@@ -134,5 +134,25 @@
     "done": "{{checked}} Fotos geprüft, {{linked}} verknüpft.",
     "lost": "Der Stand ist unbekannt: der Server hat den Auftrag vergessen (Neustart?). Bitte erneut starten – schon verknüpfte Fotos bleiben es.",
     "failed": "Die Verknüpfung ist fehlgeschlagen."
+  },
+  "visitPhotosAuto": {
+    "title": "Fotos automatisch mit Ortsbesuchen verknüpfen",
+    "hint": "Verknüpft Fotos aus Immich und PhotoPrism, die am Tag des Besuchs in der Nähe des Ortes aufgenommen wurden (nur Verknüpfungen, keine Kopien). Fotos ohne Aufnahmezeit oder Position und Fotos in Privatzonen werden nie verknüpft. Entfernte Fotos kommen nicht wieder.",
+    "loadFailed": "Der Stand der automatischen Verknüpfung konnte nicht geladen werden.",
+    "saveFailed": "Die Einstellung konnte nicht gespeichert werden.",
+    "source": {
+      "immich": "Immich",
+      "photoprism": "PhotoPrism"
+    },
+    "truncated": "Die Quelle hatte an manchen Tagen mehr Fotos, als eine Suche liest – nicht alle passenden Fotos wurden gefunden.",
+    "progress": "Verknüpfe … {{done}} von {{total}} Besuchen",
+    "running": "Verknüpfe …",
+    "done": "{{visits}} Besuche geprüft, {{linked}} Fotos verknüpft.",
+    "failedVisits_one": "{{count}} Besuch konnte nicht verarbeitet werden:",
+    "failedVisits_other": "{{count}} Besuche konnten nicht verarbeitet werden:",
+    "truncatedVisits_one": "Bei {{count}} Besuch wurden nicht alle Fotos des Tages gelesen.",
+    "truncatedVisits_other": "Bei {{count}} Besuchen wurden nicht alle Fotos des Tages gelesen.",
+    "lost": "Der Stand ist unbekannt: der Server hat den Auftrag vergessen (Neustart?). Schon verknüpfte Fotos bleiben es.",
+    "jobFailed": "Die automatische Verknüpfung ist fehlgeschlagen."
   }
 }

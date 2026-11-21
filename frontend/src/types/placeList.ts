@@ -191,5 +191,9 @@ export interface PlaceVisitPhoto {
   mimetype: string;
   sizeBytes: number;
   immichAssetId: string | null;
+  /** Photo source of `immichAssetId`; absent from servers before PhotoPrism. */
+  provider?: "immich" | "photoprism";
+  /** `auto`: linked by the server's matcher, not picked by the user. */
+  provenance?: "manual" | "auto";
   createdAt: string;
 }

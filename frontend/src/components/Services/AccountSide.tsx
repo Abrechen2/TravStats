@@ -14,6 +14,7 @@ import AccountConsentDialog from "../ExternalServices/AccountConsentDialog";
 import { serviceName } from "../ExternalServices/serviceText";
 import StravaConnectionCard from "../Settings/StravaConnectionCard";
 import PhotoJourneyNightlyScanCard from "../Settings/PhotoJourneyNightlyScanCard";
+import VisitPhotoAutoLink from "../Settings/VisitPhotoAutoLink";
 import VisitPhotoImmichLink from "../Settings/VisitPhotoImmichLink";
 import DawarichProviderHint from "../Settings/DawarichProviderHint";
 import FieldsGroup from "./FieldsGroup";
@@ -248,6 +249,10 @@ export default function AccountSide({
     if (card.id === "immich") {
       body.push(<PhotoJourneyNightlyScanCard key="nightly" />);
       body.push(<VisitPhotoImmichLink key="visit" connected />);
+    }
+    // One account switch, offered on both photo sources' cards.
+    if (card.id === "immich" || card.id === "photoprism") {
+      body.push(<VisitPhotoAutoLink key="autoLink" />);
     }
   } else if (blockedLine) {
     body.push(<Dependency key="blocked" reason={blockedLine} />);

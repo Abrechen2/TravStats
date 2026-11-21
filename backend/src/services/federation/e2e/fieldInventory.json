@@ -245,7 +245,7 @@
     "personal": "",
     "photos": "id placeVisitId mimetype sizeBytes caption sortIdx checksum takenAt tripPhotoId createdAt",
     "documents": "",
-    "excluded": "filename immichAssetId"
+    "excluded": "filename immichAssetId provider provenance"
   },
   "PlaceList": {
     "details": "id name color icon sortIdx labelMode curatedKey createdAt updatedAt",

@@ -19,6 +19,7 @@ import { typedTripDays } from "../timeModel/tripColumns";
 import { visitColumnsFromDay } from "../timeModel/visitColumns";
 import { tripForVisitDay } from "../places/visitTrip";
 import type { LinkableDomain, TripSuggestion } from "./types";
+import { scheduleVisitAutoLink } from "../places/visitPhotoAutoLink";
 
 /**
  * Answering a trip suggestion. Accepting does everything the proposal promised
@@ -321,6 +322,9 @@ export async function acceptSuggestion(
     { timeout: 30_000, maxWait: 5_000 }
   );
   invalidateTripSuggestions(userId);
+  if (proposal.kind === "place_visit" && result.placeVisitId) {
+    scheduleVisitAutoLink(userId, result.placeVisitId);
+  }
   // Converge the stored status from the newly linked entries, as every other
   // write path that links segments does; then let achievements see the change.
   if (result.tripId) await recomputeTripStatus(result.tripId);

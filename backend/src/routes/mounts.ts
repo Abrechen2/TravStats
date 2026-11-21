@@ -152,6 +152,7 @@ import placeCategoriesRouter from "./placeCategories";
 import xlsxImportRouter from "./xlsxImport";
 import checkinImportRouter from "./checkinImport";
 import appImportRouter from "./appImport";
+import placeVisitPhotoAutoRouter from "./places/visitPhotoAuto";
 import placeVisitPhotoRouter from "./places/visitPhotos";
 import placeVisitDateSuggestionRouter from "./places/visitDateSuggestions";
 import placeVisitPhotoSuggestionRouter from "./places/visitPhotoSuggestions";
@@ -561,6 +562,8 @@ export const apiMounts: ApiMount[] = [
     base: "/api/v1/places/entry-suggestions",
     router: placeEntrySuggestionsRouter,
   },
+  // Automatic photo links — before visitPhotos, whose `/photos/:photoId` would read "auto".
+  { id: "places.visitPhotoAuto", base: "/api/v1/places", router: placeVisitPhotoAutoRouter },
   { id: "places.visitPhotos", base: "/api/v1/places", router: placeVisitPhotoRouter },
   // Dates the add-visit form can offer — same prefix, own file, same reason.
   {

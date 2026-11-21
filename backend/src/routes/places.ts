@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import { scheduleVisitAutoLink } from "../services/places/visitPhotoAutoLink";
 import { Prisma, type Place } from "../prisma";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
@@ -579,7 +580,10 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
       create: (claim) => createVisit(userId, place, body, req, claim),
       replay: (id) => prisma.placeVisit.findFirst({ where: { id, userId, placeId: place.id } }),
     });
-    if (created) await recheckAchievements(userId, "visit create");
+    if (created) {
+      await recheckAchievements(userId, "visit create");
+      scheduleVisitAutoLink(userId, visit.id);
+    }
 
     res.status(created ? 201 : 200).json({ success: true, data: withVisitTimes(visit) });
   } catch (error) {
@@ -695,6 +699,8 @@ router.patch("/visits/:visitId", async (req: AuthRequest, res: Response, next: N
     }
 
     await recheckAchievements(userId, "visit update");
+    // The day (and so the photos) moved with the time.
+    if (input.visitedAt !== undefined) scheduleVisitAutoLink(userId, visit.id);
 
     res.json({ success: true, data: withVisitTimes(visit) });
   } catch (error) {

@@ -16,6 +16,7 @@ import logger from "../../../utils/logger";
 import { acceptFlow, disabled, type ClaimStore } from "../../locationEvidence/acceptFlow";
 import { travTrackInstanceOn, travTrackInstanceOnIn } from "../../travtrack/availability";
 import { recheckFinding } from "../../locationEvidence/recheck";
+import { scheduleVisitAutoLink } from "../../places/visitPhotoAutoLink";
 
 async function acceptStayOnce(userId: string, id: string, input: StayReview) {
   let createdPlaceId: string | null = null;
@@ -47,6 +48,7 @@ async function acceptStayOnce(userId: string, id: string, input: StayReview) {
   // place form's does — after the commit, because the geocoder is a network call.
   if (createdPlaceId) await completeAcceptedPlace(createdPlaceId);
   await recheckAchievements(userId, "Dawarich stay accepted");
+  if (outcome.visitId) scheduleVisitAutoLink(userId, outcome.visitId);
   return outcome;
 }
 
@@ -369,6 +371,7 @@ async function acceptTravTrackStay(userId: string, id: string, input: StayReview
   });
   if (createdPlaceId) await completeAcceptedPlace(createdPlaceId);
   await recheckAchievements(userId, "TravTrack stay accepted");
+  if (outcome.visitId) scheduleVisitAutoLink(userId, outcome.visitId);
   return outcome;
 }
 

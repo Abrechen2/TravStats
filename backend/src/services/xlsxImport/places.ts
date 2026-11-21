@@ -41,6 +41,7 @@ import {
 import { changedOnly, droppedOrNone, enumCell, keepStoredClock } from "./values";
 import { visitColumnsFromFakeUtc } from "../timeModel/visitColumns";
 import { tripForVisitDay } from "../places/visitTrip";
+import { scheduleVisitAutoLink } from "../places/visitPhotoAutoLink";
 
 const COORD_DECIMALS = 4;
 const sameCoord = (a: number | null, b: number | undefined): boolean =>
@@ -183,6 +184,7 @@ export async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<Shee
         select: { id: true },
       });
       newId = created.id;
+      scheduleVisitAutoLink(ctx.userId, created.id);
       seen.add(created.id);
       ctx.claimed.add(created.id);
       ctx.wrote = true;
@@ -292,7 +294,10 @@ export async function importPlaceVisits(sheet: IncomingSheet, ctx: Ctx): Promise
           await importedVisitColumns(stored.placeId, data.visitedAt as Date | null)
         );
       }
-      if (!ctx.dryRun) await prisma.placeVisit.update({ where: { id: targetId }, data });
+      if (!ctx.dryRun) {
+        await prisma.placeVisit.update({ where: { id: targetId }, data });
+        scheduleVisitAutoLink(ctx.userId, targetId);
+      }
       ctx.wrote = ctx.wrote || !ctx.dryRun;
       out.push({ row: rowNo, action: "update", id: targetId, label, message });
       continue;

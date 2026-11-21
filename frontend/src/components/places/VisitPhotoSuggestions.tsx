@@ -9,6 +9,7 @@ import {
   refuseVisitPhotoSuggestions,
   linkVisitPhotoSuggestions,
   listVisitPhotos,
+  type PhotoProvider,
   type VisitPhotoSuggestions as Suggestions,
 } from "../../lib/api/places";
 import { useToastStore } from "../../store/toastStore";
@@ -20,7 +21,11 @@ interface Props {
   onLinked: (photos: PlaceVisitPhoto[]) => void;
 }
 
-const keyOf = (s: { kind: string; id: string }): string => `${s.kind}:${s.id}`;
+const PROVIDERS: PhotoProvider[] = ["immich", "photoprism"];
+type PickGroup = { tripPhotoIds: string[]; assetIds: string[]; provider: PhotoProvider };
+
+const keyOf = (s: { kind: string; id: string; provider?: string }): string =>
+  `${s.kind}:${s.provider ?? ""}:${s.id}`;
 
 /**
  * "Fotos aus deiner Reise" — photographs of the visit's day taken near the
@@ -60,24 +65,32 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
     });
   };
 
-  const picks = (): { tripPhotoIds: string[]; assetIds: string[] } | null => {
-    if (!result) return null;
+  // One request per photo source: an asset id is only unique within its source.
+  const picks = (): PickGroup[] => {
+    if (!result) return [];
     const chosen = result.suggestions.filter((s) => picked.has(keyOf(s)));
-    return {
-      tripPhotoIds: chosen.filter((s) => s.kind === "trip").map((s) => s.id),
-      assetIds: chosen.filter((s) => s.kind === "library").map((s) => s.id),
-    };
+    const trip = chosen.filter((s) => s.kind === "trip").map((s) => s.id);
+    return PROVIDERS.map((provider, i) => ({
+      tripPhotoIds: i === 0 ? trip : [],
+      assetIds: chosen
+        .filter((s) => s.kind === "library" && (s.provider ?? "immich") === provider)
+        .map((s) => s.id),
+      provider,
+    })).filter((g) => g.tripPhotoIds.length + g.assetIds.length > 0);
   };
 
   // "Nicht diese": the server remembers the refusal per visit; the tiles leave
   // the list only after it said so, so a failed call never looks like a refusal.
   const refuse = async (): Promise<void> => {
-    const chosen = picks();
-    if (!result || !chosen) return;
+    const groups = picks();
+    if (!result || groups.length === 0) return;
     setBusy(true);
     try {
-      const outcome = await refuseVisitPhotoSuggestions(visitId, chosen);
-      addToast("success", t("places:photos.suggest.refused", { count: outcome.refused }));
+      let refused = 0;
+      for (const group of groups) {
+        refused += (await refuseVisitPhotoSuggestions(visitId, group)).refused;
+      }
+      addToast("success", t("places:photos.suggest.refused", { count: refused }));
       setResult({
         ...result,
         suggestions: result.suggestions.filter((s) => !picked.has(keyOf(s))),
@@ -108,15 +121,14 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
 
   const link = async (): Promise<void> => {
     if (!result) return;
-    const chosen = result.suggestions.filter((s) => picked.has(keyOf(s)));
     setBusy(true);
     try {
-      const outcome = await linkVisitPhotoSuggestions(visitId, {
-        tripPhotoIds: chosen.filter((s) => s.kind === "trip").map((s) => s.id),
-        assetIds: chosen.filter((s) => s.kind === "library").map((s) => s.id),
-      });
+      let linked = 0;
+      for (const group of picks()) {
+        linked += (await linkVisitPhotoSuggestions(visitId, group)).linked;
+      }
       onLinked(await listVisitPhotos(visitId));
-      addToast("success", t("places:photos.suggest.linked", { count: outcome.linked }));
+      addToast("success", t("places:photos.suggest.linked", { count: linked }));
       setResult({
         ...result,
         suggestions: result.suggestions.filter((s) => !picked.has(keyOf(s))),
@@ -144,7 +156,10 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
     );
   }
 
-  const libraryDown = result.library !== "ok" && result.library !== "notConfigured";
+  // One source failing is shown even while the other answered.
+  const libraryDown = Object.values(result.sources ?? { all: result.library }).some(
+    (state) => state !== "ok" && state !== "notConfigured"
+  );
   return (
     <div className="mt-1 flex flex-col gap-2">
       {result.day === null ? (

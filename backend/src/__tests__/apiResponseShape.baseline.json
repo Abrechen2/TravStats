@@ -254,6 +254,7 @@
     "places/relations.ts",
     "places/visitDateSuggestions.ts",
     "places/visitPhotoSuggestions.ts",
+    "places/visitPhotoAuto.ts",
     "places/visitPhotos.ts",
     "ports.ts",
     "publicShareLinks.ts",

@@ -13,6 +13,10 @@ export interface PhotoDto {
   mimetype: string;
   sizeBytes: number;
   immichAssetId: string | null;
+  /** Photo source of `immichAssetId`: `immich` | `photoprism`. */
+  provider: string;
+  /** `manual` or `auto` (linked by the matcher: the gallery says "automatisch verknüpft"). */
+  provenance: string;
   createdAt: string;
   /**
    * When and where it was taken (forgejo#132 item 11). A visit photo stores
@@ -38,6 +42,8 @@ export function toPhotoDto(photo: {
   mimetype: string;
   sizeBytes: number;
   immichAssetId: string | null;
+  provider: string;
+  provenance: string;
   createdAt: Date;
   takenAt: Date | null;
   tripPhoto?: { lat: number | null; lon: number | null; takenAt: Date | null } | null;
@@ -51,6 +57,8 @@ export function toPhotoDto(photo: {
     mimetype: photo.mimetype,
     sizeBytes: photo.sizeBytes,
     immichAssetId: photo.immichAssetId,
+    provider: photo.provider,
+    provenance: photo.provenance,
     createdAt: photo.createdAt.toISOString(),
     takenAt: taken?.toISOString() ?? null,
     lat: photo.tripPhoto?.lat ?? null,
