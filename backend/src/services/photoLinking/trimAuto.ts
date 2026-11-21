@@ -106,11 +106,15 @@ export async function trimAutoLinks(
   for (const [groups, remove] of [
     [
       visitGroups,
-      (ids: string[]) => prisma.placeVisitPhoto.deleteMany({ where: { id: { in: ids } } }),
+      (ids: string[]) =>
+        prisma.placeVisitPhoto.deleteMany({ where: { id: { in: ids }, provenance: "auto" } }),
     ],
     [
       entryGroups,
-      (ids: string[]) => prisma.entryPhotoLink.deleteMany({ where: { id: { in: ids } } }),
+      (ids: string[]) =>
+        prisma.entryPhotoLink.deleteMany({
+          where: { id: { in: ids }, provenance: "auto", refused: false },
+        }),
     ],
   ] as const) {
     for (const rows of groups.values()) {

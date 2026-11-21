@@ -80,10 +80,11 @@ export async function entryChoicesFor(
   // Everything chosen is listed; the room left is spread over the rest, so a
   // camera roll of a long stay shows a spread, not its first hour.
   const chosen = found.matched.filter(isChosen);
-  const others = capMatches(
-    found.matched.filter((m) => !isChosen(m)),
-    Math.max(0, ENTRY_CHOICE_LIMIT - chosen.length)
-  );
+  const rest = found.matched.filter((m) => !isChosen(m));
+  const room = Math.max(0, ENTRY_CHOICE_LIMIT - chosen.length);
+  // Below the limit every candidate is listed — a burst's frames included, so the
+  // user can pick the one they like; the spread only thins an overlong list.
+  const others = rest.length <= room ? rest : capMatches(rest, room);
   const listed = [...chosen, ...others];
   const listedKeys = new Set(listed.map((m) => refusalKey(m.provider, m.asset.id)));
   const choices: EntryChoice[] = listed.map((m) => {

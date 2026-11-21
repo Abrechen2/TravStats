@@ -96,10 +96,9 @@ export async function visitChoicesFor(
   const { anchor, window, library, matched, refused, rowOf } = found;
   const key = (m: SourcedAsset) => refusalKey(m.provider, m.asset.id);
   const chosen = matched.filter((m) => rowOf.has(key(m)));
-  const others = capMatches(
-    matched.filter((m) => !rowOf.has(key(m))),
-    Math.max(0, ENTRY_CHOICE_LIMIT - chosen.length)
-  );
+  const rest = matched.filter((m) => !rowOf.has(key(m)));
+  const room = Math.max(0, ENTRY_CHOICE_LIMIT - chosen.length);
+  const others = rest.length <= room ? rest : capMatches(rest, room);
   const listed = [...chosen, ...others];
   const choices: VisitChoice[] = listed.map((m) => {
     const row = rowOf.get(key(m));
