@@ -129,4 +129,34 @@ describe("flightAutoUpdate — per-flight steps", () => {
     expect(notifyMock.mock.calls[0][3]).toMatchObject({ pending: true });
     expect(await prisma.pendingFlightUpdate.count({ where: { userId } })).toBe(1);
   });
+
+  it("does not propose a change the user already rejected and skips the pacing pause for it", async () => {
+    const flight = await makeFlight("LH804");
+    await prisma.pendingFlightUpdate.create({
+      data: {
+        userId,
+        flightId: flight.id,
+        status: "rejected",
+        originalData: { gate: "A26" },
+        proposedData: { gate: "B44" },
+        changes: [{ field: "gate", oldValue: "A26", newValue: "B44", type: "changed" }],
+        apiSource: "airlabs",
+        fetchedAt: new Date(),
+        expiresAt: new Date(Date.now() + 24 * 3600_000),
+      },
+    });
+    lookupMock.mockResolvedValue({ source: "airlabs", departure: { gate: "B44" } });
+    const pauseSpy = jest.spyOn(global, "setTimeout");
+    try {
+      const created = await checkAndUpdateFlightsForUser(userId);
+      expect(created).toBe(0);
+      expect(pauseSpy.mock.calls.filter(([, ms]) => ms === 1000)).toHaveLength(0);
+    } finally {
+      pauseSpy.mockRestore();
+    }
+    expect(applyMock).not.toHaveBeenCalled();
+    expect(notifyMock).not.toHaveBeenCalled();
+    const rows = await prisma.pendingFlightUpdate.findMany({ where: { flightId: flight.id } });
+    expect(rows.map((r) => r.status)).toEqual(["rejected"]);
+  });
 });
