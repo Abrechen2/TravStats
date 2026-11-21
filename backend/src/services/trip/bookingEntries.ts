@@ -17,7 +17,6 @@
  */
 import { AppError, type ApiErrorCode } from "../../middleware/errorHandler";
 import type { DbTransaction } from "../../db";
-import { Prisma } from "../../prisma";
 import { propagateWrites, shareSnapshots } from "../sharing/propagate";
 import type { ShareEntity } from "../sharing/adapters/types";
 
@@ -129,7 +128,6 @@ export async function setBookingEntries(
   lists: BookingEntryLists,
   options: { replace?: boolean; moveToTrip?: boolean } = {}
 ): Promise<BookingEntryCounts> {
-  let membershipChanged = false;
   const counts: BookingEntryCounts = {
     flights: 0,
     stays: 0,
@@ -167,13 +165,6 @@ export async function setBookingEntries(
       : [];
     const touched = [...unique, ...leaving];
     if (touched.length === 0) continue;
-    const joining =
-      unique.length === 0
-        ? 0
-        : await delegate.count({
-            where: { id: { in: unique }, userId, NOT: { bookingId: booking.id } },
-          });
-    if (leaving.length > 0 || joining > 0) membershipChanged = true;
 
     const before = await shareSnapshots(tx, kind.share, touched);
     if (leaving.length > 0) {
@@ -200,15 +191,8 @@ export async function setBookingEntries(
     }
     await propagateWrites(tx, userId, kind.share, touched, before);
   }
-  // A package split names the items it was made across (forgejo#430). Once
-  // they change it no longer describes the booking; the statistics can only
-  // check its item COUNT, so a swapped item would keep stale shares counting.
-  // Clearing it here makes the package read "not split" everywhere at once.
-  if (membershipChanged) {
-    await tx.booking.updateMany({
-      where: { id: booking.id, userId },
-      data: { priceSplit: Prisma.DbNull },
-    });
-  }
+  // A package split whose items change is cleared by the database trigger
+  // `clear_package_split_on_membership` (forgejo#430), on this path and every
+  // other one that moves a booking_id.
   return counts;
 }

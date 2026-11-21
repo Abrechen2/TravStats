@@ -503,7 +503,9 @@
     "flightTimeEstimatedNote": "{{hours}} h of it estimated — {{count}} flights without times",
     "noPricesRecorded_one": "No price recorded — {{count}} flight without one",
     "noPricesRecorded_other": "No price recorded — {{count}} flights without one",
-    "scopeCompareSamePeriod": "Year {{year}} vs. same period in {{compare}}"
+    "scopeCompareSamePeriod": "Year {{year}} vs. same period in {{compare}}",
+    "packagedFlights_one": "{{count}} flight in packages not included",
+    "packagedFlights_other": "{{count}} flights in packages not included"
   },
   "noStatsAvailable": "No statistics available",
   "yearFilter": {
@@ -697,7 +699,9 @@
     "busiestMonth": "Busiest Month",
     "busiestMonthDesc": "{{month}} with {{count}} flights",
     "unconvertedNote": "Not converted: {{amounts}}",
-    "noPricesRecorded": "No flight carries a price"
+    "noPricesRecorded": "No flight carries a price",
+    "packagedFlights_one": "{{count}} flight in packages not included",
+    "packagedFlights_other": "{{count}} flights in packages not included"
   },
   "unique": {
     "title": "🌟 Unique Statistics",

@@ -186,6 +186,7 @@ describe("package bookings in the flight statistics (forgejo#430)", () => {
     );
     expect(stats.totalCost ?? null).toBeNull();
     expect(stats.costPerKm).toBeNull();
+    expect(stats.packagedFlights).toBe(1);
   });
 });
 

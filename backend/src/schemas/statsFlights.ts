@@ -170,6 +170,10 @@ export const businessStatsSchema = z.object({
   totalCost: z.number().nullable().openapi({
     description: "Null when nothing carries a price — not 0, which would read as free.",
   }),
+  packagedFlights: z.number().int().openapi({
+    description:
+      "Counted flights in an unsplit package (forgejo#430): left out of every cost figure above.",
+  }),
   totalDistance: z.number(),
   seatClassDistribution: z.record(z.string(), z.number().int()),
   mostCommonCategory: z.string().nullable(),

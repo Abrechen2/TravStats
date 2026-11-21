@@ -62,6 +62,14 @@ split per item in `bookings.price_split`, version 2:
   cost a fee; the user can give it 0).
 - A split is **valid** only while price, currency and the set of items still
   match (count and ids); otherwise it is stale and reads as not split.
+- Every write that sets, moves or clears an entry's `booking_id`, or deletes
+  a booked entry, clears the booking's split — one database trigger
+  (`clear_package_split_on_membership`, migration
+  `20261121194302_package_split_membership_trigger`) on all seven entry
+  tables, so no route, import or merge path can leave stale shares behind.
+- The flight statistics say how many flights an unsplit package kept out of
+  the cost ("N Flüge in Paketen nicht eingerechnet"): `packagedFlights` on
+  `/stats/summary` and `/stats/business`.
 - A cancelled rental on a priced booking still costs its cancellation fee in
   the trip cost; a live one costs only through the booking.
 

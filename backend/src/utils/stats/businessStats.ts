@@ -17,10 +17,10 @@ import { packageEntryShare } from "../../shared/packageBooking";
  * the cost-per-km and cost-per-hour loops below keep a single rule and never
  * see a package's whole price as one flight's.
  */
-function withPackageShare(f: FlightData): FlightData {
+function packageShareOf(f: FlightData) {
   const booking = f.booking;
-  if (!booking) return f;
-  const pkg = packageEntryShare(
+  if (!booking) return null;
+  return packageEntryShare(
     {
       price: booking.price ?? null,
       currency: booking.currency ?? null,
@@ -32,6 +32,10 @@ function withPackageShare(f: FlightData): FlightData {
     "flight",
     f.id
   );
+}
+
+function withPackageShare(f: FlightData): FlightData {
+  const pkg = packageShareOf(f);
   if (!pkg) return f;
   return {
     ...f,
@@ -66,6 +70,11 @@ export function calculateBusinessStats(
   baseCurrency: string
 ): BusinessStats {
   const flights = inputFlights.map(withPackageShare);
+  // Counted flights left out of every cost figure because they sit in an
+  // unsplit package — said beside the rates, never silently dropped.
+  const packagedFlights = inputFlights.filter(
+    (f) => isCountableFlight(f) && packageShareOf(f)?.amount === null
+  ).length;
   // Time-sensitive subset — both times must be present.
   const flownFlights = flights.filter(
     (f): f is typeof f & { departureTime: Date; arrivalTime: Date } =>
@@ -309,6 +318,7 @@ export function calculateBusinessStats(
     costPerKm,
     costPerHour,
     totalCost: anyCost ? Math.round(totalCost * 100) / 100 : null,
+    packagedFlights,
     totalDistance: Math.round(totalDistance),
     seatClassDistribution,
     mostCommonCategory,
