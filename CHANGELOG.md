@@ -6,6 +6,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.39.** Three new migrations: a source column on trip photos (existing photos become Immich), a location-check marker on lodgings, and a data-only fix that moves date-only flights stored at midnight UTC to local noon in their zone. Nothing is deleted.
+
+### Added
+
+- **TravTrack suggests the places you visited.** A stop at a venue becomes a suggestion in the stay inbox with its evidence — when, how long, measured and assumed time, the building and the counter inside it as an alternative. A known place gets a new visit; an unknown venue is proposed as a new place. Nothing is created without your decision, and a declined stop does not come back. When the venue lookup fails, the stop waits and settings say why.
+- **PhotoPrism albums can be imported into a trip,** not only linked, with the same resync and failure messages as Immich. An album too large to import completely says how many photos it took.
+
+### Changed
+
+- **A day in the trip timeline reads as travel happens:** on the same day the hotel check-out comes before any departure and the check-in after any arrival, even when the booking's nominal "11:00"/"15:00" says otherwise.
+- **Choosing a day on a trip or roadtrip map makes it stand out:** the other days turn grey, faint and thin, the chosen day is drawn thicker on top, and stop numbers are smaller, hidden when zoomed out and thinned where they crowd (forgejo#424).
+- **A lodging known only by its name is no longer placed automatically.** It is marked "Ort prüfen" instead, and a geocoder answer in a different country than the lodging's is refused. Pins that lie outside their lodging's country are flagged for a look, never moved.
+
+### Fixed
+
+- **Date-only flights west of UTC show their real day** (#403). They were stored as midnight UTC and shown one day early in the Americas and the Pacific; a date-only departure or arrival can now also be sent as a plain `YYYY-MM-DD`.
+- **A cruise stop's excursion note can be cleared with `null`** (#402), as the API description always said.
+- **A hotel could land on the wrong continent** (#401) when only its name was searched; see "Changed".
+- **Photos without a capture date sit in their own "Ohne Datum" group** instead of under January 1970, and stay off the TravTrack map.
+- **The adsb.lol key is sent in the header adsb.lol reads** (`x-api-key`), so a configured key raises the request limit instead of being ignored.
+
 **Upgrading to 2.8.0-rc.38.** One new migration: trip and place-visit answers also store a content key per member (additive).
 
 ### Added
