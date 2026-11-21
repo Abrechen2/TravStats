@@ -111,6 +111,8 @@ Immich today:
 
 ## C. Merging the same trip from two servers ("Reise zusammenlegen")
 
+> **Withdrawn (owner, 2026-11-20/21).** Merging trips is not a feature: "Das Zusammenlegen soll kein Feature sein" — the few duplicated trips are merged once by hand. Nothing in this section is to be built; it stays only as a record of the idea. (Council review 2026-11-21 flagged it as accidental scope.)
+
 **Case:** two travellers each entered the same holiday on their own server, independently. The two versions differ: one has flights the other lacks, the times differ, and one has places the other never found. Both versions should become one agreed state, held on both servers.
 
 ### C.1 What exists
