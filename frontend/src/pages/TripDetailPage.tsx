@@ -167,7 +167,8 @@ export default function TripDetailPage(): JSX.Element {
         onChanged={() => void load()}
         placeCount={countTripPlaces(places.placeVisits)}
       />
-      {places.failed && <TripPlacesError onRetry={places.reload} />}
+      {/* On the overview tab the places panel carries the failure itself. */}
+      {places.failed && tab !== "overview" && <TripPlacesError onRetry={places.reload} />}
       {/* A finished trip's list is a record, not a task: it waits at the end. */}
       {trip.status !== "completed" && <TripPackingCard tripId={trip.id} endDate={trip.endDate} />}
       <TabBar tab={tab} onChange={setTab} t={t} />
@@ -197,7 +198,9 @@ export default function TripDetailPage(): JSX.Element {
             🏨 {t("trips:detail.hiddenLodging", { count: hiddenLodgingCount })}
           </div>
         )}
-        {tab === "overview" && <TripOverview trip={shownTrip} t={t} language={i18n.language} />}
+        {tab === "overview" && (
+          <TripOverview trip={shownTrip} t={t} language={i18n.language} places={places} />
+        )}
         {tab === "timeline" && (
           <TimelineTab
             trip={shownTrip}

@@ -88,6 +88,33 @@ function renderOverview(value: Trip): void {
   );
 }
 
+describe("TripOverview places", () => {
+  it("does not say nothing is linked on a trip that only has place visits", () => {
+    const visit = {
+      place: { id: "p1", name: "Torre", category: "landmark" },
+      visit: {
+        id: "v1",
+        placeId: "p1",
+        tripId: "trip-1",
+        visitedAt: "2020-05-14T10:00:00.000Z",
+        orderIdx: 0,
+      },
+    } as never;
+    render(
+      <MemoryRouter>
+        <TripOverview
+          trip={trip({})}
+          t={t}
+          language="de"
+          places={{ placeVisits: [visit], failed: false, loading: false, reload: () => {} }}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("Torre")).toBeInTheDocument();
+    expect(screen.queryByText("trips:detail.noLinks")).not.toBeInTheDocument();
+  });
+});
+
 describe("TripOverview", () => {
   it("lists a roadtrip the trip holds as one of its entries, and says nothing is linked only when nothing is", () => {
     mockRoadtrips.mockReturnValueOnce([

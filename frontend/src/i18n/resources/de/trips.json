@@ -745,7 +745,14 @@
     "travellersMore_one": "{{count}} weitere Reisende anzeigen"
   },
   "overview": {
-    "daysAway": "Tage unterwegs"
+    "daysAway": "Tage unterwegs",
+    "places": {
+      "title": "Besuchte Orte",
+      "empty": "Für diese Reise sind noch keine Orte eingetragen.",
+      "loading": "Orte werden geladen …",
+      "planned": "geplant",
+      "undated": "Ohne Datum"
+    }
   },
   "card": {
     "days_one": "Tag",
