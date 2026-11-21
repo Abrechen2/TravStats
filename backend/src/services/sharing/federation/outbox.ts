@@ -324,7 +324,7 @@ async function deliverStream(
   }
 }
 
-async function deliverAll(now: Date): Promise<DeliveryRun> {
+async function deliverAll(now: Date, userId?: string): Promise<DeliveryRun> {
   const run: DeliveryRun = { sent: 0, failed: 0, parked: 0, dropped: 0 };
   // Off here: the rows wait. Off is absent (G5) — nothing leaves, nothing is lost.
   if (!(await tripFederationAvailability()).available) return run;
@@ -333,7 +333,11 @@ async function deliverAll(now: Date): Promise<DeliveryRun> {
   });
   const streams = await prisma.tripShareOutbox.groupBy({
     by: ["groupId", "peerOrigin"],
-    where: { parkedAt: null, nextAttemptAt: { lte: now } },
+    where: {
+      parkedAt: null,
+      nextAttemptAt: { lte: now },
+      ...(userId ? { member: { remote: { userId } } } : {}),
+    },
   });
   for (const s of streams) {
     try {
@@ -354,10 +358,12 @@ let current: Promise<DeliveryRun> | null = null;
 /**
  * One delivery pass over every stream with a due row. Passes run one after another, never two at
  * once in this process (a second call waits for the first, then runs). `now` decides what is
- * due and what a failure's backoff counts from — tests move it instead of waiting.
+ * due and what a failure's backoff counts from — tests move it instead of waiting. `userId`
+ * limits the pass to the streams of that account's memberships (an account being deleted gets
+ * its own messages out first, not the whole queue's — forgejo#415).
  */
-export function runDeliveries(now?: Date): Promise<DeliveryRun> {
-  const pass = () => deliverAll(now ?? new Date());
+export function runDeliveries(now?: Date, userId?: string): Promise<DeliveryRun> {
+  const pass = () => deliverAll(now ?? new Date(), userId);
   const next = (current ?? Promise.resolve()).then(pass, pass);
   current = next;
   void next

@@ -9,6 +9,7 @@ import type { Request, Response, NextFunction } from "express";
 const mockUserFindUnique = jest.fn();
 const mockUserCount = jest.fn();
 const mockUserDelete = jest.fn();
+const mockUserUpdate = jest.fn();
 const mockSyncChangeDeleteMany = jest.fn();
 
 jest.mock("../db", () => ({
@@ -17,6 +18,7 @@ jest.mock("../db", () => ({
       findUnique: (...args: unknown[]) => mockUserFindUnique(...args),
       count: (...args: unknown[]) => mockUserCount(...args),
       delete: (...args: unknown[]) => mockUserDelete(...args),
+      update: (...args: unknown[]) => mockUserUpdate(...args),
     },
     syncChange: {
       deleteMany: (...args: unknown[]) => mockSyncChangeDeleteMany(...args),
@@ -30,6 +32,7 @@ jest.mock("../db", () => ({
           findUnique: (...args: unknown[]) => mockUserFindUnique(...args),
           count: (...args: unknown[]) => mockUserCount(...args),
           delete: (...args: unknown[]) => mockUserDelete(...args),
+          update: (...args: unknown[]) => mockUserUpdate(...args),
         },
         syncChange: { deleteMany: (...args: unknown[]) => mockSyncChangeDeleteMany(...args) },
       }),

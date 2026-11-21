@@ -35,41 +35,55 @@ export async function notifyPeersOfDeparture(userId: string): Promise<DepartureN
   const notice: DepartureNotice = { ended: 0, failed: 0 };
   if (connections.length === 0) return notice;
 
-  for (const c of connections) {
-    try {
-      await endConnection(userId, c.id);
-      notice.ended++;
-    } catch (error) {
-      notice.failed++;
+  const work = async (): Promise<void> => {
+    for (const c of connections) {
+      try {
+        await endConnection(userId, c.id);
+        notice.ended++;
+      } catch (error) {
+        notice.failed++;
+        logger.warn(
+          {
+            operation: "account_delete_peer_withdraw_failed",
+            userId,
+            origin: c.origin,
+            error: { message: error instanceof Error ? error.message : String(error) },
+          },
+          "Could not withdraw a federated connection before deleting the account; it ends with the account"
+        );
+      }
+    }
+    // Only this account's streams: the rest of the queue is not its business.
+    await runDeliveries(undefined, userId);
+  };
+
+  // One budget for the whole phase: each withdrawal also tries its announcement
+  // once, so several dead peers in a row must not add up their timeouts.
+  let timer: NodeJS.Timeout | undefined;
+  const deadline = new Promise<"timeout">((resolve) => {
+    timer = setTimeout(() => resolve("timeout"), DEPARTURE_DELIVERY_BUDGET_MS);
+  });
+  // Settled on its own, so a rejection after the deadline is still logged, never unhandled.
+  const running = work().then(
+    () => "done" as const,
+    (error: unknown) => {
       logger.warn(
         {
-          operation: "account_delete_peer_withdraw_failed",
+          operation: "account_delete_peer_delivery_failed",
           userId,
-          origin: c.origin,
           error: { message: error instanceof Error ? error.message : String(error) },
         },
-        "Could not withdraw a federated connection before deleting the account; it ends with the account"
+        "Trip-share messages for a deleted account were not all delivered"
       );
+      return "failed" as const;
     }
-  }
-
-  let timer: NodeJS.Timeout | undefined;
+  );
   try {
-    await Promise.race([
-      runDeliveries(),
-      new Promise<void>((resolve) => {
-        timer = setTimeout(resolve, DEPARTURE_DELIVERY_BUDGET_MS);
-      }),
-    ]);
-  } catch (error) {
-    logger.warn(
-      {
-        operation: "account_delete_peer_delivery_failed",
-        userId,
-        error: { message: error instanceof Error ? error.message : String(error) },
-      },
-      "Trip-share messages for a deleted account were not all delivered"
-    );
+    if ((await Promise.race([running, deadline])) === "timeout")
+      logger.warn(
+        { operation: "account_delete_peer_budget_exceeded", userId, ...notice },
+        "Telling federated peers took longer than its budget; the deletion goes ahead"
+      );
   } finally {
     if (timer) clearTimeout(timer);
   }

@@ -28,7 +28,7 @@ jest.mock("../../services/sharing/federation/outbox", () => ({
   runDeliveries: () => mockRunDeliveries(),
 }));
 
-const NAMES = ["delPeersUser", "delPeersAdmin"];
+const NAMES = ["delPeersUser", "delPeersAdmin", "delPeersAdmin2"];
 
 async function makeUser(username: string, admin = false): Promise<string> {
   await prisma.user.deleteMany({ where: { username } });
@@ -53,11 +53,11 @@ async function connect(userId: string, n: number, state: string): Promise<string
   return row.id;
 }
 
-const del = (id: string): request.Test =>
+const del = (id: string, confirmation = NAMES[0]): request.Test =>
   request(app)
     .delete("/api/v1/auth/me")
     .set("Cookie", `auth_token=${generateToken(id)}`)
-    .send({ password: "password123", confirmation: NAMES[0] });
+    .send({ password: "password123", confirmation });
 
 describe("self-delete tells federated peers and leaves an audit event (forgejo#415)", () => {
   beforeEach(() => {
@@ -100,6 +100,20 @@ describe("self-delete tells federated peers and leaves an audit event (forgejo#4
     const res = await del(id);
     expect(res.status).toBe(200);
     expect(await prisma.user.findUnique({ where: { id } })).toBeNull();
+  });
+
+  it("two last admins deleting at once: the refused one keeps every connection", async () => {
+    await prisma.user.updateMany({ where: { isAdmin: true }, data: { isAdmin: false } });
+    const a = await makeUser(NAMES[1], true);
+    const b = await makeUser(NAMES[2], true);
+    const ca = await connect(a, 1, "active");
+    const cb = await connect(b, 2, "active");
+    const [ra, rb] = await Promise.all([del(a, NAMES[1]), del(b, NAMES[2])]);
+    expect([ra.status, rb.status].sort()).toEqual([200, 409]);
+    const kept = ra.status === 409 ? { id: a, conn: ca } : { id: b, conn: cb };
+    expect(mockEndConnection.mock.calls.map((c) => c[1])).not.toContain(kept.conn);
+    const survivor = await prisma.user.findUnique({ where: { id: kept.id } });
+    expect(survivor).toMatchObject({ isAdmin: true, isActive: true });
   });
 
   it("does not touch the connections of a last admin it refuses", async () => {
