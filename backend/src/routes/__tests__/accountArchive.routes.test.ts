@@ -6,7 +6,12 @@ import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
 import { settleAllJobs } from "../../services/jobs/jobRegistry";
-import { __resetArchiveJobs } from "../../services/accountArchive/archiveJobs";
+import {
+  __resetArchiveJobs,
+  EXPORT_TTL_MS,
+  sweepExports,
+} from "../../services/accountArchive/archiveJobs";
+import { removeAccount } from "../../services/account/removeAccount";
 import { generateToken } from "../../utils/jwt";
 import { generateApiToken } from "../../utils/apiTokens";
 
@@ -159,5 +164,30 @@ describe("account archive routes", () => {
     expect(
       (await request(app).post("/api/v1/me/account-archive/import").set("Cookie", cookie)).status
     ).toBe(403);
+  });
+
+  it("removes a deleted account's finished archive with the account", async () => {
+    const a = await makeUser("gone");
+    const started = await request(app)
+      .post("/api/v1/me/account-archive/export")
+      .set("Cookie", a.cookie);
+    const job = await jobOf(a.cookie, started.body.data.jobId);
+    expect(job.status).toBe("succeeded");
+    const zip = path.join(workDir, `${job.result.exportId}.zip`);
+    expect(fs.existsSync(zip)).toBe(true);
+    await removeAccount(a.id, { actorId: a.id });
+    expect(fs.existsSync(zip)).toBe(false);
+  });
+
+  it("sweeps archives past their time without waiting for the next export", async () => {
+    const stale = path.join(workDir, "stale-0000.zip");
+    fs.writeFileSync(stale, "PK");
+    const old = new Date(Date.now() - EXPORT_TTL_MS - 60_000);
+    fs.utimesSync(stale, old, old);
+    const fresh = path.join(workDir, "fresh-0000.zip");
+    fs.writeFileSync(fresh, "PK");
+    await sweepExports();
+    expect(fs.existsSync(stale)).toBe(false);
+    expect(fs.existsSync(fresh)).toBe(true);
   });
 });

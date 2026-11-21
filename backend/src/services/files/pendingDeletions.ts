@@ -194,3 +194,11 @@ export async function retryPendingDeletions(root: string): Promise<PendingRetryR
   });
   return result;
 }
+
+/**
+ * `<dir>/<storedName>` of every file a deletion is still waiting to remove: the
+ * account archive (forgejo#433) must never carry one.
+ */
+export async function pendingDeletionKeys(root: string): Promise<Set<string>> {
+  return serialised(async () => new Set((await readManifest(root)).map(keyOf)));
+}

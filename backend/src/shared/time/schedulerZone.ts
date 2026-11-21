@@ -45,6 +45,7 @@ export type SchedulerJob =
   | "stayFxBackfill"
   | "usageStats"
   | "reminders"
+  | "accountArchiveSweep"
   | "backup";
 
 export type BackupZoneSource = "admin" | "host" | "default-utc";

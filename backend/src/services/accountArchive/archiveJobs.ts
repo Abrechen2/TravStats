@@ -69,6 +69,15 @@ export async function sweepExports(now = Date.now()): Promise<void> {
   }
 }
 
+/** A deleted account's finished archives go with it: they hold every file it had. */
+export async function deleteAccountArchives(userId: string): Promise<void> {
+  for (const [id, stored] of exportsById) {
+    if (stored.userId !== userId) continue;
+    exportsById.delete(id);
+    await fsp.rm(stored.path, { force: true });
+  }
+}
+
 export interface ExportJobResult extends ExportResult {
   exportId: string;
   filename: string;

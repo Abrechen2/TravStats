@@ -5,14 +5,12 @@ import fsp from "fs/promises";
 import path from "path";
 import { Readable } from "stream";
 
-import { BACKED_UP_UPLOAD_DIRS, UPLOADS_ROOT } from "../../config/uploadDirs";
+import { UPLOADS_ROOT } from "../../config/uploadDirs";
 import { prisma } from "../../db";
 import type { PrismaClient } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import { buildVersion } from "../../utils/version";
-import { UPLOAD_DIR_POLICIES } from "../files/uploadDirPolicies";
-import { profilePictureFileNameFromUrl, receiptFileNameFromUrl } from "../files/privateFileUrls";
-import { displayRenditionName } from "../photos/displayRendition";
+import logger from "../../utils/logger";
 import { readCatalog, quoteIdent, type Db } from "./catalog";
 import { transformForExport } from "./exportTransforms";
 import {
@@ -21,7 +19,6 @@ import {
   ARCHIVE_FORMAT_VERSION,
   archiveMaxBytes,
   fileEntryName,
-  isSafeFileName,
   MANIFEST_ENTRY,
   tableEntryName,
   type AccountProfile,
@@ -30,7 +27,8 @@ import {
 } from "./format";
 import { ArchivePlanError, buildPlan, selectionWhere, type ArchivePlan } from "./plan";
 import { readRows } from "./rowReader";
-import { TABLE_POLICY, type FileColumn } from "./tablePolicy";
+import { TABLE_POLICY } from "./tablePolicy";
+import { estimateFiles, noteFiles, ownedFiles } from "./exportFiles";
 
 /**
  * Writes one account as a ZIP (forgejo#433, format in `format.ts`). Rows are read
@@ -127,85 +125,6 @@ async function* jsonLines(
 
 async function* oneBuffer(value: unknown): AsyncGenerator<Buffer> {
   yield Buffer.from(JSON.stringify(value, null, 2));
-}
-
-interface AccountFile {
-  dir: string;
-  name: string;
-  size: number;
-}
-
-/**
- * The files the account owns by the account deletion's per-directory rules: read
- * before the rows only to refuse an oversized archive early. What is written is
- * what the exported rows name (`namedFiles`), so rows and files are one moment.
- */
-async function collectFiles(
-  userId: string,
-  root: string
-): Promise<{ files: AccountFile[]; missing: number }> {
-  const files: AccountFile[] = [];
-  let missing = 0;
-  for (const dir of BACKED_UP_UPLOAD_DIRS) {
-    const rule = UPLOAD_DIR_POLICIES[dir].account;
-    if (rule.kind === "none") continue;
-    const dirPath = path.join(root, dir);
-    const names = new Set((await rule.namesOf(userId, dirPath)).filter(isSafeFileName));
-    for (const name of [...names]) names.add(displayRenditionName(name));
-    for (const name of [...names].sort()) {
-      const stat = await fsp.stat(path.join(dirPath, name)).catch(() => null);
-      if (stat?.isFile()) files.push({ dir, name, size: stat.size });
-      else if (!name.endsWith(displayRenditionName(""))) missing += 1;
-    }
-  }
-  return { files, missing };
-}
-
-/** The stored names a row's file columns point at, per directory. */
-function noteFiles(
-  row: Record<string, unknown>,
-  rules: readonly FileColumn[],
-  named: Map<string, Set<string>>
-): void {
-  for (const rule of rules) {
-    const value = row[rule.column];
-    if (value === null || value === undefined) continue;
-    if (rule.linkedWhen?.some((c) => row[c] !== null && row[c] !== undefined)) continue;
-    let name: string | null;
-    if (rule.kind === "avatar") {
-      const profile = (value as { profile?: { profilePicture?: unknown } }).profile;
-      name = profilePictureFileNameFromUrl(
-        typeof profile?.profilePicture === "string" ? profile.profilePicture : null
-      );
-    } else if (rule.kind === "url") {
-      name = receiptFileNameFromUrl(String(value));
-    } else {
-      name = path.basename(String(value));
-    }
-    if (!name || !isSafeFileName(name)) continue;
-    const set = named.get(rule.dir) ?? new Set<string>();
-    set.add(name);
-    named.set(rule.dir, set);
-  }
-}
-
-/** Those names on disk, each with its display rendition when it has one. */
-async function namedFiles(
-  named: ReadonlyMap<string, ReadonlySet<string>>,
-  root: string
-): Promise<{ files: AccountFile[]; missing: number }> {
-  const files: AccountFile[] = [];
-  let missing = 0;
-  for (const [dir, names] of [...named].sort(([a], [b]) => a.localeCompare(b))) {
-    for (const name of [...names].sort()) {
-      for (const candidate of [name, displayRenditionName(name)]) {
-        const stat = await fsp.stat(path.join(root, dir, candidate)).catch(() => null);
-        if (stat?.isFile()) files.push({ dir, name: candidate, size: stat.size });
-        else if (candidate === name) missing += 1;
-      }
-    }
-  }
-  return { files, missing };
 }
 
 async function readProfile(db: Db, userId: string): Promise<AccountProfile> {
@@ -336,11 +255,11 @@ async function writeEntries(
   if (plan.unclassified.length > 0) {
     throw new ArchivePlanError(`unclassified tables: ${plan.unclassified.join(", ")}`);
   }
-  const estimate = await collectFiles(userId, root);
-  if (estimate.files.reduce((sum, f) => sum + f.size, 0) > maxBytes) throw tooLarge();
+  const estimate = await estimateFiles(userId, root);
+  if (estimate.reduce((sum, f) => sum + f.size, 0) > maxBytes) throw tooLarge();
 
   const counts = await countRows(db, plan, userId);
-  const total = [...counts.values()].reduce((a, b) => a + b, 0) + estimate.files.length;
+  const total = [...counts.values()].reduce((a, b) => a + b, 0) + estimate.length;
   const named = new Map<string, Set<string>>();
   let done = 0;
   const tick = () => {
@@ -414,7 +333,11 @@ async function writeEntries(
     );
   }
 
-  const { files, missing } = await namedFiles(named, root);
+  const { files, missing, refused } = await ownedFiles(db, plan, userId, named, root);
+  if (refused > 0) {
+    // Named by a row of this account but not provably its own: never exported.
+    logger.warn({ operation: "account_archive_files_not_owned", userId, refused });
+  }
   for (const file of files) {
     await writer.add(
       fileEntryName(file.dir, file.name),
