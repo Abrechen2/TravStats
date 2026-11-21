@@ -16,6 +16,7 @@ const documentsApiMock = vi.hoisted(() => ({
   limits: vi.fn(),
   upload: vi.fn(),
   remove: vi.fn(),
+  links: vi.fn(),
 }));
 const isDemoMock = vi.hoisted(() => ({ current: false }));
 
@@ -72,6 +73,7 @@ describe("DocumentsSection", () => {
     documentsApiMock.limits.mockReset().mockResolvedValue(LIMITS);
     documentsApiMock.upload.mockReset().mockResolvedValue(makeDocument());
     documentsApiMock.remove.mockReset().mockResolvedValue(undefined);
+    documentsApiMock.links.mockReset().mockResolvedValue([]);
   });
 
   it("lists the entry's documents with name, size and date", async () => {

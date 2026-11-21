@@ -77,6 +77,59 @@ export interface TravelDocument {
   linkedAt: string | null;
   /** Absolute API path of the bytes, `/api/v1/documents/:id/file`. */
   url: string;
+  /**
+   * Only in a per-entry list (plan D2), and absent from older servers: the
+   * document's role at THIS entry — filed here (`primary`) or evidence for it
+   * (`covers`).
+   */
+  linkRole?: LinkRole;
+  /** For a `covers` document, the entry it was filed at ("Beleg aus …"). */
+  evidenceFrom?: DocumentEntryInfo | null;
+  /** How many entries the document is linked to. */
+  linkCount?: number;
+}
+
+export type LinkRole = "primary" | "covers";
+export type LinkProvenance = "user" | "parser" | "suggestion" | "legacy";
+
+/** An entry as a document's links name it: a label and the id its page needs. */
+export interface DocumentEntryInfo extends DocumentEntryRef {
+  label: string;
+  /** A stay's lodging, a visit's place, an expense's trip. */
+  parentId: string | null;
+}
+
+export interface DocumentEntryCandidate extends DocumentEntryInfo {
+  tripId: string | null;
+}
+
+export interface DocumentLinkView {
+  id: string;
+  role: LinkRole;
+  provenance: LinkProvenance;
+  rentalCategory: RentalDocumentCategory | null;
+  createdAt: string;
+  entry: DocumentEntryCandidate;
+}
+
+/** What `DELETE /documents/:id/links` removed — enough to put exactly that back. */
+export interface RemovedDocumentLink {
+  role: LinkRole;
+  provenance: LinkProvenance;
+  rentalCategory: RentalDocumentCategory | null;
+  entry: DocumentEntryRef;
+}
+
+export interface DocumentLinkCandidates {
+  tripEntries: DocumentEntryCandidate[];
+  otherEntries: DocumentEntryCandidate[];
+}
+
+export interface NewDocumentLink {
+  entry: DocumentEntryRef;
+  role?: LinkRole;
+  provenance?: LinkProvenance;
+  rentalCategory?: RentalDocumentCategory | null;
 }
 
 /**
@@ -275,6 +328,42 @@ export const documentsApi = {
 
   remove: async (id: string): Promise<void> => {
     await api.delete(`/documents/${id}`);
+  },
+
+  /** Every entry the document is linked to — the delete-everywhere dialog lists these. */
+  links: async (id: string): Promise<DocumentLinkView[]> => {
+    const { data } = await api.get<Envelope<DocumentLinkView[]>>(`/documents/${id}/links`);
+    return data.data;
+  },
+
+  linkCandidates: async (id: string): Promise<DocumentLinkCandidates> => {
+    const { data } = await api.get<Envelope<DocumentLinkCandidates>>(
+      `/documents/${id}/link-candidates`
+    );
+    return data.data;
+  },
+
+  /** The documents of the entry's own trip it is not linked to yet. */
+  tripCandidates: async (entry: DocumentEntryRef): Promise<TravelDocument[]> => {
+    const { data } = await api.get<Envelope<TravelDocument[]>>("/documents/trip-candidates", {
+      params: { entryType: entry.type, entryId: entry.id },
+    });
+    return data.data;
+  },
+
+  addLinks: async (id: string, links: NewDocumentLink[]): Promise<DocumentLinkView[]> => {
+    const { data } = await api.post<Envelope<DocumentLinkView[]>>(`/documents/${id}/links`, {
+      links,
+    });
+    return data.data;
+  },
+
+  /** Removes the link to ONE entry; the document and its other links stay. */
+  unlinkFromEntry: async (id: string, entry: DocumentEntryRef): Promise<RemovedDocumentLink> => {
+    const { data } = await api.delete<Envelope<RemovedDocumentLink>>(`/documents/${id}/links`, {
+      params: { entryType: entry.type, entryId: entry.id },
+    });
+    return data.data;
   },
 
   /**
