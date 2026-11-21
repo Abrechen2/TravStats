@@ -3,6 +3,7 @@ import logger from "../../utils/logger";
 import { startJob } from "../jobs/jobRegistry";
 import { ImmichError } from "../immich/types";
 import { PHOTO_SOURCE_KINDS, type PhotoSourceKind } from "../photoSource";
+import { photoCapFor } from "./cap";
 import { privacyCircleSet } from "../travtrack/privacyCircles";
 import {
   autoLinkEnabled,
@@ -23,6 +24,7 @@ import {
 import {
   candidatesForWindow,
   directSearch,
+  capMatches,
   matchAssets,
   refusalKey,
   type MatchSpec,
@@ -39,8 +41,8 @@ import {
  * marked `refused`, so the next pass does not bring the picture back.
  */
 
-/** Automatic links per entry at most — a two-week stay must not link a camera roll. */
-export const ENTRY_LINK_CAP = 24;
+/** Candidates the choose view lists at most — a two-week stay holds a camera roll. */
+export const ENTRY_CHOICE_LIMIT = 60;
 
 export interface EntryLinkDto {
   id: string;
@@ -69,9 +71,9 @@ export interface EntrySuggestions {
   untimed: boolean;
 }
 
-const fkOf = (kind: EntryKind, id: string) => ({ [ENTRY_FK[kind]]: id });
+export const fkOf = (kind: EntryKind, id: string) => ({ [ENTRY_FK[kind]]: id });
 
-const toKind = (p: string): PhotoSourceKind =>
+export const toKind = (p: string): PhotoSourceKind =>
   (PHOTO_SOURCE_KINDS as readonly string[]).includes(p) ? (p as PhotoSourceKind) : "immich";
 
 /** Does the entry exist and belong to the caller? */
@@ -100,7 +102,7 @@ export async function listEntryLinks(
   }));
 }
 
-interface Found {
+export interface Found {
   matched: SourcedAsset[];
   sources: Partial<Record<PhotoSourceKind, SourceState>>;
   windows: { start: Date; end: Date }[];
@@ -111,15 +113,14 @@ interface Found {
  * linked. Every leg of the plan is searched; a failing source is in `sources`,
  * never a silent empty result.
  */
-async function findMatches(
+export async function findMatches(
   userId: string,
   kind: EntryKind,
   id: string,
   plan: Exclude<EntryPlan, "untimed">,
   search: WindowSearch,
   /** `refused`: only refusals are excluded, so a linked photo that still fits shows up again. */
-  excluding: "known" | "refused" = "known",
-  cap = ENTRY_LINK_CAP
+  excluding: "known" | "refused" | "none" = "known"
 ): Promise<Found> {
   const rows = await prisma.entryPhotoLink.findMany({
     where: { userId, ...fkOf(kind, id) },
@@ -128,7 +129,7 @@ async function findMatches(
   // Linked or refused alike: neither is offered or linked again.
   const known = new Set(
     rows
-      .filter((r) => excluding === "known" || r.refused)
+      .filter((r) => excluding === "known" || (excluding === "refused" && r.refused))
       .map((r) => refusalKey(toKind(r.provider), r.assetId))
   );
   const zones = await privacyCircleSet(userId);
@@ -142,7 +143,6 @@ async function findMatches(
       locations: leg.locations,
       circles: zones(leg.window.start.getTime()),
       refused: known,
-      cap,
     };
     for (const m of matchAssets(candidates, spec)) {
       matched.set(refusalKey(m.provider, m.asset.id), m);
@@ -158,8 +158,8 @@ async function findMatches(
 
 /** Held for a minute so the thumbnail route can check an id against the list the client saw. */
 const SUGGESTION_TTL_MS = 60_000;
-const suggestionCache = new Map<string, { at: number; value: EntrySuggestions }>();
-const cacheKey = (userId: string, kind: EntryKind, id: string) => `${userId}:${kind}:${id}`;
+export const suggestionCache = new Map<string, { at: number; value: EntrySuggestions }>();
+export const cacheKey = (userId: string, kind: EntryKind, id: string) => `${userId}:${kind}:${id}`;
 
 export async function entrySuggestionsFor(
   userId: string,
@@ -174,7 +174,7 @@ export async function entrySuggestionsFor(
   const value: EntrySuggestions = {
     untimed: false,
     sources: found.sources,
-    suggestions: found.matched.slice(0, ENTRY_LINK_CAP).map(({ provider, asset }) => ({
+    suggestions: found.matched.slice(0, ENTRY_CHOICE_LIMIT).map(({ provider, asset }) => ({
       url: `/api/v1/entry-photos/${kind}/${id}/photo-suggestions/${provider}/${asset.id}/file`,
       provider,
       assetId: asset.id,
@@ -198,12 +198,14 @@ export function isCachedSuggestion(
   provider: PhotoSourceKind,
   assetId: string
 ): boolean {
-  const hit = suggestionCache.get(cacheKey(userId, kind, id));
-  if (!hit || Date.now() - hit.at > SUGGESTION_TTL_MS) return false;
-  return hit.value.suggestions.some((s) => s.provider === provider && s.assetId === assetId);
+  return [cacheKey(userId, kind, id), `${cacheKey(userId, kind, id)}:choices`].some((key) => {
+    const hit = suggestionCache.get(key);
+    if (!hit || Date.now() - hit.at > SUGGESTION_TTL_MS) return false;
+    return hit.value.suggestions.some((s) => s.provider === provider && s.assetId === assetId);
+  });
 }
 
-async function writeLinks(
+export async function writeLinks(
   userId: string,
   kind: EntryKind,
   id: string,
@@ -252,6 +254,7 @@ export async function linkPicked(
   const proven = picks.flatMap((p) => byKey.get(refusalKey(p.provider, p.assetId)) ?? []);
   const linked = await writeLinks(userId, kind, id, proven, "manual");
   suggestionCache.delete(cacheKey(userId, kind, id));
+  suggestionCache.delete(`${cacheKey(userId, kind, id)}:choices`);
   return { linked, skipped: picks.length - proven.length };
 }
 
@@ -267,6 +270,7 @@ export async function removeLink(
     data: { refused: true },
   });
   suggestionCache.delete(cacheKey(userId, kind, id));
+  suggestionCache.delete(`${cacheKey(userId, kind, id)}:choices`);
   return count > 0;
 }
 
@@ -282,6 +286,7 @@ export async function removeAutoLinks(
     data: { refused: true },
   });
   suggestionCache.delete(cacheKey(userId, kind, id));
+  suggestionCache.delete(`${cacheKey(userId, kind, id)}:choices`);
   return count;
 }
 
@@ -296,6 +301,7 @@ export async function clearRefusals(
     where: { userId, ...fkOf(kind, id), refused: true },
   });
   suggestionCache.delete(cacheKey(userId, kind, id));
+  suggestionCache.delete(`${cacheKey(userId, kind, id)}:choices`);
   return count;
 }
 
@@ -341,15 +347,7 @@ export async function autoLinkEntry(
   // What still fits, linked or not (only refusals excluded, no cap): an automatic link
   // that no longer fits — the entry's position moved, its dates stayed — goes, but only
   // when its own source answered, so a failing source never costs a good link.
-  const fits = await findMatches(
-    userId,
-    kind,
-    id,
-    plan,
-    search,
-    "refused",
-    Number.POSITIVE_INFINITY
-  );
+  const fits = await findMatches(userId, kind, id, plan, search, "refused");
   const stillFits = new Set(fits.matched.map((m) => refusalKey(m.provider, m.asset.id)));
   const autoLinks = await prisma.entryPhotoLink.findMany({
     where: { userId, ...fk, provenance: "auto", refused: false },
@@ -366,16 +364,17 @@ export async function autoLinkEntry(
   const linkedKeys = new Set(
     (
       await prisma.entryPhotoLink.findMany({
-        where: { userId, ...fk },
+        where: { userId, ...fk, refused: false },
         select: { provider: true, assetId: true },
       })
     ).map((l) => refusalKey(toKind(l.provider), l.assetId))
   );
-  const existingAuto = autoLinks.length - stale.length;
-  const room = Math.max(0, ENTRY_LINK_CAP - existingAuto);
-  const fresh = fits.matched
-    .filter((m) => !linkedKeys.has(refusalKey(m.provider, m.asset.id)))
-    .slice(0, room);
+  // The user's own picks count toward the cap, so a swapped choice leaves no room.
+  const room = Math.max(0, (await photoCapFor(userId)) - linkedKeys.size);
+  const fresh = capMatches(
+    fits.matched.filter((m) => !linkedKeys.has(refusalKey(m.provider, m.asset.id))),
+    room
+  );
   const linked = await writeLinks(userId, kind, id, fresh, "auto");
   return { linked, sources: fits.sources };
 }

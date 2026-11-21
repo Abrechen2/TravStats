@@ -21,6 +21,7 @@ import {
   removeAutoLinks,
   removeLink,
 } from "../services/photoLinking/entryPhotos";
+import { entryChoicesFor, saveEntryChoice } from "../services/photoLinking/entryChoices";
 import { createPhotoSource } from "../services/photoSource";
 import { getPhotoSourceConnection } from "../services/photoSource/connection";
 import { prisma } from "../db";
@@ -48,6 +49,17 @@ const picksSchema = z
   .object({
     provider: photoSourceKindSchema.default("immich"),
     assetIds: z.array(linkedAssetIdParamSchema).min(1).max(100),
+  })
+  .strict();
+
+const pickedSchema = z.object({
+  provider: photoSourceKindSchema,
+  assetId: linkedAssetIdParamSchema,
+});
+export const choiceSaveSchema = z
+  .object({
+    select: z.array(pickedSchema).max(100).default([]),
+    deselect: z.array(pickedSchema).max(100).default([]),
   })
   .strict();
 
@@ -79,6 +91,39 @@ router.get(
     try {
       const { kind, entryId } = parseEntry(req.params);
       const result = await entrySuggestionsFor(req.userId!, kind, entryId);
+      if (result === null) throw new AppError("Entry not found", 404);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/** "Fotos auswählen": every candidate, the linked ones ticked. */
+router.get(
+  "/:kind/:entryId/photo-choices",
+  statsLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { kind, entryId } = parseEntry(req.params);
+      const result = await entryChoicesFor(req.userId!, kind, entryId);
+      if (result === null) throw new AppError("Entry not found", 404);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.put(
+  "/:kind/:entryId/photo-choices",
+  statsLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { kind, entryId } = parseEntry(req.params);
+      const body = choiceSaveSchema.safeParse(req.body ?? {});
+      if (!body.success) throw new AppError(body.error.message, 400);
+      const result = await saveEntryChoice(req.userId!, kind, entryId, body.data);
       if (result === null) throw new AppError("Entry not found", 404);
       res.json({ success: true, data: result });
     } catch (error) {

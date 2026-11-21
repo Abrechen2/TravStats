@@ -476,5 +476,29 @@
     "linkFailed": "Die Fotos konnten nicht verknüpft werden.",
     "undo": "Entfernte wieder anbieten",
     "undoFailed": "Die entfernten Fotos konnten nicht zurückgeholt werden."
+  },
+  "photoChoose": {
+    "open": "Fotos auswählen",
+    "title": "Fotos auswählen",
+    "loading": "Lade Fotos …",
+    "loadFailed": "Die Fotos konnten nicht geladen werden.",
+    "hint": "Automatisch werden höchstens {{cap}} Fotos verknüpft. Hier kannst du selbst wählen: Ein Haken ist deine Wahl und bleibt bei jedem neuen Durchlauf bestehen. Tauschst du ein automatisches Foto gegen ein anderes, wird nichts als „abgelehnt“ gemerkt; nimmst du einen Haken ohne Ersatz weg, kommt das Foto nicht wieder.",
+    "none": "Keine passenden Fotos gefunden.",
+    "tile": "Foto vom {{time}}, {{state}}",
+    "chosen": "gewählt",
+    "notChosen": "nicht gewählt",
+    "auto": "automatisch",
+    "own": "deine Wahl",
+    "removedBefore": "früher entfernt",
+    "save": "Auswahl speichern",
+    "close": "Schließen",
+    "saved": "Auswahl gespeichert: {{picked}} gewählt, {{removed}} entfernt.",
+    "skipped_one": "{{count}} Foto passt nicht mehr zu diesem Eintrag und wurde übersprungen.",
+    "skipped_other": "{{count}} Fotos passen nicht mehr zu diesem Eintrag und wurden übersprungen.",
+    "saveFailed": "Die Auswahl konnte nicht gespeichert werden.",
+    "openIn": {
+      "immich": "In Immich öffnen",
+      "photoprism": "In PhotoPrism öffnen"
+    }
   }
 }

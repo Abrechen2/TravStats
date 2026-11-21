@@ -1015,6 +1015,10 @@ model UserSettings {
   /// (default on: the owner asked for it, 2026-11-21). Links only, never copies.
   autoLinkVisitPhotos Boolean @default(true) @map("auto_link_visit_photos")
 
+  /// How many photos the automatic linker keeps per visit or entry, 5–10 (owner,
+  /// 2026-11-21). The user's own picks count toward it.
+  photoAutoLinkCap Int @default(6) @map("photo_auto_link_cap")
+
   /// The outcome of the last automatic linking pass, per source, so a failing
   /// source is visible in the settings instead of reading as "no photos":
   /// `{ at, linked, sources: { immich: "ok" | <failure kind> | "notConfigured", … } }`.

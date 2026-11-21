@@ -23,6 +23,7 @@ import {
   clearPhotoRefusals,
   refusePhotoSuggestions,
 } from "../../services/places/visitPhotoRefusals";
+import { visitChoicesFor, saveVisitChoice } from "../../services/places/visitPhotoChoices";
 import logger from "../../utils/logger";
 
 /**
@@ -57,6 +58,52 @@ router.get(
       const params = visitParamsSchema.safeParse(req.params);
       if (!params.success) throw new AppError("Invalid visit id", 400);
       const result = await visitPhotoSuggestionsFor(req.userId!, params.data.visitId);
+      if (result === null) throw new AppError("Visit not found", 404);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/** "Fotos auswählen": every candidate library photo of the visit, the linked ones ticked. */
+router.get(
+  "/visits/:visitId/photo-choices",
+  statsLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const params = visitParamsSchema.safeParse(req.params);
+      if (!params.success) throw new AppError("Invalid visit id", 400);
+      const result = await visitChoicesFor(req.userId!, params.data.visitId);
+      if (result === null) throw new AppError("Visit not found", 404);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+const choicePickSchema = z.object({
+  provider: photoSourceKindSchema,
+  assetId: linkedAssetIdParamSchema,
+});
+export const visitChoiceSaveSchema = z
+  .object({
+    select: z.array(choicePickSchema).max(100).default([]),
+    deselect: z.array(choicePickSchema).max(100).default([]),
+  })
+  .strict();
+
+router.put(
+  "/visits/:visitId/photo-choices",
+  statsLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const params = visitParamsSchema.safeParse(req.params);
+      if (!params.success) throw new AppError("Invalid visit id", 400);
+      const body = visitChoiceSaveSchema.safeParse(req.body ?? {});
+      if (!body.success) throw new AppError(body.error.message, 400);
+      const result = await saveVisitChoice(req.userId!, params.data.visitId, body.data);
       if (result === null) throw new AppError("Visit not found", 404);
       res.json({ success: true, data: result });
     } catch (err) {

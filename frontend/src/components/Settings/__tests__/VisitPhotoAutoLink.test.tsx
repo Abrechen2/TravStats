@@ -10,6 +10,12 @@ vi.mock("../../../lib/api/places", () => ({
   getAutoLinkStatus: () => getAutoLinkStatus(),
   setAutoLinkEnabled: (...a: unknown[]) => setAutoLinkEnabled(...a),
 }));
+const setPhotoCap = vi.fn();
+const trimPhotoLinks = vi.fn();
+vi.mock("../../../lib/api/photoChoices", () => ({
+  setPhotoCap: (...a: unknown[]) => setPhotoCap(...a),
+  trimPhotoLinks: (...a: unknown[]) => trimPhotoLinks(...a),
+}));
 vi.mock("../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ isEnabled: () => true }),
 }));
@@ -65,5 +71,30 @@ describe("VisitPhotoAutoLink", () => {
     expect(alerts).toContain("visitPhotosAuto.failedVisits");
     expect(alerts).toContain("errors.unreachable");
     expect(alerts).toContain("visitPhotosAuto.truncatedVisits");
+  });
+
+  it("offers a limit of 5 to 10, saves a change and reports how many links the trim removed", async () => {
+    getAutoLinkStatus.mockResolvedValue({
+      enabled: true,
+      lastRun: null,
+      cap: 6,
+      capMin: 5,
+      capMax: 10,
+    });
+    setPhotoCap.mockResolvedValue({ trimmed: 3, checked: 9, removed: 14 });
+    render(<VisitPhotoAutoLink />);
+    const select = await screen.findByRole("combobox");
+    await waitFor(() => expect(select).toBeEnabled());
+    expect(Array.from((select as HTMLSelectElement).options).map((o) => o.value)).toEqual([
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+    ]);
+    await userEvent.selectOptions(select, "8");
+    expect(setPhotoCap).toHaveBeenCalledWith(8, expect.any(Function));
+    expect(await screen.findByText("visitPhotosAuto.trimDone")).toBeInTheDocument();
   });
 });

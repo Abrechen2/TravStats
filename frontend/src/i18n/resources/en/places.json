@@ -281,7 +281,8 @@
       "refuseFailed": "The photos could not be hidden.",
       "undo": "Offer refused photos again",
       "undone": "Refused photos are suggested again.",
-      "undoFailed": "The refused photos could not be restored."
+      "undoFailed": "The refused photos could not be restored.",
+      "choose": "Choose photos"
     },
     "auto": {
       "label": "linked automatically ({{source}})",

@@ -16,6 +16,7 @@ import {
 } from "../../lib/api/entryPhotos";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
+import PhotoChoosePanel from "./PhotoChoosePanel";
 import DetailSection from "../ui/DetailSection";
 
 interface Props {
@@ -45,6 +46,7 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
   const [found, setFound] = useState<EntryPhotoSuggestions | null>(null);
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [choosing, setChoosing] = useState(false);
 
   const reload = useCallback(async (): Promise<void> => {
     try {
@@ -196,6 +198,22 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
           style={quiet}
         >
           {t("common:entryPhotos.removeAll")}
+        </button>
+      )}
+      {choosing ? (
+        <PhotoChoosePanel
+          target={{ type: "entry", kind, entryId }}
+          onSaved={() => void reload()}
+          onClose={() => setChoosing(false)}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setChoosing(true)}
+          className="self-start text-xs underline-offset-2 hover:underline"
+          style={quiet}
+        >
+          {t("common:photoChoose.open")}
         </button>
       )}
       {found === null ? (

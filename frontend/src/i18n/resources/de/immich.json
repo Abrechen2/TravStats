@@ -153,6 +153,13 @@
     "truncatedVisits_one": "Bei {{count}} Besuch wurden nicht alle Fotos des Tages gelesen.",
     "truncatedVisits_other": "Bei {{count}} Besuchen wurden nicht alle Fotos des Tages gelesen.",
     "lost": "Der Stand ist unbekannt: der Server hat den Auftrag vergessen (Neustart?). Schon verknüpfte Fotos bleiben es.",
-    "jobFailed": "Die automatische Verknüpfung ist fehlgeschlagen."
+    "jobFailed": "Die automatische Verknüpfung ist fehlgeschlagen.",
+    "cap": "Fotos pro Besuch oder Eintrag (5–10)",
+    "capHint": "So viele Fotos verknüpft der Server höchstens von selbst – verteilt über den Zeitraum, ohne Fast-Doppelte. Deine eigene Auswahl zählt mit. Ein niedrigerer Wert kürzt schon verknüpfte automatische Fotos; eigene Wahl und entfernte Fotos bleiben unberührt.",
+    "capSaveFailed": "Der Wert konnte nicht gespeichert werden.",
+    "trim": "Bestehende automatische Fotos auf den Wert kürzen",
+    "trimRunning": "Kürze … {{done}} von {{total}}",
+    "trimDone_one": "{{count}} automatische Verknüpfung entfernt.",
+    "trimDone_other": "{{count}} automatische Verknüpfungen entfernt."
   }
 }

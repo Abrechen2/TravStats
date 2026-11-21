@@ -5,6 +5,7 @@ import { createPhotoSource, type PhotoSourceKind, PHOTO_SOURCE_KINDS } from "../
 import { getPhotoSourceConnection } from "../photoSource/connection";
 import type { PhotoSourceAsset } from "../photoSource/types";
 import type { ZoneCircle } from "../travtrack/classify";
+import { pickSpread } from "./spread";
 
 /**
  * The one matcher every automatic photo link goes through (owner, 2026-11-21:
@@ -17,8 +18,11 @@ import type { ZoneCircle } from "../travtrack/classify";
  *   (abstention: an undated photo is not "from today");
  * - a photo inside a TravTrack privacy zone never matches, however it fits;
  * - a refused photo (per entry and source) never comes back;
- * - the result is the earliest `cap` matches, so one busy day cannot link
- *   hundreds of pictures.
+ * - `matchAssets` returns EVERY match, time-ordered, each with its distance to
+ *   the place; the few that are linked on their own are chosen by
+ *   `capMatches` (`spread.ts`: spread over the window, no near-duplicates), so
+ *   one busy day cannot link hundreds of pictures while the user can still
+ *   choose among all of them.
  *
  * Entries with different shapes (a flight, a stay, a cruise stop) differ only
  * in the {@link MatchSpec} they build; `linkTargets.ts` is the registry that
@@ -43,12 +47,13 @@ export interface MatchSpec {
   circles: readonly ZoneCircle[];
   /** `provider:assetId` keys the user refused for this entry. */
   refused: ReadonlySet<string>;
-  cap: number;
 }
 
 export interface SourcedAsset {
   provider: PhotoSourceKind;
   asset: PhotoSourceAsset;
+  /** Km to the nearest of the entry's locations; set by `matchAssets`. */
+  distanceKm?: number;
 }
 
 export const refusalKey = (provider: PhotoSourceKind, assetId: string): string =>
@@ -69,10 +74,19 @@ function distanceToSegmentKm(p: LatLon, a: LatLon, b: LatLon): number {
   return haversineKm(p, nearest);
 }
 
+function distanceToLocationKm(p: LatLon, loc: LinkLocation): number {
+  return loc.kind === "point" ? haversineKm(p, loc) : distanceToSegmentKm(p, loc.from, loc.to);
+}
+
 function withinLocation(p: LatLon, loc: LinkLocation): boolean {
-  return loc.kind === "point"
-    ? haversineKm(p, loc) <= loc.radiusKm
-    : distanceToSegmentKm(p, loc.from, loc.to) <= loc.radiusKm;
+  return distanceToLocationKm(p, loc) <= loc.radiusKm;
+}
+
+/** Km from the photo to the nearest of `locations`; null for a photo with no position. */
+export function distanceKmTo(asset: PhotoSourceAsset, locations: readonly LinkLocation[]) {
+  if (asset.lat === null || asset.lon === null || locations.length === 0) return null;
+  const p = { lat: asset.lat, lon: asset.lon };
+  return Math.min(...locations.map((loc) => distanceToLocationKm(p, loc)));
 }
 
 /** Why a photo is (not) a match; exported for the abstention tests. */
@@ -90,12 +104,25 @@ export function matches(asset: PhotoSourceAsset, spec: MatchSpec): boolean {
 export function matchAssets(candidates: readonly SourcedAsset[], spec: MatchSpec): SourcedAsset[] {
   return candidates
     .filter((c) => !spec.refused.has(refusalKey(c.provider, c.asset.id)) && matches(c.asset, spec))
+    .map((c) => ({ ...c, distanceKm: distanceKmTo(c.asset, spec.locations) ?? undefined }))
     .sort(
       (x, y) =>
         Date.parse(x.asset.fileCreatedAt!) - Date.parse(y.asset.fileCreatedAt!) ||
         x.asset.id.localeCompare(y.asset.id)
-    )
-    .slice(0, spec.cap);
+    );
+}
+
+/** The few matches that are linked automatically: at most `cap`, spread over the window. */
+export function capMatches(matches: readonly SourcedAsset[], cap: number): SourcedAsset[] {
+  const byKey = new Map(matches.map((m) => [refusalKey(m.provider, m.asset.id), m]));
+  return pickSpread(
+    matches.map((m) => ({
+      key: refusalKey(m.provider, m.asset.id),
+      at: Date.parse(m.asset.fileCreatedAt!),
+      distanceKm: m.distanceKm ?? null,
+    })),
+    cap
+  ).map((item) => byKey.get(item.key)!);
 }
 
 /**

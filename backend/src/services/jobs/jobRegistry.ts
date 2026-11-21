@@ -45,6 +45,7 @@ export type JobKind =
   | "travtrack.dawarichImport"
   | "placeVisitPhotos.immichLink"
   | "placeVisitPhotos.autoLink"
+  | "placeVisitPhotos.trim"
   | "dawarich.countryDaySweep"
   | "documentLinks.pass";
 

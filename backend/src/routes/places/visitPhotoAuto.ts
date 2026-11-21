@@ -7,6 +7,13 @@ import { AppError } from "../../middleware/errorHandler";
 import { immichImportLimiter, statsLimiter } from "../../middleware/rateLimit";
 import { deletePlacePhotoFile } from "../../middleware/upload";
 import { startJob } from "../../services/jobs/jobRegistry";
+import {
+  clampPhotoCap,
+  PHOTO_CAP_MAX,
+  PHOTO_CAP_MIN,
+  photoCapFor,
+} from "../../services/photoLinking/cap";
+import { trimAutoLinks } from "../../services/photoLinking/trimAuto";
 import { autoLinkEverything } from "../../services/photoLinking/entryPhotos";
 import { autoLinkEnabled } from "../../services/places/visitPhotoAutoLink";
 import { toPhotoSourceKind } from "../../services/photoSource/connection";
@@ -23,12 +30,19 @@ router.use(authenticate);
 router.use(requireWriteScope);
 
 const switchSchema = z.object({ enabled: z.boolean() }).strict();
+export const capSchema = z
+  .object({ cap: z.number().int().min(PHOTO_CAP_MIN).max(PHOTO_CAP_MAX) })
+  .strict();
 const visitParams = z.object({ visitId: z.string().uuid() });
 
 function startRun(userId: string) {
   return startJob("placeVisitPhotos.autoLink", userId, async (report) =>
     autoLinkEverything(userId, report)
   );
+}
+
+function startTrim(userId: string) {
+  return startJob("placeVisitPhotos.trim", userId, async (report) => trimAutoLinks(userId, report));
 }
 
 router.get(
@@ -38,12 +52,19 @@ router.get(
     try {
       const row = await prisma.userSettings.findUnique({
         where: { userId: req.userId! },
-        select: { autoLinkVisitPhotos: true, visitPhotoAutoLinkLastRun: true },
+        select: {
+          autoLinkVisitPhotos: true,
+          visitPhotoAutoLinkLastRun: true,
+          photoAutoLinkCap: true,
+        },
       });
       res.json({
         success: true,
         data: {
           enabled: row?.autoLinkVisitPhotos ?? true,
+          cap: await photoCapFor(req.userId!),
+          capMin: PHOTO_CAP_MIN,
+          capMax: PHOTO_CAP_MAX,
           lastRun: row?.visitPhotoAutoLinkLastRun ?? null,
         },
       });
@@ -69,6 +90,41 @@ router.put(
       if (saved.count === 0) throw new AppError("Settings not found", 404);
       const job = body.data.enabled ? startRun(userId) : null;
       res.json({ success: true, data: { enabled: body.data.enabled, jobId: job?.id ?? null } });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/** The per-visit/entry limit, 5–10. A lower one trims what is linked already (a job). */
+router.put(
+  "/visits/photos/auto-link/cap",
+  statsLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const body = capSchema.safeParse(req.body ?? {});
+      if (!body.success) throw new AppError(body.error.message, 400);
+      const userId = req.userId!;
+      const cap = clampPhotoCap(body.data.cap);
+      const saved = await prisma.userSettings.updateMany({
+        where: { userId },
+        data: { photoAutoLinkCap: cap },
+      });
+      if (saved.count === 0) throw new AppError("Settings not found", 404);
+      res.json({ success: true, data: { cap, jobId: startTrim(userId).id } });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/** Trim every visit's and entry's automatic links to the cap; idempotent. */
+router.post(
+  "/visits/photos/auto-link/trim",
+  immichImportLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.status(202).json({ success: true, data: { jobId: startTrim(req.userId!).id } });
     } catch (error) {
       next(error);
     }

@@ -12,6 +12,7 @@ import {
   type PhotoProvider,
   type VisitPhotoSuggestions as Suggestions,
 } from "../../lib/api/places";
+import { PhotoChoosePanel } from "../common/PhotoChoosePanel";
 import { useToastStore } from "../../store/toastStore";
 import type { PlaceVisitPhoto } from "../../types/placeList";
 
@@ -42,6 +43,7 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
   const [result, setResult] = useState<Suggestions | null>(null);
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [choosing, setChoosing] = useState(false);
 
   const load = async (): Promise<void> => {
     setBusy(true);
@@ -142,17 +144,40 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
     }
   };
 
+  if (choosing) {
+    return (
+      <PhotoChoosePanel
+        target={{ type: "visit", visitId }}
+        onSaved={() => void listVisitPhotos(visitId).then(onLinked)}
+        onClose={() => setChoosing(false)}
+      />
+    );
+  }
+  const chooseButton = (
+    <button
+      type="button"
+      onClick={() => setChoosing(true)}
+      className="mt-1 self-start text-xs underline-offset-2 hover:underline"
+      style={{ color: "var(--text-muted)", background: "none", border: "none", padding: 0 }}
+    >
+      {t("places:photos.suggest.choose")}
+    </button>
+  );
+
   if (result === null) {
     return (
-      <button
-        type="button"
-        onClick={() => void load()}
-        disabled={busy}
-        className="mt-1 self-start text-xs underline-offset-2 hover:underline disabled:opacity-50"
-        style={{ color: "var(--text-muted)", background: "none", border: "none", padding: 0 }}
-      >
-        {busy ? t("places:photos.suggest.loading") : t("places:photos.suggest.open")}
-      </button>
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={() => void load()}
+          disabled={busy}
+          className="mt-1 self-start text-xs underline-offset-2 hover:underline disabled:opacity-50"
+          style={{ color: "var(--text-muted)", background: "none", border: "none", padding: 0 }}
+        >
+          {busy ? t("places:photos.suggest.loading") : t("places:photos.suggest.open")}
+        </button>
+        {chooseButton}
+      </div>
     );
   }
 
@@ -217,6 +242,7 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
         </button>
       )}
       {libraryDown && <p className="t-caption">{t("places:photos.suggest.libraryDown")}</p>}
+      {chooseButton}
     </div>
   );
 }
