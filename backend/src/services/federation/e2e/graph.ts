@@ -205,6 +205,9 @@ export const NON_TRAVEL_RELATIONS = [
   // Setup & readiness snoozes and note read marks: per-server bookkeeping, never travel data.
   "readinessItemStates",
   "readinessNoteAcks",
+  // The ledger of account archives restored here (idempotency marker per archive id): per-server
+  // import bookkeeping, never shared travel data.
+  "accountArchiveImports",
   "settings",
   "analyticsEvents",
   "createdInvitations",

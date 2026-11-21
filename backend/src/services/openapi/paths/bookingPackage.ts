@@ -9,6 +9,11 @@ import { errorContent } from "./shared";
 import { bookingSplit } from "./flightBooking";
 import { BOOKING_ENTRY_KINDS, packageSplitBodySchema } from "../../../schemas/flightBooking";
 
+import { localDateValueSchema, timeValueSchema } from "../../../shared/time/wire";
+
+/** A flight, ride or rental starts at an instant; a stay or cruise on a calendar day. */
+const timeOrDay = z.union([timeValueSchema, localDateValueSchema]).nullable();
+
 const params = z.object({ id: z.string().uuid() });
 const notFound = { description: "Not found (`BOOKING_NOT_FOUND`)", content: errorContent };
 
@@ -32,7 +37,10 @@ const bookingPackage = registry.register(
           kind: z.enum(BOOKING_ENTRY_KINDS),
           id: z.string(),
           label: z.string(),
-          date: z.string().datetime().nullable(),
+          date: z.string().datetime().nullable().describe("Legacy mirror of `times.start`"),
+          times: z
+            .object({ start: timeOrDay })
+            .describe("When the entry starts, in the time model's shape"),
           status: z.string(),
           tripId: z.string().uuid().nullable(),
           share: z
