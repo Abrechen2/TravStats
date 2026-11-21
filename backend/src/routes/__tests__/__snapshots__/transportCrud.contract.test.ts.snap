@@ -326,6 +326,7 @@ exports[`Transport CRUD skeleton (forgejo#382) rental keeps the list page respon
     "actualReturnTime": "null",
     "agreementNumber": "null",
     "arrivalFlightNumber": "null",
+    "bookingId": "null",
     "broker": "null",
     "brokerReference": "null",
     "co2": "null",

@@ -65,8 +65,9 @@ function packageAnswer(row: Awaited<ReturnType<typeof ownBooking>>, items: Booki
   return {
     booking: { ...booking, tripName: trip?.name ?? null },
     isPackage: isPackage(items),
-    items: items.map((i) => ({
+    items: items.map(({ start, ...i }) => ({
       ...i,
+      times: { start },
       // The item's share of a valid split; null = not split.
       share: shares.get(itemKey(i.kind, i.id)) ?? null,
     })),

@@ -126,21 +126,30 @@ export async function syncCompanionLinks(
 ): Promise<void> {
   const delegate = delegateOf(db, type);
   const column = TRAVELLER_SPECS[type].entryColumn;
-  await delegate.deleteMany({
-    where: { [column]: entryId, companionId: { notIn: [...companionIds] } },
-  });
-  const have = new Set(
-    (await delegate.findMany({ where: { [column]: entryId }, select: { companionId: true } })).map(
-      (r) => r.companionId as string
-    )
+  // One read, then writes only for what differs: a bulk edit re-syncs hundreds of
+  // entries, and a per-person update/create here cost seven queries per flight.
+  const have = new Map(
+    (
+      await delegate.findMany({
+        where: { [column]: entryId },
+        select: { companionId: true, position: true },
+      })
+    ).map((r) => [r.companionId as string, r.position as number])
   );
+  const wanted = new Set(companionIds);
+  const stale = [...have.keys()].filter((id) => !wanted.has(id));
+  if (stale.length > 0) {
+    await delegate.deleteMany({ where: { [column]: entryId, companionId: { in: stale } } });
+  }
+  const created: Array<Record<string, unknown>> = [];
   for (const [position, companionId] of companionIds.entries()) {
-    if (have.has(companionId)) {
+    if (!have.has(companionId)) {
+      created.push({ [column]: entryId, companionId, position });
+    } else if (have.get(companionId) !== position) {
       await delegate.updateMany({ where: { [column]: entryId, companionId }, data: { position } });
-    } else {
-      await delegate.create({ data: { [column]: entryId, companionId, position } });
     }
   }
+  if (created.length > 0) await delegate.createMany({ data: created, skipDuplicates: true });
 }
 
 export interface TravellerRow {

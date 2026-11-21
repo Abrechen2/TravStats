@@ -5,6 +5,12 @@
 import { prisma } from "../../db";
 import type { BookingEntryKind } from "../../schemas/flightBooking";
 import { itemKey } from "../flights/bookingPriceSplit";
+import type { LocalDateValue, TimeValue } from "../../shared/time/wire";
+import { flightTimes } from "../flights/timesDto";
+import { stayTimes } from "../lodging/timesDto";
+import { cruiseTimes } from "../cruise/timesDto";
+import { railTimes } from "../rail/timesDto";
+import { rentalTimes } from "../rental/timesDto";
 
 export interface BookingItem {
   kind: BookingEntryKind;
@@ -13,6 +19,11 @@ export interface BookingItem {
   label: string;
   /** When it starts, as stored; null where the entry has no date. */
   date: Date | null;
+  /**
+   * The same start in the time model's shape (ADR 0002): an instant at its place's
+   * zone, or a calendar day for a stay or cruise. `date` stays as the legacy mirror.
+   */
+  start: TimeValue | LocalDateValue | null;
   status: string;
   tripId: string | null;
 }
@@ -31,6 +42,9 @@ export async function loadBookingItems(userId: string, bookingId: string): Promi
         depIata: true,
         arrIata: true,
         departureTime: true,
+        depTimeSemantics: true,
+        depTimezone: true,
+        depPrecision: true,
         status: true,
         tripId: true,
       },
@@ -40,6 +54,11 @@ export async function loadBookingItems(userId: string, bookingId: string): Promi
       select: {
         id: true,
         checkIn: true,
+        checkOut: true,
+        checkInDate: true,
+        checkOutDate: true,
+        stayZone: true,
+        datePrecision: true,
         status: true,
         tripId: true,
         lodging: { select: { name: true } },
@@ -52,6 +71,8 @@ export async function loadBookingItems(userId: string, bookingId: string): Promi
         routeName: true,
         shipNameOverride: true,
         startDate: true,
+        startDay: true,
+        startZone: true,
         status: true,
         tripId: true,
         ship: { select: { name: true } },
@@ -67,6 +88,8 @@ export async function loadBookingItems(userId: string, bookingId: string): Promi
         provider: true,
         vehicleClass: true,
         pickupTime: true,
+        pickupTimezone: true,
+        pickupPrecision: true,
         status: true,
         tripId: true,
       },
@@ -78,6 +101,21 @@ export async function loadBookingItems(userId: string, bookingId: string): Promi
       id: f.id,
       label: [f.flightNumber, route(f.depIata, f.arrIata)].filter(Boolean).join(" "),
       date: f.departureTime,
+      start: flightTimes(
+        {
+          ...NO_DEADLINES,
+          ...f,
+          arrivalTime: null,
+          arrTimeSemantics: f.depTimeSemantics,
+          arrTimezone: null,
+          arrPrecision: null,
+          actualDeparture: null,
+          actualArrival: null,
+          runwayDepartureTime: null,
+          runwayArrivalTime: null,
+        },
+        { dep: null, arr: null }
+      ).departure,
       status: f.status,
       tripId: f.tripId,
     })),
@@ -86,6 +124,7 @@ export async function loadBookingItems(userId: string, bookingId: string): Promi
       id: s.id,
       label: s.lodging.name,
       date: s.checkIn,
+      start: stayTimes({ ...NO_DEADLINES, ...s, checkInAt: null, checkOutAt: null }).checkIn,
       status: s.status,
       tripId: s.tripId,
     })),
@@ -94,6 +133,7 @@ export async function loadBookingItems(userId: string, bookingId: string): Promi
       id: c.id,
       label: c.routeName ?? c.shipNameOverride ?? c.ship?.name ?? "—",
       date: c.startDate,
+      start: cruiseTimes({ ...c, endDate: null, endDay: null, endZone: null }).start,
       status: c.status,
       tripId: c.tripId,
     })),
@@ -105,6 +145,17 @@ export async function loadBookingItems(userId: string, bookingId: string): Promi
       id: r.id,
       label: [r.provider, r.vehicleClass].filter(Boolean).join(" · "),
       date: r.pickupTime,
+      start: rentalTimes({
+        ...NO_DEADLINES,
+        ...r,
+        returnTime: r.pickupTime,
+        returnTimezone: r.pickupTimezone,
+        returnPrecision: r.pickupPrecision,
+        actualPickupTime: null,
+        actualReturnTime: null,
+        actualPickupPrecision: null,
+        actualReturnPrecision: null,
+      }).pickup,
       status: r.status,
       tripId: r.tripId,
     })),
@@ -122,8 +173,20 @@ const RIDE = {
   depStationName: true,
   arrStationName: true,
   departureTime: true,
+  depTimezone: true,
+  depPrecision: true,
   status: true,
   tripId: true,
+} as const;
+
+/** Columns the start reading never looks at, nulled so the shared builders can be reused. */
+const NO_DEADLINES = {
+  freeCancellationUntil: null,
+  freeCancellationOn: null,
+  freeCancellationZone: null,
+  paymentDueOn: null,
+  onlineCheckInOpensAt: null,
+  onlineCheckInZone: null,
 } as const;
 
 function rides(
@@ -133,6 +196,8 @@ function rides(
     depStationName: string;
     arrStationName: string;
     departureTime: Date;
+    depTimezone: string | null;
+    depPrecision: string | null;
     status: string;
     tripId: string | null;
   }[]
@@ -142,6 +207,14 @@ function rides(
     id: r.id,
     label: route(r.depStationName, r.arrStationName),
     date: r.departureTime,
+    start: railTimes({
+      ...r,
+      arrivalTime: null,
+      actualDepartureTime: null,
+      actualArrivalTime: null,
+      arrTimezone: null,
+      arrPrecision: null,
+    }).departure,
     status: r.status,
     tripId: r.tripId,
   }));
