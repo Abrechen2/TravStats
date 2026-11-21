@@ -206,6 +206,42 @@ describe("createCruiseArcsLayer", () => {
     expect(data[0].path).toEqual(coordinates);
   });
 
+  it("draws the server's leg even when the client orders the stops differently (forgejo#435)", () => {
+    // Stops sharing a day number come back in no fixed order, so the list the
+    // dashboard holds can read Chongqing, Zhongxian, Fengdu while the server
+    // routed Chongqing, Fengdu, Zhongxian. Matching by pair dropped every line
+    // and drew arrowed chords; the feature list is drawn as sent now.
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 29.56, lon: 106.55 }),
+      makeStop(2, 2, { id: 3, lat: 30.29, lon: 108.04 }),
+      makeStop(3, 2, { id: 2, lat: 29.87, lon: 107.73 }),
+    ]);
+    const river: [number, number][] = [
+      [106.55, 29.56],
+      [107.2, 29.9],
+      [107.73, 29.87],
+    ];
+    const geometry: CruiseRouteFeatureCollection = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: { type: "LineString", coordinates: river },
+          properties: {
+            fromPortId: 1,
+            toPortId: 2,
+            routed: false,
+            protectedPrefixCount: 3,
+            protectedSuffixCount: 0,
+            method: "manual_polyline",
+          },
+        },
+      ],
+    };
+    const arcs = buildCruiseArcs([cruise], new Map([[cruise.id, geometry]]), { zoom: 4 });
+    expect(arcs.map((a) => a.path)).toEqual([river]);
+  });
+
   it("draws a manual line identically on the dashboard (low zoom) and the cruise page (forgejo#435)", () => {
     const cruise = makeCruise([
       makeStop(1, 1, { id: 1, lat: 29.5, lon: 106.5 }),
@@ -717,10 +753,9 @@ describe("a night in port is no leg (Nile cruise, prod 2026-10-16)", () => {
       ],
     };
     const arcs = buildCruiseArcs([nile], new Map([[nile.id, geometry]]));
-    expect(arcs.map((a) => [a.fromPortId, a.toPortId])).toEqual([
-      [10, 10],
-      [10, 11],
-    ]);
+    // The server's features ARE the legs once they are in: no chord is added
+    // for a pair the server did not send (forgejo#435).
+    expect(arcs.map((a) => [a.fromPortId, a.toPortId])).toEqual([[10, 10]]);
   });
 });
 

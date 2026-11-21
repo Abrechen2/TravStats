@@ -128,34 +128,14 @@ export function buildCruiseArcs(
   const rendered = new Map<string, [number, number][]>();
   for (const cruise of cruises) {
     if (cruise.status === "cancelled") continue;
-    // Effective sequence includes departure/arrival ports so minimal
-    // A-to-B cruises (no detailed stop list) still draw a route.
-    const ports = effectivePortSequence(cruise);
-
     const geometry = geometryByCruise.get(cruise.id);
-    const waypointsByPair = buildWaypointIndex(geometry);
     // The user's mode + colours are the ONLY input — same resolver the globe
     // and the dashboard legend call, so the three can never disagree.
     const color = resolveCruiseArcColor(cruise, colorConfig);
     const planned = cruise.status === "scheduled";
 
-    for (let i = 0; i < ports.length - 1; i++) {
-      const a = ports[i];
-      const b = ports[i + 1];
-      // A night in port (Luxor followed by Luxor) is no leg: the server sends
-      // no feature for it, and the chord fallback below would otherwise
-      // mount a zero-length path — a dot under the port marker, and an arrow
-      // with no heading. Only a line the user drew or recorded for it counts.
-      const ownLine = waypointsByPair.get(pairKey(a.id, b.id));
-      if (!ownLine && a.id === b.id) continue;
-      const routeGeometry = ownLine ?? {
-        coordinates: [
-          [a.lon, a.lat],
-          [b.lon, b.lat],
-        ] as [number, number][],
-        protectedPrefixCount: 0,
-        protectedSuffixCount: 0,
-      };
+    for (const leg of cruiseLegs(cruise, geometry)) {
+      const { fromPortId, toPortId, routeGeometry } = leg;
       const shapeKey = JSON.stringify(routeGeometry);
       let path = rendered.get(shapeKey);
       if (!path) {
@@ -169,8 +149,8 @@ export function buildCruiseArcs(
         status: cruise.status,
         color,
         planned,
-        fromPortId: a.id,
-        toPortId: b.id,
+        fromPortId,
+        toPortId,
       });
     }
   }
@@ -566,20 +546,60 @@ function pairKey(fromPortId: number, toPortId: number): string {
   return `${fromPortId}→${toPortId}`;
 }
 
-function buildWaypointIndex(
+interface CruiseLeg {
+  fromPortId: number;
+  toPortId: number;
+  routeGeometry: LegGeometry;
+}
+
+/**
+ * The legs of one cruise, as drawn. Once the server's geometry is in, it IS the
+ * leg list — one feature per leg, drawn as sent (manual and recorded lines are
+ * protected from smoothing there). It used to be matched back onto the client's
+ * own port sequence by `from→to` pair, and a leg whose pair the client ordered
+ * differently from the server (stops sharing a day number come back in no fixed
+ * order) lost its line and became a chord with an arrow — the Yangtze cruise on
+ * the dashboard while its detail page showed the river (forgejo#435).
+ * Without geometry (still loading, failed) each leg is the chord between ports;
+ * a night in port (same port twice) is no leg.
+ */
+function cruiseLegs(
+  cruise: Cruise,
   geometry: CruiseRouteFeatureCollection | undefined
-): Map<string, LegGeometry> {
-  const index = new Map<string, LegGeometry>();
-  if (!geometry) return index;
-  for (const feature of geometry.features) {
-    const { fromPortId, toPortId } = feature.properties;
-    index.set(pairKey(fromPortId, toPortId), {
-      coordinates: feature.geometry.coordinates,
-      protectedPrefixCount: feature.properties.protectedPrefixCount ?? 0,
-      protectedSuffixCount: feature.properties.protectedSuffixCount ?? 0,
+): CruiseLeg[] {
+  if (geometry) {
+    return geometry.features
+      .filter((f) => f.geometry.coordinates.length >= 2)
+      .map((f) => ({
+        fromPortId: f.properties.fromPortId,
+        toPortId: f.properties.toPortId,
+        routeGeometry: {
+          coordinates: f.geometry.coordinates,
+          protectedPrefixCount: f.properties.protectedPrefixCount ?? 0,
+          protectedSuffixCount: f.properties.protectedSuffixCount ?? 0,
+        },
+      }));
+  }
+  const ports = effectivePortSequence(cruise);
+  const legs: CruiseLeg[] = [];
+  for (let i = 0; i < ports.length - 1; i++) {
+    const a = ports[i];
+    const b = ports[i + 1];
+    if (a.id === b.id) continue;
+    legs.push({
+      fromPortId: a.id,
+      toPortId: b.id,
+      routeGeometry: {
+        coordinates: [
+          [a.lon, a.lat],
+          [b.lon, b.lat],
+        ],
+        protectedPrefixCount: 0,
+        protectedSuffixCount: 0,
+      },
     });
   }
-  return index;
+  return legs;
 }
 
 function buildRenderableRoutePath(
