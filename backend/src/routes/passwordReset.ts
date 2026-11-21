@@ -13,7 +13,7 @@ import { AppError } from "../middleware/errorHandler";
 import { SMTP_CONFIG_ID } from "./admin/smtp";
 import { sendPasswordResetEmail } from "../services/emailService";
 import { getInstanceSettings } from "../services/instanceSettingsService";
-import { revokeAllApiTokensForUser } from "../services/revokeUserApiTokens";
+import { rotateCredentials } from "../services/revokeUserApiTokens";
 import { isSharedDemoAccount } from "../utils/sharedDemo";
 
 /**
@@ -226,21 +226,22 @@ router.post(
 
       const newHash = await hashPassword(newPassword);
 
-      // Before the password write: see revokeUserApiTokens.ts.
-      await revokeAllApiTokensForUser(user.id);
-
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
+      // Recovering an account has to remove whoever you are recovering it
+      // from — every session and token older than this instant stops working
+      // (one step with the password write: see revokeUserApiTokens.ts).
+      await rotateCredentials(
+        user.id,
+        {
           passwordHash: newHash,
           resetToken: null,
           resetTokenExpiry: null,
           mustChangePassword: false,
-          // Recovering an account has to remove whoever you are recovering it
-          // from — every session older than this instant stops working.
-          sessionEpoch: { increment: 1 },
         },
-      });
+        {
+          where: { resetToken: hashedToken, resetTokenExpiry: { gt: new Date() } },
+          error: () => new AppError("Invalid or expired reset token", 400),
+        }
+      );
 
       logger.info({ operation: "password_reset_completed", userId: user.id });
 
@@ -284,19 +285,20 @@ router.post(
 
       const newHash = await hashPassword(newPassword);
 
-      // Before the password write: see revokeUserApiTokens.ts.
-      await revokeAllApiTokensForUser(user.id);
-
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
+      // One step with the token revocation: see revokeUserApiTokens.ts.
+      await rotateCredentials(
+        user.id,
+        {
           passwordHash: newHash,
           changeToken: null,
           changeTokenExpiry: null,
           mustChangePassword: false,
-          sessionEpoch: { increment: 1 },
         },
-      });
+        {
+          where: { changeToken: hashedToken, changeTokenExpiry: { gt: new Date() } },
+          error: () => new AppError("Invalid or expired change token", 400),
+        }
+      );
 
       logger.info({ operation: "force_password_change_completed", userId: user.id });
 

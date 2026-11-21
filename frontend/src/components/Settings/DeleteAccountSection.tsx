@@ -25,6 +25,7 @@ type Refusal =
   | "PASSKEY_UNAVAILABLE"
   | "passkeyCancelled"
   | "DELETE_LAST_ADMIN"
+  | "DELETE_CONFIRMATION_INVALID"
   | "DEMO_ACCOUNT_FORBIDDEN"
   | "offline"
   | "other";
@@ -38,7 +39,19 @@ const KNOWN: readonly string[] = [
   "NO_PASSKEY",
   "PASSKEY_UNAVAILABLE",
   "DELETE_LAST_ADMIN",
+  "DELETE_CONFIRMATION_INVALID",
 ];
+
+/** What a deletion takes, in the order the list shows it (forgejo#415). */
+const WHAT_GOES = [
+  "entries",
+  "files",
+  "photoLinks",
+  "shares",
+  "sessions",
+  "tokens",
+  "federation",
+] as const;
 
 /** Closing the browser's or password manager's dialog is a choice, not a fault. */
 function isUserCancellation(error: unknown): boolean {
@@ -60,7 +73,8 @@ export function refusalOf(error: unknown): Refusal {
 /**
  * "Konto löschen": at once and for good. The download comes first, then the
  * password (and the authenticator code where the account has one), then the
- * confirmation block with the typed word. Nothing is simulated: the server
+ * confirmation block with the username typed out (forgejo#415; the server
+ * still accepts the old words from installed apps). Nothing is simulated: the server
  * deletes the account and every file, and this page then signs out.
  */
 export default function DeleteAccountSection(): JSX.Element {
@@ -96,7 +110,8 @@ export default function DeleteAccountSection(): JSX.Element {
   }, [open]);
 
   const lang = i18n?.language ?? "de";
-  const word = lang.startsWith("en") ? "DELETE" : "LÖSCHEN";
+  // The username, typed out; the old word only while the store has no user yet.
+  const word = username || (lang.startsWith("en") ? "DELETE" : "LÖSCHEN");
   const usePasskey = method === "passkey" && hasPasskey;
   const ready = usePasskey || (password !== "" && (!hasTwoFactor || code.trim() !== ""));
 
@@ -151,6 +166,16 @@ export default function DeleteAccountSection(): JSX.Element {
           {open && !isDemo && (
             <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
               <MeExportRow />
+              <div>
+                <p className="t-caption" style={{ margin: 0 }}>
+                  {t("settings:deleteAccount.whatGoes.title")}
+                </p>
+                <ul className="t-caption" style={{ margin: "4px 0 0", paddingLeft: "1.25em" }}>
+                  {WHAT_GOES.map((key) => (
+                    <li key={key}>{t(`settings:deleteAccount.whatGoes.${key}`)}</li>
+                  ))}
+                </ul>
+              </div>
               {usePasskey ? (
                 <p className="t-caption" style={{ margin: 0 }}>
                   {t("settings:deleteAccount.passkeyHint")}

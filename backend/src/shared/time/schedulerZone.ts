@@ -22,6 +22,7 @@ import { isValidZone } from "./zonedParts";
 export type SchedulerJob =
   | "aeroapiTracks"
   | "airlineLogoRefresh"
+  | "accountDeletionRecovery"
   | "dataQualitySweep"
   | "dawarichCountryDaySweep"
   | "documentSweep"

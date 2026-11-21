@@ -11,6 +11,7 @@ import {
   loginSchema,
   changePasswordSchema,
   deleteAccountSchema,
+  deleteConfirmationMatches,
   isReservedUsername,
 } from "../schemas/auth";
 import { AppError } from "../middleware/errorHandler";
@@ -32,7 +33,7 @@ import { getInstanceSettings } from "../services/instanceSettingsService";
 import logger from "../utils/logger";
 import { stampWhatsNewSeen } from "../services/whatsNewStamp";
 import { appVersion } from "../utils/version";
-import { revokeAllApiTokensForUser } from "../services/revokeUserApiTokens";
+import { rotateCredentials } from "../services/revokeUserApiTokens";
 import {
   getAuthCookieOptions,
   getCookieSecure,
@@ -492,18 +493,21 @@ router.post(
       // Hash new password
       const newPasswordHash = await hashPassword(newPassword);
 
-      // Tokens (incl. paired devices) go first: a failure here must not leave a
-      // changed password with live tokens. The route is cookie-only, so no caller
-      // is a token cutting its own branch.
-      await revokeAllApiTokensForUser(userId);
-
-      // Update password AND close every session that predates it. A password
-      // change that leaves old cookies working is not a change anybody can rely
-      // on (audit finding AUD-003).
-      const updated = await prisma.user.update({
-        where: { id: userId },
-        data: { passwordHash: newPasswordHash, sessionEpoch: { increment: 1 } },
-      });
+      // Update password, revoke every token (incl. paired devices) AND close
+      // every session that predates it, in one step (rotateCredentials). A
+      // password change that leaves old cookies or tokens working is not a
+      // change anybody can rely on (audit finding AUD-003, forgejo#415). The
+      // route is cookie-only, so no caller is a token cutting its own branch.
+      // The old password is re-checked under the lock as the hash it matched: a
+      // reset or another change that landed meanwhile wins, this one is refused.
+      const updated = await rotateCredentials(
+        userId,
+        { passwordHash: newPasswordHash },
+        {
+          where: { passwordHash: user.passwordHash },
+          error: () => new AppError("Current password is incorrect", 401),
+        }
+      );
 
       // The caller keeps theirs: they just proved the old password and are sitting
       // in front of the app. A fresh cookie is minted AFTER the cutoff, so the
@@ -530,7 +534,7 @@ router.post(
  * as "your session is gone" and signs the user out, which a mistyped password
  * must not do. Re-authenticated with the password, plus the second factor where the account
  * has one — a stolen session cookie must not be enough to erase an account. The
- * typed word is checked by the schema. The shared demo is refused, and so is
+ * typed confirmation (the username, or a legacy word) is checked first. The shared demo is refused, and so is
  * the last admin (an instance with no admin cannot be repaired from the UI).
  * Rows and files go through the same step the admin delete uses.
  */
@@ -547,6 +551,9 @@ router.delete(
 
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user) throw new AppError("User not found", 404);
+      if (!deleteConfirmationMatches(body.confirmation, user.username)) {
+        throw new AppError("Typed confirmation is wrong", 400, "DELETE_CONFIRMATION_INVALID");
+      }
       if (body.passkeyResponse) {
         // The assertion proves possession AND a local gesture, so it also
         // satisfies the second factor (same reasoning as the passkey login).
@@ -571,10 +578,10 @@ router.delete(
         }
       }
 
-      // The last-admin refusal is decided under a lock inside removeAccount.
-      await removeAccount(userId);
+      // The last-admin refusal is decided under a lock inside removeAccount,
+      // which also tells federated peers and writes the audit event.
+      await removeAccount(userId, { actorId: userId, ip: req.ip });
       res.clearCookie("auth_token", getAuthCookieOptions(req));
-      logger.info({ operation: "self_delete_account", targetUserId: userId });
       res.json({ deleted: true });
     } catch (error) {
       next(error);

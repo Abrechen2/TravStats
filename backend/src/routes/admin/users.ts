@@ -18,7 +18,7 @@ import logger from "../../utils/logger";
 import { getInstanceSettings } from "../../services/instanceSettingsService";
 import { stampWhatsNewSeen } from "../../services/whatsNewStamp";
 import { appVersion } from "../../utils/version";
-import { revokeAllApiTokensForUser } from "../../services/revokeUserApiTokens";
+import { rotateCredentials } from "../../services/revokeUserApiTokens";
 
 const router = Router();
 
@@ -184,7 +184,7 @@ router.delete("/users/:id", async (req: AuthRequest, res: Response, next: NextFu
       }
     }
 
-    await removeAccount(id);
+    await removeAccount(id, { actorId: req.userId!, ip: req.ip });
 
     logger.info({
       operation: "admin_delete_user",
@@ -231,22 +231,16 @@ router.post(
 
       const shouldMustChange = mustChangePassword ?? mode === "generate";
 
-      // Before the password write: see revokeUserApiTokens.ts.
-      await revokeAllApiTokensForUser(id);
-
-      await prisma.user.update({
-        where: { id },
-        data: {
-          passwordHash: newPasswordHash,
-          mustChangePassword: shouldMustChange,
-          resetToken: null,
-          resetTokenExpiry: null,
-          changeToken: null,
-          changeTokenExpiry: null,
-          // An administrator resetting a password expects the account to be
-          // out of anyone else's hands from that moment.
-          sessionEpoch: { increment: 1 },
-        },
+      // An administrator resetting a password expects the account to be out of
+      // anyone else's hands from that moment: sessions, tokens and devices go
+      // in the same step as the password write (see revokeUserApiTokens.ts).
+      await rotateCredentials(id, {
+        passwordHash: newPasswordHash,
+        mustChangePassword: shouldMustChange,
+        resetToken: null,
+        resetTokenExpiry: null,
+        changeToken: null,
+        changeTokenExpiry: null,
       });
 
       logger.info({

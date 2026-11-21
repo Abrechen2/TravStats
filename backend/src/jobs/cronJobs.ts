@@ -38,6 +38,14 @@ export const CRON_JOBS: CronJob[] = [
     stop: async () =>
       (await import("./airlineLogoRefreshScheduler")).stopAirlineLogoRefreshScheduler(),
   },
+  // Every 10 minutes and at start: deletions a crash interrupted (forgejo#415).
+  {
+    name: "account_deletion_recovery",
+    start: async () =>
+      (await import("./accountDeletionRecoveryScheduler")).startAccountDeletionRecoveryScheduler(),
+    stop: async () =>
+      (await import("./accountDeletionRecoveryScheduler")).stopAccountDeletionRecoveryScheduler(),
+  },
   {
     name: "status_sweep",
     start: async () => (await import("./statusSweepScheduler")).startStatusSweepScheduler(),

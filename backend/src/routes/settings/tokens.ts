@@ -9,6 +9,7 @@ import { generateApiToken } from "../../utils/apiTokens";
 import logger, { securityLogger } from "../../utils/logger";
 import { requestPathForLog } from "../../utils/logging/requestPath";
 import { forgetPushForTokens } from "../../services/push/devices";
+import { holdForIssuance } from "../../services/revokeUserApiTokens";
 
 /**
  * Personal Access Token (PAT) management routes.
@@ -81,16 +82,23 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     }
     const { label, scope, expiresAt } = parsed.data;
 
+    const userId = req.userId;
     const generated = await generateApiToken();
-    const created = await prisma.apiToken.create({
-      data: {
-        userId: req.userId,
-        label,
-        scope,
-        lookupHash: generated.lookupHash,
-        hash: generated.hash,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
-      },
+    // Under the account's row lock and against the epoch this session was
+    // authenticated with: a password change committed since then must not be
+    // outlived by the token minted here (forgejo#415).
+    const created = await prisma.$transaction(async (tx) => {
+      await holdForIssuance(tx, userId, req.sessionEpoch);
+      return tx.apiToken.create({
+        data: {
+          userId,
+          label,
+          scope,
+          lookupHash: generated.lookupHash,
+          hash: generated.hash,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+        },
+      });
     });
 
     securityLogger.info({

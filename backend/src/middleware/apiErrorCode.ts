@@ -165,8 +165,12 @@ export type ApiErrorCode =
   | "NO_PASSKEY"
   /** Passkeys cannot be used here (no secure origin configured). */
   | "PASSKEY_UNAVAILABLE"
+  /** Deleting one's own account: the typed confirmation is neither the username nor a known word. */
+  | "DELETE_CONFIRMATION_INVALID"
   /** The only remaining admin cannot delete itself; hand the role over first. */
   | "DELETE_LAST_ADMIN"
+  /** A deletion of this account is already running. */
+  | "DELETE_IN_PROGRESS"
   /** A restore was asked for a part the archive does not carry — a file
    *  restore from an archive with no `uploads.tar.gz`, say. */
   | "RESTORE_ARCHIVE_INCOMPLETE"

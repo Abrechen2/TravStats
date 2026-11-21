@@ -156,7 +156,7 @@ Create `scripts/preview/stacks/ollama/docker-compose.yml`:
 ```yaml
 services:
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.24.0
     container_name: preview-ollama
     restart: unless-stopped
     environment:
