@@ -331,16 +331,25 @@ export async function repointLinks(
   const fromColumn = LINK_TARGETS[from.type].column;
   const toColumn = LINK_TARGETS[to.type].column;
   const where = { [fromColumn]: { in: [...from.ids] } };
-  const [linked, projected] = await Promise.all([
-    tx.documentLink.findMany({ where, select: { documentId: true } }),
-    tx.document.findMany({ where, select: { id: true } }),
-  ]);
-  await lockDocuments(tx, [
-    ...new Set([...linked.map((l) => l.documentId), ...projected.map((d) => d.id)]),
-  ]);
-  await adoptUnlinkedOwners(tx, fromColumn, from.ids);
+  // Every document this move will touch is locked before any link row is: a
+  // filing committed after the first look shows up on the next and is locked
+  // too, until a look finds nothing new.
+  const locked = new Set<string>();
+  for (;;) {
+    const [linked, projected] = await Promise.all([
+      tx.documentLink.findMany({ where, select: { documentId: true } }),
+      tx.document.findMany({ where, select: { id: true } }),
+    ]);
+    const fresh = [
+      ...new Set([...linked.map((l) => l.documentId), ...projected.map((d) => d.id)]),
+    ].filter((id) => !locked.has(id));
+    if (fresh.length === 0) break;
+    await lockDocuments(tx, fresh);
+    for (const id of fresh) locked.add(id);
+  }
+  await adoptUnlinkedOwners(tx, fromColumn, from.ids, locked);
   const links = await tx.documentLink.findMany({
-    where: { [fromColumn]: { in: [...from.ids] } },
+    where: { ...where, documentId: { in: [...locked] } },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   });
   const touched = new Set<string>();
@@ -375,10 +384,11 @@ export async function repointLinks(
 async function adoptUnlinkedOwners(
   tx: DbTransaction,
   column: TargetColumn,
-  ids: readonly string[]
+  ids: readonly string[],
+  locked: ReadonlySet<string>
 ): Promise<void> {
   const orphans = await tx.document.findMany({
-    where: { [column]: { in: [...ids] }, links: { none: {} } },
+    where: { [column]: { in: [...ids] }, id: { in: [...locked] }, links: { none: {} } },
   });
   for (const document of orphans) {
     await tx.documentLink.create({
