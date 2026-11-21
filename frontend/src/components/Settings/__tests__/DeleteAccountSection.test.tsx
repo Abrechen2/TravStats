@@ -55,7 +55,7 @@ const goOn = (): void => {
 };
 const confirm = async (): Promise<void> => {
   const dialog = screen.getByRole("dialog");
-  fireEvent.change(dialog.querySelector("input")!, { target: { value: "LÖSCHEN" } });
+  fireEvent.change(dialog.querySelector("input")!, { target: { value: "mara" } });
   await act(async () => {
     fireEvent.click(screen.getByRole("button", { name: "settings:deleteAccount.dialog.confirm" }));
   });
@@ -92,6 +92,41 @@ describe("deleting one's own account", () => {
     expect(deleteAccount).not.toHaveBeenCalled();
   });
 
+  it("lists what goes and asks for the username, not a word (forgejo#415)", async () => {
+    await open();
+    for (const key of [
+      "entries",
+      "files",
+      "photoLinks",
+      "shares",
+      "sessions",
+      "tokens",
+      "federation",
+    ])
+      expect(screen.getByText(`settings:deleteAccount.whatGoes.${key}`)).toBeInTheDocument();
+    typePassword();
+    goOn();
+    const dialog = screen.getByRole("dialog");
+    const button = screen.getByRole("button", { name: "settings:deleteAccount.dialog.confirm" });
+    fireEvent.change(dialog.querySelector("input")!, { target: { value: "LÖSCHEN" } });
+    expect(button).toBeDisabled();
+    fireEvent.change(dialog.querySelector("input")!, { target: { value: "mara" } });
+    expect(button).toBeEnabled();
+  });
+
+  it("a refused confirmation has its own line", async () => {
+    deleteAccount.mockRejectedValue({
+      response: { status: 400, data: { code: "DELETE_CONFIRMATION_INVALID" } },
+    });
+    await open();
+    typePassword();
+    goOn();
+    await confirm();
+    expect(
+      await screen.findByText("settings:deleteAccount.refused.DELETE_CONFIRMATION_INVALID")
+    ).toBeInTheDocument();
+  });
+
   it("success: deletes, signs out and leaves for the login", async () => {
     deleteAccount.mockResolvedValue(undefined);
     await open();
@@ -100,7 +135,7 @@ describe("deleting one's own account", () => {
     await confirm();
     expect(deleteAccount).toHaveBeenCalledWith({
       password: "password123",
-      confirmation: "LÖSCHEN",
+      confirmation: "mara",
     });
     await waitFor(() => expect(logout).toHaveBeenCalled());
     expect(navigate).toHaveBeenCalledWith("/login", { replace: true });
@@ -192,7 +227,7 @@ describe("deleting with a passkey (an account that may not know its password)", 
     await confirm();
     expect(deleteAccount).toHaveBeenCalledWith({
       passkeyResponse: { id: "cred" },
-      confirmation: "LÖSCHEN",
+      confirmation: "mara",
     });
     await waitFor(() => expect(logout).toHaveBeenCalled());
   });

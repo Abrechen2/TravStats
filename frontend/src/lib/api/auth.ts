@@ -59,7 +59,7 @@ export const authApi = {
   /**
    * Delete the caller's own account at once. Refused with `code`
    * DELETE_PASSWORD_INCORRECT, DELETE_SECOND_FACTOR_REQUIRED / _INVALID,
-   * DELETE_LAST_ADMIN, or 403 DEMO_ACCOUNT_FORBIDDEN.
+   * DELETE_LAST_ADMIN, 400 DELETE_CONFIRMATION_INVALID, or 403 DEMO_ACCOUNT_FORBIDDEN.
    */
   deleteAccount: async (body: {
     /** Either the password or, for a passkey account, the WebAuthn assertion. */

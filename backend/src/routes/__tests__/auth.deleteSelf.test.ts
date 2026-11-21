@@ -1,3 +1,5 @@
+import { promises as fs } from "fs";
+import path from "path";
 import request from "supertest";
 import { createGuardrails, generateSync } from "otplib";
 import app from "../../index";
@@ -6,12 +8,21 @@ import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { encryptSecret } from "../../services/twoFactor/totpService";
 import { generateRecoveryCodes } from "../../services/twoFactor/recoveryCodeService";
+import { UPLOADS_ROOT } from "../../config/uploadDirs";
+import { generateApiToken } from "../../utils/apiTokens";
 
 const SECRET = "JBSWY3DPEHPK3PXP";
 const guardrails = createGuardrails({ MIN_SECRET_BYTES: 10 });
 const codeFor = (): string => generateSync({ secret: SECRET, guardrails });
 
-const NAMES = ["delSelfPlain", "delSelfTfa", "delSelfAdmin", "delSelfAdmin2", "demo"];
+const NAMES = [
+  "delSelfPlain",
+  "delSelfTfa",
+  "delSelfAdmin",
+  "delSelfAdmin2",
+  "delSelfOther",
+  "demo",
+];
 
 async function makeUser(
   username: string,
@@ -72,10 +83,68 @@ describe("deleting one's own account (DELETE /auth/me)", () => {
     expect(await prisma.user.findUnique({ where: { id } })).not.toBeNull();
   });
 
+  it("accepts the username typed out as the confirmation, in any case (forgejo#415)", async () => {
+    const id = await makeUser("delSelfPlain");
+    const res = await del(id, { password: "password123", confirmation: " delselfplain " });
+    expect(res.status).toBe(200);
+    expect(await prisma.user.findUnique({ where: { id } })).toBeNull();
+  });
+
+  it("refuses another account's username as the confirmation", async () => {
+    const id = await makeUser("delSelfPlain");
+    await makeUser("delSelfOther");
+    const res = await del(id, { password: "password123", confirmation: "delSelfOther" });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("DELETE_CONFIRMATION_INVALID");
+    expect(await prisma.user.findUnique({ where: { id } })).not.toBeNull();
+  });
+
+  it("refuses without re-authentication: a session cookie alone is not enough", async () => {
+    const id = await makeUser("delSelfPlain");
+    const res = await del(id, { confirmation: "delSelfPlain" });
+    expect(res.status).toBe(400);
+    expect(await prisma.user.findUnique({ where: { id } })).not.toBeNull();
+  });
+
+  it("takes the account's files, sessions and tokens and leaves another account's alone", async () => {
+    const id = await makeUser("delSelfPlain");
+    const otherId = await makeUser("delSelfOther");
+    const dir = path.join(UPLOADS_ROOT, "profile-pictures");
+    await fs.mkdir(dir, { recursive: true });
+    const mine = path.join(dir, `${id}_avatar.jpg`);
+    const theirs = path.join(dir, `${otherId}_avatar.jpg`);
+    await fs.writeFile(mine, "x");
+    await fs.writeFile(theirs, "y");
+    for (const userId of [id, otherId]) {
+      const gen = await generateApiToken();
+      await prisma.apiToken.create({
+        data: { userId, label: "t", scope: "read", lookupHash: gen.lookupHash, hash: gen.hash },
+      });
+    }
+    try {
+      const res = await del(id, { password: "password123", confirmation: "delSelfPlain" });
+      expect(res.status).toBe(200);
+      await expect(fs.access(mine)).rejects.toThrow();
+      await expect(fs.access(theirs)).resolves.toBeUndefined();
+      expect(await prisma.apiToken.count({ where: { userId: id } })).toBe(0);
+      expect(await prisma.apiToken.count({ where: { userId: otherId } })).toBe(1);
+      expect(await prisma.user.findUnique({ where: { id: otherId } })).not.toBeNull();
+      // The deleted account's cookie no longer opens anything.
+      const after = await request(app)
+        .get("/api/v1/auth/me")
+        .set("Cookie", `auth_token=${generateToken(id)}`);
+      expect(after.status).toBe(401);
+    } finally {
+      await fs.rm(mine, { force: true });
+      await fs.rm(theirs, { force: true });
+    }
+  });
+
   it("refuses a missing or wrong typed word and keeps the account", async () => {
     const id = await makeUser("delSelfPlain");
     const wrong = await del(id, { password: "password123", confirmation: "yes" });
     expect(wrong.status).toBe(400);
+    expect(wrong.body.code).toBe("DELETE_CONFIRMATION_INVALID");
     const missing = await del(id, { password: "password123" });
     expect(missing.status).toBe(400);
     expect(await prisma.user.findUnique({ where: { id } })).not.toBeNull();

@@ -347,7 +347,7 @@ describe("TravTrack — legs, stops and the mode correction", () => {
           mode: "run",
         }),
       ]);
-      await removeAccount(userId);
+      await removeAccount(userId, { actorId: userId });
       expect(await prisma.travTrackLegMode.count({ where: { userId } })).toBe(0);
       userId = await makeUser(`${PREFIX}a`);
       cookie = `auth_token=${generateToken(userId)}`;

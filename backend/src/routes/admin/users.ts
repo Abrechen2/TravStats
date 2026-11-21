@@ -184,7 +184,7 @@ router.delete("/users/:id", async (req: AuthRequest, res: Response, next: NextFu
       }
     }
 
-    await removeAccount(id);
+    await removeAccount(id, { actorId: req.userId!, ip: req.ip });
 
     logger.info({
       operation: "admin_delete_user",

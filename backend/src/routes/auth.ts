@@ -11,6 +11,7 @@ import {
   loginSchema,
   changePasswordSchema,
   deleteAccountSchema,
+  deleteConfirmationMatches,
   isReservedUsername,
 } from "../schemas/auth";
 import { AppError } from "../middleware/errorHandler";
@@ -524,7 +525,7 @@ router.post(
  * as "your session is gone" and signs the user out, which a mistyped password
  * must not do. Re-authenticated with the password, plus the second factor where the account
  * has one — a stolen session cookie must not be enough to erase an account. The
- * typed word is checked by the schema. The shared demo is refused, and so is
+ * typed confirmation (the username, or a legacy word) is checked first. The shared demo is refused, and so is
  * the last admin (an instance with no admin cannot be repaired from the UI).
  * Rows and files go through the same step the admin delete uses.
  */
@@ -541,6 +542,9 @@ router.delete(
 
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user) throw new AppError("User not found", 404);
+      if (!deleteConfirmationMatches(body.confirmation, user.username)) {
+        throw new AppError("Typed confirmation is wrong", 400, "DELETE_CONFIRMATION_INVALID");
+      }
       if (body.passkeyResponse) {
         // The assertion proves possession AND a local gesture, so it also
         // satisfies the second factor (same reasoning as the passkey login).
@@ -565,10 +569,10 @@ router.delete(
         }
       }
 
-      // The last-admin refusal is decided under a lock inside removeAccount.
-      await removeAccount(userId);
+      // The last-admin refusal is decided under a lock inside removeAccount,
+      // which also tells federated peers and writes the audit event.
+      await removeAccount(userId, { actorId: userId, ip: req.ip });
       res.clearCookie("auth_token", getAuthCookieOptions(req));
-      logger.info({ operation: "self_delete_account", targetUserId: userId });
       res.json({ deleted: true });
     } catch (error) {
       next(error);

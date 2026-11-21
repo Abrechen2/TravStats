@@ -67,17 +67,27 @@ export const deleteAccountSchema = z
     /** Six digits from the authenticator app, when the account has two-factor. */
     code: z.string().max(16).optional(),
     recoveryCode: z.string().max(64).optional(),
-    confirmation: z
-      .string()
-      .transform((v) => v.trim().toLocaleUpperCase("de-DE"))
-      .refine(
-        (v) => (DELETE_ACCOUNT_WORDS as readonly string[]).includes(v),
-        "Typed word is wrong"
-      ),
+    /**
+     * The account's username, typed out (the web asks for it, forgejo#415).
+     * The words in `DELETE_ACCOUNT_WORDS` stay accepted for app versions
+     * already installed. Matched by `deleteConfirmationMatches` in the route,
+     * which knows the username.
+     */
+    confirmation: z.string().trim().min(1).max(200),
   })
   .refine((b) => (b.password === undefined) !== (b.passkeyResponse === undefined), {
     message: "Send either the password or a passkey assertion",
   });
+
+const normalizeConfirmation = (v: string): string => v.trim().toLocaleUpperCase("de-DE");
+
+/** The typed confirmation is the account's username (any case) or one of the legacy words. */
+export function deleteConfirmationMatches(typed: string, username: string): boolean {
+  const t = normalizeConfirmation(typed);
+  return (
+    t === normalizeConfirmation(username) || (DELETE_ACCOUNT_WORDS as readonly string[]).includes(t)
+  );
+}
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

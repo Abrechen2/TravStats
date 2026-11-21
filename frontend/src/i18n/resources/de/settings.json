@@ -923,7 +923,7 @@
     "codeCopied": "Kopiert",
     "codeHint": "Kein QR-Code zur Hand? In der App „Manuell verbinden\" wählen und diesen Code eingeben. Er gilt genauso lange wie der QR-Code.",
     "countdown": "Läuft ab in {{time}}",
-    "expired": "Code abgelaufen",
+    "expired": "Abgelaufen",
     "retry": "Neuen Code erzeugen",
     "cancel": "Abbrechen",
     "done": "Fertig",
@@ -936,7 +936,6 @@
     "neverUsed": "Noch nie benutzt",
     "ip": "IP {{ip}}",
     "revoked": "Abgemeldet",
-    "expired": "Abgelaufen",
     "unpairButton": "Abmelden",
     "removeButton": "Entfernen",
     "removeAllButton": "Alle alten entfernen",
@@ -1598,7 +1597,8 @@
       "NO_PASSKEY": "Zu diesem Konto gibt es keinen Passkey. Bestätige mit dem Passwort.",
       "PASSKEY_UNAVAILABLE": "Passkeys gehen hier gerade nicht. Bestätige mit dem Passwort.",
       "passkeyCancelled": "Du hast den Passkey nicht bestätigt. Ich habe nichts gelöscht.",
-      "REAUTH_PASSKEY_TOO_NEW": "Dieser Passkey ist noch keine 24 Stunden alt. Bestätige mit dem Passwort oder warte bis morgen."
+      "REAUTH_PASSKEY_TOO_NEW": "Dieser Passkey ist noch keine 24 Stunden alt. Bestätige mit dem Passwort oder warte bis morgen.",
+      "DELETE_CONFIRMATION_INVALID": "Bitte tippe genau deinen Benutzernamen ein. Ich habe nichts gelöscht."
     },
     "dialog": {
       "title": "Konto löschen?",
@@ -1609,7 +1609,17 @@
     },
     "passkeyHint": "Ich frage deinen Passkey, bevor ich löschen darf. Das geschieht erst im nächsten Schritt.",
     "usePasskey": "Stattdessen mit Passkey bestätigen",
-    "usePassword": "Stattdessen mit Passwort bestätigen"
+    "usePassword": "Stattdessen mit Passwort bestätigen",
+    "whatGoes": {
+      "title": "Das geht mit dem Konto verloren:",
+      "entries": "alle Einträge: Flüge, Reisen, Unterkünfte, Orte und alles andere",
+      "files": "alle Dokumente und hochgeladenen Dateien, auch Belege und Fotos",
+      "photoLinks": "die Verknüpfungen zu Immich-Alben und anderen Fotoquellen (die Fotos dort bleiben)",
+      "shares": "geteilte Reisen und Freigabe-Links; andere behalten ihre eigenen Kopien",
+      "sessions": "alle Anmeldungen in allen Browsern",
+      "tokens": "alle API-Tokens und gekoppelten Geräte, auch die Companion-App",
+      "federation": "Verbindungen und Einwilligungen mit Personen auf anderen Servern; die werden benachrichtigt"
+    }
   },
   "planning": {
     "title": "Planen"

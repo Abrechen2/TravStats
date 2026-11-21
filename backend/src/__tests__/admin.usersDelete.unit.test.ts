@@ -39,6 +39,12 @@ jest.mock("../db", () => ({
 jest.mock("../utils/logger", () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+  securityLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+}));
+
+// Telling federated peers is covered against real rows in auth.deleteSelfPeers.test.ts.
+jest.mock("../services/account/notifyPeersOfDeparture", () => ({
+  notifyPeersOfDeparture: jest.fn().mockResolvedValue({ ended: 0, failed: 0 }),
 }));
 
 // The account-file step (forgejo#287) is exercised against real rows and files

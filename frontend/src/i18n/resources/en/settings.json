@@ -923,7 +923,7 @@
     "codeCopied": "Copied",
     "codeHint": "No QR code to hand? Pick \"Connect manually\" in the app and enter this code. It lasts exactly as long as the QR code.",
     "countdown": "Expires in {{time}}",
-    "expired": "Code expired",
+    "expired": "Expired",
     "retry": "Generate new code",
     "cancel": "Cancel",
     "done": "Done",
@@ -936,7 +936,6 @@
     "neverUsed": "Never used",
     "ip": "IP {{ip}}",
     "revoked": "Signed out",
-    "expired": "Expired",
     "unpairButton": "Sign out",
     "removeButton": "Remove",
     "removeAllButton": "Remove all old ones",
@@ -1598,7 +1597,8 @@
       "NO_PASSKEY": "This account has no passkey. Confirm with your password.",
       "PASSKEY_UNAVAILABLE": "Passkeys don't work here right now. Confirm with your password.",
       "passkeyCancelled": "You didn't confirm the passkey. I haven't deleted anything.",
-      "REAUTH_PASSKEY_TOO_NEW": "This passkey is less than 24 hours old. Confirm with your password or wait until tomorrow."
+      "REAUTH_PASSKEY_TOO_NEW": "This passkey is less than 24 hours old. Confirm with your password or wait until tomorrow.",
+      "DELETE_CONFIRMATION_INVALID": "Please type your username exactly. Nothing was deleted."
     },
     "dialog": {
       "title": "Delete account?",
@@ -1609,7 +1609,17 @@
     },
     "passkeyHint": "I'll ask for your passkey before I may delete. That happens in the next step.",
     "usePasskey": "Confirm with a passkey instead",
-    "usePassword": "Confirm with your password instead"
+    "usePassword": "Confirm with your password instead",
+    "whatGoes": {
+      "title": "This goes with the account:",
+      "entries": "every entry: flights, trips, stays, places and everything else",
+      "files": "every document and uploaded file, receipts and photos included",
+      "photoLinks": "the links to Immich albums and other photo sources (the photos there stay)",
+      "shares": "shared trips and share links; others keep their own copies",
+      "sessions": "every sign-in in every browser",
+      "tokens": "every API token and paired device, the Companion app included",
+      "federation": "connections and consents with people on other servers; those servers are told"
+    }
   },
   "planning": {
     "title": "Plan"
