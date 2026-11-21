@@ -520,9 +520,8 @@ function localFineRoute(
 }
 
 /**
- * Never hand out an absurd sea route as a route. An implausible result is
- * replaced by a fine local water path, and failing that by the straight chord
- * flagged `routed: false`, which the callers neither store nor cache.
+ * Replace an implausibly long short-crossing route by a shorter fine local
+ * water path when one exists; otherwise the computed route stands.
  */
 function guardRoutePlausibility(
   dep: SchematicRoutePort,
@@ -532,39 +531,33 @@ function guardRoutePlausibility(
   if (!route.routed) return route;
   const chordKm = haversineKm(dep, arr);
   if (chordKm < 0.5) return route;
-  const limit = maxPlausibleRatio(chordKm);
   const routeKm = routeLengthKm(route.waypoints);
+  const implausible = routeKm > chordKm * maxPlausibleRatio(chordKm);
   // A short coastal hop is routed on the fine local water grid whenever the
-  // lane graph or the 1 degree grid had to be consulted: it stays near the chord.
-  if (chordKm < LOCAL_FINE_PREFERRED_KM && route.method !== "short_hop") {
+  // lane graph or the 1 degree grid had to be consulted: it stays near the
+  // chord. A long route is only replaced by a demonstrably shorter water path;
+  // a high ratio alone is not evidence (Genoa -> Venice really is round Italy),
+  // so without one the route is kept, never cut down to the chord.
+  const tryLocal =
+    chordKm < LOCAL_FINE_PREFERRED_KM
+      ? route.method !== "short_hop"
+      : implausible && chordKm < LOCAL_FINE_MAX_KM;
+  if (tryLocal) {
     const local = localFineRoute(dep, arr);
-    if (local !== null && local.km < routeKm && local.km <= chordKm * limit) return local.route;
+    if (local !== null && local.km < routeKm) {
+      if (implausible)
+        logger.warn(
+          {
+            operation: "schematic_router_implausible",
+            chordKm: Math.round(chordKm),
+            routeKm: Math.round(routeKm),
+          },
+          "sea route far longer than its chord; replaced by a shorter water path"
+        );
+      return local.route;
+    }
   }
-  if (routeKm <= chordKm * limit) return route;
-
-  logger.warn(
-    {
-      operation: "schematic_router_implausible",
-      method: route.method,
-      chordKm: Math.round(chordKm),
-      routeKm: Math.round(routeKm),
-    },
-    "sea route far longer than its chord; replaced"
-  );
-  if (chordKm < LOCAL_FINE_MAX_KM) {
-    const local = localFineRoute(dep, arr);
-    if (local !== null && local.km <= chordKm * limit) return local.route;
-  }
-  return {
-    waypoints: [
-      [dep.lon, dep.lat],
-      [arr.lon, arr.lat],
-    ],
-    protectedPrefixCount: 0,
-    protectedSuffixCount: 0,
-    routed: false,
-    method: "direct",
-  };
+  return route;
 }
 
 /**

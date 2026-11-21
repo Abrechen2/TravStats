@@ -47,24 +47,15 @@ describe("sea routes of short crossings (forgejo#428)", () => {
     expect(km(r.waypoints)).toBeLessThanOrEqual(chord * maxPlausibleRatio(chord));
   });
 
-  it("answers an absurd detour with the chord marked schematic, never as a stored route", async () => {
-    // Both ports sit in the middle of a 7x7 degree block of land on the coarse
-    // grid and no fine mask exists, so the only water is hundreds of km away.
-    const coarse = new Uint8Array(MASK1_BYTES);
-    const row0 = latToRow1(10);
-    const col0 = lonToCol1(10);
-    for (let r = row0 - 3; r <= row0 + 3; r++)
-      for (let c = col0 - 3; c <= col0 + 3; c++) setBit1(coarse, cellIndex1(r, c), 1);
-    setCoarseMaskForTesting(coarse, null);
-    const dep = { id: "a", lat: 10, lon: 10 };
-    const arr = { id: "b", lat: 10.2, lon: 10.2 };
+  it("keeps Genoa -> Venice round Italy: a high ratio alone never turns a route into a chord", async () => {
+    await loadCoarseMask();
+    const dep = { id: "genoa", lat: 44.4, lon: 8.93 };
+    const arr = { id: "venice", lat: 45.43, lon: 12.33 };
+    const chord = haversineKm(dep, arr);
     const r = await computeSchematicRoute(dep, arr);
-    expect(r.routed).toBe(false);
-    expect(r.method).toBe("direct");
-    expect(r.waypoints).toEqual([
-      [10, 10],
-      [10.2, 10.2],
-    ]);
+    expect(r.routed).toBe(true);
+    expect(r.method).not.toBe("direct");
+    expect(km(r.waypoints)).toBeGreaterThan(chord * maxPlausibleRatio(chord));
   });
 
   it("widens the allowed detour with the chord", () => {
