@@ -9,7 +9,7 @@ import {
   latToRow,
   lonToCol,
 } from "../shared/geo/landMaskGrid";
-import { simplifyDegrees } from "./schematicPolyline";
+import { segmentAllWater, simplifyDegrees } from "./schematicPolyline";
 
 /**
  * Fine local water path for short crossings (forgejo#428).
@@ -150,5 +150,11 @@ export function routeFineLocal(
   }
   cells.reverse();
   const path: [number, number][] = [[dep.lon, dep.lat], ...cells, [arr.lon, arr.lat]];
-  return simplifyDegrees(path, SIMPLIFY_TOLERANCE_DEG);
+  const simplified = simplifyDegrees(path, SIMPLIFY_TOLERANCE_DEG);
+  // Simplification may cut a corner of land; keep the cell path when it does.
+  const clean = simplified.every(
+    (p, i) =>
+      i === 0 || segmentAllWater(fineBytes, simplified[i - 1][0], simplified[i - 1][1], p[0], p[1])
+  );
+  return clean ? simplified : path;
 }

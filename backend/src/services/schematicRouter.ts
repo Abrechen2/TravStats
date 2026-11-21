@@ -500,6 +500,25 @@ function routeLengthKm(waypoints: ReadonlyArray<[number, number]>): number {
   return km;
 }
 
+/** Fine local water path between the ports' approach ends, approaches kept. */
+function localFineRoute(
+  dep: SchematicRoutePort,
+  arr: SchematicRoutePort
+): { route: SchematicRoute; km: number } | null {
+  if (fineMaskBytes === null) return null;
+  const depApproach = getPortApproach(dep);
+  const arrApproach = getPortApproach(arr);
+  const [dLon, dLat] = depApproach[depApproach.length - 1] ?? [dep.lon, dep.lat];
+  const [aLon, aLat] = arrApproach[arrApproach.length - 1] ?? [arr.lon, arr.lat];
+  const middle = routeFineLocal(fineMaskBytes, { lat: dLat, lon: dLon }, { lat: aLat, lon: aLon });
+  if (middle === null) return null;
+  const composed = composeRouteWaypoints(dep, depApproach, middle, arrApproach, arr);
+  return {
+    route: { ...composed, routed: true, method: "local_fine" },
+    km: routeLengthKm(composed.waypoints),
+  };
+}
+
 /**
  * Never hand out an absurd sea route as a route. An implausible result is
  * replaced by a fine local water path, and failing that by the straight chord
@@ -517,17 +536,9 @@ function guardRoutePlausibility(
   const routeKm = routeLengthKm(route.waypoints);
   // A short coastal hop is routed on the fine local water grid whenever the
   // lane graph or the 1 degree grid had to be consulted: it stays near the chord.
-  if (chordKm < LOCAL_FINE_PREFERRED_KM && route.method !== "short_hop" && fineMaskBytes !== null) {
-    const local = routeFineLocal(fineMaskBytes, dep, arr);
-    if (local !== null && routeLengthKm(local) < routeKm) {
-      return {
-        waypoints: local,
-        protectedPrefixCount: 0,
-        protectedSuffixCount: 0,
-        routed: true,
-        method: "local_fine",
-      };
-    }
+  if (chordKm < LOCAL_FINE_PREFERRED_KM && route.method !== "short_hop") {
+    const local = localFineRoute(dep, arr);
+    if (local !== null && local.km < routeKm && local.km <= chordKm * limit) return local.route;
   }
   if (routeKm <= chordKm * limit) return route;
 
@@ -540,17 +551,9 @@ function guardRoutePlausibility(
     },
     "sea route far longer than its chord; replaced"
   );
-  if (fineMaskBytes !== null && chordKm < LOCAL_FINE_MAX_KM) {
-    const local = routeFineLocal(fineMaskBytes, dep, arr);
-    if (local !== null && routeLengthKm(local) <= chordKm * limit) {
-      return {
-        waypoints: local,
-        protectedPrefixCount: 0,
-        protectedSuffixCount: 0,
-        routed: true,
-        method: "local_fine",
-      };
-    }
+  if (chordKm < LOCAL_FINE_MAX_KM) {
+    const local = localFineRoute(dep, arr);
+    if (local !== null && local.km <= chordKm * limit) return local.route;
   }
   return {
     waypoints: [
