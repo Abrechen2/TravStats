@@ -236,6 +236,10 @@ export const NON_TRAVEL_RELATIONS = [
   "dataQualityFlags",
   "dawarichStayScan",
   "dawarichSweepState",
+  // Derived document-link proposals and their pass bookkeeping: account-local,
+  // re-created by the next pass, never part of a comparison or a federation publication.
+  "documentLinkSuggestions",
+  "documentLinkPass",
   "passwordResetRequest",
   // The calendar subscription's token hash (forgejo#310): a credential.
   "calendarFeed",

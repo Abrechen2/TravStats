@@ -24,6 +24,7 @@ import { z } from "zod";
 import { RENTAL_DOCUMENT_CATEGORIES } from "../../documents/documentFormats";
 import { LINK_PROVENANCES, LINK_ROLES } from "../../documents/documentLinks";
 import { RAIL_TRANSIT_MODES } from "../../../shared/railCounting";
+import { MAX_DOCUMENT_LINKS } from "./documentLinkLimits";
 import { lat, lon, portRef, requiredZone, shipRef, zone, type PortRef } from "./publicHalf";
 
 export const TRIP_FILE_FORMAT = "travstats-trip";
@@ -645,13 +646,7 @@ export const ENTITY_KINDS = [
 ] as const;
 export type EntityKind = (typeof ENTITY_KINDS)[number];
 
-/**
- * A document has at most one link per entry, so the in-file links can never
- * exceed the entries of the file: 1 trip + flights, stays, cruises, rail, bus,
- * ferry (300 each, 20 cruises), rentals (50) and visits (2000). The cap equals
- * that sum, so no stored document can make an export fail its own validation.
- */
-export const MAX_DOCUMENT_LINKS = 1 + 300 + 300 + 20 + 300 + 300 + 300 + 50 + 2000;
+export { MAX_DOCUMENT_LINKS };
 
 const documentEntity = z.object({ kind: z.enum(ENTITY_KINDS), key: key.nullable() }).strict();
 
