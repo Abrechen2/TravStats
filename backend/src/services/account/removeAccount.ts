@@ -87,12 +87,19 @@ export async function removeAccount(userId: string, context: RemovalContext): Pr
   });
 }
 
-/** Peers, then rows and files. Idempotent: an ended connection is not open, a gone file is "missing". */
+/**
+ * Peers, then rows and files. Idempotent: an ended connection is not open, a
+ * gone file is "missing". The delete is conditional on the reservation, so a
+ * row a recovery restored meanwhile is never deleted.
+ */
 async function finishDeletion(userId: string): Promise<DepartureNotice> {
   const peers = await notifyPeersOfDeparture(userId);
   await deleteAccountWithFiles(userId, () =>
     prisma.$transaction(async (tx) => {
-      await tx.user.delete({ where: { id: userId } });
+      const gone = await tx.user.deleteMany({
+        where: { id: userId, deletionStartedAt: { not: null } },
+      });
+      if (gone.count !== 1) throw new AppError("The deletion is no longer reserved", 409);
       await tx.syncChange.deleteMany({ where: { userId } });
     })
   );
@@ -159,9 +166,17 @@ export async function recoverStalledDeletions(now = new Date()): Promise<Stalled
   const run: StalledDeletionRun = { completed: 0, restored: 0 };
   const stalled = await prisma.user.findMany({
     where: { deletionStartedAt: { lt: new Date(now.getTime() - STALLED_DELETION_MS) } },
-    select: { id: true, deletionPriorAdmin: true },
+    select: { id: true, deletionPriorAdmin: true, deletionStartedAt: true },
   });
   for (const u of stalled) {
+    // Claim it: the marker moves to now only for the one sweep that read it as
+    // it is. Another sweep (a second process) skips it, and a live deletion
+    // sees a fresh marker rather than a stalled one.
+    const claimed = await prisma.user.updateMany({
+      where: { id: u.id, deletionStartedAt: u.deletionStartedAt },
+      data: { deletionStartedAt: now },
+    });
+    if (claimed.count !== 1) continue;
     if (u.deletionPriorAdmin && (await prisma.user.count({ where: { isAdmin: true } })) === 0) {
       await restoreReserved(u.id, "would_leave_no_admin");
       run.restored++;

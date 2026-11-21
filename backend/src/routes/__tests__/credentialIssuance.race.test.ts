@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import request from "supertest";
 
 import app from "../../index";
@@ -72,6 +73,37 @@ describe("a token issued while the password changes does not survive the change 
     await rotateCredentials(userId, { passwordHash: await hashPassword("newPassword456") });
     await expect(generatePairingCode(userId, 0)).rejects.toMatchObject({ statusCode: 401 });
     expect(await prisma.pairingCode.count({ where: { userId } })).toBe(0);
+  });
+
+  it("two claims of different codes for one device leave one live token for it", async () => {
+    const a = await generatePairingCode(userId);
+    const b = await generatePairingCode(userId);
+    const claim = (code: string) =>
+      request(app)
+        .post("/api/v1/pairing/claim")
+        .send({ code, deviceName: "Phone", deviceId: "dev-same", platform: "ios" });
+    const [ra, rb] = await Promise.all([claim(a.code), claim(b.code)]);
+    expect([ra.status, rb.status]).toEqual([201, 201]);
+    expect(
+      await prisma.apiToken.count({ where: { userId, deviceId: "dev-same", revokedAt: null } })
+    ).toBe(1);
+  });
+
+  it("one reset link used twice at once resets the password once", async () => {
+    const token = "race-" + crypto.randomBytes(8).toString("hex");
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        resetToken: crypto.createHash("sha256").update(token).digest("hex"),
+        resetTokenExpiry: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
+    const reset = (newPassword: string) =>
+      request(app).post("/api/v1/auth/reset-password").send({ token, newPassword });
+    const results = await Promise.all([reset("firstPass1234"), reset("secondPass1234")]);
+    expect(results.map((r) => r.status).sort()).toEqual([200, 400]);
+    const after = await prisma.user.findUnique({ where: { id: userId } });
+    expect(after?.sessionEpoch).toBe(1);
   });
 
   it("still issues normally when nothing races", async () => {

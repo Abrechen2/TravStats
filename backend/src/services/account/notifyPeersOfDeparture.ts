@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import { endConnection } from "../sharing/federation/connections/actions";
+import { deliverAnnouncement } from "../sharing/federation/connections/announcements";
 import { runDeliveries } from "../sharing/federation/outbox";
 
 /** Connection states the other server still acts on; an ended one has nothing left to withdraw. */
@@ -33,7 +34,12 @@ export async function notifyPeersOfDeparture(userId: string): Promise<DepartureN
     select: { id: true, origin: true },
   });
   const notice: DepartureNotice = { ended: 0, failed: 0 };
-  if (connections.length === 0) return notice;
+  // Announcements already queued (a crash after an end was committed but
+  // before it was sent): delivered here too, or the delete cascades them away.
+  const queuedBefore = await prisma.connectionAnnouncement.count({
+    where: { connection: { userId } },
+  });
+  if (connections.length === 0 && queuedBefore === 0) return notice;
 
   const work = async (): Promise<void> => {
     for (const c of connections) {
@@ -53,6 +59,12 @@ export async function notifyPeersOfDeparture(userId: string): Promise<DepartureN
         );
       }
     }
+    const pending = await prisma.connectionAnnouncement.findMany({
+      where: { connection: { userId } },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    });
+    for (const a of pending) await deliverAnnouncement(a.id);
     // Only this account's streams: the rest of the queue is not its business.
     await runDeliveries(undefined, userId);
   };

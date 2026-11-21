@@ -22,6 +22,11 @@ jest.mock("../../services/sharing/federation/connections/actions", () => ({
   ...jest.requireActual("../../services/sharing/federation/connections/actions"),
   endConnection: (userId: string, id: string) => mockEndConnection(userId, id),
 }));
+const mockDeliverAnnouncement = jest.fn(async (_id: string) => undefined);
+jest.mock("../../services/sharing/federation/connections/announcements", () => ({
+  ...jest.requireActual("../../services/sharing/federation/connections/announcements"),
+  deliverAnnouncement: (id: string) => mockDeliverAnnouncement(id),
+}));
 const mockRunDeliveries = jest.fn(async () => ({ sent: 0, failed: 0, parked: 0, dropped: 0 }));
 jest.mock("../../services/sharing/federation/outbox", () => ({
   ...jest.requireActual("../../services/sharing/federation/outbox"),
@@ -63,6 +68,7 @@ describe("self-delete tells federated peers and leaves an audit event (forgejo#4
   beforeEach(() => {
     mockEndConnection.mockClear();
     mockRunDeliveries.mockClear();
+    mockDeliverAnnouncement.mockClear();
     seenUserWhenEnding.length = 0;
   });
 
@@ -91,6 +97,22 @@ describe("self-delete tells federated peers and leaves an audit event (forgejo#4
       .find((e) => e.context?.eventType === "account_deleted");
     expect(event?.context).toMatchObject({ userId: id, self: true, peersWithdrawn: 2 });
     audit.mockRestore();
+  });
+
+  it("sends an announcement an earlier end left queued before the rows go", async () => {
+    const id = await makeUser(NAMES[0]);
+    const ended = await connect(id, 4, "revoked");
+    const queued = await prisma.connectionAnnouncement.create({
+      data: {
+        connectionId: ended,
+        peerOrigin: "https://peer4.example",
+        kind: "connect-revoke",
+        payload: {},
+      },
+    });
+    const res = await del(id);
+    expect(res.status).toBe(200);
+    expect(mockDeliverAnnouncement).toHaveBeenCalledWith(queued.id);
   });
 
   it("still deletes when a peer cannot be told", async () => {

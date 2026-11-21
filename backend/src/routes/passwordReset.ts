@@ -229,12 +229,19 @@ router.post(
       // Recovering an account has to remove whoever you are recovering it
       // from — every session and token older than this instant stops working
       // (one step with the password write: see revokeUserApiTokens.ts).
-      await rotateCredentials(user.id, {
-        passwordHash: newHash,
-        resetToken: null,
-        resetTokenExpiry: null,
-        mustChangePassword: false,
-      });
+      await rotateCredentials(
+        user.id,
+        {
+          passwordHash: newHash,
+          resetToken: null,
+          resetTokenExpiry: null,
+          mustChangePassword: false,
+        },
+        {
+          where: { resetToken: hashedToken, resetTokenExpiry: { gt: new Date() } },
+          error: () => new AppError("Invalid or expired reset token", 400),
+        }
+      );
 
       logger.info({ operation: "password_reset_completed", userId: user.id });
 
@@ -279,12 +286,19 @@ router.post(
       const newHash = await hashPassword(newPassword);
 
       // One step with the token revocation: see revokeUserApiTokens.ts.
-      await rotateCredentials(user.id, {
-        passwordHash: newHash,
-        changeToken: null,
-        changeTokenExpiry: null,
-        mustChangePassword: false,
-      });
+      await rotateCredentials(
+        user.id,
+        {
+          passwordHash: newHash,
+          changeToken: null,
+          changeTokenExpiry: null,
+          mustChangePassword: false,
+        },
+        {
+          where: { changeToken: hashedToken, changeTokenExpiry: { gt: new Date() } },
+          error: () => new AppError("Invalid or expired change token", 400),
+        }
+      );
 
       logger.info({ operation: "force_password_change_completed", userId: user.id });
 

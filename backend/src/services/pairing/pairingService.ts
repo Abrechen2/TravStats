@@ -109,7 +109,9 @@ export async function verifyAndConsume<T = void>(
       where: { codeHash },
       select: { userId: true },
     });
-    if (owner) await holdForIssuance(tx, owner.userId, undefined);
+    // Exclusive while it mints: the claim replaces the device's prior token, and
+    // two claims for one device must not both find none.
+    if (owner) await holdForIssuance(tx, owner.userId, undefined, mint !== undefined);
 
     const consumed = await tx.pairingCode.updateMany({
       where: { codeHash, consumedAt: null, expiresAt: { gt: now } },

@@ -33,12 +33,26 @@ async function revokeAll(tx: DbTransaction, userId: string): Promise<void> {
  *
  * One transaction: a failure leaves the old password AND the old tokens.
  */
+export interface CredentialProof {
+  /** What the proof the caller checked must still say about the row, re-read under the lock. */
+  where: Prisma.UserWhereInput;
+  /** Thrown when it no longer does: the proof was spent or overtaken meanwhile. */
+  error: () => Error;
+}
+
 export async function rotateCredentials(
   userId: string,
-  data: Omit<Prisma.UserUpdateInput, "sessionEpoch">
+  data: Omit<Prisma.UserUpdateInput, "sessionEpoch">,
+  proof?: CredentialProof
 ) {
   return prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+    // The caller checked its proof (reset link, change token, old password)
+    // before the lock; two requests with one proof both passed that check.
+    // Only the first that gets here still finds it true.
+    if (proof && (await tx.user.count({ where: { AND: [{ id: userId }, proof.where] } })) === 0) {
+      throw proof.error();
+    }
     await revokeAll(tx, userId);
     return tx.user.update({
       where: { id: userId },
@@ -58,10 +72,16 @@ export async function rotateCredentials(
 export async function holdForIssuance(
   tx: DbTransaction,
   userId: string,
-  expectedEpoch: number | undefined
+  expectedEpoch: number | undefined,
+  exclusive = false
 ): Promise<void> {
-  const rows = await tx.$queryRaw<{ session_epoch: number }[]>`
-    SELECT session_epoch FROM users WHERE id = ${userId} FOR SHARE`;
+  // `exclusive` for a path that reads-then-replaces the account's tokens (a
+  // device re-pairing): two such issues must not both read "no prior token".
+  const rows = exclusive
+    ? await tx.$queryRaw<{ session_epoch: number }[]>`
+        SELECT session_epoch FROM users WHERE id = ${userId} FOR UPDATE`
+    : await tx.$queryRaw<{ session_epoch: number }[]>`
+        SELECT session_epoch FROM users WHERE id = ${userId} FOR SHARE`;
   const current = rows[0]?.session_epoch;
   if (current === undefined || (expectedEpoch !== undefined && current !== expectedEpoch)) {
     throw new AppError("Session expired - please sign in again", 401);

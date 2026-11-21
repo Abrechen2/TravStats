@@ -498,7 +498,16 @@ router.post(
       // password change that leaves old cookies or tokens working is not a
       // change anybody can rely on (audit finding AUD-003, forgejo#415). The
       // route is cookie-only, so no caller is a token cutting its own branch.
-      const updated = await rotateCredentials(userId, { passwordHash: newPasswordHash });
+      // The old password is re-checked under the lock as the hash it matched: a
+      // reset or another change that landed meanwhile wins, this one is refused.
+      const updated = await rotateCredentials(
+        userId,
+        { passwordHash: newPasswordHash },
+        {
+          where: { passwordHash: user.passwordHash },
+          error: () => new AppError("Current password is incorrect", 401),
+        }
+      );
 
       // The caller keeps theirs: they just proved the old password and are sitting
       // in front of the app. A fresh cookie is minted AFTER the cutoff, so the

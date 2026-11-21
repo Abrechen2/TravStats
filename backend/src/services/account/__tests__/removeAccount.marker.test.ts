@@ -93,6 +93,15 @@ describe("an interrupted account deletion is settled, never left half-done (forg
     });
   });
 
+  it("two sweeps at once settle a stalled deletion once", async () => {
+    const id = await makeUser(NAMES[0]);
+    await reserve(id, stale, false);
+    const [a, b] = await Promise.all([recoverStalledDeletions(NOW), recoverStalledDeletions(NOW)]);
+    expect(a.completed + b.completed).toBe(1);
+    expect(a.restored + b.restored).toBe(0);
+    expect(await prisma.user.findUnique({ where: { id } })).toBeNull();
+  });
+
   it("leaves a deletion still in its first minutes alone", async () => {
     const id = await makeUser(NAMES[0]);
     await reserve(id, new Date(NOW.getTime() - 60_000), false);

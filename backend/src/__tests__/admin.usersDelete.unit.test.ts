@@ -31,7 +31,7 @@ jest.mock("../db", () => ({
         user: {
           findUnique: (...args: unknown[]) => mockUserFindUnique(...args),
           count: (...args: unknown[]) => mockUserCount(...args),
-          delete: (...args: unknown[]) => mockUserDelete(...args),
+          deleteMany: (...args: unknown[]) => mockUserDelete(...args),
           update: (...args: unknown[]) => mockUserUpdate(...args),
         },
         syncChange: { deleteMany: (...args: unknown[]) => mockSyncChangeDeleteMany(...args) },
@@ -171,7 +171,7 @@ describe("DELETE /admin/users/:id — guards", () => {
       username: "bob",
       isAdmin: false,
     });
-    mockUserDelete.mockResolvedValue({ id: "target-user" });
+    mockUserDelete.mockResolvedValue({ count: 1 });
 
     const req = {
       userId: "admin-1",
@@ -180,13 +180,15 @@ describe("DELETE /admin/users/:id — guards", () => {
 
     const res = await callDeleteRoute(req);
     expect(res.status).toBe(200);
-    expect(mockUserDelete).toHaveBeenCalledWith({ where: { id: "target-user" } });
+    expect(mockUserDelete).toHaveBeenCalledWith({
+      where: { id: "target-user", deletionStartedAt: { not: null } },
+    });
     expect(res.body).toEqual({ message: "User deleted", userId: "target-user" });
   });
 
   it("deletes the account through the step that also removes its uploaded files", async () => {
     mockUserFindUnique.mockResolvedValue({ id: "target-user", username: "bob", isAdmin: false });
-    mockUserDelete.mockResolvedValue({ id: "target-user" });
+    mockUserDelete.mockResolvedValue({ count: 1 });
 
     const res = await callDeleteRoute({
       userId: "admin-1",
@@ -213,7 +215,7 @@ describe("DELETE /admin/users/:id — guards", () => {
       isAdmin: true,
     });
     mockUserCount.mockResolvedValue(3);
-    mockUserDelete.mockResolvedValue({ id: "target-admin-2" });
+    mockUserDelete.mockResolvedValue({ count: 1 });
 
     const req = {
       userId: "admin-1",
@@ -222,6 +224,8 @@ describe("DELETE /admin/users/:id — guards", () => {
 
     const res = await callDeleteRoute(req);
     expect(res.status).toBe(200);
-    expect(mockUserDelete).toHaveBeenCalledWith({ where: { id: "target-admin-2" } });
+    expect(mockUserDelete).toHaveBeenCalledWith({
+      where: { id: "target-admin-2", deletionStartedAt: { not: null } },
+    });
   });
 });
