@@ -86,6 +86,8 @@ export function buildMercatorTripLayers(input: MercatorLayerInput): Layer[] {
     getPath: (d) => d.path,
     getColor: (d) => emphasisColor(d.color, stateOf(d), 230),
     getWidth: (d) => emphasisWidth(3, stateOf(d)),
+    // Pixels, not the PathLayer's default metres: a metre width clamps to the minimum and nothing shows.
+    widthUnits: "pixels",
     widthMinPixels: 1,
     ...triggers,
     pickable: true,
