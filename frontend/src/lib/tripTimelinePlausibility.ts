@@ -184,7 +184,15 @@ function rentalFindings(events: TimelineEvent[], legs: Leg[], out: TimelineFindi
         const afterPickup = !pickup || !strictlyBefore(leg.start, pickup.when, false);
         const sameDay = compareDays(leg.start, e.when) === "same";
         if (!afterPickup && !sameDay) continue;
-        if (strictlyBefore(leg.start, e.when, true)) {
+        // A side trip that came back to the station's town before the return is fine.
+        const cameBack = legs.some(
+          (l) =>
+            l !== leg &&
+            near(place(e), l.arr, SAME_PLACE_KM) &&
+            l.start.utc > leg.start.utc &&
+            compareDays(l.end, e.when) !== "after"
+        );
+        if (!cameBack && strictlyBefore(leg.start, e.when, true)) {
           add(out, "rentalReturnAfterDeparture", e, leg.ev);
           break;
         }
@@ -207,9 +215,14 @@ function rentalFindings(events: TimelineEvent[], legs: Leg[], out: TimelineFindi
     for (const y of rentals) {
       if (y.kind !== "rental-pickup" || y.rental.id === x.rental.id) continue;
       const ret = returnOf(y.rental.id);
-      if (!ret || !strictlyBefore(y.when, x.when, false)) continue;
+      if (!ret) continue;
+      const order =
+        hasExplicitTime(x.when) && hasExplicitTime(y.when)
+          ? compareClock(y.when, x.when, false)
+          : compareDays(y.when, x.when);
+      const yFirst = order === "before" || (order === "same" && y.id < x.id);
       // y was collected first; x collected before y came back.
-      if (strictlyBefore(x.when, ret.when, false) && hasExplicitTime(x.when)) {
+      if (yFirst && strictlyBefore(x.when, ret.when, false)) {
         add(out, "rentalsOverlap", x, y);
       }
     }
@@ -243,7 +256,12 @@ function lodgingFindings(events: TimelineEvent[], legs: Leg[], out: TimelineFind
         compareDays(x.when, xo.when) === "before" && compareDays(y.when, yo.when) === "before";
       const overlap =
         compareDays(y.when, xo.when) === "before" && compareDays(x.when, yo.when) === "before";
-      if (sane && overlap && compareDays(x.when, y.when) !== "after" && x.id < y.id) {
+      if (
+        sane &&
+        overlap &&
+        (compareDays(x.when, y.when) === "before" ||
+          (compareDays(x.when, y.when) === "same" && x.id < y.id))
+      ) {
         add(out, "stayOverlap", y, x);
       }
     }
@@ -262,14 +280,21 @@ function lodgingFindings(events: TimelineEvent[], legs: Leg[], out: TimelineFind
       if (later) add(out, "checkInBeforeArrival", cin, later.ev);
     }
     if (!cout) continue;
-    // The traveller left the town and nothing brought them back, before the check-out day.
-    if (!departures.some((l) => compareDays(l.start, cout.when) !== "before")) {
-      const last = departures
-        .filter((l) => compareDays(l.start, cin.when) !== "before")
-        .sort((a, b) => b.start.utc.localeCompare(a.start.utc))[0];
-      const cameBack = last && arrivals.some((l) => l.start.utc > last.start.utc);
-      if (last && !cameBack) add(out, "checkOutAfterDeparture", cout, last.ev);
-    }
+    // The traveller left the town during the stay and nothing brought them back by the check-out day.
+    if (departures.some((l) => compareDays(l.start, cout.when) === "same")) continue;
+    const last = departures
+      .filter(
+        (l) =>
+          compareDays(l.start, cin.when) !== "before" &&
+          compareDays(l.start, cout.when) === "before"
+      )
+      .sort((a, b) => b.start.utc.localeCompare(a.start.utc))[0];
+    const cameBack =
+      last &&
+      arrivals.some(
+        (l) => l.start.utc > last.start.utc && compareDays(l.end, cout.when) !== "after"
+      );
+    if (last && !cameBack) add(out, "checkOutAfterDeparture", cout, last.ev);
   }
 }
 

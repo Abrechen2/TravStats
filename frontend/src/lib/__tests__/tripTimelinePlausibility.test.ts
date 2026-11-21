@@ -257,3 +257,69 @@ describe("timeline plausibility — lodging", () => {
     expect(codes([land, stay("s", "h", "lodging-checkin", "2009-04-08")])).toEqual([]);
   });
 });
+
+describe("timeline plausibility — review follow-ups", () => {
+  it("flags an overlap whichever stay's id sorts first", () => {
+    const events = [
+      stay("z", "h1", "lodging-checkin", "2009-04-08"),
+      stay("z", "h1", "lodging-checkout", "2009-04-12"),
+      stay("a", "h2", "lodging-checkin", "2009-04-10"),
+      stay("a", "h2", "lodging-checkout", "2009-04-14"),
+    ];
+    expect(codes(events)).toEqual(["stayOverlap:lodging-checkin-a"]);
+  });
+
+  it("accepts a rental kept over a side trip that came back before the return", () => {
+    const pick = rental("r", "rental-pickup", MCO, at("2009-04-08T10:00:00", EDT));
+    const out = flight(
+      "o",
+      MCO,
+      ORD,
+      at("2009-04-10T06:00:00", EDT),
+      at("2009-04-10T08:00:00", CDT)
+    );
+    const back = flight(
+      "b",
+      ORD,
+      MCO,
+      at("2009-04-11T06:00:00", CDT),
+      at("2009-04-11T09:00:00", EDT)
+    );
+    const ret = rental("r", "rental-return", MCO, at("2009-04-12T10:00:00", EDT));
+    expect(codes([pick, out, back, ret])).toEqual([]);
+  });
+
+  it("still flags a check-out after leaving when a later trip returns after the check-out", () => {
+    const leave = flight(
+      "o",
+      MCO,
+      ORD,
+      at("2009-04-10T06:00:00", EDT),
+      at("2009-04-10T08:00:00", CDT)
+    );
+    const back = flight(
+      "b",
+      ORD,
+      MCO,
+      at("2009-04-20T06:00:00", CDT),
+      at("2009-04-20T09:00:00", EDT)
+    );
+    const events = [
+      stay("s", "h", "lodging-checkin", "2009-04-08", MCO),
+      stay("s", "h", "lodging-checkout", "2009-04-12", MCO),
+      leave,
+      back,
+    ];
+    expect(codes(events)).toContain("checkOutAfterDeparture:lodging-checkout-s");
+  });
+
+  it("flags two date-only pickups that fall inside each other", () => {
+    const events = [
+      rental("a", "rental-pickup", MCO, day("2009-04-08")),
+      rental("a", "rental-return", MCO, day("2009-04-12")),
+      rental("b", "rental-pickup", MIA, day("2009-04-10")),
+      rental("b", "rental-return", MIA, day("2009-04-14")),
+    ];
+    expect(codes(events)).toEqual(["rentalsOverlap:rental-pickup-b"]);
+  });
+});
