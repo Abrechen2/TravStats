@@ -411,7 +411,16 @@ registry.registerPath({
   path: "/trips/{id}/immich/estimate",
   summary: "How much an import would fetch",
   tags: immichTag,
-  request: { params: z.object({ id: uuid }) },
+  request: {
+    params: z.object({ id: uuid }),
+    query: z.object({
+      albumId: z.string(),
+      provider: z
+        .enum(["immich", "photoprism"])
+        .optional()
+        .describe("Photo source; default immich"),
+    }),
+  },
   responses: { 200: { description: "Estimate" }, 404: notFound },
 });
 

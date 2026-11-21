@@ -208,6 +208,31 @@ describe("PhotoPrism import", () => {
     expect(urls.some((u) => u.includes(`/dl/${H2}`))).toBe(true);
   });
 
+  it("finishes a truncated album as completed-but-partial with the read count, not silently complete", async () => {
+    // 500-photo pages, never a short one: the 200-page bound runs out.
+    mockedAxios.get.mockImplementation((async (url: unknown) => {
+      const u = String(url);
+      if (u.includes("/config"))
+        return { data: { version: "261029-x", previewToken: "pt", downloadToken: "dt" } };
+      if (u.includes("/photos?")) {
+        const offset = Number(/offset=(\d+)/.exec(u)?.[1]);
+        return {
+          data: Array.from({ length: 500 }, (_v, i) =>
+            photo((offset + i).toString(16).padStart(40, "0"), { FileName: "x.heic" })
+          ),
+        };
+      }
+      return media();
+    }) as never);
+
+    await startAlbumImport("u1", "link-1");
+
+    expect(lastJob()).toMatchObject({ status: "completed" });
+    expect(jobStates().find((d) => d.status === "completed")).toMatchObject({
+      error: "truncated:0",
+    });
+  });
+
   it("stores the size that actually arrived, not 0 (PhotoPrism's list carries none)", async () => {
     routeAxios({ photos: [photo(H1)] });
 
