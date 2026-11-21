@@ -39,7 +39,8 @@ export function mergeFerryJourney(
   // A re-derived chord would silently shorten a crossing that was routed over
   // water; a distance the user typed still wins.
   const seaLine =
-    existing?.geometrySource === "sea_route" && sameFerryEnds(existing, merged)
+    (existing?.geometrySource === "sea_route" || existing?.geometrySource === "manual") &&
+    sameFerryEnds(existing, merged)
       ? readSeaGeometry(existing.geometry)
       : null;
   if (!seaLine || merged.distanceSource === "user") return merged;

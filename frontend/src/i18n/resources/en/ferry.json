@@ -225,7 +225,15 @@
     "noRoute": "No sea route found. The existing route is unchanged.",
     "failed": "The sea route could not be saved. Please try again.",
     "distance": "Sea route (estimate)",
-    "autoFailed": "Saved — the sea route could not be calculated. Try again on the crossing's page."
+    "autoFailed": "Saved — the sea route could not be calculated. Try again on the crossing's page.",
+    "edit": "Draw route by hand",
+    "editManual": "Edit route",
+    "clear": "Remove hand-drawn route",
+    "clearing": "Removing …",
+    "manual": "Route drawn by you — not a recorded ship track.",
+    "cleared": "Hand-drawn route removed.",
+    "clearedRouted": "Hand-drawn route removed; the sea route was calculated again.",
+    "clearFailed": "The route could not be removed. Please try again."
   },
   "map": {
     "title": "Route",
@@ -233,6 +241,24 @@
       "seaRoute": "Schematic sea route between the ports — not a recorded ship track.",
       "drawn": "The crossing's stored line.",
       "straight": "Straight line between the ports — not the way the ship sailed."
+    }
+  },
+  "routeEditor": {
+    "hint": "Click the line to insert a point. Drag a point to move it.",
+    "save": "Save",
+    "saving": "Saving …",
+    "cancel": "Cancel",
+    "undo": "Undo",
+    "redo": "Redo",
+    "removePoint": "Remove point",
+    "point": "Point {{index}}",
+    "terminal": "Terminal {{index}}",
+    "discardConfirm": "Discard the unsaved changes to the route?",
+    "failed": "The route could not be saved. Please try again.",
+    "errors": {
+      "FERRY_ROUTE_INVALID": "The route is not valid: at least one point between the terminals, at most 64 points, and not absurdly longer than the crossing.",
+      "FERRY_ROUTE_NOT_ANCHORED": "The route must start at the departure terminal and end at the arrival terminal.",
+      "VERSION_CONFLICT": "The crossing changed in the meantime. Reload the page and draw again."
     }
   }
 }

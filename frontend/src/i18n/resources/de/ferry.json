@@ -225,7 +225,15 @@
     "noRoute": "Kein Seeweg gefunden. Die bisherige Strecke bleibt erhalten.",
     "failed": "Seeweg konnte nicht gespeichert werden. Bitte erneut versuchen.",
     "distance": "Seeweg (Schätzung)",
-    "autoFailed": "Gespeichert – der Seeweg konnte nicht berechnet werden. Auf der Seite der Überfahrt erneut versuchen."
+    "autoFailed": "Gespeichert – der Seeweg konnte nicht berechnet werden. Auf der Seite der Überfahrt erneut versuchen.",
+    "edit": "Strecke von Hand zeichnen",
+    "editManual": "Strecke bearbeiten",
+    "clear": "Handgezeichnete Strecke entfernen",
+    "clearing": "Wird entfernt …",
+    "manual": "Von dir gezeichnete Strecke – kein aufgezeichneter Schiffstrack.",
+    "cleared": "Handgezeichnete Strecke entfernt.",
+    "clearedRouted": "Handgezeichnete Strecke entfernt, der Seeweg wurde neu berechnet.",
+    "clearFailed": "Die Strecke konnte nicht entfernt werden. Bitte erneut versuchen."
   },
   "map": {
     "title": "Strecke",
@@ -233,6 +241,24 @@
       "seaRoute": "Schematisch berechneter Seeweg zwischen den Häfen – kein aufgezeichneter Schiffstrack.",
       "drawn": "Gespeicherte Linie der Überfahrt.",
       "straight": "Luftlinie zwischen den Häfen – nicht der Weg des Schiffs."
+    }
+  },
+  "routeEditor": {
+    "hint": "Klicke auf die Linie, um einen Punkt einzufügen. Ziehe einen Punkt, um ihn zu verschieben.",
+    "save": "Speichern",
+    "saving": "Wird gespeichert …",
+    "cancel": "Abbrechen",
+    "undo": "Rückgängig",
+    "redo": "Wiederholen",
+    "removePoint": "Punkt entfernen",
+    "point": "Punkt {{index}}",
+    "terminal": "Hafen {{index}}",
+    "discardConfirm": "Ungespeicherte Änderungen an der Strecke verwerfen?",
+    "failed": "Die Strecke konnte nicht gespeichert werden. Bitte erneut versuchen.",
+    "errors": {
+      "FERRY_ROUTE_INVALID": "Die Strecke ist ungültig: mindestens ein Punkt zwischen den Häfen, höchstens 64 Punkte, und nicht unsinnig länger als die Überfahrt.",
+      "FERRY_ROUTE_NOT_ANCHORED": "Die Strecke muss im Abfahrtshafen beginnen und im Ankunftshafen enden.",
+      "VERSION_CONFLICT": "Die Überfahrt wurde zwischenzeitlich geändert. Seite neu laden und erneut zeichnen."
     }
   }
 }
