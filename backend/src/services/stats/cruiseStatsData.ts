@@ -13,6 +13,11 @@ import { birthdayOf } from "../timeModel/readDay";
  * companion list, the FX snapshot. A second query per page would defeat the
  * point of loading the itineraries in one pass.
  */
+import {
+  ownOrPackagePrice,
+  PACKAGE_COST_BOOKING_SELECT,
+  type PackageAwareBooking,
+} from "../../shared/packageBooking";
 import { prisma } from "../../db";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { startedIn } from "../../utils/stats/domainYear";
@@ -88,22 +93,21 @@ export async function loadCruiseStatsData(
         departurePort: true,
         arrivalPort: true,
         ship: { select: { name: true, grossTonnage: true, capacity: true, yearBuilt: true } },
+        // The booking for a split package's share (forgejo#430).
+        booking: { select: PACKAGE_COST_BOOKING_SELECT },
       },
     }),
     cruiseSeaDaysCounted(userId),
   ]);
 
   const rows: CruiseStatsRow[] = cruises.map((c) => ({
+    ...cruiseMoney(c),
     id: c.id,
     label: c.routeName ?? c.shipNameOverride ?? c.ship?.name ?? c.cruiseLine ?? "—",
     shipName: c.ship?.name ?? null,
     startDate: c.startDate,
     companions: c.companions,
     tripId: c.tripId,
-    price: c.price,
-    currency: c.currency,
-    priceBase: c.priceBase,
-    fxBaseCurrency: c.fxBaseCurrency,
     shipSpecs: c.ship
       ? {
           grossTonnage: c.ship.grossTonnage,
@@ -154,4 +158,16 @@ export async function loadCruiseStatsData(
   const userBirthday = birthdayOf(user);
 
   return { rows, userBirthday, countSeaDays };
+}
+
+/** A cruise's own price, or its share of a split package (forgejo#430). */
+function cruiseMoney(c: {
+  id: string;
+  price: number | null;
+  currency: string | null;
+  priceBase: number | null;
+  fxBaseCurrency: string | null;
+  booking: PackageAwareBooking | null;
+}) {
+  return ownOrPackagePrice(c, c.booking, "cruise", c.id);
 }

@@ -42,6 +42,8 @@ export interface RentalTimes {
 }
 
 export interface RentalBooking {
+  /** The package booking it was sold on (forgejo#430); optional — an older server sends none. */
+  bookingId?: string | null;
   /** Estimated CO2 (forgejo#395); null where the ride has no known distance. */
   co2?: import("./co2").Co2Estimate | null;
   id: string;
@@ -279,6 +281,8 @@ export interface RentalImportCandidate {
 export interface TripRental {
   id: string;
   provider: string;
+  /** The package booking it was sold on (forgejo#430); optional — an older server sends none. */
+  bookingId?: string | null;
   pickupStationName: string;
   returnStationName: string;
   pickupTime: string;

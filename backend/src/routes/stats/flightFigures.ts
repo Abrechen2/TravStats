@@ -7,6 +7,7 @@
  * `authenticate` and `statsEtag` run in the parent before this router.
  */
 
+import { PACKAGE_COST_BOOKING_SELECT } from "../../shared/packageBooking";
 import { Router, Response, NextFunction } from "express";
 import { DateRangeQuerySchema, DateRangeYearQuerySchema } from "../../schemas/statsQuery";
 import { prisma } from "../../db";
@@ -141,15 +142,7 @@ router.get(
           seatClass: true,
           createdAt: true,
           bookingId: true,
-          booking: {
-            select: {
-              id: true,
-              price: true,
-              currency: true,
-              priceBase: true,
-              fxBaseCurrency: true,
-            },
-          },
+          booking: { select: { id: true, ...PACKAGE_COST_BOOKING_SELECT } },
         },
       });
 

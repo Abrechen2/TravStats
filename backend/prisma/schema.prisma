@@ -2776,14 +2776,15 @@ model Booking {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip          Trip?          @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip          Trip?           @relation(fields: [tripId], references: [id], onDelete: SetNull)
   flights       Flight[]
   cruises       Cruise[]
   railJourneys  RailJourney[]
   busJourneys   BusJourney[]
   ferryJourneys FerryJourney[]
   lodgingStays  LodgingStay[]
+  rentals       RentalBooking[]
 
   @@index([userId])
   @@index([userId, createdAt])
@@ -5093,9 +5094,12 @@ model RentalBooking {
   /// never replaces one of these (silent-failure class 4).
   userEditedFields String[] @default([]) @map("user_edited_fields")
 
-  tripId  String? @map("trip_id")
+  tripId    String? @map("trip_id")
+  /// The booking that sold this rental with other entries — a package
+  /// (forgejo#430). Null for a rental paid on its own.
+  bookingId String? @map("booking_id")
   /// The roadtrip (`TripRoute`, kind roadtrip) this car was driven on.
-  routeId String? @map("route_id")
+  routeId   String? @map("route_id")
 
   /// The parser writes `rental:<provider>:<confirmationNumber>`.
   externalRef   String? @map("external_ref")
@@ -5108,6 +5112,7 @@ model RentalBooking {
 
   user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip           Trip?                    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking        Booking?                 @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   route          TripRoute?               @relation(fields: [routeId], references: [id], onDelete: SetNull)
   importBatch    ImportBatch?             @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
   pickupAirport  Airport?                 @relation("RentalPickupAirport", fields: [pickupAirportId], references: [id], onDelete: SetNull)
@@ -5122,6 +5127,7 @@ model RentalBooking {
   @@index([userId, confirmationNumber])
   @@index([status])
   @@index([tripId])
+  @@index([bookingId])
   @@index([routeId])
   @@index([importBatchId])
   @@index([pickupAirportId])

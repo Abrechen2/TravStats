@@ -17,6 +17,7 @@ import "./parserTemplateExport";
 import "./flights";
 import "./trips";
 import "./tripBookings";
+import "./bookingPackage";
 import "./tripPackage";
 import "./tripExchange";
 import "./tours";

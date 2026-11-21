@@ -80,6 +80,11 @@ export interface BookingEntriesInput {
   flightIds?: string[];
   stayIds?: string[];
   cruiseIds?: string[];
+  /** Rides and rentals a package sold too (forgejo#430). */
+  railIds?: string[];
+  busIds?: string[];
+  ferryIds?: string[];
+  rentalIds?: string[];
 }
 
 /** A trip that qualifies for dissolution (≤2 flights, no other content). */

@@ -28,7 +28,11 @@ import {
 import { recomputeTripStatus } from "../../services/tripStatusService";
 import { fxColumnsFor, getBaseCurrency } from "../../services/fx/snapshot";
 import { propagateWrites, shareSnapshots } from "../../services/sharing/propagate";
-import { bookingFxDay, setBookingEntries } from "../../services/trip/bookingEntries";
+import {
+  bookingFxDay,
+  NO_BOOKING_ENTRIES,
+  setBookingEntries,
+} from "../../services/trip/bookingEntries";
 import {
   resolveDeadlineColumns,
   type DeadlineContext,
@@ -135,7 +139,15 @@ router.post(
           tx,
           userId,
           created,
-          { flightIds: body.flightIds, stayIds: body.stayIds, cruiseIds: body.cruiseIds },
+          {
+            flightIds: body.flightIds,
+            stayIds: body.stayIds,
+            cruiseIds: body.cruiseIds,
+            railIds: body.railIds,
+            busIds: body.busIds,
+            ferryIds: body.ferryIds,
+            rentalIds: body.rentalIds,
+          },
           { moveToTrip: true }
         );
         return created;
@@ -257,13 +269,7 @@ router.delete(
       });
       if (!booking) throw new AppError("Booking not found", 404, "BOOKING_NOT_FOUND");
       await prisma.$transaction(async (tx) => {
-        await setBookingEntries(
-          tx,
-          userId,
-          booking,
-          { flightIds: [], stayIds: [], cruiseIds: [] },
-          { replace: true }
-        );
+        await setBookingEntries(tx, userId, booking, NO_BOOKING_ENTRIES, { replace: true });
         await tx.booking.delete({ where: { id: booking.id } });
       });
       if (booking.tripId) await recomputeTripStatus(booking.tripId);

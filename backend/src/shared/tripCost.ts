@@ -13,7 +13,7 @@
  * lost "most expensive" to a 120 EUR one. Both now read the items below.
  *
  * THE RULE, per entry on the trip:
- *  - A segment (flight, cruise, stay, train or bus ride) sold on a booking with a
+ *  - A segment (flight, cruise, stay, train, bus or ferry ride, rental) sold on a booking with a
  *    RECORDED price contributes that booking price — once per trip, however
  *    many segments share it, and all-in: the segments' own columns are not
  *    added on top. A booking recorded at 0 is free and does NOT fall back to
@@ -132,6 +132,9 @@ export interface TripCostInput {
   /** Rentals on the trip, and those driven on its roadtrips with no trip of their own. */
   rentals: (StoredPrice & {
     status: string;
+    /** A rental sold inside a package (forgejo#430) costs through its booking, once. */
+    bookingId?: string | null;
+    booking?: StoredPrice | null;
     finalAmount: number | null;
     finalCurrency: string | null;
     finalAmountBase: number | null;
@@ -229,6 +232,24 @@ export function tripCostItems(trip: TripCostInput): TripCostItems {
     take("ferry", segmentCostShare({ ...ride, own: ownPrice(ride) }, counted));
   }
   for (const rental of trip.rentals) {
+    // On a priced booking a rental is one item of it: the booking price is
+    // counted once (here or on another segment), the rental's own amount not
+    // on top. A cancelled one costs nothing on the booking either.
+    if (rental.bookingId && rental.booking && hasRecordedBookingPrice(rental.booking)) {
+      if (rental.status === "cancelled") continue;
+      take(
+        "rental",
+        segmentCostShare(
+          {
+            bookingId: rental.bookingId,
+            booking: rental.booking,
+            own: { amount: null, currency: null, amountBase: null, snapshotCurrency: null },
+          },
+          counted
+        )
+      );
+      continue;
+    }
     const cost = rentalCost(rental);
     if (cost === null) {
       // A cancelled rental without a fee cost nothing known and is no live

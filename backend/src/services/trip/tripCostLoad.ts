@@ -25,6 +25,9 @@ const AMOUNT = {
 const RENTAL_PRICE = {
   status: true,
   ...PRICE,
+  // A rental sold inside a package (forgejo#430) costs through its booking.
+  bookingId: true,
+  booking: BOOKING_PRICE,
   finalAmount: true,
   finalCurrency: true,
   finalAmountBase: true,
@@ -45,6 +48,7 @@ export const TRIP_COST_SELECT = {
           railJourneys: true,
           busJourneys: true,
           ferryJourneys: true,
+          rentals: true,
         },
       },
     },
@@ -128,7 +132,8 @@ export function toTripCostInput(row: TripCostRow, visible: VisibleDomains): Trip
         _count.lodgingStays +
         _count.railJourneys +
         _count.busJourneys +
-        _count.ferryJourneys,
+        _count.ferryJourneys +
+        _count.rentals,
     })),
     flights: when("flight", row.flights),
     cruises: when("cruise", row.cruises),

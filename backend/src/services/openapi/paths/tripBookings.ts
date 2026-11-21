@@ -172,7 +172,7 @@ registry.registerPath({
 registry.registerPath({
   method: "put",
   path: "/trips/bookings/{id}/entries",
-  summary: "Set the flights, stays and cruises a booking covers",
+  summary: "Set the entries a booking covers — flights, stays, cruises, rides, rentals",
   description:
     "Each list given replaces that kind's set (an entry left out leaves the booking); an " +
     "absent list is untouched. An entry on no trip joins the booking's trip. All or nothing: " +
@@ -192,6 +192,10 @@ registry.registerPath({
             flights: z.number().int(),
             stays: z.number().int(),
             cruises: z.number().int(),
+            rail: z.number().int(),
+            bus: z.number().int(),
+            ferry: z.number().int(),
+            rentals: z.number().int(),
           }),
         },
       },

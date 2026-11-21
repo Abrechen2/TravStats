@@ -1,4 +1,5 @@
 import ShareLinkButton from "../shareLinks/ShareLinkButton";
+import { PackageBookingCard } from "../bookings/PackageBookingCard";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useRatingCategories } from "../../hooks/useRatingCategories";
@@ -235,6 +236,14 @@ export function LodgingStayCard({
             {fact.label}: {fact.value}
           </p>
         ))}
+      {stay.bookingId && (
+        <div className="mt-2">
+          <PackageBookingCard
+            bookingId={stay.bookingId}
+            highlight={{ kind: "stay", id: stay.id }}
+          />
+        </div>
+      )}
       {stay.notes && (
         <p className="mt-2 whitespace-pre-wrap text-xs text-[var(--text-muted)]">{stay.notes}</p>
       )}

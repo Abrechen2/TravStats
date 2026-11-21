@@ -31,6 +31,7 @@
  * quietly serving a different population under the same section name.
  */
 
+import { PACKAGE_COST_BOOKING_SELECT } from "../../shared/packageBooking";
 import { Prisma } from "../../prisma";
 
 import { prisma } from "../../db";
@@ -73,15 +74,7 @@ const pageRowSelect = {
   delayMinutes: true,
   createdAt: true,
   bookingId: true,
-  booking: {
-    select: {
-      id: true,
-      price: true,
-      currency: true,
-      priceBase: true,
-      fxBaseCurrency: true,
-    },
-  },
+  booking: { select: { id: true, ...PACKAGE_COST_BOOKING_SELECT } },
 } satisfies Prisma.FlightSelect;
 
 /** One countable flight, with every column the composed sections need. */

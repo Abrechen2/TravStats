@@ -1,5 +1,6 @@
 /**
- * Which flights, stays and cruises a booking covers (#356) — one writer for
+ * Which entries a booking covers (#356; every kind since forgejo#430: flights,
+ * stays, cruises, train/bus/ferry rides and rentals) — one writer for
  * the booking routes, so creating a package by hand, editing its entries and
  * deleting it file and unfile entries by the same rules.
  *
@@ -14,7 +15,7 @@
  *     booking; a kind whose list is absent is left alone.
  *   - Shared entries are snapshotted and propagated like every other write.
  */
-import { AppError } from "../../middleware/errorHandler";
+import { AppError, type ApiErrorCode } from "../../middleware/errorHandler";
 import type { DbTransaction } from "../../db";
 import { propagateWrites, shareSnapshots } from "../sharing/propagate";
 import type { ShareEntity } from "../sharing/adapters/types";
@@ -23,15 +24,41 @@ export interface BookingEntryLists {
   flightIds?: readonly string[];
   stayIds?: readonly string[];
   cruiseIds?: readonly string[];
+  railIds?: readonly string[];
+  busIds?: readonly string[];
+  ferryIds?: readonly string[];
+  rentalIds?: readonly string[];
 }
 
 export interface BookingEntryCounts {
   flights: number;
   stays: number;
   cruises: number;
+  rail: number;
+  bus: number;
+  ferry: number;
+  rentals: number;
 }
 
-type EntryModel = "flight" | "lodgingStay" | "cruise";
+type EntryModel =
+  | "flight"
+  | "lodgingStay"
+  | "cruise"
+  | "railJourney"
+  | "busJourney"
+  | "ferryJourney"
+  | "rentalBooking";
+
+/** Every list, empty — what un-files a booking's entries of every kind. */
+export const NO_BOOKING_ENTRIES: Required<BookingEntryLists> = {
+  flightIds: [],
+  stayIds: [],
+  cruiseIds: [],
+  railIds: [],
+  busIds: [],
+  ferryIds: [],
+  rentalIds: [],
+};
 
 interface Delegate {
   count(args: { where: object }): Promise<number>;
@@ -43,7 +70,7 @@ const KINDS: readonly {
   list: keyof BookingEntryLists;
   model: EntryModel;
   share: ShareEntity;
-  code: "FLIGHT_NOT_FOUND" | "STAY_NOT_FOUND" | "CRUISE_NOT_FOUND";
+  code: ApiErrorCode;
   count: keyof BookingEntryCounts;
 }[] = [
   {
@@ -67,6 +94,22 @@ const KINDS: readonly {
     code: "CRUISE_NOT_FOUND",
     count: "cruises",
   },
+  { list: "railIds", model: "railJourney", share: "rail", code: "RAIL_NOT_FOUND", count: "rail" },
+  { list: "busIds", model: "busJourney", share: "bus", code: "BUS_NOT_FOUND", count: "bus" },
+  {
+    list: "ferryIds",
+    model: "ferryJourney",
+    share: "ferry",
+    code: "FERRY_NOT_FOUND",
+    count: "ferry",
+  },
+  {
+    list: "rentalIds",
+    model: "rentalBooking",
+    share: "rental",
+    code: "RENTAL_NOT_FOUND",
+    count: "rentals",
+  },
 ];
 
 /**
@@ -85,7 +128,15 @@ export async function setBookingEntries(
   lists: BookingEntryLists,
   options: { replace?: boolean; moveToTrip?: boolean } = {}
 ): Promise<BookingEntryCounts> {
-  const counts: BookingEntryCounts = { flights: 0, stays: 0, cruises: 0 };
+  const counts: BookingEntryCounts = {
+    flights: 0,
+    stays: 0,
+    cruises: 0,
+    rail: 0,
+    bus: 0,
+    ferry: 0,
+    rentals: 0,
+  };
 
   // Ownership of every listed id before any write.
   for (const kind of KINDS) {

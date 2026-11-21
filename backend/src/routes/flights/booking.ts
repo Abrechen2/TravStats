@@ -7,10 +7,12 @@ import { AppError } from "../../middleware/errorHandler";
 import { enrichFlightsForClients } from "../../services/flightAirportFacts";
 import {
   computeBookingSplit,
+  itemKey,
   readBookingSplit,
   type SplitRefusalCode,
 } from "../../services/flights/bookingPriceSplit";
 import { bookingSplitBodySchema } from "../../schemas/flightBooking";
+import { loadBookingItems, payingItems } from "../../services/booking/bookingItems";
 import { bookingTimes } from "../../services/deadlines/bookingTimesDto";
 
 /**
@@ -68,6 +70,7 @@ async function bookingRow(userId: string, bookingId: string) {
           busJourneys: true,
           ferryJourneys: true,
           lodgingStays: true,
+          rentals: true,
         },
       },
     },
@@ -94,13 +97,15 @@ function otherEntryCount(count: {
   busJourneys: number;
   ferryJourneys: number;
   lodgingStays: number;
+  rentals: number;
 }): number {
   return (
     count.cruises +
     count.railJourneys +
     count.busJourneys +
     count.ferryJourneys +
-    count.lodgingStays
+    count.lodgingStays +
+    count.rentals
   );
 }
 
@@ -139,10 +144,13 @@ async function bookingAnswer(userId: string, bookingId: string | null) {
       }),
       tripName: trip?.name ?? null,
       otherEntries: otherEntryCount(_count),
+      // A package's split (forgejo#430) covers every item, not just the flights.
       split: readBookingSplit(
         priceSplit,
         booking,
-        payingSegments(segments).map((s) => s.id)
+        otherEntryCount(_count) > 0
+          ? payingItems(await loadBookingItems(userId, bookingId)).map((i) => itemKey(i.kind, i.id))
+          : payingSegments(segments).map((s) => s.id)
       ),
     },
     segments: await enrichFlightsForClients(segments),

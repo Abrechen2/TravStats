@@ -340,6 +340,14 @@ export type ApiErrorCode =
   | "BOOKING_SPLIT_MIXED"
   /** Booking split by distance: a segment has no known route distance (422). */
   | "BOOKING_SPLIT_DISTANCE_UNKNOWN"
+  /** Package split (forgejo#430): the amounts do not name every paying item of the booking exactly once (422). */
+  | "BOOKING_SPLIT_ITEMS"
+  /** Package split: the amounts do not add up to the booking total in its minor unit (422). */
+  | "BOOKING_SPLIT_SUM"
+  /** Booking entries (forgejo#430): a train, bus or ferry ride that is not the caller's (404). */
+  | "RAIL_NOT_FOUND"
+  | "BUS_NOT_FOUND"
+  | "FERRY_NOT_FOUND"
   /** Bulk flight edit (forgejo#217): the trip named is not this account's — refused before any write. */
   | "TRIP_NOT_FOUND"
   /** Flight recording (forgejo#193): the flight already has a recording under

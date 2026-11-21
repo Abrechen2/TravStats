@@ -65,6 +65,7 @@ const trip = {
         railJourneys: 0,
         busJourneys: 0,
         ferryJourneys: 0,
+        rentals: 0,
       },
     },
   ],

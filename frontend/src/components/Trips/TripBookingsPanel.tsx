@@ -1,4 +1,4 @@
-import { useId, useState, type JSX } from "react";
+import { Fragment, useId, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import { useToastStore } from "../../store/toastStore";
@@ -10,10 +10,11 @@ import { deadlineFacts } from "../../lib/deadlines";
 import type { Booking, Trip } from "../../types";
 import AssignFlightsToBookingModal from "./AssignFlightsToBookingModal";
 import BookingEditModal from "./BookingEditModal";
-import type { BookingEntryKind, BookingEntryOption } from "./BookingEntriesPicker";
+import type { BookingEntryOptions } from "./BookingEntriesPicker";
 import { PanelHeader } from "./TripDetailPanels";
 import { RowActionButton } from "../table/RowActionButton";
 import TableScroll from "../ui/TableScroll";
+import { PackageBookingCard } from "../bookings/PackageBookingCard";
 
 interface Props {
   trip: Trip;
@@ -24,12 +25,20 @@ interface Props {
   cruiseDay: (c: NonNullable<Trip["cruises"]>[number]) => string;
 }
 
-/** The trip's flights, stays and cruises, as a package booking can cover them. */
+/** A ride's label: its day and its two stations. */
+const rideLabel = (r: {
+  departureTime: string;
+  depStationName: string;
+  arrStationName: string;
+}): string =>
+  `${formatLocalDate(r.departureTime.slice(0, 10))} · ${r.depStationName} → ${r.arrStationName}`;
+
+/** The trip's entries of every kind, as a package booking can cover them (forgejo#430). */
 export function bookingEntryOptions(
   trip: Trip,
   flightDay: Props["flightDay"],
   cruiseDay: Props["cruiseDay"]
-): Record<BookingEntryKind, BookingEntryOption[]> {
+): BookingEntryOptions {
   return {
     flightIds: (trip.flights ?? []).map((f) => ({
       id: f.id,
@@ -45,6 +54,26 @@ export function bookingEntryOptions(
       id: c.id,
       label: `${cruiseDay(c)} · ${c.routeName ?? c.ship?.name ?? c.shipNameOverride ?? c.cruiseLine ?? "—"}`,
       bookingId: c.bookingId,
+    })),
+    railIds: (trip.railJourneys ?? []).map((r) => ({
+      id: r.id,
+      label: rideLabel(r),
+      bookingId: r.bookingId,
+    })),
+    busIds: (trip.busJourneys ?? []).map((r) => ({
+      id: r.id,
+      label: rideLabel(r),
+      bookingId: r.bookingId,
+    })),
+    ferryIds: (trip.ferryJourneys ?? []).map((r) => ({
+      id: r.id,
+      label: rideLabel(r),
+      bookingId: r.bookingId,
+    })),
+    rentalIds: (trip.rentalBookings ?? []).map((r) => ({
+      id: r.id,
+      label: `${formatLocalDate(r.pickupTime.slice(0, 10))} · ${r.provider}`,
+      bookingId: r.bookingId,
     })),
   };
 }
@@ -75,6 +104,8 @@ export function TripBookingsPanel({
   const bookings = trip.bookings ?? [];
   const [editing, setEditing] = useState<Booking | "new" | null>(null);
   const [assigning, setAssigning] = useState<Booking | null>(null);
+  // The booking whose package card (items, split — forgejo#430) is open.
+  const [expanded, setExpanded] = useState<string | null>(null);
   const headingId = useId();
 
   const remove = async (b: Booking): Promise<void> => {
@@ -118,51 +149,73 @@ export function TripBookingsPanel({
             </thead>
             <tbody>
               {bookings.map((b) => (
-                <tr key={b.id} style={{ borderTop: "1px solid var(--color-border)" }}>
-                  <td className="px-4 py-2.5">
-                    {b.operator ?? "—"}
-                    {deadlineFacts(b.times, t, deadlineLocale)
-                      .filter((fact) => fact.value !== null)
-                      .map((fact) => (
-                        <span
-                          key={fact.label}
-                          className="block text-xs"
-                          style={{ color: "var(--text-muted)" }}
-                        >
-                          {fact.label}: {fact.value}
+                <Fragment key={b.id}>
+                  <tr style={{ borderTop: "1px solid var(--color-border)" }}>
+                    <td className="px-4 py-2.5">
+                      {b.operator ?? "—"}
+                      {deadlineFacts(b.times, t, deadlineLocale)
+                        .filter((fact) => fact.value !== null)
+                        .map((fact) => (
+                          <span
+                            key={fact.label}
+                            className="block text-xs"
+                            style={{ color: "var(--text-muted)" }}
+                          >
+                            {fact.label}: {fact.value}
+                          </span>
+                        ))}
+                    </td>
+                    <td className="px-4 py-2.5 font-mono">{b.pnr ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      {b.price != null ? formatAmount(b.price, b.currency, { language }) : "—"}
+                      {b.price != null && b.travellers != null && (
+                        <span className="block text-xs" style={{ color: "var(--text-muted)" }}>
+                          {t("trips:bookingEdit.forPersons", { count: b.travellers })}
                         </span>
-                      ))}
-                  </td>
-                  <td className="px-4 py-2.5 font-mono">{b.pnr ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    {b.price != null ? formatAmount(b.price, b.currency, { language }) : "—"}
-                    {b.price != null && b.travellers != null && (
-                      <span className="block text-xs" style={{ color: "var(--text-muted)" }}>
-                        {t("trips:bookingEdit.forPersons", { count: b.travellers })}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                    <button
-                      type="button"
-                      className="mr-2 text-xs"
-                      style={{ color: "var(--accent)" }}
-                      onClick={() => setAssigning(b)}
-                    >
-                      {t("trips:bookingAssign.action")}
-                    </button>
-                    <RowActionButton
-                      icon="edit"
-                      label={t("trips:bookingEdit.title")}
-                      onClick={() => setEditing(b)}
-                    />
-                    <RowActionButton
-                      icon="delete"
-                      label={t("trips:bookingEdit.delete")}
-                      onClick={() => void remove(b)}
-                    />
-                  </td>
-                </tr>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      <button
+                        type="button"
+                        className="mr-2 text-xs"
+                        style={{ color: "var(--accent)" }}
+                        aria-expanded={expanded === b.id}
+                        onClick={() => setExpanded(expanded === b.id ? null : b.id)}
+                      >
+                        {t(
+                          expanded === b.id
+                            ? "trips:bookingPackage.hide"
+                            : "trips:bookingPackage.show"
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className="mr-2 text-xs"
+                        style={{ color: "var(--accent)" }}
+                        onClick={() => setAssigning(b)}
+                      >
+                        {t("trips:bookingAssign.action")}
+                      </button>
+                      <RowActionButton
+                        icon="edit"
+                        label={t("trips:bookingEdit.title")}
+                        onClick={() => setEditing(b)}
+                      />
+                      <RowActionButton
+                        icon="delete"
+                        label={t("trips:bookingEdit.delete")}
+                        onClick={() => void remove(b)}
+                      />
+                    </td>
+                  </tr>
+                  {expanded === b.id && (
+                    <tr>
+                      <td colSpan={4} className="px-4 pb-3">
+                        <PackageBookingCard bookingId={b.id} />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>

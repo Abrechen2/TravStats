@@ -375,8 +375,12 @@
       "flights": "Flüge",
       "stays": "Aufenthalte",
       "cruises": "Kreuzfahrten",
-      "none": "Diese Reise hat noch keine Flüge, Aufenthalte oder Kreuzfahrten, die der Buchung zugeordnet werden könnten.",
-      "otherBooking": "(gehört zu einer anderen Buchung)"
+      "none": "Diese Reise hat noch keine Einträge, die der Buchung zugeordnet werden könnten.",
+      "otherBooking": "(gehört zu einer anderen Buchung)",
+      "rail": "Zugfahrten",
+      "bus": "Busfahrten",
+      "ferry": "Fährfahrten",
+      "rentals": "Mietwagen"
     }
   },
   "addExisting": {
@@ -1080,5 +1084,45 @@
     "summaryNone": "KI-Zusammenfassung erstellen",
     "summaryAgain": "KI-Zusammenfassung neu erstellen",
     "summaryBusy": "KI-Zusammenfassung wird erstellt …"
+  },
+  "bookingPackage": {
+    "title": "Paketbuchung",
+    "show": "Paket & Aufteilung",
+    "hide": "Paket ausblenden",
+    "loading": "Buchung wird geladen …",
+    "loadFailed": "Die Buchung konnte nicht geladen werden.",
+    "total": "Paketpreis: {{amount}}",
+    "noTotal": "Für diese Buchung ist kein Preis erfasst.",
+    "isPackage": "Ein Preis für alles unten. Die Reisekosten zählen ihn einmal; Flug- und Hotelstatistiken lesen nur einen aufgeteilten Anteil.",
+    "notPackage": "Diese Buchung umfasst nur eine Art von Eintrag.",
+    "partOfPackage": "Teil eines Pakets",
+    "thisEntry": "(dieser Eintrag)",
+    "cancelled": "storniert – kein Anteil",
+    "kind": {
+      "flight": "Flug",
+      "stay": "Aufenthalt",
+      "cruise": "Kreuzfahrt",
+      "rail": "Zug",
+      "bus": "Bus",
+      "ferry": "Fähre",
+      "rental": "Mietwagen"
+    },
+    "notSplit": "Nicht aufgeteilt – die Statistiken je Bereich zählen diese Einträge nicht mit.",
+    "stale": "Die Aufteilung passt nicht mehr zur Buchung (Preis, Währung oder Einträge geändert). Bitte neu aufteilen.",
+    "splitEqual": "Gleichmäßig aufteilen",
+    "splitManual": "Beträge eingeben",
+    "splitRemove": "Aufteilung entfernen",
+    "splitSave": "Aufteilung speichern",
+    "splitCancel": "Abbrechen",
+    "sum": "Summe {{sum}} von {{total}}",
+    "sumMismatch": "Die Beträge müssen genau {{total}} ergeben (noch {{rest}}).",
+    "amountFor": "Anteil für {{label}}",
+    "errors": {
+      "BOOKING_PRICE_MISSING": "Ohne Paketpreis gibt es nichts aufzuteilen.",
+      "BOOKING_SPLIT_SINGLE_SEGMENT": "Eine Buchung mit nur einem Eintrag braucht keine Aufteilung.",
+      "BOOKING_SPLIT_ITEMS": "Die Einträge der Buchung haben sich geändert. Bitte neu laden und erneut aufteilen.",
+      "BOOKING_SPLIT_SUM": "Die Beträge ergeben nicht genau den Paketpreis.",
+      "generic": "Die Aufteilung konnte nicht gespeichert werden."
+    }
   }
 }
