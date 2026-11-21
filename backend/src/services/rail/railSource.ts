@@ -45,7 +45,8 @@ export const RAIL_SOURCE_INCLUDE = {
     orderBy: [{ source: "asc" }, { createdAt: "asc" }, { id: "asc" }],
     take: 1,
   },
-  _count: { select: { documents: true } },
+  // Distinct documents linked to the ride, covers included (plan D2).
+  _count: { select: { documentLinks: true } },
 } satisfies Prisma.RailJourneyInclude;
 
 interface SourceRefs {
@@ -57,7 +58,7 @@ interface SourceRefs {
     issuedOn: Date | null;
     source: string;
   }>;
-  _count: { documents: number };
+  _count: { documentLinks: number };
 }
 
 /** The ride without the raw include, with `source` in its place. */
@@ -78,7 +79,7 @@ export function withRailSource<T extends SourceRefs>(
           // A @db.Date column: the day itself, carried at UTC midnight.
           issuedOn: first.issuedOn ? first.issuedOn.toISOString().slice(0, 10) : null,
           parsed: first.source === "parse",
-          documentCount: _count.documents,
+          documentCount: _count.documentLinks,
         }
       : null,
   };

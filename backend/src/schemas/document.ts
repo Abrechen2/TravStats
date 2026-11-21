@@ -145,6 +145,87 @@ export const documentDtoSchema = z.object({
     ),
 });
 
+/** What an entry shows for a document linked to it (plan D2). */
+export const entryInfoSchema = entryRefSchema.extend({
+  label: z.string().describe("A short human label: route, hotel, trip name …"),
+  parentId: z
+    .string()
+    .nullable()
+    .describe(
+      "The id of the page showing the entry: a stay's lodging, a visit's place, an expense's trip"
+    ),
+  tripId: z.string().nullable().describe("The trip the entry sits in, if any"),
+});
+
+export const evidenceFromSchema = entryRefSchema.extend({
+  label: z.string(),
+  parentId: z.string().nullable(),
+});
+
+/**
+ * The fields a per-entry document list adds (plan D2), all optional so an
+ * installed Companion that reads only the old fields is unaffected.
+ */
+export const entryDocumentFieldsSchema = z.object({
+  linkRole: z
+    .enum(["primary", "covers"])
+    .optional()
+    .describe(
+      "The document's role at THIS entry: filed here (primary) or evidence for it (covers)"
+    ),
+  evidenceFrom: evidenceFromSchema
+    .nullable()
+    .optional()
+    .describe(
+      'For a covers document, the entry it was filed at ("Beleg aus …"); null when this entry is the primary'
+    ),
+  linkCount: z.number().int().optional().describe("How many entries the document is linked to"),
+});
+
+export const entryDocumentDtoSchema = documentDtoSchema.extend(entryDocumentFieldsSchema.shape);
+
+export const documentLinkViewSchema = z.object({
+  id: uuid,
+  role: z.enum(["primary", "covers"]),
+  provenance: z.enum(["user", "parser", "suggestion", "legacy"]),
+  rentalCategory: z.enum(RENTAL_DOCUMENT_CATEGORIES).nullable(),
+  createdAt: z.string(),
+  entry: entryInfoSchema,
+});
+
+export const addDocumentLinksSchema = z
+  .object({
+    links: z
+      .array(
+        z.object({
+          entry: entryRefSchema,
+          role: z.enum(["primary", "covers"]).optional(),
+          provenance: z.enum(["user", "parser", "suggestion", "legacy"]).optional(),
+          rentalCategory: z.enum(RENTAL_DOCUMENT_CATEGORIES).nullable().optional(),
+        })
+      )
+      .min(1)
+      .max(100),
+  })
+  .strict();
+
+export const removedLinkSchema = z.object({
+  role: z.enum(["primary", "covers"]),
+  provenance: z.enum(["user", "parser", "suggestion", "legacy"]),
+  rentalCategory: z.enum(RENTAL_DOCUMENT_CATEGORIES).nullable(),
+  entry: entryRefSchema,
+});
+
+export const linkCandidatesSchema = z.object({
+  tripEntries: z.array(entryInfoSchema),
+  otherEntries: z.array(entryInfoSchema),
+});
+
+export const tripCandidatesQuerySchema = z.object({
+  entryType: z.enum(ENTRY_TYPES),
+  entryId: uuid,
+});
+
 /**
  * An unfiled document, as `GET /documents/unfiled` lists it. The extra field is
  * the whole point of the endpoint: a document with no entry is deleted after
@@ -184,7 +265,17 @@ export const documentListQuerySchema = z.object({
 });
 
 export const documentListResponseSchema = z.object({
-  documents: z.array(documentDtoSchema),
+  documents: z.array(
+    documentDtoSchema.extend({
+      linkCount: z
+        .number()
+        .int()
+        .optional()
+        .describe(
+          "How many entries the document is linked to; a document counts once however many"
+        ),
+    })
+  ),
   total: z.number().int().describe("Every document the caller owns, not just this page"),
 });
 

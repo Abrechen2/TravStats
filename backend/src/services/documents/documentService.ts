@@ -2,6 +2,7 @@ import path from "path";
 
 import type { Document, Prisma } from "../../prisma";
 
+import { listEntryDocuments } from "./documentEntryLinks";
 import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
@@ -581,11 +582,7 @@ export async function getOwnDocument(userId: string, id: string): Promise<Docume
 }
 
 export async function listDocumentsForEntry(userId: string, entry: EntryRef): Promise<Document[]> {
-  await assertEntryOwned(userId, entry);
-  return prisma.document.findMany({
-    where: { userId, ...ownerWhere(entry) },
-    orderBy: { createdAt: "asc" },
-  });
+  return (await listEntryDocuments(userId, entry)).map((e) => e.document);
 }
 
 export async function deleteDocument(userId: string, id: string): Promise<void> {

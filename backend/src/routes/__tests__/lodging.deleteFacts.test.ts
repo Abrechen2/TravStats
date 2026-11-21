@@ -29,6 +29,9 @@ describe("GET /api/v1/lodging/:id/delete-facts", () => {
         sha256: `${tag}-${name}`,
         format: "pdf",
         lodgingStayId: stayId,
+        ...(stayId && {
+          links: { create: { lodgingStayId: stayId, role: "primary", provenance: "user" } },
+        }),
       },
     });
 

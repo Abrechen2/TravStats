@@ -12,15 +12,23 @@ import { prisma } from "../../db";
 export async function listOwnDocuments(
   userId: string,
   page: { limit: number; offset: number }
-): Promise<{ documents: Document[]; total: number }> {
+): Promise<{ documents: Array<{ document: Document; linkCount: number }>; total: number }> {
   const [documents, total] = await Promise.all([
     prisma.document.findMany({
       where: { userId },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       skip: page.offset,
       take: page.limit,
+      include: { _count: { select: { links: true } } },
     }),
     prisma.document.count({ where: { userId } }),
   ]);
-  return { documents, total };
+  // Paged over DOCUMENTS, never link rows: a document linked to six entries is one row.
+  return {
+    documents: documents.map(({ _count, ...document }) => ({
+      document,
+      linkCount: _count.links,
+    })),
+    total,
+  };
 }

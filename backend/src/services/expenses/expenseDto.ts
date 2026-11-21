@@ -26,7 +26,8 @@ export const EXPENSE_SELECT = {
   fxRateDate: true,
   fxBaseCurrency: true,
   fxSource: true,
-  _count: { select: { documents: true } },
+  // Distinct documents linked to the expense, covers included (plan D2).
+  _count: { select: { documentLinks: true } },
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -87,7 +88,7 @@ export function toExpenseDto(row: ExpenseRow): ExpenseDto {
     note: row.note,
     payer: payerOf(row),
     fx: fxOf(row),
-    documentCount: row._count.documents,
+    documentCount: row._count.documentLinks,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
