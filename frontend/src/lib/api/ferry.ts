@@ -84,6 +84,26 @@ export const ferryApi = {
       )
     ).data.data;
   },
+  /** Draw the crossing's route by hand: `[lon, lat]` points, both ends on the terminals (forgejo#431). */
+  async setManualRoute(id: string, waypoints: Array<[number, number]>, baseVersion?: string) {
+    return (
+      await api.put<Envelope<FerryJourney>>(`/ferry/${encodeURIComponent(id)}/route-override`, {
+        waypoints,
+        ...(baseVersion ? { baseVersion } : {}),
+      })
+    ).data.data;
+  },
+  /** Drop the hand-drawn line; the server routes the crossing again where it can. */
+  async clearManualRoute(id: string, baseVersion?: string) {
+    return (
+      await api.delete<
+        Envelope<FerryJourney> & { meta: { seaRoute: "routed" | "straight" | "unchanged" } }
+      >(`/ferry/${encodeURIComponent(id)}/route-override`, {
+        timeout: 60000,
+        ...(baseVersion ? { headers: { "If-Match": `"${baseVersion}"` } } : {}),
+      })
+    ).data;
+  },
   async liveAvailability() {
     return (await api.get<Envelope<{ configured: boolean }>>("/ferry/live-availability")).data.data;
   },

@@ -21,6 +21,7 @@ import {
 import { mergeFerryJourney } from "../services/ferry/ferryJourneyWrite";
 import { sameFerryEnds } from "../services/ferry/ferryGeometry";
 import {
+  hasStoredLine,
   routeCrossingIfStraight,
   syncFerryLeg,
   type CrossingRouteOutcome,
@@ -384,7 +385,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           });
           // Terminals unchanged here (a move under a linked leg is refused
           // above), so a leg the link accepted off the piers is kept, not refused.
-          if (existing.geometrySource === "sea_route" && !terminalsMoved)
+          if (hasStoredLine(existing.geometrySource) && !terminalsMoved)
             await syncFerryLeg(tx, existing, { onMismatch: "keep" });
           await propagateWrite(tx, userId, "ferry", existing.id, before);
           return tx.ferryJourney.findUniqueOrThrow({

@@ -11,6 +11,7 @@ import { clientRefBodySchema } from "../../../schemas/clientRef";
 import { clientRefResponses } from "./clientRef";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { ferryTimesSchema } from "../../../schemas/times";
+import { manualRouteSchema } from "../../ferry/ferryManualRoute";
 import { errorContent, timeRefused } from "./shared";
 // The link snapshot never leaves the server (see withFerryTimes).
 const { roadtripLegBefore: _linkSnapshot, ...ferryColumns } = prismaColumns("FerryJourney");
@@ -47,6 +48,44 @@ registry.registerPath({
       content: json(envelope(z.object({ outcome: z.enum(["routed", "straight", "unchanged"]) }))),
     },
     429: { description: "Too many routing requests", content: errorContent },
+    ...errors,
+  },
+});
+registry.registerPath({
+  method: "put",
+  path: "/ferry/{id}/route-override",
+  tags: ["Ferry"],
+  summary: "Draw a crossing's route by hand",
+  description:
+    "Sets the crossing's line from [lon, lat] points (3 to 64): both ends within 1 km of the terminals (they are snapped onto them), at least one via point between. Stores geometrySource=manual; the distance follows the line unless the user typed one. A later re-route never overwrites it; moving a terminal drops it. Additive: clients that only read geometry need no change. Error codes: FERRY_ROUTE_INVALID, FERRY_ROUTE_NOT_ANCHORED.",
+  request: {
+    params,
+    body: { content: json(manualRouteSchema.openapi("FerryManualRoute")) },
+  },
+  responses: {
+    200: { description: "The updated crossing", content: json(envelope(journey)) },
+    429: { description: "Too many requests", content: errorContent },
+    ...errors,
+  },
+});
+registry.registerPath({
+  method: "delete",
+  path: "/ferry/{id}/route-override",
+  tags: ["Ferry"],
+  summary: "Drop a hand-drawn route",
+  description:
+    "Returns the crossing to a straight line and tries the sea router again; meta.seaRoute is routed, straight or unchanged (there was no manual line).",
+  request: { params },
+  responses: {
+    200: {
+      description: "The updated crossing",
+      content: json(
+        envelope(journey).extend({
+          meta: z.object({ seaRoute: z.enum(["routed", "straight", "unchanged"]) }),
+        })
+      ),
+    },
+    429: { description: "Too many requests", content: errorContent },
     ...errors,
   },
 });

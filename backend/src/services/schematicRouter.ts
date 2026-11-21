@@ -52,6 +52,7 @@ export { arcLengthResample, simplifyDegrees };
 import { haversineKm } from "../shared/geo/haversine";
 import { BinaryHeap } from "../shared/geo/binaryHeap";
 import { MASK_COLS, MASK_ROWS, cellIndex, getBit } from "../shared/geo/landMaskGrid";
+import { routeFineLocal } from "./schematicLocalRoute";
 import { logMarnetFailureOnce, routeMarnet } from "./marnet/marnetRouter";
 
 import {
@@ -100,6 +101,12 @@ const SIMPLIFY_TOLERANCE_DEG = 0.3;
  * coast-buffer post-pass still runs on the chord, so if the direct
  * line clips a peninsula it still picks up one offshore waypoint. */
 const SHORT_HOP_KM = 150;
+
+/** Below this chord the fine local grid is tried when a route is implausible. */
+const LOCAL_FINE_MAX_KM = 150;
+
+/** Below this chord the fine local grid is preferred over the lane graph. */
+const LOCAL_FINE_PREFERRED_KM = 80;
 
 /** Arc-length step for the middle-of-route resample applied AFTER
  * routing. The marnet graph has highly irregular node spacing — clusters
@@ -450,7 +457,7 @@ export interface SchematicRoute {
    * frontend renders both identically — the flag is informational,
    * letting callers surface a "direct line" badge if desired. */
   readonly routed: boolean;
-  readonly method: "short_hop" | "maritime_graph" | "coarse_a_star" | "direct";
+  readonly method: "short_hop" | "maritime_graph" | "coarse_a_star" | "local_fine" | "direct";
 }
 
 /** Hot set backed by durable successful routes. The key carries the policy
@@ -470,6 +477,90 @@ export function clearSchematicRouteCache(): void {
 }
 
 /**
+ * Longest believable route / great-circle ratio by chord length (forgejo#428).
+ * A short crossing has little room to detour: Amalfi -> Capri (33 km) came
+ * back as 102 km (3.1x) around Capri. Longer legs may legitimately go round a
+ * peninsula or through a strait, so the allowance widens with the chord.
+ * The bands are deliberately loose above 80 km.
+ */
+export function maxPlausibleRatio(chordKm: number): number {
+  if (chordKm < 80) return 2;
+  if (chordKm < 300) return 3;
+  return 4;
+}
+
+function routeLengthKm(waypoints: ReadonlyArray<[number, number]>): number {
+  let km = 0;
+  for (let i = 1; i < waypoints.length; i++) {
+    km += haversineKm(
+      { lat: waypoints[i - 1][1], lon: waypoints[i - 1][0] },
+      { lat: waypoints[i][1], lon: waypoints[i][0] }
+    );
+  }
+  return km;
+}
+
+/** Fine local water path between the ports' approach ends, approaches kept. */
+function localFineRoute(
+  dep: SchematicRoutePort,
+  arr: SchematicRoutePort
+): { route: SchematicRoute; km: number } | null {
+  if (fineMaskBytes === null) return null;
+  const depApproach = getPortApproach(dep);
+  const arrApproach = getPortApproach(arr);
+  const [dLon, dLat] = depApproach[depApproach.length - 1] ?? [dep.lon, dep.lat];
+  const [aLon, aLat] = arrApproach[arrApproach.length - 1] ?? [arr.lon, arr.lat];
+  const middle = routeFineLocal(fineMaskBytes, { lat: dLat, lon: dLon }, { lat: aLat, lon: aLon });
+  if (middle === null) return null;
+  const composed = composeRouteWaypoints(dep, depApproach, middle, arrApproach, arr);
+  return {
+    route: { ...composed, routed: true, method: "local_fine" },
+    km: routeLengthKm(composed.waypoints),
+  };
+}
+
+/**
+ * Replace an implausibly long short-crossing route by a shorter fine local
+ * water path when one exists; otherwise the computed route stands.
+ */
+function guardRoutePlausibility(
+  dep: SchematicRoutePort,
+  arr: SchematicRoutePort,
+  route: SchematicRoute
+): SchematicRoute {
+  if (!route.routed) return route;
+  const chordKm = haversineKm(dep, arr);
+  if (chordKm < 0.5) return route;
+  const routeKm = routeLengthKm(route.waypoints);
+  const implausible = routeKm > chordKm * maxPlausibleRatio(chordKm);
+  // A short coastal hop is routed on the fine local water grid whenever the
+  // lane graph or the 1 degree grid had to be consulted: it stays near the
+  // chord. A long route is only replaced by a demonstrably shorter water path;
+  // a high ratio alone is not evidence (Genoa -> Venice really is round Italy),
+  // so without one the route is kept, never cut down to the chord.
+  const tryLocal =
+    chordKm < LOCAL_FINE_PREFERRED_KM
+      ? route.method !== "short_hop"
+      : implausible && chordKm < LOCAL_FINE_MAX_KM;
+  if (tryLocal) {
+    const local = localFineRoute(dep, arr);
+    if (local !== null && local.km < routeKm) {
+      if (implausible)
+        logger.warn(
+          {
+            operation: "schematic_router_implausible",
+            chordKm: Math.round(chordKm),
+            routeKm: Math.round(routeKm),
+          },
+          "sea route far longer than its chord; replaced by a shorter water path"
+        );
+      return local.route;
+    }
+  }
+  return route;
+}
+
+/**
  * Compute a schematic waypoint list between two ports. Always
  * returns — even in pathological cases (landlocked ports, mask
  * inconsistencies) you get `{waypoints: [dep, arr], routed: false}`,
@@ -486,7 +577,7 @@ export async function computeSchematicRoute(
   const compute = async (): Promise<SchematicRoute> => {
     const raw = await computeSchematicRouteUncached(dep, arr);
     const smoothed = resampleNonCorridorMiddle(raw);
-    return { ...raw, ...smoothed };
+    return guardRoutePlausibility(dep, arr, { ...raw, ...smoothed });
   };
   if (key === null) return compute();
   // RouteStore keeps only routed results; a straight-chord fallback would be

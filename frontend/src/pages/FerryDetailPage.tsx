@@ -21,6 +21,7 @@ import { EntryPhotosSection } from "../components/common/EntryPhotos";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import { FerryLivePosition } from "../components/ferry/FerryLivePosition";
 import { FerryRoadtripLink } from "../components/ferry/FerryRoadtripLink";
+import { FerryRouteEditor } from "../components/ferry/FerryRouteEditor";
 import { FerryRouteMap } from "../components/ferry/FerryRouteMap";
 import GeoExportButtons from "../components/export/GeoExportButtons";
 import { geoExportPaths } from "../lib/api/geoExport";
@@ -48,6 +49,7 @@ export default function FerryDetailPage() {
   const [busy, setBusy] = useState(false);
   const [routing, setRouting] = useState(false);
   const [routeMessage, setRouteMessage] = useState<string | null>(null);
+  const [drawing, setDrawing] = useState(false);
   const documentCount = useDocumentCount(
     deleting && ride ? { type: "ferryJourney", id: ride.id } : null
   );
@@ -93,6 +95,26 @@ export default function FerryDetailPage() {
       );
     } catch {
       setRouteMessage(t("ferry:routing.failed"));
+    } finally {
+      setRouting(false);
+    }
+  };
+  const clearManual = async () => {
+    if (!ride || routing) return;
+    setRouting(true);
+    setRouteMessage(null);
+    try {
+      const result = await ferryApi.clearManualRoute(ride.id, ride.updatedAt);
+      setRide(await ferryApi.get(ride.id));
+      setRouteMessage(
+        t(
+          result.meta.seaRoute === "routed"
+            ? "ferry:routing.clearedRouted"
+            : "ferry:routing.cleared"
+        )
+      );
+    } catch {
+      setRouteMessage(t("ferry:routing.clearFailed"));
     } finally {
       setRouting(false);
     }
@@ -177,6 +199,7 @@ export default function FerryDetailPage() {
       )}
       {(ride.geometrySource === "straight" ||
         ride.geometrySource === "sea_route" ||
+        ride.geometrySource === "manual" ||
         routeMessage) && (
         <div className="mb-4 space-y-2">
           {ride.geometrySource === "straight" && (
@@ -184,11 +207,18 @@ export default function FerryDetailPage() {
               {t(routing ? "ferry:routing.busy" : "ferry:routing.button")}
             </Button>
           )}
+          {ride.geometrySource === "manual" && (
+            <Button onClick={() => void clearManual()} disabled={routing}>
+              {t(routing ? "ferry:routing.clearing" : "ferry:routing.clear")}
+            </Button>
+          )}
           <p role="status" className="text-sm text-(--text-muted)">
             {routeMessage ??
-              (ride.geometrySource === "sea_route"
-                ? t("ferry:routing.estimated")
-                : t("ferry:routing.hint"))}
+              (ride.geometrySource === "manual"
+                ? t("ferry:routing.manual")
+                : ride.geometrySource === "sea_route"
+                  ? t("ferry:routing.estimated")
+                  : t("ferry:routing.hint"))}
           </p>
         </div>
       )}
@@ -268,8 +298,29 @@ export default function FerryDetailPage() {
           {ride.tripId && <TripPhotoWindowStrip entry="ferry" id={ride.id} />}
           <DetailSection title={t("ferry:map.title")}>
             <WebGLGuard>
-              <FerryRouteMap ride={ride} />
+              {drawing ? (
+                <FerryRouteEditor
+                  ride={ride}
+                  onSaved={(saved) => {
+                    setDrawing(false);
+                    setRouteMessage(null);
+                    void ferryApi.get(saved.id).then(setRide, () => setError(true));
+                  }}
+                  onClose={() => setDrawing(false)}
+                />
+              ) : (
+                <FerryRouteMap ride={ride} />
+              )}
             </WebGLGuard>
+            {!drawing && (
+              <Button onClick={() => setDrawing(true)} data-testid="ferry-route-draw">
+                {t(
+                  ride.geometrySource === "manual"
+                    ? "ferry:routing.editManual"
+                    : "ferry:routing.edit"
+                )}
+              </Button>
+            )}
             {ride.geometry && (
               <GeoExportButtons
                 path={geoExportPaths.ferry(ride.id)}

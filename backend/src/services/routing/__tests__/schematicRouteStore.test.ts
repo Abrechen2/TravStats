@@ -22,6 +22,6 @@ describe("sea route data version", () => {
     }
   });
   it("names the policy and the vendored data in the key", () => {
-    expect(schematicRouteVersion()).toMatch(/^schematic-v1:[0-9a-f]{16}$/);
+    expect(schematicRouteVersion()).toMatch(/^schematic-v2:[0-9a-f]{16}$/);
   });
 });

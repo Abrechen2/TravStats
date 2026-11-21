@@ -6,6 +6,10 @@ import { haversineKm, polylineLengthKm } from "../../shared/geo/haversine";
 import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
 import { computeFerryGeometry, readSeaGeometry, type FerryEnds } from "./ferryGeometry";
 
+/** A crossing's line is worth carrying to its linked leg when it was routed or drawn by hand. */
+export const hasStoredLine = (geometrySource: string): boolean =>
+  geometrySource === "sea_route" || geometrySource === "manual";
+
 interface LinkedCrossing extends FerryEnds {
   userId: string;
   tripId: string | null;
@@ -49,7 +53,7 @@ export async function syncFerryLeg(
     if (onMismatch === "keep") return;
     throw new AppError("Unlink the roadtrip leg before changing terminals", 409);
   }
-  const line = ferry.geometrySource === "sea_route" ? readSeaGeometry(ferry.geometry) : null;
+  const line = hasStoredLine(ferry.geometrySource) ? readSeaGeometry(ferry.geometry) : null;
   const distanceKm = line
     ? polylineLengthKm(line.map(([lon, lat]) => ({ lat, lon })))
     : haversineKm(
@@ -155,13 +159,16 @@ export async function routeCrossingIfStraight(
  * effort: a member's leg that no longer fits their copy is their private
  * routing and must not block the sharer's write, so it is left as it is.
  */
-async function syncCopiesLegs(tx: DbTransaction, shareKey: string, ownId: string): Promise<void> {
+export async function syncCopiesLegs(
+  tx: DbTransaction,
+  shareKey: string,
+  ownId: string
+): Promise<void> {
   const copies = await tx.ferryJourney.findMany({
     where: {
       shareKey,
       id: { not: ownId },
       roadtripLegId: { not: null },
-      geometrySource: "sea_route",
     },
   });
   for (const copy of copies) {

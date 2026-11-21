@@ -11,7 +11,7 @@ import {
   shareSnapshots,
 } from "../../services/sharing/propagate";
 import { recomputeTripStatus } from "../../services/tripStatusService";
-import { syncFerryLeg } from "../../services/ferry/ferryRouting";
+import { hasStoredLine, syncFerryLeg } from "../../services/ferry/ferryRouting";
 import logger from "../../utils/logger";
 
 const router = Router();
@@ -182,7 +182,7 @@ router.put("/:id/roadtrip-leg", async (req: AuthRequest, res: Response, next: Ne
           distanceKm: ferry.distanceKm ?? leg.distanceKm,
         },
       });
-      if (ferry.geometrySource === "sea_route") {
+      if (hasStoredLine(ferry.geometrySource)) {
         await syncFerryLeg(
           tx,
           { ...ferry, roadtripLegId: leg.id, tripId: leg.route.tripId },
