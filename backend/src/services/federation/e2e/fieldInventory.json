@@ -165,7 +165,7 @@
     "personal": "notes tags",
     "photos": "",
     "documents": "",
-    "excluded": "userId dataSource batchId"
+    "excluded": "userId dataSource batchId locationCheck"
   },
   "LodgingStay": {
     "details": "id lodgingId tripId bookingId checkIn checkOut checkInTime checkOutTime checkInDate checkOutDate checkInAt checkOutAt stayZone datePrecision nights status roomCategory board roomAmenities membershipId membershipOptOut freeCancellationUntil freeCancellationZone freeCancellationOn externalRef createdAt updatedAt",
