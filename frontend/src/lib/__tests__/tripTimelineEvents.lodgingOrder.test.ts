@@ -217,4 +217,32 @@ describe("trip timeline — a nominal lodging time yields to the day's travel", 
       "journal-j",
     ]);
   });
+
+  it("keeps a day-room's check-in before its check-out when travel brackets the day", () => {
+    const at = (hh: string) => tv(`2026-05-10T${hh}:00`, `2026-05-10T${hh}:00.000Z`);
+    const events = sortTimelineEvents([
+      { id: "out", kind: "lodging-checkout", when: at("18:00"), stay: { id: "h" } },
+      { id: "in", kind: "lodging-checkin", when: at("11:00"), stay: { id: "h" } },
+      { id: "f1", kind: "flight", when: at("08:00"), end: at("10:00") },
+      { id: "f2", kind: "flight", when: at("20:00"), end: at("22:00") },
+    ]);
+    expect(events.map((e) => e.id)).toEqual(["f1", "in", "out", "f2"]);
+  });
+
+  it("does not let a day-only cruise embarkation drag a timed check-out above a timed 08:00 entry", () => {
+    const events = sortTimelineEvents([
+      {
+        id: "out",
+        kind: "lodging-checkout",
+        when: tv("2026-05-10T11:00:00", "2026-05-10T09:00:00.000Z"),
+      },
+      { id: "cruise", kind: "cruise", when: dayTv("2026-05-10") },
+      {
+        id: "visit",
+        kind: "place-visit",
+        when: tv("2026-05-10T08:00:00", "2026-05-10T06:00:00.000Z"),
+      },
+    ]);
+    expect(events.map((e) => e.id)).toEqual(["cruise", "visit", "out"]);
+  });
 });

@@ -60,6 +60,8 @@ export interface SortableEvent {
   kind: string;
   /** Where the entry ends, for a leg that arrives somewhere (flight, rail, bus, ferry). */
   end?: TimeValue | null;
+  /** The stay a check-in/out belongs to, so a stay's two ends keep their order. */
+  stay?: { id: string };
 }
 
 /** Entries that LEAVE a place at `when`: a lodging check-out comes before them. */
@@ -92,7 +94,9 @@ function dayTravel(events: ReadonlyArray<SortableEvent>): DayTravel {
     map.set(day, seen === undefined ? t : pick(seen, t));
   };
   for (const ev of events) {
-    if (DEPARTURE_KINDS.has(ev.kind)) {
+    // A departure without a clock says nothing about WHEN — it must not drag a
+    // known hotel time or a timed entry around.
+    if (DEPARTURE_KINDS.has(ev.kind) && hasExplicitTime(ev.when)) {
       note(firstDeparture, dayOf(ev.when), instantOf(ev.when), Math.min);
     }
     // A rental return is an arrival at its own moment; a leg arrives at its end.
@@ -199,12 +203,24 @@ export function compareTimelineEvents(a: SortableEvent, b: SortableEvent): numbe
  */
 export function sortTimelineEvents<T extends SortableEvent>(events: ReadonlyArray<T>): T[] {
   const travel = dayTravel(events);
-  return events
-    .map((ev) => ({ ev, key: keyOf(ev, travel) }))
-    .sort((x, y) => compareKeys(x.key, y.key))
-    .map((x) => x.ev);
+  const keyed = events.map((ev) => ({ ev, key: keyOf(ev, travel), own: keyOf(ev) }));
+  // A day-room (check-in and check-out on one day) clamped by travel at both
+  // ends could turn inside out; such a stay keeps its own nominal times.
+  const byStay = new Map<string, typeof keyed>();
+  for (const k of keyed) {
+    if (!k.ev.stay) continue;
+    byStay.set(k.ev.stay.id, [...(byStay.get(k.ev.stay.id) ?? []), k]);
+  }
+  for (const ends of byStay.values()) {
+    const inn = ends.find((k) => k.ev.kind === "lodging-checkin");
+    const out = ends.find((k) => k.ev.kind === "lodging-checkout");
+    if (inn && out && inn.key.day === out.key.day && out.key.instant < inn.key.instant) {
+      inn.key = inn.own;
+      out.key = out.own;
+    }
+  }
+  return keyed.sort((x, y) => compareKeys(x.key, y.key)).map((x) => x.ev);
 }
-
 /**
  * Whether a `TripStop` has already been replaced by a `PlaceVisit` and must
  * therefore NOT be drawn — otherwise the migrated POI appears twice.
