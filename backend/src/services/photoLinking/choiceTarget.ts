@@ -1,3 +1,5 @@
+import { toLocal } from "../../shared/time/instant";
+import { zoneOf } from "../../shared/time/zoneOf";
 import type { DeepLinkTarget } from "../photoSource/deepLink";
 import type { EntryPlan } from "./entryKinds";
 
@@ -18,4 +20,33 @@ export function choiceTarget(plan: Exclude<EntryPlan, "untimed">): DeepLinkTarge
   return sameSingle
     ? { window, point: { lat: first.lat, lon: first.lon, radiusKm: first.radiusKm } }
     : { window };
+}
+
+/** The zone of the entry's first place: where its rows are shown when a photo has no position. */
+export function planZone(plan: Exclude<EntryPlan, "untimed">): string | null {
+  const first = plan.legs.flatMap((l) => l.locations)[0];
+  if (!first) return null;
+  const at = first.kind === "point" ? first : first.from;
+  return zoneOf(at);
+}
+
+/**
+ * The wall clock (`YYYY-MM-DDTHH:mm:ss`) at which a photo was taken, read in the
+ * zone of the place it was taken at, else the entry's zone. Null when neither is
+ * known — never UTC, which would show a time nobody lived (ADR 0002).
+ */
+export function takenAtLocal(
+  iso: string | null,
+  photo: { lat: number | null; lon: number | null } | null,
+  fallbackZone: string | null
+): string | null {
+  if (!iso) return null;
+  const own = photo && photo.lat !== null && photo.lon !== null ? zoneOf(photo) : null;
+  const zone = own ?? fallbackZone;
+  if (!zone) return null;
+  try {
+    return toLocal(iso, zone).local;
+  } catch {
+    return null;
+  }
 }

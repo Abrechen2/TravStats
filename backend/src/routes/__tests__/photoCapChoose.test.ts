@@ -5,6 +5,7 @@ const search = {
   immich: jest.fn<() => Promise<{ assets: Asset[]; truncated: boolean }>>(),
   photoprism: jest.fn<() => Promise<{ assets: Asset[]; truncated: boolean }>>(),
 };
+const connectionSource = { value: "user" as "user" | "global" };
 jest.mock("../../services/photoSource", () => {
   const actual = jest.requireActual("../../services/photoSource") as object;
   return {
@@ -20,7 +21,9 @@ jest.mock("../../services/photoSource/connection", () => {
   return {
     ...actual,
     getPhotoSourceConnection: async (kind: "immich" | "photoprism") =>
-      kind === "immich" ? { baseUrl: "http://immich.test", apiKey: "k", source: "user" } : null,
+      kind === "immich"
+        ? { baseUrl: "http://immich.test", apiKey: "k", source: connectionSource.value }
+        : null,
   };
 });
 
@@ -29,6 +32,7 @@ import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
 import { clearImmichAssetCache } from "../../services/immich/immichAssetCache";
+import { ImmichError } from "../../services/immich/types";
 import { settleAllJobs } from "../../services/jobs/jobRegistry";
 import { autoLinkEntry } from "../../services/photoLinking/entryPhotos";
 import { generateToken } from "../../utils/jwt";
@@ -177,6 +181,8 @@ describe("photo cap, choose and trim", () => {
     expect(cap).toBe(6);
     expect(choices.length).toBeGreaterThan(6);
     expect(choices.filter((c: { chosen: boolean }) => c.chosen)).toHaveLength(6);
+    // 08:00Z is 10:00 on the Rome clock: the place's wall clock, never UTC.
+    expect(choices[0].takenAtLocal).toBe("2024-05-01T10:00:00");
     expect(choices[0]).toEqual(
       expect.objectContaining({
         provider: "immich",
@@ -187,6 +193,26 @@ describe("photo cap, choose and trim", () => {
     expect(openIn).toEqual([
       { provider: "immich", url: expect.stringContaining("http://immich.test/search?query=") },
     ]);
+  });
+
+  it("gives a non-admin on a shared connection no open-in URL, an admin or an own connection one", async () => {
+    const url = () =>
+      request(app)
+        .get(`/api/v1/places/visits/${visitId}/photo-choices`)
+        .set("Cookie", cookie)
+        .then((r) => r.body.data.openIn as unknown[]);
+    connectionSource.value = "global";
+    try {
+      expect(await url()).toEqual([]);
+      await prisma.user.update({ where: { id: userId }, data: { isAdmin: true } });
+      expect(await url()).toHaveLength(1);
+      await prisma.user.update({ where: { id: userId }, data: { isAdmin: false } });
+      connectionSource.value = "user";
+      expect(await url()).toHaveLength(1);
+    } finally {
+      connectionSource.value = "user";
+      await prisma.user.update({ where: { id: userId }, data: { isAdmin: false } });
+    }
   });
 
   it("swapping a visit's automatic link for another photo makes it a user pick and records no refusal", async () => {
@@ -280,5 +306,54 @@ describe("photo cap, choose and trim", () => {
     expect((await stayLinks()).length).toBe(5);
     const second = await runJob("/api/v1/places/visits/photos/auto-link/trim");
     expect(second.removed).toBe(0);
+  });
+
+  it("trims existing links by distance plus spread, not by spread alone", async () => {
+    // Ten links, 15 minutes apart. The first one sits ~230 m from the place, its
+    // neighbour ~20 m; spread alone would keep the earlier of the two.
+    const far = asset(1, 0, { lat: 41.903 });
+    search.immich.mockResolvedValue({ assets: [far, ...DAY.slice(1)], truncated: false });
+    await prisma.placeVisitPhoto.createMany({
+      data: DAY.slice(0, 10).map((a, i) => ({
+        placeVisitId: visitId,
+        filename: null,
+        mimetype: "image/jpeg",
+        sizeBytes: 0,
+        immichAssetId: a.id as string,
+        provider: "immich",
+        provenance: "auto",
+        takenAt: new Date(a.fileCreatedAt as string),
+        sortIdx: i,
+      })),
+    });
+    await prisma.userSettings.update({ where: { userId }, data: { photoAutoLinkCap: 5 } });
+    const result = await runJob("/api/v1/places/visits/photos/auto-link/trim");
+    expect(result.removed).toBe(5);
+    expect(result.skipped).toBe(0);
+    const kept = (await visitLinks()).map((r) => r.immichAssetId);
+    expect(kept).not.toContain(aid(1));
+    expect(kept).toContain(aid(2));
+  });
+
+  it("does not trim on a guess when a photo source failed to answer, and says so", async () => {
+    await prisma.placeVisitPhoto.createMany({
+      data: DAY.slice(0, 10).map((a, i) => ({
+        placeVisitId: visitId,
+        filename: null,
+        mimetype: "image/jpeg",
+        sizeBytes: 0,
+        immichAssetId: a.id as string,
+        provider: "immich",
+        provenance: "auto",
+        takenAt: new Date(a.fileCreatedAt as string),
+        sortIdx: i,
+      })),
+    });
+    await prisma.userSettings.update({ where: { userId }, data: { photoAutoLinkCap: 5 } });
+    search.immich.mockRejectedValue(new ImmichError("unreachable", "down", 502));
+    const result = await runJob("/api/v1/places/visits/photos/auto-link/trim");
+    expect(result.removed).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(await visitLinks()).toHaveLength(10);
   });
 });

@@ -13,6 +13,8 @@ export interface PhotoChoice {
   assetId: string;
   url: string;
   takenAt: string | null;
+  /** Wall clock where it was taken, `YYYY-MM-DDTHH:mm:ss`; null when the server knows no zone. */
+  takenAtLocal: string | null;
   /** Metres to the place; null when the source gave no position. */
   distanceM: number | null;
   chosen: boolean;

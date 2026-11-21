@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { PhotoChoosePanel } from "../PhotoChoosePanel";
+import { PhotoChoosePanel, formatTaken } from "../PhotoChoosePanel";
 
 const getPhotoChoices = vi.fn();
 const savePhotoChoices = vi.fn();
@@ -16,6 +16,7 @@ const choice = (assetId: string, over: Record<string, unknown> = {}) => ({
   assetId,
   url: `/img/${assetId}`,
   takenAt: "2024-05-01T10:00:00.000Z",
+  takenAtLocal: "2024-05-01T12:00:00",
   distanceM: 120,
   chosen: false,
   provenance: null,
@@ -93,5 +94,17 @@ describe("PhotoChoosePanel", () => {
     await userEvent.click(screen.getByRole("button", { name: "common:photoChoose.save" }));
     await waitFor(() => expect(savePhotoChoices).toHaveBeenCalled());
     expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it("shows the place's wall clock, not the UTC instant, and no time when the zone is unknown", async () => {
+    // 10:00Z is 12:00 in Rome: the server sends the local clock and it is shown as sent.
+    expect(formatTaken("2024-05-01T12:00:00", "en")).toMatch(/12:00/);
+    expect(formatTaken("2024-05-01T12:00:00", "en")).not.toMatch(/10:00/);
+    expect(formatTaken(null, "en")).toBe("");
+    render(<PhotoChoosePanel target={target} onSaved={() => {}} onClose={() => {}} />);
+    await screen.findAllByRole("button", { pressed: true });
+    expect(document.body.textContent).toMatch(/12:00/);
+    expect(document.body.textContent).not.toMatch(/10:00/);
+    expect(document.body.textContent).not.toContain("UTC");
   });
 });

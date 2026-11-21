@@ -13,6 +13,7 @@ import type { PhotoSourceKind } from "../photoSource";
 import { toPhotoSourceKind } from "../photoSource/connection";
 import { openInLinks, type OpenInLink } from "../photoSource/deepLink";
 import { privacyCircleSet } from "../travtrack/privacyCircles";
+import { takenAtLocal } from "../photoLinking/choiceTarget";
 import { PHOTO_RADIUS_KM } from "./visitDateSuggestions";
 import { anchorOf, dayWindow, libraryAssetsNear } from "./visitPhotoSuggestions";
 import { linkAssetsToVisit } from "./visitPhotoLinks";
@@ -30,6 +31,8 @@ export interface VisitChoice {
   assetId: string;
   url: string;
   takenAt: string | null;
+  /** Wall clock at the place (`YYYY-MM-DDTHH:mm:ss`); null when no zone is known, never UTC. */
+  takenAtLocal: string | null;
   distanceM: number | null;
   chosen: boolean;
   provenance: "manual" | "auto" | null;
@@ -85,6 +88,33 @@ async function candidates(userId: string, visitId: string) {
   return { anchor, window, library, matched, refused, rowOf };
 }
 
+/**
+ * Km to the place per `provider:assetId` for a visit's day, read off the
+ * matcher's candidates (the trim pass ranks stored links with it). Null when a
+ * photo source failed to answer — the caller must not trim on a guess.
+ */
+export async function visitCandidateDistances(
+  userId: string,
+  visitId: string
+): Promise<Map<string, number> | null> {
+  const found = await candidates(userId, visitId);
+  if (found === null || found === "undated") return new Map();
+  if (
+    Object.values(found.library.sources).some(
+      (s) => s !== "ok" && s !== "notConfigured" && s !== "truncated"
+    )
+  ) {
+    return null;
+  }
+  return new Map(
+    found.matched.flatMap((m) =>
+      m.distanceKm === undefined
+        ? []
+        : [[refusalKey(m.provider, m.asset.id), m.distanceKm] as const]
+    )
+  );
+}
+
 export async function visitChoicesFor(
   userId: string,
   visitId: string
@@ -108,6 +138,7 @@ export async function visitChoicesFor(
       assetId: m.asset.id,
       url: urlOf(visitId, m.provider, m.asset.id),
       takenAt: m.asset.fileCreatedAt,
+      takenAtLocal: takenAtLocal(m.asset.fileCreatedAt, null, anchor.tz),
       distanceM: m.distanceKm === undefined ? null : Math.round(m.distanceKm * 1000),
       chosen: row !== undefined,
       provenance: row ? (row.provenance === "auto" ? "auto" : "manual") : null,

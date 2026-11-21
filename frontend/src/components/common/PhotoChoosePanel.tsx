@@ -22,16 +22,20 @@ interface Props {
 
 const keyOf = (c: { provider: string; assetId: string }): string => `${c.provider}:${c.assetId}`;
 
-/** A photo's instant, in UTC — the zone of the place is not known to the browser. */
-function formatTaken(iso: string | null, locale: string): string {
-  if (!iso) return "";
-  const at = new Date(iso);
-  if (Number.isNaN(at.getTime())) return "";
-  return `${new Intl.DateTimeFormat(locale, {
+/**
+ * A photo's wall clock where it was taken, as the server sent it. Read as plain
+ * calendar parts (the `UTC` zone below only stops the browser shifting them) —
+ * never the viewer's zone and never UTC as a time of day.
+ */
+export function formatTaken(local: string | null, locale: string): string {
+  const m = local?.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!m) return "";
+  const [y, mo, d, h, mi] = m.slice(1).map(Number) as [number, number, number, number, number];
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "short",
     timeStyle: "short",
     timeZone: "UTC",
-  }).format(at)} UTC`;
+  }).format(new Date(Date.UTC(y, mo - 1, d, h, mi)));
 }
 
 function formatDistance(metres: number | null): string {
@@ -165,7 +169,7 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
                         state: on
                           ? t("common:photoChoose.chosen")
                           : t("common:photoChoose.notChosen"),
-                        time: formatTaken(c.takenAt, i18n.language),
+                        time: formatTaken(c.takenAtLocal, i18n.language),
                       })}
                       onClick={() => toggle(c)}
                       style={{
@@ -186,7 +190,7 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
                       />
                     </button>
                     <span className="text-[10px] leading-4" style={{ color: "var(--text-muted)" }}>
-                      {formatTaken(c.takenAt, i18n.language)}
+                      {formatTaken(c.takenAtLocal, i18n.language)}
                       {c.distanceM !== null && ` · ${formatDistance(c.distanceM)}`}
                       {c.chosen &&
                         ` · ${t(c.provenance === "auto" ? "common:photoChoose.auto" : "common:photoChoose.own")}`}

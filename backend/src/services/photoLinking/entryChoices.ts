@@ -23,7 +23,7 @@ import {
   type SourceState,
   type WindowSearch,
 } from "./matcher";
-import { choiceTarget } from "./choiceTarget";
+import { choiceTarget, planZone, takenAtLocal } from "./choiceTarget";
 
 /**
  * "Fotos auswählen" for an entry (owner, 2026-11-21): every candidate the
@@ -39,6 +39,8 @@ export interface EntryChoice {
   provider: PhotoSourceKind;
   assetId: string;
   takenAt: string | null;
+  /** Wall clock where it was taken (`YYYY-MM-DDTHH:mm:ss`); null when no zone is known, never UTC. */
+  takenAtLocal: string | null;
   mimetype: string;
   /** Null when the source gave no position for a linked photo that no longer matches. */
   distanceM: number | null;
@@ -86,6 +88,7 @@ export async function entryChoicesFor(
   // user can pick the one they like; the spread only thins an overlong list.
   const others = rest.length <= room ? rest : capMatches(rest, room);
   const listed = [...chosen, ...others];
+  const zone = planZone(plan);
   const listedKeys = new Set(listed.map((m) => refusalKey(m.provider, m.asset.id)));
   const choices: EntryChoice[] = listed.map((m) => {
     const row = rowOf.get(refusalKey(m.provider, m.asset.id));
@@ -94,6 +97,7 @@ export async function entryChoicesFor(
       provider: m.provider,
       assetId: m.asset.id,
       takenAt: m.asset.fileCreatedAt,
+      takenAtLocal: takenAtLocal(m.asset.fileCreatedAt, m.asset, zone),
       mimetype: m.asset.mimeType,
       distanceM: m.distanceKm === undefined ? null : Math.round(m.distanceKm * 1000),
       chosen: row !== undefined && !row.refused,
@@ -110,6 +114,7 @@ export async function entryChoicesFor(
       provider,
       assetId: row.assetId,
       takenAt: row.takenAt?.toISOString() ?? null,
+      takenAtLocal: takenAtLocal(row.takenAt?.toISOString() ?? null, null, zone),
       mimetype: row.mimetype,
       distanceM: null,
       chosen: true,

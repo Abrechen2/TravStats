@@ -200,6 +200,14 @@ export async function drain(userId: string): Promise<void> {
   if (refs.size > 0 && (await autoLinkEnabled(userId))) {
     const run = await runEntries(userId, [...refs.values()]);
     await recordRun(userId, run);
+    // A pass that failed — an entry that threw, a source that did not answer — keeps
+    // its marks, or the entry would stay unlinked until someone edits it again. The
+    // next drain (a write, or the boot one) retries; no timer, so a source that stays
+    // down is not hammered.
+    const sourceDown = Object.values(run.sources).some(
+      (s) => s !== "ok" && s !== "notConfigured" && s !== "truncated"
+    );
+    if (run.failedVisits > 0 || sourceDown) return;
   }
   await prisma.entryPhotoDirty.deleteMany({
     where: { id: { in: done }, markedAt: { lte: claimedAt } },
@@ -239,11 +247,34 @@ function scopeOf(where: unknown): { ids: string[]; userId: string | null } | nul
   return ids.length > 0 || userId ? { ids, userId } : null;
 }
 
-async function marksFor(kind: EntryKind, ids: string[], userId: string | null): Promise<Mark[]> {
+/** The owners a write's result row names itself (`userId`), by entry id. */
+function ownersIn(result: unknown): Map<string, string> {
+  const rows = Array.isArray(result) ? result : [result];
+  const out = new Map<string, string>();
+  for (const r of rows) {
+    const row = r as { id?: unknown; userId?: unknown } | null;
+    if (row && typeof row.id === "string" && typeof row.userId === "string") {
+      out.set(row.id, row.userId);
+    }
+  }
+  return out;
+}
+
+/**
+ * The owner comes from the written row itself when it names one: the write may sit
+ * in a transaction that has not committed, and a read through the global client
+ * would not see the new entry — no mark, no pass, silently.
+ */
+async function marksFor(
+  kind: EntryKind,
+  ids: string[],
+  userId: string | null,
+  known: ReadonlyMap<string, string> = new Map()
+): Promise<Mark[]> {
   if (ids.length === 0) return userId ? [{ userId, kind, entryId: WILDCARD }] : [];
   const marks: Mark[] = [];
   for (const id of ids) {
-    const owner = userId ?? (await ownerOf(kind, id));
+    const owner = userId ?? known.get(id) ?? (await ownerOf(kind, id));
     if (owner) marks.push({ userId: owner, kind, entryId: id });
   }
   return marks;
@@ -269,9 +300,11 @@ async function onWriteAsync({ model, operation, args, result }: WriteEvent): Pro
   const rule = RELEVANT[model];
   if (!rule) return;
   if (operation === "create" || operation === "createManyAndReturn") {
-    await mark(await marksFor(rule.kind, idsOf(result), null));
+    await mark(await marksFor(rule.kind, idsOf(result), null, ownersIn(result)));
   } else if (operation === "update" || operation === "upsert") {
-    if (touches(written, rule.fields)) await mark(await marksFor(rule.kind, idsOf(result), null));
+    if (touches(written, rule.fields)) {
+      await mark(await marksFor(rule.kind, idsOf(result), null, ownersIn(result)));
+    }
   } else if (operation === "updateMany") {
     const scope = scopeOf(a.where);
     if (touches(a.data, rule.fields) && scope) {
@@ -282,6 +315,7 @@ async function onWriteAsync({ model, operation, args, result }: WriteEvent): Pro
       id?: string;
       userId?: string;
       cruiseId?: string;
+      routeId?: string | null;
     }[];
     const marks: Mark[] = [];
     for (const row of rows) {
@@ -291,6 +325,12 @@ async function onWriteAsync({ model, operation, args, result }: WriteEvent): Pro
           select: { userId: true },
         });
         if (cruise) marks.push({ userId: cruise.userId, kind: "cruiseStop", entryId: WILDCARD });
+      } else if (model === "TripStop" && row?.routeId) {
+        const route = await prisma.tripRoute.findUnique({
+          where: { id: row.routeId },
+          select: { userId: true },
+        });
+        if (route) marks.push({ userId: route.userId, kind: "roadtripStop", entryId: WILDCARD });
       } else if (row?.userId) {
         marks.push({ userId: row.userId, kind: rule.kind, entryId: row.id ?? WILDCARD });
       }

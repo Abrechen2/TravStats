@@ -19,6 +19,10 @@ const choice = z.object({
   assetId: z.string(),
   url: z.string().describe("Where the thumbnail is served"),
   takenAt: z.string().nullable(),
+  takenAtLocal: z
+    .string()
+    .nullable()
+    .describe("Wall clock where it was taken, `YYYY-MM-DDTHH:mm:ss`; null when no zone is known"),
   distanceM: z.number().nullable().describe("Metres to the place; null when unknown"),
   chosen: z.boolean(),
   provenance: z.enum(["manual", "auto"]).nullable(),

@@ -722,6 +722,64 @@ describe("automatic photo links for every entry type", () => {
       expect(await prisma.entryPhotoDirty.count({ where: { userId, entryId: ghost } })).toBe(0);
     });
 
+    it("a roadtrip station created by createMany (routeId only) is marked, not skipped", async () => {
+      answerWith("roadtripStop");
+      const trip = await prisma.trip.create({ data: { userId, name: "Road bulk" } });
+      const route = await prisma.tripRoute.create({
+        data: { userId, tripId: trip.id, name: "R", mode: "road", kind: "roadtrip" },
+      });
+      await prisma.tripStop.createMany({
+        data: [
+          {
+            routeId: route.id,
+            title: "Bulk station",
+            lat: 45.0,
+            lon: 7.0,
+            startDate: new Date("2024-05-01T00:00:00Z"),
+            stopZone: "Europe/Rome",
+          },
+        ],
+      });
+      await settle();
+      const stop = await prisma.tripStop.findFirst({ where: { routeId: route.id } });
+      expect(await prisma.entryPhotoLink.count({ where: { tripStopId: stop!.id } })).toBe(1);
+    });
+
+    it("a flight created inside a not-yet-committed transaction still gets its mark and pass", async () => {
+      answerWith("flight");
+      let id = "";
+      await prisma.$transaction(async (tx) => {
+        const created = await tx.flight.create({
+          data: {
+            userId,
+            depLat: ROME.lat,
+            depLon: ROME.lon,
+            arrLat: MUC.lat,
+            arrLon: MUC.lon,
+            departureTime: new Date("2024-05-01T10:00:00Z"),
+            arrivalTime: new Date("2024-05-01T12:00:00Z"),
+          },
+        });
+        id = created.id;
+        // Let the observer run while the row is still invisible to the global client.
+        await new Promise((r) => setTimeout(r, 100));
+      });
+      await settle();
+      expect(await prisma.entryPhotoLink.count({ where: { flightId: id } })).toBe(1);
+    });
+
+    it("keeps the marks when the pass failed (a source that did not answer), and retries later", async () => {
+      search.immich.mockRejectedValue(new ImmichError("unreachable", "down", 502));
+      const id = await FIXTURES.flight.create(userId);
+      await settle();
+      expect(await prisma.entryPhotoDirty.count({ where: { userId, entryId: id } })).toBe(1);
+      expect(await prisma.entryPhotoLink.count({ where: { flightId: id } })).toBe(0);
+      answerWith("flight");
+      await drain(userId);
+      expect(await prisma.entryPhotoDirty.count({ where: { userId, entryId: id } })).toBe(0);
+      expect(await prisma.entryPhotoLink.count({ where: { flightId: id } })).toBe(1);
+    });
+
     it("a lodging upsert that sets coordinates re-runs its stays (reads create/update, not data)", async () => {
       answerWith("stay");
       const lodging = await prisma.lodging.create({ data: { userId, name: "Upsert geocode" } });
