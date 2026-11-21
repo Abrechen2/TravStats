@@ -1,5 +1,5 @@
 {
-  "$comment": "forgejo#273 — the DATE_ONLY flight contract, pinned on both sides. A date-only flight is written as a LOCAL wall clock with its airport's zone: the historical form's noon anchor (buildLocalString -> 'YYYY-MM-DDT12:00', frontend/src/components/FlightForm/flightFormModel.ts) or the cruise import's midnight ('YYYY-MM-DDT00:00', CruiseImportPreviewModal.tsx), converted by the server through that zone (toUtcDate, backend/src/services/flights/mergedChronology.ts). Its day is therefore the LOCAL day of the stored instant in that zone — never the stored UTC date. Read by backend/src/__tests__/dateOnlyContract.test.ts (writer -> stored, stored -> day in every statistic) and frontend/src/shared/__tests__/dateOnlyContract.test.ts (form writer -> local, stored -> day in the web mirror). Change both together.",
+  "$comment": "forgejo#273 — the DATE_ONLY flight contract, pinned on both sides. A date-only flight is written as a LOCAL wall clock with its airport's zone: the historical form's noon anchor (buildLocalString -> 'YYYY-MM-DDT12:00', frontend/src/components/FlightForm/flightFormModel.ts) or the cruise import's midnight ('YYYY-MM-DDT00:00', CruiseImportPreviewModal.tsx), converted by the server through that zone (toUtcDate, backend/src/services/flights/mergedChronology.ts). Its day is therefore the LOCAL day of the stored instant in that zone — never the stored UTC date. Read by backend/src/__tests__/dateOnlyContract.test.ts (writer -> stored, stored -> day in every statistic) and frontend/src/shared/__tests__/dateOnlyContract.test.ts (form writer -> local, stored -> day in the web mirror). Change both together. GitHub #403: the stored convention is ONE — the form's noon, which a bare YYYY-MM-DD with DATE_ONLY on the API now also becomes; midnight UTC rows were migrated (20261121090000_date_only_flights_local_noon). The sfo/hnl cases are the zones west of UTC where the old shape read a day early.",
   "cases": [
     {
       "id": "akl-nzdt-form-noon",
@@ -72,6 +72,24 @@
       "day": "2026-05-10",
       "local": "2026-05-10T00:00",
       "stored": "2026-05-10T04:00:00.000Z"
+    },
+    {
+      "id": "sfo-pst-form-noon",
+      "writer": "form",
+      "iata": "SFO",
+      "zone": "America/Los_Angeles",
+      "day": "2025-12-28",
+      "local": "2025-12-28T12:00",
+      "stored": "2025-12-28T20:00:00.000Z"
+    },
+    {
+      "id": "hnl-hst-form-noon",
+      "writer": "form",
+      "iata": "HNL",
+      "zone": "Pacific/Honolulu",
+      "day": "2025-12-31",
+      "local": "2025-12-31T12:00",
+      "stored": "2025-12-31T22:00:00.000Z"
     }
   ]
 }
