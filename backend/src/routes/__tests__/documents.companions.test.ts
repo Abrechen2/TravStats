@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "@jest/globals";
+import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import request from "supertest";
 
 import app from "../../index";
@@ -8,6 +8,7 @@ import { generateToken } from "../../utils/jwt";
 import { createDocument } from "../../services/documents/documentService";
 import { addLinks } from "../../services/documents/documentEntryLinks";
 import { recordParse } from "../../services/documents/parseRetention";
+import { replaceCompanionLinks } from "../../services/transport/companionLinks";
 import { syncCompanionLinks } from "../../services/companions/travellerFacts";
 import { mergeCompanions } from "../../services/companions/manageCompanions";
 import { resolveCompanions, linkRowsFor } from "../../services/companionService";
@@ -141,6 +142,12 @@ describe("documents for a person and per-traveller facts (D7)", () => {
     });
   });
 
+  // Other suites count rows of the shared test database (railRoadtripConversion
+  // compares global railJourney counts): leave none behind.
+  afterAll(async () => {
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, strangerId] } } });
+  });
+
   const facts = (type: string, entryId: string, companionId: string, body: object) =>
     api("put", `/entry-travellers/${companionId}`).send({
       entry: { type, id: entryId },
@@ -238,6 +245,23 @@ describe("documents for a person and per-traveller facts (D7)", () => {
       await prisma.$transaction((tx) =>
         syncCompanionLinks(tx, "flight", ids.flight, [norbert, erika])
       );
+    });
+
+    it("the rail/bus/ferry edit path keeps a person's facts when the same list is re-sent", async () => {
+      await facts("railJourney", ids.rail, norbert, { seatNumber: "44" });
+      await replaceCompanionLinks(prisma.railJourneyCompanion, "railJourneyId", ids.rail, [
+        { id: erika },
+        { id: norbert },
+      ]);
+      const rows = await prisma.railJourneyCompanion.findMany({
+        where: { railJourneyId: ids.rail },
+        orderBy: { position: "asc" },
+      });
+      expect(rows.map((r) => [r.companionId, r.position])).toEqual([
+        [erika, 0],
+        [norbert, 1],
+      ]);
+      expect(rows[1].seatNumber).toBe("44");
     });
 
     it("a companion who is not on the entry, or not the caller's, is a 404 and nothing is written", async () => {

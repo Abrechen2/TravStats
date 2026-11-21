@@ -166,6 +166,20 @@ async function mergeFlights(
       skipDuplicates: true,
     });
   }
+  // A person on both: the kept row's value wins, the removed twin fills what it lacks (D7).
+  for (const c of companions) {
+    const { flightId: _entry, companionId, position: _position, ...facts } = c;
+    const kept = await tx.flightCompanion.findFirst({ where: { flightId: keptId, companionId } });
+    if (!kept) continue;
+    const fill = Object.fromEntries(
+      Object.entries(facts).filter(
+        ([k, v]) => v != null && (kept as Record<string, unknown>)[k] == null
+      )
+    );
+    if (Object.keys(fill).length > 0) {
+      await tx.flightCompanion.updateMany({ where: { flightId: keptId, companionId }, data: fill });
+    }
+  }
   const withTrack = removed.find((r) => r.track);
   if (withTrack) {
     await tx.flightTrack.update({ where: { flightId: withTrack.id }, data: { flightId: keptId } });
@@ -287,6 +301,20 @@ async function mergeCruises(
       data: companions.map((c) => ({ ...c, cruiseId: keptId })),
       skipDuplicates: true,
     });
+  }
+  // A person on both: the kept row's value wins, the removed twin fills what it lacks (D7).
+  for (const c of companions) {
+    const { cruiseId: _entry, companionId, position: _position, ...facts } = c;
+    const kept = await tx.cruiseCompanion.findFirst({ where: { cruiseId: keptId, companionId } });
+    if (!kept) continue;
+    const fill = Object.fromEntries(
+      Object.entries(facts).filter(
+        ([k, v]) => v != null && (kept as Record<string, unknown>)[k] == null
+      )
+    );
+    if (Object.keys(fill).length > 0) {
+      await tx.cruiseCompanion.updateMany({ where: { cruiseId: keptId, companionId }, data: fill });
+    }
   }
   // A track the kept cruise already holds (same import reference) is the same
   // recording; it dies with the copy instead of colliding on the unique index.

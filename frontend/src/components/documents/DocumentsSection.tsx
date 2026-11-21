@@ -651,6 +651,11 @@ export default function DocumentsSection({
         </div>
       )}
 
+      {isTravellerEntryType(entryType) && people.failed && (
+        <p className="t-caption" role="alert" style={{ color: "var(--ts-warn)" }}>
+          {t("documents:travellers.loadFailed")}
+        </p>
+      )}
       {isTravellerEntryType(entryType) && (
         <TravellersPanel
           type={entryType}
