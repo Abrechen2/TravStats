@@ -1,9 +1,12 @@
+import { useMemo } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import type { useTranslation } from "../../hooks/useTranslation";
 import type { Trip } from "../../types";
 import { formatLocalDate } from "../../lib/displayFormat";
 import { tripEnd, tripStart } from "../../lib/entityTimes";
+import { buildTimelineEvents } from "../../lib/tripTimelineEvents";
+import { findTimelineInconsistencies } from "../../lib/tripTimelinePlausibility";
 import { FlagImg } from "../../lib/countryFlag";
 import { countryName } from "../../shared/geo/countryCode";
 import { statusPillStyle } from "../table/statusPillStyle";
@@ -49,6 +52,13 @@ export default function TripHead({
   onChanged,
   placeCount = 0,
 }: TripHeadProps): JSX.Element {
+  // Entries that contradict each other (forgejo#426); the timeline names each one.
+  const inconsistencies = useMemo(
+    () =>
+      new Set(findTimelineInconsistencies(buildTimelineEvents(trip, [])).map((f) => f.eventId))
+        .size,
+    [trip]
+  );
   // The trip's days at its places (`times`), never moved by the reader's zone.
   const start = tripStart(trip)?.date;
   const end = tripEnd(trip)?.date;
@@ -113,6 +123,19 @@ export default function TripHead({
                 <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
                   {meta.join(" · ")}
                 </span>
+              )}
+              {inconsistencies > 0 && (
+                <Link
+                  to="?tab=timeline"
+                  className="t-caption underline"
+                  style={{
+                    fontFamily: "var(--ts-font-mono)",
+                    color: "var(--color-warning, inherit)",
+                  }}
+                  data-testid="trip-head-inconsistencies"
+                >
+                  ⚠︎ {t("trips:detail.plausibility.count", { count: inconsistencies })}
+                </Link>
               )}
               {placeCount > 0 && (
                 <Link

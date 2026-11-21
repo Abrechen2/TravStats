@@ -9,6 +9,8 @@ import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { implausibleStayIds } from "../lib/tripStayPlausibility";
 import { computeRailStates } from "../lib/timelineRail";
 import { buildTimelineEvents, type TimelineEvent } from "../lib/tripTimelineEvents";
+import { findTimelineInconsistencies, findingsByEvent } from "../lib/tripTimelinePlausibility";
+import { TimelineWarnings } from "../components/Trips/TimelineWarnings";
 import { JournalCard } from "../components/Trips/TimelineJournalCard";
 import { useToastStore } from "../store/toastStore";
 import { usePlacesVisible } from "../hooks/usePlacesVisible";
@@ -353,6 +355,7 @@ function TimelineTab({ trip, onChanged, t, language, placeVisits }: TimelineTabP
   // is likely an import/typo error; the timeline entry shows a soft hint.
   const implausibleStays = useMemo(() => implausibleStayIds(trip), [trip]);
 
+  const findings = useMemo(() => findingsByEvent(findTimelineInconsistencies(events)), [events]);
   const rentalBands = useRentalBands(events);
   // Past/upcoming is shown on the rail (line + dots), not by graying out
   // entries — see #184. Recomputed per render; a page-lifetime "now" is fine.
@@ -503,6 +506,7 @@ function TimelineTab({ trip, onChanged, t, language, placeVisits }: TimelineTabP
                     onDelete={() => void handleDeleteJournal(ev.entry)}
                   />
                 )}
+                <TimelineWarnings ev={ev} findings={findings.get(ev.id)} />
               </li>
             );
           })}
