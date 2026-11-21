@@ -102,7 +102,13 @@ export default function DocumentLinkSuggestionsSection(): JSX.Element | null {
     let failed = false;
     try {
       if (action === "accept") await documentLinkSuggestionsApi.accept(group.documentId, ids);
-      else await documentLinkSuggestionsApi.dismiss(group.documentId);
+      else {
+        // Only what was shown: entries still hidden behind the cap are not answered unseen.
+        await documentLinkSuggestionsApi.dismiss(
+          group.documentId,
+          group.entries.map((e) => e.suggestionId)
+        );
+      }
       setError(null);
     } catch (err) {
       logger.warn("Failed to answer a document link suggestion:", err);
@@ -180,6 +186,11 @@ export default function DocumentLinkSuggestionsSection(): JSX.Element | null {
                     </span>
                   </label>
                 ))}
+                {group.hidden > 0 && (
+                  <p className="t-caption" role="note">
+                    {t(`${NS}.hidden`, { count: group.hidden })}
+                  </p>
+                )}
               </fieldset>
               <div className="flex flex-wrap gap-2" style={{ marginTop: "var(--ts-space-md)" }}>
                 <Button

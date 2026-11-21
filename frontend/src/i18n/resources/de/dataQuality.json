@@ -701,7 +701,8 @@
       "load": "Die Vorschläge für Dokumentverknüpfungen konnten nicht geladen werden.",
       "scan": "Die Prüfung der gespeicherten Dokumente ist fehlgeschlagen. Beim nächsten Öffnen wird sie erneut versucht.",
       "answer": "Die Antwort konnte nicht gespeichert werden. Bitte versuche es noch einmal."
-    }
+    },
+    "hidden": "Noch {{count}} weitere erscheinen, sobald du diese beantwortet hast."
   },
   "time": {
     "field": "Angabe",

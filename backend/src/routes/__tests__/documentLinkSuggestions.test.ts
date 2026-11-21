@@ -386,6 +386,114 @@ describe("document link suggestions (D4)", () => {
     await settleAllJobs();
   });
 
+  it("an entry assigned to the trip, or given a matching booking reference, after the scan is offered (updates, not only inserts)", async () => {
+    const docId = await keep(
+      { domain: "flight", flights: [{ flightNumber: "XX1", bookingReference: "UPD456" }] },
+      { type: "trip", id: tripId }
+    );
+    const loose = await prisma.flight.create({
+      data: flightData({
+        tripId: null,
+        flightNumber: "ZZ 1",
+        departureTime: new Date("2026-06-10T09:00:00Z"),
+      }),
+    });
+    await runDocumentLinkPass(userId);
+    expect(await rows(docId)).toEqual([]);
+    await prisma.flight.update({
+      where: { id: loose.id },
+      data: { tripId, bookingReference: "UPD456" },
+    });
+    await runDocumentLinkPass(userId);
+    expect((await rows(docId)).map((r) => [r.entryId, r.reason])).toEqual([
+      [loose.id, "bookingReference"],
+    ]);
+  });
+
+  it("a reading stored after the scan on an already-linked document is evaluated", async () => {
+    const docId = await keep({ domain: "flight", flights: [] }, { type: "trip", id: tripId });
+    await runDocumentLinkPass(userId);
+    expect(await rows(docId)).toEqual([]);
+    await prisma.document.update({
+      where: { id: docId },
+      data: {
+        parsedPayload: {
+          domain: "flight",
+          flights: [{ flightNumber: "TP 571", departureTime: "2026-06-01T08:00:00" }],
+        },
+      },
+    });
+    expect(await ensureDocumentLinkPass(userId)).not.toBeNull();
+    await settleAllJobs();
+    expect((await rows(docId)).map((r) => r.entryId)).toEqual([flight1Id]);
+  });
+
+  it("two rides on one line and day are two suggestions, and answering one leaves the other", async () => {
+    const ride = (h: string) =>
+      prisma.busJourney.create({
+        data: {
+          userId,
+          tripId,
+          lineName: "Linie 5",
+          depStationName: "A",
+          arrStationName: "B",
+          depLat: 1,
+          depLon: 1,
+          arrLat: 2,
+          arrLon: 2,
+          departureTime: new Date(`2026-06-02T${h}:00Z`),
+        } as never,
+      });
+    const morning = await ride("08:00");
+    const evening = await ride("18:00");
+    const docId = await keep(
+      {
+        domain: "bus",
+        tickets: [{ rides: [{ lineName: "Linie 5", departureLocal: "2026-06-02T08:00" }] }],
+      },
+      { type: "trip", id: tripId }
+    );
+    await runDocumentLinkPass(userId);
+    const found = await rows(docId);
+    expect(found.map((r) => r.entryId).sort()).toEqual([morning.id, evening.id].sort());
+    await post(`/document-link-suggestions/${docId}/dismiss`, { suggestionIds: [found[0].id] });
+    expect((await rows(docId)).map((r) => r.status).sort()).toEqual(["dismissed", "pending"]);
+  });
+
+  it("a group over the cap offers only what accept can take, and the rest follows", async () => {
+    const many = await keep(
+      { domain: "flight", flights: [{ flightNumber: "QQ1", bookingReference: "BIG777" }] },
+      { type: "trip", id: tripId }
+    );
+    await prisma.flight.createMany({
+      data: Array.from({ length: 201 }, (_, i) =>
+        flightData({
+          flightNumber: `QQ ${i}`,
+          bookingReference: "BIG777",
+          departureTime: new Date(Date.UTC(2026, 7, 1, 0, i)),
+        })
+      ),
+    });
+    await runDocumentLinkPass(userId);
+    const list = await get("/document-link-suggestions");
+    const group = list.body.data.suggestions.find(
+      (g: { documentId: string }) => g.documentId === many
+    );
+    expect(group.entries).toHaveLength(200);
+    expect(group.hidden).toBe(1);
+    const ids = group.entries.map((e: { suggestionId: string }) => e.suggestionId);
+    const accepted = await post(`/document-link-suggestions/${many}/accept`, {
+      suggestionIds: ids,
+    });
+    expect(accepted.status).toBe(200);
+    expect(accepted.body.data.linked).toBe(200);
+    const after = await get("/document-link-suggestions");
+    const rest = after.body.data.suggestions.find(
+      (g: { documentId: string }) => g.documentId === many
+    );
+    expect(rest.entries).toHaveLength(1);
+  });
+
   it("shows nothing to another account, and refuses its decisions", async () => {
     const list = await get("/document-link-suggestions", strangerCookie);
     expect(list.body.data.suggestions).toEqual([]);

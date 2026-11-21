@@ -21,6 +21,7 @@ const list = (over: object = {}) => ({
       documentId: "doc-1",
       displayName: "buchung.pdf",
       kind: "booking",
+      hidden: 0,
       entries: [
         {
           suggestionId: "s-1",
@@ -66,6 +67,21 @@ describe("DocumentLinkSuggestionsSection", () => {
     await userEvent.click(screen.getByRole("button", { name: /\.accept$/ }));
     await waitFor(() =>
       expect(documentLinkSuggestionsApi.accept).toHaveBeenCalledWith("doc-1", ["s-1"])
+    );
+  });
+
+  it("dismisses only the entries that were shown, never the ones hidden behind the cap", async () => {
+    const base = list();
+    vi.mocked(documentLinkSuggestionsApi.list).mockResolvedValue({
+      ...base,
+      suggestions: [{ ...base.suggestions[0], hidden: 5 }],
+    });
+    vi.mocked(documentLinkSuggestionsApi.dismiss).mockResolvedValue(undefined);
+    render(<DocumentLinkSuggestionsSection />);
+    expect(await screen.findByRole("note")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /\.dismiss$/ }));
+    await waitFor(() =>
+      expect(documentLinkSuggestionsApi.dismiss).toHaveBeenCalledWith("doc-1", ["s-1", "s-2"])
     );
   });
 

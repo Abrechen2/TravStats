@@ -19,7 +19,12 @@ export interface DocumentSuggestion {
   displayName: string;
   kind: string | null;
   entries: SuggestedEntry[];
+  /** Pending entries beyond `MAX_GROUP_ENTRIES`, offered once these are answered. */
+  hidden: number;
 }
+
+/** What one group offers; accept takes at most as many ids, so a shown selection is always acceptable. */
+export const MAX_GROUP_ENTRIES = 200;
 
 const isSuggestable = (t: string): t is (typeof SUGGESTABLE_TYPES)[number] =>
   (SUGGESTABLE_TYPES as readonly string[]).includes(t);
@@ -89,8 +94,13 @@ export async function listDocumentSuggestions(userId: string): Promise<DocumentS
         displayName: row.document.originalName ?? row.document.storedName,
         kind: row.document.kind,
         entries: [],
+        hidden: 0,
       };
       groups.set(row.documentId, group);
+    }
+    if (group.entries.length >= MAX_GROUP_ENTRIES) {
+      group.hidden += 1;
+      continue;
     }
     group.entries.push({
       suggestionId: row.id,
