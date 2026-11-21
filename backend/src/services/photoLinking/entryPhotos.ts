@@ -359,7 +359,11 @@ export async function autoLinkEntry(
       !stillFits.has(refusalKey(toKind(l.provider), l.assetId))
   );
   if (stale.length > 0) {
-    await prisma.entryPhotoLink.deleteMany({ where: { id: { in: stale.map((l) => l.id) } } });
+    // Provenance is re-checked in the same statement: a user may have picked
+    // this very photo since the read above, and a pick must survive the pass.
+    await prisma.entryPhotoLink.deleteMany({
+      where: { id: { in: stale.map((l) => l.id) }, provenance: "auto", refused: false },
+    });
   }
   const linkedKeys = new Set(
     (

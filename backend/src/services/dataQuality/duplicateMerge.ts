@@ -16,6 +16,7 @@ import { findDuplicateCandidates } from "./checks/duplicateCandidates";
 import { loadRecordSnapshot } from "./recordGather";
 import { FindingActionError } from "./findingErrors";
 import { repointLinks } from "../documents/documentLinks";
+import { carryCruiseStopLinks, carryPhotoLinks, carryStayCompanionFacts } from "./mergeCarryOver";
 
 /**
  * Merging the copies of a duplicate finding (spec C3, `merge`).
@@ -180,6 +181,7 @@ async function mergeFlights(
       await tx.flightCompanion.updateMany({ where: { flightId: keptId, companionId }, data: fill });
     }
   }
+  await carryPhotoLinks(tx, "flight", keptId, removedIds);
   const withTrack = removed.find((r) => r.track);
   if (withTrack) {
     await tx.flightTrack.update({ where: { flightId: withTrack.id }, data: { flightId: keptId } });
@@ -233,6 +235,8 @@ async function mergeStays(
     { type: "lodgingStay", ids: removedIds },
     { type: "lodgingStay", id: keptId }
   );
+  await carryPhotoLinks(tx, "stay", keptId, removedIds);
+  await carryStayCompanionFacts(tx, keptId, removedIds);
   const pick = <K extends "tripId" | "bookingId" | "membershipId">(key: K) =>
     kept[key] ?? removed.find((r) => r[key])?.[key] ?? null;
   const links = {
@@ -316,6 +320,7 @@ async function mergeCruises(
       await tx.cruiseCompanion.updateMany({ where: { cruiseId: keptId, companionId }, data: fill });
     }
   }
+  await carryCruiseStopLinks(tx, keptId, removedIds);
   // A track the kept cruise already holds (same import reference) is the same
   // recording; it dies with the copy instead of colliding on the unique index.
   const heldRefs = new Set(
