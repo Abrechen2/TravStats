@@ -58,6 +58,21 @@ describe("AccountArchiveRows", () => {
     expect(api.download).toHaveBeenCalledWith("e1");
   });
 
+  it("says when files were already missing, instead of a plain success", async () => {
+    api.exportArchive.mockResolvedValue({
+      exportId: "e2",
+      filename: "a.zip",
+      bytes: 10,
+      files: 0,
+      missingFiles: 2,
+      tables: {},
+    });
+    api.download.mockResolvedValue(new Blob(["PK"]));
+    render(<AccountArchiveRows />);
+    fireEvent.click(screen.getByRole("button", { name: "settingsRows:data.archiv.btn" }));
+    expect(await screen.findByText(/accountArchive\.missingFiles\|2/)).toBeInTheDocument();
+  });
+
   it("names the reason an export failed (too large)", async () => {
     api.exportArchive.mockRejectedValue(new JobFailedError("ACCOUNT_ARCHIVE_TOO_LARGE", 413));
     render(<AccountArchiveRows />);

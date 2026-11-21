@@ -157,7 +157,7 @@ export async function writeFiles(
     const verdict = await judge(file.dir, file.name, target, Buffer.concat(head), sha256, size);
     if (verdict) {
       remap.setFile(file.name, newName);
-      verdicts.set(newName, verdict);
+      verdicts.set(verdictKey(file.dir, newName), verdict);
     } else {
       refused += 1;
       logger.warn({ operation: "account_archive_file_refused", dir: file.dir });
@@ -180,6 +180,9 @@ export async function removeFiles(written: readonly WrittenFile[]): Promise<void
   }
 }
 
+/** Verdicts are per directory: one name may exist in two of them. */
+export const verdictKey = (dir: string, name: string): string => `${dir}/${name}`;
+
 /** The row cannot be imported without its file. */
 export class MissingFile extends Error {}
 
@@ -201,12 +204,14 @@ export function checkFileColumns(
       const profile = (value as { profile?: Record<string, unknown> }).profile;
       const url = typeof profile?.profilePicture === "string" ? profile.profilePicture : null;
       const name = profilePictureFileNameFromUrl(url);
-      if (url && name && !verdicts.has(name) && profile) delete profile.profilePicture;
+      if (url && name && !verdicts.has(verdictKey(rule.dir, name)) && profile) {
+        delete profile.profilePicture;
+      }
       continue;
     }
     if (rule.linkedWhen?.some((c) => row[c] !== null && row[c] !== undefined)) continue;
     const name = path.basename(String(value));
-    const verdict = verdicts.get(name);
+    const verdict = verdicts.get(verdictKey(rule.dir, name));
     if (rule.kind === "url") {
       if (String(value).startsWith("/api/") && !verdict) row[rule.column] = null;
       continue;

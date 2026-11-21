@@ -267,7 +267,9 @@ async function clearReplaced(
   for (const table of REPLACED_ON_IMPORT) {
     if (!contents.dataTables.has(table)) continue;
     if (table === "user_settings") {
-      const cols = USER_SETTINGS_SECRETS.map(quoteIdent).join(", ");
+      const cols = [...USER_SETTINGS_SECRETS, ...Object.values(CREDENTIAL_ENDPOINTS)]
+        .map(quoteIdent)
+        .join(", ");
       const [row] = await db.$queryRawUnsafe<Array<{ j: Record<string, unknown> }>>(
         `SELECT row_to_json(x) AS j FROM (SELECT ${cols} FROM user_settings WHERE user_id = $1) x`,
         userId
@@ -279,21 +281,35 @@ async function clearReplaced(
   return secrets;
 }
 
+/**
+ * A stored key travels with the endpoint it was entered for: where the target kept
+ * a key of its own, its base URL is kept too, so an archive cannot point the
+ * target's credential at a server of the archive's choosing.
+ */
+const CREDENTIAL_ENDPOINTS: Readonly<Record<string, string>> = {
+  immich_api_key: "immich_base_url",
+  photoprism_token: "photoprism_base_url",
+  dawarich_api_key: "dawarich_base_url",
+};
+
 async function restoreSecrets(
   db: Db,
-  secrets: Record<string, unknown> | null,
+  kept: Record<string, unknown> | null,
   userId: string
 ): Promise<void> {
-  if (!secrets) return;
-  const cols = Object.keys(secrets).filter((c) =>
+  if (!kept) return;
+  const cols = Object.keys(kept).filter((c) =>
     (USER_SETTINGS_SECRETS as readonly string[]).includes(c)
   );
+  for (const [key, endpoint] of Object.entries(CREDENTIAL_ENDPOINTS)) {
+    if (kept[key] !== null && kept[key] !== undefined) cols.push(endpoint);
+  }
   if (cols.length === 0) return;
   const list = cols.map(quoteIdent).join(", ");
   await db.$executeRawUnsafe(
     `UPDATE user_settings s SET (${list}) = (SELECT ${list} FROM json_populate_record(NULL::user_settings, $1::json))
       WHERE s.user_id = $2`,
-    JSON.stringify(secrets),
+    JSON.stringify(kept),
     userId
   );
 }

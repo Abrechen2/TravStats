@@ -1,6 +1,11 @@
 import { Readable } from "stream";
 
-import { splitLines } from "../zipReader";
+import fs from "fs";
+import os from "os";
+import path from "path";
+
+import { ArchiveReader, splitLines } from "../zipReader";
+import { writeZip } from "./archiveHelpers";
 
 /** forgejo#433: one huge line must not be buffered past the cap (security review). */
 describe("account archive line splitter", () => {
@@ -31,5 +36,15 @@ describe("account archive line splitter", () => {
     await expect(lines(["x".repeat(150) + "\n"], 100)).rejects.toMatchObject({
       code: "ACCOUNT_ARCHIVE_INVALID",
     });
+  });
+
+  it("refuses an archive with more entries than allowed, before reading them", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "az-zip-"));
+    const file = path.join(dir, "many.zip");
+    await writeZip(file, new Map(Array.from({ length: 5 }, (_, i) => [`e${i}`, Buffer.from("x")])));
+    await expect(ArchiveReader.open(file, 2)).rejects.toMatchObject({
+      code: "ACCOUNT_ARCHIVE_INVALID",
+    });
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 });

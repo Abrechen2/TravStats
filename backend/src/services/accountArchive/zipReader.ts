@@ -3,6 +3,7 @@ import type { Readable } from "stream";
 import yauzl from "yauzl";
 
 import { AppError } from "../../middleware/errorHandler";
+import { MAX_ARCHIVE_ENTRIES } from "./format";
 
 /**
  * The longest single row a data entry may carry. A flight's recorded track is the
@@ -27,7 +28,7 @@ export class ArchiveReader {
     readonly entries: ReadonlyMap<string, yauzl.Entry>
   ) {}
 
-  static async open(file: string): Promise<ArchiveReader> {
+  static async open(file: string, maxEntries = MAX_ARCHIVE_ENTRIES): Promise<ArchiveReader> {
     let zip: yauzl.ZipFile;
     try {
       zip = await yauzl.openPromise(file, {
@@ -39,12 +40,21 @@ export class ArchiveReader {
     } catch {
       throw invalidArchive("Not a ZIP archive");
     }
+    if (zip.entryCount > maxEntries + 1) {
+      zip.close();
+      throw invalidArchive("The archive holds too many entries");
+    }
     const entries = new Map<string, yauzl.Entry>();
     try {
       await new Promise<void>((resolve, reject) => {
         zip.on("entry", (entry: yauzl.Entry) => {
           if (entry.fileName.endsWith("/")) {
             zip.readEntry();
+            return;
+          }
+          // The manifest plus its entries; more is refused before it fills memory.
+          if (entries.size > maxEntries) {
+            reject(invalidArchive("The archive holds too many entries"));
             return;
           }
           if (entries.has(entry.fileName)) {

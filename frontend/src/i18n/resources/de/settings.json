@@ -384,6 +384,7 @@
     "exported": "{{size}} · {{rows}} Einträge · {{files}} Dateien, heruntergeladen",
     "imported": "{{rows}} Einträge und {{files}} Dateien übernommen",
     "alreadyImported": "Dieses Archiv ist in diesem Konto schon eingespielt.",
+    "missingFiles": "Achtung: {{count}} Dateien fehlen schon auf diesem Server und sind nicht im Archiv.",
     "partial": "Nicht zugeordnet: {{skipped}} Einträge übersprungen, {{unmatched}} Verweise (z. B. Häfen, Bahnhöfe) ohne Treffer auf diesem Server, {{refused}} Dateien abgelehnt.",
     "notEmpty": "Dieses Konto enthält schon Einträge. Lege ein neues Konto an und spiele das Archiv dort ein.",
     "statusFailed": "Konnte nicht prüfen, ob dieses Konto leer ist. Lade die Seite neu.",

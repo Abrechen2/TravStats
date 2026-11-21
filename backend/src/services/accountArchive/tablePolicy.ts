@@ -1,3 +1,5 @@
+import type { UploadDirName } from "../../config/uploadDirs";
+
 /**
  * What the account archive (forgejo#433) does with every table of the database.
  *
@@ -54,6 +56,8 @@ export interface DataTableOptions {
  */
 export interface FileColumn {
   column: string;
+  /** The upload directory the file lives in. */
+  dir: UploadDirName;
   kind: "name" | "url" | "avatar";
   mime?: string;
   format?: string;
@@ -136,7 +140,10 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
 
   // Travel data.
   trips: owner({ strip: ["share_group_id"] }),
-  flights: owner({ strip: SHARE_KEY, files: [{ column: "receipt_url", kind: "url" }] }),
+  flights: owner({
+    strip: SHARE_KEY,
+    files: [{ column: "receipt_url", dir: "receipts", kind: "url" }],
+  }),
   flight_tracks: child(),
   flight_companions: child(),
   cruises: owner({ strip: SHARE_KEY }),
@@ -154,8 +161,13 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   rental_bookings: owner({ strip: SHARE_KEY }),
   rental_booking_companions: child(),
   lodgings: owner(),
-  lodging_stays: owner({ strip: SHARE_KEY, files: [{ column: "receipt_url", kind: "url" }] }),
-  lodging_photos: child({ files: [{ column: "filename", kind: "name", mime: "mimetype" }] }),
+  lodging_stays: owner({
+    strip: SHARE_KEY,
+    files: [{ column: "receipt_url", dir: "receipts", kind: "url" }],
+  }),
+  lodging_photos: child({
+    files: [{ column: "filename", dir: "lodging-photos", kind: "name", mime: "mimetype" }],
+  }),
   lodging_membership_lodgings: child(),
   lodging_membership_chains: child(),
   lodging_rating_categories: owner(),
@@ -172,7 +184,13 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   trip_expenses: owner(),
   trip_photos: child({
     files: [
-      { column: "filename", kind: "name", mime: "mimetype", linkedWhen: ["immich_asset_id"] },
+      {
+        column: "filename",
+        dir: "trip-photos",
+        kind: "name",
+        mime: "mimetype",
+        linkedWhen: ["immich_asset_id"],
+      },
     ],
   }),
   trip_immich_albums: child(),
@@ -188,6 +206,7 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
     files: [
       {
         column: "filename",
+        dir: "place-photos",
         kind: "name",
         mime: "mimetype",
         linkedWhen: ["immich_asset_id", "trip_photo_id"],
@@ -199,11 +218,14 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   place_captures: owner(),
   place_lists: owner(),
   place_list_entries: child(),
-  notes: owner({ files: [{ column: "photo_filename", kind: "name", mime: "photo_mimetype" }] }),
+  notes: owner({
+    files: [{ column: "photo_filename", dir: "note-photos", kind: "name", mime: "photo_mimetype" }],
+  }),
   documents: owner({
     files: [
       {
         column: "stored_name",
+        dir: "documents",
         kind: "name",
         mime: "mimetype",
         format: "format",
@@ -226,7 +248,7 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
     ],
   }),
   document_links: child(),
-  receipt_uploads: owner({ files: [{ column: "filename", kind: "name" }] }),
+  receipt_uploads: owner({ files: [{ column: "filename", dir: "receipts", kind: "name" }] }),
   import_batches: owner(),
   parser_templates: owner(),
   country_days: owner(),
@@ -240,7 +262,7 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   // `data.profile.profilePicture` names the avatar file.
   user_settings: owner({
     strip: USER_SETTINGS_SECRETS,
-    files: [{ column: "data", kind: "avatar" }],
+    files: [{ column: "data", dir: "profile-pictures", kind: "avatar" }],
   }),
 
   // TravTrack, the own location history.

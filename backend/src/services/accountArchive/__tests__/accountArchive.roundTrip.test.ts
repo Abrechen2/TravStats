@@ -424,10 +424,12 @@ describe("account archive round trip", () => {
       `SELECT immich_api_key, strava_access_token, immich_base_url FROM user_settings WHERE user_id = $1`,
       [TARGET_USER]
     );
+    // The target's own Immich key keeps the target's own endpoint: an archive must not
+    // point a key it never saw at a server of its choosing (codex review).
     expect(settings).toEqual({
       immich_api_key: "TARGET-OWN-KEY",
       strava_access_token: null,
-      immich_base_url: "https://immich.example",
+      immich_base_url: null,
     });
     const flight = await one(dst, `SELECT share_key FROM flights WHERE user_id = $1`, [
       TARGET_USER,

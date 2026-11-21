@@ -97,13 +97,19 @@ function ExportRow(): JSX.Element {
       const result = await accountArchiveApi.exportArchive((job) => setPhase(progressOf(job)));
       const blob = await accountArchiveApi.download(result.exportId);
       downloadBlob(blob, result.filename);
+      const missing =
+        result.missingFiles > 0
+          ? ` ${t("settings:accountArchive.missingFiles", { count: result.missingFiles })}`
+          : "";
+      if (missing) logger.warn("Account archive written without some files:", result.missingFiles);
       setPhase({
         kind: "done",
-        text: t("settings:accountArchive.exported", {
-          size: formatBytes(result.bytes),
-          rows: sumRows(result.tables),
-          files: result.files,
-        }),
+        text:
+          t("settings:accountArchive.exported", {
+            size: formatBytes(result.bytes),
+            rows: sumRows(result.tables),
+            files: result.files,
+          }) + missing,
       });
     } catch (err) {
       setPhase(failure(err));

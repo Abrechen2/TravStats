@@ -96,7 +96,7 @@ export interface RowContext {
   remap: Remapper;
   keyMaps: KeyMaps;
   deferred: DeferredUpdate[];
-  /** Accepted files by their new stored name (`importFiles.ts`). */
+  /** Accepted files by `<dir>/<new stored name>` (`importFiles.ts`). */
   verdicts: ReadonlyMap<string, FileVerdict>;
   /** New ids of rows refused on the way: what points at them is cleared or refused too. */
   skipped: Set<string>;

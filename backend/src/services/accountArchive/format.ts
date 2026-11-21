@@ -19,6 +19,8 @@ export const ARCHIVE_FORMAT = "travstats-account-archive";
 export const ARCHIVE_FORMAT_VERSION = 1;
 
 export const MANIFEST_ENTRY = "manifest.json";
+/** Entries an archive may hold (files included); the reader stops counting past it. */
+export const MAX_ARCHIVE_ENTRIES = 100_000;
 export const ACCOUNT_ENTRY = "account.json";
 
 const GIB = 1024 * 1024 * 1024;
@@ -56,7 +58,7 @@ export const manifestSchema = z.object({
   serverVersion: z.string().max(64),
   exportedAt: z.string(),
   sourceUserId: z.string().min(1).max(64),
-  entries: z.array(manifestEntrySchema).max(100_000),
+  entries: z.array(manifestEntrySchema).max(MAX_ARCHIVE_ENTRIES),
 });
 
 export type Manifest = z.infer<typeof manifestSchema>;
