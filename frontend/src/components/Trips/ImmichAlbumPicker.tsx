@@ -4,9 +4,16 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
 import { formatBytes } from "../../lib/fileSize";
 import { logger } from "../../lib/logger";
-import type { ImmichAlbumSummary, ImmichMode, PhotoSourceKind } from "../../types/immich";
+import type {
+  ImmichAlbumSummary,
+  ImmichMode,
+  PhotoSourceAlbumKind,
+  PhotoSourceKind,
+} from "../../types/immich";
 
 const SOURCES: readonly PhotoSourceKind[] = ["immich", "photoprism"];
+/** Group order in the list: what a person curated first, derived collections after. */
+const KIND_ORDER: readonly PhotoSourceAlbumKind[] = ["album", "folder", "moment", "month", "state"];
 
 /** What one photo source answered when the picker opened. */
 type SourceState =
@@ -215,6 +222,72 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
             sel.provider !== active || !filteredAlbums.some((album) => album.id === sel.albumId)
         ).length;
 
+  // Grouped only when the source sent kinds beyond plain albums (PhotoPrism
+  // folders, moments, months, states); an Immich list stays flat.
+  const groups = KIND_ORDER.map((kind) => ({
+    kind,
+    items: filteredAlbums.filter((album) => (album.kind ?? "album") === kind),
+  })).filter((group) => group.items.length > 0);
+  const grouped = albums.some((album) => (album.kind ?? "album") !== "album");
+
+  const renderAlbum = (album: ImmichAlbumSummary): JSX.Element => {
+    const selection = selected[selectionKey(active, album.id)];
+    return (
+      <li
+        key={album.id}
+        className="rounded-sm p-2"
+        style={{ border: "1px solid var(--ts-border)" }}
+      >
+        <label className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            aria-label={album.albumName}
+            disabled={album.linked}
+            checked={Boolean(selection)}
+            onChange={() => toggle(album.id)}
+          />
+          <span className="flex-1">
+            <span className="block">{album.albumName}</span>
+            <span className="block text-xs" style={{ color: "var(--ts-muted)" }}>
+              {t("albums.photoCount", { count: album.assetCount })}
+            </span>
+          </span>
+          {album.linked && (
+            <span className="text-xs" style={{ color: "var(--ts-faint)" }}>
+              {t("albums.alreadyLinked")}
+            </span>
+          )}
+        </label>
+
+        {selection && (
+          <div className="mt-2 flex items-center gap-2 pl-7">
+            {(["link", "import"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={selection.mode === mode}
+                className="rounded px-2 py-0.5 text-xs"
+                style={
+                  selection.mode === mode
+                    ? { background: "var(--ts-info)", color: "var(--ts-bg)" }
+                    : { border: "1px solid var(--ts-border)" }
+                }
+                onClick={() => setMode(album.id, mode)}
+              >
+                {mode === "link" ? t("modeLink") : t("modeImport")}
+              </button>
+            ))}
+            {selection.estimateBytes !== null && (
+              <span className="text-xs" style={{ color: "var(--ts-warn)" }}>
+                {t("albums.estimate", { size: formatBytes(selection.estimateBytes) })}
+              </span>
+            )}
+          </div>
+        )}
+      </li>
+    );
+  };
+
   return (
     <Modal
       open
@@ -306,65 +379,26 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
           </p>
         )}
 
-        <ul className="space-y-2">
-          {filteredAlbums.map((album) => {
-            const selection = selected[selectionKey(active, album.id)];
-            return (
-              <li
-                key={album.id}
-                className="rounded-sm p-2"
-                style={{ border: "1px solid var(--ts-border)" }}
+        {grouped ? (
+          <div className="space-y-3">
+            {groups.map((group) => (
+              <details
+                key={`${active}:${group.kind}:${normalizedQuery === ""}`}
+                // A search opens every group that has a hit; without one the
+                // long ones (hundreds of folders) stay folded.
+                open={normalizedQuery !== "" || group.kind === "album" || groups.length === 1}
+                data-testid={`album-group-${group.kind}`}
               >
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    aria-label={album.albumName}
-                    disabled={album.linked}
-                    checked={Boolean(selection)}
-                    onChange={() => toggle(album.id)}
-                  />
-                  <span className="flex-1">
-                    <span className="block">{album.albumName}</span>
-                    <span className="block text-xs" style={{ color: "var(--ts-muted)" }}>
-                      {t("albums.photoCount", { count: album.assetCount })}
-                    </span>
-                  </span>
-                  {album.linked && (
-                    <span className="text-xs" style={{ color: "var(--ts-faint)" }}>
-                      {t("albums.alreadyLinked")}
-                    </span>
-                  )}
-                </label>
-
-                {selection && (
-                  <div className="mt-2 flex items-center gap-2 pl-7">
-                    {(["link", "import"] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        aria-pressed={selection.mode === mode}
-                        className="rounded px-2 py-0.5 text-xs"
-                        style={
-                          selection.mode === mode
-                            ? { background: "var(--ts-info)", color: "var(--ts-bg)" }
-                            : { border: "1px solid var(--ts-border)" }
-                        }
-                        onClick={() => setMode(album.id, mode)}
-                      >
-                        {mode === "link" ? t("modeLink") : t("modeImport")}
-                      </button>
-                    ))}
-                    {selection.estimateBytes !== null && (
-                      <span className="text-xs" style={{ color: "var(--ts-warn)" }}>
-                        {t("albums.estimate", { size: formatBytes(selection.estimateBytes) })}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                <summary className="mb-2 cursor-pointer select-none py-1 text-sm font-medium">
+                  {t(`albums.kind.${group.kind}`)} ({group.items.length})
+                </summary>
+                <ul className="space-y-2">{group.items.map(renderAlbum)}</ul>
+              </details>
+            ))}
+          </div>
+        ) : (
+          <ul className="space-y-2">{filteredAlbums.map(renderAlbum)}</ul>
+        )}
       </>
     </Modal>
   );

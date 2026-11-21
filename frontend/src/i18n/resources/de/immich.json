@@ -31,6 +31,13 @@
     "confirm_other": "{{count}} Alben verknüpfen",
     "cancel": "Abbrechen",
     "empty": "Keine Alben in Immich gefunden",
+    "kind": {
+      "album": "Alben",
+      "folder": "Ordner",
+      "moment": "Momente",
+      "month": "Monate",
+      "state": "Orte"
+    },
     "searchLabel": "Alben durchsuchen",
     "searchPlaceholder": "Nach Albumnamen suchen …",
     "noMatches": "Keine Alben gefunden, die zur Suche passen",

@@ -31,6 +31,13 @@
     "confirm_other": "Link {{count}} albums",
     "cancel": "Cancel",
     "empty": "No albums found in Immich",
+    "kind": {
+      "album": "Albums",
+      "folder": "Folders",
+      "moment": "Moments",
+      "month": "Months",
+      "state": "Places"
+    },
     "searchLabel": "Search albums",
     "searchPlaceholder": "Search by album name…",
     "noMatches": "No albums match your search",

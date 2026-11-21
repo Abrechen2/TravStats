@@ -23,11 +23,15 @@ export interface ImmichTestResult {
   details?: { version?: string; user?: string };
 }
 
+export type PhotoSourceAlbumKind = "album" | "folder" | "moment" | "month" | "state";
+
 export interface ImmichAlbumSummary {
   id: string;
   albumName: string;
   assetCount: number;
   thumbnailAssetId: string | null;
+  /** Absent for Immich (always an album); PhotoPrism also sends folders, moments, months, states. */
+  kind?: PhotoSourceAlbumKind;
   linked: boolean;
   linkId: string | null;
 }
