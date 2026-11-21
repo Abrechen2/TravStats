@@ -12,6 +12,13 @@ import { makeRailJourney } from "../../components/rail/__tests__/railJourneyFixt
  */
 const remoteBeta = vi.hoisted(() => ({ value: true as boolean }));
 const getJourney = vi.fn();
+// The entry photo strip has its own suite; here it would reach the network.
+vi.mock("../../components/common/EntryPhotos", () => ({
+  default: () => null,
+  EntryPhotos: () => null,
+  EntryPhotosSection: () => null,
+}));
+
 vi.mock("../../lib/api/rail", () => ({
   railApi: { get: (...a: unknown[]) => getJourney(...a), remove: vi.fn() },
 }));

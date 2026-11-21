@@ -18,6 +18,13 @@ const listStayPageMock = vi.fn();
 // this surface mounts it — here it would only be a request reaching the
 // network, which the setup refuses (forgejo#110).
 // The stay editor asks for the user's own lodging vocabulary on mount; no network here.
+// The entry photo strip has its own suite; here it would reach the network.
+vi.mock("../../components/common/EntryPhotos", () => ({
+  default: () => null,
+  EntryPhotos: () => null,
+  EntryPhotosSection: () => null,
+}));
+
 vi.mock("../../hooks/useLodgingEntrySuggestions", () => ({
   useLodgingEntrySuggestions: () => ({
     amenities: [],

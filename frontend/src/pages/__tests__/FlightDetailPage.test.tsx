@@ -16,6 +16,13 @@ const getTrackMock = vi.fn();
 // its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
 // this surface mounts it — here it would only be a request reaching the
 // network, which the setup refuses (forgejo#110).
+// The entry photo strip has its own suite; here it would reach the network.
+vi.mock("../../components/common/EntryPhotos", () => ({
+  default: () => null,
+  EntryPhotos: () => null,
+  EntryPhotosSection: () => null,
+}));
+
 vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
 
 // The delete dialog counts the kept originals that cascade with the flight.

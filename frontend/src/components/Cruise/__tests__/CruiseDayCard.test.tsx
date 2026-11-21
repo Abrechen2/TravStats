@@ -6,6 +6,13 @@ import type { EffectiveTimelineEntry } from "../cruisePorts";
 import type { CruiseStop, Port } from "../../../types";
 import type { TravelDocument } from "../../../lib/api/documents";
 
+// The entry photo strip has its own suite; here it would reach the network.
+vi.mock("../../common/EntryPhotos", () => ({
+  default: () => null,
+  EntryPhotos: () => null,
+  EntryPhotosSection: () => null,
+}));
+
 /** forgejo#223: one day on one card; a missing time stays open, never invented. */
 
 const oslo = { id: 7, name: "Oslo", country: "Norway", timezone: "Europe/Oslo" } as Port;

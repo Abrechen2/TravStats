@@ -2,6 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
+// The account archive rows read their status on mount; a unit test must not reach the network.
+vi.mock("../../../lib/api/accountArchive", () => ({
+  accountArchiveApi: { status: async () => ({ empty: false, busy: false, maxBytes: 1_000_000 }) },
+}));
+
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (k: string) => k,

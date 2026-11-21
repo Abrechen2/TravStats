@@ -8,6 +8,13 @@ import { ferryFixture } from "../../components/ferry/__tests__/ferryFixture";
  * Ferry parity with the rail detail page: the crossing's route map, and the
  * trip photos taken on board — the strip only for a crossing on a trip.
  */
+// The entry photo strip has its own suite; here it would reach the network.
+vi.mock("../../components/common/EntryPhotos", () => ({
+  default: () => null,
+  EntryPhotos: () => null,
+  EntryPhotosSection: () => null,
+}));
+
 vi.mock("../../components/ui/AppShell", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));

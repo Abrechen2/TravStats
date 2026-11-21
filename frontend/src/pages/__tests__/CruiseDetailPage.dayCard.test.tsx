@@ -12,6 +12,13 @@ import type { Cruise, CruiseStop, Port } from "../../types";
 const getMock = vi.fn();
 const listForEntry = vi.fn();
 
+// The entry photo strip has its own suite; here it would reach the network.
+vi.mock("../../components/common/EntryPhotos", () => ({
+  default: () => null,
+  EntryPhotos: () => null,
+  EntryPhotosSection: () => null,
+}));
+
 vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
 vi.mock("../../lib/api/documents", () => ({
   documentsApi: { listForEntry: (...a: unknown[]) => listForEntry(...a) },

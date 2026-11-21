@@ -9,6 +9,13 @@ import { ferryFixture } from "../../components/ferry/__tests__/ferryFixture";
  * the delay and the FX snapshot. Each appears when recorded and draws nothing
  * when it is absent (abstention: never "0" or a dash for an unknown).
  */
+// The entry photo strip has its own suite; here it would reach the network.
+vi.mock("../../components/common/EntryPhotos", () => ({
+  default: () => null,
+  EntryPhotos: () => null,
+  EntryPhotosSection: () => null,
+}));
+
 vi.mock("../../components/ui/AppShell", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));

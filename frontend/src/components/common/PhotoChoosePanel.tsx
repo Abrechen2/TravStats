@@ -141,7 +141,7 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
     >
       <h4 className="t-label">{t("common:photoChoose.title")}</h4>
       {failed && (
-        <p role="alert" className="t-caption" style={{ color: "var(--color-danger, #b91c1c)" }}>
+        <p role="alert" className="t-caption" style={{ color: "var(--color-danger)" }}>
           {t("common:photoChoose.loadFailed")}
         </p>
       )}

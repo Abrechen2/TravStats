@@ -154,7 +154,7 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
     >
       {heading && <h3 className="t-label">{t("common:entryPhotos.title")}</h3>}
       {loadFailed && (
-        <p role="alert" className="t-caption" style={{ color: "var(--color-danger, #b91c1c)" }}>
+        <p role="alert" className="t-caption" style={{ color: "var(--color-danger)" }}>
           {t("common:entryPhotos.loadFailed")}
         </p>
       )}

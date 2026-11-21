@@ -8,6 +8,11 @@ import { MemoryRouter } from "react-router-dom";
  * admin. The admin-only list used to feed this row, so an ordinary account got
  * no row at all; and a failed read must not read as "no backup yet".
  */
+// The account archive rows read their status on mount; a unit test must not reach the network.
+vi.mock("../../../lib/api/accountArchive", () => ({
+  accountArchiveApi: { status: async () => ({ empty: false, busy: false, maxBytes: 1_000_000 }) },
+}));
+
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (k: string) => k,
