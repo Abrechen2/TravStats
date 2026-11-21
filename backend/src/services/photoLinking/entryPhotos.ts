@@ -116,14 +116,21 @@ async function findMatches(
   kind: EntryKind,
   id: string,
   plan: Exclude<EntryPlan, "untimed">,
-  search: WindowSearch
+  search: WindowSearch,
+  /** `refused`: only refusals are excluded, so a linked photo that still fits shows up again. */
+  excluding: "known" | "refused" = "known",
+  cap = ENTRY_LINK_CAP
 ): Promise<Found> {
   const rows = await prisma.entryPhotoLink.findMany({
     where: { userId, ...fkOf(kind, id) },
     select: { provider: true, assetId: true, refused: true },
   });
   // Linked or refused alike: neither is offered or linked again.
-  const known = new Set(rows.map((r) => refusalKey(toKind(r.provider), r.assetId)));
+  const known = new Set(
+    rows
+      .filter((r) => excluding === "known" || r.refused)
+      .map((r) => refusalKey(toKind(r.provider), r.assetId))
+  );
   const zones = await privacyCircleSet(userId);
   const matched = new Map<string, SourcedAsset>();
   let sources: Found["sources"] = {};
@@ -135,7 +142,7 @@ async function findMatches(
       locations: leg.locations,
       circles: zones(leg.window.start.getTime()),
       refused: known,
-      cap: ENTRY_LINK_CAP,
+      cap,
     };
     for (const m of matchAssets(candidates, spec)) {
       matched.set(refusalKey(m.provider, m.asset.id), m);
@@ -331,13 +338,46 @@ export async function autoLinkEntry(
       })),
     },
   });
-  const existingAuto = await prisma.entryPhotoLink.count({
+  // What still fits, linked or not (only refusals excluded, no cap): an automatic link
+  // that no longer fits — the entry's position moved, its dates stayed — goes, but only
+  // when its own source answered, so a failing source never costs a good link.
+  const fits = await findMatches(
+    userId,
+    kind,
+    id,
+    plan,
+    search,
+    "refused",
+    Number.POSITIVE_INFINITY
+  );
+  const stillFits = new Set(fits.matched.map((m) => refusalKey(m.provider, m.asset.id)));
+  const autoLinks = await prisma.entryPhotoLink.findMany({
     where: { userId, ...fk, provenance: "auto", refused: false },
+    select: { id: true, provider: true, assetId: true },
   });
-  const found = await findMatches(userId, kind, id, plan, search);
+  const stale = autoLinks.filter(
+    (l) =>
+      fits.sources[toKind(l.provider)] === "ok" &&
+      !stillFits.has(refusalKey(toKind(l.provider), l.assetId))
+  );
+  if (stale.length > 0) {
+    await prisma.entryPhotoLink.deleteMany({ where: { id: { in: stale.map((l) => l.id) } } });
+  }
+  const linkedKeys = new Set(
+    (
+      await prisma.entryPhotoLink.findMany({
+        where: { userId, ...fk },
+        select: { provider: true, assetId: true },
+      })
+    ).map((l) => refusalKey(toKind(l.provider), l.assetId))
+  );
+  const existingAuto = autoLinks.length - stale.length;
   const room = Math.max(0, ENTRY_LINK_CAP - existingAuto);
-  const linked = await writeLinks(userId, kind, id, found.matched.slice(0, room), "auto");
-  return { linked, sources: found.sources };
+  const fresh = fits.matched
+    .filter((m) => !linkedKeys.has(refusalKey(m.provider, m.asset.id)))
+    .slice(0, room);
+  const linked = await writeLinks(userId, kind, id, fresh, "auto");
+  return { linked, sources: fits.sources };
 }
 
 export interface EntryRef {

@@ -33,6 +33,7 @@ import { clearImmichAssetCache } from "../../services/immich/immichAssetCache";
 import { ImmichError } from "../../services/immich/types";
 import { settleAllJobs } from "../../services/jobs/jobRegistry";
 import {
+  drain,
   installEntryPhotoTriggers,
   setTriggerDelay,
   uninstallEntryPhotoTriggers,
@@ -422,6 +423,42 @@ describe("automatic photo links for every entry type", () => {
     expect((await links("stay")).map((r) => r.assetId)).toEqual([SECOND]);
   });
 
+  it("a flight whose position moved while its dates stayed drops its automatic links, keeps manual ones and refusals", async () => {
+    answerWith("flight");
+    await runAll();
+    await prisma.entryPhotoLink.createMany({
+      data: [
+        { userId, flightId: entryIds.flight, assetId: SECOND, provenance: "manual" },
+        {
+          userId,
+          flightId: entryIds.flight,
+          assetId: WRONG_TIME,
+          provenance: "auto",
+          refused: true,
+        },
+      ],
+    });
+    await prisma.flight.update({
+      where: { id: entryIds.flight },
+      data: { depLat: 35.0, depLon: 139.0 },
+    });
+    await runAll();
+    await prisma.flight.update({
+      where: { id: entryIds.flight },
+      data: { depLat: ROME.lat, depLon: ROME.lon },
+    });
+    expect((await links("flight")).map((r) => r.assetId)).toEqual([SECOND]);
+    expect((await links("flight", true)).map((r) => r.assetId)).toEqual([WRONG_TIME]);
+  });
+
+  it("a failing source never costs a link that still fits (re-validation needs that source to answer)", async () => {
+    answerWith("flight");
+    await runAll();
+    search.immich.mockRejectedValue(new ImmichError("unreachable", "down"));
+    await runAll();
+    expect((await links("flight")).map((r) => r.assetId)).toEqual([NEAR]);
+  });
+
   it("a sea day has no position and matches nothing", async () => {
     answerWith("cruiseStop");
     const cruise = await prisma.cruiseStop.findUniqueOrThrow({
@@ -639,6 +676,71 @@ describe("automatic photo links for every entry type", () => {
       await prisma.lodging.update({
         where: { id: lodging.id },
         data: { lat: ROME.lat, lon: ROME.lon },
+      });
+      await settle();
+      expect(await prisma.entryPhotoLink.count({ where: { lodgingStayId: stay.id } })).toBe(1);
+    });
+
+    it("a bulk insert is found through its durable mark, however old its rows look", async () => {
+      answerWith("rail");
+      const before = new Set(
+        (await prisma.railJourney.findMany({ where: { userId } })).map((r) => r.id)
+      );
+      await prisma.railJourney.createMany({
+        data: [{ ...journey(userId, [6, 10]), createdAt: new Date("2020-01-01") }],
+      });
+      await settle();
+      const added = (await prisma.railJourney.findMany({ where: { userId } })).filter(
+        (r) => !before.has(r.id)
+      );
+      expect(await prisma.entryPhotoLink.count({ where: { railJourneyId: added[0].id } })).toBe(1);
+      expect(await prisma.entryPhotoDirty.count({ where: { userId } })).toBe(0);
+    });
+
+    it("an updateMany that moves departures re-runs the pass for the rows it named", async () => {
+      answerWith("bus");
+      await prisma.entryPhotoLink.deleteMany({ where: { busJourneyId: entryIds.bus } });
+      await prisma.busJourney.updateMany({
+        where: { id: entryIds.bus, userId },
+        data: { departureTime: new Date("2024-05-01T05:45:00Z") },
+      });
+      await settle();
+      expect(await links("bus")).toHaveLength(1);
+    });
+
+    it("keeps the mark of an entry that is not visible yet, and a later drain consumes it", async () => {
+      answerWith("flight");
+      const ghost = "11111111-1111-4111-8111-111111111111";
+      await prisma.entryPhotoDirty.create({ data: { userId, kind: "flight", entryId: ghost } });
+      await drain(userId);
+      expect(await prisma.entryPhotoDirty.count({ where: { userId, entryId: ghost } })).toBe(1);
+      await prisma.entryPhotoDirty.update({
+        where: { userId_kind_entryId: { userId, kind: "flight", entryId: ghost } },
+        data: { markedAt: new Date(Date.now() - 3_600_000) },
+      });
+      await drain(userId);
+      expect(await prisma.entryPhotoDirty.count({ where: { userId, entryId: ghost } })).toBe(0);
+    });
+
+    it("a lodging upsert that sets coordinates re-runs its stays (reads create/update, not data)", async () => {
+      answerWith("stay");
+      const lodging = await prisma.lodging.create({ data: { userId, name: "Upsert geocode" } });
+      const stay = await prisma.lodgingStay.create({
+        data: {
+          userId,
+          lodgingId: lodging.id,
+          checkInAt: new Date("2024-05-01T14:00:00Z"),
+          checkOutAt: new Date("2024-05-04T10:00:00Z"),
+          checkInDate: new Date("2024-05-01"),
+          checkOutDate: new Date("2024-05-04"),
+          stayZone: "Europe/Rome",
+        },
+      });
+      await settle();
+      await prisma.lodging.upsert({
+        where: { id: lodging.id },
+        create: { userId, name: "x" },
+        update: { lat: ROME.lat, lon: ROME.lon },
       });
       await settle();
       expect(await prisma.entryPhotoLink.count({ where: { lodgingStayId: stay.id } })).toBe(1);

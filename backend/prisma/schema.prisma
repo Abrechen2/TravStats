@@ -28,6 +28,7 @@ datasource db {
 }
 
 model User {
+  entryPhotoDirty                 EntryPhotoDirty[]
   entryPhotoLinks                 EntryPhotoLink[]
   mailIntakeSources               MailIntakeSource[]
   mailIntakeAddress               MailIntakeAddress?
@@ -7520,4 +7521,22 @@ model EntryPhotoLink {
   @@unique([tripStopId, provider, assetId])
   @@index([userId])
   @@map("entry_photo_links")
+}
+
+/// The durable "this entry's photo pass is due" marker. A write of an entry (or
+/// a bulk write that cannot name its rows: `entry_id = '*'`, every entry of that
+/// kind of the account) upserts one row; the pass consumes it after it ran. No
+/// foreign key on `entry_id`: it is polymorphic and a stale id simply resolves to
+/// nothing. Survives a restart and an import that outlasts any in-memory timer.
+model EntryPhotoDirty {
+  id       String   @id @default(uuid())
+  userId   String   @map("user_id")
+  kind     String
+  entryId  String   @map("entry_id")
+  markedAt DateTime @default(now()) @map("marked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, entryId])
+  @@map("entry_photo_dirty")
 }

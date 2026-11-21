@@ -221,6 +221,8 @@ export const NON_TRAVEL_RELATIONS = [
   // Photo links of flights, stays, journeys, rentals, cruise stops and stations (this slice):
   // the owner's own library pointers, never part of a comparison or a federation publication.
   "entryPhotoLinks",
+  // The photo pass's durable work marker: bookkeeping, never travel data.
+  "entryPhotoDirty",
   "importBatches",
   "linkedAsCompanion",
   "shareConsentsAsked",

@@ -221,6 +221,7 @@ export const USER_EXPORT_SELECT = {
 
 /** Every `User` list relation the export leaves out, and why. */
 export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
+  entryPhotoDirty: "the photo pass's work marker; a restored account is covered by the full pass",
   readinessInvitationSeen:
     "a scalar list the guard's schema scan reads as a relation: which setup notes the invitation card already showed; per-server bookkeeping, a restored account is shown them again",
   readinessItemStates:
