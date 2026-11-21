@@ -147,6 +147,12 @@ describe("DocumentsSection — links (D2)", () => {
     expect(api.remove).not.toHaveBeenCalled();
   });
 
+  it("renders no stray text in a document row", async () => {
+    render(<DocumentsSection entry={FLIGHT} />);
+    const row = (await screen.findByText("Rundreise.pdf")).closest("li");
+    expect(row?.textContent).not.toMatch(/\bedit\./);
+  });
+
   it("keeps 'delete everywhere' unanswerable until the affected entries are known", async () => {
     let resolve!: (v: never[]) => void;
     api.links.mockReturnValue(new Promise<never[]>((r) => (resolve = r)));

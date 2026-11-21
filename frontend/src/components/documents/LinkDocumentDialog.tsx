@@ -20,6 +20,9 @@ interface Props {
   onLinked: () => void;
 }
 
+/** The API takes at most this many links per request. */
+const MAX_LINKS = 100;
+
 const keyOf = (e: { type: string; id: string }): string => `${e.type}:${e.id}`;
 
 /**
@@ -110,7 +113,7 @@ export default function LinkDocumentDialog({ document, onClose, onLinked }: Prop
                   type="checkbox"
                   checked={picked.has(keyOf(entry))}
                   onChange={() => toggle(entry)}
-                  disabled={busy}
+                  disabled={busy || (!picked.has(keyOf(entry)) && picked.size >= MAX_LINKS)}
                 />
                 <span className="t-caption shrink-0" style={{ color: "var(--ts-muted)" }}>
                   {t(`documents:links.entryType.${entry.type}`)}

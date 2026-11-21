@@ -409,7 +409,6 @@ export default function DocumentsSection({
             <ExtractValuesAction documentId={doc.id} target={extract} />
           </>
         )}
-        edit.
         {rentalCategories && !locked && doc.linkRole !== "covers" && (
           <RentalCategorySelect
             id={`document-category-${doc.id}`}
