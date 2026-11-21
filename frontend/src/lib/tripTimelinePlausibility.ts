@@ -31,7 +31,8 @@ export type PlausibilityCode =
   | "stayOverlap"
   | "checkOutBeforeCheckIn"
   | "checkInBeforeArrival"
-  | "checkOutAfterDeparture";
+  | "checkOutAfterDeparture"
+  | "visitDuringLeg";
 
 export interface TimelineFinding {
   code: PlausibilityCode;
@@ -299,6 +300,25 @@ function lodgingFindings(events: TimelineEvent[], legs: Leg[], out: TimelineFind
 }
 
 /**
+ * A place visit WITH a time of day that falls strictly between a leg's
+ * departure and arrival: the traveller is in the air (or on the train). A visit
+ * with only a date says nothing about the minute and abstains (forgejo#432).
+ */
+function visitFindings(events: TimelineEvent[], legs: Leg[], out: TimelineFinding[]): void {
+  for (const ev of events) {
+    if (ev.kind !== "place-visit" || !hasExplicitTime(ev.when)) continue;
+    for (const leg of legs) {
+      if (
+        compareClock(leg.start, ev.when, false) === "before" &&
+        compareClock(ev.when, leg.end, false) === "before"
+      ) {
+        add(out, "visitDuringLeg", ev, leg.ev);
+      }
+    }
+  }
+}
+
+/**
  * Every finding for one trip's timeline entries. Pure; the entries keep their
  * order. An entry can carry several findings.
  */
@@ -309,6 +329,7 @@ export function findTimelineInconsistencies(events: readonly TimelineEvent[]): T
   legFindings(legs, out);
   rentalFindings(list, legs, out);
   lodgingFindings(list, legs, out);
+  visitFindings(list, legs, out);
   return out;
 }
 

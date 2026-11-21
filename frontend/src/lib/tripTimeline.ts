@@ -1,4 +1,5 @@
 import { formatTimeValueShown } from "./displayFormat";
+import { calculateDistance } from "./geo";
 import { clockOf, dayOf, type LocalDateValue, type TimeValue } from "../shared/time";
 
 /**
@@ -62,6 +63,37 @@ export interface SortableEvent {
   end?: TimeValue | null;
   /** The stay a check-in/out belongs to, so a stay's two ends keep their order. */
   stay?: { id: string };
+  /** Where a leg starts / ends, for placing a time-less place visit (forgejo#432). */
+  from?: GeoPoint | null;
+  to?: GeoPoint | null;
+  /** Where a place visit happened. */
+  at?: GeoPoint | null;
+}
+
+export interface GeoPoint {
+  lat: number | null | undefined;
+  lon: number | null | undefined;
+}
+
+/**
+ * A place is "at" a leg's end when it lies within this — an airport sits well
+ * outside the city it serves (BER to Alexanderplatz is about 25 km).
+ */
+const VISIT_NEAR_KM = 40;
+
+function isNear(a: GeoPoint | null | undefined, b: GeoPoint | null | undefined): boolean {
+  if (!a || !b) return false;
+  const { lat: la, lon: lo } = a;
+  const { lat: lb, lon: lp } = b;
+  if (
+    typeof la !== "number" ||
+    typeof lo !== "number" ||
+    typeof lb !== "number" ||
+    typeof lp !== "number"
+  ) {
+    return false;
+  }
+  return calculateDistance(la, lo, lb, lp) <= VISIT_NEAR_KM;
 }
 
 /** Entries that LEAVE a place at `when`: a lodging check-out comes before them. */
@@ -71,6 +103,9 @@ const DEPARTURE_KINDS = new Set(["flight", "rail", "bus", "ferry", "rental-picku
 interface DayTravel {
   firstDeparture: Map<string, number>;
   lastArrival: Map<string, number>;
+  /** Timed legs, for placing a time-less place visit against them. */
+  departures: Array<{ day: string; instant: number; from: GeoPoint | null | undefined }>;
+  arrivals: Array<{ day: string; instant: number; to: GeoPoint | null | undefined }>;
 }
 
 function instantOf(value: TimeValue): number {
@@ -88,6 +123,8 @@ function instantOf(value: TimeValue): number {
 function dayTravel(events: ReadonlyArray<SortableEvent>): DayTravel {
   const firstDeparture = new Map<string, number>();
   const lastArrival = new Map<string, number>();
+  const departures: DayTravel["departures"] = [];
+  const arrivals: DayTravel["arrivals"] = [];
   const note = (map: Map<string, number>, day: string, t: number, pick: typeof Math.min) => {
     if (Number.isNaN(t)) return;
     const seen = map.get(day);
@@ -98,14 +135,21 @@ function dayTravel(events: ReadonlyArray<SortableEvent>): DayTravel {
     // known hotel time or a timed entry around.
     if (DEPARTURE_KINDS.has(ev.kind) && hasExplicitTime(ev.when)) {
       note(firstDeparture, dayOf(ev.when), instantOf(ev.when), Math.min);
+      if (!Number.isNaN(instantOf(ev.when))) {
+        departures.push({ day: dayOf(ev.when), instant: instantOf(ev.when), from: ev.from });
+      }
     }
     // A rental return is an arrival at its own moment; a leg arrives at its end.
     const arrival = ev.kind === "rental-return" ? ev.when : ev.end;
     if (arrival && hasExplicitTime(arrival)) {
       note(lastArrival, dayOf(arrival), instantOf(arrival), Math.max);
+      if (!Number.isNaN(instantOf(arrival))) {
+        const to = ev.kind === "rental-return" ? ev.at : ev.to;
+        arrivals.push({ day: dayOf(arrival), instant: instantOf(arrival), to });
+      }
     }
   }
-  return { firstDeparture, lastArrival };
+  return { firstDeparture, lastArrival, departures, arrivals };
 }
 
 interface SortKey {
@@ -160,7 +204,36 @@ function keyOf(ev: SortableEvent, travel?: DayTravel): SortKey {
       instant = Math.max(instant, travel.lastArrival.get(day) ?? instant);
     }
   }
+  if (travel && ev.kind === "place-visit" && !hasExplicitTime(ev.when)) {
+    instant = visitInstant(ev, day, instant, travel);
+  }
   return { day, cls: dayRank(ev), instant, sub: subRank(ev) };
+}
+
+/**
+ * Where a place visit that has a date but no time sits against the day's timed
+ * travel (forgejo#432). It would otherwise sort at 00:00, above the flight that
+ * took the traveller there.
+ *
+ * - near the point a later departure leaves from: just before that departure;
+ * - near where an arrival ends — or anywhere, when the day has an arrival and
+ *   no departure after it: just after that arrival;
+ * - otherwise (no travel, or nothing to go by): the order it has today.
+ *
+ * Only a visit with NO time is moved; one with a time keeps its own.
+ */
+function visitInstant(ev: SortableEvent, day: string, own: number, travel: DayTravel): number {
+  const dayDepartures = travel.departures.filter((d) => d.day === day);
+  const dayArrivals = travel.arrivals.filter((a) => a.day === day);
+  const lastArrival = dayArrivals.length ? Math.max(...dayArrivals.map((a) => a.instant)) : null;
+  const nearDeparture = dayDepartures.filter((d) => isNear(ev.at, d.from)).map((d) => d.instant);
+  const nearArrival = dayArrivals.filter((a) => isNear(ev.at, a.to)).map((a) => a.instant);
+  if (nearDeparture.length) return Math.min(...nearDeparture) - 1;
+  if (nearArrival.length) return Math.max(...nearArrival) + 1;
+  const departureFollows =
+    lastArrival !== null && dayDepartures.some((d) => d.instant > lastArrival);
+  if (lastArrival !== null && !departureFollows) return lastArrival + 1;
+  return own;
 }
 
 function compareKeys(a: SortKey, b: SortKey): number {

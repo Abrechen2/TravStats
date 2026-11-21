@@ -151,6 +151,7 @@
       "checkOutBeforeCheckIn": "Check-out is before check-in",
       "checkInBeforeArrival": "Check-in before arriving at the place",
       "checkOutAfterDeparture": "Check-out after leaving the place",
+      "visitDuringLeg": "Time falls in the middle of a trip or flight",
       "edit": "Edit entry",
       "count_one": "{{count}} inconsistency",
       "count_other": "{{count}} inconsistencies"

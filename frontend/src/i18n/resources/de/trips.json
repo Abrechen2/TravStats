@@ -151,6 +151,7 @@
       "checkOutBeforeCheckIn": "Check-out liegt vor dem Check-in",
       "checkInBeforeArrival": "Check-in vor der Ankunft am Ort",
       "checkOutAfterDeparture": "Check-out nach der Abreise vom Ort",
+      "visitDuringLeg": "Zeitpunkt liegt mitten in einer Fahrt oder einem Flug",
       "edit": "Eintrag bearbeiten",
       "count_one": "{{count}} Unstimmigkeit",
       "count_other": "{{count}} Unstimmigkeiten"
