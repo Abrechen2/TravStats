@@ -320,7 +320,7 @@ describe("expense details — payer, exchange rate, receipt", () => {
       });
     };
 
-    it("files a receipt with an expense, lists it, and deletes it with the expense", async () => {
+    it("files a receipt with an expense, lists it, and unfiles it with the expense", async () => {
       const expense = (await post({ kind: "fuel", amount: 80, currency: "EUR" })).body.expense;
       expect(expense.documentCount).toBe(0);
       const doc = await upload(expense.id, `fuel-${stamp}`);
@@ -338,7 +338,10 @@ describe("expense details — payer, exchange rate, receipt", () => {
         .delete(api(`/trips/${tripId}/expenses/${expense.id}`))
         .set("Cookie", cookie);
       expect(gone.status).toBe(204);
-      expect(await prisma.document.count({ where: { id: doc.body.data.id } })).toBe(0);
+      // Document links, rule 5: the receipt outlives its expense, unfiled.
+      const kept = await prisma.document.findUniqueOrThrow({ where: { id: doc.body.data.id } });
+      expect(kept.tripExpenseId).toBeNull();
+      expect(kept.unlinkedAt).toBeInstanceOf(Date);
     });
 
     it("files an earlier upload through documentIds on create", async () => {

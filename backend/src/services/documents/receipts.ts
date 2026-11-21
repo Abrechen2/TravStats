@@ -5,6 +5,7 @@ import { prisma } from "../../db";
 import { getUploadDir } from "../../middleware/upload";
 import logger from "../../utils/logger";
 import { createDocument } from "./documentService";
+import { fileIfUnfiled, inLinkTransaction, removeLinks } from "./documentLinks";
 import { receiptUrlForms } from "../files/privateFileUrls";
 
 /**
@@ -28,6 +29,13 @@ import { receiptUrlForms } from "../files/privateFileUrls";
  */
 
 export const RECEIPT_SOURCE = "receipt";
+
+/**
+ * The provenance of the links this file manages. A receipt is filed because an
+ * entry's `receiptUrl` names it — the old single-owner mechanism — so its link
+ * is `legacy`, and only `legacy` links are ever taken off again here.
+ */
+const RECEIPT_PROVENANCE = "legacy" as const;
 
 const DOCUMENT_URL = /^\/api\/v1\/documents\/([0-9a-f-]{36})\/file$/i;
 
@@ -68,44 +76,37 @@ export async function reconcileReceiptDocuments(): Promise<ReceiptReconcileResul
   for (const ref of references) {
     // Unfiled, and the entry's owner's own: only then. A document filed with
     // something else stays where it is; a stranger's stays out of reach.
-    const { count } = await prisma.document.updateMany({
-      where: {
-        id: ref.documentId,
-        userId: ref.userId,
-        flightId: null,
-        cruiseId: null,
-        lodgingStayId: null,
-        tripId: null,
-        placeVisitId: null,
-        railJourneyId: null,
-        busJourneyId: null,
-        rentalBookingId: null,
-      },
-      data: { [ref.column]: ref.id, linkedAt: new Date() },
-    });
-    filed += count;
+    const entry = {
+      type: ref.column === "flightId" ? ("flight" as const) : ("lodgingStay" as const),
+      id: ref.id,
+    };
+    const done = await inLinkTransaction((tx) =>
+      fileIfUnfiled(tx, ref.userId, ref.documentId, entry, { provenance: RECEIPT_PROVENANCE })
+    );
+    if (done) filed += 1;
   }
 
+  // Only the links this run manages: a receipt's filing link on a flight or a
+  // stay (provenance `legacy`). A link the user or a parser made stays even
+  // when no `receiptUrl` names it (plan, lifecycle).
   const named = new Set(references.map((r) => `${r.column}:${r.id}:${r.documentId}`));
-  const filedReceipts = await prisma.document.findMany({
+  const managed = await prisma.documentLink.findMany({
     where: {
-      source: RECEIPT_SOURCE,
+      provenance: RECEIPT_PROVENANCE,
+      document: { source: RECEIPT_SOURCE },
       OR: [{ flightId: { not: null } }, { lodgingStayId: { not: null } }],
     },
-    select: { id: true, flightId: true, lodgingStayId: true },
+    select: { id: true, documentId: true, flightId: true, lodgingStayId: true },
   });
-  const orphaned = filedReceipts
-    .filter((d) =>
-      d.flightId
-        ? !named.has(`flightId:${d.flightId}:${d.id}`)
-        : !named.has(`lodgingStayId:${d.lodgingStayId}:${d.id}`)
+  const orphaned = managed
+    .filter((l) =>
+      l.flightId
+        ? !named.has(`flightId:${l.flightId}:${l.documentId}`)
+        : !named.has(`lodgingStayId:${l.lodgingStayId}:${l.documentId}`)
     )
-    .map((d) => d.id);
+    .map((l) => l.id);
   if (orphaned.length > 0) {
-    await prisma.document.updateMany({
-      where: { id: { in: orphaned } },
-      data: { flightId: null, lodgingStayId: null, linkedAt: null },
-    });
+    await inLinkTransaction((tx) => removeLinks(tx, orphaned));
   }
 
   if (filed > 0 || orphaned.length > 0) {

@@ -1,6 +1,7 @@
 import path from "path";
 
-import type { Document, Prisma } from "../../prisma";
+import type { Document } from "../../prisma";
+import { Prisma } from "../../prisma";
 
 import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
@@ -9,10 +10,8 @@ import { documentIdsBodySchema } from "../../schemas/document";
 import {
   DOCUMENT_KINDS,
   type RentalDocumentCategory,
-  ENTRY_TYPES,
   detectDocumentFormat,
   type DocumentFormat,
-  type EntryType,
   exceededLimit,
   type DetectedFormat,
   type DocumentKind,
@@ -28,6 +27,17 @@ import type { ExtractedValues } from "./documentValues";
 import { storedReading } from "./storedReading";
 import { countPdfPages } from "../pdfPageCount";
 import { sweepUploadDir } from "../files/uploadSweep";
+import {
+  assertEntryOwnedIn,
+  entryOfColumns,
+  fileIfUnfiled,
+  inLinkTransaction,
+  LINK_TARGETS,
+  type EntryRef,
+  type LinkProvenance,
+  setPrimaryLink,
+  targetColumns,
+} from "./documentLinks";
 import { uploadFileAgeMs } from "../files/uploadFiles";
 
 /**
@@ -35,44 +45,30 @@ import { uploadFileAgeMs } from "../files/uploadFiles";
  *
  * The rules this file holds, each an owner decision of 2026-09-16:
  *
- *  - A document belongs to at most one entry (also a CHECK in the database).
+ *  - A document is FILED with at most one entry (also a CHECK in the database).
+ *    Since the document-links plan (2026-11-21) that entry is the primary of
+ *    the document's links (`documentLinks.ts`), and the owner columns are its
+ *    projection; every filing write below goes through that file.
  *  - An upload is IDEMPOTENT per sha256 and target. The Companion queues
  *    originals while offline and flushes them in a burst; a retried send must
  *    return the document it already made, not a second copy.
  *  - Linking works at creation (`documentIds` on the create routes) AND
  *    afterwards, because an offline capture's document can arrive after its
  *    entry.
- *  - Deleting an entry deletes its documents, row and file. The ROWS go with
- *    the entry through the foreign keys; the BYTES go with the hourly sweep,
- *    which is the one place that removes a file whose row is gone. Every path
- *    that can delete an entry — the entry's own route, deleting its lodging
- *    or place, deleting the account, a restore — is covered by that one rule,
- *    where a removal in each route would cover only the routes someone
- *    remembered.
+ *  - Deleting an entry removes its links, not the document (plan rule 5): the
+ *    link cascades, the owner column is `SET NULL`, and a document left with
+ *    no link becomes unfiled and gets the same 30-day grace as one unfiled by
+ *    hand (trigger `document_links_after_delete`). Every path that can delete
+ *    an entry — its own route, its lodging or place, a trip, a restore — is
+ *    covered by that one rule in the database. The BYTES go with the hourly
+ *    sweep, the one place that removes a file whose row is gone.
  *  - An upload that is never filed expires (UNLINKED_TTL_DAYS).
  *
  * Logs carry id, format and size — never content, never the file name.
  */
 
 export { ENTRY_TYPES, type EntryType } from "./documentFormats";
-
-export interface EntryRef {
-  type: EntryType;
-  id: string;
-}
-
-const OWNER_COLUMN = {
-  flight: "flightId",
-  cruise: "cruiseId",
-  lodgingStay: "lodgingStayId",
-  trip: "tripId",
-  placeVisit: "placeVisitId",
-  railJourney: "railJourneyId",
-  rentalBooking: "rentalBookingId",
-  busJourney: "busJourneyId",
-  ferryJourney: "ferryJourneyId",
-  tripExpense: "tripExpenseId",
-} as const satisfies Record<EntryType, keyof Document>;
+export type { EntryRef } from "./documentLinks";
 
 /**
  * How the row came to be. `parse` (a parse route kept its input), `mail` (the mail intake fetched it) and `receipt`
@@ -168,82 +164,16 @@ const NO_OWNER: Prisma.DocumentWhereInput = {
 };
 
 function ownerWhere(entry: EntryRef): Prisma.DocumentWhereInput {
-  return { [OWNER_COLUMN[entry.type]]: entry.id };
-}
-
-interface OwnerColumns {
-  flightId: string | null;
-  cruiseId: string | null;
-  lodgingStayId: string | null;
-  tripId: string | null;
-  placeVisitId: string | null;
-  railJourneyId: string | null;
-  rentalBookingId: string | null;
-  busJourneyId: string | null;
-  ferryJourneyId: string | null;
-  tripExpenseId: string | null;
-  linkedAt: Date | null;
-  unlinkedAt: Date | null;
-  /** Cleared off a rental; kept (absent) while the document stays with one. */
-  rentalCategory?: null;
-}
-
-function ownerData(entry: EntryRef | null): OwnerColumns {
-  return {
-    flightId: entry?.type === "flight" ? entry.id : null,
-    cruiseId: entry?.type === "cruise" ? entry.id : null,
-    lodgingStayId: entry?.type === "lodgingStay" ? entry.id : null,
-    tripId: entry?.type === "trip" ? entry.id : null,
-    placeVisitId: entry?.type === "placeVisit" ? entry.id : null,
-    railJourneyId: entry?.type === "railJourney" ? entry.id : null,
-    rentalBookingId: entry?.type === "rentalBooking" ? entry.id : null,
-    busJourneyId: entry?.type === "busJourney" ? entry.id : null,
-    ferryJourneyId: entry?.type === "ferryJourney" ? entry.id : null,
-    tripExpenseId: entry?.type === "tripExpense" ? entry.id : null,
-    linkedAt: entry ? new Date() : null,
-    // The other half of the same fact, and written here for the same reason
-    // `linkedAt` is: this is the ONE place the owner columns are decided, so
-    // create, link, unlink and update cannot disagree about it.
-    unlinkedAt: entry ? null : new Date(),
-    // A rental's evidence label means nothing anywhere else (forgejo#239);
-    // the database refuses it there too (`documents_rental_category_check`).
-    ...(entry?.type !== "rentalBooking" && { rentalCategory: null }),
-  };
+  return { [LINK_TARGETS[entry.type].column]: entry.id };
 }
 
 export function entryOf(document: Document): EntryRef | null {
-  for (const type of ENTRY_TYPES) {
-    const id = document[OWNER_COLUMN[type]];
-    if (id) return { type, id };
-  }
-  return null;
+  return entryOfColumns(document);
 }
 
 /** 404 unless the entry exists AND belongs to the user — a stranger's entry is not an entry. */
 export async function assertEntryOwned(userId: string, entry: EntryRef): Promise<void> {
-  const where = { id: entry.id, userId };
-  const select = { id: true } as const;
-  const found =
-    entry.type === "flight"
-      ? await prisma.flight.findFirst({ where, select })
-      : entry.type === "cruise"
-        ? await prisma.cruise.findFirst({ where, select })
-        : entry.type === "lodgingStay"
-          ? await prisma.lodgingStay.findFirst({ where, select })
-          : entry.type === "trip"
-            ? await prisma.trip.findFirst({ where, select })
-            : entry.type === "placeVisit"
-              ? await prisma.placeVisit.findFirst({ where, select })
-              : entry.type === "railJourney"
-                ? await prisma.railJourney.findFirst({ where, select })
-                : entry.type === "rentalBooking"
-                  ? await prisma.rentalBooking.findFirst({ where, select })
-                  : entry.type === "busJourney"
-                    ? await prisma.busJourney.findFirst({ where, select })
-                    : entry.type === "ferryJourney"
-                      ? await prisma.ferryJourney.findFirst({ where, select })
-                      : await prisma.tripExpense.findFirst({ where, select });
-  if (!found) throw new AppError("Entry not found", 404, "DOCUMENT_ENTRY_NOT_FOUND");
+  await assertEntryOwnedIn(prisma, userId, entry);
 }
 
 export interface CreateDocumentInput {
@@ -274,6 +204,8 @@ export interface CreateDocumentInput {
    * differently, because the owner happens to hold the same file.
    */
   separateRow?: boolean;
+  /** How the filing link came to be (plan rule 3); `user` unless the caller says otherwise. */
+  linkProvenance?: LinkProvenance;
 }
 
 export interface CreateDocumentResult {
@@ -335,6 +267,7 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
     throw new AppError("Unknown document kind", 400);
 
   const entry = input.entry ?? null;
+  const provenance = input.linkProvenance ?? "user";
   assertCategoryFits(input.rentalCategory, entry);
   if (entry) await assertEntryOwned(input.userId, entry);
 
@@ -351,11 +284,13 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
     // uncategorised copy takes it (review, minor 4). One already filed under
     // another category keeps it — the answer carries that one, and the client
     // says so rather than pretending the new choice was applied.
-    if (input.rentalCategory && sameTarget.rentalCategory === null) {
-      const document = await prisma.document.update({
-        where: { id: sameTarget.id },
-        data: { rentalCategory: input.rentalCategory },
-      });
+    if (input.rentalCategory && sameTarget.rentalCategory === null && entry) {
+      const document = await inLinkTransaction((tx) =>
+        setPrimaryLink(tx, input.userId, sameTarget.id, entry, {
+          provenance,
+          rentalCategory: input.rentalCategory,
+        })
+      );
       return { document, created: false };
     }
     return { document: sameTarget, created: false };
@@ -370,13 +305,12 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
     if (unfiled) {
       // Filed now, so filed with the category the user chose (re-review,
       // fix round 3) — `assertCategoryFits` already held it to a rental.
-      const document = await prisma.document.update({
-        where: { id: unfiled.id },
-        data: {
-          ...ownerData(entry),
+      const document = await inLinkTransaction((tx) =>
+        setPrimaryLink(tx, input.userId, unfiled.id, entry, {
+          provenance,
           ...(input.rentalCategory && { rentalCategory: input.rentalCategory }),
-        },
-      });
+        })
+      );
       return { document, created: false };
     }
   }
@@ -385,24 +319,34 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
   const storedName = storedNameFor(sha256, detected.extension);
   await writeDocumentFile(storedName, input.buffer);
   try {
-    const document = await prisma.document.create({
-      data: {
-        userId: input.userId,
-        storedName,
-        originalName: sanitizeOriginalName(input.originalName),
-        mimetype: detected.mimetype,
-        sizeBytes: input.buffer.length,
-        sha256,
-        pageCount,
-        format: detected.format,
-        kind: input.kind ?? null,
-        issuedOn: input.issuedOn ?? null,
-        source: input.source ?? "upload",
-        parsedDomain: input.parsedDomain ?? null,
-        ...(input.parsedPayload != null && { parsedPayload: input.parsedPayload }),
-        ...ownerData(entry),
-        rentalCategory: input.rentalCategory ?? null,
-      },
+    const document = await inLinkTransaction(async (tx) => {
+      const row = await tx.document.create({
+        data: {
+          userId: input.userId,
+          storedName,
+          originalName: sanitizeOriginalName(input.originalName),
+          mimetype: detected.mimetype,
+          sizeBytes: input.buffer.length,
+          sha256,
+          pageCount,
+          format: detected.format,
+          kind: input.kind ?? null,
+          issuedOn: input.issuedOn ?? null,
+          source: input.source ?? "upload",
+          parsedDomain: input.parsedDomain ?? null,
+          ...(input.parsedPayload != null && { parsedPayload: input.parsedPayload }),
+          ...targetColumns(null),
+          unlinkedAt: new Date(),
+        },
+      });
+      // Filed through its link, in the same transaction: the row never
+      // exists without the link its owner columns describe.
+      return entry
+        ? setPrimaryLink(tx, input.userId, row.id, entry, {
+            provenance,
+            rentalCategory: input.rentalCategory ?? null,
+          })
+        : row;
     });
     logger.info(
       {
@@ -493,10 +437,7 @@ export async function linkDocuments(
   if (unique.length === 0) return [];
   await assertEntryOwned(userId, entry);
   await assertLinkable(userId, unique, entry);
-  await prisma.document.updateMany({
-    where: { id: { in: unique }, userId, ...NO_OWNER },
-    data: ownerData(entry),
-  });
+  await inLinkTransaction((tx) => linkDocumentsInTx(tx, userId, unique, entry));
   return prisma.document.findMany({
     where: { id: { in: unique }, userId },
     orderBy: { createdAt: "asc" },
@@ -507,22 +448,21 @@ export async function linkDocuments(
  * `linkDocuments` for a caller that writes the entry inside its own
  * transaction (the package-tour commit files the document on a trip created
  * a moment earlier in the same transaction). The caller has already run
- * `assertLinkable` for these ids; the `NO_OWNER` guard still keeps a
- * document filed elsewhere in the meantime where it is, and the count tells
- * the caller whether that happened.
+ * `assertLinkable` for these ids; only a document with no link yet is filed
+ * (checked under its row lock), so one filed elsewhere in the meantime stays
+ * where it is, and the count tells the caller whether that happened.
  */
 export async function linkDocumentsInTx(
-  tx: Pick<DbTransaction, "document">,
+  tx: DbTransaction,
   userId: string,
   ids: readonly string[],
-  entry: EntryRef
+  entry: EntryRef,
+  provenance: LinkProvenance = "user"
 ): Promise<number> {
-  const unique = [...new Set(ids)];
-  if (unique.length === 0) return 0;
-  const { count } = await tx.document.updateMany({
-    where: { id: { in: unique }, userId, ...NO_OWNER },
-    data: ownerData(entry),
-  });
+  let count = 0;
+  for (const id of new Set(ids)) {
+    if (await fileIfUnfiled(tx, userId, id, entry, { provenance })) count += 1;
+  }
   return count;
 }
 
@@ -532,7 +472,7 @@ export async function linkDocumentsInTx(
  * which rolls the caller's transaction (and its client-ref claim) back.
  */
 export async function fileReceipts(
-  tx: Pick<DbTransaction, "document">,
+  tx: DbTransaction,
   userId: string,
   ids: readonly string[],
   entry: EntryRef
@@ -544,7 +484,11 @@ export async function fileReceipts(
 /** Takes a document off its entry; it becomes unfiled and expires unless filed again. */
 export async function unlinkDocument(userId: string, id: string): Promise<Document> {
   const document = await getOwnDocument(userId, id);
-  return prisma.document.update({ where: { id: document.id }, data: ownerData(null) });
+  // Only the primary link, never every link (plan, Companion section): an
+  // older app that unfiles a document means the entry it shows it under.
+  return inLinkTransaction((tx) =>
+    setPrimaryLink(tx, userId, document.id, null, { provenance: "user" })
+  );
 }
 
 export interface UpdateDocumentInput {
@@ -591,41 +535,37 @@ export async function updateDocument(
   if (input.kind && !DOCUMENT_KINDS.includes(input.kind))
     throw new AppError("Unknown document kind", 400);
 
-  let owner: Partial<OwnerColumns> = {};
-  if (input.entry === null) {
-    owner = ownerData(null);
-  } else if (input.entry) {
-    const current = entryOf(document);
+  const current = entryOf(document);
+  if (input.entry) {
     const same = current?.type === input.entry.type && current.id === input.entry.id;
     if (!same) {
       await assertEntryOwned(userId, input.entry);
       // Moving between entries is an unlink and a link, said explicitly: a
       // document filed elsewhere answers 409, exactly as linking does.
       if (current) throw new AppError("Document is already filed with another entry", 409);
-      owner = ownerData(input.entry);
     }
   }
 
   // The entry the document ends up with decides whether a category may stand:
-  // taken off its rental (or onto anything else) it loses the label.
-  const finalEntry =
-    input.entry === undefined ? entryOf(document) : input.entry === null ? null : input.entry;
+  // taken off its rental (or onto anything else) it loses the label — the
+  // link's category follows its target (`setPrimaryLink`).
+  const finalEntry = input.entry === undefined ? current : input.entry;
   assertCategoryFits(input.rentalCategory, finalEntry);
-  const category =
-    finalEntry?.type !== "rentalBooking"
-      ? { rentalCategory: null }
-      : input.rentalCategory !== undefined
-        ? { rentalCategory: input.rentalCategory }
-        : {};
 
-  return prisma.document.update({
-    where: { id: document.id },
-    data: {
-      ...(input.kind !== undefined && { kind: input.kind }),
-      ...(input.issuedOn !== undefined && { issuedOn: input.issuedOn }),
-      ...owner,
-      ...category,
-    },
+  return inLinkTransaction(async (tx) => {
+    if (input.entry !== undefined || input.rentalCategory !== undefined) {
+      await setPrimaryLink(tx, userId, document.id, finalEntry, {
+        provenance: "user",
+        ...(input.rentalCategory !== undefined && { rentalCategory: input.rentalCategory }),
+      });
+    }
+    return tx.document.update({
+      where: { id: document.id },
+      data: {
+        ...(input.kind !== undefined && { kind: input.kind }),
+        ...(input.issuedOn !== undefined && { issuedOn: input.issuedOn }),
+      },
+    });
   });
 }
 
@@ -690,10 +630,8 @@ export async function sweepDocuments(
     where: { ...NO_OWNER, unlinkedAt: { lt: cutoff } },
     select: { id: true, storedName: true },
   });
-  if (expired.length > 0) {
-    await prisma.document.deleteMany({ where: { id: { in: expired.map((d) => d.id) } } });
-    await removeStoredFiles(expired.map((d) => d.storedName));
-  }
+  const removed = expired.length > 0 ? await deleteStillExpired(expired, cutoff) : [];
+  if (removed.length > 0) await removeStoredFiles(removed.map((d) => d.storedName));
 
   // The orphan half is the generic sweep's (forgejo#287), which every other
   // upload directory runs too; the TTL above is the documents' own. An orphan
@@ -702,13 +640,41 @@ export async function sweepDocuments(
     now: now.getTime(),
     fileAgeMs: (_dir, name) => fileAgeMs(name),
   });
-  if (expired.length > 0 || orphanFiles > 0) {
+  if (removed.length > 0 || orphanFiles > 0) {
     logger.info(
-      { operation: "document_sweep", expiredUnfiled: expired.length, orphanFiles },
+      { operation: "document_sweep", expiredUnfiled: removed.length, orphanFiles },
       "Document sweep removed unfiled uploads and quarantined orphan files"
     );
   }
-  return { expiredUnfiled: expired.length, orphanFiles };
+  return { expiredUnfiled: removed.length, orphanFiles };
+}
+
+/**
+ * Deletes the candidates that are STILL unlinked and expired, decided under
+ * their row locks. The sweep used to select and then delete by id, so a
+ * document filed between the two was deleted with the link just made. A link
+ * insert holds a key-share lock on the document row: one committed before the
+ * lock is seen by the re-check; one attempted after waits and then fails on
+ * the missing row instead of vanishing.
+ */
+async function deleteStillExpired(
+  candidates: readonly { id: string; storedName: string }[],
+  cutoff: Date
+): Promise<{ id: string; storedName: string }[]> {
+  const ids = candidates.map((d) => d.id);
+  return inLinkTransaction(async (tx) => {
+    await tx.$queryRaw(
+      Prisma.sql`SELECT id FROM "documents" WHERE id IN (${Prisma.join(ids)}) FOR UPDATE`
+    );
+    const still = await tx.document.findMany({
+      where: { id: { in: ids }, ...NO_OWNER, links: { none: {} }, unlinkedAt: { lt: cutoff } },
+      select: { id: true, storedName: true },
+    });
+    if (still.length > 0) {
+      await tx.document.deleteMany({ where: { id: { in: still.map((d) => d.id) } } });
+    }
+    return still;
+  });
 }
 
 export interface DocumentDto {

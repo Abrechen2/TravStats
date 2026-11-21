@@ -872,7 +872,8 @@ model Flight {
   aeroapiTrackAttempt AeroapiTrackAttempt?
   publicShareLinks    PublicShareLink[]
 
-  documents Document[]
+  documents     Document[]
+  documentLinks DocumentLink[]
 
   @@unique([userId, externalRef])
   @@unique([userId, shareKey])
@@ -1042,7 +1043,7 @@ model UserSettings {
   // Immich connection (base URL plain, API key encrypted at application level)
   immichBaseUrl     String? @map("immich_base_url")
   // Own tar1090/readsb receiver (forgejo#408 phase 3): base URL, plain.
-  tar1090BaseUrl String? @map("tar1090_base_url")
+  tar1090BaseUrl    String? @map("tar1090_base_url")
   immichApiKey      String? @map("immich_api_key")
   immichDefaultMode String  @default("link") @map("immich_default_mode")
 
@@ -1367,10 +1368,10 @@ model AdminSettings {
   airportTimezoneDataset String? @map("airport_timezone_dataset")
 
   // Global Immich connection (base URL plain, API key encrypted)
-  globalImmichBaseUrl String? @map("global_immich_base_url")
+  globalImmichBaseUrl  String? @map("global_immich_base_url")
   // Own tar1090/readsb receiver (forgejo#408 phase 3), instance-wide address.
   globalTar1090BaseUrl String? @map("global_tar1090_base_url")
-  globalImmichApiKey  String? @map("global_immich_api_key")
+  globalImmichApiKey   String? @map("global_immich_api_key")
 
   // Global PhotoPrism connection (base URL plain, app password encrypted)
   globalPhotoprismBaseUrl String? @map("global_photoprism_base_url")
@@ -2188,6 +2189,7 @@ model Trip {
   mergedFrom       MergedTripRedirect[]
 
   documents              Document[]
+  documentLinks          DocumentLink[]
   travelPlan             TravelPlan?
   travTrackShareSnapshot TravTrackShareSnapshot?
 
@@ -2573,14 +2575,15 @@ model TripExpense {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payerCompanion Companion? @relation(fields: [payerCompanionId], references: [id], onDelete: SetNull)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payerCompanion Companion?     @relation(fields: [payerCompanionId], references: [id], onDelete: SetNull)
   documents      Document[]
-  trip           Trip?      @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  route          TripRoute? @relation(fields: [routeId], references: [id], onDelete: Cascade)
-  stop           TripStop?  @relation("ExpenseStop", fields: [stopId], references: [id], onDelete: SetNull)
-  legFromStop    TripStop?  @relation("ExpenseLegFrom", fields: [legFromStopId], references: [id], onDelete: SetNull)
-  legToStop      TripStop?  @relation("ExpenseLegTo", fields: [legToStopId], references: [id], onDelete: SetNull)
+  documentLinks  DocumentLink[]
+  trip           Trip?          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  route          TripRoute?     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  stop           TripStop?      @relation("ExpenseStop", fields: [stopId], references: [id], onDelete: SetNull)
+  legFromStop    TripStop?      @relation("ExpenseLegFrom", fields: [legFromStopId], references: [id], onDelete: SetNull)
+  legToStop      TripStop?      @relation("ExpenseLegTo", fields: [legToStopId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([tripId])
@@ -2855,7 +2858,8 @@ model Cruise {
   companionLinks CruiseCompanion[]
   importBatch    ImportBatch?      @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
-  documents Document[]
+  documents     Document[]
+  documentLinks DocumentLink[]
 
   /// Public single-entry links to this record (forgejo#405).
   publicShareLinks PublicShareLink[]
@@ -3432,7 +3436,8 @@ model LodgingStay {
   /// Roadtrip stations that slept here. The stay does not own them.
   roadtripStations TripStop[]
 
-  documents Document[]
+  documents     Document[]
+  documentLinks DocumentLink[]
 
   /// Public single-entry links to this record (forgejo#405).
   publicShareLinks PublicShareLink[]
@@ -3833,7 +3838,8 @@ model PlaceVisit {
   photoRefusals VisitPhotoRefusal[]
   captures      PlaceCapture[]
 
-  documents Document[]
+  documents     Document[]
+  documentLinks DocumentLink[]
 
   /// Public single-entry links to this record (forgejo#405).
   publicShareLinks PublicShareLink[]
@@ -4466,18 +4472,22 @@ model Document {
   unlinkedAt DateTime? @map("unlinked_at")
 
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  flight             Flight?             @relation(fields: [flightId], references: [id], onDelete: Cascade)
-  cruise             Cruise?             @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
-  lodgingStay        LodgingStay?        @relation(fields: [lodgingStayId], references: [id], onDelete: Cascade)
+  flight             Flight?             @relation(fields: [flightId], references: [id], onDelete: SetNull)
+  cruise             Cruise?             @relation(fields: [cruiseId], references: [id], onDelete: SetNull)
+  lodgingStay        LodgingStay?        @relation(fields: [lodgingStayId], references: [id], onDelete: SetNull)
   planDocument       TravelPlanDocument?
-  trip               Trip?               @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  placeVisit         PlaceVisit?         @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
-  railJourney        RailJourney?        @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
-  rentalBooking      RentalBooking?      @relation(fields: [rentalBookingId], references: [id], onDelete: Cascade)
-  busJourney         BusJourney?         @relation(fields: [busJourneyId], references: [id], onDelete: Cascade)
-  ferryJourney       FerryJourney?       @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
-  tripExpense        TripExpense?        @relation(fields: [tripExpenseId], references: [id], onDelete: Cascade)
+  trip               Trip?               @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  placeVisit         PlaceVisit?         @relation(fields: [placeVisitId], references: [id], onDelete: SetNull)
+  railJourney        RailJourney?        @relation(fields: [railJourneyId], references: [id], onDelete: SetNull)
+  rentalBooking      RentalBooking?      @relation(fields: [rentalBookingId], references: [id], onDelete: SetNull)
+  busJourney         BusJourney?         @relation(fields: [busJourneyId], references: [id], onDelete: SetNull)
+  ferryJourney       FerryJourney?       @relation(fields: [ferryJourneyId], references: [id], onDelete: SetNull)
+  tripExpense        TripExpense?        @relation(fields: [tripExpenseId], references: [id], onDelete: SetNull)
   mailIntakeMessages MailIntakeMessage[]
+  /// Every entry this document is filed with or is evidence for (forgejo plan
+  /// 2026-11-21-document-links). The owner columns above are the projection of
+  /// the ONE `primary` link, kept for installed Companion versions.
+  links              DocumentLink[]
 
   @@index([userId, sha256])
   @@index([flightId])
@@ -4494,6 +4504,82 @@ model Document {
   /// The sweep asks exactly this: unfiled rows past their stamp.
   @@index([unlinkedAt])
   @@map("documents")
+}
+
+/// One link between a kept original and an entry it belongs to (plan
+/// docs/superpowers/specs/2026-11-21-document-links.md). A document has at most
+/// one `primary` link — where it was filed, mirrored into the owner columns of
+/// `documents` for installed clients — and any number of `covers` links to
+/// entries it is evidence for. A link is never an authorisation: the target is
+/// checked to belong to the document's account in the transaction that writes
+/// the link, and nothing shared or federated reads this table.
+///
+/// One real foreign key per target type rather than `entityType + entityId`, so
+/// a deleted entry takes its links with it in the database and ownership stays
+/// a join. Exactly one target is set (`document_links_single_target_check`).
+/// When the last link of a document goes — through any delete path — the
+/// trigger `document_links_after_delete` re-projects the owner columns and
+/// stamps `documents.unlinked_at`, which starts the 30-day grace.
+model DocumentLink {
+  id         String @id @default(uuid())
+  documentId String @map("document_id")
+
+  flightId        String? @map("flight_id")
+  cruiseId        String? @map("cruise_id")
+  lodgingStayId   String? @map("lodging_stay_id")
+  tripId          String? @map("trip_id")
+  placeVisitId    String? @map("place_visit_id")
+  railJourneyId   String? @map("rail_journey_id")
+  rentalBookingId String? @map("rental_booking_id")
+  busJourneyId    String? @map("bus_journey_id")
+  ferryJourneyId  String? @map("ferry_journey_id")
+  tripExpenseId   String? @map("trip_expense_id")
+
+  /// primary | covers (`document_links_role_check`).
+  role           String
+  /// How the link came to be: user | parser | suggestion | legacy
+  /// (`document_links_provenance_check`).
+  provenance     String
+  /// What a rental's evidence shows (forgejo#239), on the rental link it
+  /// describes: pickup | return | damage | fuel | odometer. Null elsewhere.
+  rentalCategory String?  @map("rental_category")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  document      Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  flight        Flight?        @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  cruise        Cruise?        @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  lodgingStay   LodgingStay?   @relation(fields: [lodgingStayId], references: [id], onDelete: Cascade)
+  trip          Trip?          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  placeVisit    PlaceVisit?    @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
+  railJourney   RailJourney?   @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
+  rentalBooking RentalBooking? @relation(fields: [rentalBookingId], references: [id], onDelete: Cascade)
+  busJourney    BusJourney?    @relation(fields: [busJourneyId], references: [id], onDelete: Cascade)
+  ferryJourney  FerryJourney?  @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
+  tripExpense   TripExpense?   @relation(fields: [tripExpenseId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, flightId])
+  @@unique([documentId, cruiseId])
+  @@unique([documentId, lodgingStayId])
+  @@unique([documentId, tripId])
+  @@unique([documentId, placeVisitId])
+  @@unique([documentId, railJourneyId])
+  @@unique([documentId, rentalBookingId])
+  @@unique([documentId, busJourneyId])
+  @@unique([documentId, ferryJourneyId])
+  @@unique([documentId, tripExpenseId])
+  /// At most one primary per document.
+  @@unique([documentId], map: "document_links_one_primary_key", where: raw("role = 'primary'"))
+  @@index([flightId])
+  @@index([cruiseId])
+  @@index([lodgingStayId])
+  @@index([tripId])
+  @@index([placeVisitId])
+  @@index([railJourneyId])
+  @@index([rentalBookingId])
+  @@index([busJourneyId])
+  @@index([ferryJourneyId])
+  @@index([tripExpenseId])
+  @@map("document_links")
 }
 
 /// One train ride: one vehicle, boarded at one station and left at another
@@ -4632,6 +4718,7 @@ model RailJourney {
   arrStation         RailStation?           @relation("RailJourneyArrStation", fields: [arrStationId], references: [id], onDelete: SetNull)
   companionLinks     RailJourneyCompanion[]
   documents          Document[]
+  documentLinks      DocumentLink[]
 
   @@unique([userId, externalRef])
   @@unique([userId, shareKey])
@@ -4789,6 +4876,7 @@ model BusJourney {
   importBatch    ImportBatch?          @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
   companionLinks BusJourneyCompanion[]
   documents      Document[]
+  documentLinks  DocumentLink[]
 
   @@unique([userId, externalRef])
   @@unique([userId, shareKey])
@@ -4988,6 +5076,7 @@ model RentalBooking {
   returnAirport  Airport?                 @relation("RentalReturnAirport", fields: [returnAirportId], references: [id], onDelete: SetNull)
   companionLinks RentalBookingCompanion[]
   documents      Document[]
+  documentLinks  DocumentLink[]
 
   @@unique([userId, externalRef])
   @@unique([userId, shareKey])
@@ -5630,6 +5719,7 @@ model FerryJourney {
   importBatch    ImportBatch?            @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
   companionLinks FerryJourneyCompanion[]
   documents      Document[]
+  documentLinks  DocumentLink[]
   routeBackfill  FerryRouteBackfill?
 
   @@unique([userId, externalRef])

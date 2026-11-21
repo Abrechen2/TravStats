@@ -426,10 +426,13 @@ export async function commitPackageProposal(
       }
 
       if (document?.action === "file") {
-        const filed = await linkDocumentsInTx(tx, userId, [document.id], {
-          type: "trip",
-          id: tripId,
-        });
+        const filed = await linkDocumentsInTx(
+          tx,
+          userId,
+          [document.id],
+          { type: "trip", id: tripId },
+          "parser"
+        );
         if (filed !== 1) {
           throw new AppError("Document is already filed with another entry", 409);
         }
