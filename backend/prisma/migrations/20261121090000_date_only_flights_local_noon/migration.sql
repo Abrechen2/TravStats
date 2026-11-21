@@ -9,7 +9,10 @@
 -- A row is in the old shape when it is DATE_ONLY, sits exactly on 00:00:00 UTC
 -- and its zone's clock at that instant is neither 00:00 nor 12:00 — those two
 -- are what the current writers produce (offsets 0 and +12 coincide with them
--- and are already right). It becomes noon of the same calendar date in its
+-- and are already right). UTC-12 (no inhabited zone) is left alone on purpose:
+-- there, local noon of the stored date IS 00:00Z of the next day, so a converted
+-- row would be converted again on a re-run; the migration stays idempotent.
+-- It becomes noon of the same calendar date in its
 -- zone. Rows without a stored zone, or with a zone Postgres does not know, are
 -- left alone: no zone, no honest conversion. (CASE, not AND: Postgres does not
 -- short-circuit AND, and an unknown zone name would abort the whole migration.) No schema change.
@@ -33,3 +36,7 @@ UPDATE flights
    AND CASE WHEN EXISTS (SELECT 1 FROM pg_timezone_names WHERE name = arr_timezone)
             THEN ((arrival_time AT TIME ZONE 'UTC') AT TIME ZONE arr_timezone)::time NOT IN (TIME '00:00', TIME '12:00')
             ELSE FALSE END;
+
+-- Known limit: DATE_ONLY also accepts a typed local time, and no provenance column
+-- says who wrote a row, so a typed 16:00 in Los Angeles (= 00:00Z) is converted
+-- too. The writers (form, cruise import, importers) send noon or midnight.

@@ -107,6 +107,16 @@ const ROWS: Row[] = [
     dtz: "Pacific/Auckland",
     atz: null,
   },
+  // UTC-12 (uninhabited): local noon IS 00:00Z there, so it cannot be told from the old shape and is left alone
+  {
+    id: "gmt-12",
+    dep: "2025-12-28T00:00:00Z",
+    arr: null,
+    dsem: "DATE_ONLY",
+    asem: "DATE_ONLY",
+    dtz: "Etc/GMT+12",
+    atz: null,
+  },
   // not touched: no zone, a zone Postgres does not know, and a real instant
   {
     id: "no-zone",
@@ -198,6 +208,10 @@ describe("migration 20261121090000 — date-only flights move to the local-noon 
   it("converts east-of-UTC old rows too, so the column holds one convention", () => {
     expect(after["lhr-muc"].dep).toBe("2026-01-13T11:00:00.000Z");
     expect(after["lhr-muc"].arr).toBe("2026-01-13T11:00:00.000Z");
+  });
+
+  it("leaves a UTC-12 row alone — converting it again on a re-run would walk it forward a day", () => {
+    expect(after["gmt-12"].dep).toBe("2025-12-28T00:00:00.000Z");
   });
 
   it("leaves rows already in the current convention exactly as they were", () => {
