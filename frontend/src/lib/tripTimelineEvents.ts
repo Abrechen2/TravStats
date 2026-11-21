@@ -14,6 +14,7 @@ import {
 } from "./entityTimes";
 import {
   sortTimelineEvents,
+  type GeoPoint,
   dayAsTimeValue,
   hasExplicitTime,
   isSupersededByPlaceVisit,
@@ -147,6 +148,10 @@ export type TimelineEvent = (
 ) & {
   /** Where a leg arrives (flight, rail, bus, ferry) — the order uses it, see `sortTimelineEvents`. */
   end?: TimeValue | null;
+  /** Where a leg starts and ends; where a place visit or rental return is. Used to order time-less visits. */
+  from?: GeoPoint | null;
+  to?: GeoPoint | null;
+  at?: GeoPoint | null;
 };
 
 /** Rentals as entries: the pickup and the return, each on its station's clock. */
@@ -160,7 +165,18 @@ function rentalEvents(trip: Trip): TimelineEvent[] {
     for (const [kind, time, zone, precision] of ends) {
       const when = timeValueAtZone(time, zone, precision === "day" ? "day" : "minute");
       if (!when) continue;
-      out.push({ id: `${kind}-${rental.id}`, kind, date: when.utc, when, rental });
+      const point =
+        kind === "rental-return"
+          ? { lat: rental.returnLat, lon: rental.returnLon }
+          : { lat: rental.pickupLat, lon: rental.pickupLon };
+      out.push({
+        id: `${kind}-${rental.id}`,
+        kind,
+        date: when.utc,
+        when,
+        rental,
+        ...(kind === "rental-return" ? { at: point } : { from: point }),
+      });
     }
   }
   return out;
@@ -178,6 +194,8 @@ function railEvents(trip: Trip): TimelineEvent[] {
       date: when.utc,
       when,
       end: railArrival(journey),
+      from: { lat: journey.depLat, lon: journey.depLon },
+      to: { lat: journey.arrLat, lon: journey.arrLon },
       journey,
     });
   }
@@ -199,6 +217,8 @@ function busEvents(trip: Trip): TimelineEvent[] {
       date: when.utc,
       when,
       end: railArrival(ride),
+      from: { lat: ride.depLat, lon: ride.depLon },
+      to: { lat: ride.arrLat, lon: ride.arrLon },
       ride,
     });
   }
@@ -215,6 +235,8 @@ function ferryEvents(trip: Trip): TimelineEvent[] {
       date: when.utc,
       when,
       end: railArrival(ride),
+      from: { lat: ride.depLat, lon: ride.depLon },
+      to: { lat: ride.arrLat, lon: ride.arrLon },
       ride,
     });
   }
@@ -239,6 +261,8 @@ function flightEvents(trip: Trip): TimelineEvent[] {
       date: when.utc,
       when,
       end: arrival,
+      from: { lat: f.depLat, lon: f.depLon },
+      to: { lat: f.arrLat, lon: f.arrLon },
       title: `${f.depIata ?? "???"} → ${f.arrIata ?? "???"}`,
       // Each end on its own airport's clock (the server's `local`), never the
       // viewer's: `toLocaleString()` once put a JFK arrival six hours off the
@@ -365,6 +389,7 @@ export function buildTimelineEvents(
       when,
       place,
       visit,
+      at: { lat: place.lat, lon: place.lon },
     });
   }
   for (const e of trip.journalEntries ?? []) {
