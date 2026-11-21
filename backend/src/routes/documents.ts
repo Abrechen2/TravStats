@@ -151,9 +151,10 @@ router.get(
       res.json({
         success: true,
         data: {
-          documents: documents.map(({ document, linkCount }) => ({
+          documents: documents.map(({ document, linkCount, people }) => ({
             ...toDocumentDto(document),
             linkCount,
+            people,
           })),
           total,
         },

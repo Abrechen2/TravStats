@@ -29,6 +29,10 @@ import { DOCUMENT_FORMAT_ICON, exceededDocumentLimit } from "./documentDisplay";
 import { ExtractValuesAction } from "./ExtractValuesAction";
 import { StoredValuesAction } from "./StoredValuesAction";
 import { EntryLink, linkErrorKey } from "./documentLinkUi";
+import { DocumentPerson } from "./DocumentPerson";
+import { TravellersPanel } from "./TravellersPanel";
+import { useEntryTravellers } from "../../hooks/useEntryTravellers";
+import { isTravellerEntryType } from "../../lib/api/entryTravellers";
 import LinkDocumentDialog from "./LinkDocumentDialog";
 import TripDocumentDialog from "./TripDocumentDialog";
 
@@ -148,6 +152,10 @@ export default function DocumentsSection({
   const entryType = entry.type;
   const entryId = entry.id;
 
+  // Plan D7: who is on the entry, to pick a document's person and edit their facts.
+  const people = useEntryTravellers(entryType, entryId, open);
+  const reloadPeople = people.reload;
+
   const reload = useCallback(async (): Promise<void> => {
     try {
       setDocuments(await documentsApi.listForEntry({ type: entryType, id: entryId }));
@@ -248,6 +256,52 @@ export default function DocumentsSection({
       }
     },
     [t]
+  );
+
+  // "Für: Norbert" lives on the link to THIS entry (plan D7). The answer is the truth,
+  // and the people list is re-read because the panel shows their documents.
+  const handlePerson = useCallback(
+    async (doc: TravelDocument, companionId: string | null): Promise<void> => {
+      setBusy(true);
+      try {
+        const saved = await documentsApi.assignCompanion(
+          doc.id,
+          { type: entryType, id: entryId },
+          companionId
+        );
+        const chosen = people.travellers.find((c) => c.companionId === saved.companionId);
+        setDocuments((prev) =>
+          prev.map((d) =>
+            d.id === doc.id
+              ? {
+                  ...d,
+                  forCompanion: chosen
+                    ? { id: chosen.companionId, displayName: chosen.displayName }
+                    : null,
+                  forSource: saved.companionSource,
+                }
+              : d
+          )
+        );
+        setError(null);
+        void reloadPeople();
+      } catch (err: unknown) {
+        if (isDemoForbidden(err)) {
+          setDemoRefused(true);
+        } else {
+          logger.error({ err, id: doc.id }, "DocumentsSection: person change failed");
+          const gone = (err as { response?: { status?: number } }).response?.status === 404;
+          setError(t(gone ? "documents:person.companionGone" : "documents:person.saveFailed"));
+          if (gone) {
+            void reload();
+            void reloadPeople();
+          }
+        }
+      } finally {
+        setBusy(false);
+      }
+    },
+    [entryType, entryId, people.travellers, reload, reloadPeople, t]
   );
 
   // The dialog names every entry the delete reaches; a failed read leaves the base sentence.
@@ -419,6 +473,12 @@ export default function DocumentsSection({
           />
         )}
       </div>
+      <DocumentPerson
+        doc={doc}
+        travellers={people.travellers}
+        disabled={busy || locked}
+        onPick={(companionId) => void handlePerson(doc, companionId)}
+      />
       {doc.linkRole === "covers" && doc.evidenceFrom && (
         <p className="t-caption" data-testid="document-evidence-from">
           {t("documents:links.evidenceFrom")}{" "}
@@ -591,6 +651,23 @@ export default function DocumentsSection({
         </div>
       )}
 
+      {isTravellerEntryType(entryType) && people.failed && (
+        <p className="t-caption" role="alert" style={{ color: "var(--ts-warn)" }}>
+          {t("documents:travellers.loadFailed")}
+        </p>
+      )}
+      {isTravellerEntryType(entryType) && (
+        <TravellersPanel
+          type={entryType}
+          id={entryId}
+          travellers={people.travellers}
+          readOnly={locked}
+          onSaved={() => {
+            void reloadPeople();
+            void reload();
+          }}
+        />
+      )}
       <ConfirmModal
         isOpen={pendingDelete !== null}
         onClose={() => setPendingDelete(null)}

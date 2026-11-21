@@ -200,11 +200,13 @@ describe("companions — manage", () => {
     expect(rewrote("flight", full.flight.id)).toBe(true);
     expect(rewrote("rail_journey", full.rail.id)).toBe(true);
     expect(await prisma.flightCompanion.findMany({ where: { flightId: full.flight.id } })).toEqual([
-      { flightId: full.flight.id, companionId: target.id, position: 0 },
+      expect.objectContaining({ flightId: full.flight.id, companionId: target.id, position: 0 }),
     ]);
     expect(
       await prisma.railJourneyCompanion.findMany({ where: { railJourneyId: full.rail.id } })
-    ).toEqual([{ railJourneyId: full.rail.id, companionId: target.id, position: 1 }]);
+    ).toEqual([
+      expect.objectContaining({ railJourneyId: full.rail.id, companionId: target.id, position: 1 }),
+    ]);
     expect(await prisma.rentalBookingCompanion.count({ where: { companionId: target.id } })).toBe(
       1
     );
@@ -318,6 +320,7 @@ describe("companions — manage", () => {
         uses: { flight: 1, trip: 0, cruise: 0, rail: 0 },
         hiddenUses: 1,
         expensesPaid: 0,
+        documents: 0,
         lastTogether: "2025-05-01",
         inUse: true,
       },

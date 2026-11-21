@@ -87,6 +87,15 @@ export interface TravelDocument {
   evidenceFrom?: DocumentEntryInfo | null;
   /** How many entries the document is linked to. */
   linkCount?: number;
+  /**
+   * Plan D7, per-entry lists only: the companion this document is for AT THIS
+   * entry; null = the owner or the whole group. Absent from older servers.
+   */
+  forCompanion?: { id: string; displayName: string } | null;
+  /** How the person was set: auto (a parsed name), user, or null = undecided. */
+  forSource?: "user" | "auto" | null;
+  /** `GET /documents` only: the companions it is assigned to on any entry. */
+  people?: Array<{ id: string; displayName: string }>;
 }
 
 export type LinkRole = "primary" | "covers";
@@ -110,6 +119,8 @@ export interface DocumentLinkView {
   rentalCategory: RentalDocumentCategory | null;
   createdAt: string;
   entry: DocumentEntryCandidate;
+  companion?: { id: string; displayName: string } | null;
+  companionSource?: "user" | "auto" | null;
 }
 
 /** What `DELETE /documents/:id/links` removed — enough to put exactly that back. */
@@ -249,14 +260,26 @@ export const documentsApi = {
     return data.data;
   },
 
+  /** Plan D7: who the document is for at ONE entry; null = me / the whole group. */
+  assignCompanion: async (
+    id: string,
+    entry: DocumentEntryRef,
+    companionId: string | null
+  ): Promise<{ companionId: string | null; companionSource: "user" | "auto" | null }> => {
+    const { data } = await api.put<
+      Envelope<{ companionId: string | null; companionSource: "user" | "auto" | null }>
+    >(`/documents/${id}/links/companion`, { entry, companionId });
+    return data.data;
+  },
+
   /** Every document the user owns, filed or not, page by page — metadata only (spreadsheet export). */
-  listEvery: async (): Promise<TravelDocument[]> => {
+  listEvery: async (companionId?: string): Promise<TravelDocument[]> => {
     const PAGE = 500;
     const documents: TravelDocument[] = [];
     for (let offset = 0; ; offset += PAGE) {
       const { data } = await api.get<Envelope<{ documents: TravelDocument[]; total: number }>>(
         "/documents",
-        { params: { limit: PAGE, offset } }
+        { params: { limit: PAGE, offset, ...(companionId ? { companionId } : {}) } }
       );
       documents.push(...data.data.documents);
       if (data.data.documents.length < PAGE || documents.length >= data.data.total) {

@@ -1,5 +1,6 @@
 import { prisma } from "../../db";
-import { linkRowsFor, resolveCompanions } from "../companionService";
+import { syncCompanionLinks } from "../companions/travellerFacts";
+import { resolveCompanions } from "../companionService";
 
 /**
  * Companions from a spreadsheet cell, written the way every form writes them:
@@ -47,24 +48,12 @@ export async function updateWithCompanions(
     if (owner === "flight") {
       if (Object.keys(payload).length > 0) await tx.flight.update({ where: { id }, data: payload });
       if (!companions) return;
-      await tx.flightCompanion.deleteMany({ where: { flightId: id } });
-      if (companions.ids.length > 0) {
-        await tx.flightCompanion.createMany({
-          data: linkRowsFor(companions.ids).map((row) => ({ ...row, flightId: id })),
-          skipDuplicates: true,
-        });
-      }
+      await syncCompanionLinks(tx, "flight", id, companions.ids);
       return;
     }
     if (Object.keys(payload).length > 0) await tx.cruise.update({ where: { id }, data: payload });
     if (!companions) return;
-    await tx.cruiseCompanion.deleteMany({ where: { cruiseId: id } });
-    if (companions.ids.length > 0) {
-      await tx.cruiseCompanion.createMany({
-        data: linkRowsFor(companions.ids).map((row) => ({ ...row, cruiseId: id })),
-        skipDuplicates: true,
-      });
-    }
+    await syncCompanionLinks(tx, "cruise", id, companions.ids);
   });
 }
 

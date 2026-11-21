@@ -331,6 +331,13 @@ export type ApiErrorCode =
   | "DOCUMENT_LINK_EXISTS"
   | "DOCUMENT_LINK_NOT_FOUND"
   | "DOCUMENT_LINK_DUPLICATE_INPUT"
+  /** Document for a person and per-traveller facts (plan D7): the companion is
+   *  not the caller's (404), the traveller is not on the entry (404), the entry
+   *  type has no travellers (400), a fact is not one of the entry's (400). */
+  | "COMPANION_NOT_FOUND"
+  | "TRAVELLER_NOT_FOUND"
+  | "TRAVELLERS_UNSUPPORTED"
+  | "TRAVELLER_FACT_INVALID"
   /** A document-link suggestion that is gone or already decided (404, plan D4). */
   | "DOCUMENT_LINK_SUGGESTION_NOT_FOUND"
   /** A flight's booking split (forgejo#219): the flight is linked to no booking. */

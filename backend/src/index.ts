@@ -548,6 +548,15 @@ if (process.env.NODE_ENV !== "test") {
     try {
       const { backfillCompanions } = await import("./scripts/backfillCompanions");
       const n = await backfillCompanions();
+      // Stay people who exist only as text get a catalogue row too (document-links D7).
+      const { backfillStayCompanions } = await import("./services/companions/stayCompanions");
+      const stayPeople = await backfillStayCompanions();
+      if (stayPeople > 0) {
+        logger.info({
+          operation: "server_start_backfill_stay_companions",
+          message: `Created ${stayPeople} companions for stay names`,
+        });
+      }
       if (n > 0) {
         logger.info({
           operation: "server_start_backfill_companions",

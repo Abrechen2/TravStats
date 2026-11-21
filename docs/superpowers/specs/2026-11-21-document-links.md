@@ -124,6 +124,7 @@ release that carries phase D2.
 | D4 | server + web | inbox suggestions for existing documents | planned |
 | D5 | Companion | show "Beleg aus …" on an entry; link-aware filing | after D2 |
 | D6 | server | contract: drop old CHECK and FK columns | after the last app version without links |
+| D7 | server + web | a document FOR a person on a link, per-traveller facts on the companion link tables (+ `lodging_stay_companions`), automatic assignment from a parsed passenger name | built (forgejo#425) |
 
 ## Tests that gate the release
 
@@ -158,3 +159,100 @@ The owner delegated both open points ("entscheide du, was am besten ist"):
   ships, then for every new document. Without the pass, the owner's existing
   round trips would stay unlinked. The pass is a job with progress, and a
   decision persists, so it never asks twice.
+
+## D7 — documents and facts for a person (owner, 2026-11-21)
+
+> "Es fehlt die Funktion, dass Dokumente oder Mitreisenden-spezifische Sachen
+> dem Mitreisenden zugeordnet werden."
+
+Scope of the first step: assignment **within the owner's account only**. No
+hand-over to a linked companion's own account (a later phase).
+
+### Rules
+
+1. **The person lives on the link, not on the document.** `document_links`
+   gets `companion_id` (FK `companions`, `ON DELETE SET NULL`) and
+   `companion_source` (`user` | `auto`, CHECK). A boarding pass is one
+   traveller's *on the entry it covers*; a package booking filed on the trip
+   covers several people and may be "for" different ones on different entries.
+   A column on `documents` could only say one person per file. Cost: an unfiled
+   document (no link) cannot be assigned; it can the moment it is filed. Move
+   and merge keep the person (`repointLinks`, `setPrimaryLink` keep the row).
+2. **`companion_id` null = the owner or the whole group.** `companion_source`
+   tells undecided (null/null) from decided: `user` also when the user kept a
+   document on "me", `auto` also when a parsed name matched the owner. A parse
+   never touches a link whose source is set.
+3. **Per-traveller facts are columns on the existing companion link tables**
+   (`flight_`, `rail_journey_`, `bus_journey_`, `ferry_journey_`,
+   `cruise_`, `rental_booking_companions`): seat number, seat class, ticket
+   number, booking reference, loyalty number; a cruise has `cabin` instead of
+   seat and ticket, a rental `is_driver` instead of seat. A lodging stay names its
+   people as text only, so `lodging_stay_companions` (new) holds **facts only**
+   — booking reference and loyalty number — and a row exists once a fact is
+   recorded; who is on the stay is still `LodgingStay.companions`. The owner's
+   own values stay on the entry. `facts_source` (`user` | `auto`) is the
+   provenance. Null = not recorded, never `""`.
+4. **Facts never put a person on an entry** (404 `TRAVELLER_NOT_FOUND`), and an
+   edit that re-sends the companion list no longer rewrites the rows: the old
+   `deleteMany` + `createMany` would have wiped every seat the moment an
+   unrelated edit ran. `syncCompanionLinks` deletes the people who left,
+   re-orders and creates the new ones, and leaves a person who stays alone —
+   used by every edit path (flight update, bulk edit, duplicate resolution,
+   cruise update, rental update, xlsx import). Companion merge fills the
+   target's empty facts from the source (`COALESCE`, target wins) and moves the
+   source's document assignments to the target; a duplicate merge copies the
+   removed twin's whole row. A stay editor that takes a person off the stay
+   prunes that person's fact row.
+5. **Automatic on parse, visible and never over a decision.** Every path that
+   creates a link (manual, package commit, suggestion, filing) and
+   `recordParse` on an already linked document run `autoAssignInTx`: read the
+   passenger names off the stored reading (`extractPassengerNames`: keys
+   `passengerName(s)`, `passengers`, `coPassengers`, `guestName(s)`, … at any
+   depth), match them (`matchPassengers`). **Abstains** unless exactly one
+   distinct person is named *and* exactly one candidate fits: the owner's name
+   (`firstName` + `lastName`) maps to "me" (`auto`, companion null), a companion
+   to that companion, several people (a group booking) or no/two fits leave the
+   link undecided for the user to pick. Boarding-pass `SURNAME/FIRST MR` is read
+   as "first surname", titles dropped, accents folded; a single-token companion
+   ("Norbert") fits only a single-token printed name. On a match the person's
+   **empty** facts are filled from the reading (booking reference; seat and
+   class for a flight, using the entry's flight number and day to pick the
+   leg) and marked `auto`; a value the user typed is never replaced. A failed
+   pass after a successful parse is logged, never a failed parse.
+6. **No new visibility.** A link still grants nobody the document; the
+   companion must be the document's own account's (404 `COMPANION_NOT_FOUND`
+   otherwise) and the facts routes are the caller's own. The shared-trip strip
+   (`memberScope.ts`) is untouched, and a companion is never carried in a
+   `.travstats` archive (the catalogue is per account).
+7. **Sharing and federation.** The facts columns sit on private link tables
+   (`propagate.writePaths` lists no companion table: companions are private).
+   `fieldInventory.json` classifies them like the flight's own: seat and class
+   `personal`; ticket number, booking reference and loyalty number
+   `documents`; `LodgingStayCompanion` joins the graph under the stay.
+
+### Contract (additive)
+
+- `PUT /documents/:id/links/companion` `{entry, companionId|null}` →
+  `{companionId, companionSource}`.
+- Entry document lists: `forCompanion`, `forSource` (optional fields).
+  `GET /documents/:id/links`: `companion`, `companionSource` per link.
+  `GET /documents?companionId=` filters by person; every row carries `people`.
+- `GET /entry-travellers?entryType&entryId` and
+  `PUT /entry-travellers/:companionId` `{entry, facts}` (patch; null/"" clears).
+- Old app versions ignore every new field. The Companion app can read the same
+  routes after the release that carries D7.
+
+### Decisions and open
+
+- Stay people who exist only as text get a catalogue row (create-only, canonical
+  name): on every stay save, on first read of a stay's travellers, and once at
+  boot for existing stays (`backfillStayCompanions`).
+- An automatic fill writes each field in a conditional update ("where still
+  empty"), so a manual save made in between is never overwritten.
+- Deleting a companion hands their documents back to the owner; the delete
+  dialog says how many first.
+- **Open:** companions are not carried in `.travstats` archives (the catalogue is
+  per account). **Open:** the web has no account-wide document list screen, so
+  the person filter exists in the API only.
+- A document for a linked companion's *own* account (hand-over) is a separate
+  phase; nothing here prepares it beyond the link carrying the person.

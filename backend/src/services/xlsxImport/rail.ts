@@ -19,6 +19,7 @@
  * ticket (`user`); every other figure is measured again.
  */
 
+import { syncCompanionLinks } from "../companions/travellerFacts";
 import { prisma } from "../../db";
 import { Prisma, type RailJourney } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
@@ -28,7 +29,7 @@ import {
   type RailStationInput,
   type UpdateRailJourneyInput,
 } from "../../schemas/rail";
-import { linkRowsFor, resolveCompanions } from "../companionService";
+import { resolveCompanions } from "../companionService";
 import { recomputeTripStatus } from "../tripStatusService";
 import { fxColumnsFor, getBaseCurrency } from "../fx/snapshot";
 import { getCountryResolver, type CountryResolver } from "../geo/countryFromCoordinates";
@@ -210,13 +211,7 @@ async function writeRide(
           })
         ).id;
     if (companions) {
-      await tx.railJourneyCompanion.deleteMany({ where: { railJourneyId: id } });
-      if (companions.ids.length > 0) {
-        await tx.railJourneyCompanion.createMany({
-          data: linkRowsFor(companions.ids).map((row) => ({ ...row, railJourneyId: id })),
-          skipDuplicates: true,
-        });
-      }
+      await syncCompanionLinks(tx, "railJourney", id, companions.ids);
     }
     return id;
   });

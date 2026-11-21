@@ -314,9 +314,9 @@
   "FlightCompanion": {
     "details": "",
     "costs": "",
-    "personal": "flightId companionId position",
+    "personal": "flightId companionId position seatNumber seatClass factsSource",
     "photos": "",
-    "documents": "",
+    "documents": "ticketNumber bookingReference loyaltyNumber",
     "excluded": ""
   },
   "TripCompanion": {
@@ -330,41 +330,41 @@
   "CruiseCompanion": {
     "details": "",
     "costs": "",
-    "personal": "cruiseId companionId position",
+    "personal": "cruiseId companionId position cabin factsSource",
     "photos": "",
-    "documents": "",
+    "documents": "bookingReference loyaltyNumber",
     "excluded": ""
   },
   "RailJourneyCompanion": {
     "details": "",
     "costs": "",
-    "personal": "railJourneyId companionId position",
+    "personal": "railJourneyId companionId position seatNumber seatClass factsSource",
     "photos": "",
-    "documents": "",
+    "documents": "ticketNumber bookingReference loyaltyNumber",
     "excluded": ""
   },
   "BusJourneyCompanion": {
     "details": "",
     "costs": "",
-    "personal": "busJourneyId companionId position",
+    "personal": "busJourneyId companionId position seatNumber seatClass factsSource",
     "photos": "",
-    "documents": "",
+    "documents": "ticketNumber bookingReference loyaltyNumber",
     "excluded": ""
   },
   "RentalBookingCompanion": {
     "details": "",
     "costs": "",
-    "personal": "rentalBookingId companionId position",
+    "personal": "rentalBookingId companionId position isDriver factsSource",
     "photos": "",
-    "documents": "",
+    "documents": "bookingReference loyaltyNumber",
     "excluded": ""
   },
   "FerryJourneyCompanion": {
     "details": "",
     "costs": "",
-    "personal": "ferryJourneyId companionId position",
+    "personal": "ferryJourneyId companionId position seatNumber seatClass factsSource",
     "photos": "",
-    "documents": "",
+    "documents": "ticketNumber bookingReference loyaltyNumber",
     "excluded": ""
   },
   "Document": {
@@ -453,6 +453,14 @@
     "personal": "",
     "photos": "",
     "documents": "",
+    "excluded": ""
+  },
+  "LodgingStayCompanion": {
+    "details": "",
+    "costs": "",
+    "personal": "lodgingStayId companionId position factsSource",
+    "photos": "",
+    "documents": "bookingReference loyaltyNumber",
     "excluded": ""
   }
 }

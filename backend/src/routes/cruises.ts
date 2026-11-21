@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import { syncCompanionLinks } from "../services/companions/travellerFacts";
 import { z } from "zod";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
@@ -26,7 +27,7 @@ import {
 import { cruiseExternalRef } from "../services/importProvenance";
 import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from "../shared/statusDerivation";
 import { recomputeTripStatus } from "../services/tripStatusService";
-import { resolveCompanions, linkRowsFor } from "../services/companionService";
+import { resolveCompanions } from "../services/companionService";
 import { getBaseCurrency } from "../services/fx/snapshot";
 import { refreshFxOnEdit } from "../services/fx/refreshOnEdit";
 import logger from "../utils/logger";
@@ -498,16 +499,12 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const updated = await prisma.$transaction(async (tx) => {
       const before = await shareSnapshot(tx, "cruise", existing.id);
       if (resolvedCompanionsForUpdate !== undefined) {
-        await tx.cruiseCompanion.deleteMany({ where: { cruiseId: existing.id } });
-        if (resolvedCompanionsForUpdate.length > 0) {
-          await tx.cruiseCompanion.createMany({
-            data: linkRowsFor(resolvedCompanionsForUpdate.map((c) => c.id)).map((row) => ({
-              ...row,
-              cruiseId: existing.id,
-            })),
-            skipDuplicates: true,
-          });
-        }
+        await syncCompanionLinks(
+          tx,
+          "cruise",
+          existing.id,
+          resolvedCompanionsForUpdate.map((c) => c.id)
+        );
       }
 
       await tx.cruise.update({

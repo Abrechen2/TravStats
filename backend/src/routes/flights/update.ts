@@ -3,6 +3,7 @@
  * ratchet, forgejo#386 REF-16); the handler is unchanged.
  */
 
+import { syncCompanionLinks } from "../../services/companions/travellerFacts";
 import { Response, NextFunction } from "express";
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
@@ -26,7 +27,7 @@ import { airlineCodeUpdate } from "../../utils/airlineCodeUpdate";
 import { normalizeAircraft } from "../../utils/aircraftNormalize";
 import { calculateNextApiCheckAt } from "../../utils/smartCheckSchedule";
 import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from "../../shared/statusDerivation";
-import { resolveCompanions, linkRowsFor } from "../../services/companionService";
+import { resolveCompanions } from "../../services/companionService";
 import { flightOwnAmount, getBaseCurrency } from "../../services/fx/snapshot";
 import { refreshFxOnEdit } from "../../services/fx/refreshOnEdit";
 import { enrichFlightsForClients } from "../../services/flightAirportFacts";
@@ -368,16 +369,12 @@ export async function updateFlightHandler(
 
     const flight = await prisma.$transaction(async (tx) => {
       if (resolvedCompanionsForUpdate !== undefined) {
-        await tx.flightCompanion.deleteMany({ where: { flightId: existingFlight.id } });
-        if (resolvedCompanionsForUpdate.length > 0) {
-          await tx.flightCompanion.createMany({
-            data: linkRowsFor(resolvedCompanionsForUpdate.map((c) => c.id)).map((row) => ({
-              ...row,
-              flightId: existingFlight.id,
-            })),
-            skipDuplicates: true,
-          });
-        }
+        await syncCompanionLinks(
+          tx,
+          "flight",
+          existingFlight.id,
+          resolvedCompanionsForUpdate.map((c) => c.id)
+        );
       }
 
       const before = await shareSnapshot(tx, "flight", id);

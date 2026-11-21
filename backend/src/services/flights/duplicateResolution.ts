@@ -1,10 +1,11 @@
 import type { Flight } from "../../prisma";
 
+import { syncCompanionLinks } from "../companions/travellerFacts";
 import { propagateWrite, shareSnapshot } from "../sharing/propagate";
 import { prisma } from "../../db";
 import type { CreateFlightInput } from "../../schemas/flight";
 import { buildFlightMergePatch, type MergeableField } from "../../utils/flightMerge";
-import { linkRowsFor, resolveCompanions } from "../companionService";
+import { resolveCompanions } from "../companionService";
 
 /**
  * Deciding whether an incoming flight is one the user already has, and — when
@@ -151,16 +152,12 @@ async function mergeInto(
       : await prisma.$transaction(async (tx) => {
           const before = await shareSnapshot(tx, "flight", existing.id);
           if (resolved !== undefined) {
-            await tx.flightCompanion.deleteMany({ where: { flightId: existing.id } });
-            if (resolved.length > 0) {
-              await tx.flightCompanion.createMany({
-                data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
-                  ...row,
-                  flightId: existing.id,
-                })),
-                skipDuplicates: true,
-              });
-            }
+            await syncCompanionLinks(
+              tx,
+              "flight",
+              existing.id,
+              resolved.map((c) => c.id)
+            );
           }
           const merged = await tx.flight.update({
             where: { id: existing.id },

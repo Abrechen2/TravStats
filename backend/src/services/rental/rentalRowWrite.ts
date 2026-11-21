@@ -1,4 +1,5 @@
 import { fileReceipts } from "../documents/documentService";
+import { syncCompanionLinks } from "../companions/travellerFacts";
 import { prisma } from "../../db";
 import { propagateWrite, shareSnapshot } from "../sharing/propagate";
 import { Prisma } from "../../prisma";
@@ -312,16 +313,12 @@ export async function updateRentalRow(
   const row = await prisma.$transaction(async (tx) => {
     const before = await shareSnapshot(tx, "rental", existing.id);
     if (resolved !== undefined) {
-      await tx.rentalBookingCompanion.deleteMany({ where: { rentalBookingId: existing.id } });
-      if (resolved.length > 0) {
-        await tx.rentalBookingCompanion.createMany({
-          data: linkRowsFor(resolved.map((c) => c.id)).map((link) => ({
-            ...link,
-            rentalBookingId: existing.id,
-          })),
-          skipDuplicates: true,
-        });
-      }
+      await syncCompanionLinks(
+        tx,
+        "rentalBooking",
+        existing.id,
+        resolved.map((c) => c.id)
+      );
     }
     await tx.rentalBooking.update({
       where: { id: existing.id },

@@ -15,6 +15,7 @@ import {
   type LinkProvenance,
   type LinkRole,
 } from "./documentLinks";
+import { autoAssignInTx } from "./documentCompanions";
 import { describeEntries, entryKey, type EntryInfo } from "./entryRefs";
 
 /**
@@ -42,6 +43,9 @@ export interface EntryLinkInfo {
   evidenceFrom: EvidenceFrom | null;
   /** How many entries the document is linked to, this one included. */
   linkCount: number;
+  /** Plan D7: who it is for at THIS entry; null = the owner / the whole group. */
+  forCompanion: { id: string; displayName: string; source: "user" | "auto" | null } | null;
+  forSource: "user" | "auto" | null;
 }
 
 export interface LinkView {
@@ -51,6 +55,9 @@ export interface LinkView {
   rentalCategory: string | null;
   createdAt: string;
   entry: EntryInfo;
+  /** Plan D7: the person this link is for; null = the owner / the whole group. */
+  companion: { id: string; displayName: string } | null;
+  companionSource: "user" | "auto" | null;
 }
 
 function targetWhere(entry: EntryRef): Record<string, string> {
@@ -77,7 +84,12 @@ export async function listEntryDocuments(
   const documents = await prisma.document.findMany({
     where: { userId, OR: [{ [column]: entry.id }, { links: { some: { [column]: entry.id } } }] },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-    include: { links: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] } },
+    include: {
+      links: {
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        include: { companion: { select: { id: true, displayName: true } } },
+      },
+    },
   });
 
   const primaries = new Map<string, EntryRef>();
@@ -109,6 +121,11 @@ export async function listEntryDocuments(
         linkRole: role,
         evidenceFrom: primaryRef ? toEvidence(info.get(entryKey(primaryRef))) : null,
         linkCount: Math.max(links.length, 1),
+        forCompanion:
+          here?.companion != null
+            ? { ...here.companion, source: here.companionSource as "user" | "auto" | null }
+            : null,
+        forSource: (here?.companionSource as "user" | "auto" | null | undefined) ?? null,
       },
     };
   });
@@ -118,7 +135,12 @@ export async function listEntryDocuments(
 export async function listDocumentLinks(userId: string, documentId: string): Promise<LinkView[]> {
   const document = await prisma.document.findFirst({
     where: { id: documentId, userId },
-    include: { links: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] } },
+    include: {
+      links: {
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        include: { companion: { select: { id: true, displayName: true } } },
+      },
+    },
   });
   if (!document) throw new AppError("Document not found", 404, "DOCUMENT_NOT_FOUND");
   const refs = document.links.flatMap((l) => {
@@ -138,6 +160,8 @@ export async function listDocumentLinks(userId: string, documentId: string): Pro
             rentalCategory: link.rentalCategory,
             createdAt: link.createdAt.toISOString(),
             entry,
+            companion: link.companion,
+            companionSource: link.companionSource as "user" | "auto" | null,
           },
         ]
       : [];
@@ -184,7 +208,9 @@ export async function addLinks(
       }
     }
     for (const item of items) await insertLink(tx, documentId, item);
-    return projectPrimary(tx, documentId);
+    const projected = await projectPrimary(tx, documentId);
+    await autoAssignInTx(tx, userId, documentId);
+    return projected;
   });
 }
 
@@ -224,6 +250,7 @@ export async function addMissingLinksInTx(
     written += 1;
   }
   await projectPrimary(tx, documentId);
+  if (written > 0) await autoAssignInTx(tx, userId, documentId);
   return written;
 }
 

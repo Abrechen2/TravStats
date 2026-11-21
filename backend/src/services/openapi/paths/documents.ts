@@ -11,6 +11,8 @@ import { registry } from "../registry";
 import { errorContent } from "./shared";
 import {
   addDocumentLinksSchema,
+  assignLinkCompanionSchema,
+  linkCompanionResultSchema,
   documentDtoSchema,
   documentLinkViewSchema,
   entryDocumentDtoSchema,
@@ -28,6 +30,11 @@ import {
   unfiledDocumentsResponseSchema,
   updateDocumentSchema,
 } from "../../../schemas/document";
+import {
+  travellerFactsBodySchema,
+  travellerRowSchema,
+  travellersQuerySchema,
+} from "../../../schemas/entryTravellers";
 import { ENTRY_TYPES, type EntryType } from "../../documents/documentFormats";
 
 const documentDto = registry.register("Document", documentDtoSchema.openapi("Document"));
@@ -417,5 +424,74 @@ registry.registerPath({
       description: "`DOCUMENT_NOT_FOUND` or `DOCUMENT_LINK_NOT_FOUND`",
       content: errorContent,
     },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/documents/{id}/links/companion",
+  summary: "Who a document is for at ONE entry",
+  description:
+    "Plan D7. The person lives on the link: a boarding pass is one traveller's on the entry it " +
+    "covers. `companionId: null` = the owner or the whole group. The result is `user` either " +
+    "way, so a later parse never overrules the choice; a parse assigns only undecided links " +
+    "(`auto`, from a passenger name matching exactly one person). The companion must be the " +
+    "caller's own (`COMPANION_NOT_FOUND`); a link never grants access.",
+  tags,
+  request: { params: idParams, body: { content: json(assignLinkCompanionSchema) } },
+  responses: {
+    200: { description: "The link's person", content: json(envelope(linkCompanionResultSchema)) },
+    400: badInput,
+    404: {
+      description: "`DOCUMENT_NOT_FOUND`, `DOCUMENT_LINK_NOT_FOUND` or `COMPANION_NOT_FOUND`",
+      content: errorContent,
+    },
+  },
+});
+
+const travellerRow = registry.register(
+  "EntryTraveller",
+  travellerRowSchema.openapi("EntryTraveller")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/entry-travellers",
+  summary: "The companions on an entry with their own facts and documents",
+  description:
+    "Plan D7. Seat, class, ticket number, booking reference and loyalty number per companion " +
+    "(a cabin on a cruise, a driver flag on a rental; a stay only the last two). `facts` holds " +
+    "the type's fields, null = not recorded; `factsSource` says whether a parse (`auto`) or the " +
+    "user set them. The owner's own values stay on the entry. `documents` are those assigned " +
+    "to the person on this entry.",
+  tags,
+  request: { query: travellersQuerySchema },
+  responses: {
+    200: {
+      description: "Travellers, in the entry's order",
+      content: json(envelope(z.array(travellerRow))),
+    },
+    400: { description: "Invalid input or `TRAVELLERS_UNSUPPORTED`", content: errorContent },
+    404: { description: "Not your entry (`DOCUMENT_ENTRY_NOT_FOUND`)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/entry-travellers/{companionId}",
+  summary: "Set one companion's facts on an entry",
+  description:
+    "A patch: fields left out stay; null or an empty string clears one. Only the entry type's " +
+    "own fields are accepted (`TRAVELLER_FACT_INVALID`). The companion must be on the entry " +
+    "(`TRAVELLER_NOT_FOUND`) — facts never add a person to an entry.",
+  tags,
+  request: {
+    params: z.object({ companionId: uuid }),
+    body: { content: json(travellerFactsBodySchema) },
+  },
+  responses: {
+    200: { description: "The traveller now", content: json(envelope(travellerRow)) },
+    400: badInput,
+    404: { description: "Not your entry, or the traveller is not on it", content: errorContent },
   },
 });

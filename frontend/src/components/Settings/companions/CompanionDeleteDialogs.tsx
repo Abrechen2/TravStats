@@ -47,10 +47,18 @@ export function CompanionDeleteDialog({
   const { busy, run, t } = useConfirm(onDone);
   const dialog = useDialogCopy();
   const name = companion.name;
+  const documents = companion.documents ?? 0;
+  const copy = dialog("companiondel", { name });
   return (
     <ConfirmDialog
       open
-      {...dialog("companiondel", { name })}
+      {...copy}
+      // Their documents stay; they become the owner's (plan D7), and the dialog says so first.
+      after={
+        documents > 0
+          ? `${t(`${NS}.delete.documentsAfter`, { count: documents })} ${copy.after}`
+          : copy.after
+      }
       busy={busy}
       onCancel={onClose}
       onConfirm={() =>

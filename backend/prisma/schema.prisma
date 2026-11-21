@@ -3463,8 +3463,9 @@ model LodgingStay {
   /// Roadtrip stations that slept here. The stay does not own them.
   roadtripStations TripStop[]
 
-  documents     Document[]
-  documentLinks DocumentLink[]
+  documents      Document[]
+  documentLinks  DocumentLink[]
+  companionLinks LodgingStayCompanion[]
 
   /// Public single-entry links to this record (forgejo#405).
   publicShareLinks PublicShareLink[]
@@ -4208,17 +4209,20 @@ model Companion {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  linkedUser   User?                    @relation("CompanionLinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
-  flights      FlightCompanion[]
-  trips        TripCompanion[]
-  cruises      CruiseCompanion[]
-  rail         RailJourneyCompanion[]
-  bus          BusJourneyCompanion[]
-  ferry        FerryJourneyCompanion[]
-  rentals      RentalBookingCompanion[]
+  user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedUser    User?                    @relation("CompanionLinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
+  flights       FlightCompanion[]
+  trips         TripCompanion[]
+  cruises       CruiseCompanion[]
+  rail          RailJourneyCompanion[]
+  bus           BusJourneyCompanion[]
+  ferry         FerryJourneyCompanion[]
+  rentals       RentalBookingCompanion[]
+  stays         LodgingStayCompanion[]
+  /// Documents assigned to this person on an entry (document-links D7).
+  documentLinks DocumentLink[]
   /// Expenses this companion paid (forgejo#150).
-  expensesPaid TripExpense[]
+  expensesPaid  TripExpense[]
 
   @@unique([userId, canonicalName])
   /// One companion per linked account and owner — two names for the same
@@ -4234,12 +4238,41 @@ model FlightCompanion {
   companionId String @map("companion_id")
   position    Int
 
+  /// Per-traveller facts (document-links D7). Null = not recorded; the owner's
+  /// own values stay on the entry. `facts_source`: user | auto (a parse set them).
+  seatNumber       String? @map("seat_number")
+  seatClass        String? @map("seat_class")
+  ticketNumber     String? @map("ticket_number")
+  bookingReference String? @map("booking_reference")
+  loyaltyNumber    String? @map("loyalty_number")
+  factsSource      String? @map("facts_source")
+
   flight    Flight    @relation(fields: [flightId], references: [id], onDelete: Cascade)
   companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
 
   @@id([flightId, companionId])
   @@index([companionId])
   @@map("flight_companions")
+}
+
+/// A traveller's own facts on a lodging stay (document-links D7). WHO is on the
+/// stay is still `LodgingStay.companions` (text); a row exists only once a fact
+/// is recorded for that person.
+model LodgingStayCompanion {
+  lodgingStayId String @map("lodging_stay_id")
+  companionId   String @map("companion_id")
+  position      Int    @default(0)
+
+  bookingReference String? @map("booking_reference")
+  loyaltyNumber    String? @map("loyalty_number")
+  factsSource      String? @map("facts_source")
+
+  lodgingStay LodgingStay @relation(fields: [lodgingStayId], references: [id], onDelete: Cascade)
+  companion   Companion   @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  @@id([lodgingStayId, companionId])
+  @@index([companionId])
+  @@map("lodging_stay_companions")
 }
 
 model TripCompanion {
@@ -4259,6 +4292,12 @@ model CruiseCompanion {
   cruiseId    String @map("cruise_id")
   companionId String @map("companion_id")
   position    Int
+
+  /// Per-traveller facts (document-links D7); null = not recorded.
+  cabin            String? @map("cabin")
+  bookingReference String? @map("booking_reference")
+  loyaltyNumber    String? @map("loyalty_number")
+  factsSource      String? @map("facts_source")
 
   cruise    Cruise    @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
   companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
@@ -4581,15 +4620,22 @@ model DocumentLink {
   tripExpenseId   String? @map("trip_expense_id")
 
   /// primary | covers (`document_links_role_check`).
-  role           String
+  role            String
   /// How the link came to be: user | parser | suggestion | legacy
   /// (`document_links_provenance_check`).
-  provenance     String
+  provenance      String
   /// What a rental's evidence shows (forgejo#239), on the rental link it
   /// describes: pickup | return | damage | fuel | odometer. Null elsewhere.
-  rentalCategory String?  @map("rental_category")
-  createdAt      DateTime @default(now()) @map("created_at")
+  rentalCategory  String?  @map("rental_category")
+  /// The person this document is for ON this entry (D7): a boarding pass is one
+  /// traveller's. Null = the owner / the whole group. SetNull keeps the link
+  /// when the companion goes.
+  companionId     String?  @map("companion_id")
+  /// user | auto (set from a parsed passenger name). Null while unassigned.
+  companionSource String?  @map("companion_source")
+  createdAt       DateTime @default(now()) @map("created_at")
 
+  companion     Companion?     @relation(fields: [companionId], references: [id], onDelete: SetNull)
   document      Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
   flight        Flight?        @relation(fields: [flightId], references: [id], onDelete: Cascade)
   cruise        Cruise?        @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
@@ -4614,6 +4660,7 @@ model DocumentLink {
   @@unique([documentId, tripExpenseId])
   /// At most one primary per document.
   @@unique([documentId], map: "document_links_one_primary_key", where: raw("role = 'primary'"))
+  @@index([companionId])
   @@index([flightId])
   @@index([cruiseId])
   @@index([lodgingStayId])
@@ -4820,6 +4867,15 @@ model RailJourneyCompanion {
   companionId   String @map("companion_id")
   position      Int
 
+  /// Per-traveller facts (document-links D7). Null = not recorded; the owner's
+  /// own values stay on the entry. `facts_source`: user | auto (a parse set them).
+  seatNumber       String? @map("seat_number")
+  seatClass        String? @map("seat_class")
+  ticketNumber     String? @map("ticket_number")
+  bookingReference String? @map("booking_reference")
+  loyaltyNumber    String? @map("loyalty_number")
+  factsSource      String? @map("facts_source")
+
   railJourney RailJourney @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
   companion   Companion   @relation(fields: [companionId], references: [id], onDelete: Cascade)
 
@@ -4937,6 +4993,15 @@ model BusJourneyCompanion {
   busJourneyId String @map("bus_journey_id")
   companionId  String @map("companion_id")
   position     Int
+
+  /// Per-traveller facts (document-links D7). Null = not recorded; the owner's
+  /// own values stay on the entry. `facts_source`: user | auto (a parse set them).
+  seatNumber       String? @map("seat_number")
+  seatClass        String? @map("seat_class")
+  ticketNumber     String? @map("ticket_number")
+  bookingReference String? @map("booking_reference")
+  loyaltyNumber    String? @map("loyalty_number")
+  factsSource      String? @map("facts_source")
 
   busJourney BusJourney @relation(fields: [busJourneyId], references: [id], onDelete: Cascade)
   companion  Companion  @relation(fields: [companionId], references: [id], onDelete: Cascade)
@@ -5142,6 +5207,12 @@ model RentalBookingCompanion {
   rentalBookingId String @map("rental_booking_id")
   companionId     String @map("companion_id")
   position        Int
+
+  /// Per-traveller facts (document-links D7); null = not recorded.
+  isDriver         Boolean? @map("is_driver")
+  bookingReference String?  @map("booking_reference")
+  loyaltyNumber    String?  @map("loyalty_number")
+  factsSource      String?  @map("facts_source")
 
   rentalBooking RentalBooking @relation(fields: [rentalBookingId], references: [id], onDelete: Cascade)
   companion     Companion     @relation(fields: [companionId], references: [id], onDelete: Cascade)
@@ -5800,6 +5871,15 @@ model FerryJourneyCompanion {
   ferryJourneyId String @map("ferry_journey_id")
   companionId    String @map("companion_id")
   position       Int
+
+  /// Per-traveller facts (document-links D7). Null = not recorded; the owner's
+  /// own values stay on the entry. `facts_source`: user | auto (a parse set them).
+  seatNumber       String? @map("seat_number")
+  seatClass        String? @map("seat_class")
+  ticketNumber     String? @map("ticket_number")
+  bookingReference String? @map("booking_reference")
+  loyaltyNumber    String? @map("loyalty_number")
+  factsSource      String? @map("facts_source")
 
   ferryJourney FerryJourney @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
   companion    Companion    @relation(fields: [companionId], references: [id], onDelete: Cascade)

@@ -43,7 +43,8 @@ describe("document link targets", () => {
           WHERE tc.table_name = ${table} AND tc.constraint_type = 'FOREIGN KEY'`
       )
         .map((r) => r.column_name)
-        .filter((c) => !["document_id", "user_id"].includes(c))
+        // companion_id is the person a link is FOR (D7), not an entry it targets.
+        .filter((c) => !["document_id", "user_id", "companion_id"].includes(c))
         .sort();
     const registered = ENTRY_TYPES.map((t) => snake(LINK_TARGETS[t].column)).sort();
     expect(await fks("document_links")).toEqual(registered);
