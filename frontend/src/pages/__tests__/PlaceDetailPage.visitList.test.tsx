@@ -80,6 +80,7 @@ vi.mock("../../components/places/VisitPhotoSuggestions", () => ({
 }));
 // Stands in for an upload that went through: the real section calls
 // `onChanged` after one (its own tests pin that).
+vi.mock("../../components/places/VisitExpenses", () => ({ VisitExpenses: () => null }));
 vi.mock("../../components/documents/DocumentsSection", () => ({
   default: ({ entry, onChanged }: { entry: { id: string }; onChanged?: () => void }) => (
     <div data-testid={`documents-${entry.id}`}>

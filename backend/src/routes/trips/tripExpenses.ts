@@ -1,5 +1,6 @@
 import { Router, Response, NextFunction } from "express";
 
+import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { createExpenseSchema, updateExpenseSchema } from "../../schemas/expense";
 import { takeDocumentIds } from "../../services/documents/documentService";
@@ -9,6 +10,7 @@ import {
   deleteExpense,
   findExpense,
   listExpenses,
+  listVisitExpenses,
   updateExpense,
   type ExpenseScope,
 } from "../../services/expenses/expenseStore";
@@ -173,5 +175,65 @@ for (const { base, resolve } of FAMILIES) {
     }
   );
 }
+
+/**
+ * `GET /places/visits/:id/expenses` (forgejo#429) — what was paid at one place
+ * visit. Same answer shape as the trip list: each item keeps its own currency
+ * and `totals` is per currency, never a sum across them. Counting these in a
+ * trip total is the trip's job and happens once, by the expense's trip/section
+ * — this list only filters.
+ */
+router.get(
+  "/places/visits/:id/expenses",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const [rows, base] = await Promise.all([
+        listVisitExpenses(userId, req.params.id),
+        getBaseCurrency(userId),
+      ]);
+      const expenses = rows.map(toExpenseDto);
+      res.json({
+        expenses,
+        totals: sumByCurrency(expenses),
+        baseTotal: baseTotal(expenses.map(baseConvertible), base),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * `GET /trips/:id/place-visits` (forgejo#429) — the trip's place visits, as
+ * far as the expense form needs them: the scope it can offer. Dated ones by
+ * day, undated last.
+ */
+router.get(
+  "/trips/:id/place-visits",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const trip = await resolveTrip(userId, req.params.id);
+      const rows = await prisma.placeVisit.findMany({
+        where: { userId, tripId: trip.id },
+        select: { id: true, place: { select: { name: true } } },
+        orderBy: [{ visitedAt: { sort: "asc", nulls: "last" } }, { id: "asc" }],
+      });
+      res.json({
+        visits: rows.map((v) => ({
+          id: v.id,
+          placeName: v.place.name,
+        })),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 export default router;

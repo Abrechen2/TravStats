@@ -911,6 +911,10 @@
       "wider": "Widen to {{radius}}"
     }
   },
+  "visitCosts": {
+    "title": "Costs at this visit",
+    "loadFailed": "Costs could not be loaded."
+  },
   "visitList": {
     "filterLabel": "Filter visits",
     "filterAll": "All",

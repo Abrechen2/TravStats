@@ -822,6 +822,8 @@
       "date": "Date",
       "dateHint": "Leave empty if the day is not known.",
       "station": "Station",
+      "visit": "Visit",
+      "visitNone": "None — not tied to a visit",
       "stationNone": "None — applies to the whole roadtrip",
       "stationOrLeg": "Station or leg",
       "groupStations": "Stations",

@@ -8,6 +8,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import type { PlaceVisit } from "../../types/place";
 import type { VisitEntry } from "./placeVisitListModel";
+import { VisitExpenses } from "./VisitExpenses";
 import { VisitPhotoStrip } from "./VisitPhotoStrip";
 
 interface Props {
@@ -191,6 +192,7 @@ export function PlaceVisitRow({
             layout="inline"
             onChanged={onChanged}
           />
+          <VisitExpenses visitId={visit.id} />
           {/* A visit that has not happened can be shared too: "wir treffen uns hier". */}
           <div>
             <ShareLinkButton kind="visit" targetId={visit.id} variant="link" />

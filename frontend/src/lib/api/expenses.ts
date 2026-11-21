@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { ExpenseInput, ExpenseWriteResult } from "../../types/expense";
+import type { ExpenseInput, ExpenseWriteResult, TripExpense } from "../../types/expense";
 
 /**
  * A roadtrip's expenses (forgejo#140). The trip-wide family
@@ -7,6 +7,24 @@ import type { ExpenseInput, ExpenseWriteResult } from "../../types/expense";
  * roadtrip page only, so this client covers that one.
  */
 export const expensesApi = {
+  /** The trip's place visits, offered as an expense's scope (forgejo#429). */
+  visitsOfTrip: async (tripId: string): Promise<Array<{ id: string; placeName: string }>> => {
+    const { data } = await api.get<{
+      visits: Array<{ id: string; placeName: string }>;
+    }>(`/trips/${tripId}/place-visits`);
+    return data.visits;
+  },
+
+  /** What was paid at one visit; each item keeps its currency, `totals` are per currency. */
+  forVisit: async (
+    visitId: string
+  ): Promise<{ expenses: TripExpense[]; totals: Record<string, number> }> => {
+    const { data } = await api.get<{ expenses: TripExpense[]; totals: Record<string, number> }>(
+      `/places/visits/${visitId}/expenses`
+    );
+    return data;
+  },
+
   /**
    * The stored expense AND `fxSnapshot` — what became of its exchange rate.
    * A `lookupFailed` is a saved expense that counts in its own currency only,

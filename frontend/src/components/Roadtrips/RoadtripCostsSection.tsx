@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
 import Button from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import ExpenseDialog from "./ExpenseDialog";
+import { expensesApi } from "../../lib/api/expenses";
+import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { formatCurrency } from "../../lib/units";
@@ -59,11 +61,14 @@ export function baseTotalState(
 export default function RoadtripCostsSection({
   roadtripId,
   stations,
+  tripId = null,
   expenses,
   costs,
   onChanged,
 }: {
   roadtripId: string;
+  /** The roadtrip's trip, whose place visits the expense form offers as scope (forgejo#429). */
+  tripId?: string | null;
   stations: readonly RoadtripStation[];
   expenses: readonly TripExpense[];
   costs: RoadtripCosts;
@@ -73,6 +78,23 @@ export default function RoadtripCostsSection({
   const display = useDisplayFormat();
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const [editing, setEditing] = useState<TripExpense | "new" | null>(null);
+  const [visits, setVisits] = useState<Array<{ id: string; label: string }>>([]);
+  useEffect(() => {
+    if (!tripId) return;
+    let live = true;
+    expensesApi
+      .visitsOfTrip(tripId)
+      .then((rows) => {
+        if (live) setVisits(rows.map((v) => ({ id: v.id, label: v.placeName })));
+      })
+      .catch((err: unknown) => {
+        // Optional scope: the form still saves without it, so no toast.
+        logger.warn("expense visit scope not loaded", err);
+      });
+    return () => {
+      live = false;
+    };
+  }, [tripId]);
 
   const titleOf = (id: string | null): string =>
     stations.find((s) => s.id === id)?.title ?? t("roadtrips:costs.removedStation");
@@ -200,6 +222,7 @@ export default function RoadtripCostsSection({
         <ExpenseDialog
           roadtripId={roadtripId}
           stations={stations}
+          visits={visits}
           expense={editing === "new" ? null : editing}
           defaultCurrency={defaultCurrency}
           onClose={() => setEditing(null)}

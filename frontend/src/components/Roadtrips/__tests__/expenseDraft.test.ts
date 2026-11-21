@@ -20,6 +20,7 @@ const stored = (over: Partial<TripExpense> = {}): TripExpense => ({
   stopId: null,
   legFromStopId: null,
   legToStopId: null,
+  placeVisitId: null,
   kind: "ferry",
   amount: 890,
   currency: "NOK",
@@ -128,5 +129,25 @@ describe("expenseDraft — payer and rate (forgejo#150)", () => {
     for (const quiet of ["supplied", "snapshotted", "unchanged", "undated", "removed"] as const) {
       expect(fxOutcomeNotice(quiet)).toBeNull();
     }
+  });
+});
+
+describe("expenseDraft — place visit scope (forgejo#429)", () => {
+  const base = expenseDraft(stored(), "EUR");
+
+  it("sends placeVisitId on create only when a visit is chosen", () => {
+    expect(createBody(base, CONTEXT)).not.toHaveProperty("placeVisitId");
+    expect(createBody({ ...base, placeVisitId: "v1" }, CONTEXT).placeVisitId).toBe("v1");
+  });
+
+  it("patches the scope when it changes and clears it with null", () => {
+    expect(editPatch(base, { ...base, placeVisitId: "v1" }, VERSION, CONTEXT)).toMatchObject({
+      placeVisitId: "v1",
+    });
+    const scoped = expenseDraft(stored({ placeVisitId: "v1" }), "EUR");
+    expect(editPatch(scoped, { ...scoped, placeVisitId: "" }, VERSION, CONTEXT)).toMatchObject({
+      placeVisitId: null,
+    });
+    expect(editPatch(scoped, { ...scoped }, VERSION, CONTEXT)).toBeNull();
   });
 });

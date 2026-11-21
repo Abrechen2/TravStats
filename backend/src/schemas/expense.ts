@@ -45,6 +45,18 @@ const expenseFields = {
     }),
   legFromStopId: z.string().uuid().nullable().optional(),
   legToStopId: z.string().uuid().nullable().optional(),
+  placeVisitId: z
+    .string()
+    .uuid()
+    .nullable()
+    .optional()
+    .openapi({
+      description:
+        "Optional place visit (forgejo#429) this cost was paid at — an entry fee, a guide. " +
+        "Must be the caller's visit on the same trip as the expense. The expense stays on " +
+        "its trip or section, so totals count it once; deleting the visit clears this " +
+        "field and keeps the expense. Null clears it; absent leaves it alone.",
+    }),
   payer: z
     .union([
       z.object({ companionId: z.string().uuid() }).strict(),
@@ -146,6 +158,7 @@ export const updateExpenseSchema = z
     stopId: expenseFields.stopId,
     legFromStopId: expenseFields.legFromStopId,
     legToStopId: expenseFields.legToStopId,
+    placeVisitId: expenseFields.placeVisitId,
     payer: expenseFields.payer,
     fx: expenseFields.fx,
   })
@@ -180,6 +193,9 @@ export const expenseSchema = z
     stopId: z.string().uuid().nullable(),
     legFromStopId: z.string().uuid().nullable(),
     legToStopId: z.string().uuid().nullable(),
+    placeVisitId: z.string().uuid().nullable().openapi({
+      description: "The place visit it was paid at (forgejo#429), or null.",
+    }),
     kind: z.enum(EXPENSE_KINDS),
     amount: z.number(),
     currency: z.string(),

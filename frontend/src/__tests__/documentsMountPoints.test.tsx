@@ -112,6 +112,7 @@ vi.mock("../hooks/useBetaFeatures", () => ({
   useBetaFeatures: () => ({ isFeatureVisible: () => false }),
   useBetaFeatureAccess: () => "denied",
 }));
+vi.mock("../components/places/VisitExpenses", () => ({ VisitExpenses: () => null }));
 vi.mock("../components/NavigationBar", () => ({ default: () => <div /> }));
 vi.mock("../components/FlightEditModal", () => ({ default: () => null }));
 vi.mock("../components/SpecialFlightModal", () => ({ default: () => null }));

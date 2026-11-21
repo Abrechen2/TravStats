@@ -74,17 +74,49 @@ export async function listEntryDocuments(
 ): Promise<Array<{ document: Document; link: EntryLinkInfo }>> {
   await assertEntryOwnedIn(prisma, userId, entry);
   const column = LINK_TARGETS[entry.type].column;
+  // A visit also shows the receipts of the expenses paid at it (forgejo#429),
+  // read live so a receipt added to the expense later appears without a link
+  // being written; they count as `covers`, evidence from the expense.
+  const expenseIds =
+    entry.type === "placeVisit"
+      ? (
+          await prisma.tripExpense.findMany({
+            where: { userId, placeVisitId: entry.id },
+            select: { id: true },
+          })
+        ).map((e) => e.id)
+      : [];
+  const ownLink = { [column]: entry.id };
   const documents = await prisma.document.findMany({
-    where: { userId, OR: [{ [column]: entry.id }, { links: { some: { [column]: entry.id } } }] },
+    where: {
+      userId,
+      OR: [
+        ownLink,
+        { links: { some: ownLink } },
+        ...(expenseIds.length > 0
+          ? [{ links: { some: { tripExpenseId: { in: expenseIds } } } }]
+          : []),
+      ],
+    },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     include: { links: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] } },
   });
+  const expenseSet = new Set(expenseIds);
+  /** The expense link that brings a document onto this visit, when it has no link of its own. */
+  const viaExpense = (links: (typeof documents)[number]["links"], doc: Document) =>
+    links.some((l) => l[column] === entry.id) || doc[column as keyof Document] === entry.id
+      ? undefined
+      : links.find((l) => l.tripExpenseId !== null && expenseSet.has(l.tripExpenseId));
 
   const primaries = new Map<string, EntryRef>();
   for (const doc of documents) {
     const here = doc.links.find((l) => l[column] === entry.id);
-    const role: LinkRole = here ? (here.role as LinkRole) : "primary";
-    if (role === "covers") {
+    const expenseLink = viaExpense(doc.links, doc);
+    const role: LinkRole = expenseLink ? "covers" : here ? (here.role as LinkRole) : "primary";
+    if (expenseLink) {
+      const ref = entryOfColumns(expenseLink);
+      if (ref) primaries.set(doc.id, ref);
+    } else if (role === "covers") {
       const primary = doc.links.find((l) => l.role === "primary");
       const ref = primary ? entryOfColumns(primary) : entryOfColumns(doc);
       if (ref) primaries.set(doc.id, ref);
@@ -94,7 +126,11 @@ export async function listEntryDocuments(
 
   return documents.map(({ links, ...document }) => {
     const here = links.find((l) => l[column] === entry.id);
-    const role: LinkRole = here ? (here.role as LinkRole) : "primary";
+    const role: LinkRole = viaExpense(links, document as Document)
+      ? "covers"
+      : here
+        ? (here.role as LinkRole)
+        : "primary";
     const primaryRef = primaries.get(document.id);
     return {
       // The category belongs to the link for THIS entry, not to the primary the

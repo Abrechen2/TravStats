@@ -172,3 +172,51 @@ for (const family of FAMILIES) {
     },
   });
 }
+
+registry.registerPath({
+  method: "get",
+  path: "/places/visits/{id}/expenses",
+  summary: "List the expenses paid at one place visit",
+  description:
+    "Expenses whose `placeVisitId` is this visit (forgejo#429). Each keeps its own currency; " +
+    "`totals` are per ISO 4217 code and NEVER summed across currencies. These expenses " +
+    "still sit on their trip or section, so a trip's cost total counts each once.",
+  tags: ["Expenses"],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "The expenses",
+      content: { "application/json": { schema: expenseListSchema } },
+    },
+    404: { description: "The visit is not the caller's", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/trips/{id}/place-visits",
+  summary: "List the place visits of a trip, for scoping an expense",
+  description:
+    "The visits an expense of this trip may name as `placeVisitId` (forgejo#429). " +
+    "Dated visits first, undated last.",
+  tags: ["Expenses"],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "The visits",
+      content: {
+        "application/json": {
+          schema: z.object({
+            visits: z.array(
+              z.object({
+                id: z.string().uuid(),
+                placeName: z.string(),
+              })
+            ),
+          }),
+        },
+      },
+    },
+    404: { description: "The trip is not the caller's", content: errorContent },
+  },
+});

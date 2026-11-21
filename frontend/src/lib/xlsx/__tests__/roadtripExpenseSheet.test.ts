@@ -17,6 +17,7 @@ const expense = (over: Partial<TripExpense>): TripExpense => ({
   stopId: null,
   legFromStopId: null,
   legToStopId: null,
+  placeVisitId: null,
   kind: "fuel",
   amount: 10,
   currency: "EUR",

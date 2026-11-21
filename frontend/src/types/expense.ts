@@ -13,6 +13,8 @@ export interface TripExpense {
   stopId: string | null;
   legFromStopId: string | null;
   legToStopId: string | null;
+  /** The place visit it was paid at (forgejo#429), or null. */
+  placeVisitId: string | null;
   kind: ExpenseKind;
   amount: number;
   currency: string;
@@ -108,6 +110,8 @@ export interface ExpenseInput {
   stopId?: string | null;
   legFromStopId?: string | null;
   legToStopId?: string | null;
+  /** A place visit of the same trip; null clears, absent leaves it alone (forgejo#429). */
+  placeVisitId?: string | null;
   /** A companion's id, or a plain name; null clears, absent leaves it alone. */
   payer?: { companionId: string } | { name: string } | null;
   /**

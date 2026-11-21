@@ -30,6 +30,8 @@ export interface ExpenseDraft {
   /** The way between two stations; both set, or both empty. Never together with `stopId`. */
   legFromStopId: string;
   legToStopId: string;
+  /** The place visit it was paid at (forgejo#429); empty = none. */
+  placeVisitId: string;
   note: string;
   payerMode: PayerMode;
   payerCompanionId: string;
@@ -63,6 +65,7 @@ export function expenseDraft(expense: TripExpense | null, defaultCurrency: strin
     stopId: expense?.stopId ?? "",
     legFromStopId: expense?.legFromStopId ?? "",
     legToStopId: expense?.legToStopId ?? "",
+    placeVisitId: expense?.placeVisitId ?? "",
     note: expense?.note ?? "",
     payerMode: !expense?.payer ? "none" : expense.payer.companionId ? "companion" : "name",
     payerCompanionId: expense?.payer?.companionId ?? "",
@@ -135,6 +138,7 @@ export function createBody(draft: ExpenseDraft, context: ExpenseWriteContext): E
       : draft.legFromStopId !== "" && draft.legToStopId !== ""
         ? { stopId: null, legFromStopId: draft.legFromStopId, legToStopId: draft.legToStopId }
         : { stopId: null, legFromStopId: null, legToStopId: null }),
+    ...(draft.placeVisitId !== "" ? { placeVisitId: draft.placeVisitId } : {}),
     ...(payer !== null ? { payer } : {}),
     ...(fx !== undefined ? { fx } : {}),
   };
@@ -170,6 +174,9 @@ export function editPatch(
     patch.stopId = full.stopId;
     patch.legFromStopId = full.legFromStopId;
     patch.legToStopId = full.legToStopId;
+  }
+  if (draft.placeVisitId !== initial.placeVisitId) {
+    patch.placeVisitId = draft.placeVisitId === "" ? null : draft.placeVisitId;
   }
   const payer = payerBody(draft);
   if (JSON.stringify(payer) !== JSON.stringify(payerBody(initial))) patch.payer = payer;
