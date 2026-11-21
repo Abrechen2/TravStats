@@ -212,6 +212,29 @@ describe("a booking as a package (forgejo#430)", () => {
     expect(res.body.split).toBeNull();
   });
 
+  it("changing the booking's items clears its split, so no stale share keeps counting", async () => {
+    await request(app)
+      .patch(`/api/v1/trips/bookings/${bookingId}`)
+      .set("Cookie", cookie)
+      .send({ price: 2870.96 })
+      .expect(200);
+    await request(app)
+      .put(`/api/v1/trips/bookings/${bookingId}/split`)
+      .set("Cookie", cookie)
+      .send({ method: "equal" })
+      .expect(200);
+    expect((await flightYear()).stats.packagedFlights).toBe(0);
+    // Swap: the rental leaves, nothing else changes count-wise for the flight.
+    await request(app)
+      .put(`/api/v1/trips/bookings/${bookingId}/entries`)
+      .set("Cookie", cookie)
+      .send({ rentalIds: [] })
+      .expect(200);
+    const stored = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
+    expect(stored.priceSplit).toBeNull();
+    expect((await flightYear()).stats.packagedFlights).toBe(1);
+  });
+
   it("a stranger's booking is not found", async () => {
     const other = await prisma.user.create({
       data: { username: `pkgb-x-${stamp}`, passwordHash: "x" },
