@@ -124,7 +124,8 @@
       "documentGone": "Das Dokument existiert nicht mehr.",
       "linkGone": "Die Verknüpfung besteht nicht mehr. Die Liste wurde neu geladen.",
       "candidatesFailed": "Die Einträge konnten nicht geladen werden.",
-      "demo": "Im Demo-Konto kann nichts verknüpft werden."
+      "demo": "Im Demo-Konto kann nichts verknüpft werden.",
+      "impactFailed": "Die betroffenen Einträge konnten nicht geladen werden. Gelöscht wird trotzdem überall."
     }
   }
 }

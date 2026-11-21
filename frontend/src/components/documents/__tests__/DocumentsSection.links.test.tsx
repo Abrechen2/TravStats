@@ -147,6 +147,32 @@ describe("DocumentsSection — links (D2)", () => {
     expect(api.remove).not.toHaveBeenCalled();
   });
 
+  it("keeps 'delete everywhere' unanswerable until the affected entries are known", async () => {
+    let resolve!: (v: never[]) => void;
+    api.links.mockReturnValue(new Promise<never[]>((r) => (resolve = r)));
+    render(<DocumentsSection entry={FLIGHT} />);
+    fireEvent.click(await screen.findByRole("button", { name: "documents:removeLabel" }));
+    // While the read is pending the confirm button is the disabled "processing" one.
+    expect(screen.queryByRole("button", { name: "common:buttons.delete" })).toBeNull();
+    resolve([]);
+    expect(await screen.findByRole("button", { name: "common:buttons.delete" })).toBeEnabled();
+  });
+
+  it("says so when the affected entries could not be read, instead of deleting blind", async () => {
+    api.links.mockRejectedValue(new Error("boom"));
+    render(<DocumentsSection entry={FLIGHT} />);
+    fireEvent.click(await screen.findByRole("button", { name: "documents:removeLabel" }));
+    expect(await screen.findByText(/documents:links\.errors\.impactFailed/)).toBeInTheDocument();
+  });
+
+  it("offers no category control on a covers row, which has none of its own", async () => {
+    api.listForEntry.mockResolvedValue([doc({ rentalCategory: "pickup" })]);
+    render(<DocumentsSection entry={{ type: "rentalBooking", id: "r1" }} rentalCategories />);
+    await screen.findByText("Rundreise.pdf");
+    expect(screen.queryByLabelText("documents:rentalCategory.rowLabel")).toBeNull();
+    expect(screen.getByTestId("documents-group-none")).toBeInTheDocument();
+  });
+
   describe("also link to …", () => {
     const open = async () => {
       render(<DocumentsSection entry={FLIGHT} />);

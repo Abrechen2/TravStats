@@ -159,6 +159,7 @@ export async function addLinks(
     if (!(await lockDocument(tx, userId, documentId))) {
       throw new AppError("Document not found", 404, "DOCUMENT_NOT_FOUND");
     }
+    await adoptLegacyPrimary(tx, documentId);
     const seen = new Set<string>();
     for (const item of items) {
       const key = entryKey(item.entry);
@@ -180,9 +181,33 @@ export async function addLinks(
   });
 }
 
+/**
+ * A document written by something that still sets only the old owner column has
+ * no link row yet. Give it the primary link that column describes (`legacy`)
+ * before another link is added or one removed, or `projectPrimary` would
+ * overwrite its original filing. Caller holds the document lock.
+ */
+async function adoptLegacyPrimary(tx: DbTransaction, documentId: string): Promise<void> {
+  if ((await tx.documentLink.count({ where: { documentId } })) > 0) return;
+  const document = await tx.document.findUniqueOrThrow({ where: { id: documentId } });
+  const owner = entryOfColumns(document);
+  if (!owner) return;
+  await tx.documentLink.create({
+    data: {
+      documentId,
+      ...targetColumns(owner),
+      role: "primary",
+      provenance: "legacy",
+      rentalCategory: owner.type === "rentalBooking" ? document.rentalCategory : null,
+    },
+  });
+}
+
 async function insertLink(tx: DbTransaction, documentId: string, item: NewLink): Promise<void> {
   const primary = await tx.documentLink.findFirst({ where: { documentId, role: "primary" } });
-  const role: LinkRole = item.role ?? (primary ? "covers" : "primary");
+  // A document with no primary takes the first link as its primary whatever was asked: a
+  // document linked only as `covers` would show no entry and lose its unfiled clock.
+  const role: LinkRole = primary ? (item.role ?? "covers") : "primary";
   if (role === "primary" && primary) {
     // A restored primary takes the role back; the one promoted meanwhile steps down.
     await tx.documentLink.update({ where: { id: primary.id }, data: { role: "covers" } });
@@ -220,6 +245,7 @@ export async function unlinkFromEntry(
     if (!(await lockDocument(tx, userId, documentId))) {
       throw new AppError("Document not found", 404, "DOCUMENT_NOT_FOUND");
     }
+    await adoptLegacyPrimary(tx, documentId);
     const link: DocumentLink | null = await tx.documentLink.findFirst({
       where: { documentId, ...targetWhere(entry) },
     });

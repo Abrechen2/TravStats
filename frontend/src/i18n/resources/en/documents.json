@@ -124,7 +124,8 @@
       "documentGone": "The document no longer exists.",
       "linkGone": "The link no longer exists. The list was reloaded.",
       "candidatesFailed": "The entries could not be loaded.",
-      "demo": "Nothing can be linked in the demo account."
+      "demo": "Nothing can be linked in the demo account.",
+      "impactFailed": "The affected entries could not be loaded. It is deleted everywhere all the same."
     }
   }
 }

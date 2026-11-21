@@ -268,6 +268,44 @@ describe("document links — reads and manual link/unlink (D2)", () => {
     );
   });
 
+  it("makes the first link primary even when 'covers' was asked, so an unfiled document is not left entry-less", async () => {
+    const doc = await keep("unfiled-covers");
+    const res = await post(`/documents/${doc.id}/links`, {
+      links: [{ entry: { type: "flight", id: flightId }, role: "covers" }],
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.data[0].role).toBe("primary");
+    expect(await prisma.document.findUnique({ where: { id: doc.id } })).toMatchObject({
+      flightId,
+      unlinkedAt: null,
+    });
+  });
+
+  it("keeps the original filing of a document that has an owner column but no link row yet", async () => {
+    const legacy = await prisma.document.create({
+      data: {
+        userId: ownerId,
+        storedName: `legacy-${stamp}.pdf`,
+        mimetype: "application/pdf",
+        sizeBytes: 1,
+        sha256: `legacy-${stamp}`,
+        format: "pdf",
+        flightId,
+      },
+    });
+    const res = await post(`/documents/${legacy.id}/links`, {
+      links: [{ entry: { type: "flight", id: flight2Id } }],
+    });
+    expect(res.status).toBe(201);
+    const roles = Object.fromEntries(
+      res.body.data.map((l: { entry: { id: string }; role: string }) => [l.entry.id, l.role])
+    );
+    expect(roles).toEqual({ [flightId]: "primary", [flight2Id]: "covers" });
+    expect(await prisma.document.findUnique({ where: { id: legacy.id } })).toMatchObject({
+      flightId,
+    });
+  });
+
   describe("no new visibility (plan rule 6)", () => {
     it("shows a trip member nothing of a covers-linked document: no row, no name, no link", async () => {
       const doc = await keep("secret-booking", { type: "trip", id: tripId });

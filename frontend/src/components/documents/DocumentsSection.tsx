@@ -133,6 +133,7 @@ export default function DocumentsSection({
   const [pendingDelete, setPendingDelete] = useState<TravelDocument | null>(null);
   /** Every entry the document to be deleted is linked to; null while unknown (loading or failed). */
   const [impact, setImpact] = useState<DocumentLinkView[] | null>(null);
+  const [impactFailed, setImpactFailed] = useState(false);
   const [linkTarget, setLinkTarget] = useState<TravelDocument | null>(null);
   const [tripDialog, setTripDialog] = useState(false);
   /** The last removal from this entry, which "Rückgängig" puts back. */
@@ -252,13 +253,17 @@ export default function DocumentsSection({
   // The dialog names every entry the delete reaches; a failed read leaves the base sentence.
   useEffect(() => {
     setImpact(null);
+    setImpactFailed(false);
     if (!pendingDelete) return;
     let live = true;
     documentsApi.links(pendingDelete.id).then(
       (links) => {
         if (live) setImpact(links);
       },
-      (err: unknown) => logger.warn({ err }, "DocumentsSection: delete impact unavailable")
+      (err: unknown) => {
+        logger.warn({ err }, "DocumentsSection: delete impact unavailable");
+        if (live) setImpactFailed(true);
+      }
     );
     return () => {
       live = false;
@@ -348,6 +353,7 @@ export default function DocumentsSection({
 
   const locked = isSharedDemo || demoRefused;
 
+  // A row's category control is the PRIMARY link's; a covers row has none of its own.
   const ROW_ACTIONS = [
     {
       key: "link",
@@ -403,7 +409,8 @@ export default function DocumentsSection({
             <ExtractValuesAction documentId={doc.id} target={extract} />
           </>
         )}
-        {rentalCategories && !locked && (
+        edit.
+        {rentalCategories && !locked && doc.linkRole !== "covers" && (
           <RentalCategorySelect
             id={`document-category-${doc.id}`}
             label={t("documents:rentalCategory.rowLabel", { name: doc.displayName })}
@@ -463,7 +470,9 @@ export default function DocumentsSection({
           <p className="t-caption">{t("documents:empty")}</p>
         )
       ) : rentalCategories ? (
-        groupByRentalCategory(documents).map((group) => (
+        groupByRentalCategory(
+          documents.map((d) => (d.linkRole === "covers" ? { ...d, rentalCategory: null } : d))
+        ).map((group) => (
           <section
             key={group.category ?? "none"}
             aria-label={t(`documents:rentalCategory.${group.category ?? "none"}`)}
@@ -587,7 +596,8 @@ export default function DocumentsSection({
         isOpen={pendingDelete !== null}
         onClose={() => setPendingDelete(null)}
         onConfirm={() => void handleDelete()}
-        isLoading={busy}
+        // Not answerable until the entries it reaches are known — or known to be unknowable.
+        isLoading={busy || (pendingDelete !== null && impact === null && !impactFailed)}
         title={t("documents:deleteTitle")}
         message={[
           t("documents:deleteMessage", { name: pendingDelete?.displayName ?? "" }),
@@ -599,7 +609,9 @@ export default function DocumentsSection({
                   (l) => `• ${t(`documents:links.entryType.${l.entry.type}`)}: ${l.entry.label}`
                 ),
               ]
-            : []),
+            : impactFailed
+              ? [t("documents:links.errors.impactFailed")]
+              : []),
         ].join("\n")}
         confirmText={t("common:buttons.delete")}
         cancelText={t("common:buttons.cancel")}
