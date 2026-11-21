@@ -579,7 +579,26 @@
       "uploadFailed": "Die Aufzeichnung konnte nicht gespeichert werden.",
       "removeFailed": "Die Aufzeichnung konnte nicht entfernt werden."
     },
-    "linesLoadError": "Die aufgezeichneten Flugspuren konnten nicht geladen werden – die Karte zeigt die Flüge auf dem Großkreis."
+    "linesLoadError": "Die aufgezeichneten Flugspuren konnten nicht geladen werden – die Karte zeigt die Flüge auf dem Großkreis.",
+    "fromReceiver": "Von meinem Empfänger holen",
+    "receiverFetched": "Spur aus deinem Empfänger gespeichert.",
+    "receiverErrors": {
+      "failed": "Die Spur konnte nicht aus dem Empfänger geholt werden.",
+      "off": "Der eigene Empfänger ist ausgeschaltet. Schalte ihn unter Einstellungen → Dienste ein.",
+      "notConfigured": "Es ist noch keine Empfängeradresse hinterlegt. Trage sie unter Einstellungen → Dienste (Eigener Empfänger) ein.",
+      "privateTarget": "Dieses Konto darf keinen Empfänger in einem privaten Netz abfragen. Nur Adressen im öffentlichen Internet sind erlaubt.",
+      "noAircraft": "Dieser Flug hat keine ICAO24-Kennung (Mode S) des Flugzeugs, über die sich die Spur finden ließe.",
+      "noSchedule": "Dieser Flug hat keine Abflug- oder Ankunftszeit, über die sich die Spur finden ließe.",
+      "notFound": "Dein Empfänger hat für dieses Flugzeug an diesem Tag keine Spur gespeichert.",
+      "outsideWindow": "Die Spur deines Empfängers deckt diesen Flug zeitlich nicht ab.",
+      "windowTooLong": "Die Flugzeit dieses Flugs ist zu lang, um ein einzelner Flug zu sein.",
+      "auth": "Dein Empfänger hat die Anfrage abgelehnt. Prüfe, ob er einen Zugang verlangt.",
+      "timeout": "Dein Empfänger hat nicht rechtzeitig geantwortet.",
+      "unreachable": "Dein Empfänger ist nicht erreichbar. Prüfe die Adresse und ob er läuft.",
+      "error": "Dein Empfänger hat mit einem Fehler geantwortet.",
+      "badTrace": "Die Antwort deines Empfängers ist keine tar1090-Spurdatei. Prüfe die Adresse.",
+      "tooLarge": "Die Spurdateien deines Empfängers sind größer, als ein einzelner Flug braucht."
+    }
   },
   "planActual": {
     "departure": "Abflug",

@@ -417,7 +417,7 @@
       "name": "ADS-B Exchange",
       "purpose": "Live aircraft data via RapidAPI",
       "why": "Second live source next to adsb.lol, only for flights in the air.",
-      "cost": "Paid RapidAPI plan. A feeder UUID is not an API key.",
+      "cost": "Paid RapidAPI plan, for personal, non-commercial use only. A feeder UUID is not an API key.",
       "quota": "According to the plan you booked.",
       "dataOut": "Flight number or identifier, today's flights only.",
       "getKeyUrl": "https://rapidapi.com/adsbx/api/adsbexchange-com1",

@@ -245,6 +245,18 @@ export const flightsApi = {
     return data.track;
   },
 
+  /**
+   * Fetch the flight's line from the account's own tar1090 / readsb receiver
+   * (forgejo#408). `replace` must be said out loud: the server never displaces
+   * a recording the passenger made or uploaded on its own.
+   */
+  fetchReceiverTrack: async (id: string, replace: boolean): Promise<FlightTrackMeta> => {
+    const { data } = await api.post<{ track: FlightTrackMeta }>(`/flights/${id}/track/receiver`, {
+      replace,
+    });
+    return data.track;
+  },
+
   /** Remove the flight's recording; 0 when there was none. */
   deleteTrack: async (id: string): Promise<number> => {
     const { data } = await api.delete<{ deleted: number }>(`/flights/${id}/track`);
