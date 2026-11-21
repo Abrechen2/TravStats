@@ -206,6 +206,43 @@ describe("createCruiseArcsLayer", () => {
     expect(data[0].path).toEqual(coordinates);
   });
 
+  it("draws a manual line identically on the dashboard (low zoom) and the cruise page (forgejo#435)", () => {
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 29.5, lon: 106.5 }),
+      makeStop(2, 2, { id: 2, lat: 29.9, lon: 107.7 }),
+    ]);
+    const coordinates: [number, number][] = [
+      [106.5, 29.5],
+      [106.9, 29.9],
+      [107.2, 29.6],
+      [107.4, 30.1],
+      [107.7, 29.9],
+    ];
+    const geometry: CruiseRouteFeatureCollection = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: { type: "LineString", coordinates },
+          properties: {
+            fromPortId: 1,
+            toPortId: 2,
+            routed: false,
+            protectedPrefixCount: coordinates.length,
+            protectedSuffixCount: 0,
+            method: "manual_polyline",
+            geometrySource: "drawn",
+          },
+        },
+      ],
+    };
+    const map = new Map([[cruise.id, geometry]]);
+    const dashboard = buildCruiseArcs([cruise], map, { zoom: 3 });
+    const page = buildCruiseArcs([cruise], map, { zoom: 9 });
+    expect(dashboard[0].path).toEqual(coordinates);
+    expect(page[0].path).toEqual(dashboard[0].path);
+  });
+
   it("renders no arrow layer when there are no qualifying legs", () => {
     const cruise = makeCruise([makeStop(1, 1, { id: 1, lat: 0, lon: 0 })]);
     expect(createCruiseArrowsLayer([cruise])).toBeNull();

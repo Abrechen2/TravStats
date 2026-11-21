@@ -151,7 +151,11 @@ export async function buildCruiseGeometry(
           fromPortId: a.id,
           toPortId: b.id,
           routed: false,
-          protectedPrefixCount: 0,
+          // Every vertex protected, like a recording: the user drew this line.
+          // With 0 the dashboard/globe/trip map (zoom < 8) splined it with
+          // Catmull-Rom and bent it off the river (forgejo#435); only the
+          // cruise page at close zoom drew it as stored.
+          protectedPrefixCount: manual.length,
           protectedSuffixCount: 0,
           method: "manual_polyline",
           geometrySource: "drawn",
