@@ -8,6 +8,7 @@ import { classRuns, modeOfSteps, settleStill, stepClass } from "./autoMode";
 import { entryModeOf, isBroadEntry, tightestWindow } from "./entries";
 import { legFigures } from "./figures";
 import { hasUsableMotion, modeFromSpeed } from "./speedMode";
+import { coverageOf } from "./coverage";
 import { findFoldRuns, targetOf, type FoldContext, type FoldRun, type FoldTarget } from "./fold";
 import { STOP_MS } from "../dayMovement";
 import { RECORDING_GAP_MS } from "../../tripRecording/segments";
@@ -378,6 +379,12 @@ function bridgedStops(
   return out;
 }
 
+/** The stop with its measured / assumed split, where a silence lies inside it. */
+function withCoverage(stop: Stop, points: readonly StoredPoint[]): Stop {
+  const coverage = coverageOf(points, stop);
+  return coverage ? { ...stop, coverage } : stop;
+}
+
 export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; stops: Stop[] } {
   const flights = inputs.windows
     .filter((w) => w.domain === "flight")
@@ -440,18 +447,25 @@ export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; st
   });
   // A bridged stop replaces the stops of ITS OWN chain's stretches (same device, same checks)
   // and spans what they covered; a stop from anywhere else is never merged into it.
-  const bridged = bridgedStops(read, inputs, isFinal).map(({ stop: b, chain }) => {
+  const bridgedRaw = bridgedStops(read, inputs, isFinal);
+  const chains = new Map(bridgedRaw.map(({ stop, chain }) => [stop, chain]));
+  const bridged = bridgedRaw.map(({ stop: b, chain }) => {
     const own = [...origin].filter(
       ([s, seg]) => chain.includes(seg) && s.fromMs < b.untilMs && b.fromMs < s.untilMs
     );
     own.forEach(([s]) => replaced.add(s));
-    return {
-      ...b,
-      fromMs: Math.min(b.fromMs, ...own.map(([s]) => s.fromMs)),
-      untilMs: Math.max(b.untilMs, ...own.map(([s]) => s.untilMs)),
-    };
+    return withCoverage(
+      {
+        ...b,
+        fromMs: Math.min(b.fromMs, ...own.map(([s]) => s.fromMs)),
+        untilMs: Math.max(b.untilMs, ...own.map(([s]) => s.untilMs)),
+      },
+      chains.get(b)?.flat() ?? []
+    );
   });
-  const standing = stops.filter((s) => !replaced.has(s));
+  const standing = stops
+    .filter((s) => !replaced.has(s))
+    .map((s) => withCoverage(s, origin.get(s) ?? []));
   stops.length = 0;
   stops.push(...standing, ...bridged);
   legs.sort((a, b) => a.fromMs - b.fromMs);

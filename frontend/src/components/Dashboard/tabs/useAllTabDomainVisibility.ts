@@ -22,9 +22,8 @@ const OVERLAY_DOMAINS: readonly AppearanceDomain[] = [
 
 /**
  * Which appearance sections the overview map's panel offers. Tours, roadtrips,
- * rail and rentals are drawn there only while `showTours` holds (the roadtrip
- * beta switch, and not the journey view), so their sections follow the same
- * condition — a slider for a layer the map does not draw is the bug forgejo#198
+ * rail and rentals are drawn there only while `showTours` holds (not the
+ * journey view), so their sections follow the same condition — a slider for a layer the map does not draw is the bug forgejo#198
  * must not swap for another. Each section also checks its own domain gate
  * (`OverlayAppearanceSections`). No roadtrip-station slider: this map does not
  * draw the stations.
@@ -83,7 +82,7 @@ export function useAllTabDomainVisibility(tours: readonly TourSummary[]): AllTab
   );
   const domainFilter = useDashboardDomainFilter(dayTourCount);
 
-  const has = (key: "flight" | "cruise" | "lodging" | "roadtrip"): boolean =>
+  const has = (key: "flight" | "cruise" | "lodging" | "roadtrip" | "tour"): boolean =>
     isEnabled(key) && domainFilter.isVisible(key);
 
   const routes = useMapRoutesStore(effectiveRoutes);
@@ -92,10 +91,11 @@ export function useAllTabDomainVisibility(tours: readonly TourSummary[]): AllTab
     cruise: has("cruise"),
     lodging: has("lodging"),
     poi: placesAllowed && domainFilter.isVisible("poi"),
-    // A roadtrip IS a domain: it answers to the user's own switch like a
-    // cruise does. A day tour is not a domain, so it has only the filter row.
+    // Roadtrips and day tours are domains (tours since 2026-11-09): each
+    // answers to the user's own switch like a cruise does. One fetch carries
+    // both, so this is what keeps a switched-off kind off the map.
     roadtrip: has("roadtrip"),
-    tour: domainFilter.isVisible("tour"),
+    tour: has("tour"),
   };
   const lines = {
     flight: visible.flight && routes.flight,

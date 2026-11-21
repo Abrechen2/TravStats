@@ -165,6 +165,11 @@ export interface Lodging {
   isoCountryCode: string | null;
   lat: number | null;
   lon: number | null;
+  /**
+   * Why the position needs a look (server-written code), or null. Absent on
+   * older backends. See `LodgingLocationCheckNotice`.
+   */
+  locationCheck?: string | null;
   stars: number | null;
   /** The house's own website (hand-entered or from OpenStreetMap). Absent on older backends. */
   website?: string | null;
@@ -206,6 +211,8 @@ export interface Lodging {
 // are actually required on create (e.g. `name`, `checkIn`/`checkOut`).
 
 export interface LodgingInput {
+  /** "I looked, the position stands" — the only value a client may send. */
+  locationCheck?: "reviewed";
   countryVisitKind?: "visit" | "transit";
   type?: LodgingType;
   name?: string;

@@ -1,5 +1,8 @@
 export type ImmichMode = "link" | "import";
 
+/** The photo library an album lives in. `immich` is what every link was before PhotoPrism. */
+export type PhotoSourceKind = "immich" | "photoprism";
+
 export type ImmichConnectionSource = "user" | "global";
 
 export interface ImmichConnectionStatus {
@@ -31,6 +34,7 @@ export interface ImmichAlbumSummary {
 
 export interface LinkedAlbum {
   id: string;
+  provider: PhotoSourceKind;
   immichAlbumId: string;
   albumName: string;
   assetCount: number;
@@ -59,7 +63,8 @@ export interface ImportJob {
 
 export interface ImportEstimate {
   assetCount: number;
-  totalBytes: number;
+  /** Null when the source reports no sizes (PhotoPrism): unknown, not zero. */
+  totalBytes: number | null;
 }
 
 /**

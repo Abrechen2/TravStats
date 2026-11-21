@@ -556,6 +556,35 @@ describe("GET /trips/:id/immich/albums/:linkId/assets", () => {
     expect(res.body.assets.map((a: { id: string }) => a.id)).toEqual(["early", "middle", "late"]);
   });
 
+  it("lists a photo without a capture time with takenAt null, after the dated ones — never as 1970", async () => {
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "link",
+    });
+    const asset = (id: string, takenAt: string | null) => ({
+      id,
+      type: "IMAGE" as const,
+      fileCreatedAt: takenAt,
+      originalFileName: `${id}.jpg`,
+      mimeType: "image/jpeg",
+      sizeBytes: 1,
+      lat: null,
+      lon: null,
+    });
+    listAlbumAssets.mockResolvedValue([
+      asset("undated", null),
+      asset("late", "2026-05-03T09:00:00.000Z"),
+      asset("early", "2026-05-01T09:00:00.000Z"),
+    ]);
+
+    const res = await request(makeApp()).get("/api/v1/trips/trip-1/immich/albums/link-1/assets");
+
+    expect(res.body.assets.map((a: { id: string }) => a.id)).toEqual(["early", "late", "undated"]);
+    expect(res.body.assets[2].takenAt).toBeNull();
+  });
+
   it("orders an import-mode album by capture date, falling back to link order", async () => {
     findFirstLink.mockResolvedValue({
       id: "link-1",
@@ -655,7 +684,7 @@ describe("GET /trips/:id/immich/estimate", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ assetCount: 42, totalBytes: 123456 });
-    expect(estimateAlbumImport).toHaveBeenCalledWith("u1", "a1");
+    expect(estimateAlbumImport).toHaveBeenCalledWith("u1", "a1", "immich");
     expect(resolveTrip).toHaveBeenCalledWith("u1", "trip-1");
   });
 

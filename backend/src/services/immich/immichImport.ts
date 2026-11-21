@@ -1,11 +1,13 @@
 /**
- * Import ("copy") mode: download an Immich album's originals onto the data
- * volume and register them as ordinary `TripPhoto` rows.
+ * Import ("copy") mode: download a photo-source album's originals (Immich or
+ * PhotoPrism) onto the data volume and register them as ordinary `TripPhoto`
+ * rows. The source is the link's `provider`; the download goes through the
+ * photo-source interface, so PhotoPrism's download token never leaves the server.
  *
  * Progress is tracked with a DB status row, mirroring `airportSeedingService`
  * — this repo has no job queue, only cron schedulers, and the UI polls.
  *
- * Idempotency lives in the `(trip_id, immich_asset_id)` unique index: a
+ * Idempotency lives in the `(trip_id, provider, immich_asset_id)` unique index: a
  * re-sync lists the album again and downloads only what is missing. One bad
  * asset fails that asset, not the run.
  */
@@ -19,8 +21,9 @@ import { prisma } from "../../db";
 import { FILE_LIMITS } from "../../config/constants";
 import { deleteTripPhotoFile, getTripPhotoDir } from "../../middleware/upload";
 import logger from "../../utils/logger";
-import { createImmichClient } from "./immichClient";
-import { getImmichConnection } from "./immichResolver";
+import { createPhotoSource, listAllAlbumAssets } from "../photoSource";
+import { getPhotoSourceConnection, toPhotoSourceKind } from "../photoSource/connection";
+import type { PhotoSourceKind, PhotoSourceProvider } from "../photoSource/types";
 import { invalidateAlbumAssets } from "./immichAssetCache";
 import { ImmichAsset, ImmichError } from "./types";
 
@@ -38,7 +41,7 @@ function isAssetTooLarge(error: unknown): error is AssetTooLargeError {
 }
 
 /** A concurrent import of a sibling album sharing this asset already created
- *  the `(tripId, immichAssetId)` row — the asset is present, not failed (M5). */
+ *  the `(tripId, provider, immichAssetId)` row — the asset is present, not failed (M5). */
 function isDuplicateAsset(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
@@ -48,9 +51,9 @@ function isDuplicateAsset(error: unknown): boolean {
  * import when Immich reports no size upfront: `pipeline()` destroys the source
  * and the write target on abort, and the caller removes the partial file.
  */
-export function createByteCapStream(maxBytes: number): Transform {
+export function createByteCapStream(maxBytes: number): Transform & { readonly bytes: number } {
   let total = 0;
-  return new Transform({
+  const stream = new Transform({
     transform(chunk: Buffer, _enc, cb): void {
       total += chunk.length;
       if (total > maxBytes) {
@@ -64,6 +67,10 @@ export function createByteCapStream(maxBytes: number): Transform {
       cb(null, chunk);
     },
   });
+  // What passed through so far: the stored size when the source reported none.
+  return Object.defineProperty(stream, "bytes", { get: () => total }) as Transform & {
+    readonly bytes: number;
+  };
 }
 
 /** Mirrors the multer `tripPhotoFilter` allow-list — same bytes, same rules. */
@@ -74,6 +81,9 @@ export const IMPORT_ALLOWED_MIME_TYPES = [
   "image/webp",
   "image/gif",
 ] as const;
+
+/** `error` of a completed-but-partial job: `truncated:<photos read>`. */
+export const TRUNCATED_ERROR_PREFIX = "truncated:";
 
 /** Keep the event loop responsive on a 5000-photo album. */
 const CHUNK_SIZE = 10;
@@ -124,6 +134,15 @@ export interface ImportJobDto {
   error: string | null;
 }
 
+/**
+ * An error that dooms every further asset of the run (a rejected credential, a
+ * target this account may not reach) rather than one file. Such a failure fails
+ * the job with its kind instead of being counted once per asset.
+ */
+function isRunWideFailure(error: unknown): error is ImmichError {
+  return error instanceof ImmichError && (error.kind === "auth" || error.kind === "invalidUrl");
+}
+
 const isImportable = (asset: ImmichAsset): boolean =>
   asset.type === "IMAGE" &&
   (IMPORT_ALLOWED_MIME_TYPES as readonly string[]).includes(asset.mimeType);
@@ -165,16 +184,24 @@ export async function getImportJob(linkId: string): Promise<ImportJobDto | null>
  */
 export async function estimateAlbumImport(
   userId: string,
-  albumId: string
-): Promise<{ assetCount: number; totalBytes: number }> {
-  const conn = await getImmichConnection(userId);
+  albumId: string,
+  provider: PhotoSourceKind = "immich"
+): Promise<{ assetCount: number; totalBytes: number | null }> {
+  const conn = await getPhotoSourceConnection(provider, userId);
   if (!conn) return { assetCount: 0, totalBytes: 0 };
 
-  const assets = (await createImmichClient(conn).listAlbumAssets(albumId)).filter(isImportable);
+  const assets = (await listAllAlbumAssets(createPhotoSource(provider, conn), albumId)).filter(
+    isImportable
+  );
 
+  // PhotoPrism reports no size in a list: no estimate (null), not "0 bytes",
+  // which would read as a free copy of a large album. Immich keeps its sum of
+  // the sizes it knows (an unknown one counts as 0).
+  const noSizes = provider === "photoprism" && assets.every((a) => a.sizeBytes === null);
   return {
     assetCount: assets.length,
-    totalBytes: assets.reduce((sum, a) => sum + (a.sizeBytes ?? 0), 0),
+    totalBytes:
+      noSizes && assets.length > 0 ? null : assets.reduce((sum, a) => sum + (a.sizeBytes ?? 0), 0),
   };
 }
 
@@ -185,7 +212,8 @@ export async function estimateAlbumImport(
  * not inflate `failedAssets`.
  */
 async function importAsset(
-  client: ReturnType<typeof createImmichClient>,
+  source: PhotoSourceProvider,
+  provider: PhotoSourceKind,
   tripId: string,
   linkId: string,
   asset: ImmichAsset
@@ -218,23 +246,36 @@ async function importAsset(
   };
 
   try {
-    const upstream = await client.fetchAssetStream(asset.id, "original");
+    const upstream = await source.streamOriginal(asset.id);
+    // PhotoPrism's list carries no MIME, only a file extension; what is stored
+    // must be what the server actually sent, under the same allow-list as an upload.
+    if (provider === "photoprism") {
+      const served = String(upstream.contentType).split(";")[0].trim().toLowerCase();
+      if (!(IMPORT_ALLOWED_MIME_TYPES as readonly string[]).includes(served)) {
+        (upstream.stream as { destroy?: () => void }).destroy?.();
+        logger.warn({
+          message: "immich_import_asset_type_refused",
+          context: { assetId: asset.id, linkId, provider, served },
+        });
+        return false;
+      }
+    }
     // The byte cap also guards the case where Immich reported no size (no EXIF
     // row yet): the stream is aborted the moment it crosses the ceiling and the
     // partial file is cleaned up below (M2).
-    await pipeline(
-      upstream.stream,
-      createByteCapStream(FILE_LIMITS.IMMICH_MAX_ASSET_BYTES),
-      fs.createWriteStream(filePath)
-    );
+    const cap = createByteCapStream(FILE_LIMITS.IMMICH_MAX_ASSET_BYTES);
+    await pipeline(upstream.stream, cap, fs.createWriteStream(filePath));
 
     await prisma.tripPhoto.create({
       data: {
         tripId,
         filename,
         mimetype: asset.mimeType,
-        sizeBytes: asset.sizeBytes ?? 0,
-        takenAt: new Date(asset.fileCreatedAt),
+        // PhotoPrism reports no size in a list: store what actually arrived, not 0.
+        sizeBytes: asset.sizeBytes ?? cap.bytes,
+        // No capture time stays null — never 1970 — and sorts last in the gallery.
+        takenAt: asset.fileCreatedAt === null ? null : new Date(asset.fileCreatedAt),
+        provider,
         immichAssetId: asset.id,
         immichAlbumLinkId: linkId,
         lat: asset.lat,
@@ -272,6 +313,7 @@ async function importAsset(
       context: { assetId: asset.id, linkId },
     });
     cleanup();
+    if (isRunWideFailure(error)) throw error;
     return false;
   }
 }
@@ -308,7 +350,8 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
       const link = await prisma.tripImmichAlbum.findUnique({ where: { id: linkId } });
       if (!link) return;
 
-      const conn = await getImmichConnection(userId);
+      const provider = toPhotoSourceKind(link.provider);
+      const conn = await getPhotoSourceConnection(provider, userId);
       if (!conn) {
         logger.warn({ message: "immich_import_no_connection", context: { linkId } });
         // Close the residual race behind the resync route's own pre-check: if a
@@ -337,16 +380,16 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
         create: { albumLinkId: linkId, ...runningJob },
       });
 
-      const client = createImmichClient(conn);
+      const source = createPhotoSource(provider, conn);
       let processed = 0;
       let failed = 0;
 
       try {
-        const all = await client.listAlbumAssets(link.immichAlbumId);
+        const all = await listAllAlbumAssets(source, link.immichAlbumId);
         const importable = all.filter(isImportable);
 
         const alreadyImported = await prisma.tripPhoto.findMany({
-          where: { tripId: link.tripId, immichAssetId: { not: null } },
+          where: { tripId: link.tripId, provider, immichAssetId: { not: null } },
           select: { immichAssetId: true },
         });
         const seen = new Set(alreadyImported.map((p) => p.immichAssetId));
@@ -359,11 +402,23 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
 
         for (let i = 0; i < todo.length; i += CHUNK_SIZE) {
           const chunk = todo.slice(i, i + CHUNK_SIZE);
-          const results = await Promise.all(
-            chunk.map((asset) => importAsset(client, link.tripId, linkId, asset))
+          // allSettled: a run-wide failure must not leave sibling downloads of
+          // this chunk running unobserved while the job is marked failed.
+          const settled = await Promise.allSettled(
+            chunk.map((asset) => importAsset(source, provider, link.tripId, linkId, asset))
           );
+          const results = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
           processed += results.filter(Boolean).length;
           failed += results.filter((ok) => !ok).length;
+          const fatal = settled.find((r): r is PromiseRejectedResult => r.status === "rejected");
+          if (fatal) {
+            // The siblings that did finish are stored: count them before failing.
+            await prisma.immichImportJob.update({
+              where: { albumLinkId: linkId },
+              data: { processedAssets: processed, failedAssets: failed },
+            });
+            throw fatal.reason;
+          }
 
           await prisma.immichImportJob.update({
             where: { albumLinkId: linkId },
@@ -375,6 +430,10 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
           where: { albumLinkId: linkId },
           data: {
             status: "completed",
+            // A source with more pages than one run reads gave a prefix: the run
+            // is completed but partial, and says how many photos it saw
+            // (`truncated:<N>`; the UI words it) instead of looking complete.
+            error: all.truncated === true ? `${TRUNCATED_ERROR_PREFIX}${importable.length}` : null,
             completedAt: new Date(),
             processedAssets: processed,
             failedAssets: failed,
@@ -384,7 +443,7 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
           where: { id: linkId },
           data: { lastSyncedAt: new Date(), assetCount: importable.length },
         });
-        invalidateAlbumAssets(userId, link.immichAlbumId);
+        invalidateAlbumAssets(userId, link.immichAlbumId, provider);
 
         logger.info({
           message: "immich_import_completed",

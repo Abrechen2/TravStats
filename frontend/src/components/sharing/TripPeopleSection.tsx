@@ -42,10 +42,16 @@ export default function TripPeopleSection({
   tripId,
   companionNames,
   onChanged,
+  bare = false,
 }: {
   tripId: string;
   companionNames: readonly string[];
   onChanged?: () => void;
+  /**
+   * Inside the "Teilen" dialog, which carries the title: no section frame, and
+   * the ways to offer the trip to people on other servers are drawn too.
+   */
+  bare?: boolean;
 }): JSX.Element | null {
   const { t, i18n } = useTranslation(["sharing", "trips"]);
   const isSharedDemo = useIsDemoAccount();
@@ -112,15 +118,22 @@ export default function TripPeopleSection({
   // trip without names still says it failed.
   // People on other servers (F-S4c) still have their place when nobody local is listed.
   if (companionNames.length === 0 && (view?.people.length ?? 0) === 0 && !loadFailed)
-    return isSharedDemo ? null : <RemoteTripPeople tripId={tripId} standalone />;
+    return isSharedDemo ? null : (
+      <RemoteTripPeople tripId={tripId} standalone={!bare} bare={bare} offerControls={bare} />
+    );
+  const frame = (children: JSX.Element): JSX.Element =>
+    bare ? (
+      children
+    ) : (
+      <DetailSection title={t("trips:detail.companions")}>{children}</DetailSection>
+    );
   if (isSharedDemo || !view) {
-    return (
-      <DetailSection title={t("trips:detail.companions")}>
-        <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-          {failure}
-          <PeopleList names={companionNames} />
-        </div>
-      </DetailSection>
+    return frame(
+      <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+        {failure}
+        <PeopleList names={companionNames} />
+        {bare && !isSharedDemo && <RemoteTripPeople tripId={tripId} bare offerControls />}
+      </div>
     );
   }
 
@@ -153,9 +166,13 @@ export default function TripPeopleSection({
   const action = (p: TripPerson): JSX.Element | undefined => {
     if (p.shareBlockedBy === "notLinked" && p.companionId) {
       return (
-        <Button onClick={() => setPicked({ tripId, value: { kind: "link", person: p } })}>
+        <button
+          type="button"
+          className="t-caption underline"
+          onClick={() => setPicked({ tripId, value: { kind: "link", person: p } })}
+        >
           {t(`${NS}.actions.link`)}
-        </Button>
+        </button>
       );
     }
     if (p.shareBlockedBy === null) {
@@ -178,11 +195,11 @@ export default function TripPeopleSection({
 
   return (
     <>
-      <DetailSection title={t("trips:detail.companions")}>
+      {frame(
         <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
           {failure}
           <PeopleList rows={rows} />
-          <RemoteTripPeople tripId={tripId} />
+          <RemoteTripPeople tripId={tripId} bare={bare} offerControls={bare} />
           {view.bookingTotals.length > 0 && (
             <div data-testid="share-booking-totals" className="text-sm">
               <p className="t-label-mono">{t("sharing:trip.bookingTotals")}</p>
@@ -209,7 +226,7 @@ export default function TripPeopleSection({
             </div>
           )}
         </div>
-      </DetailSection>
+      )}
       {pick?.kind === "share" && (
         <ShareTripDialog
           open

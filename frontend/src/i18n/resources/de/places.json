@@ -282,6 +282,15 @@
       "undo": "Abgelehnte wieder anbieten",
       "undone": "Die abgelehnten Fotos werden wieder vorgeschlagen.",
       "undoFailed": "Die abgelehnten Fotos konnten nicht zurückgeholt werden."
+    },
+    "auto": {
+      "label": "automatisch verknüpft ({{source}})",
+      "removeAll": "Alle automatisch verknüpften entfernen",
+      "removeFailed": "Die automatisch verknüpften Fotos konnten nicht entfernt werden.",
+      "source": {
+        "immich": "Immich",
+        "photoprism": "PhotoPrism"
+      }
     }
   },
   "stats": {

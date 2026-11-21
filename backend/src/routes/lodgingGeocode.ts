@@ -1,5 +1,7 @@
 import * as geo from "../services/geo/nominatim";
 import { resolveCountryCode } from "../shared/geo/countryCode";
+import { agreesWithRow } from "../services/lodging/geocodeBackfill";
+import { LOCATION_CHECK } from "../services/lodging/locationCheck";
 
 export interface AddressFields {
   /** The lodging's own name — geocode material when there is no street address. */
@@ -12,6 +14,8 @@ export interface AddressFields {
 export interface AddressWithCoords extends AddressFields {
   lat?: number | null;
   lon?: number | null;
+  /** "reviewed" = the user dismissed the note; a lookup must not put it back. */
+  locationCheck?: "reviewed";
 }
 
 /** The stored row, as far as this decision cares about it. */
@@ -114,6 +118,8 @@ export interface LocationPatch {
   address?: string;
   city?: string;
   country?: string;
+  /** Why the position needs a look, or null to clear an earlier note. */
+  locationCheck?: string | null;
 }
 
 /**
@@ -139,11 +145,38 @@ export async function resolveLocation(
   input: AddressWithCoords,
   existing?: ExistingLodging
 ): Promise<LocationPatch> {
-  const coords = existing
+  const found = existing
     ? await resolveUpdatedCoordinates(input, existing)
     : hasPlaceMaterial(input)
       ? await geo.resolveCoordinates(input)
       : null;
+
+  // A hit in another country or town than the record states is not a position:
+  // a name-and-city search can still rank a namesake first (GitHub #401, "Tulip
+  // Inn" near Delhi for a hotel in Wolfenbüttel). The pin stays unset, the row
+  // says why, and the user — not the geocoder — settles the contradiction.
+  const statedCountry = merge(input.country, existing?.country);
+  const statedCity = merge(input.city, existing?.city);
+  const contradicted =
+    found !== null &&
+    !agreesWithRow(
+      {
+        name: "",
+        type: "",
+        chainId: null,
+        address: null,
+        city: null,
+        country: statedCountry,
+      },
+      {
+        lat: found.lat,
+        lon: found.lon,
+        source: "nominatim",
+        // Country only — a town spelled differently ("Köln"/"Cologne") is not a contradiction.
+        countryName: found.country ?? found.countryCode,
+      }
+    );
+  const coords = contradicted ? null : found;
 
   // Sending both coordinates as null is not an omission, it is "remove the
   // pin". A lookup that runs in the same write — because the address changed —
@@ -154,6 +187,24 @@ export async function resolveLocation(
   if (coords && !pinRemoved) {
     patch.lat = coords.lat;
     patch.lon = coords.lon;
+  }
+  const userPin = input.lat != null && input.lon != null;
+  if (input.locationCheck !== undefined) {
+    // The user's own word on the position wins over anything derived here.
+  } else if (contradicted) {
+    patch.locationCheck = LOCATION_CHECK.contradicted;
+  } else if ((coords && !pinRemoved) || userPin) {
+    // Located by a lookup that agrees, or by the user's own pin: settled.
+    patch.locationCheck = null;
+  } else if (
+    !hasPlaceMaterial({
+      address: merge(input.address, existing?.address),
+      city: statedCity,
+      country: statedCountry,
+    }) &&
+    merge(input.lat, existing?.lat) == null
+  ) {
+    patch.locationCheck = LOCATION_CHECK.nameOnly;
   }
 
   // Reverse-complete against the coordinates this write will END UP with —

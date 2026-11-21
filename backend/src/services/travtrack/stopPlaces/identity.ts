@@ -20,7 +20,7 @@ import { rankStopCandidates, STOP_LOOKUP_RADIUS_KM } from "./candidateRanking";
 export const KNOWN_PLACE_M = 100;
 // fetch = Photon's whole reverse pool: the geocoder's importance cut would otherwise drop
 // an office (ranked low) before the stop's own ranking ever saw it.
-const STOP_SHAPE: IdentityShape = {
+export const STOP_SHAPE: IdentityShape = {
   fetch: REVERSE_CANDIDATE_POOL,
   radiusKm: STOP_LOOKUP_RADIUS_KM,
   arrange: rankStopCandidates,
@@ -28,6 +28,8 @@ const STOP_SHAPE: IdentityShape = {
 };
 
 export type KnownPlace = {
+  /** `Place.id` of a `place`; absent for a lodging. */
+  placeId?: string;
   name: string;
   kind: "place" | "lodging";
   distanceM: number;
@@ -52,7 +54,10 @@ export type StopIdentity = Omit<StayIdentity, "probable" | "placeTypeAvailable">
 
 const LAT_DEG = KNOWN_PLACE_M / 111_000;
 
-async function knownNear(userId: string, at: { lat: number; lon: number }): Promise<KnownPlace[]> {
+export async function knownNear(
+  userId: string,
+  at: { lat: number; lon: number }
+): Promise<KnownPlace[]> {
   // A degree of longitude shrinks with latitude; near a pole (or across the antimeridian)
   // the box is not worth narrowing: the haversine filter below decides.
   const cos = Math.cos((at.lat * Math.PI) / 180);
@@ -66,7 +71,7 @@ async function knownNear(userId: string, at: { lat: number; lon: number }): Prom
   const [places, lodgings] = await Promise.all([
     prisma.place.findMany({
       where: { userId, ...box },
-      select: { name: true, lat: true, lon: true },
+      select: { id: true, name: true, lat: true, lon: true },
     }),
     prisma.lodging.findMany({
       where: { userId, ...box },
@@ -74,7 +79,7 @@ async function knownNear(userId: string, at: { lat: number; lon: number }): Prom
     }),
   ]);
   return [
-    ...places.map((p) => ({ ...p, kind: "place" as const })),
+    ...places.map(({ id, ...p }) => ({ ...p, placeId: id, kind: "place" as const })),
     ...lodgings.flatMap((l) =>
       l.lat === null || l.lon === null
         ? []
@@ -103,6 +108,7 @@ export async function stopIdentityFor(
       geocoder: "empty",
       candidates: [],
       candidatesState: "empty",
+      venues: { state: "off", resolved: null },
       photos: { state: "off", count: 0, cities: [], truncated: false },
       known,
       lookup: "off",

@@ -208,6 +208,10 @@
       "name": "Own Immich",
       "purpose": "Attach photo albums to trips"
     },
+    "photoprism": {
+      "name": "PhotoPrism",
+      "purpose": "Attach photo albums to trips"
+    },
     "strava": {
       "name": "Strava",
       "purpose": "Activities as tours (uses the instance's Strava app)"
@@ -267,6 +271,10 @@
     "note": "Only an admin can switch or change these under Administration › External services."
   },
   "fields": {
+    "photoprism": {
+      "baseUrl": "Server URL",
+      "token": "App password"
+    },
     "common": {
       "apiKey": "API key",
       "key": "API key",
@@ -394,6 +402,17 @@
       "getKeyLabel": "adsb.lol",
       "quotaLine": "polite: at most 1 request / second"
     },
+    "airplaneslive": {
+      "name": "airplanes.live",
+      "purpose": "Aircraft of a flight that is currently airborne",
+      "why": "Third live source; takes over when adsb.lol cannot be reached.",
+      "cost": "Free, community service, non-commercial use only.",
+      "quota": "No fixed quota; TravStats asks at most once per second.",
+      "dataOut": "Flight number or identifier, today's flights only.",
+      "getKeyUrl": "https://airplanes.live/",
+      "getKeyLabel": "airplanes.live",
+      "quotaLine": "polite: at most 1 request / second"
+    },
     "adsbx": {
       "name": "ADS-B Exchange",
       "purpose": "Live aircraft data via RapidAPI",
@@ -483,6 +502,17 @@
       "getKeyLabel": "Create an API key in Immich",
       "quotaLine": "your own server",
       "adminPurpose": "The instance's connection for the nightly photo scan; accounts connect their own Immich"
+    },
+    "photoprism": {
+      "name": "PhotoPrism",
+      "purpose": "Attach photo albums to trips",
+      "why": "Shows albums from your PhotoPrism in trips. The pictures stay in PhotoPrism and are only passed through.",
+      "cost": "Free, self-hosted.",
+      "quota": "None.",
+      "dataOut": "Stays between TravStats and your PhotoPrism.",
+      "quotaLine": "your own server",
+      "adminPurpose": "The instance's connection to a PhotoPrism; accounts connect their own",
+      "setup": "How to connect PhotoPrism: in PhotoPrism open Settings → Account → Apps and Devices, create an app password and give it the scope “albums photos files config” (or “*”). Without “config” TravStats cannot load thumbnails. TravStats only needs read access."
     },
     "strava": {
       "name": "Strava",

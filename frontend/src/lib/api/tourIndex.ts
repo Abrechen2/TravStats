@@ -56,6 +56,10 @@ export interface TourGeometryEntry {
   rgb?: [number, number, number];
   /** A roadtrip draws a heavier line than a day tour (see `buildTourDeckLayers`). */
   isRoadtrip?: boolean;
+  /** The tour's day (`YYYY-MM-DD…`), when it has one — the trip map's day filter reads it. */
+  date?: string | null;
+  /** A roadtrip's legs by the day(s) they are driven on, `legId → YYYY-MM-DD[]`; a leg missing here has no known day. */
+  legDays?: Record<string, string[]>;
 }
 
 /**

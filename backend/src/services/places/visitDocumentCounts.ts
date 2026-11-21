@@ -16,9 +16,11 @@ export async function visitDocumentCounts(
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>(visitIds.map((id) => [id, 0]));
   if (visitIds.length === 0) return counts;
-  const rows = await prisma.document.groupBy({
+  // Links, not the owner column: a `covers` document counts at its visit too.
+  // (document, visit) is unique, so a row is one document.
+  const rows = await prisma.documentLink.groupBy({
     by: ["placeVisitId"],
-    where: { userId, placeVisitId: { in: [...visitIds] } },
+    where: { document: { userId }, placeVisitId: { in: [...visitIds] } },
     _count: { _all: true },
   });
   for (const row of rows) {

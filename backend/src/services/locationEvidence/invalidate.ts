@@ -22,10 +22,15 @@
  *     and silences around them, read from those days, so a removal elsewhere
  *     on the day may change what the run is.
  *
- * Affected OPEN rows (every status but `accepted`) are DELETED: they hold
+ * Affected OPEN rows (every status but `accepted` and `rejected`) are DELETED: they hold
  * positions and digests of the deleted history, and none is an entry the user
  * made. A venue that goes hands the fragments it replaced and that are not
  * affected themselves back to the inbox, as rejecting it would.
+ * A REJECTED row stays too, cut the same way: deleting it would make a re-import
+ * ask the question the user already answered. A rejected stay keeps the position it was
+ * rejected at (it is what the rejection is matched by) — except where a new
+ * privacy zone holds that position: there it moves to the zone's centre, and
+ * the zone filter keeps the place from being asked about again.
  * Affected ACCEPTED rows stay — the entry the answer made is TravStats data —
  * with their evidence cut to a summary holding no position and no digest
  * (`source`, `provider`, `algorithmVersion`, the explanation, the time zone or
@@ -77,6 +82,15 @@ const dayInWindow = (days: readonly string[], from: number, until: number) =>
 const sortedSpans = (cause: PointsRemovedCause): Span[] =>
   [...cause.spans].sort((a, b) => a[0] - b[0]);
 
+/**
+ * An answer — accepted or rejected — outlives the history it was read from.
+ * A rejected row deleted with the points would be asked again the moment the
+ * history is imported again; its evidence is cut instead (`accepted` below
+ * holds both, named for the first and older case).
+ */
+const isAnswered = (status: string | undefined): boolean =>
+  status === "accepted" || status === "rejected";
+
 async function affectedStays(
   tx: DbTransaction,
   userId: string,
@@ -114,8 +128,8 @@ async function affectedStays(
   const status = new Map(rows.map((r) => [r.id, r.status]));
   const ids = [...hit];
   return {
-    open: ids.filter((id) => status.get(id) !== "accepted"),
-    accepted: ids.filter((id) => status.get(id) === "accepted"),
+    open: ids.filter((id) => !isAnswered(status.get(id))),
+    accepted: ids.filter((id) => isAnswered(status.get(id))),
   };
 }
 
@@ -217,8 +231,8 @@ async function affectedSuggestions(
   const status = new Map(rows.map((r) => [r.id, r.status]));
   const ids = [...hit];
   return {
-    open: ids.filter((id) => status.get(id) !== "accepted"),
-    accepted: ids.filter((id) => status.get(id) === "accepted"),
+    open: ids.filter((id) => !isAnswered(status.get(id))),
+    accepted: ids.filter((id) => isAnswered(status.get(id))),
   };
 }
 
@@ -282,10 +296,37 @@ async function stripAcceptedStays(tx: DbTransaction, ids: string[], at: string):
              'provider', provider,
              'algorithmVersion', algorithm_version,
              'kind', evidence->'kind',
+             'market', evidence->'market',
              'zone', evidence->'zone',
              'explanation', ${scrubbedExplanation(Prisma.sql`evidence->'explanation'`)},
              'historyDeletedAt', COALESCE(evidence->'historyDeletedAt', to_jsonb(${at}::text))))
      WHERE id = ANY(${ids}::text[])`;
+}
+
+/** A rejected stay inside a new privacy zone keeps its answer but not its position. */
+async function moveRejectedStaysOutOfZone(
+  tx: DbTransaction,
+  userId: string,
+  ids: string[],
+  zone: ZoneCircle
+): Promise<void> {
+  if (ids.length === 0) return;
+  const rejected = await tx.dawarichStay.findMany({
+    where: { userId, id: { in: ids }, status: "rejected" },
+    select: { id: true, sourceLat: true, sourceLon: true, lat: true, lon: true },
+  });
+  const inside = rejected
+    .filter(
+      (r) =>
+        distanceM({ lat: r.sourceLat, lon: r.sourceLon }, zone) <= zone.radiusM ||
+        distanceM({ lat: r.lat, lon: r.lon }, zone) <= zone.radiusM
+    )
+    .map((r) => r.id);
+  if (inside.length === 0) return;
+  await tx.dawarichStay.updateMany({
+    where: { id: { in: inside } },
+    data: { sourceLat: zone.lat, sourceLon: zone.lon, lat: zone.lat, lon: zone.lon },
+  });
 }
 
 async function stripAcceptedSuggestions(
@@ -336,6 +377,8 @@ export async function invalidateOnHistoryDeleted(
     await tx.locationSuggestion.deleteMany({ where: { userId, id: { in: questions.open } } });
   }
   await stripAcceptedStays(tx, stays.accepted, at);
+  if (cause.kind === "zone")
+    await moveRejectedStaysOutOfZone(tx, userId, stays.accepted, cause.zone);
   await stripAcceptedSuggestions(tx, questions.accepted, at);
   const removed = [...stays.open, ...questions.open];
   const kept = [...stays.accepted, ...questions.accepted];

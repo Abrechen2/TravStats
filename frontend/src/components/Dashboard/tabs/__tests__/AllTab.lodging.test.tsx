@@ -14,6 +14,12 @@ import { useDashboardDomainFilterStore } from "../../../../store/dashboardDomain
 // domain filter is its only control, and these tests drive that store.
 const { mapProps } = vi.hoisted(() => ({ mapProps: [] as Record<string, unknown>[] }));
 
+// Rail, bus, ferry and rentals load whenever their domain is on (no longer
+// behind the day-tour switch); this suite is not about them, and their
+// requests would trip the network guard.
+vi.mock("../allTabTransportOverlays", () => ({
+  useTransportOverlays: () => ({ layers: [], legendRows: [], status: null }),
+}));
 vi.mock("../../../../hooks/useDashboardTours", () => ({
   // Tours are no longer gated (owner, 2026-09-18), so AllTab asks for them on
   // every render. This file is about the lodging/places legend, not tours —
@@ -262,8 +268,21 @@ describe("AllTab: the lodging domain filter row actually does something", () => 
     await waitFor(() => {
       const last = mapProps[mapProps.length - 1];
       // POI joined the list when places started drawing on this tab — a domain
-      // that paints marks here has to be steerable from the panel here.
-      expect(last.appearanceDomains).toEqual(["flight", "cruise", "lodging", "poi"]);
+      // that paints marks here has to be steerable from the panel here. The
+      // ground domains follow on the overview whatever the day-tour switch
+      // says (tester, 2026-11-18); each section still checks its own domain.
+      expect(last.appearanceDomains).toEqual([
+        "flight",
+        "cruise",
+        "lodging",
+        "poi",
+        "tour",
+        "roadtrip",
+        "rail",
+        "bus",
+        "ferry",
+        "rental",
+      ]);
     });
   });
 });

@@ -15,7 +15,12 @@ export function serviceCopy(t: TFn, id: string, part: string, fallback = ""): st
 }
 
 /** Services whose admin row is the instance part of something accounts also connect. */
-const ADMIN_PURPOSE_IDS: ReadonlySet<string> = new Set(["immich", "strava", "webdav"]);
+const ADMIN_PURPOSE_IDS: ReadonlySet<string> = new Set([
+  "immich",
+  "photoprism",
+  "strava",
+  "webdav",
+]);
 
 /** The admin row's purpose: the instance's part, where it differs from the account's. */
 export function adminPurpose(t: TFn, id: string): string {

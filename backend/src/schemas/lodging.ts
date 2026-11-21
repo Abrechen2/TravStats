@@ -104,6 +104,10 @@ const baseLodgingSchema = z.object({
 
 export const createLodgingSchema = baseLodgingSchema;
 export const updateLodgingSchema = partialForUpdate(baseLodgingSchema)
+  // The only thing a client may say about `locationCheck` is "I looked, this is
+  // right". The codes themselves are server-written evidence, never accepted
+  // from a client; "reviewed" also keeps the detector from flagging it again.
+  .and(z.object({ locationCheck: z.literal("reviewed").optional() }))
   .refine((d) => Object.keys(d).length > 0, {
     message: "At least one field must be provided for update",
   })

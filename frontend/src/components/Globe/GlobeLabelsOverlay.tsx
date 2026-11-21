@@ -43,6 +43,8 @@ interface LabelPoint {
    *  and place pills carry their own, resolved from the same colour config
    *  their dot reads (see `globePinLabels.ts`). */
   color: string;
+  /** Drawn faint (the trip map's day filter). */
+  dim?: boolean;
 }
 
 interface PlacedBox {
@@ -123,6 +125,7 @@ export function GlobeLabelsOverlay({
           kind,
           weight: p.size ?? 0,
           color: kind === "port" ? PORT_TEXT : AIRPORT_TEXT,
+          dim: p.dim,
         }))
         .filter((p) => p.text.length > 0);
     const extraPts: LabelPoint[] = (extras ?? []).map((e) => ({
@@ -297,6 +300,7 @@ export function GlobeLabelsOverlay({
           className="absolute left-0 top-0 whitespace-nowrap rounded-sm font-semibold tabular-nums"
           style={{
             display: "none",
+            opacity: pt.dim ? 0.35 : undefined,
             fontSize: "11px",
             lineHeight: "14px",
             letterSpacing: "0.02em",

@@ -6,7 +6,7 @@
  * is not in `design/tokens.json`, the value goes into the Companion token file
  * first and reaches this repo by copy — never into a component.
  */
-export { default as AppShell, type ShellWidth } from "./AppShell";
+export { default as AppShell } from "./AppShell";
 export { default as PageHeader } from "./PageHeader";
 export { default as DetailHeader } from "./DetailHeader";
 export { default as Button, type ButtonVariant } from "./Button";

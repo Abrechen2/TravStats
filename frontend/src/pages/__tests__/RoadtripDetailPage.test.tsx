@@ -168,10 +168,10 @@ describe("RoadtripDetailPage", () => {
 
   // forgejo#307: the head reads like every other domain's detail head.
   describe("header matches the other detail pages", () => {
-    it("sits in the same list-width shell as rail, ferry, bus and rentals", async () => {
+    it("sits in the same full-width shell as rail, ferry, bus and rentals", async () => {
       renderAt("/roadtrips/rt");
       const title = await screen.findByText("Fjorde 2026");
-      expect(title.closest("main")).toHaveStyle({ maxWidth: "var(--ts-width-list)" });
+      expect(title.closest("main")?.style.maxWidth).toBe("");
     });
 
     it("draws the phase with the shared status pill, underway as in progress", async () => {

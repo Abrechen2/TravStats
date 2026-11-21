@@ -98,7 +98,7 @@ export default function FerryDetailPage() {
   };
   if (!ride)
     return (
-      <AppShell width="list">
+      <AppShell>
         <Link to="/ferry" className="ts-back-link text-sm text-(--text-muted)">
           {t("ferry:title")}
         </Link>
@@ -152,7 +152,7 @@ export default function FerryDetailPage() {
     ...co2Kpis(ride.co2, t, locale),
   ];
   return (
-    <AppShell width="list">
+    <AppShell>
       <DetailHeader
         domain="ferry"
         icon={<Icon name="ship" size={24} />}

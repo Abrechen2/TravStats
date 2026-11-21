@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { repointDecisionPlace } from "../tripSuggestions/decisionRepoint";
 import type { Place as PlaceRow, Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import type { MergePlaceInput } from "../../schemas/place";
@@ -142,6 +143,10 @@ export async function mergePlaces(
       where: { placeId: source.id, userId },
       data: { placeId: target.id },
     });
+
+    // A "was it here?" answer names its place; the merged-away id must not
+    // leave the question unanswered for the place that stays.
+    await repointDecisionPlace(tx, userId, source.id, target.id);
 
     await tx.place.update({ where: { id: target.id }, data: merged });
     await tx.place.delete({ where: { id: source.id } });

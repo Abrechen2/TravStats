@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { travTrackViewsApi } from "../../../../lib/api/travtrackViews";
 import { isNotConfigured, photoFailureKey, photoWindowOf } from "../trackPhotos";
 
 const refused = (status: number, error: string) =>
@@ -39,5 +40,24 @@ describe("trackPhotos", () => {
     expect(isNotConfigured(photoFailureKey(refused(409, "notConfigured")))).toBe(true);
     expect(photoFailureKey(refused(500, "Something exploded"))).toBe("track:errors.generic");
     expect(photoFailureKey(new Error("offline"))).toBe("track:errors.network");
+  });
+});
+
+describe("photo thumbnails name their provider", () => {
+  const window = { from: "2026-10-25T08:00:00.000Z", to: "2026-10-25T09:00:00.000Z" };
+
+  it("a PhotoPrism photo asks for its rendition from PhotoPrism; an older server's photo is Immich", () => {
+    const hash = "ab".repeat(20);
+    expect(
+      new URL(
+        travTrackViewsApi.photoUrl({ assetId: hash, provider: "photoprism" }, window),
+        "http://x"
+      ).searchParams.get("provider")
+    ).toBe("photoprism");
+    expect(
+      new URL(travTrackViewsApi.photoUrl({ assetId: "u" }, window), "http://x").searchParams.get(
+        "provider"
+      )
+    ).toBe("immich");
   });
 });

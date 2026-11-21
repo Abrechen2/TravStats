@@ -57,6 +57,10 @@ vi.mock("../../components/inbox/UnfiledDocumentsSection", () => ({
 vi.mock("../../components/inbox/PlaceCapturesSection", () => ({
   default: () => <div data-testid="place-captures-stub" />,
 }));
+// Document link suggestions load their own list on mount; they have their own tests.
+vi.mock("../../components/inbox/DocumentLinkSuggestionsSection", () => ({
+  default: () => <div data-testid="document-link-suggestions-stub" />,
+}));
 vi.mock("../../components/GlobeLoader", () => ({ GlobeLoader: () => null }));
 vi.mock("../../lib/api/dataQualityFlags", () => ({
   dataQualityFlagsApi: { getAll: vi.fn(), run: vi.fn(), dismiss: vi.fn(), resolve: vi.fn() },

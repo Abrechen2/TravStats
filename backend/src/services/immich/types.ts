@@ -50,8 +50,8 @@ export interface ImmichAlbum {
 export interface ImmichAsset {
   id: string;
   type: "IMAGE" | "VIDEO";
-  /** ISO-8601. */
-  fileCreatedAt: string;
+  /** ISO-8601 capture instant; null when Immich sent none (never the epoch). */
+  fileCreatedAt: string | null;
   originalFileName: string;
   mimeType: string;
   /** From `exifInfo.fileSizeInByte` — null when Immich has no EXIF row yet. */
@@ -110,16 +110,20 @@ export class ImmichError extends Error {
  * Immich lives on the LAN by design. A public-looking name is checked again
  * at connection time, see `services/egress/privateTargets.ts`.
  */
-export function normalizeImmichBaseUrl(raw: string, policy: TargetPolicy): string {
+export function normalizeImmichBaseUrl(
+  raw: string,
+  policy: TargetPolicy,
+  service: string = "Immich"
+): string {
   let parsed: URL;
   try {
     parsed = new URL(raw.trim());
   } catch {
-    throw new ImmichError("invalidUrl", "Immich URL is not a valid URL");
+    throw new ImmichError("invalidUrl", `${service} URL is not a valid URL`);
   }
 
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new ImmichError("invalidUrl", "Immich URL must use http:// or https://");
+    throw new ImmichError("invalidUrl", `${service} URL must use http:// or https://`);
   }
 
   const path = parsed.pathname.replace(/\/+$/, "");
@@ -127,17 +131,17 @@ export function normalizeImmichBaseUrl(raw: string, policy: TargetPolicy): strin
   try {
     assertTargetAllowed(normalized, policy);
   } catch (error) {
-    if (error instanceof PrivateTargetError) throw privateTargetImmichError();
+    if (error instanceof PrivateTargetError) throw privateTargetImmichError(service);
     throw error;
   }
   return normalized;
 }
 
 /** The refusal of a host this caller may not reach, in Immich's vocabulary. */
-export function privateTargetImmichError(): ImmichError {
+export function privateTargetImmichError(service: string = "Immich"): ImmichError {
   return new ImmichError(
     "invalidUrl",
-    "Immich URL points to a private address this account may not reach",
+    `${service} URL points to a private address this account may not reach`,
     undefined,
     "PRIVATE_TARGET"
   );

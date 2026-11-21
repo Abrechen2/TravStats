@@ -30,6 +30,9 @@ export const DIENSTE_PAGE: RegistryPage = {
       {"id":"adsblol","de":"ADS-B Lol","en":"ADS-B Lol","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"flug","rows":[
 
       ]},
+      {"id":"airplaneslive","de":"airplanes.live","en":"airplanes.live","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"flug","rows":[
+
+      ]},
       {"id":"tar1090","de":"Eigener Empfänger (tar1090)","en":"Own receiver (tar1090)","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"flug","rows":[
 
       ]},
@@ -58,6 +61,10 @@ export const DIENSTE_PAGE: RegistryPage = {
       {"id":"immich","de":"Immich","en":"Immich","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"foto","rows":[
         {"id":"imminsturl","kind":"input","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Immich des Servers: Adresse","en":"Server's Immich: address","terms":{"de":"Für Konten ohne eigene Verbindung","en":"For accounts without their own"}},
         {"id":"imminstkey","kind":"secret","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Immich des Servers: API-Schlüssel","en":"Server's Immich: API key","terms":{"de":"","en":""}},
+      ]},
+      {"id":"photoprism","de":"PhotoPrism","en":"PhotoPrism","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"foto","rows":[
+        {"id":"ppinsturl","kind":"input","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"PhotoPrism des Servers: Adresse","en":"Server's PhotoPrism: address","terms":{"de":"Für Konten ohne eigene Verbindung","en":"For accounts without their own"}},
+        {"id":"ppinsttoken","kind":"secret","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"PhotoPrism des Servers: App-Passwort","en":"Server's PhotoPrism: app password","terms":{"de":"","en":""}},
       ]},
       {"id":"dawarich","de":"Dawarich","en":"Dawarich","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"foto","rows":[
         {"id":"dawinsturl","kind":"input","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Dawarich des Servers: Adresse","en":"Server's Dawarich: address","terms":{"de":"Nur für Tracks von Touren und Kreuzfahrten Standortquelle, Aufenthalte und Ländertage brauchen die eigene Verbindung jedes Kontos. Sonst sähen alle Konten die Bewegungen eines Menschen.","en":"Only for tour and cruise tracks Location source, stays and country days need each account's own connection. Otherwise every account would see one person's movements."}},

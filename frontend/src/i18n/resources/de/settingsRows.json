@@ -550,6 +550,10 @@
         "n": "ADS-B Lol",
         "p": "Positionen in der Luft, frei"
       },
+      "airplaneslive": {
+        "n": "airplanes.live",
+        "p": "Positionen in der Luft, frei"
+      },
       "adsbx": {
         "n": "ADS-B Exchange",
         "p": "Positionen in der Luft"
@@ -584,6 +588,10 @@
       },
       "immich": {
         "n": "Immich",
+        "p": "Fotos"
+      },
+      "photoprism": {
+        "n": "PhotoPrism",
         "p": "Fotos"
       },
       "dawarich": {
@@ -649,6 +657,14 @@
       "updatesTemplates": {
         "n": "GitHub",
         "p": "Neue Versionen und Vorlagen"
+      },
+      "tar1090": {
+        "n": "Eigener Empfänger (tar1090)",
+        "p": "Flugspuren vom eigenen Empfänger"
+      },
+      "airportData": {
+        "n": "OurAirports · airport-data.com",
+        "p": "Flughafenkatalog und -fotos"
       }
     },
     "rows": {
@@ -731,6 +747,21 @@
       },
       "imminstkey": {
         "t": "Immich des Servers: API-Schlüssel"
+      },
+      "ppurl": {
+        "t": "Adresse",
+        "h": "Darf im eigenen Netz liegen."
+      },
+      "pptoken": {
+        "t": "App-Passwort",
+        "s": "Aus PhotoPrism → Konto → Apps und Geräte; Berechtigungen: albums photos files config"
+      },
+      "ppinsturl": {
+        "t": "PhotoPrism des Servers: Adresse",
+        "s": "Für Konten ohne eigene Verbindung"
+      },
+      "ppinsttoken": {
+        "t": "PhotoPrism des Servers: App-Passwort"
       },
       "dawurl": {
         "t": "Adresse"
@@ -1015,10 +1046,6 @@
         "after": "Der Server meldet sich bei der nächsten Mitteilung neu an. Die Telefone musst du nicht neu koppeln.",
         "confirm": "Zurücksetzen"
       }
-    },
-    "tar1090": {
-      "n": "Eigener Empfänger (tar1090)",
-      "p": "Flugspuren vom eigenen Empfänger"
     }
   },
   "server": {

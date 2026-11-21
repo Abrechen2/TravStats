@@ -51,7 +51,7 @@ export async function placeRelations(
       select: { visitedAt: true, trip: { select: { id: true, name: true } } },
     }),
     prisma.placeVisitPhoto.count({ where: { visit: { placeId, userId } } }),
-    prisma.document.count({ where: { userId, placeVisit: { placeId } } }),
+    prisma.document.count({ where: { userId, links: { some: { placeVisit: { placeId } } } } }),
     prisma.placeListEntry.findMany({
       where: { placeId, list: { userId } },
       select: { list: { select: { id: true, name: true } } },

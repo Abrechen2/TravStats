@@ -184,6 +184,8 @@ model User {
   shareNoticesActed               ShareNotice[]                @relation("ShareNoticeActor")
   photoJourneys                   PhotoJourney[]
   tripSuggestionAnswers           TripSuggestionDecision[]
+  documentLinkSuggestions         DocumentLinkSuggestion[]
+  documentLinkPass                DocumentLinkPass?
   dataQualityFlags                DataQualityFlag[]
   countryDays                     CountryDay[]
   dawarichStayScan                DawarichStayScan?
@@ -872,7 +874,8 @@ model Flight {
   aeroapiTrackAttempt AeroapiTrackAttempt?
   publicShareLinks    PublicShareLink[]
 
-  documents Document[]
+  documents     Document[]
+  documentLinks DocumentLink[]
 
   @@unique([userId, externalRef])
   @@unique([userId, shareKey])
@@ -1005,6 +1008,15 @@ model UserSettings {
   /// stored value or the overall of any stay.
   lodgingRatingCategories String[] @default(["room", "breakfast", "service"]) @map("lodging_rating_categories")
 
+  /// Link photos from the connected photo sources to place visits on their own
+  /// (default on: the owner asked for it, 2026-11-21). Links only, never copies.
+  autoLinkVisitPhotos Boolean @default(true) @map("auto_link_visit_photos")
+
+  /// The outcome of the last automatic linking pass, per source, so a failing
+  /// source is visible in the settings instead of reading as "no photos":
+  /// `{ at, linked, sources: { immich: "ok" | <failure kind> | "notConfigured", … } }`.
+  visitPhotoAutoLinkLastRun Json? @map("visit_photo_auto_link_last_run")
+
   /// TravPlan, the planning area, for THIS account (owner, 2026-10-27): switched
   /// on and off like a domain, and only offered while the instance offers TravPlan.
   /// Off by default like every domain but flights; the migration switched it on
@@ -1042,9 +1054,13 @@ model UserSettings {
   // Immich connection (base URL plain, API key encrypted at application level)
   immichBaseUrl     String? @map("immich_base_url")
   // Own tar1090/readsb receiver (forgejo#408 phase 3): base URL, plain.
-  tar1090BaseUrl String? @map("tar1090_base_url")
+  tar1090BaseUrl    String? @map("tar1090_base_url")
   immichApiKey      String? @map("immich_api_key")
   immichDefaultMode String  @default("link") @map("immich_default_mode")
+
+  // PhotoPrism connection (base URL plain, app password encrypted at application level)
+  photoprismBaseUrl String? @map("photoprism_base_url")
+  photoprismToken   String? @map("photoprism_token")
 
   // Dawarich connection (base URL plain, API key encrypted at application
   // level, Phase 3b). Same shape as the Immich connection above — Dawarich
@@ -1294,6 +1310,7 @@ model AdminSettings {
   /// admin switch, OFF by default (forgejo#392 rule, forgejo#408). A saved adsb.lol
   /// key counts as enabled.
   adsbLolEnabled            Boolean   @default(false) @map("adsb_lol_enabled")
+  airplanesLiveEnabled      Boolean   @default(false) @map("airplanes_live_enabled")
   /// FlightAware AeroAPI plan (forgejo#409): personal | personal_feeder | custom.
   /// Decides the monthly USD budget the call guard enforces.
   aeroapiTier               String    @default("personal") @map("aeroapi_tier")
@@ -1362,10 +1379,14 @@ model AdminSettings {
   airportTimezoneDataset String? @map("airport_timezone_dataset")
 
   // Global Immich connection (base URL plain, API key encrypted)
-  globalImmichBaseUrl String? @map("global_immich_base_url")
+  globalImmichBaseUrl  String? @map("global_immich_base_url")
   // Own tar1090/readsb receiver (forgejo#408 phase 3), instance-wide address.
   globalTar1090BaseUrl String? @map("global_tar1090_base_url")
-  globalImmichApiKey  String? @map("global_immich_api_key")
+  globalImmichApiKey   String? @map("global_immich_api_key")
+
+  // Global PhotoPrism connection (base URL plain, app password encrypted)
+  globalPhotoprismBaseUrl String? @map("global_photoprism_base_url")
+  globalPhotoprismToken   String? @map("global_photoprism_token")
 
   // Global Dawarich connection (base URL plain, API key encrypted, Phase 3b)
   globalDawarichBaseUrl String? @map("global_dawarich_base_url")
@@ -2179,6 +2200,7 @@ model Trip {
   mergedFrom       MergedTripRedirect[]
 
   documents              Document[]
+  documentLinks          DocumentLink[]
   travelPlan             TravelPlan?
   travTrackShareSnapshot TravTrackShareSnapshot?
 
@@ -2198,7 +2220,10 @@ model TripPhoto {
   sortIdx   Int       @default(0) @map("sort_idx")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  // Immich provenance — set only for photos imported from a linked album.
+  // Photo-source provenance — set only for photos imported from a linked album.
+  // The column keeps its Immich name; `provider` says which source the id
+  // belongs to (`immich` | `photoprism`), because an id is only unique per source.
+  provider          String  @default("immich")
   immichAssetId     String? @map("immich_asset_id")
   immichAlbumLinkId String? @map("immich_album_link_id")
 
@@ -2222,7 +2247,7 @@ model TripPhoto {
   visitLinks   PlaceVisitPhoto[]
   journalLinks JournalEntryPhoto[]
 
-  @@unique([tripId, immichAssetId])
+  @@unique([tripId, provider, immichAssetId])
   @@index([tripId])
   @@index([tripId, sortIdx])
   @@index([immichAlbumLinkId])
@@ -2234,6 +2259,9 @@ model TripImmichAlbum {
   id               String    @id @default(uuid())
   tripId           String    @map("trip_id")
   immichAlbumId    String    @map("immich_album_id")
+  /// Which photo source holds the album: `immich` | `photoprism`. The album id
+  /// is only unique per source, so the provider is part of the unique key.
+  provider         String    @default("immich")
   albumName        String    @map("album_name")
   assetCount       Int       @default(0) @map("asset_count")
   thumbnailAssetId String?   @map("thumbnail_asset_id")
@@ -2246,7 +2274,7 @@ model TripImmichAlbum {
   photos    TripPhoto[]
   importJob ImmichImportJob?
 
-  @@unique([tripId, immichAlbumId])
+  @@unique([tripId, provider, immichAlbumId])
   @@index([tripId])
   @@map("trip_immich_albums")
 }
@@ -2561,14 +2589,15 @@ model TripExpense {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payerCompanion Companion? @relation(fields: [payerCompanionId], references: [id], onDelete: SetNull)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payerCompanion Companion?     @relation(fields: [payerCompanionId], references: [id], onDelete: SetNull)
   documents      Document[]
-  trip           Trip?      @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  route          TripRoute? @relation(fields: [routeId], references: [id], onDelete: Cascade)
-  stop           TripStop?  @relation("ExpenseStop", fields: [stopId], references: [id], onDelete: SetNull)
-  legFromStop    TripStop?  @relation("ExpenseLegFrom", fields: [legFromStopId], references: [id], onDelete: SetNull)
-  legToStop      TripStop?  @relation("ExpenseLegTo", fields: [legToStopId], references: [id], onDelete: SetNull)
+  documentLinks  DocumentLink[]
+  trip           Trip?          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  route          TripRoute?     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  stop           TripStop?      @relation("ExpenseStop", fields: [stopId], references: [id], onDelete: SetNull)
+  legFromStop    TripStop?      @relation("ExpenseLegFrom", fields: [legFromStopId], references: [id], onDelete: SetNull)
+  legToStop      TripStop?      @relation("ExpenseLegTo", fields: [legToStopId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([tripId])
@@ -2843,7 +2872,8 @@ model Cruise {
   companionLinks CruiseCompanion[]
   importBatch    ImportBatch?      @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
-  documents Document[]
+  documents     Document[]
+  documentLinks DocumentLink[]
 
   /// Public single-entry links to this record (forgejo#405).
   publicShareLinks PublicShareLink[]
@@ -3264,6 +3294,12 @@ model Lodging {
   /// handed the same oldest 500 unresolvable rows to the geocoder on every
   /// run, so a hotel added afterwards was never reached at all (AUD-070).
   geocodeAttemptedAt DateTime? @map("geocode_attempted_at")
+  /// Why this house's position needs a look, or null when nothing is wrong.
+  /// A code (`name_only`, `contradicted`, `provider_unavailable`, `no_result`,
+  /// `pin_country_mismatch` — see `locationCheck.ts`), never prose: the UI maps
+  /// it to DE/EN copy. A geocoder answer that contradicts the record is NOT
+  /// written to lat/lon; it is named here instead (GitHub #401).
+  locationCheck      String?   @map("location_check")
   stars              Int? // official 1–5
   /// The house's own website. Filled by hand or by the OpenStreetMap
   /// enrichment, which only ever writes an empty field.
@@ -3420,7 +3456,8 @@ model LodgingStay {
   /// Roadtrip stations that slept here. The stay does not own them.
   roadtripStations TripStop[]
 
-  documents Document[]
+  documents     Document[]
+  documentLinks DocumentLink[]
 
   /// Public single-entry links to this record (forgejo#405).
   publicShareLinks PublicShareLink[]
@@ -3821,7 +3858,8 @@ model PlaceVisit {
   photoRefusals VisitPhotoRefusal[]
   captures      PlaceCapture[]
 
-  documents Document[]
+  documents     Document[]
+  documentLinks DocumentLink[]
 
   /// Public single-entry links to this record (forgejo#405).
   publicShareLinks PublicShareLink[]
@@ -3884,6 +3922,16 @@ model PlaceVisitPhoto {
   /// Immich provenance, set only when imported from a linked album.
   immichAssetId String? @map("immich_asset_id")
 
+  /// Which photo source holds `immichAssetId`: `immich` | `photoprism`. The
+  /// column keeps its Immich name, like `TripPhoto.immichAssetId`; an id is only
+  /// unique per source.
+  provider String @default("immich")
+
+  /// How the row came to be: `manual` (picked or uploaded) or `auto` (linked by
+  /// the automatic matcher, forgejo visit-photos-auto). The gallery says
+  /// "automatisch verknüpft" for `auto`.
+  provenance String @default("manual")
+
   /// SHA-1 of the uploaded original, base64 — the encoding Immich uses for
   /// `asset.checksum`, so a later match is exact rather than a guess.
   ///
@@ -3919,6 +3967,7 @@ model PlaceVisitPhoto {
   tripPhoto TripPhoto? @relation(fields: [tripPhotoId], references: [id], onDelete: Cascade)
   coverOf   Place[]    @relation("PlaceCover")
 
+  @@unique([placeVisitId, provider, immichAssetId])
   @@index([placeVisitId])
   @@index([tripPhotoId])
   @@map("place_visit_photos")
@@ -3936,13 +3985,15 @@ model VisitPhotoRefusal {
   placeVisitId String   @map("place_visit_id")
   /// "trip" | "library"
   kind         String
+  /// Photo source of a "library" refusal; the asset id is only unique per source.
+  provider     String   @default("immich")
   suggestionId String   @map("suggestion_id")
   createdAt    DateTime @default(now()) @map("created_at")
 
   user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   visit PlaceVisit @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
 
-  @@unique([placeVisitId, kind, suggestionId])
+  @@unique([placeVisitId, kind, provider, suggestionId])
   @@index([userId])
   @@map("visit_photo_refusals")
 }
@@ -4338,6 +4389,10 @@ model TripSuggestionDecision {
   /// assign/extend: the trip it targeted. place_visit: the place.
   targetId            String?  @map("target_id")
   memberKeys          String[] @map("member_keys")
+  /// Content keys (`contentKey()`), aligned with `memberKeys` — what still names
+  /// a member after its id is gone (deleted and re-imported). Empty on rows
+  /// written before the column existed.
+  memberContentKeys   String[] @default([]) @map("member_content_keys")
   /// What accepting created, for the record. No foreign key: the trip may be
   /// deleted later, and the answer stays an answer.
   createdTripId       String?  @map("created_trip_id")
@@ -4417,6 +4472,10 @@ model Document {
   /// What the parse decided and extracted, kept for a later diff.
   parsedDomain  String?   @map("parsed_domain")
   parsedPayload Json?     @map("parsed_payload")
+  /// When `parsed_payload` last changed — set by the trigger `documents_parsed_at`, so
+  /// every writer is covered. The document-link pass rescans a document whose
+  /// reading is newer than its last scan.
+  parsedAt      DateTime? @map("parsed_at")
 
   flightId        String? @map("flight_id")
   cruiseId        String? @map("cruise_id")
@@ -4449,19 +4508,24 @@ model Document {
   /// owed it from the moment the document became unfiled.
   unlinkedAt DateTime? @map("unlinked_at")
 
-  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  flight             Flight?             @relation(fields: [flightId], references: [id], onDelete: Cascade)
-  cruise             Cruise?             @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
-  lodgingStay        LodgingStay?        @relation(fields: [lodgingStayId], references: [id], onDelete: Cascade)
+  user               User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flight             Flight?                  @relation(fields: [flightId], references: [id], onDelete: SetNull)
+  cruise             Cruise?                  @relation(fields: [cruiseId], references: [id], onDelete: SetNull)
+  lodgingStay        LodgingStay?             @relation(fields: [lodgingStayId], references: [id], onDelete: SetNull)
   planDocument       TravelPlanDocument?
-  trip               Trip?               @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  placeVisit         PlaceVisit?         @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
-  railJourney        RailJourney?        @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
-  rentalBooking      RentalBooking?      @relation(fields: [rentalBookingId], references: [id], onDelete: Cascade)
-  busJourney         BusJourney?         @relation(fields: [busJourneyId], references: [id], onDelete: Cascade)
-  ferryJourney       FerryJourney?       @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
-  tripExpense        TripExpense?        @relation(fields: [tripExpenseId], references: [id], onDelete: Cascade)
+  trip               Trip?                    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  placeVisit         PlaceVisit?              @relation(fields: [placeVisitId], references: [id], onDelete: SetNull)
+  railJourney        RailJourney?             @relation(fields: [railJourneyId], references: [id], onDelete: SetNull)
+  rentalBooking      RentalBooking?           @relation(fields: [rentalBookingId], references: [id], onDelete: SetNull)
+  busJourney         BusJourney?              @relation(fields: [busJourneyId], references: [id], onDelete: SetNull)
+  ferryJourney       FerryJourney?            @relation(fields: [ferryJourneyId], references: [id], onDelete: SetNull)
+  tripExpense        TripExpense?             @relation(fields: [tripExpenseId], references: [id], onDelete: SetNull)
   mailIntakeMessages MailIntakeMessage[]
+  /// Every entry this document is filed with or is evidence for (forgejo plan
+  /// 2026-11-21-document-links). The owner columns above are the projection of
+  /// the ONE `primary` link, kept for installed Companion versions.
+  links              DocumentLink[]
+  linkSuggestions    DocumentLinkSuggestion[]
 
   @@index([userId, sha256])
   @@index([flightId])
@@ -4478,6 +4542,82 @@ model Document {
   /// The sweep asks exactly this: unfiled rows past their stamp.
   @@index([unlinkedAt])
   @@map("documents")
+}
+
+/// One link between a kept original and an entry it belongs to (plan
+/// docs/superpowers/specs/2026-11-21-document-links.md). A document has at most
+/// one `primary` link — where it was filed, mirrored into the owner columns of
+/// `documents` for installed clients — and any number of `covers` links to
+/// entries it is evidence for. A link is never an authorisation: the target is
+/// checked to belong to the document's account in the transaction that writes
+/// the link, and nothing shared or federated reads this table.
+///
+/// One real foreign key per target type rather than `entityType + entityId`, so
+/// a deleted entry takes its links with it in the database and ownership stays
+/// a join. Exactly one target is set (`document_links_single_target_check`).
+/// When the last link of a document goes — through any delete path — the
+/// trigger `document_links_after_delete` re-projects the owner columns and
+/// stamps `documents.unlinked_at`, which starts the 30-day grace.
+model DocumentLink {
+  id         String @id @default(uuid())
+  documentId String @map("document_id")
+
+  flightId        String? @map("flight_id")
+  cruiseId        String? @map("cruise_id")
+  lodgingStayId   String? @map("lodging_stay_id")
+  tripId          String? @map("trip_id")
+  placeVisitId    String? @map("place_visit_id")
+  railJourneyId   String? @map("rail_journey_id")
+  rentalBookingId String? @map("rental_booking_id")
+  busJourneyId    String? @map("bus_journey_id")
+  ferryJourneyId  String? @map("ferry_journey_id")
+  tripExpenseId   String? @map("trip_expense_id")
+
+  /// primary | covers (`document_links_role_check`).
+  role           String
+  /// How the link came to be: user | parser | suggestion | legacy
+  /// (`document_links_provenance_check`).
+  provenance     String
+  /// What a rental's evidence shows (forgejo#239), on the rental link it
+  /// describes: pickup | return | damage | fuel | odometer. Null elsewhere.
+  rentalCategory String?  @map("rental_category")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  document      Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  flight        Flight?        @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  cruise        Cruise?        @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  lodgingStay   LodgingStay?   @relation(fields: [lodgingStayId], references: [id], onDelete: Cascade)
+  trip          Trip?          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  placeVisit    PlaceVisit?    @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
+  railJourney   RailJourney?   @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
+  rentalBooking RentalBooking? @relation(fields: [rentalBookingId], references: [id], onDelete: Cascade)
+  busJourney    BusJourney?    @relation(fields: [busJourneyId], references: [id], onDelete: Cascade)
+  ferryJourney  FerryJourney?  @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
+  tripExpense   TripExpense?   @relation(fields: [tripExpenseId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, flightId])
+  @@unique([documentId, cruiseId])
+  @@unique([documentId, lodgingStayId])
+  @@unique([documentId, tripId])
+  @@unique([documentId, placeVisitId])
+  @@unique([documentId, railJourneyId])
+  @@unique([documentId, rentalBookingId])
+  @@unique([documentId, busJourneyId])
+  @@unique([documentId, ferryJourneyId])
+  @@unique([documentId, tripExpenseId])
+  /// At most one primary per document.
+  @@unique([documentId], map: "document_links_one_primary_key", where: raw("role = 'primary'"))
+  @@index([flightId])
+  @@index([cruiseId])
+  @@index([lodgingStayId])
+  @@index([tripId])
+  @@index([placeVisitId])
+  @@index([railJourneyId])
+  @@index([rentalBookingId])
+  @@index([busJourneyId])
+  @@index([ferryJourneyId])
+  @@index([tripExpenseId])
+  @@map("document_links")
 }
 
 /// One train ride: one vehicle, boarded at one station and left at another
@@ -4616,6 +4756,7 @@ model RailJourney {
   arrStation         RailStation?           @relation("RailJourneyArrStation", fields: [arrStationId], references: [id], onDelete: SetNull)
   companionLinks     RailJourneyCompanion[]
   documents          Document[]
+  documentLinks      DocumentLink[]
 
   @@unique([userId, externalRef])
   @@unique([userId, shareKey])
@@ -4773,6 +4914,7 @@ model BusJourney {
   importBatch    ImportBatch?          @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
   companionLinks BusJourneyCompanion[]
   documents      Document[]
+  documentLinks  DocumentLink[]
 
   @@unique([userId, externalRef])
   @@unique([userId, shareKey])
@@ -4972,6 +5114,7 @@ model RentalBooking {
   returnAirport  Airport?                 @relation("RentalReturnAirport", fields: [returnAirportId], references: [id], onDelete: SetNull)
   companionLinks RentalBookingCompanion[]
   documents      Document[]
+  documentLinks  DocumentLink[]
 
   @@unique([userId, externalRef])
   @@unique([userId, shareKey])
@@ -5614,6 +5757,7 @@ model FerryJourney {
   importBatch    ImportBatch?            @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
   companionLinks FerryJourneyCompanion[]
   documents      Document[]
+  documentLinks  DocumentLink[]
   routeBackfill  FerryRouteBackfill?
 
   @@unique([userId, externalRef])
@@ -7263,4 +7407,53 @@ model LoginThrottle {
   lockedUntil   DateTime? @map("locked_until")
 
   @@map("login_throttles")
+}
+
+/// "This document also covers …" — a proposal that a stored document is
+/// evidence for another entry of its trip (plan D4,
+/// docs/superpowers/specs/2026-11-21-document-links.md). One row per
+/// (document, entry).
+///
+/// `entryId` has NO foreign key on purpose: the row must outlive an entry that
+/// was deleted and re-imported, because a rejected proposal is remembered by
+/// `contentKey` (what names the entry after its id is gone — the same idea as
+/// `TripSuggestionDecision.memberContentKeys`). A pending row whose entry or
+/// document is gone is swept by the pass and filtered from every answer.
+model DocumentLinkSuggestion {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  documentId String   @map("document_id")
+  /// An `EntryType` of documentFormats.ts: flight | railJourney | busJourney |
+  /// ferryJourney | lodgingStay | rentalBooking. Never a place visit.
+  entryType  String   @map("entry_type")
+  entryId    String   @map("entry_id")
+  /// `contentKey()` of the entry — stable across a delete and re-import.
+  contentKey String   @map("content_key")
+  /// Which field matched: bookingReference | flightNumber | trainNumber |
+  /// lineName | hotelDates | dateRange.
+  reason     String
+  /// pending | dismissed | accepted
+  status     String   @default("pending")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, contentKey])
+  @@index([userId, status])
+  @@map("document_link_suggestions")
+}
+
+/// When the document-link pass last finished for an account. The first run
+/// scans every stored document; later runs only those created or filed since
+/// `scannedUntil`. Absent row = the account was never scanned.
+model DocumentLinkPass {
+  userId       String   @id @map("user_id")
+  scannedUntil DateTime @map("scanned_until")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("document_link_passes")
 }

@@ -366,9 +366,9 @@ describe("listAlbumAssets — capture time at the boundary (ADR 0002 D6)", () =>
     expect(Object.fromEntries(assets.map((a) => [a.id, a.fileCreatedAt]))).toEqual({
       offset: "2026-05-01T10:00:00.000Z",
       zulu: "2026-05-01T10:30:00.000Z",
-      // No offset, no zone: the same "no capture time" as a missing one, not
-      // whatever the host's zone would have made of it.
-      bare: "1970-01-01T00:00:00.000Z",
+      // No offset, no zone: the same "no capture time" as a missing one (null,
+      // never 1970), not whatever the host's zone would have made of it.
+      bare: null,
     });
   });
 });

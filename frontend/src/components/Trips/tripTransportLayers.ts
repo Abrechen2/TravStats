@@ -8,6 +8,8 @@ import { buildRailMapLayers } from "../Dashboard/tabs/railMapOverlay";
 import { buildRentalMapLayers } from "../Dashboard/tabs/rentalMapOverlay";
 import { buildTerminalRideMapLayers } from "../Dashboard/tabs/terminalRideMapOverlay";
 import { busPaths } from "./tripBusLayer";
+import { hexToRgb } from "../../lib/domainColor";
+import type { DirectionLine } from "./tripMapArrows";
 import type { LngLat } from "./tripMapBounds";
 import type { Trip } from "../../types";
 import type { RentalBooking } from "../../types/rental";
@@ -52,6 +54,8 @@ export function useTripTransportLayers(
 ): {
   layers: Layer[];
   points: LngLat[];
+  /** The rides' lines in travel order, for the map's direction arrows. */
+  lines: DirectionLine[];
 } {
   const { colorOf } = useDomainColors();
   const railOn = useDomainVisible("rail");
@@ -82,7 +86,21 @@ export function useTripTransportLayers(
       ...busPaths(ferry).flatMap((p) => p.path),
       ...buildRentalPoints(rental).map((p) => p.position),
     ];
-    return { layers, points };
+    const lines: DirectionLine[] = [
+      ...buildRailPaths(rail).map((p) => ({
+        id: `rail:${p.id}`,
+        group: "rail" as const,
+        path: p.path,
+        color: hexToRgb(railColor),
+      })),
+      ...busPaths(ferry).map((p) => ({
+        id: `ferry:${p.id}`,
+        group: "ferry" as const,
+        path: p.path,
+        color: hexToRgb(ferryColor),
+      })),
+    ];
+    return { layers, points, lines };
   }, [
     trip.railJourneys,
     trip.ferryJourneys,

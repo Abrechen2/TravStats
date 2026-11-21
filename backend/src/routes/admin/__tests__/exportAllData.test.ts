@@ -200,6 +200,73 @@ describe("GET /api/v1/admin/export/all-data", () => {
     ]);
   });
 
+  // Document links (forgejo#425): one document, several entries — the file
+  // says which, with role and provenance, and keeps a detached document's clock.
+  it("carries a document's links, and the unlink clock of an unfiled one", async () => {
+    const userId = createdUserIds[0];
+    const trip = await prisma.trip.findFirstOrThrow({ where: { userId } });
+    const base = {
+      userId,
+      mimetype: "application/pdf",
+      sizeBytes: 1,
+      format: "pdf",
+      source: "upload",
+    };
+    const filed = await prisma.document.create({
+      data: { ...base, storedName: "links-a.pdf", sha256: "a".repeat(64) },
+    });
+    const unfiled = await prisma.document.create({
+      data: {
+        ...base,
+        storedName: "links-b.pdf",
+        sha256: "b".repeat(64),
+        unlinkedAt: new Date("2026-11-01T00:00:00Z"),
+      },
+    });
+    const ferry = await prisma.ferryJourney.create({
+      data: {
+        userId,
+        tripId: trip.id,
+        depStationName: "A",
+        arrStationName: "B",
+        depLat: 1,
+        depLon: 1,
+        arrLat: 2,
+        arrLon: 2,
+        departureTime: new Date("2026-05-01T08:00:00Z"),
+        arrivalTime: new Date("2026-05-01T10:00:00Z"),
+        status: "scheduled",
+      },
+    });
+    await prisma.documentLink.createMany({
+      data: [
+        { documentId: filed.id, tripId: trip.id, role: "primary", provenance: "parser" },
+        { documentId: filed.id, ferryJourneyId: ferry.id, role: "covers", provenance: "parser" },
+      ],
+    });
+    try {
+      const res = await request(app)
+        .get("/api/v1/admin/export/all-data")
+        .set("Cookie", adminCookie)
+        .expect(200);
+      const user = res.body.users.find((u: { id: string }) => u.id === userId);
+      const exported = user.documents.find((d: { id: string }) => d.id === filed.id);
+      expect(exported.links).toHaveLength(2);
+      expect(exported.links).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ role: "primary", tripId: trip.id, provenance: "parser" }),
+          expect.objectContaining({ role: "covers", ferryJourneyId: ferry.id }),
+        ])
+      );
+      const detached = user.documents.find((d: { id: string }) => d.id === unfiled.id);
+      expect(detached.links).toEqual([]);
+      expect(detached.unlinkedAt).toBe("2026-11-01T00:00:00.000Z");
+    } finally {
+      await prisma.document.deleteMany({ where: { id: { in: [filed.id, unfiled.id] } } });
+      await prisma.ferryJourney.delete({ where: { id: ferry.id } });
+    }
+  });
+
   // Public share links (forgejo#281): listed with what they share and until
   // when — the token hash stays out, and the token is stored nowhere.
   it("lists the share links without their token hash", async () => {

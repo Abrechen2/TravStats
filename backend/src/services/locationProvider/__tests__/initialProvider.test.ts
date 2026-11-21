@@ -33,11 +33,14 @@ const providerOf = (userId: string) =>
 describe("the initial location provider", () => {
   const switches = travTrackSwitches();
   let registration: boolean;
+  let maxUsers: number;
   let adminCookie: string;
 
   beforeAll(async () => {
-    registration = (await getInstanceSettings()).allowRegistration;
-    await updateInstanceSettings({ allowRegistration: true });
+    ({ allowRegistration: registration, maxUsers } = await getInstanceSettings());
+    // Other suites in the same shard leave accounts behind; under the default
+    // limit of 10 the admin create below answered 409 "User limit reached".
+    await updateInstanceSettings({ allowRegistration: true, maxUsers: 1000 });
     await prisma.user.deleteMany({ where: { username: { startsWith: PREFIX } } });
     const admin = await prisma.user.create({
       data: {
@@ -57,7 +60,7 @@ describe("the initial location provider", () => {
 
   afterAll(async () => {
     await switches.restore();
-    await updateInstanceSettings({ allowRegistration: registration });
+    await updateInstanceSettings({ allowRegistration: registration, maxUsers });
     await prisma.user.deleteMany({ where: { username: { startsWith: PREFIX } } });
     await prisma.$disconnect();
   });

@@ -22,8 +22,8 @@ import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/a
 import { AppError } from "../../middleware/errorHandler";
 import { resolveTrip } from "../trips";
 import { photoIdParamSchema, setCoverSchema } from "../../schemas/immich";
-import { createImmichClient } from "../../services/immich/immichClient";
-import { getImmichConnection } from "../../services/immich/immichResolver";
+import { createPhotoSource, listAllAlbumAssets } from "../../services/photoSource";
+import { getPhotoSourceConnection, toPhotoSourceKind } from "../../services/photoSource/connection";
 import { getCachedAlbumAssets } from "../../services/immich/immichAssetCache";
 import { ImmichError } from "../../services/immich/types";
 import logger from "../../utils/logger";
@@ -48,19 +48,23 @@ router.post(
 
       const link = await prisma.tripImmichAlbum.findFirst({
         where: { id: linkId, tripId },
-        select: { id: true, immichAlbumId: true },
+        select: { id: true, immichAlbumId: true, provider: true },
       });
       // `error` bodies carry the machine-readable failure-kind vocabulary
       // (`notFound`/`notConfigured`) the frontend's `immichFailureKind()`
       // classifies — not a prose message it cannot parse.
       if (!link) throw new AppError("notFound", 404);
 
-      const conn = await getImmichConnection(userId);
+      const provider = toPhotoSourceKind(link.provider);
+      const conn = await getPhotoSourceConnection(provider, userId);
       if (!conn) throw new AppError("notConfigured", 409);
 
       // The asset must belong to this album — same boundary the proxy enforces.
-      const assets = await getCachedAlbumAssets(userId, link.immichAlbumId, () =>
-        createImmichClient(conn).listAlbumAssets(link.immichAlbumId)
+      const assets = await getCachedAlbumAssets(
+        userId,
+        link.immichAlbumId,
+        () => listAllAlbumAssets(createPhotoSource(provider, conn), link.immichAlbumId),
+        provider
       );
       if (!assets.some((a) => a.id === assetId)) {
         throw new AppError("notFound", 404);

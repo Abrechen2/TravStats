@@ -12,7 +12,7 @@ import type { JSX, MouseEvent, ReactNode } from "react";
  * without it, clicking "delete" would also open the entry underneath.
  */
 
-export type RowActionIcon = "edit" | "duplicate" | "delete" | "checkIn";
+export type RowActionIcon = "edit" | "duplicate" | "delete" | "checkIn" | "link" | "unlink";
 
 const PATHS: Record<RowActionIcon, ReactNode> = {
   edit: <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />,
@@ -27,6 +27,20 @@ const PATHS: Record<RowActionIcon, ReactNode> = {
     <>
       <path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12Z" />
       <path d="m9 10 2 2 4-4" />
+    </>
+  ),
+  // A chain: assign to / detach from a trip (tours list).
+  link: (
+    <>
+      <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
+      <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
+    </>
+  ),
+  unlink: (
+    <>
+      <path d="m18.8 11.2 1.7-1.7a5 5 0 0 0-7-7l-1.7 1.7" />
+      <path d="m5.2 12.8-1.7 1.7a5 5 0 0 0 7 7l1.7-1.7" />
+      <path d="m3 3 18 18" />
     </>
   ),
   delete: (
@@ -44,6 +58,8 @@ const HOVER_CLASS: Record<RowActionIcon, string> = {
   duplicate: "hover:bg-(--bg-muted) hover:text-(--text-primary)",
   delete: "hover:bg-(--bg-muted) hover:text-(--danger)",
   checkIn: "hover:bg-(--bg-muted) hover:text-(--domain-poi)",
+  link: "hover:bg-(--bg-muted) hover:text-(--text-primary)",
+  unlink: "hover:bg-(--bg-muted) hover:text-(--text-primary)",
 };
 
 /**

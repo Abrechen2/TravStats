@@ -9,6 +9,7 @@ import type {
   ImportEstimate,
   ImportJob,
   LinkedAlbum,
+  PhotoSourceKind,
 } from "../../types/immich";
 
 const FAILURE_KINDS: readonly ImmichFailureKind[] = [
@@ -48,8 +49,9 @@ export function immichFailureKind(error: unknown): ImmichFailureKind | null {
  * card render the same vocabulary; a seventh kind must not be handled in one
  * and forgotten in the other.
  */
-export function failureKey(kind: unknown): string {
-  return isImmichFailureKind(kind) ? `errors.${kind}` : "errors.unknown";
+export function failureKey(kind: unknown, provider: PhotoSourceKind = "immich"): string {
+  const prefix = provider === "photoprism" ? "errors.photoprism" : "errors";
+  return isImmichFailureKind(kind) ? `${prefix}.${kind}` : `${prefix}.unknown`;
 }
 
 export const immichApi = {
@@ -94,15 +96,17 @@ export const immichApi = {
   },
 
   async listAlbums(
-    tripId: string
+    tripId: string,
+    provider: PhotoSourceKind = "immich"
   ): Promise<{ albums: ImmichAlbumSummary[]; defaultMode: ImmichMode }> {
-    const { data } = await api.get(`/trips/${tripId}/immich/albums`);
+    const { data } = await api.get(`/trips/${tripId}/immich/albums`, { params: { provider } });
     return data;
   },
 
+  /** One request links into ONE source; the caller groups by `provider`. */
   async linkAlbums(
     tripId: string,
-    albums: Array<{ immichAlbumId: string; mode: ImmichMode }>
+    albums: Array<{ immichAlbumId: string; mode: ImmichMode; provider?: PhotoSourceKind }>
   ): Promise<{ links: LinkedAlbum[] }> {
     const { data } = await api.post(`/trips/${tripId}/immich/albums`, { albums });
     return data;
@@ -130,8 +134,14 @@ export const immichApi = {
     return data;
   },
 
-  async estimateImport(tripId: string, albumId: string): Promise<ImportEstimate> {
-    const { data } = await api.get(`/trips/${tripId}/immich/estimate?albumId=${albumId}`);
+  async estimateImport(
+    tripId: string,
+    albumId: string,
+    provider: PhotoSourceKind = "immich"
+  ): Promise<ImportEstimate> {
+    // Immich keeps its original URL; only another source names itself.
+    const suffix = provider === "immich" ? "" : `&provider=${provider}`;
+    const { data } = await api.get(`/trips/${tripId}/immich/estimate?albumId=${albumId}${suffix}`);
     return data;
   },
 

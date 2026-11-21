@@ -57,7 +57,12 @@ export interface TravTrackFlightPanel {
   };
 }
 
+/** The photo libraries a track photo can come from. */
+export type TrackPhotoProvider = "immich" | "photoprism";
+
 export interface TravTrackPhoto {
+  /** Absent on an older server, which knew Immich only. */
+  provider?: TrackPhotoProvider;
   assetId: string;
   type: "IMAGE" | "VIDEO";
   takenAt: string;
@@ -72,6 +77,14 @@ export interface TravTrackPhotos {
   truncated: boolean;
   /** The window's track was longer than one read; absent on an older server. */
   trackTruncated?: boolean;
+  /** Sources that could not answer (their photos are missing); absent on an older server. */
+  failures?: TrackPhotoFailure[];
+}
+
+export interface TrackPhotoFailure {
+  provider: TrackPhotoProvider;
+  /** The fixed Immich failure vocabulary: unreachable, auth, notFound, protocol, invalidUrl. */
+  kind: string;
 }
 
 export type TravTrackStayState = "pending" | "accepted" | "rejected";
@@ -120,6 +133,12 @@ export function travTrackPhotoFailureKind(err: unknown): string | null {
   return typeof data?.error === "string" ? data.error : null;
 }
 
+/** The source named by a refused photo request (every source failed), or null. */
+export function travTrackPhotoFailureProvider(err: unknown): TrackPhotoProvider | null {
+  const data = (err as { response?: { data?: { provider?: unknown } } } | null)?.response?.data;
+  return data?.provider === "photoprism" || data?.provider === "immich" ? data.provider : null;
+}
+
 export const travTrackViewsApi = {
   /** One part of a span; pass the previous part's `cursor` for the next. */
   range: async (span: DaySpan | InstantSpan, cursor?: string | null): Promise<TravTrackRange> =>
@@ -144,8 +163,15 @@ export const travTrackViewsApi = {
    * A placed photo's rendition for an `<img src>`, prefixed with `API_URL` like
    * the photo-journey strip. The window must be the list's: it is the grant.
    */
-  photoUrl: (assetId: string, window: PhotoWindow, size: "thumbnail" | "preview" = "thumbnail") =>
-    `${API_URL}/api/v1/travtrack/photos/${encodeURIComponent(assetId)}/file?${new URLSearchParams({ ...window, size }).toString()}`,
+  /** The connected photo sources, without asking either library; null where the read itself failed. */
+  photoSources: async (): Promise<TrackPhotoProvider[]> =>
+    (await api.get<{ sources: TrackPhotoProvider[] }>("/travtrack/photos/sources")).data.sources,
+  photoUrl: (
+    photo: Pick<TravTrackPhoto, "assetId" | "provider">,
+    window: PhotoWindow,
+    size: "thumbnail" | "preview" = "thumbnail"
+  ) =>
+    `${API_URL}/api/v1/travtrack/photos/${encodeURIComponent(photo.assetId)}/file?${new URLSearchParams({ ...window, provider: photo.provider ?? "immich", size }).toString()}`,
   stays: async (
     query: TravTrackStaysQuery = {}
   ): Promise<{ stays: TravTrackStay[]; nextCursor: string | null }> =>

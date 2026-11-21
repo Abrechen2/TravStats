@@ -293,7 +293,7 @@ export default function RoadtripDetailPage(): JSX.Element {
 
   if (loadError) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <EmptyState
           kind="degraded"
           title={t("roadtrips:detailLoadError")}
@@ -308,7 +308,7 @@ export default function RoadtripDetailPage(): JSX.Element {
   }
   if (!detail) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <div
           aria-busy="true"
           aria-label={t("common:loading.default")}
@@ -404,7 +404,7 @@ export default function RoadtripDetailPage(): JSX.Element {
   // that needs `table`, and the stations-beside-map grid already has to work
   // at 1024px, narrower than `list` ever makes it (forgejo#307).
   return (
-    <AppShell width="list">
+    <AppShell>
       <DetailHeader
         backTo="/roadtrips"
         backLabel={t("roadtrips:pageTitle")}

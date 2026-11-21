@@ -26,6 +26,7 @@ export interface LodgingLocationPatch {
   address?: string | null;
   city?: string | null;
   country?: string | null;
+  locationCheck?: string | null;
 }
 
 export async function createLodgingRecord<I extends Prisma.LodgingInclude>(

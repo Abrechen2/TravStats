@@ -26,7 +26,20 @@ async function makeDoc(tag: string, owner: Record<string, string>): Promise<stri
       ...owner,
     },
   });
+  // The owner column alone is enough: the documents_after_owner_set trigger
+  // (document-links D2) writes the primary link, as it does for any writer.
   return d.id;
+}
+
+/**
+ * Plan 2026-11-21-document-links, rule 5: an entry's delete takes its links,
+ * not its documents — they stay, unfiled, on the 30-day clock.
+ */
+async function expectUnfiled(docId: string): Promise<void> {
+  const doc = await prisma.document.findUniqueOrThrow({ where: { id: docId } });
+  expect(await prisma.documentLink.count({ where: { documentId: docId } })).toBe(0);
+  expect(doc.linkedAt).toBeNull();
+  expect(doc.unlinkedAt).toBeInstanceOf(Date);
 }
 
 beforeAll(async () => {
@@ -42,7 +55,7 @@ afterAll(async () => {
 });
 
 describe("DELETE /trips/:id", () => {
-  it("takes the journal, the tour route, its track and the trip documents", async () => {
+  it("takes the journal, the tour route, its track and unfiles the trip documents", async () => {
     const trip = await prisma.trip.create({ data: { userId, name: `${TAG}-trip` } });
     await prisma.tripJournalEntry.create({
       data: { tripId: trip.id, date: new Date(), title: `${TAG}-j`, body: "a written day" },
@@ -104,7 +117,7 @@ describe("DELETE /trips/:id", () => {
     expect(await prisma.tripRouteLeg.count({ where: { routeId: route.id } })).toBe(0);
     expect(await prisma.tripStop.count({ where: { tripId: trip.id } })).toBe(0);
     expect(await prisma.tripPhoto.count({ where: { id: photo.id } })).toBe(0);
-    expect(await prisma.document.count({ where: { id: docId } })).toBe(0);
+    await expectUnfiled(docId);
 
     const survivor = await prisma.flight.findUniqueOrThrow({ where: { id: flight.id } });
     expect(survivor.tripId).toBeNull();
@@ -112,7 +125,7 @@ describe("DELETE /trips/:id", () => {
 });
 
 describe("DELETE /lodgings/:id/stays/:stayId", () => {
-  it("takes the stay documents; the lodging and a linked trip survive", async () => {
+  it("takes the stay, unfiles its documents; the lodging and a linked trip survive", async () => {
     const trip = await prisma.trip.create({ data: { userId, name: `${TAG}-staytrip` } });
     const lodging = await prisma.lodging.create({ data: { userId, name: `${TAG}-hotel` } });
     const stay = await prisma.lodgingStay.create({
@@ -122,14 +135,14 @@ describe("DELETE /lodgings/:id/stays/:stayId", () => {
 
     await prisma.lodgingStay.delete({ where: { id: stay.id } });
 
-    expect(await prisma.document.count({ where: { id: docId } })).toBe(0);
+    await expectUnfiled(docId);
     expect(await prisma.lodging.count({ where: { id: lodging.id } })).toBe(1);
     expect(await prisma.trip.count({ where: { id: trip.id } })).toBe(1);
   });
 });
 
 describe("DELETE /lodgings/:id", () => {
-  it("takes every stay under it, their documents and its photos", async () => {
+  it("takes every stay under it, unfiles their documents, takes its photos", async () => {
     const lodging = await prisma.lodging.create({ data: { userId, name: `${TAG}-hotel2` } });
     const stay = await prisma.lodgingStay.create({
       data: { userId, lodgingId: lodging.id, checkIn: new Date() },
@@ -148,12 +161,12 @@ describe("DELETE /lodgings/:id", () => {
 
     expect(await prisma.lodgingStay.count({ where: { id: stay.id } })).toBe(0);
     expect(await prisma.lodgingPhoto.count({ where: { id: photo.id } })).toBe(0);
-    expect(await prisma.document.count({ where: { id: docId } })).toBe(0);
+    await expectUnfiled(docId);
   });
 });
 
 describe("DELETE /flights/:id", () => {
-  it("takes the flight documents and pending updates", async () => {
+  it("takes the pending updates, unfiles the flight documents", async () => {
     const flight = await prisma.flight.create({
       data: { userId, flightNumber: "LH2", depLat: 1, depLon: 1, arrLat: 2, arrLon: 2 },
     });
@@ -173,13 +186,13 @@ describe("DELETE /flights/:id", () => {
 
     await prisma.flight.delete({ where: { id: flight.id } });
 
-    expect(await prisma.document.count({ where: { id: docId } })).toBe(0);
+    await expectUnfiled(docId);
     expect(await prisma.pendingFlightUpdate.count({ where: { id: pending.id } })).toBe(0);
   });
 });
 
 describe("DELETE /cruises/:id", () => {
-  it("takes stops, legs and the cruise documents; ports survive", async () => {
+  it("takes stops and legs, unfiles the cruise documents; ports survive", async () => {
     const port = await prisma.port.findFirstOrThrow({ orderBy: { id: "asc" } });
     const cruise = await prisma.cruise.create({
       data: { userId, routeName: `${TAG}-cruise`, startDate: new Date() },
@@ -204,7 +217,7 @@ describe("DELETE /cruises/:id", () => {
 
     expect(await prisma.cruiseStop.count({ where: { id: stop.id } })).toBe(0);
     expect(await prisma.cruiseLeg.count({ where: { id: leg.id } })).toBe(0);
-    expect(await prisma.document.count({ where: { id: docId } })).toBe(0);
+    await expectUnfiled(docId);
     expect(await prisma.port.count({ where: { id: port.id } })).toBe(1);
   });
 

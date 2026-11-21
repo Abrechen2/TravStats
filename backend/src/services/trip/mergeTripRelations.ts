@@ -20,12 +20,13 @@ import type { PackingItem } from "../../schemas/companionData";
  *
  * Two of those relations can collide, because both are unique per trip:
  *
- *  - `TripImmichAlbum` is unique on `(tripId, immichAlbumId)`. When both sides
- *    link the SAME Immich album, the target's row wins — it already carries the
+ *  - `TripImmichAlbum` is unique on `(tripId, provider, immichAlbumId)`. When both
+ *    sides link the SAME album of the SAME photo source (an id is only unique
+ *    per source), the target's row wins — it already carries the
  *    same album name, mode and sync state — and the source row's photos are
  *    re-pointed at it before it is dropped, so nothing hangs off a row that is
  *    about to go.
- *  - `TripPhoto` is unique on `(tripId, immichAssetId)`. The same asset
+ *  - `TripPhoto` is unique on `(tripId, provider, immichAssetId)`. The same asset
  *    imported into both trips is one photograph, not two: the target's copy
  *    stays and the source's duplicate row is dropped. Only the row goes — the
  *    file on disk is shared by filename and belongs to the surviving row.
@@ -47,19 +48,21 @@ export async function mergeImmichAlbums(
   const [sourceAlbums, targetAlbums] = await Promise.all([
     tx.tripImmichAlbum.findMany({
       where: { tripId: { in: sourceIds } },
-      select: { id: true, immichAlbumId: true },
+      select: { id: true, immichAlbumId: true, provider: true },
     }),
     tx.tripImmichAlbum.findMany({
       where: { tripId: targetId },
-      select: { id: true, immichAlbumId: true },
+      select: { id: true, immichAlbumId: true, provider: true },
     }),
   ]);
 
-  const targetByAlbum = new Map(targetAlbums.map((a) => [a.immichAlbumId, a.id]));
+  const albumKey = (a: { provider: string; immichAlbumId: string }): string =>
+    JSON.stringify([a.provider, a.immichAlbumId]);
+  const targetByAlbum = new Map(targetAlbums.map((a) => [albumKey(a), a.id]));
   const duplicates: string[] = [];
 
   for (const source of sourceAlbums) {
-    const existing = targetByAlbum.get(source.immichAlbumId);
+    const existing = targetByAlbum.get(albumKey(source));
     if (!existing) {
       await tx.tripImmichAlbum.update({
         where: { id: source.id },
@@ -67,7 +70,7 @@ export async function mergeImmichAlbums(
       });
       // A second source trip linking the same album must now fold into the
       // row we just moved, not create a second one.
-      targetByAlbum.set(source.immichAlbumId, source.id);
+      targetByAlbum.set(albumKey(source), source.id);
       continue;
     }
     // Re-point first, delete second. The other order would take the photos
@@ -109,22 +112,26 @@ export async function mergeTripPhotos(
 ): Promise<MergedPhotos> {
   const imported = await tx.tripPhoto.findMany({
     where: { tripId: { in: [targetId, ...sourceIds] }, immichAssetId: { not: null } },
-    select: { id: true, tripId: true, immichAssetId: true, stopId: true },
+    select: { id: true, tripId: true, provider: true, immichAssetId: true, stopId: true },
     orderBy: [{ sortIdx: "asc" }, { id: "asc" }],
   });
   const stopOf = new Map(imported.map((row) => [row.id, row.stopId]));
 
+  // An asset id is only unique per photo source, so the provider is part of the key.
+  const assetKey = (row: { provider: string; immichAssetId: string }): string =>
+    `${row.provider}:${row.immichAssetId}`;
   const survivorByAsset = new Map<string, string>();
   for (const row of imported) {
     if (row.tripId === targetId && row.immichAssetId)
-      survivorByAsset.set(row.immichAssetId, row.id);
+      survivorByAsset.set(assetKey({ ...row, immichAssetId: row.immichAssetId }), row.id);
   }
   const survivorFor = new Map<string, string>();
   for (const row of imported) {
     if (row.tripId === targetId || !row.immichAssetId) continue;
-    const survivor = survivorByAsset.get(row.immichAssetId);
+    const key = assetKey({ ...row, immichAssetId: row.immichAssetId });
+    const survivor = survivorByAsset.get(key);
     if (survivor === undefined) {
-      survivorByAsset.set(row.immichAssetId, row.id);
+      survivorByAsset.set(key, row.id);
       continue;
     }
     survivorFor.set(row.id, survivor);

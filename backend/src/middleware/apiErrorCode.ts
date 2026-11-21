@@ -319,6 +319,16 @@ export type ApiErrorCode =
    *  so "the entry is gone" is never confused with "this server has no route"
    *  (the prose "Entry not found" stays for clients that matched on it). */
   | "DOCUMENT_ENTRY_NOT_FOUND"
+  /** Document links (plan D2), on the `/documents/:id/links` routes only: the
+   *  document is not the caller's (404), the entry already carries a link to
+   *  it (409), there is no link to that entry to remove (404), or one request
+   *  named the same entry twice (400). The web maps each to its own sentence. */
+  | "DOCUMENT_NOT_FOUND"
+  | "DOCUMENT_LINK_EXISTS"
+  | "DOCUMENT_LINK_NOT_FOUND"
+  | "DOCUMENT_LINK_DUPLICATE_INPUT"
+  /** A document-link suggestion that is gone or already decided (404, plan D4). */
+  | "DOCUMENT_LINK_SUGGESTION_NOT_FOUND"
   /** A flight's booking split (forgejo#219): the flight is linked to no booking. */
   | "BOOKING_NOT_FOUND"
   /** Booking split: the booking has no total recorded, so there is nothing to split (409). */

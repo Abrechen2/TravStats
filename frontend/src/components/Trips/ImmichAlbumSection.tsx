@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
+import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import { groupByDay } from "../../lib/galleryGrouping";
 import { useLocale } from "../../hooks/useLocale";
-import type { ImmichGalleryAsset, ImportJob, LinkedAlbum } from "../../types/immich";
+import type {
+  ImmichGalleryAsset,
+  ImportJob,
+  LinkedAlbum,
+  PhotoSourceKind,
+} from "../../types/immich";
 import PhotoLightbox, { type LightboxItem } from "./PhotoLightbox";
 
 const JOB_POLL_MS = 1500;
@@ -31,12 +37,19 @@ function readGroupPref(): boolean {
  */
 function describeImportOutcome(
   job: ImportJob,
+  provider: PhotoSourceKind,
   t: (key: string, options?: Record<string, unknown>) => string
 ): string | null {
   if (job.status === "failed") {
-    const key = failureKey(job.error);
+    // The source's own words: "PhotoPrism rejected the app password", not Immich's.
+    const key = failureKey(job.error, provider);
     const reason = t(key === "errors.unknown" ? "albums.importFailedUnknown" : key);
     return t("albums.importFailed", { reason });
+  }
+  // Completed, but the album was longer than one run reads (`truncated:<N>`).
+  const truncated = /^truncated:(\d+)$/.exec(job.error ?? "");
+  if (job.status === "completed" && truncated) {
+    return t("albums.importTruncated", { count: Number(truncated[1]) });
   }
   if (job.failedAssets > 0) {
     return t("albums.importPartial", { failed: job.failedAssets, total: job.totalAssets });
@@ -102,9 +115,13 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       setAlbumTruncated(data.truncated === true);
     } catch (error) {
       if (!mountedRef.current) return;
-      setFailure(failureKey(immichFailureKind(error)));
+      logger.warn("Linked album failed to load", {
+        provider: album.provider,
+        kind: immichFailureKind(error),
+      });
+      setFailure(failureKey(immichFailureKind(error), album.provider));
     }
-  }, [tripId, album.id]);
+  }, [tripId, album.id, album.provider]);
 
   useEffect(() => {
     void load();
@@ -133,7 +150,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
         stopPolling();
         setSyncing(false);
         setProgress(null);
-        setFailure(failureKey(immichFailureKind(error)));
+        setFailure(failureKey(immichFailureKind(error), album.provider));
       }
       return;
     }
@@ -143,11 +160,11 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       stopPolling();
       setSyncing(false);
       setProgress(null);
-      setImportOutcome(describeImportOutcome(job, t));
+      setImportOutcome(describeImportOutcome(job, album.provider, t));
       await load();
       if (mountedRef.current) onChanged();
     }
-  }, [tripId, album.id, stopPolling, load, onChanged, t]);
+  }, [tripId, album.id, album.provider, stopPolling, load, onChanged, t]);
 
   const startPolling = useCallback((): void => {
     setSyncing(true);
@@ -207,7 +224,8 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       if (!mountedRef.current) return;
       startPolling();
     } catch (error) {
-      if (mountedRef.current) addToast("error", t(failureKey(immichFailureKind(error))));
+      if (mountedRef.current)
+        addToast("error", t(failureKey(immichFailureKind(error), album.provider)));
     }
   };
 
@@ -218,7 +236,8 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       setConfirmingUnlink(false);
       onChanged();
     } catch (error) {
-      if (mountedRef.current) addToast("error", t(failureKey(immichFailureKind(error))));
+      if (mountedRef.current)
+        addToast("error", t(failureKey(immichFailureKind(error), album.provider)));
     }
   };
 
@@ -235,7 +254,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
   }));
 
   // The backend hands these over chronologically; grouping only cuts where the
-  // day changes. Undated photos collect in a trailing group with no header.
+  // day changes. Undated photos collect in a trailing group headed "Ohne Datum".
   const dayGroups = useMemo(() => groupByDay(assets), [assets]);
   const hasDates = dayGroups.some((g) => g.day !== null);
   const showGroups = groupByDayEnabled && hasDates;
@@ -267,6 +286,12 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
         <h3 className="font-semibold">{album.albumName}</h3>
         <span className="text-xs text-slate-400">
           {t("albums.photoCount", { count: album.assetCount })}
+        </span>
+        <span
+          data-testid="album-source"
+          className="rounded-sm border border-slate-600 px-1.5 py-0.5 text-xs"
+        >
+          {album.provider === "photoprism" ? t("albums.badgePhotoprism") : t("albums.badgeImmich")}
         </span>
         <span className="rounded-sm bg-slate-700 px-1.5 py-0.5 text-xs">
           {album.mode === "import" ? t("albums.badgeImport") : t("albums.badgeLink")}
@@ -364,14 +389,14 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
         <div className="space-y-4">
           {dayGroups.map((group) => (
             <div key={group.day ?? "undated"}>
-              {group.day && (
-                <h4
-                  data-testid="gallery-day-header"
-                  className="mb-1.5 text-sm font-semibold text-slate-300"
-                >
-                  {dayLabel(group.day)}
-                </h4>
-              )}
+              {/* Photos without a capture date sit in their own last group, named
+                  as such — not under a made-up day, and not unlabelled. */}
+              <h4
+                data-testid={group.day ? "gallery-day-header" : "gallery-undated-header"}
+                className="mb-1.5 text-sm font-semibold text-slate-300"
+              >
+                {group.day ? dayLabel(group.day) : t("albums.undated")}
+              </h4>
               <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
                 {group.assets.map((asset) => tile(asset, asset.index))}
               </div>

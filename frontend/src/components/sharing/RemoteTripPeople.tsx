@@ -6,6 +6,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { sharingRemoteApi } from "../../lib/api/sharingRemote";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
+import { useTripSharingStore } from "../../store/tripSharingStore";
 import type {
   AddRequestBody,
   CreatedRemoteInvite,
@@ -18,7 +19,7 @@ import { Button, Pill } from "../ui";
 import DetailSection from "../ui/DetailSection";
 import { Field, Input } from "../ui/Field";
 import RemoteAddRequest from "./RemoteAddRequest";
-import RemoteOtherServerOffer from "./RemoteOtherServerOffer";
+import RemotePersonField from "./RemotePersonField";
 import RemoteTripRoster from "./RemoteTripRoster";
 import { remoteSharingError, type RemoteSharingError } from "./remoteSharingCopy";
 
@@ -75,10 +76,20 @@ const RECEIVING = new Set<RemoteMemberState>(["active", "unreachable"]);
 export default function RemoteTripPeople({
   tripId,
   standalone = false,
+  offerControls = true,
+  bare = false,
 }: {
   tripId: string;
   /** Without the people section around it (nobody local to list): brings its own frame. */
   standalone?: boolean;
+  /**
+   * The ways to offer the trip (paired people, a name on another server, a
+   * code). The overview leaves them out — they are used rarely and live in the
+   * head's "Mehr" menu; the people already on the trip stay on the page.
+   */
+  offerControls?: boolean;
+  /** Inside a dialog that carries the title: no heading, no section frame. */
+  bare?: boolean;
 }): JSX.Element | null {
   const { t } = useTranslation(["sharing"]);
   const fmt = useDisplayFormat();
@@ -91,6 +102,8 @@ export default function RemoteTripPeople({
   const [notice, setNotice] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedRemoteInvite | null>(null);
   const latest = useRef(0);
+  // A change made elsewhere (the head's offer dialog) bumps this, and the list reloads.
+  const revision = useTripSharingStore((st) => st.revision[tripId] ?? 0);
 
   const load = useCallback(async () => {
     const request = ++latest.current;
@@ -109,7 +122,7 @@ export default function RemoteTripPeople({
 
   useEffect(() => {
     if (visible) void load();
-  }, [load, visible]);
+  }, [load, visible, revision]);
 
   if (!visible) return null;
   const current = view?.tripId === tripId ? view.value : null;
@@ -219,9 +232,21 @@ export default function RemoteTripPeople({
     return [reasonLine(m) ?? t(`${NS}.since`, { date: fmt.dateTime(m.stateSince) })];
   };
 
+  // Without the offer controls, a trip with nobody on other servers has
+  // nothing to say here: no empty heading.
+  if (
+    !offerControls &&
+    !loadFailed &&
+    !current?.homeOrigin &&
+    !current?.members.length &&
+    !current?.reconfirmable &&
+    !current?.roster.length
+  )
+    return null;
+
   const body = (
     <div className="flex flex-col text-sm" style={{ gap: "var(--ts-space-md)" }}>
-      {!standalone && <h3 className="t-label-mono">{t(`${NS}.title`)}</h3>}
+      {!standalone && !bare && <h3 className="t-label-mono">{t(`${NS}.title`)}</h3>}
       {loadFailed && (
         <p role="alert" style={{ color: "var(--ts-warn)" }}>
           {t(`${NS}.errors.loadFailed`)}
@@ -275,7 +300,7 @@ export default function RemoteTripPeople({
           onSubmit={requestAddition}
         />
       )}
-      {current && !current.homeOrigin && (
+      {current && !current.homeOrigin && offerControls && (
         <>
           {current.offerable.length > 0 && (
             <ul className="flex flex-col gap-2">
@@ -298,13 +323,7 @@ export default function RemoteTripPeople({
               ))}
             </ul>
           )}
-          <RemoteOtherServerOffer busy={busy} onOffer={offerByName} />
-          <div>
-            <Button disabled={busy} onClick={createCode}>
-              {t(`${NS}.createCode`)}
-            </Button>
-            <p className="t-caption mt-1">{t(`${NS}.codeHint`)}</p>
-          </div>
+          <RemotePersonField busy={busy} onOffer={offerByName} onCreateCode={createCode} />
           {created && (
             <Field
               label={t("sharing:remote.invites.codeLabel")}
@@ -331,5 +350,9 @@ export default function RemoteTripPeople({
       {notice && <p role="status">{notice}</p>}
     </div>
   );
-  return standalone ? <DetailSection title={t(`${NS}.title`)}>{body}</DetailSection> : body;
+  return standalone && !bare ? (
+    <DetailSection title={t(`${NS}.title`)}>{body}</DetailSection>
+  ) : (
+    body
+  );
 }

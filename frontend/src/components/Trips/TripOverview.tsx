@@ -2,7 +2,6 @@ import type { JSX, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { differenceInCalendarDays } from "date-fns";
 import type { useTranslation } from "../../hooks/useTranslation";
-import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import type { Trip } from "../../types";
 import { tripCostTotals } from "../../lib/tripCost";
@@ -16,10 +15,13 @@ import DetailSection from "../ui/DetailSection";
 import TripSummaryPanel from "./TripSummaryPanel";
 import { useTripRoadtrips } from "../Roadtrips/useTripRoadtrips";
 import DocumentsSection from "../documents/DocumentsSection";
-import TripPeopleSection from "../sharing/TripPeopleSection";
+import RemoteTripPeople from "../sharing/RemoteTripPeople";
 import { useDomainVisible } from "../../hooks/useDomainVisible";
 import TripCo2Line from "./TripCo2Line";
 import type { Co2Stats } from "../../types/co2";
+import type { TripPlaceVisits } from "../../hooks/useTripPlaceVisits";
+import { usePlacesVisible } from "../../hooks/usePlacesVisible";
+import TripPlacesList from "./TripPlacesList";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -150,8 +152,8 @@ const railDay = (j: Parameters<typeof railDeparture>[0]): string | null => {
 
 /**
  * The overview tab of a trip, round 4 ("Reise Detail"): three figures, the
- * linked entries per area as rows that open the entry, notes, and beside
- * them the travellers and the summary.
+ * linked entries per area as rows that open the entry, and notes. The
+ * travellers live in the head (owner, 2026-11-20).
  *
  * It replaces seven stat tiles — several of them a bare "0" for an area the
  * trip does not touch ("0 Kreuzfahrten", "0 Tags") — and a notes box that
@@ -162,13 +164,14 @@ export default function TripOverview({
   trip,
   t,
   language,
-  onChanged,
+  places,
 }: {
   /** `co2` is sent by `GET /trips/:id` only (forgejo#395). */
   trip: Trip & { co2?: Co2Stats };
   t: T;
   language: string;
-  onChanged: () => void;
+  /** The trip's place visits, read once by the page. */
+  places?: TripPlaceVisits;
 }): JSX.Element {
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
@@ -225,7 +228,15 @@ export default function TripOverview({
   const roadtrips = useTripRoadtrips(trip.id, isEnabled("roadtrip"));
   // Every area the overview lists counts — a trip holding only a train ride
   // or a rental car said "nothing linked" above an entry it was not showing.
+  const placesVisible = usePlacesVisible();
+  // Places are an entry of the trip like any other; while they load or fail the
+  // panel speaks for itself, so "nothing linked" must not sit beside it.
+  const placesLinked =
+    placesVisible &&
+    places !== undefined &&
+    (places.placeVisits.length > 0 || places.failed || places.loading);
   const nothingLinked =
+    !placesLinked &&
     flights.length +
       cruises.length +
       stays.length +
@@ -234,17 +245,7 @@ export default function TripOverview({
       busRides.length +
       ferryRides.length +
       rentals.length ===
-    0;
-  // The side column only when it has something to hold: an empty 1fr beside
-  // the entries pushed them into two thirds of the page for nothing.
-  // Mirrors TripSummaryPanel's own condition: the beta gate went with the
-  // key (main, 2026-09-18), and what decides whether that card appears is
-  // now the demo refusal alone. Asking the same question here keeps the
-  // column from reserving space for a card that will not render.
-  const isSharedDemo = useIsDemoAccount();
-  const hasSide =
-    trip.companions.length > 0 || trip.tags.length > 0 || Boolean(trip.summary) || !isSharedDemo;
-
+      0;
   return (
     <div className="flex flex-col gap-6">
       {kpis.length > 0 && (
@@ -257,7 +258,9 @@ export default function TripOverview({
 
       <TripCo2Line co2={trip.co2} />
 
-      <div className={`grid grid-cols-1 gap-6 ${hasSide ? "lg:grid-cols-[1.6fr_1fr]" : ""}`}>
+      <TripSummaryPanel trip={trip} t={t} />
+
+      <div className="grid grid-cols-1 gap-6">
         <div className="flex min-w-0 flex-col gap-6">
           {flights.length > 0 && (
             <EntryList
@@ -453,12 +456,19 @@ export default function TripOverview({
             </EntryList>
           )}
 
+          {places && <TripPlacesList places={places} />}
+
           {nothingLinked && <p className="t-caption">{t("trips:detail.noLinks")}</p>}
 
           {/* On the overview rather than in TripDetailPage: that page is frozen
               at its recorded size by the file-size ratchet, and the trip's own
               papers belong with the trip's own summary anyway. */}
           <DocumentsSection entry={{ type: "trip", id: trip.id }} />
+
+          {/* The travellers live in the trip head; what is left here is what
+              needs an answer: people on other servers (a roster to decide, a
+              membership to confirm). Draws nothing when there is none. */}
+          <RemoteTripPeople tripId={trip.id} standalone offerControls={false} />
 
           {trip.notes && (
             <DetailSection title={t("trips:detail.notes")}>
@@ -468,36 +478,23 @@ export default function TripOverview({
             </DetailSection>
           )}
         </div>
-
-        {hasSide && (
-          <div className="flex min-w-0 flex-col gap-6">
-            {/* "Reisende": the trip's people and its sharing in one place
-                (spec 2026-10-16, D9). It hides itself when there is nobody,
-                and stays a plain name list for the shared demo account. */}
-            <TripPeopleSection
-              tripId={trip.id}
-              companionNames={trip.companions}
-              onChanged={onChanged}
-            />
-            <TripSummaryPanel trip={trip} t={t} language={language} onChanged={onChanged} />
-            {trip.tags.length > 0 && (
-              <DetailSection title={t("trips:detail.tags")}>
-                <div className="flex flex-wrap gap-1.5">
-                  {trip.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border px-2.5 py-0.5 text-xs"
-                      style={{ borderColor: "var(--ts-border)", color: "var(--ts-muted)" }}
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              </DetailSection>
-            )}
-          </div>
-        )}
       </div>
+
+      {trip.tags.length > 0 && (
+        <DetailSection title={t("trips:detail.tags")}>
+          <div className="flex flex-wrap gap-1.5">
+            {trip.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border px-2.5 py-0.5 text-xs"
+                style={{ borderColor: "var(--ts-border)", color: "var(--ts-muted)" }}
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        </DetailSection>
+      )}
     </div>
   );
 }

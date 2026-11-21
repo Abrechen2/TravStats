@@ -85,7 +85,7 @@
     "personal": "",
     "photos": "id tripId mimetype sizeBytes caption takenAt sortIdx createdAt lat lon stopId",
     "documents": "",
-    "excluded": "filename immichAssetId immichAlbumLinkId"
+    "excluded": "filename provider immichAssetId immichAlbumLinkId"
   },
   "TripImmichAlbum": {
     "details": "",
@@ -93,7 +93,7 @@
     "personal": "",
     "photos": "id tripId albumName assetCount mode sortIdx lastSyncedAt createdAt",
     "documents": "",
-    "excluded": "immichAlbumId thumbnailAssetId"
+    "excluded": "immichAlbumId provider thumbnailAssetId"
   },
   "TripStop": {
     "details": "id tripId orderIdx domain title startDate endDate lat lon startUtc endUtc stopZone precision routeId routeOrderIdx lodgingStayId overnight viaPoint placeId createdAt updatedAt countryVisitKind",
@@ -165,7 +165,7 @@
     "personal": "notes tags",
     "photos": "",
     "documents": "",
-    "excluded": "userId dataSource batchId"
+    "excluded": "userId dataSource batchId locationCheck"
   },
   "LodgingStay": {
     "details": "id lodgingId tripId bookingId checkIn checkOut checkInTime checkOutTime checkInDate checkOutDate checkInAt checkOutAt stayZone datePrecision nights status roomCategory board roomAmenities membershipId membershipOptOut freeCancellationUntil freeCancellationZone freeCancellationOn externalRef createdAt updatedAt",
@@ -245,7 +245,7 @@
     "personal": "",
     "photos": "id placeVisitId mimetype sizeBytes caption sortIdx checksum takenAt tripPhotoId createdAt",
     "documents": "",
-    "excluded": "filename immichAssetId"
+    "excluded": "filename immichAssetId provider provenance"
   },
   "PlaceList": {
     "details": "id name color icon sortIdx labelMode curatedKey createdAt updatedAt",
@@ -373,7 +373,7 @@
     "personal": "",
     "photos": "",
     "documents": "id originalName mimetype sizeBytes sha256 pageCount format kind issuedOn source parsedDomain parsedPayload flightId cruiseId lodgingStayId tripId placeVisitId railJourneyId rentalBookingId busJourneyId ferryJourneyId tripExpenseId rentalCategory createdAt linkedAt unlinkedAt",
-    "excluded": "userId storedName"
+    "excluded": "userId storedName parsedAt"
   },
   "Note": {
     "details": "",

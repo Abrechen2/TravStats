@@ -14,9 +14,15 @@ import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { resolveTrip } from "../trips";
-import { linkAlbumsSchema, unlinkQuerySchema } from "../../schemas/immich";
-import { createImmichClient, type AlbumAssetList } from "../../services/immich/immichClient";
-import { getImmichConnection, getImmichDefaultMode } from "../../services/immich/immichResolver";
+import { albumListQuerySchema, linkAlbumsSchema, unlinkQuerySchema } from "../../schemas/immich";
+import {
+  createPhotoSource,
+  listAllAlbumAssets,
+  type AlbumAssetList,
+} from "../../services/photoSource";
+import { getImmichDefaultMode } from "../../services/immich/immichResolver";
+import { getPhotoSourceConnection, toPhotoSourceKind } from "../../services/photoSource/connection";
+import type { PhotoSourceKind } from "../../services/photoSource/types";
 import {
   getCachedAlbumAssets,
   invalidateAlbumAssets,
@@ -41,6 +47,8 @@ const router = Router();
 
 export interface LinkedAlbumDto {
   id: string;
+  /** The photo source holding the album; `immichAlbumId` is that source's own id. */
+  provider: PhotoSourceKind;
   immichAlbumId: string;
   albumName: string;
   assetCount: number;
@@ -70,10 +78,17 @@ function sendImmichFailure(res: Response, error: unknown, next: NextFunction): v
 }
 
 /** Resolve the connection or answer 409 — "you have not configured Immich". */
-async function requireConnection(userId: string, res: Response): Promise<ImmichConnection | null> {
-  const conn = await getImmichConnection(userId);
+async function requireConnection(
+  userId: string,
+  res: Response,
+  provider: PhotoSourceKind = "immich"
+): Promise<ImmichConnection | null> {
+  const conn = await getPhotoSourceConnection(provider, userId);
   if (!conn) {
-    res.status(409).json({ error: "notConfigured", message: "No Immich connection configured" });
+    res.status(409).json({
+      error: "notConfigured",
+      message: `No ${provider === "photoprism" ? "PhotoPrism" : "Immich"} connection configured`,
+    });
     return null;
   }
   return conn;
@@ -83,21 +98,22 @@ async function requireConnection(userId: string, res: Response): Promise<ImmichC
 async function resolveLink(
   tripId: string,
   linkId: string
-): Promise<{ id: string; immichAlbumId: string; mode: string }> {
-  const link = await prisma.tripImmichAlbum.findFirst({
+): Promise<{ id: string; immichAlbumId: string; mode: string; provider: PhotoSourceKind }> {
+  const row = await prisma.tripImmichAlbum.findFirst({
     where: { id: linkId, tripId },
-    select: { id: true, immichAlbumId: true, mode: true },
+    select: { id: true, immichAlbumId: true, mode: true, provider: true },
   });
   // The message IS the machine-readable failure kind: `errorHandler`
   // serialises it as `{ error: "notFound" }`, which the frontend's
   // `immichFailureKind()` classifies (a domain 404, distinct from an upstream
   // Immich failure). See the error-taxonomy note in `sendImmichFailure`.
-  if (!link) throw new AppError("notFound", 404);
-  return link;
+  if (!row) throw new AppError("notFound", 404);
+  return { ...row, provider: toPhotoSourceKind(row.provider) };
 }
 
 const toLinkDto = (row: {
   id: string;
+  provider: string;
   immichAlbumId: string;
   albumName: string;
   assetCount: number;
@@ -107,6 +123,7 @@ const toLinkDto = (row: {
   lastSyncedAt: Date | null;
 }): LinkedAlbumDto => ({
   id: row.id,
+  provider: toPhotoSourceKind(row.provider),
   immichAlbumId: row.immichAlbumId,
   albumName: row.albumName,
   assetCount: row.assetCount,
@@ -130,12 +147,13 @@ router.get(
       const userId = req.userId!;
       await resolveTrip(userId, req.params.id);
 
-      const conn = await requireConnection(userId, res);
+      const { provider } = albumListQuerySchema.parse(req.query);
+      const conn = await requireConnection(userId, res, provider);
       if (!conn) return;
 
-      const albums = await createImmichClient(conn).listAlbums();
+      const albums = await createPhotoSource(provider, conn).listAlbums();
       const links = await prisma.tripImmichAlbum.findMany({
-        where: { tripId: req.params.id },
+        where: { tripId: req.params.id, provider },
         select: { id: true, immichAlbumId: true },
       });
       const linkByAlbum = new Map(links.map((l) => [l.immichAlbumId, l.id]));
@@ -167,16 +185,22 @@ router.post(
       await resolveTrip(userId, tripId);
 
       const { albums: requested } = linkAlbumsSchema.parse(req.body);
-      const conn = await requireConnection(userId, res);
+      // One request links into one source: mixing would need two connections
+      // and two ownership checks in one transaction-less write.
+      const provider = requested[0].provider;
+      if (requested.some((r) => r.provider !== provider)) {
+        throw new AppError("Albums of one request must come from one photo source", 400);
+      }
+      const conn = await requireConnection(userId, res, provider);
       if (!conn) return;
 
-      // Only albums the user's own Immich actually exposes may be linked —
+      // Only albums the user's own library actually exposes may be linked —
       // this is the ownership boundary for every later proxy request.
-      const available = await createImmichClient(conn).listAlbums();
+      const available = await createPhotoSource(provider, conn).listAlbums();
       const byId = new Map(available.map((a) => [a.id, a]));
       const unknown = requested.filter((r) => !byId.has(r.immichAlbumId));
       if (unknown.length > 0) {
-        throw new AppError(`Unknown Immich album: ${unknown[0].immichAlbumId}`, 400);
+        throw new AppError(`Unknown album: ${unknown[0].immichAlbumId}`, 400);
       }
 
       const existing = await prisma.tripImmichAlbum.findMany({
@@ -192,6 +216,7 @@ router.post(
           const album = byId.get(r.immichAlbumId)!;
           return {
             tripId,
+            provider,
             immichAlbumId: album.id,
             albumName: album.albumName,
             assetCount: album.assetCount,
@@ -210,7 +235,9 @@ router.post(
 
       // Import mode downloads in the background; the UI polls the job.
       for (const link of links) {
-        const wasRequested = requested.some((r) => r.immichAlbumId === link.immichAlbumId);
+        const wasRequested =
+          toPhotoSourceKind(link.provider) === provider &&
+          requested.some((r) => r.immichAlbumId === link.immichAlbumId);
         if (wasRequested && link.mode === "import") {
           void startAlbumImport(userId, link.id);
         }
@@ -273,7 +300,7 @@ router.delete(
       }
 
       await prisma.tripImmichAlbum.delete({ where: { id: link.id } });
-      invalidateAlbumAssets(userId, link.immichAlbumId);
+      invalidateAlbumAssets(userId, link.immichAlbumId, link.provider);
 
       logger.info({
         message: "immich_album_unlinked",
@@ -326,11 +353,14 @@ router.get(
         return;
       }
 
-      const conn = await requireConnection(userId, res);
+      const conn = await requireConnection(userId, res, link.provider);
       if (!conn) return;
 
-      const assets = await getCachedAlbumAssets(userId, link.immichAlbumId, () =>
-        createImmichClient(conn).listAlbumAssets(link.immichAlbumId)
+      const assets = await getCachedAlbumAssets(
+        userId,
+        link.immichAlbumId,
+        () => listAllAlbumAssets(createPhotoSource(link.provider, conn), link.immichAlbumId),
+        link.provider
       );
 
       res.json({
@@ -339,11 +369,15 @@ router.get(
         truncated: (assets as AlbumAssetList).truncated === true,
         assets: assets
           .filter((a: ImmichAsset) => a.type === "IMAGE")
-          // Immich answers in its own order; the gallery reads chronologically.
-          // mapAsset guarantees a fileCreatedAt (epoch 0 when absent), so this
-          // comparison never sees undefined.
+          // The source answers in its own order; the gallery reads chronologically.
+          // A photo with no capture time (`null`) has nothing to sort by and goes
+          // last, in the source's order — not to 1970, and not to the front.
           .slice()
-          .sort((a: ImmichAsset, b: ImmichAsset) => a.fileCreatedAt.localeCompare(b.fileCreatedAt))
+          .sort((a: ImmichAsset, b: ImmichAsset) =>
+            a.fileCreatedAt === null || b.fileCreatedAt === null
+              ? Number(a.fileCreatedAt === null) - Number(b.fileCreatedAt === null)
+              : a.fileCreatedAt.localeCompare(b.fileCreatedAt)
+          )
           .map((a: ImmichAsset) => ({
             id: a.id,
             url: proxyUrl(tripId, link.id, a.id, "thumbnail"),
@@ -373,7 +407,8 @@ router.get(
       const albumId = typeof req.query.albumId === "string" ? req.query.albumId : "";
       if (!albumId) throw new AppError("albumId is required", 400);
 
-      res.json(await estimateAlbumImport(userId, albumId));
+      const { provider } = albumListQuerySchema.parse(req.query);
+      res.json(await estimateAlbumImport(userId, albumId, provider));
     } catch (error) {
       sendImmichFailure(res, error, next);
     }
@@ -420,7 +455,7 @@ router.post(
       // service's no-connection branch early-returns, and the stale-reclaim
       // only fires on `running`, so nothing ever advances a `pending` row —
       // the frontend polls forever (M1). Record a terminal failure instead.
-      const conn = await getImmichConnection(userId);
+      const conn = await getPhotoSourceConnection(toPhotoSourceKind(link.provider), userId);
       if (!conn) {
         await prisma.immichImportJob.upsert({
           where: { albumLinkId: link.id },
@@ -437,9 +472,10 @@ router.post(
             completedAt: new Date(),
           },
         });
-        res
-          .status(409)
-          .json({ error: "notConfigured", message: "No Immich connection configured" });
+        res.status(409).json({
+          error: "notConfigured",
+          message: `No ${link.provider === "photoprism" ? "PhotoPrism" : "Immich"} connection configured`,
+        });
         return;
       }
 

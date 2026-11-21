@@ -29,8 +29,9 @@ const SCREEN_PADDING = px("space-screen-padding");
 const FRAME_BORDER = 2;
 /** The table's width inside a page shell of `shellWidth` pixels. */
 const tableIn = (shellWidth: number): number => shellWidth - 2 * SCREEN_PADDING - FRAME_BORDER;
-/** The logbook shell at a 1440px viewport — capped by neither side. */
-const TABLE_AT_1440 = tableIn(Math.min(1440, px("width-table")));
+/** The logbook shell at a 1440px viewport: the shell has no cap any more. */
+const WIDE_VIEWPORT = 1440;
+const TABLE_AT_1440 = tableIn(WIDE_VIEWPORT);
 
 const columnsOf = (
   layout: Record<string, Pick<TableColumn, "min" | "grow" | "priority">>
@@ -93,9 +94,9 @@ describe("table width model", () => {
   // hid columns the reader had ticked on every screen size, and the hint to
   // widen the window was false. The logbook shell must hold every column.
   it.each(Object.entries(LOGBOOKS))(
-    "shows every %s column once the window gives the logbook shell its full width",
+    "shows every %s column in a 1440px window (the shell is the window wide)",
     (_name, columns) => {
-      expect([...pickHidden(columns, tableIn(px("width-table")), GAP, PADDING)]).toEqual([]);
+      expect([...pickHidden(columns, tableIn(WIDE_VIEWPORT), GAP, PADDING)]).toEqual([]);
     }
   );
 

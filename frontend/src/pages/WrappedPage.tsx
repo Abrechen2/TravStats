@@ -150,7 +150,7 @@ export default function WrappedPage(): JSX.Element {
           : null;
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <PageHeader
         title={t("stats:wrapped.title")}
         meta={shownYear !== null ? t("stats:wrapped.intro", { year: shownYear }) : undefined}

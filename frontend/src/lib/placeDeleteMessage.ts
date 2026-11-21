@@ -7,8 +7,8 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
  * The question before a place is deleted, for the list AND the detail page —
  * one function, so the two can no longer say different things (forgejo#250).
  *
- * What goes: the visits (planned ones too), their proof photos and kept
- * documents, and the place's memberships in lists. What stays: the trips its
+ * What goes: the visits (planned ones too), their proof photos (their kept
+ * documents are detached, not deleted), and the place's memberships in lists. What stays: the trips its
  * visits were filed under, the lists themselves, and roadtrip stations that
  * named it. Counts come from `GET /places/:id/related`; while they are unknown
  * (still loading, or the request failed) the sentence uses the visit count the

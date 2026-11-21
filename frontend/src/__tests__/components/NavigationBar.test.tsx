@@ -59,6 +59,9 @@ vi.mock("@/lib/api/dataQualityFlags", async (importOriginal) => {
 // The trip-suggestion count joins the badge (2026-09-26); unmocked it reaches
 // the network. Hoisted so a case can put suggestions in the inbox.
 const tripSuggestionCount = vi.hoisted(() => ({ value: 0 }));
+vi.mock("@/lib/api/documentLinkSuggestions", () => ({
+  documentLinkSuggestionsApi: { count: vi.fn(async () => 0) },
+}));
 vi.mock("@/lib/api/tripSuggestions", () => ({
   tripSuggestionsApi: { count: vi.fn(async () => tripSuggestionCount.value) },
 }));

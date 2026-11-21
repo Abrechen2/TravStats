@@ -15,7 +15,7 @@ import {
 } from "../../lib/roadtrip/roadtripView";
 import type { RoadtripDetail, RoadtripSummary } from "../../types/roadtrip";
 import RoadtripSketch from "./RoadtripSketch";
-import { useRoadtripSpan } from "./RoadtripCard";
+import { useRoadtripSpan } from "./useRoadtripSpan";
 
 /**
  * The roadtrip the reader is on right now, first on the list (board 1).

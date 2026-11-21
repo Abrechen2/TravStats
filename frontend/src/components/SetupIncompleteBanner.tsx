@@ -78,7 +78,7 @@ export default function SetupIncompleteBanner({
         borderBottom: "1px solid var(--ts-border, var(--color-border))",
       }}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 text-sm">
+      <div className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
         <div className="flex min-w-0 items-center gap-2">
           <Icon name="info" size={16} />
           <span className="truncate">{t("common:setupIncompleteBanner.message")}</span>

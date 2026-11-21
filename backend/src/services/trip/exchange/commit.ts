@@ -25,6 +25,7 @@ import logger from "../../../utils/logger";
 import { checkAndUpdateAchievements } from "../../../utils/achievements";
 import { createDocument, type EntryRef } from "../../documents/documentService";
 import { sha256Hex } from "../../documents/documentStore";
+import { addMissingLinksInTx } from "../../documents/documentEntryLinks";
 import { DOCUMENT_KINDS, type DocumentKind } from "../../documents/documentFormats";
 import { removeDisplayRendition, writeDisplayRendition } from "../../photos/displayRendition";
 import { recomputeTripStatus } from "../../tripStatusService";
@@ -49,13 +50,14 @@ import { writeRoadtrips } from "./commitRoadtrips";
 import { knownPhotoHashes, photoHash } from "./photoIdentity";
 import type { TripArchive } from "./readArchive";
 import type { TripFileChoices, TripFileEntryProposal, TripFileProposal } from "./types";
+import { scheduleVisitAutoLink } from "../../places/visitPhotoAutoLink";
 
 export interface TripFileCommitResult {
   tripId: string;
   created: number;
   attached: number;
   skipped: number;
-  documents: { filed: number; skipped: number; refused: number };
+  documents: { filed: number; skipped: number; refused: number; linked: number };
   photos: number;
   proposal: TripFileProposal;
 }
@@ -215,6 +217,8 @@ export async function commitTripFile(
     throw error;
   }
 
+  // Imported visits get their photo pass once the trip is in.
+  for (const visitId of ids.visit.values()) scheduleVisitAutoLink(userId, visitId);
   const documents = await fileDocuments(userId, archive, ids);
   const tripId = ids.trip.get("trip")!;
   await recomputeTripStatus(tripId);
@@ -585,43 +589,101 @@ const ENTRY_TYPE: Record<Exclude<EntityKind, "trip">, EntryRef["type"]> = {
 
 /**
  * Files the documents on the rows they belonged to. A document whose bytes
- * the user already holds anywhere is skipped (that is what makes a re-import
- * write nothing); one this server refuses (format, size) is counted, logged
- * and left out — the trip itself is already written.
+ * the user already holds anywhere is not written again (that is what makes a
+ * re-import write no file) — but its links ARE added where missing: the bytes
+ * being known says nothing about the entries they now cover. One this server
+ * refuses (format, size) is counted, logged and left out — the trip itself is
+ * already written.
+ *
+ * Both ends of every link are remapped to this account's rows (`ids`); a
+ * reference with no row on this side is dropped, and a document left with none
+ * still goes on the trip, as before the file carried several links.
  */
 async function fileDocuments(
   userId: string,
   archive: TripArchive,
   ids: IdMaps
 ): Promise<TripFileCommitResult["documents"]> {
-  const result = { filed: 0, skipped: 0, refused: 0 };
+  const result = { filed: 0, skipped: 0, refused: 0, linked: 0 };
+  const tripId = ids.trip.get("trip")!;
+  const resolve = (entity: { kind: EntityKind; key: string | null }): EntryRef | null => {
+    const id = entity.kind === "trip" ? tripId : ids[entity.kind].get(entity.key ?? "");
+    return id ? { type: entity.kind === "trip" ? "trip" : ENTRY_TYPE[entity.kind], id } : null;
+  };
   for (const d of archive.file.documents) {
     const bytes = archive.blobs.get(d.file)!;
+    const sources =
+      d.links.length > 0
+        ? d.links
+        : [
+            {
+              entity: d.entity,
+              role: "primary" as const,
+              provenance: "user" as const,
+              rentalCategory: null,
+            },
+          ];
+    const wanted = sources.flatMap((l) => {
+      const entry = resolve(l.entity);
+      return entry
+        ? [
+            {
+              entry,
+              provenance: l.provenance,
+              primary: l.role === "primary",
+              rentalCategory: l.rentalCategory ?? null,
+            },
+          ]
+        : [];
+    });
+    // An entry the import skipped without a row still has a trip to go on.
+    if (wanted.length === 0)
+      wanted.push({
+        entry: { type: "trip", id: tripId },
+        provenance: "user",
+        primary: true,
+        rentalCategory: null,
+      });
     const known = await prisma.document.findFirst({
       where: { userId, sha256: sha256Hex(bytes) },
       select: { id: true },
     });
-    if (known) {
-      result.skipped += 1;
-      continue;
-    }
-    const id =
-      d.entity.kind === "trip" ? ids.trip.get("trip") : ids[d.entity.kind].get(d.entity.key ?? "");
-    const entry: EntryRef | null = id
-      ? { type: d.entity.kind === "trip" ? "trip" : ENTRY_TYPE[d.entity.kind], id }
-      : null;
     try {
-      await createDocument({
-        userId,
-        buffer: bytes,
-        originalName: d.originalName ?? undefined,
-        source: "upload",
-        kind: DOCUMENT_KINDS.includes(d.kind as DocumentKind) ? (d.kind as DocumentKind) : null,
-        issuedOn: d.issuedOn ? new Date(`${d.issuedOn}T00:00:00.000Z`) : null,
-        // An entry the import skipped without a row still has a trip to go on.
-        entry: entry ?? { type: "trip", id: ids.trip.get("trip")! },
-      });
-      result.filed += 1;
+      let documentId = known?.id;
+      let rest = wanted;
+      if (!documentId) {
+        const first = wanted.find((w) => w.primary) ?? wanted[0];
+        const created = await createDocument({
+          userId,
+          buffer: bytes,
+          originalName: d.originalName ?? undefined,
+          source: "upload",
+          kind: DOCUMENT_KINDS.includes(d.kind as DocumentKind) ? (d.kind as DocumentKind) : null,
+          issuedOn: d.issuedOn ? new Date(`${d.issuedOn}T00:00:00.000Z`) : null,
+          entry: first.entry,
+          linkProvenance: first.provenance,
+          ...(first.entry.type === "rentalBooking" ? { rentalCategory: first.rentalCategory } : {}),
+        });
+        documentId = created.document.id;
+        rest = wanted.filter((w) => w !== first);
+        result.filed += 1;
+      } else {
+        result.skipped += 1;
+      }
+      if (rest.length > 0) {
+        result.linked += await prisma.$transaction((tx) =>
+          addMissingLinksInTx(
+            tx,
+            userId,
+            documentId!,
+            rest.map(({ entry, provenance, rentalCategory }) => ({
+              entry,
+              provenance,
+              rentalCategory,
+            }))
+          )
+        );
+      }
     } catch (error) {
       result.refused += 1;
       logger.warn({

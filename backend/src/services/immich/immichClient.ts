@@ -180,8 +180,6 @@ function toImmichError(error: unknown, context: string): ImmichError {
   return new ImmichError("protocol", `Unexpected Immich failure (${context})`);
 }
 
-/** What `fileCreatedAt` becomes when Immich sends none — the existing "absent" convention. */
-const NO_CAPTURE_TIME = new Date(0).toISOString();
 const RFC3339_OFFSET = /(?:Z|[+-]\d{2}:\d{2})$/i;
 
 /**
@@ -189,12 +187,12 @@ const RFC3339_OFFSET = /(?:Z|[+-]\d{2}:\d{2})$/i;
  * Immich sends `fileCreatedAt` as RFC 3339 with an offset; it is normalised to
  * one UTC form so ordering by string compares instants, not spellings. A value
  * WITHOUT an offset is a camera wall clock with no zone: `new Date()` would
- * read it in the SERVER's zone, so it is treated like a missing time instead.
+ * read it in the SERVER's zone, so it is treated like a missing time (null).
  */
-function captureInstant(value: unknown): string {
-  if (typeof value !== "string" || !RFC3339_OFFSET.test(value)) return NO_CAPTURE_TIME;
+function captureInstant(value: unknown): string | null {
+  if (typeof value !== "string" || !RFC3339_OFFSET.test(value)) return null;
   const ms = Date.parse(value);
-  return Number.isFinite(ms) ? new Date(ms).toISOString() : NO_CAPTURE_TIME;
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
 }
 
 function mapAsset(raw: unknown): ImmichAsset | null {

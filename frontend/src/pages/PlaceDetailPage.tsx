@@ -70,11 +70,10 @@ export default function PlaceDetailPage(): JSX.Element {
    *
    * There was no question at all before: the row's delete icon called the API
    * on the first click. Finding 3 of the write-path audit (2026-09-19) is why
-   * that mattered — `Document.placeVisitId` cascades (`onDelete: Cascade`,
-   * proven live by
-   * `backend/src/__tests__/integrity/cascades.integrity.test.ts`) and the
-   * route deletes the visit's photograph FILES from disk as well. One
-   * mis-aimed click took a ticket and a day's pictures with it.
+   * that mattered — the visit's document links go
+   * (the documents are kept, unfiled) and the route deletes the visit's
+   * photograph FILES from disk as well. One mis-aimed click took a day's
+   * pictures with it.
    */
   const [confirmVisitDelete, setConfirmVisitDelete] = useState<PlaceVisit | null>(null);
   const visitDocumentCount = useDocumentCount(
@@ -223,7 +222,7 @@ export default function PlaceDetailPage(): JSX.Element {
 
   if (access === "denied") {
     return (
-      <AppShell width="reading">
+      <AppShell>
         <p className="py-16 text-center text-[var(--text-muted)]">
           {t("places:list.domainDisabled")}
         </p>
@@ -233,7 +232,7 @@ export default function PlaceDetailPage(): JSX.Element {
 
   if (loading) {
     return (
-      <AppShell width="reading">
+      <AppShell>
         <p className="py-16 text-center text-[var(--text-muted)]">{t("common:loading.default")}</p>
       </AppShell>
     );
@@ -242,7 +241,7 @@ export default function PlaceDetailPage(): JSX.Element {
   if (failure !== null || !place) {
     const isLoadError = failure === "loadError";
     return (
-      <AppShell width="reading">
+      <AppShell>
         <div className="py-16 text-center">
           <p role="alert" style={{ color: "var(--danger)" }}>
             {isLoadError ? t("places:detail.loadError") : t("places:detail.notFound")}
@@ -263,7 +262,7 @@ export default function PlaceDetailPage(): JSX.Element {
   const countryLabel = placeCountryLabel(place, i18n.language);
   const countryCode = placeCountryCode(place);
   return (
-    <AppShell width="list">
+    <AppShell>
       <DetailHeader
         backTo="/places"
         backLabel={t("places:detail.backToLogbook")}

@@ -21,9 +21,10 @@ import { authenticate, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { immichProxyLimiter } from "../../middleware/rateLimit";
 import { resolveTrip } from "../trips";
-import { assetIdParamSchema, assetSizeSchema } from "../../schemas/immich";
-import { createImmichClient } from "../../services/immich/immichClient";
+import { assetSizeSchema, linkedAssetIdParamSchema } from "../../schemas/immich";
+import { createPhotoSource, listAllAlbumAssets } from "../../services/photoSource";
 import { getImmichConnection } from "../../services/immich/immichResolver";
+import { getPhotoSourceConnection, toPhotoSourceKind } from "../../services/photoSource/connection";
 import { getCachedAlbumAssets } from "../../services/immich/immichAssetCache";
 import { ImmichError } from "../../services/immich/types";
 import logger from "../../utils/logger";
@@ -50,7 +51,7 @@ router.get(
       const tripId = req.params.id;
       await resolveTrip(userId, tripId);
 
-      const assetId = assetIdParamSchema.safeParse(req.params.assetId);
+      const assetId = linkedAssetIdParamSchema.safeParse(req.params.assetId);
       if (!assetId.success) throw new AppError("Invalid asset id", 400);
 
       const size = assetSizeSchema.safeParse(req.query.size);
@@ -64,27 +65,31 @@ router.get(
 
       const link = await prisma.tripImmichAlbum.findFirst({
         where: { id: req.params.linkId, tripId },
-        select: { immichAlbumId: true },
+        select: { immichAlbumId: true, provider: true },
       });
       // `error` body uses the failure-kind vocabulary (`notFound`) so a caller
       // that reads it classifies a domain 404 correctly.
       if (!link) throw new AppError("notFound", 404);
 
-      const conn = await getImmichConnection(userId);
+      const provider = toPhotoSourceKind(link.provider);
+      const conn = await getPhotoSourceConnection(provider, userId);
       if (!conn) {
         res.status(409).json({ error: "notConfigured" });
         return;
       }
 
-      const client = createImmichClient(conn);
-      const assets = await getCachedAlbumAssets(userId, link.immichAlbumId, () =>
-        client.listAlbumAssets(link.immichAlbumId)
+      const source = createPhotoSource(provider, conn);
+      const assets = await getCachedAlbumAssets(
+        userId,
+        link.immichAlbumId,
+        () => listAllAlbumAssets(source, link.immichAlbumId),
+        provider
       );
       if (!assets.some((a) => a.id === assetId.data)) {
         throw new AppError("notFound", 404);
       }
 
-      await streamAsset(res, client, assetId.data, size.data, etag);
+      await streamAsset(res, source, assetId.data, size.data, etag);
     } catch (error) {
       if (error instanceof ImmichError) {
         logger.warn({ message: "immich_proxy_upstream_failure", context: { kind: error.kind } });
@@ -152,7 +157,7 @@ router.get(
         return;
       }
 
-      await streamAsset(res, createImmichClient(conn), assetId, size.data, etag);
+      await streamAsset(res, createPhotoSource("immich", conn), assetId, size.data, etag);
     } catch (error) {
       if (error instanceof ImmichError) {
         logger.warn({ message: "immich_proxy_upstream_failure", context: { kind: error.kind } });

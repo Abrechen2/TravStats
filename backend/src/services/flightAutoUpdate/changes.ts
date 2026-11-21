@@ -11,18 +11,9 @@ import type { FlightLookupResult } from "../flightLookup";
 import type { FlightDataSnapshot } from "../pendingUpdateService";
 import { DEVICE_SOURCES, isDeviceSource } from "../flightDevice/deviceSource";
 import { pendingUpdateExpiryMs } from "../autoUpdateExpiry";
+import type { FlightChange, FlightFieldValue } from "../flightUpdateRejections";
 
 const prismaClient = prisma as PrismaClient;
-
-/** Union type for values that can appear in flight data fields */
-type FlightFieldValue = string | number | boolean | null | undefined | string[] | unknown[];
-
-export interface FlightChange {
-  field: string;
-  oldValue: FlightFieldValue;
-  newValue: FlightFieldValue;
-  type: "added" | "removed" | "changed";
-}
 
 export interface PendingUpdateData {
   originalData: FlightDataSnapshot;

@@ -1180,6 +1180,7 @@
     "aerodatabox": "Antwortet AeroDataBox nicht, fragt die Flugsuche den nächsten eingerichteten Dienst — für Flüge, die länger zurückliegen, gibt es keinen anderen; „Bestandsflüge auffrischen“ zählt solche Flüge als fehlgeschlagen. Gespeicherte Flüge bleiben unverändert.",
     "routing": "Antwortet der Routing-Dienst nicht, bleiben neue Etappen gerade Linien; in der Etappenliste lassen sie sich später erneut routen. Gezeichnete Strecken bleiben unberührt.",
     "rail": "Antworten die Fahrplan-Dienste nicht, findet die Zugnummer-Suche nichts, und die Fahrt wird von Hand eingetragen. Gespeicherte Fahrten bleiben unverändert.",
+    "photoprism": "Ist PhotoPrism nicht erreichbar, zeigen verknüpfte Alben keine Bilder; die Verknüpfung bleibt erhalten und funktioniert wieder, sobald PhotoPrism antwortet.",
     "immich": "Ist Immich nicht erreichbar, zeigen verknüpfte Alben keine Bilder, und ein Import bricht mit einer Meldung ab. In TravStats kopierte Fotos bleiben sichtbar.",
     "dawarich": "Ist Dawarich nicht erreichbar, bricht ein Track-Import mit einer Meldung ab, und der nächtliche Abgleich der Ländertage macht in der nächsten Nacht dort weiter, wo er stehen blieb. Vorhandene Tracks bleiben.",
     "strava": "Antwortet Strava nicht, bricht der Import von Aktivitäten mit einer Meldung ab. Bereits übernommene Touren bleiben.",
@@ -1239,6 +1240,7 @@
       "maps": "Karten & Ortssuche"
     },
     "what": {
+      "photoprism": "Fotos zu Reisen",
       "immich": "Fotos zu Reisen und Orten",
       "dawarich": "Standortverlauf, Länder und Aufenthalte",
       "strava": "Touren aus Aktivitäten",
@@ -1248,6 +1250,7 @@
       "aerodatabox": "Historische Flugdaten",
       "aeroapi": "Flugstatus und historische Flüge",
       "adsbx": "Kennzeichen und Typ, nur für Flüge in der Luft",
+      "airplaneslive": "Kennzeichen und Typ, nur für Flüge in der Luft",
       "adsblol": "Kennzeichen und Typ, nur für Flüge in der Luft",
       "opensky": "Flugspuren",
       "openrouteservice": "Straßenrouten statt Luftlinie",
@@ -1822,6 +1825,7 @@
       },
       "loadError": "Ich konnte den Stand der Suche nicht laden.",
       "next": "Nächste automatische Suche: {{at}}",
+      "visitLookup": "Die Ortssuche für Aufenthalte hat gerade nicht geantwortet (Kartendienst). Nächster Versuch: {{at}}",
       "pause": {
         "disabled": "Die automatische Suche ist aus. Vorhandene Vorschläge kannst du weiter prüfen.",
         "suggestionsDisabled": "Pausiert: Aufenthaltsvorschläge sind aus. Deine Einwilligung und bisherige Entscheidungen bleiben.",

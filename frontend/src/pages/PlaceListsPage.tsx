@@ -82,7 +82,7 @@ export default function PlaceListsPage(): JSX.Element {
 
   if (access === "pending") {
     return (
-      <AppShell width="reading">
+      <AppShell>
         <p className="py-16 text-center text-[var(--text-muted)]">{t("common:loading.default")}</p>
       </AppShell>
     );
@@ -90,7 +90,7 @@ export default function PlaceListsPage(): JSX.Element {
 
   if (access === "denied") {
     return (
-      <AppShell width="reading">
+      <AppShell>
         <p className="py-16 text-center text-[var(--text-muted)]">
           {t("places:list.domainDisabled")}
         </p>
@@ -99,7 +99,7 @@ export default function PlaceListsPage(): JSX.Element {
   }
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <div>
         <Link to="/places" className="text-sm" style={{ color: "var(--text-muted)" }}>
           ← {t("places:detail.backToList")}

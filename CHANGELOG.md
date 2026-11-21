@@ -6,6 +6,106 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.40.** Six new migrations add the document links (a new table, filled once from where every document is filed today, plus triggers that keep it in step), the link suggestions, a parse timestamp on documents, and the source and origin of a place visit's photos with the switch for linking them automatically. Nothing is deleted. One behaviour changes on purpose: deleting an entry no longer deletes its documents — see "Changed".
+
+### Added
+
+- **One document can belong to several entries** (forgejo#425). A package tour or round-trip booking filed on the trip can also be the evidence for each flight, stay and transfer it covers: every one of them lists it, marked "Beleg aus: …" with a link to where it was filed. "Auch verknüpfen mit …" on a document and "Dokument aus der Reise verknüpfen" on an entry add links by hand; "Von diesem Eintrag entfernen" removes one link and can be undone.
+- **Importing a package booking links it to what it covers.** The review shows which flights, stays and cruise the booking is evidence for, and saving links the confirmed ones.
+- **The inbox suggests links for documents already stored.** When a document's reading names a flight number and day, a booking reference, a train or bus, a hotel with its nights or a rental confirmation that matches entries of the same trip, the inbox asks "Dieses Dokument belegt auch …". Accept all or some; a declined suggestion stays declined. The first look goes over every stored document once.
+
+- **Place visits pick up their photos from Immich and PhotoPrism by themselves.** Photos taken that day at the place are linked automatically — links only, never copies, never from inside a privacy zone — and marked "automatisch verknüpft" with their source. A removed photo does not come back, and a switch in settings turns it off. Settings show the progress and any source that failed or had too many photos to read in full.
+- **A trip's overview lists its visited places** in a scrollable panel by day, each linked to its place, with planned visits marked; "N Orte" in the head jumps there.
+
+### Changed
+
+- **Deleting an entry keeps its documents.** They are detached instead and deleted only after the grace period, and only if no other entry still holds them. "Überall löschen" on a document deletes it at once and first lists every entry it is attached to.
+- **Trip files (`.travstats`) carry a document's links** to every entry inside the trip; older files still import, and importing a file twice no longer drops links of a document you already have.
+- **Choosing a day on a roadtrip map shows that day's drive** in full colour and thicker, with the other days grey but visible; before, a roadtrip's whole route vanished as soon as a day was chosen (forgejo#424).
+
+### Fixed
+
+- **A document filed again while the nightly clean-up ran could still be deleted.** The clean-up now re-checks inside its delete.
+- **Reconciling an expense's receipts could unfile a document for good** without starting its grace period, so it was never cleaned up.
+- **PhotoPrism photos of a trip shared with another server no longer fail to load there**; the shared copy asked Immich for them.
+
+**Upgrading to 2.8.0-rc.39.** Three new migrations: a source column on trip photos (existing photos become Immich), a location-check marker on lodgings, and a data-only fix that moves date-only flights stored at midnight UTC to local noon in their zone. Nothing is deleted.
+
+### Added
+
+- **TravTrack suggests the places you visited.** A stop at a venue becomes a suggestion in the stay inbox with its evidence — when, how long, measured and assumed time, the building and the counter inside it as an alternative. A known place gets a new visit; an unknown venue is proposed as a new place. Nothing is created without your decision, and a declined stop does not come back. When the venue lookup fails, the stop waits and settings say why.
+- **PhotoPrism albums can be imported into a trip,** not only linked, with the same resync and failure messages as Immich. An album too large to import completely says how many photos it took.
+
+### Changed
+
+- **A day in the trip timeline reads as travel happens:** on the same day the hotel check-out comes before any departure and the check-in after any arrival, even when the booking's nominal "11:00"/"15:00" says otherwise.
+- **Choosing a day on a trip or roadtrip map makes it stand out:** the other days turn grey, faint and thin, the chosen day is drawn thicker on top, and stop numbers are smaller, hidden when zoomed out and thinned where they crowd (forgejo#424).
+- **A lodging known only by its name is no longer placed automatically.** It is marked "Ort prüfen" instead, and a geocoder answer in a different country than the lodging's is refused. Pins that lie outside their lodging's country are flagged for a look, never moved.
+
+### Fixed
+
+- **Date-only flights west of UTC show their real day** (#403). They were stored as midnight UTC and shown one day early in the Americas and the Pacific; a date-only departure or arrival can now also be sent as a plain `YYYY-MM-DD`.
+- **A cruise stop's excursion note can be cleared with `null`** (#402), as the API description always said.
+- **A hotel could land on the wrong continent** (#401) when only its name was searched; see "Changed".
+- **Photos without a capture date sit in their own "Ohne Datum" group** instead of under January 1970, and stay off the TravTrack map.
+- **The adsb.lol key is sent in the header adsb.lol reads** (`x-api-key`), so a configured key raises the request limit instead of being ignored.
+
+**Upgrading to 2.8.0-rc.38.** One new migration: trip and place-visit answers also store a content key per member (additive).
+
+### Added
+
+- **Photos on the TravTrack map from Immich, PhotoPrism and the trip's linked albums.** The photo layer is on once a photo source is connected; each photo is placed by its capture time on the recorded track, never by its own GPS and never inside a privacy zone. A source that fails is named while the other's photos still show.
+- **TravTrack is honest about gaps.** A stay that spans a recording silence shows the measured and the assumed time and the gap; an empty day says why — nothing recorded, hidden by a privacy zone, or filtered as implausible (with a button to show those points).
+- **The trip map has days, names and order.** A day strip highlights one day and dims the rest; places, stops and airports are named by zoom; stops are numbered and lines carry direction arrows, on the flat map and the globe; a click opens a card with links to the entry and the timeline row; one legend switches each layer.
+- **Landscape iPads keep the TravTrack day list beside the map**, with one selection shared by list and map.
+
+### Changed
+
+- **A stay is named after the building, not a counter inside it.** The named building or grounds the stay lies in wins over any point within it, and a point of the same brand folds into it (McCafé → McDonald's), which stays one tap away.
+- **Every page uses the full window width.**
+- **Sharing is one "Teilen …" dialog**, with known people from this and connected servers plus one field for someone on a server not connected yet; travellers sit under the trip's flags; "Route mitteilen" only shows on running or upcoming trips.
+- **"Freunde & Teilen" is one list of people** with per-person switches, incoming requests on top and public links below.
+- **Ferry, rail and bus rides in a trip's logistics tab** use the same table as flights and cruises.
+
+### Fixed
+
+- **Inbox decisions stay decided.** A dismissed photo journey, a trip or place-visit answer after deleting and re-importing its entries, a rejected TravTrack stay after a history deletion or a new privacy zone, a dismissed data-quality question on a merged record, and a rejected live flight change were each able to come back.
+- **The service cards on "Dienste" show their names** — two showed raw translation keys.
+
+**Upgrading to 2.8.0-rc.37.** One new migration: a photo-source column on linked trip albums (existing links become Immich) and the PhotoPrism connection fields.
+
+### Added
+
+- **PhotoPrism as a second photo source.** A trip can link PhotoPrism albums the way it links Immich ones: the photos stream through the server and are not copied. The connection lives under the external services, off until switched on; the setup text names the app-password scope it needs. With both sources connected, the album picker asks which one. Importing PhotoPrism photos is not built yet.
+- **A trip shows its places.** The timeline marks each place as "Ort besucht" or "Ort geplant" and links to it, the trip map draws the places, and the trip head and each trip card count the places visited.
+- **The trips page has a list view** beside the tiles; it remembers the last choice.
+
+### Changed
+
+- **Rarely used trip actions moved into a "Mehr" menu.** Sharing, export, offering the trip to another server, the AI summary and delete sit in one menu in the trip head; only "Bearbeiten" stays a button, and the overview uses the full width.
+- **Tours and roadtrips look like the rest of the logbook**: tabs, summary strip, filters and a table; a new tour is created in a dialog. A roadtrip in progress stays a card above the table.
+
+### Fixed
+
+- **The dashboard map draws rail, bus, ferry, rental and roadtrip lines again for accounts without day tours.** Since tours became a domain, all ground lines hung on the day-tour switch.
+- **A tour's page shows the tour, not its whole trip.** A short hike opened on the trip's flights across two continents; the trip's other stops now wait folded under the tour's own.
+- **The map's WebGL notice is visible.** When the map cannot start, the reason stands over the map in German or English and in the browser console, instead of a small line under the controls.
+- **The "Öffnen" link on Einrichtung & Zustand is readable** — it was near-black on the dark card.
+- **A completed trip's packing list no longer stands above its tabs.** It waits at the end, read-only, and an empty one is hidden.
+- **The settings sidebar spacing** follows the design values.
+
+**Upgrading to 2.8.0-rc.36.** One new migration: a switch for airplanes.live, off by default.
+
+### Added
+
+- **airplanes.live as a further ADS-B source** (forgejo#408): keyless like adsb.lol, asked after it, and only once an admin switches it on under the external services.
+
+### Fixed
+
+- **A slow adsb.lol no longer counts as a failure.** It answered in just over six seconds from some networks, exactly the old limit, so every live position and aircraft lookup ended as a timeout; the limit is now twelve seconds.
+
+**Upgrading to 2.8.0-rc.35.** Take a backup: five new migrations — revoked sessions, the account login throttle and stored 2FA attempts, removal of six settings that did nothing, the single packing store, and the address of your own ADS-B receiver. Existing databases keep their role; only a fresh install now runs the app as an ordinary database user (to drop superuser rights on an existing install by hand, see SECURITY.md).
+
 **Upgrading to 2.8.0-rc.34.** One new migration: two columns on the user table for the setup invitation (which notes were seen, and "remind me tomorrow").
 
 **Upgrading to 2.8.0-rc.33.** One new migration: the setup & readiness tables (snoozes and read marks per account, the instance's version history, the stored result of the public-URL check). Every existing account starts as having seen 2.7.0, so the 2.8.0 notes that concern it appear once on the new page.
@@ -30,6 +130,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Added
 
+- **Bulk edit for rail, bus, ferry, rental cars, cruises and stays** (forgejo#405), with the same version check and share propagation as flights.
+- **Imports from TripIt, Polarsteps (ZIP, including trips), JetLovers, FlightMemory and Logmyflight** run through the preview/commit pipeline and respect which areas are switched on (forgejo#401).
+- **One packing list per trip** (forgejo#398): the trip card and TravPlan edit the same list, so items no longer exist twice.
+- **Your own ADS-B receiver** (forgejo#408): a tar1090 address in the settings adds the tracks your receiver recorded to a flight, next to a live-position endpoint and key cards for the ADS-B providers.
+- **The aircraft section lists every registration** and counts flights that have none (forgejo#303).
+- **Old API keys and phones can be removed for good** from the lists under Mein Konto, not only revoked.
 - **Einrichtung & Zustand** (Settings → Mein Konto): one page that says what is missing and what an update changed that needs action — for admins the server (backups, disk, public URL, mail, off-site copy, service keys, booking mailbox), for every account its own setup (areas, home, phone pairing and first position, own keys, mail forwarding, reminder address). Each item names the consequence and links to the setting; it clears when the setting is fixed, can be snoozed for a day, and an optional item can be marked "nutze ich nicht". A check that has not been tested yet says so instead of claiming all is well.
 - **The setup page comes to you.** After an update with notes that concern you, or while a required item fails, a small card at the bottom of the screen offers "Jetzt ansehen" or "Morgen erinnern"; it waits until the what's-new window and the telemetry question are done. When a required server item is proven to fail, admins see a banner at the top that stays until the item is fixed.
 - **"Erreichbarkeit prüfen" next to the public address** (Administration → Server): checks that the address really reaches this server, not another instance, and says why when it does not (no address, outbound traffic off, timeout, DNS, TLS, connection, HTTP status, a different server). The same check runs daily at 05:35 UTC.
@@ -121,6 +227,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Security
 
+- Tighter Content-Security-Policy, CI actions pinned to commits, and a restore that works without a database superuser (forgejo#415).
 - **A user-entered Immich or Dawarich address can no longer reach the server's own network.** An ordinary account could point its Immich URL at a server that redirected the photo proxy to internal addresses and read the answers. Private targets are now refused for ordinary accounts, redirects are never followed, the photo proxy passes only images and videos (no SVG) and drops a stream that stalls for 60 seconds.
 - **Changing or resetting a password signs out paired devices and API tokens.** Before, only browser sessions ended, so a device paired by whoever had the account kept working after the reset. Unused pairing codes are dropped as well.
 - **Unexpected server errors no longer show internal details.** A 500 now answers with a fixed message and a request id; the detail stays in the log.
@@ -137,6 +244,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Fixed
 
+- **Logging out ends that one session on the server,** and the web says so when the server could not end it.
+- **Repeated wrong passwords or 2FA codes slow down the account itself,** not only the address they came from; the count survives a restart (forgejo#415).
+- **A roadtrip's end odometer below its start is refused** by the server, not only in the form (forgejo#280).
+- **Maps release their WebGL contexts** and recover from a lost one instead of staying blank; the live globe filters on the GPU and opens in a fraction of the time.
+- **A blocked airport data source is reported as such** in flight lookups instead of looking like "nothing found".
+- **A Polarsteps file with many trips but few steps** is held to the same import size limit as any other.
+- Six settings that had no effect are gone: the auto-update interval, "only during flight", the parser strategy, map zoom and marker, and the e-mail notification switch (forgejo#389).
 - **Naming or dismissing a night stay works from either day** and applies to the whole stay; in rc.31 it failed from the evening part and only hid the morning.
 - **A night at home is one stay in TravTrack, not two gaps.** The day view now reads past midnight, and a silence that ends where it began (within about 100 m, or inside the same fixed place, at most 24 hours) continues the stay instead of showing as missing data.
 - **A stay at a fixed place carries its name at once,** also when the phone sent only a few seconds of fixes on arrival; today's open stay at Home shows as such.

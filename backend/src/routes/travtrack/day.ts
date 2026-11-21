@@ -21,8 +21,12 @@ router.get(
   travTrackTier("on"),
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { date } = travTrackDayQuerySchema.parse(req.query);
-      res.json(await travTrackDay(req.userId!, date));
+      const { date, includeImplausible } = travTrackDayQuerySchema.parse(req.query);
+      res.json(
+        await travTrackDay(req.userId!, date, {
+          includeImplausible: includeImplausible !== undefined,
+        })
+      );
     } catch (error) {
       next(error);
     }

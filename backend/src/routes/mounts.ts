@@ -43,6 +43,7 @@ import locationSuggestionRoutes from "./locationSuggestions";
 import locationCapabilitiesRoutes from "./locationCapabilities";
 import photoJourneyRoutes from "./photoJourneys";
 import tripSuggestionRoutes from "./tripSuggestions";
+import documentLinkSuggestionRoutes from "./documentLinkSuggestions";
 import flightLookupRoutes from "./flightLookup";
 import statsRoutes from "./stats";
 import statsFlightInsightsRoutes from "./stats/flightInsights";
@@ -151,6 +152,7 @@ import placeCategoriesRouter from "./placeCategories";
 import xlsxImportRouter from "./xlsxImport";
 import checkinImportRouter from "./checkinImport";
 import appImportRouter from "./appImport";
+import placeVisitPhotoAutoRouter from "./places/visitPhotoAuto";
 import placeVisitPhotoRouter from "./places/visitPhotos";
 import placeVisitDateSuggestionRouter from "./places/visitDateSuggestions";
 import placeVisitPhotoSuggestionRouter from "./places/visitPhotoSuggestions";
@@ -159,6 +161,7 @@ import placeRelationsRouter from "./places/relations";
 import placeMergeRouter from "./places/merge";
 import placeCapturesRouter from "./places/captures";
 import documentExtractValueRoutes from "./documents/extractValues";
+import documentLinkRoutes from "./documents/links";
 import placeListsRouter from "./placeLists";
 import curatedListsRouter from "./placeLists/curated";
 import lodgingChainsRouter from "./lodgingChains";
@@ -278,6 +281,7 @@ export const apiMounts: ApiMount[] = [
   // "Take the values from this receipt": one POST under `/documents/:id`, in
   // its own file; mounted first so the documents router never sees the path.
   { id: "documents.extractValues", base: "/api/v1", router: documentExtractValueRoutes },
+  { id: "documents.links", base: "/api/v1", router: documentLinkRoutes },
   { id: "documents", base: "/api/v1", router: documentRoutes },
   // Trip photos on a stay, a flight and a cruise — read-only, on /api/v1 with
   // per-route middleware; the extra path segment keeps it off the `/:id` routes.
@@ -318,6 +322,11 @@ export const apiMounts: ApiMount[] = [
   { id: "photoJourneys", base: "/api/v1/photo-journeys", router: photoJourneyRoutes },
   // The cross-domain trip-suggestion engine's inbox tab (owner, 2026-09-26).
   { id: "tripSuggestions", base: "/api/v1/trip-suggestions", router: tripSuggestionRoutes },
+  {
+    id: "documentLinkSuggestions",
+    base: "/api/v1/document-link-suggestions",
+    router: documentLinkSuggestionRoutes,
+  },
   { id: "flightLookup", base: "/api/v1/flight-lookup", router: flightLookupRoutes },
   // One arc of the globe (forgejo#132 item 9). Its own base because
   // `routes/stats.ts` may not grow; it brings that router's middlewares along.
@@ -553,6 +562,8 @@ export const apiMounts: ApiMount[] = [
     base: "/api/v1/places/entry-suggestions",
     router: placeEntrySuggestionsRouter,
   },
+  // Automatic photo links — before visitPhotos, whose `/photos/:photoId` would read "auto".
+  { id: "places.visitPhotoAuto", base: "/api/v1/places", router: placeVisitPhotoAutoRouter },
   { id: "places.visitPhotos", base: "/api/v1/places", router: placeVisitPhotoRouter },
   // Dates the add-visit form can offer — same prefix, own file, same reason.
   {

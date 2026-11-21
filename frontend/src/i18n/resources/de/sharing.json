@@ -143,7 +143,8 @@
       "switchOff": "Mit Leuten auf anderen Servern teilen geht hier noch nicht: Der Admin hat es nicht eingeschaltet.",
       "noPeer": "Mit Leuten auf anderen Servern teilen geht hier noch nicht: Der Admin hat noch keinen anderen Server zugelassen.",
       "loadFailed": "Ob du mit Leuten auf anderen Servern teilen kannst, konnte nicht geladen werden."
-    }
+    },
+    "share": "Teilen …"
   },
   "trip": {
     "leaveConfirm": "Geteilte Reise verlassen? Deine Kopie bleibt als eigene Reise erhalten; die anderen werden benachrichtigt.",
@@ -767,18 +768,24 @@
         "submit": "Anfrage senden",
         "sent": "Anfrage gesendet: {{origin}} entscheidet, ob {{name}} die Reise angeboten bekommt."
       },
-      "otherServer": {
-        "title": "Auf anderem Server",
-        "pick": "Server",
-        "username": "Benutzername der Person",
-        "submit": "Reise anbieten",
-        "noServers": "Dein Admin hat noch keinen Server verbunden.",
+      "person": {
         "warnTitle": "Bitte beachten",
         "warnStored": "Die Reise wird auf dem anderen Server gespeichert und kann dort vom Admin gelesen werden.",
         "warnEdits": "Änderungen gelten in beide Richtungen: Was dort geändert wird, ändert auch deine Reise.",
         "warnPrivate": "Private Notizen, Kosten und Dokumente bleiben bei dir.",
         "warnRecall": "Was einmal gesendet wurde, lässt sich nicht zurückholen.",
-        "warnAccept": "Die Person nimmt das Angebot in ihrem Posteingang an – vorher kommt nichts an."
+        "warnAccept": "Die Person nimmt das Angebot in ihrem Posteingang an – vorher kommt nichts an.",
+        "label": "Person auf einem anderen Server",
+        "placeholder": "benutzer@server.example",
+        "hint": "Benutzername und Server, z. B. anna@trav.example.org. Noch nicht verbunden? Die Verbindung wird dabei angefragt.",
+        "codeLink": "Oder einen Einladungscode erstellen",
+        "submit": "Reise anbieten",
+        "working": "Wird geprüft …",
+        "invalid": "Bitte als benutzer@server eingeben, z. B. anna@trav.example.org.",
+        "serverNotConnected": "{{origin}} ist für diese Instanz noch nicht zugelassen. Das macht dein Admin unter Einstellungen → Instanz – oder du erstellst einen Einladungscode.",
+        "requested": "Anfrage an {{name}} auf {{origin}} gesendet. Sobald die Person zugestimmt hat, erscheint sie oben in der Liste und du kannst ihr die Reise anbieten.",
+        "waiting": "Die Anfrage an {{name}} auf {{origin}} ist noch offen. Die Person muss sie erst bestätigen.",
+        "failed": "Die Person auf dem anderen Server konnte nicht erreicht werden."
       }
     },
     "offers": {
@@ -966,6 +973,113 @@
       "busy": "Die Route wird gerade schon von einer anderen Anfrage mitgeteilt. Versuch es gleich noch einmal.",
       "revoked": "Während die Route erstellt wurde, wurde das Mitteilen beendet. Es wird nichts mitgeteilt.",
       "network": "Der Server ist nicht erreichbar. Versuch es gleich noch einmal."
+    }
+  },
+  "tripShare": {
+    "people": "Personen",
+    "peopleHint": "Wähle jemanden aus der Liste. Wer noch nicht dabei ist, lässt sich über das Feld einladen, sofern Teilen über Server hinweg hier eingerichtet ist.",
+    "linkHint": "Eine öffentliche Seite mit dem, was du auswählst – ohne Konto lesbar.",
+    "createLink": "Öffentlichen Link verwalten…",
+    "addLocal": "Weiteren Mitreisenden von diesem Server hinzufügen…"
+  },
+  "friends": {
+    "title": "Personen",
+    "intro": "Alle, mit denen du reist oder teilst, in einer Liste. Jeder Schalter gilt für genau diese Person.",
+    "loading": "Personen werden geladen …",
+    "empty": "Noch niemand in der Liste. Mitreisende tauchen hier auf, sobald du sie in einen Eintrag schreibst; Personen mit eigenem Konto kannst du unten verbinden.",
+    "retry": "Erneut versuchen",
+    "loadFailed": {
+      "companions": "Ich konnte die Mitreisenden nicht laden.",
+      "accounts": "Ich konnte die Konten auf diesem Server nicht laden.",
+      "connections": "Ich konnte die Verbindungen zu anderen Servern nicht laden.",
+      "comparison": "Ich konnte nicht lesen, wer deine Summen sieht."
+    },
+    "status": {
+      "connected": "verbunden",
+      "requested": "angefragt"
+    },
+    "account": {
+      "local": "@{{username}}",
+      "remote": "{{username}}@{{origin}}",
+      "none": "kein Konto"
+    },
+    "demo": "Im Demo-Konto lässt sich hier nichts ändern.",
+    "switches": {
+      "share": {
+        "label": "Reisen teilen"
+      },
+      "totals": {
+        "label": "Sieht meine Summen"
+      },
+      "editScope": "Umfang ändern",
+      "encryptedSet": "Übergabe einrichten …"
+    },
+    "actions": {
+      "linkAccount": "Konto verknüpfen",
+      "changeLink": "Verknüpfung ändern",
+      "endConnection": "Verbindung beenden",
+      "withdrawPaired": "Zurückziehen",
+      "viewStats": "Zahlen ansehen",
+      "closeStats": "Zahlen schließen",
+      "viewAchievements": "Erfolge ansehen",
+      "closeAchievements": "Erfolge schließen",
+      "remoteNoRename": "Personen auf anderen Servern verwaltet ihr Server.",
+      "withdrawIncoming": "Teilen von dieser Person zurückziehen"
+    },
+    "requests": {
+      "title": "Anfragen an dich",
+      "share": "{{name}} (@{{username}}) möchte Reisen mit dir teilen.",
+      "connection": "{{name}} ({{username}}@{{origin}}) möchte sich mit dir verbinden.",
+      "reconfirm": "Die Verbindung zu {{name}} ({{username}}@{{origin}}) muss neu bestätigt werden.",
+      "comparison": "{{name}} möchte deine Summen in der Rangliste sehen.",
+      "accept": "Annehmen",
+      "decline": "Ablehnen",
+      "endReconfirm": "Beenden"
+    },
+    "remote": {
+      "submit": "Verbinden",
+      "alreadyConnected": "{{name}} ({{origin}}) ist schon verbunden. Teilen kannst du über „Reisen teilen“ in der Liste.",
+      "hint": "Benutzername und Server, z. B. anna@trav.example.org. Die Verbindung wird dabei angefragt; die Person bestätigt sie bei sich."
+    },
+    "unusedLink": "Unbenutzte Personen löschen ({{count}})",
+    "encryptedManage": "Verschlüsselte Übergaben verwalten",
+    "confirm": {
+      "withdrawShare": "{{name}} bekommt deine Reisen nicht mehr. Was schon geteilt ist, bleibt dort als eigene Kopie.",
+      "withdrawShareAction": "Zurückziehen",
+      "totalsOff": "{{name}} sieht deine Summen nicht mehr.",
+      "totalsOffAction": "Nicht mehr zeigen",
+      "endConnection": "Die Verbindung zu {{name}} endet. Geteiltes bleibt als eigene Kopie.",
+      "endConnectionAction": "Beenden",
+      "withdrawPaired": "{{name}} ({{origin}}) bekommt nichts mehr von dir.",
+      "withdrawPairedAction": "Zurückziehen",
+      "withdrawIncoming": "{{name}} teilt nichts mehr mit dir: Das Abgleichen endet. Was schon geteilt ist, bleibt als eigene Kopie bei dir.",
+      "withdrawIncomingAction": "Zurückziehen"
+    },
+    "done": {
+      "shareAsked": "Anfrage an {{name}} geschickt.",
+      "shareWithdrawn": "{{name}} bekommt deine Reisen nicht mehr.",
+      "totalsAsked": "Anfrage an {{name}} geschickt.",
+      "totalsOff": "{{name}} sieht deine Summen nicht mehr.",
+      "scopeChanged": "Umfang für {{name}} gespeichert.",
+      "switchSaved": "Gespeichert.",
+      "accepted": "Angenommen.",
+      "declined": "Abgelehnt.",
+      "ended": "Verbindung beendet.",
+      "withdrawn": "Zurückgezogen."
+    },
+    "errors": {
+      "action": "Das hat nicht geklappt. Bitte versuche es noch einmal."
+    },
+    "code": {
+      "title": "Einladungscode",
+      "create": "Code erstellen",
+      "hint": "Der Code gilt einmal und verfällt. Wer ihn bekommt, löst ihn auf seinem Server ein.",
+      "created": "Dein Code (nur jetzt sichtbar)",
+      "claimHelp": "Einen Code von jemandem auf einem anderen Server löst du hier ein.",
+      "close": "Schließen"
+    },
+    "menu": {
+      "label": "Aktionen für {{name}}"
     }
   }
 }

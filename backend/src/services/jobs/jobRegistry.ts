@@ -32,6 +32,7 @@ export type JobKind =
   | "xlsx.import"
   | "photoJourneys.scan"
   | "dawarichStays.scan"
+  | "travtrack.visitSuggestions"
   | "journal.weather"
   | "timeModel.backfill"
   | "timeZones.reResolveDryRun"
@@ -43,7 +44,9 @@ export type JobKind =
   | "travtrack.fileImport"
   | "travtrack.dawarichImport"
   | "placeVisitPhotos.immichLink"
-  | "dawarich.countryDaySweep";
+  | "placeVisitPhotos.autoLink"
+  | "dawarich.countryDaySweep"
+  | "documentLinks.pass";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 

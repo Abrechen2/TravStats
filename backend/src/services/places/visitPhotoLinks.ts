@@ -4,6 +4,7 @@ import { createImmichClient } from "../immich/immichClient";
 import { getCachedAlbumAssets } from "../immich/immichAssetCache";
 import { getImmichConnection } from "../immich/immichResolver";
 import { ImmichError, type ImmichAsset, type ImmichErrorKind } from "../immich/types";
+import type { SourcedAsset } from "../photoLinking/matcher";
 
 /**
  * Library photographs attached to a place visit as LINKS — a row that carries
@@ -26,20 +27,24 @@ export type AttachOutcome =
 const JOURNEY_SEARCH_PAD_MS = 60_000;
 
 /**
- * Write link rows for `assets` on the visit, skipping any already linked there.
- * Idempotent, so a retried accept or a double click adds nothing twice.
+ * Write link rows for `assets` on the visit, skipping any already linked there
+ * (by source and asset id). Idempotent, so a retried accept, a double click or
+ * a second automatic pass adds nothing twice. `provenance` records who linked
+ * it: the user (`manual`) or the matcher (`auto`).
  */
-export async function linkImmichAssetsToVisit(
+export async function linkAssetsToVisit(
   visitId: string,
-  assets: ImmichAsset[]
+  assets: SourcedAsset[],
+  provenance: "manual" | "auto",
+  max: number = Number.POSITIVE_INFINITY
 ): Promise<number> {
   if (assets.length === 0) return 0;
   const existing = await prisma.placeVisitPhoto.findMany({
-    where: { placeVisitId: visitId, immichAssetId: { in: assets.map((a) => a.id) } },
-    select: { immichAssetId: true },
+    where: { placeVisitId: visitId, immichAssetId: { in: assets.map((a) => a.asset.id) } },
+    select: { immichAssetId: true, provider: true },
   });
-  const known = new Set(existing.map((row) => row.immichAssetId));
-  const fresh = assets.filter((a) => !known.has(a.id));
+  const known = new Set(existing.map((row) => `${row.provider}:${row.immichAssetId}`));
+  const fresh = assets.filter((a) => !known.has(`${a.provider}:${a.asset.id}`)).slice(0, max);
   if (fresh.length === 0) return 0;
 
   const last = await prisma.placeVisitPhoto.findFirst({
@@ -48,18 +53,35 @@ export async function linkImmichAssetsToVisit(
     select: { sortIdx: true },
   });
   const base = (last?.sortIdx ?? -1) + 1;
-  await prisma.placeVisitPhoto.createMany({
-    data: fresh.map((asset, i) => ({
+  const { count } = await prisma.placeVisitPhoto.createMany({
+    data: fresh.map(({ provider, asset }, i) => ({
       placeVisitId: visitId,
       filename: null,
       mimetype: asset.mimeType,
-      // Zero bytes stored here; the column describes what we hold, not Immich.
+      // Zero bytes stored here; the column describes what we hold, not the source.
       sizeBytes: 0,
       immichAssetId: asset.id,
+      provider,
+      provenance,
+      takenAt: asset.fileCreatedAt ? new Date(asset.fileCreatedAt) : null,
       sortIdx: base + i,
     })),
+    // Two passes racing on the same visit: the unique key decides, not a throw.
+    skipDuplicates: true,
   });
-  return fresh.length;
+  return count;
+}
+
+/** The journey preview's Immich assets, as links the user accepted. */
+export async function linkImmichAssetsToVisit(
+  visitId: string,
+  assets: ImmichAsset[]
+): Promise<number> {
+  return linkAssetsToVisit(
+    visitId,
+    assets.map((asset) => ({ provider: "immich" as const, asset })),
+    "manual"
+  );
 }
 
 /**

@@ -5,6 +5,7 @@ import { errorContent } from "./shared";
 import { aggregatesSchema, pointDetailSchema } from "./travtrackLegs";
 import { travTrackMonthsQuerySchema } from "../../../schemas/travtrack";
 import {
+  travTrackPhotoAssetIdSchema,
   travTrackPhotoFileQuerySchema,
   travTrackPhotosQuerySchema,
   travTrackRangeViewQuerySchema,
@@ -182,6 +183,7 @@ const immichFailure = z.object({
 const photos = z.object({
   photos: z.array(
     z.object({
+      provider: z.enum(["immich", "photoprism"]).describe("The photo source holding the asset"),
       assetId: z.string(),
       type: z.enum(["IMAGE", "VIDEO"]),
       takenAt: z.string(),
@@ -198,6 +200,31 @@ const photos = z.object({
   trackTruncated: z
     .boolean()
     .describe("The window's track was longer than one read: later photos are not placed"),
+  failures: z
+    .array(
+      z.object({
+        provider: z.enum(["immich", "photoprism"]),
+        kind: z.string().describe("The Immich failure kind"),
+      })
+    )
+    .describe("Sources that could not answer; the other sources' photos are still in `photos`"),
+});
+
+const photoSources = z.object({
+  sources: z.array(z.enum(["immich", "photoprism"])).describe("Connected photo sources"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/travtrack/photos/sources",
+  summary: "Which photo sources the account has connected",
+  description:
+    "Resolves connections only; no photo library is contacted. Only while TravTrack is on.",
+  tags: ["TravTrack"],
+  responses: {
+    200: { description: "The sources", content: { "application/json": { schema: photoSources } } },
+    403: disabled,
+  },
 });
 
 registry.registerPath({
@@ -205,7 +232,7 @@ registry.registerPath({
   path: "/travtrack/photos",
   summary: "Photos taken during a window, placed on the own track",
   description:
-    "From the account's Immich connection. Only photos whose time lies inside a privacy-safe " +
+    "From every photo source the account has connected (Immich, PhotoPrism) plus the linked albums of the window's trips. Only photos whose time lies inside a privacy-safe " +
     "stretch are returned, positioned on it; one in a privacy zone or a cut is left out. " +
     "At most 7 days. Only while TravTrack is on.",
   tags: ["TravTrack"],
@@ -218,11 +245,11 @@ registry.registerPath({
     },
     403: disabled,
     409: {
-      description: "notConfigured: no Immich connection",
+      description: "notConfigured: no photo source connected",
       content: { "application/json": { schema: immichFailure } },
     },
     502: {
-      description: "Immich failed: unreachable, auth, notFound, protocol or invalidUrl",
+      description: "Every source failed: unreachable, auth, notFound, protocol or invalidUrl",
       content: { "application/json": { schema: immichFailure } },
     },
   },
@@ -237,7 +264,7 @@ registry.registerPath({
     "Renditions only. Private immutable caching; a 1x1 placeholder on an upstream failure.",
   tags: ["TravTrack"],
   request: {
-    params: z.object({ assetId: z.string().uuid() }),
+    params: z.object({ assetId: travTrackPhotoAssetIdSchema }),
     query: travTrackPhotoFileQuerySchema,
   },
   responses: {

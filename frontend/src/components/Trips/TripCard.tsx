@@ -13,6 +13,8 @@ import { Icon, type IconName } from "../ui/Icon";
 interface TripCardProps {
   trip: Trip;
   onOpen: (trip: Trip) => void;
+  /** Distinct places visited on the trip (`countPlacesByTrip`); shown only when above 0. */
+  placeCount?: number;
 }
 
 /** Trip status → the shared status palette (planned reads as scheduled). */
@@ -58,7 +60,7 @@ export function tripDays(trip: Trip): number | null {
  * the page to hit by accident. Kilometres and cost stay, as figures — both
  * were fixed to count every area (forgejo#86 and the cruise totals).
  */
-export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
+export default function TripCard({ trip, onOpen, placeCount = 0 }: TripCardProps): JSX.Element {
   const { t, i18n } = useTranslation(["trips"]);
 
   const { start, end } = tripSpan(trip);
@@ -188,6 +190,12 @@ export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
           <span>
             <span style={figure}>{entries}</span> {t("trips:card.entries", { count: entries })}
           </span>
+          {placeCount > 0 && (
+            <span data-testid="trip-card-places">
+              <span style={figure}>{placeCount}</span>{" "}
+              {t("trips:card.places", { count: placeCount })}
+            </span>
+          )}
         </p>
         {trip.flightsTruncated && (
           <p className="t-caption" data-testid="trip-card-countries-incomplete">

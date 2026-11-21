@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import { ADSBLOL_KEY_HEADER } from "./flightLookup/adsbV2";
+import { ADSBLOL_KEY_HEADER, AIRPLANES_LIVE_BASE } from "./flightLookup/adsbV2";
 import { getApiKey } from "./apiKeyResolver";
 import { extractAxiosErrorInfo, failure, type ApiKeyTestResult } from "./apiKeyTester";
 
@@ -77,6 +77,31 @@ export async function testAdsbLolKey(apiKey: string, userId?: string): Promise<A
     if (errInfo.status === 401 || errInfo.status === 403) {
       return { success: false, message: "Invalid API key", messageKey: "invalid" };
     }
+    if (errInfo.status === 429) {
+      return { success: false, message: "Rate limit exceeded", messageKey: "rateLimited" };
+    }
+    return failure(errInfo);
+  }
+}
+
+/** Test airplanes.live: keyless, so a 200 from `GET /v2/hex/<hex>` is all there is to prove. */
+export async function testAirplanesLive(): Promise<ApiKeyTestResult> {
+  try {
+    const response = await axios.get(`${AIRPLANES_LIVE_BASE}/hex/3C6518`, {
+      headers: { Accept: "application/json" },
+      timeout: 10000,
+    });
+    if (response.status === 200) {
+      return { success: true, message: "Service is reachable", messageKey: "valid" };
+    }
+    return {
+      success: false,
+      message: `Unexpected response: ${response.status}`,
+      messageKey: "unexpectedStatus",
+      messageParams: { status: response.status },
+    };
+  } catch (error: unknown) {
+    const errInfo = extractAxiosErrorInfo(error);
     if (errInfo.status === 429) {
       return { success: false, message: "Rate limit exceeded", messageKey: "rateLimited" };
     }

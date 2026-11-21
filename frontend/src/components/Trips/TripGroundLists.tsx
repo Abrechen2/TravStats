@@ -4,11 +4,10 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { railDeparture } from "../../lib/entityTimes";
 import { formatStationTime } from "../../lib/railTime";
 import type { Trip } from "../../types";
-import type { TripBusJourney } from "../../types/bus";
-import { TripRailList } from "../rail/RailTripCard";
 import { dateLocaleForLanguage } from "../../lib/units";
+import { PanelHeader } from "./TripDetailPanels";
 
-/** How many train and bus rides a trip holds — what the logistics tab calls "empty" by. */
+/** How many train, bus and ferry rides a trip holds — what the logistics tab calls "empty" by. */
 export function groundRideCount(
   trip: Pick<Trip, "railJourneys" | "busJourneys" | "ferryJourneys">
 ): number {
@@ -19,61 +18,112 @@ export function groundRideCount(
   );
 }
 
+type GroundRide = Parameters<typeof railDeparture>[0] & {
+  id: string;
+  depStationName: string;
+  arrStationName: string;
+};
+
 /**
- * The trip's bus rides as a logistics list, beside its train rides (forgejo#288
- * sweep). Times are the departure terminal's own clock, as the rail list's.
+ * One ground domain as a logistics panel, drawn like the flight and cruise
+ * panels beside it. Owner, 2026-11-20: a ferry stood there as a bare link
+ * with an emoji, and train and bus rides had a look of their own. Times are
+ * the departure terminal's own clock.
  */
-export function TripBusList({ rides }: { rides: readonly TripBusJourney[] }): JSX.Element {
-  const { t, i18n } = useTranslation(["bus"]);
+function GroundPanel({
+  title,
+  rides,
+  basePath,
+  testId,
+}: {
+  title: string;
+  rides: readonly GroundRide[];
+  basePath: string;
+  testId: string;
+}): JSX.Element {
+  const { t, i18n } = useTranslation(["trips"]);
   const locale = dateLocaleForLanguage(i18n.language);
   return (
     <div
       className="rounded-xl"
       style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-      data-testid="trip-bus-list"
+      data-testid={testId}
     >
-      <div className="px-4 py-3 text-sm font-semibold">
-        {t("bus:trip.listTitle", { count: rides.length })}
-      </div>
-      <ul className="text-sm">
-        {rides.map((r) => {
-          const departure = railDeparture(r);
-          return (
-            <li
-              key={r.id}
-              className="flex justify-between gap-3 px-4 py-2.5"
-              style={{ borderTop: "1px solid var(--color-border)" }}
-            >
-              <span style={{ color: "var(--text-muted)" }}>
-                {departure ? formatStationTime(departure, locale) : "—"}
-              </span>
-              <span className="flex-1">
-                {r.depStationName} → {r.arrStationName}
-              </span>
-              <Link to={`/bus/${r.id}`} className="text-xs" style={{ color: "var(--accent)" }}>
-                {t("bus:trip.open")}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      <PanelHeader>
+        {title} ({rides.length})
+      </PanelHeader>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-xs uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+            <th className="text-left px-4 py-2">{t("trips:detail.logistics.date")}</th>
+            <th className="text-left px-4 py-2">{t("trips:detail.logistics.route")}</th>
+            <th className="text-right px-4 py-2">↗</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rides.map((r) => {
+            const departure = railDeparture(r);
+            return (
+              <tr key={r.id} style={{ borderTop: "1px solid var(--color-border)" }}>
+                <td
+                  className="px-4 py-2.5 whitespace-nowrap"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {departure ? formatStationTime(departure, locale) : "—"}
+                </td>
+                <td className="px-4 py-2.5">
+                  {r.depStationName} → {r.arrStationName}
+                </td>
+                <td className="px-4 py-2.5 text-right">
+                  <Link
+                    to={`${basePath}/${r.id}`}
+                    className="text-xs"
+                    style={{ color: "var(--accent)" }}
+                  >
+                    {t("trips:detail.logistics.open")}
+                  </Link>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-/** The train and bus lists of the logistics tab; each only when the trip holds some. */
+/** The train, bus and ferry panels of the logistics tab; each only when the trip holds some. */
 export function TripGroundLists({ trip }: { trip: Trip }): JSX.Element {
+  const { t } = useTranslation(["trips"]);
   const rail = trip.railJourneys ?? [];
   const bus = trip.busJourneys ?? [];
+  const ferry = trip.ferryJourneys ?? [];
   return (
     <>
-      {(trip.ferryJourneys ?? []).map((ride) => (
-        <Link key={ride.id} to={`/ferry/${ride.id}`}>
-          ⛴ {ride.depStationName} → {ride.arrStationName}
-        </Link>
-      ))}
-      {rail.length > 0 && <TripRailList journeys={rail} />}
-      {bus.length > 0 && <TripBusList rides={bus} />}
+      {rail.length > 0 && (
+        <GroundPanel
+          title={t("trips:detail.logistics.rail")}
+          rides={rail}
+          basePath="/rail"
+          testId="trip-rail-list"
+        />
+      )}
+      {bus.length > 0 && (
+        <GroundPanel
+          title={t("trips:detail.logistics.bus")}
+          rides={bus}
+          basePath="/bus"
+          testId="trip-bus-list"
+        />
+      )}
+      {ferry.length > 0 && (
+        <GroundPanel
+          title={t("trips:detail.logistics.ferries")}
+          rides={ferry}
+          basePath="/ferry"
+          testId="trip-ferry-list"
+        />
+      )}
     </>
   );
 }

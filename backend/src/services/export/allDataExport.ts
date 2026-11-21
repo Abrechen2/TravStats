@@ -158,7 +158,11 @@ export const USER_EXPORT_SELECT = {
   },
   // Kept originals (forgejo#116): the rows — what each is, where it is filed,
   // what its parse read. The bytes stay out, as a photo's do.
-  documents: true,
+  // Its links travel with it (document-links D3): a document is evidence for
+  // several entries, and the old owner columns on the row name only the primary.
+  // The links hold the entry ids of this same export, so a reader restores
+  // entities and documents first and the links last.
+  documents: { include: { links: true } },
   // Standalone notes (forgejo#137): the text, the moment and its zone, where it
   // was written. The photo's bytes stay out, as every photo's do.
   notes: true,
@@ -219,6 +223,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
     "snoozes and opt-outs of setup checks, tied to this server's check revisions; a restored account re-evaluates",
   readinessNoteAcks:
     "read marks of this server's update notes; a restored account sees the notes for its own versions again",
+  documentLinkSuggestions:
+    "derived proposals for filing a document; the document links themselves are exported, and the next link pass re-derives the suggestions (a rejected one may be offered once more)",
   comparisonDevices: "public device identities, re-enrol after restore",
   localConnectionsLow:
     "friendships with other accounts on this server: the other side is not this user's data and ids are re-keyed on restore; friends re-confirm",

@@ -2,7 +2,7 @@ import { prisma } from "../db";
 import { ensureAdminSettingsRow } from "../services/adminSettingsRow";
 import { lookupOrCreateAirport, resetAirportLookupCaches } from "../services/airportLookup";
 import { assertEgressAllowed, EgressBlockedError } from "../services/externalServices/egress";
-import { loadPolicy, savePolicy } from "../services/externalServices/policy";
+import { loadPolicy, updatePolicy } from "../services/externalServices/policy";
 
 /**
  * forgejo#392 — the airport-data.com lookup and the OurAirports CSV download
@@ -27,7 +27,7 @@ describe("airport egress is gated by the catalogue (forgejo#392)", () => {
   });
   afterEach(async () => {
     global.fetch = realFetch;
-    await savePolicy(savedPolicy);
+    await updatePolicy(() => savedPolicy);
     await prisma.adminSettings.update({ where: { id: adminId }, data: { internetEnabled: true } });
   });
   afterAll(async () => {
@@ -35,7 +35,10 @@ describe("airport egress is gated by the catalogue (forgejo#392)", () => {
   });
 
   it("an admin-disabled airportData service makes zero outbound requests and reports blocked", async () => {
-    await savePolicy({ ...savedPolicy, disabled: [...savedPolicy.disabled, "airportData"] });
+    await updatePolicy(() => ({
+      ...savedPolicy,
+      disabled: [...savedPolicy.disabled, "airportData"],
+    }));
     await expect(lookupOrCreateAirport("ZQB")).resolves.toEqual({
       status: "unavailable",
       reason: "blocked",
@@ -55,7 +58,10 @@ describe("airport egress is gated by the catalogue (forgejo#392)", () => {
   it("a service switched off while the first request is pending stops the CSV fallback", async () => {
     fetchSpy.mockImplementation(async (url: unknown) => {
       if (String(url).includes("airport-data")) {
-        await savePolicy({ ...savedPolicy, disabled: [...savedPolicy.disabled, "airportData"] });
+        await updatePolicy(() => ({
+          ...savedPolicy,
+          disabled: [...savedPolicy.disabled, "airportData"],
+        }));
         return new Response("{}", { status: 200 });
       }
       return new Response("id,ident\n");
@@ -68,7 +74,10 @@ describe("airport egress is gated by the catalogue (forgejo#392)", () => {
   });
 
   it("the catalogue download guard throws a named error when the service is off", async () => {
-    await savePolicy({ ...savedPolicy, disabled: [...savedPolicy.disabled, "airportData"] });
+    await updatePolicy(() => ({
+      ...savedPolicy,
+      disabled: [...savedPolicy.disabled, "airportData"],
+    }));
     await expect(assertEgressAllowed("airportData")).rejects.toMatchObject({
       name: "EgressBlockedError",
       block: "service_off",

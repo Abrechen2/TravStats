@@ -26,7 +26,7 @@ export default function ReadinessBanner(): JSX.Element | null {
         borderBottom: "1px solid var(--ts-border, var(--color-border))",
       }}
     >
-      <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-2 text-sm">
+      <div className="flex items-center gap-2 px-4 py-2 text-sm">
         <Icon name="info" size={16} />
         <span className="min-w-0">
           {t("readiness:banner.text", { count: banner.itemIds.length })}

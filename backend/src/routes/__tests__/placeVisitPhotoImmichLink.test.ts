@@ -134,6 +134,8 @@ describe("place-visit photos as Immich links", () => {
   });
 
   it("streams a linked photo from Immich by the asset on its row", async () => {
+    // One link per (visit, source, asset): clear what earlier cases left on the visit.
+    await prisma.placeVisitPhoto.deleteMany({ where: { placeVisitId: visitId } });
     const row = await prisma.placeVisitPhoto.create({
       data: {
         placeVisitId: visitId,

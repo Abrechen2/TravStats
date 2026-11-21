@@ -14,6 +14,7 @@ export const createPlaceCategorySchema = z.object({
 });
 import { partialForUpdate } from "./partialUpdate";
 import { timeFieldSchema } from "../shared/time/timeInput";
+import { linkedAssetIdParamSchema, photoSourceKindSchema } from "./immich";
 
 /**
  * `.nullable()` on every field the editors can explicitly CLEAR — an emitted
@@ -134,7 +135,9 @@ export const VISIT_PHOTO_SUGGESTION_CAP = 24;
 export const linkPicksSchema = z
   .object({
     tripPhotoIds: z.array(z.string().uuid()).max(VISIT_PHOTO_SUGGESTION_CAP).default([]),
-    assetIds: z.array(z.string().uuid()).max(VISIT_PHOTO_SUGGESTION_CAP).default([]),
+    assetIds: z.array(linkedAssetIdParamSchema).max(VISIT_PHOTO_SUGGESTION_CAP).default([]),
+    /** Source of `assetIds`; Immich when absent, as for every client before PhotoPrism. */
+    provider: photoSourceKindSchema.default("immich"),
   })
   .strict();
 

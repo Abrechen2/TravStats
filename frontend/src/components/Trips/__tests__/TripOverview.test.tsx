@@ -10,7 +10,12 @@ import type { Trip } from "../../../types";
 // "Reisende" (spec 2026-10-16, D9): the section loads its sharing state on its
 // own and has its own suite (components/sharing/__tests__); here it would only
 // race the assertions.
-vi.mock("../../sharing/TripPeopleSection", () => ({ default: () => null }));
+vi.mock("../../sharing/RemoteTripPeople", () => ({
+  default: () => <div data-testid="remote-people" />,
+}));
+vi.mock("../../sharing/TripPeopleSection", () => ({
+  default: () => <div data-testid="people-section" />,
+}));
 
 vi.mock("../../documents/DocumentsSection", () => ({ default: () => null }));
 
@@ -78,10 +83,37 @@ function trip(overrides: Partial<Trip>): Trip {
 function renderOverview(value: Trip): void {
   render(
     <MemoryRouter>
-      <TripOverview trip={value} t={t} language="de" onChanged={() => undefined} />
+      <TripOverview trip={value} t={t} language="de" />
     </MemoryRouter>
   );
 }
+
+describe("TripOverview places", () => {
+  it("does not say nothing is linked on a trip that only has place visits", () => {
+    const visit = {
+      place: { id: "p1", name: "Torre", category: "landmark" },
+      visit: {
+        id: "v1",
+        placeId: "p1",
+        tripId: "trip-1",
+        visitedAt: "2020-05-14T10:00:00.000Z",
+        orderIdx: 0,
+      },
+    } as never;
+    render(
+      <MemoryRouter>
+        <TripOverview
+          trip={trip({})}
+          t={t}
+          language="de"
+          places={{ placeVisits: [visit], failed: false, loading: false, reload: () => {} }}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("Torre")).toBeInTheDocument();
+    expect(screen.queryByText("trips:detail.noLinks")).not.toBeInTheDocument();
+  });
+});
 
 describe("TripOverview", () => {
   it("lists a roadtrip the trip holds as one of its entries, and says nothing is linked only when nothing is", () => {
@@ -303,5 +335,26 @@ describe("TripOverview", () => {
       } as Partial<Trip>)
     );
     expect(screen.getByText(/Augsburg Hbf/)).toHaveTextContent("rail:bareTrain:57031");
+  });
+
+  // Owner, 2026-11-20: the travellers moved into the trip head, so the overview
+  // has no right-hand panel and its lists take the full width.
+  it("has no right-hand panel and no people section, whatever the trip carries", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <TripOverview
+          trip={trip({ companions: ["Anna"], tags: ["sommer"], summary: "Elf Tage." })}
+          t={t}
+          language="de"
+        />
+      </MemoryRouter>
+    );
+    expect(container.querySelector(".lg\\:grid-cols-\\[1\\.6fr_1fr\\]")).toBeNull();
+    expect(screen.queryByTestId("people-section")).toBeNull();
+    // People on other servers (a roster to answer) still have their place, in the main column.
+    expect(screen.getByTestId("remote-people")).toBeInTheDocument();
+    expect(screen.getByText("Elf Tage.")).toBeInTheDocument();
+    expect(screen.getByText("#sommer")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

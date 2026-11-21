@@ -6,13 +6,21 @@ import { localDay, withinKm } from "../../utils/sqlGeo";
 import { localDay as localDayAt } from "../../shared/time/instant";
 import { startOfDayAt } from "../../shared/time/legacyValues";
 import { zoneOf } from "../../shared/time/zoneOf";
-import { createImmichClient } from "../immich/immichClient";
 import { getCachedAlbumAssets, peekCachedAlbumAssets } from "../immich/immichAssetCache";
-import { getImmichConnection } from "../immich/immichResolver";
-import { ImmichError, type ImmichAsset, type ImmichErrorKind } from "../immich/types";
+import {
+  aggregateState,
+  candidatesForWindow,
+  NotConfigured,
+  type SourceState,
+  type SourcedAsset,
+  type WindowSearch,
+} from "../photoLinking/matcher";
+import { createPhotoSource, type PhotoSourceKind } from "../photoSource";
+import { getPhotoSourceConnection, toPhotoSourceKind } from "../photoSource/connection";
 import { PHOTO_RADIUS_KM } from "./visitDateSuggestions";
-import { linkImmichAssetsToVisit } from "./visitPhotoLinks";
+import { linkAssetsToVisit } from "./visitPhotoLinks";
 import { refusedIds } from "./visitPhotoRefusals";
+import { refusalKey } from "../photoLinking/matcher";
 
 /**
  * Photographs a place visit could show, found in the user's own records
@@ -31,7 +39,7 @@ import { refusedIds } from "./visitPhotoRefusals";
 /** Suggestions of each kind at most; a day at a sight can hold hundreds. */
 const SUGGESTION_CAP = VISIT_PHOTO_SUGGESTION_CAP;
 
-export type LibraryState = "ok" | "notConfigured" | ImmichErrorKind;
+export type LibraryState = SourceState;
 
 export interface VisitPhotoSuggestion {
   kind: "trip" | "library";
@@ -40,16 +48,21 @@ export interface VisitPhotoSuggestion {
   url: string;
   takenAt: string | null;
   distanceM: number;
+  /** The photo source of a `library` suggestion; absent on a trip photo. */
+  provider?: PhotoSourceKind;
 }
 
 export interface VisitPhotoSuggestions {
   /** The visit's day, `YYYY-MM-DD`; null for an undated visit, which gets none. */
   day: string | null;
   suggestions: VisitPhotoSuggestion[];
+  /** The worst-case answer over all sources: "ok" when any source answered. */
   library: LibraryState;
+  /** Each source's own answer, so one failing source is visible beside the other. */
+  sources: Partial<Record<PhotoSourceKind, LibraryState>>;
 }
 
-interface VisitAnchor {
+export interface VisitAnchor {
   id: string;
   day: string;
   tz: string | null;
@@ -58,7 +71,10 @@ interface VisitAnchor {
 }
 
 /** The caller's visit with the facts a search needs, or null when it is not theirs. */
-async function anchorOf(userId: string, visitId: string): Promise<VisitAnchor | "undated" | null> {
+export async function anchorOf(
+  userId: string,
+  visitId: string
+): Promise<VisitAnchor | "undated" | null> {
   const visit = await prisma.placeVisit.findFirst({
     where: { id: visitId, userId },
     select: {
@@ -89,6 +105,7 @@ interface TripPhotoRow {
   tripId: string;
   takenAt: Date | null;
   immichAssetId: string | null;
+  provider: string;
   distanceKm: number;
 }
 
@@ -96,7 +113,7 @@ interface TripPhotoRow {
 async function tripPhotosNear(userId: string, a: VisitAnchor): Promise<TripPhotoRow[]> {
   return prisma.$queryRaw<TripPhotoRow[]>(Prisma.sql`
     SELECT ph.id, ph.trip_id AS "tripId", ph.taken_at AS "takenAt",
-           ph.immich_asset_id AS "immichAssetId",
+           ph.immich_asset_id AS "immichAssetId", ph.provider AS "provider",
            ${EARTH_RADIUS_KM}::float8 * 2 * asin(sqrt(
              power(sin(radians(ph.lat - ${a.lat}::float8) / 2), 2)
              + cos(radians(${a.lat}::float8)) * cos(radians(ph.lat))
@@ -113,7 +130,8 @@ async function tripPhotosNear(userId: string, a: VisitAnchor): Promise<TripPhoto
       AND NOT EXISTS (
         SELECT 1 FROM place_visit_photos v
         WHERE v.place_visit_id = ${a.id}
-          AND (v.trip_photo_id = ph.id OR v.immich_asset_id = ph.immich_asset_id)
+          AND (v.trip_photo_id = ph.id
+               OR (v.immich_asset_id = ph.immich_asset_id AND v.provider = ph.provider))
       )
       -- Refused for this visit ("Nicht diese"): left out in SQL, so a refusal
       -- does not eat into the cap and hide a photo that was never refused.
@@ -126,7 +144,7 @@ async function tripPhotosNear(userId: string, a: VisitAnchor): Promise<TripPhoto
   `);
 }
 
-const dayCacheKey = (a: VisitAnchor): string => `visit-day:${a.id}:${a.day}`;
+export const dayCacheKey = (a: VisitAnchor): string => `visit-day:${a.id}:${a.day}`;
 
 const HOUR_MS = 3_600_000;
 
@@ -137,7 +155,7 @@ const HOUR_MS = 3_600_000;
  * the radius filter then keeps only what was taken there. Never the UTC day
  * alone, which silently drops a morning in Auckland or an evening in Hawaii.
  */
-function dayWindow(a: VisitAnchor): { start: Date; end: Date } {
+export function dayWindow(a: VisitAnchor): { start: Date; end: Date } {
   if (a.tz) {
     const start = startOfDayAt(a.day, a.tz);
     return { start, end: new Date(start.getTime() + 24 * HOUR_MS - 1) };
@@ -149,9 +167,9 @@ function dayWindow(a: VisitAnchor): { start: Date; end: Date } {
   };
 }
 
-function nearTheAnchor(a: VisitAnchor, day: ImmichAsset[]): ImmichAsset[] {
+function nearTheAnchor(a: VisitAnchor, day: SourcedAsset[]): SourcedAsset[] {
   return day.filter(
-    (asset) =>
+    ({ asset }) =>
       asset.lat !== null &&
       asset.lon !== null &&
       haversineKm(a, { lat: asset.lat, lon: asset.lon }) <= PHOTO_RADIUS_KM
@@ -159,36 +177,58 @@ function nearTheAnchor(a: VisitAnchor, day: ImmichAsset[]): ImmichAsset[] {
 }
 
 /**
- * The library's photographs of the visit's day within the photo radius.
+ * The day's search of one source, cached per visit, day AND source for the
+ * asset cache's minute. A source with no connection throws `NotConfigured`,
+ * which `candidatesForWindow` records as that source's state.
+ */
+function cachedDaySearch(userId: string, a: VisitAnchor): WindowSearch {
+  return async (provider, window) => {
+    const connection = await getPhotoSourceConnection(provider, userId);
+    if (connection === null) throw new NotConfigured();
+    const source = createPhotoSource(provider, connection);
+    return getCachedAlbumAssets(
+      userId,
+      dayCacheKey(a),
+      async () => {
+        const page = await source.searchAssetsByTime({
+          takenAfter: window.start,
+          takenBefore: window.end,
+        });
+        return page.assets;
+      },
+      provider
+    );
+  };
+}
+
+/**
+ * The photographs of the visit's day within the photo radius, from every
+ * connected photo source (Immich and PhotoPrism).
  *
  * This is also the PROOF every later step relies on: a library id is only ever
  * shown, streamed or linked when it is in this list, which the server built
- * from the caller's own connection. Cached per visit and day for the asset
- * cache's minute, so the thumbnails and the link that follow the listing do
- * not search the library again.
+ * from the caller's own connection. Cached per visit, day and source for the
+ * asset cache's minute, so the thumbnails and the link that follow the listing
+ * do not search the library again.
  */
 export async function libraryAssetsNear(
   userId: string,
   a: VisitAnchor
-): Promise<{ state: LibraryState; assets: ImmichAsset[] }> {
-  const connection = await getImmichConnection(userId);
-  if (connection === null) return { state: "notConfigured", assets: [] };
-  const client = createImmichClient(connection);
-  const { start, end } = dayWindow(a);
-  try {
-    const day = await getCachedAlbumAssets(userId, dayCacheKey(a), async () => {
-      const page = await client.searchAssetsByDate({ takenAfter: start, takenBefore: end });
-      return page.assets;
-    });
-    return { state: "ok", assets: nearTheAnchor(a, day) };
-  } catch (error) {
-    if (error instanceof ImmichError) return { state: error.kind, assets: [] };
-    throw error;
-  }
+): Promise<{
+  state: LibraryState;
+  sources: Partial<Record<PhotoSourceKind, LibraryState>>;
+  assets: SourcedAsset[];
+}> {
+  const { sources, candidates } = await candidatesForWindow(
+    cachedDaySearch(userId, a),
+    dayWindow(a)
+  );
+  return { state: aggregateState(sources), sources, assets: nearTheAnchor(a, candidates) };
 }
 
-function libraryUrl(visitId: string, assetId: string): string {
-  return `/api/v1/places/visits/${visitId}/photo-suggestions/library/${assetId}/file`;
+function libraryUrl(visitId: string, provider: PhotoSourceKind, assetId: string): string {
+  const base = `/api/v1/places/visits/${visitId}/photo-suggestions/library/${assetId}/file`;
+  return provider === "immich" ? base : `${base}?provider=${provider}`;
 }
 
 export async function visitPhotoSuggestionsFor(
@@ -197,14 +237,14 @@ export async function visitPhotoSuggestionsFor(
 ): Promise<VisitPhotoSuggestions | null> {
   const anchor = await anchorOf(userId, visitId);
   if (anchor === null) return null;
-  if (anchor === "undated") return { day: null, suggestions: [], library: "ok" };
+  if (anchor === "undated") return { day: null, suggestions: [], library: "ok", sources: {} };
 
   const [tripRows, library, linked, refused] = await Promise.all([
     tripPhotosNear(userId, anchor),
     libraryAssetsNear(userId, anchor),
     prisma.placeVisitPhoto.findMany({
       where: { placeVisitId: visitId, immichAssetId: { not: null } },
-      select: { immichAssetId: true },
+      select: { immichAssetId: true, provider: true },
     }),
     refusedIds(visitId),
   ]);
@@ -220,16 +260,21 @@ export async function visitPhotoSuggestionsFor(
   // the same picture twice; one refused for this visit is not offered again.
   const seen = new Set<string>([
     ...refused.library,
-    ...tripRows.flatMap((row) => (row.immichAssetId ? [row.immichAssetId] : [])),
-    ...linked.flatMap((row) => (row.immichAssetId ? [row.immichAssetId] : [])),
+    ...tripRows.flatMap((row) =>
+      row.immichAssetId ? [refusalKey(toPhotoSourceKind(row.provider), row.immichAssetId)] : []
+    ),
+    ...linked.flatMap((row) =>
+      row.immichAssetId ? [refusalKey(toPhotoSourceKind(row.provider), row.immichAssetId)] : []
+    ),
   ]);
   const fromLibrary: VisitPhotoSuggestion[] = library.assets
-    .filter((asset) => !seen.has(asset.id))
+    .filter(({ provider, asset }) => !seen.has(refusalKey(provider, asset.id)))
     .slice(0, SUGGESTION_CAP)
-    .map((asset) => ({
+    .map(({ provider, asset }) => ({
       kind: "library",
       id: asset.id,
-      url: libraryUrl(visitId, asset.id),
+      provider,
+      url: libraryUrl(visitId, provider, asset.id),
       takenAt: asset.fileCreatedAt,
       distanceM: Math.round(haversineKm(anchor, { lat: asset.lat!, lon: asset.lon! }) * 1000),
     }));
@@ -238,6 +283,7 @@ export async function visitPhotoSuggestionsFor(
     day: anchor.day,
     suggestions: [...fromTrips, ...fromLibrary],
     library: library.state,
+    sources: library.sources,
   };
 }
 
@@ -256,18 +302,24 @@ export async function visitPhotoSuggestionsFor(
 export async function isSuggestedLibraryAsset(
   userId: string,
   visitId: string,
-  assetId: string
+  assetId: string,
+  provider: PhotoSourceKind = "immich"
 ): Promise<boolean | null> {
   const anchor = await anchorOf(userId, visitId);
   if (anchor === null || anchor === "undated") return null;
-  const day = await peekCachedAlbumAssets(userId, dayCacheKey(anchor));
+  const day = await peekCachedAlbumAssets(userId, dayCacheKey(anchor), provider);
   if (day === null) return false;
-  return nearTheAnchor(anchor, day).some((asset) => asset.id === assetId);
+  return nearTheAnchor(
+    anchor,
+    day.map((asset) => ({ provider, asset }))
+  ).some(({ asset }) => asset.id === assetId);
 }
 
 export interface LinkPicks {
   tripPhotoIds: string[];
   assetIds: string[];
+  /** Source of `assetIds`; Immich when absent (the Companion's older calls). */
+  provider?: PhotoSourceKind;
 }
 
 /**
@@ -294,11 +346,12 @@ export async function linkPickedPhotos(
   const known = new Set(already.map((row) => row.tripPhotoId));
   const freshTrip = owned.filter((p) => !known.has(p.id));
 
-  let proven: ImmichAsset[] = [];
+  const provider = picks.provider ?? "immich";
+  let proven: SourcedAsset[] = [];
   if (picks.assetIds.length > 0 && anchor !== "undated") {
     const { assets } = await libraryAssetsNear(userId, anchor);
     const wanted = new Set(picks.assetIds);
-    proven = assets.filter((asset) => wanted.has(asset.id));
+    proven = assets.filter((c) => c.provider === provider && wanted.has(c.asset.id));
   }
 
   if (freshTrip.length > 0) {
@@ -319,7 +372,7 @@ export async function linkPickedPhotos(
       })),
     });
   }
-  const linkedLibrary = await linkImmichAssetsToVisit(visitId, proven);
+  const linkedLibrary = await linkAssetsToVisit(visitId, proven, "manual");
 
   // Skipped = refused: not the caller's photo, or not among the proven
   // suggestions. A pick that was already linked is neither linked nor skipped.

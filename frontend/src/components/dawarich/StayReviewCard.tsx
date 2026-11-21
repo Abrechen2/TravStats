@@ -144,11 +144,14 @@ export default function StayReviewCard({
         ({row.evidence.zone})
       </p>
       <p className="t-caption">
-        {t("trips:dawarichStays.evidence", {
-          count: row.pointCount,
-          gap: row.evidence.maxGapMinutes,
-        })}{" "}
-        · {row.sourceLat.toFixed(5)}, {row.sourceLon.toFixed(5)}
+        {/* A finding read from a stop has no run of positions to count: its explanation says the minutes. */}
+        {row.evidence.visit
+          ? null
+          : `${t("trips:dawarichStays.evidence", {
+              count: row.pointCount,
+              gap: row.evidence.maxGapMinutes,
+            })} · `}
+        {row.sourceLat.toFixed(5)}, {row.sourceLon.toFixed(5)}
       </p>
       {travtrack && row.evidence.explanation && (
         <p className="t-caption">

@@ -35,6 +35,10 @@ import {
 import { projectExploredCells } from "../services/travtrack/explored/project";
 import { projectMonths } from "../services/travtrack/months/project";
 import { CITY_LOOKUPS_PER_TICK } from "../services/travtrack/months/cities";
+import {
+  scheduledVisitSuggestions,
+  VISIT_DAYS_PER_RUN,
+} from "../services/travtrack/visits/project";
 import { buildPendingZoneRasters } from "../services/travtrack/explored/zoneCells";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
@@ -51,6 +55,8 @@ export type ProjectionRunOptions = {
   now?: Date;
   /** The question step; `countrySuggestions` unless a test makes it fail. */
   suggest?: typeof countrySuggestions;
+  /** The place-visit step; `scheduledVisitSuggestions` unless a test replaces it. */
+  visits?: typeof scheduledVisitSuggestions;
   /** Accounts one tick takes at most. */
   maxAccounts?: number;
   /** Days one tick projects at most, over all its accounts. */
@@ -174,6 +180,28 @@ async function runAccount(
       await recordFailure(userId, now);
       return { failed: true, questions: 0, days: spent };
     }
+    // Place-visit suggestions read from the days' stops (forgejo#316 slice 2),
+    // from what is left of the tick's day budget. Its own wait after a provider
+    // failure: an outage of the venue lookup must never hold the country days or
+    // the map back, so it is not a failure of the account's run.
+    let visitDays = 0;
+    const visitsBudget = Math.min(VISIT_DAYS_PER_RUN, maxDays - spent);
+    if (visitsBudget > 0) {
+      try {
+        const visits = await (options.visits ?? scheduledVisitSuggestions)(userId, {
+          maxDays: visitsBudget,
+        });
+        visitDays = visits.days;
+        if (visits.status === "failed")
+          logger.warn({ operation: "travtrack.visits.runFailed", userId });
+      } catch (error) {
+        logger.warn({
+          operation: "travtrack.visits.runFailed",
+          userId,
+          errorName: error instanceof Error ? error.name : "unknown",
+        });
+      }
+    }
     if (projected.projected > 0) {
       await prisma.travTrackDerivationState.update({
         where: { userId },
@@ -201,7 +229,7 @@ async function runAccount(
       where: { userId },
       data: { failureCount: 0, retryAfter: null },
     });
-    return { failed: false, questions, days: spent };
+    return { failed: false, questions, days: spent + visitDays };
   } catch (error) {
     logger.warn({
       operation: "travtrack_projections_account_failed",

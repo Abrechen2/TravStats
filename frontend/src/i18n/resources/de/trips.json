@@ -15,8 +15,8 @@
   "editTrip": "Reise bearbeiten",
   "deleteTrip": "Reise löschen",
   "removeFromTrip": "Aus Reise entfernen",
-  "deleteTripConfirm": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, aus ihren Stationen gebauten Touren mit ihren aufgezeichneten Tracks und den hier abgelegten Dokumenten. Flüge, Kreuzfahrten, Unterkünfte und Roadtrips bleiben erhalten, ebenso Tagestouren mit eigenen Punkten — sie werden zu eigenständigen Touren.",
-  "deleteTripConfirmKept": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, aus ihren Stationen gebauten Touren mit ihren aufgezeichneten Tracks und den hier abgelegten Dokumenten. {{kept}} bleiben erhalten, ebenso Tagestouren mit eigenen Punkten — sie werden zu eigenständigen Touren.",
+  "deleteTripConfirm": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, aus ihren Stationen gebauten Touren mit ihren aufgezeichneten Tracks und den Verknüpfungen zu hier abgelegten Dokumenten. Die Dokumente selbst bleiben erhalten und werden nach der Karenzzeit gelöscht, wenn sie an keinem anderen Eintrag hängen. Flüge, Kreuzfahrten, Unterkünfte und Roadtrips bleiben erhalten, ebenso Tagestouren mit eigenen Punkten — sie werden zu eigenständigen Touren.",
+  "deleteTripConfirmKept": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, aus ihren Stationen gebauten Touren mit ihren aufgezeichneten Tracks und den Verknüpfungen zu hier abgelegten Dokumenten. Die Dokumente selbst bleiben erhalten und werden nach der Karenzzeit gelöscht, wenn sie an keinem anderen Eintrag hängen. {{kept}} bleiben erhalten, ebenso Tagestouren mit eigenen Punkten — sie werden zu eigenständigen Touren.",
   "deleteTripKept": {
     "and": "und",
     "flights": "Flüge",
@@ -176,12 +176,58 @@
       "clickHint": "Tipp: Auf eine Route oder einen Punkt klicken, um zu zoomen.",
       "toggleProjectionHint": "Zwischen Globus und flacher Karte umschalten",
       "projectionGlobe": "🌐 Globus",
-      "projectionFlat": "🗺 Flach"
+      "projectionFlat": "🗺 Flach",
+      "legend": {
+        "title": "Ebenen",
+        "group": {
+          "flights": "Flüge",
+          "cruise": "Kreuzfahrten",
+          "rail": "Bahn",
+          "bus": "Busse",
+          "ferry": "Fähren",
+          "rental": "Mietwagen",
+          "tours": "Touren",
+          "lodging": "Unterkünfte",
+          "stops": "Stationen",
+          "places": "Orte",
+          "recording": "Aufzeichnung",
+          "shared": "Geteilte Routen"
+        },
+        "style": {
+          "recorded": "aufgezeichnet",
+          "schematic": "schematisch",
+          "point": "Punkt"
+        }
+      },
+      "days": {
+        "label": "Tag der Reise",
+        "all": "Alle Tage",
+        "dayN": "Tag {{n}}"
+      },
+      "info": {
+        "close": "Karteninfo schließen",
+        "undated": "Ohne Datum",
+        "openTimeline": "In der Zeitleiste",
+        "openEntity": "Details öffnen",
+        "kind": {
+          "lodging": "Unterkunft",
+          "stop": "Station",
+          "place": "Ort",
+          "cruise": "Kreuzfahrt"
+        }
+      },
+      "buildError": "Die Karte konnte nicht aufgebaut werden. Die Reisedaten sind unverändert; bitte die Seite neu laden."
     },
     "logistics": {
       "flights": "Flüge",
       "cruises": "Kreuzfahrten",
-      "bookings": "Buchungen"
+      "bookings": "Buchungen",
+      "rail": "Bahn",
+      "bus": "Bus",
+      "ferries": "Fähren",
+      "date": "Datum",
+      "route": "Strecke",
+      "open": "öffnen"
     },
     "timeline": {
       "addEntry": "+ Eintrag hinzufügen",
@@ -195,6 +241,8 @@
       "deleteJournalConfirm": "Tagebuch-Eintrag löschen?",
       "deleteStopConfirm": "Stopp \"{{title}}\" löschen?",
       "lodgingFarFromTrip": "Weit von den Reisezielen entfernt — Adresse prüfen",
+      "placeVisited": "Ort besucht",
+      "placePlanned": "Ort geplant",
       "showDetails": "Details anzeigen",
       "expandedHint": "Details geöffnet",
       "openCruise": "Kreuzfahrt öffnen",
@@ -472,6 +520,8 @@
     "noStops": "Noch kein Stopp in dieser Reise — lege zuerst in der Timeline Stopps an",
     "stopIsRoutePoint": "Streckenpunkt",
     "needsCoordinate": "Ohne Koordinate kein Streckenpunkt",
+    "noAssignedStops": "Diese Tour hat noch keinen Stopp aus der Reise",
+    "moreTripStops": "Weitere Stopps der Reise ({{count}})",
     "notFound": "Diese Tour gibt es nicht",
     "backToTrip": "Zurück zur Reise",
     "assignError": "Die Stopps konnten nicht gespeichert werden",
@@ -660,16 +710,49 @@
       "photosTitle": "Fotos von den Stationen lösen?",
       "photosError": "An den Stationen dieser Tour hängen Fotos einer Reise. Die Fotos bleiben bei der Reise, müssen für den Wechsel aber von den Stationen gelöst werden.",
       "detachPhotosConfirm": "Fotos lösen und fortfahren"
-    }
+    },
+    "newDialog": {
+      "title": "Neue Tour",
+      "intro": "Eine Tagestour für sich — sie kann später einer Reise zugeordnet werden.",
+      "name": "Name der Tour",
+      "submit": "Tour anlegen"
+    },
+    "columns": {
+      "name": "Tour",
+      "activity": "Art",
+      "trip": "Reise",
+      "distance": "Strecke",
+      "ascent": "Aufstieg"
+    },
+    "summary": {
+      "tours_one": "Tour",
+      "tours_other": "Touren",
+      "trips_one": "Reise",
+      "trips_other": "Reisen",
+      "withoutTrip_one": "{{count}} ohne Reise",
+      "withoutTrip_other": "{{count}} ohne Reise"
+    },
+    "allActivities": "Alle Arten",
+    "emptyHint": "Lege deine erste Tour an oder importiere eine Aufzeichnung."
   },
   "head": {
     "days_one": "{{count}} Tag",
     "days_other": "{{count}} Tage",
     "countries_one": "{{count}} Land",
-    "countries_other": "{{count}} Länder"
+    "countries_other": "{{count}} Länder",
+    "travellers": "Reisende",
+    "travellersMore_other": "{{count}} weitere Reisende anzeigen",
+    "travellersMore_one": "{{count}} weitere Reisende anzeigen"
   },
   "overview": {
-    "daysAway": "Tage unterwegs"
+    "daysAway": "Tage unterwegs",
+    "places": {
+      "title": "Besuchte Orte",
+      "empty": "Für diese Reise sind noch keine Orte eingetragen.",
+      "loading": "Orte werden geladen …",
+      "planned": "geplant",
+      "undated": "Ohne Datum"
+    }
   },
   "card": {
     "days_one": "Tag",
@@ -678,6 +761,8 @@
     "countries_other": "Länder",
     "entries_one": "Eintrag",
     "entries_other": "Einträge",
+    "places_one": "Ort",
+    "places_other": "Orte",
     "countriesIncomplete": "Länder evtl. unvollständig – die Reise hat mehr Flüge, als hier ausgewertet werden. Öffne die Reise für die vollständige Liste."
   },
   "list": {
@@ -771,7 +856,8 @@
     "beforeSourceSwitch": "Vor dem Quellwechsel erkannt",
     "explanation": {
       "stay": {
-        "dwell": "{{points}} Positionen innerhalb von {{radiusM}} m über {{minutes}} Minuten (längste Lücke {{maxGapMinutes}} Minuten)"
+        "dwell": "{{points}} Positionen innerhalb von {{radiusM}} m über {{minutes}} Minuten (längste Lücke {{maxGapMinutes}} Minuten)",
+        "stop": "{{minutes}} Minuten an diesem Ort ({{observedMinutes}} gemessen, {{inferredMinutes}} angenommen), {{distanceM}} m vom Gebäude"
       },
       "market": {
         "visit": "{{points}} Positionen über {{minutes}} Minuten auf dem Marktgelände"
@@ -854,6 +940,14 @@
         "empty": "Keine benannten Orte im Umkreis von 250 m.",
         "degraded": "Die Ortssuche ist gerade nicht erreichbar oder überlastet – Orte in der Nähe fehlen deshalb."
       },
+      "foldedInto": "gehört zu {{name}}",
+      "venues": {
+        "partial": "Von einigen Gebäuden fehlt der Grundriss in OpenStreetMap – die Wahl des Gebäudes ist deshalb unsicherer.",
+        "timeout": "Die Gebäudeabfrage bei OpenStreetMap hat zu lange gedauert – der Vorschlag beruht nur auf Nähe und Fotos.",
+        "rateLimited": "OpenStreetMap hat die Gebäudeabfrage vorübergehend abgelehnt (zu viele Anfragen) – der Vorschlag beruht nur auf Nähe und Fotos.",
+        "budget": "Das Tageskontingent für OpenStreetMap-Abfragen ist gerade ausgeschöpft oder belegt – der Vorschlag beruht nur auf Nähe und Fotos.",
+        "unavailable": "OpenStreetMap ist für die Gebäudeabfrage gerade nicht erreichbar – der Vorschlag beruht nur auf Nähe und Fotos."
+      },
       "distance": "{{meters}} m entfernt",
       "photoCount_one": "{{count}} Foto hier",
       "photoCount_other": "{{count}} Fotos hier",
@@ -927,6 +1021,11 @@
     "downloadError": "Die GPX-Datei konnte nicht heruntergeladen werden.",
     "deleteError": "Die Aufzeichnung konnte nicht gelöscht werden."
   },
+  "tripPlaces": {
+    "legend": "Orte",
+    "loadError": "Orte konnten nicht geladen werden",
+    "retry": "Erneut versuchen"
+  },
   "sharedRoute": {
     "title": "Mitgeteilte Routen",
     "legend": "Route von {{name}} – mitgeteilt, nur zum Ansehen",
@@ -960,5 +1059,26 @@
       "personal": "Persönlich",
       "shared": "Gemeinsam"
     }
+  },
+  "view": {
+    "label": "Ansicht",
+    "tiles": "Kacheln",
+    "list": "Liste"
+  },
+  "table": {
+    "name": "Reise",
+    "dates": "Zeitraum",
+    "days": "Tage",
+    "countries": "Länder",
+    "status": "Status",
+    "places": "Orte",
+    "label": "Reisen"
+  },
+  "menu": {
+    "more": "Mehr",
+    "label": "Weitere Aktionen für diese Reise",
+    "summaryNone": "KI-Zusammenfassung erstellen",
+    "summaryAgain": "KI-Zusammenfassung neu erstellen",
+    "summaryBusy": "KI-Zusammenfassung wird erstellt …"
   }
 }

@@ -113,8 +113,11 @@ export function legFitPadding(
  */
 export function stageFitPadding(
   narrow: boolean,
-  detailOpen: boolean
+  detailOpen: boolean,
+  /** The day card is a column beside the map, not a card over it. */
+  docked = false
 ): { top: number; right: number; bottom: number; left: number } {
+  if (docked) return { top: 48, right: 24, bottom: 56, left: 12 + 300 + 24 };
   return narrow
     ? { top: 64, right: 24, bottom: detailOpen ? 380 : 120, left: 24 }
     : { top: 48, right: 12 + 380 + 24, bottom: 56, left: 12 + 300 + 24 };

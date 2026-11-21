@@ -127,7 +127,7 @@ export default function NotesPage({ pageSize = NOTES_PAGE }: NotesPageProps = {}
   const failed = loadFailure !== undefined;
 
   return (
-    <AppShell width="reading">
+    <AppShell>
       <PageHeader
         title={t("notes:title")}
         meta={!loading && !failed ? t("notes:count", { count: total }) : t("notes:subtitle")}

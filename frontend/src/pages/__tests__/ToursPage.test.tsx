@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 
 import ToursPage from "../ToursPage";
 import { tourIndexApi, type TourSummary } from "../../lib/api/tourIndex";
@@ -8,8 +8,6 @@ import { toursApi } from "../../lib/api/tours";
 import { tripsApi } from "../../lib/api/trips";
 import { useToastStore } from "../../store/toastStore";
 
-const pointer = vi.hoisted(() => ({ coarse: false }));
-vi.mock("../../hooks/useCoarsePointer", () => ({ useCoarsePointer: () => pointer.coarse }));
 vi.mock("../../lib/api/tourIndex", () => ({
   tourIndexApi: { list: vi.fn(), geometryBatch: vi.fn() },
 }));
@@ -55,12 +53,22 @@ function tour(overrides: Partial<TourSummary> = {}): TourSummary {
   };
 }
 
+function Where(): React.ReactElement {
+  return <span data-testid="where">{useLocation().pathname}</span>;
+}
+
 function renderPage(): void {
   render(
     <MemoryRouter>
       <ToursPage />
+      <Where />
     </MemoryRouter>
   );
+}
+
+/** The header's create button — an empty list shows a second one in its empty state. */
+function newTourButton(): HTMLElement {
+  return screen.getAllByText("trips:tours.newTour")[0];
 }
 
 describe("the tours page", () => {
@@ -102,44 +110,61 @@ describe("the tours page", () => {
 
     // An emptied list is "no match", never the "no tours yet" onboarding text.
     fireEvent.change(box, { target: { value: "zzz" } });
-    expect(screen.getByText("trips:tours.searchEmpty")).toBeInTheDocument();
+    expect(screen.getByText("common:filters.noMatch")).toBeInTheDocument();
     expect(screen.queryByText("trips:tours.pageEmpty")).not.toBeInTheDocument();
   });
 
-  it("gives the row actions 44 px button targets under a coarse pointer, not underlined links", async () => {
+  it("draws the row actions as the icon buttons every other logbook uses, not bordered text buttons", async () => {
     vi.mocked(tourIndexApi.list).mockResolvedValue([tour({ tripId: null, tripName: null })]);
-    pointer.coarse = true;
-    try {
-      renderPage();
-      const move = await screen.findByText("trips:tours.move.action");
-      const del = screen.getByText("trips:tours.deleteLabel");
-      for (const el of [move, del]) {
-        expect(el.className).toContain("min-h-11");
-        expect(el.className).not.toContain("underline");
-      }
-    } finally {
-      pointer.coarse = false;
+    renderPage();
+    const move = await screen.findByLabelText("trips:tours.move.action");
+    const del = screen.getByLabelText("trips:tours.deleteLabel");
+    for (const el of [move, del]) {
+      expect(el.tagName).toBe("BUTTON");
+      expect(el.querySelector("svg")).not.toBeNull();
+      expect(el.textContent).toBe("");
     }
   });
 
-  it("links a standalone tour to the trip-less editor path", async () => {
+  it("opens a standalone tour on the trip-less editor path", async () => {
     vi.mocked(tourIndexApi.list).mockResolvedValue([
       tour({ id: "t-2", tripId: null, tripName: null, name: "Besseggen" }),
     ]);
-
     renderPage();
-
-    const link = (await screen.findByText("Besseggen")).closest("a");
-    expect(link).toHaveAttribute("href", "/tours/t-2");
+    fireEvent.click(await screen.findByText("Besseggen"));
+    expect(screen.getByTestId("where")).toHaveTextContent("/tours/t-2");
   });
 
-  it("links a trip's tour through its trip, so the trip context survives", async () => {
+  it("opens a trip's tour through its trip, so the trip context survives", async () => {
     vi.mocked(tourIndexApi.list).mockResolvedValue([tour()]);
-
     renderPage();
+    fireEvent.click(await screen.findByText("Süd-Norwegen"));
+    expect(screen.getByTestId("where")).toHaveTextContent("/trips/trip-1/route/t-1");
+  });
 
-    const link = (await screen.findByText("Süd-Norwegen")).closest("a");
-    expect(link).toHaveAttribute("href", "/trips/trip-1/route/t-1");
+  it("does not open the tour when a row action is clicked", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([tour()]);
+    renderPage();
+    fireEvent.click(await screen.findByLabelText("trips:tours.deleteLabel"));
+    expect(screen.getByTestId("where")).toHaveTextContent("/");
+    expect(screen.getByTestId("where").textContent).toBe("/");
+  });
+
+  it("does not open the tour when Enter is pressed on a row action", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([tour()]);
+    renderPage();
+    fireEvent.keyDown(await screen.findByLabelText("trips:tours.deleteLabel"), { key: "Enter" });
+    expect(screen.getByTestId("where").textContent).toBe("/");
+  });
+
+  it("counts the tours in the summary strip and says how many have no trip", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([
+      tour(),
+      tour({ id: "t-2", tripId: null, tripName: null, name: "Besseggen" }),
+    ]);
+    renderPage();
+    await screen.findByText("Besseggen");
+    expect(screen.getByText("trips:tours.summary.withoutTrip")).toBeInTheDocument();
   });
 
   it("creates a tour with no trip and re-reads the list", async () => {
@@ -151,11 +176,11 @@ describe("the tours page", () => {
     renderPage();
     await waitFor(() => expect(tourIndexApi.list).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByText("trips:tours.newTour"));
-    fireEvent.change(screen.getByLabelText("trips:tours.namePlaceholder"), {
+    fireEvent.click(newTourButton());
+    fireEvent.change(screen.getByPlaceholderText("trips:tours.namePlaceholder"), {
       target: { value: "Besseggen" },
     });
-    fireEvent.click(screen.getByText("trips:tours.save"));
+    fireEvent.click(screen.getByText("trips:tours.newDialog.submit"));
 
     await waitFor(() =>
       expect(toursApi.createStandalone).toHaveBeenCalledWith({
@@ -180,8 +205,8 @@ describe("the tours page", () => {
     renderPage();
     await waitFor(() => expect(tourIndexApi.list).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByText("trips:tours.newTour"));
-    fireEvent.change(screen.getByLabelText("trips:tours.namePlaceholder"), {
+    fireEvent.click(newTourButton());
+    fireEvent.change(screen.getByPlaceholderText("trips:tours.namePlaceholder"), {
       target: { value: "Fiesole" },
     });
     fireEvent.change(screen.getByLabelText("trips:tours.day.date"), {
@@ -190,7 +215,7 @@ describe("the tours page", () => {
     fireEvent.change(screen.getByLabelText("trips:tours.day.startTime"), {
       target: { value: "08:30" },
     });
-    fireEvent.click(screen.getByText("trips:tours.save"));
+    fireEvent.click(screen.getByText("trips:tours.newDialog.submit"));
 
     await waitFor(() =>
       expect(toursApi.createStandalone).toHaveBeenCalledWith({
@@ -209,7 +234,7 @@ describe("the tours page", () => {
     renderPage();
     await waitFor(() => expect(tourIndexApi.list).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByText("trips:tours.newTour"));
+    fireEvent.click(newTourButton());
     const options = Array.from(
       screen.getByLabelText("trips:tours.modeLabel").querySelectorAll("option"),
       (o) => o.getAttribute("value")
@@ -234,7 +259,7 @@ describe("the tours page", () => {
     renderPage();
     await screen.findByText("Süd-Norwegen");
 
-    fireEvent.click(screen.getByText("trips:tours.deleteLabel"));
+    fireEvent.click(screen.getByLabelText("trips:tours.deleteLabel"));
     fireEvent.click(await screen.findByText("trips:tours.deleteConfirm.confirm"));
 
     await waitFor(() =>
@@ -256,7 +281,7 @@ describe("the tours page", () => {
 
     renderPage();
     await screen.findByText("Süd-Norwegen");
-    fireEvent.click(screen.getByText("trips:tours.deleteLabel"));
+    fireEvent.click(screen.getByLabelText("trips:tours.deleteLabel"));
     fireEvent.click(await screen.findByText("trips:tours.deleteConfirm.confirm"));
     fireEvent.click(await screen.findByText("trips:tours.deleteWithCosts.confirm"));
 
@@ -280,17 +305,35 @@ describe("the tours page — a tour needs a name", () => {
     renderPage();
     await waitFor(() => expect(tourIndexApi.list).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByText("trips:tours.newTour"));
-    const input = screen.getByLabelText("trips:tours.namePlaceholder");
+    fireEvent.click(newTourButton());
+    const input = screen.getByPlaceholderText("trips:tours.namePlaceholder");
     fireEvent.change(input, { target: { value: "   " } });
-    fireEvent.click(screen.getByText("trips:tours.save"));
 
-    expect(screen.getByRole("alert")).toHaveTextContent("trips:tours.nameRequired");
-    expect(input).toHaveAttribute("aria-invalid", "true");
+    // Disabled, and the hint says what blocks it — not a button greyed out in silence.
+    expect(screen.getByText("trips:tours.newDialog.submit").closest("button")).toBeDisabled();
+    expect(document.getElementById("tour-new-save-blocked")).toHaveTextContent(
+      "trips:tours.newDialog.name"
+    );
     expect(toursApi.createStandalone).not.toHaveBeenCalled();
 
     fireEvent.change(input, { target: { value: "Besseggen" } });
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByText("trips:tours.newDialog.submit").closest("button")).toBeEnabled();
+  });
+
+  it("shows the failure in the dialog and keeps it open when the create fails", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([]);
+    vi.mocked(toursApi.createStandalone).mockRejectedValue(new Error("boom"));
+    renderPage();
+    await waitFor(() => expect(tourIndexApi.list).toHaveBeenCalled());
+
+    fireEvent.click(newTourButton());
+    fireEvent.change(screen.getByPlaceholderText("trips:tours.namePlaceholder"), {
+      target: { value: "Besseggen" },
+    });
+    fireEvent.click(screen.getByText("trips:tours.newDialog.submit"));
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("trips:tours.namePlaceholder")).toHaveValue("Besseggen");
   });
 
   it("detaches a tour from its trip through the tour path, then re-reads the list", async () => {
@@ -298,7 +341,7 @@ describe("the tours page — a tour needs a name", () => {
     vi.mocked(toursApi.update).mockResolvedValue({} as never);
     renderPage();
 
-    fireEvent.click(await screen.findByText("trips:tours.move.detach"));
+    fireEvent.click(await screen.findByLabelText("trips:tours.move.detach"));
 
     await waitFor(() =>
       expect(toursApi.update).toHaveBeenCalledWith(undefined, "t-1", { tripId: null })
@@ -315,7 +358,7 @@ describe("the tours page — a tour needs a name", () => {
     useToastStore.setState({ addToast } as never);
     renderPage();
 
-    fireEvent.click(await screen.findByText("trips:tours.move.detach"));
+    fireEvent.click(await screen.findByLabelText("trips:tours.move.detach"));
 
     await waitFor(() =>
       expect(addToast).toHaveBeenCalledWith("error", "trips:tours.move.timelineError")
@@ -331,7 +374,7 @@ describe("the tours page — a tour needs a name", () => {
     useToastStore.setState({ addToast } as never);
     renderPage();
 
-    fireEvent.click(await screen.findByText("trips:tours.move.detach"));
+    fireEvent.click(await screen.findByLabelText("trips:tours.move.detach"));
 
     await waitFor(() => expect(addToast).toHaveBeenCalledWith("error", "trips:tours.move.error"));
   });
@@ -344,7 +387,7 @@ describe("the tours page — a tour needs a name", () => {
     vi.mocked(toursApi.update).mockRejectedValue(new Error("boom"));
     renderPage();
 
-    fireEvent.click(await screen.findByText("trips:tours.move.action"));
+    fireEvent.click(await screen.findByLabelText("trips:tours.move.action"));
     const select = await screen.findByLabelText("trips:tours.move.tripLabel");
     fireEvent.change(select, { target: { value: "trip-9" } });
     fireEvent.click(screen.getByText("trips:tours.move.confirm"));
@@ -362,7 +405,7 @@ describe("the tours page — a tour needs a name", () => {
     vi.mocked(tripsApi.getAll).mockRejectedValue(new Error("down"));
     renderPage();
 
-    fireEvent.click(await screen.findByText("trips:tours.move.action"));
+    fireEvent.click(await screen.findByLabelText("trips:tours.move.action"));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("trips:tours.move.loadError");
     expect(screen.queryByText("trips:tours.move.noTrips")).not.toBeInTheDocument();
@@ -382,7 +425,7 @@ describe("the tours page — a tour needs a name", () => {
     useToastStore.setState({ addToast } as never);
     renderPage();
 
-    fireEvent.click(await screen.findByText("trips:tours.move.detach"));
+    fireEvent.click(await screen.findByLabelText("trips:tours.move.detach"));
     // Not the timeline message: the reader is asked, and can agree.
     fireEvent.click(await screen.findByText("trips:tours.move.detachPhotosConfirm"));
 

@@ -181,6 +181,18 @@ export const SERVICES: readonly ServiceDef[] = [
     tester: "adsblol",
     quotaProvider: "adsblol",
   }),
+  // airplanes.live (forgejo#408): keyless community feed, non-commercial, ~1 request/s.
+  // Off until the admin switches it on; no key fields because there is no key.
+  svc({
+    id: "airplaneslive",
+    category: "flight",
+    level: "instance",
+    credential: "none",
+    keyless: true,
+    enabled: { kind: "adminColumns", columns: ["airplanesLiveEnabled"] },
+    tester: "airplaneslive",
+    quotaProvider: "airplaneslive",
+  }),
   svc({
     id: "adsbx",
     category: "flight",
@@ -309,6 +321,23 @@ export const SERVICES: readonly ServiceDef[] = [
     ],
     requiredFields: ["baseUrl", "apiKey"],
     tester: "immich",
+  }),
+  svc({
+    id: "photoprism",
+    category: "photosLocation",
+    level: "instanceAndAccount",
+    credential: "urlKey",
+    connection: true,
+    fields: [
+      admin("baseUrl", "url", "globalPhotoprismBaseUrl"),
+      admin("token", "secret", "globalPhotoprismToken"),
+    ],
+    accountFields: [
+      user("baseUrl", "url", "photoprismBaseUrl"),
+      user("token", "secret", "photoprismToken"),
+    ],
+    requiredFields: ["baseUrl", "token"],
+    tester: "photoprism",
   }),
   svc({
     id: "dawarich",
@@ -591,6 +620,6 @@ export function serviceForResolverProvider(provider: string): ServiceDef | undef
 /** Cloud-AI services (a document leaves the server): every AI service but a local Ollama. */
 export const AI_SERVICES: readonly ServiceDef[] = SERVICES.filter((s) => s.ai);
 
-/** Account connections: the four things an admin may forbid accounts to connect. */
-export const CONNECTION_IDS = ["dawarich", "immich", "strava", "webdav"] as const;
+/** Account connections: the things an admin may forbid accounts to connect. */
+export const CONNECTION_IDS = ["dawarich", "immich", "photoprism", "strava", "webdav"] as const;
 export type ConnectionId = (typeof CONNECTION_IDS)[number];

@@ -7,7 +7,7 @@
  * Version first (unauthenticated), identity second — so a wrong URL never
  * reads as a wrong key.
  */
-import { createImmichClient } from "./immichClient";
+import { createPhotoSource } from "../photoSource";
 import type { PrivateTargetCode, TargetPolicy } from "../egress/privateTargets";
 import { ImmichError, ImmichErrorKind, normalizeImmichBaseUrl } from "./types";
 
@@ -51,30 +51,10 @@ export async function testImmichConnection(
     };
   }
 
-  const client = createImmichClient({
+  return createPhotoSource("immich", {
     baseUrl: normalized,
     apiKey,
     source: "user",
     allowPrivate: policy.allowPrivate,
-  });
-
-  try {
-    const version = await client.getServerVersion();
-    const identity = await client.whoami();
-    return {
-      success: true,
-      message: "Connected to Immich",
-      details: { version, user: identity.name },
-    };
-  } catch (error) {
-    if (error instanceof ImmichError) {
-      return {
-        success: false,
-        kind: error.kind,
-        ...(error.code ? { code: error.code } : {}),
-        message: error.message,
-      };
-    }
-    return { success: false, kind: "unreachable", message: "Could not reach Immich" };
-  }
+  }).test();
 }

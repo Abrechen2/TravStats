@@ -27,7 +27,9 @@ router.get("/:id/delete-facts", async (req: AuthRequest, res: Response, next: Ne
 
     const [photoCount, documentCount] = await Promise.all([
       prisma.lodgingPhoto.count({ where: { lodgingId: lodging.id } }),
-      prisma.document.count({ where: { userId, lodgingStay: { lodgingId: lodging.id } } }),
+      prisma.document.count({
+        where: { userId, links: { some: { lodgingStay: { lodgingId: lodging.id } } } },
+      }),
     ]);
     res.json({ success: true, data: { photoCount, documentCount } });
   } catch (err) {

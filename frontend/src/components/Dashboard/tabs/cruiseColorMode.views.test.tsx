@@ -11,6 +11,12 @@ import { DEFAULT_CRUISE_COLORS, type CruiseColorConfig } from "../../../lib/crui
 // hardcoded the cruise colour mode and the user had no say.
 const { mapProps } = vi.hoisted(() => ({ mapProps: [] as Record<string, unknown>[] }));
 
+// Rail, bus, ferry and rentals load whenever their domain is on (no longer
+// behind the day-tour switch); this suite is not about them, and their
+// requests would trip the network guard.
+vi.mock("./allTabTransportOverlays", () => ({
+  useTransportOverlays: () => ({ layers: [], legendRows: [], status: null }),
+}));
 vi.mock("../../../hooks/useDashboardTours", () => ({
   // Tours are no longer gated (owner, 2026-09-18), so AllTab asks for them on
   // every render. This file is about cruise COLOURS — an empty, settled answer

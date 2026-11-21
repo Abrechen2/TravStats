@@ -13,6 +13,14 @@ const api = vi.hoisted(() => ({
   lastSeen: vi.fn(),
   explored: vi.fn(),
 }));
+// The photo layer is on by default: no photo source is connected in these tests.
+vi.mock("../../../../lib/api/travtrackViews", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../../../lib/api/travtrackViews")>();
+  return {
+    ...original,
+    travTrackViewsApi: { ...original.travTrackViewsApi, photoSources: async () => [] },
+  };
+});
 vi.mock("../../../../lib/api/travtrack", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../../lib/api/travtrack")>()),
   travTrackApi: api,
@@ -48,6 +56,7 @@ vi.mock("../TrackRangeMap", () => ({
 const viewport = vi.hoisted(() => ({ phone: true }));
 vi.mock("../useNarrowStage", () => ({
   useNarrowStage: () => viewport.phone,
+  useDockedStage: () => false,
 }));
 
 import TrackMapView from "../TrackMapView";

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toursApi } from "../lib/api/tours";
+import { roadtripsApi } from "../lib/api/roadtrips";
+import { legDays } from "../lib/roadtrip/legDays";
 import { tourIndexApi, type TourGeometryEntry } from "../lib/api/tourIndex";
 import { hexToRgb } from "../lib/domainColor";
 import { logger } from "../lib/logger";
@@ -36,6 +38,22 @@ async function recordingGeometry(tripId: string, route: TourRoute): Promise<Tour
 }
 
 /**
+ * A roadtrip's legs by day. A failed read leaves the route without leg days —
+ * it is then drawn in the all-days style, never as "another day" — and says so
+ * in the log; the lines themselves still come from the geometry call.
+ */
+async function roadtripLegDays(route: TourRoute): Promise<Record<string, string[]> | undefined> {
+  if (route.kind !== "roadtrip") return undefined;
+  try {
+    const detail = await roadtripsApi.get(route.id);
+    return Object.fromEntries(legDays(detail.stations, detail.legs));
+  } catch (err: unknown) {
+    logger.warn("useTripTourGeometries: could not read a roadtrip's days", err);
+    return undefined;
+  }
+}
+
+/**
  * The lines of a trip's tours, for the trip map (spec 2026-08-29 §9.2: "TripMap
  * gains one PathLayer per section"). The route editor and the roadtrip page
  * already drew them; the trip's own "Karte" tab showed only the stations
@@ -69,18 +87,31 @@ export function useTripTourGeometries(tripId: string, enabled: boolean): TripTou
           if (!cancelled) setLoaded({ routes, lines: [] });
           return;
         }
-        const [planned, recorded] = await Promise.all([
+        const [planned, recorded, days] = await Promise.all([
           tourIndexApi.geometryBatch(routes.map((r) => r.id)),
           Promise.all(routes.map((r) => recordingGeometry(tripId, r))),
+          Promise.all(routes.map((r) => roadtripLegDays(r))),
         ]);
         if (cancelled) return;
         const lines: TourGeometryEntry[] = [];
         routes.forEach((route, i) => {
           const legs = planned.get(route.id);
-          if (legs) lines.push({ routeId: route.id, name: route.name, geometry: legs });
+          if (legs)
+            lines.push({
+              routeId: route.id,
+              name: route.name,
+              geometry: legs,
+              date: route.date,
+              legDays: days[i],
+            });
           const track = recorded[i];
           if (track)
-            lines.push({ routeId: `${route.id}:tracks`, name: route.name, geometry: track });
+            lines.push({
+              routeId: `${route.id}:tracks`,
+              name: route.name,
+              geometry: track,
+              date: route.date,
+            });
         });
         setLoaded({ routes, lines });
       } catch (err: unknown) {

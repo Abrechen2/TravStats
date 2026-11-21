@@ -29,8 +29,7 @@ export type SettingsSectionId =
   | "countryCounting"
   | "trips"
   | "suggestions"
-  | "sharing"
-  | "companions"
+  | "people"
   | "shareLinks"
   | "calendarFeed"
   | "dawarich"
@@ -52,9 +51,7 @@ export type SettingsSectionId =
   | "lodgingRatings"
   | "backup"
   | "import"
-  | "externalServices"
-  | "comparisonConsent"
-  | "encryptedGrants";
+  | "externalServices";
 
 export type SettingsSectionDef = SectionDef<SettingsSectionId>;
 
@@ -82,9 +79,8 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDef[] = [
   section("countryCounting"),
   section("trips"),
   section("suggestions"),
-  section("sharing"),
+  section("people"),
   section("calendarFeed", "standard"),
-  section("companions"),
   // The TravTrack page (web redesign, 2026-11-05). Recording and detection show
   // always; everything that holds or edits stored data shows while the account
   // holds TravTrack data or the instance shows TravTrack (plan T6), so export,
@@ -100,8 +96,6 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDef[] = [
   section("dawarich"),
   section("loyalty"),
   section("shareLinks"),
-  section("comparisonConsent", "standard", { gate: "comparison" }),
-  section("encryptedGrants", "standard", { gate: "encryptedShare" }),
   section("homeAirport"),
   section("autoupdate", "standard", { expertRows: true }),
   section("features"),

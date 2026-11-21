@@ -23,14 +23,24 @@ vi.mock("../../../lib/api/immich", () => ({
   immichApi: { getAlbumAssets, unlinkAlbum, resyncAlbum, getImportJob },
   immichFailureKind: (e: unknown) =>
     (e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? null,
-  failureKey: (kind: unknown) =>
-    typeof kind === "string" && KNOWN_FAILURE_KINDS.includes(kind)
-      ? `errors.${kind}`
-      : "errors.unknown",
+  failureKey: (kind: unknown, provider = "immich") => {
+    const prefix = provider === "photoprism" ? "errors.photoprism" : "errors";
+    return typeof kind === "string" && KNOWN_FAILURE_KINDS.includes(kind)
+      ? `${prefix}.${kind}`
+      : `${prefix}.unknown`;
+  },
 }));
 
+const translated = vi.hoisted(() => [] as string[]);
 vi.mock("../../../hooks/useTranslation", () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: {}, ready: true }),
+  useTranslation: () => ({
+    t: (key: string) => {
+      translated.push(key);
+      return key;
+    },
+    i18n: {},
+    ready: true,
+  }),
 }));
 
 vi.mock("../PhotoLightbox", () => ({ default: () => <div data-testid="lightbox" /> }));
@@ -40,6 +50,7 @@ import type { LinkedAlbum } from "../../../types/immich";
 
 const LINK_ALBUM: LinkedAlbum = {
   id: "link-1",
+  provider: "immich",
   immichAlbumId: "a1",
   albumName: "Rome",
   assetCount: 2,
@@ -118,6 +129,28 @@ describe("ImmichAlbumSection", () => {
     expect(screen.getAllByTestId("gallery-day-header")).toHaveLength(2);
   });
 
+  it("puts photos without a capture date in their own last group, headed as undated (not 1970)", async () => {
+    const undated = {
+      id: "u1",
+      url: "/u.jpg",
+      previewUrl: "/u.jpg",
+      takenAt: null,
+      lat: null,
+      lon: null,
+    };
+    getAlbumAssets.mockResolvedValue({ assets: [...DATED, undated] });
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(4));
+    expect(screen.getAllByTestId("gallery-day-header")).toHaveLength(2);
+    const header = screen.getByTestId("gallery-undated-header");
+    expect(header).toHaveTextContent("albums.undated");
+    // Last group: nothing follows it.
+    const headers = screen.getAllByRole("heading", { level: 4 });
+    expect(headers[headers.length - 1]).toBe(header);
+    expect(screen.queryByText(/1970/)).not.toBeInTheDocument();
+  });
+
   it("lets the grouping be turned off, showing one plain grid again", async () => {
     getAlbumAssets.mockResolvedValue({ assets: DATED });
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
@@ -167,6 +200,38 @@ describe("ImmichAlbumSection", () => {
 
     await waitFor(() => expect(screen.getByText("albums.badgeImport")).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "albums.resync" })).toBeInTheDocument();
+  });
+
+  it("labels the group with its photo source", async () => {
+    const { rerender } = render(
+      <ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("album-source")).toHaveTextContent("albums.badgeImmich")
+    );
+    rerender(
+      <ImmichAlbumSection
+        tripId="trip-1"
+        album={{ ...LINK_ALBUM, provider: "photoprism" }}
+        onChanged={vi.fn()}
+      />
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("album-source")).toHaveTextContent("albums.badgePhotoprism")
+    );
+  });
+
+  it("names PhotoPrism, not Immich, when a PhotoPrism album rejects the app password", async () => {
+    getAlbumAssets.mockRejectedValue({ response: { data: { error: "auth" } } });
+    render(
+      <ImmichAlbumSection
+        tripId="trip-1"
+        album={{ ...LINK_ALBUM, provider: "photoprism" }}
+        onChanged={vi.fn()}
+      />
+    );
+    await waitFor(() => expect(screen.getByText("errors.photoprism.auth")).toBeInTheDocument());
+    expect(screen.queryByText("errors.auth")).not.toBeInTheDocument();
   });
 
   it("renders a degraded panel instead of tiles when Immich is unreachable", async () => {
@@ -490,6 +555,39 @@ describe("ImmichAlbumSection", () => {
 
       expect(
         await screen.findByText("albums.importFailed", undefined, { timeout: 4000 })
+      ).toBeInTheDocument();
+    });
+
+    it("names the source in a failed PhotoPrism import (its words, not Immich's)", async () => {
+      translated.length = 0;
+      getImportJob
+        .mockResolvedValueOnce(job({}))
+        .mockResolvedValue(job({ status: "failed", error: "auth" }));
+
+      render(
+        <ImmichAlbumSection
+          tripId="trip-1"
+          album={{ ...IMPORT_ALBUM, provider: "photoprism" }}
+          onChanged={vi.fn()}
+        />
+      );
+
+      await screen.findByText("albums.importFailed", undefined, { timeout: 4000 });
+      expect(translated).toContain("errors.photoprism.auth");
+      expect(translated).not.toContain("errors.auth");
+    });
+
+    it("says a completed run was cut short because the album is too large", async () => {
+      getImportJob
+        .mockResolvedValueOnce(job({}))
+        .mockResolvedValue(
+          job({ status: "completed", error: "truncated:100000", processedAssets: 3 })
+        );
+
+      render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
+
+      expect(
+        await screen.findByText("albums.importTruncated", undefined, { timeout: 4000 })
       ).toBeInTheDocument();
     });
 

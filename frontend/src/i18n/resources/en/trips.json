@@ -15,8 +15,8 @@
   "editTrip": "Edit Journey",
   "deleteTrip": "Delete Journey",
   "removeFromTrip": "Remove from journey",
-  "deleteTripConfirm": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the documents filed here. Flights, cruises, stays and roadtrips are kept, and so are day tours with points of their own — they become standalone tours.",
-  "deleteTripConfirmKept": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the documents filed here. {{kept}} are kept, and so are day tours with points of their own — they become standalone tours.",
+  "deleteTripConfirm": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the links to documents filed here. The documents themselves are kept and deleted after the grace period if no other entry holds them. Flights, cruises, stays and roadtrips are kept, and so are day tours with points of their own — they become standalone tours.",
+  "deleteTripConfirmKept": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the links to documents filed here. The documents themselves are kept and deleted after the grace period if no other entry holds them. {{kept}} are kept, and so are day tours with points of their own — they become standalone tours.",
   "deleteTripKept": {
     "and": "and",
     "flights": "flights",
@@ -176,12 +176,58 @@
       "clickHint": "Tip: click a route or point to zoom in.",
       "toggleProjectionHint": "Toggle between globe and flat projection",
       "projectionGlobe": "🌐 Globe",
-      "projectionFlat": "🗺 Flat"
+      "projectionFlat": "🗺 Flat",
+      "legend": {
+        "title": "Layers",
+        "group": {
+          "flights": "Flights",
+          "cruise": "Cruises",
+          "rail": "Rail",
+          "bus": "Buses",
+          "ferry": "Ferries",
+          "rental": "Rental cars",
+          "tours": "Tours",
+          "lodging": "Stays",
+          "stops": "Stops",
+          "places": "Places",
+          "recording": "Recording",
+          "shared": "Shared routes"
+        },
+        "style": {
+          "recorded": "recorded",
+          "schematic": "schematic",
+          "point": "point"
+        }
+      },
+      "days": {
+        "label": "Day of the trip",
+        "all": "All days",
+        "dayN": "Day {{n}}"
+      },
+      "info": {
+        "close": "Close map info",
+        "undated": "No date",
+        "openTimeline": "In the timeline",
+        "openEntity": "Open details",
+        "kind": {
+          "lodging": "Stay",
+          "stop": "Stop",
+          "place": "Place",
+          "cruise": "Cruise"
+        }
+      },
+      "buildError": "The map could not be built. Your trip data is unchanged; please reload the page."
     },
     "logistics": {
       "flights": "Flights",
       "cruises": "Cruises",
-      "bookings": "Bookings"
+      "bookings": "Bookings",
+      "rail": "Rail",
+      "bus": "Bus",
+      "ferries": "Ferries",
+      "date": "Date",
+      "route": "Route",
+      "open": "open"
     },
     "timeline": {
       "addEntry": "+ Add entry",
@@ -195,6 +241,8 @@
       "deleteJournalConfirm": "Delete journal entry?",
       "deleteStopConfirm": "Delete stop \"{{title}}\"?",
       "lodgingFarFromTrip": "Far from the trip's stops — check the address",
+      "placeVisited": "Place visited",
+      "placePlanned": "Place planned",
       "showDetails": "Show details",
       "expandedHint": "Details open",
       "openCruise": "Open cruise",
@@ -472,6 +520,8 @@
     "noStops": "No stop in this trip yet — add stops in the timeline first",
     "stopIsRoutePoint": "Route point",
     "needsCoordinate": "A stop without a coordinate cannot be part of a route",
+    "noAssignedStops": "This tour has no stop from the trip yet",
+    "moreTripStops": "More stops of the trip ({{count}})",
     "notFound": "This tour does not exist",
     "backToTrip": "Back to the trip",
     "assignError": "The stops could not be saved",
@@ -660,16 +710,49 @@
       "photosTitle": "Unlink photos from the stations?",
       "photosError": "Photos of a trip are filed at this tour's stations. They stay with the trip, but have to be unlinked from the stations for the move.",
       "detachPhotosConfirm": "Unlink photos and continue"
-    }
+    },
+    "newDialog": {
+      "title": "New tour",
+      "intro": "A day tour of its own — it can be assigned to a trip later.",
+      "name": "Tour name",
+      "submit": "Create tour"
+    },
+    "columns": {
+      "name": "Tour",
+      "activity": "Type",
+      "trip": "Trip",
+      "distance": "Distance",
+      "ascent": "Ascent"
+    },
+    "summary": {
+      "tours_one": "tour",
+      "tours_other": "tours",
+      "trips_one": "trip",
+      "trips_other": "trips",
+      "withoutTrip_one": "{{count}} without a trip",
+      "withoutTrip_other": "{{count}} without a trip"
+    },
+    "allActivities": "All types",
+    "emptyHint": "Create your first tour or import a recording."
   },
   "head": {
     "days_one": "{{count}} day",
     "days_other": "{{count}} days",
     "countries_one": "{{count}} country",
-    "countries_other": "{{count}} countries"
+    "countries_other": "{{count}} countries",
+    "travellers": "Travellers",
+    "travellersMore_other": "Show {{count}} more travellers",
+    "travellersMore_one": "Show {{count}} more travellers"
   },
   "overview": {
-    "daysAway": "Days away"
+    "daysAway": "Days away",
+    "places": {
+      "title": "Visited places",
+      "empty": "No places have been added to this trip yet.",
+      "loading": "Loading places …",
+      "planned": "planned",
+      "undated": "No date"
+    }
   },
   "card": {
     "days_one": "day",
@@ -678,6 +761,8 @@
     "countries_other": "countries",
     "entries_one": "entry",
     "entries_other": "entries",
+    "places_one": "place",
+    "places_other": "places",
     "countriesIncomplete": "Countries may be incomplete – this trip has more flights than are evaluated here. Open the trip for the full list."
   },
   "list": {
@@ -771,7 +856,8 @@
     "beforeSourceSwitch": "Detected before the source was switched",
     "explanation": {
       "stay": {
-        "dwell": "{{points}} positions within {{radiusM}} m over {{minutes}} minutes (longest gap {{maxGapMinutes}} minutes)"
+        "dwell": "{{points}} positions within {{radiusM}} m over {{minutes}} minutes (longest gap {{maxGapMinutes}} minutes)",
+        "stop": "{{minutes}} minutes at this spot ({{observedMinutes}} measured, {{inferredMinutes}} assumed), {{distanceM}} m from the building"
       },
       "market": {
         "visit": "{{points}} positions over {{minutes}} minutes on the market site"
@@ -854,6 +940,14 @@
         "empty": "No named places within 250 m.",
         "degraded": "The place search is unreachable or overloaded right now – nearby places are missing for that reason."
       },
+      "foldedInto": "belongs to {{name}}",
+      "venues": {
+        "partial": "Some buildings have no outline in OpenStreetMap, so the choice of building is less certain.",
+        "timeout": "The building lookup at OpenStreetMap took too long, so the suggestion rests on distance and photos only.",
+        "rateLimited": "OpenStreetMap temporarily refused the building lookup (too many requests), so the suggestion rests on distance and photos only.",
+        "budget": "The daily quota for OpenStreetMap lookups is used up or busy right now, so the suggestion rests on distance and photos only.",
+        "unavailable": "OpenStreetMap cannot be reached for the building lookup right now, so the suggestion rests on distance and photos only."
+      },
       "distance": "{{meters}} m away",
       "photoCount_one": "{{count}} photo here",
       "photoCount_other": "{{count}} photos here",
@@ -927,6 +1021,11 @@
     "downloadError": "The GPX file could not be downloaded.",
     "deleteError": "The recording could not be deleted."
   },
+  "tripPlaces": {
+    "legend": "Places",
+    "loadError": "Places could not be loaded",
+    "retry": "Try again"
+  },
   "sharedRoute": {
     "title": "Shared routes",
     "legend": "Route by {{name}} – shared with you, view only",
@@ -960,5 +1059,26 @@
       "personal": "Personal",
       "shared": "Shared"
     }
+  },
+  "view": {
+    "label": "View",
+    "tiles": "Tiles",
+    "list": "List"
+  },
+  "table": {
+    "name": "Trip",
+    "dates": "Dates",
+    "days": "Days",
+    "countries": "Countries",
+    "status": "Status",
+    "places": "Places",
+    "label": "Trips"
+  },
+  "menu": {
+    "more": "More",
+    "label": "More actions for this trip",
+    "summaryNone": "Create AI summary",
+    "summaryAgain": "Create AI summary again",
+    "summaryBusy": "Creating AI summary …"
   }
 }

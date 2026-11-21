@@ -381,7 +381,7 @@ export default function CruisesPage(): JSX.Element {
   useEffect(() => refreshSelection(bulkRows), [bulkRows, refreshSelection]);
 
   return (
-    <AppShell width="table">
+    <AppShell>
       <LogbookTabs />
       {/* The width is the shell's now — `table`, the same one every logbook
           page asks for by name. */}

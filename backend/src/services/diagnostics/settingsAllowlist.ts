@@ -44,6 +44,7 @@ export const ADMIN_SETTINGS_ALLOWLIST: Readonly<Record<string, Rule>> = {
   railTransitousEnabled: bool,
   railDbRestEnabled: bool,
   adsbLolEnabled: bool,
+  airplanesLiveEnabled: bool,
   webdavSyncEnabled: bool,
   maxUsers: num,
   aviationstackDailyBudget: num,

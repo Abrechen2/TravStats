@@ -23,6 +23,7 @@ interface GlobalApiKeysUpdateData {
   globalAdsbxApiKey?: string | null;
   globalAdsblolApiKey?: string | null;
   adsbLolEnabled?: boolean;
+  airplanesLiveEnabled?: boolean;
   globalLogostreamApiKey?: string | null;
   globalGooglePlacesApiKey?: string | null;
   globalOpenskyClientId?: string | null;
@@ -45,6 +46,7 @@ const globalApiKeysSchema = z
     globalAdsbxApiKey: z.string().optional().nullable(),
     globalAdsblolApiKey: z.string().optional().nullable(),
     adsbLolEnabled: z.boolean().optional(),
+    airplanesLiveEnabled: z.boolean().optional(),
     // Encryption silently corrupts secrets shorter than 16 bytes (see
     // utils/encryption.ts). Allow the "no change" sentinels — empty string
     // (clear the key) and a masked echo of the GET response (unchanged) —
@@ -154,6 +156,7 @@ router.get("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
         globalAdsbxApiKey: undefined,
         globalAdsblolApiKey: undefined,
         adsbLolEnabled: false,
+        airplanesLiveEnabled: false,
         globalLogostreamApiKey: undefined,
         globalGooglePlacesApiKey: undefined,
         globalOpenskyClientId: undefined,
@@ -177,6 +180,7 @@ router.get("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
       globalAdsbxApiKey: maskKey(adminSettings.globalAdsbxApiKey),
       globalAdsblolApiKey: maskKey(adminSettings.globalAdsblolApiKey),
       adsbLolEnabled: adminSettings.adsbLolEnabled ?? false,
+      airplanesLiveEnabled: adminSettings.airplanesLiveEnabled ?? false,
       globalLogostreamApiKey: maskKey(adminSettings.globalLogostreamApiKey),
       globalGooglePlacesApiKey: maskKey(adminSettings.globalGooglePlacesApiKey),
       globalOpenskyClientId: maskKey(adminSettings.globalOpenskyClientId),
@@ -255,6 +259,9 @@ router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
     if (payload.adsbLolEnabled !== undefined) {
       updateData.adsbLolEnabled = payload.adsbLolEnabled;
     }
+    if (payload.airplanesLiveEnabled !== undefined) {
+      updateData.airplanesLiveEnabled = payload.airplanesLiveEnabled;
+    }
     if (payload.globalLogostreamApiKey !== undefined) {
       const encrypted = encryptUnlessMasked(payload.globalLogostreamApiKey);
       if (encrypted !== undefined) {
@@ -330,6 +337,7 @@ router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
         globalAdsbxApiKey: maskKey(adminSettings.globalAdsbxApiKey),
         globalAdsblolApiKey: maskKey(adminSettings.globalAdsblolApiKey),
         adsbLolEnabled: adminSettings.adsbLolEnabled,
+        airplanesLiveEnabled: adminSettings.airplanesLiveEnabled,
         globalLogostreamApiKey: maskKey(adminSettings.globalLogostreamApiKey),
         globalOpenskyClientId: maskKey(adminSettings.globalOpenskyClientId),
         globalOpenskyClientSecret: maskKey(adminSettings.globalOpenskyClientSecret),

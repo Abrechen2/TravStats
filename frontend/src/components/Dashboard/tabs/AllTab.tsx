@@ -158,11 +158,10 @@ export function AllTab(): JSX.Element {
   // second condition here).
   const placesAllowed = usePlacesVisible();
 
-  // Tours have no domain pill and no gate since 2026-09-18 — the hook still
-  // takes the flag so a future domain switch has somewhere to say no.
-  // Tours are beta again (2026-09-24): nothing is fetched while the key is closed.
+  // One fetch carries day tours AND roadtrips: it runs while either domain is
+  // on (gated on `tour` alone, roadtrips vanished — tester, 2026-11-18).
   const toursVisible = useToursVisible();
-  const dashboardTours = useDashboardTours(toursVisible);
+  const dashboardTours = useDashboardTours(toursVisible || isEnabled("roadtrip"));
   // The "Alle" tab's domain-filter (decision 2026-09-27; `rail` joined 2026-09-28).
   const { domainFilter, dayTourCount, visible, lines } = useAllTabDomainVisibility(
     dashboardTours.tours
@@ -459,9 +458,10 @@ export function AllTab(): JSX.Element {
     );
   }, [allMode, visibleFlights, visibleCruises, effectiveTripId, cruiseColorConfig, journeyVisMode]);
 
-  // Tours on the main overview map only — journey mode already takes over
-  // the map for ONE trip (`journeyLayers`); every tour on top would misdescribe it.
-  const showTours = toursVisible && allMode !== "journey";
+  // Tours and ground lines on the overview map only — journey mode takes over
+  // the map for ONE trip (`journeyLayers`). Each line answers to its own domain;
+  // hung on `tour`, all of them vanished without it (tester, rc.35).
+  const showTours = allMode !== "journey";
 
   // `buildTourPaths` is the SAME builder `TripMap.tsx` uses; the deck.gl
   // layer itself comes from `useTourDeckLayers` (`./tourMapOverlay.tsx`,

@@ -26,7 +26,7 @@ export default function StaleBundleNotice({ reloading }: StaleBundleNoticeProps)
       <div
         className="w-full"
         style={{
-          maxWidth: "var(--ts-width-reading)",
+          maxWidth: 720,
           background: "var(--ts-surface)",
           border: "1px solid var(--ts-border)",
           borderRadius: "var(--ts-radius-card)",

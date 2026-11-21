@@ -47,14 +47,14 @@ describe("the settings registry follows the settings v3 page model", () => {
     }
   });
 
-  it("counts 34 pages, 121 groups and cards (43 of them service cards: 18 the account's, 25 the server's) and 268 rows", () => {
+  it("counts 34 pages, 122 groups and cards (46 of them service cards: 19 the account's, 27 the server's) and 272 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
     expect(SETTINGS_REGISTRY).toHaveLength(34);
-    expect(sections).toHaveLength(121);
-    expect(sections.filter((s) => s.serviceCategory)).toHaveLength(43);
-    expect(registryPage("dienstek")!.sections).toHaveLength(18);
-    expect(registryPage("dienste")!.sections).toHaveLength(25);
-    expect(sections.flatMap((s) => s.rows)).toHaveLength(268);
+    expect(sections).toHaveLength(122);
+    expect(sections.filter((s) => s.serviceCategory)).toHaveLength(46);
+    expect(registryPage("dienstek")!.sections).toHaveLength(19);
+    expect(registryPage("dienste")!.sections).toHaveLength(27);
+    expect(sections.flatMap((s) => s.rows)).toHaveLength(272);
   });
 
   it("lists the rows added after the first generation, so search can find them (forgejo#407)", () => {
@@ -435,7 +435,7 @@ describe("the server area follows the prototype (settings v3 S5)", () => {
       expect(cards, id).not.toContain(id);
     }
     // The prototype's 21 cards, then the three that are left of the folded ones (expert).
-    expect(cards).toHaveLength(25);
+    expect(cards).toHaveLength(27);
     const expertCards = registryPage("dienste")!.sections.filter((c) => c.level === "expert");
     expect(expertCards.map((c) => c.id)).toEqual(["railTimetables", "openData", "airportData"]);
   });

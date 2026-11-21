@@ -24,6 +24,7 @@ import {
   type FlightTimeSemantics,
 } from "../utils/timezone";
 import { markFlownOnReportedLanding } from "./flightLandedStatus";
+import { wasAlreadyRejected, type FlightChange } from "./flightUpdateRejections";
 
 const prismaClient = prisma as PrismaClient;
 
@@ -32,7 +33,6 @@ import {
   convertApiDataToProposed,
   createPendingUpdate,
   hasSignificantChanges,
-  type FlightChange,
 } from "./flightAutoUpdate/changes";
 
 export {
@@ -41,9 +41,10 @@ export {
   hasSignificantChanges,
   convertApiDataToProposed,
   createPendingUpdate,
-  type FlightChange,
   type PendingUpdateData,
 } from "./flightAutoUpdate/changes";
+
+export type { FlightChange, FlightFieldValue } from "./flightUpdateRejections";
 
 // Beyond this, the API is describing a different rotation of a (usually
 // daily) flight number, not a schedule change to OUR flight. Legitimate
@@ -248,6 +249,9 @@ async function proposeChanges(
     );
     return { created: false, significant: false };
   }
+
+  // The user already rejected this exact proposal — do not re-offer it.
+  if (await wasAlreadyRejected(flight.id, changes)) return { created: false, significant: false };
 
   const changedFieldNames = changes.map((c) => c.field);
   logger.info(

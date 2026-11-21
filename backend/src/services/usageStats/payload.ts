@@ -107,6 +107,7 @@ export async function buildUsagePayload(): Promise<UsagePayload> {
     ["aerodatabox", admin?.globalAerodataboxApiKey],
     ["adsbx", admin?.globalAdsbxApiKey],
     ["adsblol", admin?.adsbLolEnabled === true || admin?.globalAdsblolApiKey],
+    ["airplaneslive", admin?.airplanesLiveEnabled === true],
     ["opensky", admin?.globalOpenskyClientId],
   ];
 

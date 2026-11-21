@@ -118,6 +118,11 @@ export interface TravTrackDay {
   stops?: TravTrackStop[];
   /** Speed, altitude and motion of each vertex, aligned with `segments`; absent on an older server. */
   pointDetails?: TravTrackPointDetail[][];
+  /**
+   * Why the day may draw fewer points than were stored: counts of fixes the privacy cut hid and
+   * fixes left out as implausible; absent on an older server (then the reason is unknown).
+   */
+  omitted?: { privacyZone: number; implausible: number };
 }
 
 export type TravTrackExportFormat = "gpx" | "json";
@@ -218,8 +223,13 @@ export const travTrackApi = {
   /** The last position, or null while the history holds none. */
   lastSeen: async (): Promise<TravTrackLastSeen | null> =>
     (await api.get<{ lastSeen: TravTrackLastSeen | null }>("/travtrack/last-seen")).data.lastSeen,
-  day: async (date: string): Promise<TravTrackDay> =>
-    (await api.get<TravTrackDay>("/travtrack/day", { params: { date } })).data,
+  /** `includeImplausible` also draws the coarse fixes normally left out; the privacy cut still holds. */
+  day: async (date: string, includeImplausible = false): Promise<TravTrackDay> =>
+    (
+      await api.get<TravTrackDay>("/travtrack/day", {
+        params: includeImplausible ? { date, includeImplausible: 1 } : { date },
+      })
+    ).data,
   /** The explored zoom-14 tiles in a box (plan L1); zones drawn as explored ground. */
   explored: async (box: ExploredBox): Promise<ExploredCell[]> =>
     (

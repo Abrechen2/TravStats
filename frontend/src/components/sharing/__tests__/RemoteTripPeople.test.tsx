@@ -298,7 +298,9 @@ describe("RemoteTripPeople", () => {
       await screen.findByText(/sharing:remote.trip.fromServer .*far.example.org/)
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "sharing:remote.trip.offer" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "sharing:remote.trip.createCode" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "sharing:remote.trip.person.codeLink" })
+    ).toBeNull();
     const send = screen.getByRole("button", { name: "sharing:remote.trip.addRequest.submit" });
     expect(send).toBeDisabled();
     await userEvent.type(screen.getByLabelText("sharing:remote.trip.addRequest.name"), "Bea");
@@ -396,5 +398,41 @@ describe("RemoteTripPeople", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "sharing:remote.trip.errors.loadFailed"
     );
+  });
+
+  // Owner, 2026-11-20: the ways to offer a trip are used once and live in the
+  // head's "Mehr" menu; the overview keeps only who is already on the trip.
+  describe("without the offer controls (the overview)", () => {
+    it("lists the people already on the trip but offers nobody and creates no code", async () => {
+      api.tripSharing.mockResolvedValue(
+        view({
+          offerable: [
+            { remoteId: "r9", displayName: "Zed", username: "zed", origin: "https://z.example" },
+          ],
+        })
+      );
+      const { container } = render(<RemoteTripPeople tripId="t1" offerControls={false} />);
+      expect((await screen.findAllByText(/"name":"Ben"/)).length).toBeGreaterThan(0);
+      expect(screen.queryByRole("button", { name: "sharing:remote.trip.offer" })).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: "sharing:remote.trip.person.codeLink" })
+      ).toBeNull();
+      expect(container.textContent).not.toContain("sharing:remote.trip.codeHint");
+    });
+
+    it("draws no empty heading for a trip with nobody on other servers", async () => {
+      api.tripSharing.mockResolvedValue(view({ members: [], roster: [], offerable: [] }));
+      const { container } = render(<RemoteTripPeople tripId="t1" offerControls={false} />);
+      await waitFor(() => expect(api.tripSharing).toHaveBeenCalled());
+      expect(container).toBeEmptyDOMElement();
+    });
+  });
+
+  it("inside a dialog (bare) carries no heading of its own, and keeps the offer controls", async () => {
+    render(<RemoteTripPeople tripId="t1" bare />);
+    expect(
+      await screen.findByRole("button", { name: "sharing:remote.trip.person.codeLink" })
+    ).toBeInTheDocument();
+    expect(screen.queryByText("sharing:remote.trip.title")).toBeNull();
   });
 });

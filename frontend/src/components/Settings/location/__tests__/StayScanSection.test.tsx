@@ -136,6 +136,18 @@ describe("Standort → Aufenthalte finden", () => {
     expect(navigate.mock.calls[0][0]).toBe(to);
   });
 
+  it("says so when the venue lookup behind stop suggestions did not answer, and when it asks again", async () => {
+    api.state.mockResolvedValue({ ...base, visitLookupRetryAt: "2026-11-21T09:15:00.000Z" });
+    show();
+    expect(await screen.findByText(/settings:location\.stay\.visitLookup/)).toBeInTheDocument();
+  });
+
+  it("says nothing about the venue lookup while it works", async () => {
+    show();
+    await screen.findByText(/settings:location\.stay\.next/);
+    expect(screen.queryByText(/settings:location\.stay\.visitLookup/)).not.toBeInTheDocument();
+  });
+
   it("a switched-off scan explains the locked button", async () => {
     api.state.mockResolvedValue({ ...base, enabled: false, pausedReason: "disabled" });
     show();

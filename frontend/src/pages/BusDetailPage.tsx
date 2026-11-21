@@ -152,7 +152,7 @@ export default function BusDetailPage(): JSX.Element {
 
   if (loading) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <p className="text-(--text-muted)">{t("bus:detail.loading")}</p>
       </AppShell>
     );
@@ -160,7 +160,7 @@ export default function BusDetailPage(): JSX.Element {
   if (failure !== null || !ride) {
     const isLoadError = failure === "loadError";
     return (
-      <AppShell width="reading">
+      <AppShell>
         <Link to="/bus" className="ts-back-link text-sm text-(--text-muted)">
           ← {t("bus:title")}
         </Link>
@@ -244,7 +244,7 @@ export default function BusDetailPage(): JSX.Element {
   ];
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <DetailHeader
         backTo="/bus"
         backLabel={t("bus:detail.back")}

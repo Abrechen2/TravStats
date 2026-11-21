@@ -1,4 +1,5 @@
 import { haversineKm } from "../../shared/geo/haversine";
+import { contentKey } from "./contentKey";
 import { PLACE_VISIT_NEAR_KM } from "../../shared/tripSuggestionRules";
 import type { LinkableDomain, PlaceContext, PresenceEntry, TripSuggestion } from "./types";
 
@@ -39,15 +40,29 @@ interface AnchorPoint {
 export function placeVisitProposals(
   entries: readonly PresenceEntry[],
   places: readonly PlaceContext[],
-  answered: readonly { kind: string; targetId: string | null; memberKeys: readonly string[] }[] = []
+  answered: readonly {
+    kind: string;
+    targetId: string | null;
+    memberKeys: readonly string[];
+    memberContentKeys?: readonly string[];
+  }[] = []
 ): TripSuggestion[] {
   const dayOf = new Map(entries.map((e) => [e.key, e.startDay]));
+  // The same anchor after a delete + re-import has a new id; its content key
+  // (domain, day, label) still finds the day the answer settled.
+  const dayOfContent = new Map<string, string>();
+  for (const e of entries) {
+    for (const point of e.points) {
+      dayOfContent.set(contentKey(e.domain, point.day, e.label), e.startDay);
+    }
+  }
   // Per place, the latest anchor day the user already answered about.
   const settledUntil = new Map<string, string>();
   for (const a of answered) {
     if (a.kind !== "place_visit" || a.targetId === null) continue;
-    for (const key of a.memberKeys) {
-      const day = dayOf.get(key);
+    for (const [i, key] of a.memberKeys.entries()) {
+      const ck = a.memberContentKeys?.[i];
+      const day = dayOf.get(key) ?? (ck === undefined ? undefined : dayOfContent.get(ck));
       const seen = settledUntil.get(a.targetId);
       if (day !== undefined && (seen === undefined || day > seen))
         settledUntil.set(a.targetId, day);

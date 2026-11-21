@@ -14,6 +14,9 @@ vi.mock("../../lib/api", () => ({
 vi.mock("../../lib/api/dataQualityFlags", () => ({
   dataQualityFlagsApi: { getAll: vi.fn().mockResolvedValue({ count: 0 }) },
 }));
+vi.mock("../../lib/api/documentLinkSuggestions", () => ({
+  documentLinkSuggestionsApi: { count: vi.fn().mockResolvedValue(0) },
+}));
 vi.mock("../../lib/api/tripSuggestions", () => ({
   tripSuggestionsApi: { count: vi.fn().mockResolvedValue(0) },
 }));

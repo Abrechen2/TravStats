@@ -41,13 +41,19 @@
     "unlinkKeepCopies": "Keep copies",
     "unlinkDeleteCopies": "Delete copies",
     "groupByDay": "Group by day",
+    "undated": "Undated",
     "resync": "Re-sync",
     "resyncing": "Syncing… {{done}}/{{total}}",
     "importFailed": "The import stopped – {{reason}} Photos already copied are kept.",
     "importFailedUnknown": "An unknown error occurred while copying the photos.",
+    "importTruncated": "Album too large – only the first {{count}} photos were imported.",
     "importPartial": "{{failed}} of {{total}} photos could not be copied. \"Re-sync\" tries them again.",
     "badgeLink": "live",
-    "badgeImport": "copy"
+    "badgeImport": "copy",
+    "sourceLabel": "Photo source",
+    "partialLink": "Some albums could not be linked: {{reason}}",
+    "badgePhotoprism": "PhotoPrism",
+    "badgeImmich": "Immich"
   },
   "gallery": {
     "uploaded": "Uploaded",
@@ -66,7 +72,17 @@
     "protocol": "Unexpected response from Immich. Does the server version match?",
     "invalidUrl": "The server URL is not valid.",
     "keyRequired": "Testing a different server address needs your own API key. The instance-wide key is only valid for the server it was configured for.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "photoprism": {
+      "notConfigured": "No PhotoPrism connection set up.",
+      "unreachable": "PhotoPrism cannot be reached.",
+      "unknown": "Connection test failed.",
+      "auth": "PhotoPrism rejected the app password. It needs the scope “albums photos files config”.",
+      "notFound": "Album not found — was it deleted in PhotoPrism?",
+      "protocol": "Unexpected answer from PhotoPrism. Is the version too old?",
+      "invalidUrl": "The server URL is invalid or this account may not reach it.",
+      "keyRequired": "A different server address needs its own app password."
+    }
   },
   "admin": {
     "title": "Immich (instance-wide)",
@@ -118,5 +134,25 @@
     "done": "{{checked}} photos checked, {{linked}} linked.",
     "lost": "Outcome unknown: the server lost track of the job (restart?). Run it again – photos already linked stay linked.",
     "failed": "Linking failed."
+  },
+  "visitPhotosAuto": {
+    "title": "Link photos to place visits automatically",
+    "hint": "Links photos from Immich and PhotoPrism taken near the place on the day of the visit (links only, no copies). Photos without a capture time or position, and photos inside privacy zones, are never linked. Photos you remove do not come back.",
+    "loadFailed": "The state of automatic linking could not be loaded.",
+    "saveFailed": "The setting could not be saved.",
+    "source": {
+      "immich": "Immich",
+      "photoprism": "PhotoPrism"
+    },
+    "truncated": "On some days the source held more photos than one search reads – not every matching photo was found.",
+    "progress": "Linking … {{done}} of {{total}} visits",
+    "running": "Linking …",
+    "done": "{{visits}} visits checked, {{linked}} photos linked.",
+    "failedVisits_one": "{{count}} visit could not be processed:",
+    "failedVisits_other": "{{count}} visits could not be processed:",
+    "truncatedVisits_one": "For {{count}} visit not all of the day's photos were read.",
+    "truncatedVisits_other": "For {{count}} visits not all of the day's photos were read.",
+    "lost": "The state is unknown: the server forgot the job (restart?). Photos already linked stay linked.",
+    "jobFailed": "Automatic linking failed."
   }
 }

@@ -14,6 +14,7 @@ import AccountConsentDialog from "../ExternalServices/AccountConsentDialog";
 import { serviceName } from "../ExternalServices/serviceText";
 import StravaConnectionCard from "../Settings/StravaConnectionCard";
 import PhotoJourneyNightlyScanCard from "../Settings/PhotoJourneyNightlyScanCard";
+import VisitPhotoAutoLink from "../Settings/VisitPhotoAutoLink";
 import VisitPhotoImmichLink from "../Settings/VisitPhotoImmichLink";
 import DawarichProviderHint from "../Settings/DawarichProviderHint";
 import FieldsGroup from "./FieldsGroup";
@@ -236,9 +237,22 @@ export default function AccountSide({
     }
     if (card.id === "dawarich")
       body.push(<DawarichProviderHint key="hint" check={dawarichSaved} />);
+    if (card.id === "photoprism") {
+      // The app-password scope is the one thing a user cannot guess: without
+      // `config` the server gets no thumbnail token and the test says so.
+      body.push(
+        <p key="setup" className="t-caption" data-photoprism-setup style={{ margin: 0 }}>
+          {t("externalServices:services.photoprism.setup")}
+        </p>
+      );
+    }
     if (card.id === "immich") {
       body.push(<PhotoJourneyNightlyScanCard key="nightly" />);
       body.push(<VisitPhotoImmichLink key="visit" connected />);
+    }
+    // One account switch, offered on both photo sources' cards.
+    if (card.id === "immich" || card.id === "photoprism") {
+      body.push(<VisitPhotoAutoLink key="autoLink" />);
     }
   } else if (blockedLine) {
     body.push(<Dependency key="blocked" reason={blockedLine} />);

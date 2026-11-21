@@ -4,10 +4,14 @@ import { z } from "zod";
 import { authenticate, requireWriteScope, type AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { immichProxyLimiter, statsLimiter } from "../../middleware/rateLimit";
-import { assetIdParamSchema, assetSizeSchema } from "../../schemas/immich";
+import {
+  assetSizeSchema,
+  linkedAssetIdParamSchema,
+  photoSourceKindSchema,
+} from "../../schemas/immich";
 import { sendPlaceholder, streamAsset } from "../../services/immich/assetStream";
-import { createImmichClient } from "../../services/immich/immichClient";
-import { getImmichConnection } from "../../services/immich/immichResolver";
+import { createPhotoSource } from "../../services/photoSource";
+import { getPhotoSourceConnection } from "../../services/photoSource/connection";
 import { ImmichError } from "../../services/immich/types";
 import { linkPicksSchema } from "../../schemas/place";
 import {
@@ -73,6 +77,7 @@ router.post(
       const picks = {
         tripPhotoIds: [...new Set(body.data.tripPhotoIds)],
         assetIds: [...new Set(body.data.assetIds)],
+        provider: body.data.provider,
       };
       const result = await linkPickedPhotos(req.userId!, params.data.visitId, picks);
       if (result === null) throw new AppError("Visit not found", 404);
@@ -100,6 +105,7 @@ router.post(
       const result = await refusePhotoSuggestions(req.userId!, params.data.visitId, {
         tripPhotoIds: [...new Set(body.data.tripPhotoIds)],
         assetIds: [...new Set(body.data.assetIds)],
+        provider: body.data.provider,
       });
       if (result === null) throw new AppError("Visit not found", 404);
       res.json({ success: true, data: result });
@@ -133,31 +139,34 @@ router.get(
     try {
       const params = visitParamsSchema.safeParse(req.params);
       if (!params.success) throw new AppError("Invalid visit id", 400);
-      const assetId = assetIdParamSchema.safeParse(req.params.assetId);
+      const assetId = linkedAssetIdParamSchema.safeParse(req.params.assetId);
       if (!assetId.success) throw new AppError("Invalid asset id", 400);
+      const provider = photoSourceKindSchema.safeParse(req.query.provider ?? "immich");
+      if (!provider.success) throw new AppError("Invalid provider", 400);
       const size = assetSizeSchema.safeParse(req.query.size ?? "thumbnail");
       if (!size.success) throw new AppError("Invalid size", 400);
 
       const suggested = await isSuggestedLibraryAsset(
         req.userId!,
         params.data.visitId,
-        assetId.data
+        assetId.data,
+        provider.data
       );
       // One answer for "not your visit" and "not a suggestion": both are 404,
       // in the failure-kind vocabulary the Immich proxies share.
       if (!suggested) throw new AppError("notFound", 404);
 
-      const etag = `"${assetId.data}-${size.data}"`;
+      const etag = `"${provider.data === "immich" ? "" : `${provider.data}-`}${assetId.data}-${size.data}"`;
       if (req.headers["if-none-match"] === etag) {
         res.status(304).end();
         return;
       }
-      const conn = await getImmichConnection(req.userId!);
+      const conn = await getPhotoSourceConnection(provider.data, req.userId!);
       if (!conn) {
         res.status(409).json({ error: "notConfigured" });
         return;
       }
-      await streamAsset(res, createImmichClient(conn), assetId.data, size.data, etag);
+      await streamAsset(res, createPhotoSource(provider.data, conn), assetId.data, size.data, etag);
     } catch (error) {
       if (error instanceof ImmichError) {
         logger.warn({ message: "immich_proxy_upstream_failure", context: { kind: error.kind } });

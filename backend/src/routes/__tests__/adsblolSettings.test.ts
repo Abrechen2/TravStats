@@ -242,4 +242,28 @@ describe("adsb.lol admin switch", () => {
       true
     );
   });
+
+  it("the airplanes.live switch is OFF by default and round-trips through the admin route", async () => {
+    const prior = (await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } }))
+      ?.airplanesLiveEnabled;
+    try {
+      await prisma.adminSettings.updateMany({ data: { airplanesLiveEnabled: false } });
+      const off = await request(app).get("/api/v1/admin/api-keys").set("Cookie", adminCookie);
+      expect(off.body.airplanesLiveEnabled).toBe(false);
+
+      const on = await request(app)
+        .put("/api/v1/admin/api-keys")
+        .set("Cookie", adminCookie)
+        .send({ airplanesLiveEnabled: true });
+      expect(on.status).toBe(200);
+      expect(on.body.settings.airplanesLiveEnabled).toBe(true);
+      const row = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
+      expect(row?.airplanesLiveEnabled).toBe(true);
+      expect(
+        projectAdminSettings(row as unknown as Record<string, unknown>).airplanesLiveEnabled
+      ).toBe(true);
+    } finally {
+      await prisma.adminSettings.updateMany({ data: { airplanesLiveEnabled: prior ?? false } });
+    }
+  });
 });

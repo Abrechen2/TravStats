@@ -31,10 +31,13 @@ import TripMapWithTours from "../components/Trips/TripMapWithTours";
 import TripGallery from "../components/Trips/TripGallery";
 import TourSectionList from "../components/Trips/TourSectionList";
 import { useToursVisible } from "../hooks/useToursVisible";
+import { useScrollToHash } from "../hooks/useScrollToHash";
 import { PanelHeader, Placeholder } from "../components/Trips/TripDetailPanels";
 import { TripGroundLists, groundRideCount } from "../components/Trips/TripGroundLists";
 import { RentalBand, TransitCard, useRentalBands } from "../components/Trips/timelineTransit";
-import { useTripPlaceVisits } from "../hooks/useTripPlaceVisits";
+import { useTripPlaceVisits, type TripPlaceVisit } from "../hooks/useTripPlaceVisits";
+import { countTripPlaces } from "../lib/tripPlaceCount";
+import { TripPlacesError } from "../components/Trips/TripPlacesStatus";
 import { useTripNotes } from "../hooks/useTripNotes";
 import { TimelineNoteCard, TripNotesNotice } from "../components/Trips/TimelineNoteCard";
 import NoteEditorDialog from "../components/notes/NoteEditorDialog";
@@ -101,6 +104,10 @@ export default function TripDetailPage(): JSX.Element {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { displayTrip, hiddenCruiseCount, hiddenLodgingCount } = useVisibleTrip(trip);
+  // One read of the trip's places for the head count, the timeline and the map.
+  // The user's domain choice and the instance beta flag, combined in hooks/usePlacesVisible.ts.
+  const poiEnabled = usePlacesVisible();
+  const places = useTripPlaceVisits(id ?? "", poiEnabled);
 
   const load = async (): Promise<void> => {
     if (!id) return;
@@ -138,7 +145,7 @@ export default function TripDetailPage(): JSX.Element {
 
   if (loading || !trip) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <div className="flex items-center justify-center py-20 text-(--text-muted)">
           {t("common:loading.default")}
         </div>
@@ -149,7 +156,7 @@ export default function TripDetailPage(): JSX.Element {
   const shownTrip = displayTrip ?? trip;
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <TravelPlanSummary tripId={trip.id} />
       <TripHead
         trip={shownTrip}
@@ -158,8 +165,12 @@ export default function TripDetailPage(): JSX.Element {
         onEdit={() => setEditing(true)}
         onDelete={() => setConfirmDelete(true)}
         onChanged={() => void load()}
+        placeCount={countTripPlaces(places.placeVisits)}
       />
-      <TripPackingCard tripId={trip.id} endDate={trip.endDate} />
+      {/* On the overview tab the places panel carries the failure itself. */}
+      {places.failed && tab !== "overview" && <TripPlacesError onRetry={places.reload} />}
+      {/* A finished trip's list is a record, not a task: it waits at the end. */}
+      {trip.status !== "completed" && <TripPackingCard tripId={trip.id} endDate={trip.endDate} />}
       <TabBar tab={tab} onChange={setTab} t={t} />
 
       <div className="py-6">
@@ -188,12 +199,7 @@ export default function TripDetailPage(): JSX.Element {
           </div>
         )}
         {tab === "overview" && (
-          <TripOverview
-            trip={shownTrip}
-            t={t}
-            language={i18n.language}
-            onChanged={() => void load()}
-          />
+          <TripOverview trip={shownTrip} t={t} language={i18n.language} places={places} />
         )}
         {tab === "timeline" && (
           <TimelineTab
@@ -201,9 +207,16 @@ export default function TripDetailPage(): JSX.Element {
             onChanged={() => void load()}
             t={t}
             language={i18n.language}
+            placeVisits={places.placeVisits}
           />
         )}
-        {tab === "map" && <TripMapWithTours trip={shownTrip} />}
+        {tab === "map" && (
+          <TripMapWithTours
+            trip={shownTrip}
+            placeVisits={places.placeVisits}
+            placesLoading={places.loading}
+          />
+        )}
         {tab === "gallery" && (
           <TripGallery
             tripId={shownTrip.id}
@@ -223,6 +236,10 @@ export default function TripDetailPage(): JSX.Element {
         )}
         {tab === "tours" && <TourSectionList tripId={shownTrip.id} />}
       </div>
+
+      {trip.status === "completed" && (
+        <TripPackingCard tripId={trip.id} endDate={trip.endDate} completed />
+      )}
 
       {editing && (
         <TripModal
@@ -301,14 +318,13 @@ interface TimelineTabProps {
   t: ReturnType<typeof useTranslation>["t"];
   /** The UI language, for the cards that format amounts. */
   language: string | undefined;
+  /** The places visited on the trip, loaded once by the page. */
+  placeVisits: readonly TripPlaceVisit[];
 }
 
-function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.Element {
+function TimelineTab({ trip, onChanged, t, language, placeVisits }: TimelineTabProps): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
   const { confirmDelete, confirmDialog } = useConfirmDialog();
-  // The user's domain choice and the instance beta flag, combined in hooks/usePlacesVisible.ts.
-  const poiEnabled = usePlacesVisible();
-  const placeVisits = useTripPlaceVisits(trip.id, poiEnabled);
   const tripNotes = useTripNotes(trip.id);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
 
@@ -348,6 +364,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
   }, [events]);
 
   const empty = events.length === 0;
+  useScrollToHash(!empty);
 
   const handleDeleteJournal = async (entry: TripJournalEntry): Promise<void> => {
     if (!(await confirmDelete(t("trips:detail.timeline.deleteJournalConfirm")))) return;
@@ -395,7 +412,12 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
             const isLast = i === events.length - 1;
             const rail = railStates[i];
             return (
-              <li key={ev.id} className="relative" style={{ marginBottom: isLast ? 0 : 12 }}>
+              <li
+                key={ev.id}
+                id={`timeline-${ev.id}`}
+                className="relative"
+                style={{ marginBottom: isLast ? 0 : 12 }}
+              >
                 {/*
                 Connector line drawn as two half-segments per item so it runs
                 exactly dot-to-dot with no stub above the first or below the

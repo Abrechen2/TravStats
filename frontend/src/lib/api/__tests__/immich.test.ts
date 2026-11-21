@@ -49,7 +49,22 @@ describe("immichApi settings", () => {
 describe("immichApi trip albums", () => {
   it("lists albums for the picker", async () => {
     await immichApi.listAlbums("trip-1");
-    expect(mockGet).toHaveBeenCalledWith("/trips/trip-1/immich/albums");
+    expect(mockGet).toHaveBeenCalledWith("/trips/trip-1/immich/albums", {
+      params: { provider: "immich" },
+    });
+  });
+
+  it("asks for the albums of a named photo source", async () => {
+    await immichApi.listAlbums("trip-1", "photoprism");
+    expect(mockGet).toHaveBeenCalledWith("/trips/trip-1/immich/albums", {
+      params: { provider: "photoprism" },
+    });
+  });
+
+  it("words a failure in the source's own copy", () => {
+    expect(failureKey("auth", "photoprism")).toBe("errors.photoprism.auth");
+    expect(failureKey("auth")).toBe("errors.auth");
+    expect(failureKey("brand-new", "photoprism")).toBe("errors.photoprism.unknown");
   });
 
   it("links albums with their per-album mode", async () => {
@@ -70,6 +85,13 @@ describe("immichApi trip albums", () => {
   it("requests an import estimate for one album", async () => {
     await immichApi.estimateImport("trip-1", "a1");
     expect(mockGet).toHaveBeenCalledWith("/trips/trip-1/immich/estimate?albumId=a1");
+  });
+
+  it("asks PhotoPrism for the estimate when the album lives there", async () => {
+    await immichApi.estimateImport("trip-1", "pp1", "photoprism");
+    expect(mockGet).toHaveBeenCalledWith(
+      "/trips/trip-1/immich/estimate?albumId=pp1&provider=photoprism"
+    );
   });
 
   it("kicks a resync and polls the job", async () => {

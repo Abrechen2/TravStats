@@ -171,6 +171,34 @@ describe("a trip keeps its contents", () => {
       expect(kept.immichAlbumLinkId).toBe(targetAlbum.id);
     });
 
+    it("keeps albums that only share an id across two photo sources apart", async () => {
+      const target = await prisma.trip.create({ data: { userId, name: "Target" } });
+      const source = await prisma.trip.create({ data: { userId, name: "Source" } });
+      await prisma.tripImmichAlbum.create({
+        data: { tripId: target.id, immichAlbumId: "same-id", albumName: "Immich", mode: "link" },
+      });
+      await prisma.tripImmichAlbum.create({
+        data: {
+          tripId: source.id,
+          provider: "photoprism",
+          immichAlbumId: "same-id",
+          albumName: "PhotoPrism",
+          mode: "link",
+        },
+      });
+
+      await mergeTrips(userId, { tripIds: [target.id, source.id], targetId: target.id });
+
+      const albums = await prisma.tripImmichAlbum.findMany({
+        where: { tripId: target.id },
+        orderBy: { provider: "asc" },
+      });
+      expect(albums.map((a) => [a.provider, a.albumName])).toEqual([
+        ["immich", "Immich"],
+        ["photoprism", "PhotoPrism"],
+      ]);
+    });
+
     it("keeps one row when both sides hold the same imported asset", async () => {
       const target = await prisma.trip.create({ data: { userId, name: "Target" } });
       const source = await prisma.trip.create({ data: { userId, name: "Source" } });
@@ -199,6 +227,29 @@ describe("a trip keeps its contents", () => {
 
       const photos = await prisma.tripPhoto.findMany({ where: { tripId: target.id } });
       expect(photos.map((p) => p.id)).toEqual([targetPhoto.id]);
+    });
+
+    it("keeps both rows when the same asset id belongs to two photo sources", async () => {
+      const target = await prisma.trip.create({ data: { userId, name: "Target" } });
+      const source = await prisma.trip.create({ data: { userId, name: "Source" } });
+      const row = (tripId: string, provider: string) => ({
+        tripId,
+        provider,
+        filename: "x.jpg",
+        mimetype: "image/jpeg",
+        sizeBytes: 10,
+        immichAssetId: "id-1",
+      });
+      await prisma.tripPhoto.create({ data: row(target.id, "immich") });
+      await prisma.tripPhoto.create({ data: row(source.id, "photoprism") });
+
+      await mergeTrips(userId, { tripIds: [target.id, source.id], targetId: target.id });
+
+      const photos = await prisma.tripPhoto.findMany({
+        where: { tripId: target.id },
+        orderBy: { provider: "asc" },
+      });
+      expect(photos.map((p) => p.provider)).toEqual(["immich", "photoprism"]);
     });
 
     // forgejo#139: the dropped duplicate may be the copy that was filed at a

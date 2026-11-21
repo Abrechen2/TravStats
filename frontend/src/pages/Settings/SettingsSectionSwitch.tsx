@@ -27,14 +27,9 @@ import DevicesSection from "../../components/Settings/DevicesSection";
 import ImportSection from "../../components/Settings/ImportSection";
 import TripsSection from "../../components/Settings/TripsSection";
 import InboxSuggestionsSection from "../../components/Settings/InboxSuggestionsSection";
-import SharingSection from "../../components/Settings/SharingSection";
-import ConnectionsSection from "../../components/Settings/ConnectionsSection";
-import RemoteSharingSection from "../../components/Settings/RemoteSharingSection";
 import ShareLinksSection from "../../components/Settings/ShareLinksSection";
-import CompareHandoverRow from "../../components/Settings/CompareHandoverRow";
-import CompanionsSection from "../../components/Settings/companions/CompanionsSection";
 import CalendarFeedSection from "../../components/Settings/CalendarFeedSection";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
+import PeopleSection from "../../components/Settings/people/PeopleSection";
 import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
 import LodgingRatingsSection from "../../components/Settings/LodgingRatingsSection";
@@ -62,7 +57,6 @@ export default function SettingsSectionSwitch({
   page,
 }: SettingsSectionSwitchProps): JSX.Element | null {
   const isAdmin = page.user?.isAdmin ?? false;
-  const { isFeatureVisible } = useBetaFeatures();
 
   switch (section) {
     case "profile":
@@ -115,20 +109,10 @@ export default function SettingsSectionSwitch({
     case "suggestions":
       // Which suggestions the inbox offers at all (forgejo#306).
       return <InboxSuggestionsSection />;
-    case "sharing":
-      // Shared trips (design 2026-10-09): consent and companion links, then
-      // people on other servers (forgejo#301), behind its beta key and the
-      // server's switch.
-      return (
-        <div className="space-y-4">
-          <SharingSection />
-          {isFeatureVisible("federatedTripSharing") && <ConnectionsSection />}
-          {isFeatureVisible("federatedTripSharing") && <RemoteSharingSection />}
-        </div>
-      );
-    case "companions":
-      // Rename, merge and delete companions (owner, 2026-10-22).
-      return <CompanionsSection />;
+    case "people":
+      // One list of people (owner, 2026-11-20): companions, linked accounts, people on other
+      // servers, and the per-person consents (trips, leaderboard totals, encrypted hand-over).
+      return <PeopleSection />;
     case "shareLinks":
       // Public share links (forgejo#281): own links and a pointer to administration.
       return <ShareLinksSection isAdmin={isAdmin} />;
@@ -192,10 +176,6 @@ export default function SettingsSectionSwitch({
       return <LodgingRatingsSection />;
     case "loyalty":
       return <LoyaltySection />;
-    case "comparisonConsent":
-      return <CompareHandoverRow row="rangliste" withTitle />;
-    case "encryptedGrants":
-      return <CompareHandoverRow row="verschl" withTitle={!isFeatureVisible("comparison")} />;
     default:
       return null;
   }

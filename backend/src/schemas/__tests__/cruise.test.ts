@@ -269,6 +269,14 @@ describe("stop 3-state invariant", () => {
     expect(withStop({ isAtSea: false, unresolvedPortName: "Taranto" }).success).toBe(true);
   });
 
+  it('accepts excursionNote: null, a string and "" (GitHub #402: null was a 400)', () => {
+    for (const excursionNote of [null, "Tender at 9", ""]) {
+      expect(withStop({ portId: 5, excursionNote }).success).toBe(true);
+    }
+    const parsed = withStop({ portId: 5, excursionNote: null });
+    expect(parsed.success && parsed.data.stops?.[0].excursionNote).toBeNull();
+  });
+
   it("rejects an empty stop (no port, not at sea, no unresolved name)", () => {
     expect(withStop({ isAtSea: false }).success).toBe(false);
   });

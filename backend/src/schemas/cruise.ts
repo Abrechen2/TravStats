@@ -95,7 +95,8 @@ export const cruiseStopSchema = z
     isAtSea: z.boolean().default(false),
     arrivalTime: stopTime,
     departureTime: stopTime,
-    excursionNote: z.string().max(500).optional(),
+    // null clears the note (the OpenAPI CruiseStop marks it nullable; GitHub #402).
+    excursionNote: z.string().max(500).nullable().optional(),
     // "All aboard" at this port (forgejo#223): `HH:mm` on the port's clock,
     // as the ship's daily programme prints it. Only ever the user's entry —
     // nothing derives it from the departure. "" and null clear it; on a PATCH

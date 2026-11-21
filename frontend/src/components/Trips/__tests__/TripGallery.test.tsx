@@ -38,6 +38,7 @@ const PHOTO: TripPhoto = {
 
 const ALBUM: LinkedAlbum = {
   id: "link-1",
+  provider: "immich",
   immichAlbumId: "a1",
   albumName: "Rome",
   assetCount: 2,

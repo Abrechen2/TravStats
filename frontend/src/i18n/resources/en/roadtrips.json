@@ -502,7 +502,24 @@
     "emptyTitle": "No roadtrip yet",
     "emptyCta": "Create your first roadtrip",
     "count_one": "{{count}} roadtrip",
-    "count_other": "{{count}} roadtrips"
+    "count_other": "{{count}} roadtrips",
+    "summary": {
+      "roadtrips_one": "roadtrip",
+      "roadtrips_other": "roadtrips",
+      "countries_one": "country",
+      "countries_other": "countries",
+      "stations_one": "station",
+      "stations_other": "stations"
+    },
+    "columns": {
+      "name": "Roadtrip",
+      "vehicle": "Vehicle",
+      "dates": "Dates",
+      "trip": "Trip",
+      "countries": "Countries",
+      "stations": "Stations",
+      "distance": "Distance"
+    }
   },
   "newDialog": {
     "title": "New roadtrip",

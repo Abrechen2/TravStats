@@ -154,7 +154,7 @@ export default function SealedWorkspace() {
     setPeople(nextPeople);
   };
   return (
-    <AppShell width="table" className="encrypted-share-surface">
+    <AppShell className="encrypted-share-surface">
       <PageHeader
         title={t("title")}
         meta={t("e2e.subtitle")}

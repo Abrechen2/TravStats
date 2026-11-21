@@ -153,6 +153,7 @@ describe("TravTrack gate", () => {
       "delete /travtrack/diagnostics": "held",
       "get /travtrack/photos": "on",
       "get /travtrack/photos/:assetId/file": "on",
+      "get /travtrack/photos/sources": "on",
     });
   });
 

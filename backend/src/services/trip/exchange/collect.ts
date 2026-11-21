@@ -12,8 +12,9 @@ import path from "path";
 import { prisma } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
 import { getTripPhotoDir } from "../../../middleware/upload";
-import { documentPath } from "../../documents/documentStore";
-import type { EntityKind, ExportOptions, TripFile, TripFilePortRef } from "./format";
+import type { ExportOptions, TripFile, TripFilePortRef } from "./format";
+import { collectDocuments } from "./collectDocuments";
+import { extensionOf, isoDay } from "./collectShared";
 
 export interface PackedFile {
   /** The name inside the archive (`documents/d1.pdf`). */
@@ -29,7 +30,6 @@ export interface CollectedTrip {
 }
 
 const iso = (d: Date | null): string | null => (d ? d.toISOString() : null);
-const isoDay = (d: Date | null): string | null => (d ? d.toISOString().slice(0, 10) : null);
 
 /** File-local keys per kind: the first flight is `f1`, whatever its id. */
 function keyer(prefix: string): (id: string) => string {
@@ -43,11 +43,6 @@ function keyer(prefix: string): (id: string) => string {
     return k;
   };
 }
-
-const extensionOf = (name: string, fallback: string): string => {
-  const ext = path.extname(name).slice(1).toLowerCase();
-  return /^[a-z0-9]{1,8}$/.test(ext) ? ext : fallback;
-};
 
 function portRef(
   port: {
@@ -123,7 +118,7 @@ async function loadTrip(userId: string, tripId: string) {
   return trip;
 }
 
-type LoadedTrip = Awaited<ReturnType<typeof loadTrip>>;
+export type LoadedTrip = Awaited<ReturnType<typeof loadTrip>>;
 
 function placesAndVisits(trip: LoadedTrip, priv: boolean) {
   const placeKey = keyer("p");
@@ -729,60 +724,5 @@ function collectRoadtrips(
           }
         : {}),
     };
-  });
-}
-
-async function collectDocuments(
-  userId: string,
-  trip: LoadedTrip,
-  file: TripFile,
-  files: PackedFile[],
-  keys: Record<Exclude<EntityKind, "trip">, (id: string) => string>
-): Promise<void> {
-  const ids = <T extends { id: string }>(list: T[]) => list.map((e) => e.id);
-  const documents = await prisma.document.findMany({
-    where: {
-      userId,
-      OR: [
-        { tripId: trip.id },
-        { flightId: { in: ids(trip.flights) } },
-        { lodgingStayId: { in: ids(trip.lodgingStays) } },
-        { cruiseId: { in: ids(trip.cruises) } },
-        { railJourneyId: { in: ids(trip.railJourneys) } },
-        { busJourneyId: { in: ids(trip.busJourneys) } },
-        { ferryJourneyId: { in: ids(trip.ferryJourneys) } },
-        { rentalBookingId: { in: ids(trip.rentalBookings) } },
-        { placeVisitId: { in: ids(trip.placeVisits) } },
-      ],
-    },
-    orderBy: { createdAt: "asc" },
-  });
-  documents.forEach((d, i) => {
-    const entity: TripFile["documents"][number]["entity"] = d.flightId
-      ? { kind: "flight", key: keys.flight(d.flightId) }
-      : d.lodgingStayId
-        ? { kind: "stay", key: keys.stay(d.lodgingStayId) }
-        : d.cruiseId
-          ? { kind: "cruise", key: keys.cruise(d.cruiseId) }
-          : d.railJourneyId
-            ? { kind: "rail", key: keys.rail(d.railJourneyId) }
-            : d.busJourneyId
-              ? { kind: "bus", key: keys.bus(d.busJourneyId) }
-              : d.ferryJourneyId
-                ? { kind: "ferry", key: keys.ferry(d.ferryJourneyId) }
-                : d.rentalBookingId
-                  ? { kind: "rental", key: keys.rental(d.rentalBookingId) }
-                  : d.placeVisitId
-                    ? { kind: "visit", key: keys.visit(d.placeVisitId) }
-                    : { kind: "trip", key: null };
-    const name = `documents/d${i + 1}.${extensionOf(d.storedName, "bin")}`;
-    files.push({ name, source: documentPath(d.storedName) });
-    file.documents.push({
-      file: name,
-      entity,
-      kind: d.kind,
-      issuedOn: isoDay(d.issuedOn),
-      originalName: d.originalName,
-    });
   });
 }

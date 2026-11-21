@@ -360,7 +360,7 @@ const livePosition = registry.register(
         track: z.number().nullable().describe("Degrees true"),
         seenSeconds: z.number().nullable().describe("Seconds since the last message"),
       }),
-      source: z.enum(["adsbx", "adsblol"]),
+      source: z.enum(["adsbx", "adsblol", "airplaneslive"]),
       fetchedAt: z
         .string()
         .datetime()

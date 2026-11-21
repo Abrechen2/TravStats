@@ -43,6 +43,10 @@ export interface TourPathDatum {
    * heavier. Colour cannot carry it: the user may even paint both alike.
    */
   isRoadtrip: boolean;
+  /** Off the trip map's chosen day: drawn faint, not hidden. */
+  dim?: boolean;
+  /** No day to judge it by while a day is chosen: drawn as with no filter (forgejo#424). */
+  neutral?: boolean;
   label: string;
 }
 
@@ -54,6 +58,8 @@ export function buildTourPaths(
     /** Overrides the tour hue — a roadtrip's line is drawn in its domain colour (2.7). */
     rgb?: [number, number, number];
     isRoadtrip?: boolean;
+    dim?: boolean;
+    neutral?: boolean;
   }[]
 ): TourPathDatum[] {
   const out: TourPathDatum[] = [];
@@ -68,13 +74,23 @@ export function buildTourPaths(
         color: g.rgb ?? TOUR_RGB,
         isPlaceholder: f.properties.source === "straight",
         isRoadtrip: g.isRoadtrip === true,
+        dim: g.dim === true,
+        neutral: g.neutral === true,
         label: `${g.name} · ${Math.round(f.properties.distanceKm)} km`,
       });
     }
   }
   return groupMapData(
     out,
-    (p) => JSON.stringify([p.color, p.isRoadtrip, p.isPlaceholder, pathIdentity(p.path)]),
+    (p) =>
+      JSON.stringify([
+        p.color,
+        p.isRoadtrip,
+        p.isPlaceholder,
+        p.dim,
+        p.neutral,
+        pathIdentity(p.path),
+      ]),
     (p) => p.legId
   );
 }

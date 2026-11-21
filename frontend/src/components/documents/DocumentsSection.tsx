@@ -13,6 +13,8 @@ import {
   documentsApi,
   isDemoForbidden,
   type DocumentEntryRef,
+  type DocumentLinkView,
+  type RemovedDocumentLink,
   type DocumentLimits,
   type RentalDocumentCategory,
   type TravelDocument,
@@ -26,6 +28,9 @@ import type { ExtractTarget } from "../../lib/extractValues";
 import { DOCUMENT_FORMAT_ICON, exceededDocumentLimit } from "./documentDisplay";
 import { ExtractValuesAction } from "./ExtractValuesAction";
 import { StoredValuesAction } from "./StoredValuesAction";
+import { EntryLink, linkErrorKey } from "./documentLinkUi";
+import LinkDocumentDialog from "./LinkDocumentDialog";
+import TripDocumentDialog from "./TripDocumentDialog";
 
 interface Props {
   /** Which record these documents hang off. One of the five the API serves. */
@@ -126,6 +131,15 @@ export default function DocumentsSection({
    */
   const [demoRefused, setDemoRefused] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<TravelDocument | null>(null);
+  /** Every entry the document to be deleted is linked to; null while unknown (loading or failed). */
+  const [impact, setImpact] = useState<DocumentLinkView[] | null>(null);
+  const [impactFailed, setImpactFailed] = useState(false);
+  const [linkTarget, setLinkTarget] = useState<TravelDocument | null>(null);
+  const [tripDialog, setTripDialog] = useState(false);
+  /** The last removal from this entry, which "Rückgängig" puts back. */
+  const [undo, setUndo] = useState<{ doc: TravelDocument; removed: RemovedDocumentLink } | null>(
+    null
+  );
   /** The category the next upload is filed under (rental evidence only). */
   const [uploadCategory, setUploadCategory] = useState<RentalDocumentCategory | null>(null);
   /** A remark about the last upload that is not a failure. */
@@ -236,12 +250,87 @@ export default function DocumentsSection({
     [t]
   );
 
+  // The dialog names every entry the delete reaches; a failed read leaves the base sentence.
+  useEffect(() => {
+    setImpact(null);
+    setImpactFailed(false);
+    if (!pendingDelete) return;
+    let live = true;
+    documentsApi.links(pendingDelete.id).then(
+      (links) => {
+        if (live) setImpact(links);
+      },
+      (err: unknown) => {
+        logger.warn({ err }, "DocumentsSection: delete impact unavailable");
+        if (live) setImpactFailed(true);
+      }
+    );
+    return () => {
+      live = false;
+    };
+  }, [pendingDelete]);
+
+  /** "Von diesem Eintrag entfernen": only this entry's link; the document and its others stay. */
+  const handleUnlink = useCallback(
+    async (doc: TravelDocument): Promise<void> => {
+      setBusy(true);
+      setUndo(null);
+      try {
+        const removed = await documentsApi.unlinkFromEntry(doc.id, {
+          type: entryType,
+          id: entryId,
+        });
+        setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+        setUndo({ doc, removed });
+        setError(null);
+        onChanged?.();
+      } catch (err: unknown) {
+        if (isDemoForbidden(err)) setDemoRefused(true);
+        else {
+          logger.error({ err, id: doc.id }, "DocumentsSection: unlink failed");
+          setError(t(linkErrorKey(err)));
+          // The list was stale (link already gone, document deleted elsewhere).
+          void reload();
+        }
+      } finally {
+        setBusy(false);
+      }
+    },
+    [entryType, entryId, onChanged, reload, t]
+  );
+
+  const handleUndo = useCallback(async (): Promise<void> => {
+    if (!undo) return;
+    setBusy(true);
+    try {
+      await documentsApi.addLinks(undo.doc.id, [
+        {
+          entry: undo.removed.entry,
+          role: undo.removed.role,
+          provenance: undo.removed.provenance,
+          rentalCategory: undo.removed.rentalCategory,
+        },
+      ]);
+      setUndo(null);
+      setError(null);
+      await reload();
+      onChanged?.();
+    } catch (err: unknown) {
+      logger.error({ err, id: undo.doc.id }, "DocumentsSection: undo failed");
+      setUndo(null);
+      setError(t(linkErrorKey(err)));
+    } finally {
+      setBusy(false);
+    }
+  }, [undo, reload, onChanged, t]);
+
   const handleDelete = useCallback(async (): Promise<void> => {
     if (!pendingDelete) return;
     const { id } = pendingDelete;
     setBusy(true);
     try {
       await documentsApi.remove(id);
+      setUndo(null);
       setDocuments((prev) => prev.filter((doc) => doc.id !== id));
       setError(null);
       onChanged?.();
@@ -264,76 +353,101 @@ export default function DocumentsSection({
 
   const locked = isSharedDemo || demoRefused;
 
+  // A row's category control is the PRIMARY link's; a covers row has none of its own.
+  const ROW_ACTIONS = [
+    {
+      key: "link",
+      label: "links.alsoLinkAction",
+      onClick: (d: TravelDocument) => setLinkTarget(d),
+    },
+    { key: "unlink", label: "links.unlink", onClick: (d: TravelDocument) => void handleUnlink(d) },
+    { key: "remove", label: "remove", onClick: (d: TravelDocument) => setPendingDelete(d) },
+  ] as const;
+
   const renderRow = (doc: TravelDocument): JSX.Element => (
-    <li key={doc.id} className="flex min-w-0 items-center" style={{ gap: "var(--ts-space-md)" }}>
-      <Icon
-        name={DOCUMENT_FORMAT_ICON[doc.format]}
-        size={16}
-        label={t(`documents:format.${doc.format}`)}
-        style={{ color: "var(--ts-muted)" }}
-      />
-      <a
-        // A plain link, not a fetch: the JWT is an HttpOnly cookie and
-        // a top-level navigation carries it.
-        href={documentFileUrl(doc)}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={t("documents:openLabel", { name: doc.displayName })}
-        className="min-w-0 flex-1 truncate text-sm"
-        style={{ color: "var(--ts-text-bright)", fontWeight: 600 }}
-      >
-        {doc.displayName}
-      </a>
-      {doc.format === "eml" && (
-        <a
-          href={documentDownloadUrl(doc)}
-          download
-          aria-label={t("documents:downloadLabel", { name: doc.displayName })}
-          className="t-caption shrink-0"
+    <li key={doc.id} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xs)" }}>
+      <div className="flex min-w-0 items-center" style={{ gap: "var(--ts-space-md)" }}>
+        <Icon
+          name={DOCUMENT_FORMAT_ICON[doc.format]}
+          size={16}
+          label={t(`documents:format.${doc.format}`)}
           style={{ color: "var(--ts-muted)" }}
-        >
-          {t("documents:download")}
-        </a>
-      )}
-      <span className="t-caption shrink-0">
-        {[
-          doc.kind ? t(`documents:kind.${doc.kind}`) : t(`documents:format.${doc.format}`),
-          formatBytes(doc.sizeBytes),
-          issuedOrCreated(doc, format),
-        ].join(" · ")}
-      </span>
-      {extract && !locked && EXTRACTABLE.has(doc.format) && (
-        <>
-          <StoredValuesAction documentId={doc.id} target={extract} />
-          <ExtractValuesAction documentId={doc.id} target={extract} />
-        </>
-      )}
-      {rentalCategories && !locked && (
-        <RentalCategorySelect
-          id={`document-category-${doc.id}`}
-          label={t("documents:rentalCategory.rowLabel", { name: doc.displayName })}
-          value={doc.rentalCategory ?? null}
-          disabled={busy}
-          onChange={(next) => void handleCategory(doc, next)}
         />
+        <a
+          // A plain link, not a fetch: the JWT is an HttpOnly cookie and
+          // a top-level navigation carries it.
+          href={documentFileUrl(doc)}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={t("documents:openLabel", { name: doc.displayName })}
+          className="min-w-0 flex-1 truncate text-sm"
+          style={{ color: "var(--ts-text-bright)", fontWeight: 600 }}
+        >
+          {doc.displayName}
+        </a>
+        {doc.format === "eml" && (
+          <a
+            href={documentDownloadUrl(doc)}
+            download
+            aria-label={t("documents:downloadLabel", { name: doc.displayName })}
+            className="t-caption shrink-0"
+            style={{ color: "var(--ts-muted)" }}
+          >
+            {t("documents:download")}
+          </a>
+        )}
+        <span className="t-caption shrink-0">
+          {[
+            doc.kind ? t(`documents:kind.${doc.kind}`) : t(`documents:format.${doc.format}`),
+            formatBytes(doc.sizeBytes),
+            issuedOrCreated(doc, format),
+          ].join(" · ")}
+        </span>
+        {extract && !locked && EXTRACTABLE.has(doc.format) && (
+          <>
+            <StoredValuesAction documentId={doc.id} target={extract} />
+            <ExtractValuesAction documentId={doc.id} target={extract} />
+          </>
+        )}
+        {rentalCategories && !locked && doc.linkRole !== "covers" && (
+          <RentalCategorySelect
+            id={`document-category-${doc.id}`}
+            label={t("documents:rentalCategory.rowLabel", { name: doc.displayName })}
+            value={doc.rentalCategory ?? null}
+            disabled={busy}
+            onChange={(next) => void handleCategory(doc, next)}
+          />
+        )}
+      </div>
+      {doc.linkRole === "covers" && doc.evidenceFrom && (
+        <p className="t-caption" data-testid="document-evidence-from">
+          {t("documents:links.evidenceFrom")}{" "}
+          <EntryLink entry={doc.evidenceFrom}>{doc.evidenceFrom.label}</EntryLink>
+        </p>
       )}
       {!locked && (
-        <button
-          type="button"
-          onClick={() => setPendingDelete(doc)}
-          aria-label={t("documents:removeLabel", { name: doc.displayName })}
-          // A finger-sized target beside the category select (review, minor 10).
-          className="shrink-0 text-sm pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-2"
-          style={{
-            background: "none",
-            border: "none",
-            padding: 0,
-            cursor: "pointer",
-            color: "var(--ts-muted)",
-          }}
-        >
-          {t("documents:remove")}
-        </button>
+        <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
+          {ROW_ACTIONS.map(({ key, label, onClick }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => onClick(doc)}
+              disabled={busy}
+              aria-label={t(`documents:${label}Label`, { name: doc.displayName })}
+              // A finger-sized target beside the category select (review, minor 10).
+              className="shrink-0 text-sm pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-2"
+              style={{
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                color: "var(--ts-muted)",
+              }}
+            >
+              {t(`documents:${label}`)}
+            </button>
+          ))}
+        </div>
       )}
     </li>
   );
@@ -355,7 +469,9 @@ export default function DocumentsSection({
           <p className="t-caption">{t("documents:empty")}</p>
         )
       ) : rentalCategories ? (
-        groupByRentalCategory(documents).map((group) => (
+        groupByRentalCategory(
+          documents.map((d) => (d.linkRole === "covers" ? { ...d, rentalCategory: null } : d))
+        ).map((group) => (
           <section
             key={group.category ?? "none"}
             aria-label={t(`documents:rentalCategory.${group.category ?? "none"}`)}
@@ -380,6 +496,31 @@ export default function DocumentsSection({
       {notice !== null && (
         <p className="t-caption" role="status" data-testid="documents-notice">
           {notice}
+        </p>
+      )}
+      {undo !== null && (
+        <p
+          className="t-caption flex flex-wrap items-center"
+          role="status"
+          style={{ gap: "var(--ts-space-md)" }}
+          data-testid="documents-undo"
+        >
+          {t("documents:links.unlinked", { name: undo.doc.displayName })}
+          <button
+            type="button"
+            onClick={() => void handleUndo()}
+            disabled={busy}
+            className="text-sm underline pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-2"
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              color: "var(--ts-text-bright)",
+            }}
+          >
+            {t("documents:links.undo")}
+          </button>
         </p>
       )}
       {error !== null && (
@@ -420,6 +561,22 @@ export default function DocumentsSection({
               onChange={(e) => void handleUpload(e.target.files?.[0])}
             />
           </label>
+          {layout === "card" && entry.type !== "trip" && (
+            <button
+              type="button"
+              onClick={() => setTripDialog(true)}
+              disabled={busy}
+              className="rounded-md px-3 py-2 text-xs pointer-coarse:min-h-(--ts-size-touch-min)"
+              style={{
+                border: "1px solid var(--ts-border)",
+                color: "var(--ts-muted)",
+                background: "none",
+                cursor: "pointer",
+              }}
+            >
+              {t("documents:links.fromTripAction")}
+            </button>
+          )}
           {limits && layout === "card" && (
             <span className="t-caption">
               {t("documents:limitHint", {
@@ -438,13 +595,47 @@ export default function DocumentsSection({
         isOpen={pendingDelete !== null}
         onClose={() => setPendingDelete(null)}
         onConfirm={() => void handleDelete()}
-        isLoading={busy}
+        // Not answerable until the entries it reaches are known — or known to be unknowable.
+        isLoading={busy || (pendingDelete !== null && impact === null && !impactFailed)}
         title={t("documents:deleteTitle")}
-        message={t("documents:deleteMessage", { name: pendingDelete?.displayName ?? "" })}
+        message={[
+          t("documents:deleteMessage", { name: pendingDelete?.displayName ?? "" }),
+          // Everything the delete reaches, named before it is asked (plan rule 5).
+          ...(impact && impact.length > 0
+            ? [
+                t("documents:links.deleteAffects", { count: impact.length }),
+                ...impact.map(
+                  (l) => `• ${t(`documents:links.entryType.${l.entry.type}`)}: ${l.entry.label}`
+                ),
+              ]
+            : impactFailed
+              ? [t("documents:links.errors.impactFailed")]
+              : []),
+        ].join("\n")}
         confirmText={t("common:buttons.delete")}
         cancelText={t("common:buttons.cancel")}
         confirmButtonClass={DELETE_BUTTON_CLASS}
       />
+      {linkTarget && (
+        <LinkDocumentDialog
+          document={linkTarget}
+          onClose={() => setLinkTarget(null)}
+          onLinked={() => {
+            void reload();
+            onChanged?.();
+          }}
+        />
+      )}
+      {tripDialog && (
+        <TripDocumentDialog
+          entry={{ type: entryType, id: entryId }}
+          onClose={() => setTripDialog(false)}
+          onLinked={() => {
+            void reload();
+            onChanged?.();
+          }}
+        />
+      )}
     </div>
   );
 

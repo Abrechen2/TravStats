@@ -106,7 +106,7 @@ export default function ListFilterBar({
     // above it: the title and the main action came first in the export, and
     // the translucent panel was one of the last hard-coded dark colours.
     <div className="mb-4">
-      <div className="mx-auto flex max-w-(--breakpoint-2xl) flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-1 flex-wrap items-center gap-2">
           {/* Capped at what the server accepts (`q` in flightQuerySchema).
               Without it a pasted paragraph is a 400, and a 400 on a list

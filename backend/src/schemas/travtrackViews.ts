@@ -49,6 +49,10 @@ export const travTrackPhotosQuerySchema = z
 export const travTrackPhotoFileQuerySchema = z
   .object({
     ...photoWindow,
+    provider: z
+      .enum(["immich", "photoprism"])
+      .default("immich")
+      .describe("The photo source of the asset; an older client sends none (Immich)"),
     size: z
       .enum(["thumbnail", "preview"])
       .default("thumbnail")
@@ -56,7 +60,11 @@ export const travTrackPhotoFileQuerySchema = z
   })
   .refine(photoWindowInOrder, "The window must not end before it starts");
 
-export const travTrackPhotoAssetIdSchema = z.string().uuid();
+/** An Immich asset id (uuid) or a PhotoPrism file hash (hex). */
+export const travTrackPhotoAssetIdSchema = z.union([
+  z.string().uuid(),
+  z.string().regex(/^[0-9a-f]{16,64}$/i),
+]);
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 

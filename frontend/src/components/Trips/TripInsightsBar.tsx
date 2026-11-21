@@ -59,7 +59,7 @@ export function TripInsightsBar({
     // No gutter of its own: AppShell draws it, and a second one narrowed the
     // page on a phone.
     <div>
-      <div className={`ts-insight-strip max-w-7xl mx-auto ${TRIP_GRID_CLASS} mb-4 sm:mb-6`}>
+      <div className={`ts-insight-strip ${TRIP_GRID_CLASS} mb-4 sm:mb-6`}>
         {tiles.map(({ key, label, win, excludedCount }) =>
           win ? (
             <button

@@ -10,6 +10,7 @@ import { visitTimeColumns } from "../../routes/places/visitTime";
 import { tripForVisitDay } from "./visitTrip";
 import { assertPlaceCategoryAllowed } from "./placeCategoryDefs";
 import type { CreateCaptureInput, ResolveCaptureInput } from "../../schemas/placeCapture";
+import { scheduleVisitAutoLink } from "./visitPhotoAutoLink";
 
 /**
  * Positions the Companion captured before they had a name (companion#90).
@@ -161,7 +162,7 @@ export async function resolveCapture(
   const tripId = await tripForVisitDay(prisma, userId, time);
   const happened = visitPromotesPlace(time);
 
-  return prisma.$transaction(async (tx) => {
+  const resolved = await prisma.$transaction(async (tx) => {
     const claimed = await tx.placeCapture.updateMany({
       where: { id, userId, status: "open" },
       data: { status: "resolved" },
@@ -196,6 +197,8 @@ export async function resolveCapture(
       data: { placeId: place.id, visitId: visit.id },
     });
   });
+  if (resolved.visitId) scheduleVisitAutoLink(userId, resolved.visitId);
+  return resolved;
 }
 
 /** Dismisses an open capture; the row stays as the record that it happened. */

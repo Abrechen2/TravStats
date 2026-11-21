@@ -30,7 +30,39 @@ const emptyStringToNull = z
 const LOCAL_DATETIME_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/;
 const localDateTime = z
   .string()
-  .regex(LOCAL_DATETIME_REGEX, "Expected YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss");
+  .regex(
+    LOCAL_DATETIME_REGEX,
+    "Expected YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss (a bare YYYY-MM-DD only with DATE_ONLY semantics)"
+  );
+
+const LOCAL_DAY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+/** The wall clock a date-only flight is stored at — the form's noon (forgejo#273). */
+const DATE_ONLY_ANCHOR = "T12:00";
+
+/**
+ * A bare `YYYY-MM-DD` in `departureLocal` / `arrivalLocal` is accepted with
+ * `DATE_ONLY` semantics and becomes the form's noon anchor, so the API writes
+ * the same instant the historical form does and one convention holds in the
+ * column (GitHub #403). Without DATE_ONLY the day is left alone and the regex
+ * above refuses it — a day is not a wall clock a flight can be timed by.
+ */
+export function dayOnlyToWallClock(input: unknown): unknown {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) return input;
+  const body = { ...(input as Record<string, unknown>) };
+  const sides = [
+    ["departureLocal", "depTimeSemantics"],
+    ["arrivalLocal", "arrTimeSemantics"],
+  ] as const;
+  for (const [localKey, semanticsKey] of sides) {
+    const value = body[localKey];
+    if (typeof value !== "string" || body[semanticsKey] !== "DATE_ONLY") continue;
+    if (!LOCAL_DAY_REGEX.test(value)) continue;
+    const real = new Date(`${value}T00:00:00Z`);
+    if (Number.isNaN(real.getTime()) || real.toISOString().slice(0, 10) !== value) continue;
+    body[localKey] = `${value}${DATE_ONLY_ANCHOR}`;
+  }
+  return body;
+}
 
 function isValidIanaTimezone(tz: string): boolean {
   try {
@@ -469,36 +501,42 @@ const requireStatusTimeAxisSanity = (
   }
 };
 
-export const createFlightSchema = baseFlightSchema
-  // Create only (#355): an update moves a flight between trips through the
-  // trip routes, whose ownership checks this schema cannot see.
-  .extend({ tripId: z.string().uuid().nullable().optional() })
-  .superRefine(requirePairedTimezone)
-  .superRefine(requireExistingWallClock)
-  .superRefine(requireChronologicalOrder)
-  .superRefine(requireStatusTimeAxisSanity)
-  .refine(
-    (data) => {
-      if (data.status === "historical" || data.status === "duplicated") return true;
-      // `flown` and `scheduled` need both dep + arr times — historicals can
-      // legitimately omit arrival (date-only bulk imports). Chronological
-      // order itself is now handled in `requireChronologicalOrder` above.
-      return Boolean(data.departureLocal && data.arrivalLocal);
-    },
-    {
-      message: "Non-historical flights require both departureLocal and arrivalLocal",
-      path: ["arrivalLocal"],
-    }
-  );
+export const createFlightSchema = z.preprocess(
+  dayOnlyToWallClock,
+  baseFlightSchema
+    // Create only (#355): an update moves a flight between trips through the
+    // trip routes, whose ownership checks this schema cannot see.
+    .extend({ tripId: z.string().uuid().nullable().optional() })
+    .superRefine(requirePairedTimezone)
+    .superRefine(requireExistingWallClock)
+    .superRefine(requireChronologicalOrder)
+    .superRefine(requireStatusTimeAxisSanity)
+    .refine(
+      (data) => {
+        if (data.status === "historical" || data.status === "duplicated") return true;
+        // `flown` and `scheduled` need both dep + arr times — historicals can
+        // legitimately omit arrival (date-only bulk imports). Chronological
+        // order itself is now handled in `requireChronologicalOrder` above.
+        return Boolean(data.departureLocal && data.arrivalLocal);
+      },
+      {
+        message: "Non-historical flights require both departureLocal and arrivalLocal",
+        path: ["arrivalLocal"],
+      }
+    )
+);
 
-export const updateFlightSchema = partialForUpdate(baseFlightSchema)
-  .superRefine(requirePairedTimezone)
-  .superRefine(requireExistingWallClock)
-  .superRefine(requireChronologicalOrder)
-  .superRefine(requireStatusTimeAxisSanity)
-  .refine((data) => Object.keys(data).length > 0, {
-    message: "At least one field must be provided for update",
-  });
+export const updateFlightSchema = z.preprocess(
+  dayOnlyToWallClock,
+  partialForUpdate(baseFlightSchema)
+    .superRefine(requirePairedTimezone)
+    .superRefine(requireExistingWallClock)
+    .superRefine(requireChronologicalOrder)
+    .superRefine(requireStatusTimeAxisSanity)
+    .refine((data) => Object.keys(data).length > 0, {
+      message: "At least one field must be provided for update",
+    })
+);
 
 export const SPECIAL_TYPE_FILTER_NONE = "standard";
 export const SPECIAL_TYPE_FILTER_ANY = "special";

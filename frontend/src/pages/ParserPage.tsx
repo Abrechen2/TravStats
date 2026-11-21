@@ -133,7 +133,7 @@ export default function ParserPage(): JSX.Element {
   ];
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <PageHeader title={t("parser:title")} meta={t("parser:description")} />
       <ParserOverview onCreate={() => setActiveTab("annotate")} />
       <div>

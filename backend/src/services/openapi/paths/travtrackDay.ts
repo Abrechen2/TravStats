@@ -99,6 +99,20 @@ const day = z.object({
     ),
   pointCount: z.number().int(),
   truncated: z.boolean().describe("More points than one day answer carries"),
+  omitted: z
+    .object({
+      privacyZone: z.number().int().describe("Stored fixes the privacy cut hid"),
+      implausible: z
+        .number()
+        .int()
+        .describe(
+          "Fixes left out as implausible (coarse, null island); `includeImplausible=1` draws them"
+        ),
+    })
+    .describe(
+      "Why a day may show fewer points than were stored: counts only, never a position. With " +
+        '`pointCount` 0 they tell "nothing recorded" from "recorded but not drawn"'
+    ),
 });
 
 registry.registerPath({

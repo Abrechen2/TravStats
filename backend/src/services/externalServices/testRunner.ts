@@ -14,6 +14,7 @@ import { decryptApiKey } from "../../utils/encryption";
 import { testConnection as testWebDAVConnection } from "../cloudSyncService";
 import { testDawarichConnection } from "../dawarich/dawarichTester";
 import { testImmichConnection } from "../immich/immichTester";
+import { testPhotoprismConnection } from "../photoprism/photoprismTester";
 import { accountMayReachPrivate } from "../egress/privateTargets";
 import {
   ANTHROPIC_BASE_URL,
@@ -34,7 +35,7 @@ import {
   testOpenSkyCredentials,
   type ApiKeyTestResult,
 } from "../apiKeyTester";
-import { testAdsbLolKey, testAdsbxKey } from "../apiKeyTesterAdsbx";
+import { testAdsbLolKey, testAdsbxKey, testAirplanesLive } from "../apiKeyTesterAdsbx";
 import { testAeroapiKey } from "../apiKeyTesterAeroapi";
 import { getService } from "./catalogue";
 import { loadAdminState, isEnabled } from "./adminView";
@@ -144,6 +145,8 @@ async function run(
     case "adsblol":
       // Keyless: the tester accepts an empty key.
       return fromKeyResult(await testAdsbLolKey(c.apiKey ?? "", userId));
+    case "airplaneslive":
+      return fromKeyResult(await testAirplanesLive());
     case "googlePlaces":
       return keyed(testGooglePlacesKey);
     case "openrouteservice":
@@ -164,6 +167,12 @@ async function run(
           userId
         )
       );
+    case "photoprism": {
+      if (!c.baseUrl || !c.token) return { ok: false, reason: "not_found" };
+      const policy = { allowPrivate: userId ? await accountMayReachPrivate(userId) : true };
+      const r = await testPhotoprismConnection(c.baseUrl, c.token, policy);
+      return { ok: r.success, reason: r.success ? null : toReasonCode(r.kind) };
+    }
     case "immich":
     case "dawarich": {
       if (!c.baseUrl || !c.apiKey) return { ok: false, reason: "not_found" };

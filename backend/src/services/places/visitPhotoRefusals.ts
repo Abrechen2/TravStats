@@ -1,4 +1,7 @@
 import { prisma } from "../../db";
+import { refusalKey } from "../photoLinking/matcher";
+import type { PhotoSourceKind } from "../photoSource";
+import { toPhotoSourceKind } from "../photoSource/connection";
 
 /**
  * "Nicht diese" on a visit's photo suggestion (forgejo#132 item 13), kept by
@@ -16,10 +19,13 @@ import { prisma } from "../../db";
 export interface RefusalPicks {
   tripPhotoIds: string[];
   assetIds: string[];
+  /** Source of `assetIds`; Immich when absent. */
+  provider?: PhotoSourceKind;
 }
 
 export interface RefusedIds {
   trip: Set<string>;
+  /** `provider:assetId` keys (`refusalKey`), because an id is only unique per source. */
   library: Set<string>;
 }
 
@@ -44,7 +50,11 @@ export async function refusePhotoSuggestions(
   });
   const rows = [
     ...owned.map((p) => ({ kind: "trip", suggestionId: p.id })),
-    ...picks.assetIds.map((id) => ({ kind: "library", suggestionId: id })),
+    ...picks.assetIds.map((id) => ({
+      kind: "library",
+      provider: picks.provider ?? "immich",
+      suggestionId: id,
+    })),
   ];
   const { count } = await prisma.visitPhotoRefusal.createMany({
     data: rows.map((row) => ({ ...row, userId, placeVisitId: visitId })),
@@ -69,9 +79,14 @@ export async function clearPhotoRefusals(
 export async function refusedIds(visitId: string): Promise<RefusedIds> {
   const rows = await prisma.visitPhotoRefusal.findMany({
     where: { placeVisitId: visitId },
-    select: { kind: true, suggestionId: true },
+    select: { kind: true, provider: true, suggestionId: true },
   });
-  const of = (kind: string) =>
-    new Set(rows.filter((r) => r.kind === kind).map((r) => r.suggestionId));
-  return { trip: of("trip"), library: of("library") };
+  return {
+    trip: new Set(rows.filter((r) => r.kind === "trip").map((r) => r.suggestionId)),
+    library: new Set(
+      rows
+        .filter((r) => r.kind === "library")
+        .map((r) => refusalKey(toPhotoSourceKind(r.provider), r.suggestionId))
+    ),
+  };
 }

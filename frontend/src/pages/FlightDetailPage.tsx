@@ -172,7 +172,7 @@ export default function FlightDetailPage(): JSX.Element {
   // shows the loading view instead of the previous flight.
   if (loading && flight?.id !== id) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <p className="text-[var(--text-muted)]">{t("flights:table.loading")}</p>
       </AppShell>
     );
@@ -181,7 +181,7 @@ export default function FlightDetailPage(): JSX.Element {
   if (failure !== null || !flight) {
     const isLoadError = failure === "loadError";
     return (
-      <AppShell width="reading">
+      <AppShell>
         <div>
           <Link to="/flights" className="ts-back-link text-sm text-[var(--text-muted)]">
             ← {t("flights:table.title")}
@@ -238,7 +238,7 @@ export default function FlightDetailPage(): JSX.Element {
   const withDayCard = dayCardShown(flight);
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <DetailHeader
         backTo="/flights"
         backLabel={t("flights:detail.backToLogbook")}
@@ -511,10 +511,8 @@ export default function FlightDetailPage(): JSX.Element {
         onConfirm={() => void handleDelete()}
         isLoading={deleting}
         title={t("flights:table.deleteConfirm.title")}
-        // Finding 3 of the write-path audit (2026-09-19): a flight's
-        // documents cascade with it (`onDelete: Cascade`, proven live by
-        // `backend/src/__tests__/integrity/cascades.integrity.test.ts`) and
-        // the dialog named only the flight.
+        // Finding 3 of the write-path audit (2026-09-19): the dialog
+        // named only the flight; its documents are detached, not deleted (document links, D1).
         message={flightDeleteMessage(
           t,
           {

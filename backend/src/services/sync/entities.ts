@@ -212,7 +212,8 @@ const ENTITIES: readonly SyncEntity[] = [
     find: (args) => prisma.lodging.findMany(args),
     visible: inDomain("lodging"),
     tombstoneVisible: inDomain("lodging"),
-    omit: [],
+    // Server-maintained review marker, not something an edit can clash with.
+    omit: ["locationCheck"],
     versioned: true,
     reachable: domainShown("lodging"),
   },

@@ -59,11 +59,51 @@ describe("VisitPhotoSuggestions", () => {
       expect(linkVisitPhotoSuggestions).toHaveBeenCalledWith("visit-1", {
         tripPhotoIds: [],
         assetIds: ["as-1"],
+        provider: "immich",
       })
     );
     await waitFor(() => expect(onLinked).toHaveBeenCalledWith([linkedPhoto]));
     // The linked one is no longer offered.
     expect(screen.getAllByRole("button", { pressed: false })).toHaveLength(1);
+  });
+
+  it("links a PhotoPrism pick under its own source, apart from an Immich pick with the same id", async () => {
+    getVisitPhotoSuggestions.mockResolvedValue({
+      day: "2024-05-01",
+      suggestions: [
+        { ...LIBRARY, provider: "immich" },
+        { ...LIBRARY, url: "/l/2", provider: "photoprism" },
+      ],
+      library: "ok",
+      sources: { immich: "ok", photoprism: "ok" },
+    });
+    linkVisitPhotoSuggestions.mockResolvedValue({ linked: 1, skipped: 0 });
+    listVisitPhotos.mockResolvedValue([]);
+    render(<VisitPhotoSuggestions visitId="visit-1" onLinked={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.open" }));
+    const tiles = await screen.findAllByRole("button", { pressed: false });
+    await userEvent.click(tiles[1]);
+    await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.link" }));
+    await waitFor(() =>
+      expect(linkVisitPhotoSuggestions).toHaveBeenCalledWith("visit-1", {
+        tripPhotoIds: [],
+        assetIds: ["as-1"],
+        provider: "photoprism",
+      })
+    );
+    expect(linkVisitPhotoSuggestions).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a failing source even while the other answered", async () => {
+    getVisitPhotoSuggestions.mockResolvedValue({
+      day: "2024-05-01",
+      suggestions: [],
+      library: "ok",
+      sources: { immich: "ok", photoprism: "auth" },
+    });
+    render(<VisitPhotoSuggestions visitId="visit-1" onLinked={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.open" }));
+    expect(await screen.findByText("places:photos.suggest.libraryDown")).toBeInTheDocument();
   });
 
   it("says why an undated visit gets nothing, and when the library was down", async () => {
@@ -111,6 +151,7 @@ describe("VisitPhotoSuggestions", () => {
       expect(refuseVisitPhotoSuggestions).toHaveBeenCalledWith("visit-1", {
         tripPhotoIds: ["tp-1"],
         assetIds: [],
+        provider: "immich",
       })
     );
     await waitFor(() => expect(screen.getAllByRole("button", { pressed: false })).toHaveLength(1));

@@ -175,7 +175,9 @@
     "document": {
       "file": "Das Dokument wird an der Reise abgelegt.",
       "alreadyOnTrip": "Das Dokument liegt schon an dieser Reise.",
-      "filedElsewhere": "Das Dokument liegt bei einem anderen Eintrag."
+      "filedElsewhere": "Das Dokument liegt bei einem anderen Eintrag.",
+      "covers": "Das Dokument belegt außerdem: {{entries}}.",
+      "cruise": "Kreuzfahrt"
     },
     "nothingNew": "Alles aus diesem Dokument ist schon vorhanden.",
     "commit": "Reise übernehmen",

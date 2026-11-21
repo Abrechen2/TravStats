@@ -40,6 +40,14 @@ import { groupMapData, pathIdentity } from "../layers/routeAggregation";
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import {
+  dayState,
+  dimFirst,
+  emphasisColor,
+  emphasisWidth,
+  tourDrawOrder,
+  tourState,
+} from "./tripMapEmphasis";
+import {
   EarthOcclusionExtension,
   type EarthOcclusionExtensionProps,
 } from "../Globe/EarthOcclusionExtension";
@@ -68,6 +76,8 @@ export interface TripFlightArc {
   label: string;
   /** Resolved upstream — see `Trips/tripMapColors.ts`. Never decided here. */
   color: [number, number, number];
+  /** Off the chosen day: drawn faint rather than hidden (`tripMapDays.ts`). */
+  dim?: boolean;
 }
 
 export interface TripCruisePath {
@@ -75,6 +85,7 @@ export interface TripCruisePath {
   path: [number, number][];
   label: string;
   color: [number, number, number];
+  dim?: boolean;
   /** The leg's ports, and the journey hover read off them (forgejo#323). */
   fromPortId?: number;
   toPortId?: number;
@@ -87,6 +98,12 @@ export interface TripPointDatum {
   color: [number, number, number];
   radiusMeters: number;
   kind: "airport" | "stop" | "lodging";
+  /** The entity behind the dot, so a click can open its card. */
+  entityId?: string;
+  /** Off the chosen day: drawn faint rather than hidden. */
+  dim?: boolean;
+  /** Place in the trip's order; the globe draws it as an HTML chip (`TripGlobeAnnotations`). */
+  seq?: number;
   /**
    * What the SHARED marker tooltip reads off a picked object
    * (`map/markerTooltip.ts`). Present on lodging markers, absent everywhere
@@ -162,6 +179,7 @@ export function toGlobeLabelPoints(points: readonly TripPointDatum[]): GlobePoin
       iata: p.label,
       name: p.label,
       label: p.label,
+      dim: p.dim,
     }));
 }
 
@@ -203,6 +221,8 @@ export function toGlobeLodgingPoints(
 }
 
 export interface TripMapGlobeLayersOptions {
+  /** A day is chosen: the rest is grey and thin, the day wide (forgejo#424). */
+  dayChosen?: boolean;
   flightArcs: readonly TripFlightArc[];
   cruisePaths: readonly TripCruisePath[];
   tourPaths: readonly TourPathDatum[];
@@ -222,13 +242,19 @@ export interface TripMapGlobeStack {
   native: Layer[];
 }
 
-function markerLayer(id: string, data: readonly TripPointDatum[], radiusPx: number): Layer {
+function markerLayer(
+  id: string,
+  data: readonly TripPointDatum[],
+  radiusPx: number,
+  chosen: boolean
+): Layer {
   return new ScatterplotLayer<TripPointDatum>({
     id,
-    data: data as TripPointDatum[],
+    data: dimFirst(data),
     getPosition: (d) => d.position,
-    getFillColor: (d) => [...d.color, MARKER_ALPHA] as [number, number, number, number],
-    getRadius: radiusPx,
+    getFillColor: (d) => emphasisColor(d.color, dayState(d.dim, chosen), MARKER_ALPHA),
+    getRadius: (d) => emphasisWidth(radiusPx, dayState(d.dim, chosen)),
+    updateTriggers: { getFillColor: [chosen], getRadius: [chosen] },
     radiusUnits: "pixels",
     stroked: true,
     getLineColor: MARKER_OUTLINE,
@@ -239,14 +265,20 @@ function markerLayer(id: string, data: readonly TripPointDatum[], radiusPx: numb
 }
 
 export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMapGlobeStack {
-  const { flightArcs, cruisePaths, tourPaths, airportPoints, stopPoints, lodgingPoints } = opts;
+  const { airportPoints, stopPoints, lodgingPoints } = opts;
+  const chosen = opts.dayChosen === true;
+  const flightArcs = dimFirst(opts.flightArcs);
+  const cruisePaths = dimFirst(opts.cruisePaths);
+  const tourPaths = tourDrawOrder(opts.tourPaths);
+  const stateOf = (d: { dim?: boolean }) => dayState(d.dim, chosen);
 
   const arcs = new PathLayer<TripFlightArc>({
     id: "trip-flight-arcs",
     data: flightArcs as TripFlightArc[],
     getPath: tripArcWaypoints,
-    getColor: (d) => [...d.color, LINE_ALPHA] as [number, number, number, number],
-    getWidth: 2,
+    getColor: (d) => emphasisColor(d.color, stateOf(d), LINE_ALPHA),
+    getWidth: (d) => emphasisWidth(2, stateOf(d)),
+    updateTriggers: { getColor: [chosen], getWidth: [chosen] },
     widthUnits: "pixels",
     widthMinPixels: 1.5,
     widthMaxPixels: 4,
@@ -267,12 +299,13 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMa
     id: "trip-cruise-paths",
     data: groupMapData(
       cruisePaths,
-      (p) => JSON.stringify([p.color, pathIdentity(p.path)]),
+      (p) => JSON.stringify([p.color, pathIdentity(p.path), p.dim === true]),
       (p) => p.cruiseId
     ),
     getPath: (d) => d.path,
-    getColor: (d) => [...d.color, LINE_ALPHA] as [number, number, number, number],
-    getWidth: 3,
+    getColor: (d) => emphasisColor(d.color, stateOf(d), LINE_ALPHA),
+    getWidth: (d) => emphasisWidth(3, stateOf(d)),
+    updateTriggers: { getColor: [chosen], getWidth: [chosen] },
     widthUnits: "pixels",
     widthMinPixels: 2,
     widthMaxPixels: 5,
@@ -289,10 +322,11 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMa
     id: "trip-tour-paths",
     data: tourPaths as TourPathDatum[],
     getPath: (d) => d.path,
-    getColor: (d) => [...d.color, d.isPlaceholder ? 170 : 255] as [number, number, number, number],
-    getWidth: (d) => (d.isPlaceholder ? 2 : 3.5),
+    getColor: (d) => emphasisColor(d.color, tourState(d, chosen), d.isPlaceholder ? 170 : 255),
+    getWidth: (d) => emphasisWidth(d.isPlaceholder ? 2 : 3.5, tourState(d, chosen)),
+    updateTriggers: { getColor: [chosen], getWidth: [chosen] },
     widthUnits: "pixels",
-    widthMinPixels: 2,
+    widthMinPixels: 1,
     capRounded: true,
     jointRounded: true,
     wrapLongitude: false,
@@ -304,9 +338,9 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMa
     native: [
       cruises,
       tours,
-      markerLayer("trip-airports", airportPoints, GLOBE_AIRPORT_RADIUS_PX),
-      markerLayer("lodging-pins", lodgingPoints, GLOBE_STOP_RADIUS_PX),
-      markerLayer("trip-stops", stopPoints, GLOBE_STOP_RADIUS_PX),
+      markerLayer("trip-airports", airportPoints, GLOBE_AIRPORT_RADIUS_PX, chosen),
+      markerLayer("lodging-pins", lodgingPoints, GLOBE_STOP_RADIUS_PX, chosen),
+      markerLayer("trip-stops", stopPoints, GLOBE_STOP_RADIUS_PX, chosen),
     ],
   };
 }

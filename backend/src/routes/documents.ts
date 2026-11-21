@@ -19,7 +19,6 @@ import {
   createDocument,
   deleteDocument,
   getOwnDocument,
-  listDocumentsForEntry,
   listUnfiledDocuments,
   UNLINKED_TTL_DAYS,
   toDocumentDto,
@@ -27,6 +26,7 @@ import {
   updateDocument,
   type EntryType,
 } from "../services/documents/documentService";
+import { listEntryDocuments } from "../services/documents/documentEntryLinks";
 import { listOwnDocuments } from "../services/documents/documentList";
 import { documentPath } from "../services/documents/documentStore";
 import { renderEmlAsText } from "../services/documents/emlPreview";
@@ -148,7 +148,16 @@ router.get(
     try {
       const page = documentListQuerySchema.parse(req.query);
       const { documents, total } = await listOwnDocuments(req.userId!, page);
-      res.json({ success: true, data: { documents: documents.map(toDocumentDto), total } });
+      res.json({
+        success: true,
+        data: {
+          documents: documents.map(({ document, linkCount }) => ({
+            ...toDocumentDto(document),
+            linkCount,
+          })),
+          total,
+        },
+      });
     } catch (error) {
       next(error);
     }
@@ -204,8 +213,12 @@ for (const type of ENTRY_TYPES) {
     async (req: AuthRequest, res: Response, next: NextFunction) => {
       try {
         const id = parseOrThrow(uuid, req.params.id);
-        const documents = await listDocumentsForEntry(req.userId!, { type, id });
-        res.json({ success: true, data: documents.map(toDocumentDto) });
+        // Primary AND covers links (plan D2); the extra fields are optional ones.
+        const entries = await listEntryDocuments(req.userId!, { type, id });
+        res.json({
+          success: true,
+          data: entries.map(({ document, link }) => ({ ...toDocumentDto(document), ...link })),
+        });
       } catch (error) {
         next(error);
       }

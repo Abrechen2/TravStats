@@ -191,6 +191,17 @@ describe("readiness page", () => {
     expect(within(row).getByText("readiness:checkNow")).toBeTruthy();
   });
 
+  // Owner, 2026-11-20: "Öffnen" was near-black on the dark card. The link wore
+  // --ts-accent-text, the ink meant for text ON an accent fill.
+  it("draws the open link in the accent colour, not the ink for text on an accent fill", async () => {
+    show(response([item({ id: "optional1" })]));
+    await screen.findByText("readiness:check.optional1.title");
+    const links = screen.getAllByText("readiness:openAction");
+    for (const link of links) {
+      expect(link.style.color).toBe("var(--ts-accent)");
+    }
+  });
+
   it("offers 'nutze ich nicht' only where the item allows it, never for a required one", async () => {
     show(
       response([

@@ -272,25 +272,26 @@ export default function TripRouteEditorPage(): JSX.Element {
   }, [geometry, recordingGeometry, route?.id, route?.name, route?.kind, roadtripHex]);
 
   /**
-   * What the map draws when there is no trip: the tour's own points. A
+   * What the map draws: the tour's own points, with or without a trip. A
    * standalone tour used to get no map at all, because the map could only
-   * draw a TRIP; since 2.7 it draws whatever content it is handed.
+   * draw a TRIP; since 2.7 it draws whatever content it is handed. A tour
+   * inside a trip drew the whole trip — owner, 2026-11-20: a 4.5 km hike in
+   * Madagascar opened on the flights from Germany, framed on two continents.
    */
   const mapContent = useMemo<TripMapContent>(
-    () =>
-      trip ?? {
-        // A route correction bends the line; it is not a stop to mark.
-        stops: sectionStops
-          .filter((s) => s.viaPoint !== true)
-          .map((s) => ({
-            title: s.title,
-            lat: s.lat,
-            lon: s.lon,
-            domain: "tour",
-          })),
-        emptyKey: route?.kind === "roadtrip" ? "roadtrips:map.empty" : "trips:tours.map.empty",
-      },
-    [trip, sectionStops, route?.kind]
+    () => ({
+      // A route correction bends the line; it is not a stop to mark.
+      stops: sectionStops
+        .filter((s) => s.viaPoint !== true)
+        .map((s) => ({
+          title: s.title,
+          lat: s.lat,
+          lon: s.lon,
+          domain: "tour",
+        })),
+      emptyKey: route?.kind === "roadtrip" ? "roadtrips:map.empty" : "trips:tours.map.empty",
+    }),
+    [sectionStops, route?.kind]
   );
 
   const handleActivityChange = useCallback(
@@ -545,7 +546,7 @@ export default function TripRouteEditorPage(): JSX.Element {
 
   if (loading) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <div className="flex items-center justify-center py-20 text-(--text-muted)">
           {t("common:loading.default")}
         </div>
@@ -559,7 +560,7 @@ export default function TripRouteEditorPage(): JSX.Element {
   // tour's page into "could not be loaded" — found in the browser.
   if (failure || !route || (id !== undefined && !trip)) {
     return (
-      <AppShell width="reading">
+      <AppShell>
         <div className="py-16 text-center">
           <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
             {failure === "notFound" ? t("trips:tours.notFound") : t("trips:tours.loadError")}
@@ -581,7 +582,7 @@ export default function TripRouteEditorPage(): JSX.Element {
 
   const ownPoints = editsOwnPoints(trip !== null, sectionStops);
   return (
-    <AppShell width="list">
+    <AppShell>
       <div className="space-y-6">
         <header>
           <Link

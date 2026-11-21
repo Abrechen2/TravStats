@@ -11,9 +11,11 @@ import {
 } from "../sharing/propagate";
 import { recheckAchievements } from "../../utils/achievements";
 import { restatusTrips } from "../trip/restatusTrips";
+import { repointDecisionMembers } from "../tripSuggestions/decisionRepoint";
 import { findDuplicateCandidates } from "./checks/duplicateCandidates";
 import { loadRecordSnapshot } from "./recordGather";
 import { FindingActionError } from "./findingErrors";
+import { repointLinks } from "../documents/documentLinks";
 
 /**
  * Merging the copies of a duplicate finding (spec C3, `merge`).
@@ -149,10 +151,7 @@ async function mergeFlights(
   }
   assertOneLink(rows, ["tripId", "bookingId"]);
 
-  await tx.document.updateMany({
-    where: { userId, flightId: { in: [...removedIds] } },
-    data: { flightId: keptId },
-  });
+  await repointLinks(tx, { type: "flight", ids: removedIds }, { type: "flight", id: keptId });
   await tx.publicShareLink.updateMany({
     where: { userId, flightId: { in: [...removedIds] } },
     data: { flightId: keptId },
@@ -219,10 +218,11 @@ async function mergeStays(
     throw new FindingActionError("invalidAction", "conflictingLinks");
   }
 
-  await tx.document.updateMany({
-    where: { userId, lodgingStayId: { in: [...removedIds] } },
-    data: { lodgingStayId: keptId },
-  });
+  await repointLinks(
+    tx,
+    { type: "lodgingStay", ids: removedIds },
+    { type: "lodgingStay", id: keptId }
+  );
   const pick = <K extends "tripId" | "bookingId" | "membershipId">(key: K) =>
     kept[key] ?? removed.find((r) => r[key])?.[key] ?? null;
   const links = {
@@ -282,10 +282,7 @@ async function mergeCruises(
   if (!kept || removed.length !== removedIds.length) throw new FindingActionError("staleFinding");
   assertOneLink(rows, ["tripId", "bookingId"]);
 
-  await tx.document.updateMany({
-    where: { userId, cruiseId: { in: [...removedIds] } },
-    data: { cruiseId: keptId },
-  });
+  await repointLinks(tx, { type: "cruise", ids: removedIds }, { type: "cruise", id: keptId });
   const companions = await tx.cruiseCompanion.findMany({
     where: { cruiseId: { in: [...removedIds] } },
     select: { companionId: true, position: true },
@@ -336,6 +333,13 @@ async function mergeCruises(
   return rows.map((r) => r.tripId);
 }
 
+/** The domain prefix a trip-suggestion member key carries for each mergeable type. */
+const DECISION_KEY_PREFIX: Record<"flight" | "cruise" | "lodging_stay", string> = {
+  flight: "flight",
+  cruise: "cruise",
+  lodging_stay: "lodging",
+};
+
 /**
  * Merge `removedIds` into `keptId`, then run `alsoInTx` — the flag answer — in
  * the same transaction, so the data and the answer change together or not at
@@ -362,6 +366,8 @@ export async function mergeDuplicates(
       else if (entityType === "lodging_stay") {
         trips = await mergeStays(tx, userId, keptId, removedIds);
       } else throw new FindingActionError("invalidAction", "notOffered");
+      // Answers to "belongs to a trip?" named the removed copies by id.
+      await repointDecisionMembers(tx, userId, DECISION_KEY_PREFIX[entityType], keptId, removedIds);
       await alsoInTx(tx);
       return trips;
     },

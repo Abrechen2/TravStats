@@ -143,7 +143,8 @@
       "switchOff": "Sharing with people on other servers is not possible here yet: the admin has not switched it on.",
       "noPeer": "Sharing with people on other servers is not possible here yet: the admin has not admitted any other server.",
       "loadFailed": "Whether you can share with people on other servers could not be loaded."
-    }
+    },
+    "share": "Share …"
   },
   "trip": {
     "leaveConfirm": "Leave the shared trip? Your copy stays as your own trip; the others are notified.",
@@ -767,18 +768,24 @@
         "submit": "Send request",
         "sent": "Request sent: {{origin}} decides whether {{name}} is offered the trip."
       },
-      "otherServer": {
-        "title": "On another server",
-        "pick": "Server",
-        "username": "Person's username",
-        "submit": "Offer trip",
-        "noServers": "Your admin has not connected a server yet.",
+      "person": {
         "warnTitle": "Please note",
         "warnStored": "The trip is stored on the other server and can be read there by its admin.",
         "warnEdits": "Edits go both ways: what is changed there changes your trip too.",
         "warnPrivate": "Private notes, costs and documents stay with you.",
         "warnRecall": "What has been sent cannot be recalled.",
-        "warnAccept": "The person accepts the offer in their inbox – nothing arrives before."
+        "warnAccept": "The person accepts the offer in their inbox – nothing arrives before.",
+        "label": "Person on another server",
+        "placeholder": "username@server.example",
+        "hint": "Username and server, e.g. anna@trav.example.org. Not connected yet? The connection is requested on the way.",
+        "codeLink": "Or create an invitation code",
+        "submit": "Offer trip",
+        "working": "Checking …",
+        "invalid": "Enter it as username@server, e.g. anna@trav.example.org.",
+        "serverNotConnected": "{{origin}} is not admitted on this instance yet. Your admin does that under Settings → Instance – or you create an invitation code.",
+        "requested": "Request sent to {{name}} on {{origin}}. Once they agree they appear in the list above and you can offer them the trip.",
+        "waiting": "The request to {{name}} on {{origin}} is still open. They have to confirm it first.",
+        "failed": "The person on the other server could not be reached."
       }
     },
     "offers": {
@@ -966,6 +973,113 @@
       "busy": "The route is being shared by another request right now. Try again in a moment.",
       "revoked": "Sharing was stopped while the route was being built. Nothing is shared.",
       "network": "The server cannot be reached. Try again in a moment."
+    }
+  },
+  "tripShare": {
+    "people": "People",
+    "peopleHint": "Pick someone from the list. Anyone who is not on it yet can be invited through the field, where sharing across servers is set up here.",
+    "linkHint": "A public page showing what you choose – readable without an account.",
+    "createLink": "Manage public link…",
+    "addLocal": "Add another person from this server…"
+  },
+  "friends": {
+    "title": "People",
+    "intro": "Everyone you travel or share with, in one list. Each switch applies to exactly that person.",
+    "loading": "Loading people …",
+    "empty": "Nobody in the list yet. Companions appear here once you write them into an entry; people with their own account you can connect below.",
+    "retry": "Try again",
+    "loadFailed": {
+      "companions": "I couldn't load the travel companions.",
+      "accounts": "I couldn't load the accounts on this server.",
+      "connections": "I couldn't load the connections to other servers.",
+      "comparison": "I couldn't read who sees your totals."
+    },
+    "status": {
+      "connected": "connected",
+      "requested": "requested"
+    },
+    "account": {
+      "local": "@{{username}}",
+      "remote": "{{username}}@{{origin}}",
+      "none": "no account"
+    },
+    "demo": "Nothing here can be changed in the demo account.",
+    "switches": {
+      "share": {
+        "label": "Share trips"
+      },
+      "totals": {
+        "label": "Sees my totals"
+      },
+      "editScope": "Change scope",
+      "encryptedSet": "Set up the hand-over …"
+    },
+    "actions": {
+      "linkAccount": "Link account",
+      "changeLink": "Change link",
+      "endConnection": "End connection",
+      "withdrawPaired": "Withdraw",
+      "viewStats": "View figures",
+      "closeStats": "Close figures",
+      "viewAchievements": "View achievements",
+      "closeAchievements": "Close achievements",
+      "remoteNoRename": "People on other servers are managed by their server.",
+      "withdrawIncoming": "Withdraw sharing from this person"
+    },
+    "requests": {
+      "title": "Requests to you",
+      "share": "{{name}} (@{{username}}) would like to share trips with you.",
+      "connection": "{{name}} ({{username}}@{{origin}}) would like to connect with you.",
+      "reconfirm": "The connection to {{name}} ({{username}}@{{origin}}) needs to be confirmed again.",
+      "comparison": "{{name}} would like to see your totals on the leaderboard.",
+      "accept": "Accept",
+      "decline": "Decline",
+      "endReconfirm": "End"
+    },
+    "remote": {
+      "submit": "Connect",
+      "alreadyConnected": "{{name}} ({{origin}}) is already connected. You can share through \"Share trips\" in the list.",
+      "hint": "Username and server, e.g. anna@trav.example.org. This sends a connection request; the person confirms it on their side."
+    },
+    "unusedLink": "Delete unused people ({{count}})",
+    "encryptedManage": "Manage encrypted hand-overs",
+    "confirm": {
+      "withdrawShare": "{{name}} will no longer get your trips. What is already shared stays there as their own copy.",
+      "withdrawShareAction": "Withdraw",
+      "totalsOff": "{{name}} will no longer see your totals.",
+      "totalsOffAction": "Stop showing",
+      "endConnection": "The connection to {{name}} ends. What is shared stays as an own copy.",
+      "endConnectionAction": "End",
+      "withdrawPaired": "{{name}} ({{origin}}) will get nothing more from you.",
+      "withdrawPairedAction": "Withdraw",
+      "withdrawIncoming": "{{name}} will no longer share with you: syncing stops. What is already shared stays with you as your own copy.",
+      "withdrawIncomingAction": "Withdraw"
+    },
+    "done": {
+      "shareAsked": "Request sent to {{name}}.",
+      "shareWithdrawn": "{{name}} no longer gets your trips.",
+      "totalsAsked": "Request sent to {{name}}.",
+      "totalsOff": "{{name}} no longer sees your totals.",
+      "scopeChanged": "Scope for {{name}} saved.",
+      "switchSaved": "Saved.",
+      "accepted": "Accepted.",
+      "declined": "Declined.",
+      "ended": "Connection ended.",
+      "withdrawn": "Withdrawn."
+    },
+    "errors": {
+      "action": "That didn't work. Please try again."
+    },
+    "code": {
+      "title": "Invitation code",
+      "create": "Create code",
+      "hint": "The code works once and expires. Whoever gets it redeems it on their server.",
+      "created": "Your code (shown only now)",
+      "claimHelp": "You redeem a code from someone on another server here.",
+      "close": "Close"
+    },
+    "menu": {
+      "label": "Actions for {{name}}"
     }
   }
 }

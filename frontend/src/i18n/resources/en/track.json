@@ -413,7 +413,8 @@
       "entries": "Logbook entries",
       "entriesHint": "Flights, rides, trips",
       "photos": "Photos",
-      "photosHint": "From Immich, placed on the track",
+      "photosHint": "From Immich or PhotoPrism, placed on the track",
+      "photosNoSource": "No photo source connected yet – connect Immich or PhotoPrism in the settings (Services)",
       "dayOnly": "Only in the day and 7-day views",
       "countries": "Countries",
       "countriesHint": "Countries with location points in the months the range touches – no proof of a visit"
@@ -530,14 +531,14 @@
     "thumbFailed": "Not loaded",
     "truncated": "Not every photo of this range could be considered. A shorter range shows the rest.",
     "needsShorter": "Photos are available for ranges of up to 7 days. Pick a shorter range.",
-    "connect": "Connect Immich in the settings",
+    "connect": "Connect Immich or PhotoPrism in the settings",
     "failure": {
-      "notConfigured": "Photos come from Immich, and Immich is not connected yet.",
-      "unreachable": "Immich cannot be reached right now.",
-      "auth": "Immich refused access – check the API key.",
-      "notFound": "Immich no longer knows these photos.",
-      "protocol": "Immich answered unexpectedly – perhaps the version does not match.",
-      "invalidUrl": "The Immich address is invalid – check it in the settings."
+      "notConfigured": "Photos come from Immich or PhotoPrism, and neither is connected yet.",
+      "unreachable": "{{source}} cannot be reached right now – its photos are missing.",
+      "auth": "{{source}} refused access – check the API key or app password.",
+      "notFound": "{{source}} no longer knows these photos.",
+      "protocol": "{{source}} answered unexpectedly – perhaps the version does not match.",
+      "invalidUrl": "The {{source}} address is invalid – check it in the settings."
     }
   },
   "flight": {
@@ -795,6 +796,29 @@
     },
     "dismiss": "Only a wait",
     "dismissed": "Hidden as a wait",
-    "restore": "Restore"
+    "restore": "Restore",
+    "coverage": {
+      "figures": "measured {{observed}} · assumed {{inferred}}",
+      "barLabel": "Stay with a gap in the recording: {{gaps}}",
+      "note": "Dashed: nothing was recorded. Coming back to the same place does not prove you were there the whole time."
+    }
+  },
+  "empty": {
+    "day": {
+      "noRecording": "Nothing was recorded on this day.",
+      "privacyZone": "{{count}} positions of this day lie in a privacy zone and are not shown.",
+      "implausible": "{{count}} positions of this day were too coarse or implausible and are hidden."
+    },
+    "range": {
+      "noRecording": "Nothing was recorded on these days.",
+      "privacyZone": "{{count}} positions of these days lie in privacy zones and are not shown.",
+      "implausible": "{{count}} positions of these days were too coarse or implausible and are hidden."
+    },
+    "actions": {
+      "companion": "Check the Companion",
+      "import": "View imports",
+      "zones": "View privacy zones",
+      "showFiltered": "Show filtered points"
+    }
   }
 }

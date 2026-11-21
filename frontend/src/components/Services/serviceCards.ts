@@ -107,6 +107,11 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
     use: ["ownKey", "mine", "on", "instKey", "allowKeys", "test", "quota"],
   },
   {
+    id: "airplaneslive",
+    group: "flug",
+    use: ["on", "test", "quota"],
+  },
+  {
     id: "tar1090",
     group: "flug",
     use: ["mine", "on", "instKey"],
@@ -150,6 +155,11 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
     id: "immich",
     group: "foto",
     use: ["mine", "allowConn", "on"],
+  },
+  {
+    id: "photoprism",
+    group: "foto",
+    use: ["mine", "allowConn", "on", "test"],
   },
   {
     id: "dawarich",
