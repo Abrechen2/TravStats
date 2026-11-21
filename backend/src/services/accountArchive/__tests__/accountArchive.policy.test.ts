@@ -38,7 +38,14 @@ describe("account archive table policy", () => {
             ["strip", policy.strip],
             ["rekey", policy.rekey],
             ["idColumns", policy.idColumns],
-            ["files", policy.files],
+            [
+              "files",
+              (policy.files ?? []).flatMap((f) =>
+                [f.column, f.mime, f.format, f.sha256, f.size, ...(f.linkedWhen ?? [])].filter(
+                  (c): c is string => typeof c === "string"
+                )
+              ),
+            ],
             ["late", policy.late],
           ]
         : policy.kind === "info"

@@ -17,8 +17,11 @@ import type { ArchivePlan } from "./plan";
 import { TABLE_POLICY } from "./tablePolicy";
 import { invalidArchive, type ArchiveReader } from "./zipReader";
 
-/** The manifest itself is small; anything larger is not one. */
-const MANIFEST_MAX_BYTES = 256 * 1024 * 1024;
+/**
+ * The manifest lists one line per entry (~200 bytes); 16 MB holds tens of
+ * thousands of files. Anything larger is not a manifest.
+ */
+export const MANIFEST_MAX_BYTES = 16 * 1024 * 1024;
 
 export interface ArchiveContents {
   manifest: Manifest;

@@ -39,10 +39,29 @@ export interface DataTableOptions {
    * which the archive's own links would then collide with.
    */
   late?: readonly string[];
-  /** Columns naming a stored upload (a name, a path or a URL): renamed with the file. */
-  files?: readonly string[];
+  /** Columns naming a stored upload: renamed with the file, and checked against it. */
+  files?: readonly FileColumn[];
   /** Natural keys a reference that is not in the archive resolves by (see `catalogue`). */
   catalogue?: CatalogueSpec;
+}
+
+/**
+ * A column that names an uploaded file. `name`: the stored name; the row is refused
+ * when the archive does not carry a file the upload path would accept under it
+ * (or, nullable, the column is cleared). `url`: a legacy URL ending in the name,
+ * cleared when the file is missing. `avatar`: the settings JSON's profile picture.
+ * `mime`/`format` are re-derived from the bytes, never taken from the archive.
+ */
+export interface FileColumn {
+  column: string;
+  kind: "name" | "url" | "avatar";
+  mime?: string;
+  format?: string;
+  /** The stored row's sha256 and size, recomputed from the bytes. */
+  sha256?: string;
+  size?: string;
+  /** Rows that only LINK a photo (Immich/PhotoPrism, another photo) carry no file. */
+  linkedWhen?: readonly string[];
 }
 
 export interface CatalogueSpec {
@@ -117,7 +136,7 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
 
   // Travel data.
   trips: owner({ strip: ["share_group_id"] }),
-  flights: owner({ strip: SHARE_KEY, files: ["receipt_url"] }),
+  flights: owner({ strip: SHARE_KEY, files: [{ column: "receipt_url", kind: "url" }] }),
   flight_tracks: child(),
   flight_companions: child(),
   cruises: owner({ strip: SHARE_KEY }),
@@ -135,8 +154,8 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   rental_bookings: owner({ strip: SHARE_KEY }),
   rental_booking_companions: child(),
   lodgings: owner(),
-  lodging_stays: owner({ strip: SHARE_KEY, files: ["receipt_url"] }),
-  lodging_photos: child({ files: ["filename"] }),
+  lodging_stays: owner({ strip: SHARE_KEY, files: [{ column: "receipt_url", kind: "url" }] }),
+  lodging_photos: child({ files: [{ column: "filename", kind: "name", mime: "mimetype" }] }),
   lodging_membership_lodgings: child(),
   lodging_membership_chains: child(),
   lodging_rating_categories: owner(),
@@ -151,7 +170,11 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   trip_route_legs: child(),
   trip_route_tracks: child(),
   trip_expenses: owner(),
-  trip_photos: child({ files: ["filename"] }),
+  trip_photos: child({
+    files: [
+      { column: "filename", kind: "name", mime: "mimetype", linkedWhen: ["immich_asset_id"] },
+    ],
+  }),
   trip_immich_albums: child(),
   trip_journal_entries: child(),
   journal_entry_photos: child(),
@@ -161,15 +184,33 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   travel_plan_proposals: child(),
   places: owner(),
   place_visits: owner(),
-  place_visit_photos: child({ files: ["filename"] }),
+  place_visit_photos: child({
+    files: [
+      {
+        column: "filename",
+        kind: "name",
+        mime: "mimetype",
+        linkedWhen: ["immich_asset_id", "trip_photo_id"],
+      },
+    ],
+  }),
   place_categories: owner(),
   place_external_refs: owner(),
   place_captures: owner(),
   place_lists: owner(),
   place_list_entries: child(),
-  notes: owner({ files: ["photo_filename"] }),
+  notes: owner({ files: [{ column: "photo_filename", kind: "name", mime: "photo_mimetype" }] }),
   documents: owner({
-    files: ["stored_name"],
+    files: [
+      {
+        column: "stored_name",
+        kind: "name",
+        mime: "mimetype",
+        format: "format",
+        sha256: "sha256",
+        size: "size_bytes",
+      },
+    ],
     late: [
       "flight_id",
       "cruise_id",
@@ -185,7 +226,7 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
     ],
   }),
   document_links: child(),
-  receipt_uploads: owner({ files: ["filename"] }),
+  receipt_uploads: owner({ files: [{ column: "filename", kind: "name" }] }),
   import_batches: owner(),
   parser_templates: owner(),
   country_days: owner(),
@@ -197,7 +238,10 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   visit_photo_refusals: owner(),
   user_achievements: owner(),
   // `data.profile.profilePicture` names the avatar file.
-  user_settings: owner({ strip: USER_SETTINGS_SECRETS, files: ["data"] }),
+  user_settings: owner({
+    strip: USER_SETTINGS_SECRETS,
+    files: [{ column: "data", kind: "avatar" }],
+  }),
 
   // TravTrack, the own location history.
   travtrack_points: owner({ bulk: true }),

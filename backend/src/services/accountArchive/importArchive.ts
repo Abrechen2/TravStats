@@ -1,15 +1,9 @@
-import { createHash, randomBytes } from "crypto";
-import fs from "fs";
-import fsp from "fs/promises";
-import path from "path";
-import { Transform } from "stream";
-import { pipeline } from "stream/promises";
+import { randomBytes } from "crypto";
 
 import { UPLOADS_ROOT } from "../../config/uploadDirs";
 import { prisma } from "../../db";
 import { Prisma, type PrismaClient } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
-import logger from "../../utils/logger";
 import { readCatalog, quoteIdent, type Db } from "./catalog";
 import {
   ACCOUNT_ENTRY,
@@ -27,7 +21,8 @@ import {
 } from "./importRows";
 import { readContents, verifyChecksums, type ArchiveContents } from "./importValidate";
 import { buildPlan, type ArchivePlan } from "./plan";
-import { importedFileName, Remapper } from "./remap";
+import { Remapper } from "./remap";
+import { removeFiles, writeFiles, type WrittenFile } from "./importFiles";
 import { USER_SETTINGS_SECRETS } from "./tablePolicy";
 import { ArchiveReader, invalidArchive } from "./zipReader";
 
@@ -48,12 +43,19 @@ export interface ImportResult {
   tables: Record<string, number>;
   files: number;
   alreadyImported: boolean;
+  /** Rows refused per table: their file, parent or catalogue row was not there. */
+  skipped: Record<string, number>;
+  /** Catalogue references (port, airport, ship, ...) with no match here: left empty. */
+  unmatched: number;
+  /** Files whose bytes the upload path would not have accepted. */
+  refusedFiles: number;
 }
 
 type ReportProgress = (done: number, total: number) => void;
 
 const IMPORT_TX_TIMEOUT_MS = 6 * 60 * 60 * 1000;
-const PROFILE_MAX_BYTES = 1024 * 1024;
+/** account.json holds a handful of profile fields. */
+export const PROFILE_MAX_BYTES = 64 * 1024;
 
 /**
  * Rows every account has from its first sign-in (the settings row) or from a first
@@ -117,87 +119,6 @@ async function learnIds(
   }
 }
 
-interface WrittenFile {
-  path: string;
-}
-
-async function writeFiles(
-  reader: ArchiveReader,
-  contents: ArchiveContents,
-  remap: Remapper,
-  root: string,
-  written: WrittenFile[],
-  tick: () => void
-): Promise<void> {
-  const choosePrefix = async (): Promise<string> => {
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const prefix = `a${randomBytes(4).toString("hex")}`;
-      const clashes = await Promise.all(
-        contents.files.map((f) =>
-          fsp
-            .access(
-              path.join(
-                root,
-                f.dir,
-                importedFileName(f.dir, f.name, prefix, remap.targetUserId, remap.sourceUserId)
-              )
-            )
-            .then(() => true)
-            .catch(() => false)
-        )
-      );
-      if (!clashes.some(Boolean)) return prefix;
-    }
-    throw new AppError("Could not choose free file names", 500, "ACCOUNT_ARCHIVE_INVALID");
-  };
-  const prefix = await choosePrefix();
-  for (const file of contents.files) {
-    const newName = importedFileName(
-      file.dir,
-      file.name,
-      prefix,
-      remap.targetUserId,
-      remap.sourceUserId
-    );
-    remap.setFile(file.name, newName);
-    const dir = path.join(root, file.dir);
-    await fsp.mkdir(dir, { recursive: true });
-    const target = path.join(dir, newName);
-    const hash = createHash("sha256");
-    written.push({ path: target });
-    await pipeline(
-      await reader.stream(file.entry),
-      new Transform({
-        transform(chunk: Buffer, _enc, done) {
-          hash.update(chunk);
-          done(null, chunk);
-        },
-      }),
-      fs.createWriteStream(target, { flags: "wx", mode: 0o644 })
-    );
-    if (hash.digest("hex") !== file.sha256) {
-      throw new AppError(
-        `${file.entry} does not match its checksum`,
-        422,
-        "ACCOUNT_ARCHIVE_CHECKSUM"
-      );
-    }
-    tick();
-  }
-}
-
-async function removeFiles(written: readonly WrittenFile[]): Promise<void> {
-  for (const file of written) {
-    await fsp.rm(file.path, { force: true }).catch((err: unknown) => {
-      logger.warn({
-        operation: "account_archive_import_cleanup_failed",
-        file: path.basename(file.path),
-        error: String(err),
-      });
-    });
-  }
-}
-
 export async function importAccountArchive(
   file: string,
   targetUserId: string,
@@ -224,12 +145,15 @@ export async function importAccountArchive(
           "ACCOUNT_ARCHIVE_ALREADY_IMPORTED"
         );
       }
-      const counts = earlier.counts as { tables?: Record<string, number>; files?: number };
+      const counts = earlier.counts as Partial<Omit<ImportResult, "archiveId" | "alreadyImported">>;
       return {
         archiveId: manifest.archiveId,
         tables: counts.tables ?? {},
         files: counts.files ?? 0,
         alreadyImported: true,
+        skipped: counts.skipped ?? {},
+        unmatched: counts.unmatched ?? 0,
+        refusedFiles: counts.refusedFiles ?? 0,
       };
     }
     if ((await nonEmptyTables(client as unknown as Db, plan, targetUserId)).length > 0)
@@ -252,7 +176,8 @@ export async function importAccountArchive(
       targetUserId
     );
     await learnIds(reader, plan, contents, remap);
-    await writeFiles(reader, contents, remap, root, written, tick);
+    const { verdicts, refused } = await writeFiles(reader, contents, remap, root, written, tick);
+    const outcome = { skipped: {} as Record<string, number>, unmatched: 0 };
 
     const tables = await client.$transaction(
       async (tx) => {
@@ -268,15 +193,10 @@ export async function importAccountArchive(
         });
         if ((await nonEmptyTables(db, plan, targetUserId)).length > 0) throw notEmpty();
         const keptSecrets = await clearReplaced(db, contents, targetUserId);
-        const keyMaps: KeyMaps = await resolveCatalogue(
-          db,
-          reader,
-          plan,
-          contents.catalogueTables,
-          remap
-        );
+        const keyMaps: KeyMaps = await resolveCatalogue(db, reader, plan, contents.catalogueTables);
         const deferred: DeferredUpdate[] = [];
-        const ctx = { plan, remap, keyMaps, deferred };
+        const skipped = new Set<string>();
+        const ctx = { plan, remap, keyMaps, deferred, verdicts, skipped, report: outcome };
         const counts: Record<string, number> = {};
         let inserted = 0;
         for (const p of plan.tables) {
@@ -289,7 +209,7 @@ export async function importAccountArchive(
             tick();
           });
         }
-        await applyDeferred(db, deferred);
+        await applyDeferred(db, deferred, skipped);
         await restoreSecrets(db, keptSecrets, targetUserId);
         if (profile) await applyProfile(db, profile, targetUserId);
         await tx.accountArchiveImport.update({
@@ -297,7 +217,10 @@ export async function importAccountArchive(
           data: {
             counts: {
               tables: counts,
-              files: contents.files.length,
+              files: verdicts.size,
+              skipped: outcome.skipped,
+              unmatched: outcome.unmatched,
+              refusedFiles: refused,
             } as unknown as Prisma.InputJsonValue,
           },
         });
@@ -309,8 +232,11 @@ export async function importAccountArchive(
     return {
       archiveId: manifest.archiveId,
       tables,
-      files: contents.files.length,
+      files: verdicts.size,
       alreadyImported: false,
+      skipped: outcome.skipped,
+      unmatched: outcome.unmatched,
+      refusedFiles: refused,
     };
   } catch (err) {
     await removeFiles(written);

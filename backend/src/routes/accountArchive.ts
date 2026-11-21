@@ -14,7 +14,13 @@ import multer from "multer";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 
-import { authenticate, AuthRequest, requireBrowserSession } from "../middleware/auth";
+import {
+  authenticate,
+  AuthRequest,
+  requireBrowserSession,
+  requireWriteScope,
+} from "../middleware/auth";
+import { rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
 import { accountArchiveLimiter } from "../middleware/meExportLimiter";
 import { prisma } from "../db";
@@ -64,6 +70,9 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response, next: Next
 router.post(
   "/export",
   authenticate,
+  // The shared demo account is sample data on a public instance; nothing to move.
+  rejectDemo,
+  requireWriteScope,
   accountArchiveLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
@@ -107,6 +116,8 @@ router.get(
 router.post(
   "/import",
   authenticate,
+  rejectDemo,
+  requireWriteScope,
   requireBrowserSession,
   accountArchiveLimiter,
   receiveArchive,

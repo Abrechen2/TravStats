@@ -8,6 +8,7 @@ import { prisma } from "../../db";
 import { settleAllJobs } from "../../services/jobs/jobRegistry";
 import { __resetArchiveJobs } from "../../services/accountArchive/archiveJobs";
 import { generateToken } from "../../utils/jwt";
+import { generateApiToken } from "../../utils/apiTokens";
 
 /**
  * forgejo#433 — the account archive's HTTP surface: an export runs as a job whose
@@ -116,5 +117,47 @@ describe("account archive routes", () => {
       .set("Cookie", a.cookie);
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("ACCOUNT_ARCHIVE_INVALID");
+  });
+
+  it("refuses a read-scoped token, and any token for an import", async () => {
+    const a = await makeUser("tok");
+    const bearer = async (scope: "read" | "write") => {
+      const tok = await generateApiToken();
+      await prisma.apiToken.create({
+        data: {
+          userId: a.id,
+          label: `az-${scope}`,
+          lookupHash: tok.lookupHash,
+          hash: tok.hash,
+          scope,
+        },
+      });
+      return `Bearer ${tok.plaintext}`;
+    };
+    const read = await bearer("read");
+    expect(
+      (await request(app).post("/api/v1/me/account-archive/export").set("Authorization", read))
+        .status
+    ).toBe(403);
+    const write = await bearer("write");
+    expect(
+      (await request(app).post("/api/v1/me/account-archive/import").set("Authorization", write))
+        .status
+    ).toBe(403);
+  });
+
+  it("refuses the shared demo account", async () => {
+    if (await prisma.user.findUnique({ where: { username: "demo" } })) return;
+    const demo = await prisma.user.create({
+      data: { username: "demo", passwordHash: "x", isDemo: true },
+    });
+    made.push(demo.id);
+    const cookie = `auth_token=${generateToken(demo.id)}`;
+    expect(
+      (await request(app).post("/api/v1/me/account-archive/export").set("Cookie", cookie)).status
+    ).toBe(403);
+    expect(
+      (await request(app).post("/api/v1/me/account-archive/import").set("Cookie", cookie)).status
+    ).toBe(403);
   });
 });

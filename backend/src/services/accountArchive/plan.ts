@@ -234,8 +234,8 @@ function breakCycle(pending: DataTablePlan[], placed: ReadonlySet<string>, deps:
 
 /**
  * `WHERE` clause selecting one account's rows of a data table; `$1` is the user id.
- * A child row travels when every NOT NULL key into a travelling table points at a
- * travelling row (or, with no such key, when one of its nullable keys does).
+ * A child row travels when every key into a travelling table that is set points at
+ * a travelling row of this account, and at least one is set.
  */
 export function selectionWhere(plan: ArchivePlan, tableName: string, alias = "t0"): string {
   const counter = { n: 0 };
@@ -264,9 +264,20 @@ function whereFor(
   const remaps = [...p.fkRoles.entries()].filter(
     (e): e is [string, { kind: "remap"; refTable: string }] => e[1].kind === "remap"
   );
-  const notNull = remaps.filter(([col]) => p.table.columns.find((c) => c.name === col)?.notNull);
-  if (notNull.length > 0) return notNull.map(([col, r]) => into(col, r.refTable)).join(" AND ");
   if (remaps.length === 0)
     throw new ArchivePlanError(`${tableName} has no key into a travelling table`);
-  return `(${remaps.map(([col, r]) => into(col, r.refTable)).join(" OR ")})`;
+  const isNotNull = (col: string) => p.table.columns.find((c) => c.name === col)?.notNull;
+  // Every key into a travelling table must point into THIS account: a row that also
+  // names another account's record is not this account's row.
+  const all = remaps.map(([col, r]) =>
+    isNotNull(col)
+      ? into(col, r.refTable)
+      : `(${alias}.${quoteIdent(col)} IS NULL OR ${into(col, r.refTable)})`
+  );
+  if (!remaps.some(([col]) => isNotNull(col))) {
+    all.push(`(${remaps.map(([col]) => `${alias}.${quoteIdent(col)} IS NOT NULL`).join(" OR ")})`);
+  }
+  // A child table that records its user without a foreign key must name this one.
+  if (p.table.columns.some((c) => c.name === "user_id")) all.push(`${alias}."user_id" = $1`);
+  return all.join(" AND ");
 }

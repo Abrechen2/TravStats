@@ -79,6 +79,46 @@ async function one<T = Record<string, unknown>>(
   return rows[0] as T;
 }
 
+/** The archive with some entries replaced, its manifest recomputed, under a new id. */
+async function repack(
+  changes: (entries: Map<string, Buffer>) => void,
+  name: string
+): Promise<string> {
+  const entries = await readZip(zipPath);
+  changes(entries);
+  const manifest = JSON.parse(entries.get("manifest.json")!.toString());
+  manifest.archiveId = crypto.randomUUID();
+  manifest.entries = manifest.entries.map((e: { name: string }) => {
+    const bytes = entries.get(e.name)!;
+    return {
+      ...e,
+      bytes: bytes.length,
+      sha256: crypto.createHash("sha256").update(bytes).digest("hex"),
+    };
+  });
+  entries.set("manifest.json", Buffer.from(JSON.stringify(manifest)));
+  const file = path.join(work, name);
+  await writeZip(file, entries);
+  return file;
+}
+
+function editLines(
+  entries: Map<string, Buffer>,
+  entry: string,
+  edit: (row: Record<string, unknown>) => Record<string, unknown>
+): void {
+  const lines = entries.get(entry)!.toString().split("\n").filter(Boolean);
+  entries.set(
+    entry,
+    Buffer.from(lines.map((l) => JSON.stringify(edit(JSON.parse(l)))).join("\n") + "\n")
+  );
+}
+
+async function freshUser(id: string): Promise<string> {
+  await dst.query(`INSERT INTO users (id, username, password_hash) VALUES ($1, $1, 'x')`, [id]);
+  return id;
+}
+
 const sha = (file: string) =>
   crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 
@@ -102,10 +142,21 @@ beforeAll(async () => {
   dst = new Client({ connectionString: urlFor(TARGET_DB) });
   await dst.connect();
   dstPrisma = createPrismaClient({ url: urlFor(TARGET_DB) });
-  // The target already knows Kiel, under its own id.
+  // The target's own catalogue, under its own ids; it lacks the rail station.
   await dst.query(
-    `INSERT INTO ports (id, name, lat, lon, unlocode) VALUES ($1, 'Kiel', 54.3, 10.1, 'DEKEL')`,
+    `INSERT INTO ports (id, name, lat, lon, unlocode) VALUES ($1, 'Kiel', 54.3, 10.1, 'DEKEL'), ($1 + 1, 'Oslo', 59.9, 10.7, 'NOOSL')`,
     [TARGET_PORT_ID]
+  );
+  await dst.query(
+    `INSERT INTO airports (id, name, lat, lon, iata, icao) VALUES (5000, 'Frankfurt', 50, 8.5, 'ZZF', 'ZZZF')`
+  );
+  await dst.query(
+    `INSERT INTO ships (id, name, cruise_line, imo) VALUES (5001, 'AZ Ship', 'AZ', '9999991')`
+  );
+  await dst.query(`INSERT INTO lodging_chains (id, name) VALUES (6000, 'AZ Catalogue Chain')`);
+  await dst.query(
+    `INSERT INTO achievements (id, code, name, description, category, icon, "requirementType", requirement)
+     VALUES ('az-target-ach', 'AZ_FIRST', 'First', 'd', 'c', 'i', 'flights', 1)`
   );
   for (const id of [TARGET_USER, OTHER_TARGET_USER, SPARE_TARGET_USER]) {
     await dst.query(`INSERT INTO users (id, username, password_hash) VALUES ($1, $1, 'x')`, [id]);
@@ -304,38 +355,38 @@ describe("account archive round trip", () => {
     expect(link).toEqual({ entry_id: flight.id, t_s: 180 });
   });
 
-  it("resolves catalogue references by natural key, copying only what the target lacks", async () => {
+  it("resolves catalogue references by natural key and never writes a catalogue row", async () => {
     const stop = await one<{ port_id: number }>(
       dst,
       `SELECT port_id FROM cruise_stops s JOIN cruises c ON c.id = s.cruise_id WHERE c.user_id = $1`,
       [TARGET_USER]
     );
     expect(stop.port_id).toBe(TARGET_PORT_ID);
-    const leg = await one<{ to: string }>(
+    const leg = await one<{ to: number }>(
       dst,
-      `SELECT p.unlocode AS to FROM cruise_legs l JOIN ports p ON p.id = l.to_port_id JOIN cruises c ON c.id = l.cruise_id WHERE c.user_id = $1`,
+      `SELECT l.to_port_id AS to FROM cruise_legs l JOIN cruises c ON c.id = l.cruise_id WHERE c.user_id = $1`,
       [TARGET_USER]
     );
-    expect(leg.to).toBe("NOOSL");
-    const rental = await one<{ iata: string }>(
+    expect(leg.to).toBe(TARGET_PORT_ID + 1);
+    const rental = await one(
       dst,
-      `SELECT a.iata FROM rental_bookings r JOIN airports a ON a.id = r.pickup_airport_id WHERE r.user_id = $1`,
+      `SELECT pickup_airport_id FROM rental_bookings WHERE user_id = $1`,
       [TARGET_USER]
     );
-    expect(rental.iata).toBe("ZZF");
-    const rail = await one<{ source_id: string }>(
-      dst,
-      `SELECT s.source_id FROM rail_journeys r JOIN rail_stations s ON s.id = r.dep_station_id WHERE r.user_id = $1`,
-      [TARGET_USER]
-    );
-    expect(rail.source_id).toBe("az-src-hh");
+    expect(rental).toEqual({ pickup_airport_id: 5000 });
+    // The target has no such station: the reference stays empty, and the result says so.
+    const rail = await one(dst, `SELECT dep_station_id FROM rail_journeys WHERE user_id = $1`, [
+      TARGET_USER,
+    ]);
+    expect(rail).toEqual({ dep_station_id: null });
+    expect(importResult.unmatched).toBe(1);
     const { rows: chains } = await dst.query(
-      `SELECT l.name AS lodging, c.name AS chain, c.user_id FROM lodgings l JOIN lodging_chains c ON c.id = l.chain_id WHERE l.user_id = $1 ORDER BY 1`,
+      `SELECT l.name AS lodging, c.id, c.name AS chain, c.user_id FROM lodgings l JOIN lodging_chains c ON c.id = l.chain_id WHERE l.user_id = $1 ORDER BY 1`,
       [TARGET_USER]
     );
     expect(chains).toEqual([
-      { lodging: "Hotel", chain: "AZ Catalogue Chain", user_id: null },
-      { lodging: "Inn", chain: "AZ Own Chain", user_id: TARGET_USER },
+      { lodging: "Hotel", id: 6000, chain: "AZ Catalogue Chain", user_id: null },
+      { lodging: "Inn", id: expect.any(Number), chain: "AZ Own Chain", user_id: TARGET_USER },
     ]);
     const { rows: memberChains } = await dst.query(
       `SELECT c.name FROM lodging_membership_chains m JOIN lodging_chains c ON c.id = m.chain_id
@@ -343,12 +394,17 @@ describe("account archive round trip", () => {
       [TARGET_USER]
     );
     expect(memberChains.map((r) => r.name)).toEqual(["AZ Catalogue Chain", "AZ Own Chain"]);
-    const ach = await one<{ code: string }>(
+    const ach = await one(dst, `SELECT achievement_id FROM user_achievements WHERE user_id = $1`, [
+      TARGET_USER,
+    ]);
+    expect(ach).toEqual({ achievement_id: "az-target-ach" });
+    const catalogue = await one(
       dst,
-      `SELECT a.code FROM user_achievements u JOIN achievements a ON a.id = u.achievement_id WHERE u.user_id = $1`,
-      [TARGET_USER]
+      `SELECT (SELECT count(*)::int FROM ports) AS ports, (SELECT count(*)::int FROM airports) AS airports,
+              (SELECT count(*)::int FROM rail_stations) AS stations,
+              (SELECT count(*)::int FROM lodging_chains WHERE user_id IS NULL) AS chains`
     );
-    expect(ach.code).toBe("AZ_FIRST");
+    expect(catalogue).toEqual({ ports: 2, airports: 1, stations: 0, chains: 1 });
   });
 
   it("carries no credential, other account or share state, and keeps the target's own keys", async () => {
@@ -533,5 +589,83 @@ describe("account archive round trip", () => {
     );
     expect(port.n).toBe(1);
     expect(CATALOGUE.port).toBeGreaterThan(0);
+  });
+
+  it("never creates or changes a shared catalogue row, whatever the archive says", async () => {
+    const poisoned = await repack((entries) => {
+      // An owned chain made owner-less would become every account's catalogue chain.
+      editLines(entries, "data/lodging_chains.jsonl", (r) => ({
+        ...r,
+        user_id: null,
+        name: "AZ Poison",
+      }));
+      editLines(entries, "catalogue/ports.jsonl", (r) => ({ ...r, name: "Poisoned" }));
+      editLines(entries, "catalogue/rail_stations.jsonl", (r) => ({ ...r, name: "Injected" }));
+    }, "poison.zip");
+    const user = await freshUser("az-target-poison");
+    await importAccountArchive(poisoned, user, undefined, {
+      uploadsRoot: dstRoot,
+      client: dstPrisma,
+    });
+    const { rows } = await dst.query(`SELECT user_id FROM lodging_chains WHERE name = 'AZ Poison'`);
+    expect(rows).toEqual([{ user_id: user }]);
+    expect(await one(dst, `SELECT name FROM ports WHERE id = $1`, [TARGET_PORT_ID])).toEqual({
+      name: "Kiel",
+    });
+    expect(await one(dst, `SELECT count(*)::int AS n FROM rail_stations`)).toEqual({ n: 0 });
+    expect(await one(dst, `SELECT count(*)::int AS n FROM ports WHERE name = 'Poisoned'`)).toEqual({
+      n: 0,
+    });
+  });
+
+  it("refuses a file the upload path would not accept, and the rows that need it", async () => {
+    let storedName = "";
+    const html = await repack((entries) => {
+      const entry = [...entries.keys()].find(
+        (n) => n.startsWith("files/documents/") && n.includes("doc-trip")
+      )!;
+      storedName = entry.slice("files/documents/".length);
+      entries.set(entry, Buffer.from("<html><script>alert(1)</script></html>"));
+      editLines(entries, "data/documents.jsonl", (r) =>
+        r.stored_name === storedName ? { ...r, mimetype: "text/html" } : r
+      );
+    }, "html.zip");
+    const user = await freshUser("az-target-html");
+    const result = await importAccountArchive(html, user, undefined, {
+      uploadsRoot: dstRoot,
+      client: dstPrisma,
+    });
+    expect(result.refusedFiles).toBe(1);
+    expect(result.skipped.documents).toBe(1);
+    const docs = await dst.query(
+      `SELECT original_name, mimetype FROM documents WHERE user_id = $1`,
+      [user]
+    );
+    expect(docs.rows.length).toBe(importResult.tables.documents - 1);
+    expect(docs.rows.every((d) => d.mimetype === "application/pdf")).toBe(true);
+    expect(docs.rows.some((d) => d.original_name.includes("trip-0001"))).toBe(false);
+    // Its four links went with it; the others are intact.
+    const links = await one<{ n: number }>(
+      dst,
+      `SELECT count(*)::int AS n FROM document_links l JOIN documents d ON d.id = l.document_id WHERE d.user_id = $1`,
+      [user]
+    );
+    expect(links.n).toBe(6);
+    for (const f of listFiles(dstRoot)) {
+      expect(fs.readFileSync(path.join(dstRoot, f)).toString()).not.toContain("<script>");
+    }
+  });
+
+  it("refuses a row whose user column names another account", async () => {
+    const forged = await repack((entries) => {
+      editLines(entries, "data/flights.jsonl", (r) => ({ ...r, user_id: OTHER_TARGET_USER }));
+    }, "forged.zip");
+    const user = await freshUser("az-target-forged");
+    await importAccountArchive(forged, user, undefined, {
+      uploadsRoot: dstRoot,
+      client: dstPrisma,
+    });
+    expect(await counts(dst, OTHER_TARGET_USER)).toEqual({ flights: 1 });
+    expect((await counts(dst, user)).flights).toBe(1);
   });
 });

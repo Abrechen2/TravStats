@@ -56,7 +56,7 @@ export const manifestSchema = z.object({
   serverVersion: z.string().max(64),
   exportedAt: z.string(),
   sourceUserId: z.string().min(1).max(64),
-  entries: z.array(manifestEntrySchema).max(1_000_000),
+  entries: z.array(manifestEntrySchema).max(100_000),
 });
 
 export type Manifest = z.infer<typeof manifestSchema>;

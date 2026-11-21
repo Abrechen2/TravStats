@@ -6,6 +6,7 @@ import type { Remapper } from "./remap";
 import { TABLE_POLICY, type CatalogueSpec } from "./tablePolicy";
 import { invalidArchive, type ArchiveReader } from "./zipReader";
 import { tableEntryName } from "./format";
+import { checkFileColumns, MissingFile, type FileVerdict } from "./importFiles";
 
 /**
  * Writes an archive's rows into the target database inside the import's
@@ -40,28 +41,29 @@ function specOf(table: string): CatalogueSpec {
 }
 
 /**
- * Each catalogue row the archive carries, matched on the target by its natural key;
- * a row the target lacks is inserted as a copy under a new id.
+ * Each catalogue row the archive carries, matched on the target by its natural key
+ * (UN/LOCODE, IMO, IATA/ICAO, a station's source id, a chain's name, an
+ * achievement's code). Read-only: an archive never creates or changes a shared
+ * catalogue row, since that row is every account's. A reference with no match is
+ * left unresolved; `resolveKey` then clears it or refuses the row.
  */
 export async function resolveCatalogue(
   db: Db,
   reader: ArchiveReader,
   plan: ArchivePlan,
-  tables: readonly string[],
-  remap: Remapper
+  tables: readonly string[]
 ): Promise<KeyMaps> {
   const maps: KeyMaps = new Map();
   for (const table of tables) {
     const info = plan.catalog.get(table)!;
     const spec = specOf(table);
     const pk = info.primaryKey[0];
-    const pkCol = info.columns.find((c) => c.name === pk)!;
     const map = new Map<string, string>();
     for await (const row of reader.jsonLines(tableEntryName("catalogue", table))) {
       const old = row[pk];
       if (old === null || old === undefined) throw invalidArchive(`${table} row without ${pk}`);
       const found = await lookupNatural(db, info, spec, row);
-      map.set(String(old), found ?? (await insertCopy(db, info, pkCol.serial, row, remap)));
+      if (found) map.set(String(old), found);
     }
     maps.set(table, map);
   }
@@ -89,41 +91,29 @@ async function lookupNatural(
   return null;
 }
 
-async function insertCopy(
-  db: Db,
-  info: TableInfo,
-  serial: boolean,
-  row: Row,
-  remap: Remapper
-): Promise<string> {
-  const pk = info.primaryKey[0];
-  const columns = info.columns.filter(
-    (c) => !c.generated && !(serial && c.name === pk) && c.name in row
-  );
-  const value = serial ? row : { ...row, [pk]: remap.id(String(row[pk])) };
-  const list = columns.map((c) => quoteIdent(c.name)).join(", ");
-  const [inserted] = await db.$queryRawUnsafe<Array<{ id: string }>>(
-    `INSERT INTO ${quoteIdent(info.name)} (${list})
-     SELECT ${list} FROM json_populate_record(NULL::${quoteIdent(info.name)}, $1::json)
-     RETURNING ${quoteIdent(pk)}::text AS id`,
-    JSON.stringify(value)
-  );
-  return inserted.id;
-}
-
 export interface RowContext {
   plan: ArchivePlan;
   remap: Remapper;
   keyMaps: KeyMaps;
   deferred: DeferredUpdate[];
+  /** Accepted files by their new stored name (`importFiles.ts`). */
+  verdicts: ReadonlyMap<string, FileVerdict>;
+  /** New ids of rows refused on the way: what points at them is cleared or refused too. */
+  skipped: Set<string>;
+  /** Rows refused, per table, and references cleared for want of a match. */
+  report: { skipped: Record<string, number>; unmatched: number };
 }
+
+/** The row cannot be imported as it stands (its file, its parent, its catalogue row is missing). */
+export class SkipRow extends Error {}
 
 function resolveKey(ctx: RowContext, p: DataTablePlan, column: string, value: unknown): unknown {
   const role = p.fkRoles.get(column)!;
   const nullable = !p.table.columns.find((c) => c.name === column)!.notNull;
   const missing = () => {
+    if (role.kind === "catalogue") ctx.report.unmatched += 1;
     if (nullable) return null;
-    throw invalidArchive(`${p.table.name}.${column} points at a row the archive does not carry`);
+    throw new SkipRow(`${p.table.name}.${column} points at a row that is not imported`);
   };
   switch (role.kind) {
     case "owner":
@@ -142,13 +132,22 @@ function resolveKey(ctx: RowContext, p: DataTablePlan, column: string, value: un
       const ref = ctx.plan.byName.get(role.refTable)!;
       const old = String(value);
       if (ref.serialIdColumn) return ctx.keyMaps.get(`own:${role.refTable}`)?.get(old) ?? missing();
-      if (ref.policy.bulk || ctx.remap.hasId(old)) return ctx.remap.id(old);
-      return missing();
+      const next = ref.policy.bulk || ctx.remap.hasId(old) ? ctx.remap.id(old) : null;
+      return next && !ctx.skipped.has(next) ? next : missing();
     }
   }
 }
 
-/** One archived row as the target writes it; deferred and late columns are queued, not set. */
+/** Columns that name the account: always the target, whatever the archive says. */
+function namesOwner(p: DataTablePlan, col: string): boolean {
+  const role = p.fkRoles.get(col);
+  return role?.kind === "owner" || (col === "user_id" && !role);
+}
+
+/**
+ * One archived row as the target writes it; deferred and late columns are queued,
+ * not set. Throws `SkipRow` when the row cannot be imported as it stands.
+ */
 export function transformRow(
   ctx: RowContext,
   p: DataTablePlan,
@@ -159,11 +158,14 @@ export function transformRow(
   const strip = new Set(p.policy.strip ?? []);
   const later = new Set([...(ctx.plan.deferred.get(p.table.name) ?? []), ...(p.policy.late ?? [])]);
   const types = new Map(p.table.columns.map((c) => [c.name, c.type]));
+  const fileColumns = new Set((p.policy.files ?? []).map((f) => f.column));
   const queued: Row = {};
   for (const col of columns) {
     const value = row[col];
     let next: unknown;
-    if (value === null || value === undefined || strip.has(col)) {
+    if (namesOwner(p, col)) {
+      next = ctx.remap.targetUserId;
+    } else if (value === null || value === undefined || strip.has(col)) {
       next = null;
     } else if (col === p.idColumn) {
       next = ctx.remap.id(String(value));
@@ -172,9 +174,13 @@ export function transformRow(
     } else if (p.policy.rekey?.includes(col)) {
       next = ctx.remap.id(String(value));
     } else if (p.policy.idColumns?.includes(col)) {
-      next = ctx.remap.hasId(String(value)) ? ctx.remap.id(String(value)) : value;
+      // An id the archive does not carry would name another account's record.
+      const id = ctx.remap.hasId(String(value)) ? ctx.remap.id(String(value)) : null;
+      if (!id || ctx.skipped.has(id))
+        throw new SkipRow(`${p.table.name}.${col} names no imported row`);
+      next = id;
     } else if (!p.policy.bulk && TEXT_LIKE.has(types.get(col) ?? "")) {
-      next = ctx.remap.rewrite(value, p.policy.files?.includes(col) ?? false);
+      next = ctx.remap.rewrite(value, fileColumns.has(col));
     } else {
       next = value;
     }
@@ -183,6 +189,15 @@ export function transformRow(
       out[col] = null;
     } else {
       out[col] = next;
+    }
+  }
+  if (p.policy.files) {
+    const nullable = (c: string) => !p.table.columns.find((x) => x.name === c)?.notNull;
+    try {
+      checkFileColumns(out, p.policy.files, ctx.verdicts, nullable);
+    } catch (err) {
+      if (err instanceof MissingFile) throw new SkipRow(err.message);
+      throw err;
     }
   }
   if (Object.keys(queued).length > 0) {
@@ -205,7 +220,11 @@ function columnsOf(p: DataTablePlan, row: Row): string[] {
   for (const key of keys) {
     if (!known.has(key)) throw schemaTooNew(`${p.table.name}.${key} does not exist on this server`);
   }
-  return keys.filter((k) => writable.has(k) || k === p.serialIdColumn).sort();
+  // The owner column is written even when an archive leaves it out.
+  const owners = p.table.columns.filter((c) => namesOwner(p, c.name)).map((c) => c.name);
+  return [...new Set([...keys, ...owners])]
+    .filter((k) => writable.has(k) || k === p.serialIdColumn)
+    .sort();
 }
 
 /** Inserts one table's rows; returns how many. */
@@ -224,7 +243,8 @@ export async function insertTable(
     if (batch.length === 0 || !columns) return;
     const writeCols = columns.filter((c) => c !== p.serialIdColumn);
     const list = writeCols.map(quoteIdent).join(", ");
-    // share-exempt: an imported account starts unshared; share keys and groups never travel.
+    // An imported account starts unshared: share keys and groups never travel, so
+    // nothing here propagates to another account.
     await db.$executeRawUnsafe(
       `INSERT INTO ${quoteIdent(p.table.name)} (${list})
        SELECT ${list} FROM json_populate_recordset(NULL::${quoteIdent(p.table.name)}, $1::json)`,
@@ -240,7 +260,18 @@ export async function insertTable(
     else if (rowColumns.join(",") !== columns.join(",")) {
       throw invalidArchive(`${p.table.name} rows carry different columns`);
     }
-    const out = transformRow(ctx, p, row, columns);
+    let out: Row;
+    try {
+      out = transformRow(ctx, p, row, columns);
+    } catch (err) {
+      if (!(err instanceof SkipRow)) throw err;
+      if (p.idColumn && typeof row[p.idColumn] === "string") {
+        ctx.skipped.add(ctx.remap.id(row[p.idColumn] as string));
+      }
+      ctx.report.skipped[p.table.name] = (ctx.report.skipped[p.table.name] ?? 0) + 1;
+      onRow();
+      continue;
+    }
     count += 1;
     onRow();
     if (p.serialIdColumn) {
@@ -276,14 +307,24 @@ async function insertSerialRow(
 }
 
 /** One UPDATE per row, all of its late columns at once (the owner trigger sees the final state). */
-export async function applyDeferred(db: Db, updates: readonly DeferredUpdate[]): Promise<void> {
+export async function applyDeferred(
+  db: Db,
+  updates: readonly DeferredUpdate[],
+  skipped: ReadonlySet<string>
+): Promise<void> {
   for (const u of updates) {
-    const list = Object.keys(u.values).map(quoteIdent).join(", ");
+    if (skipped.has(u.id)) continue;
+    // A key to a row refused after this one was queued stays unset.
+    const values = Object.fromEntries(
+      Object.entries(u.values).filter(([, v]) => !(typeof v === "string" && skipped.has(v)))
+    );
+    if (Object.keys(values).length === 0) continue;
+    const list = Object.keys(values).map(quoteIdent).join(", ");
     const table = quoteIdent(u.table);
     await db.$executeRawUnsafe(
       `UPDATE ${table} t SET (${list}) = (SELECT ${list} FROM json_populate_record(NULL::${table}, $1::json))
         WHERE t.${quoteIdent(u.idColumn)} = $2`,
-      JSON.stringify(u.values),
+      JSON.stringify(values),
       u.id
     );
   }

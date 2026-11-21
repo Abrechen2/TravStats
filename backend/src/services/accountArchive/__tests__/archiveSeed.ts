@@ -52,13 +52,23 @@ export async function insert(
   );
 }
 
+/** File bodies the upload path accepts: real magic numbers, then filler. */
+export const BYTES = {
+  jpeg: (s: string) => Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from(s)]),
+  png: (s: string) =>
+    Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from(s)]),
+  heic: (s: string) =>
+    Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from("ftypheic"), Buffer.from(s)]),
+  pdf: (s: string) => Buffer.from(`%PDF-1.4\n${s}\n%%EOF\n`),
+};
+
 export class SeedFiles {
   /** `<dir>/<name>` -> sha256, every file the account owns. */
   readonly files = new Map<string, string>();
   constructor(readonly root: string) {}
 
-  write(dir: string, name: string, body: string): { name: string; sha256: string } {
-    const bytes = Buffer.from(body);
+  write(dir: string, name: string, body: string | Buffer): { name: string; sha256: string } {
+    const bytes = Buffer.isBuffer(body) ? body : Buffer.from(body);
     const target = path.join(this.root, dir, name);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, bytes);
@@ -128,7 +138,7 @@ export async function seedOtherAccount(client: Client, files: SeedFiles): Promis
     arr_lat: 3,
     arr_lon: 4,
   });
-  const name = files.write("documents", "az-friend-doc.pdf", "friend bytes").name;
+  const name = files.write("documents", "az-friend-doc.pdf", BYTES.pdf("friend bytes")).name;
   files.files.delete(`documents/${name}`);
   await insert(client, "documents", {
     id: "az-friend-doc",
@@ -157,7 +167,7 @@ export async function seedCrossLinks(client: Client): Promise<void> {
 }
 
 export async function seedAccount(client: Client, files: SeedFiles): Promise<void> {
-  const avatar = files.write("profile-pictures", `${U}_1-a.png`, "avatar bytes");
+  const avatar = files.write("profile-pictures", `${U}_1-a.png`, BYTES.png("avatar bytes"));
   await insert(client, "users", {
     id: U,
     username: "az-user",
@@ -324,7 +334,7 @@ export async function seedAccount(client: Client, files: SeedFiles): Promise<voi
     body: "a note about az-trip-0001",
     occurred_at: NOW,
     occurred_zone: "UTC",
-    photo_filename: files.write("note-photos", "note-1.jpg", "note photo").name,
+    photo_filename: files.write("note-photos", "note-1.jpg", BYTES.jpeg("note photo")).name,
     photo_mimetype: "image/jpeg",
     photo_size_bytes: 10,
     updated_at: NOW,
@@ -344,8 +354,8 @@ export async function seedAccount(client: Client, files: SeedFiles): Promise<voi
     position: 0,
   });
 
-  const tripPhoto = files.write("trip-photos", "trip-1.heic", "trip photo");
-  files.write("trip-photos", "trip-1.heic.display.jpg", "trip photo rendition");
+  const tripPhoto = files.write("trip-photos", "trip-1.heic", BYTES.heic("trip photo"));
+  files.write("trip-photos", "trip-1.heic.display.jpg", BYTES.jpeg("trip photo rendition"));
   await insert(client, "trip_photos", {
     id: "az-tp-up-0001",
     trip_id: "az-trip-0001",
@@ -364,7 +374,7 @@ export async function seedAccount(client: Client, files: SeedFiles): Promise<voi
   await insert(client, "place_visit_photos", {
     id: "az-pvp-up-0001",
     place_visit_id: "az-visit-0001",
-    filename: files.write("place-photos", "visit-1.jpg", "visit photo").name,
+    filename: files.write("place-photos", "visit-1.jpg", BYTES.jpeg("visit photo")).name,
     mimetype: "image/jpeg",
     size_bytes: 11,
   });
@@ -389,7 +399,7 @@ export async function seedAccount(client: Client, files: SeedFiles): Promise<voi
   await insert(client, "lodging_photos", {
     id: "az-lp-0001",
     lodging_id: "az-lodging-0001",
-    filename: files.write("lodging-photos", "lodging-1.jpg", "lodging photo").name,
+    filename: files.write("lodging-photos", "lodging-1.jpg", BYTES.jpeg("lodging photo")).name,
     mimetype: "image/jpeg",
     size_bytes: 12,
   });
@@ -405,7 +415,7 @@ export async function seedAccount(client: Client, files: SeedFiles): Promise<voi
   });
   await insert(client, "receipt_uploads", {
     id: "az-receipt-0001",
-    filename: files.write("receipts", "receipt-1.pdf", "receipt bytes").name,
+    filename: files.write("receipts", "receipt-1.pdf", BYTES.pdf("receipt bytes")).name,
     user_id: U,
   });
   await seedDocuments(client, files);
@@ -450,14 +460,15 @@ export async function seedAccount(client: Client, files: SeedFiles): Promise<voi
 
 async function seedDocuments(client: Client, files: SeedFiles): Promise<void> {
   const doc = async (id: string, body: string, owner: Record<string, unknown> = {}) => {
-    const stored = files.write("documents", `${id}.pdf`, body);
+    const bytes = BYTES.pdf(body);
+    const stored = files.write("documents", `${id}.pdf`, bytes);
     await insert(client, "documents", {
       id,
       user_id: U,
       stored_name: stored.name,
       original_name: `Original ${id.slice(7)}.pdf`,
       mimetype: "application/pdf",
-      size_bytes: body.length,
+      size_bytes: bytes.length,
       sha256: stored.sha256,
       format: "pdf",
       ...owner,

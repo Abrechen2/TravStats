@@ -1,9 +1,15 @@
 import { createHash } from "crypto";
-import { createInterface } from "readline";
 import type { Readable } from "stream";
 import yauzl from "yauzl";
 
 import { AppError } from "../../middleware/errorHandler";
+
+/**
+ * The longest single row a data entry may carry. A flight's recorded track is the
+ * largest row there is (a few MB); a line past this is not a row but an attack on
+ * the reader's memory, and the whole archive is refused.
+ */
+export const MAX_LINE_BYTES = 32 * 1024 * 1024;
 
 /**
  * Read access to an uploaded account archive. yauzl reads the central directory,
@@ -93,10 +99,9 @@ export class ArchiveReader {
     return { sha256: hash.digest("hex"), bytes };
   }
 
-  /** The entry's lines, parsed; an unparsable line is an invalid archive. */
+  /** The entry's lines, parsed; an unparsable or over-long line is an invalid archive. */
   async *jsonLines(name: string): AsyncGenerator<Record<string, unknown>> {
-    const lines = createInterface({ input: await this.stream(name), crlfDelay: Infinity });
-    for await (const line of lines) {
+    for await (const line of splitLines(await this.stream(name), name)) {
       if (!line) continue;
       let value: unknown;
       try {
@@ -110,4 +115,29 @@ export class ArchiveReader {
       yield value as Record<string, unknown>;
     }
   }
+}
+
+/** Lines of a stream, never buffering more than `maxBytes` of one line. */
+export async function* splitLines(
+  stream: AsyncIterable<Buffer | string>,
+  name: string,
+  maxBytes = MAX_LINE_BYTES
+): AsyncGenerator<string> {
+  let parts: Buffer[] = [];
+  let held = 0;
+  for await (const raw of stream) {
+    let chunk = typeof raw === "string" ? Buffer.from(raw) : raw;
+    for (let nl = chunk.indexOf(10); nl >= 0; nl = chunk.indexOf(10)) {
+      if (held + nl > maxBytes) throw invalidArchive(`${name} holds a line that is too long`);
+      parts.push(chunk.subarray(0, nl));
+      yield Buffer.concat(parts).toString("utf-8");
+      parts = [];
+      held = 0;
+      chunk = chunk.subarray(nl + 1);
+    }
+    held += chunk.length;
+    if (held > maxBytes) throw invalidArchive(`${name} holds a line that is too long`);
+    if (chunk.length > 0) parts.push(chunk);
+  }
+  if (held > 0) yield Buffer.concat(parts).toString("utf-8");
 }
