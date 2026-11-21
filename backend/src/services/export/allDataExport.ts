@@ -223,6 +223,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
     "snoozes and opt-outs of setup checks, tied to this server's check revisions; a restored account re-evaluates",
   readinessNoteAcks:
     "read marks of this server's update notes; a restored account sees the notes for its own versions again",
+  documentLinkSuggestions:
+    "derived proposals for filing a document; the document links themselves are exported, and the next link pass re-derives the suggestions (a rejected one may be offered once more)",
   comparisonDevices: "public device identities, re-enrol after restore",
   localConnectionsLow:
     "friendships with other accounts on this server: the other side is not this user's data and ids are re-keyed on restore; friends re-confirm",
