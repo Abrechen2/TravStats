@@ -34,6 +34,8 @@ interface Props {
   arrival?: AirportPosition | null;
   /** The flight's own departure and arrival, shown where the recording names no time. */
   scheduled?: { departure: TimeValue | null; arrival: TimeValue | null };
+  /** The aircraft's ICAO24 hex — enables "from my receiver" (forgejo#408). */
+  aircraftModeS?: string | null;
 }
 
 /**
@@ -70,6 +72,7 @@ export default function FlightTrackSection({
   departure,
   arrival,
   scheduled,
+  aircraftModeS,
 }: Props): JSX.Element | null {
   const { t, i18n } = useTranslation(["flights", "stats"]);
   const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
@@ -130,7 +133,12 @@ export default function FlightTrackSection({
           {ownOrNone && (
             <>
               <p className="t-caption">{t("flights:track.uploadIntro")}</p>
-              <FlightTrackControls flightId={flightId} hasTrack={false} onChanged={reload} />
+              <FlightTrackControls
+                flightId={flightId}
+                hasTrack={false}
+                onChanged={reload}
+                aircraftModeS={aircraftModeS}
+              />
             </>
           )}
         </div>
@@ -190,7 +198,14 @@ export default function FlightTrackSection({
         {ownOrNone && (
           <GeoExportButtons path={geoExportPaths.flight(flightId)} testId="flight-track-export" />
         )}
-        {ownOrNone && <FlightTrackControls flightId={flightId} hasTrack onChanged={reload} />}
+        {ownOrNone && (
+          <FlightTrackControls
+            flightId={flightId}
+            hasTrack
+            onChanged={reload}
+            aircraftModeS={aircraftModeS}
+          />
+        )}
       </div>
     </DetailSection>
   );

@@ -452,6 +452,7 @@ export default function FlightDetailPage(): JSX.Element {
             departure={{ lat: flight.depLat, lon: flight.depLon }}
             arrival={{ lat: flight.arrLat, lon: flight.arrLon }}
             scheduled={{ departure, arrival: flightArrival(flight) }}
+            aircraftModeS={flight.aircraftModeS}
           />
           <FlightProfileLink flightId={flight.id} departure={departure} />
 

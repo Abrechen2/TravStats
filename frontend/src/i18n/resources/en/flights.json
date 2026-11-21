@@ -579,7 +579,26 @@
       "uploadFailed": "The recording could not be saved.",
       "removeFailed": "The recording could not be removed."
     },
-    "linesLoadError": "The recorded flight tracks could not be loaded — the map shows the flights on the great circle."
+    "linesLoadError": "The recorded flight tracks could not be loaded — the map shows the flights on the great circle.",
+    "fromReceiver": "Fetch from my receiver",
+    "receiverFetched": "Track saved from your receiver.",
+    "receiverErrors": {
+      "failed": "The track could not be fetched from the receiver.",
+      "off": "The own receiver is switched off. Switch it on under Settings → Services.",
+      "notConfigured": "No receiver address is set yet. Enter it under Settings → Services (Own receiver).",
+      "privateTarget": "This account may not query a receiver on a private network. Only public internet addresses are allowed.",
+      "noAircraft": "This flight has no ICAO24 (Mode S) code for the aircraft to find the track by.",
+      "noSchedule": "This flight has no departure or arrival time to find the track by.",
+      "notFound": "Your receiver holds no track of this aircraft for that day.",
+      "outsideWindow": "Your receiver's track does not cover this flight in time.",
+      "windowTooLong": "This flight's schedule spans too long to be one flight.",
+      "auth": "Your receiver refused the request. Check whether it requires a login.",
+      "timeout": "Your receiver did not answer in time.",
+      "unreachable": "Your receiver cannot be reached. Check the address and that it is running.",
+      "error": "Your receiver answered with an error.",
+      "badTrace": "Your receiver's answer is not a tar1090 trace file. Check the address.",
+      "tooLarge": "Your receiver's trace files are larger than one flight needs."
+    }
   },
   "planActual": {
     "departure": "Departure",

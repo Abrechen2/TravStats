@@ -75,6 +75,8 @@ export interface EnrichmentCandidates {
   settings: { enabled: boolean; minConfidence: number; maxPerDay: number } | null;
 }
 
+const RECEIVER_FETCH_TIMEOUT_MS = 70_000;
+
 export const flightsApi = {
   /** Flights the historical enrichment could fill in; empty with `settings: null` while it is off. */
   enrichmentCandidates: async (limit = 25): Promise<EnrichmentCandidates> => {
@@ -241,6 +243,22 @@ export const flightsApi = {
       `/flights/${id}/track/file`,
       form,
       { headers: { "Content-Type": "multipart/form-data" } }
+    );
+    return data.track;
+  },
+
+  /**
+   * Fetch the flight's line from the account's own tar1090 / readsb receiver
+   * (forgejo#408). `replace` must be said out loud: the server never displaces
+   * a recording the passenger made or uploaded on its own.
+   */
+  fetchReceiverTrack: async (id: string, replace: boolean): Promise<FlightTrackMeta> => {
+    const { data } = await api.post<{ track: FlightTrackMeta }>(
+      `/flights/${id}/track/receiver`,
+      { replace },
+      // The server's own deadline is 60 s; the 10 s client default would report a failure
+      // for a fetch that is still running and then stores the line.
+      { timeout: RECEIVER_FETCH_TIMEOUT_MS }
     );
     return data.track;
   },

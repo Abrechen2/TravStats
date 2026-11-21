@@ -135,11 +135,17 @@ explicit), lookup by registration when a flight has no hex.
 
 ## Open
 
-- ADS-B Exchange: which API access the owner's feeder account grants and whether its terms allow
-  use in a self-hosted app. Built as a bring-your-own-key provider, so nothing is used until a
-  key is entered.
-- adsb.lol key header: unverifiable today (see Deviations); re-check when adsb.lol enforces keys.
+- ADS-B Exchange terms (checked 2026-11-21, adsbexchange.com data-products page, support FAQ, RapidAPI listing): the
+  RapidAPI Community API is a paid personal-use plan (about 10 USD / 10,000 requests a month) "for personal and
+  non-commercial use"; enthusiasts may use it in their own apps and projects, bulk resale or redistribution is not
+  allowed, and commercial use needs a paid licence. No official page promises a free key to feeders (a third-party
+  comparison says the scheme ended; unconfirmed), and a feeder UUID is not an API key. So a self-hosted instance
+  may use it only with the owner's OWN personal key, for non-commercial use; the built provider is already off
+  until a key is entered, and the card now says "personal, non-commercial only". Not called from here.
+- adsb.lol key header: `x-api-key` (fixed in rc.39).
 - A lookup with ADS-B hit but no AirLabs/OpenSky route returns the aircraft only (no airports); the
   flight form fills registration and type and leaves the route to the user.
-- Companion: a cockpit consumer for `live-position`, and a button for `track/receiver` on a past flight.
-- Web: a "fetch from my receiver" action on the flight page (the server part is done).
+- Companion: a cockpit consumer for `live-position`, and a button for `track/receiver` on a past flight
+  (`POST /flights/{id}/track/receiver`, body `{ replace? }`; the web uses it, with the `RECEIVER_*` codes above).
+- Web: "Von meinem Empfänger holen" is built on the flight page's recording section (needs the aircraft's ICAO24
+  hex; asks before replacing a recording).
