@@ -35,7 +35,8 @@ const JOURNEY_SEARCH_PAD_MS = 60_000;
 export async function linkAssetsToVisit(
   visitId: string,
   assets: SourcedAsset[],
-  provenance: "manual" | "auto"
+  provenance: "manual" | "auto",
+  max: number = Number.POSITIVE_INFINITY
 ): Promise<number> {
   if (assets.length === 0) return 0;
   const existing = await prisma.placeVisitPhoto.findMany({
@@ -43,7 +44,7 @@ export async function linkAssetsToVisit(
     select: { immichAssetId: true, provider: true },
   });
   const known = new Set(existing.map((row) => `${row.provider}:${row.immichAssetId}`));
-  const fresh = assets.filter((a) => !known.has(`${a.provider}:${a.asset.id}`));
+  const fresh = assets.filter((a) => !known.has(`${a.provider}:${a.asset.id}`)).slice(0, max);
   if (fresh.length === 0) return 0;
 
   const last = await prisma.placeVisitPhoto.findFirst({

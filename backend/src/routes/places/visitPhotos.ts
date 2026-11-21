@@ -399,23 +399,29 @@ router.delete(
       // Row first, bytes second. The other order can delete the file and then
       // fail the row, which leaves a photo the UI still lists and can never
       // show — a broken thumbnail is worse than a byte we did not reclaim.
-      await prisma.placeVisitPhoto.delete({ where: { id: photo.id } });
       // A removed library link is a refusal: the automatic pass would otherwise
-      // link the same picture again on its next run.
-      if (photo.immichAssetId && photo.filename === null) {
-        await prisma.visitPhotoRefusal.createMany({
-          data: [
-            {
-              userId,
-              placeVisitId: photo.placeVisitId,
-              kind: "library",
-              provider: toPhotoSourceKind(photo.provider),
-              suggestionId: photo.immichAssetId,
-            },
-          ],
-          skipDuplicates: true,
-        });
-      }
+      // link the same picture again on its next run. Recorded in the same
+      // transaction, so the row never goes without its refusal.
+      const isLibraryLink = photo.immichAssetId !== null && photo.filename === null;
+      await prisma.$transaction([
+        ...(isLibraryLink
+          ? [
+              prisma.visitPhotoRefusal.createMany({
+                data: [
+                  {
+                    userId,
+                    placeVisitId: photo.placeVisitId,
+                    kind: "library",
+                    provider: toPhotoSourceKind(photo.provider),
+                    suggestionId: photo.immichAssetId!,
+                  },
+                ],
+                skipDuplicates: true,
+              }),
+            ]
+          : []),
+        prisma.placeVisitPhoto.delete({ where: { id: photo.id } }),
+      ]);
       if (photo.filename) deletePlacePhotoFile(photo.filename);
 
       res.status(204).send();

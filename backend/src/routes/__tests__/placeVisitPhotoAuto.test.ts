@@ -30,6 +30,7 @@ import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
 import { clearImmichAssetCache } from "../../services/immich/immichAssetCache";
+import { VISIT_PHOTO_SUGGESTION_CAP } from "../../schemas/place";
 import { ImmichError } from "../../services/immich/types";
 import { settleAllJobs } from "../../services/jobs/jobRegistry";
 import { generateToken } from "../../utils/jwt";
@@ -239,6 +240,49 @@ describe("automatic place-visit photo links", () => {
     }
     await settleAllJobs();
     expect(rows.map((r) => r.provider).sort()).toEqual(["immich", "photoprism"]);
+  });
+
+  it("drops automatic links of the old day when the visit moves, and keeps the user's own", async () => {
+    await run();
+    await prisma.placeVisitPhoto.create({
+      data: {
+        placeVisitId: visitId,
+        filename: null,
+        mimetype: "image/jpeg",
+        sizeBytes: 0,
+        immichAssetId: "own-pick",
+        takenAt: new Date("2024-05-01T09:00:00Z"),
+      },
+    });
+    await prisma.placeVisit.update({
+      where: { id: visitId },
+      data: {
+        visitedAt: new Date("2024-05-09T15:00:00Z"),
+        visitedAtUtc: new Date("2024-05-09T15:00:00Z"),
+      },
+    });
+    await run();
+    expect((await linked()).map((r) => r.immichAssetId)).toEqual(["own-pick"]);
+    await prisma.placeVisit.update({
+      where: { id: visitId },
+      data: {
+        visitedAt: new Date("2024-05-01T15:00:00Z"),
+        visitedAtUtc: new Date("2024-05-01T15:00:00Z"),
+      },
+    });
+  });
+
+  it("holds a visit to the cap however many passes run", async () => {
+    const many = Array.from({ length: 40 }, (_, i) =>
+      asset(`00000000-0000-4000-8000-${String(i).padStart(12, "0")}`, {
+        fileCreatedAt: `2024-05-01T10:${String(i).padStart(2, "0")}:00.000Z`,
+      })
+    );
+    search.immich.mockResolvedValue({ assets: many, truncated: false });
+    search.photoprism.mockResolvedValue({ assets: [], truncated: false });
+    await run();
+    await run();
+    expect(await linked()).toHaveLength(VISIT_PHOTO_SUGGESTION_CAP);
   });
 
   it("shows a failing source instead of 'no photos', and still links the other", async () => {

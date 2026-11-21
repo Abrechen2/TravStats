@@ -77,6 +77,20 @@ export async function autoLinkVisit(
   if (anchor === "undated") return { linked: 0, sources: {} };
 
   const window = dayWindow(anchor);
+  // A visit moved to another day: its automatic links from the old day no
+  // longer belong to it. Only links whose capture time is known and outside the
+  // new day go; a user's own picks (provenance manual) are never touched.
+  await prisma.placeVisitPhoto.deleteMany({
+    where: {
+      placeVisitId: visitId,
+      provenance: "auto",
+      takenAt: { not: null },
+      OR: [{ takenAt: { lt: window.start } }, { takenAt: { gt: window.end } }],
+    },
+  });
+  const existingAuto = await prisma.placeVisitPhoto.count({
+    where: { placeVisitId: visitId, provenance: "auto" },
+  });
   const [{ sources, candidates }, circles, refused, onVisit] = await Promise.all([
     candidatesForWindow(search, window),
     privacyCircleSet(userId).then((at) => at(window.start.getTime())),
@@ -102,7 +116,9 @@ export async function autoLinkVisit(
     refused: new Set([...refused.library, ...viaTrip]),
     cap: AUTO_LINK_CAP,
   };
-  const linked = await linkAssetsToVisit(visitId, matchAssets(candidates, spec), "auto");
+  // The cap bounds what the visit holds, not what one pass adds.
+  const room = Math.max(0, AUTO_LINK_CAP - existingAuto);
+  const linked = await linkAssetsToVisit(visitId, matchAssets(candidates, spec), "auto", room);
   return { linked, sources };
 }
 
@@ -169,6 +185,8 @@ export async function autoLinkVisits(
   let run: AutoLinkRun = { visits: 0, linked: 0, failedVisits: 0, sources: {} };
   let done = 0;
   for (const id of ids) {
+    // Switching off stops a pass already under way, not only the next one.
+    if (!(await autoLinkEnabled(userId))) break;
     try {
       const outcome = await autoLinkVisit(userId, id, search);
       if (outcome) {
