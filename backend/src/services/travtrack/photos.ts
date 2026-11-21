@@ -265,6 +265,8 @@ async function computePhotos(
     for (const asset of g.assets) {
       const key = `${provider}:${asset.id}`;
       if (photos.has(key)) continue;
+      // An undated photo has no moment to place on the track (null, never 1970).
+      if (asset.fileCreatedAt === null) continue;
       const t = Date.parse(asset.fileCreatedAt);
       if (!Number.isFinite(t) || t < window.fromMs || t >= window.untilMs) continue;
       // By TIME on the safe track — never the asset's own coordinates.

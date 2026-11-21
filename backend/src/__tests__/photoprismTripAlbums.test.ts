@@ -15,6 +15,7 @@ const findFirstLink = jest.fn<(args: unknown) => Promise<unknown>>();
 const createManyLinks = jest.fn<(args: unknown) => Promise<{ count: number }>>();
 jest.mock("../db", () => ({
   prisma: {
+    immichImportJob: { upsert: jest.fn() },
     tripImmichAlbum: {
       findMany: findManyLinks,
       findFirst: findFirstLink,
@@ -47,12 +48,15 @@ jest.mock("../services/immich/immichResolver", () => ({
   getImmichConnection: jest.fn(),
   getImmichDefaultMode: jest.fn(async () => "link"),
 }));
+const startAlbumImport = jest.fn();
+const estimateAlbumImport = jest.fn<(...args: unknown[]) => Promise<unknown>>();
+const isImportInFlight = jest.fn<(linkId: string) => boolean>();
 jest.mock("../services/immich/immichImport", () => ({
-  startAlbumImport: jest.fn(),
+  startAlbumImport,
   deleteImportedPhotoFiles: jest.fn(),
-  estimateAlbumImport: jest.fn(),
+  estimateAlbumImport,
   getImportJob: jest.fn(),
-  isImportInFlight: jest.fn(),
+  isImportInFlight,
 }));
 jest.mock("../middleware/rateLimit", () => ({
   immichImportLimiter: (_q: unknown, _s: unknown, next: () => void) => next(),
@@ -174,11 +178,21 @@ describe("POST link", () => {
     );
   });
 
-  it("refuses import mode for PhotoPrism instead of storing a link that can never import (phase B3)", async () => {
+  it("accepts import mode for PhotoPrism: stores the link and starts the import job (phase B3)", async () => {
+    listAlbums.mockResolvedValue([
+      { id: "x1", albumName: "Lisbon", assetCount: 2, thumbnailAssetId: HASH },
+    ]);
+    findManyLinks.mockResolvedValue([
+      { id: "link-7", provider: "photoprism", immichAlbumId: "x1", mode: "import", sortIdx: 0 },
+    ]);
     const res = await post([{ immichAlbumId: "x1", mode: "import", provider: "photoprism" }]);
-    expect(res.status).toBe(400);
-    expect(res.body.error).toBe("importNotSupported");
-    expect(createManyLinks).not.toHaveBeenCalled();
+    expect(res.status).toBe(201);
+    expect(createManyLinks).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [expect.objectContaining({ provider: "photoprism", mode: "import" })],
+      })
+    );
+    expect(startAlbumImport).toHaveBeenCalledWith("u1", "link-7");
   });
 
   it("refuses to mix sources in one request", async () => {
@@ -195,6 +209,54 @@ describe("POST link", () => {
     const res = await post([{ immichAlbumId: "nope", mode: "link", provider: "photoprism" }]);
     expect(res.status).toBe(400);
     expect(createManyLinks).not.toHaveBeenCalled();
+  });
+});
+
+describe("import mode routes for a PhotoPrism link", () => {
+  const link = {
+    id: "link-7",
+    tripId: "trip-1",
+    provider: "photoprism",
+    immichAlbumId: "x1",
+    mode: "import",
+  };
+
+  it("resync resolves the PhotoPrism connection, not the Immich one, and fires the import", async () => {
+    findFirstLink.mockResolvedValue(link);
+    isImportInFlight.mockReturnValue(false);
+    const res = await request(app()).post("/api/v1/trips/trip-1/immich/albums/link-7/resync");
+    expect(res.status).toBe(202);
+    expect(getPhotoSourceConnection).toHaveBeenCalledWith("photoprism", "u1");
+    expect(startAlbumImport).toHaveBeenCalledWith("u1", "link-7");
+  });
+
+  it("resync answers 409 notConfigured (naming PhotoPrism) when its connection is gone", async () => {
+    findFirstLink.mockResolvedValue(link);
+    isImportInFlight.mockReturnValue(false);
+    getPhotoSourceConnection.mockResolvedValue(null);
+    const res = await request(app()).post("/api/v1/trips/trip-1/immich/albums/link-7/resync");
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe("notConfigured");
+    expect(res.body.message).toContain("PhotoPrism");
+    expect(startAlbumImport).not.toHaveBeenCalled();
+  });
+
+  it("resync leaves a live run alone (in-flight rule as for Immich)", async () => {
+    findFirstLink.mockResolvedValue(link);
+    isImportInFlight.mockReturnValue(true);
+    const res = await request(app()).post("/api/v1/trips/trip-1/immich/albums/link-7/resync");
+    expect(res.status).toBe(202);
+    expect(res.body.job.status).toBe("running");
+    expect(startAlbumImport).not.toHaveBeenCalled();
+  });
+
+  it("the import estimate is asked of the requested source", async () => {
+    estimateAlbumImport.mockResolvedValue({ assetCount: 3, totalBytes: 30 });
+    const res = await request(app()).get(
+      "/api/v1/trips/trip-1/immich/estimate?albumId=x1&provider=photoprism"
+    );
+    expect(res.status).toBe(200);
+    expect(estimateAlbumImport).toHaveBeenCalledWith("u1", "x1", "photoprism");
   });
 });
 

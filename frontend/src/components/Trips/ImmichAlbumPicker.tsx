@@ -114,12 +114,13 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
   // defaultMode or an explicit mode-button click.
   const fetchEstimateIfImport = async (
     key: string,
+    provider: PhotoSourceKind,
     albumId: string,
     mode: ImmichMode
   ): Promise<void> => {
     if (mode !== "import") return;
 
-    const estimate = await immichApi.estimateImport(tripId, albumId);
+    const estimate = await immichApi.estimateImport(tripId, albumId, provider);
     setSelected((prev) =>
       // The album may have been deselected (or switched back to link) while
       // the estimate was in flight — never resurrect it into the selection,
@@ -135,7 +136,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
   const selectAlbum = (provider: PhotoSourceKind, albumId: string, mode: ImmichMode): void => {
     const key = selectionKey(provider, albumId);
     setSelected((prev) => ({ ...prev, [key]: { provider, albumId, mode, estimateBytes: null } }));
-    void fetchEstimateIfImport(key, albumId, mode).catch((error: unknown) => {
+    void fetchEstimateIfImport(key, provider, albumId, mode).catch((error: unknown) => {
       logger.warn("Import estimate failed", { provider, kind: immichFailureKind(error) });
       setLinkFailure(failureKey(immichFailureKind(error), provider));
     });
@@ -153,8 +154,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
       });
       return;
     }
-    // PhotoPrism has no import mode yet: its albums are always linked.
-    selectAlbum(active, albumId, active === "photoprism" ? "link" : defaultMode);
+    selectAlbum(active, albumId, defaultMode);
   };
 
   const setMode = (albumId: string, mode: ImmichMode): void => {
@@ -338,10 +338,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
 
                 {selection && (
                   <div className="mt-2 flex items-center gap-2 pl-7">
-                    {(active === "photoprism"
-                      ? (["link"] as const)
-                      : (["link", "import"] as const)
-                    ).map((mode) => (
+                    {(["link", "import"] as const).map((mode) => (
                       <button
                         key={mode}
                         type="button"
@@ -357,11 +354,6 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
                         {mode === "link" ? t("modeLink") : t("modeImport")}
                       </button>
                     ))}
-                    {active === "photoprism" && (
-                      <span className="text-xs" style={{ color: "var(--ts-muted)" }}>
-                        {t("albums.importUnsupported")}
-                      </span>
-                    )}
                     {selection.estimateBytes !== null && (
                       <span className="text-xs" style={{ color: "var(--ts-warn)" }}>
                         {t("albums.estimate", { size: formatBytes(selection.estimateBytes) })}

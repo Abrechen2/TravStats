@@ -263,11 +263,11 @@ describe("listAlbumAssets", () => {
     expect(asset.lon).toBeNull();
   });
 
-  it("does not take a file modification time (empty TakenSrc) for a capture time", async () => {
+  it("reports no capture time (null, not 1970) when TakenSrc is empty, i.e. only a file modification time", async () => {
     mockedAxios.get.mockResolvedValueOnce({ data: [photo({ TakenSrc: "" })] });
     const [asset] = (await createPhotoprismPhotoSource(CONN).listAlbumAssets("as6sg6bxpogaaba8", 0))
       .assets;
-    expect(asset.fileCreatedAt).toBe(new Date(0).toISOString());
+    expect(asset.fileCreatedAt).toBeNull();
   });
 
   it("drops entries without a usable hash or of a non-photo type", async () => {
@@ -330,6 +330,34 @@ describe("streams", () => {
     expect(mockedLogger.warn).toHaveBeenCalledWith(
       expect.objectContaining({ message: "photoprism_token_refresh" })
     );
+  });
+
+  it("shares one token fetch between concurrent downloads, cold and after a 401 (an import runs ten at once)", async () => {
+    let configCalls = 0;
+    let rejected = 0;
+    mockedAxios.get.mockImplementation((async (url: unknown) => {
+      if (String(url).endsWith("/config")) {
+        configCalls += 1;
+        return { data: { ...CONFIG, downloadToken: `dt${configCalls}` } };
+      }
+      // The first token is stale for every download; the refreshed one works.
+      if (String(url).includes("t=dt1")) {
+        rejected += 1;
+        throw axiosError(401);
+      }
+      return mediaResponse();
+    }) as never);
+    const source = createPhotoprismPhotoSource(CONN);
+
+    await Promise.all([
+      source.streamOriginal(HASH),
+      source.streamOriginal(HASH),
+      source.streamOriginal(HASH),
+    ]);
+
+    expect(rejected).toBe(3);
+    // One cold fetch and one refresh for all three — not three of each.
+    expect(configCalls).toBe(2);
   });
 
   it("answers auth (and does not loop) when the 403 persists after a refresh", async () => {
@@ -416,10 +444,7 @@ describe("searchAssetsByTime", () => {
       "https://photos.example.com/api/v1/photos?after=2026-10-09&before=2026-10-11&count=500&offset=0&order=oldest"
     );
     expect(found.truncated).toBe(false);
-    expect(found.assets.map((a) => a.fileCreatedAt)).toEqual([
-      "2026-10-10T12:05:00.000Z",
-      new Date(0).toISOString(),
-    ]);
+    expect(found.assets.map((a) => a.fileCreatedAt)).toEqual(["2026-10-10T12:05:00.000Z", null]);
   });
 
   it("reads further pages while they are full, and says when the page bound ran out", async () => {

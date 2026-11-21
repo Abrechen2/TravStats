@@ -73,7 +73,14 @@ const ACTIVE_IMAGE = /^image\/svg/i;
 /** An asset id is a file hash; anything else never reaches a URL. */
 const HASH = /^[0-9a-f]{16,64}$/i;
 const ALBUM_UID = /^[A-Za-z0-9_-]{1,64}$/;
-const NO_CAPTURE_TIME = new Date(0).toISOString();
+/** Originals this server may store as a trip photo, by file extension (PhotoPrism sends no MIME in a list). */
+const MIME_BY_EXTENSION: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+};
 
 interface Tokens {
   preview: string;
@@ -82,10 +89,17 @@ interface Tokens {
 }
 
 const tokenCache = new Map<string, Tokens>();
+/**
+ * A token fetch in flight per connection. An import downloads ten originals at
+ * once; without sharing, ten cold starts or ten refreshes after one 401 would
+ * each ask `/config` (and a refresh must not be undone by a slower sibling).
+ */
+const tokenFetches = new Map<string, Promise<Tokens>>();
 
 /** Test seam. Never called from production code. */
 export function clearPhotoprismTokenCache(): void {
   tokenCache.clear();
+  tokenFetches.clear();
 }
 
 const cacheKey = (conn: ImmichConnection): string =>
@@ -156,17 +170,16 @@ function mapAsset(raw: unknown): PhotoSourceAsset | null {
   // TakenAt without TakenSrc is only the file's modification time: not a capture time.
   const taken = Date.parse(str(raw.TakenAt));
   const fileCreatedAt =
-    str(raw.TakenSrc) !== "" && Number.isFinite(taken)
-      ? new Date(taken).toISOString()
-      : NO_CAPTURE_TIME;
+    str(raw.TakenSrc) !== "" && Number.isFinite(taken) ? new Date(taken).toISOString() : null;
 
   const fileName = str(raw.FileName);
+  const extension = fileName.includes(".") ? (fileName.split(".").pop() ?? "").toLowerCase() : "";
   return {
     id: hash,
     type,
     fileCreatedAt,
     originalFileName: fileName ? (fileName.split("/").pop() ?? fileName) : `${hash}.bin`,
-    mimeType: "application/octet-stream",
+    mimeType: MIME_BY_EXTENSION[extension] ?? "application/octet-stream",
     sizeBytes: null,
     lat: hasPosition ? lat : null,
     lon: hasPosition ? lon : null,
@@ -242,12 +255,22 @@ export function createPhotoprismPhotoSource(
     return tokens;
   }
 
+  /** One `fetchTokens` per connection at a time; concurrent callers share it. */
+  function sharedFetch(): Promise<Tokens> {
+    const key = cacheKey(conn);
+    const running = tokenFetches.get(key);
+    if (running) return running;
+    const started = fetchTokens().finally(() => tokenFetches.delete(key));
+    tokenFetches.set(key, started);
+    return started;
+  }
+
   async function tokens(forceRefresh = false): Promise<Tokens> {
     const cached = tokenCache.get(cacheKey(conn));
     if (!forceRefresh && cached && Date.now() - cached.fetchedAt < PHOTOPRISM_TOKEN_TTL_MS) {
       return cached;
     }
-    return fetchTokens();
+    return sharedFetch();
   }
 
   /** A stream from `build(tokens)`; one refresh of the tokens after a 403. */
@@ -268,7 +291,10 @@ export function createPhotoprismPhotoSource(
         if (failure.kind === "auth" && !refreshed) {
           refreshed = true;
           logger.warn({ message: "photoprism_token_refresh", context: { context } });
-          current = await tokens(true);
+          // A sibling request may have refreshed already: use its tokens
+          // instead of asking `/config` again for every failed download.
+          const newer = tokenCache.get(cacheKey(conn));
+          current = newer && newer.fetchedAt > current.fetchedAt ? newer : await tokens(true);
           continue;
         }
         throw failure;

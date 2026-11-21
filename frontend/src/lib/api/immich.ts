@@ -134,8 +134,14 @@ export const immichApi = {
     return data;
   },
 
-  async estimateImport(tripId: string, albumId: string): Promise<ImportEstimate> {
-    const { data } = await api.get(`/trips/${tripId}/immich/estimate?albumId=${albumId}`);
+  async estimateImport(
+    tripId: string,
+    albumId: string,
+    provider: PhotoSourceKind = "immich"
+  ): Promise<ImportEstimate> {
+    // Immich keeps its original URL; only another source names itself.
+    const suffix = provider === "immich" ? "" : `&provider=${provider}`;
+    const { data } = await api.get(`/trips/${tripId}/immich/estimate?albumId=${albumId}${suffix}`);
     return data;
   },
 

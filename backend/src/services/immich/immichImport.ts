@@ -1,11 +1,13 @@
 /**
- * Import ("copy") mode: download an Immich album's originals onto the data
- * volume and register them as ordinary `TripPhoto` rows.
+ * Import ("copy") mode: download a photo-source album's originals (Immich or
+ * PhotoPrism) onto the data volume and register them as ordinary `TripPhoto`
+ * rows. The source is the link's `provider`; the download goes through the
+ * photo-source interface, so PhotoPrism's download token never leaves the server.
  *
  * Progress is tracked with a DB status row, mirroring `airportSeedingService`
  * — this repo has no job queue, only cron schedulers, and the UI polls.
  *
- * Idempotency lives in the `(trip_id, immich_asset_id)` unique index: a
+ * Idempotency lives in the `(trip_id, provider, immich_asset_id)` unique index: a
  * re-sync lists the album again and downloads only what is missing. One bad
  * asset fails that asset, not the run.
  */
@@ -20,8 +22,8 @@ import { FILE_LIMITS } from "../../config/constants";
 import { deleteTripPhotoFile, getTripPhotoDir } from "../../middleware/upload";
 import logger from "../../utils/logger";
 import { createPhotoSource, listAllAlbumAssets } from "../photoSource";
-import type { PhotoSourceProvider } from "../photoSource/types";
-import { getImmichConnection } from "./immichResolver";
+import { getPhotoSourceConnection, toPhotoSourceKind } from "../photoSource/connection";
+import type { PhotoSourceKind, PhotoSourceProvider } from "../photoSource/types";
 import { invalidateAlbumAssets } from "./immichAssetCache";
 import { ImmichAsset, ImmichError } from "./types";
 
@@ -39,7 +41,7 @@ function isAssetTooLarge(error: unknown): error is AssetTooLargeError {
 }
 
 /** A concurrent import of a sibling album sharing this asset already created
- *  the `(tripId, immichAssetId)` row — the asset is present, not failed (M5). */
+ *  the `(tripId, provider, immichAssetId)` row — the asset is present, not failed (M5). */
 function isDuplicateAsset(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
@@ -125,6 +127,15 @@ export interface ImportJobDto {
   error: string | null;
 }
 
+/**
+ * An error that dooms every further asset of the run (a rejected credential, a
+ * target this account may not reach) rather than one file. Such a failure fails
+ * the job with its kind instead of being counted once per asset.
+ */
+function isRunWideFailure(error: unknown): error is ImmichError {
+  return error instanceof ImmichError && (error.kind === "auth" || error.kind === "invalidUrl");
+}
+
 const isImportable = (asset: ImmichAsset): boolean =>
   asset.type === "IMAGE" &&
   (IMPORT_ALLOWED_MIME_TYPES as readonly string[]).includes(asset.mimeType);
@@ -166,12 +177,13 @@ export async function getImportJob(linkId: string): Promise<ImportJobDto | null>
  */
 export async function estimateAlbumImport(
   userId: string,
-  albumId: string
+  albumId: string,
+  provider: PhotoSourceKind = "immich"
 ): Promise<{ assetCount: number; totalBytes: number }> {
-  const conn = await getImmichConnection(userId);
+  const conn = await getPhotoSourceConnection(provider, userId);
   if (!conn) return { assetCount: 0, totalBytes: 0 };
 
-  const assets = (await listAllAlbumAssets(createPhotoSource("immich", conn), albumId)).filter(
+  const assets = (await listAllAlbumAssets(createPhotoSource(provider, conn), albumId)).filter(
     isImportable
   );
 
@@ -189,6 +201,7 @@ export async function estimateAlbumImport(
  */
 async function importAsset(
   source: PhotoSourceProvider,
+  provider: PhotoSourceKind,
   tripId: string,
   linkId: string,
   asset: ImmichAsset
@@ -222,6 +235,19 @@ async function importAsset(
 
   try {
     const upstream = await source.streamOriginal(asset.id);
+    // PhotoPrism's list carries no MIME, only a file extension; what is stored
+    // must be what the server actually sent, under the same allow-list as an upload.
+    if (provider === "photoprism") {
+      const served = String(upstream.contentType).split(";")[0].trim().toLowerCase();
+      if (!(IMPORT_ALLOWED_MIME_TYPES as readonly string[]).includes(served)) {
+        (upstream.stream as { destroy?: () => void }).destroy?.();
+        logger.warn({
+          message: "immich_import_asset_type_refused",
+          context: { assetId: asset.id, linkId, provider, served },
+        });
+        return false;
+      }
+    }
     // The byte cap also guards the case where Immich reported no size (no EXIF
     // row yet): the stream is aborted the moment it crosses the ceiling and the
     // partial file is cleaned up below (M2).
@@ -237,7 +263,9 @@ async function importAsset(
         filename,
         mimetype: asset.mimeType,
         sizeBytes: asset.sizeBytes ?? 0,
-        takenAt: new Date(asset.fileCreatedAt),
+        // No capture time stays null — never 1970 — and sorts last in the gallery.
+        takenAt: asset.fileCreatedAt === null ? null : new Date(asset.fileCreatedAt),
+        provider,
         immichAssetId: asset.id,
         immichAlbumLinkId: linkId,
         lat: asset.lat,
@@ -275,6 +303,7 @@ async function importAsset(
       context: { assetId: asset.id, linkId },
     });
     cleanup();
+    if (isRunWideFailure(error)) throw error;
     return false;
   }
 }
@@ -311,7 +340,8 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
       const link = await prisma.tripImmichAlbum.findUnique({ where: { id: linkId } });
       if (!link) return;
 
-      const conn = await getImmichConnection(userId);
+      const provider = toPhotoSourceKind(link.provider);
+      const conn = await getPhotoSourceConnection(provider, userId);
       if (!conn) {
         logger.warn({ message: "immich_import_no_connection", context: { linkId } });
         // Close the residual race behind the resync route's own pre-check: if a
@@ -340,7 +370,7 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
         create: { albumLinkId: linkId, ...runningJob },
       });
 
-      const source = createPhotoSource("immich", conn);
+      const source = createPhotoSource(provider, conn);
       let processed = 0;
       let failed = 0;
 
@@ -349,7 +379,7 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
         const importable = all.filter(isImportable);
 
         const alreadyImported = await prisma.tripPhoto.findMany({
-          where: { tripId: link.tripId, immichAssetId: { not: null } },
+          where: { tripId: link.tripId, provider, immichAssetId: { not: null } },
           select: { immichAssetId: true },
         });
         const seen = new Set(alreadyImported.map((p) => p.immichAssetId));
@@ -362,9 +392,14 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
 
         for (let i = 0; i < todo.length; i += CHUNK_SIZE) {
           const chunk = todo.slice(i, i + CHUNK_SIZE);
-          const results = await Promise.all(
-            chunk.map((asset) => importAsset(source, link.tripId, linkId, asset))
+          // allSettled: a run-wide failure must not leave sibling downloads of
+          // this chunk running unobserved while the job is marked failed.
+          const settled = await Promise.allSettled(
+            chunk.map((asset) => importAsset(source, provider, link.tripId, linkId, asset))
           );
+          const fatal = settled.find((r) => r.status === "rejected");
+          if (fatal) throw (fatal as PromiseRejectedResult).reason;
+          const results = settled.map((r) => (r as PromiseFulfilledResult<boolean>).value);
           processed += results.filter(Boolean).length;
           failed += results.filter((ok) => !ok).length;
 
@@ -387,7 +422,7 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
           where: { id: linkId },
           data: { lastSyncedAt: new Date(), assetCount: importable.length },
         });
-        invalidateAlbumAssets(userId, link.immichAlbumId);
+        invalidateAlbumAssets(userId, link.immichAlbumId, provider);
 
         logger.info({
           message: "immich_import_completed",

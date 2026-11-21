@@ -111,7 +111,8 @@ export async function scanPhotoJourneys(
 
   const photos: ScanPhoto[] = assets.map((asset) => ({
     id: asset.id,
-    takenAtMs: Date.parse(asset.fileCreatedAt),
+    // No capture time is NaN, which the clustering drops: not a moment in 1970.
+    takenAtMs: asset.fileCreatedAt === null ? Number.NaN : Date.parse(asset.fileCreatedAt),
     lat: asset.lat,
     lon: asset.lon,
   }));

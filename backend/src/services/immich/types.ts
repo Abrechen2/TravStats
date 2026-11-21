@@ -50,8 +50,8 @@ export interface ImmichAlbum {
 export interface ImmichAsset {
   id: string;
   type: "IMAGE" | "VIDEO";
-  /** ISO-8601. */
-  fileCreatedAt: string;
+  /** ISO-8601 capture instant; null when Immich sent none (never the epoch). */
+  fileCreatedAt: string | null;
   originalFileName: string;
   mimeType: string;
   /** From `exifInfo.fileSizeInByte` — null when Immich has no EXIF row yet. */

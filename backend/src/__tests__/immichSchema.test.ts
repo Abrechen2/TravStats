@@ -70,6 +70,19 @@ describe("Immich schema", () => {
     );
   });
 
+  it("keeps the same asset id of two photo sources apart within one trip (provider is part of the key)", async () => {
+    const trip = await prisma.trip.create({ data: { userId, name: "Trip" } });
+    const base = { tripId: trip.id, filename: "a.jpg", mimetype: "image/jpeg", sizeBytes: 1 };
+
+    await prisma.tripPhoto.create({ data: { ...base, immichAssetId: "same" } });
+    await prisma.tripPhoto.create({
+      data: { ...base, provider: "photoprism", immichAssetId: "same" },
+    });
+    await expect(
+      prisma.tripPhoto.create({ data: { ...base, provider: "photoprism", immichAssetId: "same" } })
+    ).rejects.toThrow();
+  });
+
   it("stores an import job keyed one-to-one to its album link", async () => {
     const trip = await prisma.trip.create({ data: { userId, name: "Trip" } });
     const link = await prisma.tripImmichAlbum.create({

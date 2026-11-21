@@ -183,6 +183,18 @@ describe("startAlbumImport", () => {
     );
   });
 
+  it("stores a photo without a capture time with takenAt null (never 1970) and records the provider", async () => {
+    listAlbumAssets.mockResolvedValue([asset("p1", { fileCreatedAt: null })]);
+
+    await startAlbumImport("u1", "link-1");
+
+    expect(photoCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ takenAt: null, provider: "immich" }),
+      })
+    );
+  });
+
   it("is idempotent — already-imported assets are skipped on re-sync", async () => {
     listAlbumAssets.mockResolvedValue([asset("p1"), asset("p2")]);
     photoFindMany.mockResolvedValue([{ immichAssetId: "p1" }]);
