@@ -10,6 +10,7 @@ import { TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import { declutterByDistance, pickLabelled } from "../map/labelPriority";
 import { TRIP_MAP_CHROME } from "./tripMapColors";
+import { pickSequenceItems } from "./tripMapEmphasis";
 
 export interface TripLabelItem {
   position: [number, number];
@@ -41,6 +42,8 @@ export function pickTripLabels(items: readonly TripLabelItem[], zoom: number): T
 }
 
 type Rgba = [number, number, number, number];
+const NUMBER_SIZE_PX = 10;
+const NUMBER_CHIP: Rgba = [...TRIP_MAP_CHROME.labelText.slice(0, 3), 185] as Rgba;
 const FONT = "'Inter', system-ui, sans-serif";
 
 /**
@@ -50,7 +53,8 @@ const FONT = "'Inter', system-ui, sans-serif";
  */
 export function buildTripLabelLayers(
   items: readonly TripLabelItem[],
-  zoom: number
+  zoom: number,
+  dayChosen = false
 ): { names: Layer; numbers: Layer | null } {
   const names = pickTripLabels(items, zoom);
   const labelText = (d: TripLabelItem): [number, number, number, number] =>
@@ -83,7 +87,8 @@ export function buildTripLabelLayers(
     characterSet: "auto",
     pickable: false,
   });
-  const numbered = items.filter((i) => i.seq !== undefined);
+  // Few, small, light (forgejo#424): see `pickSequenceItems` for when they show.
+  const numbered = pickSequenceItems(items, zoom, dayChosen);
   const numbers =
     numbered.length === 0
       ? null
@@ -94,20 +99,18 @@ export function buildTripLabelLayers(
           getText: (d) => String(d.seq),
           // Dark ink on a light chip: the dot's own colour is often grey, and a
           // dark chip vanished on the dark basemap.
-          getColor: (d) =>
-            d.dim
-              ? ([...TRIP_MAP_CHROME.outline.slice(0, 3), DIM_TEXT_ALPHA] as Rgba)
-              : TRIP_MAP_CHROME.outline,
-          getSize: 12,
+          getColor: () => TRIP_MAP_CHROME.outline,
+          getSize: NUMBER_SIZE_PX,
           sizeUnits: "pixels",
           getTextAnchor: "middle",
           getAlignmentBaseline: "center",
-          getPixelOffset: [11, 11],
+          getPixelOffset: [9, 9],
           fontFamily: FONT,
           fontWeight: 700,
           background: true,
-          getBackgroundColor: labelText,
-          backgroundPadding: [5, 2],
+          // Translucent chip: the route line under it stays readable.
+          getBackgroundColor: () => NUMBER_CHIP,
+          backgroundPadding: [3, 1],
           characterSet: "auto",
           pickable: false,
         });
