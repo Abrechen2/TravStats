@@ -15,6 +15,13 @@ import type { RailJourneyDetail } from "../../types/rail";
  */
 const getMock = vi.fn();
 const getConnectionMock = vi.fn();
+// The entry photo strip has its own suite; here it would reach the network.
+vi.mock("../../components/common/EntryPhotos", () => ({
+  default: () => null,
+  EntryPhotos: () => null,
+  EntryPhotosSection: () => null,
+}));
+
 vi.mock("../../lib/api/rail", () => ({
   railApi: {
     get: (...a: unknown[]) => getMock(...a),

@@ -1,4 +1,9 @@
 // The mail-intake card loads its own settings; it has its own tests.
+// The account archive rows read their status on mount; a unit test must not reach the network.
+vi.mock("../../lib/api/accountArchive", () => ({
+  accountArchiveApi: { status: async () => ({ empty: false, busy: false, maxBytes: 1_000_000 }) },
+}));
+
 vi.mock("../../components/MailIntake/MailIntakeSettingsCard", () => ({ default: () => null }));
 // TravTrack's and TravPlan's pages wait for the server's answer: here it is yes.
 vi.mock("../../pages/Settings/useSectionConditions", () => ({

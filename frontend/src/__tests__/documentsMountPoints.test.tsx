@@ -23,6 +23,13 @@ const mounted = vi.hoisted(() => [] as { type: string; id: string }[]);
 // The form asks for the user's own lodging vocabulary on mount; no network here.
 // Shared trips (2026-10-09): the trip overview, the settings and the inbox
 // read the sharing API on mount; answered empty so no request escapes.
+// The entry photo strip has its own suite; here it would reach the network.
+vi.mock("../components/common/EntryPhotos", () => ({
+  default: () => null,
+  EntryPhotos: () => null,
+  EntryPhotosSection: () => null,
+}));
+
 vi.mock("@/lib/api/sharing", () => ({
   sharingApi: {
     tripSharing: vi.fn().mockResolvedValue({

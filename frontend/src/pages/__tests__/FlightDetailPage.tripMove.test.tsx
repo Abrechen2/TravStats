@@ -12,6 +12,13 @@ const getById = vi.fn();
 const update = vi.fn();
 const assignFlights = vi.fn();
 
+// The entry photo strip has its own suite; here it would reach the network.
+vi.mock("../../components/common/EntryPhotos", () => ({
+  default: () => null,
+  EntryPhotos: () => null,
+  EntryPhotosSection: () => null,
+}));
+
 vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
 vi.mock("../../components/flightTrack/FlightTrackSection", () => ({ default: () => null }));
 vi.mock("../../components/NavigationBar", () => ({ default: () => <div /> }));

@@ -5,6 +5,13 @@ import { rideFixture } from "../../components/bus/__tests__/busFixture";
 import type { BusJourney } from "../../types/bus";
 
 // The real German copy, so the test reads what the reader sees.
+// The entry photo strip has its own suite; here it would reach the network.
+vi.mock("../../components/common/EntryPhotos", () => ({
+  default: () => null,
+  EntryPhotos: () => null,
+  EntryPhotosSection: () => null,
+}));
+
 vi.mock("../../hooks/useTranslation", async () => {
   const { germanUseTranslationNs } = await import("../../__tests__/helpers/germanT");
   return { useTranslation: germanUseTranslationNs };

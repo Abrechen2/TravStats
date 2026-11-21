@@ -8,7 +8,7 @@
     "components/Stats/RecordsSection.tsx": { "count": 1, "why": "expansion" },
     "components/Stats/cruise/CruiseDetailSections.tsx": { "count": 2, "why": "chart-value" },
     "components/Stats/poi/PoiRhythmSection.tsx": { "count": 3, "why": "chart-value" },
-    "components/Training/EmailAnnotation.tsx": { "count": 1, "why": "expansion" },
+    "components/Training/EmailAnnotationParts.tsx": { "count": 1, "why": "expansion" },
     "components/YearHeatmap.tsx": { "count": 1, "why": "chart-value" },
     "components/flightsTable/AirlineWordmarkCell.tsx": { "count": 1, "why": "expansion" },
     "components/flightsTable/RouteCell.tsx": { "count": 1, "why": "truncation" },

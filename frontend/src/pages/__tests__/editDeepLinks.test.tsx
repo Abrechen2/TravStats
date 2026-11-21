@@ -15,6 +15,13 @@ import type { Cruise, Flight } from "../../types";
 const getFlight = vi.fn();
 const getCruise = vi.fn();
 
+// The entry photo strip has its own suite; here it would reach the network.
+vi.mock("../../components/common/EntryPhotos", () => ({
+  default: () => null,
+  EntryPhotos: () => null,
+  EntryPhotosSection: () => null,
+}));
+
 vi.mock("../../lib/api", () => ({
   flightsApi: {
     getById: (...a: unknown[]) => getFlight(...a),
