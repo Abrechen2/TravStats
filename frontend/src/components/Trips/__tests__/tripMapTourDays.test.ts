@@ -70,6 +70,14 @@ describe("forgejo#424 roadtrip legs by day", () => {
     expect(days.has("l10")).toBe(false);
   });
 
+  it("a drive over several days is on each of them, and a route correction continues the drive", () => {
+    const via = { ...station(1, null), state: "via" } as RoadtripStation;
+    const list = [station(0, "2026-06-01", "2026-06-01"), via, station(2, "2026-06-03")];
+    const days = legDays(list, [leg(0), leg(1)]);
+    expect(days.get("l0")).toEqual(["2026-06-01", "2026-06-02", "2026-06-03"]);
+    expect(days.get("l1")).toEqual(["2026-06-01", "2026-06-02", "2026-06-03"]);
+  });
+
   it("day 3 selected: day-3 legs are active, the others dimmed but present, undated ones neutral", () => {
     const parts = splitToursByDay([entry()], "2026-06-03");
     const ids = (k: "dim" | "neutral" | "active") =>
