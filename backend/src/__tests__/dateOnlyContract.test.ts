@@ -49,6 +49,8 @@ jest.mock("../services/airportCache", () => {
     CXI: "Pacific/Kiritimati",
     FRA: "Europe/Berlin",
     MIA: "America/New_York",
+    SFO: "America/Los_Angeles",
+    HNL: "Pacific/Honolulu",
   };
   return {
     ...actual,
