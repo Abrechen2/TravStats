@@ -85,7 +85,7 @@
     "personal": "",
     "photos": "id tripId mimetype sizeBytes caption takenAt sortIdx createdAt lat lon stopId",
     "documents": "",
-    "excluded": "filename immichAssetId immichAlbumLinkId"
+    "excluded": "filename provider immichAssetId immichAlbumLinkId"
   },
   "TripImmichAlbum": {
     "details": "",
