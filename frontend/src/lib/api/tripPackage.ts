@@ -98,6 +98,12 @@ export interface PackageProposal {
     id: string;
     action: "file" | "skip";
     reason?: "alreadyOnTrip" | "filedElsewhere";
+    /** Entries the document will also be linked to as evidence (document-links D3). */
+    covers?: Array<{
+      type: "flight" | "lodgingStay" | "cruise";
+      index: number | null;
+      action: "create" | "attach" | "existing";
+    }>;
   } | null;
   warnings: Array<{ code: PackageWarningCode; subject: string }>;
 }

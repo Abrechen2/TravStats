@@ -258,6 +258,22 @@ export function ProposalBody({
               }`
             )}
           </li>
+          {(proposal.document.covers ?? []).length > 0 && (
+            <li className="text-sm" data-testid="package-document-covers">
+              {t("import:package.document.covers", {
+                entries: proposal.document
+                  .covers!.map((c) =>
+                    c.type === "flight"
+                      ? proposal.flights[c.index ?? -1]?.flightNumber
+                      : c.type === "lodgingStay"
+                        ? proposal.stays[c.index ?? -1]?.name
+                        : t("import:package.document.cruise")
+                  )
+                  .filter(Boolean)
+                  .join(", "),
+              })}
+            </li>
+          )}
         </Section>
       )}
 

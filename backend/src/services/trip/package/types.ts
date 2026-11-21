@@ -112,10 +112,37 @@ export interface ProposalCruise {
   endDate: string | null;
 }
 
+/**
+ * An entry the kept booking document will cover (document-links plan, D3):
+ * transport and lodging entries the commit creates, attaches or finds already
+ * on the trip. An excluded, unmatched or other-trip entry is never listed, and
+ * a place visit is never listed (the owner links those by hand).
+ */
+export interface ProposalCover {
+  type: "flight" | "lodgingStay" | "cruise";
+  /** The flight's or stay's index in the proposal; null for the cruise. */
+  index: number | null;
+  /** `existing`: already on this trip (a retry, or a second document of the booking). */
+  action: "create" | "attach" | "existing";
+}
+
 export interface ProposalDocument {
   id: string;
   action: "file" | "skip";
   reason?: "alreadyOnTrip" | "filedElsewhere";
+  /** The entries the document will be linked to as `covers`, besides the trip. */
+  covers: ProposalCover[];
+}
+
+/** Whether a proposal or commit item is one the document covers, and how. */
+export function coverActionOf(item: {
+  action: EntityAction;
+  id: string | null;
+  reason?: ProposalReason;
+}): ProposalCover["action"] | null {
+  if (item.action === "create") return "create";
+  if (item.action === "attach") return "attach";
+  return item.action === "skip" && item.reason === "duplicate" && item.id ? "existing" : null;
 }
 
 export interface PackageProposal {

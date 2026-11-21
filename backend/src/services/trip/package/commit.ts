@@ -35,6 +35,8 @@ import { checkAndUpdateAchievements } from "../../../utils/achievements";
 import { getCachedAirports } from "../../airportCache";
 import { enrichFlightAirports } from "../../airportLookup";
 import { assertLinkable, linkDocumentsInTx } from "../../documents/documentService";
+import { addMissingLinksInTx } from "../../documents/documentEntryLinks";
+import type { EntryRef } from "../../documents/documentLinks";
 import { buildFlightCreateData } from "../../flights/flightCreateData";
 import { flightExternalRef } from "../../importProvenance";
 import {
@@ -63,6 +65,7 @@ import type {
   ProposalReason,
   ProposalStay,
 } from "./types";
+import { coverActionOf } from "./types";
 
 export interface CommittedEntity {
   action: EntityAction;
@@ -436,6 +439,21 @@ export async function commitPackageProposal(
         if (filed !== 1) {
           throw new AppError("Document is already filed with another entry", 409);
         }
+      }
+
+      // The document is evidence for every confirmed entry (created, attached
+      // or already on the trip) and for the trip itself; an excluded, unmatched
+      // or other-trip entry gets no link. A retry adds only what is missing.
+      if (document) {
+        const covered: EntryRef[] = [{ type: "trip", id: tripId }];
+        for (const f of flights)
+          if (f.id && coverActionOf(f)) covered.push({ type: "flight", id: f.id });
+        for (const s of stays)
+          if (s.id && coverActionOf(s)) covered.push({ type: "lodgingStay", id: s.id });
+        if (cruiseResult?.id && coverActionOf(cruiseResult)) {
+          covered.push({ type: "cruise", id: cruiseResult.id });
+        }
+        await addMissingLinksInTx(tx, userId, document.id, covered, "parser");
       }
 
       // Filed on a shared trip: copied to its other members.

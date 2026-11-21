@@ -182,6 +182,42 @@ export async function addLinks(
 }
 
 /**
+ * Links a document to entries inside the caller's transaction, skipping any it
+ * is linked to already — so a retried import adds only what is missing. Never
+ * moves the primary: a document with none takes the first as its primary.
+ * Returns how many links were written.
+ */
+export async function addMissingLinksInTx(
+  tx: DbTransaction,
+  userId: string,
+  documentId: string,
+  entries: readonly EntryRef[],
+  provenance: LinkProvenance
+): Promise<number> {
+  if (!(await lockDocument(tx, userId, documentId))) {
+    throw new AppError("Document not found", 404, "DOCUMENT_NOT_FOUND");
+  }
+  await adoptLegacyPrimary(tx, documentId);
+  let written = 0;
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    const key = entryKey(entry);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    await assertEntryOwnedIn(tx, userId, entry);
+    const existing = await tx.documentLink.findFirst({
+      where: { documentId, ...targetWhere(entry) },
+      select: { id: true },
+    });
+    if (existing) continue;
+    await insertLink(tx, documentId, { entry, role: "covers", provenance });
+    written += 1;
+  }
+  await projectPrimary(tx, documentId);
+  return written;
+}
+
+/**
  * A document written by something that still sets only the old owner column has
  * no link row yet. Give it the primary link that column describes (`legacy`)
  * before another link is added or one removed, or `projectPrimary` would

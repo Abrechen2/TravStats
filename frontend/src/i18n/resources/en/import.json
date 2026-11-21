@@ -175,7 +175,9 @@
     "document": {
       "file": "The document is filed with the trip.",
       "alreadyOnTrip": "The document is already on this trip.",
-      "filedElsewhere": "The document is filed with another entry."
+      "filedElsewhere": "The document is filed with another entry.",
+      "covers": "The document also serves as evidence for: {{entries}}.",
+      "cruise": "Cruise"
     },
     "nothingNew": "Everything in this document is already there.",
     "commit": "Accept trip",
