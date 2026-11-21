@@ -237,7 +237,8 @@ async function resolveCoordinates(
       lat: nominatim.coords.lat,
       lon: nominatim.coords.lon,
       source: "nominatim",
-      city: nominatim.coords.city,
+      // Country only: Nominatim answers town names in the local language, so
+      // "Köln" vs "Cologne" would read as a contradiction and discard a right pin.
       countryName: nominatim.coords.country ?? nominatim.coords.countryCode,
     };
     if (agreesWithRow(row, candidate)) return { found: candidate };

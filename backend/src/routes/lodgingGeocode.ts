@@ -165,14 +165,14 @@ export async function resolveLocation(
         type: "",
         chainId: null,
         address: null,
-        city: statedCity,
+        city: null,
         country: statedCountry,
       },
       {
         lat: found.lat,
         lon: found.lon,
         source: "nominatim",
-        city: found.city,
+        // Country only — a town spelled differently ("Köln"/"Cologne") is not a contradiction.
         countryName: found.country ?? found.countryCode,
       }
     );

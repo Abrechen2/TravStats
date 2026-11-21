@@ -88,7 +88,13 @@ export async function flagPinCountryContradictions(
       const written = await prisma.lodging.updateMany({
         // Conditional on the row still being what was read: a user who moved
         // the pin meanwhile must not be flagged for the old one.
-        where: { id: row.id, lat: row.lat, lon: row.lon, locationCheck: null },
+        where: {
+          id: row.id,
+          lat: row.lat,
+          lon: row.lon,
+          country: row.country,
+          locationCheck: null,
+        },
         data: { locationCheck: LOCATION_CHECK.pinCountryMismatch },
       });
       result.flagged += written.count;
