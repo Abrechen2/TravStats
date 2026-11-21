@@ -146,9 +146,15 @@ rejected: it would hand shared-trip members documents that `memberScope.ts`
 strips today (rule 6). Codex found the sweep's select-then-delete race and
 the archive import that skips a known hash and would lose links.
 
-## Open for the owner
+## Decisions (2026-11-21)
 
-- Q1: Should a `covers` link from a trip's package booking also show on the
-  trip's place visits, or only on transport and lodging?
-- Q2: Inbox suggestions (D4): only for new documents, or also once over all
-  stored ones?
+The owner delegated both open points ("entscheide du, was am besten ist"):
+
+- **Place visits:** a package booking's `covers` links go to transport and
+  lodging entries (and the trip), not automatically to place visits — a
+  booking rarely names the places visited. A place visit can still be linked
+  by hand or by an accepted suggestion.
+- **Inbox suggestions (D4):** one pass over all stored documents when D4
+  ships, then for every new document. Without the pass, the owner's existing
+  round trips would stay unlinked. The pass is a job with progress, and a
+  decision persists, so it never asks twice.
