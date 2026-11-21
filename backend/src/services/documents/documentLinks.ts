@@ -168,7 +168,7 @@ export async function assertEntryOwnedIn(
  * key-share lock on the same row, so the sweep (which locks before it deletes)
  * and a linker can never both act on what they read before the other committed.
  */
-async function lockDocument(
+export async function lockDocument(
   tx: DbTransaction,
   userId: string,
   documentId: string
@@ -177,6 +177,18 @@ async function lockDocument(
     Prisma.sql`SELECT id FROM "documents" WHERE id = ${documentId} AND user_id = ${userId} FOR UPDATE`
   );
   return rows.length > 0;
+}
+
+/**
+ * `lockDocument` for several rows, always in id order, and always BEFORE any
+ * link row is touched — the order every writer here keeps, so two of them
+ * (a merge and a filing, two sweeps) cannot each hold what the other waits for.
+ */
+export async function lockDocuments(tx: DbTransaction, ids: readonly string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await tx.$queryRaw(
+    Prisma.sql`SELECT id FROM "documents" WHERE id IN (${Prisma.join([...ids])}) ORDER BY id FOR UPDATE`
+  );
 }
 
 /**
@@ -318,6 +330,14 @@ export async function repointLinks(
   if (from.ids.length === 0) return 0;
   const fromColumn = LINK_TARGETS[from.type].column;
   const toColumn = LINK_TARGETS[to.type].column;
+  const where = { [fromColumn]: { in: [...from.ids] } };
+  const [linked, projected] = await Promise.all([
+    tx.documentLink.findMany({ where, select: { documentId: true } }),
+    tx.document.findMany({ where, select: { id: true } }),
+  ]);
+  await lockDocuments(tx, [
+    ...new Set([...linked.map((l) => l.documentId), ...projected.map((d) => d.id)]),
+  ]);
   await adoptUnlinkedOwners(tx, fromColumn, from.ids);
   const links = await tx.documentLink.findMany({
     where: { [fromColumn]: { in: [...from.ids] } },

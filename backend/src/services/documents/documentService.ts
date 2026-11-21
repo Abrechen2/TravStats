@@ -1,7 +1,6 @@
 import path from "path";
 
-import type { Document } from "../../prisma";
-import { Prisma } from "../../prisma";
+import type { Document, Prisma } from "../../prisma";
 
 import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
@@ -33,6 +32,8 @@ import {
   fileIfUnfiled,
   inLinkTransaction,
   LINK_TARGETS,
+  lockDocument,
+  lockDocuments,
   type EntryRef,
   type LinkProvenance,
   setPrimaryLink,
@@ -535,24 +536,28 @@ export async function updateDocument(
   if (input.kind && !DOCUMENT_KINDS.includes(input.kind))
     throw new AppError("Unknown document kind", 400);
 
-  const current = entryOf(document);
-  if (input.entry) {
-    const same = current?.type === input.entry.type && current.id === input.entry.id;
-    if (!same) {
-      await assertEntryOwned(userId, input.entry);
-      // Moving between entries is an unlink and a link, said explicitly: a
-      // document filed elsewhere answers 409, exactly as linking does.
-      if (current) throw new AppError("Document is already filed with another entry", 409);
-    }
-  }
-
-  // The entry the document ends up with decides whether a category may stand:
-  // taken off its rental (or onto anything else) it loses the label — the
-  // link's category follows its target (`setPrimaryLink`).
-  const finalEntry = input.entry === undefined ? current : input.entry;
-  assertCategoryFits(input.rentalCategory, finalEntry);
+  if (input.entry) await assertEntryOwned(userId, input.entry);
 
   return inLinkTransaction(async (tx) => {
+    // Decided on the row as it stands under the lock: read before it, a
+    // concurrent unfile or refile would be silently undone here.
+    if (!(await lockDocument(tx, userId, document.id))) {
+      throw new AppError("Document not found", 404);
+    }
+    const current = entryOf(await tx.document.findUniqueOrThrow({ where: { id: document.id } }));
+    const same =
+      !!input.entry && current?.type === input.entry.type && current.id === input.entry.id;
+    // Moving between entries is an unlink and a link, said explicitly: a
+    // document filed elsewhere answers 409, exactly as linking does.
+    if (input.entry && !same && current) {
+      throw new AppError("Document is already filed with another entry", 409);
+    }
+
+    // The entry the document ends up with decides whether a category may
+    // stand: taken off its rental (or onto anything else) it loses the label —
+    // the link's category follows its target (`setPrimaryLink`).
+    const finalEntry = input.entry === undefined ? current : input.entry;
+    assertCategoryFits(input.rentalCategory, finalEntry);
     if (input.entry !== undefined || input.rentalCategory !== undefined) {
       await setPrimaryLink(tx, userId, document.id, finalEntry, {
         provenance: "user",
@@ -663,9 +668,7 @@ async function deleteStillExpired(
 ): Promise<{ id: string; storedName: string }[]> {
   const ids = candidates.map((d) => d.id);
   return inLinkTransaction(async (tx) => {
-    await tx.$queryRaw(
-      Prisma.sql`SELECT id FROM "documents" WHERE id IN (${Prisma.join(ids)}) FOR UPDATE`
-    );
+    await lockDocuments(tx, ids);
     const still = await tx.document.findMany({
       where: { id: { in: ids }, ...NO_OWNER, links: { none: {} }, unlinkedAt: { lt: cutoff } },
       select: { id: true, storedName: true },
