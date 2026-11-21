@@ -82,6 +82,9 @@ export const IMPORT_ALLOWED_MIME_TYPES = [
   "image/gif",
 ] as const;
 
+/** `error` of a completed-but-partial job: `truncated:<photos read>`. */
+export const TRUNCATED_ERROR_PREFIX = "truncated:";
+
 /** Keep the event loop responsive on a 5000-photo album. */
 const CHUNK_SIZE = 10;
 
@@ -427,6 +430,10 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
           where: { albumLinkId: linkId },
           data: {
             status: "completed",
+            // A source with more pages than one run reads gave a prefix: the run
+            // is completed but partial, and says how many photos it saw
+            // (`truncated:<N>`; the UI words it) instead of looking complete.
+            error: all.truncated === true ? `${TRUNCATED_ERROR_PREFIX}${importable.length}` : null,
             completedAt: new Date(),
             processedAssets: processed,
             failedAssets: failed,

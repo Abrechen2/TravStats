@@ -46,6 +46,11 @@ function describeImportOutcome(
     const reason = t(key === "errors.unknown" ? "albums.importFailedUnknown" : key);
     return t("albums.importFailed", { reason });
   }
+  // Completed, but the album was longer than one run reads (`truncated:<N>`).
+  const truncated = /^truncated:(\d+)$/.exec(job.error ?? "");
+  if (job.status === "completed" && truncated) {
+    return t("albums.importTruncated", { count: Number(truncated[1]) });
+  }
   if (job.failedAssets > 0) {
     return t("albums.importPartial", { failed: job.failedAssets, total: job.totalAssets });
   }

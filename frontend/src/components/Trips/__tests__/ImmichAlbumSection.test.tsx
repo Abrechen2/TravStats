@@ -577,6 +577,20 @@ describe("ImmichAlbumSection", () => {
       expect(translated).not.toContain("errors.auth");
     });
 
+    it("says a completed run was cut short because the album is too large", async () => {
+      getImportJob
+        .mockResolvedValueOnce(job({}))
+        .mockResolvedValue(
+          job({ status: "completed", error: "truncated:100000", processedAssets: 3 })
+        );
+
+      render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
+
+      expect(
+        await screen.findByText("albums.importTruncated", undefined, { timeout: 4000 })
+      ).toBeInTheDocument();
+    });
+
     it("reports photos that did not come across in an otherwise completed run", async () => {
       getImportJob
         .mockResolvedValueOnce(job({}))

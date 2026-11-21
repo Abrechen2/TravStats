@@ -46,6 +46,7 @@
     "resyncing": "Synchronisiere … {{done}}/{{total}}",
     "importFailed": "Der Import ist abgebrochen – {{reason}} Bereits übernommene Fotos bleiben erhalten.",
     "importFailedUnknown": "Unbekannter Fehler beim Übernehmen der Fotos.",
+    "importTruncated": "Album zu groß – nur die ersten {{count}} Fotos übernommen.",
     "importPartial": "{{failed}} von {{total}} Fotos konnten nicht übernommen werden. „Neu synchronisieren“ versucht sie erneut.",
     "badgeLink": "live",
     "badgeImport": "Kopie",
