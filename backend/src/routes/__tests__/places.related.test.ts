@@ -74,7 +74,6 @@ describe("GET /places/:id/related", () => {
         sha256: "x",
         format: "pdf",
         placeVisitId: past.id,
-        links: { create: { placeVisitId: past.id, role: "primary", provenance: "user" } },
       },
     });
     for (const name of ["Rom", "Kuppeln"]) {

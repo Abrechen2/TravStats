@@ -25,7 +25,6 @@ describe("GET /places/:id — documentCount per visit", () => {
     await prisma.user.deleteMany({ where: { username: { in: USERS } } });
   };
 
-  // Filed the way the service files it: the link is the record, the owner column its projection.
   const doc = (owner: string, placeVisitId: string, name: string) =>
     prisma.document.create({
       data: {
@@ -36,7 +35,6 @@ describe("GET /places/:id — documentCount per visit", () => {
         sha256: name,
         format: "pdf",
         placeVisitId,
-        links: { create: { placeVisitId, role: "primary", provenance: "user" } },
       },
     });
 
@@ -79,7 +77,7 @@ describe("GET /places/:id — documentCount per visit", () => {
 
     const documentQueries: string[] = [];
     const stop = observeQueries((q) => {
-      if (q.model === "DocumentLink") documentQueries.push(q.operation);
+      if (q.model === "Document") documentQueries.push(q.operation);
     });
     let res;
     try {
@@ -106,7 +104,7 @@ describe("GET /places/:id — documentCount per visit", () => {
     });
     const documentQueries: string[] = [];
     const stop = observeQueries((q) => {
-      if (q.model === "DocumentLink") documentQueries.push(q.operation);
+      if (q.model === "Document") documentQueries.push(q.operation);
     });
     let res;
     try {
