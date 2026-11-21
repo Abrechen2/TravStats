@@ -105,12 +105,12 @@ export function setTriggerDelay(ms: number): void {
   delayMs = ms;
 }
 
-function defer(key: string, work: Pending): void {
+function defer(key: string, work: Pending, attempt = 0): void {
   const held = timers.get(key);
   if (held) clearTimeout(held);
   const timer = setTimeout(() => {
     timers.delete(key);
-    void resolveAndRun(work).catch((error) =>
+    void resolveAndRun(work, attempt).catch((error) =>
       logger.error({ message: "entry_photo_trigger_failed", context: { key }, error })
     );
   }, delayMs);
@@ -202,9 +202,15 @@ async function ownerOf(kind: EntryKind, id: string): Promise<string | null> {
   }
 }
 
-async function resolveAndRun(work: Pending): Promise<void> {
+/** A transaction that outlasts the delay has not committed yet: look again a few times. */
+const MAX_ATTEMPTS = 3;
+
+async function resolveAndRun(work: Pending, attempt: number): Promise<void> {
   const target = await resolve(work);
-  if (!target || target.refs.length === 0) return;
+  if (!target || target.refs.length === 0) {
+    if (attempt + 1 < MAX_ATTEMPTS) defer(JSON.stringify(work), work, attempt + 1);
+    return;
+  }
   if (!(await autoLinkEnabled(target.userId))) return;
   startJob("placeVisitPhotos.autoLink", target.userId, async () => {
     const run = await runEntries(target.userId, target.refs);

@@ -210,7 +210,7 @@ const FIXTURES: Record<EntryKind, Fixture> = {
     create: async (userId) => {
       const trip = await prisma.trip.create({ data: { userId, name: "Road" } });
       const route = await prisma.tripRoute.create({
-        data: { userId, tripId: trip.id, name: "R", mode: "road" },
+        data: { userId, tripId: trip.id, name: "R", mode: "road", kind: "roadtrip" },
       });
       return (
         await prisma.tripStop.create({
@@ -402,6 +402,24 @@ describe("automatic photo links for every entry type", () => {
       data: { datePrecision: "DAY" },
     });
     expect(await links("stay")).toHaveLength(0);
+  });
+
+  it("an entry that loses its time drops its automatic links, not a manual one", async () => {
+    answerWith("stay");
+    await runAll();
+    await prisma.entryPhotoLink.create({
+      data: { userId, lodgingStayId: entryIds.stay, assetId: SECOND, provenance: "manual" },
+    });
+    await prisma.lodgingStay.update({
+      where: { id: entryIds.stay },
+      data: { datePrecision: "MONTH" },
+    });
+    await runAll();
+    await prisma.lodgingStay.update({
+      where: { id: entryIds.stay },
+      data: { datePrecision: "DAY" },
+    });
+    expect((await links("stay")).map((r) => r.assetId)).toEqual([SECOND]);
   });
 
   it("a sea day has no position and matches nothing", async () => {

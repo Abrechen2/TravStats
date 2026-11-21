@@ -175,7 +175,11 @@ export async function entrySuggestionsFor(
       mimetype: asset.mimeType,
     })),
   };
-  suggestionCache.set(cacheKey(userId, kind, id), { at: Date.now(), value });
+  const now = Date.now();
+  for (const [key, held] of suggestionCache) {
+    if (now - held.at > SUGGESTION_TTL_MS) suggestionCache.delete(key);
+  }
+  suggestionCache.set(cacheKey(userId, kind, id), { at: now, value });
   return value;
 }
 
@@ -306,9 +310,14 @@ export async function autoLinkEntry(
 ): Promise<EntryOutcome | null> {
   const plan = await planFor(userId, kind, id);
   if (plan === null) return null;
-  if (plan === "untimed") return { linked: 0, sources: {} };
-
   const fk = fkOf(kind, id);
+  if (plan === "untimed") {
+    // The entry lost its time or position: what it was linked for no longer holds.
+    await prisma.entryPhotoLink.deleteMany({
+      where: { userId, ...fk, provenance: "auto", refused: false },
+    });
+    return { linked: 0, sources: {} };
+  }
   // Outside EVERY window: a photo between two flight windows is outside both.
   await prisma.entryPhotoLink.deleteMany({
     where: {

@@ -72,7 +72,11 @@ export const STATION_RADIUS_KM = 3;
 function dayWindowOf(day: string, tz: string | null): { start: Date; end: Date } {
   if (tz) {
     const start = startOfDayAt(day, tz);
-    return { start, end: new Date(start.getTime() + 24 * HOUR_MS - 1) };
+    // The next local midnight, not +24 h: a day with a clock change is 23 or 25 hours long.
+    const next = new Date(Date.parse(`${day}T00:00:00.000Z`) + 24 * HOUR_MS)
+      .toISOString()
+      .slice(0, 10);
+    return { start, end: new Date(startOfDayAt(next, tz).getTime() - 1) };
   }
   const utcMidnight = Date.parse(`${day}T00:00:00.000Z`);
   return {
