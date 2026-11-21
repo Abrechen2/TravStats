@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll } from "@jest/globals";
 import { prisma } from "../../../db";
 import { mergeDuplicates } from "../duplicateMerge";
+import { carryCruiseStopLinks } from "../mergeCarryOver";
 
 const day = (d: string) => new Date(`${d}T00:00:00Z`);
 const FLIGHT = {
@@ -119,5 +120,31 @@ describe("duplicate merge carries photo links and traveller facts", () => {
     expect(by[ann.id]).toMatchObject({ bookingReference: "KEEP", loyaltyNumber: "L1" });
     expect(by[bob.id]).toMatchObject({ bookingReference: "BOB" });
     expect(await prisma.entryPhotoLink.count({ where: { lodgingStayId: kept.id } })).toBe(1);
+  });
+
+  it("hands each removed cruise's stop links to the kept stop of the same day, manual over auto", async () => {
+    const cruise = () =>
+      prisma.cruise.create({
+        data: { userId, cruiseLine: "L", startDate: day("2026-05-01"), endDate: day("2026-05-02") },
+      });
+    const [kept, twinA, twinB] = [await cruise(), await cruise(), await cruise()];
+    const stop = (cruiseId: string) =>
+      prisma.cruiseStop.create({ data: { cruiseId, dayNumber: 1, isAtSea: true } });
+    const [keptStop, stopA, stopB] = [
+      await stop(kept.id),
+      await stop(twinA.id),
+      await stop(twinB.id),
+    ];
+    const link = (cruiseStopId: string, assetId: string, provenance: string) =>
+      prisma.entryPhotoLink.create({ data: { userId, cruiseStopId, assetId, provenance } });
+    await link(keptStop.id, "x", "auto");
+    await link(stopA.id, "x", "manual");
+    await link(stopB.id, "y", "manual");
+
+    await prisma.$transaction((tx) => carryCruiseStopLinks(tx, kept.id, [twinA.id, twinB.id]));
+
+    const rows = await prisma.entryPhotoLink.findMany({ where: { cruiseStopId: keptStop.id } });
+    const by = Object.fromEntries(rows.map((r) => [r.assetId, r.provenance]));
+    expect(by).toEqual({ x: "manual", y: "manual" });
   });
 });

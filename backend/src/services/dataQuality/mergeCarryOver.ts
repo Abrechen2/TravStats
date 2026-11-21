@@ -1,6 +1,6 @@
 import type { DbTransaction } from "../../db";
 import { ENTRY_FK } from "../photoLinking/entryKinds";
-import { pairStops, readStopLinks, restoreStopLinks } from "../photoLinking/cruiseStopCarry";
+import { pairStops } from "../photoLinking/cruiseStopCarry";
 
 /**
  * What a duplicate merge must carry over before it deletes the twins: the
@@ -19,13 +19,21 @@ const rank = (l: { provenance: string; refused: boolean }): number =>
  * provider + asset) keeps ONE row: a manual pick beats a refusal beats an
  * automatic link, so neither a pick nor a refusal is lost to an auto row.
  */
-export async function carryPhotoLinks(
+export function carryPhotoLinks(
   tx: DbTransaction,
   kind: PhotoKind,
   keptId: string,
   removedIds: readonly string[]
 ): Promise<void> {
-  const fk = ENTRY_FK[kind];
+  return carryLinksOnto(tx, ENTRY_FK[kind], keptId, removedIds);
+}
+
+async function carryLinksOnto(
+  tx: DbTransaction,
+  fk: (typeof ENTRY_FK)[keyof typeof ENTRY_FK],
+  keptId: string,
+  removedIds: readonly string[]
+): Promise<void> {
   const twins = await tx.entryPhotoLink.findMany({ where: { [fk]: { in: [...removedIds] } } });
   if (twins.length === 0) return;
   const held = new Map(
@@ -74,18 +82,15 @@ export async function carryCruiseStopLinks(
     unresolvedPortName: true,
   } as const;
   const keptStops = await tx.cruiseStop.findMany({ where: { cruiseId: keptId }, select });
-  const removedStops = await tx.cruiseStop.findMany({
-    where: { cruiseId: { in: [...removedIds] } },
-    select,
-  });
-  if (keptStops.length === 0 || removedStops.length === 0) return;
-  const pairs = pairStops(removedStops, keptStops);
-  const saved = await readStopLinks(
-    tx,
-    removedStops.map((s) => s.id)
-  );
-  // skipDuplicates keeps the kept stop's own row when both hold the same photo.
-  await restoreStopLinks(tx, saved, pairs);
+  if (keptStops.length === 0) return;
+  // Each removed cruise is paired on its own: pairing hands out every kept
+  // stop once, so two twins with one itinerary would otherwise share it.
+  for (const removedId of removedIds) {
+    const removedStops = await tx.cruiseStop.findMany({ where: { cruiseId: removedId }, select });
+    for (const [from, onto] of pairStops(removedStops, keptStops)) {
+      await carryLinksOnto(tx, "cruiseStopId", onto, [from]);
+    }
+  }
 }
 
 const STAY_FACTS = ["bookingReference", "loyaltyNumber", "factsSource"] as const;
