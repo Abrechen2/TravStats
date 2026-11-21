@@ -184,6 +184,8 @@ model User {
   shareNoticesActed               ShareNotice[]                @relation("ShareNoticeActor")
   photoJourneys                   PhotoJourney[]
   tripSuggestionAnswers           TripSuggestionDecision[]
+  documentLinkSuggestions         DocumentLinkSuggestion[]
+  documentLinkPass                DocumentLinkPass?
   dataQualityFlags                DataQualityFlag[]
   countryDays                     CountryDay[]
   dawarichStayScan                DawarichStayScan?
@@ -4480,23 +4482,24 @@ model Document {
   /// owed it from the moment the document became unfiled.
   unlinkedAt DateTime? @map("unlinked_at")
 
-  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  flight             Flight?             @relation(fields: [flightId], references: [id], onDelete: SetNull)
-  cruise             Cruise?             @relation(fields: [cruiseId], references: [id], onDelete: SetNull)
-  lodgingStay        LodgingStay?        @relation(fields: [lodgingStayId], references: [id], onDelete: SetNull)
+  user               User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flight             Flight?                  @relation(fields: [flightId], references: [id], onDelete: SetNull)
+  cruise             Cruise?                  @relation(fields: [cruiseId], references: [id], onDelete: SetNull)
+  lodgingStay        LodgingStay?             @relation(fields: [lodgingStayId], references: [id], onDelete: SetNull)
   planDocument       TravelPlanDocument?
-  trip               Trip?               @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  placeVisit         PlaceVisit?         @relation(fields: [placeVisitId], references: [id], onDelete: SetNull)
-  railJourney        RailJourney?        @relation(fields: [railJourneyId], references: [id], onDelete: SetNull)
-  rentalBooking      RentalBooking?      @relation(fields: [rentalBookingId], references: [id], onDelete: SetNull)
-  busJourney         BusJourney?         @relation(fields: [busJourneyId], references: [id], onDelete: SetNull)
-  ferryJourney       FerryJourney?       @relation(fields: [ferryJourneyId], references: [id], onDelete: SetNull)
-  tripExpense        TripExpense?        @relation(fields: [tripExpenseId], references: [id], onDelete: SetNull)
+  trip               Trip?                    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  placeVisit         PlaceVisit?              @relation(fields: [placeVisitId], references: [id], onDelete: SetNull)
+  railJourney        RailJourney?             @relation(fields: [railJourneyId], references: [id], onDelete: SetNull)
+  rentalBooking      RentalBooking?           @relation(fields: [rentalBookingId], references: [id], onDelete: SetNull)
+  busJourney         BusJourney?              @relation(fields: [busJourneyId], references: [id], onDelete: SetNull)
+  ferryJourney       FerryJourney?            @relation(fields: [ferryJourneyId], references: [id], onDelete: SetNull)
+  tripExpense        TripExpense?             @relation(fields: [tripExpenseId], references: [id], onDelete: SetNull)
   mailIntakeMessages MailIntakeMessage[]
   /// Every entry this document is filed with or is evidence for (forgejo plan
   /// 2026-11-21-document-links). The owner columns above are the projection of
   /// the ONE `primary` link, kept for installed Companion versions.
   links              DocumentLink[]
+  linkSuggestions    DocumentLinkSuggestion[]
 
   @@index([userId, sha256])
   @@index([flightId])
@@ -7378,4 +7381,53 @@ model LoginThrottle {
   lockedUntil   DateTime? @map("locked_until")
 
   @@map("login_throttles")
+}
+
+/// "This document also covers …" — a proposal that a stored document is
+/// evidence for another entry of its trip (plan D4,
+/// docs/superpowers/specs/2026-11-21-document-links.md). One row per
+/// (document, entry).
+///
+/// `entryId` has NO foreign key on purpose: the row must outlive an entry that
+/// was deleted and re-imported, because a rejected proposal is remembered by
+/// `contentKey` (what names the entry after its id is gone — the same idea as
+/// `TripSuggestionDecision.memberContentKeys`). A pending row whose entry or
+/// document is gone is swept by the pass and filtered from every answer.
+model DocumentLinkSuggestion {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  documentId String   @map("document_id")
+  /// An `EntryType` of documentFormats.ts: flight | railJourney | busJourney |
+  /// ferryJourney | lodgingStay | rentalBooking. Never a place visit.
+  entryType  String   @map("entry_type")
+  entryId    String   @map("entry_id")
+  /// `contentKey()` of the entry — stable across a delete and re-import.
+  contentKey String   @map("content_key")
+  /// Which field matched: bookingReference | flightNumber | trainNumber |
+  /// lineName | hotelDates | dateRange.
+  reason     String
+  /// pending | dismissed | accepted
+  status     String   @default("pending")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, contentKey])
+  @@index([userId, status])
+  @@map("document_link_suggestions")
+}
+
+/// When the document-link pass last finished for an account. The first run
+/// scans every stored document; later runs only those created or filed since
+/// `scannedUntil`. Absent row = the account was never scanned.
+model DocumentLinkPass {
+  userId       String   @id @map("user_id")
+  scannedUntil DateTime @map("scanned_until")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("document_link_passes")
 }

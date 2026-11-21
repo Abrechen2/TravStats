@@ -103,6 +103,7 @@ import "./checkinImport";
 import "./appImport";
 import "./settingsRouting";
 import "./documents";
+import "./documentLinkSuggestions";
 import "./notes";
 import "./passportOverrides";
 import "./jobs";

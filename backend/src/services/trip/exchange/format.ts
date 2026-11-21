@@ -21,6 +21,7 @@
  */
 import { MAX_CUSTOM_CATEGORY_NAME, MAX_IMPORT_CATEGORIES } from "../../../shared/ratingCategories";
 import { z } from "zod";
+import { RENTAL_DOCUMENT_CATEGORIES } from "../../documents/documentFormats";
 import { LINK_PROVENANCES, LINK_ROLES } from "../../documents/documentLinks";
 import { RAIL_TRANSIT_MODES } from "../../../shared/railCounting";
 import { lat, lon, portRef, requiredZone, shipRef, zone, type PortRef } from "./publicHalf";
@@ -39,9 +40,9 @@ export function tripFileVersionFor(file: {
   roadtrips?: readonly unknown[];
   documents?: readonly { links?: readonly unknown[] }[];
 }): 1 | 2 | 3 | 4 | 5 {
-  // Only a document that really has several links needs version 5; every
+  // Only a document that carries `links` (several, or one with a rental category) needs version 5; every
   // other archive stays readable by the older servers that import it.
-  if (file.documents?.some((d) => (d.links?.length ?? 0) > 1)) return 5;
+  if (file.documents?.some((d) => (d.links?.length ?? 0) > 0)) return 5;
   if ((file.roadtrips?.length ?? 0) > 0) return 4;
   if ((file.ferry?.length ?? 0) > 0) return 3;
   return (file.bus?.length ?? 0) > 0 ? 2 : 1;
@@ -644,6 +645,14 @@ export const ENTITY_KINDS = [
 ] as const;
 export type EntityKind = (typeof ENTITY_KINDS)[number];
 
+/**
+ * A document has at most one link per entry, so the in-file links can never
+ * exceed the entries of the file: 1 trip + flights, stays, cruises, rail, bus,
+ * ferry (300 each, 20 cruises), rentals (50) and visits (2000). The cap equals
+ * that sum, so no stored document can make an export fail its own validation.
+ */
+export const MAX_DOCUMENT_LINKS = 1 + 300 + 300 + 20 + 300 + 300 + 300 + 50 + 2000;
+
 const documentEntity = z.object({ kind: z.enum(ENTITY_KINDS), key: key.nullable() }).strict();
 
 /** One link of a document inside the file: an archive-local reference, its role and provenance. */
@@ -652,6 +661,8 @@ const documentLinkSchema = z
     entity: documentEntity,
     role: z.enum(LINK_ROLES),
     provenance: z.enum(LINK_PROVENANCES),
+    /** What a rental link's evidence shows; each rental keeps its own. */
+    rentalCategory: z.enum(RENTAL_DOCUMENT_CATEGORIES).nullable().default(null),
   })
   .strict();
 
@@ -661,7 +672,7 @@ const documentSchema = z
     /** Where the document is filed (its primary link inside the file, else its first). */
     entity: documentEntity,
     /** Version 5: every link inside the exported scope. Absent: `entity` alone. */
-    links: z.array(documentLinkSchema).max(200).default([]),
+    links: z.array(documentLinkSchema).max(MAX_DOCUMENT_LINKS).default([]),
     kind: optStr(200),
     issuedOn: day,
     originalName: optStr(200),

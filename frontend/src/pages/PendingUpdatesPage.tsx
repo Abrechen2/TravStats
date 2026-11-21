@@ -32,6 +32,7 @@ import InboxWorkspace, { type InboxCount } from "../components/inbox/workspace/I
 import SharingTab from "../components/inbox/SharingTab";
 import PasswordResetRequestsSection from "../components/inbox/PasswordResetRequestsSection";
 import UnfiledDocumentsSection from "../components/inbox/UnfiledDocumentsSection";
+import DocumentLinkSuggestionsSection from "../components/inbox/DocumentLinkSuggestionsSection";
 import MailIntakeSection from "../components/inbox/MailIntakeSection";
 import { usePhotoJourneysVisible } from "../components/inbox/usePhotoJourneysVisible";
 
@@ -112,6 +113,7 @@ export default function PendingUpdatesPage(): JSX.Element {
           <PasswordResetRequestsSection />
           <MailIntakeSection />
           <UnfiledDocumentsSection />
+          <DocumentLinkSuggestionsSection />
           <PlaceCapturesSection />
           <InboxWorkspace
             photosVisible={photoJourneysVisible}

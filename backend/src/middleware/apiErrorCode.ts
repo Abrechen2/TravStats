@@ -327,6 +327,8 @@ export type ApiErrorCode =
   | "DOCUMENT_LINK_EXISTS"
   | "DOCUMENT_LINK_NOT_FOUND"
   | "DOCUMENT_LINK_DUPLICATE_INPUT"
+  /** A document-link suggestion that is gone or already decided (404, plan D4). */
+  | "DOCUMENT_LINK_SUGGESTION_NOT_FOUND"
   /** A flight's booking split (forgejo#219): the flight is linked to no booking. */
   | "BOOKING_NOT_FOUND"
   /** Booking split: the booking has no total recorded, so there is nothing to split (409). */

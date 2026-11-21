@@ -44,7 +44,8 @@ export type JobKind =
   | "travtrack.fileImport"
   | "travtrack.dawarichImport"
   | "placeVisitPhotos.immichLink"
-  | "dawarich.countryDaySweep";
+  | "dawarich.countryDaySweep"
+  | "documentLinks.pass";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 

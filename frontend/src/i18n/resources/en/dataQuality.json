@@ -682,6 +682,27 @@
     "deletesOn": "Will be deleted on",
     "open": "Open"
   },
+  "documentLinkSuggestions": {
+    "title": "Documents that cover more",
+    "description": "These documents name bookings of the same trip they are not linked to yet. Tick what they also cover — nothing is linked until you confirm.",
+    "scanning": "Checking stored documents … {{done}} of {{total}}",
+    "alsoCovers": "“{{name}}” also covers …",
+    "accept": "Link",
+    "dismiss": "No, do not link",
+    "reason": {
+      "bookingReference": "same booking reference",
+      "flightNumber": "same flight number and day",
+      "trainNumber": "same train number and day",
+      "lineName": "same line and day",
+      "hotelDates": "same hotel and nights",
+      "dateRange": "same date range"
+    },
+    "errors": {
+      "load": "The document link suggestions could not be loaded.",
+      "scan": "Checking the stored documents failed. It is retried the next time you open this page.",
+      "answer": "Your answer could not be saved. Please try again."
+    }
+  },
   "time": {
     "field": "Value",
     "reason": "Reason",
