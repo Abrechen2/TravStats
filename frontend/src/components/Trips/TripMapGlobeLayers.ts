@@ -39,7 +39,14 @@ import { groupMapData, pathIdentity } from "../layers/routeAggregation";
 
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
-import { dayState, dimFirst, emphasisColor, emphasisWidth } from "./tripMapEmphasis";
+import {
+  dayState,
+  dimFirst,
+  emphasisColor,
+  emphasisWidth,
+  tourDrawOrder,
+  tourState,
+} from "./tripMapEmphasis";
 import {
   EarthOcclusionExtension,
   type EarthOcclusionExtensionProps,
@@ -262,7 +269,7 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMa
   const chosen = opts.dayChosen === true;
   const flightArcs = dimFirst(opts.flightArcs);
   const cruisePaths = dimFirst(opts.cruisePaths);
-  const tourPaths = dimFirst(opts.tourPaths);
+  const tourPaths = tourDrawOrder(opts.tourPaths);
   const stateOf = (d: { dim?: boolean }) => dayState(d.dim, chosen);
 
   const arcs = new PathLayer<TripFlightArc>({
@@ -315,8 +322,8 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMa
     id: "trip-tour-paths",
     data: tourPaths as TourPathDatum[],
     getPath: (d) => d.path,
-    getColor: (d) => emphasisColor(d.color, stateOf(d), d.isPlaceholder ? 170 : 255),
-    getWidth: (d) => emphasisWidth(d.isPlaceholder ? 2 : 3.5, stateOf(d)),
+    getColor: (d) => emphasisColor(d.color, tourState(d, chosen), d.isPlaceholder ? 170 : 255),
+    getWidth: (d) => emphasisWidth(d.isPlaceholder ? 2 : 3.5, tourState(d, chosen)),
     updateTriggers: { getColor: [chosen], getWidth: [chosen] },
     widthUnits: "pixels",
     widthMinPixels: 1,
