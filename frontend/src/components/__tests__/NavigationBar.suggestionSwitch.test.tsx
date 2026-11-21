@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-const mocks = vi.hoisted(() => ({ count: vi.fn() }));
+const mocks = vi.hoisted(() => ({ count: vi.fn(), docCount: vi.fn() }));
 
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -15,6 +15,9 @@ vi.mock("../../lib/api/dataQualityFlags", () => ({
 }));
 vi.mock("../../lib/api/tripSuggestions", () => ({
   tripSuggestionsApi: { count: mocks.count },
+}));
+vi.mock("../../lib/api/documentLinkSuggestions", () => ({
+  documentLinkSuggestionsApi: { count: mocks.docCount },
 }));
 vi.mock("../../lib/api/sharing", () => ({
   sharingApi: { inboxCount: vi.fn().mockResolvedValue(0) },
@@ -57,6 +60,7 @@ function renderBar() {
 describe("NavigationBar inbox badge and the trip suggestions switch", () => {
   beforeEach(() => {
     mocks.count.mockReset().mockResolvedValue(3);
+    mocks.docCount.mockReset().mockResolvedValue(0);
     useSuggestionSwitchesStore.setState({ trips: true, stays: true });
   });
 
@@ -78,6 +82,18 @@ describe("NavigationBar inbox badge and the trip suggestions switch", () => {
     act(() => useSuggestionSwitchesStore.setState({ trips: false }));
     expect(await screen.findByRole("link", { name: INBOX })).toBeInTheDocument();
     act(() => useSuggestionSwitchesStore.setState({ trips: true }));
+    expect(await screen.findByRole("link", { name: `${INBOX} (3)` })).toBeInTheDocument();
+  });
+
+  it("adds the documents that cover more entries to the badge, and a failing count does not zero the rest", async () => {
+    mocks.docCount.mockResolvedValue(2);
+    renderBar();
+    expect(await screen.findByRole("link", { name: `${INBOX} (5)` })).toBeInTheDocument();
+  });
+
+  it("keeps the other sources when the document suggestion count fails", async () => {
+    mocks.docCount.mockRejectedValue(new Error("down"));
+    renderBar();
     expect(await screen.findByRole("link", { name: `${INBOX} (3)` })).toBeInTheDocument();
   });
 });

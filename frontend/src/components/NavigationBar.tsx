@@ -4,6 +4,7 @@ import { useAuthStore } from "../store/authStore";
 import { pendingUpdatesApi } from "../lib/api";
 import { dataQualityFlagsApi } from "../lib/api/dataQualityFlags";
 import { tripSuggestionsApi } from "../lib/api/tripSuggestions";
+import { documentLinkSuggestionsApi } from "../lib/api/documentLinkSuggestions";
 import { useSuggestionSwitchesStore } from "../store/suggestionSwitchesStore";
 import { sharingApi } from "../lib/api/sharing";
 import { useTranslation } from "../hooks/useTranslation";
@@ -88,10 +89,11 @@ export default function NavigationBar(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation(["dashboard", "common", "dataQuality", "track", "travplan"]);
-  // Four sources, one badge — the Posteingang is one page (see useNavItems).
+  // Five sources, one badge — the Posteingang is one page (see useNavItems).
   const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
   const [openFlagCount, setOpenFlagCount] = useState(0);
   const [tripSuggestionCount, setTripSuggestionCount] = useState(0);
+  const [documentLinkCount, setDocumentLinkCount] = useState(0);
   const [sharingCount, setSharingCount] = useState(0);
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
   // Switched off (forgejo#306), the kind is not counted at all. A dependency of
@@ -121,6 +123,11 @@ export default function NavigationBar(): JSX.Element {
           logger.warn("Failed to load trip suggestion count");
         }
         try {
+          setDocumentLinkCount(await documentLinkSuggestionsApi.count());
+        } catch {
+          logger.warn("Failed to load document link suggestion count");
+        }
+        try {
           setSharingCount(await sharingApi.inboxCount());
         } catch {
           logger.warn("Failed to load sharing inbox count");
@@ -137,7 +144,8 @@ export default function NavigationBar(): JSX.Element {
     navigate("/login");
   };
 
-  const inboxCount = pendingUpdatesCount + openFlagCount + tripSuggestionCount + sharingCount;
+  const inboxCount =
+    pendingUpdatesCount + openFlagCount + tripSuggestionCount + documentLinkCount + sharingCount;
   const { primary, more, areas } = useNavItems();
   const area = effectiveArea(location.pathname, areas);
   // Stats keeps the round-4 model; Plan and Track show their own menu and no

@@ -315,7 +315,7 @@ describe("document link suggestions (D4)", () => {
       },
       { type: "trip", id: tripId }
     );
-    const first = await get("/document-link-suggestions/count");
+    const first = await get("/document-link-suggestions");
     expect(first.body.data.pass.jobId).toEqual(expect.any(String));
     await settleAllJobs();
     const job = await get(`/jobs/${first.body.data.pass.jobId}`);
@@ -361,6 +361,29 @@ describe("document link suggestions (D4)", () => {
     expect(
       await prisma.documentLink.count({ where: { documentId: docId, flightId: target.id } })
     ).toBe(0);
+  });
+
+  it("the badge count starts the scan only for a never-scanned account, not on every poll", async () => {
+    // A pass has run (earlier cases); a new document is waiting for the next pass.
+    await keep(
+      {
+        domain: "flight",
+        flights: [{ flightNumber: "TP 999", departureTime: "2026-06-07T09:00:00" }],
+      },
+      { type: "trip", id: tripId }
+    );
+    const polled = await get("/document-link-suggestions/count");
+    expect(polled.body.data.pass.jobId).toBeNull();
+    // The inbox itself, once opened, does start it.
+    const opened = await get("/document-link-suggestions");
+    expect(opened.body.data.pass.jobId).toEqual(expect.any(String));
+    await settleAllJobs();
+
+    // A never-scanned account is scanned by the first poll.
+    await prisma.documentLinkPass.deleteMany({ where: { userId } });
+    const first = await get("/document-link-suggestions/count");
+    expect(first.body.data.pass.jobId).toEqual(expect.any(String));
+    await settleAllJobs();
   });
 
   it("shows nothing to another account, and refuses its decisions", async () => {

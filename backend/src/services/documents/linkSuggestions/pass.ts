@@ -257,3 +257,17 @@ export async function ensureDocumentLinkPass(userId: string): Promise<JobView | 
   running.set(userId, job);
   return job;
 }
+
+/**
+ * The badge poll's variant: it starts the pass only for an account that was
+ * never scanned. Once a pass has run, later documents and entries are picked up
+ * when the inbox itself is opened (`ensureDocumentLinkPass`), so a 30-second
+ * poll never costs a scan.
+ */
+export async function ensureFirstDocumentLinkPass(userId: string): Promise<JobView | null> {
+  const current = running.get(userId);
+  if (current && current !== "starting") return current;
+  if (current === "starting") return null;
+  const done = await prisma.documentLinkPass.findUnique({ where: { userId } });
+  return done ? null : ensureDocumentLinkPass(userId);
+}

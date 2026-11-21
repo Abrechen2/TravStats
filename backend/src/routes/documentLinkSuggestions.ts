@@ -3,7 +3,10 @@ import { z } from "zod";
 
 import { authenticate, requireWriteScope, type AuthRequest } from "../middleware/auth";
 import { statsLimiter } from "../middleware/rateLimit";
-import { ensureDocumentLinkPass } from "../services/documents/linkSuggestions/pass";
+import {
+  ensureDocumentLinkPass,
+  ensureFirstDocumentLinkPass,
+} from "../services/documents/linkSuggestions/pass";
 import {
   acceptDocumentSuggestions,
   dismissDocumentSuggestions,
@@ -31,8 +34,11 @@ const idsBody = z
   .object({ suggestionIds: z.array(z.string().uuid()).min(1).max(200).optional() })
   .strict();
 
-async function passView(userId: string): Promise<{ jobId: string | null }> {
-  const job = await ensureDocumentLinkPass(userId);
+async function passView(
+  userId: string,
+  start = ensureDocumentLinkPass
+): Promise<{ jobId: string | null }> {
+  const job = await start(userId);
   return { jobId: job?.id ?? null };
 }
 
@@ -50,10 +56,10 @@ router.get(
   }
 );
 
-/** The inbox badge's number: documents with something to decide. */
+/** The inbox badge's number: documents with something to decide. Polled, so it starts a scan only for a never-scanned account. */
 router.get("/count", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const pass = await passView(req.userId!);
+    const pass = await passView(req.userId!, ensureFirstDocumentLinkPass);
     const suggestions = await listDocumentSuggestions(req.userId!);
     res.json({ success: true, data: { count: suggestions.length, pass } });
   } catch (err) {

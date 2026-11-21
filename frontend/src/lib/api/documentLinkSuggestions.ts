@@ -44,6 +44,11 @@ export const documentLinkSuggestionsApi = {
     return data.data;
   },
 
+  count: async (): Promise<number> => {
+    const { data } = await api.get<Envelope<{ count: number }>>("/document-link-suggestions/count");
+    return data.data.count;
+  },
+
   /** `suggestionIds` absent = every pending entry of the document. */
   accept: async (
     documentId: string,
