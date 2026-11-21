@@ -11,6 +11,7 @@ import { Icon } from "../components/ui/Icon";
 import TripPill from "../components/Trips/TripPill";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
+import { EntryPhotosSection } from "../components/common/EntryPhotos";
 import { railExtractTarget } from "../lib/extractTargets";
 import { co2Kpis } from "../lib/co2Kpis";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
@@ -347,6 +348,8 @@ export default function RailDetailPage(): JSX.Element {
               <RailConnectionLink legId={journey.id} />
             </DetailSection>
           )}
+
+          <EntryPhotosSection kind="rail" entryId={journey.id} />
 
           <DocumentsSection
             entry={{ type: "railJourney", id: journey.id }}

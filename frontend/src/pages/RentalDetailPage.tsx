@@ -12,6 +12,7 @@ import Button from "../components/ui/Button";
 import TripPill from "../components/Trips/TripPill";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
+import { EntryPhotosSection } from "../components/common/EntryPhotos";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { RentalFormModal } from "../components/rental/RentalFormModal";
 import { RentalSuggestionBanner } from "../components/rental/RentalSuggestionBanner";
@@ -392,6 +393,7 @@ export default function RentalDetailPage(): JSX.Element {
             <RentalPriceComparison rental={rental} />
           </DetailSection>
 
+          <EntryPhotosSection kind="rental" entryId={rental.id} />
           <DocumentsSection entry={{ type: "rentalBooking", id: rental.id }} rentalCategories />
           {rental.tripId && <TripPhotoWindowStrip entry="rentals" id={rental.id} />}
         </div>

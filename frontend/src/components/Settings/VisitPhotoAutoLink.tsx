@@ -11,6 +11,7 @@ import {
   type AutoLinkRunResult,
   type AutoLinkStatus,
 } from "../../lib/api/places";
+import { setPhotoCap, trimPhotoLinks, type TrimResult } from "../../lib/api/photoChoices";
 import { logger } from "../../lib/logger";
 import { token } from "../ui/tokens";
 
@@ -25,10 +26,11 @@ export default function VisitPhotoAutoLink(): JSX.Element | null {
   const { t } = useTranslation("immich");
   const { isEnabled } = useEnabledDomains();
   const [status, setStatus] = useState<AutoLinkStatus | null>(null);
-  const [failed, setFailed] = useState<"load" | "save" | "lost" | "job" | null>(null);
+  const [failed, setFailed] = useState<"load" | "save" | "lost" | "job" | "cap" | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<AutoLinkRunResult | null>(null);
+  const [trim, setTrim] = useState<TrimResult | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     try {
@@ -64,6 +66,41 @@ export default function VisitPhotoAutoLink(): JSX.Element | null {
     }
   };
 
+  const changeCap = async (cap: number): Promise<void> => {
+    setFailed(null);
+    setTrim(null);
+    setRunning(true);
+    try {
+      setTrim(await setPhotoCap(cap, setProgress));
+    } catch (err: unknown) {
+      logger.error("VisitPhotoAutoLink: cap failed", err);
+      setFailed(err instanceof JobLostError ? "lost" : "cap");
+    } finally {
+      setRunning(false);
+      setProgress(null);
+      await load();
+    }
+  };
+
+  const runTrim = async (): Promise<void> => {
+    setFailed(null);
+    setTrim(null);
+    setRunning(true);
+    try {
+      setTrim(await trimPhotoLinks(setProgress));
+    } catch (err: unknown) {
+      logger.error("VisitPhotoAutoLink: trim failed", err);
+      setFailed(err instanceof JobLostError ? "lost" : "job");
+    } finally {
+      setRunning(false);
+      setProgress(null);
+    }
+  };
+
+  const capMin = status?.capMin ?? 5;
+  const capMax = status?.capMax ?? 10;
+  const capOptions = Array.from({ length: capMax - capMin + 1 }, (_, i) => capMin + i);
+
   const problems = SOURCES.flatMap((source) => {
     const state = status?.lastRun?.sources[source];
     return state && state !== "ok" && state !== "notConfigured"
@@ -89,6 +126,36 @@ export default function VisitPhotoAutoLink(): JSX.Element | null {
         <span className="label">{t("visitPhotosAuto.title")}</span>
       </label>
       <p className="t-caption">{t("visitPhotosAuto.hint")}</p>
+      <label className="flex items-center gap-2">
+        <span className="label">{t("visitPhotosAuto.cap")}</span>
+        <select
+          value={status?.cap ?? 6}
+          disabled={status === null || running}
+          onChange={(e) => void changeCap(Number(e.target.value))}
+          style={{ minHeight: 44 }}
+        >
+          {capOptions.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="t-caption">{t("visitPhotosAuto.capHint")}</p>
+      <button
+        type="button"
+        onClick={() => void runTrim()}
+        disabled={status === null || running}
+        className="self-start text-xs underline-offset-2 hover:underline disabled:opacity-50"
+        style={{ minHeight: 44, background: "none", border: "none", padding: 0 }}
+      >
+        {t("visitPhotosAuto.trim")}
+      </button>
+      {trim && (
+        <p role="status" className="text-sm">
+          {t("visitPhotosAuto.trimDone", { count: trim.removed })}
+        </p>
+      )}
       {problems.map((line) => (
         <p key={line} role="alert" className="text-sm" style={{ color: token("bad") }}>
           {line}
@@ -129,6 +196,7 @@ export default function VisitPhotoAutoLink(): JSX.Element | null {
               save: "visitPhotosAuto.saveFailed",
               lost: "visitPhotosAuto.lost",
               job: "visitPhotosAuto.jobFailed",
+              cap: "visitPhotosAuto.capSaveFailed",
             }[failed]
           )}
         </p>

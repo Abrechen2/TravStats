@@ -15,3 +15,11 @@ describe("photo link target registry", () => {
     }
   });
 });
+
+describe("wired targets name a kind the entry pass knows", () => {
+  it("every wired non-visit entry is an ENTRY_KIND, and every kind is wired", async () => {
+    const { ENTRY_KINDS } = await import("../entryKinds");
+    const wired = Object.values(PHOTO_LINK_TARGETS).flatMap((t) => (t.wired ? [t.entry] : []));
+    expect(wired.filter((e) => e !== "placeVisit").sort()).toEqual([...ENTRY_KINDS].sort());
+  });
+});

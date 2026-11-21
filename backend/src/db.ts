@@ -57,6 +57,25 @@ export interface ObservedQuery {
 
 const queryObservers = new Set<(query: ObservedQuery) => void>();
 
+/**
+ * A completed write, for the one subscriber that must learn about every
+ * creator and editor of an entry without each of them calling it (the automatic
+ * photo links, `services/photoLinking/entryPhotoTriggers.ts`). It runs inside
+ * the query, possibly before an enclosing transaction commits, so a subscriber
+ * defers its work; it never throws into the write.
+ */
+export interface WriteEvent {
+  model: string | undefined;
+  operation: string;
+  args: unknown;
+  result: unknown;
+}
+let writeObserver: ((event: WriteEvent) => void) | null = null;
+
+export function setWriteObserver(observer: ((event: WriteEvent) => void) | null): void {
+  writeObserver = observer;
+}
+
 /** Watch every query this client makes. Returns the function that stops it. */
 export function observeQueries(observer: (query: ObservedQuery) => void): () => void {
   queryObservers.add(observer);
@@ -119,6 +138,13 @@ export const prisma = basePrisma.$extends({
 
       try {
         const result = await query(args);
+        if (writeObserver && operation !== "findMany" && operation !== "findFirst") {
+          try {
+            writeObserver({ model, operation, args, result });
+          } catch (observerError) {
+            dbLogger.error({ message: "write_observer_failed", error: observerError });
+          }
+        }
         if (verbose) {
           logQuerySafely(
             () =>

@@ -19,7 +19,6 @@ const spec = (over: Partial<MatchSpec> = {}): MatchSpec => ({
   locations: [{ kind: "point", lat: 50, lon: 8, radiusKm: 1 }],
   circles: [],
   refused: new Set(),
-  cap: 10,
   ...over,
 });
 
@@ -40,7 +39,7 @@ describe("photo matcher", () => {
     expect(matches(asset("off", { lat: 50.5, lon: 8.5 }), corridor)).toBe(false);
   });
 
-  it("drops privacy-zone, refused and over-cap photos, earliest first", () => {
+  it("drops privacy-zone and refused photos and returns every other match, earliest first", () => {
     const all: SourcedAsset[] = [
       { provider: "immich", asset: asset("zone") },
       { provider: "immich", asset: asset("refused") },
@@ -52,12 +51,11 @@ describe("photo matcher", () => {
       spec({
         circles: [{ lat: 50, lon: 8, radiusM: 0 }],
         refused: new Set(["immich:refused"]),
-        cap: 1,
       })
     );
     // radius 0 only holds the exact point: zone/refused/late/early all sit on it, so 0 survive.
     expect(out).toEqual([]);
-    const free = matchAssets(all.slice(1), spec({ refused: new Set(["immich:refused"]), cap: 1 }));
-    expect(free.map((c) => c.asset.id)).toEqual(["early"]);
+    const free = matchAssets(all.slice(1), spec({ refused: new Set(["immich:refused"]) }));
+    expect(free.map((c) => c.asset.id)).toEqual(["early", "late"]);
   });
 });

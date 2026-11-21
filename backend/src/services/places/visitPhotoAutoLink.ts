@@ -1,16 +1,17 @@
 import { prisma } from "../../db";
-import { VISIT_PHOTO_SUGGESTION_CAP } from "../../schemas/place";
 import logger from "../../utils/logger";
 import { startJob } from "../jobs/jobRegistry";
 import {
   candidatesForWindow,
   directSearch,
+  capMatches,
   matchAssets,
   refusalKey,
   type MatchSpec,
   type SourceState,
   type WindowSearch,
 } from "../photoLinking/matcher";
+import { photoCapFor } from "../photoLinking/cap";
 import { PHOTO_SOURCE_KINDS, type PhotoSourceKind } from "../photoSource";
 import { toPhotoSourceKind } from "../photoSource/connection";
 import { privacyCircleSet } from "../travtrack/privacyCircles";
@@ -32,9 +33,6 @@ import { refusedIds } from "./visitPhotoRefusals";
  * the account's own.
  */
 
-/** Auto-linked photos per visit at most; the same cap the suggestions use. */
-export const AUTO_LINK_CAP = VISIT_PHOTO_SUGGESTION_CAP;
-
 export interface AutoLinkOutcome {
   linked: number;
   sources: Partial<Record<PhotoSourceKind, SourceState>>;
@@ -47,6 +45,14 @@ export async function autoLinkEnabled(userId: string): Promise<boolean> {
     select: { autoLinkVisitPhotos: true },
   });
   return row?.autoLinkVisitPhotos ?? true;
+}
+
+async function linkedKeys(visitId: string): Promise<Set<string>> {
+  const rows = await prisma.placeVisitPhoto.findMany({
+    where: { placeVisitId: visitId, immichAssetId: { not: null } },
+    select: { immichAssetId: true, provider: true },
+  });
+  return new Set(rows.map((r) => refusalKey(toPhotoSourceKind(r.provider), r.immichAssetId!)));
 }
 
 /** Remember each window's search for one run: many visits share a day. */
@@ -89,9 +95,14 @@ export async function autoLinkVisit(
       OR: [{ takenAt: { lt: window.start } }, { takenAt: { gt: window.end } }],
     },
   });
-  const existingAuto = await prisma.placeVisitPhoto.count({
-    where: { placeVisitId: visitId, provenance: "auto" },
-  });
+  // The user's own library picks count toward the cap: a swapped choice must not
+  // leave room for the matcher to link a replacement.
+  const [cap, existingLinks] = await Promise.all([
+    photoCapFor(userId),
+    prisma.placeVisitPhoto.count({
+      where: { placeVisitId: visitId, immichAssetId: { not: null } },
+    }),
+  ]);
   const [{ sources, candidates }, circles, refused, onVisit] = await Promise.all([
     candidatesForWindow(search, window),
     privacyCircleSet(userId).then((at) => at(window.start.getTime())),
@@ -115,11 +126,14 @@ export async function autoLinkVisit(
     locations: [{ kind: "point", lat: anchor.lat, lon: anchor.lon, radiusKm: PHOTO_RADIUS_KM }],
     circles,
     refused: new Set([...refused.library, ...viaTrip]),
-    cap: AUTO_LINK_CAP,
   };
   // The cap bounds what the visit holds, not what one pass adds.
-  const room = Math.max(0, AUTO_LINK_CAP - existingAuto);
-  const linked = await linkAssetsToVisit(visitId, matchAssets(candidates, spec), "auto", room);
+  const room = Math.max(0, cap - existingLinks);
+  const linkedAlready = await linkedKeys(visitId);
+  const fresh = matchAssets(candidates, spec).filter(
+    (m) => !linkedAlready.has(refusalKey(m.provider, m.asset.id))
+  );
+  const linked = await linkAssetsToVisit(visitId, capMatches(fresh, room), "auto");
   return { linked, sources };
 }
 
@@ -136,12 +150,12 @@ export interface AutoLinkRun {
   sources: Partial<Record<PhotoSourceKind, SourceState>>;
 }
 
-const rank = (s: SourceState): number => (s === "ok" ? 1 : s === "notConfigured" ? 0 : 2);
+export const rank = (s: SourceState): number => (s === "ok" ? 1 : s === "notConfigured" ? 0 : 2);
 
 /** Enough to explain a failing run in the settings; the rest are in the log. */
 const FAILURES_KEPT = 10;
 
-function mergeSources(
+export function mergeSources(
   into: AutoLinkRun["sources"],
   from: AutoLinkOutcome["sources"]
 ): AutoLinkRun["sources"] {
@@ -156,7 +170,7 @@ function mergeSources(
 }
 
 /** Persist the run's outcome so the settings can show a failing source. */
-async function recordRun(userId: string, run: AutoLinkRun): Promise<void> {
+export async function recordRun(userId: string, run: AutoLinkRun): Promise<void> {
   await prisma.userSettings.updateMany({
     where: { userId },
     data: {
@@ -181,6 +195,16 @@ export async function autoLinkVisits(
   userId: string,
   visitIds: string[] | null,
   onProgress?: (done: number, total: number) => void
+): Promise<AutoLinkRun> {
+  return runVisits(userId, visitIds, onProgress, true);
+}
+
+/** The visit pass; `record: false` lets a caller fold other entry types into one record. */
+export async function runVisits(
+  userId: string,
+  visitIds: string[] | null,
+  onProgress: ((done: number, total: number) => void) | undefined,
+  record: boolean
 ): Promise<AutoLinkRun> {
   const ids =
     visitIds ??
@@ -229,7 +253,7 @@ export async function autoLinkVisits(
     }
     onProgress?.(++done, ids.length);
   }
-  if (ids.length > 0) await recordRun(userId, run);
+  if (record && ids.length > 0) await recordRun(userId, run);
   return run;
 }
 

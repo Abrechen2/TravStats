@@ -1,5 +1,10 @@
 import { Router, Response, NextFunction } from "express";
 import { syncCompanionLinks } from "../services/companions/travellerFacts";
+import {
+  pairStops,
+  readStopLinks,
+  restoreStopLinks,
+} from "../services/photoLinking/cruiseStopCarry";
 import { z } from "zod";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
@@ -540,9 +545,30 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
             },
           })
         );
+        const oldStops = await tx.cruiseStop.findMany({
+          where: { cruiseId: existing.id },
+          select: {
+            id: true,
+            dayNumber: true,
+            isAtSea: true,
+            portId: true,
+            unresolvedPortName: true,
+          },
+        });
+        const savedLinks = await readStopLinks(
+          tx,
+          oldStops.map((s) => s.id)
+        );
         await tx.cruiseStop.deleteMany({ where: { cruiseId: existing.id } });
         if (stops.length > 0) {
-          await tx.cruiseStop.createMany({
+          const created = await tx.cruiseStop.createManyAndReturn({
+            select: {
+              id: true,
+              dayNumber: true,
+              isAtSea: true,
+              portId: true,
+              unresolvedPortName: true,
+            },
             data: stops.map((s, index) => ({
               cruiseId: existing.id,
               portId: s.portId ?? null,
@@ -554,6 +580,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
               unresolvedPortName: s.unresolvedPortName ?? null,
             })),
           });
+          await restoreStopLinks(tx, savedLinks, pairStops(oldStops, created));
         }
       }
 

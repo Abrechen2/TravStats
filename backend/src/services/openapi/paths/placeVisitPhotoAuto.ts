@@ -8,6 +8,9 @@ const placesTag = ["Places"];
 
 const autoLinkStatus = z.object({
   enabled: z.boolean(),
+  cap: z.number().int().describe("Automatic links kept per visit or entry (5–10)"),
+  capMin: z.number(),
+  capMax: z.number(),
   lastRun: z
     .object({
       at: z.string(),

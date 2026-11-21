@@ -190,6 +190,10 @@ export const USER_EXPORT_SELECT = {
   // Visit photo suggestions the user refused ("Nicht diese", forgejo#132
   // item 13): the same reason — a restored account must not be offered them again.
   visitPhotoRefusals: true,
+  // Library photos linked to flights, stays, journeys, rentals, cruise stops and stations, and
+  // the refusals among them (`refused`): a restored account keeps what it linked and what it
+  // removed, so no pass brings a removed photo back.
+  entryPhotoLinks: true,
   userAchievements: { include: { achievement: true } },
   // Field-by-field: the stored API keys are not part of a data export.
   settings: {
@@ -217,6 +221,7 @@ export const USER_EXPORT_SELECT = {
 
 /** Every `User` list relation the export leaves out, and why. */
 export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
+  entryPhotoDirty: "the photo pass's work marker; a restored account is covered by the full pass",
   readinessInvitationSeen:
     "a scalar list the guard's schema scan reads as a relation: which setup notes the invitation card already showed; per-server bookkeeping, a restored account is shown them again",
   readinessItemStates:

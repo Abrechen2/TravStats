@@ -30,7 +30,7 @@ import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
 import { clearImmichAssetCache } from "../../services/immich/immichAssetCache";
-import { VISIT_PHOTO_SUGGESTION_CAP } from "../../schemas/place";
+import { PHOTO_CAP_DEFAULT } from "../../services/photoLinking/cap";
 import { ImmichError } from "../../services/immich/types";
 import { settleAllJobs } from "../../services/jobs/jobRegistry";
 import { generateToken } from "../../utils/jwt";
@@ -138,15 +138,18 @@ describe("automatic place-visit photo links", () => {
       ],
       truncated: false,
     });
-    search.photoprism.mockResolvedValue({ assets: [asset(PRISM_NEAR)], truncated: false });
+    search.photoprism.mockResolvedValue({
+      assets: [asset(PRISM_NEAR, { fileCreatedAt: "2024-05-01T10:30:00.000Z" })],
+      truncated: false,
+    });
   });
 
   it("links the visit's day photos near the place from Immich AND PhotoPrism, as auto links", async () => {
     await run();
     const rows = await linked();
     expect(rows.map((r) => [r.provider, r.immichAssetId, r.provenance, r.filename])).toEqual([
-      ["photoprism", PRISM_NEAR, "auto", null],
       ["immich", IMMICH_NEAR, "auto", null],
+      ["photoprism", PRISM_NEAR, "auto", null],
     ]);
   });
 
@@ -282,7 +285,7 @@ describe("automatic place-visit photo links", () => {
     search.photoprism.mockResolvedValue({ assets: [], truncated: false });
     await run();
     await run();
-    expect(await linked()).toHaveLength(VISIT_PHOTO_SUGGESTION_CAP);
+    expect(await linked()).toHaveLength(PHOTO_CAP_DEFAULT);
   });
 
   it("shows a failing source instead of 'no photos', and still links the other", async () => {

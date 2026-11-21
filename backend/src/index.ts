@@ -1,4 +1,5 @@
 import express from "express";
+import { installEntryPhotoTriggers } from "./services/photoLinking/entryPhotoTriggers";
 import { withoutShareKeys } from "./services/sharing/wireGuard";
 import cors from "cors";
 import { corsOriginCheck } from "./middleware/corsOrigin";
@@ -304,6 +305,8 @@ process.on("SIGTERM", shutdown("SIGTERM"));
 
 // Start server only if not in test mode
 if (process.env.NODE_ENV !== "test") {
+  // Every write of an entry feeds the automatic photo pass; tests install it themselves.
+  installEntryPhotoTriggers();
   const HOST = process.env.HOST || "0.0.0.0"; // Bind to all interfaces for network access
   httpServer = app.listen(PORT, HOST, async () => {
     logger.info({

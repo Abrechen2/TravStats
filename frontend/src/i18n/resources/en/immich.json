@@ -153,6 +153,13 @@
     "truncatedVisits_one": "For {{count}} visit not all of the day's photos were read.",
     "truncatedVisits_other": "For {{count}} visits not all of the day's photos were read.",
     "lost": "The state is unknown: the server forgot the job (restart?). Photos already linked stay linked.",
-    "jobFailed": "Automatic linking failed."
+    "jobFailed": "Automatic linking failed.",
+    "cap": "Photos per visit or entry (5–10)",
+    "capHint": "The most photos the server links on its own, spread over the time span without near-duplicates. Your own choices count too. A lower value trims automatic links that already exist; your own picks and removed photos are left alone.",
+    "capSaveFailed": "The value could not be saved.",
+    "trim": "Trim existing automatic photos to this value",
+    "trimRunning": "Trimming … {{done}} of {{total}}",
+    "trimDone_one": "{{count}} automatic link removed.",
+    "trimDone_other": "{{count}} automatic links removed."
   }
 }

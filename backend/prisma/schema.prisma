@@ -28,6 +28,8 @@ datasource db {
 }
 
 model User {
+  entryPhotoDirty                 EntryPhotoDirty[]
+  entryPhotoLinks                 EntryPhotoLink[]
   mailIntakeSources               MailIntakeSource[]
   mailIntakeAddress               MailIntakeAddress?
   mailIntakeSenders               MailIntakeSender[]
@@ -671,47 +673,48 @@ model Airport {
 }
 
 model Flight {
-  id                   String    @id @default(uuid())
-  userId               String    @map("user_id")
+  entryPhotoLinks      EntryPhotoLink[]
+  id                   String           @id @default(uuid())
+  userId               String           @map("user_id")
   airline              String?
-  airlineIata          String?   @map("airline_iata")
-  airlineIcao          String?   @map("airline_icao")
-  operatingAirline     String?   @map("operating_airline")
-  operatingAirlineIata String?   @map("operating_airline_iata")
-  operatingAirlineIcao String?   @map("operating_airline_icao")
-  isCodeshare          Boolean?  @map("is_codeshare")
-  flightNumber         String?   @map("flight_number")
+  airlineIata          String?          @map("airline_iata")
+  airlineIcao          String?          @map("airline_icao")
+  operatingAirline     String?          @map("operating_airline")
+  operatingAirlineIata String?          @map("operating_airline_iata")
+  operatingAirlineIcao String?          @map("operating_airline_icao")
+  isCodeshare          Boolean?         @map("is_codeshare")
+  flightNumber         String?          @map("flight_number")
   callsign             String?
   aircraft             String?
-  aircraftRegistration String?   @map("aircraft_registration")
-  aircraftModeS        String?   @map("aircraft_mode_s")
-  depIcao              String?   @map("dep_icao")
-  depIata              String?   @map("dep_iata")
-  depName              String?   @map("dep_name")
-  depLat               Float     @map("dep_lat")
-  depLon               Float     @map("dep_lon")
-  arrIcao              String?   @map("arr_icao")
-  arrIata              String?   @map("arr_iata")
-  arrName              String?   @map("arr_name")
-  arrLat               Float     @map("arr_lat")
-  arrLon               Float     @map("arr_lon")
-  departureTime        DateTime? @map("departure_time")
-  arrivalTime          DateTime? @map("arrival_time")
-  status               String    @default("scheduled") // scheduled, flown, cancelled, historical
+  aircraftRegistration String?          @map("aircraft_registration")
+  aircraftModeS        String?          @map("aircraft_mode_s")
+  depIcao              String?          @map("dep_icao")
+  depIata              String?          @map("dep_iata")
+  depName              String?          @map("dep_name")
+  depLat               Float            @map("dep_lat")
+  depLon               Float            @map("dep_lon")
+  arrIcao              String?          @map("arr_icao")
+  arrIata              String?          @map("arr_iata")
+  arrName              String?          @map("arr_name")
+  arrLat               Float            @map("arr_lat")
+  arrLon               Float            @map("arr_lon")
+  departureTime        DateTime?        @map("departure_time")
+  arrivalTime          DateTime?        @map("arrival_time")
+  status               String           @default("scheduled") // scheduled, flown, cancelled, historical
   notes                String?
   // Boarding Pass Information
-  seatNumber           String?   @map("seat_number")
-  seatClass            String?   @map("seat_class") // economy, premium_economy, business, first
-  boardingGroup        String?   @map("boarding_group")
+  seatNumber           String?          @map("seat_number")
+  seatClass            String?          @map("seat_class") // economy, premium_economy, business, first
+  boardingGroup        String?          @map("boarding_group")
   gate                 String?
   terminal             String?
-  bookingReference     String?   @map("booking_reference")
-  ticketNumber         String?   @map("ticket_number")
+  bookingReference     String?          @map("booking_reference")
+  ticketNumber         String?          @map("ticket_number")
   // Costs & categorization
-  price                Float?    @map("price")
-  currency             String?   @default("EUR") @map("currency")
-  taxes                Float?    @map("taxes")
-  fees                 Float?    @map("fees")
+  price                Float?           @map("price")
+  currency             String?          @default("EUR") @map("currency")
+  taxes                Float?           @map("taxes")
+  fees                 Float?           @map("fees")
   /// FX snapshot (#267). `price + taxes + fees` converted into the user's base
   /// currency at the rate for the DEPARTURE day, with the rate, its day and its
   /// source kept alongside. Statistics used to sum `price` across currencies
@@ -719,28 +722,28 @@ model Flight {
   /// symbol, so 300 USD + 300 EUR was reported as "600 €". Null where no
   /// honest conversion was possible (no date, no currency, no rate) — those
   /// amounts are reported per currency instead of being folded into a total.
-  priceBase            Float?    @map("price_base")
-  fxRate               Float?    @map("fx_rate")
-  fxRateDate           DateTime? @map("fx_rate_date")
-  fxBaseCurrency       String?   @map("fx_base_currency")
-  fxSource             String?   @map("fx_source")
+  priceBase            Float?           @map("price_base")
+  fxRate               Float?           @map("fx_rate")
+  fxRateDate           DateTime?        @map("fx_rate_date")
+  fxBaseCurrency       String?          @map("fx_base_currency")
+  fxSource             String?          @map("fx_source")
   // No column default: category is genuinely optional. The old
   // @default("private") silently classified every API import that omitted
   // the field, while the UI suggested "business" — two systems, two
   // opinions, neither of them the user's (dropped 2026-08-02).
-  category             String?   @map("category") // business, private, vacation
-  tags                 String[]  @default([]) @map("tags")
-  companions           String[]  @default([]) @map("companions") // User-defined travel group (set manually, vs. coPassengers = auto-parsed from email)
-  receiptUrl           String?   @map("receipt_url")
-  ticketPrice          Float?    @map("ticket_price")
-  createdAt            DateTime  @default(now()) @map("created_at")
+  category             String?          @map("category") // business, private, vacation
+  tags                 String[]         @default([]) @map("tags")
+  companions           String[]         @default([]) @map("companions") // User-defined travel group (set manually, vs. coPassengers = auto-parsed from email)
+  receiptUrl           String?          @map("receipt_url")
+  ticketPrice          Float?           @map("ticket_price")
+  createdAt            DateTime         @default(now()) @map("created_at")
   /// Bumped by every Prisma write. Read by the statistics ETag (forgejo#50):
   /// without it an edited flight could not be told apart from an unchanged one.
-  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedAt            DateTime         @default(now()) @updatedAt @map("updated_at")
   // Route tracking
-  actualRoute          Json?     @map("actual_route") // Array of waypoints [{lat, lon, timestamp, country?}]
-  overflownCountries   String[]  @default([]) @map("overflown_countries")
-  routeDistance        Float?    @map("route_distance")
+  actualRoute          Json?            @map("actual_route") // Array of waypoints [{lat, lon, timestamp, country?}]
+  overflownCountries   String[]         @default([]) @map("overflown_countries")
+  routeDistance        Float?           @map("route_distance")
   // MEASURED flight time in minutes — the clocks, never an estimate. The
   // estimate stays where it belongs, in `shared/flightDuration.ts`, which
   // labels it as a guess; this column only ever carries evidence.
@@ -783,11 +786,11 @@ model Flight {
   // `@default(dbgenerated())` is how Prisma is told "the database fills this
   // in": without it every `migrate diff` wants to DROP the generated
   // expression it cannot see.
-  durationMinutes      Float?    @default(dbgenerated()) @map("duration_minutes")
-  routeSource          String?   @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
-  hasLiveTracking      Boolean   @default(false) @map("has_live_tracking")
+  durationMinutes      Float?           @default(dbgenerated()) @map("duration_minutes")
+  routeSource          String?          @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
+  hasLiveTracking      Boolean          @default(false) @map("has_live_tracking")
   // Data source tracking
-  dataSource           String?   @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import', 'imported_fr24', 'imported_generic_csv', 'imported_roundtrip', 'imported_<tracker>' (openflights, airtrail, jetlog, flighty, app_in_the_air)
+  dataSource           String?          @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import', 'imported_fr24', 'imported_generic_csv', 'imported_roundtrip', 'imported_<tracker>' (openflights, airtrail, jetlog, flighty, app_in_the_air)
   // Time-storage semantics for departureTime / arrivalTime.
   // 'UTC' = canonical real UTC instant (current writes always use this).
   // 'LEGACY_FAKE_UTC' = wall-clock encoded as fake-UTC; needs depTz/arrTz to
@@ -795,24 +798,24 @@ model Flight {
   // 'UNKNOWN' = not yet classified by the backfill script (DB-side default
   // for rows existing at the time of the ADD COLUMN migration). New writes
   // from Prisma default to 'UTC'.
-  depTimeSemantics     String    @default("UTC") @map("dep_time_semantics")
-  arrTimeSemantics     String    @default("UTC") @map("arr_time_semantics")
+  depTimeSemantics     String           @default("UTC") @map("dep_time_semantics")
+  arrTimeSemantics     String           @default("UTC") @map("arr_time_semantics")
   /// ADR 0002: the IANA zone each end was WRITTEN with, frozen. Reads used to
   /// join the airport catalogue, so a catalogue correction moved the displayed
   /// time of every past flight there. Re-derived only when the airport itself
   /// changes (`routes/flights/timeInput.ts`). Null = not yet backfilled (3b).
-  depTimezone          String?   @map("dep_timezone")
-  arrTimezone          String?   @map("arr_timezone")
+  depTimezone          String?          @map("dep_timezone")
+  arrTimezone          String?          @map("arr_timezone")
   /// When online check-in opens (forgejo#285), where the airline says so — an
   /// INSTANT with the zone it was stated in (normally the departure
   /// airport's). Null = not known; nothing derives it from the departure.
-  onlineCheckInOpensAt DateTime? @map("online_check_in_opens_at")
-  onlineCheckInZone    String?   @map("online_check_in_zone")
+  onlineCheckInOpensAt DateTime?        @map("online_check_in_opens_at")
+  onlineCheckInZone    String?          @map("online_check_in_zone")
   /// minute | day | unknown (`shared/time/wire.ts` TIME_PRECISIONS).
-  depPrecision         String?   @map("dep_precision")
-  arrPrecision         String?   @map("arr_precision")
-  lastModifiedBy       String?   @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
-  enrichmentHistory    Json?     @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
+  depPrecision         String?          @map("dep_precision")
+  arrPrecision         String?          @map("arr_precision")
+  lastModifiedBy       String?          @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
+  enrichmentHistory    Json?            @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
 
   // Phase 3: Actual Times, Delay, CO₂
   actualDeparture DateTime? @map("actual_departure")
@@ -1018,6 +1021,10 @@ model UserSettings {
   /// Link photos from the connected photo sources to place visits on their own
   /// (default on: the owner asked for it, 2026-11-21). Links only, never copies.
   autoLinkVisitPhotos Boolean @default(true) @map("auto_link_visit_photos")
+
+  /// How many photos the automatic linker keeps per visit or entry, 5–10 (owner,
+  /// 2026-11-21). The user's own picks count toward it.
+  photoAutoLinkCap Int @default(6) @map("photo_auto_link_cap")
 
   /// The outcome of the last automatic linking pass, per source, so a failing
   /// source is visible in the settings instead of reading as "no photos":
@@ -2305,23 +2312,24 @@ model ImmichImportJob {
 }
 
 model TripStop {
-  countryVisitKind String    @default("visit") @map("country_visit_kind")
-  id               String    @id @default(uuid())
+  entryPhotoLinks  EntryPhotoLink[]
+  countryVisitKind String           @default("visit") @map("country_visit_kind")
+  id               String           @id @default(uuid())
   /// The trip this stop sits on, or NULL for a stop that exists only as a
   /// vertex of a standalone tour. A stop always has one or the other —
   /// `trip_stops_trip_or_route` in the migration refuses a row with
   /// neither, because such a row would belong to nobody.
-  tripId           String?   @map("trip_id")
-  orderIdx         Int       @default(0) @map("order_idx")
+  tripId           String?          @map("trip_id")
+  orderIdx         Int              @default(0) @map("order_idx")
   // Free-form DomainKey-style label so the timeline picks the right
   // colour ("poi", "hotel", "train", "hike", …). Null means "generic".
   domain           String?
   // Optional id of an existing flight/cruise/etc. that this stop wraps.
-  sourceId         String?   @map("source_id")
+  sourceId         String?          @map("source_id")
   title            String
   description      String?
-  startDate        DateTime? @map("start_date")
-  endDate          DateTime? @map("end_date")
+  startDate        DateTime?        @map("start_date")
+  endDate          DateTime?        @map("end_date")
   lat              Float?
   lon              Float?
   /// ADR 0002 phase 2 dual-write: `startDate`/`endDate` keep their old
@@ -2329,29 +2337,29 @@ model TripStop {
   /// real instants, the zone of the stop (its coordinates or the entry it
   /// wraps) and the precision. Null zone + precision `unknown` = no place to
   /// read a clock at.
-  startUtc         DateTime? @map("start_utc")
-  endUtc           DateTime? @map("end_utc")
-  stopZone         String?   @map("stop_zone")
+  startUtc         DateTime?        @map("start_utc")
+  endUtc           DateTime?        @map("end_utc")
+  stopZone         String?          @map("stop_zone")
   precision        String?
   notes            String?
   /// Route membership. NULL means what every stop is today: a timeline
   /// point that produces no kilometres. Set means it is a vertex of that
   /// route section. Nothing derives this — see the migration note.
-  routeId          String?   @map("route_id")
+  routeId          String?          @map("route_id")
   /// Position WITHIN the route, 0-based and contiguous. Written only by
   /// PUT /trips/:id/routes/:routeId/stops, never by a client.
-  routeOrderIdx    Int?      @map("route_order_idx")
+  routeOrderIdx    Int?             @map("route_order_idx")
   /// Roadtrip station: the stay slept in here. SetNull — deleting the stay
   /// keeps the station, which then reads as a free night (`overnight` stays
   /// true), because the night still happened. The stay never points back:
   /// the stay owns the night (design 2026-09-24 §2).
-  lodgingStayId    String?   @map("lodging_stay_id")
+  lodgingStayId    String?          @map("lodging_stay_id")
   /// Roadtrip station: a night was spent here. With `lodgingStayId` it is a
   /// "stay" station; without it a "free" one (a pitch with no accommodation
   /// record); false is a pass-through. Derived, never stored as an enum — a
   /// stored enum plus the SetNull above would need a CHECK that the cascade
   /// itself then violates (the trap migration 20260921195505 met).
-  overnight        Boolean   @default(false)
+  overnight        Boolean          @default(false)
   /// A route correction ("Streckenkorrektur", tester 2026-09-26): a point
   /// with no name of its own that exists only to bend the route between its
   /// neighbours. Legs run through it like through any vertex, so distances
@@ -2359,21 +2367,21 @@ model TripStop {
   /// count, countries, nights, days away, achievements, the phone's list, the
   /// dashboard markers) leaves it out. Never overnight and never a stay —
   /// `trip_stops_via_point_passes` holds that in the database.
-  viaPoint         Boolean   @default(false) @map("via_point")
+  viaPoint         Boolean          @default(false) @map("via_point")
   /// Roadtrip pass-through: the user's own place (POI) it passed, as a stay
   /// station names its stay (tester 2026-09-26). SetNull — deleting the
   /// place leaves the pass-through standing. Only on a pass-through:
   /// `trip_stops_place_on_pass` holds that in the database.
-  placeId          String?   @map("place_id")
+  placeId          String?          @map("place_id")
   /// Trip sharing: the same key on every member's copy of this stop. A stop
   /// has no user column, so the key is unique per TRIP — which is per user,
   /// since a trip has exactly one owner.
-  shareKey         String?   @map("share_key")
+  shareKey         String?          @map("share_key")
   /// The import that wrote this stop (Takeout "trip stop" rows), so undoing
   /// the import takes it back. Null for every stop typed or planned by hand.
-  importBatchId    String?   @map("import_batch_id")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  importBatchId    String?          @map("import_batch_id")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
 
   trip            Trip?          @relation(fields: [tripId], references: [id], onDelete: Cascade)
   /// Cascade, and the delete handler does the other half.
@@ -3190,36 +3198,37 @@ model MergedTripRedirect {
 }
 
 model CruiseStop {
-  id                 String    @id @default(uuid())
-  cruiseId           String    @map("cruise_id")
-  portId             Int?      @map("port_id")
-  dayNumber          Int       @map("day_number")
+  entryPhotoLinks    EntryPhotoLink[]
+  id                 String           @id @default(uuid())
+  cruiseId           String           @map("cruise_id")
+  portId             Int?             @map("port_id")
+  dayNumber          Int              @map("day_number")
   date               DateTime?
-  isAtSea            Boolean   @default(false) @map("is_at_sea")
-  arrivalTime        DateTime? @map("arrival_time")
-  departureTime      DateTime? @map("departure_time")
+  isAtSea            Boolean          @default(false) @map("is_at_sea")
+  arrivalTime        DateTime?        @map("arrival_time")
+  departureTime      DateTime?        @map("departure_time")
   /// Read by the statistics ETag (forgejo#50).
   /// ADR 0002 phase 2 dual-write: `arrivalTime`/`departureTime` keep their
   /// old meaning (the port's wall clock stored as if it were UTC) and `date`
   /// its UTC-midnight day; these hold the real instants, the port's zone,
   /// the call's local day and the precision. A sea day or an unresolved port
   /// has no zone: its times stay in the legacy columns, precision `unknown`.
-  arrivalUtc         DateTime? @map("arrival_utc")
-  departureUtc       DateTime? @map("departure_utc")
-  stopZone           String?   @map("stop_zone")
-  stopDate           DateTime? @map("stop_date") @db.Date
-  timePrecision      String?   @map("time_precision")
-  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at")
-  excursionNote      String?   @map("excursion_note")
+  arrivalUtc         DateTime?        @map("arrival_utc")
+  departureUtc       DateTime?        @map("departure_utc")
+  stopZone           String?          @map("stop_zone")
+  stopDate           DateTime?        @map("stop_date") @db.Date
+  timePrecision      String?          @map("time_precision")
+  updatedAt          DateTime         @default(now()) @updatedAt @map("updated_at")
+  excursionNote      String?          @map("excursion_note")
   /// "All aboard" (forgejo#223): the latest time to be back on the ship at
   /// this port, `HH:mm` on the PORT's clock, on the stop's own day. Only ever
   /// what the user typed from the ship's daily programme — it is never derived
   /// from the departure, because the gap between the two differs by line and
   /// port, and a guessed time to be back on board is worse than none.
-  allAboardTime      String?   @map("all_aboard_time")
+  allAboardTime      String?          @map("all_aboard_time")
   // Third stop state: a port whose name could not be matched to the catalog on
   // import. portId=null AND isAtSea=false AND this set => unresolved port.
-  unresolvedPortName String?   @map("unresolved_port_name")
+  unresolvedPortName String?          @map("unresolved_port_name")
 
   cruise Cruise @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
   port   Port?  @relation(fields: [portId], references: [id], onDelete: SetNull)
@@ -3344,11 +3353,12 @@ model Lodging {
 }
 
 model LodgingStay {
-  id                    String    @id @default(uuid())
-  lodgingId             String    @map("lodging_id")
-  userId                String    @map("user_id")
-  tripId                String?   @map("trip_id")
-  bookingId             String?   @map("booking_id")
+  entryPhotoLinks       EntryPhotoLink[]
+  id                    String           @id @default(uuid())
+  lodgingId             String           @map("lodging_id")
+  userId                String           @map("user_id")
+  tripId                String?          @map("trip_id")
+  bookingId             String?          @map("booking_id")
   /// Hotel-local, do not normalize to UTC.
   ///
   /// NULLABLE since 2.7: a hotel you remember but cannot date is still a place
@@ -3357,8 +3367,8 @@ model LodgingStay {
   /// (`departure_time`) and cruises (`start_date`) have always allowed this;
   /// lodging was the odd one out. What the dates mean is qualified by
   /// `date_precision`.
-  checkIn               DateTime? @map("check_in")
-  checkOut              DateTime? @map("check_out")
+  checkIn               DateTime?        @map("check_in")
+  checkOut              DateTime?        @map("check_out")
   /// Optional wall-clock times ("HH:mm", hotel-local like the dates) for the
   /// check-in/check-out DAY above. Stored separately so the UTC-midnight day
   /// anchors — which the FX snapshot, night counting and status derivation
@@ -3366,17 +3376,17 @@ model LodgingStay {
   /// day + time; everything else keeps reading the dates alone. Meaningful
   /// only at DAY precision (schema-enforced). Tester wish, #dev-talk
   /// 2026-08-18: a planned hotel should not "begin" at midnight.
-  checkInTime           String?   @map("check_in_time")
-  checkOutTime          String?   @map("check_out_time")
+  checkInTime           String?          @map("check_in_time")
+  checkOutTime          String?          @map("check_out_time")
   /// ADR 0002 phase 2 dual-write: the check-in/-out days as calendar days,
   /// the instants they begin/end (day + time in the hotel's zone; null
   /// without a time or without a zone) and the hotel's zone. The legacy
   /// columns above keep their meaning until phase 6.
-  checkInDate           DateTime? @map("check_in_date") @db.Date
-  checkOutDate          DateTime? @map("check_out_date") @db.Date
-  checkInAt             DateTime? @map("check_in_at")
-  checkOutAt            DateTime? @map("check_out_at")
-  stayZone              String?   @map("stay_zone")
+  checkInDate           DateTime?        @map("check_in_date") @db.Date
+  checkOutDate          DateTime?        @map("check_out_date") @db.Date
+  checkInAt             DateTime?        @map("check_in_at")
+  checkOutAt            DateTime?        @map("check_out_at")
+  stayZone              String?          @map("stay_zone")
   /// How much of the date is actually known: DAY (both dates real) | MONTH
   /// ("July 2011", stored as the 1st) | YEAR ("some time in 2011", stored as
   /// 1 January) | NONE (no idea, both dates null).
@@ -3386,72 +3396,72 @@ model LodgingStay {
   /// A MONTH-precision stay must never land in a weekday histogram, and a
   /// YEAR-precision one must never land in a month histogram — see
   /// shared/lodgingTiming.ts, which is the only place that decides this.
-  datePrecision         String    @default("DAY") @map("date_precision")
+  datePrecision         String           @default("DAY") @map("date_precision")
   /// Nights, when the dates cannot supply them. "Three nights, no idea when"
   /// is a different gap from "July 2011, no idea how long", and one field
   /// cannot express both. Null = unknown; the dates win wherever they can
   /// answer (DAY precision with both ends).
   nights                Int?
-  status                String    @default("completed") // scheduled | in_progress | completed | cancelled
-  roomNumber            String?   @map("room_number")
-  roomCategory          String?   @map("room_category")
+  status                String           @default("completed") // scheduled | in_progress | completed | cancelled
+  roomNumber            String?          @map("room_number")
+  roomCategory          String?          @map("room_category")
   board                 String? // none | breakfast | half | full | all_inclusive
   // How many people the booking covered, as the confirmation states it. A COUNT,
   // never a name: a confirmation names the booker, so who came along stays the
   // user's to enter in `companions`. Kept so the stay editor can point at that
   // field when a booking covered more than one person.
   guests                Int?
-  pricePerNight         Float?    @map("price_per_night")
-  currency              String    @default("EUR")
-  totalPrice            Float?    @map("total_price")
-  totalPriceBase        Float?    @map("total_price_base") // FX snapshot (§7.1)
-  fxRate                Float?    @map("fx_rate")
-  fxRateDate            DateTime? @map("fx_rate_date")
-  fxBaseCurrency        String?   @map("fx_base_currency")
+  pricePerNight         Float?           @map("price_per_night")
+  currency              String           @default("EUR")
+  totalPrice            Float?           @map("total_price")
+  totalPriceBase        Float?           @map("total_price_base") // FX snapshot (§7.1)
+  fxRate                Float?           @map("fx_rate")
+  fxRateDate            DateTime?        @map("fx_rate_date")
+  fxBaseCurrency        String?          @map("fx_base_currency")
   // 'ecb' | 'cdn' | 'manual' — which provider produced the snapshot above.
   // A rate alone cannot say whether it is official or the user's own estimate.
-  fxSource              String?   @map("fx_source")
-  isAwardStay           Boolean   @default(false) @map("is_award_stay")
-  ratingRoom            Float?    @map("rating_room")
-  ratingBreakfast       Float?    @map("rating_breakfast")
-  ratingService         Float?    @map("rating_service")
-  ratingOverall         Float?    @map("rating_overall")
+  fxSource              String?          @map("fx_source")
+  isAwardStay           Boolean          @default(false) @map("is_award_stay")
+  ratingRoom            Float?           @map("rating_room")
+  ratingBreakfast       Float?           @map("rating_breakfast")
+  ratingService         Float?           @map("rating_service")
+  ratingOverall         Float?           @map("rating_overall")
   /// Every category value of the stay as {category: 1..5}: built-in keys and own
   /// `custom:<id>` keys. The source of truth; ratingRoom/Breakfast/Service above are
   /// mirrored from it on write for one release (rollback must not lose a verdict).
   /// ratingOverall is the mean of THESE values, never of the currently active set.
-  ratings               Json?     @map("ratings")
-  roomAmenities         String[]  @default([]) @map("room_amenities")
-  bookingReference      String?   @map("booking_reference")
-  membershipId          String?   @map("membership_id")
+  ratings               Json?            @map("ratings")
+  roomAmenities         String[]         @default([]) @map("room_amenities")
+  bookingReference      String?          @map("booking_reference")
+  membershipId          String?          @map("membership_id")
   /// true = the user explicitly used NO programme for this stay. Distinct from
   /// `membershipId = null`, which means "derive it from the hotel"
   /// (shared/membershipDerivation.ts).
-  membershipOptOut      Boolean   @default(false) @map("membership_opt_out")
-  receiptUrl            String?   @map("receipt_url")
+  membershipOptOut      Boolean          @default(false) @map("membership_opt_out")
+  receiptUrl            String?          @map("receipt_url")
   /// Booking deadlines (forgejo#285). `freeCancellationUntil` is an INSTANT
   /// (real UTC) with the IANA zone the deadline was stated in beside it (ADR
   /// 0002 D1) — "free cancellation until 18:00 hotel time". `paymentDueOn` is
   /// a calendar day with no zone (`YYYY-MM-DD`). Null = not recorded, never
   /// "none": the reminder side treats an absent deadline as unknown.
-  freeCancellationUntil DateTime? @map("free_cancellation_until")
-  freeCancellationZone  String?   @map("free_cancellation_zone")
+  freeCancellationUntil DateTime?        @map("free_cancellation_until")
+  freeCancellationZone  String?          @map("free_cancellation_zone")
   /// A cancellation deadline known only to the DAY ("bis 1. Mai") — until the
   /// end of that local day. Never turned into an invented instant; exactly one
   /// of it and `freeCancellationUntil` is set (CHECK).
-  freeCancellationOn    DateTime? @map("free_cancellation_on") @db.Date
-  paymentDueOn          DateTime? @map("payment_due_on") @db.Date
-  companions            String[]  @default([])
+  freeCancellationOn    DateTime?        @map("free_cancellation_on") @db.Date
+  paymentDueOn          DateTime?        @map("payment_due_on") @db.Date
+  companions            String[]         @default([])
   notes                 String?
-  parserTemplate        String?   @map("parser_template")
-  parserConfidence      Int?      @map("parser_confidence")
-  dataSource            String?   @map("data_source")
-  externalRef           String?   @map("external_ref") // e.g. "booking:5087376273"
-  batchId               String?   @map("batch_id")
+  parserTemplate        String?          @map("parser_template")
+  parserConfidence      Int?             @map("parser_confidence")
+  dataSource            String?          @map("data_source")
+  externalRef           String?          @map("external_ref") // e.g. "booking:5087376273"
+  batchId               String?          @map("batch_id")
   /// Trip sharing: the same key on every member's copy of this entry. Null = never shared.
-  shareKey              String?   @map("share_key")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  shareKey              String?          @map("share_key")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
 
   lodging    Lodging            @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
   user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -4682,8 +4692,9 @@ model DocumentLink {
 /// them from the geocoder. Coordinates are REQUIRED, as on `Flight`: a station
 /// without a position can be neither drawn, measured nor placed in a zone.
 model RailJourney {
-  id     String @id @default(uuid())
-  userId String @map("user_id")
+  entryPhotoLinks EntryPhotoLink[]
+  id              String           @id @default(uuid())
+  userId          String           @map("user_id")
 
   operator      String?
   /// "ICE", "TGV", "RJX" — apart from the number because statistics group by it.
@@ -4890,8 +4901,9 @@ model RailJourneyCompanion {
 /// `services/rail/timesDto.ts` and the trip bounds are structurally typed on
 /// them, so a bus row reads through the same functions without a copy.
 model BusJourney {
-  id     String @id @default(uuid())
-  userId String @map("user_id")
+  entryPhotoLinks EntryPhotoLink[]
+  id              String           @id @default(uuid())
+  userId          String           @map("user_id")
 
   /// "FlixBus", "Kobus", "Lux Express" — free text with entry suggestions.
   operator String?
@@ -5016,8 +5028,9 @@ model BusJourneyCompanion {
 /// a contract, not a route: it has no geometry of its own; a roadtrip may name
 /// it as the car it was driven in (`routeId`).
 model RentalBooking {
-  id     String @id @default(uuid())
-  userId String @map("user_id")
+  entryPhotoLinks EntryPhotoLink[]
+  id              String           @id @default(uuid())
+  userId          String           @map("user_id")
 
   /// The company whose counter hands over the keys ("Sixt", "Alamo").
   provider           String
@@ -5752,14 +5765,15 @@ model Note {
 }
 
 model FerryJourney {
-  roadtripLegId     String?       @unique @map("roadtrip_leg_id")
-  roadtripLeg       TripRouteLeg? @relation(fields: [roadtripLegId], references: [id], onDelete: SetNull)
+  entryPhotoLinks   EntryPhotoLink[]
+  roadtripLegId     String?          @unique @map("roadtrip_leg_id")
+  roadtripLeg       TripRouteLeg?    @relation(fields: [roadtripLegId], references: [id], onDelete: SetNull)
   /// The linked leg's routing as it was before linking (mode, source,
   /// confidence, waypoints, drivingMinutes, distanceKm). Linking makes the leg
   /// a straight ferry leg; unlinking or relinking restores it from here.
-  roadtripLegBefore Json?         @map("roadtrip_leg_before")
-  id                String        @id @default(uuid())
-  userId            String        @map("user_id")
+  roadtripLegBefore Json?            @map("roadtrip_leg_before")
+  id                String           @id @default(uuid())
+  userId            String           @map("user_id")
 
   operator            String?
   vesselName          String? @map("vessel_name")
@@ -7543,4 +7557,77 @@ model DocumentLinkPass {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("document_link_passes")
+}
+
+/// A photo of the user's Immich / PhotoPrism library attached to ONE entry
+/// (flight, stay, rail/bus/ferry journey, rental, cruise stop, roadtrip stop)
+/// as a LINK: no bytes are stored here, the file route streams the asset from
+/// its own source. One table with one nullable foreign key per entry type
+/// instead of a table per domain: the matcher, the refusals, the gallery and the
+/// export are the same for all of them, and each FK is a real one with cascade,
+/// so deleting an entry deletes its links. Exactly one FK is set
+/// (`entry_photo_links_one_entry` in the migration). `refused` rows are the
+/// user's "not this one": kept so the next automatic pass does not bring the
+/// picture back, never shown. Unique per (entry, provider, asset) through one
+/// partial-free composite per FK (NULLs are distinct in Postgres).
+model EntryPhotoLink {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  flightId       String?   @map("flight_id")
+  lodgingStayId  String?   @map("lodging_stay_id")
+  railJourneyId  String?   @map("rail_journey_id")
+  busJourneyId   String?   @map("bus_journey_id")
+  ferryJourneyId String?   @map("ferry_journey_id")
+  rentalId       String?   @map("rental_booking_id")
+  cruiseStopId   String?   @map("cruise_stop_id")
+  tripStopId     String?   @map("trip_stop_id")
+  /// `immich` | `photoprism`; an asset id is only unique per source.
+  provider       String    @default("immich")
+  assetId        String    @map("asset_id")
+  /// `manual` (picked) | `auto` (linked by the matcher).
+  provenance     String    @default("manual")
+  /// True: the user removed this link; it only exists to stop a re-link.
+  refused        Boolean   @default(false)
+  mimetype       String    @default("image/jpeg")
+  takenAt        DateTime? @map("taken_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flight       Flight?        @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  lodgingStay  LodgingStay?   @relation(fields: [lodgingStayId], references: [id], onDelete: Cascade)
+  railJourney  RailJourney?   @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
+  busJourney   BusJourney?    @relation(fields: [busJourneyId], references: [id], onDelete: Cascade)
+  ferryJourney FerryJourney?  @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
+  rental       RentalBooking? @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  cruiseStop   CruiseStop?    @relation(fields: [cruiseStopId], references: [id], onDelete: Cascade)
+  tripStop     TripStop?      @relation(fields: [tripStopId], references: [id], onDelete: Cascade)
+
+  @@unique([flightId, provider, assetId])
+  @@unique([lodgingStayId, provider, assetId])
+  @@unique([railJourneyId, provider, assetId])
+  @@unique([busJourneyId, provider, assetId])
+  @@unique([ferryJourneyId, provider, assetId])
+  @@unique([rentalId, provider, assetId])
+  @@unique([cruiseStopId, provider, assetId])
+  @@unique([tripStopId, provider, assetId])
+  @@index([userId])
+  @@map("entry_photo_links")
+}
+
+/// The durable "this entry's photo pass is due" marker. A write of an entry (or
+/// a bulk write that cannot name its rows: `entry_id = '*'`, every entry of that
+/// kind of the account) upserts one row; the pass consumes it after it ran. No
+/// foreign key on `entry_id`: it is polymorphic and a stale id simply resolves to
+/// nothing. Survives a restart and an import that outlasts any in-memory timer.
+model EntryPhotoDirty {
+  id       String   @id @default(uuid())
+  userId   String   @map("user_id")
+  kind     String
+  entryId  String   @map("entry_id")
+  markedAt DateTime @default(now()) @map("marked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, entryId])
+  @@map("entry_photo_dirty")
 }

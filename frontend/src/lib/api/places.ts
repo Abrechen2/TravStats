@@ -230,6 +230,10 @@ export async function linkVisitPhotosToImmich(): Promise<{ checked: number; link
 /** The account switch for automatic photo links and what the last pass found per source. */
 export interface AutoLinkStatus {
   enabled: boolean;
+  /** Automatic links kept per visit or entry, between `capMin` and `capMax`. */
+  cap?: number;
+  capMin?: number;
+  capMax?: number;
   lastRun: {
     at: string;
     linked: number;

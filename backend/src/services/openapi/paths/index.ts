@@ -77,6 +77,8 @@ import "./loyalty";
 import "./settings";
 import "./places";
 import "./placeVisitPhotoAuto";
+import "./photoChoices";
+import "./entryPhotos";
 import "./placeCategories";
 import "./placePhotos";
 import "./placeRelations";

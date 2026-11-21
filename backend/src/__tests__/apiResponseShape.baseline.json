@@ -188,6 +188,7 @@
     "version.ts"
   ],
   "enveloped": [
+    "entryPhotos.ts",
     "aircraft.ts",
     "airlines.ts",
     "appImport.ts",
