@@ -27,6 +27,7 @@
  * | 03:45 | log retention (logRetentionScheduler.ts) |
  * | 03:50 | sync change-feed retention (syncRetentionScheduler.ts) |
  * | 03:55 | TravTrack orphan-link sweep (travTrackOrphanLinkScheduler.ts) |
+ * | 03:58 | change-history retention, only when `CHANGE_HISTORY_RETENTION_DAYS` is set |
  * | every :00 | hourly status sweep |
  * | **04:10** | **this** |
  * | 04:25 | TravTrack trip questions (travTrackTripScheduler.ts) |

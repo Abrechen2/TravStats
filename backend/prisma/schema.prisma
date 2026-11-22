@@ -28,6 +28,7 @@ datasource db {
 }
 
 model User {
+  changeLedgerEntries             ChangeLedgerEntry[]
   entryPhotoDirty                 EntryPhotoDirty[]
   entryPhotoLinks                 EntryPhotoLink[]
   mailIntakeSources               MailIntakeSource[]
@@ -7664,4 +7665,45 @@ model AccountArchiveImport {
 
   @@index([userId])
   @@map("account_archive_imports")
+}
+
+/// The change ledger (2026-11-22, spec `docs/superpowers/specs/2026-11-22-change-history.md`):
+/// one row per changed field of a travel entry, or one row per deleted entry, so
+/// a corrected value keeps what it was and old statistics stay explainable.
+/// Written by the query hook in `db.ts`; scalars and short JSON only, never a
+/// blob or a payload dump (`services/changeLedger/values.ts` caps every value).
+/// Belongs to the account: cascades with it, travels in the account archive and
+/// never leaves through federation or a share.
+model ChangeLedgerEntry {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  /// One write of one entry: every field row it produced shares this id.
+  changeSetId    String   @map("change_set_id")
+  entityType     String   @map("entity_type") @db.VarChar(32)
+  entityId       String   @map("entity_id") @db.VarChar(64)
+  /// "update" | "delete".
+  operation      String   @db.VarChar(8)
+  /// Null on a delete row.
+  field          String?  @db.VarChar(64)
+  /// JSON-encoded scalar, capped; null when `omitted` or when the value was null.
+  oldValue       String?  @map("old_value")
+  newValue       String?  @map("new_value")
+  /// The value was too large (or binary) to keep; the row says only that it changed.
+  omitted        Boolean  @default(false)
+  /// A short name of the entry at the time (a delete row's only description).
+  label          String?  @db.VarChar(160)
+  /// web | companion | api | import | auto_update | merge | share_sync | system
+  source         String   @db.VarChar(16)
+  /// The account that made the change; no foreign key, it may be another account (share sync).
+  actorUserId    String?  @map("actor_user_id")
+  reason         String?  @db.VarChar(200)
+  /// Set when this row is a restore of an earlier one.
+  restoredFromId String?  @map("restored_from_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, entityType, entityId, createdAt])
+  @@index([createdAt])
+  @@map("change_ledger_entries")
 }

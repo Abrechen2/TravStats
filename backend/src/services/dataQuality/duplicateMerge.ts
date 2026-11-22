@@ -17,6 +17,7 @@ import { loadRecordSnapshot } from "./recordGather";
 import { FindingActionError } from "./findingErrors";
 import { repointLinks } from "../documents/documentLinks";
 import { carryCruiseStopLinks, carryPhotoLinks, carryStayCompanionFacts } from "./mergeCarryOver";
+import { withChangeSource } from "../changeLedger/context";
 
 /**
  * Merging the copies of a duplicate finding (spec C3, `merge`).
@@ -369,7 +370,7 @@ const DECISION_KEY_PREFIX: Record<"flight" | "cruise" | "lodging_stay", string> 
  * the same transaction, so the data and the answer change together or not at
  * all.
  */
-export async function mergeDuplicates(
+async function mergeDuplicatesUnattributed(
   userId: string,
   entityType: RecordCheckDomain,
   keptId: string,
@@ -411,3 +412,9 @@ export async function mergeDuplicates(
   await restatusTrips(tripIds);
   await recheckAchievements(userId, `merge ${entityType}`);
 }
+
+/** mergeDuplicates, with every entry it changes recorded as `merge` in the change ledger. */
+export const mergeDuplicates = (
+  ...args: Parameters<typeof mergeDuplicatesUnattributed>
+): ReturnType<typeof mergeDuplicatesUnattributed> =>
+  withChangeSource("merge", () => mergeDuplicatesUnattributed(...args));

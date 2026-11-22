@@ -2,6 +2,7 @@ import { prisma } from "../db";
 import logger from "../utils/logger";
 import { lookupFlightWithHistorical } from "./flightLookup";
 import { getAirportTimezone, toLocalDateString } from "../utils/timezone";
+import { withChangeSource } from "./changeLedger/context";
 
 /**
  * One last question about a flight that landed without its actual times.
@@ -67,7 +68,7 @@ async function departureLocalDay(
   return toLocalDateString(departureTime, tz ?? "UTC");
 }
 
-export async function runFinalArrivalSweep(
+async function runFinalArrivalSweepUnattributed(
   now: Date = new Date()
 ): Promise<FinalArrivalSweepSummary> {
   const summary: FinalArrivalSweepSummary = { attempted: 0, filled: 0 };
@@ -172,3 +173,9 @@ export async function runFinalArrivalSweep(
 
   return summary;
 }
+
+/** runFinalArrivalSweep, with every entry it changes recorded as `auto_update` in the change ledger. */
+export const runFinalArrivalSweep = (
+  ...args: Parameters<typeof runFinalArrivalSweepUnattributed>
+): ReturnType<typeof runFinalArrivalSweepUnattributed> =>
+  withChangeSource("auto_update", () => runFinalArrivalSweepUnattributed(...args));

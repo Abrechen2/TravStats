@@ -5,6 +5,7 @@ import comparisonPeerRoutes from "./comparisonPeer";
 import federationAdmissionRoutes from "./federationAdmission";
 import federationIdentityRoutes from "./federationIdentity";
 import tripSharePeerRoutes from "./tripSharePeer";
+import changeHistoryRoutes from "./changeHistory";
 /**
  * The API mount table — the single source of truth for what is served
  * under /api/v1 and in which order.
@@ -394,6 +395,8 @@ export const apiMounts: ApiMount[] = [
   { id: "meExport", base: "/api/v1/me", router: meExportRoutes },
   // Moving one account to another server as a ZIP (forgejo#433).
   { id: "accountArchive", base: "/api/v1/me/account-archive", router: accountArchiveRoutes },
+  // Every edited value of a travel entry, and restoring one (spec 2026-11-22-change-history).
+  { id: "changeHistory", base: "/api/v1/change-history", router: changeHistoryRoutes },
   { id: "parserTemplates", base: "/api/v1/parser-templates", router: parserTemplatesRoutes },
   { id: "backup", base: "/api/v1/backup", router: backupRoutes },
   { id: "pendingUpdates", base: "/api/v1/pending-updates", router: pendingUpdatesRoutes },

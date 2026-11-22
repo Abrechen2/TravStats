@@ -6,6 +6,11 @@ import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import * as propagation from "../../services/sharing/propagate";
 import { makeAccount, sharedPair, wipeShareTestAccounts } from "./sharingFixtures";
+import {
+  flushChangeLedger,
+  ledgerStats,
+  resetLedgerStats,
+} from "../../services/changeLedger/capture";
 
 /**
  * forgejo#217 — trip, tags and companions over an explicit selection. One
@@ -222,15 +227,25 @@ describe("POST /flights/bulk-edit", () => {
         companions: { mode: "add", values: ["Anna"] },
       };
       let first: request.Response | undefined;
+      await flushChangeLedger();
+      resetLedgerStats();
       const firstQueries = await countQueries(async () => {
         first = await send(body);
       });
+      await flushChangeLedger();
       expect(first?.status).toBe(200);
       expect(first?.body.summary).toEqual({ updated: 200, unchanged: 0, failed: 0 });
       // Per changed flight: delete links, create links, update — never a
       // per-name upsert. Plus the flights read, the people read, the one
       // create of the people nobody had yet, and the auth lookups.
       expect(firstQueries).toBeLessThanOrEqual(200 * 3 + 20);
+      // The change ledger keeps every one of the 200 edits on its own budget:
+      // one before-read per changed flight and batched inserts, never an
+      // insert per flight (change history spec, Performance).
+      const ledger = ledgerStats();
+      expect(ledger.snapshotReads).toBeLessThanOrEqual(200);
+      expect(ledger.rows).toBe(400);
+      expect(ledger.inserts).toBeLessThanOrEqual(20);
 
       let again: request.Response | undefined;
       const repeatQueries = await countQueries(async () => {

@@ -88,6 +88,7 @@ import "./operations";
 import "./dataQuality";
 import "./accounts";
 import "./accountArchive";
+import "./changeHistory";
 import "./integrations";
 import "./photoJourneys";
 import "./tripSuggestions";

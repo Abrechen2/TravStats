@@ -3,6 +3,7 @@ import { localDay } from "../../shared/time/instant";
 import { fakeUtcToInstant } from "../../shared/time/legacyValues";
 import type { TimePrecision } from "../../shared/time/wire";
 import { iso, ledgeredRowIds, placeZone, writeRows, type LedgerEntry, type RowWrite } from "./core";
+import { withoutChangeLedger } from "../changeLedger/context";
 
 /**
  * Flights (ADR 0002 phase 3b). A flight gets the zone of each end — the
@@ -174,7 +175,7 @@ function fakeUtcEnd(
   };
 }
 
-export async function backfillFlights() {
+async function backfillFlightsUnrecorded() {
   const done = await ledgeredRowIds("flights");
   const rows = (
     await prisma.flight.findMany({
@@ -216,3 +217,12 @@ export async function backfillFlights() {
   });
   return writeRows("flights", writes, (id, data) => prisma.flight.update({ where: { id }, data }));
 }
+
+/**
+ * backfillFlights, unrecorded: it fills derived time columns on every row, which is
+ * maintenance, not a correction anybody made (change ledger spec §Sources).
+ */
+export const backfillFlights = (
+  ...args: Parameters<typeof backfillFlightsUnrecorded>
+): ReturnType<typeof backfillFlightsUnrecorded> =>
+  withoutChangeLedger(() => backfillFlightsUnrecorded(...args));

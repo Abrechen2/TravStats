@@ -1,6 +1,11 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import { createPrismaClient } from "./prismaClient";
+import {
+  captureWrite,
+  configureChangeLedger,
+  isCapturedWrite,
+} from "./services/changeLedger/capture";
 import logger, { dbLogger } from "./utils/logger";
 import { toLoggable } from "./utils/logging/toLoggable";
 import { getLoggingRuntimeFlags } from "./utils/logging/runtimeFlags";
@@ -8,6 +13,9 @@ import { getLoggingRuntimeFlags } from "./utils/logging/runtimeFlags";
 const basePrisma = createPrismaClient({
   log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
 });
+// The change ledger reads its snapshots and writes its rows on the unextended
+// client, so its own queries never re-enter the hook below.
+configureChangeLedger(basePrisma);
 
 /**
  * Write one query-log line, and never let it fail the query.
@@ -137,7 +145,11 @@ export const prisma = basePrisma.$extends({
       const verbose = getLoggingRuntimeFlags().databaseQueries;
 
       try {
-        const result = await query(args);
+        // Edits of travel entries keep their history (the change ledger, spec
+        // 2026-11-22-change-history); everything else runs as it always did.
+        const result = isCapturedWrite(model, operation)
+          ? await captureWrite(model as string, operation, args, () => query(args))
+          : await query(args);
         if (writeObserver && operation !== "findMany" && operation !== "findFirst") {
           try {
             writeObserver({ model, operation, args, result });
