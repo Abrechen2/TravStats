@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // vi.hoisted lets these vi.fn()s survive vi.mock factory hoisting and stay
@@ -15,6 +15,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
 }));
 
 import PhotoLightbox, { type LightboxItem } from "../PhotoLightbox";
+import { useCoverCropStore } from "../../../store/coverCropStore";
 
 const ITEMS: LightboxItem[] = [
   { id: "p1", previewUrl: "/p1.jpg", caption: "First", source: { kind: "photo" } },
@@ -23,6 +24,7 @@ const ITEMS: LightboxItem[] = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useCoverCropStore.getState().close();
   setImmichCover.mockResolvedValue({ coverImageUrl: "/cover-immich" });
   setPhotoCover.mockResolvedValue({ coverImageUrl: "/cover-photo" });
 });
@@ -68,6 +70,26 @@ describe("PhotoLightbox", () => {
 
     await user.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("does not step or close underneath an open cover crop editor (its keys pan and cancel)", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(<PhotoLightbox tripId="trip-1" items={ITEMS} startIndex={0} onClose={onClose} />);
+    act(() =>
+      useCoverCropStore
+        .getState()
+        .open({ tripId: "trip-1", coverImageUrl: "/c.jpg", initialCrop: null })
+    );
+
+    await user.keyboard("{ArrowRight}");
+    await user.keyboard("{Escape}");
+    expect(screen.getByTestId("lightbox-image")).toHaveAttribute("src", "/p1.jpg");
+    expect(onClose).not.toHaveBeenCalled();
+
+    act(() => useCoverCropStore.getState().close());
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByTestId("lightbox-image")).toHaveAttribute("src", "/a1.jpg");
   });
 
   it("sets a local photo as the cover", async () => {

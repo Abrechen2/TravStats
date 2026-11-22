@@ -50,7 +50,12 @@ export default function PhotoLightbox({
     [items.length]
   );
 
+  // The cover crop editor opens on top of the lightbox and uses the same keys (arrows pan,
+  // Escape cancels); while it is open, the lightbox must not step or close underneath it.
+  const cropEditorOpen = useCoverCropStore((s) => s.request !== null);
+
   useEffect(() => {
+    if (cropEditorOpen) return undefined;
     const onKey = (event: KeyboardEvent): void => {
       if (event.key === "Escape") onClose();
       if (event.key === "ArrowRight") {
@@ -64,7 +69,7 @@ export default function PhotoLightbox({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, step]);
+  }, [onClose, step, cropEditorOpen]);
 
   if (items.length === 0) return null;
   // Guard against the parent shrinking `items` (e.g. a photo delete) while
