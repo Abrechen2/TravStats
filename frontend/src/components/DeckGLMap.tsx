@@ -11,6 +11,7 @@ import { HoverTooltip, type HoverTooltipApi } from "./map/cards/HoverTooltip";
 import type { MapPinned } from "./map/cards/pinnedTypes";
 import { pinnedFromAirport } from "./map/cards/buildFlatPinned";
 import { FLAT_FOCUS, focusMarker, useMapSelectionCards } from "./map/cards/useMapSelectionCards";
+import { useMapFocusRequests } from "./map/cards/useMapFocusRequests";
 import { LightingEffect } from "@deck.gl/core";
 import { useDeckHoverCursor } from "../hooks/useDeckHoverCursor";
 import { useTranslation } from "../hooks/useTranslation";
@@ -302,6 +303,9 @@ export function DeckGLMap({
       // airports on screen; a second command would undo exactly that.
       framesFlightSelection: true,
     });
+
+  // The activity list's camera requests (a point to zoom to, a route to fit).
+  useMapFocusRequests(mapRef, "flat");
 
   // Wrap onFlightClick so that a deck.gl layer click sets the guard ref BEFORE the
   // Map onClick fires and would otherwise clear the selection immediately (Bug 1).
