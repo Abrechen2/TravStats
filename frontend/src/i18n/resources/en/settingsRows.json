@@ -1002,7 +1002,16 @@
       "immichMode": "Link or copy photos",
       "immichModeLoadFailed": "I couldn't read how new photos are taken over by default.",
       "introAccount": "Your connections. Your data. Your decision. Enter your own keys here, or use the server's.",
-      "introServer": "Connect the services that take your server further. What is set here applies to every account."
+      "introServer": "Connect the services that take your server further. What is set here applies to every account.",
+      "sourceOwnInstanceEmpty": "Your personal key is active · instance key empty – other accounts have none.",
+      "sourceOwnWithInstance": "Your personal key is active · the instance key serves every other account.",
+      "sourceNone": "No key active – neither a personal nor an instance key.",
+      "testEffectiveT": "Test with my key",
+      "testEffectiveH": "Checks the key your own requests use – not the instance key.",
+      "testedWith": {
+        "account": "Tested: your own key",
+        "instance": "Tested: the server's key"
+      }
     },
     "status": {
       "needsConsent": "Waiting for your consent",
@@ -1032,8 +1041,10 @@
       "budget_exhausted": "The monthly budget is reached. I'll ask again next month.",
       "timeout": "No answer after 10 seconds.",
       "disabled": "Switched off by your admin. I won't ask, not even for a test.",
-      "not_configured": "Not set up",
-      "unknown": "I couldn't check this."
+      "not_configured": "Not set up. I sent no request.",
+      "unknown": "I couldn't check this.",
+      "no_instance_key": "No instance key stored. I sent no request.",
+      "http_404": "The provider answers \"404 not found\". The service or address does not exist there (any more)."
     },
     "smtp": {
       "SMTP_CONNECTION": "I can't reach the mail server. Are address and port right?",

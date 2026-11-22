@@ -60,6 +60,8 @@ export interface AdminService {
   enabled: boolean;
   configured: boolean;
   instanceSource: InstanceSource;
+  /** Where this admin's own requests are served from (the same value the account side reports). */
+  effectiveSource: EffectiveSource;
   allowAccountKeys: boolean | null;
   lastTest: ServiceLastTest | null;
   quota: ServiceQuota | null;
@@ -95,6 +97,8 @@ export interface ServiceTestResult {
   ok: boolean;
   reason: string | null;
   usedQuota: boolean;
+  /** Whose credential was used; "none" when nothing was called. Absent on a server before 2.8. */
+  source?: "account" | "instance" | "none";
 }
 
 export type EffectiveSource = "account" | "instance" | "none" | "off";
@@ -180,10 +184,10 @@ export const externalServicesApi = {
   async adminSetConnection(id: ConnectionId, allowed: boolean): Promise<void> {
     await api.put(`${admin}/connections/${id}`, { allowed });
   },
-  async adminTest(id: string): Promise<ServiceTestResult> {
+  async adminTest(id: string, effective = false): Promise<ServiceTestResult> {
     return (
       await api.post<ServiceTestResult>(
-        `${admin}/${encodeURIComponent(id)}/test`,
+        `${admin}/${encodeURIComponent(id)}/test${effective ? "?effective=1" : ""}`,
         {},
         { timeout: TEST_TIMEOUT_MS }
       )

@@ -65,6 +65,7 @@ export const adminServiceViewSchema = z.object({
   enabled: z.boolean(),
   configured: z.boolean(),
   instanceSource: z.enum(["instance", "none"]),
+  effectiveSource: z.enum(["account", "instance", "none", "off"]),
   allowAccountKeys: z.boolean().nullable(),
   lastTest,
   quota,
@@ -134,6 +135,9 @@ export const serviceTestResponseSchema = z.object({
   ok: z.boolean(),
   reason: z.string().nullable(),
   usedQuota: z.boolean().describe("Whether the test spent provider quota"),
+  source: z
+    .enum(["account", "instance", "none"])
+    .describe("Whose credential the test used (none: nothing was called)"),
   lastTest,
 });
 

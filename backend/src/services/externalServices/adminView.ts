@@ -10,6 +10,7 @@ import { loadAllTests, type LastTest } from "./tests";
 import { quotaFor, type QuotaView } from "./quota";
 import { parsePolicy, parsePrefs } from "./policy";
 import { currentConsentDestination } from "./consentBinding";
+import { accountHasCredential, effectiveSourceFor, type EffectiveSource } from "./accountView";
 import { isLlmProviderKind, isLocalLlmHost } from "../llm/llmEndpoint";
 import { CATEGORY_ORDER, type ExternalServicePolicy, type ServiceDef } from "./types";
 
@@ -25,7 +26,14 @@ export interface AdminServiceView {
   recommended: ServiceDef["recommended"];
   enabled: boolean;
   configured: boolean;
+  /** The server's own credential column only. */
   instanceSource: "instance" | "none";
+  /**
+   * Where a request of the VIEWING admin is served from (account key first, then
+   * the instance's) — the same value the account side reports, so the card, the
+   * key row and the test never disagree.
+   */
+  effectiveSource: EffectiveSource;
   allowAccountKeys: boolean | null;
   lastTest: LastTest | null;
   quota: QuotaView | null;
@@ -117,7 +125,7 @@ function consentCounts(
   return counts;
 }
 
-export async function buildAdminView(): Promise<{
+export async function buildAdminView(viewerId?: string): Promise<{
   categories: Array<{ id: string; services: AdminServiceView[] }>;
   accountConnections: Array<{
     id: (typeof CONNECTION_IDS)[number];
@@ -136,12 +144,20 @@ export async function buildAdminView(): Promise<{
     countConnections(),
   ]);
   const consents = consentCounts(prefRows, state.admin);
+  const viewerRow = viewerId
+    ? ((await prisma.userSettings.findUnique({ where: { userId: viewerId } })) as Record<
+        string,
+        unknown
+      > | null)
+    : null;
+  const viewerPrefs = parsePrefs(viewerRow?.externalServicePrefs);
 
   const services: AdminServiceView[] = [];
   for (const service of SERVICES) {
     if (service.adminRow === false) continue;
     const enabled = isEnabled(service, state);
     const source = sourceOf(service, src);
+    const viewerHas = viewerId ? await accountHasCredential(service, viewerRow, viewerId) : false;
     const view: AdminServiceView = {
       id: service.id,
       category: service.category,
@@ -154,6 +170,7 @@ export async function buildAdminView(): Promise<{
       enabled,
       configured: service.keyless && service.requiredFields.length === 0 ? true : source !== "none",
       instanceSource: source,
+      effectiveSource: effectiveSourceFor(service, state, viewerPrefs, viewerHas),
       allowAccountKeys:
         service.level === "instanceAndAccount" && !service.connection
           ? !state.policy.accountKeysForbidden.includes(service.id)

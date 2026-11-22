@@ -1002,7 +1002,16 @@
       "immichMode": "Fotos verknüpfen oder kopieren",
       "immichModeLoadFailed": "Ich konnte nicht lesen, wie neue Fotos standardmäßig übernommen werden.",
       "introAccount": "Deine Verbindungen. Deine Daten. Deine Entscheidung. Hier trägst du eigene Schlüssel ein oder nutzt den Schlüssel des Servers.",
-      "introServer": "Verbinde die Dienste, die deinen Server weiterbringen. Was hier steht, gilt für alle Konten."
+      "introServer": "Verbinde die Dienste, die deinen Server weiterbringen. Was hier steht, gilt für alle Konten.",
+      "sourceOwnInstanceEmpty": "Dein persönlicher Schlüssel ist aktiv · Instanz-Schlüssel leer – andere Konten haben keinen.",
+      "sourceOwnWithInstance": "Dein persönlicher Schlüssel ist aktiv · Der Instanz-Schlüssel gilt für alle anderen Konten.",
+      "sourceNone": "Kein Schlüssel aktiv – weder ein persönlicher noch ein Instanz-Schlüssel.",
+      "testEffectiveT": "Mit meinem Schlüssel testen",
+      "testEffectiveH": "Prüft den Schlüssel, mit dem deine eigenen Anfragen laufen – nicht den Instanz-Schlüssel.",
+      "testedWith": {
+        "account": "Getestet: dein eigener Schlüssel",
+        "instance": "Getestet: Schlüssel des Servers"
+      }
     },
     "status": {
       "needsConsent": "Wartet auf deine Zustimmung",
@@ -1032,8 +1041,10 @@
       "budget_exhausted": "Das Monatsbudget ist erreicht. Ich frage erst nächsten Monat wieder.",
       "timeout": "Nach 10 Sekunden kam keine Antwort.",
       "disabled": "Vom Admin abgeschaltet. Ich frage nicht an, auch nicht zum Test.",
-      "not_configured": "Nicht eingerichtet",
-      "unknown": "Das konnte ich nicht prüfen."
+      "not_configured": "Nicht eingerichtet. Ich habe nichts angefragt.",
+      "unknown": "Das konnte ich nicht prüfen.",
+      "no_instance_key": "Kein Instanz-Schlüssel hinterlegt. Ich habe nichts angefragt.",
+      "http_404": "Der Anbieter antwortet mit „404 nicht gefunden“. Dienst oder Adresse existiert dort nicht (mehr)."
     },
     "smtp": {
       "SMTP_CONNECTION": "Ich erreiche den Mail-Server nicht. Stimmen Adresse und Port?",

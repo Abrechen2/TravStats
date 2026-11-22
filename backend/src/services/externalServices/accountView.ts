@@ -72,7 +72,7 @@ export function effectiveSourceFor(
   return "none";
 }
 
-async function accountHasCredential(
+export async function accountHasCredential(
   service: ServiceDef,
   userRow: Record<string, unknown> | null,
   userId: string

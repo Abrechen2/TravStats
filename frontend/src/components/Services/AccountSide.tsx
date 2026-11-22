@@ -155,7 +155,11 @@ export default function AccountSide({
         />
       );
     }
-    if (uses("test") && acct.configured && acct.effectiveSource === "account") {
+    if (
+      uses("test") &&
+      ((acct.configured && acct.effectiveSource === "account") ||
+        acct.effectiveSource === "instance")
+    ) {
       rows.push(
         <TestRow
           key="test"

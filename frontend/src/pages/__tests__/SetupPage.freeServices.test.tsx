@@ -58,6 +58,7 @@ function svc(id: string, over: Partial<AdminService>): AdminService {
     enabled: false,
     configured: true,
     instanceSource: "none",
+    effectiveSource: "none",
     allowAccountKeys: null,
     lastTest: null,
     quota: null,
