@@ -139,6 +139,17 @@ describe("pickAisStatic", () => {
   });
 });
 
+describe("pickAisStatic with a known IMO", () => {
+  it("never takes a same-named ship that transmits another IMO", () => {
+    expect(
+      pickAisStatic([{ mmsi: "211000001", name: "FINNMAID", imo: "9000001" }], {
+        name: "Finnmaid",
+        imo: "9468906",
+      })
+    ).toMatchObject({ status: "unresolved" });
+  });
+});
+
 describe("resolveVessel", () => {
   it("prefers the catalogue's own MMSI and asks nobody", async () => {
     const row = await prisma.ship.create({
@@ -200,6 +211,20 @@ describe("resolveVessel", () => {
     const r = await resolveVessel({ name: "Some Ferry", operator: null, userId: USER, ais: false });
     expect(r).toMatchObject({ status: "unresolved", reason: "unavailable" });
     expect(await prisma.vesselIdentity.count()).toBe(0);
+  });
+
+  it("remembers a catalogue-only list when Wikidata is down, so a pick from it is accepted", async () => {
+    jest.mocked(searchWikidataByName).mockResolvedValue({ ok: false, failure: "unavailable" });
+    const row = await prisma.ship.create({
+      data: { name: "Candidate Test Ship", cruiseLine: "Test Line", mmsi: "247000777" },
+    });
+    try {
+      const r = await searchVesselCandidates("Candidate Test", USER);
+      expect(r.status).toBe("unavailable");
+      expect(await isOfferedCandidate("247000777", ["search:candidate test"])).not.toBeNull();
+    } finally {
+      await prisma.ship.delete({ where: { id: row.id } });
+    }
   });
 
   it("searchVesselCandidates offers only ships with an MMSI and remembers the list", async () => {

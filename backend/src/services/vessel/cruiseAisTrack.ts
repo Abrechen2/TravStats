@@ -57,3 +57,21 @@ export async function rebuildCruiseAisTrack(
   );
   return true;
 }
+
+/** The cruise changed ship: its fixes and its AIS recording go, and the legs are measured again. */
+export async function dropCruiseAisRecording(cruiseId: string, userId: string): Promise<void> {
+  const legDistances = await precomputeLegDistancesForCruise(cruiseId);
+  await prisma.$transaction(
+    async (tx) => {
+      const before = await shareSnapshot(tx, "cruise", cruiseId);
+      await tx.vesselPositionFix.deleteMany({ where: { cruiseId } });
+      const dropped = await tx.cruiseTrack.deleteMany({
+        where: { cruiseId, externalRef: CRUISE_AIS_TRACK_REF },
+      });
+      if (dropped.count === 0) return;
+      await recomputeLegsForCruise(cruiseId, tx, legDistances);
+      await propagateWrite(tx, userId, "cruise", cruiseId, before);
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
+}

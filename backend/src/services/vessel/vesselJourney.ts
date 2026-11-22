@@ -3,6 +3,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { haversineKm, polylineLengthKm } from "../../shared/geo/haversine";
 import type { VesselPosition } from "../ferry/aisStream";
 import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
+import { dropCruiseAisRecording } from "./cruiseAisTrack";
 import {
   isOfferedCandidate,
   lookupKeyOf,
@@ -45,6 +46,8 @@ const FERRY_DEFAULT_SPAN_MS = 24 * 60 * 60 * 1000;
 const CRUISE_LAST_DAY_MS = 36 * 60 * 60 * 1000;
 /** A fix this close to a terminal counts as having been there. */
 export const COVER_KM = 5;
+/** Two consecutive fixes further apart in time than this leave a hole: no full coverage. */
+export const COVER_MAX_GAP_MS = 45 * 60 * 1000;
 
 export async function loadVesselJourney(
   kind: VesselJourneyKind,
@@ -125,12 +128,19 @@ async function writeMmsi(
   source: string | null,
   onlyIfUnset: boolean
 ): Promise<void> {
-  const where = { id: j.id, userId: j.userId, ...(onlyIfUnset ? { vesselMmsi: null } : {}) };
+  // A resolution binds only into an empty column AND only while the ship is
+  // still the one it was resolved for — a rename in between must not receive it.
+  const base = { id: j.id, userId: j.userId, ...(onlyIfUnset ? { vesselMmsi: null } : {}) };
   const data = { vesselMmsi: mmsi, vesselMmsiSource: source };
-  // share-exempt: the vessel MMSI is private to the account, never a share fact
-  if (j.kind === "ferry") await prisma.ferryJourney.updateMany({ where, data });
-  // share-exempt: the vessel MMSI is private to the account, never a share fact
-  else await prisma.cruise.updateMany({ where, data });
+  if (j.kind === "ferry") {
+    const where = onlyIfUnset ? { ...base, vesselName: j.vesselName, operator: j.operator } : base;
+    // share-exempt: the vessel MMSI is private to the account, never a share fact
+    await prisma.ferryJourney.updateMany({ where, data });
+  } else {
+    const where = onlyIfUnset ? { ...base, shipId: j.shipId } : base;
+    // share-exempt: the vessel MMSI is private to the account, never a share fact
+    await prisma.cruise.updateMany({ where, data });
+  }
 }
 
 /**
@@ -157,6 +167,9 @@ export async function ensureVesselMmsi(
   );
   if (resolution.status !== "resolved") return { mmsi: null, resolution };
   await writeMmsi(j, resolution.mmsi, resolution.source, true);
+  // Read back: the bind lost a race (a rename, a manual pick) when it did not land.
+  const now2 = await loadVesselJourney(j.kind, j.id, j.userId);
+  if (now2?.mmsi !== resolution.mmsi) return { mmsi: null, resolution };
   return { mmsi: resolution.mmsi, resolution };
 }
 
@@ -178,11 +191,18 @@ export async function assignVessel(
     keys.filter((k): k is string => k !== null)
   );
   if (!offered) throw new AppError("Vessel was not offered", 400, "VESSEL_NOT_OFFERED", "mmsi");
+  // The same ship again: only the source changes, the recording stays.
+  if (offered.mmsi === j.mmsi) {
+    await writeMmsi(j, offered.mmsi, "manual", false);
+    return;
+  }
   await writeMmsi(j, offered.mmsi, "manual", false);
-  // The old ship's positions are not this one's.
-  await prisma.vesselPositionFix.deleteMany({
-    where: j.kind === "ferry" ? { ferryJourneyId: j.id } : { cruiseId: j.id },
-  });
+  // The old ship's positions, and a cruise's AIS recording built from them, are not this one's.
+  if (j.kind === "ferry") {
+    await prisma.vesselPositionFix.deleteMany({ where: { ferryJourneyId: j.id } });
+    return;
+  }
+  await dropCruiseAisRecording(j.id, j.userId);
 }
 
 /** Forget a resolved (not a manually picked) MMSI — the vessel's name or ship changed. */
@@ -223,6 +243,12 @@ export async function storeFix(j: VesselJourney, p: VesselPosition): Promise<boo
     }),
   ]);
   if (near || count >= MAX_FIXES_PER_JOURNEY) return false;
+  // The journey may have changed ship since the poll began: store only for the bound one.
+  const still =
+    j.kind === "ferry"
+      ? await prisma.ferryJourney.count({ where: { id: j.id, vesselMmsi: p.mmsi } })
+      : await prisma.cruise.count({ where: { id: j.id, vesselMmsi: p.mmsi } });
+  if (still !== 1) return false;
   const created = await prisma.vesselPositionFix.createMany({
     data: [
       {
@@ -259,8 +285,12 @@ export function trackFromFixes(
   if (fixes.length === 0) return null;
   const first = fixes[0];
   const last = fixes[fixes.length - 1];
+  const holes = fixes.some(
+    (f, i) => i > 0 && f.observedAt.getTime() - fixes[i - 1].observedAt.getTime() > COVER_MAX_GAP_MS
+  );
   const covers =
     fixes.length >= 2 &&
+    !holes &&
     j.dep !== null &&
     j.arr !== null &&
     haversineKm(j.dep, first) <= COVER_KM &&

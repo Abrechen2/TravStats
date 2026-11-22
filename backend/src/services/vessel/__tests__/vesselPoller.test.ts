@@ -123,14 +123,31 @@ describe("vessel poller", () => {
       new Date(NOW.getTime() - 3600e3),
       new Date(NOW.getTime() + 8 * 3600e3)
     );
-    await pollVesselsOnce(NOW, async () => ok(DEP.lat, DEP.lon, NOW));
-    const later = new Date(NOW.getTime() + 6 * 3600e3);
-    await pollVesselsOnce(later, async () => ok(ARR.lat, ARR.lon, later));
+    // A position every 30 minutes from Kiel to Gothenburg: a track without holes.
+    for (let i = 0; i <= 12; i++) {
+      const at = new Date(NOW.getTime() + i * 30 * 60e3);
+      const f = i / 12;
+      await pollVesselsOnce(at, async () =>
+        ok(DEP.lat + (ARR.lat - DEP.lat) * f, DEP.lon + (ARR.lon - DEP.lon) * f, at)
+      );
+    }
     const row = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: ride.id } });
     expect(row.geometrySource).toBe("manual");
     expect(row.geometry).toEqual(MANUAL_LINE);
     expect(row.distanceSource).toBe("ais_track");
     expect(row.distanceKm).toBeGreaterThan(300);
+  });
+
+  it("does not let a track with a hole set the distance", async () => {
+    const ride = await ferry(
+      new Date(NOW.getTime() - 3600e3),
+      new Date(NOW.getTime() + 8 * 3600e3)
+    );
+    await pollVesselsOnce(NOW, async () => ok(DEP.lat, DEP.lon, NOW));
+    const later = new Date(NOW.getTime() + 6 * 3600e3);
+    await pollVesselsOnce(later, async () => ok(ARR.lat, ARR.lon, later));
+    const row = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: ride.id } });
+    expect(row).toMatchObject({ distanceSource: "sea_route", distanceKm: 420 });
   });
 
   it("stores nothing and resolves nothing without an AIS key", async () => {
@@ -208,5 +225,42 @@ describe("GET /:id/vessel", () => {
     expect(res.body.code).toBe("VESSEL_NOT_OFFERED");
     const row = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: ride.id } });
     expect(row.vesselMmsi).toBeNull();
+  });
+});
+
+describe("Schiff zuordnen", () => {
+  it("keeps the recorded positions when the same ship is picked again", async () => {
+    const ride = await ferry(
+      new Date(NOW.getTime() - 3600e3),
+      new Date(NOW.getTime() + 8 * 3600e3)
+    );
+    await pollVesselsOnce(NOW, async () => ok(55, 10.8, NOW));
+    await prisma.vesselIdentity.upsert({
+      where: { lookupKey: "search:stena" },
+      create: {
+        lookupKey: "search:stena",
+        candidates: [
+          {
+            mmsi: "265177000",
+            imo: null,
+            name: "Stena Germanica",
+            operator: null,
+            source: "wikidata",
+          },
+        ],
+        resolvedAt: NOW,
+        nextAttemptAt: new Date(Date.now() + 3600e3),
+      },
+      update: {},
+    });
+    await request(app)
+      .put(`/api/v1/ferry/${ride.id}/vessel`)
+      .set("Cookie", cookie)
+      .send({ mmsi: "265177000", query: "Stena" })
+      .expect(200);
+    const row = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: ride.id } });
+    expect(row.vesselMmsiSource).toBe("manual");
+    expect(await prisma.vesselPositionFix.count({ where: { ferryJourneyId: ride.id } })).toBe(1);
+    await prisma.vesselIdentity.delete({ where: { lookupKey: "search:stena" } });
   });
 });

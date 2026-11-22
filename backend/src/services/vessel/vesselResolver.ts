@@ -174,7 +174,13 @@ export function pickAisStatic(
       };
   }
   const name = normaliseVesselName(q.name);
-  const named = distinctByMmsi(vessels.filter((v) => normaliseVesselName(v.name) === name));
+  // With a known IMO, a same-named ship transmitting ANOTHER IMO is not ours.
+  const named = distinctByMmsi(
+    vessels.filter(
+      (v) =>
+        normaliseVesselName(v.name) === name && (!isImo(q.imo) || v.imo === null || v.imo === q.imo)
+    )
+  );
   const candidates = named.map((v) => ({
     mmsi: v.mmsi,
     imo: v.imo,
@@ -260,8 +266,11 @@ async function fromAis(q: VesselQuery, imo: string | null): Promise<VesselResolu
   if (q.ais === false || !q.area || !(await allowed(AIS_SERVICE, q.userId)))
     return { status: "unresolved", reason: "notFound", candidates: [] };
   const name = normaliseVesselName(q.name);
-  const result = await collectStaticData(q.area, (seen) =>
-    seen.some((v) => (imo !== null && v.imo === imo) || normaliseVesselName(v.name) === name)
+  // An IMO match ends the wait; a name match does not — a second ship of the
+  // same name must have its chance to make the answer ambiguous.
+  const result = await collectStaticData(
+    q.area,
+    (seen) => imo !== null && seen.some((v) => v.imo === imo)
   );
   if (result.status !== "ok")
     return { status: "unresolved", reason: "unavailable", candidates: [] };
@@ -388,19 +397,21 @@ export async function searchVesselCandidates(
     else status = "unavailable";
   } else status = "unavailable";
   const candidates = distinctByMmsi([...fromShips, ...fromWiki]).slice(0, MAX_CANDIDATES);
-  if (status === "ok") {
-    const data = {
-      vesselName: name,
-      candidates: candidates as unknown as Prisma.InputJsonValue,
-      resolvedAt: now,
-      nextAttemptAt: new Date(now.getTime() + SEARCH_RETRY_MS),
-    };
-    await prisma.vesselIdentity.upsert({
-      where: { lookupKey: key },
-      create: { lookupKey: key, ...data },
-      update: data,
-    });
-  }
+  // Cached either way, so a pick from what was shown is accepted; a partial
+  // list (Wikidata did not answer) is asked again sooner.
+  const data = {
+    vesselName: name,
+    candidates: candidates as unknown as Prisma.InputJsonValue,
+    resolvedAt: now,
+    nextAttemptAt: new Date(
+      now.getTime() + (status === "ok" ? SEARCH_RETRY_MS : RETRY_MS.unavailable)
+    ),
+  };
+  await prisma.vesselIdentity.upsert({
+    where: { lookupKey: key },
+    create: { lookupKey: key, ...data },
+    update: data,
+  });
   return { status, candidates };
 }
 

@@ -33,6 +33,10 @@ import { AIS_SERVICE } from "./vesselResolver";
 /** The poller's own account key for the socket guard: one socket, never two. */
 const POLLER_ACCOUNT = "vessel-poller";
 export const MAX_PER_TICK = 30;
+/** Journeys read per run before the in-progress check; a storage bound, not a quota. */
+const MAX_CANDIDATES = 500;
+/** Where the next run starts in the candidate list, so more than `MAX_PER_TICK` journeys take turns. */
+let cursor = 0;
 const FERRY_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 const CRUISE_LOOKBACK_MS = 40 * 24 * 60 * 60 * 1000;
 
@@ -53,10 +57,15 @@ async function candidates(
       where: {
         status: { not: "cancelled" },
         departureTime: { lte: soon, gte: new Date(now.getTime() - FERRY_LOOKBACK_MS) },
+        // Arrived crossings out in the query, so they cannot crowd out the ones at sea.
+        OR: [
+          { arrivalTime: null },
+          { arrivalTime: { gte: new Date(now.getTime() - IN_PROGRESS_MARGIN_MS) } },
+        ],
       },
       select: { id: true, userId: true },
-      orderBy: { departureTime: "asc" },
-      take: MAX_PER_TICK * 2,
+      orderBy: { id: "asc" },
+      take: MAX_CANDIDATES,
     }),
     prisma.cruise.findMany({
       where: {
@@ -65,8 +74,8 @@ async function candidates(
         endDate: { gte: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000) },
       },
       select: { id: true, userId: true },
-      orderBy: { startDate: "asc" },
-      take: MAX_PER_TICK * 2,
+      orderBy: { id: "asc" },
+      take: MAX_CANDIDATES,
     }),
   ]);
   return [
@@ -93,7 +102,11 @@ export async function pollVesselsOnce(
   if (!aisConfigured()) return { ...report, skipped: "notConfigured" };
   if ((await egressBlock(AIS_SERVICE)) !== null) return { ...report, skipped: "blocked" };
   const reads = new Map<string, AisResult>();
-  for (const c of await candidates(now)) {
+  const all = await candidates(now);
+  const start = all.length > 0 ? cursor % all.length : 0;
+  const turn = [...all.slice(start), ...all.slice(0, start)];
+  cursor = start + MAX_PER_TICK;
+  for (const c of turn) {
     if (report.journeys >= MAX_PER_TICK) break;
     const j = await loadVesselJourney(c.kind, c.id, c.userId);
     if (!j || !isInProgress(j, now)) continue;
