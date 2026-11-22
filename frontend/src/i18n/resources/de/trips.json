@@ -1109,7 +1109,7 @@
     "hide": "Paket ausblenden",
     "loading": "Buchung wird geladen …",
     "loadFailed": "Die Buchung konnte nicht geladen werden.",
-    "total": "Paketpreis: {{amount}}",
+    "total": "Paketpreis {{amount}}",
     "noTotal": "Für diese Buchung ist kein Preis erfasst.",
     "isPackage": "Ein Preis für alles unten. Die Reisekosten zählen ihn einmal; Flug- und Hotelstatistiken lesen nur einen aufgeteilten Anteil.",
     "notPackage": "Diese Buchung umfasst nur eine Art von Eintrag.",
@@ -1141,7 +1141,14 @@
       "BOOKING_SPLIT_ITEMS": "Die Einträge der Buchung haben sich geändert. Bitte neu laden und erneut aufteilen.",
       "BOOKING_SPLIT_SUM": "Die Beträge ergeben nicht genau den Paketpreis.",
       "generic": "Die Aufteilung konnte nicht gespeichert werden."
-    }
+    },
+    "titleSingle": "Buchung",
+    "entries_one": "{{count}} Eintrag",
+    "entries_other": "{{count}} Einträge",
+    "splitMenu": "Paketpreis aufteilen …",
+    "splitTitle": "Paketpreis aufteilen",
+    "staleShort": "Aufteilung prüfen",
+    "membersTitle": "Einträge dieser Buchung"
   },
   "bookingMenuLabel": "Weitere Aktionen zur Buchung {{name}}"
 }

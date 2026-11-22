@@ -11,6 +11,7 @@ import type { Flight } from "../../types";
 import type { FlightBookingAnswer } from "../../types/flightBooking";
 import { DAY_CARD_TOUCH } from "./FlightDayCard";
 import { PackageBookingCard } from "../bookings/PackageBookingCard";
+import type { PackageSplitController } from "../bookings/usePackageSplit";
 
 /** The split refusals the server names, each to its own sentence. */
 const SPLIT_ERROR_KEYS: Readonly<Record<string, string>> = {
@@ -172,10 +173,13 @@ export default function BookingPrice({
   flight,
   answer,
   onAnswer,
+  packageSplit,
 }: {
   flight: Flight;
   answer: FlightBookingAnswer;
   onAnswer: (answer: FlightBookingAnswer) => void;
+  /** Opened from the page's ⋯ menu. */
+  packageSplit?: PackageSplitController;
 }): JSX.Element | null {
   const { t, i18n } = useTranslation(["flights"]);
   const booking = answer.booking;
@@ -205,6 +209,7 @@ export default function BookingPrice({
           <PackageBookingCard
             bookingId={booking.id}
             highlight={{ kind: "flight", id: flight.id }}
+            controller={packageSplit}
           />
         </>
       ) : null}

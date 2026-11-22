@@ -1109,7 +1109,7 @@
     "hide": "Hide package",
     "loading": "Loading booking …",
     "loadFailed": "The booking could not be loaded.",
-    "total": "Package price: {{amount}}",
+    "total": "Package price {{amount}}",
     "noTotal": "No price is recorded for this booking.",
     "isPackage": "One price for everything below. The trip cost counts it once; flight and hotel statistics read only a split share.",
     "notPackage": "This booking covers only one kind of entry.",
@@ -1141,7 +1141,14 @@
       "BOOKING_SPLIT_ITEMS": "The booking's entries have changed. Please reload and split again.",
       "BOOKING_SPLIT_SUM": "The amounts do not add up to the package price exactly.",
       "generic": "The split could not be saved."
-    }
+    },
+    "titleSingle": "Booking",
+    "entries_one": "{{count}} entry",
+    "entries_other": "{{count}} entries",
+    "splitMenu": "Split package price …",
+    "splitTitle": "Split the package price",
+    "staleShort": "Check the split",
+    "membersTitle": "Entries of this booking"
   },
   "bookingMenuLabel": "More actions for booking {{name}}"
 }

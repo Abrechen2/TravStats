@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import type { BookingPackageAnswer } from "../../../types/bookingPackage";
 
 const get = vi.fn();
@@ -14,6 +15,28 @@ vi.mock("../../../lib/api/bookingPackage", () => ({
 }));
 
 import { PackageBookingCard } from "../PackageBookingCard";
+import { usePackageSplit } from "../usePackageSplit";
+import OverflowMenu from "../../ui/OverflowMenu";
+
+/** The card with the dialog opened — the compact line keeps the editor behind it. */
+async function openSplitDialog(): Promise<void> {
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: /Paketpreis aufteilen|Split package price|splitMenu/,
+    })
+  );
+}
+
+/** A host with the card on the page and the split action in its own ⋯ menu. */
+function Host(): JSX.Element {
+  const { controller, entry } = usePackageSplit();
+  return (
+    <MemoryRouter>
+      <OverflowMenu label="menu" testId="host-menu" entries={entry ? [entry] : []} />
+      <PackageBookingCard bookingId="b1" controller={controller} />
+    </MemoryRouter>
+  );
+}
 
 const answer = (over: Partial<BookingPackageAnswer> = {}): BookingPackageAnswer => ({
   booking: {
@@ -62,6 +85,7 @@ describe("PackageBookingCard (forgejo#430)", () => {
   it("shows an unsplit item as part of a package — not 0 and not the whole price", async () => {
     get.mockResolvedValue(answer());
     render(<PackageBookingCard bookingId="b1" highlight={{ kind: "flight", id: "f1" }} />);
+    await openSplitDialog();
     const shares = await screen.findAllByTestId("package-share");
     for (const s of shares) {
       expect(s.textContent).toMatch(/Teil eines Pakets|Part of a package|partOfPackage/);
@@ -84,6 +108,7 @@ describe("PackageBookingCard (forgejo#430)", () => {
       })
     );
     render(<PackageBookingCard bookingId="b1" />);
+    await openSplitDialog();
     const shares = await screen.findAllByTestId("package-share");
     expect(shares[0].textContent).toMatch(/900/);
     expect(shares[1].textContent).toMatch(/1[.,]?970/);
@@ -107,6 +132,7 @@ describe("PackageBookingCard (forgejo#430)", () => {
       })
     );
     render(<PackageBookingCard bookingId="b1" />);
+    await openSplitDialog();
     expect(await screen.findByRole("status")).toHaveTextContent(
       /Aufteilung prüfen|Check the split|bookingPackage\.stale/
     );
@@ -118,6 +144,7 @@ describe("PackageBookingCard (forgejo#430)", () => {
     get.mockResolvedValue(answer());
     split.mockResolvedValue(answer());
     render(<PackageBookingCard bookingId="b1" />);
+    await openSplitDialog();
     fireEvent.click(
       await screen.findByRole("button", { name: /Beträge eingeben|Enter amounts|splitManual/ })
     );
@@ -148,6 +175,7 @@ describe("PackageBookingCard (forgejo#430)", () => {
       response: { status: 422, data: { code: "BOOKING_SPLIT_SUM", error: "x" } },
     });
     render(<PackageBookingCard bookingId="b1" />);
+    await openSplitDialog();
     fireEvent.click(
       await screen.findByRole("button", { name: /Gleichmäßig|Split evenly|splitEqual/ })
     );
@@ -158,5 +186,59 @@ describe("PackageBookingCard (forgejo#430)", () => {
     get.mockRejectedValue(new Error("network"));
     render(<PackageBookingCard bookingId="b1" />);
     expect(await screen.findByRole("alert")).toBeTruthy();
+  });
+
+  it("is one compact line: ref, package price and entry count — no member list, no split buttons", async () => {
+    get.mockResolvedValue(answer());
+    render(
+      <MemoryRouter>
+        <PackageBookingCard bookingId="b1" />
+      </MemoryRouter>
+    );
+    const line = await screen.findByTestId("package-booking");
+    expect(line.textContent).toMatch(/(Paketbuchung|bookingPackage\.title) Opodo/);
+    expect(screen.getByTestId("package-total").textContent).toMatch(
+      /Paketpreis.*2[.,]?870|bookingPackage\.total/
+    );
+    expect(line.textContent).toMatch(/2 Einträge|bookingPackage\.entries/);
+    expect(screen.queryByTestId("package-members")).toBeNull();
+    expect(screen.queryByText(/Teil eines Pakets|partOfPackage/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /Gleichmäßig|splitEqual/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Beträge eingeben|splitManual/ })).toBeNull();
+  });
+
+  it("lists the members as links behind the entry count", async () => {
+    get.mockResolvedValue(answer());
+    render(
+      <MemoryRouter>
+        <PackageBookingCard bookingId="b1" highlight={{ kind: "flight", id: "f1" }} />
+      </MemoryRouter>
+    );
+    fireEvent.click(await screen.findByTestId("package-members-toggle"));
+    const members = screen.getByTestId("package-members");
+    expect(members.textContent).toMatch(/LH418 FRA → IAD/);
+    expect(members.textContent).toMatch(/Hotel Capitol/);
+    expect(members.querySelector('a[href="/flights/f1"]')).not.toBeNull();
+  });
+
+  it("offers the split from the entry's ⋯ menu, which opens the dialog with the explanation", async () => {
+    get.mockResolvedValue(answer());
+    render(<Host />);
+    await screen.findByTestId("package-booking");
+    fireEvent.click(await screen.findByRole("button", { name: /menu/ }));
+    fireEvent.click(await screen.findByTestId("package-split-menu"));
+    expect(await screen.findByRole("dialog")).toHaveTextContent(
+      /Ein Preis für alles|One price|bookingPackage\.isPackage/
+    );
+    expect(screen.getByRole("button", { name: /Gleichmäßig|splitEqual/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Beträge eingeben|splitManual/ })).toBeTruthy();
+  });
+
+  it("offers no split entry in the ⋯ menu for a booking that cannot be split", async () => {
+    get.mockResolvedValue(answer({ isPackage: false, items: answer().items.slice(0, 1) }));
+    render(<Host />);
+    await screen.findByTestId("package-booking");
+    // The menu has no entry, so it never renders a trigger for one.
+    expect(screen.queryByTestId("package-split-menu")).toBeNull();
   });
 });
