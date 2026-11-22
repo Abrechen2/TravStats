@@ -311,3 +311,95 @@ registry.registerPath({
     429: { description: "Rate limit exceeded", content: errorContent },
   },
 });
+
+/* One companion's page — spec 2026-11-22-person-timeline.md. */
+const label = z.union([
+  z.object({
+    key: z.string(),
+    values: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
+  }),
+  z.object({ text: z.string() }),
+]);
+const entryRef = z.object({ kind: useKind, id: z.string(), href: z.string().nullable() });
+
+registry.registerPath({
+  method: "get",
+  path: "/companions/{id}/timeline",
+  summary: "One companion's timeline",
+  description:
+    "First and last day together, shared trips / flights / nights / countries by the same " +
+    "counting rules as `/companions/together` (a stay counts after check-out; a figure that " +
+    "cannot be derived is `null`, not 0), the shared entries oldest first with the person's " +
+    "planned trips marked `planned`, the documents assigned to them and their own seat and " +
+    "loyalty facts. Your own companions only.",
+  tags: ["Companions"],
+  request: { params: idParams },
+  responses: {
+    200: {
+      description: "The person's page",
+      content: {
+        "application/json": {
+          schema: z.object({
+            companion: z.object({
+              id: z.string(),
+              name: z.string(),
+              linkedUser: person.nullable(),
+            }),
+            kinds: z.array(useKind),
+            summary: z.object({
+              firstTogether: z.string().nullable(),
+              lastTogether: z.string().nullable(),
+              firstJourney: journey.nullable(),
+              lastJourney: journey.nullable(),
+              entries: z.number().int(),
+              days: z.number().int(),
+              trips: z.number().int(),
+              flights: z.number().int().nullable(),
+              nights: z.number().int().nullable(),
+              countries: z.number().int().nullable(),
+              plannedTrips: z.number().int(),
+            }),
+            timeline: z.array(
+              z.object({
+                kind: useKind,
+                id: z.string(),
+                href: z.string().nullable(),
+                title: label,
+                subtitle: label.nullable(),
+                from: z.string().nullable(),
+                to: z.string().nullable(),
+                state: z.enum(["happened", "planned"]),
+              })
+            ),
+            documents: z.array(
+              z.object({
+                id: z.string(),
+                name: z.string().nullable(),
+                kind: z.string().nullable(),
+                issuedOn: z.string().nullable(),
+                entry: entryRef.nullable(),
+              })
+            ),
+            facts: z.object({
+              seats: z.array(
+                z.object({
+                  kind: useKind,
+                  id: z.string(),
+                  href: z.string().nullable(),
+                  title: label,
+                  day: z.string().nullable(),
+                  seat: z.string().nullable(),
+                  seatClass: z.string().nullable(),
+                })
+              ),
+              loyalty: z.array(z.object({ number: z.string(), kinds: z.array(useKind) })),
+            }),
+          }),
+        },
+      },
+    },
+    401: unauthenticated,
+    404: notYours,
+    429: limited,
+  },
+});

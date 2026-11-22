@@ -181,7 +181,9 @@ function CompanionRow({
       data-testid={`companion-row-${companion.id}`}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="font-semibold">{companion.name}</span>
+        <Link to={`/mitreisende/${companion.id}`} className="font-semibold underline">
+          {companion.name}
+        </Link>
         <span className="t-caption">
           {companion.linkedUser ? (
             <>

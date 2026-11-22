@@ -72,6 +72,7 @@ const RoadtripDetailPage = lazy(() => import("./pages/RoadtripDetailPage"));
 const StravaCallbackPage = lazy(() => import("./pages/StravaCallbackPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
 const NotesPage = lazy(() => import("./pages/NotesPage"));
+const PersonTimelinePage = lazy(() => import("./pages/PersonTimelinePage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const DesignPage = lazy(() => import("./pages/DesignPage"));
@@ -665,6 +666,10 @@ function AppContent() {
                 element={isAuthenticated ? <AchievementsPage /> : <Navigate to="/login" />}
               />
               {/* Standalone notes (forgejo#137): no domain gate — a note needs none. */}
+              <Route
+                path="/mitreisende/:id"
+                element={isAuthenticated ? <PersonTimelinePage /> : <Navigate to="/login" />}
+              />
               <Route
                 path="/notes"
                 element={isAuthenticated ? <NotesPage /> : <Navigate to="/login" />}

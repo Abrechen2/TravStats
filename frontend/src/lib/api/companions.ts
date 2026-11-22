@@ -68,6 +68,60 @@ export interface CompanionTogether {
   lastJourney: CompanionJourney | null;
 }
 
+/** `{ key, values } | { text }` of an entry, as the evidence panel's contract has it. */
+export type PersonLabel =
+  { key: string; values?: Record<string, string | number> } | { text: string };
+
+export interface PersonTimelineRow {
+  kind: CompanionUseKind;
+  id: string;
+  href: string | null;
+  title: PersonLabel;
+  subtitle: PersonLabel | null;
+  from: string | null;
+  to: string | null;
+  state: "happened" | "planned";
+}
+
+/** One companion's page — `GET /companions/:id/timeline`. null figures are "unknown", never 0. */
+export interface PersonTimeline {
+  companion: { id: string; name: string; linkedUser: CompanionPerson | null };
+  kinds: CompanionUseKind[];
+  summary: {
+    firstTogether: string | null;
+    lastTogether: string | null;
+    firstJourney: CompanionJourney | null;
+    lastJourney: CompanionJourney | null;
+    entries: number;
+    days: number;
+    trips: number;
+    flights: number | null;
+    nights: number | null;
+    countries: number | null;
+    plannedTrips: number;
+  };
+  timeline: PersonTimelineRow[];
+  documents: Array<{
+    id: string;
+    name: string | null;
+    kind: string | null;
+    issuedOn: string | null;
+    entry: { kind: CompanionUseKind; id: string; href: string | null } | null;
+  }>;
+  facts: {
+    seats: Array<{
+      kind: CompanionUseKind;
+      id: string;
+      href: string | null;
+      title: PersonLabel;
+      day: string | null;
+      seat: string | null;
+      seatClass: string | null;
+    }>;
+    loyalty: Array<{ number: string; kinds: CompanionUseKind[] }>;
+  };
+}
+
 const enc = encodeURIComponent;
 
 // Companion API
@@ -86,6 +140,10 @@ export const companionsApi = {
     const { data } = await api.get<{ companions: CompanionTogether[]; kinds: CompanionUseKind[] }>(
       "/companions/together"
     );
+    return data;
+  },
+  timeline: async (id: string): Promise<PersonTimeline> => {
+    const { data } = await api.get<PersonTimeline>(`/companions/${enc(id)}/timeline`);
     return data;
   },
   rename: async (id: string, name: string): Promise<{ id: string; name: string }> => {
