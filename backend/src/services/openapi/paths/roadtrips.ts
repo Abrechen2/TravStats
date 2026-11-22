@@ -74,6 +74,7 @@ const roadtripSummary = registry.register(
       vehicle: z.enum(STORED_ROADTRIP_VEHICLES).nullable(),
       vehicleName: z.string().nullable(),
       kindAssignedAutomatically: z.boolean(),
+      purpose: z.enum(["private", "business"]).nullable().describe("Private or business; null is unknown"),
       startDate: z.string().datetime().nullable(),
       endDate: z.string().datetime().nullable(),
       distanceKm: z.number(),

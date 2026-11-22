@@ -68,6 +68,13 @@ export const ENTRY_SCOPE_PREFIXES = [
   "/api/v1/companions",
   "/api/v1/trip-suggestions",
   "/api/v1/search",
+  // Tours and roadtrips carry a purpose of their own (trip_routes), and the suggestion inboxes
+  // read the same logbook: a hidden entry must not be proposed or counted from there either.
+  "/api/v1/tours",
+  "/api/v1/roadtrips",
+  "/api/v1/place-lists",
+  "/api/v1/dawarich-stays",
+  "/api/v1/location-suggestions",
 ] as const;
 
 const MODELS = new Set([
@@ -120,6 +127,19 @@ const PURPOSE_MODEL_DOMAIN: Record<string, keyof PurposeVisibility> = {
   Cruise: "cruise",
 };
 
+/**
+ * A tour or a roadtrip is one model (`TripRoute`) with two domains: the kind says which setting
+ * governs the row. The hidden store keys them `TripRoute:<kind>`.
+ */
+export const PURPOSE_ROUTE_KIND_DOMAIN: Record<string, keyof PurposeVisibility> = {
+  tour: "tour",
+  roadtrip: "roadtrip",
+};
+export const routeHiddenKey = (kind: string): string => `TripRoute:${kind}`;
+
+/** Every model whose rows a purpose can hide. */
+const PURPOSE_FILTERED_MODELS = new Set([...Object.keys(PURPOSE_MODEL_DOMAIN), "TripRoute"]);
+
 const RECORDED = { OR: [{ provenance: null }, { provenance: { not: "remembered" } }] };
 
 type Json = Record<string, unknown>;
@@ -143,6 +163,16 @@ type Active = Map<string, Json>;
 function entryCondition(store: Store, model: string): Json | null {
   const parts: Json[] = [];
   if (store.recorded && MODELS.has(model)) parts.push(RECORDED);
+  if (model === "TripRoute") {
+    for (const kind of Object.keys(PURPOSE_ROUTE_KIND_DOMAIN)) {
+      const hiddenKind = store.hidden?.[routeHiddenKey(kind)];
+      if (hiddenKind && hiddenKind.length > 0) {
+        parts.push({
+          OR: [{ kind: { not: kind } }, { purpose: null }, { purpose: { notIn: hiddenKind } }],
+        });
+      }
+    }
+  }
   const hidden = store.hidden?.[model];
   if (hidden && hidden.length > 0) {
     parts.push({ OR: [{ purpose: null }, { purpose: { notIn: hidden } }] });
@@ -156,7 +186,7 @@ function entryCondition(store: Store, model: string): Json | null {
  */
 function tripThroughEntries(own: Map<string, Json>): Json | null {
   const purposeRelations = [...relationsOf("Trip")].filter(
-    ([, r]) => r.isList && r.target in PURPOSE_MODEL_DOMAIN
+    ([, r]) => r.isList && PURPOSE_FILTERED_MODELS.has(r.target)
   );
   const filtered = purposeRelations.some(
     ([, r]) => own.has(r.target) && hasPurposeCond(own, r.target)
@@ -183,7 +213,7 @@ const visibleOf = (own: Map<string, Json>, model: string): Json => own.get(model
 function activeConditions(store: Store): Active {
   const active: Active = new Map();
   const own = new Map<string, Json>();
-  for (const model of [...MODELS, ...Object.keys(PURPOSE_MODEL_DOMAIN)]) {
+  for (const model of [...MODELS, ...PURPOSE_FILTERED_MODELS]) {
     const c = entryCondition(store, model);
     if (c) own.set(model, c);
   }

@@ -8,7 +8,7 @@ import { PURPOSES, PURPOSE_DOMAINS } from "../shared/purpose";
  */
 export const purposeField = z.enum(PURPOSES).nullable().optional();
 
-/** The eight kinds of entry that can carry a purpose, in the names of their Prisma delegates. */
+/** The kinds of entry (a tour or roadtrip is a `tripRoute`) that can carry a purpose, in the names of their Prisma delegates. */
 export const PURPOSE_ENTRY_TYPES = [
   "placeVisit",
   "flight",
@@ -18,6 +18,7 @@ export const PURPOSE_ENTRY_TYPES = [
   "ferryJourney",
   "rentalBooking",
   "cruise",
+  "tripRoute",
 ] as const;
 export type PurposeEntryType = (typeof PURPOSE_ENTRY_TYPES)[number];
 

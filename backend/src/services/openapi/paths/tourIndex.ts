@@ -48,6 +48,7 @@ const tourSummary = registry.register(
       activity: z.enum(TOUR_ACTIVITIES).nullable(),
       vehicle: z.enum(STORED_ROADTRIP_VEHICLES).nullable(),
       kindAssignedAutomatically: z.boolean(),
+      purpose: z.enum(["private", "business"]).nullable().describe("Private or business; null is unknown"),
       notes: z.string().nullable(),
       anchorStopId: z
         .string()
@@ -109,6 +110,7 @@ const tourSummary = registry.register(
         activity: "hike",
         vehicle: null,
         kindAssignedAutomatically: false,
+        purpose: null,
         notes: null,
         anchorStopId: null,
         anchorStopTitle: null,

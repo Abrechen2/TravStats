@@ -24,6 +24,7 @@ export const ROADTRIP_LIST_SELECT = {
   vehicle: true,
   vehicleName: true,
   kindAssignedAutomatically: true,
+  purpose: true,
   startOdometerKm: true,
   endOdometerKm: true,
   trip: { select: { name: true } },

@@ -225,6 +225,7 @@ export interface RoadtripListRow {
   vehicle: string | null;
   vehicleName: string | null;
   kindAssignedAutomatically: boolean;
+  purpose: string | null;
   startOdometerKm: number | null;
   endOdometerKm: number | null;
   trip: { name: string } | null;
@@ -278,6 +279,7 @@ export function toRoadtripSummary(
     vehicle: row.vehicle,
     vehicleName: row.vehicleName,
     kindAssignedAutomatically: row.kindAssignedAutomatically,
+    purpose: row.purpose,
     ...spanOf(row.stops),
     distanceKm: travelledKm(row.legs),
     drivenKm: drivenKm(row.legs),

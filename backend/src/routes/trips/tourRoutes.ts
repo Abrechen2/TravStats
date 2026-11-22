@@ -123,6 +123,7 @@ export function toDto(route: {
   kindAssignedAutomatically: boolean;
   tourDate: Date | null;
   tourStartMinute: number | null;
+  purpose: string | null;
   legs: LegRow[];
   _count: { stops: number };
 }): Record<string, unknown> {
@@ -143,6 +144,7 @@ export function toDto(route: {
     vehicleName: route.vehicleName,
     anchorStopId: route.anchorStopId,
     kindAssignedAutomatically: route.kindAssignedAutomatically,
+    purpose: route.purpose,
     ...tourDayDto(route),
     stopCount: route._count.stops,
     legCount: route.legs.length,
@@ -295,6 +297,8 @@ router.post(
           tags: body.tags ?? [],
           startOdometerKm: body.startOdometerKm,
           endOdometerKm: body.endOdometerKm,
+          // Undefined: the trip's category decides (services/purpose/tripInheritance.ts).
+          purpose: body.purpose,
           orderIdx: last ? last.orderIdx + 1 : 0,
         },
         include: ROUTE_SELECT,

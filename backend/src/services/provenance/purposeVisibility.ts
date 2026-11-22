@@ -6,6 +6,8 @@ import { PURPOSE_DOMAINS, type PurposeVisibility } from "../../shared/purpose";
 import {
   entryFilterActive,
   purposeDomainOfModel,
+  PURPOSE_ROUTE_KIND_DOMAIN,
+  routeHiddenKey,
   runWithHiddenPurposes,
   setScopeHidden,
 } from "./recordedOnly";
@@ -47,6 +49,10 @@ function modelsFromSetting(setting: PurposeVisibility): Record<string, string[]>
     const domain = purposeDomainOfModel(model);
     const hidden = domain ? setting[domain] : undefined;
     if (hidden && hidden.length > 0) out[model] = hidden;
+  }
+  for (const [kind, domain] of Object.entries(PURPOSE_ROUTE_KIND_DOMAIN)) {
+    const hidden = setting[domain];
+    if (hidden && hidden.length > 0) out[routeHiddenKey(kind)] = hidden;
   }
   return out;
 }

@@ -10,6 +10,7 @@ const PURPOSE_MODELS = new Set([
   "FerryJourney",
   "RentalBooking",
   "Cruise",
+  "TripRoute",
 ]);
 
 type Json = Record<string, unknown>;

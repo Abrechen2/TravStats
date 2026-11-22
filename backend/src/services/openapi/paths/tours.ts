@@ -91,6 +91,10 @@ const tourRoute = registry.register(
         .uuid()
         .nullable()
         .describe("Tour only: the roadtrip station the day tour set out from"),
+      purpose: z
+        .enum(["private", "business"])
+        .nullable()
+        .describe("Private or business; null is unknown"),
       kindAssignedAutomatically: z
         .boolean()
         .describe(
@@ -132,6 +136,7 @@ const tourRoute = registry.register(
         vehicleName: "Der Dicke",
         anchorStopId: null,
         kindAssignedAutomatically: false,
+        purpose: null,
         orderIdx: 0,
         color: "#2563eb",
         notes: null,

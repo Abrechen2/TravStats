@@ -2523,6 +2523,11 @@ model TripRoute {
   /// shared trip. Unique per owner, like the other shareable tables.
   shareKey                  String?   @map("share_key")
 
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md), for a
+  /// tour or a roadtrip: `private` | `business` | NULL (unknown, never read as private). The
+  /// member's own view: never a share fact, so a shared roadtrip's copy starts unknown.
+  purpose                   String?   @map("purpose")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
