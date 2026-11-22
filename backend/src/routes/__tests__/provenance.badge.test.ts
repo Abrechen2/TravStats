@@ -96,6 +96,34 @@ describe("provenance notice badge", () => {
     expect(await count()).toBe(0);
   });
 
+  it("a createMany names its accounts too", async () => {
+    await prisma.trip.update({
+      where: { id: tripId },
+      data: { endDate: new Date("1999-07-10T00:00:00Z") },
+    });
+    await prisma.provenanceNotice.deleteMany({ where: { userId } });
+    await prisma.flight.deleteMany({ where: { userId } });
+    await prisma.flight.createMany({
+      data: [
+        {
+          userId,
+          tripId,
+          depIata: "FRA",
+          depLat: 50,
+          depLon: 8,
+          arrIata: "LIS",
+          arrLat: 38,
+          arrLon: -9,
+          status: "flown",
+          departureTime: new Date("1999-09-09T08:00:00Z"),
+          provenance: "recorded",
+        },
+      ],
+    });
+    await settle();
+    expect(await count()).toBe(1);
+  });
+
   it("the boot sweep catches what no write named", async () => {
     await prisma.trip.update({
       where: { id: tripId },

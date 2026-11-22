@@ -28,7 +28,10 @@ const day = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD")
   // 2026-02-30 matches the pattern and would silently roll into March.
-  .refine((v) => new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v, "Not a calendar day");
+  .refine((v) => {
+    const d = new Date(`${v}T00:00:00Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+  }, "Not a calendar day");
 
 /**
  * The body of `PUT /provenance/:entryType/:id`. `provenance: null` clears the field (back to

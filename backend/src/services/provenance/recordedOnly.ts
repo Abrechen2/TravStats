@@ -128,16 +128,23 @@ function narrowSelection(model: string, selection: unknown): unknown {
   const rel = relationsOf(model);
   const out: Json = {};
   for (const [key, value] of Object.entries(selection)) {
-    if (key === "_count" && isObject(value) && isObject(value.select)) {
+    if (key === "_count" && value !== false && value !== undefined && value !== null) {
+      // `_count: true` counts every to-many relation; `{ select: { rel: true | { where } } }` the named ones.
+      const named = isObject(value) && isObject(value.select) ? value.select : null;
+      const names = named
+        ? Object.keys(named)
+        : [...rel].filter(([, r]) => r.isList).map(([name]) => name);
       const counted: Json = {};
-      for (const [name, v] of Object.entries(value.select)) {
+      for (const name of names) {
+        const v = named ? named[name] : true;
         const r = rel.get(name);
-        if (r && r.isList && narrowsModel(r.target)) {
+        if (v === false || v === undefined) counted[name] = v;
+        else if (r && r.isList && narrowsModel(r.target)) {
           const base = isObject(v) ? v : {};
           counted[name] = { ...base, where: narrowWhere(r.target, base.where) };
         } else counted[name] = v;
       }
-      out[key] = { ...value, select: counted };
+      out[key] = { ...(isObject(value) ? value : {}), select: counted };
       continue;
     }
     const r = rel.get(key);

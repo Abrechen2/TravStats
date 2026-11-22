@@ -164,3 +164,47 @@ describe("recorded-only scope", () => {
     });
   });
 });
+
+describe("recorded-only scope — _count", () => {
+  it("narrows `_count: true` and leaves a `false` entry switched off", async () => {
+    const stamp = Date.now();
+    const u = (
+      await prisma.user.create({
+        data: { username: `rf-ct-${stamp}`, passwordHash: await hashPassword("test-password") },
+      })
+    ).id;
+    try {
+      const trip = await prisma.trip.create({ data: { userId: u, name: "Count" } });
+      for (const provenance of ["remembered", "recorded"]) {
+        await prisma.flight.create({
+          data: {
+            userId: u,
+            tripId: trip.id,
+            depIata: "FRA",
+            depLat: 50,
+            depLon: 8,
+            arrIata: "LIS",
+            arrLat: 38,
+            arrLon: -9,
+            status: "flown",
+            provenance,
+          },
+        });
+      }
+      await runRecordedOnly(async () => {
+        const all = await prisma.trip.findUniqueOrThrow({
+          where: { id: trip.id },
+          select: { _count: true },
+        });
+        expect(all._count.flights).toBe(1);
+        const off = await prisma.trip.findUniqueOrThrow({
+          where: { id: trip.id },
+          select: { _count: { select: { flights: false, railJourneys: true } } },
+        });
+        expect((off._count as Record<string, unknown>).flights).toBeUndefined();
+      });
+    } finally {
+      await prisma.user.delete({ where: { id: u } });
+    }
+  });
+});

@@ -101,7 +101,24 @@ export async function findContradictions(userId: string): Promise<Found[]> {
  * notice (the unique `(userId, contentKey)` makes a second pass a no-op); a dismissed one stays
  * dismissed; a pending one whose contradiction is gone is `resolved`, and reopens if it returns.
  */
-export async function syncProvenanceNotices(userId: string): Promise<void> {
+export function syncProvenanceNotices(userId: string): Promise<void> {
+  // One pass per account at a time, in arrival order: an older snapshot must not resolve or
+  // reopen notices after a newer pass has finished.
+  const run = (syncChains.get(userId) ?? Promise.resolve())
+    .catch(() => undefined)
+    .then(() => syncOnce(userId));
+  syncChains.set(userId, run);
+  void run
+    .finally(() => {
+      if (syncChains.get(userId) === run) syncChains.delete(userId);
+    })
+    .catch(() => undefined);
+  return run;
+}
+
+const syncChains = new Map<string, Promise<void>>();
+
+async function syncOnce(userId: string): Promise<void> {
   const current = await findContradictions(userId);
   const existing = await prisma.provenanceNotice.findMany({
     where: { userId },
