@@ -33,6 +33,19 @@ export function encodeValue(raw: unknown): EncodedValue {
   return { value: text, omitted: false };
 }
 
+/** Two values equal as the ledger would store them, compared in full (no cap). */
+export function sameRaw(a: unknown, b: unknown): boolean {
+  if (a instanceof Uint8Array && b instanceof Uint8Array) return Buffer.compare(a, b) === 0;
+  const plain = (v: unknown): unknown => {
+    if (v === undefined || isNullSentinel(v)) return null;
+    if (v instanceof Date) return v.toISOString();
+    if (Prisma.Decimal.isDecimal(v)) return (v as Prisma.Decimal).toString();
+    if (typeof v === "bigint") return v.toString();
+    return v;
+  };
+  return JSON.stringify(plain(a)) === JSON.stringify(plain(b));
+}
+
 /** Sentinel: the new value cannot be told from the write alone. */
 export const UNKNOWN = Symbol("unknown");
 

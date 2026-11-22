@@ -89,7 +89,7 @@ describe("change history on an entry's detail page", () => {
     expect(await screen.findByText("changeHistory:empty")).toBeInTheDocument();
   });
 
-  it("offers no restore on a time, an omitted value or a delete", async () => {
+  it("offers no restore on a time, an omitted value or a delete, and says why for the time", async () => {
     api.forEntry.mockResolvedValue({
       entries: [
         row({ id: "a", field: "departureTime", valueType: "DateTime", restorable: false }),
@@ -102,7 +102,7 @@ describe("change history on an entry's detail page", () => {
     await userEvent.click(screen.getByTestId("change-history-open"));
     expect(await screen.findAllByTestId("change-history-row")).toHaveLength(3);
     expect(screen.queryByTestId("change-history-restore")).toBeNull();
-    expect(screen.getByText("changeHistory:notRestorableTime")).toBeInTheDocument();
+    expect(screen.getByText("changeHistory:notRestorable")).toBeInTheDocument();
     expect(screen.getByText("changeHistory:deleted")).toBeInTheDocument();
   });
 });

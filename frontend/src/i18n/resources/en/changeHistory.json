@@ -14,7 +14,7 @@
   "restoreRefused": "This value cannot be restored — the entry is gone or the value points to something that no longer exists.",
   "restoreNotFound": "This change does not exist (any more).",
   "reloadFailed": "Restored, but the view could not be reloaded. Please reload the page.",
-  "notRestorableTime": "Times cannot be reset one by one here — please change them in the edit dialog.",
+  "notRestorable": "This value cannot be reset on its own here — please change it in the edit dialog.",
   "omitted": "too large to keep",
   "emptyValue": "empty",
   "deleted": "Deleted",

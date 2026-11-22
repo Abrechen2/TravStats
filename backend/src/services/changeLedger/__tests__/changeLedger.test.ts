@@ -196,6 +196,32 @@ describe("change ledger", () => {
     });
   });
 
+  it("records a change between two values too large to keep, as omitted, and no-op between equal ones", async () => {
+    const big = (c: string) => c.repeat(MAX_VALUE_CHARS + 10);
+    const f = await flight(userId, { notes: big("a") });
+    await prisma.flight.update({ where: { id: f.id }, data: { notes: big("a") } });
+    expect(await rowsFor(f.id)).toEqual([]);
+    await prisma.flight.update({ where: { id: f.id }, data: { notes: big("b") } });
+    const rows = await rowsFor(f.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ field: "notes", omitted: true });
+  });
+
+  it("does not restore a field the entry's form derives others from (companions)", async () => {
+    const f = await flight(userId, { companions: ["Bo"] });
+    await prisma.flight.update({ where: { id: f.id }, data: { companions: ["Anna"] } });
+    const [row] = await rowsFor(f.id);
+    const list = await request(app)
+      .get(`/api/v1/change-history?entityType=flight&entityId=${f.id}`)
+      .set("Cookie", cookie);
+    expect(list.body.entries[0]).toMatchObject({ field: "companions", restorable: false });
+    const res = await request(app)
+      .post(`/api/v1/change-history/${row.id}/restore`)
+      .set("Cookie", cookie);
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("CHANGE_NOT_RESTORABLE");
+  });
+
   it("records nothing inside a maintenance backfill", async () => {
     const f = await flight(userId, { gate: "A1" });
     await withoutChangeLedger(() =>

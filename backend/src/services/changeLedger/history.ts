@@ -18,12 +18,54 @@ import { decodeValue } from "./values";
 export const HISTORY_PAGE_SIZE = 100;
 
 /**
- * Fields a restore must not write back on its own. A time is stored together
- * with its derived instant, zone and precision (ADR 0002), which only the
- * entry's own form recomputes; writing one of them alone would leave the
- * others describing a different moment. The history still shows them.
+ * The fields a restore may write back on its own: free text and labels that
+ * nothing else is derived from. Everything else is shown in the history but
+ * changed through the entry's own form, because a direct write would skip
+ * what that form recomputes — a time's instant, zone and precision (ADR 0002),
+ * an airport's coordinates and zone, a price's FX snapshot, the companion
+ * links behind `companions`, a trip's status behind `tripId`.
  */
-const DERIVED_TIME_FIELD = /(Utc|Zone|Timezone|Precision|Semantics)$/;
+export const RESTORABLE_FIELDS: ReadonlySet<string> = new Set([
+  "notes",
+  "tags",
+  "seatNumber",
+  "seatClass",
+  "boardingGroup",
+  "gate",
+  "terminal",
+  "bookingReference",
+  "ticketNumber",
+  "ticketReference",
+  "confirmationNumber",
+  "brokerReference",
+  "agreementNumber",
+  "invoiceNumber",
+  "baggageAllowance",
+  "frequentFlyerNumber",
+  "bookingClassLetter",
+  "baggageBelt",
+  "checkInDesk",
+  "aircraft",
+  "aircraftRegistration",
+  "callsign",
+  "roomNumber",
+  "roomCategory",
+  "board",
+  "travelClass",
+  "fareClass",
+  "cabinNumber",
+  "cabinType",
+  "vehicleType",
+  "vehicleRegistration",
+  "vehicleClass",
+  "vehicleExample",
+  "vehicleDriven",
+  "licensePlate",
+  "excursionNote",
+  "category",
+  "summary",
+  "payerName",
+]);
 
 const SHARE_ENTITY: Partial<Record<TrackedModel, ShareEntity>> = {
   Flight: "flight",
@@ -70,11 +112,9 @@ export function isRestorable(row: LedgerRecord): boolean {
     row.operation === "update" &&
     !row.omitted &&
     row.field !== null &&
-    type !== null &&
-    type !== "DateTime" &&
-    type !== "Bytes" &&
-    !IGNORED_FIELDS.has(row.field) &&
-    !DERIVED_TIME_FIELD.test(row.field)
+    (type === "String" || type === "Int" || type === "Float") &&
+    RESTORABLE_FIELDS.has(row.field) &&
+    !IGNORED_FIELDS.has(row.field)
   );
 }
 

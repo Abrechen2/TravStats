@@ -240,8 +240,8 @@ export default function ChangeHistorySection({
                         >
                           {t("changeHistory:restore")}
                         </button>
-                      ) : entry.operation === "update" && entry.valueType === "DateTime" ? (
-                        <span className="t-caption">{t("changeHistory:notRestorableTime")}</span>
+                      ) : entry.operation === "update" && !entry.omitted ? (
+                        <span className="t-caption">{t("changeHistory:notRestorable")}</span>
                       ) : null}
                     </td>
                   </tr>

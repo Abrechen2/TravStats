@@ -13,7 +13,7 @@ import {
   type ModelMeta,
   type TrackedModel,
 } from "./models";
-import { appliedValue, encodeValue, UNKNOWN } from "./values";
+import { appliedValue, encodeValue, sameRaw, UNKNOWN } from "./values";
 
 /**
  * The capture point of the change ledger: called by the query hook in `db.ts`
@@ -97,6 +97,36 @@ function scheduleFlush(): void {
 }
 
 /**
+ * One `createMany` of the rows whose account still exists. An account deleted
+ * while its rows waited would fail the whole batch on the foreign key, and with
+ * it every other account's rows: its rows go with it, as the cascade would have
+ * taken them. The check and the insert race a deletion in between, so a
+ * foreign-key failure re-checks once and retries with the survivors.
+ */
+async function writeBatch(client: PrismaClient, batch: LedgerRow[]): Promise<void> {
+  for (let attempt = 0; ; attempt += 1) {
+    const owners = [...new Set(batch.map((r) => r.userId))];
+    const alive = new Set(
+      (await client.user.findMany({ where: { id: { in: owners } }, select: { id: true } })).map(
+        (u) => u.id
+      )
+    );
+    const rows = batch.filter((r) => alive.has(r.userId));
+    if (rows.length === 0) return;
+    stats.inserts += 1;
+    stats.rows += rows.length;
+    try {
+      await client.changeLedgerEntry.createMany({ data: rows });
+      return;
+    } catch (error) {
+      const code = (error as { code?: unknown })?.code;
+      stats.rows -= rows.length;
+      if (code !== "P2003" || attempt > 0) throw error;
+    }
+  }
+}
+
+/**
  * Write every queued row now. Awaited by a restore (so its answer shows the
  * new row) and by tests; a failed insert is logged with its size and never
  * thrown into the write it describes.
@@ -111,20 +141,7 @@ export function flushChangeLedger(): Promise<void> {
   inFlight = inFlight.then(async () => {
     if (batch.length === 0 || !base) return;
     try {
-      // An account deleted while its rows waited would fail the whole batch on
-      // the foreign key, and with it every other account's rows: its rows go
-      // with it, as the cascade would have taken them.
-      const owners = [...new Set(batch.map((r) => r.userId))];
-      const alive = new Set(
-        (await base.user.findMany({ where: { id: { in: owners } }, select: { id: true } })).map(
-          (u) => u.id
-        )
-      );
-      const rows = batch.filter((r) => alive.has(r.userId));
-      if (rows.length === 0) return;
-      stats.inserts += 1;
-      stats.rows += rows.length;
-      await base.changeLedgerEntry.createMany({ data: rows });
+      await writeBatch(base, batch);
     } catch (error) {
       dbLogger.error({
         operation: "change_ledger_write_failed",
@@ -253,10 +270,11 @@ function updateRows(
       if (next === UNKNOWN) continue;
       const oldEnc = encodeValue(row[field]);
       const newEnc = encodeValue(next);
-      // A no-op write keeps nothing. Two omitted values cannot be compared and
-      // are treated as unchanged rather than guessed at.
-      if (oldEnc.omitted && newEnc.omitted) continue;
-      if (!oldEnc.omitted && !newEnc.omitted && oldEnc.value === newEnc.value) continue;
+      // A no-op write keeps nothing. Two values too large to keep are compared
+      // in full: a change between them is still a change, recorded as omitted.
+      if (oldEnc.omitted && newEnc.omitted) {
+        if (sameRaw(row[field], next)) continue;
+      } else if (!oldEnc.omitted && !newEnc.omitted && oldEnc.value === newEnc.value) continue;
       const omitted = oldEnc.omitted || newEnc.omitted;
       out.push({
         ...common(ctx, model, userId, row, meta),
@@ -292,6 +310,43 @@ function deleteRows(
         omitted: false,
       },
     ];
+  });
+}
+
+/**
+ * The snapshot rows the write really changed. A bulk write reports only a
+ * count; when it differs from the snapshot (a concurrent edit moved a row out
+ * of the filter, another request deleted one first), the rows are read again:
+ * a deleted row must be gone, an updated one must now hold the written value.
+ */
+async function reconcile(
+  model: TrackedModel,
+  meta: ModelMeta,
+  operation: string,
+  before: Row[],
+  data: Row,
+  fields: readonly string[],
+  result: unknown
+): Promise<Row[]> {
+  const count = (result as { count?: unknown } | null)?.count;
+  if (typeof count !== "number" || count === before.length || !base) return before;
+  if (count === 0) return [];
+  const delegate = (base as unknown as Record<string, Delegate>)[delegateOf(model)];
+  stats.snapshotReads += 1;
+  const now = await delegate.findMany({
+    where: { id: { in: before.map((r) => r.id) } },
+    select: selectFor(meta, fields),
+  });
+  const byId = new Map(now.map((r) => [r.id, r]));
+  if (DELETE_OPS.has(operation)) return before.filter((r) => !byId.has(r.id));
+  return before.filter((r) => {
+    const current = byId.get(r.id);
+    if (!current) return false;
+    return fields.every((field) => {
+      const f = meta.scalars.get(field);
+      const next = f ? appliedValue(data[field], r[field], f.type, f.isList) : UNKNOWN;
+      return next === UNKNOWN || sameRaw(current[field], next);
+    });
   });
 }
 
@@ -334,10 +389,11 @@ export async function captureWrite<T>(
   const result = await run();
   if (!before || before.length === 0) return result;
   try {
+    const touched = await reconcile(model, meta, operation, before, data, fields, result);
     enqueue(
       isDelete
-        ? deleteRows(ctx, model, meta, before)
-        : updateRows(ctx, model, meta, before, data, fields, result)
+        ? deleteRows(ctx, model, meta, touched)
+        : updateRows(ctx, model, meta, touched, data, fields, result)
     );
   } catch (error) {
     dbLogger.error({

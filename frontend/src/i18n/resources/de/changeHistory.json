@@ -14,7 +14,7 @@
   "restoreRefused": "Dieser Wert lässt sich nicht wiederherstellen – der Eintrag fehlt oder der Wert verweist auf etwas, das es nicht mehr gibt.",
   "restoreNotFound": "Diese Änderung gibt es nicht (mehr).",
   "reloadFailed": "Wiederhergestellt, aber die Ansicht konnte nicht neu geladen werden. Bitte die Seite neu laden.",
-  "notRestorableTime": "Zeiten lassen sich hier nicht einzeln zurücksetzen – bitte im Bearbeiten-Dialog ändern.",
+  "notRestorable": "Dieser Wert lässt sich hier nicht einzeln zurücksetzen – bitte im Bearbeiten-Dialog ändern.",
   "omitted": "zu groß zum Aufbewahren",
   "emptyValue": "leer",
   "deleted": "Gelöscht",

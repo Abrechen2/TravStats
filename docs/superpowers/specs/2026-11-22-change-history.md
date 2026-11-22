@@ -13,16 +13,16 @@ write one value back.
 
 Tracked entries (Prisma model → `entityType`):
 
-| Model | entityType |
-|---|---|
-| Flight | `flight` |
-| LodgingStay | `lodgingStay` |
+| Model                                   | entityType               |
+| --------------------------------------- | ------------------------ |
+| Flight                                  | `flight`                 |
+| LodgingStay                             | `lodgingStay`            |
 | RailJourney / BusJourney / FerryJourney | `rail` / `bus` / `ferry` |
-| RentalBooking | `rental` |
-| Cruise / CruiseStop | `cruise` / `cruiseStop` |
-| Trip | `trip` |
-| PlaceVisit | `placeVisit` |
-| TripExpense | `expense` |
+| RentalBooking                           | `rental`                 |
+| Cruise / CruiseStop                     | `cruise` / `cruiseStop`  |
+| Trip                                    | `trip`                   |
+| PlaceVisit                              | `placeVisit`             |
+| TripExpense                             | `expense`                |
 
 Recorded: `update`, `updateMany`, `upsert` (its update branch) and `delete`, `deleteMany`.
 A create is not a change and is not recorded. A no-op write (every value equal after
@@ -91,15 +91,20 @@ payloads a refresh rewrites wholesale (`geometry`, `actualRoute`, `enrichmentHis
 - Queued rows live in memory for at most one flush interval; a crash loses them.
 - A relation written through `connect`/`disconnect` is not recorded (no tracked write path
   uses it today).
+- A bulk write whose reported count differs from its snapshot (a concurrent edit) re-reads
+  the rows and records only those that now hold the written value.
 
 ## Restore
 
 `POST /api/v1/change-history/:id/restore` writes the row's old value back to the field,
 through the same hook — so the restore is itself a row, with `restoredFromId` — and,
-for a shareable entry, through the share propagation like any edit. Not restorable: a
-delete row, an omitted value, a time (`DateTime`) or a derived time column (`*Utc`,
-`*Zone`, `*Timezone`, `*Precision`, `*Semantics`) — a time is stored with its derived
-instant and zone, which only the entry's own form recomputes. A value naming a record that
+for a shareable entry, through the share propagation like any edit. Only free text and
+labels nothing else is derived from are restorable (`RESTORABLE_FIELDS` in `history.ts`:
+notes, tags, seat, gate, booking codes, room, cabin, vehicle, …). Everything else is shown
+and changed through the entry's own form, because a direct write would skip what that form
+recomputes: a time's instant, zone and precision (ADR 0002), an airport's coordinates and
+zone, a price's FX snapshot, the companion links behind `companions`, a trip's status behind
+`tripId`. A delete row and an omitted value are never restorable. A value naming a record that
 is gone answers 409 `CHANGE_NOT_RESTORABLE`; a row of another account 404
 `CHANGE_NOT_FOUND`.
 
