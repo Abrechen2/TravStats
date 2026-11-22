@@ -169,5 +169,52 @@
     "trimRunning": "Trimming … {{done}} of {{total}}",
     "trimDone_one": "{{count}} automatic link removed.",
     "trimDone_other": "{{count}} automatic links removed."
+  },
+  "cover": {
+    "menu": "Suggest a cover",
+    "prompt": "Suggest a cover",
+    "title": "Suggest a cover",
+    "intro": "We look through this trip's photos for one that shows where you are – and, if possible, you. Nothing is set automatically.",
+    "loading": "Looking at the photos …",
+    "loadFailed": "The suggestions could not be loaded.",
+    "retry": "Try again",
+    "choose": "Use as cover",
+    "choosing": "Setting …",
+    "chosen": "The cover is set.",
+    "chooseFailed": "The cover could not be set.",
+    "photoAlt": "Suggestion {{n}}",
+    "score": "{{score}} points",
+    "close": "Close",
+    "abstained": {
+      "noTripDates": "This trip has no start and end date – without them there is no telling which photos belong to it.",
+      "noCandidates": "This trip holds no photos from its dates. Link an album or upload photos.",
+      "noneQualified": "No photo is good enough to suggest: none shows you, is a favourite or was taken close to a place of the trip."
+    },
+    "reasons": {
+      "me": "You are in the photo",
+      "placeClose": "Taken at a place of this trip",
+      "placeNearby": "Taken near a place of this trip",
+      "favorite": "Marked as a favourite",
+      "highQuality": "High image quality",
+      "landscape": "Landscape format",
+      "resolution": "High resolution"
+    },
+    "source": {
+      "photosFailed": "{{name}} could not be read: {{reason}}",
+      "peopleFailed": "The people in {{name}} could not be read – \"That's me\" was left out: {{reason}}",
+      "peopleNotSet": "Tip: pick \"That's me\" for {{name}} in the settings and photos with you are preferred."
+    }
+  },
+  "selfPerson": {
+    "title": "That's me",
+    "hint": "Pick which recognised person you are in {{name}}. Cover suggestions prefer trip photos with you. Only the choice is stored, no face data.",
+    "label": "Person in {{name}}",
+    "none": "Not set",
+    "load": "Load people",
+    "loading": "Loading people …",
+    "empty": "{{name}} has no named person yet.",
+    "loadFailed": "The people could not be loaded: {{reason}}",
+    "saved": "Saved.",
+    "saveFailed": "The choice could not be saved."
   }
 }

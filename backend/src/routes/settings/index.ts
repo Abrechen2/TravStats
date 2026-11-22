@@ -10,6 +10,7 @@ import profileRouter from "./profile";
 import profilePictureRouter from "./profilePicture";
 import tokensRouter from "./tokens";
 import immichRouter from "./immich";
+import photoSourcePeopleRouter from "./photoSourcePeople";
 import dawarichRouter from "./dawarich";
 import webPrefsRouter from "./webPrefs";
 import instanceServicesRouter from "./instanceServices";
@@ -52,6 +53,8 @@ router.use(
     "/api-keys",
     "/tokens",
     "/immich",
+    // Which recognised person is "me" in the shared account's library: one visitor's would be everyone's.
+    "/photo-sources",
     "/dawarich",
     "/profile-picture",
     "/notifications",
@@ -89,6 +92,7 @@ router.use("/profile", profileRouter);
 router.use("/profile-picture", profilePictureRouter);
 router.use("/tokens", tokensRouter);
 router.use("/immich", immichRouter);
+router.use("/photo-sources", photoSourcePeopleRouter);
 router.use("/dawarich", dawarichRouter);
 router.use("/web-prefs", webPrefsRouter);
 router.use("/instance-services", instanceServicesRouter);

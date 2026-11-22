@@ -34,7 +34,9 @@ import type {
   PhotoSourceAlbum,
   PhotoSourceAsset,
   PhotoSourceAssetPage,
+  PhotoSourcePerson,
   PhotoSourceProvider,
+  PhotoSourceSearchFilter,
   PhotoSourceStream,
   PhotoSourceTestResult,
   PhotoSourceThumbnailSize,
@@ -51,6 +53,8 @@ export const PHOTOPRISM_PAGE_SIZE = 500;
 /** Pages one time search reads (5 000 photos); a fuller answer is `truncated`. */
 export const PHOTOPRISM_SEARCH_MAX_PAGES = 10;
 const DAY_MS = 86_400_000;
+/** People listed at most; a library with more named people than this is not a family album. */
+const PEOPLE_COUNT = 1000;
 /** Page size of the album listing; 5000 was accepted without a visible cap. */
 const ALBUM_PAGE_SIZE = 1000;
 /** Album-like collections PhotoPrism keeps as `albums` rows, in listing order. */
@@ -186,6 +190,13 @@ function mapAsset(raw: unknown): PhotoSourceAsset | null {
     sizeBytes: null,
     lat: hasPosition ? lat : null,
     lon: hasPosition ? lon : null,
+    // Quality hints (cover suggestions): absent unless PhotoPrism said so.
+    ...(typeof raw.Favorite === "boolean" ? { favorite: raw.Favorite } : {}),
+    ...(typeof raw.Width === "number" && typeof raw.Height === "number" && raw.Width > 0
+      ? { width: raw.Width, height: raw.Height }
+      : {}),
+    ...(str(raw.CameraMake) !== "" ? { cameraMake: str(raw.CameraMake) } : {}),
+    ...(typeof raw.Quality === "number" ? { quality: raw.Quality } : {}),
   };
 }
 
@@ -462,14 +473,19 @@ export function createPhotoprismPhotoSource(
      * is not relied on, which is what the padding is for. Oldest first, paged
      * by `offset` until a short page or the page bound.
      */
-    async searchAssetsByTime(range: PhotoSourceTimeRange): Promise<PhotoSourceTimeSearch> {
+    async searchAssetsByTime(
+      range: PhotoSourceTimeRange,
+      filter: PhotoSourceSearchFilter = {}
+    ): Promise<PhotoSourceTimeSearch> {
+      // `subject=<UID>`: only the photos this recognised person is in.
+      const subject = filter.personId ? `&subject=${encodeURIComponent(filter.personId)}` : "";
       const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
       const after = day(range.takenAfter.getTime() - DAY_MS);
       const before = day(range.takenBefore.getTime() + DAY_MS);
       const assets: PhotoSourceAsset[] = [];
       for (let page = 0; page < PHOTOPRISM_SEARCH_MAX_PAGES; page += 1) {
         const data = await getJson(
-          `/photos?after=${after}&before=${before}&count=${PHOTOPRISM_PAGE_SIZE}&offset=${page * PHOTOPRISM_PAGE_SIZE}&order=oldest`,
+          `/photos?after=${after}&before=${before}&count=${PHOTOPRISM_PAGE_SIZE}&offset=${page * PHOTOPRISM_PAGE_SIZE}&order=oldest${subject}`,
           "photos by time",
           true
         );
@@ -480,6 +496,28 @@ export function createPhotoprismPhotoSource(
         if (data.length < PHOTOPRISM_PAGE_SIZE) return { assets, truncated: false };
       }
       return { assets, truncated: true };
+    },
+
+    /**
+     * `GET /subjects?type=person&count=` (`count` is required by the form).
+     * Hidden and nameless subjects are left out: only a named person can be "me".
+     */
+    async listPeople(): Promise<PhotoSourcePerson[]> {
+      const data = await getJson(
+        `/subjects?type=person&count=${PEOPLE_COUNT}&offset=0&hidden=no`,
+        "subjects",
+        true
+      );
+      if (!Array.isArray(data)) {
+        throw new ImmichError("protocol", `${SERVICE} returned an unexpected subject payload`);
+      }
+      const people: PhotoSourcePerson[] = [];
+      for (const raw of data) {
+        if (!isRecord(raw) || str(raw.UID) === "" || str(raw.Name).trim() === "") continue;
+        if (raw.Hidden === true) continue;
+        people.push({ id: str(raw.UID), name: str(raw.Name).trim() });
+      }
+      return people;
     },
 
     streamThumbnail: (assetId, size) =>

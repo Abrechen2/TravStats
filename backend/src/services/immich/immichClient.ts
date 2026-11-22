@@ -87,7 +87,15 @@ export interface ImmichClient {
    * `takenAfter` / `takenBefore` so the range is filtered server-side
    * rather than by pulling the library and discarding most of it.
    */
-  searchAssetsByDate(range: ImmichDateRange): Promise<ImmichAssetPage>;
+  searchAssetsByDate(
+    range: ImmichDateRange,
+    filter?: { personId?: string }
+  ): Promise<ImmichAssetPage>;
+  /**
+   * The named people of the library (`GET /people`, paged). Unnamed face
+   * clusters are left out: nobody can recognise themselves in "Person 1042".
+   */
+  listPeople(): Promise<ImmichPerson[]>;
   fetchAssetStream(assetId: string, size: ImmichAssetSize): Promise<ImmichAssetStream>;
   /**
    * The id of the library asset whose content has this checksum, or null.
@@ -99,6 +107,15 @@ export interface ImmichClient {
    */
   findAssetIdByChecksum(checksum: string): Promise<string | null>;
 }
+
+export interface ImmichPerson {
+  id: string;
+  name: string;
+}
+
+/** Pages of `GET /people` read at most (10 x 500 people). */
+const MAX_PEOPLE_PAGES = 10;
+const PEOPLE_PAGE_SIZE = 500;
 
 /** Inclusive on both ends, as Immich treats them. */
 export interface ImmichDateRange {
@@ -206,6 +223,9 @@ function mapAsset(raw: unknown): ImmichAsset | null {
   const exif = isRecord(raw.exifInfo) ? raw.exifInfo : undefined;
   const city = exif?.city;
   const country = exif?.country;
+  const make = exif?.make;
+  const width = asNumberOrNull(exif?.exifImageWidth);
+  const height = asNumberOrNull(exif?.exifImageHeight);
 
   return {
     id: raw.id,
@@ -219,6 +239,10 @@ function mapAsset(raw: unknown): ImmichAsset | null {
     // Only when Immich named one — absent, not "", so a missing hint stays missing.
     ...(nonEmpty(city) ? { city } : {}),
     ...(nonEmpty(country) ? { country } : {}),
+    // Quality hints (cover suggestions): absent unless Immich said so.
+    ...(typeof raw.isFavorite === "boolean" ? { favorite: raw.isFavorite } : {}),
+    ...(width !== null && height !== null ? { width, height } : {}),
+    ...(nonEmpty(make) ? { cameraMake: make } : {}),
   };
 }
 
@@ -366,10 +390,10 @@ export function createImmichClient(
       return first?.id ?? null;
     },
 
-    async searchAssetsByDate({
-      takenAfter,
-      takenBefore,
-    }: ImmichDateRange): Promise<ImmichAssetPage> {
+    async searchAssetsByDate(
+      { takenAfter, takenBefore }: ImmichDateRange,
+      filter: { personId?: string } = {}
+    ): Promise<ImmichAssetPage> {
       const collected: ImmichAsset[] = [];
       let truncated = false;
 
@@ -387,6 +411,8 @@ export function createImmichClient(
               // Coordinates live in the EXIF block; without this the scan
               // gets timestamps and no places at all.
               withExif: true,
+              // `personIds`: only photos this recognised person is in.
+              ...(filter.personId ? { personIds: [filter.personId] } : {}),
               page,
               size: PAGE_SIZE,
             },
@@ -423,6 +449,31 @@ export function createImmichClient(
       }
 
       return { assets: collected, truncated };
+    },
+
+    async listPeople(): Promise<ImmichPerson[]> {
+      const people: ImmichPerson[] = [];
+      for (let page = 1; page <= MAX_PEOPLE_PAGES; page += 1) {
+        let data: unknown;
+        try {
+          ({ data } = await axios.get(
+            url(`/people?page=${page}&size=${PEOPLE_PAGE_SIZE}&withHidden=false`),
+            jsonConfig
+          ));
+        } catch (error) {
+          throw toImmichError(error, "people");
+        }
+        if (!isRecord(data) || !Array.isArray(data.people)) {
+          throw new ImmichError("protocol", "Immich returned an unexpected people payload");
+        }
+        for (const raw of data.people) {
+          if (!isRecord(raw) || typeof raw.id !== "string" || raw.id.length === 0) continue;
+          if (raw.isHidden === true || !nonEmpty(raw.name)) continue;
+          people.push({ id: raw.id, name: raw.name.trim() });
+        }
+        if (data.hasNextPage !== true) break;
+      }
+      return people;
     },
 
     /**

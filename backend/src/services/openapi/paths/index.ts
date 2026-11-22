@@ -16,6 +16,7 @@ import "./parserTemplateExport";
 
 import "./flights";
 import "./gapCalendar";
+import "./coverSuggestions";
 import "./trips";
 import "./tripBookings";
 import "./bookingPackage";
