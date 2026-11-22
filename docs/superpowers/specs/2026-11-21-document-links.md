@@ -118,13 +118,13 @@ release that carries phase D2.
 
 | Phase | Side | What | State |
 |---|---|---|---|
-| D1 | server | table, backfill, cascades to `SET NULL`, dual-write, replay test, registry + domain test, sweep transaction | planned |
-| D2 | server + web | read links everywhere (entry lists show "Beleg aus …", distinct counts), manual link/unlink UI, "delete everywhere" | planned |
-| D3 | server + web | package import links confirmed entries; `.travstats` archive v-next; export/backup | planned |
-| D4 | server + web | inbox suggestions for existing documents | planned |
+| D1 | server | table, backfill, cascades to `SET NULL`, dual-write, replay test, registry + domain test, sweep transaction | shipped in 2.8.0-rc.41/42 |
+| D2 | server + web | read links everywhere (entry lists show "Beleg aus …", distinct counts), manual link/unlink UI, "delete everywhere" | shipped in 2.8.0-rc.41/42 |
+| D3 | server + web | package import links confirmed entries; `.travstats` archive v-next; export/backup | shipped in 2.8.0-rc.41/42 |
+| D4 | server + web | inbox suggestions for existing documents | shipped in 2.8.0-rc.41/42 |
 | D5 | Companion | show "Beleg aus …" on an entry; link-aware filing | after D2 |
 | D6 | server | contract: drop old CHECK and FK columns | after the last app version without links |
-| D7 | server + web | a document FOR a person on a link, per-traveller facts on the companion link tables (+ `lodging_stay_companions`), automatic assignment from a parsed passenger name | built (forgejo#425) |
+| D7 | server + web | a document FOR a person on a link, per-traveller facts on the companion link tables (+ `lodging_stay_companions`), automatic assignment from a parsed passenger name | shipped in 2.8.0-rc.41/42 (forgejo#425) |
 
 ## Tests that gate the release
 
