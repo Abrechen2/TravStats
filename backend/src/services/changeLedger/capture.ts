@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 
 import type { PrismaClient } from "../../prisma";
@@ -28,9 +29,16 @@ import { appliedValue, encodeValue, sameRaw, UNKNOWN } from "./values";
  * the hook and are not counted by `observeQueries`; `ledgerStats()` counts them
  * instead, for the guard that holds this budget.
  *
- * Known limit: the snapshot and the insert run outside an enclosing
- * interactive transaction. A transaction that rolls back after its write can
- * leave a row describing a change that did not land (spec §Limits).
+ * Inside a `$transaction` the rows belong to the transaction: they are
+ * collected per transaction and queued only when it commits; a rollback drops
+ * them (`runLedgerTransaction`, wired in `db.ts`). The snapshot never reads
+ * through the transaction (a read there can wait on a nested transaction's
+ * locks); a field the transaction already wrote takes its "before" from the
+ * transaction's own record of it.
+ * So a write that did not land never leaves a history row. Rows are written
+ * after the commit, not inside it, so a ledger failure can never abort the
+ * caller's transaction; the price is that a crash in the flush window loses
+ * rows (never invents them).
  */
 
 const UPDATE_OPS = new Set(["update", "updateMany", "upsert"]);
@@ -55,6 +63,8 @@ export interface LedgerRow {
   actorUserId: string | null;
   reason: string | null;
   restoredFromId: string | null;
+  /** When the write happened, not when its batch was flushed. */
+  createdAt: Date;
 }
 
 type Row = Record<string, unknown>;
@@ -67,6 +77,44 @@ let queue: LedgerRow[] = [];
 let timer: NodeJS.Timeout | null = null;
 let inFlight: Promise<void> = Promise.resolve();
 const stats = { snapshotReads: 0, inserts: 0, rows: 0 };
+
+/**
+ * One running `$transaction`: the rows its writes produced, and the values it
+ * wrote so far (a later write in the same transaction reads its "before" from
+ * here — the snapshot itself runs on the base client and sees only committed
+ * values, which is what keeps it from ever waiting on the transaction's locks).
+ */
+interface TxScope {
+  pending: LedgerRow[];
+  written: Map<string, unknown>;
+}
+const txScope = new AsyncLocalStorage<TxScope>();
+
+const writtenKey = (model: string, id: unknown, field: string) => `${model}:${String(id)}:${field}`;
+
+/**
+ * Run `$transaction` (`raw`) so that the ledger rows its writes produce are
+ * queued only after it committed, and dropped when it threw. Both forms: a
+ * callback and an array of queries. A transaction nested through `tx.$transaction`
+ * shares its outer one's scope, so its rows follow the outer commit.
+ */
+export async function runLedgerTransaction(
+  raw: (...a: unknown[]) => Promise<unknown>,
+  arg: unknown,
+  options?: unknown
+): Promise<unknown> {
+  const scope: TxScope = { pending: [], written: new Map() };
+  const extra = options === undefined ? [] : [options];
+  let result: unknown;
+  if (typeof arg === "function") {
+    const fn = arg as (tx: unknown) => Promise<unknown>;
+    result = await raw((tx: unknown) => txScope.run(scope, async () => await fn(tx)), ...extra);
+  } else {
+    result = await txScope.run(scope, async () => await raw(arg, ...extra));
+  }
+  enqueue(scope.pending);
+  return result;
+}
 
 /** Wired once by `db.ts` with the unextended client. */
 export function configureChangeLedger(client: PrismaClient): void {
@@ -198,6 +246,12 @@ function selectFor(meta: ModelMeta, fields: readonly string[]): Row {
   return select;
 }
 
+function readRows(model: TrackedModel, args: unknown): Promise<Row[]> {
+  const delegate = (base as unknown as Record<string, Delegate>)[delegateOf(model)];
+  stats.snapshotReads += 1;
+  return delegate.findMany(args);
+}
+
 async function snapshot(
   model: TrackedModel,
   meta: ModelMeta,
@@ -205,9 +259,7 @@ async function snapshot(
   fields: readonly string[]
 ): Promise<Row[] | null> {
   if (!base) return null;
-  const delegate = (base as unknown as Record<string, Delegate>)[delegateOf(model)];
-  stats.snapshotReads += 1;
-  const rows = await delegate.findMany({
+  const rows = await readRows(model, {
     where: filterOf(where, meta),
     select: selectFor(meta, fields),
     take: MAX_SNAPSHOT_ROWS + 1,
@@ -238,6 +290,7 @@ function common(
     actorUserId: ctx.actorUserId,
     reason: ctx.reason,
     restoredFromId: ctx.restoredFromId,
+    createdAt: new Date(),
   };
 }
 
@@ -248,7 +301,8 @@ function updateRows(
   before: Row[],
   data: Row,
   fields: readonly string[],
-  result: unknown
+  result: unknown,
+  written?: Map<string, unknown>
 ): LedgerRow[] {
   const out: LedgerRow[] = [];
   // A single update hands back the row as stored; it beats re-deriving the value.
@@ -263,17 +317,20 @@ function updateRows(
     for (const field of fields) {
       const f = meta.scalars.get(field);
       if (!f) continue;
+      const key = writtenKey(model, row.id, field);
+      const old = written?.has(key) ? written.get(key) : row[field];
       const next =
         stored && Object.prototype.hasOwnProperty.call(stored, field)
           ? stored[field]
-          : appliedValue(data[field], row[field], f.type, f.isList);
+          : appliedValue(data[field], old, f.type, f.isList);
       if (next === UNKNOWN) continue;
-      const oldEnc = encodeValue(row[field]);
+      written?.set(key, next);
+      const oldEnc = encodeValue(old);
       const newEnc = encodeValue(next);
       // A no-op write keeps nothing. Two values too large to keep are compared
       // in full: a change between them is still a change, recorded as omitted.
       if (oldEnc.omitted && newEnc.omitted) {
-        if (sameRaw(row[field], next)) continue;
+        if (sameRaw(old, next)) continue;
       } else if (!oldEnc.omitted && !newEnc.omitted && oldEnc.value === newEnc.value) continue;
       const omitted = oldEnc.omitted || newEnc.omitted;
       out.push({
@@ -329,11 +386,9 @@ async function reconcile(
   result: unknown
 ): Promise<Row[]> {
   const count = (result as { count?: unknown } | null)?.count;
-  if (typeof count !== "number" || count === before.length || !base) return before;
+  if (typeof count !== "number" || count === before.length) return before;
   if (count === 0) return [];
-  const delegate = (base as unknown as Record<string, Delegate>)[delegateOf(model)];
-  stats.snapshotReads += 1;
-  const now = await delegate.findMany({
+  const now = await readRows(model, {
     where: { id: { in: before.map((r) => r.id) } },
     select: selectFor(meta, fields),
   });
@@ -364,7 +419,8 @@ export async function captureWrite<T>(
   model: string,
   operation: string,
   args: unknown,
-  run: () => Promise<T>
+  run: () => Promise<T>,
+  inTransaction = false
 ): Promise<T> {
   if (!isTrackedModel(model) || !base) return run();
   const ctx = resolveChangeContext();
@@ -375,6 +431,10 @@ export async function captureWrite<T>(
   const data = ((operation === "upsert" ? a.update : a.data) ?? {}) as Row;
   const fields = isDelete ? [] : recordedFields(data, meta);
   if (!isDelete && fields.length === 0) return run();
+
+  // Inside a transaction: read through its client, keep the rows with it.
+  const scope = inTransaction ? txScope.getStore() : undefined;
+  const sink = (rows: LedgerRow[]) => (scope ? scope.pending.push(...rows) : enqueue(rows));
 
   let before: Row[] | null = null;
   try {
@@ -390,10 +450,10 @@ export async function captureWrite<T>(
   if (!before || before.length === 0) return result;
   try {
     const touched = await reconcile(model, meta, operation, before, data, fields, result);
-    enqueue(
+    sink(
       isDelete
         ? deleteRows(ctx, model, meta, touched)
-        : updateRows(ctx, model, meta, touched, data, fields, result)
+        : updateRows(ctx, model, meta, touched, data, fields, result, scope?.written)
     );
   } catch (error) {
     dbLogger.error({

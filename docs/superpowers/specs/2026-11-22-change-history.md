@@ -85,9 +85,17 @@ payloads a refresh rewrites wholesale (`geometry`, `actualRoute`, `enrichmentHis
 
 ## Limits (known, accepted)
 
-- The snapshot and the insert run outside an enclosing interactive transaction. A
-  transaction that rolls back after its write can leave a row describing a change that did
-  not land, and a snapshot inside a transaction reads the last committed value.
+- Transactions: every `prisma.$transaction` (callback or array form) runs through
+  `runLedgerTransaction` (`db.ts` wraps the client's method; the extension API has no hook
+  for a transaction's end). The rows its writes produce are collected per transaction and
+  queued only after it committed; a rollback drops them, so a write that did not land never
+  leaves a row. Chosen over inserting through the transaction client because a ledger
+  failure must never abort the caller's transaction, and because a read through the outer
+  client while a nested `tx.$transaction` is open waits on it. The snapshot therefore runs
+  on the base client (committed values, never blocked by the transaction's locks); a field
+  the same transaction already wrote takes its "before" from the transaction's own record.
+  A nested `tx.$transaction` shares its outer scope: rows from a nested part that rolled
+  back while the outer one still committed are kept (no write path does that today).
 - Queued rows live in memory for at most one flush interval; a crash loses them.
 - A relation written through `connect`/`disconnect` is not recorded (no tracked write path
   uses it today).
@@ -127,12 +135,15 @@ invalid value is logged at start and nothing is deleted.
 ## UI
 
 Each detail page (flight, rail, bus, ferry, rental, cruise, trip) shows "Verlauf" /
-"History": who (source), when, what (field), from → to, and a restore button on
-restorable rows. DE first, EN mirrored; tokens only (design wardens).
+"History" full width below its grid: who (source), when, what (field), from → to, and a
+restore button on restorable rows. The same component, `compact`, sits on each stay card of
+a lodging, each visit of a place, each day card of a cruise (its stop) and in the expense
+dialog. Loaded only when opened. DE first, EN mirrored; tokens only (design wardens).
 
 ## Open
 
-- An admin setting for retention instead of the env variable.
-- "Verlauf" on the stays of a lodging, the visits of a place, cruise stops and expenses
-  (the API serves them; the panel takes any `entityType`).
-- An account-wide view including delete rows (the API serves it without `entityType`).
+Left for later (coordinator, 2026-11-22):
+
+- Retention stays an env variable; an admin setting is a later step.
+- An account-wide view including delete rows (the API already serves it without
+  `entityType`).

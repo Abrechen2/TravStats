@@ -5,6 +5,7 @@ import {
   captureWrite,
   configureChangeLedger,
   isCapturedWrite,
+  runLedgerTransaction,
 } from "./services/changeLedger/capture";
 import logger, { dbLogger } from "./utils/logger";
 import { toLoggable } from "./utils/logging/toLoggable";
@@ -137,7 +138,8 @@ export function expectingUniqueConflict<T>(model: string, run: () => Promise<T>)
  */
 export const prisma = basePrisma.$extends({
   query: {
-    async $allOperations({ model, operation, args, query }) {
+    async $allOperations(params) {
+      const { model, operation, args, query } = params;
       const startTime = Date.now();
       // Before the call, matching the old middleware: it recorded on the way
       // in, so a query that throws is still counted.
@@ -148,7 +150,15 @@ export const prisma = basePrisma.$extends({
         // Edits of travel entries keep their history (the change ledger, spec
         // 2026-11-22-change-history); everything else runs as it always did.
         const result = isCapturedWrite(model, operation)
-          ? await captureWrite(model as string, operation, args, () => query(args))
+          ? await captureWrite(
+              model as string,
+              operation,
+              args,
+              () => query(args),
+              // Set inside a `$transaction` (interactive or batch); Prisma does not type it.
+              (params as { __internalParams?: { transaction?: unknown } }).__internalParams
+                ?.transaction != null
+            )
           : await query(args);
         if (writeObserver && operation !== "findMany" && operation !== "findFirst") {
           try {
@@ -261,6 +271,30 @@ function logQueryFailure(
       stack: !model?.startsWith("TravelPlan") && error instanceof Error ? error.stack : undefined,
     },
   });
+}
+
+/**
+ * Every `$transaction` carries its ledger rows with it: they are collected
+ * while it runs and queued only once it committed, so a rolled-back write
+ * leaves no history (services/changeLedger/capture.ts, `runLedgerTransaction`).
+ * The extension API has no hook for a transaction's end, hence the wrapper.
+ */
+{
+  // Unbound: a transaction client inherits this property, and its own
+  // `tx.$transaction` (a nested transaction, Prisma 7) must stay Prisma's —
+  // bound to the top client it would open a second, independent transaction
+  // that waits on the first one's locks.
+  const original = prisma.$transaction as unknown as (...a: unknown[]) => Promise<unknown>;
+  const top = prisma;
+  (prisma as unknown as { $transaction: unknown }).$transaction = function (
+    this: unknown,
+    arg: unknown,
+    options?: unknown
+  ) {
+    const args = options === undefined ? [arg] : [arg, options];
+    if (this !== top) return original.apply(this, args);
+    return runLedgerTransaction((...a: unknown[]) => original.apply(top, a), arg, options);
+  };
 }
 
 /**

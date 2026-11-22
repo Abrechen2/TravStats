@@ -146,6 +146,48 @@ describe("change ledger", () => {
     expect(row.source).toBe("share_sync");
   });
 
+  it("leaves no row for a change a transaction rolled back, and exactly one for a committed one", async () => {
+    const f = await flight(userId, { gate: "A1" });
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await tx.flight.update({ where: { id: f.id }, data: { gate: "R1" } });
+        throw new Error("rolled back on purpose");
+      })
+    ).rejects.toThrow("rolled back on purpose");
+    expect((await prisma.flight.findUnique({ where: { id: f.id } }))?.gate).toBe("A1");
+    expect(await rowsFor(f.id)).toEqual([]);
+
+    await prisma.$transaction(async (tx) => {
+      // The snapshot reads through the transaction: the first write is its "before".
+      await tx.flight.update({ where: { id: f.id }, data: { gate: "B1" } });
+      await tx.flight.update({ where: { id: f.id }, data: { gate: "B2" } });
+    });
+    const rows = await rowsFor(f.id);
+    // One batch shares a timestamp, so the order is not the point; the pairs are.
+    expect(rows.map((r) => [r.oldValue, r.newValue]).sort()).toEqual([
+      ['"A1"', '"B1"'],
+      ['"B1"', '"B2"'],
+    ]);
+  });
+
+  it("drops the rows of a failed batch transaction too", async () => {
+    const f = await flight(userId, { gate: "A1" });
+    await expect(
+      prisma.$transaction([
+        prisma.flight.update({ where: { id: f.id }, data: { gate: "X1" } }),
+        prisma.flight.update({
+          where: { id: "00000000-0000-4000-8000-000000000000" },
+          data: { gate: "Y" },
+        }),
+      ])
+    ).rejects.toBeDefined();
+    expect(await rowsFor(f.id)).toEqual([]);
+    await prisma.$transaction([
+      prisma.flight.update({ where: { id: f.id }, data: { gate: "X2" } }),
+    ]);
+    expect(await rowsFor(f.id)).toHaveLength(1);
+  });
+
   it("keeps nothing for a write that changes nothing", async () => {
     const f = await flight(userId, { gate: "A1", price: 120 });
     await prisma.flight.update({ where: { id: f.id }, data: { gate: "A1", price: 120 } });
