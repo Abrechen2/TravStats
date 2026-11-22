@@ -1,4 +1,6 @@
 import type { PickingInfo } from "@deck.gl/core";
+import { lodgingPresence } from "../../lib/mapPresence";
+import type { Lodging } from "../../types/lodging";
 import { escapeHtml } from "../../lib/escapeHtml";
 import { flagImgHtml, countryName, resolveCountryCode } from "../../lib/countryFlag";
 import {
@@ -168,6 +170,7 @@ interface LodgingDatum {
   readonly nights?: number;
   /** Stays still ahead of check-out. */
   readonly plannedStays?: number;
+  readonly stays?: Lodging["stays"];
 }
 
 const SURFACE_STYLE: Record<string, string> = {
@@ -405,7 +408,9 @@ function renderLodgingHtml(d: LodgingDatum, heading: string, t: TFn, locale: str
       `<div style="color:${LODGING_ACCENT_HEX};margin-top:2px;">${escapeHtml(parts.join(" · "))}</div>`
     );
   }
-  const planned = typeof d.plannedStays === "number" ? d.plannedStays : 0;
+  // The globe hands over the raw `Lodging`, which has stays but no `plannedStays`.
+  const planned =
+    typeof d.plannedStays === "number" ? d.plannedStays : lodgingPresence(d).counts.planned;
   lines.push(plannedOnlyHtml(planned, stayCount ?? 0, LODGING_ACCENT_HEX, t));
   return lines.join("");
 }
