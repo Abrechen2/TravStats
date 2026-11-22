@@ -13,7 +13,11 @@ import type { OverflowEntry } from "../ui/OverflowMenu";
  * is never replaced and a failed answer keeps the stored line. `panel` (progress,
  * reasons, cancel) renders under the header, outside the closed menu.
  */
-export function useRoadtripReroute(routeId: string): {
+export function useRoadtripReroute(
+  routeId: string,
+  /** Reloads the page's roadtrip once the run has ended: the legs it routed are new geometry. */
+  onEnded: () => void
+): {
   entry: OverflowEntry;
   panel: JSX.Element | null;
 } {
@@ -26,7 +30,8 @@ export function useRoadtripReroute(routeId: string): {
     },
     // The page only offers the action; a run already going is shown by the
     // refused start (`alreadyActive`), so opening a roadtrip costs no request.
-    false
+    false,
+    onEnded
   );
   const active = run?.status === "running" || run?.status === "paused";
   return {

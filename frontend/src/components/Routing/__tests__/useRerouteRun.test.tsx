@@ -121,6 +121,32 @@ describe("useRerouteRun", () => {
     expect((await screen.findByRole("alert")).textContent).toBe("notConfigured");
   });
 
+  it("tells the page when the run it follows has ended, so the page can reload what was routed", async () => {
+    const onEnded = vi.fn();
+    function Ended() {
+      const s = useRerouteRun(
+        {
+          read: async () => null,
+          start: async () => run(),
+          cancel: async () => run({ status: "done" }),
+        },
+        false,
+        onEnded
+      );
+      return (
+        <div>
+          <button onClick={() => void s.start()}>go</button>
+          <button onClick={() => void s.cancel()}>stop</button>
+        </div>
+      );
+    }
+    render(<Ended />);
+    await act(async () => fireEvent.click(screen.getByText("go")));
+    expect(onEnded).not.toHaveBeenCalled();
+    await act(async () => fireEvent.click(screen.getByText("stop")));
+    await waitFor(() => expect(onEnded).toHaveBeenCalledTimes(1));
+  });
+
   it("cancels the run it shows", async () => {
     const cancel = vi.fn(async () => run({ status: "cancelled" }));
     render(<Harness read={async () => run()} start={async () => run()} cancel={cancel} />);

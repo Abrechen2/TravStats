@@ -5,6 +5,7 @@ import type { RerouteRun } from "../../lib/api/rerouteRuns";
 import { logger } from "../../lib/logger";
 
 const POLL_MS = 3000;
+const PAUSED_POLL_MS = 60_000;
 
 export type RerouteError = "notConfigured" | "failed" | "loadFailed";
 
@@ -20,7 +21,9 @@ export function useRerouteRun(
     cancel: (id: string) => Promise<RerouteRun>;
   },
   /** Read the latest run on mount. A page that only offers the action reads it when asked. */
-  readOnMount = true
+  readOnMount = true,
+  /** Called once when the run this hook follows ends, so a page can reload what it changed. */
+  onEnded?: (run: RerouteRun) => void
 ): {
   run: RerouteRun | null;
   error: RerouteError | null;
@@ -34,7 +37,19 @@ export function useRerouteRun(
   const apiRef = useRef(api);
   apiRef.current = api;
   const runId = run?.id ?? null;
-  const running = run?.status === "running";
+  const status = run?.status ?? null;
+  const active = status === "running" || status === "paused";
+  const onEndedRef = useRef(onEnded);
+  onEndedRef.current = onEnded;
+  const lastStatus = useRef<string | null>(null);
+
+  useEffect(() => {
+    const before = lastStatus.current;
+    lastStatus.current = status;
+    if (run && before && (before === "running" || before === "paused") && !active) {
+      onEndedRef.current?.(run);
+    }
+  }, [status, active, run]);
 
   useEffect(() => {
     if (!readOnMount) return undefined;
@@ -52,15 +67,20 @@ export function useRerouteRun(
   }, [readOnMount]);
 
   useEffect(() => {
-    if (!running || !runId) return undefined;
-    const timer = setInterval(() => {
-      apiRef.current
-        .read()
-        .then((r) => r && setRun(r))
-        .catch((err: unknown) => logger.warn("Following the re-route run failed", err));
-    }, POLL_MS);
+    if (!active || !runId) return undefined;
+    // A paused run waits for the next quota window; looking once a minute is enough
+    // to see it go on by itself.
+    const timer = setInterval(
+      () => {
+        apiRef.current
+          .read()
+          .then((r) => r && setRun(r))
+          .catch((err: unknown) => logger.warn("Following the re-route run failed", err));
+      },
+      status === "paused" ? PAUSED_POLL_MS : POLL_MS
+    );
     return () => clearInterval(timer);
-  }, [running, runId]);
+  }, [active, status, runId]);
 
   const start = useCallback(async (): Promise<void> => {
     setBusy(true);

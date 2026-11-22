@@ -239,6 +239,56 @@ describe("bulk re-route run", () => {
     expect((await legOf(l.id)).source).toBe("straight");
   });
 
+  it("one account without a provider keeps its lines and the pass goes on to the next account", async () => {
+    const other = await prisma.user.create({
+      data: { username: "rerouterun2", passwordHash: "x" },
+    });
+    const oroute = await prisma.tripRoute.create({
+      data: { userId: other.id, name: "Other", mode: "road", kind: "roadtrip" },
+    });
+    const oa = await prisma.tripStop.create({
+      data: { title: "a", lat: A.lat, lon: A.lon, routeId: oroute.id },
+    });
+    const ob = await prisma.tripStop.create({
+      data: { title: "b", lat: B.lat, lon: B.lon, routeId: oroute.id },
+    });
+    const theirs = await prisma.tripRouteLeg.create({
+      data: {
+        routeId: oroute.id,
+        fromStopId: oa.id,
+        toStopId: ob.id,
+        distanceKm: 1,
+        source: "straight",
+        mode: "road",
+      },
+    });
+    const mine = await leg("straight");
+    const { provider } = fakeProvider(okLine);
+    const r = await executeRerouteRun((await run("straight")).id, undefined, {
+      pauseMs: () => 0,
+      resolveProvider: async (uid) => (uid === other.id ? null : provider),
+    });
+    expect(r).toMatchObject({
+      status: "done",
+      routed: 1,
+      kept: 1,
+      failureCounts: { no_provider: 1 },
+    });
+    expect((await legOf(mine.id)).source).toBe("routed");
+    expect((await legOf(theirs.id)).source).toBe("straight");
+    await prisma.user.delete({ where: { id: other.id } });
+  });
+
+  it("a cancelled run is not revived by a resume that picked it up before the cancel", async () => {
+    await leg("straight");
+    const created = await run("straight");
+    await cancelRerouteRun(created.id, { userId });
+    const { provider, calls } = fakeProvider(okLine);
+    const r = await executeRerouteRun(created.id, undefined, deps(provider));
+    expect(r.status).toBe("cancelled");
+    expect(calls).toHaveLength(0);
+  });
+
   it("cancel ends the run before the next item and keeps what was written", async () => {
     await leg("straight");
     await leg("straight");

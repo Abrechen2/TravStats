@@ -299,7 +299,7 @@ export default function RoadtripDetailPage(): JSX.Element {
     stations: detail?.stations ?? [],
   });
 
-  const reroute = useRoadtripReroute(id);
+  const reroute = useRoadtripReroute(id, () => void load());
 
   if (loadError) {
     return (

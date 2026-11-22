@@ -115,6 +115,16 @@ describe("bulk re-route endpoints", () => {
     expect(cancelled.body.run.status).toBe("cancelled");
   });
 
+  it("two starts arriving together create one run, not two workers on the same quota", async () => {
+    await configure("custom", "http://osrm.invalid");
+    const [a, b] = await Promise.all([startAdmin(), startAdmin()]);
+    expect([a.status, b.status].sort()).toEqual([202, 409]);
+    await settleAllJobs();
+    expect(
+      await prisma.rerouteRun.count({ where: { scope: "instance", userId: { in: ids } } })
+    ).toBe(1);
+  });
+
   it("a user starts a run for their own roadtrip; a stranger can neither start, read nor cancel it", async () => {
     await configure("custom", "http://osrm.invalid");
     const started = await startUser();

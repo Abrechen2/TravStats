@@ -57,6 +57,8 @@ export interface RerouteRunView {
   finishedAt: string | null;
 }
 
+const ACTIVE = ["running", "paused"];
+
 /** Latest failures kept on the row; the counts cover the whole run. */
 const FAILURE_SAMPLE_MAX = 50;
 /** This many provider errors or timeouts in a row mean the provider is down. */
@@ -190,10 +192,12 @@ export async function executeRerouteRun(
   let { processed, routed, kept, cursor } = run;
   const remaining = await countRemaining(scope, cursor);
   let total = processed + remaining;
-  await prisma.rerouteRun.update({
-    where: { id: runId },
+  // Conditional: a run cancelled between the scheduler's pick and this line stays cancelled.
+  const claimed = await prisma.rerouteRun.updateMany({
+    where: { id: runId, status: { in: ACTIVE } },
     data: { status: "running", stopReason: null, resumeAfter: null, total },
   });
+  if (claimed.count === 0) return toView(run);
   const providers = new Map<string, RouteProvider | null>();
   const demo = new Map<string, boolean>();
   let consecutive = 0;
@@ -218,28 +222,34 @@ export async function executeRerouteRun(
       if (!providers.has(item.userId)) providers.set(item.userId, await resolve(item.userId));
       const provider = providers.get(item.userId) ?? null;
       if (provider === null) {
-        end = { status: "failed", stopReason: "no_provider" };
-        break;
-      }
-      providerId = provider.id;
-      const gate =
-        scope.scope === "instance"
-          ? () => takeBulkProviderCall(provider.id, now())
-          : providerCallGate(item.userId);
-      try {
-        outcome =
-          item.kind === "leg"
-            ? await routeLeg(item, provider, gate)
-            : await routeBus(item, scope.mode, provider, gate);
-      } catch (error) {
-        logger.warn({
-          operation: "reroute_run_item",
-          runId,
-          kind: item.kind,
-          itemId: item.id,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        outcome = { kind: "kept", reason: "provider_error" };
+        // One account without a usable provider is that account's lines kept; the
+        // pass stops only when the starter has none either (routing is off).
+        if ((await resolve(run.userId)) === null) {
+          end = { status: "failed", stopReason: "no_provider" };
+          break;
+        }
+        outcome = { kind: "kept", reason: "no_provider" };
+      } else {
+        providerId = provider.id;
+        const gate =
+          scope.scope === "instance"
+            ? () => takeBulkProviderCall(provider.id, now())
+            : providerCallGate(item.userId);
+        try {
+          outcome =
+            item.kind === "leg"
+              ? await routeLeg(item, provider, gate)
+              : await routeBus(item, scope.mode, provider, gate);
+        } catch (error) {
+          logger.warn({
+            operation: "reroute_run_item",
+            runId,
+            kind: item.kind,
+            itemId: item.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          outcome = { kind: "kept", reason: "provider_error" };
+        }
       }
     }
 
@@ -288,11 +298,9 @@ export async function executeRerouteRun(
     if (wait > 0) await new Promise((r) => setTimeout(r, wait));
   }
 
-  // A cancel that arrived during the last item stays a cancel.
-  const last = await loadRun(runId);
-  if (last && last.status !== "running") return toView(last);
-  const finished = await prisma.rerouteRun.update({
-    where: { id: runId },
+  // Conditional on still running: a cancel that arrived during the last item stays a cancel.
+  await prisma.rerouteRun.updateMany({
+    where: { id: runId, status: "running" },
     data: {
       status: end.status,
       stopReason: end.stopReason ?? null,
@@ -300,6 +308,7 @@ export async function executeRerouteRun(
       finishedAt: end.status === "paused" ? null : now(),
     },
   });
+  const finished = await prisma.rerouteRun.findUniqueOrThrow({ where: { id: runId } });
   logger.info({
     operation: "reroute_run",
     runId,
@@ -318,20 +327,27 @@ export type RerouteStart =
   /** An instance run is running or paused; its view is the answer. */
   | { kind: "alreadyActive"; run: RerouteRunView };
 
-const ACTIVE = ["running", "paused"];
-
 function launch(run: { id: string; userId: string }, deps?: RunDeps): void {
   startJob("routing.rerouteAll", run.userId, (progress) =>
     executeRerouteRun(run.id, progress, deps)
   );
 }
 
+/** Starts are serialized in this process so two clicks cannot both pass the active-run check. */
+let startQueue: Promise<unknown> = Promise.resolve();
+
 /** Create the run row and start its job; one active run per scope (and roadtrip). */
-export async function startRerouteRun(
+export function startRerouteRun(
   userId: string,
   input: RunScope,
   deps?: RunDeps
 ): Promise<RerouteStart> {
+  const next = startQueue.then(() => startOne(userId, input, deps));
+  startQueue = next.catch(() => undefined);
+  return next;
+}
+
+async function startOne(userId: string, input: RunScope, deps?: RunDeps): Promise<RerouteStart> {
   const active = await prisma.rerouteRun.findFirst({
     where: {
       status: { in: ACTIVE },
