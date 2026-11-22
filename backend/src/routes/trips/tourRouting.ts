@@ -18,6 +18,11 @@ import {
 } from "../../services/tour/routing/types";
 import { findLegOrThrow, requireCoords } from "./tourLegs";
 import { resolveRouteFromRequest, toDto, toLegDto, ROUTE_SELECT } from "./tourRoutes";
+import {
+  cancelRerouteRun,
+  getRerouteRun,
+  startRerouteRun,
+} from "../../services/tour/routing/rerouteRun";
 import logger from "../../utils/logger";
 
 /**
@@ -260,6 +265,74 @@ router.post(
         fallbackCount,
         fallbackReason,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /trips/:id/routes/:routeId/reroute-all  (forgejo#436)
+ *
+ * "Alle Etappen neu routen": the user's own legs of this section, routed again
+ * through the instance's provider as a resumable run (`reroute_runs`) with the
+ * user's own share of the daily quota. A line drawn or recorded is never
+ * replaced and a failed answer keeps the stored line. 202 `{ run }`; 409
+ * `notConfigured`, or `alreadyActive` with the run already going.
+ */
+router.post(
+  ["/trips/:id/routes/:routeId/reroute-all", "/tours/:routeId/reroute-all"],
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const routeId = await resolveRouteFromRequest(userId, req);
+      const start = await startRerouteRun(userId, { scope: "roadtrip", routeId, mode: "all" });
+      if (start.kind === "started") {
+        res.status(202).json({ run: start.run });
+        return;
+      }
+      const error =
+        start.kind === "alreadyActive"
+          ? "A re-route is already running"
+          : "No routing provider is configured";
+      res.status(409).json({
+        error,
+        code: start.kind,
+        ...(start.kind === "alreadyActive" && { run: start.run }),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/** GET /routing-runs/:id — the caller's own run; a stranger's reads as 404. */
+router.get(
+  "/routing-runs/:id",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const run = await getRerouteRun(req.params.id, req.userId!);
+      if (!run) throw new AppError("Run not found", 404);
+      res.json({ run });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/** POST /routing-runs/:id/cancel */
+router.post(
+  "/routing-runs/:id/cancel",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const run = await cancelRerouteRun(req.params.id, { userId: req.userId! });
+      if (!run) throw new AppError("Run not found", 404);
+      res.json({ run });
     } catch (error) {
       next(error);
     }

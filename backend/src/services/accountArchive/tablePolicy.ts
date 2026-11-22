@@ -282,6 +282,9 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   travtrack_fixed_places: owner(),
   travtrack_place_settings: owner(),
   travtrack_zone_tombstones: owner(),
+  reroute_runs: excluded(
+    "Bulk re-routing progress of this server (forgejo#436): the cursor and counts describe a pass over this server's rows"
+  ),
   travtrack_deleted_points: excluded(
     "a deleted point is kept as a digest keyed by the account id; it cannot be re-keyed without the position, which is not kept"
   ),

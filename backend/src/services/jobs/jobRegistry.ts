@@ -40,6 +40,7 @@ export type JobKind =
   | "placeImport.resolve"
   | "bus.routeStraight"
   | "rail.rerouteLocalTransit"
+  | "routing.rerouteAll"
   | "webdavSync.run"
   | "travtrack.fileImport"
   | "travtrack.dawarichImport"

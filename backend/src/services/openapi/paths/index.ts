@@ -23,6 +23,7 @@ import "./tripPackage";
 import "./tripExchange";
 import "./tours";
 import "./sectionDelete";
+import "./rerouteRuns";
 import "./tourTracks";
 import "./tourIndex";
 import "./roadtrips";

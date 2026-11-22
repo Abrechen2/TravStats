@@ -6,11 +6,11 @@ import { ACCEPTED_LEG_SOURCES } from "../../../schemas/tour";
 import type { LegPair } from "../../../shared/tour/legPlan";
 import logger from "../../../utils/logger";
 import { propagateWrite, shareSnapshot } from "../../sharing/propagate";
-import { LEG_MODES, type LegMode } from "../tourDistance";
+import { asRoutableMode } from "./legMode";
 import { providerCallGate } from "./providerBudget";
 import { resolveRouteProvider } from "./resolveProvider";
 import { routeLegGeometry, type RoutedLeg } from "./routeLeg";
-import { isRoutableMode, type RouteProvider, type RoutableMode } from "./types";
+import type { RouteProvider } from "./types";
 
 /**
  * The write-side check on what a routing outcome may persist
@@ -61,12 +61,14 @@ async function legOwner(legId: string): Promise<{ routeId: string; userId: strin
 export async function applyRoutedLegIfStillStraight(
   legId: string,
   readAt: Date,
-  routed: RoutedLeg
+  routed: RoutedLeg,
+  /** The source the leg had when it was read; a bulk re-route passes `routed`. Never `drawn` or `track`. */
+  expectedSource: "straight" | "routed" = "straight"
 ): Promise<boolean> {
   const owner = await legOwner(legId);
   const before = owner && (await shareSnapshot(prisma, "roadtrip", owner.routeId));
   const { count } = await prisma.tripRouteLeg.updateMany({
-    where: { id: legId, source: "straight", updatedAt: readAt },
+    where: { id: legId, source: expectedSource, updatedAt: readAt },
     data: routedLegData(routed),
   });
   if (count === 1 && owner) {
@@ -90,11 +92,6 @@ export const AUTO_ROUTE_MAX_LEGS = 25;
  */
 const AUTO_ROUTE_LEG_TIMEOUT_MS = 8_000;
 const AUTO_ROUTE_BUDGET_MS = 15_000;
-
-function asRoutableMode(mode: string): RoutableMode | null {
-  const known = LEG_MODES.find((m): m is LegMode => m === mode);
-  return known !== undefined && isRoutableMode(known) ? known : null;
-}
 
 export function withTimeout<T>(work: Promise<T>, ms: number): Promise<T | null> {
   let timer: NodeJS.Timeout | undefined;

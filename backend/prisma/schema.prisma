@@ -7786,3 +7786,44 @@ model ProvenanceNotice {
   @@index([userId, status])
   @@map("provenance_notices")
 }
+
+/// One bulk "route the straight lines again" run (forgejo#436). Instance scope is the
+/// administrator's pass over every account's legs; roadtrip scope is one user's
+/// "route all legs" on one roadtrip. The row is what makes a run outlive a day:
+/// the provider's quota ends it as `paused`, and the cursor says where the next
+/// day's pass takes up. A job handle in memory could not survive a restart.
+model RerouteRun {
+  id            String    @id @default(uuid())
+  /// The administrator or user who started it; the owner of a roadtrip run.
+  userId        String    @map("user_id")
+  /// instance | roadtrip
+  scope         String
+  routeId       String?   @map("route_id")
+  /// straight (only lines never routed) | all (routed lines again too)
+  mode          String
+  /// running | paused | done | cancelled | failed
+  status        String
+  /// The last item handled, `<kind>:<id>` with kind leg | bus. Items are walked in
+  /// that order, so everything before the cursor is settled.
+  cursor        String?
+  total         Int       @default(0)
+  processed     Int       @default(0)
+  routed        Int       @default(0)
+  /// Tried and left as stored: the provider failed, or the row changed meanwhile.
+  kept          Int       @default(0)
+  /// `{ <RouteFallbackReason>: count }` over the whole run.
+  failureCounts Json      @default("{}") @map("failure_counts")
+  /// The latest failures, capped: `[{ kind, id, reason }]`.
+  failureSample Json      @default("[]") @map("failure_sample")
+  /// Why a paused or failed run stopped: a RouteFallbackReason.
+  stopReason    String?   @map("stop_reason")
+  /// A paused run is picked up again after this instant.
+  resumeAfter   DateTime? @map("resume_after")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  finishedAt    DateTime? @map("finished_at")
+
+  @@index([status, resumeAfter])
+  @@index([scope, userId, createdAt])
+  @@map("reroute_runs")
+}

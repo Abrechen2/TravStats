@@ -106,6 +106,12 @@ export const CRON_JOBS: CronJob[] = [
     stop: async () =>
       (await import("./dawarichCountryDaySweepScheduler")).stopDawarichCountryDaySweepScheduler(),
   },
+  // Bulk re-routes paused at the provider's quota (forgejo#436), hourly.
+  {
+    name: "reroute_resume",
+    start: async () => (await import("./rerouteResumeScheduler")).startRerouteResumeScheduler(),
+    stop: async () => (await import("./rerouteResumeScheduler")).stopRerouteResumeScheduler(),
+  },
   // Kept originals (forgejo#116), hourly at :25.
   {
     name: "document_sweep",
