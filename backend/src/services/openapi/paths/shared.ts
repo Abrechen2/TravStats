@@ -287,6 +287,25 @@ export const tripResponse = registry.register(
       times: tripTimesSchema
         .optional()
         .describe("The trip's first and last day; on the list, detail, create and update"),
+      coverCrop: z
+        .object({
+          x: z.number().min(0).max(1),
+          y: z.number().min(0).max(1),
+          zoom: z.number().min(1),
+        })
+        .nullable()
+        .describe(
+          "How the cover is framed, non-destructively: x/y the focal point (0..1 of the image) " +
+            "shown in the middle of the frame, zoom >= 1 on top of the cover fit. Null shows the " +
+            "image centred; a new cover resets it."
+        ),
+      coverSource: z
+        .enum(["manual", "auto"])
+        .nullable()
+        .describe(
+          "Who chose the cover: `manual` (the user) or `auto` (picked from the trip's photos). " +
+            "Null for no cover or one older than the field. An automatic pick never replaces a manual one."
+        ),
     })
     .openapi("Trip")
 );
