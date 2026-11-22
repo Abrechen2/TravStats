@@ -1,4 +1,3 @@
-import ShareLinkButton from "../shareLinks/ShareLinkButton";
 import ProvenanceDetails from "../provenance/ProvenanceDetails";
 import RememberedMarker from "../provenance/RememberedMarker";
 import type { JSX } from "react";
@@ -197,10 +196,6 @@ export function PlaceVisitRow({
           />
           <VisitExpenses visitId={visit.id} />
           <ProvenanceDetails entryType="placeVisit" entry={visit} onSaved={onChanged} />
-          {/* A visit that has not happened can be shared too: "wir treffen uns hier". */}
-          <div>
-            <ShareLinkButton kind="visit" targetId={visit.id} variant="link" />
-          </div>
         </div>
       )}
     </li>

@@ -36,6 +36,7 @@ const link = {
   createdAt: "2030-06-01T10:00:00.000Z",
   viewCount: 3,
   lastViewedAt: null,
+  retired: false,
 };
 
 const renderSection = (isAdmin: boolean) =>
@@ -63,6 +64,16 @@ describe("ShareLinksSection", () => {
     await waitFor(() => expect(api.revoke).toHaveBeenCalledWith("l1"));
     expect(await screen.findByText("sharing:links.section.empty")).toBeTruthy();
     expect(addToast).toHaveBeenCalledWith("success", "sharing:links.section.revoked");
+  });
+
+  it("still lists an old flight link, marked as no longer available, and lets the owner delete it", async () => {
+    const old = { ...link, id: "old1", kind: "flight" as const, targetId: "f9", retired: true };
+    api.list.mockResolvedValue({ enabled: true, links: [old] });
+    renderSection(false);
+    expect(await screen.findByTestId("share-link-retired-old1")).toBeTruthy();
+    expect(screen.getByText("sharing:links.section.retired")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "sharing:links.section.revoke" }));
+    await waitFor(() => expect(api.revoke).toHaveBeenCalledWith("old1"));
   });
 
   it("shows an admin no state row and no switch here: the instance switch has its own row", async () => {

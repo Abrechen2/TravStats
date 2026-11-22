@@ -419,10 +419,10 @@
     "dialog": {
       "title": "Create a public link",
       "warning": "Anyone with the link sees the chosen details – without signing in, until the link expires or you revoke it. Nothing else is reachable through it.",
-      "fieldsTitle": "What the page shows",
+      "fieldsTitle": "What else the page shows",
       "expiry": "Valid",
       "expiryOptions": {
-        "untilLanding": "Until landing (+2 hours)",
+        "tripEnd": "Until a week after the trip (at most 90 days)",
         "day": "1 day",
         "week": "7 days",
         "month": "30 days",
@@ -450,68 +450,32 @@
         "overLimit_one": "{{count}} photo beyond the limit of 12",
         "overLimit_other": "{{count}} photos beyond the limit of 12"
       },
-      "itineraryHint": "Shows every entry of the trip on local time – flight numbers, stays with their address, train, bus, ferry, rental car, cruise ports – and what is happening now. Never booking numbers, seat, room or cabin numbers, prices, documents, notes or companions. The link ends at the latest 24 hours after the trip's last day."
+      "itineraryHint": "Shows day by day where you are when – in each place's local time, with the entry in progress marked. Never booking codes, prices, documents, frequent-flyer numbers, notes or fellow travellers. With an itinerary the link ends at the latest a week after the trip's last day.",
+      "itineraryTitle": "Itinerary for family"
     },
     "fields": {
-      "flight": {
-        "owner": "Your first name",
-        "flightNumber": "Airline and flight number",
-        "route": "Departure and arrival airport",
-        "schedule": "Departure and arrival times",
-        "progress": "Status and expected arrival",
-        "aircraft": "Aircraft type",
-        "lastPosition": "Last position (only if your phone sends flight paths to the server)"
-      },
       "trip": {
         "owner": "Your first name",
         "name": "Trip name",
         "dates": "Dates",
+        "flights": "Flights (airline, flight number, airports, times, terminal and gate)",
+        "stays": "Stays (name, address, check-in and check-out)",
+        "transport": "Train, bus, ferry, rental car and cruise",
+        "places": "Places visited and stops",
         "totals": "Totals (flights, km, countries, days)",
         "countries": "Countries",
-        "route": "Exact route",
-        "costs": "Costs",
-        "companions": "Companions",
+        "route": "Route on one line",
         "photos": "Photos (up to 12, without location data)",
-        "notes": "Notes (only those marked shareable, without photos or coordinates)",
-        "itinerary": "Itinerary (who is where, when)"
+        "itinerary": "Itinerary (all sections)"
       },
       "wrapped": {
         "owner": "Your first name",
         "totals": "The year's totals",
         "topAirline": "Most-flown airline",
         "topRoute": "Most-flown route"
-      },
-      "cruise": {
-        "owner": "Your first name",
-        "ship": "Ship and cruise line",
-        "dates": "Dates",
-        "ports": "Ports and sea days"
-      },
-      "stay": {
-        "owner": "Your first name",
-        "name": "Name of the lodging",
-        "location": "Address, city and country",
-        "dates": "Check-in and check-out"
-      },
-      "visit": {
-        "owner": "Your first name",
-        "place": "Place (name, city, country)",
-        "date": "Date of the visit",
-        "rating": "Your rating (stars)"
       }
     },
     "view": {
-      "phase": {
-        "scheduled": "Scheduled",
-        "inFlight": "In the air",
-        "landed": "Landed",
-        "cancelled": "Cancelled",
-        "unknown": "Status unknown"
-      },
-      "eta": "Arrival (expected)",
-      "departure": "Departure",
-      "arrival": "Arrival",
-      "noPosition": "No position sent yet",
       "flights": "Flights",
       "km": "km",
       "cruises": "Cruises",
@@ -519,13 +483,8 @@
       "countries": "Countries",
       "days": "Days",
       "photos": "{{count}} photos",
-      "incomplete": "not every entry has a price",
       "none": "—",
       "year": "Year {{year}}",
-      "noNotes": "No shareable note on these days",
-      "moreNotes": "more not shown",
-      "notes_one": "{{count}} shareable note",
-      "notes_other": "{{count}} shareable notes",
       "itinerary": {
         "title": "Itinerary",
         "empty": "No entries yet.",
@@ -543,20 +502,9 @@
           "rental": "Rental car",
           "visit": "Visit",
           "stop": "Stop"
-        }
-      },
-      "entry": {
-        "ship": "Ship",
-        "cruiseLine": "Cruise line",
-        "ports": "Ports",
-        "seaDay": "At sea",
-        "dayWord": "Day",
-        "checkIn": "Check-in",
-        "checkOut": "Check-out",
-        "address": "Address",
-        "when": "When",
-        "rating": "Rating",
-        "ofFive": "of 5"
+        },
+        "terminal": "Terminal {{value}}",
+        "gate": "Gate {{value}}"
       }
     },
     "section": {
@@ -578,7 +526,8 @@
       "revoked": "Link revoked – it no longer works.",
       "loadFailed": "The links could not be loaded.",
       "saveFailed": "The switch could not be saved.",
-      "title": "Public links"
+      "title": "Public links",
+      "retired": "no longer available – delete only"
     },
     "errors": {
       "disabled": "Public links are switched off on this instance.",

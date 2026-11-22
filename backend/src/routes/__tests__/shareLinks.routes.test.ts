@@ -5,8 +5,12 @@ import { prisma } from "../../db";
 import { setClockForTests } from "../../shared/time/clock";
 import { afterDatabaseRestore } from "../../services/backup/backupRestore";
 import { updateInstanceSettings } from "../../services/instanceSettingsService";
-import { shareTokenHash } from "../../services/shareLinks/token";
-import { SHARE_LINK_FIELDS, SHARE_LINK_MAX_ACTIVE } from "../../schemas/shareLinks";
+import { generateShareToken, shareTokenHash } from "../../services/shareLinks/token";
+import {
+  SHARE_LINK_FIELDS,
+  SHARE_LINK_ITINERARY_SECTIONS,
+  SHARE_LINK_MAX_ACTIVE,
+} from "../../schemas/shareLinks";
 import adminRoutes from "../admin";
 import settingsRoutes from "../settings";
 import {
@@ -107,8 +111,8 @@ afterAll(async () => {
 describe("owner side", () => {
   it("refuses to create while the instance switch is off, and says so in the list", async () => {
     await setSwitch(false);
-    const flight = await makeFlight(anna.id);
-    const res = await create(anna, { kind: "flight", targetId: flight.id, fields: ["progress"] });
+    const trip = await makeTrip(anna.id);
+    const res = await create(anna, { kind: "trip", targetId: trip.id, fields: ["name"] });
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("SHARE_LINKS_DISABLED");
     const list = await request(app).get("/api/v1/share-links").set("Cookie", anna.cookie);
@@ -120,8 +124,8 @@ describe("owner side", () => {
   });
 
   it("hands out a fragment URL once and stores only the token's hash", async () => {
-    const flight = await makeFlight(anna.id);
-    const res = await create(anna, { kind: "flight", targetId: flight.id, fields: ["progress"] });
+    const trip = await makeTrip(anna.id);
+    const res = await create(anna, { kind: "trip", targetId: trip.id, fields: ["name"] });
     expect(res.status).toBe(201);
     const { url, token } = res.body.data;
     expect(token).toMatch(/^ts_share_[A-Za-z0-9_-]{43}$/);
@@ -137,41 +141,75 @@ describe("owner side", () => {
     expect(list.body.data.links).toHaveLength(1);
     expect(JSON.stringify(list.body)).not.toContain(token);
     expect(JSON.stringify(list.body)).not.toContain(row.tokenHash);
-    // A flight link ends two hours after the arrival, before the chosen week.
-    expect(list.body.data.links[0].effectiveExpiresAt).toBe("2030-06-01T22:00:00.000Z");
+    // Without an itinerary nothing shortens the owner's own week.
+    expect(list.body.data.links[0].effectiveExpiresAt).toBe(IN_A_WEEK);
+    expect(list.body.data.links[0].retired).toBe(false);
   });
 
   it("refuses a field outside the kind's allow-list", async () => {
-    const flight = await makeFlight(anna.id);
-    for (const fields of [["photos"], ["seatNumber"], ["bookingReference"], []]) {
-      const res = await create(anna, { kind: "flight", targetId: flight.id, fields });
+    const trip = await makeTrip(anna.id);
+    for (const fields of [["progress"], ["seatNumber"], ["bookingReference"], []]) {
+      const res = await create(anna, { kind: "trip", targetId: trip.id, fields });
       expect(res.status).toBe(400);
     }
     expect(await prisma.publicShareLink.count({ where: { userId: anna.id } })).toBe(0);
   });
 
-  it("answers another account's target and link like missing ones", async () => {
+  it("refuses a new flight, cruise, stay or visit link — those kinds are retired (2026-11-22)", async () => {
     const flight = await makeFlight(anna.id);
-    const theirs = await create(eve, { kind: "flight", targetId: flight.id, fields: ["progress"] });
+    const { ids } = await makeItineraryTrip(anna.id);
+    const targets = { flight: flight.id, stay: ids[4], cruise: ids[9], visit: ids[11] };
+    for (const [kind, targetId] of Object.entries(targets)) {
+      for (const path of ["/api/v1/share-links", "/api/v1/share-links/preview"]) {
+        const res = await request(app)
+          .post(path)
+          .set("Cookie", anna.cookie)
+          .send({ kind, targetId, fields: ["owner"], expiresAt: IN_A_WEEK });
+        expect(res.status).toBe(400);
+      }
+    }
+    expect(await prisma.publicShareLink.count({ where: { userId: anna.id } })).toBe(0);
+  });
+
+  it("accepts the retired trip fields an installed app still offers, and stores none of them", async () => {
+    const trip = await makeTrip(anna.id);
+    await makeFlight(anna.id, trip.id);
+    const res = await create(anna, {
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["name", "costs", "companions", "notes"],
+    });
+    expect(res.status).toBe(201);
+    const row = await prisma.publicShareLink.findUniqueOrThrow({ where: { id: res.body.data.id } });
+    expect(row.fields).toEqual(["name"]);
+    const body = JSON.stringify((await view(res.body.data.token).expect(200)).body);
+    for (const absent of ["987.65", "Gina Guest", "PRIVATE trip note", '"costs"', '"notes"']) {
+      expect(body).not.toContain(absent);
+    }
+  });
+
+  it("answers another account's target and link like missing ones", async () => {
+    const trip = await makeTrip(anna.id);
+    const theirs = await create(eve, { kind: "trip", targetId: trip.id, fields: ["name"] });
     expect(theirs.status).toBe(404);
     expect(theirs.body.code).toBe("SHARE_LINK_NOT_FOUND");
 
     const { token, id } = await tokenFor(anna, {
-      kind: "flight",
-      targetId: flight.id,
-      fields: ["progress"],
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["name"],
     });
     await request(app).delete(`/api/v1/share-links/${id}`).set("Cookie", eve.cookie).expect(404);
     expect((await view(token)).status).toBe(200);
   });
 
   it("refuses an expiry in the past or beyond 90 days", async () => {
-    const flight = await makeFlight(anna.id);
+    const trip = await makeTrip(anna.id);
     for (const expiresAt of ["2030-06-01T09:00:00Z", "2030-09-01T10:00:00Z"]) {
       const res = await create(anna, {
-        kind: "flight",
-        targetId: flight.id,
-        fields: ["progress"],
+        kind: "trip",
+        targetId: trip.id,
+        fields: ["name"],
         expiresAt,
       });
       expect(res.status).toBe(400);
@@ -179,18 +217,18 @@ describe("owner side", () => {
     }
   });
 
-  it("uses server time for a 90-day lifetime and caps a next-week flight at arrival plus two hours", async () => {
-    const flight = await makeFlight(anna.id);
-    // Move the server clock back a week: the fixture is now next week's flight.
+  it("uses server time for a 90-day lifetime and caps an itinerary a week after the trip", async () => {
+    const trip = await makeTrip(anna.id);
+    // Move the server clock back a week: the fixture is now next week's trip.
     setClockForTests("2030-05-25T10:00:00.000Z");
     // The previous UI used the browser clock. Five minutes ahead crosses the server cap.
     const skewedExpiry = new Date(
       Date.parse("2030-05-25T10:05:00.000Z") + 90 * 86400000
     ).toISOString();
     const skewed = await create(anna, {
-      kind: "flight",
-      targetId: flight.id,
-      fields: ["route"],
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["flights"],
       expiresAt: skewedExpiry,
     });
     expect(skewed.status).toBe(400);
@@ -198,18 +236,19 @@ describe("owner side", () => {
     const res = await request(app)
       .post("/api/v1/share-links")
       .set("Cookie", anna.cookie)
-      .send({ kind: "flight", targetId: flight.id, fields: ["route"], expiresInDays: 90 });
+      .send({ kind: "trip", targetId: trip.id, fields: ["flights"], expiresInDays: 90 });
     expect(res.status).toBe(201);
     expect(res.body.data.expiresAt).toBe(
       new Date(Date.parse("2030-05-25T10:00:00.000Z") + 90 * 86400000).toISOString()
     );
-    expect(res.body.data.effectiveExpiresAt).toBe("2030-06-01T22:00:00.000Z");
+    // Last day 8 June in New York ends at 9 June 04:00Z; plus seven days.
+    expect(res.body.data.effectiveExpiresAt).toBe("2030-06-16T04:00:00.000Z");
     const row = await prisma.publicShareLink.findUniqueOrThrow({ where: { id: res.body.data.id } });
     expect(row.expiresAt.toISOString()).toBe(res.body.data.expiresAt);
   });
 
   it("rejects missing, conflicting and out-of-range lifetimes", async () => {
-    const flight = await makeFlight(anna.id);
+    const trip = await makeTrip(anna.id);
     for (const expiry of [
       {},
       { expiresInDays: 0 },
@@ -220,17 +259,9 @@ describe("owner side", () => {
       const res = await request(app)
         .post("/api/v1/share-links")
         .set("Cookie", anna.cookie)
-        .send({ kind: "flight", targetId: flight.id, fields: ["route"], ...expiry });
+        .send({ kind: "trip", targetId: trip.id, fields: ["route"], ...expiry });
       expect(res.status).toBe(400);
     }
-  });
-
-  it("refuses a flight that has already landed", async () => {
-    const flight = await makeFlight(anna.id);
-    setClockForTests("2030-06-01T23:00:00Z");
-    const res = await create(anna, { kind: "flight", targetId: flight.id, fields: ["progress"] });
-    expect(res.status).toBe(409);
-    expect(res.body.code).toBe("SHARE_LINK_FLIGHT_LANDED");
   });
 
   it(`stops at ${SHARE_LINK_MAX_ACTIVE} live links`, async () => {
@@ -291,15 +322,15 @@ describe("the instance switch", () => {
     const get = () =>
       request(settingsApp).get("/api/v1/admin/instance-settings").set("Cookie", eve.cookie);
     expect((await get()).body.shareLinkStats).toEqual({ links: 0, accounts: 0 });
-    const a1 = await makeFlight(anna.id);
-    const a2 = await makeFlight(anna.id);
-    const e1 = await makeFlight(eve.id);
-    for (const [owner, flight] of [
+    const a1 = await makeTrip(anna.id);
+    const a2 = await makeTrip(anna.id);
+    const e1 = await makeTrip(eve.id);
+    for (const [owner, trip] of [
       [anna, a1],
       [anna, a2],
       [eve, e1],
     ] as const) {
-      await tokenFor(owner, { kind: "flight", targetId: flight.id, fields: ["progress"] });
+      await tokenFor(owner, { kind: "trip", targetId: trip.id, fields: ["name"] });
     }
     expect((await get()).body.shareLinkStats).toEqual({ links: 3, accounts: 2 });
     await request(settingsApp)
@@ -367,12 +398,8 @@ describe("public side — one answer for every failure", () => {
     expect((await view(expiring.token)).body).toEqual(reference.body);
     setClockForTests(NOW);
 
-    // Orphaned: the flight deleted takes its link with it.
-    const flightLink = await tokenFor(anna, {
-      kind: "flight",
-      targetId: flight.id,
-      fields: ["progress"],
-    });
+    // Orphaned: the flight deleted takes its (retired) link with it — a 404, not a 410.
+    const flightLink = await retiredLink(anna.id, { kind: "flight", flightId: flight.id });
     await prisma.flight.delete({ where: { id: flight.id } });
     expect((await view(flightLink.token)).body).toEqual(reference.body);
 
@@ -436,164 +463,84 @@ describe("public side — one answer for every failure", () => {
   });
 });
 
-describe("flight links", () => {
-  it("a landed flight's link leaves the active count, and the count and the list agree", async () => {
-    await prisma.publicShareLink.createMany({
-      data: Array.from({ length: SHARE_LINK_MAX_ACTIVE - 1 }, (_, i) => ({
-        userId: anna.id,
-        kind: "wrapped",
-        year: 2000 + i,
-        fields: ["totals"],
-        tokenHash: `landed-test-${anna.id}-${i}`,
-        expiresAt: new Date("2030-06-20T10:00:00Z"),
-        effectiveExpiresAt: new Date("2030-06-20T10:00:00Z"),
-      })),
-    });
-    const flight = await makeFlight(anna.id);
-    await tokenFor(anna, { kind: "flight", targetId: flight.id, fields: ["progress"] });
-
-    setClockForTests("2030-06-02T10:00:00Z");
-    const list = await request(app).get("/api/v1/share-links").set("Cookie", anna.cookie);
-    expect(list.body.data.links).toHaveLength(SHARE_LINK_MAX_ACTIVE - 1);
-    const trip = await makeTrip(anna.id);
-    expect((await create(anna, { kind: "trip", targetId: trip.id, fields: ["name"] })).status).toBe(
-      201
-    );
+/** A link of a retired kind as it was stored before 2026-11-22 — creation now refuses one. */
+async function retiredLink(
+  userId: string,
+  target: {
+    kind: "flight" | "cruise" | "stay" | "visit";
+    flightId?: string;
+    cruiseId?: string;
+    lodgingStayId?: string;
+    placeVisitId?: string;
+  },
+  expiresAt = IN_A_WEEK
+): Promise<{ token: string; id: string }> {
+  const { token, tokenHash } = generateShareToken();
+  const row = await prisma.publicShareLink.create({
+    data: {
+      userId,
+      ...target,
+      fields: ["owner"],
+      tokenHash,
+      expiresAt: new Date(expiresAt),
+      effectiveExpiresAt: new Date(expiresAt),
+    },
   });
+  return { token, id: row.id };
+}
 
-  it("an ended flight link never comes back when the flight is moved later", async () => {
+describe("retired kinds: flight, cruise, stay, visit (owner decision 2026-11-22)", () => {
+  const oldLinks = async () => {
     const flight = await makeFlight(anna.id);
-    const { token } = await tokenFor(anna, {
-      kind: "flight",
-      targetId: flight.id,
-      fields: ["progress"],
-    });
-    setClockForTests("2030-06-02T10:00:00Z");
-    await prisma.flight.update({
-      where: { id: flight.id },
-      data: {
-        departureTime: new Date("2030-06-05T12:00:00Z"),
-        arrivalTime: new Date("2030-06-05T20:00:00Z"),
-      },
-    });
-    expect((await view(token)).status).toBe(404);
-  });
+    const { ids } = await makeItineraryTrip(anna.id);
+    return [
+      await retiredLink(anna.id, { kind: "flight", flightId: flight.id }),
+      await retiredLink(anna.id, { kind: "stay", lodgingStayId: ids[4] }),
+      await retiredLink(anna.id, { kind: "cruise", cruiseId: ids[9] }),
+      await retiredLink(anna.id, { kind: "visit", placeVisitId: ids[11] }),
+    ];
+  };
 
-  it("shows the phase and ETA from the schedule and ends two hours after landing", async () => {
-    const flight = await makeFlight(anna.id);
-    const { token } = await tokenFor(anna, {
-      kind: "flight",
-      targetId: flight.id,
-      fields: ["progress"],
-    });
-    expect((await view(token)).body.data.view.flight.progress).toMatchObject({
-      phase: "scheduled",
-      basis: "schedule",
-    });
-
-    setClockForTests("2030-06-01T16:00:00Z");
-    const mid = (await view(token)).body.data.view.flight.progress;
-    expect(mid.phase).toBe("inFlight");
-    expect(mid.fraction).toBeCloseTo(0.5, 2);
-    // 20:00Z is 16:00 on the arrival airport's clock (EDT).
-    expect(mid.eta).toMatchObject({ zone: "America/New_York", local: "2030-06-01T16:00:00" });
-
-    setClockForTests("2030-06-01T21:00:00Z");
-    expect((await view(token)).body.data.view.flight.progress.phase).toBe("landed");
-
-    setClockForTests("2030-06-01T22:00:01Z");
-    expect((await view(token)).status).toBe(404);
-  });
-
-  it("shows a position only when chosen, and only one the phone actually sent", async () => {
-    const flight = await makeFlight(anna.id);
-    const withPosition = await tokenFor(anna, {
-      kind: "flight",
-      targetId: flight.id,
-      fields: ["lastPosition"],
-    });
-    const without = await tokenFor(anna, {
-      kind: "flight",
-      targetId: flight.id,
-      fields: ["progress"],
-    });
-    expect((await view(withPosition.token)).body.data.view.flight).toEqual({ lastPosition: null });
-
-    await prisma.flightTrack.create({
-      data: {
-        flightId: flight.id,
-        source: "companion",
-        uploadId: "sharelink-test-upload",
-        startedAt: new Date("2030-06-01T12:05:00Z"),
-        endedAt: new Date("2030-06-01T13:30:00Z"),
-        geometry: [
-          [8.56, 50.03],
-          [-20.5, 55.25],
-        ],
-        segmentStarts: [0],
-        cumulativeKm: [0, 2000],
-        pointCount: 2,
-        distanceKm: 2000,
-      },
-    });
-    expect((await view(withPosition.token)).body.data.view.flight.lastPosition).toEqual({
-      lat: 55.25,
-      lon: -20.5,
-      recordedAt: "2030-06-01T13:30:00.000Z",
-    });
-    const plain = (await view(without.token)).body.data.view.flight;
-    expect(plain).not.toHaveProperty("lastPosition");
-    expect(JSON.stringify(plain)).not.toContain("55.25");
-  });
-
-  // Security review of TravTrack T5: the last position leaves through the
-  // owner's privacy cut like every other read of a recording.
-  it("never reveals a position inside one of the owner's privacy zones", async () => {
-    const flight = await makeFlight(anna.id);
-    const link = await tokenFor(anna, {
-      kind: "flight",
-      targetId: flight.id,
-      fields: ["lastPosition"],
-    });
-    await prisma.flightTrack.create({
-      data: {
-        flightId: flight.id,
-        source: "companion",
-        uploadId: "sharelink-zone-upload",
-        startedAt: new Date("2030-06-01T12:05:00Z"),
-        endedAt: new Date("2030-06-01T13:30:00Z"),
-        geometry: [
-          [8.56, 50.03],
-          [8.6, 50.05],
-          [13.4, 52.52],
-        ],
-        segmentStarts: [0],
-        cumulativeKm: [0, 4, 430],
-        pointCount: 3,
-        distanceKm: 430,
-      },
-    });
-    await prisma.travTrackPrivacyZone.create({
-      data: { userId: anna.id, name: "Zuhause", lat: 52.52, lon: 13.4, radiusM: 500 },
-    });
-    try {
-      // The last vertex lies in the zone; the last one left is the one before the
-      // chord, and the recording's end time belongs to the hidden fix: no time.
-      expect((await view(link.token)).body.data.view.flight.lastPosition).toEqual({
-        lat: 50.05,
-        lon: 8.6,
-        recordedAt: null,
+  it("answers a live old link with 410 'no longer available' — no view, no 500", async () => {
+    for (const link of await oldLinks()) {
+      const res = await view(link.token);
+      expect(res.status).toBe(410);
+      expect(res.body).toEqual({
+        error: "This link is no longer available",
+        code: "SHARE_LINK_RETIRED",
       });
-      await prisma.travTrackPrivacyZone.create({
-        data: { userId: anna.id, name: "Abflug", lat: 50.04, lon: 8.58, radiusM: 5000 },
-      });
-      // Nothing left of the line: no position at all.
-      const body = (await view(link.token)).body.data.view.flight;
-      expect(body.lastPosition).toBeNull();
-      expect(JSON.stringify(body)).not.toContain("52.52");
-    } finally {
-      await prisma.travTrackPrivacyZone.deleteMany({ where: { userId: anna.id } });
+      expect(res.headers["cache-control"]).toBe("no-store");
+      expect((await photo(link.token, 0)).status).toBe(404);
     }
+    const rows = await prisma.publicShareLink.findMany({ where: { userId: anna.id } });
+    expect(rows.every((r) => r.viewCount === 0)).toBe(true);
+  });
+
+  it("answers an expired old link like any dead link", async () => {
+    const flight = await makeFlight(anna.id);
+    const link = await retiredLink(
+      anna.id,
+      { kind: "flight", flightId: flight.id },
+      "2030-06-01T11:00:00Z"
+    );
+    setClockForTests("2030-06-01T11:00:01Z");
+    const res = await view(link.token);
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("SHARE_LINK_NOT_FOUND");
+  });
+
+  it("still lists old links for their owner, marked retired, and lets the owner delete them", async () => {
+    const links = await oldLinks();
+    const list = await request(app).get("/api/v1/share-links").set("Cookie", anna.cookie);
+    expect(list.status).toBe(200);
+    const listed = list.body.data.links as Array<{ id: string; kind: string; retired: boolean }>;
+    expect(listed.map((l) => l.kind).sort()).toEqual(["cruise", "flight", "stay", "visit"]);
+    expect(listed.every((l) => l.retired)).toBe(true);
+    await request(app)
+      .delete(`/api/v1/share-links/${links[0].id}`)
+      .set("Cookie", anna.cookie)
+      .expect(200);
+    expect((await view(links[0].token)).status).toBe(404);
   });
 });
 
@@ -628,8 +575,9 @@ describe("the field allow-list decides the payload", () => {
     await wrappedYear(owner.id);
     return { flight: flight.id, trip: trip.id, wrapped: "2029" } as const;
   };
+  const SECTIONS: readonly string[] = SHARE_LINK_ITINERARY_SECTIONS;
 
-  it.each(["flight", "trip", "wrapped"] as const)(
+  it.each(["trip", "wrapped"] as const)(
     "a %s link carries each chosen field and nothing else",
     async (kind) => {
       const ids = await targets(anna);
@@ -637,14 +585,15 @@ describe("the field allow-list decides the payload", () => {
         const { token } = await tokenFor(anna, { kind, targetId: ids[kind], fields: [field] });
         const res = await view(token).expect(200);
         const payload = res.body.data.view[kind];
-        const expected = kind === "wrapped" ? ["year", field].sort() : [field];
+        const shown = field === "itinerary" || SECTIONS.includes(field) ? "itinerary" : field;
+        const expected = kind === "wrapped" ? ["year", field].sort() : [shown];
         expect(Object.keys(payload).sort()).toEqual(expected);
         await prisma.publicShareLink.deleteMany({ where: { userId: anna.id } });
       }
     }
   );
 
-  it.each(["flight", "trip", "wrapped"] as const)(
+  it.each(["trip", "wrapped"] as const)(
     "a %s link with every field still carries no private value, id or surname",
     async (kind) => {
       const ids = await targets(anna);
@@ -762,91 +711,42 @@ describe("the field allow-list decides the payload", () => {
     ]);
   });
 
-  it("names cost and companions only when they were chosen", async () => {
+  it("never names a cost or a companion, whatever was chosen (2026-11-22)", async () => {
     const ids = await targets(anna);
-    const bare = await tokenFor(anna, {
-      kind: "trip",
-      targetId: ids.trip,
-      fields: ["name", "totals", "route"],
-    });
-    const body = JSON.stringify((await view(bare.token)).body);
-    expect(body).not.toContain("987.65");
-    expect(body).not.toContain("Gina Guest");
-
     const full = await tokenFor(anna, {
       kind: "trip",
       targetId: ids.trip,
-      fields: ["costs", "companions"],
+      fields: [...SHARE_LINK_FIELDS.trip, "costs", "companions"],
     });
-    const trip = (await view(full.token)).body.data.view.trip;
-    expect(trip.companions).toEqual(["Gina Guest"]);
-    expect(trip.costs).not.toBeNull();
-  });
-});
-
-describe("trip notes (forgejo#146)", () => {
-  const shareableNote = (userId: string, body: string, utc: string) =>
-    prisma.note.create({
-      data: {
-        userId,
-        body,
-        occurredAt: new Date(utc),
-        occurredZone: "America/New_York",
-        placeName: "Brooklyn Bridge",
-        lat: 40.7061,
-        lon: -73.9969,
-        visibility: "shareable",
-      },
-    });
-
-  it("carries the owner's shareable notes on the trip's days — never a private one", async () => {
-    const trip = await makeTrip(anna.id);
-    await shareableNote(anna.id, "Sunset on the bridge", "2030-06-04T23:30:00Z");
-    // After the trip on its own clock (the 9th in New York), and Eve's note.
-    await shareableNote(anna.id, "Back home", "2030-06-09T14:00:00Z");
-    await shareableNote(eve.id, "Eve's shareable line", "2030-06-04T12:00:00Z");
-
-    const { token } = await tokenFor(anna, { kind: "trip", targetId: trip.id, fields: ["notes"] });
-    const res = await view(token).expect(200);
-    const notes = res.body.data.view.trip.notes;
-    expect(notes.truncated).toBe(false);
-    expect(notes.items).toEqual([
-      {
-        body: "Sunset on the bridge",
-        placeName: "Brooklyn Bridge",
-        at: expect.objectContaining({ local: "2030-06-04T19:30:00", zone: "America/New_York" }),
-        day: { date: "2030-06-04", zone: "America/New_York", precision: "day" },
-      },
-    ]);
-    const body = JSON.stringify(res.body);
-    for (const absent of [
-      "PRIVATE standalone note",
-      "Back home",
-      "Eve's shareable line",
-      "40.7061",
-    ]) {
+    const body = JSON.stringify((await view(full.token)).body);
+    for (const absent of ["987.65", "Gina Guest", '"costs"', '"companions"']) {
       expect(body).not.toContain(absent);
     }
   });
+});
 
-  it("re-reads the flag on every view: a note made private disappears at once", async () => {
+describe("trip notes (forgejo#146, retired 2026-11-22)", () => {
+  it("carries no note — not even a shareable one, and not for a link that once chose notes", async () => {
     const trip = await makeTrip(anna.id);
-    const shared = await shareableNote(anna.id, "Was shareable", "2030-06-04T16:00:00Z");
-    const { token } = await tokenFor(anna, { kind: "trip", targetId: trip.id, fields: ["notes"] });
-    expect((await view(token)).body.data.view.trip.notes.items).toHaveLength(1);
-    await prisma.note.update({ where: { id: shared.id }, data: { visibility: "private" } });
-    expect((await view(token)).body.data.view.trip.notes.items).toEqual([]);
-  });
-
-  it("names no note when notes were not chosen", async () => {
-    const trip = await makeTrip(anna.id);
-    await shareableNote(anna.id, "Sunset on the bridge", "2030-06-04T23:30:00Z");
-    const { token } = await tokenFor(anna, {
-      kind: "trip",
-      targetId: trip.id,
-      fields: ["name", "dates"],
+    await prisma.note.create({
+      data: {
+        userId: anna.id,
+        body: "Sunset on the bridge",
+        occurredAt: new Date("2030-06-04T23:30:00Z"),
+        occurredZone: "America/New_York",
+        placeName: "Brooklyn Bridge",
+        visibility: "shareable",
+      },
     });
-    expect(JSON.stringify((await view(token)).body)).not.toContain("Sunset on the bridge");
+    // A link made before the change, with `notes` stored among its fields.
+    const old = await tokenFor(anna, { kind: "trip", targetId: trip.id, fields: ["name"] });
+    await prisma.publicShareLink.update({
+      where: { id: old.id },
+      data: { fields: ["name", "notes", "costs", "companions"] },
+    });
+    const res = await view(old.token).expect(200);
+    expect(Object.keys(res.body.data.view.trip)).toEqual(["name"]);
+    expect(JSON.stringify(res.body)).not.toContain("Sunset on the bridge");
   });
 });
 
@@ -1038,6 +938,87 @@ describe("trip itinerary (forgejo#302)", () => {
     }
   });
 
+  it("shows only the sections the owner chose (flights, stays, transport, places)", async () => {
+    const { trip } = await makeItineraryTrip(anna.id);
+    const kindsFor = async (fields: string[]) => {
+      const { token } = await tokenFor(anna, { kind: "trip", targetId: trip.id, fields });
+      const itinerary = await itineraryOf(token);
+      await prisma.publicShareLink.deleteMany({ where: { userId: anna.id } });
+      return {
+        sections: itinerary.sections,
+        kinds: itinerary.items.map((i: { kind: string }) => i.kind),
+      };
+    };
+    expect(await kindsFor(["flights"])).toEqual({ sections: ["flights"], kinds: ["flight"] });
+    expect(await kindsFor(["stays"])).toEqual({ sections: ["stays"], kinds: ["stay"] });
+    expect(await kindsFor(["transport"])).toEqual({
+      sections: ["transport"],
+      kinds: ["rail", "bus", "ferry", "rental", "cruise"],
+    });
+    expect(await kindsFor(["places"])).toEqual({ sections: ["places"], kinds: ["visit", "stop"] });
+    // The default of the dialog: flights, stays and transport.
+    expect((await kindsFor(["name", "flights", "stays", "transport"])).kinds).toEqual([
+      "flight",
+      "stay",
+      "rail",
+      "bus",
+      "ferry",
+      "rental",
+      "cruise",
+    ]);
+    // A link of before 2026-11-22 names `itinerary` alone: all four sections.
+    expect((await kindsFor(["itinerary"])).sections).toEqual([
+      "flights",
+      "stays",
+      "transport",
+      "places",
+    ]);
+    // No section, no itinerary at all.
+    const { token } = await tokenFor(anna, { kind: "trip", targetId: trip.id, fields: ["name"] });
+    expect((await view(token).expect(200)).body.data.view.trip.itinerary).toBeUndefined();
+  });
+
+  it("names a flight's terminal and gate, never its PNR, price, note or document", async () => {
+    const { trip, ids } = await makeItineraryTrip(anna.id);
+    await prisma.document.create({
+      data: {
+        userId: anna.id,
+        flightId: ids[1],
+        storedName: "sharelink-test-boarding.pdf",
+        originalName: "PRIVATE-boarding-pass.pdf",
+        mimetype: "application/pdf",
+        sizeBytes: 1234,
+        sha256: "f".repeat(64),
+        format: "pdf",
+      },
+    });
+    const { token } = await tokenFor(anna, {
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["name", "dates", "flights", "stays", "transport", "places"],
+    });
+    const res = await view(token).expect(200);
+    expect(res.body.data.view.trip.itinerary.items[0]).toMatchObject({
+      kind: "flight",
+      terminal: "1",
+      gate: "B12",
+    });
+    const body = JSON.stringify(res.body);
+    for (const secret of [
+      "PNR-XYZ123",
+      "987.65",
+      "PRIVATE flight note",
+      "PRIVATE trip note",
+      "PRIVATE-boarding-pass",
+      "sharelink-test-boarding",
+      "FF-MILES-998877",
+      "Coraline Copassenger",
+      ...NEVER_ON_ITINERARY,
+    ]) {
+      expect(body).not.toContain(secret);
+    }
+  });
+
   it("leaves cancelled entries out", async () => {
     const { trip } = await makeItineraryTrip(anna.id);
     const { token } = await tokenFor(anna, {
@@ -1089,19 +1070,21 @@ describe("trip itinerary (forgejo#302)", () => {
     expect(after.items.some((i: { kind: string }) => i.kind === "rail")).toBe(false);
   });
 
-  it("ends by itself a day after the trip's last local day", async () => {
+  it("ends by itself a week after the trip's last local day", async () => {
     const { trip } = await makeItineraryTrip(anna.id);
     const res = await request(app)
       .post("/api/v1/share-links")
       .set("Cookie", anna.cookie)
       .send({ kind: "trip", targetId: trip.id, fields: ["itinerary"], expiresInDays: 90 })
       .expect(201);
-    // Last day 8 June in New York ends at 9 June 04:00Z; plus 24 hours.
-    expect(res.body.data.effectiveExpiresAt).toBe("2030-06-10T04:00:00.000Z");
+    // Last day 8 June in New York ends at 9 June 04:00Z; plus seven days.
+    expect(res.body.data.effectiveExpiresAt).toBe("2030-06-16T04:00:00.000Z");
     expect((await view(res.body.data.token).expect(200)).body.data.expiresAt).toBe(
-      "2030-06-10T04:00:00.000Z"
+      "2030-06-16T04:00:00.000Z"
     );
-    setClockForTests("2030-06-10T04:00:01Z");
+    setClockForTests("2030-06-15T12:00:00Z");
+    expect((await view(res.body.data.token)).status).toBe(200);
+    setClockForTests("2030-06-16T04:00:01Z");
     expect((await view(res.body.data.token)).status).toBe(404);
   });
 
@@ -1111,12 +1094,14 @@ describe("trip itinerary (forgejo#302)", () => {
       kind: "trip",
       targetId: trip.id,
       fields: ["itinerary"],
+      expiresAt: "2030-08-01T00:00:00Z",
     });
     await prisma.trip.update({
       where: { id: trip.id },
       data: { endDay: new Date("2030-06-02T00:00:00Z") },
     });
-    setClockForTests("2030-06-04T05:00:00Z");
+    // 2 June in New York ends at 3 June 04:00Z; a week later the link is gone.
+    setClockForTests("2030-06-10T05:00:00Z");
     expect((await view(token)).status).toBe(404);
     await prisma.trip.update({
       where: { id: trip.id },
@@ -1127,12 +1112,12 @@ describe("trip itinerary (forgejo#302)", () => {
 
   it("refuses an itinerary for a trip that has ended — a link without one still works", async () => {
     const { trip } = await makeItineraryTrip(anna.id);
-    setClockForTests("2030-06-11T00:00:00Z");
+    setClockForTests("2030-06-17T00:00:00Z");
     const refused = await create(anna, {
       kind: "trip",
       targetId: trip.id,
-      fields: ["name", "itinerary"],
-      expiresAt: "2030-06-20T00:00:00Z",
+      fields: ["name", "stays"],
+      expiresAt: "2030-06-25T00:00:00Z",
     });
     expect(refused.status).toBe(409);
     expect(refused.body.code).toBe("SHARE_LINK_TRIP_ENDED");
@@ -1140,7 +1125,7 @@ describe("trip itinerary (forgejo#302)", () => {
       kind: "trip",
       targetId: trip.id,
       fields: ["name"],
-      expiresAt: "2030-06-20T00:00:00Z",
+      expiresAt: "2030-06-25T00:00:00Z",
     });
     expect(plain.status).toBe(201);
   });
@@ -1148,7 +1133,7 @@ describe("trip itinerary (forgejo#302)", () => {
   describe("a trip without dates of its own (forgejo#317)", () => {
     const undated = { startDay: null, endDay: null, startDate: null, endDate: null };
 
-    it("ends a day after its entries' last local day", async () => {
+    it("ends a week after its entries' last local day", async () => {
       const trip = await prisma.trip.create({ data: { userId: anna.id, name: "Undated" } });
       await makeFlight(anna.id, trip.id); // lands 1 June 20:00Z, 16:00 in New York
       const res = await create(anna, {
@@ -1158,8 +1143,8 @@ describe("trip itinerary (forgejo#302)", () => {
         expiresAt: "2030-06-20T00:00:00Z",
       });
       expect(res.status).toBe(201);
-      // 1 June in New York ends at 2 June 04:00Z; plus 24 hours.
-      expect(res.body.data.effectiveExpiresAt).toBe("2030-06-03T04:00:00.000Z");
+      // 1 June in New York ends at 2 June 04:00Z; plus seven days.
+      expect(res.body.data.effectiveExpiresAt).toBe("2030-06-09T04:00:00.000Z");
     });
 
     it("refuses an itinerary when every entry lies in the past", async () => {
@@ -1212,146 +1197,16 @@ describe("trip itinerary (forgejo#302)", () => {
         fields: ["itinerary"],
         expiresAt: "2030-06-20T00:00:00Z",
       });
-      expect(res.body.data.effectiveExpiresAt).toBe("2030-06-03T04:00:00.000Z");
+      expect(res.body.data.effectiveExpiresAt).toBe("2030-06-09T04:00:00.000Z");
     });
 
     it("with no dated entry either, keeps the owner's own expiry", async () => {
       // Nothing on the trip names a day, so there is no end to derive: the
       // link stays open until the owner's chosen expiry (abstention, not a guess).
       const trip = await prisma.trip.create({ data: { userId: anna.id, name: "Empty" } });
-      const res = await create(anna, { kind: "trip", targetId: trip.id, fields: ["itinerary"] });
+      const res = await create(anna, { kind: "trip", targetId: trip.id, fields: ["flights"] });
       expect(res.status).toBe(201);
       expect(res.body.data.effectiveExpiresAt).toBe(IN_A_WEEK);
     });
-  });
-});
-
-// forgejo#405 item 9: the single-entry link, for a cruise, a lodging stay and
-// a place visit. Fixtures: the itinerary trip's entries, which carry every
-// private value (`NEVER_ON_ITINERARY`) a view must not reach.
-describe("single-entry links: cruise, stay, visit", () => {
-  const entries = async (owner: TestAccount) => {
-    const { ids } = await makeItineraryTrip(owner.id);
-    return { stay: ids[4], cruise: ids[9], visit: ids[11] };
-  };
-  const bodyText = (res: request.Response): string => JSON.stringify(res.body);
-
-  it("shares a cruise with only the chosen fields, and never a cabin, price or reference", async () => {
-    const { cruise } = await entries(anna);
-    const { token } = await tokenFor(anna, {
-      kind: "cruise",
-      targetId: cruise,
-      fields: ["ship", "dates", "ports"],
-    });
-    const res = await view(token);
-    expect(res.status).toBe(200);
-    const shown = res.body.data.view;
-    expect(shown.kind).toBe("cruise");
-    expect(shown.cruise.ship).toEqual({ name: "Harbor Queen", line: "Circle Line" });
-    expect(shown.cruise.dates.start.date).toBe("2030-06-07");
-    expect(shown.cruise.ports[0]).toMatchObject({ dayNumber: 1, name: "Pier 83", atSea: false });
-    // Not chosen, so absent — not null.
-    expect(shown.cruise).not.toHaveProperty("owner");
-    for (const secret of [...NEVER_ON_ITINERARY, ...NEVER_PUBLIC]) {
-      expect(bodyText(res)).not.toContain(secret);
-    }
-  });
-
-  it("shares a stay's address only when `location` is chosen", async () => {
-    const { stay } = await entries(anna);
-    const without = await tokenFor(anna, {
-      kind: "stay",
-      targetId: stay,
-      fields: ["name", "dates"],
-    });
-    const plain = await view(without.token);
-    expect(plain.body.data.view.stay).toMatchObject({ name: "Hotel Hudson View" });
-    expect(plain.body.data.view.stay).not.toHaveProperty("location");
-    expect(bodyText(plain)).not.toContain("356 W 58th St");
-
-    const withLocation = await tokenFor(anna, {
-      kind: "stay",
-      targetId: stay,
-      fields: ["name", "location", "dates"],
-    });
-    const shown = (await view(withLocation.token)).body.data.view.stay;
-    expect(shown.location).toEqual({
-      address: "356 W 58th St",
-      city: "New York",
-      country: "US",
-    });
-    expect(shown.dates.checkIn.date).toBe("2030-06-01");
-    expect(shown.dates.checkOut.date).toBe("2030-06-04");
-    for (const secret of [...NEVER_ON_ITINERARY, ...NEVER_PUBLIC]) {
-      expect(bodyText(await view(withLocation.token))).not.toContain(secret);
-    }
-  });
-
-  it("shares a visit's place, date and rating, never its note", async () => {
-    const { visit } = await entries(anna);
-    await prisma.placeVisit.update({ where: { id: visit }, data: { rating: 4 } });
-    const { token } = await tokenFor(anna, {
-      kind: "visit",
-      targetId: visit,
-      fields: ["place", "date", "rating"],
-    });
-    const res = await view(token);
-    const shown = res.body.data.view.visit;
-    expect(shown.place).toEqual({ name: "Statue of Liberty", city: "New York", country: null });
-    expect(shown.date).toMatchObject({ precision: "minute", zone: "America/New_York" });
-    expect(shown.rating).toBe(4);
-    for (const secret of [...NEVER_ON_ITINERARY, ...NEVER_PUBLIC]) {
-      expect(bodyText(res)).not.toContain(secret);
-    }
-  });
-
-  it("answers a stranger's entry, a cancelled stay and an unknown id with the same 404", async () => {
-    const mine = await entries(anna);
-    for (const [kind, targetId] of [
-      ["cruise", mine.cruise],
-      ["stay", mine.stay],
-      ["visit", mine.visit],
-    ] as const) {
-      const fields = [SHARE_LINK_FIELDS[kind][1]];
-      const stranger = await create(eve, { kind, targetId, fields });
-      const unknown = await create(anna, {
-        kind,
-        targetId: "00000000-0000-4000-8000-000000000000",
-        fields,
-      });
-      expect(stranger.status).toBe(404);
-      expect(unknown.status).toBe(404);
-      expect(stranger.body).toEqual(unknown.body);
-    }
-    await prisma.lodgingStay.update({ where: { id: mine.stay }, data: { status: "cancelled" } });
-    expect(
-      (await create(anna, { kind: "stay", targetId: mine.stay, fields: ["name"] })).status
-    ).toBe(404);
-  });
-
-  it("refuses a field that belongs to another kind", async () => {
-    const { visit } = await entries(anna);
-    const res = await create(anna, { kind: "visit", targetId: visit, fields: ["ports"] });
-    expect(res.status).toBe(400);
-  });
-
-  it("lists the link with its entry id, and stops serving it when the entry is deleted", async () => {
-    const { visit } = await entries(anna);
-    const { token, id } = await tokenFor(anna, {
-      kind: "visit",
-      targetId: visit,
-      fields: ["place"],
-    });
-    const list = await request(app).get("/api/v1/share-links").set("Cookie", anna.cookie);
-    expect(list.body.data.links.find((l: { id: string }) => l.id === id)).toMatchObject({
-      kind: "visit",
-      targetId: visit,
-    });
-    expect((await view(token)).status).toBe(200);
-
-    await prisma.placeVisit.delete({ where: { id: visit } });
-    expect((await view(token)).status).toBe(404);
-    const after = await request(app).get("/api/v1/share-links").set("Cookie", anna.cookie);
-    expect(after.body.data.links.some((l: { id: string }) => l.id === id)).toBe(false);
   });
 });

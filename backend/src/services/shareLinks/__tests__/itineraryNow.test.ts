@@ -98,15 +98,15 @@ describe("nowMarker", () => {
 });
 
 describe("itineraryAutoExpiry", () => {
-  it("ends 24 hours after the trip's last local day", () => {
+  it("ends seven days after the trip's last local day", () => {
     expect(itineraryAutoExpiry(serializeDay("2030-06-08", NY))?.toISOString()).toBe(
-      "2030-06-10T04:00:00.000Z"
+      "2030-06-16T04:00:00.000Z"
     );
   });
 
   it("reads a last day with no zone where that day ends last on Earth", () => {
     expect(itineraryAutoExpiry(serializeDay("2030-06-08", null))?.toISOString()).toBe(
-      "2030-06-10T12:00:00.000Z"
+      "2030-06-16T12:00:00.000Z"
     );
   });
 

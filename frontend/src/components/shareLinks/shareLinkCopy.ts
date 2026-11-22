@@ -16,9 +16,13 @@ export function shareLinkErrorKey(err: unknown, fallbackKey: string): string {
   });
 }
 
-/** Expiry choices, in days; `untilLanding` is the server's cap, which the landing cuts short. */
+/**
+ * Expiry choices, in days. `tripEnd` asks for the longest lifetime and lets the
+ * server cut it at its cap for an itinerary — a week after the trip's last day
+ * (owner default, 2026-11-22).
+ */
 export const EXPIRY_CHOICES = {
-  untilLanding: 90,
+  tripEnd: 90,
   day: 1,
   week: 7,
   month: 30,

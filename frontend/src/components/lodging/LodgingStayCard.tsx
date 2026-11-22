@@ -1,4 +1,3 @@
-import { useShareLink } from "../shareLinks/ShareLinkButton";
 import OverflowMenu from "../ui/OverflowMenu";
 import DocumentsSection from "../documents/DocumentsSection";
 import RememberedMarker from "../provenance/RememberedMarker";
@@ -61,8 +60,7 @@ export function LodgingStayCard({
   membershipName,
   membershipSource,
 }: LodgingStayCardProps): JSX.Element {
-  const { t, i18n } = useTranslation(["lodging", "common", "sharing"]);
-  const share = useShareLink("stay", stay.id);
+  const { t, i18n } = useTranslation(["lodging", "common"]);
   const { labelOf } = useRatingCategories();
   const baseCurrency = useSettingsStore((st) => st.baseCurrency);
   const nights = stayNights(stay);
@@ -155,7 +153,7 @@ export function LodgingStayCard({
         <span className="ml-auto text-sm font-semibold" style={{ color: "var(--star)" }}>
           {formatRatingText(stay.ratingOverall)}
         </span>
-        {/* Share link, edit and delete are one card ⋯ (owner, 2026-11-22). The red belongs to
+        {/* Edit and delete are one card ⋯ (owner, 2026-11-22). The red belongs to
             the confirmation, which is where the consequence is actually stated. */}
         {(onEdit || onDelete) && (
           <OverflowMenu
@@ -172,16 +170,6 @@ export function LodgingStayCard({
                     },
                   ]
                 : []),
-              ...(onEdit && share.available
-                ? [
-                    {
-                      key: "share",
-                      testId: `stay-share-${stay.id}`,
-                      label: t("sharing:links.button"),
-                      onSelect: share.start,
-                    },
-                  ]
-                : []),
               ...(onDelete
                 ? [
                     {
@@ -194,9 +182,7 @@ export function LodgingStayCard({
                   ]
                 : []),
             ]}
-          >
-            {share.node}
-          </OverflowMenu>
+          />
         )}
       </div>
 

@@ -5,8 +5,6 @@ import { MemoryRouter } from "react-router-dom";
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
-const demo = vi.hoisted(() => ({ shared: false }));
-vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => demo.shared }));
 const openData = vi.hoisted(() => ({ on: true }));
 vi.mock("../../../store/settingsStore", () => ({
   useSettingsStore: (sel: (s: { openDataEnabled: boolean }) => unknown) =>
@@ -21,9 +19,6 @@ vi.mock("../../../lib/api/openData", () => ({
   isOpenDataDisabled: () => false,
   openDataUpstreamFailure: () => null,
 }));
-vi.mock("../../shareLinks/ShareLinkDialog", () => ({
-  default: () => <div role="dialog">share-dialog</div>,
-}));
 
 import DetailMoreMenu from "../DetailMoreMenu";
 
@@ -35,7 +30,6 @@ function renderMenu(withEnrich = true) {
     <MemoryRouter>
       <DetailMoreMenu
         entries={[{ key: "merge", label: "Merge", onSelect: onMerge }]}
-        shareLink={{ kind: "flight", targetId: "f1" }}
         enrich={withEnrich ? { lodgingId: "l1", onDone: vi.fn() } : undefined}
         onDelete={onDelete}
       />
@@ -49,23 +43,12 @@ const labels = () => screen.getAllByRole("menuitem").map((i) => i.textContent);
 describe("DetailMoreMenu", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    demo.shared = false;
     openData.on = true;
   });
 
-  it("offers the page's entry, the share link and the enrichment, with delete last", () => {
+  it("offers the page's entry and the enrichment, with delete last — no share link (2026-11-22)", () => {
     renderMenu();
-    const all = labels();
-    expect(all).toContain("Merge");
-    expect(all).toContain("sharing:links.button");
-    expect(all).toContain("openData:lodging.enrich");
-    expect(all[all.length - 1]).toBe("common:buttons.delete");
-  });
-
-  it("opens the share dialog from its entry", () => {
-    renderMenu();
-    fireEvent.click(screen.getByRole("menuitem", { name: "sharing:links.button" }));
-    expect(screen.getByText("share-dialog")).toBeTruthy();
+    expect(labels()).toEqual(["Merge", "openData:lodging.enrich", "common:buttons.delete"]);
   });
 
   it("asks the enrichment what it would fill when its entry is chosen", async () => {
@@ -75,8 +58,7 @@ describe("DetailMoreMenu", () => {
     await waitFor(() => expect(preview).toHaveBeenCalledWith("l1"));
   });
 
-  it("leaves the share link out for the shared demo account and the enrichment when open data is off", () => {
-    demo.shared = true;
+  it("leaves the enrichment out when open data is off", () => {
     openData.on = false;
     renderMenu();
     expect(labels()).toEqual(["Merge", "common:buttons.delete"]);

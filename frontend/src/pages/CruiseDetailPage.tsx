@@ -277,7 +277,6 @@ export default function CruiseDetailPage(): JSX.Element {
           <>
             <Button onClick={() => setEditing(true)}>{t("detail.edit")}</Button>
             <DetailMoreMenu
-              shareLink={{ kind: "cruise", targetId: cruise.id }}
               deleteLabel={t("detail.delete")}
               onDelete={() => setConfirmingDelete(true)}
             />

@@ -283,11 +283,8 @@ export default function FlightDetailPage(): JSX.Element {
             >
               {t("common:buttons.edit")}
             </Button>
-            {/* The public, expiring link for the family (forgejo#281) and delete live behind "Mehr". */}
-            <DetailMoreMenu
-              shareLink={{ kind: "flight", targetId: flight.id }}
-              onDelete={() => setConfirmingDelete(true)}
-            />
+            {/* Delete lives behind "Mehr"; a flight is shared through its trip's link (2026-11-22). */}
+            <DetailMoreMenu onDelete={() => setConfirmingDelete(true)} />
           </>
         }
       />

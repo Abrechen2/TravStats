@@ -8,9 +8,22 @@ import type { LocalDateValue, TimeValue } from "../shared/time";
 
 export type ShareLinkKind = "flight" | "trip" | "wrapped" | "cruise" | "stay" | "visit";
 
-/** The allow-list per kind — the only things an owner can choose to show. */
+/**
+ * The kinds a link can still be made for (owner decision 2026-11-22). Old
+ * flight, cruise, stay and visit links stay listed — marked `retired` — so the
+ * owner can delete them; their page says "no longer available".
+ */
+export type CreatableShareLinkKind = "trip" | "wrapped";
+
+/** What a trip link's itinerary can show; flights, stays and transport are the default. */
+export const SHARE_LINK_ITINERARY_SECTIONS = ["flights", "stays", "transport", "places"] as const;
+
+/**
+ * The allow-list per kind — the only things an owner can choose to show. The
+ * trip's `itinerary` is the pre-2026-11-22 "all sections" field, which the
+ * server still accepts from installed apps; the dialog offers the sections.
+ */
 export const SHARE_LINK_FIELDS = {
-  flight: ["owner", "flightNumber", "route", "schedule", "progress", "aircraft", "lastPosition"],
   trip: [
     "owner",
     "name",
@@ -18,31 +31,21 @@ export const SHARE_LINK_FIELDS = {
     "totals",
     "countries",
     "route",
-    "costs",
-    "companions",
     "photos",
-    "notes",
     "itinerary",
+    ...SHARE_LINK_ITINERARY_SECTIONS,
   ],
   wrapped: ["owner", "totals", "topAirline", "topRoute"],
-  // Single entries (forgejo#405).
-  cruise: ["owner", "ship", "dates", "ports"],
-  stay: ["owner", "name", "location", "dates"],
-  visit: ["owner", "place", "date", "rating"],
-} as const satisfies Record<ShareLinkKind, readonly string[]>;
+} as const satisfies Record<CreatableShareLinkKind, readonly string[]>;
 
-export type ShareLinkField = (typeof SHARE_LINK_FIELDS)[ShareLinkKind][number];
+export type ShareLinkField = (typeof SHARE_LINK_FIELDS)[CreatableShareLinkKind][number];
 
-/** What the owner picks first: enough to say something, nothing private. */
-export const SHARE_LINK_DEFAULT_FIELDS: Record<ShareLinkKind, readonly ShareLinkField[]> = {
-  flight: ["flightNumber", "route", "progress"],
-  trip: ["name", "dates", "totals"],
-  wrapped: ["totals"],
-  // Nothing private by default: a stay's address and a visit's rating are opt-in.
-  cruise: ["ship", "dates"],
-  stay: ["name", "dates"],
-  visit: ["place", "date"],
-};
+/** What the owner picks first: the trip's name and days, and where to find them. */
+export const SHARE_LINK_DEFAULT_FIELDS: Record<CreatableShareLinkKind, readonly ShareLinkField[]> =
+  {
+    trip: ["name", "dates", "flights", "stays", "transport"],
+    wrapped: ["totals"],
+  };
 
 export interface ShareLink {
   id: string;
@@ -52,6 +55,8 @@ export interface ShareLink {
   expiresAt: string;
   effectiveExpiresAt: string;
   createdAt: string;
+  /** A kind no longer offered: the owner can only delete it. */
+  retired: boolean;
   viewCount: number;
   lastViewedAt: string | null;
 }
@@ -72,22 +77,6 @@ export interface CreatedShareLink {
 interface Airport {
   code: string | null;
   name: string | null;
-}
-
-export interface FlightShareView {
-  owner?: string | null;
-  flightNumber?: { airline: string | null; number: string | null };
-  route?: { from: Airport; to: Airport };
-  schedule?: { departure: TimeValue | null; arrival: TimeValue | null };
-  progress?: {
-    phase: FlightPhase;
-    fraction: number | null;
-    eta: TimeValue | null;
-    basis: "schedule" | "reported";
-  };
-  aircraft?: string | null;
-  /** `recordedAt` null when the privacy cut hid the recording's last fix. */
-  lastPosition?: { lat: number; lon: number; recordedAt: string | null } | null;
 }
 
 type FlightPhase = "scheduled" | "inFlight" | "landed" | "cancelled" | "unknown";
@@ -116,6 +105,9 @@ export type ItineraryItem =
       to: Airport;
       departure: TimeValue | null;
       arrival: TimeValue | null;
+      /** Departure terminal and gate, when stored. */
+      terminal: string | null;
+      gate: string | null;
       phase: FlightPhase;
     }
   | {
@@ -155,6 +147,7 @@ export type ItineraryItem =
   | { kind: "stop"; name: string; start: TimeValue | null; end: TimeValue | null };
 
 export interface ItineraryShareView {
+  sections: Array<(typeof SHARE_LINK_ITINERARY_SECTIONS)[number]>;
   items: ItineraryItem[];
   /** The entry in progress by the plan, else the next one; null when nothing is ahead. */
   now: { index: number; state: "inProgress" | "next" } | null;
@@ -179,14 +172,7 @@ export interface TripShareView {
     from: string | null;
     to: string | null;
   }>;
-  costs?: { byCurrency: Array<{ currency: string; amount: number }>; complete: boolean } | null;
-  companions?: string[];
   photos?: { count: number };
-  /** The owner's notes marked shareable on the trip's days (forgejo#146) — never a private one. */
-  notes?: {
-    items: Array<{ body: string; placeName: string | null; at: TimeValue; day: LocalDateValue }>;
-    truncated: boolean;
-  };
   itinerary?: ItineraryShareView;
 }
 
@@ -208,39 +194,8 @@ export interface WrappedShareView {
   topRoute?: { from: string; to: string; flights: number } | null;
 }
 
-export interface CruiseShareView {
-  owner?: string | null;
-  ship?: { name: string | null; line: string | null };
-  dates?: { start: LocalDateValue | null; end: LocalDateValue | null };
-  ports?: Array<{
-    dayNumber: number;
-    name: string | null;
-    atSea: boolean;
-    day: LocalDateValue | null;
-  }>;
-}
-
-export interface StayShareView {
-  owner?: string | null;
-  name?: string;
-  location?: { address: string | null; city: string | null; country: string | null };
-  dates?: { checkIn: LocalDateValue | null; checkOut: LocalDateValue | null };
-}
-
-export interface VisitShareView {
-  owner?: string | null;
-  place?: { name: string; city: string | null; country: string | null };
-  date?: TimeValue | null;
-  rating?: number | null;
-}
-
 export type ShareView =
-  | { kind: "flight"; flight: FlightShareView }
-  | { kind: "trip"; trip: TripShareView }
-  | { kind: "wrapped"; wrapped: WrappedShareView }
-  | { kind: "cruise"; cruise: CruiseShareView }
-  | { kind: "stay"; stay: StayShareView }
-  | { kind: "visit"; visit: VisitShareView };
+  { kind: "trip"; trip: TripShareView } | { kind: "wrapped"; wrapped: WrappedShareView };
 
 /** Owner-only: which photos a trip link leaves out, and why (preview answer). */
 export interface PhotoOmissions {

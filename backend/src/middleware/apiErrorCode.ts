@@ -544,8 +544,13 @@ export type ApiErrorCode =
   | "SHARE_LINK_NOT_FOUND"
   /** The instance switch for public links is off (409). */
   | "SHARE_LINKS_DISABLED"
-  /** A flight link for a flight that has already landed (409). */
+  /** A flight link for a flight that has already landed (409). No longer
+   *  thrown since flight links were retired (2026-11-22); kept for clients
+   *  that still map it. */
   | "SHARE_LINK_FLIGHT_LANDED"
+  /** A live public link of a retired kind — flight, cruise, stay, visit
+   *  (410, owner decision 2026-11-22). Only a valid token can get it. */
+  | "SHARE_LINK_RETIRED"
   /** A trip link with the itinerary for a trip whose last day is over (409, forgejo#302). */
   | "SHARE_LINK_TRIP_ENDED"
   /** WebDAV backup download: the body ended before the Content-Length it promised (502). */

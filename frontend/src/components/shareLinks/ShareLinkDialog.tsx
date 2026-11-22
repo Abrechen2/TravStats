@@ -8,9 +8,10 @@ import { logger } from "../../lib/logger";
 import {
   SHARE_LINK_DEFAULT_FIELDS,
   SHARE_LINK_FIELDS,
+  SHARE_LINK_ITINERARY_SECTIONS,
+  type CreatableShareLinkKind,
   type CreatedShareLink,
   type PhotoOmissions,
-  type ShareLinkKind,
   type ShareLinkPreviewResult,
 } from "../../types/shareLinks";
 import Modal from "../Modal";
@@ -23,6 +24,16 @@ const NS = "sharing:links";
 
 type Status = "loading" | "enabled" | "disabled" | "failed";
 
+const SECTIONS: readonly string[] = SHARE_LINK_ITINERARY_SECTIONS;
+
+/**
+ * The checkboxes outside the itinerary, in the order the page shows them.
+ * `itinerary` — the old "every section" field — is not offered: the sections are.
+ */
+function plainFields(kind: CreatableShareLinkKind): string[] {
+  return SHARE_LINK_FIELDS[kind].filter((f) => f !== "itinerary" && !SECTIONS.includes(f));
+}
+
 /**
  * "Als Link teilen" (forgejo#281): pick what a public page shows, see exactly
  * that in the preview, choose how long it lives, create it — and copy the URL,
@@ -31,6 +42,10 @@ type Status = "loading" | "enabled" | "disabled" | "failed";
  * The preview is the server's own serializer, asked with the current choice,
  * so it cannot claim less than the link will show. While the instance switch
  * is off the dialog says so instead of offering a form that can only fail.
+ *
+ * A trip link is the family itinerary (owner, 2026-11-22): flights, stays and
+ * transport are on by default, places are opt-in, and the link lives until a
+ * week after the trip unless the owner picks a shorter time.
  */
 export default function ShareLinkDialog({
   open,
@@ -40,14 +55,14 @@ export default function ShareLinkDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  kind: ShareLinkKind;
+  kind: CreatableShareLinkKind;
   targetId: string;
 }): JSX.Element | null {
   const { t } = useTranslation(["sharing"]);
   const format = useDisplayFormat();
   const [status, setStatus] = useState<Status>("loading");
   const [fields, setFields] = useState<string[]>([...SHARE_LINK_DEFAULT_FIELDS[kind]]);
-  const [expiry, setExpiry] = useState<ExpiryChoice>(kind === "flight" ? "untilLanding" : "week");
+  const [expiry, setExpiry] = useState<ExpiryChoice>(kind === "trip" ? "tripEnd" : "week");
   const [preview, setPreview] = useState<ShareLinkPreviewResult | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
   const [created, setCreated] = useState<CreatedShareLink | null>(null);
@@ -136,7 +151,18 @@ export default function ShareLinkDialog({
   };
 
   const choices = (Object.keys(EXPIRY_CHOICES) as ExpiryChoice[]).filter(
-    (choice) => kind === "flight" || choice !== "untilLanding"
+    (choice) => kind === "trip" || choice !== "tripEnd"
+  );
+  const checkbox = (field: string, describedBy?: string): JSX.Element => (
+    <label key={field} className="inline-flex items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        checked={fields.includes(field)}
+        onChange={(e) => toggle(field, e.target.checked)}
+        aria-describedby={describedBy}
+      />
+      {t(`${NS}.fields.${kind}.${field}`)}
+    </label>
   );
 
   return (
@@ -193,28 +219,20 @@ export default function ShareLinkDialog({
         {status === "enabled" && !created && (
           <>
             <p className="t-caption">{t(`${NS}.dialog.warning`)}</p>
+            {kind === "trip" && (
+              <fieldset className="flex flex-col gap-1.5">
+                <legend className="mb-1 font-semibold">{t(`${NS}.dialog.itineraryTitle`)}</legend>
+                <p id="share-link-itinerary-hint" className="t-caption">
+                  {t(`${NS}.dialog.itineraryHint`)}
+                </p>
+                {SHARE_LINK_ITINERARY_SECTIONS.map((field) =>
+                  checkbox(field, "share-link-itinerary-hint")
+                )}
+              </fieldset>
+            )}
             <fieldset className="flex flex-col gap-1.5">
               <legend className="mb-1 font-semibold">{t(`${NS}.dialog.fieldsTitle`)}</legend>
-              {SHARE_LINK_FIELDS[kind].map((field) => (
-                <div key={field} className="flex flex-col">
-                  <label className="inline-flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={fields.includes(field)}
-                      onChange={(e) => toggle(field, e.target.checked)}
-                      aria-describedby={
-                        field === "itinerary" ? "share-link-itinerary-hint" : undefined
-                      }
-                    />
-                    {t(`${NS}.fields.${kind}.${field}`)}
-                  </label>
-                  {field === "itinerary" && (
-                    <p id="share-link-itinerary-hint" className="t-caption ml-6">
-                      {t(`${NS}.dialog.itineraryHint`)}
-                    </p>
-                  )}
-                </div>
-              ))}
+              {plainFields(kind).map((field) => checkbox(field))}
             </fieldset>
             <Field label={t(`${NS}.dialog.expiry`)} htmlFor="share-link-expiry">
               <Select

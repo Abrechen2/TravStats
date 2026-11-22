@@ -93,7 +93,7 @@ describe("trip recording — private to its owner", () => {
 
   it("is not in a public link's view, whatever fields it shares", async () => {
     const row = await loadOwnedTrip(anna.id, full.trip.id);
-    const view = await buildTripView(anna.id, row!, new Set(SHARE_LINK_FIELDS.trip), "Anna", []);
+    const view = await buildTripView(row!, new Set(SHARE_LINK_FIELDS.trip), "Anna", []);
     expect(view.name).toBe(full.trip.name);
     expect(leaks(view)).toBe(false);
   });

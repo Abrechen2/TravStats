@@ -21,45 +21,7 @@ export default function ShareLinkPreview({ view }: { view: ShareView }): JSX.Ele
   const none = t(`${NS}.view.none`);
   const rows: Row[] = [];
 
-  if (view.kind === "flight") {
-    const f = view.flight;
-    if (f.owner !== undefined) rows.push([label("flight", "owner"), f.owner ?? none]);
-    if (f.flightNumber) {
-      rows.push([
-        label("flight", "flightNumber"),
-        [f.flightNumber.airline, f.flightNumber.number].filter(Boolean).join(" ") || none,
-      ]);
-    }
-    if (f.route) {
-      rows.push([
-        label("flight", "route"),
-        `${f.route.from.code ?? "?"} → ${f.route.to.code ?? "?"}`,
-      ]);
-    }
-    if (f.schedule) {
-      rows.push([
-        t(`${NS}.view.departure`),
-        f.schedule.departure ? format.timeValue(f.schedule.departure) : none,
-      ]);
-      rows.push([
-        t(`${NS}.view.arrival`),
-        f.schedule.arrival ? format.timeValue(f.schedule.arrival) : none,
-      ]);
-    }
-    if (f.progress) {
-      rows.push([label("flight", "progress"), t(`${NS}.view.phase.${f.progress.phase}`)]);
-      if (f.progress.eta) rows.push([t(`${NS}.view.eta`), format.timeValue(f.progress.eta)]);
-    }
-    if (f.aircraft !== undefined) rows.push([label("flight", "aircraft"), f.aircraft ?? none]);
-    if (f.lastPosition !== undefined) {
-      rows.push([
-        label("flight", "lastPosition"),
-        f.lastPosition
-          ? `${f.lastPosition.lat.toFixed(3)}, ${f.lastPosition.lon.toFixed(3)}`
-          : t(`${NS}.view.noPosition`),
-      ]);
-    }
-  } else if (view.kind === "trip") {
+  if (view.kind === "trip") {
     const trip = view.trip;
     if (trip.owner !== undefined) rows.push([label("trip", "owner"), trip.owner ?? none]);
     if (trip.name !== undefined) rows.push([label("trip", "name"), trip.name]);
@@ -83,81 +45,8 @@ export default function ShareLinkPreview({ view }: { view: ShareView }): JSX.Ele
         trip.route.map((leg) => `${leg.from ?? "?"} → ${leg.to ?? "?"}`).join(", ") || none,
       ]);
     }
-    if (trip.costs !== undefined) {
-      rows.push([
-        label("trip", "costs"),
-        trip.costs
-          ? trip.costs.byCurrency.map((c) => `${c.amount} ${c.currency}`).join(" + ") +
-            (trip.costs.complete ? "" : ` (${t(`${NS}.view.incomplete`)})`)
-          : none,
-      ]);
-    }
-    if (trip.companions) {
-      rows.push([label("trip", "companions"), trip.companions.join(", ") || none]);
-    }
     if (trip.photos) {
       rows.push([label("trip", "photos"), t(`${NS}.view.photos`, { count: trip.photos.count })]);
-    }
-    if (trip.notes) {
-      rows.push([
-        label("trip", "notes"),
-        trip.notes.items.length === 0
-          ? t(`${NS}.view.noNotes`)
-          : t(`${NS}.view.notes`, { count: trip.notes.items.length }) +
-            (trip.notes.truncated ? ` (${t(`${NS}.view.moreNotes`)})` : ""),
-      ]);
-    }
-  } else if (view.kind === "cruise") {
-    const c = view.cruise;
-    const entry = (key: string) => t(`${NS}.view.entry.${key}`);
-    const day = (d: { date: string } | null) => (d ? format.localDate(d.date) : null);
-    if (c.owner !== undefined) rows.push([label("cruise", "owner"), c.owner ?? none]);
-    if (c.ship) {
-      rows.push([entry("ship"), c.ship.name ?? none]);
-      if (c.ship.line) rows.push([entry("cruiseLine"), c.ship.line]);
-    }
-    if (c.dates) {
-      rows.push([
-        label("cruise", "dates"),
-        [day(c.dates.start), day(c.dates.end)].filter(Boolean).join(" – ") || none,
-      ]);
-    }
-    if (c.ports) {
-      rows.push([
-        entry("ports"),
-        c.ports.map((p) => (p.atSea ? entry("seaDay") : (p.name ?? "?"))).join(", ") || none,
-      ]);
-    }
-  } else if (view.kind === "stay") {
-    const s = view.stay;
-    const entry = (key: string) => t(`${NS}.view.entry.${key}`);
-    const day = (d: { date: string } | null) => (d ? format.localDate(d.date) : none);
-    if (s.owner !== undefined) rows.push([label("stay", "owner"), s.owner ?? none]);
-    if (s.name !== undefined) rows.push([label("stay", "name"), s.name]);
-    if (s.location) {
-      rows.push([
-        entry("address"),
-        [s.location.address, s.location.city, s.location.country].filter(Boolean).join(", ") ||
-          none,
-      ]);
-    }
-    if (s.dates) {
-      rows.push([entry("checkIn"), day(s.dates.checkIn)]);
-      rows.push([entry("checkOut"), day(s.dates.checkOut)]);
-    }
-  } else if (view.kind === "visit") {
-    const v = view.visit;
-    const entry = (key: string) => t(`${NS}.view.entry.${key}`);
-    if (v.owner !== undefined) rows.push([label("visit", "owner"), v.owner ?? none]);
-    if (v.place) {
-      rows.push([
-        label("visit", "place"),
-        [v.place.name, v.place.city, v.place.country].filter(Boolean).join(", "),
-      ]);
-    }
-    if (v.date !== undefined) rows.push([entry("when"), v.date ? format.timeValue(v.date) : none]);
-    if (v.rating !== undefined) {
-      rows.push([entry("rating"), v.rating ? `${v.rating} ${entry("ofFive")}` : none]);
     }
   } else {
     const w = view.wrapped;

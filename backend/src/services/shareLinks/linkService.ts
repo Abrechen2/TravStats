@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import {
+  isRetiredShareLinkKind,
   publicViewSchema,
   SHARE_LINK_MAX_ACTIVE,
   SHARE_LINK_MAX_DAYS,
@@ -13,8 +14,6 @@ import {
 import { now } from "../../shared/time/clock";
 import { getInstanceSettings } from "../instanceSettingsService";
 import logger from "../../utils/logger";
-import { buildCruiseView, buildStayView, buildVisitView } from "./entryViews";
-import { buildFlightView, flightAutoExpiry, loadOwnedFlightTimes } from "./flightView";
 import { photoSnapshot, sharedPhotoBytes, type PhotoOmissions } from "./photoProxy";
 import {
   generateShareToken,
@@ -23,7 +22,7 @@ import {
   shareTokenMatches,
 } from "./token";
 import { itineraryAutoExpiry } from "./itineraryNow";
-import { buildTripView, loadOwnedTrip, tripLastDay } from "./tripView";
+import { buildTripView, itinerarySections, loadOwnedTrip, tripLastDay } from "./tripView";
 import { buildWrappedView } from "./wrappedView";
 
 /**
@@ -34,7 +33,10 @@ import { buildWrappedView } from "./wrappedView";
  * found" for a target that is not theirs, and the public side says "not
  * found" for EVERYTHING that is not a live link — malformed, unknown,
  * expired, revoked, switched off, owner or target gone. One answer, so the
- * public endpoint is no oracle.
+ * public endpoint is no oracle. The single exception is a live link of a
+ * retired kind (flight, cruise, stay, visit — owner decision 2026-11-22): its
+ * holder already has a valid token, and is told it is "no longer available"
+ * instead of being left with a broken page.
  */
 
 export const notFound = () => new AppError("Not found", 404, "SHARE_LINK_NOT_FOUND");
@@ -73,8 +75,8 @@ function targetOf(selection: Pick<ShareLinkSelection, "kind" | "targetId">): Tar
 }
 
 /**
- * The public view of a target, built from `fields` only, and the instant a
- * flight link ends by itself. Null: the target is not the user's, or has
+ * The public view of a target, built from `fields` only, and the instant an
+ * itinerary link ends by itself. Null: the target is not the user's, or has
  * nothing to show. The output is parsed through the strict view schema
  * before it is returned, so no builder can add a key nobody reviewed.
  */
@@ -86,42 +88,19 @@ async function buildView(
 ): Promise<{ view: PublicView; autoExpiry: Date | null } | null> {
   const owner = fields.includes("owner") ? await ownerFirstName(userId) : null;
   let built: { view: PublicView; autoExpiry: Date | null } | null = null;
-  if (target.kind === "flight" && target.flightId) {
-    const loaded = await loadOwnedFlightTimes(userId, target.flightId);
-    if (!loaded) return null;
-    const set = new Set(fields) as Set<ShareLinkField<"flight">>;
-    built = {
-      view: { kind: "flight", flight: await buildFlightView(target.flightId, loaded, set, owner) },
-      autoExpiry: flightAutoExpiry(loaded.times),
-    };
-  } else if (target.kind === "trip" && target.tripId) {
+  if (target.kind === "trip" && target.tripId) {
     const trip = await loadOwnedTrip(userId, target.tripId);
     if (!trip) return null;
-    const set = new Set(fields) as Set<ShareLinkField<"trip">>;
+    const set = new Set(fields);
     built = {
-      view: { kind: "trip", trip: await buildTripView(userId, trip, set, owner, photoIds) },
-      autoExpiry: set.has("itinerary") ? await tripAutoExpiry(trip) : null,
+      view: { kind: "trip", trip: await buildTripView(trip, set, owner, photoIds) },
+      autoExpiry: itinerarySections(fields).length > 0 ? await tripAutoExpiry(trip) : null,
     };
   } else if (target.kind === "wrapped" && target.year !== null) {
     const set = new Set(fields) as Set<ShareLinkField<"wrapped">>;
     const wrapped = await buildWrappedView(userId, target.year, set, owner);
     if (!wrapped) return null;
     built = { view: { kind: "wrapped", wrapped }, autoExpiry: null };
-  } else if (target.kind === "cruise" && target.cruiseId) {
-    const set = new Set(fields) as Set<ShareLinkField<"cruise">>;
-    const cruise = await buildCruiseView(userId, target.cruiseId, set, owner);
-    if (!cruise) return null;
-    built = { view: { kind: "cruise", cruise }, autoExpiry: null };
-  } else if (target.kind === "stay" && target.lodgingStayId) {
-    const set = new Set(fields) as Set<ShareLinkField<"stay">>;
-    const stay = await buildStayView(userId, target.lodgingStayId, set, owner);
-    if (!stay) return null;
-    built = { view: { kind: "stay", stay }, autoExpiry: null };
-  } else if (target.kind === "visit" && target.placeVisitId) {
-    const set = new Set(fields) as Set<ShareLinkField<"visit">>;
-    const visit = await buildVisitView(userId, target.placeVisitId, set, owner);
-    if (!visit) return null;
-    built = { view: { kind: "visit", visit }, autoExpiry: null };
   }
   if (!built) return null;
   return { view: publicViewSchema.parse(built.view), autoExpiry: built.autoExpiry };
@@ -130,8 +109,9 @@ async function buildView(
 const earlier = (a: Date, b: Date | null): Date => (b && b < a ? b : a);
 
 /**
- * An itinerary link ends by itself a day after the trip's last local day
- * (forgejo#302) — for a trip without dates, its entries' last day (forgejo#317).
+ * An itinerary link ends by itself a week after the trip's last local day
+ * (forgejo#302, one week since 2026-11-22) — for a trip without dates, its
+ * entries' last day (forgejo#317).
  */
 async function tripAutoExpiry(
   trip: NonNullable<Awaited<ReturnType<typeof loadOwnedTrip>>>
@@ -203,9 +183,7 @@ export async function createShareLink(
   const built = await buildView(userId, target, selection.fields, photoIds);
   if (!built) throw notFound();
   if (built.autoExpiry && built.autoExpiry <= at) {
-    throw target.kind === "trip"
-      ? new AppError("This trip has already ended", 409, "SHARE_LINK_TRIP_ENDED")
-      : new AppError("This flight has already landed", 409, "SHARE_LINK_FLIGHT_LANDED");
+    throw new AppError("This trip has already ended", 409, "SHARE_LINK_TRIP_ENDED");
   }
   // The same settled set the list shows: a link the owner cannot see must not
   // hold one of their slots.
@@ -256,13 +234,9 @@ const targetIdOf = (
   row.placeVisitId ??
   String(row.year);
 
-/** The end a link's target sets by itself today: a flight's landing, an itinerary's trip end. */
+/** The end a link's target sets by itself today: an itinerary's trip end. */
 async function targetAutoExpiry(row: LinkRow): Promise<Date | null> {
-  if (row.flightId) {
-    const loaded = await loadOwnedFlightTimes(row.userId, row.flightId);
-    return loaded ? flightAutoExpiry(loaded.times) : null;
-  }
-  if (row.tripId && row.fields.includes("itinerary")) {
+  if (row.tripId && itinerarySections(row.fields).length > 0) {
     const trip = await loadOwnedTrip(row.userId, row.tripId);
     return trip ? await tripAutoExpiry(trip) : null;
   }
@@ -271,12 +245,12 @@ async function targetAutoExpiry(row: LinkRow): Promise<Date | null> {
 
 /**
  * A link's end as of now: the stored end, LOWERED (and stored) when its
- * flight now lands earlier or its itinerary's trip now ends earlier. Never
- * raised — recomputing the end from the flight's current times brought an
- * ended link back to life when the flight was later moved to another day.
+ * itinerary's trip now ends earlier. Never raised — recomputing the end from
+ * the target's current dates brought an ended link back to life when a flight
+ * was later moved to another day.
  */
 async function settledExpiry(row: LinkRow): Promise<Date> {
-  if (!row.flightId && !row.fields.includes("itinerary")) return row.effectiveExpiresAt;
+  if (!row.tripId || itinerarySections(row.fields).length === 0) return row.effectiveExpiresAt;
   const effective = earlier(row.effectiveExpiresAt, await targetAutoExpiry(row));
   // Lowered in the database, not from the row read above: a settlement that
   // finished in between may already have stored an even earlier end, and an
@@ -332,6 +306,7 @@ export async function listShareLinks(userId: string): Promise<OwnerShareLink[]> 
     expiresAt: row.expiresAt.toISOString(),
     effectiveExpiresAt: row.effectiveExpiresAt.toISOString(),
     createdAt: row.createdAt.toISOString(),
+    retired: isRetiredShareLinkKind(row.kind),
     viewCount: row.viewCount,
     lastViewedAt: row.lastViewedAt?.toISOString() ?? null,
   }));
@@ -374,11 +349,13 @@ const targetOfRow = (row: LinkRow): Target => ({
   placeVisitId: row.placeVisitId,
 });
 
-export async function resolvePublicView(
-  token: unknown
-): Promise<{ expiresAt: string; view: PublicView } | null> {
+export type PublicViewResolution =
+  { status: "live"; expiresAt: string; view: PublicView } | { status: "retired" };
+
+export async function resolvePublicView(token: unknown): Promise<PublicViewResolution | null> {
   const row = await liveLink(token);
   if (!row) return null;
+  if (isRetiredShareLinkKind(row.kind)) return { status: "retired" };
   const built = await buildView(row.userId, targetOfRow(row), row.fields, row.photoIds);
   if (!built) return null;
   // A count and a time, for the owner to notice a link travelling further than
@@ -388,6 +365,7 @@ export async function resolvePublicView(
     data: { viewCount: { increment: 1 }, lastViewedAt: now() },
   });
   return {
+    status: "live",
     expiresAt: earlier(row.effectiveExpiresAt, built.autoExpiry).toISOString(),
     view: built.view,
   };

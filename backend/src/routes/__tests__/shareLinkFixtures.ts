@@ -113,6 +113,8 @@ export async function makeFlight(ownerId: string, tripId: string | null = null) 
       depTimeSemantics: "UTC",
       arrTimeSemantics: "UTC",
       status: "scheduled",
+      terminal: "1",
+      gate: "B12",
       seatNumber: "SEAT-14C",
       bookingReference: "PNR-XYZ123",
       ticketNumber: "TICKET-2201234567",

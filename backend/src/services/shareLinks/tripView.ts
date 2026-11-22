@@ -8,41 +8,37 @@ import {
   tripCountries,
 } from "../../routes/trips/tripCountries";
 import {
-  SHARE_LINK_MAX_NOTES,
+  SHARE_LINK_ITINERARY_SECTIONS,
   SHARE_LINK_MAX_PHOTOS,
-  type ShareLinkField,
+  type ShareLinkItinerarySection,
   type TripView,
 } from "../../schemas/shareLinks";
 import { daysBetween } from "../../shared/time/localDate";
 import { calculateDistance } from "../../utils/geo";
-import { tripPageCost } from "../trip/tripCostSuperlative";
 import { tripTimes, withTripTimes } from "../trips/timesDto";
 import { segmentTripSpan } from "../timeModel/tripColumns";
 import { RAIL_CLOCK_SELECT } from "../../shared/railClock";
 import type { LocalDateValue } from "../../shared/time/wire";
-import { toNoteDto } from "../notes/noteService";
-import { notesInSpan, tripDaySpan } from "../notes/tripNotes";
 import { buildItinerary } from "./itineraryView";
 import { shareablePhotoIds } from "./photoProxy";
 import { isCountedRailMode } from "../../shared/railCounting";
 
 /**
- * The public view of one trip — the share card and Trip Wrapped (forgejo#154,
- * companion#39). Field by field, like the flight view: the trip row's notes,
- * journal, documents, seats, booking references and every id stay where they
- * are because no line below reads them. Standalone notes travel only through
- * the `notes` field, and only the owner's shareable ones.
+ * The public view of one trip — the family itinerary and the share card
+ * (forgejo#154, companion#39, redesigned 2026-11-22). Field by field: the trip
+ * row's notes, journal, documents, seats, booking references, prices,
+ * companions and every id stay where they are because no line below reads
+ * them (owner decision 2026-11-22: costs, companions and notes no longer
+ * travel at all).
  *
- * Counting reuses the trip page's own homes — `tripCountries` for the
- * countries, `tripPageCost` for the money — so the card cannot disagree with
- * the page it was made from.
+ * Counting reuses the trip page's own home — `tripCountries` for the
+ * countries — so the card cannot disagree with the page it was made from.
  */
 
 const TRIP_VIEW_SELECT = {
   id: true,
   name: true,
   countries: true,
-  companions: true,
   startDate: true,
   endDate: true,
   startDay: true,
@@ -215,50 +211,9 @@ function routeOf(legs: Legs): NonNullable<TripView["route"]> {
   return entries.sort((a, b) => a.t - b.t).map((e) => e.leg);
 }
 
-async function companionsOf(trip: TripRow): Promise<string[]> {
-  const links = await prisma.tripCompanion.findMany({
-    where: { tripId: trip.id },
-    orderBy: { position: "asc" },
-    select: { companion: { select: { displayName: true } } },
-  });
-  return links.length > 0 ? links.map((l) => l.companion.displayName) : trip.companions;
-}
-
-async function costsOf(userId: string, tripId: string): Promise<TripView["costs"]> {
-  const cost = await tripPageCost(userId, tripId);
-  if (!cost) return null;
-  const byCurrency = Object.entries(cost.spendByCurrency)
-    .map(([currency, amount]) => ({ currency, amount }))
-    .sort((a, b) => a.currency.localeCompare(b.currency));
-  if (byCurrency.length === 0) return null;
-  return { byCurrency, complete: cost.unpricedEntries === 0 };
-}
-
-/**
- * The owner's SHAREABLE notes on the trip's days (forgejo#146). The
- * visibility filter is part of the query, so a private note is never even
- * loaded here; text, place name and moment only — no position, photo or id.
- */
-async function notesOf(userId: string, trip: TripRow): Promise<TripView["notes"]> {
-  const span = tripDaySpan(trip);
-  if (!span) return { items: [], truncated: false };
-  const { notes, truncated } = await notesInSpan(userId, span, {
-    visibility: "shareable",
-    limit: SHARE_LINK_MAX_NOTES,
-  });
-  return {
-    items: notes.map((note) => {
-      const { times } = toNoteDto(note);
-      return { body: note.body, placeName: note.placeName, at: times.occurredAt, day: times.day };
-    }),
-    truncated,
-  };
-}
-
 export async function buildTripView(
-  userId: string,
   trip: TripRow,
-  fields: ReadonlySet<ShareLinkField<"trip">>,
+  fields: ReadonlySet<string>,
   ownerFirstName: string | null,
   photoIds: readonly string[]
 ): Promise<TripView> {
@@ -292,13 +247,27 @@ export async function buildTripView(
     };
   }
   if (legs && fields.has("route")) view.route = routeOf(legs);
-  if (fields.has("costs")) view.costs = await costsOf(userId, trip.id);
-  if (fields.has("companions")) view.companions = await companionsOf(trip);
   if (fields.has("photos")) {
     const live = await shareablePhotoIds(trip.id, photoIds);
     view.photos = { count: Math.min(live.length, SHARE_LINK_MAX_PHOTOS) };
   }
-  if (fields.has("notes")) view.notes = await notesOf(userId, trip);
-  if (fields.has("itinerary")) view.itinerary = await buildItinerary(trip.id);
+  const sections = itinerarySections(fields);
+  if (sections.length > 0) view.itinerary = await buildItinerary(trip.id, sections);
   return view;
+}
+
+/**
+ * The itinerary sections a link shows. A link made before 2026-11-22 names
+ * only `itinerary`, which meant every entry — it keeps showing all four.
+ * Stored fields no longer on the allow-list (`costs`, `companions`, `notes`)
+ * are read by nothing here, so an old link stops showing them at once.
+ */
+export function itinerarySections(
+  fields: ReadonlySet<string> | readonly string[]
+): ShareLinkItinerarySection[] {
+  const has = (f: string) =>
+    Array.isArray(fields) ? fields.includes(f) : (fields as ReadonlySet<string>).has(f);
+  const chosen = SHARE_LINK_ITINERARY_SECTIONS.filter(has);
+  if (chosen.length > 0) return chosen;
+  return has("itinerary") ? [...SHARE_LINK_ITINERARY_SECTIONS] : [];
 }
