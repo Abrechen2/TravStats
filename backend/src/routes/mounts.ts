@@ -71,6 +71,7 @@ import imageParseRoutes from "./imageParse";
 import diagnosticExportRoutes from "./diagnosticExport";
 import meExportRoutes from "./meExport";
 import accountArchiveRoutes from "./accountArchive";
+import lifeBookRoutes from "./lifeBook";
 import setupRoutes from "./setup";
 import versionRoutes from "./version";
 import adminRoutes from "./admin";
@@ -397,6 +398,8 @@ export const apiMounts: ApiMount[] = [
   { id: "meExport", base: "/api/v1/me", router: meExportRoutes },
   // Moving one account to another server as a ZIP (forgejo#433).
   { id: "accountArchive", base: "/api/v1/me/account-archive", router: accountArchiveRoutes },
+  // The life book: one offline HTML chronicle of the logbook.
+  { id: "lifeBook", base: "/api/v1/me/life-book", router: lifeBookRoutes },
   { id: "parserTemplates", base: "/api/v1/parser-templates", router: parserTemplatesRoutes },
   { id: "backup", base: "/api/v1/backup", router: backupRoutes },
   { id: "pendingUpdates", base: "/api/v1/pending-updates", router: pendingUpdatesRoutes },

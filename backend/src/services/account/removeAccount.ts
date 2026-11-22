@@ -4,6 +4,7 @@ import { securityLogger } from "../../utils/logger";
 import { takeUserCountLock } from "../../utils/userCountLock";
 import { deleteAccountWithFiles } from "../files/accountFiles";
 import { cancelAccountExports, deleteAccountArchives } from "../accountArchive/archiveJobs";
+import { deleteAccountLifeBooks } from "../lifeBook/lifeBookJobs";
 import { notifyPeersOfDeparture, type DepartureNotice } from "./notifyPeersOfDeparture";
 
 export interface RemovalContext {
@@ -108,6 +109,7 @@ async function finishDeletion(userId: string): Promise<DepartureNotice> {
   );
   // Finished account ZIPs (forgejo#433) are copies of every file just removed.
   await deleteAccountArchives(userId);
+  await deleteAccountLifeBooks(userId);
   return peers;
 }
 

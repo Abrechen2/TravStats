@@ -10,6 +10,7 @@ import cron from "node-cron";
 import type { ScheduledTask } from "node-cron";
 
 import { sweepExports } from "../services/accountArchive/archiveJobs";
+import { sweepLifeBooks } from "../services/lifeBook/lifeBookJobs";
 import { schedulerZone } from "../shared/time/schedulerZone";
 import logger from "../utils/logger";
 
@@ -20,6 +21,8 @@ let task: ScheduledTask | null = null;
 async function run(): Promise<void> {
   try {
     await sweepExports();
+    // The life book's finished HTML files share the work directory and the six-hour wait.
+    await sweepLifeBooks();
   } catch (error) {
     logger.warn({ operation: "account_archive_sweep_failed", error: String(error) });
   }

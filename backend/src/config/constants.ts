@@ -125,6 +125,9 @@ export const RATE_LIMITS = {
   // whole account with its files, so a handful per hour per account.
   ACCOUNT_ARCHIVE_WINDOW_MS: 60 * 60 * 1000,
   ACCOUNT_ARCHIVE_MAX: 6,
+  // Life book: reads the whole account once per build, so a dozen an hour per account.
+  LIFE_BOOK_WINDOW_MS: 60 * 60 * 1000,
+  LIFE_BOOK_MAX: 12,
 
   // Admin airport reseed rate limits (18k row upsert, expensive)
   ADMIN_RESEED_WINDOW_MS: 60 * 60 * 1000, // 1 hour
