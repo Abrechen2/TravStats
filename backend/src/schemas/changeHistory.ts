@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 import { ENTITY_TYPES } from "../services/changeLedger/models";
 

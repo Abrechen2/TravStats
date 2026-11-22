@@ -3,7 +3,6 @@ import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
 import type { ShareEntity } from "../sharing/shareTypes";
-import { flushChangeLedger } from "./capture";
 import { resolveChangeContext, withChangeSource } from "./context";
 import {
   delegateOf,
@@ -162,7 +161,6 @@ export async function listHistory(
   userId: string,
   q: HistoryQuery
 ): Promise<{ entries: HistoryRow[]; nextCursor: string | null }> {
-  await flushChangeLedger();
   const where: Prisma.ChangeLedgerEntryWhereInput = { userId };
   if (q.entityType) where.entityType = q.entityType;
   if (q.entityId) where.entityId = q.entityId;
@@ -249,7 +247,6 @@ export async function restoreChange(userId: string, ledgerId: string): Promise<H
     throw error;
   }
 
-  await flushChangeLedger();
   const written = await prisma.changeLedgerEntry.findMany({
     where: { userId, restoredFromId: row.id },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],

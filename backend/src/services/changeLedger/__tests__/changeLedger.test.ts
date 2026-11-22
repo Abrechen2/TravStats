@@ -6,7 +6,6 @@ import { prisma } from "../../../db";
 import { hashPassword } from "../../../utils/password";
 import { generateToken } from "../../../utils/jwt";
 import { TABLE_POLICY } from "../../accountArchive/tablePolicy";
-import { flushChangeLedger } from "../capture";
 import {
   changeContextMiddleware,
   resolveChangeContext,
@@ -47,7 +46,6 @@ describe("change ledger", () => {
     });
 
   const rowsFor = async (entityId: string) => {
-    await flushChangeLedger();
     return prisma.changeLedgerEntry.findMany({
       where: { entityId },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -70,12 +68,10 @@ describe("change ledger", () => {
 
   beforeEach(async () => {
     await prisma.flight.deleteMany({ where: { userId: { in: [userId, otherId] } } });
-    await flushChangeLedger();
     await prisma.changeLedgerEntry.deleteMany({ where: { userId: { in: [userId, otherId] } } });
   });
 
   afterAll(async () => {
-    await flushChangeLedger();
     await prisma.user.deleteMany({ where: { id: { in: [userId, otherId] } } });
     await prisma.$disconnect();
   });
@@ -168,6 +164,44 @@ describe("change ledger", () => {
       ['"A1"', '"B1"'],
       ['"B1"', '"B2"'],
     ]);
+  });
+
+  it("drops the rows of a nested transaction that rolled back while the outer one committed", async () => {
+    const f = await flight(userId, { gate: "A1", seatNumber: "1A" });
+    await prisma.$transaction(async (tx) => {
+      await tx.flight.update({ where: { id: f.id }, data: { seatNumber: "2B" } });
+      await tx
+        .$transaction(async (inner) => {
+          await inner.flight.update({ where: { id: f.id }, data: { gate: "N1" } });
+          throw new Error("inner rolled back");
+        })
+        .catch(() => undefined);
+    });
+    const stored = await prisma.flight.findUnique({ where: { id: f.id } });
+    expect([stored?.gate, stored?.seatNumber]).toEqual(["A1", "2B"]);
+    expect((await rowsFor(f.id)).map((r) => r.field)).toEqual(["seatNumber"]);
+  });
+
+  it("sees what the same transaction created: an entry made and edited in one transaction", async () => {
+    let id = "";
+    await prisma.$transaction(async (tx) => {
+      const created = await tx.flight.create({
+        data: {
+          userId,
+          flightNumber: "LH1",
+          depLat: 0,
+          depLon: 0,
+          arrLat: 1,
+          arrLon: 1,
+          status: "scheduled",
+          gate: "C1",
+        },
+      });
+      id = created.id;
+      await tx.flight.update({ where: { id }, data: { gate: "C2" } });
+    });
+    const rows = await rowsFor(id);
+    expect(rows.map((r) => [r.oldValue, r.newValue])).toEqual([['"C1"', '"C2"']]);
   });
 
   it("drops the rows of a failed batch transaction too", async () => {

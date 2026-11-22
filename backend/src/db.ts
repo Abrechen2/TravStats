@@ -5,7 +5,9 @@ import {
   captureWrite,
   configureChangeLedger,
   isCapturedWrite,
+  isLedgerInternal,
   runLedgerTransaction,
+  runNestedLedgerTransaction,
 } from "./services/changeLedger/capture";
 import logger, { dbLogger } from "./utils/logger";
 import { toLoggable } from "./utils/logging/toLoggable";
@@ -140,6 +142,9 @@ export const prisma = basePrisma.$extends({
   query: {
     async $allOperations(params) {
       const { model, operation, args, query } = params;
+      // The change ledger's own snapshot or insert through a transaction
+      // client: not the caller's query, so neither observed, logged nor captured.
+      if (isLedgerInternal()) return query(args);
       const startTime = Date.now();
       // Before the call, matching the old middleware: it recorded on the way
       // in, so a query that throws is still counted.
@@ -291,8 +296,9 @@ function logQueryFailure(
     arg: unknown,
     options?: unknown
   ) {
-    const args = options === undefined ? [arg] : [arg, options];
-    if (this !== top) return original.apply(this, args);
+    if (this !== top) {
+      return runNestedLedgerTransaction((...a: unknown[]) => original.apply(this, a), arg, options);
+    }
     return runLedgerTransaction((...a: unknown[]) => original.apply(top, a), arg, options);
   };
 }

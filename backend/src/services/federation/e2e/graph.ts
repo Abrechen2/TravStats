@@ -168,6 +168,8 @@ export const TRAVEL_GRAPH: Record<string, NodeSpec> = {
 
 /** Non-travel User relations: credentials, configuration, workflow and delivery bookkeeping. */
 export const NON_TRAVEL_RELATIONS = [
+  // The change history stays on this server and never travels to a peer (spec 2026-11-22).
+  "changeLedgerEntries",
   "comparisonDevices",
   "comparisonPublications",
   "comparisonLinks",

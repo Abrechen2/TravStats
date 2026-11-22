@@ -34,8 +34,8 @@ are covered by their parent's delete row.
 `services/changeLedger/capture.ts`, called by the one query extension in `db.ts` around
 every write to a tracked model — so all ~200 write paths are covered without each calling
 it. For a write that touches a recorded field the hook reads a before-snapshot of exactly
-those fields (plus id, owner and a short label) on the unextended client, runs the write,
-diffs, and queues the rows. A single `update`/`upsert` takes the new value from the row the
+those fields (plus id, owner and a short label), runs the write, diffs, and writes the rows
+in the same transaction as the change (see Transactions). A single `update`/`upsert` takes the new value from the row the
 database handed back; an `updateMany` derives it from the written value (`set`, arithmetic,
 `push` are understood; anything else is skipped rather than guessed).
 
@@ -72,35 +72,51 @@ payloads a refresh rewrites wholesale (`geometry`, `actualRoute`, `enrichmentHis
 - A bulk write matching more than 5 000 rows is a migration, not an edit: it is logged
   (`change_ledger_bulk_skipped`) and not recorded.
 
+## Transactions — a row commits with its change
+
+A history row commits or rolls back with the change it describes: never a row for a write
+that did not land, never a committed change without its row, never a row twice (nothing is
+retried or queued).
+
+- Interactive `$transaction` (and nested `tx.$transaction`, a savepoint in Prisma 7):
+  `db.ts` wraps the client's method (the extension API has no hook for a transaction's
+  end) and gives each one a scope. The snapshot is read through that transaction's client
+  (it sees the transaction's earlier writes, needs no second connection); the rows are
+  collected in the scope and inserted through the same client when the callback returns,
+  before the commit. A nested transaction has its own scope, so its rows roll back with it.
+  Options (isolation level, timeout) pass through unchanged; a nested call stays Prisma's
+  own method on that `tx` — binding it to the top client opened a second, independent
+  transaction that waited on the first (50 sharing tests caught that).
+- A write outside any transaction runs inside a short transaction of its own on the base
+  client: snapshot, the same call on the transaction's delegate, the rows.
+- The array form `$transaction([...])` cannot carry extra statements: its snapshots read
+  committed values and its rows are inserted right after it committed (a crash in that
+  moment loses them; a rollback drops them).
+- The insert runs in a savepoint: a ledger failure (an account deleted meanwhile) is logged
+  with the row count and never aborts the caller's work. A failing snapshot inside a
+  caller's transaction is the one ledger statement that could abort it; it is a plain
+  primary-key/filter read.
+- Memory: rows live only for the duration of their transaction and are inserted in chunks
+  of 1 000; there is no process-wide queue.
+
 ## Performance budget
 
-- A tracked write touching a recorded field: one extra primary-key/filter read
-  (the snapshot). A write touching none (a version claim, a geometry refresh): nothing.
-- Inserts are batched: rows are queued and written by one `createMany` per flush
-  (200 ms or 500 rows), plus one owner-existence read per flush. Never one insert per write.
-- The ledger's queries run on the unextended client, so they do not re-enter the hook and
-  are not counted by `observeQueries`. `ledgerStats()` counts them; the 200-flight bulk
-  edit test holds them to ≤ 200 snapshot reads and ≤ 20 inserts for 400 rows, while the
-  route's own guard (≤ 620 queries) is unchanged.
+- A tracked write touching a recorded field: one snapshot read. A write touching none (a
+  version claim, a geometry refresh): nothing.
+- One insert per transaction (chunked), plus a savepoint around it; a standalone write adds
+  its own BEGIN/COMMIT.
+- The ledger's statements are not counted by `observeQueries`; `ledgerStats()` counts them.
+  The 200-flight bulk edit (200 transactions) is held to ≤ 200 snapshot reads and ≤ 200
+  inserts for 400 rows, while the route's own guard (≤ 620 queries) is unchanged.
 
 ## Limits (known, accepted)
 
-- Transactions: every `prisma.$transaction` (callback or array form) runs through
-  `runLedgerTransaction` (`db.ts` wraps the client's method; the extension API has no hook
-  for a transaction's end). The rows its writes produce are collected per transaction and
-  queued only after it committed; a rollback drops them, so a write that did not land never
-  leaves a row. Chosen over inserting through the transaction client because a ledger
-  failure must never abort the caller's transaction, and because a read through the outer
-  client while a nested `tx.$transaction` is open waits on it. The snapshot therefore runs
-  on the base client (committed values, never blocked by the transaction's locks); a field
-  the same transaction already wrote takes its "before" from the transaction's own record.
-  A nested `tx.$transaction` shares its outer scope: rows from a nested part that rolled
-  back while the outer one still committed are kept (no write path does that today).
-- Queued rows live in memory for at most one flush interval; a crash loses them.
 - A relation written through `connect`/`disconnect` is not recorded (no tracked write path
   uses it today).
 - A bulk write whose reported count differs from its snapshot (a concurrent edit) re-reads
   the rows and records only those that now hold the written value.
+- A write inside a callback that uses a transaction client captured from an outer
+  transaction is recorded in the inner scope.
 
 ## Restore
 
