@@ -161,6 +161,14 @@ export default function LodgingDetailPage(): JSX.Element {
     else addToast("error", t("lodging:detail.stayNotFound"));
   });
 
+  // `?stay=<id>` (from a package's member sheet) marks that stay and scrolls it into view.
+  const highlightStayId = new URLSearchParams(location.search).get("stay");
+  const stayCount = lodging?.stays.length ?? 0;
+  useEffect(() => {
+    if (!highlightStayId || stayCount === 0) return;
+    document.getElementById(`stay-${highlightStayId}`)?.scrollIntoView?.({ block: "center" });
+  }, [highlightStayId, stayCount]);
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -483,7 +491,21 @@ export default function LodgingDetailPage(): JSX.Element {
                           ?.programName
                       : undefined;
                   return (
-                    <div key={stay.id} className="flex flex-col gap-2">
+                    <div
+                      key={stay.id}
+                      id={`stay-${stay.id}`}
+                      className="flex flex-col gap-2"
+                      data-highlighted={highlightStayId === stay.id ? "true" : undefined}
+                      style={
+                        highlightStayId === stay.id
+                          ? {
+                              outline: "2px solid var(--accent)",
+                              outlineOffset: 4,
+                              borderRadius: 12,
+                            }
+                          : undefined
+                      }
+                    >
                       <LodgingStayCard
                         stay={stay}
                         onEdit={setEditingStay}

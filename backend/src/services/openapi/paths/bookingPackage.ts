@@ -43,6 +43,7 @@ const bookingPackage = registry.register(
             .describe("When the entry starts, in the time model's shape"),
           status: z.string(),
           tripId: z.string().uuid().nullable(),
+          lodgingId: z.string().optional().describe("A stay only: the lodging page that shows it"),
           share: z
             .number()
             .nullable()

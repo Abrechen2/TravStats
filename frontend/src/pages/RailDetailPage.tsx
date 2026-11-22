@@ -1,4 +1,6 @@
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
+import { PackageBookingCard } from "../components/bookings/PackageBookingCard";
+import { usePackageSplit } from "../components/bookings/usePackageSplit";
 import { useEffect, useState } from "react";
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import type { JSX } from "react";
@@ -71,6 +73,7 @@ export default function RailDetailPage(): JSX.Element {
   const viewerZone = useSettingsStore((s) => s.display?.timezone);
   const locale = dateLocaleForLanguage(i18n.language);
   const addToast = useToastStore((s) => s.addToast);
+  const packageSplit = usePackageSplit();
   const [journey, setJourney] = useState<RailJourneyDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<LoadFailure | null>(null);
@@ -283,6 +286,7 @@ export default function RailDetailPage(): JSX.Element {
             <Button onClick={() => setEditing({ mode: "edit" })}>{t("rail:edit")}</Button>
             <DetailMoreMenu
               entries={[
+                ...(packageSplit.entry ? [packageSplit.entry] : []),
                 {
                   key: "connection",
                   label: t("rail:connection.add"),
@@ -367,6 +371,13 @@ export default function RailDetailPage(): JSX.Element {
 
           <EntryPhotosSection kind="rail" entryId={journey.id} />
 
+          {journey.bookingId && (
+            <PackageBookingCard
+              bookingId={journey.bookingId}
+              highlight={{ kind: "rail", id: journey.id }}
+              controller={packageSplit.controller}
+            />
+          )}
           <DocumentsSection
             entry={{ type: "railJourney", id: journey.id }}
             extract={railExtractTarget(journey, async (updates) => {

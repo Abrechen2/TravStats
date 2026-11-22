@@ -23,6 +23,7 @@ describe("a booking as a package (forgejo#430)", () => {
   let bookingId: string;
   let flightId: string;
   let stayId: string;
+  let lodgingId: string;
   let rentalId: string;
 
   beforeAll(async () => {
@@ -51,6 +52,7 @@ describe("a booking as a package (forgejo#430)", () => {
       })
     ).id;
     const lodging = await prisma.lodging.create({ data: { userId, name: "Hotel Capitol" } });
+    lodgingId = lodging.id;
     stayId = (
       await prisma.lodgingStay.create({
         data: {
@@ -131,6 +133,18 @@ describe("a booking as a package (forgejo#430)", () => {
       ["flight", null],
       ["rental", null],
     ]);
+  });
+
+  it("names the lodging a stay belongs to, so the member sheet can open and mark it", async () => {
+    const res = await request(app)
+      .get(`/api/v1/trips/bookings/${bookingId}`)
+      .set("Cookie", cookie)
+      .expect(200);
+    const stay = res.body.items.find((i: { kind: string }) => i.kind === "stay");
+    expect(stay.lodgingId).toBe(lodgingId);
+    expect(
+      res.body.items.find((i: { kind: string }) => i.kind === "flight").lodgingId
+    ).toBeUndefined();
   });
 
   it("the trip pays the package once — the rental's own price is not added on top", async () => {

@@ -1,4 +1,6 @@
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
+import { PackageBookingCard } from "../components/bookings/PackageBookingCard";
+import { usePackageSplit } from "../components/bookings/usePackageSplit";
 import { useEffect, useState } from "react";
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -45,6 +47,7 @@ export default function FerryDetailPage() {
   const toursVisible = useToursVisible();
   const { t, i18n } = useTranslation(["ferry", "common", "rail", "documents"]);
   const fxReadout = usePriceFxReadout();
+  const packageSplit = usePackageSplit();
   const [ride, setRide] = useState<FerryJourney | null>(null);
   const [error, setError] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -192,7 +195,11 @@ export default function FerryDetailPage() {
         actions={
           <>
             <Button onClick={() => setEditing(true)}>{t("ferry:edit")}</Button>
-            <DetailMoreMenu deleteLabel={t("ferry:remove")} onDelete={() => setDeleting(true)} />
+            <DetailMoreMenu
+              entries={packageSplit.entry ? [packageSplit.entry] : []}
+              deleteLabel={t("ferry:remove")}
+              onDelete={() => setDeleting(true)}
+            />
           </>
         }
       />
@@ -286,6 +293,13 @@ export default function FerryDetailPage() {
             }))}
           />
           <EntryPhotosSection kind="ferry" entryId={ride.id} />
+          {ride.bookingId && (
+            <PackageBookingCard
+              bookingId={ride.bookingId}
+              highlight={{ kind: "ferry", id: ride.id }}
+              controller={packageSplit.controller}
+            />
+          )}
           <DocumentsSection entry={{ type: "ferryJourney", id: ride.id }} />
         </div>
         <aside className="flex flex-col gap-6 md:col-span-2">

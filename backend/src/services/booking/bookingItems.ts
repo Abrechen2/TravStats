@@ -27,6 +27,8 @@ export interface BookingItem {
   start: TimeValue | LocalDateValue | null;
   status: string;
   tripId: string | null;
+  /** A stay only: the lodging it belongs to, which is where the stay is shown. */
+  lodgingId?: string;
 }
 
 const route = (from: string | null, to: string | null): string =>
@@ -63,6 +65,7 @@ export async function loadBookingItems(userId: string, bookingId: string): Promi
         datePrecision: true,
         status: true,
         tripId: true,
+        lodgingId: true,
         lodging: { select: { name: true } },
       },
     }),
@@ -145,6 +148,7 @@ export async function loadBookingItems(userId: string, bookingId: string): Promi
       kind: "stay" as const,
       id: s.id,
       label: s.lodging.name,
+      lodgingId: s.lodgingId,
       date: s.checkIn,
       start: stayTimes({ ...NO_DEADLINES, ...s, checkInAt: null, checkOutAt: null }).checkIn,
       status: s.status,

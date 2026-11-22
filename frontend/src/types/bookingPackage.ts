@@ -12,6 +12,8 @@ export interface BookingPackageItem {
   date: string | null;
   status: string;
   tripId: string | null;
+  /** A stay only: the lodging page that shows it. */
+  lodgingId?: string;
   /** This item's share of a valid split; null = not split ("Teil eines Pakets"). */
   share: number | null;
 }
