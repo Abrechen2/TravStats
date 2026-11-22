@@ -24,6 +24,7 @@ import {
   ORCHESTRATOR_VERSION,
 } from "../services/cruiseDistance/cruiseLegService";
 import { buildEffectivePortSequence } from "../shared/cruise/portSequence";
+import { CRUISE_STOP_ORDER_BY } from "../shared/cruise/stopOrder";
 
 interface BackfillStats {
   scanned: number;
@@ -49,6 +50,18 @@ export interface ExpectedLegInput {
  * in `cruise_stops` — so this script judged correct cruises to be out of date
  * and would have been the wrong ruler for any migration that trusted it.
  */
+export function expectedLegPairs(cruise: ExpectedLegInput): string[] {
+  const portCalls = cruise.stops
+    .filter((s): s is { portId: number } => s.portId !== null)
+    .map((s) => ({ id: s.portId }));
+  const sequence = buildEffectivePortSequence(
+    cruise.departurePortId !== null ? { id: cruise.departurePortId } : null,
+    portCalls,
+    cruise.arrivalPortId !== null ? { id: cruise.arrivalPortId } : null
+  );
+  return sequence.slice(1).map((p, i) => `${sequence[i].id}>${p.id}`);
+}
+
 export function expectedLegCount(cruise: ExpectedLegInput): number {
   const portCalls = cruise.stops
     .filter((s): s is { portId: number } => s.portId !== null)
@@ -77,10 +90,13 @@ async function backfill(apply: boolean): Promise<BackfillStats> {
       arrivalPortId: true,
       stops: {
         where: { isAtSea: false, portId: { not: null } },
-        orderBy: { dayNumber: "asc" },
+        orderBy: CRUISE_STOP_ORDER_BY,
         select: { portId: true },
       },
-      legs: { select: { routerVersion: true } },
+      legs: {
+        orderBy: { ordinal: "asc" },
+        select: { routerVersion: true, fromPortId: true, toPortId: true },
+      },
     },
   });
 
@@ -94,7 +110,15 @@ async function backfill(apply: boolean): Promise<BackfillStats> {
       continue;
     }
 
-    const lengthMatches = haveLegs === expectedLegs;
+    // The stored legs must also be the legs of TODAY's stop order: before the
+    // stop order gained arrival time and id as tie-breaks (forgejo#435), stops
+    // sharing a day were read in whatever order Postgres chose, and the legs
+    // (and their distances) were computed for that order.
+    const expectedPairs = expectedLegPairs(cruise);
+    const orderMatches = cruise.legs.every(
+      (l, i) => `${l.fromPortId}>${l.toPortId}` === expectedPairs[i]
+    );
+    const lengthMatches = haveLegs === expectedLegs && orderMatches;
     const versionMatches =
       haveLegs > 0 && cruise.legs.every((l) => l.routerVersion === ORCHESTRATOR_VERSION);
 

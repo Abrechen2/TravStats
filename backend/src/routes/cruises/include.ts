@@ -1,4 +1,5 @@
 import { Prisma } from "../../prisma";
+import { CRUISE_STOP_ORDER_BY } from "../../shared/cruise/stopOrder";
 
 /**
  * What a cruise carries when it is READ — list rows and the detail page alike.
@@ -15,7 +16,7 @@ export const CRUISE_INCLUDE = {
   // cruise belongs to, and pulling the whole Trip row (with its own relations)
   // into every list entry would be paid on all 500 rows for two fields.
   trip: { select: { id: true, name: true, color: true } },
-  stops: { include: { port: true }, orderBy: { dayNumber: "asc" as const } },
+  stops: { include: { port: true }, orderBy: CRUISE_STOP_ORDER_BY },
   legs: { orderBy: { ordinal: "asc" as const } },
   // What a delete takes with it besides the stops and the documents
   // (forgejo#250, review I1): GPS recordings and the routes the user redrew

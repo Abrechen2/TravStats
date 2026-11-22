@@ -11,6 +11,7 @@ import { rentalTimes } from "../rental/timesDto";
 import { tripStopTimes } from "../trips/timesDto";
 import { FLIGHT_VIEW_SELECT, flightProgress } from "./flightView";
 import { nowMarker, sortItinerary } from "./itineraryNow";
+import { CRUISE_STOP_ORDER_BY } from "../../shared/cruise/stopOrder";
 
 /**
  * The `itinerary` of a trip link (forgejo#302): where the traveller is when,
@@ -127,7 +128,7 @@ export async function cruiseItemsWhere(
       endZone: true,
       ship: { select: { name: true } },
       stops: {
-        orderBy: { dayNumber: "asc" },
+        orderBy: CRUISE_STOP_ORDER_BY,
         select: {
           dayNumber: true,
           isAtSea: true,

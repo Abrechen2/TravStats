@@ -14,6 +14,7 @@ import {
 } from "../facts";
 import { planStopMatch } from "./cruiseStopMatch";
 import { joinLabel, plainData, type EntityAdapter, type SharedRow } from "./types";
+import { CRUISE_STOP_ORDER_BY } from "../../../shared/cruise/stopOrder";
 
 /**
  * A cruise with its port calls (`stops`) and computed legs (`legs`) as two
@@ -24,7 +25,7 @@ type StopFacts = Pick<CruiseStop, CruiseStopFactField>;
 type LegFacts = Pick<CruiseLeg, CruiseLegFactField>;
 
 const INCLUDE = {
-  stops: { orderBy: [{ dayNumber: "asc" }, { id: "asc" }] },
+  stops: { orderBy: CRUISE_STOP_ORDER_BY },
   legs: { orderBy: { ordinal: "asc" } },
 } as const satisfies Prisma.CruiseInclude;
 
@@ -54,7 +55,7 @@ async function applyStops(
 ): Promise<void> {
   const current = await c.cruiseStop.findMany({
     where: { cruiseId },
-    orderBy: [{ dayNumber: "asc" }, { id: "asc" }],
+    orderBy: CRUISE_STOP_ORDER_BY,
     select: {
       id: true,
       dayNumber: true,

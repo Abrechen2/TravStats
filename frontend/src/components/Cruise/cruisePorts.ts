@@ -2,6 +2,7 @@ import type { Cruise, CruiseStop, Port } from "../../types";
 import { dateOfCruiseDay } from "./cruiseDayNumbers";
 import { cruiseEnd, cruiseStart, cruiseStopArrival, cruiseStopDay } from "../../lib/entityTimes";
 import { dayOf } from "../../shared/time";
+import { compareCruiseStops } from "../../shared/cruise/stopOrder";
 
 /**
  * Shared port-sequence helpers for cruise surfaces.
@@ -103,7 +104,7 @@ export interface EffectiveSequenceEntry {
 export function effectiveTimedSequence(cruise: Cruise): EffectiveSequenceEntry[] {
   const seq: EffectiveSequenceEntry[] = cruise.stops
     .filter((s) => !s.isAtSea && s.port !== null)
-    .sort((a, b) => a.dayNumber - b.dayNumber)
+    .sort(compareCruiseStops)
     .map((s) => ({
       port: s.port as Port,
       dayNumber: s.dayNumber,

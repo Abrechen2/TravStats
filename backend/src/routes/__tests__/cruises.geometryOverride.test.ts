@@ -99,6 +99,17 @@ describe("Cruise geometry honours a stored route", () => {
     expect(f.properties.routed).toBe(false);
   });
 
+  it("protects every vertex of a manual line from client smoothing (forgejo#435)", async () => {
+    await storeLine();
+    const res = await request(app)
+      .post("/api/v1/cruises/geometry/batch")
+      .set("Cookie", authCookie)
+      .send({ ids: [cruiseId] });
+    const f = res.body.data[cruiseId].features[0];
+    expect(f.properties.protectedPrefixCount).toBe(LINE.length);
+    expect(f.properties.protectedSuffixCount).toBe(0);
+  });
+
   it("returns it from the batch endpoint too", async () => {
     await storeLine();
     const res = await request(app)

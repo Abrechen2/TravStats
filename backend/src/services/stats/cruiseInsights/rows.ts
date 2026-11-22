@@ -25,6 +25,7 @@ import type { CruiseData } from "../../../utils/cruiseStats";
 import { cruiseStopTimes, type CruiseStopTimeColumns } from "../../cruise/timesDto";
 import type { CruiseMoneyColumns } from "../cruiseSpendBase";
 import { loadCruiseStatsData } from "../cruiseStatsData";
+import { compareCruiseStops } from "../../../shared/cruise/stopOrder";
 
 export interface CruiseCall {
   stopId: string;
@@ -106,24 +107,22 @@ export function cruiseInsightRowOf(
 ): CruiseInsightRow {
   const startDay = dayOf(base.input.startDate);
   const endDay = dayOf(base.input.endDate) ?? startDay;
-  const calls = [...stops]
-    .sort((a, b) => a.dayNumber - b.dayNumber || a.id.localeCompare(b.id))
-    .map((s): CruiseCall => {
-      const times = cruiseStopTimes(s);
-      return {
-        stopId: s.id,
-        dayNumber: s.dayNumber,
-        day: times.date?.date ?? (startDay ? addDays(startDay, s.dayNumber - 1) : null),
-        isAtSea: s.isAtSea,
-        portId: s.isAtSea ? null : s.portId,
-        portName: s.isAtSea ? null : (s.port?.name ?? s.unresolvedPortName ?? null),
-        lat: s.port?.lat ?? null,
-        lon: s.port?.lon ?? null,
-        arrival: times.arrival,
-        departure: times.departure,
-        excursionNote: s.excursionNote?.trim() ? s.excursionNote.trim() : null,
-      };
-    });
+  const calls = [...stops].sort(compareCruiseStops).map((s): CruiseCall => {
+    const times = cruiseStopTimes(s);
+    return {
+      stopId: s.id,
+      dayNumber: s.dayNumber,
+      day: times.date?.date ?? (startDay ? addDays(startDay, s.dayNumber - 1) : null),
+      isAtSea: s.isAtSea,
+      portId: s.isAtSea ? null : s.portId,
+      portName: s.isAtSea ? null : (s.port?.name ?? s.unresolvedPortName ?? null),
+      lat: s.port?.lat ?? null,
+      lon: s.port?.lon ?? null,
+      arrival: times.arrival,
+      departure: times.departure,
+      excursionNote: s.excursionNote?.trim() ? s.excursionNote.trim() : null,
+    };
+  });
   return {
     id: base.id,
     label: base.label,

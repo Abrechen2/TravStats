@@ -6,7 +6,11 @@ import {
   greatCircleWaypoints,
 } from "../../Globe/arcUtils";
 import type { Layer } from "@deck.gl/core";
-import { createCruiseArcsLayer, createCruiseArrowsLayer } from "../../layers/cruiseArcsLayer";
+import {
+  createCruiseArcsLayer,
+  createCruiseArrowsLayer,
+  type CruiseGeometryMap,
+} from "../../layers/cruiseArcsLayer";
 import type { CruiseColorConfig } from "../../../lib/cruiseColor";
 import type { GeoJSONFeature } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
@@ -171,7 +175,11 @@ export function buildJourneyLayers(
    * with the leg and is larger than this constant. To the flight branch a
    * non-zero value therefore means only "this is the globe".
    */
-  altitudeM = 0
+  altitudeM = 0,
+  /** The server's per-cruise geometry (`useCruiseGeometry`). Without it every
+   *  leg is a chord with an arrow, which is what Reise drew for a river cruise
+   *  whose lines the user had drawn (forgejo#435). */
+  cruiseGeometry: CruiseGeometryMap = new Map()
 ): Layer[] {
   const groups = groupByTripId(flights, cruises);
 
@@ -193,13 +201,13 @@ export function buildJourneyLayers(
     const cruiseOptions = { colorConfig: cruiseColorConfig, altitudeM };
     const cruiseLayer = createCruiseArcsLayer(
       trip.cruises,
-      undefined,
+      cruiseGeometry,
       null,
       undefined,
       cruiseOptions
     );
     if (cruiseLayer !== null) layers.push(cruiseLayer);
-    const arrowsLayer = createCruiseArrowsLayer(trip.cruises, undefined, null, cruiseOptions);
+    const arrowsLayer = createCruiseArrowsLayer(trip.cruises, cruiseGeometry, null, cruiseOptions);
     if (arrowsLayer !== null) layers.push(arrowsLayer);
   }
 

@@ -14,6 +14,7 @@ import type { FlightTimeSemantics } from "../../utils/timezone";
 import { getCachedAirports } from "../airportCache";
 import { addDays, daysBetween, placeClock, placeZone, storedDay } from "./time";
 import type { PresenceEntry, PresencePoint } from "./types";
+import { CRUISE_STOP_ORDER_BY } from "../../shared/cruise/stopOrder";
 
 /**
  * Flights, rides and cruises as presence entries: two ends (or a string of
@@ -410,7 +411,7 @@ export async function loadCruises(userId: string): Promise<Loaded> {
       stops: {
         where: { isAtSea: false, portId: { not: null } },
         select: { dayNumber: true, date: true, port: { select: portSelect } },
-        orderBy: { dayNumber: "asc" },
+        orderBy: CRUISE_STOP_ORDER_BY,
       },
     },
   });

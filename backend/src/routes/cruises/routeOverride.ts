@@ -16,6 +16,7 @@ import {
   SHARE_TX_TIMEOUT_MS,
 } from "../../services/sharing/propagate";
 import logger from "../../utils/logger";
+import { CRUISE_STOP_ORDER_BY } from "../../shared/cruise/stopOrder";
 
 /**
  * `PUT`/`DELETE /api/v1/cruises/:id/route-override` — split out of
@@ -72,7 +73,7 @@ async function findLegPorts(
       arrivalPort: true,
       stops: {
         where: { isAtSea: false, portId: { not: null } },
-        orderBy: { dayNumber: "asc" },
+        orderBy: CRUISE_STOP_ORDER_BY,
         include: { port: true },
       },
     },

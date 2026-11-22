@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { groupByTripId } from "../buildJourneyLayers";
+import type { Layer } from "@deck.gl/core";
+import { buildJourneyLayers, groupByTripId } from "../buildJourneyLayers";
 import type { GeoJSONFeature } from "../../../../types";
 import type { Cruise } from "../../../../types/cruise";
 
@@ -69,5 +70,62 @@ describe("groupByTripId", () => {
   it("ignores empty-string tripId (treated same as null)", () => {
     const groups = groupByTripId([flightFeature("f1", "")], [cruise("c1", "")]);
     expect(Object.keys(groups).length).toBe(0);
+  });
+});
+
+describe("buildJourneyLayers cruise geometry (forgejo#435)", () => {
+  const port = (id: number, lon: number, lat: number) => ({ id, name: `P${id}`, lon, lat });
+  const river: [number, number][] = [
+    [106.5, 29.5],
+    [107.0, 30.0],
+    [107.7, 29.9],
+  ];
+  const trip = {
+    id: "c1",
+    tripId: "t1",
+    status: "completed",
+    departurePort: port(1, 106.5, 29.5),
+    arrivalPort: port(2, 107.7, 29.9),
+    stops: [],
+  } as unknown as Cruise;
+  const geometry = new Map([
+    [
+      "c1",
+      {
+        type: "FeatureCollection" as const,
+        features: [
+          {
+            type: "Feature" as const,
+            geometry: { type: "LineString" as const, coordinates: river },
+            properties: {
+              fromPortId: 1,
+              toPortId: 2,
+              routed: false,
+              protectedPrefixCount: 3,
+              protectedSuffixCount: 0,
+            },
+          },
+        ],
+      },
+    ],
+  ]);
+  const pathsOf = (layers: Layer[]): unknown[] =>
+    layers.flatMap((l) => {
+      const data = (l as unknown as { props: { data: unknown } }).props.data;
+      return Array.isArray(data) ? data.map((d: { path?: unknown }) => d.path) : [];
+    });
+
+  it("draws the stored line, not a chord, when the geometry is handed in", () => {
+    const layers = buildJourneyLayers([], [trip], "t1", undefined, 0, geometry);
+    expect(pathsOf(layers)).toContainEqual(river);
+  });
+
+  it("falls back to the chord without geometry", () => {
+    const layers = buildJourneyLayers([], [trip], "t1");
+    expect(pathsOf(layers)).not.toContainEqual(river);
+    expect(pathsOf(layers)).toContainEqual([
+      [106.5, 29.5],
+      [107.7, 29.9],
+    ]);
   });
 });

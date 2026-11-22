@@ -10,6 +10,7 @@ import {
 import { isRiverCruise } from "../../shared/cruiseKind";
 import { isInlandLeg } from "../cruiseDistance/inlandLeg";
 import { riverLegPath, withDerivedRiverRegions } from "../cruiseDistance/riverCalculator";
+import { CRUISE_STOP_ORDER_BY } from "../../shared/cruise/stopOrder";
 
 /**
  * The map line of every leg of one cruise — moved out of `routes/cruises.ts`
@@ -79,7 +80,7 @@ export interface CruiseGeometryInput {
 
 /** The include both geometry routes load a cruise with. */
 export const CRUISE_GEOMETRY_INCLUDE = {
-  stops: { include: { port: true }, orderBy: { dayNumber: "asc" as const } },
+  stops: { include: { port: true }, orderBy: CRUISE_STOP_ORDER_BY },
   departurePort: true,
   arrivalPort: true,
   legRoutes: true,
@@ -151,7 +152,11 @@ export async function buildCruiseGeometry(
           fromPortId: a.id,
           toPortId: b.id,
           routed: false,
-          protectedPrefixCount: 0,
+          // Every vertex protected, like a recording: the user drew this line.
+          // With 0 the dashboard/globe/trip map (zoom < 8) splined it with
+          // Catmull-Rom and bent it off the river (forgejo#435); only the
+          // cruise page at close zoom drew it as stored.
+          protectedPrefixCount: manual.length,
           protectedSuffixCount: 0,
           method: "manual_polyline",
           geometrySource: "drawn",

@@ -19,6 +19,7 @@ import { computeLegDistance } from "./index";
 import { polylineDistanceKm } from "./polylineDistance";
 import { CRUISE_TRACK_COVERAGE_SELECT, resolveRecordedLegs } from "./recordedLegs";
 import type { ComputedLeg, PortPoint } from "./types";
+import { CRUISE_STOP_ORDER_BY } from "../../shared/cruise/stopOrder";
 
 /**
  * Bumps when the orchestrator's calculator chain or chaining logic changes.
@@ -131,7 +132,7 @@ export async function precomputeLegDistancesForCruise(cruiseId: string): Promise
     }),
     prisma.cruiseStop.findMany({
       where: { cruiseId, isAtSea: false, portId: { not: null } },
-      orderBy: { dayNumber: "asc" },
+      orderBy: CRUISE_STOP_ORDER_BY,
       select: { portId: true },
     }),
     prisma.cruiseLegRoute.findMany({
@@ -171,7 +172,7 @@ export async function recomputeLegsForCruise(
     }),
     client.cruiseStop.findMany({
       where: { cruiseId, isAtSea: false, portId: { not: null } },
-      orderBy: { dayNumber: "asc" },
+      orderBy: CRUISE_STOP_ORDER_BY,
       include: { port: true },
     }),
     client.cruiseLegRoute.findMany({

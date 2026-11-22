@@ -8,6 +8,7 @@ import {
 import { RECORDED_TRACK_METHOD } from "../cruiseDistance/cruiseLegService";
 import type { CruiseGeometrySource } from "./cruiseGeometry";
 import { cruiseLegWindow, cruiseWindow, type WindowStop } from "./cruiseLegWindow";
+import { CRUISE_STOP_ORDER_BY } from "../../shared/cruise/stopOrder";
 
 /**
  * What the cruise page shows about recordings: the recordings themselves
@@ -99,7 +100,7 @@ export async function loadCruiseTrackOverview(
     include: {
       departurePort: true,
       arrivalPort: true,
-      stops: { orderBy: { dayNumber: "asc" }, include: { port: true } },
+      stops: { orderBy: CRUISE_STOP_ORDER_BY, include: { port: true } },
       legs: {
         orderBy: { ordinal: "asc" },
         select: { ordinal: true, distanceKm: true, method: true },

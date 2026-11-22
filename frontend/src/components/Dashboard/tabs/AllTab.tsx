@@ -49,11 +49,8 @@ import { ALL_MODES } from "../../../types/dashboard";
 import FlightEditModal from "../../FlightEditModal";
 import MapContainer3D, { type MapMode } from "../../MapContainer3D";
 import { classifyVisit } from "../../../shared/placeCounting";
-import {
-  JOURNEY_GLOBE_ALTITUDE_M,
-  buildJourneyLayers,
-  groupByTripId,
-} from "../modes/buildJourneyLayers";
+import { groupByTripId } from "../modes/buildJourneyLayers";
+import { useJourneyLayers } from "../modes/useJourneyLayers";
 import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
 import type { ActivityItem } from "../sidebars/activityItems";
 import { useLodgingSelectionStore } from "../../../store/lodgingSelectionStore";
@@ -447,16 +444,14 @@ export function AllTab(): JSX.Element {
   // globe could never see there.
   const journeyVisMode: MapMode = projection === "globe" ? "globe" : "routes";
 
-  const journeyLayers = useMemo<Layer[]>(() => {
-    if (allMode !== "journey") return [];
-    return buildJourneyLayers(
-      visibleFlights,
-      visibleCruises,
-      effectiveTripId,
-      cruiseColorConfig,
-      journeyVisMode === "globe" ? JOURNEY_GLOBE_ALTITUDE_M : 0
-    );
-  }, [allMode, visibleFlights, visibleCruises, effectiveTripId, cruiseColorConfig, journeyVisMode]);
+  const journeyLayers = useJourneyLayers({
+    active: allMode === "journey",
+    flights: visibleFlights,
+    cruises: visibleCruises,
+    tripId: effectiveTripId,
+    colorConfig: cruiseColorConfig,
+    onGlobe: journeyVisMode === "globe",
+  });
 
   // Tours and ground lines on the overview map only — journey mode takes over
   // the map for ONE trip (`journeyLayers`). Each line answers to its own domain;

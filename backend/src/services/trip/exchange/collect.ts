@@ -15,6 +15,7 @@ import { getTripPhotoDir } from "../../../middleware/upload";
 import type { ExportOptions, TripFile, TripFilePortRef } from "./format";
 import { collectDocuments } from "./collectDocuments";
 import { extensionOf, isoDay } from "./collectShared";
+import { CRUISE_STOP_ORDER_BY } from "../../../shared/cruise/stopOrder";
 
 export interface PackedFile {
   /** The name inside the archive (`documents/d1.pdf`). */
@@ -83,7 +84,7 @@ async function loadTrip(userId: string, tripId: string) {
           ship: true,
           departurePort: true,
           arrivalPort: true,
-          stops: { orderBy: { dayNumber: "asc" }, include: { port: true } },
+          stops: { orderBy: CRUISE_STOP_ORDER_BY, include: { port: true } },
           companionLinks: byPosition,
         },
       },
