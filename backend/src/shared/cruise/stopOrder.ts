@@ -2,6 +2,11 @@
  * The ONE order of a cruise's stops: day number, then arrival time, then
  * departure time (a stop without a time sorts after one with it), then id.
  *
+ * Limit, on purpose: Prisma's `orderBy` cannot coalesce, so arrival and departure
+ * are two keys, not `arrival ?? departure`. A stop with only a departure sorts
+ * after a same-day stop that has an arrival. Both forms keep the SAME rule, so the
+ * server and the maps still agree.
+ *
  * Why all four: a river cruise calls at two ports on one day (Fengdu 07:00 and
  * Zhongxian 15:00 on day 2), and `orderBy: { dayNumber }` alone leaves those in
  * whatever order Postgres returns them. Two queries then disagreed, the sequence

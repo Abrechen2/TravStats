@@ -94,6 +94,7 @@ describe("Cruise stops are read in one order: day, arrival time, id (forgejo#435
   });
 
   afterAll(async () => {
+    if (!userId) return;
     await prisma.cruise.deleteMany({ where: { userId } });
     await prisma.user.delete({ where: { id: userId } });
   });
