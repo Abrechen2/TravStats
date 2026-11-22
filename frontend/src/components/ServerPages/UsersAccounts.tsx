@@ -270,6 +270,6 @@ export default function UsersAccounts(): JSX.Element {
 /** "Flüge: 3 · Orte: 1" — the domains the account has entries in, for the number's tooltip. */
 function entryBreakdown(user: AdminUser, t: (key: string) => string): string {
   return AVAILABLE_DOMAINS.filter((d) => (user.entryCounts?.[d] ?? 0) > 0)
-    .map((d) => `${t(DOMAINS[d].i18nKey)}: ${user.entryCounts[d]}`)
+    .map((d) => `${t(`common:${DOMAINS[d].i18nKey}`)}: ${user.entryCounts[d]}`)
     .join(" · ");
 }

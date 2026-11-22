@@ -293,8 +293,8 @@ describe("account rows (admin user list)", () => {
     const counts = await screen.findByTestId("entries-me");
     expect(counts.textContent).toContain("settingsRows:users.counts");
     // `t` is a key echo in this suite; the interpolated total is what must change.
-    expect(counts).toHaveAttribute("title", expect.stringContaining("domain.flight: 3"));
-    expect(counts).toHaveAttribute("title", expect.stringContaining("domain.poi: 1"));
+    expect(counts).toHaveAttribute("title", expect.stringContaining("common:domain.flight: 3"));
+    expect(counts).toHaveAttribute("title", expect.stringContaining("common:domain.poi: 1"));
   });
 
   it("labels the two-factor and account pills so 'Aus' is no longer ambiguous", async () => {
