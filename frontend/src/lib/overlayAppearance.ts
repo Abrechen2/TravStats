@@ -30,12 +30,6 @@ export interface OverlayAppearance {
   rentalLineWidth: number;
   /** Multiplier on a rental's pick-up/return marker (1 = default, 0 = hidden). */
   rentalMarkerSize: number;
-  /**
-   * Whether a one-way rental draws its dashed pick-up → return link. Off shows
-   * the stations alone (tester ask, forgejo#198). Absent = shown, the
-   * behaviour every user had before the switch existed.
-   */
-  rentalShowLine: boolean;
 }
 
 export const DEFAULT_OVERLAY_APPEARANCE: OverlayAppearance = {
@@ -46,7 +40,6 @@ export const DEFAULT_OVERLAY_APPEARANCE: OverlayAppearance = {
   railStationSize: 1,
   rentalLineWidth: 1,
   rentalMarkerSize: 1,
-  rentalShowLine: true,
 };
 
 /** Slider range for every line-width multiplier — the flight/cruise range. */
@@ -54,7 +47,7 @@ export const OVERLAY_WIDTH_RANGE = { min: 0.3, max: 2, step: 0.1 } as const;
 /** Slider range for every marker-size multiplier — 0 hides the markers. */
 export const OVERLAY_SIZE_RANGE = { min: 0, max: 1.6, step: 0.1 } as const;
 
-type NumericKey = Exclude<keyof OverlayAppearance, "rentalShowLine">;
+type NumericKey = keyof OverlayAppearance;
 
 const RANGE_OF: Record<NumericKey, { min: number; max: number }> = {
   tourLineWidth: OVERLAY_WIDTH_RANGE,
@@ -82,11 +75,5 @@ export function overlayAppearanceFromStored(stored: Record<string, unknown>): Ov
   const numeric = Object.fromEntries(
     (Object.keys(RANGE_OF) as NumericKey[]).map((key) => [key, numberFrom(stored[key], key)])
   ) as Record<NumericKey, number>;
-  return {
-    ...numeric,
-    rentalShowLine:
-      typeof stored.rentalShowLine === "boolean"
-        ? stored.rentalShowLine
-        : DEFAULT_OVERLAY_APPEARANCE.rentalShowLine,
-  };
+  return numeric;
 }

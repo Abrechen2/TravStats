@@ -409,7 +409,22 @@
     },
     "row": {
       "only": "Nur",
-      "onlyTooltip": "Nur diese Domäne zeigen"
+      "onlyTooltip": "Nur diese Domäne zeigen",
+      "routes": "Routen",
+      "stopsOnly": "Nur Orte",
+      "routesHideTooltip": "Routen ausblenden, nur {{places}} zeigen",
+      "routesShowTooltip": "Routen wieder einblenden",
+      "routesBlocked": "In diesem Modus sind die Routen der Inhalt der Karte.",
+      "places": {
+        "flight": "Flughäfen",
+        "cruise": "Häfen",
+        "rail": "Bahnhöfe",
+        "bus": "Haltestellen",
+        "ferry": "Fährhäfen",
+        "tour": "Stationen",
+        "roadtrip": "Stationen",
+        "rental": "Stationen"
+      }
     },
     "betaBadge": {
       "tooltip": "Beta-Funktion dieser Instanz"

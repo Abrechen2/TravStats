@@ -23,18 +23,13 @@ import {
   type OverlayAppearance,
 } from "../../lib/overlayAppearance";
 import { useOverlayAppearanceStore } from "../../store/overlayAppearanceStore";
-import {
-  CollapsibleSection,
-  Slider,
-  Toggle,
-  type AppearanceDomain,
-  MUTED_TEXT,
-} from "./controlPanelKit";
-import { useDomainVisible } from "../../hooks/useDomainVisible";
+import { useRoutesVisible } from "../../store/mapRoutesStore";
 import { RoutesSwitch } from "./RoutesSwitch";
+import { CollapsibleSection, Slider, type AppearanceDomain } from "./controlPanelKit";
+import { useDomainVisible } from "../../hooks/useDomainVisible";
 import { RouteOnlyControls } from "./RouteOnlyControls";
 
-type NumericKey = Exclude<keyof OverlayAppearance, "rentalShowLine">;
+type NumericKey = keyof OverlayAppearance;
 
 function WidthSlider({ field }: { field: NumericKey }): JSX.Element {
   const { t } = useTranslation();
@@ -66,20 +61,10 @@ function SizeSlider({ field, label }: { field: NumericKey; label: string }): JSX
 }
 
 function RentalLineToggle(): JSX.Element {
-  const { t } = useTranslation();
-  const showLine = useOverlayAppearanceStore((s) => s.appearance.rentalShowLine);
-  const setValue = useOverlayAppearanceStore((s) => s.setValue);
+  const showLine = useRoutesVisible("rental");
   return (
-    <div className="-mx-1 mt-1.5">
-      <Toggle
-        checked={showLine}
-        onChange={(v) => setValue("rentalShowLine", v)}
-        icon="↔️"
-        label={t("map:globe.panel.rentalShowLine")}
-      />
-      <div className="px-2 text-[10px] leading-snug" style={{ color: MUTED_TEXT }}>
-        {t("map:globe.panel.rentalShowLineHint")}
-      </div>
+    <div className="mt-1.5">
+      <RoutesSwitch domain="rental" />
       {/* The width of a line that is not drawn is not a control — hidden with it. */}
       {showLine && (
         <div className="px-1">

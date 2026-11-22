@@ -15,7 +15,8 @@ import {
  * through the shared `mapAppearance` blob and with it the account sync.
  */
 export function loadRoutesVisible(): RoutesVisible {
-  return routesVisibleFromStored(loadMapAppearance().routesVisible);
+  const stored = loadMapAppearance();
+  return routesVisibleFromStored(stored.routesVisible, stored.rentalShowLine);
 }
 
 interface MapRoutesState {
