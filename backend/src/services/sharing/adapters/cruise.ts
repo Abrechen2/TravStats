@@ -67,11 +67,19 @@ async function applyStops(
     },
   });
   const plan = planStopMatch(stops, current);
+  // `position` is not a wire fact (older peers refuse unknown keys): the
+  // copy takes the source's order, which `load` sends already sorted (forgejo#438).
+  const positionOf = (source: StopFacts): number => Math.max(0, stops.indexOf(source));
   for (const { copyId, source } of plan.updates) {
-    await c.cruiseStop.update({ where: { id: copyId }, data: cruiseStopFacts(source) });
+    await c.cruiseStop.update({
+      where: { id: copyId },
+      data: { ...cruiseStopFacts(source), position: positionOf(source) },
+    });
   }
   for (const source of plan.creates) {
-    await c.cruiseStop.create({ data: { ...cruiseStopFacts(source), cruiseId } });
+    await c.cruiseStop.create({
+      data: { ...cruiseStopFacts(source), position: positionOf(source), cruiseId },
+    });
   }
   if (plan.deletes.length > 0) {
     await c.cruiseStop.deleteMany({ where: { id: { in: plan.deletes } } });
@@ -106,7 +114,12 @@ export const cruiseAdapter: EntityAdapter = {
         tripId: recipientTripId,
         shareKey: source.shareKey,
         dataSource: SHARED_SOURCE,
-        stops: { create: (source.facts.stops as StopFacts[]).map((s) => cruiseStopFacts(s)) },
+        stops: {
+          create: (source.facts.stops as StopFacts[]).map((s, position) => ({
+            ...cruiseStopFacts(s),
+            position,
+          })),
+        },
         legs: { create: (source.facts.legs as LegFacts[]).map((l) => cruiseLegFacts(l)) },
       },
       select: { id: true },

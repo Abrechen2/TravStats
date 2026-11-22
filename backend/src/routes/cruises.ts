@@ -574,6 +574,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
               cruiseId: existing.id,
               portId: s.portId ?? null,
               dayNumber: s.dayNumber,
+              position: s.position ?? index,
               isAtSea: s.isAtSea,
               ...stopTimes[index],
               excursionNote: s.excursionNote ?? null,

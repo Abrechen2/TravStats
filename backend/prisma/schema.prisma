@@ -3303,6 +3303,10 @@ model CruiseStop {
   // Third stop state: a port whose name could not be matched to the catalog on
   // import. portId=null AND isAtSea=false AND this set => unresolved port.
   unresolvedPortName String?          @map("unresolved_port_name")
+  /// Order within the cruise (forgejo#438): the tie-break after day, arrival
+  /// and departure, so two same-day stops without times keep the order the
+  /// user (or the import's source) gave them instead of the random uuid's.
+  position           Int              @default(0)
 
   cruise Cruise @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
   port   Port?  @relation(fields: [portId], references: [id], onDelete: SetNull)

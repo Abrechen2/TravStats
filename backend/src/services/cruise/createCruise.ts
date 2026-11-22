@@ -168,6 +168,7 @@ export async function createCruiseRecord(
           cruiseId: created.id,
           portId: s.portId ?? null,
           dayNumber: s.dayNumber,
+          position: s.position ?? index,
           isAtSea: s.isAtSea,
           ...stopTimes[index],
           excursionNote: s.excursionNote ?? null,

@@ -31,4 +31,24 @@ describe("compareCruiseStops (forgejo#435)", () => {
     const late = { id: "a", dayNumber: 1, departureTime: "2026-10-01T18:00:00Z" };
     expect(sortCruiseStops([late, early]).map((s) => s.id)).toEqual(["x", "a"]);
   });
+
+  it("keeps same-day stops without times in position order, not uuid order (forgejo#438)", () => {
+    const first = { id: "z-uuid", dayNumber: 4, position: 0 };
+    const second = { id: "a-uuid", dayNumber: 4, position: 1 };
+    const third = { id: "m-uuid", dayNumber: 4, position: 2 };
+    expect(sortCruiseStops([third, second, first]).map((s) => s.id)).toEqual([
+      "z-uuid",
+      "a-uuid",
+      "m-uuid",
+    ]);
+  });
+
+  it("lets a time beat the position and the position beat the id (forgejo#438)", () => {
+    const timedLate = { id: "a", dayNumber: 1, arrivalTime: "2026-10-01T15:00:00Z", position: 0 };
+    const timedEarly = { id: "b", dayNumber: 1, arrivalTime: "2026-10-01T07:00:00Z", position: 5 };
+    expect(sortCruiseStops([timedLate, timedEarly]).map((s) => s.id)).toEqual(["b", "a"]);
+    expect(
+      compareCruiseStops({ id: "b", dayNumber: 1 }, { id: "a", dayNumber: 1 })
+    ).toBeGreaterThan(0);
+  });
 });

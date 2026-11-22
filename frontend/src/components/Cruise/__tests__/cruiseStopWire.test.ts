@@ -92,4 +92,12 @@ describe("cruiseStopToWire — a port call in the time model's write shape", () 
     ).toHaveProperty("allAboardTime", null);
     expect(cruiseStopToWire(stop({ beforeSea: { portId: 1 } }), 0)).not.toHaveProperty("beforeSea");
   });
+
+  it("writes the list index as position, so a same-day reorder persists (forgejo#438)", () => {
+    const list = [
+      stop({ portId: 1, position: 7, arrivalTime: null, departureTime: null }),
+      stop({ portId: 2, position: 3, arrivalTime: null, departureTime: null }),
+    ];
+    expect(list.map(cruiseStopToWire).map((w) => w.position)).toEqual([0, 1]);
+  });
 });
