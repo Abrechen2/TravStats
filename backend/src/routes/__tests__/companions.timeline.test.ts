@@ -210,6 +210,50 @@ describe("companions — person timeline", () => {
     });
   });
 
+  it("links a document on a planned flight to its page, and leaves place-visit documents out", async () => {
+    const planned = await prisma.flight.create({
+      data: {
+        userId: anna.id,
+        depIata: "LIS",
+        arrIata: "FRA",
+        depLat: 38.77,
+        depLon: -9.13,
+        arrLat: 50.03,
+        arrLon: 8.56,
+        departureTime: day("2099-01-01"),
+        status: "planned",
+      },
+    });
+    const doc = await prisma.document.create({
+      data: {
+        userId: anna.id,
+        storedName: `${PREFIX}future`,
+        originalName: "future.pdf",
+        mimetype: "application/pdf",
+        sizeBytes: 1,
+        sha256: "future",
+        format: "pdf",
+      },
+    });
+    await prisma.documentLink.create({
+      data: {
+        documentId: doc.id,
+        flightId: planned.id,
+        role: "primary",
+        provenance: "user",
+        companionId: benId,
+        companionSource: "user",
+      },
+    });
+    const res = await timeline(anna, benId).expect(200);
+    expect(res.body.documents).toHaveLength(1);
+    expect(res.body.documents[0].entry).toEqual({
+      kind: "flight",
+      id: planned.id,
+      href: `/flights/${planned.id}`,
+    });
+  });
+
   it("is the caller's own: another account, and a linked companion, get 404", async () => {
     const eve = await account("eve", ["flight"]);
     const res = await timeline(eve, benId).expect(404);

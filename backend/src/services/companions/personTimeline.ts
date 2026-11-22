@@ -31,7 +31,7 @@ export interface PersonDocument {
   name: string | null;
   kind: string | null;
   issuedOn: string | null;
-  entry: { kind: CompanionUseKind; id: string; href: string | null } | null;
+  entry: { kind: CompanionUseKind; id: string; href: string | null };
 }
 
 export interface PersonTimeline {
@@ -149,6 +149,17 @@ function loadDocumentLinks(userId: string, companionId: string) {
   });
 }
 
+/** The page of an entry; a stay's page is its house's, which only the timeline row knows. */
+const ENTRY_PATH: Partial<Record<CompanionUseKind, string>> = {
+  flight: "/flights",
+  cruise: "/cruises",
+  trip: "/trips",
+  rail: "/rail",
+  bus: "/bus",
+  ferry: "/ferry",
+  rental: "/rentals",
+};
+
 function entryOfLink(l: LinkedDoc): { kind: CompanionUseKind; id: string } | null {
   if (l.flightId) return { kind: "flight", id: l.flightId };
   if (l.cruiseId) return { kind: "cruise", id: l.cruiseId };
@@ -196,14 +207,17 @@ export async function personTimeline(userId: string, companionId: string): Promi
     const ref = entryOfLink(l);
     // An entry of a domain switched off is not shown, its documents with it.
     if (ref && !kinds.includes(ref.kind)) return [];
-    const row = ref ? rowOf.get(`${ref.kind}:${ref.id}`) : undefined;
+    // A place visit or an expense is no shared entry of a kind: not this page's.
+    if (!ref) return [];
+    const base = ENTRY_PATH[ref.kind];
+    const href = rowOf.get(`${ref.kind}:${ref.id}`)?.href ?? (base ? `${base}/${ref.id}` : null);
     return [
       {
         id: l.document.id,
         name: l.document.originalName,
         kind: l.document.kind,
         issuedOn: dayOf(l.document.issuedOn),
-        entry: ref ? { ...ref, href: row?.href ?? null } : null,
+        entry: { ...ref, href },
       },
     ];
   });

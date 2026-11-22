@@ -106,7 +106,7 @@ export interface PersonTimeline {
     name: string | null;
     kind: string | null;
     issuedOn: string | null;
-    entry: { kind: CompanionUseKind; id: string; href: string | null } | null;
+    entry: { kind: CompanionUseKind; id: string; href: string | null };
   }>;
   facts: {
     seats: Array<{

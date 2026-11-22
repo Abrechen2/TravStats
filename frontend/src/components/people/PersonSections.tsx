@@ -151,7 +151,7 @@ export function DocumentsList({ docs }: { docs: PersonTimeline["documents"] }): 
                   {t(`documents:kind.${d.kind}`, { defaultValue: d.kind })}
                 </span>
               )}
-              {d.entry?.href && (
+              {d.entry.href && (
                 <Link to={d.entry.href} className="t-caption underline">
                   {t(`${NS}.kind.${d.entry.kind}`)}
                 </Link>

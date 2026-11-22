@@ -377,7 +377,7 @@ registry.registerPath({
                 name: z.string().nullable(),
                 kind: z.string().nullable(),
                 issuedOn: z.string().nullable(),
-                entry: entryRef.nullable(),
+                entry: entryRef,
               })
             ),
             facts: z.object({

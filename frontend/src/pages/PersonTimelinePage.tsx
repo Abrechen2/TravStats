@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type JSX } from "react";
+import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import {
@@ -27,12 +27,18 @@ export default function PersonTimelinePage(): JSX.Element {
   const [failure, setFailure] = useState<string | null | undefined>(undefined);
   const [notFound, setNotFound] = useState(false);
 
+  /** The latest request wins: an answer for a person we have navigated away from is dropped. */
+  const latest = useRef(0);
+
   const load = useCallback(async (): Promise<void> => {
+    const mine = ++latest.current;
     setFailure(undefined);
     setNotFound(false);
     try {
-      setData(await companionsApi.timeline(id));
+      const next = await companionsApi.timeline(id);
+      if (mine === latest.current) setData(next);
     } catch (err) {
+      if (mine !== latest.current) return;
       const status = (err as { response?: { status?: number } }).response?.status;
       if (status === 404) setNotFound(true);
       else {
