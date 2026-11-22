@@ -1,4 +1,5 @@
-import { it, expect, vi } from "vitest";
+import { it, expect, vi, describe, afterEach } from "vitest";
+import { useSettingsStore } from "../../../store/settingsStore";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import type { Flight } from "../../../types";
 import { api } from "../../../lib/api/client";
@@ -89,4 +90,37 @@ it("falls back to a code tile that fits the column, keeping the name for readers
   const code = screen.getByText("LH");
   expect(code.getAttribute("aria-hidden")).toBe("true");
   expect(screen.getByText("Lufthansa").className).toContain("sr-only");
+});
+
+// The suite-wide settings mock (setup.ts) hands out one shared state object.
+function setStyle(style: string | undefined): void {
+  (useSettingsStore.getState().units as unknown as Record<string, unknown>).airlineLogoStyle =
+    style;
+}
+
+describe("airline logo style setting", () => {
+  afterEach(() => {
+    setStyle(undefined);
+  });
+
+  it("requests the icon variant when the user chose 'Nur Symbol'", () => {
+    setStyle("icon");
+    render(<AirlineWordmarkCell flight={flight} />);
+    const img = screen.getByRole("img") as HTMLImageElement;
+    expect(img.src).toContain("/api/v1/airline-logos/LH?variant=icon");
+  });
+
+  it("keeps the named tile when the setting is absent or unknown", () => {
+    setStyle("bogus");
+    render(<AirlineWordmarkCell flight={flight} />);
+    expect((screen.getByRole("img") as HTMLImageElement).src).toContain("variant=logo");
+  });
+
+  it("shows the code tile, not an empty box, when the icon is missing", () => {
+    setStyle("icon");
+    render(<AirlineWordmarkCell flight={flight} />);
+    fireEvent.error(document.querySelector("img")!);
+    expect(document.querySelector("img")).toBeNull();
+    expect(screen.getByText("Lufthansa")).toBeInTheDocument();
+  });
 });

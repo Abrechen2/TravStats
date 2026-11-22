@@ -213,6 +213,10 @@
       "fahrenheit": "Fahrenheit"
     },
     "weight": "Gewicht",
+    "airlineLogoOptions": {
+      "tile": "Kachel mit Name",
+      "icon": "Nur Symbol"
+    },
     "weightOptions": {
       "kg": "Kilogramm",
       "lb": "Pfund"
@@ -1715,6 +1719,11 @@
     },
     "distance": {
       "name": "Entfernung"
+    },
+    "airlineLogoStyle": {
+      "name": "Airline-Logos",
+      "sub": "In Listen und Tabellen",
+      "help": "„Nur Symbol“ zeigt das kleine Logo ohne Namen. Hat eine Airline kein Symbol, bleibt die Kachel mit Name."
     },
     "weight": {
       "name": "Gepäck",
