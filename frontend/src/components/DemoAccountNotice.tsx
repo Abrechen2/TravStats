@@ -16,7 +16,8 @@ export const DEMO_ACCOUNT_TARGET = "/settings/wartung#system";
  */
 export function DemoAccountNotice({ variant }: { variant: "chip" | "menu" }): JSX.Element | null {
   const { t } = useTranslation(["common"]);
-  const isAdmin = useAuthStore((s) => s.user?.isAdmin ?? false);
+  const { user } = useAuthStore();
+  const isAdmin = user?.isAdmin ?? false;
   const active = useDemoAccountStore((s) => s.active);
   const refresh = useDemoAccountStore((s) => s.refresh);
   const coarse = useCoarsePointer();
@@ -32,13 +33,12 @@ export function DemoAccountNotice({ variant }: { variant: "chip" | "menu" }): JS
     <Link
       to={DEMO_ACCOUNT_TARGET}
       data-testid={`demo-account-${variant}`}
-      title={t("common:demoAccount.hint")}
       aria-label={`${label}. ${t("common:demoAccount.hint")}`}
       className="inline-flex shrink-0 items-center rounded-full whitespace-nowrap"
       style={{
         minHeight: coarse ? 40 : 24,
         padding: "0 var(--ts-space-sm)",
-        fontSize: "var(--ts-text-xs, 12px)",
+        fontSize: 12,
         color: "var(--ts-warn)",
         border: "1px solid var(--ts-warn)",
         background: "transparent",

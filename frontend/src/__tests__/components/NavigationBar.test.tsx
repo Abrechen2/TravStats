@@ -12,6 +12,10 @@ vi.mock("../../lib/api", async (importOriginal) => {
       ...actual.settingsApi,
       update: vi.fn().mockResolvedValue(undefined),
     },
+    adminApi: {
+      ...actual.adminApi,
+      getSystemInfo: vi.fn().mockResolvedValue({ demoUserExists: false, demoUserActive: false }),
+    },
     pendingUpdatesApi: {
       ...actual.pendingUpdatesApi,
       getAll: vi.fn().mockResolvedValue({ count: 0, updates: [] }),
