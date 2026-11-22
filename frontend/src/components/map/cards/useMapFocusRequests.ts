@@ -15,10 +15,10 @@ export interface FittableMap extends FocusableMap {
   ) => void;
 }
 
-/** How close a single place is shown: street level on the flat map, the region on the globe. */
+/** How close a single place is shown: city level on both: the globe is zoomed less per step. */
 export const FOCUS_REQUEST = {
   flat: { pointZoom: 10, maxZoom: 10, duration: 800 },
-  globe: { pointZoom: 5, maxZoom: 5, duration: 1200 },
+  globe: { pointZoom: 7, maxZoom: 7, duration: 1200 },
 } as const;
 
 const EDGE = 80;
