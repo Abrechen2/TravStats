@@ -60,7 +60,6 @@ export function writersOf(event: WriteEvent): string[] {
 }
 
 const FOLLOW_UP_MS = 60_000;
-let sweepTimer: ReturnType<typeof setTimeout> | null = null;
 
 function run(userId: string): void {
   syncProvenanceNotices(userId).catch((error) =>
@@ -89,30 +88,20 @@ function schedule(userId: string): void {
   timers.set(userId, timer);
 }
 
-/** A write that named no account (by id, or a parent's cascade): every account with something to check. */
-function scheduleSweep(): void {
-  if (sweepTimer) return;
-  sweepTimer = setTimeout(() => {
-    sweepTimer = null;
-    void sweepAllAccounts().catch((error) =>
-      logger.warn({ message: "provenance_notice_sweep_failed", error })
-    );
-  }, debounceMs);
-  sweepTimer.unref();
-}
-
 /** Exported for the test that drives it without waiting on the timer. */
 export function onProvenanceWrite(event: WriteEvent): void {
   if (!event.model || !MODELS.has(event.model) || !WRITES.has(event.operation)) return;
   const writers = writersOf(event);
   if (writers.length > 0) for (const userId of writers) schedule(userId);
-  else scheduleSweep();
+  // A write that names no account (an `updateMany` by id) is left to the boot sweep and to
+  // opening the inbox: a global pass per such write is work a burst of them could pile up.
 }
 
 /** Boot-time: every write feeds the notices. Not installed under test unless a test asks. */
 export function installProvenanceNoticeTriggers(): () => void {
   const remove = addWriteObserver(onProvenanceWrite);
   // Writes that could not name their account, and anything done while the server was down.
+  // The ONLY global sweep.
   const boot = setTimeout(() => {
     void sweepAllAccounts().catch((error) =>
       logger.warn({ message: "provenance_notice_boot_sweep_failed", error })
@@ -126,13 +115,40 @@ export function installProvenanceNoticeTriggers(): () => void {
     timers.clear();
     for (const t of followUps.values()) clearTimeout(t);
     followUps.clear();
-    if (sweepTimer) clearTimeout(sweepTimer);
-    sweepTimer = null;
   };
 }
 
-/** Accounts that hold anything remembered are the only ones a contradiction can involve. */
-export async function sweepAllAccounts(): Promise<number> {
+let sweeping: Promise<number> | null = null;
+let rerunQueued = false;
+
+/**
+ * Every account that holds anything remembered. Never more than one runs at a time: a request made
+ * while one is in flight queues at most ONE rerun (which covers every later request too).
+ */
+export function sweepAllAccounts(): Promise<number> {
+  if (sweeping) {
+    rerunQueued = true;
+    return sweeping;
+  }
+  const run = sweepOnce().finally(() => {
+    sweeping = null;
+    if (rerunQueued) {
+      rerunQueued = false;
+      void sweepAllAccounts().catch((error) =>
+        logger.warn({ message: "provenance_notice_sweep_rerun_failed", error })
+      );
+    }
+  });
+  sweeping = run;
+  return run;
+}
+
+/** Test seam: the accounts waiting for a pass. */
+export function pendingNoticeAccounts(): string[] {
+  return [...timers.keys()];
+}
+
+async function sweepOnce(): Promise<number> {
   const rows = await prisma.$queryRaw<{ user_id: string }[]>`
     SELECT DISTINCT user_id FROM (
       SELECT user_id FROM trips WHERE provenance = 'remembered'

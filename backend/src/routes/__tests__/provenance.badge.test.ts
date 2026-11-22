@@ -9,6 +9,7 @@ import {
   installProvenanceNoticeTriggers,
   setNoticeDebounceMs,
   sweepAllAccounts,
+  pendingNoticeAccounts,
 } from "../../services/provenance/noticeTriggers";
 
 /**
@@ -134,5 +135,48 @@ describe("provenance notice badge", () => {
     expect(await count()).toBe(0);
     await sweepAllAccounts();
     expect(await count()).toBe(1);
+  });
+
+  it("overlapping sweeps run at most one sweep plus one rerun", async () => {
+    let sweeps = 0;
+    const stop = observeQueries((q) => {
+      if (q.model === undefined && q.operation === "$queryRaw") sweeps += 1;
+    });
+    await Promise.all(Array.from({ length: 8 }, () => sweepAllAccounts()));
+    await settle(600);
+    stop();
+    // The sweep's own query, plus the single rerun the overlapping requests coalesced into.
+    expect(sweeps).toBeGreaterThanOrEqual(1);
+    expect(sweeps).toBeLessThanOrEqual(2);
+  });
+
+  it("a deleted place or lodging schedules its OWNER only, never a global sweep", async () => {
+    setNoticeDebounceMs(60_000);
+    try {
+      const other = (
+        await prisma.user.create({
+          data: { username: `rf-bo-${stamp}`, passwordHash: await hashPassword("test-password") },
+        })
+      ).id;
+      let sweeps = 0;
+      const stop = observeQueries((q) => {
+        if (q.model === undefined && q.operation === "$queryRaw") sweeps += 1;
+      });
+      const place = await prisma.place.create({
+        data: { userId, name: "Weg", lat: 1, lon: 1 },
+      });
+      const lodging = await prisma.lodging.create({
+        data: { userId, name: "Weg", city: "X", lat: 1, lon: 1 },
+      });
+      await prisma.place.delete({ where: { id: place.id } });
+      await prisma.lodging.delete({ where: { id: lodging.id } });
+      stop();
+      expect(pendingNoticeAccounts()).toEqual([userId]);
+      expect(pendingNoticeAccounts()).not.toContain(other);
+      expect(sweeps).toBe(0);
+      await prisma.user.delete({ where: { id: other } });
+    } finally {
+      setNoticeDebounceMs(50);
+    }
   });
 });
