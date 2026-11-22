@@ -150,6 +150,19 @@ describe("Ferry editor", () => {
     fireEvent.keyDown(screen.getByLabelText("picker.label"), { key: "Enter" });
     expect(screen.getByTestId("modal").dataset.dirty).toBe("true");
   });
+  it("has no MMSI field and never sends one: the server resolves the ship from its name", async () => {
+    // Owner, 2026-11-22: nobody knows their ship's MMSI.
+    mocks.save.mockResolvedValue(ride);
+    const onSaved = vi.fn();
+    const withMmsi = { ...ride, vesselMmsi: "265177000" } as FerryJourney;
+    render(<FerryFormModal journey={withMmsi} onClose={vi.fn()} onSaved={onSaved} />);
+    expect(screen.queryByLabelText("ferry:vesselMmsi")).toBeNull();
+    expect(screen.getByLabelText("ferry:vesselName")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("ferry:notes"), { target: { value: "x" } });
+    fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(mocks.save.mock.calls[0][1]).not.toHaveProperty("vesselMmsi");
+  });
   // forgejo#393: fareClass was stored and sent by imports, but the form had no input for it.
   it("lets the fare class be typed, kept and cleared", async () => {
     mocks.save.mockResolvedValue(ride);

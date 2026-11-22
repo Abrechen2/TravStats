@@ -611,6 +611,17 @@
       "getKeyLabel": "OurAirports",
       "quotaLine": "–"
     },
+    "vesselData": {
+      "name": "Vessel data",
+      "purpose": "Wikidata",
+      "why": "Finds a ship's MMSI and IMO from its name, so ferry crossings and cruises are recorded via AIS automatically during the trip.",
+      "cost": "Free.",
+      "quota": "–",
+      "dataOut": "Ship name or IMO number.",
+      "getKeyUrl": "https://www.wikidata.org/",
+      "getKeyLabel": "Wikidata",
+      "quotaLine": "fair use"
+    },
     "logos": {
       "name": "Airline & operator logos",
       "purpose": "kiwi.com, Daisycon, Wikimedia; logostream optional",

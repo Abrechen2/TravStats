@@ -17,6 +17,11 @@ jest.mock("../../services/ferry/aisStream", () => ({
   aisConfigured: () => false,
   lookupVessel: jest.fn(),
 }));
+jest.mock("../../services/vessel/vesselResolver", () => ({
+  ...jest.requireActual("../../services/vessel/vesselResolver"),
+  resolveVessel: jest.fn(),
+}));
+import { resolveVessel } from "../../services/vessel/vesselResolver";
 import { previewFerryText } from "../../services/ferry/ticketPreview";
 import { lookupVessel } from "../../services/ferry/aisStream";
 // The FX lookup is replaced (as in bus.fx.test.ts): the global test guard refuses
@@ -588,6 +593,13 @@ describe("Ferry rides API", () => {
       ).status
     ).toBe(404);
     expect(lookupVessel).not.toHaveBeenCalled();
+    jest.mocked(resolveVessel).mockResolvedValue({
+      status: "resolved",
+      mmsi: "211123456",
+      imo: null,
+      source: "wikidata",
+      confidence: "high",
+    });
     jest.mocked(lookupVessel).mockResolvedValue({ status: "notConfigured", position: null });
     const res = await request(app)
       .get(`/api/v1/ferry/${mine.body.data.id}/live-position?mmsi=211123456`)
@@ -597,50 +609,59 @@ describe("Ferry rides API", () => {
       (await request(app).get("/api/v1/ferry/live-availability").set("Cookie", cookie)).body.data
     ).toEqual({ configured: false, provider: "AISStream" });
   });
-  it("binds the vessel to the crossing: the first answered MMSI is kept, another is refused", async () => {
-    // The MMSI was free input on every call, so any crossing worked as a
-    // general AIS proxy for any vessel.
+  it("ignores an MMSI sent by a client: neither a save nor the live position takes it", async () => {
+    // Nobody knows their ship's MMSI (owner, 2026-11-22), and free input made
+    // any crossing a general AIS proxy for any vessel.
+    jest
+      .mocked(resolveVessel)
+      .mockReset()
+      .mockResolvedValue({ status: "unresolved", reason: "ambiguous", candidates: [] });
+    jest.mocked(lookupVessel).mockReset();
+    const created = await create({ ...base, vesselMmsi: "211123456" });
+    expect(created.status).toBe(201);
+    expect(created.body.data.vesselMmsi).toBeNull();
+    const id = created.body.data.id;
+    await request(app)
+      .patch(`/api/v1/ferry/${id}`)
+      .set("Cookie", cookie)
+      .send({ vesselMmsi: "211999999" })
+      .expect(200);
+    expect((await prisma.ferryJourney.findUniqueOrThrow({ where: { id } })).vesselMmsi).toBeNull();
+    const live = await request(app)
+      .get(`/api/v1/ferry/${id}/live-position?mmsi=211123456`)
+      .set("Cookie", cookie);
+    expect(live.status).toBe(200);
+    expect(live.body.data).toEqual({ status: "unresolved", position: null });
+    expect(lookupVessel).not.toHaveBeenCalled();
+  });
+
+  it("reads the server-resolved MMSI, binds it with its source, and forgets it when the ship is renamed", async () => {
+    jest.mocked(resolveVessel).mockReset().mockResolvedValue({
+      status: "resolved",
+      mmsi: "211123456",
+      imo: null,
+      source: "wikidata",
+      confidence: "medium",
+    });
+    jest.mocked(lookupVessel).mockReset().mockResolvedValue({ status: "noSignal", position: null });
     const ride = (await create(base)).body.data;
-    const ok = {
-      status: "ok" as const,
-      position: {
-        mmsi: "211123456",
-        vesselName: "PREMIUM",
-        lat: 38,
-        lon: 128,
-        speedKnots: 10,
-        courseDegrees: 90,
-        receivedAt: "2026-09-20T09:30:00.000Z",
-        observedAt: null,
-      },
-    };
-    jest.mocked(lookupVessel).mockReset().mockResolvedValue(ok);
     const url = `/api/v1/ferry/${ride.id}/live-position`;
-    expect((await request(app).get(`${url}?mmsi=211123456`).set("Cookie", cookie)).status).toBe(
+    expect((await request(app).get(`${url}?mmsi=211999999`).set("Cookie", cookie)).status).toBe(
       200
     );
     expect(lookupVessel).toHaveBeenCalledWith("211123456", userId);
     const stored = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: ride.id } });
     expect(stored.vesselMmsi).toBe("211123456");
+    expect(stored.vesselMmsiSource).toBe("wikidata");
 
-    const other = await request(app).get(`${url}?mmsi=211999999`).set("Cookie", cookie);
-    expect(other.status).toBe(400);
-    expect(other.body.field).toBe("mmsi");
-    expect(lookupVessel).toHaveBeenCalledTimes(1);
-
-    // Without a query the bound vessel is read.
-    expect((await request(app).get(url).set("Cookie", cookie)).status).toBe(200);
-    expect(lookupVessel).toHaveBeenLastCalledWith("211123456", userId);
-
-    // The crossing's editor can rebind it.
     await request(app)
       .patch(`/api/v1/ferry/${ride.id}`)
       .set("Cookie", cookie)
-      .send({ vesselMmsi: "211999999" })
+      .send({ vesselName: "Another Ship" })
       .expect(200);
-    expect((await request(app).get(`${url}?mmsi=211999999`).set("Cookie", cookie)).status).toBe(
-      200
-    );
+    const renamed = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: ride.id } });
+    expect(renamed.vesselMmsi).toBeNull();
+    expect(renamed.vesselMmsiSource).toBeNull();
   });
 
   it("refuses stale edits and deletes, and permits a delete of the current version", async () => {

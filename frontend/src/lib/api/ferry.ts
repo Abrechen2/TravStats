@@ -1,4 +1,3 @@
-import type { FerryAisResult } from "../../components/ferry/FerryLivePosition";
 import type { FerryTicketPreview } from "../../components/ferry/FerryTicketImport";
 import { api } from "./client";
 import type { FerryStationDraft } from "../../components/ferry/FerryStationField";
@@ -56,7 +55,6 @@ export interface FerryJourneyInput {
   status?: FerryStatus;
   operator?: string | null;
   vesselName?: string | null;
-  vesselMmsi?: string | null;
   bookingReference?: string | null;
   ticketReference?: string | null;
   vehicleType?: string | null;
@@ -103,17 +101,6 @@ export const ferryApi = {
         ...(baseVersion ? { headers: { "If-Match": `"${baseVersion}"` } } : {}),
       })
     ).data;
-  },
-  async liveAvailability() {
-    return (await api.get<Envelope<{ configured: boolean }>>("/ferry/live-availability")).data.data;
-  },
-  async livePosition(id: string, mmsi: string): Promise<FerryAisResult> {
-    return (
-      await api.get<Envelope<FerryAisResult>>(`/ferry/${encodeURIComponent(id)}/live-position`, {
-        params: { mmsi },
-        timeout: 20000,
-      })
-    ).data.data;
   },
   async ticketPreview(
     input: { text: string } | { documentId: string },

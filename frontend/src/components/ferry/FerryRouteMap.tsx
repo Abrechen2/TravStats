@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { JSX } from "react";
 import MapGL from "react-map-gl/maplibre";
 import type { Layer } from "@deck.gl/core";
+import { PathLayer } from "@deck.gl/layers";
 import { DeckGLOverlay } from "../map/DeckGLOverlay";
 import { buildTerminalRideMapLayers } from "../Dashboard/tabs/terminalRideMapOverlay";
 import { busPaths } from "../Trips/tripBusLayer";
@@ -42,17 +43,46 @@ export function ferryMapLine(
  * faint chord between the ports. The caption says which — a reader must never
  * take a chord, or a schematic sea lane, for the track the ship sailed.
  */
-export function FerryRouteMap({ ride }: { ride: FerryJourney }): JSX.Element | null {
+export function FerryRouteMap({
+  ride,
+  recordedTrack = null,
+}: {
+  ride: FerryJourney;
+  /**
+   * The AIS track the server recorded during the crossing, `[lon, lat]`. Drawn as a dark line
+   * IN ADDITION to the stored line — never instead of it: a drawn route
+   * stays what the user drew (forgejo#431).
+   */
+  recordedTrack?: Array<[number, number]> | null;
+}): JSX.Element | null {
   const mapStyle = useBasemapStyle();
   const { t } = useTranslation(["ferry"]);
   const { colorOf } = useDomainColors();
   const [mapLoaded, setMapLoaded] = useState(false);
   const color = colorOf("ferry");
   const drawn = useMemo(() => ({ ...ride, status: "completed" }), [ride]);
-  const layers = useMemo<Layer[]>(
-    () => buildTerminalRideMapLayers([drawn], color, false, "ferry-detail", "important", "ferry"),
-    [drawn, color]
-  );
+  const layers = useMemo<Layer[]>(() => {
+    const base = buildTerminalRideMapLayers(
+      [drawn],
+      color,
+      false,
+      "ferry-detail",
+      "important",
+      "ferry"
+    );
+    if (!recordedTrack || recordedTrack.length < 2) return base;
+    return [
+      ...base,
+      new PathLayer<{ path: [number, number][] }>({
+        id: "ferry-detail-ais-track",
+        data: [{ path: recordedTrack }],
+        getPath: (d) => d.path,
+        getColor: [20, 20, 20, 200],
+        getWidth: 2,
+        widthUnits: "pixels",
+      }),
+    ];
+  }, [drawn, color, recordedTrack]);
   const line = useMemo(() => ferryMapLine(ride), [ride]);
   if (!line) return null;
 
@@ -76,6 +106,11 @@ export function FerryRouteMap({ ride }: { ride: FerryJourney }): JSX.Element | n
       <p className="t-caption" data-testid="ferry-line-source">
         {t(`ferry:map.line.${line.kind}`)}
       </p>
+      {recordedTrack && recordedTrack.length >= 2 && (
+        <p className="t-caption" data-testid="ferry-recorded-track">
+          {t("ferry:map.recordedTrack")}
+        </p>
+      )}
     </div>
   );
 }

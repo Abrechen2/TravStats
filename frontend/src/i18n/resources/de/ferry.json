@@ -21,8 +21,6 @@
   "edit": "Überfahrt bearbeiten",
   "empty": "Noch keine Überfahrten.",
   "error": "Überfahrten konnten nicht geladen werden.",
-  "vesselMmsi": "MMSI des Schiffes",
-  "invalidMmsi": "Die MMSI hat genau 9 Ziffern.",
   "invalidNumber": "Bitte gib bei „{{field}}“ eine gültige Zahl ab 0 ein (z. B. 39,90).",
   "saveError": "Speichern fehlgeschlagen. Bitte Eingaben prüfen.",
   "versionConflict": "Diese Überfahrt wurde inzwischen anderswo geändert. Bitte neu öffnen und erneut speichern.",
@@ -158,21 +156,50 @@
     "readByWorkshop": "Mit deiner eigenen Werkstatt-Vorlage gelesen.",
     "readByRepository": "Mit einer Vorlage aus dem Vorlagen-Repository gelesen."
   },
-  "live": {
-    "title": "Aktueller Schiffsstandort",
-    "hint": "Aktuelle AIS-Meldung für die eingegebene MMSI. Keine historische Reiseroute; Fahrplan und Überfahrt werden nicht verändert.",
-    "mmsi": "MMSI des Schiffes (9 Ziffern)",
-    "bound": "An diese Überfahrt gebunden. Ein anderes Schiff trägst du unter „Überfahrt bearbeiten“ ein.",
-    "read": "Standort abrufen",
-    "waiting": "Warte auf AIS-Meldung …",
-    "notConfigured": "Live-Schiffspositionen sind auf dieser Instanz noch nicht eingerichtet.",
-    "noSignal": "Im Abfragezeitraum wurde keine passende AIS-Meldung empfangen. Das bedeutet nicht, dass das Schiff nicht unterwegs ist.",
-    "unavailable": "Der Standortdienst ist derzeit nicht erreichbar.",
-    "busy": "Der Standortdienst bearbeitet gerade andere Abfragen. Bitte später erneut versuchen.",
-    "received": "Empfangen: {{time}}",
-    "observed": "Zeitangabe der Quelle: {{time}}",
-    "ageUnknown": "Die Quelle liefert keinen vollständigen Beobachtungszeitpunkt. Das Alter der Position ist unbekannt.",
-    "map": "Auf OpenStreetMap ansehen"
+  "vessel": {
+    "title": "Schiff und Position",
+    "ship": "Schiff: {{name}}",
+    "mmsi": "MMSI {{mmsi}}",
+    "source": {
+      "catalogue": "aus dem Schiffskatalog",
+      "wikidata": "über Wikidata gefunden",
+      "aisstream": "über AIS gefunden",
+      "manual": "von dir zugeordnet",
+      "legacy": "früher gebunden"
+    },
+    "medium": "Nur über den Namen gefunden – stimmt das Schiff nicht, ordne es über „Mehr“ zu.",
+    "reason": {
+      "ambiguous": "Schiff nicht eindeutig gefunden. Über „Mehr › Schiff zuordnen …“ kannst du es auswählen.",
+      "notFound": "Schiff nicht gefunden. Über „Mehr › Schiff zuordnen …“ kannst du es suchen.",
+      "unavailable": "Die Schiffsdaten sind gerade nicht erreichbar. TravStats versucht es später erneut.",
+      "noName": "Trage den Schiffsnamen ein, dann sucht TravStats das Schiff selbst."
+    },
+    "signal": {
+      "notConfigured": "AIS-Positionen sind auf dieser Instanz nicht eingerichtet.",
+      "notInProgress": "Während der Fahrt zeichnet TravStats die Position automatisch auf.",
+      "outOfRange": "Keine AIS-Meldung – Schiff außerhalb der Empfangsreichweite",
+      "ok": "Position wird während der Fahrt automatisch aufgezeichnet."
+    },
+    "lastFix": "Letzte Position: {{lat}}, {{lon}}",
+    "lastFixAt": "Gemeldet: {{time}}",
+    "speed": "{{knots}} kn",
+    "track": "Aufgezeichnet: {{count}} Positionen, {{km}} km",
+    "trackCovers": "Die Aufzeichnung deckt die ganze Fahrt ab; die Strecke zählt nach ihr.",
+    "map": "Auf OpenStreetMap ansehen",
+    "loadFailed": "Schiffsdaten konnten nicht geladen werden.",
+    "assign": {
+      "menu": "Schiff zuordnen …",
+      "title": "Schiff zuordnen",
+      "search": "Schiffsname",
+      "searchButton": "Suchen",
+      "none": "Kein Schiff mit diesem Namen gefunden.",
+      "unavailable": "Die Schiffssuche ist gerade nicht erreichbar.",
+      "failed": "Das Schiff konnte nicht zugeordnet werden.",
+      "done": "Schiff zugeordnet.",
+      "pick": "Zuordnen",
+      "imo": "IMO {{imo}}",
+      "hint": "Gib den Namen des Schiffes ein und wähle es aus der Liste."
+    }
   },
   "stats": {
     "crossings": "Überfahrten",
@@ -246,7 +273,8 @@
       "seaRoute": "Schematisch berechneter Seeweg zwischen den Häfen – kein aufgezeichneter Schiffstrack.",
       "drawn": "Gespeicherte Linie der Überfahrt.",
       "straight": "Luftlinie zwischen den Häfen – nicht der Weg des Schiffs."
-    }
+    },
+    "recordedTrack": "Dunkle Linie: die aufgezeichnete AIS-Spur, zusätzlich zur Strecke."
   },
   "routeEditor": {
     "hint": "Klicke auf die Linie, um einen Punkt einzufügen. Ziehe einen Punkt, um ihn zu verschieben.",

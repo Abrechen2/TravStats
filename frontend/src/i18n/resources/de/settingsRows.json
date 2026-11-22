@@ -677,6 +677,10 @@
       "airportData": {
         "n": "OurAirports · airport-data.com",
         "p": "Flughafenkatalog und -fotos"
+      },
+      "vesselData": {
+        "n": "Wikidata",
+        "p": "Schiffs-MMSI und -IMO"
       }
     },
     "rows": {

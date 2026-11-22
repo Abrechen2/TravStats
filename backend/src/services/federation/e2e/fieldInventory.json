@@ -16,7 +16,7 @@
     "excluded": "uploadId deviceId"
   },
   "Cruise": {
-    "details": "id shipId shipNameOverride cruiseLine departurePortId arrivalPortId routeName startDate endDate startDay endDay startZone endZone status kind deck tripId bookingId color createdAt updatedAt externalRef importBatchId",
+    "details": "id shipId shipNameOverride vesselMmsi vesselMmsiSource cruiseLine departurePortId arrivalPortId routeName startDate endDate startDay endDay startZone endZone status kind deck tripId bookingId color createdAt updatedAt externalRef importBatchId",
     "costs": "price currency priceBase fxRate fxRateDate fxBaseCurrency fxSource",
     "personal": "cabinNumber cabinType notes tags companions",
     "photos": "",
@@ -56,7 +56,7 @@
     "excluded": ""
   },
   "Ship": {
-    "details": "id name imo cruiseLine yearBuilt grossTonnage capacity status isUserAdded kind",
+    "details": "id name imo mmsi cruiseLine yearBuilt grossTonnage capacity status isUserAdded kind",
     "costs": "",
     "personal": "",
     "photos": "",
@@ -296,7 +296,7 @@
     "excluded": "userId shareKey provenance rememberedOn rememberedNote"
   },
   "FerryJourney": {
-    "details": "roadtripLegId id operator vesselName vesselMmsi vehicleType vehicleLengthM vehicleWidthM vehicleHeightM passengerCount depStationName depAddress depLat depLon depCountry depTimezone arrStationName arrAddress arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime fareClass status delayMinutes tripId bookingId externalRef importBatchId createdAt updatedAt",
+    "details": "roadtripLegId id operator vesselName vesselMmsi vesselMmsiSource vehicleType vehicleLengthM vehicleWidthM vehicleHeightM passengerCount depStationName depAddress depLat depLon depCountry depTimezone arrStationName arrAddress arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime fareClass status delayMinutes tripId bookingId externalRef importBatchId createdAt updatedAt",
     "costs": "price currency priceBase fxRate fxRateDate fxBaseCurrency fxSource",
     "personal": "cabinType seat notes tags companions vehicleRegistration",
     "photos": "",

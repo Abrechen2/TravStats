@@ -157,6 +157,7 @@ model User {
   railJourneys                    RailJourney[]
   busJourneys                     BusJourney[]
   ferryJourneys                   FerryJourney[]
+  vesselPositionFixes             VesselPositionFix[]
   rentalBookings                  RentalBooking[]
   apiTokens                       ApiToken[]
   pairingCodes                    PairingCode[]
@@ -745,18 +746,18 @@ model Flight {
   /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
   /// dates approximate) | NULL (unknown — every row older than the field). Private to the
   /// account: never a share fact, so a copy starts unknown.
-  provenance       String?   @map("provenance")
+  provenance           String?   @map("provenance")
   /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
-  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  rememberedOn         DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
-  rememberedNote   String?   @map("remembered_note")
+  rememberedNote       String?   @map("remembered_note")
   /// Bumped by every Prisma write. Read by the statistics ETag (forgejo#50):
   /// without it an edited flight could not be told apart from an unchanged one.
-  updatedAt            DateTime         @default(now()) @updatedAt @map("updated_at")
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at")
   // Route tracking
-  actualRoute          Json?            @map("actual_route") // Array of waypoints [{lat, lon, timestamp, country?}]
-  overflownCountries   String[]         @default([]) @map("overflown_countries")
-  routeDistance        Float?           @map("route_distance")
+  actualRoute          Json?     @map("actual_route") // Array of waypoints [{lat, lon, timestamp, country?}]
+  overflownCountries   String[]  @default([]) @map("overflown_countries")
+  routeDistance        Float?    @map("route_distance")
   // MEASURED flight time in minutes — the clocks, never an estimate. The
   // estimate stays where it belongs, in `shared/flightDuration.ts`, which
   // labels it as a guess; this column only ever carries evidence.
@@ -799,11 +800,11 @@ model Flight {
   // `@default(dbgenerated())` is how Prisma is told "the database fills this
   // in": without it every `migrate diff` wants to DROP the generated
   // expression it cannot see.
-  durationMinutes      Float?           @default(dbgenerated()) @map("duration_minutes")
-  routeSource          String?          @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
-  hasLiveTracking      Boolean          @default(false) @map("has_live_tracking")
+  durationMinutes      Float?    @default(dbgenerated()) @map("duration_minutes")
+  routeSource          String?   @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
+  hasLiveTracking      Boolean   @default(false) @map("has_live_tracking")
   // Data source tracking
-  dataSource           String?          @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import', 'imported_fr24', 'imported_generic_csv', 'imported_roundtrip', 'imported_<tracker>' (openflights, airtrail, jetlog, flighty, app_in_the_air)
+  dataSource           String?   @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import', 'imported_fr24', 'imported_generic_csv', 'imported_roundtrip', 'imported_<tracker>' (openflights, airtrail, jetlog, flighty, app_in_the_air)
   // Time-storage semantics for departureTime / arrivalTime.
   // 'UTC' = canonical real UTC instant (current writes always use this).
   // 'LEGACY_FAKE_UTC' = wall-clock encoded as fake-UTC; needs depTz/arrTz to
@@ -811,24 +812,24 @@ model Flight {
   // 'UNKNOWN' = not yet classified by the backfill script (DB-side default
   // for rows existing at the time of the ADD COLUMN migration). New writes
   // from Prisma default to 'UTC'.
-  depTimeSemantics     String           @default("UTC") @map("dep_time_semantics")
-  arrTimeSemantics     String           @default("UTC") @map("arr_time_semantics")
+  depTimeSemantics     String    @default("UTC") @map("dep_time_semantics")
+  arrTimeSemantics     String    @default("UTC") @map("arr_time_semantics")
   /// ADR 0002: the IANA zone each end was WRITTEN with, frozen. Reads used to
   /// join the airport catalogue, so a catalogue correction moved the displayed
   /// time of every past flight there. Re-derived only when the airport itself
   /// changes (`routes/flights/timeInput.ts`). Null = not yet backfilled (3b).
-  depTimezone          String?          @map("dep_timezone")
-  arrTimezone          String?          @map("arr_timezone")
+  depTimezone          String?   @map("dep_timezone")
+  arrTimezone          String?   @map("arr_timezone")
   /// When online check-in opens (forgejo#285), where the airline says so — an
   /// INSTANT with the zone it was stated in (normally the departure
   /// airport's). Null = not known; nothing derives it from the departure.
-  onlineCheckInOpensAt DateTime?        @map("online_check_in_opens_at")
-  onlineCheckInZone    String?          @map("online_check_in_zone")
+  onlineCheckInOpensAt DateTime? @map("online_check_in_opens_at")
+  onlineCheckInZone    String?   @map("online_check_in_zone")
   /// minute | day | unknown (`shared/time/wire.ts` TIME_PRECISIONS).
-  depPrecision         String?          @map("dep_precision")
-  arrPrecision         String?          @map("arr_precision")
-  lastModifiedBy       String?          @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
-  enrichmentHistory    Json?            @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
+  depPrecision         String?   @map("dep_precision")
+  arrPrecision         String?   @map("arr_precision")
+  lastModifiedBy       String?   @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
+  enrichmentHistory    Json?     @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
 
   // Phase 3: Actual Times, Delay, CO₂
   actualDeparture DateTime? @map("actual_departure")
@@ -2202,12 +2203,12 @@ model Trip {
   /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
   /// dates approximate) | NULL (unknown — every row older than the field). Private to the
   /// account: never a share fact, so a copy starts unknown.
-  provenance       String?   @map("provenance")
+  provenance     String?   @map("provenance")
   /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
-  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
-  rememberedNote   String?   @map("remembered_note")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  rememberedNote String?   @map("remembered_note")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   shareGroup       TripShareGroup?      @relation(fields: [shareGroupId], references: [id], onDelete: SetNull)
@@ -2841,6 +2842,10 @@ model Cruise {
   userId           String    @map("user_id")
   shipId           Int?      @map("ship_id")
   shipNameOverride String?   @map("ship_name_override")
+  /// The ship's MMSI for the AIS track, resolved by the server — see
+  /// `FerryJourney.vesselMmsi`, same contract.
+  vesselMmsi       String?   @map("vessel_mmsi")
+  vesselMmsiSource String?   @map("vessel_mmsi_source")
   cruiseLine       String?   @map("cruise_line")
   departurePortId  Int?      @map("departure_port_id")
   arrivalPortId    Int?      @map("arrival_port_id")
@@ -2896,23 +2901,24 @@ model Cruise {
   /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
   /// dates approximate) | NULL (unknown — every row older than the field). Private to the
   /// account: never a share fact, so a copy starts unknown.
-  provenance       String?   @map("provenance")
+  provenance     String?   @map("provenance")
   /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
-  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
-  rememberedNote   String?   @map("remembered_note")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  rememberedNote String?   @map("remembered_note")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ship          Ship?            @relation(fields: [shipId], references: [id], onDelete: SetNull)
-  departurePort Port?            @relation("CruiseDeparture", fields: [departurePortId], references: [id], onDelete: SetNull)
-  arrivalPort   Port?            @relation("CruiseArrival", fields: [arrivalPortId], references: [id], onDelete: SetNull)
-  trip          Trip?            @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  booking       Booking?         @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ship          Ship?               @relation(fields: [shipId], references: [id], onDelete: SetNull)
+  departurePort Port?               @relation("CruiseDeparture", fields: [departurePortId], references: [id], onDelete: SetNull)
+  arrivalPort   Port?               @relation("CruiseArrival", fields: [arrivalPortId], references: [id], onDelete: SetNull)
+  trip          Trip?               @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking       Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   stops         CruiseStop[]
   legs          CruiseLeg[]
   legRoutes     CruiseLegRoute[]
   tracks        CruiseTrack[]
+  vesselFixes   VesselPositionFix[]
 
   /// Where this row came from, so a second import of the same file recognises
   /// it instead of duplicating it (#84). Format `<source>:<stable key>`; the
@@ -3282,6 +3288,8 @@ model Ship {
   id           Int     @id @default(autoincrement())
   name         String
   imo          String? @unique
+  /// The vessel's MMSI where the catalogue knows it — the resolver's first source.
+  mmsi         String?
   cruiseLine   String  @map("cruise_line")
   yearBuilt    Int?    @map("year_built")
   grossTonnage Int?    @map("gross_tonnage")
@@ -3506,12 +3514,12 @@ model LodgingStay {
   /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
   /// dates approximate) | NULL (unknown — every row older than the field). Private to the
   /// account: never a share fact, so a copy starts unknown.
-  provenance       String?   @map("provenance")
+  provenance     String?   @map("provenance")
   /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
-  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
-  rememberedNote   String?   @map("remembered_note")
-  updatedAt             DateTime         @updatedAt @map("updated_at")
+  rememberedNote String?   @map("remembered_note")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   lodging    Lodging            @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
   user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -3918,12 +3926,12 @@ model PlaceVisit {
   /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
   /// dates approximate) | NULL (unknown — every row older than the field). Private to the
   /// account: never a share fact, so a copy starts unknown.
-  provenance       String?   @map("provenance")
+  provenance     String?   @map("provenance")
   /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
-  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
-  rememberedNote   String?   @map("remembered_note")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  rememberedNote String?   @map("remembered_note")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -4868,12 +4876,12 @@ model RailJourney {
   /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
   /// dates approximate) | NULL (unknown — every row older than the field). Private to the
   /// account: never a share fact, so a copy starts unknown.
-  provenance       String?   @map("provenance")
+  provenance     String?   @map("provenance")
   /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
-  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
-  rememberedNote   String?   @map("remembered_note")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  rememberedNote String?   @map("remembered_note")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Rail&Fly (owner ruling 2026-11-05): the flight this ride belongs to. Set
@@ -5057,12 +5065,12 @@ model BusJourney {
   /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
   /// dates approximate) | NULL (unknown — every row older than the field). Private to the
   /// account: never a share fact, so a copy starts unknown.
-  provenance       String?   @map("provenance")
+  provenance     String?   @map("provenance")
   /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
-  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
-  rememberedNote   String?   @map("remembered_note")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  rememberedNote String?   @map("remembered_note")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip           Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
@@ -5278,12 +5286,12 @@ model RentalBooking {
   /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
   /// dates approximate) | NULL (unknown — every row older than the field). Private to the
   /// account: never a share fact, so a copy starts unknown.
-  provenance       String?   @map("provenance")
+  provenance     String?   @map("provenance")
   /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
-  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
-  rememberedNote   String?   @map("remembered_note")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  rememberedNote String?   @map("remembered_note")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip           Trip?                    @relation(fields: [tripId], references: [id], onDelete: SetNull)
@@ -5873,9 +5881,14 @@ model FerryJourney {
 
   operator            String?
   vesselName          String? @map("vessel_name")
-  /// The MMSI the live position reads (9 digits). Bound on the first answered
-  /// lookup so a crossing is not a free AIS proxy for any vessel.
+  /// The MMSI the live position and the AIS track read (9 digits). Server-managed
+  /// since 2026-11-22: resolved from the vessel's name (`services/vessel/`) or picked
+  /// from the resolver's candidates — never typed, never taken from a request, so a
+  /// crossing is not a free AIS proxy for any vessel.
   vesselMmsi          String? @map("vessel_mmsi")
+  /// Where `vesselMmsi` came from: catalogue | wikidata | aisstream | manual
+  /// (picked from candidates). NULL with an MMSI = bound before 2026-11-22.
+  vesselMmsiSource    String? @map("vessel_mmsi_source")
   vehicleType         String? @map("vehicle_type")
   vehicleRegistration String? @map("vehicle_registration")
   vehicleLengthM      Float?  @map("vehicle_length_m")
@@ -5942,12 +5955,12 @@ model FerryJourney {
   /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
   /// dates approximate) | NULL (unknown — every row older than the field). Private to the
   /// account: never a share fact, so a copy starts unknown.
-  provenance       String?   @map("provenance")
+  provenance     String?   @map("provenance")
   /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
-  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
-  rememberedNote   String?   @map("remembered_note")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  rememberedNote String?   @map("remembered_note")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip           Trip?                   @relation(fields: [tripId], references: [id], onDelete: SetNull)
@@ -5957,6 +5970,7 @@ model FerryJourney {
   documents      Document[]
   documentLinks  DocumentLink[]
   routeBackfill  FerryRouteBackfill?
+  vesselFixes    VesselPositionFix[]
 
   @@unique([userId, externalRef])
   @@unique([userId, shareKey])
@@ -5971,6 +5985,60 @@ model FerryJourney {
 /// The one-shot sea-route backfill's bookkeeping (owner, 2026-10-21): one row
 /// per crossing it tried, so a boot does not route the same chord again, and a
 /// crossing the router cannot route is not retried on every boot.
+/// The vessel resolver's cache (2026-11-22): one row per lookup key — an IMO
+/// (`imo:9876543`) or a normalised name with its operator (`name:stena germanica|op:stena line`).
+/// A resolved row carries the MMSI with its source and confidence; an unresolved
+/// one carries the reason and, for an ambiguous name, the candidates the manual
+/// override may offer. Never a guess: an ambiguous name stays unresolved.
+model VesselIdentity {
+  lookupKey     String   @id @map("lookup_key")
+  mmsi          String?
+  imo           String?
+  vesselName    String?  @map("vessel_name")
+  /// catalogue | wikidata | aisstream
+  source        String?
+  /// high | medium
+  confidence    String?
+  /// ambiguous | notFound | unavailable — NULL when resolved
+  reason        String?
+  /// `[{ mmsi, imo, name, operator, source }]`, at most 20
+  candidates    Json?
+  resolvedAt    DateTime @map("resolved_at")
+  /// When the resolver may ask again.
+  nextAttemptAt DateTime @map("next_attempt_at")
+
+  @@map("vessel_identities")
+}
+
+/// AIS positions the vessel poller received for a journey in progress — the
+/// raw record the journey's recorded track is built from (a cruise's also
+/// becomes its `CruiseTrack` with source `ais`). Server-side, never a device
+/// copy; deduplicated by time and bounded per journey. Exactly one of the two
+/// journey ids is set.
+model VesselPositionFix {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  ferryJourneyId String?  @map("ferry_journey_id")
+  cruiseId       String?  @map("cruise_id")
+  mmsi           String
+  /// The AIS message's own time where it carried one, else the receipt time.
+  observedAt     DateTime @map("observed_at")
+  receivedAt     DateTime @map("received_at")
+  lat            Float
+  lon            Float
+  speedKnots     Float?   @map("speed_knots")
+  courseDegrees  Float?   @map("course_degrees")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ferryJourney FerryJourney? @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
+  cruise       Cruise?       @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+
+  @@unique([ferryJourneyId, observedAt])
+  @@unique([cruiseId, observedAt])
+  @@index([userId])
+  @@map("vessel_position_fixes")
+}
+
 model FerryRouteBackfill {
   ferryJourneyId String       @id @map("ferry_journey_id")
   /// routed | straight | failed
@@ -7764,21 +7832,21 @@ model AccountArchiveImport {
 /// `entryId` has NO foreign key on purpose, like `DocumentLinkSuggestion`: a dismissal is kept
 /// by `contentKey`, so it survives a delete and re-import of the remembered entry.
 model ProvenanceNotice {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
   /// trip | flight | lodgingStay | railJourney | busJourney | ferryJourney | rentalBooking | cruise | placeVisit
-  entryType   String   @map("entry_type")
-  entryId     String   @map("entry_id")
+  entryType  String   @map("entry_type")
+  entryId    String   @map("entry_id")
   /// `contentKey()` of the REMEMBERED entry, plus the recorded one it disagrees with.
-  contentKey  String   @map("content_key")
+  contentKey String   @map("content_key")
   /// outsideRememberedSpan | outsideRecordedSpan
-  kind        String
+  kind       String
   /// The two readings, for the card: { remembered: {type,id,label,from,to}, recorded: {…} }.
-  detail      Json
+  detail     Json
   /// pending | dismissed | resolved (the contradiction went away on its own)
-  status      String   @default("pending")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  status     String   @default("pending")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

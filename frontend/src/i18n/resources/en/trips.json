@@ -623,7 +623,8 @@
         "tcx": "TCX file",
         "strava": "Strava",
         "healthkit": "Apple Health",
-        "healthconnect": "Health Connect"
+        "healthconnect": "Health Connect",
+        "ais": "AIS"
       },
       "dawarich": {
         "pullLabel": "Pull from Dawarich",

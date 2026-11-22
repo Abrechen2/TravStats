@@ -194,6 +194,7 @@ exports[`Transport CRUD skeleton (forgejo#382) ferry keeps the list page respons
     "vehicleType": "null",
     "vehicleWidthM": "null",
     "vesselMmsi": "null",
+    "vesselMmsiSource": "null",
     "vesselName": "string",
   },
   "meta": {

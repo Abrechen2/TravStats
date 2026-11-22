@@ -46,6 +46,8 @@ import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import CruiseTracksPanel from "../components/Cruise/CruiseTracksPanel";
+import { VesselLiveStatus } from "../components/vessel/VesselLiveStatus";
+import { VesselAssignDialog } from "../components/vessel/VesselAssignDialog";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import Toggletip from "../components/ui/Toggletip";
 
@@ -66,6 +68,8 @@ export default function CruiseDetailPage(): JSX.Element {
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [editing, setEditing] = useState<boolean>(false);
   const [confirmingDelete, setConfirmingDelete] = useState<boolean>(false);
+  const [assigningVessel, setAssigningVessel] = useState<boolean>(false);
+  const [vesselReload, setVesselReload] = useState<number>(0);
   /**
    * Asked only while the confirmation is opening — `null` keeps the hook
    * silent, so reading a cruise costs the same requests it always did.
@@ -277,6 +281,14 @@ export default function CruiseDetailPage(): JSX.Element {
           <>
             <Button onClick={() => setEditing(true)}>{t("detail.edit")}</Button>
             <DetailMoreMenu
+              entries={[
+                {
+                  key: "assign-vessel",
+                  label: t("ferry:vessel.assign.menu"),
+                  testId: "cruise-assign-vessel",
+                  onSelect: () => setAssigningVessel(true),
+                },
+              ]}
               shareLink={{ kind: "cruise", targetId: cruise.id }}
               deleteLabel={t("detail.delete")}
               onDelete={() => setConfirmingDelete(true)}
@@ -330,6 +342,19 @@ export default function CruiseDetailPage(): JSX.Element {
             </div>
           </DetailSection>
 
+          <VesselLiveStatus kind="cruise" id={cruise.id} reloadKey={vesselReload} />
+          {assigningVessel && (
+            <VesselAssignDialog
+              kind="cruise"
+              id={cruise.id}
+              initialName={cruise.ship?.name ?? cruise.shipNameOverride ?? ""}
+              onClose={() => setAssigningVessel(false)}
+              onAssigned={() => {
+                setAssigningVessel(false);
+                setVesselReload((n) => n + 1);
+              }}
+            />
+          )}
           {isFeatureVisible("cruiseTracks") && (
             <CruiseTracksPanel cruiseId={cruise.id} onChanged={onTracksChanged} />
           )}

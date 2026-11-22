@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import { CRUISE_AIS_TRACK_REF } from "../services/vessel/cruiseAisTrack";
 import { syncCompanionLinks } from "../services/companions/travellerFacts";
 import {
   pairStops,
@@ -502,8 +503,23 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           })
         : undefined;
 
+    // Another ship: the resolved MMSI, its AIS positions and its AIS track were
+    // the old ship's. A manual pick ("Schiff zuordnen …") stays.
+    const shipChanged =
+      existing.vesselMmsiSource !== "manual" &&
+      existing.vesselMmsi !== null &&
+      ((rest.shipId !== undefined && rest.shipId !== existing.shipId) ||
+        (rest.shipNameOverride !== undefined &&
+          rest.shipNameOverride !== existing.shipNameOverride));
+
     const updated = await prisma.$transaction(async (tx) => {
       const before = await shareSnapshot(tx, "cruise", existing.id);
+      if (shipChanged) {
+        await tx.vesselPositionFix.deleteMany({ where: { cruiseId: existing.id } });
+        await tx.cruiseTrack.deleteMany({
+          where: { cruiseId: existing.id, externalRef: CRUISE_AIS_TRACK_REF },
+        });
+      }
       if (resolvedCompanionsForUpdate !== undefined) {
         await syncCompanionLinks(
           tx,
@@ -522,6 +538,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           startDate: nextStartDate,
           endDate: nextEndDate,
           ...dayColumns,
+          ...(shipChanged && { vesselMmsi: null, vesselMmsiSource: null }),
           ...(resolvedCompanionsForUpdate !== undefined && {
             companions: resolvedCompanionsForUpdate.map((c) => c.displayName),
           }),
@@ -588,7 +605,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       // Legs span departure port → stops → arrival port, so a changed
       // departure/arrival port invalidates them just like changed stops.
       const portsChanged = "departurePortId" in parsed.data || "arrivalPortId" in parsed.data;
-      if (stops !== undefined || portsChanged) {
+      if (stops !== undefined || portsChanged || shipChanged) {
         await recomputeLegsForCruise(existing.id, tx, legDistances);
       }
       await propagateWrite(tx, userId, "cruise", existing.id, before);

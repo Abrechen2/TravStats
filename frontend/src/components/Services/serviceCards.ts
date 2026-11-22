@@ -31,6 +31,7 @@ export const FOLDED_INTO_INTERNET: ReadonlySet<string> = new Set([
   "railTimetables",
   "openData",
   "airportData",
+  "vesselData",
 ]);
 
 /**
@@ -203,6 +204,11 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
   },
   {
     id: "airportData",
+    group: "open",
+    use: ["on"],
+  },
+  {
+    id: "vesselData",
     group: "open",
     use: ["on"],
   },

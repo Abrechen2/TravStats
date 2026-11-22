@@ -211,6 +211,9 @@ export const NON_TRAVEL_RELATIONS = [
   // Contradiction cards between a remembered and a recorded entry: the member's own view of their
   // data (plan 2026-11-22-remembered-facts), derived per account, never shared with a friend.
   "provenanceNotices",
+  // AIS positions of the member's own journeys in progress (2026-11-22): server bookkeeping per
+  // account, never shared — a shared cruise's copies receive its AIS recording as a cruise track.
+  "vesselPositionFixes",
   "settings",
   "analyticsEvents",
   "createdInvitations",

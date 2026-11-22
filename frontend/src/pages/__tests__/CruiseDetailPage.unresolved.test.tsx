@@ -13,6 +13,7 @@ const getMock = vi.fn();
 const updateMock = vi.fn();
 
 // The entry photo strip has its own suite; here it would reach the network.
+vi.mock("../../components/vessel/VesselLiveStatus", () => ({ VesselLiveStatus: () => null }));
 vi.mock("../../components/common/EntryPhotos", () => ({
   default: () => null,
   EntryPhotos: () => null,

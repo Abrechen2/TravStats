@@ -228,6 +228,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
     "snoozes and opt-outs of setup checks, tied to this server's check revisions; a restored account re-evaluates",
   readinessNoteAcks:
     "read marks of this server's update notes; a restored account sees the notes for its own versions again",
+  vesselPositionFixes:
+    "raw AIS positions the vessel poller received for a journey in progress; a cruise's become its exported AIS recording (cruise tracks), a ferry's covering track has already set the crossing's exported distance",
   provenanceNotices:
     "derived contradiction cards between a remembered and a recorded entry; the entries themselves are exported (provenance, rememberedOn, rememberedNote) and the next pass re-derives the cards (a dismissed one may be raised once more; the account ZIP archive carries them)",
   documentLinkSuggestions:

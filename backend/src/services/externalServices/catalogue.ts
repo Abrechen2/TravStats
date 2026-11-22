@@ -483,6 +483,18 @@ export const SERVICES: readonly ServiceDef[] = [
     keyless: true,
   }),
   svc({
+    // The vessel resolver's public source (2026-11-22): Wikidata's ship items,
+    // read for a ship's MMSI and IMO (`services/vessel/wikidataVessel.ts`).
+    // Public data the ferry and cruise AIS track needs, so on by default under
+    // the master internet switch. Only a ship's name or IMO number leaves the
+    // server, never a journey or an account.
+    id: "vesselData",
+    category: "openData",
+    level: "instance",
+    credential: "none",
+    keyless: true,
+  }),
+  svc({
     id: "logos",
     category: "openData",
     level: "instance",
