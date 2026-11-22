@@ -6,6 +6,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.43.** One new migration adds the "remembered" provenance to trips and entries (empty for everything existing) and the table of its contradiction notices. Nothing is deleted.
+
+### Added
+
+- **A page per travel companion.** First and last trip together, shared trips, flights, nights and countries, the documents assigned to them and their seats and loyalty numbers — reached from the companion list, "Mit wem unterwegs" and any traveller chip.
+- **Gap calendar.** A year and month view of the whole logbook that shows days with entries, at home, with a track, hidden by a privacy zone, filtered as implausible or simply unknown; every gap offers "Eintrag anlegen" with its dates filled in. Under Mehr → Sammlungen, and it works without TravTrack.
+- **Life book.** A year, a trip or everything as one offline HTML file — day by day, with chosen photos, the kind of evidence per entry and unknown dates shown as unknown — readable without TravStats and printable.
+- **Remembered or recorded.** Entries typed in from memory can be marked "aus der Erinnerung" with a note; statistics have one switch "nur belegte", and a recorded date that contradicts a remembered one becomes one inbox notice, never an overwrite.
+- **The activity list on the dashboard shows every domain**, planned entries first, then newest to oldest; a tap zooms the map to the entry and opens its card. The single-domain tabs use the same list.
+
+### Changed
+
+- **Rare actions moved into "⋯" menus.** Detail pages keep "Bearbeiten" and "Mehr"; list rows, list headers, trip sections, route cards, photo strips, settings rows and inbox cards keep their everyday buttons and fold the rest into one menu. Delete is always the last entry, red, with a confirmation.
+- **Each map domain has a "Routen / Nur Orte" switch** in the map's domain selection — airports without arcs, ports without cruise lines, stations without tracks. Rental cars use the same switch now.
+- **A lodging's documents belong to its stays.** The house page no longer has a document section; each stay shows and files its own.
+- **Trip view and life-book scope use one segmented switch** instead of separate buttons or dropdowns.
+
+### Fixed
+
+- **A finished trip without a plan no longer asks you to plan it.**
+- **Removing a mail-intake folder, address or sender now asks first.**
+- **"Nur belegte" also leaves remembered cruises out of the passport and country details.**
+
 **Upgrading to 2.8.0-rc.42.** No migration. After the update, run `npx tsx src/scripts/backfillCruiseLegs.ts --apply` once in the backend container: it recomputes stored cruise legs whose port order was wrong (only derived legs; ports, times and hand-drawn lines stay).
 
 ### Fixed
