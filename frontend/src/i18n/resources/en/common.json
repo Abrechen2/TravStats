@@ -233,7 +233,8 @@
         "rail": "A logbook for train journeys",
         "rental": "A logbook for rental cars",
         "bus": "Logbook for bus rides",
-        "ferry": "Crossings, vehicle and tickets"
+        "ferry": "Crossings, vehicle and tickets",
+        "tour": "Day tours, routes and recordings"
       }
     }
   },

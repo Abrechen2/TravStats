@@ -113,15 +113,12 @@ describe("purpose: tours and roadtrips", () => {
     expect(hidden.body.data.hidden.roadtrip.business).toBeGreaterThan(0);
   });
 
-  it("the scope covers tours, roadtrips and the visit-suggestion inboxes", () => {
-    for (const prefix of [
-      "/api/v1/tours",
-      "/api/v1/roadtrips",
-      "/api/v1/place-lists",
-      "/api/v1/dawarich-stays",
-      "/api/v1/location-suggestions",
-    ]) {
+  it("the scope covers tours and roadtrips; the suggestion inboxes dedupe against everything", () => {
+    for (const prefix of ["/api/v1/tours", "/api/v1/roadtrips", "/api/v1/place-lists"]) {
       expect(ENTRY_SCOPE_PREFIXES).toContain(prefix);
+    }
+    for (const prefix of ["/api/v1/dawarich-stays", "/api/v1/location-suggestions"]) {
+      expect(ENTRY_SCOPE_PREFIXES).not.toContain(prefix);
     }
   });
 });

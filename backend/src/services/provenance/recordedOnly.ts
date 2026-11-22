@@ -68,13 +68,12 @@ export const ENTRY_SCOPE_PREFIXES = [
   "/api/v1/companions",
   "/api/v1/trip-suggestions",
   "/api/v1/search",
-  // Tours and roadtrips carry a purpose of their own (trip_routes), and the suggestion inboxes
-  // read the same logbook: a hidden entry must not be proposed or counted from there either.
+  // Tours and roadtrips carry a purpose of their own (trip_routes); the suggestion inboxes
+  // (dawarich-stays, location-suggestions) stay OUT: they dedupe against every recorded entry,
+  // hidden ones included, so a hidden visit is never proposed again.
   "/api/v1/tours",
   "/api/v1/roadtrips",
   "/api/v1/place-lists",
-  "/api/v1/dawarich-stays",
-  "/api/v1/location-suggestions",
 ] as const;
 
 const MODELS = new Set([

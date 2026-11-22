@@ -8,6 +8,7 @@ import { recheckAchievements } from "../../utils/achievements";
 import { classifyVisit } from "../../shared/placeCounting";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { getContinent } from "../../utils/continents";
+import { runUnfiltered } from "../../services/provenance/recordedOnly";
 import { buildAnchors, suggestVisits } from "../../services/places/visitSuggestions";
 import { completePlaceAddress } from "../../services/places/addressBackfill";
 import { tripForVisitDay } from "../../services/places/visitTrip";
@@ -308,6 +309,9 @@ router.get("/:key/progress", async (req: AuthRequest, res: Response, next: NextF
  * would put places nobody has been to into the visited count, invisibly — see
  * the header of `services/places/visitSuggestions.ts`.
  *
+ * Read with NO purpose filter: a hidden visit is still recorded, so it must never be proposed
+ * again (only display and counts honour the hiding).
+ *
  * Anchors are the user's OWN recorded travel, and only travel that happened:
  * stays that are over, port calls on sailed cruises, flown legs, logged places.
  *
@@ -330,70 +334,72 @@ router.get(
       });
       if (!curated) throw new AppError("Checklist not found", 404);
 
-      const [ticked, stays, stops, flights, places, photos] = await Promise.all([
-        prisma.place.findMany({
-          where: { userId, curatedItemId: { in: curated.items.map((i) => i.id) } },
-          select: { curatedItemId: true, visited: true },
-        }),
-        prisma.lodgingStay.findMany({
-          where: { userId },
-          select: {
-            status: true,
-            checkIn: true,
-            checkOut: true,
-            lodging: { select: { name: true, lat: true, lon: true } },
-          },
-        }),
-        prisma.cruiseStop.findMany({
-          where: { cruise: { userId, ...countableCruiseWhere() }, isAtSea: false },
-          select: {
-            date: true,
-            arrivalTime: true,
-            port: { select: { name: true, lat: true, lon: true } },
-          },
-        }),
-        prisma.flight.findMany({
-          where: { userId, ...countableFlightWhere() },
-          select: {
-            status: true,
-            depIata: true,
-            arrIata: true,
-            depLat: true,
-            depLon: true,
-            arrLat: true,
-            arrLon: true,
-            departureTime: true,
-            arrivalTime: true,
-          },
-        }),
-        prisma.place.findMany({
-          where: { userId, visited: true },
-          select: {
-            name: true,
-            lat: true,
-            lon: true,
-            visited: true,
-            visits: { select: { visitedAt: true } },
-          },
-        }),
-        /**
-         * Geotagged trip photos — POI Phase D, piece 1.
-         *
-         * These rows already existed and were doing nothing for suggestions: an
-         * Immich import writes `lat`/`lon`/`takenAt`, so a trip with a linked
-         * album is already a list of dated, positioned points. It is the only
-         * anchor that records where the user STOOD rather than where their travel
-         * was, which is why it reaches one kilometre and outranks the rest.
-         *
-         * Filtered in the query, not afterwards: an account can hold thousands of
-         * photos and only some carry coordinates, and the ones without a position
-         * cannot become an anchor however far the code goes.
-         */
-        prisma.tripPhoto.findMany({
-          where: { trip: { userId }, lat: { not: null }, lon: { not: null } },
-          select: { lat: true, lon: true, takenAt: true, trip: { select: { name: true } } },
-        }),
-      ]);
+      const [ticked, stays, stops, flights, places, photos] = await runUnfiltered(() =>
+        Promise.all([
+          prisma.place.findMany({
+            where: { userId, curatedItemId: { in: curated.items.map((i) => i.id) } },
+            select: { curatedItemId: true, visited: true },
+          }),
+          prisma.lodgingStay.findMany({
+            where: { userId },
+            select: {
+              status: true,
+              checkIn: true,
+              checkOut: true,
+              lodging: { select: { name: true, lat: true, lon: true } },
+            },
+          }),
+          prisma.cruiseStop.findMany({
+            where: { cruise: { userId, ...countableCruiseWhere() }, isAtSea: false },
+            select: {
+              date: true,
+              arrivalTime: true,
+              port: { select: { name: true, lat: true, lon: true } },
+            },
+          }),
+          prisma.flight.findMany({
+            where: { userId, ...countableFlightWhere() },
+            select: {
+              status: true,
+              depIata: true,
+              arrIata: true,
+              depLat: true,
+              depLon: true,
+              arrLat: true,
+              arrLon: true,
+              departureTime: true,
+              arrivalTime: true,
+            },
+          }),
+          prisma.place.findMany({
+            where: { userId, visited: true },
+            select: {
+              name: true,
+              lat: true,
+              lon: true,
+              visited: true,
+              visits: { select: { visitedAt: true } },
+            },
+          }),
+          /**
+           * Geotagged trip photos — POI Phase D, piece 1.
+           *
+           * These rows already existed and were doing nothing for suggestions: an
+           * Immich import writes `lat`/`lon`/`takenAt`, so a trip with a linked
+           * album is already a list of dated, positioned points. It is the only
+           * anchor that records where the user STOOD rather than where their travel
+           * was, which is why it reaches one kilometre and outranks the rest.
+           *
+           * Filtered in the query, not afterwards: an account can hold thousands of
+           * photos and only some carry coordinates, and the ones without a position
+           * cannot become an anchor however far the code goes.
+           */
+          prisma.tripPhoto.findMany({
+            where: { trip: { userId }, lat: { not: null }, lon: { not: null } },
+            select: { lat: true, lon: true, takenAt: true, trip: { select: { name: true } } },
+          }),
+        ])
+      );
 
       // Only OPEN targets. Suggesting something the user already ticked is noise
       // that makes the list of suggestions untrustworthy.

@@ -59,4 +59,35 @@ describe("purpose inheritance inside an interactive transaction", () => {
     });
     expect(flight.purpose).toBe("business");
   });
+
+  it("an array-form transaction resolves the trip before the batch opens: no pool deadlock", async () => {
+    const trip = await db.prisma.trip.create({
+      data: {
+        userId,
+        name: "batch trip",
+        category: "business",
+        startDate: new Date("2025-03-01T00:00:00Z"),
+        endDate: new Date("2025-03-05T00:00:00Z"),
+      },
+    });
+    const [flight] = await db.prisma.$transaction([
+      db.prisma.flight.create({
+        data: {
+          userId,
+          tripId: trip.id,
+          depIata: "FRA",
+          arrIata: "FCO",
+          depLat: 50,
+          depLon: 8,
+          arrLat: 41,
+          arrLon: 12,
+          status: "flown",
+          departureTime: new Date("2025-03-01T08:00:00Z"),
+          arrivalTime: new Date("2025-03-01T10:00:00Z"),
+        },
+      }),
+    ]);
+    // The hook runs while the batch is still being built, before it holds the connection.
+    expect(flight.purpose).toBe("business");
+  });
 });
