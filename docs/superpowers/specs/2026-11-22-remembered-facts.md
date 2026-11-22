@@ -56,7 +56,8 @@ A remembered thing and a recorded one of the same trip disagree when the recorde
 than a day outside the remembered one (a zone or a night flight is not a contradiction):
 
 - remembered trip, recorded entry outside its span — `outsideRememberedSpan`;
-- recorded (or unknown) trip, remembered entry outside its span — `outsideRecordedSpan`.
+- recorded or unknown trip (an unknown row is treated as the record: it predates the field and is
+  almost always a booking or import; the notice words it neutrally and can be dismissed), remembered entry outside its span — `outsideRecordedSpan`.
 
 Two recollections cannot contradict a record, two records are not our call. The result is a row in
 `provenance_notices`, never a change: the user edits the entry or dismisses the notice ("beide so

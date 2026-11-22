@@ -82,6 +82,22 @@ describe("remembered facts", () => {
       expect(res.status).toBe(400);
     });
 
+    it("refuses a day that is not on the calendar instead of rolling it into March", async () => {
+      const f = await flight({});
+      const res = await put("flight", f.id, {
+        provenance: "remembered",
+        rememberedOn: "2026-02-30",
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it("keeps the database from holding a note on an entry that is not remembered", async () => {
+      const f = await flight({});
+      await expect(
+        prisma.flight.update({ where: { id: f.id }, data: { rememberedNote: "orphan" } })
+      ).rejects.toThrow();
+    });
+
     it("marks every kind of entry and refuses a stranger's entry", async () => {
       const lodging = await prisma.lodging.create({
         data: { userId, name: "Pension Rosa", city: "Rimini", lat: 44.06, lon: 12.57 },

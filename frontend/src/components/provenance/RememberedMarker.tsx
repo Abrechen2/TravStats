@@ -16,7 +16,9 @@ export default function RememberedMarker({
   if (entry?.provenance !== "remembered") return null;
   const detail = [
     entry.rememberedNote,
-    entry.rememberedOn ? t("provenance:marker.on", { date: entry.rememberedOn }) : null,
+    entry.rememberedOn
+      ? t("provenance:marker.on", { date: entry.rememberedOn.slice(0, 10) })
+      : null,
   ]
     .filter(Boolean)
     .join(" · ");

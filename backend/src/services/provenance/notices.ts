@@ -126,8 +126,9 @@ export async function syncProvenanceNotices(userId: string): Promise<void> {
   for (const c of current) {
     const row = byKey.get(c.contentKey);
     if (!row || row.status === "dismissed") continue;
-    await prisma.provenanceNotice.update({
-      where: { id: row.id },
+    // Guarded on the status again: a dismissal that landed since the read must not be undone.
+    await prisma.provenanceNotice.updateMany({
+      where: { id: row.id, userId, status: { not: "dismissed" } },
       data: {
         status: "pending",
         entryType: c.entryType,
@@ -140,7 +141,7 @@ export async function syncProvenanceNotices(userId: string): Promise<void> {
   const gone = existing.filter((n) => n.status === "pending" && !liveKeys.has(n.contentKey));
   if (gone.length > 0) {
     await prisma.provenanceNotice.updateMany({
-      where: { id: { in: gone.map((n) => n.id) }, userId },
+      where: { id: { in: gone.map((n) => n.id) }, userId, status: "pending" },
       data: { status: "resolved" },
     });
   }

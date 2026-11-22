@@ -31,7 +31,7 @@ export default function RememberedEditor({
 }): JSX.Element {
   const { t } = useTranslation(["provenance"]);
   const [choice, setChoice] = useState<Choice>(initial?.provenance ?? "unknown");
-  const [on, setOn] = useState(initial?.rememberedOn ?? "");
+  const [on, setOn] = useState(initial?.rememberedOn?.slice(0, 10) ?? "");
   const [note, setNote] = useState(initial?.rememberedNote ?? "");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<"saved" | "error" | null>(null);

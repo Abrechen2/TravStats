@@ -20,7 +20,7 @@
   "notices": {
     "title": "Erinnerung und Beleg widersprechen sich",
     "description": "Hier steht etwas aus der Erinnerung, und ein Beleg nennt ein anderes Datum. Nichts wird überschrieben – ändere den Eintrag oder lass beide so stehen.",
-    "outsideRememberedSpan": "„{{remembered}}“ (aus der Erinnerung, {{rFrom}} – {{rTo}}) – aber „{{recorded}}“ ist belegt am {{cFrom}}.",
+    "outsideRememberedSpan": "„{{remembered}}“ (aus der Erinnerung, {{rFrom}} – {{rTo}}) – der Eintrag „{{recorded}}“ nennt dagegen den {{cFrom}}.",
     "outsideRecordedSpan": "„{{remembered}}“ (aus der Erinnerung, {{rFrom}}) liegt außerhalb von „{{recorded}}“ ({{cFrom}} – {{cTo}}).",
     "dismiss": "Beide so lassen",
     "type": {

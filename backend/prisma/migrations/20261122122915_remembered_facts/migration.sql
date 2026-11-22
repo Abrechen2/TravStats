@@ -72,37 +72,37 @@ ALTER TABLE "provenance_notices" ADD CONSTRAINT "provenance_notices_user_id_fkey
 -- `remembered` only (spec 2026-11-22-remembered-facts).
 ALTER TABLE "trips" ADD CONSTRAINT "trips_provenance_check" CHECK (
   ("provenance" IS NULL OR "provenance" IN ('recorded', 'remembered'))
-  AND ("provenance" = 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
+  AND ("provenance" IS NOT DISTINCT FROM 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
 );
 ALTER TABLE "flights" ADD CONSTRAINT "flights_provenance_check" CHECK (
   ("provenance" IS NULL OR "provenance" IN ('recorded', 'remembered'))
-  AND ("provenance" = 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
+  AND ("provenance" IS NOT DISTINCT FROM 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
 );
 ALTER TABLE "lodging_stays" ADD CONSTRAINT "lodging_stays_provenance_check" CHECK (
   ("provenance" IS NULL OR "provenance" IN ('recorded', 'remembered'))
-  AND ("provenance" = 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
+  AND ("provenance" IS NOT DISTINCT FROM 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
 );
 ALTER TABLE "rail_journeys" ADD CONSTRAINT "rail_journeys_provenance_check" CHECK (
   ("provenance" IS NULL OR "provenance" IN ('recorded', 'remembered'))
-  AND ("provenance" = 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
+  AND ("provenance" IS NOT DISTINCT FROM 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
 );
 ALTER TABLE "bus_journeys" ADD CONSTRAINT "bus_journeys_provenance_check" CHECK (
   ("provenance" IS NULL OR "provenance" IN ('recorded', 'remembered'))
-  AND ("provenance" = 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
+  AND ("provenance" IS NOT DISTINCT FROM 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
 );
 ALTER TABLE "ferry_journeys" ADD CONSTRAINT "ferry_journeys_provenance_check" CHECK (
   ("provenance" IS NULL OR "provenance" IN ('recorded', 'remembered'))
-  AND ("provenance" = 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
+  AND ("provenance" IS NOT DISTINCT FROM 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
 );
 ALTER TABLE "rental_bookings" ADD CONSTRAINT "rental_bookings_provenance_check" CHECK (
   ("provenance" IS NULL OR "provenance" IN ('recorded', 'remembered'))
-  AND ("provenance" = 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
+  AND ("provenance" IS NOT DISTINCT FROM 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
 );
 ALTER TABLE "cruises" ADD CONSTRAINT "cruises_provenance_check" CHECK (
   ("provenance" IS NULL OR "provenance" IN ('recorded', 'remembered'))
-  AND ("provenance" = 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
+  AND ("provenance" IS NOT DISTINCT FROM 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
 );
 ALTER TABLE "place_visits" ADD CONSTRAINT "place_visits_provenance_check" CHECK (
   ("provenance" IS NULL OR "provenance" IN ('recorded', 'remembered'))
-  AND ("provenance" = 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
+  AND ("provenance" IS NOT DISTINCT FROM 'remembered' OR ("remembered_on" IS NULL AND "remembered_note" IS NULL))
 );
