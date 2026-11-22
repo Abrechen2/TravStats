@@ -153,6 +153,7 @@ import rentalRemindersRouter from "./rental/reminders";
 import rentalLinksRouter from "./rental/links";
 import rentalProvidersRouter from "./rental/providers";
 import cruiseTrackRoutes from "./cruises/tracks";
+import { vesselRouter } from "./vessel/vesselRoutes";
 import currenciesRouter from "./currencies";
 import lodgingRouter from "./lodging";
 import lodgingPhotoRouter from "./lodging/photos";
@@ -577,6 +578,7 @@ export const apiMounts: ApiMount[] = [
   { id: "rental", base: "/api/v1/rentals", router: rentalRouter },
   // Recorded tracks of a cruise (2.7) — the same satellite pattern.
   { id: "cruises.tracks", base: "/api/v1/cruises", router: cruiseTrackRoutes },
+  { id: "cruises.vessel", base: "/api/v1/cruises", router: vesselRouter("cruise") },
   { id: "currencies", base: "/api/v1/currencies", router: currenciesRouter },
   // Photographs of the house — same prefix, own file. Mounted FIRST for the
   // same reason the visit-photo router is: relying on segment counts to keep

@@ -4464,6 +4464,26 @@
           },
           "ad": 1,
           "x": 1
+        },
+        {
+          "id": "vesselData",
+          "cat": "open",
+          "svc": {
+            "n": ["Schiffsdaten", "Vessel data"],
+            "de": "Schiffs-MMSI und -IMO aus offenen Daten",
+            "en": "Ship MMSI and IMO from open data",
+            "st": ["An", "On"],
+            "tone": "muted"
+          },
+          "use": ["on"],
+          "rows": [],
+          "ov": {
+            "on": {
+              "v": true
+            }
+          },
+          "ad": 1,
+          "x": 1
         }
       ]
     },

@@ -614,6 +614,17 @@
       "getKeyLabel": "OurAirports",
       "quotaLine": "–"
     },
+    "vesselData": {
+      "name": "Schiffsdaten",
+      "purpose": "Wikidata",
+      "why": "Findet zu einem Schiffsnamen die MMSI und IMO, damit Fähre und Kreuzfahrt während der Reise automatisch per AIS mitgeschrieben werden.",
+      "cost": "Kostenlos.",
+      "quota": "–",
+      "dataOut": "Schiffsname oder IMO-Nummer.",
+      "getKeyUrl": "https://www.wikidata.org/",
+      "getKeyLabel": "Wikidata",
+      "quotaLine": "faire Nutzung"
+    },
     "logos": {
       "name": "Airline- & Betreiber-Logos",
       "purpose": "kiwi.com, Daisycon, Wikimedia; logostream optional",

@@ -21,8 +21,6 @@
   "edit": "Edit crossing",
   "empty": "No crossings yet.",
   "error": "Could not load crossings.",
-  "vesselMmsi": "Vessel MMSI",
-  "invalidMmsi": "An MMSI has exactly 9 digits.",
   "invalidNumber": "Enter a valid number of 0 or more for “{{field}}” (e.g. 39.90).",
   "saveError": "Could not save. Please check the fields.",
   "versionConflict": "This crossing was changed elsewhere in the meantime. Reopen it and save again.",
@@ -158,21 +156,50 @@
     "readByWorkshop": "Read with your own workshop template.",
     "readByRepository": "Read with a template from the template repository."
   },
-  "live": {
-    "title": "Current vessel position",
-    "hint": "Current AIS report for the MMSI you enter. This is not a historical track; it does not change the timetable or crossing.",
-    "mmsi": "Vessel MMSI (9 digits)",
-    "bound": "Bound to this crossing. To read another vessel, change it under “Edit crossing”.",
-    "read": "Look up position",
-    "waiting": "Waiting for AIS report …",
-    "notConfigured": "Live vessel positions have not been configured on this instance yet.",
-    "noSignal": "No matching AIS report arrived during this request. This does not mean the vessel is not sailing.",
-    "unavailable": "The position service is currently unavailable.",
-    "busy": "The position service is handling other requests. Please try again later.",
-    "received": "Received: {{time}}",
-    "observed": "Source timestamp: {{time}}",
-    "ageUnknown": "The source provides no complete observation timestamp. The age of this position is unknown.",
-    "map": "View on OpenStreetMap"
+  "vessel": {
+    "title": "Ship and position",
+    "ship": "Ship: {{name}}",
+    "mmsi": "MMSI {{mmsi}}",
+    "source": {
+      "catalogue": "from the ship catalogue",
+      "wikidata": "found via Wikidata",
+      "aisstream": "found via AIS",
+      "manual": "assigned by you",
+      "legacy": "bound earlier"
+    },
+    "medium": "Found by name only – if this is the wrong ship, assign it under “More”.",
+    "reason": {
+      "ambiguous": "Ship not found unambiguously. You can pick it under “More › Assign ship …”.",
+      "notFound": "Ship not found. You can search for it under “More › Assign ship …”.",
+      "unavailable": "Ship data is unreachable right now. TravStats will try again later.",
+      "noName": "Enter the ship's name and TravStats finds the ship itself."
+    },
+    "signal": {
+      "notConfigured": "AIS positions are not set up on this instance.",
+      "notInProgress": "During the voyage TravStats records the position automatically.",
+      "outOfRange": "No AIS report – ship out of receiver range",
+      "ok": "The position is recorded automatically during the voyage."
+    },
+    "lastFix": "Last position: {{lat}}, {{lon}}",
+    "lastFixAt": "Reported: {{time}}",
+    "speed": "{{knots}} kn",
+    "track": "Recorded: {{count}} positions, {{km}} km",
+    "trackCovers": "The recording covers the whole voyage; the distance follows it.",
+    "map": "View on OpenStreetMap",
+    "loadFailed": "Ship data could not be loaded.",
+    "assign": {
+      "menu": "Assign ship …",
+      "title": "Assign ship",
+      "search": "Ship name",
+      "searchButton": "Search",
+      "none": "No ship with this name found.",
+      "unavailable": "The ship search is unreachable right now.",
+      "failed": "The ship could not be assigned.",
+      "done": "Ship assigned.",
+      "pick": "Assign",
+      "imo": "IMO {{imo}}",
+      "hint": "Enter the ship's name and pick it from the list."
+    }
   },
   "stats": {
     "crossings": "Crossings",
@@ -246,7 +273,8 @@
       "seaRoute": "Schematic sea route between the ports — not a recorded ship track.",
       "drawn": "The crossing's stored line.",
       "straight": "Straight line between the ports — not the way the ship sailed."
-    }
+    },
+    "recordedTrack": "Dark line: the recorded AIS track, in addition to the route."
   },
   "routeEditor": {
     "hint": "Click the line to insert a point. Drag a point to move it.",

@@ -71,6 +71,7 @@ import "./busEntrySuggestions";
 import "./domainEntrySuggestions";
 import "./rental";
 import "./cruiseTracks";
+import "./vessel";
 import "./flightDevice";
 import "./flightBooking";
 import "./flightBulkEdit";

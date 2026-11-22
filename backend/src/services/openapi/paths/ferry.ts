@@ -285,14 +285,14 @@ registry.registerPath({
   tags: ["Ferry"],
   summary: "On-demand current AIS snapshot for the crossing's vessel",
   description:
-    "Checks crossing ownership. The MMSI is the crossing's `vesselMmsi`; a crossing without one takes the first MMSI that answers, and a different one is refused (400, field mmsi) until the crossing is edited. One open lookup per user and two per instance, beyond that `busy`. Returns noSignal after 15 seconds without a usable message; receipt time is not observation time.",
+    "Checks crossing ownership. Reads the crossing's server-resolved MMSI (`vesselMmsi`, see GET /ferry/{id}/vessel); a crossing without one is resolved from its vessel name first, and stays `unresolved` when no unambiguous ship is found. An `mmsi` query parameter from an older client is accepted and ignored. One open lookup per user and two per instance, beyond that `busy`. Returns noSignal after 15 seconds without a usable message; receipt time is not observation time.",
   request: {
     params,
     query: z.object({
       mmsi: z
         .string()
-        .regex(/^\d{9}$/)
-        .optional(),
+        .optional()
+        .describe("Ignored since 2026-11-22; kept so older clients are not refused"),
     }),
   },
   responses: {
@@ -301,7 +301,14 @@ registry.registerPath({
       content: json(
         envelope(
           z.object({
-            status: z.enum(["ok", "notConfigured", "noSignal", "unavailable", "busy"]),
+            status: z.enum([
+              "ok",
+              "notConfigured",
+              "noSignal",
+              "unavailable",
+              "busy",
+              "unresolved",
+            ]),
             position: z
               .object({
                 mmsi: z.string(),

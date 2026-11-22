@@ -36,11 +36,15 @@ const baseFerrySchema = z.object({
   purpose: purposeField,
   operator: optionalText(100),
   vesselName: optionalText(100),
+  /**
+   * Accepted and dropped (2026-11-22): the MMSI is resolved by the server
+   * (`services/vessel/`), never typed. An older client that still sends one is
+   * not refused — it is simply not listened to.
+   */
   vesselMmsi: z
-    .string()
-    .regex(/^\d{9}$/)
-    .nullable()
-    .optional(),
+    .unknown()
+    .optional()
+    .transform(() => undefined),
   vehicleType: optionalText(80),
   vehicleRegistration: optionalText(40),
   vehicleLengthM: z.number().positive().max(100).nullable().optional(),

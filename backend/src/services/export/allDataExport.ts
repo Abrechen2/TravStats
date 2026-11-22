@@ -134,6 +134,9 @@ export const USER_EXPORT_SELECT = {
   // companion links — the terminals' frozen names and zones included.
   busJourneys: { include: { companionLinks: true } },
   ferryJourneys: { include: { companionLinks: true } },
+  // AIS positions recorded during a crossing or cruise (2026-11-22): recorded data,
+  // and for a ferry the server's only copy of the track.
+  vesselPositionFixes: true,
   companions: true,
   // Trip sharing (design 2026-10-09): the consents this account asked for and
   // gave, the groups it started and the notices addressed to it.

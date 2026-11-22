@@ -214,6 +214,7 @@
     "cruises/list.ts",
     "cruises/routeOverride.ts",
     "cruises/tracks.ts",
+    "vessel/vesselRoutes.ts",
     "currencies.ts",
     "dataQualityFlags.ts",
     "domainBulkEdit.ts",

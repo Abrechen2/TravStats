@@ -190,6 +190,8 @@ export const TRACK_SOURCES = [
   "strava",
   "healthkit",
   "healthconnect",
+  // A cruise's AIS recording from the server's vessel poller (2026-11-22).
+  "ais",
 ] as const;
 export type TrackSource = (typeof TRACK_SOURCES)[number];
 

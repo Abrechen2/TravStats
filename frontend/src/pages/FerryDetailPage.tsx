@@ -23,7 +23,9 @@ import Button from "../components/ui/Button";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { EntryPhotosSection } from "../components/common/EntryPhotos";
 import ConfirmModal from "../components/ui/ConfirmModal";
-import { FerryLivePosition } from "../components/ferry/FerryLivePosition";
+import { VesselLiveStatus } from "../components/vessel/VesselLiveStatus";
+import { VesselAssignDialog } from "../components/vessel/VesselAssignDialog";
+import type { VesselStatus } from "../lib/api/vessel";
 import { FerryRoadtripLink } from "../components/ferry/FerryRoadtripLink";
 import { FerryRouteEditor } from "../components/ferry/FerryRouteEditor";
 import { FerryRouteMap } from "../components/ferry/FerryRouteMap";
@@ -56,6 +58,9 @@ export default function FerryDetailPage() {
   const [routing, setRouting] = useState(false);
   const [routeMessage, setRouteMessage] = useState<string | null>(null);
   const [drawing, setDrawing] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [vesselReload, setVesselReload] = useState(0);
+  const [vessel, setVessel] = useState<VesselStatus | null>(null);
   const documentCount = useDocumentCount(
     deleting && ride ? { type: "ferryJourney", id: ride.id } : null
   );
@@ -196,7 +201,15 @@ export default function FerryDetailPage() {
           <>
             <Button onClick={() => setEditing(true)}>{t("ferry:edit")}</Button>
             <DetailMoreMenu
-              entries={packageSplit.entry ? [packageSplit.entry] : []}
+              entries={[
+                {
+                  key: "assign-vessel",
+                  label: t("ferry:vessel.assign.menu"),
+                  testId: "ferry-assign-vessel",
+                  onSelect: () => setAssigning(true),
+                },
+                ...(packageSplit.entry ? [packageSplit.entry] : []),
+              ]}
               deleteLabel={t("ferry:remove")}
               onDelete={() => setDeleting(true)}
             />
@@ -303,7 +316,24 @@ export default function FerryDetailPage() {
           <DocumentsSection entry={{ type: "ferryJourney", id: ride.id }} />
         </div>
         <aside className="flex flex-col gap-6 md:col-span-2">
-          <FerryLivePosition key={ride.id} id={ride.id} boundMmsi={ride.vesselMmsi} />
+          <VesselLiveStatus
+            kind="ferry"
+            id={ride.id}
+            reloadKey={vesselReload}
+            onLoaded={setVessel}
+          />
+          {assigning && (
+            <VesselAssignDialog
+              kind="ferry"
+              id={ride.id}
+              initialName={ride.vesselName ?? ""}
+              onClose={() => setAssigning(false)}
+              onAssigned={() => {
+                setAssigning(false);
+                setVesselReload((n) => n + 1);
+              }}
+            />
+          )}
           {ride.trip && (
             <DetailSection title={t("ferry:trip")}>
               <TripPill trip={ride.trip} />
@@ -324,7 +354,7 @@ export default function FerryDetailPage() {
                   onClose={() => setDrawing(false)}
                 />
               ) : (
-                <FerryRouteMap ride={ride} />
+                <FerryRouteMap ride={ride} recordedTrack={vessel?.track?.coordinates ?? null} />
               )}
             </WebGLGuard>
             {!drawing && (

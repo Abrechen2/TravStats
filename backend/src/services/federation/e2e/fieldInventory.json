@@ -21,7 +21,7 @@
     "personal": "cabinNumber cabinType notes tags companions",
     "photos": "",
     "documents": "bookingReference",
-    "excluded": "userId parserTemplate parserConfidence dataSource shareKey provenance rememberedOn rememberedNote purpose"
+    "excluded": "userId parserTemplate parserConfidence dataSource shareKey provenance rememberedOn rememberedNote purpose vesselMmsi vesselMmsiSource"
   },
   "CruiseStop": {
     "details": "id cruiseId portId dayNumber position date isAtSea arrivalTime departureTime arrivalUtc departureUtc stopZone stopDate timePrecision updatedAt allAboardTime unresolvedPortName",
@@ -56,7 +56,7 @@
     "excluded": ""
   },
   "Ship": {
-    "details": "id name imo cruiseLine yearBuilt grossTonnage capacity status isUserAdded kind",
+    "details": "id name imo mmsi cruiseLine yearBuilt grossTonnage capacity status isUserAdded kind",
     "costs": "",
     "personal": "",
     "photos": "",
@@ -296,12 +296,12 @@
     "excluded": "userId shareKey provenance rememberedOn rememberedNote purpose"
   },
   "FerryJourney": {
-    "details": "roadtripLegId id operator vesselName vesselMmsi vehicleType vehicleLengthM vehicleWidthM vehicleHeightM passengerCount depStationName depAddress depLat depLon depCountry depTimezone arrStationName arrAddress arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime fareClass status delayMinutes tripId bookingId externalRef importBatchId createdAt updatedAt",
+    "details": "roadtripLegId id operator vesselName vehicleType vehicleLengthM vehicleWidthM vehicleHeightM passengerCount depStationName depAddress depLat depLon depCountry depTimezone arrStationName arrAddress arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime fareClass status delayMinutes tripId bookingId externalRef importBatchId createdAt updatedAt",
     "costs": "price currency priceBase fxRate fxRateDate fxBaseCurrency fxSource",
     "personal": "cabinType seat notes tags companions vehicleRegistration",
     "photos": "",
     "documents": "bookingReference ticketReference",
-    "excluded": "userId shareKey roadtripLegBefore provenance rememberedOn rememberedNote purpose"
+    "excluded": "userId shareKey roadtripLegBefore provenance rememberedOn rememberedNote purpose vesselMmsi vesselMmsiSource"
   },
   "Companion": {
     "details": "",

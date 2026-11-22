@@ -102,5 +102,8 @@ export const DIENSTE_PAGE: RegistryPage = {
       {"id":"airportData","de":"Flughafen-Daten","en":"Airport data","level":"expert","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"open","rows":[
 
       ]},
+      {"id":"vesselData","de":"Schiffsdaten","en":"Vessel data","level":"expert","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"open","rows":[
+
+      ]},
   ],
 };

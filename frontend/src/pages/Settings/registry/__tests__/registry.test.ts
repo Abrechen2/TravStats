@@ -47,13 +47,13 @@ describe("the settings registry follows the settings v3 page model", () => {
     }
   });
 
-  it("counts 34 pages, 122 groups and cards (46 of them service cards: 19 the account's, 27 the server's) and 272 rows", () => {
+  it("counts 34 pages, 123 groups and cards (47 of them service cards: 19 the account's, 28 the server's) and 272 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
     expect(SETTINGS_REGISTRY).toHaveLength(34);
-    expect(sections).toHaveLength(122);
-    expect(sections.filter((s) => s.serviceCategory)).toHaveLength(46);
+    expect(sections).toHaveLength(123);
+    expect(sections.filter((s) => s.serviceCategory)).toHaveLength(47);
     expect(registryPage("dienstek")!.sections).toHaveLength(19);
-    expect(registryPage("dienste")!.sections).toHaveLength(27);
+    expect(registryPage("dienste")!.sections).toHaveLength(28);
     expect(sections.flatMap((s) => s.rows)).toHaveLength(272);
   });
 
@@ -434,10 +434,16 @@ describe("the server area follows the prototype (settings v3 S5)", () => {
     ]) {
       expect(cards, id).not.toContain(id);
     }
-    // The prototype's 21 cards, then the three that are left of the folded ones (expert).
-    expect(cards).toHaveLength(27);
+    // The prototype's 21 cards, then the four that are left of the folded ones (expert;
+    // vessel data since 2026-11-22).
+    expect(cards).toHaveLength(28);
     const expertCards = registryPage("dienste")!.sections.filter((c) => c.level === "expert");
-    expect(expertCards.map((c) => c.id)).toEqual(["railTimetables", "openData", "airportData"]);
+    expect(expertCards.map((c) => c.id)).toEqual([
+      "railTimetables",
+      "openData",
+      "airportData",
+      "vesselData",
+    ]);
   });
 
   it("puts the master internet switch first on Funktionen, in Netz, as a standard row", () => {

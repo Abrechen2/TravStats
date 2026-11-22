@@ -360,6 +360,8 @@ export const CRUISE_TRACK_SOURCES = [
   "dawarich",
   "healthkit",
   "healthconnect",
+  // The vessel poller's AIS positions (2026-11-22, services/vessel/cruiseAisTrack.ts).
+  "ais",
 ] as const;
 export type CruiseTrackSource = (typeof CRUISE_TRACK_SOURCES)[number];
 

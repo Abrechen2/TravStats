@@ -1,6 +1,7 @@
 /** Ferry crossings (dennis/TravStats forgejo#293). */
 import { Router, Response, NextFunction } from "express";
 import liveRoutes from "./ferry/live";
+import { vesselRouter } from "./vessel/vesselRoutes";
 import ticketRoutes from "./ferry/tickets";
 import routingRoutes from "./ferry/routing";
 import type { z } from "zod";
@@ -163,6 +164,7 @@ function plainColumns(input: UpdateFerryJourneyInput) {
     distanceKm: _distance,
     status: _status,
     companions: _companions,
+    vesselMmsi: _mmsi,
     ...rest
   } = input;
   return rest;
@@ -173,6 +175,7 @@ router.use(authenticate);
 router.use(requireWriteScope);
 router.use(ticketRoutes);
 router.use(liveRoutes);
+router.use(vesselRouter("ferry"));
 router.use(routingRoutes);
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -352,6 +355,12 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         ? await resolveCompanions(userId, input.companions)
         : undefined;
     const fxColumns = await fxColumnsOnEdit(userId, input, existing, state.departureTime);
+    // A manual pick ("Schiff zuordnen …") stays until the user picks again.
+    const vesselChanged =
+      existing.vesselMmsiSource !== "manual" &&
+      existing.vesselMmsi !== null &&
+      ((input.vesselName !== undefined && (input.vesselName ?? null) !== existing.vesselName) ||
+        (input.operator !== undefined && (input.operator ?? null) !== existing.operator));
 
     let ride;
     try {
@@ -372,10 +381,14 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
               resolved
             );
           }
+          if (vesselChanged)
+            await tx.vesselPositionFix.deleteMany({ where: { ferryJourneyId: existing.id } });
           await tx.ferryJourney.update({
             where: { id: existing.id },
             data: {
               ...plainColumns(input),
+              // Another ship: the resolved MMSI and its positions were the old one's.
+              ...(vesselChanged && { vesselMmsi: null, vesselMmsiSource: null }),
               ...state,
               ...(terminalsMoved && { geometry: Prisma.DbNull, geometrySource: "straight" }),
               updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)),

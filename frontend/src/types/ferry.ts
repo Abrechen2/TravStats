@@ -18,8 +18,10 @@ export interface FerryJourney {
   userId: string;
   operator: string | null;
   vesselName: string | null;
-  /** The vessel the live position reads; bound on the first answered lookup. */
+  /** The vessel's MMSI, resolved by the server from the name — never typed (2026-11-22). */
   vesselMmsi: string | null;
+  /** catalogue | wikidata | aisstream | manual; null for an MMSI bound before 2026-11-22. */
+  vesselMmsiSource?: string | null;
   vehicleType: string | null;
   vehicleRegistration: string | null;
   vehicleLengthM: number | null;

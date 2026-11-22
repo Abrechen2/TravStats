@@ -84,8 +84,12 @@ const MAX_SOCKETS = 2;
  * everyone, so one account reading two vessels left all others "busy".
  */
 const openFor = new Set<string>();
+/** ShipStaticData sockets open now; they count against `MAX_SOCKETS` like a position read. */
+let staticOpen = 0;
 /**
- * On-demand snapshot, not a persistent voyage tracker, no background polling.
+ * On-demand snapshot. The vessel poller (`services/vessel/vesselPoller.ts`)
+ * calls it for journeys in progress under its own account key, so it holds at
+ * most one socket and leaves the other to the people reading a position.
  * At most one socket per user and `MAX_SOCKETS` in all; beyond that "busy".
  * A vessel someone is already reading joins that socket at no cost.
  */
@@ -97,7 +101,7 @@ export async function lookupVessel(mmsi: string, userId: string): Promise<AisRes
   if (cached && cached.until > Date.now()) return cached.result;
   const same = pending.get(mmsi);
   if (same) return same;
-  if (pending.size >= MAX_SOCKETS || openFor.has(userId)) {
+  if (pending.size + staticOpen >= MAX_SOCKETS || openFor.has(userId)) {
     return { status: "busy", position: null };
   }
   openFor.add(userId);
@@ -157,5 +161,111 @@ export async function lookupVessel(mmsi: string, userId: string): Promise<AisRes
   } finally {
     pending.delete(mmsi);
     openFor.delete(userId);
+  }
+}
+
+const STATIC_WAIT_MS = 20000;
+/** A ShipStaticData frame's identity: MMSI, name and IMO as the ship transmits them. */
+export interface AisStaticVessel {
+  mmsi: string;
+  name: string;
+  imo: string | null;
+}
+const staticSchema = z.object({
+  MessageType: z.literal("ShipStaticData"),
+  Message: z.object({
+    ShipStaticData: z.object({
+      UserID: z.number().int(),
+      Name: z.string().max(200),
+      ImoNumber: z.number().int().optional(),
+      Valid: z.literal(true),
+    }),
+  }),
+});
+export function decodeStatic(raw: unknown): AisStaticVessel | null {
+  const parsed = staticSchema.safeParse(raw);
+  if (!parsed.success) return null;
+  const d = parsed.data.Message.ShipStaticData;
+  const mmsi = String(d.UserID);
+  const name = d.Name.replace(/@+$/, "").trim();
+  if (!/^\d{9}$/.test(mmsi) || name === "") return null;
+  const imo = d.ImoNumber !== undefined && d.ImoNumber >= 1000000 ? String(d.ImoNumber) : null;
+  return { mmsi, name, imo };
+}
+export type AisStaticResult =
+  | { status: "ok"; vessels: AisStaticVessel[] }
+  | { status: "notConfigured" | "unavailable" | "busy"; vessels: [] };
+/**
+ * Listen for ShipStaticData inside one box for up to 20 s and hand back every
+ * vessel that identified itself — the resolver's last source (a name to an
+ * MMSI while the ship is in terrestrial range). Same socket budget as a
+ * position read; `stop` ends the wait early once the caller has its answer.
+ */
+export async function collectStaticData(
+  box: { minLat: number; minLon: number; maxLat: number; maxLon: number },
+  stop: (seen: AisStaticVessel[]) => boolean = () => false
+): Promise<AisStaticResult> {
+  const key = instanceTuning().aisstreamApiKey?.trim();
+  if (!key) return { status: "notConfigured", vessels: [] };
+  if (pending.size + staticOpen >= MAX_SOCKETS) return { status: "busy", vessels: [] };
+  staticOpen += 1;
+  try {
+    return await new Promise<AisStaticResult>((resolve) => {
+      const seen = new Map<string, AisStaticVessel>();
+      let finished = false;
+      // A socket the provider closed before a single frame is a failure, not "no ship here".
+      let received = false;
+      const socket = new WebSocket(ENDPOINT, {
+        perMessageDeflate: true,
+        handshakeTimeout: 8000,
+        maxPayload: 65536,
+      });
+      const finish = (result: AisStaticResult) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        socket.terminate();
+        resolve(result);
+      };
+      const done = () => finish({ status: "ok", vessels: [...seen.values()] });
+      const timer = setTimeout(done, STATIC_WAIT_MS);
+      socket.on("open", () =>
+        socket.send(
+          JSON.stringify({
+            APIKey: key,
+            BoundingBoxes: [
+              [
+                [box.minLat, box.minLon],
+                [box.maxLat, box.maxLon],
+              ],
+            ],
+            FilterMessageTypes: ["ShipStaticData"],
+          })
+        )
+      );
+      socket.on("message", (bytes) => {
+        try {
+          const raw: unknown = JSON.parse(bytes.toString());
+          if (typeof raw === "object" && raw !== null && ("error" in raw || "Error" in raw)) {
+            finish({ status: "unavailable", vessels: [] });
+            return;
+          }
+          received = true;
+          const vessel = decodeStatic(raw);
+          if (vessel && seen.size < 5000) seen.set(vessel.mmsi, vessel);
+          if (vessel && stop([...seen.values()])) done();
+        } catch {
+          /* Invalid/irrelevant frames never become a vessel. */
+        }
+      });
+      socket.on("error", () => finish({ status: "unavailable", vessels: [] }));
+      socket.on("close", () =>
+        received ? done() : finish({ status: "unavailable", vessels: [] })
+      );
+    });
+  } catch {
+    return { status: "unavailable", vessels: [] };
+  } finally {
+    staticOpen -= 1;
   }
 }

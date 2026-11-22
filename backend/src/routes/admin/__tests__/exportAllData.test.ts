@@ -636,6 +636,46 @@ describe("GET /api/v1/admin/export/all-data", () => {
     }
   });
 
+  it("carries the AIS positions recorded for a crossing (the server's only copy of its track)", async () => {
+    const userId = createdUserIds[0];
+    const ferry = await prisma.ferryJourney.create({
+      data: {
+        userId,
+        depStationName: "Kiel",
+        depLat: 54.3,
+        depLon: 10.1,
+        arrStationName: "Oslo",
+        arrLat: 59.9,
+        arrLon: 10.7,
+        departureTime: new Date("2025-02-01T14:00:00Z"),
+        vesselMmsi: "257000001",
+      },
+    });
+    await prisma.vesselPositionFix.create({
+      data: {
+        userId,
+        ferryJourneyId: ferry.id,
+        mmsi: "257000001",
+        observedAt: new Date("2025-02-01T16:00:00Z"),
+        receivedAt: new Date("2025-02-01T16:00:01Z"),
+        lat: 56,
+        lon: 11,
+      },
+    });
+    try {
+      const res = await request(app)
+        .get("/api/v1/admin/export/all-data")
+        .set("Cookie", adminCookie)
+        .expect(200);
+      const me = res.body.users.find((u: { id: string }) => u.id === userId);
+      expect(me.vesselPositionFixes).toEqual([
+        expect.objectContaining({ ferryJourneyId: ferry.id, mmsi: "257000001", lat: 56 }),
+      ]);
+    } finally {
+      await prisma.ferryJourney.delete({ where: { id: ferry.id } });
+    }
+  });
+
   it("carries TravTrack points with their links, zones, deleted ranges and gaps — TravTrack off or not", async () => {
     // TravTrack plan T7. The switch governs capture, not taking one's data away.
     const settings = await getInstanceSettings();

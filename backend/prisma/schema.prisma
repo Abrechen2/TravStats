@@ -158,6 +158,7 @@ model User {
   railJourneys                    RailJourney[]
   busJourneys                     BusJourney[]
   ferryJourneys                   FerryJourney[]
+  vesselPositionFixes             VesselPositionFix[]
   rentalBookings                  RentalBooking[]
   apiTokens                       ApiToken[]
   pairingCodes                    PairingCode[]
@@ -2540,7 +2541,7 @@ model TripRoute {
   /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md), for a
   /// tour or a roadtrip: `private` | `business` | NULL (unknown, never read as private). The
   /// member's own view: never a share fact, so a shared roadtrip's copy starts unknown.
-  purpose                   String?   @map("purpose")
+  purpose String? @map("purpose")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -2870,6 +2871,10 @@ model Cruise {
   userId           String    @map("user_id")
   shipId           Int?      @map("ship_id")
   shipNameOverride String?   @map("ship_name_override")
+  /// The ship's MMSI for the AIS track, resolved by the server — see
+  /// `FerryJourney.vesselMmsi`, same contract.
+  vesselMmsi       String?   @map("vessel_mmsi")
+  vesselMmsiSource String?   @map("vessel_mmsi_source")
   cruiseLine       String?   @map("cruise_line")
   departurePortId  Int?      @map("departure_port_id")
   arrivalPortId    Int?      @map("arrival_port_id")
@@ -2937,16 +2942,17 @@ model Cruise {
   purpose   String?  @map("purpose")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ship          Ship?            @relation(fields: [shipId], references: [id], onDelete: SetNull)
-  departurePort Port?            @relation("CruiseDeparture", fields: [departurePortId], references: [id], onDelete: SetNull)
-  arrivalPort   Port?            @relation("CruiseArrival", fields: [arrivalPortId], references: [id], onDelete: SetNull)
-  trip          Trip?            @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  booking       Booking?         @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ship          Ship?               @relation(fields: [shipId], references: [id], onDelete: SetNull)
+  departurePort Port?               @relation("CruiseDeparture", fields: [departurePortId], references: [id], onDelete: SetNull)
+  arrivalPort   Port?               @relation("CruiseArrival", fields: [arrivalPortId], references: [id], onDelete: SetNull)
+  trip          Trip?               @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking       Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   stops         CruiseStop[]
   legs          CruiseLeg[]
   legRoutes     CruiseLegRoute[]
   tracks        CruiseTrack[]
+  vesselFixes   VesselPositionFix[]
 
   /// Where this row came from, so a second import of the same file recognises
   /// it instead of duplicating it (#84). Format `<source>:<stable key>`; the
@@ -3320,6 +3326,8 @@ model Ship {
   id           Int     @id @default(autoincrement())
   name         String
   imo          String? @unique
+  /// The vessel's MMSI where the catalogue knows it — the resolver's first source.
+  mmsi         String?
   cruiseLine   String  @map("cruise_line")
   yearBuilt    Int?    @map("year_built")
   grossTonnage Int?    @map("gross_tonnage")
@@ -5980,9 +5988,14 @@ model FerryJourney {
 
   operator            String?
   vesselName          String? @map("vessel_name")
-  /// The MMSI the live position reads (9 digits). Bound on the first answered
-  /// lookup so a crossing is not a free AIS proxy for any vessel.
+  /// The MMSI the live position and the AIS track read (9 digits). Server-managed
+  /// since 2026-11-22: resolved from the vessel's name (`services/vessel/`) or picked
+  /// from the resolver's candidates — never typed, never taken from a request, so a
+  /// crossing is not a free AIS proxy for any vessel.
   vesselMmsi          String? @map("vessel_mmsi")
+  /// Where `vesselMmsi` came from: catalogue | wikidata | aisstream | manual
+  /// (picked from candidates). NULL with an MMSI = bound before 2026-11-22.
+  vesselMmsiSource    String? @map("vessel_mmsi_source")
   vehicleType         String? @map("vehicle_type")
   vehicleRegistration String? @map("vehicle_registration")
   vehicleLengthM      Float?  @map("vehicle_length_m")
@@ -6069,6 +6082,7 @@ model FerryJourney {
   documents      Document[]
   documentLinks  DocumentLink[]
   routeBackfill  FerryRouteBackfill?
+  vesselFixes    VesselPositionFix[]
 
   @@unique([userId, externalRef])
   @@unique([userId, shareKey])
@@ -6083,6 +6097,60 @@ model FerryJourney {
 /// The one-shot sea-route backfill's bookkeeping (owner, 2026-10-21): one row
 /// per crossing it tried, so a boot does not route the same chord again, and a
 /// crossing the router cannot route is not retried on every boot.
+/// The vessel resolver's cache (2026-11-22): one row per lookup key — an IMO
+/// (`imo:9876543`) or a normalised name with its operator (`name:stena germanica|op:stena line`).
+/// A resolved row carries the MMSI with its source and confidence; an unresolved
+/// one carries the reason and, for an ambiguous name, the candidates the manual
+/// override may offer. Never a guess: an ambiguous name stays unresolved.
+model VesselIdentity {
+  lookupKey     String   @id @map("lookup_key")
+  mmsi          String?
+  imo           String?
+  vesselName    String?  @map("vessel_name")
+  /// catalogue | wikidata | aisstream
+  source        String?
+  /// high | medium
+  confidence    String?
+  /// ambiguous | notFound | unavailable — NULL when resolved
+  reason        String?
+  /// `[{ mmsi, imo, name, operator, source }]`, at most 20
+  candidates    Json?
+  resolvedAt    DateTime @map("resolved_at")
+  /// When the resolver may ask again.
+  nextAttemptAt DateTime @map("next_attempt_at")
+
+  @@map("vessel_identities")
+}
+
+/// AIS positions the vessel poller received for a journey in progress — the
+/// raw record the journey's recorded track is built from (a cruise's also
+/// becomes its `CruiseTrack` with source `ais`). Server-side, never a device
+/// copy; deduplicated by time and bounded per journey. Exactly one of the two
+/// journey ids is set.
+model VesselPositionFix {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  ferryJourneyId String?  @map("ferry_journey_id")
+  cruiseId       String?  @map("cruise_id")
+  mmsi           String
+  /// The AIS message's own time where it carried one, else the receipt time.
+  observedAt     DateTime @map("observed_at")
+  receivedAt     DateTime @map("received_at")
+  lat            Float
+  lon            Float
+  speedKnots     Float?   @map("speed_knots")
+  courseDegrees  Float?   @map("course_degrees")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ferryJourney FerryJourney? @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
+  cruise       Cruise?       @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+
+  @@unique([ferryJourneyId, observedAt])
+  @@unique([cruiseId, observedAt])
+  @@index([userId])
+  @@map("vessel_position_fixes")
+}
+
 model FerryRouteBackfill {
   ferryJourneyId String       @id @map("ferry_journey_id")
   /// routed | straight | failed

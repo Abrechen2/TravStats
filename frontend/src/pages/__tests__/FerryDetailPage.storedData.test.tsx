@@ -20,7 +20,7 @@ vi.mock("../../components/ui/AppShell", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
-vi.mock("../../components/ferry/FerryLivePosition", () => ({ FerryLivePosition: () => null }));
+vi.mock("../../components/vessel/VesselLiveStatus", () => ({ VesselLiveStatus: () => null }));
 vi.mock("../../components/ferry/FerryRoadtripLink", () => ({ FerryRoadtripLink: () => null }));
 vi.mock("../../components/ferry/FerryFormModal", () => ({ FerryFormModal: () => null }));
 vi.mock("../../components/ui/ConfirmModal", () => ({ default: () => null }));

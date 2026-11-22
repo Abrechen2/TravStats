@@ -97,13 +97,13 @@ describe("ServicesPage", () => {
     act(() => resetWriteQueue());
   });
 
-  it("draws one card per catalogue entry — 33 — and asks the server's side of nobody but an admin", async () => {
+  it("draws one card per catalogue entry — 34 — and asks the server's side of nobody but an admin", async () => {
     await show(false);
     await waitFor(
-      () => expect(document.querySelectorAll("[data-service-card-id]")).toHaveLength(33),
+      () => expect(document.querySelectorAll("[data-service-card-id]")).toHaveLength(34),
       WAIT
     );
-    expect(SERVICE_CARDS).toHaveLength(33);
+    expect(SERVICE_CARDS).toHaveLength(34);
     expect(api.adminOverview).not.toHaveBeenCalled();
   });
 
@@ -696,7 +696,7 @@ describe("ServicesPage", () => {
       ]) {
         expect(ids()).not.toContain(id);
       }
-      for (const id of ["railTimetables", "openData", "airportData"]) {
+      for (const id of ["railTimetables", "openData", "airportData", "vesselData"]) {
         expect(ids()).not.toContain(id);
       }
       // The groups of the prototype, in its order.
@@ -713,7 +713,7 @@ describe("ServicesPage", () => {
       cleanup();
       useSettingsLevelStore.setState({ level: "expert" });
       await showSide("server");
-      await waitFor(() => expect(ids()).toHaveLength(27), WAIT);
+      await waitFor(() => expect(ids()).toHaveLength(28), WAIT);
       // Nothing of the account's half on the server's page.
       expect(document.querySelector("[data-service-side='account']")).toBeNull();
     });
