@@ -24,3 +24,34 @@ export const SHARE_PAGE_BRAND_SVG =
   `<path fill="currentColor" d="${NAME}"/>` +
   `<path class="a2-accent" d="${SLASH_GREATER}"/>` +
   "</svg>";
+
+/**
+ * The brand's accent for `<` and `/>` — Signal-Orange on dark grounds, Glut on
+ * light ones (brand guide). These belong to the abrechen2 mark, not to the
+ * TravStats palette, which is why they are named here and nowhere else.
+ */
+export const ABRECHEN2_ACCENT_ON_DARK = "#FF7A1A";
+export const ABRECHEN2_ACCENT_ON_LIGHT = "#C2410C";
+
+/**
+ * The TravStats lockup from the app header (`frontend/src/components/Brand/Logo.tsx`):
+ * the luggage-tag mark and the TRAV ✚ STATS wordmark. The tag path and rules
+ * are the same as there; colours come from the page's stylesheet (`.ts-mark`,
+ * `.ts-cross` → `--ts-accent`, the wordmark → `--ts-text-bright`).
+ */
+const TAG_PATH = "M 28 36 L 60 10 L 92 36 L 92 126 Q 92 132 86 132 L 34 132 Q 28 132 28 126 Z";
+const TAG_RULES = "M 38 52 L 82 52 M 38 62 L 82 62";
+
+export const SHARE_PAGE_LOGO =
+  '<div class="ts-logo" role="img" aria-label="TravStats">' +
+  '<svg class="ts-mark" viewBox="0 0 120 140" width="26" height="30" aria-hidden="true">' +
+  `<path d="${TAG_PATH}" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>` +
+  '<circle cx="60" cy="28" r="5" fill="none" stroke="currentColor" stroke-width="3"/>' +
+  `<path d="${TAG_RULES}" stroke="currentColor" stroke-width="1.5" stroke-opacity="0.5"/>` +
+  '<text x="60" y="96" text-anchor="middle" font-size="32" font-weight="700" fill="currentColor" letter-spacing="-1">TS</text>' +
+  "</svg>" +
+  '<span class="ts-wordmark" aria-hidden="true">TRAV' +
+  '<svg class="ts-cross" viewBox="0 0 20 20" width="8" height="8">' +
+  '<line x1="10" y1="3" x2="10" y2="17" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>' +
+  '<line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>' +
+  "</svg>STATS</span></div>";

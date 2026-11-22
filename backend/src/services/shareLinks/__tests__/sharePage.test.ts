@@ -59,16 +59,45 @@ describe("GET /share", () => {
 
   it("carries the abrechen2 credit as outlined paths, never typeset (brand rule)", () => {
     expect(SHARE_PAGE_HTML).toContain("Ein Projekt von");
-    expect(SHARE_PAGE_HTML).toMatch(/<svg class="a2-mark"[^>]*aria-label="abrechen2"/);
-    expect((SHARE_PAGE_HTML.match(/<path /g) ?? []).length).toBe(3);
+    const mark = SHARE_PAGE_HTML.match(
+      /<svg class="a2-mark"[^>]*aria-label="abrechen2"[\s\S]*?<\/svg>/
+    );
+    expect(mark).not.toBeNull();
+    expect((mark![0].match(/<path /g) ?? []).length).toBe(3);
+    expect(mark![0]).not.toMatch(/<text/);
     expect(SHARE_PAGE_JS).toContain("https://www.abrechen2.de/en/");
   });
 
   it("lays the itinerary out for A4 when printed, and offers it as a PDF", () => {
     expect(SHARE_PAGE_CSS).toMatch(/@page\{size:A4/);
     expect(SHARE_PAGE_CSS).toMatch(/@media print\{[\s\S]*\.actions[^{]*\{display:none\}/);
-    expect(SHARE_PAGE_CSS).toMatch(/@media \(prefers-color-scheme:dark\)/);
     expect(SHARE_PAGE_JS).toContain("window.print()");
+  });
+
+  it("is drawn in the app's design: its tokens, its fonts, its logo, domain colours on the markers", async () => {
+    // No palette of its own: the only hex values are the abrechen2 mark's two accents.
+    const hexes = [...SHARE_PAGE_CSS.matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map((m) => m[0]);
+    expect([...new Set(hexes)].sort()).toEqual(["#C2410C", "#FF7A1A"]);
+    expect(SHARE_PAGE_CSS).not.toMatch(/rgba?\(/);
+    for (const domain of ["flight", "hotel", "rail", "bus", "ferry", "rental", "cruise"]) {
+      expect(SHARE_PAGE_CSS).toContain(`var(--ts-domain-${domain})`);
+    }
+    // Print and the PDF are the same tokens on the token set's paper.
+    expect(SHARE_PAGE_CSS).toMatch(/@media print\{\s*:root\{[^}]*--ts-bg:var\(--ts-paper\)/);
+    expect(SHARE_PAGE_HTML.indexOf("/share/theme.css")).toBeLessThan(
+      SHARE_PAGE_HTML.indexOf("/share/share.css")
+    );
+    expect(SHARE_PAGE_HTML).toMatch(/class="ts-logo"[\s\S]*TRAV[\s\S]*STATS/);
+    expect(SHARE_PAGE_JS).toContain('"entry k-" + e.kind');
+
+    const theme = await request(shareLinkApp()).get("/share/theme.css").expect(200);
+    expect(theme.headers["content-type"]).toMatch(/text\/css/);
+    expect(theme.headers["content-security-policy"]).toBe(SHARE_PAGE_CSP);
+    expect(theme.text).toContain("--ts-domain-flight:");
+    expect(theme.text).toContain("--ts-paper:");
+    expect(theme.text).toContain('font-family: "Hanken Grotesk"');
+    expect(theme.text).not.toMatch(/@theme|@utility|fonts\.googleapis/);
+    expect(SHARE_PAGE_CSP).toContain("font-src 'self'");
   });
 
   it("CSP allows only self and blob: images, and nothing inline", () => {

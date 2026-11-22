@@ -210,6 +210,11 @@ COPY backend/scripts ./scripts
 # rather than the "base" version stored in backend/VERSION.
 RUN echo "${VERSION}" > ./VERSION
 
+# The public share page (/share) is styled with the web app's own design
+# tokens and font faces; the backend serves them as /share/theme.css
+# (backend/src/services/shareLinks/sharePageTheme.ts).
+COPY frontend/src/theme/tokens.css frontend/src/theme/fonts.css ./share-theme/
+
 # Setup Frontend (nginx will serve these files)
 WORKDIR /app/frontend
 COPY --from=frontend-builder /app/frontend/dist ./dist

@@ -5,6 +5,7 @@ import {
   SHARE_PAGE_HTML,
   SHARE_PAGE_JS,
 } from "../services/shareLinks/sharePageAssets";
+import { sharePageThemeCss } from "../services/shareLinks/sharePageTheme";
 
 /**
  * `GET /share` — the page a public share link opens (forgejo#281). Mounted
@@ -13,12 +14,13 @@ import {
  *
  * Its own headers on every answer, set after Helmet so they win: a CSP
  * stricter than the app's (`default-src 'none'`, script and style from self,
- * images from self and blob: for the photos the script fetches), no Referer,
+ * images from self and blob: for the photos the script fetches, the app's own
+ * self-hosted fonts from `/fonts`), no Referer,
  * no indexing, no framing, and no caching of the shell — it holds no data, but
  * a cached shell is one more copy of a URL that should leave no trace.
  */
 export const SHARE_PAGE_CSP =
-  "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; " +
+  "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; " +
   "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
 /** The public share-link API, which the CORS middleware leaves alone (see index.ts). */
@@ -45,6 +47,17 @@ router.get(["/", ""], (_req, res) => {
 router.get("/share.js", (_req, res) => {
   pageHeaders(res, "no-cache");
   res.type("application/javascript").send(SHARE_PAGE_JS);
+});
+
+// The app's design tokens and font faces (sharePageTheme.ts) — no palette of its own.
+router.get("/theme.css", (_req, res) => {
+  pageHeaders(res, "no-cache");
+  const css = sharePageThemeCss();
+  if (css === null) {
+    res.status(503).type("text/css").send("/* theme unavailable — see the server log */");
+    return;
+  }
+  res.type("text/css").send(css);
 });
 
 router.get("/share.css", (_req, res) => {
