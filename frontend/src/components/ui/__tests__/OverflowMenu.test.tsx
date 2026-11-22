@@ -163,4 +163,25 @@ describe("OverflowMenu", () => {
     expect(onA).toHaveBeenCalled();
     expect(rowClick).not.toHaveBeenCalled();
   });
+
+  it("keeps Escape from reaching an enclosing dialog's own Escape handler", () => {
+    const outer = vi.fn();
+    document.addEventListener("keydown", outer);
+    renderMenu();
+    fireEvent.click(screen.getByTestId("menu"));
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+    document.removeEventListener("keydown", outer);
+    expect(outer).not.toHaveBeenCalled();
+  });
+
+  it("puts initial focus on the first enabled entry", () => {
+    renderMenu({
+      entries: [
+        { key: "a", label: "Alpha", disabled: true },
+        { key: "b", label: "Beta", onSelect: vi.fn() },
+      ],
+    });
+    fireEvent.click(screen.getByTestId("menu"));
+    expect(document.activeElement?.textContent).toBe("Beta");
+  });
 });

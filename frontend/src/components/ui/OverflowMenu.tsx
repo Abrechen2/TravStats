@@ -105,7 +105,11 @@ export default function OverflowMenu({
   }, [open]);
 
   useEffect(() => {
-    if (open) panelRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    if (open) {
+      panelRef.current
+        ?.querySelector<HTMLElement>('[role="menuitem"]:not(:disabled):not([aria-disabled="true"])')
+        ?.focus();
+    }
   }, [open]);
 
   // Stable partition: destructive entries last, in their given order.
@@ -131,7 +135,11 @@ export default function OverflowMenu({
 
   const onMenuKey = (e: KeyboardEvent<HTMLDivElement>): void => {
     if (e.key === "Escape" || e.key === "Tab") {
-      if (e.key === "Escape") e.preventDefault();
+      // Escape closes the menu only: an enclosing dialog's own Escape handler must not also fire.
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       // The portaled panel sits at the end of the document: close and hand focus
       // back to the trigger so Tab continues from there.
       setOpen(false);
