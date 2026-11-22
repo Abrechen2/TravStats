@@ -6,9 +6,10 @@ import logger from "../utils/logger";
 import { getAvailableProviders } from "../services/parsers/factory";
 import { validateBoardingPassImageBase64 } from "../utils/fileValidation";
 import { PARSER_SUPPORTED_DOMAINS } from "../shared/domains";
-import { isEmpty, readBoardingPass } from "../services/boardingPassRead";
+import { BoardingPassReadError, isEmpty, readBoardingPass } from "../services/boardingPassRead";
 import type { ApiErrorCode } from "../middleware/errorHandler";
 import { describeParserError } from "../utils/parserErrors";
+import { ImageRefusedError } from "../utils/barcodeScan/pixels";
 import {
   assertMayRecord,
   assertRetainable,
@@ -54,6 +55,8 @@ const parseBoardingpassSchema = z
  * - fallbackUsed: boolean - Whether the OCR fallback was used
  * - enriched: boolean - Whether data was enriched with API
  * - sources: { barcode, ocr } - which half produced anything (additive, 2026-08-30)
+ * - flights: ParsedBooking[] - one per pass on the image (additive, 2026-11-22)
+ * - stages: what barcode, OCR, parser, lookup and LLM each did (additive, 2026-11-22)
  */
 router.post(
   "/parse-boardingpass",
@@ -112,66 +115,26 @@ router.post(
 
       logger.info(`[Boarding Pass Parse] Starting parsing for user ${userId}`);
 
-      // Barcode first, OCR for what no barcode carries, merged with the barcode
-      // winning — shared with /boardingpass/propose, see services/boardingPassRead.
-      const reading = await readBoardingPass({ imageBase64: validatedImage, userId });
+      // Barcode → OCR → parser → flight lookup → language model, each stage
+      // recorded — shared with /boardingpass/propose, see services/boardingPassRead.
+      const reading = await readBoardingPass({
+        imageBase64: validatedImage,
+        userId,
+        enrich: enrichWithApi,
+      });
 
       if (isEmpty(reading)) {
         res.status(422).json({
           error: "No flight data could be extracted from the boarding pass",
           code: "NO_FLIGHT_DATA" satisfies ApiErrorCode,
+          stages: reading.stages,
         });
         return;
       }
 
-      let enriched = false;
-      let flight = reading.merged;
-
-      if (
-        enrichWithApi &&
-        flight.flightNumber &&
-        flight.departureTime &&
-        flight.departureCode &&
-        flight.arrivalCode
-      ) {
-        try {
-          const { lookupFlightWithHistorical } = await import("../services/flightLookup");
-          const date = new Date(flight.departureTime);
-          const { flights: apiFlights } = await lookupFlightWithHistorical(
-            flight.flightNumber,
-            date
-          );
-
-          if (apiFlights.length > 0) {
-            const apiData = apiFlights[0];
-
-            // Validate that API data matches boarding pass data
-            const departureDateMatch = apiData.departure?.iata === flight.departureCode;
-            const arrivalDateMatch = apiData.arrival?.iata === flight.arrivalCode;
-
-            if (departureDateMatch && arrivalDateMatch) {
-              logger.info("[Boarding Pass Parse] Enriching with API data");
-
-              // Merge data immutably: Vision parser is Source of Truth, API fills gaps
-              flight = {
-                ...flight,
-                aircraft: flight.aircraft || apiData.aircraft,
-                terminal: flight.terminal || apiData.departure?.terminal,
-                gate: flight.gate || apiData.departure?.gate,
-                arrivalTime: flight.arrivalTime || apiData.arrival?.scheduledTime,
-                airline: flight.airline || apiData.airline,
-              };
-
-              enriched = true;
-            }
-          }
-        } catch (apiError) {
-          logger.warn(
-            { error: apiError },
-            "[Boarding Pass Parse] Flight lookup API failed, continuing without enrichment"
-          );
-        }
-      }
+      const flight = reading.merged;
+      const flights = [...reading.legs];
+      const enriched = reading.enriched;
 
       const documentId = await recordParse({
         userId,
@@ -179,7 +142,7 @@ router.post(
         retain: parsed.retain,
         input: retainInput,
         parsedDomain: "flight",
-        parsedPayload: { flight },
+        parsedPayload: { flight, flights },
       });
 
       res.json({
@@ -192,6 +155,11 @@ router.post(
         // a caller that wants to know how much to trust the answer can, and one
         // that does not simply ignores the field.
         sources: reading.sources,
+        // Additive (2026-11-22): every pass on the image — two paper passes on
+        // one photo are two flights; `flight` stays the first — and what each
+        // stage did, in order, with a stable code the client turns into copy.
+        flights,
+        stages: reading.stages,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -206,12 +174,23 @@ router.post(
       logger.error({ error }, "[Boarding Pass Parse] Parsing failed");
 
       // Same mapping as the other parse routes: a stable code, and no raw
-      // exception text for the scanner to print.
-      const described = describeParserError(error);
+      // exception text for the scanner to print — plus the stages that ran.
+      const readError = error instanceof BoardingPassReadError ? error : null;
+      // An image refused for its size is the user's file, not a server fault.
+      if (readError?.original instanceof ImageRefusedError) {
+        res.status(422).json({
+          error: "The image was refused before reading",
+          code: "NO_FLIGHT_DATA" satisfies ApiErrorCode,
+          stages: readError.stages,
+        });
+        return;
+      }
+      const described = describeParserError(readError ? readError.original : error);
       res.status(described.status).json({
         error: "Boarding pass parsing failed",
         message: described.message,
         code: described.code,
+        ...(readError ? { stages: readError.stages } : {}),
       });
     }
   }

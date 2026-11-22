@@ -1,11 +1,9 @@
 ﻿import { useState, useEffect, useRef, useId } from "react";
 import Modal from "./Modal";
 import {
-  FieldError,
   FormErrorBanner,
   RequiredLegend,
   SaveBlockedHint,
-  fieldErrorProps,
   useDirtyGuard,
   useFormFailure,
 } from "./form";
@@ -37,6 +35,8 @@ import {
 import ReviewParserNotices from "./FlightForm/ReviewParserNotices";
 import ReviewCostSection from "./FlightForm/ReviewCostSection";
 import ReviewField, { REVIEW_INPUT } from "./FlightForm/ReviewField";
+import TimesFields, { type TimesFieldsValue } from "./FlightForm/fields/TimesFields";
+import { followDepartureDate, joinLocal, timesFromParsed } from "./FlightForm/fields/timesFollow";
 import ReviewOnlineCheckIn, { onlineCheckInRequest } from "./FlightForm/ReviewOnlineCheckIn";
 
 interface FlightReviewModalProps {
@@ -59,6 +59,7 @@ export default function FlightReviewModal({
   onClose,
   onConfirm,
   initialData,
+  source,
   flightIndex,
   totalFlights,
   originalData,
@@ -75,8 +76,11 @@ export default function FlightReviewModal({
   const [airline, setAirline] = useState("");
   const [departureCode, setDepartureCode] = useState("");
   const [arrivalCode, setArrivalCode] = useState("");
-  const [departureTime, setDepartureTime] = useState("");
-  const [arrivalTime, setArrivalTime] = useState("");
+  // The flight form's four fields and its arrival-follows-departure rule
+  // (`timesFollow`), so a scanned pass asks only for the clock.
+  const [times, setTimes] = useState<TimesFieldsValue>(timesFromParsed("", ""));
+  const departureTime = joinLocal(times.depDate, times.depTime);
+  const arrivalTime = joinLocal(times.arrDate, times.arrTime);
   const [aircraft, setAircraft] = useState("");
   const [seatClass, setSeatClass] = useState<"economy" | "premium_economy" | "business" | "first">(
     "economy"
@@ -121,10 +125,13 @@ export default function FlightReviewModal({
       setAirline(initialData.airline || "");
       setDepartureCode(initialData.departureCode || "");
       setArrivalCode(initialData.arrivalCode || "");
-      setDepartureTime(
-        initialData.departureTime ? formatDateTimeLocal(initialData.departureTime) : ""
+      setTimes(
+        timesFromParsed(
+          initialData.departureTime ? formatDateTimeLocal(initialData.departureTime) : "",
+          initialData.arrivalTime ? formatDateTimeLocal(initialData.arrivalTime) : "",
+          source === "boardingpass"
+        )
       );
-      setArrivalTime(initialData.arrivalTime ? formatDateTimeLocal(initialData.arrivalTime) : "");
       setAircraft(initialData.aircraft || "");
       setSeat(initialData.seat || "");
       setTerminal(initialData.terminal || "");
@@ -271,6 +278,12 @@ export default function FlightReviewModal({
     departureTime: fid(3),
     arrivalTime: fid(4),
   };
+  const timeIds = {
+    depDate: `${fieldId}-dep-date`,
+    depTime: ids.departureTime,
+    arrDate: `${fieldId}-arr-date`,
+    arrTime: ids.arrivalTime,
+  };
   const missing = [
     !flightNumber.trim() && { field: ids.flightNumber, label: t("flights:form.flightNumber") },
     !departureAirport && {
@@ -278,8 +291,14 @@ export default function FlightReviewModal({
       label: t("flights:form.missing.departureAirport"),
     },
     !arrivalAirport && { field: ids.arrival, label: t("flights:form.missing.arrivalAirport") },
-    !departureTime && { field: ids.departureTime, label: t("flights:form.missing.departureTime") },
-    !arrivalTime && { field: ids.arrivalTime, label: t("flights:form.missing.arrivalTime") },
+    !departureTime && {
+      field: times.depDate ? ids.departureTime : timeIds.depDate,
+      label: t("flights:form.missing.departureTime"),
+    },
+    !arrivalTime && {
+      field: times.arrDate ? ids.arrivalTime : timeIds.arrDate,
+      label: t("flights:form.missing.arrivalTime"),
+    },
   ].filter((step): step is { field: string; label: string } => Boolean(step));
   const failure = useFormFailure(JSON.stringify(snapshot));
   const [serverField, setServerField] = useState<string | null>(null);
@@ -585,51 +604,25 @@ export default function FlightReviewModal({
             </div>
           </div>
 
-          {/* Times */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ReviewField
-              id={fid(3)}
-              label={t("flights:form.departureTime")}
-              required
-              inferredHint={
-                isInferred("departureTime", initialData.inferredFields)
-                  ? t("flights:review.inferredDateHint")
-                  : null
-              }
-            >
-              <input
-                id={fid(3)}
-                {...fieldErrorProps(fid(3), fieldError("departureLocal"))}
-                type="datetime-local"
-                value={departureTime}
-                onChange={(e) => setDepartureTime(e.target.value)}
-                className={`${REVIEW_INPUT} ${getFieldBorderClass("departureTime", initialData.fieldSources)}`}
-                required
-              />
-              <FieldError id={fid(3)} error={fieldError("departureLocal")} />
-            </ReviewField>
-
-            <ReviewField
-              id={fid(4)}
-              label={t("flights:form.arrivalTime")}
-              required
-              inferredHint={
-                isInferred("arrivalTime", initialData.inferredFields)
-                  ? t("flights:review.inferredDateHint")
-                  : null
-              }
-            >
-              <input
-                id={fid(4)}
-                {...fieldErrorProps(fid(4), fieldError("arrivalLocal"))}
-                type="datetime-local"
-                value={arrivalTime}
-                onChange={(e) => setArrivalTime(e.target.value)}
-                className={`${REVIEW_INPUT} ${getFieldBorderClass("arrivalTime", initialData.fieldSources)}`}
-                required
-              />
-              <FieldError id={fid(4)} error={fieldError("arrivalLocal")} />
-            </ReviewField>
+          {/* Times — the flight form's fields: the arrival date follows the departure date. */}
+          <div>
+            {(["departureTime", "arrivalTime"] as const)
+              .filter((f) => isInferred(f, initialData.inferredFields))
+              .map((f) => (
+                <p key={f} className="text-xs mb-1 text-amber-300">
+                  {t(`flights:form.${f}`)}: {t("flights:review.inferredDateHint")}
+                </p>
+              ))}
+            <TimesFields
+              value={times}
+              onChange={(next) => setTimes((prev) => followDepartureDate(prev, next))}
+              ids={timeIds}
+              markRequired
+              errors={{
+                depTime: fieldError("departureLocal"),
+                arrTime: fieldError("arrivalLocal"),
+              }}
+            />
           </div>
 
           {/* Aircraft and Class */}

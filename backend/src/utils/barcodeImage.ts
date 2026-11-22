@@ -1,56 +1,35 @@
 /**
- * Decode a boarding-pass 2D barcode directly FROM an image.
+ * Decode boarding-pass 2D barcodes directly FROM an image.
  *
- * Boarding-pass OCR (Tesseract) is unreliable — it returns low-confidence
- * garbage for the structured fields. The 2D barcode every boarding pass carries
- * is deterministic and error-corrected, so when a user uploads a photo or a
- * Wallet screenshot we read the barcode out of the image and feed it to the
- * BCBP decoder, exactly like a live camera scan.
+ * Boarding-pass OCR (Tesseract) is unreliable for the structured fields; the
+ * 2D barcode every pass carries is deterministic and error-corrected. So when
+ * a user uploads a photo or a Wallet screenshot we read the barcode(s) out of
+ * the image and feed them to the BCBP decoder, exactly like a live camera scan.
  *
- * Formats cover every boarding-pass variant: PDF417 (paper), Aztec (most
- * mobile/Wallet passes) and QRCode (some airlines' digital passes).
+ * Formats: PDF417 (paper), Aztec (most Wallet passes), QR (some airlines'
+ * digital passes). The search itself — full frame, then cropped, thresholded
+ * and upscaled candidate regions — lives in `barcodeScan/`.
  */
-import logger from "./logger";
+import { scanBoardingPassBarcodes, type BarcodeScan } from "./barcodeScan";
 
-interface ZxingResult {
-  text: string;
-  format: string;
-}
-type ReadBarcodes = (
-  input: Blob,
-  options: { formats: string[]; tryHarder: boolean }
-) => Promise<ZxingResult[]>;
-
-// zxing-wasm is ESM-only, but the backend compiles to CommonJS. A plain
-// `import()` would be downleveled by tsc to `require()`, which throws on an
-// ESM-only package. The Function indirection keeps a *native* dynamic import at
-// runtime so Node's ESM loader handles it.
-const esmImport = new Function("specifier", "return import(specifier)") as (
-  specifier: string
-) => Promise<{ readBarcodes: ReadBarcodes }>;
+export type { BarcodeScan, FoundBarcode } from "./barcodeScan";
 
 function stripDataUrl(s: string): string {
   const i = s.indexOf("base64,");
   return i >= 0 ? s.slice(i + 7) : s;
 }
 
+/** Every barcode in the image, with how the search went. Never throws. */
+export async function scanBarcodesFromImageBase64(imageBase64: string): Promise<BarcodeScan> {
+  return scanBoardingPassBarcodes(Buffer.from(stripDataUrl(imageBase64), "base64"));
+}
+
 /**
- * Returns the decoded barcode string (typically an IATA BCBP "M…" string) or
- * null if no PDF417 / Aztec / QR barcode could be read. Never throws.
+ * The first barcode, preferring a BCBP boarding pass ("M" prefix), or null.
+ * Kept for single-barcode callers; never throws.
  */
 export async function decodeBarcodeFromImageBase64(imageBase64: string): Promise<string | null> {
-  try {
-    const { readBarcodes } = await esmImport("zxing-wasm/reader");
-    const blob = new Blob([Buffer.from(stripDataUrl(imageBase64), "base64")]);
-    const results = await readBarcodes(blob, {
-      formats: ["PDF417", "Aztec", "QRCode"],
-      tryHarder: true,
-    });
-    // Prefer a result that looks like a BCBP boarding pass ("M" prefix).
-    const bcbp = results.find((r) => typeof r.text === "string" && r.text[0] === "M");
-    return bcbp?.text ?? results[0]?.text ?? null;
-  } catch (err) {
-    logger.warn({ err }, "[BarcodeImage] barcode decode from image failed");
-    return null;
-  }
+  const { codes } = await scanBarcodesFromImageBase64(imageBase64);
+  const bcbp = codes.find((c) => c.text[0] === "M");
+  return bcbp?.text ?? codes[0]?.text ?? null;
 }

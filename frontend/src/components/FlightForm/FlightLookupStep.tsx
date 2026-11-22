@@ -47,7 +47,8 @@ export interface FlightLookupStepProps {
   setError: (msg: string) => void;
   // Handlers
   handleFlightLookup: () => Promise<void>;
-  handleBoardingPassScan: (parsedData: ParsedBooking) => Promise<void>;
+  /** Every flight a scan read — two paper passes on one photo are two. */
+  handleBoardingPassScan: (flights: ParsedBooking[]) => Promise<void>;
   setImportBatchId: (id: string | null) => void;
   setParsedFlights: (flights: ParsedBooking[]) => void;
   setCurrentFlightIndex: (idx: number) => void;

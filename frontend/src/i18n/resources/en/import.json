@@ -89,7 +89,8 @@
     "pdfNoText": "No text could be read from this PDF – probably a scan. Please read it in as an image with the boarding-pass scanner.",
     "rateLimited": "Too many imports in a short time. Please wait a moment and try again.",
     "timeout": "Reading the document took too long. Please try again later.",
-    "llmCloudNotConsented": "The AI provider is outside the network, and the administrator has not agreed to sending documents there."
+    "llmCloudNotConsented": "The AI provider is outside the network, and the administrator has not agreed to sending documents there.",
+    "tooLarge": "The image is too large to upload. Please choose a smaller photo (JPG) or crop it to the boarding pass."
   },
   "wrongDialog": {
     "title": "Wrong import",

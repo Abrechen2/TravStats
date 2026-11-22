@@ -19,7 +19,7 @@
     "test:ollama:download": "tsx scripts/test-ollama-models.ts --download-missing",
     "test:samples": "tsx scripts/test-parser-samples.ts all",
     "test:samples:email": "tsx scripts/test-parser-samples.ts email",
-    "test:samples:boardingpass": "tsx scripts/test-parser-samples.ts boardingpass",
+    "test:samples:boardingpass": "tsx scripts/boarding-pass-corpus.ts",
     "init": "tsx src/init.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

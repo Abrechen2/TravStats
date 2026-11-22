@@ -29,6 +29,8 @@ export function parseFailureMessage(err: unknown, t: Translate, fallbackKey: str
   const e = err as { response?: { status?: number }; code?: string; message?: string } | undefined;
   const status = e?.response?.status;
   if (status === 429) return t("import:errors.rateLimited");
+  // The body limit answers before any route does, so there is no code to read.
+  if (status === 413) return t("import:errors.tooLarge");
   if (status === 503) return t("import:errors.llmUnreachable");
   if (!e?.response && (e?.code === "ECONNABORTED" || /timeout/i.test(e?.message ?? ""))) {
     return t("import:errors.timeout");

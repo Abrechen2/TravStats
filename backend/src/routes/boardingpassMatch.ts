@@ -84,6 +84,8 @@ router.post(
         barcode,
         userId,
         allowOcr: validation === null ? false : validation.valid,
+        // Scheduled times for the clock a barcode never carries (owner, 2026-11-22).
+        enrich: true,
       });
 
       const { decoded, merged } = reading;
@@ -151,7 +153,25 @@ router.post(
           boardingGroup: boardingGroup ?? null,
           aircraft: aircraft ?? null,
           passengerName: passengerName ?? null,
+          // Additive (2026-11-22): the local departure/arrival clock when the
+          // printed card, the flight lookup or the model supplied one; null
+          // while only the barcode's date is known.
+          departureTime: clockOf(merged.departureTime),
+          arrivalTime: clockOf(merged.arrivalTime),
         },
+        // Additive: every pass on the image (two paper passes on one photo are
+        // two legs; `recognized` stays the first), and what each stage did.
+        legs: reading.legs.map((leg) => ({
+          flightNumber: leg.flightNumber ?? null,
+          departureCode: leg.departureCode ?? null,
+          arrivalCode: leg.arrivalCode ?? null,
+          date: leg.departureTime?.slice(0, 10) ?? null,
+          departureTime: clockOf(leg.departureTime),
+          arrivalTime: clockOf(leg.arrivalTime),
+          seatNumber: leg.seat ?? null,
+          pnr: leg.pnr ?? leg.bookingReference ?? null,
+        })),
+        stages: reading.stages,
         sources: { barcode: Boolean(decoded), ocr: ocrUsed },
         missing,
         action: match ? "merge" : "create",
@@ -177,6 +197,12 @@ router.post(
     }
   }
 );
+
+/** "YYYY-MM-DDTHH:mm" when a real clock is known; the date-only T00:00 placeholder is null. */
+function clockOf(iso: string | undefined): string | null {
+  if (!iso || iso.length < 16 || iso.slice(10, 16) === "T00:00") return null;
+  return iso.slice(0, 16);
+}
 
 async function resolveAirport(code: string | undefined): Promise<AirportDto | null> {
   if (!code) return null;

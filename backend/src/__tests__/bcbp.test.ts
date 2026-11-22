@@ -88,3 +88,40 @@ describe("decodeBcbp", () => {
     expect(decodeBcbp(empty)).toBeNull();
   });
 });
+
+/**
+ * A paper pass with the conditional section, synthetic data in the layout of
+ * a United PDF417 (forgejo boarding-pass package, 2026-11-22): leg ORD-MUC,
+ * day 008, and a date of issue "6008" — issued on day 8 of a year ending in 6.
+ */
+const PAPER_PASS =
+  "M1DOE/JANEMS          EQ7XK2P ORDMUCUA 0952 008Y035A0006 15C>3180 K6008BUA 5016" +
+  "8820310012901623589826560 UA LH 992002391797244     *30601    09         ";
+
+describe("decodeBcbp — a paper pass with a date of issue", () => {
+  it("decodes a BCBP string to the expected fields", () => {
+    const d = decodeBcbp(PAPER_PASS, new Date("2026-11-22T00:00:00Z"));
+    expect(d).toMatchObject({
+      passengerName: "DOE/JANEMS",
+      pnr: "Q7XK2P",
+      fromCode: "ORD",
+      toCode: "MUC",
+      carrier: "UA",
+      flightNumber: "UA952",
+      seatNumber: "35A",
+      bookingClassLetter: "Y",
+      issueYearDigit: 6,
+    });
+  });
+
+  it("takes the year from the date of issue instead of the nearest year", () => {
+    // Asked in 2029 a day-008 pass issued in a year ending in 6 is 2026 —
+    // the nearest-year rule alone would have answered 2029-01-08.
+    expect(decodeBcbp(PAPER_PASS, new Date("2029-06-01T00:00:00Z"))?.date).toBe("2026-01-08");
+  });
+
+  it("puts a flight issued in late December into the next year", () => {
+    const decIssue = PAPER_PASS.replace("K6008B", "K5362B").replace("0952 008Y", "0952 003Y");
+    expect(decodeBcbp(decIssue, new Date("2026-11-22T00:00:00Z"))?.date).toBe("2026-01-03");
+  });
+});

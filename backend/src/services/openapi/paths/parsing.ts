@@ -3,6 +3,7 @@
  */
 
 import { z } from "zod";
+import { BOARDING_PASS_STAGE_CODES } from "../../boardingPass/stages";
 
 import { registry } from "../registry";
 import { parseEmailBodySchema } from "../../../schemas/parseEmail";
@@ -226,14 +227,27 @@ registry.registerPath({
   },
 });
 
+const boardingPassStageSchema = z
+  .object({
+    stage: z.enum(["barcode", "ocr", "parser", "lookup", "llm"]),
+    status: z.enum(["ok", "partial", "failed", "skipped"]),
+    code: z.enum(BOARDING_PASS_STAGE_CODES),
+    count: z.number().int().optional(),
+    fields: z.array(z.string()).optional(),
+  })
+  .openapi("BoardingPassStage");
+
 registry.registerPath({
   method: "post",
   path: "/parse-boardingpass",
   summary: "Extract a flight from a boarding-pass image",
   description:
     "Accepts a base64-encoded boarding-pass image (PNG/JPEG/PDF, up to 20 MB). " +
-    "Tries QR/PDF417 barcode decoding first, then OCR + vision LLM as fallback. " +
-    "Like /parse-email, the result is NOT auto-saved.",
+    "Stages, in order: barcode (PDF417/Aztec/QR, every pass on the image), OCR, " +
+    "parser (template/regex over the OCR text, incl. the printed departure/arrival " +
+    "clocks), flight lookup (when enrichWithApi), language model (last, only for what " +
+    "is still open). `stages` reports each one with a stable code; `flights` holds one " +
+    "entry per pass. Like /parse-email, the result is NOT auto-saved.",
   tags: ["Parsers"],
   request: {
     body: {
@@ -269,6 +283,11 @@ registry.registerPath({
             provider: z.string(),
             fallbackUsed: z.boolean().optional(),
             enriched: z.boolean().optional(),
+            flights: z
+              .array(parsedFlightSchema)
+              .optional()
+              .describe("One entry per boarding pass on the image; `flight` is the first"),
+            stages: z.array(boardingPassStageSchema).optional(),
           }),
         },
       },

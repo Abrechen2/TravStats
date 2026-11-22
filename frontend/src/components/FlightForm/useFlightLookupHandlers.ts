@@ -92,10 +92,11 @@ export function useFlightLookupHandlers(s: FlightFormState, refs: FlightFormRefs
   };
 
   // Boarding Pass Scanner
-  const handleBoardingPassScan = async (parsedData: ParsedBooking) => {
+  // The same review the mail import uses, one flight after the other.
+  const handleBoardingPassScan = async (flights: ParsedBooking[]) => {
     s.setShowScanner(false);
     s.setError("");
-    s.setParsedFlights([parsedData]);
+    s.setParsedFlights(flights);
     s.setCurrentFlightIndex(0);
     s.setShowFlightReview(true);
   };

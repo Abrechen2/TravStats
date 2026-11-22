@@ -4,6 +4,7 @@ import logger, { parserFactoryLogger, parserVisionLogger } from "../../utils/log
 import { shouldLogParserOperations } from "../loggingConfig";
 import { checkProviderAvailability, deleteAvailabilityCacheEntry } from "./config";
 import { getVisionParserInstance } from "./providers";
+import { ImageRefusedError } from "../../utils/barcodeScan/pixels";
 
 /**
  * Calculate quality score for parsed booking (0-100)
@@ -110,7 +111,15 @@ export async function parseBoardingPass(
         logger.info(`[Parser Factory] Attempting vision parse with: ${provider}`);
       }
 
-      const flight = await parser.parseImage(imageBase64);
+      let ocrText: string | undefined;
+      let flight: ParsedBooking;
+      if (parser.readImage) {
+        const read = await parser.readImage(imageBase64);
+        flight = read.booking;
+        ocrText = read.text;
+      } else {
+        flight = await parser.parseImage(imageBase64);
+      }
       const parseDuration = Date.now() - parseStartTime;
 
       const fallbackUsed = config.visionProvider !== provider;
@@ -157,8 +166,11 @@ export async function parseBoardingPass(
         flights: [flight],
         provider,
         fallbackUsed,
+        ...(ocrText !== undefined ? { ocrText } : {}),
       };
     } catch (error: unknown) {
+      // Refused for its size: no other provider may decode it either.
+      if (error instanceof ImageRefusedError) throw error;
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
       if (shouldLog) {
         visionLog.warn({
