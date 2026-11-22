@@ -1,4 +1,7 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
+import { useGapPrefill } from "../hooks/useGapPrefill";
+import { railGapDraft } from "../components/rail/railGapDraft";
+import type { RailFormDraft } from "../components/rail/railFormModel";
 import DomainBulkBar, { BulkStartButton } from "../components/bulkEdit/DomainBulkBar";
 import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
 import { railBulkRow } from "../components/bulkEdit/bulkRows";
@@ -73,7 +76,7 @@ const RAIL_SORT_FIELDS = ["departure"] as const;
 type RailSortField = (typeof RAIL_SORT_FIELDS)[number];
 
 type Filters = Pick<RailListQuery, "q" | "status" | "year">;
-type Editing = { journey: RailJourney | null } | null;
+type Editing = { journey: RailJourney | null; draft?: RailFormDraft } | null;
 
 /**
  * One page of the logbook. Normally the server's connections (forgejo#187): a
@@ -127,6 +130,16 @@ export default function RailPage(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<RailStatus | "all">("all");
   const [yearFilter, setYearFilter] = useState<number | "all">("all");
   const [editing, setEditing] = useState<Editing>(null);
+  // The gap calendar's "Eintrag anlegen": a new ride on the gap's days (`?addFrom=&addTo=`).
+  const gap = useGapPrefill();
+  useEffect(() => {
+    if (!gap.request) return;
+    setEditing({
+      journey: null,
+      draft: gap.request.dates ? railGapDraft(gap.request.dates) : undefined,
+    });
+    gap.done();
+  }, [gap]);
   const [toDelete, setToDelete] = useState<RailJourney | null>(null);
   const [deleting, setDeleting] = useState(false);
   // Asked only while the question is open (forgejo#250): the originals go
@@ -425,6 +438,7 @@ export default function RailPage(): JSX.Element {
       {editing && (
         <RailFormModal
           journey={editing.journey}
+          initialDraft={editing.draft}
           onClose={(): void => setEditing(null)}
           onReload={editing.journey ? undefined : () => void reload()}
           onSaved={handleSaved}

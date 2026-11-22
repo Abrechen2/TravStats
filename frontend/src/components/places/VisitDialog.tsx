@@ -56,6 +56,8 @@ interface Props {
    * look before sending again. Omitted where the caller cannot do that.
    */
   onReload?: () => void;
+  /** The gap calendar's day (`YYYY-MM-DD`): a new visit opens on it instead of today. */
+  initialDate?: string;
 }
 
 /**
@@ -84,12 +86,13 @@ export function VisitDialog({
   onSaved,
   afterSaveFailedKey,
   onReload,
+  initialDate,
 }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["places", "common"]);
   const isEdit = visit !== null;
   const today = todayIn(useTodayZone());
 
-  const initial = visitDraft(visit);
+  const initial = visitDraft(visit, initialDate);
   const [mode, setMode] = useState<VisitDateMode>(initial.mode);
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);

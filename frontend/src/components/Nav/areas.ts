@@ -64,6 +64,7 @@ export function trackMenu(t: Translate): NavLeaf[] {
     },
     { kind: "leaf", id: "track-months", path: "/track/months", label: t("track:menu.stats") },
     { kind: "leaf", id: "track-stays", path: "/track/stays", label: t("track:menu.stays") },
+    { kind: "leaf", id: "track-gaps", path: "/track/gaps", label: t("track:menu.gaps") },
     { kind: "leaf", id: "track-imports", path: "/track/imports", label: t("track:menu.imports") },
   ];
 }

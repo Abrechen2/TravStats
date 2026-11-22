@@ -59,13 +59,17 @@ export const DEFAULT_CHECK_OUT_TIME = "11:00";
  */
 export function stayDraftFields(
   stay: LodgingStay | null | undefined,
-  defaultCurrency: LodgingCurrency
+  defaultCurrency: LodgingCurrency,
+  /** The gap calendar's days: a NEW stay opens with them as check-in and check-out. */
+  gap?: { from: string; to: string }
 ): StayDraftFields {
   return {
     // The hotel's own days (`times`, ADR 0002) - the same ones the overlap rule
     // and the lists read - and the legacy anchor only where `times` is absent.
-    checkIn: (stay && stayCheckIn(stay)?.date) || toDateInput(stay?.checkIn),
-    checkOut: (stay && stayCheckOut(stay)?.date) || toDateInput(stay?.checkOut),
+    checkIn:
+      (stay && stayCheckIn(stay)?.date) || (!stay && gap?.from) || toDateInput(stay?.checkIn),
+    checkOut:
+      (stay && stayCheckOut(stay)?.date) || (!stay && gap?.to) || toDateInput(stay?.checkOut),
     // A stored stay keeps exactly what it has (empty stays empty); only a new one is pre-filled.
     checkInTime: stay ? (stay.checkInTime ?? "") : DEFAULT_CHECK_IN_TIME,
     checkOutTime: stay ? (stay.checkOutTime ?? "") : DEFAULT_CHECK_OUT_TIME,

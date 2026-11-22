@@ -1,4 +1,6 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
+import { useGapPrefill } from "../hooks/useGapPrefill";
+import type { GapDates } from "../lib/gapCalendar";
 import DomainBulkBar, { BulkStartButton } from "../components/bulkEdit/DomainBulkBar";
 import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
 import { busFerryBulkRow } from "../components/bulkEdit/bulkRows";
@@ -72,7 +74,7 @@ type FerrySortField = (typeof FERRY_SORT_FIELDS)[number];
 const YEAR_SCAN_LIMIT = 500;
 
 type Filters = Pick<FerryListQuery, "q" | "status" | "year">;
-type Editing = { journey: FerryJourney | null } | null;
+type Editing = { journey: FerryJourney | null; dates?: GapDates } | null;
 
 /** Ferry logbook using the shared responsive table and filter controls. */
 export default function FerryPage(): JSX.Element {
@@ -93,6 +95,13 @@ export default function FerryPage(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<FerryStatus | "all">("all");
   const [yearFilter, setYearFilter] = useState<number | "all">("all");
   const [editing, setEditing] = useState<Editing>(null);
+  // The gap calendar's "Eintrag anlegen": a new crossing on the gap's days (`?addFrom=&addTo=`).
+  const gap = useGapPrefill();
+  useEffect(() => {
+    if (!gap.request) return;
+    setEditing({ journey: null, dates: gap.request.dates ?? undefined });
+    gap.done();
+  }, [gap]);
   const [toDelete, setToDelete] = useState<FerryJourney | null>(null);
   const [deleting, setDeleting] = useState(false);
   // Asked only while the confirmation is open: deleting a ride takes its filed documents along.
@@ -365,6 +374,7 @@ export default function FerryPage(): JSX.Element {
       {editing && (
         <FerryFormModal
           journey={editing.journey}
+          initialDates={editing.dates}
           onClose={(): void => setEditing(null)}
           onSaved={handleSaved}
         />

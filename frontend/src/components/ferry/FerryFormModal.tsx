@@ -1,4 +1,5 @@
 import { parseDecimalInput } from "../../lib/decimalInput";
+import type { GapDates } from "../../lib/gapCalendar";
 import { useEffect, useId, useRef, useState } from "react";
 import { FerryTicketImport } from "./FerryTicketImport";
 import Modal from "../Modal";
@@ -92,7 +93,7 @@ function port(ride: FerryJourney | null, prefix: "dep" | "arr"): FerryStationDra
       }
     : { ...EMPTY_TERMINAL };
 }
-function initial(ride: FerryJourney | null) {
+export function initial(ride: FerryJourney | null, gap?: GapDates) {
   const fields: Record<string, string> = {};
   for (const key of [...TEXT, ...NUMBERS])
     fields[key] = String(ride?.[key] ?? (key === "currency" ? "EUR" : ""));
@@ -101,6 +102,12 @@ function initial(ride: FerryJourney | null) {
   if (ride?.distanceSource !== "user") fields.distanceKm = "";
   fields.departureLocal = ride ? (railDeparture(ride)?.local.slice(0, 16) ?? "") : "";
   fields.arrivalLocal = ride ? (railArrival(ride)?.local.slice(0, 16) ?? "") : "";
+  // A gap's days start a new crossing at midnight: the form has no "day only", and the
+  // clock is the user's to type.
+  if (!ride && gap) {
+    fields.departureLocal = `${gap.from}T00:00`;
+    fields.arrivalLocal = `${gap.to}T00:00`;
+  }
   fields.tripId = ride?.tripId ?? "";
   fields.departureFold = "";
   fields.arrivalFold = "";
@@ -110,14 +117,17 @@ export function FerryFormModal({
   journey,
   onClose,
   onSaved,
+  initialDates,
 }: {
   journey: FerryJourney | null;
   onClose: () => void;
   onSaved: (ride: FerryJourney) => void;
+  /** The gap calendar's days: a new crossing opens on them (departure and arrival day). */
+  initialDates?: GapDates;
 }) {
   const { t } = useTranslation(["ferry", "common"]);
   const formId = useId();
-  const [opened] = useState(() => initial(journey));
+  const [opened] = useState(() => initial(journey, initialDates));
   const [fields, setFields] = useState(opened);
   // Names and tags are lists, not text: a comma typed into a name is part of it.
   const [companions, setCompanions] = useState<string[]>(() => journey?.companions ?? []);

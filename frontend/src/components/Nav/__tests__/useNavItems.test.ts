@@ -171,6 +171,17 @@ describe("useNavItems — Mehr › Sammlungen", () => {
     expect(paths.indexOf("/wrapped")).toBe(paths.indexOf("/passport") + 1);
   });
 
+  // The gap calendar needs no TravTrack and no particular domain: any logbook has gaps.
+  it("offers the gap calendar whenever a logbook domain is on, with TravTrack off", () => {
+    useSettingsStore.setState({ enabledDomains: ["cruise"], betaFeaturesEnabled: false });
+    expect(section(run().more, "collections").map((i) => i.path)).toContain("/gaps");
+  });
+
+  it("omits the gap calendar when no domain is on", () => {
+    useSettingsStore.setState({ enabledDomains: [], betaFeaturesEnabled: false });
+    expect(section(run().more, "collections").map((i) => i.path)).not.toContain("/gaps");
+  });
+
   it("omits the year in review when flights are off", () => {
     useSettingsStore.setState({ enabledDomains: ["cruise"], betaFeaturesEnabled: true });
     expect(section(run().more, "collections").map((i) => i.path)).not.toContain("/wrapped");

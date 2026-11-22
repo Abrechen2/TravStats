@@ -36,7 +36,14 @@ export interface VisitDraft {
  * exists for; an existing one opens on what it stores, an undated one on
  * "unknown", so opening and closing it changes nothing.
  */
-export function visitDraft(visit: PlaceVisit | null | undefined): VisitDraft {
+export function visitDraft(
+  visit: PlaceVisit | null | undefined,
+  /** The gap calendar's day: a new visit opens on it instead of today. */
+  initialDate?: string
+): VisitDraft {
+  if (!visit && initialDate) {
+    return { mode: "other", date: initialDate, time: "", notes: "", rating: null, tripId: "" };
+  }
   if (!visit) return { mode: "today", date: "", time: "", notes: "", rating: null, tripId: "" };
   const shown = visitTime(visit);
   const { date, time } = shown ? splitTimeValue(shown) : { date: "", time: "" };

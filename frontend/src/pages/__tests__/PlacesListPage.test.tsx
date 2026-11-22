@@ -7,14 +7,32 @@ import { countRenderedRows, paginationControlsRendered } from "./tablePagination
 const listPlacesMock = vi.fn();
 const getPlaceRelationsMock = vi.fn();
 const createVisitMock = vi.fn();
+const searchPlacesPageMock = vi.fn();
 const deletePlaceMock = vi.fn();
 
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-stub" />,
 }));
 
+// The visit dialog has its own suites: a gap's visit (the one with `initialDate`) only has to
+// arrive for the right place and day; every other opening is the real dialog.
+vi.mock("../../components/places/VisitDialog", async (original) => {
+  const real = await original<typeof import("../../components/places/VisitDialog")>();
+  return {
+    VisitDialog: (props: Parameters<typeof real.VisitDialog>[0]) =>
+      props.initialDate ? (
+        <div data-testid="visit-dialog-stub">
+          {props.place.id}|{props.initialDate}
+        </div>
+      ) : (
+        <real.VisitDialog {...props} />
+      ),
+  };
+});
+
 vi.mock("../../lib/api/places", () => ({
   listPlaces: (...args: unknown[]) => listPlacesMock(...args),
+  searchPlacesPage: (...args: unknown[]) => searchPlacesPageMock(...args),
   deletePlace: (...args: unknown[]) => deletePlaceMock(...args),
   getPlaceRelations: (...args: unknown[]) => getPlaceRelationsMock(...args),
   createVisit: (...args: unknown[]) => createVisitMock(...args),
@@ -76,9 +94,9 @@ function makePlace(overrides: Partial<Place> & Pick<Place, "id" | "name">): Plac
   };
 }
 
-function renderListPage(): ReturnType<typeof render> {
+function renderListPage(url = "/"): ReturnType<typeof render> {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[url]}>
       <PlacesListPage />
     </MemoryRouter>
   );
@@ -88,6 +106,16 @@ describe("PlacesListPage", () => {
   beforeEach(() => {
     listPlacesMock.mockReset();
     useSettingsStore.setState({ enabledDomains: ["flight", "poi"] });
+  });
+
+  it("asks which place for a gap's visit, then opens the visit on the gap's first day", async () => {
+    listPlacesMock.mockResolvedValue([]);
+    searchPlacesPageMock.mockResolvedValue([{ id: "p1", name: "Colosseo", city: "Roma" }]);
+    renderListPage("/places?addFrom=2024-03-04&addTo=2024-03-07");
+
+    fireEvent.click(await screen.findByRole("button", { name: /Colosseo/ }));
+
+    expect(await screen.findByTestId("visit-dialog-stub")).toHaveTextContent("p1|2024-03-04");
   });
 
   it("renders the empty state without crashing when there are no places", async () => {

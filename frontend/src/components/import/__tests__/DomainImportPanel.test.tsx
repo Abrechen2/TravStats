@@ -190,3 +190,29 @@ describe("DomainImportPanel", () => {
     expect(renderManualSpy.mock.lastCall?.[0]).toMatchObject({ prefill: { from: "link" } });
   });
 });
+
+describe("DomainImportPanel — initialManual (the gap calendar)", () => {
+  it("skips the chooser and hands the adapter's manual form the prefill", () => {
+    renderManualSpy.mockClear();
+    render(
+      <DomainImportPanel
+        open
+        onClose={vi.fn()}
+        onItemsCreated={vi.fn()}
+        adapter={adapter}
+        initialManual={{ prefill: { kind: "gap" } }}
+      />
+    );
+    expect(screen.getByTestId("manual-modal")).toBeTruthy();
+    expect(screen.queryByText("Test Import")).toBeNull();
+    expect(renderManualSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ prefill: { kind: "gap" } })
+    );
+  });
+
+  it("without it the chooser is the first step, as before", () => {
+    renderPanel();
+    expect(screen.getByText("Test Import")).toBeTruthy();
+    expect(screen.queryByTestId("manual-modal")).toBeNull();
+  });
+});

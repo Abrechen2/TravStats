@@ -14,6 +14,11 @@ vi.mock("../../../lib/api", () => ({
   tripsApi: { detect: vi.fn().mockResolvedValue({ proposed: [] }) },
 }));
 
+vi.mock("../../../hooks/useTripEntrySuggestions", () => ({
+  useTripEntrySuggestions: () => ({ origins: [], destinations: [] }),
+}));
+vi.mock("../../../hooks/useTagSuggestions", () => ({ useTagSuggestions: () => [] }));
+
 vi.mock("../../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: () => void }) => unknown) =>
     selector({ addToast: vi.fn() }),
@@ -69,5 +74,25 @@ describe("TripsTab — filters are the server's job", () => {
     expect(onFiltersChange).toHaveBeenCalledWith({ status: "in_progress" });
     // Rows are whatever the server sent; the tab never drops one itself.
     expect(screen.getByText("Planned trip")).toBeInTheDocument();
+  });
+});
+
+describe("TripsTab — the gap calendar's days", () => {
+  it("opens the add form straight away on the gap's days, skipping the chooser", async () => {
+    useSettingsStore.setState({ enabledDomains: ["flight"] });
+    render(
+      <MemoryRouter initialEntries={["/trips?addFrom=2024-03-04&addTo=2024-03-07"]}>
+        <TripsTab
+          trips={[]}
+          filters={{ q: "", status: "all", category: "all" }}
+          onFiltersChange={vi.fn()}
+          onTripsChange={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+    // The trip form's dates are the gap's; the import chooser never shows.
+    const start = (await screen.findByDisplayValue("2024-03-04")) as HTMLInputElement;
+    expect(start).toBeInTheDocument();
+    expect(screen.getByDisplayValue("2024-03-07")).toBeInTheDocument();
   });
 });

@@ -7,11 +7,18 @@ interface TripModalProps {
   trip: Trip | null; // null = create mode
   onClose: () => void;
   onSaved: () => void;
+  /** The gap calendar's days, for a new trip. */
+  initialDates?: { from: string; to: string };
 }
 
-export default function TripModal({ trip, onClose, onSaved }: TripModalProps): JSX.Element {
+export default function TripModal({
+  trip,
+  onClose,
+  onSaved,
+  initialDates,
+}: TripModalProps): JSX.Element {
   const { t } = useTranslation(["trips", "common"]);
-  const f = useTripModalForm(trip, onSaved);
+  const f = useTripModalForm(trip, onSaved, initialDates);
 
   return (
     <div

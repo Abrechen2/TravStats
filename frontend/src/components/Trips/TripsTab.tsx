@@ -1,4 +1,6 @@
 import Modal from "../Modal";
+import { useGapPrefill } from "../../hooks/useGapPrefill";
+import { gapPrefill } from "../../lib/gapCalendar";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Trip, TripCategory, TripStatus } from "../../types";
@@ -87,6 +89,15 @@ export default function TripsTab({
   const navigate = useNavigate();
   const [view, setView] = useTripsView();
   const [showAddPanel, setShowAddPanel] = useState(false);
+  // The gap calendar's "Eintrag anlegen": the add form on the gap's days (`?addFrom=&addTo=`).
+  const gap = useGapPrefill();
+  const [gapManual, setGapManual] = useState<{ prefill: unknown } | null>(null);
+  useEffect(() => {
+    if (!gap.request) return;
+    setGapManual(gap.request.dates ? { prefill: gapPrefill(gap.request.dates) } : null);
+    setShowAddPanel(true);
+    gap.done();
+  }, [gap]);
   const tripAdapter = useTripImportAdapter(onTripsChange);
   const [showCleanup, setShowCleanup] = useState(false);
 
@@ -416,7 +427,11 @@ export default function TripsTab({
           form directly: there is nothing to choose. */}
       <DomainImportPanel
         open={showAddPanel}
-        onClose={() => setShowAddPanel(false)}
+        initialManual={gapManual}
+        onClose={() => {
+          setShowAddPanel(false);
+          setGapManual(null);
+        }}
         onItemsCreated={onTripsChange}
         adapter={tripAdapter}
       />
