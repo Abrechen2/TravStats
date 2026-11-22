@@ -310,21 +310,18 @@ type TripReader = {
 };
 const openTransaction = new AsyncLocalStorage<TripReader>();
 
-// Typed as `queried`: the wrapper changes no signature, and a widened type breaks `DbTransaction`.
-export const prisma = queried.$extends({
-  client: {
-    $transaction: ((arg: unknown, options?: unknown) => {
-      if (typeof arg !== "function") {
-        return (queried.$transaction as (a: unknown, o?: unknown) => unknown)(arg, options);
-      }
-      const callback = arg as (tx: unknown) => Promise<unknown>;
-      return (queried.$transaction as (a: unknown, o?: unknown) => unknown)(
-        (tx: unknown) => openTransaction.run(tx as TripReader, () => callback(tx)),
-        options
-      );
-    }) as typeof queried.$transaction,
-  },
-}) as unknown as typeof queried;
+// One client, one `$transaction` wrapper (below): it both scopes the change ledger and binds
+// the interactive transaction for the hook's own lookups. A second client extension around
+// `$transaction` would hand callbacks a transaction client of the inner client, which does not
+// carry the ledger wrapper, so a nested transaction would escape the ledger's scoping.
+export const prisma = queried;
+
+/** Runs an interactive transaction's callback with its client bound for the hook's lookups. */
+function bindOpenTransaction(arg: unknown): unknown {
+  if (typeof arg !== "function") return arg;
+  const callback = arg as (tx: unknown) => Promise<unknown>;
+  return (tx: unknown) => openTransaction.run(tx as TripReader, () => callback(tx));
+}
 
 const CONNECTION_ERROR_MARKERS = [
   "Can't reach database server",
@@ -410,10 +407,15 @@ function logQueryFailure(
     arg: unknown,
     options?: unknown
   ) {
+    const bound = bindOpenTransaction(arg);
     if (this !== top) {
-      return runNestedLedgerTransaction((...a: unknown[]) => original.apply(this, a), arg, options);
+      return runNestedLedgerTransaction(
+        (...a: unknown[]) => original.apply(this, a),
+        bound,
+        options
+      );
     }
-    return runLedgerTransaction((...a: unknown[]) => original.apply(top, a), arg, options);
+    return runLedgerTransaction((...a: unknown[]) => original.apply(top, a), bound, options);
   };
 }
 
