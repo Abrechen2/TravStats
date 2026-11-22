@@ -12,6 +12,7 @@ import {
   mergePreview,
   renameCompanion,
 } from "../services/companions/manageCompanions";
+import { personTimeline } from "../services/companions/personTimeline";
 import { companionTogetherStats } from "../services/companions/companionStats";
 
 const router = Router();
@@ -108,6 +109,15 @@ router.get(
   statsLimiter,
   handle(async (req, res) => {
     res.json(await companionTogetherStats(req.userId!));
+  })
+);
+
+router.get(
+  "/:id/timeline",
+  authenticate,
+  statsLimiter,
+  handle(async (req, res) => {
+    res.json(await personTimeline(req.userId!, idSchema.parse(req.params.id)));
   })
 );
 

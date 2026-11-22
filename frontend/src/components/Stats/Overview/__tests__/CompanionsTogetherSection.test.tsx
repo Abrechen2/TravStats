@@ -98,13 +98,20 @@ describe("CompanionsTogetherSection", () => {
       "companionsTogether.flightKm"
     );
     const links = benRow.querySelectorAll("a");
-    expect([...links].map((a) => a.getAttribute("href"))).toEqual(["/flights/f1", "/flights/f2"]);
+    // The name opens the person's page; then the first and last journey.
+    expect([...links].map((a) => a.getAttribute("href"))).toEqual([
+      "/mitreisende/b1",
+      "/flights/f1",
+      "/flights/f2",
+    ]);
 
     const danaRow = screen.getByTestId("companion-together-d1");
     expect(screen.queryByTestId("companion-km-d1")).toBeNull();
     expect(danaRow.textContent).toContain("stats:companionsTogether.flightKmUnknown");
-    // A journey with no page of its own is text, not a dead link.
-    expect(danaRow.querySelectorAll("a")).toHaveLength(0);
+    // A journey with no page of its own is text, not a dead link: only the name links.
+    expect([...danaRow.querySelectorAll("a")].map((a) => a.getAttribute("href"))).toEqual([
+      "/mitreisende/d1",
+    ]);
   });
 
   it("shows the empty state when nobody has a shared entry", async () => {
