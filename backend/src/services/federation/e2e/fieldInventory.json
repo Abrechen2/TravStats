@@ -221,7 +221,7 @@
     "personal": "notes tags",
     "photos": "",
     "documents": "",
-    "excluded": "userId dataSource batchId"
+    "excluded": "userId dataSource batchId brandWikidataId createdBy"
   },
   "PlaceExternalRef": {
     "details": "id placeId ref createdAt",
@@ -237,7 +237,7 @@
     "personal": "notes rating",
     "photos": "",
     "documents": "",
-    "excluded": "userId suggestionRef provenance rememberedOn rememberedNote"
+    "excluded": "userId suggestionRef provenance rememberedOn rememberedNote createdBy"
   },
   "PlaceVisitPhoto": {
     "details": "",
@@ -261,7 +261,7 @@
     "personal": "",
     "photos": "",
     "documents": "",
-    "excluded": ""
+    "excluded": "createdBy"
   },
   "RailJourney": {
     "details": "id operator trainCategory trainNumber depStationName depStationCode depStationId depLat depLon depCountry depTimezone arrStationName arrStationCode arrStationId arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime lookupProvider lookupRef travelClass coach status delayMinutes tightConnection transitMode tripId bookingId externalRef importBatchId createdAt updatedAt",

@@ -43,6 +43,7 @@ const pick = (over: Partial<VisitPick> = {}): VisitPick => ({
   isArea: true,
   resolved: "contains",
   distanceM: 14,
+  brand: null,
   alternatives: [
     { name: "McCafé", osmRef: "node/2", type: "cafe", distanceM: 9, foldedInto: "McDonald's" },
   ],

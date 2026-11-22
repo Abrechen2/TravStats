@@ -221,6 +221,8 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   place_captures: owner(),
   place_lists: owner(),
   place_list_entries: child(),
+  // A smart list's chain rule: the account's own setting, keyed by the Wikidata brand id.
+  place_list_brand_rules: owner(),
   notes: owner({
     files: [{ column: "photo_filename", dir: "note-photos", kind: "name", mime: "photo_mimetype" }],
   }),

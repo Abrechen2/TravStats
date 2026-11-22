@@ -3,6 +3,7 @@ import { STEP_M, STOP_MS } from "../dayMovement";
 import { explanation } from "../../locationEvidence/envelope";
 import type { Explanation } from "../../locationEvidence/types";
 import type { VisitPick } from "./resolve";
+import type { BrandMatch } from "./brandMatch";
 
 /**
  * Which derived stops may become a place-visit suggestion, and what the
@@ -54,7 +55,8 @@ export function visitEvidence(
   stop: Stop,
   pick: VisitPick,
   lookup: { geocoder: string; venues: string },
-  readCoverage: "complete" | "truncated"
+  readCoverage: "complete" | "truncated",
+  brandMatches: readonly BrandMatch[] = []
 ) {
   const t = stopTimes(stop);
   const gaps = stop.coverage?.gaps.length ?? 0;
@@ -83,7 +85,10 @@ export function visitEvidence(
         category: pick.category,
         isArea: pick.isArea,
         resolved: pick.resolved,
+        ...(pick.brand ? { brand: pick.brand } : {}),
       },
+      // Smart lists the venue belongs to (additive; a client that ignores it reads a plain visit).
+      ...(brandMatches.length ? { brandMatches } : {}),
       alternatives: pick.alternatives,
       lookup,
     },

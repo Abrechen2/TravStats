@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PlaceDetailPage from "../PlaceDetailPage";
 import { findNamed, getNamed } from "../../__tests__/helpers/namedElement";
+vi.mock("../../components/places/smartList/PlaceVisitSuggestions", () => ({ default: () => null }));
 
 const createVisit = vi.fn();
 

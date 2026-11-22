@@ -121,6 +121,8 @@ export const USER_EXPORT_SELECT = {
   placeCaptures: true,
   placeVisits: { include: { photos: true } },
   placeLists: { include: { entries: true } },
+  // Smart lists: the chain rule of each list (which brands, dwell window, distance, auto-accept).
+  placeListBrandRules: true,
   // Rail (spec 2026-09-25-rail-domain): the rides with their companion links,
   // frozen line included — it cannot be fetched again for a past day.
   railJourneys: { include: { companionLinks: true } },

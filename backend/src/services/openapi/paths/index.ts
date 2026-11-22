@@ -78,6 +78,7 @@ import "./lodgingRatingCategories";
 import "./loyalty";
 import "./settings";
 import "./places";
+import "./smartLists";
 import "./placeVisitPhotoAuto";
 import "./photoChoices";
 import "./entryPhotos";

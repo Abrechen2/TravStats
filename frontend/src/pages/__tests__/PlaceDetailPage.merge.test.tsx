@@ -42,6 +42,7 @@ vi.mock("../../components/places/PlaceMergeDialog", () => ({
 }));
 
 import PlaceDetailPage from "../PlaceDetailPage";
+vi.mock("../../components/places/smartList/PlaceVisitSuggestions", () => ({ default: () => null }));
 
 const PLACE = {
   id: "p1",

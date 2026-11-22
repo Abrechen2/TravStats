@@ -80,6 +80,66 @@ describe("resolveVisit", () => {
     expect(identity).toHaveBeenCalledTimes(1);
   });
 
+  it("returns the chosen venue's brand from the same lookup, with no second call", async () => {
+    const brand = { wikidata: "Q38076", name: "McDonald's", disused: false };
+    const v = view();
+    identity.mockResolvedValue({
+      ...v,
+      candidates: [{ ...v.candidates[0], brand }, v.candidates[1]],
+    });
+    const r = await resolveVisit(
+      userId,
+      STOP,
+      SWITCHES,
+      { allowLookup: true, wantBrand: true },
+      { identity }
+    );
+    expect(r).toMatchObject({ kind: "pick", pick: { brand } });
+    expect(identity).toHaveBeenCalledTimes(1);
+  });
+
+  it("an own place that already carries a brand answers it without a lookup; one without reads it from the lookup", async () => {
+    const branded = await prisma.place.create({
+      data: { userId, name: "Mickey D", lat: 37.50003, lon: 127.00003, brandWikidataId: "Q38076" },
+    });
+    const fromPlace = await resolveVisit(
+      userId,
+      STOP,
+      SWITCHES,
+      { allowLookup: true, wantBrand: true },
+      { identity }
+    );
+    expect(fromPlace).toMatchObject({
+      kind: "pick",
+      lookedUp: false,
+      pick: { placeId: branded.id, brand: { wikidata: "Q38076" } },
+    });
+    expect(identity).not.toHaveBeenCalled();
+    await prisma.place.update({
+      where: { id: branded.id },
+      data: { brandWikidataId: null, externalRef: "osm:way/1" },
+    });
+    const v = view();
+    identity.mockResolvedValue({
+      ...v,
+      candidates: [
+        { ...v.candidates[0], brand: { wikidata: "Q38076", name: null, disused: false } },
+      ],
+    });
+    const fromLookup = await resolveVisit(
+      userId,
+      STOP,
+      SWITCHES,
+      { allowLookup: true, wantBrand: true },
+      { identity }
+    );
+    expect(fromLookup).toMatchObject({
+      kind: "pick",
+      lookedUp: true,
+      pick: { brand: { wikidata: "Q38076" } },
+    });
+  });
+
   it("an own place within its radius is a visit of that place, and asks nobody", async () => {
     const place = await prisma.place.create({
       data: { userId, name: "My Mickey D", lat: 37.50003, lon: 127.00003 },

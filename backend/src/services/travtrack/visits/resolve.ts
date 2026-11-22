@@ -5,6 +5,7 @@ import { stayIdentityView } from "../../dawarich/stays/identity";
 import type { StayCandidate, StayIdentityView } from "../../dawarich/stays/identityCombine";
 import type { SuggestionSwitchColumns } from "../../settings/suggestionSwitches";
 import { knownNear, STOP_SHAPE } from "../stopPlaces/identity";
+import type { VenueBrand } from "../../dawarich/stays/venueBrand";
 import { osmCategory } from "./osmCategory";
 
 /**
@@ -47,6 +48,11 @@ export type VisitPick = {
   /** From the stop's anchor to the venue. */
   distanceM: number;
   alternatives: VisitAlternative[];
+  /**
+   * The venue's brand facts from the SAME lookup (no extra call), for smart lists; null when the
+   * tags carry none or the venue layer did not take part. Smart lists match on this locally.
+   */
+  brand: VenueBrand | null;
 };
 
 export type LookupFailure = "places" | "venues";
@@ -83,21 +89,78 @@ export type ResolveDeps = {
   identity?: typeof stayIdentityView;
 };
 
+/**
+ * An own place beside the stop answers without a lookup — unless a smart list needs its brand and
+ * the place does not carry one yet: then the place's own OSM venue is read from the same lookup.
+ * That lookup failing leaves the visit a plain one (no brand, so no match) and says why in `lookup`.
+ */
+async function knownBrand(
+  userId: string,
+  placeId: string,
+  stop: { lat: number; lon: number; fromMs: number; untilMs: number },
+  switches: Pick<SuggestionSwitchColumns, "staySuggestionsImmichEvidence">,
+  options: { allowLookup: boolean; wantBrand: boolean },
+  deps: ResolveDeps
+): Promise<{
+  brand: VenueBrand | null;
+  lookup: { geocoder: string; venues: string };
+  lookedUp: boolean;
+}> {
+  const skipped = { geocoder: "skipped", venues: "skipped" };
+  if (!options.wantBrand) return { brand: null, lookup: skipped, lookedUp: false };
+  const place = await prisma.place.findFirst({
+    where: { id: placeId, userId },
+    select: { brandWikidataId: true, externalRef: true },
+  });
+  if (place?.brandWikidataId)
+    return {
+      brand: { wikidata: place.brandWikidataId, name: null, disused: false },
+      lookup: skipped,
+      lookedUp: false,
+    };
+  const ref = place?.externalRef?.startsWith("osm:") ? place.externalRef.slice(4) : null;
+  if (!ref || !options.allowLookup) return { brand: null, lookup: skipped, lookedUp: false };
+  const view = await (deps.identity ?? stayIdentityView)(
+    userId,
+    {
+      id: `stop:${stop.fromMs}-${stop.untilMs}`,
+      lat: stop.lat,
+      lon: stop.lon,
+      sourceStartAt: new Date(stop.fromMs),
+      sourceEndAt: new Date(stop.untilMs),
+    },
+    switches.staySuggestionsImmichEvidence,
+    STOP_SHAPE
+  );
+  const lookup = { geocoder: view.geocoder, venues: view.venues.state };
+  const brand = view.candidates.find((c) => c.osmRef === ref)?.brand ?? null;
+  return { brand, lookup, lookedUp: true };
+}
+
 export async function resolveVisit(
   userId: string,
   stop: { lat: number; lon: number; fromMs: number; untilMs: number },
   switches: Pick<SuggestionSwitchColumns, "staySuggestionsImmichEvidence">,
-  options: { allowLookup: boolean },
+  options: { allowLookup: boolean; wantBrand?: boolean },
   deps: ResolveDeps = {}
 ): Promise<VisitResolution> {
   const known = await knownNear(userId, stop);
   const ownPlace = known.find((k) => k.kind === "place" && k.placeId);
   if (ownPlace?.placeId) {
+    const fromKnown = await knownBrand(
+      userId,
+      ownPlace.placeId,
+      stop,
+      switches,
+      { allowLookup: options.allowLookup, wantBrand: options.wantBrand === true },
+      deps
+    );
     return {
       kind: "pick",
-      lookedUp: false,
-      lookup: { geocoder: "skipped", venues: "skipped" },
+      lookedUp: fromKnown.lookedUp,
+      lookup: fromKnown.lookup,
       pick: {
+        brand: fromKnown.brand,
         source: "known",
         name: ownPlace.name,
         lat: ownPlace.lat,
@@ -166,6 +229,7 @@ export async function resolveVisit(
       resolved: view.venues.resolved,
       distanceM: metersBetween(stop, chosen),
       alternatives,
+      brand: chosen.brand ?? null,
     },
   };
 }

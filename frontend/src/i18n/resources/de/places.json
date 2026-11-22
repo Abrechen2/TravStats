@@ -971,5 +971,64 @@
       "deleteFailed": "Die Kategorie konnte nicht gelöscht werden.",
       "stale": "Gespeichert, aber die Liste ließ sich nicht neu laden. Lade die Seite neu."
     }
+  },
+  "smartList": {
+    "menuEntry": "Kette verknüpfen",
+    "menuHint": "Die Liste folgt einer Kette: passende Filialen kommen von selbst dazu.",
+    "dialogTitle": "Intelligente Liste",
+    "dialogIntro": "Wähle eine oder mehrere Ketten. Hält TravTrack bei einer Filiale an, schlägt die Liste den Besuch vor.",
+    "brandSearch": "Kette suchen",
+    "brandPlaceholder": "z. B. McDonald's",
+    "chosenBrands": "Gewählte Ketten",
+    "noBrandYet": "Noch keine Kette gewählt.",
+    "removeBrand": "{{name}} entfernen",
+    "window": "Aufenthalt und Entfernung",
+    "minDwell": "Mindestdauer (Min.)",
+    "maxDwell": "Höchstdauer (Min.)",
+    "maxDistance": "Entfernung zur Filiale (m)",
+    "windowInvalid": "Die Höchstdauer muss mindestens so groß wie die Mindestdauer sein (1 bis 1440 Minuten).",
+    "distanceInvalid": "Die Entfernung muss zwischen 10 und 500 Metern liegen.",
+    "autoAccept": "Sichere Treffer automatisch übernehmen",
+    "autoAcceptHint": "Nur wenn die Kette eindeutig erkannt ist. Jede automatische Übernahme steht unter „Zuletzt automatisch übernommen“ und lässt sich zurücknehmen.",
+    "stop": "Nicht mehr folgen",
+    "header": "Intelligente Liste: Kette {{brands}}",
+    "headerLabel": "Intelligente Liste",
+    "headerRule": "{{min}} bis {{max}} Min. Aufenthalt, höchstens {{distance}} m entfernt, automatisch übernehmen: {{auto}}",
+    "autoOn": "an",
+    "autoOff": "aus",
+    "newOutlets": "Neue Filialen zum Bestätigen",
+    "recentAuto": "Zuletzt automatisch übernommen",
+    "autoLine": "{{date}} um {{time}} · {{minutes}} Min. · erkannt durch TravTrack ({{distance}} m)",
+    "undo": "Zurücknehmen",
+    "undoFailed": "Das Zurücknehmen hat nicht geklappt. Bitte später erneut versuchen.",
+    "placeSectionTitle": "Warst du hier?",
+    "question": "Warst du am {{date}} um {{time}} hier?",
+    "reason": "{{minutes}} Min. — erkannt durch TravTrack ({{distance}} m)",
+    "weaker": "schwächerer Treffer: nur der Markenname stimmt",
+    "fitsList": "Passt zu Liste {{lists}}",
+    "confirm": "Bestätigen",
+    "notMe": "War ich nicht",
+    "loadFailed": "Die Vorschläge konnten nicht geladen werden. Bitte später erneut versuchen.",
+    "answerErrors": {
+      "resolved": "Dieser Vorschlag wurde schon beantwortet.",
+      "gone": "Der Vorschlag existiert nicht mehr, weil sich der Standortverlauf geändert hat.",
+      "inProgress": "Der Vorschlag wird gerade bestätigt. Bitte gleich noch einmal versuchen.",
+      "disabled": "TravTrack ist auf dieser Instanz ausgeschaltet.",
+      "interval": "Der Zeitraum des Besuchs ist ungültig.",
+      "failed": "Die Antwort konnte nicht gespeichert werden. Bitte später erneut versuchen."
+    },
+    "search": {
+      "searching": "Suche läuft …",
+      "none": "Keine Kette gefunden.",
+      "disabled": "Offene Daten sind auf dieser Instanz ausgeschaltet, deshalb kann keine Kette gesucht werden.",
+      "timeout": "Wikidata hat nicht rechtzeitig geantwortet. Bitte später erneut versuchen.",
+      "rateLimited": "Wikidata nimmt gerade keine weiteren Anfragen an. Bitte später erneut versuchen.",
+      "unavailable": "Wikidata ist nicht erreichbar. Bitte später erneut versuchen.",
+      "failed": "Die Suche ist fehlgeschlagen."
+    },
+    "saveErrors": {
+      "curated": "Eine vorgegebene Checkliste kann keiner Kette folgen.",
+      "failed": "Die Regel konnte nicht gespeichert werden. Bitte später erneut versuchen."
+    }
   }
 }

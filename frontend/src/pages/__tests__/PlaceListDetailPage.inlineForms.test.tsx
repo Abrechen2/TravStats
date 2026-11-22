@@ -41,6 +41,7 @@ vi.mock("../../components/places/PlaceListLabelFields", () => ({
 }));
 
 import PlaceListDetailPage from "../PlaceListDetailPage";
+vi.mock("../../components/places/smartList/SmartListPanel", () => ({ default: () => null }));
 
 const place = (id: string, name: string) => ({
   id,

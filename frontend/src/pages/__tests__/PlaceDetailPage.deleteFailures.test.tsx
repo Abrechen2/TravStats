@@ -41,6 +41,7 @@ vi.mock("../../components/places/PlaceGallery", () => ({ PlaceGallery: () => nul
 vi.mock("../../components/common/WikipediaCard", () => ({ default: () => null }));
 
 import PlaceDetailPage from "../PlaceDetailPage";
+vi.mock("../../components/places/smartList/PlaceVisitSuggestions", () => ({ default: () => null }));
 
 const PLACE = {
   id: "p1",

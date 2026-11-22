@@ -172,6 +172,7 @@ import documentLinkRoutes from "./documents/links";
 import entryTravellerRoutes from "./entryTravellers";
 import placeListsRouter from "./placeLists";
 import curatedListsRouter from "./placeLists/curated";
+import smartListsRouter from "./placeLists/smart";
 import lodgingChainsRouter from "./lodgingChains";
 import lodgingMembershipsRouter from "./lodgingMemberships";
 import loyaltyMembershipsRouter from "./loyaltyMemberships";
@@ -617,6 +618,7 @@ export const apiMounts: ApiMount[] = [
   // Curated checklists mount FIRST on the same path: '/curated' would
   // otherwise be captured by the lists router's '/:id' and answered 404.
   { id: "placeLists.curated", base: "/api/v1/place-lists/curated", router: curatedListsRouter },
+  { id: "placeLists.smart", base: "/api/v1/place-lists/smart", router: smartListsRouter },
   { id: "placeLists", base: "/api/v1/place-lists", router: placeListsRouter },
   { id: "lodgingChains", base: "/api/v1/lodging-chains", router: lodgingChainsRouter },
   {

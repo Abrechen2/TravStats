@@ -17,6 +17,7 @@ import { acceptFlow, disabled, type ClaimStore } from "../../locationEvidence/ac
 import { travTrackInstanceOn, travTrackInstanceOnIn } from "../../travtrack/availability";
 import { recheckFinding } from "../../locationEvidence/recheck";
 import { scheduleVisitAutoLink } from "../../places/visitPhotoAutoLink";
+import { applyBrandMatches } from "../../places/brandRules";
 
 async function acceptStayOnce(userId: string, id: string, input: StayReview) {
   let createdPlaceId: string | null = null;
@@ -64,7 +65,7 @@ export async function applyStayAcceptance(
   userId: string,
   row: DawarichStay,
   input: StayReview,
-  extra: { suggestionRef?: string | null; claimToken?: string } = {}
+  extra: { suggestionRef?: string | null; claimToken?: string; createdBy?: string } = {}
 ): Promise<{ row: DawarichStay; createdPlaceId: string | null }> {
   const id = row.id;
   let createdPlaceId: string | null = null;
@@ -151,6 +152,7 @@ export async function applyStayAcceptance(
         ...(sameVenue || visitVenue ? { externalRef: osmRef, wikidataId } : {}),
         dataSource: "dawarich",
         visited: true,
+        ...(extra.createdBy ? { createdBy: extra.createdBy } : {}),
       },
     });
     createdPlaceId = place.id;
@@ -203,6 +205,7 @@ export async function applyStayAcceptance(
         tripId: input.tripId,
         ...start,
         writtenVia: "suggestion",
+        ...(extra.createdBy ? { createdBy: extra.createdBy } : {}),
         // The finding that made it (TravTrack plan E4): never its own cover.
         ...(extra.suggestionRef ? { suggestionRef: extra.suggestionRef } : {}),
       },
@@ -210,6 +213,8 @@ export async function applyStayAcceptance(
   if (existing && !existing.tripId && input.tripId)
     await tx.placeVisit.update({ where: { id: existing.id }, data: { tripId: input.tripId } });
   await tx.place.update({ where: { id: place.id }, data: { visited: true } });
+  // Smart lists: the place joins every list whose rule matched this stop.
+  await applyBrandMatches(tx, userId, row.evidence, place.id, extra.createdBy ?? null);
   const accepted = {
     status: "accepted",
     resolvedAt: new Date(),
@@ -353,7 +358,12 @@ function stayClaimStore(userId: string): ClaimStore<DawarichStay, DawarichStay> 
  * history as it is now, and published under the TravTrack lock — the visit
  * names the finding (`suggestion_ref`), so it never covers it.
  */
-async function acceptTravTrackStay(userId: string, id: string, input: StayReview) {
+async function acceptTravTrackStay(
+  userId: string,
+  id: string,
+  input: StayReview,
+  createdBy?: string
+) {
   let createdPlaceId: string | null = null;
   const outcome = await acceptFlow({
     userId,
@@ -364,6 +374,7 @@ async function acceptTravTrackStay(userId: string, id: string, input: StayReview
       const applied = await applyStayAcceptance(tx, userId, row, input, {
         suggestionRef: row.evidenceKey,
         claimToken: token,
+        createdBy,
       });
       createdPlaceId = applied.createdPlaceId;
       return applied.row;
@@ -381,7 +392,12 @@ async function acceptTravTrackStay(userId: string, id: string, input: StayReview
  * Dawarich one is accepted exactly as before (open owner decision (b): no
  * re-check of Dawarich evidence).
  */
-export async function acceptStay(userId: string, id: string, input: StayReview) {
+export async function acceptStay(
+  userId: string,
+  id: string,
+  input: StayReview,
+  options: { createdBy?: string } = {}
+) {
   const source = await prisma.dawarichStay.findFirst({
     where: { id, userId },
     select: { provider: true },
@@ -391,7 +407,8 @@ export async function acceptStay(userId: string, id: string, input: StayReview) 
   // read exactly what it read before. `SUGGESTION_NOT_FOUND` belongs to a
   // TravTrack row, which the protocol answers when the row goes mid-accept (E5).
   if (!source) throw new AppError("Finding not found", 404);
-  if (source.provider === "travtrack") return acceptTravTrackStay(userId, id, input);
+  if (source.provider === "travtrack")
+    return acceptTravTrackStay(userId, id, input, options.createdBy);
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await acceptStayOnce(userId, id, input);

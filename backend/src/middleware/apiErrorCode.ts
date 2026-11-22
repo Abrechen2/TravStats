@@ -99,6 +99,10 @@ export type ApiErrorCode =
   | "DAWARICH_ALREADY_RESOLVED"
   | "DAWARICH_INVALID_INTERVAL"
   | "DAWARICH_VISIT_TRIP_CONFLICT"
+  | "LIST_IS_CURATED"
+  | "AUTO_ENTRY_NOT_FOUND"
+  | "NOT_AUTOMATIC"
+  | "OPEN_DATA_DISABLED"
   /** An edit or delete named a base version (If-Match / baseVersion) the
    *  record has moved past — forgejo#141, `services/sync/versionPrecondition.ts`.
    *  The 409 carries the current record and the changed fields. */

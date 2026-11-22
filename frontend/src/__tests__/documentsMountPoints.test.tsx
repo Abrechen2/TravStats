@@ -134,6 +134,7 @@ import CruiseDetailPage from "../pages/CruiseDetailPage";
 import PlaceDetailPage from "../pages/PlaceDetailPage";
 import TripOverview from "../components/Trips/TripOverview";
 import { StayEditor } from "../components/lodging/StayEditor";
+vi.mock("../components/places/smartList/PlaceVisitSuggestions", () => ({ default: () => null }));
 
 const FLIGHT = {
   id: "flight-1",
