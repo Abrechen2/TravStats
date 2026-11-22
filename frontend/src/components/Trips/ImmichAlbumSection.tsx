@@ -391,7 +391,9 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
 
       {albumTruncated && !failure && (
         <p role="status" data-testid="album-truncated" className="mb-2 text-xs text-slate-400">
-          {t("albums.truncated", { shown: assets.length })}
+          {t(album.provider === "photoprism" ? "albums.truncatedPhotoprism" : "albums.truncated", {
+            shown: assets.length,
+          })}
         </p>
       )}
 

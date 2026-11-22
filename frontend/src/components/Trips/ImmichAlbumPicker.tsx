@@ -344,6 +344,16 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
             ))}
           </div>
         )}
+        {!loading && connected.length === 1 && (
+          <p
+            className="mb-3 text-xs"
+            data-testid="album-single-source"
+            style={{ color: "var(--ts-muted)" }}
+          >
+            {t("albums.onlySource")}:{" "}
+            {active === "photoprism" ? t("albums.badgePhotoprism") : t("albums.badgeImmich")}
+          </p>
+        )}
         {failure && (
           <p className="text-sm" style={{ color: "var(--ts-bad)" }}>
             {t(failure)}
@@ -351,7 +361,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
         )}
         {!loading && !failure && albums.length === 0 && (
           <p className="text-sm" style={{ color: "var(--ts-muted)" }}>
-            {t("albums.empty")}
+            {t(active === "photoprism" ? "albums.emptyPhotoprism" : "albums.empty")}
           </p>
         )}
 

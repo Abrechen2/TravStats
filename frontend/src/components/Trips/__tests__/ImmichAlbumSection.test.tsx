@@ -650,6 +650,19 @@ describe("ImmichAlbumSection — a failing import poll (forgejo#375)", () => {
     expect(screen.getByTestId("album-truncated")).toHaveTextContent("albums.truncated");
   });
 
+  it("names PhotoPrism, not Immich, in the truncation notice of a PhotoPrism album", async () => {
+    getAlbumAssets.mockResolvedValue({ assets: ASSETS, truncated: true });
+    render(
+      <ImmichAlbumSection
+        tripId="trip-1"
+        album={{ ...LINK_ALBUM, provider: "photoprism" }}
+        onChanged={vi.fn()}
+      />
+    );
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
+    expect(screen.getByTestId("album-truncated").textContent).toBe("albums.truncatedPhotoprism");
+  });
+
   it("shows no truncation notice for a complete album", async () => {
     getAlbumAssets.mockResolvedValue({ assets: ASSETS, truncated: false });
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);

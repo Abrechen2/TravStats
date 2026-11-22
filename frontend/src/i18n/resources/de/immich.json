@@ -21,7 +21,8 @@
   "modeImportHint": "Fotos werden kopiert und liegen im Backup.",
   "albums": {
     "truncated": "Zeigt die ersten {{shown}} Fotos – das Album ist länger und wird hier nicht vollständig geladen. Öffne es in Immich für alle Fotos.",
-    "link": "Immich-Album verknüpfen",
+    "truncatedPhotoprism": "Zeigt die ersten {{shown}} Fotos – die Quelle ist länger und wird hier nicht vollständig geladen. Öffne sie in PhotoPrism für alle Fotos.",
+    "link": "Album verknüpfen",
     "pickerTitle": "Alben auswählen",
     "alreadyLinked": "Bereits verknüpft",
     "photoCount": "{{count}} Foto",
@@ -31,6 +32,8 @@
     "confirm_other": "{{count}} Alben verknüpfen",
     "cancel": "Abbrechen",
     "empty": "Keine Alben in Immich gefunden",
+    "emptyPhotoprism": "Keine Alben oder Ordner in PhotoPrism gefunden",
+    "onlySource": "Quelle",
     "kind": {
       "album": "Alben",
       "folder": "Ordner",

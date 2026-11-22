@@ -442,6 +442,34 @@ describe("ImmichAlbumPicker with PhotoPrism", () => {
     expect(screen.queryByRole("group", { name: "albums.sourceLabel" })).not.toBeInTheDocument();
   });
 
+  it("names PhotoPrism as the source when it is the only one connected", async () => {
+    listAlbums.mockImplementation(async (_tripId: string, provider = "immich") => {
+      if (provider === "immich") throw { response: { data: { error: "notConfigured" } } };
+      return { albums: [], defaultMode: "link" };
+    });
+    renderPicker();
+    await waitFor(() =>
+      expect(screen.getByTestId("album-single-source")).toHaveTextContent("albums.badgePhotoprism")
+    );
+    // The empty state names PhotoPrism, not Immich.
+    expect(screen.getByText("albums.emptyPhotoprism")).toBeInTheDocument();
+    expect(screen.queryByText("albums.empty")).not.toBeInTheDocument();
+  });
+
+  it("names Immich as the source when it is the only one connected", async () => {
+    renderPicker();
+    await waitFor(() =>
+      expect(screen.getByTestId("album-single-source")).toHaveTextContent("albums.badgeImmich")
+    );
+  });
+
+  it("shows no single-source line when both are connected (the switch names them)", async () => {
+    connectBoth();
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    expect(screen.queryByTestId("album-single-source")).not.toBeInTheDocument();
+  });
+
   it("links a PhotoPrism album with its provider", async () => {
     connectBoth();
     renderPicker();
