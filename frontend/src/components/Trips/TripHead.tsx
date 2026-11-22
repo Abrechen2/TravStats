@@ -13,6 +13,7 @@ import { FlagImg } from "../../lib/countryFlag";
 import { countryName } from "../../shared/geo/countryCode";
 import { statusPillStyle } from "../table/statusPillStyle";
 import Button from "../ui/Button";
+import CoverSuggestPrompt from "./CoverSuggestPrompt";
 import TripMoreMenu from "./TripMoreMenu";
 import TripTravellers from "./TripTravellers";
 
@@ -190,6 +191,7 @@ export default function TripHead({
               </ul>
             )}
             <TripTravellers tripId={trip.id} companions={trip.companions} />
+            {!trip.coverImageUrl && <CoverSuggestPrompt tripId={trip.id} onChosen={onChanged} />}
           </div>
           <div className="flex shrink-0 flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
             <Button onClick={onEdit}>{t("common:buttons.edit")}</Button>

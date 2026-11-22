@@ -10,6 +10,7 @@ import { useTripSharingStore } from "../../store/tripSharingStore";
 import { useTripShareDialogs } from "../sharing/useTripShareDialogs";
 import OverflowMenu from "../ui/OverflowMenu";
 import type { OverflowEntry } from "../ui/OverflowMenu";
+import CoverSuggestDialog from "./CoverSuggestDialog";
 import { TripExportModal } from "./TripExportModal";
 import { useTripSummaryAction } from "./useTripSummaryAction";
 
@@ -37,7 +38,7 @@ export default function TripMoreMenu({
   /** The trip changed from the menu (a traveller added, a summary written): reload it. */
   onChanged: () => void;
 }): JSX.Element {
-  const { t } = useTranslation(["trips", "sharing", "common"]);
+  const { t } = useTranslation(["trips", "sharing", "common", "immich"]);
   const isSharedDemo = useIsDemoAccount();
   const travTrack = useTravTrackVisible();
   const summary = useTripSummaryAction(trip, language, t, onChanged);
@@ -45,6 +46,7 @@ export default function TripMoreMenu({
   const shareDialogs = useTripShareDialogs(trip.id, onChanged);
   const [exporting, setExporting] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [suggestingCover, setSuggestingCover] = useState(false);
 
   // One "Teilen …" entry: companions, people on other servers, the code and the
   // public link are sections of its dialog. The route share stays here, for a
@@ -63,6 +65,15 @@ export default function TripMoreMenu({
                 },
               ]
             : []),
+        ]),
+    ...(isSharedDemo
+      ? []
+      : [
+          {
+            key: "cover",
+            label: t("immich:cover.menu"),
+            onSelect: () => setSuggestingCover(true),
+          },
         ]),
     { key: "export", label: t("trips:export.button"), onSelect: () => setExporting(true) },
     ...(summary.available
@@ -90,6 +101,13 @@ export default function TripMoreMenu({
       testId="trip-more-menu"
     >
       {shareDialogs.node}
+      {suggestingCover && (
+        <CoverSuggestDialog
+          tripId={trip.id}
+          onClose={() => setSuggestingCover(false)}
+          onChosen={onChanged}
+        />
+      )}
       {exporting && <TripExportModal tripId={trip.id} onClose={() => setExporting(false)} />}
       {sharing && (
         <TripShareDialog

@@ -169,5 +169,52 @@
     "trimRunning": "Kürze … {{done}} von {{total}}",
     "trimDone_one": "{{count}} automatische Verknüpfung entfernt.",
     "trimDone_other": "{{count}} automatische Verknüpfungen entfernt."
+  },
+  "cover": {
+    "menu": "Deckblatt vorschlagen",
+    "prompt": "Deckblatt vorschlagen",
+    "title": "Deckblatt vorschlagen",
+    "intro": "Wir suchen in den Fotos dieser Reise nach einem Bild, auf dem man sieht, wo du bist – und möglichst auch dich. Es wird nichts automatisch gesetzt.",
+    "loading": "Fotos werden angesehen …",
+    "loadFailed": "Die Vorschläge konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "choose": "Als Deckblatt verwenden",
+    "choosing": "Wird gesetzt …",
+    "chosen": "Das Deckblatt ist gesetzt.",
+    "chooseFailed": "Das Deckblatt konnte nicht gesetzt werden.",
+    "photoAlt": "Vorschlag {{n}}",
+    "score": "{{score}} Punkte",
+    "close": "Schließen",
+    "abstained": {
+      "noTripDates": "Diese Reise hat kein Start- und Enddatum – ohne sie lässt sich nicht erkennen, welche Fotos dazugehören.",
+      "noCandidates": "In dieser Reise liegen keine Fotos aus dem Reisezeitraum. Verknüpfe ein Album oder lade Fotos hoch.",
+      "noneQualified": "Kein Foto ist gut genug für einen Vorschlag: keines zeigt dich, ist ein Favorit oder wurde nah an einem Ort der Reise aufgenommen."
+    },
+    "reasons": {
+      "me": "Du bist auf dem Foto",
+      "placeClose": "Aufgenommen an einem Ort dieser Reise",
+      "placeNearby": "Aufgenommen in der Nähe eines Reiseorts",
+      "favorite": "Als Favorit markiert",
+      "highQuality": "Hohe Bildqualität",
+      "landscape": "Querformat",
+      "resolution": "Hohe Auflösung"
+    },
+    "source": {
+      "photosFailed": "{{name}} konnte nicht gelesen werden: {{reason}}",
+      "peopleFailed": "Die Personen aus {{name}} konnten nicht gelesen werden – „Das bin ich“ blieb unberücksichtigt: {{reason}}",
+      "peopleNotSet": "Tipp: Wähle in den Einstellungen bei {{name}} „Das bin ich“, dann werden Fotos mit dir bevorzugt."
+    }
+  },
+  "selfPerson": {
+    "title": "Das bin ich",
+    "hint": "Wähle, welche erkannte Person du in {{name}} bist. Für Deckblatt-Vorschläge werden Reisefotos mit dir bevorzugt. Gespeichert wird nur die Auswahl, keine Gesichtsdaten.",
+    "label": "Person in {{name}}",
+    "none": "Nicht festgelegt",
+    "load": "Personen laden",
+    "loading": "Personen werden geladen …",
+    "empty": "In {{name}} gibt es noch keine benannte Person.",
+    "loadFailed": "Die Personen konnten nicht geladen werden: {{reason}}",
+    "saved": "Gespeichert.",
+    "saveFailed": "Die Auswahl konnte nicht gespeichert werden."
   }
 }

@@ -48,7 +48,9 @@ export function createImmichPhotoSource(connection: ImmichConnection): PhotoSour
       return { assets: list, nextPage: null, truncated: list.truncated === true };
     },
 
-    searchAssetsByTime: (range) => client.searchAssetsByDate(range),
+    searchAssetsByTime: (range, filter) => client.searchAssetsByDate(range, filter),
+
+    listPeople: () => client.listPeople(),
 
     streamThumbnail: (assetId, size) => client.fetchAssetStream(assetId, size),
     streamOriginal: (assetId) => client.fetchAssetStream(assetId, "original"),

@@ -111,6 +111,7 @@ import openDataRoutes from "./openData";
 import immichTripRoutes from "./immich/tripAlbums";
 import immichAssetProxyRoutes from "./immich/assetProxy";
 import immichTripCoverRoutes from "./immich/tripCover";
+import immichCoverSuggestionRoutes from "./immich/coverSuggestions";
 import passwordResetRoutes from "./passwordReset";
 import suggestionsRoutes from "./suggestions";
 import portsRoutes from "./ports";
@@ -493,6 +494,7 @@ export const apiMounts: ApiMount[] = [
   { id: "immich.tripAlbums", base: "/api/v1", router: immichTripRoutes },
   { id: "immich.assetProxy", base: "/api/v1", router: immichAssetProxyRoutes },
   { id: "immich.tripCover", base: "/api/v1", router: immichTripCoverRoutes },
+  { id: "immich.coverSuggestions", base: "/api/v1", router: immichCoverSuggestionRoutes },
   { id: "suggestions", base: "/api/v1/suggestions", router: suggestionsRoutes },
   { id: "ports", base: "/api/v1/ports", router: portsRoutes },
   { id: "ships", base: "/api/v1/ships", router: shipsRoutes },

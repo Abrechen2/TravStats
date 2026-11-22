@@ -50,6 +50,23 @@ export interface PhotoSourceAsset {
   lon: number | null;
   city?: string;
   country?: string;
+  /**
+   * Quality hints for cover suggestions. Each is absent when the source does
+   * not say — never a default that would read as a verdict (abstention).
+   */
+  favorite?: boolean;
+  width?: number | null;
+  height?: number | null;
+  /** Camera make from EXIF; absent on screenshots and scans. */
+  cameraMake?: string | null;
+  /** The source's own quality score (PhotoPrism 0-7). */
+  quality?: number | null;
+}
+
+/** One person the source recognised; only named ones are offered as "Das bin ich". */
+export interface PhotoSourcePerson {
+  id: string;
+  name: string;
 }
 
 /** One page of an album's assets. */
@@ -68,6 +85,11 @@ export interface PhotoSourceAssetPage {
 export interface PhotoSourceTimeRange {
   takenAfter: Date;
   takenBefore: Date;
+}
+
+/** Narrow a time search to the photos a recognised person is in. */
+export interface PhotoSourceSearchFilter {
+  personId?: string;
 }
 
 /** Assets taken in a time range; `truncated` when the source had more than one search reads. */
@@ -104,7 +126,12 @@ export interface PhotoSourceProvider {
    * slightly wider set, and an asset without a trustworthy capture time
    * carries null, which no window contains.
    */
-  searchAssetsByTime(range: PhotoSourceTimeRange): Promise<PhotoSourceTimeSearch>;
+  searchAssetsByTime(
+    range: PhotoSourceTimeRange,
+    filter?: PhotoSourceSearchFilter
+  ): Promise<PhotoSourceTimeSearch>;
+  /** The named people of the library, read on demand and never stored. */
+  listPeople(): Promise<PhotoSourcePerson[]>;
   streamThumbnail(assetId: string, size: PhotoSourceThumbnailSize): Promise<PhotoSourceStream>;
   streamOriginal(assetId: string): Promise<PhotoSourceStream>;
 }

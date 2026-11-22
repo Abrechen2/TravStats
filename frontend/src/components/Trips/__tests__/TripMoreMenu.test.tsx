@@ -69,12 +69,13 @@ describe("TripMoreMenu — the rare actions behind one Mehr button", () => {
     travTrack.on = false;
   });
 
-  it("holds sharing, export and the AI summary, with delete last", () => {
+  it("holds sharing, the cover suggestion, export and the AI summary, with delete last", () => {
     renderMenu();
     open();
     const labels = screen.getAllByRole("menuitem").map((el) => el.textContent);
     expect(labels).toEqual([
       "sharing:menu.share",
+      "immich:cover.menu",
       "trips:export.button",
       "trips:menu.summaryNone",
       "common:buttons.delete",
