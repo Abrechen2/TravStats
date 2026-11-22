@@ -82,4 +82,24 @@ describe("purpose: a place visited only through a hidden business visit", () => 
     await request(app).put("/api/v1/purpose/visibility").set("Cookie", cookie).send({}).expect(200);
     expect(await visitedByName()).toMatchObject({ Messehalle: true });
   });
+
+  it("a visited filter uses the same rule, so a count and a list cannot disagree", async () => {
+    const names = async (visited: boolean): Promise<string[]> => {
+      const res = await request(app)
+        .get(`/api/v1/places?limit=100&visited=${visited}`)
+        .set("Cookie", cookie)
+        .expect(200);
+      const rows = (res.body.places ?? res.body.data ?? res.body) as Array<{ name: string }>;
+      return rows.map((p) => p.name);
+    };
+    await request(app)
+      .put("/api/v1/purpose/visibility")
+      .set("Cookie", cookie)
+      .send({ poi: ["business"] })
+      .expect(200);
+    expect(await names(true)).toEqual(["Stammcafe"]);
+    expect(await names(false)).toContain("Messehalle");
+    await request(app).put("/api/v1/purpose/visibility").set("Cookie", cookie).send({}).expect(200);
+    expect(await names(true)).toContain("Messehalle");
+  });
 });

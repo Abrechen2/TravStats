@@ -3,6 +3,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import {
   applyRecordedOnly,
   entryFilterActive,
+  placeVisitHiddenActive,
   runUnfiltered,
 } from "./services/provenance/recordedOnly";
 import {
@@ -167,7 +168,12 @@ const queried = basePrisma.$extends({
         );
         return trip?.category ?? null;
       });
-      const scoped = applyRecordedOnly(model, operation, inherited);
+      const scoped = applyRecordedOnly(
+        model,
+        operation,
+        inherited,
+        placeVisitHiddenActive() ? (await import("./shared/time/clock")).now() : undefined
+      );
       // A place that is "visited" only through a hidden business visit stops counting as visited.
       const hiddenVisitPurposes = isPlaceRead(model, operation)
         ? (entryFilterActive().hidden.PlaceVisit ?? [])

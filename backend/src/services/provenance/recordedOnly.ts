@@ -339,16 +339,89 @@ export function setScopeHidden(hidden: Record<string, string[]>): void {
 export const purposeDomainOfModel = (model: string): keyof PurposeVisibility | undefined =>
   PURPOSE_MODEL_DOMAIN[model];
 
+/**
+ * `Place.visited` is a stored flag that a hidden business visit may have switched on. Where a
+ * read FILTERS on it (a count of visited places, "countries with a visited place"), the flag is
+ * replaced by the purpose-aware rule: visited, unless a completed visit is hidden and no visible
+ * visit has completed (see services/purpose/placeVisited.ts, which corrects the returned rows).
+ */
+function demotedPlace(hidden: string[], now: Date): Json {
+  const done = {
+    OR: [
+      { visitedAtUtc: { lte: now } },
+      { visitedAtUtc: null, visitedAt: { lte: now } },
+      { visitedAtUtc: null, visitedAt: null },
+    ],
+  };
+  return {
+    AND: [
+      { visited: true },
+      { visits: { some: { AND: [{ purpose: { in: hidden } }, done] } } },
+      {
+        visits: {
+          none: { AND: [{ OR: [{ purpose: null }, { purpose: { notIn: hidden } }] }, done] },
+        },
+      },
+    ],
+  };
+}
+
+function rewriteVisited(model: string, where: unknown, demoted: Json): unknown {
+  if (Array.isArray(where)) return where.map((w) => rewriteVisited(model, w, demoted));
+  if (!isObject(where)) return where;
+  const out: Json = {};
+  const extra: Json[] = [];
+  for (const [key, value] of Object.entries(where)) {
+    if (key === "AND" || key === "OR" || key === "NOT")
+      out[key] = rewriteVisited(model, value, demoted);
+    else if (model === "Place" && key === "visited" && typeof value === "boolean") {
+      extra.push(value ? { NOT: demoted } : { OR: [{ visited: false }, demoted] });
+    } else if (isObject(value) && relationsOf(model).has(key)) {
+      const r = relationsOf(model).get(key)!;
+      const inner: Json = {};
+      for (const [k, v] of Object.entries(value)) {
+        inner[k] = ["some", "every", "none", "is", "isNot"].includes(k)
+          ? rewriteVisited(r.target, v, demoted)
+          : v;
+      }
+      const wrapped = ["some", "every", "none", "is", "isNot"].some((k) => k in value);
+      out[key] = wrapped ? inner : rewriteVisited(r.target, value, demoted);
+    } else out[key] = value;
+  }
+  if (extra.length === 0) return out;
+  // `visited: true` keeps its own condition beside the demotion rule; `false` is replaced by it.
+  const kept = Object.entries(where).filter(([k, v]) => k === "visited" && v === true);
+  const base = kept.length > 0 ? { ...out, visited: true } : out;
+  const existing = base.AND === undefined ? [] : Array.isArray(base.AND) ? base.AND : [base.AND];
+  return { ...base, AND: [...existing, ...extra] };
+}
+
 /** Called by the Prisma query hook with every operation's arguments. */
-export function applyRecordedOnly<A>(model: string | undefined, operation: string, args: A): A {
+export function applyRecordedOnly<A>(
+  model: string | undefined,
+  operation: string,
+  args: A,
+  /** The clock; needed only to tell a completed visit from a plan when filtering on `visited`. */
+  now?: Date
+): A {
   const store = scope.getStore();
   if (!store || store.done || !model || !READS.has(operation)) return args;
   const active = activeConditions(store);
   if (active.size === 0) return args;
   const narrowed = narrowArgs(active, model, args);
   if (active.has(model)) narrowed.where = narrowWhere(active, model, narrowed.where);
+  const hiddenVisits = store.hidden?.PlaceVisit;
+  if (now && hiddenVisits && hiddenVisits.length > 0 && narrowed.where !== undefined) {
+    narrowed.where = rewriteVisited(model, narrowed.where, demotedPlace(hiddenVisits, now)) as Json;
+  }
   return narrowed as A;
 }
+
+/** Is a filter on a hidden PlaceVisit purpose open? Then a `visited` filter needs the clock. */
+export const placeVisitHiddenActive = (): boolean => {
+  const store = scope.getStore();
+  return !!store && !store.done && (store.hidden?.PlaceVisit?.length ?? 0) > 0;
+};
 
 /** Test seam: is a recorded-only scope open right now? */
 export function recordedOnlyActive(): boolean {
