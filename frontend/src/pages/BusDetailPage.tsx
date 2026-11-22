@@ -38,6 +38,7 @@ import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { useToastStore } from "../store/toastStore";
 import type { BusJourney } from "../types/bus";
 import WebGLGuard from "../components/map/WebGLGuard";
+import ChangeHistorySection from "../components/changeHistory/ChangeHistorySection";
 
 /**
  * One bus ride (spec 2026-10-07-bus-domain-design §11). Every time is on its
@@ -366,6 +367,15 @@ export default function BusDetailPage(): JSX.Element {
             </DetailSection>
           )}
         </aside>
+      </div>
+
+      {/* Every recorded change of this entry, full width (spec 2026-11-22-change-history). */}
+      <div style={{ marginTop: "var(--ts-space-xl)" }}>
+        <ChangeHistorySection
+          entityType="bus"
+          entityId={ride.id}
+          onRestored={() => setReloadKey((k) => k + 1)}
+        />
       </div>
 
       {editing && (

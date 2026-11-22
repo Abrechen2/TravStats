@@ -36,6 +36,7 @@ import type { FerryJourney } from "../types/ferry";
 import { dateLocaleForLanguage } from "../lib/units";
 import { usePriceFxReadout } from "../hooks/usePriceFxReadout";
 import WebGLGuard from "../components/map/WebGLGuard";
+import ChangeHistorySection from "../components/changeHistory/ChangeHistorySection";
 export default function FerryDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -360,6 +361,15 @@ export default function FerryDetailPage() {
             </DetailSection>
           )}
         </aside>
+      </div>
+
+      {/* Every recorded change of this entry, full width (spec 2026-11-22-change-history). */}
+      <div style={{ marginTop: "var(--ts-space-xl)" }}>
+        <ChangeHistorySection
+          entityType="ferry"
+          entityId={ride.id}
+          onRestored={() => setReload((n) => n + 1)}
+        />
       </div>
       {editing && (
         <FerryFormModal

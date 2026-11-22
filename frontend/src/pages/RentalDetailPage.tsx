@@ -41,6 +41,7 @@ import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { RentalBooking } from "../types/rental";
 import WebGLGuard from "../components/map/WebGLGuard";
+import ChangeHistorySection from "../components/changeHistory/ChangeHistorySection";
 
 const stationLabel = (name: string, iata: string | null): string =>
   iata ? `${name} (${iata})` : name;
@@ -457,6 +458,15 @@ export default function RentalDetailPage(): JSX.Element {
             ]}
           />
         </aside>
+      </div>
+
+      {/* Every recorded change of this entry, full width (spec 2026-11-22-change-history). */}
+      <div style={{ marginTop: "var(--ts-space-xl)" }}>
+        <ChangeHistorySection
+          entityType="rental"
+          entityId={rental.id}
+          onRestored={() => setReloadKey((k) => k + 1)}
+        />
       </div>
 
       {editing && (

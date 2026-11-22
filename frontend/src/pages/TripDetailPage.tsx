@@ -52,6 +52,7 @@ import {
   StopCard,
   dotColor,
 } from "../components/Trips/TimelineEventCards";
+import ChangeHistorySection from "../components/changeHistory/ChangeHistorySection";
 
 // Re-exported so the cabin-label tests keep importing it from the page.
 export { cabinLabel } from "../components/Trips/TimelineEventCards";
@@ -238,6 +239,11 @@ export default function TripDetailPage(): JSX.Element {
           />
         )}
         {tab === "tours" && <TourSectionList tripId={shownTrip.id} />}
+      </div>
+
+      {/* Every recorded change of this entry, full width (spec 2026-11-22-change-history). */}
+      <div style={{ marginTop: "var(--ts-space-xl)" }}>
+        <ChangeHistorySection entityType="trip" entityId={trip.id} onRestored={load} />
       </div>
 
       {trip.status === "completed" && (
