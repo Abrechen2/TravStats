@@ -24,7 +24,7 @@ import { detachTrip } from "./sharing/detach";
 import { propagateWrites } from "./sharing/propagate";
 import { idsOnTrips } from "./sharing/keyOps";
 import { SHARE_ENTITIES, type ShareEntity } from "./sharing/shareTypes";
-import type { Prisma } from "../prisma";
+import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import { linkRowsFor, resolveCompanions } from "./companionService";
 import { AppError } from "../middleware/errorHandler";
@@ -120,6 +120,32 @@ export const EMPTY_TRIP_WHERE = {
   tags: { isEmpty: true },
   companions: { isEmpty: true },
 } satisfies Prisma.TripWhereInput;
+
+type CoverCarrier = {
+  coverImageUrl: string | null;
+  coverCrop: Prisma.JsonValue;
+  coverSource: string | null;
+};
+
+/**
+ * The merged trip's cover columns: the target's own cover wins, else the first
+ * source's, WITH its crop and provenance — a framing a person chose travels with
+ * the picture, and an inherited URL names a trip about to be deleted (AUD-030).
+ */
+function mergedCover(
+  target: CoverCarrier,
+  sources: CoverCarrier[],
+  sourceIds: string[],
+  targetId: string,
+  survivorFor: Parameters<typeof retargetCoverUrl>[3]
+) {
+  const owner = target.coverImageUrl ? target : sources.find((s) => s.coverImageUrl);
+  return {
+    coverImageUrl: retargetCoverUrl(owner?.coverImageUrl, sourceIds, targetId, survivorFor),
+    coverCrop: owner?.coverCrop ?? Prisma.JsonNull,
+    coverSource: owner?.coverSource ?? null,
+  };
+}
 
 interface EmptinessProbe {
   notes: string | null;
@@ -365,12 +391,7 @@ export async function mergeTrips(
         countries: union(trips.map((t) => t.countries)),
         // An inherited cover URL names the trip it came from, and that trip is
         // about to be deleted — the string has to follow its photo (AUD-030).
-        coverImageUrl: retargetCoverUrl(
-          target.coverImageUrl ?? sources.find((s) => s.coverImageUrl)?.coverImageUrl,
-          sourceIds,
-          targetId,
-          mergedPhotos.survivorFor
-        ),
+        ...mergedCover(target, sources, sourceIds, targetId, mergedPhotos.survivorFor),
         notes:
           [target.notes, ...sources.map((s) => s.notes)]
             .filter((n): n is string => !!n)

@@ -1,6 +1,7 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import express from "express";
 import request from "supertest";
+import { Prisma } from "../prisma";
 
 const resolveTrip = jest.fn(async (..._args: unknown[]) => ({ id: "trip-1" }));
 jest.mock("../routes/trips", () => ({ resolveTrip }));
@@ -125,7 +126,7 @@ describe("POST /trips/:id/immich/cover", () => {
     expect(res.body).toEqual({ coverImageUrl: expected });
     expect(tripUpdate).toHaveBeenCalledWith({
       where: { id: "trip-1" },
-      data: { coverImageUrl: expected },
+      data: { coverImageUrl: expected, coverCrop: Prisma.JsonNull, coverSource: "manual" },
     });
     expect(resolveTrip).toHaveBeenCalledWith("u1", "trip-1");
   });
@@ -192,7 +193,11 @@ describe("POST /trips/:id/photos/:photoId/cover", () => {
     expect(res.body).toEqual({ coverImageUrl: `/api/v1/trips/trip-1/photos/${PHOTO_ID}/file` });
     expect(tripUpdate).toHaveBeenCalledWith({
       where: { id: "trip-1" },
-      data: { coverImageUrl: `/api/v1/trips/trip-1/photos/${PHOTO_ID}/file` },
+      data: {
+        coverImageUrl: `/api/v1/trips/trip-1/photos/${PHOTO_ID}/file`,
+        coverCrop: Prisma.JsonNull,
+        coverSource: "manual",
+      },
     });
   });
 

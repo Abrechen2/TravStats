@@ -17,6 +17,7 @@ import { resolveTrip } from "../trips";
 import { ENTRY_FK, type EntryKind } from "../../services/photoLinking/entryKinds";
 import { suggestCover } from "../../services/coverSuggestions/suggest";
 import logger from "../../utils/logger";
+import { manualCoverData } from "../../services/trip/tripCover";
 
 const router = Router();
 
@@ -85,7 +86,7 @@ router.post(
       if (!found) throw new AppError("notFound", 404);
 
       const coverImageUrl = `/api/v1/entry-photos/${found.kind as EntryKind}/${found.entryId}/photos/${linkId}/file?size=preview`;
-      await prisma.trip.update({ where: { id: tripId }, data: { coverImageUrl } });
+      await prisma.trip.update({ where: { id: tripId }, data: manualCoverData(coverImageUrl) });
       logger.info({ message: "entry_photo_cover_set", context: { tripId, kind: found.kind } });
       res.json({ coverImageUrl });
     } catch (error) {

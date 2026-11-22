@@ -72,7 +72,7 @@
     "excluded": ""
   },
   "Trip": {
-    "details": "id name color startDate endDate status startDay endDay startZone endZone category originLabel destinationLabel coverImageUrl icon countries shareGroupId createdAt updatedAt",
+    "details": "id name color startDate endDate status startDay endDay startZone endZone category originLabel destinationLabel coverImageUrl coverCrop coverSource icon countries shareGroupId createdAt updatedAt",
     "costs": "",
     "personal": "description tags companions notes summary summarySource summaryGeneratedAt summaryEntryCount",
     "photos": "",

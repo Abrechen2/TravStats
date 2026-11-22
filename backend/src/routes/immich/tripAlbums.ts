@@ -42,6 +42,7 @@ import {
 } from "../../services/immich/types";
 import { immichImportLimiter, immichProxyLimiter } from "../../middleware/rateLimit";
 import logger from "../../utils/logger";
+import { manualCoverData } from "../../services/trip/tripCover";
 
 const router = Router();
 
@@ -296,7 +297,7 @@ router.delete(
         select: { coverImageUrl: true },
       });
       if (trip?.coverImageUrl?.includes(`/immich/albums/${link.id}/`)) {
-        await prisma.trip.update({ where: { id: tripId }, data: { coverImageUrl: null } });
+        await prisma.trip.update({ where: { id: tripId }, data: manualCoverData(null) });
       }
 
       await prisma.tripImmichAlbum.delete({ where: { id: link.id } });

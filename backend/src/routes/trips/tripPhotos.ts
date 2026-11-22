@@ -35,6 +35,7 @@ import {
   photoFileToServe,
   removeDisplayRendition,
 } from "../../services/photos/displayRendition";
+import { manualCoverData } from "../../services/trip/tripCover";
 
 /**
  * Trip photos and the cover image — a same-prefix satellite of routes/trips.ts, split out when that
@@ -330,7 +331,7 @@ router.post(
       const coverUrl = `/api/v1/trips/${req.params.id}/photos/${photo.id}/file`;
       const trip = await prisma.trip.update({
         where: { id: req.params.id },
-        data: { coverImageUrl: coverUrl },
+        data: manualCoverData(coverUrl),
       });
       res.status(201).json({ trip, coverUrl });
     } catch (error) {

@@ -1,3 +1,4 @@
+import CoverImage from "./CoverImage";
 import { formatCurrency } from "../../lib/units";
 import RememberedMarker from "../provenance/RememberedMarker";
 import type { Trip } from "../../types";
@@ -128,16 +129,7 @@ export default function TripCard({ trip, onOpen, placeCount = 0 }: TripCardProps
         }}
       >
         {trip.coverImageUrl && (
-          <div
-            aria-hidden="true"
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `url(${trip.coverImageUrl})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              opacity: 0.35,
-            }}
-          />
+          <CoverImage url={trip.coverImageUrl} crop={trip.coverCrop} opacity={0.35} />
         )}
         <span className="absolute right-3 top-3 flex flex-col items-end gap-1">
           <span className="ts-status-pill" style={statusPillStyle(STATUS_TONE[trip.status])}>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useCoverCropStore } from "../../store/coverCropStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { immichApi } from "../../lib/api/immich";
 import { useToastStore } from "../../store/toastStore";
@@ -86,6 +87,12 @@ export default function PhotoLightbox({
       if (currentItemIdRef.current === requestedItemId) {
         setCoverSet(true);
         onCoverChanged?.(result.coverImageUrl);
+        useCoverCropStore.getState().open({
+          tripId,
+          coverImageUrl: result.coverImageUrl,
+          initialCrop: null,
+          onDone: () => onCoverChanged?.(result.coverImageUrl),
+        });
       }
     } catch {
       addToast("error", t("errors.unreachable"));

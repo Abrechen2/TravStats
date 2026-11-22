@@ -203,6 +203,27 @@
       "photosFailed": "{{name}} konnte nicht gelesen werden: {{reason}}",
       "peopleFailed": "Die Personen aus {{name}} konnten nicht gelesen werden – „Das bin ich“ blieb unberücksichtigt: {{reason}}",
       "peopleNotSet": "Tipp: Wähle in den Einstellungen bei {{name}} „Das bin ich“, dann werden Fotos mit dir bevorzugt."
+    },
+    "crop": {
+      "title": "Ausschnitt anpassen",
+      "menuAdjust": "Ausschnitt anpassen",
+      "frameLabel": "Rahmenform",
+      "frame": {
+        "header": "Kopfbereich",
+        "card": "Karte"
+      },
+      "stageLabel": "Foto mit Rahmen",
+      "photoAlt": "Titelfoto im Rahmen",
+      "hint": "Ziehen zum Verschieben, Mausrad, Zwei-Finger-Geste oder Regler zum Zoomen. Tastatur: Pfeiltasten verschieben, + und − zoomen, Escape bricht ab. Das Foto selbst bleibt unverändert.",
+      "zoom": "Zoom",
+      "zoomIn": "Vergrößern",
+      "zoomOut": "Verkleinern",
+      "reset": "Zurücksetzen",
+      "cancel": "Abbrechen",
+      "confirm": "Übernehmen",
+      "saving": "Wird gespeichert …",
+      "saveFailed": "Der Ausschnitt konnte nicht gespeichert werden. Bitte versuche es erneut.",
+      "loadFailed": "Das Foto konnte nicht geladen werden."
     }
   },
   "selfPerson": {

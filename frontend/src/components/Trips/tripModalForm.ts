@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useCoverCropStore } from "../../store/coverCropStore";
 import type { Trip, TripCategory } from "../../types";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
@@ -240,7 +241,10 @@ export function useTripModalForm(
       if (coverFile) {
         setUploadingCover(true);
         try {
-          await tripsApi.uploadCover(savedTrip.id, coverFile);
+          const { coverUrl: uploaded } = await tripsApi.uploadCover(savedTrip.id, coverFile);
+          useCoverCropStore
+            .getState()
+            .open({ tripId: savedTrip.id, coverImageUrl: uploaded, initialCrop: null });
         } catch {
           addToast("error", t("trips:gallery.uploadError"));
         } finally {

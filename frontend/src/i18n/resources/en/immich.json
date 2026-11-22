@@ -203,6 +203,27 @@
       "photosFailed": "{{name}} could not be read: {{reason}}",
       "peopleFailed": "The people in {{name}} could not be read – \"That's me\" was left out: {{reason}}",
       "peopleNotSet": "Tip: pick \"That's me\" for {{name}} in the settings and photos with you are preferred."
+    },
+    "crop": {
+      "title": "Adjust crop",
+      "menuAdjust": "Adjust crop",
+      "frameLabel": "Frame shape",
+      "frame": {
+        "header": "Header",
+        "card": "Card"
+      },
+      "stageLabel": "Photo with frame",
+      "photoAlt": "Cover photo in the frame",
+      "hint": "Drag to move; mouse wheel, two-finger pinch or the slider to zoom. Keyboard: arrow keys move, + and − zoom, Escape cancels. The photo itself is never changed.",
+      "zoom": "Zoom",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "reset": "Reset",
+      "cancel": "Cancel",
+      "confirm": "Apply",
+      "saving": "Saving …",
+      "saveFailed": "The crop could not be saved. Please try again.",
+      "loadFailed": "The photo could not be loaded."
     }
   },
   "selfPerson": {

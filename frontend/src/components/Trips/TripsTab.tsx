@@ -1,4 +1,5 @@
 import Modal from "../Modal";
+import CoverCropHost from "./CoverCropHost";
 import { useGapPrefill } from "../../hooks/useGapPrefill";
 import { gapPrefill } from "../../lib/gapCalendar";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -219,6 +220,7 @@ export default function TripsTab({
 
   return (
     <div className="pb-12">
+      <CoverCropHost onSaved={onTripsChange} />
       <div>
         {header ? (
           <PageHeader title={header.title} meta={header.meta} actions={pageActions} />
