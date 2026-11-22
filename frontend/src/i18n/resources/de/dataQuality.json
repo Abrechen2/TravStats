@@ -487,7 +487,8 @@
         "title": "Bereits beantwortet",
         "empty": "Hier hast du noch nichts beantwortet.",
         "failed": "Die erledigten Einträge konnten nicht geladen werden."
-      }
+      },
+      "moreAnswers": "Weitere Entscheidungen zu dieser Frage"
     }
   },
   "flag": {

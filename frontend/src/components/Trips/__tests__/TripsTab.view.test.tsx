@@ -62,7 +62,7 @@ describe("TripsTab — tiles or list", () => {
   it("starts on the tiles when nothing was ever chosen", () => {
     renderTab();
     expect(screen.queryByRole("table")).toBeNull();
-    expect(screen.getByTestId("trips-view-tiles")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("radio", { name: "trips:view.tiles" })).toBeChecked();
   });
 
   it("shows the trips as a table with name, dates, days, countries, status and places", () => {
@@ -77,7 +77,7 @@ describe("TripsTab — tiles or list", () => {
 
   it("a click on the toggle switches the view, writes ?view= and remembers it", () => {
     renderTab();
-    fireEvent.click(screen.getByTestId("trips-view-list"));
+    fireEvent.click(screen.getByRole("radio", { name: "trips:view.list" }));
     expect(screen.getByTestId("trip-row-a")).toBeInTheDocument();
     expect(screen.getByTestId("where")).toHaveTextContent("view=list");
     expect(window.localStorage.getItem(TRIPS_VIEW_KEY)).toBe("list");
@@ -93,13 +93,13 @@ describe("TripsTab — tiles or list", () => {
     window.localStorage.setItem(TRIPS_VIEW_KEY, "list");
     renderTab("/trips?view=tiles");
     expect(screen.queryByTestId("trip-row-a")).toBeNull();
-    expect(screen.getByTestId("trips-view-tiles")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("radio", { name: "trips:view.tiles" })).toBeChecked();
   });
 
   it("choosing the tiles again overrides a stored list (an explicit ?view=tiles)", () => {
     window.localStorage.setItem(TRIPS_VIEW_KEY, "list");
     renderTab();
-    fireEvent.click(screen.getByTestId("trips-view-tiles"));
+    fireEvent.click(screen.getByRole("radio", { name: "trips:view.tiles" }));
     expect(screen.getByTestId("where")).toHaveTextContent("view=tiles");
     expect(screen.queryByTestId("trip-row-a")).toBeNull();
   });
@@ -109,7 +109,7 @@ describe("TripsTab — tiles or list", () => {
       throw new Error("blocked");
     });
     renderTab();
-    expect(screen.getByTestId("trips-view-tiles")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("radio", { name: "trips:view.tiles" })).toBeChecked();
   });
 
   it("still switches the view when storage cannot be written", () => {
@@ -117,14 +117,14 @@ describe("TripsTab — tiles or list", () => {
       throw new Error("blocked");
     });
     renderTab();
-    fireEvent.click(screen.getByTestId("trips-view-list"));
+    fireEvent.click(screen.getByRole("radio", { name: "trips:view.list" }));
     expect(screen.getByTestId("trip-row-a")).toBeInTheDocument();
   });
 
   it("ignores a stored value that is neither view", () => {
     window.localStorage.setItem(TRIPS_VIEW_KEY, "grid");
     renderTab();
-    expect(screen.getByTestId("trips-view-tiles")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("radio", { name: "trips:view.tiles" })).toBeChecked();
   });
 
   it("opens a trip from its row", () => {

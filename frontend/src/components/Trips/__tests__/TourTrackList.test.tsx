@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 
 import TourTrackList from "../TourTrackList";
 import type { TourTrackMeta } from "../../../types/tour";
+import { chooseFromBareMenu, triggersOffering } from "../../../__tests__/helpers/menu";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -113,7 +114,7 @@ describe("TourTrackList", () => {
     const track = makeTrack();
     const props = renderList({ tracks: [track] });
 
-    fireEvent.click(screen.getByText("trips:tours.tracks.deleteLabel"));
+    chooseFromBareMenu("trips:tours.tracks.deleteLabel");
 
     expect(props.onDelete).not.toHaveBeenCalled();
     expect(screen.getByText("trips:tours.tracks.deleteConfirm.title")).toBeInTheDocument();
@@ -121,7 +122,7 @@ describe("TourTrackList", () => {
 
   it("names the track in the question — its window and its point count", () => {
     renderList({ tracks: [makeTrack()] });
-    fireEvent.click(screen.getByText("trips:tours.tracks.deleteLabel"));
+    chooseFromBareMenu("trips:tours.tracks.deleteLabel");
 
     // The mocked `t` returns the key, so the interpolation itself cannot be
     // read here. What IS observable is that the message key is used with the
@@ -134,7 +135,7 @@ describe("TourTrackList", () => {
     const track = makeTrack();
     const props = renderList({ tracks: [track] });
 
-    fireEvent.click(screen.getByText("trips:tours.tracks.deleteLabel"));
+    chooseFromBareMenu("trips:tours.tracks.deleteLabel");
     fireEvent.click(screen.getByText("trips:tours.tracks.deleteConfirm.confirm"));
 
     expect(props.onDelete).toHaveBeenCalledWith(track);
@@ -143,7 +144,7 @@ describe("TourTrackList", () => {
   it("deletes nothing when the question is cancelled", () => {
     const props = renderList({ tracks: [makeTrack()] });
 
-    fireEvent.click(screen.getByText("trips:tours.tracks.deleteLabel"));
+    chooseFromBareMenu("trips:tours.tracks.deleteLabel");
     fireEvent.click(screen.getByText("common:buttons.cancel"));
 
     expect(props.onDelete).not.toHaveBeenCalled();
@@ -195,15 +196,14 @@ describe("TourTrackList", () => {
     const onDownload = vi.fn();
     const second = makeTrack({ id: "track-2" });
     renderList({ tracks: [makeTrack(), second], onDownload });
-    const buttons = screen.getAllByText("roadtrips:trackArchive.downloadOne");
-    expect(buttons).toHaveLength(2);
-    fireEvent.click(buttons[1]);
+    expect(triggersOffering("roadtrips:trackArchive.downloadOne")).toHaveLength(2);
+    chooseFromBareMenu("roadtrips:trackArchive.downloadOne", 1);
     expect(onDownload).toHaveBeenCalledWith(second);
   });
 
   it("draws no download control where no page can take the file", () => {
     renderList({ tracks: [makeTrack()] });
-    expect(screen.queryByText("roadtrips:trackArchive.downloadOne")).not.toBeInTheDocument();
+    expect(triggersOffering("roadtrips:trackArchive.downloadOne")).toHaveLength(0);
   });
 
   it("says under a track how many fixes were left out as GPS jitter (forgejo#319)", () => {

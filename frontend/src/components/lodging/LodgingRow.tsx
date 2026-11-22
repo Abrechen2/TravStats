@@ -12,7 +12,7 @@ import { lodgingTypeIcon } from "../../lib/lodgingFormat";
 import { FlagImg, resolveCountryCode } from "../../lib/countryFlag";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { latestStayDayOf } from "../../lib/lodgingLatestStay";
-import { RowActionButton, RowActions } from "../table/RowActionButton";
+import RowMenu from "../table/RowMenu";
 import { TableRow, type TableColumn } from "../ui/Table";
 import { useTranslation } from "../../hooks/useTranslation";
 import Toggletip from "../ui/Toggletip";
@@ -161,28 +161,34 @@ export function LodgingRow({
       </>
     ),
     actions: (
-      <RowActions>
-        <RowActionButton
-          icon="edit"
-          label={t("common:buttons.edit")}
-          testId={`lodging-edit-${l.id}`}
-          onClick={onEdit}
-        />
-        {onRestay && (
-          <RowActionButton
-            icon="duplicate"
-            label={t("lodging:restay.action")}
-            testId={`lodging-restay-${l.id}`}
-            onClick={onRestay}
-          />
-        )}
-        <RowActionButton
-          icon="delete"
-          label={t("common:buttons.delete")}
-          testId={`lodging-delete-${l.id}`}
-          onClick={onDelete}
-        />
-      </RowActions>
+      <RowMenu
+        testId={`lodging-menu-${l.id}`}
+        entries={[
+          {
+            key: "edit",
+            testId: `lodging-edit-${l.id}`,
+            label: t("common:buttons.edit"),
+            onSelect: onEdit,
+          },
+          ...(onRestay
+            ? [
+                {
+                  key: "restay",
+                  testId: `lodging-restay-${l.id}`,
+                  label: t("lodging:restay.action"),
+                  onSelect: onRestay,
+                },
+              ]
+            : []),
+          {
+            key: "delete",
+            testId: `lodging-delete-${l.id}`,
+            label: t("common:buttons.delete"),
+            danger: true,
+            onSelect: onDelete,
+          },
+        ]}
+      />
     ),
   };
 

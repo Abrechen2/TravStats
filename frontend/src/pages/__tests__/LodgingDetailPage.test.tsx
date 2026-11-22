@@ -669,7 +669,7 @@ describe("LodgingDetailPage", () => {
     const box = await screen.findByTestId("lodging-stays-scroll");
     expect(box.className).toMatch(/overflow-y-auto/);
     expect(box.className).toMatch(/max-h-/);
-    expect(within(box).getAllByText("common:buttons.edit")).toHaveLength(30);
+    expect(within(box).getAllByRole("button", { name: "lodging:stay.menuLabel" })).toHaveLength(30);
   });
 
   /**
@@ -696,6 +696,7 @@ describe("LodgingDetailPage", () => {
     renderDetailPage();
 
     await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("stay-menu-stay-1"));
     await user.click(screen.getByTestId("stay-delete-stay-1"));
 
     const dialog = await screen.findByRole("dialog");
@@ -727,6 +728,7 @@ describe("LodgingDetailPage", () => {
     renderDetailPage();
 
     await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("stay-menu-stay-1"));
     await user.click(screen.getByTestId("stay-delete-stay-1"));
 
     const dialog = await screen.findByRole("dialog");
@@ -759,6 +761,7 @@ describe("LodgingDetailPage", () => {
     // The real figures are on screen first.
     expect(screen.getByText("lodging:detail.stays").closest("div")?.textContent).toContain("2");
 
+    await user.click(screen.getByTestId("stay-menu-stay-1"));
     await user.click(screen.getByTestId("stay-delete-stay-1"));
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByRole("button", { name: "common:buttons.delete" }));
@@ -800,6 +803,7 @@ describe("LodgingDetailPage", () => {
     renderDetailPage();
 
     await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("stay-menu-stay-1"));
     await user.click(screen.getByTestId("stay-delete-stay-1"));
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByRole("button", { name: "common:buttons.delete" }));
@@ -831,6 +835,7 @@ describe("LodgingDetailPage", () => {
     renderDetailPage();
 
     await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("stay-menu-stay-1"));
     await user.click(screen.getByTestId("stay-edit-stay-1"));
 
     const deleteInEditor = await screen.findByTestId("stay-editor-delete");
@@ -984,6 +989,7 @@ describe("LodgingDetailPage", () => {
     renderDetailPage();
 
     await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("stay-menu-stay-1"));
     await user.click(screen.getByTestId("stay-delete-stay-1"));
 
     const dialog = await screen.findByRole("dialog");
@@ -1004,6 +1010,7 @@ describe("LodgingDetailPage", () => {
     renderDetailPage();
 
     await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("stay-menu-stay-1"));
     await user.click(screen.getByTestId("stay-delete-stay-1"));
 
     const dialog = await screen.findByRole("dialog");
@@ -1035,6 +1042,7 @@ describe("LodgingDetailPage", () => {
     renderDetailPage();
 
     await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("stay-menu-stay-1"));
     await user.click(screen.getByTestId("stay-delete-stay-1"));
 
     const dialog = await screen.findByRole("dialog");

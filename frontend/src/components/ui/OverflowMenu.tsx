@@ -13,6 +13,10 @@ import { Icon } from "./Icon";
 export interface OverflowEntry {
   key: string;
   label: string;
+  /** A muted sentence under the label: what the entry does, where that is not obvious. */
+  hint?: string;
+  /** `data-testid` of the entry (it exists only while the menu is open). */
+  testId?: string;
   /** Runs when the entry is chosen (after the confirmation, when `confirm` is set). */
   onSelect?: () => void;
   /** Navigates instead of calling `onSelect`. */
@@ -45,6 +49,35 @@ export interface OverflowEntry {
  * move, Escape and Tab close and hand focus back to the trigger. Targets are
  * 44 px on a coarse pointer (an iPad at any width).
  */
+/**
+ * An entry that opens a dialog of its own: the dialog hands focus back to the element that
+ * opened it — the menu entry, which is gone by then — so focus fell to the page. Watch for the
+ * dialog to appear and go, and give focus back to the trigger once it has (package 1, P3).
+ * Entries that open nothing leave no dialog behind and cost one observer for a moment.
+ */
+function returnFocusAfterDialog(trigger: () => HTMLButtonElement | null): void {
+  const DIALOG = '[role="dialog"],[aria-modal="true"]';
+  let seen = false;
+  const observer = new MutationObserver(() => {
+    const present = document.querySelector(DIALOG) !== null;
+    if (present) {
+      seen = true;
+      return;
+    }
+    if (seen) {
+      observer.disconnect();
+      window.clearTimeout(giveUp);
+      const active = document.activeElement;
+      if (!active || active === document.body) trigger()?.focus();
+    }
+  });
+  // No dialog within a second: the entry did something else (navigated, downloaded).
+  const giveUp = window.setTimeout(() => {
+    if (!seen) observer.disconnect();
+  }, 1000);
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
 export default function OverflowMenu({
   entries,
   label,
@@ -124,6 +157,7 @@ export default function OverflowMenu({
       return;
     }
     entry.onSelect?.();
+    returnFocusAfterDialog(trigger);
   };
 
   const items = (): HTMLElement[] =>
@@ -178,6 +212,13 @@ export default function OverflowMenu({
     minHeight: coarse ? "var(--ts-size-touch-min)" : undefined,
   });
 
+  const hintOf = (entry: OverflowEntry): ReactNode =>
+    entry.hint ? (
+      <span className="block text-xs font-normal" style={{ color: "var(--ts-muted)" }}>
+        {entry.hint}
+      </span>
+    ) : null;
+
   const renderItem = (entry: OverflowEntry, index: number): ReactNode => (
     <div key={entry.key} className="flex flex-col">
       {index === firstDanger && index > 0 && (
@@ -190,16 +231,19 @@ export default function OverflowMenu({
         <Link
           to={entry.href}
           role="menuitem"
+          data-testid={entry.testId}
           className={itemClass}
           style={itemStyle(entry)}
           onClick={() => setOpen(false)}
         >
           {entry.label}
+          {hintOf(entry)}
         </Link>
       ) : (
         <button
           type="button"
           role="menuitem"
+          data-testid={entry.testId}
           disabled={entry.disabled}
           title={entry.disabled ? entry.disabledReason : undefined}
           aria-describedby={
@@ -210,6 +254,7 @@ export default function OverflowMenu({
           style={itemStyle(entry)}
         >
           {entry.label}
+          {hintOf(entry)}
         </button>
       )}
       {entry.disabled && entry.disabledReason && (
@@ -227,9 +272,15 @@ export default function OverflowMenu({
   const stop = stopPropagation
     ? (e: { stopPropagation: () => void }) => e.stopPropagation()
     : undefined;
+  // The portaled panel's keys bubble through the React tree into the row (which opens on Enter).
+  const stopKeys = stopPropagation
+    ? (e: KeyboardEvent<HTMLElement>) => {
+        if (e.key === "Enter" || e.key === " ") e.stopPropagation();
+      }
+    : undefined;
 
   return (
-    <div ref={rootRef} onBlur={onBlur} onClick={stop}>
+    <div ref={rootRef} onBlur={onBlur} onClick={stop} onKeyDown={stopKeys}>
       {triggerLabel ? (
         <Button
           aria-haspopup="menu"
@@ -267,7 +318,10 @@ export default function OverflowMenu({
             ref={panelRef}
             role="menu"
             aria-label={label}
-            onKeyDown={onMenuKey}
+            onKeyDown={(e) => {
+              stopKeys?.(e);
+              onMenuKey(e);
+            }}
             onClick={stop}
             className="fixed z-70 flex flex-col overflow-y-auto rounded-lg p-2 shadow-xl"
             style={{

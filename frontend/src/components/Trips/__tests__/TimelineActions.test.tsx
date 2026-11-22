@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 
 import TimelineActions from "../TimelineActions";
 import { openDataApi } from "../../../lib/api/openData";
 import { useSettingsStore } from "../../../store/settingsStore";
 import type { TripJournalEntry } from "../../../types";
+import { chooseMenuEntry } from "../../../__tests__/helpers/menu";
 
 vi.unmock("../../../store/settingsStore");
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -53,7 +54,7 @@ describe("TimelineActions", () => {
         onChanged={vi.fn()}
       />
     );
-    expect(screen.queryByRole("button", { name: "openData:weather.fill" })).toBeNull();
+    expect(screen.queryByTestId("timeline-menu")).toBeNull();
     rerender(
       <TimelineActions
         tripId="t1"
@@ -62,7 +63,7 @@ describe("TimelineActions", () => {
         onChanged={vi.fn()}
       />
     );
-    expect(screen.getByRole("button", { name: "openData:weather.fill" })).toBeInTheDocument();
+    expect(screen.getByTestId("timeline-menu")).toBeInTheDocument();
     act(() => useSettingsStore.setState({ openDataEnabled: false }));
     rerender(
       <TimelineActions
@@ -72,7 +73,7 @@ describe("TimelineActions", () => {
         onChanged={vi.fn()}
       />
     );
-    expect(screen.queryByRole("button", { name: "openData:weather.fill" })).toBeNull();
+    expect(screen.queryByTestId("timeline-menu")).toBeNull();
   });
 
   it("fills the missing weather and reloads the trip", async () => {
@@ -91,7 +92,7 @@ describe("TimelineActions", () => {
         onChanged={onChanged}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "openData:weather.fill" }));
+    chooseMenuEntry(screen.getByTestId("timeline-menu"), "openData:weather.fill");
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
     expect(openDataApi.fillJournalWeather).toHaveBeenCalledWith("t1");
   });

@@ -656,7 +656,8 @@
     "conflict": "Die Bahnfahrt wurde inzwischen geändert. Bitte neu laden.",
     "denied": "Die Berechtigung fehlt oder die Sitzung ist abgelaufen.",
     "missing": "Diese Bahnfahrt wurde nicht gefunden.",
-    "network": "Der Server ist nicht erreichbar oder die Anfrage dauerte zu lange. Bitte erneut versuchen."
+    "network": "Der Server ist nicht erreichbar oder die Anfrage dauerte zu lange. Bitte erneut versuchen.",
+    "menuLabel": "Weitere Aktionen zur Route"
   },
   "bookmarklet": {
     "title": "Verbindung von bahn.de übernehmen",

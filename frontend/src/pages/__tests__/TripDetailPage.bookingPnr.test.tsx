@@ -81,6 +81,7 @@ vi.mock("../../components/NavigationBar", () => ({
 }));
 
 import TripDetailPage from "../TripDetailPage";
+import { chooseFromBareMenu } from "../../__tests__/helpers/menu";
 
 function makeTrip(overrides: Partial<Trip> = {}): Trip {
   return {
@@ -148,7 +149,7 @@ describe("TripDetailPage booking editor", () => {
       })
     );
     await userEvent.click(screen.getByText("trips:detail.tabs.logistics"));
-    await userEvent.click(screen.getByRole("button", { name: "trips:bookingEdit.title" }));
+    chooseFromBareMenu("trips:bookingEdit.title");
 
     expect(await screen.findByText("XYZ123")).toBeInTheDocument();
   });

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { JSX } from "react";
 import { TableRow, type TableColumn } from "../ui/Table";
-import { RowActionButton, RowActions } from "../table/RowActionButton";
+import RowMenu from "../table/RowMenu";
 
 export type PlaceSortKey =
   "name" | "category" | "location" | "country" | "continent" | "visits" | "lastVisit";
@@ -79,13 +79,15 @@ export function PlaceRow({
   const all: Record<PlaceColumnId, ReactNode> = {
     ...cells,
     actions: (
-      <RowActions>
-        {onRecordVisit && recordVisitLabel && (
-          <RowActionButton icon="checkIn" label={recordVisitLabel} onClick={onRecordVisit} />
-        )}
-        <RowActionButton icon="edit" label={editLabel} onClick={onEdit} />
-        <RowActionButton icon="delete" label={deleteLabel} onClick={onDelete} />
-      </RowActions>
+      <RowMenu
+        entries={[
+          ...(onRecordVisit && recordVisitLabel
+            ? [{ key: "visit", label: recordVisitLabel, onSelect: onRecordVisit }]
+            : []),
+          { key: "edit", label: editLabel, onSelect: onEdit },
+          { key: "delete", label: deleteLabel, danger: true, onSelect: onDelete },
+        ]}
+      />
     ),
   };
   return (

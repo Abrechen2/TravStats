@@ -249,7 +249,8 @@
     },
     "deleted": "Stay deleted",
     "refreshFailed": "Stay deleted — the figures could not be refreshed.",
-    "deleteError": "Stay could not be deleted"
+    "deleteError": "Stay could not be deleted",
+    "menuLabel": "More stay actions"
   },
   "stayEditor": {
     "addStay": "Add stay",

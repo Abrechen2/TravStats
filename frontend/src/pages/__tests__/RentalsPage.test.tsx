@@ -88,6 +88,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 
 import RentalsPage from "../RentalsPage";
 import { makeRental } from "../../components/rental/__tests__/rentalFixture";
+import { chooseFromBareMenu } from "../../__tests__/helpers/menu";
 
 const renderPage = (url = "/"): void => {
   render(
@@ -166,7 +167,7 @@ describe("RentalsPage", () => {
   it("edits from the row's action without opening the rental", async () => {
     renderPage();
     await screen.findByTestId("rental-row-r1");
-    fireEvent.click(screen.getByRole("button", { name: "rental:edit" }));
+    chooseFromBareMenu("rental:edit");
     expect(screen.getByTestId("rental-form")).toHaveTextContent("r1");
     expect(navigate).not.toHaveBeenCalled();
   });
@@ -186,7 +187,7 @@ describe("RentalsPage", () => {
     remove.mockResolvedValue(undefined);
     renderPage();
     await screen.findByTestId("rental-row-r1");
-    fireEvent.click(screen.getByRole("button", { name: "rental:delete" }));
+    chooseFromBareMenu("rental:delete");
     fireEvent.click(screen.getByText("confirm-delete"));
     await waitFor(() => expect(remove).toHaveBeenCalledWith("r1"));
     expect(await screen.findByText("rental:empty")).toBeInTheDocument();
@@ -208,7 +209,7 @@ describe("RentalsPage", () => {
     listForEntry.mockResolvedValue([{ id: "d1" }, { id: "d2" }]);
     renderPage();
     await screen.findByTestId("rental-row-r1");
-    fireEvent.click(screen.getByRole("button", { name: "rental:delete" }));
+    chooseFromBareMenu("rental:delete");
     await waitFor(() =>
       expect(screen.getByTestId("confirm-message").textContent).toContain(
         "documents:deleteCascadeNote/2"

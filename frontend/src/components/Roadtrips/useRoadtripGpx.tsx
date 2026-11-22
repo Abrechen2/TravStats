@@ -1,21 +1,22 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
-import Button from "../ui/Button";
 import { useTranslation } from "../../hooks/useTranslation";
 import { downloadBlob } from "../../lib/export";
 import { toursApi } from "../../lib/api/tours";
 import { logger } from "../../lib/logger";
 import { buildRoadtripGpx, gpxFileName } from "../../lib/roadtrip/gpxExport";
 import type { RoadtripStation } from "../../types/roadtrip";
+import type { OverflowEntry } from "../ui/OverflowMenu";
 
 /**
- * "GPX exportieren": the stations and the legs' lines as a GPX file. The lines
- * are fetched fresh — the page's copy is decoration that may have failed to
- * load, and a file without its route must not pass for the whole export. When
- * the lines cannot be read, nothing is saved and the button says so.
+ * "GPX exportieren" as an entry of the roadtrip's ⋯ (owner, 2026-11-22): the stations and the
+ * legs' lines as a GPX file. The lines are fetched fresh — the page's copy is decoration that
+ * may have failed to load, and a file without its route must not pass for the whole export.
+ * When the lines cannot be read, nothing is saved and `failure` (rendered beside the header,
+ * outside the closed menu) says so.
  */
-export default function RoadtripGpxButton({
+export function useRoadtripGpx({
   routeId,
   name,
   stations,
@@ -23,7 +24,7 @@ export default function RoadtripGpxButton({
   routeId: string;
   name: string;
   stations: readonly RoadtripStation[];
-}): JSX.Element {
+}): { entry: OverflowEntry; failure: JSX.Element | null } {
   const { t } = useTranslation(["roadtrips"]);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -43,16 +44,17 @@ export default function RoadtripGpxButton({
     }
   };
 
-  return (
-    <>
-      <Button disabled={busy} onClick={() => void run()}>
-        {busy ? t("roadtrips:gpx.exporting") : t("roadtrips:gpx.export")}
-      </Button>
-      {failed && (
-        <span role="alert" style={{ fontSize: 13, color: "var(--ts-bad)", alignSelf: "center" }}>
-          {t("roadtrips:gpx.failed")}
-        </span>
-      )}
-    </>
-  );
+  return {
+    entry: {
+      key: "gpx",
+      label: busy ? t("roadtrips:gpx.exporting") : t("roadtrips:gpx.export"),
+      disabled: busy,
+      onSelect: () => void run(),
+    },
+    failure: failed ? (
+      <span role="alert" style={{ fontSize: 13, color: "var(--ts-bad)", alignSelf: "center" }}>
+        {t("roadtrips:gpx.failed")}
+      </span>
+    ) : null,
+  };
 }

@@ -487,7 +487,8 @@
         "title": "Already answered",
         "empty": "You haven't answered anything here yet.",
         "failed": "The answered items could not be loaded."
-      }
+      },
+      "moreAnswers": "More answers to this question"
     }
   },
   "flag": {

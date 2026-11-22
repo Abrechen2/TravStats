@@ -104,6 +104,7 @@ import { MemoryRouter } from "react-router-dom";
 import RailPage from "../RailPage";
 import type { RailJourney } from "../../types/rail";
 import { getNamed } from "../../__tests__/helpers/namedElement";
+import { chooseFromBareMenu } from "../../__tests__/helpers/menu";
 
 // A row opens the journey's own page since the detail page (phase 2b); the
 // loyalty notice reads the URL, so the page renders inside a router.
@@ -291,7 +292,7 @@ describe("RailPage", () => {
     listForEntry.mockResolvedValue([{ id: "d1" }, { id: "d2" }]);
     renderPage();
     await screen.findByTestId("rail-row-j1");
-    fireEvent.click(getNamed("button", "rail:delete"));
+    chooseFromBareMenu("rail:delete");
     await waitFor(() =>
       expect(screen.getByTestId("delete-message").textContent).toContain(
         "documents:deleteCascadeNote/2"
@@ -319,7 +320,7 @@ describe("RailPage", () => {
     remove.mockResolvedValue(undefined);
     renderPage();
     await screen.findByTestId("rail-row-j1");
-    fireEvent.click(getNamed("button", "rail:delete"));
+    chooseFromBareMenu("rail:delete");
     fireEvent.click(screen.getByText("confirm-delete"));
     await waitFor(() => expect(remove).toHaveBeenCalledWith("j1"));
     expect(await screen.findByText("rail:empty")).toBeInTheDocument();

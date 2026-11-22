@@ -7,6 +7,7 @@ import { jobErrorCode, JobLostError } from "../../lib/api/jobs";
 import { downloadBlob } from "../../lib/export";
 import { logger } from "../../lib/logger";
 import { Icon } from "../ui/Icon";
+import { Segmented } from "../ui/Segmented";
 import { JobStatus, SettingItem } from "../ui/settings";
 import type { JobView } from "../ui/settings";
 
@@ -143,18 +144,16 @@ export default function LifeBookRow(): JSX.Element {
       }
     >
       <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2">
-          <span className="label">{t("settings:lifeBook.scope")}</span>
-          <select
-            value={mode}
-            onChange={(e) => setMode(e.target.value as Mode)}
-            style={{ minHeight: 44 }}
-          >
-            <option value="all">{t("settings:lifeBook.scopeAll")}</option>
-            <option value="year">{t("settings:lifeBook.scopeYear")}</option>
-            <option value="trip">{t("settings:lifeBook.scopeTrip")}</option>
-          </select>
-        </label>
+        <Segmented<Mode>
+          value={mode}
+          onChange={setMode}
+          label={t("settings:lifeBook.scope")}
+          options={[
+            { value: "all", label: t("settings:lifeBook.scopeAll") },
+            { value: "year", label: t("settings:lifeBook.scopeYear") },
+            { value: "trip", label: t("settings:lifeBook.scopeTrip") },
+          ]}
+        />
         {mode === "year" ? (
           <label className="flex items-center gap-2">
             <span className="label">{t("settings:lifeBook.year")}</span>

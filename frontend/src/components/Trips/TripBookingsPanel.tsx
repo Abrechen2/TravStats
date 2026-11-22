@@ -12,7 +12,7 @@ import AssignFlightsToBookingModal from "./AssignFlightsToBookingModal";
 import BookingEditModal from "./BookingEditModal";
 import type { BookingEntryOptions } from "./BookingEntriesPicker";
 import { PanelHeader } from "./TripDetailPanels";
-import { RowActionButton } from "../table/RowActionButton";
+import RowMenu from "../table/RowMenu";
 import TableScroll from "../ui/TableScroll";
 import { PackageBookingCard } from "../bookings/PackageBookingCard";
 
@@ -188,24 +188,30 @@ export function TripBookingsPanel({
                             : "trips:bookingPackage.show"
                         )}
                       </button>
-                      <button
-                        type="button"
-                        className="mr-2 text-xs"
-                        style={{ color: "var(--accent)" }}
-                        onClick={() => setAssigning(b)}
-                      >
-                        {t("trips:bookingAssign.action")}
-                      </button>
-                      <RowActionButton
-                        icon="edit"
-                        label={t("trips:bookingEdit.title")}
-                        onClick={() => setEditing(b)}
-                      />
-                      <RowActionButton
-                        icon="delete"
-                        label={t("trips:bookingEdit.delete")}
-                        onClick={() => void remove(b)}
-                      />
+                      <span className="inline-block align-middle">
+                        <RowMenu
+                          label={t("trips:bookingMenuLabel", { name: b.operator ?? b.pnr ?? "" })}
+                          testId={`booking-menu-${b.id}`}
+                          entries={[
+                            {
+                              key: "assign",
+                              label: t("trips:bookingAssign.action"),
+                              onSelect: () => setAssigning(b),
+                            },
+                            {
+                              key: "edit",
+                              label: t("trips:bookingEdit.title"),
+                              onSelect: () => setEditing(b),
+                            },
+                            {
+                              key: "delete",
+                              label: t("trips:bookingEdit.delete"),
+                              danger: true,
+                              onSelect: () => void remove(b),
+                            },
+                          ]}
+                        />
+                      </span>
                     </td>
                   </tr>
                   {expanded === b.id && (

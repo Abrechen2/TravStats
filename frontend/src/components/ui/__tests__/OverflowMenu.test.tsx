@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { useState } from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 const coarse = vi.hoisted(() => ({ on: false }));
@@ -183,5 +184,41 @@ describe("OverflowMenu", () => {
     });
     fireEvent.click(screen.getByTestId("menu"));
     expect(document.activeElement?.textContent).toBe("Beta");
+  });
+
+  it("gives focus back to the trigger once a dialog an entry opened has closed", async () => {
+    function Host() {
+      const [dlg, setDlg] = useState(false);
+      return (
+        <MemoryRouter>
+          <OverflowMenu
+            label="More"
+            testId="menu"
+            entries={[{ key: "d", label: "Open dialog", onSelect: () => setDlg(true) }]}
+          >
+            {dlg && (
+              <div role="dialog">
+                <button type="button" onClick={() => setDlg(false)}>
+                  close
+                </button>
+              </div>
+            )}
+          </OverflowMenu>
+        </MemoryRouter>
+      );
+    }
+    render(<Host />);
+    fireEvent.click(screen.getByTestId("menu"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Open dialog" }));
+    await screen.findByRole("dialog");
+    screen.getByText("close").focus();
+    fireEvent.click(screen.getByText("close"));
+    await waitFor(() => expect(screen.getByTestId("menu")).toHaveFocus());
+  });
+
+  it("shows an entry's hint under its label", () => {
+    renderMenu({ entries: [{ key: "a", label: "Alpha", hint: "Does alpha", onSelect: onA }] });
+    fireEvent.click(screen.getByTestId("menu"));
+    expect(screen.getByRole("menuitem", { name: /Alpha/ })).toHaveTextContent("Does alpha");
   });
 });

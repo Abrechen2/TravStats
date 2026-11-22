@@ -9,6 +9,7 @@
  * agent/script tokens shown on the API Tokens page.
  */
 
+import OverflowMenu from "../ui/OverflowMenu";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -335,33 +336,28 @@ export default function DevicesSection(): JSX.Element {
                     (via /settings/tokens, guarded for the demo account) — the
                     section-level notice above already explains the lock, so
                     this action is simply not offered rather than repeated. */}
-                    {isOldToken(dev) && !isDemo && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemove(dev.id, dev.label)}
-                        className="ml-3 px-3 py-1.5 text-xs rounded-md"
-                        style={{
-                          background: "transparent",
-                          border: "1px solid var(--color-border)",
-                          color: "var(--danger)",
-                        }}
-                      >
-                        {t("settings:devices.removeButton")}
-                      </button>
-                    )}
-                    {!isOldToken(dev) && !isDemo && (
-                      <button
-                        type="button"
-                        onClick={() => handleUnpair(dev.id, dev.label)}
-                        className="ml-3 px-3 py-1.5 text-xs rounded-md"
-                        style={{
-                          background: "transparent",
-                          border: "1px solid var(--color-border)",
-                          color: "var(--danger)",
-                        }}
-                      >
-                        {t("settings:devices.unpairButton")}
-                      </button>
+                    {!isDemo && (
+                      <div className="ml-3">
+                        <OverflowMenu
+                          label={t("settings:devices.menuLabel", { name: dev.label })}
+                          testId={`device-menu-${dev.id}`}
+                          entries={[
+                            isOldToken(dev)
+                              ? {
+                                  key: "remove",
+                                  label: t("settings:devices.removeButton"),
+                                  danger: true,
+                                  onSelect: () => void handleRemove(dev.id, dev.label),
+                                }
+                              : {
+                                  key: "unpair",
+                                  label: t("settings:devices.unpairButton"),
+                                  danger: true,
+                                  onSelect: () => void handleUnpair(dev.id, dev.label),
+                                },
+                          ]}
+                        />
+                      </div>
                     )}
                   </li>
                 ))}

@@ -656,7 +656,8 @@
     "conflict": "The journey changed in the meantime. Please reload.",
     "denied": "Permission is missing or your session expired.",
     "missing": "This rail journey could not be found.",
-    "network": "The server is unreachable or the request timed out. Please try again."
+    "network": "The server is unreachable or the request timed out. Please try again.",
+    "menuLabel": "More route actions"
   },
   "bookmarklet": {
     "title": "Take a connection over from bahn.de",

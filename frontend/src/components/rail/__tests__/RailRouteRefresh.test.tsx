@@ -1,7 +1,8 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { RailRouteRefresh } from "../RailRouteRefresh";
 import { railApi } from "../../../lib/api/rail";
+import { chooseMenuEntry } from "../../../__tests__/helpers/menu";
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (key: string, args?: { reason?: string }) => key + (args?.reason ?? ""),
@@ -21,10 +22,10 @@ describe("explicit route refresh", () => {
       const { rerender } = render(
         <RailRouteRefresh id="ride" source={source} onUpdated={updated} />
       );
-      fireEvent.click(screen.getByRole("button"));
+      chooseMenuEntry(screen.getByTestId("rail-route-menu"), "rail:routeRefresh.action");
       await waitFor(() => expect(updated).toHaveBeenCalledOnce());
       rerender(<RailRouteRefresh id="ride" source="openrailrouting" onUpdated={updated} />);
-      expect(screen.getByRole("button")).toBeEnabled();
+      expect(screen.getByTestId("rail-route-menu")).toBeEnabled();
     }
   );
   it("does not offer automatic replacement of a manual route", () => {
@@ -42,7 +43,7 @@ describe("explicit route refresh", () => {
     });
     const updated = vi.fn();
     render(<RailRouteRefresh id="ride" source="straight" onUpdated={updated} />);
-    fireEvent.click(screen.getByRole("button"));
+    chooseMenuEntry(screen.getByTestId("rail-route-menu"), "rail:routeRefresh.action");
     await waitFor(() => expect(screen.getByRole("status")).toBeInTheDocument());
     expect(screen.getByRole("status")).toHaveTextContent(
       "rail:geometryNotice.reason.railRoutingNotConfigured"
@@ -63,7 +64,7 @@ describe("explicit route refresh", () => {
     });
     const updated = vi.fn();
     render(<RailRouteRefresh id="ride" source="straight" onUpdated={updated} />);
-    fireEvent.click(screen.getByRole("button"));
+    chooseMenuEntry(screen.getByTestId("rail-route-menu"), "rail:routeRefresh.action");
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent(`rail:routeRefresh.${reason}`)
     );

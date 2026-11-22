@@ -1,4 +1,5 @@
-import ShareLinkButton from "../shareLinks/ShareLinkButton";
+import { useShareLink } from "../shareLinks/ShareLinkButton";
+import OverflowMenu from "../ui/OverflowMenu";
 import RememberedMarker from "../provenance/RememberedMarker";
 import { PackageBookingCard } from "../bookings/PackageBookingCard";
 import type { JSX } from "react";
@@ -59,7 +60,8 @@ export function LodgingStayCard({
   membershipName,
   membershipSource,
 }: LodgingStayCardProps): JSX.Element {
-  const { t, i18n } = useTranslation(["lodging", "common"]);
+  const { t, i18n } = useTranslation(["lodging", "common", "sharing"]);
+  const share = useShareLink("stay", stay.id);
   const { labelOf } = useRatingCategories();
   const baseCurrency = useSettingsStore((st) => st.baseCurrency);
   const nights = stayNights(stay);
@@ -152,30 +154,48 @@ export function LodgingStayCard({
         <span className="ml-auto text-sm font-semibold" style={{ color: "var(--star)" }}>
           {formatRatingText(stay.ratingOverall)}
         </span>
-        {onEdit && <ShareLinkButton kind="stay" targetId={stay.id} variant="link" />}
-        {onEdit && (
-          <button
-            type="button"
-            data-testid={`stay-edit-${stay.id}`}
-            onClick={() => onEdit(stay)}
-            className="text-xs text-[var(--accent)] hover:underline"
+        {/* Share link, edit and delete are one card ⋯ (owner, 2026-11-22). The red belongs to
+            the confirmation, which is where the consequence is actually stated. */}
+        {(onEdit || onDelete) && (
+          <OverflowMenu
+            label={t("lodging:stay.menuLabel")}
+            testId={`stay-menu-${stay.id}`}
+            entries={[
+              ...(onEdit
+                ? [
+                    {
+                      key: "edit",
+                      testId: `stay-edit-${stay.id}`,
+                      label: t("common:buttons.edit"),
+                      onSelect: () => onEdit(stay),
+                    },
+                  ]
+                : []),
+              ...(onEdit && share.available
+                ? [
+                    {
+                      key: "share",
+                      testId: `stay-share-${stay.id}`,
+                      label: t("sharing:links.button"),
+                      onSelect: share.start,
+                    },
+                  ]
+                : []),
+              ...(onDelete
+                ? [
+                    {
+                      key: "delete",
+                      testId: `stay-delete-${stay.id}`,
+                      label: t("common:buttons.delete"),
+                      danger: true,
+                      onSelect: () => onDelete(stay),
+                    },
+                  ]
+                : []),
+            ]}
           >
-            {t("common:buttons.edit")}
-          </button>
-        )}
-        {/* Quieter than the edit link beside it, and never a red primary: a
-            danger-weighted button repeated down a list reads as the row's
-            purpose. The red belongs to the confirmation, which is where the
-            consequence is actually stated. */}
-        {onDelete && (
-          <button
-            type="button"
-            data-testid={`stay-delete-${stay.id}`}
-            onClick={() => onDelete(stay)}
-            className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] hover:underline"
-          >
-            {t("common:buttons.delete")}
-          </button>
+            {share.node}
+          </OverflowMenu>
         )}
       </div>
 

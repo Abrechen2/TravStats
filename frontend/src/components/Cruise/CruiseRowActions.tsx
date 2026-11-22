@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import type { Cruise } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
-import { RowActionButton, RowActions } from "../table/RowActionButton";
+import RowMenu from "../table/RowMenu";
 
 export interface CruiseRowActionsProps {
   cruise: Cruise;
@@ -11,13 +11,8 @@ export interface CruiseRowActionsProps {
 }
 
 /**
- * Edit / duplicate / delete on a cruise row.
- *
- * These were tinted text buttons — three words that took roughly half a column
- * of width on the narrowest of the three tables. Icons say the same thing in a
- * quarter of the space, and every list now uses the same ones. The shared
- * component stops propagation, which matters here because the row navigates to
- * the cruise underneath.
+ * Edit / duplicate / delete on a cruise row, as one ⋯ (owner, 2026-11-22). The row navigates to
+ * the cruise, so the shared row menu stops the click from reaching it.
  */
 export default function CruiseRowActions({
   cruise,
@@ -27,22 +22,18 @@ export default function CruiseRowActions({
 }: CruiseRowActionsProps): JSX.Element {
   const { t } = useTranslation(["cruise", "common"]);
   return (
-    <RowActions>
-      <RowActionButton
-        icon="edit"
-        label={t("common:buttons.edit")}
-        onClick={() => onEdit(cruise)}
-      />
-      <RowActionButton
-        icon="duplicate"
-        label={t("cruise:list.duplicate")}
-        onClick={() => onDuplicate(cruise)}
-      />
-      <RowActionButton
-        icon="delete"
-        label={t("common:buttons.delete")}
-        onClick={() => onDelete(cruise.id)}
-      />
-    </RowActions>
+    <RowMenu
+      testId={`cruise-menu-${cruise.id}`}
+      entries={[
+        { key: "edit", label: t("common:buttons.edit"), onSelect: () => onEdit(cruise) },
+        { key: "dup", label: t("cruise:list.duplicate"), onSelect: () => onDuplicate(cruise) },
+        {
+          key: "delete",
+          label: t("common:buttons.delete"),
+          danger: true,
+          onSelect: () => onDelete(cruise.id),
+        },
+      ]}
+    />
   );
 }

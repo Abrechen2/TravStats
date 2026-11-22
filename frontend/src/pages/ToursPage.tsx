@@ -20,7 +20,7 @@ import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListFilterBar from "../components/table/ListFilterBar";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
-import { RowActionButton, RowActions } from "../components/table/RowActionButton";
+import RowMenu from "../components/table/RowMenu";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import { Table, type TableColumn } from "../components/ui/Table";
 import { useTableHints } from "../components/ui/useTableHints";
@@ -262,29 +262,31 @@ export default function ToursPage(): JSX.Element {
                 )
               }
               actions={
-                <RowActions>
-                  {tour.tripId === null ? (
-                    <RowActionButton
-                      icon="link"
-                      label={t("trips:tours.move.action")}
-                      onClick={() => setMovingTour(tour)}
-                      testId={`tour-assign-${tour.id}`}
-                    />
-                  ) : (
-                    <RowActionButton
-                      icon="unlink"
-                      label={t("trips:tours.move.detach")}
-                      onClick={() => void handleDetach(tour)}
-                      testId={`tour-detach-${tour.id}`}
-                    />
-                  )}
-                  <RowActionButton
-                    icon="delete"
-                    label={t("trips:tours.deleteLabel")}
-                    onClick={() => setPendingDelete(tour)}
-                    testId={`tour-delete-${tour.id}`}
-                  />
-                </RowActions>
+                <RowMenu
+                  testId={`tour-menu-${tour.id}`}
+                  entries={[
+                    tour.tripId === null
+                      ? {
+                          key: "assign",
+                          testId: `tour-assign-${tour.id}`,
+                          label: t("trips:tours.move.action"),
+                          onSelect: () => setMovingTour(tour),
+                        }
+                      : {
+                          key: "detach",
+                          testId: `tour-detach-${tour.id}`,
+                          label: t("trips:tours.move.detach"),
+                          onSelect: () => void handleDetach(tour),
+                        },
+                    {
+                      key: "delete",
+                      testId: `tour-delete-${tour.id}`,
+                      label: t("trips:tours.deleteLabel"),
+                      danger: true,
+                      onSelect: () => setPendingDelete(tour),
+                    },
+                  ]}
+                />
               }
             />
           ))}

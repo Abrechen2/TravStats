@@ -140,7 +140,8 @@
     "pickMe": "Mich / alle",
     "pickUndecided": "Noch nicht zugeordnet",
     "saveFailed": "Die Zuordnung konnte nicht gespeichert werden.",
-    "companionGone": "Diese Person gibt es nicht mehr. Die Liste wurde neu geladen."
+    "companionGone": "Diese Person gibt es nicht mehr. Die Liste wurde neu geladen.",
+    "rowAction": "Für Person …"
   },
   "travellers": {
     "title": "Mitreisende auf diesem Eintrag",

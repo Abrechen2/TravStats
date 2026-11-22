@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
-import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { rideFixture as busFixture } from "../../components/bus/__tests__/busFixture";
 const rideFixture = (): FerryJourney => ({
@@ -92,6 +92,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 }));
 
 import FerryPage from "../FerryPage";
+import { chooseMenuEntry, menuTriggerIn } from "../../__tests__/helpers/menu";
 
 const renderPage = (url = "/"): void => {
   render(
@@ -172,7 +173,7 @@ describe("FerryPage", () => {
     list.mockResolvedValue(page(rideFixture(), second));
     renderPage();
     const row = await screen.findByTestId("ferry-row-r1");
-    fireEvent.click(within(row).getByRole("button", { name: "Überfahrt bearbeiten" }));
+    chooseMenuEntry(menuTriggerIn(row), "Überfahrt bearbeiten");
     expect(screen.getByTestId("ferry-form")).toHaveTextContent("r1");
     expect(navigate).not.toHaveBeenCalled();
     fireEvent.click(row);

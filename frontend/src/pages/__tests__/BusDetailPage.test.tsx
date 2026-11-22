@@ -95,6 +95,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 }));
 
 import BusDetailPage from "../BusDetailPage";
+import { chooseMenuEntry } from "../../__tests__/helpers/menu";
 
 async function renderPage(loaded: BusJourney | Error, url = "/bus/r1"): Promise<void> {
   if (loaded instanceof Error) getMock.mockRejectedValue(loaded);
@@ -177,7 +178,7 @@ describe("BusDetailPage", () => {
         geometry: { outcome: "routed", geometrySource: "road", fallback: null },
       });
       await renderPage(rideFixture());
-      fireEvent.click(await screen.findByRole("button", { name: "Über die Straße berechnen" }));
+      chooseMenuEntry(await screen.findByTestId("bus-route-menu"), "Über die Straße berechnen");
       expect(await screen.findByTestId("bus-route-message")).toHaveTextContent(
         "Über die Straße berechnet: 214 km."
       );
@@ -195,7 +196,7 @@ describe("BusDetailPage", () => {
         },
       });
       await renderPage(rideFixture());
-      fireEvent.click(await screen.findByRole("button", { name: "Über die Straße berechnen" }));
+      chooseMenuEntry(await screen.findByTestId("bus-route-menu"), "Über die Straße berechnen");
       const message = await screen.findByTestId("bus-route-message");
       expect(message).toHaveTextContent(
         "Ein Terminal liegt zu weit von der nächsten Straße entfernt."
@@ -207,7 +208,7 @@ describe("BusDetailPage", () => {
     it("words a failed request instead of failing silently", async () => {
       routeAgainMock.mockRejectedValue(new Error("Network Error"));
       await renderPage(rideFixture());
-      fireEvent.click(await screen.findByRole("button", { name: "Über die Straße berechnen" }));
+      chooseMenuEntry(await screen.findByTestId("bus-route-menu"), "Über die Straße berechnen");
       expect(await screen.findByTestId("bus-route-message")).toHaveTextContent(
         "Die Berechnung ist nicht angekommen"
       );

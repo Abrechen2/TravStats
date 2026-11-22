@@ -26,7 +26,12 @@
     "test": "Test connection",
     "run": "Check now",
     "remove": "Remove",
-    "privateNote": "Only public servers are allowed; a server on your own network cannot be entered here."
+    "privateNote": "Only public servers are allowed; a server on your own network cannot be entered here.",
+    "menuLabel": "More mailbox actions",
+    "removeConfirm": {
+      "title": "Remove the folder?",
+      "message": "The connection to the folder “{{folder}}” is deleted, together with the stored password. Your mail is left untouched."
+    }
   },
   "status": {
     "never": "Never checked.",
@@ -73,7 +78,17 @@
     "noSenders": "No sender allowed yet – mail to your address is rejected.",
     "senderPlaceholder": "you@example.com",
     "senderAdd": "Allow",
-    "senderRemove": "Remove"
+    "senderRemove": "Remove",
+    "menuLabel": "More forwarding-address actions",
+    "senderMenuLabel": "More actions for sender {{name}}",
+    "revokeConfirm": {
+      "title": "Revoke the address?",
+      "message": "The forwarding address {{address}} stops working; mail sent to it is discarded."
+    },
+    "senderRemoveConfirm": {
+      "title": "Remove the sender?",
+      "message": "Mail from {{address}} is no longer accepted."
+    }
   },
   "inbox": {
     "title": "From your mail",

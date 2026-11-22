@@ -58,9 +58,7 @@ describe("LifeBookRow", () => {
     api.build.mockResolvedValue(result);
     api.download.mockResolvedValue(new Blob(["x"]));
     render(<LifeBookRow />);
-    fireEvent.change(screen.getByLabelText("settings:lifeBook.scope"), {
-      target: { value: "trip" },
-    });
+    fireEvent.click(screen.getByRole("radio", { name: "settings:lifeBook.scopeTrip" }));
     const button = screen.getByRole("button", { name: "settings:lifeBook.button" });
     expect(button).toBeDisabled();
     await screen.findByText("Lissabon");
@@ -69,6 +67,18 @@ describe("LifeBookRow", () => {
     fireEvent.click(button);
     await waitFor(() => expect(api.build).toHaveBeenCalled());
     expect(api.build.mock.calls[0][0]).toEqual({ scope: "trip", tripId: "t1" });
+  });
+
+  it("offers the scope as Alles / Jahr / Reise and shows the year or trip picker only for its scope", () => {
+    api.getEvery.mockResolvedValue([]);
+    render(<LifeBookRow />);
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
+    expect(screen.getByRole("radio", { name: "settings:lifeBook.scopeAll" })).toBeChecked();
+    expect(screen.queryByLabelText("settings:lifeBook.year")).toBeNull();
+    expect(screen.queryByLabelText("settings:lifeBook.trip")).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "settings:lifeBook.scopeYear" }));
+    expect(screen.getByLabelText("settings:lifeBook.year")).toBeInTheDocument();
+    expect(screen.queryByLabelText("settings:lifeBook.trip")).toBeNull();
   });
 
   it("says visibly when photos are missing from the finished book", async () => {

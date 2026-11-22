@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { isAxiosError } from "axios";
-import Button from "../ui/Button";
+import RouteMenu from "../detail/RouteMenu";
 import { railApi } from "../../lib/api/rail";
 import { useTranslation } from "../../hooks/useTranslation";
 import { geometryNotice } from "./railFormModel";
@@ -9,15 +9,17 @@ export function RailRouteRefresh({
   id,
   source,
   onUpdated,
+  geoExport,
 }: {
   id: string;
   source: string;
   onUpdated: () => void;
+  /** The line's GPX/KML export, which shares the route card's ⋯. */
+  geoExport?: { path: string; testId: string };
 }): JSX.Element | null {
   const { t } = useTranslation(["rail"]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  if (source === "manual") return null;
   const refresh = async () => {
     setBusy(true);
     try {
@@ -47,11 +49,26 @@ export function RailRouteRefresh({
       setBusy(false);
     }
   };
+  // A hand-drawn route is never replaced automatically, so it offers no refresh — only the export.
   return (
-    <div className="mb-4">
-      <Button disabled={busy} onClick={() => void refresh()}>
-        {t(busy ? "rail:routeRefresh.busy" : "rail:routeRefresh.action")}
-      </Button>
+    <div className="mt-2">
+      <RouteMenu
+        label={t("rail:routeRefresh.menuLabel")}
+        testId="rail-route-menu"
+        entries={
+          source === "manual"
+            ? []
+            : [
+                {
+                  key: "refresh",
+                  label: t(busy ? "rail:routeRefresh.busy" : "rail:routeRefresh.action"),
+                  disabled: busy,
+                  onSelect: () => void refresh(),
+                },
+              ]
+        }
+        geoExport={geoExport}
+      />
       {message && (
         <p role="status" className="mt-2 text-sm">
           {message}

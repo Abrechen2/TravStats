@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import OverflowMenu from "../ui/OverflowMenu";
 import ConfirmModal from "../ui/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { formatInProfileZone } from "../../lib/profileInstant";
@@ -189,22 +190,26 @@ export default function TourTrackList({
               {track.ascentM !== null && (
                 <span className="text-(--text-muted)">↑ {Math.round(track.ascentM)} m</span>
               )}
-              {onDownload && (
-                <button
-                  type="button"
-                  className="text-xs underline"
-                  onClick={() => onDownload(track)}
-                >
-                  {t("roadtrips:trackArchive.downloadOne")}
-                </button>
-              )}
-              <button
-                type="button"
-                className="text-xs underline"
-                onClick={() => setPendingDelete(track)}
-              >
-                {t("trips:tours.tracks.deleteLabel")}
-              </button>
+              <OverflowMenu
+                label={t("trips:tours.tracks.menuLabel")}
+                entries={[
+                  ...(onDownload
+                    ? [
+                        {
+                          key: "download",
+                          label: t("roadtrips:trackArchive.downloadOne"),
+                          onSelect: () => onDownload(track),
+                        },
+                      ]
+                    : []),
+                  {
+                    key: "delete",
+                    label: t("trips:tours.tracks.deleteLabel"),
+                    danger: true,
+                    onSelect: () => setPendingDelete(track),
+                  },
+                ]}
+              />
             </li>
           ))}
         </ul>

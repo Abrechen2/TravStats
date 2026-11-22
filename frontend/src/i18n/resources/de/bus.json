@@ -371,7 +371,8 @@
       "timeout": "Der Fahrplan-Dienst (Transitous) hat nicht rechtzeitig geantwortet.",
       "unavailable": "Der Fahrplan-Dienst (Transitous) ist gerade nicht erreichbar."
     },
-    "savedKeptLine": "Gespeichert. Die Linie konnte nicht neu aus dem Fahrplan geholt werden: {{reason}} Die gespeicherte Linie bleibt."
+    "savedKeptLine": "Gespeichert. Die Linie konnte nicht neu aus dem Fahrplan geholt werden: {{reason}} Die gespeicherte Linie bleibt.",
+    "menuLabel": "Weitere Aktionen zur Route"
   },
   "import": {
     "title": "Busticket einlesen",

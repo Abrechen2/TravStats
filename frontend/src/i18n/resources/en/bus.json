@@ -371,7 +371,8 @@
       "timeout": "The timetable service (Transitous) did not answer in time.",
       "unavailable": "The timetable service (Transitous) is not reachable right now."
     },
-    "savedKeptLine": "Saved. The line could not be fetched from the timetable again: {{reason}} The stored line stays."
+    "savedKeptLine": "Saved. The line could not be fetched from the timetable again: {{reason}} The stored line stays.",
+    "menuLabel": "More route actions"
   },
   "import": {
     "title": "Read coach ticket",

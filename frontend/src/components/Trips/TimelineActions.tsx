@@ -13,6 +13,7 @@ import {
 } from "../../lib/api/openData";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
+import OverflowMenu from "../ui/OverflowMenu";
 import { useToastStore } from "../../store/toastStore";
 import type { TripJournalEntry } from "../../types";
 
@@ -127,16 +128,22 @@ export default function TimelineActions({
           }}
         />
       )}
+      {/* The weather fill is rare (once, for entries written before open data): a section ⋯
+          (owner, 2026-11-22), so the row keeps its two adding actions. */}
       {openData && missing && (
-        <button
-          type="button"
-          onClick={() => void fillWeather()}
-          disabled={filling}
-          className={BUTTON}
-          style={style}
-        >
-          {filling ? t("openData:weather.filling") : t("openData:weather.fill")}
-        </button>
+        <OverflowMenu
+          label={t("trips:detail.timeline.menuLabel")}
+          testId="timeline-menu"
+          entries={[
+            {
+              key: "weather",
+              testId: "timeline-fill-weather",
+              label: filling ? t("openData:weather.filling") : t("openData:weather.fill"),
+              disabled: filling,
+              onSelect: () => void fillWeather(),
+            },
+          ]}
+        />
       )}
     </div>
   );

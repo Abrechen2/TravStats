@@ -73,6 +73,7 @@ describe("LodgingStayCard — deleting a stay", () => {
     const user = userEvent.setup();
     render(<LodgingStayCard stay={baseStay} onEdit={vi.fn()} onDelete={onDelete} />);
 
+    await user.click(screen.getByTestId("stay-menu-stay-7"));
     const button = screen.getByTestId("stay-delete-stay-7");
     expect(button).toHaveTextContent("common:buttons.delete");
 
@@ -82,17 +83,17 @@ describe("LodgingStayCard — deleting a stay", () => {
   });
 
   /**
-   * A row is not the place for a red primary.
-   *
-   * Repeated down a list of stays it reads as what the row is FOR, and the
-   * consequence it warns about is not stated anywhere near it. The red belongs
-   * to the confirmation, which does state it.
+   * A row is not the place for a red primary: delete lives in the card's ⋯, last, where the
+   * consequence is stated by the confirmation and not by a button repeated down a list.
    */
-  it("keeps the row action quiet — no danger background, no primary weight", () => {
+  it("keeps delete out of the card until its ⋯ is opened, and draws it last and red there", async () => {
+    const user = userEvent.setup();
     render(<LodgingStayCard stay={baseStay} onEdit={vi.fn()} onDelete={vi.fn()} />);
 
-    const className = screen.getByTestId("stay-delete-stay-7").className;
-    expect(className).not.toMatch(/bg-\[var\(--danger\)\]/);
-    expect(className).not.toMatch(/btn-primary/);
+    expect(screen.queryByTestId("stay-delete-stay-7")).not.toBeInTheDocument();
+    await user.click(screen.getByTestId("stay-menu-stay-7"));
+    const items = screen.getAllByRole("menuitem");
+    expect(items[items.length - 1]).toBe(screen.getByTestId("stay-delete-stay-7"));
+    expect(items[items.length - 1]?.style.color).toBe("var(--ts-bad)");
   });
 });

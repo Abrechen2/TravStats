@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import CruiseRowActions from "./CruiseRowActions";
 import type { Cruise } from "../../types";
@@ -17,24 +18,27 @@ describe("CruiseRowActions", () => {
     const onDelete = vi.fn();
     const onRow = vi.fn();
     render(
-      <table>
-        <tbody>
-          <tr onClick={onRow}>
-            <td>
-              <CruiseRowActions
-                cruise={cruise}
-                onEdit={onEdit}
-                onDuplicate={onDuplicate}
-                onDelete={onDelete}
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <MemoryRouter>
+        <table>
+          <tbody>
+            <tr onClick={onRow}>
+              <td>
+                <CruiseRowActions
+                  cruise={cruise}
+                  onEdit={onEdit}
+                  onDuplicate={onDuplicate}
+                  onDelete={onDelete}
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </MemoryRouter>
     );
-    await userEvent.click(screen.getByRole("button", { name: "common:buttons.edit" }));
-    await userEvent.click(screen.getByRole("button", { name: "cruise:list.duplicate" }));
-    await userEvent.click(screen.getByRole("button", { name: "common:buttons.delete" }));
+    for (const name of ["common:buttons.edit", "cruise:list.duplicate", "common:buttons.delete"]) {
+      await userEvent.click(screen.getByTestId("cruise-menu-c1"));
+      await userEvent.click(screen.getByRole("menuitem", { name }));
+    }
     expect(onEdit).toHaveBeenCalledWith(cruise);
     expect(onDuplicate).toHaveBeenCalledWith(cruise);
     expect(onDelete).toHaveBeenCalledWith("c1");

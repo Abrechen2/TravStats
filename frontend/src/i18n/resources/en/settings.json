@@ -420,9 +420,9 @@
     "help": "One HTML file with all trips, days, maps, photos and evidence of the chosen scope. It needs no internet and no JavaScript. To print or save as PDF: open it in the browser and choose Print (A4, one trip per page).",
     "button": "Create life book",
     "scope": "Scope",
-    "scopeAll": "Everything",
-    "scopeYear": "One year",
-    "scopeTrip": "One trip",
+    "scopeAll": "All",
+    "scopeYear": "Year",
+    "scopeTrip": "Trip",
     "year": "Year",
     "trip": "Trip",
     "pickTrip": "Choose a trip",
@@ -1030,7 +1030,8 @@
       "amount_other": "{{count}} signed-out or expired phones",
       "after": "Active phones stay connected.",
       "confirm": "Remove all"
-    }
+    },
+    "menuLabel": "More actions for device {{name}}"
   },
   "apiTokens": {
     "title": "API keys",
@@ -1092,7 +1093,8 @@
       "amount_other": "{{count}} revoked or expired keys",
       "after": "Active keys stay in place.",
       "confirm": "Remove all"
-    }
+    },
+    "menuLabel": "More actions for token {{name}}"
   },
   "security": {
     "title": "Sign-in",

@@ -60,7 +60,8 @@
     "sourceLabel": "Fotoquelle",
     "partialLink": "Ein Teil der Alben konnte nicht verknüpft werden: {{reason}}",
     "badgePhotoprism": "PhotoPrism",
-    "badgeImmich": "Immich"
+    "badgeImmich": "Immich",
+    "menuLabel": "Weitere Aktionen zum Album {{name}}"
   },
   "gallery": {
     "uploaded": "Hochgeladen",

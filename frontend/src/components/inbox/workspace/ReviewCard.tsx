@@ -12,6 +12,7 @@ import {
   flagUnchangedKey,
 } from "../../DataQuality/flagSubject";
 import Button from "../../ui/Button";
+import OverflowMenu from "../../ui/OverflowMenu";
 import FlagQuickEditor, { type InboxAction } from "./FlagQuickEditor";
 import { W } from "./model";
 
@@ -58,7 +59,7 @@ export default function ReviewCard({
   busy: boolean;
   act: InboxAction;
 }) {
-  const { t, i18n } = useTranslation(["dataQuality"]);
+  const { t, i18n } = useTranslation(["dataQuality", "common"]);
   const group = flagQuestionGroup(flag);
   const path = flagSubjectPath(flag);
   const label = flagSubjectLabel(
@@ -94,70 +95,7 @@ export default function ReviewCard({
         <fieldset disabled={busy} className="min-w-0 space-y-4">
           <legend className="t-label-mono mb-2">{t(`${W}.yourAnswer`)}</legend>
           <FlagQuickEditor flag={flag} busy={busy} act={act} />
-          {flag.actions?.includes("link") && (
-            <div>
-              <Button
-                variant="primary"
-                disabled={busy}
-                onClick={() =>
-                  void act(
-                    () =>
-                      dataQualityFlagsApi.resolve(flag.id, {
-                        action: "link",
-                        revision: flag.revision,
-                      }),
-                    false,
-                    t("dataQuality:inbox.messages.linked")
-                  )
-                }
-              >
-                {t("dataQuality:flag.actions.link.label")}
-              </Button>
-              <p className="t-caption mt-1">{t("dataQuality:flag.actions.link.hint")}</p>
-            </div>
-          )}
-          {flag.actions?.includes("convert") && (
-            <div>
-              <Button
-                variant="primary"
-                disabled={busy}
-                onClick={() =>
-                  void act(
-                    () =>
-                      dataQualityFlagsApi.resolve(flag.id, {
-                        action: "convert",
-                        revision: flag.revision,
-                      }),
-                    false,
-                    t("dataQuality:inbox.messages.converted")
-                  )
-                }
-              >
-                {t("dataQuality:flag.actions.convert.label")}
-              </Button>
-              <p className="t-caption mt-1">{t("dataQuality:flag.actions.convert.hint")}</p>
-            </div>
-          )}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <Button
-                variant="primary"
-                disabled={busy}
-                onClick={() =>
-                  void act(
-                    () =>
-                      flag.revision === undefined
-                        ? dataQualityFlagsApi.resolve(flag.id)
-                        : dataQualityFlagsApi.resolve(flag.id, { revision: flag.revision }),
-                    false,
-                    t("dataQuality:inbox.messages.resolved")
-                  )
-                }
-              >
-                {t("dataQuality:flag.actions.resolve.label")}
-              </Button>
-              <p className="t-caption mt-1">{t("dataQuality:flag.actions.resolve.hint")}</p>
-            </div>
+          <div className="flex flex-wrap items-start gap-3">
             <div>
               <Button
                 disabled={busy}
@@ -173,6 +111,68 @@ export default function ReviewCard({
               </Button>
               <p className="t-caption mt-1">{t("dataQuality:flag.actions.dismiss.hint")}</p>
             </div>
+            {/* The other answers, each with its consequence as the entry's hint: the difference
+                between them only matters at the moment of choosing (owner, 2026-11-22: card ⋯). */}
+            <OverflowMenu
+              label={t(`${W}.moreAnswers`)}
+              triggerLabel={t("common:buttons.more")}
+              testId="review-card-menu"
+              disabled={busy}
+              entries={[
+                ...(flag.actions?.includes("link")
+                  ? [
+                      {
+                        key: "link",
+                        label: t("dataQuality:flag.actions.link.label"),
+                        hint: t("dataQuality:flag.actions.link.hint"),
+                        onSelect: () =>
+                          void act(
+                            () =>
+                              dataQualityFlagsApi.resolve(flag.id, {
+                                action: "link",
+                                revision: flag.revision,
+                              }),
+                            false,
+                            t("dataQuality:inbox.messages.linked")
+                          ),
+                      },
+                    ]
+                  : []),
+                ...(flag.actions?.includes("convert")
+                  ? [
+                      {
+                        key: "convert",
+                        label: t("dataQuality:flag.actions.convert.label"),
+                        hint: t("dataQuality:flag.actions.convert.hint"),
+                        onSelect: () =>
+                          void act(
+                            () =>
+                              dataQualityFlagsApi.resolve(flag.id, {
+                                action: "convert",
+                                revision: flag.revision,
+                              }),
+                            false,
+                            t("dataQuality:inbox.messages.converted")
+                          ),
+                      },
+                    ]
+                  : []),
+                {
+                  key: "resolve",
+                  label: t("dataQuality:flag.actions.resolve.label"),
+                  hint: t("dataQuality:flag.actions.resolve.hint"),
+                  onSelect: () =>
+                    void act(
+                      () =>
+                        flag.revision === undefined
+                          ? dataQualityFlagsApi.resolve(flag.id)
+                          : dataQualityFlagsApi.resolve(flag.id, { revision: flag.revision }),
+                      false,
+                      t("dataQuality:inbox.messages.resolved")
+                    ),
+                },
+              ]}
+            />
           </div>
           <Button disabled={busy} onClick={() => void act(() => dataQualityFlagsApi.run())}>
             {t(`${W}.recheck`)}

@@ -421,8 +421,8 @@
     "button": "Lebensbuch erstellen",
     "scope": "Bereich",
     "scopeAll": "Alles",
-    "scopeYear": "Ein Jahr",
-    "scopeTrip": "Eine Reise",
+    "scopeYear": "Jahr",
+    "scopeTrip": "Reise",
     "year": "Jahr",
     "trip": "Reise",
     "pickTrip": "Reise wählen",
@@ -1030,7 +1030,8 @@
       "amount_other": "{{count}} abgemeldete oder abgelaufene Telefone",
       "after": "Aktive Telefone bleiben verbunden.",
       "confirm": "Alle entfernen"
-    }
+    },
+    "menuLabel": "Weitere Aktionen zum Gerät {{name}}"
   },
   "apiTokens": {
     "title": "API-Schlüssel",
@@ -1092,7 +1093,8 @@
       "amount_other": "{{count}} zurückgezogene oder abgelaufene Schlüssel",
       "after": "Aktive Schlüssel bleiben bestehen.",
       "confirm": "Alle entfernen"
-    }
+    },
+    "menuLabel": "Weitere Aktionen zum Token {{name}}"
   },
   "security": {
     "title": "Anmeldung",

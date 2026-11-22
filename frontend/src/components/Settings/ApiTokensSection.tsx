@@ -1,3 +1,4 @@
+import OverflowMenu from "../ui/OverflowMenu";
 import Modal from "../Modal";
 /**
  * Personal Access Token (PAT) management UI.
@@ -267,14 +268,18 @@ export default function ApiTokensSection(): JSX.Element {
                             : t("settings:apiTokens.expired")}
                         </Pill>
                         {!isDemo && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemove(tok.id, tok.label)}
-                            className="btn-secondary"
-                            style={{ color: "var(--ts-bad)" }}
-                          >
-                            {t("settings:apiTokens.removeButton")}
-                          </button>
+                          <OverflowMenu
+                            label={t("settings:apiTokens.menuLabel", { name: tok.label })}
+                            testId={`api-token-menu-${tok.id}`}
+                            entries={[
+                              {
+                                key: "remove",
+                                label: t("settings:apiTokens.removeButton"),
+                                danger: true,
+                                onSelect: () => void handleRemove(tok.id, tok.label),
+                              },
+                            ]}
+                          />
                         )}
                       </>
                     ) : (
@@ -283,14 +288,18 @@ export default function ApiTokensSection(): JSX.Element {
                           {t(`settings:apiTokens.scopesShort.${tok.scope}`)}
                         </Pill>
                         {!isDemo && (
-                          <button
-                            type="button"
-                            onClick={() => handleRevoke(tok.id, tok.label)}
-                            className="btn-secondary"
-                            style={{ color: "var(--ts-bad)" }}
-                          >
-                            {t("settings:apiTokens.revokeButton")}
-                          </button>
+                          <OverflowMenu
+                            label={t("settings:apiTokens.menuLabel", { name: tok.label })}
+                            testId={`api-token-menu-${tok.id}`}
+                            entries={[
+                              {
+                                key: "revoke",
+                                label: t("settings:apiTokens.revokeButton"),
+                                danger: true,
+                                onSelect: () => void handleRevoke(tok.id, tok.label),
+                              },
+                            ]}
+                          />
                         )}
                       </>
                     )

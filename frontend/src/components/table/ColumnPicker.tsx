@@ -16,6 +16,33 @@ interface ColumnPickerProps {
   prefs: ColumnPrefs;
 }
 
+/** The checkboxes alone — the picker's dropdown and the list header ⋯'s dialog both draw them. */
+export function ColumnChecklist({ columns, prefs }: ColumnPickerProps): JSX.Element {
+  return (
+    <>
+      {columns.map((col) => (
+        <label
+          key={col.id}
+          className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm pointer-coarse:min-h-(--ts-size-touch-min) ${
+            col.always
+              ? "cursor-not-allowed text-[var(--text-muted)]"
+              : "cursor-pointer text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={col.always || prefs.isVisible(col.id)}
+            disabled={col.always}
+            onChange={() => prefs.toggle(col.id)}
+            data-testid={`column-toggle-${col.id}`}
+          />
+          {col.label}
+        </label>
+      ))}
+    </>
+  );
+}
+
 /**
  * "Spalten ▾" dropdown shared by the domain list tables — one checkbox per
  * column, identity columns pinned. Same visual idiom as the other toolbar
@@ -59,25 +86,7 @@ export function ColumnPicker({ columns, prefs }: ColumnPickerProps): JSX.Element
           className="absolute right-0 z-30 mt-1 w-56 rounded-md border border-[var(--color-border)] p-2 shadow-lg"
           style={{ background: "var(--bg-elevated)" }}
         >
-          {columns.map((col) => (
-            <label
-              key={col.id}
-              className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm ${
-                col.always
-                  ? "cursor-not-allowed text-[var(--text-muted)]"
-                  : "cursor-pointer text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={col.always || prefs.isVisible(col.id)}
-                disabled={col.always}
-                onChange={() => prefs.toggle(col.id)}
-                data-testid={`column-toggle-${col.id}`}
-              />
-              {col.label}
-            </label>
-          ))}
+          <ColumnChecklist columns={columns} prefs={prefs} />
         </div>
       )}
     </div>

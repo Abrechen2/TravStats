@@ -31,7 +31,7 @@ import { DOCUMENT_FORMAT_ICON, exceededDocumentLimit } from "./documentDisplay";
 import { ExtractValuesDialog } from "./ExtractValuesAction";
 import { StoredValuesDialog } from "./StoredValuesAction";
 import { EntryLink, linkErrorKey } from "./documentLinkUi";
-import { DocumentPerson } from "./DocumentPerson";
+import { DocumentPerson, DocumentPersonDialog } from "./DocumentPerson";
 import { TravellersPanel } from "./TravellersPanel";
 import { useEntryTravellers } from "../../hooks/useEntryTravellers";
 import { isTravellerEntryType } from "../../lib/api/entryTravellers";
@@ -144,7 +144,7 @@ export default function DocumentsSection({
   const [tripDialog, setTripDialog] = useState(false);
   // The row menu's entries that open a dialog of their own.
   const [rowDialog, setRowDialog] = useState<{
-    kind: "stored" | "extract" | "category";
+    kind: "stored" | "extract" | "category" | "person";
     doc: TravelDocument;
   } | null>(null);
   /** The last removal from this entry, which "Rückgängig" puts back. */
@@ -440,6 +440,15 @@ export default function DocumentsSection({
           },
         ]
       : []),
+    ...(people.travellers.length > 0 && doc.forSource !== undefined
+      ? [
+          {
+            key: "person",
+            label: t("documents:person.rowAction"),
+            onSelect: () => setRowDialog({ kind: "person", doc }),
+          },
+        ]
+      : []),
     { key: "link", label: t("documents:links.alsoLinkAction"), onSelect: () => setLinkTarget(doc) },
     ...(doc.viaExpense
       ? []
@@ -507,12 +516,7 @@ export default function DocumentsSection({
           />
         )}
       </div>
-      <DocumentPerson
-        doc={doc}
-        travellers={people.travellers}
-        disabled={busy || locked}
-        onPick={(companionId) => void handlePerson(doc, companionId)}
-      />
+      <DocumentPerson doc={doc} />
       {doc.linkRole === "covers" && doc.evidenceFrom && (
         <p className="t-caption" data-testid="document-evidence-from">
           {t("documents:links.evidenceFrom")}{" "}
@@ -735,6 +739,15 @@ export default function DocumentsSection({
             }}
           />
         </Modal>
+      )}
+      {rowDialog?.kind === "person" && (
+        <DocumentPersonDialog
+          doc={rowDialog.doc}
+          travellers={people.travellers}
+          disabled={busy}
+          onClose={() => setRowDialog(null)}
+          onPick={(companionId) => void handlePerson(rowDialog.doc, companionId)}
+        />
       )}
       {linkTarget && (
         <LinkDocumentDialog
