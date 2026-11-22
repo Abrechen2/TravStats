@@ -38,9 +38,11 @@ import {
 import { testAdsbLolKey, testAdsbxKey, testAirplanesLive } from "../apiKeyTesterAdsbx";
 import { testAeroapiKey } from "../apiKeyTesterAeroapi";
 import { getService } from "./catalogue";
-import { loadAdminState, isEnabled } from "./adminView";
-import { offReasonFor } from "./policy";
-import { recordTest, type LastTest } from "./tests";
+import { loadAdminState, isEnabled, isCloudAi } from "./adminView";
+import { effectiveSourceFor, isEnabledForConsent } from "./accountView";
+import { currentConsentDestination } from "./consentBinding";
+import { offReasonFor, parsePrefs } from "./policy";
+import { loadAllTests, recordTest, type LastTest } from "./tests";
 import type { FieldDef, ServiceDef } from "./types";
 
 export interface TestOutcome {
@@ -48,7 +50,11 @@ export interface TestOutcome {
   reason: string | null;
   /** Whether the test spent provider quota (metered APIs answer a real request). */
   usedQuota: boolean;
+  /** Whose credential was used; "none" when nothing was called. */
+  source: "account" | "instance" | "none";
   lastTest: LastTest | null;
+  /** Set when nothing was called: `lastTest` is the admin's stored verdict on the instance key. */
+  storedInstanceVerdict?: boolean;
 }
 
 /** Testers that answer a real, metered API request. */
@@ -87,6 +93,10 @@ export const TEST_REASONS = [
   "network",
   "http_error",
   "not_found",
+  "not_configured",
+  "no_instance_key",
+  "no_admin_test",
+  "http_404",
   "disabled",
   "unknown",
 ] as const;
@@ -95,7 +105,10 @@ export type TestReason = (typeof TEST_REASONS)[number];
 const REASON_BY_KEY: Record<string, TestReason> = {
   invalid: "auth",
   noKey: "auth",
-  notConfigured: "not_found",
+  // "Nothing to test" is not "nothing found at the address".
+  notConfigured: "not_configured",
+  noInstanceKey: "no_instance_key",
+  notFound: "http_404",
   notTestable: "unknown",
   openskyMissingCredentials: "auth",
   openskyInvalid: "auth",
@@ -113,6 +126,14 @@ export function toReasonCode(raw: string | null | undefined): TestReason {
   return (raw && REASON_BY_KEY[raw]) || "unknown";
 }
 
+/** A provider's HTTP 404 has its own reason: neither "unexpected answer" nor "no such address". */
+function keyFailureReason(r: ApiKeyTestResult): TestReason {
+  if (r.messageKey === "unexpectedStatus" && Number(r.messageParams?.status) === 404) {
+    return "http_404";
+  }
+  return toReasonCode(r.messageKey);
+}
+
 const notConfigured = (): ApiKeyTestResult => ({
   success: false,
   message: "No credential configured to test.",
@@ -126,7 +147,7 @@ async function run(
 ): Promise<{ ok: boolean; reason: string | null }> {
   const fromKeyResult = (r: ApiKeyTestResult) => ({
     ok: r.success,
-    reason: r.success ? null : toReasonCode(r.messageKey),
+    reason: r.success ? null : keyFailureReason(r),
   });
   const keyed = async (fn: (k: string, u?: string) => Promise<ApiKeyTestResult>) =>
     fromKeyResult(c.apiKey ? await fn(c.apiKey, userId) : notConfigured());
@@ -168,14 +189,14 @@ async function run(
         )
       );
     case "photoprism": {
-      if (!c.baseUrl || !c.token) return { ok: false, reason: "not_found" };
+      if (!c.baseUrl || !c.token) return { ok: false, reason: "not_configured" };
       const policy = { allowPrivate: userId ? await accountMayReachPrivate(userId) : true };
       const r = await testPhotoprismConnection(c.baseUrl, c.token, policy);
       return { ok: r.success, reason: r.success ? null : toReasonCode(r.kind) };
     }
     case "immich":
     case "dawarich": {
-      if (!c.baseUrl || !c.apiKey) return { ok: false, reason: "not_found" };
+      if (!c.baseUrl || !c.apiKey) return { ok: false, reason: "not_configured" };
       // The instance credential keeps LAN access; an account's own one only
       // when the account is an admin (forgejo#411).
       const policy = { allowPrivate: userId ? await accountMayReachPrivate(userId) : true };
@@ -192,7 +213,7 @@ async function run(
     case "ollama":
     case "llmCloud": {
       const target = llmTarget(service, c);
-      if (!target) return { ok: false, reason: "not_found" };
+      if (!target) return { ok: false, reason: "not_configured" };
       const probe = await llmProbe(target);
       const auth = /HTTP 40[13]\b/.test(probe.error ?? "");
       return {
@@ -231,8 +252,29 @@ function llmTarget(service: ServiceDef, c: Record<string, string | null>): LlmTa
 const disabled = (): AppError =>
   new AppError("This service is switched off; nothing was called", 409, "SERVICE_DISABLED");
 
-/** Admin test of the instance credential. */
-export async function testInstanceService(id: string): Promise<TestOutcome> {
+/** Does the instance (admin) columns hold everything the service requires? */
+function instanceHasCredential(service: ServiceDef, admin: Row): boolean {
+  return (
+    service.requiredFields.length > 0 &&
+    service.requiredFields.every((key) => {
+      const f = service.fields.find((x) => x.key === key);
+      return f
+        ? plain(f, admin) !== null || (f.kind === "switch" && admin?.[f.column] === true)
+        : false;
+    })
+  );
+}
+
+/**
+ * Admin test. By default it tests the INSTANCE credential; with an empty
+ * instance column it says so ("noInstanceKey") instead of probing. With
+ * `effective` it tests the key a request of this admin would really use, and
+ * names whose it was (the account's own first, then the instance's).
+ */
+export async function testInstanceService(
+  id: string,
+  opts: { effective?: boolean; userId?: string } = {}
+): Promise<TestOutcome> {
   const service = getService(id);
   if (!service) throw new AppError("Unknown external service", 404, "SERVICE_NOT_FOUND");
   const state = await loadAdminState();
@@ -240,22 +282,136 @@ export async function testInstanceService(id: string): Promise<TestOutcome> {
   if (!isEnabled(service, state) && !waitingForConsent) throw disabled();
   if (state.policy.disabled.includes(id)) throw disabled();
 
-  if (!service.tester) return { ok: false, reason: "unknown", usedQuota: false, lastTest: null };
+  if (!service.tester) {
+    return { ok: false, reason: "unknown", usedQuota: false, source: "none", lastTest: null };
+  }
+  const metered = METERED.has(service.tester);
+  if (opts.effective && opts.userId) {
+    const row = (await prisma.userSettings.findUnique({ where: { userId: opts.userId } })) as Row;
+    const own = creds(service.accountFields, row);
+    const ownHas =
+      service.requiredFields.length > 0 &&
+      service.requiredFields.every((k) => own[k] !== undefined && own[k] !== null) &&
+      effectiveSourceFor(service, state, parsePrefs(row?.externalServicePrefs), true) === "account";
+    if (ownHas) {
+      const outcome = await run(service, own, opts.userId);
+      const lastTest = await recordTest(opts.userId, id, outcome.ok, outcome.reason);
+      return { ...outcome, usedQuota: metered, source: "account", lastTest };
+    }
+  }
+  if (
+    !service.keyless &&
+    service.requiredFields.length > 0 &&
+    !instanceHasCredential(service, state.admin)
+  ) {
+    // Nothing is probed and nothing is recorded: there was no test.
+    return {
+      ok: false,
+      reason: "no_instance_key",
+      usedQuota: false,
+      source: "none",
+      lastTest: null,
+    };
+  }
   const outcome = await run(service, creds(service.fields, state.admin));
   const lastTest = await recordTest(null, id, outcome.ok, outcome.reason);
-  return { ...outcome, usedQuota: METERED.has(service.tester), lastTest };
+  return { ...outcome, usedQuota: metered, source: "instance", lastTest };
 }
 
-/** Account test of the account's OWN credential (never the instance's). */
+/** A test of the instance key spends the instance's quota or budget (metered API, paid AI). */
+function isInstanceMetered(service: ServiceDef): boolean {
+  return (
+    (service.tester !== undefined && METERED.has(service.tester)) || service.tester === "llmCloud"
+  );
+}
+
+async function isAdminUser(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
+  return user?.isAdmin === true;
+}
+
+/**
+ * The gates the real request path applies before it falls back to the instance
+ * key: not switched off (admin or account), enabled, and - for a cloud AI
+ * provider - released by the admin and consented to by this account.
+ * Returns the reason to refuse, or null.
+ */
+async function instanceGate(
+  service: ServiceDef,
+  state: Awaited<ReturnType<typeof loadAdminState>>,
+  prefs: ReturnType<typeof parsePrefs>
+): Promise<TestReason | null> {
+  if (effectiveSourceFor(service, state, prefs, false) !== "instance") return "disabled";
+  if (!isEnabled(service, state)) return "disabled";
+  if (service.ai && isCloudAi(service, state)) {
+    if (!isEnabledForConsent(service, state, false)) return "disabled";
+    const entry = prefs.aiConsent[service.ai.kind];
+    const bound = currentConsentDestination(state.admin, service.ai.kind);
+    if (!entry || bound === null || entry.destination !== bound) return "disabled";
+  }
+  return null;
+}
+
+/**
+ * Account test: the credential that is EFFECTIVE for this account - its own
+ * when it set one (and the admin allows it), otherwise the instance's. The
+ * outcome names which one was tested; with neither, nothing is called.
+ */
 export async function testAccountService(id: string, userId: string): Promise<TestOutcome> {
   const service = getService(id);
   if (!service || service.accountFields.length === 0) {
     throw new AppError("Unknown external service", 404, "SERVICE_NOT_FOUND");
   }
   if (await offReasonFor(id, userId)) throw disabled();
+  if (!service.tester) {
+    return { ok: false, reason: "unknown", usedQuota: false, source: "none", lastTest: null };
+  }
+  const state = await loadAdminState();
   const row = (await prisma.userSettings.findUnique({ where: { userId } })) as Row;
-  if (!service.tester) return { ok: false, reason: "unknown", usedQuota: false, lastTest: null };
-  const outcome = await run(service, creds(service.accountFields, row), userId);
+  const own = creds(service.accountFields, row);
+  const ownHas =
+    service.requiredFields.length > 0 &&
+    service.requiredFields.every((k) => own[k] !== undefined && own[k] !== null) &&
+    effectiveSourceFor(service, state, parsePrefs(row?.externalServicePrefs), true) === "account";
+  const metered = METERED.has(service.tester);
+  if (ownHas) {
+    const outcome = await run(service, own, userId);
+    const lastTest = await recordTest(userId, id, outcome.ok, outcome.reason);
+    return { ...outcome, usedQuota: metered, source: "account", lastTest };
+  }
+  if (instanceHasCredential(service, state.admin)) {
+    const gate = await instanceGate(service, state, parsePrefs(row?.externalServicePrefs));
+    if (gate) return { ok: false, reason: gate, usedQuota: false, source: "none", lastTest: null };
+    // A metered instance key is the admin's quota: an ordinary account reads the admin's
+    // last verdict instead of spending it.
+    if (isInstanceMetered(service) && !(await isAdminUser(userId))) {
+      const stored = (await loadAllTests(null)).get(id) ?? null;
+      return {
+        ok: stored?.ok ?? false,
+        reason: stored ? stored.reason : "no_admin_test",
+        usedQuota: false,
+        source: "instance",
+        lastTest: stored,
+        storedInstanceVerdict: true,
+      };
+    }
+    // The instance credential keeps the server's reach (no account egress policy).
+    const outcome = await run(service, creds(service.fields, state.admin));
+    const lastTest = await recordTest(userId, id, outcome.ok, outcome.reason);
+    return { ...outcome, usedQuota: metered, source: "instance", lastTest };
+  }
+  if (service.requiredFields.length > 0) {
+    // Neither side holds a usable credential: nothing is called, nothing is quota.
+    return {
+      ok: false,
+      reason: "not_configured",
+      usedQuota: false,
+      source: "none",
+      lastTest: null,
+    };
+  }
+  // A service with no required field (keyless) is probed as before, with the account's values.
+  const outcome = await run(service, own, userId);
   const lastTest = await recordTest(userId, id, outcome.ok, outcome.reason);
-  return { ...outcome, usedQuota: METERED.has(service.tester), lastTest };
+  return { ...outcome, usedQuota: metered, source: "account", lastTest };
 }

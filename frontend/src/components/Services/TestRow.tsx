@@ -7,6 +7,12 @@ import { isServiceDisabledError, reasonSentence } from "../ExternalServices/serv
 import { logger } from "../../lib/logger";
 import type { RowLock } from "./useLockFor";
 
+/** " · <whose key>" for a verdict that used a credential; empty when nothing was called. */
+function sourceSuffix(t: ReturnType<typeof useTranslation>["t"], source?: string): string {
+  if (source !== "account" && source !== "instance") return "";
+  return ` · ${t(`settingsRows:services.ui.testedWith.${source}`)}`;
+}
+
 /**
  * The "Verbindung prüfen" row. Nothing here is simulated: the line under it is
  * what the tester answered, kept with its time (`lastTest`), and a test that
@@ -18,6 +24,7 @@ export default function TestRow({
   run,
   lock,
   onDone,
+  effective = false,
 }: {
   lastTest: ServiceLastTest | null;
   /** The service's name, for "something other than {name} answers there". */
@@ -26,6 +33,8 @@ export default function TestRow({
   lock?: RowLock;
   /** Reload the page's data: the verdict was persisted server-side. */
   onDone: () => Promise<unknown> | void;
+  /** The row tests the key this viewer's requests really use, not the stored instance one. */
+  effective?: boolean;
 }): JSX.Element {
   const { t } = useTranslation(["settingsRows", "externalServices"]);
   const [busy, setBusy] = useState(false);
@@ -36,17 +45,34 @@ export default function TestRow({
     setFresh(null);
     try {
       const result = await run();
+      if (result.storedInstanceVerdict && result.lastTest) {
+        const ok = result.lastTest.ok;
+        setFresh({
+          ok,
+          text: t("settingsRows:services.ui.storedVerdict", {
+            result: t(
+              ok ? "settingsRows:services.ui.storedOk" : "settingsRows:services.ui.storedFailed"
+            ),
+            when: formatDateTime(result.lastTest.at),
+          }),
+        });
+        return;
+      }
       setFresh(
         result.ok
           ? {
               ok: true,
-              text: t(
-                result.usedQuota
-                  ? "externalServices:test.resultOkQuota"
-                  : "externalServices:test.resultOk"
-              ),
+              text:
+                t(
+                  result.usedQuota
+                    ? "externalServices:test.resultOkQuota"
+                    : "externalServices:test.resultOk"
+                ) + sourceSuffix(t, result.source),
             }
-          : { ok: false, text: reasonSentence(t, result.reason, name) }
+          : {
+              ok: false,
+              text: reasonSentence(t, result.reason, name) + sourceSuffix(t, result.source),
+            }
       );
     } catch (err) {
       logger.warn("service test could not run");
@@ -64,7 +90,9 @@ export default function TestRow({
 
   return (
     <SettingItem
-      title={t("settingsRows:services.tpl.test.t")}
+      title={t(
+        effective ? "settingsRows:services.ui.testEffectiveT" : "settingsRows:services.tpl.test.t"
+      )}
       sub={
         fresh
           ? undefined
@@ -77,7 +105,9 @@ export default function TestRow({
                   reason: reasonSentence(t, lastTest.reason, name),
                 })
       }
-      help={t("settingsRows:services.tpl.test.h")}
+      help={t(
+        effective ? "settingsRows:services.ui.testEffectiveH" : "settingsRows:services.tpl.test.h"
+      )}
       locked={lock}
       control={
         <ActionControl

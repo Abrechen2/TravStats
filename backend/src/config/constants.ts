@@ -110,6 +110,8 @@ export const RATE_LIMITS = {
   // Stats calculation rate limits (expensive DB aggregations)
   STATS_WINDOW_MS: 60 * 1000, // 1 minute
   STATS_MAX_REQUESTS: 30, // 30 requests per minute
+  SERVICE_TEST_WINDOW_MS: 60 * 1000, // 1 minute
+  SERVICE_TEST_MAX_REQUESTS: 10, // 10 connection tests per minute per account
   // Badge proofs fold a badge's rows many times over (forgejo#265): tighter.
   BADGE_EVIDENCE_WINDOW_MS: 60 * 1000, // 1 minute
   BADGE_EVIDENCE_MAX_REQUESTS: 10, // 10 badge proofs per minute

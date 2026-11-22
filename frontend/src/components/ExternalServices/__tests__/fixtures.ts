@@ -23,6 +23,7 @@ export function service(overrides: Partial<AdminService> & { id: string }): Admi
     enabled: true,
     configured: true,
     instanceSource: "instance",
+    effectiveSource: "instance",
     allowAccountKeys: true,
     lastTest: { at: "2026-10-30T12:14:00Z", ok: true, reason: null },
     quota: null,
@@ -51,6 +52,7 @@ export function adminOverview(): AdminExternalServices {
             allowAccountKeys: null,
             lastTest: null,
             instanceSource: "none",
+            effectiveSource: "none",
             fields: [{ key: "apiKey", kind: "secret", value: "", expert: false }],
           }),
           service({

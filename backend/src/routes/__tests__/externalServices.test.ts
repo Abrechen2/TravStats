@@ -411,6 +411,92 @@ describe("external services (forgejo#392)", () => {
     });
   });
 
+  describe("one resolved source per viewer (personal key, empty instance column)", () => {
+    const adminAirlabs = async () =>
+      (
+        await request(app).get("/api/v1/admin/external-services").set("Cookie", adminCookie)
+      ).body.categories
+        .flatMap((c: { services: unknown[] }) => c.services)
+        .find((s: { id: string }) => s.id === "airlabs");
+    const clearInstance = () =>
+      prisma.adminSettings.update({ where: { id: rowId }, data: { globalAirlabsApiKey: null } });
+    const setAdminOwn = () =>
+      prisma.userSettings.upsert({
+        where: { userId: adminId },
+        create: { userId: adminId, data: {}, airlabsApiKey: encryptApiKey("admin-own-key-123456") },
+        update: { airlabsApiKey: encryptApiKey("admin-own-key-123456") },
+      });
+
+    it("the admin row names the personal key as the source while the instance column is empty", async () => {
+      await clearInstance();
+      await setAdminOwn();
+      const row = await adminAirlabs();
+      expect(row.instanceSource).toBe("none");
+      expect(row.effectiveSource).toBe("account");
+      const acct = await request(app)
+        .get("/api/v1/settings/external-services")
+        .set("Cookie", adminCookie);
+      expect(
+        acct.body.ownKeys.find((s: { id: string }) => s.id === "airlabs").effectiveSource
+      ).toBe(row.effectiveSource);
+    });
+
+    it("the server-side test of an empty instance column says noInstanceKey, not not_found, and probes nothing", async () => {
+      await clearInstance();
+      await setAdminOwn();
+      const res = await request(app)
+        .post("/api/v1/admin/external-services/airlabs/test")
+        .set("Cookie", adminCookie);
+      expect(res.body).toMatchObject({ ok: false, reason: "no_instance_key", source: "none" });
+      expect(testAirlabsKey).not.toHaveBeenCalled();
+    });
+
+    it("the effective test uses the personal key and names it", async () => {
+      await clearInstance();
+      await setAdminOwn();
+      testAirlabsKey.mockResolvedValue({ success: true, message: "ok", messageKey: "valid" });
+      const res = await request(app)
+        .post("/api/v1/admin/external-services/airlabs/test?effective=1")
+        .set("Cookie", adminCookie);
+      expect(res.body).toMatchObject({ ok: true, source: "account" });
+      expect(testAirlabsKey).toHaveBeenCalledWith("admin-own-key-123456");
+    });
+
+    it("no key anywhere resolves to none and never answers not_found", async () => {
+      await clearInstance();
+      await prisma.userSettings.upsert({
+        where: { userId: adminId },
+        create: { userId: adminId, data: {} },
+        update: { airlabsApiKey: null },
+      });
+      process.env.AIRLABS_API_KEY = "env-only-key-123456";
+      expect((await adminAirlabs()).effectiveSource).toBe("none");
+      const res = await request(app)
+        .post("/api/v1/admin/external-services/airlabs/test?effective=1")
+        .set("Cookie", adminCookie);
+      expect(res.body.reason).toBe("no_instance_key");
+      expect(res.body.reason).not.toBe("not_found");
+    });
+
+    it("a provider 404 has its own reason, not http_error", async () => {
+      testAirlabsKey.mockResolvedValue({
+        success: false,
+        message: "Unexpected response: 404",
+        messageKey: "unexpectedStatus",
+        messageParams: { status: 404 },
+      });
+      const res = await request(app)
+        .post("/api/v1/admin/external-services/airlabs/test")
+        .set("Cookie", adminCookie);
+      expect(res.body.reason).toBe("http_404");
+    });
+
+    it("notConfigured never maps to not_found", async () => {
+      const { toReasonCode } = await import("../../services/externalServices/testRunner");
+      expect(toReasonCode("notConfigured")).toBe("not_configured");
+    });
+  });
+
   describe("cloud AI consent (invariant 4)", () => {
     const enableOpenai = () =>
       putAdmin("openai", {
@@ -555,8 +641,95 @@ describe("account service test (settings rebuild, package 6)", () => {
     expect(testAirlabsKey).toHaveBeenCalledWith("account-airlabs-key-123456");
   });
 
+  it("an admin account without its own key tests the instance key and the result names it", async () => {
+    testAirlabsKey.mockClear();
+    await prisma.user.update({ where: { id: otherId }, data: { isAdmin: true } });
+    testAirlabsKey.mockResolvedValue({ success: true });
+    await prisma.adminSettings.updateMany({
+      data: { globalAirlabsApiKey: encryptApiKey("instance-airlabs-key-123456") },
+    });
+    const res = await request(app)
+      .post("/api/v1/settings/external-services/airlabs/test")
+      .set("Cookie", otherCookie)
+      .send({});
+    expect(res.body).toMatchObject({ ok: true, source: "instance" });
+    expect(testAirlabsKey).toHaveBeenCalledWith("instance-airlabs-key-123456");
+    await prisma.user.update({ where: { id: otherId }, data: { isAdmin: false } });
+  });
+
+  it("an account that gave no AI consent is not tested through the instance's cloud AI key (gate)", async () => {
+    await prisma.adminSettings.updateMany({
+      data: { llmOpenaiApiKey: encryptApiKey("instance-openai-key-123456"), llmOpenaiOptIn: true },
+    });
+    const res = await request(app)
+      .post("/api/v1/settings/external-services/openai/test")
+      .set("Cookie", otherCookie)
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ ok: false, reason: "disabled", source: "none" });
+  });
+
+  it("a non-admin's test of a metered instance key reads the admin's stored verdict and spends nothing", async () => {
+    testAirlabsKey.mockClear();
+    await prisma.adminSettings.updateMany({
+      data: { globalAirlabsApiKey: encryptApiKey("instance-airlabs-key-123456") },
+    });
+    await prisma.externalServiceTest.deleteMany({ where: { userId: null, serviceId: "airlabs" } });
+    const none = await request(app)
+      .post("/api/v1/settings/external-services/airlabs/test")
+      .set("Cookie", otherCookie)
+      .send({});
+    expect(none.body).toMatchObject({ ok: false, reason: "no_admin_test", usedQuota: false });
+    await prisma.$executeRaw`INSERT INTO external_service_tests (id, user_id, service_id, at, ok, reason) VALUES (gen_random_uuid()::text, NULL, 'airlabs', now(), true, NULL)`;
+    const res = await request(app)
+      .post("/api/v1/settings/external-services/airlabs/test")
+      .set("Cookie", otherCookie)
+      .send({});
+    expect(res.body).toMatchObject({
+      ok: true,
+      source: "instance",
+      storedInstanceVerdict: true,
+      usedQuota: false,
+    });
+    expect(testAirlabsKey).not.toHaveBeenCalled();
+  });
+
+  it("the test route is rate limited per account", async () => {
+    const fresh = await prisma.user.create({
+      data: {
+        username: `es-limit-${Date.now()}`,
+        passwordHash: await hashPassword("pw-123456"),
+        isActive: true,
+      },
+    });
+    const freshCookie = `auth_token=${generateToken(fresh.id)}`;
+    const statuses: number[] = [];
+    for (let i = 0; i < 12; i++) {
+      statuses.push(
+        (
+          await request(app)
+            .post("/api/v1/settings/external-services/aeroapi/test")
+            .set("Cookie", freshCookie)
+            .send({})
+        ).status
+      );
+    }
+    expect(statuses).toContain(429);
+    await prisma.user.delete({ where: { id: fresh.id } });
+  });
+
+  it("an account with its own key is tested with it and the result names it", async () => {
+    testAirlabsKey.mockResolvedValue({ success: true });
+    const res = await request(app)
+      .post("/api/v1/settings/external-services/airlabs/test")
+      .set("Cookie", cookie)
+      .send({});
+    expect(res.body.source).toBe("account");
+  });
+
   it("does not test another account's key: an account without its own key gets a failed verdict, not the neighbour's result", async () => {
     testAirlabsKey.mockClear();
+    await prisma.adminSettings.updateMany({ data: { globalAirlabsApiKey: null } });
     const res = await request(app)
       .post("/api/v1/settings/external-services/airlabs/test")
       .set("Cookie", otherCookie)

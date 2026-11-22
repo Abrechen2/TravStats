@@ -80,9 +80,11 @@ registry.registerPath({
   summary: "Test a service's instance credential",
   description:
     "Runs the existing tester and persists `lastTest` (reason is a stable code). A switched-off " +
-    "service answers 409 `SERVICE_DISABLED` without calling out. `usedQuota` says whether a metered request was spent.",
+    "service answers 409 `SERVICE_DISABLED` without calling out. `usedQuota` says whether a metered request was spent. " +
+    "An empty instance credential answers `no_instance_key` without calling out; `?effective=1` tests the key this admin's " +
+    "requests really use and `source` names whose it was.",
   tags: adminTags,
-  request: { params: id },
+  request: { params: id, query: z.object({ effective: z.enum(["0", "1", "true"]).optional() }) },
   responses: {
     200: { description: "The verdict", content: json(serviceTestResponseSchema) },
     404: { description: "SERVICE_NOT_FOUND", content: errorContent },

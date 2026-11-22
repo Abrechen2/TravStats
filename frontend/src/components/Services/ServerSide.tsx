@@ -205,6 +205,21 @@ function SwitchRows({
  * server's own key or connection, whether accounts may bring theirs, the quota.
  * It reads and writes `/admin/external-services` — never the account's group.
  */
+/** Which key serves this admin's requests, said once and from the same value as the card. */
+function SourceLine({ service }: { service: AdminService }): JSX.Element | null {
+  const { t } = useTranslation(["settingsRows"]);
+  const own = service.effectiveSource === "account";
+  const instance = service.instanceSource === "instance";
+  if (!own && instance) return null;
+  if (service.effectiveSource === "off") return null;
+  const key = own ? (instance ? "sourceOwnWithInstance" : "sourceOwnInstanceEmpty") : "sourceNone";
+  return (
+    <p className="t-caption" style={{ margin: 0 }} data-testid="service-source-line">
+      {t(`settingsRows:services.ui.${key}`)}
+    </p>
+  );
+}
+
 export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Element | null {
   const { t } = useTranslation(["settingsRows", "externalServices"]);
   const { admin } = useServices();
@@ -230,6 +245,7 @@ export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Elem
           {t("settingsRows:services.ui.serverHint")}
         </p>
       </div>
+      {service && uses("test") ? <SourceLine service={service} /> : null}
       <SwitchRows card={card} service={service} connection={connection} />
       {service && cardFields.length > 0 && !ownsFields(card.id) ? (
         <FieldsGroup
@@ -286,6 +302,16 @@ export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Elem
           name={name}
           lock={demo}
           run={() => externalServicesApi.adminTest(card.id)}
+          onDone={() => admin.reload()}
+        />
+      ) : null}
+      {service && uses("test") && service.effectiveSource === "account" ? (
+        <TestRow
+          effective
+          lastTest={null}
+          name={name}
+          lock={demo}
+          run={() => externalServicesApi.adminTest(card.id, true)}
           onDone={() => admin.reload()}
         />
       ) : null}

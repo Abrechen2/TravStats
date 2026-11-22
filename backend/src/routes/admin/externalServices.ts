@@ -18,9 +18,9 @@ import { testInstanceService } from "../../services/externalServices/testRunner"
 
 const router = Router();
 
-router.get("/", async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    res.json(await buildAdminView());
+    res.json(await buildAdminView(req.userId));
   } catch (error) {
     next(error);
   }
@@ -43,7 +43,8 @@ router.post(
   "/:id/test",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      res.json(await testInstanceService(String(req.params.id)));
+      const effective = req.query.effective === "1" || req.query.effective === "true";
+      res.json(await testInstanceService(String(req.params.id), { effective, userId: req.userId }));
     } catch (error) {
       next(error);
     }
@@ -55,7 +56,7 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction): 
     const id = String(req.params.id);
     await applyAdminUpdate(id, adminServiceUpdateSchema.parse(req.body));
     // Answer with the service as it now reads, secrets masked.
-    const view = await buildAdminView();
+    const view = await buildAdminView(req.userId);
     res.json(view.categories.flatMap((c) => c.services).find((s) => s.id === id));
   } catch (error) {
     next(error);

@@ -16,6 +16,7 @@ export const admin = (id: string, over: Partial<AdminService> = {}): AdminServic
   enabled: true,
   configured: true,
   instanceSource: "instance",
+  effectiveSource: "instance",
   allowAccountKeys: true,
   lastTest: null,
   quota: null,

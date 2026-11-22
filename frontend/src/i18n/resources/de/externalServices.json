@@ -118,7 +118,10 @@
       "network": "Server nicht erreichbar",
       "http_error": "Unerwartete Antwort des Dienstes",
       "not_found": "Adresse oder Zugang nicht gefunden",
-      "unknown": "Unbekannter Fehler"
+      "unknown": "Unbekannter Fehler",
+      "no_instance_key": "kein Instanz-Schlüssel hinterlegt",
+      "http_404": "Anbieter antwortet mit 404",
+      "no_admin_test": "Admin hat den Server-Schlüssel noch nicht getestet"
     },
     "missingUrl": "Erst eine Adresse eintragen",
     "offPlain": "Ausgeschaltet"

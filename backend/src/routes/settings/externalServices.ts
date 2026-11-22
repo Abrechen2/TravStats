@@ -6,6 +6,7 @@
  */
 import { Router, Response, NextFunction } from "express";
 import { AuthRequest } from "../../middleware/auth";
+import { serviceTestLimiter } from "../../middleware/rateLimit";
 import {
   accountServiceUpdateSchema,
   aiConsentBodySchema,
@@ -44,6 +45,7 @@ router.put(
  */
 router.post(
   "/:id/test",
+  serviceTestLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       res.json(await testAccountService(String(req.params.id), req.userId!));
