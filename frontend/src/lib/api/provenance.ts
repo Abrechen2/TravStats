@@ -67,6 +67,11 @@ export const provenanceApi = {
     return data.data.notices;
   },
 
+  count: async (): Promise<number> => {
+    const { data } = await api.get<Envelope<{ count: number }>>("/provenance/notices/count");
+    return data.data.count;
+  },
+
   dismiss: async (id: string): Promise<void> => {
     await api.post(`/provenance/notices/${id}/dismiss`);
   },

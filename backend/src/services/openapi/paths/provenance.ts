@@ -98,6 +98,26 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/provenance/notices/count",
+  summary: "The inbox badge's number of memory/record contradictions",
+  tags,
+  responses: {
+    200: {
+      description: "Pending notices",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ count: z.number().int() }),
+          }),
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/provenance/notices/{id}/dismiss",
   summary: "Keep both readings: dismiss a contradiction notice",

@@ -29,11 +29,6 @@ export const SummaryQuerySchema = z.object({
   toDate: z.string().optional(),
   year: z.coerce.number().int().min(1900).max(2100).optional(),
   compareYear: z.coerce.number().int().min(1900).max(2100).optional(),
-  /** "Nur belegte": leave out flights entered from memory (spec 2026-11-22-remembered-facts). */
-  onlyRecorded: z
-    .enum(["true", "false"])
-    .optional()
-    .transform((v) => v === "true"),
 });
 
 /**

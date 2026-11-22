@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
@@ -192,6 +193,13 @@ export default function FerryDetailPage() {
           </>
         }
       />
+      <div style={{ margin: "var(--ts-space-sm) 0" }}>
+        <ProvenanceDetails
+          entryType="ferryJourney"
+          entry={ride}
+          onSaved={() => setReload((k) => k + 1)}
+        />
+      </div>
       {error && (
         <p role="alert" className="mb-4 text-sm text-(--danger)">
           {t("ferry:error")}

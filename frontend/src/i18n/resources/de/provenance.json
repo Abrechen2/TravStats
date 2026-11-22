@@ -38,5 +38,9 @@
       "load": "Die Widersprüche zwischen Erinnerung und Beleg konnten nicht geladen werden.",
       "answer": "Die Antwort konnte nicht gespeichert werden. Bitte versuche es noch einmal."
     }
+  },
+  "stats": {
+    "onlyRecorded": "Nur belegte",
+    "onlyRecordedHint": "Blendet alles aus, was aus der Erinnerung eingetragen wurde – für jede Zahl auf dieser Seite."
   }
 }

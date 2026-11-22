@@ -12,6 +12,10 @@ import type { VisitTimes } from "./times";
 
 export interface PlaceVisit {
   id: string;
+  /** "Aus der Erinnerung" (docs/superpowers/specs/2026-11-22-remembered-facts.md); absent on older servers. */
+  provenance?: "recorded" | "remembered" | null;
+  rememberedOn?: string | null;
+  rememberedNote?: string | null;
   placeId: string;
   tripId: string | null;
   /** ISO string, or null for a visit the user cannot date — which still counts. */

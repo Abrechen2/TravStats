@@ -23,7 +23,7 @@ import TripModal from "../components/Trips/TripModal";
 import { TravelPlanSummary } from "../components/Trips/TravelPlanSummary";
 import TripPackingCard from "../components/Trips/TripPackingCard";
 import TripHead from "../components/Trips/TripHead";
-import RememberedEditor from "../components/provenance/RememberedEditor";
+import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import TripOverview from "../components/Trips/TripOverview";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
 import TimelineActions from "../components/Trips/TimelineActions";
@@ -171,17 +171,9 @@ export default function TripDetailPage(): JSX.Element {
         placeCount={countTripPlaces(places.placeVisits)}
         placeVisits={places.placeVisits}
       />
-      <details className="t-caption" style={{ margin: "var(--ts-space-sm) 0" }}>
-        <summary style={{ cursor: "pointer" }}>{t("provenance:editor.legend")}</summary>
-        <div style={{ marginTop: "var(--ts-space-sm)" }}>
-          <RememberedEditor
-            entryType="trip"
-            entryId={shownTrip.id}
-            initial={shownTrip}
-            onSaved={() => void load()}
-          />
-        </div>
-      </details>
+      <div style={{ margin: "var(--ts-space-sm) 0" }}>
+        <ProvenanceDetails entryType="trip" entry={shownTrip} onSaved={() => void load()} />
+      </div>
       {/* On the overview tab the places panel carries the failure itself. */}
       {places.failed && tab !== "overview" && <TripPlacesError onRetry={places.reload} />}
       {/* A finished trip's list is a record, not a task: it waits at the end. */}

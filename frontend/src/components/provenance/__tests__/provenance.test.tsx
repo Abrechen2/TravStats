@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 
 import RememberedMarker from "../RememberedMarker";
 import RememberedEditor from "../RememberedEditor";
+import ProvenanceDetails from "../ProvenanceDetails";
 import ProvenanceNoticesSection from "../../inbox/ProvenanceNoticesSection";
 import { provenanceApi } from "../../../lib/api/provenance";
 
@@ -105,5 +106,22 @@ describe("provenance notices in the inbox", () => {
     vi.mocked(provenanceApi.notices).mockRejectedValue(new Error("down"));
     render(<ProvenanceNoticesSection />);
     expect(await screen.findByRole("alert")).toBeTruthy();
+  });
+});
+
+describe("provenance details on a detail page", () => {
+  it("tells the page after a save, so the row's marker is read again", async () => {
+    vi.mocked(provenanceApi.set).mockResolvedValue({
+      provenance: "remembered",
+      rememberedOn: null,
+      rememberedNote: null,
+    });
+    const onSaved = vi.fn();
+    render(<ProvenanceDetails entryType="lodgingStay" entry={{ id: "s-1" }} onSaved={onSaved} />);
+    const user = userEvent.setup();
+    await user.click(screen.getAllByRole("radio", { hidden: true })[2]);
+    await user.click(screen.getByRole("button", { hidden: true }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+    expect(provenanceApi.set).toHaveBeenCalledWith("lodgingStay", "s-1", expect.any(Object));
   });
 });

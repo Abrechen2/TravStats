@@ -150,12 +150,55 @@ describe("remembered facts", () => {
         await make("recorded");
         await make(null);
         const c = `auth_token=${generateToken(u)}`;
-        const all = await request(app).get("/api/v1/stats/summary").set("Cookie", c);
-        const recorded = await request(app)
-          .get("/api/v1/stats/summary?onlyRecorded=true")
-          .set("Cookie", c);
-        expect(all.body.totalFlights).toBe(3);
-        expect(recorded.body.totalFlights).toBe(2);
+        const get = (path: string) => request(app).get(`/api/v1${path}`).set("Cookie", c);
+        expect((await get("/stats/summary")).body.totalFlights).toBe(3);
+        expect((await get("/stats/summary?onlyRecorded=true")).body.totalFlights).toBe(2);
+        expect((await get("/stats/summary?onlyRecorded=false")).body.totalFlights).toBe(3);
+      } finally {
+        await prisma.user.delete({ where: { id: u } });
+      }
+    });
+
+    it("two endpoints agree under the filter: the summary total and the flight list see the same population", async () => {
+      const u = (
+        await prisma.user.create({
+          data: { username: `rf-g-${stamp}`, passwordHash: await hashPassword("test-password") },
+        })
+      ).id;
+      try {
+        for (const provenance of ["remembered", "remembered", "recorded", null]) {
+          await prisma.flight.create({
+            data: {
+              userId: u,
+              depIata: "FRA",
+              depLat: 50.03,
+              depLon: 8.56,
+              arrIata: "MUC",
+              arrLat: 48.35,
+              arrLon: 11.78,
+              status: "flown",
+              departureTime: new Date("2006-06-06T08:00:00Z"),
+              arrivalTime: new Date("2006-06-06T09:00:00Z"),
+              provenance,
+            },
+          });
+        }
+        const c = `auth_token=${generateToken(u)}`;
+        const get = (path: string) => request(app).get(`/api/v1${path}`).set("Cookie", c);
+        const rows = (body: unknown): unknown[] =>
+          Array.isArray(body) ? body : ((body as { flights: unknown[] }).flights ?? []);
+        for (const [query, expected] of [
+          ["", 4],
+          ["?onlyRecorded=true", 2],
+        ] as const) {
+          const summary = await get(`/stats/summary${query}`);
+          const list = await get(`/flights${query}`);
+          expect(list.status).toBe(200);
+          expect(summary.body.totalFlights).toBe(expected);
+          expect(rows(list.body)).toHaveLength(expected);
+        }
+        // The parameter never reaches a handler that validates its query strictly.
+        expect((await get("/flights?onlyRecorded=true&limit=1")).status).toBe(200);
       } finally {
         await prisma.user.delete({ where: { id: u } });
       }

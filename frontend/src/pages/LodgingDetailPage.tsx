@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import RememberedMarker from "../components/provenance/RememberedMarker";
-import RememberedEditor from "../components/provenance/RememberedEditor";
+import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import TagChips from "../components/common/TagChips";
 import WikipediaCard from "../components/common/WikipediaCard";
 import LodgingEnrichButton from "../components/lodging/LodgingEnrichButton";
@@ -498,20 +497,12 @@ export default function LodgingDetailPage(): JSX.Element {
                         membershipName={membershipName}
                         membershipSource={resolvedMembership.source}
                       />
-                      <RememberedMarker entry={stay} />
                       <EntryPhotos kind="stay" entryId={stay.id} />
-                      <details className="t-caption">
-                        <summary style={{ cursor: "pointer" }}>
-                          {t("provenance:editor.legend")}
-                        </summary>
-                        <div style={{ marginTop: "var(--ts-space-sm)" }}>
-                          <RememberedEditor
-                            entryType="lodgingStay"
-                            entryId={stay.id}
-                            initial={stay}
-                          />
-                        </div>
-                      </details>
+                      <ProvenanceDetails
+                        entryType="lodgingStay"
+                        entry={stay}
+                        onSaved={() => void reloadLodgingQuietly()}
+                      />
                     </div>
                   );
                 })}

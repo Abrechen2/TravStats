@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
+import { applyRecordedOnly } from "./services/provenance/recordedOnly";
 import { createPrismaClient } from "./prismaClient";
 import logger, { dbLogger } from "./utils/logger";
 import { toLoggable } from "./utils/logging/toLoggable";
@@ -129,7 +130,10 @@ export function expectingUniqueConflict<T>(model: string, run: () => Promise<T>)
  */
 export const prisma = basePrisma.$extends({
   query: {
-    async $allOperations({ model, operation, args, query }) {
+    async $allOperations({ model, operation, args: askedArgs, query }) {
+      // "Nur belegte": inside a recorded-only request every read of an entry model leaves out
+      // what was typed in from memory (services/provenance/recordedOnly.ts).
+      const args = applyRecordedOnly(model, operation, askedArgs);
       const startTime = Date.now();
       // Before the call, matching the old middleware: it recorded on the way
       // in, so a query that throws is still counted.

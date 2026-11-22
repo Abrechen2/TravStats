@@ -62,6 +62,10 @@ export type CruiseStatus = "scheduled" | "in_progress" | "completed" | "cancelle
 export type CabinType = "inside" | "oceanview" | "balcony" | "suite";
 
 export interface Cruise {
+  /** "Aus der Erinnerung" (docs/superpowers/specs/2026-11-22-remembered-facts.md); absent on older servers. */
+  provenance?: "recorded" | "remembered" | null;
+  rememberedOn?: string | null;
+  rememberedNote?: string | null;
   id: string;
   userId: string;
   /** Estimated CO2 (forgejo#395); null where the ride has no known distance. */

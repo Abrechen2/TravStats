@@ -61,6 +61,19 @@ router.get(
   }
 );
 
+/** The inbox badge's number, counted like every other inbox source. */
+router.get(
+  "/notices/count",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const notices = await listProvenanceNotices(req.userId!);
+      res.json({ success: true, data: { count: notices.length } });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 router.post(
   "/notices/:id/dismiss",
   rejectDemo,

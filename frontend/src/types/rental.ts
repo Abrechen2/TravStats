@@ -42,6 +42,10 @@ export interface RentalTimes {
 }
 
 export interface RentalBooking {
+  /** "Aus der Erinnerung" (docs/superpowers/specs/2026-11-22-remembered-facts.md); absent on older servers. */
+  provenance?: "recorded" | "remembered" | null;
+  rememberedOn?: string | null;
+  rememberedNote?: string | null;
   /** The package booking it was sold on (forgejo#430); optional — an older server sends none. */
   bookingId?: string | null;
   /** Estimated CO2 (forgejo#395); null where the ride has no known distance. */

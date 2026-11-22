@@ -53,7 +53,7 @@ import BookingItinerary from "../components/flightDetail/BookingItinerary";
 import BookingPrice from "../components/flightDetail/BookingPrice";
 import FlightProfileLink from "../components/flightDetail/FlightProfileLink";
 import RememberedMarker from "../components/provenance/RememberedMarker";
-import RememberedEditor from "../components/provenance/RememberedEditor";
+import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import { useFlightBooking } from "../components/flightDetail/useFlightBooking";
 
 /**
@@ -465,14 +465,11 @@ export default function FlightDetailPage(): JSX.Element {
           />
           <FlightProfileLink flightId={flight.id} departure={departure} />
 
-          <DetailSection title={t("provenance:editor.legend")}>
-            <RememberedEditor
-              entryType="flight"
-              entryId={flight.id}
-              initial={flight}
-              onSaved={() => setReloadKey((k) => k + 1)}
-            />
-          </DetailSection>
+          <ProvenanceDetails
+            entryType="flight"
+            entry={flight}
+            onSaved={() => setReloadKey((k) => k + 1)}
+          />
 
           <DetailSection
             title={t("flights:form.aircraft")}

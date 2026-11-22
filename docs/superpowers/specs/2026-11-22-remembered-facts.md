@@ -45,10 +45,21 @@ saving it. Minimum server version for the Companion: the release carrying this c
 
 ## Statistics
 
-Remembered entries count by default. "Nur belegte" (`onlyRecorded`) leaves out `remembered`; it
-keeps NULL (unknown) — an unknown is not a recollection, and dropping every legacy row would empty
-the page. Built for the flight summary; the other domains' totals follow the same one-line
-predicate (`provenance IS DISTINCT FROM 'remembered'`) when their stats are wired.
+Remembered entries count by default. "Nur belegte" leaves out `remembered`; it keeps NULL
+(unknown) — an unknown is not a recollection, and dropping every legacy row would empty the page.
+
+ONE filter, no per-endpoint copies: a GET carrying `?onlyRecorded=true` on the statistics page's
+routes (`/stats`, `/achievements` and the lists it computes from: flights, cruises, trips, rail,
+bus, ferry, rentals, lodging, places) opens a request scope (`services/provenance/recordedOnly.ts`);
+the Prisma query hook in `db.ts` then adds the predicate to every READ of the nine models inside
+it, and the middleware removes the parameter so strict query schemas never see it. Writes,
+`findUnique` and nested `include`s are not narrowed. Two endpoints therefore cannot disagree (a
+test pins summary total and flight list against each other).
+
+Web: `RecordedOnlyBoundary` puts one "Nur belegte" switch on the page and re-mounts it when
+flipped, so every card and hook reads again under the same filter. The switch lives only while the
+page is mounted (`lib/stats/recordedOnly.ts`; the API client adds the parameter), never persisted.
+Roadtrips and tours carry no provenance and are not narrowed.
 
 ## Contradiction notice
 
@@ -69,11 +80,9 @@ is read and after each marking.
 ## Web
 
 - `RememberedMarker`: a quiet "aus der Erinnerung" chip with the note and the date as a tooltip and
-  accessible name (not colour-only). On the trip header and the flight and stay rows.
+  accessible name (not colour-only). On every domain's detail page (`ProvenanceDetails`) and list row: trip, flight, stay, rail, bus,
+  ferry, rental, cruise, place visit.
 - `RememberedEditor`: a three-way choice (unknown / belegt / aus der Erinnerung) with the date and
   note fields, on the trip detail and the flight / stay detail.
-- Inbox: a "Erinnerung und Beleg widersprechen sich" section; DE and EN together. Full width.
-- Stats: `SummaryParams.onlyRecorded` is in the client. The "Nur belegte" switch itself is NOT on the
-  stats page yet: the page composes figures from many endpoints (`/stats/page`, per-domain stats)
-  and a switch that filters only one of them would show two populations side by side. It waits for
-  the other endpoints to take the same parameter.
+- Inbox: a "Erinnerung und Beleg widersprechen sich" section and its share of the inbox badge
+  (`GET /provenance/notices/count`); DE and EN together. Full width.

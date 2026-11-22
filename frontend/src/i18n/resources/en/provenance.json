@@ -38,5 +38,9 @@
       "load": "The conflicts between memory and record could not be loaded.",
       "answer": "The answer could not be saved. Please try again."
     }
+  },
+  "stats": {
+    "onlyRecorded": "Documented only",
+    "onlyRecordedHint": "Hides everything entered from memory – for every figure on this page."
   }
 }
