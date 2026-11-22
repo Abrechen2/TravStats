@@ -90,7 +90,7 @@ describe("a trip's bus rides, wherever the trip is read", () => {
   it("counts a bus ride and draws it on the public trip view's route", async () => {
     const trip = await loadOwnedTrip(userId, busTripId);
     const fields = new Set(["totals", "route", "countries"]) as ReadonlySet<ShareLinkField<"trip">>;
-    const view = await buildTripView(userId, trip!, fields, null, []);
+    const view = await buildTripView(trip!, fields, null, []);
     // The cancelled ride still sits on the trip, but it was never travelled: the
     // public view leaves it out like a cancelled flight, and like the trip list
     // leaves out its country (FR) in the first test above.
