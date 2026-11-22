@@ -37,6 +37,8 @@ export const SHARE_PAGE_ITINERARY_JS = `function planDays(it, fmt, T) {
     return tv.precision === "minute" ? hm(tv) + " " + fmt.zoneLabel(tv) : fmt.clock(tv);
   }
   function dayText(d) { return d ? fmt.day(d.date, d.precision) : null; }
+  // A time known only to the month or the year sits under "no date" — but says what is known.
+  function vague(tv) { return tv && !keyOfTime(tv) ? fmt.clock(tv) : null; }
   function airport(a) {
     if (a.name && a.code) return a.name + " (" + a.code + ")";
     return a.name || a.code || "?";
@@ -68,6 +70,7 @@ export const SHARE_PAGE_ITINERARY_JS = `function planDays(it, fmt, T) {
           kind: "flight", label: T.kind.flight, time: hm(item.departure), zone: zone(item.departure),
           title: join([item.airline, item.flightNumber]) || T.kind.flight,
           lines: [
+            vague(item.departure || item.arrival),
             airport(item.from) + " → " + airport(item.to),
             item.arrival ? join([T.arr, at(item.arrival), laterDay(item.departure, item.arrival)]) : null,
             item.terminal || item.gate
@@ -89,13 +92,15 @@ export const SHARE_PAGE_ITINERARY_JS = `function planDays(it, fmt, T) {
           break;
         }
         var nights = outKey ? nightsBetween(inKey, outKey) : [];
+        var sameDay = outKey === inKey;
         made.push(add(inKey, {
           kind: "stay", label: T.checkIn, time: hm(item.checkInAt), zone: zone(item.checkInAt), title: item.name,
           lines: [
             place,
-            outKey
+            outKey && !sameDay
               ? join([T.until, fmt.day(outKey), "(" + nights.length + " " + (nights.length === 1 ? T.night : T.nights) + ")"])
-              : null
+              : null,
+            sameDay ? join([T.checkOut, item.checkOutAt ? at(item.checkOutAt) : null]) : null
           ]
         }));
         nights.forEach(function (k) { dayOf(k).nights.push(item.name); });
@@ -109,7 +114,11 @@ export const SHARE_PAGE_ITINERARY_JS = `function planDays(it, fmt, T) {
       case "cruise": {
         var head = add(keyOfDay(item.start), {
           kind: "cruise", label: T.kind.cruise, time: null, zone: null, title: item.ship || item.cruiseLine || T.kind.cruise,
-          lines: [item.ship ? item.cruiseLine : null, item.end ? join([T.until, dayText(item.end)]) : null]
+          lines: [
+            keyOfDay(item.start) ? null : dayText(item.start),
+            item.ship ? item.cruiseLine : null,
+            item.end ? join([T.until, dayText(item.end)]) : null
+          ]
         }, "98");
         made.push(head);
         item.ports.forEach(function (p) {
@@ -130,6 +139,7 @@ export const SHARE_PAGE_ITINERARY_JS = `function planDays(it, fmt, T) {
           kind: item.kind, label: T.kind[item.kind], time: hm(item.departure), zone: zone(item.departure),
           title: join([item.operator, item.service]) || T.kind[item.kind],
           lines: [
+            vague(item.departure),
             item.from + " → " + item.to,
             item.arrival ? join([T.arrives, at(item.arrival), laterDay(item.departure, item.arrival)]) : null
           ]
@@ -140,27 +150,27 @@ export const SHARE_PAGE_ITINERARY_JS = `function planDays(it, fmt, T) {
         var returnKey = keyOfTime(item.return.at);
         var pickup = add(pickupKey, {
           kind: "rental", label: T.pickup, time: hm(item.pickup.at), zone: zone(item.pickup.at), title: item.provider,
-          lines: [item.pickup.station]
+          lines: [vague(item.pickup.at), item.pickup.station]
         });
         made.push(pickup);
         if (pickupKey && returnKey === pickupKey) pickup.lines.push(join([T.dropoff, item.return.station, at(item.return.at)]));
         else {
           add(returnKey, {
             kind: "rental", label: T.dropoff, time: hm(item.return.at), zone: zone(item.return.at), title: item.provider,
-            lines: [item.return.station]
+            lines: [vague(item.return.at), item.return.station]
           });
         }
         break;
       }
       case "visit":
         made.push(add(keyOfTime(item.at), {
-          kind: "visit", label: T.kind.visit, time: hm(item.at), zone: zone(item.at), title: item.name, lines: [item.city]
+          kind: "visit", label: T.kind.visit, time: hm(item.at), zone: zone(item.at), title: item.name, lines: [vague(item.at), item.city]
         }));
         break;
       case "stop":
         made.push(add(keyOfTime(item.start), {
           kind: "stop", label: T.kind.stop, time: hm(item.start), zone: zone(item.start), title: item.name,
-          lines: [item.end ? join([T.until, at(item.end)]) : null]
+          lines: [vague(item.start), item.end ? join([T.until, at(item.end)]) : null]
         }));
         break;
       default:

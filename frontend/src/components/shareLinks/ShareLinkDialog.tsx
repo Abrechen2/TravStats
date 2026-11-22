@@ -119,7 +119,7 @@ export default function ShareLinkDialog({
     setBusy(true);
     setError(null);
     try {
-      const expiresInDays = EXPIRY_CHOICES[expiry];
+      const expiresInDays = EXPIRY_CHOICES[shownExpiry];
       setCreated(await shareLinksApi.create({ kind, targetId, fields, expiresInDays }));
     } catch (err) {
       logger.error("Creating a share link failed:", err);
@@ -150,8 +150,12 @@ export default function ShareLinkDialog({
     onClose();
   };
 
+  // "Until a week after the trip" holds only while an itinerary is shown: the server's
+  // trip-end cap applies to itinerary links alone, so without one it would mean 90 days.
+  const hasItinerary = kind === "trip" && fields.some((f) => SECTIONS.includes(f));
+  const shownExpiry: ExpiryChoice = expiry === "tripEnd" && !hasItinerary ? "week" : expiry;
   const choices = (Object.keys(EXPIRY_CHOICES) as ExpiryChoice[]).filter(
-    (choice) => kind === "trip" || choice !== "tripEnd"
+    (choice) => hasItinerary || choice !== "tripEnd"
   );
   const checkbox = (field: string, describedBy?: string): JSX.Element => (
     <label key={field} className="inline-flex items-center gap-2 text-sm">
@@ -237,7 +241,7 @@ export default function ShareLinkDialog({
             <Field label={t(`${NS}.dialog.expiry`)} htmlFor="share-link-expiry">
               <Select
                 id="share-link-expiry"
-                value={expiry}
+                value={shownExpiry}
                 onChange={(e) => setExpiry(e.target.value as ExpiryChoice)}
               >
                 {choices.map((choice) => (

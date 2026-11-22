@@ -123,6 +123,29 @@ describe("ShareLinkDialog", () => {
     expect(screen.queryByText("sharing:links.dialog.expiryOptions.tripEnd")).toBeNull();
   });
 
+  it("offers 'until a week after the trip' only while an itinerary section is ticked", async () => {
+    api.create.mockResolvedValue({
+      id: "l1",
+      url: "https://example.test/share#ts_share_abc",
+      token: "ts_share_abc",
+      expiresAt: "2030-09-01T00:00:00.000Z",
+      effectiveExpiresAt: "2030-06-15T00:00:00.000Z",
+    });
+    renderDialog();
+    await screen.findByText("LH400", { exact: false });
+    for (const field of ["flights", "stays", "transport"]) {
+      await userEvent.click(
+        screen.getByRole("checkbox", { name: `sharing:links.fields.trip.${field}` })
+      );
+    }
+    const expiry = screen.getByLabelText("sharing:links.dialog.expiry") as HTMLSelectElement;
+    expect(expiry.value).toBe("week");
+    expect(screen.queryByText("sharing:links.dialog.expiryOptions.tripEnd")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "sharing:links.dialog.create" }));
+    await waitFor(() => expect(api.create).toHaveBeenCalled());
+    expect(api.create.mock.calls[0][0].expiresInDays).toBe(7);
+  });
+
   it("says why the server refused — the link limit is not a network error", async () => {
     api.create.mockRejectedValue({
       isAxiosError: true,

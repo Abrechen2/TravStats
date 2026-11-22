@@ -303,6 +303,43 @@ describe("share page itinerary", () => {
     ]);
   });
 
+  it("keeps a same-day stay's check-out time, and a visit known only to its month", () => {
+    const stay = itinerary.items[1];
+    const plan = planOf({
+      sections: ["stays", "places"],
+      items: [
+        {
+          ...stay,
+          checkOut: { date: "2030-06-01", zone: "America/New_York", precision: "day" },
+          checkOutAt: tv(
+            "2030-06-01T23:00:00",
+            "America/New_York",
+            "-04:00",
+            "2030-06-02T03:00:00.000Z"
+          ),
+        },
+        {
+          kind: "visit",
+          name: "Statue of Liberty",
+          city: "New York",
+          at: tv(
+            "2030-06-01T00:00:00",
+            "America/New_York",
+            "-04:00",
+            "2030-06-01T04:00:00.000Z",
+            "month"
+          ),
+        },
+      ],
+      now: null,
+    });
+    const [dated, undated] = plan.days;
+    expect(dated.entries[0].lines.join("\n")).toMatch(/Check-out 23:00 (EDT|GMT-4)/);
+    expect(dated.nights).toEqual([]);
+    expect(undated.heading).toBeNull();
+    expect(undated.entries[0].lines).toContain("June 2030");
+  });
+
   it("names the current entry in words, and only that one", () => {
     const plan = planOf(itinerary);
     const all = plan.days.flatMap((d) => d.entries);
