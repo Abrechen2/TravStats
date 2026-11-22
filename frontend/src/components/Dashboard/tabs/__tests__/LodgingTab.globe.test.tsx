@@ -24,6 +24,35 @@ const listLodgingsMock = vi.fn();
 const getLodgingStatsMock = vi.fn();
 const capturedGlobeProps = vi.hoisted(() => [] as Array<Record<string, unknown>>);
 
+// The list beside the map is the server's merged feed now; this answers it.
+vi.mock("../../../../lib/api/activityFeed", async (orig) => ({
+  ...(await orig<typeof import("../../../../lib/api/activityFeed")>()),
+  activityFeedApi: {
+    page: vi.fn().mockResolvedValue({
+      items: [
+        {
+          key: "lodging:s1",
+          domain: "lodging",
+          id: "s1",
+          subjectId: "l1",
+          title: "Hotel Test Ludwigsburg",
+          subtitle: null,
+          place: null,
+          date: null,
+          sortAt: null,
+          planned: false,
+          point: { lat: 48.9, lon: 9.19 },
+          bbox: null,
+          path: "/lodging/l1",
+        },
+      ],
+      nextCursor: null,
+      failed: [],
+      domains: ["lodging"],
+    }),
+  },
+}));
+
 vi.mock("../../../../lib/api/lodging", () => ({
   listLodgings: (...args: unknown[]) => listLodgingsMock(...args),
   getLodgingStats: (...args: unknown[]) => getLodgingStatsMock(...args),

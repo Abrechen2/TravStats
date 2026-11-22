@@ -37,6 +37,7 @@ import flightBookingRoutes from "./flights/booking";
 import flightBulkEditRoutes from "./flights/bulkEdit";
 import domainBulkEditRoutes from "./domainBulkEdit";
 import upcomingRoutes from "./upcoming";
+import activityRoutes from "./activity";
 import searchRoutes from "./search";
 import dawarichStayRoutes from "./dawarichStays";
 import locationSuggestionRoutes from "./locationSuggestions";
@@ -327,6 +328,8 @@ export const apiMounts: ApiMount[] = [
   // The dashboard tab strip's "next up" line — one route for every domain,
   // so the strip never depends on which tab happens to have loaded.
   { id: "upcoming", base: "/api/v1/upcoming", router: upcomingRoutes },
+  // The dashboard "Aktivität" list: one merged, cursor-paged feed of every domain.
+  { id: "activity", base: "/api/v1/activity", router: activityRoutes },
   // One query across every domain (forgejo#403); web header + Companion.
   { id: "search", base: "/api/v1/search", router: searchRoutes },
   { id: "photoJourneys", base: "/api/v1/photo-journeys", router: photoJourneyRoutes },

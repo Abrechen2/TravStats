@@ -335,7 +335,17 @@
       "cruise": "Kreuzfahrten"
     },
     "notOnMap": "Nicht auf der Karte",
-    "places": "Orte"
+    "places": "Orte",
+    "planned": "geplant",
+    "feedLoading": "Lade Aktivität …",
+    "feedLoadMore": "Weitere laden",
+    "feedError": "Die Aktivität konnte nicht geladen werden.",
+    "feedRetry": "Erneut versuchen",
+    "feedPartial": "Unvollständig: {{domains}} konnten nicht geladen werden.",
+    "focusFailed": "Der Eintrag konnte nicht geöffnet werden.",
+    "focusNotLoaded": "Der Eintrag ist auf dieser Karte nicht geladen.",
+    "focusSwitchedOn": "{{domain}} wurde auf der Karte eingeschaltet.",
+    "focusUnplaced": "Dieser Eintrag hat keinen Ort und ist nicht auf der Karte."
   },
   "legend": {
     "flightPast": "Flüge (geflogen)",

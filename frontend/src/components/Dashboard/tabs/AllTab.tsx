@@ -30,7 +30,6 @@ import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { useDomainLoad } from "../../../hooks/useDomainLoad";
 import { useCruiseColorStore } from "../../../store/cruiseColorStore";
 import { useThemeStore } from "../../../store/themeStore";
-import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
 import { useFlightColorStore } from "../../../store/flightColorStore";
 import { useLodgingColorStore } from "../../../store/lodgingColorStore";
 import { usePlaceColorStore } from "../../../store/placeColorStore";
@@ -51,10 +50,8 @@ import MapContainer3D, { type MapMode } from "../../MapContainer3D";
 import { classifyVisit } from "../../../shared/placeCounting";
 import { groupByTripId } from "../modes/buildJourneyLayers";
 import { useJourneyLayers } from "../modes/useJourneyLayers";
-import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
-import type { ActivityItem } from "../sidebars/activityItems";
-import { useLodgingSelectionStore } from "../../../store/lodgingSelectionStore";
-import { usePlaceSelectionStore } from "../../../store/placeSelectionStore";
+import { ActivityFeedPanel } from "../sidebars/ActivityFeedPanel";
+import { useActivityFeedSelection } from "../sidebars/useActivityFeedSelection";
 import type { Layer } from "@deck.gl/core";
 import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
 import { initialLegendOpen, isPhoneViewport } from "./legendInitialState";
@@ -115,9 +112,6 @@ export function AllTab(): JSX.Element {
   const [reloadKey, setReloadKey] = useState(0);
   const { lookup, lookupMany } = useFlightLookup();
   const setSelection = useFlightSelectionStore((s) => s.setSelection);
-  const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
-  const setLodgingSelection = useLodgingSelectionStore((s) => s.setSelection);
-  const setPlaceSelection = usePlaceSelectionStore((s) => s.setSelection);
   const navigate = useNavigate();
   const [places, setPlaces] = useState<Place[]>([]);
   const [placeLists, setPlaceLists] = useState<PlaceList[]>([]);
@@ -269,29 +263,6 @@ export function AllTab(): JSX.Element {
     [lookupMany, setSelection]
   );
 
-  // Aktivität-sidebar row wiring. One click means the same thing in every
-  // domain — focus and highlight on the map, never navigate. The arrow is what
-  // leaves the dashboard. Lodgings used to break that rule: their rows were
-  // plain links, so clicking a hotel threw the user off the map entirely.
-  const handleActivitySelect = useCallback(
-    (item: ActivityItem): void => {
-      if ("flightId" in item.payload) {
-        const f = lookup(item.payload.flightId);
-        if (f) setSelection([f]);
-      } else if ("cruise" in item.payload) {
-        setCruiseSelection(item.payload.cruise);
-      } else if ("lodging" in item.payload) {
-        // A hotel whose location never resolved has no pin to focus. Selecting
-        // it would silently do nothing, so the row says so instead (see the
-        // `mappable` marker) and the click is a no-op rather than a lie.
-        if (item.mappable) setLodgingSelection(item.payload.lodging);
-      } else {
-        setPlaceSelection(item.payload.place);
-      }
-    },
-    [lookup, setSelection, setCruiseSelection, setLodgingSelection, setPlaceSelection]
-  );
-
   /** The map speaks flight ids, the sidebar speaks activity rows — separate doors. */
   const handleFlightOpen = useCallback(
     (flightId: string): void => {
@@ -299,22 +270,6 @@ export function AllTab(): JSX.Element {
       if (f) setEditingFlight(f);
     },
     [lookup]
-  );
-
-  const handleActivityDetails = useCallback(
-    (item: ActivityItem): void => {
-      if ("flightId" in item.payload) {
-        const f = lookup(item.payload.flightId);
-        if (f) setEditingFlight(f);
-      } else if ("cruise" in item.payload) {
-        navigate(`/cruises/${item.payload.cruise.id}`);
-      } else if ("lodging" in item.payload) {
-        navigate(`/lodging/${item.payload.lodging.id}`);
-      } else {
-        navigate(`/places/${item.payload.place.id}`);
-      }
-    },
-    [lookup, navigate]
   );
 
   // Lodging pin click → detail page, same route LodgingTab's map pins and
@@ -611,19 +566,23 @@ export function AllTab(): JSX.Element {
     />
   );
 
-  // The panel takes the same `visible*` collections the map does, so the domain
-  // pills keep applying to both — that intersection is the "Alle" tab's own
-  // contract and is deliberately NOT what a single-domain tab does.
+  // The list is the server's merged feed of EVERY domain, not the map's
+  // filtered subset: a row of an unticked domain switches its layer on when it
+  // is clicked (`useActivityFeedSelection`).
+  const activitySelection = useActivityFeedSelection({
+    findFlight: lookup,
+    cruises,
+    lodgings,
+    places,
+    domainFilter,
+  });
   const activityPanel = (
-    <UnifiedActivityPanel
-      flights={visibleFlights}
-      cruises={visibleCruises}
-      lodgings={visibleLodgings}
-      places={visiblePlaces}
+    <ActivityFeedPanel
       isOpen={sidebarOpen}
       onClose={() => setSidebarOpen(false)}
-      onSelect={handleActivitySelect}
-      onDetails={handleActivityDetails}
+      onSelect={activitySelection.onSelect}
+      onDetails={activitySelection.onDetails}
+      reloadKey={reloadKey}
     />
   );
 

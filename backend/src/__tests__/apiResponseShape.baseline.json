@@ -190,6 +190,7 @@
     "version.ts"
   ],
   "enveloped": [
+    "activity.ts",
     "entryPhotos.ts",
     "accountArchive.ts",
     "lifeBook.ts",

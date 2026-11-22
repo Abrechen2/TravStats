@@ -13,9 +13,8 @@ import {
 } from "../../../store/dashboardFilterStore";
 import type { Lodging, LodgingStats } from "../../../types/lodging";
 import MapContainer3D from "../../MapContainer3D";
-import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
-import type { ActivityItem } from "../sidebars/activityItems";
-import { useLodgingSelectionStore } from "../../../store/lodgingSelectionStore";
+import { ActivityFeedPanel } from "../sidebars/ActivityFeedPanel";
+import { ALWAYS_ON, useActivityFeedSelection } from "../sidebars/useActivityFeedSelection";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 import { LodgingChainsView } from "./lodging/LodgingChainsView";
 import { LodgingNightsChart } from "./lodging/LodgingNightsChart";
@@ -23,13 +22,17 @@ import { SidebarToggle } from "../SidebarToggle";
 import { MapEmptyOverlay } from "./MapEmptyOverlay";
 
 export function LodgingTab(): JSX.Element {
-  const setLodgingSelection = useLodgingSelectionStore((st) => st.setSelection);
   const { mode } = useDashboardRoute();
   const navigate = useNavigate();
+
   const { isEnabled } = useEnabledDomains();
   const lodgingEnabled = isEnabled("lodging");
   const { t } = useTranslation(["dashboard"]);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
+  const activitySelection = useActivityFeedSelection({
+    lodgings: lodgings,
+    domainFilter: ALWAYS_ON,
+  });
   const [stats, setStats] = useState<LodgingStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -144,20 +147,13 @@ export function LodgingTab(): JSX.Element {
           `createdAt desc` decided the order — the sequence hotels were TYPED
           IN, not stayed in), and every row was a plain link, so clicking a
           hotel threw the user off the map instead of focusing it. */}
-      <UnifiedActivityPanel
-        lodgings={visibleLodgings}
-        lockedKind="lodging"
+      <ActivityFeedPanel
+        domains={["lodging"]}
         title={t("dashboard:lodgingTab.listTitle")}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onSelect={(item: ActivityItem) => {
-          if ("lodging" in item.payload && item.mappable) {
-            setLodgingSelection(item.payload.lodging);
-          }
-        }}
-        onDetails={(item: ActivityItem) => {
-          if ("lodging" in item.payload) navigate(`/lodging/${item.payload.lodging.id}`);
-        }}
+        onSelect={activitySelection.onSelect}
+        onDetails={activitySelection.onDetails}
       />
 
       {/* The stat strip and the currency breakdown used to sit HERE, floating

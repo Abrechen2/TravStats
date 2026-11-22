@@ -37,6 +37,8 @@ export interface FocusableMap {
   flyTo: (options: {
     center: [number, number];
     zoom?: number;
+    /** Pixels to shift the target off the map's centre. */
+    offset?: [number, number];
     duration?: number;
     essential?: boolean;
   }) => void;
@@ -194,6 +196,8 @@ export function useMapSelectionCards({
   const selectedCruise = useCruiseSelectionStore((s) => s.selectedCruise);
   const selectedLodging = useLodgingSelectionStore((s) => s.selectedLodging);
   const selectedPlace = usePlaceSelectionStore((s) => s.selectedPlace);
+  const selectedStayId = useLodgingSelectionStore((s) => s.selectedEntryId);
+  const selectedVisitId = usePlaceSelectionStore((s) => s.selectedEntryId);
 
   const clearFlights = useFlightSelectionStore((s) => s.clearSelection);
   const clearCruise = useCruiseSelectionStore((s) => s.clearSelection);
@@ -317,21 +321,21 @@ export function useMapSelectionCards({
     // Abstains for a lodging whose location never resolved — the sidebar row
     // already says it is not on the map, and a card with no anchor would have
     // to float somewhere arbitrary.
-    const next = pinnedFromLodging(selectedLodging);
+    const next = pinnedFromLodging(selectedLodging, selectedStayId);
     if (!next) return;
     setPinned(next);
     focus(next.anchorLngLat);
-  }, [selectedLodging, focus, setPinned, clearOnEmpty]);
+  }, [selectedLodging, selectedStayId, focus, setPinned, clearOnEmpty]);
 
   useEffect(() => {
     if (selectedPlace === null) {
       if (clearOnEmpty) setPinned((prev) => (prev?.kind === "place" ? null : prev));
       return;
     }
-    const next = pinnedFromPlace(selectedPlace);
+    const next = pinnedFromPlace(selectedPlace, selectedVisitId);
     setPinned(next);
     focus(next.anchorLngLat);
-  }, [selectedPlace, focus, setPinned, clearOnEmpty]);
+  }, [selectedPlace, selectedVisitId, focus, setPinned, clearOnEmpty]);
 
   const resolveSelectedFlight = useCallback(
     (flightId: string): Flight | undefined =>

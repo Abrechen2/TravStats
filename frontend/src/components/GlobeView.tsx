@@ -53,6 +53,7 @@ import type { Rgb } from "../lib/cruiseColor";
 import type { PlaceLabelList } from "../lib/placeLabel";
 import { useCruiseGeometry } from "../hooks/useCruiseGeometry";
 import { GLOBE_FOCUS, focusMarker, useMapSelectionCards } from "./map/cards/useMapSelectionCards";
+import { useMapFocusRequests } from "./map/cards/useMapFocusRequests";
 import { resolveFlightTipColor } from "../lib/flightColor";
 import { useTranslation } from "../hooks/useTranslation";
 import { GlobeTimeHistogram } from "./Globe/GlobeTimeHistogram";
@@ -487,6 +488,9 @@ export default function GlobeView({
       focus: focusOnGlobe,
       setPinned,
     });
+
+  // The activity list's camera requests (a point to zoom to, a route to fit).
+  useMapFocusRequests(mapRef, "globe");
 
   const { onArcHover, onAirportHover, onPortHover, onCruisePathHover, onPinHover } = useGlobeHover(
     tooltipRef,
