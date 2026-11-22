@@ -69,6 +69,8 @@ export function useMapFocusRequests(
       } else if (request.point) {
         map.flyTo({
           center: [request.point.lon, request.point.lat],
+          // The list covers the map's left edge: aim at the middle of what is left.
+          offset: [(request.leftInset ?? 0) / 2, 0],
           zoom: Math.max(map.getZoom(), tuning.pointZoom),
           duration: tuning.duration,
           essential: true,

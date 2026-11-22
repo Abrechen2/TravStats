@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDomainColors } from "../../../hooks/useDomainColors";
@@ -56,6 +56,8 @@ export function useActivityFeedSelection(options: Options): {
   const focus = useMapFocusStore((s) => s.focus);
   const addToast = useToastStore((s) => s.addToast);
 
+  const latestClick = useRef(0);
+
   const say = useCallback(
     (outcome: FeedSelectOutcome, item: ActivityFeedItem): void => {
       if (outcome === "switchedOn") {
@@ -78,6 +80,7 @@ export function useActivityFeedSelection(options: Options): {
         typeof window !== "undefined" && window.innerWidth >= PANEL_BESIDE_MAP_MIN_WIDTH
           ? ACTIVITY_PANEL_WIDTH
           : 0;
+      const click = ++latestClick.current;
       selectFeedItem(item, {
         findFlight,
         cruises,
@@ -93,9 +96,11 @@ export function useActivityFeedSelection(options: Options): {
         focus,
         colorOf,
         leftInset,
+        isCurrent: () => click === latestClick.current,
       }).then(
         (outcome) => say(outcome, item),
         (err: unknown) => {
+          if (click !== latestClick.current) return;
           logger.warn("activity feed row could not be opened", err);
           addToast("error", t("dashboard:sidebar.focusFailed"));
         }

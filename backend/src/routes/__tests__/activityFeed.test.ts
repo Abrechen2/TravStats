@@ -217,6 +217,8 @@ describe("GET /api/v1/activity/feed", () => {
       for (let guard = 0; guard < 100; guard++) {
         const res = await feed({ limit: String(limit), ...(cursor ? { cursor } : {}) });
         expect(res.status).toBe(200);
+        // A reader that errored mid-paging would thin the list silently: it must not error.
+        expect(res.body.data.failed).toEqual([]);
         keys.push(...res.body.data.items.map((i: { key: string }) => i.key));
         cursor = res.body.data.nextCursor ?? undefined;
         if (!cursor) break;
@@ -249,6 +251,8 @@ describe("GET /api/v1/activity/feed", () => {
 
   it("refuses a malformed cursor, limit or domain instead of answering page one", async () => {
     expect((await feed({ cursor: "not-a-cursor" })).status).toBe(400);
+    const forged = Buffer.from(JSON.stringify({ t: 1e100, r: 0, i: "x" })).toString("base64url");
+    expect((await feed({ cursor: forged })).status).toBe(400);
     expect((await feed({ limit: "0" })).status).toBe(400);
     expect((await feed({ limit: "5000" })).status).toBe(400);
     expect((await feed({ domains: "flight,bogus" })).status).toBe(400);

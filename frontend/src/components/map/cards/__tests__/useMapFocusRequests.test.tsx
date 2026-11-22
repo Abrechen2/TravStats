@@ -37,10 +37,16 @@ describe("useMapFocusRequests", () => {
   it("zooms to a single point, never zooming out from a closer view", () => {
     const far = fakeMap(2);
     const { unmount } = render(<Host map={far} engine="flat" />);
-    act(() => useMapFocusStore.getState().focus({ point: { lat: 38.7, lon: -9.1 } }));
+    act(() =>
+      useMapFocusStore.getState().focus({ point: { lat: 38.7, lon: -9.1 }, leftInset: 320 })
+    );
     act(() => void vi.runAllTimers());
     expect(far.flyTo).toHaveBeenCalledWith(
-      expect.objectContaining({ center: [-9.1, 38.7], zoom: FOCUS_REQUEST.flat.pointZoom })
+      expect.objectContaining({
+        center: [-9.1, 38.7],
+        zoom: FOCUS_REQUEST.flat.pointZoom,
+        offset: [160, 0],
+      })
     );
     unmount();
 

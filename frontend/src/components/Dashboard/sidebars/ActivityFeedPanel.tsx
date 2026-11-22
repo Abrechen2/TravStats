@@ -160,6 +160,8 @@ export function ActivityFeedPanel({
             onClick={() => onSelect(item)}
             title={onMap ? undefined : t("dashboard:sidebar.notOnMap")}
             onKeyDown={(e) => {
+              // Enter on the details arrow inside the row belongs to the arrow.
+              if (e.target !== e.currentTarget) return;
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 onSelect(item);

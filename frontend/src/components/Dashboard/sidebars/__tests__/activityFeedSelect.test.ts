@@ -43,6 +43,7 @@ function deps(over: Partial<FeedSelectDeps> = {}): FeedSelectDeps {
     focus: vi.fn(),
     colorOf: () => "#336699",
     leftInset: 320,
+    isCurrent: () => true,
     ...over,
   };
 }
@@ -184,6 +185,27 @@ describe("selectFeedItem", () => {
     expect(d.focus).not.toHaveBeenCalled();
     expect(d.selectFlight).not.toHaveBeenCalled();
     expect(d.showDomain).not.toHaveBeenCalled();
+  });
+
+  it("drops a slow ground fetch that a newer click has replaced", async () => {
+    vi.mocked(railApi.get).mockResolvedValue({
+      id: "r1",
+      status: "completed",
+      transitMode: "rail",
+      depStationName: "A",
+      arrStationName: "B",
+      depLat: 1,
+      depLon: 1,
+      arrLat: 2,
+      arrLon: 2,
+      departureTime: "2026-03-01T08:00:00Z",
+    } as never);
+    const d = deps({ isCurrent: () => false });
+    await expect(
+      selectFeedItem(item({ domain: "rail", id: "r1", subjectId: "r1" }), d)
+    ).resolves.toBe("superseded");
+    expect(d.selectLayerCard).not.toHaveBeenCalled();
+    expect(d.focus).not.toHaveBeenCalled();
   });
 
   it("rejects when the entry behind a ground row cannot be fetched, so the failure is shown", async () => {

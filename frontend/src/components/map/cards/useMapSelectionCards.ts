@@ -37,6 +37,8 @@ export interface FocusableMap {
   flyTo: (options: {
     center: [number, number];
     zoom?: number;
+    /** Pixels to shift the target off the map's centre. */
+    offset?: [number, number];
     duration?: number;
     essential?: boolean;
   }) => void;

@@ -55,15 +55,18 @@ export interface FeedSelectDeps {
   colorOf: (domain: FilterDomainKey) => string;
   /** Pixels the list covers on the map's left edge. */
   leftInset: number;
+  /** False once a newer click has replaced this one — a slow fetch must not overwrite it. */
+  isCurrent: () => boolean;
 }
 
 /**
  * - `selected`: the entry's card is open (and the camera on its way).
  * - `switchedOn`: as `selected`, and the domain's layer had to be switched on first.
  * - `notLoaded`: the entry is not among the rows this tab loaded (nothing opened).
+ * - `superseded`: a newer click replaced this one while it was fetching; nothing was opened.
  * - `unplaced`: the entry has no coordinates, so there is nothing to show on the map.
  */
-export type FeedSelectOutcome = "selected" | "switchedOn" | "notLoaded" | "unplaced";
+export type FeedSelectOutcome = "selected" | "switchedOn" | "notLoaded" | "superseded" | "unplaced";
 
 function anchorOf(item: ActivityFeedItem): [number, number] | null {
   if (item.point) return [item.point.lon, item.point.lat];
@@ -142,6 +145,7 @@ export async function selectFeedItem(
     }
     default: {
       const pinned = await layerCardOf(item, anchor, deps);
+      if (!deps.isCurrent()) return "superseded";
       if (!pinned) return "notLoaded";
       deps.selectLayerCard(pinned);
     }

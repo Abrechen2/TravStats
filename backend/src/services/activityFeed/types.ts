@@ -82,7 +82,11 @@ export function decodeCursor(raw: string): FeedCursor | null {
     if (typeof parsed !== "object" || parsed === null) return null;
     const { t, r, i } = parsed as Record<string, unknown>;
     if (!(t === null || (typeof t === "number" && Number.isFinite(t)))) return null;
-    if (typeof r !== "number" || !Number.isInteger(r) || typeof i !== "string") return null;
+    if (typeof r !== "number" || !Number.isInteger(r) || r < 0 || r >= FEED_DOMAINS.length)
+      return null;
+    if (typeof i !== "string") return null;
+    // Past the range a Date can hold, a timestamp is not a position in the list.
+    if (t !== null && Math.abs(t) > 8.64e15) return null;
     return { t, r, i };
   } catch {
     return null;
@@ -108,7 +112,8 @@ export function afterCursor(
   const undated = nullable ? [{ [field]: null }] : [];
   if (cursor.t === null) {
     // Inside the undated tail: same domain continues by id, a later domain starts over.
-    if (rank < cursor.r) return { id: { in: [] } };
+    // A column that is never null has no undated rows, and `{ field: null }` is an error for it.
+    if (rank < cursor.r || !nullable) return { id: { in: [] } };
     return { [field]: null, ...(rank === cursor.r ? { id: { lt: cursor.i } } : {}) };
   }
   const at = new Date(cursor.t);
