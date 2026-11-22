@@ -4,6 +4,7 @@ import type { PlaceResult } from "../../geo/photon";
 import type { ImmichAsset, ImmichErrorKind } from "../../immich/types";
 import { contains, polygons } from "../marketVisits/geometry";
 import { RADIUS_METERS } from "./detect";
+import { brandOfTags, type VenueBrand } from "./venueBrand";
 import {
   areaSizeM2,
   entityOf,
@@ -82,6 +83,11 @@ export interface StayCandidate {
   foldedInto?: string | null;
   /** True for the building/area outline the stay point lies in or the pick folded into. */
   isArea?: boolean;
+  /**
+   * The venue's brand facts from its OSM tags (`brand:wikidata`, `brand`, disused);
+   * absent when the venue layer did not take part or the tags say nothing.
+   */
+  brand?: VenueBrand;
 }
 
 export type ProbableSource = "nearbyPlace" | "address" | "photos";
@@ -286,7 +292,11 @@ export function combineStayIdentity(input: StayIdentityInput): StayIdentityView 
   const ranked = USABLE_VENUE_STATES.includes(venueState)
     ? rankWithVenues({ ...input, photos: { ...input.photos, assets } }, found, withPhotos)
     : { candidates: found, probable: null, resolved: null };
-  const candidates = ranked.candidates;
+  const byRef = new Map((input.venues?.elements ?? []).map((el) => [el.ref, el]));
+  const candidates = ranked.candidates.map((c) => {
+    const brand = c.osmRef ? brandOfTags(byRef.get(c.osmRef)?.tags ?? {}) : null;
+    return brand ? { ...c, brand } : c;
+  });
   return {
     probable: ranked.probable ?? probableOf(candidates, parts, cities),
     address: parts

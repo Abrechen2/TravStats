@@ -74,6 +74,7 @@ vi.mock("../../components/location/LocationMiniMap", () => ({
 }));
 
 import PlaceDetailPage from "../PlaceDetailPage";
+vi.mock("../../components/places/smartList/PlaceVisitSuggestions", () => ({ default: () => null }));
 
 function renderPage() {
   return render(

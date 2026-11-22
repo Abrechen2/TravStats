@@ -63,6 +63,7 @@ vi.mock("../../components/NavigationBar", () => ({ default: () => null }));
 vi.mock("../../components/location/LocationMiniMap", () => ({ LocationMiniMap: () => null }));
 
 import PlaceDetailPage from "../PlaceDetailPage";
+vi.mock("../../components/places/smartList/PlaceVisitSuggestions", () => ({ default: () => null }));
 
 describe("PlaceDetailPage gallery", () => {
   it("leads with a visit photo, and keeps it after the place is edited", async () => {

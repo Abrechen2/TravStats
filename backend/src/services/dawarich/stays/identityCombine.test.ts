@@ -183,3 +183,49 @@ describe("combineStayIdentity", () => {
     });
   });
 });
+
+describe("combineStayIdentity: brand facts for smart lists", () => {
+  it("hands the chosen venue's brand:wikidata, brand and closure from the tags the lookup already read", () => {
+    const view = combineStayIdentity(
+      input({
+        places: {
+          results: [place("McDonald's", 0.0001, { externalRef: "osm:node/5", type: "fast_food" })],
+          degraded: false,
+        },
+        venues: {
+          state: "ok",
+          elements: [
+            {
+              ref: "node/5",
+              tags: {
+                amenity: "fast_food",
+                name: "McDonald's",
+                brand: "McDonald's",
+                "brand:wikidata": "Q38076",
+              },
+              area: null,
+              point: at(0.0001),
+            },
+          ],
+        },
+      })
+    );
+    expect(view.candidates[0].brand).toEqual({
+      wikidata: "Q38076",
+      name: "McDonald's",
+      disused: false,
+    });
+  });
+
+  it("states no brand when the venue layer did not take part (abstains, never guesses from the name)", () => {
+    const view = combineStayIdentity(
+      input({
+        places: {
+          results: [place("McDonald's", 0.0001, { externalRef: "osm:node/5" })],
+          degraded: false,
+        },
+      })
+    );
+    expect(view.candidates[0]).not.toHaveProperty("brand");
+  });
+});

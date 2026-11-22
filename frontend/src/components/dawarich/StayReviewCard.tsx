@@ -27,7 +27,7 @@ export default function StayReviewCard({
   choices: StayChoices;
   onDone: () => void;
 }): JSX.Element {
-  const { t } = useTranslation("trips");
+  const { t } = useTranslation(["trips", "places"]);
   const text = (key: string) => t(`trips:dawarichStays.${key}`);
   // A TravTrack finding (plan E4) names its source and explains itself; a
   // Dawarich one reads exactly as it always did.
@@ -161,6 +161,12 @@ export default function StayReviewCard({
           )}
         </p>
       )}
+      {row.evidence.visit?.brandMatches?.map((m) => (
+        <p key={m.ruleId} className="t-caption" data-testid="stay-brand-match">
+          {t("places:smartList.fitsList", { lists: m.listName })}
+          {m.strength === "name" && ` · ${t("places:smartList.weaker")}`}
+        </p>
+      ))}
       {section && <TrackSectionPanel {...section} />}
       <StayIdentityPanel
         stayId={row.id}

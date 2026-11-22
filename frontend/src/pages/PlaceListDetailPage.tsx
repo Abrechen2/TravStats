@@ -28,6 +28,8 @@ import { FieldError, FormErrorBanner, fieldErrorProps } from "../components/form
 import { placeCategoryIcon } from "../lib/placeCategoryDisplay";
 import { usePlaceCategories } from "../hooks/usePlaceCategories";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
+import SmartListPanel from "../components/places/smartList/SmartListPanel";
+import OverflowMenu from "../components/ui/OverflowMenu";
 import { PlaceListAddPanel, type UnassignedPlace } from "../components/places/PlaceListAddPanel";
 import { useToastStore } from "../store/toastStore";
 import type { Place } from "../types/place";
@@ -67,6 +69,8 @@ export default function PlaceListDetailPage(): JSX.Element {
   const [failure, setFailure] = useState<LoadFailure | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [renaming, setRenaming] = useState(false);
+  /** The smart-list rule dialog (list ⋯ → "Kette verknüpfen"). */
+  const [ruleOpen, setRuleOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
   /** Why the rename was refused — said at the field, not in a toast (forgejo#246). */
   const [renameError, setRenameError] = useState<string | null>(null);
@@ -449,15 +453,37 @@ export default function PlaceListDetailPage(): JSX.Element {
             />
           </div>
 
-          <button
-            type="button"
-            onClick={() => setConfirmDelete(true)}
-            className={`shrink-0 rounded-lg px-4 py-2 text-sm ${COARSE_BOX}`}
-            style={{ border: "1px solid var(--color-border)", color: "var(--danger)" }}
-          >
-            {t("places:lists.deleteList")}
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <OverflowMenu
+              label={t("common:buttons.moreActions")}
+              triggerLabel={t("common:buttons.more")}
+              testId="place-list-more"
+              entries={[
+                {
+                  key: "smart-rule",
+                  label: t("places:smartList.menuEntry"),
+                  hint: t("places:smartList.menuHint"),
+                  onSelect: () => setRuleOpen(true),
+                },
+              ]}
+            />
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className={`rounded-lg px-4 py-2 text-sm ${COARSE_BOX}`}
+              style={{ border: "1px solid var(--color-border)", color: "var(--danger)" }}
+            >
+              {t("places:lists.deleteList")}
+            </button>
+          </div>
         </div>
+
+        <SmartListPanel
+          listId={list.id}
+          ruleOpen={ruleOpen}
+          onRuleClose={() => setRuleOpen(false)}
+          onChanged={() => void load()}
+        />
 
         {/* A refused change, kept until the next one succeeds (forgejo#246). */}
         <div className="mb-4">

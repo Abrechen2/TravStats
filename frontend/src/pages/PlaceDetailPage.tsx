@@ -1,3 +1,4 @@
+import PlaceVisitSuggestions from "../components/places/smartList/PlaceVisitSuggestions";
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import TagChips from "../components/common/TagChips";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -335,6 +336,7 @@ export default function PlaceDetailPage(): JSX.Element {
         <div className="flex flex-col gap-6">
           <PlaceGallery key={place.id} place={place} />
           <WikipediaCard kind="place" id={place.id} />
+          <PlaceVisitSuggestions placeId={place.id} onAnswered={() => void refreshQuietly()} />
           <PlaceVisitList
             visits={place.visits ?? []}
             placeVisited={place.visited}

@@ -174,3 +174,34 @@ it.each(["mall", "park", "zoo", "themePark", "museum"] as const)(
     expect(dawarichStaysApi.accept).not.toHaveBeenCalled();
   }
 );
+
+describe("smart-list badge in the inbox", () => {
+  it("names the list a TravTrack stop matched, and flags a brand-string-only match as weaker", () => {
+    mount({
+      evidence: {
+        ...row.evidence,
+        source: "dawarich",
+        visit: {
+          durationMs: 1_500_000,
+          observedMs: 1_500_000,
+          inferredMs: 0,
+          venue: { name: "McDonald's", source: "osm", osmRef: "way/1", category: "restaurant" },
+          alternatives: [],
+          brandMatches: [
+            {
+              ruleId: "r1",
+              listId: "l1",
+              listName: "Maccis",
+              brandName: "McDonald's",
+              strength: "name",
+              auto: false,
+            },
+          ],
+        },
+      },
+    });
+    const badge = screen.getByTestId("stay-brand-match");
+    expect(badge).toHaveTextContent("places:smartList.fitsList");
+    expect(badge).toHaveTextContent("places:smartList.weaker");
+  });
+});

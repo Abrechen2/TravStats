@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import PlaceDetailPage from "../PlaceDetailPage";
+vi.mock("../../components/places/smartList/PlaceVisitSuggestions", () => ({ default: () => null }));
 
 /**
  * Editing a place visit — the answer to the inbox's "Uhrzeit unbekannt"

@@ -188,6 +188,8 @@ export const NON_TRAVEL_RELATIONS = [
   "clientWriteRefs",
   // Unnamed positions awaiting a name (companion#90): a private inbox, never published.
   "placeCaptures",
+  // A smart list's chain rule: the account's own setting, never published.
+  "placeListBrandRules",
   // Per-day AI/weather limits are operational counters, not shared travel data.
   "travelPlanUsage",
   // A user's own vocabularies: the names of the lodging rating categories and of the place

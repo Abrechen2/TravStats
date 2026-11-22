@@ -67,6 +67,7 @@ vi.mock("../../hooks/useTranslation", async () => {
 });
 
 import PlaceDetailPage from "../PlaceDetailPage";
+vi.mock("../../components/places/smartList/PlaceVisitSuggestions", () => ({ default: () => null }));
 
 const visit = (id: string, visitedAt: string) => ({
   id,

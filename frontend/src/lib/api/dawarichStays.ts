@@ -113,6 +113,15 @@ export interface DawarichStay {
       inferredMs: number;
       venue: { name: string; source: "known" | "osm"; osmRef: string | null; category: string };
       alternatives: { name: string; foldedInto: string | null }[];
+      /** Smart lists (chain rules) whose brand this stop's venue matched. `name`: only the brand string agreed. */
+      brandMatches?: {
+        ruleId: string;
+        listId: string;
+        listName: string;
+        brandName: string;
+        strength: "id" | "name";
+        auto: boolean;
+      }[];
     };
   };
 }

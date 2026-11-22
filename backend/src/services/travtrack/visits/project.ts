@@ -58,6 +58,9 @@ import {
   type VisitResolution,
 } from "./resolve";
 import { stopTimes, visitEvidence, visitStopsOf } from "./stops";
+import { matchBrandRules, type BrandRuleInput } from "./brandMatch";
+import { BRAND_RULE, loadBrandRules } from "../../places/brandRules";
+import { acceptStay } from "../../dawarich/stays/review";
 
 export const VISIT_DAYS_PER_RUN = 5;
 export const VISIT_LOOKUPS_PER_RUN = 20;
@@ -88,6 +91,9 @@ export type VisitProjectionResult = {
   deferred: number;
   /** Stops whose lookup failed, by reason. The day stays open. */
   failed: Record<LookupFailure, number>;
+  /** Matches of a smart list taken without asking (`autoAccept`), and those that could not be. */
+  autoAccepted: number;
+  autoFailed: number;
   /** Duration of every stop asked about, in minutes — what the minimum stop (spec Q2) is measured on. */
   stopMinutes: number[];
   /** The history changed under the run, or the permission went: nothing more was written. */
@@ -120,6 +126,8 @@ const empty = (status: VisitProjectionResult["status"]): VisitProjectionResult =
   noVenue: 0,
   deferred: 0,
   failed: { places: 0, venues: 0 },
+  autoAccepted: 0,
+  autoFailed: 0,
   stopMinutes: [],
   interrupted: false,
 });
@@ -167,6 +175,7 @@ type RunContext = {
   trips: Awaited<ReturnType<typeof loadTrips>>;
   suppression: Awaited<ReturnType<typeof loadSuppression>>;
   result: VisitProjectionResult;
+  brandRules: BrandRuleInput[];
   lookupsLeft: number;
   findingsLeft: number;
   deps: VisitProjectionDeps;
@@ -243,6 +252,51 @@ function grownEvidence(old: unknown, stop: Stop) {
       inferredMinutes: min(t.inferredMs),
     }),
   };
+}
+
+/**
+ * A confident match on a list that allows it is taken directly, through the same accept path the
+ * owner's click uses, marked `brandRule` so it can be undone. A refusal (history changed, the
+ * place was merged away, the instance switched TravTrack off) leaves the finding pending in the
+ * inbox, counted and logged — never a silent loss.
+ */
+async function autoAccept(
+  ctx: RunContext,
+  key: string,
+  pick: { name: string; lat: number; lon: number; placeId: string | null },
+  tripId: string | null,
+  startAt: Date,
+  endAt: Date
+): Promise<void> {
+  const row = await prisma.dawarichStay.findFirst({
+    where: { userId: ctx.userId, fingerprint: key, status: "pending" },
+    select: { id: true },
+  });
+  if (!row) return;
+  try {
+    await acceptStay(
+      ctx.userId,
+      row.id,
+      {
+        placeId: pick.placeId,
+        tripId,
+        name: pick.name,
+        lat: pick.lat,
+        lon: pick.lon,
+        startAt: { kind: "instant", utc: startAt, bareZ: false },
+        endAt: { kind: "instant", utc: endAt, bareZ: false },
+      },
+      { createdBy: BRAND_RULE }
+    );
+    ctx.result.autoAccepted++;
+  } catch (error) {
+    ctx.result.autoFailed++;
+    logger.warn({
+      operation: "travtrack.visits.autoAcceptFailed",
+      userId: ctx.userId,
+      error: (error as Error).message,
+    });
+  }
 }
 
 /** One stop. Returns false when the run must stop (permission or history changed). */
@@ -371,7 +425,7 @@ async function handleStop(
         userId,
         { ...stop.anchor, fromMs: stop.fromMs, untilMs: stop.untilMs },
         { staySuggestionsImmichEvidence: ctx.immich },
-        { allowLookup },
+        { allowLookup, wantBrand: ctx.brandRules.length > 0 },
         ctx.deps.resolve
       );
   if (resolution.kind === "deferred") {
@@ -404,7 +458,16 @@ async function handleStop(
     return { open: false, go: true };
   }
   const tripMatch = tripForStay(ctx.trips, startDay, localDay(endAt, ctx.profileZone));
-  const evidence = { ...visitEvidence(stop, pick, lookup, readCoverage), zone };
+  // Smart lists: matched locally on the brand tags the lookup already returned. The pick is the
+  // lookup's chosen venue (never a nearest-node guess), so it is the stop's top candidate.
+  const matches = matchBrandRules({
+    rules: ctx.brandRules,
+    venue: pick.brand,
+    topCandidate: true,
+    dwellMinutes: minutes,
+    distanceM: pick.distanceM,
+  });
+  const evidence = { ...visitEvidence(stop, pick, lookup, readCoverage, matches), zone };
   const made = await publish(userId, generation, async (tx) => {
     const r = await tx.dawarichStay.createMany({
       skipDuplicates: true,
@@ -442,6 +505,8 @@ async function handleStop(
   if (made === "created") {
     result.created++;
     ctx.findingsLeft--;
+    if (matches.some((m) => m.auto))
+      await autoAccept(ctx, key, pick, tripMatch.trip?.id ?? null, startAt, endAt);
   }
   outcome(made === "created" ? `created:${pick.source}` : "duplicate");
   return { open: false, go: true };
@@ -525,6 +590,7 @@ export async function projectVisitSuggestions(
       trips: await loadTrips(userId),
       suppression: await loadSuppression(userId),
       result,
+      brandRules: await loadBrandRules(userId),
       lookupsLeft: deps.maxLookups ?? VISIT_LOOKUPS_PER_RUN,
       findingsLeft: deps.maxFindings ?? VISIT_FINDINGS_PER_RUN,
       deps,

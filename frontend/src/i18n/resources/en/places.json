@@ -971,5 +971,66 @@
       "deleteFailed": "The category could not be deleted.",
       "stale": "Saved, but the list could not be reloaded. Reload the page."
     }
+  },
+  "smartList": {
+    "menuEntry": "Follow a chain",
+    "menuHint": "The list follows a chain: matching outlets join it on their own.",
+    "dialogTitle": "Smart list",
+    "dialogIntro": "Pick one or more chains. When TravTrack stops at an outlet, the list suggests the visit.",
+    "brandSearch": "Search for a chain",
+    "brandPlaceholder": "e.g. McDonald's",
+    "chosenBrands": "Chosen chains",
+    "noBrandYet": "No chain chosen yet.",
+    "removeBrand": "Remove {{name}}",
+    "window": "Stay and distance",
+    "minDwell": "Minimum stay (min.)",
+    "maxDwell": "Maximum stay (min.)",
+    "maxDistance": "Suggest within (m)",
+    "windowInvalid": "The maximum stay must be at least the minimum stay (1 to 1440 minutes).",
+    "distanceInvalid": "The distance must be between 10 and 500 metres.",
+    "autoAccept": "Take confident matches automatically",
+    "autoAcceptHint": "Only when the chain is recognised unambiguously. Every automatic entry is listed under “Recently taken automatically” and can be undone.",
+    "stop": "Stop following",
+    "header": "Smart list: chain {{brands}}",
+    "headerLabel": "Smart list",
+    "headerRule": "{{min}} to {{max}} min. stay, suggest within {{distance}} m, automatic within {{autoDistance}} m, take automatically: {{auto}}",
+    "autoOn": "on",
+    "autoOff": "off",
+    "newOutlets": "New outlets to confirm",
+    "recentAuto": "Recently taken automatically",
+    "autoLine": "{{date}} at {{time}} · {{minutes}} min. · detected by TravTrack ({{distance}} m)",
+    "undo": "Undo",
+    "undoFailed": "Undoing failed. Please try again later.",
+    "placeSectionTitle": "Were you here?",
+    "question": "Were you here on {{date}} at {{time}}?",
+    "reason": "{{minutes}} min. — detected by TravTrack ({{distance}} m)",
+    "weaker": "weaker match: only the brand name agrees",
+    "fitsList": "Fits list {{lists}}",
+    "confirm": "Confirm",
+    "notMe": "I wasn't",
+    "loadFailed": "The suggestions could not be loaded. Please try again later.",
+    "answerErrors": {
+      "resolved": "This suggestion has already been answered.",
+      "gone": "The suggestion no longer exists because the location history changed.",
+      "inProgress": "The suggestion is being confirmed right now. Please try again in a moment.",
+      "disabled": "TravTrack is switched off on this instance.",
+      "interval": "The time span of the visit is invalid.",
+      "failed": "The answer could not be saved. Please try again later."
+    },
+    "search": {
+      "searching": "Searching …",
+      "none": "No chain found.",
+      "disabled": "Open data is switched off on this instance, so chains cannot be searched.",
+      "timeout": "Wikidata did not answer in time. Please try again later.",
+      "rateLimited": "Wikidata is refusing more requests right now. Please try again later.",
+      "unavailable": "Wikidata is not reachable. Please try again later.",
+      "failed": "The search failed."
+    },
+    "saveErrors": {
+      "curated": "A shipped checklist cannot follow a chain.",
+      "failed": "The rule could not be saved. Please try again later."
+    },
+    "autoDistance": "Take automatically within (m)",
+    "autoDistanceInvalid": "The automatic distance must be at least 10 m and no larger than the suggestion distance."
   }
 }

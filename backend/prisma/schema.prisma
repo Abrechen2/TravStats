@@ -174,6 +174,7 @@ model User {
   placeVisits                     PlaceVisit[]
   visitPhotoRefusals              VisitPhotoRefusal[]
   placeLists                      PlaceList[]
+  placeListBrandRules             PlaceListBrandRule[]
   importBatches                   ImportBatch[]
   companions                      Companion[]
   /// Trip sharing (design 2026-10-09): companions of OTHER users linked to
@@ -3774,6 +3775,12 @@ model Place {
   /// through two services on every visit. Never guessed from the name.
   wikidataId String? @map("wikidata_id")
 
+  /// OSM `brand:wikidata` of the venue this place was made from (smart lists).
+  /// Read from the venue's tags, never guessed from the name.
+  brandWikidataId String? @map("brand_wikidata_id")
+  /// `brandRule` when a smart list's auto-accept made the place; null for everything the owner made.
+  createdBy       String? @map("created_by")
+
   /// Logbook or wishlist? Same question Lodging.visited answers — but note the
   /// OPPOSITE default. Lodging chose `true` because every row predating the
   /// column described a real stay; here the dominant creation path is "add a
@@ -3924,6 +3931,9 @@ model PlaceVisit {
   /// visit (TravTrack plan E1/E4), so the finding never counts its own visit
   /// as cover or support. Null for every visit written any other way.
   suggestionRef String? @map("suggestion_ref")
+
+  /// `brandRule` when a smart list's auto-accept wrote this visit; undo removes only these.
+  createdBy String? @map("created_by")
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -4121,8 +4131,9 @@ model PlaceList {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  entries PlaceListEntry[]
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries    PlaceListEntry[]
+  brandRules PlaceListBrandRule[]
 
   @@unique([userId, curatedKey])
   @@index([userId])
@@ -4137,6 +4148,8 @@ model PlaceListEntry {
   listId  String @map("list_id")
   placeId String @map("place_id")
   sortIdx Int    @default(0) @map("sort_idx")
+  /// `brandRule` when a smart list's auto-accept added the entry; undo removes only these.
+  createdBy String? @map("created_by")
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -4147,6 +4160,38 @@ model PlaceListEntry {
   @@index([listId])
   @@index([placeId])
   @@map("place_list_entries")
+}
+
+/// A smart list's rule (docs/superpowers/specs/2026-11-22-brand-lists.md): the list follows one
+/// chain, chosen by its Wikidata brand id. The dwell window, distance and auto-accept are the
+/// list's settings, kept on every brand row of the list so one row is self-contained.
+model PlaceListBrandRule {
+  id     String @id @default(uuid())
+  listId String @map("list_id")
+  userId String @map("user_id")
+
+  /// OSM `brand:wikidata`, "Q38076".
+  brandWikidataId String @map("brand_wikidata_id")
+  /// Display name and the exact-`brand`-string fallback ("weaker" match).
+  brandName       String @map("brand_name")
+
+  minDwellMinutes Int     @default(5) @map("min_dwell_minutes")
+  maxDwellMinutes Int     @default(60) @map("max_dwell_minutes")
+  /// Suggestion tier: a stop this near the outlet is offered in the inbox and on the place page.
+  maxDistanceM    Int     @default(100) @map("max_distance_m")
+  /// Auto-accept tier: only a stop this near is taken without asking (never above `maxDistanceM`).
+  autoAcceptDistanceM Int @default(60) @map("auto_accept_distance_m")
+  autoAccept      Boolean @default(false) @map("auto_accept")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  list PlaceList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, brandWikidataId])
+  @@index([userId])
+  @@map("place_list_brand_rules")
 }
 
 /// NOT application data — the receipt of the POI backfill.
