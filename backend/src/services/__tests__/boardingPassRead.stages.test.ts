@@ -269,4 +269,25 @@ describe("readBoardingPass — per-stage error codes", () => {
     expect(reading.stages.at(-1)?.code).toBe("LLM_UNREACHABLE");
     expect(reading.legs).toHaveLength(1);
   });
+
+  it("does not take a lone answer that names another carrier's flight", async () => {
+    mockedScan.mockResolvedValue(scanOf(UA633));
+    mockedOcr.mockResolvedValue(ocrOf("unreadable"));
+    llm.parseEmail.mockResolvedValue([
+      { flightNumber: "LH633", departureTime: "2026-01-08T07:00", missing: [] },
+    ]);
+    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    expect(reading.merged.departureTime).toBe("2026-01-08T00:00");
+  });
+
+  it("matches a bare flight number from the model to the carrier-prefixed leg", async () => {
+    mockedScan.mockResolvedValue(scanOf(UA633, UA952));
+    mockedOcr.mockResolvedValue(ocrOf("unreadable"));
+    llm.parseEmail.mockResolvedValue([
+      { flightNumber: "952", departureTime: "2026-01-08T17:50", missing: [] },
+    ]);
+    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    expect(reading.legs[1].departureTime).toBe("2026-01-08T17:50");
+    expect(reading.legs[0].departureTime).toBe("2026-01-08T00:00");
+  });
 });

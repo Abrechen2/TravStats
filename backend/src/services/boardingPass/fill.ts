@@ -113,29 +113,50 @@ export async function lookupStage(
   };
 }
 
-/** "UA952" and "UA 0952" → carrier "UA", number "952", suffix kept. */
+/**
+ * "UA952", "UA 0952" → carrier "UA", number "952"; "952" → number only. A
+ * carrier designator is three letters or two characters with a letter in
+ * them (U2, 4U), so a bare number is never split into a fake carrier.
+ */
 function flightIdentity(fn: string | undefined): { carrier?: string; number: string } | null {
   const m = (fn ?? "")
     .toUpperCase()
     .replace(/\s/g, "")
-    .match(/^([A-Z0-9]{2}(?=\d)|[A-Z]{2,3})?0*(\d{1,4}[A-Z]?)$/);
+    .match(/^(?:([A-Z]{2,3}|[A-Z]\d|\d[A-Z]))?0*(\d{1,4}[A-Z]?)$/);
   return m ? { ...(m[1] ? { carrier: m[1] } : {}), number: m[2] } : null;
 }
 
+const conflicts = (a: string | undefined, b: string | undefined): boolean =>
+  Boolean(a && b && a !== b);
+
 /**
  * The model's answer belongs to a leg when the flight number agrees — the
- * carrier too whenever the answer names one (UA123 is not LH123), and the
- * route wherever both sides have it.
+ * carrier too whenever both name one (UA123 is not LH123) — and neither
+ * airport contradicts the leg's.
  */
 function sameFlight(leg: ParsedBooking, answer: ParsedBooking): boolean {
   const a = flightIdentity(leg.flightNumber);
   const b = flightIdentity(answer.flightNumber);
-  if (!a || !b || a.number !== b.number) return false;
-  if (a.carrier && b.carrier && a.carrier !== b.carrier) return false;
-  if (leg.departureCode && answer.departureCode && leg.departureCode !== answer.departureCode) {
-    return false;
-  }
-  return true;
+  if (!a || !b || a.number !== b.number || conflicts(a.carrier, b.carrier)) return false;
+  return (
+    !conflicts(leg.departureCode, answer.departureCode) &&
+    !conflicts(leg.arrivalCode, answer.arrivalCode)
+  );
+}
+
+/** A lone answer for a lone leg, when it names no flight that could contradict the leg. */
+function loneUnnamedAnswer(
+  legs: Legs,
+  answers: readonly ParsedBooking[]
+): ParsedBooking | undefined {
+  if (legs.length !== 1 || answers.length !== 1) return undefined;
+  const [leg] = legs;
+  const [answer] = answers;
+  if (flightIdentity(leg.flightNumber) && flightIdentity(answer.flightNumber)) return undefined;
+  return conflicts(leg.departureCode, answer.departureCode) ||
+    conflicts(leg.arrivalCode, answer.arrivalCode)
+    ? undefined
+    : answer;
 }
 
 /**
@@ -195,9 +216,7 @@ export async function llmStage(
   }
   const filled: string[] = [];
   const out = legs.map((leg) => {
-    const match =
-      answers.find((a) => sameFlight(leg, a)) ??
-      (legs.length === 1 && answers.length === 1 ? answers[0] : undefined);
+    const match = answers.find((a) => sameFlight(leg, a)) ?? loneUnnamedAnswer(legs, answers);
     if (!match) return leg;
     const next = fillGaps(leg, match);
     filled.push(...changedFields(leg, next));
