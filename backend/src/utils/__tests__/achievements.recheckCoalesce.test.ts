@@ -1,6 +1,11 @@
 import { recheckAchievements } from "../achievements";
 import { prisma } from "../../db";
 
+// The purpose scope is beside the point here (an ordering test over a mocked data layer).
+jest.mock("../../services/provenance/purposeVisibility", () => ({
+  withPurposeVisibility: (_userId: string, fn: () => Promise<unknown>) => fn(),
+}));
+
 jest.mock("../../db", () => ({
   prisma: {
     achievement: { findMany: jest.fn() },
