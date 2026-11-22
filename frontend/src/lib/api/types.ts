@@ -51,8 +51,21 @@ export interface ParserCorrectionPayload {
 }
 
 /** Parse result for boarding pass */
+/** One step of reading a boarding pass, as the server reports it (2026-11-22). */
+export interface BoardingPassStage {
+  stage: "barcode" | "ocr" | "parser" | "lookup" | "llm";
+  status: "ok" | "partial" | "failed" | "skipped";
+  /** Stable code — mapped to copy in `components/boardingPass/stageCopy.ts`. */
+  code: string;
+  count?: number;
+  fields?: string[];
+}
+
 export interface BoardingPassParseResult {
   flight: ParsedBooking;
+  /** Every pass on the image; older servers send only `flight`. */
+  flights?: ParsedBooking[];
+  stages?: BoardingPassStage[];
   enriched?: boolean;
   provider?: string;
   confidence?: number;

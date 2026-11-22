@@ -5,6 +5,7 @@ import TimesFields, {
   type ActualTimesFieldsValue,
   type TimesFieldErrors,
 } from "./fields/TimesFields";
+import { followDepartureDate } from "./fields/timesFollow";
 import { RequiredLegend } from "../form";
 import { FLIGHT_FORM_IDS } from "./createFormState";
 import CatalogueCombobox, { searchAirlineOptions } from "./fields/CatalogueCombobox";
@@ -504,21 +505,21 @@ export default function FlightCompleteStep({
               onChange={(next) => {
                 // Create-only extra, kept here rather than inside TimesFields
                 // (which the edit form also renders and must not gain this):
-                // when the user picks a NEW departure date and the arrival date
-                // hasn't caught up yet (empty or still before it), nudge arrival
-                // forward with it. `next.arrDate` still equals the pre-change
-                // arrival date whenever the user edited the departure date input
-                // specifically (TimesFields only touches the field that changed),
-                // so comparing it here is equivalent to the pre-swap inline
-                // `onChange` that did this same check against `arrivalDate`.
-                const depDateChanged = next.depDate !== departureDate;
-                const arrivalNeedsToCatchUp = !next.arrDate || next.arrDate < next.depDate;
-                setDepartureDate(next.depDate);
-                setDepartureTime(next.depTime);
-                setArrivalDate(
-                  depDateChanged && arrivalNeedsToCatchUp ? next.depDate : next.arrDate
+                // the arrival date follows a NEW departure date while it has
+                // not caught up — shared with the scan/import review.
+                const followed = followDepartureDate(
+                  {
+                    depDate: departureDate,
+                    depTime: departureTime,
+                    arrDate: arrivalDate,
+                    arrTime: arrivalTime,
+                  },
+                  next
                 );
-                setArrivalTime(next.arrTime);
+                setDepartureDate(followed.depDate);
+                setDepartureTime(followed.depTime);
+                setArrivalDate(followed.arrDate);
+                setArrivalTime(followed.arrTime);
               }}
               onEstimateArrival={handleEstimateArrival}
               canEstimateArrival={canEstimateArrival}

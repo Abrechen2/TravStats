@@ -1,10 +1,13 @@
 import { useState, useRef } from "react";
 import { parseApi } from "../lib/api";
+import type { BoardingPassStage } from "../lib/api/types";
 import { useTranslation } from "../hooks/useTranslation";
 import { extractBarcodeFromImage } from "../lib/barcodeExtractor";
 import { parseBCBP } from "../lib/bcbpParser";
 import { logger } from "../lib/logger";
 import { bcbpToScanResult } from "./bcbpToScanResult";
+import BoardingPassStages from "./boardingPass/BoardingPassStages";
+import { stagesOfError } from "./boardingPass/stageCopy";
 
 import type { ScanResultData } from "./BoardingPassScanner.types";
 import { parseFailureMessage } from "../lib/parseErrorCopy";
@@ -14,136 +17,133 @@ import { parseFailureMessage } from "../lib/parseErrorCopy";
 export type { ScanResultData } from "./BoardingPassScanner.types";
 
 interface BoardingPassScannerProps {
-  onScanSuccess: (data: ScanResultData) => void;
+  /** Every flight read off the image — two paper passes on one photo are two. */
+  onScanSuccess: (flights: ScanResultData[]) => void;
   onClose: () => void;
 }
 
+type StepStatus = "pending" | "loading" | "success" | "error";
+
 interface ScanStep {
-  id: string;
-  label: string;
-  status: "pending" | "loading" | "success" | "error";
-  icon: string;
+  id: "load" | "device" | "server";
+  status: StepStatus;
   detail?: string;
 }
 
+const STEP_TONE: Record<StepStatus, string> = {
+  success: "bg-green-900/20 border-green-800 text-green-200",
+  error: "bg-red-900/20 border-red-800 text-red-200",
+  loading: "bg-blue-900/20 border-blue-800 text-blue-200",
+  pending: "bg-(--bg-elevated) border-border text-(--text-muted)",
+};
+
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => resolve(String(event.target?.result ?? ""));
+    reader.onerror = () => reject(reader.error ?? new Error("read failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Upload a photo of one or more boarding passes.
+ *
+ * The browser tries the barcode first (fast, but it only reads a crisp,
+ * frame-filling one), then the SERVER reads the image in its fixed order —
+ * barcode with cropping/rotation/upscaling, OCR, template/regex parser, flight
+ * lookup, AI parser last — and reports every stage. Both outcomes stay on
+ * screen until the user goes on: before 2026-11-22 a photo of two United
+ * passes passed as "Ollama Vision analysiert…" (it was never the model) and
+ * ended in one vague error.
+ */
 export default function BoardingPassScanner({
   onScanSuccess,
   onClose,
 }: BoardingPassScannerProps): JSX.Element {
-  const { t } = useTranslation(["flights", "common", "errors"]);
+  const { t } = useTranslation(["flights", "common", "errors", "import"]);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
-  const [scanSteps, setScanSteps] = useState<ScanStep[]>([]);
+  const [steps, setSteps] = useState<ScanStep[]>([]);
+  const [stages, setStages] = useState<BoardingPassStage[]>([]);
+  const [flights, setFlights] = useState<ScanResultData[] | null>(null);
+  const [deviceFlight, setDeviceFlight] = useState<ScanResultData | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const updateScanStep = (id: string, updates: Partial<ScanStep>) => {
-    setScanSteps((prev) => prev.map((step) => (step.id === id ? { ...step, ...updates } : step)));
-  };
+  const setStep = (id: ScanStep["id"], update: Omit<ScanStep, "id">) =>
+    setSteps((prev) => prev.map((s) => (s.id === id ? { id, ...update } : s)));
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setError("");
+    setStages([]);
+    setFlights(null);
+    setDeviceFlight(null);
     setScanning(true);
+    setSteps([
+      { id: "load", status: "loading" },
+      { id: "device", status: "pending" },
+      { id: "server", status: "pending" },
+    ]);
 
-    const steps: ScanStep[] = [
-      { id: "load", label: t("flights:scanner.steps.load"), status: "loading", icon: "📸" },
-      { id: "barcode", label: t("flights:scanner.steps.barcode"), status: "pending", icon: "📱" },
-      { id: "parser", label: t("flights:scanner.steps.parser"), status: "pending", icon: "⚙️" },
-      { id: "ocr", label: t("flights:scanner.steps.api"), status: "pending", icon: "🔍" },
-      { id: "complete", label: t("flights:scanner.steps.complete"), status: "pending", icon: "✅" },
-    ];
-    setScanSteps(steps);
-
+    let dataUrl: string;
     try {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const dataUrl = event.target?.result as string;
-        setPreview(dataUrl);
-        updateScanStep("load", { status: "success" });
-
-        try {
-          // Step 1: Try barcode extraction first (fast, free)
-          updateScanStep("barcode", { status: "loading" });
-          const barcodeData = await extractBarcodeFromImage(file);
-
-          if (barcodeData) {
-            updateScanStep("barcode", { status: "success", detail: "Barcode gefunden" });
-            updateScanStep("parser", { status: "loading" });
-            const parsedData = parseBCBP(barcodeData);
-
-            if (parsedData) {
-              updateScanStep("parser", {
-                status: "success",
-                detail: `Flug ${parsedData.flightNumber || ""} ${parsedData.departureAirport} → ${parsedData.arrivalAirport}`,
-              });
-              updateScanStep("ocr", { status: "pending" });
-              updateScanStep("complete", { status: "success" });
-
-              const flightData: ScanResultData = bcbpToScanResult(parsedData);
-
-              await new Promise((resolve) => setTimeout(resolve, 800));
-              onScanSuccess(flightData);
-              setScanning(false);
-              return;
-            } else {
-              updateScanStep("parser", { status: "error", detail: "Parser fehlgeschlagen" });
-            }
-          } else {
-            updateScanStep("barcode", { status: "error", detail: "Kein Barcode gefunden" });
-          }
-
-          // Step 2: Fallback to Tesseract OCR via API
-          updateScanStep("ocr", { status: "loading", detail: t("flights:scanner.analyzing") });
-          const base64Data = dataUrl.split(",")[1];
-          const result = await parseApi.parseBoardingpass(base64Data, false);
-
-          updateScanStep("ocr", {
-            status: "success",
-            detail: `${result.flight.flightNumber || t("flights:scanner.flight")} ${result.flight.departureCode} ${t("common:labels.routeSeparator")} ${result.flight.arrivalCode}`,
-          });
-
-          if (result.enriched) {
-            updateScanStep("ocr", { status: "success", detail: t("flights:scanner.enriched") });
-          }
-
-          updateScanStep("complete", { status: "success" });
-          await new Promise((resolve) => setTimeout(resolve, 800));
-          onScanSuccess(result.flight);
-          setScanning(false);
-        } catch (err: unknown) {
-          logger.error("Boarding pass parsing failed:", err);
-
-          const currentStep = steps.find((s) => s.status === "loading");
-          if (currentStep) {
-            updateScanStep(currentStep.id, { status: "error" });
-          }
-
-          // Never the server's English `error` or axios's own message.
-          setError(parseFailureMessage(err, t, "errors:boardingPassError"));
-          setScanning(false);
-        }
-      };
-
-      reader.onerror = () => {
-        updateScanStep("load", { status: "error" });
-        setError(t("flights:scanner.loadError"));
-        setScanning(false);
-      };
-
-      reader.readAsDataURL(file);
+      dataUrl = await readAsDataUrl(file);
     } catch {
-      setError(t("flights:scanner.processError"));
+      setStep("load", { status: "error" });
+      setError(t("flights:scanner.loadError"));
       setScanning(false);
+      return;
     }
+    setPreview(dataUrl);
+    setStep("load", { status: "success" });
+
+    // 1. The browser's own barcode read — offered as a way on if the server fails.
+    setStep("device", { status: "loading" });
+    let local: ScanResultData | null = null;
+    try {
+      const barcode = await extractBarcodeFromImage(file);
+      const parsed = barcode ? parseBCBP(barcode) : null;
+      local = parsed ? bcbpToScanResult(parsed) : null;
+    } catch (err) {
+      logger.warn("Browser barcode read failed:", err);
+    }
+    setDeviceFlight(local);
+    setStep(
+      "device",
+      local
+        ? {
+            status: "success",
+            detail: t("flights:scanner.device.found", {
+              flight: `${local.flightNumber ?? ""} ${local.departureCode ?? ""} → ${local.arrivalCode ?? ""}`,
+            }),
+          }
+        : { status: "error", detail: t("flights:scanner.device.none") }
+    );
+
+    // 2. The server, every stage reported.
+    setStep("server", { status: "loading", detail: t("flights:scanner.serverWorking") });
+    try {
+      const result = await parseApi.parseBoardingpass(dataUrl.split(",")[1], true);
+      const read = result.flights && result.flights.length > 0 ? result.flights : [result.flight];
+      setStages(result.stages ?? []);
+      setFlights(read);
+      setStep("server", { status: "success" });
+    } catch (err: unknown) {
+      logger.error("Boarding pass parsing failed:", err);
+      setStages(stagesOfError(err));
+      setStep("server", { status: "error", detail: t("flights:scanner.serverFailed") });
+      // Never the server's English `error` or axios's own message.
+      setError(parseFailureMessage(err, t, "errors:boardingPassError"));
+    }
+    setScanning(false);
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-(--bg-surface) rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="sticky top-0 bg-(--bg-surface) border-b border-border px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-white">{t("flights:scanner.title")}</h2>
           <button
@@ -163,20 +163,13 @@ export default function BoardingPassScanner({
           </button>
         </div>
 
-        {/* Content */}
         <div className="p-6 space-y-6">
           {error && (
-            <div className="p-4 bg-red-900/20 border-red-800 border rounded-lg">
-              <div className="flex items-start">
-                <span className="text-2xl mr-3" aria-hidden="true">
-                  X
-                </span>
-                <p className="text-red-200">{error}</p>
-              </div>
+            <div role="alert" className="p-4 bg-red-900/20 border-red-800 border rounded-lg">
+              <p className="text-red-200">{error}</p>
             </div>
           )}
 
-          {/* Upload Area */}
           {!scanning && !preview && (
             <div>
               <div
@@ -189,44 +182,39 @@ export default function BoardingPassScanner({
                   className="hidden"
                   accept="image/*"
                   onChange={handleFileSelect}
+                  data-testid="boarding-pass-file"
                 />
                 <div className="space-y-3">
                   <div className="text-5xl" aria-hidden="true">
                     🎫
                   </div>
-                  <div>
-                    <p className="text-lg font-medium text-white">
-                      {t("flights:scanner.uploadTitle")}
-                    </p>
-                    <p className="text-sm mt-1 text-(--text-muted)">
-                      {t("flights:scanner.clickToSelect")}
-                    </p>
-                  </div>
+                  <p className="text-lg font-medium text-white">
+                    {t("flights:scanner.uploadTitle")}
+                  </p>
+                  <p className="text-sm mt-1 text-(--text-muted)">
+                    {t("flights:scanner.clickToSelect")}
+                  </p>
                   <p className="text-xs text-(--text-muted)">
                     {t("flights:scanner.supportedFormats")}
                   </p>
                 </div>
               </div>
-
-              {/* Info Box */}
               <div className="mt-4 p-4 bg-blue-900/20 border-blue-800 border rounded-lg">
                 <h3 className="text-sm font-semibold text-blue-200 mb-2">
                   {t("flights:scanner.info.title")}
                 </h3>
-                <ul className="text-sm text-blue-300 space-y-1">
-                  <li>• {t("flights:scanner.info.step1")}</li>
-                  <li>• {t("flights:scanner.info.step2")}</li>
-                  <li>• {t("flights:scanner.info.step3")}</li>
-                  <li>• {t("flights:scanner.info.step4")}</li>
-                </ul>
+                <ol className="text-sm text-blue-300 space-y-1 list-decimal list-inside">
+                  <li>{t("flights:scanner.info.step1")}</li>
+                  <li>{t("flights:scanner.info.step2")}</li>
+                  <li>{t("flights:scanner.info.step3")}</li>
+                  <li>{t("flights:scanner.info.step4")}</li>
+                </ol>
               </div>
             </div>
           )}
 
-          {/* Preview & Progress */}
           {preview && (
             <div className="space-y-4">
-              {/* Image Preview */}
               <div className="border-2 border-dashed border-border rounded-lg p-2">
                 <img
                   src={preview}
@@ -235,60 +223,45 @@ export default function BoardingPassScanner({
                 />
               </div>
 
-              {/* Scan Steps */}
-              {scanSteps.length > 0 && (
-                <div className="space-y-2">
-                  {scanSteps.map((step) => (
-                    <div
-                      key={step.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg ${
-                        step.status === "success"
-                          ? "bg-green-900/20 border border-green-800"
-                          : step.status === "error"
-                            ? "bg-red-900/20 border border-red-800"
-                            : step.status === "loading"
-                              ? "bg-blue-900/20 border border-blue-800"
-                              : "bg-(--bg-elevated) border border-border"
-                      }`}
-                    >
-                      <span className="text-2xl" aria-hidden="true">
-                        {step.icon}
-                      </span>
-                      <div className="flex-1">
-                        <p
-                          className={`font-medium ${
-                            step.status === "success"
-                              ? "text-green-200"
-                              : step.status === "error"
-                                ? "text-red-200"
-                                : step.status === "loading"
-                                  ? "text-blue-200"
-                                  : "text-(--text-muted)"
-                          }`}
-                        >
-                          {step.label}
-                        </p>
-                        {step.detail && (
-                          <p
-                            className={`text-sm ${
-                              step.status === "success"
-                                ? "text-green-300"
-                                : step.status === "error"
-                                  ? "text-red-300"
-                                  : "text-blue-300"
-                            }`}
-                          >
-                            {step.detail}
-                          </p>
-                        )}
-                      </div>
-                      {step.status === "loading" && (
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                      )}
+              <ul className="space-y-2">
+                {steps.map((step) => (
+                  <li
+                    key={step.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg border ${STEP_TONE[step.status]}`}
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium">{t(`flights:scanner.steps.${step.id}`)}</p>
+                      {step.detail && <p className="text-sm opacity-90">{step.detail}</p>}
                     </div>
-                  ))}
-                </div>
-              )}
+                    {step.status === "loading" && (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+
+              {stages.length > 0 && <BoardingPassStages stages={stages} />}
+
+              <div className="flex flex-wrap justify-end gap-2">
+                {flights === null && deviceFlight && !scanning && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => onScanSuccess([deviceFlight])}
+                  >
+                    {t("flights:scanner.useDeviceBarcode")}
+                  </button>
+                )}
+                {flights && (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => onScanSuccess(flights)}
+                  >
+                    {t("flights:scanner.review", { count: flights.length })}
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
