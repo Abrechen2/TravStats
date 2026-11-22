@@ -86,6 +86,30 @@ describe("TravelPlanSummary", () => {
       expect(await screen.findByText("plan page")).toBeInTheDocument();
     });
 
+    it("does not nag a completed trip without a plan to plan it (running or upcoming still do)", async () => {
+      mocks.get.mockRejectedValue({ response: { status: 404, data: { code: "PLAN_NOT_FOUND" } } });
+      const done = render(
+        <MemoryRouter>
+          <TravelPlanSummary tripId="trip-one" completed />
+        </MemoryRouter>
+      );
+      await act(async () => undefined);
+      expect(mocks.get).toHaveBeenCalled();
+      expect(done.container).toBeEmptyDOMElement();
+      done.unmount();
+      renderSummary();
+      expect(await screen.findByRole("button", { name: "planThis.action" })).toBeInTheDocument();
+    });
+
+    it("still shows the plan of a completed trip", async () => {
+      render(
+        <MemoryRouter>
+          <TravelPlanSummary tripId="trip-one" completed />
+        </MemoryRouter>
+      );
+      expect(await screen.findByRole("link", { name: "continue" })).toBeInTheDocument();
+    });
+
     it("offers nothing when the plan could not be read for another reason", async () => {
       mocks.get.mockRejectedValueOnce({ response: { status: 500, data: {} } });
       const { container } = renderSummary();

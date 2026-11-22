@@ -13,8 +13,18 @@ import { StatusPill } from "../ui/Pill";
  * The trip page's way into its plan. Behind the same gate as the navigation
  * entry — the beta switch, the instance switch and the account's own — since a
  * link into planning the server refuses would only bounce.
+ *
+ * `completed` is the server's own verdict on the trip (the one the trip head and the
+ * packing card read). A finished trip is not asked to be planned (owner, 2026-11-22:
+ * "viel zu penetrant"); a plan that already exists is still shown, read-only.
  */
-export function TravelPlanSummary({ tripId }: { tripId: string }) {
+export function TravelPlanSummary({
+  tripId,
+  completed = false,
+}: {
+  tripId: string;
+  completed?: boolean;
+}) {
   const { t } = useTranslation("travplan"),
     offered = useTravPlanVisible(),
     navigate = useNavigate(),
@@ -44,7 +54,7 @@ export function TravelPlanSummary({ tripId }: { tripId: string }) {
       live = false;
     };
   }, [tripId, offered]);
-  if (offered && !plan && absent === "none")
+  if (offered && !plan && absent === "none" && !completed)
     return (
       <Card style={{ margin: "var(--ts-space-xl) 0" }}>
         <section className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
