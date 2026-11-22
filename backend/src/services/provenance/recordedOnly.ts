@@ -71,6 +71,13 @@ const READS = new Set([
  */
 const PARENTS: Record<string, string> = { Lodging: "stays", Place: "visits" };
 
+/**
+ * A child row that carries no provenance of its own but exists only through its parent entry —
+ * a cruise's stops and legs — is as remembered as that parent. A statistic that reads the stops
+ * directly (the passport, a country's detail) would otherwise still count a remembered cruise's ports.
+ */
+const CHILDREN: Record<string, string> = { CruiseStop: "cruise", CruiseLeg: "cruise" };
+
 const RECORDED = { OR: [{ provenance: null }, { provenance: { not: "remembered" } }] };
 
 type Json = Record<string, unknown>;
@@ -102,9 +109,12 @@ const narrowWhere = (model: string, where: unknown): Json =>
     ? withRecorded(where)
     : model in PARENTS
       ? withVisibleEntries(model, where)
-      : (where as Json);
+      : model in CHILDREN
+        ? andWhere(where, { [CHILDREN[model]]: { is: RECORDED } })
+        : (where as Json);
 
-const narrowsModel = (model: string): boolean => MODELS.has(model) || model in PARENTS;
+const narrowsModel = (model: string): boolean =>
+  MODELS.has(model) || model in PARENTS || model in CHILDREN;
 
 /** model -> relation name -> target, read once from the schema. */
 let relations: Map<string, Map<string, { target: string; isList: boolean }>> | null = null;

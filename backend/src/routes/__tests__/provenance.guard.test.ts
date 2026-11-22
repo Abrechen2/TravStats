@@ -64,6 +64,7 @@ describe("nur belegte — every statistic the page reads drops a remembered acco
   let ghostCookie: string;
   let emptyCookie: string;
   const ids: string[] = [];
+  let portId = 0;
 
   beforeAll(async () => {
     const passwordHash = await hashPassword("test-password");
@@ -149,7 +150,7 @@ describe("nur belegte — every statistic the page reads drops a remembered acco
         ...mark,
       },
     });
-    await prisma.cruise.create({
+    const cruise = await prisma.cruise.create({
       data: {
         userId: ghost,
         tripId,
@@ -157,6 +158,22 @@ describe("nur belegte — every statistic the page reads drops a remembered acco
         endDate: new Date("2001-07-18T00:00:00Z"),
         status: "completed",
         ...mark,
+      },
+    });
+    // The remembered cruise's only port is in a country no other entry reaches: a statistic that
+    // reads the stops directly (passport, country detail) must not report it.
+    const port = await prisma.port.create({
+      data: { name: "Piräus", city: "Piräus", country: "GR", lat: 37.94, lon: 23.64 },
+    });
+    portId = port.id;
+    await prisma.cruiseStop.create({
+      data: {
+        cruiseId: cruise.id,
+        portId: port.id,
+        dayNumber: 1,
+        date: new Date("2001-07-12T00:00:00Z"),
+        arrivalTime: new Date("2001-07-12T08:00:00Z"),
+        departureTime: new Date("2001-07-12T18:00:00Z"),
       },
     });
     const lodging = await prisma.lodging.create({
@@ -189,6 +206,7 @@ describe("nur belegte — every statistic the page reads drops a remembered acco
 
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { id: { in: ids } } });
+    await prisma.port.deleteMany({ where: { id: portId } });
   });
 
   // Reads that need a parameter or a window the bare route lacks; same check, same fixture.
@@ -197,6 +215,7 @@ describe("nur belegte — every statistic the page reads drops a remembered acco
     "/api/v1/stats/timeseries?window=all",
     "/api/v1/stats/timeseries?window=all&domain=cruise",
     "/api/v1/stats/countries/IT",
+    "/api/v1/stats/countries/GR",
     "/api/v1/stats/summary?year=2001",
     "/api/v1/stats/routes?year=2001",
     "/api/v1/lodging?year=2001",

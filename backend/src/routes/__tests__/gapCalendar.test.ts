@@ -130,6 +130,48 @@ describe("gap calendar", () => {
     expect(body.firstDay).toBeNull();
   });
 
+  it("a year-precision historical flight's Jan 1 placeholder does not cover that day", async () => {
+    await prisma.flight.create({
+      data: {
+        userId,
+        ...AIRPORTS,
+        depIata: "ICN",
+        arrIata: "NRT",
+        flightNumber: "KE3",
+        departureTime: new Date("2026-01-01T00:00:00Z"),
+        depTimeSemantics: "UNKNOWN",
+        depPrecision: "year",
+        status: "flown",
+      },
+    });
+    const body = (await year()).body as Body;
+    expect(body.firstDay).toBeNull();
+    expect(stateOf(body, "2026-01-01")).not.toBe("entry");
+  });
+
+  it("a month-precision flight and the legacy UNKNOWN placeholder shape cover no day either", async () => {
+    for (const [n, precision] of [
+      ["KE4", "month"],
+      ["KE5", null],
+    ] as const) {
+      await prisma.flight.create({
+        data: {
+          userId,
+          ...AIRPORTS,
+          depIata: "ICN",
+          arrIata: "NRT",
+          flightNumber: n,
+          departureTime: new Date("2026-03-01T00:00:00Z"),
+          depTimeSemantics: "UNKNOWN",
+          depPrecision: precision,
+          status: "flown",
+        },
+      });
+    }
+    const body = (await year()).body as Body;
+    expect(body.firstDay).toBeNull();
+  });
+
   describe("TravTrack fixes", () => {
     it("a day with a plausible fix is track; an entry beats it", async () => {
       await storePoint(userId, { t: Date.parse("2026-06-10T03:00:00Z"), lat: 35.1, lon: 129.0 });

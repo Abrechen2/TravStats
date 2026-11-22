@@ -53,7 +53,8 @@ function spans(userId: string): Prisma.Sql {
            COALESCE(${localDay("arrival_time", zoneOr("arr_timezone"))},
                     ${localDay("departure_time", zoneOr("dep_timezone"))}) AS d_to
     FROM ${Prisma.raw(table)}
-    WHERE user_id = ${userId} AND status <> 'cancelled'`;
+    WHERE user_id = ${userId} AND status <> 'cancelled'
+      AND COALESCE(dep_precision, 'minute') NOT IN ('month', 'year')`;
   return Prisma.sql`
     ${tripLike("trips", Prisma.sql`TRUE`)}
     UNION ALL ${tripLike("cruises", Prisma.sql`status <> 'cancelled'`)}
@@ -76,6 +77,11 @@ function spans(userId: string): Prisma.Sql {
                   ELSE departure_time::date END) AS d_to
     FROM flights
     WHERE user_id = ${userId} AND status <> 'cancelled' AND departure_time IS NOT NULL
+      -- A month- or year-precision flight stores the 1st of the period as a placeholder; it covers
+      -- no specific day. The legacy shape (UNKNOWN semantics, 1st at 00:00) is the same placeholder.
+      AND COALESCE(dep_precision, 'minute') NOT IN ('month', 'year')
+      AND NOT (dep_time_semantics = 'UNKNOWN' AND COALESCE(dep_precision, '') NOT IN ('minute', 'day')
+               AND departure_time::time = TIME '00:00' AND EXTRACT(DAY FROM departure_time) = 1)
     UNION ALL ${journey("rail_journeys")}
     UNION ALL ${journey("bus_journeys")}
     UNION ALL ${journey("ferry_journeys")}
@@ -84,6 +90,7 @@ function spans(userId: string): Prisma.Sql {
            ${localDay("return_time", zoneOr("return_timezone"))} AS d_to
     FROM rental_bookings
     WHERE user_id = ${userId} AND status <> 'cancelled'
+      AND pickup_precision NOT IN ('month', 'year')
     UNION ALL
     SELECT d AS d_from, d AS d_to FROM (
       SELECT CASE WHEN visited_at_utc IS NOT NULL
