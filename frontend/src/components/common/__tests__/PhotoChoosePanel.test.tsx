@@ -75,15 +75,24 @@ describe("PhotoChoosePanel", () => {
     const { unmount } = render(
       <PhotoChoosePanel target={target} onSaved={() => {}} onClose={() => {}} />
     );
-    const link = await screen.findByRole("link", { name: "common:photoChoose.openIn.immich" });
-    expect(link).toHaveAttribute("href", "https://immich.example/search?query=x");
-    expect(link).toHaveAttribute("target", "_blank");
-    expect(link.getAttribute("rel")).toContain("noopener");
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "common:entryPhotos.menuLabel" })
+    );
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: "common:photoChoose.openIn.immich" })
+    );
+    expect(open).toHaveBeenCalledWith(
+      "https://immich.example/search?query=x",
+      "_blank",
+      "noopener,noreferrer"
+    );
+    open.mockRestore();
     unmount();
     getPhotoChoices.mockResolvedValue(data({ openIn: [] }));
     render(<PhotoChoosePanel target={target} onSaved={() => {}} onClose={() => {}} />);
     await screen.findAllByRole("button", { pressed: true });
-    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.queryByRole("button", { name: "common:entryPhotos.menuLabel" })).toBeNull();
   });
 
   it("says so when the save fails instead of closing silently", async () => {

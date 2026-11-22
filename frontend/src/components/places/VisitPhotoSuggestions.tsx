@@ -1,4 +1,5 @@
 import { useState } from "react";
+import OverflowMenu, { type OverflowEntry } from "../ui/OverflowMenu";
 import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
@@ -153,32 +154,36 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
       />
     );
   }
-  const chooseButton = (
-    <button
-      type="button"
-      onClick={() => setChoosing(true)}
-      className="mt-1 self-start text-xs underline-offset-2 hover:underline"
-      style={{ color: "var(--text-muted)", background: "none", border: "none", padding: 0 }}
-    >
-      {t("places:photos.suggest.choose")}
-    </button>
+  // The suggestion search, the library picker and "undo refusals" are rare: one ⋯ (owner,
+  // 2026-11-22). The suggested tiles and their link / refuse buttons stay in view.
+  const menu = (extra: OverflowEntry[]): JSX.Element => (
+    <div className="flex justify-end">
+      <OverflowMenu
+        label={t("places:photos.suggest.menuLabel")}
+        testId={`visit-photos-menu-${visitId}`}
+        entries={[
+          ...extra,
+          {
+            key: "choose",
+            testId: `visit-photos-choose-${visitId}`,
+            label: t("places:photos.suggest.choose"),
+            onSelect: () => setChoosing(true),
+          },
+        ]}
+      />
+    </div>
   );
 
   if (result === null) {
-    return (
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={() => void load()}
-          disabled={busy}
-          className="mt-1 self-start text-xs underline-offset-2 hover:underline disabled:opacity-50"
-          style={{ color: "var(--text-muted)", background: "none", border: "none", padding: 0 }}
-        >
-          {busy ? t("places:photos.suggest.loading") : t("places:photos.suggest.open")}
-        </button>
-        {chooseButton}
-      </div>
-    );
+    return menu([
+      {
+        key: "open",
+        testId: `visit-photos-open-${visitId}`,
+        label: busy ? t("places:photos.suggest.loading") : t("places:photos.suggest.open"),
+        disabled: busy,
+        onSelect: () => void load(),
+      },
+    ]);
   }
 
   // One source failing is shown even while the other answered.
@@ -230,19 +235,20 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
           </div>
         </>
       )}
-      {result.day !== null && (
-        <button
-          type="button"
-          onClick={() => void undoRefusals()}
-          disabled={busy}
-          className="self-start text-xs underline-offset-2 hover:underline disabled:opacity-50"
-          style={{ color: "var(--text-muted)", background: "none", border: "none", padding: 0 }}
-        >
-          {t("places:photos.suggest.undo")}
-        </button>
-      )}
       {libraryDown && <p className="t-caption">{t("places:photos.suggest.libraryDown")}</p>}
-      {chooseButton}
+      {menu(
+        result.day !== null
+          ? [
+              {
+                key: "undo",
+                testId: `visit-photos-undo-${visitId}`,
+                label: t("places:photos.suggest.undo"),
+                disabled: busy,
+                onSelect: () => void undoRefusals(),
+              },
+            ]
+          : []
+      )}
     </div>
   );
 }

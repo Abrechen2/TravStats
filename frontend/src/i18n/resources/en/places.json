@@ -258,6 +258,7 @@
     "captionAdd": "Caption…",
     "captionFailed": "The caption could not be saved.",
     "suggest": {
+      "menuLabel": "Photo actions",
       "open": "Suggest photos from your trip",
       "title": "Photos from your trip",
       "loading": "Looking for photos …",

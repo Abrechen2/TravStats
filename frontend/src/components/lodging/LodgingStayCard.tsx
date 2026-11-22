@@ -1,5 +1,6 @@
 import { useShareLink } from "../shareLinks/ShareLinkButton";
 import OverflowMenu from "../ui/OverflowMenu";
+import DocumentsSection from "../documents/DocumentsSection";
 import RememberedMarker from "../provenance/RememberedMarker";
 import { PackageBookingCard } from "../bookings/PackageBookingCard";
 import type { JSX } from "react";
@@ -269,6 +270,9 @@ export function LodgingStayCard({
       {stay.notes && (
         <p className="mt-2 whitespace-pre-wrap text-xs text-[var(--text-muted)]">{stay.notes}</p>
       )}
+      {/* Documents hang off the STAY, never the house (owner, 2026-11-22): the list and the
+          upload both live on the card of the stay they belong to. */}
+      <DocumentsSection layout="inline" entry={{ type: "lodgingStay", id: stay.id }} />
     </div>
   );
 }

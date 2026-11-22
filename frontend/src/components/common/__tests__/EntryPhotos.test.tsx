@@ -34,6 +34,14 @@ const AUTO = {
   mimetype: "image/jpeg",
 };
 
+/** The rare actions sit in the section ⋯ (owner, 2026-11-22): open it, choose the entry. */
+async function menuItem(name: string): Promise<void> {
+  await userEvent.click(
+    await screen.findByRole("button", { name: "common:entryPhotos.menuLabel" })
+  );
+  await userEvent.click(await screen.findByRole("menuitem", { name }));
+}
+
 describe("EntryPhotos", () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -82,7 +90,7 @@ describe("EntryPhotos", () => {
     });
     linkEntryPhotos.mockResolvedValue({ linked: 1, skipped: 0 });
     render(<EntryPhotos kind="ferry" entryId="fe-1" />);
-    await userEvent.click(await screen.findByRole("button", { name: "common:entryPhotos.add" }));
+    await menuItem("common:entryPhotos.add");
     expect(await screen.findByText("common:entryPhotos.sourceDown")).toBeTruthy();
     const tiles = await screen.findAllByRole("button", { pressed: false });
     await userEvent.click(tiles[0]);
@@ -97,7 +105,21 @@ describe("EntryPhotos", () => {
     listEntryPhotos.mockResolvedValue([]);
     getEntryPhotoSuggestions.mockResolvedValue({ untimed: true, sources: {}, suggestions: [] });
     render(<EntryPhotos kind="cruiseStop" entryId="c-1" />);
-    await userEvent.click(await screen.findByRole("button", { name: "common:entryPhotos.add" }));
+    await menuItem("common:entryPhotos.add");
     expect(await screen.findByText("common:entryPhotos.untimed")).toBeTruthy();
+  });
+
+  it("removes every automatic link only after the ⋯ entry is confirmed", async () => {
+    listEntryPhotos.mockResolvedValue([
+      { id: "p1", provider: "immich", assetId: "a", url: "/a.jpg", provenance: "auto" },
+    ]);
+    removeAutoEntryPhotos.mockResolvedValue(undefined);
+    render(<EntryPhotos kind="flight" entryId="f1" />);
+    await menuItem("common:entryPhotos.removeAll");
+    expect(removeAutoEntryPhotos).not.toHaveBeenCalled();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "common:entryPhotos.removeAll" })
+    );
+    await waitFor(() => expect(removeAutoEntryPhotos).toHaveBeenCalledWith("flight", "f1"));
   });
 });

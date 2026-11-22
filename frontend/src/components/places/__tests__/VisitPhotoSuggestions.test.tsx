@@ -30,6 +30,12 @@ const LIBRARY = { kind: "library", id: "as-1", url: "/l/1", takenAt: null, dista
  * and a pick is sent back split into trip photos and library ids — never
  * attached without the user choosing it.
  */
+/** The rare actions sit in the section ⋯ (owner, 2026-11-22): open it, choose the entry. */
+async function menuItem(name: string): Promise<void> {
+  await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.menuLabel" }));
+  await userEvent.click(await screen.findByRole("menuitem", { name }));
+}
+
 describe("VisitPhotoSuggestions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,7 +54,7 @@ describe("VisitPhotoSuggestions", () => {
     render(<VisitPhotoSuggestions visitId="visit-1" onLinked={onLinked} />);
 
     expect(getVisitPhotoSuggestions).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.open" }));
+    await menuItem("places:photos.suggest.open");
 
     const tiles = await screen.findAllByRole("button", { pressed: false });
     expect(tiles).toHaveLength(2);
@@ -80,7 +86,7 @@ describe("VisitPhotoSuggestions", () => {
     linkVisitPhotoSuggestions.mockResolvedValue({ linked: 1, skipped: 0 });
     listVisitPhotos.mockResolvedValue([]);
     render(<VisitPhotoSuggestions visitId="visit-1" onLinked={vi.fn()} />);
-    await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.open" }));
+    await menuItem("places:photos.suggest.open");
     const tiles = await screen.findAllByRole("button", { pressed: false });
     await userEvent.click(tiles[1]);
     await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.link" }));
@@ -102,7 +108,7 @@ describe("VisitPhotoSuggestions", () => {
       sources: { immich: "ok", photoprism: "auth" },
     });
     render(<VisitPhotoSuggestions visitId="visit-1" onLinked={vi.fn()} />);
-    await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.open" }));
+    await menuItem("places:photos.suggest.open");
     expect(await screen.findByText("places:photos.suggest.libraryDown")).toBeInTheDocument();
   });
 
@@ -113,7 +119,7 @@ describe("VisitPhotoSuggestions", () => {
       library: "unreachable",
     });
     render(<VisitPhotoSuggestions visitId="visit-1" onLinked={vi.fn()} />);
-    await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.open" }));
+    await menuItem("places:photos.suggest.open");
 
     expect(await screen.findByText("places:photos.suggest.undated")).toBeInTheDocument();
     expect(screen.getByText("places:photos.suggest.libraryDown")).toBeInTheDocument();
@@ -127,7 +133,7 @@ describe("VisitPhotoSuggestions", () => {
       library: "ok",
     });
     render(<VisitPhotoSuggestions visitId="v1" onLinked={vi.fn()} />);
-    await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.open" }));
+    await menuItem("places:photos.suggest.open");
     const tiles = await screen.findAllByRole("button", { pressed: false });
     expect(tiles[0]).toHaveTextContent("places:photos.suggest.distanceShort");
     expect(tiles[0]).not.toHaveAttribute("title");
@@ -142,7 +148,7 @@ describe("VisitPhotoSuggestions", () => {
     });
     refuseVisitPhotoSuggestions.mockResolvedValue({ refused: 1, skipped: 0 });
     render(<VisitPhotoSuggestions visitId="visit-1" onLinked={vi.fn()} />);
-    await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.open" }));
+    await menuItem("places:photos.suggest.open");
     const tiles = await screen.findAllByRole("button", { pressed: false });
     await userEvent.click(tiles[0]);
     await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.refuse" }));
@@ -165,7 +171,7 @@ describe("VisitPhotoSuggestions", () => {
     });
     refuseVisitPhotoSuggestions.mockRejectedValue(new Error("500"));
     render(<VisitPhotoSuggestions visitId="visit-1" onLinked={vi.fn()} />);
-    await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.open" }));
+    await menuItem("places:photos.suggest.open");
     await userEvent.click((await screen.findAllByRole("button", { pressed: false }))[0]);
     await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.refuse" }));
 
@@ -183,19 +189,19 @@ describe("VisitPhotoSuggestions", () => {
     });
     clearVisitPhotoRefusals.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("x"));
     render(<VisitPhotoSuggestions visitId="visit-1" onLinked={vi.fn()} />);
-    await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.open" }));
-    const undo = await screen.findByRole("button", { name: "places:photos.suggest.undo" });
+    await menuItem("places:photos.suggest.open");
+    await screen.findByText("places:photos.suggest.none");
 
     getVisitPhotoSuggestions.mockResolvedValueOnce({
       day: "2024-05-01",
       suggestions: [TRIP],
       library: "ok",
     });
-    await userEvent.click(undo);
+    await menuItem("places:photos.suggest.undo");
     await waitFor(() => expect(clearVisitPhotoRefusals).toHaveBeenCalledWith("visit-1"));
     expect(await screen.findAllByRole("button", { pressed: false })).toHaveLength(1);
 
-    await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.undo" }));
+    await menuItem("places:photos.suggest.undo");
     await waitFor(() =>
       expect(addToast).toHaveBeenCalledWith("error", "places:photos.suggest.undoFailed")
     );
