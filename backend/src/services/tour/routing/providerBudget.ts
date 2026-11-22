@@ -39,6 +39,31 @@ export function takeProviderCall(userId: string, now: Date = new Date()): Budget
   return "ok";
 }
 
+/**
+ * What the instance may spend on one provider per UTC day, as the provider's own
+ * free tier states it. `null` = no published limit (a self-hosted OSRM).
+ */
+export const PROVIDER_DAILY_LIMIT: Record<string, number | null> = {
+  openrouteservice: 2000,
+  graphhopper: 500,
+  custom: null,
+};
+
+/**
+ * One call of the administrator's instance-wide re-route. It draws from the same
+ * instance counter every other caller does, so interactive routing sees what the
+ * pass spent, but it answers to the PROVIDER's daily limit rather than to a
+ * single account's cap: one account with 400 legs must not stop everyone else's.
+ */
+export function takeBulkProviderCall(providerId: string, now: Date = new Date()): boolean {
+  const key = dayKey(now);
+  if (today.key !== key) today = { key, instance: 0, perUser: new Map() };
+  const limit = PROVIDER_DAILY_LIMIT[providerId] ?? null;
+  if (limit !== null && today.instance >= limit) return false;
+  today.instance += 1;
+  return true;
+}
+
 /** The `beforeRequest` gate `routeLegGeometry` asks before a real provider call. */
 export function providerCallGate(userId: string): () => boolean {
   return () => takeProviderCall(userId) === "ok";

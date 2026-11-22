@@ -1,0 +1,63 @@
+{
+  "admin": {
+    "title": "Strecken neu routen",
+    "hint": "Routet Etappen und Busfahrten aller Konten über den eingestellten Routing-Dienst. Eine selbst gezeichnete oder aufgezeichnete Linie wird nie ersetzt, und scheitert eine Anfrage, bleibt die gespeicherte Linie. Ist das Tageskontingent des Dienstes aufgebraucht, hält der Lauf an und macht am nächsten Tag von selbst weiter.",
+    "mode": "Welche Strecken",
+    "modeStraight": "Nur Luftlinien",
+    "modeAll": "Alle",
+    "modeAllHint": "„Alle“ berechnet auch schon geroutete Strecken neu und verbraucht entsprechend mehr Kontingent.",
+    "start": "Neu routen",
+    "notConfigured": "Es ist kein Routing-Dienst eingerichtet – ohne ihn gibt es nichts zu routen.",
+    "failed": "Der Lauf konnte nicht gestartet werden.",
+    "loadFailed": "Der Stand des letzten Laufs konnte nicht geladen werden."
+  },
+  "roadtrip": {
+    "action": "Alle Etappen neu routen",
+    "running": "Etappen werden neu geroutet …",
+    "notConfigured": "Es ist kein Routing-Dienst eingerichtet – die Etappen bleiben, wie sie sind.",
+    "failed": "Das Neu-Routen konnte nicht gestartet werden.",
+    "title": "Etappen neu routen"
+  },
+  "run": {
+    "progress": "Fortschritt der Neuberechnung",
+    "cancel": "Abbrechen",
+    "resumeAt": "Weiter geht es am {{at}} (UTC).",
+    "status": {
+      "running": "Läuft: {{processed}} von {{total}} Strecken bearbeitet, {{routed}} neu geroutet, {{kept}} unverändert behalten.",
+      "paused": "Pausiert: {{processed}} von {{total}} Strecken bearbeitet, {{routed}} neu geroutet, {{kept}} unverändert behalten.",
+      "done": "Fertig: {{processed}} Strecken bearbeitet, {{routed}} neu geroutet, {{kept}} unverändert behalten.",
+      "cancelled": "Abgebrochen nach {{processed}} von {{total}} Strecken: {{routed}} neu geroutet, {{kept}} unverändert behalten.",
+      "failed": "Angehalten nach {{processed}} von {{total}} Strecken: {{routed}} neu geroutet, {{kept}} unverändert behalten."
+    },
+    "stop": {
+      "rate_limited": "Das Tageskontingent des Routing-Dienstes ist aufgebraucht.",
+      "auth": "Der Routing-Dienst hat den Schlüssel abgelehnt.",
+      "no_provider": "Es ist kein Routing-Dienst mehr eingerichtet oder er ist ausgeschaltet.",
+      "provider_error": "Der Routing-Dienst antwortet nicht mehr."
+    },
+    "reason": {
+      "rate_limited_one": "{{count}} Strecke wegen des Kontingents zurückgestellt",
+      "rate_limited_other": "{{count}} Strecken wegen des Kontingents zurückgestellt",
+      "no_route_one": "{{count}} Strecke: der Dienst findet keine Route, die Linie bleibt",
+      "no_route_other": "{{count}} Strecken: der Dienst findet keine Route, die Linie bleibt",
+      "point_not_near_road_one": "{{count}} Strecke: ein Punkt liegt nicht an einer Straße, die Linie bleibt",
+      "point_not_near_road_other": "{{count}} Strecken: ein Punkt liegt nicht an einer Straße, die Linie bleibt",
+      "untrustworthy_one": "{{count}} Strecke: die Antwort passte nicht zu den Stationen und wurde verworfen",
+      "untrustworthy_other": "{{count}} Strecken: die Antwort passte nicht zu den Stationen und wurde verworfen",
+      "provider_error_one": "{{count}} Strecke: der Dienst hat einen Fehler gemeldet, die Linie bleibt",
+      "provider_error_other": "{{count}} Strecken: der Dienst hat einen Fehler gemeldet, die Linie bleibt",
+      "timeout_one": "{{count}} Strecke: keine Antwort innerhalb der Frist, die Linie bleibt",
+      "timeout_other": "{{count}} Strecken: keine Antwort innerhalb der Frist, die Linie bleibt",
+      "auth_one": "{{count}} Strecke: Schlüssel abgelehnt",
+      "auth_other": "{{count}} Strecken: Schlüssel abgelehnt",
+      "no_provider_one": "{{count}} Strecke: für dieses Konto steht kein Routing-Dienst zur Verfügung",
+      "no_provider_other": "{{count}} Strecken: für dieses Konto steht kein Routing-Dienst zur Verfügung",
+      "no_coordinates_one": "{{count}} Strecke: eine Station hat keine Koordinaten",
+      "no_coordinates_other": "{{count}} Strecken: eine Station hat keine Koordinaten",
+      "changed_one": "{{count}} Strecke wurde währenddessen geändert und nicht überschrieben",
+      "changed_other": "{{count}} Strecken wurden währenddessen geändert und nicht überschrieben",
+      "unroutable_mode_one": "{{count}} Strecke: dafür gibt es kein Straßenrouting",
+      "unroutable_mode_other": "{{count}} Strecken: dafür gibt es kein Straßenrouting"
+    }
+  }
+}

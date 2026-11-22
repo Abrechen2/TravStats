@@ -29,6 +29,7 @@ export const jobSchema = z.object({
     "placeImport.resolve",
     "bus.routeStraight",
     "rail.rerouteLocalTransit",
+    "routing.rerouteAll",
     "webdavSync.run",
     "travtrack.fileImport",
     "travtrack.dawarichImport",

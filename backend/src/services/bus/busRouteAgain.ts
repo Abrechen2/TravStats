@@ -56,14 +56,16 @@ export async function routeStraightRide(
   userId: string,
   rideId: string,
   fetchLine: (ends: Parameters<typeof fetchBusLine>[1]) => Promise<BusLine> = (ends) =>
-    fetchBusLine(userId, ends)
+    fetchBusLine(userId, ends),
+  /** Sources this call may replace. The bulk re-route adds `road`; never `manual` or `transitous`. */
+  replaceable: readonly string[] = ["straight"]
 ): Promise<BusGeometryReport | null> {
   const ride = await prisma.busJourney.findFirst({
     where: { id: rideId, userId },
     select: ROUTE_SELECT,
   });
   if (!ride) return null;
-  if (ride.geometrySource !== "straight") {
+  if (!replaceable.includes(ride.geometrySource)) {
     return {
       outcome: "unchanged",
       geometrySource: ride.geometrySource,
@@ -95,7 +97,7 @@ export async function routeStraightRide(
       where: {
         id: ride.id,
         userId,
-        geometrySource: "straight",
+        geometrySource: ride.geometrySource,
         // The timetable match rests on these two as much as on the terminals.
         lineName: ride.lineName,
         departureTime: ride.departureTime,

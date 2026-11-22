@@ -1,0 +1,63 @@
+{
+  "admin": {
+    "title": "Route lines again",
+    "hint": "Routes the legs and coach rides of all accounts through the configured routing service. A line someone drew or recorded is never replaced, and when a request fails the stored line stays. When the service's daily quota is used up, the run stops and carries on by itself the next day.",
+    "mode": "Which lines",
+    "modeStraight": "Straight lines only",
+    "modeAll": "All",
+    "modeAllHint": "\"All\" also routes lines that were routed before and uses more of the quota.",
+    "start": "Route again",
+    "notConfigured": "No routing service is set up – there is nothing to route without one.",
+    "failed": "The run could not be started.",
+    "loadFailed": "The state of the last run could not be loaded."
+  },
+  "roadtrip": {
+    "action": "Route all legs again",
+    "running": "Re-routing legs …",
+    "notConfigured": "No routing service is set up – the legs stay as they are.",
+    "failed": "Re-routing could not be started.",
+    "title": "Route legs again"
+  },
+  "run": {
+    "progress": "Re-routing progress",
+    "cancel": "Cancel",
+    "resumeAt": "It carries on at {{at}} (UTC).",
+    "status": {
+      "running": "Running: {{processed}} of {{total}} lines handled, {{routed}} newly routed, {{kept}} left as they were.",
+      "paused": "Paused: {{processed}} of {{total}} lines handled, {{routed}} newly routed, {{kept}} left as they were.",
+      "done": "Done: {{processed}} lines handled, {{routed}} newly routed, {{kept}} left as they were.",
+      "cancelled": "Cancelled after {{processed}} of {{total}} lines: {{routed}} newly routed, {{kept}} left as they were.",
+      "failed": "Stopped after {{processed}} of {{total}} lines: {{routed}} newly routed, {{kept}} left as they were."
+    },
+    "stop": {
+      "rate_limited": "The routing service's daily quota is used up.",
+      "auth": "The routing service refused the key.",
+      "no_provider": "No routing service is set up any more, or it is switched off.",
+      "provider_error": "The routing service has stopped answering."
+    },
+    "reason": {
+      "rate_limited_one": "{{count}} line put off because of the quota",
+      "rate_limited_other": "{{count}} lines put off because of the quota",
+      "no_route_one": "{{count}} line: the service finds no route, the line stays",
+      "no_route_other": "{{count}} lines: the service finds no route, the lines stay",
+      "point_not_near_road_one": "{{count}} line: a point is not near a road, the line stays",
+      "point_not_near_road_other": "{{count}} lines: a point is not near a road, the lines stay",
+      "untrustworthy_one": "{{count}} line: the answer did not fit the stops and was discarded",
+      "untrustworthy_other": "{{count}} lines: the answer did not fit the stops and was discarded",
+      "provider_error_one": "{{count}} line: the service reported an error, the line stays",
+      "provider_error_other": "{{count}} lines: the service reported an error, the lines stay",
+      "timeout_one": "{{count}} line: no answer in time, the line stays",
+      "timeout_other": "{{count}} lines: no answer in time, the lines stay",
+      "auth_one": "{{count}} line: key refused",
+      "auth_other": "{{count}} lines: key refused",
+      "no_provider_one": "{{count}} line: no routing service is available for this account",
+      "no_provider_other": "{{count}} lines: no routing service is available for this account",
+      "no_coordinates_one": "{{count}} line: a stop has no coordinates",
+      "no_coordinates_other": "{{count}} lines: a stop has no coordinates",
+      "changed_one": "{{count}} line was changed meanwhile and not overwritten",
+      "changed_other": "{{count}} lines were changed meanwhile and not overwritten",
+      "unroutable_mode_one": "{{count}} line: no road routing for this kind of leg",
+      "unroutable_mode_other": "{{count}} lines: no road routing for this kind of leg"
+    }
+  }
+}

@@ -47,6 +47,7 @@ export type SchedulerJob =
   | "usageStats"
   | "reminders"
   | "accountArchiveSweep"
+  | "rerouteResume"
   | "backup";
 
 export type BackupZoneSource = "admin" | "host" | "default-utc";

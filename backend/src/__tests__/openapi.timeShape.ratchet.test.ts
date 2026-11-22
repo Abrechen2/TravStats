@@ -44,6 +44,7 @@ const BOOKKEEPING_INSTANTS = new Set([
   "lastUsedAt",
   "completedAt",
   "finishedAt",
+  "resumeAfter",
   "unlockedAt",
   "fetchedAt",
   "geocodeAttemptedAt",

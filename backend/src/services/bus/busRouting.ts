@@ -10,7 +10,7 @@ import { providerCallGate } from "../tour/routing/providerBudget";
 import { resolveRouteProvider } from "../tour/routing/resolveProvider";
 import { routeLegGeometry } from "../tour/routing/routeLeg";
 import { lookupBusLine, type BusLineMiss } from "./transitousBusLine";
-import type { RouteFallbackReason } from "../tour/routing/types";
+import type { RouteFallbackReason, RouteProvider } from "../tour/routing/types";
 
 /**
  * The road line of a coach ride (spec 2026-10-07-bus-domain-design §5, B3).
@@ -73,7 +73,14 @@ export interface BusLine {
 const round1 = (km: number): number => Math.round(km * 10) / 10;
 
 /** One routing attempt between the two terminals. Never throws for a routing failure. */
-export async function fetchBusLine(userId: string, ask: BusLineAsk): Promise<BusLine> {
+export async function fetchBusLine(
+  userId: string,
+  ask: BusLineAsk,
+  /** Replaces the per-user budget gate; the instance-wide re-route passes its own. */
+  gate: () => boolean = providerCallGate(userId),
+  /** The provider the caller already resolved; undefined = look it up for `userId`. */
+  resolved?: RouteProvider | null
+): Promise<BusLine> {
   const ends = ask;
   let lineMiss: BusLineMiss | null = null;
   const straight = (fallback: RouteFallbackReason): BusLine => ({
@@ -112,7 +119,7 @@ export async function fetchBusLine(userId: string, ask: BusLineAsk): Promise<Bus
     }
     // Nothing to match on is not a failure worth a sentence on every plain ride.
     lineMiss = timetable.miss === "no_line" ? null : timetable.miss;
-    const provider = await resolveRouteProvider(userId);
+    const provider = resolved !== undefined ? resolved : await resolveRouteProvider(userId);
     const routed = await withTimeout(
       routeLegGeometry(
         provider,
@@ -121,7 +128,7 @@ export async function fetchBusLine(userId: string, ask: BusLineAsk): Promise<Bus
           to: { lat: ends.arrLat, lon: ends.arrLon },
           mode: "road",
         },
-        providerCallGate(userId)
+        gate
       ),
       BUS_ROUTE_TIMEOUT_MS
     );
