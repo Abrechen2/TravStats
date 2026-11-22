@@ -22,6 +22,7 @@ import "./setup";
 import { OpenAPIRegistry, OpenApiGeneratorV3 } from "@asteasolutions/zod-to-openapi";
 import { appVersion } from "../../utils/version";
 import { localDateValueSchema, timeValueSchema } from "../../shared/time/wire";
+import { withOnlyRecordedParameter } from "./onlyRecorded";
 import { withVersionPreconditions } from "./syncConflicts";
 
 const registry = new OpenAPIRegistry();
@@ -75,5 +76,5 @@ export function buildOpenApiDocument(): ReturnType<typeof withVersionPreconditio
     servers: [{ url: "/api/v1", description: "Same-origin API root" }],
     security: [{ BearerAuth: [] }],
   });
-  return withVersionPreconditions(document);
+  return withOnlyRecordedParameter(withVersionPreconditions(document));
 }
