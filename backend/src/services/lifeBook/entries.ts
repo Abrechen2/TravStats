@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { airportFactsFor } from "../../routes/trips/tripCountries";
 import { isValidZone } from "../../shared/time/zonedParts";
+import { placeholderDayOf } from "../../shared/time/legacyValues";
 import { toLocal } from "../../shared/time/instant";
 import { bookStrings } from "./strings";
 import type { BookEntry, BookLang, DocKind, EntryKind, MapPoint } from "./types";
@@ -85,6 +86,23 @@ export function stampOf(
   }
   const when = whenOf(instant, zone);
   return noClock ? { ...when, time: null } : when;
+}
+
+/**
+ * `YYYY` / `YYYY-MM` for a row whose stored date is only a period's placeholder (the 1st, 00:00 UTC),
+ * else null. The stored precision decides; the legacy `UNKNOWN`-semantics placeholder shape counts too.
+ */
+function partialOf(
+  instant: Date,
+  semantics?: string | null,
+  precision?: string | null
+): string | null {
+  const iso = instant.toISOString().slice(0, 10);
+  if (precision === "year") return iso.slice(0, 4);
+  if (precision === "month") return iso.slice(0, 7);
+  const legacy = placeholderDayOf(instant, semantics, precision);
+  if (!legacy) return null;
+  return legacy.slice(5) === "01-01" ? legacy.slice(0, 4) : legacy.slice(0, 7);
 }
 
 /** A coordinate pair that is really there: 0,0 is the column default of an unfilled airport. */
@@ -183,10 +201,18 @@ export async function loadEntries(
     const arrZone = f.arrTimezone ?? facts.get(f.arrIata ?? "")?.timezone ?? null;
     const dep = f.depIata ?? f.depIcao ?? "?";
     const arr = f.arrIata ?? f.arrIcao ?? "?";
-    const when = stampOf(f.departureTime, depZone, f.depTimeSemantics, f.depPrecision);
+    // A year- or month-precision flight is stored as the 1st of the period at 00:00 UTC; converting
+    // that placeholder through the zone would put a 2015 flight into December 2014.
+    const partial = f.departureTime
+      ? partialOf(f.departureTime, f.depTimeSemantics, f.depPrecision)
+      : null;
+    const when = partial
+      ? { day: null, time: null, ms: null }
+      : stampOf(f.departureTime, depZone, f.depTimeSemantics, f.depPrecision);
     push(
       f.id,
       base("flight", f.id, when, join([f.flightNumber, `${dep} → ${arr}`]), {
+        partial,
         detail: [
           join([f.airline, f.aircraft], " · "),
           join([f.depName, f.arrName], " → "),
@@ -323,6 +349,7 @@ export async function loadEntries(
           : { day: null, time: null, ms: null },
         l.name,
         {
+          partial: partial || null,
           endDay: exact && end ? isoDay(end) : null,
           detail: [
             join([l.city, l.country], ", "),

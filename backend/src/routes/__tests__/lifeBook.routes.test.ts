@@ -64,6 +64,8 @@ async function html(cookie: string, exportId: string): Promise<string> {
 let owner: Awaited<ReturnType<typeof makeUser>>;
 let tripId: string;
 
+let partial: Awaited<ReturnType<typeof makeUser>>;
+
 beforeAll(async () => {
   setClockForTests("2026-11-22T10:00:00Z");
   owner = await makeUser("owner");
@@ -250,6 +252,38 @@ beforeAll(async () => {
       depTimezone: "UTC",
     },
   });
+  // A separate account: the build endpoint is rate-limited per user.
+  partial = await makeUser("partial");
+  // Known only to the year (a Jan 1 00:00 UTC placeholder; a zone conversion would make it Dec 2014)
+  await prisma.flight.create({
+    data: {
+      userId: partial.id,
+      flightNumber: "YEARONLY 1",
+      depIata: "JFK",
+      arrIata: "LAX",
+      depLat: 1,
+      depLon: 2,
+      arrLat: 3,
+      arrLon: 4,
+      departureTime: new Date("2015-01-01T00:00:00Z"),
+      depTimezone: "America/New_York",
+      depTimeSemantics: "UNKNOWN",
+      depPrecision: "year",
+    },
+  });
+  // A stay known only to the month: its rendered day is null
+  const monthLodging = await prisma.lodging.create({
+    data: { userId: partial.id, name: "MONTHSTAY Inn", city: "Nice", lat: 43.7, lon: 7.26 },
+  });
+  await prisma.lodgingStay.create({
+    data: {
+      userId: partial.id,
+      lodgingId: monthLodging.id,
+      checkIn: new Date("2016-03-01T00:00:00Z"),
+      datePrecision: "MONTH",
+      status: "completed",
+    },
+  });
 });
 
 afterAll(async () => {
@@ -350,6 +384,25 @@ describe("life book routes", () => {
     expect(p2024).toContain("LOOSE 1");
     expect(p2024).toContain("Loose photo");
     expect(p2024).not.toContain("Lissabon Frühling");
+  });
+
+  it("keeps a year-only flight in its own year under 'unknown date', not in December before", async () => {
+    const y2015 = (await build(partial.cookie, { scope: "year", year: 2015, lang: "en" })).job;
+    expect(y2015.status).toBe("succeeded");
+    const p2015 = await html(partial.cookie, y2015.result.exportId);
+    expect(p2015).toContain("YEARONLY 1");
+    expect(p2015).toContain("2015 · No known date");
+    const y2014 = (await build(partial.cookie, { scope: "year", year: 2014, lang: "en" })).job;
+    expect(y2014.status).toBe("failed");
+    expect(y2014.error.code).toBe("LIFE_BOOK_EMPTY");
+  });
+
+  it("includes a month-precision stay in the year book instead of dropping it", async () => {
+    const y2016 = (await build(partial.cookie, { scope: "year", year: 2016, lang: "en" })).job;
+    expect(y2016.status).toBe("succeeded");
+    const page = await html(partial.cookie, y2016.result.exportId);
+    expect(page).toContain("MONTHSTAY Inn");
+    expect(page).toContain("2016-03 · No known date");
   });
 
   it("fails with LIFE_BOOK_EMPTY when the scope holds nothing", async () => {

@@ -19,6 +19,8 @@ export interface BookEntry {
   day: string | null;
   /** Local `HH:MM` when the entry's zone is known, else null. */
   time: string | null;
+  /** The known part of an otherwise unknown date: `YYYY` or `YYYY-MM`. Null = nothing known, or `day` is set. */
+  partial?: string | null;
   /** Instant used only to order entries inside a day; null sorts after dated ones. */
   sortMs: number | null;
   /** The last day of a multi-day entry (stay, cruise, rental), when known. */

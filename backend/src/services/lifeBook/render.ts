@@ -160,9 +160,18 @@ function renderDays(entries: BookEntry[], tripStart: string | null, lang: BookLa
     bucket.push(renderEntry(e, lang));
   }
   flush();
-  if (undated.length > 0) {
+  // Undated entries group by what IS known (a year or a month), then the wholly unknown.
+  const groups = new Map<string, BookEntry[]>();
+  for (const e of undated) {
+    const key = e.partial ?? "";
+    groups.set(key, [...(groups.get(key) ?? []), e]);
+  }
+  for (const key of [...groups.keys()].sort((a, b) =>
+    a === "" ? 1 : b === "" ? -1 : a.localeCompare(b)
+  )) {
+    const heading = key ? `${esc(key)} · ${esc(s.unknownDates)}` : esc(s.unknownDates);
     out.push(
-      `<section class="day undated"><h3>${esc(s.unknownDates)}</h3><ul class="entries">${undated
+      `<section class="day undated"><h3>${heading}</h3><ul class="entries">${(groups.get(key) ?? [])
         .map((e) => renderEntry(e, lang))
         .join("")}</ul></section>`
     );

@@ -237,7 +237,12 @@ export async function buildLoose(
   const loaded = await loadEntries(userId, null, lang);
   const items =
     scope.kind === "year"
-      ? loaded.items.filter((i) => i.entry.day?.startsWith(`${scope.year}-`))
+      ? loaded.items.filter(
+          (i) =>
+            i.entry.day?.startsWith(`${scope.year}-`) ||
+            // A month- or year-precision entry belongs to the year it is known to be in.
+            (!i.entry.day && i.entry.partial?.startsWith(`${scope.year}`))
+        )
       : loaded.items;
   await attachEvidence(items);
   await loadPhotos(userId, null, items, loader);
