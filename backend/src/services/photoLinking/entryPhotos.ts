@@ -69,6 +69,10 @@ export interface EntrySuggestions {
   sources: Partial<Record<PhotoSourceKind, SourceState>>;
   /** True when the entry has no usable time or position, so there is nothing to suggest. */
   untimed: boolean;
+  /** Candidates found in all; `suggestions` holds at most ENTRY_CHOICE_LIMIT of them. */
+  total?: number;
+  /** True when `suggestions` is cut short of `total`, so the view says "N von M". */
+  thinned?: boolean;
 }
 
 export const fkOf = (kind: EntryKind, id: string) => ({ [ENTRY_FK[kind]]: id });
@@ -174,6 +178,9 @@ export async function entrySuggestionsFor(
   const value: EntrySuggestions = {
     untimed: false,
     sources: found.sources,
+    // Cut to the limit, but never silently: `total`/`thinned` let the view say how many it left out.
+    total: found.matched.length,
+    thinned: found.matched.length > ENTRY_CHOICE_LIMIT,
     suggestions: found.matched.slice(0, ENTRY_CHOICE_LIMIT).map(({ provider, asset }) => ({
       url: `/api/v1/entry-photos/${kind}/${id}/photo-suggestions/${provider}/${asset.id}/file`,
       provider,

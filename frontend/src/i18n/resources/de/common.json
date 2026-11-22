@@ -474,6 +474,7 @@
     "suggestFailed": "Die Fotos konnten nicht gesucht werden.",
     "sourceDown": "Eine Fotoquelle hat nicht geantwortet — die Liste kann unvollständig sein.",
     "sourceTruncated": "Eine Fotoquelle hatte mehr Fotos im Zeitraum, als eine Suche liest — die Liste ist unvollständig.",
+    "suggestThinned": "{{shown}} von {{total}} passenden Fotos. Alle siehst du unter „Fotos auswählen“.",
     "link_one": "{{count}} Foto verknüpfen",
     "link_other": "{{count}} Fotos verknüpfen",
     "linked_one": "{{count}} Foto verknüpft.",

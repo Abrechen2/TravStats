@@ -73,6 +73,15 @@ registry.registerPath({
                 mimetype: z.string(),
               })
             ),
+            total: z
+              .number()
+              .int()
+              .optional()
+              .describe("Candidates found in all, before the list was cut to 60"),
+            thinned: z
+              .boolean()
+              .optional()
+              .describe("`suggestions` holds fewer than `total`; the choose view lists every one"),
             sources: z.record(z.string(), sourceState),
             untimed: z.boolean(),
           })

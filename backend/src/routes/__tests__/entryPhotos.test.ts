@@ -499,12 +499,27 @@ describe("automatic photo links for every entry type", () => {
       .get(`/api/v1/entry-photos/rail/${entryIds.rail}/photo-suggestions`)
       .set("Cookie", cookie);
     expect(sug.body.data.suggestions.map((s: { assetId: string }) => s.assetId)).toEqual([NEAR]);
+    expect(sug.body.data).toMatchObject({ total: 1, thinned: false });
     const link = await request(app)
       .post(`/api/v1/entry-photos/rail/${entryIds.rail}/photos`)
       .set("Cookie", cookie)
       .send({ assetIds: [NEAR, FAR] });
     expect(link.body.data).toEqual({ linked: 1, skipped: 1 });
     expect((await links("rail")).map((r) => [r.assetId, r.provenance])).toEqual([[NEAR, "manual"]]);
+  });
+
+  it("suggestions cut to the limit say how many were found instead of silently dropping the rest", async () => {
+    const f = FIXTURES.rail;
+    search.immich.mockResolvedValue({
+      assets: Array.from({ length: 70 }, (_, n) => asset(id(1000 + n), f.at, f.lat, f.lon)),
+      truncated: false,
+    });
+    const sug = await request(app)
+      .get(`/api/v1/entry-photos/rail/${entryIds.rail}/photo-suggestions`)
+      .set("Cookie", cookie);
+    expect(sug.body.data.suggestions).toHaveLength(60);
+    expect(sug.body.data.total).toBe(70);
+    expect(sug.body.data.thinned).toBe(true);
   });
 
   it("a suggestion thumbnail is only served for an id the server itself found", async () => {

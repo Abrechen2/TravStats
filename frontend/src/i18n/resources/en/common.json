@@ -474,6 +474,7 @@
     "suggestFailed": "The photos could not be searched.",
     "sourceDown": "A photo source did not answer — the list may be incomplete.",
     "sourceTruncated": "A photo source had more photos in the period than one search reads — the list is incomplete.",
+    "suggestThinned": "{{shown}} of {{total}} matching photos. See them all under “Choose photos”.",
     "link_one": "Link {{count}} photo",
     "link_other": "Link {{count}} photos",
     "linked_one": "{{count}} photo linked.",

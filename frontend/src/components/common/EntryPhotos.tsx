@@ -303,6 +303,14 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
               </button>
             </>
           )}
+          {found.thinned && !found.untimed && (
+            <p className="t-caption" data-testid="entry-photos-thinned">
+              {t("common:entryPhotos.suggestThinned", {
+                shown: found.suggestions.length,
+                total: found.total ?? found.suggestions.length,
+              })}
+            </p>
+          )}
           {sourceDown && <p className="t-caption">{t("common:entryPhotos.sourceDown")}</p>}
           {truncated && <p className="t-caption">{t("common:entryPhotos.sourceTruncated")}</p>}
         </div>

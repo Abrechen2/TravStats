@@ -101,6 +101,24 @@ describe("EntryPhotos", () => {
     expect(linkEntryPhotos).toHaveBeenCalledTimes(1);
   });
 
+  it("says 'N von M' when the suggestions were cut short instead of hiding the rest", async () => {
+    listEntryPhotos.mockResolvedValue([]);
+    getEntryPhotoSuggestions.mockResolvedValue({
+      untimed: false,
+      sources: { immich: "ok" },
+      total: 70,
+      thinned: true,
+      suggestions: [
+        { url: "/s/1", provider: "immich", assetId: "i1", takenAt: null, mimetype: "image/jpeg" },
+      ],
+    });
+    render(<EntryPhotos kind="ferry" entryId="fe-1" />);
+    await menuItem("common:entryPhotos.add");
+    expect((await screen.findByTestId("entry-photos-thinned")).textContent).toContain(
+      "common:entryPhotos.suggestThinned"
+    );
+  });
+
   it("explains an entry without time or place instead of an empty list", async () => {
     listEntryPhotos.mockResolvedValue([]);
     getEntryPhotoSuggestions.mockResolvedValue({ untimed: true, sources: {}, suggestions: [] });

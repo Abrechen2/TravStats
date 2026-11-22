@@ -30,6 +30,10 @@ export interface EntryPhotoSuggestions {
   sources: Partial<Record<EntryPhotoProvider, string>>;
   /** The entry has no usable time or position: nothing can be suggested. */
   untimed: boolean;
+  /** Candidates found in all; `suggestions` may hold fewer. */
+  total?: number;
+  /** `suggestions` was cut short of `total`. */
+  thinned?: boolean;
 }
 
 interface Envelope<T> {
