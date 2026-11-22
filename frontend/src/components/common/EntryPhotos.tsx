@@ -18,6 +18,7 @@ import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import PhotoChoosePanel from "./PhotoChoosePanel";
 import DetailSection from "../ui/DetailSection";
+import OverflowMenu, { type OverflowEntry } from "../ui/OverflowMenu";
 
 interface Props {
   kind: EntryPhotoKind;
@@ -138,6 +139,54 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
     (s) => s !== "ok" && s !== "notConfigured" && s !== "truncated"
   );
   const truncated = sourceStates.includes("truncated");
+  const menuEntries: OverflowEntry[] = [
+    ...(choosing
+      ? []
+      : [
+          {
+            key: "choose",
+            testId: "entry-photos-choose",
+            label: t("common:photoChoose.open"),
+            onSelect: () => setChoosing(true),
+          },
+        ]),
+    ...(found === null
+      ? [
+          {
+            key: "search",
+            testId: "entry-photos-search",
+            label: busy ? t("common:entryPhotos.loading") : t("common:entryPhotos.add"),
+            disabled: busy,
+            onSelect: () => void search(),
+          },
+        ]
+      : [
+          {
+            key: "undo",
+            testId: "entry-photos-undo",
+            label: t("common:entryPhotos.undo"),
+            disabled: busy,
+            onSelect: () => void undoRefusals(),
+          },
+        ]),
+    ...(hasAuto
+      ? [
+          {
+            key: "removeAll",
+            testId: "entry-photos-remove-all",
+            label: t("common:entryPhotos.removeAll"),
+            danger: true,
+            disabled: busy,
+            confirm: {
+              title: t("common:entryPhotos.removeAllConfirmTitle"),
+              message: t("common:entryPhotos.removeAllConfirmMessage"),
+              confirmText: t("common:entryPhotos.removeAll"),
+            },
+            onSelect: () => void removeAuto(),
+          },
+        ]
+      : []),
+  ];
   const linkButton = "rounded-md px-3 py-1 text-xs font-medium bg-(--accent) text-(--bg-base)";
   const quiet = {
     color: "var(--text-muted)",
@@ -152,7 +201,16 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
       data-testid="entry-photos"
       className="flex w-full flex-col gap-2"
     >
-      {heading && <h3 className="t-label">{t("common:entryPhotos.title")}</h3>}
+      {/* The photos stay in view; the rare actions are one section ⋯, remove-all last, red and
+          confirmed (owner, 2026-11-22). */}
+      <div className="flex items-center justify-between gap-2">
+        {heading ? <h3 className="t-label">{t("common:entryPhotos.title")}</h3> : <span />}
+        <OverflowMenu
+          label={t("common:entryPhotos.menuLabel")}
+          testId="entry-photos-menu"
+          entries={menuEntries}
+        />
+      </div>
       {loadFailed && (
         <p role="alert" className="t-caption" style={{ color: "var(--color-danger)" }}>
           {t("common:entryPhotos.loadFailed")}
@@ -189,44 +247,14 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
           ))}
         </ul>
       )}
-      {hasAuto && (
-        <button
-          type="button"
-          onClick={() => void removeAuto()}
-          disabled={busy}
-          className="self-start text-xs underline-offset-2 hover:underline disabled:opacity-50"
-          style={quiet}
-        >
-          {t("common:entryPhotos.removeAll")}
-        </button>
-      )}
       {choosing ? (
         <PhotoChoosePanel
           target={{ type: "entry", kind, entryId }}
           onSaved={() => void reload()}
           onClose={() => setChoosing(false)}
         />
-      ) : (
-        <button
-          type="button"
-          onClick={() => setChoosing(true)}
-          className="self-start text-xs underline-offset-2 hover:underline"
-          style={quiet}
-        >
-          {t("common:photoChoose.open")}
-        </button>
-      )}
-      {found === null ? (
-        <button
-          type="button"
-          onClick={() => void search()}
-          disabled={busy}
-          className="self-start text-xs underline-offset-2 hover:underline disabled:opacity-50"
-          style={quiet}
-        >
-          {busy ? t("common:entryPhotos.loading") : t("common:entryPhotos.add")}
-        </button>
-      ) : (
+      ) : null}
+      {found !== null && (
         <div className="flex flex-col gap-2">
           {found.untimed ? (
             <p className="t-caption">{t("common:entryPhotos.untimed")}</p>
@@ -275,15 +303,6 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
               </button>
             </>
           )}
-          <button
-            type="button"
-            onClick={() => void undoRefusals()}
-            disabled={busy}
-            className="self-start text-xs underline-offset-2 hover:underline disabled:opacity-50"
-            style={quiet}
-          >
-            {t("common:entryPhotos.undo")}
-          </button>
           {sourceDown && <p className="t-caption">{t("common:entryPhotos.sourceDown")}</p>}
           {truncated && <p className="t-caption">{t("common:entryPhotos.sourceTruncated")}</p>}
         </div>

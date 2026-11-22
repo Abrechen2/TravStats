@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import OverflowMenu from "../ui/OverflowMenu";
 import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
@@ -222,18 +223,19 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
             >
               {t("common:photoChoose.close")}
             </button>
-            {data.openIn.map((link) => (
-              <a
-                key={link.provider}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={button}
-                style={{ minHeight: minSize, border: "1px solid var(--color-border)" }}
-              >
-                {t(`common:photoChoose.openIn.${link.provider}`)}
-              </a>
-            ))}
+            {data.openIn.length > 0 && (
+              <OverflowMenu
+                label={t("common:entryPhotos.menuLabel")}
+                testId="photo-choose-menu"
+                entries={data.openIn.map((link) => ({
+                  key: link.provider,
+                  testId: `photo-choose-open-${link.provider}`,
+                  label: t(`common:photoChoose.openIn.${link.provider}`),
+                  // An external address: the entry's `href` is a router link, so open it here.
+                  onSelect: () => window.open(link.url, "_blank", "noopener,noreferrer"),
+                }))}
+              />
+            )}
           </div>
         </>
       )}

@@ -258,6 +258,7 @@
     "captionAdd": "Bildunterschrift…",
     "captionFailed": "Die Bildunterschrift konnte nicht gespeichert werden.",
     "suggest": {
+      "menuLabel": "Foto-Aktionen",
       "open": "Fotos aus deiner Reise vorschlagen",
       "title": "Fotos aus deiner Reise",
       "loading": "Suche Fotos …",

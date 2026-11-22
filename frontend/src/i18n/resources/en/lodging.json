@@ -105,7 +105,6 @@
     "deletePhotosNote_one": "Plus 1 photo of the house, deleted with it.",
     "deletePhotosNote_other": "Plus {{count}} photos of the house, deleted with it.",
     "survivorTripsUnnamed": "linked trips",
-    "stayDocuments": "Documents · {{period}}",
     "noCategoryRatings": "No categories rated yet"
   },
   "nightPrice": {
