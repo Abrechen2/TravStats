@@ -9,7 +9,8 @@
 import type { ParsedBooking } from "../bookingParser";
 import type { DecodedBcbp } from "../../utils/bcbp";
 import { getMissingFields } from "../parsers/shared/utils";
-import { legTimesOn, readPrintedTimes, type PrintedTimes } from "./printedTimes";
+import { addDays, legTimesOn, readPrintedTimes, type PrintedTimes } from "./printedTimes";
+import { toInstant } from "../../shared/time/instant";
 
 /** The placeholder this codebase reads as "date known, clock not". */
 const DATE_ONLY_SUFFIX = "T00:00";
@@ -130,4 +131,48 @@ function applyPrintedTimes(leg: ParsedBooking, printed: PrintedTimes): ParsedBoo
     }
   }
   return next;
+}
+
+/** No scheduled flight is longer than this; a reading beyond it has the wrong day. */
+const MAX_FLIGHT_MS = 20 * 60 * 60 * 1000;
+
+type ZoneOf = (airportCode: string) => Promise<string | null>;
+
+/**
+ * The arrival DATE, checked against both airports' zones.
+ *
+ * A pass prints the arrival clock only; `legTimesOn` rolls it to the next day
+ * when it is earlier than the departure clock, which is right for UA 952
+ * (17:50 ORD → 09:50 MUC) and wrong for a short westbound hop whose local
+ * arrival is earlier the SAME day (Codex review, 2026-11-22). With both zones
+ * known, the date that gives a positive flight time under 20 hours wins; with
+ * either zone unknown the clock-only reading stays.
+ */
+export async function settleArrivalDate(
+  leg: ParsedBooking,
+  zoneOf: ZoneOf
+): Promise<ParsedBooking> {
+  if (!hasClock(leg.departureTime) || !hasClock(leg.arrivalTime)) return leg;
+  if (!leg.departureCode || !leg.arrivalCode) return leg;
+  const [depZone, arrZone] = await Promise.all([
+    zoneOf(leg.departureCode),
+    zoneOf(leg.arrivalCode),
+  ]);
+  if (!depZone || !arrZone) return leg;
+  const dep = toInstant(leg.departureTime!.slice(0, 16), depZone, {
+    origin: "machine",
+  }).utc.getTime();
+  const depDate = leg.departureTime!.slice(0, 10);
+  const clock = leg.arrivalTime!.slice(11, 16);
+  const durationOn = (date: string): number =>
+    toInstant(`${date}T${clock}`, arrZone, { origin: "machine" }).utc.getTime() - dep;
+  const current = durationOn(leg.arrivalTime!.slice(0, 10));
+  if (current > 0 && current <= MAX_FLIGHT_MS) return leg;
+  const fit = [0, 1, -1, 2]
+    .map((days) => addDays(depDate, days))
+    .find((date) => {
+      const d = durationOn(date);
+      return d > 0 && d <= MAX_FLIGHT_MS;
+    });
+  return fit ? { ...leg, arrivalTime: `${fit}T${clock}` } : leg;
 }

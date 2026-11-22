@@ -59,6 +59,7 @@ export default function FlightReviewModal({
   onClose,
   onConfirm,
   initialData,
+  source,
   flightIndex,
   totalFlights,
   originalData,
@@ -127,7 +128,8 @@ export default function FlightReviewModal({
       setTimes(
         timesFromParsed(
           initialData.departureTime ? formatDateTimeLocal(initialData.departureTime) : "",
-          initialData.arrivalTime ? formatDateTimeLocal(initialData.arrivalTime) : ""
+          initialData.arrivalTime ? formatDateTimeLocal(initialData.arrivalTime) : "",
+          source === "boardingpass"
         )
       );
       setAircraft(initialData.aircraft || "");

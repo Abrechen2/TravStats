@@ -113,6 +113,31 @@ export async function lookupStage(
   };
 }
 
+/** "UA952" and "UA 0952" → carrier "UA", number "952", suffix kept. */
+function flightIdentity(fn: string | undefined): { carrier?: string; number: string } | null {
+  const m = (fn ?? "")
+    .toUpperCase()
+    .replace(/\s/g, "")
+    .match(/^([A-Z0-9]{2}(?=\d)|[A-Z]{2,3})?0*(\d{1,4}[A-Z]?)$/);
+  return m ? { ...(m[1] ? { carrier: m[1] } : {}), number: m[2] } : null;
+}
+
+/**
+ * The model's answer belongs to a leg when the flight number agrees — the
+ * carrier too whenever the answer names one (UA123 is not LH123), and the
+ * route wherever both sides have it.
+ */
+function sameFlight(leg: ParsedBooking, answer: ParsedBooking): boolean {
+  const a = flightIdentity(leg.flightNumber);
+  const b = flightIdentity(answer.flightNumber);
+  if (!a || !b || a.number !== b.number) return false;
+  if (a.carrier && b.carrier && a.carrier !== b.carrier) return false;
+  if (leg.departureCode && answer.departureCode && leg.departureCode !== answer.departureCode) {
+    return false;
+  }
+  return true;
+}
+
 /**
  * The language model over the OCR text — last, and only when a leg still
  * lacks an essential field. Matches its answer to a leg by flight number (or
@@ -138,9 +163,15 @@ export async function llmStage(
       stage: { stage: "llm", status: "skipped", code: "LLM_NOT_CONFIGURED" },
     };
   }
-  const parser = getTextParserInstance("ollama", config);
-  const availability = await parser.checkAvailability();
-  if (!availability.available) {
+  // A provider that cannot be built or probed is unreachable for this
+  // request — never an exception that costs the legs already read.
+  let parser: ReturnType<typeof getTextParserInstance>;
+  try {
+    parser = getTextParserInstance("ollama", config);
+    const availability = await parser.checkAvailability();
+    if (!availability.available) throw new Error(availability.reason ?? "unavailable");
+  } catch (err) {
+    logger.warn({ err }, "[BoardingPassRead] language model not reachable");
     return { legs: [...legs], stage: { stage: "llm", status: "failed", code: "LLM_UNREACHABLE" } };
   }
   let answers: ParsedBooking[];
@@ -162,21 +193,11 @@ export async function llmStage(
       stage: { stage: "llm", status: "ok", code: "LLM_OK", count: answers.length },
     };
   }
-  // "UA952", "UA 0952" and "952" are the same flight to this comparison.
-  const digits = (fn: string | undefined): string | undefined =>
-    (fn ?? "")
-      .toUpperCase()
-      .replace(/\s/g, "")
-      .match(/(\d{1,4})[A-Z]?$/)?.[1]
-      ?.replace(/^0+/, "");
   const filled: string[] = [];
   const out = legs.map((leg) => {
     const match =
-      answers.find(
-        (a) =>
-          digits(leg.flightNumber) !== undefined &&
-          digits(a.flightNumber) === digits(leg.flightNumber)
-      ) ?? (legs.length === 1 && answers.length === 1 ? answers[0] : undefined);
+      answers.find((a) => sameFlight(leg, a)) ??
+      (legs.length === 1 && answers.length === 1 ? answers[0] : undefined);
     if (!match) return leg;
     const next = fillGaps(leg, match);
     filled.push(...changedFields(leg, next));

@@ -241,4 +241,32 @@ describe("readBoardingPass — per-stage error codes", () => {
       ],
     });
   });
+
+  it("keeps two travellers on the same flight as two legs", async () => {
+    const companion = UA633.replace("DOE/JANEMS  ", "DOE/JOHNMR  ").replace("024F", "024E");
+    mockedScan.mockResolvedValue(scanOf(UA633, companion));
+    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER, allowLlm: false });
+    expect(reading.legs.map((l) => l.seat)).toEqual(["24F", "24E"]);
+  });
+
+  it("does not give a leg the model's answer for another carrier's flight", async () => {
+    mockedScan.mockResolvedValue(scanOf(UA633));
+    mockedOcr.mockResolvedValue(ocrOf("unreadable"));
+    llm.parseEmail.mockResolvedValue([
+      { flightNumber: "LH633", departureTime: "2026-01-08T07:00", missing: [] },
+      { flightNumber: "LH634", missing: [] },
+    ]);
+    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    expect(reading.merged.departureTime).toBe("2026-01-08T00:00");
+    expect(reading.stages.at(-1)?.code).toBe("LLM_NOTHING");
+  });
+
+  it("reports an unreachable model when building or probing it throws", async () => {
+    mockedScan.mockResolvedValue(scanOf(UA633));
+    mockedOcr.mockResolvedValue(ocrOf("unreadable"));
+    llm.checkAvailability.mockRejectedValue(new Error("ECONNREFUSED"));
+    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    expect(reading.stages.at(-1)?.code).toBe("LLM_UNREACHABLE");
+    expect(reading.legs).toHaveLength(1);
+  });
 });

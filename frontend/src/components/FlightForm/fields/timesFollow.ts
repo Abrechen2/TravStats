@@ -24,14 +24,19 @@ export function followDepartureDate(
 }
 
 /**
- * "YYYY-MM-DDTHH:mm" into the four-field shape. `T00:00` is this codebase's
- * date-only placeholder (a barcode carries a day, never a clock), so it opens
- * with an EMPTY time to fill in rather than a confident midnight.
+ * "YYYY-MM-DDTHH:mm" into the four-field shape. With `midnightIsDateOnly`,
+ * `T00:00` opens as an EMPTY time to fill in rather than a confident
+ * midnight: a boarding pass's barcode carries a day, never a clock. Other
+ * sources keep their 00:00 — a real midnight flight must survive the review.
  */
-export function splitLocal(local: string): { date: string; time: string } {
+export function splitLocal(
+  local: string,
+  midnightIsDateOnly = false
+): { date: string; time: string } {
   const m = local.match(/^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2}))?/);
   if (!m) return { date: "", time: "" };
-  return { date: m[1], time: m[2] && m[2] !== "00:00" ? m[2] : "" };
+  const time = m[2] ?? "";
+  return { date: m[1], time: midnightIsDateOnly && time === "00:00" ? "" : time };
 }
 
 /** The four fields back into "YYYY-MM-DDTHH:mm"; empty until both halves are there. */
@@ -40,9 +45,13 @@ export function joinLocal(date: string, time: string): string {
 }
 
 /** The four fields of a parsed flight, arrival date already following departure. */
-export function timesFromParsed(departure: string, arrival: string): TimesFieldsValue {
-  const dep = splitLocal(departure);
-  const arr = splitLocal(arrival);
+export function timesFromParsed(
+  departure: string,
+  arrival: string,
+  midnightIsDateOnly = false
+): TimesFieldsValue {
+  const dep = splitLocal(departure, midnightIsDateOnly);
+  const arr = splitLocal(arrival, midnightIsDateOnly);
   return {
     depDate: dep.date,
     depTime: dep.time,

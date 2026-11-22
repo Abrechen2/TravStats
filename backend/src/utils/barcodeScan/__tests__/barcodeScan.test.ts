@@ -2,7 +2,7 @@ import { PNG } from "pngjs";
 import { readBarcodes } from "zxing-wasm/reader";
 import { writeBarcode } from "zxing-wasm/writer";
 import { scanBoardingPassBarcodes } from "..";
-import type { Gray } from "../pixels";
+import { decodeToGray, type Gray } from "../pixels";
 
 /**
  * Synthetic photos of paper boarding passes, built from real-looking BCBP
@@ -168,4 +168,12 @@ describe("scanBoardingPassBarcodes — paper passes on a photo", () => {
     expect(scan.error).toBeUndefined();
     expect(scan.imageDecoded).toBe(true);
   }, 60_000);
+
+  it("refuses to decode a PNG whose header announces too many pixels", () => {
+    // 1x1 PNG with the IHDR rewritten to 100 000 x 100 000 — a decompression bomb's shape.
+    const png = PNG.sync.write(new PNG({ width: 1, height: 1 }));
+    png.writeUInt32BE(100_000, 16);
+    png.writeUInt32BE(100_000, 20);
+    expect(decodeToGray(png)).toBeNull();
+  });
 });

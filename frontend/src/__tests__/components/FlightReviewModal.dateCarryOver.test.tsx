@@ -135,4 +135,18 @@ describe("FlightReviewModal — date carry-over in the scan result", () => {
     expect(input(/^Ankunftsdatum/).value).toBe("2016-01-08");
     expect(input(/^Ankunftszeit/).value).toBe("09:50");
   });
+
+  it("keeps a genuine 00:00 from a mail import", async () => {
+    render(
+      <FlightReviewModal
+        isOpen
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        initialData={{ ...scanned, inferredFields: [] } as ParsedBooking}
+        source="email"
+      />
+    );
+    await waitFor(() => expect(document.querySelector("form")).toBeTruthy());
+    expect(input(/^Abflugzeit/).value).toBe("00:00");
+  });
 });

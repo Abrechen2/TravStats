@@ -48,6 +48,11 @@ export function decodeToGray(bytes: Buffer): Gray | null {
       maxMemoryUsageInMB: 1024,
     });
   } else if (isPng(bytes)) {
+    // pngjs has no size guard of its own: read the IHDR dimensions first, so a
+    // small, highly compressed upload cannot allocate gigabytes.
+    if (bytes.length < 24 || bytes.readUInt32BE(16) * bytes.readUInt32BE(20) > MAX_DECODED_PIXELS) {
+      return null;
+    }
     rgba = PNG.sync.read(bytes);
   } else {
     return null;

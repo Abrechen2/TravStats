@@ -27,7 +27,8 @@ import { scanBarcodesFromImageBase64, type BarcodeScan } from "../utils/barcodeI
 import { decodeBcbp, looksLikeBcbp, type DecodedBcbp } from "../utils/bcbp";
 import type { Box } from "../utils/barcodeScan/pixels";
 import logger from "../utils/logger";
-import { mergeLeg, openFields } from "./boardingPass/legs";
+import { mergeLeg, openFields, settleArrivalDate } from "./boardingPass/legs";
+import { getAirportTimezone } from "../utils/timezone";
 import { readPrintedTimes } from "./boardingPass/printedTimes";
 import { getTesseractParser } from "./parsers/vision/tesseractParser";
 import { cropPassBands } from "./boardingPass/bands";
@@ -78,7 +79,12 @@ export function isEmpty(reading: BoardingPassReading): boolean {
   return reading.legs.length === 0;
 }
 
-const legKey = (d: DecodedBcbp): string => `${d.flightNumber}|${d.date}|${d.fromCode}`;
+/**
+ * One pass per passenger and flight: the same pass read twice (full frame and
+ * a region) collapses, two travellers on one flight stay two legs.
+ */
+const legKey = (d: DecodedBcbp): string =>
+  [d.flightNumber, d.date, d.fromCode, d.passengerName, d.seatNumber].join("|");
 
 type DecodedLeg = { bcbp: DecodedBcbp; box?: Box };
 
@@ -291,7 +297,9 @@ export async function readBoardingPass(input: BoardingPassInput): Promise<Boardi
 
   // 3. parser: barcode + OCR reading + printed clocks
   const passes = ocr?.passes ?? [];
-  let legs = buildLegs(decodedAll, passes);
+  let legs = await Promise.all(
+    buildLegs(decodedAll, passes).map((leg) => settleArrivalDate(leg, getAirportTimezone))
+  );
   stages.push(parserStageEntry(legs, passes));
 
   // 4. flight lookup
