@@ -28,7 +28,8 @@ export type PhotoSourceAlbumKind = "album" | "folder" | "moment" | "month" | "st
 export interface ImmichAlbumSummary {
   id: string;
   albumName: string;
-  assetCount: number;
+  /** Null when the source cannot tell (PhotoPrism): show no number, never 0. */
+  assetCount: number | null;
   thumbnailAssetId: string | null;
   /** Absent for Immich (always an album); PhotoPrism also sends folders, moments, months, states. */
   kind?: PhotoSourceAlbumKind;
@@ -41,7 +42,8 @@ export interface LinkedAlbum {
   provider: PhotoSourceKind;
   immichAlbumId: string;
   albumName: string;
-  assetCount: number;
+  /** Null when the source cannot tell (PhotoPrism): show no number, never 0. */
+  assetCount: number | null;
   thumbnailAssetId: string | null;
   mode: ImmichMode;
   sortIdx: number;

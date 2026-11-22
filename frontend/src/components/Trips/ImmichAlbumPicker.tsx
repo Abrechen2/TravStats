@@ -248,9 +248,11 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
           />
           <span className="flex-1">
             <span className="block">{album.albumName}</span>
-            <span className="block text-xs" style={{ color: "var(--ts-muted)" }}>
-              {t("albums.photoCount", { count: album.assetCount })}
-            </span>
+            {album.assetCount !== null && (
+              <span className="block text-xs" style={{ color: "var(--ts-muted)" }}>
+                {t("albums.photoCount", { count: album.assetCount })}
+              </span>
+            )}
           </span>
           {album.linked && (
             <span className="text-xs" style={{ color: "var(--ts-faint)" }}>

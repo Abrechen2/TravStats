@@ -52,7 +52,8 @@ export interface LinkedAlbumDto {
   provider: PhotoSourceKind;
   immichAlbumId: string;
   albumName: string;
-  assetCount: number;
+  /** Null when the source cannot tell (PhotoPrism): the UI shows no number. */
+  assetCount: number | null;
   thumbnailAssetId: string | null;
   mode: ImmichMode;
   sortIdx: number;
@@ -127,7 +128,12 @@ const toLinkDto = (row: {
   provider: toPhotoSourceKind(row.provider),
   immichAlbumId: row.immichAlbumId,
   albumName: row.albumName,
-  assetCount: row.assetCount,
+  // A linked PhotoPrism album never learns its size at link time, and its
+  // stored 0 means "unknown" (an imported one is counted by the import).
+  assetCount:
+    row.assetCount === 0 && row.provider === "photoprism" && row.mode !== "import"
+      ? null
+      : row.assetCount,
   thumbnailAssetId: row.thumbnailAssetId,
   mode: row.mode === "import" ? "import" : "link",
   sortIdx: row.sortIdx,
@@ -220,7 +226,9 @@ router.post(
             provider,
             immichAlbumId: album.id,
             albumName: album.albumName,
-            assetCount: album.assetCount,
+            // The column is NOT NULL; 0 is stored for an unknown count and read back
+            // as unknown for PhotoPrism link-mode rows (see `toLinkDto`).
+            assetCount: album.assetCount ?? 0,
             thumbnailAssetId: album.thumbnailAssetId,
             mode: r.mode,
             sortIdx: nextIdx++,

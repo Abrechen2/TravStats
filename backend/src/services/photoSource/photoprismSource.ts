@@ -362,7 +362,12 @@ export function createPhotoprismPhotoSource(
         found.push({
           id,
           albumName: str(raw.Title),
-          assetCount: typeof raw.PhotoCount === "number" ? raw.PhotoCount : 0,
+          // PhotoPrism keeps `PhotoCount` only for albums whose rows it
+          // maintains; filter-backed albums, folders, months and moments
+          // answer 0 (measured on 4089 entries: every one). A 0 is therefore
+          // "unknown", not "empty".
+          assetCount:
+            typeof raw.PhotoCount === "number" && raw.PhotoCount > 0 ? raw.PhotoCount : null,
           thumbnailAssetId: HASH.test(cover) ? cover : null,
           kind,
         });

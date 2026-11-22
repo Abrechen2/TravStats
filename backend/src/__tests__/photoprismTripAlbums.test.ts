@@ -178,6 +178,31 @@ describe("POST link", () => {
     );
   });
 
+  it("an album of unknown size links with count null in the answer, not '0 photos'", async () => {
+    listAlbums.mockResolvedValue([
+      { id: "x1", albumName: "Lisbon", assetCount: null, thumbnailAssetId: null },
+    ]);
+    findManyLinks.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        id: "link-1",
+        provider: "photoprism",
+        immichAlbumId: "x1",
+        albumName: "Lisbon",
+        assetCount: 0,
+        thumbnailAssetId: null,
+        mode: "link",
+        sortIdx: 0,
+        lastSyncedAt: null,
+      },
+    ]);
+    const res = await post([{ immichAlbumId: "x1", mode: "link", provider: "photoprism" }]);
+    expect(res.status).toBe(201);
+    expect(createManyLinks).toHaveBeenCalledWith(
+      expect.objectContaining({ data: [expect.objectContaining({ assetCount: 0 })] })
+    );
+    expect(res.body.links[0].assetCount).toBeNull();
+  });
+
   it("accepts import mode for PhotoPrism: stores the link and starts the import job (phase B3)", async () => {
     listAlbums.mockResolvedValue([
       { id: "x1", albumName: "Lisbon", assetCount: 2, thumbnailAssetId: HASH },

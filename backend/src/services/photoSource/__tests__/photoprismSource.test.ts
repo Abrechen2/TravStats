@@ -201,11 +201,30 @@ describe("listAlbums", () => {
       {
         id: "as6sg6bxpogaaba9",
         albumName: "No cover",
-        assetCount: 0,
+        assetCount: null,
         thumbnailAssetId: null,
         kind: "album",
       },
     ]);
+  });
+
+  it("reports an unknown count as null, never 0 (PhotoPrism answers PhotoCount 0 for every filter-backed entry, measured on rc.43)", async () => {
+    mockAlbumKinds({
+      album: [
+        {
+          UID: "as952upupwagjp4j",
+          Title: "2009-04 Florida",
+          Type: "album",
+          PhotoCount: 0,
+          Filter: "after:2009-04-06 before:2009-04-16",
+          Thumb: "",
+        },
+      ],
+      folder: [{ UID: "atcv9x7aew27dqod", Title: "100CANON", Type: "folder", PhotoCount: 0 }],
+      month: [{ UID: "asmonth000000001", Title: "May", Type: "month" }],
+    });
+    const albums = await createPhotoprismPhotoSource(CONN).listAlbums();
+    expect(albums.map((a) => a.assetCount)).toEqual([null, null, null]);
   });
 
   it("lists folders, moments, months and states too, each tagged with its kind (forgejo#434: a library with no manual album)", async () => {
