@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import { applyRecordedOnly } from "./services/provenance/recordedOnly";
+import { applyRecordedOnly, runUnfiltered } from "./services/provenance/recordedOnly";
 import { inheritPurposeOnCreate } from "./services/purpose/tripInheritance";
 import { createPrismaClient } from "./prismaClient";
 import logger, { dbLogger } from "./utils/logger";
@@ -142,14 +142,20 @@ export function expectingUniqueConflict<T>(model: string, run: () => Promise<T>)
  * `query.$allOperations` — not `query.$allModels.$allOperations` — because the
  * middleware it replaces also saw raw queries, where `model` is undefined.
  */
-export const prisma = basePrisma.$extends({
+const queried = basePrisma.$extends({
   query: {
     async $allOperations({ model, operation, args: askedArgs, query }) {
       // "Nur belegte": inside a recorded-only request every read of an entry model leaves out
       // what was typed in from memory (services/provenance/recordedOnly.ts).
       // A new entry inside a trip starts with the trip's purpose (services/purpose/tripInheritance.ts).
       const inherited = await inheritPurposeOnCreate(model, operation, askedArgs, async (id) => {
-        const trip = await basePrisma.trip.findFirst({ where: { id }, select: { category: true } });
+        // Inside an interactive transaction the lookup runs on THAT transaction: a trip created a
+        // statement earlier is only visible there, and a second pool connection would wait for
+        // the one the transaction holds (a deadlock at connection_limit=1).
+        const reader = openTransaction.getStore() ?? basePrisma;
+        const trip = await runUnfiltered(() =>
+          reader.trip.findFirst({ where: { id }, select: { category: true } })
+        );
         return trip?.category ?? null;
       });
       const args = applyRecordedOnly(model, operation, inherited);
@@ -212,6 +218,36 @@ export const prisma = basePrisma.$extends({
     },
   },
 });
+
+/**
+ * The interactive transaction the current async flow runs in, for the hook's own lookups (the
+ * purpose inheritance reads the trip's category). Set by the `$transaction` wrapper below.
+ */
+type TripReader = {
+  trip: {
+    findFirst(args: {
+      where: { id: string };
+      select: { category: true };
+    }): Promise<{ category: string | null } | null>;
+  };
+};
+const openTransaction = new AsyncLocalStorage<TripReader>();
+
+// Typed as `queried`: the wrapper changes no signature, and a widened type breaks `DbTransaction`.
+export const prisma = queried.$extends({
+  client: {
+    $transaction: ((arg: unknown, options?: unknown) => {
+      if (typeof arg !== "function") {
+        return (queried.$transaction as (a: unknown, o?: unknown) => unknown)(arg, options);
+      }
+      const callback = arg as (tx: unknown) => Promise<unknown>;
+      return (queried.$transaction as (a: unknown, o?: unknown) => unknown)(
+        (tx: unknown) => openTransaction.run(tx as TripReader, () => callback(tx)),
+        options
+      );
+    }) as typeof queried.$transaction,
+  },
+}) as unknown as typeof queried;
 
 const CONNECTION_ERROR_MARKERS = [
   "Can't reach database server",
