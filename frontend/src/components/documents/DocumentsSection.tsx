@@ -5,6 +5,8 @@ import DemoLockedNotice from "../Settings/DemoLockedNotice";
 import ConfirmModal from "../ui/ConfirmModal";
 import DetailSection from "../ui/DetailSection";
 import { Icon } from "../ui/Icon";
+import Modal from "../Modal";
+import OverflowMenu, { type OverflowEntry } from "../ui/OverflowMenu";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
@@ -26,8 +28,8 @@ import { formatBytes } from "../../lib/fileSize";
 import { logger } from "../../lib/logger";
 import type { ExtractTarget } from "../../lib/extractValues";
 import { DOCUMENT_FORMAT_ICON, exceededDocumentLimit } from "./documentDisplay";
-import { ExtractValuesAction } from "./ExtractValuesAction";
-import { StoredValuesAction } from "./StoredValuesAction";
+import { ExtractValuesDialog } from "./ExtractValuesAction";
+import { StoredValuesDialog } from "./StoredValuesAction";
 import { EntryLink, linkErrorKey } from "./documentLinkUi";
 import { DocumentPerson } from "./DocumentPerson";
 import { TravellersPanel } from "./TravellersPanel";
@@ -140,6 +142,11 @@ export default function DocumentsSection({
   const [impactFailed, setImpactFailed] = useState(false);
   const [linkTarget, setLinkTarget] = useState<TravelDocument | null>(null);
   const [tripDialog, setTripDialog] = useState(false);
+  // The row menu's entries that open a dialog of their own.
+  const [rowDialog, setRowDialog] = useState<{
+    kind: "stored" | "extract" | "category";
+    doc: TravelDocument;
+  } | null>(null);
   /** The last removal from this entry, which "Rückgängig" puts back. */
   const [undo, setUndo] = useState<{ doc: TravelDocument; removed: RemovedDocumentLink } | null>(
     null
@@ -407,16 +414,50 @@ export default function DocumentsSection({
 
   const locked = isSharedDemo || demoRefused;
 
+  // The row's rare actions, in its "⋯" (rule: more than two actions -> a row menu; delete last).
   // A row's category control is the PRIMARY link's; a covers row has none of its own.
-  const ROW_ACTIONS = [
+  const rowEntries = (doc: TravelDocument): OverflowEntry[] => [
+    ...(extract && EXTRACTABLE.has(doc.format)
+      ? [
+          {
+            key: "stored",
+            label: t("documents:stored.action"),
+            onSelect: () => setRowDialog({ kind: "stored", doc }),
+          },
+          {
+            key: "extract",
+            label: t("documents:extract.action"),
+            onSelect: () => setRowDialog({ kind: "extract", doc }),
+          },
+        ]
+      : []),
+    ...(rentalCategories && doc.linkRole !== "covers"
+      ? [
+          {
+            key: "category",
+            label: t("documents:rentalCategory.rowAction"),
+            onSelect: () => setRowDialog({ kind: "category", doc }),
+          },
+        ]
+      : []),
+    { key: "link", label: t("documents:links.alsoLinkAction"), onSelect: () => setLinkTarget(doc) },
+    ...(doc.viaExpense
+      ? []
+      : [
+          {
+            key: "unlink",
+            label: t("documents:links.unlink"),
+            onSelect: () => void handleUnlink(doc),
+          },
+        ]),
     {
-      key: "link",
-      label: "links.alsoLinkAction",
-      onClick: (d: TravelDocument) => setLinkTarget(d),
+      key: "remove",
+      label: t("documents:remove"),
+      danger: true,
+      // The section's own confirm dialog (it states the cascade) answers the question.
+      onSelect: () => setPendingDelete(doc),
     },
-    { key: "unlink", label: "links.unlink", onClick: (d: TravelDocument) => void handleUnlink(d) },
-    { key: "remove", label: "remove", onClick: (d: TravelDocument) => setPendingDelete(d) },
-  ] as const;
+  ];
 
   const renderRow = (doc: TravelDocument): JSX.Element => (
     <li key={doc.id} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xs)" }}>
@@ -457,19 +498,12 @@ export default function DocumentsSection({
             issuedOrCreated(doc, format),
           ].join(" · ")}
         </span>
-        {extract && !locked && EXTRACTABLE.has(doc.format) && (
-          <>
-            <StoredValuesAction documentId={doc.id} target={extract} />
-            <ExtractValuesAction documentId={doc.id} target={extract} />
-          </>
-        )}
-        {rentalCategories && !locked && doc.linkRole !== "covers" && (
-          <RentalCategorySelect
-            id={`document-category-${doc.id}`}
-            label={t("documents:rentalCategory.rowLabel", { name: doc.displayName })}
-            value={doc.rentalCategory ?? null}
+        {!locked && (
+          <OverflowMenu
+            entries={rowEntries(doc)}
+            label={t("documents:rowMenuLabel", { name: doc.displayName })}
+            testId={`document-menu-${doc.id}`}
             disabled={busy}
-            onChange={(next) => void handleCategory(doc, next)}
           />
         )}
       </div>
@@ -484,32 +518,6 @@ export default function DocumentsSection({
           {t("documents:links.evidenceFrom")}{" "}
           <EntryLink entry={doc.evidenceFrom}>{doc.evidenceFrom.label}</EntryLink>
         </p>
-      )}
-      {!locked && (
-        <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
-          {ROW_ACTIONS.filter(({ key }) => !(key === "unlink" && doc.viaExpense)).map(
-            ({ key, label, onClick }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => onClick(doc)}
-                disabled={busy}
-                aria-label={t(`documents:${label}Label`, { name: doc.displayName })}
-                // A finger-sized target beside the category select (review, minor 10).
-                className="shrink-0 text-sm pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-2"
-                style={{
-                  background: "none",
-                  border: "none",
-                  padding: 0,
-                  cursor: "pointer",
-                  color: "var(--ts-muted)",
-                }}
-              >
-                {t(`documents:${label}`)}
-              </button>
-            )
-          )}
-        </div>
       )}
     </li>
   );
@@ -624,20 +632,18 @@ export default function DocumentsSection({
             />
           </label>
           {layout === "card" && entry.type !== "trip" && (
-            <button
-              type="button"
-              onClick={() => setTripDialog(true)}
+            <OverflowMenu
+              entries={[
+                {
+                  key: "from-trip",
+                  label: t("documents:links.fromTripAction"),
+                  onSelect: () => setTripDialog(true),
+                },
+              ]}
+              label={t("documents:sectionMenuLabel")}
+              testId="documents-section-menu"
               disabled={busy}
-              className="rounded-md px-3 py-2 text-xs pointer-coarse:min-h-(--ts-size-touch-min)"
-              style={{
-                border: "1px solid var(--ts-border)",
-                color: "var(--ts-muted)",
-                background: "none",
-                cursor: "pointer",
-              }}
-            >
-              {t("documents:links.fromTripAction")}
-            </button>
+            />
           )}
           {limits && layout === "card" && (
             <span className="t-caption">
@@ -695,6 +701,41 @@ export default function DocumentsSection({
         cancelText={t("common:buttons.cancel")}
         confirmButtonClass={DELETE_BUTTON_CLASS}
       />
+      {rowDialog?.kind === "stored" && extract && (
+        <StoredValuesDialog
+          documentId={rowDialog.doc.id}
+          target={extract}
+          onClose={() => setRowDialog(null)}
+        />
+      )}
+      {rowDialog?.kind === "extract" && extract && (
+        <ExtractValuesDialog
+          documentId={rowDialog.doc.id}
+          target={extract}
+          onClose={() => setRowDialog(null)}
+        />
+      )}
+      {rowDialog?.kind === "category" && (
+        <Modal
+          open
+          onClose={() => setRowDialog(null)}
+          maxWidth={360}
+          closeLabel={t("common:buttons.close")}
+          title={t("documents:rentalCategory.rowAction")}
+        >
+          <RentalCategorySelect
+            id={`document-category-${rowDialog.doc.id}`}
+            label={t("documents:rentalCategory.rowLabel", { name: rowDialog.doc.displayName })}
+            value={rowDialog.doc.rentalCategory ?? null}
+            disabled={busy}
+            onChange={(next) => {
+              const doc = rowDialog.doc;
+              setRowDialog(null);
+              void handleCategory(doc, next);
+            }}
+          />
+        </Modal>
+      )}
       {linkTarget && (
         <LinkDocumentDialog
           document={linkTarget}

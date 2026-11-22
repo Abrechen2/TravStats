@@ -74,7 +74,7 @@ export function ExtractValuesAction({ documentId, target }: Props): JSX.Element 
   );
 }
 
-function ExtractValuesDialog({
+export function ExtractValuesDialog({
   documentId,
   target,
   onClose,

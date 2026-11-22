@@ -123,7 +123,8 @@ describe("PlaceDetailPage — delete failures", () => {
         </Routes>
       </MemoryRouter>
     );
-    fireEvent.click(await screen.findByRole("button", { name: "Ort löschen" }));
+    fireEvent.click(await screen.findByTestId("detail-more-menu"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Ort löschen" }));
     const dialog = await screen.findByTestId("confirm-modal");
     await act(async () => {
       fireEvent.click(within(dialog).getByRole("button", { name: "Löschen" }));

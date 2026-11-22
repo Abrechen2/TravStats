@@ -107,7 +107,9 @@ describe("CruiseDetailPage delete dialog", () => {
     const user = userEvent.setup();
     await renderCruise();
 
-    await user.click(screen.getByRole("button", { name: "detail.delete" }));
+    await user.click(screen.getByTestId("detail-more-menu"));
+
+    await user.click(screen.getByRole("menuitem", { name: "detail.delete" }));
 
     const dialog = await screen.findByTestId("confirm-modal");
     await waitFor(() => expect(dialog.textContent).toContain("documents:deleteCascadeNote"));
@@ -130,7 +132,9 @@ describe("CruiseDetailPage delete dialog", () => {
     const user = userEvent.setup();
     await renderCruise();
 
-    await user.click(screen.getByRole("button", { name: "detail.delete" }));
+    await user.click(screen.getByTestId("detail-more-menu"));
+
+    await user.click(screen.getByRole("menuitem", { name: "detail.delete" }));
 
     const dialog = await screen.findByTestId("confirm-modal");
     expect(dialog.textContent).toContain("detail.deleteConfirmMessageNoStops");
@@ -145,7 +149,9 @@ describe("CruiseDetailPage delete dialog", () => {
     const user = userEvent.setup();
     await renderCruise();
 
-    await user.click(screen.getByRole("button", { name: "detail.delete" }));
+    await user.click(screen.getByTestId("detail-more-menu"));
+
+    await user.click(screen.getByRole("menuitem", { name: "detail.delete" }));
 
     const dialog = await screen.findByTestId("confirm-modal");
     await waitFor(() => expect(listForEntryMock).toHaveBeenCalled());

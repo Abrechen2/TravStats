@@ -11,6 +11,8 @@
   "openLabel": "Open {{name}}",
   "download": "Original",
   "downloadLabel": "Download {{name}} as the original mail",
+  "rowMenuLabel": "More actions for {{name}}",
+  "sectionMenuLabel": "More document actions",
   "remove": "Delete everywhere",
   "removeLabel": "Delete {{name}} everywhere",
   "deleteTitle": "Delete document everywhere?",
@@ -72,6 +74,7 @@
     }
   },
   "rentalCategory": {
+    "rowAction": "Change category …",
     "pickup": "Pickup",
     "return": "Return",
     "damage": "Damage",

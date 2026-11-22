@@ -124,7 +124,10 @@ describe("RentalDetailPage", () => {
     expect((await screen.findByTestId("documents")).dataset.categories).toBe("true");
     // The document count is asked when the question opens; let it settle.
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "rental:delete" }));
+      fireEvent.click(screen.getByTestId("detail-more-menu"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("menuitem", { name: "rental:delete" }));
     });
     const message = screen.getByTestId("confirm-message").textContent ?? "";
     expect(message).toContain("rental:deleteConfirmNamed");

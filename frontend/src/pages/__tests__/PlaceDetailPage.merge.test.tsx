@@ -70,7 +70,8 @@ describe("PlaceDetailPage — merging a duplicate in", () => {
         </Routes>
       </MemoryRouter>
     );
-    fireEvent.click(await screen.findByRole("button", { name: "Dublette zusammenführen" }));
+    fireEvent.click(await screen.findByTestId("detail-more-menu"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Dublette zusammenführen" }));
     fireEvent.click(screen.getByRole("button", { name: "mock-merged" }));
 
     await waitFor(() => expect(getPlace).toHaveBeenCalledTimes(2));

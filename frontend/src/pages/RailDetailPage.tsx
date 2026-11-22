@@ -1,3 +1,4 @@
+import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -271,12 +272,17 @@ export default function RailDetailPage(): JSX.Element {
         actions={
           <>
             <Button onClick={() => setEditing({ mode: "edit" })}>{t("rail:edit")}</Button>
-            <Button onClick={() => setEditing({ mode: "connection" })}>
-              {t("rail:connection.add")}
-            </Button>
-            <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
-              {t("rail:delete")}
-            </Button>
+            <DetailMoreMenu
+              entries={[
+                {
+                  key: "connection",
+                  label: t("rail:connection.add"),
+                  onSelect: () => setEditing({ mode: "connection" }),
+                },
+              ]}
+              deleteLabel={t("rail:delete")}
+              onDelete={() => setConfirmingDelete(true)}
+            />
           </>
         }
       />

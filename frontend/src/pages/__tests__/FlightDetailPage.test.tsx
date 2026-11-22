@@ -287,7 +287,8 @@ describe("FlightDetailPage", () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: "common:buttons.delete" }));
+    await user.click(screen.getByTestId("detail-more-menu"));
+    await user.click(screen.getByRole("menuitem", { name: "common:buttons.delete" }));
 
     const dialog = await screen.findByTestId("confirm-modal");
     await waitFor(() => expect(dialog.textContent).toContain("documents:deleteCascadeNote"));
@@ -314,7 +315,8 @@ describe("FlightDetailPage", () => {
     renderPage();
 
     await screen.findByTestId("booking-itinerary");
-    await user.click(screen.getByRole("button", { name: "common:buttons.delete" }));
+    await user.click(screen.getByTestId("detail-more-menu"));
+    await user.click(screen.getByRole("menuitem", { name: "common:buttons.delete" }));
     const dialog = await screen.findByTestId("confirm-modal");
     // The suite's translation mock drops interpolation, so the names inside
     // the line are pinned in lib/flights/__tests__/flightDeleteMessage.test.ts;
@@ -328,7 +330,8 @@ describe("FlightDetailPage", () => {
     const user = userEvent.setup();
     renderPage();
     await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: "common:buttons.delete" }));
+    await user.click(screen.getByTestId("detail-more-menu"));
+    await user.click(screen.getByRole("menuitem", { name: "common:buttons.delete" }));
     const dialog = await screen.findByTestId("confirm-modal");
     await waitFor(() => expect(dialog.textContent).toContain("flights:deleteParts.recording"));
   });
@@ -356,7 +359,8 @@ describe("FlightDetailPage", () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: "common:buttons.delete" }));
+    await user.click(screen.getByTestId("detail-more-menu"));
+    await user.click(screen.getByRole("menuitem", { name: "common:buttons.delete" }));
 
     // The question is on screen before the count is: a warning is worth
     // adding to a dialog, never worth delaying it.
@@ -375,7 +379,8 @@ describe("FlightDetailPage", () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: "common:buttons.delete" }));
+    await user.click(screen.getByTestId("detail-more-menu"));
+    await user.click(screen.getByRole("menuitem", { name: "common:buttons.delete" }));
 
     const dialog = await screen.findByTestId("confirm-modal");
     await waitFor(() => expect(listForEntryMock).toHaveBeenCalled());

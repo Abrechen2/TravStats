@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import { ferryFixture } from "../../components/ferry/__tests__/ferryFixture";
@@ -75,5 +75,17 @@ describe("FerryDetailPage — map and photos", () => {
     draw();
     expect(await screen.findByText("#night")).toBeInTheDocument();
     expect(screen.getByText("#harbour")).toBeInTheDocument();
+  });
+
+  it("keeps only Bearbeiten in the header and puts Entfernen last and red inside Mehr", async () => {
+    get.mockResolvedValue(ferryFixture({ id: "f1", tripId: null, trip: null }));
+    draw();
+    await waitFor(() => expect(screen.getByTestId("ferry-map-stub")).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: "ferry:remove" })).toBeNull();
+    expect(screen.getByRole("button", { name: "ferry:edit" })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("detail-more-menu"));
+    const items = screen.getAllByRole("menuitem");
+    expect(items[items.length - 1]?.textContent).toBe("ferry:remove");
+    expect(items[items.length - 1]?.style.color).toBe("var(--ts-bad)");
   });
 });

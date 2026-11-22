@@ -1,4 +1,4 @@
-import ShareLinkButton from "../components/shareLinks/ShareLinkButton";
+import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
@@ -274,11 +274,12 @@ export default function CruiseDetailPage(): JSX.Element {
         }
         actions={
           <>
-            <ShareLinkButton kind="cruise" targetId={cruise.id} />
             <Button onClick={() => setEditing(true)}>{t("detail.edit")}</Button>
-            <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
-              {t("detail.delete")}
-            </Button>
+            <DetailMoreMenu
+              shareLink={{ kind: "cruise", targetId: cruise.id }}
+              deleteLabel={t("detail.delete")}
+              onDelete={() => setConfirmingDelete(true)}
+            />
           </>
         }
       />

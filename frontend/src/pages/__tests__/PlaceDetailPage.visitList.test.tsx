@@ -117,7 +117,9 @@ function renderPage() {
 
 /** The row toggles, in document order, by the date they start with. */
 const rowToggles = (): HTMLElement[] =>
-  screen.getAllByRole("button").filter((b) => b.hasAttribute("aria-expanded"));
+  screen
+    .getAllByRole("button")
+    .filter((b) => b.hasAttribute("aria-expanded") && !b.hasAttribute("aria-haspopup"));
 
 describe("PlaceDetailPage — visit list", () => {
   beforeEach(() => {

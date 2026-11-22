@@ -103,11 +103,13 @@ describe("DocumentsSection — rental categories", () => {
       makeDocument({ id: "b", displayName: "alt.pdf", rentalCategory: "fuel" })
     );
     render(<DocumentsSection entry={RENTAL} rentalCategories />);
-    const selects = await screen.findAllByRole("combobox", {
-      name: "documents:rentalCategory.rowLabel",
-    });
+    const menus = await screen.findAllByRole("button", { name: "documents:rowMenuLabel" });
     // Rows in group order: damage (a), odometer (c), none (b).
-    fireEvent.change(selects[2], { target: { value: "fuel" } });
+    fireEvent.click(menus[2]);
+    fireEvent.click(screen.getByRole("menuitem", { name: "documents:rentalCategory.rowAction" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "documents:rentalCategory.rowLabel" }), {
+      target: { value: "fuel" },
+    });
     await waitFor(() => expect(screen.getByTestId("documents-group-fuel")).toBeTruthy());
     expect(documentsApiMock.setRentalCategory).toHaveBeenCalledWith("b", "fuel");
     expect(documentsApiMock.upload).not.toHaveBeenCalled();
@@ -116,10 +118,12 @@ describe("DocumentsSection — rental categories", () => {
   it("says when a re-filing fails, and keeps the old group", async () => {
     documentsApiMock.setRentalCategory.mockRejectedValue(new Error("down"));
     render(<DocumentsSection entry={RENTAL} rentalCategories />);
-    const selects = await screen.findAllByRole("combobox", {
-      name: "documents:rentalCategory.rowLabel",
+    const menus = await screen.findAllByRole("button", { name: "documents:rowMenuLabel" });
+    fireEvent.click(menus[2]);
+    fireEvent.click(screen.getByRole("menuitem", { name: "documents:rentalCategory.rowAction" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "documents:rentalCategory.rowLabel" }), {
+      target: { value: "fuel" },
     });
-    fireEvent.change(selects[2], { target: { value: "fuel" } });
     expect(await screen.findByText("documents:rentalCategory.saveFailed")).toBeTruthy();
     expect(screen.queryByTestId("documents-group-fuel")).toBeNull();
   });

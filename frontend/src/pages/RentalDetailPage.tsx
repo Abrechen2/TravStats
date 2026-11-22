@@ -1,3 +1,4 @@
+import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -226,9 +227,10 @@ export default function RentalDetailPage(): JSX.Element {
         actions={
           <>
             <Button onClick={() => setEditing(true)}>{t("rental:edit")}</Button>
-            <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
-              {t("rental:delete")}
-            </Button>
+            <DetailMoreMenu
+              deleteLabel={t("rental:delete")}
+              onDelete={() => setConfirmingDelete(true)}
+            />
           </>
         }
       />

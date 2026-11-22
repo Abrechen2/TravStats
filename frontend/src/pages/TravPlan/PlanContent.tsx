@@ -187,36 +187,49 @@ export default function PlanContent({
         actions={
           <>
             {!remote && <PlanLink to={prefix + "/ai"}>{t("sections.ai")}</PlanLink>}
-            <PlanMenu>
-              <Button
-                onClick={() =>
-                  setEditor({
-                    title: t("editTrip"),
-                    fields: settingFields,
-                    value: { name: plan.name, ...state },
-                  })
-                }
-              >
-                {t("editTrip")}
-              </Button>
-              <Button disabled={busy} onClick={() => void refresh()}>
-                {t("refresh")}
-              </Button>
-              {!remote && <PlanLink to={"/trips/" + tripId}>{t("statsMode")}</PlanLink>}
-              {!remote && (
-                <Button onClick={() => setMembers(true)}>
-                  {t("members.open", {
-                    count: collab?.members.filter((m) => m.status === "active").length ?? 1,
-                  })}
-                </Button>
-              )}
-              {/* The owner's alone (D3): a co-planner is not offered what the server refuses. */}
-              {!remote && (plan.self?.isOwner ?? true) && (
-                <Button variant="danger" onClick={() => setDeleting(true)}>
-                  {t("deletePlan.open")}
-                </Button>
-              )}
-            </PlanMenu>
+            <PlanMenu
+              entries={[
+                {
+                  key: "edit",
+                  label: t("editTrip"),
+                  onSelect: () =>
+                    setEditor({
+                      title: t("editTrip"),
+                      fields: settingFields,
+                      value: { name: plan.name, ...state },
+                    }),
+                },
+                {
+                  key: "refresh",
+                  label: t("refresh"),
+                  disabled: busy,
+                  onSelect: () => void refresh(),
+                },
+                ...(!remote
+                  ? [
+                      { key: "stats", label: t("statsMode"), href: "/trips/" + tripId },
+                      {
+                        key: "members",
+                        label: t("members.open", {
+                          count: collab?.members.filter((m) => m.status === "active").length ?? 1,
+                        }),
+                        onSelect: () => setMembers(true),
+                      },
+                    ]
+                  : []),
+                // The owner's alone (D3): a co-planner is not offered what the server refuses.
+                ...(!remote && (plan.self?.isOwner ?? true)
+                  ? [
+                      {
+                        key: "delete",
+                        label: t("deletePlan.open"),
+                        danger: true,
+                        onSelect: () => setDeleting(true),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
           </>
         }
       />

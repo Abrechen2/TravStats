@@ -1,3 +1,4 @@
+import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
@@ -13,7 +14,6 @@ import { resolveAirlineIata } from "../lib/airlineUtils";
 import { formatTimeValueShown } from "../lib/displayFormat";
 import { flightArrival, flightDeparture } from "../lib/entityTimes";
 import Button from "../components/ui/Button";
-import ShareLinkButton from "../components/shareLinks/ShareLinkButton";
 import SpecialTypeBadge from "../components/specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "../components/specialFlights/specialTypeMeta";
 import FlightEditModal from "../components/FlightEditModal";
@@ -274,11 +274,11 @@ export default function FlightDetailPage(): JSX.Element {
             >
               {t("common:buttons.edit")}
             </Button>
-            {/* A public, expiring link for the family (forgejo#281). */}
-            <ShareLinkButton kind="flight" targetId={flight.id} />
-            <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
-              {t("common:buttons.delete")}
-            </Button>
+            {/* The public, expiring link for the family (forgejo#281) and delete live behind "Mehr". */}
+            <DetailMoreMenu
+              shareLink={{ kind: "flight", targetId: flight.id }}
+              onDelete={() => setConfirmingDelete(true)}
+            />
           </>
         }
       />

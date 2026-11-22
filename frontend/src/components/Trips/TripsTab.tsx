@@ -18,6 +18,7 @@ import { useTripPlaceCounts } from "../../hooks/useTripPlaceCounts";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { TripPlacesError } from "./TripPlacesStatus";
 import Button from "../ui/Button";
+import OverflowMenu from "../ui/OverflowMenu";
 import PageHeader from "../ui/PageHeader";
 
 /** What the list is narrowed to; the SERVER applies it, so a trip past the page cap is found. */
@@ -529,10 +530,7 @@ function FilterPill({
   );
 }
 
-const RARE_ACTION_CLASS =
-  "whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent)";
-
-/** Clean-up and merge: buttons from 640px, a "…" menu below. */
+/** Clean-up and merge: rare housekeeping, behind "⋯" at every width (the iPad is wide). */
 function RareActions({
   onCleanup,
   onMerge,
@@ -546,61 +544,14 @@ function RareActions({
   mergeLabel: string;
   moreLabel: string;
 }): JSX.Element {
-  const [open, setOpen] = useState(false);
-  const style = { borderColor: "var(--color-border)", color: "var(--text-muted)" };
   return (
-    <>
-      <span className="hidden sm:contents">
-        <button type="button" onClick={onCleanup} className={RARE_ACTION_CLASS} style={style}>
-          {cleanupLabel}
-        </button>
-        <button type="button" onClick={onMerge} className={RARE_ACTION_CLASS} style={style}>
-          {mergeLabel}
-        </button>
-      </span>
-      <span className="relative sm:hidden">
-        <button
-          type="button"
-          aria-haspopup="menu"
-          aria-expanded={open}
-          aria-label={moreLabel}
-          onClick={() => setOpen((v) => !v)}
-          className={RARE_ACTION_CLASS}
-          style={style}
-        >
-          …
-        </button>
-        {open && (
-          <span
-            role="menu"
-            className="absolute right-0 z-30 mt-1 flex flex-col rounded-lg p-1 shadow-xl"
-            style={{ background: "var(--ts-surface)", border: "1px solid var(--ts-border)" }}
-          >
-            <button
-              type="button"
-              role="menuitem"
-              className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm"
-              onClick={() => {
-                setOpen(false);
-                onCleanup();
-              }}
-            >
-              {cleanupLabel}
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm"
-              onClick={() => {
-                setOpen(false);
-                onMerge();
-              }}
-            >
-              {mergeLabel}
-            </button>
-          </span>
-        )}
-      </span>
-    </>
+    <OverflowMenu
+      label={moreLabel}
+      testId="trips-rare-actions"
+      entries={[
+        { key: "cleanup", label: cleanupLabel, onSelect: onCleanup },
+        { key: "merge", label: mergeLabel, onSelect: onMerge },
+      ]}
+    />
   );
 }
