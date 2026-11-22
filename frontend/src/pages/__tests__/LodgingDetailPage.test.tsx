@@ -202,9 +202,9 @@ function makeLodging(overrides: Partial<Lodging> = {}, stays: LodgingStay[] = [b
   };
 }
 
-function renderDetailPage(id = "lodging-1"): ReturnType<typeof render> {
+function renderDetailPage(id = "lodging-1", search = ""): ReturnType<typeof render> {
   return render(
-    <MemoryRouter initialEntries={[`/lodging/${id}`]}>
+    <MemoryRouter initialEntries={[`/lodging/${id}${search}`]}>
       <Routes>
         <Route path="/lodging/:id" element={<LodgingDetailPage />} />
       </Routes>
@@ -213,6 +213,17 @@ function renderDetailPage(id = "lodging-1"): ReturnType<typeof render> {
 }
 
 describe("LodgingDetailPage", () => {
+  it("marks the stay named by ?stay= (a package's member link) and no other", async () => {
+    const lodging = makeLodging();
+    getLodgingMock.mockResolvedValue(lodging);
+    const stayId = lodging.stays[0].id;
+    const { container } = renderDetailPage("lodging-1", `?stay=${stayId}`);
+    await screen.findByText(lodging.name);
+    const marked = container.querySelectorAll('[data-highlighted="true"]');
+    expect(marked).toHaveLength(1);
+    expect(marked[0].id).toBe(`stay-${stayId}`);
+  });
+
   beforeEach(() => {
     getLodgingMock.mockReset();
     deleteLodgingMock.mockReset();

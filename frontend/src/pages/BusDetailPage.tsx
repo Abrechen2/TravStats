@@ -1,4 +1,6 @@
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
+import { PackageBookingCard } from "../components/bookings/PackageBookingCard";
+import { usePackageSplit } from "../components/bookings/usePackageSplit";
 import { useEffect, useState } from "react";
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import type { JSX } from "react";
@@ -55,6 +57,7 @@ export default function BusDetailPage(): JSX.Element {
   const fxReadout = usePriceFxReadout();
   const locale = dateLocaleForLanguage(i18n.language);
   const addToast = useToastStore((s) => s.addToast);
+  const packageSplit = usePackageSplit();
   const [ride, setRide] = useState<BusJourney | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<LoadFailure | null>(null);
@@ -265,6 +268,7 @@ export default function BusDetailPage(): JSX.Element {
           <>
             <Button onClick={() => setEditing(true)}>{t("bus:edit")}</Button>
             <DetailMoreMenu
+              entries={packageSplit.entry ? [packageSplit.entry] : []}
               deleteLabel={t("bus:delete")}
               onDelete={() => setConfirmingDelete(true)}
             />
@@ -311,6 +315,13 @@ export default function BusDetailPage(): JSX.Element {
           )}
 
           <EntryPhotosSection kind="bus" entryId={ride.id} />
+          {ride.bookingId && (
+            <PackageBookingCard
+              bookingId={ride.bookingId}
+              highlight={{ kind: "bus", id: ride.id }}
+              controller={packageSplit.controller}
+            />
+          )}
           <DocumentsSection entry={{ type: "busJourney", id: ride.id }} />
         </div>
 

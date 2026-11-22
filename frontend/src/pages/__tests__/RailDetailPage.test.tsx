@@ -81,6 +81,14 @@ vi.mock("../../lib/api/documents", () => ({
   documentsApi: { listForEntry: (...a: unknown[]) => listForEntry(...a) },
   documentFileUrl: (doc: { url: string }) => doc.url,
 }));
+const packageGet = vi.fn();
+vi.mock("../../lib/api/bookingPackage", () => ({
+  bookingPackageApi: {
+    get: (...a: unknown[]) => packageGet(...a),
+    split: vi.fn(),
+    removeSplit: vi.fn(),
+  },
+}));
 vi.mock("../../lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
@@ -109,6 +117,65 @@ async function renderPage(journey: RailJourneyDetail): Promise<void> {
   );
   await screen.findByText("Frankfurt → Fulda");
 }
+
+describe("RailDetailPage package booking", () => {
+  beforeEach(() => {
+    getMock.mockReset();
+    getConnectionMock.mockReset().mockRejectedValue(new Error("not asked in this test"));
+    listForEntry.mockReset().mockResolvedValue([]);
+    packageGet.mockReset().mockResolvedValue({
+      booking: {
+        id: "b1",
+        pnr: "P1",
+        operator: "Op",
+        travellers: 1,
+        price: 100,
+        currency: "EUR",
+        tripId: null,
+        tripName: null,
+      },
+      isPackage: true,
+      items: [
+        {
+          kind: "rail",
+          id: "r1",
+          label: "A → B",
+          date: null,
+          status: "completed",
+          tripId: null,
+          share: null,
+        },
+        {
+          kind: "stay",
+          id: "s1",
+          label: "Hotel",
+          date: null,
+          status: "completed",
+          tripId: null,
+          share: null,
+          lodgingId: "l1",
+        },
+      ],
+      split: null,
+    });
+  });
+
+  it("shows the compact package line and offers the split in the ⋯ menu when the ride is in a package", async () => {
+    await renderPage(detail({ bookingId: "b1" }));
+    expect(await screen.findByTestId("package-booking")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("package-members-toggle"));
+    expect(
+      screen.getByTestId("package-members").querySelector('a[href="/lodging/l1?stay=s1"]')
+    ).not.toBeNull();
+    fireEvent.click(screen.getByTestId("detail-more-menu"));
+    expect(await screen.findByTestId("package-split-menu")).toBeTruthy();
+  });
+
+  it("shows no package line for a ride without a booking", async () => {
+    await renderPage(detail({ bookingId: null }));
+    expect(screen.queryByTestId("package-booking")).toBeNull();
+  });
+});
 
 describe("RailDetailPage", () => {
   // Braces matter: a function returned from beforeEach is run as its cleanup.

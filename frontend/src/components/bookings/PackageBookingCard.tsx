@@ -46,7 +46,7 @@ const needsCheck = (a: BookingPackageAnswer): boolean =>
 /** Whole cents — the comparison the server makes, so the button never promises a save it refuses. */
 const cents = (n: number): number => Math.round(Number((n * 100).toPrecision(12)));
 
-/** Where an item of the package opens; a stay has no page of its own, so it leads to its trip. */
+/** Where an item of the package opens; a stay opens its lodging page with the stay highlighted (its trip when the lodging is unknown). */
 function itemHref(item: BookingPackageItem): string | null {
   switch (item.kind) {
     case "flight":
@@ -62,6 +62,7 @@ function itemHref(item: BookingPackageItem): string | null {
     case "rental":
       return `/rentals/${item.id}`;
     case "stay":
+      if (item.lodgingId) return `/lodging/${item.lodgingId}?stay=${item.id}`;
       return item.tripId ? `/trips/${item.tripId}` : null;
   }
 }
