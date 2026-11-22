@@ -22,8 +22,16 @@ export function focusOf(places: ReadonlyArray<{ lat: number | null; lon: number 
 } {
   const pts = places.filter(usable);
   if (pts.length === 0) return { point: null, bbox: null };
-  const west = Math.min(...pts.map((p) => p.lon));
-  const east = Math.max(...pts.map((p) => p.lon));
+  let west = Math.min(...pts.map((p) => p.lon));
+  let east = Math.max(...pts.map((p) => p.lon));
+  // Across the antimeridian (Tokyo to Los Angeles) the short way round is the
+  // box from the eastern lons to the western ones shifted by 360, not the 250
+  // degrees that span the whole map the wrong way.
+  if (east - west > 180) {
+    const shifted = pts.map((p) => (p.lon < 0 ? p.lon + 360 : p.lon));
+    west = Math.min(...shifted);
+    east = Math.max(...shifted);
+  }
   const south = Math.min(...pts.map((p) => p.lat));
   const north = Math.max(...pts.map((p) => p.lat));
   if (west === east && south === north) return { point: { lat: south, lon: west }, bbox: null };
