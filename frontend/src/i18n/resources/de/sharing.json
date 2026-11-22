@@ -419,10 +419,10 @@
     "dialog": {
       "title": "Öffentlichen Link erstellen",
       "warning": "Wer den Link hat, sieht die gewählten Angaben – ohne Anmeldung, bis der Link abläuft oder du ihn widerrufst. Nichts anderes ist darüber erreichbar.",
-      "fieldsTitle": "Was die Seite zeigt",
+      "fieldsTitle": "Was die Seite außerdem zeigt",
       "expiry": "Gültig",
       "expiryOptions": {
-        "untilLanding": "Bis zur Landung (+2 Stunden)",
+        "tripEnd": "Bis eine Woche nach Reiseende (höchstens 90 Tage)",
         "day": "1 Tag",
         "week": "7 Tage",
         "month": "30 Tage",
@@ -450,68 +450,32 @@
         "overLimit_one": "{{count}} Foto über der Grenze von 12",
         "overLimit_other": "{{count}} Fotos über der Grenze von 12"
       },
-      "itineraryHint": "Zeigt alle Einträge der Reise mit Ortszeiten – Flugnummern, Unterkünfte mit Adresse, Bahn, Bus, Fähre, Mietwagen, Kreuzfahrt-Häfen – und was gerade läuft. Nie Buchungsnummern, Sitz-, Zimmer- oder Kabinennummern, Preise, Dokumente, Notizen oder Mitreisende. Der Link endet spätestens 24 Stunden nach dem letzten Reisetag."
+      "itineraryHint": "Zeigt Tag für Tag, wo du wann bist – in der Ortszeit jedes Orts, mit dem Eintrag, der gerade läuft. Nie Buchungsnummern, Preise, Dokumente, Vielfliegernummern, Notizen oder Mitreisende. Mit Reiseplan endet der Link spätestens eine Woche nach dem letzten Reisetag.",
+      "itineraryTitle": "Reiseplan für die Familie"
     },
     "fields": {
-      "flight": {
-        "owner": "Dein Vorname",
-        "flightNumber": "Airline und Flugnummer",
-        "route": "Abflug- und Zielflughafen",
-        "schedule": "Abflug- und Ankunftszeiten",
-        "progress": "Status und voraussichtliche Ankunft",
-        "aircraft": "Flugzeugtyp",
-        "lastPosition": "Letzte Position (nur wenn dein Telefon Flugwege an den Server sendet)"
-      },
       "trip": {
         "owner": "Dein Vorname",
         "name": "Name der Reise",
         "dates": "Daten",
+        "flights": "Flüge (Airline, Flugnummer, Flughäfen, Zeiten, Terminal und Gate)",
+        "stays": "Unterkünfte (Name, Adresse, Check-in und Check-out)",
+        "transport": "Bahn, Bus, Fähre, Mietwagen und Kreuzfahrt",
+        "places": "Besuchte Orte und Stationen",
         "totals": "Summen (Flüge, km, Länder, Tage)",
         "countries": "Länder",
-        "route": "Genaue Route",
-        "costs": "Kosten",
-        "companions": "Mitreisende",
+        "route": "Route in einer Zeile",
         "photos": "Fotos (bis zu 12, ohne Ortsdaten)",
-        "notes": "Notizen (nur die als teilbar markierten, ohne Fotos und Koordinaten)",
-        "itinerary": "Reiseplan (wer wann wo ist)"
+        "itinerary": "Reiseplan (alle Abschnitte)"
       },
       "wrapped": {
         "owner": "Dein Vorname",
         "totals": "Summen des Jahres",
         "topAirline": "Meistgeflogene Airline",
         "topRoute": "Häufigste Strecke"
-      },
-      "cruise": {
-        "owner": "Dein Vorname",
-        "ship": "Schiff und Reederei",
-        "dates": "Reisedaten",
-        "ports": "Häfen und Seetage"
-      },
-      "stay": {
-        "owner": "Dein Vorname",
-        "name": "Name der Unterkunft",
-        "location": "Adresse, Ort und Land",
-        "dates": "Check-in und Check-out"
-      },
-      "visit": {
-        "owner": "Dein Vorname",
-        "place": "Ort (Name, Stadt, Land)",
-        "date": "Datum des Besuchs",
-        "rating": "Deine Bewertung (Sterne)"
       }
     },
     "view": {
-      "phase": {
-        "scheduled": "Geplant",
-        "inFlight": "In der Luft",
-        "landed": "Gelandet",
-        "cancelled": "Annulliert",
-        "unknown": "Status unbekannt"
-      },
-      "eta": "Ankunft (voraussichtlich)",
-      "departure": "Abflug",
-      "arrival": "Ankunft",
-      "noPosition": "Noch keine Position gesendet",
       "flights": "Flüge",
       "km": "km",
       "cruises": "Kreuzfahrten",
@@ -519,13 +483,8 @@
       "countries": "Länder",
       "days": "Tage",
       "photos": "{{count}} Fotos",
-      "incomplete": "nicht alle Einträge mit Preis",
       "none": "—",
       "year": "Jahr {{year}}",
-      "noNotes": "Keine teilbare Notiz an diesen Tagen",
-      "moreNotes": "weitere nicht gezeigt",
-      "notes_one": "{{count}} teilbare Notiz",
-      "notes_other": "{{count}} teilbare Notizen",
       "itinerary": {
         "title": "Reiseplan",
         "empty": "Noch keine Einträge.",
@@ -543,20 +502,9 @@
           "rental": "Mietwagen",
           "visit": "Besuch",
           "stop": "Station"
-        }
-      },
-      "entry": {
-        "ship": "Schiff",
-        "cruiseLine": "Reederei",
-        "ports": "Häfen",
-        "seaDay": "Seetag",
-        "dayWord": "Tag",
-        "checkIn": "Check-in",
-        "checkOut": "Check-out",
-        "address": "Adresse",
-        "when": "Wann",
-        "rating": "Bewertung",
-        "ofFive": "von 5"
+        },
+        "terminal": "Terminal {{value}}",
+        "gate": "Gate {{value}}"
       }
     },
     "section": {
@@ -578,7 +526,8 @@
       "revoked": "Link widerrufen – er funktioniert nicht mehr.",
       "loadFailed": "Die Links konnten nicht geladen werden.",
       "saveFailed": "Der Schalter konnte nicht gespeichert werden.",
-      "title": "Öffentliche Links"
+      "title": "Öffentliche Links",
+      "retired": "nicht mehr verfügbar – nur noch löschen"
     },
     "errors": {
       "disabled": "Öffentliche Links sind auf dieser Instanz ausgeschaltet.",

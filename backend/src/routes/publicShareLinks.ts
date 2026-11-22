@@ -58,7 +58,13 @@ router.post(
     const parsed = shareLinkResolveSchema.safeParse(req.body ?? {});
     const resolved = parsed.success ? await resolvePublicView(parsed.data.token) : null;
     if (!resolved) throw notFound();
-    res.json({ success: true, data: resolved });
+    if (resolved.status === "retired") {
+      // A flight, cruise, stay or visit link of before 2026-11-22: the page
+      // says "no longer available" rather than leaving a broken screen.
+      throw new AppError("This link is no longer available", 410, "SHARE_LINK_RETIRED");
+    }
+    const { expiresAt, view } = resolved;
+    res.json({ success: true, data: { expiresAt, view } });
   })
 );
 

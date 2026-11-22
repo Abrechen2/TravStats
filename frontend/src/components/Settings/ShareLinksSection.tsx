@@ -112,6 +112,14 @@ export default function ShareLinksSection({ isAdmin }: { isAdmin: boolean }): JS
                     <span>
                       {target(link)}
                       <span className="t-caption">
+                        {link.retired && (
+                          <>
+                            {" · "}
+                            <span data-testid={`share-link-retired-${link.id}`}>
+                              {t(`${NS}.retired`)}
+                            </span>
+                          </>
+                        )}
                         {" · "}
                         {t(`${NS}.endsAt`, { date: format.dateTime(link.effectiveExpiresAt) })}
                         {" · "}

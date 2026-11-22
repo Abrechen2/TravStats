@@ -1,6 +1,10 @@
 import { prisma } from "../../db";
 import type { Prisma } from "../../prisma";
 import type { ItineraryItem, ItineraryView } from "../../schemas/shareLinkItinerary";
+import {
+  SHARE_LINK_ITINERARY_SECTIONS,
+  type ShareLinkItinerarySection,
+} from "../../schemas/shareLinks";
 import { now } from "../../shared/time/clock";
 import { cruiseStopTimes, cruiseTimes } from "../cruise/timesDto";
 import { enrichFlightsForClients } from "../flightAirportFacts";
@@ -9,7 +13,7 @@ import { visitTime } from "../places/timesDto";
 import { railTimes } from "../rail/timesDto";
 import { rentalTimes } from "../rental/timesDto";
 import { tripStopTimes } from "../trips/timesDto";
-import { FLIGHT_VIEW_SELECT, flightProgress } from "./flightView";
+import { FLIGHT_VIEW_SELECT, flightPhase } from "./flightPhase";
 import { nowMarker, sortItinerary } from "./itineraryNow";
 import { CRUISE_STOP_ORDER_BY } from "../../shared/cruise/stopOrder";
 
@@ -17,7 +21,7 @@ import { CRUISE_STOP_ORDER_BY } from "../../shared/cruise/stopOrder";
  * The `itinerary` of a trip link (forgejo#302): where the traveller is when,
  * with flight numbers and hotel names, so family can follow the trip.
  *
- * Built ENTRY BY ENTRY from named columns, like the flight view: every select
+ * Built ENTRY BY ENTRY from named columns: every select
  * below lists what the item may carry plus the columns the domain's `times`
  * builder reads, and nothing else — a booking reference, seat, room or cabin
  * number, price, document, note or companion is never even loaded, and an id
@@ -64,14 +68,16 @@ async function flightItems(tripId: string): Promise<ItineraryItem[]> {
     to: { code: f.arrIata ?? f.arrIcao, name: f.arrName },
     departure: f.times.departure,
     arrival: f.times.arrival,
-    phase: flightProgress(f.status, f.times, at).phase,
+    terminal: f.terminal?.trim() || null,
+    gate: f.gate?.trim() || null,
+    phase: flightPhase(f.status, f.times, at).phase,
   }));
 }
 
 const stayItems = (tripId: string) => stayItemsWhere({ tripId, ...NOT_CANCELLED });
 
-/** The stays a `where` names, as itinerary items — the single-stay link (forgejo#405) reads one through here too. */
-export async function stayItemsWhere(
+/** The stays a `where` names, as itinerary items. */
+async function stayItemsWhere(
   where: Prisma.LodgingStayWhereInput
 ): Promise<Array<Extract<ItineraryItem, { kind: "stay" }>>> {
   const rows = await prisma.lodgingStay.findMany({
@@ -111,8 +117,8 @@ export async function stayItemsWhere(
 
 const cruiseItems = (tripId: string) => cruiseItemsWhere({ tripId, ...NOT_CANCELLED });
 
-/** The cruises a `where` names, as itinerary items — the single-cruise link (forgejo#405) reads one through here too. */
-export async function cruiseItemsWhere(
+/** The cruises a `where` names, as itinerary items. */
+async function cruiseItemsWhere(
   where: Prisma.CruiseWhereInput
 ): Promise<Array<Extract<ItineraryItem, { kind: "cruise" }>>> {
   const rows = await prisma.cruise.findMany({
@@ -283,16 +289,29 @@ async function stopItems(tripId: string): Promise<ItineraryItem[]> {
   });
 }
 
-export async function buildItinerary(tripId: string): Promise<ItineraryView> {
+const none = async (): Promise<ItineraryItem[]> => [];
+
+/**
+ * The plan with only the sections the owner chose (2026-11-22): a section not
+ * chosen is not even read. "transport" is every way of getting somewhere that
+ * is not a flight — rail, bus, ferry, rental and cruise; "places" the visits
+ * and timeline stops. The "now" marker is found among what is shown.
+ */
+export async function buildItinerary(
+  tripId: string,
+  sections: readonly ShareLinkItinerarySection[]
+): Promise<ItineraryView> {
+  const has = (section: ShareLinkItinerarySection) => sections.includes(section);
   const groups = await Promise.all([
-    flightItems(tripId),
-    stayItems(tripId),
-    cruiseItems(tripId),
-    rideItems(tripId),
-    rentalItems(tripId),
-    visitItems(tripId),
-    stopItems(tripId),
+    has("flights") ? flightItems(tripId) : none(),
+    has("stays") ? stayItems(tripId) : none(),
+    has("transport") ? cruiseItems(tripId) : none(),
+    has("transport") ? rideItems(tripId) : none(),
+    has("transport") ? rentalItems(tripId) : none(),
+    has("places") ? visitItems(tripId) : none(),
+    has("places") ? stopItems(tripId) : none(),
   ]);
   const items = sortItinerary(groups.flat());
-  return { items, now: nowMarker(items, now()) };
+  const shown = SHARE_LINK_ITINERARY_SECTIONS.filter(has);
+  return { sections: shown, items, now: nowMarker(items, now()) };
 }

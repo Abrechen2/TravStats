@@ -32,6 +32,8 @@ const flightItem = z.strictObject({
   to: airport,
   departure: time.describe("Scheduled departure on the departure airport's clock"),
   arrival: time.describe("Scheduled arrival on the arrival airport's clock"),
+  terminal: z.string().nullable().describe("Departure terminal, when stored"),
+  gate: z.string().nullable().describe("Departure gate, when stored"),
   phase: z
     .enum(FLIGHT_PHASES)
     .describe("By the server clock; a reported time wins over the schedule"),
@@ -119,6 +121,11 @@ export type ItineraryItem = z.infer<typeof itineraryItemSchema>;
 
 export const itineraryViewSchema = z
   .strictObject({
+    sections: z
+      .array(z.enum(["flights", "stays", "transport", "places"]))
+      .describe(
+        "What the owner chose to show: flights; stays; transport (rail, bus, ferry, rental, cruise); places (visits and timeline stops)"
+      ),
     items: z.array(itineraryItemSchema),
     now: z
       .strictObject({

@@ -1,4 +1,3 @@
-import ShareLinkButton from "../shareLinks/ShareLinkButton";
 import ProvenanceDetails from "../provenance/ProvenanceDetails";
 import PurposeChip from "../../components/purpose/PurposeChip";
 import RememberedMarker from "../provenance/RememberedMarker";
@@ -206,10 +205,6 @@ export function PlaceVisitRow({
             entityId={visit.id}
             onRestored={onChanged}
           />
-          {/* A visit that has not happened can be shared too: "wir treffen uns hier". */}
-          <div>
-            <ShareLinkButton kind="visit" targetId={visit.id} variant="link" />
-          </div>
         </div>
       )}
     </li>

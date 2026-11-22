@@ -38,6 +38,8 @@ export function itineraryLine(
           `${item.from.code ?? "?"} → ${item.to.code ?? "?"}`,
           when(format, item.departure),
           when(format, item.arrival),
+          item.terminal ? t(`${NS}.terminal`, { value: item.terminal }) : null,
+          item.gate ? t(`${NS}.gate`, { value: item.gate }) : null,
         ]),
       };
     case "stay":

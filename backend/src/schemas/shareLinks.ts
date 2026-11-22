@@ -1,5 +1,5 @@
 import { z } from "./zod";
-import { localDateValueSchema, timeValueSchema } from "../shared/time/wire";
+import { localDateValueSchema } from "../shared/time/wire";
 import { FLIGHT_PHASES, itineraryViewSchema } from "./shareLinkItinerary";
 
 export { FLIGHT_PHASES };
@@ -19,9 +19,29 @@ export { FLIGHT_PHASES };
 export const SHARE_LINK_KINDS = ["flight", "trip", "wrapped", "cruise", "stay", "visit"] as const;
 export type ShareLinkKind = (typeof SHARE_LINK_KINDS)[number];
 
+/**
+ * The kinds a link can still be made for (owner decision 2026-11-22). Single
+ * flights, cruises, stays and visits are no longer shared on their own — the
+ * trip itinerary carries them. Their old rows stay listed for the owner to
+ * delete, and the public side answers them with "no longer available" (410).
+ */
+export const SHARE_LINK_CREATABLE_KINDS = ["trip", "wrapped"] as const;
+export type CreatableShareLinkKind = (typeof SHARE_LINK_CREATABLE_KINDS)[number];
+export const RETIRED_SHARE_LINK_KINDS = ["flight", "cruise", "stay", "visit"] as const;
+
+export function isRetiredShareLinkKind(kind: string): boolean {
+  return (RETIRED_SHARE_LINK_KINDS as readonly string[]).includes(kind);
+}
+
+/**
+ * The itinerary sections an owner can show on a trip link (2026-11-22). A link
+ * made before carries the single field `itinerary`, which stands for all four.
+ */
+export const SHARE_LINK_ITINERARY_SECTIONS = ["flights", "stays", "transport", "places"] as const;
+export type ShareLinkItinerarySection = (typeof SHARE_LINK_ITINERARY_SECTIONS)[number];
+
 /** The allow-list. A field not listed for a kind cannot be asked for. */
 export const SHARE_LINK_FIELDS = {
-  flight: ["owner", "flightNumber", "route", "schedule", "progress", "aircraft", "lastPosition"],
   trip: [
     "owner",
     "name",
@@ -29,43 +49,47 @@ export const SHARE_LINK_FIELDS = {
     "totals",
     "countries",
     "route",
-    "costs",
-    "companions",
     "photos",
-    "notes",
     "itinerary",
+    ...SHARE_LINK_ITINERARY_SECTIONS,
   ],
   wrapped: ["owner", "totals", "topAirline", "topRoute"],
-  // Single entries (forgejo#405): only what the owner ticks, and never a price,
-  // booking reference, cabin or room number, note, document, photo or companion.
-  cruise: ["owner", "ship", "dates", "ports"],
-  stay: ["owner", "name", "location", "dates"],
-  visit: ["owner", "place", "date", "rating"],
-} as const satisfies Record<ShareLinkKind, readonly string[]>;
+} as const satisfies Record<CreatableShareLinkKind, readonly string[]>;
 
-export type ShareLinkField<K extends ShareLinkKind = ShareLinkKind> =
+/**
+ * Trip fields that no longer travel (owner decision 2026-11-22: never a price,
+ * a note or another traveller's name). Installed Companion versions still
+ * offer them, so a request naming one is accepted and the field is DROPPED
+ * before the link is stored — the preview, built from the stored set, shows
+ * the owner that it is not there.
+ */
+export const SHARE_LINK_RETIRED_TRIP_FIELDS = ["costs", "companions", "notes"] as const;
+
+export type ShareLinkField<K extends CreatableShareLinkKind = CreatableShareLinkKind> =
   (typeof SHARE_LINK_FIELDS)[K][number];
 
 /** At most this many photos travel with a trip link. */
 export const SHARE_LINK_MAX_PHOTOS = 12;
-/** At most this many notes travel with a trip link — only the owner's `shareable` ones. */
-export const SHARE_LINK_MAX_NOTES = 50;
 /** The furthest a link may be set to expire. */
 export const SHARE_LINK_MAX_DAYS = 90;
 /** Active links one account may hold at once. */
 export const SHARE_LINK_MAX_ACTIVE = 50;
-/** How long a flight link outlives the arrival. */
-export const SHARE_LINK_FLIGHT_GRACE_MS = 2 * 3_600_000;
-/** How long an itinerary link outlives the end of the trip's last local day (forgejo#302). */
-export const SHARE_LINK_ITINERARY_GRACE_MS = 24 * 3_600_000;
+/**
+ * How long an itinerary link outlives the end of the trip's last local day
+ * (forgejo#302; one week since 2026-11-22 — the owner's default "trip end + 7
+ * days" and the latest an itinerary may stay visible).
+ */
+export const SHARE_LINK_ITINERARY_GRACE_MS = 7 * 24 * 3_600_000;
 
 const targetIdSchema = z.string().trim().min(1).max(100);
 
 const selectionBase = z.strictObject({
-  kind: z.enum(SHARE_LINK_KINDS),
-  targetId: targetIdSchema.describe(
-    'The flight, trip, cruise, lodging stay or place visit id; for `wrapped` the calendar year, e.g. `"2026"`.'
-  ),
+  kind: z
+    .enum(SHARE_LINK_KINDS)
+    .describe(
+      "`trip` or `wrapped`. `flight`, `cruise`, `stay` and `visit` are retired (2026-11-22) and answer 400."
+    ),
+  targetId: targetIdSchema.describe('The trip id; for `wrapped` the calendar year, e.g. `"2026"`.'),
   fields: z
     .array(z.string().min(1).max(40))
     .min(1)
@@ -78,9 +102,18 @@ function checkSelection(
   value: { kind: ShareLinkKind; targetId: string; fields: string[] },
   ctx: z.RefinementCtx
 ): void {
-  const allowed: readonly string[] = SHARE_LINK_FIELDS[value.kind];
+  if (isRetiredShareLinkKind(value.kind)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["kind"],
+      message: `${value.kind} links are no longer offered; share the trip instead`,
+    });
+    return;
+  }
+  const allowed: readonly string[] = SHARE_LINK_FIELDS[value.kind as CreatableShareLinkKind];
+  const retired: readonly string[] = value.kind === "trip" ? SHARE_LINK_RETIRED_TRIP_FIELDS : [];
   for (const field of value.fields) {
-    if (!allowed.includes(field)) {
+    if (!allowed.includes(field) && !retired.includes(field)) {
       ctx.addIssue({
         code: "custom",
         path: ["fields"],
@@ -93,9 +126,13 @@ function checkSelection(
   }
 }
 
-const dedupe = <T extends { fields: string[] }>(value: T): T => ({
+/** De-duplicated, and a retired trip field dropped (it is accepted, never stored). */
+const dedupe = <T extends { kind: ShareLinkKind; fields: string[] }>(value: T) => ({
   ...value,
-  fields: [...new Set(value.fields)],
+  kind: value.kind as CreatableShareLinkKind,
+  fields: [...new Set(value.fields)].filter(
+    (field) => !(SHARE_LINK_RETIRED_TRIP_FIELDS as readonly string[]).includes(field)
+  ),
 });
 
 export const shareLinkPreviewSchema = selectionBase.superRefine(checkSelection).transform(dedupe);
@@ -108,9 +145,9 @@ export const shareLinkCreateSchema = selectionBase
       .datetime({ offset: true })
       .optional()
       .describe(
-        `When the link stops working, at most ${SHARE_LINK_MAX_DAYS} days ahead. A flight ` +
-          "link also ends two hours after the arrival, and a trip link with `itinerary` 24 " +
-          "hours after the end of the trip's last day, whichever comes first."
+        `When the link stops working, at most ${SHARE_LINK_MAX_DAYS} days ahead. A trip link ` +
+          "showing its itinerary also ends seven days after the end of the trip's last day, " +
+          "whichever comes first."
       ),
     expiresInDays: z
       .number()
@@ -119,7 +156,7 @@ export const shareLinkCreateSchema = selectionBase
       .max(SHARE_LINK_MAX_DAYS)
       .optional()
       .describe(
-        "Lifetime in days measured by the server clock. Supply exactly one of expiresInDays or expiresAt. Flight links still end two hours after arrival, itinerary links 24 hours after the trip's last day, if earlier."
+        "Lifetime in days measured by the server clock. Supply exactly one of expiresInDays or expiresAt. Itinerary links still end seven days after the trip's last day, if earlier."
       ),
   })
   .refine((value) => (value.expiresAt !== undefined) !== (value.expiresInDays !== undefined), {
@@ -144,48 +181,6 @@ export const shareLinkPhotoSchema = z.strictObject({
 
 // ---------------------------------------------------------------------------
 // The public view. Strict at every level: an unknown key is a failure.
-
-const airportView = z.strictObject({
-  code: z.string().nullable().describe("IATA, else ICAO"),
-  name: z.string().nullable(),
-});
-
-const flightView = z.strictObject({
-  owner: z.string().nullable().optional(),
-  flightNumber: z
-    .strictObject({ airline: z.string().nullable(), number: z.string().nullable() })
-    .optional(),
-  route: z.strictObject({ from: airportView, to: airportView }).optional(),
-  schedule: z
-    .strictObject({ departure: timeValueSchema.nullable(), arrival: timeValueSchema.nullable() })
-    .optional(),
-  progress: z
-    .strictObject({
-      phase: z.enum(FLIGHT_PHASES),
-      fraction: z
-        .number()
-        .min(0)
-        .max(1)
-        .nullable()
-        .describe("Share of the flight behind, by the clock"),
-      eta: timeValueSchema.nullable().describe("Arrival — a reported time wins over the schedule"),
-      basis: z
-        .enum(["schedule", "reported"])
-        .describe("Whether the times behind the phase are the schedule or a provider's report"),
-    })
-    .optional(),
-  aircraft: z.string().nullable().optional(),
-  lastPosition: z
-    .strictObject({
-      lat: z.number(),
-      lon: z.number(),
-      // Null when the privacy cut hid the recording's last fix (TravTrack plan T5).
-      recordedAt: z.string().datetime().nullable(),
-    })
-    .nullable()
-    .optional()
-    .describe("The last point the phone sent; null when it has sent none"),
-});
 
 const tripLeg = z.strictObject({
   mode: z.enum(["flight", "rail", "bus", "ferry", "rental", "cruise"]),
@@ -214,95 +209,11 @@ const tripView = z.strictObject({
     .optional(),
   countries: z.array(z.string()).optional(),
   route: z.array(tripLeg).optional(),
-  costs: z
-    .strictObject({
-      byCurrency: z
-        .array(z.strictObject({ currency: z.string(), amount: z.number() }))
-        .describe("What was paid, per currency — never summed across currencies"),
-      complete: z.boolean().describe("False when some entries carry no price: a lower bound"),
-    })
-    .nullable()
-    .optional()
-    .describe("The trip page's own figure; null when the server can state none"),
-  companions: z.array(z.string()).optional(),
   photos: z
     .strictObject({ count: z.number().int().min(0).max(SHARE_LINK_MAX_PHOTOS) })
     .optional()
     .describe("Fetch photo i (0 ≤ i < count) through POST /public/share-links/photo"),
-  notes: z
-    .strictObject({
-      items: z
-        .array(
-          z.strictObject({
-            body: z.string(),
-            placeName: z
-              .string()
-              .nullable()
-              .describe("Where it was written, as the owner typed it"),
-            at: timeValueSchema.describe("On the clock of the zone it was written in"),
-            day: localDateValueSchema,
-          })
-        )
-        .max(SHARE_LINK_MAX_NOTES),
-      truncated: z.boolean().describe("True when the trip holds more shareable notes than shown"),
-    })
-    .optional()
-    .describe(
-      "The owner's notes marked `shareable` whose day falls in the trip, oldest first — " +
-        "re-read on every request, so a note made private disappears at once. A private note " +
-        "is never listed; no position, photo or id travels."
-    ),
   itinerary: itineraryViewSchema.optional(),
-});
-
-const entryDay = localDateValueSchema.nullable();
-
-/** A cruise on its own (forgejo#405). No cabin, price, booking reference or companion has a member. */
-const cruiseView = z.strictObject({
-  owner: z.string().nullable().optional(),
-  ship: z.strictObject({ name: z.string().nullable(), line: z.string().nullable() }).optional(),
-  dates: z.strictObject({ start: entryDay, end: entryDay }).optional(),
-  ports: z
-    .array(
-      z.strictObject({
-        dayNumber: z.number().int().describe("Day of the cruise"),
-        name: z.string().nullable().describe("Null on a sea day"),
-        atSea: z.boolean(),
-        day: entryDay,
-      })
-    )
-    .optional(),
-});
-
-/** A lodging stay on its own (forgejo#405). The address is its own opt-in field (`location`). */
-const stayView = z.strictObject({
-  owner: z.string().nullable().optional(),
-  name: z.string().optional().describe("The lodging's name"),
-  location: z
-    .strictObject({
-      address: z.string().nullable(),
-      city: z.string().nullable(),
-      country: z.string().nullable(),
-    })
-    .optional(),
-  dates: z.strictObject({ checkIn: entryDay, checkOut: entryDay }).optional(),
-});
-
-/** A place visit on its own (forgejo#405). The visit's note, photos and trip never travel. */
-const visitView = z.strictObject({
-  owner: z.string().nullable().optional(),
-  place: z
-    .strictObject({
-      name: z.string(),
-      city: z.string().nullable(),
-      country: z.string().nullable(),
-    })
-    .optional(),
-  date: timeValueSchema
-    .nullable()
-    .describe("On the place's clock, cut to the stored precision; null for an undated visit")
-    .optional(),
-  rating: z.number().int().min(1).max(5).nullable().optional(),
 });
 
 const wrappedView = z.strictObject({
@@ -330,20 +241,12 @@ const wrappedView = z.strictObject({
 });
 
 export const publicViewSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("flight"), flight: flightView }),
   z.strictObject({ kind: z.literal("trip"), trip: tripView }),
   z.strictObject({ kind: z.literal("wrapped"), wrapped: wrappedView }),
-  z.strictObject({ kind: z.literal("cruise"), cruise: cruiseView }),
-  z.strictObject({ kind: z.literal("stay"), stay: stayView }),
-  z.strictObject({ kind: z.literal("visit"), visit: visitView }),
 ]);
 export type PublicView = z.infer<typeof publicViewSchema>;
-export type FlightView = z.infer<typeof flightView>;
 export type TripView = z.infer<typeof tripView>;
 export type WrappedView = z.infer<typeof wrappedView>;
-export type CruiseView = z.infer<typeof cruiseView>;
-export type StayView = z.infer<typeof stayView>;
-export type VisitView = z.infer<typeof visitView>;
 
 export const publicShareResponseSchema = z
   .object({
@@ -362,11 +265,13 @@ export const ownerShareLinkSchema = z
     effectiveExpiresAt: z
       .string()
       .datetime()
-      .describe(
-        "When it really ends — earlier for a flight that lands first, or a trip itinerary " +
-          "whose trip ends first"
-      ),
+      .describe("When it really ends — earlier for a trip itinerary whose trip ends first"),
     createdAt: z.string().datetime(),
+    retired: z
+      .boolean()
+      .describe(
+        'A kind no longer offered (flight, cruise, stay, visit): the public sees "no longer available"; the owner can only delete it'
+      ),
     viewCount: z.number().int(),
     lastViewedAt: z.string().datetime().nullable(),
   })

@@ -5,7 +5,12 @@ import request from "supertest";
 
 import { shareLinkApp } from "../../../routes/__tests__/shareLinkFixtures";
 import { SHARE_PAGE_CSP } from "../../../routes/sharePage";
-import { SHARE_PAGE_FORMAT_JS, SHARE_PAGE_HTML, SHARE_PAGE_JS } from "../sharePageAssets";
+import {
+  SHARE_PAGE_CSS,
+  SHARE_PAGE_FORMAT_JS,
+  SHARE_PAGE_HTML,
+  SHARE_PAGE_JS,
+} from "../sharePageAssets";
 import { SHARE_PAGE_ITINERARY_COPY, SHARE_PAGE_ITINERARY_JS } from "../sharePageItinerary";
 
 /**
@@ -43,8 +48,56 @@ describe("GET /share", () => {
     expect(scripts).toHaveLength(1);
     expect(scripts[0][1]).toContain('src="/share/share.js"');
     expect(scripts[0][2].trim()).toBe("");
-    expect(SHARE_PAGE_HTML).not.toMatch(/https?:\/\//);
+    // The only outside address is the abrechen2 credit — a link, never a fetched resource.
+    const outside = [...SHARE_PAGE_HTML.matchAll(/https?:\/\/[^"\s]+/g)].map((m) => m[0]);
+    expect(outside).toEqual(["https://www.abrechen2.de/"]);
+    expect(SHARE_PAGE_HTML).toMatch(/<a id="credit"[^>]*href="https:\/\/www\.abrechen2\.de\/"/);
+    expect(SHARE_PAGE_HTML).not.toMatch(/\s(src|srcset)="https?:/);
+    expect(SHARE_PAGE_HTML).not.toMatch(/<style|\sstyle=/); // the CSP allows no inline style
     expect(SHARE_PAGE_HTML).not.toMatch(/\son\w+=/i); // no inline handlers
+  });
+
+  it("carries the abrechen2 credit as outlined paths, never typeset (brand rule)", () => {
+    expect(SHARE_PAGE_HTML).toContain("Ein Projekt von");
+    const mark = SHARE_PAGE_HTML.match(
+      /<svg class="a2-mark"[^>]*aria-label="abrechen2"[\s\S]*?<\/svg>/
+    );
+    expect(mark).not.toBeNull();
+    expect((mark![0].match(/<path /g) ?? []).length).toBe(3);
+    expect(mark![0]).not.toMatch(/<text/);
+    expect(SHARE_PAGE_JS).toContain("https://www.abrechen2.de/en/");
+  });
+
+  it("lays the itinerary out for A4 when printed, and offers it as a PDF", () => {
+    expect(SHARE_PAGE_CSS).toMatch(/@page\{size:A4/);
+    expect(SHARE_PAGE_CSS).toMatch(/@media print\{[\s\S]*\.actions[^{]*\{display:none\}/);
+    expect(SHARE_PAGE_JS).toContain("window.print()");
+  });
+
+  it("is drawn in the app's design: its tokens, its fonts, its logo, domain colours on the markers", async () => {
+    // No palette of its own: the only hex values are the abrechen2 mark's two accents.
+    const hexes = [...SHARE_PAGE_CSS.matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map((m) => m[0]);
+    expect([...new Set(hexes)].sort()).toEqual(["#C2410C", "#FF7A1A"]);
+    expect(SHARE_PAGE_CSS).not.toMatch(/rgba?\(/);
+    for (const domain of ["flight", "hotel", "rail", "bus", "ferry", "rental", "cruise"]) {
+      expect(SHARE_PAGE_CSS).toContain(`var(--ts-domain-${domain})`);
+    }
+    // Print and the PDF are the same tokens on the token set's paper.
+    expect(SHARE_PAGE_CSS).toMatch(/@media print\{\s*:root\{[^}]*--ts-bg:var\(--ts-paper\)/);
+    expect(SHARE_PAGE_HTML.indexOf("/share/theme.css")).toBeLessThan(
+      SHARE_PAGE_HTML.indexOf("/share/share.css")
+    );
+    expect(SHARE_PAGE_HTML).toMatch(/class="ts-logo"[\s\S]*TRAV[\s\S]*STATS/);
+    expect(SHARE_PAGE_JS).toContain('"entry k-" + e.kind');
+
+    const theme = await request(shareLinkApp()).get("/share/theme.css").expect(200);
+    expect(theme.headers["content-type"]).toMatch(/text\/css/);
+    expect(theme.headers["content-security-policy"]).toBe(SHARE_PAGE_CSP);
+    expect(theme.text).toContain("--ts-domain-flight:");
+    expect(theme.text).toContain("--ts-paper:");
+    expect(theme.text).toContain('font-family: "Hanken Grotesk"');
+    expect(theme.text).not.toMatch(/@theme|@utility|fonts\.googleapis/);
+    expect(SHARE_PAGE_CSP).toContain("font-src 'self'");
   });
 
   it("CSP allows only self and blob: images, and nothing inline", () => {
@@ -132,38 +185,52 @@ describe("share page date formatting", () => {
 });
 
 /**
- * The itinerary on the public page (forgejo#302): each entry's times on its
- * place's clock with that zone written beside them, and the current entry
- * named in words — not by colour alone.
+ * The itinerary on the public page (forgejo#302, day-by-day since 2026-11-22):
+ * each time on its place's clock with that zone beside it, entries that span
+ * days split onto the days family looks at, and the current entry named in
+ * words — not by colour alone.
  */
 describe("share page itinerary", () => {
-  type Entry = { title: string; lines: string[]; now: string | null };
-  const T = {
-    ...SHARE_PAGE_ITINERARY_COPY.en,
-    dep: "Departure",
-    arr: "Arrival",
-    scheduled: "Scheduled",
-    inFlight: "In the air",
-    landed: "Landed",
-    cancelled: "Cancelled",
+  type Entry = {
+    kind: string;
+    label: string;
+    time: string | null;
+    zone: string | null;
+    title: string;
+    lines: string[];
+    now: string | null;
   };
-  const entriesOf = (itinerary: unknown, tz = "Pacific/Kiritimati"): Entry[] => {
-    const context: { result?: Entry[] } = {};
+  type Day = {
+    key: string;
+    heading: { num: string; text: string } | null;
+    nights: string[];
+    entries: Entry[];
+  };
+  type Plan = { days: Day[]; now: { label: string; title: string; time: string | null } | null };
+  const T = SHARE_PAGE_ITINERARY_COPY.en;
+  const planOf = (itinerary: unknown, tz = "Pacific/Kiritimati", locale = "en-GB"): Plan => {
+    const context: { result?: Plan } = {};
     const previous = process.env.TZ;
     process.env.TZ = tz;
     try {
       vm.runInNewContext(
-        `${SHARE_PAGE_FORMAT_JS}; ${SHARE_PAGE_ITINERARY_JS}; result = itineraryEntries(` +
-          `${JSON.stringify(itinerary)}, shareFormat("en-GB"), ${JSON.stringify(T)});`,
+        `${SHARE_PAGE_FORMAT_JS}; ${SHARE_PAGE_ITINERARY_JS}; result = planDays(` +
+          `${JSON.stringify(itinerary)}, shareFormat(${JSON.stringify(locale)}), ${JSON.stringify(T)});`,
         context
       );
     } finally {
       process.env.TZ = previous;
     }
-    return context.result!;
+    return JSON.parse(JSON.stringify(context.result!));
   };
-  const tv = (local: string, zone: string | null, offset: string, precision = "minute") => ({
-    utc: "2030-06-01T12:00:00.000Z",
+  const tv = (
+    local: string,
+    zone: string | null,
+    offset: string,
+    utc: string,
+    precision = "minute"
+  ) => ({
+    utc,
     zone,
     offset,
     local,
@@ -171,6 +238,7 @@ describe("share page itinerary", () => {
     zoneSource: zone ? "stored" : null,
   });
   const itinerary = {
+    sections: ["flights", "stays"],
     items: [
       {
         kind: "flight",
@@ -178,8 +246,15 @@ describe("share page itinerary", () => {
         flightNumber: "LH400",
         from: { code: "FRA", name: "Frankfurt" },
         to: { code: "JFK", name: "New York JFK" },
-        departure: tv("2030-06-01T14:00:00", "Europe/Berlin", "+02:00"),
-        arrival: tv("2030-06-01T16:00:00", "America/New_York", "-04:00"),
+        departure: tv("2030-06-01T14:00:00", "Europe/Berlin", "+02:00", "2030-06-01T12:00:00.000Z"),
+        arrival: tv(
+          "2030-06-01T16:00:00",
+          "America/New_York",
+          "-04:00",
+          "2030-06-01T20:00:00.000Z"
+        ),
+        terminal: "1",
+        gate: "B12",
         phase: "inFlight",
       },
       {
@@ -199,51 +274,109 @@ describe("share page itinerary", () => {
 
   it("writes each time on its place's clock with the zone beside it, whatever the visitor's zone", () => {
     for (const zone of ["Pacific/Kiritimati", "America/St_Johns"]) {
-      const [flight, stay] = entriesOf(itinerary, zone);
-      expect(flight.title).toBe("Flight Lufthansa LH400");
-      expect(flight.lines).toContain("FRA → JFK (Frankfurt → New York JFK)");
-      expect(flight.lines.join("\n")).toMatch(
-        /Departure 1 Jun 2030,? 14:00 \(Europe\/Berlin, UTC\+02:00\)/
-      );
-      expect(flight.lines.join("\n")).toMatch(
-        /Arrival 1 Jun 2030,? 16:00 \(America\/New York, UTC-04:00\)/
-      );
+      const plan = planOf(itinerary, zone);
+      const [first] = plan.days;
+      expect(first.key).toBe("2030-06-01");
+      expect(first.heading!.text).toMatch(/^Saturday,? 1 June 2030$/);
+      const [flight, checkIn] = first.entries;
+      expect(flight.time).toBe("14:00");
+      expect(flight.zone).toMatch(/^(CEST|GMT\+2)$/);
+      expect(flight.title).toBe("Lufthansa LH400");
+      expect(flight.lines).toContain("Frankfurt (FRA) → New York JFK (JFK)");
+      expect(flight.lines.join("\n")).toMatch(/Arrival 16:00 (EDT|GMT-4)/);
+      expect(flight.lines).toContain("Terminal 1, Gate B12");
       expect(flight.lines).toContain("In the air");
-      expect(stay.title).toBe("Stay Hotel Hudson View");
-      expect(stay.lines).toEqual([
+      expect(checkIn.label).toBe("Check-in");
+      expect(checkIn.lines).toEqual([
         "356 W 58th St, New York, US",
-        "Check-in 1 June 2030",
-        "Check-out 4 June 2030",
+        "until 4 June 2030 (3 nights)",
       ]);
     }
   });
 
-  it("writes a stay known only to the month or the year without a day", () => {
+  it("puts a stay's nights and its check-out on their own days", () => {
+    const plan = planOf(itinerary);
+    expect(plan.days.map((d) => d.key)).toEqual([
+      "2030-06-01",
+      "2030-06-02",
+      "2030-06-03",
+      "2030-06-04",
+    ]);
+    expect(plan.days.slice(0, 3).map((d) => d.nights)).toEqual([
+      ["Hotel Hudson View"],
+      ["Hotel Hudson View"],
+      ["Hotel Hudson View"],
+    ]);
+    expect(plan.days[3].nights).toEqual([]);
+    expect(plan.days[3].entries.map((e) => e.label)).toEqual(["Check-out"]);
+  });
+
+  it("writes a stay known only to the month or the year without a day, under no date", () => {
     const stay = itinerary.items[1];
-    const [month, year] = entriesOf({
+    const plan = planOf({
+      sections: ["stays"],
       items: [
         {
           ...stay,
           checkIn: { date: "2030-06-01", zone: null, precision: "month" },
           checkOut: { date: "2030-06-01", zone: null, precision: "month" },
         },
+      ],
+      now: null,
+    });
+    expect(plan.days).toHaveLength(1);
+    expect(plan.days[0].heading).toBeNull();
+    expect(plan.days[0].entries[0].lines.slice(1)).toEqual([
+      "Check-in June 2030",
+      "Check-out June 2030",
+    ]);
+  });
+
+  it("keeps a same-day stay's check-out time, and a visit known only to its month", () => {
+    const stay = itinerary.items[1];
+    const plan = planOf({
+      sections: ["stays", "places"],
+      items: [
         {
           ...stay,
-          checkIn: { date: "2030-01-01", zone: null, precision: "year" },
-          checkOut: { date: "2030-01-01", zone: null, precision: "year" },
+          checkOut: { date: "2030-06-01", zone: "America/New_York", precision: "day" },
+          checkOutAt: tv(
+            "2030-06-01T23:00:00",
+            "America/New_York",
+            "-04:00",
+            "2030-06-02T03:00:00.000Z"
+          ),
+        },
+        {
+          kind: "visit",
+          name: "Statue of Liberty",
+          city: "New York",
+          at: tv(
+            "2030-06-01T00:00:00",
+            "America/New_York",
+            "-04:00",
+            "2030-06-01T04:00:00.000Z",
+            "month"
+          ),
         },
       ],
       now: null,
     });
-    expect(month.lines.slice(1)).toEqual(["Check-in June 2030", "Check-out June 2030"]);
-    expect(year.lines.slice(1)).toEqual(["Check-in 2030", "Check-out 2030"]);
+    const [dated, undated] = plan.days;
+    expect(dated.entries[0].lines.join("\n")).toMatch(/Check-out 23:00 (EDT|GMT-4)/);
+    expect(dated.nights).toEqual([]);
+    expect(undated.heading).toBeNull();
+    expect(undated.entries[0].lines).toContain("June 2030");
   });
 
   it("names the current entry in words, and only that one", () => {
-    const entries = entriesOf(itinerary);
-    expect(entries.map((e) => e.now)).toEqual(["Now", null]);
-    const next = entriesOf({ ...itinerary, now: { index: 1, state: "next" } });
-    expect(next.map((e) => e.now)).toEqual([null, "Next"]);
+    const plan = planOf(itinerary);
+    const all = plan.days.flatMap((d) => d.entries);
+    expect(all.map((e) => e.now)).toEqual(["Now", null, null]);
+    expect(plan.now).toMatchObject({ label: "Now", title: "Lufthansa LH400", time: "14:00" });
+    const next = planOf({ ...itinerary, now: { index: 1, state: "next" } });
+    expect(next.days.flatMap((d) => d.entries).map((e) => e.now)).toEqual([null, "Next", null]);
+    expect(planOf({ ...itinerary, now: null }).now).toBeNull();
   });
 
   it("is what the page script renders, through textContent only", () => {
@@ -254,14 +387,16 @@ describe("share page itinerary", () => {
 });
 
 /**
- * forgejo#405: the page renders a single cruise, stay or visit. Run the real
- * script against a minimal DOM and read back the text it wrote — a renderer
- * that threw, or wrote a key the view does not carry, would show a blank page.
+ * Run the real script against a minimal DOM and read back the text it wrote —
+ * a renderer that threw, or wrote a key the view does not carry, would show a
+ * blank page.
  */
 class FakeNode {
   children: FakeNode[] = [];
   textContent = "";
   className = "";
+  attributes: Record<string, string> = {};
+  listeners: Record<string, () => void> = {};
   get firstChild(): FakeNode | undefined {
     return this.children[0];
   }
@@ -272,94 +407,142 @@ class FakeNode {
   removeChild(child: FakeNode): void {
     this.children = this.children.filter((c) => c !== child);
   }
-  setAttribute(): void {}
+  setAttribute(name: string, value: string): void {
+    this.attributes[name] = value;
+  }
+  addEventListener(type: string, fn: () => void): void {
+    this.listeners[type] = fn;
+  }
   text(): string {
     return [this.textContent, ...this.children.map((c) => c.text())].filter(Boolean).join("\n");
   }
+  find(cls: string): FakeNode | undefined {
+    if (this.className.split(" ").includes(cls)) return this;
+    for (const c of this.children) {
+      const hit = c.find(cls);
+      if (hit) return hit;
+    }
+    return undefined;
+  }
 }
 
-async function renderedText(view: unknown): Promise<string> {
+async function renderPage(
+  answer: { status: number; body?: unknown },
+  language = "de-DE"
+): Promise<{ root: FakeNode; document: { title: string }; printed: string[] }> {
   const root = new FakeNode();
+  const printed: string[] = [];
+  const document = {
+    title: "TravStats",
+    documentElement: {},
+    getElementById: () => root,
+    createElement: () => new FakeNode(),
+  };
   const context = {
-    navigator: { language: "de-DE" },
-    document: {
-      documentElement: {},
-      getElementById: () => root,
-      createElement: () => new FakeNode(),
-    },
+    navigator: { language, languages: [language] },
+    document,
+    window: { print: () => printed.push(document.title) },
     location: { hash: "#token" },
     fetch: () =>
       Promise.resolve({
-        status: 200,
-        ok: true,
-        json: () => Promise.resolve({ data: { expiresAt: "2030-06-08T10:00:00.000Z", view } }),
+        status: answer.status,
+        ok: answer.status === 200,
+        json: () => Promise.resolve(answer.body),
       }),
     setInterval: () => 1,
     clearInterval: () => {},
+    setTimeout: () => 1,
     URL,
     Intl,
     decodeURIComponent,
   };
   new vm.Script(SHARE_PAGE_JS).runInNewContext(context);
   await new Promise((resolve) => setTimeout(resolve, 20));
-  return root.text();
+  return { root, document, printed };
 }
 
-const day = (date: string) => ({ date, precision: "day" });
+const day = (date: string) => ({ date, zone: null, precision: "day" });
 
-describe("share page single entries", () => {
-  it("writes a cruise's ship, dates and ports", async () => {
-    const text = await renderedText({
-      kind: "cruise",
-      cruise: {
-        owner: "Anna",
-        ship: { name: "Harbor Queen", line: "Circle Line" },
-        dates: { start: day("2030-06-07"), end: day("2030-06-08") },
-        ports: [
-          { dayNumber: 1, name: "Pier 83", atSea: false, day: day("2030-06-07") },
-          { dayNumber: 2, name: null, atSea: true, day: null },
+describe("share page rendering", () => {
+  const trip = {
+    kind: "trip",
+    trip: {
+      owner: "Anna",
+      name: "New York 2030",
+      dates: { start: day("2030-06-01"), end: day("2030-06-08") },
+      totals: {
+        flights: 1,
+        flightKm: 6189,
+        cruises: 0,
+        railRides: 0,
+        busRides: 0,
+        ferryCrossings: 0,
+        rentals: 0,
+        countries: 2,
+        days: 8,
+      },
+      itinerary: {
+        sections: ["stays"],
+        items: [
+          {
+            kind: "stay",
+            name: "Hotel Hudson View",
+            address: "356 W 58th St",
+            city: "New York",
+            country: "US",
+            checkIn: day("2030-06-01"),
+            checkOut: day("2030-06-04"),
+            checkInAt: null,
+            checkOutAt: null,
+          },
         ],
+        now: { index: 0, state: "next" },
       },
-    });
-    expect(text).toContain("Harbor Queen");
-    expect(text).toContain("Circle Line");
-    expect(text).toContain("Pier 83");
-    expect(text).toContain("Seetag");
-    expect(text).toContain("Anna");
+    },
+  };
+  const live = {
+    status: 200,
+    body: { data: { expiresAt: "2030-06-15T10:00:00.000Z", view: trip } },
+  };
+
+  it("writes the trip's title, dates, owner and day plan in German", async () => {
+    const { root, document } = await renderPage(live);
+    const text = root.text();
+    expect(text).toContain("New York 2030");
+    expect(text).toContain("1. Juni 2030 – 8. Juni 2030");
+    expect(text).toContain("Geteilt von Anna");
+    expect(text).toContain("Als Nächstes");
+    expect(text).toContain("Übernachtung: Hotel Hudson View");
+    expect(text).toContain("Samstag");
+    expect(text).toContain("Link gültig bis");
+    // One of a thing is written in the singular.
+    expect(text).not.toContain("Flüge");
+    expect(text).toContain("Flug");
+    expect(text).toContain("8\nTage");
+    expect(document.title).toBe("New York 2030 – TravStats");
   });
 
-  it("writes a stay's name, address and nights, and nothing it was not sent", async () => {
-    const text = await renderedText({
-      kind: "stay",
-      stay: {
-        name: "Hotel Hudson View",
-        location: { address: "356 W 58th St", city: "New York", country: "US" },
-        dates: { checkIn: day("2030-06-01"), checkOut: day("2030-06-04") },
-      },
-    });
-    expect(text).toContain("Hotel Hudson View");
-    expect(text).toContain("356 W 58th St");
-    expect(text).toContain("Check-in");
-    const bare = await renderedText({ kind: "stay", stay: { name: "Hotel Hudson View" } });
-    expect(bare).not.toContain("356 W 58th St");
+  it("prints the itinerary as '<Trip>-Reiseplan', and in English as '<Trip>-Itinerary'", async () => {
+    const de = await renderPage(live);
+    const button = de.root.find("btn")!;
+    expect(button.textContent).toBe("Als PDF herunterladen");
+    button.listeners.click();
+    expect(de.printed).toEqual(["New York 2030-Reiseplan"]);
+    const en = await renderPage(live, "en-US");
+    expect(en.root.find("btn")!.textContent).toBe("Download as PDF");
+    en.root.find("btn")!.listeners.click();
+    expect(en.printed).toEqual(["New York 2030-Itinerary"]);
   });
 
-  it("writes a visit's place, day and rating", async () => {
-    const text = await renderedText({
-      kind: "visit",
-      visit: {
-        place: { name: "Statue of Liberty", city: "New York", country: null },
-        date: {
-          utc: "2030-06-02T14:00:00.000Z",
-          local: "2030-06-02T10:00:00",
-          zone: "America/New_York",
-          offset: "-04:00",
-          precision: "minute",
-        },
-        rating: 4,
-      },
-    });
-    expect(text).toContain("Statue of Liberty");
-    expect(text).toContain("4 von 5");
+  it("answers a retired link with 'no longer available', in German and English", async () => {
+    const de = await renderPage({ status: 410, body: { error: "gone" } });
+    expect(de.root.text()).toContain("Dieser Link ist nicht mehr verfügbar.");
+    const en = await renderPage({ status: 410, body: { error: "gone" } }, "en-GB");
+    expect(en.root.text()).toContain("This link is no longer available.");
+  });
+
+  it("answers an unknown link with its own sentence, not a blank page", async () => {
+    const { root } = await renderPage({ status: 404, body: {} });
+    expect(root.text()).toContain("Dieser Link ist nicht (mehr) gültig.");
   });
 });

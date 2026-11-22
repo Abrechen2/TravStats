@@ -42,8 +42,8 @@ const notFound = err(
 );
 const publicNotFound = err(
   "`SHARE_LINK_NOT_FOUND` — the one answer for every failure: malformed, unknown, expired, " +
-    "revoked, the instance switch off, the owner or the target gone. Never 410, never a 400: " +
-    "a guesser learns nothing about whether a token ever existed."
+    "revoked, the instance switch off, the owner or the target gone. Never a 400: a guesser " +
+    "learns nothing about whether a token ever existed."
 );
 
 registry.registerPath({
@@ -125,8 +125,8 @@ registry.registerPath({
     ),
     404: notFound,
     409: err(
-      "`SHARE_LINKS_DISABLED`: the instance switch is off; `SHARE_LINK_FLIGHT_LANDED`: the " +
-        "flight has landed; `SHARE_LINK_LIMIT`: too many live links"
+      "`SHARE_LINKS_DISABLED`: the instance switch is off; `SHARE_LINK_TRIP_ENDED`: the " +
+        "itinerary's trip has ended; `SHARE_LINK_LIMIT`: too many live links"
     ),
   },
 });
@@ -156,6 +156,10 @@ registry.registerPath({
   responses: {
     200: ok("The link's view", publicShareResponseSchema),
     404: publicNotFound,
+    410: err(
+      "`SHARE_LINK_RETIRED`: a live link of a kind no longer offered (flight, cruise, stay, " +
+        "visit — retired 2026-11-22). Only a holder of a valid token can get this answer."
+    ),
     429: err("Too many requests from this address"),
   },
 });

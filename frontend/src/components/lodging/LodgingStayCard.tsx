@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useShareLink } from "../shareLinks/ShareLinkButton";
 import OverflowMenu from "../ui/OverflowMenu";
 import DocumentsSection from "../documents/DocumentsSection";
 import EntryPhotos from "../common/EntryPhotos";
@@ -72,9 +71,8 @@ export function LodgingStayCard({
   membershipSource,
   onProvenanceSaved,
 }: LodgingStayCardProps): JSX.Element {
-  const { t, i18n } = useTranslation(["lodging", "common", "sharing", "provenance"]);
+  const { t, i18n } = useTranslation(["lodging", "common", "provenance"]);
   const [editingOrigin, setEditingOrigin] = useState(false);
-  const share = useShareLink("stay", stay.id);
   const packageSplit = usePackageSplit();
   const { labelOf } = useRatingCategories();
   const baseCurrency = useSettingsStore((st) => st.baseCurrency);
@@ -168,7 +166,7 @@ export function LodgingStayCard({
         <span className="ml-auto text-sm font-semibold" style={{ color: "var(--star)" }}>
           {formatRatingText(stay.ratingOverall)}
         </span>
-        {/* Share link, edit and delete are one card ⋯ (owner, 2026-11-22). The red belongs to
+        {/* Edit and delete are one card ⋯ (owner, 2026-11-22). The red belongs to
             the confirmation, which is where the consequence is actually stated. */}
         {(onEdit || onDelete || onProvenanceSaved || packageSplit.entry) && (
           <OverflowMenu
@@ -182,16 +180,6 @@ export function LodgingStayCard({
                       testId: `stay-edit-${stay.id}`,
                       label: t("common:buttons.edit"),
                       onSelect: () => onEdit(stay),
-                    },
-                  ]
-                : []),
-              ...(onEdit && share.available
-                ? [
-                    {
-                      key: "share",
-                      testId: `stay-share-${stay.id}`,
-                      label: t("sharing:links.button"),
-                      onSelect: share.start,
                     },
                   ]
                 : []),
@@ -219,7 +207,6 @@ export function LodgingStayCard({
                 : []),
             ]}
           >
-            {share.node}
             {editingOrigin && (
               <ProvenanceDialog
                 entryType="lodgingStay"
