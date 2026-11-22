@@ -12,7 +12,8 @@ const RULE = {
   brands: [{ brandWikidataId: "Q38076", brandName: "McDonald's" }],
   minDwellMinutes: 5,
   maxDwellMinutes: 60,
-  maxDistanceM: 60,
+  maxDistanceM: 100,
+  autoAcceptDistanceM: 60,
   autoAccept: false,
 };
 
@@ -54,13 +55,23 @@ describe("Smart lists API", () => {
   it("stores the rule, reads it back, and refuses a window whose maximum is below its minimum", async () => {
     expect((await put(`${BASE}/${listId}/rule`, RULE)).status).toBe(200);
     const read = await get(`${BASE}/${listId}/rule`);
-    expect(read.body.data).toMatchObject({ listId, maxDistanceM: 60, autoAccept: false });
+    expect(read.body.data).toMatchObject({
+      listId,
+      maxDistanceM: 100,
+      autoAcceptDistanceM: 60,
+      autoAccept: false,
+    });
     expect(read.body.data.brands).toEqual(RULE.brands);
     const bad = await put(`${BASE}/${listId}/rule`, {
       ...RULE,
       minDwellMinutes: 30,
       maxDwellMinutes: 10,
     });
+    expect(bad.status).toBe(400);
+  });
+
+  it("refuses an auto-accept distance above the suggestion distance", async () => {
+    const bad = await put(`${BASE}/${listId}/rule`, { ...RULE, autoAcceptDistanceM: 150 });
     expect(bad.status).toBe(400);
   });
 

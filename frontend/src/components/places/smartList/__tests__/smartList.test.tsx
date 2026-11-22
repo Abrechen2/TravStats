@@ -135,7 +135,8 @@ describe("BrandRuleDialog", () => {
       brands: [{ brandWikidataId: "Q38076", brandName: "McDonald's" }],
       minDwellMinutes: 5,
       maxDwellMinutes: 60,
-      maxDistanceM: 60,
+      maxDistanceM: 100,
+      autoAcceptDistanceM: 60,
       autoAccept: false,
     });
   });
@@ -149,7 +150,8 @@ describe("BrandRuleDialog", () => {
           brands: [{ brandWikidataId: "Q38076", brandName: "McDonald's" }],
           minDwellMinutes: 30,
           maxDwellMinutes: 10,
-          maxDistanceM: 60,
+          maxDistanceM: 100,
+          autoAcceptDistanceM: 60,
           autoAccept: false,
         }}
         onClose={vi.fn()}
@@ -158,5 +160,26 @@ describe("BrandRuleDialog", () => {
     );
     expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
     expect(screen.getByText(/Höchstdauer muss mindestens/)).toBeInTheDocument();
+  });
+
+  it("refuses an automatic distance above the suggestion distance before sending", async () => {
+    render(
+      <BrandRuleDialog
+        listId="l1"
+        rule={{
+          listId: "l1",
+          brands: [{ brandWikidataId: "Q38076", brandName: "McDonald's" }],
+          minDwellMinutes: 5,
+          maxDwellMinutes: 60,
+          maxDistanceM: 100,
+          autoAcceptDistanceM: 150,
+          autoAccept: true,
+        }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+    expect(screen.getByText(/automatische Entfernung muss/)).toBeInTheDocument();
   });
 });

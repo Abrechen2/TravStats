@@ -79,9 +79,14 @@ const ruleBody = z
     minDwellMinutes: z.number().int().min(1).max(1440),
     maxDwellMinutes: z.number().int().min(1).max(1440),
     maxDistanceM: z.number().int().min(10).max(500),
+    autoAcceptDistanceM: z.number().int().min(10).max(500),
     autoAccept: z.boolean(),
   })
   .strict()
+  .refine((b) => b.autoAcceptDistanceM <= b.maxDistanceM, {
+    message: "autoAcceptDistanceM must not exceed maxDistanceM",
+    path: ["autoAcceptDistanceM"],
+  })
   .refine((b) => b.maxDwellMinutes >= b.minDwellMinutes, {
     message: "maxDwellMinutes must not be below minDwellMinutes",
     path: ["maxDwellMinutes"],

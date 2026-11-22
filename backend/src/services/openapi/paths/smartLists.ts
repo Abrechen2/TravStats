@@ -15,7 +15,11 @@ const brand = z.object({ brandWikidataId: z.string(), brandName: z.string() });
 const settings = z.object({
   minDwellMinutes: z.number().int(),
   maxDwellMinutes: z.number().int(),
-  maxDistanceM: z.number().int(),
+  maxDistanceM: z.number().int().describe("Suggestion tier (default 100 m)"),
+  autoAcceptDistanceM: z
+    .number()
+    .int()
+    .describe("Auto-accept tier (default 60 m), at most maxDistanceM"),
   autoAccept: z.boolean(),
 });
 const rule = z.object({ listId: uuid, brands: z.array(brand) }).merge(settings);

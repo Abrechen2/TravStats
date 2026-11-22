@@ -53,6 +53,7 @@ export function BrandRuleDialog({
   const [minDwell, setMinDwell] = useState(String(initial.minDwellMinutes));
   const [maxDwell, setMaxDwell] = useState(String(initial.maxDwellMinutes));
   const [distance, setDistance] = useState(String(initial.maxDistanceM));
+  const [autoDistance, setAutoDistance] = useState(String(initial.autoAcceptDistanceM));
   const [auto, setAuto] = useState(initial.autoAccept);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<BrandHit[]>([]);
@@ -100,8 +101,10 @@ export function BrandRuleDialog({
   const dist = Number(distance);
   const windowOk =
     Number.isInteger(min) && Number.isInteger(max) && min >= 1 && max >= min && max <= 1440;
+  const autoDist = Number(autoDistance);
   const distOk = Number.isInteger(dist) && dist >= 10 && dist <= 500;
-  const canSave = brands.length > 0 && windowOk && distOk && !busy;
+  const autoDistOk = Number.isInteger(autoDist) && autoDist >= 10 && autoDist <= dist;
+  const canSave = brands.length > 0 && windowOk && distOk && autoDistOk && !busy;
 
   const add = (hit: BrandHit): void => {
     setBrands((b) =>
@@ -123,6 +126,7 @@ export function BrandRuleDialog({
           minDwellMinutes: min,
           maxDwellMinutes: max,
           maxDistanceM: dist,
+          autoAcceptDistanceM: autoDist,
           autoAccept: auto,
         })
       );
@@ -330,6 +334,18 @@ export function BrandRuleDialog({
               style={field}
             />
           </label>
+          <label className="flex flex-col gap-1 text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("places:smartList.autoDistance")}
+            <input
+              type="number"
+              inputMode="numeric"
+              min={10}
+              value={autoDistance}
+              onChange={(e) => setAutoDistance(e.target.value)}
+              className={`w-28 rounded-lg px-3 py-2 text-sm ${COARSE}`}
+              style={field}
+            />
+          </label>
         </fieldset>
         {!windowOk && (
           <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
@@ -339,6 +355,11 @@ export function BrandRuleDialog({
         {!distOk && (
           <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
             {t("places:smartList.distanceInvalid")}
+          </p>
+        )}
+        {distOk && !autoDistOk && (
+          <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
+            {t("places:smartList.autoDistanceInvalid")}
           </p>
         )}
 

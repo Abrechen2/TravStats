@@ -30,7 +30,13 @@ const FROM = Date.parse(`${DAY}T10:00:00Z`);
 const SEOUL = { lat: 37.5665, lon: 126.978 };
 const VENUE_AT = { lat: 37.5666, lon: 126.9781 };
 const MCD = { brandWikidataId: "Q38076", brandName: "McDonald's" };
-const SETTINGS = { minDwellMinutes: 5, maxDwellMinutes: 60, maxDistanceM: 60, autoAccept: false };
+const SETTINGS = {
+  minDwellMinutes: 5,
+  maxDwellMinutes: 60,
+  maxDistanceM: 100,
+  autoAcceptDistanceM: 60,
+  autoAccept: false,
+};
 
 const pick = (over: Partial<VisitPick> = {}): VisitPick => ({
   source: "osm",
@@ -208,6 +214,21 @@ describe("smart lists in the visit projection", () => {
     expect(await recentlyAutoAccepted(userId, listId)).toHaveLength(0);
     // The stop does not come back as a suggestion.
     expect((await stays())[0].status).toBe("rejected");
+  });
+
+  it("a venue 80 m away is suggested but not auto-accepted; one 60 m away is taken", async () => {
+    await setListRule(userId, listId, [MCD], { ...SETTINGS, autoAccept: true });
+    resolveStop.mockResolvedValue(picked({ distanceM: 80 }));
+    await stand(25);
+    const far = await run();
+    expect(far).toMatchObject({ created: 1, autoAccepted: 0 });
+    expect((await stays())[0].status).toBe("pending");
+    await prisma.dawarichStay.deleteMany({ where: { userId } });
+    await wipeTravTrack([userId]);
+    await prisma.travTrackDirtyDay.deleteMany({ where: { userId } });
+    resolveStop.mockResolvedValue(picked({ distanceM: 60 }));
+    await stand(25);
+    expect((await run()).autoAccepted).toBe(1);
   });
 
   it("undo spares a place, a list entry and a visit the owner already had", async () => {

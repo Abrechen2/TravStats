@@ -102,6 +102,7 @@ export default function SmartListPanel({
               min: rule.minDwellMinutes,
               max: rule.maxDwellMinutes,
               distance: rule.maxDistanceM,
+              autoDistance: rule.autoAcceptDistanceM,
               auto: rule.autoAccept ? t("places:smartList.autoOn") : t("places:smartList.autoOff"),
             })}
           </p>

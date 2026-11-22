@@ -4164,7 +4164,10 @@ model PlaceListBrandRule {
 
   minDwellMinutes Int     @default(5) @map("min_dwell_minutes")
   maxDwellMinutes Int     @default(60) @map("max_dwell_minutes")
-  maxDistanceM    Int     @default(60) @map("max_distance_m")
+  /// Suggestion tier: a stop this near the outlet is offered in the inbox and on the place page.
+  maxDistanceM    Int     @default(100) @map("max_distance_m")
+  /// Auto-accept tier: only a stop this near is taken without asking (never above `maxDistanceM`).
+  autoAcceptDistanceM Int @default(60) @map("auto_accept_distance_m")
   autoAccept      Boolean @default(false) @map("auto_accept")
 
   createdAt DateTime @default(now()) @map("created_at")

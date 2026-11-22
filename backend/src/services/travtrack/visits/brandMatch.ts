@@ -9,7 +9,8 @@
  *  - the venue is not disused / abandoned;
  *  - the dwell is inside the rule's window at BOTH ends (a four-hour stop beside a
  *    McDonald's is the hotel or the office);
- *  - the distance to the venue is within the rule's maximum.
+ *  - the distance to the venue is within the rule's maximum (the suggestion tier); auto-accept
+ *    additionally needs it within `autoAcceptDistanceM` (the tighter tier).
  * By brand id (`brand:wikidata`) the match is `id`. A venue without that tag but with
  * an exactly equal `brand` string is a `name` match: weaker, never auto-accepted.
  * A venue that carries a DIFFERENT brand id never matches by name.
@@ -28,6 +29,7 @@ export type BrandRuleInput = {
   minDwellMinutes: number;
   maxDwellMinutes: number;
   maxDistanceM: number;
+  autoAcceptDistanceM: number;
   autoAccept: boolean;
 };
 
@@ -74,7 +76,7 @@ export function matchBrandRules(input: {
       brandWikidataId: rule.brandWikidataId,
       brandName: rule.brandName,
       strength,
-      auto: strength === "id" && rule.autoAccept,
+      auto: strength === "id" && rule.autoAccept && input.distanceM <= rule.autoAcceptDistanceM,
     });
   }
   return out;

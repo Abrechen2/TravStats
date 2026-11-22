@@ -25,13 +25,15 @@ export type RuleSettings = {
   minDwellMinutes: number;
   maxDwellMinutes: number;
   maxDistanceM: number;
+  autoAcceptDistanceM: number;
   autoAccept: boolean;
 };
 
 export const DEFAULT_RULE_SETTINGS: RuleSettings = {
   minDwellMinutes: 5,
   maxDwellMinutes: 60,
-  maxDistanceM: 60,
+  maxDistanceM: 100,
+  autoAcceptDistanceM: 60,
   autoAccept: false,
 };
 
@@ -54,6 +56,7 @@ export async function loadBrandRules(userId: string): Promise<BrandRuleInput[]> 
     minDwellMinutes: r.minDwellMinutes,
     maxDwellMinutes: r.maxDwellMinutes,
     maxDistanceM: r.maxDistanceM,
+    autoAcceptDistanceM: r.autoAcceptDistanceM,
     autoAccept: r.autoAccept,
   }));
 }
@@ -81,6 +84,7 @@ export async function getListRule(userId: string, listId: string): Promise<ListR
     minDwellMinutes: first.minDwellMinutes,
     maxDwellMinutes: first.maxDwellMinutes,
     maxDistanceM: first.maxDistanceM,
+    autoAcceptDistanceM: first.autoAcceptDistanceM,
     autoAccept: first.autoAccept,
   };
 }

@@ -8,7 +8,8 @@ const rule = (over: Partial<BrandRuleInput> = {}): BrandRuleInput => ({
   brandName: "McDonald's",
   minDwellMinutes: 5,
   maxDwellMinutes: 60,
-  maxDistanceM: 60,
+  maxDistanceM: 100,
+  autoAcceptDistanceM: 60,
   autoAccept: true,
   ...over,
 });
@@ -45,9 +46,15 @@ describe("matchBrandRules", () => {
     expect(match({ dwellMinutes: 60 })).toHaveLength(1);
   });
 
-  it("does not match a venue further than the rule's maximum distance", () => {
-    expect(match({ distanceM: 61 })).toEqual([]);
-    expect(match({ distanceM: 60 })).toHaveLength(1);
+  it("does not match a venue further than the rule's suggestion distance (100 m), and matches exactly at it", () => {
+    expect(match({ distanceM: 101 })).toEqual([]);
+    expect(match({ distanceM: 100 })).toHaveLength(1);
+  });
+
+  it("auto-accepts only within the tighter tier: 60 m auto, 61 m suggestion only", () => {
+    expect(match({ distanceM: 60 })[0]).toMatchObject({ strength: "id", auto: true });
+    expect(match({ distanceM: 61 })[0]).toMatchObject({ strength: "id", auto: false });
+    expect(match({ distanceM: 100 })[0].auto).toBe(false);
   });
 
   it("never matches when the venue was not the stop's top candidate (no nearest-node fallback)", () => {

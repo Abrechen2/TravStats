@@ -14,7 +14,10 @@ export interface RuleBrand {
 export interface RuleSettings {
   minDwellMinutes: number;
   maxDwellMinutes: number;
+  /** Suggestion tier. */
   maxDistanceM: number;
+  /** Auto-accept tier, at most `maxDistanceM`. */
+  autoAcceptDistanceM: number;
   autoAccept: boolean;
 }
 export type ListRule = { listId: string; brands: RuleBrand[] } & RuleSettings;
@@ -24,7 +27,8 @@ export type ListRuleInput = { brands: RuleBrand[] } & RuleSettings;
 export const DEFAULT_RULE_SETTINGS: RuleSettings = {
   minDwellMinutes: 5,
   maxDwellMinutes: 60,
-  maxDistanceM: 60,
+  maxDistanceM: 100,
+  autoAcceptDistanceM: 60,
   autoAccept: false,
 };
 
