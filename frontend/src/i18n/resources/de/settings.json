@@ -414,6 +414,33 @@
       "generic": "Das hat nicht geklappt (Serverfehler). Nichts wurde übernommen. Bitte versuche es später erneut."
     }
   },
+  "lifeBook": {
+    "title": "Lebensbuch",
+    "sub": "Dein Reisetagebuch als eine einzige Datei, die auch in Jahrzehnten ohne TravStats lesbar bleibt.",
+    "help": "Eine HTML-Datei mit allen Reisen, Tagen, Karten, Fotos und Belegen des gewählten Bereichs. Die Datei braucht kein Internet und kein JavaScript. Zum Drucken oder als PDF: im Browser öffnen und Drucken wählen (A4, eine Reise pro Seite).",
+    "button": "Lebensbuch erstellen",
+    "scope": "Bereich",
+    "scopeAll": "Alles",
+    "scopeYear": "Ein Jahr",
+    "scopeTrip": "Eine Reise",
+    "year": "Jahr",
+    "trip": "Reise",
+    "pickTrip": "Reise wählen",
+    "tripsFailed": "Die Reisen konnten nicht geladen werden. Lade die Seite neu.",
+    "building": "Lebensbuch wird erstellt",
+    "done": "{{trips}} Reisen, {{entries}} Einträge, {{photos}} Fotos, heruntergeladen",
+    "photosSkipped": "Achtung: {{count}} Fotos konnten nicht gelesen werden und fehlen im Buch.",
+    "note": "Enthalten sind Reisen mit Tagesliste, Streckenkarte (ohne Kartenhintergrund), eine Auswahl der Fotos (höchstens 24 je Reise, verkleinert) und die Art der hinterlegten Belege. Einträge mit unbekanntem Datum stehen als „Datum unbekannt“, nie an einem geschätzten Tag.",
+    "failed": {
+      "LIFE_BOOK_EMPTY": "In diesem Bereich gibt es keine Einträge.",
+      "LIFE_BOOK_TOO_LARGE": "Das Buch wird für diesen Server zu groß. Wähle ein einzelnes Jahr oder eine einzelne Reise.",
+      "LIFE_BOOK_BUSY": "Für dieses Konto wird schon ein Lebensbuch erstellt.",
+      "LIFE_BOOK_NOT_FOUND": "Das fertige Buch ist nicht mehr da. Bitte neu erstellen.",
+      "TRIP_NOT_FOUND": "Diese Reise gibt es nicht (mehr).",
+      "rate_limited": "Zu viele Versuche in kurzer Zeit. Bitte versuche es in einer Stunde erneut.",
+      "generic": "Das hat nicht geklappt (Serverfehler). Bitte versuche es später erneut."
+    }
+  },
   "password": {
     "title": "Passwort ändern",
     "oldPassword": "Aktuelles Passwort",

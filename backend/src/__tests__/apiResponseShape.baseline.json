@@ -191,6 +191,7 @@
   "enveloped": [
     "entryPhotos.ts",
     "accountArchive.ts",
+    "lifeBook.ts",
     "aircraft.ts",
     "airlines.ts",
     "appImport.ts",
