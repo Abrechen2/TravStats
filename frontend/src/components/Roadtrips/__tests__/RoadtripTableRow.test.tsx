@@ -70,6 +70,16 @@ describe("RoadtripTableRow", () => {
     expect(screen.getByText("254 km")).toBeInTheDocument();
   });
 
+  it("marks a business roadtrip with the purpose chip and a private one with none", () => {
+    renderRow({ purpose: "business" });
+    expect(screen.getByTestId("purpose-chip")).toBeInTheDocument();
+  });
+
+  it("shows no purpose chip for a private or unknown roadtrip", () => {
+    renderRow({ purpose: "private" });
+    expect(screen.queryByTestId("purpose-chip")).toBeNull();
+  });
+
   it("opens the roadtrip when the row is clicked", () => {
     const onOpen = vi.fn();
     renderRow({}, "past", onOpen);

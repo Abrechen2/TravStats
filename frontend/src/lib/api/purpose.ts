@@ -19,7 +19,8 @@ export type PurposeEntryType =
   | "busJourney"
   | "ferryJourney"
   | "rentalBooking"
-  | "cruise";
+  | "cruise"
+  | "tripRoute";
 
 export interface VisibilityState {
   visibility: PurposeVisibility;

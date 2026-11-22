@@ -2,6 +2,7 @@ import type { JSX, ReactNode } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import type { TourSummary } from "../../lib/api/tourIndex";
+import PurposeChip from "../purpose/PurposeChip";
 import { TableRow, type TableColumn } from "../ui/Table";
 
 export type TourColumnId = "name" | "activity" | "trip" | "distance" | "ascent" | "actions";
@@ -40,7 +41,12 @@ function formatKm(value: number): string {
 export function TourTableRow({ tour, columns, onOpen, actions }: Props): JSX.Element {
   const { t } = useTranslation(["trips", "roadtrips"]);
   const cell: Record<string, ReactNode> = {
-    name: <span className="font-semibold">{tour.name}</span>,
+    name: (
+      <span className="flex flex-wrap items-center gap-2">
+        <span className="font-semibold">{tour.name}</span>
+        <PurposeChip entry={tour} />
+      </span>
+    ),
     activity: (
       <span className="rounded-sm bg-(--bg-surface) px-1.5 py-0.5 text-xs">
         {tour.activity

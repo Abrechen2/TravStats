@@ -1,3 +1,4 @@
+import PurposeEditor from "../components/purpose/PurposeEditor";
 import RouteTagsEditor from "../components/Roadtrips/RouteTagsEditor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -624,6 +625,13 @@ export default function TripRouteEditorPage(): JSX.Element {
               <TourDayEditor route={route} tripId={id} onSaved={setRoute} />
             )}
             <RouteTagsEditor route={route} tripId={id} onSaved={setRoute} />
+            <PurposeEditor
+              key={`purpose-${route.purpose ?? ""}`}
+              entryType="tripRoute"
+              entryId={route.id}
+              purpose={route.purpose}
+              onSaved={(purpose) => setRoute({ ...route, purpose })}
+            />
             <span>
               {t(`trips:tours.mode.${route.mode}`)} ·{" "}
               {/* A day tour is measured by its recording once it has one. */}

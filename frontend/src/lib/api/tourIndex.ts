@@ -24,6 +24,8 @@ export interface TourSummary {
   activity: TourActivity | null;
   vehicle: StoredRoadtripVehicle | null;
   kindAssignedAutomatically: boolean;
+  /** Private or business; null is unknown (never read as private). */
+  purpose?: string | null;
   notes: string | null;
   /** Free-form labels (forgejo#405); absent on older backends. */
   tags?: string[];
