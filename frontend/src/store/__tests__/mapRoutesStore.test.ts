@@ -55,3 +55,24 @@ describe("route switches are persisted in the account-synced mapAppearance blob"
     expect(effectiveRoutes(useMapRoutesStore.getState()).tour).toBe(false);
   });
 });
+
+describe("rental joined the routes switch (2026-11-22)", () => {
+  beforeEach(() => window.localStorage.clear());
+  afterEach(() => window.localStorage.clear());
+
+  it("keeps a rental link that was switched off under the old rentalShowLine off", async () => {
+    window.localStorage.setItem("mapAppearance.v2", JSON.stringify({ rentalShowLine: false }));
+    const { useMapRoutesStore } = await fresh();
+    expect(useMapRoutesStore.getState().visible.rental).toBe(false);
+    expect(useMapRoutesStore.getState().visible.flight).toBe(true);
+  });
+
+  it("lets the new key win over the legacy one once it was written", async () => {
+    window.localStorage.setItem(
+      "mapAppearance.v2",
+      JSON.stringify({ rentalShowLine: false, routesVisible: { rental: true } })
+    );
+    const { useMapRoutesStore } = await fresh();
+    expect(useMapRoutesStore.getState().visible.rental).toBe(true);
+  });
+});

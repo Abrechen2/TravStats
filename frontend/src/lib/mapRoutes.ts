@@ -7,8 +7,9 @@ import type { Layer } from "@deck.gl/core";
  *
  * The switch is a per-domain boolean in the account-synced `mapAppearance`
  * blob (`routesVisible`). Absent = drawn, so nobody's map changes until they
- * flip one. Rentals are not here: their one-way link already has its own
- * switch (`rentalShowLine`).
+ * flip one. Rentals joined on 2026-11-22: their one-way link used to have its
+ * own `rentalShowLine`, which is still READ once (see `routesVisibleFromStored`)
+ * so a link that was off stays off.
  */
 export const ROUTE_DOMAINS = [
   "flight",
@@ -18,6 +19,7 @@ export const ROUTE_DOMAINS = [
   "ferry",
   "tour",
   "roadtrip",
+  "rental",
 ] as const;
 export type RouteDomain = (typeof ROUTE_DOMAINS)[number];
 export type RoutesVisible = Record<RouteDomain, boolean>;
@@ -30,14 +32,20 @@ export const ALL_ROUTES_VISIBLE: RoutesVisible = {
   ferry: true,
   tour: true,
   roadtrip: true,
+  rental: true,
 };
 
 /** The stored record, defaulted per domain: anything but an explicit `false` is drawn. */
-export function routesVisibleFromStored(stored: unknown): RoutesVisible {
+export function routesVisibleFromStored(
+  stored: unknown,
+  legacyRentalShowLine?: unknown
+): RoutesVisible {
   const raw =
     typeof stored === "object" && stored !== null ? (stored as Record<string, unknown>) : {};
   const out = { ...ALL_ROUTES_VISIBLE };
   for (const domain of ROUTE_DOMAINS) if (raw[domain] === false) out[domain] = false;
+  // Migration: the pre-unification rental switch, unless the new key was ever written.
+  if (raw.rental === undefined && legacyRentalShowLine === false) out.rental = false;
   return out;
 }
 

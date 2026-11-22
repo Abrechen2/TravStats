@@ -46,6 +46,12 @@ describe("domain row routes toggle", () => {
     expect(btn).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("rental has the pill too and writes the same store", () => {
+    renderRow("rental");
+    fireEvent.click(screen.getByTestId("row-routes-toggle-rental"));
+    expect(useMapRoutesStore.getState().visible.rental).toBe(false);
+  });
+
   it("is absent on domains that draw no route and disabled while the mode is route-only", () => {
     renderRow("lodging");
     expect(screen.queryByTestId("row-routes-toggle-lodging")).toBeNull();

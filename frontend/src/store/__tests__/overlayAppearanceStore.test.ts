@@ -22,12 +22,6 @@ describe("useOverlayAppearanceStore", () => {
     expect(stored).toEqual({ styleId: "dark", railStationSize: 0 });
   });
 
-  it("persists the rental line switch as a boolean", () => {
-    useOverlayAppearanceStore.getState().setValue("rentalShowLine", false);
-    expect(useOverlayAppearanceStore.getState().appearance.rentalShowLine).toBe(false);
-    expect(JSON.parse(window.localStorage.getItem(KEY) ?? "{}").rentalShowLine).toBe(false);
-  });
-
   it("leaves the other fields as they were", () => {
     useOverlayAppearanceStore.getState().setValue("tourLineWidth", 1.7);
     const { appearance } = useOverlayAppearanceStore.getState();

@@ -3,11 +3,12 @@ vi.mock("../../hooks/useDashboardRoute", () => ({
   useDashboardRoute: () => ({ tab: "flight", mode: "routes" }),
 }));
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { OverlayAppearanceSections } from "./OverlayAppearanceSections";
 import { FlatMapControlPanel } from "./FlatMapControlPanel";
 import type { AppearanceDomain } from "./controlPanelKit";
 import { useOverlayAppearanceStore } from "../../store/overlayAppearanceStore";
+import { useMapRoutesStore } from "../../store/mapRoutesStore";
 import { DEFAULT_OVERLAY_APPEARANCE } from "../../lib/overlayAppearance";
 import { DEFAULT_FLIGHT_COLOR_CONFIG } from "../../lib/flightColor";
 import { DEFAULT_CRUISE_COLOR_CONFIG } from "../../lib/cruiseColor";
@@ -114,9 +115,9 @@ describe("OverlayAppearanceSections: the controls write what the layers read", (
   it("switches the rental link off, and hides the width of a line no longer drawn", () => {
     renderSections(["rental"]);
     expect(screen.getByLabelText("map:globe.panel.width")).toBeTruthy();
-    fireEvent.click(screen.getByRole("switch", { name: /map:globe.panel.rentalShowLine/ }));
-    expect(useOverlayAppearanceStore.getState().appearance.rentalShowLine).toBe(false);
-    expect(JSON.parse(window.localStorage.getItem(KEY) ?? "{}").rentalShowLine).toBe(false);
+    fireEvent.click(within(screen.getByTestId("routes-switch-rental")).getByRole("switch"));
+    expect(useMapRoutesStore.getState().visible.rental).toBe(false);
+    expect(JSON.parse(window.localStorage.getItem(KEY) ?? "{}").routesVisible.rental).toBe(false);
     expect(screen.queryByLabelText("map:globe.panel.width")).toBeNull();
     // The station markers stay controllable — they are what is left on the map.
     expect(screen.getByLabelText("map:globe.panel.rentalStations")).toBeTruthy();

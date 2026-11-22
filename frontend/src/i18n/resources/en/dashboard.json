@@ -422,7 +422,8 @@
         "bus": "stops",
         "ferry": "terminals",
         "tour": "stops",
-        "roadtrip": "stops"
+        "roadtrip": "stops",
+        "rental": "stations"
       }
     },
     "betaBadge": {
