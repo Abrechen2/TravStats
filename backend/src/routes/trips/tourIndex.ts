@@ -55,6 +55,7 @@ interface TourSummaryRow {
   activity: string | null;
   vehicle: string | null;
   kindAssignedAutomatically: boolean;
+  purpose: string | null;
   notes: string | null;
   tags: string[];
   tourDate: Date | null;
@@ -89,6 +90,7 @@ const TOUR_SUMMARY_SELECT = {
   activity: true,
   vehicle: true,
   kindAssignedAutomatically: true,
+  purpose: true,
   notes: true,
   tags: true,
   tourDate: true,
@@ -165,6 +167,7 @@ function toTourSummary(route: TourSummaryRow): Record<string, unknown> {
     activity: route.activity,
     vehicle: route.vehicle,
     kindAssignedAutomatically: route.kindAssignedAutomatically,
+    purpose: route.purpose,
     notes: route.notes,
     tags: route.tags,
     // The spreadsheet writes the anchor as "Station [id]"; the title saves it
@@ -304,6 +307,8 @@ async function createTour(userId: string, raw: unknown, claim: ClaimClientRef) {
           tags: body.tags ?? [],
           startOdometerKm: body.startOdometerKm,
           endOdometerKm: body.endOdometerKm,
+          // Undefined: the trip's category decides (services/purpose/tripInheritance.ts).
+          purpose: body.purpose,
           orderIdx: last ? last.orderIdx + 1 : 0,
           ...day,
         },

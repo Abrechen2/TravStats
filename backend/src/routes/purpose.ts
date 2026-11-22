@@ -1,4 +1,5 @@
 import { Router, type NextFunction, type Response } from "express";
+import { recheckAchievements } from "../utils/achievements";
 import { z } from "zod";
 
 import { prisma } from "../db";
@@ -42,6 +43,8 @@ router.put(
         res.status(404).json({ success: false, error: "Entry not found", code: "ENTRY_NOT_FOUND" });
         return;
       }
+      // A hidden entry earns no badge: whatever the purpose change hides or shows is re-derived.
+      await recheckAchievements(req.userId!, "purpose-entry");
       res.json({ success: true, data: { purpose } });
     } catch (err) {
       next(err);
@@ -78,6 +81,9 @@ router.put(
           create: { userId: req.userId!, data: {}, purposeVisibility: value },
         })
       );
+      // Stored badges are not derived per request: re-derive them so hidden entries stop
+      // counting (and shown ones count again).
+      await recheckAchievements(req.userId!, "purpose-visibility");
       res.json({
         success: true,
         data: { visibility, revision: purposeVisibilityRevision(visibility) },
@@ -115,6 +121,7 @@ router.post(
         res.status(404).json({ success: false, error: "Trip not found", code: "TRIP_NOT_FOUND" });
         return;
       }
+      await recheckAchievements(req.userId!, "purpose-trip-apply");
       res.json({ success: true, data: result });
     } catch (err) {
       next(err);
@@ -128,7 +135,9 @@ router.post(
   rejectDemo,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      res.json({ success: true, data: { changed: await fillPurposeFromTrips(req.userId!) } });
+      const changed = await fillPurposeFromTrips(req.userId!);
+      await recheckAchievements(req.userId!, "purpose-from-trips");
+      res.json({ success: true, data: { changed } });
     } catch (err) {
       next(err);
     }

@@ -7,6 +7,7 @@ import {
   type LeaderboardSnapshot,
 } from "../../schemas/comparison";
 import { loadVisibleDomains } from "../domainVisibility";
+import { withPurposeVisibility } from "../provenance/purposeVisibility";
 import { loadPassport } from "../stats/passportLoader";
 import { loadDaysAway } from "../stats/daysAwayLoader";
 import { DOMAIN_AGGREGATES } from "./domainAggregates";
@@ -58,7 +59,8 @@ export async function buildLeaderboardSnapshot(
   const loaded = await Promise.all(
     domains
       .filter((domain) => allowed.some((m) => m.domain === domain))
-      .map((domain) => DOMAIN_AGGREGATES[domain](userId, year))
+      // What the account hid by purpose is out of the totals it publishes, as on its own screens.
+      .map((domain) => withPurposeVisibility(userId, () => DOMAIN_AGGREGATES[domain](userId, year)))
   );
   for (const figures of loaded) {
     for (const [key, value] of Object.entries(figures.values) as Array<[MetricKey, number | null]>)
@@ -67,11 +69,17 @@ export async function buildLeaderboardSnapshot(
   }
   if (allowedKeys.has("daysAway"))
     values.daysAway = wholeAccount
-      ? (await loadDaysAway(userId, { year: year ?? undefined })).total
+      ? (
+          await withPurposeVisibility(userId, () =>
+            loadDaysAway(userId, { year: year ?? undefined })
+          )
+        ).total
       : null;
   if (allowedKeys.has("countries"))
     values.countries =
-      wholeAccount && year === null ? (await loadPassport(userId)).summary.countries : null;
+      wholeAccount && year === null
+        ? (await withPurposeVisibility(userId, () => loadPassport(userId))).summary.countries
+        : null;
   const common = {
     schema: LEADERBOARD_SCHEMA,
     asOf: new Date().toISOString(),

@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 
+import PurposeChip from "../purpose/PurposeChip";
 import Pill from "../ui/Pill";
 import { TableRow, type TableColumn } from "../ui/Table";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -61,6 +62,7 @@ export function RoadtripTableRow({ roadtrip: r, phase, columns, onOpen }: Props)
       <span className="flex min-w-0 flex-col" style={{ gap: 2 }}>
         <span className="flex flex-wrap items-center gap-2">
           <span className="font-semibold">{r.name}</span>
+          <PurposeChip entry={r} />
           {phase === "planned" && (
             <Pill color="var(--ts-info)">{t("roadtrips:phase.planned")}</Pill>
           )}

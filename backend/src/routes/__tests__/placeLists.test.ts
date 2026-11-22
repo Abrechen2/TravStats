@@ -447,6 +447,29 @@ describe("Place lists API", () => {
       expect(hit.visitedAt).toContain("2024-06-10");
     });
 
+    it("still proposes from a stay the account hid by purpose: a hidden stay is recorded", async () => {
+      await stayInRome();
+      await prisma.lodgingStay.updateMany({ where: { userId }, data: { purpose: "business" } });
+      await request(app)
+        .put("/api/v1/purpose/visibility")
+        .set("Cookie", authCookie)
+        .send({ lodging: ["business"] })
+        .expect(200);
+      try {
+        const res = await suggestions();
+        expect(res.body.data.anchorCount).toBeGreaterThan(0);
+        expect(
+          res.body.data.suggestions.some((s: { itemId: string }) => s.itemId === COLOSSEUM)
+        ).toBe(true);
+      } finally {
+        await request(app)
+          .put("/api/v1/purpose/visibility")
+          .set("Cookie", authCookie)
+          .send({})
+          .expect(200);
+      }
+    });
+
     it("never proposes something already ticked", async () => {
       await stayInRome();
       await request(app)

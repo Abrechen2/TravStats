@@ -1,6 +1,16 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import { applyRecordedOnly } from "./services/provenance/recordedOnly";
+import {
+  applyRecordedOnly,
+  entryFilterActive,
+  placeVisitHiddenActive,
+  runUnfiltered,
+} from "./services/provenance/recordedOnly";
+import {
+  demoteHiddenOnlyVisited,
+  ensureIdSelected,
+  isPlaceRead,
+} from "./services/purpose/placeVisited";
 import { inheritPurposeOnCreate } from "./services/purpose/tripInheritance";
 import { createPrismaClient } from "./prismaClient";
 import {
@@ -153,7 +163,7 @@ export function expectingUniqueConflict<T>(model: string, run: () => Promise<T>)
  * `query.$allOperations` — not `query.$allModels.$allOperations` — because the
  * middleware it replaces also saw raw queries, where `model` is undefined.
  */
-export const prisma = basePrisma.$extends({
+const queried = basePrisma.$extends({
   query: {
     async $allOperations(params) {
       const { model, operation, args: askedArgs, query } = params;
@@ -164,10 +174,27 @@ export const prisma = basePrisma.$extends({
       // what was typed in from memory (services/provenance/recordedOnly.ts).
       // A new entry inside a trip starts with the trip's purpose (services/purpose/tripInheritance.ts).
       const inherited = await inheritPurposeOnCreate(model, operation, askedArgs, async (id) => {
-        const trip = await basePrisma.trip.findFirst({ where: { id }, select: { category: true } });
+        // Inside an interactive transaction the lookup runs on THAT transaction: a trip created a
+        // statement earlier is only visible there, and a second pool connection would wait for
+        // the one the transaction holds (a deadlock at connection_limit=1).
+        const reader = openTransaction.getStore() ?? basePrisma;
+        const trip = await runUnfiltered(() =>
+          reader.trip.findFirst({ where: { id }, select: { category: true } })
+        );
         return trip?.category ?? null;
       });
-      const args = applyRecordedOnly(model, operation, inherited);
+      const scoped = applyRecordedOnly(
+        model,
+        operation,
+        inherited,
+        placeVisitHiddenActive() ? (await import("./shared/time/clock")).now() : undefined
+      );
+      // A place that is "visited" only through a hidden business visit stops counting as visited.
+      const hiddenVisitPurposes = isPlaceRead(model, operation)
+        ? (entryFilterActive().hidden.PlaceVisit ?? [])
+        : [];
+      const { args, added: addedId } =
+        hiddenVisitPurposes.length > 0 ? ensureIdSelected(scoped) : { args: scoped, added: false };
       const startTime = Date.now();
       // Before the call, matching the old middleware: it recorded on the way
       // in, so a query that throws is still counted.
@@ -177,7 +204,7 @@ export const prisma = basePrisma.$extends({
       try {
         // Edits of travel entries keep their history (the change ledger, spec
         // 2026-11-22-change-history); everything else runs as it always did.
-        const result = isCapturedWrite(model, operation)
+        const raw = isCapturedWrite(model, operation)
           ? await captureWrite(
               model as string,
               operation,
@@ -188,6 +215,22 @@ export const prisma = basePrisma.$extends({
                 ?.transaction != null
             )
           : await query(args);
+        const result =
+          hiddenVisitPurposes.length > 0
+            ? await demoteHiddenOnlyVisited(
+                raw,
+                hiddenVisitPurposes,
+                (ids) =>
+                  runUnfiltered(() =>
+                    (openTransaction.getStore() ?? basePrisma).placeVisit.findMany({
+                      where: { placeId: { in: ids } },
+                      select: { placeId: true, purpose: true, visitedAt: true, visitedAtUtc: true },
+                    })
+                  ),
+                addedId,
+                (await import("./shared/time/clock")).now()
+              )
+            : raw;
         if (!READ_OPERATIONS.has(operation)) {
           for (const observer of [
             ...(writeObserver ? [writeObserver] : []),
@@ -239,6 +282,49 @@ export const prisma = basePrisma.$extends({
     },
   },
 });
+
+/**
+ * The interactive transaction the current async flow runs in, for the hook's own lookups (the
+ * purpose inheritance reads the trip's category). Set by the `$transaction` wrapper below.
+ */
+type TripReader = {
+  trip: {
+    findFirst(args: {
+      where: { id: string };
+      select: { category: true };
+    }): Promise<{ category: string | null } | null>;
+  };
+  placeVisit: {
+    findMany(args: {
+      where: { placeId: { in: string[] } };
+      select: { placeId: true; purpose: true; visitedAt: true; visitedAtUtc: true };
+    }): Promise<
+      Array<{
+        placeId: string;
+        purpose: string | null;
+        visitedAt: Date | null;
+        visitedAtUtc: Date | null;
+      }>
+    >;
+  };
+};
+const openTransaction = new AsyncLocalStorage<TripReader>();
+
+// Typed as `queried`: the wrapper changes no signature, and a widened type breaks `DbTransaction`.
+export const prisma = queried.$extends({
+  client: {
+    $transaction: ((arg: unknown, options?: unknown) => {
+      if (typeof arg !== "function") {
+        return (queried.$transaction as (a: unknown, o?: unknown) => unknown)(arg, options);
+      }
+      const callback = arg as (tx: unknown) => Promise<unknown>;
+      return (queried.$transaction as (a: unknown, o?: unknown) => unknown)(
+        (tx: unknown) => openTransaction.run(tx as TripReader, () => callback(tx)),
+        options
+      );
+    }) as typeof queried.$transaction,
+  },
+}) as unknown as typeof queried;
 
 const CONNECTION_ERROR_MARKERS = [
   "Can't reach database server",

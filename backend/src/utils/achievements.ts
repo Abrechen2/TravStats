@@ -1,4 +1,5 @@
 import { prisma } from "../db";
+import { withPurposeVisibility } from "../services/provenance/purposeVisibility";
 import { calculateRailAchievementStats } from "./railAchievements";
 import { calculateInsightBadgeStats } from "./insightAchievements";
 import { loadDomainAchievementChecks } from "./domainAchievementChecks";
@@ -73,7 +74,12 @@ export function checkAndUpdateAchievements(
   options: AchievementCheckOptions = {}
 ): Promise<UserAchievementWithRelation[]> {
   const previous = runningPerUser.get(userId);
-  const run = () => runAchievementCheck(userId, options.unlockedAt ?? new Date());
+  // An entry the account hid by purpose neither earns nor counts toward a badge (owner rule:
+  // hidden = out of every count), so the check reads the logbook through the stored setting.
+  const run = () =>
+    withPurposeVisibility(userId, () =>
+      runAchievementCheck(userId, options.unlockedAt ?? new Date())
+    );
 
   // Both branches run the check: a failed run must not stop the queue behind it.
   const started: Promise<UserAchievementWithRelation[]> = previous

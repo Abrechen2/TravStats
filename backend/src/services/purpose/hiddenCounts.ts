@@ -15,7 +15,15 @@ const DELEGATE: Record<PurposeDomain, string> = {
   ferry: "ferryJourney",
   rental: "rentalBooking",
   cruise: "cruise",
+  tour: "tripRoute",
+  roadtrip: "tripRoute",
 };
+
+/** A tour and a roadtrip share one table; the kind tells them apart. */
+const KIND_OF: Partial<Record<PurposeDomain, string>> = { tour: "tour", roadtrip: "roadtrip" };
+
+const kindWhere = (domain: PurposeDomain): Record<string, string> =>
+  KIND_OF[domain] ? { kind: KIND_OF[domain] } : {};
 
 /**
  * How many entries each domain's "ausblenden" setting leaves out, so a hidden number is never
@@ -32,7 +40,9 @@ export async function countHiddenByPurpose(
     const delegate = (prisma as unknown as Record<string, Counter>)[DELEGATE[domain]];
     const counts: Record<string, number> = {};
     for (const purpose of hidden) {
-      counts[purpose] = await runUnfiltered(() => delegate.count({ where: { userId, purpose } }));
+      counts[purpose] = await runUnfiltered(() =>
+        delegate.count({ where: { userId, purpose, ...kindWhere(domain) } })
+      );
     }
     out[domain] = counts;
   }

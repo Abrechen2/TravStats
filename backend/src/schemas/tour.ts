@@ -1,3 +1,4 @@
+import { purposeField } from "./purpose";
 import { z } from "./zod";
 import { clientRefSchema } from "./clientRef";
 import { isCurrencyCode } from "../shared/currencies";
@@ -147,6 +148,8 @@ export const createRouteSchema = z.object({
   tags: z.array(z.string().trim().max(40)).max(30).optional(),
   startOdometerKm: z.number().int().min(0).max(10_000_000).optional(),
   endOdometerKm: z.number().int().min(0).max(10_000_000).optional(),
+  /** Private or business; omitted: the trip's category decides (spec 2026-11-22-private-business-purpose). */
+  purpose: purposeField,
 });
 
 export const updateRouteSchema = z.object({

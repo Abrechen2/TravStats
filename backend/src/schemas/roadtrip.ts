@@ -1,3 +1,4 @@
+import { purposeField } from "./purpose";
 import { z } from "./zod";
 import { legacyDayFieldSchema } from "../shared/time/timeInput";
 
@@ -26,6 +27,8 @@ export const createRoadtripSchema = z.object({
   startOdometerKm: odometer.optional(),
   endOdometerKm: odometer.optional(),
   tripId: z.string().uuid().nullish(),
+  /** Private or business; omitted: the trip's category decides (spec 2026-11-22-private-business-purpose). */
+  purpose: purposeField,
 });
 
 /**
@@ -133,6 +136,8 @@ export const tourDayFields = {
 
 export const kindFieldsSchema = z.object({
   ...tourDayFields,
+  /** Private or business; omitted leaves the stored value, `null` clears it. */
+  purpose: purposeField,
   activity: z.enum(TOUR_ACTIVITIES).nullable().optional(),
   vehicle: z.enum(ROADTRIP_VEHICLES).nullable().optional(),
   vehicleName: z.string().trim().min(1).max(120).nullable().optional(),

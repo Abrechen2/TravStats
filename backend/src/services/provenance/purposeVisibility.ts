@@ -3,7 +3,14 @@ import { createHash } from "crypto";
 import { prisma } from "../../db";
 import { purposeVisibilitySchema } from "../../schemas/purpose";
 import { PURPOSE_DOMAINS, type PurposeVisibility } from "../../shared/purpose";
-import { entryFilterActive, purposeDomainOfModel, setScopeHidden } from "./recordedOnly";
+import {
+  entryFilterActive,
+  purposeDomainOfModel,
+  PURPOSE_ROUTE_KIND_DOMAIN,
+  routeHiddenKey,
+  runWithHiddenPurposes,
+  setScopeHidden,
+} from "./recordedOnly";
 
 const PURPOSE_MODELS = [
   "PlaceVisit",
@@ -43,7 +50,22 @@ function modelsFromSetting(setting: PurposeVisibility): Record<string, string[]>
     const hidden = domain ? setting[domain] : undefined;
     if (hidden && hidden.length > 0) out[model] = hidden;
   }
+  for (const [kind, domain] of Object.entries(PURPOSE_ROUTE_KIND_DOMAIN)) {
+    const hidden = setting[domain];
+    if (hidden && hidden.length > 0) out[routeHiddenKey(kind)] = hidden;
+  }
   return out;
+}
+
+/**
+ * Runs `fn` with the account's stored "ausblenden" choices applied to every entry read inside it
+ * — for the work that has no request scope of its own: the totals the account publishes to a
+ * leaderboard, a recompute of stored badges. A hidden entry is out of every count (owner rule).
+ */
+export async function withPurposeVisibility<T>(userId: string, fn: () => Promise<T>): Promise<T> {
+  const hidden = await loadPurposeVisibility(userId);
+  if (Object.keys(hidden).length === 0) return fn();
+  return runWithHiddenPurposes(hidden, fn);
 }
 
 /**

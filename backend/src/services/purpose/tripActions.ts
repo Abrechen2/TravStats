@@ -19,6 +19,7 @@ const DELEGATES = [
   "rentalBooking",
   "cruise",
   "placeVisit",
+  "tripRoute",
 ] as const;
 
 /**

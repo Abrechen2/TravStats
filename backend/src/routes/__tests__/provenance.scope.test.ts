@@ -126,8 +126,8 @@ describe("recorded-only scope", () => {
     it("a route outside the scoped prefixes ignores the parameter", async () => {
       const q = `ZZ ${stamp % 1000}`;
       const [plain, flagged] = await Promise.all([
-        request(app).get("/api/v1/search").query({ q }).set("Cookie", cookie),
-        request(app).get("/api/v1/search").query({ q, onlyRecorded: "true" }).set("Cookie", cookie),
+        request(app).get("/api/v1/suggestions/airlines").query({ q }).set("Cookie", cookie),
+        request(app).get("/api/v1/suggestions/airlines").query({ q, onlyRecorded: "true" }).set("Cookie", cookie),
       ]);
       expect(plain.status).toBe(200);
       expect(JSON.stringify(flagged.body)).toBe(JSON.stringify(plain.body));

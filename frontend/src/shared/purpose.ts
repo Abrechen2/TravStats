@@ -22,6 +22,8 @@ export const PURPOSE_DOMAINS = [
   "ferry",
   "rental",
   "cruise",
+  "tour",
+  "roadtrip",
 ] as const;
 export type PurposeDomain = (typeof PURPOSE_DOMAINS)[number];
 

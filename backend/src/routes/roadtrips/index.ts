@@ -99,6 +99,8 @@ router.post(
           tags: body.tags ?? [],
           startOdometerKm: body.startOdometerKm,
           endOdometerKm: body.endOdometerKm,
+          // Undefined: the trip's category decides (services/purpose/tripInheritance.ts).
+          purpose: body.purpose,
           orderIdx: last ? last.orderIdx + 1 : 0,
         },
         include: ROUTE_SELECT,

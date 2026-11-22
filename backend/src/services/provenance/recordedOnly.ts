@@ -68,6 +68,12 @@ export const ENTRY_SCOPE_PREFIXES = [
   "/api/v1/companions",
   "/api/v1/trip-suggestions",
   "/api/v1/search",
+  // Tours and roadtrips carry a purpose of their own (trip_routes); the suggestion inboxes
+  // (dawarich-stays, location-suggestions) stay OUT: they dedupe against every recorded entry,
+  // hidden ones included, so a hidden visit is never proposed again.
+  "/api/v1/tours",
+  "/api/v1/roadtrips",
+  "/api/v1/place-lists",
 ] as const;
 
 const MODELS = new Set([
@@ -120,6 +126,19 @@ const PURPOSE_MODEL_DOMAIN: Record<string, keyof PurposeVisibility> = {
   Cruise: "cruise",
 };
 
+/**
+ * A tour or a roadtrip is one model (`TripRoute`) with two domains: the kind says which setting
+ * governs the row. The hidden store keys them `TripRoute:<kind>`.
+ */
+export const PURPOSE_ROUTE_KIND_DOMAIN: Record<string, keyof PurposeVisibility> = {
+  tour: "tour",
+  roadtrip: "roadtrip",
+};
+export const routeHiddenKey = (kind: string): string => `TripRoute:${kind}`;
+
+/** Every model whose rows a purpose can hide. */
+const PURPOSE_FILTERED_MODELS = new Set([...Object.keys(PURPOSE_MODEL_DOMAIN), "TripRoute"]);
+
 const RECORDED = { OR: [{ provenance: null }, { provenance: { not: "remembered" } }] };
 
 type Json = Record<string, unknown>;
@@ -143,6 +162,16 @@ type Active = Map<string, Json>;
 function entryCondition(store: Store, model: string): Json | null {
   const parts: Json[] = [];
   if (store.recorded && MODELS.has(model)) parts.push(RECORDED);
+  if (model === "TripRoute") {
+    for (const kind of Object.keys(PURPOSE_ROUTE_KIND_DOMAIN)) {
+      const hiddenKind = store.hidden?.[routeHiddenKey(kind)];
+      if (hiddenKind && hiddenKind.length > 0) {
+        parts.push({
+          OR: [{ kind: { not: kind } }, { purpose: null }, { purpose: { notIn: hiddenKind } }],
+        });
+      }
+    }
+  }
   const hidden = store.hidden?.[model];
   if (hidden && hidden.length > 0) {
     parts.push({ OR: [{ purpose: null }, { purpose: { notIn: hidden } }] });
@@ -156,7 +185,7 @@ function entryCondition(store: Store, model: string): Json | null {
  */
 function tripThroughEntries(own: Map<string, Json>): Json | null {
   const purposeRelations = [...relationsOf("Trip")].filter(
-    ([, r]) => r.isList && r.target in PURPOSE_MODEL_DOMAIN
+    ([, r]) => r.isList && PURPOSE_FILTERED_MODELS.has(r.target)
   );
   const filtered = purposeRelations.some(
     ([, r]) => own.has(r.target) && hasPurposeCond(own, r.target)
@@ -183,7 +212,7 @@ const visibleOf = (own: Map<string, Json>, model: string): Json => own.get(model
 function activeConditions(store: Store): Active {
   const active: Active = new Map();
   const own = new Map<string, Json>();
-  for (const model of [...MODELS, ...Object.keys(PURPOSE_MODEL_DOMAIN)]) {
+  for (const model of [...MODELS, ...PURPOSE_FILTERED_MODELS]) {
     const c = entryCondition(store, model);
     if (c) own.set(model, c);
   }
@@ -309,16 +338,89 @@ export function setScopeHidden(hidden: Record<string, string[]>): void {
 export const purposeDomainOfModel = (model: string): keyof PurposeVisibility | undefined =>
   PURPOSE_MODEL_DOMAIN[model];
 
+/**
+ * `Place.visited` is a stored flag that a hidden business visit may have switched on. Where a
+ * read FILTERS on it (a count of visited places, "countries with a visited place"), the flag is
+ * replaced by the purpose-aware rule: visited, unless a completed visit is hidden and no visible
+ * visit has completed (see services/purpose/placeVisited.ts, which corrects the returned rows).
+ */
+function demotedPlace(hidden: string[], now: Date): Json {
+  const done = {
+    OR: [
+      { visitedAtUtc: { lte: now } },
+      { visitedAtUtc: null, visitedAt: { lte: now } },
+      { visitedAtUtc: null, visitedAt: null },
+    ],
+  };
+  return {
+    AND: [
+      { visited: true },
+      { visits: { some: { AND: [{ purpose: { in: hidden } }, done] } } },
+      {
+        visits: {
+          none: { AND: [{ OR: [{ purpose: null }, { purpose: { notIn: hidden } }] }, done] },
+        },
+      },
+    ],
+  };
+}
+
+function rewriteVisited(model: string, where: unknown, demoted: Json): unknown {
+  if (Array.isArray(where)) return where.map((w) => rewriteVisited(model, w, demoted));
+  if (!isObject(where)) return where;
+  const out: Json = {};
+  const extra: Json[] = [];
+  for (const [key, value] of Object.entries(where)) {
+    if (key === "AND" || key === "OR" || key === "NOT")
+      out[key] = rewriteVisited(model, value, demoted);
+    else if (model === "Place" && key === "visited" && typeof value === "boolean") {
+      extra.push(value ? { NOT: demoted } : { OR: [{ visited: false }, demoted] });
+    } else if (isObject(value) && relationsOf(model).has(key)) {
+      const r = relationsOf(model).get(key)!;
+      const inner: Json = {};
+      for (const [k, v] of Object.entries(value)) {
+        inner[k] = ["some", "every", "none", "is", "isNot"].includes(k)
+          ? rewriteVisited(r.target, v, demoted)
+          : v;
+      }
+      const wrapped = ["some", "every", "none", "is", "isNot"].some((k) => k in value);
+      out[key] = wrapped ? inner : rewriteVisited(r.target, value, demoted);
+    } else out[key] = value;
+  }
+  if (extra.length === 0) return out;
+  // `visited: true` keeps its own condition beside the demotion rule; `false` is replaced by it.
+  const kept = Object.entries(where).filter(([k, v]) => k === "visited" && v === true);
+  const base = kept.length > 0 ? { ...out, visited: true } : out;
+  const existing = base.AND === undefined ? [] : Array.isArray(base.AND) ? base.AND : [base.AND];
+  return { ...base, AND: [...existing, ...extra] };
+}
+
 /** Called by the Prisma query hook with every operation's arguments. */
-export function applyRecordedOnly<A>(model: string | undefined, operation: string, args: A): A {
+export function applyRecordedOnly<A>(
+  model: string | undefined,
+  operation: string,
+  args: A,
+  /** The clock; needed only to tell a completed visit from a plan when filtering on `visited`. */
+  now?: Date
+): A {
   const store = scope.getStore();
   if (!store || store.done || !model || !READS.has(operation)) return args;
   const active = activeConditions(store);
   if (active.size === 0) return args;
   const narrowed = narrowArgs(active, model, args);
   if (active.has(model)) narrowed.where = narrowWhere(active, model, narrowed.where);
+  const hiddenVisits = store.hidden?.PlaceVisit;
+  if (now && hiddenVisits && hiddenVisits.length > 0 && narrowed.where !== undefined) {
+    narrowed.where = rewriteVisited(model, narrowed.where, demotedPlace(hiddenVisits, now)) as Json;
+  }
   return narrowed as A;
 }
+
+/** Is a filter on a hidden PlaceVisit purpose open? Then a `visited` filter needs the clock. */
+export const placeVisitHiddenActive = (): boolean => {
+  const store = scope.getStore();
+  return !!store && !store.done && (store.hidden?.PlaceVisit?.length ?? 0) > 0;
+};
 
 /** Test seam: is a recorded-only scope open right now? */
 export function recordedOnlyActive(): boolean {

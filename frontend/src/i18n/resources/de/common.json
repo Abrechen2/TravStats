@@ -233,7 +233,8 @@
         "rail": "Fahrtenbuch für Zugfahrten",
         "rental": "Fahrtenbuch für Mietwagen",
         "bus": "Fahrtenbuch für Busfahrten",
-        "ferry": "Überfahrten, Fahrzeug und Tickets"
+        "ferry": "Überfahrten, Fahrzeug und Tickets",
+        "tour": "Tagestouren, Strecken und Aufzeichnungen"
       }
     }
   },
