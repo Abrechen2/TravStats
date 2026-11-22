@@ -224,3 +224,49 @@ it("refuses a year the consent does not cover, including the lifetime view", asy
   });
   expect((await buildLeaderboardSnapshot(userId, one, 2024)).metrics.ferryCrossings).toBe(1);
 });
+
+describe("what the account hid by purpose is out of the published totals", () => {
+  let hidingUser: string;
+  beforeAll(async () => {
+    hidingUser = (
+      await prisma.user.create({
+        data: { username: `lb-purpose-${randomUUID()}`, passwordHash: "test-only" },
+      })
+    ).id;
+    await prisma.ferryJourney.createMany({
+      data: [
+        { ...ferry("2025-06-01T12:00:00Z", 670), userId: hidingUser, purpose: "private" },
+        { ...ferry("2025-07-01T12:00:00Z", 100), userId: hidingUser, purpose: "business" },
+      ],
+    });
+    await prisma.place.create({
+      data: {
+        userId: hidingUser,
+        name: "Messe",
+        lat: 50.1,
+        lon: 8.6,
+        visited: true,
+        visits: {
+          create: [
+            { userId: hidingUser, visitedAt: new Date("2025-06-03T10:00:00Z"), purpose: "business" },
+          ],
+        },
+      },
+    });
+  });
+  afterAll(async () => {
+    await prisma.user.delete({ where: { id: hidingUser } });
+  });
+
+  it("leaderboard totals leave out hidden business ferry crossings and place visits", async () => {
+    const before = await buildLeaderboardSnapshot(hidingUser, ALL, null);
+    expect(before.metrics).toMatchObject({ ferryCrossings: 2, places: 1, placeVisits: 1 });
+    await prisma.userSettings.upsert({
+      where: { userId: hidingUser },
+      create: { userId: hidingUser, data: {}, purposeVisibility: { ferry: ["business"], poi: ["business"] } },
+      update: { purposeVisibility: { ferry: ["business"], poi: ["business"] } },
+    });
+    const after = await buildLeaderboardSnapshot(hidingUser, ALL, null);
+    expect(after.metrics).toMatchObject({ ferryCrossings: 1, ferryKm: 670, places: 0, placeVisits: 0 });
+  });
+});
