@@ -134,6 +134,8 @@ describe("DocumentsSection — people (D7)", () => {
     render(<DocumentsSection entry={FLIGHT} />);
     const select = await openPersonPicker();
     fireEvent.change(select, { target: { value: "c2" } });
+    expect(api.assignCompanion).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.save" }));
     await waitFor(() => expect(api.assignCompanion).toHaveBeenCalledWith("d1", FLIGHT, "c2"));
     expect(await screen.findByTestId("document-person")).toHaveTextContent(
       "documents:person.forPerson"
@@ -146,6 +148,7 @@ describe("DocumentsSection — people (D7)", () => {
     render(<DocumentsSection entry={FLIGHT} />);
     const select = await openPersonPicker();
     fireEvent.change(select, { target: { value: "c2" } });
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.save" }));
     expect(await screen.findByText("documents:person.saveFailed")).toBeInTheDocument();
     expect(screen.getByTestId("document-person")).toHaveTextContent(
       "documents:person.pickUndecided"
@@ -157,6 +160,7 @@ describe("DocumentsSection — people (D7)", () => {
     render(<DocumentsSection entry={FLIGHT} />);
     const select = await openPersonPicker();
     fireEvent.change(select, { target: { value: "c1" } });
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.save" }));
     expect(await screen.findByText("documents:person.companionGone")).toBeInTheDocument();
     await waitFor(() => expect(api.listForEntry.mock.calls.length).toBeGreaterThan(1));
   });

@@ -272,9 +272,15 @@ export default function OverflowMenu({
   const stop = stopPropagation
     ? (e: { stopPropagation: () => void }) => e.stopPropagation()
     : undefined;
+  // The portaled panel's keys bubble through the React tree into the row (which opens on Enter).
+  const stopKeys = stopPropagation
+    ? (e: KeyboardEvent<HTMLElement>) => {
+        if (e.key === "Enter" || e.key === " ") e.stopPropagation();
+      }
+    : undefined;
 
   return (
-    <div ref={rootRef} onBlur={onBlur} onClick={stop}>
+    <div ref={rootRef} onBlur={onBlur} onClick={stop} onKeyDown={stopKeys}>
       {triggerLabel ? (
         <Button
           aria-haspopup="menu"
@@ -312,7 +318,10 @@ export default function OverflowMenu({
             ref={panelRef}
             role="menu"
             aria-label={label}
-            onKeyDown={onMenuKey}
+            onKeyDown={(e) => {
+              stopKeys?.(e);
+              onMenuKey(e);
+            }}
             onClick={stop}
             className="fixed z-70 flex flex-col overflow-y-auto rounded-lg p-2 shadow-xl"
             style={{

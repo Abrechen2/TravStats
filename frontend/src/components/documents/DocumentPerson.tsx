@@ -1,6 +1,8 @@
+import { useState } from "react";
 import type { JSX } from "react";
 
 import Modal from "../Modal";
+import Button from "../ui/Button";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import type { EntryTraveller } from "../../lib/api/entryTravellers";
@@ -49,12 +51,15 @@ function DocumentPersonSelect({
   doc,
   travellers,
   disabled,
-  onPick,
+  value,
+  onChange,
 }: {
   doc: TravelDocument;
   travellers: readonly EntryTraveller[];
   disabled: boolean;
-  onPick: (companionId: string | null) => void;
+  /** "" = me / all, "undecided" = nothing chosen yet, else a companion id. */
+  value: string;
+  onChange: (value: string) => void;
 }): JSX.Element {
   const { t } = useTranslation(["documents"]);
   const person = doc.forCompanion ?? null;
@@ -67,12 +72,9 @@ function DocumentPersonSelect({
   return (
     <select
       aria-label={t("documents:person.pickLabel", { name: doc.displayName })}
-      value={person?.id ?? (source === null ? "undecided" : "")}
+      value={value}
       disabled={disabled}
-      onChange={(e): void => {
-        if (e.target.value === "undecided") return;
-        onPick(e.target.value === "" ? null : e.target.value);
-      }}
+      onChange={(e): void => onChange(e.target.value)}
       className="w-full rounded-md border border-border bg-(--bg-surface) px-2 py-1 text-sm pointer-coarse:min-h-(--ts-size-touch-min)"
     >
       {source === null && !person && (
@@ -105,6 +107,14 @@ export function DocumentPersonDialog({
   onPick: (companionId: string | null) => void;
 }): JSX.Element {
   const { t } = useTranslation(["documents", "common"]);
+  // A native select saves on every arrow key in some browsers: choose first, save explicitly.
+  const initial = doc.forCompanion?.id ?? (doc.forSource == null ? "undecided" : "");
+  const [value, setValue] = useState(initial);
+  const save = (): void => {
+    if (value === "undecided") return;
+    onClose();
+    onPick(value === "" ? null : value);
+  };
   return (
     <Modal
       open
@@ -112,15 +122,18 @@ export function DocumentPersonDialog({
       maxWidth={360}
       closeLabel={t("common:buttons.close")}
       title={t("documents:person.rowAction")}
+      footer={
+        <Button variant="primary" disabled={disabled || value === "undecided"} onClick={save}>
+          {t("common:buttons.save")}
+        </Button>
+      }
     >
       <DocumentPersonSelect
         doc={doc}
         travellers={travellers}
         disabled={disabled}
-        onPick={(companionId) => {
-          onClose();
-          onPick(companionId);
-        }}
+        value={value}
+        onChange={setValue}
       />
     </Modal>
   );

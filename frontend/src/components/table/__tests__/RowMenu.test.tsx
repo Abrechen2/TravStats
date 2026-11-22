@@ -30,6 +30,23 @@ describe("RowMenu", () => {
   });
 });
 
+describe("RowMenu keyboard", () => {
+  it("keeps Enter on an entry from reaching a row that opens on Enter", () => {
+    const onRowKey = vi.fn();
+    render(
+      <MemoryRouter>
+        <div onKeyDown={onRowKey}>
+          <RowMenu testId="row-menu" entries={[{ key: "a", label: "Alpha", onSelect: vi.fn() }]} />
+        </div>
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByTestId("row-menu"));
+    fireEvent.keyDown(screen.getByRole("menuitem", { name: "Alpha" }), { key: "Enter" });
+    fireEvent.keyDown(screen.getByTestId("row-menu"), { key: "Enter" });
+    expect(onRowKey).not.toHaveBeenCalled();
+  });
+});
+
 describe("ListHeaderMenu", () => {
   it("offers bulk selection only while not selecting, and the import hub as a link", () => {
     const start = vi.fn();
