@@ -10,6 +10,7 @@ import {
 import { isRiverCruise } from "../../shared/cruiseKind";
 import { isInlandLeg } from "../cruiseDistance/inlandLeg";
 import { riverLegPath, withDerivedRiverRegions } from "../cruiseDistance/riverCalculator";
+import { CRUISE_STOP_ORDER_BY } from "../../shared/cruise/stopOrder";
 
 /**
  * The map line of every leg of one cruise — moved out of `routes/cruises.ts`
@@ -79,7 +80,7 @@ export interface CruiseGeometryInput {
 
 /** The include both geometry routes load a cruise with. */
 export const CRUISE_GEOMETRY_INCLUDE = {
-  stops: { include: { port: true }, orderBy: { dayNumber: "asc" as const } },
+  stops: { include: { port: true }, orderBy: CRUISE_STOP_ORDER_BY },
   departurePort: true,
   arrivalPort: true,
   legRoutes: true,

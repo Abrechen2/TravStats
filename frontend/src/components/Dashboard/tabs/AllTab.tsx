@@ -25,7 +25,6 @@ import {
   buildPoiLegendRows,
   legendRow,
 } from "./allTabLegendRows";
-import { useCruiseGeometry } from "../../../hooks/useCruiseGeometry";
 import { useTransportOverlays } from "./allTabTransportOverlays";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { useDomainLoad } from "../../../hooks/useDomainLoad";
@@ -50,11 +49,8 @@ import { ALL_MODES } from "../../../types/dashboard";
 import FlightEditModal from "../../FlightEditModal";
 import MapContainer3D, { type MapMode } from "../../MapContainer3D";
 import { classifyVisit } from "../../../shared/placeCounting";
-import {
-  JOURNEY_GLOBE_ALTITUDE_M,
-  buildJourneyLayers,
-  groupByTripId,
-} from "../modes/buildJourneyLayers";
+import { groupByTripId } from "../modes/buildJourneyLayers";
+import { useJourneyLayers } from "../modes/useJourneyLayers";
 import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
 import type { ActivityItem } from "../sidebars/activityItems";
 import { useLodgingSelectionStore } from "../../../store/lodgingSelectionStore";
@@ -448,33 +444,14 @@ export function AllTab(): JSX.Element {
   // globe could never see there.
   const journeyVisMode: MapMode = projection === "globe" ? "globe" : "routes";
 
-  // The chosen trip's cruises only: the server's geometry for them, so a
-  // journey draws the river or hand-drawn line, not a chord (forgejo#435).
-  const journeyCruises = useMemo<Cruise[]>(
-    () => (allMode === "journey" ? visibleCruises.filter((c) => c.tripId === effectiveTripId) : []),
-    [allMode, visibleCruises, effectiveTripId]
-  );
-  const journeyCruiseGeometry = useCruiseGeometry(journeyCruises);
-
-  const journeyLayers = useMemo<Layer[]>(() => {
-    if (allMode !== "journey") return [];
-    return buildJourneyLayers(
-      visibleFlights,
-      visibleCruises,
-      effectiveTripId,
-      cruiseColorConfig,
-      journeyVisMode === "globe" ? JOURNEY_GLOBE_ALTITUDE_M : 0,
-      journeyCruiseGeometry
-    );
-  }, [
-    allMode,
-    visibleFlights,
-    visibleCruises,
-    effectiveTripId,
-    cruiseColorConfig,
-    journeyVisMode,
-    journeyCruiseGeometry,
-  ]);
+  const journeyLayers = useJourneyLayers({
+    active: allMode === "journey",
+    flights: visibleFlights,
+    cruises: visibleCruises,
+    tripId: effectiveTripId,
+    colorConfig: cruiseColorConfig,
+    onGlobe: journeyVisMode === "globe",
+  });
 
   // Tours and ground lines on the overview map only — journey mode takes over
   // the map for ONE trip (`journeyLayers`). Each line answers to its own domain;

@@ -70,6 +70,7 @@ import {
   SHARE_TX_TIMEOUT_MS,
 } from "../services/sharing/propagate";
 import { newTripColor } from "../services/trip/newTripColor";
+import { CRUISE_STOP_ORDER_BY } from "../shared/cruise/stopOrder";
 
 // Re-exported for the Immich trip routers, which import it from here.
 export { resolveTrip };
@@ -316,7 +317,7 @@ router.get(
               ship: true,
               departurePort: true,
               arrivalPort: true,
-              stops: { include: { port: true }, orderBy: { dayNumber: "asc" } },
+              stops: { include: { port: true }, orderBy: CRUISE_STOP_ORDER_BY },
             },
             orderBy: { startDate: "asc" },
           },

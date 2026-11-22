@@ -1,4 +1,4 @@
-import { expectedLegCount } from "../backfillCruiseLegs";
+import { expectedLegCount, expectedLegPairs } from "../backfillCruiseLegs";
 
 describe("expectedLegCount", () => {
   it("counts departure + port calls + arrival, like recomputeLegsForCruise", () => {
@@ -37,5 +37,17 @@ describe("expectedLegCount", () => {
 
   it("gives zero legs when there is nothing to connect", () => {
     expect(expectedLegCount({ departurePortId: null, arrivalPortId: null, stops: [] })).toBe(0);
+  });
+});
+
+describe("expectedLegPairs (forgejo#435)", () => {
+  it("names the legs in stop order, so legs stored in another order read as stale", () => {
+    expect(
+      expectedLegPairs({
+        departurePortId: 1,
+        arrivalPortId: 4,
+        stops: [{ portId: 2 }, { portId: 3 }],
+      })
+    ).toEqual(["1>2", "2>3", "3>4"]);
   });
 });

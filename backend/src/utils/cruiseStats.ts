@@ -1,5 +1,6 @@
 import { haversineKm } from "../shared/geo/haversine";
 import { isRiverCruise, isSeaDay } from "../shared/cruiseKind";
+import { compareCruiseStops } from "../shared/cruise/stopOrder";
 
 export interface CruisePortData {
   id: number;
@@ -232,7 +233,7 @@ export function calculateCruiseStats(
     // Mirrors buildEffectivePortSequence (shared/cruise/portSequence) —
     // departure/arrival are skipped when they duplicate the first/last
     // port-call stop.
-    const sortedStops = [...cruise.stops].sort((a, b) => a.dayNumber - b.dayNumber);
+    const sortedStops = [...cruise.stops].sort(compareCruiseStops);
     const portCallStops = sortedStops.filter((s) => !s.isAtSea && s.port);
     const effectiveStops: CruiseStopData[] = [...sortedStops];
     if (cruise.departurePort && cruise.departurePort.id !== portCallStops[0]?.port?.id) {

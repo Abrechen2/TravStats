@@ -1,4 +1,5 @@
 import type { Cruise, CruiseStopInput, Port } from "../../types";
+import { compareCruiseStops } from "../../shared/cruise/stopOrder";
 
 /** How an imported name is compared: trimmed, case-insensitive — as `countUnresolvedPorts`. */
 export const normalizePortName = (name: string): string => name.trim().toLowerCase();
@@ -19,7 +20,7 @@ export interface UnresolvedGroup {
  */
 export function unresolvedGroups(cruise: Pick<Cruise, "stops">): UnresolvedGroup[] {
   const groups = new Map<string, UnresolvedGroup>();
-  for (const stop of [...cruise.stops].sort((a, b) => a.dayNumber - b.dayNumber)) {
+  for (const stop of [...cruise.stops].sort(compareCruiseStops)) {
     if (stop.isAtSea || stop.port?.id != null || !stop.unresolvedPortName) continue;
     const key = normalizePortName(stop.unresolvedPortName);
     const group = groups.get(key);

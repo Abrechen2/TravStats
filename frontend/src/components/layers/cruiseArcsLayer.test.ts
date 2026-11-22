@@ -242,6 +242,28 @@ describe("createCruiseArcsLayer", () => {
     expect(arcs.map((a) => a.path)).toEqual([river]);
   });
 
+  it("reads the Yangtze stops in call order: day, arrival time, then id (forgejo#435)", () => {
+    // Fengdu (07:00) and Zhongxian (15:00) share day 2, Fengjie and Wushan day
+    // 3; the ids sort the wrong way round on purpose.
+    const at = (id: string, day: number, port: number, hhmm: string) => ({
+      ...makeStop(day, port, { id: port, lat: 29 + port * 0.1, lon: 106 + port * 0.3 }),
+      id,
+      arrivalTime: `2026-10-0${day}T${hhmm}:00Z`,
+    });
+    const cruise = makeCruise([
+      at("0-zhongxian", 2, 3, "15:00"),
+      at("f-fengdu", 2, 2, "07:00"),
+      at("0-wushan", 3, 5, "14:00"),
+      at("f-fengjie", 3, 4, "08:00"),
+    ]);
+    const arcs = buildCruiseArcs([cruise]);
+    expect(arcs.map((a) => [a.fromPortId, a.toPortId])).toEqual([
+      [2, 3],
+      [3, 4],
+      [4, 5],
+    ]);
+  });
+
   it("draws a manual line identically on the dashboard (low zoom) and the cruise page (forgejo#435)", () => {
     const cruise = makeCruise([
       makeStop(1, 1, { id: 1, lat: 29.5, lon: 106.5 }),

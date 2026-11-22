@@ -43,6 +43,7 @@ import { withCruiseCo2 } from "../services/co2/rideDto";
 import { withCruiseTimes } from "../services/cruise/timesDto";
 import { propagateDelete, propagateWrite, shareSnapshot } from "../services/sharing/propagate";
 import { carryOverAllAboard } from "../services/cruise/stopCarryOver";
+import { CRUISE_STOP_ORDER_BY } from "../shared/cruise/stopOrder";
 
 const router = Router();
 router.use(authenticate);
@@ -494,7 +495,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
                 : (
                     await prisma.cruiseStop.findMany({
                       where: { cruiseId: existing.id, isAtSea: false, portId: { not: null } },
-                      orderBy: { dayNumber: "asc" },
+                      orderBy: CRUISE_STOP_ORDER_BY,
                       select: { portId: true },
                     })
                   ).flatMap((s) => (s.portId === null ? [] : [s.portId])),
