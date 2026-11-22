@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 /**
  * Where an entry came from (docs/superpowers/specs/2026-11-22-remembered-facts.md).
