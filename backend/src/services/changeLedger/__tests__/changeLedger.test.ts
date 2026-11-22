@@ -14,6 +14,7 @@ import {
 } from "../context";
 import { MAX_VALUE_CHARS } from "../values";
 import { asPropagation } from "../../sharing/propagationGuard";
+import { injectLedgerFaultForTests, ledgerStats, resetLedgerStats } from "../capture";
 import { changeHistoryRetentionDays, pruneChangeHistory } from "../retention";
 
 /**
@@ -202,6 +203,42 @@ describe("change ledger", () => {
     });
     const rows = await rowsFor(id);
     expect(rows.map((r) => [r.oldValue, r.newValue])).toEqual([['"C1"', '"C2"']]);
+  });
+
+  describe("a failing ledger never fails the write it describes", () => {
+    afterEach(() => injectLedgerFaultForTests(null));
+
+    it.each(["insert", "snapshot"] as const)(
+      "a %s that fails inside the user's transaction leaves the user's writes committed",
+      async (kind) => {
+        const f = await flight(userId, { gate: "A1", seatNumber: "1A" });
+        resetLedgerStats();
+        injectLedgerFaultForTests(kind);
+        await prisma.$transaction(async (tx) => {
+          await tx.flight.update({ where: { id: f.id }, data: { gate: "F1" } });
+          // A statement after the failure: an aborted transaction would refuse it.
+          await tx.flight.update({ where: { id: f.id }, data: { seatNumber: "9Z" } });
+        });
+        const stored = await prisma.flight.findUnique({ where: { id: f.id } });
+        expect([stored?.gate, stored?.seatNumber]).toEqual(["F1", "9Z"]);
+        const stats = ledgerStats();
+        expect(kind === "insert" ? stats.insertFailures : stats.snapshotFailures).toBeGreaterThan(
+          0
+        );
+        expect(await rowsFor(f.id)).toEqual([]);
+      }
+    );
+
+    it.each(["insert", "snapshot"] as const)(
+      "a %s that fails around a standalone write leaves the write done",
+      async (kind) => {
+        const f = await flight(userId, { gate: "A1" });
+        injectLedgerFaultForTests(kind);
+        await prisma.flight.update({ where: { id: f.id }, data: { gate: "S1" } });
+        expect((await prisma.flight.findUnique({ where: { id: f.id } }))?.gate).toBe("S1");
+        expect(await rowsFor(f.id)).toEqual([]);
+      }
+    );
   });
 
   it("drops the rows of a failed batch transaction too", async () => {

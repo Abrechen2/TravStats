@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 
-import type { PrismaClient } from "../../prisma";
+import { Prisma, type PrismaClient } from "../../prisma";
 import { dbLogger } from "../../utils/logger";
 import { resolveChangeContext, type ResolvedChangeContext } from "./context";
 import {
@@ -28,13 +28,13 @@ import { appliedValue, encodeValue, sameRaw, UNKNOWN } from "./values";
  *   included) the snapshot is read through that transaction's own client, so it
  *   sees the transaction's earlier writes and needs no second connection; the
  *   rows are collected in the transaction's scope and inserted through the same
- *   client when its callback returns, before the commit. The insert runs in a
- *   nested transaction (a savepoint), so a ledger failure is logged and never
- *   aborts the caller's work. A nested transaction that rolls back takes its
+ *   client when its callback returns, before the commit. The snapshot and the
+ *   insert each run in a savepoint (a nested transaction), so a ledger failure
+ *   is logged, counted and never aborts the caller's work. A nested transaction that rolls back takes its
  *   rows with it.
- * - A write outside any transaction is run inside a short transaction of its
- *   own on the base client: snapshot, the write itself, the rows (in a
- *   savepoint). If the snapshot fails, the write runs alone, unrecorded, logged.
+ * - A write outside any transaction: snapshot, write and rows as three plain
+ *   statements, so no connection is held longer than the write alone holds
+ *   it. A crash between write and insert loses its rows, never invents one.
  * - The array form `$transaction([...])` cannot carry extra statements: its
  *   snapshots read committed values on the base client and its rows are
  *   inserted right after it committed (a crash in between loses them; a
@@ -49,11 +49,11 @@ import { appliedValue, encodeValue, sameRaw, UNKNOWN } from "./values";
 
 const UPDATE_OPS = new Set(["update", "updateMany", "upsert"]);
 const DELETE_OPS = new Set(["delete", "deleteMany"]);
+/** Writes that name one row: their snapshot can take the one-round-trip path. */
+const SINGLE_ROW_OPS = new Set(["update", "upsert", "delete"]);
 /** Above this many matched rows a bulk write is a migration, not an edit: logged, not recorded. */
 export const MAX_SNAPSHOT_ROWS = 5000;
 const INSERT_CHUNK = 1000;
-/** A standalone write's own transaction waits up to this long for a connection (Prisma: 2 s). */
-const STANDALONE_TX_OPTIONS = { maxWait: 5000 };
 
 export interface LedgerRow {
   userId: string;
@@ -78,13 +78,52 @@ type Row = Record<string, unknown>;
 type Delegate = {
   findMany(args: unknown): Promise<Row[]>;
 } & Record<string, (args: unknown) => Promise<unknown>>;
+type RawCapable = {
+  $queryRawUnsafe<T>(query: string, ...values: unknown[]): Promise<T>;
+};
 /** A client that can open a (nested) transaction: the base client or a transaction client. */
 type TxCapable = {
   $transaction: (fn: (tx: unknown) => Promise<unknown>, options?: unknown) => Promise<unknown>;
 } & Record<string, unknown>;
 
 let base: PrismaClient | null = null;
-const stats = { snapshotReads: 0, inserts: 0, rows: 0 };
+const stats = {
+  snapshotReads: 0,
+  inserts: 0,
+  rows: 0,
+  savepoints: 0,
+  snapshotFailures: 0,
+  insertFailures: 0,
+};
+
+/** A test seam: make the next snapshots or inserts fail with a real database error. */
+let injectedFault: "snapshot" | "insert" | null = null;
+export function injectLedgerFaultForTests(kind: "snapshot" | "insert" | null): void {
+  injectedFault = kind;
+}
+async function maybeFail(client: unknown, kind: "snapshot" | "insert"): Promise<void> {
+  if (injectedFault !== kind) return;
+  // Division by zero: a database error that aborts a transaction like any other.
+  await (client as { $executeRawUnsafe: (q: string) => Promise<unknown> }).$executeRawUnsafe(
+    "SELECT 1/0"
+  );
+}
+
+/** Off switch for measurements (spec §Performance); not wired to configuration. */
+let enabled = true;
+export function setChangeLedgerEnabled(on: boolean): void {
+  enabled = on;
+}
+
+/**
+ * Run `fn` in a savepoint of the transaction `tx` (a nested transaction):
+ * a failure rolls back only the savepoint, so the caller's transaction is
+ * never aborted by the ledger.
+ */
+function inSavepoint<T>(tx: unknown, fn: (sp: unknown) => Promise<T>): Promise<T> {
+  stats.savepoints += 1;
+  return asInternal(() => (tx as TxCapable).$transaction(fn) as Promise<T>);
+}
 
 /** One running transaction: its client (null for the array form) and the rows it produced. */
 interface TxScope {
@@ -109,25 +148,56 @@ const asInternal = <T>(fn: () => Promise<T>): Promise<T> =>
  */
 async function insertRows(client: unknown, rows: LedgerRow[]): Promise<void> {
   if (rows.length === 0) return;
+  let lost = 0;
   try {
-    await asInternal(() =>
-      (client as TxCapable).$transaction(async (sp) => {
-        for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
-          const chunk = rows.slice(i, i + INSERT_CHUNK);
-          stats.inserts += 1;
-          stats.rows += chunk.length;
-          await (sp as PrismaClient).changeLedgerEntry.createMany({ data: chunk });
-        }
-      })
-    );
+    for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
+      const chunk = rows.slice(i, i + INSERT_CHUNK);
+      const payload = JSON.stringify(
+        chunk.map((r) => ({
+          // A NOT NULL violation stands in for any database failure in tests.
+          user_id: injectedFault === "insert" ? null : r.userId,
+          change_set_id: r.changeSetId,
+          entity_type: r.entityType,
+          entity_id: r.entityId,
+          operation: r.operation,
+          field: r.field,
+          old_value: r.oldValue,
+          new_value: r.newValue,
+          omitted: r.omitted,
+          label: r.label,
+          source: r.source,
+          actor_user_id: r.actorUserId,
+          reason: r.reason,
+          restored_from_id: r.restoredFromId,
+          created_at: r.createdAt.toISOString(),
+        }))
+      );
+      stats.inserts += 1;
+      // `change_ledger_insert()` inserts inside an exception block (a savepoint
+      // on the server): one round trip, and a failure is -1, never an aborted
+      // transaction.
+      const call = () =>
+        (client as RawCapable).$queryRawUnsafe<{ n: number }[]>(
+          "SELECT change_ledger_insert($1::jsonb) AS n",
+          payload
+        );
+      const [{ n }] = client === base ? await call() : await asInternal(call);
+      if (n < 0) lost += chunk.length;
+      else stats.rows += n;
+    }
   } catch (error) {
+    lost = rows.length;
     dbLogger.error({
       operation: "change_ledger_write_failed",
-      message: `change ledger lost ${rows.length} row(s)`,
-      error: {
-        name: error instanceof Error ? error.name : typeof error,
-        code: (error as { code?: unknown })?.code,
-      },
+      message: `change ledger insert call failed`,
+      error: { name: error instanceof Error ? error.name : typeof error },
+    });
+  }
+  if (lost > 0) {
+    stats.insertFailures += 1;
+    dbLogger.error({
+      operation: "change_ledger_write_failed",
+      message: `change ledger lost ${lost} row(s)`,
     });
   }
 }
@@ -186,9 +256,7 @@ export function ledgerStats(): Readonly<typeof stats> {
   return { ...stats };
 }
 export function resetLedgerStats(): void {
-  stats.snapshotReads = 0;
-  stats.inserts = 0;
-  stats.rows = 0;
+  for (const key of Object.keys(stats) as (keyof typeof stats)[]) stats[key] = 0;
 }
 
 /** A unique `where` as a plain filter: compound keys (`userId_clientRef`) are spread out. */
@@ -231,9 +299,74 @@ function selectFor(meta: ModelMeta, fields: readonly string[]): Row {
 }
 
 function readRows(client: unknown, model: TrackedModel, args: unknown): Promise<Row[]> {
-  const delegate = (client as Record<string, Delegate>)[delegateOf(model)];
   stats.snapshotReads += 1;
-  return client === base ? delegate.findMany(args) : asInternal(() => delegate.findMany(args));
+  const read = async (c: unknown) => {
+    await maybeFail(c, "snapshot");
+    return (c as Record<string, Delegate>)[delegateOf(model)].findMany(args);
+  };
+  // Inside the caller's transaction the read runs in a savepoint: a failing
+  // read must not abort the transaction it only observes.
+  return client === base ? read(client) : inSavepoint(client, read);
+}
+
+/** `where` names one row by id (and owner): the one-round-trip snapshot applies. */
+function singleRowKey(
+  meta: ModelMeta,
+  operation: string,
+  where: unknown
+): { id: string; userId: string | null } | null {
+  if (meta.owner.kind !== "column" || !SINGLE_ROW_OPS.has(operation)) return null;
+  if (!where || typeof where !== "object") return null;
+  const w = where as Row;
+  if (Object.keys(w).some((k) => k !== "id" && k !== "userId")) return null;
+  if (typeof w.id !== "string") return null;
+  if (w.userId !== undefined && typeof w.userId !== "string") return null;
+  return { id: w.id, userId: (w.userId as string | undefined) ?? null };
+}
+
+/** A column value as `to_jsonb` hands it back, in the type Prisma would. */
+function fromJson(value: unknown, type: string): unknown {
+  if (value === null || value === undefined) return null;
+  if (type === "DateTime" && typeof value === "string") {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return new Date(`${value}T00:00:00Z`);
+    return new Date(/(Z|[+-]\d{2}:?\d{2})$/.test(value) ? value : `${value}Z`);
+  }
+  if (type === "Decimal") return new Prisma.Decimal(String(value));
+  if (type === "BigInt") return BigInt(String(value));
+  return value;
+}
+
+/**
+ * The snapshot of one row in ONE round trip: `change_ledger_snapshot()` reads
+ * it inside an exception block (a savepoint on the server), so a failure comes
+ * back as `ok: false` and never aborts the caller's transaction.
+ */
+async function snapshotRow(
+  client: unknown,
+  meta: ModelMeta,
+  key: { id: string; userId: string | null },
+  fields: readonly string[]
+): Promise<Row[]> {
+  stats.snapshotReads += 1;
+  const table = injectedFault === "snapshot" ? "pg_class" : meta.table;
+  const call = () =>
+    (client as RawCapable).$queryRawUnsafe<{ s: { ok: boolean; row: Row | null } }[]>(
+      "SELECT change_ledger_snapshot($1::regclass, $2, $3) AS s",
+      `"${table}"`,
+      key.id,
+      key.userId
+    );
+  const [{ s }] = client === base ? await call() : await asInternal(call);
+  if (!s.ok) throw new Error("change ledger snapshot failed in the database");
+  if (!s.row) return [];
+  const raw = s.row;
+  const out: Row = {};
+  for (const f of new Set(["id", "userId", ...fields, ...meta.labelFields])) {
+    const column = meta.columns.get(f);
+    const type = meta.scalars.get(f)?.type ?? "String";
+    if (column) out[f] = fromJson(raw[column], type);
+  }
+  return [out];
 }
 
 async function snapshot(
@@ -241,8 +374,11 @@ async function snapshot(
   model: TrackedModel,
   meta: ModelMeta,
   where: unknown,
-  fields: readonly string[]
+  fields: readonly string[],
+  operation: string
 ): Promise<Row[] | null> {
+  const key = singleRowKey(meta, operation, where);
+  if (key) return snapshotRow(client, meta, key, fields);
   const rows = await readRows(client, model, {
     where: filterOf(where, meta),
     select: selectFor(meta, fields),
@@ -443,8 +579,9 @@ async function captureInScope<T>(p: Planned, scope: TxScope, run: () => Promise<
   const client = scope.tx ?? base;
   let before: Row[] | null = null;
   try {
-    before = await snapshot(client, p.model, p.meta, p.where, p.fields);
+    before = await snapshot(client, p.model, p.meta, p.where, p.fields, p.operation);
   } catch (error) {
+    stats.snapshotFailures += 1;
     logLedgerError("change_ledger_snapshot_failed", p.model, p.operation, error);
   }
   const result = await run();
@@ -454,48 +591,25 @@ async function captureInScope<T>(p: Planned, scope: TxScope, run: () => Promise<
   return result;
 }
 
-class SnapshotFailed extends Error {
-  constructor(readonly original: unknown) {
-    super("change ledger snapshot failed");
-  }
-}
-
 /**
- * Outside any transaction: snapshot, the write and its rows in one short
- * transaction on the base client, so they commit together. The write is the
- * same call on the transaction's delegate. A failed snapshot rolls back
- * before anything was written; the write then runs alone, unrecorded.
+ * Outside any transaction: snapshot, the write, the rows — three separate
+ * statements, each holding a pool connection only for itself, so no write
+ * holds a connection longer than it did without the ledger (spec §Pool).
+ * A failed snapshot means the write runs unrecorded; a failed insert is
+ * logged. A crash between the write and the insert loses the rows (never
+ * invents them).
  */
-async function captureStandalone<T>(p: Planned, args: unknown, run: () => Promise<T>): Promise<T> {
-  const client = base as unknown as TxCapable;
-  let started = false;
+async function captureStandalone<T>(p: Planned, run: () => Promise<T>): Promise<T> {
+  let before: Row[] | null = null;
   try {
-    return (await client.$transaction(async (tx) => {
-      started = true;
-      let before: Row[] | null;
-      try {
-        before = await snapshot(tx, p.model, p.meta, p.where, p.fields);
-      } catch (error) {
-        throw new SnapshotFailed(error);
-      }
-      const delegate = (tx as Record<string, Delegate>)[delegateOf(p.model)];
-      const result = await delegate[p.operation](args);
-      if (before && before.length > 0) await insertRows(tx, await rowsOf(tx, p, before, result));
-      return result;
-    }, STANDALONE_TX_OPTIONS)) as T;
+    before = await snapshot(base, p.model, p.meta, p.where, p.fields, p.operation);
   } catch (error) {
-    if (error instanceof SnapshotFailed) {
-      logLedgerError("change_ledger_snapshot_failed", p.model, p.operation, error.original);
-      return run();
-    }
-    // No connection for the transaction in time (P2028 before it began): nothing
-    // ran, so the write goes ahead alone rather than failing for the ledger's sake.
-    if ((error as { code?: unknown })?.code === "P2028" && !started) {
-      logLedgerError("change_ledger_no_connection", p.model, p.operation, error);
-      return run();
-    }
-    throw error;
+    stats.snapshotFailures += 1;
+    logLedgerError("change_ledger_snapshot_failed", p.model, p.operation, error);
   }
+  const result = await run();
+  if (before && before.length > 0) await insertRows(base, await rowsOf(base, p, before, result));
+  return result;
 }
 
 /**
@@ -510,7 +624,7 @@ export async function captureWrite<T>(
   run: () => Promise<T>,
   inTransaction = false
 ): Promise<T> {
-  if (!isTrackedModel(model) || !base) return run();
+  if (!enabled || !isTrackedModel(model) || !base) return run();
   const ctx = resolveChangeContext();
   if (!ctx) return run();
   const meta = modelMeta(model);
@@ -531,5 +645,5 @@ export async function captureWrite<T>(
     }
     return captureInScope(p, scope, run);
   }
-  return captureStandalone(p, args, run);
+  return captureStandalone(p, run);
 }

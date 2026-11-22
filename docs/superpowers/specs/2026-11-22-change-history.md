@@ -74,40 +74,51 @@ payloads a refresh rewrites wholesale (`geometry`, `actualRoute`, `enrichmentHis
 
 ## Transactions — a row commits with its change
 
-A history row commits or rolls back with the change it describes: never a row for a write
-that did not land, never a committed change without its row, never a row twice (nothing is
-retried or queued).
+A history row never describes a write that did not land, and no ledger failure ever fails or
+aborts the caller's write.
 
 - Interactive `$transaction` (and nested `tx.$transaction`, a savepoint in Prisma 7):
   `db.ts` wraps the client's method (the extension API has no hook for a transaction's
   end) and gives each one a scope. The snapshot is read through that transaction's client
-  (it sees the transaction's earlier writes, needs no second connection); the rows are
+  (it sees the transaction's earlier writes and needs no second connection); the rows are
   collected in the scope and inserted through the same client when the callback returns,
   before the commit. A nested transaction has its own scope, so its rows roll back with it.
   Options (isolation level, timeout) pass through unchanged; a nested call stays Prisma's
   own method on that `tx` — binding it to the top client opened a second, independent
   transaction that waited on the first (50 sharing tests caught that).
-- A write outside any transaction runs inside a short transaction of its own on the base
-  client: snapshot, the same call on the transaction's delegate, the rows.
+- A write outside any transaction: snapshot, write and insert are three plain statements,
+  each holding a pool connection only for itself, so no write holds a connection longer
+  than it does without the ledger. A crash between the write and the insert loses its rows
+  (never invents one).
 - The array form `$transaction([...])` cannot carry extra statements: its snapshots read
-  committed values and its rows are inserted right after it committed (a crash in that
-  moment loses them; a rollback drops them).
-- The insert runs in a savepoint: a ledger failure (an account deleted meanwhile) is logged
-  with the row count and never aborts the caller's work. A failing snapshot inside a
-  caller's transaction is the one ledger statement that could abort it; it is a plain
-  primary-key/filter read.
+  committed values and its rows are inserted right after it committed.
+- Never aborting: the insert and the single-row snapshot are two SQL functions
+  (`change_ledger_insert`, `change_ledger_snapshot`, migration
+  `20261122144646_change_ledger_functions`) whose PL/pgSQL exception block is a savepoint
+  taken on the server — one round trip each instead of SAVEPOINT / statement / RELEASE. A
+  failure returns -1 or `ok: false`, is logged and counted (`ledgerStats()`), and leaves the
+  transaction usable. A snapshot by a wider filter (an `updateMany`) runs in a Prisma
+  savepoint. Tests inject a real database error into each and assert the user's writes
+  commit.
 - Memory: rows live only for the duration of their transaction and are inserted in chunks
   of 1 000; there is no process-wide queue.
 
 ## Performance budget
 
-- A tracked write touching a recorded field: one snapshot read. A write touching none (a
-  version claim, a geometry refresh): nothing.
-- One insert per transaction (chunked), plus a savepoint around it; a standalone write adds
-  its own BEGIN/COMMIT.
-- The ledger's statements are not counted by `observeQueries`; `ledgerStats()` counts them.
-  The 200-flight bulk edit (200 transactions) is held to ≤ 200 snapshot reads and ≤ 200
-  inserts for 400 rows, while the route's own guard (≤ 620 queries) is unchanged.
+Measured 2026-11-22 on the worker database (`changeLedger.measure.test.ts`, run with
+`MEASURE_CHANGE_LEDGER=1`), ledger off → on:
+
+| Workload | Wall time | Statements (observed + ledger) | Peak active connections |
+|---|---|---|---|
+| Flight bulk edit, 200 flights | 700 → 864 ms (+23 %) | 606 → 1006 | 1 → 1 |
+| xlsx re-import, 500 bus rows (all updates) | 1318 → 1695 ms (+29 %) | 1058 → 2058 | 5 → 2 |
+| Share a trip of 50 flights | 259 → 243 ms (noise) | 399 → 452 | 1 → 1 |
+| 50 edits propagated to the member | 2686 → 2619 ms (noise) | 4101 → 4300 | 4 → 5 |
+
+The first version (Prisma savepoints around snapshot and insert) cost +104 % and +99 % on
+the first two; the SQL functions brought both under 30 %. TravTrack ingest writes no
+tracked model and is not affected. Per tracked write: one snapshot round trip; per
+transaction: one insert round trip. A write touching no recorded field costs nothing.
 
 ## Limits (known, accepted)
 
@@ -117,6 +128,8 @@ retried or queued).
   the rows and records only those that now hold the written value.
 - A write inside a callback that uses a transaction client captured from an outer
   transaction is recorded in the inner scope.
+- Standalone writes are recorded at most once (three plain statements), transactional
+  writes exactly once with their transaction.
 
 ## Restore
 
