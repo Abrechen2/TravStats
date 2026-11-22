@@ -432,8 +432,8 @@
     "demodel": {
       "title": "Demo-Konto löschen?",
       "affects": "Das Konto {{name}} mit allen Einträgen",
-      "amount_one": "{{count}} Flug",
-      "amount_other": "{{count}} Flüge",
+      "amount_one": "{{count}} Eintrag",
+      "amount_other": "{{count}} Einträge",
       "after": "Niemand kann sich mehr als Demo anmelden.",
       "confirm": "Löschen"
     },

@@ -2,6 +2,7 @@ import { useEffect, useState, type JSX } from "react";
 import { adminApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useDemoAccountStore } from "../../store/demoAccountStore";
 import { useToastStore } from "../../store/toastStore";
 import { useDialogCopy, useRowCopy } from "../Settings/rowCopy";
 import Button from "../ui/Button";
@@ -28,6 +29,7 @@ export default function MaintenanceSystem(): JSX.Element {
   const row = useRowCopy("maintenance");
   const dialog = useDialogCopy();
   const addToast = useToastStore((s) => s.addToast);
+  const refreshDemoNotice = useDemoAccountStore((s) => s.refresh);
   const [info, setInfo] = useState<SystemInfoData | null>(null);
   const [demo, setDemo] = useState<AdminUser | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -90,6 +92,7 @@ export default function MaintenanceSystem(): JSX.Element {
       setAsking(null);
       addToast("success", t("settingsRows:users.done.delete", { name: demo.username }));
       await load();
+      await refreshDemoNotice();
     } catch (error) {
       logger.error("Failed to delete the demo account:", error);
       setAsking(null);
@@ -107,7 +110,7 @@ export default function MaintenanceSystem(): JSX.Element {
     asking === "reseed"
       ? dialog("reseed")
       : asking === "demo" && demo
-        ? dialog("demodel", { name: demo.username, count: demo._count.flights })
+        ? dialog("demodel", { name: demo.username, count: demo.entryTotal })
         : null;
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>

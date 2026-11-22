@@ -504,5 +504,10 @@
       "immich": "In Immich öffnen",
       "photoprism": "In PhotoPrism öffnen"
     }
+  },
+  "demoAccount": {
+    "label": "Achtung: Demo-Konto aktiv",
+    "short": "Demo-Konto aktiv",
+    "hint": "Ein Demo-Konto ist noch aktiv. Zur Wartung, um es zu löschen."
   }
 }

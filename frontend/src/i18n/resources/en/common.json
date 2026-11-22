@@ -504,5 +504,10 @@
       "immich": "Open in Immich",
       "photoprism": "Open in PhotoPrism"
     }
+  },
+  "demoAccount": {
+    "label": "Warning: demo account active",
+    "short": "Demo account active",
+    "hint": "A demo account is still active. Go to Maintenance to delete it."
   }
 }
