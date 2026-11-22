@@ -21,6 +21,12 @@ export interface ExpandableEventCardProps {
   icon: string;
   bg: string;
   iconColor: string;
+  /**
+   * The operator's own mark (airline tile, operator tile) in place of the tinted
+   * domain icon. The domain colour then stays as a left border, so the
+   * timeline still reads by domain.
+   */
+  mark?: ReactNode;
   title: string;
   subtitle?: string | null;
   date: string;
@@ -41,6 +47,7 @@ export function ExpandableEventCard({
   icon,
   bg,
   iconColor,
+  mark,
   title,
   subtitle,
   date,
@@ -54,7 +61,12 @@ export function ExpandableEventCard({
   return (
     <div
       className="rounded-xl"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+      style={{
+        background: "var(--bg-surface)",
+        border: "1px solid var(--color-border)",
+        ...(mark ? { borderLeft: `4px solid ${iconColor}` } : {}),
+      }}
+      data-testid={mark ? "timeline-card-with-mark" : undefined}
     >
       <button
         type="button"
@@ -64,12 +76,14 @@ export function ExpandableEventCard({
         className="w-full text-left px-4 py-3 flex items-start gap-3 rounded-xl"
         style={{ background: "transparent", border: 0, cursor: "pointer" }}
       >
-        <span
-          className="w-9 h-9 rounded-lg flex items-center justify-center text-base shrink-0"
-          style={{ background: bg, color: iconColor }}
-        >
-          {icon}
-        </span>
+        {mark ?? (
+          <span
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-base shrink-0"
+            style={{ background: bg, color: iconColor }}
+          >
+            {icon}
+          </span>
+        )}
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
             {title}

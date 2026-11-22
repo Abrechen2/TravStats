@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
+import { OperatorTile, railOperatorLogoUrl } from "../table/OperatorTile";
 import { ExpandableEventCard } from "../Trip/ExpandableEventCard";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatRailSpan, formatStationTime } from "../../lib/railTime";
@@ -53,6 +54,14 @@ export function RailTripCard({
   ];
   return (
     <ExpandableEventCard
+      mark={
+        <OperatorTile
+          name={journey.operator}
+          domain="rail"
+          logoUrl={railOperatorLogoUrl(journey.operator)}
+          size={36}
+        />
+      }
       icon="🚆"
       bg="var(--domain-rail-soft)"
       iconColor="var(--domain-rail)"

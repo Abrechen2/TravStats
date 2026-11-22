@@ -65,6 +65,10 @@ export interface PresenceEntry {
   nights: readonly string[];
   /** What the user recognises: "LH 1790 MUC → LIS", "Hotel Avenida". */
   label: string;
+  /** Who carries it (airline, rail/bus/ferry operator, rental provider, cruise line), for the inbox's logo. */
+  operator?: string | null;
+  /** A flight's airline code, so the inbox draws the same tile as the logbook. */
+  airlineIata?: string | null;
   /** Where it went, for naming a proposal. */
   city: string | null;
   country: string | null;
@@ -112,6 +116,8 @@ export interface SuggestionMember {
   domain: LinkableDomain;
   id: string;
   label: string;
+  operator?: string | null;
+  airlineIata?: string | null;
   startDay: string;
   endDay: string;
   planned: boolean;

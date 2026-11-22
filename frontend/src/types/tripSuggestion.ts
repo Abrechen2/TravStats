@@ -24,6 +24,10 @@ export interface TripSuggestionMember {
   domain: TripSuggestionDomain;
   id: string;
   label: string;
+  /** Airline, operator, provider or cruise line; absent for stays, places, tours and older servers. */
+  operator?: string;
+  /** A flight's airline code. */
+  airlineIata?: string;
   startDay: string;
   endDay: string;
   planned: boolean;

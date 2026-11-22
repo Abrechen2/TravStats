@@ -480,3 +480,19 @@ describe("composeSuggestions — no home known", () => {
     );
   });
 });
+
+describe("composeSuggestions — operator on members (inbox logos)", () => {
+  it("carries a member's operator and airline code to the proposal, and none for a stay", () => {
+    const entries = italyWeek().map((e) =>
+      e.key === "rail:out"
+        ? { ...e, operator: "Trenitalia" }
+        : e.key === "rail:back"
+          ? { ...e, operator: "Trenitalia", airlineIata: "XX" }
+          : e
+    );
+    const members = composeSuggestions(input({ entries }))[0].members;
+    expect(members.find((m) => m.key === "rail:out")?.operator).toBe("Trenitalia");
+    expect(members.find((m) => m.key === "rail:back")?.airlineIata).toBe("XX");
+    expect(members.find((m) => m.key === "lodging:rome")).not.toHaveProperty("operator");
+  });
+});
