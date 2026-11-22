@@ -107,6 +107,22 @@ describe("change history on an entry's detail page", () => {
   });
 });
 
+describe("change history inside a card (stay, visit, cruise stop, expense)", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("draws no section frame, opens on its 'Verlauf' button and asks for that entry", async () => {
+    api.forEntry.mockResolvedValue({
+      entries: [row({ entityType: "cruiseStop", entityId: "s1", field: "excursionNote" })],
+      nextCursor: null,
+    });
+    render(<ChangeHistorySection compact entityType="cruiseStop" entityId="s1" />);
+    expect(screen.queryByRole("heading")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "changeHistory:title" }));
+    expect(await screen.findByTestId("change-history-row")).toBeInTheDocument();
+    expect(api.forEntry).toHaveBeenCalledWith("cruiseStop", "s1");
+  });
+});
+
 describe("formatChangeValue", () => {
   const words = { dateTime: (iso: string) => `D(${iso})`, empty: "–", yes: "Y", no: "N" };
   it("reads the ledger's JSON values", () => {

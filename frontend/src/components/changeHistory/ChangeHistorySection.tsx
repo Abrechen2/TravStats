@@ -19,6 +19,11 @@ interface ChangeHistorySectionProps {
   entityId: string;
   /** Called after a restore wrote a value, so the page can show the entry as it now is. */
   onRestored?: () => Promise<void> | void;
+  /**
+   * Inside a card or a dialog (a stay, a visit, a cruise stop, an expense):
+   * no section frame of its own, only the "Verlauf" button and, once opened, the list.
+   */
+  compact?: boolean;
 }
 
 type Load = { state: "closed" } | { state: "loading" } | { state: "failed" } | { state: "ready" };
@@ -34,6 +39,7 @@ export default function ChangeHistorySection({
   entityType,
   entityId,
   onRestored,
+  compact = false,
 }: ChangeHistorySectionProps): JSX.Element {
   const { t } = useTranslation(["changeHistory"]);
   const format = useDisplayFormat();
@@ -133,138 +139,137 @@ export default function ChangeHistorySection({
 
   const cell = { padding: "var(--ts-space-sm) var(--ts-space-md)", verticalAlign: "top" as const };
 
-  return (
-    <DetailSection title={t("changeHistory:title")}>
-      <div
-        data-testid="change-history"
-        className="flex flex-col"
-        style={{ gap: "var(--ts-space-md)" }}
-      >
-        {load.state === "closed" && (
-          <div>
-            <button
-              type="button"
-              className="ts-chip"
-              data-testid="change-history-open"
-              onClick={() => void fetchFirst()}
-              style={chipStyle(coarse)}
-            >
-              {t("changeHistory:show")}
-            </button>
-          </div>
-        )}
-        {load.state === "loading" && <p className="t-caption">{t("changeHistory:loading")}</p>}
-        {load.state === "failed" && (
-          <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
-            <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-              {t("changeHistory:loadFailed")}
-            </p>
-            <button
-              type="button"
-              className="ts-chip"
-              onClick={() => void fetchFirst()}
-              style={chipStyle(coarse)}
-            >
-              {t("changeHistory:retry")}
-            </button>
-          </div>
-        )}
-        {restoreError && (
+  const body = (
+    <div
+      data-testid="change-history"
+      className="flex flex-col"
+      style={{ gap: "var(--ts-space-md)" }}
+    >
+      {load.state === "closed" && (
+        <div>
+          <button
+            type="button"
+            className="ts-chip"
+            data-testid="change-history-open"
+            onClick={() => void fetchFirst()}
+            style={chipStyle(coarse)}
+          >
+            {compact ? t("changeHistory:title") : t("changeHistory:show")}
+          </button>
+        </div>
+      )}
+      {load.state === "loading" && <p className="t-caption">{t("changeHistory:loading")}</p>}
+      {load.state === "failed" && (
+        <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
           <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-            {restoreError}
+            {t("changeHistory:loadFailed")}
           </p>
-        )}
-        {load.state === "ready" && entries.length === 0 && (
-          <p className="t-caption">{t("changeHistory:empty")}</p>
-        )}
-        {load.state === "ready" && entries.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
-              <thead>
-                <tr className="t-caption" style={{ textAlign: "left" }}>
-                  <th style={cell}>{t("changeHistory:columns.when")}</th>
-                  <th style={cell}>{t("changeHistory:columns.who")}</th>
-                  <th style={cell}>{t("changeHistory:columns.what")}</th>
-                  <th style={cell}>{t("changeHistory:columns.change")}</th>
-                  <th style={cell} aria-hidden="true" />
+          <button
+            type="button"
+            className="ts-chip"
+            onClick={() => void fetchFirst()}
+            style={chipStyle(coarse)}
+          >
+            {t("changeHistory:retry")}
+          </button>
+        </div>
+      )}
+      {restoreError && (
+        <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
+          {restoreError}
+        </p>
+      )}
+      {load.state === "ready" && entries.length === 0 && (
+        <p className="t-caption">{t("changeHistory:empty")}</p>
+      )}
+      {load.state === "ready" && entries.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+            <thead>
+              <tr className="t-caption" style={{ textAlign: "left" }}>
+                <th style={cell}>{t("changeHistory:columns.when")}</th>
+                <th style={cell}>{t("changeHistory:columns.who")}</th>
+                <th style={cell}>{t("changeHistory:columns.what")}</th>
+                <th style={cell}>{t("changeHistory:columns.change")}</th>
+                <th style={cell} aria-hidden="true" />
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((entry) => (
+                <tr
+                  key={entry.id}
+                  data-testid="change-history-row"
+                  style={{ borderTop: "1px solid var(--ts-border)", color: "var(--ts-text)" }}
+                >
+                  <td style={{ ...cell, whiteSpace: "nowrap" }}>
+                    {format.dateTime(entry.createdAt)}
+                  </td>
+                  <td style={cell}>
+                    {who(entry)}
+                    {entry.restoredFromId && (
+                      <span className="t-caption"> · {t("changeHistory:restoreOf")}</span>
+                    )}
+                  </td>
+                  <td style={cell}>
+                    {entry.operation === "delete"
+                      ? t("changeHistory:deleted")
+                      : fieldLabel(entry.field)}
+                  </td>
+                  <td style={{ ...cell, wordBreak: "break-word" }}>
+                    {entry.operation === "update" && (
+                      <>
+                        <span style={{ color: "var(--ts-muted)" }}>
+                          {valueText(entry, entry.oldValue)}
+                        </span>
+                        {" → "}
+                        <span style={{ color: "var(--ts-text-bright)", fontWeight: 600 }}>
+                          {valueText(entry, entry.newValue)}
+                        </span>
+                      </>
+                    )}
+                  </td>
+                  <td style={{ ...cell, textAlign: "right", whiteSpace: "nowrap" }}>
+                    {entry.restorable ? (
+                      <button
+                        type="button"
+                        className="ts-chip"
+                        data-testid="change-history-restore"
+                        disabled={restoring !== null}
+                        aria-busy={restoring === entry.id}
+                        title={t("changeHistory:restoreTitle", {
+                          value: valueText(entry, entry.oldValue),
+                          field: fieldLabel(entry.field),
+                        })}
+                        onClick={() => void restore(entry)}
+                        style={chipStyle(coarse)}
+                      >
+                        {t("changeHistory:restore")}
+                      </button>
+                    ) : entry.operation === "update" && !entry.omitted ? (
+                      <span className="t-caption">{t("changeHistory:notRestorable")}</span>
+                    ) : null}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {entries.map((entry) => (
-                  <tr
-                    key={entry.id}
-                    data-testid="change-history-row"
-                    style={{ borderTop: "1px solid var(--ts-border)", color: "var(--ts-text)" }}
-                  >
-                    <td style={{ ...cell, whiteSpace: "nowrap" }}>
-                      {format.dateTime(entry.createdAt)}
-                    </td>
-                    <td style={cell}>
-                      {who(entry)}
-                      {entry.restoredFromId && (
-                        <span className="t-caption"> · {t("changeHistory:restoreOf")}</span>
-                      )}
-                    </td>
-                    <td style={cell}>
-                      {entry.operation === "delete"
-                        ? t("changeHistory:deleted")
-                        : fieldLabel(entry.field)}
-                    </td>
-                    <td style={{ ...cell, wordBreak: "break-word" }}>
-                      {entry.operation === "update" && (
-                        <>
-                          <span style={{ color: "var(--ts-muted)" }}>
-                            {valueText(entry, entry.oldValue)}
-                          </span>
-                          {" → "}
-                          <span style={{ color: "var(--ts-text-bright)", fontWeight: 600 }}>
-                            {valueText(entry, entry.newValue)}
-                          </span>
-                        </>
-                      )}
-                    </td>
-                    <td style={{ ...cell, textAlign: "right", whiteSpace: "nowrap" }}>
-                      {entry.restorable ? (
-                        <button
-                          type="button"
-                          className="ts-chip"
-                          data-testid="change-history-restore"
-                          disabled={restoring !== null}
-                          aria-busy={restoring === entry.id}
-                          title={t("changeHistory:restoreTitle", {
-                            value: valueText(entry, entry.oldValue),
-                            field: fieldLabel(entry.field),
-                          })}
-                          onClick={() => void restore(entry)}
-                          style={chipStyle(coarse)}
-                        >
-                          {t("changeHistory:restore")}
-                        </button>
-                      ) : entry.operation === "update" && !entry.omitted ? (
-                        <span className="t-caption">{t("changeHistory:notRestorable")}</span>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {load.state === "ready" && cursor && (
-          <div>
-            <button
-              type="button"
-              className="ts-chip"
-              onClick={() => void fetchMore()}
-              style={chipStyle(coarse)}
-            >
-              {t("changeHistory:more")}
-            </button>
-          </div>
-        )}
-      </div>
-    </DetailSection>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {load.state === "ready" && cursor && (
+        <div>
+          <button
+            type="button"
+            className="ts-chip"
+            onClick={() => void fetchMore()}
+            style={chipStyle(coarse)}
+          >
+            {t("changeHistory:more")}
+          </button>
+        </div>
+      )}
+    </div>
   );
+  return compact ? body : <DetailSection title={t("changeHistory:title")}>{body}</DetailSection>;
 }
 
 function chipStyle(coarse: boolean) {

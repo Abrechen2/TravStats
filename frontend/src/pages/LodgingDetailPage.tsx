@@ -50,6 +50,7 @@ import { useToastStore } from "../store/toastStore";
 import type { Lodging, LodgingMembership, LodgingStay } from "../types/lodging";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import WebGLGuard from "../components/map/WebGLGuard";
+import ChangeHistorySection from "../components/changeHistory/ChangeHistorySection";
 
 /** What a figure reads as when it cannot be stated. The same dash the spend
  *  card already prints for an unconvertible total. */
@@ -497,6 +498,12 @@ export default function LodgingDetailPage(): JSX.Element {
                         membershipSource={resolvedMembership.source}
                       />
                       <EntryPhotos kind="stay" entryId={stay.id} />
+                      <ChangeHistorySection
+                        compact
+                        entityType="lodgingStay"
+                        entityId={stay.id}
+                        onRestored={() => setReloadKey((k) => k + 1)}
+                      />
                     </div>
                   );
                 })}

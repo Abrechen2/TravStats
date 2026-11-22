@@ -7,6 +7,7 @@ import { documentFileUrl } from "../../lib/api/documents";
 import type { EffectiveTimelineEntry } from "./cruisePorts";
 import { documentsOfDay, portStay } from "./cruiseDayCardModel";
 import type { CruiseDocumentsState } from "./useCruiseDocuments";
+import ChangeHistorySection from "../changeHistory/ChangeHistorySection";
 
 interface Props {
   entry: EffectiveTimelineEntry;
@@ -168,6 +169,11 @@ export function CruiseDayCard({
       {stop && !entry.isAtSea && (
         <div className="mt-3">
           <EntryPhotos kind="cruiseStop" entryId={stop.id} />
+        </div>
+      )}
+      {stop && (
+        <div className="mt-3">
+          <ChangeHistorySection compact entityType="cruiseStop" entityId={stop.id} />
         </div>
       )}
       <p className="mt-2 text-xs text-(--text-muted)">{t("dayCard.localNote")}</p>
