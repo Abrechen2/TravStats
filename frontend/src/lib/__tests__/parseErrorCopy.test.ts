@@ -27,6 +27,10 @@ describe("parseFailureMessage — codes, not prose", () => {
     expect(parseFailureMessage(timeout, t, "fallback")).toBe("import:errors.timeout");
   });
 
+  it("says an image was too large instead of the generic scan error (413)", () => {
+    expect(parseFailureMessage(httpError(413), t, "fallback")).toBe("import:errors.tooLarge");
+  });
+
   it("never returns the server's words for an unknown failure", () => {
     const err = httpError(500, { error: "Boarding pass parsing failed", message: "boom" });
     expect(parseFailureMessage(err, t, "errors:boardingPassError")).toBe(
