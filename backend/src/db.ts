@@ -8,8 +8,11 @@ import {
 } from "./services/provenance/recordedOnly";
 import {
   demoteHiddenOnlyVisited,
+  demoteNestedPlaces,
   ensureIdSelected,
   isPlaceRead,
+  planNestedPlaces,
+  type VisitFact,
 } from "./services/purpose/placeVisited";
 import { inheritPurposeOnCreate } from "./services/purpose/tripInheritance";
 import { createPrismaClient } from "./prismaClient";
@@ -173,6 +176,10 @@ const queried = basePrisma.$extends({
       // "Nur belegte": inside a recorded-only request every read of an entry model leaves out
       // what was typed in from memory (services/provenance/recordedOnly.ts).
       // A new entry inside a trip starts with the trip's purpose (services/purpose/tripInheritance.ts).
+      // A batch `$transaction([...])` runs this hook for each query while the batch is still being
+      // built, before it holds a connection: the lookup reads the committed trip (resolved before the
+      // batch, never inside it). A trip created in the same batch is not there yet, so its entries
+      // keep an unknown purpose (purpose.txInheritance.test.ts, purposeHook.reads.test.ts).
       const inherited = await inheritPurposeOnCreate(model, operation, askedArgs, async (id) => {
         // Inside an interactive transaction the lookup runs on THAT transaction: a trip created a
         // statement earlier is only visible there, and a second pool connection would wait for
@@ -190,11 +197,36 @@ const queried = basePrisma.$extends({
         placeVisitHiddenActive() ? (await import("./shared/time/clock")).now() : undefined
       );
       // A place that is "visited" only through a hidden business visit stops counting as visited.
-      const hiddenVisitPurposes = isPlaceRead(model, operation)
-        ? (entryFilterActive().hidden.PlaceVisit ?? [])
-        : [];
-      const { args, added: addedId } =
+      const filter = entryFilterActive();
+      const hiddenPlaceVisits = filter.hidden.PlaceVisit ?? [];
+      const hiddenVisitPurposes = isPlaceRead(model, operation) ? hiddenPlaceVisits : [];
+      const ensured =
         hiddenVisitPurposes.length > 0 ? ensureIdSelected(scoped) : { args: scoped, added: false };
+      const addedId = ensured.added;
+      // The same correction for Place rows reached through an include (a list entry's `place`).
+      const nested =
+        hiddenPlaceVisits.length > 0
+          ? await planNestedPlaces(model, operation, ensured.args)
+          : { args: ensured.args, tree: null };
+      const args = nested.args;
+      // Every visit of the places, past the purpose filter (a hidden visit must be seen to be
+      // counted as hidden), but not past "Nur belegte": a remembered visit the user hides that way
+      // is no visible visit and cannot keep a place visited.
+      const loadVisits = async (ids: string[]): Promise<VisitFact[]> => {
+        const visits = await runUnfiltered(() =>
+          (openTransaction.getStore() ?? basePrisma).placeVisit.findMany({
+            where: { placeId: { in: ids } },
+            select: {
+              placeId: true,
+              purpose: true,
+              visitedAt: true,
+              visitedAtUtc: true,
+              provenance: true,
+            },
+          })
+        );
+        return filter.recorded ? visits.filter((v) => v.provenance !== "remembered") : visits;
+      };
       const startTime = Date.now();
       // Before the call, matching the old middleware: it recorded on the way
       // in, so a query that throws is still counted.
@@ -215,22 +247,25 @@ const queried = basePrisma.$extends({
                 ?.transaction != null
             )
           : await query(args);
-        const result =
+        const topLevel =
           hiddenVisitPurposes.length > 0
             ? await demoteHiddenOnlyVisited(
                 raw,
                 hiddenVisitPurposes,
-                (ids) =>
-                  runUnfiltered(() =>
-                    (openTransaction.getStore() ?? basePrisma).placeVisit.findMany({
-                      where: { placeId: { in: ids } },
-                      select: { placeId: true, purpose: true, visitedAt: true, visitedAtUtc: true },
-                    })
-                  ),
+                loadVisits,
                 addedId,
                 (await import("./shared/time/clock")).now()
               )
             : raw;
+        const result = nested.tree
+          ? await demoteNestedPlaces(
+              topLevel,
+              nested.tree,
+              hiddenPlaceVisits,
+              loadVisits,
+              (await import("./shared/time/clock")).now()
+            )
+          : topLevel;
         if (!READ_OPERATIONS.has(operation)) {
           for (const observer of [
             ...(writeObserver ? [writeObserver] : []),
@@ -297,13 +332,20 @@ type TripReader = {
   placeVisit: {
     findMany(args: {
       where: { placeId: { in: string[] } };
-      select: { placeId: true; purpose: true; visitedAt: true; visitedAtUtc: true };
+      select: {
+        placeId: true;
+        purpose: true;
+        visitedAt: true;
+        visitedAtUtc: true;
+        provenance: true;
+      };
     }): Promise<
       Array<{
         placeId: string;
         purpose: string | null;
         visitedAt: Date | null;
         visitedAtUtc: Date | null;
+        provenance: string | null;
       }>
     >;
   };
