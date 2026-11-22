@@ -319,6 +319,10 @@ export class TesseractVisionParser implements IVisionParser {
   }
 
   async parseImage(imageBase64: string): Promise<ParsedBooking> {
+    return (await this.readImage(imageBase64)).booking;
+  }
+
+  async readImage(imageBase64: string): Promise<{ booking: ParsedBooking; text: string }> {
     logger.info("[Tesseract Parser] Starting OCR boarding pass parsing");
 
     try {
@@ -361,7 +365,7 @@ export class TesseractVisionParser implements IVisionParser {
         "[Tesseract Parser] Parsing complete"
       );
 
-      return result;
+      return { booking: result, text: extractedText };
     } catch (error) {
       logger.error({ error }, "[Tesseract Parser] OCR parsing failed");
       throw new Error(

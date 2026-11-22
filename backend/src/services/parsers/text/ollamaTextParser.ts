@@ -63,6 +63,22 @@ Inference reporting:
 `;
 }
 
+/**
+ * Appended for OCR text of a boarding pass. The model used to leave the times
+ * empty on a United pass that prints "Flight Departs: 12:46 PM" in full
+ * (owner, 2026-11-22), and the clock it is most likely to grab otherwise is
+ * the boarding time printed right beside the date.
+ */
+export const BOARDING_PASS_RULES = `
+Boarding pass rules (the text is OCR of one or more boarding passes, possibly noisy):
+- One element per boarding pass; two passes on one image are two legs.
+- departureTime: the printed flight date plus the printed DEPARTURE time ("Flight Departs", "Departure", "Dep", "Abflug", "STD"). Always fill it when the pass prints a departure time.
+- The BOARDING time ("Boarding", "Boarding Begins", "Einstieg") is NOT the departure time. Never use it for departureTime.
+- arrivalTime: the printed ARRIVAL time ("Flight Arrives", "Arrival", "Arr", "Ankunft", "STA") when printed, else null. If the arrival clock is earlier than the departure clock, the arrival is on the next day.
+- Convert 12-hour times to 24-hour: 12:46 PM -> 12:46, 2:49 PM -> 14:49, 9:50 AM -> 09:50, 12:05 AM -> 00:05.
+- A date printed with its year (e.g. "FRI 08 JAN 2016") keeps that year; do not move it to today's year.
+`;
+
 const EMAIL_SNIPPET_MAX_CHARS = 12_000;
 
 function mapSeatClass(raw: string | null | undefined): string | undefined {
@@ -169,7 +185,9 @@ export class OllamaTextParser implements ITextParser {
 
     const responseText = await llmGenerate(this.target, {
       ...(options?.userId ? { userId: options.userId } : {}),
-      system: buildSystemPrompt(options?.referenceDate),
+      system:
+        buildSystemPrompt(options?.referenceDate) +
+        (options?.documentKind === "boardingPass" ? BOARDING_PASS_RULES : ""),
       prompt: userPrompt,
       temperature: 0.1,
       // The answer is a top-level ARRAY — a JSON-object mode would forbid it.

@@ -37,6 +37,12 @@ export interface DecodedBcbp {
   bookingClassLetter?: string;
   sequence?: string;
   legs: number;
+  /**
+   * The last digit of the year the pass was ISSUED, from the conditional
+   * "date of issue" field (version marker `>` at position 60). The only trace
+   * of a year a BCBP string carries; absent on passes that omit the section.
+   */
+  issueYearDigit?: number;
 }
 
 const clean = (s: string): string => s.replace(/\s+/g, " ").trim();
@@ -64,6 +70,7 @@ export function decodeBcbp(raw: string, now: Date = new Date()): DecodedBcbp | n
   const sequence = stripLeadingZeros(clean(s.slice(52, 57)).replace(/\s/g, ""));
 
   if (!fromCode && !toCode && !flightNum) return null;
+  const issue = readDateOfIssue(s);
 
   return {
     passengerName: passengerName || undefined,
@@ -72,13 +79,30 @@ export function decodeBcbp(raw: string, now: Date = new Date()): DecodedBcbp | n
     toCode: toCode || undefined,
     carrier: carrier || undefined,
     flightNumber: carrier && flightNum ? `${carrier}${flightNum}` : flightNum || undefined,
-    date: julianToISO(julian, now),
+    date: julianToISO(julian, now, issue),
     seatNumber: seatNumber || undefined,
     bookingClassLetter: bookingClassLetter || undefined,
     sequence: sequence || undefined,
     legs,
+    ...(issue !== undefined ? { issueYearDigit: issue.yearDigit } : {}),
   };
 }
+
+/**
+ * Conditional section, first leg: `>` (60), version (61), size of the unique
+ * block (62-63, hex), passenger description (64), source of check-in (65),
+ * source of issuance (66), DATE OF ISSUE (67-70: last year digit + Julian
+ * day). Read only when the marker and a digit sit where the layout puts them.
+ */
+function readDateOfIssue(s: string): { yearDigit: number; day: number } | undefined {
+  if (s.length < 71 || s[60] !== ">") return undefined;
+  const field = s.slice(67, 71);
+  if (!/^\d{4}$/.test(field)) return undefined;
+  const day = Number(field.slice(1));
+  return day >= 1 && day <= 366 ? { yearDigit: Number(field[0]), day } : undefined;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** 366 days only where February has 29. */
 function daysInYear(year: number): number {
@@ -101,11 +125,28 @@ function daysInYear(year: number): number {
  * for the user to supply. A wrong day that looks certain is worse than an
  * absent one that asks.
  */
-function julianToISO(julian: string, now: Date): string | undefined {
+function julianToISO(
+  julian: string,
+  now: Date,
+  issue?: { yearDigit: number; day: number }
+): string | undefined {
   const day = parseInt(julian, 10);
   if (!day || day < 1 || day > 366) return undefined;
 
   const year = now.getUTCFullYear();
+  // With the date of issue the decade is the only question left: the issue
+  // year is the latest year ending in that digit whose issue day is not in
+  // the future, and the flight is in that year — or the next, when its day
+  // comes before the issue day (issued 28 Dec, flown 3 Jan).
+  if (issue !== undefined) {
+    for (let y = year; y >= year - 30; y--) {
+      if (y % 10 !== issue.yearDigit || issue.day > daysInYear(y)) continue;
+      if (Date.UTC(y, 0, issue.day) - now.getTime() > DAY_MS) continue;
+      const flightYear = day < issue.day ? y + 1 : y;
+      if (day > daysInYear(flightYear)) return undefined;
+      return new Date(Date.UTC(flightYear, 0, day)).toISOString().slice(0, 10);
+    }
+  }
   let best: Date | undefined;
   let bestDiff = Infinity;
   for (const y of [year - 1, year, year + 1]) {

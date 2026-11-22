@@ -1,5 +1,5 @@
 import { isEmpty, readBoardingPass } from "../boardingPassRead";
-import { decodeBarcodeFromImageBase64 } from "../../utils/barcodeImage";
+import { scanBarcodesFromImageBase64 } from "../../utils/barcodeImage";
 import { parseBoardingPass } from "../parsers/factory";
 
 /**
@@ -8,7 +8,7 @@ import { parseBoardingPass } from "../parsers/factory";
  * what is under test here is the seam between them.
  */
 jest.mock("../../utils/barcodeImage", () => ({
-  decodeBarcodeFromImageBase64: jest.fn(),
+  scanBarcodesFromImageBase64: jest.fn(),
 }));
 
 jest.mock("../parsers/factory", () => ({
@@ -22,7 +22,18 @@ jest.mock("../../utils/logger", () => ({
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
-const mockedBarcode = decodeBarcodeFromImageBase64 as jest.Mock;
+const mockedScan = scanBarcodesFromImageBase64 as jest.Mock;
+/** One barcode text (or none), as the image scan reports it. */
+const mockedBarcode = {
+  mockResolvedValue: (text: string | null) =>
+    mockedScan.mockResolvedValue({
+      codes: text ? [{ text, format: "Aztec" }] : [],
+      imageDecoded: true,
+      regionsTried: 0,
+      attempts: 1,
+      budgetExhausted: false,
+    }),
+};
 const mockedOcr = parseBoardingPass as jest.Mock;
 
 /** A real Lufthansa Wallet pass: LH117, MUC-FRA, day 242, seat 8C, PNR 9VLVKC. */
@@ -123,7 +134,7 @@ describe("readBoardingPass — the two callers use it differently", () => {
     // The live scanner decodes from a camera frame and sends no photograph;
     // re-reading a JPEG of the same card would be strictly worse.
     await readBoardingPass({ barcode: BCBP, userId: USER });
-    expect(mockedBarcode).not.toHaveBeenCalled();
+    expect(mockedScan).not.toHaveBeenCalled();
   });
 
   it("works with a barcode and no image at all", async () => {

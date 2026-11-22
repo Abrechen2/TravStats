@@ -28,6 +28,13 @@ export interface IVisionParser {
    * @returns Parsed flight data
    */
   parseImage(imageBase64: string, apiKey?: string): Promise<ParsedBooking>;
+
+  /**
+   * The same reading plus the OCR text it came from. Optional: the boarding
+   * pass reader needs the text for the printed clocks no regex field holds,
+   * and a provider without text (manual) simply does not offer it.
+   */
+  readImage?(imageBase64: string): Promise<{ booking: ParsedBooking; text: string }>;
 }
 
 /**
@@ -44,6 +51,12 @@ export interface TextParseOptions {
   referenceDate?: Date;
   /** The account the mail belongs to — a cloud model needs its consent (forgejo#392). */
   userId?: string;
+  /**
+   * What the text is when it is not a booking mail. `"boardingPass"` adds the
+   * boarding-pass rules to the model's prompt: read the printed departure
+   * date and time, never take the boarding time for it, convert AM/PM.
+   */
+  documentKind?: "boardingPass";
 }
 
 /**
@@ -168,6 +181,9 @@ export interface ParserResult {
    * Parsed flight data
    */
   flights: ParsedBooking[];
+
+  /** The OCR text a vision provider read, when it offers it (see `readImage`). */
+  ocrText?: string;
 
   /**
    * Which provider was used

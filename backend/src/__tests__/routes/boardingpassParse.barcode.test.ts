@@ -3,7 +3,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
-import { decodeBarcodeFromImageBase64 } from "../../utils/barcodeImage";
+import { scanBarcodesFromImageBase64 } from "../../utils/barcodeImage";
 import { parseBoardingPass } from "../../services/parsers/factory";
 
 /**
@@ -14,7 +14,7 @@ import { parseBoardingPass } from "../../services/parsers/factory";
  * belongs in a route test.
  */
 jest.mock("../../utils/barcodeImage", () => ({
-  decodeBarcodeFromImageBase64: jest.fn(),
+  scanBarcodesFromImageBase64: jest.fn(),
 }));
 
 jest.mock("../../services/parsers/factory", () => ({
@@ -22,7 +22,18 @@ jest.mock("../../services/parsers/factory", () => ({
   parseBoardingPass: jest.fn(),
 }));
 
-const mockedBarcode = decodeBarcodeFromImageBase64 as jest.Mock;
+const mockedScan = scanBarcodesFromImageBase64 as jest.Mock;
+/** One barcode text (or none), as the image scan reports it. */
+const mockedBarcode = {
+  mockResolvedValue: (text: string | null) =>
+    mockedScan.mockResolvedValue({
+      codes: text ? [{ text, format: "Aztec" }] : [],
+      imageDecoded: true,
+      regionsTried: 0,
+      attempts: 1,
+      budgetExhausted: false,
+    }),
+};
 const mockedOcr = parseBoardingPass as jest.Mock;
 
 /** A real 1x1 PNG — the route checks magic numbers before it does anything. */
@@ -191,5 +202,50 @@ describe("POST /parse-boardingpass — barcode and OCR together", () => {
     const res = await post(token);
 
     expect(res.status).toBe(422);
+  });
+});
+
+describe("POST /parse-boardingpass — stages and every pass in the answer", () => {
+  let token: string;
+
+  beforeAll(async () => {
+    const user = await prisma.user.create({
+      data: {
+        username: `bp-stages-test-${Date.now()}`,
+        passwordHash: await hashPassword("password123"),
+        isAdmin: false,
+        isActive: true,
+      },
+    });
+    token = generateToken(user.id);
+  });
+
+  it("answers each stage's outcome next to the flight", async () => {
+    mockedBarcode.mockResolvedValue(BCBP);
+    mockedOcr.mockResolvedValue(OCR_EMPTY);
+
+    const res = await post(token);
+
+    expect(res.status).toBe(200);
+    expect(res.body.flights).toHaveLength(1);
+    expect(res.body.stages.map((s: { stage: string }) => s.stage)).toEqual([
+      "barcode",
+      "ocr",
+      "parser",
+      "lookup",
+      "llm",
+    ]);
+    expect(res.body.stages[0]).toMatchObject({ status: "ok", code: "BARCODE_FOUND" });
+  });
+
+  it("names the failed stages in the 422, never only a generic error", async () => {
+    mockedBarcode.mockResolvedValue(null);
+    mockedOcr.mockResolvedValue({ flights: [], provider: "tesseract", fallbackUsed: true });
+
+    const res = await post(token);
+
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe("NO_FLIGHT_DATA");
+    expect(res.body.stages[0]).toMatchObject({ stage: "barcode", code: "BARCODE_NOT_FOUND" });
   });
 });
