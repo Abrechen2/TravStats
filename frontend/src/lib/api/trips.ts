@@ -51,6 +51,8 @@ export interface UpdateTripInput {
   destinationLabel?: string | null;
   coverImageUrl?: string | null;
   coverCrop?: CoverCrop | null;
+  /** The cover URL the crop was made on; the server refuses (409) if it changed meanwhile. */
+  coverCropFor?: string;
   icon?: string | null;
   countries?: string[];
 }

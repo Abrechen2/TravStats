@@ -104,7 +104,12 @@ describe("CoverCropHost / editor", () => {
     openEditor({ initialCrop: { x: 0.3, y: 0.5, zoom: 3 } });
     fireEvent.click(screen.getByRole("button", { name: "cover.crop.reset" }));
     fireEvent.click(screen.getByRole("button", { name: "cover.crop.confirm" }));
-    await waitFor(() => expect(tripsApi.update).toHaveBeenCalledWith("t1", { coverCrop: null }));
+    await waitFor(() =>
+      expect(tripsApi.update).toHaveBeenCalledWith("t1", {
+        coverCrop: null,
+        coverCropFor: "/c.jpg",
+      })
+    );
   });
 
   it("Escape cancels without saving", () => {
@@ -121,6 +126,19 @@ describe("CoverCropHost / editor", () => {
     fireEvent.click(screen.getByRole("button", { name: "cover.crop.confirm" }));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(screen.getByTestId("cover-crop-editor")).toBeInTheDocument();
+  });
+
+  it("an untouched editor keeps the stored crop instead of re-clamping it to the header shape", async () => {
+    vi.mocked(tripsApi.update).mockResolvedValue({} as never);
+    // x 0.05 is valid for a narrow card frame but outside the header frame's range.
+    openEditor({ initialCrop: { x: 0.05, y: 0.5, zoom: 6 } });
+    fireEvent.click(screen.getByRole("button", { name: "cover.crop.confirm" }));
+    await waitFor(() => expect(tripsApi.update).toHaveBeenCalled());
+    expect(vi.mocked(tripsApi.update).mock.calls[0][1].coverCrop).toEqual({
+      x: 0.05,
+      y: 0.5,
+      zoom: 6,
+    });
   });
 
   it("arrow keys pan the photo and the frame stays filled", () => {

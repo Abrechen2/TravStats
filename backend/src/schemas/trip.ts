@@ -118,7 +118,11 @@ export const createTripSchema = z
     icon: z.string().max(8).optional(),
     countries: COUNTRY_LIST.optional(),
   })
-  .refine((d) => tripDatesInOrder(d.startDate, d.endDate), DATE_ORDER_ISSUE);
+  .refine((d) => tripDatesInOrder(d.startDate, d.endDate), DATE_ORDER_ISSUE)
+  .refine((d) => !d.coverCrop || !!d.coverImageUrl, {
+    message: "coverCrop needs a coverImageUrl",
+    path: ["coverCrop"],
+  });
 
 // PATCH semantics: explicit `null` clears nullable string fields, `undefined`
 // leaves them untouched. Arrays accept the new full list (no element-level
@@ -140,6 +144,8 @@ export const updateTripSchema = z
     destinationLabel: z.string().max(120).nullable().optional(),
     coverImageUrl: z.string().max(500).nullable().optional(),
     coverCrop: coverCropSchema.nullable().optional(),
+    /** The cover the crop was made on; a PATCH that finds another cover refuses (409). */
+    coverCropFor: z.string().max(500).optional(),
     icon: z.string().max(8).nullable().optional(),
     countries: COUNTRY_LIST.optional(),
   })

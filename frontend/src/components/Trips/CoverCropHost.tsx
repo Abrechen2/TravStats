@@ -38,7 +38,10 @@ export default function CoverCropHost({
     setSaving(true);
     setError(null);
     try {
-      await tripsApi.update(request.tripId, { coverCrop: crop });
+      await tripsApi.update(request.tripId, {
+        coverCrop: crop,
+        coverCropFor: request.coverImageUrl,
+      });
       finish();
     } catch (err) {
       logger.error("CoverCropHost: saving the crop failed", err);

@@ -73,6 +73,25 @@ describe("trip cover crop and source", () => {
     expect((await patch({ coverCrop: { x: 0.5, y: 0.5, zoom: 0.5 } })).status).toBe(400);
   });
 
+  it("refuses a crop made on a cover that has been replaced meanwhile (409)", async () => {
+    await patch({ coverImageUrl: "/a" });
+    await patch({ coverImageUrl: "/b" });
+    const res = await patch({ coverCrop: { x: 0.5, y: 0.5, zoom: 2 }, coverCropFor: "/a" });
+    expect(res.status).toBe(409);
+    expect((await read()).coverCrop).toBeNull();
+    expect(
+      (await patch({ coverCrop: { x: 0.5, y: 0.5, zoom: 2 }, coverCropFor: "/b" })).status
+    ).toBe(200);
+  });
+
+  it("refuses to create a trip with a crop but no cover", async () => {
+    const res = await request(app)
+      .post("/api/v1/trips")
+      .set("Cookie", cookie)
+      .send({ name: "x", coverCrop: { x: 0.5, y: 0.5, zoom: 2 } });
+    expect(res.status).toBe(400);
+  });
+
   it("removing the cover clears crop and source", async () => {
     await patch({ coverImageUrl: "/a", coverCrop: { x: 0.5, y: 0.5, zoom: 2 } });
     await patch({ coverImageUrl: null });

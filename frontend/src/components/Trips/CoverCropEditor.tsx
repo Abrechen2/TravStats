@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { JSX, KeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
@@ -59,6 +59,9 @@ export default function CoverCropEditor({
   const [loadFailed, setLoadFailed] = useState(false);
   const [kind, setKind] = useState<FrameKind>("header");
   const [crop, setCrop] = useState<CoverCrop>(initialCrop ?? DEFAULT_COVER_CROP);
+  // Until the person moves something, Apply keeps the stored crop as it is: the preview clamps
+  // against the frame shown, which must not rewrite a crop made against the other shape.
+  const [touched, setTouched] = useState(false);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<{ dist: number; zoom: number } | null>(null);
 
@@ -87,15 +90,10 @@ export default function CoverCropEditor({
   const frameLeft = (stage.width - frame.width) / 2;
   const frameTop = (stage.height - frame.height) / 2;
 
-  // A change of frame shape can leave the stored focal point outside the new range.
-  useEffect(() => {
-    if (image && frame.width > 0) setCrop((c) => clampCrop(c, frame, image));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-clamp only when the shape changes
-  }, [kind, image, stage.width, stage.height]);
-
   const update = useCallback(
     (fn: (c: CoverCrop, f: Size, i: Size) => CoverCrop) => {
       if (!image || frame.width <= 0) return;
+      setTouched(true);
       setCrop((c) => fn(c, frame, image));
     },
     [image, frame.width, frame.height] // eslint-disable-line react-hooks/exhaustive-deps
@@ -315,7 +313,14 @@ export default function CoverCropEditor({
             >
               +
             </button>
-            <button type="button" style={btn} onClick={() => setCrop(DEFAULT_COVER_CROP)}>
+            <button
+              type="button"
+              style={btn}
+              onClick={() => {
+                setTouched(true);
+                setCrop(DEFAULT_COVER_CROP);
+              }}
+            >
               {t("cover.crop.reset")}
             </button>
             <span className="flex-1" />
@@ -326,7 +331,11 @@ export default function CoverCropEditor({
               type="button"
               style={{ ...btn, background: "var(--ts-accent)", color: "var(--ts-accent-text)" }}
               disabled={saving || !ready}
-              onClick={() => onSave(sameCrop(shown, null) ? null : shown)}
+              onClick={() =>
+                onSave(
+                  sameCrop(touched ? shown : crop, null) ? null : touched ? shown : initialCrop
+                )
+              }
             >
               {saving ? t("cover.crop.saving") : t("cover.crop.confirm")}
             </button>

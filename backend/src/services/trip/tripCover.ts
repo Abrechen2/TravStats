@@ -47,7 +47,11 @@ export async function fillEmptyCover(tripId: string, coverImageUrl: string): Pro
  * crop; a crop alone re-frames the existing cover; `null` clears both.
  */
 export function coverPatchData(
-  body: { coverImageUrl?: string | null; coverCrop?: Prisma.InputJsonValue | null },
+  body: {
+    coverImageUrl?: string | null;
+    coverCrop?: Prisma.InputJsonValue | null;
+    coverCropFor?: string;
+  },
   existing: { coverImageUrl: string | null }
 ): Prisma.TripUncheckedUpdateInput {
   const { coverImageUrl, coverCrop } = body;
@@ -63,5 +67,10 @@ export function coverPatchData(
   }
   if (coverCrop === undefined) return {};
   if (!existing.coverImageUrl) throw new AppError("coverCropWithoutCover", 400);
+  // Another tab swapped the picture while the editor was open: a crop made on the
+  // old one must not frame the new one.
+  if (body.coverCropFor !== undefined && body.coverCropFor !== existing.coverImageUrl) {
+    throw new AppError("coverChanged", 409);
+  }
   return { coverCrop: coverCrop ?? Prisma.JsonNull, coverSource: "manual" };
 }
