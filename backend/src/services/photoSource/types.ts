@@ -25,7 +25,8 @@ export interface PhotoSourceAlbum {
   id: string;
   /** Wire name kept from Immich; the routes and the frontend read it as is. */
   albumName: string;
-  assetCount: number;
+  /** Null when the source cannot tell (PhotoPrism): unknown, never 0. */
+  assetCount: number | null;
   thumbnailAssetId: string | null;
   /**
    * What kind of collection this is. Absent for Immich (always an album);

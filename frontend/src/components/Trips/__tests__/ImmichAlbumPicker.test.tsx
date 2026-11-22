@@ -105,6 +105,16 @@ describe("ImmichAlbumPicker", () => {
     expect(screen.getByText("albums.alreadyLinked")).toBeInTheDocument();
   });
 
+  it("shows no photo count for an album of unknown size (null is not '0 photos')", async () => {
+    listAlbums.mockResolvedValue({
+      albums: [{ ...ALBUMS[0], assetCount: null }, ALBUMS[2]],
+      defaultMode: "link",
+    });
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    expect(screen.getAllByText("albums.photoCount")).toHaveLength(1);
+  });
+
   it("links the selected album in the default mode", async () => {
     const onLinked = vi.fn();
     render(<ImmichAlbumPicker tripId="trip-1" onClose={vi.fn()} onLinked={onLinked} />);

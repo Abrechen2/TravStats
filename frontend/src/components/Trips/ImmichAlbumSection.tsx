@@ -285,9 +285,11 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
     <section className="mt-6">
       <header className="mb-2 flex items-center gap-3">
         <h3 className="font-semibold">{album.albumName}</h3>
-        <span className="text-xs text-slate-400">
-          {t("albums.photoCount", { count: album.assetCount })}
-        </span>
+        {album.assetCount !== null && (
+          <span className="text-xs text-slate-400">
+            {t("albums.photoCount", { count: album.assetCount })}
+          </span>
+        )}
         <span
           data-testid="album-source"
           className="rounded-sm border border-slate-600 px-1.5 py-0.5 text-xs"
