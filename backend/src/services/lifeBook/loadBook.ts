@@ -100,7 +100,11 @@ async function loadPhotos(
   const visitPhotos = visitIds.length
     ? await prisma.placeVisitPhoto.findMany({
         where: { placeVisitId: { in: visitIds }, visit: { userId } },
-        include: { tripPhoto: { select: { filename: true, mimetype: true } } },
+        include: {
+          tripPhoto: {
+            select: { filename: true, mimetype: true, immichAssetId: true, provider: true },
+          },
+        },
         orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }, { id: "asc" }],
       })
     : [];
@@ -120,6 +124,8 @@ async function loadPhotos(
         p.tripPhoto.filename,
         p.tripPhoto.mimetype
       );
+    else if (p.tripPhoto?.immichAssetId)
+      dataUri = await loader.fromLibrary(p.tripPhoto.provider, p.tripPhoto.immichAssetId);
     else if (p.immichAssetId) dataUri = await loader.fromLibrary(p.provider, p.immichAssetId);
     if (!dataUri) continue;
     perVisit.set(p.placeVisitId, (perVisit.get(p.placeVisitId) ?? 0) + 1);
