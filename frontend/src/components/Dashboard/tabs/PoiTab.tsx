@@ -1,3 +1,4 @@
+import { buildPlannedMarkerLegendRow } from "./allTabLegendRows";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
@@ -271,6 +272,11 @@ export function PoiTab(): JSX.Element {
                 {row.label ?? t(`dashboard:poi.legend.${row.slot}`)}
               </li>
             ))}
+            {visiblePlaces.some(
+              (p) => p.visited && p.visitCount === 0 && (p.plannedVisitCount ?? 0) > 0
+            ) && (
+              <li style={{ color: "var(--text-secondary)" }}>{buildPlannedMarkerLegendRow(t)}</li>
+            )}
           </ul>
         </div>
       )}

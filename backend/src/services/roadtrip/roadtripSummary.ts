@@ -9,6 +9,7 @@ import type { CountryResolver } from "../geo/countryFromCoordinates";
 import { toCountryCode } from "../../shared/countryEvidence";
 import { stayTimes } from "../lodging/timesDto";
 import { stationTimes } from "./timesDto";
+import { stationPhase } from "../../shared/tour/roadtripTimeline";
 import { NOT_A_COVER } from "../trips/photoStation";
 
 /**
@@ -263,7 +264,8 @@ export function stationCountries(
 export function toRoadtripSummary(
   row: RoadtripListRow,
   tourCount: number,
-  countries: string[]
+  countries: string[],
+  now: Date = new Date()
 ): Record<string, unknown> {
   const nights = nightsOf(row.stops);
   const stations = row.stops.filter(isStation);
@@ -292,7 +294,18 @@ export function toRoadtripSummary(
     // 2026-09-26): placed ones only, never a route correction.
     stations: stations.flatMap((s) =>
       s.lat !== null && s.lon !== null
-        ? [{ id: s.id, title: s.title, lat: s.lat, lon: s.lon, state: stationState(s) }]
+        ? [
+            {
+              id: s.id,
+              title: s.title,
+              lat: s.lat,
+              lon: s.lon,
+              state: stationState(s),
+              // Still ahead on its own calendar — the timeline rule every
+              // roadtrip figure asks (`shared/tour/roadtripTimeline`). Additive.
+              planned: stationPhase(s, now) === "planned",
+            },
+          ]
         : []
     ),
     nights: nights.nights,

@@ -27,7 +27,7 @@ import {
 } from "../../layers/markerDotStyle";
 import { journeyFromBus, journeyFromFerry } from "../../map/cards/journeys/journeyNormalize";
 import { withJourneyCards } from "../../map/cards/journeys/journeyLayerCards";
-import { legendRow, type LegendRowFn } from "./allTabLegendRows";
+import { buildPlannedMarkerLegendRow, legendRow, type LegendRowFn } from "./allTabLegendRows";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
 import { useDomainVisible } from "../../../hooks/useDomainVisible";
@@ -159,6 +159,7 @@ export function buildTerminalRideLegendRows(
     const faint = `rgba(${r},${g},${b},${(CHORD_ALPHA / 255).toFixed(2)})`;
     rows.push(row(faint, t(keys.straight), keys.straightRow));
   }
+  if (terminalPoints(rides).some((p) => p.plannedOnly)) rows.push(buildPlannedMarkerLegendRow(t));
   return rows;
 }
 

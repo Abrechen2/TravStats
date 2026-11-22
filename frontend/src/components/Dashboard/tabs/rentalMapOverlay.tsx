@@ -11,7 +11,7 @@ import {
 import { hexToRgb } from "../../../lib/domainColor";
 import { journeyFromRental } from "../../map/cards/journeys/journeyNormalize";
 import { withJourneyCards } from "../../map/cards/journeys/journeyLayerCards";
-import { legendRow, type LegendRowFn } from "./allTabLegendRows";
+import { buildPlannedMarkerLegendRow, legendRow, type LegendRowFn } from "./allTabLegendRows";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
 import { useOverlayAppearance } from "../../../store/overlayAppearanceStore";
@@ -83,6 +83,7 @@ export function buildRentalLegendRows(
     const dash = `repeating-linear-gradient(90deg, rgb(${r},${g},${b}) 0 4px, transparent 4px 7px)`;
     rows.push(row(dash, t("dashboard:legend.rentalOneWay"), "rental-oneway", "line"));
   }
+  if (points.some((p) => p.plannedOnly)) rows.push(buildPlannedMarkerLegendRow(t));
   return rows;
 }
 

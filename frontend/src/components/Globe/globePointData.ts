@@ -16,6 +16,7 @@
 import type { GeoJSONFeature } from "../../types";
 import type { Cruise } from "../../types/cruise";
 import type { PointDatum } from "./globeLayerTypes";
+import { cruisePortCalls } from "../../lib/cruisePortCalls";
 import { mapStatusClass } from "../../lib/mapPresence";
 import { isCountableCruise } from "../../shared/cruiseCounting";
 import { toPortLabel } from "../map/portLabel";
@@ -142,10 +143,11 @@ export function buildPortPoints(
     }
     for (const ld of legs) portVisitDate.set(ld.toPortId, ld.endDate);
 
-    for (const stop of c.stops) {
-      if (stop.isAtSea || !stop.port) continue;
-      const port = stop.port;
-      const visit = portVisitDate.get(port.id);
+    // The flat map's own enumeration (`cruisePortCalls`): an embarkation or
+    // disembarkation port that is not a stop is a port call on both maps.
+    for (const call of cruisePortCalls(c)) {
+      const port = call.port;
+      const visit = portVisitDate.get(port.id) ?? (call.date ? new Date(call.date) : undefined);
 
       if (window.mode === "live" && window.current) {
         if (!visit || visit.getTime() > window.current.getTime()) continue;

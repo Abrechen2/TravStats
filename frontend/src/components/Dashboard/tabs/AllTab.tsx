@@ -92,6 +92,18 @@ function isAllMode(mode: unknown): mode is AllMode {
 // visit, and it is a display preference rather than account state.
 const LEGEND_OPEN_KEY = "dashboard.legendOpen";
 
+/** First row per React key; the planned-marker row can come from several overlays. */
+function dedupeByKey(rows: JSX.Element[]): JSX.Element[] {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    const key = String(row.key ?? "");
+    if (key === "") return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function AllTab(): JSX.Element {
   const { mode, projection } = useDashboardRoute();
   const { t } = useTranslation(["dashboard", "roadtrips"]);
@@ -492,7 +504,9 @@ export function AllTab(): JSX.Element {
     (visible.lodging && visibleLodgings.some((l) => lodgingPresence(l).class === "planned")) ||
     (visible.poi &&
       visiblePlaces.some((p) => p.visited && p.visitCount === 0 && (p.plannedVisitCount ?? 0) > 0));
-  const legendRows = [
+  // The rail/bus/ferry/rental overlays add the same planned row for their own
+  // markers; one key is enough, so repeats (same React key) are dropped.
+  const legendRows = dedupeByKey([
     ...(hasPlannedMarker ? [buildPlannedMarkerLegendRow(t)] : []),
     ...(lines.flight ? flightLegendRows : []),
     ...(lines.cruise ? cruiseLegendRows : []),
@@ -504,7 +518,7 @@ export function AllTab(): JSX.Element {
     // the key is shut — and be missing from the count on the button.
     ...(tourHasData ? tourLegend.rows : []),
     ...transport.legendRows,
-  ];
+  ]);
 
   // Collapsible, like the map options beside it. The key grew a row per LIST
   // when "by list" colouring started naming them, and on a map with a dozen

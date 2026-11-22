@@ -38,6 +38,18 @@ describe("roadtrip station markers", () => {
     expect(props.getPosition(STATIONS[0])).toEqual([9.99, 53.55]);
   });
 
+  it("draws a planned station hollow (faint fill, heavy ring) and a driven one solid", () => {
+    const planned = { ...STATIONS[0], planned: true };
+    const [layer] = buildRoadtripStationLayers([planned, STATIONS[1]], COLORS, 0);
+    const props = layer.props as unknown as {
+      getFillColor: (d: RoadtripStationPoint) => number[];
+      getLineWidth: (d: RoadtripStationPoint) => number;
+    };
+    expect(props.getFillColor(planned)[3]).toBeLessThan(80);
+    expect(props.getFillColor(STATIONS[1])[3]).toBe(255);
+    expect(props.getLineWidth(planned)).toBeGreaterThan(props.getLineWidth(STATIONS[1]));
+  });
+
   it("lifts the markers on the globe to the lines' altitude", () => {
     const [layer] = buildRoadtripStationLayers(STATIONS, COLORS, 5000);
     const props = layer.props as unknown as {

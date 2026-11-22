@@ -18,7 +18,7 @@ import {
   TOUR_PATH_GLOBE_ALTITUDE_M,
   useTourDeckLayers,
 } from "./tourMapOverlay";
-import { legendRow } from "./allTabLegendRows";
+import { buildPlannedMarkerLegendRow, legendRow } from "./allTabLegendRows";
 import MapContainer3D from "../../MapContainer3D";
 import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
 import { SidebarToggle } from "../SidebarToggle";
@@ -129,6 +129,9 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
         "dot"
       )
     );
+  if (roadtripStations.stations.some((s) => s.planned === true)) {
+    stationLegend.push(buildPlannedMarkerLegendRow(t));
+  }
 
   // The same swatch-JSX builder AllTab.tsx's "Alle" map legend uses —
   // shared in `./allTabLegendRows.tsx` since the fix-round review
