@@ -6,6 +6,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.42.** No migration. After the update, run `npx tsx src/scripts/backfillCruiseLegs.ts --apply` once in the backend container: it recomputes stored cruise legs whose port order was wrong (only derived legs; ports, times and hand-drawn lines stay).
+
+### Fixed
+
+- **A cruise with two ports on the same day is drawn in the right order** (forgejo#435). Stops of one day were ordered at random, so the Yangtze cruise ran Chongqing → Zhongxian → Fengdu and zig-zagged back; every list, map, distance and export now orders by day, then arrival time.
+- **The trip view on the dashboard shows a cruise's real route** — hand-drawn or along the river — instead of straight lines with arrows between the ports, and hand-drawn lines are no longer smoothed on the dashboard, globe or trip map.
+
 **Upgrading to 2.8.0-rc.41.** Ten new migrations: photo links for every kind of entry, per-traveller documents and details (with traveller lists on stays), expenses on place visits, a crash-safe account-deletion marker, rentals in package bookings and the package split's review flag, the cap for automatically linked photos, and the record of imported account archives. Nothing is deleted. On first start the automatically linked photos of place visits are trimmed to the new cap; photos you picked yourself stay.
 
 ### Added
