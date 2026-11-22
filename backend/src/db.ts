@@ -2,6 +2,14 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 import { applyRecordedOnly } from "./services/provenance/recordedOnly";
 import { createPrismaClient } from "./prismaClient";
+import {
+  captureWrite,
+  configureChangeLedger,
+  isCapturedWrite,
+  isLedgerInternal,
+  runLedgerTransaction,
+  runNestedLedgerTransaction,
+} from "./services/changeLedger/capture";
 import logger, { dbLogger } from "./utils/logger";
 import { toLoggable } from "./utils/logging/toLoggable";
 import { getLoggingRuntimeFlags } from "./utils/logging/runtimeFlags";
@@ -9,6 +17,9 @@ import { getLoggingRuntimeFlags } from "./utils/logging/runtimeFlags";
 const basePrisma = createPrismaClient({
   log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
 });
+// The change ledger reads its snapshots and writes its rows on the unextended
+// client, so its own queries never re-enter the hook below.
+configureChangeLedger(basePrisma);
 
 /**
  * Write one query-log line, and never let it fail the query.
@@ -143,7 +154,11 @@ export function expectingUniqueConflict<T>(model: string, run: () => Promise<T>)
  */
 export const prisma = basePrisma.$extends({
   query: {
-    async $allOperations({ model, operation, args: askedArgs, query }) {
+    async $allOperations(params) {
+      const { model, operation, args: askedArgs, query } = params;
+      // The change ledger's own snapshot or insert through a transaction
+      // client: not the caller's query, so neither observed, logged nor captured.
+      if (isLedgerInternal()) return query(askedArgs);
       // "Nur belegte": inside a recorded-only request every read of an entry model leaves out
       // what was typed in from memory (services/provenance/recordedOnly.ts).
       const args = applyRecordedOnly(model, operation, askedArgs);
@@ -154,7 +169,19 @@ export const prisma = basePrisma.$extends({
       const verbose = getLoggingRuntimeFlags().databaseQueries;
 
       try {
-        const result = await query(args);
+        // Edits of travel entries keep their history (the change ledger, spec
+        // 2026-11-22-change-history); everything else runs as it always did.
+        const result = isCapturedWrite(model, operation)
+          ? await captureWrite(
+              model as string,
+              operation,
+              args,
+              () => query(args),
+              // Set inside a `$transaction` (interactive or batch); Prisma does not type it.
+              (params as { __internalParams?: { transaction?: unknown } }).__internalParams
+                ?.transaction != null
+            )
+          : await query(args);
         if (!READ_OPERATIONS.has(operation)) {
           for (const observer of [
             ...(writeObserver ? [writeObserver] : []),
@@ -271,6 +298,31 @@ function logQueryFailure(
       stack: !model?.startsWith("TravelPlan") && error instanceof Error ? error.stack : undefined,
     },
   });
+}
+
+/**
+ * Every `$transaction` carries its ledger rows with it: they are collected
+ * while it runs and queued only once it committed, so a rolled-back write
+ * leaves no history (services/changeLedger/capture.ts, `runLedgerTransaction`).
+ * The extension API has no hook for a transaction's end, hence the wrapper.
+ */
+{
+  // Unbound: a transaction client inherits this property, and its own
+  // `tx.$transaction` (a nested transaction, Prisma 7) must stay Prisma's —
+  // bound to the top client it would open a second, independent transaction
+  // that waits on the first one's locks.
+  const original = prisma.$transaction as unknown as (...a: unknown[]) => Promise<unknown>;
+  const top = prisma;
+  (prisma as unknown as { $transaction: unknown }).$transaction = function (
+    this: unknown,
+    arg: unknown,
+    options?: unknown
+  ) {
+    if (this !== top) {
+      return runNestedLedgerTransaction((...a: unknown[]) => original.apply(this, a), arg, options);
+    }
+    return runLedgerTransaction((...a: unknown[]) => original.apply(top, a), arg, options);
+  };
 }
 
 /**

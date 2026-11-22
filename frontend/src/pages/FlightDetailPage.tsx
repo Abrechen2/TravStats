@@ -55,6 +55,7 @@ import FlightProfileLink from "../components/flightDetail/FlightProfileLink";
 import RememberedMarker from "../components/provenance/RememberedMarker";
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import { useFlightBooking } from "../components/flightDetail/useFlightBooking";
+import ChangeHistorySection from "../components/changeHistory/ChangeHistorySection";
 
 /**
  * Reading a flight without editing it.
@@ -498,6 +499,15 @@ export default function FlightDetailPage(): JSX.Element {
             </DetailSection>
           )}
         </aside>
+      </div>
+
+      {/* Every recorded change of this entry, full width (spec 2026-11-22-change-history). */}
+      <div style={{ marginTop: "var(--ts-space-xl)" }}>
+        <ChangeHistorySection
+          entityType="flight"
+          entityId={flight.id}
+          onRestored={() => setReloadKey((k) => k + 1)}
+        />
       </div>
 
       {editing && (

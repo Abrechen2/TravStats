@@ -673,4 +673,9 @@ export type ApiErrorCode =
    *  after its ten minutes, or was already used. Long-lived device tokens are unaffected. */
   | "PAIRING_CODE_UNKNOWN"
   | "PAIRING_CODE_EXPIRED"
-  | "PAIRING_CODE_USED";
+  | "PAIRING_CODE_USED"
+  /** Change history (spec 2026-11-22): the ledger row is not this account's (404), or its
+   *  value cannot be written back — a delete, an omitted value, a time or derived field,
+   *  an entry that is gone, or a value that now names a missing record (409). */
+  | "CHANGE_NOT_FOUND"
+  | "CHANGE_NOT_RESTORABLE";

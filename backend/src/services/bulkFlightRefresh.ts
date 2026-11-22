@@ -36,6 +36,7 @@ import logger from "../utils/logger";
 import { lookupFlightWithHistorical } from "./flightLookup";
 import type { ProviderFailure } from "./flightLookup/providerOutcome";
 import { flightProviderAvailability } from "./flightLookup/providerAvailability";
+import { withChangeSource } from "./changeLedger/context";
 
 /** Max flights touched per single endpoint call. Keeps the request under the
  *  default Express 60 s timeout (≈13 s at 500 ms pacing) and gives the user
@@ -391,7 +392,7 @@ const OUTCOME_COUNTER = {
  *   3. pass the user's own `userId` so per-user API keys can be picked up
  *      by the provider cascade
  */
-export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary> {
+async function runBulkRefreshUnattributed(userId: string): Promise<BulkRefreshSummary> {
   const candidates = await findBulkRefreshCandidates(userId);
   const summary: BulkRefreshSummary = {
     scanned: candidates.length,
@@ -464,3 +465,9 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
 
   return summary;
 }
+
+/** runBulkRefresh, with every entry it changes recorded as `auto_update` in the change ledger. */
+export const runBulkRefresh = (
+  ...args: Parameters<typeof runBulkRefreshUnattributed>
+): ReturnType<typeof runBulkRefreshUnattributed> =>
+  withChangeSource("auto_update", () => runBulkRefreshUnattributed(...args));

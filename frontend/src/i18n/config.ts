@@ -29,6 +29,7 @@ import enTrips from "./resources/en/trips.json";
 import enCruise from "./resources/en/cruise.json";
 import enRail from "./resources/en/rail.json";
 import enBus from "./resources/en/bus.json";
+import enChangeHistory from "./resources/en/changeHistory.json";
 import enRental from "./resources/en/rental.json";
 import enImport from "./resources/en/import.json";
 import enAircraft from "./resources/en/aircraft.json";
@@ -80,6 +81,7 @@ import deTrips from "./resources/de/trips.json";
 import deCruise from "./resources/de/cruise.json";
 import deRail from "./resources/de/rail.json";
 import deBus from "./resources/de/bus.json";
+import deChangeHistory from "./resources/de/changeHistory.json";
 import deRental from "./resources/de/rental.json";
 import deImport from "./resources/de/import.json";
 import deAircraft from "./resources/de/aircraft.json";
@@ -152,6 +154,7 @@ const resources = {
     cruise: enCruise,
     rail: enRail,
     bus: enBus,
+    changeHistory: enChangeHistory,
     ferry: enFerry,
     rental: enRental,
     import: enImport,
@@ -206,6 +209,7 @@ const resources = {
     cruise: deCruise,
     rail: deRail,
     bus: deBus,
+    changeHistory: deChangeHistory,
     ferry: deFerry,
     rental: deRental,
     import: deImport,
@@ -270,6 +274,7 @@ i18n.use(initReactI18next).init({
     "cruise",
     "rail",
     "bus",
+    "changeHistory",
     "rental",
     "import",
     "aircraft",

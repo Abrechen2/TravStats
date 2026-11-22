@@ -36,6 +36,7 @@ export type SchedulerJob =
   | "statusSweep"
   | "elapsedPlanSweep"
   | "syncRetention"
+  | "changeHistoryRetention"
   | "publicUrlCheck"
   | "travTrackDiagnosticsRetention"
   | "travTrackOrphanLinks"

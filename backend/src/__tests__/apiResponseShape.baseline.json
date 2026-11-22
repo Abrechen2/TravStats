@@ -37,6 +37,7 @@
     "boardingpassMatch.ts",
     "boardingpassParse.ts",
     "calendarFeedPublic.ts",
+    "changeHistory.ts",
     "companions.ts",
     "comparisonPeer.ts",
     "countryFlags.ts",

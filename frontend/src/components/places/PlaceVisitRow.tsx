@@ -12,6 +12,7 @@ import type { PlaceVisit } from "../../types/place";
 import type { VisitEntry } from "./placeVisitListModel";
 import { VisitExpenses } from "./VisitExpenses";
 import { VisitPhotoStrip } from "./VisitPhotoStrip";
+import ChangeHistorySection from "../changeHistory/ChangeHistorySection";
 
 interface Props {
   entry: VisitEntry;
@@ -197,6 +198,12 @@ export function PlaceVisitRow({
           />
           <VisitExpenses visitId={visit.id} />
           <ProvenanceDetails entryType="placeVisit" entry={visit} onSaved={onChanged} />
+          <ChangeHistorySection
+            compact
+            entityType="placeVisit"
+            entityId={visit.id}
+            onRestored={onChanged}
+          />
           {/* A visit that has not happened can be shared too: "wir treffen uns hier". */}
           <div>
             <ShareLinkButton kind="visit" targetId={visit.id} variant="link" />

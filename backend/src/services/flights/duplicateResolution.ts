@@ -6,6 +6,7 @@ import { prisma } from "../../db";
 import type { CreateFlightInput } from "../../schemas/flight";
 import { buildFlightMergePatch, type MergeableField } from "../../utils/flightMerge";
 import { resolveCompanions } from "../companionService";
+import { withChangeSource } from "../changeLedger/context";
 
 /**
  * Deciding whether an incoming flight is one the user already has, and — when
@@ -176,7 +177,7 @@ async function mergeInto(
  * `merge` is the caller's `?merge=true`; `?force=true` is handled before this
  * is reached, by not calling it at all.
  */
-export async function resolveDuplicateFlight(args: {
+async function resolveDuplicateFlightUnattributed(args: {
   userId: string;
   data: CreateFlightInput;
   departureUtc: Date | null;
@@ -197,3 +198,9 @@ export async function resolveDuplicateFlight(args: {
       : `Flight ${data.flightNumber} on this day already exists`,
   };
 }
+
+/** resolveDuplicateFlight, with every entry it changes recorded as `merge` in the change ledger. */
+export const resolveDuplicateFlight = (
+  ...args: Parameters<typeof resolveDuplicateFlightUnattributed>
+): ReturnType<typeof resolveDuplicateFlightUnattributed> =>
+  withChangeSource("merge", () => resolveDuplicateFlightUnattributed(...args));

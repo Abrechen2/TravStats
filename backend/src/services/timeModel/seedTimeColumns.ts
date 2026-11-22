@@ -7,6 +7,7 @@ import { stationTimeColumns, typedTripDays } from "./tripColumns";
 import { visitColumnsFromFakeUtc } from "./visitColumns";
 import { precisionOf } from "../../routes/flights/timeInput";
 import { instantOfFakeUtc } from "../../shared/time/resolveInput";
+import { withoutChangeLedger } from "../changeLedger/context";
 
 /**
  * The time-model columns of a SEEDED account (ADR 0002 phase 2).
@@ -20,7 +21,7 @@ import { instantOfFakeUtc } from "../../shared/time/resolveInput";
  * backfill case. Only rows whose new columns are still empty are touched, so a
  * second run changes nothing.
  */
-export async function fillSeededTimeColumns(userId: string): Promise<void> {
+async function fillSeededTimeColumnsUnrecorded(userId: string): Promise<void> {
   await flights(userId);
   await rail(userId);
   await stays(userId);
@@ -204,3 +205,12 @@ async function birthday(userId: string): Promise<void> {
     data: { birthDay: dbDayOrNull(user.birthdate), birthPrecision: "day" },
   });
 }
+
+/**
+ * fillSeededTimeColumns, unrecorded: it fills derived time columns on every row, which is
+ * maintenance, not a correction anybody made (change ledger spec §Sources).
+ */
+export const fillSeededTimeColumns = (
+  ...args: Parameters<typeof fillSeededTimeColumnsUnrecorded>
+): ReturnType<typeof fillSeededTimeColumnsUnrecorded> =>
+  withoutChangeLedger(() => fillSeededTimeColumnsUnrecorded(...args));

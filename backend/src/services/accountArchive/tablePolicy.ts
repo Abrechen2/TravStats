@@ -273,6 +273,15 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   // TravTrack, the own location history.
   travtrack_points: owner({ bulk: true }),
   travtrack_point_links: owner({ bulk: true, idColumns: ["entry_id"] }),
+
+  // The change history (spec 2026-11-22). Travels with the account; a row of an
+  // entry the archive does not carry (a deleted one) names nothing on the target
+  // and is skipped. The actor may be another account of this server, and a
+  // restore's link to its source row is not re-keyed: both are cleared.
+  change_ledger_entries: owner({
+    idColumns: ["entity_id"],
+    strip: ["actor_user_id", "restored_from_id"],
+  }),
   travtrack_deleted_ranges: owner(),
   travtrack_privacy_zones: owner(),
   travtrack_gaps: owner(),

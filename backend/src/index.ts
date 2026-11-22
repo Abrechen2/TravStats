@@ -141,6 +141,7 @@ import { RATE_LIMITS, FILE_LIMITS } from "./config/constants";
 import { skipGlobalRateLimit } from "./middleware/rateLimit";
 import { peerBodyParser } from "./middleware/peerBody";
 import { ingestRawBody, TRAVTRACK_INGEST_PATH } from "./middleware/ingestBody";
+import { changeContextMiddleware, markChangeSource } from "./services/changeLedger/context";
 
 // Rate limiting. `skipGlobalRateLimit` (middleware/rateLimit.ts) says who is
 // let through uncounted, and why it is nobody in production.
@@ -173,6 +174,30 @@ app.use(cookieParser());
 
 // Request logging middleware (with correlation IDs)
 app.use(requestLoggerMiddleware);
+
+// Every write a request makes knows the request, for the change ledger's
+// source and actor (services/changeLedger/context.ts).
+app.use(changeContextMiddleware);
+// What an import or a parser changes is the import's doing, not a hand edit.
+app.use(
+  [
+    "/api/v1/import",
+    "/api/v1/xlsx-import",
+    "/api/v1/checkin-import",
+    "/api/v1/app-import",
+    "/api/v1/lodging-import",
+    "/api/v1/place-import",
+    "/api/v1/import-batches",
+    "/api/v1/mail-intake",
+    "/api/v1/parse-email",
+    "/api/v1/parse-email-file",
+    "/api/v1/parse-pdf",
+    "/api/v1/parse-image",
+    "/api/v1/parse-boardingpass",
+    "/api/v1/boardingpass",
+  ],
+  markChangeSource("import")
+);
 
 // Version detection (routes/version.ts): single source of truth is
 // /app/backend/VERSION, loaded by ./utils/version. The Dockerfile writes that file from the

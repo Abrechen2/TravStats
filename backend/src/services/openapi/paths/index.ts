@@ -90,6 +90,7 @@ import "./dataQuality";
 import "./accounts";
 import "./accountArchive";
 import "./lifeBook";
+import "./changeHistory";
 import "./integrations";
 import "./photoJourneys";
 import "./tripSuggestions";

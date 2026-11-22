@@ -43,6 +43,7 @@ export {
   createPendingUpdate,
   type PendingUpdateData,
 } from "./flightAutoUpdate/changes";
+import { withChangeSource } from "./changeLedger/context";
 
 export type { FlightChange, FlightFieldValue } from "./flightUpdateRejections";
 
@@ -337,7 +338,7 @@ async function checkOneFlight(
 /**
  * Check and update flights for a specific user
  */
-export async function checkAndUpdateFlightsForUser(userId: string): Promise<number> {
+async function checkAndUpdateFlightsForUserUnattributed(userId: string): Promise<number> {
   try {
     // Get user settings
     const userSettings = await prismaClient.userSettings.findUnique({
@@ -439,7 +440,7 @@ export async function findAutoUpdateEligibleUserIds(): Promise<string[]> {
 /**
  * Check and update flights for all users with auto-update enabled
  */
-export async function checkAndUpdateAllFlights(): Promise<number> {
+async function checkAndUpdateAllFlightsUnattributed(): Promise<number> {
   try {
     // Converge stored statuses with the dates before the API sweep — reduces
     // wasted API calls on flights/cruises that already departed but are stuck
@@ -485,7 +486,7 @@ export async function checkAndUpdateAllFlights(): Promise<number> {
     let totalUpdates = 0;
 
     for (const userId of users) {
-      const updates = await checkAndUpdateFlightsForUser(userId);
+      const updates = await checkAndUpdateFlightsForUserUnattributed(userId);
       totalUpdates += updates;
     }
 
@@ -511,3 +512,15 @@ export async function checkAndUpdateAllFlights(): Promise<number> {
     return 0;
   }
 }
+
+/** checkAndUpdateFlightsForUser, with every entry it changes recorded as `auto_update` in the change ledger. */
+export const checkAndUpdateFlightsForUser = (
+  ...args: Parameters<typeof checkAndUpdateFlightsForUserUnattributed>
+): ReturnType<typeof checkAndUpdateFlightsForUserUnattributed> =>
+  withChangeSource("auto_update", () => checkAndUpdateFlightsForUserUnattributed(...args));
+
+/** checkAndUpdateAllFlights, with every entry it changes recorded as `auto_update` in the change ledger. */
+export const checkAndUpdateAllFlights = (
+  ...args: Parameters<typeof checkAndUpdateAllFlightsUnattributed>
+): ReturnType<typeof checkAndUpdateAllFlightsUnattributed> =>
+  withChangeSource("auto_update", () => checkAndUpdateAllFlightsUnattributed(...args));

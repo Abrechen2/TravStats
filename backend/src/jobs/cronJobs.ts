@@ -46,6 +46,14 @@ export const CRON_JOBS: CronJob[] = [
     stop: async () =>
       (await import("./airlineLogoRefreshScheduler")).stopAirlineLogoRefreshScheduler(),
   },
+  // Only when CHANGE_HISTORY_RETENTION_DAYS is set; the default keeps the history.
+  {
+    name: "change_history_retention",
+    start: async () =>
+      (await import("./changeHistoryRetentionScheduler")).startChangeHistoryRetentionScheduler(),
+    stop: async () =>
+      (await import("./changeHistoryRetentionScheduler")).stopChangeHistoryRetentionScheduler(),
+  },
   // Every 10 minutes and at start: deletions a crash interrupted (forgejo#415).
   {
     name: "account_deletion_recovery",

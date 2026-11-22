@@ -22,6 +22,7 @@ import {
   rideEndsAt,
   rideStatusSpan,
 } from "../shared/railClock";
+import { withChangeSource } from "./changeLedger/context";
 
 const H = 60 * 60 * 1000;
 
@@ -174,7 +175,7 @@ async function sweepDayStatuses(
  */
 export type TripSweepScope = "all" | "open";
 
-export async function sweepStatuses(
+async function sweepStatusesUnattributed(
   now: Date = clockNow(),
   tripScope: TripSweepScope = "all"
 ): Promise<{
@@ -614,3 +615,9 @@ async function sweepClocklessFerry(now: Date): Promise<number> {
   }
   return changed;
 }
+
+/** sweepStatuses, with every entry it changes recorded as `auto_update` in the change ledger. */
+export const sweepStatuses = (
+  ...args: Parameters<typeof sweepStatusesUnattributed>
+): ReturnType<typeof sweepStatusesUnattributed> =>
+  withChangeSource("auto_update", () => sweepStatusesUnattributed(...args));

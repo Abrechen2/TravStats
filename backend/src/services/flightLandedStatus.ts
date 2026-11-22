@@ -2,6 +2,7 @@ import { prisma } from "../db";
 import type { Flight } from "../prisma";
 import logger from "../utils/logger";
 import { deriveFlightStatus } from "../shared/statusDerivation";
+import { withChangeSource } from "./changeLedger/context";
 
 /**
  * A touchdown the provider reports ends "scheduled" at once (2026-10-03: a
@@ -15,7 +16,7 @@ import { deriveFlightStatus } from "../shared/statusDerivation";
  *
  * Returns whether the flight was marked flown.
  */
-export async function markFlownOnReportedLanding(
+async function markFlownOnReportedLandingUnattributed(
   flight: Pick<Flight, "id" | "status" | "departureTime" | "arrivalTime">,
   reportedActualArrival: string | null | undefined,
   modifiedBy: string = "auto_update"
@@ -39,3 +40,9 @@ export async function markFlownOnReportedLanding(
   );
   return true;
 }
+
+/** markFlownOnReportedLanding, with every entry it changes recorded as `auto_update` in the change ledger. */
+export const markFlownOnReportedLanding = (
+  ...args: Parameters<typeof markFlownOnReportedLandingUnattributed>
+): ReturnType<typeof markFlownOnReportedLandingUnattributed> =>
+  withChangeSource("auto_update", () => markFlownOnReportedLandingUnattributed(...args));
