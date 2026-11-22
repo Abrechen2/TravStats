@@ -100,7 +100,7 @@ describe("resolveAirlineLogo", () => {
         })
       );
     global.fetch = fn as unknown as typeof fetch;
-    const r = await resolveAirlineLogo("Q9", "icon");
+    const r = await resolveAirlineLogo("Q9", "logo");
     expect(r).not.toBeNull();
     expect(r!.contentType).toBe("image/png");
     expect(fn).toHaveBeenCalledTimes(3);
@@ -108,7 +108,7 @@ describe("resolveAirlineLogo", () => {
     expect(String(fn.mock.calls[1][0])).toContain("images.kiwi.com");
     expect(String(fn.mock.calls[2][0])).toContain("daisycon");
     expect(put).toHaveBeenCalledWith(
-      "Q9-icon",
+      "Q9-logo",
       expect.objectContaining({ contentType: "image/png" }),
       "daisycon"
     );
@@ -157,10 +157,26 @@ describe("resolveAirlineLogo", () => {
         })
       );
     global.fetch = fn as unknown as typeof fetch;
-    const r = await resolveAirlineLogo("AA", "icon");
+    const r = await resolveAirlineLogo("AA", "logo");
     expect(r).not.toBeNull();
     expect(String(fn.mock.calls[0][0])).toContain("images.kiwi.com");
     expect(String(fn.mock.calls[1][0])).toContain("daisycon");
+  });
+
+  it("stops an icon request after the vendored tier: no kiwi or Daisycon wordmark for 'Nur Symbol'", async () => {
+    jest.spyOn(cache, "getCachedLogoEntry").mockResolvedValue(null);
+    const put = jest.spyOn(cache, "putCachedLogo").mockResolvedValue();
+    const fn = jest.fn().mockResolvedValue(
+      new Response(new Uint8Array(Buffer.from("realpng")), {
+        status: 200,
+        headers: { "content-type": "image/png" },
+      })
+    );
+    global.fetch = fn as unknown as typeof fetch;
+    // ZZ is in no vendored snapshot; kiwi would happily answer a "logo" request.
+    expect(await resolveAirlineLogo("ZZ", "icon")).toBeNull();
+    expect(fn).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
   });
 
   it("treats the Daisycon placeholder body as a miss", async () => {
@@ -181,7 +197,7 @@ describe("resolveAirlineLogo", () => {
         })
       );
     global.fetch = fn as unknown as typeof fetch;
-    const r = await resolveAirlineLogo("Q9", "icon");
+    const r = await resolveAirlineLogo("Q9", "logo");
     expect(r).toBeNull();
     expect(put).not.toHaveBeenCalled();
   });
@@ -204,19 +220,19 @@ describe("resolveAirlineLogo", () => {
     const down = jest.fn().mockRejectedValue(new Error("getaddrinfo EAI_AGAIN"));
     global.fetch = down as unknown as typeof fetch;
     later.mockReturnValue(t0);
-    expect(await resolveAirlineLogo("QQ", "icon")).toBeNull();
+    expect(await resolveAirlineLogo("QQ", "logo")).toBeNull();
     const afterFirst = down.mock.calls.length;
     later.mockReturnValue(t0 + 6 * 60 * 1000);
-    await resolveAirlineLogo("QQ", "icon");
+    await resolveAirlineLogo("QQ", "logo");
     expect(down.mock.calls.length).toBeGreaterThan(afterFirst);
 
     // Real miss (404 everywhere): still negative-cached after 6 minutes.
     const gone = mockFetchOnce(404, Buffer.alloc(0), "text/plain");
     later.mockReturnValue(t0);
-    expect(await resolveAirlineLogo("RR", "icon")).toBeNull();
+    expect(await resolveAirlineLogo("RR", "logo")).toBeNull();
     const afterMiss = gone.mock.calls.length;
     later.mockReturnValue(t0 + 6 * 60 * 1000);
-    await resolveAirlineLogo("RR", "icon");
+    await resolveAirlineLogo("RR", "logo");
     expect(gone.mock.calls.length).toBe(afterMiss);
   });
 

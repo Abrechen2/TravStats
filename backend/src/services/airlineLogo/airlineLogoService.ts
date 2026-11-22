@@ -206,6 +206,10 @@ async function fetchFromChain(
   if (premium) return { logo: premium, source: "logostream" };
   const vendored = getVendoredLogo(code, variant);
   if (vendored) return { logo: vendored, source: "vendored" };
+  // A symbol is asked for ("Nur Symbol"): kiwi and Daisycon only hold wordmark
+  // tiles, so answering with one would put a name where the user asked for none.
+  // A miss is a miss — the cell then shows its small code tile.
+  if (variant === "icon") return null;
   // "Off means off" (forgejo#392): the tiers below are third-party requests, and
   // the keyless ones need no key an admin could have withdrawn. Cached bytes and
   // the vendored marks above stay: they leave nothing.
