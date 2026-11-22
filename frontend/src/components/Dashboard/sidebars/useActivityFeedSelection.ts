@@ -23,11 +23,17 @@ import { selectFeedItem, type FeedSelectOutcome } from "./activityFeedSelect";
 export const ACTIVITY_PANEL_WIDTH = 320;
 const PANEL_BESIDE_MAP_MIN_WIDTH = 640;
 
+/** A single-domain tab has no domain filter: its one layer is always on the map. */
+export const ALWAYS_ON = { isVisible: () => true, toggle: () => undefined };
+
+const NO_FLIGHT = (): undefined => undefined;
+const NONE: readonly never[] = [];
+
 interface Options {
-  findFlight: (id: string) => Flight | undefined;
-  cruises: readonly Cruise[];
-  lodgings: readonly Lodging[];
-  places: readonly Place[];
+  findFlight?: (id: string) => Flight | undefined;
+  cruises?: readonly Cruise[];
+  lodgings?: readonly Lodging[];
+  places?: readonly Place[];
   domainFilter: Pick<DashboardDomainFilterResult, "isVisible" | "toggle">;
 }
 
@@ -44,7 +50,11 @@ export function useActivityFeedSelection(options: Options): {
   onSelect: (item: ActivityFeedItem) => void;
   onDetails: (item: ActivityFeedItem) => void;
 } {
-  const { findFlight, cruises, lodgings, places, domainFilter } = options;
+  const { domainFilter } = options;
+  const findFlight = options.findFlight ?? NO_FLIGHT;
+  const cruises = options.cruises ?? NONE;
+  const lodgings = options.lodgings ?? NONE;
+  const places = options.places ?? NONE;
   const { t } = useTranslation(["dashboard", "common"]);
   const { colorOf } = useDomainColors();
   const navigate = useNavigate();

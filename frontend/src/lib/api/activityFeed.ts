@@ -50,11 +50,12 @@ export const ACTIVITY_FEED_PAGE_SIZE = 50;
 export const activityFeedApi = {
   /** `GET /activity/feed`. */
   page: async (
-    params: { cursor?: string | null; limit?: number },
+    params: { cursor?: string | null; limit?: number; domains?: readonly ActivityFeedDomain[] },
     signal?: AbortSignal
   ): Promise<ActivityFeedPage> => {
     const { data } = await api.get<{ success: true; data: ActivityFeedPage }>("/activity/feed", {
       params: {
+        domains: params.domains?.length ? params.domains.join(",") : undefined,
         cursor: params.cursor ?? undefined,
         limit: params.limit ?? ACTIVITY_FEED_PAGE_SIZE,
       },

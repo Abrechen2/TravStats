@@ -5,7 +5,7 @@ import { useActivityFeed } from "../../../hooks/useActivityFeed";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { useDisplayFormat } from "../../../lib/displayFormat";
-import type { ActivityFeedItem } from "../../../lib/api/activityFeed";
+import type { ActivityFeedDomain, ActivityFeedItem } from "../../../lib/api/activityFeed";
 import { DOMAINS } from "../../../shared/domains";
 import { Icon } from "../../ui/Icon";
 import Toggletip from "../../ui/Toggletip";
@@ -20,6 +20,10 @@ interface ActivityFeedPanelProps {
   onDetails(item: ActivityFeedItem): void;
   /** Starts the list over (an entry was saved). */
   reloadKey?: number;
+  /** Pins the list to these domains (a single-domain tab); omitted = every visible domain. */
+  domains?: readonly ActivityFeedDomain[];
+  /** Heading; a domain tab passes its own. */
+  title?: string;
 }
 
 /**
@@ -28,8 +32,8 @@ interface ActivityFeedPanelProps {
  * the server's merged feed (`GET /activity/feed`), so a long history costs one
  * page, not one fetch per domain.
  *
- * It replaces the client-merged list on the "Alle" tab only; the single-domain
- * tabs keep `UnifiedActivityPanel`, which is locked to its one domain.
+ * The single-domain tabs use it too, pinned to their domain with `domains`, so
+ * order, the planned label and click-to-focus are the same everywhere.
  */
 export function ActivityFeedPanel({
   isOpen,
@@ -37,12 +41,14 @@ export function ActivityFeedPanel({
   onSelect,
   onDetails,
   reloadKey = 0,
+  domains,
+  title,
 }: ActivityFeedPanelProps): JSX.Element | null {
   const { t } = useTranslation(["dashboard", "common"]);
   const { colorOf } = useDomainColors();
   const fmt = useDisplayFormat();
   const coarse = useCoarsePointer();
-  const feed = useActivityFeed(isOpen, reloadKey);
+  const feed = useActivityFeed(isOpen, reloadKey, domains);
   const sentinel = useRef<HTMLDivElement | null>(null);
   const { loadMore, hasMore, loading, loadingMore, error } = feed;
 
@@ -83,7 +89,7 @@ export function ActivityFeedPanel({
       {...MAP_CHROME}
       className="ts-activity-panel"
       role="region"
-      aria-label={t("dashboard:sidebar.activity")}
+      aria-label={title ?? t("dashboard:sidebar.activity")}
       style={{
         position: "absolute",
         top: 0,
@@ -104,7 +110,7 @@ export function ActivityFeedPanel({
           borderBottom: "1px solid var(--color-border)",
         }}
       >
-        <strong>{t("dashboard:sidebar.activity")}</strong>
+        <strong>{title ?? t("dashboard:sidebar.activity")}</strong>
         <button
           type="button"
           onClick={onClose}

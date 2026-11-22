@@ -318,7 +318,8 @@
     "rentalSame": "Rental car · pick-up and return",
     "rentalPickup": "Rental car · pick-up",
     "rentalReturn": "Rental car · return",
-    "rentalLink": "Rental car · one-way"
+    "rentalLink": "Rental car · one-way",
+    "visit": "Visit"
   },
   "styleFallback": {
     "notice": "The map provider cannot be reached right now. You are seeing a simplified fallback map.",

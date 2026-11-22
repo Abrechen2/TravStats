@@ -17,17 +17,22 @@ import type { Lodging } from "../types/lodging";
 interface LodgingSelectionState {
   selectedLodgingId: string | null;
   selectedLodging: Lodging | null;
-  setSelection: (lodging: Lodging | null) => void;
+  /** The entry of that lodging the selection is ABOUT (a stay, a visit), when it is one of several. */
+  selectedEntryId: string | null;
+  setSelection: (lodging: Lodging | null, entryId?: string) => void;
   clearSelection: () => void;
 }
 
 export const useLodgingSelectionStore = create<LodgingSelectionState>()((set) => ({
   selectedLodgingId: null,
   selectedLodging: null,
-  setSelection: (lodging) =>
+  selectedEntryId: null,
+  setSelection: (lodging, entryId) =>
     set({
+      selectedEntryId: entryId ?? null,
       selectedLodging: lodging,
       selectedLodgingId: lodging?.id ?? null,
     }),
-  clearSelection: () => set({ selectedLodging: null, selectedLodgingId: null }),
+  clearSelection: () =>
+    set({ selectedLodging: null, selectedLodgingId: null, selectedEntryId: null }),
 }));

@@ -43,8 +43,8 @@ export interface FeedSelectDeps {
   places: readonly Place[];
   selectFlight: (flights: Flight[]) => void;
   selectCruise: (cruise: Cruise) => void;
-  selectLodging: (lodging: Lodging) => void;
-  selectPlace: (place: Place) => void;
+  selectLodging: (lodging: Lodging, stayId: string) => void;
+  selectPlace: (place: Place, visitId: string) => void;
   /** Opens a card a layer would open (rail, bus, ferry, rental, tours). */
   selectLayerCard: (pinned: MapPinned) => void;
   /** Whether the domain's layer is on the map right now. */
@@ -134,13 +134,13 @@ export async function selectFeedItem(
     case "lodging": {
       const lodging = deps.lodgings.find((l) => l.id === item.subjectId);
       if (!lodging) return "notLoaded";
-      deps.selectLodging(lodging);
+      deps.selectLodging(lodging, item.id);
       break;
     }
     case "poi": {
       const place = deps.places.find((p) => p.id === item.subjectId);
       if (!place) return "notLoaded";
-      deps.selectPlace(place);
+      deps.selectPlace(place, item.id);
       break;
     }
     default: {

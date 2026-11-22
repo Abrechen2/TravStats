@@ -27,7 +27,13 @@ export interface ActivityFeedState {
  * the fetch itself, so a closed panel costs no request; `reloadKey` starts the
  * list over (an entry was saved).
  */
-export function useActivityFeed(enabled: boolean, reloadKey = 0): ActivityFeedState {
+export function useActivityFeed(
+  enabled: boolean,
+  reloadKey = 0,
+  /** Narrow to these domains (a single-domain tab); omitted = every visible domain. */
+  domains?: readonly ActivityFeedDomain[]
+): ActivityFeedState {
+  const domainsKey = domains?.join(",") ?? "";
   const [items, setItems] = useState<ActivityFeedItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
@@ -38,32 +44,38 @@ export function useActivityFeed(enabled: boolean, reloadKey = 0): ActivityFeedSt
   const inFlight = useRef(false);
   const generation = useRef(0);
 
-  const fetchPage = useCallback(async (after: string | null, first: boolean): Promise<void> => {
-    if (inFlight.current) return;
-    inFlight.current = true;
-    const mine = generation.current;
-    if (first) setLoading(true);
-    else setLoadingMore(true);
-    setError(false);
-    try {
-      const page = await activityFeedApi.page({ cursor: after });
-      if (mine !== generation.current) return;
-      setItems((prev) => (first ? page.items : [...prev, ...page.items]));
-      setCursor(page.nextCursor);
-      setHasMore(page.nextCursor !== null);
-      setFailed((prev) => [...new Set([...(first ? [] : prev), ...page.failed])]);
-    } catch (err) {
-      if (mine !== generation.current) return;
-      logger.warn("activity feed page failed", err);
-      setError(true);
-    } finally {
-      if (mine === generation.current) {
-        setLoading(false);
-        setLoadingMore(false);
+  const fetchPage = useCallback(
+    async (after: string | null, first: boolean): Promise<void> => {
+      if (inFlight.current) return;
+      inFlight.current = true;
+      const mine = generation.current;
+      if (first) setLoading(true);
+      else setLoadingMore(true);
+      setError(false);
+      try {
+        const page = await activityFeedApi.page({
+          cursor: after,
+          domains: domainsKey ? (domainsKey.split(",") as ActivityFeedDomain[]) : undefined,
+        });
+        if (mine !== generation.current) return;
+        setItems((prev) => (first ? page.items : [...prev, ...page.items]));
+        setCursor(page.nextCursor);
+        setHasMore(page.nextCursor !== null);
+        setFailed((prev) => [...new Set([...(first ? [] : prev), ...page.failed])]);
+      } catch (err) {
+        if (mine !== generation.current) return;
+        logger.warn("activity feed page failed", err);
+        setError(true);
+      } finally {
+        if (mine === generation.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
+        inFlight.current = false;
       }
-      inFlight.current = false;
-    }
-  }, []);
+    },
+    [domainsKey]
+  );
 
   useEffect(() => {
     generation.current += 1;

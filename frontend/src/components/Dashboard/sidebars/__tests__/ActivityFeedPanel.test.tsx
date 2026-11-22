@@ -166,6 +166,13 @@ describe("ActivityFeedPanel", () => {
     expect(row).toHaveAttribute("title", expect.stringMatching(/notOnMap/));
   });
 
+  it("pins a single-domain tab's list to its domain and uses its title", async () => {
+    page.mockResolvedValue({ items: [], nextCursor: null, failed: [], domains: ["cruise"] });
+    renderPanel({ domains: ["cruise"], title: "Kreuzfahrten" });
+    await screen.findByText("Kreuzfahrten");
+    expect(page).toHaveBeenCalledWith({ cursor: null, domains: ["cruise"] });
+  });
+
   it("requests nothing while closed", () => {
     renderPanel({ isOpen: false });
     expect(page).not.toHaveBeenCalled();

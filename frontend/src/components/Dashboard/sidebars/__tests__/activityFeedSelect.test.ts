@@ -73,7 +73,7 @@ describe("selectFeedItem", () => {
       bbox: null,
     });
     await selectFeedItem(row, d);
-    expect(d.selectLodging).toHaveBeenCalledWith({ id: "l1" });
+    expect(d.selectLodging).toHaveBeenCalledWith({ id: "l1" }, "s9");
     expect(d.focus).toHaveBeenCalledWith({
       point: { lat: 38.7, lon: -9.1 },
       bbox: null,
@@ -87,7 +87,7 @@ describe("selectFeedItem", () => {
       item({ domain: "poi", id: "v1", subjectId: "p1", point: { lat: 1, lon: 1 }, bbox: null }),
       d
     );
-    expect(d.selectPlace).toHaveBeenCalledWith({ id: "p1" });
+    expect(d.selectPlace).toHaveBeenCalledWith({ id: "p1" }, "v1");
     await selectFeedItem(item({ domain: "cruise", id: "c1", subjectId: "c1" }), d);
     expect(d.selectCruise).toHaveBeenCalledWith({ id: "c1" });
   });

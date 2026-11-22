@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
-import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
-import type { ActivityItem } from "../sidebars/activityItems";
-import { usePlaceSelectionStore } from "../../../store/placeSelectionStore";
+import { ActivityFeedPanel } from "../sidebars/ActivityFeedPanel";
+import { ALWAYS_ON, useActivityFeedSelection } from "../sidebars/useActivityFeedSelection";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 import type { Layer } from "@deck.gl/core";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
@@ -41,13 +40,13 @@ export function PoiTab(): JSX.Element {
   // POI was the ONE tab with no entries list at all — there was nothing to
   // pick from, so "select it on the map" had no starting point here.
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const setPlaceSelection = usePlaceSelectionStore((st) => st.setSelection);
   const { isEnabled } = useEnabledDomains();
   const poiEnabled = isEnabled("poi");
   const { t } = useTranslation(["dashboard"]);
   const colorConfig = usePlaceColorStore((s) => s.config);
 
   const [places, setPlaces] = useState<Place[]>([]);
+  const activitySelection = useActivityFeedSelection({ places, domainFilter: ALWAYS_ON });
   const [lists, setLists] = useState<PlaceList[]>([]);
   /** `null` = every place. A filter, not a mode: it changes WHICH pins are
    *  drawn, never what one means. */
@@ -180,18 +179,13 @@ export function PoiTab(): JSX.Element {
         onToggle={() => setSidebarOpen((prev) => !prev)}
         label={t("dashboard:sidebar.places")}
       />
-      <UnifiedActivityPanel
-        places={visiblePlaces}
-        lockedKind="poi"
+      <ActivityFeedPanel
+        domains={["poi"]}
         title={t("dashboard:sidebar.places")}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onSelect={(item: ActivityItem) => {
-          if ("place" in item.payload) setPlaceSelection(item.payload.place);
-        }}
-        onDetails={(item: ActivityItem) => {
-          if ("place" in item.payload) navigate(`/places/${item.payload.place.id}`);
-        }}
+        onSelect={activitySelection.onSelect}
+        onDetails={activitySelection.onDetails}
       />
 
       {/* List filter + legend. The legend derives from the SAME store the pin
