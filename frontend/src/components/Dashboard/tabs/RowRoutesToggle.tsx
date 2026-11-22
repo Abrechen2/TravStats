@@ -49,7 +49,11 @@ export function RowRoutesToggle({
         e.stopPropagation();
         setVisible(domain, !shown);
       }}
-      onKeyDown={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        // Only activation stays here (the row would toggle its checkbox);
+        // Escape and the arrows must still reach the panel's handlers.
+        if (e.key === "Enter" || e.key === " ") e.stopPropagation();
+      }}
       className="cursor-pointer"
       style={{
         background: shown ? "transparent" : "var(--ts-accent)",

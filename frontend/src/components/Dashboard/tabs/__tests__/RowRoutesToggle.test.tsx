@@ -5,6 +5,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { DomainFilterRow } from "../DomainFilterRow";
+import { RowRoutesToggle } from "../RowRoutesToggle";
 import { useMapRoutesStore } from "../../../../store/mapRoutesStore";
 import { ALL_ROUTES_VISIBLE } from "../../../../lib/mapRoutes";
 import type { FilterDomainKey } from "../../../../shared/dashboardDomainFilter";
@@ -54,5 +55,19 @@ describe("domain row routes toggle", () => {
     useMapRoutesStore.setState({ blocked: true });
     renderRow("flight");
     expect(screen.getByTestId("row-routes-toggle-flight")).toBeDisabled();
+  });
+
+  it("lets Escape reach the panel from the focused toggle but keeps Enter off the row", () => {
+    const rowKey = vi.fn();
+    render(
+      <div onKeyDown={(e) => rowKey(e.key)}>
+        <RowRoutesToggle domain="flight" touch={false} />
+      </div>
+    );
+    const btn = screen.getByTestId("row-routes-toggle-flight");
+    fireEvent.keyDown(btn, { key: "Escape" });
+    fireEvent.keyDown(btn, { key: "Enter" });
+    expect(rowKey).toHaveBeenCalledTimes(1);
+    expect(rowKey).toHaveBeenCalledWith("Escape");
   });
 });
