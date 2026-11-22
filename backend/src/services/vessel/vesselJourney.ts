@@ -196,13 +196,20 @@ export async function assignVessel(
     await writeMmsi(j, offered.mmsi, "manual", false);
     return;
   }
-  await writeMmsi(j, offered.mmsi, "manual", false);
-  // The old ship's positions, and a cruise's AIS recording built from them, are not this one's.
+  // The old ship's positions, and a cruise's AIS recording built from them, are
+  // not this one's — dropped in the same transaction that binds the new ship.
   if (j.kind === "ferry") {
-    await prisma.vesselPositionFix.deleteMany({ where: { ferryJourneyId: j.id } });
+    await prisma.$transaction([
+      // share-exempt: the vessel MMSI is private to the account, never a share fact
+      prisma.ferryJourney.updateMany({
+        where: { id: j.id, userId: j.userId },
+        data: { vesselMmsi: offered.mmsi, vesselMmsiSource: "manual" },
+      }),
+      prisma.vesselPositionFix.deleteMany({ where: { ferryJourneyId: j.id } }),
+    ]);
     return;
   }
-  await dropCruiseAisRecording(j.id, j.userId);
+  await dropCruiseAisRecording(j.id, j.userId, offered.mmsi);
 }
 
 /** Forget a resolved (not a manually picked) MMSI — the vessel's name or ship changed. */

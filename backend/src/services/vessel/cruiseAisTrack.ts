@@ -21,7 +21,7 @@ export const CRUISE_AIS_TRACK_REF = "ais";
 export async function rebuildCruiseAisTrack(
   cruiseId: string,
   userId: string,
-  fixes: Array<{ lat: number; lon: number; observedAt: Date }>
+  fixes: Array<{ lat: number; lon: number; observedAt: Date; mmsi: string }>
 ): Promise<boolean> {
   if (fixes.length < 2) return false;
   const parsed: ParsedTrack = {
@@ -36,8 +36,12 @@ export async function rebuildCruiseAisTrack(
   if (!ingested) return false;
   const columns = cruiseTrackColumns(ingested);
   const legDistances = await precomputeLegDistancesForCruise(cruiseId);
-  await prisma.$transaction(
+  const mmsi = fixes[fixes.length - 1].mmsi;
+  return prisma.$transaction(
     async (tx) => {
+      // A ship picked meanwhile owns the cruise now: these fixes are not its recording.
+      const bound = await tx.cruise.count({ where: { id: cruiseId, vesselMmsi: mmsi } });
+      if (bound !== 1 || fixes.some((f) => f.mmsi !== mmsi)) return false;
       const before = await shareSnapshot(tx, "cruise", cruiseId);
       await tx.cruiseTrack.deleteMany({ where: { cruiseId, externalRef: CRUISE_AIS_TRACK_REF } });
       await tx.cruiseTrack.create({
@@ -52,18 +56,27 @@ export async function rebuildCruiseAisTrack(
       });
       await recomputeLegsForCruise(cruiseId, tx, legDistances);
       await propagateWrite(tx, userId, "cruise", cruiseId, before);
+      return true;
     },
     { timeout: SHARE_TX_TIMEOUT_MS }
   );
-  return true;
 }
 
 /** The cruise changed ship: its fixes and its AIS recording go, and the legs are measured again. */
-export async function dropCruiseAisRecording(cruiseId: string, userId: string): Promise<void> {
+export async function dropCruiseAisRecording(
+  cruiseId: string,
+  userId: string,
+  newMmsi: string
+): Promise<void> {
   const legDistances = await precomputeLegDistancesForCruise(cruiseId);
   await prisma.$transaction(
     async (tx) => {
       const before = await shareSnapshot(tx, "cruise", cruiseId);
+      // share-exempt: the vessel MMSI is private to the account, never a share fact
+      await tx.cruise.updateMany({
+        where: { id: cruiseId, userId },
+        data: { vesselMmsi: newMmsi, vesselMmsiSource: "manual" },
+      });
       await tx.vesselPositionFix.deleteMany({ where: { cruiseId } });
       const dropped = await tx.cruiseTrack.deleteMany({
         where: { cruiseId, externalRef: CRUISE_AIS_TRACK_REF },

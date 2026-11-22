@@ -265,7 +265,6 @@ async function fromWikidata(q: VesselQuery, imo: string | null): Promise<VesselR
 async function fromAis(q: VesselQuery, imo: string | null): Promise<VesselResolution> {
   if (q.ais === false || !q.area || !(await allowed(AIS_SERVICE, q.userId)))
     return { status: "unresolved", reason: "notFound", candidates: [] };
-  const name = normaliseVesselName(q.name);
   // An IMO match ends the wait; a name match does not — a second ship of the
   // same name must have its chance to make the answer ambiguous.
   const result = await collectStaticData(
