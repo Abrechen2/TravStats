@@ -409,7 +409,21 @@
     },
     "row": {
       "only": "Only",
-      "onlyTooltip": "Show only this domain"
+      "onlyTooltip": "Show only this domain",
+      "routes": "Routes",
+      "stopsOnly": "Stops only",
+      "routesHideTooltip": "Hide routes, show only {{places}}",
+      "routesShowTooltip": "Show routes again",
+      "routesBlocked": "In this mode the routes are the map's content.",
+      "places": {
+        "flight": "airports",
+        "cruise": "ports",
+        "rail": "stations",
+        "bus": "stops",
+        "ferry": "terminals",
+        "tour": "stops",
+        "roadtrip": "stops"
+      }
     },
     "betaBadge": {
       "tooltip": "Beta feature of this instance"
