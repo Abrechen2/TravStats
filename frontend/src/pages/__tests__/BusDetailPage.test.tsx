@@ -290,7 +290,8 @@ describe("BusDetailPage", () => {
   it("deletes the ride after the confirmation and returns to the logbook", async () => {
     removeMock.mockResolvedValue(undefined);
     await renderPage(rideFixture());
-    fireEvent.click(await screen.findByRole("button", { name: "Löschen" }));
+    fireEvent.click(await screen.findByTestId("detail-more-menu"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Löschen" }));
     fireEvent.click(screen.getByText("confirm-delete"));
     await waitFor(() => expect(removeMock).toHaveBeenCalledWith("r1"));
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/bus"));
@@ -299,7 +300,8 @@ describe("BusDetailPage", () => {
   it("stays on the page and says so when the delete fails", async () => {
     removeMock.mockRejectedValue(new Error("nope"));
     await renderPage(rideFixture());
-    fireEvent.click(await screen.findByRole("button", { name: "Löschen" }));
+    fireEvent.click(await screen.findByTestId("detail-more-menu"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Löschen" }));
     fireEvent.click(screen.getByText("confirm-delete"));
     await waitFor(() =>
       expect(addToast).toHaveBeenCalledWith("error", "Die Busfahrt konnte nicht gelöscht werden.")
@@ -316,7 +318,8 @@ describe("BusDetailPage", () => {
       tripId: "t1",
       companions: ["Mina"],
     });
-    fireEvent.click(await screen.findByRole("button", { name: "Löschen" }));
+    fireEvent.click(await screen.findByTestId("detail-more-menu"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Löschen" }));
     const message = screen.getByTestId("confirm-message").textContent ?? "";
     expect(message).toContain(
       "Die Busfahrt Seoul Express Bus Terminal → Sokcho Express Bus Terminal wirklich löschen?"

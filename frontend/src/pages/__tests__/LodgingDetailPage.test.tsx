@@ -302,7 +302,9 @@ describe("LodgingDetailPage", () => {
     renderDetailPage();
     await screen.findByText("Engimatt City & Garden");
 
-    await user.click(screen.getByTestId("lodging-delete-button"));
+    await user.click(screen.getByTestId("detail-more-menu"));
+
+    await user.click(screen.getByRole("menuitem", { name: "common:buttons.delete" }));
     const dialog = await screen.findByRole("dialog");
 
     await waitFor(() => expect(dialog).toHaveTextContent("documents:deleteCascadeNote"));
@@ -320,7 +322,9 @@ describe("LodgingDetailPage", () => {
       expect(screen.getByText("Engimatt City & Garden")).toBeInTheDocument();
     });
 
-    await user.click(screen.getByTestId("lodging-delete-button"));
+    await user.click(screen.getByTestId("detail-more-menu"));
+
+    await user.click(screen.getByRole("menuitem", { name: "common:buttons.delete" }));
 
     const dialog = await screen.findByRole("dialog");
     // The dialog is the shared ConfirmModal now — the same one the LIST uses,
@@ -339,7 +343,8 @@ describe("LodgingDetailPage", () => {
     expect(deleteLodgingMock).not.toHaveBeenCalled();
 
     // Only the explicit confirm click calls deleteLodging.
-    await user.click(screen.getByTestId("lodging-delete-button"));
+    await user.click(screen.getByTestId("detail-more-menu"));
+    await user.click(screen.getByRole("menuitem", { name: "common:buttons.delete" }));
     const dialog2 = await screen.findByRole("dialog");
     await user.click(within(dialog2).getByRole("button", { name: "common:buttons.delete" }));
 
@@ -402,7 +407,7 @@ describe("LodgingDetailPage", () => {
     await waitFor(() => {
       expect(getLodgingMock).toHaveBeenCalled();
     });
-    expect(screen.queryByTestId("lodging-delete-button")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("detail-more-menu")).not.toBeInTheDocument();
   });
 
   it("shows the trip pill and the loyalty program when a stay is linked to both", async () => {
@@ -593,7 +598,7 @@ describe("LodgingDetailPage", () => {
     renderDetailPage();
 
     await waitFor(() => {
-      expect(screen.getByTestId("lodging-delete-button")).toBeInTheDocument();
+      expect(screen.getByTestId("detail-more-menu")).toBeInTheDocument();
     });
     expect(screen.queryByText("lodging:field.notes")).not.toBeInTheDocument();
   });
@@ -868,7 +873,9 @@ describe("LodgingDetailPage", () => {
       renderDetailPage();
       await screen.findByTestId("stay-card-stay-1");
 
-      await user.click(screen.getByTestId("lodging-restay-button"));
+      await user.click(screen.getByTestId("detail-more-menu"));
+
+      await user.click(screen.getByRole("menuitem", { name: "lodging:restay.action" }));
 
       // The new visit: the house is named, the line says what is left to enter,
       // and the dates, room, booking reference and price are empty - the earlier
@@ -913,7 +920,9 @@ describe("LodgingDetailPage", () => {
       renderDetailPage();
       await screen.findByTestId("stay-card-stay-1");
 
-      await user.click(screen.getByTestId("lodging-restay-button"));
+      await user.click(screen.getByTestId("detail-more-menu"));
+
+      await user.click(screen.getByRole("menuitem", { name: "lodging:restay.action" }));
       await screen.findByTestId("stay-editor-save");
       await enterDates("2024-05-12", "2024-05-14");
       await user.click(screen.getByTestId("stay-editor-save"));

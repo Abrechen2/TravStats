@@ -105,7 +105,8 @@ describe("DocumentsSection — links (D2)", () => {
     api.unlinkFromEntry.mockResolvedValue(removed);
     api.addLinks.mockResolvedValue([]);
     render(<DocumentsSection entry={FLIGHT} />);
-    fireEvent.click(await screen.findByRole("button", { name: "documents:links.unlinkLabel" }));
+    fireEvent.click(await screen.findByRole("button", { name: "documents:rowMenuLabel" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "documents:links.unlink" }));
     await waitFor(() => expect(api.unlinkFromEntry).toHaveBeenCalledWith("d1", FLIGHT));
     expect(api.remove).not.toHaveBeenCalled();
     expect(await screen.findByTestId("documents-undo")).toBeInTheDocument();
@@ -124,7 +125,8 @@ describe("DocumentsSection — links (D2)", () => {
   it("tells the user the link was already gone and re-reads the list", async () => {
     api.unlinkFromEntry.mockRejectedValue(axiosError(404, "DOCUMENT_LINK_NOT_FOUND"));
     render(<DocumentsSection entry={FLIGHT} />);
-    fireEvent.click(await screen.findByRole("button", { name: "documents:links.unlinkLabel" }));
+    fireEvent.click(await screen.findByRole("button", { name: "documents:rowMenuLabel" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "documents:links.unlink" }));
     expect(await screen.findByText("documents:links.errors.linkGone")).toBeInTheDocument();
     await waitFor(() => expect(api.listForEntry).toHaveBeenCalledTimes(2));
   });
@@ -147,7 +149,8 @@ describe("DocumentsSection — links (D2)", () => {
       },
     ]);
     render(<DocumentsSection entry={FLIGHT} />);
-    fireEvent.click(await screen.findByRole("button", { name: "documents:removeLabel" }));
+    fireEvent.click(await screen.findByRole("button", { name: "documents:rowMenuLabel" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "documents:remove" }));
     const modal = await screen.findByTestId("confirm-modal");
     await waitFor(() => expect(modal.textContent).toContain("Rundreise USA"));
     const message = modal;
@@ -166,7 +169,8 @@ describe("DocumentsSection — links (D2)", () => {
     let resolve!: (v: never[]) => void;
     api.links.mockReturnValue(new Promise<never[]>((r) => (resolve = r)));
     render(<DocumentsSection entry={FLIGHT} />);
-    fireEvent.click(await screen.findByRole("button", { name: "documents:removeLabel" }));
+    fireEvent.click(await screen.findByRole("button", { name: "documents:rowMenuLabel" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "documents:remove" }));
     // While the read is pending the confirm button is the disabled "processing" one.
     expect(screen.queryByRole("button", { name: "common:buttons.delete" })).toBeNull();
     resolve([]);
@@ -176,7 +180,8 @@ describe("DocumentsSection — links (D2)", () => {
   it("says so when the affected entries could not be read, instead of deleting blind", async () => {
     api.links.mockRejectedValue(new Error("boom"));
     render(<DocumentsSection entry={FLIGHT} />);
-    fireEvent.click(await screen.findByRole("button", { name: "documents:removeLabel" }));
+    fireEvent.click(await screen.findByRole("button", { name: "documents:rowMenuLabel" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "documents:remove" }));
     expect(await screen.findByText(/documents:links\.errors\.impactFailed/)).toBeInTheDocument();
   });
 
@@ -191,9 +196,8 @@ describe("DocumentsSection — links (D2)", () => {
   describe("also link to …", () => {
     const open = async () => {
       render(<DocumentsSection entry={FLIGHT} />);
-      fireEvent.click(
-        await screen.findByRole("button", { name: "documents:links.alsoLinkActionLabel" })
-      );
+      fireEvent.click(await screen.findByRole("button", { name: "documents:rowMenuLabel" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "documents:links.alsoLinkAction" }));
       return screen.findByTestId("link-document-dialog");
     };
 
@@ -265,9 +269,8 @@ describe("DocumentsSection — links (D2)", () => {
         return [];
       });
       render(<DocumentsSection entry={FLIGHT} />);
-      fireEvent.click(
-        await screen.findByRole("button", { name: "documents:links.fromTripAction" })
-      );
+      fireEvent.click(await screen.findByRole("button", { name: "documents:sectionMenuLabel" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "documents:links.fromTripAction" }));
       const dialog = await screen.findByTestId("trip-document-dialog");
       for (const box of await within(dialog).findAllByRole("checkbox")) fireEvent.click(box);
       fireEvent.click(

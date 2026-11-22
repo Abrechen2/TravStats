@@ -1,3 +1,4 @@
+import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { useEffect, useState } from "react";
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import type { JSX } from "react";
@@ -263,9 +264,10 @@ export default function BusDetailPage(): JSX.Element {
         actions={
           <>
             <Button onClick={() => setEditing(true)}>{t("bus:edit")}</Button>
-            <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
-              {t("bus:delete")}
-            </Button>
+            <DetailMoreMenu
+              deleteLabel={t("bus:delete")}
+              onDelete={() => setConfirmingDelete(true)}
+            />
           </>
         }
       />

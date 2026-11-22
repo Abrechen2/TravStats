@@ -11,6 +11,8 @@
   "openLabel": "{{name}} öffnen",
   "download": "Original",
   "downloadLabel": "{{name}} als Original-Mail herunterladen",
+  "rowMenuLabel": "Weitere Aktionen für {{name}}",
+  "sectionMenuLabel": "Weitere Aktionen für Dokumente",
   "remove": "Überall löschen",
   "removeLabel": "{{name}} überall löschen",
   "deleteTitle": "Dokument überall löschen?",
@@ -72,6 +74,7 @@
     }
   },
   "rentalCategory": {
+    "rowAction": "Kategorie ändern …",
     "pickup": "Abholung",
     "return": "Rückgabe",
     "damage": "Schäden",

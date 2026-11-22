@@ -8,6 +8,24 @@ import Button from "../ui/Button";
 import ShareLinkDialog from "./ShareLinkDialog";
 
 /**
+ * The same dialog as state, for a menu entry: `available` is false for the shared demo account.
+ */
+export function useShareLink(
+  kind: ShareLinkKind,
+  targetId: string
+): { available: boolean; start: () => void; node: JSX.Element | null } {
+  const isSharedDemo = useIsDemoAccount();
+  const [open, setOpen] = useState(false);
+  return {
+    available: !isSharedDemo,
+    start: () => setOpen(true),
+    node: open ? (
+      <ShareLinkDialog open={open} onClose={() => setOpen(false)} kind={kind} targetId={targetId} />
+    ) : null,
+  };
+}
+
+/**
  * The "Als Link teilen" button on a flight, a trip, the year in review, a cruise,
  * a lodging stay and a place visit
  * (forgejo#281). Not for the shared demo account — every visitor of a public

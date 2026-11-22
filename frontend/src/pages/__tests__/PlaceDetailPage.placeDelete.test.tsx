@@ -87,7 +87,8 @@ async function openPlaceDeleteDialog(): Promise<HTMLElement> {
     </MemoryRouter>
   );
   await screen.findByRole("heading", { name: /Wartburg/ });
-  await user.click(screen.getByRole("button", { name: "Ort löschen" }));
+  await user.click(screen.getByTestId("detail-more-menu"));
+  await user.click(screen.getByRole("menuitem", { name: "Ort löschen" }));
   return screen.findByTestId("confirm-modal");
 }
 

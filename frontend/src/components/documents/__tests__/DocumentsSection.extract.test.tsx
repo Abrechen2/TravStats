@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import type { TravelDocument } from "../../../lib/api/documents";
 
@@ -61,12 +61,18 @@ describe("DocumentsSection — take the values from a document", () => {
   it("offers it on a PDF and not on an image", async () => {
     render(<DocumentsSection entry={{ type: "flight", id: "f1" }} extract={EXTRACT} />);
     await screen.findByText("bill.pdf");
-    expect(screen.getAllByRole("button", { name: "documents:extract.action" })).toHaveLength(1);
+    const [pdfMenu, imageMenu] = screen.getAllByRole("button", { name: "documents:rowMenuLabel" });
+    fireEvent.click(pdfMenu);
+    expect(screen.getAllByRole("menuitem", { name: "documents:extract.action" })).toHaveLength(1);
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+    fireEvent.click(imageMenu);
+    expect(screen.queryByRole("menuitem", { name: "documents:extract.action" })).toBeNull();
   });
 
   it("offers nothing when the entry has nowhere to put the values", async () => {
     render(<DocumentsSection entry={{ type: "flight", id: "f1" }} />);
     await screen.findByText("bill.pdf");
-    expect(screen.queryByRole("button", { name: "documents:extract.action" })).toBeNull();
+    fireEvent.click(screen.getAllByRole("button", { name: "documents:rowMenuLabel" })[0]);
+    expect(screen.queryByRole("menuitem", { name: "documents:extract.action" })).toBeNull();
   });
 });

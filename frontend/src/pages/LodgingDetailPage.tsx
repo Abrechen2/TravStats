@@ -1,8 +1,8 @@
+import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { useEffect, useState } from "react";
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import TagChips from "../components/common/TagChips";
 import WikipediaCard from "../components/common/WikipediaCard";
-import LodgingEnrichButton from "../components/lodging/LodgingEnrichButton";
 import type { JSX, ReactNode } from "react";
 import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
@@ -415,27 +415,24 @@ export default function LodgingDetailPage(): JSX.Element {
         }
         actions={
           <>
-            <LodgingEnrichButton lodgingId={lodging.id} onDone={() => setReloadKey((k) => k + 1)} />
-            {/* The quickest way to the next visit (forgejo#227): a new stay at
-                THIS house, nothing carried over but the house itself - dates,
-                room, booking reference and price are the new visit's own. */}
-            <Button
-              data-testid="lodging-restay-button"
-              onClick={() => {
-                setRestaying(true);
-                setEditingStay("new");
-              }}
-            >
-              {t("lodging:restay.action")}
-            </Button>
             <Button onClick={() => setEditing(true)}>{t("common:buttons.edit")}</Button>
-            <Button
-              variant="danger"
-              data-testid="lodging-delete-button"
-              onClick={() => setConfirmingDelete(true)}
-            >
-              {t("common:buttons.delete")}
-            </Button>
+            <DetailMoreMenu
+              enrich={{ lodgingId: lodging.id, onDone: () => setReloadKey((k) => k + 1) }}
+              entries={[
+                // The quickest way to the next visit (forgejo#227): a new stay at
+                // THIS house, nothing carried over but the house itself - dates,
+                // room, booking reference and price are the new visit's own.
+                {
+                  key: "restay",
+                  label: t("lodging:restay.action"),
+                  onSelect: () => {
+                    setRestaying(true);
+                    setEditingStay("new");
+                  },
+                },
+              ]}
+              onDelete={() => setConfirmingDelete(true)}
+            />
           </>
         }
       />

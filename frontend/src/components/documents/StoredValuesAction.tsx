@@ -62,7 +62,7 @@ export function StoredValuesAction({ documentId, target }: Props): JSX.Element {
   );
 }
 
-function StoredValuesDialog({
+export function StoredValuesDialog({
   documentId,
   target,
   onClose,

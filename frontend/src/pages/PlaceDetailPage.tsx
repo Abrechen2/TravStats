@@ -1,3 +1,4 @@
+import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import TagChips from "../components/common/TagChips";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import WikipediaCard from "../components/common/WikipediaCard";
@@ -297,10 +298,17 @@ export default function PlaceDetailPage(): JSX.Element {
         actions={
           <>
             <Button onClick={() => setEditing(true)}>{t("common:buttons.edit")}</Button>
-            <Button onClick={() => setMerging(true)}>{t("places:merge.action")}</Button>
-            <Button variant="danger" onClick={() => setConfirmDelete(true)}>
-              {t("places:detail.deletePlace")}
-            </Button>
+            <DetailMoreMenu
+              entries={[
+                {
+                  key: "merge",
+                  label: t("places:merge.action"),
+                  onSelect: () => setMerging(true),
+                },
+              ]}
+              deleteLabel={t("places:detail.deletePlace")}
+              onDelete={() => setConfirmDelete(true)}
+            />
           </>
         }
       />

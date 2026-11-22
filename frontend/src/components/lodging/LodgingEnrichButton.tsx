@@ -32,20 +32,25 @@ function isUpstreamReason(reason: LodgingEnrichmentReason): reason is Upstream {
   return reason !== null && UPSTREAM_REASONS.has(reason);
 }
 
-export default function LodgingEnrichButton({
-  lodgingId,
-  onDone,
-}: {
-  lodgingId: string;
-  onDone: () => void;
-}): JSX.Element | null {
+/**
+ * The enrichment as state + dialog, so a button or a menu entry can start it.
+ * `available` is false where the instance's open data switch is off (the entry is then absent).
+ */
+export function useLodgingEnrich(
+  lodgingId: string,
+  onDone: () => void
+): {
+  available: boolean;
+  busy: boolean;
+  label: string;
+  ask: () => Promise<void>;
+  node: JSX.Element | null;
+} {
   const { t } = useTranslation(["openData"]);
   const openData = useSettingsStore((s) => s.openDataEnabled) === true;
   const addToast = useToastStore((s) => s.addToast);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<LodgingEnrichmentPreview | null>(null);
-
-  if (!openData) return null;
 
   /** A found-nothing answer, as the reader's own message. */
   const sayNothing = (reason: LodgingEnrichmentReason): void => {
@@ -129,19 +134,38 @@ export default function LodgingEnrichButton({
     }
   };
 
+  const node = preview ? (
+    <LodgingEnrichPreviewDialog
+      preview={preview}
+      busy={busy}
+      onApply={() => void apply()}
+      onClose={() => setPreview(null)}
+    />
+  ) : null;
+  return {
+    available: openData,
+    busy,
+    label: busy && !preview ? t("openData:lodging.enriching") : t("openData:lodging.enrich"),
+    ask,
+    node,
+  };
+}
+
+export default function LodgingEnrichButton({
+  lodgingId,
+  onDone,
+}: {
+  lodgingId: string;
+  onDone: () => void;
+}): JSX.Element | null {
+  const enrich = useLodgingEnrich(lodgingId, onDone);
+  if (!enrich.available) return null;
   return (
     <>
-      <Button onClick={() => void ask()} disabled={busy}>
-        {busy && !preview ? t("openData:lodging.enriching") : t("openData:lodging.enrich")}
+      <Button onClick={() => void enrich.ask()} disabled={enrich.busy}>
+        {enrich.label}
       </Button>
-      {preview && (
-        <LodgingEnrichPreviewDialog
-          preview={preview}
-          busy={busy}
-          onApply={() => void apply()}
-          onClose={() => setPreview(null)}
-        />
-      )}
+      {enrich.node}
     </>
   );
 }

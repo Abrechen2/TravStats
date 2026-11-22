@@ -177,7 +177,9 @@ describe("DocumentsSection", () => {
     fireEvent.change(screen.getByTestId("documents-file-input"), { target: { files: [file] } });
     await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(await screen.findByRole("button", { name: "documents:removeLabel" }));
+    fireEvent.click(await screen.findByRole("button", { name: "documents:rowMenuLabel" }));
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "documents:remove" }));
     fireEvent.click(await screen.findByRole("button", { name: "common:buttons.delete" }));
     await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(2));
   });
@@ -209,7 +211,9 @@ describe("DocumentsSection", () => {
     documentsApiMock.listForEntry.mockResolvedValue([makeDocument()]);
     render(<DocumentsSection entry={FLIGHT} />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "documents:removeLabel" }));
+    fireEvent.click(await screen.findByRole("button", { name: "documents:rowMenuLabel" }));
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "documents:remove" }));
     expect(await screen.findByText("documents:deleteMessage")).toBeInTheDocument();
     expect(documentsApiMock.remove).not.toHaveBeenCalled();
 
@@ -226,7 +230,7 @@ describe("DocumentsSection", () => {
     expect(await screen.findByText("settings:demoLocked")).toBeInTheDocument();
     expect(screen.queryByTestId("documents-file-input")).toBeNull();
     // Nor a remove button: the same guard refuses the delete.
-    expect(screen.queryByRole("button", { name: "documents:removeLabel" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "documents:rowMenuLabel" })).toBeNull();
     // And it does not ask for limits it may never use.
     expect(documentsApiMock.limits).not.toHaveBeenCalled();
   });
@@ -263,7 +267,9 @@ describe("DocumentsSection", () => {
     documentsApiMock.remove.mockRejectedValue(new Error("boom"));
     render(<DocumentsSection entry={FLIGHT} />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "documents:removeLabel" }));
+    fireEvent.click(await screen.findByRole("button", { name: "documents:rowMenuLabel" }));
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "documents:remove" }));
     fireEvent.click(await screen.findByRole("button", { name: "common:buttons.delete" }));
 
     expect(await screen.findByText("documents:deleteFailed")).toBeInTheDocument();
@@ -283,7 +289,9 @@ describe("DocumentsSection", () => {
     fireEvent.change(screen.getByTestId("documents-file-input"), { target: { files: [huge] } });
     expect(await screen.findByText("documents:tooLarge")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "documents:removeLabel" }));
+    fireEvent.click(screen.getByRole("button", { name: "documents:rowMenuLabel" }));
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "documents:remove" }));
     fireEvent.click(await screen.findByRole("button", { name: "common:buttons.delete" }));
 
     await waitFor(() => expect(screen.queryByText("LH2462.pdf")).toBeNull());

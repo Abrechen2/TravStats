@@ -1,3 +1,4 @@
+import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { useEffect, useState } from "react";
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -189,7 +190,7 @@ export default function FerryDetailPage() {
         actions={
           <>
             <Button onClick={() => setEditing(true)}>{t("ferry:edit")}</Button>
-            <Button onClick={() => setDeleting(true)}>{t("ferry:remove")}</Button>
+            <DetailMoreMenu deleteLabel={t("ferry:remove")} onDelete={() => setDeleting(true)} />
           </>
         }
       />

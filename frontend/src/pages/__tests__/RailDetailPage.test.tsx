@@ -315,7 +315,8 @@ describe("RailDetailPage", () => {
         booking: { id: "b1", pnr: null, railJourneys: legs },
       })
     );
-    fireEvent.click(screen.getByRole("button", { name: "rail:delete" }));
+    fireEvent.click(screen.getByTestId("detail-more-menu"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "rail:delete" }));
     const dialog = await screen.findByRole("dialog");
     await waitFor(() => expect(dialog.textContent).toContain("documents:deleteCascadeNote"));
     expect(dialog.textContent).toContain('rail:deleteConfirmNamed {"route":"Frankfurt → Fulda"}');
@@ -327,7 +328,8 @@ describe("RailDetailPage", () => {
   // the dialog closes, even when the user cancels the next leg.
   it("reads the booking again when the dialog closes after a leg was added", async () => {
     await renderPage(detail());
-    fireEvent.click(screen.getByRole("button", { name: "rail:connection.add" }));
+    fireEvent.click(screen.getByTestId("detail-more-menu"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "rail:connection.add" }));
     fireEvent.click(screen.getByText("editor-progress"));
     expect(getMock).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByText("editor-close"));
@@ -336,7 +338,8 @@ describe("RailDetailPage", () => {
 
   it("closes without a reload when nothing was added", async () => {
     await renderPage(detail());
-    fireEvent.click(screen.getByRole("button", { name: "rail:connection.add" }));
+    fireEvent.click(screen.getByTestId("detail-more-menu"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "rail:connection.add" }));
     fireEvent.click(screen.getByText("editor-close"));
     expect(screen.queryByTestId("rail-editor")).toBeNull();
     expect(getMock).toHaveBeenCalledTimes(1);
@@ -346,7 +349,8 @@ describe("RailDetailPage", () => {
   // Back guard's own navigation, never a plain navigate.
   it("moves to a newly saved connection through navigateAfterSave", async () => {
     await renderPage(detail());
-    fireEvent.click(screen.getByRole("button", { name: "rail:connection.add" }));
+    fireEvent.click(screen.getByTestId("detail-more-menu"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "rail:connection.add" }));
     fireEvent.click(screen.getByText("editor-save-new"));
     await waitFor(() =>
       expect(navigateAfterSave).toHaveBeenCalledWith(expect.any(Function), "/rail/leg-new")
