@@ -207,7 +207,14 @@ describe("Wartung › System", () => {
 
   it("shows the demo account's removal only while a demo account exists, behind the confirmation", async () => {
     admin.getUsers.mockResolvedValue({
-      users: [{ id: "d1", username: "demo", _count: { flights: 30, userAchievements: 0 } }],
+      users: [
+        {
+          id: "d1",
+          username: "demo",
+          entryTotal: 30,
+          _count: { flights: 30, userAchievements: 0 },
+        },
+      ],
     });
     admin.deleteUser.mockRejectedValue(httpError(500));
     render(<MaintenanceSystem />);

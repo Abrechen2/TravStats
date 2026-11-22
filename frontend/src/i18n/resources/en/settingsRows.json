@@ -432,8 +432,8 @@
     "demodel": {
       "title": "Delete demo account?",
       "affects": "The account {{name}} with all entries",
-      "amount_one": "{{count}} flight",
-      "amount_other": "{{count}} flights",
+      "amount_one": "{{count}} entry",
+      "amount_other": "{{count}} entries",
       "after": "No one can sign in as demo any more.",
       "confirm": "Delete"
     },

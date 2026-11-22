@@ -15,6 +15,7 @@ import UpdateBadge from "./UpdateBadge";
 import NavDropdown from "./Nav/NavDropdown";
 import MoreMenu from "./Nav/MoreMenu";
 import UserMenu from "./Nav/UserMenu";
+import { DemoAccountNotice } from "./DemoAccountNotice";
 import GlobalSearch from "./Nav/GlobalSearch";
 import { Icon } from "./ui/Icon";
 import { useSettingsStore } from "../store/settingsStore";
@@ -264,6 +265,7 @@ export default function NavigationBar(): JSX.Element {
                 />
               )}
             </Link>
+            <DemoAccountNotice variant="chip" />
             <UserMenu
               user={user}
               profilePicture={profilePicture}

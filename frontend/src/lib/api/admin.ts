@@ -245,6 +245,8 @@ export const adminApi = {
     maxUsers: number;
     warningThreshold: boolean;
     registrationEnabled: boolean;
+    demoUserExists?: boolean;
+    demoUserActive?: boolean;
     version: string;
     buildVersion: string;
   }> => {
@@ -256,6 +258,8 @@ export const adminApi = {
       maxUsers: number;
       warningThreshold: boolean;
       registrationEnabled: boolean;
+      demoUserExists?: boolean;
+      demoUserActive?: boolean;
       version: string;
       buildVersion: string;
     }>("/admin/system/info");

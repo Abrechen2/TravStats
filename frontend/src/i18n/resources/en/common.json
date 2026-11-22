@@ -525,5 +525,10 @@
       "anyDate": "Regardless of the stay's dates",
       "leave": "Back to the time search"
     }
+  },
+  "demoAccount": {
+    "label": "Warning: demo account active",
+    "short": "Demo account active",
+    "hint": "A demo account is still active. Go to Maintenance to delete it."
   }
 }

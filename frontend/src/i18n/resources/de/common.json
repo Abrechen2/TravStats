@@ -525,5 +525,10 @@
       "anyDate": "Unabhängig vom Aufenthaltszeitraum",
       "leave": "Zurück zur Zeitsuche"
     }
+  },
+  "demoAccount": {
+    "label": "Achtung: Demo-Konto aktiv",
+    "short": "Demo-Konto aktiv",
+    "hint": "Ein Demo-Konto ist noch aktiv. Zur Wartung, um es zu löschen."
   }
 }

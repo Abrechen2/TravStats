@@ -14,6 +14,7 @@ import ReadinessSection from "../components/Settings/readiness/ReadinessSection"
 import { SettingsLayout } from "../components/Settings/frame/SettingsLayout";
 import { SectionFrame } from "../components/Settings/frame/SectionFrame";
 import { ExpertPageNotice, PageExpertNote } from "../components/Settings/frame/ExpertNote";
+import { DemoAccountNotice } from "../components/DemoAccountNotice";
 import { VersionLine } from "../components/Settings/frame/VersionLine";
 import {
   PageExpertNoteShownContext,
@@ -320,7 +321,12 @@ export default function SettingsPage(): JSX.Element {
       hiddenPages={hiddenPages}
       search={<AreaSearch isAdmin={isAdmin} />}
       moreExpert={moreExpert}
-      menuFooter={<VersionLine />}
+      menuFooter={
+        <div className="flex flex-col items-start" style={{ gap: "var(--ts-space-sm)" }}>
+          <DemoAccountNotice variant="menu" />
+          <VersionLine />
+        </div>
+      }
       title={title}
       meta={
         <span>
