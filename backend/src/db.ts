@@ -174,9 +174,7 @@ const queried = basePrisma.$extends({
         ? (entryFilterActive().hidden.PlaceVisit ?? [])
         : [];
       const { args, added: addedId } =
-        hiddenVisitPurposes.length > 0
-          ? ensureIdSelected(scoped)
-          : { args: scoped, added: false };
+        hiddenVisitPurposes.length > 0 ? ensureIdSelected(scoped) : { args: scoped, added: false };
       const startTime = Date.now();
       // Before the call, matching the old middleware: it recorded on the way
       // in, so a query that throws is still counted.

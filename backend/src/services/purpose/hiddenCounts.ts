@@ -40,7 +40,9 @@ export async function countHiddenByPurpose(
     const delegate = (prisma as unknown as Record<string, Counter>)[DELEGATE[domain]];
     const counts: Record<string, number> = {};
     for (const purpose of hidden) {
-      counts[purpose] = await runUnfiltered(() => delegate.count({ where: { userId, purpose, ...kindWhere(domain) } }));
+      counts[purpose] = await runUnfiltered(() =>
+        delegate.count({ where: { userId, purpose, ...kindWhere(domain) } })
+      );
     }
     out[domain] = counts;
   }

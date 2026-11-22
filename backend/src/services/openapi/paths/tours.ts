@@ -7,8 +7,7 @@
  * with `/trips/{id}/routes` rather than its own top-level segment.
  *
  * None of these responses use the `{success, data}` envelope the cruise
- * endpoints use — they follow the older bare-object convention `trips.ts`
- * itself uses (`{ route: ... }`, `{ leg: ... }`).
+ * endpoints use: the older bare-object convention (`{ route }`, `{ leg }`).
  *
  * The two dashboard-wide endpoints — `GET /tours` and
  * `POST /tours/geometry/batch`, on the NOT-trip-scoped
@@ -91,10 +90,7 @@ const tourRoute = registry.register(
         .uuid()
         .nullable()
         .describe("Tour only: the roadtrip station the day tour set out from"),
-      purpose: z
-        .enum(["private", "business"])
-        .nullable()
-        .describe("Private or business; null is unknown"),
+      purpose: z.enum(["private", "business"]).nullable(),
       kindAssignedAutomatically: z
         .boolean()
         .describe(
@@ -136,7 +132,6 @@ const tourRoute = registry.register(
         vehicleName: "Der Dicke",
         anchorStopId: null,
         kindAssignedAutomatically: false,
-        purpose: null,
         orderIdx: 0,
         color: "#2563eb",
         notes: null,

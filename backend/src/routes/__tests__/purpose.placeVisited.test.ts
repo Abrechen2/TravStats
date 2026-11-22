@@ -59,7 +59,10 @@ describe("purpose: a place visited only through a hidden business visit", () => 
   });
 
   const visitedByName = async (): Promise<Record<string, boolean>> => {
-    const res = await request(app).get("/api/v1/places?limit=100").set("Cookie", cookie).expect(200);
+    const res = await request(app)
+      .get("/api/v1/places?limit=100")
+      .set("Cookie", cookie)
+      .expect(200);
     const rows = (res.body.places ?? res.body.data ?? res.body) as Array<{
       name: string;
       visited: boolean;

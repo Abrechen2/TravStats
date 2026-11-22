@@ -25,7 +25,13 @@ export type VisitLoader = (placeIds: string[]) => Promise<VisitFact[]>;
 type Row = Record<string, unknown>;
 const isRow = (v: unknown): v is Row => typeof v === "object" && v !== null && !Array.isArray(v);
 
-const PLACE_READS = new Set(["findMany", "findFirst", "findFirstOrThrow", "findUnique", "findUniqueOrThrow"]);
+const PLACE_READS = new Set([
+  "findMany",
+  "findFirst",
+  "findFirstOrThrow",
+  "findUnique",
+  "findUniqueOrThrow",
+]);
 
 /** Is this a read whose rows this module may correct? */
 export const isPlaceRead = (model: string | undefined, operation: string): boolean =>
@@ -40,7 +46,8 @@ export function demotedPlaceIds(
   const byPlace = new Map<string, { hiddenDone: boolean; visibleDone: boolean }>();
   for (const v of visits) {
     const entry = byPlace.get(v.placeId) ?? { hiddenDone: false, visibleDone: false };
-    const done = classifyVisit({ visitedAt: v.visitedAt, visitedAtUtc: v.visitedAtUtc }, now) === "visited";
+    const done =
+      classifyVisit({ visitedAt: v.visitedAt, visitedAtUtc: v.visitedAtUtc }, now) === "visited";
     if (done) {
       if (isHiddenByPurpose(v.purpose, hidden)) entry.hiddenDone = true;
       else entry.visibleDone = true;

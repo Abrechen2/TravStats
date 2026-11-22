@@ -248,7 +248,11 @@ describe("what the account hid by purpose is out of the published totals", () =>
         visited: true,
         visits: {
           create: [
-            { userId: hidingUser, visitedAt: new Date("2025-06-03T10:00:00Z"), purpose: "business" },
+            {
+              userId: hidingUser,
+              visitedAt: new Date("2025-06-03T10:00:00Z"),
+              purpose: "business",
+            },
           ],
         },
       },
@@ -263,11 +267,20 @@ describe("what the account hid by purpose is out of the published totals", () =>
     expect(before.metrics).toMatchObject({ ferryCrossings: 2, places: 1, placeVisits: 1 });
     await prisma.userSettings.upsert({
       where: { userId: hidingUser },
-      create: { userId: hidingUser, data: {}, purposeVisibility: { ferry: ["business"], poi: ["business"] } },
+      create: {
+        userId: hidingUser,
+        data: {},
+        purposeVisibility: { ferry: ["business"], poi: ["business"] },
+      },
       update: { purposeVisibility: { ferry: ["business"], poi: ["business"] } },
     });
     const after = await buildLeaderboardSnapshot(hidingUser, ALL, null);
-    expect(after.metrics).toMatchObject({ ferryCrossings: 1, ferryKm: 670, places: 0, placeVisits: 0 });
+    expect(after.metrics).toMatchObject({
+      ferryCrossings: 1,
+      ferryKm: 670,
+      places: 0,
+      placeVisits: 0,
+    });
   });
 
   it("a place visited only through a hidden business visit is not counted as a place", async () => {
@@ -284,7 +297,11 @@ describe("what the account hid by purpose is out of the published totals", () =>
         visited: true,
         visits: {
           create: [
-            { userId: hidingUser, visitedAt: new Date("2025-06-04T10:00:00Z"), purpose: "business" },
+            {
+              userId: hidingUser,
+              visitedAt: new Date("2025-06-04T10:00:00Z"),
+              purpose: "business",
+            },
             { userId: hidingUser, visitedAt: new Date("2999-01-01T10:00:00Z"), purpose: "private" },
           ],
         },
