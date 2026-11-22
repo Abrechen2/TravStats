@@ -208,6 +208,9 @@ export const NON_TRAVEL_RELATIONS = [
   // The ledger of account archives restored here (idempotency marker per archive id): per-server
   // import bookkeeping, never shared travel data.
   "accountArchiveImports",
+  // Contradiction cards between a remembered and a recorded entry: the member's own view of their
+  // data (plan 2026-11-22-remembered-facts), derived per account, never shared with a friend.
+  "provenanceNotices",
   "settings",
   "analyticsEvents",
   "createdInvitations",
