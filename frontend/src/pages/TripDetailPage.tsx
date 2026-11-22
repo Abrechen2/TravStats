@@ -159,7 +159,7 @@ export default function TripDetailPage(): JSX.Element {
 
   return (
     <AppShell>
-      <TravelPlanSummary tripId={trip.id} />
+      <TravelPlanSummary tripId={trip.id} completed={trip.status === "completed"} />
       <TripHead
         trip={shownTrip}
         locale={i18n.language}
