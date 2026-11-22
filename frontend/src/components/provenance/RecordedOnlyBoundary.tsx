@@ -1,5 +1,6 @@
 import { useLayoutEffect, useState, type ReactNode } from "react";
 
+import HelpIcon from "../Help/HelpIcon";
 import { useTranslation } from "../../hooks/useTranslation";
 import { setRecordedOnly } from "../../lib/stats/recordedOnly";
 
@@ -22,16 +23,18 @@ export default function RecordedOnlyBoundary({ children }: { children: ReactNode
   return (
     <>
       <div
-        className="flex justify-end"
+        className="flex items-center justify-end"
         style={{ padding: "var(--ts-space-sm) var(--ts-space-lg) 0" }}
       >
-        <label
-          className="flex items-center gap-2 text-sm"
-          title={t("provenance:stats.onlyRecordedHint")}
-        >
+        <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} />
           {t("provenance:stats.onlyRecorded")}
         </label>
+        <HelpIcon
+          content={t("provenance:stats.onlyRecordedHint")}
+          subject={t("provenance:stats.onlyRecorded")}
+          className="ml-1"
+        />
       </div>
       <div key={on ? "recorded" : "all"}>{children}</div>
     </>
