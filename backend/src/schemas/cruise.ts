@@ -88,6 +88,19 @@ export const cruiseStopSchema = z
       ),
     portId: z.number().int().positive().nullable().optional(),
     dayNumber: z.number().int().min(1).max(365),
+    // Order within the cruise, the tie-break after day and times (forgejo#438).
+    // Optional: a client that does not know it (an older app) gets the stop's
+    // place in the list it sent, i.e. the next position, never a reshuffle.
+    position: z
+      .number()
+      .int()
+      .min(0)
+      .max(100_000)
+      .optional()
+      .describe(
+        "Order within the cruise; ties on day and times are broken by it. " +
+          "Absent: the stop's index in the array sent."
+      ),
     // Calendar date of the stop. Booking confirmations list a date per stop
     // (often without clock times), so this captures it even when arrival/
     // departure times are absent ("2027-10-08" -> "2027-10-08T00:00:00.000Z").

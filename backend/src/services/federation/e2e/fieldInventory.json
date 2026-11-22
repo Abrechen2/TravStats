@@ -24,7 +24,7 @@
     "excluded": "userId parserTemplate parserConfidence dataSource shareKey provenance rememberedOn rememberedNote"
   },
   "CruiseStop": {
-    "details": "id cruiseId portId dayNumber date isAtSea arrivalTime departureTime arrivalUtc departureUtc stopZone stopDate timePrecision updatedAt allAboardTime unresolvedPortName",
+    "details": "id cruiseId portId dayNumber position date isAtSea arrivalTime departureTime arrivalUtc departureUtc stopZone stopDate timePrecision updatedAt allAboardTime unresolvedPortName",
     "costs": "",
     "personal": "excursionNote",
     "photos": "",

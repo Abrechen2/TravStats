@@ -57,6 +57,9 @@ export function storedStopFold(
  *   value for a stop that does not send the key (for clients that do not know
  *   it, review C1), so a day added here on a removed day's port would
  *   otherwise inherit that day's time. A sea day sends null.
+ * - `position` is the stop's index in the list: the editor's order IS the
+ *   order, so a reorder within a day persists and a new stop lands last
+ *   (forgejo#438).
  * The UI-only fields (`port`, `originalDay`, `dateSource`, `uiKey`,
  * `beforeSea`) are dropped.
  */
@@ -77,6 +80,7 @@ export function cruiseStopToWire(stop: CruiseStopInput, index: number): CruiseSt
   } = stop;
   const wire: CruiseStopWire = {
     ...rest,
+    position: index,
     allAboardTime: stop.isAtSea ? null : (allAboardTime ?? null),
   };
   if (date !== undefined) wire.date = date === null ? null : dayInput(date.slice(0, 10));

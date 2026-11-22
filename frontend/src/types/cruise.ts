@@ -38,6 +38,8 @@ export interface CruiseStop {
   portId: number | null;
   port: Port | null;
   dayNumber: number;
+  /** Order within the cruise, the tie-break after day and times (forgejo#438). */
+  position?: number;
   /** Calendar date of the stop (ISO) or null. */
   date: string | null;
   isAtSea: boolean;
@@ -117,6 +119,8 @@ export interface Cruise {
 export interface CruiseStopInput {
   portId: number | null;
   dayNumber: number;
+  /** As loaded; the submit mapper rewrites it from the list order (forgejo#438). */
+  position?: number;
   date?: string | null;
   isAtSea: boolean;
   arrivalTime?: string | null;
