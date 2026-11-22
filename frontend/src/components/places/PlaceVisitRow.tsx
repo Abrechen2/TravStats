@@ -1,5 +1,6 @@
 import ShareLinkButton from "../shareLinks/ShareLinkButton";
 import ProvenanceDetails from "../provenance/ProvenanceDetails";
+import PurposeChip from "../../components/purpose/PurposeChip";
 import RememberedMarker from "../provenance/RememberedMarker";
 import type { JSX } from "react";
 
@@ -93,6 +94,7 @@ export function PlaceVisitRow({
               </span>
             )}
             <RememberedMarker entry={visit} />
+            <PurposeChip entry={visit} />
             {state === "planned" && (
               <span className="ts-status-pill shrink-0" style={statusPillStyle("scheduled")}>
                 {plannedLabel}

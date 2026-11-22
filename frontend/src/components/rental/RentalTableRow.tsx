@@ -1,4 +1,5 @@
 import type { JSX, ReactNode } from "react";
+import PurposeChip from "../../components/purpose/PurposeChip";
 import RememberedMarker from "../provenance/RememberedMarker";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatRentalPeriod } from "../../lib/rentalTime";
@@ -138,6 +139,7 @@ export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX
           {t(`rental:status.${rental.status}`)}
         </span>
         <RememberedMarker entry={rental} />
+        <PurposeChip entry={rental} />
         {/* A deposit still held after the car is back is easy to forget (forgejo#238). */}
         {depositOutstanding ? (
           <span className="t-caption text-(--warning)" data-testid="rental-deposit-open">

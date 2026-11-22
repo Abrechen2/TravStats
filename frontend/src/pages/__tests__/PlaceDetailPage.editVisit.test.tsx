@@ -132,6 +132,7 @@ describe("PlaceDetailPage — editing a visit", () => {
       expect(updateVisit).toHaveBeenCalledWith("v1", {
         visitedAt: { local: "2024-05-02T14:30", placeRef: { kind: "place", id: "p1" } },
         notes: "Lutherstube",
+        purpose: null,
         rating: null,
         tripId: null,
       })

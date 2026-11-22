@@ -219,6 +219,7 @@
     "dawarichStays.ts",
     "documentLinkSuggestions.ts",
     "provenance.ts",
+    "purpose.ts",
     "documents.ts",
     "documents/extractValues.ts",
     "documents/links.ts",

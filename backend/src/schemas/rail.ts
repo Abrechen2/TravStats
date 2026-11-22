@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { purposeField } from "./purpose";
 import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
 import { RAIL_LOOKUP_PROVIDERS } from "../services/rail/lookup/types";
@@ -148,6 +149,8 @@ export function strayFoldKey(body: unknown): string | null {
 }
 
 const baseRailSchema = z.object({
+  /** Private or business; omitted leaves the stored value as it is (spec 2026-11-22-private-business-purpose). */
+  purpose: purposeField,
   operator: optionalText(100),
   trainCategory: optionalText(20),
   trainNumber: optionalText(20),

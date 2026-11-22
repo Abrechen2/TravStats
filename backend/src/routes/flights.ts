@@ -51,6 +51,7 @@ export interface FlightUpdateData extends ExtendedFlightInput {
   fxRateDate?: Date | null;
   fxBaseCurrency?: string | null;
   fxSource?: string | null;
+  purpose?: string | null;
   airline?: string | null;
   airlineIata?: string | null;
   airlineIcao?: string | null;

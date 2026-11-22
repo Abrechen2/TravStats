@@ -1,5 +1,6 @@
 // The mail-intake card loads its own settings; it has its own tests.
 // The account archive rows read their status on mount; a unit test must not reach the network.
+vi.mock("../../components/Settings/PurposeVisibilitySection", () => ({ default: () => null }));
 vi.mock("../../lib/api/accountArchive", () => ({
   accountArchiveApi: { status: async () => ({ empty: false, busy: false, maxBytes: 1_000_000 }) },
 }));

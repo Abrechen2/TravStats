@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { purposeField } from "./purpose";
 import { normalizeRegistration } from "../shared/aircraftRegistration";
 import { receiptUrlValidator } from "./receiptUrl";
 import { chronologyProblem, departsInFuture } from "../shared/flightChronology";
@@ -158,6 +159,8 @@ export const SPECIAL_FLIGHT_TYPES = [
 ] as const;
 
 const baseFlightSchema = z.object({
+  /** Private or business; omitted leaves the stored value as it is (spec 2026-11-22-private-business-purpose). */
+  purpose: purposeField,
   airline: emptyStringToNull,
   airlineIata: z.string().max(4).nullable().optional(),
   airlineIcao: z.string().max(5).nullable().optional(),

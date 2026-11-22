@@ -34,7 +34,7 @@ import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
 import LodgingRatingsSection from "../../components/Settings/LodgingRatingsSection";
 import LoyaltySection from "../../components/Settings/LoyaltySection";
-import ModuleSection from "../../components/Settings/ModuleSection";
+import DomainsSection from "../../components/Settings/DomainsSection";
 import PlanningSection from "../../components/Settings/PlanningSection";
 import VisibilitySection from "../../components/Settings/VisibilitySection";
 import ServicesPage from "../../components/Services/ServicesPage";
@@ -93,7 +93,7 @@ export default function SettingsSectionSwitch({
       // The module switch and the domain colour, one row per domain
       // (forgejo#321): they were two sections that listed the same domains
       // twice, a screen apart.
-      return <ModuleSection />;
+      return <DomainsSection />;
     case "planning":
       return <PlanningSection />;
     case "countryCounting":

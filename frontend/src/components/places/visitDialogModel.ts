@@ -28,6 +28,8 @@ export interface VisitDraft {
   rating: number | null;
   /** "" = file by date (create only), `NO_TRIP`, or a trip id. */
   tripId: string;
+  /** Private or business; "" is not set (a create then leaves the trip to decide). */
+  purpose: "" | "private" | "business";
 }
 
 /**
@@ -42,9 +44,18 @@ export function visitDraft(
   initialDate?: string
 ): VisitDraft {
   if (!visit && initialDate) {
-    return { mode: "other", date: initialDate, time: "", notes: "", rating: null, tripId: "" };
+    return {
+      mode: "other",
+      date: initialDate,
+      time: "",
+      notes: "",
+      rating: null,
+      tripId: "",
+      purpose: "",
+    };
   }
-  if (!visit) return { mode: "today", date: "", time: "", notes: "", rating: null, tripId: "" };
+  if (!visit)
+    return { mode: "today", date: "", time: "", notes: "", rating: null, tripId: "", purpose: "" };
   const shown = visitTime(visit);
   const { date, time } = shown ? splitTimeValue(shown) : { date: "", time: "" };
   return {
@@ -54,6 +65,7 @@ export function visitDraft(
     notes: visit.notes ?? "",
     rating: visit.rating !== null && visit.rating >= 1 && visit.rating <= 5 ? visit.rating : null,
     tripId: visit.tripId ?? NO_TRIP,
+    purpose: visit.purpose === "business" || visit.purpose === "private" ? visit.purpose : "",
   };
 }
 
@@ -98,5 +110,11 @@ export function visitPayload(
   const trip =
     draft.tripId === "" ? {} : { tripId: draft.tripId === NO_TRIP ? null : draft.tripId };
   const rating = isEdit || draft.rating !== null ? { rating: draft.rating } : {};
-  return { visitedAt, notes: draft.notes.trim() || null, ...rating, ...trip };
+  // A create leaves an unset purpose out (the trip's category decides); an edit says "not set" with null.
+  const purpose = isEdit
+    ? { purpose: draft.purpose || null }
+    : draft.purpose
+      ? { purpose: draft.purpose }
+      : {};
+  return { visitedAt, notes: draft.notes.trim() || null, ...rating, ...trip, ...purpose };
 }

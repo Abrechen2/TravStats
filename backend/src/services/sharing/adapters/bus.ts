@@ -41,6 +41,8 @@ export const busAdapter: EntityAdapter = {
       data: {
         ...busFacts(source.facts as Pick<BusJourney, BusFactField>),
         userId: recipientId,
+        // The member's own view: a copy starts unknown, and no trip lookup runs inside this transaction.
+        purpose: null,
         tripId: recipientTripId,
         shareKey: source.shareKey,
       },

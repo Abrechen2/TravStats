@@ -24,6 +24,7 @@ import { TravelPlanSummary } from "../components/Trips/TravelPlanSummary";
 import TripPackingCard from "../components/Trips/TripPackingCard";
 import TripHead from "../components/Trips/TripHead";
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
+import TripPurposeAction from "../components/purpose/TripPurposeAction";
 import TripOverview from "../components/Trips/TripOverview";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
 import TimelineActions from "../components/Trips/TimelineActions";
@@ -174,6 +175,7 @@ export default function TripDetailPage(): JSX.Element {
       />
       <div style={{ margin: "var(--ts-space-sm) 0" }}>
         <ProvenanceDetails entryType="trip" entry={shownTrip} onSaved={() => void load()} />
+        <TripPurposeAction tripId={trip.id} onApplied={() => void load()} />
       </div>
       {/* On the overview tab the places panel carries the failure itself. */}
       {places.failed && tab !== "overview" && <TripPlacesError onRetry={places.reload} />}

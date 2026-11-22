@@ -747,11 +747,16 @@ model Flight {
   /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
   /// dates approximate) | NULL (unknown — every row older than the field). Private to the
   /// account: never a share fact, so a copy starts unknown.
-  provenance           String?   @map("provenance")
+  provenance     String?   @map("provenance")
   /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
-  rememberedOn         DateTime? @map("remembered_on") @db.Date
+  rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
-  rememberedNote       String?   @map("remembered_note")
+  rememberedNote String?   @map("remembered_note")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose              String?   @map("purpose")
   /// Bumped by every Prisma write. Read by the statistics ETag (forgejo#50):
   /// without it an edited flight could not be told apart from an unchanged one.
   updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at")
@@ -1035,6 +1040,11 @@ model UserSettings {
 
   /// Link photos from the connected photo sources to place visits on their own
   /// (default on: the owner asked for it, 2026-11-21). Links only, never copies.
+  /// Which purposes each domain hides, server-side (spec 2026-11-22-private-business-purpose.md):
+  /// `{ "poi": ["business"], "flight": [] }`. A missing domain hides nothing; an entry without a
+  /// purpose is never hidden. Read per request by services/provenance/recordedOnly.ts.
+  purposeVisibility Json? @map("purpose_visibility")
+
   autoLinkVisitPhotos Boolean @default(true) @map("auto_link_visit_photos")
 
   /// How many photos the automatic linker keeps per visit or entry, 5–10 (owner,
@@ -2915,7 +2925,12 @@ model Cruise {
   rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote String?   @map("remembered_note")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose   String?  @map("purpose")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   ship          Ship?            @relation(fields: [shipId], references: [id], onDelete: SetNull)
@@ -3525,7 +3540,12 @@ model LodgingStay {
   rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote String?   @map("remembered_note")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose   String?  @map("purpose")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   lodging    Lodging            @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
   user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -3946,7 +3966,12 @@ model PlaceVisit {
   rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote String?   @map("remembered_note")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose   String?  @map("purpose")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -4144,10 +4169,10 @@ model PlaceList {
 /// McDonald's at the Trevi Fountain is in "Maccis" and in "Rom" at once, which
 /// a column on `places` could never express.
 model PlaceListEntry {
-  id      String @id @default(uuid())
-  listId  String @map("list_id")
-  placeId String @map("place_id")
-  sortIdx Int    @default(0) @map("sort_idx")
+  id        String  @id @default(uuid())
+  listId    String  @map("list_id")
+  placeId   String  @map("place_id")
+  sortIdx   Int     @default(0) @map("sort_idx")
   /// `brandRule` when a smart list's auto-accept added the entry; undo removes only these.
   createdBy String? @map("created_by")
 
@@ -4175,13 +4200,13 @@ model PlaceListBrandRule {
   /// Display name and the exact-`brand`-string fallback ("weaker" match).
   brandName       String @map("brand_name")
 
-  minDwellMinutes Int     @default(5) @map("min_dwell_minutes")
-  maxDwellMinutes Int     @default(60) @map("max_dwell_minutes")
+  minDwellMinutes     Int     @default(5) @map("min_dwell_minutes")
+  maxDwellMinutes     Int     @default(60) @map("max_dwell_minutes")
   /// Suggestion tier: a stop this near the outlet is offered in the inbox and on the place page.
-  maxDistanceM    Int     @default(100) @map("max_distance_m")
+  maxDistanceM        Int     @default(100) @map("max_distance_m")
   /// Auto-accept tier: only a stop this near is taken without asking (never above `maxDistanceM`).
-  autoAcceptDistanceM Int @default(60) @map("auto_accept_distance_m")
-  autoAccept      Boolean @default(false) @map("auto_accept")
+  autoAcceptDistanceM Int     @default(60) @map("auto_accept_distance_m")
+  autoAccept          Boolean @default(false) @map("auto_accept")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -4931,7 +4956,12 @@ model RailJourney {
   rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote String?   @map("remembered_note")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose   String?  @map("purpose")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Rail&Fly (owner ruling 2026-11-05): the flight this ride belongs to. Set
@@ -5120,7 +5150,12 @@ model BusJourney {
   rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote String?   @map("remembered_note")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose   String?  @map("purpose")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip           Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
@@ -5341,7 +5376,12 @@ model RentalBooking {
   rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote String?   @map("remembered_note")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose   String?  @map("purpose")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip           Trip?                    @relation(fields: [tripId], references: [id], onDelete: SetNull)
@@ -6005,7 +6045,12 @@ model FerryJourney {
   rememberedOn   DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote String?   @map("remembered_note")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose   String?  @map("purpose")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip           Trip?                   @relation(fields: [tripId], references: [id], onDelete: SetNull)

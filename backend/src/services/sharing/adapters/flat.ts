@@ -64,6 +64,8 @@ export const flightAdapter: EntityAdapter = {
       data: {
         ...flightFacts(source.facts as Pick<Flight, FlightFactField>),
         userId: recipientId,
+        // The member's own view: a copy starts unknown, and no trip lookup runs inside this transaction.
+        purpose: null,
         tripId: recipientTripId,
         shareKey: source.shareKey,
         dataSource: SHARED_SOURCE,
@@ -131,6 +133,8 @@ export const railAdapter: EntityAdapter = {
       data: {
         ...railFacts(source.facts as Pick<RailJourney, RailFactField>),
         userId: recipientId,
+        // The member's own view: a copy starts unknown, and no trip lookup runs inside this transaction.
+        purpose: null,
         tripId: recipientTripId,
         shareKey: source.shareKey,
       },
@@ -186,6 +190,8 @@ export const rentalAdapter: EntityAdapter = {
       data: {
         ...rentalFacts(source.facts as Pick<RentalBooking, RentalFactField>),
         userId: recipientId,
+        // The member's own view: a copy starts unknown, and no trip lookup runs inside this transaction.
+        purpose: null,
         tripId: recipientTripId,
         shareKey: source.shareKey,
       },

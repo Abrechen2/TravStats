@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import { applyRecordedOnly } from "./services/provenance/recordedOnly";
+import { inheritPurposeOnCreate } from "./services/purpose/tripInheritance";
 import { createPrismaClient } from "./prismaClient";
 import {
   captureWrite,
@@ -161,7 +162,12 @@ export const prisma = basePrisma.$extends({
       if (isLedgerInternal()) return query(askedArgs);
       // "Nur belegte": inside a recorded-only request every read of an entry model leaves out
       // what was typed in from memory (services/provenance/recordedOnly.ts).
-      const args = applyRecordedOnly(model, operation, askedArgs);
+      // A new entry inside a trip starts with the trip's purpose (services/purpose/tripInheritance.ts).
+      const inherited = await inheritPurposeOnCreate(model, operation, askedArgs, async (id) => {
+        const trip = await basePrisma.trip.findFirst({ where: { id }, select: { category: true } });
+        return trip?.category ?? null;
+      });
+      const args = applyRecordedOnly(model, operation, inherited);
       const startTime = Date.now();
       // Before the call, matching the old middleware: it recorded on the way
       // in, so a query that throws is still counted.

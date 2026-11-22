@@ -28,6 +28,7 @@ vi.mock("@/lib/api/stats", async (importOriginal) => {
 });
 
 // "Mit wem unterwegs" fetches on its own (its suite is CompanionsTogetherSection.test).
+vi.mock("../../../purpose/PurposeHiddenHint", () => ({ default: () => null }));
 vi.mock("../CompanionsTogetherSection", () => ({ default: () => null }));
 
 // The tour figures fetch on their own; here only WHERE they are drawn matters.

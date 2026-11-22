@@ -1,5 +1,6 @@
 /** Ferry crossings (dennis/TravStats forgejo#293). */
 import { z } from "./zod";
+import { purposeField } from "./purpose";
 import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
 import { foldField, optionalText, wallClockOrDay } from "./wallClockInput";
@@ -31,6 +32,8 @@ export function strayFerryFoldKey(body: unknown): string | null {
 }
 
 const baseFerrySchema = z.object({
+  /** Private or business; omitted leaves the stored value as it is (spec 2026-11-22-private-business-purpose). */
+  purpose: purposeField,
   operator: optionalText(100),
   vesselName: optionalText(100),
   vesselMmsi: z

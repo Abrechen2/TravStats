@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import PurposeChip from "../../components/purpose/PurposeChip";
 import RememberedMarker from "../provenance/RememberedMarker";
 import type { JSX } from "react";
 import type { Flight, Trip } from "../../types";
@@ -107,6 +108,7 @@ export function FlightRow({
       <span className="inline-flex flex-col items-start gap-1">
         <FlightStatusCell flight={flight} />
         <RememberedMarker entry={flight} />
+        <PurposeChip entry={flight} />
       </span>
     ),
     duration: cells.duration,

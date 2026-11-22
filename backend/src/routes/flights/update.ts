@@ -139,6 +139,8 @@ export async function updateFlightHandler(
       updateData.aircraftRegistration = data.aircraftRegistration;
     if (data.aircraftModeS !== undefined) updateData.aircraftModeS = data.aircraftModeS;
     if (data.notes !== undefined) updateData.notes = data.notes;
+    // Omitted keeps the stored purpose; an older client never resets it.
+    if (data.purpose !== undefined) updateData.purpose = data.purpose;
     if (data.price !== undefined) updateData.price = data.price;
     if (data.taxes !== undefined) updateData.taxes = data.taxes;
     if (data.fees !== undefined) updateData.fees = data.fees;

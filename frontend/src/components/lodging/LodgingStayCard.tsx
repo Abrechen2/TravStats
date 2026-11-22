@@ -5,6 +5,7 @@ import DocumentsSection from "../documents/DocumentsSection";
 import EntryPhotos from "../common/EntryPhotos";
 import ProvenanceDialog from "../provenance/ProvenanceDialog";
 import ProvenanceLine from "../provenance/ProvenanceLine";
+import PurposeChip from "../../components/purpose/PurposeChip";
 import { PackageBookingCard } from "../bookings/PackageBookingCard";
 import { usePackageSplit } from "../bookings/usePackageSplit";
 import type { JSX } from "react";
@@ -136,6 +137,7 @@ export function LodgingStayCard({
             the flights table — a cancelled stay used to look identical to a
             booked one here. */}
         <StayStatusPill status={stay.status} testId={`stay-status-${stay.id}`} />
+        <PurposeChip entry={stay} />
         {stay.isAwardStay && (
           <span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-xs font-medium text-[var(--accent)]">
             {t("lodging:field.awardStay")}
