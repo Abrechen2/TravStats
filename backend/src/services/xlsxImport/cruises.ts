@@ -477,7 +477,11 @@ export async function importCruiseStops(sheet: IncomingSheet, ctx: Ctx): Promise
     if (!ctx.dryRun && cruiseId) {
       // Sheet order is source order: the new stop goes after the cruise's
       // existing ones (forgejo#438).
-      const position = await prisma.cruiseStop.count({ where: { cruiseId } });
+      const last = await prisma.cruiseStop.aggregate({
+        where: { cruiseId },
+        _max: { position: true },
+      });
+      const position = (last._max.position ?? -1) + 1;
       const created = await prisma.cruiseStop.create({
         data: {
           ...stop,
