@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import RememberedMarker from "../provenance/RememberedMarker";
 import type { JSX } from "react";
 import type { Flight, Trip } from "../../types";
 import { TableRow, type TableColumn } from "../ui/Table";
@@ -102,7 +103,12 @@ export function FlightRow({
     flightNumber: cells.flightNumber,
     route: <RouteCell flight={flight} />,
     time: <TimeCell flight={flight} />,
-    status: <FlightStatusCell flight={flight} />,
+    status: (
+      <span className="inline-flex flex-col items-start gap-1">
+        <FlightStatusCell flight={flight} />
+        <RememberedMarker entry={flight} />
+      </span>
+    ),
     duration: cells.duration,
     aircraft: cells.aircraft,
     price: cells.price,

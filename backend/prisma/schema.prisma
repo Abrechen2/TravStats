@@ -194,6 +194,7 @@ model User {
   photoJourneys                   PhotoJourney[]
   tripSuggestionAnswers           TripSuggestionDecision[]
   documentLinkSuggestions         DocumentLinkSuggestion[]
+  provenanceNotices               ProvenanceNotice[]
   documentLinkPass                DocumentLinkPass?
   dataQualityFlags                DataQualityFlag[]
   countryDays                     CountryDay[]
@@ -739,6 +740,16 @@ model Flight {
   receiptUrl           String?          @map("receipt_url")
   ticketPrice          Float?           @map("ticket_price")
   createdAt            DateTime         @default(now()) @map("created_at")
+
+  /// Where the entry came from (docs/superpowers/specs/2026-11-22-remembered-facts.md):
+  /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
+  /// dates approximate) | NULL (unknown — every row older than the field). Private to the
+  /// account: never a share fact, so a copy starts unknown.
+  provenance       String?   @map("provenance")
+  /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
+  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
+  rememberedNote   String?   @map("remembered_note")
   /// Bumped by every Prisma write. Read by the statistics ETag (forgejo#50):
   /// without it an edited flight could not be told apart from an unchanged one.
   updatedAt            DateTime         @default(now()) @updatedAt @map("updated_at")
@@ -2186,6 +2197,16 @@ model Trip {
   shareGroupId       String?   @map("share_group_id")
 
   createdAt DateTime @default(now()) @map("created_at")
+
+  /// Where the entry came from (docs/superpowers/specs/2026-11-22-remembered-facts.md):
+  /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
+  /// dates approximate) | NULL (unknown — every row older than the field). Private to the
+  /// account: never a share fact, so a copy starts unknown.
+  provenance       String?   @map("provenance")
+  /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
+  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
+  rememberedNote   String?   @map("remembered_note")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -2870,6 +2891,16 @@ model Cruise {
   // null and keep their derived color.
   color            String?   @map("color")
   createdAt        DateTime  @default(now()) @map("created_at")
+
+  /// Where the entry came from (docs/superpowers/specs/2026-11-22-remembered-facts.md):
+  /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
+  /// dates approximate) | NULL (unknown — every row older than the field). Private to the
+  /// account: never a share fact, so a copy starts unknown.
+  provenance       String?   @map("provenance")
+  /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
+  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
+  rememberedNote   String?   @map("remembered_note")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -3470,6 +3501,16 @@ model LodgingStay {
   /// Trip sharing: the same key on every member's copy of this entry. Null = never shared.
   shareKey              String?          @map("share_key")
   createdAt             DateTime         @default(now()) @map("created_at")
+
+  /// Where the entry came from (docs/superpowers/specs/2026-11-22-remembered-facts.md):
+  /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
+  /// dates approximate) | NULL (unknown — every row older than the field). Private to the
+  /// account: never a share fact, so a copy starts unknown.
+  provenance       String?   @map("provenance")
+  /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
+  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
+  rememberedNote   String?   @map("remembered_note")
   updatedAt             DateTime         @updatedAt @map("updated_at")
 
   lodging    Lodging            @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
@@ -3872,6 +3913,16 @@ model PlaceVisit {
   suggestionRef String? @map("suggestion_ref")
 
   createdAt DateTime @default(now()) @map("created_at")
+
+  /// Where the entry came from (docs/superpowers/specs/2026-11-22-remembered-facts.md):
+  /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
+  /// dates approximate) | NULL (unknown — every row older than the field). Private to the
+  /// account: never a share fact, so a copy starts unknown.
+  provenance       String?   @map("provenance")
+  /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
+  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
+  rememberedNote   String?   @map("remembered_note")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
@@ -4812,6 +4863,16 @@ model RailJourney {
   shareKey      String? @map("share_key")
 
   createdAt DateTime @default(now()) @map("created_at")
+
+  /// Where the entry came from (docs/superpowers/specs/2026-11-22-remembered-facts.md):
+  /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
+  /// dates approximate) | NULL (unknown — every row older than the field). Private to the
+  /// account: never a share fact, so a copy starts unknown.
+  provenance       String?   @map("provenance")
+  /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
+  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
+  rememberedNote   String?   @map("remembered_note")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -4991,6 +5052,16 @@ model BusJourney {
   shareKey      String? @map("share_key")
 
   createdAt DateTime @default(now()) @map("created_at")
+
+  /// Where the entry came from (docs/superpowers/specs/2026-11-22-remembered-facts.md):
+  /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
+  /// dates approximate) | NULL (unknown — every row older than the field). Private to the
+  /// account: never a share fact, so a copy starts unknown.
+  provenance       String?   @map("provenance")
+  /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
+  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
+  rememberedNote   String?   @map("remembered_note")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -5202,6 +5273,16 @@ model RentalBooking {
   shareKey      String? @map("share_key")
 
   createdAt DateTime @default(now()) @map("created_at")
+
+  /// Where the entry came from (docs/superpowers/specs/2026-11-22-remembered-facts.md):
+  /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
+  /// dates approximate) | NULL (unknown — every row older than the field). Private to the
+  /// account: never a share fact, so a copy starts unknown.
+  provenance       String?   @map("provenance")
+  /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
+  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
+  rememberedNote   String?   @map("remembered_note")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -5856,6 +5937,16 @@ model FerryJourney {
   shareKey      String? @map("share_key")
 
   createdAt DateTime @default(now()) @map("created_at")
+
+  /// Where the entry came from (docs/superpowers/specs/2026-11-22-remembered-facts.md):
+  /// `recorded` (a document, booking, track or import) | `remembered` (typed in from memory,
+  /// dates approximate) | NULL (unknown — every row older than the field). Private to the
+  /// account: never a share fact, so a copy starts unknown.
+  provenance       String?   @map("provenance")
+  /// The day the user wrote the recollection down ("erinnert am"); only with `remembered`.
+  rememberedOn     DateTime? @map("remembered_on") @db.Date
+  /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
+  rememberedNote   String?   @map("remembered_note")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -7664,4 +7755,34 @@ model AccountArchiveImport {
 
   @@index([userId])
   @@map("account_archive_imports")
+}
+
+/// "Your recollection and your record disagree" — a notice in the Posteingang that a remembered
+/// entry (or trip) names a date a recorded one contradicts (docs/superpowers/specs/2026-11-22-remembered-facts.md).
+/// Nothing is ever overwritten; the user edits the entry or dismisses the notice.
+///
+/// `entryId` has NO foreign key on purpose, like `DocumentLinkSuggestion`: a dismissal is kept
+/// by `contentKey`, so it survives a delete and re-import of the remembered entry.
+model ProvenanceNotice {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  /// trip | flight | lodgingStay | railJourney | busJourney | ferryJourney | rentalBooking | cruise | placeVisit
+  entryType   String   @map("entry_type")
+  entryId     String   @map("entry_id")
+  /// `contentKey()` of the REMEMBERED entry, plus the recorded one it disagrees with.
+  contentKey  String   @map("content_key")
+  /// outsideRememberedSpan | outsideRecordedSpan
+  kind        String
+  /// The two readings, for the card: { remembered: {type,id,label,from,to}, recorded: {…} }.
+  detail      Json
+  /// pending | dismissed | resolved (the contradiction went away on its own)
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contentKey])
+  @@index([userId, status])
+  @@map("provenance_notices")
 }

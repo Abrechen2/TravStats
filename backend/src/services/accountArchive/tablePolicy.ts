@@ -383,6 +383,8 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   dawarich_sweep_state: excluded(BOOKKEEPING),
   document_link_passes: excluded(BOOKKEEPING),
   document_link_suggestions: excluded(DERIVED),
+  // The user's dismissals are decisions, so they travel; entry_id names an entry without a foreign key.
+  provenance_notices: owner({ idColumns: ["entry_id"] }),
   entry_photo_dirty: excluded(DERIVED),
   external_service_tests: excluded(BOOKKEEPING),
   ferry_route_backfills: excluded(BOOKKEEPING),

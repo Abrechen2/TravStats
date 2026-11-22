@@ -1,4 +1,6 @@
 import express from "express";
+import { installProvenanceNoticeTriggers } from "./services/provenance/noticeTriggers";
+import { RECORDED_ONLY_PREFIXES, recordedOnlyScope } from "./services/provenance/recordedOnly";
 import { installEntryPhotoTriggers } from "./services/photoLinking/entryPhotoTriggers";
 import { withoutShareKeys } from "./services/sharing/wireGuard";
 import cors from "cors";
@@ -227,6 +229,8 @@ app.use(
   ["/api/v1/roadtrips", "/api/v1/tours", "/api/v1/trips/:id/routes", "/api/v1/rail"],
   recheckAchievementsAfterWrite
 );
+// "Nur belegte" on the statistics page: one scope for every route it reads (spec 2026-11-22).
+app.use([...RECORDED_ONLY_PREFIXES], recordedOnlyScope);
 for (const { base, router } of apiMounts) {
   app.use(base, router);
 }
@@ -307,6 +311,8 @@ process.on("SIGTERM", shutdown("SIGTERM"));
 if (process.env.NODE_ENV !== "test") {
   // Every write of an entry feeds the automatic photo pass; tests install it themselves.
   installEntryPhotoTriggers();
+  // Contradiction notices are kept current on write, so the inbox badge only counts stored rows.
+  installProvenanceNoticeTriggers();
   const HOST = process.env.HOST || "0.0.0.0"; // Bind to all interfaces for network access
   httpServer = app.listen(PORT, HOST, async () => {
     logger.info({

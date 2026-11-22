@@ -1,4 +1,5 @@
 import type { JSX } from "react";
+import RememberedMarker from "../provenance/RememberedMarker";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Trip } from "../../types";
 import { formatLocalDate } from "../../lib/displayFormat";
@@ -81,8 +82,11 @@ export default function TripsTable({
             ? trip.countries.map((cc) => countryName(cc, i18n.language)).join(", ")
             : "—",
           status: (
-            <span className="ts-status-pill" style={statusPillStyle(STATUS_TONE[trip.status])}>
-              {t(`trips:status.${trip.status}`)}
+            <span className="inline-flex flex-col items-start gap-1">
+              <span className="ts-status-pill" style={statusPillStyle(STATUS_TONE[trip.status])}>
+                {t(`trips:status.${trip.status}`)}
+              </span>
+              <RememberedMarker entry={trip} />
             </span>
           ),
           places: places > 0 ? String(places) : "—",

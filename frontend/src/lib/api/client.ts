@@ -1,6 +1,7 @@
 import axios, { type AxiosError } from "axios";
 
 import { API_TIMEOUTS } from "../../config/constants";
+import { wantsRecordedOnly } from "../stats/recordedOnly";
 import { attachGatewayRetry } from "./gatewayRetry";
 
 export const API_URL = import.meta.env?.VITE_API_URL || "";
@@ -23,6 +24,15 @@ export const parserApi = axios.create({
   },
   timeout: API_TIMEOUTS.PARSER,
   withCredentials: true,
+});
+
+// "Nur belegte": while the statistics page has the switch on, its reads carry one parameter and
+// the server narrows each of them alike (lib/stats/recordedOnly.ts).
+api.interceptors.request.use((config) => {
+  if (wantsRecordedOnly(config.method, config.url)) {
+    config.params = { ...(config.params as object | undefined), onlyRecorded: "true" };
+  }
+  return config;
 });
 
 // Response interceptor for handling 401 errors (expired/invalid tokens)

@@ -1,0 +1,46 @@
+{
+  "marker": {
+    "label": "aus der Erinnerung",
+    "title": "Aus der Erinnerung eingetragen – Angaben ungefähr",
+    "on": "erinnert am {{date}}"
+  },
+  "editor": {
+    "legend": "Herkunft der Angaben",
+    "unknown": "Unbekannt",
+    "recorded": "Belegt (Dokument, Buchung, Aufzeichnung)",
+    "remembered": "Aus der Erinnerung",
+    "rememberedOn": "Erinnert am",
+    "note": "Deine Worte dazu",
+    "notePlaceholder": "z. B. Sommer 1998, ungefähr zwei Wochen, mit dem Auto",
+    "hint": "Aus der Erinnerung heißt: Daten sind ungefähr. Die Zahlen zählen mit, lassen sich aber ausblenden.",
+    "save": "Speichern",
+    "saved": "Herkunft gespeichert.",
+    "error": "Die Herkunft konnte nicht gespeichert werden. Bitte versuche es noch einmal."
+  },
+  "notices": {
+    "title": "Erinnerung und Beleg widersprechen sich",
+    "description": "Hier steht etwas aus der Erinnerung, und ein Beleg nennt ein anderes Datum. Nichts wird überschrieben – ändere den Eintrag oder lass beide so stehen.",
+    "outsideRememberedSpan": "„{{remembered}}“ (aus der Erinnerung, {{rFrom}} – {{rTo}}) – der Eintrag „{{recorded}}“ nennt dagegen den {{cFrom}}.",
+    "outsideRecordedSpan": "„{{remembered}}“ (aus der Erinnerung, {{rFrom}}) liegt außerhalb von „{{recorded}}“ ({{cFrom}} – {{cTo}}).",
+    "dismiss": "Beide so lassen",
+    "type": {
+      "trip": "Reise",
+      "flight": "Flug",
+      "lodgingStay": "Unterkunft",
+      "railJourney": "Bahnfahrt",
+      "busJourney": "Busfahrt",
+      "ferryJourney": "Fähre",
+      "rentalBooking": "Mietwagen",
+      "cruise": "Kreuzfahrt",
+      "placeVisit": "Besuch"
+    },
+    "errors": {
+      "load": "Die Widersprüche zwischen Erinnerung und Beleg konnten nicht geladen werden.",
+      "answer": "Die Antwort konnte nicht gespeichert werden. Bitte versuche es noch einmal."
+    }
+  },
+  "stats": {
+    "onlyRecorded": "Nur belegte",
+    "onlyRecordedHint": "Blendet alles aus, was aus der Erinnerung eingetragen wurde – für jede Zahl auf dieser Seite."
+  }
+}

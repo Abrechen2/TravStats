@@ -41,6 +41,10 @@ export interface FlightRailAndFly {
 
 export interface RailJourney {
   id: string;
+  /** "Aus der Erinnerung" (docs/superpowers/specs/2026-11-22-remembered-facts.md); absent on older servers. */
+  provenance?: "recorded" | "remembered" | null;
+  rememberedOn?: string | null;
+  rememberedNote?: string | null;
   userId: string;
   /** Rail&Fly: the flight this ticket feeds (owner ruling 2026-11-05); null = none. */
   railAndFlyFlightId?: string | null;

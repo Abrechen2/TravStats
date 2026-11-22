@@ -1,4 +1,5 @@
 import ShareLinkButton from "../components/shareLinks/ShareLinkButton";
+import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
@@ -282,6 +283,13 @@ export default function CruiseDetailPage(): JSX.Element {
           </>
         }
       />
+      <div style={{ margin: "var(--ts-space-sm) 0" }}>
+        <ProvenanceDetails
+          entryType="cruise"
+          entry={cruise}
+          onSaved={() => setReloadKey((k) => k + 1)}
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
         <div className="flex flex-col gap-6 md:col-span-3">

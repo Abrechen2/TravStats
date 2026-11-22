@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
+import { applyRecordedOnly } from "./services/provenance/recordedOnly";
 import { createPrismaClient } from "./prismaClient";
 import logger, { dbLogger } from "./utils/logger";
 import { toLoggable } from "./utils/logging/toLoggable";
@@ -75,20 +76,18 @@ const READ_OPERATIONS: ReadonlySet<string> = new Set(["findMany", "findFirst"]);
 
 let writeObserver: ((event: WriteEvent) => void) | null = null;
 
-export function setWriteObserver(observer: ((event: WriteEvent) => void) | null): void {
-  writeObserver = observer;
-}
-
 /**
- * Further write listeners beside the single `setWriteObserver` slot (which the
- * photo triggers own). Same contract: runs inside the query, never throws into
- * the write. Returns the function that removes it.
+ * More subscribers than the one slot above: they are told after it, each isolated from the
+ * others' failures. Returns the function that removes it.
  */
 const extraWriteObservers = new Set<(event: WriteEvent) => void>();
-
 export function addWriteObserver(observer: (event: WriteEvent) => void): () => void {
   extraWriteObservers.add(observer);
   return () => extraWriteObservers.delete(observer);
+}
+
+export function setWriteObserver(observer: ((event: WriteEvent) => void) | null): void {
+  writeObserver = observer;
 }
 
 /** Watch every query this client makes. Returns the function that stops it. */
@@ -144,7 +143,10 @@ export function expectingUniqueConflict<T>(model: string, run: () => Promise<T>)
  */
 export const prisma = basePrisma.$extends({
   query: {
-    async $allOperations({ model, operation, args, query }) {
+    async $allOperations({ model, operation, args: askedArgs, query }) {
+      // "Nur belegte": inside a recorded-only request every read of an entry model leaves out
+      // what was typed in from memory (services/provenance/recordedOnly.ts).
+      const args = applyRecordedOnly(model, operation, askedArgs);
       const startTime = Date.now();
       // Before the call, matching the old middleware: it recorded on the way
       // in, so a query that throws is still counted.

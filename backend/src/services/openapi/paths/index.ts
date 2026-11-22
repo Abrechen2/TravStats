@@ -111,6 +111,7 @@ import "./appImport";
 import "./settingsRouting";
 import "./documents";
 import "./documentLinkSuggestions";
+import "./provenance";
 import "./notes";
 import "./passportOverrides";
 import "./jobs";

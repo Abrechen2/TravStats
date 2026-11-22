@@ -64,6 +64,10 @@ export const BUS_RIDE_KINDS: readonly BusRideKind[] = ["intercity", "shuttle", "
 export type BusTimes = RailTimes;
 
 export interface BusJourney {
+  /** "Aus der Erinnerung" (docs/superpowers/specs/2026-11-22-remembered-facts.md); absent on older servers. */
+  provenance?: "recorded" | "remembered" | null;
+  rememberedOn?: string | null;
+  rememberedNote?: string | null;
   id: string;
   userId: string;
   /** Estimated CO2 (forgejo#395); null where the ride has no known distance. */

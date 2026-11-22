@@ -1,4 +1,5 @@
 import { ConnectionDistance } from "./ConnectionDistance";
+import RememberedMarker from "../provenance/RememberedMarker";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatRailSpan } from "../../lib/railTime";
@@ -170,6 +171,7 @@ export function RailTableRow({ connection, columns, onOpen, actions }: Props): J
           </span>
         ) : null}
         {delay ? <span className="t-caption">{delay}</span> : null}
+        <RememberedMarker entry={legs[0]} />
       </span>
     ),
     trip: <TripPill trip={trip} />,

@@ -214,6 +214,7 @@
     "domainBulkEdit.ts",
     "dawarichStays.ts",
     "documentLinkSuggestions.ts",
+    "provenance.ts",
     "documents.ts",
     "documents/extractValues.ts",
     "documents/links.ts",

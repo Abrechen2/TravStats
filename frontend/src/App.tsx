@@ -29,6 +29,7 @@ import ProfileZonePrompt from "./components/ProfileZonePrompt";
 import DemoBetaNotice from "./components/DemoBetaNotice";
 import SetupIncompleteBanner from "./components/SetupIncompleteBanner";
 import UsageStatsConsentDialog from "./components/UsageStatsConsentDialog";
+import RecordedOnlyBoundary from "./components/provenance/RecordedOnlyBoundary";
 
 const ComparisonPage = lazy(() => import("./pages/ComparisonPage"));
 
@@ -691,7 +692,15 @@ function AppContent() {
               />
               <Route
                 path="/stats"
-                element={isAuthenticated ? <AdvancedStatsPage /> : <Navigate to="/login" />}
+                element={
+                  isAuthenticated ? (
+                    <RecordedOnlyBoundary>
+                      <AdvancedStatsPage />
+                    </RecordedOnlyBoundary>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
               />
               {/* One settings area (settings rebuild): `/settings/<page>` holds the
                   account's pages and, for an admin, the server's. `/settings`

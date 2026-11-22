@@ -1,4 +1,5 @@
 import { formatCurrency } from "../../lib/units";
+import RememberedMarker from "../provenance/RememberedMarker";
 import type { Trip } from "../../types";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { tripEntryCounts, tripEntryTotal } from "../../lib/tripEntryCount";
@@ -138,10 +139,11 @@ export default function TripCard({ trip, onOpen, placeCount = 0 }: TripCardProps
             }}
           />
         )}
-        <span className="absolute right-3 top-3">
+        <span className="absolute right-3 top-3 flex flex-col items-end gap-1">
           <span className="ts-status-pill" style={statusPillStyle(STATUS_TONE[trip.status])}>
             {t(`trips:status.${trip.status}`)}
           </span>
+          <RememberedMarker entry={trip} />
         </span>
         {areas.length > 0 && (
           <span className="absolute bottom-3 left-3 flex gap-1.5" aria-hidden="true">
