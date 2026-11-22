@@ -365,7 +365,8 @@
     "explored": "Erkundet",
     "stats": "Statistik",
     "stays": "Aufenthalte",
-    "imports": "Importe"
+    "imports": "Importe",
+    "gaps": "Lücken"
   },
   "map": {
     "panel": "Ebenen und Darstellung",
@@ -820,5 +821,31 @@
       "zones": "Schutzzonen ansehen",
       "showFiltered": "Gefilterte Punkte zeigen"
     }
+  },
+  "gaps": {
+    "title": "Lücken im Logbuch {{year}}",
+    "year": "Jahr",
+    "intro": "Welche Tage dein Logbuch erklärt – und welche nicht. Ein Tag zählt, wenn ein Eintrag ihn abdeckt oder TravTrack Positionen hat.",
+    "loading": "Das Jahr wird geladen …",
+    "retry": "Erneut versuchen",
+    "nothingYet": "Noch ist nichts eingetragen oder aufgezeichnet – es gibt also auch keine Lücken.",
+    "summary_one": "{{count}} Tag ohne Beleg in diesem Jahr.",
+    "summary_other": "{{count}} Tage ohne Beleg in diesem Jahr.",
+    "cell": "{{day}}: {{state}}",
+    "state": {
+      "entry": "Im Logbuch",
+      "home": "Zuhause",
+      "track": "Aufgezeichnet",
+      "privacyZone": "Durch Privatzone ausgeblendet",
+      "implausible": "Als unplausibel herausgefiltert",
+      "unknown": "Unbekannt",
+      "outside": "Außerhalb deiner Aufzeichnung"
+    },
+    "monthComplete": "In diesem Monat gibt es keine unbekannten Tage.",
+    "range": "{{from}} bis {{to}}",
+    "days_one": "{{count}} Tag",
+    "days_other": "{{count}} Tage",
+    "create": "Eintrag anlegen",
+    "openDay": "Tag im Track"
   }
 }

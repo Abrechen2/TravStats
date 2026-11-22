@@ -31,12 +31,13 @@ describe("trackMenu", () => {
   const menu = trackMenu(t);
   const active = (path: string) => menu.filter((l) => isLeafActive(l, path)).map((l) => l.id);
 
-  it("offers Karte, Erkundet, Statistik, Aufenthalte and Importe, in that order", () => {
+  it("offers Karte, Erkundet, Statistik, Aufenthalte, Lücken and Importe, in that order", () => {
     expect(menu.map((l) => [l.path, l.label])).toEqual([
       ["/track", "track:menu.map"],
       ["/track/explored", "track:menu.explored"],
       ["/track/months", "track:menu.stats"],
       ["/track/stays", "track:menu.stays"],
+      ["/track/gaps", "track:menu.gaps"],
       ["/track/imports", "track:menu.imports"],
     ]);
   });
@@ -47,6 +48,7 @@ describe("trackMenu", () => {
     expect(active("/track/explored")).toEqual(["track-explored"]);
     expect(active("/track/months")).toEqual(["track-months"]);
     expect(active("/track/stays")).toEqual(["track-stays"]);
+    expect(active("/track/gaps")).toEqual(["track-gaps"]);
     expect(active("/track/imports")).toEqual(["track-imports"]);
   });
 });

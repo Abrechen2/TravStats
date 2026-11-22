@@ -62,6 +62,7 @@ import FlightBulkBar from "../components/flightsTable/bulk/FlightBulkBar";
 import SelectCheckbox from "../components/flightsTable/bulk/SelectCheckbox";
 import { useFlightSelection } from "../components/flightsTable/bulk/useFlightSelection";
 import Toggletip from "../components/ui/Toggletip";
+import { isDayString } from "../lib/gapCalendar";
 
 // Trips moved to their own /trips page; the trip badge is a Link to /trips/:id.
 
@@ -125,6 +126,8 @@ export default function FlightsTablePage(): JSX.Element {
   ] as const);
   const flightColumnPrefs = useColumnPrefs("flights-list", FLIGHT_ALWAYS_VISIBLE);
   const [showAddFlight, setShowAddFlight] = useState(false);
+  /** A day the add dialog opens on (`?addFrom=`, from the gap calendar). */
+  const [addFrom, setAddFrom] = useState<string | undefined>(undefined);
   /** An explicit selection for the bulk edit of trip, tags and companions (forgejo#217). */
   const selection = useFlightSelection();
   const refreshSelection = selection.refresh;
@@ -137,6 +140,17 @@ export default function FlightsTablePage(): JSX.Element {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
+    const from = searchParams.get("addFrom");
+    if (from === null) return;
+    // A date that is not one is dropped, the dialog still opens on today.
+    setAddFrom(isDayString(from) ? from : undefined);
+    setShowAddFlight(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("addFrom");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
     if (searchParams.get("import") !== "email") return;
     setShowAddFlight(true);
     const next = new URLSearchParams(searchParams);
@@ -146,6 +160,7 @@ export default function FlightsTablePage(): JSX.Element {
 
   const closeAddFlight = (): void => {
     setShowAddFlight(false);
+    setAddFrom(undefined);
   };
 
   useEffect(() => {
@@ -695,6 +710,7 @@ export default function FlightsTablePage(): JSX.Element {
       {/* Add Flight Modal */}
       {showAddFlight && (
         <SimplifiedFlightFormV2
+          initialDate={addFrom}
           onSubmit={handleAddFlight}
           onCancel={closeAddFlight}
           onReload={reload}

@@ -40,6 +40,7 @@ import upcomingRoutes from "./upcoming";
 import searchRoutes from "./search";
 import dawarichStayRoutes from "./dawarichStays";
 import locationSuggestionRoutes from "./locationSuggestions";
+import gapCalendarRoutes from "./gapCalendar";
 import locationCapabilitiesRoutes from "./locationCapabilities";
 import photoJourneyRoutes from "./photoJourneys";
 import tripSuggestionRoutes from "./tripSuggestions";
@@ -252,6 +253,8 @@ export const apiMounts: ApiMount[] = [
     base: "/api/v1/location-suggestions",
     router: locationSuggestionRoutes,
   },
+  // Where the logbook is silent, per day (spec 2026-11-22-gap-calendar).
+  { id: "gapCalendar", base: "/api/v1/gap-calendar", router: gapCalendarRoutes },
   // What the Companion should record (TravTrack plan S4); answers every session.
   {
     id: "locationCapabilities",

@@ -70,10 +70,25 @@ export interface WriteEvent {
   args: unknown;
   result: unknown;
 }
+/** The reads the write listeners skip (the old filter, kept as it was). */
+const READ_OPERATIONS: ReadonlySet<string> = new Set(["findMany", "findFirst"]);
+
 let writeObserver: ((event: WriteEvent) => void) | null = null;
 
 export function setWriteObserver(observer: ((event: WriteEvent) => void) | null): void {
   writeObserver = observer;
+}
+
+/**
+ * Further write listeners beside the single `setWriteObserver` slot (which the
+ * photo triggers own). Same contract: runs inside the query, never throws into
+ * the write. Returns the function that removes it.
+ */
+const extraWriteObservers = new Set<(event: WriteEvent) => void>();
+
+export function addWriteObserver(observer: (event: WriteEvent) => void): () => void {
+  extraWriteObservers.add(observer);
+  return () => extraWriteObservers.delete(observer);
 }
 
 /** Watch every query this client makes. Returns the function that stops it. */
@@ -138,11 +153,16 @@ export const prisma = basePrisma.$extends({
 
       try {
         const result = await query(args);
-        if (writeObserver && operation !== "findMany" && operation !== "findFirst") {
-          try {
-            writeObserver({ model, operation, args, result });
-          } catch (observerError) {
-            dbLogger.error({ message: "write_observer_failed", error: observerError });
+        if (!READ_OPERATIONS.has(operation)) {
+          for (const observer of [
+            ...(writeObserver ? [writeObserver] : []),
+            ...extraWriteObservers,
+          ]) {
+            try {
+              observer({ model, operation, args, result });
+            } catch (observerError) {
+              dbLogger.error({ message: "write_observer_failed", error: observerError });
+            }
           }
         }
         if (verbose) {

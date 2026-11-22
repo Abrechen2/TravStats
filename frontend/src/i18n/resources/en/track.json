@@ -365,7 +365,8 @@
     "explored": "Explored",
     "stats": "Statistics",
     "stays": "Stays",
-    "imports": "Imports"
+    "imports": "Imports",
+    "gaps": "Gaps"
   },
   "map": {
     "panel": "Layers and appearance",
@@ -820,5 +821,31 @@
       "zones": "View privacy zones",
       "showFiltered": "Show filtered points"
     }
+  },
+  "gaps": {
+    "title": "Logbook gaps {{year}}",
+    "year": "Year",
+    "intro": "Which days your logbook explains – and which it does not. A day counts when an entry covers it or TravTrack holds positions.",
+    "loading": "Loading the year …",
+    "retry": "Try again",
+    "nothingYet": "Nothing is entered or recorded yet, so there are no gaps.",
+    "summary_one": "{{count}} day without evidence this year.",
+    "summary_other": "{{count}} days without evidence this year.",
+    "cell": "{{day}}: {{state}}",
+    "state": {
+      "entry": "In the logbook",
+      "home": "At home",
+      "track": "Recorded",
+      "privacyZone": "Hidden by a privacy zone",
+      "implausible": "Filtered out as implausible",
+      "unknown": "Unknown",
+      "outside": "Outside your record"
+    },
+    "monthComplete": "This month has no unknown days.",
+    "range": "{{from}} to {{to}}",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "create": "Add an entry",
+    "openDay": "Day in Track"
   }
 }

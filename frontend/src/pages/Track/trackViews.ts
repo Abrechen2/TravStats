@@ -4,5 +4,5 @@
  * page into App's bundle. A new tab is one entry here plus its body in
  * `TrackPage`'s `TAB_BODY` — a missing body is a type error.
  */
-export const TRACK_TABS = ["explored", "months", "stays", "imports"] as const;
+export const TRACK_TABS = ["explored", "months", "stays", "gaps", "imports"] as const;
 export type TrackTab = (typeof TRACK_TABS)[number];

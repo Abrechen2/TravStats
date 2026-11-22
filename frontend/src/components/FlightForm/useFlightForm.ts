@@ -24,7 +24,8 @@ export function useFlightForm(
   // possible; `void` keeps older callers valid (they get no assignment).
   onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<Flight | void>,
   onCancel: () => void,
-  onBatchComplete?: (newAchievements?: UserAchievement[]) => void
+  onBatchComplete?: (newAchievements?: UserAchievement[]) => void,
+  initialDate?: string
   /**
    * Opens straight into the e-mail/PDF uploader instead of the lookup step.
    * Used by the central import hub (#238): the hub carries the flight parse
@@ -46,7 +47,7 @@ export function useFlightForm(
     // Accumulates confirmed flight inputs during multi-flight email import
     confirmedFlightsRef: useRef<FlightInput[]>([]),
   };
-  useFlightFormEffects(state, refs);
+  useFlightFormEffects(state, refs, initialDate);
   const lookup = useFlightLookupHandlers(state, refs, t);
 
   const {

@@ -51,6 +51,8 @@ interface SimplifiedFlightFormProps {
    * look before sending again. Omitted where the caller cannot do that.
    */
   onReload?: () => void;
+  /** A `YYYY-MM-DD` the form opens on instead of today (the gap calendar). */
+  initialDate?: string;
 }
 
 export default function SimplifiedFlightFormV2({
@@ -60,10 +62,11 @@ export default function SimplifiedFlightFormV2({
   onPickSpecialFlight,
   initialDocument = null,
   onReload,
+  initialDate,
 }: SimplifiedFlightFormProps): JSX.Element {
   const { t } = useTranslation(["flights", "errors", "common"]);
 
-  const form = useFlightForm(onSubmit, onCancel, onBatchComplete);
+  const form = useFlightForm(onSubmit, onCancel, onBatchComplete, initialDate);
   // The footer's submit button sits outside the <form>; `form={id}` ties it back.
   const formId = useId();
   const hintId = `${formId}-blocked`;
