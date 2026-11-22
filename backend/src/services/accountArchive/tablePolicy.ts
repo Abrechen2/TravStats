@@ -158,6 +158,9 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   bus_journey_companions: child(),
   ferry_journeys: owner({ strip: SHARE_KEY }),
   ferry_journey_companions: child(),
+  // AIS positions recorded during a crossing or cruise (2026-11-22): recorded data,
+  // the server's only copy of a ferry's track.
+  vessel_position_fixes: owner(),
   rental_bookings: owner({ strip: SHARE_KEY }),
   rental_booking_companions: child(),
   lodgings: owner(),
@@ -308,6 +311,9 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   market_catalog_state: excluded(CATALOGUE_UNREFERENCED),
   market_catalog_tiles: excluded(CATALOGUE_UNREFERENCED),
   geo_city_cache: excluded("lookup cache, refilled on demand"),
+  vessel_identities: excluded(
+    "vessel resolver cache (name → MMSI), shared by the server, refilled on demand"
+  ),
 
   // Shares and pairings: what the account shared, for the reader; never imported.
   public_share_links: { kind: "info", where: "t0.user_id = $1", omit: ["token_hash"] },

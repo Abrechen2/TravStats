@@ -16,12 +16,12 @@
     "excluded": "uploadId deviceId"
   },
   "Cruise": {
-    "details": "id shipId shipNameOverride vesselMmsi vesselMmsiSource cruiseLine departurePortId arrivalPortId routeName startDate endDate startDay endDay startZone endZone status kind deck tripId bookingId color createdAt updatedAt externalRef importBatchId",
+    "details": "id shipId shipNameOverride cruiseLine departurePortId arrivalPortId routeName startDate endDate startDay endDay startZone endZone status kind deck tripId bookingId color createdAt updatedAt externalRef importBatchId",
     "costs": "price currency priceBase fxRate fxRateDate fxBaseCurrency fxSource",
     "personal": "cabinNumber cabinType notes tags companions",
     "photos": "",
     "documents": "bookingReference",
-    "excluded": "userId parserTemplate parserConfidence dataSource shareKey provenance rememberedOn rememberedNote"
+    "excluded": "userId parserTemplate parserConfidence dataSource shareKey vesselMmsi vesselMmsiSource provenance rememberedOn rememberedNote"
   },
   "CruiseStop": {
     "details": "id cruiseId portId dayNumber date isAtSea arrivalTime departureTime arrivalUtc departureUtc stopZone stopDate timePrecision updatedAt allAboardTime unresolvedPortName",
@@ -296,12 +296,12 @@
     "excluded": "userId shareKey provenance rememberedOn rememberedNote"
   },
   "FerryJourney": {
-    "details": "roadtripLegId id operator vesselName vesselMmsi vesselMmsiSource vehicleType vehicleLengthM vehicleWidthM vehicleHeightM passengerCount depStationName depAddress depLat depLon depCountry depTimezone arrStationName arrAddress arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime fareClass status delayMinutes tripId bookingId externalRef importBatchId createdAt updatedAt",
+    "details": "roadtripLegId id operator vesselName vehicleType vehicleLengthM vehicleWidthM vehicleHeightM passengerCount depStationName depAddress depLat depLon depCountry depTimezone arrStationName arrAddress arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime fareClass status delayMinutes tripId bookingId externalRef importBatchId createdAt updatedAt",
     "costs": "price currency priceBase fxRate fxRateDate fxBaseCurrency fxSource",
     "personal": "cabinType seat notes tags companions vehicleRegistration",
     "photos": "",
     "documents": "bookingReference ticketReference",
-    "excluded": "userId shareKey roadtripLegBefore provenance rememberedOn rememberedNote"
+    "excluded": "userId shareKey roadtripLegBefore vesselMmsi vesselMmsiSource provenance rememberedOn rememberedNote"
   },
   "Companion": {
     "details": "",

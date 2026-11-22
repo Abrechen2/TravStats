@@ -514,12 +514,6 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
 
     const updated = await prisma.$transaction(async (tx) => {
       const before = await shareSnapshot(tx, "cruise", existing.id);
-      if (shipChanged) {
-        await tx.vesselPositionFix.deleteMany({ where: { cruiseId: existing.id } });
-        await tx.cruiseTrack.deleteMany({
-          where: { cruiseId: existing.id, externalRef: CRUISE_AIS_TRACK_REF },
-        });
-      }
       if (resolvedCompanionsForUpdate !== undefined) {
         await syncCompanionLinks(
           tx,
@@ -544,6 +538,13 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           }),
         },
       });
+      // After the row update, which holds the cruise's lock (see `storeFix`).
+      if (shipChanged) {
+        await tx.vesselPositionFix.deleteMany({ where: { cruiseId: existing.id } });
+        await tx.cruiseTrack.deleteMany({
+          where: { cruiseId: existing.id, externalRef: CRUISE_AIS_TRACK_REF },
+        });
+      }
 
       if (stops !== undefined) {
         // Read BEFORE the delete: a client that does not know the all-aboard

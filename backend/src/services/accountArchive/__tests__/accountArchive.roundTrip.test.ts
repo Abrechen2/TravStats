@@ -205,6 +205,7 @@ describe("account archive round trip", () => {
       "rail_journeys",
       "bus_journeys",
       "ferry_journeys",
+      "vessel_position_fixes",
       "rental_bookings",
       "trips",
       "places",

@@ -132,6 +132,9 @@ export const USER_EXPORT_SELECT = {
   // companion links — the terminals' frozen names and zones included.
   busJourneys: { include: { companionLinks: true } },
   ferryJourneys: { include: { companionLinks: true } },
+  // AIS positions recorded during a crossing or cruise (2026-11-22): recorded data,
+  // and for a ferry the server's only copy of the track.
+  vesselPositionFixes: true,
   companions: true,
   // Trip sharing (design 2026-10-09): the consents this account asked for and
   // gave, the groups it started and the notices addressed to it.
@@ -228,8 +231,6 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
     "snoozes and opt-outs of setup checks, tied to this server's check revisions; a restored account re-evaluates",
   readinessNoteAcks:
     "read marks of this server's update notes; a restored account sees the notes for its own versions again",
-  vesselPositionFixes:
-    "raw AIS positions the vessel poller received for a journey in progress; a cruise's become its exported AIS recording (cruise tracks), a ferry's covering track has already set the crossing's exported distance",
   provenanceNotices:
     "derived contradiction cards between a remembered and a recorded entry; the entries themselves are exported (provenance, rememberedOn, rememberedNote) and the next pass re-derives the cards (a dismissed one may be raised once more; the account ZIP archive carries them)",
   documentLinkSuggestions:

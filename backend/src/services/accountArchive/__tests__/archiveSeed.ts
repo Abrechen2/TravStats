@@ -320,6 +320,21 @@ export async function seedAccount(client: Client, files: SeedFiles): Promise<voi
   );
   await insert(client, "bus_journeys", journey("az-bus-0001"));
   await insert(client, "ferry_journeys", journey("az-ferry-0001"));
+  for (const [id, scope] of [
+    ["az-fix-0001", { ferry_journey_id: "az-ferry-0001" }],
+    ["az-fix-0002", { cruise_id: "az-cruise-0001" }],
+  ] as const) {
+    await insert(client, "vessel_position_fixes", {
+      id,
+      user_id: U,
+      ...scope,
+      mmsi: "265177000",
+      observed_at: NOW,
+      received_at: NOW,
+      lat: 55,
+      lon: 11,
+    });
+  }
   await insert(client, "rental_bookings", {
     id: "az-rental-0001",
     user_id: U,

@@ -250,29 +250,39 @@ export async function storeFix(j: VesselJourney, p: VesselPosition): Promise<boo
     }),
   ]);
   if (near || count >= MAX_FIXES_PER_JOURNEY) return false;
-  // The journey may have changed ship since the poll began: store only for the bound one.
-  const still =
-    j.kind === "ferry"
-      ? await prisma.ferryJourney.count({ where: { id: j.id, vesselMmsi: p.mmsi } })
-      : await prisma.cruise.count({ where: { id: j.id, vesselMmsi: p.mmsi } });
-  if (still !== 1) return false;
-  const created = await prisma.vesselPositionFix.createMany({
-    data: [
-      {
-        ...scope,
-        userId: j.userId,
-        mmsi: p.mmsi,
-        observedAt,
-        receivedAt: new Date(p.receivedAt),
-        lat: p.lat,
-        lon: p.lon,
-        speedKnots: p.speedKnots,
-        courseDegrees: p.courseDegrees,
-      },
-    ],
-    skipDuplicates: true,
+  // The journey may have changed ship since the poll began: store only for the
+  // bound MMSI, checked under the journey row's lock. A re-pick updates that row
+  // before it deletes the old fixes, in one transaction, so either it waits for
+  // this insert and then deletes it, or this check sees the new MMSI and stores
+  // nothing — an old ship's fix can never outlive the re-pick.
+  return prisma.$transaction(async (tx) => {
+    const bound =
+      j.kind === "ferry"
+        ? await tx.$queryRaw<
+            unknown[]
+          >`SELECT 1 FROM ferry_journeys WHERE id = ${j.id} AND vessel_mmsi = ${p.mmsi} FOR UPDATE`
+        : await tx.$queryRaw<
+            unknown[]
+          >`SELECT 1 FROM cruises WHERE id = ${j.id} AND vessel_mmsi = ${p.mmsi} FOR UPDATE`;
+    if (bound.length !== 1) return false;
+    const created = await tx.vesselPositionFix.createMany({
+      data: [
+        {
+          ...scope,
+          userId: j.userId,
+          mmsi: p.mmsi,
+          observedAt,
+          receivedAt: new Date(p.receivedAt),
+          lat: p.lat,
+          lon: p.lon,
+          speedKnots: p.speedKnots,
+          courseDegrees: p.courseDegrees,
+        },
+      ],
+      skipDuplicates: true,
+    });
+    return created.count === 1;
   });
-  return created.count === 1;
 }
 
 export interface RecordedVesselTrack {

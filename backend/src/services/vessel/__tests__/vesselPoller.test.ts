@@ -15,6 +15,7 @@ import { hashPassword } from "../../../utils/password";
 import { aisConfigured, type AisResult } from "../../ferry/aisStream";
 import { resolveVessel } from "../vesselResolver";
 import { pollVesselsOnce } from "../vesselPoller";
+import { loadVesselJourney, storeFix } from "../vesselJourney";
 
 const NOW = new Date("2030-06-01T12:00:00Z");
 const DEP = { lat: 54.38, lon: 10.17 }; // Kiel
@@ -262,5 +263,34 @@ describe("Schiff zuordnen", () => {
     expect(row.vesselMmsiSource).toBe("manual");
     expect(await prisma.vesselPositionFix.count({ where: { ferryJourneyId: ride.id } })).toBe(1);
     await prisma.vesselIdentity.delete({ where: { lookupKey: "search:stena" } });
+  });
+});
+
+describe("a fix racing a re-pick", () => {
+  it("discards a position of the previous ship that arrives while the ship is being changed", async () => {
+    const ride = await ferry(
+      new Date(NOW.getTime() - 3600e3),
+      new Date(NOW.getTime() + 8 * 3600e3)
+    );
+    await prisma.ferryJourney.update({
+      where: { id: ride.id },
+      data: { vesselMmsi: "265177000", vesselMmsiSource: "wikidata" },
+    });
+    const snapshot = (await loadVesselJourney("ferry", ride.id, userId))!;
+    const old = ok(55, 10.8, NOW);
+    let pending: Promise<boolean> | null = null;
+    // The re-pick: bind the new ship, then drop the old fixes — one transaction.
+    await prisma.$transaction(async (tx) => {
+      await tx.ferryJourney.update({
+        where: { id: ride.id },
+        data: { vesselMmsi: "219000000", vesselMmsiSource: "manual" },
+      });
+      // The poller stores the OLD ship's position while the re-pick is still open.
+      pending = storeFix(snapshot, old.status === "ok" ? old.position : (undefined as never));
+      await new Promise((r) => setTimeout(r, 400));
+      await tx.vesselPositionFix.deleteMany({ where: { ferryJourneyId: ride.id } });
+    });
+    expect(await pending!).toBe(false);
+    expect(await prisma.vesselPositionFix.count({ where: { ferryJourneyId: ride.id } })).toBe(0);
   });
 });
