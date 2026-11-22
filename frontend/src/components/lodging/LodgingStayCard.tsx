@@ -6,6 +6,7 @@ import EntryPhotos from "../common/EntryPhotos";
 import ProvenanceDialog from "../provenance/ProvenanceDialog";
 import ProvenanceLine from "../provenance/ProvenanceLine";
 import { PackageBookingCard } from "../bookings/PackageBookingCard";
+import { usePackageSplit } from "../bookings/usePackageSplit";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useRatingCategories } from "../../hooks/useRatingCategories";
@@ -73,6 +74,7 @@ export function LodgingStayCard({
   const { t, i18n } = useTranslation(["lodging", "common", "sharing", "provenance"]);
   const [editingOrigin, setEditingOrigin] = useState(false);
   const share = useShareLink("stay", stay.id);
+  const packageSplit = usePackageSplit();
   const { labelOf } = useRatingCategories();
   const baseCurrency = useSettingsStore((st) => st.baseCurrency);
   const nights = stayNights(stay);
@@ -166,7 +168,7 @@ export function LodgingStayCard({
         </span>
         {/* Share link, edit and delete are one card ⋯ (owner, 2026-11-22). The red belongs to
             the confirmation, which is where the consequence is actually stated. */}
-        {(onEdit || onDelete || onProvenanceSaved) && (
+        {(onEdit || onDelete || onProvenanceSaved || packageSplit.entry) && (
           <OverflowMenu
             label={t("lodging:stay.menuLabel")}
             testId={`stay-menu-${stay.id}`}
@@ -201,6 +203,7 @@ export function LodgingStayCard({
                     },
                   ]
                 : []),
+              ...(packageSplit.entry ? [packageSplit.entry] : []),
               ...(onDelete
                 ? [
                     {
@@ -291,6 +294,7 @@ export function LodgingStayCard({
           <PackageBookingCard
             bookingId={stay.bookingId}
             highlight={{ kind: "stay", id: stay.id }}
+            controller={packageSplit.controller}
           />
         </div>
       )}

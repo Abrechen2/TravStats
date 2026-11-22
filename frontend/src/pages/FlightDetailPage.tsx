@@ -51,6 +51,7 @@ import FlightPlanActual from "../components/flightDetail/FlightPlanActual";
 import FlightDayCard, { dayCardShown } from "../components/flightDetail/FlightDayCard";
 import BookingItinerary from "../components/flightDetail/BookingItinerary";
 import BookingPrice from "../components/flightDetail/BookingPrice";
+import { usePackageSplit } from "../components/bookings/usePackageSplit";
 import FlightProfileLink from "../components/flightDetail/FlightProfileLink";
 import RememberedMarker from "../components/provenance/RememberedMarker";
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
@@ -88,6 +89,7 @@ export default function FlightDetailPage(): JSX.Element {
   const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
   const weightUnit = useSettingsStore((state) => state.units?.weightUnit);
 
+  const packageSplit = usePackageSplit();
   const [flight, setFlight] = useState<Flight | null>(null);
   // Rail&Fly tickets the single-flight route adds (owner ruling 2026-11-05).
   const railAndFlyRides = (flight as (Flight & FlightRailAndFly) | null)?.railAndFlyRides;
@@ -286,6 +288,7 @@ export default function FlightDetailPage(): JSX.Element {
             {/* The public, expiring link for the family (forgejo#281) and delete live behind "Mehr". */}
             <DetailMoreMenu
               shareLink={{ kind: "flight", targetId: flight.id }}
+              entries={packageSplit.entry ? [packageSplit.entry] : []}
               onDelete={() => setConfirmingDelete(true)}
             />
           </>
@@ -405,6 +408,7 @@ export default function FlightDetailPage(): JSX.Element {
                 flight={flight}
                 answer={booking.state.answer}
                 onAnswer={booking.replace}
+                packageSplit={packageSplit.controller}
               />
             ) : null}
           </DetailSection>

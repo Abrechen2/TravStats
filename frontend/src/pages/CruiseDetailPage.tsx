@@ -39,6 +39,7 @@ import { cruiseExtractTarget } from "../lib/extractTargets";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { PackageBookingCard } from "../components/bookings/PackageBookingCard";
+import { usePackageSplit } from "../components/bookings/usePackageSplit";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { cruiseDeleteMessage } from "../components/Cruise/cruiseDeleteMessage";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
@@ -56,6 +57,7 @@ export default function CruiseDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation("cruise");
+  const packageSplit = usePackageSplit();
   const [cruise, setCruise] = useState<Cruise | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   // Two states, not one: a 404 means the cruise is gone, anything else
@@ -278,6 +280,7 @@ export default function CruiseDetailPage(): JSX.Element {
             <Button onClick={() => setEditing(true)}>{t("detail.edit")}</Button>
             <DetailMoreMenu
               shareLink={{ kind: "cruise", targetId: cruise.id }}
+              entries={packageSplit.entry ? [packageSplit.entry] : []}
               deleteLabel={t("detail.delete")}
               onDelete={() => setConfirmingDelete(true)}
             />
@@ -360,6 +363,7 @@ export default function CruiseDetailPage(): JSX.Element {
             <PackageBookingCard
               bookingId={cruise.bookingId}
               highlight={{ kind: "cruise", id: cruise.id }}
+              controller={packageSplit.controller}
             />
           )}
           <DocumentsSection

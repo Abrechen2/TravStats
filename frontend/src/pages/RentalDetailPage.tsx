@@ -16,6 +16,7 @@ import ConfirmModal from "../components/ui/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { EntryPhotosSection } from "../components/common/EntryPhotos";
 import { PackageBookingCard } from "../components/bookings/PackageBookingCard";
+import { usePackageSplit } from "../components/bookings/usePackageSplit";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { RentalFormModal } from "../components/rental/RentalFormModal";
 import { RentalSuggestionBanner } from "../components/rental/RentalSuggestionBanner";
@@ -61,6 +62,7 @@ export default function RentalDetailPage(): JSX.Element {
   const fxReadout = usePriceFxReadout();
   const locale = dateLocaleForLanguage(i18n.language);
   const addToast = useToastStore((s) => s.addToast);
+  const packageSplit = usePackageSplit();
   const [rental, setRental] = useState<RentalBooking | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<LoadFailure | null>(null);
@@ -229,6 +231,7 @@ export default function RentalDetailPage(): JSX.Element {
           <>
             <Button onClick={() => setEditing(true)}>{t("rental:edit")}</Button>
             <DetailMoreMenu
+              entries={packageSplit.entry ? [packageSplit.entry] : []}
               deleteLabel={t("rental:delete")}
               onDelete={() => setConfirmingDelete(true)}
             />
@@ -409,6 +412,7 @@ export default function RentalDetailPage(): JSX.Element {
             <PackageBookingCard
               bookingId={rental.bookingId}
               highlight={{ kind: "rental", id: rental.id }}
+              controller={packageSplit.controller}
             />
           )}
           <DocumentsSection entry={{ type: "rentalBooking", id: rental.id }} rentalCategories />
