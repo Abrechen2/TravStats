@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { DomainKey } from "../../shared/domains";
 import type {
   ApiKeyTestResponse,
   ExportAllDataResponse,
@@ -274,6 +275,8 @@ export const adminApi = {
         flights: number;
         userAchievements: number;
       };
+      entryTotal: number;
+      entryCounts: Record<DomainKey, number>;
     }>;
   }> => {
     const { data } = await api.get<{
@@ -289,6 +292,8 @@ export const adminApi = {
           flights: number;
           userAchievements: number;
         };
+        entryTotal: number;
+        entryCounts: Record<DomainKey, number>;
       }>;
     }>("/admin/users");
     return data;

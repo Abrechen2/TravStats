@@ -357,8 +357,8 @@
     "userdel": {
       "title": "{{name}} löschen?",
       "affects": "Das Konto {{name}} mit allen Einträgen und Dateien",
-      "amount_one": "{{count}} Flug",
-      "amount_other": "{{count}} Flüge",
+      "amount_one": "{{count}} Eintrag",
+      "amount_other": "{{count}} Einträge",
       "after": "Es lässt sich nur aus einer Sicherung zurückholen.",
       "confirm": "Löschen",
       "word": "{{name}}"
@@ -1292,7 +1292,7 @@
       "lock": "{{name}} gesperrt",
       "reset2fa": "Zweiter Faktor von {{name}} zurückgesetzt"
     },
-    "counts": "{{flights}} Flüge · {{achievements}} Erfolge",
+    "counts": "{{entries}} Einträge · {{achievements}} Erfolge",
     "demo": "Demo",
     "menu": "Aktionen für {{name}}",
     "noMail": "Per Mail geht erst, wenn der Server Mails verschickt. Richte ihn unter Dienste ein.",
@@ -1303,6 +1303,16 @@
       "used": "eingelöst",
       "expired": "abgelaufen",
       "active": "offen"
+    },
+    "pills": {
+      "twoFactorOn": "2FA an",
+      "twoFactorOff": "2FA aus",
+      "twoFactorOnHint": "Zwei-Faktor-Anmeldung: Dieses Konto schützt die Anmeldung mit einem zweiten Faktor.",
+      "twoFactorOffHint": "Zwei-Faktor-Anmeldung: Dieses Konto meldet sich nur mit Passwort an.",
+      "active": "Konto aktiv",
+      "inactive": "Konto deaktiviert",
+      "activeHint": "Das Konto ist aktiv und kann sich anmelden.",
+      "inactiveHint": "Das Konto ist deaktiviert und kann sich nicht anmelden. Seine Daten bleiben erhalten."
     }
   },
   "backups": {
