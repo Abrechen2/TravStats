@@ -46,6 +46,12 @@ export function rentalProviderLogoUrl(provider: string | null): string | null {
   return name ? `/api/v1/rentals/providers/logo?name=${encodeURIComponent(name)}` : null;
 }
 
+/** The logo URL of a rail operator, by the name a journey records (catalogue only). */
+export function railOperatorLogoUrl(operator: string | null): string | null {
+  const name = operator?.trim();
+  return name ? `/api/v1/rail/operators/logo?name=${encodeURIComponent(name)}` : null;
+}
+
 /**
  * The leading mark of a rail, rental or bus row (forgejo#197): the airline
  * tile's shape, with the provider's LOGO where one is known and a MONOGRAM on

@@ -26,7 +26,7 @@ import DetailHeader from "../components/ui/DetailHeader";
 import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
 import DetailSection from "../components/ui/DetailSection";
 import PeopleList from "../components/ui/PeopleList";
-import { Icon } from "../components/ui/Icon";
+import { OperatorMarkTile } from "../components/table/OperatorMarkTile";
 import Button from "../components/ui/Button";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
@@ -256,7 +256,14 @@ export default function CruiseDetailPage(): JSX.Element {
         backTo="/cruises"
         backLabel={t("detail.backToLogbook")}
         domain="cruise"
-        icon={<Icon name="ship" size={24} />}
+        icon={
+          <OperatorMarkTile
+            name={cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? null}
+            domain="cruise"
+            size={48}
+          />
+        }
+        iconIsTile
         title={[shipName, cruise.routeName].filter(Boolean).join(" · ")}
         meta={[
           cruise.cruiseLine ?? cruise.ship?.cruiseLine,

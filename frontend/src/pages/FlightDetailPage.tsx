@@ -10,7 +10,7 @@ import { runwayFacts } from "../lib/flights/runwayFacts";
 import { minutesText } from "../lib/flights/minutesText";
 import PeopleList from "../components/ui/PeopleList";
 import FlightRouteHero from "../components/flightsTable/FlightRouteHero";
-import { resolveAirlineIata } from "../lib/airlineUtils";
+import AirlineWordmarkCell from "../components/flightsTable/AirlineWordmarkCell";
 import { formatTimeValueShown } from "../lib/displayFormat";
 import { flightArrival, flightDeparture } from "../lib/entityTimes";
 import Button from "../components/ui/Button";
@@ -253,11 +253,8 @@ export default function FlightDetailPage(): JSX.Element {
         backTo="/flights"
         backLabel={t("flights:detail.backToLogbook")}
         domain="flight"
-        icon={
-          <span style={{ fontFamily: "var(--ts-font-mono)", fontSize: 15, fontWeight: 800 }}>
-            {resolveAirlineIata(flight) || "✈"}
-          </span>
-        }
+        icon={<AirlineWordmarkCell flight={flight} size={48} />}
+        iconIsTile
         title={
           [flight.flightNumber, flight.airline].filter(Boolean).join(" · ") ||
           t("common:labels.unknown")

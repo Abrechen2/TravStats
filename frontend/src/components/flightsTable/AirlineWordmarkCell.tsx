@@ -26,7 +26,15 @@ import { resolveAirlineDisplay, resolveAirlineIata } from "../../lib/airlineUtil
  */
 const TILE_PX = 44;
 
-export default function AirlineWordmarkCell({ flight }: { flight: Flight }): JSX.Element {
+/** `size` lets a detail header draw the same tile at its own 48px mark. */
+
+export default function AirlineWordmarkCell({
+  flight,
+  size = TILE_PX,
+}: {
+  flight: Flight;
+  size?: number;
+}): JSX.Element {
   const name = resolveAirlineDisplay(flight);
   const iata = resolveAirlineIata(flight);
   // "icon" asks the proxy for the vendored symbol; where the chain has none the
@@ -42,8 +50,8 @@ export default function AirlineWordmarkCell({ flight }: { flight: Flight }): JSX
     <span
       className="inline-flex items-center justify-center"
       style={{
-        width: TILE_PX,
-        height: TILE_PX,
+        width: size,
+        height: size,
         borderRadius: "var(--ts-radius-button)",
         background: "var(--ts-tile)",
         color: "var(--ts-text-bright)",
@@ -64,7 +72,7 @@ export default function AirlineWordmarkCell({ flight }: { flight: Flight }): JSX
         icao={flight.airlineIcao}
         flightNumber={flight.flightNumber}
         variant={style === "icon" ? "icon" : "logo"}
-        size={TILE_PX}
+        size={size}
         // max-w-none: Tailwind's preflight sets img { max-width: 100% }, and
         // Firefox's auto table layout computes this column narrower than
         // Chrome — the cap would shrink the tile to the cell width there.

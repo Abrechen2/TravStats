@@ -9,7 +9,7 @@ import DetailKpis from "../components/ui/DetailKpis";
 import PeopleList from "../components/ui/PeopleList";
 import TagChips from "../components/common/TagChips";
 import TripPill from "../components/Trips/TripPill";
-import { Icon } from "../components/ui/Icon";
+import { OperatorMarkTile } from "../components/table/OperatorMarkTile";
 import { statusPillProps } from "../components/table/statusPillStyle";
 import ListLoadFailed from "../components/table/ListLoadFailed";
 import { useDocumentCount } from "../hooks/useDocumentCount";
@@ -181,7 +181,8 @@ export default function FerryDetailPage() {
     <AppShell>
       <DetailHeader
         domain="ferry"
-        icon={<Icon name="ship" size={24} />}
+        icon={<OperatorMarkTile name={ride.operator} domain="ferry" size={48} />}
+        iconIsTile
         backTo="/ferry"
         backLabel={t("ferry:title")}
         title={`${ride.depStationName} → ${ride.arrStationName}`}

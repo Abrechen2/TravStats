@@ -1,3 +1,4 @@
+import { OperatorMarkTile } from "../table/OperatorMarkTile";
 import type { ReactNode } from "react";
 import RememberedMarker from "../provenance/RememberedMarker";
 import type { Cruise } from "../../types";
@@ -60,6 +61,7 @@ export function CruiseRow({ cruise, onOpen, actions, columns }: Props): JSX.Elem
     day ? display.localDate(day.date) : "—";
   const portsCount = countUniquePorts(cruise);
   const unresolvedCount = countUnresolvedPorts(cruise);
+  const cruiseLineName = cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? null;
   const displayLine = cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—";
   const displayShip = cruise.ship?.name ?? cruise.shipNameOverride ?? "—";
   // Through the shared formatter, like every other price in the app: this row
@@ -70,7 +72,12 @@ export function CruiseRow({ cruise, onOpen, actions, columns }: Props): JSX.Elem
 
   const cell: Record<CruiseColumnId, ReactNode> = {
     ship: displayShip,
-    line: displayLine,
+    line: (
+      <span className="inline-flex items-center gap-2">
+        <OperatorMarkTile name={cruiseLineName} domain="cruise" size={28} />
+        <span>{displayLine}</span>
+      </span>
+    ),
     dates: `${fmtDay(cruiseStart(cruise))} – ${fmtDay(cruiseEnd(cruise))}`,
     ports: (
       <>

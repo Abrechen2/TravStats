@@ -17,6 +17,15 @@ vi.mock("../../hooks/useTranslation", async () => {
   return { useTranslation: germanUseTranslationNs };
 });
 vi.mock("../../components/NavigationBar", () => ({ default: () => <div /> }));
+// The operator service answers "there is a logo" for every name here.
+vi.mock("../../lib/api/operators", async (importActual) => {
+  const actual = await importActual<typeof import("../../lib/api/operators")>();
+  return {
+    ...actual,
+    getOperatorMark: () => Promise.resolve({ available: true, source: "catalogue", credit: null }),
+  };
+});
+
 const getMock = vi.fn();
 const removeMock = vi.fn();
 const routingMock = vi.fn();
@@ -141,6 +150,12 @@ describe("BusDetailPage", () => {
     expect(screen.getByText("Entfernung · Luftlinie")).toBeInTheDocument();
     expect(screen.getByText("Kobus · Premium")).toBeInTheDocument();
     expect(screen.getByTestId("bus-detail-status")).toHaveTextContent("Gefahren");
+  });
+
+  it("draws the operator's logo in the header, as the list row does, not a bare bus icon", async () => {
+    await renderPage(rideFixture());
+    const logo = await screen.findByTestId("operator-logo");
+    expect(logo.getAttribute("src")).toBe("/api/v1/operators/logo?domain=bus&name=Kobus");
   });
 
   it("names a typed distance 'laut Ticket' and a routed one 'Straße', never Luftlinie", async () => {

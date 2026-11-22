@@ -9,7 +9,7 @@ import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
 import DetailSection from "../components/ui/DetailSection";
 import PeopleList from "../components/ui/PeopleList";
 import Button from "../components/ui/Button";
-import { Icon } from "../components/ui/Icon";
+import { OperatorTile, railOperatorLogoUrl } from "../components/table/OperatorTile";
 import TripPill from "../components/Trips/TripPill";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
@@ -233,7 +233,15 @@ export default function RailDetailPage(): JSX.Element {
         backTo="/rail"
         backLabel={t("rail:detail.back")}
         domain="rail"
-        icon={<Icon name="train-front" size={24} />}
+        icon={
+          <OperatorTile
+            name={journey.operator}
+            domain="rail"
+            logoUrl={railOperatorLogoUrl(journey.operator)}
+            size={48}
+          />
+        }
+        iconIsTile
         title={`${journey.depStationName} → ${journey.arrStationName}`}
         subtitle={
           // The DB codes, in the title's order, where the catalogue knows them;

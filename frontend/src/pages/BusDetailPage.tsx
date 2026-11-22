@@ -9,7 +9,7 @@ import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
 import DetailSection from "../components/ui/DetailSection";
 import PeopleList from "../components/ui/PeopleList";
 import Button from "../components/ui/Button";
-import { Icon } from "../components/ui/Icon";
+import { OperatorMarkTile } from "../components/table/OperatorMarkTile";
 import TripPill from "../components/Trips/TripPill";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
@@ -253,7 +253,8 @@ export default function BusDetailPage(): JSX.Element {
         backTo="/bus"
         backLabel={t("bus:detail.back")}
         domain="bus"
-        icon={<Icon name="bus" size={24} />}
+        icon={<OperatorMarkTile name={ride.operator} domain="bus" size={48} />}
+        iconIsTile
         title={`${ride.depStationName} → ${ride.arrStationName}`}
         subtitle={[ride.operator, ride.lineName].filter(Boolean).join(" · ") || undefined}
         hero={kpis.length > 0 ? <DetailKpis items={kpis} /> : undefined}

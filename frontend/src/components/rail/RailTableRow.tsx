@@ -13,7 +13,7 @@ import {
 import { formatRailDuration } from "../../lib/rail/railDuration";
 import { primaryOperator } from "../../lib/rail/primaryOperator";
 import type { RailConnection, RailJourney } from "../../types/rail";
-import { OperatorTile } from "../table/OperatorTile";
+import { OperatorTile, railOperatorLogoUrl } from "../table/OperatorTile";
 import { statusPillProps } from "../table/statusPillStyle";
 import TripPill from "../Trips/TripPill";
 import { TableRow, type TableColumn } from "../ui/Table";
@@ -151,11 +151,7 @@ export function RailTableRow({ connection, columns, onOpen, actions }: Props): J
       <OperatorTile
         name={primaryOperator(legs)}
         domain="rail"
-        logoUrl={
-          primaryOperator(legs)
-            ? `/api/v1/rail/operators/logo?name=${encodeURIComponent(primaryOperator(legs)!)}`
-            : null
-        }
+        logoUrl={railOperatorLogoUrl(primaryOperator(legs))}
       />
     ),
     route: single ? <StationPair journey={single} /> : connectionStations(legs).join(" → "),
