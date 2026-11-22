@@ -118,8 +118,10 @@ describe("buildPortPoints", () => {
     expect(points.find((p) => p.name === "Oslo")?.country).toBe("NO");
   });
 
-  it("ignores a cruise that has not sailed", () => {
-    expect(buildPortPoints([cruise("c2", "scheduled")], LEGS, OPEN)).toEqual([]);
+  it("ignores a cancelled cruise and marks a scheduled one's port planned, not visited", () => {
+    expect(buildPortPoints([cruise("c2", "cancelled")], LEGS, OPEN)).toEqual([]);
+    const [planned] = buildPortPoints([cruise("c2", "scheduled")], LEGS, OPEN);
+    expect([planned.flownCount, planned.plannedCount]).toEqual([0, 1]);
   });
 
   it("drops ports the live window has not reached yet", () => {

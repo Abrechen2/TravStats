@@ -348,6 +348,7 @@
     "focusUnplaced": "This entry has no location and is not on the map."
   },
   "legend": {
+    "plannedMarker": "Hollow ring: planned only, not yet visited",
     "flightPast": "Flights (flown)",
     "flightUpcoming": "Flights (upcoming)",
     "cruisePast": "Cruises (sailed)",

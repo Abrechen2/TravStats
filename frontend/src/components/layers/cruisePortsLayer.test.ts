@@ -133,7 +133,7 @@ describe("createCruisePortsLayer", () => {
     expect(props.characterSet).toBe("auto");
   });
 
-  it("a scheduled cruise contributes no visits — only sailed (flown/historical) cruises count", () => {
+  it("a scheduled cruise contributes no VISITS — its ports are marked planned, only sailed cruises count", () => {
     const sharedPort = {
       id: 1,
       lat: 41.9,
@@ -165,14 +165,21 @@ describe("createCruisePortsLayer", () => {
     const data = (dotLayer as { props: { data: unknown } }).props.data as Array<{
       name: string;
       visits: number;
+      plannedVisits: number;
+      plannedOnly: boolean;
     }>;
 
-    // Only the flown cruise's port survives; the scheduled cruise's own port
-    // never appears at all.
-    expect(data.find((d) => d.name === "Piraeus")).toBeUndefined();
+    // The scheduled cruise's own port appears, but as planned-only with no
+    // visit; the shared port keeps its one sailed visit and counts the plan.
+    expect(data.find((d) => d.name === "Piraeus")).toMatchObject({
+      visits: 0,
+      plannedVisits: 1,
+      plannedOnly: true,
+    });
     const civitavecchia = data.find((d) => d.name === "Civitavecchia");
     expect(civitavecchia).toBeDefined();
     expect(civitavecchia!.visits).toBe(1);
+    expect(civitavecchia).toMatchObject({ plannedVisits: 1, plannedOnly: false });
   });
 
   it("itinerary scope keeps every stop as a pin for a scheduled-only cruise, with no visit claim", () => {
@@ -249,9 +256,8 @@ describe("createCruisePortsLayer", () => {
     expect(civitavecchia!.visits).toBe(1);
   });
 
-  it("visits scope (default) still returns null for a scheduled-only cruise", () => {
-    // Keeps the aggregate-map contract from Task 7 pinned: without an
-    // explicit itinerary scope, a scheduled-only cruise contributes no pins.
+  it("visits scope (default) still returns null for a cancelled-only cruise", () => {
+    // A cancelled cruise never sailed: on an aggregate map it contributes no pins.
     const cruise = makeCruise(
       [
         makeStop(1, {
@@ -263,7 +269,7 @@ describe("createCruisePortsLayer", () => {
           city: "Civitavecchia",
         }),
       ],
-      { status: "scheduled" }
+      { status: "cancelled" }
     );
     const layers = createCruisePortsLayer([cruise]);
     expect(layers).toBeNull();

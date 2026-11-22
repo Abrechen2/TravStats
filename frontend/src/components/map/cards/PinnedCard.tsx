@@ -26,6 +26,7 @@ import { tokens } from "../../../theme/tokens";
 import { hexToRgb } from "../../../lib/domainColor";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import type { CruiseCardDatum, MapPinned, MarkerCardDatum, RouteCardDatum } from "./pinnedTypes";
+import { plannedSummaryText } from "./hoverCardHtml";
 import { getAirportStats, getArcStats, getCruiseStats, getPortStats } from "./cardStats";
 import {
   Actions,
@@ -352,8 +353,16 @@ function AirportBody({
       <SubHeading>{data.name}</SubHeading>
       <Place city={data.city} country={data.country} locale={locale} />
       <Hero color={tokens.domainColor.flight}>
-        {stats.totalVisits} {t("map:globe.flight", { count: stats.totalVisits })}
+        {stats.plannedFlights > 0
+          ? plannedSummaryText(
+              { visited: stats.totalVisits, planned: stats.plannedFlights },
+              t as (key: string, options?: Record<string, unknown>) => string
+            )
+          : `${stats.totalVisits} ${t("map:globe.flight", { count: stats.totalVisits })}`}
       </Hero>
+      {stats.plannedFlights > 0 && stats.totalVisits === 0 && (
+        <SubHeading>{t("map:tooltip.plannedOnly")}</SubHeading>
+      )}
       <Grid>
         {stats.totalKm > 0 && (
           <Row label={t("map:globe.pinned.distance")} value={formatKm(stats.totalKm, locale)} />
@@ -393,8 +402,17 @@ function PortBody({
       {data.iata !== data.name && <SubHeading>{data.iata}</SubHeading>}
       <Place city={data.city} country={data.country} locale={locale} />
       <Hero color={tokens.domainColor.cruise}>
-        {stats.totalVisits} {t("map:airportMarkers.visits")}
+        {stats.plannedCalls > 0
+          ? plannedSummaryText(
+              { visited: stats.totalVisits, planned: stats.plannedCalls },
+              t as (key: string, options?: Record<string, unknown>) => string,
+              "map:tooltip.countVisited"
+            )
+          : `${stats.totalVisits} ${t("map:airportMarkers.visits")}`}
       </Hero>
+      {stats.plannedCalls > 0 && stats.totalVisits === 0 && (
+        <SubHeading>{t("map:tooltip.plannedOnly")}</SubHeading>
+      )}
       <Grid>
         {stats.country && <Row label={t("map:globe.pinned.country")} value={stats.country} />}
         {stats.region && (

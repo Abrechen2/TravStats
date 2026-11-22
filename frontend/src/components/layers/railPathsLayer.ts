@@ -1,4 +1,5 @@
 import { groupMapData, pathIdentity } from "./routeAggregation";
+import { mapStatusClass, PLANNED_FILL_ALPHA, PLANNED_RING_PX } from "../../lib/mapPresence";
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import { greatCirclePath } from "./greatCircle";
@@ -62,6 +63,8 @@ export interface RailStationDatum {
   key: string;
   position: [number, number];
   name: string;
+  /** Only booked (scheduled) journeys touch this station: drawn as a faint fill in a heavier ring. */
+  plannedOnly: boolean;
 }
 
 /**
@@ -116,7 +119,7 @@ export function railPathSourceKind(journey: RailPathSource): RailPathSourceKind 
  */
 export function buildRailPaths(journeys: readonly RailPathSource[]): RailPathDatum[] {
   const paths = journeys
-    .filter((j) => j.status !== "cancelled")
+    .filter((j) => mapStatusClass(j.status) !== "hidden")
     .map((j) => {
       const source = railPathSourceKind(j);
       return {
@@ -138,13 +141,17 @@ export function buildRailPaths(journeys: readonly RailPathSource[]): RailPathDat
 export function buildRailStations(journeys: readonly RailPathSource[]): RailStationDatum[] {
   const byKey = new Map<string, RailStationDatum>();
   for (const j of journeys) {
-    if (j.status === "cancelled") continue;
+    if (mapStatusClass(j.status) === "hidden") continue;
+    const planned = mapStatusClass(j.status) === "planned";
     for (const [name, lon, lat] of [
       [j.depStationName, j.depLon, j.depLat],
       [j.arrStationName, j.arrLon, j.arrLat],
     ] as const) {
       const key = `${lon.toFixed(4)},${lat.toFixed(4)}`;
-      if (!byKey.has(key)) byKey.set(key, { key, position: [lon, lat], name });
+      const known = byKey.get(key);
+      // A station that any journey that happened touches is a visited one.
+      if (!known) byKey.set(key, { key, position: [lon, lat], name, plannedOnly: planned });
+      else if (!planned) known.plannedOnly = false;
     }
   }
   return [...byKey.values()];
@@ -209,10 +216,11 @@ export function buildRailDeckLayers(
       id: `${idPrefix}-stations`,
       data: stations,
       getPosition: (d) => up(d.position),
-      getFillColor: [...color, 255] as [number, number, number, number],
-      getLineColor: STATION_DOT_OUTLINE_RGBA,
+      getFillColor: (d) =>
+        [...color, d.plannedOnly ? PLANNED_FILL_ALPHA : 255] as [number, number, number, number],
+      getLineColor: (d) => (d.plannedOnly ? [...color, 255] : STATION_DOT_OUTLINE_RGBA),
       lineWidthUnits: "pixels",
-      getLineWidth: STATION_DOT_OUTLINE_PX,
+      getLineWidth: (d) => (d.plannedOnly ? PLANNED_RING_PX : STATION_DOT_OUTLINE_PX),
       stroked: true,
       radiusUnits: "pixels",
       getRadius: RAIL_STATION_RADIUS_PX * stationSize,

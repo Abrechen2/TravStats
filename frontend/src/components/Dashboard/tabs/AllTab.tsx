@@ -22,10 +22,12 @@ import {
   buildCruiseLegendRows,
   buildFlightLegendRows,
   buildLodgingLegendRows,
+  buildPlannedMarkerLegendRow,
   buildPoiLegendRows,
   legendRow,
 } from "./allTabLegendRows";
 import { useTransportOverlays } from "./allTabTransportOverlays";
+import { lodgingPresence, mapStatusClass } from "../../../lib/mapPresence";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { useDomainLoad } from "../../../hooks/useDomainLoad";
 import { useCruiseColorStore } from "../../../store/cruiseColorStore";
@@ -481,7 +483,17 @@ export function AllTab(): JSX.Element {
   // require the credit to stay visible, so covering it is a licence question,
   // not a cosmetic one. The other three map overlays in this app sit
   // bottom-LEFT and are unaffected.
+  // The planned-marker key appears only while the map really draws a
+  // planned-only marker (a flight/cruise booked, a house or place planned).
+  const hasPlannedMarker =
+    (visible.flight &&
+      visibleFlights.some((f) => mapStatusClass(f.properties.status) === "planned")) ||
+    (visible.cruise && visibleCruises.some((c) => mapStatusClass(c.status) === "planned")) ||
+    (visible.lodging && visibleLodgings.some((l) => lodgingPresence(l).class === "planned")) ||
+    (visible.poi &&
+      visiblePlaces.some((p) => p.visited && p.visitCount === 0 && (p.plannedVisitCount ?? 0) > 0));
   const legendRows = [
+    ...(hasPlannedMarker ? [buildPlannedMarkerLegendRow(t)] : []),
     ...(lines.flight ? flightLegendRows : []),
     ...(lines.cruise ? cruiseLegendRows : []),
     ...(visible.lodging ? lodgingLegendRows : []),

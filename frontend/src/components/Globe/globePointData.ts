@@ -16,6 +16,7 @@
 import type { GeoJSONFeature } from "../../types";
 import type { Cruise } from "../../types/cruise";
 import type { PointDatum } from "./globeLayerTypes";
+import { mapStatusClass } from "../../lib/mapPresence";
 import { isCountableCruise } from "../../shared/cruiseCounting";
 import { toPortLabel } from "../map/portLabel";
 import type { CruiseLegDates } from "./timeSliderUtils";
@@ -42,6 +43,10 @@ export function buildAirportPoints(flights: readonly GeoJSONFeature[]): PointDat
     return cur.lastVisit;
   };
   for (const flight of flights) {
+    // Cancelled: no marker, in no count. Planned stays apart from flown.
+    const presence = mapStatusClass(flight.properties?.status);
+    if (presence === "hidden") continue;
+    const planned = presence === "planned" ? 1 : 0;
     const coords = flight.geometry?.coordinates;
     if (!coords || coords.length < 2) continue;
     const dep = flight.properties?.departureAirport;
@@ -61,12 +66,16 @@ export function buildAirportPoints(flights: readonly GeoJSONFeature[]): PointDat
         seen.set(dep.iata, {
           ...cur,
           size: cur.size + 1,
+          flownCount: (cur.flownCount ?? 0) + (1 - planned),
+          plannedCount: (cur.plannedCount ?? 0) + planned,
           lastVisit: bumpLastVisit(cur, departureTime),
         });
       } else {
         seen.set(dep.iata, {
           position: [start[0], start[1]],
           size: 1,
+          flownCount: 1 - planned,
+          plannedCount: planned,
           iata: dep.iata,
           name: dep.name ?? dep.iata,
           icao: dep.icao,
@@ -82,12 +91,16 @@ export function buildAirportPoints(flights: readonly GeoJSONFeature[]): PointDat
         seen.set(arr.iata, {
           ...cur,
           size: cur.size + 1,
+          flownCount: (cur.flownCount ?? 0) + (1 - planned),
+          plannedCount: (cur.plannedCount ?? 0) + planned,
           lastVisit: bumpLastVisit(cur, departureTime),
         });
       } else {
         seen.set(arr.iata, {
           position: [end[0], end[1]],
           size: 1,
+          flownCount: 1 - planned,
+          plannedCount: planned,
           iata: arr.iata,
           name: arr.name ?? arr.iata,
           icao: arr.icao,
@@ -115,7 +128,11 @@ export function buildPortPoints(
   for (const c of cruises) {
     // Only a sailed cruise's port calls count as a visit — the rule lives in
     // shared/cruiseCounting.ts, so it no longer drifts from the layer's copy.
-    if (!isCountableCruise(c)) continue;
+    // A scheduled cruise is booked, not sailed: its ports join the map as
+    // planned (hollow); cancelled and every other status draw nothing.
+    const sailed = isCountableCruise(c);
+    if (!sailed && c.status !== "scheduled") continue;
+    const planned = sailed ? 0 : 1;
     const legs = legDatesByCruise.get(c.id) ?? [];
     const portVisitDate = new Map<number, Date>();
     const startDate = c.startDate ? new Date(c.startDate) : null;
@@ -147,11 +164,19 @@ export function buildPortPoints(
       if (cur) {
         const nextLast =
           visitIso && (!cur.lastVisit || visitIso > cur.lastVisit) ? visitIso : cur.lastVisit;
-        seen.set(port.id, { ...cur, size: cur.size + 1, lastVisit: nextLast });
+        seen.set(port.id, {
+          ...cur,
+          size: cur.size + 1,
+          flownCount: (cur.flownCount ?? 0) + (1 - planned),
+          plannedCount: (cur.plannedCount ?? 0) + planned,
+          lastVisit: planned ? cur.lastVisit : nextLast,
+        });
       } else {
         seen.set(port.id, {
           position: [port.lon, port.lat],
           size: 1,
+          flownCount: 1 - planned,
+          plannedCount: planned,
           iata: port.unlocode ?? port.name,
           name: port.name,
           city: port.city ?? undefined,
@@ -160,7 +185,7 @@ export function buildPortPoints(
           label: toPortLabel(port.name),
           // Flag from the LOCODE country prefix (only when it's a real code).
           country: port.unlocode ? port.unlocode.slice(0, 2) : undefined,
-          lastVisit: visitIso,
+          lastVisit: planned ? undefined : visitIso,
         });
       }
     }

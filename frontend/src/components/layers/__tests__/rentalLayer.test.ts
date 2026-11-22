@@ -104,7 +104,12 @@ describe("rentalLayer — the same-station dot", () => {
     const [, rentalPoints] = buildRentalDeckLayers(buildRentalPoints([base]), [], {
       color: COLOR,
     });
-    const station: RailStationDatum = { key: "s", position: [8, 50], name: "A" };
+    const station: RailStationDatum = {
+      key: "s",
+      position: [8, 50],
+      name: "A",
+      plannedOnly: false,
+    };
     const path: RailPathDatum = {
       id: "p",
       path: [

@@ -9,6 +9,7 @@ import {
   STATION_DOT_RADIUS_PX,
 } from "./markerDotStyle";
 import type { Rgb } from "../../lib/domainColor";
+import { mapStatusClass, PLANNED_FILL_ALPHA, PLANNED_RING_PX } from "../../lib/mapPresence";
 import type { RentalBooking } from "../../types/rental";
 
 /**
@@ -53,6 +54,8 @@ export interface RentalPointDatum {
   position: [number, number];
   role: RentalPointRole;
   label: string;
+  /** A booked (scheduled) rental: drawn as a faint fill in a heavier ring (lib/mapPresence.ts). */
+  plannedOnly: boolean;
 }
 
 export interface RentalLinkDatum {
@@ -68,13 +71,15 @@ export const RENTAL_GLOBE_ALTITUDE_M = 5_000;
 export function buildRentalPoints(rentals: readonly RentalMapSource[]): RentalPointDatum[] {
   const points: RentalPointDatum[] = [];
   for (const r of rentals) {
-    if (r.status === "cancelled") continue;
+    if (mapStatusClass(r.status) === "hidden") continue;
+    const plannedOnly = mapStatusClass(r.status) === "planned";
     if (!r.oneWay) {
       points.push({
         key: `${r.id}-same`,
         position: [r.pickupLon, r.pickupLat],
         role: "same",
         label: `${r.provider} · ${r.pickupStationName}`,
+        plannedOnly,
       });
       continue;
     }
@@ -84,18 +89,20 @@ export function buildRentalPoints(rentals: readonly RentalMapSource[]): RentalPo
         position: [r.pickupLon, r.pickupLat],
         role: "pickup",
         label: `${r.provider} · ${r.pickupStationName}`,
+        plannedOnly,
       },
       {
         key: `${r.id}-return`,
         position: [r.returnLon, r.returnLat],
         role: "return",
         label: `${r.provider} · ${r.returnStationName}`,
+        plannedOnly,
       }
     );
   }
   return groupMapData(
     points,
-    (p) => JSON.stringify([p.position, p.role, p.label]),
+    (p) => JSON.stringify([p.position, p.role, p.label, p.plannedOnly]),
     (p) => p.key
   );
 }
@@ -103,7 +110,7 @@ export function buildRentalPoints(rentals: readonly RentalMapSource[]): RentalPo
 /** The dashed link of a one-way rental — none for a rental a roadtrip already draws. */
 export function buildRentalLinks(rentals: readonly RentalMapSource[]): RentalLinkDatum[] {
   const links = rentals
-    .filter((r) => r.status !== "cancelled" && r.oneWay && r.routeId === null)
+    .filter((r) => mapStatusClass(r.status) !== "hidden" && r.oneWay && r.routeId === null)
     .map((r) => ({
       id: r.id,
       path: greatCirclePath([r.pickupLon, r.pickupLat], [r.returnLon, r.returnLat]).points as Array<
@@ -176,9 +183,20 @@ export function buildRentalDeckLayers(
     stroked: true,
     filled: true,
     lineWidthUnits: "pixels",
-    getLineWidth: (d) => (d.role === "same" ? STATION_DOT_OUTLINE_PX : RENTAL_END_RING_PX),
-    getLineColor: (d) => (d.role === "same" ? STATION_DOT_OUTLINE_RGBA : [...color, 255]),
-    getFillColor: (d) => (d.role === "pickup" ? [0, 0, 0, 0] : [...color, 255]),
+    getLineWidth: (d) =>
+      d.plannedOnly
+        ? PLANNED_RING_PX
+        : d.role === "same"
+          ? STATION_DOT_OUTLINE_PX
+          : RENTAL_END_RING_PX,
+    getLineColor: (d) =>
+      d.role === "same" && !d.plannedOnly ? STATION_DOT_OUTLINE_RGBA : [...color, 255],
+    getFillColor: (d) =>
+      d.plannedOnly
+        ? [...color, PLANNED_FILL_ALPHA]
+        : d.role === "pickup"
+          ? [0, 0, 0, 0]
+          : [...color, 255],
     pickable: true,
     updateTriggers: { getRadius: markerSize, getLineColor: color, getFillColor: color },
   });

@@ -47,6 +47,8 @@ export function useGlobeHover(
               city: d.city,
               country: d.country,
               count: d.size,
+              flown: d.flownCount,
+              planned: d.plannedCount,
               lastVisit: d.lastVisit,
             },
             { t, locale }
@@ -74,6 +76,8 @@ export function useGlobeHover(
               code: d.iata,
               city: d.city,
               country: d.country,
+              planned: d.plannedCount,
+              flown: d.flownCount,
               lastVisit: d.lastVisit,
             },
             { t, locale }

@@ -348,6 +348,7 @@
     "focusUnplaced": "Dieser Eintrag hat keinen Ort und ist nicht auf der Karte."
   },
   "legend": {
+    "plannedMarker": "Hohler Ring: nur geplant, noch nicht besucht",
     "flightPast": "Flüge (geflogen)",
     "flightUpcoming": "Flüge (geplant)",
     "cruisePast": "Kreuzfahrten (gefahren)",

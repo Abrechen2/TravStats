@@ -6,6 +6,7 @@ import {
   resolveLodgingColor,
   type LodgingColorConfig,
 } from "../../lib/lodgingColor";
+import { lodgingPresence, PLANNED_FILL_ALPHA, PLANNED_RING_PX } from "../../lib/mapPresence";
 import { markerDotRadiusProps } from "./markerDotStyle";
 import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
 
@@ -29,6 +30,10 @@ interface LodgingPinDatum {
   country: string | null;
   /** Total stays recorded at this lodging — feeds the hover tooltip and the label-priority weight. */
   stayCount: number;
+  /** Stays still ahead (check-out not yet past); cancelled ones are in neither figure. */
+  plannedStays: number;
+  /** Only planned stays, none counted yet: drawn as a hollow ring (lib/mapPresence.ts). */
+  plannedOnly: boolean;
   /** Total nights recorded at this lodging — feeds the hover tooltip. */
   nights: number;
   /** Decides the pin's colour in "chain" mode. */
@@ -124,7 +129,12 @@ export function buildLodgingPins(
   const data: LodgingPinDatum[] = [];
   for (const lodging of lodgings) {
     if (lodging.lat === null || lodging.lon === null) continue;
+    // Cancelled: a house whose every stay was cancelled draws nothing.
+    const presence = lodgingPresence(lodging);
+    if (presence.class === "hidden") continue;
     data.push({
+      plannedStays: presence.counts.planned,
+      plannedOnly: presence.class === "planned",
       position: [lodging.lon, lodging.lat],
       lodgingId: lodging.id,
       name: lodging.name,
@@ -146,10 +156,18 @@ export function buildLodgingPins(
     getPosition: (d) => d.position,
     ...markerDotRadiusProps(sizeScale),
     getFillColor: (d) =>
-      [...resolveLodgingColor(d, colors), 220] as [number, number, number, number],
-    getLineColor: [255, 255, 255, 220],
+      [...resolveLodgingColor(d, colors), d.plannedOnly ? PLANNED_FILL_ALPHA : 220] as [
+        number,
+        number,
+        number,
+        number,
+      ],
+    getLineColor: (d) =>
+      d.plannedOnly
+        ? ([...resolveLodgingColor(d, colors), 255] as [number, number, number, number])
+        : [255, 255, 255, 220],
     lineWidthUnits: "pixels",
-    getLineWidth: 1,
+    getLineWidth: (d) => (d.plannedOnly ? PLANNED_RING_PX : 1),
     stroked: true,
     pickable: true,
     onClick: onPinClick

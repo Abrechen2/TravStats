@@ -1,4 +1,5 @@
 import { useRoutesVisible } from "../../../store/mapRoutesStore";
+import { PLANNED_FILL_ALPHA, PLANNED_RING_PX } from "../../../lib/mapPresence";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
@@ -110,10 +111,10 @@ export function buildTerminalRideLines(
       id: `${idPrefix}-terminals`,
       data: terminalPoints(rides),
       getPosition: (d) => (altitude === 0 ? d.position : [d.position[0], d.position[1], altitude]),
-      getFillColor: [r, g, b, 255],
-      getLineColor: STATION_DOT_OUTLINE_RGBA,
+      getFillColor: (d) => [r, g, b, d.plannedOnly ? PLANNED_FILL_ALPHA : 255],
+      getLineColor: (d) => (d.plannedOnly ? [r, g, b, 255] : STATION_DOT_OUTLINE_RGBA),
       lineWidthUnits: "pixels",
-      getLineWidth: STATION_DOT_OUTLINE_PX,
+      getLineWidth: (d) => (d.plannedOnly ? PLANNED_RING_PX : STATION_DOT_OUTLINE_PX),
       stroked: true,
       radiusUnits: "pixels",
       getRadius: STATION_DOT_RADIUS_PX,

@@ -103,6 +103,10 @@ export interface PointDatum {
    *  events exist for this marker (extremely rare — would mean every
    *  contributing flight had no `departureTime`). */
   lastVisit?: string;
+  /** Flights here that happened. `size` is flown + planned; cancelled are in neither. */
+  flownCount?: number;
+  /** Booked, future flights here. Zero flown and some planned = a planned-only airport. */
+  plannedCount?: number;
 }
 
 export interface CruisePathDatum {
