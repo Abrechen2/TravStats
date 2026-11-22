@@ -10,6 +10,7 @@ import { useTripSharingStore } from "../../store/tripSharingStore";
 import { useTripShareDialogs } from "../sharing/useTripShareDialogs";
 import OverflowMenu from "../ui/OverflowMenu";
 import type { OverflowEntry } from "../ui/OverflowMenu";
+import { useCoverCropStore } from "../../store/coverCropStore";
 import CoverSuggestDialog from "./CoverSuggestDialog";
 import { TripExportModal } from "./TripExportModal";
 import { useTripSummaryAction } from "./useTripSummaryAction";
@@ -75,6 +76,21 @@ export default function TripMoreMenu({
             onSelect: () => setSuggestingCover(true),
           },
         ]),
+    ...(!isSharedDemo && trip.coverImageUrl
+      ? [
+          {
+            key: "cover-crop",
+            label: t("immich:cover.crop.menuAdjust"),
+            onSelect: () =>
+              useCoverCropStore.getState().open({
+                tripId: trip.id,
+                coverImageUrl: trip.coverImageUrl!,
+                initialCrop: trip.coverCrop ?? null,
+                onDone: onChanged,
+              }),
+          },
+        ]
+      : []),
     { key: "export", label: t("trips:export.button"), onSelect: () => setExporting(true) },
     ...(summary.available
       ? [

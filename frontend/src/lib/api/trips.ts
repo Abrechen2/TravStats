@@ -1,3 +1,4 @@
+import type { CoverCrop } from "../coverCrop";
 import type { LocalTimeInput } from "../../shared/time";
 import { api } from "./client";
 import { API_TIMEOUTS } from "../../config/constants";
@@ -27,6 +28,7 @@ export interface CreateTripInput {
   originLabel?: string;
   destinationLabel?: string;
   coverImageUrl?: string;
+  coverCrop?: CoverCrop;
   icon?: string;
   countries?: string[];
 }
@@ -48,6 +50,9 @@ export interface UpdateTripInput {
   originLabel?: string | null;
   destinationLabel?: string | null;
   coverImageUrl?: string | null;
+  coverCrop?: CoverCrop | null;
+  /** The cover URL the crop was made on; the server refuses (409) if it changed meanwhile. */
+  coverCropFor?: string;
   icon?: string | null;
   countries?: string[];
 }

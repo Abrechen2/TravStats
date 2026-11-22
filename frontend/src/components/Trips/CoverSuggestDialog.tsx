@@ -13,6 +13,7 @@ import { failureKey } from "../../lib/api/immich";
 import { logger } from "../../lib/logger";
 import { token } from "../ui/tokens";
 import Modal from "../Modal";
+import { useCoverCropStore } from "../../store/coverCropStore";
 
 const PROVIDER_NAME = { immich: "Immich", photoprism: "PhotoPrism" } as const;
 
@@ -58,8 +59,11 @@ export default function CoverSuggestDialog({
     setChoosing(s.key);
     setChooseFailed(false);
     try {
-      await coverSuggestionsApi.apply(tripId, s.apply);
+      const { coverImageUrl } = await coverSuggestionsApi.apply(tripId, s.apply);
       onChosen();
+      useCoverCropStore
+        .getState()
+        .open({ tripId, coverImageUrl, initialCrop: null, onDone: onChosen });
       onClose();
     } catch (err) {
       logger.error("CoverSuggestDialog: choosing failed", err);

@@ -85,6 +85,18 @@ export function tripDatesInOrder(
 
 const DATE_ORDER_ISSUE = { message: TRIP_DATE_ORDER_MESSAGE, path: ["endDate"] };
 
+/**
+ * Non-destructive cover crop: x/y the focal point (0..1 of the image) shown in
+ * the middle of the frame, zoom >= 1 on top of the cover fit. Mirrored by
+ * `frontend/src/lib/coverCrop.ts`, which clamps the same way.
+ */
+export const COVER_ZOOM_MAX = 8;
+export const coverCropSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  zoom: z.number().min(1).max(COVER_ZOOM_MAX),
+});
+
 export const createTripSchema = z
   .object({
     name: z.string().trim().min(1).max(200),
@@ -102,10 +114,15 @@ export const createTripSchema = z
     originLabel: z.string().max(120).optional(),
     destinationLabel: z.string().max(120).optional(),
     coverImageUrl: z.string().max(500).optional(),
+    coverCrop: coverCropSchema.optional(),
     icon: z.string().max(8).optional(),
     countries: COUNTRY_LIST.optional(),
   })
-  .refine((d) => tripDatesInOrder(d.startDate, d.endDate), DATE_ORDER_ISSUE);
+  .refine((d) => tripDatesInOrder(d.startDate, d.endDate), DATE_ORDER_ISSUE)
+  .refine((d) => !d.coverCrop || !!d.coverImageUrl, {
+    message: "coverCrop needs a coverImageUrl",
+    path: ["coverCrop"],
+  });
 
 // PATCH semantics: explicit `null` clears nullable string fields, `undefined`
 // leaves them untouched. Arrays accept the new full list (no element-level
@@ -126,6 +143,9 @@ export const updateTripSchema = z
     originLabel: z.string().max(120).nullable().optional(),
     destinationLabel: z.string().max(120).nullable().optional(),
     coverImageUrl: z.string().max(500).nullable().optional(),
+    coverCrop: coverCropSchema.nullable().optional(),
+    /** The cover the crop was made on; a PATCH that finds another cover refuses (409). */
+    coverCropFor: z.string().max(500).optional(),
     icon: z.string().max(8).nullable().optional(),
     countries: COUNTRY_LIST.optional(),
   })

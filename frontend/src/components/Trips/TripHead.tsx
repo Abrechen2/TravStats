@@ -1,3 +1,5 @@
+import CoverImage from "./CoverImage";
+import CoverCropHost from "./CoverCropHost";
 import { useMemo } from "react";
 import RememberedMarker from "../provenance/RememberedMarker";
 import type { JSX } from "react";
@@ -111,16 +113,7 @@ export default function TripHead({
         }}
       >
         {trip.coverImageUrl && (
-          <div
-            aria-hidden="true"
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `url(${trip.coverImageUrl})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              opacity: 0.18,
-            }}
-          />
+          <CoverImage url={trip.coverImageUrl} crop={trip.coverCrop} opacity={0.18} />
         )}
         <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-sm)" }}>
@@ -199,6 +192,7 @@ export default function TripHead({
           </div>
         </div>
       </div>
+      <CoverCropHost onSaved={onChanged} />
     </div>
   );
 }

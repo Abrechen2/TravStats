@@ -27,6 +27,7 @@ import { getPhotoSourceConnection, toPhotoSourceKind } from "../../services/phot
 import { getCachedAlbumAssets } from "../../services/immich/immichAssetCache";
 import { ImmichError } from "../../services/immich/types";
 import logger from "../../utils/logger";
+import { manualCoverData } from "../../services/trip/tripCover";
 
 const router = Router();
 
@@ -71,7 +72,7 @@ router.post(
       }
 
       const coverImageUrl = immichCoverUrl(tripId, link.id, assetId);
-      await prisma.trip.update({ where: { id: tripId }, data: { coverImageUrl } });
+      await prisma.trip.update({ where: { id: tripId }, data: manualCoverData(coverImageUrl) });
 
       logger.info({ message: "immich_cover_set", context: { tripId, linkId: link.id } });
       res.json({ coverImageUrl });
@@ -107,7 +108,7 @@ router.post(
       if (!photo) throw new AppError("Photo not found", 404);
 
       const coverImageUrl = `/api/v1/trips/${tripId}/photos/${photo.id}/file`;
-      await prisma.trip.update({ where: { id: tripId }, data: { coverImageUrl } });
+      await prisma.trip.update({ where: { id: tripId }, data: manualCoverData(coverImageUrl) });
 
       res.json({ coverImageUrl });
     } catch (error) {

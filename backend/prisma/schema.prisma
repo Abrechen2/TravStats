@@ -2195,6 +2195,13 @@ model Trip {
   originLabel        String?   @map("origin_label")
   destinationLabel   String?   @map("destination_label")
   coverImageUrl      String?   @map("cover_image_url")
+  /// Non-destructive crop of the cover, `{x, y, zoom}`: x/y the focal point
+  /// (0..1 of the image) that sits in the middle of the frame, zoom >= 1 on
+  /// top of the cover fit. NULL = centred, as before the editor existed.
+  coverCrop          Json?     @map("cover_crop")
+  /// Who chose the cover: "manual" or "auto". NULL = a cover that predates the
+  /// column (treated as manual). Automatic code only ever fills an EMPTY cover.
+  coverSource        String?   @map("cover_source")
   icon               String?
   countries          String[]  @default([])
   /// The share group this trip is one member's copy in (trip sharing, S1).

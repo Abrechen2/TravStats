@@ -55,6 +55,7 @@ import {
 } from "./trips/tripCountries";
 import { resolveTrip } from "./trips/resolveTrip";
 import { refusesCoverImage } from "./trips/refusesCoverImage";
+import { coverPatchData } from "../services/trip/tripCover";
 import { toPhotoDto } from "./trips/photoDto";
 import { NOT_A_COVER, TRIP_PHOTO_LIST_CAP } from "../services/trips/photoStation";
 import { provenanceForWrite } from "../services/tripSummaryProvenance";
@@ -476,6 +477,9 @@ router.post(
             originLabel: body.originLabel,
             destinationLabel: body.destinationLabel,
             coverImageUrl: body.coverImageUrl,
+            // A crop without a cover has nothing to frame.
+            coverCrop: body.coverImageUrl ? body.coverCrop : undefined,
+            coverSource: body.coverImageUrl ? "manual" : undefined,
             icon: body.icon,
             countries: body.countries,
           },
@@ -589,9 +593,7 @@ router.patch(
               ...(body.destinationLabel !== undefined && {
                 destinationLabel: body.destinationLabel,
               }),
-              ...(body.coverImageUrl !== undefined && {
-                coverImageUrl: body.coverImageUrl,
-              }),
+              ...coverPatchData(body, existing),
               ...(body.icon !== undefined && { icon: body.icon }),
               ...(body.countries !== undefined && { countries: body.countries }),
             },

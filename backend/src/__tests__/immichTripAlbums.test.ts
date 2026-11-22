@@ -1,6 +1,7 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import express from "express";
 import request from "supertest";
+import { Prisma } from "../prisma";
 
 const resolveTrip = jest.fn(async (..._args: unknown[]) => ({ id: "trip-1" }));
 jest.mock("../routes/trips", () => ({ resolveTrip }));
@@ -472,7 +473,7 @@ describe("DELETE /trips/:id/immich/albums/:linkId", () => {
 
     expect(prisma.trip.update).toHaveBeenCalledWith({
       where: { id: "trip-1" },
-      data: { coverImageUrl: null },
+      data: { coverImageUrl: null, coverCrop: Prisma.JsonNull, coverSource: null },
     });
   });
 });
