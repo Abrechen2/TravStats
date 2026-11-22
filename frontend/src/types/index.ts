@@ -215,8 +215,7 @@ export interface Trip {
   coverImageUrl: string | null;
   /** Non-destructive framing of the cover; null/absent = centred. */
   coverCrop?: import("../lib/coverCrop").CoverCrop | null;
-  /** Who chose the cover: "manual" | "auto"; null = predates the column. */
-  coverSource?: "manual" | "auto" | null;
+  coverSource?: "manual" | "auto" | null; // who chose the cover; null = predates the column
   icon: string | null;
   countries: string[];
   flightsTruncated?: boolean; // GET /trips: `countries` came from capped flights, may be incomplete

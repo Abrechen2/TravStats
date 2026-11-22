@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const getMock = vi.hoisted(() => vi.fn());
 vi.mock("../client", () => ({ api: { get: getMock } }));
 
-import { __clearOperatorMarkCache, getOperatorMark } from "../operators";
+// The shared setup stubs `getOperatorMark` for every tile test; this suite tests the real one.
+const { __clearOperatorMarkCache, getOperatorMark } =
+  await vi.importActual<typeof import("../operators")>("../operators");
 
 /** forgejo#323 review: a "pending" mark must be asked again, a settled one not. */
 describe("getOperatorMark", () => {

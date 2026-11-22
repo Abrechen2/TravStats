@@ -154,7 +154,7 @@ export default function CoverSuggestDialog({
                   width: "100%",
                   aspectRatio: "4 / 3",
                   objectFit: "cover",
-                  borderRadius: "var(--ts-radius-sm, 6px)",
+                  borderRadius: "var(--ts-radius-tile)",
                 }}
               />
               <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
