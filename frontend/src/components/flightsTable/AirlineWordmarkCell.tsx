@@ -1,5 +1,6 @@
 import type { Flight } from "../../types";
 import AirlineLogo from "../AirlineLogo";
+import { useAirlineLogoStyle } from "../../lib/airlineLogoStyle";
 import { resolveAirlineDisplay, resolveAirlineIata } from "../../lib/airlineUtils";
 
 /**
@@ -28,6 +29,9 @@ const TILE_PX = 44;
 export default function AirlineWordmarkCell({ flight }: { flight: Flight }): JSX.Element {
   const name = resolveAirlineDisplay(flight);
   const iata = resolveAirlineIata(flight);
+  // "icon" asks the proxy for the vendored symbol; where the chain has none the
+  // image errors and the code tile below stays, never an empty box.
+  const style = useAirlineLogoStyle();
 
   // A tile the size of a logo, with the code in it. The name used to stand
   // here as text, and in a 48px column "Lufthansa" ran straight into the
@@ -59,7 +63,7 @@ export default function AirlineWordmarkCell({ flight }: { flight: Flight }): JSX
         iata={iata}
         icao={flight.airlineIcao}
         flightNumber={flight.flightNumber}
-        variant="logo"
+        variant={style === "icon" ? "icon" : "logo"}
         size={TILE_PX}
         // max-w-none: Tailwind's preflight sets img { max-width: 100% }, and
         // Firefox's auto table layout computes this column narrower than

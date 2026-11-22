@@ -77,15 +77,15 @@ export interface UnitsSettings {
   distanceUnit: DistanceUnit;
   /** Unit of a bare baggage number; absent = kg. Why: `lib/baggageAllowance.ts`. */
   weightUnit?: WeightUnit;
+  airlineLogoStyle?: "tile" | "icon"; // lib/airlineLogoStyle.ts
   // `currency` is GONE from here on purpose (2026-08-23). The app had two
   // currency settings: this one, in the settings JSON, read only by flight
   // surfaces — and `baseCurrency`, a real column, read by lodging, stats and
-  // achievements. So the "general" one was domain-specific and the
-  // "lodging" one was general, exactly swapped, and three comments in the
-  // codebase existed only to warn readers apart. There is one currency now,
-  // `baseCurrency`, and it lives under Einheiten & Formate where it always
-  // belonged. Removing the field rather than leaving it unread is deliberate:
-  // a stale setting that used to control something is a trap.
+  // achievements. So the "general" one was domain-specific and the "lodging"
+  // one was general, exactly swapped, and three comments existed only to warn
+  // readers apart. There is one currency now, `baseCurrency`, and it lives
+  // under Einheiten & Formate where it always belonged. The field is removed,
+  // not left unread: a stale setting that used to control something is a trap.
 }
 
 export interface DefaultsSettings {

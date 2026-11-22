@@ -213,6 +213,10 @@
       "fahrenheit": "Fahrenheit"
     },
     "weight": "Weight",
+    "airlineLogoOptions": {
+      "tile": "Tile with name",
+      "icon": "Symbol only"
+    },
     "weightOptions": {
       "kg": "Kilograms",
       "lb": "Pounds"
@@ -1715,6 +1719,11 @@
     },
     "distance": {
       "name": "Distance"
+    },
+    "airlineLogoStyle": {
+      "name": "Airline logos",
+      "sub": "In lists and tables",
+      "help": "“Symbol only” shows the small logo without the name. An airline without a symbol keeps the tile with its name."
     },
     "weight": {
       "name": "Baggage",

@@ -125,6 +125,7 @@ export interface UserSettings {
   units?: {
     distanceUnit?: string;
     weightUnit?: string;
+    airlineLogoStyle?: string;
     currency?: string;
   };
   defaults?: {

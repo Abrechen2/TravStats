@@ -4,7 +4,7 @@ import { useSettingsStore, type UnitsSettings } from "../../store/settingsStore"
 import { ChoiceControl, SettingItem } from "../ui/settings";
 import { useDocumentSetting } from "./useDocumentSetting";
 
-type UnitField = "distanceUnit" | "weightUnit";
+type UnitField = "distanceUnit" | "weightUnit" | "airlineLogoStyle";
 
 interface UnitRowProps<V extends string> {
   field: UnitField;

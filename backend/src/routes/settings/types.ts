@@ -31,6 +31,8 @@ export interface SettingsDataJson {
     distanceUnit?: string;
     /** Unit of a bare baggage-allowance number (forgejo#186); absent = kg. */
     weightUnit?: string;
+    /** "tile" (default) or "icon": how airline logos are drawn in lists. */
+    airlineLogoStyle?: string;
     currency?: string;
   };
   defaults?: {

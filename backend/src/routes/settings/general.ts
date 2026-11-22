@@ -124,6 +124,9 @@ const settingsSchema = z
         // Names the unit of a bare baggage-allowance number ("23" reads
         // "23 kg"); nothing is converted (forgejo#186).
         weightUnit: z.enum(["kg", "lb"]).optional(),
+        // How an airline is drawn in lists: the named brand tile (absent = "tile")
+        // or the bare symbol without text ("icon").
+        airlineLogoStyle: z.enum(["tile", "icon"]).optional(),
         // Any ISO 4217 alpha-3 code — see schemas/flight.ts for rationale.
         currency: z
           .string()

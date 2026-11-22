@@ -11,6 +11,7 @@ import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore"
 import { UnitRow } from "./UnitRow";
 import { useExpertRows } from "./frame/useExpertRows";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
+import { AIRLINE_LOGO_STYLES, resolveAirlineLogoStyle } from "../../lib/airlineLogoStyle";
 import { WEIGHT_UNITS, resolveWeightUnit } from "../../lib/baggageAllowance";
 
 interface UnitsSectionProps {
@@ -91,6 +92,17 @@ export default function UnitsSection({ units, baseCurrency }: UnitsSectionProps)
           // "kg" and "lb" are symbols, the same in both languages.
           shortLabel={(value) => value}
           name={(value) => t(`settings:units.weightOptions.${value}`)}
+          locked={isDemo}
+        />
+        <UnitRow
+          field="airlineLogoStyle"
+          title={t("settings:rows.airlineLogoStyle.name")}
+          sub={t("settings:rows.airlineLogoStyle.sub")}
+          help={t("settings:rows.airlineLogoStyle.help")}
+          saved={resolveAirlineLogoStyle(units.airlineLogoStyle)}
+          values={AIRLINE_LOGO_STYLES}
+          shortLabel={(value) => t(`settings:units.airlineLogoOptions.${value}`)}
+          name={(value) => t(`settings:units.airlineLogoOptions.${value}`)}
           locked={isDemo}
         />
         <SettingItem
