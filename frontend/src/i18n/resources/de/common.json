@@ -503,6 +503,26 @@
     "openIn": {
       "immich": "In Immich öffnen",
       "photoprism": "In PhotoPrism öffnen"
+    },
+    "window": "Fotos vom {{range}}",
+    "count": "{{shown}} von {{total}} Fotos",
+    "loadAll": "Alle {{total}} laden",
+    "saveFirst": "Speichere zuerst deine Auswahl, bevor du die Liste wechselst.",
+    "album": {
+      "open": "Aus Album wählen",
+      "title": "Album wählen",
+      "back": "Zurück",
+      "hint": "Die Fotos des Albums erscheinen nur zur Auswahl; das Album selbst wird nicht verknüpft. Du entscheidest, welche Fotos bleiben.",
+      "filter": "Album suchen",
+      "noSource": "Keine Fotoquelle verbunden.",
+      "loading": "Lade Alben …",
+      "none": "Keine Alben gefunden.",
+      "count_one": "{{count}} Foto",
+      "count_other": "{{count}} Fotos",
+      "window": "Album „{{name}}“ · Fotos vom {{range}}",
+      "windowAny": "Album „{{name}}“ · alle Aufnahmedaten",
+      "anyDate": "Unabhängig vom Aufenthaltszeitraum",
+      "leave": "Zurück zur Zeitsuche"
     }
   }
 }

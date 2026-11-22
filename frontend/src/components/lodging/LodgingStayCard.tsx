@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { useShareLink } from "../shareLinks/ShareLinkButton";
 import OverflowMenu from "../ui/OverflowMenu";
 import DocumentsSection from "../documents/DocumentsSection";
-import RememberedMarker from "../provenance/RememberedMarker";
+import EntryPhotos from "../common/EntryPhotos";
+import ProvenanceDialog from "../provenance/ProvenanceDialog";
+import ProvenanceLine from "../provenance/ProvenanceLine";
 import { PackageBookingCard } from "../bookings/PackageBookingCard";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -41,6 +44,11 @@ interface LodgingStayCardProps {
   membershipName?: string;
   /** How `membershipName` was resolved — shown as a small qualifier next to the chip. */
   membershipSource?: StayMembershipSource;
+  /**
+   * Re-read the stay after its origin was saved. The origin ("aus der Erinnerung") is edited from
+   * this card's ⋯; leave it out where the card is read-only.
+   */
+  onProvenanceSaved?: () => void;
 }
 
 /**
@@ -60,8 +68,10 @@ export function LodgingStayCard({
   tripName,
   membershipName,
   membershipSource,
+  onProvenanceSaved,
 }: LodgingStayCardProps): JSX.Element {
-  const { t, i18n } = useTranslation(["lodging", "common", "sharing"]);
+  const { t, i18n } = useTranslation(["lodging", "common", "sharing", "provenance"]);
+  const [editingOrigin, setEditingOrigin] = useState(false);
   const share = useShareLink("stay", stay.id);
   const { labelOf } = useRatingCategories();
   const baseCurrency = useSettingsStore((st) => st.baseCurrency);
@@ -124,7 +134,6 @@ export function LodgingStayCard({
             the flights table — a cancelled stay used to look identical to a
             booked one here. */}
         <StayStatusPill status={stay.status} testId={`stay-status-${stay.id}`} />
-        <RememberedMarker entry={stay} />
         {stay.isAwardStay && (
           <span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-xs font-medium text-[var(--accent)]">
             {t("lodging:field.awardStay")}
@@ -157,7 +166,7 @@ export function LodgingStayCard({
         </span>
         {/* Share link, edit and delete are one card ⋯ (owner, 2026-11-22). The red belongs to
             the confirmation, which is where the consequence is actually stated. */}
-        {(onEdit || onDelete) && (
+        {(onEdit || onDelete || onProvenanceSaved) && (
           <OverflowMenu
             label={t("lodging:stay.menuLabel")}
             testId={`stay-menu-${stay.id}`}
@@ -182,6 +191,16 @@ export function LodgingStayCard({
                     },
                   ]
                 : []),
+              ...(onProvenanceSaved
+                ? [
+                    {
+                      key: "provenance",
+                      testId: `stay-provenance-${stay.id}`,
+                      label: t("provenance:editor.menu"),
+                      onSelect: () => setEditingOrigin(true),
+                    },
+                  ]
+                : []),
               ...(onDelete
                 ? [
                     {
@@ -196,6 +215,14 @@ export function LodgingStayCard({
             ]}
           >
             {share.node}
+            {editingOrigin && (
+              <ProvenanceDialog
+                entryType="lodgingStay"
+                entry={stay}
+                onClose={() => setEditingOrigin(false)}
+                onSaved={() => onProvenanceSaved?.()}
+              />
+            )}
           </OverflowMenu>
         )}
       </div>
@@ -270,6 +297,12 @@ export function LodgingStayCard({
       {stay.notes && (
         <p className="mt-2 whitespace-pre-wrap text-xs text-[var(--text-muted)]">{stay.notes}</p>
       )}
+      <ProvenanceLine entry={stay} className="t-caption mt-2" />
+      {/* Photos and documents hang off the STAY, never the house (owner, 2026-11-22): each stay
+          shows its own. */}
+      <div className="mt-3">
+        <EntryPhotos kind="stay" entryId={stay.id} />
+      </div>
       {/* Documents hang off the STAY, never the house (owner, 2026-11-22): the list and the
           upload both live on the card of the stay they belong to. */}
       <DocumentsSection layout="inline" entry={{ type: "lodgingStay", id: stay.id }} />

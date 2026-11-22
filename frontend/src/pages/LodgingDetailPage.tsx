@@ -1,6 +1,5 @@
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { useEffect, useState } from "react";
-import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import TagChips from "../components/common/TagChips";
 import WikipediaCard from "../components/common/WikipediaCard";
 import type { JSX, ReactNode } from "react";
@@ -15,7 +14,6 @@ import { lodgingLifecycleStatus } from "../components/lodging/lodgingLifecycle";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { LodgingMiniMap } from "../components/lodging/LodgingMiniMap";
 import { LodgingStayCard } from "../components/lodging/LodgingStayCard";
-import EntryPhotos from "../components/common/EntryPhotos";
 import { StarRating } from "../components/lodging/StarRating";
 import { LodgingPhotoSection } from "../components/lodging/LodgingPhotoSection";
 import { StayEditor } from "../components/lodging/StayEditor";
@@ -492,12 +490,7 @@ export default function LodgingDetailPage(): JSX.Element {
                         tripName={stay.tripId ? tripNameById[stay.tripId] : undefined}
                         membershipName={membershipName}
                         membershipSource={resolvedMembership.source}
-                      />
-                      <EntryPhotos kind="stay" entryId={stay.id} />
-                      <ProvenanceDetails
-                        entryType="lodgingStay"
-                        entry={stay}
-                        onSaved={() => void reloadLodgingQuietly()}
+                        onProvenanceSaved={() => void reloadLodgingQuietly()}
                       />
                     </div>
                   );

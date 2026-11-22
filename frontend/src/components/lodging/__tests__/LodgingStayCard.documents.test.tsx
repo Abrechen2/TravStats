@@ -15,6 +15,7 @@ vi.mock("../../documents/DocumentsSection", () => ({
   },
 }));
 
+vi.mock("../../common/EntryPhotos", () => ({ default: () => null }));
 import { LodgingStayCard } from "../LodgingStayCard";
 
 const stay = (id: string): LodgingStay =>

@@ -33,6 +33,19 @@ const choices = z.object({
   sources: z.record(z.string(), z.string()),
   untimed: z.boolean().optional(),
   cap: z.number(),
+  window: z
+    .object({ from: z.string(), to: z.string() })
+    .optional()
+    .describe("Entries only: the local days searched, `YYYY-MM-DD`"),
+  total: z.number().optional().describe("Entries only: candidates found before thinning"),
+  thinned: z
+    .boolean()
+    .optional()
+    .describe("Entries only: `choices` is a spread of `total`; `?all=1` lists every one"),
+  album: z
+    .object({ provider, albumId: z.string(), anyDate: z.boolean() })
+    .optional()
+    .describe("Entries only: the album the candidates came from"),
   openIn: z
     .array(z.object({ provider, url: z.string() }))
     .describe("Links into the source's own UI; empty without a browsable base URL"),
@@ -45,6 +58,10 @@ const change = z.object({
     .max(100)
     .optional()
     .describe("An automatic one replaced by a pick is dropped quietly; the rest become refusals"),
+  album: z
+    .object({ provider, albumId: z.string(), anyDate: z.boolean().optional() })
+    .optional()
+    .describe("Entries only: the album the picks were listed from, to prove them against it"),
 });
 const saved = z.object({
   picked: z.number(),
@@ -85,6 +102,44 @@ for (const [path, params] of [
     },
   });
 }
+
+registry.registerPath({
+  method: "get",
+  path: "/entry-photos/{kind}/{entryId}/photo-albums",
+  summary: "The albums and folders of one photo source, to choose an entry's photos from",
+  tags,
+  request: {
+    params: z.object({ kind: z.string(), entryId: z.string().uuid() }),
+    query: z.object({ provider: provider.optional() }),
+  },
+  responses: {
+    200: {
+      description: "The albums",
+      content: json(
+        envelope(
+          z.object({
+            provider,
+            albums: z.array(
+              z.object({
+                id: z.string(),
+                albumName: z.string(),
+                assetCount: z.number(),
+                thumbnailAssetId: z.string().nullable().optional(),
+                kind: z.string().optional(),
+              })
+            ),
+          })
+        )
+      ),
+    },
+    404: notFound,
+    409: { description: "The source is not connected", content: errorContent },
+    502: {
+      description: "The source failed (`unreachable`, `auth`, `protocol`…)",
+      content: errorContent,
+    },
+  },
+});
 
 registry.registerPath({
   method: "put",

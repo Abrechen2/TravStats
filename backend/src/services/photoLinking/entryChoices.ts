@@ -23,7 +23,18 @@ import {
   type SourceState,
   type WindowSearch,
 } from "./matcher";
-import { choiceTarget, planZone, takenAtLocal } from "./choiceTarget";
+import { albumMatches, type AlbumPick } from "./albumCandidates";
+import { choiceTarget, planZone, takenAtLocal, windowDays } from "./choiceTarget";
+
+/** "Alle laden": what the choose view lists at most when the user asks for everything. */
+export const ENTRY_CHOICE_ALL_LIMIT = 500;
+
+export interface ChoiceOptions {
+  /** List every candidate (up to {@link ENTRY_CHOICE_ALL_LIMIT}), not the spread of {@link ENTRY_CHOICE_LIMIT}. */
+  all?: boolean;
+  /** Candidates are one album's photos instead of the matcher's. */
+  album?: AlbumPick;
+}
 
 /**
  * "Fotos auswählen" for an entry (owner, 2026-11-21): every candidate the
@@ -57,13 +68,22 @@ export interface EntryChoices {
   /** Automatic links per entry, the account's setting. */
   cap: number;
   openIn: OpenInLink[];
+  /** The local days searched (what the time window says on screen). */
+  window?: { from: string; to: string };
+  /** Candidates found in all, before the list was thinned; `choices` may hold fewer. */
+  total?: number;
+  /** True when `choices` is a spread of `total`, so the view offers "alle laden". */
+  thinned?: boolean;
+  /** The album the candidates came from, when the user picked one. */
+  album?: { provider: PhotoSourceKind; albumId: string; anyDate: boolean };
 }
 
 export async function entryChoicesFor(
   userId: string,
   kind: EntryKind,
   id: string,
-  search: WindowSearch = directSearch(userId)
+  search: WindowSearch = directSearch(userId),
+  options: ChoiceOptions = {}
 ): Promise<EntryChoices | null> {
   const plan = await planFor(userId, kind, id);
   if (plan === null) return null;
@@ -71,7 +91,9 @@ export async function entryChoicesFor(
   if (plan === "untimed") return { choices: [], sources: {}, untimed: true, cap, openIn: [] };
 
   const [found, rows] = await Promise.all([
-    findMatches(userId, kind, id, plan, search, "none"),
+    options.album
+      ? albumMatches(userId, plan, options.album)
+      : findMatches(userId, kind, id, plan, search, "none"),
     prisma.entryPhotoLink.findMany({ where: { userId, ...fkOf(kind, id) } }),
   ]);
   const rowOf = new Map(rows.map((r) => [refusalKey(toKind(r.provider), r.assetId), r]));
@@ -83,7 +105,10 @@ export async function entryChoicesFor(
   // camera roll of a long stay shows a spread, not its first hour.
   const chosen = found.matched.filter(isChosen);
   const rest = found.matched.filter((m) => !isChosen(m));
-  const room = Math.max(0, ENTRY_CHOICE_LIMIT - chosen.length);
+  const room = Math.max(
+    0,
+    (options.all ? ENTRY_CHOICE_ALL_LIMIT : ENTRY_CHOICE_LIMIT) - chosen.length
+  );
   // Below the limit every candidate is listed — a burst's frames included, so the
   // user can pick the one they like; the spread only thins an overlong list.
   const others = rest.length <= room ? rest : capMatches(rest, room);
@@ -147,6 +172,10 @@ export async function entryChoicesFor(
     untimed: false,
     cap,
     openIn: await openInLinks(userId, providers, choiceTarget(plan)),
+    window: windowDays(plan),
+    total: found.matched.length,
+    thinned: others.length < rest.length,
+    ...(options.album ? { album: options.album } : {}),
   };
 }
 
@@ -166,14 +195,18 @@ export async function saveEntryChoice(
   kind: EntryKind,
   id: string,
   change: { select: PickedAsset[]; deselect: PickedAsset[] },
-  search: WindowSearch = directSearch(userId)
+  search: WindowSearch = directSearch(userId),
+  options: Pick<ChoiceOptions, "album"> = {}
 ): Promise<ChoiceSaveResult | null> {
   const plan = await planFor(userId, kind, id);
   if (plan === null) return null;
   if (plan === "untimed") {
     return { picked: 0, swapped: 0, refused: 0, skipped: change.select.length };
   }
-  const found = await findMatches(userId, kind, id, plan, search, "none");
+  // The same candidates the view listed: an album pick is proven against that album.
+  const found = options.album
+    ? await albumMatches(userId, plan, options.album)
+    : await findMatches(userId, kind, id, plan, search, "none");
   const byKey = new Map(found.matched.map((m) => [refusalKey(m.provider, m.asset.id), m]));
   const rows = await prisma.entryPhotoLink.findMany({ where: { userId, ...fkOf(kind, id) } });
   const rowOf = new Map(rows.map((r) => [refusalKey(toKind(r.provider), r.assetId), r]));
