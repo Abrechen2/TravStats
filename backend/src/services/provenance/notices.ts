@@ -180,3 +180,8 @@ export async function dismissProvenanceNotice(userId: string, id: string): Promi
   });
   return count > 0;
 }
+
+/** The inbox badge's number: stored pending rows only — one indexed count, no recomputation. */
+export async function countProvenanceNotices(userId: string): Promise<number> {
+  return prisma.provenanceNotice.count({ where: { userId, status: "pending" } });
+}

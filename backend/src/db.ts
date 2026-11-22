@@ -73,6 +73,16 @@ export interface WriteEvent {
 }
 let writeObserver: ((event: WriteEvent) => void) | null = null;
 
+/**
+ * More subscribers than the one slot above: they are told after it, each isolated from the
+ * others' failures. Returns the function that removes it.
+ */
+const extraWriteObservers = new Set<(event: WriteEvent) => void>();
+export function addWriteObserver(observer: (event: WriteEvent) => void): () => void {
+  extraWriteObservers.add(observer);
+  return () => extraWriteObservers.delete(observer);
+}
+
 export function setWriteObserver(observer: ((event: WriteEvent) => void) | null): void {
   writeObserver = observer;
 }
@@ -142,11 +152,16 @@ export const prisma = basePrisma.$extends({
 
       try {
         const result = await query(args);
-        if (writeObserver && operation !== "findMany" && operation !== "findFirst") {
-          try {
-            writeObserver({ model, operation, args, result });
-          } catch (observerError) {
-            dbLogger.error({ message: "write_observer_failed", error: observerError });
+        if (operation !== "findMany" && operation !== "findFirst") {
+          for (const observer of [
+            ...(writeObserver ? [writeObserver] : []),
+            ...extraWriteObservers,
+          ]) {
+            try {
+              observer({ model, operation, args, result });
+            } catch (observerError) {
+              dbLogger.error({ message: "write_observer_failed", error: observerError });
+            }
           }
         }
         if (verbose) {

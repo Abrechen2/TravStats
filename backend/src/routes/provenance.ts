@@ -6,6 +6,7 @@ import { rejectDemo } from "../middleware/demoGuard";
 import { statsLimiter } from "../middleware/rateLimit";
 import { PROVENANCE_ENTRY_TYPES, setProvenanceSchema } from "../schemas/provenance";
 import {
+  countProvenanceNotices,
   dismissProvenanceNotice,
   listProvenanceNotices,
   syncProvenanceNotices,
@@ -61,13 +62,12 @@ router.get(
   }
 );
 
-/** The inbox badge's number, counted like every other inbox source. */
+/** The inbox badge: stored rows only, kept current on write (services/provenance/noticeTriggers.ts). */
 router.get(
   "/notices/count",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const notices = await listProvenanceNotices(req.userId!);
-      res.json({ success: true, data: { count: notices.length } });
+      res.json({ success: true, data: { count: await countProvenanceNotices(req.userId!) } });
     } catch (err) {
       next(err);
     }

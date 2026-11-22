@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import { recordedOnlyActive } from "../services/provenance/recordedOnly";
 import { z } from "zod";
 import { AppError } from "../middleware/errorHandler";
 import { prisma } from "../db";
@@ -47,6 +48,20 @@ router.use(authenticate);
 router.use(requireWriteScope);
 
 // Get all achievements with user progress
+// "Nur belegte" cannot narrow an honour: a badge is earned once and stored, never re-derived per
+// request (utils/achievementWrites.ts). Rather than show the whole account's badges next to
+// filtered figures, a recorded-only read says so and the page leaves the block out.
+router.use((req: AuthRequest, res: Response, next: NextFunction): void => {
+  if (!recordedOnlyActive()) {
+    next();
+    return;
+  }
+  res.status(409).json({
+    error: "Achievements cannot be narrowed to documented entries",
+    code: "ACHIEVEMENTS_NOT_FILTERABLE",
+  });
+});
+
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;

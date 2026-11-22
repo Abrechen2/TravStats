@@ -50,11 +50,26 @@ Remembered entries count by default. "Nur belegte" leaves out `remembered`; it k
 
 ONE filter, no per-endpoint copies: a GET carrying `?onlyRecorded=true` on the statistics page's
 routes (`/stats`, `/achievements` and the lists it computes from: flights, cruises, trips, rail,
-bus, ferry, rentals, lodging, places) opens a request scope (`services/provenance/recordedOnly.ts`);
-the Prisma query hook in `db.ts` then adds the predicate to every READ of the nine models inside
-it, and the middleware removes the parameter so strict query schemas never see it. Writes,
-`findUnique` and nested `include`s are not narrowed. Two endpoints therefore cannot disagree (a
-test pins summary total and flight list against each other).
+bus, ferry, rentals, lodging, places) opens a request scope (`services/provenance/recordedOnly.ts`,
+an AsyncLocalStorage that ends with the response); the Prisma query hook in `db.ts` then narrows
+every READ inside it:
+
+- the nine models (`findMany/First/Unique/count/aggregate/groupBy`), the predicate kept as a
+  sibling `AND` so a `findUnique` keeps its unique key;
+- every to-many `include`/`select` and `_count` that reaches one, at any depth (a to-one relation
+  cannot carry a filter and names a row the parent already points at);
+- parents that exist only through their entries — a lodging and its stays, a place and its visits —
+  drop out when they have entries and none is visible;
+- raw SQL, which the hook cannot see, says the same through `recordedSql.ts` (the lodging list,
+  facets and stay list);
+- achievements are earned once and stored, so they cannot be narrowed: a recorded-only read answers
+  `409 ACHIEVEMENTS_NOT_FILTERABLE` and the page leaves the block out.
+
+The middleware removes the parameter so strict query schemas never see it; only GETs open a scope.
+Writes are never narrowed. `provenance.guard.test.ts` walks every parameter-free GET route under the
+scoped prefixes (plus a few with parameters) and asserts an account whose WHOLE history is
+remembered answers exactly like an empty account when the filter is on — and not like one when it
+is off.
 
 Web: `RecordedOnlyBoundary` puts one "Nur belegte" switch on the page and re-mounts it when
 flipped, so every card and hook reads again under the same filter. The switch lives only while the
@@ -74,8 +89,10 @@ Two recollections cannot contradict a record, two records are not our call. The 
 `provenance_notices`, never a change: the user edits the entry or dismisses the notice ("beide so
 lassen"). A notice is named by a content key (kind, both labels, the recorded day), so it exists
 once, a dismissal survives deleting and re-importing the entry, and a pending one whose
-contradiction has gone is `resolved` and reopens if it returns. The pass runs when the inbox list
-is read and after each marking.
+contradiction has gone is `resolved` and reopens if it returns. The notices are kept current ON WRITE: a write to any of the nine models marks its account
+dirty (a second write observer in `db.ts`), and one pass per account runs a few seconds later
+(`noticeTriggers.ts`); a boot sweep covers writes that named no account, and opening the inbox or
+marking an entry also runs it. The badge's `GET /provenance/notices/count` reads stored rows only.
 
 ## Web
 

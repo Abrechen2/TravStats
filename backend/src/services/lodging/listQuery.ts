@@ -20,6 +20,7 @@
  * holds the two spellings together.
  */
 
+import { recordedJoinedStaySql, recordedStaySql } from "../provenance/recordedSql";
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import type { LodgingListQuery as LodgingQueryInput } from "../../schemas/lodging";
@@ -59,7 +60,11 @@ export interface LodgingPage {
  * nights, a different question nobody asked.
  */
 export function lodgingFilterSql(q: LodgingQueryInput, userId: string): Prisma.Sql {
-  const conditions: Prisma.Sql[] = [Prisma.sql`l.user_id = ${userId}`];
+  const conditions: Prisma.Sql[] = [
+    Prisma.sql`l.user_id = ${userId}`,
+    // "Nur belegte": remembered stays leave the join, and a house of only those leaves the list.
+    recordedJoinedStaySql("s"),
+  ];
 
   if (q.type) conditions.push(Prisma.sql`l.type = ${q.type}`);
   if (q.coveredLodgingIds !== undefined) {
@@ -107,7 +112,7 @@ export function lodgingFilterSql(q: LodgingQueryInput, userId: string): Prisma.S
     // `stays: { some: { tripId, checkIn } }`, not one stay per condition.
     conditions.push(Prisma.sql`EXISTS (
       SELECT 1 FROM lodging_stays s2
-      WHERE s2.lodging_id = l.id AND ${Prisma.join(stayConditions, " AND ")}
+      WHERE s2.lodging_id = l.id AND ${recordedStaySql("s2")} AND ${Prisma.join(stayConditions, " AND ")}
     )`);
   }
 
