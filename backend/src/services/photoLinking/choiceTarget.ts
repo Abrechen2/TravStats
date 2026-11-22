@@ -1,4 +1,4 @@
-import { toLocal } from "../../shared/time/instant";
+import { localDay, toLocal } from "../../shared/time/instant";
 import { zoneOf } from "../../shared/time/zoneOf";
 import type { DeepLinkTarget } from "../photoSource/deepLink";
 import type { EntryPlan } from "./entryKinds";
@@ -49,4 +49,18 @@ export function takenAtLocal(
   } catch {
     return null;
   }
+}
+
+/**
+ * The local days a plan searches, first to last (`YYYY-MM-DD`), read in the entry's zone — what
+ * "Fotos vom 3.–7. Mai" says. Without a zone the UTC days; the search itself is wider then.
+ */
+export function windowDays(plan: Exclude<EntryPlan, "untimed">): { from: string; to: string } {
+  const zone = planZone(plan) ?? "UTC";
+  const starts = plan.legs.map((l) => l.window.start.getTime());
+  const ends = plan.legs.map((l) => l.window.end.getTime());
+  return {
+    from: localDay(new Date(Math.min(...starts)), zone),
+    to: localDay(new Date(Math.max(...ends)), zone),
+  };
 }

@@ -15,7 +15,8 @@
     "hint": "Aus der Erinnerung heißt: Daten sind ungefähr. Die Zahlen zählen mit, lassen sich aber ausblenden.",
     "save": "Speichern",
     "saved": "Herkunft gespeichert.",
-    "error": "Die Herkunft konnte nicht gespeichert werden. Bitte versuche es noch einmal."
+    "error": "Die Herkunft konnte nicht gespeichert werden. Bitte versuche es noch einmal.",
+    "menu": "Herkunft der Angabe …"
   },
   "notices": {
     "title": "Erinnerung und Beleg widersprechen sich",
@@ -42,5 +43,9 @@
   "stats": {
     "onlyRecorded": "Nur belegte",
     "onlyRecordedHint": "Blendet alles aus, was aus der Erinnerung eingetragen wurde – für jede Zahl auf dieser Seite."
+  },
+  "line": {
+    "remembered": "Aus der Erinnerung",
+    "recorded": "Belegt (Dokument, Buchung, Aufzeichnung)"
   }
 }

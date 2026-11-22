@@ -204,13 +204,17 @@ export async function planFor(
       const { lat, lon } = s.lodging;
       if (lat === null || lon === null || s.datePrecision !== "DAY") return "untimed";
       const tz = s.stayZone ?? zoneOf({ lat, lon });
+      // The whole of the check-in day through the whole of the check-out day, in the stay's
+      // zone (owner, 2026-11-22): a camera roll starts with the arrival that morning and ends
+      // with the walk after check-out, so cutting at the 15:00 check-in or the 11:00 check-out
+      // dropped a stay's photos. The calendar dates are the local truth; an instant is read as
+      // the local day it falls on.
       const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
-      // Instants when both ends carry a time; else the local days.
-      let window: { start: Date; end: Date } | null = null;
-      if (s.checkInAt && s.checkOutAt) window = { start: s.checkInAt, end: s.checkOutAt };
-      else if (day(s.checkInDate) && day(s.checkOutDate)) {
-        window = daysWindow(day(s.checkInDate)!, day(s.checkOutDate)!, tz);
-      }
+      const first =
+        day(s.checkInDate) ?? (s.checkInAt ? localDayAt(s.checkInAt, tz ?? "UTC") : null);
+      const last =
+        day(s.checkOutDate) ?? (s.checkOutAt ? localDayAt(s.checkOutAt, tz ?? "UTC") : null);
+      const window = first && last ? daysWindow(first, last, tz) : null;
       if (!window || window.end.getTime() < window.start.getTime()) return "untimed";
       return {
         legs: [{ window, locations: [{ kind: "point", lat, lon, radiusKm: STAY_RADIUS_KM }] }],

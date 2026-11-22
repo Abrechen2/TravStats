@@ -31,11 +31,41 @@ export interface PhotoChoices {
   cap: number;
   /** Links into the source's own UI for the photos not chosen; empty without a browsable URL. */
   openIn: { provider: ChoiceProvider; url: string }[];
+  /** Entries only: the local days searched (`YYYY-MM-DD`), what "Fotos vom 3.–7. Mai" says. */
+  window?: { from: string; to: string };
+  /** Entries only: candidates found before the list was thinned. */
+  total?: number;
+  /** Entries only: `choices` is a spread of `total`; asking for `all` lists every one. */
+  thinned?: boolean;
+  /** Entries only: the album the candidates came from. */
+  album?: AlbumPick;
+}
+
+/** "Aus Album wählen": the candidates are one album's photos, never the album linked. */
+export interface AlbumPick {
+  provider: ChoiceProvider;
+  albumId: string;
+  /** Regardless of the entry's dates. */
+  anyDate: boolean;
+}
+
+export interface ChoiceQuery {
+  all?: boolean;
+  album?: AlbumPick;
+}
+
+export interface PhotoAlbum {
+  id: string;
+  albumName: string;
+  assetCount: number;
+  kind?: string;
 }
 
 export interface ChoiceChange {
   select: { provider: ChoiceProvider; assetId: string }[];
   deselect: { provider: ChoiceProvider; assetId: string }[];
+  /** The album the picks were listed from, so the server proves them against it. */
+  album?: AlbumPick;
 }
 
 export interface ChoiceSaved {
@@ -58,9 +88,31 @@ const pathOf = (t: ChoiceTarget): string =>
     ? `/places/visits/${t.visitId}/photo-choices`
     : `/entry-photos/${t.kind}/${t.entryId}/photo-choices`;
 
-export async function getPhotoChoices(target: ChoiceTarget): Promise<PhotoChoices> {
-  const res = await api.get<Envelope<PhotoChoices>>(pathOf(target));
+export async function getPhotoChoices(
+  target: ChoiceTarget,
+  query: ChoiceQuery = {}
+): Promise<PhotoChoices> {
+  const params: Record<string, string> = {};
+  if (query.all) params.all = "1";
+  if (query.album) {
+    params.provider = query.album.provider;
+    params.albumId = query.album.albumId;
+    if (query.album.anyDate) params.anyDate = "1";
+  }
+  const res = await api.get<Envelope<PhotoChoices>>(pathOf(target), { params });
   return res.data.data;
+}
+
+/** The albums and folders of one photo source, for an entry (not a visit). */
+export async function listPhotoAlbums(
+  target: Extract<ChoiceTarget, { type: "entry" }>,
+  provider: ChoiceProvider
+): Promise<PhotoAlbum[]> {
+  const res = await api.get<Envelope<{ albums: PhotoAlbum[] }>>(
+    `/entry-photos/${target.kind}/${target.entryId}/photo-albums`,
+    { params: { provider } }
+  );
+  return res.data.data.albums;
 }
 
 export async function savePhotoChoices(

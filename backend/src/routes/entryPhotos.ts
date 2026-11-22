@@ -22,6 +22,7 @@ import {
   removeLink,
 } from "../services/photoLinking/entryPhotos";
 import { entryChoicesFor, saveEntryChoice } from "../services/photoLinking/entryChoices";
+import { planFor } from "../services/photoLinking/entryKinds";
 import { createPhotoSource } from "../services/photoSource";
 import { getPhotoSourceConnection } from "../services/photoSource/connection";
 import { prisma } from "../db";
@@ -56,12 +57,27 @@ const pickedSchema = z.object({
   provider: photoSourceKindSchema,
   assetId: linkedAssetIdParamSchema,
 });
+const albumPickSchema = z
+  .object({
+    provider: photoSourceKindSchema,
+    albumId: z.string().min(1).max(200),
+    anyDate: z.boolean().default(false),
+  })
+  .strict();
 export const choiceSaveSchema = z
   .object({
     select: z.array(pickedSchema).max(100).default([]),
     deselect: z.array(pickedSchema).max(100).default([]),
+    /** The album the picks were listed from ("Aus Album wählen"). */
+    album: albumPickSchema.optional(),
   })
   .strict();
+const choiceQuerySchema = z.object({
+  all: z.enum(["1", "true"]).optional(),
+  provider: photoSourceKindSchema.optional(),
+  albumId: z.string().min(1).max(200).optional(),
+  anyDate: z.enum(["1", "true"]).optional(),
+});
 
 function parseEntry(params: unknown): { kind: EntryKind; entryId: string } {
   const parsed = entryParams.safeParse(params);
@@ -106,10 +122,53 @@ router.get(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { kind, entryId } = parseEntry(req.params);
-      const result = await entryChoicesFor(req.userId!, kind, entryId);
+      const query = choiceQuerySchema.safeParse(req.query);
+      if (!query.success) throw new AppError("Invalid query", 400);
+      const { all, provider, albumId, anyDate } = query.data;
+      if ((provider === undefined) !== (albumId === undefined)) {
+        throw new AppError("provider and albumId go together", 400);
+      }
+      const result = await entryChoicesFor(req.userId!, kind, entryId, undefined, {
+        all: all !== undefined,
+        album:
+          provider && albumId ? { provider, albumId, anyDate: anyDate !== undefined } : undefined,
+      });
       if (result === null) throw new AppError("Entry not found", 404);
       res.json({ success: true, data: result });
     } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * The albums and folders of one connected source, for "Aus Album wählen". The same listing the
+ * trip gallery's album picker reads, but scoped to the entry (the user owns it) not to a trip.
+ */
+router.get(
+  "/:kind/:entryId/photo-albums",
+  statsLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { kind, entryId } = parseEntry(req.params);
+      const provider = photoSourceKindSchema.safeParse(req.query.provider ?? "immich");
+      if (!provider.success) throw new AppError("Invalid provider", 400);
+      if ((await planFor(req.userId!, kind, entryId)) === null) {
+        throw new AppError("Entry not found", 404);
+      }
+      const conn = await getPhotoSourceConnection(provider.data, req.userId!);
+      if (!conn) {
+        res.status(409).json({ error: "notConfigured" });
+        return;
+      }
+      const albums = await createPhotoSource(provider.data, conn).listAlbums();
+      res.json({ success: true, data: { provider: provider.data, albums } });
+    } catch (error) {
+      if (error instanceof ImmichError) {
+        logger.warn({ message: "immich_upstream_failure", context: { kind: error.kind } });
+        res.status(502).json({ error: error.kind });
+        return;
+      }
       next(error);
     }
   }
@@ -123,7 +182,10 @@ router.put(
       const { kind, entryId } = parseEntry(req.params);
       const body = choiceSaveSchema.safeParse(req.body ?? {});
       if (!body.success) throw new AppError(body.error.message, 400);
-      const result = await saveEntryChoice(req.userId!, kind, entryId, body.data);
+      const { album, ...change } = body.data;
+      const result = await saveEntryChoice(req.userId!, kind, entryId, change, undefined, {
+        album,
+      });
       if (result === null) throw new AppError("Entry not found", 404);
       res.json({ success: true, data: result });
     } catch (error) {

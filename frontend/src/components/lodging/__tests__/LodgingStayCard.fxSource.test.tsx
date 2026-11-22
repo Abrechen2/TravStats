@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+// The photo strip has its own tests; here it must not reach the network.
+vi.mock("../../common/EntryPhotos", () => ({ default: () => null }));
 import { LodgingStayCard } from "../LodgingStayCard";
 import type { LodgingStay } from "../../../types/lodging";
 

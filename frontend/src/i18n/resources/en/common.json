@@ -503,6 +503,26 @@
     "openIn": {
       "immich": "Open in Immich",
       "photoprism": "Open in PhotoPrism"
+    },
+    "window": "Photos from {{range}}",
+    "count": "{{shown}} of {{total}} photos",
+    "loadAll": "Load all {{total}}",
+    "saveFirst": "Save your selection before you switch the list.",
+    "album": {
+      "open": "Choose from album",
+      "title": "Choose an album",
+      "back": "Back",
+      "hint": "The album's photos only appear for you to choose from; the album itself is not linked. You decide which photos stay.",
+      "filter": "Search albums",
+      "noSource": "No photo source connected.",
+      "loading": "Loading albums …",
+      "none": "No albums found.",
+      "count_one": "{{count}} photo",
+      "count_other": "{{count}} photos",
+      "window": "Album “{{name}}” · photos from {{range}}",
+      "windowAny": "Album “{{name}}” · any capture date",
+      "anyDate": "Regardless of the stay's dates",
+      "leave": "Back to the time search"
     }
   }
 }

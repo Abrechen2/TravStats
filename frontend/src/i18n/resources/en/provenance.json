@@ -15,7 +15,8 @@
     "hint": "From memory means the dates are approximate. The figures still count, but can be hidden.",
     "save": "Save",
     "saved": "Origin saved.",
-    "error": "The origin could not be saved. Please try again."
+    "error": "The origin could not be saved. Please try again.",
+    "menu": "Where this information comes from …"
   },
   "notices": {
     "title": "Memory and record disagree",
@@ -42,5 +43,9 @@
   "stats": {
     "onlyRecorded": "Documented only",
     "onlyRecordedHint": "Hides everything entered from memory – for every figure on this page."
+  },
+  "line": {
+    "remembered": "From memory",
+    "recorded": "Documented (document, booking, recording)"
   }
 }
