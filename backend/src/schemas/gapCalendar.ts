@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 /** `GET /gap-calendar` (spec 2026-11-22-gap-calendar). */
 export const gapCalendarQuerySchema = z.object({
