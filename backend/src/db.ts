@@ -10,7 +10,6 @@ import {
   ensureIdSelected,
   isPlaceRead,
 } from "./services/purpose/placeVisited";
-import { now as clockNow } from "./shared/time/clock";
 import { inheritPurposeOnCreate } from "./services/purpose/tripInheritance";
 import { createPrismaClient } from "./prismaClient";
 import logger, { dbLogger } from "./utils/logger";
@@ -196,7 +195,7 @@ const queried = basePrisma.$extends({
                     })
                   ),
                 addedId,
-                clockNow()
+                (await import("./shared/time/clock")).now()
               )
             : raw;
         if (!READ_OPERATIONS.has(operation)) {

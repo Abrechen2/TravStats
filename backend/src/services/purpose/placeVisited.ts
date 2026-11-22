@@ -1,4 +1,3 @@
-import { classifyVisit } from "../../shared/placeCounting";
 import { isHiddenByPurpose } from "../../shared/purpose";
 
 /**
@@ -38,11 +37,14 @@ export const isPlaceRead = (model: string | undefined, operation: string): boole
   model === "Place" && PLACE_READS.has(operation);
 
 /** The place ids (of the rows that say `visited`) whose flag no longer stands. */
-export function demotedPlaceIds(
+export async function demotedPlaceIds(
   visits: readonly VisitFact[],
   hidden: readonly string[],
   now: Date
-): Set<string> {
+): Promise<Set<string>> {
+  // Loaded here, not at the top: this module is imported by `db.ts`, and `placeCounting` reaches
+  // the error classes that import `db.ts` again (a load-order cycle: "Class extends undefined").
+  const { classifyVisit } = await import("../../shared/placeCounting");
   const byPlace = new Map<string, { hiddenDone: boolean; visibleDone: boolean }>();
   for (const v of visits) {
     const entry = byPlace.get(v.placeId) ?? { hiddenDone: false, visibleDone: false };
@@ -80,10 +82,10 @@ export async function demoteHiddenOnlyVisited<R>(
   let demoted = new Set<string>();
   if (candidates.length > 0) {
     const visits = await load(candidates.map((r) => r.id as string));
-    demoted = demotedPlaceIds(visits, hiddenPurposes, now);
+    demoted = await demotedPlaceIds(visits, hiddenPurposes, now);
   }
   const fix = (row: Row): Row => {
-    const next = demoted.has(row.id as string) ? { ...row, visited: false } : { ...row };
+    const next: Row = demoted.has(row.id as string) ? { ...row, visited: false } : { ...row };
     if (stripId) delete next.id;
     return next;
   };
