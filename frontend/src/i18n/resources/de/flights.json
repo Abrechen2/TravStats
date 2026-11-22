@@ -422,6 +422,7 @@
       "BARCODE_NOT_FOUND": "Kein Barcode erkannt – Foto schärfer und heller aufnehmen, den Barcode groß ins Bild nehmen oder die Daten eingeben.",
       "BARCODE_NOT_BOARDING_PASS": "Ein Code wurde gelesen, aber er ist keine Bordkarte (zum Beispiel ein QR-Link).",
       "BARCODE_DECODE_ERROR": "Der Barcode-Leser ist ausgefallen – bitte noch einmal versuchen.",
+      "BARCODE_IMAGE_REFUSED": "Das Bild ist zu groß oder beschädigt und wurde nicht gelesen – bitte ein normales Foto (JPG oder PNG) verwenden.",
       "OCR_OK": "Text gelesen",
       "OCR_FAILED": "Der Text auf der Bordkarte konnte nicht gelesen werden.",
       "OCR_NOT_RUN": "Nicht ausgeführt",

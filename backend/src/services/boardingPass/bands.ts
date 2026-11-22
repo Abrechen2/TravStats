@@ -59,7 +59,13 @@ function grayToPngBase64(g: Gray): string {
  * not a JPEG/PNG we can cut — the caller then reads the whole image once.
  */
 export function cropPassBands(imageBase64: string, boxes: readonly Box[]): string[] | null {
-  const gray = decodeToGray(Buffer.from(imageBase64, "base64"));
+  let gray: Gray | null;
+  try {
+    gray = decodeToGray(Buffer.from(imageBase64, "base64"));
+  } catch {
+    // Refused or unreadable: the caller reads the whole image once instead.
+    return null;
+  }
   if (!gray) return null;
   return passBands(gray.width, gray.height, boxes).map((band) => grayToPngBase64(crop(gray, band)));
 }

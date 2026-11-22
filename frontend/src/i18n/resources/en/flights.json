@@ -422,6 +422,7 @@
       "BARCODE_NOT_FOUND": "No barcode recognised – take a sharper, brighter photo, fill the frame with the barcode, or enter the details.",
       "BARCODE_NOT_BOARDING_PASS": "A code was read, but it is not a boarding pass (for example a QR link).",
       "BARCODE_DECODE_ERROR": "The barcode reader failed – please try again.",
+      "BARCODE_IMAGE_REFUSED": "The image is too large or damaged and was not read – please use an ordinary photo (JPG or PNG).",
       "OCR_OK": "Text read",
       "OCR_FAILED": "The text on the boarding pass could not be read.",
       "OCR_NOT_RUN": "Not run",

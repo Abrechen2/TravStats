@@ -24,6 +24,7 @@ import {
   otsuLevel,
   threshold,
   upscale,
+  ImageRefusedError,
   type Box,
   type Gray,
 } from "./pixels";
@@ -62,6 +63,8 @@ export interface BarcodeScan {
   readonly budgetExhausted: boolean;
   /** Set when zxing itself failed (not "found nothing") — the stage's own error. */
   readonly error?: string;
+  /** The image was refused before decoding (over the pixel/inflate limits). */
+  readonly refused?: boolean;
 }
 
 const looksLikeBoardingPass = (text: string): boolean => text.length >= 58 && text[0] === "M";
@@ -119,25 +122,34 @@ export async function scanBoardingPassBarcodes(imageBytes: Buffer): Promise<Barc
   };
   const origin: Box = { x: 0, y: 0, width: 0, height: 0 };
 
-  try {
-    attempts++;
-    const whole = await readBarcodes(new Blob([new Uint8Array(imageBytes)]), {
-      formats: FORMATS as never,
-      tryHarder: true,
-      maxNumberOfSymbols: 8,
-    });
-    for (const r of whole) keep(r, origin, 1);
-  } catch (err) {
-    logger.warn({ err }, "[BarcodeScan] full-frame decode failed");
-    return finish(found, false, 0, attempts, false, describe(err));
-  }
-
+  // Pixels first, under the decoder limits (pixels.ts, pngGuard.ts). A JPEG or
+  // PNG over them is refused outright — zxing's own decoder would otherwise
+  // inflate the same bytes unguarded. For a decoded image zxing reads OUR
+  // pixmap, so its internal image decoder never touches JPEG/PNG bytes.
   let gray: Gray | null;
   try {
     gray = decodeToGray(imageBytes);
   } catch (err) {
+    if (err instanceof ImageRefusedError) {
+      logger.warn({ reason: err.message }, "[BarcodeScan] image refused before decoding");
+      return { ...finish(found, false, 0, attempts, false, err.message), refused: true };
+    }
     logger.warn({ err }, "[BarcodeScan] image could not be decoded for cropping");
     gray = null;
+  }
+
+  try {
+    attempts++;
+    const whole = await readBarcodes(
+      gray
+        ? (grayToRgba(gray) as unknown as Parameters<typeof readBarcodes>[0])
+        : new Blob([new Uint8Array(imageBytes)]),
+      { formats: FORMATS as never, tryHarder: true, maxNumberOfSymbols: 8 }
+    );
+    for (const r of whole) keep(r, origin, 1);
+  } catch (err) {
+    logger.warn({ err }, "[BarcodeScan] full-frame decode failed");
+    return finish(found, gray !== null, 0, attempts, false, describe(err));
   }
   if (gray === null) return finish(found, false, 0, attempts, false);
 

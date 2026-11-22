@@ -133,6 +133,12 @@ async function barcodeStage(
       stage: { stage: "barcode", status: "ok", code: "BARCODE_FOUND", count: decoded.length },
     };
   }
+  if (scan.refused) {
+    return {
+      decoded,
+      stage: { stage: "barcode", status: "failed", code: "BARCODE_IMAGE_REFUSED" },
+    };
+  }
   if (scan.error) {
     return { decoded, stage: { stage: "barcode", status: "failed", code: "BARCODE_DECODE_ERROR" } };
   }

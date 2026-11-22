@@ -12,6 +12,7 @@
  */
 import * as jpeg from "jpeg-js";
 import { PNG } from "pngjs";
+import { inspectPng } from "./pngGuard";
 
 /** One byte per pixel, row-major. */
 export interface Gray {
@@ -28,7 +29,21 @@ export interface Box {
 }
 
 /** Above this many pixels the decoder refuses to allocate (a 50 MP photo). */
-const MAX_DECODED_PIXELS = 40_000_000;
+export const MAX_DECODED_PIXELS = 40_000_000;
+/** jpeg-js's own working-memory ceiling, in MB — 40 MP RGBA plus its buffers. */
+const MAX_JPEG_MEMORY_MB = 512;
+
+/**
+ * The image is refused before decoding: too many pixels, or a PNG whose
+ * pixel data would inflate past what its header allows. Nothing else
+ * (zxing included) may then decode the same bytes.
+ */
+export class ImageRefusedError extends Error {
+  constructor(reason: string) {
+    super(`image refused: ${reason}`);
+    this.name = "ImageRefusedError";
+  }
+}
 
 const isPng = (b: Buffer): boolean =>
   b.length > 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47;
@@ -37,22 +52,31 @@ const isJpeg = (b: Buffer): boolean => b.length > 3 && b[0] === 0xff && b[1] ===
 /**
  * JPEG or PNG bytes to grayscale. Null for any other format (WebP, HEIC) —
  * the caller still hands those bytes to zxing whole, which decodes them on its
- * own; only the cropping steps need pixels in hand.
+ * own; only the cropping steps need pixels in hand. Throws ImageRefusedError
+ * for an image over the limits, and jpeg-js's own error for a JPEG over its
+ * resolution/memory caps.
  */
 export function decodeToGray(bytes: Buffer): Gray | null {
   let rgba: { data: Uint8Array | Buffer; width: number; height: number };
   if (isJpeg(bytes)) {
-    rgba = jpeg.decode(bytes, {
-      useTArray: true,
-      maxResolutionInMP: MAX_DECODED_PIXELS / 1_000_000,
-      maxMemoryUsageInMB: 1024,
-    });
-  } else if (isPng(bytes)) {
-    // pngjs has no size guard of its own: read the IHDR dimensions first, so a
-    // small, highly compressed upload cannot allocate gigabytes.
-    if (bytes.length < 24 || bytes.readUInt32BE(16) * bytes.readUInt32BE(20) > MAX_DECODED_PIXELS) {
-      return null;
+    try {
+      rgba = jpeg.decode(bytes, {
+        useTArray: true,
+        maxResolutionInMP: MAX_DECODED_PIXELS / 1_000_000,
+        maxMemoryUsageInMB: MAX_JPEG_MEMORY_MB,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (/maxResolutionInMP|maxMemoryUsageInMB/.test(message)) {
+        throw new ImageRefusedError(message);
+      }
+      throw err;
     }
+  } else if (isPng(bytes)) {
+    // pngjs has no limit of its own: decode only what provably inflates to
+    // at most the capped pixel count (see pngGuard).
+    const verdict = inspectPng(bytes, MAX_DECODED_PIXELS);
+    if (!verdict.ok) throw new ImageRefusedError(verdict.reason);
     rgba = PNG.sync.read(bytes);
   } else {
     return null;

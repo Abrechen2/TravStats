@@ -2,7 +2,7 @@ import { PNG } from "pngjs";
 import { readBarcodes } from "zxing-wasm/reader";
 import { writeBarcode } from "zxing-wasm/writer";
 import { scanBoardingPassBarcodes } from "..";
-import { decodeToGray, type Gray } from "../pixels";
+import { decodeToGray, ImageRefusedError, type Gray } from "../pixels";
 
 /**
  * Synthetic photos of paper boarding passes, built from real-looking BCBP
@@ -174,6 +174,6 @@ describe("scanBoardingPassBarcodes — paper passes on a photo", () => {
     const png = PNG.sync.write(new PNG({ width: 1, height: 1 }));
     png.writeUInt32BE(100_000, 16);
     png.writeUInt32BE(100_000, 20);
-    expect(decodeToGray(png)).toBeNull();
+    expect(() => decodeToGray(png)).toThrow(ImageRefusedError);
   });
 });
