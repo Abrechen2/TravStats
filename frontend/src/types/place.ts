@@ -16,6 +16,8 @@ export interface PlaceVisit {
   provenance?: "recorded" | "remembered" | null;
   rememberedOn?: string | null;
   rememberedNote?: string | null;
+  /** Private or business; null is unknown, absent on older servers. */
+  purpose?: "private" | "business" | null;
   placeId: string;
   tripId: string | null;
   /** ISO string, or null for a visit the user cannot date — which still counts. */
@@ -118,6 +120,8 @@ export interface VisitInput {
   orderIdx?: number;
   notes?: string | null;
   rating?: number | null;
+  /** Omitted: unchanged on an edit, the trip decides on a create. */
+  purpose?: "private" | "business" | null;
 }
 
 export type PlaceSortKey = "name" | "city" | "category" | "visitCount" | "lastVisit" | "createdAt";

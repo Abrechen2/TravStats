@@ -1,0 +1,43 @@
+{
+  "chip": {
+    "label": "geschäftlich",
+    "title": "Geschäftlicher Eintrag"
+  },
+  "field": {
+    "legend": "Zweck",
+    "unknown": "Nicht festgelegt",
+    "private": "Privat",
+    "business": "Geschäftlich",
+    "hint": "Neue Einträge in einer Reise übernehmen den Zweck der Reise-Kategorie. Nicht festgelegt wird nie ausgeblendet."
+  },
+  "editor": {
+    "saved": "Zweck gespeichert.",
+    "error": "Der Zweck konnte nicht gespeichert werden. Bitte versuche es noch einmal."
+  },
+  "visibility": {
+    "title": "Geschäftliche und private Einträge",
+    "intro": "Pro Bereich festlegen, was ausgeblendet wird. Ausgeblendetes zählt in keiner Liste, Karte oder Statistik – auch nicht in der App.",
+    "show": "Alle zeigen",
+    "hideBusiness": "Geschäftliche ausblenden",
+    "hidePrivate": "Private ausblenden",
+    "error": "Die Einstellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.",
+    "fromTrips": "Zweck aus der Reise-Kategorie übernehmen",
+    "fromTripsHelp": "Einmalig: füllt nur Einträge ohne Zweck in Reisen mit Kategorie.",
+    "fromTripsDone_one": "{{count}} Eintrag ergänzt.",
+    "fromTripsDone_other": "{{count}} Einträge ergänzt."
+  },
+  "hidden": {
+    "business_one": "{{count}} geschäftlicher Eintrag ausgeblendet",
+    "business_other": "{{count}} geschäftliche Einträge ausgeblendet",
+    "private_one": "{{count}} privater Eintrag ausgeblendet",
+    "private_other": "{{count}} private Einträge ausgeblendet"
+  },
+  "trip": {
+    "apply": "Zweck auf alle Einträge übertragen",
+    "applyHelp": "Setzt den Zweck der Reise-Kategorie bei allen Einträgen dieser Reise.",
+    "done_one": "{{count}} Eintrag aktualisiert.",
+    "done_other": "{{count}} Einträge aktualisiert.",
+    "none": "Die Kategorie dieser Reise sagt nichts über den Zweck aus.",
+    "error": "Der Zweck konnte nicht übertragen werden. Bitte versuche es noch einmal."
+  }
+}

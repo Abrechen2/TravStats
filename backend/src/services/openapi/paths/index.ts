@@ -112,6 +112,7 @@ import "./settingsRouting";
 import "./documents";
 import "./documentLinkSuggestions";
 import "./provenance";
+import "./purpose";
 import "./notes";
 import "./passportOverrides";
 import "./jobs";

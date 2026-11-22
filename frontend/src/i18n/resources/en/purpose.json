@@ -1,0 +1,43 @@
+{
+  "chip": {
+    "label": "business",
+    "title": "Business entry"
+  },
+  "field": {
+    "legend": "Purpose",
+    "unknown": "Not set",
+    "private": "Private",
+    "business": "Business",
+    "hint": "New entries in a trip take the purpose of the trip's category. Not set is never hidden."
+  },
+  "editor": {
+    "saved": "Purpose saved.",
+    "error": "The purpose could not be saved. Please try again."
+  },
+  "visibility": {
+    "title": "Business and private entries",
+    "intro": "Choose per area what is hidden. Hidden entries count in no list, map or statistic – the app included.",
+    "show": "Show all",
+    "hideBusiness": "Hide business",
+    "hidePrivate": "Hide private",
+    "error": "The setting could not be saved. Please try again.",
+    "fromTrips": "Take the purpose from the trip category",
+    "fromTripsHelp": "One-off: fills only entries without a purpose in trips that have a category.",
+    "fromTripsDone_one": "{{count}} entry filled in.",
+    "fromTripsDone_other": "{{count}} entries filled in."
+  },
+  "hidden": {
+    "business_one": "{{count}} business entry hidden",
+    "business_other": "{{count}} business entries hidden",
+    "private_one": "{{count}} private entry hidden",
+    "private_other": "{{count}} private entries hidden"
+  },
+  "trip": {
+    "apply": "Apply purpose to all entries",
+    "applyHelp": "Sets the purpose of the trip category on every entry of this trip.",
+    "done_one": "{{count}} entry updated.",
+    "done_other": "{{count}} entries updated.",
+    "none": "This trip's category says nothing about the purpose.",
+    "error": "The purpose could not be applied. Please try again."
+  }
+}

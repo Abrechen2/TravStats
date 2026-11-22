@@ -10,6 +10,8 @@ export interface FerryJourney {
   provenance?: "recorded" | "remembered" | null;
   rememberedOn?: string | null;
   rememberedNote?: string | null;
+  /** Private or business; null is unknown, absent on older servers. */
+  purpose?: "private" | "business" | null;
   /** Estimated CO2 (forgejo#395); null where the ride has no known distance. */
   co2?: import("./co2").Co2Estimate | null;
   roadtripLegId: string | null;

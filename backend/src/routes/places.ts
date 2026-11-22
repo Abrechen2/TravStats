@@ -644,6 +644,8 @@ async function createVisit(
         orderIdx: input.orderIdx ?? 0,
         notes: input.notes ?? null,
         rating: input.rating ?? null,
+        // Undefined: the trip's category decides (services/purpose/tripInheritance.ts).
+        purpose: input.purpose,
       },
     });
     if (happened && !place.visited) {
@@ -682,6 +684,8 @@ router.patch("/visits/:visitId", async (req: AuthRequest, res: Response, next: N
     if (input.orderIdx !== undefined) data.orderIdx = input.orderIdx;
     if (input.notes !== undefined) data.notes = input.notes;
     if (input.rating !== undefined) data.rating = input.rating;
+    // Omitted keeps the stored purpose; an older client never resets it.
+    if (input.purpose !== undefined) data.purpose = input.purpose;
     if (input.tripId !== undefined) {
       data.trip = input.tripId ? { connect: { id: input.tripId } } : { disconnect: true };
     }

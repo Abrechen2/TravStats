@@ -23,6 +23,7 @@ import {
   useSaveOnce,
 } from "../form";
 import type { MissingStep } from "../form";
+import PurposeSelect, { type PurposeChoice } from "../purpose/PurposeSelect";
 import { VisitDateChips } from "./VisitDateChips";
 import {
   NO_TRIP,
@@ -99,6 +100,7 @@ export function VisitDialog({
   const [notes, setNotes] = useState(initial.notes);
   const [rating, setRating] = useState<number | null>(initial.rating);
   const [tripId, setTripId] = useState(initial.tripId);
+  const [purpose, setPurpose] = useState<PurposeChoice>(initial.purpose);
   const [files, setFiles] = useState<File[]>([]);
 
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -130,7 +132,7 @@ export function VisitDialog({
     };
   }, [tripsAttempt]);
 
-  const draft = { mode, date, time, notes, rating, tripId };
+  const draft = { mode, date, time, notes, rating, tripId, purpose };
   // The photos are input too: closing must not drop a picked file silently.
   const snapshot = { ...draft, files: files.map((f) => `${f.name}:${f.size}`) };
   const { dirty, markSaved } = useDirtyGuard({ ...initial, files: [] }, snapshot);
@@ -391,6 +393,8 @@ export function VisitDialog({
             </button>
           </p>
         )}
+
+        <PurposeSelect id="visit-dialog-purpose" value={purpose} onChange={setPurpose} />
 
         <Labelled id="visit-dialog-notes" label={t("places:detail.visitNotes")}>
           <input

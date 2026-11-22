@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { purposeField } from "./purpose";
 import { PLACE_CATEGORY_ICON_CHOICES, PLACE_CATEGORY_NAME_MAX } from "../shared/placeCategories";
 
 /**
@@ -85,6 +86,8 @@ export const updatePlaceSchema = partialForUpdate(basePlaceSchema).extend({
 const ratingField = z.number().int().min(1).max(5).nullable().optional();
 
 export const createVisitSchema = z.object({
+  /** Private or business; omitted leaves the stored value as it is (spec 2026-11-22-private-business-purpose). */
+  purpose: purposeField,
   tripId: z.string().uuid().nullable().optional(),
   /**
    * Nullable on purpose: a visit you cannot date is still a visit.

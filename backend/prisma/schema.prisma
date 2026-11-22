@@ -750,6 +750,11 @@ model Flight {
   rememberedOn     DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote   String?   @map("remembered_note")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose          String?   @map("purpose")
   /// Bumped by every Prisma write. Read by the statistics ETag (forgejo#50):
   /// without it an edited flight could not be told apart from an unchanged one.
   updatedAt            DateTime         @default(now()) @updatedAt @map("updated_at")
@@ -1033,6 +1038,11 @@ model UserSettings {
 
   /// Link photos from the connected photo sources to place visits on their own
   /// (default on: the owner asked for it, 2026-11-21). Links only, never copies.
+  /// Which purposes each domain hides, server-side (spec 2026-11-22-private-business-purpose.md):
+  /// `{ "poi": ["business"], "flight": [] }`. A missing domain hides nothing; an entry without a
+  /// purpose is never hidden. Read per request by services/provenance/recordedOnly.ts.
+  purposeVisibility Json? @map("purpose_visibility")
+
   autoLinkVisitPhotos Boolean @default(true) @map("auto_link_visit_photos")
 
   /// How many photos the automatic linker keeps per visit or entry, 5–10 (owner,
@@ -2901,6 +2911,11 @@ model Cruise {
   rememberedOn     DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote   String?   @map("remembered_note")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose          String?   @map("purpose")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -3511,6 +3526,11 @@ model LodgingStay {
   rememberedOn     DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote   String?   @map("remembered_note")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose          String?   @map("purpose")
   updatedAt             DateTime         @updatedAt @map("updated_at")
 
   lodging    Lodging            @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
@@ -3923,6 +3943,11 @@ model PlaceVisit {
   rememberedOn     DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote   String?   @map("remembered_note")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose          String?   @map("purpose")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
@@ -4873,6 +4898,11 @@ model RailJourney {
   rememberedOn     DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote   String?   @map("remembered_note")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose          String?   @map("purpose")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -5062,6 +5092,11 @@ model BusJourney {
   rememberedOn     DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote   String?   @map("remembered_note")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose          String?   @map("purpose")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -5283,6 +5318,11 @@ model RentalBooking {
   rememberedOn     DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote   String?   @map("remembered_note")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose          String?   @map("purpose")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -5947,6 +5987,11 @@ model FerryJourney {
   rememberedOn     DateTime? @map("remembered_on") @db.Date
   /// The user's own words about it ("Sommer 1998, ungefähr zwei Wochen"); only with `remembered`.
   rememberedNote   String?   @map("remembered_note")
+
+  /// Private or business (docs/superpowers/specs/2026-11-22-private-business-purpose.md):
+  /// `private` | `business` | NULL (unknown — every row older than the field; never read as
+  /// private). The member's own view: never a share fact, so a copy starts unknown.
+  purpose          String?   @map("purpose")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)

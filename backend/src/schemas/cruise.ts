@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { purposeField } from "./purpose";
 import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
 import { CRUISE_SORT_FIELDS } from "../shared/cruiseListOrder";
@@ -145,6 +146,8 @@ export const cruiseStopSchema = z
   });
 
 const baseCruiseSchema = z.object({
+  /** Private or business; omitted leaves the stored value as it is (spec 2026-11-22-private-business-purpose). */
+  purpose: purposeField,
   shipId: z.number().int().positive().nullable().optional(),
   shipNameOverride: emptyToNull,
   cruiseLine: emptyToNull,

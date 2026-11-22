@@ -80,6 +80,8 @@ export async function buildFlightCreateData(
     externalRef: ctx.externalRef,
     importBatchId: ctx.importBatchId,
     ...(ctx.tripId !== undefined ? { tripId: ctx.tripId } : {}),
+    // Undefined: the trip's category decides (services/purpose/tripInheritance.ts).
+    purpose: data.purpose,
     // The zone each end was written with (ADR 0002 phase 2).
     ...(await flightZoneColumns(data, enriched, undefined, {
       userId: ctx.userId,

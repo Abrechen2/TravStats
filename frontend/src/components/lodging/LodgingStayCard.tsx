@@ -1,6 +1,7 @@
 import { useShareLink } from "../shareLinks/ShareLinkButton";
 import OverflowMenu from "../ui/OverflowMenu";
 import DocumentsSection from "../documents/DocumentsSection";
+import PurposeChip from "../../components/purpose/PurposeChip";
 import RememberedMarker from "../provenance/RememberedMarker";
 import { PackageBookingCard } from "../bookings/PackageBookingCard";
 import type { JSX } from "react";
@@ -125,6 +126,7 @@ export function LodgingStayCard({
             booked one here. */}
         <StayStatusPill status={stay.status} testId={`stay-status-${stay.id}`} />
         <RememberedMarker entry={stay} />
+        <PurposeChip entry={stay} />
         {stay.isAwardStay && (
           <span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-xs font-medium text-[var(--accent)]">
             {t("lodging:field.awardStay")}

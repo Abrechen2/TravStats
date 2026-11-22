@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { purposeField } from "./purpose";
 import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
 import { isLocalDate } from "../shared/time/localDate";
@@ -172,6 +173,8 @@ const calendarDay = z
   .refine((v) => isLocalDate(v), "is not a real day");
 
 const baseRentalSchema = z.object({
+  /** Private or business; omitted leaves the stored value as it is (spec 2026-11-22-private-business-purpose). */
+  purpose: purposeField,
   provider: z.string().trim().min(1).max(100),
   operatedBy: optionalText(100),
   broker: optionalText(100),

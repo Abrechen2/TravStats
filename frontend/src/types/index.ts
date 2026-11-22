@@ -35,6 +35,8 @@ export interface Flight extends FlightProviderData {
   provenance?: "recorded" | "remembered" | null;
   rememberedOn?: string | null;
   rememberedNote?: string | null;
+  /** Private or business; null is unknown, absent on older servers. */
+  purpose?: "private" | "business" | null;
   /** The row's version (the bulk edit's `baseVersions`); absent on rows built client-side. */
   updatedAt?: string;
   userId: string;

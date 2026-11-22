@@ -8,6 +8,10 @@ import logger, { securityLogger } from "../utils/logger";
 import { requestPathForLog } from "../utils/logging/requestPath";
 import { isSharedDemoAccount } from "../utils/sharedDemo";
 import {
+  markPurposeRevision,
+  openPurposeVisibility,
+} from "../services/provenance/purposeVisibility";
+import {
   ApiTokenScope,
   looksLikeApiToken,
   tokenLookupHash,
@@ -72,7 +76,8 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
   try {
     const bearer = extractBearer(req.headers.authorization);
     if (bearer) {
-      await authenticateWithApiToken(req, bearer);
+      const stored = await authenticateWithApiToken(req, bearer);
+      markPurposeRevision(res, await openPurposeVisibility(req.userId!, stored));
       next();
       return;
     }
@@ -120,7 +125,15 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
       where: { id: decoded.userId },
       // `isDemo` and `username` are here for `req.isSharedDemo` below, not for
       // the checks in this function — see the field's own note.
-      select: { id: true, isActive: true, sessionEpoch: true, isDemo: true, username: true },
+      select: {
+        id: true,
+        isActive: true,
+        sessionEpoch: true,
+        isDemo: true,
+        username: true,
+        // Rides on the lookup above so the purpose filter costs no query of its own.
+        settings: { select: { purposeVisibility: true } },
+      },
     });
 
     if (!user) {
@@ -187,6 +200,10 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     req.userId = decoded.userId;
     req.sessionEpoch = user.sessionEpoch;
     req.isSharedDemo = isSharedDemoAccount(user);
+    markPurposeRevision(
+      res,
+      await openPurposeVisibility(decoded.userId, user.settings?.purposeVisibility ?? null)
+    );
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
@@ -214,7 +231,7 @@ const extractBearer = (header: string | undefined): string | undefined => {
   return match?.[1];
 };
 
-async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Promise<void> {
+async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Promise<unknown> {
   // Reject obviously malformed tokens before hitting the DB so a
   // misconfigured proxy spamming bogus Authorization headers can't
   // turn into a bcrypt-comparison DoS.
@@ -236,7 +253,17 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
   const lookup = tokenLookupHash(plaintext);
   const token = await prisma.apiToken.findUnique({
     where: { lookupHash: lookup },
-    include: { user: { select: { id: true, isActive: true, isDemo: true, username: true } } },
+    include: {
+      user: {
+        select: {
+          id: true,
+          isActive: true,
+          isDemo: true,
+          username: true,
+          settings: { select: { purposeVisibility: true } },
+        },
+      },
+    },
   });
 
   if (!token) {
@@ -324,6 +351,7 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
       }
     })();
   }
+  return token.user.settings?.purposeVisibility ?? null;
 }
 
 /** A PAT's last-used stamp is rewritten at most once a minute (forgejo#383, PERF-28). */

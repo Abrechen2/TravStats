@@ -52,6 +52,7 @@ import FlightDayCard, { dayCardShown } from "../components/flightDetail/FlightDa
 import BookingItinerary from "../components/flightDetail/BookingItinerary";
 import BookingPrice from "../components/flightDetail/BookingPrice";
 import FlightProfileLink from "../components/flightDetail/FlightProfileLink";
+import PurposeChip from "../components/purpose/PurposeChip";
 import RememberedMarker from "../components/provenance/RememberedMarker";
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import { useFlightBooking } from "../components/flightDetail/useFlightBooking";
@@ -266,6 +267,7 @@ export default function FlightDetailPage(): JSX.Element {
             {flight.specialType && <SpecialTypeBadge type={flight.specialType as SpecialType} />}
             <FlightStatusCell flight={flight} />
             <RememberedMarker entry={flight} />
+            <PurposeChip entry={flight} />
           </>
         }
         meta={[

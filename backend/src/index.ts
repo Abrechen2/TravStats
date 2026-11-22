@@ -1,6 +1,6 @@
 import express from "express";
 import { installProvenanceNoticeTriggers } from "./services/provenance/noticeTriggers";
-import { RECORDED_ONLY_PREFIXES, recordedOnlyScope } from "./services/provenance/recordedOnly";
+import { ENTRY_SCOPE_PREFIXES, recordedOnlyScope } from "./services/provenance/recordedOnly";
 import { installEntryPhotoTriggers } from "./services/photoLinking/entryPhotoTriggers";
 import { withoutShareKeys } from "./services/sharing/wireGuard";
 import cors from "cors";
@@ -230,7 +230,7 @@ app.use(
   recheckAchievementsAfterWrite
 );
 // "Nur belegte" on the statistics page: one scope for every route it reads (spec 2026-11-22).
-app.use([...RECORDED_ONLY_PREFIXES], recordedOnlyScope);
+app.use([...ENTRY_SCOPE_PREFIXES], recordedOnlyScope);
 for (const { base, router } of apiMounts) {
   app.use(base, router);
 }

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import PurposeChip from "../../components/purpose/PurposeChip";
 import RememberedMarker from "../provenance/RememberedMarker";
 import type { Cruise } from "../../types";
 import TripPill from "../Trips/TripPill";
@@ -93,6 +94,7 @@ export function CruiseRow({ cruise, onOpen, actions, columns }: Props): JSX.Elem
           {t(`status.${cruise.status}`)}
         </span>
         <RememberedMarker entry={cruise} />
+        <PurposeChip entry={cruise} />
       </span>
     ),
     cabin: cruise.cabinNumber ?? "—",

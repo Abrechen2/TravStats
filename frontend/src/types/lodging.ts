@@ -68,6 +68,8 @@ export interface LodgingStay {
   provenance?: "recorded" | "remembered" | null;
   rememberedOn?: string | null;
   rememberedNote?: string | null;
+  /** Private or business; null is unknown, absent on older servers. */
+  purpose?: "private" | "business" | null;
   lodgingId: string;
   userId: string;
   tripId: string | null;

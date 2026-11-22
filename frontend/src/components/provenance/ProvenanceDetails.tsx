@@ -2,6 +2,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 import type { ProvenanceEntryType, ProvenanceState } from "../../lib/api/provenance";
 import RememberedEditor from "./RememberedEditor";
 import RememberedMarker from "./RememberedMarker";
+import PurposeChip from "../purpose/PurposeChip";
+import PurposeEditor from "../purpose/PurposeEditor";
 
 /**
  * The origin of an entry on its detail page: the "aus der Erinnerung" marker, and — folded away
@@ -13,7 +15,7 @@ export default function ProvenanceDetails({
   onSaved,
 }: {
   entryType: ProvenanceEntryType;
-  entry: Partial<ProvenanceState> & { id: string };
+  entry: Partial<ProvenanceState> & { id: string; purpose?: string | null };
   onSaved?: (state: ProvenanceState) => void;
 }): JSX.Element {
   const { t } = useTranslation(["provenance"]);
@@ -22,6 +24,7 @@ export default function ProvenanceDetails({
       <summary className="flex flex-wrap items-center gap-2" style={{ cursor: "pointer" }}>
         {t("provenance:editor.legend")}
         <RememberedMarker entry={entry} />
+        <PurposeChip entry={entry} />
       </summary>
       <div style={{ marginTop: "var(--ts-space-sm)" }}>
         <RememberedEditor
@@ -32,6 +35,16 @@ export default function ProvenanceDetails({
           initial={entry}
           onSaved={onSaved}
         />
+        {entryType !== "trip" && (
+          <div style={{ marginTop: "var(--ts-space-md)" }}>
+            <PurposeEditor
+              key={`purpose-${entry.purpose ?? ""}`}
+              entryType={entryType}
+              entryId={entry.id}
+              purpose={entry.purpose}
+            />
+          </div>
+        )}
       </div>
     </details>
   );

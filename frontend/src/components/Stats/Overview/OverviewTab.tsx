@@ -26,6 +26,7 @@ import CarbonByModeSection from "./CarbonByModeSection";
 import DomainRecordsSection from "./DomainRecordsSection";
 import CrossDomainSection from "./CrossDomainSection";
 import CompanionsTogetherSection from "./CompanionsTogetherSection";
+import PurposeHiddenHint from "../../purpose/PurposeHiddenHint";
 import { todayZoneNow } from "../../../hooks/useTodayZone";
 import { todayIn } from "../../../shared/time";
 
@@ -133,6 +134,7 @@ export default function OverviewTab({
             achievements={achievements}
             foldedDomains={folded}
           />
+          <PurposeHiddenHint />
         </section>
       )}
 

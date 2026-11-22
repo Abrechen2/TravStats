@@ -101,6 +101,8 @@ export const cruiseAdapter: EntityAdapter = {
       data: {
         ...cruiseFacts(source.facts as Pick<Cruise, CruiseFactField>),
         userId: recipientId,
+        // The member's own view: a copy starts unknown, and no trip lookup runs inside this transaction.
+        purpose: null,
         tripId: recipientTripId,
         shareKey: source.shareKey,
         dataSource: SHARED_SOURCE,

@@ -1,4 +1,5 @@
 import { LODGING_IMPORT_LIMITS } from "../shared/lodgingImportLimits";
+import { purposeField } from "./purpose";
 import { z } from "./zod";
 import { isCurrencyCode } from "../shared/currencies";
 import { receiptUrlValidator } from "./receiptUrl";
@@ -129,6 +130,8 @@ const stayTimeField = z
   .optional();
 
 const baseStaySchema = z.object({
+  /** Private or business; omitted leaves the stored value as it is (spec 2026-11-22-private-business-purpose). */
+  purpose: purposeField,
   // Nullable since 2.7: a hotel you remember but cannot date is still a place
   // you slept, and rating/price/board/room/membership all live on the STAY, so
   // without a dateless stay those had nowhere to go. `datePrecision` says what

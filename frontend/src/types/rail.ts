@@ -45,6 +45,8 @@ export interface RailJourney {
   provenance?: "recorded" | "remembered" | null;
   rememberedOn?: string | null;
   rememberedNote?: string | null;
+  /** Private or business; null is unknown, absent on older servers. */
+  purpose?: "private" | "business" | null;
   userId: string;
   /** Rail&Fly: the flight this ticket feeds (owner ruling 2026-11-05); null = none. */
   railAndFlyFlightId?: string | null;
