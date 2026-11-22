@@ -75,7 +75,10 @@ export async function sweepLifeBooks(at = Date.now()): Promise<void> {
 
 export function findLifeBook(exportId: string, userId: string): StoredBook | null {
   const stored = books.get(exportId);
-  return stored && stored.userId === userId ? stored : null;
+  // Expired books are refused even before the sweep has removed the file.
+  if (!stored || stored.userId !== userId || Date.now() - stored.createdAt > LIFE_BOOK_TTL_MS)
+    return null;
+  return stored;
 }
 
 /** A deleted account's finished books go with it. */
@@ -131,7 +134,8 @@ async function buildBook(
   const s = bookStrings(lang);
   const max = lifeBookMaxBytes();
   const metas = await listScopeTrips(userId, scope);
-  const loose = scope.kind === "trip" ? [] : await buildLoose(userId, scope, lang);
+  const looseLoader = new PhotoLoader(userId);
+  const loose = scope.kind === "trip" ? [] : await buildLoose(userId, scope, lang, looseLoader);
   if (metas.length === 0 && loose.length === 0) {
     throw new AppError("Nothing to put into the book", 422, "LIFE_BOOK_EMPTY");
   }
@@ -154,7 +158,7 @@ async function buildBook(
   let bytes = 0;
   const loader = new PhotoLoader(userId);
   let entries = loose.length;
-  let photos = 0;
+  let photos = loose.reduce((n, e) => n + e.photos.length, 0);
   const write = async (chunk: string): Promise<void> => {
     bytes += Buffer.byteLength(chunk);
     if (bytes > max) {
@@ -191,7 +195,7 @@ async function buildBook(
       trips: metas.length,
       entries,
       photos,
-      photosSkipped: loader.skipped,
+      photosSkipped: loader.skipped + looseLoader.skipped,
     };
   } finally {
     await handle.close().catch(() => undefined);

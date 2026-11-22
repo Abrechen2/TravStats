@@ -29,6 +29,7 @@ interface BookStrings {
   entryKinds: Record<EntryKind, string>;
   docKinds: Record<DocKind, string>;
   nights: string;
+  partialDate: string;
   cancelled: string;
   footer: string;
 }
@@ -78,6 +79,7 @@ const de: BookStrings = {
     other: "Dokument",
   },
   nights: "Nächte",
+  partialDate: "Bekannt ist nur",
   cancelled: "storniert",
   footer: "Diese Datei ist in sich geschlossen: sie braucht weder TravStats noch Internet.",
 };
@@ -127,6 +129,7 @@ const en: BookStrings = {
     other: "Document",
   },
   nights: "nights",
+  partialDate: "Only known:",
   cancelled: "cancelled",
   footer: "This file is self-contained: it needs neither TravStats nor the internet.",
 };

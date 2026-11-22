@@ -16,8 +16,8 @@ import { decodePng, isPng } from "./pngDecode";
  * safely, or cannot be decoded — the caller counts the photo as skipped.
  */
 
-export const MAX_DECODE_BYTES = 25 * 1024 * 1024;
-const MAX_DECODE_PIXELS = 60_000_000;
+export const MAX_DECODE_BYTES = 15 * 1024 * 1024;
+const MAX_DECODE_PIXELS = 30_000_000;
 const JPEG_QUALITY = 72;
 
 interface Raster {

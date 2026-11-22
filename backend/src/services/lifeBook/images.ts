@@ -23,7 +23,13 @@ export class PhotoLoader {
 
   constructor(private readonly userId: string) {}
 
-  private toUri(bytes: Buffer, mimetype: string): string | null {
+  /**
+   * Decoding is synchronous CPU work. A turn is yielded before each photo so
+   * requests of other users interleave between photos (one photo still holds the
+   * loop for its own decode; the pixel and byte caps in `downscale.ts` bound that).
+   */
+  private async toUri(bytes: Buffer, mimetype: string): Promise<string | null> {
+    await new Promise<void>((resolve) => setImmediate(resolve));
     const small = downscaleToJpeg(bytes, mimetype, BOOK_PHOTO_EDGE);
     if (!small) return null;
     return `data:${small.mimetype};base64,${small.data.toString("base64")}`;
@@ -36,7 +42,7 @@ export class PhotoLoader {
       : path.basename(filename);
     try {
       const bytes = await fsp.readFile(path.join(dir, path.basename(name)));
-      const uri = this.toUri(bytes, isHeifMimetype(mimetype) ? "image/jpeg" : mimetype);
+      const uri = await this.toUri(bytes, isHeifMimetype(mimetype) ? "image/jpeg" : mimetype);
       if (!uri) this.skip("undecodable", filename);
       return uri;
     } catch (err) {
@@ -78,7 +84,7 @@ export class PhotoLoader {
         }
         chunks.push(buf);
       }
-      const uri = this.toUri(Buffer.concat(chunks), upstream.contentType);
+      const uri = await this.toUri(Buffer.concat(chunks), upstream.contentType);
       if (!uri) this.skip("undecodable", assetId);
       return uri;
     } catch (err) {

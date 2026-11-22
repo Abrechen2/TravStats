@@ -54,8 +54,38 @@ export function whenOf(instant: Date | null, zone: string | null | undefined): W
   return { day: isoDay(instant), time: null, ms: instant.getTime() };
 }
 
-const clock = (instant: Date | null, zone: string | null | undefined): string | null =>
-  whenOf(instant, zone).time;
+const clock = (
+  instant: Date | null,
+  zone: string | null | undefined,
+  semantics?: string | null,
+  precision?: string | null
+): string | null => stampOf(instant, zone, semantics, precision).time;
+
+/**
+ * `whenOf` honouring how the row was written: a date-only stamp or a stored
+ * `day`/`unknown` precision has no clock to show, and a legacy wall-clock
+ * stored as fake UTC reads its day and time straight from the stored value
+ * (converting it through the zone would shift it by the zone's offset).
+ */
+export function stampOf(
+  instant: Date | null,
+  zone: string | null | undefined,
+  semantics?: string | null,
+  precision?: string | null
+): WhenOf {
+  if (!instant || Number.isNaN(instant.getTime())) return { day: null, time: null, ms: null };
+  const noClock = precision === "day" || precision === "unknown" || semantics === "DATE_ONLY";
+  if (semantics === "DATE_ONLY") return { day: isoDay(instant), time: null, ms: instant.getTime() };
+  if (semantics === "LEGACY_FAKE_UTC") {
+    return {
+      day: isoDay(instant),
+      time: noClock ? null : instant.toISOString().slice(11, 16),
+      ms: instant.getTime(),
+    };
+  }
+  const when = whenOf(instant, zone);
+  return noClock ? { ...when, time: null } : when;
+}
 
 /** A coordinate pair that is really there: 0,0 is the column default of an unfilled airport. */
 function point(
@@ -153,14 +183,14 @@ export async function loadEntries(
     const arrZone = f.arrTimezone ?? facts.get(f.arrIata ?? "")?.timezone ?? null;
     const dep = f.depIata ?? f.depIcao ?? "?";
     const arr = f.arrIata ?? f.arrIcao ?? "?";
-    const when = whenOf(f.departureTime, depZone);
+    const when = stampOf(f.departureTime, depZone, f.depTimeSemantics, f.depPrecision);
     push(
       f.id,
       base("flight", f.id, when, join([f.flightNumber, `${dep} → ${arr}`]), {
         detail: [
           join([f.airline, f.aircraft], " · "),
           join([f.depName, f.arrName], " → "),
-          span(when.time, clock(f.arrivalTime, arrZone)) ?? "",
+          span(when.time, clock(f.arrivalTime, arrZone, f.arrTimeSemantics, f.arrPrecision)) ?? "",
         ].filter(Boolean),
         notes: f.notes,
       })
@@ -169,7 +199,7 @@ export async function loadEntries(
   }
 
   for (const r of rails) {
-    const when = whenOf(r.departureTime, r.depTimezone);
+    const when = stampOf(r.departureTime, r.depTimezone, null, r.depPrecision);
     push(
       r.id,
       base(
@@ -183,7 +213,7 @@ export async function loadEntries(
         {
           detail: [
             r.operator ?? "",
-            span(when.time, clock(r.arrivalTime, r.arrTimezone)) ?? "",
+            span(when.time, clock(r.arrivalTime, r.arrTimezone, null, r.arrPrecision)) ?? "",
           ].filter(Boolean),
           notes: r.notes,
         }
@@ -193,7 +223,7 @@ export async function loadEntries(
   }
 
   for (const b of buses) {
-    const when = whenOf(b.departureTime, b.depTimezone);
+    const when = stampOf(b.departureTime, b.depTimezone, null, b.depPrecision);
     push(
       b.id,
       base(
@@ -204,7 +234,7 @@ export async function loadEntries(
         {
           detail: [
             b.operator ?? "",
-            span(when.time, clock(b.arrivalTime, b.arrTimezone)) ?? "",
+            span(when.time, clock(b.arrivalTime, b.arrTimezone, null, b.arrPrecision)) ?? "",
           ].filter(Boolean),
           notes: b.notes,
         }
@@ -214,7 +244,7 @@ export async function loadEntries(
   }
 
   for (const f of ferries) {
-    const when = whenOf(f.departureTime, f.depTimezone);
+    const when = stampOf(f.departureTime, f.depTimezone, null, f.depPrecision);
     push(
       f.id,
       base(
@@ -225,7 +255,7 @@ export async function loadEntries(
         {
           detail: [
             f.operator ?? "",
-            span(when.time, clock(f.arrivalTime, f.arrTimezone)) ?? "",
+            span(when.time, clock(f.arrivalTime, f.arrTimezone, null, f.arrPrecision)) ?? "",
           ].filter(Boolean),
           notes: f.notes,
         }
@@ -235,8 +265,8 @@ export async function loadEntries(
   }
 
   for (const r of rentals) {
-    const when = whenOf(r.pickupTime, r.pickupTimezone);
-    const back = whenOf(r.returnTime, r.returnTimezone);
+    const when = stampOf(r.pickupTime, r.pickupTimezone, null, r.pickupPrecision);
+    const back = stampOf(r.returnTime, r.returnTimezone, null, r.returnPrecision);
     push(
       r.id,
       base("rental", r.id, when, join([r.provider, r.vehicleClass], " · "), {
@@ -274,18 +304,30 @@ export async function loadEntries(
     const day = st.checkInDate ?? st.checkIn;
     const end = st.checkOutDate ?? st.checkOut;
     const l = st.lodging;
+    // Only a DAY-precise stay has a day. A stay known to the month or the year is
+    // shown as unknown with the part that IS known, never as an exact date.
+    const exact = st.datePrecision === "DAY" && day !== null;
+    const partial =
+      !exact && day && st.datePrecision === "MONTH"
+        ? isoDay(day).slice(0, 7)
+        : !exact && day && st.datePrecision === "YEAR"
+          ? isoDay(day).slice(0, 4)
+          : "";
     push(
       st.id,
       base(
         "stay",
         st.id,
-        { day: day ? isoDay(day) : null, time: null, ms: day ? day.getTime() : null },
+        exact && day
+          ? { day: isoDay(day), time: null, ms: day.getTime() }
+          : { day: null, time: null, ms: null },
         l.name,
         {
-          endDay: end ? isoDay(end) : null,
+          endDay: exact && end ? isoDay(end) : null,
           detail: [
             join([l.city, l.country], ", "),
             st.nights != null ? `${st.nights} ${s.nights}` : "",
+            partial ? `${s.partialDate} ${partial}` : "",
           ].filter(Boolean),
           notes: st.notes,
         }

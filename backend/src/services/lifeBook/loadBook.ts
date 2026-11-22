@@ -90,7 +90,7 @@ async function attachEvidence(items: RawEntry[]): Promise<void> {
 /** Visit photographs (manual before auto, 3 per visit) and trip photographs, within one budget. */
 async function loadPhotos(
   userId: string,
-  tripId: string,
+  tripId: string | null,
   items: RawEntry[],
   loader: PhotoLoader
 ): Promise<BookPhoto[]> {
@@ -131,6 +131,7 @@ async function loadPhotos(
     });
   }
 
+  if (tripId === null) return [];
   const tripPhotos = await prisma.tripPhoto.findMany({
     where: { tripId, trip: { userId } },
     orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }, { id: "asc" }],
@@ -217,15 +218,22 @@ export async function buildTrip(
   };
 }
 
-/** Entries with no trip, for the `all` and `year` scopes. Undated ones only count in `all`. */
+/**
+ * Entries with no trip, for the `all` and `year` scopes. Undated ones only count in
+ * `all`. Visit photographs are loaded like a trip's (the same cap and budget).
+ */
 export async function buildLoose(
   userId: string,
   scope: BookScope,
-  lang: BookLang
+  lang: BookLang,
+  loader: PhotoLoader
 ): Promise<BookEntry[]> {
   const loaded = await loadEntries(userId, null, lang);
-  await attachEvidence(loaded.items);
-  const entries = loaded.items.map((i) => i.entry);
-  if (scope.kind !== "year") return entries;
-  return entries.filter((e) => e.day?.startsWith(`${scope.year}-`));
+  const items =
+    scope.kind === "year"
+      ? loaded.items.filter((i) => i.entry.day?.startsWith(`${scope.year}-`))
+      : loaded.items;
+  await attachEvidence(items);
+  await loadPhotos(userId, null, items, loader);
+  return items.map((i) => i.entry);
 }

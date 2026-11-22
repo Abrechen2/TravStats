@@ -54,9 +54,16 @@ export function decodePng(bytes: Buffer, maxPixels: number): PngRaster | null {
   if (!channels || depth !== 8 || interlace !== 0 || width < 1 || height < 1) return null;
   if (width * height > maxPixels || (colour === 3 && !palette)) return null;
 
-  const raw = zlib.inflateSync(Buffer.concat(idat));
   const stride = width * channels;
-  if (raw.length < (stride + 1) * height) return null;
+  // Bound the inflated size by what the header promises: a few KB of IDAT must not expand into gigabytes.
+  const expected = (stride + 1) * height;
+  let raw: Buffer;
+  try {
+    raw = zlib.inflateSync(Buffer.concat(idat), { maxOutputLength: expected });
+  } catch {
+    return null;
+  }
+  if (raw.length < expected) return null;
   const px = Buffer.alloc(stride * height);
   for (let y = 0; y < height; y++) {
     const filter = raw[y * (stride + 1)];

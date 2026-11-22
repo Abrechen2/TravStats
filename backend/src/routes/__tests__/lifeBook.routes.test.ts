@@ -185,6 +185,56 @@ beforeAll(async () => {
   await prisma.tripJournalEntry.create({
     data: { tripId, date: new Date("2025-03-05T00:00:00Z"), body: "Pastéis de nata." },
   });
+  // a flight known only to the day shows no clock; a stay known only to the month shows no day
+  await prisma.flight.create({
+    data: {
+      userId: owner.id,
+      tripId,
+      flightNumber: "DAYONLY 1",
+      depIata: "OPO",
+      arrIata: "FRA",
+      depTimezone: "Europe/Lisbon",
+      departureTime: new Date("2025-03-06T12:00:00Z"),
+      depPrecision: "day",
+      depLat: 41.24,
+      depLon: -8.67,
+      arrLat: 50.03,
+      arrLon: 8.57,
+    },
+  });
+  await prisma.lodgingStay.create({
+    data: {
+      userId: owner.id,
+      tripId,
+      lodgingId: lodging.id,
+      checkInDate: new Date("2025-03-01T00:00:00Z"),
+      datePrecision: "MONTH",
+    },
+  });
+  // a visit without a trip, with a photo of its own
+  const looseFile = `lb-loose-${Date.now()}.jpg`;
+  fs.writeFileSync(
+    path.join(getPlacePhotoDir(), looseFile),
+    Buffer.from(
+      jpeg.encode({ data: Buffer.alloc(400 * 300 * 4, 90), width: 400, height: 300 }, 80).data
+    )
+  );
+  photoFiles.push(looseFile);
+  const loosePlace = await prisma.place.create({
+    data: { userId: owner.id, name: "Loose Place", category: "sight", lat: 10, lon: 10 },
+  });
+  const looseVisit = await prisma.placeVisit.create({
+    data: { userId: owner.id, placeId: loosePlace.id, visitedAt: new Date("2024-07-01T00:00:00Z") },
+  });
+  await prisma.placeVisitPhoto.create({
+    data: {
+      placeVisitId: looseVisit.id,
+      filename: looseFile,
+      mimetype: "image/jpeg",
+      sizeBytes: 10,
+      caption: "Loose photo",
+    },
+  });
   // loose entry with a date and one without
   await prisma.flight.create({
     data: {
@@ -261,6 +311,13 @@ describe("life book routes", () => {
     // the photo was embedded smaller than the 1600 px original
     const uri = /src="data:image\/jpeg;base64,([^"]+)"/.exec(page)![1];
     expect(jpeg.decode(Buffer.from(uri, "base64"), { useTArray: true }).width).toBe(900);
+    // day-precise flight: on its day, without an invented clock
+    const day6 = page.slice(page.indexOf("6. März 2025"), page.indexOf('class="day undated"'));
+    expect(day6).toContain("DAYONLY 1");
+    expect(day6).not.toMatch(/class="time">1[0-9]:/);
+    // a month-precise stay is unknown, with what is known, and not on 1 March
+    expect(page.slice(page.indexOf('class="day undated"'))).toContain("Bekannt ist nur 2025-03");
+    expect(page).not.toContain("1. März 2025");
     // loose entries do not belong to a trip-scope book
     expect(page).not.toContain("LOOSE 1");
   });
@@ -280,13 +337,18 @@ describe("life book routes", () => {
     const allPage = await html(owner.cookie, all.result.exportId);
     expect(allPage).toContain('id="no-trip"');
     expect(allPage).toContain("LOOSE 1");
+    // a visit without a trip keeps its photograph in the book
+    expect(allPage).toContain("Loose photo");
+    expect(all.result.photos).toBe(2);
     const y2025 = (await build(owner.cookie, { scope: "year", year: 2025, lang: "de" })).job;
     const p2025 = await html(owner.cookie, y2025.result.exportId);
     expect(p2025).toContain("Lissabon Frühling");
     expect(p2025).not.toContain("LOOSE 1");
+    expect(p2025).not.toContain("Loose photo");
     const y2024 = (await build(owner.cookie, { scope: "year", year: 2024, lang: "de" })).job;
     const p2024 = await html(owner.cookie, y2024.result.exportId);
     expect(p2024).toContain("LOOSE 1");
+    expect(p2024).toContain("Loose photo");
     expect(p2024).not.toContain("Lissabon Frühling");
   });
 
@@ -306,6 +368,20 @@ describe("life book routes", () => {
       expect(fs.readdirSync(workDir).sort()).toEqual(before);
     } finally {
       delete process.env.LIFE_BOOK_MAX_BYTES;
+    }
+  });
+
+  it("refuses to serve a book past its six-hour wait even before the sweep removed it", async () => {
+    const { job } = await build(owner.cookie, { scope: "trip", tripId, lang: "de" });
+    const real = Date.now();
+    const spy = jest.spyOn(Date, "now").mockReturnValue(real + 7 * 60 * 60 * 1000);
+    try {
+      const res = await request(app)
+        .get(`/api/v1/me/life-book/${job.result.exportId}`)
+        .set("Cookie", owner.cookie);
+      expect(res.status).toBe(404);
+    } finally {
+      spy.mockRestore();
     }
   });
 

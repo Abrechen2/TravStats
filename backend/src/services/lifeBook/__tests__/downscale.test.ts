@@ -1,4 +1,5 @@
 import jpeg from "jpeg-js";
+import zlib from "zlib";
 import { PNG } from "pngjs";
 
 import { downscaleToJpeg, exifOrientation } from "../downscale";
@@ -72,5 +73,28 @@ describe("life book photo downscaling", () => {
     expect(downscaleToJpeg(Buffer.from("not an image"), "image/jpeg", 900)).toBeNull();
     expect(downscaleToJpeg(Buffer.alloc(0), "image/png", 900)).toBeNull();
     expect(downscaleToJpeg(Buffer.from("GIF89a....."), "image/gif", 900)).toBeNull();
+  });
+
+  it("refuses a PNG whose data inflates far past what its header promises instead of allocating it", () => {
+    const sig = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const chunk = (type: string, body: Buffer) => {
+      const head = Buffer.alloc(8);
+      head.writeUInt32BE(body.length, 0);
+      head.write(type, 4, "latin1");
+      return Buffer.concat([head, body, Buffer.alloc(4)]); // CRC is not checked by the reader
+    };
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(10, 0);
+    ihdr.writeUInt32BE(10, 4);
+    ihdr[8] = 8;
+    ihdr[9] = 6;
+    const bomb = zlib.deflateSync(Buffer.alloc(64 * 1024 * 1024)); // header says 10x10 RGBA = 410 bytes
+    const png = Buffer.concat([
+      sig,
+      chunk("IHDR", ihdr),
+      chunk("IDAT", bomb),
+      chunk("IEND", Buffer.alloc(0)),
+    ]);
+    expect(downscaleToJpeg(png, "image/png", 900)).toBeNull();
   });
 });
