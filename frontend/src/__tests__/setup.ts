@@ -59,6 +59,14 @@ vi.mock("../lib/api/placeCategories", () => ({
   deletePlaceCategory: () => new Promise(() => {}),
 }));
 
+// Every bus, ferry and cruise tile asks once per operator whether a logo exists (`/operators/mark`).
+// Same rule as above: the answer stays pending, so the monogram shows, no request escapes and no
+// state settles outside act(). A test about the logo mocks this module with its own answer.
+vi.mock("../lib/api/operators", async (importActual) => {
+  const actual = await importActual<typeof import("../lib/api/operators")>();
+  return { ...actual, getOperatorMark: () => new Promise<never>(() => {}) };
+});
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,

@@ -7,7 +7,8 @@ import DetailHeader from "../components/ui/DetailHeader";
 import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
 import DetailSection from "../components/ui/DetailSection";
 import Button from "../components/ui/Button";
-import { Icon } from "../components/ui/Icon";
+import { OperatorTile, railOperatorLogoUrl } from "../components/table/OperatorTile";
+import { primaryOperator } from "../lib/rail/primaryOperator";
 import { useTranslation } from "../hooks/useTranslation";
 import { railApi } from "../lib/api/rail";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
@@ -126,7 +127,15 @@ export default function RailConnectionPage(): JSX.Element {
         backTo="/rail"
         backLabel={t("rail:detail.back")}
         domain="rail"
-        icon={<Icon name="train-front" size={24} />}
+        icon={
+          <OperatorTile
+            name={primaryOperator(legs)}
+            domain="rail"
+            logoUrl={railOperatorLogoUrl(primaryOperator(legs))}
+            size={48}
+          />
+        }
+        iconIsTile
         title={connectionStations(legs).join(" → ")}
         meta={[
           span ? formatRailSpan(span, locale) : null,

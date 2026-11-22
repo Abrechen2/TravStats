@@ -3,8 +3,9 @@
  * ~50 fields the table has no column for was to open the edit form — reading
  * meant putting the record into an editable state.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { useSettingsStore } from "../../store/settingsStore";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import type { Flight } from "../../types";
@@ -453,5 +454,36 @@ describe("FlightDetailPage — stored day-of-travel data", () => {
     await screen.findByText("flights:detail.takeoff");
     expect(screen.queryByText("flights:detail.taxiOut")).toBeNull();
     expect(screen.queryByText("flights:detail.airTime")).toBeNull();
+  });
+
+  // The header showed the carrier's code as orange text where the logbook shows its logo.
+  describe("airline logo in the header", () => {
+    const setStyle = (style: string | undefined): void => {
+      (useSettingsStore.getState().units as unknown as Record<string, unknown>).airlineLogoStyle =
+        style;
+    };
+    afterEach(() => setStyle(undefined));
+
+    it("draws the airline's logo tile, as the logbook does, instead of the bare code", async () => {
+      getByIdMock.mockResolvedValue(makeFlight({ airlineIata: "LH" } as Partial<Flight>));
+      renderPage();
+      const img = (await screen.findByRole("img", { name: "Lufthansa" })) as HTMLImageElement;
+      expect(img.src).toContain("/api/v1/airline-logos/LH?variant=logo");
+    });
+
+    it("honours the symbol-only setting in the header", async () => {
+      setStyle("icon");
+      getByIdMock.mockResolvedValue(makeFlight({ airlineIata: "LH" } as Partial<Flight>));
+      renderPage();
+      const img = (await screen.findByRole("img", { name: "Lufthansa" })) as HTMLImageElement;
+      expect(img.src).toContain("/api/v1/airline-logos/LH?variant=icon");
+    });
+
+    it("keeps the code tile when the logo does not load", async () => {
+      getByIdMock.mockResolvedValue(makeFlight({ airlineIata: "LH" } as Partial<Flight>));
+      renderPage();
+      fireEvent.error(await screen.findByRole("img", { name: "Lufthansa" }));
+      expect(screen.getByText("LH")).toHaveAttribute("aria-hidden", "true");
+    });
   });
 });

@@ -5,7 +5,7 @@ import { railArrival, railDeparture } from "../../lib/entityTimes";
 import { formatRailDuration } from "../../lib/rail/railDuration";
 import type { BusJourney } from "../../types/bus";
 import type { FerryJourney } from "../../types/ferry";
-import { OperatorTile } from "../table/OperatorTile";
+import { OperatorMarkTile } from "../table/OperatorMarkTile";
 import { statusPillProps } from "../table/statusPillStyle";
 import TripPill from "../Trips/TripPill";
 import { TableRow, type TableColumn } from "../ui/Table";
@@ -71,8 +71,8 @@ interface Props {
  * One bus or ferry ride as a table row. A ride is one ticket between two
  * terminals, so unlike rail there is no connection to fold: one row, one page.
  *
- * The operator tile is a monogram on the domain colour — no logo source is
- * chosen for any operator (see `OperatorTile`, spec §11a).
+ * The operator tile carries the operator's logo where the operator service
+ * has one, else a monogram on the domain colour (see `OperatorTile`).
  */
 export function LegTableRow({ domain, journey, columns, onOpen, actions }: Props): JSX.Element {
   const { ns } = domain;
@@ -102,7 +102,7 @@ export function LegTableRow({ domain, journey, columns, onOpen, actions }: Props
     );
 
   const cell: Record<string, ReactNode> = {
-    operator: <OperatorTile name={journey.operator} domain={ns} />,
+    operator: <OperatorMarkTile name={journey.operator} domain={ns} />,
     route: `${journey.depStationName} → ${journey.arrStationName}`,
     time: formatRailSpan(journey, locale) || "—",
     [domain.serviceColumn]: domain.service(journey) ?? "—",
