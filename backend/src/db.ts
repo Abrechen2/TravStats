@@ -1,6 +1,16 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import { applyRecordedOnly, runUnfiltered } from "./services/provenance/recordedOnly";
+import {
+  applyRecordedOnly,
+  entryFilterActive,
+  runUnfiltered,
+} from "./services/provenance/recordedOnly";
+import {
+  demoteHiddenOnlyVisited,
+  ensureIdSelected,
+  isPlaceRead,
+} from "./services/purpose/placeVisited";
+import { now as clockNow } from "./shared/time/clock";
 import { inheritPurposeOnCreate } from "./services/purpose/tripInheritance";
 import { createPrismaClient } from "./prismaClient";
 import logger, { dbLogger } from "./utils/logger";
@@ -158,7 +168,15 @@ const queried = basePrisma.$extends({
         );
         return trip?.category ?? null;
       });
-      const args = applyRecordedOnly(model, operation, inherited);
+      const scoped = applyRecordedOnly(model, operation, inherited);
+      // A place that is "visited" only through a hidden business visit stops counting as visited.
+      const hiddenVisitPurposes = isPlaceRead(model, operation)
+        ? (entryFilterActive().hidden.PlaceVisit ?? [])
+        : [];
+      const { args, added: addedId } =
+        hiddenVisitPurposes.length > 0
+          ? ensureIdSelected(scoped)
+          : { args: scoped, added: false };
       const startTime = Date.now();
       // Before the call, matching the old middleware: it recorded on the way
       // in, so a query that throws is still counted.
@@ -166,7 +184,23 @@ const queried = basePrisma.$extends({
       const verbose = getLoggingRuntimeFlags().databaseQueries;
 
       try {
-        const result = await query(args);
+        const raw = await query(args);
+        const result =
+          hiddenVisitPurposes.length > 0
+            ? await demoteHiddenOnlyVisited(
+                raw,
+                hiddenVisitPurposes,
+                (ids) =>
+                  runUnfiltered(() =>
+                    (openTransaction.getStore() ?? basePrisma).placeVisit.findMany({
+                      where: { placeId: { in: ids } },
+                      select: { placeId: true, purpose: true, visitedAt: true, visitedAtUtc: true },
+                    })
+                  ),
+                addedId,
+                clockNow()
+              )
+            : raw;
         if (!READ_OPERATIONS.has(operation)) {
           for (const observer of [
             ...(writeObserver ? [writeObserver] : []),
@@ -229,6 +263,19 @@ type TripReader = {
       where: { id: string };
       select: { category: true };
     }): Promise<{ category: string | null } | null>;
+  };
+  placeVisit: {
+    findMany(args: {
+      where: { placeId: { in: string[] } };
+      select: { placeId: true; purpose: true; visitedAt: true; visitedAtUtc: true };
+    }): Promise<
+      Array<{
+        placeId: string;
+        purpose: string | null;
+        visitedAt: Date | null;
+        visitedAtUtc: Date | null;
+      }>
+    >;
   };
 };
 const openTransaction = new AsyncLocalStorage<TripReader>();

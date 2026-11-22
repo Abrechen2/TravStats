@@ -269,4 +269,28 @@ describe("what the account hid by purpose is out of the published totals", () =>
     const after = await buildLeaderboardSnapshot(hidingUser, ALL, null);
     expect(after.metrics).toMatchObject({ ferryCrossings: 1, ferryKm: 670, places: 0, placeVisits: 0 });
   });
+
+  it("a place visited only through a hidden business visit is not counted as a place", async () => {
+    await prisma.userSettings.update({
+      where: { userId: hidingUser },
+      data: { purposeVisibility: { poi: ["business"] } },
+    });
+    await prisma.place.create({
+      data: {
+        userId: hidingUser,
+        name: "Planned later",
+        lat: 51,
+        lon: 9,
+        visited: true,
+        visits: {
+          create: [
+            { userId: hidingUser, visitedAt: new Date("2025-06-04T10:00:00Z"), purpose: "business" },
+            { userId: hidingUser, visitedAt: new Date("2999-01-01T10:00:00Z"), purpose: "private" },
+          ],
+        },
+      },
+    });
+    const s = await buildLeaderboardSnapshot(hidingUser, ALL, null);
+    expect(s.metrics).toMatchObject({ places: 0, placeVisits: 0 });
+  });
 });
