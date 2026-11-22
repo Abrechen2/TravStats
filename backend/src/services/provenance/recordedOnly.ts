@@ -67,6 +67,7 @@ export const ENTRY_SCOPE_PREFIXES = [
   "/api/v1/me/life-book",
   "/api/v1/companions",
   "/api/v1/trip-suggestions",
+  "/api/v1/search",
 ] as const;
 
 const MODELS = new Set([

@@ -32,19 +32,22 @@ async function fill(
   purpose: Purpose,
   onlyUnknown: boolean
 ): Promise<number> {
-  let changed = 0;
-  for (const name of DELEGATES) {
-    const delegate = (prisma as unknown as Record<string, Writer>)[name];
-    // Purpose is the member's own view, never a share fact: nothing to propagate.
-    const res = await runUnfiltered(() =>
-      delegate.updateMany({
-        where: { userId, ...tripWhere, ...(onlyUnknown ? { purpose: null } : {}) },
-        data: { purpose },
-      })
-    );
-    changed += res.count;
-  }
-  return changed;
+  // One transaction: a failure part-way leaves no domain overwritten.
+  return runUnfiltered(() =>
+    prisma.$transaction(async (tx) => {
+      let changed = 0;
+      for (const name of DELEGATES) {
+        const delegate = (tx as unknown as Record<string, Writer>)[name];
+        // Purpose is the member's own view, never a share fact: nothing to propagate.
+        const res = await delegate.updateMany({
+          where: { userId, ...tripWhere, ...(onlyUnknown ? { purpose: null } : {}) },
+          data: { purpose },
+        });
+        changed += res.count;
+      }
+      return changed;
+    })
+  );
 }
 
 /** "Zweck auf alle Einträge übertragen": the trip's category (or a chosen purpose) onto its entries. */
