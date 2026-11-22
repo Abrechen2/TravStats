@@ -145,9 +145,15 @@ export async function buildWhere(
   userId: string,
   fromDate: string | undefined,
   toDate: string | undefined,
-  filterYear?: number
+  filterYear?: number,
+  onlyRecorded = false
 ): Promise<Prisma.FlightWhereInput> {
   const where: Prisma.FlightWhereInput = { userId };
+  // A flight entered from memory still counts by default; "nur belegte" leaves it out. An
+  // unknown provenance (every flight older than the field) is NOT a recollection and stays in —
+  // SQL's `<> 'remembered'` would drop those NULLs, hence the explicit OR.
+  if (onlyRecorded)
+    where.AND = [{ OR: [{ provenance: null }, { provenance: { not: "remembered" } }] }];
 
   if (filterYear !== undefined) {
     where.id = { in: await flightIdsDepartingInLocalYear(userId, filterYear) };

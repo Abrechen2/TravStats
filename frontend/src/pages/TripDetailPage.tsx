@@ -23,6 +23,7 @@ import TripModal from "../components/Trips/TripModal";
 import { TravelPlanSummary } from "../components/Trips/TravelPlanSummary";
 import TripPackingCard from "../components/Trips/TripPackingCard";
 import TripHead from "../components/Trips/TripHead";
+import RememberedEditor from "../components/provenance/RememberedEditor";
 import TripOverview from "../components/Trips/TripOverview";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
 import TimelineActions from "../components/Trips/TimelineActions";
@@ -78,7 +79,7 @@ export default function TripDetailPage(): JSX.Element {
   // a cabin type and a seat class, whose words live in those namespaces. Without
   // them `t("cruise:cabinType.balcony")` cannot resolve and the raw key reaches
   // the screen — which is what a browser showed, and no test could.
-  const { t, i18n } = useTranslation(["trips", "common", "cruise", "flights"]);
+  const { t, i18n } = useTranslation(["trips", "common", "cruise", "flights", "provenance"]);
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
 
@@ -170,6 +171,17 @@ export default function TripDetailPage(): JSX.Element {
         placeCount={countTripPlaces(places.placeVisits)}
         placeVisits={places.placeVisits}
       />
+      <details className="t-caption" style={{ margin: "var(--ts-space-sm) 0" }}>
+        <summary style={{ cursor: "pointer" }}>{t("provenance:editor.legend")}</summary>
+        <div style={{ marginTop: "var(--ts-space-sm)" }}>
+          <RememberedEditor
+            entryType="trip"
+            entryId={shownTrip.id}
+            initial={shownTrip}
+            onSaved={() => void load()}
+          />
+        </div>
+      </details>
       {/* On the overview tab the places panel carries the failure itself. */}
       {places.failed && tab !== "overview" && <TripPlacesError onRetry={places.reload} />}
       {/* A finished trip's list is a record, not a task: it waits at the end. */}

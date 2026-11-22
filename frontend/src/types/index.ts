@@ -31,6 +31,10 @@ export interface Airport {
 
 export interface Flight extends FlightProviderData {
   id: string;
+  /** "Aus der Erinnerung" (docs/superpowers/specs/2026-11-22-remembered-facts.md); absent on older servers. */
+  provenance?: "recorded" | "remembered" | null;
+  rememberedOn?: string | null;
+  rememberedNote?: string | null;
   /** The row's version (the bulk edit's `baseVersions`); absent on rows built client-side. */
   updatedAt?: string;
   userId: string;
@@ -183,6 +187,10 @@ export type { TripJournalEntry };
 
 export interface Trip {
   id: string;
+  /** "Aus der Erinnerung" (docs/superpowers/specs/2026-11-22-remembered-facts.md); absent on older servers. */
+  provenance?: "recorded" | "remembered" | null;
+  rememberedOn?: string | null;
+  rememberedNote?: string | null;
   userId: string;
   name: string;
   description: string | null;

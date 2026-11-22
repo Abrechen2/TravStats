@@ -79,13 +79,13 @@ router.get(
         res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
         return;
       }
-      const { fromDate, toDate, year, compareYear } = parsed.data;
+      const { fromDate, toDate, year, compareYear, onlyRecorded } = parsed.data;
       assertYearWithoutRange(parsed.data);
       const baseCurrency = await getBaseCurrency(userId);
 
       // `daysAway` rides on every summary, scoped like its flight figures (forgejo#92).
       const summarize = async (scopeYear: number | undefined) => {
-        const where = await buildWhere(userId, fromDate, toDate, scopeYear);
+        const where = await buildWhere(userId, fromDate, toDate, scopeYear, onlyRecorded);
         const { stats } = await computeSummary(where, baseCurrency);
         const daysAway = await loadDaysAway(userId, { year: scopeYear, fromDate, toDate });
         return { ...stats, daysAway };

@@ -44,6 +44,7 @@ import locationCapabilitiesRoutes from "./locationCapabilities";
 import photoJourneyRoutes from "./photoJourneys";
 import tripSuggestionRoutes from "./tripSuggestions";
 import documentLinkSuggestionRoutes from "./documentLinkSuggestions";
+import provenanceRoutes from "./provenance";
 import flightLookupRoutes from "./flightLookup";
 import statsRoutes from "./stats";
 import statsFlightInsightsRoutes from "./stats/flightInsights";
@@ -332,6 +333,8 @@ export const apiMounts: ApiMount[] = [
     base: "/api/v1/document-link-suggestions",
     router: documentLinkSuggestionRoutes,
   },
+  // "Aus der Erinnerung" marks and the contradiction notices (spec 2026-11-22-remembered-facts).
+  { id: "provenance", base: "/api/v1/provenance", router: provenanceRoutes },
   { id: "flightLookup", base: "/api/v1/flight-lookup", router: flightLookupRoutes },
   // One arc of the globe (forgejo#132 item 9). Its own base because
   // `routes/stats.ts` may not grow; it brings that router's middlewares along.
