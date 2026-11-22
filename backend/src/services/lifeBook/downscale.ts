@@ -1,139 +1,152 @@
-import jpeg from "jpeg-js";
-import { decodePng, isPng } from "./pngDecode";
+import { Worker } from "worker_threads";
+
+import logger from "../../utils/logger";
+import { downscaleWorkerSource } from "./downscaleWorker";
 
 /**
- * Shrinks one photograph for the life book: decode, box-filter to a longest
- * edge of `maxEdge`, re-encode as JPEG. Pure JavaScript on purpose (jpeg-js
- * and a small PNG reader): the image ships no native image library, and a book is built in a
- * background job where a second or two per photo does not matter.
+ * Shrinks one photograph for the life book — decode, box-filter to a longest
+ * edge, re-encode as JPEG — in a small pool of worker threads, so a book with
+ * hundreds of photographs never holds the server's event loop. Each image has a
+ * deadline: a worker that runs past it (a slow or hostile file) is terminated
+ * and replaced, and the image resolves to null.
  *
- * The phone's EXIF orientation is honoured for the three rotations; jpeg-js
- * ignores it, and an unrotated portrait photo in a chronicle reads as a defect
- * nobody can see until the book is printed. Mirrored variants are not handled
- * (cameras do not write them).
- *
- * Null when the bytes are neither a JPEG nor a PNG, are too large to decode
- * safely, or cannot be decoded — the caller counts the photo as skipped.
+ * Null therefore means "this photo is not in the book": not a JPEG/PNG, over
+ * the byte or pixel cap, undecodable, or timed out. The caller counts it as
+ * skipped and says so; nothing here swallows a failure silently.
  */
 
 export const MAX_DECODE_BYTES = 15 * 1024 * 1024;
-const MAX_DECODE_PIXELS = 30_000_000;
-const JPEG_QUALITY = 72;
+export const MAX_DECODE_PIXELS = 30_000_000;
+const POOL_SIZE = 2;
+const IDLE_TERMINATE_MS = 30_000;
+let timeoutMs = 30_000;
 
-interface Raster {
-  width: number;
-  height: number;
-  /** RGBA, row-major. */
-  data: Uint8Array;
+/** Test seam: the per-image deadline. */
+export function setDownscaleTimeoutForTests(ms: number | null): void {
+  timeoutMs = ms ?? 30_000;
 }
 
-/** EXIF orientation tag (1..8) of a JPEG, 1 when absent or unreadable. */
-export function exifOrientation(bytes: Buffer): number {
-  if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return 1;
-  let pos = 2;
-  while (pos + 4 < bytes.length) {
-    if (bytes[pos] !== 0xff) return 1;
-    const marker = bytes[pos + 1];
-    const len = bytes.readUInt16BE(pos + 2);
-    if (marker === 0xe1 && bytes.toString("latin1", pos + 4, pos + 10) === "Exif\0\0") {
-      const tiff = pos + 10;
-      const little = bytes.toString("latin1", tiff, tiff + 2) === "II";
-      const u16 = (o: number) => (little ? bytes.readUInt16LE(o) : bytes.readUInt16BE(o));
-      const u32 = (o: number) => (little ? bytes.readUInt32LE(o) : bytes.readUInt32BE(o));
-      if (tiff + 8 > bytes.length) return 1;
-      const ifd = tiff + u32(tiff + 4);
-      if (ifd + 2 > bytes.length) return 1;
-      const count = u16(ifd);
-      for (let i = 0; i < count; i++) {
-        const entry = ifd + 2 + i * 12;
-        if (entry + 12 > bytes.length) return 1;
-        if (u16(entry) === 0x0112) {
-          const value = u16(entry + 8);
-          return value >= 1 && value <= 8 ? value : 1;
-        }
-      }
-      return 1;
-    }
-    if (marker === 0xda) return 1;
-    pos += 2 + len;
-  }
-  return 1;
+interface Job {
+  id: number;
+  bytes: Uint8Array;
+  mimetype: string;
+  maxEdge: number;
+  resolve: (data: Buffer | null) => void;
 }
 
-function decode(bytes: Buffer, mimetype: string): Raster | null {
-  const isJpeg = bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8;
-  if (isPng(bytes) || (!isJpeg && mimetype.toLowerCase() === "image/png")) {
-    return decodePng(bytes, MAX_DECODE_PIXELS);
-  }
-  if (!isJpeg) return null;
-  const decoded = jpeg.decode(bytes, {
-    useTArray: true,
-    formatAsRGBA: true,
-    maxResolutionInMP: MAX_DECODE_PIXELS / 1_000_000,
-    maxMemoryUsageInMB: 512,
+interface Slot {
+  worker: Worker;
+  job: Job | null;
+  deadline: NodeJS.Timeout | null;
+}
+
+type Reply =
+  { id: number; ok: true; bytes: Uint8Array | null } | { id: number; ok: false; message: string };
+
+const queue: Job[] = [];
+const slots: Slot[] = [];
+let nextId = 1;
+let idleTimer: NodeJS.Timeout | null = null;
+
+function finish(slot: Slot, result: Buffer | null): void {
+  const job = slot.job;
+  slot.job = null;
+  if (slot.deadline) clearTimeout(slot.deadline);
+  slot.deadline = null;
+  job?.resolve(result);
+  pump();
+}
+
+function retire(slot: Slot, reason: string): void {
+  const i = slots.indexOf(slot);
+  if (i >= 0) slots.splice(i, 1);
+  void slot.worker.terminate();
+  if (slot.job) logger.warn({ operation: "life_book_image_worker", reason });
+  finish(slot, null);
+}
+
+function spawn(): Slot {
+  const worker = new Worker(downscaleWorkerSource(), {
+    eval: true,
+    // A decode that balloons stays inside the worker.
+    resourceLimits: { maxOldGenerationSizeMb: 768 },
   });
-  return { width: decoded.width, height: decoded.height, data: decoded.data as Uint8Array };
+  worker.unref();
+  const slot: Slot = { worker, job: null, deadline: null };
+  worker.on("message", (reply: Reply) => {
+    if (!slot.job || slot.job.id !== reply.id) return;
+    if (reply.ok) finish(slot, reply.bytes ? Buffer.from(reply.bytes) : null);
+    else {
+      logger.warn({ operation: "life_book_image_undecodable", message: reply.message });
+      finish(slot, null);
+    }
+  });
+  worker.on("error", (err: unknown) =>
+    retire(slot, err instanceof Error ? err.message : String(err))
+  );
+  worker.on("exit", () => {
+    if (slots.includes(slot)) retire(slot, "worker exited");
+  });
+  slots.push(slot);
+  return slot;
+}
+
+function dropIdle(): void {
+  idleTimer = null;
+  for (const slot of [...slots]) {
+    if (!slot.job) {
+      slots.splice(slots.indexOf(slot), 1);
+      void slot.worker.terminate();
+    }
+  }
+}
+
+function pump(): void {
+  while (queue.length > 0) {
+    const slot = slots.find((s) => !s.job) ?? (slots.length < POOL_SIZE ? spawn() : null);
+    if (!slot) return;
+    const job = queue.shift() as Job;
+    slot.job = job;
+    slot.deadline = setTimeout(() => retire(slot, `timed out after ${timeoutMs} ms`), timeoutMs);
+    slot.deadline.unref();
+    slot.worker.postMessage({
+      id: job.id,
+      bytes: job.bytes,
+      mimetype: job.mimetype,
+      maxEdge: job.maxEdge,
+      maxPixels: MAX_DECODE_PIXELS,
+    });
+  }
+  if (idleTimer) clearTimeout(idleTimer);
+  idleTimer = setTimeout(dropIdle, IDLE_TERMINATE_MS);
+  idleTimer.unref();
 }
 
 export function downscaleToJpeg(
   bytes: Buffer,
   mimetype: string,
   maxEdge: number
-): { data: Buffer; mimetype: "image/jpeg" } | null {
-  if (bytes.length === 0 || bytes.length > MAX_DECODE_BYTES) return null;
-  try {
-    const src = decode(bytes, mimetype);
-    if (!src || src.width < 1 || src.height < 1) return null;
-    const orientation = exifOrientation(bytes);
-    const swap = orientation === 6 || orientation === 8;
-    const rotW = swap ? src.height : src.width;
-    const rotH = swap ? src.width : src.height;
-    const scale = Math.min(1, maxEdge / Math.max(rotW, rotH));
-    const outW = Math.max(1, Math.round(rotW * scale));
-    const outH = Math.max(1, Math.round(rotH * scale));
-    const out = Buffer.alloc(outW * outH * 4);
-    for (let y = 0; y < outH; y++) {
-      const y0 = Math.floor((y * rotH) / outH);
-      const y1 = Math.max(y0 + 1, Math.floor(((y + 1) * rotH) / outH));
-      for (let x = 0; x < outW; x++) {
-        const x0 = Math.floor((x * rotW) / outW);
-        const x1 = Math.max(x0 + 1, Math.floor(((x + 1) * rotW) / outW));
-        let r = 0;
-        let g = 0;
-        let b = 0;
-        let n = 0;
-        for (let ry = y0; ry < y1; ry++) {
-          for (let rx = x0; rx < x1; rx++) {
-            // Position in the unrotated source for a rotated-frame pixel.
-            let sx = rx;
-            let sy = ry;
-            if (orientation === 3) {
-              sx = src.width - 1 - rx;
-              sy = src.height - 1 - ry;
-            } else if (orientation === 6) {
-              sx = ry;
-              sy = src.height - 1 - rx;
-            } else if (orientation === 8) {
-              sx = src.width - 1 - ry;
-              sy = rx;
-            }
-            const i = (sy * src.width + sx) * 4;
-            r += src.data[i];
-            g += src.data[i + 1];
-            b += src.data[i + 2];
-            n++;
-          }
-        }
-        const o = (y * outW + x) * 4;
-        out[o] = Math.round(r / n);
-        out[o + 1] = Math.round(g / n);
-        out[o + 2] = Math.round(b / n);
-        out[o + 3] = 255;
-      }
-    }
-    const encoded = jpeg.encode({ data: out, width: outW, height: outH }, JPEG_QUALITY);
-    return { data: Buffer.from(encoded.data), mimetype: "image/jpeg" };
-  } catch {
-    return null;
+): Promise<{ data: Buffer; mimetype: "image/jpeg" } | null> {
+  if (bytes.length === 0 || bytes.length > MAX_DECODE_BYTES) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    queue.push({
+      id: nextId++,
+      bytes: new Uint8Array(bytes),
+      mimetype,
+      maxEdge,
+      resolve: (data) => resolve(data ? { data, mimetype: "image/jpeg" } : null),
+    });
+    pump();
+  });
+}
+
+/** Ends every worker now, for tests that must not leave a thread behind. */
+export function shutdownDownscalePool(): void {
+  for (const job of queue.splice(0)) job.resolve(null);
+  for (const slot of [...slots]) {
+    slots.splice(slots.indexOf(slot), 1);
+    if (slot.deadline) clearTimeout(slot.deadline);
+    slot.job?.resolve(null);
+    void slot.worker.terminate();
   }
 }

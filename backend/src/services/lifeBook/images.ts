@@ -23,14 +23,9 @@ export class PhotoLoader {
 
   constructor(private readonly userId: string) {}
 
-  /**
-   * Decoding is synchronous CPU work. A turn is yielded before each photo so
-   * requests of other users interleave between photos (one photo still holds the
-   * loop for its own decode; the pixel and byte caps in `downscale.ts` bound that).
-   */
+  // Decoding runs in the worker pool of `downscale.ts`, off the event loop.
   private async toUri(bytes: Buffer, mimetype: string): Promise<string | null> {
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    const small = downscaleToJpeg(bytes, mimetype, BOOK_PHOTO_EDGE);
+    const small = await downscaleToJpeg(bytes, mimetype, BOOK_PHOTO_EDGE);
     if (!small) return null;
     return `data:${small.mimetype};base64,${small.data.toString("base64")}`;
   }
