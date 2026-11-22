@@ -845,7 +845,38 @@
     "range": "{{from}} to {{to}}",
     "days_one": "{{count}} day",
     "days_other": "{{count}} days",
-    "create": "Add an entry",
-    "openDay": "Day in Track"
+    "openDay": "Day in Track",
+    "target": {
+      "trip": "Trip",
+      "flight": "Flight",
+      "lodging": "Stay",
+      "rail": "Train ride",
+      "bus": "Bus ride",
+      "ferry": "Ferry crossing",
+      "rental": "Car rental",
+      "place": "Place visit"
+    },
+    "createFor": "Add an entry for this gap",
+    "picker": {
+      "loading": "Searching …",
+      "failed": "The search did not work. Try again.",
+      "none": "Nothing found."
+    },
+    "lodgingPicker": {
+      "title": "Which stay's house?",
+      "hint": "The stay opens with {{from}} to {{to}}.",
+      "search": "Search for a house",
+      "create": "Add a new house"
+    },
+    "placePicker": {
+      "title": "Which place did you visit?",
+      "hint": "The visit opens on {{day}}.",
+      "search": "Search for a place",
+      "create": "Add a new place"
+    },
+    "noTrack": "Without TravTrack the calendar shows logbook entries only: Recorded, Privacy zone and Implausible do not occur.",
+    "openTrack": "Open Track",
+    "pageTitle": "Logbook gaps",
+    "menu": "Gaps"
   }
 }

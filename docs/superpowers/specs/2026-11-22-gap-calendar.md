@@ -15,14 +15,14 @@ A day is a calendar day in the **profile zone** (ADR 0002, `profileZoneOf`; `UTC
 unset). The window of the history is `firstDay` (earliest entry or fix, any year) to
 today in that zone; a day outside it is `outside`, never a gap.
 
-| # | State | Meaning |
-|---|---|---|
-| 1 | `entry` | A logbook entry covers the day: trip, cruise, lodging stay (DAY precision), flight, rail, bus, ferry, rental, place visit. Cancelled entries and month/year-precision stays do not cover. |
-| 2 | `home` | The day has plausible fixes outside every privacy zone, all inside the radius of that day's home-period residence. |
-| 3 | `track` | At least one plausible fix outside every privacy zone. |
-| 4 | `privacyZone` | Stored fixes exist, but every one lies in a privacy zone (a former zone counts for fixes before its end). Nothing else is revealed: no position, no count. |
-| 5 | `implausible` | Fixes exist, none plausible (null island, accuracy over 10 km — the evidence pipeline's `isBadFix`). |
-| 6 | `unknown` | None of the above: this is the gap. |
+| #   | State         | Meaning                                                                                                                                                                                   |
+| --- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `entry`       | A logbook entry covers the day: trip, cruise, lodging stay (DAY precision), flight, rail, bus, ferry, rental, place visit. Cancelled entries and month/year-precision stays do not cover. |
+| 2   | `home`        | The day has plausible fixes outside every privacy zone, all inside the radius of that day's home-period residence.                                                                        |
+| 3   | `track`       | At least one plausible fix outside every privacy zone.                                                                                                                                    |
+| 4   | `privacyZone` | Stored fixes exist, but every one lies in a privacy zone (a former zone counts for fixes before its end). Nothing else is revealed: no position, no count.                                |
+| 5   | `implausible` | Fixes exist, none plausible (null island, accuracy over 10 km — the evidence pipeline's `isBadFix`).                                                                                      |
+| 6   | `unknown`     | None of the above: this is the gap.                                                                                                                                                       |
 
 The server answers `outside` for days after today. Entries dated in the future are
 still `outside` (not a gap, not a record).
@@ -57,15 +57,26 @@ every user's entries) and after 5 minutes regardless (raw-SQL ingest is not obse
 
 ## Web
 
-Tab `Lücken` / `Gaps` under Track (`/track/gaps`): year heatmap (12 month rows by 31
-day cells, full width, state colours from tokens plus a pattern per state so colour is
-not the only signal), year switcher, month drill-down listing its unknown stretches.
-Each stretch: "Eintrag anlegen" (domain chooser from `useEnabledDomains`, dates in the
-query) and "Tag im Track" (`/track/:date`). The flight form reads `?addFrom=` to
-pre-fill the departure date; the other domains open their list with the dates shown
-in the notice (Open).
+Two places, one component (`components/gap/GapCalendar.tsx`):
+
+- `/gaps` ("Lücken" under Mehr → Sammlungen, offered once any logbook domain is on). Works
+  WITHOUT TravTrack: then only entries explain a day, the legend leaves out Aufgezeichnet,
+  Zuhause, Privatzone and Unplausibel (unless the server reports such days) and a note says so.
+- `/track/gaps`, a Track tab, for accounts with TravTrack.
+
+Year heatmap (12 month rows, full width, tokens plus hatching so colour is not the only signal),
+year switcher, month drill-down listing its unknown stretches. Each stretch links to "Tag im
+Track" and to every enabled domain's create form: `?addFrom=YYYY-MM-DD&addTo=YYYY-MM-DD` on
+`/trips`, `/flights`, `/lodging`, `/rail`, `/bus`, `/ferry`, `/rentals`, `/places`
+(`useGapPrefill` reads and strips it). Each form opens on the gap: trip, flight, rail, bus,
+ferry, rental directly; a stay asks which house (server search, with "new house"), a place
+visit asks which place likewise. Rail, bus and rental take the days as "day only"; ferry has no
+such flag and starts at 00:00; a flight and a visit take the first day only.
 
 ## Not done / open
 
-- Create forms other than the flight form do not read prefilled dates yet.
+- Creating a NEW house or place from the picker opens the ordinary create form; the gap's days
+  are not carried through it.
 - Home is a refinement of fixes only; a home period without fixes is not claimed.
+- The `/gaps` menu entry is offered when a logbook domain is on, not only when the account
+  already holds entries (the nav has no cheap "has entries" signal).

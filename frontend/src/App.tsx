@@ -61,6 +61,7 @@ import { LOYALTY_SETTINGS_PATH } from "./pages/Settings/settingsModel";
 import { planRoutes } from "./pages/planRoutes";
 import { friendsRoutes } from "./pages/friendsRoutes";
 import { trackRoutes } from "./pages/Track/trackRoutes";
+import { gapRoutes } from "./pages/gapRoutes";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
@@ -259,6 +260,7 @@ function AppContent() {
               {planRoutes(isAuthenticated)}
               {friendsRoutes()}
               {trackRoutes(isAuthenticated)}
+              {gapRoutes(isAuthenticated)}
               <Route
                 path="/login"
                 element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />}

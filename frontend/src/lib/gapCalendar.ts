@@ -35,3 +35,41 @@ export function unknownStretches(data: GapCalendar, month: string): GapRun[] {
     .filter((r) => r.state === "unknown" && r.to >= first && r.from <= last)
     .map((r) => ({ ...r, from: r.from < first ? first : r.from, to: r.to > last ? last : r.to }));
 }
+
+/** The dates a gap hands to a create form: its first day, and its last when it spans more than one. */
+export type GapDates = { from: string; to: string };
+
+/**
+ * `?addFrom=&addTo=` as dates. A first day that is not a real day gives null (the form opens as
+ * if no gap had been named); a missing or earlier last day is the first day.
+ */
+export function gapDatesFromParams(from: string | null, to: string | null): GapDates | null {
+  if (from === null || !isDayString(from)) return null;
+  return { from, to: to !== null && isDayString(to) && to >= from ? to : from };
+}
+
+/** What the gap calendar hands the import panel's manual form (`DomainImportPanel.initialManual`). */
+export type GapPrefill = { kind: "gap"; dates: GapDates };
+
+export const gapPrefill = (dates: GapDates): GapPrefill => ({ kind: "gap", dates });
+
+export function isGapPrefill(value: unknown): value is GapPrefill {
+  return typeof value === "object" && value !== null && (value as GapPrefill).kind === "gap";
+}
+
+/** The create form each domain opens, in the order the gap menu lists them. */
+export const GAP_CREATE_TARGETS = [
+  { id: "trip", domain: null, path: "/trips", label: "track:gaps.target.trip" },
+  { id: "flight", domain: "flight", path: "/flights", label: "track:gaps.target.flight" },
+  { id: "lodging", domain: "lodging", path: "/lodging", label: "track:gaps.target.lodging" },
+  { id: "rail", domain: "rail", path: "/rail", label: "track:gaps.target.rail" },
+  { id: "bus", domain: "bus", path: "/bus", label: "track:gaps.target.bus" },
+  { id: "ferry", domain: "ferry", path: "/ferry", label: "track:gaps.target.ferry" },
+  { id: "rental", domain: "rental", path: "/rentals", label: "track:gaps.target.rental" },
+  { id: "place", domain: "poi", path: "/places", label: "track:gaps.target.place" },
+] as const;
+
+/** Where a target opens its create form for a gap. */
+export function gapCreateUrl(path: string, gap: GapDates): string {
+  return `${path}?addFrom=${gap.from}&addTo=${gap.to}`;
+}

@@ -28,6 +28,11 @@ interface DomainImportPanelProps {
   onOpenOtherImport?: (domain: ParseDomain, document: ImportDocument) => void;
   /** The imports the host can open right now (enabled and visible). */
   openableDomains?: readonly ParseDomain[];
+  /**
+   * Skip the chooser and open the manual form straight away with this prefill
+   * (the gap calendar's "Eintrag anlegen"). The adapter narrows `prefill`.
+   */
+  initialManual?: { prefill: unknown } | null;
 }
 
 interface Mismatch {
@@ -66,6 +71,7 @@ export default function DomainImportPanel({
   initialDocument = null,
   onOpenOtherImport,
   openableDomains = [],
+  initialManual = null,
 }: DomainImportPanelProps): JSX.Element | null {
   const { t } = useTranslation(["import", "common"]);
   const addToast = useToastStore((s) => s.addToast);
@@ -80,9 +86,12 @@ export default function DomainImportPanel({
     if (open) {
       setParseState(null);
       setShowManual(false);
-      setManualPrefill(undefined);
+      setManualPrefill(initialManual?.prefill);
+      setShowManual(initialManual !== null);
       setMismatch(null);
     }
+    // Read when the panel opens: a later change of the request must not reopen a form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const handleError = useCallback(

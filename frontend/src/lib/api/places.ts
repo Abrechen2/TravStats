@@ -49,6 +49,14 @@ export async function listPlaces(query: PlaceListQuery = {}): Promise<Place[]> {
   return out;
 }
 
+/** ONE page of places matching `q` — a picker's search, never a walk of every page. */
+export async function searchPlacesPage(q: string, limit = 20): Promise<Place[]> {
+  const res = await api.get<Envelope<Place[]>>("/places", {
+    params: { ...(q ? { q } : {}), limit, offset: 0 },
+  });
+  return res.data.data ?? [];
+}
+
 /** Total matching places without transferring them — for tab counts. */
 export async function countPlaces(query: PlaceListQuery = {}): Promise<number> {
   const res = await api.get<Envelope<Place[]>>("/places", {

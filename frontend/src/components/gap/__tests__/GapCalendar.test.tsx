@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import type { GapCalendar } from "../../../lib/api/gapCalendar";
+import type { GapCalendar as GapCalendarData } from "../../../lib/api/gapCalendar";
 
 const api = vi.hoisted(() => ({ year: vi.fn() }));
 vi.mock("../../../lib/api/gapCalendar", async (orig) => ({
@@ -25,7 +25,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 
-import TrackGaps from "../TrackGaps";
+import GapCalendar from "../GapCalendar";
 
 /**
  * The gap calendar tab: the unknown stretches are the point of the screen, a
@@ -42,7 +42,7 @@ const counts = {
   unknown: 5,
   outside: 0,
 };
-const DATA: GapCalendar = {
+const DATA: GapCalendarData = {
   year: 2026,
   zone: "UTC",
   today: "2026-11-22",
@@ -59,14 +59,14 @@ const DATA: GapCalendar = {
   ],
 };
 
-const show = () =>
+const show = (withTrack = true) =>
   render(
     <MemoryRouter>
-      <TrackGaps />
+      <GapCalendar withTrack={withTrack} />
     </MemoryRouter>
   );
 
-describe("TrackGaps", () => {
+describe("GapCalendar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     domains.enabled = ["flight"];
@@ -87,8 +87,8 @@ describe("TrackGaps", () => {
     const stretches = screen.getAllByTestId("gaps-stretch");
     expect(stretches).toHaveLength(2);
     expect(stretches[0].textContent).toContain("track:gaps.range");
-    const link = within(stretches[0]).getByText("track:gaps.create").closest("a");
-    expect(link?.getAttribute("href")).toBe("/flights?addFrom=2026-03-04");
+    const link = within(stretches[0]).getByText("track:gaps.target.flight").closest("a");
+    expect(link?.getAttribute("href")).toBe("/flights?addFrom=2026-03-04&addTo=2026-03-07");
     expect(
       within(stretches[0]).getByText("track:gaps.openDay").closest("a")?.getAttribute("href")
     ).toBe("/track/2026-03-04");
@@ -102,11 +102,12 @@ describe("TrackGaps", () => {
     expect(last.textContent).toContain("31");
   });
 
-  it("offers no 'Eintrag anlegen' when no enabled domain can take the dates", async () => {
+  it("offers no domain whose switch is off, only trips", async () => {
     domains.enabled = ["cruise"];
     show();
     await screen.findByTestId("gaps-2026-03");
-    expect(screen.queryByText("track:gaps.create")).toBeNull();
+    expect(screen.queryByText("track:gaps.target.flight")).toBeNull();
+    expect(screen.getAllByText("track:gaps.target.trip").length).toBeGreaterThan(0);
     expect(screen.getAllByText("track:gaps.openDay").length).toBeGreaterThan(0);
   });
 
@@ -131,6 +132,46 @@ describe("TrackGaps", () => {
     show();
     expect(await screen.findByTestId("gaps-empty")).toBeTruthy();
     expect(screen.queryByTestId("gaps-2026-03")).toBeNull();
+  });
+
+  it("without TravTrack the legend leaves out the states only fixes produce and says so", async () => {
+    api.year.mockResolvedValue({ ...DATA, counts: { ...DATA.counts, track: 0, privacyZone: 0 } });
+    show(false);
+    await screen.findByTestId("gaps-2026-03");
+    expect(screen.getByTestId("gaps-no-track")).toBeTruthy();
+    const legend = screen.getByTestId("gaps-legend").textContent ?? "";
+    expect(legend).toContain("track:gaps.state.entry");
+    expect(legend).toContain("track:gaps.state.unknown");
+    expect(legend).not.toContain("track:gaps.state.track");
+    expect(legend).not.toContain("track:gaps.state.privacyZone");
+    expect(legend).not.toContain("track:gaps.state.implausible");
+  });
+
+  it("with TravTrack there is no such note and the legend carries every state", async () => {
+    show(true);
+    await screen.findByTestId("gaps-2026-03");
+    expect(screen.queryByTestId("gaps-no-track")).toBeNull();
+    expect(screen.getByTestId("gaps-legend").textContent).toContain("track:gaps.state.privacyZone");
+  });
+
+  it("offers every enabled domain's create form with the gap's days in the link", async () => {
+    domains.enabled = ["flight", "lodging", "rail", "bus", "ferry", "rental", "poi"];
+    show();
+    await screen.findByTestId("gaps-2026-03");
+    const first = screen.getAllByTestId("gaps-stretch")[0];
+    const hrefs = [...first.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+    for (const path of [
+      "/trips",
+      "/flights",
+      "/lodging",
+      "/rail",
+      "/bus",
+      "/ferry",
+      "/rentals",
+      "/places",
+    ]) {
+      expect(hrefs).toContain(`${path}?addFrom=2026-03-04&addTo=2026-03-07`);
+    }
   });
 
   it("picking another month lists that month's stretches", async () => {

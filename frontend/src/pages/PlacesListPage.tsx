@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useGapPrefill } from "../hooks/useGapPrefill";
+import GapEntityPicker from "../components/gap/GapEntityPicker";
 import GeoExportButtons from "../components/export/GeoExportButtons";
 import { geoExportPaths } from "../lib/api/geoExport";
 import AppShell from "../components/ui/AppShell";
@@ -37,7 +39,7 @@ import { placeCountryCode, placeCountryLabel } from "../lib/placeCountry";
 import { listPlaceLists } from "../lib/api/placeLists";
 import type { PlaceList } from "../types/placeList";
 import { logger } from "../lib/logger";
-import { deletePlace, listPlaces } from "../lib/api/places";
+import { deletePlace, listPlaces, searchPlacesPage } from "../lib/api/places";
 import { useToastStore } from "../store/toastStore";
 import { PLACE_CATEGORIES, PLACE_CATEGORY_FILTER_ALL } from "../shared/placeCategories";
 import { placeCategoryIcon, placeCategoryLabel } from "../lib/placeCategoryDisplay";
@@ -145,7 +147,7 @@ function compareRows(a: Place, b: Place, key: PlaceSortKey, locale: string, t: T
 }
 
 export default function PlacesListPage(): JSX.Element {
-  const { t, i18n } = useTranslation(["places", "common"]);
+  const { t, i18n } = useTranslation(["places", "common", "track"]);
   const { customs } = usePlaceCategories();
   const tableHints = useTableHints();
   const navigate = useNavigate();
@@ -158,6 +160,17 @@ export default function PlacesListPage(): JSX.Element {
   const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Place | null>(null);
   const [creating, setCreating] = useState(false);
+  // The gap calendar's "Eintrag anlegen": which place was visited, then the visit on the gap's
+  // first day (`?addFrom=`). A first day that was not one opens the create form instead.
+  const gap = useGapPrefill();
+  const [gapPick, setGapPick] = useState<string | null>(null);
+  const [gapVisit, setGapVisit] = useState<{ place: Place; day: string } | null>(null);
+  useEffect(() => {
+    if (!gap.request) return;
+    if (gap.request.dates) setGapPick(gap.request.dates.from);
+    else setCreating(true);
+    gap.done();
+  }, [gap]);
   /** The place a visit is being recorded for, from its row (forgejo#231). */
   const [recordingFor, setRecordingFor] = useState<Place | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -685,6 +698,46 @@ export default function PlacesListPage(): JSX.Element {
           )}
         </>
       </div>
+
+      {gapPick && (
+        <GapEntityPicker<Place>
+          title={t("track:gaps.placePicker.title")}
+          hint={t("track:gaps.placePicker.hint", { day: gapPick })}
+          searchLabel={t("track:gaps.placePicker.search")}
+          search={async (q) =>
+            (await searchPlacesPage(q)).map((p) => ({
+              id: p.id,
+              name: p.name,
+              detail: p.city ?? null,
+              data: p,
+            }))
+          }
+          onPick={(pick) => {
+            setGapVisit({ place: pick.data, day: gapPick });
+            setGapPick(null);
+          }}
+          createLabel={t("track:gaps.placePicker.create")}
+          onCreate={() => {
+            setGapPick(null);
+            setCreating(true);
+          }}
+          onClose={() => setGapPick(null)}
+        />
+      )}
+
+      {gapVisit && (
+        <VisitDialog
+          place={gapVisit.place}
+          initialDate={gapVisit.day}
+          afterSaveFailedKey="common:form.savedButRefreshFailed"
+          onClose={() => setGapVisit(null)}
+          onReload={() => void load()}
+          onSaved={async () => {
+            setGapVisit(null);
+            await load();
+          }}
+        />
+      )}
 
       {creating && (
         <PlaceFormModal

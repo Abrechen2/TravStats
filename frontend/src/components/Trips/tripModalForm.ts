@@ -134,7 +134,12 @@ function useTripCover(trip: Trip | null) {
 export type TripModalForm = ReturnType<typeof useTripModalForm>;
 
 /** All field state, the cover handling and the save of the trip modal. */
-export function useTripModalForm(trip: Trip | null, onSaved: () => void) {
+export function useTripModalForm(
+  trip: Trip | null,
+  onSaved: () => void,
+  /** The gap calendar's days: a new trip opens with them as start and end. */
+  initialDates?: { from: string; to: string }
+) {
   const { t } = useTranslation(["trips", "common"]);
   const addToast = useToastStore((s) => s.addToast);
 
@@ -147,8 +152,12 @@ export function useTripModalForm(trip: Trip | null, onSaved: () => void) {
   const preferredColor = useSuggestionSwitchesStore((s) => s.tripDefaultColor);
   const [color, setColor] = useState<string | null>(trip?.color ?? preferredColor);
   const [category, setCategory] = useState<TripCategory | "">(trip?.category ?? "");
-  const [startDate, setStartDate] = useState(toDateInput(trip?.startDate ?? null));
-  const [endDate, setEndDate] = useState(toDateInput(trip?.endDate ?? null));
+  const [startDate, setStartDate] = useState(
+    trip ? toDateInput(trip.startDate ?? null) : (initialDates?.from ?? "")
+  );
+  const [endDate, setEndDate] = useState(
+    trip ? toDateInput(trip.endDate ?? null) : (initialDates?.to ?? "")
+  );
   const [originLabel, setOriginLabel] = useState(trip?.originLabel ?? "");
   const [destinationLabel, setDestinationLabel] = useState(trip?.destinationLabel ?? "");
   const [tags, setTags] = useState<string[]>(trip?.tags ?? []);

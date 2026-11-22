@@ -100,10 +100,12 @@ vi.mock("../../components/lodging/StayEditor", () => ({
     mode: string;
     lodgingId: string;
     lodgingName?: string;
+    initialDates?: { from: string; to: string };
     onSaved: (saved: unknown) => void;
   }) => (
     <div data-testid="stay-editor-stub">
       {props.mode}|{props.lodgingId}|{props.lodgingName}
+      {props.initialDates ? `|${props.initialDates.from}..${props.initialDates.to}` : ""}
       <button type="button" onClick={() => props.onSaved({})}>
         stub-save-stay
       </button>
@@ -239,9 +241,9 @@ async function openFilterPanel(): Promise<void> {
   await userEvent.click(await screen.findByTestId("list-filter-more"));
 }
 
-function renderListPage(): ReturnType<typeof render> {
+function renderListPage(url = "/"): ReturnType<typeof render> {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[url]}>
       <LodgingListPage />
     </MemoryRouter>
   );
@@ -964,6 +966,18 @@ describe("LodgingListPage", () => {
       expect(dialog).toHaveTextContent("lodging:detail.deleteConfirmMessage");
       expect(dialog).not.toHaveTextContent("documents:deleteCascadeNote");
       expect(dialog).not.toHaveTextContent("lodging:detail.deletePhotosNote");
+    });
+
+    // The gap calendar's "Eintrag anlegen": which house, then the stay on the gap's days.
+    it("asks which house for a gap's stay, then opens the stay on the gap's days", async () => {
+      mockRows([makeLodging({ id: "l1", name: "Hotel Adlon" })]);
+      renderListPage("/lodging?addFrom=2024-03-04&addTo=2024-03-07");
+
+      await userEvent.click(await screen.findByRole("button", { name: /Hotel Adlon/ }));
+
+      expect(await screen.findByTestId("stay-editor-stub")).toHaveTextContent(
+        "create|l1|Hotel Adlon|2024-03-04..2024-03-07"
+      );
     });
 
     // forgejo#227: "Wieder hier übernachten" from the row - a new stay at that

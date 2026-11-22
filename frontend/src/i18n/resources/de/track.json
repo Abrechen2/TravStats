@@ -845,7 +845,38 @@
     "range": "{{from}} bis {{to}}",
     "days_one": "{{count}} Tag",
     "days_other": "{{count}} Tage",
-    "create": "Eintrag anlegen",
-    "openDay": "Tag im Track"
+    "openDay": "Tag im Track",
+    "target": {
+      "trip": "Reise",
+      "flight": "Flug",
+      "lodging": "Unterkunft",
+      "rail": "Bahnfahrt",
+      "bus": "Busfahrt",
+      "ferry": "Fährüberfahrt",
+      "rental": "Mietwagen",
+      "place": "Ortsbesuch"
+    },
+    "createFor": "Eintrag anlegen für diese Lücke",
+    "picker": {
+      "loading": "Es wird gesucht …",
+      "failed": "Die Suche hat nicht geklappt. Versuche es erneut.",
+      "none": "Nichts gefunden."
+    },
+    "lodgingPicker": {
+      "title": "In welcher Unterkunft?",
+      "hint": "Der Aufenthalt öffnet mit {{from}} bis {{to}}.",
+      "search": "Unterkunft suchen",
+      "create": "Neue Unterkunft anlegen"
+    },
+    "placePicker": {
+      "title": "Welchen Ort hast du besucht?",
+      "hint": "Der Besuch öffnet am {{day}}.",
+      "search": "Ort suchen",
+      "create": "Neuen Ort anlegen"
+    },
+    "noTrack": "Ohne TravTrack zeigt der Kalender nur Logbucheinträge: Aufgezeichnet, Privatzone und Unplausibel kommen nicht vor.",
+    "openTrack": "Zum Track",
+    "pageTitle": "Lücken im Logbuch",
+    "menu": "Lücken"
   }
 }

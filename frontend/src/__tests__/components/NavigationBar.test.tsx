@@ -283,7 +283,14 @@ describe("NavigationBar — area switch (variant B)", () => {
       within(nav)
         .getAllByRole("link")
         .map((a) => a.getAttribute("href"))
-    ).toEqual(["/track", "/track/explored", "/track/months", "/track/stays", "/track/imports"]);
+    ).toEqual([
+      "/track",
+      "/track/explored",
+      "/track/months",
+      "/track/stays",
+      "/track/gaps",
+      "/track/imports",
+    ]);
     expect(within(nav).queryByRole("button", { name: /nav\.more/ })).toBeNull();
     const current = within(nav).getByRole("link", { name: /track:menu\.explored/ });
     expect(current.getAttribute("aria-current")).toBe("page");

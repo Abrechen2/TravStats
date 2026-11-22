@@ -21,8 +21,19 @@ vi.mock("../../components/ui/AppShell", () => ({
 }));
 vi.mock("../../components/table/LogbookTabs", () => ({ default: () => null }));
 vi.mock("../../components/rental/RentalFormModal", () => ({
-  RentalFormModal: ({ rental }: { rental: { id: string } | null }) => (
-    <div data-testid="rental-form">{rental ? rental.id : "new"}</div>
+  RentalFormModal: ({
+    rental,
+    initialDates,
+  }: {
+    rental: { id: string } | null;
+    initialDates?: { from: string; to: string };
+  }) => (
+    <div
+      data-testid="rental-form"
+      data-dates={initialDates ? `${initialDates.from}..${initialDates.to}` : ""}
+    >
+      {rental ? rental.id : "new"}
+    </div>
   ),
 }));
 vi.mock("../../components/import/DomainImportPanel", () => ({
@@ -78,9 +89,9 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 import RentalsPage from "../RentalsPage";
 import { makeRental } from "../../components/rental/__tests__/rentalFixture";
 
-const renderPage = (): void => {
+const renderPage = (url = "/"): void => {
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[url]}>
       <RentalsPage />
     </MemoryRouter>
   );
@@ -103,6 +114,13 @@ describe("RentalsPage", () => {
       providers: [{ provider: "Sixt" }, { provider: "Testcar" }],
     });
     localStorage.clear();
+  });
+
+  it("opens a new rental on the gap's days when the gap calendar sent them", async () => {
+    renderPage("/rentals?addFrom=2024-03-04&addTo=2024-03-07");
+    const form = await screen.findByTestId("rental-form");
+    expect(form.textContent).toBe("new");
+    expect(form.getAttribute("data-dates")).toBe("2024-03-04..2024-03-07");
   });
 
   it("asks for one page, newest pickup first, and opens a rental from its row", async () => {
