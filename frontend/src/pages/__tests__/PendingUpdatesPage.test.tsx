@@ -61,6 +61,10 @@ vi.mock("../../components/inbox/PlaceCapturesSection", () => ({
 vi.mock("../../components/inbox/DocumentLinkSuggestionsSection", () => ({
   default: () => <div data-testid="document-link-suggestions-stub" />,
 }));
+// Memory/record contradictions load their own list on mount; they have their own tests.
+vi.mock("../../components/inbox/ProvenanceNoticesSection", () => ({
+  default: () => <div data-testid="provenance-notices-stub" />,
+}));
 vi.mock("../../components/GlobeLoader", () => ({ GlobeLoader: () => null }));
 vi.mock("../../lib/api/dataQualityFlags", () => ({
   dataQualityFlagsApi: { getAll: vi.fn(), run: vi.fn(), dismiss: vi.fn(), resolve: vi.fn() },

@@ -102,5 +102,46 @@
       "mergeFailed": "Zusammenführen fehlgeschlagen.",
       "deleteFailed": "Löschen fehlgeschlagen."
     }
+  },
+  "person": {
+    "title": "Person",
+    "back": "Zurück zu den Mitreisenden",
+    "loading": "Die Person wird geladen …",
+    "loadFailed": "Die Seite dieser Person konnte nicht geladen werden.",
+    "notFound": {
+      "title": "Diese Person gibt es nicht",
+      "description": "Die Person gehört nicht zu deinem Konto oder wurde gelöscht."
+    },
+    "unknown": "unbekannt",
+    "first": "Erste gemeinsame Reise",
+    "last": "Zuletzt gemeinsam",
+    "trips": "Gemeinsame Reisen",
+    "flights": "Gemeinsame Flüge",
+    "nights": "Gemeinsame Nächte",
+    "countries": "Gemeinsame Länder",
+    "days": "Gemeinsame Tage",
+    "rule": "Gezählt wird, was stattgefunden hat: Eine Unterkunft zählt erst nach dem Check-out, geplante Reisen sind markiert und zählen nicht. Was sich nicht ermitteln lässt, steht als „unbekannt“, nicht als 0.",
+    "timeline": "Gemeinsam unterwegs",
+    "emptyTimeline": "Mit dieser Person gibt es noch keinen gemeinsamen Eintrag.",
+    "undated": "ohne Datum",
+    "planned": "geplant",
+    "documents": "Belege für diese Person",
+    "emptyDocuments": "Keine Belege für diese Person zugeordnet.",
+    "unnamed": "Beleg",
+    "facts": "Eigene Angaben",
+    "seats": "Sitzplätze und Kabinen",
+    "emptySeats": "Keine Sitzplätze erfasst.",
+    "loyalty": "Bonusnummern",
+    "emptyLoyalty": "Keine Bonusnummern erfasst.",
+    "kind": {
+      "flight": "Flug",
+      "trip": "Reise",
+      "cruise": "Kreuzfahrt",
+      "lodging": "Unterkunft",
+      "rail": "Zug",
+      "bus": "Bus",
+      "ferry": "Fähre",
+      "rental": "Mietwagen"
+    }
   }
 }

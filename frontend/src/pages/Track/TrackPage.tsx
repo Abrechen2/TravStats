@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useTravTrackState } from "../../hooks/useTravTrackVisible";
 import { LastSeenLine } from "../../components/Dashboard/LastSeenCard";
 import TrackExploredMap from "./TrackExploredMap";
+import TrackGaps from "./TrackGaps";
 import TrackGettingStarted from "./TrackGettingStarted";
 import TrackImports from "./TrackImports";
 import TrackMonths from "./TrackMonths";
@@ -23,6 +24,7 @@ const TAB_BODY: Record<TrackTab, () => JSX.Element> = {
   ),
   months: () => <TrackMonths />,
   stays: () => <TrackStays />,
+  gaps: () => <TrackGaps />,
   imports: () => <TrackImports />,
 };
 

@@ -64,6 +64,10 @@ export interface LodgingMembership {
 
 export interface LodgingStay {
   id: string;
+  /** "Aus der Erinnerung" (docs/superpowers/specs/2026-11-22-remembered-facts.md); absent on older servers. */
+  provenance?: "recorded" | "remembered" | null;
+  rememberedOn?: string | null;
+  rememberedNote?: string | null;
   lodgingId: string;
   userId: string;
   tripId: string | null;

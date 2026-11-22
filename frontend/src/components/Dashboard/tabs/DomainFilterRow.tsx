@@ -3,6 +3,7 @@ import { useId } from "react";
 import { Icon, type IconName } from "../../ui/Icon";
 import type { DomainFilterRow as DomainFilterRowData } from "../../../hooks/useDashboardDomainFilter";
 import type { FilterDomainKey } from "../../../shared/dashboardDomainFilter";
+import { RowRoutesToggle, isRouteDomainKey } from "./RowRoutesToggle";
 
 /** Same glyphs `DomainTabStrip` uses for these seven — one visual vocabulary. */
 export const FILTER_ROW_ICON: Record<FilterDomainKey, IconName> = {
@@ -160,6 +161,7 @@ export function DomainFilterRow({
             job is to say what is on the map. */}
         {row.count ?? ""}
       </span>
+      {isRouteDomainKey(row.key) && <RowRoutesToggle domain={row.key} touch={touch} />}
       <button
         type="button"
         title={onlyTooltip}

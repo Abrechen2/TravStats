@@ -34,3 +34,14 @@ export const accountArchiveLimiter = rateLimit({
   skipFailedRequests: true,
   keyGenerator: userOrIpKey,
 });
+
+/** The life book: one build reads the whole account (and fetches its photos). */
+export const lifeBookLimiter = rateLimit({
+  windowMs: RATE_LIMITS.LIFE_BOOK_WINDOW_MS,
+  max: RATE_LIMITS.LIFE_BOOK_MAX,
+  message: { error: "Too many life book requests, please try again later", code: "rate_limited" },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipFailedRequests: true,
+  keyGenerator: userOrIpKey,
+});

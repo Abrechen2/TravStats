@@ -71,6 +71,7 @@
     "flights/trackSource.ts",
     "flights/update.ts",
     "flightsBatch.ts",
+    "gapCalendar.ts",
     "geoExport.ts",
     "geoServer.ts",
     "health.ts",
@@ -189,8 +190,10 @@
     "version.ts"
   ],
   "enveloped": [
+    "activity.ts",
     "entryPhotos.ts",
     "accountArchive.ts",
+    "lifeBook.ts",
     "aircraft.ts",
     "airlines.ts",
     "appImport.ts",
@@ -212,6 +215,7 @@
     "domainBulkEdit.ts",
     "dawarichStays.ts",
     "documentLinkSuggestions.ts",
+    "provenance.ts",
     "documents.ts",
     "documents/extractValues.ts",
     "documents/links.ts",

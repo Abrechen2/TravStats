@@ -165,7 +165,10 @@ function CompanionRow({
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
-          {rank}. {row.name}
+          {rank}.{" "}
+          <Link to={`/mitreisende/${row.id}`} className="underline">
+            {row.name}
+          </Link>
         </span>
         {figure(
           "days",

@@ -491,6 +491,8 @@ export interface SummaryParams {
   toDate?: string;
   year?: number;
   compareYear?: number;
+  /** "Nur belegte": leave out flights entered from memory (`remembered`). */
+  onlyRecorded?: boolean;
 }
 
 // ==================== Timeseries Types ====================

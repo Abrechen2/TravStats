@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 import type { TravelDocument } from "../../../lib/api/documents";
@@ -108,13 +109,13 @@ describe("DocumentsSection — people (D7)", () => {
   });
 
   it("says a document is not assigned yet instead of pretending it is the owner's", async () => {
-    render(<DocumentsSection entry={FLIGHT} />);
+    render(<DocumentsSection entry={FLIGHT} />, { wrapper: MemoryRouter });
     const person = await screen.findByTestId("document-person");
     expect(person).toHaveTextContent("documents:person.pickUndecided");
   });
 
   it("keeps only the person's status in the row; the picker is the row menu's 'Für Person …'", async () => {
-    render(<DocumentsSection entry={FLIGHT} />);
+    render(<DocumentsSection entry={FLIGHT} />, { wrapper: MemoryRouter });
     await screen.findByTestId("document-person");
     expect(screen.queryByRole("combobox")).toBeNull();
   });
@@ -123,7 +124,7 @@ describe("DocumentsSection — people (D7)", () => {
     api.listForEntry.mockResolvedValue([
       doc({ forCompanion: { id: "c1", displayName: "Norbert Nord" }, forSource: "auto" }),
     ]);
-    render(<DocumentsSection entry={FLIGHT} />);
+    render(<DocumentsSection entry={FLIGHT} />, { wrapper: MemoryRouter });
     const person = await screen.findByTestId("document-person");
     expect(person).toHaveTextContent("documents:person.forPerson");
     expect(screen.getByTestId("document-person-auto")).toHaveTextContent("documents:person.auto");
@@ -131,7 +132,7 @@ describe("DocumentsSection — people (D7)", () => {
 
   it("assigns the picked companion to this entry's link and shows the saved answer", async () => {
     api.assignCompanion.mockResolvedValue({ companionId: "c2", companionSource: "user" });
-    render(<DocumentsSection entry={FLIGHT} />);
+    render(<DocumentsSection entry={FLIGHT} />, { wrapper: MemoryRouter });
     const select = await openPersonPicker();
     fireEvent.change(select, { target: { value: "c2" } });
     expect(api.assignCompanion).not.toHaveBeenCalled();
@@ -145,7 +146,7 @@ describe("DocumentsSection — people (D7)", () => {
 
   it("says the assignment failed and keeps the old person", async () => {
     api.assignCompanion.mockRejectedValue(axiosError(500));
-    render(<DocumentsSection entry={FLIGHT} />);
+    render(<DocumentsSection entry={FLIGHT} />, { wrapper: MemoryRouter });
     const select = await openPersonPicker();
     fireEvent.change(select, { target: { value: "c2" } });
     fireEvent.click(screen.getByRole("button", { name: "common:buttons.save" }));
@@ -157,7 +158,7 @@ describe("DocumentsSection — people (D7)", () => {
 
   it("says the person is gone (404) and reloads instead of a generic failure", async () => {
     api.assignCompanion.mockRejectedValue(axiosError(404));
-    render(<DocumentsSection entry={FLIGHT} />);
+    render(<DocumentsSection entry={FLIGHT} />, { wrapper: MemoryRouter });
     const select = await openPersonPicker();
     fireEvent.change(select, { target: { value: "c1" } });
     fireEvent.click(screen.getByRole("button", { name: "common:buttons.save" }));
@@ -180,7 +181,7 @@ describe("DocumentsSection — people (D7)", () => {
           documents: [{ id: "d1", displayName: "BoardingPass.pdf", kind: "boardingPass" }],
         }),
       ]);
-      render(<DocumentsSection entry={FLIGHT} />);
+      render(<DocumentsSection entry={FLIGHT} />, { wrapper: MemoryRouter });
       const panel = await screen.findByTestId("travellers-panel");
       expect(panel).toHaveTextContent("Norbert Nord");
       const facts = within(panel).getByTestId("traveller-facts");
@@ -191,7 +192,7 @@ describe("DocumentsSection — people (D7)", () => {
 
     it("saves one person's facts and re-reads", async () => {
       travellers.setFacts.mockResolvedValue(traveller());
-      render(<DocumentsSection entry={FLIGHT} />);
+      render(<DocumentsSection entry={FLIGHT} />, { wrapper: MemoryRouter });
       fireEvent.click(
         (await screen.findAllByRole("button", { name: "documents:travellers.editLabel" }))[0]
       );
@@ -211,7 +212,7 @@ describe("DocumentsSection — people (D7)", () => {
 
     it("says the facts could not be saved, and keeps the form open", async () => {
       travellers.setFacts.mockRejectedValue(axiosError(500));
-      render(<DocumentsSection entry={FLIGHT} />);
+      render(<DocumentsSection entry={FLIGHT} />, { wrapper: MemoryRouter });
       fireEvent.click(
         (await screen.findAllByRole("button", { name: "documents:travellers.editLabel" }))[0]
       );

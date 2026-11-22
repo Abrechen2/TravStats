@@ -8,7 +8,6 @@ import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { cruiseApi } from "../../../lib/api/cruise";
 import { logger } from "../../../lib/logger";
-import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
 import {
   intervalOverlapsRange,
   useDashboardFilterStore,
@@ -16,8 +15,8 @@ import {
 import type { Cruise } from "../../../types/cruise";
 import MapContainer3D from "../../MapContainer3D";
 import { buildPortFrequencyLayer } from "../modes/buildPortFrequencyLayer";
-import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
-import type { ActivityItem } from "../sidebars/activityItems";
+import { ActivityFeedPanel } from "../sidebars/ActivityFeedPanel";
+import { ALWAYS_ON, useActivityFeedSelection } from "../sidebars/useActivityFeedSelection";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 import { SidebarToggle } from "../SidebarToggle";
 import { MapEmptyOverlay } from "./MapEmptyOverlay";
@@ -38,8 +37,11 @@ export function CruisesTab(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
   const navigate = useNavigate();
+  const activitySelection = useActivityFeedSelection({
+    cruises: cruises,
+    domainFilter: ALWAYS_ON,
+  });
 
   const loadCruises = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -54,19 +56,6 @@ export function CruisesTab(): JSX.Element {
       setLoading(false);
     }
   }, []);
-
-  const handleSelectCruise = useCallback(
-    (cruise: Cruise): void => {
-      setCruiseSelection(cruise);
-    },
-    [setCruiseSelection]
-  );
-  const handleCruiseDetails = useCallback(
-    (cruise: Cruise): void => {
-      navigate(`/cruises/${cruise.id}`);
-    },
-    [navigate]
-  );
 
   // Domain-gating: never fetch cruise data while the domain is disabled —
   // the tab renders the DomainDisabledNotice stub instead (see below).
@@ -174,18 +163,13 @@ export function CruisesTab(): JSX.Element {
       {/* Same sidebar as every other tab, pinned to this domain. The bespoke
           CruiseListPanel is gone: it never sorted at all and only looked right
           because the API happened to return startDate desc. */}
-      <UnifiedActivityPanel
-        cruises={visibleCruises}
-        lockedKind="cruise"
+      <ActivityFeedPanel
+        domains={["cruise"]}
         title={t("dashboard:sidebar.cruises")}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onSelect={(item: ActivityItem) => {
-          if ("cruise" in item.payload) handleSelectCruise(item.payload.cruise);
-        }}
-        onDetails={(item: ActivityItem) => {
-          if ("cruise" in item.payload) handleCruiseDetails(item.payload.cruise);
-        }}
+        onSelect={activitySelection.onSelect}
+        onDetails={activitySelection.onDetails}
       />
       {loading && (
         <div

@@ -49,7 +49,8 @@ export type JobKind =
   | "dawarich.countryDaySweep"
   | "documentLinks.pass"
   | "accountArchive.export"
-  | "accountArchive.import";
+  | "accountArchive.import"
+  | "lifeBook.export";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 

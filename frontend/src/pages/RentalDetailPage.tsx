@@ -1,5 +1,6 @@
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { useEffect, useState } from "react";
+import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
@@ -234,6 +235,13 @@ export default function RentalDetailPage(): JSX.Element {
           </>
         }
       />
+      <div style={{ margin: "var(--ts-space-sm) 0" }}>
+        <ProvenanceDetails
+          entryType="rentalBooking"
+          entry={rental}
+          onSaved={() => setReloadKey((k) => k + 1)}
+        />
+      </div>
 
       {rental.invoiceMissing ? (
         <p className="t-caption mb-3" data-testid="rental-invoice-missing">

@@ -1,0 +1,46 @@
+{
+  "marker": {
+    "label": "from memory",
+    "title": "Entered from memory – dates are approximate",
+    "on": "remembered on {{date}}"
+  },
+  "editor": {
+    "legend": "Where this information comes from",
+    "unknown": "Unknown",
+    "recorded": "Documented (document, booking, recording)",
+    "remembered": "From memory",
+    "rememberedOn": "Remembered on",
+    "note": "Your words about it",
+    "notePlaceholder": "e.g. summer 1998, about two weeks, by car",
+    "hint": "From memory means the dates are approximate. The figures still count, but can be hidden.",
+    "save": "Save",
+    "saved": "Origin saved.",
+    "error": "The origin could not be saved. Please try again."
+  },
+  "notices": {
+    "title": "Memory and record disagree",
+    "description": "Something here comes from memory, and a record names another date. Nothing is overwritten – edit the entry or leave both as they are.",
+    "outsideRememberedSpan": "\"{{remembered}}\" (from memory, {{rFrom}} – {{rTo}}) – but the entry \"{{recorded}}\" says {{cFrom}}.",
+    "outsideRecordedSpan": "\"{{remembered}}\" (from memory, {{rFrom}}) lies outside \"{{recorded}}\" ({{cFrom}} – {{cTo}}).",
+    "dismiss": "Leave both",
+    "type": {
+      "trip": "Trip",
+      "flight": "Flight",
+      "lodgingStay": "Stay",
+      "railJourney": "Train ride",
+      "busJourney": "Bus ride",
+      "ferryJourney": "Ferry",
+      "rentalBooking": "Rental car",
+      "cruise": "Cruise",
+      "placeVisit": "Visit"
+    },
+    "errors": {
+      "load": "The conflicts between memory and record could not be loaded.",
+      "answer": "The answer could not be saved. Please try again."
+    }
+  },
+  "stats": {
+    "onlyRecorded": "Documented only",
+    "onlyRecordedHint": "Hides everything entered from memory – for every figure on this page."
+  }
+}

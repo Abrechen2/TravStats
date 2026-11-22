@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { recordedStaySql } from "../provenance/recordedSql";
 import { Prisma } from "../../prisma";
 import type { StayListQuery } from "../../schemas/lodging";
 import { withStayTimes } from "./timesDto";
@@ -26,7 +27,7 @@ const END_DAY = Prisma.sql`COALESCE(s.check_out_date, s.check_out::date, s.check
  * undated stay has no day and so touches no window.
  */
 function stayListConditions(userId: string, query: StayListQuery): Prisma.Sql {
-  const conditions: Prisma.Sql[] = [Prisma.sql`s.user_id = ${userId}`];
+  const conditions: Prisma.Sql[] = [Prisma.sql`s.user_id = ${userId}`, recordedStaySql("s")];
   if (query.tripId !== undefined) conditions.push(Prisma.sql`s.trip_id = ${query.tripId}`);
   if (query.to !== undefined) conditions.push(Prisma.sql`${CHECK_IN_DAY} <= ${query.to}::date`);
   if (query.from !== undefined) conditions.push(Prisma.sql`${END_DAY} >= ${query.from}::date`);

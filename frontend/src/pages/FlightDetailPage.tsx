@@ -52,6 +52,8 @@ import FlightDayCard, { dayCardShown } from "../components/flightDetail/FlightDa
 import BookingItinerary from "../components/flightDetail/BookingItinerary";
 import BookingPrice from "../components/flightDetail/BookingPrice";
 import FlightProfileLink from "../components/flightDetail/FlightProfileLink";
+import RememberedMarker from "../components/provenance/RememberedMarker";
+import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import { useFlightBooking } from "../components/flightDetail/useFlightBooking";
 
 /**
@@ -75,7 +77,13 @@ import { useFlightBooking } from "../components/flightDetail/useFlightBooking";
 export default function FlightDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation(["flights", "common", "trips", "specialFlights"]);
+  const { t, i18n } = useTranslation([
+    "flights",
+    "common",
+    "trips",
+    "specialFlights",
+    "provenance",
+  ]);
   const addToast = useToastStore((s) => s.addToast);
   const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
   const weightUnit = useSettingsStore((state) => state.units?.weightUnit);
@@ -257,6 +265,7 @@ export default function FlightDetailPage(): JSX.Element {
           <>
             {flight.specialType && <SpecialTypeBadge type={flight.specialType as SpecialType} />}
             <FlightStatusCell flight={flight} />
+            <RememberedMarker entry={flight} />
           </>
         }
         meta={[
@@ -455,6 +464,12 @@ export default function FlightDetailPage(): JSX.Element {
             aircraftModeS={flight.aircraftModeS}
           />
           <FlightProfileLink flightId={flight.id} departure={departure} />
+
+          <ProvenanceDetails
+            entryType="flight"
+            entry={flight}
+            onSaved={() => setReloadKey((k) => k + 1)}
+          />
 
           <DetailSection
             title={t("flights:form.aircraft")}

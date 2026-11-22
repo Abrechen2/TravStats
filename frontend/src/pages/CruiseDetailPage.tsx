@@ -1,3 +1,4 @@
+import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
@@ -283,6 +284,13 @@ export default function CruiseDetailPage(): JSX.Element {
           </>
         }
       />
+      <div style={{ margin: "var(--ts-space-sm) 0" }}>
+        <ProvenanceDetails
+          entryType="cruise"
+          entry={cruise}
+          onSaved={() => setReloadKey((k) => k + 1)}
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
         <div className="flex flex-col gap-6 md:col-span-3">

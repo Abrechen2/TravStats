@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { JSX } from "react";
+import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import {
@@ -79,9 +80,13 @@ export function TravellersPanel({
             style={{ gap: "var(--ts-space-xs)" }}
           >
             <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
-              <span className="text-sm" style={{ fontWeight: 600 }}>
+              <Link
+                to={`/mitreisende/${c.companionId}`}
+                className="text-sm underline"
+                style={{ fontWeight: 600 }}
+              >
                 {c.displayName}
-              </span>
+              </Link>
               <span className="t-caption">
                 {c.documents.length === 0
                   ? t("documents:travellers.noDocuments")

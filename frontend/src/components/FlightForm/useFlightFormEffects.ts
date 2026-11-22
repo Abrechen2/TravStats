@@ -86,7 +86,12 @@ function useArrivalEstimate(
 }
 
 /** The create form's effects: settings defaults, derived status, notice handling and the arrival estimate. */
-export function useFlightFormEffects(s: FlightFormState, refs: FlightFormRefs): void {
+export function useFlightFormEffects(
+  s: FlightFormState,
+  refs: FlightFormRefs,
+  /** A day the form opens on instead of today (the gap calendar's "Eintrag anlegen"). */
+  initialDate?: string
+): void {
   const baseCurrency = useSettingsStore((st) => st.baseCurrency);
   const defaults = useSettingsStore((st) => st.defaults);
   const { stepNoticeRef, arrivalDateSetRef, confirmedFlightsRef } = refs;
@@ -109,7 +114,7 @@ export function useFlightFormEffects(s: FlightFormState, refs: FlightFormRefs): 
   // Initialize defaults from settings
   useEffect(() => {
     // Today in the profile zone (Q1) — neither UTC nor the browser's.
-    const today = todayIn(todayZoneNow());
+    const today = initialDate ?? todayIn(todayZoneNow());
     setSearchDate(today);
     setDepartureDate(today);
     setArrivalDate(today);

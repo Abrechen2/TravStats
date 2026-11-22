@@ -414,6 +414,33 @@
       "generic": "That did not work (server error). Nothing was imported. Please try again later."
     }
   },
+  "lifeBook": {
+    "title": "Life book",
+    "sub": "Your travel log as one single file that stays readable without TravStats for decades.",
+    "help": "One HTML file with all trips, days, maps, photos and evidence of the chosen scope. It needs no internet and no JavaScript. To print or save as PDF: open it in the browser and choose Print (A4, one trip per page).",
+    "button": "Create life book",
+    "scope": "Scope",
+    "scopeAll": "All",
+    "scopeYear": "Year",
+    "scopeTrip": "Trip",
+    "year": "Year",
+    "trip": "Trip",
+    "pickTrip": "Choose a trip",
+    "tripsFailed": "The trips could not be loaded. Reload the page.",
+    "building": "Building the life book",
+    "done": "{{trips}} trips, {{entries}} entries, {{photos}} photos, downloaded",
+    "photosSkipped": "Note: {{count}} photos could not be read and are missing from the book.",
+    "note": "It holds trips with a day list, a route map (without a map background), a selection of photos (at most 24 per trip, downscaled) and the kind of evidence attached. Entries with an unknown date appear as \"Date unknown\", never on a guessed day.",
+    "failed": {
+      "LIFE_BOOK_EMPTY": "There are no entries in this scope.",
+      "LIFE_BOOK_TOO_LARGE": "The book would be too large for this server. Choose a single year or a single trip.",
+      "LIFE_BOOK_BUSY": "A life book is already being built for this account.",
+      "LIFE_BOOK_NOT_FOUND": "The finished book is gone. Please create it again.",
+      "TRIP_NOT_FOUND": "This trip does not exist (any more).",
+      "rate_limited": "Too many attempts in a short time. Please try again in an hour.",
+      "generic": "That did not work (server error). Please try again later."
+    }
+  },
   "password": {
     "title": "Change Password",
     "oldPassword": "Current Password",

@@ -27,7 +27,11 @@
     "run": "Jetzt prüfen",
     "remove": "Entfernen",
     "privateNote": "Nur öffentliche Server sind erlaubt; ein Server im eigenen Netz kann hier nicht eingetragen werden.",
-    "menuLabel": "Weitere Aktionen zum Postfach"
+    "menuLabel": "Weitere Aktionen zum Postfach",
+    "removeConfirm": {
+      "title": "Ordner entfernen?",
+      "message": "Die Verbindung zum Ordner „{{folder}}“ wird gelöscht, samt dem gespeicherten Passwort. Deine Mails bleiben unberührt."
+    }
   },
   "status": {
     "never": "Noch nie geprüft.",
@@ -76,7 +80,15 @@
     "senderAdd": "Erlauben",
     "senderRemove": "Entfernen",
     "menuLabel": "Weitere Aktionen zur Weiterleitungsadresse",
-    "senderMenuLabel": "Weitere Aktionen zum Absender {{name}}"
+    "senderMenuLabel": "Weitere Aktionen zum Absender {{name}}",
+    "revokeConfirm": {
+      "title": "Adresse widerrufen?",
+      "message": "Die Weiterleitungsadresse {{address}} funktioniert danach nicht mehr; Mails an sie werden verworfen."
+    },
+    "senderRemoveConfirm": {
+      "title": "Absender entfernen?",
+      "message": "Mails von {{address}} werden nicht mehr angenommen."
+    }
   },
   "inbox": {
     "title": "Aus deiner Mail",

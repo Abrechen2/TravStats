@@ -13,17 +13,21 @@ import type { Place } from "../types/place";
 interface PlaceSelectionState {
   selectedPlaceId: string | null;
   selectedPlace: Place | null;
-  setSelection: (place: Place | null) => void;
+  /** The entry of that place the selection is ABOUT (a stay, a visit), when it is one of several. */
+  selectedEntryId: string | null;
+  setSelection: (place: Place | null, entryId?: string) => void;
   clearSelection: () => void;
 }
 
 export const usePlaceSelectionStore = create<PlaceSelectionState>()((set) => ({
   selectedPlaceId: null,
   selectedPlace: null,
-  setSelection: (place) =>
+  selectedEntryId: null,
+  setSelection: (place, entryId) =>
     set({
+      selectedEntryId: entryId ?? null,
       selectedPlace: place,
       selectedPlaceId: place?.id ?? null,
     }),
-  clearSelection: () => set({ selectedPlace: null, selectedPlaceId: null }),
+  clearSelection: () => set({ selectedPlace: null, selectedPlaceId: null, selectedEntryId: null }),
 }));

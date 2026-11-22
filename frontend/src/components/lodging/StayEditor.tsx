@@ -85,6 +85,8 @@ interface StayEditorProps {
    * look before sending again. Omitted where the caller cannot do that.
    */
   onReload?: () => void;
+  /** The gap calendar's days: a new stay opens with them as check-in and check-out. */
+  initialDates?: { from: string; to: string };
 }
 
 /**
@@ -117,6 +119,7 @@ export function StayEditor({
   afterSaveFailedKey = "common:form.savedButViewRefreshFailed",
   onRequestDelete,
   onReload,
+  initialDates,
 }: StayEditorProps): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common"]);
   const fid = useId();
@@ -134,7 +137,8 @@ export function StayEditor({
   // recorded fact, not a suggestion.
   const initial = stayDraftFields(
     stay,
-    currencyForCountry(lodgingCountryCode) ?? baseCurrency ?? "EUR"
+    currencyForCountry(lodgingCountryCode) ?? baseCurrency ?? "EUR",
+    initialDates
   );
 
   const [checkIn, setCheckIn] = useState<string>(initial.checkIn);

@@ -29,6 +29,7 @@ import ProfileZonePrompt from "./components/ProfileZonePrompt";
 import DemoBetaNotice from "./components/DemoBetaNotice";
 import SetupIncompleteBanner from "./components/SetupIncompleteBanner";
 import UsageStatsConsentDialog from "./components/UsageStatsConsentDialog";
+import RecordedOnlyBoundary from "./components/provenance/RecordedOnlyBoundary";
 
 const ComparisonPage = lazy(() => import("./pages/ComparisonPage"));
 
@@ -61,6 +62,7 @@ import { LOYALTY_SETTINGS_PATH } from "./pages/Settings/settingsModel";
 import { planRoutes } from "./pages/planRoutes";
 import { friendsRoutes } from "./pages/friendsRoutes";
 import { trackRoutes } from "./pages/Track/trackRoutes";
+import { gapRoutes } from "./pages/gapRoutes";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
@@ -72,6 +74,7 @@ const RoadtripDetailPage = lazy(() => import("./pages/RoadtripDetailPage"));
 const StravaCallbackPage = lazy(() => import("./pages/StravaCallbackPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
 const NotesPage = lazy(() => import("./pages/NotesPage"));
+const PersonTimelinePage = lazy(() => import("./pages/PersonTimelinePage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const DesignPage = lazy(() => import("./pages/DesignPage"));
@@ -259,6 +262,7 @@ function AppContent() {
               {planRoutes(isAuthenticated)}
               {friendsRoutes()}
               {trackRoutes(isAuthenticated)}
+              {gapRoutes(isAuthenticated)}
               <Route
                 path="/login"
                 element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />}
@@ -666,6 +670,10 @@ function AppContent() {
               />
               {/* Standalone notes (forgejo#137): no domain gate — a note needs none. */}
               <Route
+                path="/mitreisende/:id"
+                element={isAuthenticated ? <PersonTimelinePage /> : <Navigate to="/login" />}
+              />
+              <Route
                 path="/notes"
                 element={isAuthenticated ? <NotesPage /> : <Navigate to="/login" />}
               />
@@ -684,7 +692,15 @@ function AppContent() {
               />
               <Route
                 path="/stats"
-                element={isAuthenticated ? <AdvancedStatsPage /> : <Navigate to="/login" />}
+                element={
+                  isAuthenticated ? (
+                    <RecordedOnlyBoundary>
+                      <AdvancedStatsPage />
+                    </RecordedOnlyBoundary>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
               />
               {/* One settings area (settings rebuild): `/settings/<page>` holds the
                   account's pages and, for an admin, the server's. `/settings`

@@ -150,6 +150,19 @@ export function useNavItems(): {
         label: t("dashboard:achievements"),
         icon: "trophy",
       },
+      // Where the logbook is silent (gap calendar). It needs no TravTrack: entries alone
+      // explain days. Offered once any domain is on, i.e. once there is a logbook.
+      ...(domainChildren.length > 0
+        ? [
+            {
+              kind: "leaf" as const,
+              id: "gaps",
+              path: "/gaps",
+              label: t("track:gaps.menu"),
+              icon: "calendar" as const,
+            },
+          ]
+        : []),
       // Standalone notes (forgejo#137) belong to no domain and no trip, so the
       // entry is there whatever domains are on — a moment needs no flight.
       // A collection like the others here: something the user keeps, not a

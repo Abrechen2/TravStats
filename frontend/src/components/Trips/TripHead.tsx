@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import RememberedMarker from "../provenance/RememberedMarker";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import type { useTranslation } from "../../hooks/useTranslation";
@@ -126,6 +127,7 @@ export default function TripHead({
               <span className="ts-status-pill" style={statusPillStyle(STATUS_TONE[trip.status])}>
                 {t(`trips:status.${trip.status}`)}
               </span>
+              <RememberedMarker entry={trip} />
               {meta.length > 0 && (
                 <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
                   {meta.join(" · ")}

@@ -128,7 +128,7 @@ export interface MapAppearance {
   railStationSize?: number;
   rentalLineWidth?: number;
   rentalMarkerSize?: number;
-  /** Absent = the one-way link is drawn (the behaviour before the switch). */
+  /** Legacy: read once into `routesVisible.rental` (mapRoutes). Never written. */
   rentalShowLine?: boolean;
   /** Whether the lodging LIST panel is open (its own state, not the map
    *  control panel's `panelExpanded`). It used to open on every mount, so

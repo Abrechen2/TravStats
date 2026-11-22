@@ -148,6 +148,8 @@ export interface PlaceCardDatum {
   /** Visits that have actually happened. */
   visitCount?: number;
   lastVisitAt?: string | null;
+  /** The visit the selection is about, when it came from a list row (null date: undated). */
+  focusVisit?: { visitedAt: string | null };
 }
 
 /**

@@ -25,8 +25,19 @@ vi.mock("../../components/ui/AppShell", () => ({
 }));
 vi.mock("../../components/table/LogbookTabs", () => ({ default: () => null }));
 vi.mock("../../components/rail/RailFormModal", () => ({
-  RailFormModal: ({ journey }: { journey: { id: string } | null }) => (
-    <div data-testid="rail-form">{journey ? journey.id : "new"}</div>
+  RailFormModal: ({
+    journey,
+    initialDraft,
+  }: {
+    journey: { id: string } | null;
+    initialDraft?: { departureLocal: string; arrivalLocal: string };
+  }) => (
+    <div
+      data-testid="rail-form"
+      data-gap={initialDraft ? `${initialDraft.departureLocal}..${initialDraft.arrivalLocal}` : ""}
+    >
+      {journey ? journey.id : "new"}
+    </div>
   ),
 }));
 // A new ride starts at the import chooser (ticket or by hand); its own tests
@@ -97,9 +108,9 @@ import { chooseFromBareMenu } from "../../__tests__/helpers/menu";
 
 // A row opens the journey's own page since the detail page (phase 2b); the
 // loyalty notice reads the URL, so the page renders inside a router.
-const renderPage = (): void => {
+const renderPage = (url = "/"): void => {
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[url]}>
       <RailPage />
     </MemoryRouter>
   );
@@ -181,6 +192,13 @@ describe("RailPage", () => {
     listForEntry.mockReset().mockResolvedValue([]);
     stats.mockReset().mockResolvedValue({ byYear: [{ year: 2025 }, { year: 2026 }] });
     localStorage.clear();
+  });
+
+  it("opens a new ride on the gap's days when the gap calendar sent them", async () => {
+    renderPage("/rail?addFrom=2024-03-04&addTo=2024-03-07");
+    const form = await screen.findByTestId("rail-form");
+    expect(form.textContent).toBe("new");
+    expect(form.getAttribute("data-gap")).toBe("2024-03-04..2024-03-07");
   });
 
   it("lists journeys with times on each station's own clock", async () => {

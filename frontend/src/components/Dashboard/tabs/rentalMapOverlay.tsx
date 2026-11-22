@@ -19,6 +19,7 @@ import { rentalApi } from "../../../lib/api/rental";
 import type { RentalBooking } from "../../../types/rental";
 import { logger } from "../../../lib/logger";
 import { MapLoadFailedNotice } from "../../map/MapLoadFailedNotice";
+import { useRoutesVisible } from "../../../store/mapRoutesStore";
 
 type Translate = (key: string) => string;
 
@@ -159,7 +160,8 @@ export function useRentalOverlay(show: boolean, onGlobe: boolean, t: Translate):
   const { rentals, failed, loading, reload } = useDashboardRentals(show, year);
   const { colorOf } = useDomainColors();
   const color = colorOf("rental");
-  const { rentalLineWidth, rentalMarkerSize, rentalShowLine } = useOverlayAppearance();
+  const { rentalLineWidth, rentalMarkerSize } = useOverlayAppearance();
+  const rentalShowLine = useRoutesVisible("rental");
   const style = useMemo<RentalMapStyle>(
     () => ({ lineWidth: rentalLineWidth, markerSize: rentalMarkerSize, showLine: rentalShowLine }),
     [rentalLineWidth, rentalMarkerSize, rentalShowLine]

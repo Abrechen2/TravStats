@@ -69,7 +69,9 @@ describe("CompanionsSection", () => {
     const used = await rowOf("c1");
     expect(used.queryByRole("button", { name: "companions:manage.actions.delete" })).toBeNull();
     expect(used.getByText("companions:manage.inUseHint")).toBeTruthy();
-    expect(used.getByRole("link").getAttribute("href")).toBe("/settings/freunde#accounts");
+    expect(used.getByRole("link", { name: /linkAccount/ }).getAttribute("href")).toBe(
+      "/settings/freunde#accounts"
+    );
     const free = await rowOf("c3");
     api.remove.mockResolvedValue();
     await userEvent.click(free.getByRole("button", { name: "companions:manage.actions.delete" }));

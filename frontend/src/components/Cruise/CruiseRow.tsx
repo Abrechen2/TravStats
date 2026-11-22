@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import RememberedMarker from "../provenance/RememberedMarker";
 import type { Cruise } from "../../types";
 import TripPill from "../Trips/TripPill";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -87,8 +88,11 @@ export function CruiseRow({ cruise, onOpen, actions, columns }: Props): JSX.Elem
       </>
     ),
     status: (
-      <span className="ts-status-pill" style={cruiseStatusPillStyle(cruise.status)}>
-        {t(`status.${cruise.status}`)}
+      <span className="inline-flex flex-col items-start gap-1">
+        <span className="ts-status-pill" style={cruiseStatusPillStyle(cruise.status)}>
+          {t(`status.${cruise.status}`)}
+        </span>
+        <RememberedMarker entry={cruise} />
       </span>
     ),
     cabin: cruise.cabinNumber ?? "—",

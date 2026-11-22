@@ -17,7 +17,6 @@ const KEY = "mapAppearance.v2";
 describe("overlayAppearanceFromStored", () => {
   it("reads an empty blob as today's look: every multiplier 1, the rental link shown", () => {
     expect(overlayAppearanceFromStored({})).toEqual(DEFAULT_OVERLAY_APPEARANCE);
-    expect(DEFAULT_OVERLAY_APPEARANCE.rentalShowLine).toBe(true);
     expect(DEFAULT_OVERLAY_APPEARANCE.railLineWidth).toBe(1);
   });
 
@@ -30,7 +29,6 @@ describe("overlayAppearanceFromStored", () => {
       railStationSize: 1.2,
       rentalLineWidth: 0.7,
       rentalMarkerSize: 1.6,
-      rentalShowLine: false,
     });
     expect(out).toEqual({
       tourLineWidth: 0.5,
@@ -40,7 +38,6 @@ describe("overlayAppearanceFromStored", () => {
       railStationSize: 1.2,
       rentalLineWidth: 0.7,
       rentalMarkerSize: 1.6,
-      rentalShowLine: false,
     });
   });
 
@@ -49,12 +46,10 @@ describe("overlayAppearanceFromStored", () => {
       railLineWidth: "thick",
       railStationSize: Number.NaN,
       rentalMarkerSize: null,
-      rentalShowLine: "no",
     });
     expect(out.railLineWidth).toBe(1);
     expect(out.railStationSize).toBe(1);
     expect(out.rentalMarkerSize).toBe(1);
-    expect(out.rentalShowLine).toBe(true);
   });
 
   it("clamps an out-of-range number into what the slider can show", () => {
@@ -69,8 +64,8 @@ describe("loadOverlayAppearance — the persisted blob", () => {
 
   it("reads the overlay fields back from the shared blob after a merge-write", () => {
     saveMapAppearance({ styleId: "dark" });
-    saveMapAppearance({ railLineWidth: 1.5, rentalShowLine: false });
-    expect(loadOverlayAppearance()).toMatchObject({ railLineWidth: 1.5, rentalShowLine: false });
+    saveMapAppearance({ railLineWidth: 1.5, rentalMarkerSize: 0.5 });
+    expect(loadOverlayAppearance()).toMatchObject({ railLineWidth: 1.5, rentalMarkerSize: 0.5 });
     // The merge-write left the neighbouring field alone.
     expect(JSON.parse(window.localStorage.getItem(KEY) ?? "{}").styleId).toBe("dark");
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 
 import MailIntakeSettingsCard from "../MailIntakeSettingsCard";
 import { mailIntakeApi, type MailIntakeStatus } from "../../../lib/api/mailIntake";
@@ -87,6 +87,51 @@ describe("MailIntakeSettingsCard (forgejo#313)", () => {
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain("mailIntake:errors.unreachable")
     );
+  });
+
+  it("asks, naming what goes, before removing the folder, the address or a sender", async () => {
+    vi.mocked(mailIntakeApi.status).mockResolvedValue(
+      status({
+        forwardingAvailable: true,
+        address: "trips+abc@example.org",
+        senders: [{ id: "s1", address: "me@gmail.example" }],
+      })
+    );
+    vi.mocked(mailIntakeApi.removeSource).mockResolvedValue(undefined);
+    vi.mocked(mailIntakeApi.revokeAddress).mockResolvedValue(undefined);
+    vi.mocked(mailIntakeApi.removeSender).mockResolvedValue(status());
+    render(<MailIntakeSettingsCard />);
+
+    const cases: Array<[() => HTMLElement, string, string, () => unknown]> = [
+      [
+        () => screen.getByTestId("mail-folder-menu"),
+        "mailIntake:folder.remove",
+        "mailIntake:folder.removeConfirm.message",
+        () => mailIntakeApi.removeSource,
+      ],
+      [
+        () => screen.getByTestId("mail-address-menu"),
+        "mailIntake:forwarding.revoke",
+        "mailIntake:forwarding.revokeConfirm.message",
+        () => mailIntakeApi.revokeAddress,
+      ],
+      [
+        () => screen.getByLabelText("mailIntake:forwarding.senderMenuLabel"),
+        "mailIntake:forwarding.senderRemove",
+        "mailIntake:forwarding.senderRemoveConfirm.message",
+        () => mailIntakeApi.removeSender,
+      ],
+    ];
+    await screen.findByTestId("mail-address");
+    for (const [trigger, entry, message, fn] of cases) {
+      chooseMenuEntry(trigger(), entry);
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog.textContent).toContain(message);
+      expect(fn()).not.toHaveBeenCalled();
+      fireEvent.click(within(dialog).getByRole("button", { name: entry }));
+      await waitFor(() => expect(fn()).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    }
   });
 
   it("says plainly when the admin switched the feature off, and offers no form", async () => {

@@ -245,6 +245,17 @@ function stationOf(r: RentalBooking, end: "pickup" | "return"): RentalStationDra
 }
 
 /** The form, filled from a stored rental — times on each station's clock, from `times`. */
+/** A new rental: empty, or — from the gap calendar — picked up and returned on the gap's days, day only. */
+export function emptyRentalDraft(gap?: { from: string; to: string }): RentalDraft {
+  if (!gap) return EMPTY_RENTAL_DRAFT;
+  return {
+    ...EMPTY_RENTAL_DRAFT,
+    pickupLocal: gap.from,
+    returnLocal: gap.to,
+    dayOnly: { ...NO_DAY_ONLY, pickup: true, return: true },
+  };
+}
+
 export function draftFromRental(r: RentalBooking): RentalDraft {
   return {
     provider: r.provider,

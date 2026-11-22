@@ -37,13 +37,16 @@ import flightBookingRoutes from "./flights/booking";
 import flightBulkEditRoutes from "./flights/bulkEdit";
 import domainBulkEditRoutes from "./domainBulkEdit";
 import upcomingRoutes from "./upcoming";
+import activityRoutes from "./activity";
 import searchRoutes from "./search";
 import dawarichStayRoutes from "./dawarichStays";
 import locationSuggestionRoutes from "./locationSuggestions";
+import gapCalendarRoutes from "./gapCalendar";
 import locationCapabilitiesRoutes from "./locationCapabilities";
 import photoJourneyRoutes from "./photoJourneys";
 import tripSuggestionRoutes from "./tripSuggestions";
 import documentLinkSuggestionRoutes from "./documentLinkSuggestions";
+import provenanceRoutes from "./provenance";
 import flightLookupRoutes from "./flightLookup";
 import statsRoutes from "./stats";
 import statsFlightInsightsRoutes from "./stats/flightInsights";
@@ -70,6 +73,7 @@ import imageParseRoutes from "./imageParse";
 import diagnosticExportRoutes from "./diagnosticExport";
 import meExportRoutes from "./meExport";
 import accountArchiveRoutes from "./accountArchive";
+import lifeBookRoutes from "./lifeBook";
 import setupRoutes from "./setup";
 import versionRoutes from "./version";
 import adminRoutes from "./admin";
@@ -252,6 +256,8 @@ export const apiMounts: ApiMount[] = [
     base: "/api/v1/location-suggestions",
     router: locationSuggestionRoutes,
   },
+  // Where the logbook is silent, per day (spec 2026-11-22-gap-calendar).
+  { id: "gapCalendar", base: "/api/v1/gap-calendar", router: gapCalendarRoutes },
   // What the Companion should record (TravTrack plan S4); answers every session.
   {
     id: "locationCapabilities",
@@ -322,6 +328,8 @@ export const apiMounts: ApiMount[] = [
   // The dashboard tab strip's "next up" line — one route for every domain,
   // so the strip never depends on which tab happens to have loaded.
   { id: "upcoming", base: "/api/v1/upcoming", router: upcomingRoutes },
+  // The dashboard "Aktivität" list: one merged, cursor-paged feed of every domain.
+  { id: "activity", base: "/api/v1/activity", router: activityRoutes },
   // One query across every domain (forgejo#403); web header + Companion.
   { id: "search", base: "/api/v1/search", router: searchRoutes },
   { id: "photoJourneys", base: "/api/v1/photo-journeys", router: photoJourneyRoutes },
@@ -332,6 +340,8 @@ export const apiMounts: ApiMount[] = [
     base: "/api/v1/document-link-suggestions",
     router: documentLinkSuggestionRoutes,
   },
+  // "Aus der Erinnerung" marks and the contradiction notices (spec 2026-11-22-remembered-facts).
+  { id: "provenance", base: "/api/v1/provenance", router: provenanceRoutes },
   { id: "flightLookup", base: "/api/v1/flight-lookup", router: flightLookupRoutes },
   // One arc of the globe (forgejo#132 item 9). Its own base because
   // `routes/stats.ts` may not grow; it brings that router's middlewares along.
@@ -394,6 +404,8 @@ export const apiMounts: ApiMount[] = [
   { id: "meExport", base: "/api/v1/me", router: meExportRoutes },
   // Moving one account to another server as a ZIP (forgejo#433).
   { id: "accountArchive", base: "/api/v1/me/account-archive", router: accountArchiveRoutes },
+  // The life book: one offline HTML chronicle of the logbook.
+  { id: "lifeBook", base: "/api/v1/me/life-book", router: lifeBookRoutes },
   { id: "parserTemplates", base: "/api/v1/parser-templates", router: parserTemplatesRoutes },
   { id: "backup", base: "/api/v1/backup", router: backupRoutes },
   { id: "pendingUpdates", base: "/api/v1/pending-updates", router: pendingUpdatesRoutes },

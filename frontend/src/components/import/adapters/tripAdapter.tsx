@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { isGapPrefill } from "../../../lib/gapCalendar";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
@@ -146,8 +147,13 @@ export function useTripImportAdapter(onTripsChanged: () => void): DomainImportAd
       },
     ],
     manualLabel: t("import:trip.manual"),
-    renderManual: ({ onClose, onSaved }) => (
-      <TripModal trip={null} onClose={onClose} onSaved={onSaved} />
+    renderManual: ({ onClose, onSaved, prefill }) => (
+      <TripModal
+        trip={null}
+        initialDates={isGapPrefill(prefill) ? prefill.dates : undefined}
+        onClose={onClose}
+        onSaved={onSaved}
+      />
     ),
     renderReviewModal: renderPackageReview,
   };

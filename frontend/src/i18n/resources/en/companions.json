@@ -102,5 +102,46 @@
       "mergeFailed": "Merging failed.",
       "deleteFailed": "Deleting failed."
     }
+  },
+  "person": {
+    "title": "Person",
+    "back": "Back to companions",
+    "loading": "Loading this person …",
+    "loadFailed": "This person's page could not be loaded.",
+    "notFound": {
+      "title": "This person does not exist",
+      "description": "They are not part of your account or were deleted."
+    },
+    "unknown": "unknown",
+    "first": "First trip together",
+    "last": "Last time together",
+    "trips": "Trips together",
+    "flights": "Flights together",
+    "nights": "Nights together",
+    "countries": "Countries together",
+    "days": "Days together",
+    "rule": "Only what has happened is counted: a stay counts once its check-out is past, planned trips are marked and do not count. What cannot be determined reads \"unknown\", not 0.",
+    "timeline": "Travelled together",
+    "emptyTimeline": "No shared entry with this person yet.",
+    "undated": "undated",
+    "planned": "planned",
+    "documents": "Documents for this person",
+    "emptyDocuments": "No documents assigned to this person.",
+    "unnamed": "Document",
+    "facts": "Own details",
+    "seats": "Seats and cabins",
+    "emptySeats": "No seats recorded.",
+    "loyalty": "Loyalty numbers",
+    "emptyLoyalty": "No loyalty numbers recorded.",
+    "kind": {
+      "flight": "Flight",
+      "trip": "Trip",
+      "cruise": "Cruise",
+      "lodging": "Stay",
+      "rail": "Train",
+      "bus": "Bus",
+      "ferry": "Ferry",
+      "rental": "Rental car"
+    }
   }
 }

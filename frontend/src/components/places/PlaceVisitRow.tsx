@@ -1,4 +1,6 @@
 import ShareLinkButton from "../shareLinks/ShareLinkButton";
+import ProvenanceDetails from "../provenance/ProvenanceDetails";
+import RememberedMarker from "../provenance/RememberedMarker";
 import type { JSX } from "react";
 
 import DocumentsSection from "../documents/DocumentsSection";
@@ -89,6 +91,7 @@ export function PlaceVisitRow({
                 {timeText}
               </span>
             )}
+            <RememberedMarker entry={visit} />
             {state === "planned" && (
               <span className="ts-status-pill shrink-0" style={statusPillStyle("scheduled")}>
                 {plannedLabel}
@@ -193,6 +196,7 @@ export function PlaceVisitRow({
             onChanged={onChanged}
           />
           <VisitExpenses visitId={visit.id} />
+          <ProvenanceDetails entryType="placeVisit" entry={visit} onSaved={onChanged} />
           {/* A visit that has not happened can be shared too: "wir treffen uns hier". */}
           <div>
             <ShareLinkButton kind="visit" targetId={visit.id} variant="link" />

@@ -334,9 +334,15 @@ export function pinnedFromSpecialFlight(flight: Flight): MapPinned | null {
  * `Lodging`, which is what lets the globe's pin click hand the card the same
  * record without a second shape in between.
  */
-export function pinnedFromLodging(lodging: Lodging): MapPinned | null {
+export function pinnedFromLodging(lodging: Lodging, stayId?: string | null): MapPinned | null {
   if (lodging.lat == null || lodging.lon == null) return null;
-  return { kind: "lodging", anchorLngLat: [lodging.lon, lodging.lat], data: lodging };
+  // A hotel has several stays and the card names ONE ("which stay" is
+  // `latestStayFacts`). A selection about a particular stay narrows the datum to
+  // it, so a planned stay is shown as the upcoming one rather than the card
+  // falling back to the latest past visit. The counts are server totals, untouched.
+  const only = stayId ? lodging.stays.filter((s) => s.id === stayId) : [];
+  const data = only.length > 0 ? { ...lodging, stays: only } : lodging;
+  return { kind: "lodging", anchorLngLat: [lodging.lon, lodging.lat], data };
 }
 
 /**
@@ -345,6 +351,10 @@ export function pinnedFromLodging(lodging: Lodging): MapPinned | null {
  * `lat`/`lon` are NOT NULL on a place, so unlike a lodging this never abstains
  * — the type says a place that cannot be drawn is not creatable.
  */
-export function pinnedFromPlace(place: Place): MapPinned {
-  return { kind: "place", anchorLngLat: [place.lon, place.lat], data: place };
+export function pinnedFromPlace(place: Place, visitId?: string | null): MapPinned {
+  // A place has several visits; a selection about one carries its date so the
+  // card names that visit, not only the lifetime figures.
+  const visit = visitId ? place.visits?.find((v) => v.id === visitId) : undefined;
+  const data = visit ? { ...place, focusVisit: { visitedAt: visit.visitedAt } } : place;
+  return { kind: "place", anchorLngLat: [place.lon, place.lat], data };
 }

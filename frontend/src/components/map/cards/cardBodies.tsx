@@ -248,6 +248,12 @@ export function PlaceBody({
           : t("places:list.visitsCount", { count: data.visitCount ?? 0 })}
       </Hero>
       <Grid>
+        {data.focusVisit?.visitedAt && (
+          <Row
+            label={t("map:tooltip.visit")}
+            value={formatDate(data.focusVisit.visitedAt, locale)}
+          />
+        )}
         {data.lastVisitAt && (
           <Row label={t("map:tooltip.lastVisit")} value={formatDate(data.lastVisitAt, locale)} />
         )}

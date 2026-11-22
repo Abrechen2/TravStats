@@ -33,6 +33,7 @@ import SharingTab from "../components/inbox/SharingTab";
 import PasswordResetRequestsSection from "../components/inbox/PasswordResetRequestsSection";
 import UnfiledDocumentsSection from "../components/inbox/UnfiledDocumentsSection";
 import DocumentLinkSuggestionsSection from "../components/inbox/DocumentLinkSuggestionsSection";
+import ProvenanceNoticesSection from "../components/inbox/ProvenanceNoticesSection";
 import MailIntakeSection from "../components/inbox/MailIntakeSection";
 import { usePhotoJourneysVisible } from "../components/inbox/usePhotoJourneysVisible";
 
@@ -114,6 +115,7 @@ export default function PendingUpdatesPage(): JSX.Element {
           <MailIntakeSection />
           <UnfiledDocumentsSection />
           <DocumentLinkSuggestionsSection />
+          <ProvenanceNoticesSection />
           <PlaceCapturesSection />
           <InboxWorkspace
             photosVisible={photoJourneysVisible}

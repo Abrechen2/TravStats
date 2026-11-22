@@ -270,6 +270,13 @@ export default function MailIntakeSettingsCard(): JSX.Element | null {
                       key: "remove",
                       label: t("mailIntake:folder.remove"),
                       danger: true,
+                      confirm: {
+                        title: t("mailIntake:folder.removeConfirm.title"),
+                        message: t("mailIntake:folder.removeConfirm.message", {
+                          folder: source.folder,
+                        }),
+                        confirmText: t("mailIntake:folder.remove"),
+                      },
                       disabled: isDemo || busy,
                       onSelect: () =>
                         void run(async () => {
@@ -350,6 +357,13 @@ export default function MailIntakeSettingsCard(): JSX.Element | null {
                           key: "revoke",
                           label: t("mailIntake:forwarding.revoke"),
                           danger: true,
+                          confirm: {
+                            title: t("mailIntake:forwarding.revokeConfirm.title"),
+                            message: t("mailIntake:forwarding.revokeConfirm.message", {
+                              address: status.address ?? "",
+                            }),
+                            confirmText: t("mailIntake:forwarding.revoke"),
+                          },
                           disabled: isDemo || busy,
                           onSelect: () =>
                             void run(async () => {
@@ -397,6 +411,13 @@ export default function MailIntakeSettingsCard(): JSX.Element | null {
                               key: "remove",
                               label: t("mailIntake:forwarding.senderRemove"),
                               danger: true,
+                              confirm: {
+                                title: t("mailIntake:forwarding.senderRemoveConfirm.title"),
+                                message: t("mailIntake:forwarding.senderRemoveConfirm.message", {
+                                  address: s.address,
+                                }),
+                                confirmText: t("mailIntake:forwarding.senderRemove"),
+                              },
                               disabled: busy,
                               onSelect: () =>
                                 void run(async () => {

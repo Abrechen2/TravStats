@@ -22,8 +22,19 @@ vi.mock("../../components/ui/AppShell", () => ({
 }));
 vi.mock("../../components/table/LogbookTabs", () => ({ default: () => null }));
 vi.mock("../../components/bus/BusFormModal", () => ({
-  BusFormModal: ({ journey }: { journey: { id: string } | null }) => (
-    <div data-testid="bus-form">{journey ? journey.id : "new"}</div>
+  BusFormModal: ({
+    journey,
+    initialDraft,
+  }: {
+    journey: { id: string } | null;
+    initialDraft?: Record<string, unknown>;
+  }) => (
+    <div
+      data-testid="bus-form"
+      data-gap={initialDraft ? `${initialDraft.departureLocal}..${initialDraft.arrivalLocal}` : ""}
+    >
+      {journey ? journey.id : "new"}
+    </div>
   ),
 }));
 vi.mock("../../components/ui/ConfirmModal", () => ({
@@ -70,9 +81,9 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 import BusPage from "../BusPage";
 import { chooseMenuEntry, menuTriggerIn } from "../../__tests__/helpers/menu";
 
-const renderPage = (): void => {
+const renderPage = (url = "/"): void => {
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[url]}>
       <BusPage />
     </MemoryRouter>
   );
@@ -112,6 +123,12 @@ describe("BusPage", () => {
     navigate.mockReset();
     documentCount.value = null;
     localStorage.clear();
+  });
+  it("opens a new ride on the gap's days when the gap calendar sent them", async () => {
+    renderPage("/bus?addFrom=2024-03-04&addTo=2024-03-07");
+    const form = await screen.findByTestId("bus-form");
+    expect(form.textContent).toBe("new");
+    expect(form.getAttribute("data-gap")).toBe("2024-03-04..2024-03-07");
   });
 
   it("lists the rides with operator, route, terminal-clock times and status", async () => {

@@ -320,6 +320,83 @@ registry.registerPath({
   },
 });
 
+const feedDomainEnum = z.enum([
+  "flight",
+  "cruise",
+  "lodging",
+  "poi",
+  "rail",
+  "bus",
+  "ferry",
+  "rental",
+  "roadtrip",
+  "tour",
+]);
+
+registry.registerPath({
+  method: "get",
+  path: "/activity/feed",
+  summary: "The dashboard activity list, every domain merged",
+  description:
+    "Every entry of every domain the account may see (enabled, and not hidden by the instance's " +
+    "beta switch) as one list, newest first with planned entries on top: ordered by `sortAt` " +
+    "descending, then the domain order of the enum, then the id descending; undated entries last. " +
+    "Cursor-paged: pass `nextCursor` back as `cursor`; a page never repeats or skips a row. " +
+    "`date` is the entry's own local day; `sortAt` only orders. A stay is one row per stay and a " +
+    "place one row per visit. `point` is a place to zoom to, `bbox` (`[west, south, east, north]`) " +
+    "a route to fit; both null means no coordinates. `failed` names domains whose reader errored: " +
+    "for those the page is incomplete, not empty. Needs server 2.8.0-rc.43 or newer.",
+  tags: ["Dashboard"],
+  request: {
+    query: z.object({
+      cursor: z.string().optional().describe("`nextCursor` of the previous page"),
+      limit: z.coerce.number().int().min(1).max(200).optional().describe("Default 50"),
+      domains: z
+        .string()
+        .optional()
+        .describe("Comma list narrowing the domains; unknown names are a 400"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "One page",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              items: z.array(
+                z.object({
+                  key: z.string(),
+                  domain: feedDomainEnum,
+                  id: z.string(),
+                  subjectId: z
+                    .string()
+                    .describe("What a click selects: the lodging of a stay, the place of a visit"),
+                  title: z.string(),
+                  subtitle: z.string().nullable(),
+                  place: z.string().nullable(),
+                  date: localDateValueSchema.nullable(),
+                  sortAt: z.string().nullable(),
+                  planned: z.boolean(),
+                  point: z.object({ lat: z.number(), lon: z.number() }).nullable(),
+                  bbox: z.array(z.number()).length(4).nullable(),
+                  path: z.string(),
+                })
+              ),
+              nextCursor: z.string().nullable(),
+              failed: z.array(feedDomainEnum),
+              domains: z.array(feedDomainEnum),
+            }),
+          }),
+        },
+      },
+    },
+    400: { description: "Malformed cursor, limit or domain", content: errorContent },
+    401: { description: "Missing or invalid token", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/currencies/recent",

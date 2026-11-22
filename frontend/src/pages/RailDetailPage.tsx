@@ -1,5 +1,6 @@
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { useEffect, useState } from "react";
+import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
@@ -285,6 +286,13 @@ export default function RailDetailPage(): JSX.Element {
           </>
         }
       />
+      <div style={{ margin: "var(--ts-space-sm) 0" }}>
+        <ProvenanceDetails
+          entryType="railJourney"
+          entry={journey}
+          onSaved={() => setReloadKey((k) => k + 1)}
+        />
+      </div>
 
       {isConvertedFromRoadtrip(journey) && (
         <p className="t-caption mb-4" data-testid="rail-converted-note">

@@ -318,7 +318,8 @@
     "rentalSame": "Mietwagen · Abholung und Rückgabe",
     "rentalPickup": "Mietwagen · Abholung",
     "rentalReturn": "Mietwagen · Rückgabe",
-    "rentalLink": "Mietwagen · Einwegmiete"
+    "rentalLink": "Mietwagen · Einwegmiete",
+    "visit": "Besuch"
   },
   "styleFallback": {
     "notice": "Der Kartenanbieter ist gerade nicht erreichbar. Du siehst eine vereinfachte Ersatzkarte.",

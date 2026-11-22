@@ -181,7 +181,7 @@ export function DomainFilterButton({
         bottom: "calc(100% + 8px)",
         right: 0,
         zIndex: 40,
-        width: 300,
+        width: "min(360px, calc(100vw - 24px))", // the row carries a routes switch beside "Only"
         maxHeight: "min(70vh, 480px)",
         overflowY: "auto",
         background: "var(--ts-surface2)",

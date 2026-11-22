@@ -59,6 +59,9 @@ vi.mock("@/lib/api/dataQualityFlags", async (importOriginal) => {
 // The trip-suggestion count joins the badge (2026-09-26); unmocked it reaches
 // the network. Hoisted so a case can put suggestions in the inbox.
 const tripSuggestionCount = vi.hoisted(() => ({ value: 0 }));
+vi.mock("@/lib/api/provenance", () => ({
+  provenanceApi: { count: vi.fn(async () => 0) },
+}));
 vi.mock("@/lib/api/documentLinkSuggestions", () => ({
   documentLinkSuggestionsApi: { count: vi.fn(async () => 0) },
 }));
@@ -283,7 +286,14 @@ describe("NavigationBar — area switch (variant B)", () => {
       within(nav)
         .getAllByRole("link")
         .map((a) => a.getAttribute("href"))
-    ).toEqual(["/track", "/track/explored", "/track/months", "/track/stays", "/track/imports"]);
+    ).toEqual([
+      "/track",
+      "/track/explored",
+      "/track/months",
+      "/track/stays",
+      "/track/gaps",
+      "/track/imports",
+    ]);
     expect(within(nav).queryByRole("button", { name: /nav\.more/ })).toBeNull();
     const current = within(nav).getByRole("link", { name: /track:menu\.explored/ });
     expect(current.getAttribute("aria-current")).toBe("page");

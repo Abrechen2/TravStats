@@ -40,7 +40,7 @@ function routePair(q: string): [string, string] | null {
 }
 
 /** The departure's local day, read the way every flight read does (`flightTimes`): stored zone, else today's catalogue zone. */
-async function flightDepartureDay(
+export async function flightDepartureDay(
   f: FlightTimeColumns & {
     depIata: string | null;
     depIcao: string | null;

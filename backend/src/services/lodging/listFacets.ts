@@ -24,6 +24,7 @@
  * against the TypeScript rule over the same rows.
  */
 
+import { recordedStaySql } from "../provenance/recordedSql";
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import type { LodgingListQuery as LodgingQueryInput } from "../../schemas/lodging";
@@ -155,7 +156,7 @@ async function yearFacet(
     SELECT EXTRACT(YEAR FROM s.check_in)::int AS year, COUNT(DISTINCT agg.id) AS count
     FROM agg
     JOIN lodging_stays s ON s.lodging_id = agg.id
-    WHERE s.check_in IS NOT NULL
+    WHERE s.check_in IS NOT NULL AND ${recordedStaySql("s")}
     GROUP BY 1
     ORDER BY 1 DESC
   `);
@@ -207,7 +208,7 @@ async function summarise(
            COALESCE(SUM(${stayNightsSql()}) FILTER (WHERE ${counts}), 0)::int AS nights,
            COUNT(DISTINCT c.name) AS chains
     FROM agg
-    LEFT JOIN lodging_stays s ON s.lodging_id = agg.id
+    LEFT JOIN lodging_stays s ON s.lodging_id = agg.id AND ${recordedStaySql("s")}
     LEFT JOIN lodging_chains c ON c.id = agg.chain_id
   `);
   return {

@@ -1,4 +1,7 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
+import { useGapPrefill } from "../hooks/useGapPrefill";
+import { busGapDraft } from "../components/bus/busGapDraft";
+import type { BusFormDraft } from "../components/bus/busFormModel";
 import DomainBulkBar from "../components/bulkEdit/DomainBulkBar";
 import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
 import { busFerryBulkRow } from "../components/bulkEdit/bulkRows";
@@ -64,7 +67,7 @@ type BusSortField = (typeof BUS_SORT_FIELDS)[number];
 const YEAR_SCAN_LIMIT = 500;
 
 type Filters = Pick<BusListQuery, "q" | "status" | "year">;
-type Editing = { journey: BusJourney | null } | null;
+type Editing = { journey: BusJourney | null; draft?: BusFormDraft } | null;
 
 /**
  * The bus logbook (spec 2026-10-07-bus-domain-design §11), in the layout every
@@ -90,6 +93,16 @@ export default function BusPage(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<BusStatus | "all">("all");
   const [yearFilter, setYearFilter] = useState<number | "all">("all");
   const [editing, setEditing] = useState<Editing>(null);
+  // The gap calendar's "Eintrag anlegen": a new ride on the gap's days (`?addFrom=&addTo=`).
+  const gap = useGapPrefill();
+  useEffect(() => {
+    if (!gap.request) return;
+    setEditing({
+      journey: null,
+      draft: gap.request.dates ? busGapDraft(gap.request.dates) : undefined,
+    });
+    gap.done();
+  }, [gap]);
   const [toDelete, setToDelete] = useState<BusJourney | null>(null);
   const [deleting, setDeleting] = useState(false);
   // Asked only while the confirmation is open: deleting a ride takes its filed documents along.
@@ -364,6 +377,7 @@ export default function BusPage(): JSX.Element {
       {editing && (
         <BusFormModal
           journey={editing.journey}
+          initialDraft={editing.draft}
           onClose={(): void => setEditing(null)}
           onReload={editing.journey ? undefined : reload}
           onSaved={handleSaved}

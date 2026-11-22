@@ -39,6 +39,7 @@ import enWhatsNew from "./resources/en/whatsNew.json";
 import enReadiness from "./resources/en/readiness.json";
 import enUsageStats from "./resources/en/usageStats.json";
 import enPushRelay from "./resources/en/pushRelay.json";
+import enProvenance from "./resources/en/provenance.json";
 import enSettingsRows from "./resources/en/settingsRows.json";
 import enLodging from "./resources/en/lodging.json";
 import enLocation from "./resources/en/location.json";
@@ -89,6 +90,7 @@ import deWhatsNew from "./resources/de/whatsNew.json";
 import deReadiness from "./resources/de/readiness.json";
 import deUsageStats from "./resources/de/usageStats.json";
 import dePushRelay from "./resources/de/pushRelay.json";
+import deProvenance from "./resources/de/provenance.json";
 import deSettingsRows from "./resources/de/settingsRows.json";
 import deLodging from "./resources/de/lodging.json";
 import deLocation from "./resources/de/location.json";
@@ -161,6 +163,7 @@ const resources = {
     readiness: enReadiness,
     usageStats: enUsageStats,
     pushRelay: enPushRelay,
+    provenance: enProvenance,
     settingsRows: enSettingsRows,
     lodging: enLodging,
     location: enLocation,
@@ -214,6 +217,7 @@ const resources = {
     readiness: deReadiness,
     usageStats: deUsageStats,
     pushRelay: dePushRelay,
+    provenance: deProvenance,
     settingsRows: deSettingsRows,
     lodging: deLodging,
     location: deLocation,
@@ -276,6 +280,7 @@ i18n.use(initReactI18next).init({
     "readiness",
     "usageStats",
     "pushRelay",
+    "provenance",
     "settingsRows",
     "lodging",
     "location",

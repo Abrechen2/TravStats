@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { LodgingGapStay } from "../components/lodging/LodgingGapStay";
 import AppShell from "../components/ui/AppShell";
 import type { JSX } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -705,6 +706,9 @@ export default function LodgingListPage(): JSX.Element {
             }}
           />
         )}
+
+        {/* The gap calendar's "Eintrag anlegen": which house, then a stay on the gap's days. */}
+        <LodgingGapStay onCreateHouse={() => setShowAdd(true)} onReload={reloadAll} />
 
         {restayAt && (
           // Nothing is carried over but the house: dates, room, booking

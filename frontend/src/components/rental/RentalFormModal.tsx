@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { GapDates } from "../../lib/gapCalendar";
 import type { JSX, KeyboardEvent } from "react";
 import Modal from "../Modal";
 import {
@@ -14,7 +15,7 @@ import { isOutcomeUnknownSaveError, isTransientSaveError } from "../../lib/saveE
 import { logger } from "../../lib/logger";
 import type { RentalBooking } from "../../types/rental";
 import {
-  EMPTY_RENTAL_DRAFT,
+  emptyRentalDraft,
   draftFromRental,
   rentalInputFromDraft,
   rentalSaveError,
@@ -46,6 +47,8 @@ interface Props {
    * look before sending again. Omitted where the caller cannot do that.
    */
   onReload?: () => void;
+  /** The gap calendar's days: a new rental opens with pickup and return on them, day only. */
+  initialDates?: GapDates;
 }
 
 const tabId = (step: RentalFormStep): string => `rental-form-step-${step}`;
@@ -84,12 +87,13 @@ export function RentalFormModal({
   initialStep,
   afterSaveFailedKey,
   onReload,
+  initialDates,
 }: Props): JSX.Element {
   const { t } = useTranslation(["rental", "common"]);
   // ONE source for the starting draft — the state AND the dirty baseline —
   // read once per opening, so an edit form never opens already "changed".
   const [opened] = useState<RentalDraft>(() =>
-    rental ? draftFromRental(rental) : EMPTY_RENTAL_DRAFT
+    rental ? draftFromRental(rental) : emptyRentalDraft(initialDates)
   );
   const [draft, setDraft] = useState<RentalDraft>(opened);
   const [step, setStep] = useState<RentalFormStep>(initialStep ?? openingStep(rental));

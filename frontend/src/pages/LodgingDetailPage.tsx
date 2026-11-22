@@ -1,5 +1,6 @@
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { useEffect, useState } from "react";
+import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import TagChips from "../components/common/TagChips";
 import WikipediaCard from "../components/common/WikipediaCard";
 import type { JSX, ReactNode } from "react";
@@ -70,7 +71,7 @@ export default function LodgingDetailPage(): JSX.Element {
   const fromChain =
     (location.state as { fromChain?: { id: number; name: string } } | null)?.fromChain ?? null;
   const backTo = fromChain ? `/lodging/chains/${fromChain.id}` : "/lodging";
-  const { t } = useTranslation(["lodging", "common", "openData"]);
+  const { t } = useTranslation(["lodging", "common", "openData", "provenance"]);
   const { labelOf } = useRatingCategories();
   const backLabel = fromChain ? fromChain.name : t("lodging:list.title");
   const addToast = useToastStore((s) => s.addToast);
@@ -494,6 +495,11 @@ export default function LodgingDetailPage(): JSX.Element {
                         membershipSource={resolvedMembership.source}
                       />
                       <EntryPhotos kind="stay" entryId={stay.id} />
+                      <ProvenanceDetails
+                        entryType="lodgingStay"
+                        entry={stay}
+                        onSaved={() => void reloadLodgingQuietly()}
+                      />
                     </div>
                   );
                 })}
