@@ -1011,7 +1011,10 @@
       "testedWith": {
         "account": "Tested: your own key",
         "instance": "Tested: the server's key"
-      }
+      },
+      "storedVerdict": "Server key – last tested by the admin: {{result}}, {{when}}",
+      "storedOk": "OK",
+      "storedFailed": "failed"
     },
     "status": {
       "needsConsent": "Waiting for your consent",
@@ -1044,7 +1047,8 @@
       "not_configured": "Not set up. I sent no request.",
       "unknown": "I couldn't check this.",
       "no_instance_key": "No instance key stored. I sent no request.",
-      "http_404": "The provider answers \"404 not found\". The service or address does not exist there (any more)."
+      "http_404": "The provider answers \"404 not found\". The service or address does not exist there (any more).",
+      "no_admin_test": "The admin has not tested the server's key yet."
     },
     "smtp": {
       "SMTP_CONNECTION": "I can't reach the mail server. Are address and port right?",

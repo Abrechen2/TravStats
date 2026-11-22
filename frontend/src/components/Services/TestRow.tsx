@@ -45,6 +45,19 @@ export default function TestRow({
     setFresh(null);
     try {
       const result = await run();
+      if (result.storedInstanceVerdict && result.lastTest) {
+        const ok = result.lastTest.ok;
+        setFresh({
+          ok,
+          text: t("settingsRows:services.ui.storedVerdict", {
+            result: t(
+              ok ? "settingsRows:services.ui.storedOk" : "settingsRows:services.ui.storedFailed"
+            ),
+            when: formatDateTime(result.lastTest.at),
+          }),
+        });
+        return;
+      }
       setFresh(
         result.ok
           ? {

@@ -99,6 +99,9 @@ export interface ServiceTestResult {
   usedQuota: boolean;
   /** Whose credential was used; "none" when nothing was called. Absent on a server before 2.8. */
   source?: "account" | "instance" | "none";
+  /** Nothing was called: `lastTest` is the admin's stored verdict on the server's key. */
+  storedInstanceVerdict?: boolean;
+  lastTest?: ServiceLastTest | null;
 }
 
 export type EffectiveSource = "account" | "instance" | "none" | "off";

@@ -38,9 +38,11 @@ import {
 import { testAdsbLolKey, testAdsbxKey, testAirplanesLive } from "../apiKeyTesterAdsbx";
 import { testAeroapiKey } from "../apiKeyTesterAeroapi";
 import { getService } from "./catalogue";
-import { loadAdminState, isEnabled } from "./adminView";
-import { offReasonFor } from "./policy";
-import { recordTest, type LastTest } from "./tests";
+import { loadAdminState, isEnabled, isCloudAi } from "./adminView";
+import { effectiveSourceFor, isEnabledForConsent } from "./accountView";
+import { currentConsentDestination } from "./consentBinding";
+import { offReasonFor, parsePrefs } from "./policy";
+import { loadAllTests, recordTest, type LastTest } from "./tests";
 import type { FieldDef, ServiceDef } from "./types";
 
 export interface TestOutcome {
@@ -51,6 +53,8 @@ export interface TestOutcome {
   /** Whose credential was used; "none" when nothing was called. */
   source: "account" | "instance" | "none";
   lastTest: LastTest | null;
+  /** Set when nothing was called: `lastTest` is the admin's stored verdict on the instance key. */
+  storedInstanceVerdict?: boolean;
 }
 
 /** Testers that answer a real, metered API request. */
@@ -91,6 +95,7 @@ export const TEST_REASONS = [
   "not_found",
   "not_configured",
   "no_instance_key",
+  "no_admin_test",
   "http_404",
   "disabled",
   "unknown",
@@ -287,7 +292,7 @@ export async function testInstanceService(
     const ownHas =
       service.requiredFields.length > 0 &&
       service.requiredFields.every((k) => own[k] !== undefined && own[k] !== null) &&
-      !state.policy.accountKeysForbidden.includes(id);
+      effectiveSourceFor(service, state, parsePrefs(row?.externalServicePrefs), true) === "account";
     if (ownHas) {
       const outcome = await run(service, own, opts.userId);
       const lastTest = await recordTest(opts.userId, id, outcome.ok, outcome.reason);
@@ -313,6 +318,40 @@ export async function testInstanceService(
   return { ...outcome, usedQuota: metered, source: "instance", lastTest };
 }
 
+/** A test of the instance key spends the instance's quota or budget (metered API, paid AI). */
+function isInstanceMetered(service: ServiceDef): boolean {
+  return (
+    (service.tester !== undefined && METERED.has(service.tester)) || service.tester === "llmCloud"
+  );
+}
+
+async function isAdminUser(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
+  return user?.isAdmin === true;
+}
+
+/**
+ * The gates the real request path applies before it falls back to the instance
+ * key: not switched off (admin or account), enabled, and - for a cloud AI
+ * provider - released by the admin and consented to by this account.
+ * Returns the reason to refuse, or null.
+ */
+async function instanceGate(
+  service: ServiceDef,
+  state: Awaited<ReturnType<typeof loadAdminState>>,
+  prefs: ReturnType<typeof parsePrefs>
+): Promise<TestReason | null> {
+  if (effectiveSourceFor(service, state, prefs, false) !== "instance") return "disabled";
+  if (!isEnabled(service, state)) return "disabled";
+  if (service.ai && isCloudAi(service, state)) {
+    if (!isEnabledForConsent(service, state, false)) return "disabled";
+    const entry = prefs.aiConsent[service.ai.kind];
+    const bound = currentConsentDestination(state.admin, service.ai.kind);
+    if (!entry || bound === null || entry.destination !== bound) return "disabled";
+  }
+  return null;
+}
+
 /**
  * Account test: the credential that is EFFECTIVE for this account - its own
  * when it set one (and the admin allows it), otherwise the instance's. The
@@ -333,7 +372,7 @@ export async function testAccountService(id: string, userId: string): Promise<Te
   const ownHas =
     service.requiredFields.length > 0 &&
     service.requiredFields.every((k) => own[k] !== undefined && own[k] !== null) &&
-    !state.policy.accountKeysForbidden.includes(id);
+    effectiveSourceFor(service, state, parsePrefs(row?.externalServicePrefs), true) === "account";
   const metered = METERED.has(service.tester);
   if (ownHas) {
     const outcome = await run(service, own, userId);
@@ -341,12 +380,38 @@ export async function testAccountService(id: string, userId: string): Promise<Te
     return { ...outcome, usedQuota: metered, source: "account", lastTest };
   }
   if (instanceHasCredential(service, state.admin)) {
+    const gate = await instanceGate(service, state, parsePrefs(row?.externalServicePrefs));
+    if (gate) return { ok: false, reason: gate, usedQuota: false, source: "none", lastTest: null };
+    // A metered instance key is the admin's quota: an ordinary account reads the admin's
+    // last verdict instead of spending it.
+    if (isInstanceMetered(service) && !(await isAdminUser(userId))) {
+      const stored = (await loadAllTests(null)).get(id) ?? null;
+      return {
+        ok: stored?.ok ?? false,
+        reason: stored ? stored.reason : "no_admin_test",
+        usedQuota: false,
+        source: "instance",
+        lastTest: stored,
+        storedInstanceVerdict: true,
+      };
+    }
     // The instance credential keeps the server's reach (no account egress policy).
     const outcome = await run(service, creds(service.fields, state.admin));
     const lastTest = await recordTest(userId, id, outcome.ok, outcome.reason);
     return { ...outcome, usedQuota: metered, source: "instance", lastTest };
   }
+  if (service.requiredFields.length > 0) {
+    // Neither side holds a usable credential: nothing is called, nothing is quota.
+    return {
+      ok: false,
+      reason: "not_configured",
+      usedQuota: false,
+      source: "none",
+      lastTest: null,
+    };
+  }
+  // A service with no required field (keyless) is probed as before, with the account's values.
   const outcome = await run(service, own, userId);
   const lastTest = await recordTest(userId, id, outcome.ok, outcome.reason);
-  return { ...outcome, usedQuota: metered, source: "none", lastTest };
+  return { ...outcome, usedQuota: metered, source: "account", lastTest };
 }

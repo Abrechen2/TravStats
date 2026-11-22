@@ -120,7 +120,8 @@
       "not_found": "Address or credentials not found",
       "unknown": "Unknown error",
       "no_instance_key": "no instance key stored",
-      "http_404": "provider answers 404"
+      "http_404": "provider answers 404",
+      "no_admin_test": "admin has not tested the server key yet"
     },
     "missingUrl": "Enter an address first",
     "offPlain": "Switched off"

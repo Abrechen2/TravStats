@@ -1011,7 +1011,10 @@
       "testedWith": {
         "account": "Getestet: dein eigener Schlüssel",
         "instance": "Getestet: Schlüssel des Servers"
-      }
+      },
+      "storedVerdict": "Schlüssel des Servers – zuletzt vom Admin getestet: {{result}}, {{when}}",
+      "storedOk": "OK",
+      "storedFailed": "fehlgeschlagen"
     },
     "status": {
       "needsConsent": "Wartet auf deine Zustimmung",
@@ -1044,7 +1047,8 @@
       "not_configured": "Nicht eingerichtet. Ich habe nichts angefragt.",
       "unknown": "Das konnte ich nicht prüfen.",
       "no_instance_key": "Kein Instanz-Schlüssel hinterlegt. Ich habe nichts angefragt.",
-      "http_404": "Der Anbieter antwortet mit „404 nicht gefunden“. Dienst oder Adresse existiert dort nicht (mehr)."
+      "http_404": "Der Anbieter antwortet mit „404 nicht gefunden“. Dienst oder Adresse existiert dort nicht (mehr).",
+      "no_admin_test": "Der Admin hat den Schlüssel des Servers noch nicht getestet."
     },
     "smtp": {
       "SMTP_CONNECTION": "Ich erreiche den Mail-Server nicht. Stimmen Adresse und Port?",
