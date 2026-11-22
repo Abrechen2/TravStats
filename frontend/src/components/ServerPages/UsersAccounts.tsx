@@ -11,6 +11,7 @@ import { statusPillStyle } from "../table/statusPillStyle";
 import AdminPasswordResetModal from "../Admin/AdminPasswordResetModal";
 import { useDialogCopy, useRowCopy } from "../Settings/rowCopy";
 import Button from "../ui/Button";
+import Toggletip from "../ui/Toggletip";
 import { ConfirmDialog, ErrorLine, SettingItem } from "../ui/settings";
 import { MenuItem, RowMenu } from "./RowMenu";
 import type { AdminUser } from "./types";
@@ -148,12 +149,13 @@ export default function UsersAccounts(): JSX.Element {
               </span>
               <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
                 {formatIsoDate(user.createdAt)} ·{" "}
-                <span title={entryBreakdown(user, t)} data-testid={`entries-${user.id}`}>
+                {/* The per-domain breakdown is help a finger must reach too: a toggletip, not a title. */}
+                <Toggletip content={entryBreakdown(user, t)} data-testid={`entries-${user.id}`}>
                   {t("settingsRows:users.counts", {
                     entries: user.entryTotal,
                     achievements: user._count.userAchievements,
                   })}
-                </span>
+                </Toggletip>
               </span>
             </span>
             <span className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
@@ -168,32 +170,34 @@ export default function UsersAccounts(): JSX.Element {
                   {t("settingsRows:users.demo")}
                 </span>
               ) : null}
-              <span
-                className="ts-status-pill"
-                title={t(
+              <Toggletip
+                content={t(
                   user.twoFactorEnabledAt
                     ? "settingsRows:users.pills.twoFactorOnHint"
                     : "settingsRows:users.pills.twoFactorOffHint"
                 )}
-                style={statusPillStyle(user.twoFactorEnabledAt ? "completed" : "historical")}
+                triggerClassName="ts-status-pill"
+                triggerStyle={statusPillStyle(user.twoFactorEnabledAt ? "completed" : "historical")}
+                data-testid={`twofactor-${user.id}`}
               >
                 {user.twoFactorEnabledAt
                   ? t("settingsRows:users.pills.twoFactorOn")
                   : t("settingsRows:users.pills.twoFactorOff")}
-              </span>
-              <span
-                className="ts-status-pill"
-                title={t(
+              </Toggletip>
+              <Toggletip
+                content={t(
                   user.isActive
                     ? "settingsRows:users.pills.activeHint"
                     : "settingsRows:users.pills.inactiveHint"
                 )}
-                style={statusPillStyle(user.isActive ? "completed" : "cancelled")}
+                triggerClassName="ts-status-pill"
+                triggerStyle={statusPillStyle(user.isActive ? "completed" : "cancelled")}
+                data-testid={`active-${user.id}`}
               >
                 {user.isActive
                   ? t("settingsRows:users.pills.active")
                   : t("settingsRows:users.pills.inactive")}
-              </span>
+              </Toggletip>
             </span>
             <RowMenu label={t("settingsRows:users.menu", { name: user.username })}>
               {(close) => (

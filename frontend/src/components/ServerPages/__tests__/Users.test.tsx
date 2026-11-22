@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import UsersAccess from "../UsersAccess";
@@ -293,8 +293,12 @@ describe("account rows (admin user list)", () => {
     const counts = await screen.findByTestId("entries-me");
     expect(counts.textContent).toContain("settingsRows:users.counts");
     // `t` is a key echo in this suite; the interpolated total is what must change.
-    expect(counts).toHaveAttribute("title", expect.stringContaining("common:domain.flight: 3"));
-    expect(counts).toHaveAttribute("title", expect.stringContaining("common:domain.poi: 1"));
+    // The breakdown is a toggletip (reachable by touch and keyboard), not a hover title.
+    expect(counts).not.toHaveAttribute("title");
+    fireEvent.click(counts);
+    const panel = await screen.findByTestId("entries-me-panel");
+    expect(panel.textContent).toContain("common:domain.flight: 3");
+    expect(panel.textContent).toContain("common:domain.poi: 1");
   });
 
   it("labels the two-factor and account pills so 'Aus' is no longer ambiguous", async () => {
@@ -308,11 +312,15 @@ describe("account rows (admin user list)", () => {
     );
     await screen.findByText("me");
     const me = within(rowOf("me"));
-    expect(me.getByText("settingsRows:users.pills.twoFactorOff")).toHaveAttribute(
-      "title",
+    expect(me.getByText("settingsRows:users.pills.twoFactorOff")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("twofactor-me"));
+    expect((await screen.findByTestId("twofactor-me-panel")).textContent).toContain(
       "settingsRows:users.pills.twoFactorOffHint"
     );
-    expect(me.getByText("settingsRows:users.pills.active")).toHaveAttribute("title");
+    fireEvent.click(screen.getByTestId("active-me"));
+    expect((await screen.findByTestId("active-me-panel")).textContent).toContain(
+      "settingsRows:users.pills.activeHint"
+    );
     const jonas = within(rowOf("jonas"));
     expect(jonas.getByText("settingsRows:users.pills.twoFactorOn")).toBeInTheDocument();
     expect(jonas.getByText("settingsRows:users.pills.inactive")).toBeInTheDocument();
