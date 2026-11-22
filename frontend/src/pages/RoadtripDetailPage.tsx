@@ -49,6 +49,7 @@ import { sectionExpenseCount } from "../lib/sectionExpenses";
 import { hexToRgb } from "../lib/domainColor";
 import { leaveThroughHistory, navigateAfterSave } from "../components/form/unsavedChanges";
 import { useRoadtripGpx } from "../components/Roadtrips/useRoadtripGpx";
+import { useRoadtripReroute } from "../components/Roadtrips/useRoadtripReroute";
 import OverflowMenu from "../components/ui/OverflowMenu";
 import { useUnsavedEditsGuard } from "../components/Roadtrips/useUnsavedEditsGuard";
 import { logger } from "../lib/logger";
@@ -298,6 +299,8 @@ export default function RoadtripDetailPage(): JSX.Element {
     stations: detail?.stations ?? [],
   });
 
+  const reroute = useRoadtripReroute(id);
+
   if (loadError) {
     return (
       <AppShell>
@@ -416,6 +419,7 @@ export default function RoadtripDetailPage(): JSX.Element {
             onSelect: () => setOdometerOpen(true),
           },
           gpx.entry,
+          reroute.entry,
           {
             key: "delete",
             label: t("roadtrips:delete"),
@@ -460,6 +464,8 @@ export default function RoadtripDetailPage(): JSX.Element {
         }
         actions={actions}
       />
+
+      {reroute.panel}
 
       <RoadtripFigures detail={detail} today={today} />
 

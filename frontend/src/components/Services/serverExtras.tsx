@@ -7,6 +7,7 @@ import DawarichServerRows from "./DawarichServerRows";
 import FederationRows from "./FederationRows";
 import OllamaRows from "./OllamaRows";
 import PushRows from "./PushRows";
+import RoutingRerouteRows from "./RoutingRerouteRows";
 import SmtpRows from "./SmtpRows";
 import UsageStatsRows from "./UsageStatsRows";
 import type { ServiceCardDef } from "./serviceCards";
@@ -53,6 +54,11 @@ export function ServerExtras({
       return <DawarichServerRows />;
     case "ollama":
       return service ? <OllamaRows service={service} /> : null;
+    case "openrouteservice":
+    case "graphhopper":
+      return <RoutingRerouteRows withRail={false} />;
+    case "selfHostedRouting":
+      return <RoutingRerouteRows withRail />;
     case "logos":
       return <LogosReload />;
     default:

@@ -123,6 +123,10 @@ describe("bulk re-route endpoints", () => {
     const runId = started.body.run.id as string;
     await settleAllJobs();
 
+    const latest = await request(app)
+      .get(`/api/v1/tours/${routeId}/reroute-all`)
+      .set("Cookie", userCookie);
+    expect(latest.body.run.id).toBe(runId);
     const foreign = await request(app)
       .post(`/api/v1/tours/${routeId}/reroute-all`)
       .set("Cookie", strangerCookie)

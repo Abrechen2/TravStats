@@ -19,6 +19,14 @@ vi.mock("../../lib/api/tours", () => ({
     removeStandalone: vi.fn(),
   },
 }));
+const startReroute = vi.fn();
+vi.mock("../../lib/api/rerouteRuns", () => ({
+  roadtripRerouteApi: {
+    start: (...a: unknown[]) => startReroute(...a),
+    latest: vi.fn(async () => null),
+    cancel: vi.fn(),
+  },
+}));
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (k: string, o?: Record<string, unknown>) => (o && "day" in o ? `${k}:${String(o.day)}` : k),
@@ -95,18 +103,44 @@ describe("RoadtripDetailPage", () => {
     expect(screen.getByTestId("map")).toBeInTheDocument();
   });
 
-  it("keeps odometer, GPX export and delete in the ⋯, delete last, and has no footer delete link", async () => {
+  it("keeps odometer, GPX export, re-routing and delete in the ⋯, delete last, and has no footer delete link", async () => {
     renderAt("/roadtrips/rt");
     fireEvent.click(await screen.findByTestId("roadtrip-more"));
     expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual([
       "roadtrips:odometerDialog.open",
       "roadtrips:gpx.export",
+      "routing:roadtrip.action",
       "roadtrips:delete",
     ]);
     fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
     // The only "delete" left on the page is inside the closed menu, not a footer link.
     expect(screen.queryByText("roadtrips:delete")).toBeNull();
     expect(screen.getByRole("button", { name: "roadtrips:editLegs" })).toBeInTheDocument();
+  });
+
+  it("starts the re-route of the roadtrip's own legs from the ⋯ and shows its progress", async () => {
+    startReroute.mockResolvedValue({
+      id: "r1",
+      scope: "roadtrip",
+      routeId: "rt",
+      mode: "all",
+      status: "running",
+      total: 4,
+      processed: 1,
+      routed: 1,
+      kept: 0,
+      failureCounts: {},
+      failureSample: [],
+      stopReason: null,
+      resumeAfter: null,
+      createdAt: "2026-11-22T10:00:00.000Z",
+      finishedAt: null,
+    });
+    renderAt("/roadtrips/rt");
+    fireEvent.click(await screen.findByTestId("roadtrip-more"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "routing:roadtrip.action" }));
+    expect(await screen.findByTestId("roadtrip-reroute-run")).toBeInTheDocument();
+    expect(startReroute).toHaveBeenCalledWith("rt");
   });
 
   it("asks once more before deleting a roadtrip's costs with it, then sends the opt-in", async () => {

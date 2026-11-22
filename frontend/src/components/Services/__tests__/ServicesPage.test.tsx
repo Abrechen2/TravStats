@@ -21,6 +21,9 @@ vi.mock("../../../hooks/useTranslation", () => ({
 let tours = true;
 vi.mock("../../../hooks/useToursVisible", () => ({ useToursVisible: () => tours }));
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => false }));
+vi.mock("../../../lib/api/rerouteRuns", () => ({
+  adminRerouteApi: { latest: async () => null, start: vi.fn(), cancel: vi.fn() },
+}));
 vi.mock("../../Settings/StravaConnectionCard", () => ({ default: () => <div>strava-card</div> }));
 vi.mock("../../Settings/PhotoJourneyNightlyScanCard", () => ({ default: () => null }));
 vi.mock("../../Settings/VisitPhotoImmichLink", () => ({ default: () => null }));

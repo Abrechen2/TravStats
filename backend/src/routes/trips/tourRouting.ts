@@ -21,6 +21,7 @@ import { resolveRouteFromRequest, toDto, toLegDto, ROUTE_SELECT } from "./tourRo
 import {
   cancelRerouteRun,
   getRerouteRun,
+  latestRoadtripRun,
   startRerouteRun,
 } from "../../services/tour/routing/rerouteRun";
 import logger from "../../utils/logger";
@@ -302,6 +303,21 @@ router.post(
         code: start.kind,
         ...(start.kind === "alreadyActive" && { run: start.run }),
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/** GET /trips/:id/routes/:routeId/reroute-all — the latest run on this section, or null. */
+router.get(
+  ["/trips/:id/routes/:routeId/reroute-all", "/tours/:routeId/reroute-all"],
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const routeId = await resolveRouteFromRequest(userId, req);
+      res.json({ run: await latestRoadtripRun(userId, routeId) });
     } catch (error) {
       next(error);
     }

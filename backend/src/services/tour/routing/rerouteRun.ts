@@ -365,6 +365,18 @@ export async function latestInstanceRun(): Promise<RerouteRunView | null> {
   return row ? toView(row) : null;
 }
 
+/** The latest run on one roadtrip; the route is already checked as the caller's. */
+export async function latestRoadtripRun(
+  userId: string,
+  routeId: string
+): Promise<RerouteRunView | null> {
+  const row = await prisma.rerouteRun.findFirst({
+    where: { userId, scope: "roadtrip", routeId },
+    orderBy: { createdAt: "desc" },
+  });
+  return row ? toView(row) : null;
+}
+
 /** A run the caller started (a stranger's run reads as no run). */
 export async function getRerouteRun(id: string, userId: string): Promise<RerouteRunView | null> {
   const row = await prisma.rerouteRun.findFirst({ where: { id, userId } });

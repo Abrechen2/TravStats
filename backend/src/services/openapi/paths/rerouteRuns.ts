@@ -63,6 +63,21 @@ registerSectionPath({
   },
 });
 
+registerSectionPath({
+  method: "get",
+  path: "/trips/{id}/routes/{routeId}/reroute-all",
+  summary: "The latest re-route run of a section",
+  tags: ["Tours"],
+  request: { params: routeIdParams },
+  responses: {
+    200: {
+      description: "The latest run, or null when none was ever started",
+      content: { "application/json": { schema: z.object({ run: rerouteRun.nullable() }) } },
+    },
+    404: { description: "Trip or section not found", content: errorContent },
+  },
+});
+
 const runParams = z.object({ id: z.string().uuid() });
 
 registry.registerPath({
