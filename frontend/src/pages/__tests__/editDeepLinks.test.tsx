@@ -47,6 +47,8 @@ vi.mock("../../components/SpecialFlightModal", () => ({
 vi.mock("../../components/Cruise/CruiseEditModal", () => ({
   CruiseEditModal: () => <div data-testid="cruise-editor" />,
 }));
+// The live AIS status asks the server for the voyage's vessel; not what this suite is about.
+vi.mock("../../components/vessel/VesselLiveStatus", () => ({ VesselLiveStatus: () => null }));
 vi.mock("../../components/Cruise/CruiseRouteMap", () => ({
   CruiseRouteMap: () => <div data-testid="map-stub" />,
 }));
