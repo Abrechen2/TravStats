@@ -1,4 +1,4 @@
-import type { Flight } from "../../types";
+import type { AirlineCodeSource } from "../../lib/airlineUtils";
 import AirlineLogo from "../AirlineLogo";
 import { useAirlineLogoStyle } from "../../lib/airlineLogoStyle";
 import { resolveAirlineDisplay, resolveAirlineIata } from "../../lib/airlineUtils";
@@ -32,7 +32,8 @@ export default function AirlineWordmarkCell({
   flight,
   size = TILE_PX,
 }: {
-  flight: Flight;
+  /** Only the airline fields are read, so a trip's trimmed flight fits too. */
+  flight: AirlineCodeSource;
   size?: number;
 }): JSX.Element {
   const name = resolveAirlineDisplay(flight);

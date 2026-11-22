@@ -49,6 +49,8 @@ export async function loadFlights(userId: string): Promise<Loaded> {
       tripId: true,
       status: true,
       flightNumber: true,
+      airline: true,
+      airlineIata: true,
       bookingReference: true,
       depIata: true,
       depIcao: true,
@@ -111,6 +113,8 @@ export async function loadFlights(userId: string): Promise<Loaded> {
       points,
       nights: overnight(out.day, inn.day),
       label: [row.flightNumber, `${depCode} → ${arrCode}`].filter(Boolean).join(" "),
+      operator: row.airline,
+      airlineIata: row.airlineIata,
       // A destination is named by the city an airport serves (D10); the
       // airport's own name only where the catalogue cannot say.
       city: airportCityName(arr) ?? airportDisplayName(arr),
@@ -165,6 +169,7 @@ export async function loadRail(userId: string): Promise<Loaded> {
       status: true,
       trainCategory: true,
       trainNumber: true,
+      operator: true,
       depStationName: true,
       arrStationName: true,
       depLat: true,
@@ -209,6 +214,7 @@ export async function loadRail(userId: string): Promise<Loaded> {
       points,
       nights: overnight(out.day, inn.day),
       label: [train, `${row.depStationName} → ${row.arrStationName}`].filter(Boolean).join(" "),
+      operator: row.operator,
       city: stationCity(row.arrStationName),
       country: row.arrCountry,
       pointCities: [stationCity(row.depStationName), stationCity(row.arrStationName)],
@@ -226,6 +232,7 @@ export async function loadRail(userId: string): Promise<Loaded> {
  */
 const TERMINAL_RIDE_SELECT = {
   id: true,
+  operator: true,
   tripId: true,
   status: true,
   depStationName: true,
@@ -262,6 +269,7 @@ interface TerminalRideRow {
   depPrecision: string | null;
   arrPrecision: string | null;
   bookingReference: string | null;
+  operator: string | null;
 }
 
 function terminalRideEntry(
@@ -288,6 +296,7 @@ function terminalRideEntry(
     points,
     nights: overnight(out.day, inn.day),
     label: `${row.depStationName} → ${row.arrStationName}`,
+    operator: row.operator,
     city: stationCity(row.arrStationName),
     country: row.arrCountry,
     pointCities: [stationCity(row.depStationName), stationCity(row.arrStationName)],
@@ -380,6 +389,7 @@ export async function loadRentals(userId: string): Promise<Loaded> {
       points,
       nights: [],
       label: `${row.provider} · ${row.pickupStationName}`,
+      operator: row.provider,
       city: stationCity(row.returnStationName),
       country: row.returnCountry ?? row.pickupCountry,
       pointCities: [stationCity(row.pickupStationName), stationCity(row.returnStationName)],
@@ -402,6 +412,7 @@ export async function loadCruises(userId: string): Promise<Loaded> {
       tripId: true,
       status: true,
       routeName: true,
+      cruiseLine: true,
       shipNameOverride: true,
       startDate: true,
       endDate: true,
@@ -453,6 +464,7 @@ export async function loadCruises(userId: string): Promise<Loaded> {
       points: points.map(({ lat, lon, day, hour }) => ({ lat, lon, day, hour })),
       nights,
       label: row.routeName ?? row.shipNameOverride ?? row.ship?.name ?? "",
+      operator: row.cruiseLine,
       city: row.arrivalPort?.city ?? null,
       country: row.arrivalPort?.country ?? null,
       pointCities: cities,

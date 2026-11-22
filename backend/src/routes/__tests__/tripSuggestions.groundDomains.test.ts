@@ -61,6 +61,7 @@ describe("trip suggestions — bus, ferry and rental join the trip", () => {
       data: {
         userId,
         ...ride,
+        operator: "FlixBus",
         departureTime: new Date("2025-05-04T08:00:00Z"),
         arrivalTime: new Date("2025-05-04T09:00:00Z"),
       },
@@ -167,6 +168,17 @@ describe("trip suggestions — bus, ferry and rental join the trip", () => {
     expect(await tripOf(prisma.lodgingStay.findUniqueOrThrow({ where: { id: hotel.id } }))).toBe(
       result.tripId
     );
+  });
+
+  it("names the operator of a bus ride and the provider of a rental, for the inbox logos", async () => {
+    await stay();
+    await bus();
+    await rental();
+    const [proposal] = await newTrips();
+    const operatorOf = (domain: string) => proposal.members.find((m) => m.domain === domain);
+    expect(operatorOf("bus")?.operator).toBe("FlixBus");
+    expect(operatorOf("rental")?.operator).toBe("Sixt");
+    expect(operatorOf("lodging")).not.toHaveProperty("operator");
   });
 
   it("never proposes a cancelled ride or a rental already on a trip", async () => {

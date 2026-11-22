@@ -6,6 +6,8 @@ import { cruiseStopArrival, cruiseStopDeparture } from "../../lib/entityTimes";
 import { clockOf, type TimeValue } from "../../shared/time";
 import { formatAmount } from "../../lib/units";
 import { type TimelineEvent } from "../../lib/tripTimelineEvents";
+import AirlineWordmarkCell from "../flightsTable/AirlineWordmarkCell";
+import { OperatorMarkTile } from "../table/OperatorMarkTile";
 import { ExpandableEventCard } from "../../components/Trip/ExpandableEventCard";
 import { RowActions } from "../../components/Trips/TimelineJournalCard";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -166,6 +168,7 @@ export function FlightCard({
     .join(" · ");
   return (
     <ExpandableEventCard
+      mark={<AirlineWordmarkCell flight={f} size={36} />}
       icon="✈"
       bg="var(--domain-flight-soft)"
       iconColor="var(--domain-flight, var(--accent))"
@@ -207,6 +210,7 @@ export function CruiseCard({
   const stops = c.stops ?? [];
   return (
     <ExpandableEventCard
+      mark={<OperatorMarkTile name={c.cruiseLine} domain="cruise" size={36} />}
       icon="⚓"
       bg="var(--domain-cruise-soft)"
       iconColor="var(--domain-cruise)"

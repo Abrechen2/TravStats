@@ -64,6 +64,9 @@ function toMember(entry: PresenceEntry): SuggestionMember {
     domain: entry.domain as LinkableDomain,
     id: entry.id,
     label: entry.label,
+    // Only where set, so a lodging member keeps the shape older clients know.
+    ...(entry.operator ? { operator: entry.operator } : {}),
+    ...(entry.airlineIata ? { airlineIata: entry.airlineIata } : {}),
     startDay: entry.startDay,
     endDay: entry.endDay,
     planned: entry.state === "planned",

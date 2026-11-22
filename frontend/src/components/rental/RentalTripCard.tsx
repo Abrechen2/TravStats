@@ -6,6 +6,7 @@ import type { TimeValue } from "../../shared/time";
 import type { TripRental } from "../../types/rental";
 import { rentalDays } from "../../shared/rentalCounting";
 import { deadlineFacts } from "../../lib/deadlines";
+import { OperatorTile, rentalProviderLogoUrl } from "../table/OperatorTile";
 import { dateLocaleForLanguage } from "../../lib/units";
 
 interface Props {
@@ -47,19 +48,31 @@ export function RentalTripCard({ rental, end, when }: Props): JSX.Element {
       style={{ borderColor: "var(--ts-border)", borderLeft: "6px solid var(--ts-domain-rental)" }}
       data-testid="rental-trip-card-pickup"
     >
-      <div className="t-caption">{formatTimelineDate(when)}</div>
-      <Link to={`/rentals/${rental.id}`} className="font-semibold hover:underline">
-        {t("rental:timeline.pickup", {
-          provider: rental.provider,
-          station: rental.pickupStationName,
-        })}
-      </Link>
-      <div className="t-caption">{t("rental:timeline.span", { count: rentalDays(rental) })}</div>
-      {deadlines.map((fact) => (
-        <div key={fact.label} className="t-caption" data-testid="rental-trip-card-deadline">
-          {fact.label}: {fact.value}
+      <div className="flex items-start gap-3">
+        <OperatorTile
+          name={rental.provider}
+          domain="rental"
+          logoUrl={rentalProviderLogoUrl(rental.provider)}
+          size={36}
+        />
+        <div className="min-w-0">
+          <div className="t-caption">{formatTimelineDate(when)}</div>
+          <Link to={`/rentals/${rental.id}`} className="font-semibold hover:underline">
+            {t("rental:timeline.pickup", {
+              provider: rental.provider,
+              station: rental.pickupStationName,
+            })}
+          </Link>
+          <div className="t-caption">
+            {t("rental:timeline.span", { count: rentalDays(rental) })}
+          </div>
+          {deadlines.map((fact) => (
+            <div key={fact.label} className="t-caption" data-testid="rental-trip-card-deadline">
+              {fact.label}: {fact.value}
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
     </div>
   );
 }

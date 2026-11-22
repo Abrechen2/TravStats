@@ -25,6 +25,8 @@ const member = z.object({
   domain: z.enum(["flight", "rail", "cruise", "lodging", "place", "roadtrip", "tour"]),
   id: z.string(),
   label: z.string(),
+  operator: z.string().optional().describe("Airline, operator, provider or cruise line"),
+  airlineIata: z.string().optional(),
   startDay: day,
   endDay: day,
   planned: z.boolean(),

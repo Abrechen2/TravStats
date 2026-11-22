@@ -4,6 +4,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useDisplayFormat } from "../../../lib/displayFormat";
 import { tripSuggestionsApi } from "../../../lib/api/tripSuggestions";
 import type { TripSuggestion, TripSuggestionEdits } from "../../../types/tripSuggestion";
+import TripMemberMark, { memberAccent } from "../TripMemberMark";
 import TripSuggestionEditor, { domainKey } from "../TripSuggestionEditor";
 import { suggestedTripName } from "../tripSuggestionCopy";
 import Button from "../../ui/Button";
@@ -78,13 +79,21 @@ export default function TripProposalCard({
         {[...s.members]
           .sort((a, b) => a.startDay.localeCompare(b.startDay))
           .map((m) => (
-            <li key={m.key} className="text-sm">
-              <span className="t-caption">
-                {day(m.startDay)}
-                {m.endDay !== m.startDay ? ` – ${day(m.endDay)}` : ""} ·{" "}
-                {t(`common:domain.${domainKey(m.domain)}`)}
-              </span>
-              <p>{m.label}</p>
+            <li
+              key={m.key}
+              className="flex items-start gap-2 text-sm"
+              style={{ borderLeft: `3px solid ${memberAccent(m.domain)}`, paddingLeft: 8 }}
+              data-testid="proposal-member"
+            >
+              <TripMemberMark member={m} />
+              <div className="min-w-0">
+                <span className="t-caption">
+                  {day(m.startDay)}
+                  {m.endDay !== m.startDay ? ` – ${day(m.endDay)}` : ""} ·{" "}
+                  {t(`common:domain.${domainKey(m.domain)}`)}
+                </span>
+                <p>{m.label}</p>
+              </div>
             </li>
           ))}
       </ol>

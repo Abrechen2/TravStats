@@ -1,12 +1,16 @@
 import { useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
+import { OperatorMarkTile } from "../table/OperatorMarkTile";
 import { ExpandableEventCard } from "../Trip/ExpandableEventCard";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatRailSpan } from "../../lib/railTime";
 import { formatAmount, dateLocaleForLanguage } from "../../lib/units";
 import type { TripBusJourney } from "../../types/bus";
 import type { TripFerryJourney } from "../../types/ferry";
+
+/** The timeline mark, smaller than a logbook row's 44px tile. */
+const MARK_PX = 36;
 
 export type LegTrip = TripBusJourney | TripFerryJourney;
 
@@ -54,6 +58,7 @@ export function LegTripCard({
   ];
   return (
     <ExpandableEventCard
+      mark={<OperatorMarkTile name={ride.operator} domain={ns} size={MARK_PX} />}
       icon={domain.icon}
       bg={`color-mix(in srgb, var(--ts-domain-${ns}) 18%, transparent)`}
       iconColor={`var(--ts-domain-${ns})`}
