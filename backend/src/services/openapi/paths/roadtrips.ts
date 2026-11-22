@@ -96,6 +96,9 @@ const roadtripSummary = registry.register(
             lat: z.number(),
             lon: z.number(),
             state: z.enum(["stay", "free", "pass"]),
+            planned: z
+              .boolean()
+              .describe("Still ahead on its own calendar (the roadtrip timeline rule); additive."),
           })
         )
         .describe(

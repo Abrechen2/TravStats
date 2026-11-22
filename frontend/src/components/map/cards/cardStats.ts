@@ -7,7 +7,7 @@
 // MapLibre Popup anchor, this file backs the denser content.
 
 import type { GeoJSONFeature } from "../../../types";
-import type { Cruise } from "../../../types/cruise";
+import type { Cruise, Port } from "../../../types";
 import { isCountableCruise } from "../../../shared/cruiseCounting";
 import { isCountableFlight } from "../../../shared/flightCounting";
 import { resolveStayTiming } from "../../../shared/lodgingTiming";
@@ -15,10 +15,14 @@ import { classifyStay } from "../../../shared/lodgingCounting";
 import { formatAmount } from "../../../lib/units";
 import { formatDate as formatUserDate } from "../../../lib/displayFormat";
 import type { LodgingCardStay } from "./pinnedTypes";
+import { mapStatusClass } from "../../../lib/mapPresence";
 import { cruisePortCalls } from "../../../lib/cruisePortCalls";
 
 export interface AirportCardStats {
+  /** Flights that happened — the same rule the hover reads (`mapStatusClass`). */
   totalVisits: number;
+  /** Booked, future flights here. `totalVisits` 0 with some planned = a planned-only airport. */
+  plannedFlights: number;
   /**
    * Kilometres actually covered through this airport. Only flown/historical
    * legs count — a scheduled flight has not covered any distance yet. Carried
@@ -37,6 +41,8 @@ export interface PortCardStats {
   country: string | null;
   region: string | null;
   totalVisits: number;
+  /** Port calls of booked (scheduled) cruises — counted apart, never as a visit. */
+  plannedCalls: number;
   lastCallDate: string | null;
   ships: string[];
   longestPortCallMinutes: number | null;
@@ -115,19 +121,20 @@ export function getAirportStats(
   flights: readonly GeoJSONFeature[],
   iata: string
 ): AirportCardStats {
+  // ONE rule with the marker's hover (lib/mapPresence.ts): a cancelled flight is
+  // in no count; a scheduled one is planned, never a visit.
   const touched = flights.filter(
-    (f) => f.properties.departureAirport.iata === iata || f.properties.arrivalAirport.iata === iata
+    (f) =>
+      mapStatusClass(f.properties.status) !== "hidden" &&
+      (f.properties.departureAirport.iata === iata || f.properties.arrivalAirport.iata === iata)
   );
   const departures = touched.filter((f) => f.properties.departureAirport.iata === iata);
 
   // A scheduled flight must never count as a visit or bump the last-visit
-  // date — it's a future plan, not something that happened. Cancelled
-  // flights deliberately still count here (status !== "scheduled" keeps
-  // them in) — a deferred semantic, not the bug this filter guards against.
-  // That's an asymmetry vs. getPortStats below, which filters cruises down
-  // to flown|historical explicitly (so cancelled cruises DON'T count as a
-  // port call) — both are intentional, just answering different questions.
-  const visitedOnly = touched.filter((f) => f.properties.status !== "scheduled");
+  // date — it's a future plan, not something that happened. It is counted
+  // separately as planned, so the card can say "0 geflogen · 2 geplant".
+  const visitedOnly = touched.filter((f) => mapStatusClass(f.properties.status) === "visited");
+  const plannedFlights = touched.length - visitedOnly.length;
 
   // Longest route originating from this airport, by distance.
   let longestRoute: AirportCardStats["longestRoute"] = null;
@@ -147,6 +154,7 @@ export function getAirportStats(
 
   return {
     totalVisits: visitedOnly.length,
+    plannedFlights,
     totalKm,
     lastVisitDate: maxDate(visitedOnly.map((f) => f.properties.departureTime)),
     longestRoute,
@@ -173,8 +181,14 @@ export function getPortStats(cruises: Cruise[], portKey: string): PortCardStats 
       .map((call) => ({ ...call, cruise: c }))
   );
 
-  const country = calls[0]?.port.country ?? null;
-  const region = calls[0]?.port.region ?? null;
+  const matches = (port: Port): boolean =>
+    port.unlocode === portKey || port.name === portKey || port.city === portKey;
+  const planned = cruises
+    .filter((c) => mapStatusClass(c.status) === "planned")
+    .flatMap((c) => cruisePortCalls(c).filter(({ port }) => matches(port)));
+
+  const country = (calls[0] ?? planned[0])?.port.country ?? null;
+  const region = (calls[0] ?? planned[0])?.port.region ?? null;
 
   const ships = Array.from(
     new Set(
@@ -201,6 +215,7 @@ export function getPortStats(cruises: Cruise[], portKey: string): PortCardStats 
     country,
     region,
     totalVisits: calls.length,
+    plannedCalls: planned.length,
     lastCallDate: maxDate(calls.map(({ date }) => date ?? null)),
     ships,
     longestPortCallMinutes,

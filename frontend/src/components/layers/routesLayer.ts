@@ -15,6 +15,12 @@ import {
 } from "../../lib/flightColor";
 import { DEFAULT_FLIGHT_ROUTE_SHAPE, type FlightRouteShape } from "../../lib/flightRouteShape";
 import { isCountableFlight } from "../../shared/flightCounting";
+import {
+  isPlannedOnly,
+  mapStatusClass,
+  PLANNED_FILL_ALPHA,
+  PLANNED_RING_PX,
+} from "../../lib/mapPresence";
 import { canonicalRoutePair } from "../../shared/routePair";
 import { buildFlatRoutes, createFlatRoutesLayer } from "./flatRoutesLayer";
 import { markerDotRadiusProps, resolveAirportDotColor } from "./markerDotStyle";
@@ -106,6 +112,8 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
   for (const f of flights) {
     const dep = f.properties.departureAirport;
     const arr = f.properties.arrivalAirport;
+    // A cancelled flight never happened: no arc (forgejo map-planned).
+    if (mapStatusClass(f.properties.status) === "hidden") continue;
     const coords = getCoordsFromFeature(f);
     if (!coords) continue;
     // Identify each airport by IATA → ICAO → coordinate key so ICAO-only /
@@ -224,6 +232,11 @@ function buildArcs(
   return { arcs, recorded };
 }
 
+/** True when every flight at this airport is still booked (none flown). */
+export function airportPlannedOnly(d: PointDatum): boolean {
+  return isPlannedOnly({ visited: d.flownCount ?? 0, planned: d.plannedCount ?? 0 });
+}
+
 function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
   const airportMap = new Map<string, PointDatum>();
   const bumpLastVisit = (
@@ -237,6 +250,11 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
   for (const f of flights) {
     const dep = f.properties.departureAirport;
     const arr = f.properties.arrivalAirport;
+    // Cancelled: no marker, in no count. Planned and flown are kept apart so
+    // the hover can say "0 geflogen · 2 geplant" instead of one blended number.
+    const presence = mapStatusClass(f.properties.status);
+    if (presence === "hidden") continue;
+    const planned = presence === "planned" ? 1 : 0;
     const coords = getCoordsFromFeature(f);
     if (!coords) continue;
     // A scheduled flight is a future flight — it must never bump "Letzter
@@ -253,6 +271,8 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
       airportMap.set(depKey, {
         position: coords.depCoord,
         count: 0,
+        flownCount: 0,
+        plannedCount: 0,
         name: dep.name ?? airportLabel(dep),
         iata: airportLabel(dep),
         icao: dep.icao,
@@ -264,6 +284,8 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
       airportMap.set(arrKey, {
         position: coords.arrCoord,
         count: 0,
+        flownCount: 0,
+        plannedCount: 0,
         name: arr.name ?? airportLabel(arr),
         iata: airportLabel(arr),
         icao: arr.icao,
@@ -276,11 +298,15 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
     airportMap.set(depKey, {
       ...depPoint,
       count: depPoint.count + 1,
+      flownCount: (depPoint.flownCount ?? 0) + (1 - planned),
+      plannedCount: (depPoint.plannedCount ?? 0) + planned,
       lastVisit: bumpLastVisit(depPoint.lastVisit, departureTime),
     });
     airportMap.set(arrKey, {
       ...arrPoint,
       count: arrPoint.count + 1,
+      flownCount: (arrPoint.flownCount ?? 0) + (1 - planned),
+      plannedCount: (arrPoint.plannedCount ?? 0) + planned,
       lastVisit: bumpLastVisit(arrPoint.lastVisit, departureTime),
     });
   }
@@ -629,9 +655,20 @@ export function createRoutesLayers(
     // accessor function of markerSizeScale — no updateTriggers entry
     // needed for it; radiusMinPixels/radiusMaxPixels are plain props and
     // deck.gl diffs those automatically.
-    updateTriggers: { getFillColor: [dotRgb] },
-    getFillColor: [...dotRgb, 220] as [number, number, number, number],
-    stroked: false,
+    updateTriggers: { getFillColor: [dotRgb], getLineColor: [dotRgb] },
+    // A planned-only airport is a hollow ring in the same colour: nothing has
+    // happened there yet (lib/mapPresence.ts).
+    getFillColor: (d) =>
+      [...dotRgb, airportPlannedOnly(d) ? PLANNED_FILL_ALPHA : 220] as [
+        number,
+        number,
+        number,
+        number,
+      ],
+    getLineColor: [...dotRgb, 255] as [number, number, number, number],
+    lineWidthUnits: "pixels",
+    getLineWidth: (d) => (airportPlannedOnly(d) ? PLANNED_RING_PX : 0),
+    stroked: true,
     opacity: airportOpacity,
     pickable: !!onAirportClick,
     onClick: onAirportClick

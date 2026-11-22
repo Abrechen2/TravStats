@@ -1,4 +1,5 @@
 import { useRoutesVisible } from "../../../store/mapRoutesStore";
+import { PLANNED_FILL_ALPHA, PLANNED_RING_PX } from "../../../lib/mapPresence";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
@@ -26,7 +27,7 @@ import {
 } from "../../layers/markerDotStyle";
 import { journeyFromBus, journeyFromFerry } from "../../map/cards/journeys/journeyNormalize";
 import { withJourneyCards } from "../../map/cards/journeys/journeyLayerCards";
-import { legendRow, type LegendRowFn } from "./allTabLegendRows";
+import { buildPlannedMarkerLegendRow, legendRow, type LegendRowFn } from "./allTabLegendRows";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
 import { useDomainVisible } from "../../../hooks/useDomainVisible";
@@ -110,10 +111,10 @@ export function buildTerminalRideLines(
       id: `${idPrefix}-terminals`,
       data: terminalPoints(rides),
       getPosition: (d) => (altitude === 0 ? d.position : [d.position[0], d.position[1], altitude]),
-      getFillColor: [r, g, b, 255],
-      getLineColor: STATION_DOT_OUTLINE_RGBA,
+      getFillColor: (d) => [r, g, b, d.plannedOnly ? PLANNED_FILL_ALPHA : 255],
+      getLineColor: (d) => (d.plannedOnly ? [r, g, b, 255] : STATION_DOT_OUTLINE_RGBA),
       lineWidthUnits: "pixels",
-      getLineWidth: STATION_DOT_OUTLINE_PX,
+      getLineWidth: (d) => (d.plannedOnly ? PLANNED_RING_PX : STATION_DOT_OUTLINE_PX),
       stroked: true,
       radiusUnits: "pixels",
       getRadius: STATION_DOT_RADIUS_PX,
@@ -158,6 +159,7 @@ export function buildTerminalRideLegendRows(
     const faint = `rgba(${r},${g},${b},${(CHORD_ALPHA / 255).toFixed(2)})`;
     rows.push(row(faint, t(keys.straight), keys.straightRow));
   }
+  if (terminalPoints(rides).some((p) => p.plannedOnly)) rows.push(buildPlannedMarkerLegendRow(t));
   return rows;
 }
 

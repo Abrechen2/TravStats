@@ -273,6 +273,18 @@ describe("createMarkerTooltip — lodging", () => {
     expect(result!.html).toContain("/flags/fr.svg");
   });
 
+  it("says a future-only house is planned, from the raw Lodging's stays (globe hover)", () => {
+    const result = getTooltip(
+      makeInfo("globe-lodging-pins", {
+        name: "Hotel Zukunft",
+        stayCount: 0,
+        stays: [{ status: "confirmed", checkIn: "2099-09-01", checkOut: "2099-09-05" }],
+      })
+    );
+    expect(result!.html).toContain("map:tooltip.countPlanned");
+    expect(result!.html).toContain("map:tooltip.plannedOnly");
+  });
+
   it("degrades gracefully when city/country/counts are absent", () => {
     const result = getTooltip(makeInfo("lodging-pins", { name: "Unnamed Guesthouse" }));
     expect(result).not.toBeNull();

@@ -311,6 +311,10 @@
     "routes": "Routen"
   },
   "tooltip": {
+    "countFlown": "{{count}} geflogen",
+    "countVisited": "{{count}} besucht",
+    "countPlanned": "{{count}} geplant",
+    "plannedOnly": "Nur geplant",
     "lastVisit": "Letzter Besuch",
     "lastCall": "Letzter Anlauf",
     "railLine": "Zugfahrt",

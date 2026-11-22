@@ -3,6 +3,12 @@ import type { Layer } from "@deck.gl/core";
 import type { Cruise, Port } from "../../types";
 import { toPortLabel } from "../map/portLabel";
 import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
+import {
+  isPlannedOnly,
+  mapStatusClass,
+  PLANNED_FILL_ALPHA,
+  PLANNED_RING_PX,
+} from "../../lib/mapPresence";
 import { markerDotRadiusProps } from "./markerDotStyle";
 import { isCountableCruise } from "../../shared/cruiseCounting";
 import { cruisePortCalls } from "../../lib/cruisePortCalls";
@@ -50,6 +56,10 @@ interface PortDatum {
    * is 0 (see markerTooltip.ts's `visits > 0` gate).
    */
   visits: number;
+  /** Port calls of booked (scheduled) cruises; cancelled cruises are in neither figure. */
+  plannedVisits: number;
+  /** Only booked calls, none sailed: drawn as a hollow ring (lib/mapPresence.ts). */
+  plannedOnly: boolean;
   /** ISO date of the most recent SAILED stop at this port (max of
    *  stop.arrivalTime across flown|historical cruises). Surfaced in the
    *  hover tooltip; stays unset alongside visits === 0. */
@@ -143,6 +153,8 @@ export function createCruisePortsLayer(
       country: port.country,
       city: port.city,
       visits: 0,
+      plannedVisits: 0,
+      plannedOnly: false,
     };
     byPort.set(port.id, created);
     return created;
@@ -160,17 +172,28 @@ export function createCruisePortsLayer(
     // visit. "itinerary" scope (one cruise's own detail map): every
     // cruise still gets a pin so a booked route isn't blank, but only a
     // sailed cruise's stops may claim a visit.
-    if (scope === "visits" && !isSailedCruise(cruise)) continue;
+    // A cancelled cruise never sailed and never will: no pin on an aggregate
+    // map. ("itinerary" is one cruise's own detail map, which still shows its route.)
+    if (scope === "visits" && mapStatusClass(cruise.status) === "hidden") continue;
     const claimsVisit = isSailedCruise(cruise);
+    // A scheduled cruise on an aggregate map marks its ports as PLANNED — a
+    // hollow ring and a "geplant" count — never as a visit.
+    const isPlanned = mapStatusClass(cruise.status) === "planned";
+    if (scope === "visits" && !claimsVisit && !isPlanned) continue;
     const touch = (port: Port, date: string | undefined): void => {
       if (claimsVisit) recordVisit(port, date);
-      else ensurePort(port);
+      else {
+        const entry = ensurePort(port);
+        if (isPlanned) entry.plannedVisits += 1;
+      }
     };
     // Departure/arrival ports get markers too — the same calls the port
     // card counts (`cruisePortCalls`).
     for (const call of cruisePortCalls(cruise)) touch(call.port, call.date);
   }
   const data = Array.from(byPort.values());
+  for (const d of data)
+    d.plannedOnly = isPlannedOnly({ visited: d.visits, planned: d.plannedVisits });
   if (data.length === 0) return null;
 
   const ringLayer = new ScatterplotLayer<PortDatum>({
@@ -198,10 +221,17 @@ export function createCruisePortsLayer(
     // would balloon to cover the entire port city. Shared with the
     // airport dot via markerDotStyle.ts (#187).
     ...markerDotRadiusProps(portSizeScale),
-    getFillColor: [...portRgb, 220] as [number, number, number, number],
-    getLineColor: [255, 255, 255, 220],
+    getFillColor: (d) =>
+      [...portRgb, d.plannedOnly ? PLANNED_FILL_ALPHA : 220] as [number, number, number, number],
+    getLineColor: (d) =>
+      (d.plannedOnly ? [...portRgb, 255] : [255, 255, 255, 220]) as [
+        number,
+        number,
+        number,
+        number,
+      ],
     lineWidthUnits: "pixels",
-    getLineWidth: 1,
+    getLineWidth: (d) => (d.plannedOnly ? PLANNED_RING_PX : 1),
     stroked: true,
     pickable: true,
     onClick: ({ object }: { object?: PortDatum }) => {

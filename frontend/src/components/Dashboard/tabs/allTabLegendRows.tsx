@@ -82,6 +82,31 @@ export function legendRow(
   );
 }
 
+/**
+ * The key for the planned marker style: a hollow dashed ring. Shown only while
+ * some marker on the map is planned-only — never a key for a mark the map does
+ * not draw. The ring is dashed here as a legible swatch; the map draws a
+ * heavier solid ring in the marker's own hue.
+ */
+export function buildPlannedMarkerLegendRow(t: Translate): JSX.Element {
+  return (
+    <span key="planned-marker" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <span
+        aria-hidden
+        style={{
+          width: 10,
+          height: 10,
+          boxSizing: "border-box",
+          borderRadius: "50%",
+          border: "2px dashed var(--text-primary)",
+          flexShrink: 0,
+        }}
+      />
+      <span style={{ color: "var(--text-primary)" }}>{t("dashboard:legend.plannedMarker")}</span>
+    </span>
+  );
+}
+
 // Legend row → i18n key. The COLOURS never appear here — they come from
 // `buildFlightLegend`, i.e. the same function the map layers resolve through
 // (see lib/flightColor.ts). Adding a 4th colour mode later means adding a

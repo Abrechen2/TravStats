@@ -25,6 +25,12 @@ import type { NightCell } from "../sunPosition";
 import type { CruisePathDatum, PointDatum } from "../globeLayerTypes";
 import { resolveCruisePathColor } from "../cruisePathColor";
 import { bridgeExtraLayers, type BridgedExtra } from "./nativeExtras";
+import {
+  isPlannedOnly,
+  lodgingPresence,
+  PLANNED_FILL_ALPHA,
+  PLANNED_RING_PX,
+} from "../../../lib/mapPresence";
 import { cssRgba, lineFeatures, pointFeature, type NativeFeature } from "./nativeGeo";
 
 export const NATIVE_IDS = {
@@ -127,6 +133,24 @@ const hoverGuard = (lite: boolean, normal: ExpressionSpecification | string, hov
         normal,
       ] as ExpressionSpecification);
 
+/** Solid dot, or — for a planned-only point (`po`) — a nearly empty fill inside a heavier ring of the same hue. */
+function plannedAware(rgba: readonly number[]): {
+  color: ExpressionSpecification;
+  stroke: ExpressionSpecification;
+  strokeWidth: ExpressionSpecification;
+} {
+  return {
+    color: [
+      "case",
+      ["==", ["get", "po"], 1],
+      cssRgba([rgba[0], rgba[1], rgba[2], PLANNED_FILL_ALPHA]),
+      cssRgba(rgba, 230),
+    ],
+    stroke: ["case", ["==", ["get", "po"], 1], cssRgba(rgba, 255), DOT_OUTLINE],
+    strokeWidth: ["case", ["==", ["get", "po"], 1], PLANNED_RING_PX, 1],
+  } as unknown as ReturnType<typeof plannedAware>;
+}
+
 const colorOf = (prop: string): ExpressionSpecification => ["to-color", ["get", prop]];
 
 function circleLayer(
@@ -193,7 +217,20 @@ const keyMap = <T>(data: readonly T[], keyOf: (d: T) => string): Map<string, unk
 const pointKey = (d: PointDatum): string => `${d.iata}|${d.position[0]},${d.position[1]}`;
 
 function pointCollection(points: readonly PointDatum[]): FeatureCollection {
-  return collection(points.map((d, i) => pointFeature(d.position, { i, k: pointKey(d) }, i + 1)));
+  // `po` = planned-only: nothing flown/sailed here yet, so the dot is drawn hollow.
+  return collection(
+    points.map((d, i) =>
+      pointFeature(
+        d.position,
+        {
+          i,
+          k: pointKey(d),
+          po: isPlannedOnly({ visited: d.flownCount ?? 0, planned: d.plannedCount ?? 0 }) ? 1 : 0,
+        },
+        i + 1
+      )
+    )
+  );
 }
 
 /** A grouped leg's identity: the same discriminators the grouping used — hue, planned or sailed, and the full geometry. */
@@ -369,10 +406,8 @@ export function buildNativeGlobe(
       byKey: keyMap(input.airportPoints, pointKey),
       fc: cache.get("airports", [input.airportPoints], () => pointCollection(input.airportPoints)),
       paint: {
-        color: cssRgba(input.airportColor, 230),
+        ...plannedAware(input.airportColor),
         radius: input.airportRadius,
-        stroke: DOT_OUTLINE,
-        strokeWidth: 1,
       },
     });
   if (input.portRadius > 0 && input.portPoints.length > 0)
@@ -383,14 +418,12 @@ export function buildNativeGlobe(
       byKey: keyMap(input.portPoints, pointKey),
       fc: cache.get("ports", [input.portPoints], () => pointCollection(input.portPoints)),
       paint: {
-        color: cssRgba(input.portColor, 230),
+        ...plannedAware(input.portColor),
         radius: input.portRadius,
-        stroke: DOT_OUTLINE,
-        strokeWidth: 1,
       },
     });
   const lodgingPins = cache.get("lodgingPins", [input.lodgings], () =>
-    input.lodgings.filter(hasCoords)
+    input.lodgings.filter(hasCoords).filter((d) => lodgingPresence(d).class !== "hidden")
   );
   if (input.lodgingRadius > 0 && lodgingPins.length > 0)
     dots.push({
@@ -403,20 +436,28 @@ export function buildNativeGlobe(
         [lodgingPins, input.lodgingColors.mode, input.lodgingColors.colors],
         () =>
           collection(
-            lodgingPins.map((d, i) =>
-              pointFeature(
+            lodgingPins.map((d, i) => {
+              const rgb = resolveLodgingColor(d, input.lodgingColors);
+              const planned = lodgingPresence(d).class === "planned";
+              return pointFeature(
                 [d.lon as number, d.lat as number],
-                { i, k: d.id, f: cssRgba([...resolveLodgingColor(d, input.lodgingColors), 230]) },
+                {
+                  i,
+                  k: d.id,
+                  f: cssRgba([...rgb, planned ? PLANNED_FILL_ALPHA : 230]),
+                  s: planned ? cssRgba([...rgb, 255]) : DOT_OUTLINE,
+                  sw: planned ? PLANNED_RING_PX : 1,
+                },
                 i + 1
-              )
-            )
+              );
+            })
           )
       ),
       paint: {
         color: colorOf("f"),
         radius: input.lodgingRadius,
-        stroke: DOT_OUTLINE,
-        strokeWidth: 1,
+        stroke: colorOf("s"),
+        strokeWidth: ["get", "sw"],
       },
     });
   const placePins = cache.get("placePins", [input.places], () =>
@@ -439,14 +480,26 @@ export function buildNativeGlobe(
                 { visited: d.visited, listColor: input.placeListColors?.get(d.id) },
                 input.placeColors
               );
+              const plannedOnly = isPlannedOnly({
+                visited: d.visited ? d.visitCount : 1,
+                planned: d.plannedVisitCount ?? 0,
+              });
               return pointFeature(
                 [d.lon, d.lat],
                 {
                   i,
                   k: d.id,
-                  f: d.visited ? cssRgba([...rgb, 230]) : "rgba(0,0,0,0)",
-                  s: d.visited ? DOT_OUTLINE : cssRgba([...rgb, 235]),
-                  sw: d.visited ? 1 : 2,
+                  f: plannedOnly
+                    ? cssRgba([...rgb, PLANNED_FILL_ALPHA])
+                    : d.visited
+                      ? cssRgba([...rgb, 230])
+                      : "rgba(0,0,0,0)",
+                  s: plannedOnly
+                    ? cssRgba([...rgb, 255])
+                    : d.visited
+                      ? DOT_OUTLINE
+                      : cssRgba([...rgb, 235]),
+                  sw: plannedOnly ? PLANNED_RING_PX : d.visited ? 1 : 2,
                 },
                 i + 1
               );

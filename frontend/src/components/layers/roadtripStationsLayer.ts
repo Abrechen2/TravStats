@@ -2,6 +2,7 @@ import { groupMapData } from "./routeAggregation";
 import { ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 
+import { PLANNED_FILL_ALPHA, PLANNED_RING_PX } from "../../lib/mapPresence";
 import { markerDotRadiusProps } from "./markerDotStyle";
 
 /** A station as the dashboard map marks it — from `GET /roadtrips` `stations`. */
@@ -13,6 +14,8 @@ export interface RoadtripStationPoint {
   lat: number;
   lon: number;
   state: "stay" | "free" | "pass";
+  /** Still ahead on its own calendar (server, roadtrip timeline rule); absent on older servers. */
+  planned?: boolean;
   roadtripName: string;
 }
 
@@ -41,14 +44,25 @@ export function buildRoadtripStationLayers(
       id: "dashboard-roadtrip-stations",
       data: groupMapData(
         stations,
-        (s) => JSON.stringify([s.lon, s.lat, s.title, s.state]),
+        (s) => JSON.stringify([s.lon, s.lat, s.title, s.state, s.planned === true]),
         (s) => s.id
       ),
       getPosition: (d) => (altitudeM === 0 ? [d.lon, d.lat] : [d.lon, d.lat, altitudeM]),
-      getFillColor: (d) => [...colors[d.state], 255] as [number, number, number, number],
-      getLineColor: [13, 17, 23, 255],
+      // A planned station is a hollow ring in its state's hue (lib/mapPresence.ts).
+      getFillColor: (d) =>
+        [...colors[d.state], d.planned === true ? PLANNED_FILL_ALPHA : 255] as [
+          number,
+          number,
+          number,
+          number,
+        ],
+      getLineColor: (d) =>
+        d.planned === true
+          ? ([...colors[d.state], 255] as [number, number, number, number])
+          : [13, 17, 23, 255],
+      lineWidthUnits: "pixels",
+      getLineWidth: (d) => (d.planned === true ? PLANNED_RING_PX : 1.5),
       stroked: true,
-      lineWidthMinPixels: 1.5,
       ...markerDotRadiusProps(sizeScale),
       pickable: true,
       autoHighlight: true,

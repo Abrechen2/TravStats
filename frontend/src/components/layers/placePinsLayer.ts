@@ -7,6 +7,7 @@ import {
   type PlaceColorConfig,
 } from "../../lib/placeColor";
 import type { Rgb } from "../../lib/cruiseColor";
+import { isPlannedOnly, PLANNED_FILL_ALPHA, PLANNED_RING_PX } from "../../lib/mapPresence";
 import { markerDotRadiusProps } from "./markerDotStyle";
 import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
 import {
@@ -37,6 +38,10 @@ interface PlacePinDatum {
   visitCount: number;
   /** Logbook vs. wishlist. Drives BOTH the colour and the filled/hollow shape. */
   visited: boolean;
+  /** Visits booked for later (placeCounting: a visit after now is planned). */
+  plannedVisits: number;
+  /** A logbook place with only planned visits: hollow like a wishlist entry, but in its own ring weight. */
+  plannedOnly: boolean;
   /** Resolved list colour in `list` mode; undefined for a place in no list.
    *  Baked into the datum so the colour accessor stays a pure lookup rather
    *  than closing over a map it would then have to declare as a trigger. */
@@ -171,6 +176,11 @@ export function buildPlacePins(
       country: place.country,
       visitCount: place.visitCount,
       visited: place.visited,
+      plannedVisits: place.plannedVisitCount ?? 0,
+      plannedOnly: isPlannedOnly({
+        visited: place.visited ? place.visitCount : 1,
+        planned: place.plannedVisitCount ?? 0,
+      }),
       listColor: listColors?.get(place.id),
       label: resolvePlaceLabel({ source: labelSource, list: listLabels?.get(place.id) ?? null }),
     });
@@ -187,15 +197,24 @@ export function buildPlacePins(
       ...markerDotRadiusProps(sizeScale),
       // A wishlist entry is drawn hollow: transparent fill, coloured ring.
       getFillColor: (d) =>
-        d.visited
-          ? ([...resolvePlaceColor(d, colors), 220] as [number, number, number, number])
-          : ([0, 0, 0, 0] as [number, number, number, number]),
+        d.plannedOnly
+          ? ([...resolvePlaceColor(d, colors), PLANNED_FILL_ALPHA] as [
+              number,
+              number,
+              number,
+              number,
+            ])
+          : d.visited
+            ? ([...resolvePlaceColor(d, colors), 220] as [number, number, number, number])
+            : ([0, 0, 0, 0] as [number, number, number, number]),
       getLineColor: (d) =>
-        d.visited
-          ? ([255, 255, 255, 220] as [number, number, number, number])
-          : ([...resolvePlaceColor(d, colors), 235] as [number, number, number, number]),
+        d.plannedOnly
+          ? ([...resolvePlaceColor(d, colors), 255] as [number, number, number, number])
+          : d.visited
+            ? ([255, 255, 255, 220] as [number, number, number, number])
+            : ([...resolvePlaceColor(d, colors), 235] as [number, number, number, number]),
       lineWidthUnits: "pixels",
-      getLineWidth: (d) => (d.visited ? 1 : 2),
+      getLineWidth: (d) => (d.plannedOnly ? PLANNED_RING_PX : d.visited ? 1 : 2),
       stroked: true,
       pickable: true,
       updateTriggers: {

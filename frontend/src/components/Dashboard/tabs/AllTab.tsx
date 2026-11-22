@@ -22,10 +22,12 @@ import {
   buildCruiseLegendRows,
   buildFlightLegendRows,
   buildLodgingLegendRows,
+  buildPlannedMarkerLegendRow,
   buildPoiLegendRows,
   legendRow,
 } from "./allTabLegendRows";
 import { useTransportOverlays } from "./allTabTransportOverlays";
+import { lodgingPresence, mapStatusClass } from "../../../lib/mapPresence";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { useDomainLoad } from "../../../hooks/useDomainLoad";
 import { useCruiseColorStore } from "../../../store/cruiseColorStore";
@@ -89,6 +91,18 @@ function isAllMode(mode: unknown): mode is AllMode {
 // Remembered per browser: a key someone shut should stay shut on the next
 // visit, and it is a display preference rather than account state.
 const LEGEND_OPEN_KEY = "dashboard.legendOpen";
+
+/** First row per React key; the planned-marker row can come from several overlays. */
+function dedupeByKey(rows: JSX.Element[]): JSX.Element[] {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    const key = String(row.key ?? "");
+    if (key === "") return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
 export function AllTab(): JSX.Element {
   const { mode, projection } = useDashboardRoute();
@@ -481,7 +495,19 @@ export function AllTab(): JSX.Element {
   // require the credit to stay visible, so covering it is a licence question,
   // not a cosmetic one. The other three map overlays in this app sit
   // bottom-LEFT and are unaffected.
-  const legendRows = [
+  // The planned-marker key appears only while the map really draws a
+  // planned-only marker (a flight/cruise booked, a house or place planned).
+  const hasPlannedMarker =
+    (visible.flight &&
+      visibleFlights.some((f) => mapStatusClass(f.properties.status) === "planned")) ||
+    (visible.cruise && visibleCruises.some((c) => mapStatusClass(c.status) === "planned")) ||
+    (visible.lodging && visibleLodgings.some((l) => lodgingPresence(l).class === "planned")) ||
+    (visible.poi &&
+      visiblePlaces.some((p) => p.visited && p.visitCount === 0 && (p.plannedVisitCount ?? 0) > 0));
+  // The rail/bus/ferry/rental overlays add the same planned row for their own
+  // markers; one key is enough, so repeats (same React key) are dropped.
+  const legendRows = dedupeByKey([
+    ...(hasPlannedMarker ? [buildPlannedMarkerLegendRow(t)] : []),
     ...(lines.flight ? flightLegendRows : []),
     ...(lines.cruise ? cruiseLegendRows : []),
     ...(visible.lodging ? lodgingLegendRows : []),
@@ -492,7 +518,7 @@ export function AllTab(): JSX.Element {
     // the key is shut — and be missing from the count on the button.
     ...(tourHasData ? tourLegend.rows : []),
     ...transport.legendRows,
-  ];
+  ]);
 
   // Collapsible, like the map options beside it. The key grew a row per LIST
   // when "by list" colouring started naming them, and on a map with a dozen

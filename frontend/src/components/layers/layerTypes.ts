@@ -57,6 +57,10 @@ export interface PointDatum {
   /** ISO date of the most recent flight touching this airport.
    *  Surfaced in the hover tooltip alongside the visit count. */
   lastVisit?: string;
+  /** Flights here that happened. `count` is flown + planned; cancelled are in neither. */
+  flownCount?: number;
+  /** Booked, future flights here. Zero flown and some planned = a planned-only airport. */
+  plannedCount?: number;
 }
 
 export interface TripDatum {

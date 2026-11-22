@@ -15,7 +15,7 @@ import type { LabelsMode } from "../../map/labelPriority";
 import { hexToRgb } from "../../../lib/domainColor";
 import { journeyFromRail } from "../../map/cards/journeys/journeyNormalize";
 import { withJourneyCards } from "../../map/cards/journeys/journeyLayerCards";
-import { legendRow, type LegendRowFn } from "./allTabLegendRows";
+import { buildPlannedMarkerLegendRow, legendRow, type LegendRowFn } from "./allTabLegendRows";
 import { useDashboardRail } from "../../../hooks/useDashboardRail";
 import type { RailJourney } from "../../../types/rail";
 import { useDomainColors } from "../../../hooks/useDomainColors";
@@ -121,6 +121,9 @@ export function buildRailLegendRows(
     if (!paths.some((p) => p.source === source)) continue;
     const rgba = source === "straight" ? `rgba(${r},${g},${b},0.67)` : `rgb(${r},${g},${b})`;
     rows.push(legendRow(rgba, t(SOURCE_KEYS[source]), `rail-${source}`));
+  }
+  if (buildRailStations(journeys).some((s) => s.plannedOnly)) {
+    rows.push(buildPlannedMarkerLegendRow(t));
   }
   return rows;
 }

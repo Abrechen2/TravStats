@@ -18,6 +18,7 @@ export type MapMode = "routes" | "heatmap" | "trips" | "globe";
 import { useTranslation } from "../hooks/useTranslation";
 import WebGLGuard from "./map/WebGLGuard";
 import { useThemeStore } from "../store/themeStore";
+import { mapStatusClass } from "../lib/mapPresence";
 import { useRecordedFlightPaths } from "../hooks/useRecordedFlightPaths";
 import SpecialFlightsLegend from "./specialFlights/SpecialFlightsLegend";
 import type { SpecialType } from "./specialFlights/specialTypeMeta";
@@ -158,7 +159,14 @@ export default function MapContainer3D({
   const { t } = useTranslation(["common", "map"]);
   const mapTheme = useThemeStore((s) => s.mapTheme);
   // Recorded flights drawn along their recording (forgejo#312), in both engines.
-  const drawnFlights = useRecordedFlightPaths(flights);
+  // A cancelled flight never happened: it draws no arc, no airport marker and
+  // is in no count (it stays in the logbook). Dropped once here, ahead of both
+  // engines, so the hover and the pinned card read the same list.
+  const mapFlights = useMemo(
+    () => flights.filter((f) => mapStatusClass(f.properties.status) !== "hidden"),
+    [flights]
+  );
+  const drawnFlights = useRecordedFlightPaths(mapFlights);
   // The cruise list is always the caller's: every tab either passes a
   // pre-filtered `cruisesOverride` or draws its own cruises with
   // `showInternalCruises={false}`. The internal `cruiseApi.list()` fetch that
@@ -212,13 +220,13 @@ export default function MapContainer3D({
   const routeCount = useMemo(() => {
     if (visMode !== "routes") return null;
     const seen = new Set<string>();
-    for (const f of flights) {
+    for (const f of mapFlights) {
       const dep = f.properties.departureAirport?.iata;
       const arr = f.properties.arrivalAirport?.iata;
       if (dep && arr) seen.add([dep, arr].sort().join("-"));
     }
     return seen.size;
-  }, [flights, visMode]);
+  }, [mapFlights, visMode]);
 
   // Populate the legend only with specialType values actually present
   // in the current flight set — otherwise 8 entries (most empty) would
@@ -346,7 +354,7 @@ export default function MapContainer3D({
             boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
           }}
         >
-          <span style={{ color: "var(--map-accent)", fontWeight: 700 }}>{flights.length}</span>{" "}
+          <span style={{ color: "var(--map-accent)", fontWeight: 700 }}>{mapFlights.length}</span>{" "}
           {t("map:infoPill.flights")}
           {" · "}
           <span style={{ color: "var(--map-accent)", fontWeight: 700 }}>{routeCount}</span>{" "}

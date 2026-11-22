@@ -1,10 +1,13 @@
 import type { PickingInfo } from "@deck.gl/core";
+import { lodgingPresence } from "../../lib/mapPresence";
+import type { Lodging } from "../../types/lodging";
 import { escapeHtml } from "../../lib/escapeHtml";
 import { flagImgHtml, countryName, resolveCountryCode } from "../../lib/countryFlag";
 import {
   airportHoverHtml,
   arcHoverHtml,
   cruiseHoverHtml,
+  plannedOnlyHtml,
   portHoverHtml,
 } from "./cards/hoverCardHtml";
 import {
@@ -94,6 +97,10 @@ interface PlaceDatum {
   /** Free text exactly as LodgingDatum.country is — resolved at render time. */
   readonly country?: string | null;
   readonly visitCount?: number;
+  /** Visits booked for later. */
+  readonly plannedVisits?: number;
+  /** The same, as the `Place` the globe hands over spells it. */
+  readonly plannedVisitCount?: number;
   /** Logbook vs. wishlist. A wishlist entry has no visits to report. */
   readonly visited?: boolean;
 }
@@ -106,6 +113,9 @@ interface AirportDatum {
   readonly city?: string | null;
   /** Visits / flight count touching this airport. */
   readonly count?: number;
+  /** Flown / booked split of `count`; cancelled flights are in neither. */
+  readonly flownCount?: number;
+  readonly plannedCount?: number;
   /** ISO date of the most recent flight touching this airport. */
   readonly lastVisit?: string;
 }
@@ -120,6 +130,8 @@ interface PortDatum {
   readonly city?: string | null;
   /** Visits / cruise-stop count at this port. */
   readonly visits?: number;
+  /** Port calls of booked cruises. */
+  readonly plannedVisits?: number;
   /** Globe carries the same number as `size` instead of `visits`. */
   readonly size?: number;
   /** ISO date of the most recent stop at this port. */
@@ -156,6 +168,9 @@ interface LodgingDatum {
   readonly stayCount?: number;
   /** Total nights recorded at this lodging. */
   readonly nights?: number;
+  /** Stays still ahead of check-out. */
+  readonly plannedStays?: number;
+  readonly stays?: Lodging["stays"];
 }
 
 const SURFACE_STYLE: Record<string, string> = {
@@ -336,6 +351,8 @@ function renderAirportHtml(d: AirportDatum, heading: string, t: TFn, locale: str
       city: d.city,
       country: d.country,
       count: d.count,
+      flown: d.flownCount,
+      planned: d.plannedCount,
       lastVisit: d.lastVisit,
     },
     { t, locale, flagHeight: FLAT_FLAG_PX }
@@ -350,6 +367,7 @@ function renderPortHtml(d: PortDatum, heading: string, t: TFn, locale: string): 
       city: d.city,
       country: d.country,
       visits: d.visits ?? d.size,
+      planned: d.plannedVisits,
       lastVisit: d.lastVisit,
     },
     { t, locale, flagHeight: FLAT_FLAG_PX }
@@ -390,6 +408,10 @@ function renderLodgingHtml(d: LodgingDatum, heading: string, t: TFn, locale: str
       `<div style="color:${LODGING_ACCENT_HEX};margin-top:2px;">${escapeHtml(parts.join(" · "))}</div>`
     );
   }
+  // The globe hands over the raw `Lodging`, which has stays but no `plannedStays`.
+  const planned =
+    typeof d.plannedStays === "number" ? d.plannedStays : lodgingPresence(d).counts.planned;
+  lines.push(plannedOnlyHtml(planned, stayCount ?? 0, LODGING_ACCENT_HEX, t));
   return lines.join("");
 }
 
@@ -440,6 +462,11 @@ function renderPlaceHtml(d: PlaceDatum, heading: string, t: TFn, locale: string)
   if (tail.length > 0) {
     lines.push(
       `<div style="color:${PLACE_ACCENT_HEX};margin-top:2px;">${escapeHtml(tail.join(" · "))}</div>`
+    );
+  }
+  if (d.visited !== false) {
+    lines.push(
+      plannedOnlyHtml(d.plannedVisits ?? d.plannedVisitCount ?? 0, visits ?? 0, PLACE_ACCENT_HEX, t)
     );
   }
   return lines.join("");

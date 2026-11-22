@@ -1,4 +1,5 @@
 import { groupMapData, pathIdentity } from "../layers/routeAggregation";
+import { mapStatusClass } from "../../lib/mapPresence";
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import {
   STATION_DOT_OUTLINE_PX,
@@ -48,7 +49,7 @@ export interface TerminalRideLine {
 export function busPaths(rides: readonly TerminalRideLine[]): BusPathDatum[] {
   const out: BusPathDatum[] = [];
   for (const ride of rides) {
-    if (ride.status === "cancelled") continue;
+    if (mapStatusClass(ride.status) === "hidden") continue;
     const coords = [ride.depLat, ride.depLon, ride.arrLat, ride.arrLon];
     if (coords.some((v) => typeof v !== "number" || !Number.isFinite(v))) continue;
     const routed = Array.isArray(ride.geometry) && ride.geometry.length >= 2;
@@ -92,20 +93,25 @@ export function terminalRidePath(
 
 export interface TerminalDatum {
   position: [number, number];
+  /** Only booked (scheduled) rides touch this terminal: drawn as a faint fill in a heavier ring. */
+  plannedOnly: boolean;
 }
 
 /** One dot per terminal place (to ~100 m, `endKey`), cancelled rides left out. */
 export function terminalPoints(rides: readonly TerminalRideLine[]): TerminalDatum[] {
   const byKey = new Map<string, TerminalDatum>();
   for (const ride of rides) {
-    if (ride.status === "cancelled") continue;
+    if (mapStatusClass(ride.status) === "hidden") continue;
+    const planned = mapStatusClass(ride.status) === "planned";
     for (const [lon, lat] of [
       [ride.depLon, ride.depLat],
       [ride.arrLon, ride.arrLat],
     ] as const) {
       if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
       const key = endKey({ lat, lon });
-      if (!byKey.has(key)) byKey.set(key, { position: [lon, lat] });
+      const known = byKey.get(key);
+      if (!known) byKey.set(key, { position: [lon, lat], plannedOnly: planned });
+      else if (!planned) known.plannedOnly = false;
     }
   }
   return [...byKey.values()];

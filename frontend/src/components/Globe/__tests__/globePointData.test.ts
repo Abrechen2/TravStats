@@ -118,8 +118,25 @@ describe("buildPortPoints", () => {
     expect(points.find((p) => p.name === "Oslo")?.country).toBe("NO");
   });
 
-  it("ignores a cruise that has not sailed", () => {
-    expect(buildPortPoints([cruise("c2", "scheduled")], LEGS, OPEN)).toEqual([]);
+  it("ignores a cancelled cruise and marks a scheduled one's port planned, not visited", () => {
+    expect(buildPortPoints([cruise("c2", "cancelled")], LEGS, OPEN)).toEqual([]);
+    const [planned] = buildPortPoints([cruise("c2", "scheduled")], LEGS, OPEN);
+    expect([planned.flownCount, planned.plannedCount]).toEqual([0, 1]);
+  });
+
+  it("marks a booked cruise's embarkation port that is not a stop, as the flat map does", () => {
+    const base = cruise("c3", "scheduled");
+    const kiel = base.stops[0].port!;
+    const embark = { ...kiel, id: 99, name: "Hamburg", lat: 53.5, lon: 10 };
+    const points = buildPortPoints(
+      [{ ...base, departurePort: embark } as unknown as Cruise],
+      LEGS,
+      OPEN
+    );
+    expect(points.find((p) => p.name === "Hamburg")).toMatchObject({
+      flownCount: 0,
+      plannedCount: 1,
+    });
   });
 
   it("drops ports the live window has not reached yet", () => {

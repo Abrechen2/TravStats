@@ -50,6 +50,53 @@ function datedLine(label: string, iso: string): string {
   return `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">${escapeHtml(label)}: ${escapeHtml(formatDate(iso))}</div>`;
 }
 
+// ─── Planned vs. happened ─────────────────────────────────────────
+
+/**
+ * "0 geflogen · 2 geplant" plus, when nothing has happened yet, a "Nur
+ * geplant" mark. Empty when nothing is planned — the caller then draws its own
+ * plain count, so a marker without plans reads exactly as it always did.
+ * `visitedKey` names what "happened" means in the domain (flown, visited, …).
+ * One builder for every domain and for the pinned card's twin
+ * (`plannedSummaryText`), so hover and card cannot count differently.
+ */
+export function plannedStatusHtml(
+  counts: { visited: number; planned: number },
+  color: string,
+  t: TFn,
+  visitedKey: string = "map:tooltip.countFlown"
+): string {
+  if (counts.planned <= 0) return "";
+  const summary = plannedSummaryText(counts, t, visitedKey);
+  const only =
+    counts.visited === 0
+      ? `<div style="opacity:0.8;font-size:10.5px;margin-top:2px;">${escapeHtml(t("map:tooltip.plannedOnly"))}</div>`
+      : "";
+  return `<div style="color:${color};margin-top:4px;">${escapeHtml(summary)}</div>${only}`;
+}
+
+/**
+ * The planned half on its own, for a marker whose "happened" figure the card
+ * already prints in its own words (a lodging's "2 Aufenthalte"): "1 geplant",
+ * plus "Nur geplant" when nothing has happened. Empty when nothing is planned.
+ */
+export function plannedOnlyHtml(planned: number, happened: number, color: string, t: TFn): string {
+  if (planned <= 0) return "";
+  const only =
+    happened === 0
+      ? `<div style="opacity:0.8;font-size:10.5px;margin-top:2px;">${escapeHtml(t("map:tooltip.plannedOnly"))}</div>`
+      : "";
+  return `<div style="color:${color};margin-top:2px;">${escapeHtml(t("map:tooltip.countPlanned", { count: planned }))}</div>${only}`;
+}
+
+export function plannedSummaryText(
+  counts: { visited: number; planned: number },
+  t: TFn,
+  visitedKey: string = "map:tooltip.countFlown"
+): string {
+  return `${t(visitedKey, { count: counts.visited })} · ${t("map:tooltip.countPlanned", { count: counts.planned })}`;
+}
+
 // ─── Airport ──────────────────────────────────────────────────────
 
 export interface AirportHoverDatum {
@@ -60,6 +107,9 @@ export interface AirportHoverDatum {
   country?: string | null;
   /** Flights touching this airport. Omitted or 0 → the line is left out. */
   count?: number;
+  /** Flights that happened / are booked. Omitted = no split (a plain `count`). */
+  flown?: number;
+  planned?: number;
   lastVisit?: string | null;
 }
 
@@ -78,10 +128,17 @@ export function airportHoverHtml(d: AirportHoverDatum, opts: HoverHtmlOptions): 
       ? `<div style="opacity:0.88;font-size:11.5px;margin-top:3px;">${escapeHtml(d.name)}</div>`
       : "";
   const count = typeof d.count === "number" && d.count > 0 ? d.count : null;
+  const split = plannedStatusHtml(
+    { visited: d.flown ?? 0, planned: d.planned ?? 0 },
+    tokens.domainColor.flight,
+    t
+  );
   const countLine =
-    count !== null
-      ? `<div style="color:${tokens.domainColor.flight};margin-top:4px;">${count} ${escapeHtml(t("map:globe.flight", { count }))}</div>`
-      : "";
+    split !== ""
+      ? split
+      : count !== null
+        ? `<div style="color:${tokens.domainColor.flight};margin-top:4px;">${count} ${escapeHtml(t("map:globe.flight", { count }))}</div>`
+        : "";
   return `<div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;">${flagImgHtml(d.country, flagHeight)}<span>${escapeHtml(heading)}</span>${icaoPill}</div>${nameLine}${placeLine(d.city, d.country, locale)}${countLine}${d.lastVisit ? datedLine(t("map:tooltip.lastVisit"), d.lastVisit) : ""}`;
 }
 
@@ -95,6 +152,10 @@ export interface PortHoverDatum {
   country?: string | null;
   /** Cruise stops at this port. Omitted or 0 → the line is left out. */
   visits?: number;
+  /** Port calls of booked cruises. Omitted or 0 → no planned line. */
+  planned?: number;
+  /** Sailed calls when the datum has no `visits` (the globe's does not). */
+  flown?: number;
   lastVisit?: string | null;
 }
 
@@ -112,7 +173,7 @@ export function portHoverHtml(d: PortHoverDatum, opts: HoverHtmlOptions): string
     visits !== null
       ? `<div style="color:${tokens.domainColor.cruise};margin-top:2px;">${visits} ${escapeHtml(t("map:airportMarkers.visits"))}</div>`
       : "";
-  return `<div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;">${flag}<span>${escapeHtml(heading)}</span></div>${placeLine(d.city, d.country, locale)}${codeLine}${visitsLine}${d.lastVisit ? datedLine(t("map:tooltip.lastCall"), d.lastVisit) : ""}`;
+  return `<div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;">${flag}<span>${escapeHtml(heading)}</span></div>${placeLine(d.city, d.country, locale)}${codeLine}${visitsLine}${plannedOnlyHtml(d.planned ?? 0, visits ?? d.flown ?? 0, tokens.domainColor.cruise, t)}${d.lastVisit ? datedLine(t("map:tooltip.lastCall"), d.lastVisit) : ""}`;
 }
 
 // ─── Route arc ────────────────────────────────────────────────────
