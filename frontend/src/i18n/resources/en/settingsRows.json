@@ -357,8 +357,8 @@
     "userdel": {
       "title": "Delete {{name}}?",
       "affects": "The account {{name}} with all entries and files",
-      "amount_one": "{{count}} flight",
-      "amount_other": "{{count}} flights",
+      "amount_one": "{{count}} entry",
+      "amount_other": "{{count}} entries",
       "after": "It can only be restored from a backup.",
       "confirm": "Delete",
       "word": "{{name}}"
@@ -1292,7 +1292,7 @@
       "lock": "{{name}} locked",
       "reset2fa": "{{name}}'s second step reset"
     },
-    "counts": "{{flights}} flights · {{achievements}} achievements",
+    "counts": "{{entries}} entries · {{achievements}} achievements",
     "demo": "Demo",
     "menu": "Actions for {{name}}",
     "noMail": "By e-mail only works once the server sends mail. Set it up under Services.",
@@ -1303,6 +1303,16 @@
       "used": "used",
       "expired": "expired",
       "active": "open"
+    },
+    "pills": {
+      "twoFactorOn": "2FA on",
+      "twoFactorOff": "2FA off",
+      "twoFactorOnHint": "Two-factor sign-in: this account protects its sign-in with a second factor.",
+      "twoFactorOffHint": "Two-factor sign-in: this account signs in with a password only.",
+      "active": "Account active",
+      "inactive": "Account disabled",
+      "activeHint": "The account is active and can sign in.",
+      "inactiveHint": "The account is disabled and cannot sign in. Its data is kept."
     }
   },
   "backups": {

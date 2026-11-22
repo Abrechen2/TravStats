@@ -1,3 +1,4 @@
+import type { DomainKey } from "../../shared/domains";
 /** What the Nutzer and Wartung pages read from the admin API. */
 
 export interface AdminUser {
@@ -13,6 +14,10 @@ export interface AdminUser {
     flights: number;
     userAchievements: number;
   };
+  /** Every entry domain summed (trips are not entries). */
+  entryTotal: number;
+  /** Entries per domain, for the tooltip. */
+  entryCounts: Record<DomainKey, number>;
 }
 
 export interface Invitation {

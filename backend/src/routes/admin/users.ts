@@ -14,6 +14,7 @@ import {
 import { sendAdminPasswordResetEmail } from "../../services/emailService";
 import { removeAccount } from "../../services/account/removeAccount";
 import { SMTP_CONFIG_ID } from "./smtp";
+import { countEntriesByUser, emptyByDomain } from "../../services/admin/userEntryCounts";
 import logger from "../../utils/logger";
 import { getInstanceSettings } from "../../services/instanceSettingsService";
 import { stampWhatsNewSeen } from "../../services/whatsNewStamp";
@@ -108,7 +109,18 @@ router.get("/users", async (req: AuthRequest, res: Response, next: NextFunction)
       orderBy: { createdAt: "desc" },
     });
 
-    res.json({ users });
+    const entries = await countEntriesByUser();
+    res.json({
+      users: users.map((u) => {
+        const counts = entries.get(u.id);
+        return {
+          ...u,
+          // Every entry domain summed (the row's "Einträge"); trips are not entries.
+          entryTotal: counts?.total ?? 0,
+          entryCounts: counts?.byDomain ?? emptyByDomain(),
+        };
+      }),
+    });
   } catch (error) {
     next(error);
   }

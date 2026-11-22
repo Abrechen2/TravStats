@@ -14,6 +14,7 @@ import Button from "../ui/Button";
 import { ConfirmDialog, ErrorLine, SettingItem } from "../ui/settings";
 import { MenuItem, RowMenu } from "./RowMenu";
 import type { AdminUser } from "./types";
+import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 import { useAdminAction } from "./useAdminAction";
 
 type Pending = { kind: "delete" | "lock" | "reset2fa" | "resetpw"; user: AdminUser };
@@ -107,7 +108,7 @@ export default function UsersAccounts(): JSX.Element {
             : pending.kind === "resetpw"
               ? "userpw"
               : "user2fa",
-        { name: pending.user.username, count: pending.user._count.flights }
+        { name: pending.user.username, count: pending.user.entryTotal }
       )
     : null;
 
@@ -147,10 +148,12 @@ export default function UsersAccounts(): JSX.Element {
               </span>
               <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
                 {formatIsoDate(user.createdAt)} ·{" "}
-                {t("settingsRows:users.counts", {
-                  flights: user._count.flights,
-                  achievements: user._count.userAchievements,
-                })}
+                <span title={entryBreakdown(user, t)} data-testid={`entries-${user.id}`}>
+                  {t("settingsRows:users.counts", {
+                    entries: user.entryTotal,
+                    achievements: user._count.userAchievements,
+                  })}
+                </span>
               </span>
             </span>
             <span className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
@@ -167,17 +170,29 @@ export default function UsersAccounts(): JSX.Element {
               ) : null}
               <span
                 className="ts-status-pill"
+                title={t(
+                  user.twoFactorEnabledAt
+                    ? "settingsRows:users.pills.twoFactorOnHint"
+                    : "settingsRows:users.pills.twoFactorOffHint"
+                )}
                 style={statusPillStyle(user.twoFactorEnabledAt ? "completed" : "historical")}
               >
                 {user.twoFactorEnabledAt
-                  ? t("admin:users.twoFactor.on")
-                  : t("admin:users.twoFactor.off")}
+                  ? t("settingsRows:users.pills.twoFactorOn")
+                  : t("settingsRows:users.pills.twoFactorOff")}
               </span>
               <span
                 className="ts-status-pill"
+                title={t(
+                  user.isActive
+                    ? "settingsRows:users.pills.activeHint"
+                    : "settingsRows:users.pills.inactiveHint"
+                )}
                 style={statusPillStyle(user.isActive ? "completed" : "cancelled")}
               >
-                {user.isActive ? t("admin:users.status.active") : t("admin:users.status.inactive")}
+                {user.isActive
+                  ? t("settingsRows:users.pills.active")
+                  : t("settingsRows:users.pills.inactive")}
               </span>
             </span>
             <RowMenu label={t("settingsRows:users.menu", { name: user.username })}>
@@ -250,4 +265,11 @@ export default function UsersAccounts(): JSX.Element {
       ) : null}
     </SettingItem>
   );
+}
+
+/** "Flüge: 3 · Orte: 1" — the domains the account has entries in, for the number's tooltip. */
+function entryBreakdown(user: AdminUser, t: (key: string) => string): string {
+  return AVAILABLE_DOMAINS.filter((d) => (user.entryCounts?.[d] ?? 0) > 0)
+    .map((d) => `${t(`common:${DOMAINS[d].i18nKey}`)}: ${user.entryCounts[d]}`)
+    .join(" · ");
 }

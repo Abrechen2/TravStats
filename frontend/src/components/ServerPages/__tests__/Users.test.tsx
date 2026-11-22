@@ -40,6 +40,8 @@ const user = (id: string, over = {}) => ({
   createdAt: "2026-01-01T00:00:00Z",
   twoFactorEnabledAt: null,
   _count: { flights: 3, userAchievements: 1 },
+  entryTotal: 3,
+  entryCounts: { flight: 3 },
   ...over,
 });
 
@@ -275,5 +277,44 @@ describe("Nutzer › Einladungen", () => {
     expect(
       await screen.findByText("settingsRows:users.errors.loadInvitations")
     ).toBeInTheDocument();
+  });
+});
+
+describe("account rows (admin user list)", () => {
+  it("shows ONE entries total per account, not just the flight count", async () => {
+    api.getUsers.mockResolvedValue({
+      users: [user("me", { entryTotal: 7, entryCounts: { flight: 3, lodging: 3, poi: 1 } })],
+    });
+    render(
+      <MemoryRouter>
+        <UsersAccounts />
+      </MemoryRouter>
+    );
+    const counts = await screen.findByTestId("entries-me");
+    expect(counts.textContent).toContain("settingsRows:users.counts");
+    // `t` is a key echo in this suite; the interpolated total is what must change.
+    expect(counts).toHaveAttribute("title", expect.stringContaining("common:domain.flight: 3"));
+    expect(counts).toHaveAttribute("title", expect.stringContaining("common:domain.poi: 1"));
+  });
+
+  it("labels the two-factor and account pills so 'Aus' is no longer ambiguous", async () => {
+    api.getUsers.mockResolvedValue({
+      users: [user("me"), user("jonas", { twoFactorEnabledAt: "2026-02-01", isActive: false })],
+    });
+    render(
+      <MemoryRouter>
+        <UsersAccounts />
+      </MemoryRouter>
+    );
+    await screen.findByText("me");
+    const me = within(rowOf("me"));
+    expect(me.getByText("settingsRows:users.pills.twoFactorOff")).toHaveAttribute(
+      "title",
+      "settingsRows:users.pills.twoFactorOffHint"
+    );
+    expect(me.getByText("settingsRows:users.pills.active")).toHaveAttribute("title");
+    const jonas = within(rowOf("jonas"));
+    expect(jonas.getByText("settingsRows:users.pills.twoFactorOn")).toBeInTheDocument();
+    expect(jonas.getByText("settingsRows:users.pills.inactive")).toBeInTheDocument();
   });
 });
