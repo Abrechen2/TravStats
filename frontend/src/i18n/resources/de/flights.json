@@ -425,6 +425,7 @@
       "BARCODE_IMAGE_REFUSED": "Das Bild ist zu groß oder beschädigt und wurde nicht gelesen – bitte ein normales Foto (JPG oder PNG) verwenden.",
       "OCR_OK": "Text gelesen",
       "OCR_FAILED": "Der Text auf der Bordkarte konnte nicht gelesen werden.",
+      "OCR_IMAGE_REFUSED": "Das Bild ist zu groß oder beschädigt – die Texterkennung hat es nicht gelesen. Bitte ein normales Foto (JPG oder PNG) verwenden.",
       "OCR_NOT_RUN": "Nicht ausgeführt",
       "PARSER_OK": "Alle Flugdaten gefunden",
       "PARSER_PARTIAL": "Teilweise erkannt – es fehlt: {{fields}}",

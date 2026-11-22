@@ -425,6 +425,7 @@
       "BARCODE_IMAGE_REFUSED": "The image is too large or damaged and was not read – please use an ordinary photo (JPG or PNG).",
       "OCR_OK": "Text read",
       "OCR_FAILED": "The text on the boarding pass could not be read.",
+      "OCR_IMAGE_REFUSED": "The image is too large or damaged – text recognition did not read it. Please use an ordinary photo (JPG or PNG).",
       "OCR_NOT_RUN": "Not run",
       "PARSER_OK": "All flight details found",
       "PARSER_PARTIAL": "Partly recognised – missing: {{fields}}",

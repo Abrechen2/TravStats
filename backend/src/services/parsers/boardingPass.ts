@@ -4,6 +4,7 @@ import logger, { parserFactoryLogger, parserVisionLogger } from "../../utils/log
 import { shouldLogParserOperations } from "../loggingConfig";
 import { checkProviderAvailability, deleteAvailabilityCacheEntry } from "./config";
 import { getVisionParserInstance } from "./providers";
+import { ImageRefusedError } from "../../utils/barcodeScan/pixels";
 
 /**
  * Calculate quality score for parsed booking (0-100)
@@ -168,6 +169,8 @@ export async function parseBoardingPass(
         ...(ocrText !== undefined ? { ocrText } : {}),
       };
     } catch (error: unknown) {
+      // Refused for its size: no other provider may decode it either.
+      if (error instanceof ImageRefusedError) throw error;
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
       if (shouldLog) {
         visionLog.warn({

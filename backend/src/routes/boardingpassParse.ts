@@ -9,6 +9,7 @@ import { PARSER_SUPPORTED_DOMAINS } from "../shared/domains";
 import { BoardingPassReadError, isEmpty, readBoardingPass } from "../services/boardingPassRead";
 import type { ApiErrorCode } from "../middleware/errorHandler";
 import { describeParserError } from "../utils/parserErrors";
+import { ImageRefusedError } from "../utils/barcodeScan/pixels";
 import {
   assertMayRecord,
   assertRetainable,
@@ -175,6 +176,15 @@ router.post(
       // Same mapping as the other parse routes: a stable code, and no raw
       // exception text for the scanner to print — plus the stages that ran.
       const readError = error instanceof BoardingPassReadError ? error : null;
+      // An image refused for its size is the user's file, not a server fault.
+      if (readError?.original instanceof ImageRefusedError) {
+        res.status(422).json({
+          error: "The image was refused before reading",
+          code: "NO_FLIGHT_DATA" satisfies ApiErrorCode,
+          stages: readError.stages,
+        });
+        return;
+      }
       const described = describeParserError(readError ? readError.original : error);
       res.status(described.status).json({
         error: "Boarding pass parsing failed",

@@ -10,6 +10,8 @@ import {
 import { CITY_TO_IATA } from "../text/regexMappings";
 import { normalizeCityName } from "../text/regexAirportExtractor";
 import logger from "../../../utils/logger";
+import { boundedOcrImage } from "../../../utils/barcodeScan/ocrImage";
+import { ImageRefusedError } from "../../../utils/barcodeScan/pixels";
 
 /**
  * Three-letter tokens that are printed ON boarding passes but are not
@@ -278,7 +280,7 @@ export class TesseractVisionParser implements IVisionParser {
    */
   async recognizeText(imageBase64: string): Promise<{ text: string; confidence: number }> {
     const worker = await this.ensureDocumentWorker();
-    const { data } = await worker.recognize(Buffer.from(imageBase64, "base64"));
+    const { data } = await worker.recognize(boundedOcrImage(Buffer.from(imageBase64, "base64")));
 
     logger.info(
       { confidence: data.confidence, textLength: data.text.length },
@@ -328,8 +330,8 @@ export class TesseractVisionParser implements IVisionParser {
     try {
       const worker = await this.ensureWorker();
 
-      // Convert base64 to buffer
-      const imageBuffer = Buffer.from(imageBase64, "base64");
+      // Never the raw upload: Tesseract's decoder has no size limit (ocrImage).
+      const imageBuffer = boundedOcrImage(Buffer.from(imageBase64, "base64"));
 
       // Perform OCR
       const { data } = await worker.recognize(imageBuffer);
@@ -367,6 +369,8 @@ export class TesseractVisionParser implements IVisionParser {
 
       return { booking: result, text: extractedText };
     } catch (error) {
+      // A refused image keeps its own type, so the caller can say why.
+      if (error instanceof ImageRefusedError) throw error;
       logger.error({ error }, "[Tesseract Parser] OCR parsing failed");
       throw new Error(
         `Tesseract OCR parsing failed: ${error instanceof Error ? error.message : "Unknown error"}`

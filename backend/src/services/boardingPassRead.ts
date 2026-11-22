@@ -25,7 +25,7 @@ import type { ParserConfig } from "./parsers/types";
 import { getMissingFields } from "./parsers/shared/utils";
 import { scanBarcodesFromImageBase64, type BarcodeScan } from "../utils/barcodeImage";
 import { decodeBcbp, looksLikeBcbp, type DecodedBcbp } from "../utils/bcbp";
-import type { Box } from "../utils/barcodeScan/pixels";
+import { ImageRefusedError, type Box } from "../utils/barcodeScan/pixels";
 import logger from "../utils/logger";
 import { mergeLeg, openFields, settleArrivalDate } from "./boardingPass/legs";
 import { getAirportTimezone } from "../utils/timezone";
@@ -223,7 +223,13 @@ async function withSecondReading(
 
 function ocrStageEntry(ocr: OcrOutcome): BoardingPassStage {
   const read = ocr.passes.filter((p) => !p.failed).length;
-  if (read === 0) return { stage: "ocr", status: "failed", code: "OCR_FAILED" };
+  if (read === 0) {
+    return {
+      stage: "ocr",
+      status: "failed",
+      code: ocr.error instanceof ImageRefusedError ? "OCR_IMAGE_REFUSED" : "OCR_FAILED",
+    };
+  }
   return {
     stage: "ocr",
     status: read === ocr.passes.length ? "ok" : "partial",
@@ -289,7 +295,7 @@ export async function readBoardingPass(input: BoardingPassInput): Promise<Boardi
     );
     const entry = ocrStageEntry(ocr);
     stages.push(entry);
-    if (entry.code === "OCR_FAILED") {
+    if (entry.status === "failed") {
       logger.warn({ err: ocr.error }, "[BoardingPassRead] OCR failed");
       // Without a barcode nothing is left to read; the route's error mapping
       // tells the user why (the contract before stages existed).

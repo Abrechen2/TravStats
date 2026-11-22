@@ -12,7 +12,11 @@
  * what the server reads by itself, without network.
  *
  * Usage (from backend/):
- *   DATABASE_URL=… npx tsx scripts/boarding-pass-corpus.ts [--dir ../test-samples/boarding-passes]
+ *   DATABASE_URL=… npx tsx scripts/boarding-pass-corpus.ts [--dir ../test-samples/boarding-passes] [--min-score 0.9]
+ *
+ * Exits 1 when a sample failed to read, or when `--min-score` (share of
+ * expected fields read correctly, 0–1) is given and the run falls below it —
+ * so a broken run cannot look successful.
  */
 import fs from "fs";
 import path from "path";
@@ -40,6 +44,16 @@ function argDir(): string {
   return path.resolve(i >= 0 ? process.argv[i + 1] : "../test-samples/boarding-passes");
 }
 
+function argMinScore(): number | undefined {
+  const i = process.argv.indexOf("--min-score");
+  if (i < 0) return undefined;
+  const value = Number(process.argv[i + 1]);
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new Error("--min-score takes a share between 0 and 1, e.g. 0.9");
+  }
+  return value;
+}
+
 function loadSamples(dir: string): Sample[] {
   const files = fs
     .readdirSync(dir)
@@ -55,8 +69,10 @@ function expectedOf(sample: Sample): Expected[] {
   return [{ ...e, date: e.departureTime?.slice(0, 10), departureTime: undefined }];
 }
 
-async function main(): Promise<void> {
+async function main(): Promise<number> {
   const dir = argDir();
+  const minScore = argMinScore();
+  let failures = 0;
   let hits = 0;
   let total = 0;
   for (const sample of loadSamples(dir)) {
@@ -73,6 +89,7 @@ async function main(): Promise<void> {
       allowLlm: false,
     }).catch((err: unknown) => {
       console.log(`FAIL ${sample.filename}: ${err instanceof Error ? err.message : String(err)}`);
+      failures++;
       return null;
     });
     if (!reading) continue;
@@ -101,11 +118,21 @@ async function main(): Promise<void> {
     );
     for (const line of lines) console.log(line);
   }
-  console.log(`\n${hits}/${total} fields correct`);
+  const score = total === 0 ? 0 : hits / total;
+  console.log(`\n${hits}/${total} fields correct (${(score * 100).toFixed(1)} %)`);
+  if (failures > 0) {
+    console.log(`${failures} sample(s) could not be read`);
+    return 1;
+  }
+  if (minScore !== undefined && score < minScore) {
+    console.log(`below --min-score ${minScore}`);
+    return 1;
+  }
+  return 0;
 }
 
 main()
-  .then(() => process.exit(0))
+  .then((code) => process.exit(code))
   .catch((err) => {
     console.error(err);
     process.exit(1);

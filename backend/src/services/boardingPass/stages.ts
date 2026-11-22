@@ -27,6 +27,7 @@ export const BOARDING_PASS_STAGE_CODES = [
   // ocr
   "OCR_OK",
   "OCR_FAILED",
+  "OCR_IMAGE_REFUSED",
   "OCR_NOT_RUN",
   // parser
   "PARSER_OK",
