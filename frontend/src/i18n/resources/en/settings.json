@@ -385,7 +385,10 @@
     "imported": "{{rows}} entries and {{files}} files imported",
     "alreadyImported": "This archive has already been imported into this account.",
     "missingFiles": "Note: {{count}} files are not in the archive:",
-    "omittedReason": { "not_owned": "not your account", "not_found": "not found on the server" },
+    "omittedReason": {
+      "not_owned": "not your account",
+      "not_found": "not found on the server"
+    },
     "partial": "Not matched: {{skipped}} entries skipped, {{unmatched}} references (e.g. ports, stations) with no match on this server, {{refused}} files refused.",
     "notEmpty": "This account already holds entries. Create a new account and import the archive there.",
     "statusFailed": "Could not check whether this account is empty. Reload the page.",
@@ -1000,7 +1003,8 @@
       "amount_other": "{{count}} signed-out or expired phones",
       "after": "Active phones stay connected.",
       "confirm": "Remove all"
-    }
+    },
+    "menuLabel": "More actions for device {{name}}"
   },
   "apiTokens": {
     "title": "API keys",
@@ -1062,7 +1066,8 @@
       "amount_other": "{{count}} revoked or expired keys",
       "after": "Active keys stay in place.",
       "confirm": "Remove all"
-    }
+    },
+    "menuLabel": "More actions for token {{name}}"
   },
   "security": {
     "title": "Sign-in",

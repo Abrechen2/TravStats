@@ -95,6 +95,20 @@ describe("RoadtripDetailPage", () => {
     expect(screen.getByTestId("map")).toBeInTheDocument();
   });
 
+  it("keeps odometer, GPX export and delete in the ⋯, delete last, and has no footer delete link", async () => {
+    renderAt("/roadtrips/rt");
+    fireEvent.click(await screen.findByTestId("roadtrip-more"));
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual([
+      "roadtrips:odometerDialog.open",
+      "roadtrips:gpx.export",
+      "roadtrips:delete",
+    ]);
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+    // The only "delete" left on the page is inside the closed menu, not a footer link.
+    expect(screen.queryByText("roadtrips:delete")).toBeNull();
+    expect(screen.getByRole("button", { name: "roadtrips:editLegs" })).toBeInTheDocument();
+  });
+
   it("asks once more before deleting a roadtrip's costs with it, then sends the opt-in", async () => {
     // forgejo#140: a roadtrip with costs and no trip answers 409 with the count.
     vi.mocked(toursApi.removeStandalone)
@@ -106,7 +120,8 @@ describe("RoadtripDetailPage", () => {
       )
       .mockResolvedValueOnce(undefined);
     renderAt("/roadtrips/rt");
-    fireEvent.click(await screen.findByText("roadtrips:delete"));
+    fireEvent.click(await screen.findByTestId("roadtrip-more"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "roadtrips:delete" }));
     fireEvent.click(screen.getByText("roadtrips:deleteConfirm.confirm"));
     fireEvent.click(await screen.findByText("roadtrips:deleteWithCosts.confirm"));
     await waitFor(() => expect(toursApi.removeStandalone).toHaveBeenCalledTimes(2));
@@ -152,7 +167,8 @@ describe("RoadtripDetailPage", () => {
       trip: { id: "t", name: "Norwegen" },
     });
     renderAt("/roadtrips/rt");
-    fireEvent.click(await screen.findByText("roadtrips:delete"));
+    fireEvent.click(await screen.findByTestId("roadtrip-more"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "roadtrips:delete" }));
     const dialog = screen.getByTestId("confirm-modal");
     expect(dialog).toHaveTextContent("roadtrips:deleteConfirm.goesEmpty");
     expect(dialog).toHaveTextContent("common:delete.survivors");

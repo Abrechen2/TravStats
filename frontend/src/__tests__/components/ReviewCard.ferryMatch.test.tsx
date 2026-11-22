@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 
 import ReviewCard from "../../components/inbox/workspace/ReviewCard";
 import type { DataQualityFlag } from "../../types/dataQuality";
+import { chooseMenuEntry } from "../helpers/menu";
 
 /**
  * The ferry match (spec 2026-10-25 C3) as a German reader sees it: a question
@@ -93,7 +94,7 @@ describe("ReviewCard — ferry match", () => {
 
   it("offers 'Zur Reise hinzufügen' and answers with the link action", () => {
     renderCard(flag(["link"]));
-    fireEvent.click(screen.getByRole("button", { name: "Zur Reise hinzufügen" }));
+    chooseMenuEntry(screen.getByTestId("review-card-menu"), /Zur Reise hinzufügen/);
     expect(resolve).toHaveBeenCalledWith("flag-1", { action: "link" });
   });
 
@@ -106,9 +107,9 @@ describe("ReviewCard — ferry match", () => {
     renderCard({ ...flag(["link"]), revision: 3 });
     fireEvent.click(screen.getByRole("button", { name: "Das stimmt so" }));
     expect(dismiss).toHaveBeenCalledWith("flag-1", 3);
-    fireEvent.click(screen.getByRole("button", { name: "Ich habe es korrigiert" }));
+    chooseMenuEntry(screen.getByTestId("review-card-menu"), /Ich habe es korrigiert/);
     expect(resolve).toHaveBeenCalledWith("flag-1", { revision: 3 });
-    fireEvent.click(screen.getByRole("button", { name: "Zur Reise hinzufügen" }));
+    chooseMenuEntry(screen.getByTestId("review-card-menu"), /Zur Reise hinzufügen/);
     expect(resolve).toHaveBeenCalledWith("flag-1", { action: "link", revision: 3 });
   });
 });

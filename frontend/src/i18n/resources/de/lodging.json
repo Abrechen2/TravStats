@@ -249,7 +249,8 @@
     },
     "deleted": "Aufenthalt gelöscht",
     "refreshFailed": "Aufenthalt gelöscht — die Kennzahlen konnten nicht aktualisiert werden.",
-    "deleteError": "Aufenthalt konnte nicht gelöscht werden"
+    "deleteError": "Aufenthalt konnte nicht gelöscht werden",
+    "menuLabel": "Weitere Aktionen zum Aufenthalt"
   },
   "stayEditor": {
     "addStay": "Aufenthalt hinzufügen",

@@ -1,5 +1,5 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
-import DomainBulkBar, { BulkStartButton } from "../components/bulkEdit/DomainBulkBar";
+import DomainBulkBar from "../components/bulkEdit/DomainBulkBar";
 import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
 import { busFerryBulkRow } from "../components/bulkEdit/bulkRows";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -13,9 +13,9 @@ import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListFilterBar, { SEARCH_MAX_LENGTH } from "../components/table/ListFilterBar";
 import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
-import { ColumnPicker } from "../components/table/ColumnPicker";
+import ListHeaderMenu from "../components/table/ListHeaderMenu";
 import TablePagination from "../components/table/TablePagination";
-import { RowActionButton, RowActions } from "../components/table/RowActionButton";
+import RowMenu from "../components/table/RowMenu";
 import { logbookColumns } from "../components/table/logbookColumns";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import { useServerPagination } from "../components/table/useServerPagination";
@@ -230,15 +230,6 @@ export default function BusPage(): JSX.Element {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="t-screen-title">{t("bus:title")}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <BulkStartButton selection={selection} />
-            <ColumnPicker
-              columns={BUS_COLUMN_IDS.map((id) => ({
-                id,
-                label: t(`bus:list.${id}`),
-                always: (BUS_ALWAYS_VISIBLE as readonly string[]).includes(id),
-              }))}
-              prefs={columnPrefs}
-            />
             <button
               type="button"
               onClick={(): void => setEditing({ journey: null })}
@@ -247,6 +238,15 @@ export default function BusPage(): JSX.Element {
               <span>+</span>
               <span>{add}</span>
             </button>
+            <ListHeaderMenu
+              selection={selection}
+              columns={BUS_COLUMN_IDS.map((id) => ({
+                id,
+                label: t(`bus:list.${id}`),
+                always: (BUS_ALWAYS_VISIBLE as readonly string[]).includes(id),
+              }))}
+              prefs={columnPrefs}
+            />
           </div>
         </div>
 
@@ -330,18 +330,21 @@ export default function BusPage(): JSX.Element {
                   actions={
                     <>
                       <BulkRowCheck selection={selection} rows={[busFerryBulkRow(ride)]} />
-                      <RowActions>
-                        <RowActionButton
-                          icon="edit"
-                          label={t("bus:edit")}
-                          onClick={(): void => setEditing({ journey: ride })}
-                        />
-                        <RowActionButton
-                          icon="delete"
-                          label={t("bus:delete")}
-                          onClick={(): void => setToDelete(ride)}
-                        />
-                      </RowActions>
+                      <RowMenu
+                        entries={[
+                          {
+                            key: "edit",
+                            label: t("bus:edit"),
+                            onSelect: (): void => setEditing({ journey: ride }),
+                          },
+                          {
+                            key: "delete",
+                            label: t("bus:delete"),
+                            danger: true,
+                            onSelect: (): void => setToDelete(ride),
+                          },
+                        ]}
+                      />
                     </>
                   }
                 />

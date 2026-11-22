@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
 import MailIntakeSettingsCard from "../MailIntakeSettingsCard";
 import { mailIntakeApi, type MailIntakeStatus } from "../../../lib/api/mailIntake";
+import { chooseMenuEntry } from "../../../__tests__/helpers/menu";
 
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => false }));
 vi.mock("../../../lib/api/mailIntake", async (importOriginal) => {
@@ -82,7 +83,7 @@ describe("MailIntakeSettingsCard (forgejo#313)", () => {
     vi.mocked(mailIntakeApi.status).mockResolvedValue(status());
     vi.mocked(mailIntakeApi.testSource).mockResolvedValue({ ok: false, error: "unreachable" });
     render(<MailIntakeSettingsCard />);
-    fireEvent.click(await screen.findByRole("button", { name: "mailIntake:folder.test" }));
+    chooseMenuEntry(await screen.findByTestId("mail-folder-menu"), "mailIntake:folder.test");
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain("mailIntake:errors.unreachable")
     );

@@ -10,6 +10,7 @@ import { pendingUpdatesApi } from "../../../../lib/api/pendingUpdates";
 import { tripsApi } from "../../../../lib/api/trips";
 import { dawarichStaysApi } from "../../../../lib/api/dawarichStays";
 import { flag, suggestion, update } from "./fixtures";
+import { chooseMenuEntry } from "../../../../__tests__/helpers/menu";
 
 /**
  * The one inbox's sections (2026-10-16): the old per-kind tabs became the
@@ -155,8 +156,9 @@ describe("the inbox's sections", () => {
     vi.mocked(dataQualityFlagsApi.resolve).mockResolvedValue({ success: true } as never);
     await mount("/pending-updates?tab=review");
     vi.mocked(dataQualityFlagsApi.getAll).mockResolvedValue({ flags: [], count: 0 });
-    await userEvent.click(
-      screen.getByRole("button", { name: "dataQuality:flag.actions.resolve.label" })
+    chooseMenuEntry(
+      screen.getByTestId("review-card-menu"),
+      /dataQuality:flag.actions.resolve.label/
     );
     await waitFor(() => expect(dataQualityFlagsApi.resolve).toHaveBeenCalledWith("flag1"));
     expect(dataQualityFlagsApi.dismiss).not.toHaveBeenCalled();

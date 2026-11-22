@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -11,6 +11,7 @@ vi.mock("../../lib/api/dataQualityFlags", () => ({
   dataQualityFlagsApi: { resolve: vi.fn(), dismiss: vi.fn(), run: vi.fn() },
 }));
 import { formatDate } from "../../lib/displayFormat";
+import { chooseMenuEntry } from "../helpers/menu";
 
 /**
  * A flag is a question, not a verdict — so the card's job is to show BOTH
@@ -193,24 +194,27 @@ describe("ReviewCard — the two answers are not synonyms", () => {
   it("labels them differently and states the different consequence of each", () => {
     renderCard(mismatchFlag);
 
-    const resolve = screen.getByRole("button", {
-      name: "dataQuality:flag.actions.resolve.label",
-    });
     const dismiss = screen.getByRole("button", {
       name: "dataQuality:flag.actions.dismiss.label",
     });
+    // "I corrected it" is one of the card's ⋯ answers, and says its consequence as the entry's hint.
+    fireEvent.click(screen.getByTestId("review-card-menu"));
+    const resolve = screen.getByRole("menuitem", {
+      name: /dataQuality:flag.actions.resolve.label/,
+    });
     expect(resolve).not.toBe(dismiss);
 
-    // Each button carries its own consequence as visible copy, not a tooltip.
-    expect(screen.getByText("dataQuality:flag.actions.resolve.hint")).toBeInTheDocument();
+    // Each answer carries its own consequence as visible copy, not a tooltip.
+    expect(resolve).toHaveTextContent("dataQuality:flag.actions.resolve.hint");
     expect(screen.getByText("dataQuality:flag.actions.dismiss.hint")).toBeInTheDocument();
   });
 
   it("sends resolve and dismiss to their own endpoints, never both", async () => {
     const act = renderCard(mismatchFlag);
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "dataQuality:flag.actions.resolve.label" })
+    chooseMenuEntry(
+      screen.getByTestId("review-card-menu"),
+      /dataQuality:flag.actions.resolve.label/
     );
     expect(dataQualityFlagsApi.resolve).toHaveBeenCalledWith("flag-1");
     expect(dataQualityFlagsApi.dismiss).not.toHaveBeenCalled();

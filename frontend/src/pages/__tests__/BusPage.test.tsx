@@ -68,6 +68,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 }));
 
 import BusPage from "../BusPage";
+import { chooseMenuEntry, menuTriggerIn } from "../../__tests__/helpers/menu";
 
 const renderPage = (): void => {
   render(
@@ -195,7 +196,7 @@ describe("BusPage", () => {
     list.mockResolvedValue(page(rideFixture()));
     renderPage();
     const row = await screen.findByTestId("bus-row-r1");
-    fireEvent.click(within(row).getByRole("button", { name: "Bearbeiten" }));
+    chooseMenuEntry(menuTriggerIn(row), "Bearbeiten");
     expect(screen.getByTestId("bus-form")).toHaveTextContent("r1");
     expect(navigate).not.toHaveBeenCalled();
     fireEvent.click(row);
@@ -207,7 +208,7 @@ describe("BusPage", () => {
     remove.mockResolvedValue(undefined);
     renderPage();
     const row = await screen.findByTestId("bus-row-r1");
-    fireEvent.click(within(row).getByRole("button", { name: "Löschen" }));
+    chooseMenuEntry(menuTriggerIn(row), "Löschen");
     fireEvent.click(screen.getByText("confirm-delete"));
     await waitFor(() => expect(remove).toHaveBeenCalledWith("r1"));
     await waitFor(() => expect(addToast).toHaveBeenCalledWith("success", "Busfahrt gelöscht"));
@@ -219,7 +220,7 @@ describe("BusPage", () => {
     documentCount.value = 2;
     renderPage();
     const row = await screen.findByTestId("bus-row-r1");
-    fireEvent.click(within(row).getByRole("button", { name: "Löschen" }));
+    chooseMenuEntry(menuTriggerIn(row), "Löschen");
     expect(screen.getByTestId("confirm-message")).toHaveTextContent(
       "Dazu 2 Dokumente: Diese werden nur von diesem Eintrag gelöst"
     );
@@ -230,7 +231,7 @@ describe("BusPage", () => {
     documentCount.value = 0;
     renderPage();
     const row = await screen.findByTestId("bus-row-r1");
-    fireEvent.click(within(row).getByRole("button", { name: "Löschen" }));
+    chooseMenuEntry(menuTriggerIn(row), "Löschen");
     expect(screen.getByTestId("confirm-message")).not.toHaveTextContent("Dokument");
   });
 
@@ -239,7 +240,7 @@ describe("BusPage", () => {
     remove.mockRejectedValue(new Error("nope"));
     renderPage();
     const row = await screen.findByTestId("bus-row-r1");
-    fireEvent.click(within(row).getByRole("button", { name: "Löschen" }));
+    chooseMenuEntry(menuTriggerIn(row), "Löschen");
     fireEvent.click(screen.getByText("confirm-delete"));
     await waitFor(() =>
       expect(addToast).toHaveBeenCalledWith("error", "Die Busfahrt konnte nicht gelöscht werden.")
@@ -259,7 +260,7 @@ describe("BusPage", () => {
       documentCount.value = 1;
       renderPage();
       const row = await screen.findByTestId("bus-row-r1");
-      fireEvent.click(within(row).getByRole("button", { name: "Löschen" }));
+      chooseMenuEntry(menuTriggerIn(row), "Löschen");
       const message = screen.getByTestId("confirm-message").textContent ?? "";
       expect(message).toContain(
         "Die Busfahrt Seoul Express Bus Terminal → Sokcho Express Bus Terminal wirklich löschen?"

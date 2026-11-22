@@ -1,5 +1,5 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
-import DomainBulkBar, { BulkStartButton } from "../components/bulkEdit/DomainBulkBar";
+import DomainBulkBar from "../components/bulkEdit/DomainBulkBar";
 import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
 import { rentalBulkRow } from "../components/bulkEdit/bulkRows";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -16,9 +16,9 @@ import ListFilterBar, {
   PANEL_SELECT_CLASS,
   SEARCH_MAX_LENGTH,
 } from "../components/table/ListFilterBar";
-import { ColumnPicker } from "../components/table/ColumnPicker";
+import ListHeaderMenu from "../components/table/ListHeaderMenu";
 import TablePagination from "../components/table/TablePagination";
-import { RowActionButton, RowActions } from "../components/table/RowActionButton";
+import RowMenu from "../components/table/RowMenu";
 import { logbookColumns } from "../components/table/logbookColumns";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import { useServerPagination } from "../components/table/useServerPagination";
@@ -248,15 +248,6 @@ export default function RentalsPage(): JSX.Element {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="t-screen-title">{t("rental:title")}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <BulkStartButton selection={selection} />
-            <ColumnPicker
-              columns={RENTAL_COLUMN_IDS.map((id) => ({
-                id,
-                label: t(`rental:list.columns.${id}`),
-                always: (RENTAL_ALWAYS_VISIBLE as readonly string[]).includes(id),
-              }))}
-              prefs={columnPrefs}
-            />
             <button
               type="button"
               onClick={(): void => setAdding(true)}
@@ -265,6 +256,15 @@ export default function RentalsPage(): JSX.Element {
               <span>+</span>
               <span>{t("rental:add")}</span>
             </button>
+            <ListHeaderMenu
+              selection={selection}
+              columns={RENTAL_COLUMN_IDS.map((id) => ({
+                id,
+                label: t(`rental:list.columns.${id}`),
+                always: (RENTAL_ALWAYS_VISIBLE as readonly string[]).includes(id),
+              }))}
+              prefs={columnPrefs}
+            />
           </div>
         </div>
 
@@ -359,18 +359,21 @@ export default function RentalsPage(): JSX.Element {
                   actions={
                     <>
                       <BulkRowCheck selection={selection} rows={[rentalBulkRow(rental)]} />
-                      <RowActions>
-                        <RowActionButton
-                          icon="edit"
-                          label={t("rental:edit")}
-                          onClick={(): void => setEditing({ rental })}
-                        />
-                        <RowActionButton
-                          icon="delete"
-                          label={t("rental:delete")}
-                          onClick={(): void => setToDelete(rental)}
-                        />
-                      </RowActions>
+                      <RowMenu
+                        entries={[
+                          {
+                            key: "edit",
+                            label: t("rental:edit"),
+                            onSelect: (): void => setEditing({ rental }),
+                          },
+                          {
+                            key: "delete",
+                            label: t("rental:delete"),
+                            danger: true,
+                            onSelect: (): void => setToDelete(rental),
+                          },
+                        ]}
+                      />
                     </>
                   }
                 />

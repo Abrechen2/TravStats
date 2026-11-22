@@ -11,6 +11,7 @@ import type {
   LinkedAlbum,
   PhotoSourceKind,
 } from "../../types/immich";
+import OverflowMenu from "../ui/OverflowMenu";
 import PhotoLightbox, { type LightboxItem } from "./PhotoLightbox";
 
 const JOB_POLL_MS = 1500;
@@ -330,21 +331,37 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
               </button>
             </label>
           )}
-          {album.mode === "import" && (
-            <button
-              type="button"
-              disabled={syncing}
-              className="text-xs underline disabled:opacity-40"
-              onClick={() => void handleResync()}
-            >
-              {syncing && progress
-                ? t("albums.resyncing", { done: progress.done, total: progress.total })
-                : t("albums.resync")}
-            </button>
+          {/* Re-sync and unlink are the album's rare actions: one card ⋯, unlink last and red
+              (owner, 2026-11-22). The day grouping stays, it is a view switch. */}
+          {syncing && progress && (
+            <span role="status" className="text-xs text-slate-400">
+              {t("albums.resyncing", { done: progress.done, total: progress.total })}
+            </span>
           )}
-          <button type="button" className="text-xs underline" onClick={onUnlinkClick}>
-            {t("albums.unlink")}
-          </button>
+          <OverflowMenu
+            label={t("albums.menuLabel", { name: album.albumName })}
+            testId="album-menu"
+            entries={[
+              ...(album.mode === "import"
+                ? [
+                    {
+                      key: "resync",
+                      testId: "album-resync",
+                      label: t("albums.resync"),
+                      disabled: syncing,
+                      onSelect: () => void handleResync(),
+                    },
+                  ]
+                : []),
+              {
+                key: "unlink",
+                testId: "album-unlink",
+                label: t("albums.unlink"),
+                danger: true,
+                onSelect: onUnlinkClick,
+              },
+            ]}
+          />
         </div>
       </header>
 

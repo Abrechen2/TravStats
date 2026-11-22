@@ -279,7 +279,9 @@
         "loadFailed": "Die Notizen zu dieser Reise konnten nicht geladen werden.",
         "retry": "Erneut versuchen",
         "truncated": "Nicht alle Notizen dieser Reise werden gezeigt – es sind mehr als 200."
-      }
+      },
+      "menuLabel": "Weitere Aktionen zum Zeitstrahl",
+      "entryMenuLabel": "Weitere Aktionen zum Eintrag"
     },
     "stopNotFound": "Diesen Halt gibt es in dieser Reise nicht mehr.",
     "journalEntryNotFound": "Diesen Tagebucheintrag gibt es in dieser Reise nicht mehr.",
@@ -637,7 +639,8 @@
           "invalidUrl": "Die Dawarich-Adresse ist ungültig",
           "keyRequired": "Für eine andere Dawarich-Adresse wird ein eigener Schlüssel benötigt"
         }
-      }
+      },
+      "menuLabel": "Weitere Aktionen zur Aufzeichnung"
     },
     "dawarichSettings": {
       "title": "Dawarich-Verbindung",
@@ -1139,5 +1142,6 @@
       "BOOKING_SPLIT_SUM": "Die Beträge ergeben nicht genau den Paketpreis.",
       "generic": "Die Aufteilung konnte nicht gespeichert werden."
     }
-  }
+  },
+  "bookingMenuLabel": "Weitere Aktionen zur Buchung {{name}}"
 }

@@ -75,7 +75,10 @@ vi.mock("../../components/FlightRowActions", () => ({
     <button type="button" onClick={() => onDelete(flight.id)}>{`delete-${flight.id}`}</button>
   ),
 }));
-vi.mock("../../components/table/ColumnPicker", () => ({ ColumnPicker: () => null }));
+vi.mock("../../components/table/ColumnPicker", () => ({
+  ColumnPicker: () => null,
+  ColumnChecklist: () => null,
+}));
 
 const deleteFlight = vi.fn();
 const getTrack = vi.fn();

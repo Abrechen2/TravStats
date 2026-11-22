@@ -60,7 +60,8 @@
     "sourceLabel": "Photo source",
     "partialLink": "Some albums could not be linked: {{reason}}",
     "badgePhotoprism": "PhotoPrism",
-    "badgeImmich": "Immich"
+    "badgeImmich": "Immich",
+    "menuLabel": "More actions for album {{name}}"
   },
   "gallery": {
     "uploaded": "Uploaded",

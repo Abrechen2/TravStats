@@ -18,7 +18,7 @@ import {
   type LodgingColumnId,
 } from "../components/lodging/LodgingRow";
 import { Table, type TableColumn } from "../components/ui/Table";
-import { ColumnPicker } from "../components/table/ColumnPicker";
+import ListHeaderMenu from "../components/table/ListHeaderMenu";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
@@ -456,19 +456,6 @@ export default function LodgingListPage(): JSX.Element {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="t-screen-title">{t("lodging:list.title")}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            {view === "houses" && (
-              <ColumnPicker
-                columns={COLUMN_IDS.map((id) => ({
-                  id,
-                  label:
-                    id === "status"
-                      ? t("lodging:list.status.label")
-                      : t(`lodging:list.columns.${id}`),
-                  always: (ALWAYS_VISIBLE as readonly string[]).includes(id),
-                }))}
-                prefs={columnPrefs}
-              />
-            )}
             {/* One way in, not three. "Buchung einlesen" used to sit here as
                 its own button beside "Importieren" and "Hotel hinzufügen" —
                 three controls for two ideas, and two of them saying "import".
@@ -483,6 +470,19 @@ export default function LodgingListPage(): JSX.Element {
               <span>+</span>
               <span>{t("lodging:add.title")}</span>
             </button>
+            {view === "houses" && (
+              <ListHeaderMenu
+                columns={COLUMN_IDS.map((id) => ({
+                  id,
+                  label:
+                    id === "status"
+                      ? t("lodging:list.status.label")
+                      : t(`lodging:list.columns.${id}`),
+                  always: (ALWAYS_VISIBLE as readonly string[]).includes(id),
+                }))}
+                prefs={columnPrefs}
+              />
+            )}
           </div>
         </div>
 

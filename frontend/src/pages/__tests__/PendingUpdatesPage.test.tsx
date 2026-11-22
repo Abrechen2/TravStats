@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -127,8 +127,9 @@ describe("PendingUpdatesPage — one inbox", () => {
     await screen.findByText(`${W}.shown`);
     // The trip proposal has exactly one accept, the question one resolve.
     expect(screen.getAllByRole("button", { name: `${W}.acceptProposal.new_trip` })).toHaveLength(1);
+    fireEvent.click(screen.getByTestId("review-card-menu"));
     expect(
-      screen.getAllByRole("button", { name: "dataQuality:flag.actions.resolve.label" })
+      screen.getAllByRole("menuitem", { name: /dataQuality:flag.actions.resolve.label/ })
     ).toHaveLength(1);
   });
 

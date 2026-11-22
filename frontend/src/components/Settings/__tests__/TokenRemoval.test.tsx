@@ -19,6 +19,7 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => demo
 
 import ApiTokensSection from "../ApiTokensSection";
 import DevicesSection from "../DevicesSection";
+import { chooseMenuEntry, triggersOffering } from "../../../__tests__/helpers/menu";
 
 const base = {
   prefix: "ts_pat_",
@@ -65,9 +66,9 @@ describe("ApiTokensSection removal of old keys", () => {
     api.remove.mockResolvedValue(undefined);
     render(<ApiTokensSection />);
     await screen.findByText("Old key");
-    const buttons = screen.getAllByRole("button", { name: "settings:apiTokens.removeButton" });
+    const buttons = triggersOffering("settings:apiTokens.removeButton");
     expect(buttons).toHaveLength(2);
-    fireEvent.click(buttons[0]);
+    chooseMenuEntry(buttons[0], "settings:apiTokens.removeButton");
     fireEvent.click(
       await screen.findByRole("button", { name: "settings:apiTokens.removeDialog.confirm" })
     );
@@ -91,7 +92,10 @@ describe("ApiTokensSection removal of old keys", () => {
     );
     render(<ApiTokensSection />);
     await screen.findByText("Old key");
-    fireEvent.click(screen.getAllByRole("button", { name: "settings:apiTokens.removeButton" })[0]);
+    chooseMenuEntry(
+      triggersOffering("settings:apiTokens.removeButton")[0],
+      "settings:apiTokens.removeButton"
+    );
     fireEvent.click(
       await screen.findByRole("button", { name: "settings:apiTokens.removeDialog.confirm" })
     );
@@ -103,7 +107,10 @@ describe("ApiTokensSection removal of old keys", () => {
     api.remove.mockRejectedValue(axiosError(500, { error: "boom" }));
     render(<ApiTokensSection />);
     await screen.findByText("Old key");
-    fireEvent.click(screen.getAllByRole("button", { name: "settings:apiTokens.removeButton" })[0]);
+    chooseMenuEntry(
+      triggersOffering("settings:apiTokens.removeButton")[0],
+      "settings:apiTokens.removeButton"
+    );
     fireEvent.click(
       await screen.findByRole("button", { name: "settings:apiTokens.removeDialog.confirm" })
     );
@@ -132,7 +139,7 @@ describe("ApiTokensSection removal of old keys", () => {
     demo.value = true;
     render(<ApiTokensSection />);
     await screen.findByText("Old key");
-    expect(screen.queryByRole("button", { name: "settings:apiTokens.removeButton" })).toBeNull();
+    expect(triggersOffering("settings:apiTokens.removeButton")).toHaveLength(0);
     expect(screen.queryByRole("button", { name: "settings:apiTokens.removeAllButton" })).toBeNull();
   });
 });
@@ -144,9 +151,9 @@ describe("DevicesSection removal of old phones", () => {
     api.remove.mockResolvedValue(undefined);
     render(<DevicesSection />);
     await screen.findByText("Old phone");
-    const buttons = screen.getAllByRole("button", { name: "settings:devices.removeButton" });
+    const buttons = triggersOffering("settings:devices.removeButton");
     expect(buttons).toHaveLength(1);
-    fireEvent.click(buttons[0]);
+    chooseMenuEntry(buttons[0], "settings:devices.removeButton");
     fireEvent.click(
       await screen.findByRole("button", { name: "settings:devices.removeDialog.confirm" })
     );
@@ -168,7 +175,10 @@ describe("DevicesSection removal of old phones", () => {
     api.remove.mockRejectedValue(axiosError(409, { error: "TOKEN_STILL_ACTIVE" }));
     render(<DevicesSection />);
     await screen.findByText("Old phone");
-    fireEvent.click(screen.getByRole("button", { name: "settings:devices.removeButton" }));
+    chooseMenuEntry(
+      triggersOffering("settings:devices.removeButton")[0],
+      "settings:devices.removeButton"
+    );
     fireEvent.click(
       await screen.findByRole("button", { name: "settings:devices.removeDialog.confirm" })
     );
@@ -179,7 +189,7 @@ describe("DevicesSection removal of old phones", () => {
     demo.value = true;
     render(<DevicesSection />);
     await screen.findByText("Old phone");
-    expect(screen.queryByRole("button", { name: "settings:devices.removeButton" })).toBeNull();
+    expect(triggersOffering("settings:devices.removeButton")).toHaveLength(0);
     expect(screen.queryByRole("button", { name: "settings:devices.removeAllButton" })).toBeNull();
   });
 });

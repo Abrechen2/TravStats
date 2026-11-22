@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import GeoExportButtons from "../components/export/GeoExportButtons";
 import { geoExportPaths } from "../lib/api/geoExport";
 import AppShell from "../components/ui/AppShell";
 import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { SkeletonTable } from "../components/SkeletonLoader";
-import { ColumnPicker } from "../components/table/ColumnPicker";
+import ListHeaderMenu from "../components/table/ListHeaderMenu";
 import {
   PlaceRow,
   PLACE_COLUMN_IDS as COLUMN_IDS,
@@ -424,14 +423,6 @@ export default function PlacesListPage(): JSX.Element {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="t-screen-title">{t("places:list.title")}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <ColumnPicker
-              columns={COLUMN_IDS.map((id) => ({
-                id,
-                label: columnLabel(t, id),
-                always: (ALWAYS_VISIBLE as readonly string[]).includes(id),
-              }))}
-              prefs={columnPrefs}
-            />
             {/* Also reachable as a logbook tab (LogbookTabs): a list is a view OF
                 the logbook, so it hangs off the logbook, but a button alone was
                 too easy to miss. */}
@@ -458,13 +449,17 @@ export default function PlacesListPage(): JSX.Element {
               <span>+</span>
               <span>{t("places:list.addPlace")}</span>
             </button>
+            <ListHeaderMenu
+              columns={COLUMN_IDS.map((id) => ({
+                id,
+                label: columnLabel(t, id),
+                always: (ALWAYS_VISIBLE as readonly string[]).includes(id),
+              }))}
+              prefs={columnPrefs}
+              geoExport={{ path: geoExportPaths.places, testId: "places-export" }}
+            />
           </div>
         </div>
-        <GeoExportButtons
-          path={geoExportPaths.places}
-          testId="places-export"
-          className="mb-3 flex flex-wrap items-center gap-2"
-        />
 
         {deleteFailure !== null && (
           <div className="mb-3">

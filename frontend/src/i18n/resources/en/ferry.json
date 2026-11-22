@@ -233,7 +233,12 @@
     "manual": "Route drawn by you — not a recorded ship track.",
     "cleared": "Hand-drawn route removed.",
     "clearedRouted": "Hand-drawn route removed; the sea route was calculated again.",
-    "clearFailed": "The route could not be removed. Please try again."
+    "clearFailed": "The route could not be removed. Please try again.",
+    "menuLabel": "More route actions",
+    "clearConfirm": {
+      "title": "Remove the hand-drawn route?",
+      "message": "The hand-drawn route is discarded and the sea route is calculated again."
+    }
   },
   "map": {
     "title": "Route",

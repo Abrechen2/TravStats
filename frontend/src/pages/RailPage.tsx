@@ -1,5 +1,5 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
-import DomainBulkBar, { BulkStartButton } from "../components/bulkEdit/DomainBulkBar";
+import DomainBulkBar from "../components/bulkEdit/DomainBulkBar";
 import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
 import { railBulkRow } from "../components/bulkEdit/bulkRows";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -12,9 +12,9 @@ import LogbookTabs from "../components/table/LogbookTabs";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListFilterBar, { SEARCH_MAX_LENGTH } from "../components/table/ListFilterBar";
-import { ColumnPicker } from "../components/table/ColumnPicker";
+import ListHeaderMenu from "../components/table/ListHeaderMenu";
 import TablePagination from "../components/table/TablePagination";
-import { RowActionButton, RowActions } from "../components/table/RowActionButton";
+import RowMenu from "../components/table/RowMenu";
 import { logbookColumns } from "../components/table/logbookColumns";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import { useServerPagination } from "../components/table/useServerPagination";
@@ -273,15 +273,6 @@ export default function RailPage(): JSX.Element {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="t-screen-title">{t("rail:title")}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <BulkStartButton selection={selection} />
-            <ColumnPicker
-              columns={RAIL_COLUMN_IDS.map((id) => ({
-                id,
-                label: t(`rail:list.columns.${id}`),
-                always: (RAIL_ALWAYS_VISIBLE as readonly string[]).includes(id),
-              }))}
-              prefs={columnPrefs}
-            />
             <button
               type="button"
               onClick={(): void => setAdding(true)}
@@ -290,6 +281,15 @@ export default function RailPage(): JSX.Element {
               <span>+</span>
               <span>{t("rail:add")}</span>
             </button>
+            <ListHeaderMenu
+              selection={selection}
+              columns={RAIL_COLUMN_IDS.map((id) => ({
+                id,
+                label: t(`rail:list.columns.${id}`),
+                always: (RAIL_ALWAYS_VISIBLE as readonly string[]).includes(id),
+              }))}
+              prefs={columnPrefs}
+            />
           </div>
         </div>
 
@@ -385,18 +385,21 @@ export default function RailPage(): JSX.Element {
                       <>
                         <BulkRowCheck selection={selection} rows={entry.legs.map(railBulkRow)} />
                         {single ? (
-                          <RowActions>
-                            <RowActionButton
-                              icon="edit"
-                              label={t("rail:edit")}
-                              onClick={(): void => setEditing({ journey: single })}
-                            />
-                            <RowActionButton
-                              icon="delete"
-                              label={t("rail:delete")}
-                              onClick={(): void => setToDelete(single)}
-                            />
-                          </RowActions>
+                          <RowMenu
+                            entries={[
+                              {
+                                key: "edit",
+                                label: t("rail:edit"),
+                                onSelect: (): void => setEditing({ journey: single }),
+                              },
+                              {
+                                key: "delete",
+                                label: t("rail:delete"),
+                                danger: true,
+                                onSelect: (): void => setToDelete(single),
+                              },
+                            ]}
+                          />
                         ) : null}
                       </>
                     }

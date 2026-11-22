@@ -279,7 +279,9 @@
         "loadFailed": "The notes for this trip could not be loaded.",
         "retry": "Try again",
         "truncated": "Not every note of this trip is shown – there are more than 200."
-      }
+      },
+      "menuLabel": "More timeline actions",
+      "entryMenuLabel": "More entry actions"
     },
     "stopNotFound": "This stop no longer exists on this trip.",
     "journalEntryNotFound": "This journal entry no longer exists on this trip.",
@@ -637,7 +639,8 @@
           "invalidUrl": "The Dawarich address is invalid",
           "keyRequired": "A different Dawarich address needs your own key"
         }
-      }
+      },
+      "menuLabel": "More track actions"
     },
     "dawarichSettings": {
       "title": "Dawarich connection",
@@ -1139,5 +1142,6 @@
       "BOOKING_SPLIT_SUM": "The amounts do not add up to the package price exactly.",
       "generic": "The split could not be saved."
     }
-  }
+  },
+  "bookingMenuLabel": "More actions for booking {{name}}"
 }

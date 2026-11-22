@@ -9,6 +9,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
 
 import ApiTokensSection from "../ApiTokensSection";
 import { useAuthStore } from "../../../store/authStore";
+import { triggersOffering } from "../../../__tests__/helpers/menu";
 
 /** The signed-in account the section reads its rights from. */
 const signIn = (isAdmin: boolean): void => {
@@ -38,9 +39,7 @@ describe("ApiTokensSection", () => {
     render(<ApiTokensSection />);
     expect(await screen.findByText("Home Assistant")).toBeInTheDocument();
     expect(screen.getByText("settings:apiTokens.scopesShort.read")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "settings:apiTokens.revokeButton" })
-    ).toBeInTheDocument();
+    expect(triggersOffering("settings:apiTokens.revokeButton")).toHaveLength(1);
   });
 
   it("keeps the create form folded until asked for, and folds it again after creating", async () => {

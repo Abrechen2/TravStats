@@ -233,7 +233,12 @@
     "manual": "Von dir gezeichnete Strecke – kein aufgezeichneter Schiffstrack.",
     "cleared": "Handgezeichnete Strecke entfernt.",
     "clearedRouted": "Handgezeichnete Strecke entfernt, der Seeweg wurde neu berechnet.",
-    "clearFailed": "Die Strecke konnte nicht entfernt werden. Bitte erneut versuchen."
+    "clearFailed": "Die Strecke konnte nicht entfernt werden. Bitte erneut versuchen.",
+    "menuLabel": "Weitere Aktionen zur Route",
+    "clearConfirm": {
+      "title": "Handroute entfernen?",
+      "message": "Die von Hand gezeichnete Route wird verworfen und der Seeweg neu berechnet."
+    }
   },
   "map": {
     "title": "Strecke",

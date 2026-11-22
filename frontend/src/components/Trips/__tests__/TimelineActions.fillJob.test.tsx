@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 
 /**
  * "Wetter nachtragen" as a server job with a per-entry outcome (silent-failure
@@ -27,6 +27,7 @@ import { api } from "../../../lib/api/client";
 import { useSettingsStore } from "../../../store/settingsStore";
 import TimelineActions from "../TimelineActions";
 import type { TripJournalEntry } from "../../../types";
+import { chooseMenuEntry } from "../../../__tests__/helpers/menu";
 
 const withoutWeather: TripJournalEntry = {
   id: "e1",
@@ -83,7 +84,7 @@ describe("filling a trip's weather reports each entry's outcome", () => {
       })) as never);
     const onChanged = renderActions();
 
-    fireEvent.click(screen.getByRole("button", { name: "openData:weather.fill" }));
+    chooseMenuEntry(screen.getByTestId("timeline-menu"), "openData:weather.fill");
 
     await waitFor(
       () =>
@@ -116,7 +117,7 @@ describe("filling a trip's weather reports each entry's outcome", () => {
     } as never);
     renderActions();
 
-    fireEvent.click(screen.getByRole("button", { name: "openData:weather.fill" }));
+    chooseMenuEntry(screen.getByTestId("timeline-menu"), "openData:weather.fill");
 
     await waitFor(() =>
       expect(addToast).toHaveBeenCalledWith("info", "openData:weather.fillNotYet#1")

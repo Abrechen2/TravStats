@@ -26,7 +26,8 @@
     "test": "Test connection",
     "run": "Check now",
     "remove": "Remove",
-    "privateNote": "Only public servers are allowed; a server on your own network cannot be entered here."
+    "privateNote": "Only public servers are allowed; a server on your own network cannot be entered here.",
+    "menuLabel": "More mailbox actions"
   },
   "status": {
     "never": "Never checked.",
@@ -73,7 +74,9 @@
     "noSenders": "No sender allowed yet – mail to your address is rejected.",
     "senderPlaceholder": "you@example.com",
     "senderAdd": "Allow",
-    "senderRemove": "Remove"
+    "senderRemove": "Remove",
+    "menuLabel": "More forwarding-address actions",
+    "senderMenuLabel": "More actions for sender {{name}}"
   },
   "inbox": {
     "title": "From your mail",

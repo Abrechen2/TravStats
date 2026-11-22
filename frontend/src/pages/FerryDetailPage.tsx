@@ -24,7 +24,7 @@ import { FerryLivePosition } from "../components/ferry/FerryLivePosition";
 import { FerryRoadtripLink } from "../components/ferry/FerryRoadtripLink";
 import { FerryRouteEditor } from "../components/ferry/FerryRouteEditor";
 import { FerryRouteMap } from "../components/ferry/FerryRouteMap";
-import GeoExportButtons from "../components/export/GeoExportButtons";
+import RouteMenu from "../components/detail/RouteMenu";
 import { geoExportPaths } from "../lib/api/geoExport";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { useToursVisible } from "../hooks/useToursVisible";
@@ -203,16 +203,6 @@ export default function FerryDetailPage() {
         ride.geometrySource === "manual" ||
         routeMessage) && (
         <div className="mb-4 space-y-2">
-          {ride.geometrySource === "straight" && (
-            <Button onClick={() => void route()} disabled={routing}>
-              {t(routing ? "ferry:routing.busy" : "ferry:routing.button")}
-            </Button>
-          )}
-          {ride.geometrySource === "manual" && (
-            <Button onClick={() => void clearManual()} disabled={routing}>
-              {t(routing ? "ferry:routing.clearing" : "ferry:routing.clear")}
-            </Button>
-          )}
           <p role="status" className="text-sm text-(--text-muted)">
             {routeMessage ??
               (ride.geometrySource === "manual"
@@ -314,20 +304,54 @@ export default function FerryDetailPage() {
               )}
             </WebGLGuard>
             {!drawing && (
-              <Button onClick={() => setDrawing(true)} data-testid="ferry-route-draw">
-                {t(
-                  ride.geometrySource === "manual"
-                    ? "ferry:routing.editManual"
-                    : "ferry:routing.edit"
-                )}
-              </Button>
-            )}
-            {ride.geometry && (
-              <GeoExportButtons
-                path={geoExportPaths.ferry(ride.id)}
-                testId="ferry-line-export"
-                className="mt-2 flex flex-wrap items-center gap-2"
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button onClick={() => setDrawing(true)} data-testid="ferry-route-draw">
+                  {t(
+                    ride.geometrySource === "manual"
+                      ? "ferry:routing.editManual"
+                      : "ferry:routing.edit"
+                  )}
+                </Button>
+                <RouteMenu
+                  label={t("ferry:routing.menuLabel")}
+                  testId="ferry-route-menu"
+                  entries={[
+                    ...(ride.geometrySource === "straight"
+                      ? [
+                          {
+                            key: "reroute",
+                            testId: "ferry-route-again",
+                            label: t(routing ? "ferry:routing.busy" : "ferry:routing.button"),
+                            disabled: routing,
+                            onSelect: () => void route(),
+                          },
+                        ]
+                      : []),
+                    ...(ride.geometrySource === "manual"
+                      ? [
+                          {
+                            key: "clear",
+                            testId: "ferry-route-clear",
+                            label: t(routing ? "ferry:routing.clearing" : "ferry:routing.clear"),
+                            danger: true,
+                            disabled: routing,
+                            confirm: {
+                              title: t("ferry:routing.clearConfirm.title"),
+                              message: t("ferry:routing.clearConfirm.message"),
+                              confirmText: t("ferry:routing.clear"),
+                            },
+                            onSelect: () => void clearManual(),
+                          },
+                        ]
+                      : []),
+                  ]}
+                  geoExport={
+                    ride.geometry
+                      ? { path: geoExportPaths.ferry(ride.id), testId: "ferry-line-export" }
+                      : undefined
+                  }
+                />
+              </div>
             )}
           </DetailSection>
           {ride.companions.length > 0 && (

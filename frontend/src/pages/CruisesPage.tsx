@@ -1,5 +1,5 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
-import DomainBulkBar, { BulkStartButton } from "../components/bulkEdit/DomainBulkBar";
+import DomainBulkBar from "../components/bulkEdit/DomainBulkBar";
 import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
 import { cruiseBulkRow } from "../components/bulkEdit/bulkRows";
 import AppShell from "../components/ui/AppShell";
@@ -13,7 +13,7 @@ import {
   type CruiseColumnId,
 } from "../components/Cruise/CruiseRow";
 import { Table, type TableColumn } from "../components/ui/Table";
-import { ColumnPicker } from "../components/table/ColumnPicker";
+import ListHeaderMenu from "../components/table/ListHeaderMenu";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
@@ -389,15 +389,6 @@ export default function CruisesPage(): JSX.Element {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="t-screen-title">{t("list.title")}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <BulkStartButton selection={selection} />
-            <ColumnPicker
-              columns={CRUISE_COLUMN_IDS.map((id) => ({
-                id,
-                label: t(`list.columns.${id}`),
-                always: (CRUISE_ALWAYS_VISIBLE as readonly string[]).includes(id),
-              }))}
-              prefs={columnPrefs}
-            />
             <button
               type="button"
               onClick={() => setShowAdd(true)}
@@ -406,6 +397,15 @@ export default function CruisesPage(): JSX.Element {
               <span>+</span>
               <span>{t("add.title")}</span>
             </button>
+            <ListHeaderMenu
+              selection={selection}
+              columns={CRUISE_COLUMN_IDS.map((id) => ({
+                id,
+                label: t(`list.columns.${id}`),
+                always: (CRUISE_ALWAYS_VISIBLE as readonly string[]).includes(id),
+              }))}
+              prefs={columnPrefs}
+            />
           </div>
         </div>
 

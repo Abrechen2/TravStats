@@ -43,7 +43,8 @@ vi.mock("../../lib/api/trips", () => ({ tripsApi: { getAll: vi.fn(async () => []
 // Imported after the mocks above so the module graph picks them up.
 import PlacesListPage from "../PlacesListPage";
 import { useSettingsStore } from "../../store/settingsStore";
-import { allNamed, findNamed, getNamed, queryNamed } from "../../__tests__/helpers/namedElement";
+import { findNamed, getNamed, queryNamed } from "../../__tests__/helpers/namedElement";
+import { chooseFromBareMenu } from "../../__tests__/helpers/menu";
 
 // Measured 2026-09-19: this page's paged-rows case renders in about a second
 // on a developer machine and past Vitest's 5 s default on the CI runner under
@@ -143,7 +144,7 @@ describe("PlacesListPage", () => {
     await screen.findByText("Wartburg");
     expect(getPlaceRelationsMock).not.toHaveBeenCalled();
 
-    fireEvent.click(allNamed("button", "common:buttons.delete")[0]);
+    chooseFromBareMenu("common:buttons.delete");
     const dialog = await screen.findByTestId("confirm-modal");
     await waitFor(() => expect(dialog.textContent).toContain("places:delete.photos"));
     expect(getPlaceRelationsMock).toHaveBeenCalledWith("p1");
@@ -157,7 +158,7 @@ describe("PlacesListPage", () => {
     renderListPage();
     await screen.findByText("Wartburg");
 
-    fireEvent.click(getNamed("button", "places:visit.action"));
+    chooseFromBareMenu("places:visit.action");
     const save = await findNamed("button", "common:buttons.save");
     fireEvent.click(save);
 
@@ -179,7 +180,7 @@ describe("PlacesListPage", () => {
     renderListPage();
     await screen.findByText("Wartburg");
 
-    fireEvent.click(allNamed("button", "common:buttons.delete")[0]);
+    chooseFromBareMenu("common:buttons.delete");
     const dialog = await screen.findByTestId("confirm-modal");
     await act(async () => {
       fireEvent.click(within(dialog).getByRole("button", { name: "common:buttons.delete" }));

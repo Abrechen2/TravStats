@@ -9,7 +9,7 @@ import { flightSummaryFiguresFromCounts } from "../lib/flights/flightSummaryFigu
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { flightsApi, tripsApi } from "../lib/api";
-import { ColumnPicker } from "../components/table/ColumnPicker";
+import ListHeaderMenu from "../components/table/ListHeaderMenu";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
@@ -114,7 +114,6 @@ export default function FlightsTablePage(): JSX.Element {
   const deleteRecordingPoints = useFlightRecordingPoints(
     deleteConfirmOpen && flightToDelete ? flightToDelete.id : null
   );
-  const [duplicateMenuFor, setDuplicateMenuFor] = useState<string | null>(null);
   // Newest first everywhere, and the choice survives a reload — the
   // column choice already did (useColumnPrefs), the sort never had.
   const { sortBy, sortOrder, setSort } = useSortPrefs("flights-list", "departureTime", "desc", [
@@ -206,21 +205,7 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
-  // Close duplicate menu when clicking outside
-  useEffect(() => {
-    if (!duplicateMenuFor) return;
-    const onClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest("[data-duplicate-menu]")) {
-        setDuplicateMenuFor(null);
-      }
-    };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [duplicateMenuFor]);
-
   const handleDuplicate = async (flight: Flight, mode: "return" | "same") => {
-    setDuplicateMenuFor(null);
     const input = buildDuplicateInput(flight, mode);
     try {
       const created = await flightsApi.create(input, { force: true });
@@ -477,16 +462,15 @@ export default function FlightsTablePage(): JSX.Element {
           {/* flex-wrap like every other logbook: three buttons are 404px, and
               without it they pushed a 360px phone's page sideways (forgejo#88). */}
           <div className="flex flex-wrap items-center gap-2">
-            {!selection.selecting && (
-              <button
-                type="button"
-                className="btn-secondary whitespace-nowrap pointer-coarse:min-h-(--ts-size-touch-min)"
-                onClick={selection.start}
-              >
-                {t("flights:bulk.start")}
-              </button>
-            )}
-            <ColumnPicker
+            <button
+              className="btn-primary flex items-center gap-2 whitespace-nowrap"
+              onClick={() => setShowAddFlight(true)}
+            >
+              <span>+</span>
+              <span>{t("dashboard:addFlight")}</span>
+            </button>
+            <ListHeaderMenu
+              selection={selection}
               columns={FLIGHT_COLUMN_IDS.map((id) => ({
                 id,
                 // Two ids whose label keys don't match their column id: the
@@ -502,13 +486,6 @@ export default function FlightsTablePage(): JSX.Element {
               }))}
               prefs={flightColumnPrefs}
             />
-            <button
-              className="btn-primary flex items-center gap-2 whitespace-nowrap"
-              onClick={() => setShowAddFlight(true)}
-            >
-              <span>+</span>
-              <span>{t("dashboard:addFlight")}</span>
-            </button>
           </div>
         </div>
 
@@ -642,8 +619,6 @@ export default function FlightsTablePage(): JSX.Element {
                         )}
                         <FlightRowActions
                           flight={flight}
-                          openDuplicateMenuFor={duplicateMenuFor}
-                          onToggleDuplicateMenu={setDuplicateMenuFor}
                           onEdit={(f) => {
                             // Special flights → SpecialFlightModal so the user
                             // edits eclipse coords / parabolas / etc. through the

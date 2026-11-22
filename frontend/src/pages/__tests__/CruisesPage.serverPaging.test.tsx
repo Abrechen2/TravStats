@@ -61,7 +61,10 @@ vi.mock("../../components/import/adapters/cruiseAdapter", () => ({
   useCruiseImportAdapter: () => ({}),
 }));
 vi.mock("../../components/ui/ConfirmModal", () => ({ default: () => null }));
-vi.mock("../../components/table/ColumnPicker", () => ({ ColumnPicker: () => null }));
+vi.mock("../../components/table/ColumnPicker", () => ({
+  ColumnPicker: () => null,
+  ColumnChecklist: () => null,
+}));
 
 const listPage = vi.fn();
 const facets = vi.fn();

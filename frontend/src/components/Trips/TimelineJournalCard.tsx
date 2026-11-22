@@ -7,6 +7,7 @@ import { formatTimelineDate } from "../../lib/tripTimeline";
 import { ExpandableEventCard } from "../Trip/ExpandableEventCard";
 import JournalBody from "./JournalBody";
 import JournalPhotoRow from "./JournalPhotoRow";
+import OverflowMenu from "../ui/OverflowMenu";
 import type { TimelineEvent } from "../../lib/tripTimelineEvents";
 
 /**
@@ -83,22 +84,14 @@ export function JournalCard({
         >
           {t("trips:detail.timeline.openJournal")}
         </button>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="rounded-lg px-3 py-1.5 text-xs"
-          style={{ border: "1px solid var(--color-border)", color: "var(--text-muted)" }}
-        >
-          {t("common:buttons.edit")}
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="rounded-lg px-3 py-1.5 text-xs"
-          style={{ border: "1px solid var(--color-border)", color: "var(--text-muted)" }}
-        >
-          {t("common:buttons.delete")}
-        </button>
+        <OverflowMenu
+          label={t("trips:detail.timeline.entryMenuLabel")}
+          testId="journal-entry-menu"
+          entries={[
+            { key: "edit", label: t("common:buttons.edit"), onSelect: onEdit },
+            { key: "delete", label: t("common:buttons.delete"), danger: true, onSelect: onDelete },
+          ]}
+        />
       </div>
     </ExpandableEventCard>
   );
@@ -113,41 +106,19 @@ export function RowActions({
   onEdit: () => void;
   onDelete: () => void;
 }): JSX.Element {
-  const { t } = useTranslation(["common"]);
+  const { t } = useTranslation(["common", "trips"]);
   return (
-    <div className="flex gap-1 mt-1">
-      {onView && (
-        <button
-          type="button"
-          onClick={onView}
-          className="text-[11px] px-1.5 py-0.5 rounded-sm"
-          style={{ color: "var(--text-muted)" }}
-          aria-label={t("common:accessibility.view")}
-          title="view"
-        >
-          👁
-        </button>
-      )}
-      <button
-        type="button"
-        onClick={onEdit}
-        className="text-[11px] px-1.5 py-0.5 rounded-sm"
-        style={{ color: "var(--text-muted)" }}
-        aria-label={t("common:buttons.edit")}
-        title="edit"
-      >
-        ✎
-      </button>
-      <button
-        type="button"
-        onClick={onDelete}
-        className="text-[11px] px-1.5 py-0.5 rounded-sm"
-        style={{ color: "var(--danger)" }}
-        aria-label={t("common:buttons.delete")}
-        title="delete"
-      >
-        ✕
-      </button>
+    <div className="mt-1">
+      <OverflowMenu
+        label={t("trips:detail.timeline.entryMenuLabel")}
+        entries={[
+          ...(onView
+            ? [{ key: "view", label: t("common:accessibility.view"), onSelect: onView }]
+            : []),
+          { key: "edit", label: t("common:buttons.edit"), onSelect: onEdit },
+          { key: "delete", label: t("common:buttons.delete"), danger: true, onSelect: onDelete },
+        ]}
+      />
     </div>
   );
 }

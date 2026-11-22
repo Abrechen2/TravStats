@@ -48,7 +48,8 @@ import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { sectionExpenseCount } from "../lib/sectionExpenses";
 import { hexToRgb } from "../lib/domainColor";
 import { leaveThroughHistory, navigateAfterSave } from "../components/form/unsavedChanges";
-import RoadtripGpxButton from "../components/Roadtrips/RoadtripGpxButton";
+import { useRoadtripGpx } from "../components/Roadtrips/useRoadtripGpx";
+import OverflowMenu from "../components/ui/OverflowMenu";
 import { useUnsavedEditsGuard } from "../components/Roadtrips/useUnsavedEditsGuard";
 import { logger } from "../lib/logger";
 import { dayNumber, roadtripPhase, spanDays } from "../lib/roadtrip/roadtripView";
@@ -291,6 +292,12 @@ export default function RoadtripDetailPage(): JSX.Element {
     await load();
   };
 
+  const gpx = useRoadtripGpx({
+    routeId: id,
+    name: detail?.roadtrip.name ?? "",
+    stations: detail?.stations ?? [],
+  });
+
   if (loadError) {
     return (
       <AppShell>
@@ -385,10 +392,9 @@ export default function RoadtripDetailPage(): JSX.Element {
       </Button>
     </div>
   ) : (
-    <div className="flex flex-wrap" style={{ gap: 8 }}>
+    <div className="flex flex-wrap items-center" style={{ gap: 8 }}>
+      {gpx.failure}
       <Button onClick={() => navigate(`/tours/${id}`)}>{t("roadtrips:editLegs")}</Button>
-      <Button onClick={() => setOdometerOpen(true)}>{t("roadtrips:odometerDialog.open")}</Button>
-      <RoadtripGpxButton routeId={id} name={r.name} stations={detail.stations} />
       {/* Secondary and without an icon, like "Bearbeiten" on rail, ferry, bus
           and rentals: a primary button is taller and stood out (forgejo#307). */}
       <Button
@@ -397,6 +403,27 @@ export default function RoadtripDetailPage(): JSX.Element {
       >
         {t("roadtrips:detail.edit")}
       </Button>
+      {/* Rare actions in the ⋯, delete last and red (owner, 2026-11-22); the
+          page's own confirm dialog asks, so the entry has no `confirm`. */}
+      <OverflowMenu
+        label={t("common:buttons.moreActions")}
+        triggerLabel={t("common:buttons.more")}
+        testId="roadtrip-more"
+        entries={[
+          {
+            key: "odometer",
+            label: t("roadtrips:odometerDialog.open"),
+            onSelect: () => setOdometerOpen(true),
+          },
+          gpx.entry,
+          {
+            key: "delete",
+            label: t("roadtrips:delete"),
+            danger: true,
+            onSelect: () => setConfirmDelete(true),
+          },
+        ]}
+      />
     </div>
   );
 
@@ -603,12 +630,6 @@ export default function RoadtripDetailPage(): JSX.Element {
         costs={detail.costs}
         onChanged={() => void load()}
       />
-
-      <footer className="mt-8 pt-4 text-sm" style={{ borderTop: "1px solid var(--ts-border)" }}>
-        <button type="button" className="underline" onClick={() => setConfirmDelete(true)}>
-          {t("roadtrips:delete")}
-        </button>
-      </footer>
 
       {legEdit && (
         <LegDialog

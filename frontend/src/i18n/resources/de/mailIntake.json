@@ -26,7 +26,8 @@
     "test": "Verbindung testen",
     "run": "Jetzt prüfen",
     "remove": "Entfernen",
-    "privateNote": "Nur öffentliche Server sind erlaubt; ein Server im eigenen Netz kann hier nicht eingetragen werden."
+    "privateNote": "Nur öffentliche Server sind erlaubt; ein Server im eigenen Netz kann hier nicht eingetragen werden.",
+    "menuLabel": "Weitere Aktionen zum Postfach"
   },
   "status": {
     "never": "Noch nie geprüft.",
@@ -73,7 +74,9 @@
     "noSenders": "Noch kein Absender erlaubt – Mails an deine Adresse werden abgelehnt.",
     "senderPlaceholder": "du@beispiel.de",
     "senderAdd": "Erlauben",
-    "senderRemove": "Entfernen"
+    "senderRemove": "Entfernen",
+    "menuLabel": "Weitere Aktionen zur Weiterleitungsadresse",
+    "senderMenuLabel": "Weitere Aktionen zum Absender {{name}}"
   },
   "inbox": {
     "title": "Aus deiner Mail",

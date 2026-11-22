@@ -140,7 +140,8 @@
     "pickMe": "Me / everyone",
     "pickUndecided": "Not assigned yet",
     "saveFailed": "The assignment could not be saved.",
-    "companionGone": "That person no longer exists. The list was reloaded."
+    "companionGone": "That person no longer exists. The list was reloaded.",
+    "rowAction": "For person …"
   },
   "travellers": {
     "title": "Travellers on this entry",

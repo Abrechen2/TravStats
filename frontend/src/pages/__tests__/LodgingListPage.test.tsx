@@ -129,6 +129,7 @@ import LodgingListPage from "../LodgingListPage";
 import { useSettingsStore } from "../../store/settingsStore";
 import { EMPTY_LODGING_STATS_BLOCKS } from "../../types/lodgingStatsFixture";
 import { findNamed, queryNamed } from "../../__tests__/helpers/namedElement";
+import { chooseByTestId } from "../../__tests__/helpers/menu";
 
 // Measured 2026-09-19: this page's paged-rows case renders in about a second
 // on a developer machine and past Vitest's 5 s default on the CI runner under
@@ -873,9 +874,9 @@ describe("LodgingListPage", () => {
       renderListPage();
 
       await screen.findByText("Hotel Adlon");
-      expect(screen.getByTestId("lodging-edit-l1")).toBeInTheDocument();
+      expect(screen.getByTestId("lodging-menu-l1")).toBeInTheDocument();
 
-      await userEvent.click(screen.getByTestId("lodging-delete-l1"));
+      chooseByTestId("lodging-menu-l1", "lodging-delete-l1");
 
       // The dialog must name the stays that go with the house — deleting one
       // takes its whole history, and the list is where a mis-click is easiest.
@@ -911,7 +912,7 @@ describe("LodgingListPage", () => {
       renderListPage();
 
       await screen.findByText("Hotel Adlon");
-      await userEvent.click(screen.getByTestId("lodging-delete-l1"));
+      chooseByTestId("lodging-menu-l1", "lodging-delete-l1");
       const dialog = await screen.findByRole("dialog");
 
       await waitFor(() => {
@@ -942,7 +943,7 @@ describe("LodgingListPage", () => {
       renderListPage();
 
       await screen.findByText("Hotel Adlon");
-      await userEvent.click(screen.getByTestId("lodging-delete-l1"));
+      chooseByTestId("lodging-menu-l1", "lodging-delete-l1");
       const dialog = await screen.findByRole("dialog");
 
       await waitFor(() => expect(getTripsMock).toHaveBeenCalled());
@@ -957,7 +958,7 @@ describe("LodgingListPage", () => {
       renderListPage();
 
       await screen.findByText("Hotel Adlon");
-      await userEvent.click(screen.getByTestId("lodging-delete-l1"));
+      chooseByTestId("lodging-menu-l1", "lodging-delete-l1");
       const dialog = await screen.findByRole("dialog");
 
       await waitFor(() => expect(deleteFactsMock).toHaveBeenCalled());
@@ -973,7 +974,7 @@ describe("LodgingListPage", () => {
       renderListPage();
 
       await screen.findByText("Hotel Adlon");
-      await userEvent.click(screen.getByTestId("lodging-restay-l1"));
+      chooseByTestId("lodging-menu-l1", "lodging-restay-l1");
 
       expect(await screen.findByTestId("stay-editor-stub")).toHaveTextContent(
         "create|l1|Hotel Adlon"
@@ -1018,10 +1019,11 @@ describe("LodgingListPage", () => {
       renderListPage();
 
       await screen.findByText("Hotel Adlon");
-      await userEvent.click(screen.getByTestId("lodging-delete-l1"));
+      chooseByTestId("lodging-menu-l1", "lodging-delete-l1");
 
       // The row navigates; without stopPropagation the delete click would
       // also open the very lodging it is about to remove.
+      await screen.findByRole("dialog");
       expect(navigateMock).not.toHaveBeenCalled();
     });
   });
@@ -1036,17 +1038,17 @@ describe("LodgingListPage", () => {
         </MemoryRouter>
       );
       await screen.findByText("Hotel Adlon");
-      expect(screen.getByTestId("lodging-view-houses")).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("radio", { name: "lodging:stayView.toggle.houses" })).toBeChecked();
       expect(listStayPageMock).not.toHaveBeenCalled();
 
-      await userEvent.click(screen.getByTestId("lodging-view-stays"));
+      await userEvent.click(screen.getByRole("radio", { name: "lodging:stayView.toggle.stays" }));
       await waitFor(() => expect(listStayPageMock).toHaveBeenCalled());
-      expect(screen.getByTestId("lodging-view-stays")).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("radio", { name: "lodging:stayView.toggle.stays" })).toBeChecked();
       // The house table and its filter bar give way to the stay list.
       expect(screen.queryByText("Hotel Adlon")).toBeNull();
       expect(await screen.findByText("lodging:stayView.empty")).toBeInTheDocument();
 
-      await userEvent.click(screen.getByTestId("lodging-view-houses"));
+      await userEvent.click(screen.getByRole("radio", { name: "lodging:stayView.toggle.houses" }));
       expect(await screen.findByText("Hotel Adlon")).toBeInTheDocument();
     });
 
@@ -1087,7 +1089,7 @@ describe("LodgingListPage", () => {
         </MemoryRouter>
       );
       expect(await screen.findByText("lodging:stayView.empty")).toBeInTheDocument();
-      expect(screen.getByTestId("lodging-view-stays")).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("radio", { name: "lodging:stayView.toggle.stays" })).toBeChecked();
     });
   });
 

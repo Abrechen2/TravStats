@@ -16,7 +16,7 @@ import { EntryPhotosSection } from "../components/common/EntryPhotos";
 import { BusFormModal } from "../components/bus/BusFormModal";
 import { BusNoRoutingNote } from "../components/bus/BusNoRoutingNote";
 import { BusRouteMap } from "../components/bus/BusRouteMap";
-import GeoExportButtons from "../components/export/GeoExportButtons";
+import RouteMenu from "../components/detail/RouteMenu";
 import { geoExportPaths } from "../lib/api/geoExport";
 import { co2Kpis } from "../lib/co2Kpis";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
@@ -292,16 +292,7 @@ export default function BusDetailPage(): JSX.Element {
           {(ride.geometrySource === "straight" || routeMessage !== null) && (
             <DetailSection title={t("bus:detail.routeTitle")}>
               <div className="flex flex-col items-start gap-2" data-testid="bus-route-again">
-                {routing?.configured === false ? (
-                  <BusNoRoutingNote />
-                ) : (
-                  <Button
-                    onClick={() => void handleRouteAgain()}
-                    disabled={routingAgain || routing === null}
-                  >
-                    {routingAgain ? t("bus:routing.againBusy") : t("bus:routing.again")}
-                  </Button>
-                )}
+                {routing?.configured === false && <BusNoRoutingNote />}
                 {routeMessage && (
                   <p role="status" className="t-caption" data-testid="bus-route-message">
                     {routeMessage}
@@ -330,13 +321,30 @@ export default function BusDetailPage(): JSX.Element {
             <WebGLGuard>
               <BusRouteMap ride={ride} />
             </WebGLGuard>
-            {ride.geometry && (
-              <GeoExportButtons
-                path={geoExportPaths.bus(ride.id)}
-                testId="bus-line-export"
-                className="mt-2 flex flex-wrap items-center gap-2"
+            <div className="mt-2">
+              <RouteMenu
+                label={t("bus:routing.menuLabel")}
+                testId="bus-route-menu"
+                entries={
+                  ride.geometrySource === "straight" && routing?.configured !== false
+                    ? [
+                        {
+                          key: "reroute",
+                          testId: "bus-route-again-button",
+                          label: routingAgain ? t("bus:routing.againBusy") : t("bus:routing.again"),
+                          disabled: routingAgain || routing === null,
+                          onSelect: () => void handleRouteAgain(),
+                        },
+                      ]
+                    : []
+                }
+                geoExport={
+                  ride.geometry
+                    ? { path: geoExportPaths.bus(ride.id), testId: "bus-line-export" }
+                    : undefined
+                }
               />
-            )}
+            </div>
           </DetailSection>
 
           {ride.companions.length > 0 && (

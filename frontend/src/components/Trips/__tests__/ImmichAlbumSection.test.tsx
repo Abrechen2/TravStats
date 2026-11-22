@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { StrictMode } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // vi.hoisted lets these vi.fn()s survive vi.mock factory hoisting and stay
@@ -48,6 +48,19 @@ vi.mock("../PhotoLightbox", () => ({ default: () => <div data-testid="lightbox" 
 import ImmichAlbumSection from "../ImmichAlbumSection";
 import type { LinkedAlbum } from "../../../types/immich";
 
+/** The album's ⋯ holds re-sync and unlink; open it once, whichever test asks first. */
+function openAlbumMenu(): void {
+  if (!screen.queryByRole("menu")) fireEvent.click(screen.getByTestId("album-menu"));
+}
+function menuItem(name: string): HTMLElement {
+  openAlbumMenu();
+  return screen.getByRole("menuitem", { name });
+}
+function queryMenuItem(name: string): HTMLElement | null {
+  openAlbumMenu();
+  return screen.queryByRole("menuitem", { name });
+}
+
 const LINK_ALBUM: LinkedAlbum = {
   id: "link-1",
   provider: "immich",
@@ -86,7 +99,7 @@ describe("ImmichAlbumSection", () => {
     await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
     expect(screen.getByText("Rome")).toBeInTheDocument();
     expect(screen.getByText("albums.badgeLink")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "albums.resync" })).not.toBeInTheDocument();
+    expect(queryMenuItem("albums.resync")).not.toBeInTheDocument();
   });
 
   /* ── Day grouping (#154) ────────────────────────────────────────────────
@@ -199,7 +212,7 @@ describe("ImmichAlbumSection", () => {
     render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByText("albums.badgeImport")).toBeInTheDocument());
-    expect(screen.getByRole("button", { name: "albums.resync" })).toBeInTheDocument();
+    expect(menuItem("albums.resync")).toBeInTheDocument();
   });
 
   it("labels the group with its photo source", async () => {
@@ -260,7 +273,7 @@ describe("ImmichAlbumSection", () => {
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByText("errors.notFound")).toBeInTheDocument());
-    expect(screen.getByRole("button", { name: "albums.unlink" })).toBeInTheDocument();
+    expect(menuItem("albums.unlink")).toBeInTheDocument();
   });
 
   // Regression guard for the `failure !== "errors.notFound"` check on line ~220:
@@ -292,7 +305,7 @@ describe("ImmichAlbumSection", () => {
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={onChanged} />);
     await waitFor(() => expect(getAlbumAssets).toHaveBeenCalled());
 
-    await user.click(screen.getByRole("button", { name: "albums.unlink" }));
+    await user.click(menuItem("albums.unlink"));
 
     await waitFor(() => expect(unlinkAlbum).toHaveBeenCalledWith("trip-1", "link-1", false));
     expect(onChanged).toHaveBeenCalled();
@@ -303,7 +316,7 @@ describe("ImmichAlbumSection", () => {
     render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
     await waitFor(() => expect(getAlbumAssets).toHaveBeenCalled());
 
-    await user.click(screen.getByRole("button", { name: "albums.unlink" }));
+    await user.click(menuItem("albums.unlink"));
     expect(unlinkAlbum).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "albums.unlinkDeleteCopies" }));
@@ -355,14 +368,11 @@ describe("ImmichAlbumSection", () => {
     await waitFor(() => expect(getImportJob).toHaveBeenCalledTimes(1));
     expect(screen.queryByText("albums.resyncing")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "albums.resync" }));
+    await user.click(menuItem("albums.resync"));
 
     await waitFor(() => expect(resyncAlbum).toHaveBeenCalledWith("trip-1", "link-2"));
     await waitFor(() => expect(screen.getByText("albums.resyncing")).toBeInTheDocument());
-    await waitFor(
-      () => expect(screen.getByRole("button", { name: "albums.resync" })).toBeEnabled(),
-      { timeout: 4000 }
-    );
+    await waitFor(() => expect(menuItem("albums.resync")).toBeEnabled(), { timeout: 4000 });
   });
 
   // (b) Owner-decided: resume polling on mount. An import is already running
@@ -402,10 +412,7 @@ describe("ImmichAlbumSection", () => {
 
     await waitFor(() => expect(screen.getByText("albums.resyncing")).toBeInTheDocument());
     expect(resyncAlbum).not.toHaveBeenCalled();
-    await waitFor(
-      () => expect(screen.getByRole("button", { name: "albums.resync" })).toBeEnabled(),
-      { timeout: 4000 }
-    );
+    await waitFor(() => expect(menuItem("albums.resync")).toBeEnabled(), { timeout: 4000 });
   });
 
   // (c) The mount probe must NOT start a poller for a terminal or absent job.
@@ -610,10 +617,7 @@ describe("ImmichAlbumSection", () => {
 
       render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
 
-      await waitFor(
-        () => expect(screen.getByRole("button", { name: "albums.resync" })).toBeEnabled(),
-        { timeout: 4000 }
-      );
+      await waitFor(() => expect(menuItem("albums.resync")).toBeEnabled(), { timeout: 4000 });
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
   });
@@ -628,7 +632,7 @@ describe("ImmichAlbumSection — a failing import poll (forgejo#375)", () => {
     render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
     await waitFor(() => expect(getImportJob).toHaveBeenCalledTimes(1));
 
-    await user.click(screen.getByRole("button", { name: "albums.resync" }));
+    await user.click(menuItem("albums.resync"));
 
     await waitFor(() => expect(screen.getByText("errors.unreachable")).toBeInTheDocument(), {
       timeout: 6000,

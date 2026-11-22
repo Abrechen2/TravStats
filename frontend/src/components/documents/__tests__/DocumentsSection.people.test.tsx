@@ -77,6 +77,24 @@ const traveller = (over: Partial<EntryTraveller> = {}): EntryTraveller => ({
   ...over,
 });
 
+/** The picker lives in the row ⋯ ("Für Person …"), which exists once the entry's people have loaded. */
+async function openPersonPicker(): Promise<HTMLElement> {
+  const trigger = await screen.findByTestId("document-menu-d1");
+  await waitFor(() => expect(travellers.list).toHaveBeenCalled());
+  await waitFor(() => {
+    fireEvent.click(trigger);
+    const item = screen.queryByRole("menuitem", { name: "documents:person.rowAction" });
+    if (!item) {
+      fireEvent.click(trigger); // not there yet: close again and retry
+      throw new Error("no person entry yet");
+    }
+    fireEvent.click(item);
+  });
+  const select = await screen.findByRole("combobox", { name: "documents:person.pickLabel" });
+  await waitFor(() => expect(within(select).getAllByRole("option").length).toBeGreaterThan(2));
+  return select;
+}
+
 describe("DocumentsSection — people (D7)", () => {
   beforeEach(() => {
     [...Object.values(api), ...Object.values(travellers)].forEach((m) => m.mockReset());
@@ -95,6 +113,12 @@ describe("DocumentsSection — people (D7)", () => {
     expect(person).toHaveTextContent("documents:person.pickUndecided");
   });
 
+  it("keeps only the person's status in the row; the picker is the row menu's 'Für Person …'", async () => {
+    render(<DocumentsSection entry={FLIGHT} />);
+    await screen.findByTestId("document-person");
+    expect(screen.queryByRole("combobox")).toBeNull();
+  });
+
   it("names the person and that a parsed name set it", async () => {
     api.listForEntry.mockResolvedValue([
       doc({ forCompanion: { id: "c1", displayName: "Norbert Nord" }, forSource: "auto" }),
@@ -108,8 +132,7 @@ describe("DocumentsSection — people (D7)", () => {
   it("assigns the picked companion to this entry's link and shows the saved answer", async () => {
     api.assignCompanion.mockResolvedValue({ companionId: "c2", companionSource: "user" });
     render(<DocumentsSection entry={FLIGHT} />);
-    const select = await screen.findByRole("combobox", { name: "documents:person.pickLabel" });
-    await waitFor(() => expect(within(select).getAllByRole("option").length).toBeGreaterThan(2));
+    const select = await openPersonPicker();
     fireEvent.change(select, { target: { value: "c2" } });
     await waitFor(() => expect(api.assignCompanion).toHaveBeenCalledWith("d1", FLIGHT, "c2"));
     expect(await screen.findByTestId("document-person")).toHaveTextContent(
@@ -121,8 +144,7 @@ describe("DocumentsSection — people (D7)", () => {
   it("says the assignment failed and keeps the old person", async () => {
     api.assignCompanion.mockRejectedValue(axiosError(500));
     render(<DocumentsSection entry={FLIGHT} />);
-    const select = await screen.findByRole("combobox", { name: "documents:person.pickLabel" });
-    await waitFor(() => expect(within(select).getAllByRole("option").length).toBeGreaterThan(2));
+    const select = await openPersonPicker();
     fireEvent.change(select, { target: { value: "c2" } });
     expect(await screen.findByText("documents:person.saveFailed")).toBeInTheDocument();
     expect(screen.getByTestId("document-person")).toHaveTextContent(
@@ -133,8 +155,7 @@ describe("DocumentsSection — people (D7)", () => {
   it("says the person is gone (404) and reloads instead of a generic failure", async () => {
     api.assignCompanion.mockRejectedValue(axiosError(404));
     render(<DocumentsSection entry={FLIGHT} />);
-    const select = await screen.findByRole("combobox", { name: "documents:person.pickLabel" });
-    await waitFor(() => expect(within(select).getAllByRole("option").length).toBeGreaterThan(2));
+    const select = await openPersonPicker();
     fireEvent.change(select, { target: { value: "c1" } });
     expect(await screen.findByText("documents:person.companionGone")).toBeInTheDocument();
     await waitFor(() => expect(api.listForEntry.mock.calls.length).toBeGreaterThan(1));

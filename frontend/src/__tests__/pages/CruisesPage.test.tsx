@@ -43,6 +43,7 @@ vi.mock("../../store/toastStore", () => ({
 const mockNavigate = vi.fn();
 import { MemoryRouter } from "react-router-dom";
 import { getNamed } from "../helpers/namedElement";
+import { chooseFromBareMenu } from "../helpers/menu";
 
 // Measured 2026-09-19: this page's paged-rows case renders in about a second
 // on a developer machine and past Vitest's 5 s default on the CI runner under
@@ -177,7 +178,7 @@ describe("CruisesPage", () => {
 
     await screen.findByRole("table");
 
-    await userEvent.click(getNamed("button", "common:buttons.delete"));
+    chooseFromBareMenu("common:buttons.delete");
 
     const dialog = await screen.findByRole("dialog");
     // The list and the detail page share these keys now — deleting a cruise
@@ -211,7 +212,7 @@ describe("CruisesPage", () => {
         </MemoryRouter>
       );
       await screen.findByRole("table");
-      await userEvent.click(getNamed("button", "common:buttons.delete"));
+      chooseFromBareMenu("common:buttons.delete");
 
       const dialog = await screen.findByRole("dialog");
       expect(dialog.textContent).toContain("documents:deleteCascadeNote(count:2)");

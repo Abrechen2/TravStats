@@ -1,3 +1,4 @@
+import OverflowMenu from "../ui/OverflowMenu";
 import { useCallback, useEffect, useState, type JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
@@ -245,40 +246,41 @@ export default function MailIntakeSettingsCard(): JSX.Element | null {
               >
                 {t("mailIntake:folder.save")}
               </button>
+              {/* Test, run now and remove are rare: one ⋯ beside "Speichern", remove last and red
+                  (owner, 2026-11-22). */}
               {source && (
-                <>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    disabled={busy}
-                    onClick={() => void test()}
-                  >
-                    {t("mailIntake:folder.test")}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    disabled={busy || !source.enabled}
-                    onClick={() => void checkNow()}
-                  >
-                    {t("mailIntake:folder.run")}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    disabled={isDemo || busy}
-                    onClick={() =>
-                      void run(async () => {
-                        await mailIntakeApi.removeSource();
-                        setDraft(EMPTY);
-                        await load();
-                        return null;
-                      })
-                    }
-                  >
-                    {t("mailIntake:folder.remove")}
-                  </button>
-                </>
+                <OverflowMenu
+                  label={t("mailIntake:folder.menuLabel")}
+                  triggerLabel={t("common:buttons.more")}
+                  testId="mail-folder-menu"
+                  entries={[
+                    {
+                      key: "test",
+                      label: t("mailIntake:folder.test"),
+                      disabled: busy,
+                      onSelect: () => void test(),
+                    },
+                    {
+                      key: "run",
+                      label: t("mailIntake:folder.run"),
+                      disabled: busy || !source.enabled,
+                      onSelect: () => void checkNow(),
+                    },
+                    {
+                      key: "remove",
+                      label: t("mailIntake:folder.remove"),
+                      danger: true,
+                      disabled: isDemo || busy,
+                      onSelect: () =>
+                        void run(async () => {
+                          await mailIntakeApi.removeSource();
+                          setDraft(EMPTY);
+                          await load();
+                          return null;
+                        }),
+                    },
+                  ]}
+                />
               )}
             </div>
             {source && (
@@ -327,35 +329,37 @@ export default function MailIntakeSettingsCard(): JSX.Element | null {
                     >
                       {copied ? t("mailIntake:forwarding.copied") : t("mailIntake:forwarding.copy")}
                     </button>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      disabled={isDemo || busy}
-                      onClick={() =>
-                        void run(async () => {
-                          await mailIntakeApi.issueAddress();
-                          setCopied(false);
-                          await load();
-                          return null;
-                        })
-                      }
-                    >
-                      {t("mailIntake:forwarding.regenerate")}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      disabled={isDemo || busy}
-                      onClick={() =>
-                        void run(async () => {
-                          await mailIntakeApi.revokeAddress();
-                          await load();
-                          return null;
-                        })
-                      }
-                    >
-                      {t("mailIntake:forwarding.revoke")}
-                    </button>
+                    <OverflowMenu
+                      label={t("mailIntake:forwarding.menuLabel")}
+                      triggerLabel={t("common:buttons.more")}
+                      testId="mail-address-menu"
+                      entries={[
+                        {
+                          key: "regenerate",
+                          label: t("mailIntake:forwarding.regenerate"),
+                          disabled: isDemo || busy,
+                          onSelect: () =>
+                            void run(async () => {
+                              await mailIntakeApi.issueAddress();
+                              setCopied(false);
+                              await load();
+                              return null;
+                            }),
+                        },
+                        {
+                          key: "revoke",
+                          label: t("mailIntake:forwarding.revoke"),
+                          danger: true,
+                          disabled: isDemo || busy,
+                          onSelect: () =>
+                            void run(async () => {
+                              await mailIntakeApi.revokeAddress();
+                              await load();
+                              return null;
+                            }),
+                        },
+                      ]}
+                    />
                     <span className="t-caption">{t("mailIntake:forwarding.regenerateHint")}</span>
                   </div>
                 ) : (
@@ -386,19 +390,22 @@ export default function MailIntakeSettingsCard(): JSX.Element | null {
                     {status.senders.map((s) => (
                       <li key={s.id} className="flex items-center gap-2">
                         <span>{s.address}</span>
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          disabled={busy}
-                          onClick={() =>
-                            void run(async () => {
-                              setStatus(await mailIntakeApi.removeSender(s.id));
-                              return null;
-                            })
-                          }
-                        >
-                          {t("mailIntake:forwarding.senderRemove")}
-                        </button>
+                        <OverflowMenu
+                          label={t("mailIntake:forwarding.senderMenuLabel", { name: s.address })}
+                          entries={[
+                            {
+                              key: "remove",
+                              label: t("mailIntake:forwarding.senderRemove"),
+                              danger: true,
+                              disabled: busy,
+                              onSelect: () =>
+                                void run(async () => {
+                                  setStatus(await mailIntakeApi.removeSender(s.id));
+                                  return null;
+                                }),
+                            },
+                          ]}
+                        />
                       </li>
                     ))}
                   </ul>

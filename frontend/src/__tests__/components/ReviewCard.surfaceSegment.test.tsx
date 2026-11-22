@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import ReviewCard from "../../components/inbox/workspace/ReviewCard";
 import type { DataQualityFlag } from "../../types/dataQuality";
+import { chooseMenuEntry } from "../helpers/menu";
 
 /**
  * A stored flight that is a train or bus ride (owner ruling 2026-11-05) as a
@@ -76,7 +77,7 @@ describe("ReviewCard — flight that is a train or bus ride", () => {
   it("converts only on the button, with the revision it showed", () => {
     renderCard(flag(["convert"]));
     expect(resolve).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "In Zug- oder Busfahrt umwandeln" }));
+    chooseMenuEntry(screen.getByTestId("review-card-menu"), /In Zug- oder Busfahrt umwandeln/);
     expect(resolve).toHaveBeenCalledWith("flag-9", { action: "convert", revision: 2 });
   });
 

@@ -7,6 +7,7 @@ import { tourIndexApi, type TourSummary } from "../../lib/api/tourIndex";
 import { toursApi } from "../../lib/api/tours";
 import { tripsApi } from "../../lib/api/trips";
 import { useToastStore } from "../../store/toastStore";
+import { bareMenuReady, bareMenuTrigger, chooseFromBareMenu } from "../../__tests__/helpers/menu";
 
 vi.mock("../../lib/api/tourIndex", () => ({
   tourIndexApi: { list: vi.fn(), geometryBatch: vi.fn() },
@@ -114,16 +115,14 @@ describe("the tours page", () => {
     expect(screen.queryByText("trips:tours.pageEmpty")).not.toBeInTheDocument();
   });
 
-  it("draws the row actions as the icon buttons every other logbook uses, not bordered text buttons", async () => {
+  it("folds the row actions into one ⋯ that lists assign and delete (delete last)", async () => {
     vi.mocked(tourIndexApi.list).mockResolvedValue([tour({ tripId: null, tripName: null })]);
     renderPage();
-    const move = await screen.findByLabelText("trips:tours.move.action");
-    const del = screen.getByLabelText("trips:tours.deleteLabel");
-    for (const el of [move, del]) {
-      expect(el.tagName).toBe("BUTTON");
-      expect(el.querySelector("svg")).not.toBeNull();
-      expect(el.textContent).toBe("");
-    }
+    await waitFor(() => bareMenuTrigger());
+    expect(screen.queryByLabelText("trips:tours.deleteLabel")).toBeNull();
+    fireEvent.click(bareMenuTrigger());
+    const items = screen.getAllByRole("menuitem").map((i) => i.textContent);
+    expect(items).toEqual(["trips:tours.move.action", "trips:tours.deleteLabel"]);
   });
 
   it("opens a standalone tour on the trip-less editor path", async () => {
@@ -145,7 +144,8 @@ describe("the tours page", () => {
   it("does not open the tour when a row action is clicked", async () => {
     vi.mocked(tourIndexApi.list).mockResolvedValue([tour()]);
     renderPage();
-    fireEvent.click(await screen.findByLabelText("trips:tours.deleteLabel"));
+    await bareMenuReady();
+    chooseFromBareMenu("trips:tours.deleteLabel");
     expect(screen.getByTestId("where")).toHaveTextContent("/");
     expect(screen.getByTestId("where").textContent).toBe("/");
   });
@@ -153,7 +153,8 @@ describe("the tours page", () => {
   it("does not open the tour when Enter is pressed on a row action", async () => {
     vi.mocked(tourIndexApi.list).mockResolvedValue([tour()]);
     renderPage();
-    fireEvent.keyDown(await screen.findByLabelText("trips:tours.deleteLabel"), { key: "Enter" });
+    await waitFor(() => bareMenuTrigger());
+    fireEvent.keyDown(bareMenuTrigger(), { key: "Enter" });
     expect(screen.getByTestId("where").textContent).toBe("/");
   });
 
@@ -259,7 +260,7 @@ describe("the tours page", () => {
     renderPage();
     await screen.findByText("Süd-Norwegen");
 
-    fireEvent.click(screen.getByLabelText("trips:tours.deleteLabel"));
+    chooseFromBareMenu("trips:tours.deleteLabel");
     fireEvent.click(await screen.findByText("trips:tours.deleteConfirm.confirm"));
 
     await waitFor(() =>
@@ -281,7 +282,7 @@ describe("the tours page", () => {
 
     renderPage();
     await screen.findByText("Süd-Norwegen");
-    fireEvent.click(screen.getByLabelText("trips:tours.deleteLabel"));
+    chooseFromBareMenu("trips:tours.deleteLabel");
     fireEvent.click(await screen.findByText("trips:tours.deleteConfirm.confirm"));
     fireEvent.click(await screen.findByText("trips:tours.deleteWithCosts.confirm"));
 
@@ -341,7 +342,8 @@ describe("the tours page — a tour needs a name", () => {
     vi.mocked(toursApi.update).mockResolvedValue({} as never);
     renderPage();
 
-    fireEvent.click(await screen.findByLabelText("trips:tours.move.detach"));
+    await bareMenuReady();
+    chooseFromBareMenu("trips:tours.move.detach");
 
     await waitFor(() =>
       expect(toursApi.update).toHaveBeenCalledWith(undefined, "t-1", { tripId: null })
@@ -358,7 +360,8 @@ describe("the tours page — a tour needs a name", () => {
     useToastStore.setState({ addToast } as never);
     renderPage();
 
-    fireEvent.click(await screen.findByLabelText("trips:tours.move.detach"));
+    await bareMenuReady();
+    chooseFromBareMenu("trips:tours.move.detach");
 
     await waitFor(() =>
       expect(addToast).toHaveBeenCalledWith("error", "trips:tours.move.timelineError")
@@ -374,7 +377,8 @@ describe("the tours page — a tour needs a name", () => {
     useToastStore.setState({ addToast } as never);
     renderPage();
 
-    fireEvent.click(await screen.findByLabelText("trips:tours.move.detach"));
+    await bareMenuReady();
+    chooseFromBareMenu("trips:tours.move.detach");
 
     await waitFor(() => expect(addToast).toHaveBeenCalledWith("error", "trips:tours.move.error"));
   });
@@ -387,8 +391,10 @@ describe("the tours page — a tour needs a name", () => {
     vi.mocked(toursApi.update).mockRejectedValue(new Error("boom"));
     renderPage();
 
-    fireEvent.click(await screen.findByLabelText("trips:tours.move.action"));
+    await bareMenuReady();
+    chooseFromBareMenu("trips:tours.move.action");
     const select = await screen.findByLabelText("trips:tours.move.tripLabel");
+    await screen.findByRole("option", { name: "Jotunheimen" });
     fireEvent.change(select, { target: { value: "trip-9" } });
     fireEvent.click(screen.getByText("trips:tours.move.confirm"));
 
@@ -405,7 +411,8 @@ describe("the tours page — a tour needs a name", () => {
     vi.mocked(tripsApi.getAll).mockRejectedValue(new Error("down"));
     renderPage();
 
-    fireEvent.click(await screen.findByLabelText("trips:tours.move.action"));
+    await bareMenuReady();
+    chooseFromBareMenu("trips:tours.move.action");
 
     expect(await screen.findByRole("alert")).toHaveTextContent("trips:tours.move.loadError");
     expect(screen.queryByText("trips:tours.move.noTrips")).not.toBeInTheDocument();
@@ -425,7 +432,8 @@ describe("the tours page — a tour needs a name", () => {
     useToastStore.setState({ addToast } as never);
     renderPage();
 
-    fireEvent.click(await screen.findByLabelText("trips:tours.move.detach"));
+    await bareMenuReady();
+    chooseFromBareMenu("trips:tours.move.detach");
     // Not the timeline message: the reader is asked, and can agree.
     fireEvent.click(await screen.findByText("trips:tours.move.detachPhotosConfirm"));
 

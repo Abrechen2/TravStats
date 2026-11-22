@@ -72,7 +72,10 @@ vi.mock("../../components/SpecialFlightModal", () => ({ default: () => null }));
 vi.mock("../../components/FlightEditModal", () => ({ default: () => null }));
 vi.mock("../../components/FlightRowActions", () => ({ default: () => null }));
 vi.mock("../../components/ui/ConfirmModal", () => ({ default: () => null }));
-vi.mock("../../components/table/ColumnPicker", () => ({ ColumnPicker: () => null }));
+vi.mock("../../components/table/ColumnPicker", () => ({
+  ColumnPicker: () => null,
+  ColumnChecklist: () => null,
+}));
 
 const getAll = vi.fn();
 const getFacets = vi.fn();
@@ -90,6 +93,7 @@ vi.mock("../../lib/api", () => ({
 
 import FlightsTablePage from "../FlightsTablePage";
 import { getNamed } from "../../__tests__/helpers/namedElement";
+import { chooseMenuEntry } from "../../__tests__/helpers/menu";
 
 const FLIGHTS = ["f1", "f2", "f3"].map((id) => ({
   id,
@@ -122,7 +126,7 @@ describe("FlightsTablePage bulk selection", () => {
   it("edits exactly the ticked flights", async () => {
     render(<FlightsTablePage />);
     await screen.findByTestId("row-f1");
-    fireEvent.click(getNamed("button", "flights:bulk.start"));
+    chooseMenuEntry(screen.getByTestId("list-header-menu"), "bulkEdit:start");
     fireEvent.click(screen.getByRole("checkbox", { name: /"name":"F1 MUC → CPH"/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: /"name":"F3 MUC → CPH"/ }));
     expect(screen.getByTestId("flight-bulk-bar")).toHaveTextContent(
@@ -135,14 +139,14 @@ describe("FlightsTablePage bulk selection", () => {
   it("selects the page on request, and ending the selection forgets it", async () => {
     render(<FlightsTablePage />);
     await screen.findByTestId("row-f1");
-    fireEvent.click(getNamed("button", "flights:bulk.start"));
+    chooseMenuEntry(screen.getByTestId("list-header-menu"), "bulkEdit:start");
     fireEvent.click(getNamed("button", "flights:bulk.selectPage"));
     expect(screen.getAllByRole("checkbox").every((c) => (c as HTMLInputElement).checked)).toBe(
       true
     );
     fireEvent.click(getNamed("button", "flights:bulk.stop"));
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
-    fireEvent.click(getNamed("button", "flights:bulk.start"));
+    chooseMenuEntry(screen.getByTestId("list-header-menu"), "bulkEdit:start");
     await waitFor(() =>
       expect(screen.getByTestId("flight-bulk-bar")).toHaveTextContent(
         'flights:bulk.selected {"count":0}'

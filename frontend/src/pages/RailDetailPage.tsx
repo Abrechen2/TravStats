@@ -19,7 +19,6 @@ import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { RailFormModal } from "../components/rail/RailFormModal";
 import { RailRouteRefresh } from "../components/rail/RailRouteRefresh";
 import { RailRouteMap } from "../components/rail/RailRouteMap";
-import GeoExportButtons from "../components/export/GeoExportButtons";
 import { geoExportPaths } from "../lib/api/geoExport";
 import { RailConnectionView } from "../components/rail/RailConnectionView";
 import { RailConnectionLink } from "../components/rail/RailConnectionLink";
@@ -287,12 +286,6 @@ export default function RailDetailPage(): JSX.Element {
         }
       />
 
-      <RailRouteRefresh
-        id={journey.id}
-        source={journey.geometrySource}
-        onUpdated={() => setReloadKey((k) => k + 1)}
-      />
-
       {isConvertedFromRoadtrip(journey) && (
         <p className="t-caption mb-4" data-testid="rail-converted-note">
           {t("rail:detail.convertedFromRoadtrip")}
@@ -398,13 +391,16 @@ export default function RailDetailPage(): JSX.Element {
             <WebGLGuard>
               <RailRouteMap journey={journey} />
             </WebGLGuard>
-            {journey.geometry && (
-              <GeoExportButtons
-                path={geoExportPaths.rail(journey.id)}
-                testId="rail-line-export"
-                className="mt-2 flex flex-wrap items-center gap-2"
-              />
-            )}
+            <RailRouteRefresh
+              id={journey.id}
+              source={journey.geometrySource}
+              onUpdated={() => setReloadKey((k) => k + 1)}
+              geoExport={
+                journey.geometry
+                  ? { path: geoExportPaths.rail(journey.id), testId: "rail-line-export" }
+                  : undefined
+              }
+            />
           </DetailSection>
 
           {journey.companions.length > 0 && (

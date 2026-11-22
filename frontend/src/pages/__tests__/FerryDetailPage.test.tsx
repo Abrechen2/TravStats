@@ -36,7 +36,13 @@ vi.mock("../../components/common/TripPhotoWindowStrip", () => ({
   ),
 }));
 const get = vi.fn();
-vi.mock("../../lib/api/ferry", () => ({ ferryApi: { get: (...a: unknown[]) => get(...a) } }));
+const clearManualRoute = vi.fn();
+vi.mock("../../lib/api/ferry", () => ({
+  ferryApi: {
+    get: (...a: unknown[]) => get(...a),
+    clearManualRoute: (...a: unknown[]) => clearManualRoute(...a),
+  },
+}));
 
 import FerryDetailPage from "../FerryDetailPage";
 
@@ -87,5 +93,20 @@ describe("FerryDetailPage — map and photos", () => {
     const items = screen.getAllByRole("menuitem");
     expect(items[items.length - 1]?.textContent).toBe("ferry:remove");
     expect(items[items.length - 1]?.style.color).toBe("var(--ts-bad)");
+  });
+
+  it("keeps one visible 'Route bearbeiten' and puts the hand-route removal last, red and confirmed, in the route card's ⋯", async () => {
+    get.mockResolvedValue(
+      ferryFixture({ id: "f1", tripId: null, trip: null, geometrySource: "manual" })
+    );
+    draw();
+    await waitFor(() => expect(screen.getByTestId("ferry-route-draw")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("ferry-route-menu"));
+    const items = screen.getAllByRole("menuitem");
+    expect(items[items.length - 1]?.textContent).toBe("ferry:routing.clear");
+    expect(items[items.length - 1]?.style.color).toBe("var(--ts-bad)");
+    fireEvent.click(items[items.length - 1]);
+    // Asked first (the dialog is stubbed out here): nothing is cleared by the click itself.
+    expect(clearManualRoute).not.toHaveBeenCalled();
   });
 });
