@@ -17,6 +17,8 @@ const listForEntryMock = vi.fn();
 // Stubbed for the same reason the price suite stubs it: the section fetches on
 // mount, and the network is refused in tests (forgejo#110). The count the
 // dialog needs comes from the mock below, not from the section.
+// The recorded-tracks panel loads its own data; these suites are about something else.
+vi.mock("../../components/Cruise/CruiseTracksPanel", () => ({ default: () => null }));
 vi.mock("../../components/vessel/VesselLiveStatus", () => ({ VesselLiveStatus: () => null }));
 vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
 

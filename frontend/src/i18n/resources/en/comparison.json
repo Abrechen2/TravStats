@@ -239,7 +239,6 @@
       "title": "Accept an invitation",
       "signIn": "Sign in on your server",
       "signInHint": "Open this link again after signing in. Nothing has been sent.",
-      "off": "This feature is not switched on on your server yet.",
       "damaged": "This invitation link is damaged",
       "damagedHint": "It is incomplete or not from TravStats. Nothing was sent – ask for the link again.",
       "intro": "Someone on {{origin}} invites you to compare travel totals.",

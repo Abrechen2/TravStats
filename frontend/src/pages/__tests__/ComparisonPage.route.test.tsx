@@ -95,19 +95,11 @@ describe("the comparison routes", () => {
   });
 
   it(
-    "sends the reader away from both while the beta switch is off",
+    "draws the leaderboard with the beta switch off (out of beta, 2.8)",
     { timeout: 10000 },
     async () => {
       remoteBeta.value = false;
-      for (const path of ["/freunde", "/encrypted-share"]) {
-        window.history.pushState({}, "", path);
-        const view = render(<App />);
-        await waitFor(() => expect(screen.getByTestId("dashboard-stub")).toBeTruthy(), {
-          timeout: 8000,
-        });
-        expect(screen.queryByTestId("sealed-stub")).toBeNull();
-        view.unmount();
-      }
+      await landOn("/freunde", "leaderboard-stub");
     }
   );
 });

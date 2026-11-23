@@ -172,3 +172,13 @@ describe("selection keys", () => {
     expect(ghostCuratedKey("ghost:outlet:s1")).toBeNull();
   });
 });
+
+describe("?lists= param", () => {
+  it("round-trips own lists as bare ids and checklists as curated:<key>", async () => {
+    const { selectionFromParam, selectionToParam } = await import("../mapPlaceLists");
+    const keys = selectionFromParam("a,curated:wonders,,b");
+    expect(keys).toEqual(["list:a", "curated:wonders", "list:b"]);
+    expect(selectionToParam(keys)).toBe("a,curated:wonders,b");
+    expect(selectionFromParam(null)).toEqual([]);
+  });
+});

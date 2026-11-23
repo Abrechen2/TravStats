@@ -121,3 +121,12 @@ describe("beta feature registry", () => {
     expect(isBetaFeatureKey(undefined)).toBe(false);
   });
 });
+
+describe("what is still beta for 2.8 (owner, 2026-11-23)", () => {
+  it("has left tours, roadtrips, TravTrack, comparison and cruise tracks, and keeps exactly the other four", async () => {
+    const { BETA_FEATURE_KEYS } = await import("../../config/betaFeatures");
+    expect([...BETA_FEATURE_KEYS].sort()).toEqual(
+      ["devicePairing", "encryptedShare", "federatedTripSharing", "travPlan"].sort()
+    );
+  });
+});

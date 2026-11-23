@@ -168,3 +168,25 @@ export function resolveSelection(
 ): ListSelectionKey[] {
   return selection.filter((k) => known.has(k));
 }
+
+/** `?lists=` value: an own list as its bare id, a checklist as `curated:<key>`. */
+export function selectionToParam(selection: readonly ListSelectionKey[]): string {
+  return selection.map((k) => (k.startsWith("list:") ? k.slice(5) : k)).join(",");
+}
+
+export function selectionFromParam(param: string | null): ListSelectionKey[] {
+  if (!param) return [];
+  return selectionFromStored(
+    param
+      .split(",")
+      .filter((t) => t.length > 0)
+      .map((t) => (t.startsWith("curated:") ? t : `list:${t}`))
+  );
+}
+
+/** Where a pin leads: a real place's page, a checklist target's checklist, nothing for an outlet. */
+export function placeOpenPath(placeId: string): string | null {
+  if (!isGhostPlaceId(placeId)) return `/places/${placeId}`;
+  const key = ghostCuratedKey(placeId);
+  return key ? `/places/checklists/${key}` : null;
+}

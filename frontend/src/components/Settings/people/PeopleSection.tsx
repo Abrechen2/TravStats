@@ -72,9 +72,6 @@ export default function PeopleSection(): JSX.Element {
   const [stats, setStats] = useState<string | null>(null);
   const [achievements, setAchievements] = useState<string | null>(null);
   const [offersVersion, setOffersVersion] = useState(0);
-  const gates = {
-    comparison: isFeatureVisible("comparison"),
-  };
 
   /** Runs one write: its failure is said on the page, logged, and the list is read again. */
   const run = async (
@@ -310,7 +307,7 @@ export default function PeopleSection(): JSX.Element {
       ) : undefined,
     details: (
       <>
-        <PersonSwitches person={p} handlers={handlers} disabled={isDemo || busy} gates={gates} />
+        <PersonSwitches person={p} handlers={handlers} disabled={isDemo || busy} />
         {stats === p.key && p.connection && <RemotePersonStats person={p.connection} />}
         {achievements === p.key && p.connection && (
           <RemotePersonAchievements person={p.connection} />

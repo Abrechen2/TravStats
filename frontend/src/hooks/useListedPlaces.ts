@@ -1,8 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { getCuratedProgress } from "../lib/api/placeLists";
 import { listNewOutlets, type SmartSuggestion } from "../lib/api/smartLists";
 import { logger } from "../lib/logger";
-import { buildListedPlaces, type ListSelectionKey } from "../lib/mapPlaceLists";
+import {
+  buildListedPlaces,
+  selectionFromParam,
+  selectionToParam,
+  type ListSelectionKey,
+} from "../lib/mapPlaceLists";
 import { usePlaceListFilterStore } from "../store/placeListFilterStore";
 import type { Place } from "../types/place";
 import type { CuratedProgress, PlaceList } from "../types/placeList";
@@ -33,6 +39,43 @@ export function useListedPlaces(
 ): ListedPlaces {
   const { i18n } = useTranslation();
   const selection = usePlaceListFilterStore((s) => s.selection);
+  const setSelection = usePlaceListFilterStore((s) => s.setSelection);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // `?lists=` (a link to a list view) wins over the stored choice, and the URL
+  // follows the choice afterwards. `lastParam` is what this hook last wrote or
+  // read, so the two effects cannot ping-pong.
+  const param = searchParams.get("lists");
+  const lastParam = useRef<string | null>(null);
+  useEffect(() => {
+    if (param === lastParam.current) return;
+    lastParam.current = param;
+    const fromUrl = selectionFromParam(param);
+    if (param !== null && selectionToParam(fromUrl) !== selectionToParam(selection)) {
+      setSelection(fromUrl);
+    }
+  }, [param, selection, setSelection]);
+  // Only a CHANGE of the choice writes the URL, so a link being adopted above
+  // is not overwritten by the stored choice it is replacing.
+  const selectionParam = selectionToParam(selection);
+  const lastSelection = useRef(selectionParam);
+  useEffect(() => {
+    if (selectionParam === lastSelection.current) return;
+    lastSelection.current = selectionParam;
+    const wanted = selectionParam || null;
+    if (wanted === param) return;
+    lastParam.current = wanted;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (wanted) next.set("lists", wanted);
+        else next.delete("lists");
+        return next;
+      },
+      { replace: true }
+    );
+  }, [selectionParam, param, setSearchParams]);
+
   const [curated, setCurated] = useState<ReadonlyMap<string, CuratedProgress>>(EMPTY_CURATED);
   const [outlets, setOutlets] =
     useState<ReadonlyMap<string, readonly SmartSuggestion[]>>(EMPTY_OUTLETS);

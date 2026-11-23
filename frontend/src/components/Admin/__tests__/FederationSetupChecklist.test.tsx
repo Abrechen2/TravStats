@@ -66,12 +66,12 @@ describe("FederationRows — setup checklist", () => {
     betaOpen = true;
   });
 
-  it("is absent while the beta key is closed", async () => {
+  it("is there with the trip-sharing beta key closed — comparison (out of beta) needs the federation too", async () => {
     betaOpen = false;
     vi.mocked(federationAdminApi.get).mockResolvedValue(done);
     render(<FederationRows />);
-    expect(await screen.findByText(FP)).toBeInTheDocument();
-    expect(screen.queryByTestId("federation-checklist")).toBeNull();
+    expect((await screen.findAllByText(FP)).length).toBeGreaterThan(0);
+    expect(screen.getByTestId("federation-checklist")).toBeInTheDocument();
   });
 
   it("is all done: address and fingerprint with copy buttons, switch on", async () => {

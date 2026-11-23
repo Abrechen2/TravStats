@@ -16,6 +16,8 @@ const getFlight = vi.fn();
 const getCruise = vi.fn();
 
 // The entry photo strip has its own suite; here it would reach the network.
+// The recorded-tracks panel loads its own data; these suites are about something else.
+vi.mock("../../components/Cruise/CruiseTracksPanel", () => ({ default: () => null }));
 vi.mock("../../components/common/EntryPhotos", () => ({
   default: () => null,
   EntryPhotos: () => null,

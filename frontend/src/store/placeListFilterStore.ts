@@ -18,6 +18,7 @@ interface PlaceListFilterState {
    */
   viewActive: boolean;
   setViewActive: (active: boolean) => void;
+  setSelection: (selection: ListSelectionKey[]) => void;
   toggle: (key: ListSelectionKey) => void;
   clear: () => void;
 }
@@ -30,6 +31,10 @@ export const usePlaceListFilterStore = create<PlaceListFilterState>((set) => ({
   selection: selectionFromStored(loadMapAppearance().placeListSelection),
   viewActive: false,
   setViewActive: (viewActive) => set({ viewActive }),
+  setSelection: (selection) => {
+    persist(selection);
+    set({ selection });
+  },
   toggle: (key) =>
     set((state) => {
       const selection = state.selection.includes(key)

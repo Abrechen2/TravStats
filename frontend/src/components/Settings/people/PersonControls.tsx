@@ -29,12 +29,10 @@ export function PersonSwitches({
   person,
   handlers,
   disabled,
-  gates,
 }: {
   person: PersonEntry;
   handlers: PersonHandlers;
   disabled: boolean;
-  gates: { comparison: boolean };
 }): JSX.Element | null {
   const { t } = useTranslation(["sharing"]);
   const { account } = person;
@@ -55,7 +53,7 @@ export function PersonSwitches({
   // The comparison API asks a LOCAL username. A person on another server gets no way to switch it
   // on from here (their bare username would reach a same-named local account); an existing consent
   // can still be switched off, by its key.
-  const totalsShown = gates.comparison && (account.kind === "local" || totalsOn);
+  const totalsShown = account.kind === "local" || totalsOn;
 
   return (
     <div

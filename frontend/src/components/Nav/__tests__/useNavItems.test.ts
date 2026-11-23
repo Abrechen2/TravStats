@@ -313,10 +313,10 @@ describe("comparison and encrypted share (rework 2026-10-16)", () => {
     });
   });
 
-  it("hides both while the beta switch is off", () => {
+  it("keeps the friends page and hides the encrypted share while the beta switch is off", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     const all = run().more.flatMap((s) => s.items.map((l) => l.id));
-    expect(all).not.toContain("comparison");
+    expect(all).toContain("comparison");
     expect(all).not.toContain("encrypted-share");
   });
 });

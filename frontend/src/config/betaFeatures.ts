@@ -63,12 +63,6 @@ export interface BetaFeatureMeta {
  * owner's word, never because its `returnsWhen` reads as met.
  */
 export const BETA_FEATURES = Object.freeze({
-  comparison: Object.freeze({
-    reason: "beta",
-    why: "The friend leaderboard was rebuilt on 2026-10-16 from server-side totals under per-person consent (spec docs/superpowers/specs/2026-10-16-comparison-rework-design.md). Across servers the totals travel signed but not end-to-end encrypted, by owner decision; that, and the load of ~9 loaders per friend, wants an RC look first (forgejo#40).",
-    returnsWhen:
-      "The owner accepts the rebuilt leaderboard on the RC — same-instance and one cross-server pair — and the leaderboard load is measured there.",
-  }),
   encryptedShare: Object.freeze({
     reason: "beta",
     why: "The full-record, device-encrypted transfer (protocol v2, docs/FEDERATION_E2E.md) was split off the comparison page on 2026-10-16 and kept, unchanged, until the owner decides to keep or cut it. It has had no independent cryptographic review.",
@@ -114,20 +108,6 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
-   * Recorded tracks on a cruise (2.7, board item `cruise-tracks`): a GPS
-   * recording replaces a leg's computed sea route on the map and in the
-   * statistics. Gated at ONE place, the "Aufgezeichnete Spuren" section of
-   * `CruiseDetailPage`. The backend endpoints stay reachable, as for every
-   * entry here; a cruise without recordings behaves exactly as before.
-   */
-  cruiseTracks: Object.freeze({
-    why: "Built on 2026-09-25 without a browser acceptance (owner: none that night). Its three thresholds — a port counts as reached within 10 km, a step of more than 20 km between two points is a hole (raised to three times the recording's own median step for a sparse recording since 2026-09-26, after a 41-point GPX was read as all holes), and a leg whose holes exceed a quarter falls back to the sea route — were chosen from reasoning about tender ports and phones at sea, not measured on a real cruise recording. A wrong threshold would silently replace a sea route with a worse line and change the statistics.",
-    returnsWhen:
-      "The owner has added at least one real cruise recording (a Dawarich pull or a GPX export), checked the per-leg verdicts and the map against what was sailed, and accepts the feature for release.",
-    reason: "beta",
-  }),
-
-  /**
    * Trip sharing across servers (forgejo#301, spec
    * docs/superpowers/specs/2026-10-20-federated-trip-sharing-design.md). Gated in two places:
    * the admin's switch in Admin → Instanz (`FederationSettings`) and the "people on other
@@ -140,23 +120,6 @@ export const BETA_FEATURES = Object.freeze({
     returnsWhen:
       "The owner has shared a trip between two real servers on the RC (both directions, an edit on each side, a leave or a revoke, a restore or re-pin confirmed again) and accepts it for release (spec O10).",
     issue: "forgejo#301",
-    reason: "beta",
-  }),
-
-  /**
-   * TravTrack, the own location history (TravTrack plan 2026-10-24, phase 2):
-   * an optional area in which the Companion records positions into this
-   * server. Gated at the TravTrack card of `LocationSourceSection` (beside
-   * the server's `choices.travtrack`; a stored choice still shows its card
-   * with the warning) and at TravTrack's switch in Admin → Instanz. Like
-   * `travPlan`, the SERVER asks too: every `/travtrack/*` path but the
-   * capabilities refuses with `TRAVTRACK_DISABLED` while the beta switch is
-   * off, because a phone keeps sending long after anybody looks at the page.
-   */
-  travTrack: Object.freeze({
-    why: "TravTrack, the own location history, is new and has not passed the field test (plan C8). Positions reach it from the Companion, from GPX, KML, GeoJSON and TCX files, from a Google Timeline export, from OwnTracks and Overland (ingest tokens) and from a copy of a Dawarich history, so a fault in any of them lands in the same history.",
-    returnsWhen:
-      "The C8 field test on Android and iPhone passed and the owner accepts /track in a browser review.",
     reason: "beta",
   }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);

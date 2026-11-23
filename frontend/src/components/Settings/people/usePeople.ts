@@ -47,7 +47,6 @@ export function usePeople(): PeopleState {
   const { isFeatureVisible } = useBetaFeatures();
   const isDemo = useIsDemoAccount();
   const federated = isFeatureVisible("federatedTripSharing");
-  const comparisonOn = isFeatureVisible("comparison");
   const [sources, setSources] = useState<PeopleSources>({
     companions: null,
     consents: null,
@@ -105,7 +104,7 @@ export function usePeople(): PeopleState {
             return { available: true, connections, paired };
           })
         : Promise.resolve(null),
-      comparisonOn && !isDemo
+      !isDemo
         ? guard("comparison", (): Promise<PeopleResponse> => comparisonApi.people())
         : Promise.resolve(null),
     ]);
@@ -123,7 +122,7 @@ export function usePeople(): PeopleState {
     setRemoteAvailable(remote?.available ?? false);
     setFailed(bad);
     setLoading(false);
-  }, [isDemo, federated, comparisonOn]);
+  }, [isDemo, federated]);
 
   useEffect(() => {
     void reload();

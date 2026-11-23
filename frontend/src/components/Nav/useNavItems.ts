@@ -107,7 +107,6 @@ export function useNavItems(): {
   const placesVisible = usePlacesVisible();
   const isAdmin = user?.isAdmin ?? false;
   const { isFeatureVisible } = useBetaFeatures();
-  const comparisonVisible = isFeatureVisible("comparison");
   const encryptedShareVisible = isFeatureVisible("encryptedShare");
   const travPlanVisible = useTravPlanVisible();
   const travTrackVisible = useTravTrackVisible();
@@ -206,17 +205,13 @@ export function useNavItems(): {
         : []),
       // Friends' totals beside the year in review: the other "how am I doing" page. Its own
       // icon — the trophy belongs to the achievements (rework 2026-10-16).
-      ...(comparisonVisible
-        ? [
-            {
-              kind: "leaf" as const,
-              id: "comparison",
-              path: "/freunde",
-              label: t("comparison:title"),
-              icon: "users" as const,
-            },
-          ]
-        : []),
+      {
+        kind: "leaf" as const,
+        id: "comparison",
+        path: "/freunde",
+        label: t("comparison:title"),
+        icon: "users" as const,
+      },
       ...(placesVisible
         ? [
             {
@@ -282,7 +277,6 @@ export function useNavItems(): {
     isEnabled,
     placesVisible,
     isAdmin,
-    comparisonVisible,
     encryptedShareVisible,
     travPlanVisible,
     travTrackVisible,

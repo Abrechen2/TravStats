@@ -49,7 +49,6 @@ import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import CruiseTracksPanel from "../components/Cruise/CruiseTracksPanel";
 import { VesselLiveStatus } from "../components/vessel/VesselLiveStatus";
 import { VesselAssignDialog } from "../components/vessel/VesselAssignDialog";
-import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import Toggletip from "../components/ui/Toggletip";
 import ChangeHistorySection from "../components/changeHistory/ChangeHistorySection";
 
@@ -82,7 +81,6 @@ export default function CruiseDetailPage(): JSX.Element {
   );
   const [deleting, setDeleting] = useState<boolean>(false);
   const addToast = useToastStore((s) => s.addToast);
-  const { isFeatureVisible } = useBetaFeatures();
   const todayZone = useTodayZone();
   /**
    * The day whose card the reader opened; undefined = today's, if any
@@ -365,9 +363,7 @@ export default function CruiseDetailPage(): JSX.Element {
               }}
             />
           )}
-          {isFeatureVisible("cruiseTracks") && (
-            <CruiseTracksPanel cruiseId={cruise.id} onChanged={onTracksChanged} />
-          )}
+          <CruiseTracksPanel cruiseId={cruise.id} onChanged={onTracksChanged} />
 
           <DetailSection
             title={t("detail.cabin")}

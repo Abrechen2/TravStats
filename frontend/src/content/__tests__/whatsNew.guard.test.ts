@@ -29,13 +29,10 @@ const guarded = WHATS_NEW_ENTRIES.filter((e) => compareVersions(e.version, GUARD
 
 /** What a reader would look for on the page, per registry key: [de, en]. */
 const KEYWORDS: Record<keyof typeof BETA_FEATURES, [RegExp, RegExp]> = {
-  comparison: [/Freundesvergleich|Serververgleich/i, /friend comparison|federation/i],
   encryptedShare: [/verschlüsseltes Teilen/i, /encrypted sharing/i],
   devicePairing: [/koppel/i, /\bpair/i],
-  cruiseTracks: [/Kreuzfahrt-Spuren/, /cruise tracks/i],
   travPlan: [/TravPlan/, /TravPlan/],
   federatedTripSharing: [/Reisen über Server|anderen Servern teilen/i, /across servers/i],
-  travTrack: [/TravTrack/, /TravTrack/],
 };
 const keys = Object.keys(KEYWORDS) as (keyof typeof BETA_FEATURES)[];
 

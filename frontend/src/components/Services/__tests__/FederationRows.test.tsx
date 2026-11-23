@@ -122,9 +122,10 @@ describe("FederationRows", () => {
       expect(screen.getByTestId("federation-step-2")).toBeInTheDocument();
     });
 
-    it("shows no checklist when neither is visible", async () => {
+    it("shows the checklist even when trip sharing is hidden — comparison is out of beta (2.8)", async () => {
       await open();
-      expect(screen.queryByTestId("federation-checklist")).toBeNull();
+      expect(screen.getByTestId("federation-checklist")).toBeInTheDocument();
+      expect(screen.queryByTestId("federation-step-2")).toBeNull();
     });
   });
 

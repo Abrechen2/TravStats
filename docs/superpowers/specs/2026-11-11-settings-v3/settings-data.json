@@ -1412,7 +1412,6 @@
             {
               "id": "rangliste",
               "t": "toggle",
-              "beta": "comparison",
               "inv": "A12 Comparison consent",
               "de": ["Sieht meine Summen", "Rangliste: wer deine Summen sieht", ""],
               "en": ["Sees my totals", "Leaderboard: who sees your totals", ""],
@@ -2894,7 +2893,6 @@
               "sc": "i",
               "ad": 1,
               "v": true,
-              "beta": "travTrack",
               "inv": "C1 TravTrack offered",
               "de": [
                 "TravTrack anbieten",

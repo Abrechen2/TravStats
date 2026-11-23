@@ -120,7 +120,6 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
   // The two plan limits are the expert rows of this page.
   // On "Netz" the five outbound switches under the master switch are the expert rows.
   const expert = useExpertRows(showPlan ? 2 : showNet ? OUTBOUND_SWITCHES.length : 0);
-  const trackOffered = isFeatureVisible("travTrack");
   const planOffered = isFeatureVisible("travPlan");
 
   const [trackSaved, setTrackSaved] = useState<boolean | null>(null);
@@ -134,9 +133,7 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
       logger.error("Loading the module switches failed:", error);
       if (alive) setLoadFailed(true);
     };
-    if (trackOffered) {
-      travTrackApi.config().then((c) => alive && setTrackSaved(c.enabled), fail);
-    }
+    travTrackApi.config().then((c) => alive && setTrackSaved(c.enabled), fail);
     if (planOffered) {
       travplanApi.config().then((c) => {
         if (!alive) return;
@@ -147,7 +144,7 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
     return () => {
       alive = false;
     };
-  }, [trackOffered, planOffered]);
+  }, [planOffered]);
 
   const beta = useSettingWrite<boolean>("server:beta", settings.betaFeaturesEnabled, async (on) => {
     await patch({ betaFeaturesEnabled: on });
@@ -286,7 +283,6 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
           sub={tt.sub}
           scope="allAccounts"
           save={track}
-          dependency={trackOffered ? undefined : needsBeta}
           control={<SwitchControl checked={track.value} onChange={track.choose} label={tt.title} />}
         />
       ) : null}

@@ -28,7 +28,7 @@ import {
   legendRow,
 } from "./allTabLegendRows";
 import { useListedPlaces } from "../../../hooks/useListedPlaces";
-import { ghostCuratedKey, isGhostPlaceId } from "../../../lib/mapPlaceLists";
+import { placeOpenPath } from "../../../lib/mapPlaceLists";
 import { rgbCss } from "../../../lib/flightColor";
 import { useTransportOverlays } from "./allTabTransportOverlays";
 import { lodgingPresence, mapStatusClass } from "../../../lib/mapPresence";
@@ -300,12 +300,8 @@ export function AllTab(): JSX.Element {
     (placeId: string): void => {
       // A checklist target or an outlet is not a Place yet: send the reader to
       // where it can become one (the checklist), never to a /places/ghost:… page.
-      if (isGhostPlaceId(placeId)) {
-        const curatedKey = ghostCuratedKey(placeId);
-        if (curatedKey) void navigate(`/places/checklists/${curatedKey}`);
-        return;
-      }
-      void navigate(`/places/${placeId}`);
+      const path = placeOpenPath(placeId);
+      if (path) void navigate(path);
     },
     [navigate]
   );

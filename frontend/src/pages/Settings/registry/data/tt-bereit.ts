@@ -6,7 +6,7 @@ export const TT_BEREIT_PAGE: RegistryPage = {
   ...{"id":"tt-bereit","area":"track","de":"Bereitstellung","en":"Provisioning","level":"standard","audience":"admin","demoLocked":false},
   sections: [
       {"id":"tt-bereit-travtrack","de":"TravTrack","en":"TravTrack","level":"standard","scope":"account","audience":"admin","demoLocked":false,"rows":[
-        {"id":"ttoffer","mount":"ttoffer","kind":"toggle","level":"standard","scope":"instance","audience":"admin","beta":"travTrack","demoLocked":false,"de":"TravTrack anbieten","en":"Offer TravTrack","terms":{"de":"Aus: Die Seiten verschwinden für alle Konten. Gespeicherte Punkte bleiben.","en":"Off: the pages disappear for every account. Stored points stay."}},
+        {"id":"ttoffer","mount":"ttoffer","kind":"toggle","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"TravTrack anbieten","en":"Offer TravTrack","terms":{"de":"Aus: Die Seiten verschwinden für alle Konten. Gespeicherte Punkte bleiben.","en":"Off: the pages disappear for every account. Stored points stay."}},
       ]},
   ],
 };
