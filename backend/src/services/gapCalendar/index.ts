@@ -6,7 +6,7 @@ import { cacheGet, cachePut, currentGeneration, ensureCacheInvalidation } from "
 import {
   classifyDay,
   countStates,
-  isInferredHome,
+  isInferred,
   toRuns,
   type DayRun,
   type DayState,
@@ -63,7 +63,7 @@ export async function gapCalendarYear(userId: string, year: number): Promise<Gap
     return {
       day,
       state: (outside ? "outside" : classifyDay(f)) as DayState,
-      inferred: !outside && isInferredHome(f),
+      inferred: !outside && isInferred(f),
     };
   });
   const firstYear = firstDay ? Number(firstDay.slice(0, 4)) : null;

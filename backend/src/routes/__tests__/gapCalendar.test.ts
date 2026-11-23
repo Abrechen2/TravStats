@@ -238,6 +238,35 @@ describe("gap calendar", () => {
         expect(body.runs.find((r) => r.from === "2026-06-10")?.inferred).toBeUndefined();
       });
 
+      it("a work or custom place without a window explains a silence too, as `place`; one with a window does not", async () => {
+        await homeSettings();
+        const spot = { lat: 35.1, lon: 129.0 };
+        await prisma.travTrackFixedPlace.create({
+          data: { userId, name: "Büro", kind: "work", ...spot, radiusM: 150 },
+        });
+        await prisma.travTrackFixedPlace.create({
+          data: {
+            userId,
+            name: "Atelier",
+            kind: "custom",
+            lat: 36.0,
+            lon: 128.0,
+            radiusM: 150,
+            window: { days: [1], from: "09:00", until: "17:00" },
+          },
+        });
+        await at("2026-06-10T03:00:00Z", spot.lat, spot.lon);
+        await at("2026-06-13T03:00:00Z", spot.lat, spot.lon);
+        await at("2026-07-10T03:00:00Z", 36.0, 128.0);
+        await at("2026-07-13T03:00:00Z", 36.0, 128.0);
+        const body = (await year()).body as Body & { runs: Array<{ inferred?: boolean }> };
+        expect(stateOf(body, "2026-06-11")).toBe("place");
+        expect(
+          body.runs.find((r) => r.from <= "2026-06-11" && "2026-06-11" <= r.to)?.inferred
+        ).toBe(true);
+        expect(stateOf(body, "2026-07-11")).toBe("unknown");
+      });
+
       it("ends at different places keep the silent days unknown", async () => {
         await homeSettings();
         await at("2026-06-10T03:00:00Z");

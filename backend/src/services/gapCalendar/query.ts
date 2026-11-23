@@ -146,6 +146,7 @@ type Row = {
   zone_fixes: number;
   bad: number;
   silent_home: boolean;
+  silent_place: boolean;
 };
 
 const HAVERSINE = (aLat: string, aLon: string, bLat: string, bLon: string): Prisma.Sql =>
@@ -239,16 +240,35 @@ export async function gapCalendarFacts(input: {
       WHERE NOT EXISTS (SELECT 1 FROM fix_days x WHERE x.day = d.day)
         AND NOT EXISTS (SELECT 1 FROM entry_days e WHERE e.day = d.day)
     ),
+    -- Work and custom places without a window (the day view's rule: a window has no clock here).
+    spots AS (
+      SELECT f.lat, f.lon, f.radius_m FROM travtrack_fixed_places f
+      WHERE f.user_id = ${userId} AND f."window" IS NULL
+        -- a place inside a privacy circle is never used to explain anything
+        AND NOT EXISTS (
+          SELECT 1 FROM circles c
+          WHERE ${HAVERSINE("f.lat", "f.lon", "c.lat", "c.lon")} <= c.radius_m)
+    ),
     silent AS (
-      SELECT b.day
-      FROM bare b
-      CROSS JOIN LATERAL (${silenceEnd(userId, "before", "b.start_utc")}) pv
-      CROSS JOIN LATERAL (${silenceEnd(userId, "after", "b.end_utc")}) nx
-      WHERE EXISTS (
+      SELECT b.day,
+        EXISTS (
           SELECT 1 FROM homes h
           WHERE b.day >= h."from" AND (h."to" IS NULL OR b.day < h."to")
             AND ${HAVERSINE("pv.lat", "pv.lon", "h.lat", "h.lon")} <= ${input.homeRadiusM + FOLD_BAND_M}
-            AND ${HAVERSINE("nx.lat", "nx.lon", "h.lat", "h.lon")} <= ${input.homeRadiusM + FOLD_BAND_M})
+            AND ${HAVERSINE("nx.lat", "nx.lon", "h.lat", "h.lon")} <= ${input.homeRadiusM + FOLD_BAND_M}) AS at_home
+      FROM bare b
+      CROSS JOIN LATERAL (${silenceEnd(userId, "before", "b.start_utc")}) pv
+      CROSS JOIN LATERAL (${silenceEnd(userId, "after", "b.end_utc")}) nx
+      WHERE (
+          EXISTS (
+            SELECT 1 FROM homes h
+            WHERE b.day >= h."from" AND (h."to" IS NULL OR b.day < h."to")
+              AND ${HAVERSINE("pv.lat", "pv.lon", "h.lat", "h.lon")} <= ${input.homeRadiusM + FOLD_BAND_M}
+              AND ${HAVERSINE("nx.lat", "nx.lon", "h.lat", "h.lon")} <= ${input.homeRadiusM + FOLD_BAND_M})
+          OR EXISTS (
+            SELECT 1 FROM spots k
+            WHERE ${HAVERSINE("pv.lat", "pv.lon", "k.lat", "k.lon")} <= k.radius_m + ${FOLD_BAND_M}
+              AND ${HAVERSINE("nx.lat", "nx.lon", "k.lat", "k.lon")} <= k.radius_m + ${FOLD_BAND_M}))
         AND NOT EXISTS (SELECT 1 FROM all_spans s WHERE s.d_from <= nx.day AND s.d_to >= pv.day)
         AND NOT EXISTS (
           SELECT 1 FROM travtrack_deleted_ranges r
@@ -270,7 +290,8 @@ export async function gapCalendarFacts(input: {
            COALESCE(e.n, 0) AS entries, COALESCE(x.good, 0) AS good,
            COALESCE(x.home, 0) AS home, COALESCE(x.zone_fixes, 0) AS zone_fixes,
            COALESCE(x.bad, 0) AS bad,
-           (sh.day IS NOT NULL) AS silent_home
+           (sh.day IS NOT NULL AND sh.at_home) AS silent_home,
+           (sh.day IS NOT NULL AND NOT sh.at_home) AS silent_place
     FROM days d
     LEFT JOIN silent sh ON sh.day = d.day
     LEFT JOIN entry_days e ON e.day = d.day
@@ -288,6 +309,7 @@ export async function gapCalendarFacts(input: {
         zoneFixes: r.zone_fixes,
         badFixes: r.bad,
         silentHome: r.silent_home,
+        silentPlace: r.silent_place,
       },
     })),
   };

@@ -1,4 +1,4 @@
-import { classifyDay, countStates, toRuns, type DayFacts } from "../classify";
+import { classifyDay, isInferred, countStates, toRuns, type DayFacts } from "../classify";
 
 const none: DayFacts = { entries: 0, goodFixes: 0, homeFixes: 0, zoneFixes: 0, badFixes: 0 };
 
@@ -11,6 +11,13 @@ describe("gap calendar — classification precedence", () => {
     expect(classifyDay({ ...none, silentHome: true })).toBe("home");
     expect(classifyDay({ ...none, silentHome: true, entries: 1 })).toBe("entry");
     expect(classifyDay({ ...none, silentHome: true, goodFixes: 2, homeFixes: 1 })).toBe("track");
+  });
+
+  it("a silent day at a known non-home place is `place`, inferred; home wins over it", () => {
+    expect(classifyDay({ ...none, silentPlace: true })).toBe("place");
+    expect(classifyDay({ ...none, silentPlace: true, silentHome: true })).toBe("home");
+    expect(isInferred({ ...none, silentPlace: true })).toBe(true);
+    expect(isInferred({ ...none, goodFixes: 2, homeFixes: 2 })).toBe(false);
   });
 
   it("an entry outranks every fix-based state", () => {

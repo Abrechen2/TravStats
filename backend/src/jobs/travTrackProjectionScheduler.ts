@@ -32,6 +32,7 @@ import {
   MONTHS_BIT,
   pendingDirtyDays,
 } from "../services/travtrack/dirtyDays";
+import { projectInferredCountryDays } from "../services/travtrack/silence/inferredCountryDays";
 import { projectExploredCells } from "../services/travtrack/explored/project";
 import { projectMonths } from "../services/travtrack/months/project";
 import { CITY_LOOKUPS_PER_TICK } from "../services/travtrack/months/cities";
@@ -146,6 +147,15 @@ async function runAccount(
       maxDays: countryBudget,
     });
     const days = projected.projected + projected.rerun;
+    // Silences spent at a known place: a new upload may have closed one, so every run of an
+    // account with owed work recomputes them. A failure here never holds the real days back.
+    if (projected.status === "done") {
+      try {
+        await projectInferredCountryDays(userId, countryAt);
+      } catch (error) {
+        logger.warn({ operation: "travtrack.inferredDays.failed", userId, error });
+      }
+    }
     if (projected.status === "failed") {
       await recordFailure(userId, now);
       return { failed: true, questions: 0, days };

@@ -848,6 +848,9 @@
     "state": {
       "entry": "Im Logbuch",
       "home": "Zuhause",
+      "homeInferred": "zu Hause (abgeleitet)",
+      "place": "An einem bekannten Ort",
+      "placeInferred": "An einem bekannten Ort (abgeleitet)",
       "track": "Aufgezeichnet",
       "privacyZone": "Durch Privatzone ausgeblendet",
       "implausible": "Als unplausibel herausgefiltert",

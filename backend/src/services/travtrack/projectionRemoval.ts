@@ -32,7 +32,8 @@ export async function projectionsOnHistoryDeleted(
   await tx.countryDay.deleteMany({
     where: {
       userId,
-      source: "travtrack",
+      // The inferred days rest on the silence around the removed points: recomputed next run.
+      source: { in: ["travtrack", "travtrack-inferred"] },
       date: { in: affected.map((d) => new Date(dayMs(d))) },
     },
   });

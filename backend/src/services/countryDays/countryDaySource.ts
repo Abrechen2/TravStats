@@ -39,8 +39,11 @@
 /**
  * Every pipeline allowed to write a country-day. `travtrack` is TravTrack's
  * own projection (TravTrack plan E6); a Dawarich day is never rewritten by it.
+ * `travtrack-inferred` holds days with NO point at all that a silence spent at one known
+ * place explains (`travtrack/silence/inferredCountryDays.ts`): pointCount 0, the country of
+ * the place. A separate source so a reader asking for "only evidenced days" leaves it out.
  */
-export const COUNTRY_DAY_SOURCES = ["dawarich", "travtrack"] as const;
+export const COUNTRY_DAY_SOURCES = ["dawarich", "travtrack", "travtrack-inferred"] as const;
 
 export type CountryDaySource = (typeof COUNTRY_DAY_SOURCES)[number];
 

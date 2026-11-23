@@ -8,6 +8,7 @@
 export const DAY_STATES = [
   "entry",
   "home",
+  "place",
   "track",
   "privacyZone",
   "implausible",
@@ -34,6 +35,8 @@ export interface DayFacts {
    * (iOS suspends the app when the phone stands still). Inferred, never recorded.
    */
   silentHome?: boolean;
+  /** The same for a work or custom fixed place without a window; only when it is not home. */
+  silentPlace?: boolean;
 }
 
 /**
@@ -45,18 +48,21 @@ export function classifyDay(facts: DayFacts): Exclude<DayState, "outside"> {
   if (facts.goodFixes > 0) return facts.homeFixes === facts.goodFixes ? "home" : "track";
   if (facts.zoneFixes > 0) return "privacyZone";
   if (facts.badFixes > 0) return "implausible";
-  return facts.silentHome ? "home" : "unknown";
+  if (facts.silentHome) return "home";
+  return facts.silentPlace ? "place" : "unknown";
 }
 
-/** Whether `classifyDay` read the day as home from standing still, not from a fix. */
-export const isInferredHome = (facts: DayFacts): boolean =>
-  classifyDay(facts) === "home" && facts.goodFixes === 0;
+/** Whether `classifyDay` read the day as home or a known place from standing still, not from a fix. */
+export const isInferred = (facts: DayFacts): boolean => {
+  const state = classifyDay(facts);
+  return (state === "home" || state === "place") && facts.goodFixes === 0;
+};
 
 export interface DayRun {
   from: string;
   to: string;
   state: DayState;
-  /** `home` only: inferred from the silence around the day, no fix recorded on it. */
+  /** `home` or `place`: inferred from the silence around the day, no fix recorded on it. */
   inferred?: true;
 }
 

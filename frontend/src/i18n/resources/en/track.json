@@ -848,6 +848,9 @@
     "state": {
       "entry": "In the logbook",
       "home": "At home",
+      "homeInferred": "at home (inferred)",
+      "place": "At a known place",
+      "placeInferred": "At a known place (inferred)",
       "track": "Recorded",
       "privacyZone": "Hidden by a privacy zone",
       "implausible": "Filtered out as implausible",

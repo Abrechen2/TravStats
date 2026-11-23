@@ -67,7 +67,7 @@ async function endNear(
 }
 
 /** A logbook entry, a reported pause or a deleted span inside the silence contradicts "stood still". */
-async function interrupted(userId: string, span: Span): Promise<boolean> {
+export async function interrupted(userId: string, span: Span): Promise<boolean> {
   const [entries, gaps, deleted, deletedPoints, between] = await Promise.all([
     logbookWindows(userId, span),
     prisma.travTrackGap.count({
@@ -104,7 +104,7 @@ async function interrupted(userId: string, span: Span): Promise<boolean> {
 }
 
 /** The known places a silence can be explained by: fixed places without a window, accepted stay places. */
-async function placesFor(
+export async function placesFor(
   userId: string,
   window: Span,
   day: string,
