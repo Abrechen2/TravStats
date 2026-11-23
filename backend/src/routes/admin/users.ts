@@ -12,6 +12,7 @@ import {
   isReservedUsername,
 } from "../../schemas/auth";
 import { sendAdminPasswordResetEmail } from "../../services/emailService";
+import { markDemoRemoved } from "../../services/demoAccount";
 import { removeAccount } from "../../services/account/removeAccount";
 import { SMTP_CONFIG_ID } from "./smtp";
 import { countEntriesByUser, emptyByDomain } from "../../services/admin/userEntryCounts";
@@ -182,7 +183,7 @@ router.delete("/users/:id", async (req: AuthRequest, res: Response, next: NextFu
 
     const user = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, username: true, isAdmin: true },
+      select: { id: true, username: true, isAdmin: true, isDemo: true },
     });
 
     if (!user) {
@@ -195,6 +196,11 @@ router.delete("/users/:id", async (req: AuthRequest, res: Response, next: NextFu
         throw new AppError("Cannot delete the last remaining admin", 400);
       }
     }
+
+    // An admin's removal of the demo account is final: record it BEFORE the
+    // delete, so a crash in between cannot leave it deleted and unmarked (a
+    // stale marker on a surviving account is harmless).
+    if (user.isDemo) await markDemoRemoved();
 
     await removeAccount(id, { actorId: req.userId!, ip: req.ip });
 

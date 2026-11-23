@@ -46,4 +46,6 @@ export interface SystemInfoData {
   buildVersion?: string;
   demoUserExists?: boolean;
   demoUserActive?: boolean;
+  demoRemovedAt?: string | null;
+  demoForcedByEnv?: boolean;
 }

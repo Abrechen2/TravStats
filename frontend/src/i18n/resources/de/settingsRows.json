@@ -1510,6 +1510,15 @@
         "seedingFailed": "Das Einlesen der Flughäfen ist unterwegs abgebrochen."
       }
     },
+    "demorecreate": {
+      "t": "Demo-Konto wieder anlegen",
+      "s": "Legt das Demo-Konto mit Beispieldaten neu an. Das dauert etwa eine Minute.",
+      "btn": "Wieder anlegen",
+      "forced": "Das Demo-Konto wird beim Start durch CREATE_DEMO_USER neu angelegt. Entferne die Variable, wenn es gelöscht bleiben soll.",
+      "removed": "Du hast das Demo-Konto am {{date}} gelöscht. Es bleibt weg, bis du es hier wieder anlegst.",
+      "running": "Ich lege das Demo-Konto an …",
+      "done": "Das Demo-Konto ist wieder da."
+    },
     "demodel": {
       "t": "Demo-Konto löschen"
     },
@@ -1537,7 +1546,8 @@
     "errors": {
       "range": "Ich nehme Werte von {{min}} bis {{max}}.",
       "export": "Ich konnte die Daten nicht zusammenstellen.",
-      "demo": "Ich konnte das Demo-Konto nicht löschen."
+      "demo": "Ich konnte das Demo-Konto nicht löschen.",
+      "recreate": "Ich konnte das Demo-Konto nicht anlegen."
     },
     "nothingOld": "Keine Datei ist älter als die Aufbewahrung.",
     "download": "Herunterladen",
