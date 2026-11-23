@@ -8,6 +8,7 @@
  * Every count runs on an indexed `user_id` column; the lists are capped.
  */
 import { prisma } from "../../db";
+import { Prisma } from "../../prisma";
 import { placeZone } from "../timeMigration/core";
 import { findTripCountryMismatches } from "./tripCountryCheck";
 
@@ -72,6 +73,12 @@ function flightRule(where: (userId: string) => object): ProblemRule {
 }
 
 /**
+ * Sources that carry a real clock: a scan, a live update or a provider lookup
+ * never invents midnight, so a 00:00 from them is a genuine night flight.
+ */
+const TIMED_SOURCES = ["boarding_pass_scan", "live_update", "api_lookup"] as const;
+
+/**
  * A departure stored as an exact UTC minute that is really "midnight, time unknown":
  * the local clock in the departure's own zone reads 00:00 to the minute. The UTC
  * hour pre-filter (00, 22, 23 — midnight in the zones around Europe, where the old
@@ -86,6 +93,7 @@ async function midnightPlaceholderIds(userId: string, limit: number | null): Pro
       AND f.dep_time_semantics = 'UTC'
       AND coalesce(f.dep_precision, 'minute') = 'minute'
       AND f.status <> 'cancelled'
+      AND coalesce(f.data_source, '') NOT IN (${Prisma.join([...TIMED_SOURCES])})
       AND extract(minute FROM f.departure_time) = 0 AND extract(second FROM f.departure_time) = 0
       AND extract(hour FROM f.departure_time) IN (0, 22, 23)
       AND EXISTS (SELECT 1 FROM pg_timezone_names z WHERE z.name = f.dep_timezone)
@@ -95,13 +103,23 @@ async function midnightPlaceholderIds(userId: string, limit: number | null): Pro
   return rows.map((r) => r.id);
 }
 
+/**
+ * The local day of a visit: the instant in its own zone where both are stored,
+ * else the legacy `visited_at` (a mixed column, ADR 0002) — so two visits either
+ * side of a UTC midnight are not paired, nor a pair split, by the server's clock.
+ */
+const VISIT_DAY_SQL = Prisma.sql`CASE
+      WHEN v.visited_at_utc IS NOT NULL AND v.visited_zone IN (SELECT name FROM pg_timezone_names)
+        THEN ((v.visited_at_utc AT TIME ZONE 'UTC') AT TIME ZONE v.visited_zone)::date
+      ELSE v.visited_at::date END`;
+
 /** Places visited twice on one local day: each (place, day) pair is one entry. */
 async function duplicateVisitRows(userId: string, limit: number | null) {
   return prisma.$queryRaw<{ id: string; place_id: string; name: string; day: Date }[]>`
-    SELECT min(v.id) AS id, v.place_id, min(p.name) AS name, v.visited_at::date AS day
+    SELECT min(v.id) AS id, v.place_id, min(p.name) AS name, ${VISIT_DAY_SQL} AS day
     FROM place_visits v JOIN places p ON p.id = v.place_id
-    WHERE v.user_id = ${userId} AND v.visited_at IS NOT NULL
-    GROUP BY v.place_id, v.visited_at::date HAVING count(*) > 1
+    WHERE v.user_id = ${userId} AND (v.visited_at IS NOT NULL OR v.visited_at_utc IS NOT NULL)
+    GROUP BY v.place_id, ${VISIT_DAY_SQL} HAVING count(*) > 1
     ORDER BY day DESC, v.place_id
     LIMIT ${limit ?? 1_000_000}`;
 }
@@ -126,6 +144,7 @@ async function doublePricedRows(userId: string, limit: number | null) {
 // ---- Stored zones that disagree with the place (the re-resolve dry run's resolver)
 
 const ZONE_CACHE_MS = 5 * 60 * 1000;
+const ZONE_CACHE_MAX = 200;
 const zoneCache = new Map<string, { at: number; entries: ProblemEntry[] }>();
 
 /** Test seam. */
@@ -189,6 +208,9 @@ async function zoneMismatches(userId: string): Promise<ProblemEntry[]> {
       });
     }
   }
+  // Bounded: the oldest account's answer goes first (a Map keeps insertion order).
+  zoneCache.delete(userId);
+  if (zoneCache.size >= ZONE_CACHE_MAX) zoneCache.delete(zoneCache.keys().next().value as string);
   zoneCache.set(userId, { at: Date.now(), entries });
   return entries;
 }
@@ -211,7 +233,17 @@ export const PROBLEM_RULES = {
   })),
   "user.flightsDateOnly": flightRule((userId) => ({
     ...liveFlight(userId),
-    AND: [{ OR: [{ depTimeSemantics: "DATE_ONLY" }, { depPrecision: "day" }] }],
+    // Either end: a known departure with a date-only arrival still lacks a flight time.
+    AND: [
+      {
+        OR: [
+          { depTimeSemantics: "DATE_ONLY" },
+          { arrTimeSemantics: "DATE_ONLY" },
+          { depPrecision: "day" },
+          { arrPrecision: "day" },
+        ],
+      },
+    ],
   })),
   "user.flightsMidnightPlaceholder": {
     count: async (userId) => (await midnightPlaceholderIds(userId, null)).length,

@@ -123,6 +123,9 @@ describe("visible-problem checks", () => {
       expect(await statusOf("user.flightsDateOnly")).toBeUndefined();
       await flight({ depTimeSemantics: "DATE_ONLY", arrTimeSemantics: "DATE_ONLY" });
       expect((await statusOf("user.flightsDateOnly"))?.count).toBe(1);
+      // An exact departure with a date-only arrival still has no flight time.
+      await flight({ arrPrecision: "day" });
+      expect((await statusOf("user.flightsDateOnly"))?.count).toBe(2);
     });
 
     it("finds an exact-looking local midnight that is a placeholder, not a real 08:00", async () => {
@@ -133,6 +136,11 @@ describe("visible-problem checks", () => {
       await flight({ departureTime: new Date("2025-06-01T22:00:00Z"), depPrecision: "minute" });
       // A day-precision row is already honest about it.
       await flight({ departureTime: new Date("2025-06-02T22:00:00Z"), depPrecision: "day" });
+      // A scanned boarding pass carries a real clock: a genuine night flight.
+      await flight({
+        departureTime: new Date("2025-06-03T22:00:00Z"),
+        dataSource: "boarding_pass_scan",
+      });
       expect((await statusOf("user.flightsMidnightPlaceholder"))?.count).toBe(1);
     });
 
@@ -156,6 +164,25 @@ describe("visible-problem checks", () => {
       expect(await statusOf("user.duplicateVisits")).toBeUndefined();
       await visit("2025-05-01T15:00:00Z");
       await visit("2025-05-01T16:00:00Z");
+      expect((await statusOf("user.duplicateVisits"))?.count).toBe(1);
+    });
+
+    it("pairs visits by the place's local day, not the server's UTC day", async () => {
+      const place = await prisma.place.create({
+        data: { userId, name: "Tokyo Tower", lat: 35.66, lon: 139.75 },
+      });
+      // 23:30 UTC on the 1st and 01:00 UTC on the 2nd are both the 2nd in Tokyo.
+      for (const at of ["2025-05-01T23:30:00Z", "2025-05-02T01:00:00Z"]) {
+        await prisma.placeVisit.create({
+          data: {
+            placeId: place.id,
+            userId,
+            visitedAt: new Date(at),
+            visitedAtUtc: new Date(at),
+            visitedZone: "Asia/Tokyo",
+          },
+        });
+      }
       expect((await statusOf("user.duplicateVisits"))?.count).toBe(1);
     });
 
@@ -241,11 +268,13 @@ describe("visible-problem checks", () => {
       });
 
     it("asks the admin for a rail router while rides are drawn as chords, and blocks the user's item on it", async () => {
-      expect(await statusOf("admin.railRouter", "admin")).toBeUndefined();
+      // Instance-wide: other accounts' rides count too, so measure the step.
+      const before = (await statusOf("admin.railRouter", "admin"))?.count ?? 0;
+      expect(await statusOf("user.railStraight")).toBeUndefined();
       await rail();
       expect(await statusOf("admin.railRouter", "admin")).toEqual({
         status: "needsAction",
-        count: 1,
+        count: before + 1,
       });
       expect(await statusOf("user.railStraight")).toEqual({ status: "needsAction", count: 1 });
     });
