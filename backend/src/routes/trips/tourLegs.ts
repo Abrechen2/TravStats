@@ -9,6 +9,7 @@ import { legDistanceKm } from "../../services/tour/tourDistance";
 import { adoptSegment, ANCHOR_TOLERANCE_KM } from "../../services/tour/tracks/adoptTrack";
 import { haversineKm } from "../../shared/geo/haversine";
 import logger from "../../utils/logger";
+import { adoptDrawnLegLineOnFerry } from "../../services/ferry/ferryManualRoute";
 import { resolveRouteFromRequest, toLegDto } from "./tourRoutes";
 import { resolveTrack } from "./tourTracks";
 import { isCoordinatePolyline, readStoredTrack } from "../../services/trackCoverage/storedTrack";
@@ -250,6 +251,9 @@ router.put(
                 body
               )
             : undefined;
+          // A linked crossing is the same sea lane: it follows a line drawn here.
+          if (body.source === "drawn" && waypoints)
+            await adoptDrawnLegLineOnFerry(tx, userId, leg.id, waypoints);
           await propagateWrite(tx, userId, "roadtrip", routeId, roadtripBefore);
           return { updated: updatedLeg, toll: legToll };
         },

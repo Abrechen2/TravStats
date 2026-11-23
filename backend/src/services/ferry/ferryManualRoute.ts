@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import { haversineKm, polylineLengthKm } from "../../shared/geo/haversine";
@@ -100,7 +100,7 @@ export async function setFerryManualRoute(
       await syncFerryLeg(
         tx,
         { ...existing, geometry: line, geometrySource: "manual" },
-        { onMismatch: "keep" }
+        { onMismatch: "keep", replaceUserLine: "all" }
       );
       await propagateWrite(tx, userId, "ferry", id, before);
       if (existing.shareKey) await syncCopiesLegs(tx, existing.shareKey, id);
@@ -152,7 +152,7 @@ export async function clearFerryManualRoute(
       await syncFerryLeg(
         tx,
         { ...existing, geometry: null, geometrySource: "straight" },
-        { onMismatch: "keep" }
+        { onMismatch: "keep", replaceUserLine: "drawn" }
       );
       await propagateWrite(tx, userId, "ferry", id, before);
       if (existing.shareKey) await syncCopiesLegs(tx, existing.shareKey, id);
@@ -164,4 +164,54 @@ export async function clearFerryManualRoute(
     outcome: seaRoute === "routed" ? ("routed" as const) : ("straight" as const),
     ride: await prisma.ferryJourney.findUniqueOrThrow({ where: { id } }),
   };
+}
+
+/**
+ * The other direction of the crossing/leg link: the user drew the LEG's line
+ * in the tour editor. A linked crossing is the same sea lane, so its stored
+ * line follows - otherwise the ferry page and the "Alle" map's ferry layer kept
+ * the old line while the tour layer drew the new one. Only a leg whose stops
+ * sit on the crossing's terminals qualifies (the same test `syncFerryLeg`
+ * applies); a leg linked off the piers keeps its own line and the crossing its.
+ */
+export async function adoptDrawnLegLineOnFerry(
+  tx: DbTransaction,
+  userId: string,
+  legId: string,
+  waypoints: Array<[number, number]>
+): Promise<void> {
+  const ferry = await tx.ferryJourney.findFirst({ where: { roadtripLegId: legId, userId } });
+  if (!ferry || waypoints.length < 3) return;
+  const near = (a: { lat: number; lon: number }, b: [number, number]) =>
+    haversineKm(a, { lat: b[1], lon: b[0] }) <= ANCHOR_TOLERANCE_KM;
+  const first = waypoints[0];
+  const last = waypoints[waypoints.length - 1];
+  const dep = { lat: ferry.depLat, lon: ferry.depLon };
+  const arr = { lat: ferry.arrLat, lon: ferry.arrLon };
+  if (!near(dep, first) || !near(arr, last)) return;
+  const line: Array<[number, number]> = [
+    [dep.lon, dep.lat],
+    ...waypoints.slice(1, -1),
+    [arr.lon, arr.lat],
+  ];
+  const km = polylineLengthKm(line.map(([lon, lat]) => ({ lat, lon })));
+  if (
+    !Number.isFinite(km) ||
+    km > Math.max(haversineKm(dep, arr) * MAX_DETOUR_FACTOR, MIN_ALLOWED_KM)
+  )
+    return;
+  const before = await shareSnapshot(tx, "ferry", ferry.id);
+  await tx.ferryJourney.update({
+    where: { id: ferry.id },
+    data: {
+      geometry: line as unknown as Prisma.InputJsonValue,
+      geometrySource: "manual",
+      ...(ferry.distanceSource !== "user" && {
+        distanceKm: Math.round(km * 10) / 10,
+        distanceSource: "sea_route",
+      }),
+    },
+  });
+  await propagateWrite(tx, userId, "ferry", ferry.id, before);
+  if (ferry.shareKey) await syncCopiesLegs(tx, ferry.shareKey, ferry.id);
 }
