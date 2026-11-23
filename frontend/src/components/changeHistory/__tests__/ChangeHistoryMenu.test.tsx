@@ -6,6 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 import DetailMoreMenu from "../../detail/DetailMoreMenu";
 import ChangeHistoryMenuButton from "../ChangeHistoryMenuButton";
 import ChangeHistoryRetentionRow from "../../Settings/ChangeHistoryRetentionRow";
+import { resetWriteQueue } from "../../ui/settings/writeQueue";
 import { changeHistoryApi } from "../../../lib/api/changeHistory";
 
 vi.mock("../../../lib/api/changeHistory", () => ({
@@ -44,6 +45,7 @@ const oneRow = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetWriteQueue();
   api.forEntry.mockResolvedValue({ entries: [oneRow], nextCursor: null });
   api.retention.mockResolvedValue({ months: 12, options: [3, 6, 12, 24] });
 });
@@ -132,7 +134,6 @@ describe("the retention setting", () => {
     await userEvent.selectOptions(await screen.findByRole("combobox"), "3");
     await userEvent.click(await screen.findByRole("button", { name: /cancel/i }));
     expect(api.setRetention).not.toHaveBeenCalled();
-    screen.debug(screen.getByRole("combobox"));
     expect(screen.getByRole("combobox")).toHaveValue("12");
   });
 });
