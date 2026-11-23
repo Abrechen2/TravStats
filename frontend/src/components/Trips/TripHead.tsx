@@ -1,4 +1,5 @@
 import CoverImage from "./CoverImage";
+import AutoCoverNote from "./AutoCoverNote";
 import CoverCropHost from "./CoverCropHost";
 import { useMemo } from "react";
 import RememberedMarker from "../provenance/RememberedMarker";
@@ -185,6 +186,9 @@ export default function TripHead({
             )}
             <TripTravellers tripId={trip.id} companions={trip.companions} />
             {!trip.coverImageUrl && <CoverSuggestPrompt tripId={trip.id} onChosen={onChanged} />}
+            {trip.coverImageUrl && trip.coverSource === "auto" && (
+              <AutoCoverNote trip={trip} onChanged={onChanged} />
+            )}
           </div>
           <div className="flex shrink-0 flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
             <Button onClick={onEdit}>{t("common:buttons.edit")}</Button>

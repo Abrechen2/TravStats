@@ -71,4 +71,19 @@ export const coverSuggestionsApi = {
   async setSelf(provider: PhotoSourceKind, personId: string | null): Promise<void> {
     await api.put(`/settings/photo-sources/${provider}/self`, { personId });
   },
+
+  async getAuto(): Promise<{ enabled: boolean; autoCovers: number }> {
+    const { data } = await api.get("/settings/auto-cover");
+    return data;
+  },
+
+  async setAuto(enabled: boolean): Promise<void> {
+    await api.put("/settings/auto-cover", { enabled });
+  },
+
+  /** Removes only the covers the server chose; returns how many. */
+  async removeAutoCovers(): Promise<number> {
+    const { data } = await api.delete("/settings/auto-cover/covers");
+    return data.removed;
+  },
 };

@@ -32,6 +32,7 @@ import {
   type SourceState,
   type WindowSearch,
 } from "./matcher";
+import { queueAutoCover } from "../coverSuggestions/autoCover";
 
 /**
  * Photo links for every entry type but the place visit (owner, 2026-11-21: "ja,
@@ -233,6 +234,7 @@ export async function writeLinks(
     // Two passes racing on one entry: the unique key decides, not a throw.
     skipDuplicates: true,
   });
+  if (count > 0) queueAutoCover(userId);
   return count;
 }
 

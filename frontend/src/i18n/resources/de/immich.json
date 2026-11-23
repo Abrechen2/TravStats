@@ -146,6 +146,21 @@
     "lost": "Der Stand ist unbekannt: der Server hat den Auftrag vergessen (Neustart?). Bitte erneut starten – schon verknüpfte Fotos bleiben es.",
     "failed": "Die Verknüpfung ist fehlgeschlagen."
   },
+  "autoCover": {
+    "title": "Titelbilder automatisch wählen",
+    "hint": "Reisen ohne Titelbild bekommen eines aus deinen eigenen Fotos – nur wenn ein Bild eindeutig besser ist als die anderen. Ein selbst gewähltes Titelbild wird nie ersetzt.",
+    "count_one": "{{count}} Titelbild wurde automatisch gewählt.",
+    "count_other": "{{count}} Titelbilder wurden automatisch gewählt.",
+    "remove": "Automatische Titelbilder entfernen",
+    "removed_one": "{{count}} automatisches Titelbild entfernt.",
+    "removed_other": "{{count}} automatische Titelbilder entfernt.",
+    "loadFailed": "Der Stand der automatischen Titelbilder konnte nicht geladen werden.",
+    "saveFailed": "Die Einstellung konnte nicht gespeichert werden.",
+    "removeFailed": "Die automatischen Titelbilder konnten nicht entfernt werden.",
+    "note": "automatisch gewählt",
+    "other": "Anderes wählen",
+    "adjust": "Ausschnitt anpassen"
+  },
   "visitPhotosAuto": {
     "title": "Fotos automatisch mit Ortsbesuchen verknüpfen",
     "hint": "Verknüpft Fotos aus Immich und PhotoPrism, die am Tag des Besuchs in der Nähe des Ortes aufgenommen wurden (nur Verknüpfungen, keine Kopien). Fotos ohne Aufnahmezeit oder Position und Fotos in Privatzonen werden nie verknüpft. Entfernte Fotos kommen nicht wieder.",
@@ -177,7 +192,7 @@
     "menu": "Deckblatt vorschlagen",
     "prompt": "Deckblatt vorschlagen",
     "title": "Deckblatt vorschlagen",
-    "intro": "Wir suchen in den Fotos dieser Reise nach einem Bild, auf dem man sieht, wo du bist – und möglichst auch dich. Es wird nichts automatisch gesetzt.",
+    "intro": "Wir suchen in den Fotos dieser Reise nach einem Bild, auf dem man sieht, wo du bist – und möglichst auch dich. Nur wenn ein Bild eindeutig vorn liegt, setzen wir es von allein (einstellbar bei den Fotoquellen).",
     "loading": "Fotos werden angesehen …",
     "loadFailed": "Die Vorschläge konnten nicht geladen werden.",
     "retry": "Erneut versuchen",

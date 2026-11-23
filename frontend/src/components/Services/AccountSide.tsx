@@ -16,6 +16,7 @@ import StravaConnectionCard from "../Settings/StravaConnectionCard";
 import PhotoJourneyNightlyScanCard from "../Settings/PhotoJourneyNightlyScanCard";
 import VisitPhotoAutoLink from "../Settings/VisitPhotoAutoLink";
 import SelfPersonPicker from "../Settings/SelfPersonPicker";
+import AutoCoverSetting from "../Settings/AutoCoverSetting";
 import VisitPhotoImmichLink from "../Settings/VisitPhotoImmichLink";
 import DawarichProviderHint from "../Settings/DawarichProviderHint";
 import FieldsGroup from "./FieldsGroup";
@@ -259,6 +260,7 @@ export default function AccountSide({
     if (card.id === "immich" || card.id === "photoprism") {
       body.push(<SelfPersonPicker key="self" provider={card.id} name={name} />);
       body.push(<VisitPhotoAutoLink key="autoLink" />);
+      body.push(<AutoCoverSetting key="autoCover" />);
     }
   } else if (blockedLine) {
     body.push(<Dependency key="blocked" reason={blockedLine} />);

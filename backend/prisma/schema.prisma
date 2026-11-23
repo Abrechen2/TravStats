@@ -1048,6 +1048,11 @@ model UserSettings {
 
   autoLinkVisitPhotos Boolean @default(true) @map("auto_link_visit_photos")
 
+  /// "Titelbilder automatisch wählen" (owner, 2026-11-23): a trip without a cover gets one
+  /// from the account's OWN photos when the scorer is sure (coverSuggestions/autoCover.ts).
+  /// Default on; off stops every automatic pick for the account.
+  autoCoverEnabled Boolean @default(true) @map("auto_cover_enabled")
+
   /// How many photos the automatic linker keeps per visit or entry, 5–10 (owner,
   /// 2026-11-21). The user's own picks count toward it.
   photoAutoLinkCap Int @default(6) @map("photo_auto_link_cap")
