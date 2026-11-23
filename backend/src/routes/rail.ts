@@ -678,6 +678,8 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           ...state,
           ...fxColumns,
           ...(written && geometryColumns(lookup, written)),
+          // New ends, new chance: a re-route miss recorded for the old ends no longer holds.
+          ...(written && { rerouteMissReason: null, rerouteMissAt: null }),
           ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
         },
       });

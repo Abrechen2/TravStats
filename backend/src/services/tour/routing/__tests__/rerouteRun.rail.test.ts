@@ -141,6 +141,22 @@ describe("bulk re-route, rail scope", () => {
     expect(kept.geometry).toEqual(LINE);
   });
 
+  it("records why a straight ride stayed straight, and clears it once a later pass draws it (rc.45)", async () => {
+    routeLine.mockResolvedValue({ ok: false, reason: "noRoute" });
+    const straight = await journey("straight");
+    await runToEnd("straight");
+    const missed = await prisma.railJourney.findUniqueOrThrow({ where: { id: straight.id } });
+    expect(missed.rerouteMissReason).toBe("railRoutingNoRoute");
+    expect(missed.rerouteMissAt).not.toBeNull();
+
+    routeLine.mockResolvedValue({ ok: true, line: LINE, distanceKm: 500 } as never);
+    await runToEnd("straight");
+    const drawn = await prisma.railJourney.findUniqueOrThrow({ where: { id: straight.id } });
+    expect(drawn.geometrySource).toBe("openrailrouting");
+    expect(drawn.rerouteMissReason).toBeNull();
+    expect(drawn.rerouteMissAt).toBeNull();
+  });
+
   it("never swaps a stored tram line for the straight one when the router says no route", async () => {
     routeLine.mockResolvedValue({ ok: false, reason: "noRoute" });
     const tram = await prisma.railJourney.create({

@@ -109,6 +109,13 @@
       "consequence": "Ein Bahn-Router ist eingerichtet, aber diese Fahrten sind noch als gerade Linie gespeichert. Ein Durchlauf zeichnet sie entlang der Gleise neu.",
       "action": "Bahnstrecken neu routen"
     },
+    "adminRailRerouteMissed": {
+      "title": "Fahrten ohne gefundene Strecke",
+      "title_one": "{{count}} Fahrt konnte das Routing nicht finden",
+      "title_other": "{{count}} Fahrten konnte das Routing nicht finden",
+      "consequence": "Der letzte Durchlauf hat für diese Fahrten keine Strecke gefunden oder der Router hat einen Fehler gemeldet. Die Fahrten bleiben gerade Linien, bis du die Strecke selbst zeichnest oder den Durchlauf nach einer Router-Änderung wiederholst.",
+      "action": "Bahn-Routing öffnen"
+    },
     "adminRoadRouting": {
       "title": "Straßenetappen als Luftlinie",
       "title_one": "{{count}} Etappe als Luftlinie",

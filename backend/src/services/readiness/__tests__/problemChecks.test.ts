@@ -298,6 +298,25 @@ describe("visible-problem checks", () => {
       expect(await statusOf("admin.railReroute", "admin")).toBeUndefined();
     });
 
+    it("stops counting a ride the last pass could not draw, and names it separately, so the card clears (rc.45)", async () => {
+      await prisma.adminSettings.updateMany({ data: { railRoutingUrl: "http://router.lan:8989" } });
+      const before = (await statusOf("admin.railReroute", "admin"))?.count ?? 0;
+      const missedBefore = (await statusOf("admin.railRerouteMissed", "admin"))?.count ?? 0;
+      const ride = await rail();
+      expect((await statusOf("admin.railReroute", "admin"))?.count).toBe(before + 1);
+      await prisma.railJourney.update({
+        where: { id: ride.id },
+        data: { rerouteMissReason: "railRoutingNoRoute", rerouteMissAt: NOW },
+      });
+      const after = await statusOf("admin.railReroute", "admin");
+      expect(after?.count ?? 0).toBe(before);
+      if (before === 0) expect(after).toBeUndefined();
+      expect(await statusOf("admin.railRerouteMissed", "admin")).toEqual({
+        status: "needsAction",
+        count: missedBefore + 1,
+      });
+    });
+
     it("names a stored routing key only where routing is off or the chosen provider cannot answer", async () => {
       expect(await statusOf("admin.routingKeyUnused", "admin")).toBeUndefined();
       await prisma.userSettings.create({

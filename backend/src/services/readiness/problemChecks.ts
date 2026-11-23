@@ -40,6 +40,7 @@ export const PROBLEM_CHECK_IMPLS: Readonly<
       CheckId,
       | "admin.railRouter"
       | "admin.railReroute"
+      | "admin.railRerouteMissed"
       | "admin.roadRouting"
       | "admin.routingKeyUnused"
       | "admin.twoFactor"
@@ -56,8 +57,13 @@ export const PROBLEM_CHECK_IMPLS: Readonly<
     problems.instance.railRouterConfigured ? null : problems.instance.railStraight
   ),
   // A router is set, yet rides are still chords: the bulk pass (feat/rail-reroute-all) draws them.
+  // Only rides a pass has not tried (or that changed since): a recorded miss is not
+  // fixed by running the pass again, so the card clears once every ride was tried.
   "admin.railReroute": countCheck(({ problems }) =>
-    problems.instance.railRouterConfigured ? problems.instance.railStraight : null
+    problems.instance.railRouterConfigured ? problems.instance.railStraightUntried : null
+  ),
+  "admin.railRerouteMissed": countCheck(({ problems }) =>
+    problems.instance.railRouterConfigured ? problems.instance.railRerouteMissed : null
   ),
   "admin.roadRouting": countCheck(({ problems }) =>
     problems.instance.roadRoutingEffective ? null : problems.instance.roadStraight

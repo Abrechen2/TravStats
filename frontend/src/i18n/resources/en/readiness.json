@@ -109,6 +109,13 @@
       "consequence": "A rail router is set up, but these journeys are still stored as straight lines. One pass redraws them along the tracks.",
       "action": "Re-route rail journeys"
     },
+    "adminRailRerouteMissed": {
+      "title": "Journeys without a found route",
+      "title_one": "Routing could not find {{count}} journey",
+      "title_other": "Routing could not find {{count}} journeys",
+      "consequence": "The last pass found no route for these journeys, or the router reported an error. They stay straight lines until you draw the route yourself or repeat the pass after changing the router.",
+      "action": "Open rail routing"
+    },
     "adminRoadRouting": {
       "title": "Road legs drawn as straight lines",
       "title_one": "{{count}} leg as a straight line",

@@ -4915,6 +4915,11 @@ model RailJourney {
   /// offline once. Kept because a line routed over the TRACKS may not be the
   /// line the train took, and the map has to be able to say which it shows.
   geometrySource String @default("straight") @map("geometry_source")
+  /// Why the last bulk re-route left this straight line as it was (no route,
+  /// router error), and when. Cleared when a line is drawn. The readiness card
+  /// "Bahnstrecken neu routen" counts only rides without one, so it can clear.
+  rerouteMissReason String?   @map("reroute_miss_reason")
+  rerouteMissAt     DateTime? @map("reroute_miss_at")
 
   /// What actually happened, when known: captured on the day or typed. A past
   /// journey with no record keeps null — no free source answers past actuals.

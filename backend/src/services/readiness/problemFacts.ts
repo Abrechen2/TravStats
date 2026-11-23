@@ -29,6 +29,10 @@ export interface InstanceProblemFacts {
   railRouterConfigured: boolean;
   /** Rail journeys of every account drawn as a chord (with or without a router). */
   railStraight: number;
+  /** Of those, the ones no re-route pass has tried yet or that changed since: what a pass can still fix. */
+  railStraightUntried: number;
+  /** Of those, the ones the last pass could not draw (a recorded reason): only a hand-drawn line helps. */
+  railRerouteMissed: number;
   /** A road provider answers for the instance itself (admin global key or own OSRM). */
   roadRoutingEffective: boolean;
   /** Straight routable legs and coach rides of every account; counted only while no provider answers. */
@@ -73,9 +77,14 @@ const straightLegs = (userId?: string) =>
   });
 const straightBus = (userId?: string) =>
   prisma.busJourney.count({ where: { geometrySource: "straight", ...(userId ? { userId } : {}) } });
-const straightRail = (userId?: string) =>
+const straightRail = (userId?: string, miss?: "missed" | "untried") =>
   prisma.railJourney.count({
-    where: { geometrySource: "straight", ...(userId ? { userId } : {}) },
+    where: {
+      geometrySource: "straight",
+      ...(userId ? { userId } : {}),
+      ...(miss === "missed" ? { rerouteMissReason: { not: null } } : {}),
+      ...(miss === "untried" ? { rerouteMissReason: null } : {}),
+    },
   });
 
 export async function loadInstanceProblemFacts(): Promise<InstanceProblemFacts> {
@@ -100,8 +109,9 @@ export async function loadInstanceProblemFacts(): Promise<InstanceProblemFacts> 
   ]);
   const railRouterConfigured = !!admin?.railRoutingUrl && !routingOff;
   const roadRoutingEffective = instanceRouting.provider !== null;
-  const [railStraight, legs, bus] = await Promise.all([
+  const [railStraight, railRerouteMissed, legs, bus] = await Promise.all([
     straightRail(),
+    straightRail(undefined, "missed"),
     roadRoutingEffective ? 0 : straightLegs(),
     roadRoutingEffective ? 0 : straightBus(),
   ]);
@@ -110,6 +120,8 @@ export async function loadInstanceProblemFacts(): Promise<InstanceProblemFacts> 
   return {
     railRouterConfigured,
     railStraight,
+    railStraightUntried: railStraight - railRerouteMissed,
+    railRerouteMissed,
     roadRoutingEffective,
     roadStraight: legs + bus,
     routingKeyWithoutProvider:

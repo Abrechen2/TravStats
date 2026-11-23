@@ -283,6 +283,8 @@ exports[`Transport CRUD skeleton (forgejo#382) rail keeps the list page response
     "railAndFlyOptOut": "boolean",
     "rememberedNote": "null",
     "rememberedOn": "null",
+    "rerouteMissAt": "null",
+    "rerouteMissReason": "null",
     "seat": "null",
     "source": "null",
     "status": "string",

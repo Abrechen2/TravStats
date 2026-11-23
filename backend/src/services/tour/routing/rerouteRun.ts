@@ -209,6 +209,25 @@ async function routeRail(item: RailItem, mode: RerouteMode): Promise<Outcome> {
   }
 }
 
+/**
+ * A rail ride the pass could not draw keeps its reason on the row, so the
+ * readiness card "Bahnstrecken neu routen" stops counting it (it can clear) and
+ * "N Fahrten konnte das Routing nicht finden" names it instead. A drawn line
+ * clears it; a row edited meanwhile ("changed") records nothing.
+ */
+async function recordRailMiss(id: string, outcome: Outcome, at: Date): Promise<void> {
+  if (outcome.kind === "stop" || (outcome.kind === "kept" && outcome.reason === "changed")) return;
+  const miss =
+    outcome.kind === "routed"
+      ? { rerouteMissReason: null, rerouteMissAt: null }
+      : { rerouteMissReason: outcome.reason, rerouteMissAt: at };
+  // share-exempt: re-route bookkeeping of this server, not a shared fact.
+  await prisma.railJourney.updateMany({
+    where: { id, ...(outcome.kind === "routed" ? {} : { geometrySource: "straight" }) },
+    data: miss,
+  });
+}
+
 async function loadRun(id: string) {
   return prisma.rerouteRun.findUnique({ where: { id } });
 }
@@ -318,6 +337,8 @@ export async function executeRerouteRun(
       end = { status: "failed", stopReason: reason };
       break;
     }
+    // Only an item the pass consumed: a stop above leaves it for the next try.
+    if (item.kind === "rail") await recordRailMiss(item.id, outcome, now());
     processed += 1;
     cursor = `${item.kind}:${item.id}`;
     if (outcome.kind === "routed") {
