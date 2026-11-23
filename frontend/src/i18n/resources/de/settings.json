@@ -1044,6 +1044,7 @@
     "docsLink": "Swagger UI öffnen →",
     "newLabel": "Beschreibung",
     "newLabelPlaceholder": "z. B. „Home Assistant Integration\"",
+    "providerWarning": "Nutzt du den Schlüssel mit einem KI-Assistenten (z. B. über MCP), gehen alle Daten, die der Assistent liest, an dessen KI-Anbieter und werden dort nach dessen Bedingungen gespeichert. TravStats kann das nicht zurückholen.",
     "scope": "Berechtigung",
     "scopes": {
       "read": "Read — nur lesen",

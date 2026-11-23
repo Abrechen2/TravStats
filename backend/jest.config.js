@@ -99,5 +99,8 @@ module.exports = {
   moduleNameMapper: {
     "^uuid$": "<rootDir>/src/__mocks__/uuid.ts",
     "^webdav$": "<rootDir>/src/__mocks__/webdav.ts",
+    // packages/travstats-mcp is imported by its contract tests; CI installs no dependencies
+    // there, so it borrows the backend's zod (same major).
+    "^zod$": "<rootDir>/node_modules/zod",
   },
 };

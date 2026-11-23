@@ -647,9 +647,30 @@ registry.registerPath({
   method: "get",
   path: "/auth/me",
   summary: "Who the caller is",
+  description:
+    "`tokenScope` is the scope (`read`, `write` or `admin`) of the personal access token the " +
+    "call was made with, and `null` for a browser session.",
   tags: authTag,
   responses: {
-    200: { description: "The current user" },
+    200: {
+      description: "The current user",
+      content: {
+        "application/json": {
+          schema: z.object({
+            user: z.object({
+              id: z.string(),
+              username: z.string(),
+              isAdmin: z.boolean(),
+              firstName: z.string().nullable(),
+              lastName: z.string().nullable(),
+              isSharedDemo: z.boolean(),
+              providerQuotaRefused: z.boolean(),
+            }),
+            tokenScope: z.enum(["read", "write", "admin"]).nullable(),
+          }),
+        },
+      },
+    },
     401: { description: "Not signed in", content: errorContent },
   },
 });

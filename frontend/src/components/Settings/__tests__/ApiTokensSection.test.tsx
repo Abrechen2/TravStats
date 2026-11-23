@@ -73,6 +73,13 @@ describe("ApiTokensSection", () => {
    * admin call answer 403, and had nothing telling them whether the token, the
    * scope or the endpoint was at fault.
    */
+  it("warns, when a key is created, that data an assistant reads goes to its AI provider", async () => {
+    render(<ApiTokensSection />);
+    await screen.findByText("Home Assistant");
+    fireEvent.click(screen.getByRole("button", { name: "settings:apiTokens.create" }));
+    expect(screen.getByText("settings:apiTokens.providerWarning")).toBeInTheDocument();
+  });
+
   it("offers no admin scope to an account that could never use one", async () => {
     signIn(false);
     render(<ApiTokensSection />);

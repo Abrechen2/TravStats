@@ -337,6 +337,9 @@ export default function ApiTokensSection(): JSX.Element {
                 disabled={creating}
               />
               <p className="t-caption">{t(`settings:apiTokens.scopes.${newScope}`)}</p>
+              <p className="t-caption" data-testid="token-provider-warning">
+                {t("settings:apiTokens.providerWarning")}
+              </p>
               <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
                 <button
                   type="button"
