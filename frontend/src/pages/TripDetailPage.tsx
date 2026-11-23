@@ -284,7 +284,7 @@ interface TabBarProps {
 /** Exported for its own test: the "tours" tab kept a hard-coded "Beta" pill after its gate
  *  came off (auditor 3, 2026-09-19); a badge no registry entry backs, nothing can take away. */
 export function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
-  // "tours" is behind the roadtrips beta key again since 2026-09-24 (owner).
+  // "tours" follows the tour domain switch (beta key removed for 2.8).
   const toursVisible = useToursVisible();
   const visibleTabs = TABS.filter((key) => key !== "tours" || toursVisible);
 

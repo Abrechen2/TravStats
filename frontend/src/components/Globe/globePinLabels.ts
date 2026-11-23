@@ -80,7 +80,8 @@ export function placeLabelPoints(
   colors: PlaceColorConfig,
   listColors?: ReadonlyMap<string, Rgb>,
   listLabels?: ReadonlyMap<string, PlaceLabelList>,
-  labelSource?: PlaceLabelSource
+  labelSource?: PlaceLabelSource,
+  greyUnvisited = false
 ): GlobeExtraLabel[] {
   const out: GlobeExtraLabel[] = [];
   for (const place of places) {
@@ -99,7 +100,14 @@ export function placeLabelPoints(
       lat: place.lat,
       weight: place.visitCount ?? 0,
       color: rgbCss(
-        resolvePlaceColor({ visited: place.visited, listColor: listColors?.get(place.id) }, colors)
+        resolvePlaceColor(
+          {
+            visited: place.visited,
+            listColor: listColors?.get(place.id),
+            greyed: greyUnvisited,
+          },
+          colors
+        )
       ),
     });
   }

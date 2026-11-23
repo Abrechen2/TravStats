@@ -51,6 +51,13 @@ import { join } from "node:path";
 // Shared trips (2026-10-09): the trip overview, the settings and the inbox
 // read the sharing API on mount; answered empty so no request escapes.
 // The calendar subscription card left beta (forgejo#390) and loads its state on mount.
+// Comparison left beta (2.8): the people section loads its list on mount.
+vi.mock("@/lib/api/comparison", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/comparison")>()),
+  comparisonApi: {
+    people: vi.fn().mockResolvedValue({ people: [], requests: [], leaderboards: [] }),
+  },
+}));
 vi.mock("@/lib/api/calendarFeed", () => ({
   calendarFeedApi: {
     status: vi

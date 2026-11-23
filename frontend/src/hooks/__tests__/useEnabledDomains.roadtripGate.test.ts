@@ -7,16 +7,13 @@ import { useEnabledDomains } from "../useEnabledDomains";
 import { useSettingsStore } from "../../store/settingsStore";
 
 /**
- * Roadtrips are beta in 2.7, and this hook is the whole gate: every surface
- * that shows a domain — nav, logbook tabs, dashboard tab, statistics tab,
- * overview — asks it. So the one thing to pin is that the domain does not
- * exist for a reader while the instance switch is closed, whatever their own
- * toggle says, and that nothing else changes.
+ * Roadtrips and tours left beta for 2.8 (owner, 2026-11-23): only the reader's
+ * own switch decides, whatever the instance's beta flag says.
  */
-describe("useEnabledDomains — the roadtrip beta gate", () => {
+describe("useEnabledDomains — roadtrips and tours are not beta-gated", () => {
   beforeEach(() => {
     useSettingsStore.setState({
-      enabledDomains: ["flight", "lodging", "roadtrip"],
+      enabledDomains: ["flight", "lodging", "roadtrip", "tour"],
       betaFeaturesEnabled: null,
     });
   });
@@ -24,23 +21,18 @@ describe("useEnabledDomains — the roadtrip beta gate", () => {
   it.each([
     ["not loaded yet", null],
     ["off", false],
-  ])("hides roadtrips while the beta switch is %s", (_label, flag) => {
+    ["on", true],
+  ])("shows roadtrips and tours without the beta flag (%s)", (_label, flag) => {
     useSettingsStore.setState({ betaFeaturesEnabled: flag });
     const { result } = renderHook(() => useEnabledDomains());
-    expect(result.current.enabled).toEqual(["flight", "lodging"]);
-    expect(result.current.isEnabled("roadtrip")).toBe(false);
-    expect(result.current.isEnabled("lodging")).toBe(true);
-  });
-
-  it("shows roadtrips once the beta switch is on and the reader enabled them", () => {
-    useSettingsStore.setState({ betaFeaturesEnabled: true });
-    const { result } = renderHook(() => useEnabledDomains());
     expect(result.current.isEnabled("roadtrip")).toBe(true);
+    expect(result.current.isEnabled("tour")).toBe(true);
   });
 
-  it("still respects the reader's own toggle with the beta switch on", () => {
-    useSettingsStore.setState({ betaFeaturesEnabled: true, enabledDomains: ["flight"] });
+  it("still respects the reader's own toggle", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: false, enabledDomains: ["flight"] });
     const { result } = renderHook(() => useEnabledDomains());
     expect(result.current.isEnabled("roadtrip")).toBe(false);
+    expect(result.current.isEnabled("tour")).toBe(false);
   });
 });

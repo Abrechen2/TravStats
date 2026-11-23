@@ -54,11 +54,14 @@ describe("TravTrack availability", () => {
     await prisma.$disconnect();
   });
 
-  it("off while the beta switch is off, even with the config row on", async () => {
+  it("is not behind the beta switch any more: the config row alone decides (out of beta, 2.8)", async () => {
     await switches.set({ beta: false, config: true });
-    expect(await travTrackOffered()).toBe(false);
+    expect(await travTrackOffered()).toBe(true);
+    expect(await travTrackInstanceOn()).toBe(true);
+    expect(await travTrackAvailable(userId)).toBe(true);
+
+    await switches.set({ beta: false, config: false });
     expect(await travTrackInstanceOn()).toBe(false);
-    expect(await travTrackAvailable(userId)).toBe(false);
 
     await switches.set({ beta: true, config: true });
     expect(await travTrackInstanceOn()).toBe(true);

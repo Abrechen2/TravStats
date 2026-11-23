@@ -103,9 +103,6 @@ export function DomainTabStrip({
   // them click through to the "coming soon" screen and turn it back on. Mixing
   // the enabled state in here would hide the tab instead and break that.
   //
-  // "Touren" and "Roadtrips" went back behind the beta switch on 2026-09-24
-  // (owner) — hidden, not dimmed: dimming is for a domain the USER switched
-  // off and can turn back on, and a closed instance gate is neither.
   const toursVisible = useToursVisible();
   const visibleTabs = DASHBOARD_TABS.filter((tab) => {
     if (VIEW_ONLY_TABS.has(tab)) return false;

@@ -587,8 +587,7 @@ function AppContent() {
                   trip at all since 2026-09-21, and then this list is the only
                   place it can be reached from. */}
               {/* A tour is a domain of its own since 2026-11-09: the user's
-                  switch AND the roadtrips beta key (`DOMAIN_BETA_GATES`) let the
-                  page in, and `DomainRouteGuard` says which one is closed. */}
+                  switch lets the page in, and `DomainRouteGuard` guards it. */}
               <Route
                 path="/tours"
                 element={
@@ -654,8 +653,7 @@ function AppContent() {
               <Route
                 path="/trips/:id/route/:routeId"
                 element={
-                  // Same guard as the trip-less path above: the tour domain
-                  // switch AND the roadtrips beta key.
+                  // Same guard as the trip-less path above: the tour domain switch.
                   isAuthenticated ? (
                     <DomainRouteGuard domain="tour">
                       <TripRouteEditorPage />

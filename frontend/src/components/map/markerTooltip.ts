@@ -1,3 +1,4 @@
+import { isListViewActive } from "../../store/placeListFilterStore";
 import type { PickingInfo } from "@deck.gl/core";
 import { lodgingPresence } from "../../lib/mapPresence";
 import type { Lodging } from "../../types/lodging";
@@ -456,8 +457,13 @@ function renderPlaceHtml(d: PlaceDatum, heading: string, t: TFn, locale: string)
 
   const tail: string[] = [];
   if (d.category) tail.push(placeCategoryLabel(t, d.category));
-  if (d.visited === false) tail.push(t("places:list.status.wishlist"));
-  else if (visits !== null) tail.push(t("places:list.visitsCount", { count: visits }));
+  // With a list narrowing the map, an unvisited member says what it is for the
+  // reader of THAT view: not been there yet. "Merkliste" stays for "Alle Orte".
+  if (d.visited === false) {
+    tail.push(
+      t(isListViewActive() ? "places:list.status.notVisitedYet" : "places:list.status.wishlist")
+    );
+  } else if (visits !== null) tail.push(t("places:list.visitsCount", { count: visits }));
 
   if (tail.length > 0) {
     lines.push(

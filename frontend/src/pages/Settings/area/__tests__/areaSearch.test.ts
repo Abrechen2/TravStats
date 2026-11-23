@@ -66,8 +66,8 @@ describe("the settings search reads the registry", () => {
 
   it("leaves out a row of a closed beta gate and of a switched-off domain", () => {
     const closed: RegistryAccess = { ...admin, isGateOpen: () => false };
-    expect(find("TravTrack anbieten").some((h) => h.rowId === "ttoffer")).toBe(true);
-    expect(find("TravTrack anbieten", closed).some((h) => h.rowId === "ttoffer")).toBe(false);
+    expect(find("Reisen planen anbieten").some((h) => h.rowId === "tpoffer")).toBe(true);
+    expect(find("Reisen planen anbieten", closed).some((h) => h.rowId === "tpoffer")).toBe(false);
     const noFlights: RegistryAccess = { ...admin, isDomainOn: (d) => d !== "flight" };
     expect(find("Heimatflughäfen", noFlights).some((h) => h.pageId === "reisearten")).toBe(false);
   });

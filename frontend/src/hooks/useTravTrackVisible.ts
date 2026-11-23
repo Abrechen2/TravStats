@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useBetaFeatureAccess, useBetaFeatures } from "./useBetaFeatures";
 import { useAuthStore } from "../store/authStore";
 import { travTrackApi, type TravTrackCapabilities } from "../lib/api/travtrack";
 import { logger } from "../lib/logger";
@@ -71,11 +70,7 @@ export function useTravTrackState(): {
   access: TravTrackAccess;
   caps: TravTrackCapabilities | null;
 } {
-  const key = useBetaFeatureAccess("travTrack");
-  const keyOpen = key === "allowed";
-  const { caps, settled } = useCapabilitiesRead(keyOpen);
-  if (key === "pending") return { access: "pending", caps: null };
-  if (!keyOpen) return { access: "hidden", caps: null };
+  const { caps, settled } = useCapabilitiesRead(true);
   if (!settled) return { access: "pending", caps: null };
   if (!caps) return { access: "hidden", caps: null };
   return { access: caps.enabled ? "visible" : "hidden", caps };
@@ -97,10 +92,8 @@ export function useTravTrackVisible(): boolean {
  * closed while pending or after a failed read.
  */
 export function useTravTrackInstanceOn(): boolean {
-  const { isFeatureVisible } = useBetaFeatures();
-  const keyOpen = isFeatureVisible("travTrack");
-  const { caps } = useCapabilitiesRead(keyOpen);
-  return keyOpen && caps !== null && caps.enabled;
+  const { caps } = useCapabilitiesRead(true);
+  return caps !== null && caps.enabled;
 }
 
 /**

@@ -8,6 +8,7 @@
 // ORIGINAL bodies (route, airport, port, cruise) stay there; these four are
 // the ones a reader looks up by name.
 
+import { isListViewActive } from "../../../store/placeListFilterStore";
 import type { JSX } from "react";
 import { resolveCountryCode } from "../../../lib/countryFlag";
 import { LODGING_COLOR } from "../../../lib/lodgingColor";
@@ -244,7 +245,11 @@ export function PlaceBody({
           intention (shared/placeCounting.ts draws the same line). */}
       <Hero color={rgbCss(PLACE_COLOR)}>
         {data.visited === false
-          ? t("places:list.status.wishlist")
+          ? t(
+              isListViewActive()
+                ? "places:list.status.notVisitedYet"
+                : "places:list.status.wishlist"
+            )
           : t("places:list.visitsCount", { count: data.visitCount ?? 0 })}
       </Hero>
       <Grid>

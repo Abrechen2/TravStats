@@ -23,6 +23,7 @@ import { useFlightColorStore } from "../store/flightColorStore";
 import { resolveFlightTipColor } from "../lib/flightColor";
 import { useLodgingColorStore } from "../store/lodgingColorStore";
 import { usePlaceColorStore } from "../store/placeColorStore";
+import { usePlaceListFilterStore } from "../store/placeListFilterStore";
 import { useMapCameraStore } from "../store/mapCameraStore";
 import { useMapLabelsModeStore } from "../store/mapLabelsModeStore";
 import { appendWithLabelObstacles } from "./map/labelObstacles";
@@ -129,6 +130,7 @@ export function DeckGLMap({
   // the same pair every other domain has. The dot still derives from
   // `markerDotStyle`, so 1x is exactly an airport dot.
   const placeColorConfig = usePlaceColorStore((s) => s.config);
+  const listViewActive = usePlaceListFilterStore((s) => s.viewActive);
   const setPlaceColorMode = usePlaceColorStore((s) => s.setMode);
   const setPlaceColor = usePlaceColorStore((s) => s.setColor);
   const setCruiseColorMode = useCruiseColorStore((s) => s.setMode);
@@ -458,6 +460,7 @@ export function DeckGLMap({
         listColors: placeListColors,
         listLabels: placeListLabels,
         labelSource: placeLabelSource,
+        greyUnvisited: listViewActive,
       }) ?? [];
 
     // Station names in `extraLayers` place around this map's own labels
@@ -511,6 +514,7 @@ export function DeckGLMap({
     placesOverride,
     placeMarkerSize,
     placeColorConfig,
+    listViewActive,
     placeListColors,
     placeListLabels,
     placeLabelSource,

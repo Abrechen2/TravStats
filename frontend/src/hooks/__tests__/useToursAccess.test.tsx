@@ -33,7 +33,7 @@ beforeEach(() => {
   useRemoteSettingsStatus.setState({ failed: false });
 });
 
-describe("tours access: the domain switch AND the roadtrips beta key", () => {
+describe("tours access: the domain switch alone", () => {
   it("is allowed only when both are open", () => {
     setup({ domains: ["flight", "tour"], beta: true });
     expect(renderHook(() => useToursAccess()).result.current).toBe("allowed");
@@ -44,14 +44,14 @@ describe("tours access: the domain switch AND the roadtrips beta key", () => {
     expect(renderHook(() => useToursAccess()).result.current).toBe("denied");
   });
 
-  it("is denied when the beta key is closed, even with the domain switched on", () => {
+  it("is allowed without the beta flag — tours left beta for 2.8", () => {
     setup({ domains: ["flight", "tour"], beta: false });
-    expect(renderHook(() => useToursAccess()).result.current).toBe("denied");
+    expect(renderHook(() => useToursAccess()).result.current).toBe("allowed");
   });
 
-  it("is pending, not denied, while the instance flag is unknown", () => {
-    setup({ domains: ["flight"], beta: null });
-    expect(renderHook(() => useToursAccess()).result.current).toBe("pending");
+  it("is allowed while the instance flag is unknown", () => {
+    setup({ domains: ["flight", "tour"], beta: null });
+    expect(renderHook(() => useToursAccess()).result.current).toBe("allowed");
   });
 
   it("is pending, not denied, while the user's settings have not loaded", () => {
@@ -90,10 +90,10 @@ describe("the /tours route guard", () => {
     expect(screen.queryByTestId("tours-page")).not.toBeInTheDocument();
   });
 
-  it("hides the page when the roadtrips beta key is off, though the domain is on", () => {
+  it("shows the page with the beta flag off when the domain is on", () => {
     setup({ domains: ["flight", "tour"], beta: false });
     renderGuard();
-    expect(screen.queryByTestId("tours-page")).not.toBeInTheDocument();
+    expect(screen.getByTestId("tours-page")).toBeInTheDocument();
   });
 });
 
@@ -116,9 +116,9 @@ describe("the navigation entry for tours", () => {
     expect(navPaths()).not.toContain("/tours");
   });
 
-  it("hides /tours when the beta key is off", () => {
+  it("lists /tours with the beta flag off", () => {
     setup({ domains: ["flight", "tour"], beta: false });
-    expect(navPaths()).not.toContain("/tours");
+    expect(navPaths()).toContain("/tours");
   });
 });
 

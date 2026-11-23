@@ -147,6 +147,8 @@ export interface MapAppearance {
    * turning a list to symbols appear to do nothing at all.
    */
   placeLabelSource?: PlaceLabelSource;
+  /** Place lists the dashboard map is narrowed to (`lib/mapPlaceLists`); absent or empty is "Alle Orte". */
+  placeListSelection?: string[];
   labelsMode?: LabelsMode;
   /** Draw recorded flight paths beside the route arcs (forgejo#312). Owned by
    *  `store/recordedFlightPathsStore.ts`; absent = off. */

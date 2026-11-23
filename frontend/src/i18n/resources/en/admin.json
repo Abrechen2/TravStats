@@ -140,21 +140,9 @@
             "name": "Device pairing",
             "what": "The Devices settings entry and its QR code, the only way to bind the phone app to this account."
           },
-          "roadtrips": {
-            "name": "Roadtrips and tours",
-            "what": "The “Roadtrips” domain (multi-day trips with stations at your stays) and all tours: the tours page and editor, the tour tab on the dashboard and on a trip, the tours on the overview map, and the routing provider and Strava cards."
-          },
           "travPlan": {
             "name": "TravPlan (alpha)",
             "what": "The planning mode for a trip still ahead: day plan, ideas, booking import, transfers, packing list, budget and the handover to the travel log. Alpha experiment: may still change fundamentally."
-          },
-          "cruiseTracks": {
-            "name": "Recorded tracks on cruises",
-            "what": "The “Recorded tracks” section on a cruise’s page: a GPS recording (a file or Dawarich) replaces the computed sea route of the legs it covers – on the map and in the statistics."
-          },
-          "comparison": {
-            "name": "Friend comparisons",
-            "what": "Compare your travel totals with friends who agreed, as a leaderboard — no individual records."
           },
           "encryptedShare": {
             "name": "Encrypted sharing",
@@ -163,10 +151,6 @@
           "federatedTripSharing": {
             "name": "Trip sharing across servers",
             "what": "Connect with companions on other TravStats servers by invitation code, under Settings → Trips; it has its own switch under server connections as well. Shared trips travel signed to the companion's server. With the switch off, this server does not answer other servers for it at all."
-          },
-          "travTrack": {
-            "name": "TravTrack (own location history)",
-            "what": "An own location history on this server: positions come from the Companion app, GPX files, OwnTracks, Overland and a Dawarich import, flights and trips included, with privacy zones and delete by time span. Also needs the TravTrack switch under Instance."
           }
         }
       },

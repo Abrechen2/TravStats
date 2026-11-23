@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import { AppShell, Button, Card, EmptyState, PageHeader } from "../components/ui";
 import SwitchesAskDialog from "../components/friends/SwitchesAskDialog";
 import { useTranslation } from "../hooks/useTranslation";
-import { useBetaFeatureAccess } from "../hooks/useBetaFeatures";
 import { useAuthStore } from "../store/authStore";
 import { comparisonApi, comparisonFailureCode } from "../lib/api/comparison";
 import { decodeInvitePayload } from "../lib/comparison/inviteLink";
@@ -25,7 +24,6 @@ export default function FriendAcceptPage(): JSX.Element {
   const tr = (key: string, options?: Record<string, unknown>): string =>
     String(t(key, options ?? {}));
   const user = useAuthStore((s) => s.user);
-  const access = useBetaFeatureAccess("comparison");
   // Read once: the fragment is cleared after redeeming, and a re-render must not forget it first.
   const [raw] = useState(() => window.location.hash.replace(/^#/, ""));
   const [asking, setAsking] = useState(false);
@@ -54,8 +52,6 @@ export default function FriendAcceptPage(): JSX.Element {
           }
         />
       );
-    if (access === "pending") return <p className="t-caption">{tr("common:loading.default")}</p>;
-    if (access === "denied") return <EmptyState title={tr("friends.accept.off")} />;
     if (outcome)
       return (
         <Card>

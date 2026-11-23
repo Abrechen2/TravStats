@@ -28,6 +28,12 @@ vi.mock("../../lib/api/sharing", () => ({
 vi.mock("../../lib/api/travplan", () => ({
   travplanApi: { capabilities: vi.fn().mockResolvedValue({ enabled: false }) },
 }));
+// TravTrack left beta (2.8): the nav asks its capabilities; this suite is about the inbox badge.
+vi.mock("../../hooks/useTravTrackVisible", () => ({
+  useTravTrackVisible: () => false,
+  useTravTrackAccess: () => "hidden",
+  useTravTrackCapabilities: () => null,
+}));
 vi.mock("../UpdateBadge", () => ({ default: () => null }));
 vi.mock("../Nav/UserMenu", () => ({ default: () => null }));
 vi.mock("../Nav/MoreMenu", () => ({ default: () => null }));

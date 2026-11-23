@@ -6,8 +6,9 @@ describe("isEntryDomainShown — the server's upcoming entries under the beta ga
   // As `useEnabledDomains` answers with every beta switch closed.
   const isEnabled = (key: DomainKey) => ["flight", "lodging"].includes(key);
 
-  it("drops a roadtrip entry while its domain is gated out", () => {
-    expect(isEntryDomainShown("roadtrip", isEnabled)).toBe(false);
+  it("keeps a roadtrip entry — no beta gate stands in front of it any more", () => {
+    expect(isEntryDomainShown("roadtrip", isEnabled)).toBe(true);
+    expect(isEntryDomainShown("tour", isEnabled)).toBe(true);
   });
 
   it("keeps trips and ungated domains — the server already filtered those by the user's choice", () => {
@@ -31,30 +32,7 @@ describe("switchableDomains — the settings and setup switch lists", () => {
     expect(switchableDomains(DOMAIN_KEYS, [], open)).toEqual([...DOMAIN_KEYS]);
   });
 
-  it("hides a gated domain the user never turned on while its switch is closed", () => {
-    const keys = switchableDomains(DOMAIN_KEYS, ["flight"], closed);
-    expect(keys).not.toContain("roadtrip");
-    expect(keys).toEqual(
-      expect.arrayContaining([
-        "flight",
-        "cruise",
-        "lodging",
-        "poi",
-        "rail",
-        "rental",
-        "bus",
-        "ferry",
-      ])
-    );
-  });
-
-  it("keeps a gated domain the user has on, so it can be switched off — except roadtrips", () => {
-    const keys = switchableDomains(
-      DOMAIN_KEYS,
-      ["rail", "rental", "bus", "ferry", "roadtrip"],
-      closed
-    );
-    expect(keys).toEqual(expect.arrayContaining(["rail", "rental", "bus", "ferry"]));
-    expect(keys).not.toContain("roadtrip");
+  it("offers every domain, roadtrips and tours included, while the beta switches are closed", () => {
+    expect(switchableDomains(DOMAIN_KEYS, ["flight"], closed)).toEqual([...DOMAIN_KEYS]);
   });
 });

@@ -13,11 +13,7 @@ import type { BetaFeatureKey } from "./betaFeatures";
  * (and its registry entry); a domain absent from this map is never gated.
  */
 export const DOMAIN_BETA_GATES: Readonly<Partial<Record<DomainKey, BetaFeatureKey>>> =
-  Object.freeze({
-    roadtrip: "roadtrips",
-    // Tours share the roadtrip key until roadtrips are released.
-    tour: "roadtrips",
-  });
+  Object.freeze({});
 
 /** Whether the instance allows `key` at all — true for a domain no switch gates. */
 export function isDomainOffered(
@@ -46,15 +42,11 @@ export function isEntryDomainShown(
  * The domains a settings or setup list offers as a switch. A gated domain is
  * offered while its beta switch is open, and stays listed while the user has it
  * on even with the switch closed, so it can always be switched off again.
- * Roadtrips are the exception kept from before this map: listed only while
- * their switch is open.
  */
 export function switchableDomains(
   keys: readonly DomainKey[],
   stored: readonly DomainKey[],
   isFeatureVisible: (feature: BetaFeatureKey) => boolean
 ): DomainKey[] {
-  return keys.filter(
-    (key) => isDomainOffered(key, isFeatureVisible) || (key !== "roadtrip" && stored.includes(key))
-  );
+  return keys.filter((key) => isDomainOffered(key, isFeatureVisible) || stored.includes(key));
 }

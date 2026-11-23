@@ -239,7 +239,6 @@
       "title": "Einladung annehmen",
       "signIn": "Melde dich auf deinem Server an",
       "signInHint": "Öffne diesen Link nach der Anmeldung noch einmal. Es wurde nichts gesendet.",
-      "off": "Diese Funktion ist auf deinem Server noch nicht eingeschaltet.",
       "damaged": "Dieser Einladungslink ist beschädigt",
       "damagedHint": "Er ist unvollständig oder gehört nicht zu TravStats. Es wurde nichts gesendet – lass dir den Link noch einmal schicken.",
       "intro": "Jemand auf {{origin}} lädt dich ein, Reisesummen zu vergleichen.",

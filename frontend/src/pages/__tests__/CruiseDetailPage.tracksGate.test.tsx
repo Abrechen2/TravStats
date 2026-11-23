@@ -4,9 +4,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { Cruise } from "../../types";
 
 /**
- * The recorded-tracks section of a cruise (2.7) is behind the beta switch
- * (`cruiseTracks` in `config/betaFeatures.ts`): hidden on an instance with the
- * switch off, shown with it on.
+ * The recorded-tracks section of a cruise left beta for 2.8 (owner,
+ * 2026-11-23): it is shown whatever the instance's beta switch says.
  */
 const getMock = vi.fn();
 
@@ -51,8 +50,7 @@ let betaOn = false;
 vi.mock("../../hooks/useBetaFeatures", () => ({
   useBetaFeatures: () => ({
     betaFeaturesEnabled: betaOn,
-    // The real key check, so a typo in the page's gate key fails here too.
-    isFeatureVisible: (key: string) => betaOn && key === "cruiseTracks",
+    isFeatureVisible: () => betaOn,
   }),
 }));
 
@@ -109,10 +107,10 @@ describe("CruiseDetailPage recorded tracks gate", () => {
     vi.clearAllMocks();
   });
 
-  it("hides the recorded tracks while the beta switch is off", async () => {
+  it("shows the recorded tracks while the beta switch is off", async () => {
     betaOn = false;
     await renderCruise(makeCruise());
-    expect(screen.queryByTestId("tracks-panel")).toBeNull();
+    expect(screen.getByTestId("tracks-panel")).toBeInTheDocument();
   });
 
   it("shows them with the beta switch on", async () => {

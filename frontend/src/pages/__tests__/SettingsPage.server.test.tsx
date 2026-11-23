@@ -17,6 +17,11 @@ vi.mock("@/lib/api/locationProvider", async (importOriginal) => ({
   },
 }));
 // The version line under the settings menu asks the server (forgejo#321).
+// TravTrack left beta (2.8): its offer switch loads the instance config on mount.
+vi.mock("@/lib/api/travtrack", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/travtrack")>()),
+  travTrackApi: { config: vi.fn().mockResolvedValue({ enabled: false }) },
+}));
 vi.mock("@/lib/api/version", () => ({
   versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },
 }));

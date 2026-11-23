@@ -516,7 +516,6 @@
               "id": "d_tour",
               "t": "domain",
               "v": false,
-              "beta": "roadtrips",
               "inv": "A4 Domain on/off + Domain colour (roadtrip/tour)",
               "de": ["Touren", "Wandern, Rad, Roadtrip", ""],
               "en": ["Tours", "Hiking, cycling, road trips", ""],
@@ -527,7 +526,6 @@
               "id": "d_roadtrip",
               "t": "domain",
               "v": false,
-              "beta": "roadtrips",
               "d": 1,
               "inv": "S3 Domain on/off (roadtrip)",
               "de": ["Roadtrips", "Stationen, die bei deinen Unterkünften schlafen", ""],
@@ -1447,7 +1445,6 @@
             {
               "id": "rangliste",
               "t": "toggle",
-              "beta": "comparison",
               "inv": "A12 Comparison consent",
               "de": ["Sieht meine Summen", "Rangliste: wer deine Summen sieht", ""],
               "en": ["Sees my totals", "Leaderboard: who sees your totals", ""],
@@ -2912,7 +2909,6 @@
               "sc": "i",
               "ad": 1,
               "v": true,
-              "beta": "travTrack",
               "inv": "C1 TravTrack offered",
               "de": [
                 "TravTrack anbieten",

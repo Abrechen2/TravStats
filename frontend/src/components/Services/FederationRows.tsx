@@ -112,7 +112,7 @@ export default function FederationRows({
 
   return (
     <>
-      {showRest && (tripSharingVisible || isFeatureVisible("comparison")) ? (
+      {showRest ? (
         <FederationSetupChecklist
           tripSharing={tripSharingVisible}
           state={state}

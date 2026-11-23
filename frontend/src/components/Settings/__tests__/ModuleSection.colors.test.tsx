@@ -32,23 +32,13 @@ describe("ModuleSection — one row per domain, switch and colour", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"] });
   });
 
-  it("offers no roadtrip colour while the roadtrips beta is closed, and offers it once open", () => {
-    const { unmount } = render(<ModuleSection />);
-    expect(screen.queryByLabelText(/roadtrip/i)).not.toBeInTheDocument();
-    expect(screen.getAllByLabelText(/flight/i).length).toBeGreaterThan(0);
-    unmount();
-
-    mockBeta.mockReturnValue(true);
+  it("offers the roadtrip colour with the beta flag off — roadtrips left beta for 2.8", () => {
     render(<ModuleSection />);
     expect(screen.getAllByLabelText(/roadtrip/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(/flight/i).length).toBeGreaterThan(0);
   });
 
-  it("offers the tour switch only while the roadtrips beta is open (tours-own-domain)", () => {
-    const { unmount } = render(<ModuleSection />);
-    expect(screen.queryByRole("switch", { name: /domain\.tour/ })).not.toBeInTheDocument();
-    unmount();
-
-    mockBeta.mockReturnValue(true);
+  it("offers the tour switch with the beta flag off — tours left beta for 2.8", () => {
     render(<ModuleSection />);
     expect(screen.getByRole("switch", { name: /domain\.tour/ })).not.toBeChecked();
   });

@@ -14,8 +14,8 @@ export const REISEARTEN_PAGE: RegistryPage = {
         {"id":"d_ferry","mount":"domains","kind":"domain","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Fähre","en":"Ferry","terms":{"de":"","en":""}},
         {"id":"d_rental","mount":"domains","kind":"domain","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Mietwagen","en":"Rental cars","terms":{"de":"","en":""}},
         {"id":"d_poi","mount":"domains","kind":"domain","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Orte","en":"Places","terms":{"de":"","en":""}},
-        {"id":"d_tour","mount":"domains","kind":"domain","level":"standard","scope":"account","audience":"all","beta":"roadtrips","demoLocked":false,"de":"Touren","en":"Tours","terms":{"de":"Wandern, Rad, Roadtrip","en":"Hiking, cycling, road trips"}},
-        {"id":"d_roadtrip","mount":"domains","kind":"domain","level":"standard","scope":"account","audience":"all","beta":"roadtrips","demoLocked":true,"de":"Roadtrips","en":"Road trips","terms":{"de":"Stationen, die bei deinen Unterkünften schlafen","en":"Stops that sleep at your stays"}},
+        {"id":"d_tour","mount":"domains","kind":"domain","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Touren","en":"Tours","terms":{"de":"Wandern, Rad, Roadtrip","en":"Hiking, cycling, road trips"}},
+        {"id":"d_roadtrip","mount":"domains","kind":"domain","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Roadtrips","en":"Road trips","terms":{"de":"Stationen, die bei deinen Unterkünften schlafen","en":"Stops that sleep at your stays"}},
         {"id":"farbenreset","mount":"domains","kind":"action","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Farben zurücksetzen","en":"Reset colours","terms":{"de":"Die Karte hat eigene Farben und bleibt, wie sie ist.","en":"The map has its own colours and stays as it is."}},
       ]},
       {"id":"reisearten-lander-zuhause","de":"Länder & Zuhause","en":"Countries & home","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[

@@ -1,7 +1,6 @@
 import { useEffect, useState, type JSX, type ReactNode } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../../hooks/useIsDemoAccount";
-import { useBetaFeatures } from "../../../hooks/useBetaFeatures";
 import { apiErrorMachineCode } from "../../../lib/apiError";
 import type {
   LocationProviderKind,
@@ -72,7 +71,6 @@ export default function LocationSourceSection({
   const { t } = useTranslation(["settings"]);
   const isDemo = useIsDemoAccount();
   const navigate = useGuardedNavigate();
-  const { isFeatureVisible } = useBetaFeatures();
   const state = useLocationProviderStore((s) => s.settings);
   const loadFailed = useLocationProviderStore((s) => s.loadFailed && s.settings === null);
   const refresh = useLocationProviderStore((s) => s.refresh);
@@ -103,8 +101,7 @@ export default function LocationSourceSection({
     ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
     : undefined;
   const travTrackOffered =
-    state !== null &&
-    ((state.choices.travtrack && isFeatureVisible("travTrack")) || state.kind === "travtrack");
+    state !== null && (state.choices.travtrack || state.kind === "travtrack");
   const dawarichHidden = onTravTrackSource(state);
   const options: ChoiceOption<LocationProviderKind>[] = state
     ? [

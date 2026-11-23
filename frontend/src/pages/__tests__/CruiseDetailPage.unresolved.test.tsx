@@ -13,6 +13,8 @@ const getMock = vi.fn();
 const updateMock = vi.fn();
 
 // The entry photo strip has its own suite; here it would reach the network.
+// The recorded-tracks panel loads its own data; these suites are about something else.
+vi.mock("../../components/Cruise/CruiseTracksPanel", () => ({ default: () => null }));
 vi.mock("../../components/vessel/VesselLiveStatus", () => ({ VesselLiveStatus: () => null }));
 vi.mock("../../components/common/EntryPhotos", () => ({
   default: () => null,

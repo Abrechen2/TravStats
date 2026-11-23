@@ -4,7 +4,6 @@ import { Router } from "express";
 import { ZodError } from "zod";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../db";
-import { getInstanceSettings } from "../services/instanceSettingsService";
 import { packetBody } from "../services/federation/contract";
 import {
   authenticatePeer,
@@ -25,7 +24,6 @@ router.use(
 );
 router.post("/", async (req, res) => {
   try {
-    if (!(await getInstanceSettings()).betaFeaturesEnabled) throw refused("beta-off");
     // Size first: an 8 MB body was signature-checked, parsed and validated before this refused it.
     const raw: unknown = req.body;
     if (

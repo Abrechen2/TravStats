@@ -213,14 +213,14 @@ describe("PeopleSection", () => {
     await waitFor(() => expect(cmp.end).toHaveBeenCalledWith("u:u1"));
   });
 
-  it("has no leaderboard switch while its beta key is off", async () => {
+  it("has the leaderboard switch with the beta flag off (comparison is out of beta, 2.8), but not the encrypted one", async () => {
     setup({ companions: [companion({ linkedUser: jonasAccount })], outgoing: [consent({})] });
     const row = await switches("c:c1");
     expect(row.getByRole("switch", { name: /switches\.share\.label/ })).toBeTruthy();
-    expect(row.queryByRole("switch", { name: /switches\.totals\.label/ })).toBeNull();
+    expect(row.getByRole("switch", { name: /switches\.totals\.label/ })).toBeTruthy();
     expect(row.queryByRole("switch", { name: /encrypted/ })).toBeNull();
     expect(comp.manage).toHaveBeenCalled();
-    expect(cmp.people).not.toHaveBeenCalled();
+    expect(cmp.people).toHaveBeenCalled();
   });
 
   it("lists a pending incoming request on top and answers it", async () => {

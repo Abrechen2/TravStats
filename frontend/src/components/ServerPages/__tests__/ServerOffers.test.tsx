@@ -69,14 +69,14 @@ describe("Server › Was der Server anbietet", () => {
     expect(screen.getByRole("button", { name: "settings:blocks.save.retry" })).toBeInTheDocument();
   });
 
-  it("locks TravTrack with the reason and a jump while the beta switch is off", async () => {
+  it("offers the TravTrack switch with the beta switch off — TravTrack is out of beta (2.8); TravPlan still is locked", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     api.getInstanceSettings.mockResolvedValue(answer({ betaFeaturesEnabled: false }));
     renderOffers(<ServerOffers />);
     const track = await screen.findByRole("switch", { name: "settingsRows:server.ttoffer.t" });
-    expect(track).toBeDisabled();
-    expect(track).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getAllByText("settingsRows:server.deps.needsBeta").length).toBeGreaterThan(0);
+    expect(track).not.toBeDisabled();
+    const plan = await screen.findByRole("switch", { name: "settingsRows:server.tpoffer.t" });
+    expect(plan).toBeDisabled();
     expect(screen.getAllByRole("button", { name: /needsBetaJump/ }).length).toBeGreaterThan(0);
   });
 
@@ -177,7 +177,7 @@ describe("Server › Bereitstellung pages (settings v3 S4)", () => {
   it("sends the lock's jump to the page that holds the beta switch, since the offer pages do not draw it", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     api.getInstanceSettings.mockResolvedValue(answer({ betaFeaturesEnabled: false }));
-    renderOffers(<ServerOffers part="track" />);
+    renderOffers(<ServerOffers part="plan" />);
     await userEvent.click(await screen.findByRole("button", { name: /needsBetaJump/ }));
     expect(navigate).toHaveBeenCalledWith("/settings/funktionen?match=beta", undefined);
   });

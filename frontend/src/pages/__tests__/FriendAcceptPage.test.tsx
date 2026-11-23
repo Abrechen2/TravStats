@@ -7,7 +7,6 @@ import { ALL_ON, VALID_PAYLOAD, b64url } from "../../components/friends/__tests_
 
 const state = vi.hoisted(() => ({
   user: { id: "u1" } as { id: string } | null,
-  access: "allowed",
 }));
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
@@ -15,7 +14,6 @@ vi.mock("../../hooks/useTranslation", () => ({
 vi.mock("../../store/authStore", () => ({
   useAuthStore: (sel: (s: { user: unknown }) => unknown) => sel({ user: state.user }),
 }));
-vi.mock("../../hooks/useBetaFeatures", () => ({ useBetaFeatureAccess: () => state.access }));
 vi.mock("../../components/ui/AppShell", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
@@ -42,7 +40,6 @@ describe("FriendAcceptPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     state.user = { id: "u1" };
-    state.access = "allowed";
     vi.mocked(comparisonApi.redeemInviteLink).mockResolvedValue({ status: "awaitingAdmin" });
   });
   afterEach(() => window.history.replaceState(null, "", "/"));
@@ -101,11 +98,5 @@ describe("FriendAcceptPage", () => {
     at(`#${PAYLOAD}`);
     expect(screen.getByText("friends.accept.signIn")).toBeInTheDocument();
     expect(comparisonApi.redeemInviteLink).not.toHaveBeenCalled();
-  });
-
-  it("says the feature is off on this server instead of redirecting", () => {
-    state.access = "denied";
-    at(`#${PAYLOAD}`);
-    expect(screen.getByText("friends.accept.off")).toBeInTheDocument();
   });
 });

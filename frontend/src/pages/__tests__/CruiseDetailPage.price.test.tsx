@@ -15,6 +15,8 @@ const getMock = vi.fn();
 // its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
 // this surface mounts it — here it would only be a request reaching the
 // network, which the setup refuses (forgejo#110).
+// The recorded-tracks panel loads its own data; these suites are about something else.
+vi.mock("../../components/Cruise/CruiseTracksPanel", () => ({ default: () => null }));
 vi.mock("../../components/vessel/VesselLiveStatus", () => ({ VesselLiveStatus: () => null }));
 vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
 

@@ -72,7 +72,7 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-it("refuses tokens and a switched-off beta with named codes", async () => {
+it("refuses tokens with a named code, and answers with the beta switch off (out of beta, 2.8)", async () => {
   const a = await user();
   const pat = await request(app)
     .get("/api/v1/comparison/people")
@@ -82,8 +82,7 @@ it("refuses tokens and a switched-off beta with named codes", async () => {
   expect(pat.body.code).toBe("COMPARISON_TOKEN_REFUSED");
   jest.mocked(getInstanceSettings).mockResolvedValue({ betaFeaturesEnabled: false } as never);
   const off = await request(app).get("/api/v1/comparison/people").set("x-test-user", a.id);
-  expect(off.status).toBe(403);
-  expect(off.body.code).toBe("COMPARISON_DISABLED");
+  expect(off.status).toBe(200);
 });
 
 it("runs the same-instance flow: ask, accept, rank, end", async () => {

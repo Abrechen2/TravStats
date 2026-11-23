@@ -1,7 +1,6 @@
 /**
  * The leaderboard's cookie API (spec 2026-10-16 §9.1). Enveloped family. Browser sessions
- * only: a personal access token is refused, as is everything while the instance beta switch
- * is off. Every refusal carries a COMPARISON_* code and is logged (services/comparison/errors).
+ * only: a personal access token is refused (the beta switch no longer gates it, 2.8). Every refusal carries a COMPARISON_* code and is logged (services/comparison/errors).
  *
  * Every route is throttled per user by the read limiter; the four that create something —
  * asking a person, minting and redeeming an invitation, creating a group — also by the hourly
@@ -11,7 +10,6 @@ import { Router, type Response, type NextFunction } from "express";
 import { authenticate, type AuthRequest } from "../middleware/auth";
 import { rejectDemo } from "../middleware/demoGuard";
 import { comparisonReadLimiter, comparisonWriteLimiter } from "../middleware/comparisonRateLimit";
-import { getInstanceSettings } from "../services/instanceSettingsService";
 import { comparisonError } from "../services/comparison/errors";
 import { buildLeaderboardSnapshot } from "../services/comparison/aggregates";
 import {
@@ -64,17 +62,7 @@ router.use((req: AuthRequest, _res, next) => {
     );
     return;
   }
-  void getInstanceSettings()
-    .then((s) =>
-      next(
-        s.betaFeaturesEnabled
-          ? undefined
-          : comparisonError("COMPARISON_DISABLED", 403, "Comparison is off on this server", {
-              userId: req.userId,
-            })
-      )
-    )
-    .catch(next);
+  next();
 });
 router.use(comparisonReadLimiter);
 

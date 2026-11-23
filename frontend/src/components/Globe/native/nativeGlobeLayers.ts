@@ -85,6 +85,8 @@ export interface NativeGlobeInput {
   places: readonly Place[];
   placeColors: PlaceColorConfig;
   placeListColors?: ReadonlyMap<string, Rgb>;
+  /** A list narrows the map: unvisited members draw grey (`PlaceColorInput.greyed`). */
+  placeGreyUnvisited?: boolean;
   placeRadius: number;
   extraLayers: readonly Layer[];
   routesVisible: RoutesVisible;
@@ -472,12 +474,22 @@ export function buildNativeGlobe(
       // A wishlist place is hollow: transparent fill, coloured ring (placePinsLayer.ts has the why).
       fc: cache.get(
         "places",
-        [placePins, input.placeColors.mode, input.placeColors.colors, input.placeListColors],
+        [
+          placePins,
+          input.placeColors.mode,
+          input.placeColors.colors,
+          input.placeListColors,
+          input.placeGreyUnvisited,
+        ],
         () =>
           collection(
             placePins.map((d, i) => {
               const rgb = resolvePlaceColor(
-                { visited: d.visited, listColor: input.placeListColors?.get(d.id) },
+                {
+                  visited: d.visited,
+                  listColor: input.placeListColors?.get(d.id),
+                  greyed: input.placeGreyUnvisited,
+                },
                 input.placeColors
               );
               const plannedOnly = isPlannedOnly({

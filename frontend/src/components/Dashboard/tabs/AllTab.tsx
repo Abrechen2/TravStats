@@ -24,8 +24,12 @@ import {
   buildLodgingLegendRows,
   buildPlannedMarkerLegendRow,
   buildPoiLegendRows,
+  buildUnvisitedListLegendRow,
   legendRow,
 } from "./allTabLegendRows";
+import { useListedPlaces } from "../../../hooks/useListedPlaces";
+import { placeOpenPath } from "../../../lib/mapPlaceLists";
+import { rgbCss } from "../../../lib/flightColor";
 import { useTransportOverlays } from "./allTabTransportOverlays";
 import { lodgingPresence, mapStatusClass } from "../../../lib/mapPresence";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
@@ -248,10 +252,12 @@ export function AllTab(): JSX.Element {
   // place whose visits carry no date occupies no known day, so it steps aside
   // while a range is set and returns the moment it is cleared — rather than
   // being shown under a year it may not belong to.
+  const listed = useListedPlaces(places, placeLists, placesAllowed);
   const visiblePlaces = useMemo<Place[]>(() => {
     if (!visible.poi) return [];
-    if (!filterTime.from && !filterTime.to) return places;
-    return places.filter((place) =>
+    const drawn = listed.drawn as Place[];
+    if (!filterTime.from && !filterTime.to) return drawn;
+    return drawn.filter((place) =>
       place.visits.some(
         (visit) =>
           visit.visitedAt !== null &&
@@ -259,7 +265,7 @@ export function AllTab(): JSX.Element {
           intervalOverlapsRange(visit.visitedAt, visit.visitedAt, filterTime.from, filterTime.to)
       )
     );
-  }, [places, visible.poi, filterTime.from, filterTime.to]);
+  }, [listed.drawn, visible.poi, filterTime.from, filterTime.to]);
 
   // Map click → selection store. DeckGLMap handles dim/highlight + tooltip.
   const handleFlightClick = useCallback(
@@ -292,7 +298,10 @@ export function AllTab(): JSX.Element {
   // the map on every AllTab render and rebuilt every layer (forgejo#350).
   const handlePlaceOpen = useCallback(
     (placeId: string): void => {
-      void navigate(`/places/${placeId}`);
+      // A checklist target or an outlet is not a Place yet: send the reader to
+      // where it can become one (the checklist), never to a /places/ghost:… page.
+      const path = placeOpenPath(placeId);
+      if (path) void navigate(path);
     },
     [navigate]
   );
@@ -375,6 +384,7 @@ export function AllTab(): JSX.Element {
     cruisesFailed && isEnabled("cruise") && t("dashboard:tabStrip.tabs.cruise"),
     lodgingsFailed && isEnabled("lodging") && t("dashboard:tabStrip.tabs.lodging"),
     placesFailed && placesAllowed && t("dashboard:tabStrip.tabs.poi"),
+    listed.failed && listed.active && t("dashboard:domainFilter.placeLists.failedName"),
     tripsFailed && t("dashboard:trips.label"),
   ].filter((name): name is string => typeof name === "string");
 
@@ -508,6 +518,9 @@ export function AllTab(): JSX.Element {
   // markers; one key is enough, so repeats (same React key) are dropped.
   const legendRows = dedupeByKey([
     ...(hasPlannedMarker ? [buildPlannedMarkerLegendRow(t)] : []),
+    ...(visible.poi && listed.active
+      ? [buildUnvisitedListLegendRow(t, rgbCss(placeColorConfig.colors.wishlist))]
+      : []),
     ...(lines.flight ? flightLegendRows : []),
     ...(lines.cruise ? cruiseLegendRows : []),
     ...(visible.lodging ? lodgingLegendRows : []),

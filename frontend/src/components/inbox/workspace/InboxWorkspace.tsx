@@ -1,3 +1,4 @@
+import { useTravTrackVisible } from "../../../hooks/useTravTrackVisible";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -21,7 +22,6 @@ import {
 } from "./model";
 import { useInboxData } from "./useInboxData";
 import { useSuggestionSwitchesStore } from "../../../store/suggestionSwitchesStore";
-import { useBetaFeatures } from "../../../hooks/useBetaFeatures";
 import InboxCard from "./InboxCard";
 import InboxHistory, { HISTORY_SOURCES, type HistorySource } from "./InboxHistory";
 import SourcePanel from "./SourcePanel";
@@ -64,8 +64,8 @@ export default function InboxWorkspace({
   // The account's suggestion switches (forgejo#306): an off kind has no tab and is not loaded.
   const tripsVisible = useSuggestionSwitchesStore((s) => s.trips);
   const staysVisible = useSuggestionSwitchesStore((s) => s.stays);
-  // TravTrack's questions (plan E6/E7) exist only behind its beta key.
-  const locationVisible = useBetaFeatures().isFeatureVisible("travTrack");
+  // TravTrack's questions (plan E6/E7) exist only where TravTrack is on for this account.
+  const locationVisible = useTravTrackVisible();
   const visibility = useMemo(
     () => ({
       photos: photosVisible,

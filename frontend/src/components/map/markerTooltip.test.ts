@@ -1,3 +1,4 @@
+import { usePlaceListFilterStore } from "../../store/placeListFilterStore";
 import { describe, it, expect } from "vitest";
 import type { PickingInfo } from "@deck.gl/core";
 import { createMarkerTooltip } from "./markerTooltip";
@@ -15,6 +16,7 @@ const t = (key: string, opts?: Record<string, unknown>): string => {
   if (key === "lodging:field.nightsCount") return `${opts?.count} Übernachtungen`;
   if (key === "places:list.visitsCount") return `${opts?.count} Besuche`;
   if (key === "places:list.status.wishlist") return "Merkliste";
+  if (key === "places:list.status.notVisitedYet") return "Noch nicht besucht";
   if (key === "places:categories.restaurant") return "Restaurant";
   if (key === "places:categories.landmark") return "Sehenswürdigkeit";
   return key;
@@ -358,6 +360,24 @@ describe("createMarkerTooltip — places", () => {
 
     expect(result!.html).toContain("Merkliste");
     expect(result!.html).not.toContain("0 Besuche");
+  });
+
+  it("says 'noch nicht besucht' for an unvisited member while a list narrows the map", () => {
+    usePlaceListFilterStore.setState({ viewActive: true });
+    try {
+      const result = getTooltip(
+        makeInfo("place-pins", {
+          name: "Petra",
+          category: "landmark",
+          visitCount: 0,
+          visited: false,
+        })
+      );
+      expect(result!.html).toContain("Noch nicht besucht");
+      expect(result!.html).not.toContain("Merkliste");
+    } finally {
+      usePlaceListFilterStore.setState({ viewActive: false });
+    }
   });
 
   it("stays silent for a datum with no name", () => {

@@ -1,18 +1,14 @@
 import { prisma, type DbTransaction } from "../../db";
-import { AppError } from "../../middleware/errorHandler";
 import { isSharedDemoUser } from "../../utils/sharedDemo";
-import { getInstanceSettings } from "../instanceSettingsService";
 import { travTrackConfig } from "./config";
 
 /**
  * Whether TravTrack exists on this server, and for whom (TravTrack plan, T1).
  *
- * Two switches, both the admin's: the instance's beta switch (TravTrack is
- * `travTrack` in the web's beta registry) and TravTrack's own
- * `travtrack_config.enabled`. The beta switch alone OFFERS it — the admin can
- * reach TravTrack's own switch, as `/travplan/config` sits behind
- * `assertTravPlanOffered` only. Both together turn it ON: capture, views and
- * derivations.
+ * One switch, the admin's: TravTrack's own `travtrack_config.enabled`. The
+ * instance's beta switch no longer stands in front of it (out of beta for 2.8,
+ * owner 2026-11-23): TravTrack is always OFFERED, so the admin can reach its
+ * switch, and `enabled` turns it ON: capture, views and derivations.
  *
  * Per-user activation is choosing provider `travtrack`; there is no third
  * switch. The shared demo account never gets it — its history would be every
@@ -24,21 +20,16 @@ import { travTrackConfig } from "./config";
  * nichts wird gelöscht, Export und Löschen bleiben möglich."
  */
 
-const disabled = (): AppError =>
-  new AppError("TravTrack is switched off on this server", 403, "TRAVTRACK_DISABLED");
-
+/** Always offered since 2.8; the question stays for `routes/travtrack/gate.ts` and the capabilities answer. */
 export async function travTrackOffered(): Promise<boolean> {
-  return (await getInstanceSettings()).betaFeaturesEnabled;
+  return true;
 }
 
-export async function assertTravTrackOffered(): Promise<void> {
-  if (!(await travTrackOffered())) throw disabled();
-}
+export async function assertTravTrackOffered(): Promise<void> {}
 
-/** Offered AND switched on by the admin: the server captures, shows and derives. */
+/** Switched on by the admin: the server captures, shows and derives. */
 export async function travTrackInstanceOn(): Promise<boolean> {
-  const [offered, config] = await Promise.all([travTrackOffered(), travTrackConfig()]);
-  return offered && config.enabled;
+  return (await travTrackConfig()).enabled;
 }
 
 /**
@@ -48,11 +39,6 @@ export async function travTrackInstanceOn(): Promise<boolean> {
  * Read-only — no settings row is created here; without one nothing is offered.
  */
 export async function travTrackInstanceOnIn(tx: DbTransaction): Promise<boolean> {
-  const admin = await tx.adminSettings.findFirst({
-    orderBy: { id: "asc" },
-    select: { betaFeaturesEnabled: true },
-  });
-  if (!admin?.betaFeaturesEnabled) return false;
   return (await travTrackConfig(tx)).enabled;
 }
 

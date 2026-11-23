@@ -1,4 +1,5 @@
-import { buildPlannedMarkerLegendRow } from "./allTabLegendRows";
+import { buildPlannedMarkerLegendRow, buildUnvisitedListLegendRow } from "./allTabLegendRows";
+import { rgbCss } from "../../../lib/flightColor";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +16,10 @@ import { logger } from "../../../lib/logger";
 import type { Place } from "../../../types/place";
 import type { PlaceList } from "../../../types/placeList";
 import { buildPlaceLegend, resolvePlaceListColors } from "../../../lib/placeColor";
+import { useListedPlaces } from "../../../hooks/useListedPlaces";
+import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
+import { placeOpenPath } from "../../../lib/mapPlaceLists";
+import { PlaceListPicker } from "./PlaceListPicker";
 import { usePlaceColorStore } from "../../../store/placeColorStore";
 import { classifyPlace } from "../../../shared/placeCounting";
 import MapContainer3D from "../../MapContainer3D";
@@ -45,13 +50,11 @@ export function PoiTab(): JSX.Element {
   const poiEnabled = isEnabled("poi");
   const { t } = useTranslation(["dashboard"]);
   const colorConfig = usePlaceColorStore((s) => s.config);
+  const coarse = useCoarsePointer();
 
   const [places, setPlaces] = useState<Place[]>([]);
   const activitySelection = useActivityFeedSelection({ places, domainFilter: ALWAYS_ON });
   const [lists, setLists] = useState<PlaceList[]>([]);
-  /** `null` = every place. A filter, not a mode: it changes WHICH pins are
-   *  drawn, never what one means. */
-  const [listFilter, setListFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -85,20 +88,18 @@ export function PoiTab(): JSX.Element {
 
   const handlePinClick = useCallback(
     (placeId: string) => {
-      navigate(`/places/${placeId}`);
+      // A checklist target is not a Place yet; an outlet leads nowhere.
+      const path = placeOpenPath(placeId);
+      if (path) navigate(path);
     },
     [navigate]
   );
 
   const listColors = useMemo(() => resolvePlaceListColors(lists), [lists]);
 
-  const visiblePlaces = useMemo(() => {
-    if (listFilter === null) return places;
-    const members = new Set(
-      (lists.find((l) => l.id === listFilter)?.entries ?? []).map((e) => e.placeId)
-    );
-    return places.filter((p) => members.has(p.id));
-  }, [places, lists, listFilter]);
+  // The same list choice as the "Alle" map: one picker, one store.
+  const listed = useListedPlaces(places, lists, poiEnabled);
+  const visiblePlaces = listed.drawn as Place[];
 
   const layers = useMemo<Layer[]>(() => {
     if (visiblePlaces.length === 0) return [];
@@ -216,29 +217,13 @@ export function PoiTab(): JSX.Element {
             fontSize: 12,
           }}
         >
-          {lists.length > 0 && (
-            <select
-              value={listFilter ?? ""}
-              onChange={(e) => setListFilter(e.target.value === "" ? null : e.target.value)}
-              aria-label={t("dashboard:poi.listFilter")}
-              style={{
-                marginBottom: 9,
-                width: "100%",
-                padding: "4px 6px",
-                borderRadius: 6,
-                fontSize: 11,
-                background: "var(--bg-elevated)",
-                border: "1px solid var(--color-border)",
-                color: "var(--text-secondary)",
-              }}
-            >
-              <option value="">{t("dashboard:poi.allLists")}</option>
-              {lists.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
+          <div style={{ marginBottom: 9, marginLeft: -38 }}>
+            <PlaceListPicker touch={coarse} />
+          </div>
+          {listed.failed && listed.active && (
+            <div role="alert" style={{ color: "var(--ts-warn)", marginBottom: 6 }}>
+              {t("dashboard:domainFilter.placeLists.failedName")}
+            </div>
           )}
 
           <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 5 }}>
@@ -276,6 +261,11 @@ export function PoiTab(): JSX.Element {
               (p) => p.visited && p.visitCount === 0 && (p.plannedVisitCount ?? 0) > 0
             ) && (
               <li style={{ color: "var(--text-secondary)" }}>{buildPlannedMarkerLegendRow(t)}</li>
+            )}
+            {listed.active && (
+              <li style={{ color: "var(--text-secondary)" }}>
+                {buildUnvisitedListLegendRow(t, rgbCss(colorConfig.colors.wishlist))}
+              </li>
             )}
           </ul>
         </div>

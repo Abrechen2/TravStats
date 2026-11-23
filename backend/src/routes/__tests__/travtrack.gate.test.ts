@@ -162,7 +162,7 @@ describe("TravTrack gate", () => {
     const res = await call("get", "/api/v1/travtrack/capabilities").expect(200);
     expect(res.body).toEqual({
       version: 1,
-      offered: false,
+      offered: true,
       enabled: false,
       active: false,
       hasData: false,
@@ -225,15 +225,10 @@ describe("TravTrack gate", () => {
     expect(caps.body).toMatchObject({ offered: true, enabled: true });
   });
 
-  it("config answers 403 while the beta switch is off", async () => {
+  it("config is reachable with the beta switch off — TravTrack is out of beta (2.8)", async () => {
     await switches.set({ beta: false, config: false });
     const res = await call("get", "/api/v1/travtrack/config", adminCookie);
-    expect(res.status).toBe(403);
-    expect(res.body.code).toBe("TRAVTRACK_DISABLED");
-    const patch = await call("patch", "/api/v1/travtrack/config", adminCookie).send({
-      enabled: true,
-    });
-    expect(patch.status).toBe(403);
+    expect(res.status).toBe(200);
   });
 
   it("admin config needs admin, PATCH needs write scope", async () => {

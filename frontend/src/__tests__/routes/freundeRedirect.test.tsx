@@ -54,14 +54,14 @@ describe("the Mehr menu", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
   });
 
-  it("the Mehr menu lists Freunde behind the comparison key", () => {
+  it("the Mehr menu lists Freunde, with the beta flag on or off (out of beta, 2.8)", () => {
     const { result } = renderHook(() => useNavItems());
     const leaf = result.current.more.flatMap((s) => s.items).find((l) => l.id === "comparison");
     expect(leaf).toMatchObject({ path: "/freunde", icon: "users", label: "comparison:title" });
     act(() => useSettingsStore.setState({ betaFeaturesEnabled: false }));
-    const hidden = renderHook(() => useNavItems()).result.current.more.flatMap((s) =>
+    const stillThere = renderHook(() => useNavItems()).result.current.more.flatMap((s) =>
       s.items.map((l) => l.id)
     );
-    expect(hidden).not.toContain("comparison");
+    expect(stillThere).toContain("comparison");
   });
 });
