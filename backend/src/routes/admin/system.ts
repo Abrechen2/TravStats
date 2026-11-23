@@ -198,11 +198,17 @@ router.post(
   adminReseedLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
+      if (await prisma.user.findUnique({ where: { username: "demo" }, select: { id: true } })) {
+        throw new AppError("The demo account already exists", 409);
+      }
+      // Check and start without an await in between: two requests cannot both pass.
       if (findRunningJob(["demo.recreate"])) {
         throw new AppError("The demo account is already being created", 409);
       }
-      await clearDemoRemoved();
-      const job = startJob("demo.recreate", req.userId!, () => seedDemoInstance());
+      const job = startJob("demo.recreate", req.userId!, async () => {
+        await clearDemoRemoved();
+        return seedDemoInstance();
+      });
       logger.info({ operation: "admin_demo_recreate", adminId: req.userId, jobId: job.id });
       res.status(202).json({ jobId: job.id });
     } catch (error) {

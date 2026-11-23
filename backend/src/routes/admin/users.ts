@@ -197,11 +197,12 @@ router.delete("/users/:id", async (req: AuthRequest, res: Response, next: NextFu
       }
     }
 
-    await removeAccount(id, { actorId: req.userId!, ip: req.ip });
-
-    // An admin's removal of the demo account is final: record it, or the next
-    // boot seeds the account again (CREATE_DEMO_USER, first install).
+    // An admin's removal of the demo account is final: record it BEFORE the
+    // delete, so a crash in between cannot leave it deleted and unmarked (a
+    // stale marker on a surviving account is harmless).
     if (user.isDemo) await markDemoRemoved();
+
+    await removeAccount(id, { actorId: req.userId!, ip: req.ip });
 
     logger.info({
       operation: "admin_delete_user",

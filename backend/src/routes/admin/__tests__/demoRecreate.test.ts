@@ -36,6 +36,17 @@ describe("POST /admin/demo/recreate (Demo-Konto wieder anlegen)", () => {
     expect(await demoSeedAllowed()).toBe(true);
   });
 
+  it("refuses to re-create while a demo account exists (the seed would wipe it)", async () => {
+    await prisma.user.create({ data: { username: "demo", passwordHash: "x", isDemo: true } });
+    const before = seedDemoInstance.mock.calls.length;
+    const res = await request(app)
+      .post("/api/v1/admin/demo/recreate")
+      .set("Cookie", `auth_token=${generateToken(admin.id)}`);
+    await prisma.user.deleteMany({ where: { username: "demo" } });
+    expect(res.status).toBe(409);
+    expect(seedDemoInstance.mock.calls.length).toBe(before);
+  });
+
   it("is admin-only", async () => {
     const user = await prisma.user.create({
       data: { username: `demo-recreate-user-${Date.now()}`, passwordHash: "x" },
