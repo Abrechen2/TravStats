@@ -56,6 +56,8 @@ router.use(
     "/immich",
     // Which recognised person is "me" in the shared account's library: one visitor's would be everyone's.
     "/photo-sources",
+    // Whether the shared account picks covers on its own: one visitor's switch would be everyone's.
+    "/auto-cover",
     "/dawarich",
     "/profile-picture",
     "/notifications",

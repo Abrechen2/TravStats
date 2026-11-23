@@ -69,4 +69,24 @@ describe("settings/auto-cover", () => {
       manual: "/mine.jpg",
     });
   });
+
+  it("refuses the shared demo account: one visitor's switch would be everyone's", async () => {
+    await prisma.user.deleteMany({ where: { username: "demo" } });
+    const demo = await prisma.user.create({
+      data: { username: "demo", passwordHash: await hashPassword("demo123"), isDemo: true },
+    });
+    try {
+      const demoCookie = `auth_token=${generateToken(demo.id)}`;
+      const put = await request(app)
+        .put("/api/v1/settings/auto-cover")
+        .set("Cookie", demoCookie)
+        .send({ enabled: false });
+      const del = await request(app)
+        .delete("/api/v1/settings/auto-cover/covers")
+        .set("Cookie", demoCookie);
+      expect([put.status, del.status]).toEqual([403, 403]);
+    } finally {
+      await prisma.user.delete({ where: { id: demo.id } });
+    }
+  });
 });
