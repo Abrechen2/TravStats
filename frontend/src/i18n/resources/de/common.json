@@ -299,6 +299,11 @@
     "star": "Projekt auf GitHub",
     "starAria": "Das Projekt auf GitHub ansehen"
   },
+  "importReview": {
+    "takeObvious": "Offensichtlich neue übernehmen ({{count}})",
+    "skipObvious": "Offensichtliche Duplikate überspringen ({{count}})",
+    "nextOpen": "Nächster offener Punkt ({{count}}) – Taste N"
+  },
   "filters": {
     "more": "Filter",
     "reset": "Filter zurücksetzen",

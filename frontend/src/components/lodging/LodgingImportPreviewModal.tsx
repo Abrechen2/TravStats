@@ -15,6 +15,8 @@ import {
   type EditableRow,
 } from "./lodgingImportRowModel";
 import { PreviewRowLine } from "./LodgingImportPreviewRow";
+import ImportReviewBar from "../import/ImportReviewBar";
+import { lodgingObvious } from "../import/obviousRows";
 import { canCreate, isMatched, liveFlags, rowBlockers } from "./lodgingImportRowState";
 
 // Re-exported because the suite imports them from here, and because this
@@ -145,6 +147,26 @@ export function LodgingImportPreviewModal({
   const createAllUndecided = useCallback((): void => {
     setEdited((prev) => prev.map((r) => (bulkCreatable(r) ? { ...r, decision: "create" } : r)));
   }, []);
+
+  // The review bar: rows the server was sure about, as it recommended them.
+  const obvious = useMemo(
+    () => ({
+      take: edited.filter((r) => lodgingObvious(r) === "new" && r.decision !== "create").length,
+      skip: edited.filter((r) => lodgingObvious(r) === "duplicate" && r.decision !== "skip").length,
+    }),
+    [edited]
+  );
+  const applyObvious = useCallback((kind: "new" | "duplicate"): void => {
+    setEdited((prev) =>
+      prev.map((r) =>
+        lodgingObvious(r) === kind ? { ...r, decision: kind === "new" ? "create" : "skip" } : r
+      )
+    );
+  }, []);
+  const openRows = useMemo(
+    () => edited.filter((r) => r.decision === "" || rowBlockers(r).length > 0).length,
+    [edited]
+  );
 
   const createAllChains = useCallback((): void => {
     setEdited((prev) =>
@@ -321,6 +343,15 @@ export function LodgingImportPreviewModal({
           {t("lodging:import.preview.currencyMissingHint")}
         </p>
       )}
+
+      <ImportReviewBar
+        obviousNew={obvious.take}
+        obviousDuplicates={obvious.skip}
+        openCount={openRows}
+        onTakeNew={() => applyObvious("new")}
+        onSkipDuplicates={() => applyObvious("duplicate")}
+        disabled={saving}
+      />
 
       {(undecidedCount > 0 || uncheckedChains > 0) && (
         <div className="mb-3 flex flex-wrap items-center gap-2">

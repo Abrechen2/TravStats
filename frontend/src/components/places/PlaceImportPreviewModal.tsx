@@ -6,6 +6,8 @@ import { logger } from "../../lib/logger";
 import type { LocationSelection } from "../location/LocationInput";
 import { applyResolution, rowsToResolve } from "../../lib/placeImportTakeout";
 import { PlaceImportPreviewRow, rowHasPosition, type EditableRow } from "./PlaceImportPreviewRow";
+import ImportReviewBar from "../import/ImportReviewBar";
+import { placeObvious } from "../import/obviousRows";
 import { TakeoutResolvePanel } from "./TakeoutResolvePanel";
 import type {
   PlaceImportCandidate,
@@ -155,6 +157,25 @@ export function PlaceImportPreviewModal({
     return { newRows, alreadyPresent, needsInput };
   }, [edited]);
 
+  // The review bar: rows the server was sure about, as it recommended them.
+  const obvious = useMemo(() => {
+    const target = (r: EditableRow): "create" | "skip" | null => {
+      const v = placeObvious(r);
+      return v === "new" ? "create" : v === "duplicate" ? "skip" : null;
+    };
+    return {
+      take: edited.filter((r) => target(r) === "create" && r.decision !== "create").length,
+      skip: edited.filter((r) => target(r) === "skip" && r.decision !== "skip").length,
+    };
+  }, [edited]);
+  const applyObvious = useCallback((kind: "new" | "duplicate"): void => {
+    setEdited((prev) =>
+      prev.map((r) =>
+        placeObvious(r) === kind ? { ...r, decision: kind === "new" ? "create" : "skip" } : r
+      )
+    );
+  }, []);
+
   // Nothing undecided, and something to write: a button that "imports 0 rows"
   // promises work the server would not do.
   const canCommit = counts.needsInput === 0 && counts.newRows > 0 && !saving;
@@ -201,6 +222,15 @@ export function PlaceImportPreviewModal({
             {t("places:import.preview.needsInputHint")}
           </p>
         )}
+
+        <ImportReviewBar
+          obviousNew={obvious.take}
+          obviousDuplicates={obvious.skip}
+          openCount={counts.needsInput}
+          onTakeNew={() => applyObvious("new")}
+          onSkipDuplicates={() => applyObvious("duplicate")}
+          disabled={saving}
+        />
 
         <TakeoutResolvePanel rows={resolvable} listName={listName} onResolved={onResolved} t={t} />
 

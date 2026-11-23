@@ -299,6 +299,11 @@
     "star": "Project on GitHub",
     "starAria": "View the project on GitHub"
   },
+  "importReview": {
+    "takeObvious": "Take obviously new rows ({{count}})",
+    "skipObvious": "Skip obvious duplicates ({{count}})",
+    "nextOpen": "Next open item ({{count}}) – key N"
+  },
   "filters": {
     "more": "Filters",
     "reset": "Reset filters",
