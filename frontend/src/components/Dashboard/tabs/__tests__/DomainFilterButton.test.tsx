@@ -11,6 +11,11 @@ import { useDashboardCountsStore } from "../../../../store/dashboardCountsStore"
 import { useSettingsStore } from "../../../../store/settingsStore";
 
 vi.unmock("../../../../store/settingsStore");
+// The "Orte" row carries a list picker that loads the user's lists; this suite is about the rows.
+vi.mock("../../../../lib/api/placeLists", () => ({
+  listPlaceLists: () => Promise.resolve([]),
+  listCuratedChecklists: () => Promise.resolve([]),
+}));
 
 // Human-readable copy for the strings this suite actually reads; everything
 // else falls through to the bare key, same pattern as DomainTabStrip.test.tsx.

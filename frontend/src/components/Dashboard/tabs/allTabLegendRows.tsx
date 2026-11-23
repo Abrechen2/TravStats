@@ -107,6 +107,32 @@ export function buildPlannedMarkerLegendRow(t: Translate): JSX.Element {
   );
 }
 
+/**
+ * The key for a grey member of a chosen list: a hollow ring in the muted
+ * wishlist slot, the colour the pin layer resolves for it. Shown only while a
+ * list narrows the map.
+ */
+export function buildUnvisitedListLegendRow(t: Translate, color: string): JSX.Element {
+  return (
+    <span key="unvisited-list-member" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <span
+        aria-hidden
+        style={{
+          width: 10,
+          height: 10,
+          boxSizing: "border-box",
+          borderRadius: "50%",
+          border: `2px solid ${color}`,
+          flexShrink: 0,
+        }}
+      />
+      <span style={{ color: "var(--text-primary)" }}>
+        {t("dashboard:legend.unvisitedListMember")}
+      </span>
+    </span>
+  );
+}
+
 // Legend row → i18n key. The COLOURS never appear here — they come from
 // `buildFlightLegend`, i.e. the same function the map layers resolve through
 // (see lib/flightColor.ts). Adding a 4th colour mode later means adding a

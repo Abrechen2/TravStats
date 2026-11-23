@@ -301,6 +301,7 @@
       "list": "List"
     },
     "legend": {
+      "unvisitedListMember": "Grey ring: on the chosen list, not visited yet",
       "solid": "Places",
       "visited": "Visited",
       "wishlist": "Wishlist",
@@ -409,6 +410,18 @@
     "empty": "No train journeys yet."
   },
   "domainFilter": {
+    "placeLists": {
+      "trigger": "List",
+      "all": "All places",
+      "count_one": "{{count}} list",
+      "count_other": "{{count}} lists",
+      "own": "My lists",
+      "curated": "Curated lists",
+      "loading": "Loading lists …",
+      "loadFailed": "The lists could not be loaded.",
+      "failedName": "Chosen places list",
+      "noLists": "You have no lists yet."
+    },
     "button": {
       "label": "Domains · {{visible}}/{{total}}"
     },

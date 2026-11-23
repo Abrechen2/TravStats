@@ -46,6 +46,8 @@ interface PlacePinDatum {
    *  Baked into the datum so the colour accessor stays a pure lookup rather
    *  than closing over a map it would then have to declare as a trigger. */
   listColor?: Rgb;
+  /** Not visited, in a list view: resolves to the muted slot (`PlaceColorInput.greyed`). */
+  greyed: boolean;
   /**
    * Name or symbol, already resolved through `resolvePlaceLabel`. Baked into
    * the datum for the same reason `listColor` is: the split between the two
@@ -99,6 +101,12 @@ export interface PlacePinsAppearance {
    * "always names" would make turning a list to symbols appear to do nothing.
    */
   labelSource?: PlaceLabelSource;
+  /**
+   * A list is narrowing the map: a member that is not visited yet draws grey
+   * (the wishlist slot), as a hollow ring like the planned marker. Not set for
+   * "Alle Orte", where a wishlist pin keeps the colour the mode gives it.
+   */
+  greyUnvisited?: boolean;
 }
 
 /**
@@ -157,6 +165,7 @@ export function buildPlacePins(
     listColors,
     listLabels,
     labelSource,
+    greyUnvisited = false,
   } = appearance;
 
   const data: PlacePinDatum[] = [];
@@ -182,6 +191,7 @@ export function buildPlacePins(
         planned: place.plannedVisitCount ?? 0,
       }),
       listColor: listColors?.get(place.id),
+      greyed: greyUnvisited && !place.visited,
       label: resolvePlaceLabel({ source: labelSource, list: listLabels?.get(place.id) ?? null }),
     });
   }
@@ -220,8 +230,8 @@ export function buildPlacePins(
       updateTriggers: {
         // `listColors` is not a trigger: it is already baked into each datum,
         // and a new map identity re-creates `data` anyway.
-        getFillColor: [colors.mode, colors.colors],
-        getLineColor: [colors.mode, colors.colors],
+        getFillColor: [colors.mode, colors.colors, greyUnvisited],
+        getLineColor: [colors.mode, colors.colors, greyUnvisited],
       },
       onClick: onPinClick
         ? ({ object }: { object?: PlacePinDatum }) => {

@@ -49,6 +49,7 @@
     },
     "status": {
       "visited": "Visited",
+      "notVisitedYet": "Not visited yet",
       "wishlist": "Wishlist",
       "planned": "Planned"
     },

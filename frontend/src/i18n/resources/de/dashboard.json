@@ -301,6 +301,7 @@
       "list": "Liste"
     },
     "legend": {
+      "unvisitedListMember": "Grauer Ring: in der gewählten Liste, noch nicht besucht",
       "solid": "Orte",
       "visited": "Besucht",
       "wishlist": "Merkliste",
@@ -409,6 +410,18 @@
     "empty": "Noch keine Zugfahrten erfasst."
   },
   "domainFilter": {
+    "placeLists": {
+      "trigger": "Liste",
+      "all": "Alle Orte",
+      "count_one": "{{count}} Liste",
+      "count_other": "{{count}} Listen",
+      "own": "Meine Listen",
+      "curated": "Kuratierte Listen",
+      "loading": "Listen werden geladen …",
+      "loadFailed": "Die Listen konnten nicht geladen werden.",
+      "failedName": "Gewählte Ortsliste",
+      "noLists": "Du hast noch keine Listen."
+    },
     "button": {
       "label": "Domänen · {{visible}}/{{total}}"
     },

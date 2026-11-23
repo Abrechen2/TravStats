@@ -20,6 +20,7 @@ import { loadGlobeChrome, saveGlobeChrome } from "./map/globeChrome";
 import { effectiveRoutes, useMapRoutesStore } from "../store/mapRoutesStore";
 import { withoutHiddenRoutes } from "../lib/mapRoutes";
 import { useMapCameraStore } from "../store/mapCameraStore";
+import { usePlaceListFilterStore } from "../store/placeListFilterStore";
 import { useMapLabelsModeStore } from "../store/mapLabelsModeStore";
 
 // Base marker radius (px) a size preset scales. off → 0 (hidden).
@@ -191,10 +192,9 @@ export default function GlobeView({
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
   const mapRef = useRef<MapRef>(null);
-  // Read ONCE, at mount — the same trap as the flat map (#290): every tab
-  // switch mounts a fresh globe, and a constant `initialViewState` put it back
-  // at the overview pose each time. The globe keeps its own entry because its
-  // zoom scale differs from the flat map's for the same framing.
+  const listViewActive = usePlaceListFilterStore((s) => s.viewActive);
+  // Read ONCE, at mount (the flat map's #290 trap): a constant `initialViewState`
+  // reset the globe to the overview pose on every tab switch. Own entry: its zoom scale differs.
   const [initialViewState] = useState<MapViewState>(
     () => useMapCameraStore.getState().camera.globe ?? INITIAL_VIEW_STATE
   );
@@ -508,7 +508,8 @@ export default function GlobeView({
         placeColorConfig,
         placeListColors,
         placeListLabels,
-        placeLabelSource
+        placeLabelSource,
+        listViewActive
       ),
     ],
     [
@@ -519,6 +520,7 @@ export default function GlobeView({
       placeListColors,
       placeListLabels,
       placeLabelSource,
+      listViewActive,
       extraLayers,
     ]
   );
@@ -549,6 +551,7 @@ export default function GlobeView({
       places,
       placeColors: placeColorConfig,
       placeListColors,
+      placeGreyUnvisited: listViewActive,
       placeRadius: GLOBE_MARKER_BASE_PX * placeMarkerSize,
       extraLayers,
       routesVisible,

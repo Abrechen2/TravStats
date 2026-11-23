@@ -106,6 +106,13 @@ export interface PlaceColorInput {
    * re-invented per layer.
    */
   listColor?: Rgb;
+  /**
+   * A list is narrowing the map and this member is not visited yet: it draws in
+   * the muted wishlist slot whatever the mode says, so "grey = not visited yet"
+   * holds for a catalogue target, a smart list's outlet and a wishlist place
+   * alike. Ignored for a visited place.
+   */
+  greyed?: boolean;
 }
 
 /**
@@ -114,6 +121,7 @@ export interface PlaceColorInput {
  */
 export function resolvePlaceColor(place: PlaceColorInput, cfg: PlaceColorConfig): Rgb {
   const { mode, colors } = cfg;
+  if (place.greyed && place.visited !== true) return colors.wishlist;
   if (mode === "visited") {
     return place.visited ? colors.visited : colors.wishlist;
   }

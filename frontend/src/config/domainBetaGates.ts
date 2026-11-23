@@ -48,7 +48,5 @@ export function switchableDomains(
   stored: readonly DomainKey[],
   isFeatureVisible: (feature: BetaFeatureKey) => boolean
 ): DomainKey[] {
-  return keys.filter(
-    (key) => isDomainOffered(key, isFeatureVisible) || stored.includes(key)
-  );
+  return keys.filter((key) => isDomainOffered(key, isFeatureVisible) || stored.includes(key));
 }

@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { useRef } from "react";
+import { Fragment, useRef } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import type {
@@ -8,6 +8,7 @@ import type {
 } from "../../../hooks/useDashboardDomainFilter";
 import type { FilterDomainKey } from "../../../shared/dashboardDomainFilter";
 import { DomainFilterRow } from "./DomainFilterRow";
+import { PlaceListPicker } from "./PlaceListPicker";
 
 export interface DomainFilterPanelBodyProps {
   filter: DashboardDomainFilterResult;
@@ -92,26 +93,28 @@ export function DomainFilterPanelBody({
   const rowsList = (
     <div className="flex flex-col" style={{ gap: phone ? 2 : 1 }}>
       {filter.rows.map((row: DomainFilterRowData) => (
-        <DomainFilterRow
-          key={row.key}
-          row={row}
-          label={rowLabel(t, row.key)}
-          color={colorFor(row.key)}
-          onlyLabel={onlyLabel}
-          onlyTooltip={onlyTooltip}
-          betaTooltip={betaTooltip}
-          touch={touch}
-          onToggle={filter.toggle}
-          onIsolate={filter.isolate}
-          onKeyDown={handleRowKeyDown}
-          rowRef={(el) => {
-            rowRefs.current[row.key] = el;
-            if (el && row.key === autoFocusKey && !autoFocusDone.current) {
-              autoFocusDone.current = true;
-              el.focus();
-            }
-          }}
-        />
+        <Fragment key={row.key}>
+          <DomainFilterRow
+            row={row}
+            label={rowLabel(t, row.key)}
+            color={colorFor(row.key)}
+            onlyLabel={onlyLabel}
+            onlyTooltip={onlyTooltip}
+            betaTooltip={betaTooltip}
+            touch={touch}
+            onToggle={filter.toggle}
+            onIsolate={filter.isolate}
+            onKeyDown={handleRowKeyDown}
+            rowRef={(el) => {
+              rowRefs.current[row.key] = el;
+              if (el && row.key === autoFocusKey && !autoFocusDone.current) {
+                autoFocusDone.current = true;
+                el.focus();
+              }
+            }}
+          />
+          {row.key === "poi" && row.visible && <PlaceListPicker touch={touch} />}
+        </Fragment>
       ))}
     </div>
   );

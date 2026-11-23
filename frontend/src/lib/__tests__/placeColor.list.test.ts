@@ -160,3 +160,25 @@ describe("list membership resolves colour and label as one", () => {
     });
   });
 });
+
+describe("resolvePlaceColor — a list view greys what is not visited yet", () => {
+  const cfg = { mode: "solid", colors: DEFAULT_PLACE_COLORS } as const;
+
+  it("paints an unvisited member in the muted wishlist slot, whatever the mode", () => {
+    expect(resolvePlaceColor({ visited: false, greyed: true }, cfg)).toEqual(
+      DEFAULT_PLACE_COLORS.wishlist
+    );
+    expect(
+      resolvePlaceColor(
+        { visited: false, greyed: true, listColor: [1, 2, 3] },
+        { ...cfg, mode: "list" }
+      )
+    ).toEqual(DEFAULT_PLACE_COLORS.wishlist);
+  });
+
+  it("leaves a visited member in its normal colour", () => {
+    expect(resolvePlaceColor({ visited: true, greyed: true }, cfg)).toEqual(
+      DEFAULT_PLACE_COLORS.solid
+    );
+  });
+});

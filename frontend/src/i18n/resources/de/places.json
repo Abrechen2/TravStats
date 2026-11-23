@@ -49,6 +49,7 @@
     },
     "status": {
       "visited": "Besucht",
+      "notVisitedYet": "Noch nicht besucht",
       "wishlist": "Merkliste",
       "planned": "Geplant"
     },
