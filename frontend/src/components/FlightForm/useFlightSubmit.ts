@@ -9,7 +9,7 @@ import type { DuplicateFlight, FlightSubmitOptions } from "./flightFormModel";
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 /** The four ways the create form saves. */
-export type FlightSubmitVariant = "save" | "saveAndReturn" | "force" | "merge";
+export type FlightSubmitVariant = "save" | "saveAndReturn" | "saveAndNext" | "force" | "merge";
 
 /**
  * A refused save, kept apart from the sentence (forgejo#246, #247): the key
@@ -34,6 +34,8 @@ interface Deps {
   maybeAssignTrip: (created: Flight | void) => Promise<void>;
   prepareReturnFlightForm: () => void;
   afterReturnPrepared: () => void;
+  prepareNextFlightForm: () => void;
+  afterNextPrepared: () => void;
   setLoading: (loading: boolean) => void;
   setError: (message: string) => void;
   setDuplicateFlight: (flight: DuplicateFlight | null) => void;
@@ -66,6 +68,7 @@ function fieldOf(err: unknown): string | null {
 export function useFlightSubmit(deps: Deps): {
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   handleSubmitAndReturn: (e: React.FormEvent) => Promise<void>;
+  handleSubmitAndNext: (e: React.FormEvent) => Promise<void>;
   handleForceSubmit: () => Promise<void>;
   handleMergeSubmit: () => Promise<void>;
   failure: FlightSubmitFailure | null;
@@ -92,7 +95,7 @@ export function useFlightSubmit(deps: Deps): {
     // decorative — that is how a blank required time reached the wire as noon.
     // (Force and merge come from the duplicate question, after a save that
     // passed this guard.)
-    if ((variant === "save" || variant === "saveAndReturn") && !d.canSubmit) {
+    if (variant !== "force" && variant !== "merge" && !d.canSubmit) {
       d.setError(d.t("errors:missingTimes"));
       return;
     }
@@ -105,7 +108,7 @@ export function useFlightSubmit(deps: Deps): {
       d.storeHistoricalData();
       d.setTimeEstimationWarning(null);
       const opts: FlightSubmitOptions | undefined =
-        variant === "saveAndReturn"
+        variant === "saveAndReturn" || variant === "saveAndNext"
           ? { hasMoreFlights: true }
           : variant === "force"
             ? { force: true }
@@ -120,6 +123,9 @@ export function useFlightSubmit(deps: Deps): {
       if (variant === "saveAndReturn") {
         d.prepareReturnFlightForm();
         d.afterReturnPrepared();
+      } else if (variant === "saveAndNext") {
+        d.prepareNextFlightForm();
+        d.afterNextPrepared();
       }
     } catch (err: unknown) {
       // Save, save-and-return and force-save create a flight; a lost answer
@@ -127,7 +133,7 @@ export function useFlightSubmit(deps: Deps): {
       // writes into the flight already there and may be sent again.
       const saveOptions = { create: variant !== "merge" };
       const outcome = flightSaveFailure(err, d.t, saveOptions);
-      if (outcome.kind === "duplicate" && (variant === "save" || variant === "saveAndReturn")) {
+      if (outcome.kind === "duplicate" && variant !== "force" && variant !== "merge") {
         d.setDuplicateFlight(outcome.existing);
         return;
       }
@@ -156,6 +162,10 @@ export function useFlightSubmit(deps: Deps): {
     handleSubmitAndReturn: async (e) => {
       e.preventDefault();
       await run("saveAndReturn");
+    },
+    handleSubmitAndNext: async (e) => {
+      e.preventDefault();
+      await run("saveAndNext");
     },
     handleForceSubmit: () => run("force"),
     handleMergeSubmit: () => run("merge"),

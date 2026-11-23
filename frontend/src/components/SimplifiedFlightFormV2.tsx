@@ -189,6 +189,14 @@ export default function SimplifiedFlightFormV2({
     void form.handleSubmitAndReturn(e);
   };
 
+  const handleSubmitAndNextWithFocus = (e: React.FormEvent): void => {
+    if (!focusFirstGapIfIncomplete()) {
+      e.preventDefault();
+      return;
+    }
+    void form.handleSubmitAndNext(e);
+  };
+
   // Theme classes (dark-only — see TravStatsWeb/brand/BRAND.md §1.1)
   const textClass = "text-white";
   const mutedTextClass = "text-(--text-muted)";
@@ -242,6 +250,16 @@ export default function SimplifiedFlightFormV2({
                   aria-describedby={hintId}
                 >
                   {t("flights:form.submitAndReturn")}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitAndNextWithFocus}
+                  className="btn-secondary"
+                  disabled={form.loading}
+                  aria-describedby={hintId}
+                  data-testid="flight-submit-and-next"
+                >
+                  {t("flights:form.submitAndNext")}
                 </button>
                 <button
                   type="submit"

@@ -17,7 +17,7 @@ import { useFlightFormState } from "./useFlightFormState";
 import { useFlightFormEffects, type FlightFormRefs } from "./useFlightFormEffects";
 import { useFlightLookupHandlers } from "./useFlightLookupHandlers";
 import { useFlightReviewConfirm } from "./useFlightReviewConfirm";
-import { prepareReturnLegForm } from "./flightFormReturn";
+import { prepareNextLegForm, prepareReturnLegForm } from "./flightFormReturn";
 
 export function useFlightForm(
   // Returning the created Flight makes the post-create trip assignment
@@ -130,6 +130,7 @@ export function useFlightForm(
   };
 
   const prepareReturnFlightForm = (): void => prepareReturnLegForm(state, refs.arrivalDateSetRef);
+  const prepareNextFlightForm = (): void => prepareNextLegForm(state, refs.arrivalDateSetRef);
 
   /** Post-create trip assignment (#199) — a SECOND call on the Trip
    *  relation's own endpoint, strictly after a successful create, mirroring
@@ -161,12 +162,21 @@ export function useFlightForm(
     prepareReturnFlightForm,
     afterReturnPrepared: () =>
       useToastStore.getState().addToast("info", t("flights:form.returnFlightHint")),
+    prepareNextFlightForm,
+    afterNextPrepared: () =>
+      useToastStore.getState().addToast("info", t("flights:form.nextFlightHint")),
     setLoading: state.setLoading,
     setError: state.setError,
     setDuplicateFlight: state.setDuplicateFlight,
     setTimeEstimationWarning: state.setTimeEstimationWarning,
   });
-  const { handleSubmit, handleSubmitAndReturn, handleForceSubmit, handleMergeSubmit } = submit;
+  const {
+    handleSubmit,
+    handleSubmitAndReturn,
+    handleSubmitAndNext,
+    handleForceSubmit,
+    handleMergeSubmit,
+  } = submit;
 
   const review = useFlightReviewConfirm({ s: state, refs, t, onSubmit, onCancel, onBatchComplete });
   const {
@@ -185,6 +195,7 @@ export function useFlightForm(
     handleBoardingPassScan: lookup.handleBoardingPassScan,
     handleSubmit,
     handleSubmitAndReturn,
+    handleSubmitAndNext,
     handleForceSubmit,
     handleMergeSubmit,
     handleFlightReviewConfirm: review.handleFlightReviewConfirm,
