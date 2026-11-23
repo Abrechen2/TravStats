@@ -26,6 +26,7 @@ import { getPhotoSourceConnection, toPhotoSourceKind } from "../photoSource/conn
 import type { PhotoSourceKind, PhotoSourceProvider } from "../photoSource/types";
 import { invalidateAlbumAssets } from "./immichAssetCache";
 import { ImmichAsset, ImmichError } from "./types";
+import { queueAutoCover } from "../coverSuggestions/autoCover";
 
 /** Marks a stream aborted for exceeding the per-asset byte cap (M2), distinct
  *  from a genuine upstream/write failure. */
@@ -444,6 +445,7 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
           data: { lastSyncedAt: new Date(), assetCount: importable.length },
         });
         invalidateAlbumAssets(userId, link.immichAlbumId, provider);
+        queueAutoCover(userId);
 
         logger.info({
           message: "immich_import_completed",

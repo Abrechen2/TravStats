@@ -11,6 +11,7 @@ import profilePictureRouter from "./profilePicture";
 import tokensRouter from "./tokens";
 import immichRouter from "./immich";
 import photoSourcePeopleRouter from "./photoSourcePeople";
+import autoCoverRouter from "./autoCover";
 import dawarichRouter from "./dawarich";
 import webPrefsRouter from "./webPrefs";
 import instanceServicesRouter from "./instanceServices";
@@ -55,6 +56,8 @@ router.use(
     "/immich",
     // Which recognised person is "me" in the shared account's library: one visitor's would be everyone's.
     "/photo-sources",
+    // Whether the shared account picks covers on its own: one visitor's switch would be everyone's.
+    "/auto-cover",
     "/dawarich",
     "/profile-picture",
     "/notifications",
@@ -93,6 +96,7 @@ router.use("/profile-picture", profilePictureRouter);
 router.use("/tokens", tokensRouter);
 router.use("/immich", immichRouter);
 router.use("/photo-sources", photoSourcePeopleRouter);
+router.use("/auto-cover", autoCoverRouter);
 router.use("/dawarich", dawarichRouter);
 router.use("/web-prefs", webPrefsRouter);
 router.use("/instance-services", instanceServicesRouter);

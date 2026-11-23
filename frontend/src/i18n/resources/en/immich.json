@@ -146,6 +146,21 @@
     "lost": "Outcome unknown: the server lost track of the job (restart?). Run it again – photos already linked stay linked.",
     "failed": "Linking failed."
   },
+  "autoCover": {
+    "title": "Choose cover photos automatically",
+    "hint": "Trips without a cover get one from your own photos – only when one photo is clearly better than the rest. A cover you chose yourself is never replaced.",
+    "count_one": "{{count}} cover was chosen automatically.",
+    "count_other": "{{count}} covers were chosen automatically.",
+    "remove": "Remove automatic covers",
+    "removed_one": "{{count}} automatic cover removed.",
+    "removed_other": "{{count}} automatic covers removed.",
+    "loadFailed": "The state of automatic covers could not be loaded.",
+    "saveFailed": "The setting could not be saved.",
+    "removeFailed": "The automatic covers could not be removed.",
+    "note": "chosen automatically",
+    "other": "Choose another",
+    "adjust": "Adjust crop"
+  },
   "visitPhotosAuto": {
     "title": "Link photos to place visits automatically",
     "hint": "Links photos from Immich and PhotoPrism taken near the place on the day of the visit (links only, no copies). Photos without a capture time or position, and photos inside privacy zones, are never linked. Photos you remove do not come back.",
@@ -176,8 +191,9 @@
   "cover": {
     "menu": "Suggest a cover",
     "prompt": "Suggest a cover",
+    "unavailable": "Cover no longer available – choose a new one",
     "title": "Suggest a cover",
-    "intro": "We look through this trip's photos for one that shows where you are – and, if possible, you. Nothing is set automatically.",
+    "intro": "We look through this trip's photos for one that shows where you are – and, if possible, you. Only when one photo clearly leads do we set it on our own (a switch in the photo sources).",
     "loading": "Looking at the photos …",
     "loadFailed": "The suggestions could not be loaded.",
     "retry": "Try again",

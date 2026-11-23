@@ -130,3 +130,52 @@ registry.registerPath({
     502: { description: "The source failed (error carries the kind)", content: errorContent },
   },
 });
+
+/** Automatic covers (owner decision 2026-11-23): the account switch and its undo. */
+registry.registerPath({
+  method: "get",
+  path: "/settings/auto-cover",
+  summary: "Whether covers are chosen automatically, and how many the server chose",
+  tags: ["Settings"],
+  responses: {
+    200: {
+      description: "Switch and count",
+      content: {
+        "application/json": {
+          schema: z.object({ enabled: z.boolean(), autoCovers: z.number().int() }),
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/settings/auto-cover",
+  summary: "Switch automatic covers on or off for the account",
+  tags: ["Settings"],
+  request: {
+    body: {
+      content: { "application/json": { schema: z.object({ enabled: z.boolean() }).strict() } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Saved",
+      content: { "application/json": { schema: z.object({ enabled: z.boolean() }) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/settings/auto-cover/covers",
+  summary: "Remove every automatically chosen cover; a person's own cover is never touched",
+  tags: ["Settings"],
+  responses: {
+    200: {
+      description: "How many were removed",
+      content: { "application/json": { schema: z.object({ removed: z.number().int() }) } },
+    },
+  },
+});

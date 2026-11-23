@@ -25,6 +25,7 @@ import {
 } from "./matcher";
 import { albumMatches, type AlbumPick } from "./albumCandidates";
 import { choiceTarget, planZone, takenAtLocal, windowDays } from "./choiceTarget";
+import { repairAutoCovers } from "../coverSuggestions/autoCover";
 
 /** "Alle laden": what the choose view lists at most when the user asks for everything. */
 export const ENTRY_CHOICE_ALL_LIMIT = 500;
@@ -257,5 +258,6 @@ export async function saveEntryChoice(
   }
   suggestionCache.delete(cacheKey(userId, kind, id));
   suggestionCache.delete(`${cacheKey(userId, kind, id)}:choices`);
+  if (swapped + refused > 0) await repairAutoCovers(userId);
   return { picked, swapped, refused, skipped };
 }

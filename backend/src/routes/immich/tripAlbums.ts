@@ -43,6 +43,7 @@ import {
 import { immichImportLimiter, immichProxyLimiter } from "../../middleware/rateLimit";
 import logger from "../../utils/logger";
 import { manualCoverData } from "../../services/trip/tripCover";
+import { queueAutoCover } from "../../services/coverSuggestions/autoCover";
 
 const router = Router();
 
@@ -252,6 +253,7 @@ router.post(
         }
       }
 
+      queueAutoCover(userId);
       logger.info({
         message: "immich_albums_linked",
         context: { userId, tripId, count: requested.length },
@@ -310,6 +312,7 @@ router.delete(
 
       await prisma.tripImmichAlbum.delete({ where: { id: link.id } });
       invalidateAlbumAssets(userId, link.immichAlbumId, link.provider);
+      queueAutoCover(userId);
 
       logger.info({
         message: "immich_album_unlinked",

@@ -13,9 +13,14 @@ import CoverSuggestDialog from "./CoverSuggestDialog";
 export default function CoverSuggestPrompt({
   tripId,
   onChosen,
+  label = "cover.prompt",
+  testId = "cover-suggest-prompt",
 }: {
   tripId: string;
   onChosen: () => void;
+  /** Translation key of the line; "cover.unavailable" when the current cover no longer loads. */
+  label?: string;
+  testId?: string;
 }): JSX.Element | null {
   const { t } = useTranslation("immich");
   const isSharedDemo = useIsDemoAccount();
@@ -27,10 +32,10 @@ export default function CoverSuggestPrompt({
         type="button"
         className="t-caption self-start underline"
         style={{ minHeight: "var(--ts-size-touch-min)", color: "var(--ts-muted)" }}
-        data-testid="cover-suggest-prompt"
+        data-testid={testId}
         onClick={() => setOpen(true)}
       >
-        {t("cover.prompt")}
+        {t(label)}
       </button>
       {open && (
         <CoverSuggestDialog tripId={tripId} onClose={() => setOpen(false)} onChosen={onChosen} />
