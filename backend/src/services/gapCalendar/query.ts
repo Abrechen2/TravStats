@@ -254,6 +254,13 @@ export async function gapCalendarFacts(input: {
           SELECT 1 FROM travtrack_deleted_ranges r
           WHERE r.user_id = ${userId} AND r.from_at < nx.t AND r.to_at > pv.t)
         AND NOT EXISTS (
+          SELECT 1 FROM travtrack_deleted_points dp
+          WHERE dp.user_id = ${userId}
+            AND dp.t_s > floor(extract(epoch FROM pv.t)) AND dp.t_s < ceil(extract(epoch FROM nx.t)))
+        AND NOT EXISTS (
+          SELECT 1 FROM travtrack_points q
+          WHERE q.user_id = ${userId} AND q.t > pv.t AND q.t < nx.t)
+        AND NOT EXISTS (
           SELECT 1 FROM travtrack_gaps g
           WHERE g.user_id = ${userId} AND g.from_at < nx.t AND g.to_at > pv.t)
     )

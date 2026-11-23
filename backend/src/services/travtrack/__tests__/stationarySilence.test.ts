@@ -136,6 +136,22 @@ describe("TravTrack — a silence spent standing at a known place", () => {
     expect(d.homeSuggestion).toMatchObject({ lat: HOME.lat, lon: HOME.lon });
   });
 
+  it("an isolated fix elsewhere inside the silence keeps it from being read as home", async () => {
+    await bracket(HOME, HOME);
+    await storePoint(userId, { t: at("2026-10-12T10:00:00Z"), ...ELSEWHERE });
+    const d = await day();
+    expect(d.coverage.every((c) => c.state !== "stationary")).toBe(true);
+  });
+
+  it("a point deleted on its own inside the silence is never bridged", async () => {
+    await bracket(HOME, HOME);
+    await prisma.travTrackDeletedPoint.create({
+      data: { userId, digest: "d".repeat(64), tS: Math.floor(at("2026-10-12T10:00:00Z") / 1000) },
+    });
+    const d = await day();
+    expect(d.coverage.every((c) => c.state !== "stationary")).toBe(true);
+  });
+
   it("a silence still going on (no fix after it yet) is not explained", async () => {
     await storePoint(userId, { t: at("2026-10-10T20:00:00Z"), ...HOME });
     const d = await day();

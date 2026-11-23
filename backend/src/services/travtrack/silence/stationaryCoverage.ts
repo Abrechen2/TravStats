@@ -3,7 +3,7 @@ import { logbookWindows } from "../../locationEvidence/journeys/entryWindows";
 import { inPrivacyZone } from "../classify";
 import type { CoveragePiece } from "../dayEntryCoverage";
 import { foldContextFor, HOME_ID } from "../places/places";
-import { privacyCirclesFor } from "../privacyCircles";
+import { privacyCircleSet, privacyCirclesFor } from "../privacyCircles";
 import type { Span } from "../readSafe";
 import { KNOWN_PLACE_M, knownNear } from "../stopPlaces/identity";
 import {
@@ -60,14 +60,15 @@ async function endNear(
     select: { t: true, lat: true, lon: true, accuracyM: true },
   });
   if (rows.length === 0) return null;
-  const circles = await privacyCirclesFor(userId, rows[rows.length - 1].t.getTime());
-  const hit = rows.find((r) => usableEnd(r, circles));
+  // Each fix is judged by the circles in force for a line starting at it, as the day view does.
+  const circlesAt = await privacyCircleSet(userId);
+  const hit = rows.find((r) => usableEnd(r, circlesAt(r.t.getTime())));
   return hit ? { tMs: hit.t.getTime(), lat: hit.lat, lon: hit.lon } : null;
 }
 
 /** A logbook entry, a reported pause or a deleted span inside the silence contradicts "stood still". */
 async function interrupted(userId: string, span: Span): Promise<boolean> {
-  const [entries, gaps, deleted] = await Promise.all([
+  const [entries, gaps, deleted, deletedPoints, between] = await Promise.all([
     logbookWindows(userId, span),
     prisma.travTrackGap.count({
       where: {
@@ -83,9 +84,22 @@ async function interrupted(userId: string, span: Span): Promise<boolean> {
         toAt: { gt: new Date(span.fromMs) },
       },
     }),
+    // A point deleted on its own leaves a silence that must never be bridged (`readSafe`).
+    prisma.travTrackDeletedPoint.count({
+      where: {
+        userId,
+        tS: { gt: Math.floor(span.fromMs / 1000), lt: Math.ceil(span.untilMs / 1000) },
+      },
+    }),
+    // Any stored fix strictly between the ends (an isolated fix elsewhere, a hidden one) is no silence.
+    prisma.travTrackPoint.count({
+      where: { userId, t: { gt: new Date(span.fromMs), lt: new Date(span.untilMs) } },
+    }),
   ]);
   return (
-    entries.some((e) => e.untilMs > span.fromMs && e.fromMs < span.untilMs) || gaps + deleted > 0
+    deletedPoints + between > 0 ||
+    entries.some((e) => e.untilMs > span.fromMs && e.fromMs < span.untilMs) ||
+    gaps + deleted > 0
   );
 }
 

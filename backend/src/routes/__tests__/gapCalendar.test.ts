@@ -245,6 +245,30 @@ describe("gap calendar", () => {
         expect(stateOf((await year()).body as Body, "2026-06-11")).toBe("unknown");
       });
 
+      it("a stored fix the calendar ignores, or a deleted point, inside the silence is no quiet home", async () => {
+        await homeSettings();
+        await at("2026-06-10T03:00:00Z");
+        await at("2026-06-20T03:00:00Z");
+        // Implausible (accuracy over 10 km): never an end of a silence, but it was recorded.
+        await storePoint(userId, {
+          t: Date.parse("2026-06-15T03:00:00Z"),
+          lat: 35.1,
+          lon: 129.0,
+          accuracyM: 20_000,
+        });
+        await prisma.travTrackDeletedPoint.create({
+          data: {
+            userId,
+            digest: "d".repeat(64),
+            tS: Math.floor(Date.parse("2026-06-17T03:00:00Z") / 1000),
+          },
+        });
+        const body = (await year()).body as Body;
+        for (const day of ["2026-06-11", "2026-06-14", "2026-06-16", "2026-06-18"]) {
+          expect(stateOf(body, day)).toBe("unknown");
+        }
+      });
+
       it("a flight inside the silence wins: the days are not read as home", async () => {
         await homeSettings();
         await at("2026-06-10T03:00:00Z");
