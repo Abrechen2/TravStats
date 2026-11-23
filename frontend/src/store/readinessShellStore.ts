@@ -2,6 +2,8 @@ import { create } from "zustand";
 
 import {
   fetchReadiness,
+  fetchReadinessAttention,
+  type ReadinessAttention,
   type ReadinessBanner,
   type ReadinessInvitation,
 } from "../lib/api/readiness";
@@ -20,6 +22,8 @@ import { logger } from "../lib/logger";
 interface ReadinessShellState {
   invitation: ReadinessInvitation | null;
   banner: ReadinessBanner | null;
+  /** The header dot and the settings menu's glow (`GET /readiness/attention`). */
+  attention: ReadinessAttention | null;
   /** Epoch ms of the last read that was started; drives the focus throttle. */
   lastReadAt: number | null;
   refresh: () => Promise<void>;
@@ -39,16 +43,24 @@ let readSeq = 0;
 export const useReadinessShellStore = create<ReadinessShellState>((set, get) => ({
   invitation: null,
   banner: null,
+  attention: null,
   lastReadAt: null,
   refresh: async () => {
     const mine = ++readSeq;
     set({ lastReadAt: Date.now() });
-    try {
-      const data = await fetchReadiness();
-      if (mine === readSeq) set({ invitation: data.invitation, banner: data.banner });
-    } catch (error) {
-      logger.debug("readiness shell refresh failed", error);
+    // Two reads, two outcomes: a failed card read must not hold back the dot.
+    const [view, attention] = await Promise.allSettled([
+      fetchReadiness(),
+      fetchReadinessAttention(),
+    ]);
+    if (mine !== readSeq) return;
+    if (view.status === "fulfilled") {
+      set({ invitation: view.value.invitation, banner: view.value.banner });
+    } else {
+      logger.debug("readiness shell refresh failed", view.reason);
     }
+    if (attention.status === "fulfilled") set({ attention: attention.value });
+    else logger.warn("readiness attention read failed", attention.reason);
   },
   refreshOnFocus: async (nowMs) => {
     const last = get().lastReadAt;
@@ -61,7 +73,7 @@ export const useReadinessShellStore = create<ReadinessShellState>((set, get) => 
   },
   reset: () => {
     readSeq++;
-    set({ invitation: null, banner: null, lastReadAt: null });
+    set({ invitation: null, banner: null, attention: null, lastReadAt: null });
   },
 }));
 

@@ -1,5 +1,6 @@
 // Generated: the pages of the settings registry, in the prototype's order.
 import { PROFIL_PAGE } from "./profil";
+import { EINRICHTUNG_PAGE } from "./einrichtung";
 import { ANZEIGE_PAGE } from "./anzeige";
 import { REISEARTEN_PAGE } from "./reisearten";
 import { REISEN_PAGE } from "./reisen";
@@ -12,7 +13,6 @@ import { FREUNDE_PAGE } from "./freunde";
 import { TELEFONE_PAGE } from "./telefone";
 import { DIENSTEK_PAGE } from "./dienstek";
 import { DATEN_PAGE } from "./daten";
-import { EINRICHTUNG_PAGE } from "./einrichtung";
 import { UEBER_PAGE } from "./ueber";
 import { TT_AUFZ_PAGE } from "./tt-aufz";
 import { TT_ERK_PAGE } from "./tt-erk";
@@ -37,6 +37,7 @@ import type { RegistryPage } from "../types";
 
 export const REGISTRY_PAGES: readonly RegistryPage[] = [
   PROFIL_PAGE,
+  EINRICHTUNG_PAGE,
   ANZEIGE_PAGE,
   REISEARTEN_PAGE,
   REISEN_PAGE,
@@ -49,7 +50,6 @@ export const REGISTRY_PAGES: readonly RegistryPage[] = [
   TELEFONE_PAGE,
   DIENSTEK_PAGE,
   DATEN_PAGE,
-  EINRICHTUNG_PAGE,
   UEBER_PAGE,
   TT_AUFZ_PAGE,
   TT_ERK_PAGE,

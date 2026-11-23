@@ -20,6 +20,11 @@ export interface SettingsMenuEntry {
   indent?: boolean;
   /** B15: something required on this page is missing; the dot carries `warnLabel`. */
   warn?: { label: string };
+  /**
+   * Readiness (owner, 2026-11-23): the entry glows amber or red and carries the
+   * count of items that need attention.
+   */
+  attention?: { color: string; tone: string; count: number; label: string };
 }
 
 export interface SettingsMenuGroup {
@@ -104,11 +109,13 @@ export function SettingsMenuColumn({
             )}
             {group.entries.map((entry) => {
               const active = entry.id === activeId;
+              const glow = entry.attention;
               return (
                 <Link
                   key={entry.id}
                   to={entry.to}
                   aria-current={active ? "page" : undefined}
+                  data-attention={glow?.tone}
                   className="flex items-center"
                   style={{
                     gap: "var(--ts-space-md)",
@@ -121,6 +128,12 @@ export function SettingsMenuColumn({
                     fontWeight: active ? 700 : 500,
                     color: active ? "var(--ts-text-bright)" : "var(--ts-muted)",
                     background: active ? "var(--ts-tile)" : "transparent",
+                    ...(glow
+                      ? {
+                          boxShadow: `inset 3px 0 0 ${glow.color}, 0 0 12px -4px ${glow.color}`,
+                          color: active ? "var(--ts-text-bright)" : glow.color,
+                        }
+                      : {}),
                   }}
                 >
                   <Icon name={entry.icon} size={16} />
@@ -151,6 +164,26 @@ export function SettingsMenuColumn({
                         background: "var(--ts-warn)",
                       }}
                     />
+                  )}
+                  {glow && (
+                    <span
+                      role="img"
+                      aria-label={glow.label}
+                      data-attention-badge=""
+                      className="inline-flex items-center justify-center"
+                      style={{
+                        minWidth: 20,
+                        height: 20,
+                        padding: "0 6px",
+                        borderRadius: "var(--ts-radius-pill)",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "var(--ts-bg)",
+                        background: glow.color,
+                      }}
+                    >
+                      {glow.count}
+                    </span>
                   )}
                   {entry.badge !== undefined && (
                     <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
@@ -200,7 +233,7 @@ export function SettingsMenuCompact({
           <optgroup key={group.id} label={group.label ?? label}>
             {group.entries.map((entry) => (
               <option key={entry.id} value={entry.id}>
-                {entry.label}
+                {entry.attention ? `${entry.label} (${entry.attention.count})` : entry.label}
               </option>
             ))}
           </optgroup>

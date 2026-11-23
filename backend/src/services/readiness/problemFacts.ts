@@ -12,7 +12,11 @@ import { prisma } from "../../db";
 import { getApiKey } from "../apiKeyResolver";
 import { isServiceDisabledByAdmin } from "../externalServices/policy";
 import { LEG_MODES, type LegMode } from "../tour/tourDistance";
-import { isRoutableMode, ROUTING_PROVIDER_IDS, type RoutingProviderId } from "../tour/routing/types";
+import {
+  isRoutableMode,
+  ROUTING_PROVIDER_IDS,
+  type RoutingProviderId,
+} from "../tour/routing/types";
 import { VISITS_BIT } from "../travtrack/dirtyDays";
 import { PROBLEM_RULES, type ProblemRuleId } from "./problemEntries";
 
@@ -116,9 +120,7 @@ export async function loadInstanceProblemFacts(): Promise<InstanceProblemFacts> 
     roadRoutingEffective ? 0 : straightBus(),
   ]);
   const anyKey =
-    keyHolder !== null ||
-    !!admin?.globalOpenrouteserviceApiKey ||
-    !!admin?.globalGraphhopperApiKey;
+    keyHolder !== null || !!admin?.globalOpenrouteserviceApiKey || !!admin?.globalGraphhopperApiKey;
   return {
     railRouterConfigured,
     railStraight,
@@ -154,16 +156,7 @@ export async function loadAccountProblemFacts(
       settings?.routingCustomUrl ?? null,
       userId
     ));
-  const [
-    user,
-    passkey,
-    rail,
-    legs,
-    bus,
-    point,
-    backlog,
-    entryCounts,
-  ] = await Promise.all([
+  const [user, passkey, rail, legs, bus, point, backlog, entryCounts] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { twoFactorEnabledAt: true } }),
     prisma.webAuthnCredential.findFirst({ where: { userId }, select: { id: true } }),
     instance.railRouterConfigured ? null : straightRail(userId),

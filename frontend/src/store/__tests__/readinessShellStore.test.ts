@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 
-import { fetchReadiness } from "../../lib/api/readiness";
+import { fetchReadiness, fetchReadinessAttention } from "../../lib/api/readiness";
 import { FOCUS_REFRESH_MIN_MS, useReadinessShellStore } from "../readinessShellStore";
 import { useReadinessRefresh } from "../../hooks/useReadinessRefresh";
 
-vi.mock("../../lib/api/readiness", () => ({ fetchReadiness: vi.fn() }));
+vi.mock("../../lib/api/readiness", () => ({
+  fetchReadiness: vi.fn(),
+  fetchReadinessAttention: vi.fn(),
+}));
 
 const answer = (show: boolean) =>
   ({
@@ -17,6 +20,25 @@ beforeEach(() => {
   vi.clearAllMocks();
   useReadinessShellStore.getState().reset();
   vi.mocked(fetchReadiness).mockResolvedValue(answer(true));
+  vi.mocked(fetchReadinessAttention).mockResolvedValue({ problem: 0, warning: 2 });
+});
+
+describe("the header's attention counts", () => {
+  it("reads them from the light endpoint, beside the card read", async () => {
+    await useReadinessShellStore.getState().refresh();
+    expect(fetchReadinessAttention).toHaveBeenCalledTimes(1);
+    expect(useReadinessShellStore.getState().attention).toEqual({ problem: 0, warning: 2 });
+  });
+
+  it("keeps the dot when only the card read fails, and the card when only the dot fails", async () => {
+    vi.mocked(fetchReadiness).mockRejectedValueOnce(new Error("down"));
+    await useReadinessShellStore.getState().refresh();
+    expect(useReadinessShellStore.getState().attention).toEqual({ problem: 0, warning: 2 });
+    vi.mocked(fetchReadinessAttention).mockRejectedValueOnce(new Error("down"));
+    await useReadinessShellStore.getState().refresh();
+    expect(useReadinessShellStore.getState().invitation?.show).toBe(true);
+    expect(useReadinessShellStore.getState().attention).toEqual({ problem: 0, warning: 2 });
+  });
 });
 
 describe("readiness refresh rules", () => {

@@ -1,8 +1,15 @@
-import type { ReadinessItem, ReadinessNote, ReadinessResponse } from "../../../lib/api/readiness";
+import type {
+  ReadinessAttention,
+  ReadinessItem,
+  ReadinessNote,
+  ReadinessResponse,
+} from "../../../lib/api/readiness";
 
 /**
- * How the page orders what the server sent (spec §3.3 and §4 point 1):
- * muss, neu in X.Y, empfohlen, Braucht den Admin, bereit.
+ * How the page orders what the server sent: muss, empfohlen, neu in X.Y,
+ * Braucht den Admin, bereit. Since 2026-11-23 (owner) what needs fixing opens
+ * the page: the recommendations moved above the update notes, and inside them
+ * a verified "needs action" comes before an unchecked one.
  *
  * Two rules the layout rests on:
  * - `unknown` is NEVER a muss. A check nobody has run is not a verified
@@ -15,8 +22,8 @@ export type ReadinessGroupId = "required" | "new" | "recommended" | "blocked" | 
 
 export const READINESS_GROUP_ORDER: readonly ReadinessGroupId[] = [
   "required",
-  "new",
   "recommended",
+  "new",
   "blocked",
   "ready",
 ];
@@ -66,6 +73,11 @@ export function groupReadiness(
       groups.recommended.push(item);
     }
   }
+  // Stable: the server's order is kept inside each half.
+  groups.recommended = [
+    ...groups.recommended.filter((i) => i.status === "needsAction"),
+    ...groups.recommended.filter((i) => i.status !== "needsAction"),
+  ];
   return groups;
 }
 
@@ -85,3 +97,28 @@ export function readinessKey(key: string): string {
   if (key.includes(":")) return key;
   return `readiness:${key.replace(/^readiness\./, "")}`;
 }
+
+export type AttentionTone = "problem" | "warning";
+
+/**
+ * What the header dot and the settings menu show: red while any required item
+ * needs action, amber while only recommended ones do, nothing otherwise
+ * (owner, 2026-11-23).
+ */
+export function attentionOf(
+  attention: ReadinessAttention | null
+): { tone: AttentionTone; count: number } | null {
+  if (!attention) return null;
+  const count = attention.problem + attention.warning;
+  if (count === 0) return null;
+  return { tone: attention.problem > 0 ? "problem" : "warning", count };
+}
+
+/** The colour token of a tone. */
+export const TONE_COLOR: Readonly<Record<AttentionTone, string>> = {
+  problem: "var(--ts-bad)",
+  warning: "var(--ts-warn)",
+};
+
+/** Where the dot and the menu line lead. */
+export const READINESS_PAGE = "/settings/einrichtung";

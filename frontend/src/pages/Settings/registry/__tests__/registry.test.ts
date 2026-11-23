@@ -266,6 +266,14 @@ describe("the area mounts what the registry lists", () => {
     expect([...listed].sort()).toEqual(AREA_PAGES.map((p) => p.id).sort());
   });
 
+  it("puts Einrichtung & Zustand directly below Profil (owner, 2026-11-23)", () => {
+    expect(AREA_MENU.find((g) => g.id === "konto")!.pages.slice(0, 3)).toEqual([
+      "profil",
+      "einrichtung",
+      "anzeige",
+    ]);
+  });
+
   it("groups the menu as Mein Konto, TravTrack, TravPlan and the server's (admin pages only)", () => {
     expect(AREA_MENU.map((g) => g.id)).toEqual(["konto", "track", "plan", "server"]);
     const server = AREA_MENU.find((g) => g.id === "server")!;

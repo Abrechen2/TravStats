@@ -21,11 +21,7 @@ async function statusOf(
   id: CheckId,
   who: "admin" | "user" = "user"
 ): Promise<{ status: string; count: number | null } | undefined> {
-  const ctx = await loadReadinessContext(
-    who === "admin" ? adminId : userId,
-    who === "admin",
-    NOW
-  );
+  const ctx = await loadReadinessContext(who === "admin" ? adminId : userId, who === "admin", NOW);
   const hit = evaluateChecks(ctx).get(id);
   return hit ? { status: hit.status, count: hit.count } : undefined;
 }
@@ -166,7 +162,14 @@ describe("visible-problem checks", () => {
     it("finds a stored trip country list that leaves out where a stay was", async () => {
       const trip = await prisma.trip.create({ data: { userId, name: "Alpen", countries: ["DE"] } });
       const house = await prisma.lodging.create({
-        data: { userId, name: "Wien", country: "Austria", isoCountryCode: "AT", lat: 48.2, lon: 16.37 },
+        data: {
+          userId,
+          name: "Wien",
+          country: "Austria",
+          isoCountryCode: "AT",
+          lat: 48.2,
+          lon: 16.37,
+        },
       });
       expect(await statusOf("user.tripCountryMismatch")).toBeUndefined();
       await prisma.lodgingStay.create({
@@ -272,7 +275,9 @@ describe("visible-problem checks", () => {
         create: { id: "default", enabled: true },
         update: { enabled: true },
       });
-      await prisma.userSettings.create({ data: { userId, data: {}, locationProvider: "travtrack" } });
+      await prisma.userSettings.create({
+        data: { userId, data: {}, locationProvider: "travtrack" },
+      });
       const tok = await generateApiToken();
       await prisma.apiToken.create({
         data: {

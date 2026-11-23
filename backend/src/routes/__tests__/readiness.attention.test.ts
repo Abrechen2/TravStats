@@ -138,7 +138,10 @@ describe("Readiness attention", () => {
     expect(res.status).toBe(200);
     expect(res.body.total).toBe(3);
     expect(res.body.entries).toHaveLength(3);
-    expect(res.body.entries[0]).toMatchObject({ kind: "flight", href: expect.stringMatching(/^\/flights\//) });
+    expect(res.body.entries[0]).toMatchObject({
+      kind: "flight",
+      href: expect.stringMatching(/^\/flights\//),
+    });
 
     const none = await request(app)
       .get("/api/v1/readiness/items/user.domains/entries")

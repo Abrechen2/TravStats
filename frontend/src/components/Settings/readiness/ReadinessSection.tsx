@@ -17,7 +17,6 @@ import {
   type ReadinessResponse,
 } from "../../../lib/api/readiness";
 import { logger } from "../../../lib/logger";
-import { profileDateTime } from "../../../lib/profileInstant";
 import { resolveAddress } from "../../../pages/Settings/area/redirects";
 import { now } from "../../../shared/time";
 import { refreshReadinessShell } from "../../../store/readinessShellStore";
@@ -25,6 +24,7 @@ import { useAuthStore } from "../../../store/authStore";
 import Button from "../../ui/Button";
 import Chip from "../../ui/Chip";
 import Pill from "../../ui/Pill";
+import { ItemRow } from "./ReadinessItemRow";
 import { token } from "../../ui/tokens";
 import { SectionCard } from "../SettingsShared";
 import {
@@ -337,82 +337,3 @@ const rowStyle = {
   background: "var(--ts-tile)",
   borderRadius: "var(--ts-radius-card)",
 } as const;
-
-interface ItemRowProps {
-  item: ReadinessItem;
-  group: ReadinessGroupId | "parked";
-  isAdmin: boolean;
-  demo: boolean;
-  minHeight: number;
-  href: string | null;
-  onSnooze: () => void;
-  onOptOut: () => void;
-  onClear: () => void;
-}
-
-function ItemRow({
-  item,
-  group,
-  isAdmin,
-  demo,
-  minHeight,
-  href,
-  onSnooze,
-  onOptOut,
-  onClear,
-}: ItemRowProps): JSX.Element {
-  const { t } = useTranslation(["readiness"]);
-  const checked = profileDateTime(item.checkedAt);
-  const unknown = item.status === "unknown";
-  const active = group !== "ready" && group !== "parked";
-  return (
-    <li data-item={item.id} data-group={group} style={rowStyle}>
-      <div className="flex flex-wrap items-center" style={{ gap: 8 }}>
-        <strong>{t(readinessKey(item.titleKey))}</strong>
-        {unknown && (
-          <Pill color={token("muted")} dashed>
-            {t("readiness:unchecked")}
-          </Pill>
-        )}
-        {isAdmin && item.scope === "admin" && (
-          <Pill color={token("muted")}>{t("readiness:scope.server")}</Pill>
-        )}
-      </div>
-      <p className="t-caption">{t(readinessKey(item.consequenceKey))}</p>
-      {unknown && !checked && <p className="t-caption">{t("readiness:neverChecked")}</p>}
-      {checked && <p className="t-caption">{t("readiness:checkedAt", { time: checked })}</p>}
-      {group === "blocked" && !href && <p className="t-caption">{t("readiness:blockedHint")}</p>}
-      <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
-        {href && (
-          <Link
-            to={href}
-            className="underline"
-            style={{
-              minHeight,
-              display: "inline-flex",
-              alignItems: "center",
-              color: "var(--ts-accent)",
-            }}
-          >
-            {unknown ? t("readiness:checkNow") : t("readiness:openAction")}
-          </Link>
-        )}
-        {active && (
-          <Button variant="secondary" disabled={demo} onClick={onSnooze}>
-            {t("readiness:snooze")}
-          </Button>
-        )}
-        {active && item.optOutAllowed && item.severity !== "required" && (
-          <Button variant="secondary" disabled={demo} onClick={onOptOut}>
-            {t("readiness:optOut")}
-          </Button>
-        )}
-        {group === "parked" && (
-          <Button variant="secondary" disabled={demo} onClick={onClear}>
-            {t("readiness:showAgain")}
-          </Button>
-        )}
-      </div>
-    </li>
-  );
-}

@@ -143,7 +143,10 @@ async function zoneMismatches(userId: string): Promise<ProblemEntry[]> {
   if (hit && Date.now() - hit.at < ZONE_CACHE_MS) return hit.entries;
   const [stays, visits] = await Promise.all([
     prisma.lodgingStay.findMany({
-      where: { stayZone: { not: null }, lodging: { userId, lat: { not: null }, lon: { not: null } } },
+      where: {
+        stayZone: { not: null },
+        lodging: { userId, lat: { not: null }, lon: { not: null } },
+      },
       select: {
         id: true,
         stayZone: true,

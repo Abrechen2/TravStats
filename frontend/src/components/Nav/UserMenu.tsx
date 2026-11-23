@@ -6,6 +6,7 @@ import { displayName, initials, type DisplayableUser } from "../../lib/userDispl
 import { Icon } from "../ui/Icon";
 import { useInstallPrompt } from "../../hooks/useInstallPrompt";
 import { canonicalPrivateFileUrl } from "../../lib/privateFileUrl";
+import { AttentionDot, AttentionMenuLine } from "../Readiness/AttentionIndicator";
 
 interface UserMenuProps {
   user: DisplayableUser | null | undefined;
@@ -113,6 +114,8 @@ export default function UserMenu({
           </span>
         )}
         <span className="hidden xl:inline max-w-[10rem] truncate">{name}</span>
+        {/* Readiness (owner, 2026-11-23): what needs attention, on the name itself. */}
+        <AttentionDot />
         <span aria-hidden="true" style={{ color: "var(--text-muted)" }}>
           ▾
         </span>
@@ -130,6 +133,7 @@ export default function UserMenu({
           >
             {name}
           </div>
+          <AttentionMenuLine onNavigate={() => setOpen(false)} />
           <Link
             to="/settings/profil"
             role="menuitem"
