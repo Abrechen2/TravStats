@@ -212,6 +212,9 @@ export async function applyStayAcceptance(
     }));
   if (existing && !existing.tripId && input.tripId)
     await tx.placeVisit.update({ where: { id: existing.id }, data: { tripId: input.tripId } });
+  // An automatic acceptance remembers whether it is what made the place visited, so undoing it
+  // reverses exactly that and never a flag the owner had set (brandRules.undoAutoAccepted).
+  const promotedVisited = !!extra.createdBy && (createdPlaceId !== null || !place.visited);
   await tx.place.update({ where: { id: place.id }, data: { visited: true } });
   // Smart lists: the place joins every list whose rule matched this stop.
   await applyBrandMatches(tx, userId, row.evidence, place.id, extra.createdBy ?? null);
@@ -227,6 +230,14 @@ export async function applyStayAcceptance(
     zone: zone!,
     startAt: start.visitedAtUtc,
     endAt: end.visitedAtUtc,
+    ...(promotedVisited
+      ? {
+          evidence: {
+            ...((row.evidence ?? {}) as Record<string, unknown>),
+            promotedVisited: true,
+          } as unknown as Prisma.InputJsonValue,
+        }
+      : {}),
   };
   if (extra.claimToken === undefined) {
     const updated = await tx.dawarichStay.update({ where: { id }, data: accepted });

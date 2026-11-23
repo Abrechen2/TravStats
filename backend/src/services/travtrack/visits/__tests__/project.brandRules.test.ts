@@ -290,6 +290,25 @@ describe("smart lists in the visit projection", () => {
     expect((await prisma.place.findUniqueOrThrow({ where: { id: place.id } })).visited).toBe(false);
   });
 
+  it("undo leaves a 'visited' the owner had set without any visit", async () => {
+    await setListRule(userId, listId, [MCD], { ...SETTINGS, autoAccept: true });
+    const place = await prisma.place.create({
+      data: {
+        userId,
+        name: "McDonald's Alt",
+        ...VENUE_AT,
+        externalRef: "osm:way/1",
+        visited: true,
+      },
+    });
+    resolveStop.mockResolvedValue(picked({ source: "known", placeId: place.id }));
+    await stand(25);
+    expect((await run()).autoAccepted).toBe(1);
+    const [fed] = await recentlyAutoAccepted(userId, listId);
+    expect(await undoAutoAccepted(userId, fed.id)).toMatchObject({ removedVisit: true });
+    expect((await prisma.place.findUniqueOrThrow({ where: { id: place.id } })).visited).toBe(true);
+  });
+
   it("drops a stop inside a privacy zone before any match: nothing is suggested or taken automatically", async () => {
     await setListRule(userId, listId, [MCD], { ...SETTINGS, autoAccept: true });
     await prisma.travTrackPrivacyZone.create({

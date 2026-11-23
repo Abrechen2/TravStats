@@ -414,9 +414,14 @@ export async function undoAutoAccepted(userId: string, stayId: string): Promise<
       ) {
         await tx.place.delete({ where: { id: row.placeId } });
         out.removedPlace = true;
-      } else if (place && out.removedVisit) {
-        // Accepting switched `visited` on; with the automatic visit gone the flag follows the
-        // visits that are left (every one, a hidden purpose included), not the rejected one.
+      } else if (
+        place &&
+        out.removedVisit &&
+        (row.evidence as { promotedVisited?: unknown } | null)?.promotedVisited === true
+      ) {
+        // This acceptance is what switched `visited` on (a flag the owner set stays untouched);
+        // with its visit gone the flag follows the visits that are left (every one, a hidden
+        // purpose included), not the rejected one.
         const left = await runUnfiltered(
           async () =>
             await tx.placeVisit.findMany({
