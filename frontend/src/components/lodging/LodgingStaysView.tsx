@@ -12,6 +12,7 @@ import { useServerPagination } from "../table/useServerPagination";
 import { useTableHints } from "../ui/useTableHints";
 import { FilterField } from "../table/ListFilterBar";
 import { FieldError } from "../form";
+import { collectAllPages } from "../../lib/collectPages";
 import { useRowSelection } from "../bulkEdit/useRowSelection";
 import DomainBulkBar, { BulkStartButton } from "../bulkEdit/DomainBulkBar";
 import BulkRowCheck from "../bulkEdit/BulkRowCheck";
@@ -347,6 +348,24 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
         domain="stay"
         selection={selection}
         pageRows={bulkRows}
+        matching={{
+          total,
+          resolve: async () => {
+            const all = await collectAllPages(async ({ limit: size, offset: skip }) => {
+              const page = await listStayPage({
+                ...(from !== "" && { from }),
+                ...(to !== "" && { to }),
+                ...(tripId !== "" && { tripId }),
+                sort: sortBy,
+                order: sortOrder,
+                limit: size,
+                offset: skip,
+              });
+              return { items: page.rows, total: page.total };
+            });
+            return all.map(stayBulkRow);
+          },
+        }}
         onApplied={() => {
           reload();
           onChanged?.();

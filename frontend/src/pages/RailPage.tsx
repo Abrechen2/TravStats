@@ -3,6 +3,7 @@ import { useGapPrefill } from "../hooks/useGapPrefill";
 import { railGapDraft } from "../components/rail/railGapDraft";
 import type { RailFormDraft } from "../components/rail/railFormModel";
 import DomainBulkBar from "../components/bulkEdit/DomainBulkBar";
+import { collectAllPages } from "../lib/collectPages";
 import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
 import { railBulkRow } from "../components/bulkEdit/bulkRows";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -395,6 +396,22 @@ export default function RailPage(): JSX.Element {
           domain="rail"
           selection={selection}
           pageRows={bulkRows}
+          matching={{
+            total,
+            shown: entries.length,
+            resolve: async () => {
+              const entries = await collectAllPages(async ({ limit: size, offset: skip }) => {
+                const page = await loadPage(filters, membershipId, linkedYear, {
+                  limit: size,
+                  offset: skip,
+                  order: sortOrder,
+                  sort: sortBy,
+                });
+                return { items: page.connections, total: page.total };
+              });
+              return entries.flatMap((entry) => entry.legs.map(railBulkRow));
+            },
+          }}
           onApplied={() => void reload()}
         />
         {loadFailed ? (

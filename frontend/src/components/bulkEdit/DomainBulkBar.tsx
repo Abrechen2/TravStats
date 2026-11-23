@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { BulkDomain } from "../../shared/bulkEditFields";
 import DomainBulkEditModal from "./DomainBulkEditModal";
+import SelectMatchingButton, { type SelectMatching } from "./SelectMatchingButton";
 import type { BulkRow, RowSelection } from "./useRowSelection";
 
 const BAR_BUTTON =
@@ -32,11 +33,14 @@ export default function DomainBulkBar({
   domain,
   selection,
   pageRows,
+  matching,
   onApplied,
 }: {
   domain: BulkDomain;
   selection: RowSelection;
   pageRows: readonly BulkRow[];
+  /** "Alle N Treffer auswählen": every match of the current filter, past the page. */
+  matching?: SelectMatching<BulkRow>;
   /** After any row changed — the list reloads. */
   onApplied: () => void;
 }): JSX.Element | null {
@@ -58,6 +62,11 @@ export default function DomainBulkBar({
       <button type="button" className={BAR_BUTTON} onClick={() => selection.selectAll(pageRows)}>
         {t("bulkEdit:selectPage")}
       </button>
+      <SelectMatchingButton
+        matching={matching}
+        pageCount={pageRows.length}
+        onSelect={selection.selectAll}
+      />
       <button type="button" className={BAR_BUTTON} onClick={selection.clear} disabled={count === 0}>
         {t("bulkEdit:clearSelection")}
       </button>

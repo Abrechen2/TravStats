@@ -3,6 +3,7 @@ import { useGapPrefill } from "../hooks/useGapPrefill";
 import { busGapDraft } from "../components/bus/busGapDraft";
 import type { BusFormDraft } from "../components/bus/busFormModel";
 import DomainBulkBar from "../components/bulkEdit/DomainBulkBar";
+import { collectAllPages } from "../lib/collectPages";
 import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
 import { busFerryBulkRow } from "../components/bulkEdit/bulkRows";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -309,6 +310,21 @@ export default function BusPage(): JSX.Element {
           domain="bus"
           selection={selection}
           pageRows={bulkRows}
+          matching={{
+            total,
+            resolve: async () => {
+              const all = await collectAllPages(async (window) => {
+                const page = await busApi.list({
+                  ...filters,
+                  sort: sortBy,
+                  order: sortOrder,
+                  ...window,
+                });
+                return { items: page.journeys, total: page.total };
+              });
+              return all.map(busFerryBulkRow);
+            },
+          }}
           onApplied={() => void reload()}
         />
         {loadFailed ? (

@@ -2,6 +2,7 @@ import { useRowSelection } from "../components/bulkEdit/useRowSelection";
 import { useGapPrefill } from "../hooks/useGapPrefill";
 import type { GapDates } from "../lib/gapCalendar";
 import DomainBulkBar from "../components/bulkEdit/DomainBulkBar";
+import { collectAllPages } from "../lib/collectPages";
 import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
 import { rentalBulkRow } from "../components/bulkEdit/bulkRows";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -332,6 +333,21 @@ export default function RentalsPage(): JSX.Element {
           domain="rental"
           selection={selection}
           pageRows={bulkRows}
+          matching={{
+            total,
+            resolve: async () => {
+              const all = await collectAllPages(async (window) => {
+                const page = await rentalApi.list({
+                  ...filters,
+                  sort: sortBy,
+                  order: sortOrder,
+                  ...window,
+                });
+                return { items: page.rentals, total: page.total };
+              });
+              return all.map(rentalBulkRow);
+            },
+          }}
           onApplied={() => void reload()}
         />
         {loadFailed ? (

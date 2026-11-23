@@ -1,5 +1,6 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
 import DomainBulkBar from "../components/bulkEdit/DomainBulkBar";
+import { collectAllPages } from "../lib/collectPages";
 import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
 import { cruiseBulkRow } from "../components/bulkEdit/bulkRows";
 import AppShell from "../components/ui/AppShell";
@@ -473,6 +474,21 @@ export default function CruisesPage(): JSX.Element {
           domain="cruise"
           selection={selection}
           pageRows={bulkRows}
+          matching={{
+            total,
+            resolve: async () => {
+              const all = await collectAllPages(async (window) => {
+                const page = await cruiseApi.listPage({
+                  ...filterQuery,
+                  sort: sortBy,
+                  order: sortOrder,
+                  ...window,
+                });
+                return { items: page.items, total: page.total };
+              });
+              return all.map(cruiseBulkRow);
+            },
+          }}
           onApplied={() => void reload()}
         />
         {loadError ? (
