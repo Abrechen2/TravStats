@@ -55,6 +55,16 @@ export default function TripProposalCard({
         {day(s.startDay)} – {day(s.endDay)}
         {s.planned ? ` · ${t(`${NS}.planned`)}` : ""}
       </p>
+      {(s.expanded || s.purpose === "business") && (
+        <p className="t-caption">
+          {[
+            s.expanded ? t(`${NS}.expanded`) : null,
+            s.purpose === "business" ? t(`${NS}.business`) : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      )}
       {s.signals.length > 0 && (
         <p className="t-caption">
           {s.signals.map((signal) => t(`${NS}.signals.${signal}`)).join(" · ")}

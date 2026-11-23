@@ -23,6 +23,9 @@ import {
 import { acceptTripSuggestion, tripAcceptSchema } from "../services/locationEvidence/trips/accept";
 import { publicTrip, tripIdOf, type PublicTrip } from "../services/locationEvidence/trips/evidence";
 import type { EvidenceSuggested } from "../services/locationEvidence/types";
+import { tripSuggestionsEnabled } from "../services/settings/suggestionSwitches";
+import { openTripCards } from "../services/tripSuggestions/stream";
+import { recordTravTrackTripDecision } from "../services/tripSuggestions/travTrackDecision";
 
 /**
  * What location history asks the user (TravTrack plan E6/E7/L4):
@@ -42,6 +45,13 @@ import type { EvidenceSuggested } from "../services/locationEvidence/types";
  *
  * Listing and rejecting work with TravTrack switched off; accepting a
  * TravTrack question then answers 403 `TRAVTRACK_DISABLED` and leaves it.
+ *
+ * Trip questions follow the account's trip-suggestion switch and the merged
+ * stream (trip suggestions v2, `services/tripSuggestions/stream.ts`): the
+ * pending list carries only the trip rows the stream keeps open — none while
+ * switched off (they stay stored, hidden) — and answering one is refused with
+ * 409 `TRIP_SUGGESTIONS_DISABLED` while off. Every answer is also written to
+ * the shared decision table, so the engine never re-asks the same days.
  */
 const router = Router();
 router.use(authenticate, requireWriteScope);
@@ -103,13 +113,27 @@ const answer = async (userId: string, row: StoredSuggestion) =>
 const unanswerable = () =>
   new AppError("This question is not answered here", 400, "VALIDATION_FAILED", "id");
 
+/** A trip question is answered only while the account's trip suggestions are on. */
+async function refuseWhileOff(userId: string): Promise<void> {
+  if (!(await tripSuggestionsEnabled(userId)))
+    throw new AppError("Trip suggestions are switched off", 409, "TRIP_SUGGESTIONS_DISABLED");
+}
+
 router.get("/", async (req: AuthRequest, res, next) => {
   try {
     const userId = user(req);
     const { status } = listQuery.parse(req.query);
     // An accept in progress is still an open question to the inbox.
+    const pending = status === "pending";
+    // Pending trip rows are only those the merged stream keeps open (null: off).
+    const stream = pending ? await openTripCards(userId) : null;
+    const tripIds = [...(stream?.travTrackIds ?? [])];
     const rows = await prisma.locationSuggestion.findMany({
-      where: { userId, status: status === "pending" ? { in: ["pending", "accepting"] } : status },
+      where: {
+        userId,
+        status: pending ? { in: ["pending", "accepting"] } : status,
+        ...(pending ? { OR: [{ kind: { not: "trip" } }, { id: { in: tripIds } }] } : {}),
+      },
       orderBy: [{ windowFrom: "asc" }, { id: "asc" }],
       take: 200,
       select: SUGGESTION_SELECT,
@@ -132,7 +156,9 @@ router.post("/:id/accept", rejectDemo, async (req: AuthRequest, res, next) => {
     } else if (kind === "journey") {
       row = await acceptJourneyRun(userId, id, journeyAcceptSchema.parse(req.body ?? {}));
     } else if (kind === "trip") {
+      await refuseWhileOff(userId);
       row = await acceptTripSuggestion(userId, id, tripAcceptSchema.parse(req.body ?? {}));
+      if (row.status === "accepted") await recordTravTrackTripDecision(userId, id, "accepted");
     } else throw unanswerable();
     res.json({ success: true, data: await answer(userId, row) });
   } catch (e) {
@@ -146,7 +172,11 @@ router.post("/:id/reject", rejectDemo, async (req: AuthRequest, res, next) => {
     const { id } = idParam.parse(req.params);
     const { kind } = await loadSuggestion(userId, id);
     let row: StoredSuggestion;
-    if (kind === "country" || kind === "trip") {
+    if (kind === "trip") {
+      await refuseWhileOff(userId);
+      row = await rejectSuggestion(userId, id);
+      await recordTravTrackTripDecision(userId, id, "dismissed");
+    } else if (kind === "country") {
       row = await rejectSuggestion(userId, id);
     } else if (kind === "journey") {
       const { runIndex } = journeyCloseSchema.parse(req.body ?? {});

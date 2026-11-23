@@ -197,10 +197,13 @@
         "extend_other": "{{count}} entries would extend “{{trip}}” to {{span}}",
         "placeVisit": "You were here that day: “{{anchor}}” was {{distance}} m away."
       },
+      "expanded": "Extended: much longer since you declined it",
+      "business": "Business trip – every entry is business",
       "signals": {
         "pnr": "same booking reference",
         "home_loop": "out and back from your home airport",
-        "continuity": "connecting flights without a gap"
+        "continuity": "connecting flights without a gap",
+        "package": "one package booking"
       },
       "creates": {
         "new_trip": "Accepting creates the trip and links every entry listed.",

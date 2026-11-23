@@ -37,6 +37,7 @@ import { fromDbDate } from "../../../shared/time/localDate";
 import logger from "../../../utils/logger";
 import { getLocationProvider } from "../../locationProvider/provider";
 import { takeTravTrackLock } from "../../travtrack/lock";
+import { tripSuggestionsEnabled } from "../../settings/suggestionSwitches";
 import { travTrackDerivationAllowed, type DerivationAllowance } from "../allowed";
 import { explanation } from "../envelope";
 import { historyGeneration } from "../generation";
@@ -51,7 +52,7 @@ export const MAX_NEW_TRIP_QUESTIONS = 3;
 
 export type SuggestTripsResult = {
   status: "done" | "skipped" | "stale" | "cancelled";
-  reason?: Exclude<DerivationAllowance, "ok"> | "noResidence";
+  reason?: Exclude<DerivationAllowance, "ok"> | "noResidence" | "tripSuggestionsOff";
   created: number;
   /** Of `created`, stored in the aggregate entry rather than as cards. */
   aggregated: number;
@@ -223,6 +224,12 @@ export async function suggestTrips(
 ): Promise<SuggestTripsResult> {
   const allowance = await travTrackDerivationAllowed(userId);
   if (allowance !== "ok") return result("skipped", { reason: allowance });
+  // The account's trip-suggestion switch is the one gate for every trip
+  // question, the engine's and TravTrack's (trip suggestions v2): off, the
+  // sweep produces nothing.
+  if (!(await tripSuggestionsEnabled(userId))) {
+    return result("skipped", { reason: "tripSuggestionsOff" });
+  }
 
   const nowMs = opts.nowMs ?? now().getTime();
   // Finished days on the residence's clock, the one the days are classified on.
@@ -249,6 +256,7 @@ export async function suggestTrips(
     // Asked again under the lock: a switch while it read publishes nothing.
     const allowedNow = await travTrackDerivationAllowed(userId);
     if (allowedNow !== "ok") return allowedNow;
+    if (!(await tripSuggestionsEnabled(userId))) return "tripSuggestionsOff" as const;
     const { count } = await tx.locationSuggestion.createMany({
       data: create,
       skipDuplicates: true,

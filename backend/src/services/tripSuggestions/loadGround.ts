@@ -23,6 +23,8 @@ export async function loadStays(userId: string): Promise<Loaded> {
       id: true,
       tripId: true,
       status: true,
+      bookingId: true,
+      purpose: true,
       checkIn: true,
       checkOut: true,
       datePrecision: true,
@@ -62,6 +64,8 @@ export async function loadStays(userId: string): Promise<Loaded> {
       label: lodging.name,
       city: lodging.city,
       country: lodging.country,
+      bookingId: row.bookingId,
+      purpose: row.purpose,
     });
   }
   return { entries, truncated: rows.length > ROW_CAP };
@@ -79,6 +83,7 @@ export async function loadPlaceVisits(
         id: true,
         tripId: true,
         visitedAt: true,
+        purpose: true,
         place: { select: { name: true, city: true, country: true, lat: true, lon: true } },
       },
     }),
@@ -115,6 +120,7 @@ export async function loadPlaceVisits(
       label: row.place.name,
       city: row.place.city,
       country: row.place.country,
+      purpose: row.purpose,
     });
   }
   return {
@@ -148,6 +154,7 @@ export async function loadRoutes(userId: string, today: string): Promise<Loaded>
       kind: true,
       name: true,
       tourDate: true,
+      purpose: true,
       stops: {
         where: { lat: { not: null }, lon: { not: null }, viaPoint: false },
         orderBy: { routeOrderIdx: "asc" },
@@ -211,6 +218,7 @@ export async function loadRoutes(userId: string, today: string): Promise<Loaded>
       label: row.name,
       city: row.stops[row.stops.length - 1]?.title ?? null,
       country: null,
+      purpose: row.purpose,
       ...(tourDay?.zoneUnknown ? { zoneUnknown: true } : {}),
     });
   }

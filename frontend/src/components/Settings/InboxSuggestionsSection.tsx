@@ -7,6 +7,7 @@ import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore"
 import { saveSwitch } from "../../store/confirmedSettings";
 import { useRowCopy } from "./rowCopy";
 import OpenSuggestionsRow from "./OpenSuggestionsRow";
+import TripSuggestionMemoryRows from "./TripSuggestionMemoryRows";
 
 /**
  * "Vorschläge im Eingang" (forgejo#306, design §4 A5): whether the Posteingang
@@ -38,6 +39,7 @@ export default function InboxSuggestionsSection(): JSX.Element {
           control={<SwitchControl checked={trips.value} onChange={trips.choose} />}
         />
         <OpenSuggestionsRow />
+        <TripSuggestionMemoryRows />
       </SettingRows>
     </SectionCard>
   );

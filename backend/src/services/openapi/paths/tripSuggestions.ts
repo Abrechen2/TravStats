@@ -40,7 +40,7 @@ const suggestion = z.object({
   nights: z.number().int().nullable().describe("Nights away; null for a place visit"),
   planned: z.boolean().describe("Every member is still ahead"),
   destination: z.string().nullable(),
-  signals: z.array(z.enum(["pnr", "home_loop", "continuity"])),
+  signals: z.array(z.enum(["pnr", "home_loop", "continuity", "package"])),
   zoneUnknown: z
     .number()
     .int()
@@ -65,6 +65,11 @@ const suggestion = z.object({
     })
     .optional(),
   distanceM: z.number().int().optional(),
+  expanded: z
+    .literal(true)
+    .optional()
+    .describe("Re-asked once: a dismissed proposal over these days grew past double its length"),
+  purpose: z.literal("business").optional().describe("Every member is a business entry"),
 });
 
 registry.registerPath({
@@ -171,7 +176,8 @@ registry.registerPath({
   method: "post",
   path: "/trip-suggestions/{id}/dismiss",
   summary: "Dismiss a trip suggestion",
-  description: "Remembered: it does not come back unless its member set changes materially.",
+  description:
+    "Remembered by its days: a later proposal overlapping them stays quiet unless it grows past double (then asked once, `expanded`).",
   tags,
   request: { params: idParam },
   responses: {
@@ -187,5 +193,27 @@ registry.registerPath({
       },
     },
     409: stale,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/trip-suggestions/rejections/reset",
+  summary: "Forget every dismissed trip suggestion",
+  description:
+    "The engine's and TravTrack's dismissals of this account are deleted, so each period may be asked again.",
+  tags,
+  responses: {
+    200: {
+      description: "Reset",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ reset: z.number().int() }),
+          }),
+        },
+      },
+    },
   },
 });

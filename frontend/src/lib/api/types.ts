@@ -163,7 +163,7 @@ export interface UserSettings {
   /** Silent trip auto-creation during flight import (default true). */
   autoCreateTrips?: boolean;
   /** Inbox trip suggestions on/off (forgejo#306, default on). Off, nothing is computed. */
-  tripSuggestions?: { enabled?: boolean };
+  tripSuggestions?: { enabled?: boolean; quietDays?: number };
   /**
    * Inbox Dawarich stay suggestions (forgejo#306). `enabled` (default on) gates
    * the scan itself; `immichEvidence` and `llmPlaceClassification` are read by

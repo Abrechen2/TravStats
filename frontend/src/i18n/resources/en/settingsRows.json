@@ -36,6 +36,20 @@
       "btn": "Create link",
       "res": "Link created · visible only now · Copy"
     },
+    "ruhe": {
+      "t": "Quiet period after declining",
+      "s": "For this long nothing is asked about the same days again – not even a trip that has grown since",
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days"
+    },
+    "abgelehnt": {
+      "t": "Declined suggestions",
+      "s": "Declined trips stay quiet until you reset them",
+      "btn": "Reset declined",
+      "res_one": "{{count}} decline forgotten – it may be suggested again",
+      "res_other": "{{count}} declines forgotten – they may be suggested again",
+      "failed": "Resetting failed. Please try again later."
+    },
     "offenevor": {
       "t": "Open suggestions",
       "off": "Off",

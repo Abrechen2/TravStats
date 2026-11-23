@@ -197,10 +197,13 @@
         "extend_other": "{{count}} Einträge würden „{{trip}}“ auf {{span}} verlängern",
         "placeVisit": "An diesem Tag warst du hier: „{{anchor}}“ lag {{distance}} m entfernt."
       },
+      "expanded": "Erweitert: seit deiner Ablehnung deutlich länger geworden",
+      "business": "Geschäftsreise – alle Einträge sind geschäftlich",
       "signals": {
         "pnr": "gleiche Buchungsnummer",
         "home_loop": "Hin- und Rückflug ab Heimatflughafen",
-        "continuity": "lückenlose Anschlussflüge"
+        "continuity": "lückenlose Anschlussflüge",
+        "package": "eine Pauschalbuchung"
       },
       "creates": {
         "new_trip": "Übernehmen legt die Reise an und verknüpft alle aufgeführten Einträge.",
