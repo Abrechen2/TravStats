@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useToursAccess } from "../hooks/useToursVisible";
-import { useBetaFeatureAccess } from "../hooks/useBetaFeatures";
 import { Navigate } from "react-router-dom";
 import type { JSX } from "react";
 import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
@@ -50,7 +49,6 @@ export default function DashboardPage(): JSX.Element {
   // `null` for one request on a cold load, and treating that as "denied" would
   // redirect a direct `/dashboard/tour` load away before it has answered, the
   // exact /dashboard/poi bug below.
-  const roadtripBetaAccess = useBetaFeatureAccess("roadtrips");
   // Counts live in a module-level Zustand store, not `useState` here --
   // `App.tsx` keys its animated `Routes` on `location.pathname`, so
   // `/dashboard/flight` -> `/dashboard/cruise` remounts this component on
@@ -192,10 +190,7 @@ export default function DashboardPage(): JSX.Element {
   if (tab === "poi" && placesAccess === "denied") {
     return <Navigate to="/dashboard" replace />;
   }
-  if (
-    (tab === "tour" && toursAccess === "denied") ||
-    (tab === "roadtrip" && roadtripBetaAccess === "denied")
-  ) {
+  if (tab === "tour" && toursAccess === "denied") {
     return <Navigate to="/dashboard" replace />;
   }
   return (

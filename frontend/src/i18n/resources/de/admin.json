@@ -140,10 +140,6 @@
             "name": "Geräte koppeln",
             "what": "Der Einstellungs-Eintrag „Geräte“ mit dem QR-Code, über den die Handy-App an dieses Konto gebunden wird."
           },
-          "roadtrips": {
-            "name": "Roadtrips und Touren",
-            "what": "Die Domäne „Roadtrips“ (mehrtägige Touren mit Stationen an deinen Unterkünften) und alle Touren: die Touren-Seite und der Editor, der Touren-Reiter im Dashboard und in einer Reise, die Touren auf der Übersichtskarte sowie die Karten für Routing-Anbieter und Strava."
-          },
           "travPlan": {
             "name": "TravPlan (Alpha)",
             "what": "Der Planungsmodus für eine Reise, die noch bevorsteht: Tagesplan, Ideen, Buchungsimport, Transfers, Packliste, Budget und die Übergabe an das Reisetagebuch. Alpha-Versuch: kann sich noch grundlegend ändern."

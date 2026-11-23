@@ -140,10 +140,6 @@
             "name": "Device pairing",
             "what": "The Devices settings entry and its QR code, the only way to bind the phone app to this account."
           },
-          "roadtrips": {
-            "name": "Roadtrips and tours",
-            "what": "The “Roadtrips” domain (multi-day trips with stations at your stays) and all tours: the tours page and editor, the tour tab on the dashboard and on a trip, the tours on the overview map, and the routing provider and Strava cards."
-          },
           "travPlan": {
             "name": "TravPlan (alpha)",
             "what": "The planning mode for a trip still ahead: day plan, ideas, booking import, transfers, packing list, budget and the handover to the travel log. Alpha experiment: may still change fundamentally."

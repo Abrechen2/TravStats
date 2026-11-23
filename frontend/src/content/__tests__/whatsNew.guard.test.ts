@@ -32,7 +32,6 @@ const KEYWORDS: Record<keyof typeof BETA_FEATURES, [RegExp, RegExp]> = {
   comparison: [/Freundesvergleich|Serververgleich/i, /friend comparison|federation/i],
   encryptedShare: [/verschlüsseltes Teilen/i, /encrypted sharing/i],
   devicePairing: [/koppel/i, /\bpair/i],
-  roadtrips: [/Roadtrip|Touren/, /Roadtrip|\btours\b/i],
   cruiseTracks: [/Kreuzfahrt-Spuren/, /cruise tracks/i],
   travPlan: [/TravPlan/, /TravPlan/],
   federatedTripSharing: [/Reisen über Server|anderen Servern teilen/i, /across servers/i],

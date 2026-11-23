@@ -42,14 +42,11 @@ export interface DashboardDomainFilterResult {
 }
 
 /**
- * The rows still carrying a beta label: `tour` and `roadtrip` behind the
- * `roadtrips` key (`config/betaFeatures.ts`). Every other row carries no beta
- * entry at all — rail left beta in 2.7.0-rc.20, bus, ferry and rental on
- * 2026-10-26. A row only reaches `rows` once
- * its own gate is open, so this flag is purely informational — "still
- * labelled beta on this instance", not a second gate.
+ * The rows still carrying a beta label: none. Rail left beta in 2.7.0-rc.20,
+ * bus, ferry and rental on 2026-10-26, tours and roadtrips for 2.8 (owner,
+ * 2026-11-23). The flag stays so a future gated row has a place to say so.
  */
-const BETA_ROWS = new Set<FilterDomainKey>(["tour", "roadtrip"]);
+const BETA_ROWS = new Set<FilterDomainKey>();
 
 /**
  * Drives the "Alle" tab's domain-filter button/panel: which of the six rows

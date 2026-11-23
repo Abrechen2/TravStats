@@ -49,10 +49,10 @@ describe("useDashboardDomainFilter", () => {
     expect(keys).toEqual(["flight", "cruise", "lodging", "poi"]);
   });
 
-  it("adds tour and roadtrip once the roadtrips beta key and the domain are both on", () => {
+  it("adds tour and roadtrip once the domain is on, with the beta flag off", () => {
     useSettingsStore.setState({
       enabledDomains: ["flight", "cruise", "lodging", "poi", "roadtrip", "tour"],
-      betaFeaturesEnabled: true,
+      betaFeaturesEnabled: false,
     });
     const { result } = renderHook(() => useDashboardDomainFilter(4), {
       wrapper: wrapper(["/dashboard"]),
@@ -61,7 +61,7 @@ describe("useDashboardDomainFilter", () => {
     expect(keys).toEqual(["flight", "cruise", "lodging", "poi", "tour", "roadtrip"]);
     const tourRow = result.current.rows.find((r) => r.key === "tour");
     expect(tourRow?.count).toBe(4);
-    expect(tourRow?.beta).toBe(true);
+    expect(tourRow?.beta).toBe(false);
   });
 
   it("rail is the seventh row, last and no longer beta-labelled, once the domain is on", () => {

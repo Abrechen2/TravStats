@@ -1,32 +1,22 @@
 import { useSettingsStore } from "../store/settingsStore";
-import { useBetaFeatureAccess, useBetaFeatures, type BetaFeatureAccess } from "./useBetaFeatures";
 
 /**
- * Whether day tours may be shown at all: `tour` is a domain since 2026-11-09, so
- * the user's switch AND the instance's beta key (`roadtrips`, shared with
- * roadtrips — the key's entry in `config/betaFeatures.ts` names both) must be
- * open — the same two conditions `useEnabledDomains` applies to a gated domain
- * (`DOMAIN_BETA_GATES`); this stays as the one name the tour surfaces ask, until T2 folds them into the
- * domain gate. Removing the beta gate means deleting its registry entries and
- * every `isFeatureVisible("roadtrips")` call, as the registry asks.
+ * Whether day tours may be shown: `tour` is a domain since 2026-11-09, so this
+ * is the user's own switch. The instance beta key they once shared with
+ * roadtrips is gone (un-gated for 2.8, owner 2026-11-23).
  */
 export function useToursVisible(): boolean {
   const stored = useSettingsStore((s) => s.enabledDomains);
-  const { isFeatureVisible } = useBetaFeatures();
-  return (stored ?? []).includes("tour") && isFeatureVisible("roadtrips");
+  return (stored ?? []).includes("tour");
 }
 
 /**
- * Three-state for route guards: `pending` while the instance flag or the user's
- * settings are still unknown, `denied` when the beta key is closed or the user
- * switched tours off. Roadtrip surfaces that share the beta key but not the
- * domain ask `useBetaFeatureAccess("roadtrips")` themselves.
+ * Three-state for route guards: `pending` while the user's settings are still
+ * unknown, `denied` when the user switched tours off.
  */
-export function useToursAccess(): BetaFeatureAccess {
-  const beta = useBetaFeatureAccess("roadtrips");
+export function useToursAccess(): "pending" | "allowed" | "denied" {
   const stored = useSettingsStore((s) => s.enabledDomains);
   const loaded = useSettingsStore((s) => s.enabledDomainsLoaded);
-  if (beta === "denied") return "denied";
-  if (beta === "pending" || !loaded) return "pending";
+  if (!loaded) return "pending";
   return (stored ?? []).includes("tour") ? "allowed" : "denied";
 }

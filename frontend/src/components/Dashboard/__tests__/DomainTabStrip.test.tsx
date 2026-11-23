@@ -241,19 +241,16 @@ describe("DomainTabStrip", () => {
       );
     };
 
-    // Tours were released on 2026-09-18 and went back behind the switch on
-    // 2026-09-24 (owner), under the roadtrips key. Closed and unknown both
-    // hide the two tabs — hidden, not dimmed: dimming is for a domain the
-    // user switched off, and a closed instance gate is not that.
+    // Tours and roadtrips left beta for 2.8 (owner, 2026-11-23): the instance
+    // flag, closed or unknown, no longer hides their tabs.
     it.each([
       ["off", false],
       ["unknown (not loaded yet)", null],
-    ])("hides the Touren and Roadtrips tabs when the beta flag is %s", (_label, flag) => {
-      useSettingsStore.setState({ betaFeaturesEnabled: flag });
+    ])("shows the Touren and Roadtrips tabs without the beta flag (%s)", (_label, flag) => {
+      useSettingsStore.setState({ betaFeaturesEnabled: flag, enabledDomains: ["flight", "tour"] });
       renderStrip();
-      expect(screen.queryByRole("tab", { name: /tours/i })).toBeNull();
-      expect(screen.queryByRole("tab", { name: /roadtrip/i })).toBeNull();
-      expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
+      expect(screen.getByRole("tab", { name: /tours/i })).toBeTruthy();
+      expect(screen.getByRole("tab", { name: /roadtrip/i })).toBeTruthy();
     });
 
     it("shows the Touren tab, undimmed while the tour domain is on, when the beta flag is on", () => {
