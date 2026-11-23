@@ -15,24 +15,36 @@ import {
 const BATCH = 200;
 
 export interface InferredOperatorColumns {
-  operator?: string;
+  operator?: string | null;
   operatorSource: string | null;
 }
 
 /**
- * The operator columns for a write. `typed` is the operator the request carries
- * (undefined = not part of the request). A typed value clears the source; a
- * blank one is inferred when the evidence allows, else stays blank.
+ * The operator columns for a write, or null to leave them alone.
+ *
+ * `typed` is the operator the request carries (undefined = not in the request);
+ * `stored` is the row before an edit (undefined on create). The edit form
+ * resends the stored operator on every save, so a value equal to a stored
+ * INFERRED one keeps its mark instead of becoming "entered" by a notes edit.
+ * An inferred value is recomputed whenever the evidence is — a train changed
+ * to RE no longer carries "DB Fernverkehr" — and cleared when nothing names it.
  */
 export function operatorColumnsFor(
   typed: string | null | undefined,
-  evidence: RailInferenceInput
+  evidence: RailInferenceInput,
+  stored?: { operator: string | null; operatorSource: string | null }
 ): InferredOperatorColumns | null {
-  if (typed && typed.trim() !== "") return { operatorSource: null };
-  if (typed === undefined) return null;
+  const storedInferred = stored?.operatorSource === OPERATOR_SOURCE_INFERRED;
+  const value = typed?.trim() ?? (typed === undefined ? undefined : "");
+  if (value) {
+    return storedInferred && value === stored?.operator ? null : { operatorSource: null };
+  }
+  // Blank typed, or none sent while a stored inference may have gone stale.
+  if (typed === undefined && !storedInferred) return null;
   const inferred = inferRailOperator(evidence);
-  return inferred
-    ? { operator: inferred, operatorSource: OPERATOR_SOURCE_INFERRED }
+  if (inferred) return { operator: inferred, operatorSource: OPERATOR_SOURCE_INFERRED };
+  return typed === undefined || storedInferred
+    ? { operator: null, operatorSource: null }
     : { operatorSource: null };
 }
 

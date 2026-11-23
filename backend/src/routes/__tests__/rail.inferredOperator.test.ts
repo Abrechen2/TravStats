@@ -100,3 +100,49 @@ describe("inferred rail operator (operator-logos)", () => {
     expect((await backfillInferredRailOperators({ userId })).inferred).toBe(0);
   });
 });
+
+describe("inferred operator survives and follows edits (review)", () => {
+  let userId: string;
+  let cookie: string;
+  beforeAll(async () => {
+    await prisma.user.deleteMany({ where: { username: "railinferop2" } });
+    const user = await prisma.user.create({
+      data: { username: "railinferop2", passwordHash: await hashPassword("password123") },
+    });
+    userId = user.id;
+    cookie = `auth_token=${generateToken(user.id)}`;
+  });
+  afterAll(async () => {
+    await railCreationLimiter.resetKey(`user:${userId}`);
+    await prisma.user.deleteMany({ where: { username: "railinferop2" } });
+  });
+
+  const create = () =>
+    request(app).post("/api/v1/rail").set("Cookie", cookie).send({
+      trainCategory: "ICE",
+      trainNumber: "633",
+      departureStation: HANNOVER,
+      arrivalStation: MUNICH,
+      departureLocal: "2024-04-02T08:15",
+      arrivalLocal: "2024-04-02T11:40",
+    });
+
+  it("keeps the mark when a save resends the inferred operator unchanged", async () => {
+    const made = await create();
+    const saved = await request(app)
+      .patch(`/api/v1/rail/${made.body.data.id}`)
+      .set("Cookie", cookie)
+      .send({ operator: "DB Fernverkehr", notes: "window seat" });
+    expect(saved.body.data.operatorSource).toBe("inferred");
+  });
+
+  it("drops a stale inference when the train changes to one that names nobody", async () => {
+    const made = await create();
+    const saved = await request(app)
+      .patch(`/api/v1/rail/${made.body.data.id}`)
+      .set("Cookie", cookie)
+      .send({ trainCategory: "RE" });
+    expect(saved.body.data.operator).toBeNull();
+    expect(saved.body.data.operatorSource).toBeNull();
+  });
+});

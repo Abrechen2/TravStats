@@ -655,12 +655,17 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         where: { id: existing.id },
         data: {
           ...plainColumns(input),
-          ...operatorColumnsFor(input.operator, {
-            trainCategory:
-              input.trainCategory === undefined ? existing.trainCategory : input.trainCategory,
-            trainNumber: input.trainNumber === undefined ? existing.trainNumber : input.trainNumber,
-            ...state,
-          }),
+          ...operatorColumnsFor(
+            input.operator,
+            {
+              trainCategory:
+                input.trainCategory === undefined ? existing.trainCategory : input.trainCategory,
+              trainNumber:
+                input.trainNumber === undefined ? existing.trainNumber : input.trainNumber,
+              ...state,
+            },
+            { operator: existing.operator, operatorSource: existing.operatorSource }
+          ),
           ...state,
           ...fxColumns,
           ...(written && geometryColumns(lookup, written)),
