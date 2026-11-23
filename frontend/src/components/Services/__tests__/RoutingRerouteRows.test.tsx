@@ -15,6 +15,7 @@ vi.mock("../../../lib/logger", () => ({
 vi.mock("../../Settings/RailLocalTransitReroute", () => ({
   default: () => <div>rail-reroute</div>,
 }));
+vi.mock("../RailRerouteRows", () => ({ default: () => <div>rail-pass</div> }));
 const start = vi.fn();
 vi.mock("../../../lib/api/rerouteRuns", () => ({
   adminRerouteApi: { latest: async () => null, start: (m: string) => start(m), cancel: vi.fn() },
@@ -60,7 +61,9 @@ describe("RoutingRerouteRows", () => {
   it("carries the rail re-route beside it only where the rail router is entered", () => {
     const { rerender } = render(<RoutingRerouteRows withRail={false} />);
     expect(screen.queryByText("rail-reroute")).toBeNull();
+    expect(screen.queryByText("rail-pass")).toBeNull();
     rerender(<RoutingRerouteRows withRail />);
     expect(screen.getByText("rail-reroute")).toBeTruthy();
+    expect(screen.getByText("rail-pass")).toBeTruthy();
   });
 });

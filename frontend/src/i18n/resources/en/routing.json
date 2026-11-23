@@ -33,7 +33,8 @@
       "rate_limited": "The routing service's daily quota is used up.",
       "auth": "The routing service refused the key.",
       "no_provider": "No routing service is set up any more, or it is switched off.",
-      "provider_error": "The routing service has stopped answering."
+      "provider_error": "The routing service has stopped answering.",
+      "railRoutingUnavailable": "The rail router no longer answers."
     },
     "reason": {
       "rate_limited_one": "{{count}} line put off because of the quota",
@@ -57,7 +58,31 @@
       "changed_one": "{{count}} line was changed meanwhile and not overwritten",
       "changed_other": "{{count}} lines were changed meanwhile and not overwritten",
       "unroutable_mode_one": "{{count}} line: no road routing for this kind of leg",
-      "unroutable_mode_other": "{{count}} lines: no road routing for this kind of leg"
+      "unroutable_mode_other": "{{count}} lines: no road routing for this kind of leg",
+      "railRoutingNoRoute_one": "{{count}} rail journey: the rail router finds no connection, the line stays",
+      "railRoutingNoRoute_other": "{{count}} rail journeys: the rail router finds no connection, the line stays",
+      "railRoutingUnavailable_one": "{{count}} rail journey: the rail router did not answer, the line stays",
+      "railRoutingUnavailable_other": "{{count}} rail journeys: the rail router did not answer, the line stays",
+      "railRoutingModeUnsupported_one": "{{count}} rail journey: the rail router has no network for this train type, the line stays",
+      "railRoutingModeUnsupported_other": "{{count}} rail journeys: the rail router has no network for this train type, the line stays",
+      "railRoutingNotConfigured_one": "{{count}} rail journey: no rail router is set up, the line stays",
+      "railRoutingNotConfigured_other": "{{count}} rail journeys: no rail router is set up, the line stays",
+      "unchanged_one": "{{count}} rail journey: nothing better found, the line stays",
+      "unchanged_other": "{{count}} rail journeys: nothing better found, the line stays"
     }
+  },
+  "rail": {
+    "title": "Re-route rail lines",
+    "hint": "Routes the rail journeys of every account that are only drawn as a straight line: first along the timetable's own trace (Transitous), otherwise through the rail router, on the network that fits the train type. A line you drew or brought over is never replaced, and when a request fails the stored line stays.",
+    "modeAllHint": "\"All\" also routes again the journeys the rail router already routed. Timetable traces and drawn lines stay.",
+    "start": "Re-route rail lines",
+    "readiness_one": "{{count}} rail journey is drawn as a straight line - no rail routing is set up. Enter the address of a rail router above, then they can be routed.",
+    "readiness_other": "{{count}} rail journeys are drawn as straight lines - no rail routing is set up. Enter the address of a rail router above, then they can be routed.",
+    "offer_one": "Address saved. {{count}} rail journey is still a straight line.",
+    "offer_other": "Address saved. {{count}} rail journeys are still straight lines.",
+    "offerAction": "Route all rail straight lines now",
+    "notConfigured": "No rail router is set up - there is nothing to route without one.",
+    "failed": "The run could not be started.",
+    "loadFailed": "The state of the last run could not be loaded."
   }
 }

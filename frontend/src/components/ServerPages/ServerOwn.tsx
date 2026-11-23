@@ -3,6 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import Button from "../ui/Button";
 import { ErrorLine } from "../ui/settings";
 import FieldsGroup from "../Services/FieldsGroup";
+import RailRerouteRows from "../Services/RailRerouteRows";
 import { ServicesProvider, useServices } from "../Services/servicesContext";
 import { useDemoLock } from "../Services/useLockFor";
 import SubHeading from "./SubHeading";
@@ -81,7 +82,16 @@ function Groups(): JSX.Element {
               write={async (changes) => {
                 if (!(await admin.write(group.card, changes))) throw new Error("save refused");
               }}
-            />
+            >
+              {group.id === "routes" && (
+                // Where the rail router's address is saved, so a saved address can offer the pass.
+                <RailRerouteRows
+                  railUrl={
+                    (fields.find((f) => f.key === "railRoutingUrl")?.value as string | null) || null
+                  }
+                />
+              )}
+            </FieldsGroup>
           </section>
         );
       })}

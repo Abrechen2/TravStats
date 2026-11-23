@@ -2,6 +2,7 @@ import { useState, type JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { adminRerouteApi, type RerouteMode } from "../../lib/api/rerouteRuns";
+import RailRerouteRows from "./RailRerouteRows";
 import RailLocalTransitReroute from "../Settings/RailLocalTransitReroute";
 import RerouteRunStatus from "../Routing/RerouteRunStatus";
 import { useRerouteRun } from "../Routing/useRerouteRun";
@@ -11,10 +12,18 @@ import { ActionControl, ChoiceControl, ErrorLine, SettingItem } from "../ui/sett
  * "Strecken neu routen" on the routing service (forgejo#436): the administrator's
  * pass over every account's straight legs and coach rides. The run lives on the
  * server and outlasts this page — and a day: it pauses at the provider's quota
- * and carries on by itself. Rail has its own re-route; it sits underneath, drawn
- * the same way, where the rail router's address is entered.
+ * and carries on by itself. Rail is its own scope of the same engine
+ * (`RailRerouteRows`), drawn underneath where the rail router's address is
+ * entered, followed by the one-off tram and U-Bahn repair.
  */
-export default function RoutingRerouteRows({ withRail }: { withRail: boolean }): JSX.Element {
+export default function RoutingRerouteRows({
+  withRail,
+  railUrl = null,
+}: {
+  withRail: boolean;
+  /** The saved rail router address; a change while the page is open triggers the offer. */
+  railUrl?: string | null;
+}): JSX.Element {
   const { t } = useTranslation(["routing", "settings"]);
   const [mode, setMode] = useState<RerouteMode>("straight");
   const { run, error, busy, start, cancel } = useRerouteRun({
@@ -56,6 +65,7 @@ export default function RoutingRerouteRows({ withRail }: { withRail: boolean }):
           <RerouteRunStatus run={run} onCancel={() => void cancel()} testId="routing-reroute-run" />
         )}
       </SettingItem>
+      {withRail && <RailRerouteRows railUrl={railUrl} />}
       {withRail && (
         <SettingItem title={t("settings:railRouting.reroute.action")} control={null}>
           <RailLocalTransitReroute />

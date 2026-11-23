@@ -264,7 +264,10 @@ function routedOnWrongNetwork(existing: StoredJourneyLine, geo: JourneyGeometry)
 }
 
 /** Explicit refresh replaces automatic lines of equal quality; preserves manual lines and falls back safely. */
-export async function refetchJourneyGeometry(existing: StoredJourneyLine): Promise<GeometryEdit> {
+export async function refetchJourneyGeometry(
+  existing: StoredJourneyLine,
+  options: { repairWrongNetwork?: boolean } = {}
+): Promise<GeometryEdit> {
   const stored = readStoredLine(existing.geometry);
   if (stored && existing.geometrySource === "manual")
     return { kind: "kept", line: stored, geometrySource: existing.geometrySource, fallback: null };
@@ -278,7 +281,9 @@ export async function refetchJourneyGeometry(existing: StoredJourneyLine): Promi
   });
   if (geo.geometrySource === "straight" && geo.fallback === null)
     geo.fallback = "railRoutingNotConfigured";
-  if (routedOnWrongNetwork(existing, geo)) return { kind: "refetched", geo };
+  if ((options.repairWrongNetwork ?? true) && routedOnWrongNetwork(existing, geo)) {
+    return { kind: "refetched", geo };
+  }
   if (
     stored &&
     (geo.geometry === null || lineRank(existing.geometrySource) > lineRank(geo.geometrySource))

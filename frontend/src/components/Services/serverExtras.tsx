@@ -58,7 +58,15 @@ export function ServerExtras({
     case "graphhopper":
       return <RoutingRerouteRows withRail={false} />;
     case "selfHostedRouting":
-      return <RoutingRerouteRows withRail />;
+      return (
+        <RoutingRerouteRows
+          withRail
+          railUrl={
+            (service?.fields.find((f) => f.key === "railRoutingUrl")?.value as string | null) ||
+            null
+          }
+        />
+      );
     case "logos":
       return <LogosReload />;
     default:

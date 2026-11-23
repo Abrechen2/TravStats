@@ -52,6 +52,7 @@ import logger from "../utils/logger";
 import { railIdsCoveredBy } from "../services/loyalty/listFilters";
 import { withRailCo2 } from "../services/co2/rideDto";
 import { withRailDetailTimes, withRailTimes } from "../services/rail/timesDto";
+import { railRouterMissing, withGeometryReason } from "../services/rail/noRouter";
 import { RAIL_SOURCE_INCLUDE, withRailSource } from "../services/rail/railSource";
 import {
   readLogbookPage,
@@ -260,6 +261,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const limit = query.limit ?? DEFAULT_LIMIT;
     const offset = query.offset ?? 0;
     const where = await buildRailWhere(query, userId);
+    const routerMissing = await railRouterMissing();
 
     res.json(
       await readLogbookPage(
@@ -285,7 +287,11 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
         {
           limit,
           offset,
-          mapRow: (j) => withRailSource(withStationShortCodes(withRailCo2(withRailTimes(j)))),
+          mapRow: (j) =>
+            withGeometryReason(
+              withRailSource(withStationShortCodes(withRailCo2(withRailTimes(j)))),
+              routerMissing
+            ),
           summarise: summariseStationGroups,
         }
       )
@@ -305,7 +311,10 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     if (!journey) throw new AppError("Rail journey not found", 404);
     res.json({
       success: true,
-      data: withRailSource(withStationShortCodes(withRailCo2(withRailDetailTimes(journey)))),
+      data: withGeometryReason(
+        withRailSource(withStationShortCodes(withRailCo2(withRailDetailTimes(journey)))),
+        await railRouterMissing()
+      ),
     });
   } catch (err) {
     next(err);

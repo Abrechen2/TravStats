@@ -17,6 +17,11 @@ const REASON_ORDER = [
   "no_coordinates",
   "changed",
   "unroutable_mode",
+  "railRoutingNoRoute",
+  "railRoutingModeUnsupported",
+  "railRoutingUnavailable",
+  "railRoutingNotConfigured",
+  "unchanged",
 ];
 
 /**

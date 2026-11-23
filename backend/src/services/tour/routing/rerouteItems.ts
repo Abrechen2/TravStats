@@ -7,8 +7,9 @@ import { isRoutableMode } from "./types";
  *
  * Two kinds carry a line a road router serves: a roadtrip or tour leg
  * (`trip_route_legs`) and a coach ride (`bus_journeys`). Rental bookings have no
- * geometry, ferries use the sea router and rail has its own re-route, so none
- * of them is an item here.
+ * geometry and ferries use the sea router, so neither is an item here. Rail
+ * journeys are items of their own scope (`rail`), walked through the rail
+ * router instead of a road provider.
  *
  * The source decides what is replaceable, and the rule is the same for both:
  * a line the user drew (`drawn`, bus `manual`) or recorded (`track`) is never
@@ -17,10 +18,21 @@ import { isRoutableMode } from "./types";
  */
 
 export type RerouteMode = "straight" | "all";
-export type RerouteItemKind = "leg" | "bus";
+export type RerouteItemKind = "leg" | "bus" | "rail";
 
 /** Walked in this order; the cursor is `<kind>:<id>` of the last item handled. */
-export const ITEM_KINDS: readonly RerouteItemKind[] = ["leg", "bus"];
+export const ITEM_KINDS: readonly RerouteItemKind[] = ["leg", "bus", "rail"];
+
+/**
+ * Rail journeys (the rail scope). `straight` is a line never routed; `all` adds
+ * the self-hosted router's own earlier line. A Transitous trace, a drawn
+ * (`manual`, also a roadtrip's recorded line), `brouter` or `none` line is never
+ * a candidate, in either mode.
+ */
+export const RAIL_SOURCES: Record<RerouteMode, readonly string[]> = {
+  straight: ["straight"],
+  all: ["straight", "openrailrouting"],
+};
 
 export const LEG_SOURCES: Record<RerouteMode, readonly ("straight" | "routed")[]> = {
   straight: ["straight"],
@@ -34,7 +46,7 @@ export const BUS_SOURCES: Record<RerouteMode, readonly string[]> = {
 const ROUTABLE_LEG_MODES = LEG_MODES.filter((m): m is LegMode => isRoutableMode(m));
 
 export interface RunScope {
-  scope: "instance" | "roadtrip";
+  scope: "instance" | "roadtrip" | "rail";
   routeId: string | null;
   mode: RerouteMode;
 }
@@ -55,7 +67,12 @@ export interface BusItem {
   id: string;
   userId: string;
 }
-export type RerouteItem = LegItem | BusItem;
+export interface RailItem {
+  kind: "rail";
+  id: string;
+  userId: string;
+}
+export type RerouteItem = LegItem | BusItem | RailItem;
 
 export function parseCursor(cursor: string | null): { kind: RerouteItemKind; id: string } | null {
   if (!cursor) return null;
@@ -65,7 +82,9 @@ export function parseCursor(cursor: string | null): { kind: RerouteItemKind; id:
 }
 
 const kindsOf = (run: RunScope): readonly RerouteItemKind[] =>
-  run.scope === "roadtrip" ? ["leg"] : ITEM_KINDS;
+  run.scope === "roadtrip" ? ["leg"] : run.scope === "rail" ? ["rail"] : ["leg", "bus"];
+
+const railWhere = (run: RunScope) => ({ geometrySource: { in: [...RAIL_SOURCES[run.mode]] } });
 
 const legWhere = (run: RunScope) => ({
   source: { in: [...LEG_SOURCES[run.mode]] },
@@ -106,6 +125,13 @@ export async function nextItem(run: RunScope, cursor: string | null): Promise<Re
           to: leg.toStop,
         };
       }
+    } else if (kind === "rail") {
+      const ride = await prisma.railJourney.findFirst({
+        where: { ...railWhere(run), ...after },
+        orderBy: { id: "asc" },
+        select: { id: true, userId: true },
+      });
+      if (ride) return { kind: "rail", id: ride.id, userId: ride.userId };
     } else {
       const ride = await prisma.busJourney.findFirst({
         where: { geometrySource: { in: [...BUS_SOURCES[run.mode]] }, ...after },
@@ -125,12 +151,15 @@ export async function countRemaining(run: RunScope, cursor: string | null): Prom
   for (const kind of kindsOf(run)) {
     if (at && ITEM_KINDS.indexOf(kind) < ITEM_KINDS.indexOf(at.kind)) continue;
     const after = at && at.kind === kind ? { id: { gt: at.id } } : {};
-    total +=
-      kind === "leg"
-        ? await prisma.tripRouteLeg.count({ where: { ...legWhere(run), ...after } })
-        : await prisma.busJourney.count({
-            where: { geometrySource: { in: [...BUS_SOURCES[run.mode]] }, ...after },
-          });
+    if (kind === "leg") {
+      total += await prisma.tripRouteLeg.count({ where: { ...legWhere(run), ...after } });
+    } else if (kind === "rail") {
+      total += await prisma.railJourney.count({ where: { ...railWhere(run), ...after } });
+    } else {
+      total += await prisma.busJourney.count({
+        where: { geometrySource: { in: [...BUS_SOURCES[run.mode]] }, ...after },
+      });
+    }
   }
   return total;
 }
