@@ -141,6 +141,41 @@ describe("bulk re-route, rail scope", () => {
     expect(kept.geometry).toEqual(LINE);
   });
 
+  it("never swaps a stored tram line for the straight one when the router says no route", async () => {
+    routeLine.mockResolvedValue({ ok: false, reason: "noRoute" });
+    const tram = await prisma.railJourney.create({
+      data: {
+        userId,
+        depStationName: "A",
+        depLat: A.lat,
+        depLon: A.lon,
+        arrStationName: "B",
+        arrLat: B.lat,
+        arrLon: B.lon,
+        departureTime: new Date("2025-03-01T08:00:00Z"),
+        transitMode: "tram",
+        geometrySource: "openrailrouting",
+        geometry: LINE,
+      },
+    });
+    const done = await runToEnd("all");
+    expect(done.kept).toBe(1);
+    const after = await read(tram.id);
+    expect(after.geometrySource).toBe("openrailrouting");
+    expect(after.geometry).toEqual(LINE);
+  });
+
+  it("does not overwrite a journey that became a drawn line after it was selected", async () => {
+    const drawn = await journey("manual", LINE);
+    const { routeRailJourneyAgain } = await import("../../../rail/railRouteAgain");
+    routeLine.mockResolvedValue({ ok: true, line: LINE, distanceKm: 1 } as never);
+    await expect(
+      routeRailJourneyAgain(userId, drawn.id, { sources: ["straight"] })
+    ).rejects.toMatchObject({ statusCode: 409 });
+    expect(routeLine).not.toHaveBeenCalled();
+    expect((await read(drawn.id)).geometrySource).toBe("manual");
+  });
+
   it("stops as failed when the router stops answering instead of failing ride by ride", async () => {
     routeLine.mockResolvedValue({ ok: false, reason: "unavailable" });
     for (let i = 0; i < 7; i++) await journey("straight");

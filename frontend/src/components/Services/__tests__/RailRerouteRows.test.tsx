@@ -82,6 +82,24 @@ describe("RailRerouteRows", () => {
     await waitFor(() => expect(start).toHaveBeenLastCalledWith("straight"));
   });
 
+  it("follows a removed address: the note returns and the start button locks", async () => {
+    status.mockResolvedValue({ run: null, straightJourneys: 3, routerConfigured: true });
+    const { rerender } = render(<RailRerouteRows railUrl="http://orr" />);
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("button", { name: "routing:rail.start" }) as HTMLButtonElement).disabled
+      ).toBe(false)
+    );
+    status.mockResolvedValue({ run: null, straightJourneys: 3, routerConfigured: false });
+    await act(async () => {
+      rerender(<RailRerouteRows railUrl={null} />);
+    });
+    expect(await screen.findByTestId("rail-reroute-readiness")).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: "routing:rail.start" }) as HTMLButtonElement).disabled
+    ).toBe(true);
+  });
+
   it("shows a refused start in words instead of nothing", async () => {
     status.mockResolvedValue({ run: null, straightJourneys: 2, routerConfigured: true });
     start.mockRejectedValue(new Error("boom"));

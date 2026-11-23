@@ -58,9 +58,9 @@ export default function RailRerouteRows({ railUrl }: { railUrl: string | null })
     if (lastUrl.current === railUrl) return;
     lastUrl.current = railUrl;
     setOffer(false);
-    if (!railUrl) return;
+    // A removed address matters as much as a saved one: the note and the button follow it.
     void read()
-      .then(() => setOffer(true))
+      .then(() => setOffer(railUrl !== null))
       .catch((err: unknown) => logger.warn("Reading the rail count failed", err));
   }, [railUrl, read]);
 

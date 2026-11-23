@@ -86,11 +86,21 @@ function refetchColumns(
  */
 export async function routeRailJourneyAgain(
   userId: string,
-  id: string
+  id: string,
+  /**
+   * The bulk pass: it only ever touches the line sources it selected (a journey
+   * edited to a traced or drawn line meanwhile is a 409, not overwritten), and a
+   * definite "no route" never swaps a stored line for the straight one — only the
+   * dedicated tram and U-Bahn repair does that.
+   */
+  bulk?: { sources: readonly string[] }
 ): Promise<{ id: string; report: GeometryReport } | null> {
   const existing = await prisma.railJourney.findFirst({ where: { id, userId } });
   if (!existing) return null;
-  const edit = await refetchJourneyGeometry(existing);
+  if (bulk && !bulk.sources.includes(existing.geometrySource)) {
+    throw new AppError("Journey changed while routing; reload and try again", 409);
+  }
+  const edit = await refetchJourneyGeometry(existing, { repairWrongNetwork: !bulk });
   const columns = refetchColumns(existing, edit);
   if (columns) {
     await prisma.$transaction(

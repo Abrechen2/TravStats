@@ -17,6 +17,7 @@ import {
   nextItem,
   type BusItem,
   type LegItem,
+  RAIL_SOURCES,
   type RailItem,
   type RerouteItem,
   type RerouteMode,
@@ -190,9 +191,11 @@ async function routeBus(
  * network. A line the router could not deliver, a drawn line and a row that
  * changed meanwhile keep what is stored, each with its reason.
  */
-async function routeRail(item: RailItem): Promise<Outcome> {
+async function routeRail(item: RailItem, mode: RerouteMode): Promise<Outcome> {
   try {
-    const done = await routeRailJourneyAgain(item.userId, item.id);
+    const done = await routeRailJourneyAgain(item.userId, item.id, {
+      sources: RAIL_SOURCES[mode],
+    });
     if (!done) return { kind: "kept", reason: "changed" };
     const { outcome, fallback } = done.report;
     if (outcome === "routed" || outcome === "traced") return { kind: "routed" };
@@ -256,7 +259,7 @@ export async function executeRerouteRun(
     if (item.kind === "rail") {
       // Self-hosted router: no key, no quota, no per-account provider; the courtesy pause stays.
       try {
-        outcome = await routeRail(item);
+        outcome = await routeRail(item, scope.mode);
       } catch (error) {
         logger.warn({
           operation: "reroute_run_item",
