@@ -110,12 +110,12 @@ export default function FerryDetailPage() {
       setRouting(false);
     }
   };
-  const clearManual = async () => {
+  const clearManual = async (scope: "all" | "journey") => {
     if (!ride || routing) return;
     setRouting(true);
     setRouteMessage(null);
     try {
-      const result = await ferryApi.clearManualRoute(ride.id, ride.updatedAt);
+      const result = await ferryApi.clearManualRoute(ride.id, ride.updatedAt, scope);
       setRide(await ferryApi.get(ride.id));
       setRouteMessage(
         t(
@@ -382,21 +382,52 @@ export default function FerryDetailPage() {
                         ]
                       : []),
                     ...(ride.geometrySource === "manual"
-                      ? [
-                          {
-                            key: "clear",
-                            testId: "ferry-route-clear",
-                            label: t(routing ? "ferry:routing.clearing" : "ferry:routing.clear"),
-                            danger: true,
-                            disabled: routing,
-                            confirm: {
-                              title: t("ferry:routing.clearConfirm.title"),
-                              message: t("ferry:routing.clearConfirm.message"),
-                              confirmText: t("ferry:routing.clear"),
+                      ? ride.manualScope === "pair"
+                        ? [
+                            {
+                              key: "clear",
+                              testId: "ferry-route-clear",
+                              label: t(
+                                routing ? "ferry:routing.clearing" : "ferry:routing.clearAll"
+                              ),
+                              danger: true,
+                              disabled: routing,
+                              confirm: {
+                                title: t("ferry:routing.clearAllConfirm.title"),
+                                message: t("ferry:routing.clearAllConfirm.message"),
+                                confirmText: t("ferry:routing.clearAll"),
+                              },
+                              onSelect: () => void clearManual("all"),
                             },
-                            onSelect: () => void clearManual(),
-                          },
-                        ]
+                            {
+                              key: "clearOne",
+                              testId: "ferry-route-clear-one",
+                              label: t("ferry:routing.clearOne"),
+                              danger: true,
+                              disabled: routing,
+                              confirm: {
+                                title: t("ferry:routing.clearOneConfirm.title"),
+                                message: t("ferry:routing.clearOneConfirm.message"),
+                                confirmText: t("ferry:routing.clearOne"),
+                              },
+                              onSelect: () => void clearManual("journey"),
+                            },
+                          ]
+                        : [
+                            {
+                              key: "clear",
+                              testId: "ferry-route-clear",
+                              label: t(routing ? "ferry:routing.clearing" : "ferry:routing.clear"),
+                              danger: true,
+                              disabled: routing,
+                              confirm: {
+                                title: t("ferry:routing.clearConfirm.title"),
+                                message: t("ferry:routing.clearConfirm.message"),
+                                confirmText: t("ferry:routing.clear"),
+                              },
+                              onSelect: () => void clearManual("journey"),
+                            },
+                          ]
                       : []),
                   ]}
                   geoExport={

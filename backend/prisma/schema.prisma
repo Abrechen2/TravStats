@@ -159,6 +159,7 @@ model User {
   busJourneys                     BusJourney[]
   ferryJourneys                   FerryJourney[]
   vesselPositionFixes             VesselPositionFix[]
+  ferryPairRoutes                 FerryPairRoute[]
   rentalBookings                  RentalBooking[]
   apiTokens                       ApiToken[]
   pairingCodes                    PairingCode[]
@@ -6032,6 +6033,10 @@ model FerryJourney {
   distanceSource String? @map("distance_source")
   geometry       Json?
   geometrySource String  @default("straight") @map("geometry_source")
+  /// Who owns a `manual` line: `pair` (follows the user's FerryPairRoute for the two ports),
+  /// `journey` (this crossing only). NULL = no manual line, or one stored before the pair
+  /// line existed (read as `journey` until `adoptLegacyManualLines` has sorted it).
+  manualScope    String? @map("manual_scope")
 
   actualDepartureTime DateTime? @map("actual_departure_time")
   actualArrivalTime   DateTime? @map("actual_arrival_time")
@@ -6097,6 +6102,29 @@ model FerryJourney {
   @@index([bookingId])
   @@index([importBatchId])
   @@map("ferry_journeys")
+}
+
+/// A hand-drawn sea line shared by every crossing of the user between two ports, in
+/// both directions (GitHub #406/#407). The ports are matched by normalised name AND
+/// coordinates within 1 km (a crossing has no port catalogue id). `waypoints` run
+/// from end A to end B as [lon, lat]; a crossing B -> A reads them reversed.
+model FerryPairRoute {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  aName     String   @map("a_name")
+  aLat      Float    @map("a_lat")
+  aLon      Float    @map("a_lon")
+  bName     String   @map("b_name")
+  bLat      Float    @map("b_lat")
+  bLon      Float    @map("b_lon")
+  waypoints Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("ferry_pair_routes")
 }
 
 /// The one-shot sea-route backfill's bookkeeping (owner, 2026-10-21): one row

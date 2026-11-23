@@ -16,6 +16,14 @@ export interface FerryRoadtripLeg {
 }
 /** What a save did to the crossing's sea line: `failed` = saved, but routing failed. */
 export type FerrySeaRouteOutcome = "routed" | "straight" | "unchanged" | "failed";
+/** `pair`: every crossing between the same two ports, both directions; `journey`: this one only. */
+export type FerryLineScope = "pair" | "journey";
+export interface FerryPairReach {
+  count: number;
+  from: string;
+  to: string;
+  hasPairLine: boolean;
+}
 export interface FerryListSummary {
   journeys: number;
   operators: number;
@@ -83,21 +91,33 @@ export const ferryApi = {
     ).data.data;
   },
   /** Draw the crossing's route by hand: `[lon, lat]` points, both ends on the terminals (forgejo#431). */
-  async setManualRoute(id: string, waypoints: Array<[number, number]>, baseVersion?: string) {
+  async setManualRoute(
+    id: string,
+    waypoints: Array<[number, number]>,
+    baseVersion?: string,
+    scope: FerryLineScope = "pair"
+  ) {
     return (
       await api.put<Envelope<FerryJourney>>(`/ferry/${encodeURIComponent(id)}/route-override`, {
         waypoints,
+        scope,
         ...(baseVersion ? { baseVersion } : {}),
       })
     ).data.data;
   },
+  /** How many of the user's crossings a pair line drawn here would reach (this one included). */
+  async routePair(id: string): Promise<FerryPairReach> {
+    return (await api.get<Envelope<FerryPairReach>>(`/ferry/${encodeURIComponent(id)}/route-pair`))
+      .data.data;
+  },
   /** Drop the hand-drawn line; the server routes the crossing again where it can. */
-  async clearManualRoute(id: string, baseVersion?: string) {
+  async clearManualRoute(id: string, baseVersion?: string, scope: "all" | "journey" = "all") {
     return (
       await api.delete<
         Envelope<FerryJourney> & { meta: { seaRoute: "routed" | "straight" | "unchanged" } }
       >(`/ferry/${encodeURIComponent(id)}/route-override`, {
         timeout: 60000,
+        params: { scope },
         ...(baseVersion ? { headers: { "If-Match": `"${baseVersion}"` } } : {}),
       })
     ).data;

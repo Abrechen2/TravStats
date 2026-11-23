@@ -12,6 +12,7 @@
  */
 
 import logger from "../utils/logger";
+import { adoptLegacyManualLines } from "../services/ferry/ferryPairMigration";
 import {
   backfillFerrySeaRoutes,
   type BackfillOptions,
@@ -83,12 +84,20 @@ export function startFerryRouteBackfillScheduler(): void {
   if (bootTimer) return;
   stopped = false;
   bootTimer = setTimeout(() => {
-    void runFerryRouteBackfill().catch((error) => {
-      logger.warn(
-        { operation: "ferry_route_backfill_error", error },
-        "Ferry sea-route backfill failed"
-      );
-    });
+    void adoptLegacyManualLines()
+      .catch((error) => {
+        logger.warn(
+          { operation: "ferry_pair_line_migration_error", error },
+          "Sorting the manual ferry lines failed; they stay per crossing"
+        );
+      })
+      .then(() => runFerryRouteBackfill())
+      .catch((error) => {
+        logger.warn(
+          { operation: "ferry_route_backfill_error", error },
+          "Ferry sea-route backfill failed"
+        );
+      });
   }, BOOT_DELAY_MS);
   bootTimer.unref?.();
 }

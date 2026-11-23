@@ -57,7 +57,7 @@ registry.registerPath({
   tags: ["Ferry"],
   summary: "Draw a crossing's route by hand",
   description:
-    "Sets the crossing's line from [lon, lat] points (3 to 64): both ends within 1 km of the terminals (they are snapped onto them), at least one via point between. Stores geometrySource=manual; the distance follows the line unless the user typed one. A later re-route never overwrites it; moving a terminal drops it. Additive: clients that only read geometry need no change. Error codes: FERRY_ROUTE_INVALID, FERRY_ROUTE_NOT_ANCHORED.",
+    "Sets the crossing's line from [lon, lat] points (3 to 64): both ends within 1 km of the terminals (they are snapped onto them), at least one via point between. Stores geometrySource=manual; the distance follows the line unless the user typed one. A later re-route never overwrites it; moving a terminal drops it. Body `scope`: `pair` (default) makes it the line of every crossing the user has between the same two ports, both directions (a crossing with its own line keeps it); `journey` keeps it on this crossing. Additive: clients that only read geometry need no change. Error codes: FERRY_ROUTE_INVALID, FERRY_ROUTE_NOT_ANCHORED.",
   request: {
     params,
     body: { content: json(manualRouteSchema.openapi("FerryManualRoute")) },
@@ -74,8 +74,8 @@ registry.registerPath({
   tags: ["Ferry"],
   summary: "Drop a hand-drawn route",
   description:
-    "Returns the crossing to a straight line and tries the sea router again; meta.seaRoute is routed, straight or unchanged (there was no manual line).",
-  request: { params },
+    "Returns the crossing to a straight line and tries the sea router again; meta.seaRoute is routed, straight or unchanged (there was no manual line). Query `scope`: `all` (default) also removes the pair line, so every crossing that followed it is redrawn; `journey` clears this crossing only.",
+  request: { params, query: z.object({ scope: z.enum(["all", "journey"]).optional() }) },
   responses: {
     200: {
       description: "The updated crossing",
@@ -86,6 +86,31 @@ registry.registerPath({
       ),
     },
     429: { description: "Too many requests", content: errorContent },
+    ...errors,
+  },
+});
+registry.registerPath({
+  method: "get",
+  path: "/ferry/{id}/route-pair",
+  tags: ["Ferry"],
+  summary: "How far a hand-drawn line reaches from this crossing",
+  description:
+    "The number of the user's crossings between the same two ports (both directions, this one included) and whether a pair line is stored.",
+  request: { params },
+  responses: {
+    200: {
+      description: "Pair reach",
+      content: json(
+        envelope(
+          z.object({
+            count: z.number(),
+            from: z.string(),
+            to: z.string(),
+            hasPairLine: z.boolean(),
+          })
+        )
+      ),
+    },
     ...errors,
   },
 });

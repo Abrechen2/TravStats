@@ -27,7 +27,8 @@ vi.mock("../../../hooks/useDomainColors", () => ({
   useDomainColors: () => ({ colorOf: () => "#5686b8" }),
 }));
 const setManualRoute = vi.hoisted(() => vi.fn());
-vi.mock("../../../lib/api/ferry", () => ({ ferryApi: { setManualRoute } }));
+const routePair = vi.hoisted(() => vi.fn());
+vi.mock("../../../lib/api/ferry", () => ({ ferryApi: { setManualRoute, routePair } }));
 
 import { FerryRouteEditor, editorStartLine } from "../FerryRouteEditor";
 
@@ -43,6 +44,8 @@ describe("FerryRouteEditor", () => {
   beforeEach(() => {
     pathLayers.length = 0;
     setManualRoute.mockReset();
+    routePair.mockReset();
+    routePair.mockResolvedValue({ count: 3, from: "Galtby", to: "Långnäs", hasPairLine: false });
   });
 
   it("starts from the chord between the terminals", () => {
@@ -66,8 +69,30 @@ describe("FerryRouteEditor", () => {
     expect(setManualRoute).toHaveBeenCalledWith(
       ride.id,
       [[ride.depLon, ride.depLat], via, [ride.arrLon, ride.arrLat]],
-      ride.updatedAt
+      ride.updatedAt,
+      "pair"
     );
+  });
+
+  it("says how many crossings the line reaches, and 'this crossing only' keeps it local (GitHub #406)", async () => {
+    setManualRoute.mockResolvedValue(ride);
+    render(<FerryRouteEditor ride={ride} onSaved={vi.fn()} onClose={vi.fn()} />);
+    const scope = await screen.findByTestId("ferry-route-scope");
+    expect(scope.textContent).toContain("ferry:routeEditor.scope.pair");
+    fireEvent.click(screen.getByTestId("ferry-route-only-this"));
+    expect(scope.textContent).toContain("ferry:routeEditor.scope.onlyThis");
+    clickSegment(0, [ride.depLon, ride.depLat + 0.2]);
+    const save = await screen.findByTestId("ferry-route-editor-save");
+    await waitFor(() => expect(save).toBeEnabled());
+    fireEvent.click(save);
+    await waitFor(() => expect(setManualRoute).toHaveBeenCalled());
+    expect(setManualRoute.mock.calls[0][3]).toBe("journey");
+  });
+
+  it("says so when the reach cannot be loaded instead of saving blind in silence", async () => {
+    routePair.mockRejectedValue(new Error("network"));
+    render(<FerryRouteEditor ride={ride} onSaved={vi.fn()} onClose={vi.fn()} />);
+    expect(await screen.findByTestId("ferry-route-scope-failed")).toBeInTheDocument();
   });
 
   it("shows the server's reason for a refused line, not a raw code", async () => {

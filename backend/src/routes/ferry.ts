@@ -390,7 +390,11 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
               // Another ship: the resolved MMSI and its positions were the old one's.
               ...(vesselChanged && { vesselMmsi: null, vesselMmsiSource: null }),
               ...state,
-              ...(terminalsMoved && { geometry: Prisma.DbNull, geometrySource: "straight" }),
+              ...(terminalsMoved && {
+                geometry: Prisma.DbNull,
+                geometrySource: "straight",
+                manualScope: null,
+              }),
               updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)),
               ...fxColumns,
               ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),

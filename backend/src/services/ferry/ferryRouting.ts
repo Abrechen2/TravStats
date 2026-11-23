@@ -5,6 +5,7 @@ import logger from "../../utils/logger";
 import { haversineKm, polylineLengthKm } from "../../shared/geo/haversine";
 import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
 import { computeFerryGeometry, readSeaGeometry, type FerryEnds } from "./ferryGeometry";
+import { findPairRoute, lineForCrossing } from "./ferryPairRoute";
 
 /** A crossing's line is worth carrying to its linked leg when it was routed or drawn by hand. */
 export const hasStoredLine = (geometrySource: string): boolean =>
@@ -107,8 +108,20 @@ export async function routeFerryJourney(
   const existing = await prisma.ferryJourney.findFirst({ where: { id, userId } });
   if (!existing) throw new AppError("Ferry ride not found", 404);
   if (existing.geometrySource !== "straight") return { outcome: "unchanged" as const };
-  const result = await computeFerryGeometry(existing);
-  if (!result) return { outcome: "straight" as const };
+  // The user's hand-drawn line for this pair of ports outranks a routed one
+  // (GitHub #406); a crossing that opted out ("only this crossing") is routed.
+  const pair =
+    existing.manualScope === "journey" ? null : await findPairRoute(prisma, userId, existing);
+  const pairLine = pair ? lineForCrossing(pair.row.waypoints, pair.direction, existing) : null;
+  const routed = pairLine
+    ? {
+        geometry: pairLine,
+        distanceKm:
+          Math.round(polylineLengthKm(pairLine.map(([lon, lat]) => ({ lat, lon }))) * 10) / 10,
+      }
+    : await computeFerryGeometry(existing);
+  if (!routed) return { outcome: "straight" as const };
+  const result = { ...routed, source: pairLine ? "manual" : "sea_route" };
   await prisma.$transaction(
     async (tx) => {
       // The sea line and its length are shared facts: every copy gets them.
@@ -117,7 +130,8 @@ export async function routeFerryJourney(
         where: { id, userId, updatedAt: existing.updatedAt, geometrySource: "straight" },
         data: {
           geometry: result.geometry,
-          geometrySource: "sea_route",
+          geometrySource: result.source,
+          ...(pairLine && { manualScope: "pair" }),
           ...(existing.distanceSource !== "user" && {
             distanceKm: result.distanceKm,
             distanceSource: "sea_route",
@@ -128,7 +142,7 @@ export async function routeFerryJourney(
         throw new AppError("Crossing changed elsewhere", 409, "VERSION_CONFLICT");
       await syncFerryLeg(
         tx,
-        { ...existing, geometry: result.geometry, geometrySource: "sea_route" },
+        { ...existing, geometry: result.geometry, geometrySource: result.source },
         { onMismatch }
       );
       await propagateWrite(tx, userId, "ferry", id, before);

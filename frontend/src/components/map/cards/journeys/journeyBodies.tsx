@@ -9,6 +9,7 @@ import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { FlagImg } from "../../../../lib/countryFlag";
 import { tokens } from "../../../../theme/tokens";
+import { useFerryRouteEditStore } from "../../../../store/ferryRouteEditStore";
 import {
   Actions,
   Grid,
@@ -213,9 +214,12 @@ function LatestRows({
 
 function OpenAction({
   latest,
+  editRouteOf,
   t,
 }: {
   latest: JourneyRouteStats["latest"];
+  /** The domain whose line this card is, when the line is edited from the map. */
+  editRouteOf?: MapJourney["domain"];
   t: TFn;
 }): JSX.Element | null {
   const navigate = useNavigate();
@@ -227,6 +231,15 @@ function OpenAction({
         label: t(latest.upcoming ? "map:journey.openNext" : "map:journey.openLatest"),
         onClick: () => navigate(journeyPath(target)),
       }}
+      // A ferry line is drawn once per pair of ports (GitHub #407): edit it from the map.
+      secondary={
+        editRouteOf === "ferry"
+          ? {
+              label: t("map:journey.editRoute"),
+              onClick: () => useFerryRouteEditStore.getState().open(target.id),
+            }
+          : undefined
+      }
     />
   );
 }
@@ -267,7 +280,7 @@ export function JourneyRouteBody({
         )}
       </Grid>
       <JourneyList journeys={stats.list} t={t} />
-      <OpenAction latest={stats.latest} t={t} />
+      <OpenAction latest={stats.latest} editRouteOf={data.domain} t={t} />
     </>
   );
 }

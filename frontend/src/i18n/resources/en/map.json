@@ -440,6 +440,7 @@
       "cruise_other": "{{count}} departures"
     },
     "picture": "Picture",
-    "pictureUnavailable": "Picture currently unavailable."
+    "pictureUnavailable": "Picture currently unavailable.",
+    "editRoute": "Edit route"
   }
 }
