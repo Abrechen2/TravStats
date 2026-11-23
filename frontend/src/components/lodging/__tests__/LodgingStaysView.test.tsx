@@ -196,7 +196,12 @@ describe("LodgingStaysView", () => {
     const dates = container.querySelectorAll<HTMLInputElement>('input[type="date"]');
     fireEvent.change(dates[0], { target: { value: "2025-06-01" } });
     fireEvent.change(dates[1], { target: { value: "2025-06-30" } });
-    await userEvent.selectOptions(screen.getByRole("combobox"), "t1");
+    // By name: the rows (and their page-size picker) stay on screen while the
+    // narrower list loads, so the trip picker is no longer the only combobox.
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "lodging:stayView.filter.trip" }),
+      "t1"
+    );
 
     await waitFor(() =>
       expect(listStayPageMock).toHaveBeenLastCalledWith(

@@ -4,7 +4,7 @@ import TagChips from "../components/common/TagChips";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import WikipediaCard from "../components/common/WikipediaCard";
 import type { JSX } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
 import DetailSection from "../components/ui/DetailSection";
@@ -39,6 +39,7 @@ import { usePlaceCategories } from "../hooks/usePlaceCategories";
 import { useDisplayFormat } from "../lib/displayFormat";
 import { visitTime as visitTimeOf } from "../lib/entityTimes";
 import type { Place, PlaceVisit } from "../types/place";
+import BackLink from "../components/navigation/BackLink";
 
 export default function PlaceDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -253,9 +254,9 @@ export default function PlaceDetailPage(): JSX.Element {
               <Button onClick={() => void load()}>{t("common:buttons.retry")}</Button>
             </div>
           )}
-          <Link to="/places" className="ts-back-link mt-3 inline-block text-sm">
+          <BackLink to="/places" className="ts-back-link mt-3 inline-block text-sm">
             ← {t("places:detail.backToList")}
-          </Link>
+          </BackLink>
         </div>
       </AppShell>
     );

@@ -111,7 +111,7 @@ describe("close affordance — the shared primitives", () => {
 
   it("the change history ('Verlauf') opens inline AND closes again", async () => {
     vi.mocked(changeHistoryApi.forEntry).mockResolvedValue({ entries: [], nextCursor: null });
-    render(<ChangeHistorySection entityType="lodging" entityId="l1" />);
+    render(<ChangeHistorySection entityType="flight" entityId="f1" />);
     await userEvent.click(screen.getByTestId("change-history-open"));
     await screen.findByText("changeHistory:empty");
 

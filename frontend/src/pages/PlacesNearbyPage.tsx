@@ -30,6 +30,7 @@ import { usePlaceCategories } from "../hooks/usePlaceCategories";
 import type { PlaceCountState } from "../shared/placeCounting";
 import type { Lodging } from "../types/lodging";
 import type { Place } from "../types/place";
+import BackLink from "../components/navigation/BackLink";
 
 const COARSE = "pointer-coarse:min-h-(--ts-size-touch-min)";
 const ALL_STATES: readonly PlaceCountState[] = ["visited", "planned", "excluded"];
@@ -176,9 +177,9 @@ export default function PlacesNearbyPage(): JSX.Element {
 
   return (
     <AppShell>
-      <Link to="/places" className="ts-back-link text-sm">
+      <BackLink to="/places" className="ts-back-link text-sm">
         ← {t("places:detail.backToLogbook")}
-      </Link>
+      </BackLink>
       <h1 className="t-screen-title mt-2 mb-1">{t("places:nearby.title")}</h1>
       <p className="mb-5 text-sm" style={{ color: "var(--text-muted)" }}>
         {t("places:nearby.subtitle")}

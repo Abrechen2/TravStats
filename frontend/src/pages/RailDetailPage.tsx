@@ -56,6 +56,7 @@ import type { RailJourney, RailJourneyDetail } from "../types/rail";
 import { StationShortCode } from "../components/rail/StationShortCode";
 import WebGLGuard from "../components/map/WebGLGuard";
 import ChangeHistorySection from "../components/changeHistory/ChangeHistorySection";
+import BackLink from "../components/navigation/BackLink";
 
 type Editing = { mode: "edit" } | { mode: "connection" } | null;
 
@@ -160,9 +161,9 @@ export default function RailDetailPage(): JSX.Element {
     const isLoadError = failure === "loadError";
     return (
       <AppShell>
-        <Link to="/rail" className="ts-back-link text-sm text-(--text-muted)">
+        <BackLink to="/rail" className="ts-back-link text-sm text-(--text-muted)">
           ← {t("rail:title")}
-        </Link>
+        </BackLink>
         <div
           role="alert"
           className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)"

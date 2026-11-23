@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useQueryReset } from "../../hooks/useQueryState";
 import { getLoyaltyMembership } from "../../lib/api/loyalty";
 import { logger } from "../../lib/logger";
 
@@ -44,21 +45,18 @@ export function useLoyaltyListFilter(): {
   linkedYear: number | null;
   clear: () => void;
 } {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const resetQuery = useQueryReset();
   const membershipId = searchParams.get(LOYALTY_FILTER_PARAM);
   const rawYear = Number.parseInt(searchParams.get(LOYALTY_YEAR_PARAM) ?? "", 10);
   const linkedYear = Number.isFinite(rawYear) ? rawYear : null;
+  // Only the card goes. `year` is the list's own year filter since the list
+  // state moved into the URL (2026-11-23); the link merely seeded it. Through
+  // the shared query writer, so "reset filters" — several writes in one
+  // click — does not lose the others.
   const clear = useCallback((): void => {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete(LOYALTY_FILTER_PARAM);
-        next.delete(LOYALTY_YEAR_PARAM);
-        return next;
-      },
-      { replace: true }
-    );
-  }, [setSearchParams]);
+    resetQuery([LOYALTY_FILTER_PARAM]);
+  }, [resetQuery]);
   return { membershipId, linkedYear, clear };
 }
 

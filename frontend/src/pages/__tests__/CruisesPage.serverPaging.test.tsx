@@ -3,7 +3,9 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router-dom", async (importOriginal) => ({
+  // The real module underneath: list state hooks ask `useInRouterContext`.
+  ...(await importOriginal<typeof import("react-router-dom")>()),
   Link: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   useNavigate: () => vi.fn(),
 }));
@@ -259,7 +261,11 @@ describe("CruisesPage — nothing is filtered or sliced in the browser", () => {
   });
 
   it("debounces the search rather than querying per keystroke", () => {
-    expect(source).toContain("useDebouncedValue");
+    // Through the URL-backed search box, which debounces before it writes or queries.
+    expect(source).toContain("useQuerySearch");
+    expect(readFileSync(resolve(__dirname, "../../hooks/useQueryState.ts"), "utf8")).toContain(
+      "useDebouncedValue"
+    );
   });
 });
 

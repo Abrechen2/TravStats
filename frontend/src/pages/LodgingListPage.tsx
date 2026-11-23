@@ -46,7 +46,15 @@ import { useToastStore } from "../store/toastStore";
 import type { Lodging, LodgingFacets, LodgingSortKey, LodgingType } from "../types/lodging";
 import { useSortPrefs } from "../components/table/useSortPrefs";
 import { useServerPagination } from "../components/table/useServerPagination";
-import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
+import {
+  oneOfParam,
+  stringParam,
+  useQuerySearch,
+  useQueryState,
+  useQuerySetter,
+  yearOrAllParam,
+} from "../hooks/useQueryState";
 import TablePagination from "../components/table/TablePagination";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
@@ -56,6 +64,22 @@ type TypeFilter = LodgingType | "all";
 type YearFilter = number | "all";
 type CountryFilter = string | "all";
 type StatusFilter = StayStatus | "all";
+
+const TYPE_FILTER_PARAM = oneOfParam<TypeFilter>([
+  "all",
+  "hotel",
+  "campsite",
+  "guesthouse",
+  "apartment",
+  "hostel",
+]);
+const STATUS_FILTER_PARAM = oneOfParam<StatusFilter>([
+  "all",
+  "scheduled",
+  "in_progress",
+  "completed",
+  "cancelled",
+]);
 
 /** The lifecycle values a lodging row can show, in the order the pill ranks
  *  them. `null` (a house with no stays at all) is not a filterable state —
@@ -103,18 +127,16 @@ export default function LodgingListPage(): JSX.Element {
   // Houses or the chronological stay list (forgejo#226). In the URL, so a
   // bookmark, a reload and the browser's Back all keep the reader's view; the
   // other query parameters (a loyalty link) are carried through untouched.
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const view: LodgingView = searchParams.get("view") === "stays" ? "stays" : "houses";
+  const writeQuery = useQuerySetter();
   const setView = (next: LodgingView): void =>
-    setSearchParams(
-      (current) => {
-        const params = new URLSearchParams(current);
-        if (next === "stays") params.set("view", "stays");
-        else params.delete("view");
-        return params;
-      },
-      { replace: true }
-    );
+    writeQuery((params) => {
+      if (next === "stays") params.set("view", "stays");
+      else params.delete("view");
+      // The two views page differently; page 4 of the houses is not page 4 of the stays.
+      params.delete("page");
+    });
   // `totalSpendBase` is computed by the backend in the user's actual base
   // currency (`UserSettings.baseCurrency`) — NOT `units.currency`, which is an
   // independent display preference used elsewhere for flight-cost figures.
@@ -145,15 +167,24 @@ export default function LodgingListPage(): JSX.Element {
   // The photographs and kept originals that go with the house, and the trips
   // that stay - read while its confirmation is open (forgejo#250).
   const deleteFacts = useLodgingDeleteFacts(toDelete);
-  const [search, setSearch] = useState<string>("");
-  const debouncedSearch = useDebouncedValue(search);
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  // The filter bar lives in the URL (2026-11-23): Back from a stay, a reload
+  // and a shared link reopen the list as it was left, not as new.
+  const [search, setSearch, debouncedSearch] = useQuerySearch();
+  const [typeFilter, setTypeFilter] = useQueryState<TypeFilter>("type", "all", TYPE_FILTER_PARAM);
   // A loyalty link (`?membership=…&year=…`) opens the list on one card's
-  // stays; its year seeds the ordinary year filter.
+  // stays; its `year` IS the ordinary year filter's parameter.
   const loyaltyFilter = useLoyaltyListFilter();
-  const [yearFilter, setYearFilter] = useState<YearFilter>(() => loyaltyFilter.linkedYear ?? "all");
-  const [countryFilter, setCountryFilter] = useState<CountryFilter>("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [yearFilter, setYearFilter] = useQueryState<YearFilter>("year", "all", yearOrAllParam);
+  const [countryFilter, setCountryFilter] = useQueryState<CountryFilter>(
+    "country",
+    "all",
+    stringParam
+  );
+  const [statusFilter, setStatusFilter] = useQueryState<StatusFilter>(
+    "status",
+    "all",
+    STATUS_FILTER_PARAM
+  );
   // Newest first everywhere, and the choice survives a reload — the
   // column choice already did (useColumnPrefs), the sort never had.
   const { sortBy, sortOrder, setSort } = useSortPrefs("lodging-list", "lastStay", "desc", [
@@ -244,6 +275,8 @@ export default function LodgingListPage(): JSX.Element {
   const filterSignature = useMemo(() => lodgingFilterSignature(filterState), [filterState]);
 
   const pagination = useServerPagination(total, "lodging-list", filterSignature);
+  // Back to this list waits for the rows before it restores the scroll.
+  useScrollRestoreReady(!loading);
   const { limit, offset } = pagination;
 
   // Bumped by anything that CHANGES rows (a delete, an import, an edit), which
@@ -607,7 +640,10 @@ export default function LodgingListPage(): JSX.Element {
               />
             ) : (
               <>
-                {loading ? (
+                {/* The skeleton only before the first rows: a reload after an
+                    edit keeps the rows on screen, so the page does not collapse
+                    and throw the reader back to the top. */}
+                {loading && rows.length === 0 ? (
                   <SkeletonTable rows={10} />
                 ) : rows.length === 0 ? (
                   <div

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { JSX } from "react";
-import { Link } from "react-router-dom";
+import BackLink from "../navigation/BackLink";
 import type { DomainKey } from "../../shared/domains";
 import { alpha, DOMAIN_TOKEN, token } from "./tokens";
 
@@ -94,8 +94,9 @@ export default function DetailHeader({
     <div style={{ marginBottom: "var(--ts-space-xl)" }}>
       {/* A real link, not a button: back is a destination, so a middle click
           and "open in new tab" have to work. Three of the four pages used a
-          button and silently took that away. */}
-      <Link
+          button and silently took that away. It goes BACK in history when the
+          entry behind is the list, so the list returns as it was left. */}
+      <BackLink
         to={backTo}
         className="ts-back-link"
         style={{
@@ -110,7 +111,7 @@ export default function DetailHeader({
       >
         <span aria-hidden>←</span>
         {backLabel}
-      </Link>
+      </BackLink>
 
       <div
         className="flex flex-col"

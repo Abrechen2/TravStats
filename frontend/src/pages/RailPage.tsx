@@ -34,7 +34,13 @@ import {
 import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useRailImportAdapter } from "../components/import/adapters/railAdapter";
 import { LoyaltyFilterNotice, useLoyaltyListFilter } from "../components/Loyalty/LoyaltyListFilter";
-import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import {
+  statusOrAllParam,
+  useQuerySearch,
+  useQueryState,
+  yearOrAllParam,
+} from "../hooks/useQueryState";
+import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
 import { useTranslation } from "../hooks/useTranslation";
 import {
   railApi,
@@ -125,10 +131,10 @@ export default function RailPage(): JSX.Element {
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [years, setYears] = useState<number[]>([]);
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebouncedValue(search);
-  const [statusFilter, setStatusFilter] = useState<RailStatus | "all">("all");
-  const [yearFilter, setYearFilter] = useState<number | "all">("all");
+  // List state in the URL (2026-11-23): Back from an entry and a reload keep it.
+  const [search, setSearch, debouncedSearch] = useQuerySearch();
+  const [statusFilter, setStatusFilter] = useQueryState("status", "all", statusOrAllParam);
+  const [yearFilter, setYearFilter] = useQueryState("year", "all", yearOrAllParam);
   const [editing, setEditing] = useState<Editing>(null);
   // The gap calendar's "Eintrag anlegen": a new ride on the gap's days (`?addFrom=&addTo=`).
   const gap = useGapPrefill();
@@ -173,6 +179,8 @@ export default function RailPage(): JSX.Element {
   }, [debouncedSearch, statusFilter, yearFilter]);
   const signature = `${filters.q ?? ""}|${filters.status ?? ""}|${filters.year ?? ""}|${membershipId ?? ""}`;
   const pagination = useServerPagination(total, "rail-list", signature);
+  // Back to this list waits for the rows before it restores the scroll.
+  useScrollRestoreReady(!loading);
   const { limit, offset } = pagination;
 
   useEffect(() => {

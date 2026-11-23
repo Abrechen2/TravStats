@@ -2,10 +2,13 @@ import { describe, expect, it, beforeEach, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import { MemoryRouter } from "react-router-dom";
 
 // The URL the page was opened at — a loyalty link sets `membership` and `year`.
 const urlParams = vi.hoisted(() => ({ current: "" }));
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router-dom", async (importOriginal) => ({
+  // The real module underneath: list state hooks ask `useInRouterContext`.
+  ...(await importOriginal<typeof import("react-router-dom")>()),
   Link: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   useNavigate: () => vi.fn(),
   useSearchParams: () => [new URLSearchParams(urlParams.current), vi.fn()],
@@ -141,7 +144,13 @@ describe("FlightsTablePage — server-side paging", () => {
     urlParams.current = "membership=card-7&year=2023";
     getLoyaltyMembership.mockResolvedValue({ id: "card-7", programName: "Miles & More" });
     try {
-      render(<FlightsTablePage />);
+      // In a router: the year is read from the URL itself since the list
+      // state moved there (2026-11-23), not seeded into local state.
+      render(
+        <MemoryRouter initialEntries={["/flights?membership=card-7&year=2023"]}>
+          <FlightsTablePage />
+        </MemoryRouter>
+      );
       await waitFor(() => expect(getAll).toHaveBeenCalled());
       expect(lastQuery()).toMatchObject({ membershipId: "card-7", year: 2023 });
       expect(await screen.findByTestId("loyalty-list-filter")).toBeTruthy();
@@ -298,7 +307,11 @@ describe("FlightsTablePage — nothing is filtered or sliced in the browser", ()
   });
 
   it("debounces the search rather than querying per keystroke", () => {
-    expect(source).toContain("useDebouncedValue");
+    // Through the URL-backed search box, which debounces before it writes or queries.
+    expect(source).toContain("useQuerySearch");
+    expect(readFileSync(resolve(__dirname, "../../hooks/useQueryState.ts"), "utf8")).toContain(
+      "useDebouncedValue"
+    );
   });
 });
 

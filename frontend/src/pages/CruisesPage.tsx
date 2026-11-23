@@ -40,13 +40,28 @@ import { logger } from "../lib/logger";
 import { CRUISE_SORT_FIELDS, type CruiseSortField } from "../shared/cruiseListOrder";
 import { useSortPrefs } from "../components/table/useSortPrefs";
 import { useServerPagination } from "../components/table/useServerPagination";
-import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import {
+  oneOfParam,
+  stringParam,
+  useQuerySearch,
+  useQueryState,
+  yearOrAllParam,
+} from "../hooks/useQueryState";
+import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
 import TablePagination from "../components/table/TablePagination";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
 
 type StatusFilter = CruiseStatus | "all";
 type YearFilter = number | "all";
+const STATUS_FILTER_PARAM = oneOfParam<StatusFilter>([
+  "all",
+  "scheduled",
+  "in_progress",
+  "completed",
+  "cancelled",
+  "historical",
+]);
 
 // #status-from-dates: in_progress included so the filter dropdown can
 // discover cruises currently under way, not just scheduled/completed/cancelled.
@@ -126,17 +141,21 @@ export default function CruisesPage(): JSX.Element {
 
   // Filter state — mirrors the flights filter panel conceptually but the
   // data domain is smaller so we inline rather than reuse <Filters />.
-  const [search, setSearch] = useState<string>("");
+  // In the URL (2026-11-23), so Back from a cruise and a reload keep them.
   // Debounced: the search used to filter rows already in the browser, so
   // typing cost nothing. As a query parameter, "AIDAnova" is eight requests
   // without this, seven for a prefix nobody wanted to see.
-  const debouncedSearch = useDebouncedValue(search);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [yearFilter, setYearFilter] = useState<YearFilter>("all");
+  const [search, setSearch, debouncedSearch] = useQuerySearch();
+  const [statusFilter, setStatusFilter] = useQueryState<StatusFilter>(
+    "status",
+    "all",
+    STATUS_FILTER_PARAM
+  );
+  const [yearFilter, setYearFilter] = useQueryState<YearFilter>("year", "all", yearOrAllParam);
   // The one filter only cruises have. It lives behind the "Filter" button,
   // which is what that button is for — search/status/year stay open because
   // every domain has them.
-  const [lineFilter, setLineFilter] = useState<string>("all");
+  const [lineFilter, setLineFilter] = useQueryState("line", "all", stringParam);
   // Newest first everywhere, and the choice survives a reload — the
   // column choice already did (useColumnPrefs), the sort never had.
   // The vocabulary comes from the mirror the SERVER also reads, so a key the
@@ -222,6 +241,7 @@ export default function CruisesPage(): JSX.Element {
   );
 
   const pagination = useServerPagination(total, "cruises-list", filterSignature);
+  useScrollRestoreReady(!loading);
   const { limit, offset } = pagination;
 
   useEffect(() => {
@@ -482,7 +502,7 @@ export default function CruisesPage(): JSX.Element {
             onRetry={(): void => void reload()}
             log={loadFailure}
           />
-        ) : loading ? (
+        ) : loading && cruises.length === 0 ? (
           <SkeletonTable rows={10} />
         ) : cruises.length === 0 ? (
           <div

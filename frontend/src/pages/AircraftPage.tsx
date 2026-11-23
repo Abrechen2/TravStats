@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { formatNumber } from "../lib/units";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import { statsApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import type { AircraftProfileResponse } from "../types";
 import { formatDate as formatUserDate } from "../lib/displayFormat";
+import BackLink from "../components/navigation/BackLink";
 
 function formatDate(iso: string | null, _locale: string): string {
   return iso ? formatUserDate(iso) || "—" : "—";
@@ -40,9 +41,12 @@ export default function AircraftPage(): JSX.Element {
   return (
     <AppShell>
       <div>
-        <Link to="/stats" className="ts-back-link mb-4 inline-block text-sm text-(--text-muted)">
+        <BackLink
+          to="/stats"
+          className="ts-back-link mb-4 inline-block text-sm text-(--text-muted)"
+        >
           ← {t("aircraft:backToStats")}
-        </Link>
+        </BackLink>
         {loading && <p className="text-sm text-gray-500">{t("common:loading.default")}</p>}
         {!loading && notFound && (
           <div className="bg-(--bg-elevated) rounded-xl shadow-sm p-6">

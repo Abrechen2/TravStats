@@ -3,7 +3,7 @@ import { PackageBookingCard } from "../components/bookings/PackageBookingCard";
 import { usePackageSplit } from "../components/bookings/usePackageSplit";
 import { useEffect, useState } from "react";
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
 import DetailSection from "../components/ui/DetailSection";
@@ -43,6 +43,7 @@ import { dateLocaleForLanguage } from "../lib/units";
 import { usePriceFxReadout } from "../hooks/usePriceFxReadout";
 import WebGLGuard from "../components/map/WebGLGuard";
 import ChangeHistorySection from "../components/changeHistory/ChangeHistorySection";
+import BackLink from "../components/navigation/BackLink";
 export default function FerryDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -133,9 +134,9 @@ export default function FerryDetailPage() {
   if (!ride)
     return (
       <AppShell>
-        <Link to="/ferry" className="ts-back-link text-sm text-(--text-muted)">
+        <BackLink to="/ferry" className="ts-back-link text-sm text-(--text-muted)">
           {t("ferry:title")}
-        </Link>
+        </BackLink>
         {error ? (
           <ListLoadFailed
             title={t("ferry:error")}

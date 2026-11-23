@@ -25,7 +25,10 @@ import SpecialFlightModal from "../components/SpecialFlightModal";
 import FlightEditModal from "../components/FlightEditModal";
 import FlightRowActions from "../components/FlightRowActions";
 import { buildDuplicateInput } from "../lib/flightDuplicate";
-import type { SpecialTypeFilter } from "../components/specialFlights/specialTypeMeta";
+import {
+  SPECIAL_TYPES,
+  type SpecialTypeFilter,
+} from "../components/specialFlights/specialTypeMeta";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import { useToastStore } from "../store/toastStore";
 import { getFlightDuration } from "../lib/flightDuration";
@@ -47,9 +50,11 @@ import {
   FLIGHT_COLUMN_IDS,
   FLIGHT_SORT_KEY_BY_COLUMN,
   flightColumnLabel,
+  FLIGHT_STATUSES,
   type FlightStatusFilter,
 } from "../components/flightsTable/flightColumns";
-import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import { oneOfParam, stringParam, useQuerySearch, useQueryState } from "../hooks/useQueryState";
+import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
 import {
   buildFlightFilterQuery,
   buildFlightListQuery,
@@ -63,6 +68,14 @@ import SelectCheckbox from "../components/flightsTable/bulk/SelectCheckbox";
 import { useFlightSelection } from "../components/flightsTable/bulk/useFlightSelection";
 import Toggletip from "../components/ui/Toggletip";
 import { isDayString } from "../lib/gapCalendar";
+
+const STATUS_FILTER_PARAM = oneOfParam<FlightStatusFilter>(["all", ...FLIGHT_STATUSES]);
+const SPECIAL_FILTER_PARAM = oneOfParam<SpecialTypeFilter>([
+  "all",
+  "standard",
+  "special",
+  ...SPECIAL_TYPES,
+]);
 
 // Trips moved to their own /trips page; the trip badge is a Link to /trips/:id.
 
@@ -80,25 +93,36 @@ export default function FlightsTablePage(): JSX.Element {
   const [total, setTotal] = useState<number>(0);
   const [facets, setFacets] = useState<FlightFacets | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [tripFilter, setTripFilter] = useState<"all" | "with" | "without" | string>("all");
-  const [specialFilter, setSpecialFilter] = useState<SpecialTypeFilter>("all");
+  // List state in the URL (2026-11-23): Back from a flight, a reload and a
+  // shared link reopen the logbook as it was left.
+  const [tripFilter, setTripFilter] = useQueryState<"all" | "with" | "without" | string>(
+    "trip",
+    "all",
+    stringParam
+  );
+  const [specialFilter, setSpecialFilter] = useQueryState<SpecialTypeFilter>(
+    "special",
+    "all",
+    SPECIAL_FILTER_PARAM
+  );
   // Every filter, the sort and the page are decided by the SERVER now, and
   // the option lists and the summary figures come from /flights/facets.
   // They were all decided here, over a list this page fetched in full — a
   // `limit=500` loop until the account was exhausted, on every load, so that
   // a dropdown could count years (measured 2026-09-20). A page cannot be a
   // page while the thing that decides its contents runs after the fetch.
-  const [search, setSearch] = useState<string>("");
-  const debouncedSearch = useDebouncedValue(search);
-  const [statusFilter, setStatusFilter] = useState<FlightStatusFilter>("all");
-  // A loyalty link (`?membership=…&year=…`) opens the logbook on one card's
-  // flights; its year seeds the ordinary year filter.
-  const loyaltyFilter = useLoyaltyListFilter();
-  const [yearFilter, setYearFilter] = useState<string>(() =>
-    loyaltyFilter.linkedYear !== null ? String(loyaltyFilter.linkedYear) : "all"
+  const [search, setSearch, debouncedSearch] = useQuerySearch();
+  const [statusFilter, setStatusFilter] = useQueryState<FlightStatusFilter>(
+    "status",
+    "all",
+    STATUS_FILTER_PARAM
   );
-  const [monthFilter, setMonthFilter] = useState<string>("all");
-  const [airlineFilter, setAirlineFilter] = useState<string>("all");
+  // A loyalty link (`?membership=…&year=…`) opens the logbook on one card's
+  // flights; its `year` IS the ordinary year filter's parameter.
+  const loyaltyFilter = useLoyaltyListFilter();
+  const [yearFilter, setYearFilter] = useQueryState("year", "all", stringParam);
+  const [monthFilter, setMonthFilter] = useQueryState("month", "all", stringParam);
+  const [airlineFilter, setAirlineFilter] = useQueryState("airline", "all", stringParam);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [loadFailure, setLoadFailure] = useState<string | null>(null);
@@ -357,6 +381,7 @@ export default function FlightsTablePage(): JSX.Element {
   const filterSignature = useMemo(() => flightFilterSignature(filterState), [filterState]);
 
   const pagination = useServerPagination(total, "flights-list", filterSignature);
+  useScrollRestoreReady(!loading);
   const { limit, offset } = pagination;
 
   useEffect(() => {
@@ -577,7 +602,9 @@ export default function FlightsTablePage(): JSX.Element {
             {!loading && flights.length > 0 && (
               <TablePagination {...pagination} allowAll={false} placement="top" />
             )}
-            {loading ? (
+            {/* The skeleton only before the first rows: a reload after an edit
+                keeps them, so the page does not collapse to the top. */}
+            {loading && flights.length === 0 ? (
               <SkeletonTable rows={10} />
             ) : flights.length === 0 ? (
               <div

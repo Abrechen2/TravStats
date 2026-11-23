@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import RememberedMarker from "../provenance/RememberedMarker";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
+import BackLink from "../navigation/BackLink";
 import type { useTranslation } from "../../hooks/useTranslation";
 import type { Trip } from "../../types";
 import { formatLocalDate } from "../../lib/displayFormat";
@@ -89,7 +90,7 @@ export default function TripHead({
 
   return (
     <div style={{ marginBottom: "var(--ts-space-lg)" }}>
-      <Link
+      <BackLink
         to="/trips"
         className="ts-back-link"
         style={{
@@ -102,7 +103,7 @@ export default function TripHead({
       >
         <span aria-hidden>←</span>
         {t("trips:tab")}
-      </Link>
+      </BackLink>
       <div
         className="relative overflow-hidden"
         style={{
