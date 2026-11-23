@@ -6,11 +6,18 @@ import type { Trip } from "../types";
 import TripsTab, { NO_TRIP_FILTERS, type TripsFilters } from "../components/Trips/TripsTab";
 import { TripInsightsBar } from "../components/Trips/TripInsightsBar";
 import AppShell from "../components/ui/AppShell";
-import { stringParam, useQueryState, type QueryCodec } from "../hooks/useQueryState";
+import {
+  positiveIntParam,
+  stringParam,
+  useQueryState,
+  type QueryCodec,
+} from "../hooks/useQueryState";
 import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
 
 /** Trips per request; "mehr laden" fetches the next page of this size. */
 export const TRIPS_PAGE_SIZE = 100;
+/** The server's per-request cap (`TRIPS_LIST_CAP`); a restore larger than it reads in chunks. */
+const TRIPS_MAX_REQUEST = 500;
 
 /**
  * Top-level Trips page (Phase-1 redesign). Was previously embedded as a
@@ -38,6 +45,12 @@ export default function TripsPage(): JSX.Element {
     stringParam as QueryCodec<TripsFilters["category"]>
   );
   const filters = useMemo<TripsFilters>(() => ({ q, status, category }), [q, status, category]);
+  // How many trips "mehr laden" had brought in, so Back from a trip reloads
+  // that many and the scroll can land on the card the reader left.
+  const [shown, setShown] = useQueryState("shown", TRIPS_PAGE_SIZE, positiveIntParam);
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+  const lastFilters = useRef(filters);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [facets, setFacets] = useState<TripsListPage["facets"]>();
@@ -73,15 +86,35 @@ export default function TripsPage(): JSX.Element {
     setReplacing(true);
     void (async () => {
       try {
-        const page = await tripsApi.listPage({
+        // New filters start from one page again; the same filters (a mount
+        // after Back, a reload) read back everything that was shown.
+        const filtersChanged = lastFilters.current !== filters;
+        lastFilters.current = filters;
+        if (filtersChanged) setShown(TRIPS_PAGE_SIZE);
+        const want = filtersChanged ? TRIPS_PAGE_SIZE : Math.max(shownRef.current, TRIPS_PAGE_SIZE);
+        const query = {
           q: filters.q,
           status: filters.status === "all" ? undefined : filters.status,
           category: filters.category === "all" ? undefined : filters.category,
-          limit: TRIPS_PAGE_SIZE,
-          offset: 0,
-        });
+        };
+        const firstLimit = Math.min(want, TRIPS_MAX_REQUEST);
+        let page = await tripsApi.listPage({ ...query, limit: firstLimit, offset: 0 });
+        let collected = page.trips;
+        // Only a FULL answer means there is more to read for this restore.
+        let lastFull = page.trips.length >= firstLimit;
+        while (lastFull && collected.length < want && collected.length < page.total) {
+          if (id !== requestId.current) return;
+          const limit = Math.min(want - collected.length, TRIPS_MAX_REQUEST);
+          const next = await tripsApi.listPage({ ...query, limit, offset: collected.length });
+          lastFull = next.trips.length >= limit;
+          collected = [
+            ...collected,
+            ...next.trips.filter((n) => !collected.some((c) => c.id === n.id)),
+          ];
+          page = { ...next, facets: page.facets };
+        }
         if (id !== requestId.current) return;
-        setTrips(page.trips);
+        setTrips(collected);
         setTotal(page.total);
         setFacets(page.facets);
         setListError(false);
@@ -94,7 +127,7 @@ export default function TripsPage(): JSX.Element {
         if (id === requestId.current) setReplacing(false);
       }
     })();
-  }, [filters, reloadKey]);
+  }, [filters, reloadKey, setShown]);
 
   const loadMore = async (): Promise<void> => {
     const id = ++requestId.current;
@@ -108,7 +141,9 @@ export default function TripsPage(): JSX.Element {
         offset: trips.length,
       });
       if (id !== requestId.current) return;
-      setTrips((prev) => [...prev, ...page.trips.filter((n) => !prev.some((p) => p.id === n.id))]);
+      const merged = [...trips, ...page.trips.filter((n) => !trips.some((p) => p.id === n.id))];
+      setTrips(merged);
+      setShown(merged.length);
       setTotal(page.total);
       setMoreError(false);
     } catch (err) {
