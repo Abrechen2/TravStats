@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 
 /**
  * GET /trips caps its list at 500, and the page used to search only those
@@ -107,5 +107,46 @@ describe("TripsPage server-side search", () => {
     renderPage();
     expect(await screen.findByTestId("trips-list-error")).toHaveTextContent("trips:listError");
     expect(screen.queryByText("trips:noTrips")).toBeNull();
+  });
+
+  // Back from a trip used to bring back only the first page, so the card the
+  // reader had scrolled to after "mehr laden" was gone and the scroll had
+  // nowhere to land.
+  it("Back after 'mehr laden' reloads as many trips as were shown, from ?shown=", async () => {
+    const many = (from: number, n: number) =>
+      Array.from({ length: n }, (_, i) => trip(`t${from + i}`, `T${from + i}`));
+    listPage
+      .mockResolvedValueOnce(page(many(0, 500), 900))
+      .mockResolvedValueOnce(page(many(500, 200), 900));
+    render(
+      <MemoryRouter initialEntries={["/trips?shown=700"]}>
+        <TripsPage />
+      </MemoryRouter>
+    );
+    await screen.findByText("T699");
+    expect(listPage).toHaveBeenNthCalledWith(1, expect.objectContaining({ limit: 500, offset: 0 }));
+    expect(listPage).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ limit: 200, offset: 500 })
+    );
+  });
+
+  it("'mehr laden' writes the shown count into the URL", async () => {
+    function Where(): JSX.Element {
+      const location = useLocation();
+      return <output data-testid="where">{location.search}</output>;
+    }
+    listPage
+      .mockResolvedValueOnce(page([trip("a", "A"), trip("b", "B")], 3))
+      .mockResolvedValueOnce(page([trip("c", "C")], 3));
+    render(
+      <MemoryRouter initialEntries={["/trips"]}>
+        <Where />
+        <TripsPage />
+      </MemoryRouter>
+    );
+    fireEvent.click(await screen.findByTestId("trips-load-more"));
+    await screen.findByText("C");
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("shown=3"));
   });
 });
