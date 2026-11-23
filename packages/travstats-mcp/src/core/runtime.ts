@@ -1,13 +1,16 @@
 import { z } from "zod";
 import type { ApiClient } from "./client";
 import { ToolFailure, describeFailure } from "./errors";
-import { capOutput } from "./output";
+import { OUTPUT_CAP_BYTES, capOutput } from "./output";
 import { redact } from "./redact";
 import { TOOLS } from "./tools";
 import type { ToolContext, ToolDef } from "./types";
 
 /** The first server version whose GET /auth/me reports the token's scope. */
 export const MIN_SERVER_VERSION = "2.8.0-rc.45";
+
+/** Room kept for the summary line and the truncation note, so the whole text stays under the cap. */
+const SUMMARY_ROOM_BYTES = 600;
 
 export interface CallOutcome {
   isError: boolean;
@@ -33,7 +36,10 @@ export async function callTool(
       );
     }
     const result = await def.run(ctx, parsed.data as Record<string, unknown>);
-    const structured = capOutput({ instance: ctx.instance, ...result.data });
+    const structured = capOutput(
+      { instance: ctx.instance, ...result.data },
+      OUTPUT_CAP_BYTES - SUMMARY_ROOM_BYTES
+    );
     const text = redact(
       `${result.summary}${structured.truncated ? " (output cut to fit the size cap)" : ""}\n${JSON.stringify(structured)}`,
       token

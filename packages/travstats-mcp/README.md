@@ -39,11 +39,12 @@ Nothing is collected by this package. It makes no calls except to the server you
 
    Claude Code: `claude mcp add travstats --env TRAVSTATS_URL=https://travstats.example.org --env TRAVSTATS_TOKEN_FILE=$HOME/.config/travstats-mcp/token -- node /path/to/TravStats/packages/travstats-mcp/dist/index.js`
 
-| Variable                                    | Meaning                                                                                                                |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `TRAVSTATS_URL`                             | Base address of your instance (required)                                                                               |
-| `TRAVSTATS_TOKEN` or `TRAVSTATS_TOKEN_FILE` | The `ts_pat_…` key, or a file that holds it. Prefer the file: an `env` entry sits in plain text in the client's config |
-| `TRAVSTATS_MCP_CALLS_PER_MINUTE`            | Client-side call budget, default 60                                                                                    |
+| Variable                                    | Meaning                                                                                                                         |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `TRAVSTATS_URL`                             | Base address of your instance (required)                                                                                        |
+| `TRAVSTATS_TOKEN` or `TRAVSTATS_TOKEN_FILE` | The `ts_pat_…` key, or a file that holds it. Prefer the file: an `env` entry sits in plain text in the client's config          |
+| `TRAVSTATS_ALLOW_INSECURE_HTTP`             | `1` allows plain http to a public address. Private and local addresses (192.168.x.x, localhost, .local) may use http without it |
+| `TRAVSTATS_MCP_CALLS_PER_MINUTE`            | Client-side call budget, default 60                                                                                             |
 
 ## Scopes
 

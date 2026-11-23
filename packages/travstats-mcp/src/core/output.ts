@@ -12,7 +12,7 @@ export function capOutput(
 ): Record<string, unknown> {
   let out = { ...data };
   let truncated = false;
-  while (JSON.stringify(out).length > cap) {
+  while (Buffer.byteLength(JSON.stringify(out)) > cap) {
     const arrays = Object.entries(out).filter(([, v]) => Array.isArray(v) && v.length > 1);
     if (!arrays.length) {
       return {

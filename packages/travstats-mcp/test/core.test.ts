@@ -36,12 +36,53 @@ describe("loadConfig", () => {
   it("needs a URL and a token shaped like a TravStats token", () => {
     expect(() => loadConfig({})).toThrow(/TRAVSTATS_URL/);
     expect(() => loadConfig({ TRAVSTATS_URL: "ftp://x", TRAVSTATS_TOKEN: TOKEN })).toThrow(/http/);
-    expect(() => loadConfig({ TRAVSTATS_URL: "http://x", TRAVSTATS_TOKEN: "nope" })).toThrow(
+    expect(() => loadConfig({ TRAVSTATS_URL: "http://localhost", TRAVSTATS_TOKEN: "nope" })).toThrow(
       /ts_pat_/
     );
     expect(
       loadConfig({ TRAVSTATS_URL: "https://t.example/", TRAVSTATS_TOKEN: TOKEN }).apiBase
     ).toBe("https://t.example/api/v1");
+  });
+});
+
+describe("plain http", () => {
+  it("is accepted for private addresses and refused for public ones unless allowed", () => {
+    expect(() =>
+      loadConfig({ TRAVSTATS_URL: "http://192.168.1.20:3010", TRAVSTATS_TOKEN: TOKEN })
+    ).not.toThrow();
+    expect(() =>
+      loadConfig({ TRAVSTATS_URL: "http://localhost:8000", TRAVSTATS_TOKEN: TOKEN })
+    ).not.toThrow();
+    expect(() =>
+      loadConfig({ TRAVSTATS_URL: "http://trav.example.org", TRAVSTATS_TOKEN: TOKEN })
+    ).toThrow(/unencrypted/);
+    expect(() =>
+      loadConfig({
+        TRAVSTATS_URL: "http://trav.example.org",
+        TRAVSTATS_TOKEN: TOKEN,
+        TRAVSTATS_ALLOW_INSECURE_HTTP: "1",
+      })
+    ).not.toThrow();
+  });
+});
+
+describe("output cap", () => {
+  it("counts bytes, and keeps summary plus data under the cap for multi-byte text", async () => {
+    const rows = Array.from({ length: 40 }, () => ({
+      domain: "trip",
+      id: "1",
+      title: "ü".repeat(1000),
+      path: "/trips/1",
+    }));
+    const out = await callTool(
+      {
+        client: fake({ "/search": { data: { hits: rows, more: [], failed: [], capped: false } } }),
+        instance: "http://x",
+      },
+      tool("search_entries"),
+      { q: "x" }
+    );
+    expect(Buffer.byteLength(out.text)).toBeLessThanOrEqual(20_000);
   });
 });
 
