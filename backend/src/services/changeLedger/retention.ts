@@ -15,9 +15,23 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 
 /** `months` back from `now`, on the calendar (Postgres' own interval arithmetic would differ at month ends). */
 export function retentionCutoff(months: number, now: Date): Date {
-  const cutoff = new Date(now.getTime());
-  cutoff.setUTCMonth(cutoff.getUTCMonth() - months);
-  return cutoff;
+  // Clamp the day to the target month's last day: a bare setUTCMonth turns
+  // 31 March − 1 month into 3 March, and the prune deleted three days of history
+  // still inside the window (review, rc.45).
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth() - months;
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return new Date(
+    Date.UTC(
+      year,
+      month,
+      Math.min(now.getUTCDate(), lastDay),
+      now.getUTCHours(),
+      now.getUTCMinutes(),
+      now.getUTCSeconds(),
+      now.getUTCMilliseconds()
+    )
+  );
 }
 
 /**

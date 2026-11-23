@@ -12,6 +12,23 @@ import { retainedLedgerRowsSql } from "../retentionPolicy";
  * account's window (3/6/12/24 months, 12 by default) are deleted, in bounded
  * batches; the setting round-trips; the account archive carries only the window.
  */
+describe("retentionCutoff at a month end (rc.45 review)", () => {
+  it("clamps to the target month's last day instead of overflowing into the next month", () => {
+    expect(retentionCutoff(1, new Date("2026-03-31T10:00:00Z")).toISOString()).toBe(
+      "2026-02-28T10:00:00.000Z"
+    );
+    expect(retentionCutoff(6, new Date("2026-08-31T00:00:00Z")).toISOString()).toBe(
+      "2026-02-28T00:00:00.000Z"
+    );
+    expect(retentionCutoff(12, new Date("2028-02-29T05:00:00Z")).toISOString()).toBe(
+      "2027-02-28T05:00:00.000Z"
+    );
+    expect(retentionCutoff(3, new Date("2026-11-23T03:58:00Z")).toISOString()).toBe(
+      "2026-08-23T03:58:00.000Z"
+    );
+  });
+});
+
 describe("change history retention", () => {
   const NOW = new Date("2026-11-23T03:58:00Z");
   const ids: Record<"a" | "b" | "c", string> = { a: "", b: "", c: "" };
