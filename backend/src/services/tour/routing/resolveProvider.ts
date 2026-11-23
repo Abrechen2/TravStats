@@ -5,18 +5,18 @@ import { isServiceDisabledByAdmin } from "../../externalServices/policy";
 import { createOpenRouteService } from "./openRouteService";
 import { createGraphHopper } from "./graphHopper";
 import { createCustomOsrm } from "./customOsrm";
-import { ROUTING_PROVIDER_IDS, RouteProvider, RoutingProviderId } from "./types";
+import { ROUTING_OFF, ROUTING_PROVIDER_IDS, RouteProvider, RoutingProviderId } from "./types";
 
 /** Whose credential serves a routing request — decides who pays and who receives the data. */
 export type RoutingKeySource = "account" | "instance" | "selfHosted";
 
 /** Why no provider answered; the UI maps it to a concrete setup hint. */
-export type RoutingHint = "noProvider" | "selectedUnavailable";
+export type RoutingHint = "noProvider" | "selectedUnavailable" | "off";
 
 export interface RoutingResolution {
   provider: RouteProvider | null;
-  /** `null` routingProvider is "Automatisch", not "Aus". */
-  mode: "auto" | "explicit";
+  /** `null` routingProvider is "Automatisch"; "off" is "Aus". */
+  mode: "auto" | "explicit" | "off";
   /** The instance's explicit choice, when there is one. */
   selected: RoutingProviderId | null;
   keySource: RoutingKeySource | null;
@@ -93,6 +93,9 @@ export async function resolveRouting(userId?: string): Promise<RoutingResolution
     }
     return none("auto", null, "noProvider");
   }
+
+  // "Aus": the admin switched routing off on purpose — distinct from null (Automatisch).
+  if (raw === ROUTING_OFF) return none("off", null, "off");
 
   if (!isRoutingProviderId(raw)) {
     logger.warn(

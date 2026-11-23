@@ -37,6 +37,7 @@ export function routingEffectiveText(
           : t("settingsRows:services.routing.selfHosted");
     return `${via} · ${who}`;
   }
+  if (routing.hint === "off") return t("settingsRows:services.routing.off");
   return routing.hint === "selectedUnavailable"
     ? t("settingsRows:services.routing.selectedUnavailable", {
         provider: routing.selected ? providerName(t, routing.selected) : "",

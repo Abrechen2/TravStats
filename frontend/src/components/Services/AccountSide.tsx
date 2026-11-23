@@ -20,7 +20,7 @@ import VisitPhotoImmichLink from "../Settings/VisitPhotoImmichLink";
 import DawarichProviderHint from "../Settings/DawarichProviderHint";
 import FieldsGroup from "./FieldsGroup";
 import TestRow from "./TestRow";
-import RoutingLines from "./RoutingLines";
+import RoutingLines, { ROUTING_CARDS } from "./RoutingLines";
 import WebdavAccountRows from "./WebdavAccountRows";
 import { useServices } from "./servicesContext";
 import type { ServiceCardDef } from "./serviceCards";
@@ -111,7 +111,8 @@ export default function AccountSide({
   const name = serviceName(t, card.id);
 
   const hasRows = uses("mine") || uses("ownKey") || uses("aiConsent") || uses("allowConn");
-  if (!hasRows) return null;
+  const routingCard = ROUTING_CARDS.has(card.id);
+  if (!hasRows && !routingCard) return null;
 
   const blockedLine = blocked
     ? t(
@@ -241,7 +242,6 @@ export default function AccountSide({
     } else {
       body.push(...ownRows(service));
     }
-    body.push(<RoutingLines key="routing" cardId={card.id} />);
     if (card.id === "dawarich")
       body.push(<DawarichProviderHint key="hint" check={dawarichSaved} />);
     if (card.id === "photoprism") {
@@ -265,6 +265,10 @@ export default function AccountSide({
   } else if (blockedLine) {
     body.push(<Dependency key="blocked" reason={blockedLine} />);
   }
+
+  // Said whether or not the account has a key row here: the self-hosted card has none, and a
+  // forbidden-keys policy removes the service from the account's list.
+  if (routingCard) body.push(<RoutingLines key="routing" cardId={card.id} />);
 
   const confirmConsent = async (): Promise<void> => {
     if (!consent) return;

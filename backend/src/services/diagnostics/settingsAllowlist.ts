@@ -1,7 +1,7 @@
 import { COUNTRY_TIERS } from "../../shared/countryEvidence";
 import { FX_FALLBACK_IDS, FX_SOURCE_IDS } from "../fx/fxSources";
 import { LOG_LEVELS } from "../../shared/logContract";
-import { ROUTING_PROVIDER_IDS } from "../tour/routing/types";
+import { ROUTING_SETTING_VALUES } from "../tour/routing/types";
 
 /**
  * The admin settings a public bug report may carry — a POSITIVE list.
@@ -55,7 +55,7 @@ export const ADMIN_SETTINGS_ALLOWLIST: Readonly<Record<string, Rule>> = {
   backupInterval: oneOf(["daily", "weekly", "monthly"]),
   countryThreshold: oneOf(COUNTRY_TIERS),
   usageStatsConsent: oneOf(["unset", "granted", "denied"]),
-  routingProvider: oneOf(ROUTING_PROVIDER_IDS),
+  routingProvider: oneOf(ROUTING_SETTING_VALUES),
   airportTimezoneDataset: oneOf(["all", "now"]),
   ollamaConfigured: present("ollamaUrl"),
   immichConfigured: present("globalImmichBaseUrl"),

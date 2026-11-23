@@ -131,11 +131,11 @@ export const accountExternalServicesResponseSchema = z.object({
     ),
   routing: z
     .object({
-      mode: z.enum(["auto", "explicit"]),
+      mode: z.enum(["auto", "explicit", "off"]),
       selected: z.enum(["openrouteservice", "graphhopper", "custom"]).nullable(),
       providerId: z.enum(["openrouteservice", "graphhopper", "custom"]).nullable(),
       keySource: z.enum(["account", "instance", "selfHosted"]).nullable(),
-      hint: z.enum(["noProvider", "selectedUnavailable"]).nullable(),
+      hint: z.enum(["noProvider", "selectedUnavailable", "off"]).nullable(),
     })
     .describe(
       "Which routing provider answers THIS account's requests and whose credential it uses. " +

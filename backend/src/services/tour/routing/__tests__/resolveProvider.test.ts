@@ -317,6 +317,18 @@ describe("resolveRouteProvider / describeRoutingAvailability", () => {
       expect((await resolveRouting(user.id)).provider?.id).toBe("openrouteservice");
     });
 
+    it("'off' keeps routing off on purpose, even with a personal key; null does not", async () => {
+      await giveOwnKey(user.id, { openrouteserviceApiKey: encryptApiKey("mine") });
+      const id = (await prisma.adminSettings.findFirst())!.id;
+      await prisma.adminSettings.update({ where: { id }, data: { routingProvider: "off" } });
+      const off = await resolveRouting(user.id);
+      expect(off.provider).toBeNull();
+      expect(off.mode).toBe("off");
+      expect(off.hint).toBe("off");
+      await prisma.adminSettings.update({ where: { id }, data: { routingProvider: null } });
+      expect((await resolveRouting(user.id)).provider?.id).toBe("openrouteservice");
+    });
+
     it("the account view reports the same resolution the handlers run", async () => {
       await giveOwnKey(user.id, { openrouteserviceApiKey: encryptApiKey("mine") });
       await expect(routingViewFor(user.id)).resolves.toEqual({

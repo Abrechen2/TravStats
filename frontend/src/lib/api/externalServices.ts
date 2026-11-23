@@ -142,11 +142,11 @@ export interface BlockedService {
 
 /** Which routing provider answers this account's requests (the server's own resolution). */
 export interface AccountRouting {
-  mode: "auto" | "explicit";
+  mode: "auto" | "explicit" | "off";
   selected: "openrouteservice" | "graphhopper" | "custom" | null;
   providerId: "openrouteservice" | "graphhopper" | "custom" | null;
   keySource: "account" | "instance" | "selfHosted" | null;
-  hint: "noProvider" | "selectedUnavailable" | null;
+  hint: "noProvider" | "selectedUnavailable" | "off" | null;
 }
 
 export interface AccountExternalServices {

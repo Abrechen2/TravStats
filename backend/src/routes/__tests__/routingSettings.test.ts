@@ -133,6 +133,17 @@ describe("Tour routing provider settings (Phase 3)", () => {
   });
 
   describe("PUT /api/v1/admin/api-keys — routingCustomUrl validation", () => {
+    it("stores 'off' explicitly and echoes it, distinct from null (Automatisch)", async () => {
+      const put = await request(app)
+        .put("/api/v1/admin/api-keys")
+        .set("Cookie", adminCookie)
+        .send({ routingProvider: "off" });
+      expect(put.status).toBe(200);
+      expect((await prisma.adminSettings.findFirst())?.routingProvider).toBe("off");
+      const get = await request(app).get("/api/v1/admin/api-keys").set("Cookie", adminCookie);
+      expect(get.body.routingProvider).toBe("off");
+    });
+
     it("rejects a malformed custom routing URL with 400", async () => {
       const res = await request(app)
         .put("/api/v1/admin/api-keys")

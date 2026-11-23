@@ -1088,7 +1088,14 @@
       "ownServer": "your own server",
       "noProvider": "Routing is not set up for you. Enter an OpenRouteService or GraphHopper key.",
       "selectedUnavailable": "The server routes through {{provider}}, but nothing is set up for you there. Enter your own key or ask the admin.",
-      "instanceEmptyOwn": "No instance key – your personal key applies only to you"
+      "instanceEmptyOwn": "No instance key – your personal key applies only to you",
+      "off": "Routing is switched off.",
+      "pickT": "Routing provider",
+      "pickS": "Which service calculates road routes. Automatic uses the first one set up for each account: OpenRouteService, GraphHopper, own server.",
+      "optAuto": "Automatic (recommended)",
+      "optCustom": "Own server",
+      "optOff": "Off",
+      "saveFailed": "I could not save the routing provider."
     }
   },
   "server": {

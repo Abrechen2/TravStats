@@ -1088,7 +1088,14 @@
       "ownServer": "den eigenen Server",
       "noProvider": "Für dich ist kein Routing eingerichtet. Trage einen OpenRouteService- oder GraphHopper-Schlüssel ein.",
       "selectedUnavailable": "Der Server routet über {{provider}}, aber dort ist für dich nichts eingerichtet. Trage einen eigenen Schlüssel ein oder bitte den Admin darum.",
-      "instanceEmptyOwn": "Kein Instanzschlüssel – dein persönlicher Schlüssel gilt nur für dich"
+      "instanceEmptyOwn": "Kein Instanzschlüssel – dein persönlicher Schlüssel gilt nur für dich",
+      "off": "Routing ist ausgeschaltet.",
+      "pickT": "Routing-Anbieter",
+      "pickS": "Welcher Dienst Strecken auf der Straße berechnet. Automatisch nimmt für jedes Konto den ersten eingerichteten: OpenRouteService, GraphHopper, eigener Server.",
+      "optAuto": "Automatisch (empfohlen)",
+      "optCustom": "Eigener Server",
+      "optOff": "Aus",
+      "saveFailed": "Ich konnte den Routing-Anbieter nicht speichern."
     }
   },
   "server": {
