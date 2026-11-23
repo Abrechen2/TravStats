@@ -46,7 +46,11 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 
-vi.mock("../PhotoLightbox", () => ({ default: () => <div data-testid="lightbox" /> }));
+vi.mock("../PhotoLightbox", () => ({
+  default: ({ items }: { items: unknown[] }) => (
+    <div data-testid="lightbox" data-count={items.length} />
+  ),
+}));
 
 import ImmichAlbumSection from "../ImmichAlbumSection";
 import type { LinkedAlbum } from "../../../types/immich";
@@ -219,6 +223,19 @@ describe("ImmichAlbumSection", () => {
     await userEvent.click(await screen.findByRole("button", { name: "albums.loadMore" }));
     await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(3));
     expect(getAlbumDayAssets.mock.calls.map((c) => c[3])).toEqual([0, 2]);
+  });
+
+  it("hands the lightbox the whole day, not only the pages scrolled into view", async () => {
+    serve(DATED);
+    getAlbumDayAssets.mockImplementation(
+      async (_t: string, _l: string, day: string, off: number) =>
+        off === 0
+          ? { day, total: 3, offset: 0, nextOffset: 2, assets: DATED.slice(0, 2) }
+          : { day, total: 3, offset: 2, nextOffset: null, assets: DATED.slice(2) }
+    );
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+    await userEvent.click((await screen.findAllByRole("img"))[0]);
+    expect((await screen.findByTestId("lightbox")).dataset.count).toBe("3");
   });
 
   it("says why a day could not be loaded instead of showing an empty grid", async () => {

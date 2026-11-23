@@ -10,6 +10,8 @@ import { formatDayChip } from "./GalleryDayStrip";
 
 /** Photos per request. A tile row is 3-5 across, so this is a dozen or so rows. */
 export const DAY_PAGE_SIZE = 60;
+/** Pages read while completing the list for the lightbox: metadata only, so larger. */
+const REST_PAGE_SIZE = 200;
 
 interface Props {
   tripId: string;
@@ -113,13 +115,32 @@ export default function AlbumDayPhotos({
     [headers, assets, zone]
   );
 
+  // The lightbox steps through the list it is given, so it must hold the whole
+  // day, not just the pages scrolled into view. Only metadata is read here —
+  // the images stay lazy — and a failure is shown like any other page failure.
+  const open = async (index: number): Promise<void> => {
+    let all = assets;
+    let offset = nextOffset;
+    const mine = generation.current;
+    try {
+      while (offset !== null) {
+        const page = await immichApi.getAlbumDayAssets(tripId, linkId, day, offset, REST_PAGE_SIZE);
+        if (generation.current !== mine) return;
+        all = [...all, ...page.assets];
+        offset = page.nextOffset;
+      }
+      setAssets(all);
+      setNextOffset(null);
+    } catch (error) {
+      if (generation.current !== mine) return;
+      logger.warn("Gallery day failed to load", { provider, kind: immichFailureKind(error) });
+      setFailure(failureKey(immichFailureKind(error), provider));
+    }
+    onOpen(all, index);
+  };
+
   const tile = (asset: ImmichGalleryAsset, index: number): JSX.Element => (
-    <button
-      key={asset.id}
-      type="button"
-      onClick={() => onOpen(assets, index)}
-      aria-label={albumName}
-    >
+    <button key={asset.id} type="button" onClick={() => void open(index)} aria-label={albumName}>
       <LazyThumb src={asset.url} alt={albumName} />
     </button>
   );
