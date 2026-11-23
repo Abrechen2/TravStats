@@ -32,7 +32,7 @@ import {
   type SourceState,
   type WindowSearch,
 } from "./matcher";
-import { queueAutoCover } from "../coverSuggestions/autoCover";
+import { queueAutoCover, repairAutoCovers } from "../coverSuggestions/autoCover";
 
 /**
  * Photo links for every entry type but the place visit (owner, 2026-11-21: "ja,
@@ -280,6 +280,7 @@ export async function removeLink(
   });
   suggestionCache.delete(cacheKey(userId, kind, id));
   suggestionCache.delete(`${cacheKey(userId, kind, id)}:choices`);
+  if (count > 0) await repairAutoCovers(userId);
   return count > 0;
 }
 
@@ -296,6 +297,7 @@ export async function removeAutoLinks(
   });
   suggestionCache.delete(cacheKey(userId, kind, id));
   suggestionCache.delete(`${cacheKey(userId, kind, id)}:choices`);
+  if (count > 0) await repairAutoCovers(userId);
   return count;
 }
 

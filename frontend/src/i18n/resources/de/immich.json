@@ -191,6 +191,7 @@
   "cover": {
     "menu": "Deckblatt vorschlagen",
     "prompt": "Deckblatt vorschlagen",
+    "unavailable": "Titelbild nicht mehr verfügbar – neues wählen",
     "title": "Deckblatt vorschlagen",
     "intro": "Wir suchen in den Fotos dieser Reise nach einem Bild, auf dem man sieht, wo du bist – und möglichst auch dich. Nur wenn ein Bild eindeutig vorn liegt, setzen wir es von allein (einstellbar bei den Fotoquellen).",
     "loading": "Fotos werden angesehen …",

@@ -23,7 +23,7 @@ export const AUTO_MIN_LEAD = 15;
 export const AUTO_MAX_TRIPS_PER_USER = 25;
 const PAUSE_BETWEEN_TRIPS_MS = 500;
 /** A burst of photo links (an album import) triggers ONE run, this long after the last. */
-const TRIGGER_DELAY_MS = 90_000;
+export const TRIGGER_DELAY_MS = 90_000;
 
 export type AutoCoverOutcome =
   "applied" | "disabled" | "hasCover" | "notSure" | "sourceFailed" | "noSuggestion" | "error";
@@ -127,6 +127,8 @@ export async function runAutoCoverForUser(
   userId: string,
   pauseMs = PAUSE_BETWEEN_TRIPS_MS
 ): Promise<Record<AutoCoverOutcome, number>> {
+  // First drop auto covers whose photo is gone, so they are re-picked in this very run.
+  await repairAutoCovers(userId, false);
   const counts: Record<AutoCoverOutcome, number> = {
     applied: 0,
     disabled: 0,
@@ -145,6 +147,76 @@ export async function runAutoCoverForUser(
     if (pauseMs > 0) await sleep(pauseMs);
   }
   return counts;
+}
+
+const TRIP_PHOTO_COVER = /^\/api\/v1\/trips\/[^/]+\/photos\/([^/]+)\/file$/;
+const ENTRY_PHOTO_COVER = /^\/api\/v1\/entry-photos\/[^/]+\/[^/]+\/photos\/([^/]+)\/file/;
+const ALBUM_COVER = /^\/api\/v1\/trips\/[^/]+\/immich\/albums\/([^/]+)\/assets\//;
+
+/**
+ * An AUTO cover whose photo was deleted, unlinked or refused would render a broken
+ * image and — being non-null — never be re-picked. Clear exactly those (a manual
+ * cover is never matched: the update itself requires `coverSource = auto` and the
+ * same URL) and queue a re-pick. Never throws: the caller is a delete the user asked for.
+ */
+export async function repairAutoCovers(userId: string, requeue = true): Promise<number> {
+  try {
+    const covers = await prisma.trip.findMany({
+      where: { userId, coverSource: "auto", coverImageUrl: { not: null } },
+      select: { id: true, coverImageUrl: true },
+    });
+    if (covers.length === 0) return 0;
+    const ids = { photo: new Set<string>(), entry: new Set<string>(), album: new Set<string>() };
+    const kindOf = (url: string): [keyof typeof ids, string] | null => {
+      for (const [kind, re] of [
+        ["photo", TRIP_PHOTO_COVER],
+        ["entry", ENTRY_PHOTO_COVER],
+        ["album", ALBUM_COVER],
+      ] as const) {
+        const m = re.exec(url);
+        if (m) return [kind, m[1]];
+      }
+      return null;
+    };
+    for (const c of covers) {
+      const k = kindOf(c.coverImageUrl!);
+      if (k) ids[k[0]].add(k[1]);
+    }
+    const [photos, entries, albums] = await Promise.all([
+      prisma.tripPhoto.findMany({ where: { id: { in: [...ids.photo] } }, select: { id: true } }),
+      prisma.entryPhotoLink.findMany({
+        where: { id: { in: [...ids.entry] }, userId, refused: false },
+        select: { id: true },
+      }),
+      prisma.tripImmichAlbum.findMany({
+        where: { id: { in: [...ids.album] } },
+        select: { id: true },
+      }),
+    ]);
+    const alive = {
+      photo: new Set(photos.map((r) => r.id)),
+      entry: new Set(entries.map((r) => r.id)),
+      album: new Set(albums.map((r) => r.id)),
+    };
+    let cleared = 0;
+    for (const c of covers) {
+      const k = kindOf(c.coverImageUrl!);
+      if (!k || alive[k[0]].has(k[1])) continue;
+      const { count } = await prisma.trip.updateMany({
+        where: { id: c.id, coverSource: "auto", coverImageUrl: c.coverImageUrl },
+        data: { coverImageUrl: null, coverCrop: Prisma.JsonNull, coverSource: null },
+      });
+      cleared += count;
+    }
+    if (cleared > 0) {
+      logger.info({ message: "auto_cover_dropped_missing_photo", context: { userId, cleared } });
+      if (requeue) queueAutoCover(userId);
+    }
+    return cleared;
+  } catch (error) {
+    logger.warn({ message: "auto_cover_repair_failed", error, context: { userId } });
+    return 0;
+  }
 }
 
 /** Nightly: every account that has not switched it off. */

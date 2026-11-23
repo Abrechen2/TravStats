@@ -16,10 +16,13 @@ export default function CoverImage({
   url,
   crop,
   opacity,
+  onBroken,
 }: {
   url: string;
   crop: CoverCrop | null | undefined;
   opacity: number;
+  /** The picture did not load (its photo is gone): the owner of the cover says so instead. */
+  onBroken?: () => void;
 }): JSX.Element {
   const holder = useRef<HTMLDivElement>(null);
   const [frame, setFrame] = useState<Size | null>(null);
@@ -54,6 +57,7 @@ export default function CoverImage({
         src={url}
         alt=""
         draggable={false}
+        onError={onBroken}
         onLoad={(e) =>
           setImage({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })
         }

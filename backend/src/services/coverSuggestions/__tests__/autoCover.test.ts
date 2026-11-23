@@ -13,8 +13,11 @@ import {
   autoCoverCandidates,
   coverUrlOf,
   pickAutoCover,
+  queueAutoCover,
   removeAutoCovers,
+  repairAutoCovers,
   runAutoCoverForUser,
+  TRIGGER_DELAY_MS,
 } from "../autoCover";
 import { fillEmptyCover, manualCoverData } from "../../trip/tripCover";
 
@@ -183,5 +186,112 @@ describe("applyAutoCover and the job", () => {
       data: { coverCrop: { x: 0.5, y: 0.5, zoom: 1 }, coverSource: "manual" },
     });
     expect(await removeAutoCovers(userId)).toBe(0);
+  });
+});
+
+describe("repairAutoCovers: a cover never points at a photo that is gone", () => {
+  const stamp = Date.now();
+  let userId: string;
+  const mk = (data: Record<string, unknown>) =>
+    prisma.trip.create({ data: { userId, name: "R", ...data } });
+  const read = (id: string) =>
+    prisma.trip.findUniqueOrThrow({
+      where: { id },
+      select: { coverImageUrl: true, coverSource: true },
+    });
+
+  beforeAll(async () => {
+    userId = (
+      await prisma.user.create({
+        data: { username: `ac-r-${stamp}`, passwordHash: await hashPassword("pw-12345678") },
+      })
+    ).id;
+  });
+  afterAll(async () => {
+    await prisma.trip.deleteMany({ where: { userId } });
+    await prisma.user.delete({ where: { id: userId } });
+  });
+
+  it("clears an auto cover whose gallery photo was deleted, and only that", async () => {
+    const t = await mk({});
+    const alive = await prisma.tripPhoto.create({
+      data: { tripId: t.id, filename: "a.jpg", mimetype: "image/jpeg", sizeBytes: 1 },
+    });
+    const liveTrip = await mk({
+      coverImageUrl: `/api/v1/trips/${t.id}/photos/${alive.id}/file`,
+      coverSource: "auto",
+    });
+    const gone = "11111111-1111-4111-8111-111111111111";
+    const brokenAuto = await mk({
+      coverImageUrl: `/api/v1/trips/x/photos/${gone}/file`,
+      coverSource: "auto",
+    });
+    const brokenManual = await mk({
+      coverImageUrl: `/api/v1/trips/x/photos/${gone}/file`,
+      coverSource: "manual",
+    });
+    expect(await repairAutoCovers(userId, false)).toBe(1);
+    expect(await read(brokenAuto.id)).toEqual({ coverImageUrl: null, coverSource: null });
+    expect((await read(brokenManual.id)).coverSource).toBe("manual");
+    expect((await read(liveTrip.id)).coverSource).toBe("auto");
+  });
+
+  it("clears an auto cover whose entry-photo link was refused or removed", async () => {
+    const gone = "22222222-2222-4222-8222-222222222222";
+    const t = await mk({
+      coverImageUrl: `/api/v1/entry-photos/flight/f1/photos/${gone}/file?size=preview`,
+      coverSource: "auto",
+    });
+    expect(await repairAutoCovers(userId, false)).toBe(1);
+    expect((await read(t.id)).coverImageUrl).toBeNull();
+  });
+});
+
+describe("queueAutoCover debounce", () => {
+  const stamp = Date.now();
+  let userId: string;
+
+  beforeAll(async () => {
+    userId = (
+      await prisma.user.create({
+        data: { username: `ac-q-${stamp}`, passwordHash: await hashPassword("pw-12345678") },
+      })
+    ).id;
+    const t = await prisma.trip.create({
+      data: { userId, name: "Q", startDate: new Date("2026-05-01T00:00:00Z") },
+    });
+    await prisma.tripPhoto.create({
+      data: { tripId: t.id, filename: "q.jpg", mimetype: "image/jpeg", sizeBytes: 1 },
+    });
+  });
+  afterAll(async () => {
+    await prisma.trip.deleteMany({ where: { userId } });
+    await prisma.user.delete({ where: { id: userId } });
+  });
+
+  it("several links within the delay give exactly one run", async () => {
+    suggestCover.mockReset();
+    suggestCover.mockResolvedValue(answer([]));
+    jest.useFakeTimers({ doNotFake: ["nextTick", "setImmediate", "queueMicrotask"] });
+    try {
+      queueAutoCover(userId);
+      jest.advanceTimersByTime(TRIGGER_DELAY_MS - 1000);
+      queueAutoCover(userId);
+      jest.advanceTimersByTime(TRIGGER_DELAY_MS - 1000);
+      queueAutoCover(userId);
+      expect(suggestCover).not.toHaveBeenCalled();
+      jest.advanceTimersByTime(TRIGGER_DELAY_MS);
+      // The run reads the database in real time; wait on the wall clock, not on timers.
+      const until = Date.now() + 5000;
+      while (suggestCover.mock.calls.length === 0 && Date.now() < until) {
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+      expect(suggestCover).toHaveBeenCalledTimes(1);
+      jest.advanceTimersByTime(10 * TRIGGER_DELAY_MS);
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(suggestCover).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

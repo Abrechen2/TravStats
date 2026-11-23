@@ -191,6 +191,7 @@
   "cover": {
     "menu": "Suggest a cover",
     "prompt": "Suggest a cover",
+    "unavailable": "Cover no longer available – choose a new one",
     "title": "Suggest a cover",
     "intro": "We look through this trip's photos for one that shows where you are – and, if possible, you. Only when one photo clearly leads do we set it on our own (a switch in the photo sources).",
     "loading": "Looking at the photos …",

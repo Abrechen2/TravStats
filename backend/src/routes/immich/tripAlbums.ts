@@ -312,6 +312,7 @@ router.delete(
 
       await prisma.tripImmichAlbum.delete({ where: { id: link.id } });
       invalidateAlbumAssets(userId, link.immichAlbumId, link.provider);
+      queueAutoCover(userId);
 
       logger.info({
         message: "immich_album_unlinked",

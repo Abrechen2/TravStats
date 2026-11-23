@@ -36,6 +36,7 @@ import {
   removeDisplayRendition,
 } from "../../services/photos/displayRendition";
 import { manualCoverData } from "../../services/trip/tripCover";
+import { repairAutoCovers } from "../../services/coverSuggestions/autoCover";
 
 /**
  * Trip photos and the cover image — a same-prefix satellite of routes/trips.ts, split out when that
@@ -290,6 +291,7 @@ router.delete(
       if (!photo) throw new AppError("Photo not found", 404);
       await prisma.tripPhoto.delete({ where: { id: req.params.photoId } });
       deleteTripPhotoFile(photo.filename);
+      await repairAutoCovers(userId);
       res.status(204).send();
     } catch (error) {
       next(error);

@@ -1,7 +1,7 @@
 import CoverImage from "./CoverImage";
 import AutoCoverNote from "./AutoCoverNote";
 import CoverCropHost from "./CoverCropHost";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import RememberedMarker from "../provenance/RememberedMarker";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
@@ -63,6 +63,8 @@ export default function TripHead({
   placeCount = 0,
   placeVisits = NO_VISITS,
 }: TripHeadProps): JSX.Element {
+  // The cover URL that failed to load: its photo is gone, so the hint replaces the picture.
+  const [brokenCover, setBrokenCover] = useState<string | null>(null);
   // Entries that contradict each other (forgejo#426); the timeline names each one.
   const inconsistencies = useMemo(
     () =>
@@ -114,7 +116,12 @@ export default function TripHead({
         }}
       >
         {trip.coverImageUrl && (
-          <CoverImage url={trip.coverImageUrl} crop={trip.coverCrop} opacity={0.18} />
+          <CoverImage
+            url={trip.coverImageUrl}
+            crop={trip.coverCrop}
+            opacity={0.18}
+            onBroken={() => setBrokenCover(trip.coverImageUrl)}
+          />
         )}
         <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-sm)" }}>
@@ -186,9 +193,19 @@ export default function TripHead({
             )}
             <TripTravellers tripId={trip.id} companions={trip.companions} />
             {!trip.coverImageUrl && <CoverSuggestPrompt tripId={trip.id} onChosen={onChanged} />}
-            {trip.coverImageUrl && trip.coverSource === "auto" && (
-              <AutoCoverNote trip={trip} onChanged={onChanged} />
+            {trip.coverImageUrl && brokenCover === trip.coverImageUrl && (
+              <CoverSuggestPrompt
+                tripId={trip.id}
+                onChosen={onChanged}
+                label="cover.unavailable"
+                testId="cover-unavailable"
+              />
             )}
+            {trip.coverImageUrl &&
+              trip.coverSource === "auto" &&
+              brokenCover !== trip.coverImageUrl && (
+                <AutoCoverNote trip={trip} onChanged={onChanged} />
+              )}
           </div>
           <div className="flex shrink-0 flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
             <Button onClick={onEdit}>{t("common:buttons.edit")}</Button>
