@@ -239,7 +239,39 @@ registry.registerPath({
     "waits here until it is applied or rejected — which is what keeps a wrong " +
     "match from silently rewriting a flight that was recorded correctly.",
   tags: pendingTag,
-  responses: { 200: { description: "Pending updates" } },
+  request: {
+    query: z.object({
+      status: z
+        .string()
+        .optional()
+        .describe("pending, applied, rejected, expired, edited or superseded"),
+      flightId: z.string().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Pending updates",
+      content: {
+        "application/json": {
+          schema: z.object({
+            updates: z.array(
+              z.object({
+                id: z.string(),
+                flightId: z.string(),
+                status: z.string(),
+                apiSource: z.string(),
+                fetchedAt: z.string(),
+                expiresAt: z.string(),
+                createdAt: z.string(),
+                changes: z.unknown(),
+              })
+            ),
+            count: z.number().int(),
+          }),
+        },
+      },
+    },
+  },
 });
 
 registry.registerPath({
@@ -647,9 +679,30 @@ registry.registerPath({
   method: "get",
   path: "/auth/me",
   summary: "Who the caller is",
+  description:
+    "`tokenScope` is the scope (`read`, `write` or `admin`) of the personal access token the " +
+    "call was made with, and `null` for a browser session.",
   tags: authTag,
   responses: {
-    200: { description: "The current user" },
+    200: {
+      description: "The current user",
+      content: {
+        "application/json": {
+          schema: z.object({
+            user: z.object({
+              id: z.string(),
+              username: z.string(),
+              isAdmin: z.boolean(),
+              firstName: z.string().nullable(),
+              lastName: z.string().nullable(),
+              isSharedDemo: z.boolean(),
+              providerQuotaRefused: z.boolean(),
+            }),
+            tokenScope: z.enum(["read", "write", "admin"]).nullable(),
+          }),
+        },
+      },
+    },
     401: { description: "Not signed in", content: errorContent },
   },
 });

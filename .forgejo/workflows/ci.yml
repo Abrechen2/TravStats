@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: https://code.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install backend dependencies
-        run: cd backend && npm ci
+        run: cd backend && npm ci && cd ../packages/travstats-mcp && npm ci
       - name: Install frontend dependencies
         run: cd frontend && npm ci
       - name: Typecheck backend
@@ -49,6 +49,22 @@ jobs:
       - name: File-size ratchet
         run: npm run check:size
 
+  mcp-package:
+    name: travstats-mcp (typecheck, lint, tests, build)
+    runs-on: homelab-docker
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install
+        run: cd packages/travstats-mcp && npm ci
+      - name: Typecheck
+        run: cd packages/travstats-mcp && npx tsc --noEmit
+      - name: Lint
+        run: cd packages/travstats-mcp && npm run lint
+      - name: Tests
+        run: cd packages/travstats-mcp && npm test
+      - name: Build
+        run: cd packages/travstats-mcp && npm run build
+
   schema-drift:
     name: Prisma schema drift
     runs-on: homelab-docker
@@ -67,7 +83,7 @@ jobs:
     steps:
       - uses: https://code.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install dependencies
-        run: cd backend && npm ci
+        run: cd backend && npm ci && cd ../packages/travstats-mcp && npm ci
       - name: Schema drift
         run: npm run check:drift
 
@@ -111,7 +127,7 @@ jobs:
     steps:
       - uses: https://code.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install dependencies
-        run: cd backend && npm ci
+        run: cd backend && npm ci && cd ../packages/travstats-mcp && npm ci
       # restoreOlderArchive.test.ts refuses to skip under CI when pg_dump/psql are
       # missing. node:22-bookworm has neither, and bookworm's own client is 15,
       # which refuses to dump the 16 server, so the client comes from PGDG.

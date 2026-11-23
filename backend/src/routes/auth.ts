@@ -442,6 +442,10 @@ router.get("/me", authenticate, async (req: AuthRequest, res: Response, next: Ne
         isSharedDemo: isSharedDemoAccount({ isDemo, username: user.username }),
         providerQuotaRefused: isDemo === true,
       },
+      // Which scope the caller's personal access token carries; null for a cookie
+      // session. Clients that refuse a token that is too powerful (travstats-mcp
+      // refuses `admin`) need this, because the token string itself says nothing.
+      tokenScope: req.apiToken?.scope ?? null,
     });
   } catch (error) {
     next(error);

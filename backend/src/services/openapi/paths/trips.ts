@@ -282,7 +282,7 @@ registry.registerPath({
   path: "/trips/{id}",
   summary: "Get a trip",
   description:
-    "Includes everything linked to it: flights, cruises with their ship, ports " +
+    "Answers `{ trip }`. Includes everything linked to it: flights, cruises with their ship, ports " +
     "and stops, lodging stays with their property, stops, diary entries and photos, " +
     "the trip's `cost` by the server's rule, and its distance: `totalDistanceKm` and " +
     "`distanceByMode`, over the legs each domain's counting rule counts. Both are additive; " +
@@ -294,22 +294,24 @@ registry.registerPath({
       description: "Trip",
       content: {
         "application/json": {
-          schema: tripResponse.extend({
-            cost: tripCost.nullable(),
-            totalDistanceKm: z
-              .number()
-              .nullable()
-              .describe("Sum of distanceByMode; null when no mode has a measured leg"),
-            distanceByMode: z
-              .object({
-                flight: z.number().nullable(),
-                rail: z.number().nullable(),
-                bus: z.number().nullable(),
-                ferry: z.number().nullable(),
-                cruise: z.number().nullable(),
-                roadtrip: z.number().nullable().describe("Road legs only"),
-              })
-              .describe("Whole km per mode; null when the mode has no measured leg"),
+          schema: z.object({
+            trip: tripResponse.extend({
+              cost: tripCost.nullable(),
+              totalDistanceKm: z
+                .number()
+                .nullable()
+                .describe("Sum of distanceByMode; null when no mode has a measured leg"),
+              distanceByMode: z
+                .object({
+                  flight: z.number().nullable(),
+                  rail: z.number().nullable(),
+                  bus: z.number().nullable(),
+                  ferry: z.number().nullable(),
+                  cruise: z.number().nullable(),
+                  roadtrip: z.number().nullable().describe("Road legs only"),
+                })
+                .describe("Whole km per mode; null when the mode has no measured leg"),
+            }),
           }),
         },
       },

@@ -1044,6 +1044,7 @@
     "docsLink": "Open Swagger UI →",
     "newLabel": "Label",
     "newLabelPlaceholder": "e.g. \"Home Assistant integration\"",
+    "providerWarning": "If you use this key with an AI assistant (for example through MCP), everything the assistant reads goes to its AI provider and is stored under that provider's terms. TravStats cannot take it back.",
     "scope": "Scope",
     "scopes": {
       "read": "Read — read-only",
