@@ -267,9 +267,18 @@ export default function TripsTab({
               ).map((opt) => (
                 <FilterPill
                   key={opt}
-                  active={statusFilter === opt}
+                  active={
+                    opt === "all"
+                      ? statusFilter === "all" && categoryFilter === "all"
+                      : statusFilter === opt
+                  }
                   count={statusCounts[opt] ?? 0}
-                  onClick={() => onFiltersChange({ status: opt })}
+                  onClick={() =>
+                    onFiltersChange({
+                      status: statusFilter === opt ? "all" : opt,
+                      category: "all",
+                    })
+                  }
                 >
                   {opt === "all" ? t("trips:filterBar.allStatuses") : t(`trips:status.${opt}`)}
                 </FilterPill>
@@ -282,7 +291,10 @@ export default function TripsTab({
                   active={categoryFilter === opt}
                   count={statusCounts[`cat:${opt}`] ?? 0}
                   onClick={() =>
-                    onFiltersChange({ category: categoryFilter === opt ? "all" : opt })
+                    onFiltersChange({
+                      category: categoryFilter === opt ? "all" : opt,
+                      status: "all",
+                    })
                   }
                 >
                   {t(`trips:category.${opt}`)}

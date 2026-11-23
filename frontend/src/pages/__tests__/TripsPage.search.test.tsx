@@ -149,4 +149,88 @@ describe("TripsPage server-side search", () => {
     await screen.findByText("C");
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("shown=3"));
   });
+
+  describe("filter pills are single-select", () => {
+    const facetPage = () => ({
+      trips: [trip("a", "A")],
+      total: 5,
+      truncated: false,
+      facets: { status: { completed: 3, planned: 2 }, category: { business: 2, vacation: 3 } },
+    });
+    function Where(): JSX.Element {
+      return <output data-testid="where">{useLocation().search}</output>;
+    }
+    const open = (url: string) =>
+      render(
+        <MemoryRouter initialEntries={[url]}>
+          <Where />
+          <TripsPage />
+        </MemoryRouter>
+      );
+    const lit = () =>
+      screen
+        .getAllByRole("button", { pressed: true })
+        .map((b) => b.textContent ?? "")
+        .filter((t) => /status\.|category\.|allStatuses/.test(t));
+
+    beforeEach(() => listPage.mockResolvedValue(facetPage()));
+
+    it("clicking a category after a status leaves only the category lit and queries it alone", async () => {
+      open("/trips?status=planned");
+      await screen.findByText("trips:category.business");
+      expect(lit()).toHaveLength(1);
+      fireEvent.click(screen.getByText("trips:category.business"));
+      await waitFor(() =>
+        expect(listPage).toHaveBeenLastCalledWith(
+          expect.objectContaining({ category: "business", status: undefined })
+        )
+      );
+      expect(lit()).toHaveLength(1);
+      expect(lit()[0]).toContain("category.business");
+      expect(screen.getByTestId("where").textContent).not.toContain("status=planned");
+    });
+
+    it("clicking a status after a category leaves only the status lit", async () => {
+      open("/trips?category=business");
+      fireEvent.click(await screen.findByText("trips:status.planned"));
+      await waitFor(() =>
+        expect(listPage).toHaveBeenLastCalledWith(
+          expect.objectContaining({ status: "planned", category: undefined })
+        )
+      );
+      expect(lit()).toHaveLength(1);
+      expect(lit()[0]).toContain("status.planned");
+    });
+
+    it("'Alle' clears both and is the only lit pill", async () => {
+      open("/trips?category=business");
+      fireEvent.click(await screen.findByText("trips:filterBar.allStatuses"));
+      await waitFor(() =>
+        expect(screen.getByTestId("where").textContent).not.toContain("category=")
+      );
+      expect(lit()).toHaveLength(1);
+      expect(lit()[0]).toContain("allStatuses");
+    });
+
+    it("an old link carrying both filters is read as the category alone", async () => {
+      open("/trips?status=planned&category=business");
+      await screen.findByText("trips:category.business");
+      await waitFor(() =>
+        expect(listPage).toHaveBeenCalledWith(
+          expect.objectContaining({ category: "business", status: undefined })
+        )
+      );
+      expect(lit()).toHaveLength(1);
+      expect(lit()[0]).toContain("category.business");
+    });
+
+    it("pill counts come from the whole logbook's facets, whichever pill is lit", async () => {
+      open("/trips?category=business");
+      await screen.findByText("trips:status.planned");
+      const pill = (label: string) => screen.getByText(label).closest("button")!;
+      expect(pill("trips:status.planned")).toHaveTextContent("2");
+      expect(pill("trips:status.completed")).toHaveTextContent("3");
+      expect(pill("trips:category.business")).toHaveTextContent("2");
+    });
+  });
 });
