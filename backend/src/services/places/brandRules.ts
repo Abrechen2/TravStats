@@ -16,6 +16,9 @@ import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import { recheckAchievements } from "../../utils/achievements";
 import { toLocal } from "../../shared/time/instant";
+import { classifyVisit } from "../../shared/placeCounting";
+import { now as clockNow } from "../../shared/time/clock";
+import { runUnfiltered } from "../provenance/recordedOnly";
 import type { BrandRuleInput } from "../travtrack/visits/brandMatch";
 
 export const BRAND_RULE = "brandRule";
@@ -347,9 +350,21 @@ export async function undoAutoAccepted(userId: string, stayId: string): Promise<
       keptVisit: null,
     };
     if (row.visitId) {
-      const visit = await tx.placeVisit.findUnique({ where: { id: row.visitId } });
+      const visit = await tx.placeVisit.findUnique({
+        where: { id: row.visitId },
+        include: {
+          _count: {
+            select: { photos: true, documents: true, documentLinks: true, expenses: true },
+          },
+        },
+      });
+      // Anything the owner added since — a note, a rating, a photo, a document, an expense — makes
+      // the visit theirs: deleting it would cascade their additions away with it.
+      const added =
+        !!visit &&
+        (!!visit.notes || visit.rating !== null || Object.values(visit._count).some((n) => n > 0));
       if (visit && visit.createdBy !== BRAND_RULE) out.keptVisit = "notAutomatic";
-      else if (visit && (visit.notes || visit.rating !== null)) out.keptVisit = "notes";
+      else if (visit && added) out.keptVisit = "notes";
       else if (visit) {
         await tx.placeVisit.delete({ where: { id: visit.id } });
         out.removedVisit = true;
@@ -368,16 +383,51 @@ export async function undoAutoAccepted(userId: string, stayId: string): Promise<
         where: { id: row.placeId, userId },
         select: {
           createdBy: true,
-          _count: { select: { visits: true, listEntries: true } },
+          notes: true,
+          tags: true,
+          coverPhotoId: true,
+          _count: {
+            select: {
+              visits: true,
+              listEntries: true,
+              roadtripStations: true,
+              photoJourneys: true,
+              captures: true,
+            },
+          },
         },
       });
+      // A place the owner has since written on (notes, tags, a cover) or used elsewhere is theirs.
+      const ownerTouched =
+        !!place &&
+        (!!place.notes ||
+          place.tags.length > 0 ||
+          place.coverPhotoId !== null ||
+          place._count.roadtripStations > 0 ||
+          place._count.photoJourneys > 0 ||
+          place._count.captures > 0);
       if (
         place?.createdBy === BRAND_RULE &&
+        !ownerTouched &&
         place._count.visits === 0 &&
         place._count.listEntries === 0
       ) {
         await tx.place.delete({ where: { id: row.placeId } });
         out.removedPlace = true;
+      } else if (place && out.removedVisit) {
+        // Accepting switched `visited` on; with the automatic visit gone the flag follows the
+        // visits that are left (every one, a hidden purpose included), not the rejected one.
+        const left = await runUnfiltered(
+          async () =>
+            await tx.placeVisit.findMany({
+              where: { placeId: row.placeId! },
+              select: { visitedAt: true, visitedAtUtc: true },
+            })
+        );
+        const at = clockNow();
+        if (!left.some((v) => classifyVisit(v, at) === "visited")) {
+          await tx.place.update({ where: { id: row.placeId }, data: { visited: false } });
+        }
       }
     }
     await tx.dawarichStay.update({

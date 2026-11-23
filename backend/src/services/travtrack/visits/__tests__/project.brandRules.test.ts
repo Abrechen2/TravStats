@@ -258,6 +258,38 @@ describe("smart lists in the visit projection", () => {
     expect(await prisma.placeVisit.findUnique({ where: { id: manual.id } })).not.toBeNull();
   });
 
+  it("undo keeps an automatic visit that gained a photo, and a place that gained notes", async () => {
+    await setListRule(userId, listId, [MCD], { ...SETTINGS, autoAccept: true });
+    await stand(25);
+    expect((await run()).autoAccepted).toBe(1);
+    const visit = await prisma.placeVisit.findFirstOrThrow({ where: { userId } });
+    await prisma.placeVisitPhoto.create({
+      data: { placeVisitId: visit.id, mimetype: "image/jpeg", sizeBytes: 1, provider: "local" },
+    });
+    await prisma.place.update({ where: { id: visit.placeId }, data: { notes: "Gute Pommes" } });
+    const [fed] = await recentlyAutoAccepted(userId, listId);
+    const undone = await undoAutoAccepted(userId, fed.id);
+    expect(undone).toMatchObject({ removedVisit: false, keptVisit: "notes", removedPlace: false });
+    expect(await prisma.placeVisitPhoto.count({ where: { placeVisitId: visit.id } })).toBe(1);
+    expect(await prisma.place.count({ where: { id: visit.placeId } })).toBe(1);
+  });
+
+  it("undo on a wishlist place the owner had takes back the 'visited' its acceptance switched on", async () => {
+    await setListRule(userId, listId, [MCD], { ...SETTINGS, autoAccept: true });
+    const place = await prisma.place.create({
+      data: { userId, name: "McDonald's Wunsch", ...VENUE_AT, externalRef: "osm:way/1" },
+    });
+    expect(place.visited).toBe(false);
+    resolveStop.mockResolvedValue(picked({ source: "known", placeId: place.id }));
+    await stand(25);
+    expect((await run()).autoAccepted).toBe(1);
+    expect((await prisma.place.findUniqueOrThrow({ where: { id: place.id } })).visited).toBe(true);
+    const [fed] = await recentlyAutoAccepted(userId, listId);
+    const undone = await undoAutoAccepted(userId, fed.id);
+    expect(undone).toMatchObject({ removedVisit: true, removedPlace: false });
+    expect((await prisma.place.findUniqueOrThrow({ where: { id: place.id } })).visited).toBe(false);
+  });
+
   it("drops a stop inside a privacy zone before any match: nothing is suggested or taken automatically", async () => {
     await setListRule(userId, listId, [MCD], { ...SETTINGS, autoAccept: true });
     await prisma.travTrackPrivacyZone.create({

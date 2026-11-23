@@ -185,8 +185,8 @@ const queried = basePrisma.$extends({
         // statement earlier is only visible there, and a second pool connection would wait for
         // the one the transaction holds (a deadlock at connection_limit=1).
         const reader = openTransaction.getStore() ?? basePrisma;
-        const trip = await runUnfiltered(() =>
-          reader.trip.findFirst({ where: { id }, select: { category: true } })
+        const trip = await runUnfiltered(
+          async () => await reader.trip.findFirst({ where: { id }, select: { category: true } })
         );
         return trip?.category ?? null;
       });
@@ -213,17 +213,18 @@ const queried = basePrisma.$extends({
       // counted as hidden), but not past "Nur belegte": a remembered visit the user hides that way
       // is no visible visit and cannot keep a place visited.
       const loadVisits = async (ids: string[]): Promise<VisitFact[]> => {
-        const visits = await runUnfiltered(() =>
-          (openTransaction.getStore() ?? basePrisma).placeVisit.findMany({
-            where: { placeId: { in: ids } },
-            select: {
-              placeId: true,
-              purpose: true,
-              visitedAt: true,
-              visitedAtUtc: true,
-              provenance: true,
-            },
-          })
+        const visits = await runUnfiltered(
+          async () =>
+            await (openTransaction.getStore() ?? basePrisma).placeVisit.findMany({
+              where: { placeId: { in: ids } },
+              select: {
+                placeId: true,
+                purpose: true,
+                visitedAt: true,
+                visitedAtUtc: true,
+                provenance: true,
+              },
+            })
         );
         return filter.recorded ? visits.filter((v) => v.provenance !== "remembered") : visits;
       };

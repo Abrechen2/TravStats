@@ -344,14 +344,17 @@ export const purposeDomainOfModel = (model: string): keyof PurposeVisibility | u
  * replaced by the purpose-aware rule: visited, unless a completed visit is hidden and no visible
  * visit has completed (see services/purpose/placeVisited.ts, which corrects the returned rows).
  */
-function demotedPlace(hidden: string[], now: Date): Json {
-  const done = {
+function demotedPlace(hidden: string[], now: Date, recorded: boolean): Json {
+  const happened = {
     OR: [
       { visitedAtUtc: { lte: now } },
       { visitedAtUtc: null, visitedAt: { lte: now } },
       { visitedAtUtc: null, visitedAt: null },
     ],
   };
+  // Under "Nur belegte" a remembered visit is no visit at all, on either side of the rule — the
+  // same cut the read hook makes before it corrects the returned rows (db.ts, `loadVisits`).
+  const done = recorded ? { AND: [happened, RECORDED] } : happened;
   return {
     AND: [
       { visited: true },
@@ -411,7 +414,11 @@ export function applyRecordedOnly<A>(
   if (active.has(model)) narrowed.where = narrowWhere(active, model, narrowed.where);
   const hiddenVisits = store.hidden?.PlaceVisit;
   if (now && hiddenVisits && hiddenVisits.length > 0 && narrowed.where !== undefined) {
-    narrowed.where = rewriteVisited(model, narrowed.where, demotedPlace(hiddenVisits, now)) as Json;
+    narrowed.where = rewriteVisited(
+      model,
+      narrowed.where,
+      demotedPlace(hiddenVisits, now, store.recorded)
+    ) as Json;
   }
   return narrowed as A;
 }

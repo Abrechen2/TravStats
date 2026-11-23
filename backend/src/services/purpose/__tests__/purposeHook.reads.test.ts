@@ -130,5 +130,11 @@ describe("purpose hook: batches, included places and recorded-only", () => {
       true
     );
     expect(recorded?.visited).toBe(false);
+    // A count filters on the flag in SQL; it must give the same answer as the returned row.
+    const counted = await hidden(
+      () => prisma.place.count({ where: { id: memoryId, visited: true } }),
+      true
+    );
+    expect(counted).toBe(0);
   });
 });
