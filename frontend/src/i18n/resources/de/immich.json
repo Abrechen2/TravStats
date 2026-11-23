@@ -64,7 +64,12 @@
     "partialLink": "Ein Teil der Alben konnte nicht verknüpft werden: {{reason}}",
     "badgePhotoprism": "PhotoPrism",
     "badgeImmich": "Immich",
-    "menuLabel": "Weitere Aktionen zum Album {{name}}"
+    "menuLabel": "Weitere Aktionen zum Album {{name}}",
+    "dayAll": "Alle",
+    "dayStripLabel": "Tage der Reise",
+    "dayPhotos": "{{count}} Fotos",
+    "loadMore": "Mehr Fotos laden",
+    "loadingDay": "Lade Fotos …"
   },
   "gallery": {
     "uploaded": "Hochgeladen",

@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
-import { groupByDay } from "../../lib/galleryGrouping";
-import { useLocale } from "../../hooks/useLocale";
 import type {
+  AlbumDays,
   ImmichGalleryAsset,
   ImportJob,
   LinkedAlbum,
@@ -13,6 +12,9 @@ import type {
 } from "../../types/immich";
 import OverflowMenu from "../ui/OverflowMenu";
 import PhotoLightbox, { type LightboxItem } from "./PhotoLightbox";
+import AlbumDayPhotos from "./AlbumDayPhotos";
+import GalleryDayStrip, { ALL_DAYS, dayKey } from "./GalleryDayStrip";
+import { useDayPrefetch } from "./useDayPrefetch";
 
 const JOB_POLL_MS = 1500;
 /** Consecutive failed job polls after which polling stops and the failure is shown. */
@@ -20,6 +22,17 @@ const MAX_POLL_FAILURES = 3;
 
 /** Viewing preference, not instance state — it belongs in the browser. */
 const GROUP_PREF_KEY = "travstats.gallery.groupByDay";
+
+/** Last day opened, per trip — the next visit starts where this one stopped. */
+const lastDayKey = (tripId: string): string => `travstats.gallery.lastDay.${tripId}`;
+
+function readLastDay(tripId: string): string | null {
+  try {
+    return localStorage.getItem(lastDayKey(tripId));
+  } catch {
+    return null;
+  }
+}
 
 function readGroupPref(): boolean {
   try {
@@ -72,16 +85,17 @@ interface Props {
  */
 export default function ImmichAlbumSection({ tripId, album, onChanged }: Props): JSX.Element {
   const { t } = useTranslation("immich");
-  const locale = useLocale();
   const addToast = useToastStore((s) => s.addToast);
 
-  const [assets, setAssets] = useState<ImmichGalleryAsset[]>([]);
-  const [albumTruncated, setAlbumTruncated] = useState(false);
+  const [days, setDays] = useState<AlbumDays | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  // Bumped when the album's content changed under the open day (a re-sync).
+  const [reloadToken, setReloadToken] = useState(0);
   // Resolved i18n key (e.g. "errors.auth"), not the bare failure kind — so an
   // unrecognised kind resolves to "errors.unknown" via failureKey() at the
   // point of capture rather than being force-fit into "unreachable" here.
   const [failure, setFailure] = useState<string | null>(null);
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [lightbox, setLightbox] = useState<{ items: LightboxItem[]; index: number } | null>(null);
   const [groupByDayEnabled, setGroupByDayEnabled] = useState<boolean>(readGroupPref);
   const [confirmingUnlink, setConfirmingUnlink] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -110,10 +124,10 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
   const load = useCallback(async (): Promise<void> => {
     setFailure(null);
     try {
-      const data = await immichApi.getAlbumAssets(tripId, album.id);
+      const data = await immichApi.getAlbumDays(tripId, album.id);
       if (!mountedRef.current) return;
-      setAssets(data.assets);
-      setAlbumTruncated(data.truncated === true);
+      setDays(data);
+      setReloadToken((n) => n + 1);
     } catch (error) {
       if (!mountedRef.current) return;
       logger.warn("Linked album failed to load", {
@@ -248,38 +262,47 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
     else void handleUnlink(false);
   };
 
-  const items: LightboxItem[] = assets.map((a) => ({
-    id: a.id,
-    previewUrl: a.previewUrl,
-    source: album.mode === "import" ? { kind: "photo" } : { kind: "immich", linkId: album.id },
-  }));
-
-  // The backend hands these over chronologically; grouping only cuts where the
-  // day changes. Undated photos collect in a trailing group headed "Ohne Datum".
-  const dayGroups = useMemo(() => groupByDay(assets), [assets]);
-  const hasDates = dayGroups.some((g) => g.day !== null);
+  const hasDates = (days?.days ?? []).some((d) => d.day !== null);
   const showGroups = groupByDayEnabled && hasDates;
 
-  const dayLabel = (day: string): string =>
-    // `day` is a `YYYY-MM-DD` key; read in UTC so the reader's zone cannot move it.
-    new Date(`${day}T00:00:00.000Z`).toLocaleDateString(locale, {
-      timeZone: "UTC",
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
+  // Which day is open: the user's choice, else the day they last opened on this
+  // trip when this album has photos on it, else the first day with photos.
+  const bucketKeys = (days?.days ?? []).map(dayKey);
+  const remembered = readLastDay(tripId);
+  const openDay = !showGroups
+    ? ALL_DAYS
+    : selectedDay && (selectedDay === ALL_DAYS || bucketKeys.includes(selectedDay))
+      ? selectedDay
+      : remembered && (remembered === ALL_DAYS || bucketKeys.includes(remembered))
+        ? remembered
+        : (bucketKeys[0] ?? ALL_DAYS);
+
+  const chooseDay = (key: string): void => {
+    setSelectedDay(key);
+    try {
+      localStorage.setItem(lastDayKey(tripId), key);
+    } catch {
+      // Remembering the day is a convenience; the view works without it.
+    }
+  };
+
+  const openLightbox = (shown: ImmichGalleryAsset[], index: number): void =>
+    setLightbox({
+      items: shown.map((a) => ({
+        id: a.id,
+        previewUrl: a.previewUrl,
+        source: album.mode === "import" ? { kind: "photo" } : { kind: "immich", linkId: album.id },
+      })),
+      index,
     });
 
-  const tile = (asset: ImmichGalleryAsset, index: number): JSX.Element => (
-    <button key={asset.id} type="button" onClick={() => setLightboxIndex(index)}>
-      <img
-        src={asset.url}
-        alt={album.albumName}
-        loading="lazy"
-        className="aspect-square w-full rounded-sm object-cover"
-      />
-    </button>
-  );
+  useDayPrefetch({
+    tripId,
+    linkId: album.id,
+    keys: showGroups ? bucketKeys : [],
+    current: openDay,
+    enabled: !failure,
+  });
 
   return (
     <section className="mt-6">
@@ -389,10 +412,10 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
         </div>
       )}
 
-      {albumTruncated && !failure && (
+      {days?.truncated && !failure && (
         <p role="status" data-testid="album-truncated" className="mb-2 text-xs text-slate-400">
           {t(album.provider === "photoprism" ? "albums.truncatedPhotoprism" : "albums.truncated", {
-            shown: assets.length,
+            shown: days?.total ?? 0,
           })}
         </p>
       )}
@@ -406,36 +429,38 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
             </button>
           )}
         </div>
-      ) : showGroups ? (
-        <div className="space-y-4">
-          {dayGroups.map((group) => (
-            <div key={group.day ?? "undated"}>
-              {/* Photos without a capture date sit in their own last group, named
-                  as such — not under a made-up day, and not unlabelled. */}
-              <h4
-                data-testid={group.day ? "gallery-day-header" : "gallery-undated-header"}
-                className="mb-1.5 text-sm font-semibold text-slate-300"
-              >
-                {group.day ? dayLabel(group.day) : t("albums.undated")}
-              </h4>
-              <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
-                {group.assets.map((asset) => tile(asset, asset.index))}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
-          {assets.map((asset, index) => tile(asset, index))}
-        </div>
-      )}
+      ) : days ? (
+        <>
+          {showGroups && (
+            <GalleryDayStrip
+              days={days.days}
+              total={days.total}
+              selected={openDay}
+              onSelect={chooseDay}
+            />
+          )}
+          <AlbumDayPhotos
+            // A new day is a new list: keyed so no page of the old one lingers.
+            key={openDay}
+            tripId={tripId}
+            linkId={album.id}
+            provider={album.provider}
+            albumName={album.albumName}
+            day={openDay}
+            zone={days.zone}
+            headers={showGroups && openDay === ALL_DAYS}
+            reloadToken={reloadToken}
+            onOpen={openLightbox}
+          />
+        </>
+      ) : null}
 
-      {lightboxIndex !== null && (
+      {lightbox !== null && (
         <PhotoLightbox
           tripId={tripId}
-          items={items}
-          startIndex={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
+          items={lightbox.items}
+          startIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
           onCoverChanged={() => onChanged()}
         />
       )}

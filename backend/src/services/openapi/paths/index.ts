@@ -96,6 +96,7 @@ import "./accountArchive";
 import "./lifeBook";
 import "./changeHistory";
 import "./integrations";
+import "./galleryDays";
 import "./photoJourneys";
 import "./tripSuggestions";
 import "./sharing";

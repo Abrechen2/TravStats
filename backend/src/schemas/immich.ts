@@ -66,6 +66,20 @@ export const unlinkQuerySchema = z
 
 export const assetSizeSchema = z.enum(["thumbnail", "preview", "original"]).default("thumbnail");
 
+/** A day bucket of the gallery: a local day, the photos without a date, or everything. */
+export const galleryDayParamSchema = z.union([
+  z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  z.enum(["undated", "all"]),
+]);
+
+/** Page of one day's photos. Bounded: a day of a long trip can hold hundreds. */
+export const galleryDayQuerySchema = z
+  .object({
+    offset: z.coerce.number().int().min(0).default(0),
+    limit: z.coerce.number().int().min(1).max(200).default(60),
+  })
+  .strict();
+
 export const assetIdParamSchema = z.string().uuid();
 
 /**
