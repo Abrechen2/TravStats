@@ -17,7 +17,7 @@ import { interrupted, placesFor } from "./stationaryCoverage";
  * place, `pointCount` 0 — nothing was recorded. A separate source, so a reader that wants only
  * evidenced days leaves it out; never merged into the `travtrack` rows.
  *
- * Recomputed over the whole history, replace-not-upsert, so a silence that later turns out to
+ * Recomputed incrementally over the silences touching the dirty days (whole history after a deletion), replace-not-upsert, so a silence that later turns out to
  * contain a fix, or whose ends change, loses its rows. Days are UTC days like every country day
  * (ADR 0002 Q3); only a day wholly inside the silence counts, so the local-day edge never
  * claims a day the owner might have spent elsewhere.
@@ -37,8 +37,36 @@ type GapRow = {
 
 export type InferredResult = { gaps: number; written: number };
 
-/** Pairs of consecutive good fixes at least a day apart, newest data last, ending inside the window. */
-async function gapsSince(userId: string, since: Date): Promise<GapRow[]> {
+/** The nearest good fix (plausible, outside every privacy circle) on one side of `atMs`, or null. */
+async function goodFixBeyond(
+  userId: string,
+  side: "before" | "after",
+  atMs: number
+): Promise<Date | null> {
+  const circlesAt = await privacyCircleSet(userId);
+  const [cmp, order] = side === "before" ? ["<", "DESC"] : [">=", "ASC"];
+  let cursor = atMs;
+  // Fixes inside a zone are skipped one batch at a time; a zone-heavy account loops a little.
+  for (let round = 0; round < 50; round++) {
+    const rows = await prisma.$queryRaw<Array<{ t: Date; lat: number; lon: number }>>(Prisma.sql`
+      SELECT t, lat, lon FROM travtrack_points
+      WHERE user_id = ${userId} AND t ${Prisma.raw(cmp)} ${new Date(cursor)}
+        AND NOT COALESCE(accuracy_m > ${MAX_ACCURACY_M}, false)
+        AND NOT (abs(lat) < ${NULL_ISLAND_DEG} AND abs(lon) < ${NULL_ISLAND_DEG})
+      ORDER BY t ${Prisma.raw(order)} LIMIT 200`);
+    if (rows.length === 0) return null;
+    const hit = rows.find(
+      (r) => !circlesAt(r.t.getTime()).some((z) => distanceM(r, z) <= z.radiusM)
+    );
+    if (hit) return hit.t;
+    // `before` is `<` (exclusive), `after` is `>=`: step past the last row so a batch never repeats.
+    cursor = rows[rows.length - 1].t.getTime() + (side === "after" ? 1 : 0);
+  }
+  return null;
+}
+
+/** Pairs of consecutive good fixes at least a day apart whose later fix lies in `[fromMs, untilMs]`. */
+async function gapsBetween(userId: string, fromMs: number, untilMs: number): Promise<GapRow[]> {
   const circlesAt = await privacyCircleSet(userId);
   const rows = await prisma.$queryRaw<
     Array<{ t: Date; lat: number; lon: number; prev_t: Date; prev_lat: number; prev_lon: number }>
@@ -47,12 +75,13 @@ async function gapsSince(userId: string, since: Date): Promise<GapRow[]> {
       SELECT t, lat, lon,
              LAG(t) OVER w AS prev_t, LAG(lat) OVER w AS prev_lat, LAG(lon) OVER w AS prev_lon
       FROM travtrack_points
-      WHERE user_id = ${userId} AND TRUE
+      WHERE user_id = ${userId}
+        AND t >= ${new Date(fromMs)} AND t <= ${new Date(untilMs)}
         AND NOT COALESCE(accuracy_m > ${MAX_ACCURACY_M}, false)
         AND NOT (abs(lat) < ${NULL_ISLAND_DEG} AND abs(lon) < ${NULL_ISLAND_DEG})
       WINDOW w AS (ORDER BY t, seq)
     ) x
-    WHERE prev_t IS NOT NULL AND t >= ${since} AND t - prev_t >= interval '1 day'
+    WHERE prev_t IS NOT NULL AND t - prev_t >= interval '1 day'
     ORDER BY t`);
   // Privacy circles are checked here, per fix, as the day view does; a pair with a hidden end is
   // skipped (its true neighbour is the hidden fix, not the one SQL paired it with).
@@ -74,18 +103,45 @@ async function gapsSince(userId: string, since: Date): Promise<GapRow[]> {
     }));
 }
 
+/** The UTC days (`YYYY-MM-DD`, inclusive) whose data changed; null recomputes the whole history. */
+export type InferredScope = { fromDay: string; toDay: string } | null;
+
+/**
+ * A normal run recomputes only the silences touching the dirty days: from the last good fix
+ * before the earliest to the first good fix after the latest. After a deletion or a zone change
+ * (`inferredRebuildDue`) the scope is null and the whole history is rebuilt once.
+ */
 export async function projectInferredCountryDays(
   userId: string,
   countryAt: (lat: number, lon: number) => string | null,
+  scope: InferredScope = null,
   now: Date = new Date()
 ): Promise<InferredResult> {
-  // The whole history, not a rolling window: a row older than any window must still lose its
-  // rows when an end fix of its silence is gone (privacy), and nothing else can name it.
-  const startDay = new Date(0);
-  const endExclusive = utcMidnight(now.toISOString().slice(0, 10));
+  const today = utcMidnight(now.toISOString().slice(0, 10));
+  let fromMs = 0;
+  let untilMs = Date.UTC(3000, 0, 1);
+  let startAt = new Date(0);
+  let endAtExclusive = today;
+  if (scope) {
+    const scopeFrom = utcMidnight(scope.fromDay).getTime();
+    const scopeUntil = utcMidnight(scope.toDay).getTime() + DAY_MS;
+    const [before, after] = await Promise.all([
+      goodFixBeyond(userId, "before", scopeFrom),
+      goodFixBeyond(userId, "after", scopeUntil),
+    ]);
+    fromMs = before ? before.getTime() : scopeFrom;
+    untilMs = after ? after.getTime() : Date.UTC(3000, 0, 1);
+    startAt = utcMidnight(new Date(fromMs).toISOString().slice(0, 10));
+    endAtExclusive = new Date(
+      Math.min(
+        today.getTime(),
+        utcMidnight(new Date(untilMs).toISOString().slice(0, 10)).getTime() + DAY_MS
+      )
+    );
+  }
   const { zone } = await profileZoneOf(userId);
   const byDate = new Map<string, string>();
-  const gaps = await gapsSince(userId, startDay);
+  const gaps = await gapsBetween(userId, fromMs, untilMs);
   for (const g of gaps) {
     const before: SilenceEnd = { tMs: g.b_t.getTime(), lat: g.b_lat, lon: g.b_lon };
     const after: SilenceEnd = { tMs: g.a_t.getTime(), lat: g.a_lat, lon: g.a_lon };
@@ -102,10 +158,10 @@ export async function projectInferredCountryDays(
     // Whole UTC days inside the silence, within the window and never today or later.
     for (
       let d = Math.ceil(before.tMs / DAY_MS) * DAY_MS;
-      d + DAY_MS <= after.tMs && d < endExclusive.getTime();
+      d + DAY_MS <= after.tMs && d < endAtExclusive.getTime();
       d += DAY_MS
     ) {
-      if (d >= startDay.getTime()) byDate.set(new Date(d).toISOString().slice(0, 10), code);
+      if (d >= startAt.getTime()) byDate.set(new Date(d).toISOString().slice(0, 10), code);
     }
   }
   const observations = [...byDate].map(([date, countryCode]) => ({
@@ -118,7 +174,7 @@ export async function projectInferredCountryDays(
   const { written } = await replaceCountryDays(
     userId,
     "travtrack-inferred",
-    { startAt: startDay, endAtExclusive: endExclusive },
+    { startAt, endAtExclusive },
     observations
   );
   return { gaps: gaps.length, written };
