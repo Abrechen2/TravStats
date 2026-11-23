@@ -47,7 +47,7 @@ import { travTrackInstanceOnIn } from "../availability";
 import { inPrivacyZone } from "../classify";
 import { profileZoneOf } from "../../../shared/time/profileZone";
 import { deriveDay } from "../dayDerivation";
-import { ackDirtyDay, pendingDirtyDays, VISITS_BIT, type DirtyDay } from "../dirtyDays";
+import { ackDirtyDay, VISITS_BIT, type DirtyDay } from "../dirtyDays";
 import { takeTravTrackLock } from "../lock";
 import { privacyCircleSet, type CircleSet } from "../privacyCircles";
 import type { Stop } from "../legs";
@@ -132,13 +132,29 @@ const empty = (status: VisitProjectionResult["status"]): VisitProjectionResult =
   interrupted: false,
 });
 
-/** Per account, in memory: after a failed lookup the schedule waits before asking again. */
-const retry = new Map<string, { until: number; failures: number }>();
+/**
+ * After a failed lookup the DAY waits (persisted on `travtrack_dirty_days`, so a restart neither
+ * loses nor resets it): 15 minutes, doubling, at most 6 hours. Days that need no lookup are never
+ * held by it.
+ */
 export const clearVisitRetry = (): void => {
-  retry.clear();
   noVenueMemory.clear();
 };
-export const visitRetryAfter = (userId: string): number => retry.get(userId)?.until ?? 0;
+
+export const visitRetryMs = (failures: number): number =>
+  Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** Math.max(0, failures - 1));
+/** The status line's question: when the waiting days are asked again, and how many stops wait. */
+export async function visitLookupStatus(
+  userId: string,
+  now: Date = new Date()
+): Promise<{ retryAt: Date; waitingStops: number } | null> {
+  const [row] = await prisma.$queryRaw<{ retry_at: Date | null; waiting: bigint | null }[]>`
+    SELECT min(visits_retry_after) AS retry_at, sum(visits_waiting) AS waiting
+      FROM travtrack_dirty_days
+     WHERE user_id = ${userId} AND (done & ${VISITS_BIT}) = 0 AND visits_retry_after > ${now}`;
+  if (!row?.retry_at) return null;
+  return { retryAt: row.retry_at, waitingStops: Number(row.waiting ?? 0) };
+}
 
 /**
  * Stops already asked about that named no venue (nothing there, or an own lodging), by stop key, in
@@ -178,6 +194,11 @@ type RunContext = {
   brandRules: BrandRuleInput[];
   lookupsLeft: number;
   findingsLeft: number;
+  /** A lookup failed in this run: the provider is down, so no further lookup is tried this run. */
+  outage: boolean;
+  /** Stops left waiting on the lookup (failed, or held back by the outage) in this run. */
+  waiting: number;
+  now: Date;
   deps: VisitProjectionDeps;
 };
 
@@ -418,7 +439,7 @@ async function handleStop(
     outcome("deferred");
     return { open: true, go: true };
   }
-  const allowLookup = ctx.lookupsLeft > 0;
+  const allowLookup = ctx.lookupsLeft > 0 && !ctx.outage;
   const resolution = ctx.deps.resolveStop
     ? await ctx.deps.resolveStop(stop, allowLookup)
     : await resolveVisit(
@@ -429,12 +450,15 @@ async function handleStop(
         ctx.deps.resolve
       );
   if (resolution.kind === "deferred") {
+    if (ctx.outage) ctx.waiting++;
     result.deferred++;
     outcome("deferred");
     return { open: true, go: true };
   }
   if (resolution.kind === "failed") {
     ctx.lookupsLeft--;
+    ctx.outage = true;
+    ctx.waiting++;
     result.failed[resolution.reason]++;
     outcome(`failed:${resolution.reason}`);
     return { open: true, go: true };
@@ -524,6 +548,7 @@ async function projectDay(ctx: RunContext, dirty: DirtyDay): Promise<boolean> {
   const readCoverage = derived.raw.next === null ? "complete" : "truncated";
   const stops = visitStopsOf(derived.whole, window);
   let open = false;
+  const waitingBefore = ctx.waiting;
   if (stops.length > 0) {
     const coverage = await loadCoverage(
       userId,
@@ -540,26 +565,53 @@ async function projectDay(ctx: RunContext, dirty: DirtyDay): Promise<boolean> {
   // days at the front of every run. Its findings say so (`readCoverage: "truncated"`).
   if (readCoverage === "truncated")
     logger.warn({ operation: "travtrack.visits.truncatedDay", userId, day: dirty.day });
+  if (open && ctx.waiting > waitingBefore) await holdDay(ctx, dirty, ctx.waiting - waitingBefore);
   return !open;
 }
 
+/**
+ * The day waits for its own stops' lookup: its backoff doubles with each failed round. One
+ * statement, guarded by the version read and the open bit, so a day answered or marked again
+ * meanwhile does not inherit a stale wait. The SQL mirrors `visitRetryMs`.
+ */
+async function holdDay(ctx: RunContext, dirty: DirtyDay, stops: number): Promise<void> {
+  await prisma.$executeRaw`
+    UPDATE travtrack_dirty_days
+       SET visits_failures = visits_failures + 1, visits_waiting = ${stops},
+           visits_retry_after = ${ctx.now}::timestamptz + LEAST(
+             ${RETRY_MAX_MS}::double precision * interval '1 millisecond',
+             ${RETRY_BASE_MS}::double precision * interval '1 millisecond' * power(2, LEAST(visits_failures, 20)))
+     WHERE user_id = ${ctx.userId} AND day = ${dirty.day}::date AND version = ${dirty.version}
+       AND (done & ${VISITS_BIT}) = 0`;
+}
+
+/**
+ * Newest first: today and yesterday are asked before any backlog, and a day waiting out its own
+ * backoff is skipped (a window asked for by "scan now" ignores the wait).
+ */
 async function pendingVisitDays(
   userId: string,
   limit: number,
-  fromDay: string | undefined
+  fromDay: string | undefined,
+  now: Date
 ): Promise<DirtyDay[]> {
-  if (!fromDay) return pendingDirtyDays(userId, VISITS_BIT, limit);
+  const from = fromDay ?? "0001-01-01";
   const rows = await prisma.$queryRaw<{ day: Date; version: bigint }[]>`
     SELECT day, version FROM travtrack_dirty_days
-     WHERE user_id = ${userId} AND (done & ${VISITS_BIT}) = 0 AND day >= ${fromDay}::date
-     ORDER BY day ASC LIMIT ${limit}`;
+     WHERE user_id = ${userId} AND (done & ${VISITS_BIT}) = 0 AND day >= ${from}::date
+       AND (${fromDay !== undefined} OR visits_retry_after IS NULL OR visits_retry_after <= ${now})
+     ORDER BY day DESC LIMIT ${limit}`;
   return rows.map((r) => ({ day: r.day.toISOString().slice(0, 10), version: r.version }));
 }
 
 async function ack(userId: string, dirty: DirtyDay): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await takeTravTrackLock(tx, userId);
-    await ackDirtyDay(tx, userId, dirty, VISITS_BIT);
+    if (await ackDirtyDay(tx, userId, dirty, VISITS_BIT))
+      await tx.$executeRaw`
+        UPDATE travtrack_dirty_days
+           SET visits_retry_after = NULL, visits_failures = 0, visits_waiting = 0
+         WHERE user_id = ${userId} AND day = ${dirty.day}::date`;
   });
 }
 
@@ -572,7 +624,12 @@ export async function projectVisitSuggestions(
   if (allowance !== "ok")
     return { ...result, status: allowance === "disabled" ? "disabled" : "skipped" };
   const now = deps.now ?? new Date();
-  const days = await pendingVisitDays(userId, deps.maxDays ?? VISIT_DAYS_PER_RUN, deps.fromDay);
+  const days = await pendingVisitDays(
+    userId,
+    deps.maxDays ?? VISIT_DAYS_PER_RUN,
+    deps.fromDay,
+    now
+  );
   if (days.length === 0) return result;
   if (!(await permitted(userId))) {
     for (const d of days) await ack(userId, d);
@@ -593,6 +650,9 @@ export async function projectVisitSuggestions(
       brandRules: await loadBrandRules(userId),
       lookupsLeft: deps.maxLookups ?? VISIT_LOOKUPS_PER_RUN,
       findingsLeft: deps.maxFindings ?? VISIT_FINDINGS_PER_RUN,
+      outage: false,
+      waiting: 0,
+      now,
       deps,
     };
     const horizon = now.getTime() - VISIT_HORIZON_DAYS * DAY_MS;
@@ -620,31 +680,23 @@ export async function projectVisitSuggestions(
 }
 
 /**
- * The schedule's entry: `projectVisitSuggestions`, waiting after a provider
- * failure (15 minutes, doubling, at most 6 hours) so an Overpass outage is not
- * asked again every tick. In memory — a restart forgets it, which only asks sooner.
+ * The schedule's entry: `projectVisitSuggestions`, logging a failed lookup. The wait after one is
+ * per day (`holdDay`), not per account, so an Overpass outage holds only the days whose stops need
+ * the lookup.
  */
 export async function scheduledVisitSuggestions(
   userId: string,
   deps: VisitProjectionDeps = {}
 ): Promise<VisitProjectionResult> {
-  const now = (deps.now ?? new Date()).getTime();
-  if (visitRetryAfter(userId) > now) return empty("skipped");
   const result = await projectVisitSuggestions(userId, deps);
-  const failures = result.failed.places + result.failed.venues;
-  if (failures > 0 || result.status === "failed") {
-    const previous = retry.get(userId)?.failures ?? 0;
-    retry.set(userId, {
-      failures: previous + 1,
-      until: now + Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** previous),
-    });
+  if (result.failed.places + result.failed.venues > 0 || result.status === "failed") {
     logger.warn({
       operation: "travtrack.visits.lookupFailed",
       userId,
       places: result.failed.places,
       venues: result.failed.venues,
     });
-  } else retry.delete(userId);
+  }
   return result;
 }
 

@@ -79,6 +79,12 @@ registry.registerPath({
             .describe(
               "Present only while the venue lookup behind TravTrack stop suggestions did not answer (Photon or Overpass) and waits until this time before asking again; absent while it works"
             ),
+          visitLookupWaiting: z
+            .number()
+            .int()
+            .describe(
+              "Present with `visitLookupRetryAt`: how many stops wait for the venue lookup to answer"
+            ),
           placesEnabled: z.boolean(),
           pausedReason: z
             .enum([

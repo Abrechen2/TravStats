@@ -7328,6 +7328,12 @@ model TravTrackDirtyDay {
   day     DateTime @db.Date
   version BigInt
   done    Int      @default(0)
+  /// The place-visit scan's own wait for this day after a venue lookup failed (per day, so an
+  /// outage holds only the days that need a lookup); cleared when the day is answered.
+  visitsRetryAfter DateTime? @map("visits_retry_after") @db.Timestamptz(6)
+  visitsFailures   Int       @default(0) @map("visits_failures")
+  /// Stops of the day still waiting on the lookup, for the status line.
+  visitsWaiting    Int       @default(0) @map("visits_waiting")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
