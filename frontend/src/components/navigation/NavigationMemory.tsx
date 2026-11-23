@@ -76,9 +76,15 @@ export default function NavigationMemory(): null {
     const samePage = pathnameRef.current === location.pathname;
     pathnameRef.current = location.pathname;
 
-    if (kind === "REPLACE") return;
+    // The same page under a new entry (a filter, a tab in the query): the
+    // reader stays put, and the new entry starts with that position — no
+    // scroll event will come to record it, and Back to it would find nothing.
+    if (kind === "REPLACE" || (kind === "PUSH" && samePage)) {
+      saveScrollPosition(location.key, window.scrollY);
+      return;
+    }
     if (kind === "PUSH") {
-      if (!samePage && !location.hash) window.scrollTo(0, 0);
+      if (!location.hash) window.scrollTo(0, 0);
       return;
     }
 

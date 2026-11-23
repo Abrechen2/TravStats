@@ -198,3 +198,48 @@ describe("Lodging list — a real Back", () => {
     );
   });
 });
+
+describe("NavigationMemory — an entry made by a filter change keeps its scroll", () => {
+  beforeEach(() => {
+    resetNavHistory();
+    resetScrollMemory();
+    listLodgingPageMock.mockReset();
+    listLodgingPageMock.mockResolvedValue({
+      rows: [lodging("l-51", "Hotel Einundfünfzig")],
+      total: 120,
+    });
+    scrollY = 0;
+    scrollTo.mockClear();
+    vi.stubGlobal("scrollTo", scrollTo);
+    Object.defineProperty(window, "scrollY", { configurable: true, get: () => scrollY });
+    Object.defineProperty(document.documentElement, "scrollHeight", {
+      configurable: true,
+      get: () => 6000,
+    });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("a filter written after the last scroll still comes back at that scroll", async () => {
+    const user = userEvent.setup();
+    renderApp(["/lodging?q=Adlon"]);
+    await screen.findByText("Hotel Einundfünfzig");
+    scrollY = 900;
+    act(() => {
+      window.dispatchEvent(new Event("scroll"));
+    });
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    });
+    // A filter change REPLACES the entry (new key) without any scroll event.
+    fireEvent.change(screen.getByDisplayValue("Adlon"), { target: { value: "Sacher" } });
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("q=Sacher"));
+
+    await user.click(screen.getByText("Hotel Einundfünfzig"));
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/lodging/l-51"));
+    scrollTo.mockClear();
+    await user.click(screen.getByRole("link", { name: /Logbuch · Unterkünfte/ }));
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 900));
+  });
+});
