@@ -1033,7 +1033,8 @@
       "ready": "Bereit",
       "notEnabled": "Nicht freigegeben",
       "keyRejected": "Schlüssel abgelehnt",
-      "offByAdmin": "Vom Admin abgeschaltet"
+      "offByAdmin": "Vom Admin abgeschaltet",
+      "keyStored": "Schlüssel hinterlegt"
     },
     "reason": {
       "auth": "Ich komme nicht hinein: Der Schlüssel wurde abgelehnt.",
@@ -1077,6 +1078,17 @@
         "after": "Der Server meldet sich bei der nächsten Mitteilung neu an. Die Telefone musst du nicht neu koppeln.",
         "confirm": "Zurücksetzen"
       }
+    },
+    "routing": {
+      "auto": "Routing: Automatisch (ORS → GraphHopper → eigener Server)",
+      "via": "Routing über {{provider}}",
+      "yourKey": "dein Schlüssel · dein Kontingent",
+      "serverKey": "Schlüssel des Servers",
+      "selfHosted": "eigener Server",
+      "ownServer": "den eigenen Server",
+      "noProvider": "Für dich ist kein Routing eingerichtet. Trage einen OpenRouteService- oder GraphHopper-Schlüssel ein.",
+      "selectedUnavailable": "Der Server routet über {{provider}}, aber dort ist für dich nichts eingerichtet. Trage einen eigenen Schlüssel ein oder bitte den Admin darum.",
+      "instanceEmptyOwn": "Kein Instanzschlüssel – dein persönlicher Schlüssel gilt nur für dich"
     }
   },
   "server": {

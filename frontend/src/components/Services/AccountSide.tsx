@@ -20,6 +20,7 @@ import VisitPhotoImmichLink from "../Settings/VisitPhotoImmichLink";
 import DawarichProviderHint from "../Settings/DawarichProviderHint";
 import FieldsGroup from "./FieldsGroup";
 import TestRow from "./TestRow";
+import RoutingLines from "./RoutingLines";
 import WebdavAccountRows from "./WebdavAccountRows";
 import { useServices } from "./servicesContext";
 import type { ServiceCardDef } from "./serviceCards";
@@ -240,6 +241,7 @@ export default function AccountSide({
     } else {
       body.push(...ownRows(service));
     }
+    body.push(<RoutingLines key="routing" cardId={card.id} />);
     if (card.id === "dawarich")
       body.push(<DawarichProviderHint key="hint" check={dawarichSaved} />);
     if (card.id === "photoprism") {

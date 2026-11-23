@@ -129,6 +129,19 @@ export const accountExternalServicesResponseSchema = z.object({
         "`connections` and `ownKeys`, so without this list the page could not tell them from " +
         "a service the server simply does not offer."
     ),
+  routing: z
+    .object({
+      mode: z.enum(["auto", "explicit"]),
+      selected: z.enum(["openrouteservice", "graphhopper", "custom"]).nullable(),
+      providerId: z.enum(["openrouteservice", "graphhopper", "custom"]).nullable(),
+      keySource: z.enum(["account", "instance", "selfHosted"]).nullable(),
+      hint: z.enum(["noProvider", "selectedUnavailable"]).nullable(),
+    })
+    .describe(
+      "Which routing provider answers THIS account's requests and whose credential it uses. " +
+        "`mode: auto` is an unset instance provider (ORS, GraphHopper, then the self-hosted server). " +
+        "Computed by the same resolution the routing handlers run."
+    ),
 });
 
 export const serviceTestResponseSchema = z.object({

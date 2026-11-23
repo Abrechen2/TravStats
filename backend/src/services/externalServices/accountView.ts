@@ -4,6 +4,7 @@
  * from, and which cloud AI providers it has consented to. Nothing here calls out.
  */
 import { prisma } from "../../db";
+import { resolveRouting, type RoutingResolution } from "../tour/routing/resolveProvider";
 import { isLocalLlmHost } from "../llm/llmEndpoint";
 import { AI_SERVICES, CONNECTION_IDS, SERVICES, getService } from "./catalogue";
 import { isEnabled, loadAdminState, type AdminState } from "./adminView";
@@ -94,6 +95,30 @@ export async function accountHasCredential(
   );
 }
 
+/**
+ * What routing does for THIS account — the same resolution the route handlers
+ * run, so the card text and the actual request cannot disagree.
+ */
+export interface RoutingView {
+  mode: RoutingResolution["mode"];
+  selected: RoutingResolution["selected"];
+  /** The provider that would answer this account's request; null when none. */
+  providerId: "openrouteservice" | "graphhopper" | "custom" | null;
+  keySource: RoutingResolution["keySource"];
+  hint: RoutingResolution["hint"];
+}
+
+export async function routingViewFor(userId: string): Promise<RoutingView> {
+  const r = await resolveRouting(userId);
+  return {
+    mode: r.mode,
+    selected: r.selected,
+    providerId: r.provider?.id ?? null,
+    keySource: r.keySource,
+    hint: r.hint,
+  };
+}
+
 export async function buildAccountView(userId: string): Promise<{
   connections: AccountServiceView[];
   ownKeys: AccountServiceView[];
@@ -105,6 +130,7 @@ export async function buildAccountView(userId: string): Promise<{
   }>;
   instanceProvided: Array<{ id: string; enabled: boolean; recommended: Recommended }>;
   blocked: Array<{ id: string; reason: "disabled" | "keysForbidden" | "connectionForbidden" }>;
+  routing: RoutingView;
 }> {
   const state = await loadAdminState();
   const userRow = (await prisma.userSettings.findUnique({ where: { userId } })) as Record<
@@ -191,7 +217,8 @@ export async function buildAccountView(userId: string): Promise<{
     return [];
   });
 
-  return { connections, ownKeys, aiConsents, instanceProvided, blocked };
+  const routing = await routingViewFor(userId);
+  return { connections, ownKeys, aiConsents, instanceProvided, blocked, routing };
 }
 
 /** A cloud provider the admin has allowed (opt-in) — or a remote Ollama with its opt-in. */

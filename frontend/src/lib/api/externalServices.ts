@@ -140,12 +140,23 @@ export interface BlockedService {
   reason: BlockedReason;
 }
 
+/** Which routing provider answers this account's requests (the server's own resolution). */
+export interface AccountRouting {
+  mode: "auto" | "explicit";
+  selected: "openrouteservice" | "graphhopper" | "custom" | null;
+  providerId: "openrouteservice" | "graphhopper" | "custom" | null;
+  keySource: "account" | "instance" | "selfHosted" | null;
+  hint: "noProvider" | "selectedUnavailable" | null;
+}
+
 export interface AccountExternalServices {
   connections: AccountService[];
   ownKeys: AccountService[];
   aiConsents: AccountAiConsent[];
   instanceProvided: InstanceProvidedService[];
   blocked: BlockedService[];
+  /** Absent on a server before this resolution existed. */
+  routing?: AccountRouting;
 }
 
 export interface AccountServiceUpdate {

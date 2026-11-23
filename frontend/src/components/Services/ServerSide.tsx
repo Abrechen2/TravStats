@@ -21,6 +21,7 @@ import QuotaRow from "./QuotaRow";
 import TestRow from "./TestRow";
 import { ServerExtras, ownsEnabledSwitch, ownsFields } from "./serverExtras";
 import { useServices } from "./servicesContext";
+import { ROUTING_KEY_CARDS } from "./cardStatus";
 import {
   INTERNET_GATED_SWITCH_CARDS,
   OUTBOUND_EXPERT_FIELDS,
@@ -212,6 +213,13 @@ function SourceLine({ service }: { service: AdminService }): JSX.Element | null 
   const instance = service.instanceSource === "instance";
   if (!own && instance) return null;
   if (service.effectiveSource === "off") return null;
+  if (own && !instance && ROUTING_KEY_CARDS.has(service.id)) {
+    return (
+      <p className="t-caption" style={{ margin: 0 }} data-testid="service-source-line">
+        {t("settingsRows:services.routing.instanceEmptyOwn")}
+      </p>
+    );
+  }
   const key = own ? (instance ? "sourceOwnWithInstance" : "sourceOwnInstanceEmpty") : "sourceNone";
   return (
     <p className="t-caption" style={{ margin: 0 }} data-testid="service-source-line">
