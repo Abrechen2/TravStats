@@ -7,6 +7,7 @@ const CONFIGURED: ReadonlySet<CardStatus> = new Set([
   "on",
   "ready",
   "connected",
+  "keyStored",
   "viaServer",
   "keyRejected",
   // Switched off or waiting for consent is still something the person (or admin) set up; hiding it would also make a card vanish under the cursor when its switch is turned off.
@@ -27,6 +28,7 @@ export function useCardStatusOf(isAdmin: boolean): (card: ServiceCardDef) => Car
       account: [...(data?.connections ?? []), ...(data?.ownKeys ?? [])].find(
         (s) => s.id === card.id
       ),
+      routing: data?.routing,
       consent: data?.aiConsents.find((c) => c.id === card.id),
       provided: data?.instanceProvided.find((s) => s.id === card.id),
       admin: admin?.data?.categories.flatMap((c) => c.services).find((s) => s.id === card.id),

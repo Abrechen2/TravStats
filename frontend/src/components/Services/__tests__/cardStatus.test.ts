@@ -129,3 +129,37 @@ describe("cardStatus", () => {
     expect(cardStatus({ card: cardOf("airlabs"), isAdmin: false, account: none })).toBe("notSetUp");
   });
 });
+
+describe("routing key pills (forgejo routing-auto)", () => {
+  const own = { ...acct, effectiveSource: "account" as const };
+  const routing = (providerId: "openrouteservice" | "graphhopper" | null) => ({
+    mode: "auto" as const,
+    selected: null,
+    providerId,
+    keySource: providerId ? ("account" as const) : null,
+    hint: null,
+  });
+
+  it("an own key routing does not use reads 'Schlüssel hinterlegt', not 'Verbunden'", () => {
+    expect(
+      cardStatus({
+        card: cardOf("graphhopper"),
+        isAdmin: false,
+        account: own,
+        routing: routing("openrouteservice"),
+      })
+    ).toBe("keyStored");
+  });
+
+  it("a used key is 'Verbunden' only after a successful test", () => {
+    const input = {
+      card: cardOf("openrouteservice"),
+      isAdmin: false,
+      routing: routing("openrouteservice"),
+    };
+    expect(cardStatus({ ...input, account: own })).toBe("keyStored");
+    expect(
+      cardStatus({ ...input, account: { ...own, lastTest: { at: "x", ok: true, reason: null } } })
+    ).toBe("connected");
+  });
+});

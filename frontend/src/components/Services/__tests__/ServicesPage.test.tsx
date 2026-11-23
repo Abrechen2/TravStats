@@ -24,6 +24,7 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => fals
 vi.mock("../../../lib/api/rerouteRuns", () => ({
   adminRerouteApi: { latest: async () => null, start: vi.fn(), cancel: vi.fn() },
 }));
+vi.mock("../RoutingProviderRow", () => ({ default: () => null }));
 vi.mock("../../Settings/StravaConnectionCard", () => ({ default: () => <div>strava-card</div> }));
 vi.mock("../../Settings/PhotoJourneyNightlyScanCard", () => ({ default: () => null }));
 vi.mock("../../Settings/VisitPhotoImmichLink", () => ({ default: () => null }));

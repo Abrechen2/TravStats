@@ -8,6 +8,7 @@ import FederationRows from "./FederationRows";
 import OllamaRows from "./OllamaRows";
 import PushRows from "./PushRows";
 import RoutingRerouteRows from "./RoutingRerouteRows";
+import RoutingProviderRow from "./RoutingProviderRow";
 import SmtpRows from "./SmtpRows";
 import UsageStatsRows from "./UsageStatsRows";
 import type { ServiceCardDef } from "./serviceCards";
@@ -56,16 +57,24 @@ export function ServerExtras({
       return service ? <OllamaRows service={service} /> : null;
     case "openrouteservice":
     case "graphhopper":
-      return <RoutingRerouteRows withRail={false} />;
+      return (
+        <>
+          <RoutingProviderRow />
+          <RoutingRerouteRows withRail={false} />
+        </>
+      );
     case "selfHostedRouting":
       return (
-        <RoutingRerouteRows
-          withRail
-          railUrl={
-            (service?.fields.find((f) => f.key === "railRoutingUrl")?.value as string | null) ||
-            null
-          }
-        />
+        <>
+          <RoutingProviderRow />
+          <RoutingRerouteRows
+            withRail
+            railUrl={
+              (service?.fields.find((f) => f.key === "railRoutingUrl")?.value as string | null) ||
+              null
+            }
+          />
+        </>
       );
     case "logos":
       return <LogosReload />;

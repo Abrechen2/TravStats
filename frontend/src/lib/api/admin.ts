@@ -532,7 +532,7 @@ export const adminApi = {
     // and which provider/custom URL is active for the whole instance.
     globalOpenrouteserviceApiKey?: string;
     globalGraphhopperApiKey?: string;
-    routingProvider: RoutingProviderId | null;
+    routingProvider: RoutingProviderId | "off" | null;
     routingCustomUrl: string | null;
     allowUserFlightApiKeys: boolean;
     undecryptableKeys?: string[];
@@ -558,7 +558,7 @@ export const adminApi = {
     globalOpenskyPassword?: string | null;
     globalOpenrouteserviceApiKey?: string | null;
     globalGraphhopperApiKey?: string | null;
-    routingProvider?: RoutingProviderId | null;
+    routingProvider?: RoutingProviderId | "off" | null;
     routingCustomUrl?: string | null;
     allowUserFlightApiKeys?: boolean;
   }): Promise<MessageResponse> => {

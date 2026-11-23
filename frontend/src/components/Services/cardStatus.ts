@@ -3,6 +3,7 @@ import type {
   AccountService,
   AdminService,
   InstanceProvidedService,
+  AccountRouting,
 } from "../../lib/api/externalServices";
 import type { ServiceCardDef } from "./serviceCards";
 
@@ -15,6 +16,7 @@ export type CardStatus =
   | "always"
   | "notConnected"
   | "connected"
+  | "keyStored"
   | "ready"
   | "notEnabled"
   | "needsConsent"
@@ -30,6 +32,7 @@ export interface CardStatusInput {
   consent?: AccountAiConsent;
   provided?: InstanceProvidedService;
   admin?: AdminService;
+  routing?: AccountRouting;
 }
 
 const TONE: Record<CardStatus, CardTone> = {
@@ -40,12 +43,16 @@ const TONE: Record<CardStatus, CardTone> = {
   always: "good",
   notConnected: "muted",
   connected: "good",
+  keyStored: "muted",
   ready: "good",
   notEnabled: "muted",
   needsConsent: "warn",
   keyRejected: "bad",
   offByAdmin: "warn",
 };
+
+/** Cards whose own key only counts once routing resolves to it. */
+export const ROUTING_KEY_CARDS: ReadonlySet<string> = new Set(["openrouteservice", "graphhopper"]);
 
 export const toneOf = (status: CardStatus): CardTone => TONE[status];
 
@@ -55,7 +62,7 @@ export const toneOf = (status: CardStatus): CardTone => TONE[status];
  * a credential the last test really refused.
  */
 export function cardStatus(input: CardStatusInput): CardStatus {
-  const { card, isAdmin, account, consent, provided, admin } = input;
+  const { card, isAdmin, account, consent, provided, admin, routing } = input;
   const uses = (t: string): boolean => (card.use as readonly string[]).includes(t);
   if (uses("always")) return "always";
 
@@ -76,7 +83,15 @@ export function cardStatus(input: CardStatusInput): CardStatus {
   }
   if (account) {
     const connection = uses("allowConn");
-    if (account.effectiveSource === "account") return "connected";
+    if (account.effectiveSource === "account") {
+      // A routing key is "Verbunden" only while routing really uses it and a test
+      // said it works; an unused or untested key is just stored.
+      if (ROUTING_KEY_CARDS.has(card.id)) {
+        const used = routing?.providerId === card.id && routing.keySource === "account";
+        return used && account.lastTest?.ok ? "connected" : "keyStored";
+      }
+      return "connected";
+    }
     if (account.effectiveSource === "instance") return "viaServer";
     return connection ? "notConnected" : "notSetUp";
   }

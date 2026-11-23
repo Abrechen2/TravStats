@@ -83,6 +83,10 @@ export interface RouteProvider {
 export const ROUTING_PROVIDER_IDS = ["openrouteservice", "graphhopper", "custom"] as const;
 export type RoutingProviderId = (typeof ROUTING_PROVIDER_IDS)[number];
 
+/** What `admin_settings.routing_provider` may hold: a provider, or "off" (routing switched off on purpose). null is "Automatisch". */
+export const ROUTING_OFF = "off" as const;
+export const ROUTING_SETTING_VALUES = [...ROUTING_PROVIDER_IDS, ROUTING_OFF] as const;
+
 /**
  * The set of leg modes a road router can meaningfully answer.
  * Road, foot, and bike are self-directed: the traveller or vehicle follows

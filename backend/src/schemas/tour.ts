@@ -5,7 +5,7 @@ import { isCurrencyCode } from "../shared/currencies";
 import { instantFieldSchema } from "../shared/time/timeInput";
 
 import { LEG_MODES } from "../services/tour/tourDistance";
-import { ROUTING_PROVIDER_IDS } from "../services/tour/routing/types";
+import { ROUTING_SETTING_VALUES } from "../services/tour/routing/types";
 import { TOUR_ACTIVITIES } from "../shared/tour/roadtrip";
 import { tourDayFields } from "./roadtrip";
 
@@ -394,7 +394,7 @@ const routingCustomUrlSchema = z
  */
 export const routingSettingsSchema = z
   .object({
-    routingProvider: z.enum(ROUTING_PROVIDER_IDS).nullable().optional(),
+    routingProvider: z.enum(ROUTING_SETTING_VALUES).nullable().optional(),
     routingCustomUrl: routingCustomUrlSchema.nullable().optional(),
   })
   .partial();
