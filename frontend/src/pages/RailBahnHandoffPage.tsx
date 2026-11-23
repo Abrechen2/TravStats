@@ -16,6 +16,7 @@ import {
 import { useAuthStore } from "../store/authStore";
 import { useToastStore } from "../store/toastStore";
 import type { RailImportBooking } from "../types/rail";
+import BackLink from "../components/navigation/BackLink";
 
 /** Failures after the hand-over was decoded: the server's reading, or the request to it. */
 type PageFailure = HandoffFailure | "noTrain" | "requestRateLimited" | "requestFailed";
@@ -90,9 +91,9 @@ export default function RailBahnHandoffPage(): JSX.Element {
 
   return (
     <AppShell>
-      <Link to="/rail" className="ts-back-link text-sm text-(--text-muted)">
+      <BackLink to="/rail" className="ts-back-link text-sm text-(--text-muted)">
         ← {t("rail:title")}
-      </Link>
+      </BackLink>
       <h1 className="t-screen-title mt-2">{t("rail:bahnHandoff.title")}</h1>
       {state.kind === "reading" && (
         <p className="mt-3 text-(--text-muted)" role="status">

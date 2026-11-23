@@ -6,6 +6,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useTranslation } from "../hooks/useTranslation";
+import { useEscapeClose } from "../hooks/useEscapeClose";
 
 interface Achievement {
   id: string;
@@ -109,6 +110,8 @@ export default function AchievementPopup({
     }, 300);
     timeoutRefs.current.push(timer);
   };
+
+  useEscapeClose(currentAchievement !== undefined && currentAchievement !== null, handleClose);
 
   if (!currentAchievement) return null;
 

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useEscapeClose } from "../../hooks/useEscapeClose";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { logger } from "../../lib/logger";
 import type { LocationSelection } from "../location/LocationInput";
@@ -107,6 +108,7 @@ export function PlaceImportPreviewModal({
   const { t } = useTranslation(["places", "common"]);
   const coarse = useCoarsePointer();
   const [saving, setSaving] = useState(false);
+  useEscapeClose(true, onCancel, saving);
   const [error, setError] = useState<string | null>(null);
   const [edited, setEdited] = useState<EditableRow[]>(() => rows.map(toEditableRow));
   // Computed once from what the file brought, so the panel's request does not

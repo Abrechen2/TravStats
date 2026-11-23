@@ -21,6 +21,7 @@ import { LOYALTY_SETTINGS_PATH } from "./Settings/settingsModel";
 
 import type { Lodging, LodgingChainDetail } from "../types/lodging";
 import { useDomainColors } from "../hooks/useDomainColors";
+import BackLink from "../components/navigation/BackLink";
 
 /**
  * Chain detail page (collaborator request): click a chain name anywhere it
@@ -105,9 +106,9 @@ export default function LodgingChainDetailPage(): JSX.Element {
     return (
       <AppShell>
         <div>
-          <Link to="/lodging" className="ts-back-link text-sm text-[var(--text-muted)]">
+          <BackLink to="/lodging" className="ts-back-link text-sm text-[var(--text-muted)]">
             ← {t("lodging:list.title")}
-          </Link>
+          </BackLink>
           <div className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]">
             {t("lodging:chainDetail.notFound")}
           </div>
@@ -133,12 +134,12 @@ export default function LodgingChainDetailPage(): JSX.Element {
   return (
     <AppShell>
       <div>
-        <Link
+        <BackLink
           to="/lodging"
           className="ts-back-link mb-3 inline-block text-sm text-[var(--text-muted)]"
         >
           ← {t("lodging:list.title")}
-        </Link>
+        </BackLink>
 
         {/* Header: chain name + brand-colour mark + loyalty program.
             The brand colour is a MARK, never a border-left stripe on a boxed

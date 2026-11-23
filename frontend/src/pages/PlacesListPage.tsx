@@ -52,6 +52,8 @@ import { formatIsoDate } from "../lib/dateUtils";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
 import { LocalName } from "../components/places/LocalName";
+import { oneOfParam, stringParam, useQuerySearch, useQueryState } from "../hooks/useQueryState";
+import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
 
 type CategoryFilter = string;
 type CountryFilter = string | "all";
@@ -75,6 +77,7 @@ const PLACE_STATUS_KEY = {
 } as const;
 
 type VisitedFilter = "all" | "visited" | "planned" | "wishlist";
+const VISITED_PARAM = oneOfParam<VisitedFilter>(["all", "visited", "planned", "wishlist"]);
 
 /**
  * Not hideable. `name`, `lastVisit` and `status` are the three the row keeps
@@ -178,14 +181,19 @@ export default function PlacesListPage(): JSX.Element {
   // names photos, documents, lists and trips as soon as they are known.
   const deleteRelations = usePlaceRelations(pendingDelete?.id ?? null);
 
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<CategoryFilter>(PLACE_CATEGORY_FILTER_ALL);
-  const [country, setCountry] = useState<CountryFilter>("all");
+  // List state in the URL (2026-11-23): Back from a place and a reload keep it.
+  const [search, setSearch] = useQuerySearch();
+  const [category, setCategory] = useQueryState<CategoryFilter>(
+    "category",
+    PLACE_CATEGORY_FILTER_ALL,
+    stringParam
+  );
+  const [country, setCountry] = useQueryState<CountryFilter>("country", "all", stringParam);
   /** Which list a place must belong to. "all" = every place. A filter, not
    *  a mode: it changes WHICH rows are shown, never what one means. */
-  const [listId, setListId] = useState<string>("all");
+  const [listId, setListId] = useQueryState("list", "all", stringParam);
   const [lists, setLists] = useState<PlaceList[]>([]);
-  const [visited, setVisited] = useState<VisitedFilter>("all");
+  const [visited, setVisited] = useQueryState<VisitedFilter>("visited", "all", VISITED_PARAM);
   // Newest first everywhere, and the choice survives a reload — the
   // column choice already did (useColumnPrefs), the sort never had.
   const { sortBy, sortOrder, setSort } = useSortPrefs("places-list", "lastVisit", "desc", [
@@ -284,6 +292,7 @@ export default function PlacesListPage(): JSX.Element {
   // Pages over the already filtered+sorted set — the summary strip and the
   // filter option lists above keep reading `filtered`/`rows`, never this.
   const pagination = usePagination(filtered, "places-list");
+  useScrollRestoreReady(!loading);
 
   const handleSort = useCallback(
     (key: PlaceSortKey): void => {
@@ -376,7 +385,7 @@ export default function PlacesListPage(): JSX.Element {
     setCountry("all");
     setListId("all");
     setVisited("all");
-  }, []);
+  }, [setSearch, setCategory, setCountry, setListId, setVisited]);
 
   /**
    * Delete, once. A refusal closes the question and stays on the page, naming
@@ -588,7 +597,7 @@ export default function PlacesListPage(): JSX.Element {
         />
 
         <>
-          {loading ? (
+          {loading && rows.length === 0 ? (
             <SkeletonTable rows={10} />
           ) : loadError ? (
             // Distinct from "no places yet" (forgejo#247/#250): the shared

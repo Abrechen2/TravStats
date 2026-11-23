@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { token } from "../../../components/ui/tokens";
 import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useEscapeClose } from "../../../hooks/useEscapeClose";
 import { trackErrorKey } from "../../../lib/api/travtrack";
 import { travTrackViewsApi } from "../../../lib/api/travtrackViews";
 import { formatDate, formatTime } from "../../../lib/displayFormat";
@@ -38,6 +39,7 @@ export default function TrackPointInspector({
   onClose: () => void;
   onDeleted: () => void;
 }): JSX.Element {
+  useEscapeClose(true, onClose);
   const { t, i18n } = useTranslation(["track", "common"]);
   const { confirmDelete, confirmDialog } = useConfirmDialog();
   const [busy, setBusy] = useState(false);

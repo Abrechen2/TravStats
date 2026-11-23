@@ -44,6 +44,7 @@ import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { RentalBooking } from "../types/rental";
 import WebGLGuard from "../components/map/WebGLGuard";
+import BackLink from "../components/navigation/BackLink";
 
 const stationLabel = (name: string, iata: string | null): string =>
   iata ? `${name} (${iata})` : name;
@@ -123,9 +124,9 @@ export default function RentalDetailPage(): JSX.Element {
     const isLoadError = failure === "loadError";
     return (
       <AppShell>
-        <Link to="/rentals" className="ts-back-link text-sm text-(--text-muted)">
+        <BackLink to="/rentals" className="ts-back-link text-sm text-(--text-muted)">
           ← {t("rental:title")}
-        </Link>
+        </BackLink>
         <div
           role="alert"
           className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)"

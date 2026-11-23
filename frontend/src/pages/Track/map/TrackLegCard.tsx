@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { token } from "../../../components/ui/tokens";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useEscapeClose } from "../../../hooks/useEscapeClose";
 import { apiErrorMachineCode } from "../../../lib/apiError";
 import { trackErrorKey } from "../../../lib/api/travtrack";
 import {
@@ -47,6 +48,7 @@ export default function TrackLegCard({
   pointsShown: boolean;
   onTogglePoints: () => void;
 }): JSX.Element {
+  useEscapeClose(true, onClose);
   const { t, i18n } = useTranslation(["track"]);
   const coarse = useCoarsePointer();
   const [busy, setBusy] = useState(false);

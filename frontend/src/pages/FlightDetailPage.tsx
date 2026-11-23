@@ -57,6 +57,7 @@ import PurposeChip from "../components/purpose/PurposeChip";
 import RememberedMarker from "../components/provenance/RememberedMarker";
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import { useFlightBooking } from "../components/flightDetail/useFlightBooking";
+import BackLink from "../components/navigation/BackLink";
 
 /**
  * Reading a flight without editing it.
@@ -195,9 +196,9 @@ export default function FlightDetailPage(): JSX.Element {
     return (
       <AppShell>
         <div>
-          <Link to="/flights" className="ts-back-link text-sm text-[var(--text-muted)]">
+          <BackLink to="/flights" className="ts-back-link text-sm text-[var(--text-muted)]">
             ← {t("flights:table.title")}
-          </Link>
+          </BackLink>
           <div
             role="alert"
             className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]"

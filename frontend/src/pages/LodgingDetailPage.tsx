@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import TagChips from "../components/common/TagChips";
 import WikipediaCard from "../components/common/WikipediaCard";
 import type { JSX, ReactNode } from "react";
-import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
 import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
@@ -48,6 +48,7 @@ import { useToastStore } from "../store/toastStore";
 import type { Lodging, LodgingMembership, LodgingStay } from "../types/lodging";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import WebGLGuard from "../components/map/WebGLGuard";
+import BackLink from "../components/navigation/BackLink";
 
 /** What a figure reads as when it cannot be stated. The same dash the spend
  *  card already prints for an unconvertible total. */
@@ -288,9 +289,9 @@ export default function LodgingDetailPage(): JSX.Element {
     return (
       <AppShell>
         <div>
-          <Link to={backTo} className="ts-back-link text-sm text-[var(--text-muted)]">
+          <BackLink to={backTo} className="ts-back-link text-sm text-[var(--text-muted)]">
             ← {backLabel}
-          </Link>
+          </BackLink>
           <div
             role="alert"
             className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]"

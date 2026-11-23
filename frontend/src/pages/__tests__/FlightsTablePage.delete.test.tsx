@@ -3,7 +3,9 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
 // The URL the page was opened at — a loyalty link sets `membership` and `year`.
 const urlParams = vi.hoisted(() => ({ current: "" }));
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router-dom", async (importOriginal) => ({
+  // The real module underneath: list state hooks ask `useInRouterContext`.
+  ...(await importOriginal<typeof import("react-router-dom")>()),
   Link: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   useNavigate: () => vi.fn(),
   useSearchParams: () => [new URLSearchParams(urlParams.current), vi.fn()],

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useEscapeClose } from "../../hooks/useEscapeClose";
 import { hasHardError, type PreviewFlag, type PreviewRowEnriched } from "../../lib/api/import";
 import { useBulkLookup } from "../../hooks/useBulkLookup";
 import type { LookupOutcome, LookupRow } from "../../lib/flightLookupBatch";
@@ -125,6 +126,7 @@ export function PreviewModal({
 
   const acceptedRows = rows.filter((r) => checked.get(r.sourceRowIndex));
   const isSubmitting = submitState.phase === "submitting";
+  useEscapeClose(true, onClose, isSubmitting);
 
   const submit = async (): Promise<void> => {
     setSubmitState({ phase: "submitting" });

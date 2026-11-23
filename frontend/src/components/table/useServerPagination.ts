@@ -1,5 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { logger } from "../../lib/logger";
+import { positiveIntParam, useQueryState } from "../../hooks/useQueryState";
 
 /**
  * Pagination for a list the SERVER pages.
@@ -75,24 +76,37 @@ export function useServerPagination(
    * count would leave the reader stranded, and `total` also arrives one
    * render LATE, so page 1 would be requested at the old offset first.
    */
-  filterSignature: string
+  filterSignature: string,
+  /**
+   * The query parameter the page lives in. In the URL, so Back from a detail
+   * page and a reload land on the page the reader left (owner report
+   * 2026-11-23), not on page 1.
+   */
+  pageParam = "page"
 ): ServerPagination {
   const [pageSize, setPageSizeState] = useState<number>(() => readPageSize(tableKey));
-  const [page, setPage] = useState<number>(1);
+  const [urlPage, setUrlPage] = useQueryState(pageParam, 1, positiveIntParam);
   const [lastSignature, setLastSignature] = useState<string>(filterSignature);
 
-  // Adjusted DURING the render that brings the new filters, not in an effect.
-  // An effect runs after the caller's fetch effect in the same commit, so the
-  // list would first be asked for page 7 of a set that no longer has one, and
-  // only then for page 1 — two requests over the whole filtered set for one
-  // dropdown change. React re-renders on this before touching children.
-  if (lastSignature !== filterSignature) {
+  // New filters mean page 1 IN THE SAME RENDER that brings them: the caller's
+  // fetch effect reads `offset` from this render, so a page 7 that the new set
+  // no longer has is never requested. The URL catches up in an effect (a
+  // navigation cannot happen during render), and that second render asks for
+  // the same offset, so it costs no second request.
+  const signatureChanged = lastSignature !== filterSignature;
+  useEffect(() => {
+    if (!signatureChanged) return;
     setLastSignature(filterSignature);
-    setPage(1);
-  }
+    setUrlPage(1);
+  }, [signatureChanged, filterSignature, setUrlPage]);
+  const page = signatureChanged ? 1 : urlPage;
+  const setPage = setUrlPage;
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  const clampedPage = Math.min(Math.max(page, 1), pageCount);
+  // Not clamped while `total` is still 0: before the first answer arrives the
+  // page count is unknown, and clamping then would throw a restored page 2
+  // back to page 1 before the list ever asked for it.
+  const clampedPage = total > 0 ? Math.min(Math.max(page, 1), pageCount) : Math.max(page, 1);
 
   const setPageSize = useCallback(
     (size: number | "all"): void => {
@@ -108,7 +122,7 @@ export function useServerPagination(
         logger.warn("useServerPagination: could not persist the page size", err);
       }
     },
-    [tableKey]
+    [tableKey, setPage]
   );
 
   return {

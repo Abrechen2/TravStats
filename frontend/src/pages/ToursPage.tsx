@@ -31,6 +31,8 @@ import {
   TourTableRow,
 } from "../components/Tours/TourTableRow";
 import { tourSummaryFigures } from "../lib/tour/tourSummaryFigures";
+import { stringParam, useQuerySearch, useQueryState } from "../hooks/useQueryState";
+import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
 
 /**
  * Every tour the reader owns, across every trip and none.
@@ -54,9 +56,10 @@ export default function ToursPage(): JSX.Element {
 
   const [tours, setTours] = useState<TourSummary[] | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const [search, setSearch] = useState("");
+  // List state in the URL (2026-11-23): Back from a tour and a reload keep it.
+  const [search, setSearch] = useQuerySearch();
   const [creating, setCreating] = useState(false);
-  const [activityFilter, setActivityFilter] = useState("all");
+  const [activityFilter, setActivityFilter] = useQueryState("activity", "all", stringParam);
   const [loadLog, setLoadLog] = useState<string | null>(null);
   const { isEnabled } = useEnabledDomains();
   const stravaConnected = useStravaConnected();
@@ -118,6 +121,7 @@ export default function ToursPage(): JSX.Element {
   };
 
   const isLoading = tours === null && !loadError;
+  useScrollRestoreReady(!isLoading);
   const hasTours = !isLoading && !loadError && tours !== null && tours.length > 0;
   const isEmpty = !isLoading && !loadError && tours !== null && tours.length === 0;
   // Name or trip name, case-insensitive — the same free-text filter every other

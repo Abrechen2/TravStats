@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useEscapeClose } from "../../hooks/useEscapeClose";
 
 export interface MappingFieldSpec<F extends string> {
   key: F;
@@ -208,6 +209,8 @@ export function ColumnMappingWizard<F extends string>({
   const [rejectedMapping, setRejectedMapping] = useState<string | null>(null);
   const mappingKey = JSON.stringify(mapping);
   const repeatsRejectedAttempt = submitError != null && rejectedMapping === mappingKey;
+
+  useEscapeClose(true, onCancel);
 
   const canSubmit =
     missingRequired.length === 0 && collisions.size === 0 && !repeatsRejectedAttempt;

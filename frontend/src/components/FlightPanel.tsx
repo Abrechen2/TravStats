@@ -7,6 +7,7 @@ import { groupFlights } from "../utils/groupFlights";
 import { FlightEntry } from "./FlightPanel/FlightEntry";
 import { FlightGroupItem } from "./FlightPanel/FlightGroupItem";
 import { useTranslation } from "../hooks/useTranslation";
+import { useEscapeClose } from "../hooks/useEscapeClose";
 import { useLocale } from "../hooks/useLocale";
 import { tripsApi } from "../lib/api";
 import { calculateDistance } from "../lib/geo";
@@ -65,6 +66,7 @@ export function FlightPanel({
   tripTotals,
 }: FlightPanelProps): JSX.Element {
   const { t } = useTranslation(["dashboard", "common", "trips"]);
+  useEscapeClose(isOpen, onClose);
   const locale = useLocale();
   const [tab, setTab] = useState<PanelTab>("flights");
   const [sortMode, setSortMode] = useState<SortMode>("date-desc");

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence, MotionConfig } from "framer-motion";
+import NavigationMemory from "./components/navigation/NavigationMemory";
 import { useEffect, useState, Suspense, lazy } from "react";
 import { useAuthStore } from "./store/authStore";
 import { logger } from "./lib/logger";
@@ -787,6 +788,7 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
+      <NavigationMemory />
       <AppContent />
     </BrowserRouter>
   );

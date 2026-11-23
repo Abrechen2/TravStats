@@ -32,6 +32,13 @@ import { useTodayZone } from "../hooks/useTodayZone";
 import { todayIn } from "../shared/time";
 import type { StoredRoadtripVehicle } from "../shared/tour/roadtrip";
 import type { RoadtripSummary } from "../types/roadtrip";
+import {
+  stringParam,
+  useQuerySearch,
+  useQueryState,
+  type QueryCodec,
+} from "../hooks/useQueryState";
+import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
 
 function Section({ label, children }: { label: ReactNode; children: ReactNode }): JSX.Element {
   return (
@@ -69,8 +76,14 @@ export default function RoadtripsPage(): JSX.Element {
   const [loadError, setLoadError] = useState(false);
   const [loadLog, setLoadLog] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [query, setQuery] = useState("");
-  const [vehicle, setVehicle] = useState<StoredRoadtripVehicle | "">("");
+  // List state in the URL (2026-11-23): Back from a roadtrip and a reload keep it.
+  const [query, setQuery] = useQuerySearch();
+  const [vehicle, setVehicle] = useQueryState<StoredRoadtripVehicle | "">(
+    "vehicle",
+    "",
+    stringParam as QueryCodec<StoredRoadtripVehicle | "">
+  );
+  useScrollRestoreReady(rows !== null || loadError);
 
   const mountedRef = useRef(true);
   useEffect(() => {

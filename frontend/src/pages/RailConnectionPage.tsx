@@ -1,7 +1,7 @@
 import { ConnectionDistance } from "../components/rail/ConnectionDistance";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
 import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
@@ -24,6 +24,7 @@ import { formatRailDuration } from "../lib/rail/railDuration";
 import { formatRailSpan } from "../lib/railTime";
 import type { RailConnectionDetail } from "../types/rail";
 import { dateLocaleForLanguage } from "../lib/units";
+import BackLink from "../components/navigation/BackLink";
 
 /**
  * A whole train ride (forgejo#187): the page between the logbook and a single
@@ -75,9 +76,9 @@ export default function RailConnectionPage(): JSX.Element {
     const isLoadError = failure === "loadError";
     return (
       <AppShell>
-        <Link to="/rail" className="ts-back-link text-sm text-(--text-muted)">
+        <BackLink to="/rail" className="ts-back-link text-sm text-(--text-muted)">
           ← {t("rail:title")}
-        </Link>
+        </BackLink>
         <div
           role="alert"
           className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)"

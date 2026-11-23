@@ -4,7 +4,7 @@ import { usePackageSplit } from "../components/bookings/usePackageSplit";
 import { useEffect, useState } from "react";
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import type { JSX } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
 import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
@@ -42,6 +42,7 @@ import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { useToastStore } from "../store/toastStore";
 import type { BusJourney } from "../types/bus";
 import WebGLGuard from "../components/map/WebGLGuard";
+import BackLink from "../components/navigation/BackLink";
 
 /**
  * One bus ride (spec 2026-10-07-bus-domain-design §11). Every time is on its
@@ -167,9 +168,9 @@ export default function BusDetailPage(): JSX.Element {
     const isLoadError = failure === "loadError";
     return (
       <AppShell>
-        <Link to="/bus" className="ts-back-link text-sm text-(--text-muted)">
+        <BackLink to="/bus" className="ts-back-link text-sm text-(--text-muted)">
           ← {t("bus:title")}
-        </Link>
+        </BackLink>
         <div
           role="alert"
           className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)"

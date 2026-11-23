@@ -36,7 +36,14 @@ import {
 } from "../components/rental/RentalTableRow";
 import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useRentalImportAdapter } from "../components/import/adapters/rentalAdapter";
-import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import {
+  statusOrAllParam,
+  stringParam,
+  useQuerySearch,
+  useQueryState,
+  yearOrAllParam,
+} from "../hooks/useQueryState";
+import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
 import { useTranslation } from "../hooks/useTranslation";
 import { rentalApi, type RentalListQuery, type RentalListSummary } from "../lib/api/rental";
 import { rentalLinksApi } from "../lib/api/rentalLinks";
@@ -99,11 +106,11 @@ export default function RentalsPage(): JSX.Element {
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [options, setOptions] = useState<Options>({ years: [], providers: [] });
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebouncedValue(search);
-  const [statusFilter, setStatusFilter] = useState<RentalStatus | "all">("all");
-  const [yearFilter, setYearFilter] = useState<number | "all">("all");
-  const [providerFilter, setProviderFilter] = useState("all");
+  // List state in the URL (2026-11-23): Back from an entry and a reload keep it.
+  const [search, setSearch, debouncedSearch] = useQuerySearch();
+  const [statusFilter, setStatusFilter] = useQueryState("status", "all", statusOrAllParam);
+  const [yearFilter, setYearFilter] = useQueryState("year", "all", yearOrAllParam);
+  const [providerFilter, setProviderFilter] = useQueryState("provider", "all", stringParam);
   const [editing, setEditing] = useState<Editing>(null);
   // The gap calendar's "Eintrag anlegen": a new rental on the gap's days (`?addFrom=&addTo=`).
   const gap = useGapPrefill();
@@ -141,6 +148,8 @@ export default function RentalsPage(): JSX.Element {
   }, [debouncedSearch, statusFilter, yearFilter, providerFilter]);
   const signature = [filters.q, filters.status, filters.year, filters.provider].join("|");
   const pagination = useServerPagination(total, "rental-list", signature);
+  // Back to this list waits for the rows before it restores the scroll.
+  useScrollRestoreReady(!loading);
   const { limit, offset } = pagination;
 
   useEffect(() => {

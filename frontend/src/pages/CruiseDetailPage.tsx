@@ -1,7 +1,7 @@
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
 import { co2Kpis } from "../lib/co2Kpis";
 import type { Cruise } from "../types";
@@ -51,6 +51,7 @@ import { VesselLiveStatus } from "../components/vessel/VesselLiveStatus";
 import { VesselAssignDialog } from "../components/vessel/VesselAssignDialog";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import Toggletip from "../components/ui/Toggletip";
+import BackLink from "../components/navigation/BackLink";
 
 /** A cruise day at its port, in the user's format — never moved by the reader's zone. */
 const fmtDate = (day: LocalDateValue | null): string => (day ? formatLocalDate(day.date) : "—");
@@ -178,9 +179,9 @@ export default function CruiseDetailPage(): JSX.Element {
     return (
       <AppShell>
         <div>
-          <Link to="/cruises" className="ts-back-link text-sm text-(--text-muted)">
+          <BackLink to="/cruises" className="ts-back-link text-sm text-(--text-muted)">
             ← {t("list.title")}
-          </Link>
+          </BackLink>
           <div
             role="alert"
             className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)"

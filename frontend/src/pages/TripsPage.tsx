@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../hooks/useTranslation";
 import { tripsApi, type TripCostSuperlative, type TripsListPage } from "../lib/api";
 import { logger } from "../lib/logger";
@@ -6,6 +6,8 @@ import type { Trip } from "../types";
 import TripsTab, { NO_TRIP_FILTERS, type TripsFilters } from "../components/Trips/TripsTab";
 import { TripInsightsBar } from "../components/Trips/TripInsightsBar";
 import AppShell from "../components/ui/AppShell";
+import { stringParam, useQueryState, type QueryCodec } from "../hooks/useQueryState";
+import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
 
 /** Trips per request; "mehr laden" fetches the next page of this size. */
 export const TRIPS_PAGE_SIZE = 100;
@@ -21,7 +23,21 @@ export const TRIPS_PAGE_SIZE = 100;
  */
 export default function TripsPage(): JSX.Element {
   const { t } = useTranslation(["trips"]);
-  const [filters, setFilters] = useState<TripsFilters>(NO_TRIP_FILTERS);
+  // In the URL (2026-11-23): Back from a trip and a reload keep the search
+  // and the pills. The values are the server's vocabulary; an unknown one
+  // only narrows to nothing, which the empty state then says.
+  const [q, setQ] = useQueryState("q", NO_TRIP_FILTERS.q, stringParam);
+  const [status, setStatus] = useQueryState<TripsFilters["status"]>(
+    "status",
+    NO_TRIP_FILTERS.status,
+    stringParam as QueryCodec<TripsFilters["status"]>
+  );
+  const [category, setCategory] = useQueryState<TripsFilters["category"]>(
+    "category",
+    NO_TRIP_FILTERS.category,
+    stringParam as QueryCodec<TripsFilters["category"]>
+  );
+  const filters = useMemo<TripsFilters>(() => ({ q, status, category }), [q, status, category]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [facets, setFacets] = useState<TripsListPage["facets"]>();
@@ -105,9 +121,14 @@ export default function TripsPage(): JSX.Element {
   };
 
   const onFiltersChange = useCallback(
-    (patch: Partial<TripsFilters>) => setFilters((prev) => ({ ...prev, ...patch })),
-    []
+    (patch: Partial<TripsFilters>) => {
+      if (patch.q !== undefined) setQ(patch.q);
+      if (patch.status !== undefined) setStatus(patch.status);
+      if (patch.category !== undefined) setCategory(patch.category);
+    },
+    [setQ, setStatus, setCategory]
   );
+  useScrollRestoreReady(total !== null || listError);
 
   const hasMore = total !== null && trips.length < total;
 

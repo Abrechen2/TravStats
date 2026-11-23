@@ -34,6 +34,8 @@ import {
 } from "../../types/lodging";
 import { useSortPrefs } from "../table/useSortPrefs";
 import type { Trip } from "../../types";
+import { stringParam, useQueryState } from "../../hooks/useQueryState";
+import { useScrollRestoreReady } from "../../lib/navigation/scrollMemory";
 
 const INPUT_CLASS =
   "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] pointer-coarse:min-h-(--ts-size-touch-min)";
@@ -80,9 +82,10 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<boolean>(false);
   const [loadFailure, setLoadFailure] = useState<string | null>(null);
-  const [from, setFrom] = useState<string>("");
-  const [to, setTo] = useState<string>("");
-  const [tripId, setTripId] = useState<string>("");
+  // In the URL, like the houses view's filters: Back from a stay brings them back.
+  const [from, setFrom] = useQueryState("from", "", stringParam);
+  const [to, setTo] = useQueryState("to", "", stringParam);
+  const [tripId, setTripId] = useQueryState("trip", "", stringParam);
   const [trips, setTrips] = useState<Trip[]>([]);
   // The trip filter has nothing to offer when its list did not load - and
   // saying nothing would read as "no trips" (forgejo#247).
@@ -108,6 +111,7 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
   );
   const filterSignature = `${from}|${to}|${tripId}|${sortBy}|${sortOrder}`;
   const pagination = useServerPagination(total, "lodging-stays", filterSignature);
+  useScrollRestoreReady(!loading);
   const { limit, offset } = pagination;
 
   useEffect(() => {
@@ -377,7 +381,7 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
           onRetry={reload}
           log={loadFailure}
         />
-      ) : windowInvalid ? null : loading ? (
+      ) : windowInvalid ? null : loading && rows.length === 0 ? (
         <SkeletonTable rows={10} />
       ) : rows.length === 0 ? (
         <div
