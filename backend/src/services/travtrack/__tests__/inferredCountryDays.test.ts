@@ -1,4 +1,6 @@
 import { prisma } from "../../../db";
+import { deleteTravTrackPoint } from "../deletePoint";
+import { createZone } from "../zones";
 import { projectInferredCountryDays } from "../silence/inferredCountryDays";
 import { makeUser, storePoint, wipeTravTrack } from "./fixtures";
 
@@ -84,5 +86,43 @@ describe("TravTrack — country days of a silence spent at a known place", () =>
       "2026-10-18",
       "2026-10-19",
     ]);
+  });
+
+  it("deleting the end point of a multi-day silence removes ALL its inferred days, not only the end's", async () => {
+    await storePoint(userId, { t: at("2026-10-01T20:00:00Z"), ...HOME });
+    const end = await storePoint(userId, { t: at("2026-10-14T05:00:00Z"), ...HOME });
+    await projectInferredCountryDays(userId, countryAt, NOW);
+    expect((await rows()).length).toBe(12);
+    await deleteTravTrackPoint(userId, end);
+    // 2026-10-02 is far from the deleted point's own day and its neighbours.
+    expect(await rows()).toHaveLength(0);
+  });
+
+  it("a privacy zone around home removes the inferred days, and a rebuild does not bring them back", async () => {
+    await storePoint(userId, { t: at("2026-10-10T20:00:00Z"), ...HOME });
+    await storePoint(userId, { t: at("2026-10-14T05:00:00Z"), ...HOME });
+    await projectInferredCountryDays(userId, countryAt, NOW);
+    expect(await rows()).toHaveLength(3);
+    await createZone(userId, { name: "Home", ...HOME, radiusM: 300 }, true);
+    expect(await rows()).toHaveLength(0);
+    await projectInferredCountryDays(userId, countryAt, NOW);
+    expect(await rows()).toHaveLength(0);
+  });
+
+  it("a run drops inferred rows older than any window once their end fixes are gone", async () => {
+    const old = NOW.getTime() - 400 * 86_400_000;
+    await prisma.countryDay.create({
+      data: {
+        userId,
+        date: new Date(old),
+        countryCode: "DE",
+        source: "travtrack-inferred",
+        pointCount: 0,
+        airportPointCount: 0,
+        spanKm: 0,
+      },
+    });
+    await projectInferredCountryDays(userId, countryAt, NOW);
+    expect(await rows()).toHaveLength(0);
   });
 });

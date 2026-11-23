@@ -17,13 +17,12 @@ import { interrupted, placesFor } from "./stationaryCoverage";
  * place, `pointCount` 0 — nothing was recorded. A separate source, so a reader that wants only
  * evidenced days leaves it out; never merged into the `travtrack` rows.
  *
- * Recomputed over a rolling window, replace-not-upsert, so a silence that later turns out to
+ * Recomputed over the whole history, replace-not-upsert, so a silence that later turns out to
  * contain a fix, or whose ends change, loses its rows. Days are UTC days like every country day
  * (ADR 0002 Q3); only a day wholly inside the silence counts, so the local-day edge never
  * claims a day the owner might have spent elsewhere.
  */
 
-export const INFERRED_WINDOW_DAYS = 120;
 const DAY_MS = 86_400_000;
 const NULL_ISLAND_DEG = 0.0001;
 
@@ -48,7 +47,7 @@ async function gapsSince(userId: string, since: Date): Promise<GapRow[]> {
       SELECT t, lat, lon,
              LAG(t) OVER w AS prev_t, LAG(lat) OVER w AS prev_lat, LAG(lon) OVER w AS prev_lon
       FROM travtrack_points
-      WHERE user_id = ${userId} AND t >= ${new Date(since.getTime() - 400 * DAY_MS)}
+      WHERE user_id = ${userId} AND TRUE
         AND NOT COALESCE(accuracy_m > ${MAX_ACCURACY_M}, false)
         AND NOT (abs(lat) < ${NULL_ISLAND_DEG} AND abs(lon) < ${NULL_ISLAND_DEG})
       WINDOW w AS (ORDER BY t, seq)
@@ -80,9 +79,9 @@ export async function projectInferredCountryDays(
   countryAt: (lat: number, lon: number) => string | null,
   now: Date = new Date()
 ): Promise<InferredResult> {
-  const startDay = utcMidnight(
-    new Date(now.getTime() - INFERRED_WINDOW_DAYS * DAY_MS).toISOString().slice(0, 10)
-  );
+  // The whole history, not a rolling window: a row older than any window must still lose its
+  // rows when an end fix of its silence is gone (privacy), and nothing else can name it.
+  const startDay = new Date(0);
   const endExclusive = utcMidnight(now.toISOString().slice(0, 10));
   const { zone } = await profileZoneOf(userId);
   const byDate = new Map<string, string>();
