@@ -4,9 +4,8 @@ import LogViewer from "../LogViewer";
 
 const api = vi.hoisted(() => ({ readLogFile: vi.fn() }));
 vi.mock("../../../lib/api", () => ({ adminApi: api }));
-vi.mock("../../../hooks/useTranslation", () => ({
-  useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
-}));
+const tr = vi.hoisted(() => ({ t: (k: string) => k, i18n: { language: "de" } }));
+vi.mock("../../../hooks/useTranslation", () => ({ useTranslation: () => tr }));
 
 const entries = Array.from({ length: 20 }, (_, i) => ({
   timestamp: "2026-11-23T10:00:00Z",
