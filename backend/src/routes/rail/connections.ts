@@ -4,7 +4,10 @@ import { prisma } from "../../db";
 import type { Prisma } from "../../prisma";
 import { authenticate, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
+import { z } from "zod";
+
 import { railQuerySchema } from "../../schemas/rail";
+import { CONNECTION_SORT_FIELDS, sortConnections } from "../../services/rail/connectionSort";
 import { groupRailLegs } from "../../shared/railJourneyGrouping";
 import { RAIL_GROUPING_SELECT } from "../../services/rail/railGroupingSelect";
 import { withStationShortCodes } from "../../services/rail/railStations";
@@ -41,6 +44,9 @@ const DEFAULT_LIMIT = 100;
  */
 export const railConnectionQuerySchema = railQuerySchema
   .pick({ status: true, q: true, year: true, tripId: true, limit: true, offset: true, order: true })
+  // A connection has its own sort keys: the leg list's `distance`/`created`
+  // are columns, these are derived per ride (see services/rail/connectionSort).
+  .extend({ sort: z.enum(CONNECTION_SORT_FIELDS).default("departure") })
   .strict();
 
 /** The columns the grouping rule reads — nothing a list row would draw. */
@@ -48,6 +54,9 @@ const GROUPING_SELECT = {
   ...RAIL_GROUPING_SELECT,
   // For the summary strip, which counts every matching train, not this page.
   operator: true,
+  distanceKm: true,
+  status: true,
+  trip: { select: { name: true } },
 } satisfies Prisma.RailJourneySelect;
 
 /** The full rows of `ids`, as the leg list sends them, keyed by id. */
@@ -98,8 +107,17 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     ]);
     const matched = new Set(matching.map((row) => row.id));
     // groupRailLegs answers oldest first, with a total order.
-    const groups = groupRailLegs(all).filter((group) => group.some((leg) => matched.has(leg.id)));
-    if (query.order === "desc") groups.reverse();
+    const matchingGroups = groupRailLegs(all).filter((group) =>
+      group.some((leg) => matched.has(leg.id))
+    );
+    // Departure keeps the grouping's own order (reversed for desc): it is
+    // already total. Every other key sorts over the whole set, then slices.
+    const groups =
+      query.sort === "departure"
+        ? query.order === "desc"
+          ? matchingGroups.reverse()
+          : matchingGroups
+        : sortConnections(matchingGroups, query.sort, query.order);
 
     const page = groups.slice(offset, offset + limit);
     const rows = await loadLegs(

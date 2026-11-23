@@ -533,6 +533,11 @@ export default function FlightsTablePage(): JSX.Element {
         <FlightBulkBar
           selection={selection}
           pageFlights={flights}
+          // The count and the rows both come from the filter the list shows.
+          matching={{
+            total,
+            resolve: () => flightsApi.getEvery(buildFlightFilterQuery(filterState)),
+          }}
           trips={trips}
           labelOf={(id) => {
             const f = selection.selected.get(id) ?? flights.find((x) => x.id === id);

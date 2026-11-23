@@ -226,6 +226,30 @@ describe("RailPage", () => {
     expect(list).not.toHaveBeenCalled();
   });
 
+  it("sorts by the route column through the server query, not in the browser", async () => {
+    listConnections.mockResolvedValue(page([journey()]));
+    renderPage();
+    await screen.findByTestId("rail-row-j1");
+    // Headers in column order: operator, route, time, ... (the stub echoes the key).
+    fireEvent.click(screen.getAllByRole("button", { name: "rail:list.sortBy" })[1]);
+    await waitFor(() =>
+      expect(listConnections).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: "route", order: "asc" })
+      )
+    );
+  });
+
+  it("captions the forced departure sort in the loyalty-card leg view, whatever was stored", async () => {
+    localStorage.setItem(
+      "travstats:table-sort:rail-list",
+      JSON.stringify({ by: "operator", order: "asc" })
+    );
+    list.mockResolvedValue({ journeys: [journey()], total: 1, summary: { journeys: 1 } });
+    renderPage("/rail?membership=m1");
+    expect(await screen.findByTestId("rail-sorted-by")).toHaveAttribute("data-sort", "departure");
+    expect(list.mock.calls[0][0]).toMatchObject({ sort: "departure" });
+  });
+
   it("says a failed load instead of drawing an empty logbook", async () => {
     listConnections.mockRejectedValue(new Error("down"));
     renderPage();

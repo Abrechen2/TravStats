@@ -96,7 +96,7 @@ export function PlaceImportPreviewRow({ row, onChange, onPlace, t, coarse }: Pro
 
   return (
     <>
-      <tr className={rowClass}>
+      <tr className={rowClass} data-open-item={undecided ? "true" : undefined}>
         <td className="p-2">
           <input
             data-testid={`place-import-name-${sourceRowIndex}`}

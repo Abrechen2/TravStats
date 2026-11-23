@@ -20,6 +20,8 @@ import { groupOf, toBusInput } from "./railImportModes";
 import { RailImportBookingFields } from "./RailImportBookingFields";
 import { RailImportLegRow, type RowState } from "./RailImportLegRow";
 import { RailImportRemember } from "./RailImportRemember";
+import ImportReviewBar from "../import/ImportReviewBar";
+import { railObvious, railOpen } from "../import/obviousRows";
 import {
   applyBookingDraft,
   bookingDraftFrom,
@@ -72,6 +74,23 @@ export function RailImportPreviewModal({ booking, onCancel, onSaved }: Props): J
   const blocked = toSave.some(({ row }) => !isRowReady(row));
   const draftBlocked = draftProblems(draft).length > 0;
   const totalIndex = totalGoesTo(rows);
+
+  // The review bar: legs the ticket made unambiguous (a placed new train, a ride
+  // already in the logbook), as opposed to a leg still waiting for a station.
+  const savedAt = (index: number): boolean => states[index].kind === "saved";
+  const obviousNew = rows.filter(
+    (r, i) => railObvious(r) === "new" && !r.selected && !savedAt(i)
+  ).length;
+  const obviousDuplicates = rows.filter(
+    (r, i) => railObvious(r) === "duplicate" && r.selected && !savedAt(i)
+  ).length;
+  const openCount = rows.filter(railOpen).length;
+  const applyObvious = (kind: "new" | "duplicate"): void =>
+    setRows((prev) =>
+      prev.map((r, i) =>
+        railObvious(r) === kind && !savedAt(i) ? { ...r, selected: kind === "new" } : r
+      )
+    );
 
   const save = async (): Promise<void> => {
     setSaving(true);
@@ -158,6 +177,14 @@ export function RailImportPreviewModal({ booking, onCancel, onSaved }: Props): J
         draft={draft}
         onChange={(patch): void => setDraft((prev) => ({ ...prev, ...patch }))}
         totalNotWritten={totalIndex < 0}
+        disabled={saving}
+      />
+      <ImportReviewBar
+        obviousNew={obviousNew}
+        obviousDuplicates={obviousDuplicates}
+        openCount={openCount}
+        onTakeNew={() => applyObvious("new")}
+        onSkipDuplicates={() => applyObvious("duplicate")}
         disabled={saving}
       />
       <ol className="flex flex-col gap-3">

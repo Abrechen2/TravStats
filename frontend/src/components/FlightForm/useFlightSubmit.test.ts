@@ -20,6 +20,8 @@ function setup(onSubmit: (...args: unknown[]) => unknown, over: Record<string, u
     maybeAssignTrip: vi.fn().mockResolvedValue(undefined),
     prepareReturnFlightForm: vi.fn(),
     afterReturnPrepared: vi.fn(),
+    prepareNextFlightForm: vi.fn(),
+    afterNextPrepared: vi.fn(),
     setLoading: vi.fn(),
     setError: vi.fn(),
     setDuplicateFlight: vi.fn(),
@@ -39,6 +41,26 @@ const dbDown = Object.assign(new Error("503"), {
 
 /** forgejo#247 — the create form's save: once, with a failure that remembers what it was. */
 describe("useFlightSubmit", () => {
+  it("save-and-next keeps the dialog open and prepares the next leg after a save", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const { hook, deps } = setup(onSubmit);
+    await act(async () => {
+      await hook.result.current.handleSubmitAndNext(event);
+    });
+    expect(onSubmit).toHaveBeenCalledWith(expect.anything(), { hasMoreFlights: true });
+    expect(deps.prepareNextFlightForm).toHaveBeenCalledTimes(1);
+    expect(deps.prepareReturnFlightForm).not.toHaveBeenCalled();
+  });
+
+  it("save-and-next prepares nothing when the save fails", async () => {
+    const onSubmit = vi.fn().mockRejectedValue(networkError);
+    const { hook, deps } = setup(onSubmit);
+    await act(async () => {
+      await hook.result.current.handleSubmitAndNext(event);
+    });
+    expect(deps.prepareNextFlightForm).not.toHaveBeenCalled();
+  });
+
   it("sends one create for two clicks in the same frame", async () => {
     let settle: () => void = () => {};
     const onSubmit = vi.fn(() => new Promise<void>((r) => (settle = r)));

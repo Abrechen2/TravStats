@@ -82,6 +82,7 @@ export function PreviewRowLine({ row, onChange, t, language }: PreviewRowLinePro
             ? "border-t border-[var(--color-border)] bg-amber-500/5"
             : "border-t border-[var(--color-border)]"
         }
+        data-open-item={attention ? "true" : undefined}
       >
         <td className="p-2">
           <NameCell row={row} t={t} onChange={onChange} />

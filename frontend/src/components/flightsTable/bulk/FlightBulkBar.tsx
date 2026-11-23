@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { Flight, Trip } from "../../../types";
+import SelectMatchingButton, { type SelectMatching } from "../../bulkEdit/SelectMatchingButton";
 import FlightBulkEditModal from "./FlightBulkEditModal";
 import FlightRefreshModal from "./FlightRefreshModal";
 import type { FlightSelection } from "./useFlightSelection";
@@ -17,12 +18,15 @@ const BAR_BUTTON =
 export default function FlightBulkBar({
   selection,
   pageFlights,
+  matching,
   trips,
   labelOf,
   onApplied,
 }: {
   selection: FlightSelection;
   pageFlights: readonly Flight[];
+  /** "Alle N Treffer auswählen": every flight the current filter matches. */
+  matching?: SelectMatching<Flight>;
   trips: readonly Trip[];
   labelOf: (flightId: string) => string;
   onApplied: () => void;
@@ -44,6 +48,11 @@ export default function FlightBulkBar({
       <button type="button" className={BAR_BUTTON} onClick={() => selection.selectAll(pageFlights)}>
         {t("flights:bulk.selectPage")}
       </button>
+      <SelectMatchingButton
+        matching={matching}
+        pageCount={pageFlights.length}
+        onSelect={selection.selectAll}
+      />
       <button type="button" className={BAR_BUTTON} onClick={selection.clear} disabled={count === 0}>
         {t("flights:bulk.clearSelection")}
       </button>

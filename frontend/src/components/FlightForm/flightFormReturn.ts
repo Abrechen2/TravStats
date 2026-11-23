@@ -52,3 +52,54 @@ export function prepareReturnLegForm(
   s.setError("");
   s.setTimeEstimationWarning(null);
 }
+
+/**
+ * After a successful save, prepare the form for the NEXT flight of a
+ * multi-leg day ("Weiteren Flug anlegen"). Unlike the return leg this is not
+ * the same booking: it keeps what a traveller repeats from flight to flight —
+ * airline, trip, cabin class, companions — starts at the airport the last
+ * flight ended at, leaves the destination open, and suggests the previous
+ * arrival date. Everything booking-specific (reference, ticket, price,
+ * receipt) and leg-specific (number, seat, gate, aircraft, times) starts empty.
+ */
+export function prepareNextLegForm(
+  s: FlightFormState,
+  arrivalDateSetRef: MutableRefObject<boolean>
+): void {
+  s.setDeparture(s.arrival);
+  s.setArrival(null);
+
+  s.setFlightNumber("");
+  s.setAircraft("");
+  s.setTerminal("");
+  s.setGate("");
+  s.setSeatNumber("");
+  s.setBoardingGroup("");
+  s.setNotes("");
+  s.setReceiptUrl("");
+  s.setOperatingAirline("");
+  s.setBookingReference("");
+  s.setTicketNumber("");
+  s.setBookingClassLetter("");
+  s.setPrice(undefined);
+  s.setTaxes(undefined);
+  s.setFees(undefined);
+  s.meta.setLookupCallsign("");
+  s.meta.setLookupAircraftRegistration("");
+  s.meta.setLookupAircraftModeS("");
+  s.meta.setLookupAirlineIata("");
+  s.meta.setLookupAirlineIcao("");
+  s.meta.setLookupIsCodeshare(null);
+
+  if (s.arrivalDate) {
+    s.setDepartureDate(s.arrivalDate);
+    s.setArrivalDate(s.arrivalDate);
+  }
+  s.setDepartureTime("12:00");
+  s.setArrivalTime("14:00");
+  arrivalDateSetRef.current = false;
+
+  s.setStep("complete");
+  s.setError("");
+  s.setTimeEstimationWarning(null);
+}

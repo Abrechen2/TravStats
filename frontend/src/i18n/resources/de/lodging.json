@@ -1067,7 +1067,20 @@
     "loadError": "Aufenthalte konnten nicht geladen werden",
     "empty": "Noch keine Aufenthalte erfasst",
     "emptyHint": "Ein Aufenthalt gehört zu einer Unterkunft: lege zuerst eine Unterkunft an oder lies eine Buchung ein.",
-    "footer": "Neueste Anreise zuerst; Aufenthalte ohne Datum stehen am Ende."
+    "sort": {
+      "label": "Sortieren nach",
+      "checkIn": "Anreise",
+      "checkOut": "Abreise",
+      "house": "Unterkunft",
+      "trip": "Reise",
+      "status": "Status",
+      "price": "Preis",
+      "ascending": "aufsteigend",
+      "descending": "absteigend",
+      "ascAria": "Aufsteigend sortiert – zum Umkehren tippen",
+      "descAria": "Absteigend sortiert – zum Umkehren tippen"
+    },
+    "footer": "Sortiert nach {{sort}} ({{dir}}); Aufenthalte ohne Datum bzw. Wert stehen am Ende."
   },
   "conflict": {
     "title": "Diese Tage überschneiden sich mit anderen Aufenthalten",

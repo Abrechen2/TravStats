@@ -1,3 +1,4 @@
+import { railOpen } from "../import/obviousRows";
 import type { JSX } from "react";
 import { StationPicker } from "./StationPicker";
 import { wallClockLabel, type RailImportRow } from "./railImportModel";
@@ -63,7 +64,11 @@ export function RailImportLegRow({
   const modeKey = modeLabelKey(leg);
   const note = choiceNote(row, busEnabled, t);
   return (
-    <li className="rounded-md border border-border p-3" data-testid={`rail-import-leg-${index}`}>
+    <li
+      className="rounded-md border border-border p-3"
+      data-testid={`rail-import-leg-${index}`}
+      data-open-item={railOpen(row) ? "true" : undefined}
+    >
       <label className="flex items-start gap-3 text-sm">
         <input
           type="checkbox"

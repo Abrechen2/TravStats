@@ -133,7 +133,27 @@ describe("GET /rail/connections", () => {
   });
 
   it("refuses a sort it does not offer instead of ignoring it", async () => {
-    expect((await list({ sort: "distance" })).status).toBe(400);
+    expect((await list({ sort: "created" })).status).toBe(400);
+  });
+
+  it("sorts connections by route, duration and status over the whole set before paging", async () => {
+    // Route: Frankfurt→Mannheim, Köln→Basel (first dep Köln), Mannheim→Köln.
+    const byRoute = await list({ sort: "route", order: "desc" });
+    expect(shape(byRoute.body)).toEqual([[sameReference], [changeFirst, changeSecond], [single]]);
+    // Duration: the change ride (07:00→11:10) is longest, the 40-minute RE shortest.
+    const byDuration = await list({ sort: "duration", order: "desc" });
+    expect(shape(byDuration.body)).toEqual([
+      [changeFirst, changeSecond],
+      [sameReference],
+      [single],
+    ]);
+    const page2 = await list({ sort: "duration", order: "desc", limit: 1, offset: 1 });
+    expect(shape(page2.body)).toEqual([[sameReference]]);
+    expect(page2.body.meta.total).toBe(3);
+    // Every ride is "scheduled/completed" alike: ties fall back to a total order.
+    const byStatus = await list({ sort: "status", order: "asc" });
+    expect(byStatus.status).toBe(200);
+    expect(byStatus.body.data).toHaveLength(3);
   });
 
   it("shows a stranger nothing", async () => {

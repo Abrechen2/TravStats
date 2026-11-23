@@ -419,7 +419,19 @@ export interface StayListQuery {
   limit?: number;
   offset?: number;
   order?: "asc" | "desc";
+  sort?: StaySortField;
 }
+
+/** The orders `GET /lodging/stays` offers; check-in is the logbook's own. */
+export const STAY_SORT_FIELDS = [
+  "checkIn",
+  "checkOut",
+  "house",
+  "trip",
+  "status",
+  "price",
+] as const;
+export type StaySortField = (typeof STAY_SORT_FIELDS)[number];
 
 /** One page of `GET /lodging/stays`: the rows, and the size of the set they came from. */
 export interface StayPage {

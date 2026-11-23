@@ -196,12 +196,41 @@ describe("LodgingStaysView", () => {
     const dates = container.querySelectorAll<HTMLInputElement>('input[type="date"]');
     fireEvent.change(dates[0], { target: { value: "2025-06-01" } });
     fireEvent.change(dates[1], { target: { value: "2025-06-30" } });
-    await userEvent.selectOptions(screen.getByRole("combobox"), "t1");
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "lodging:stayView.filter.trip" }),
+      "t1"
+    );
 
     await waitFor(() =>
       expect(listStayPageMock).toHaveBeenLastCalledWith(
         expect.objectContaining({ from: "2025-06-01", to: "2025-06-30", tripId: "t1" })
       )
+    );
+  });
+
+  it("sorts by price through the server query and reverses the direction", async () => {
+    renderView();
+    await screen.findByTestId("stay-view-row-s-june");
+    await userEvent.selectOptions(screen.getByTestId("stay-view-sort"), "price");
+    await waitFor(() =>
+      expect(listStayPageMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: "price", order: "desc" })
+      )
+    );
+    await userEvent.click(screen.getByTestId("stay-view-sort-order"));
+    await waitFor(() =>
+      expect(listStayPageMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: "price", order: "asc" })
+      )
+    );
+  });
+
+  it("names the active sort in the footer, not always the newest check-in", async () => {
+    renderView();
+    await screen.findByTestId("stay-view-row-s-june");
+    await userEvent.selectOptions(screen.getByTestId("stay-view-sort"), "price");
+    await waitFor(() =>
+      expect(screen.getByTestId("stay-view-footer")).toHaveAttribute("data-sort", "price")
     );
   });
 

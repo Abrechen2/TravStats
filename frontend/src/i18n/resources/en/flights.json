@@ -51,6 +51,8 @@
     "coPassengersTakeOver": "Take over",
     "submit": "Save Flight",
     "submitAndReturn": "Save + add return flight",
+    "submitAndNext": "Save + add another flight",
+    "nextFlightHint": "Flight saved — the next one starts at the last destination; please add the destination, flight number and times",
     "returnFlightHint": "Outbound saved — please fill in date and times for the return flight",
     "saving": "Saving...",
     "cancel": "Cancel",

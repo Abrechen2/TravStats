@@ -12,6 +12,7 @@ import { useServerPagination } from "../table/useServerPagination";
 import { useTableHints } from "../ui/useTableHints";
 import { FilterField } from "../table/ListFilterBar";
 import { FieldError } from "../form";
+import { collectAllPages } from "../../lib/collectPages";
 import { useRowSelection } from "../bulkEdit/useRowSelection";
 import DomainBulkBar, { BulkStartButton } from "../bulkEdit/DomainBulkBar";
 import BulkRowCheck from "../bulkEdit/BulkRowCheck";
@@ -26,7 +27,12 @@ import { deleteStay, listStayPage } from "../../lib/api/lodging";
 import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { formatStayPeriod, hasUnknownLength, stayNights } from "../../lib/lodgingDateDisplay";
-import type { LodgingStayListItem } from "../../types/lodging";
+import {
+  STAY_SORT_FIELDS,
+  type LodgingStayListItem,
+  type StaySortField,
+} from "../../types/lodging";
+import { useSortPrefs } from "../table/useSortPrefs";
 import type { Trip } from "../../types";
 
 const INPUT_CLASS =
@@ -93,7 +99,14 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
   // error: say so at the field and do not send it (the server would 400).
   const windowInvalid = from !== "" && to !== "" && from > to;
   const hasActiveFilter = from !== "" || to !== "" || tripId !== "";
-  const filterSignature = `${from}|${to}|${tripId}`;
+  // Held as state a URL param can later feed; decided by the server.
+  const { sortBy, sortOrder, setSort } = useSortPrefs<StaySortField>(
+    "lodging-stays",
+    "checkIn",
+    "desc",
+    STAY_SORT_FIELDS
+  );
+  const filterSignature = `${from}|${to}|${tripId}|${sortBy}|${sortOrder}`;
   const pagination = useServerPagination(total, "lodging-stays", filterSignature);
   const { limit, offset } = pagination;
 
@@ -128,6 +141,8 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
           ...(from !== "" && { from }),
           ...(to !== "" && { to }),
           ...(tripId !== "" && { tripId }),
+          sort: sortBy,
+          order: sortOrder,
           limit,
           offset,
         });
@@ -146,7 +161,7 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
     return () => {
       cancelled = true;
     };
-  }, [from, to, tripId, limit, offset, reloadToken, windowInvalid]);
+  }, [from, to, tripId, sortBy, sortOrder, limit, offset, reloadToken, windowInvalid]);
 
   const resetFilters = (): void => {
     setFrom("");
@@ -333,6 +348,24 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
         domain="stay"
         selection={selection}
         pageRows={bulkRows}
+        matching={{
+          total,
+          resolve: async () => {
+            const all = await collectAllPages(async ({ limit: size, offset: skip }) => {
+              const page = await listStayPage({
+                ...(from !== "" && { from }),
+                ...(to !== "" && { to }),
+                ...(tripId !== "" && { tripId }),
+                sort: sortBy,
+                order: sortOrder,
+                limit: size,
+                offset: skip,
+              });
+              return { items: page.rows, total: page.total };
+            });
+            return all.map(stayBulkRow);
+          },
+        }}
         onApplied={() => {
           reload();
           onChanged?.();
@@ -361,7 +394,31 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
         </div>
       ) : (
         <>
-          <div className="mb-3 flex justify-end">
+          <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+            <label className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+              {t("lodging:stayView.sort.label")}
+              <select
+                value={sortBy}
+                onChange={(e) => setSort(e.target.value as StaySortField, sortOrder)}
+                className={INPUT_CLASS}
+                data-testid="stay-view-sort"
+              >
+                {STAY_SORT_FIELDS.map((field) => (
+                  <option key={field} value={field}>
+                    {t(`lodging:stayView.sort.${field}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              data-testid="stay-view-sort-order"
+              aria-label={t(`lodging:stayView.sort.${sortOrder}Aria`)}
+              onClick={() => setSort(sortBy, sortOrder === "asc" ? "desc" : "asc")}
+              className="rounded-md border border-[var(--color-border)] px-3 py-2 text-sm pointer-coarse:min-h-(--ts-size-touch-min)"
+            >
+              {sortOrder === "asc" ? "↑" : "↓"}
+            </button>
             <BulkStartButton selection={selection} />
           </div>
           <TablePagination {...pagination} allowAll={false} placement="top" />
@@ -380,8 +437,19 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
             })}
           </Table>
           <TablePagination {...pagination} allowAll={false} />
-          <p className="mt-2 px-1 text-xs text-[var(--text-muted)]">
-            {t("lodging:stayView.footer")}
+          <p
+            className="mt-2 px-1 text-xs text-[var(--text-muted)]"
+            data-testid="stay-view-footer"
+            data-sort={sortBy}
+          >
+            {t("lodging:stayView.footer", {
+              sort: t(`lodging:stayView.sort.${sortBy}`),
+              dir: t(
+                sortOrder === "asc"
+                  ? "lodging:stayView.sort.ascending"
+                  : "lodging:stayView.sort.descending"
+              ),
+            })}
           </p>
         </>
       )}

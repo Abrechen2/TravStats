@@ -1067,7 +1067,20 @@
     "loadError": "Stays could not be loaded",
     "empty": "No stays recorded yet",
     "emptyHint": "A stay belongs to a lodging: add a lodging first or read in a booking.",
-    "footer": "Latest check-in first; stays without a date come last."
+    "sort": {
+      "label": "Sort by",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out",
+      "house": "House",
+      "trip": "Trip",
+      "status": "Status",
+      "price": "Price",
+      "ascending": "ascending",
+      "descending": "descending",
+      "ascAria": "Sorted ascending – tap to reverse",
+      "descAria": "Sorted descending – tap to reverse"
+    },
+    "footer": "Sorted by {{sort}} ({{dir}}); stays without a date or value come last."
   },
   "conflict": {
     "title": "These days overlap other stays",

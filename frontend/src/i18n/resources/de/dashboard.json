@@ -478,6 +478,13 @@
       "bad": "Diese Eingabe kann nicht gesucht werden.",
       "retry": "Erneut versuchen"
     },
+    "chips": {
+      "label": "Suche eingrenzen auf"
+    },
+    "recent": {
+      "label": "Zuletzt gesucht",
+      "clear": "Verlauf löschen"
+    },
     "group": {
       "flight": "Flüge",
       "cruise": "Kreuzfahrten",

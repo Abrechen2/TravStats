@@ -24,25 +24,34 @@ export type SearchState =
  * `useEnabledDomains` plus trips, plus tours while the beta key lets them in.
  * The server applies the same gate; sending it keeps the two honest.
  */
-export function useGlobalSearch(rawQuery: string): { state: SearchState; retry: () => void } {
+export function useGlobalSearch(
+  rawQuery: string,
+  /** Domain chips: when non-empty, only these are searched (never more than the account shows). */
+  only: readonly SearchDomain[] = []
+): { state: SearchState; retry: () => void } {
   const query = useDebouncedValue(rawQuery.trim(), 250);
   const { enabled } = useEnabledDomains();
   const toursVisible = useToursVisible();
   const [state, setState] = useState<SearchState>({ status: "idle" });
   const [attempt, setAttempt] = useState(0);
 
-  const domainsKey = `${enabled.join(",")}|${toursVisible}`;
+  const onlyKey = only.join(",");
+  const domainsKey = `${enabled.join(",")}|${toursVisible}|${onlyKey}`;
 
   useEffect(() => {
     if (query.length < MIN_SEARCH_LENGTH) {
       setState({ status: "idle" });
       return;
     }
-    const domains: SearchDomain[] = [
+    const shown: SearchDomain[] = [
       ...enabled,
       "trip",
       ...(toursVisible ? (["tour"] as const) : []),
     ];
+    const narrowed = shown.filter((d) => onlyKey.split(",").includes(d));
+    // A stale chip (its domain was switched off) narrows to nothing; the
+    // server reads an empty list as "everything", so fall back to what is shown.
+    const domains = narrowed.length > 0 ? narrowed : shown;
     const controller = new AbortController();
     setState({ status: "loading" });
     searchApi

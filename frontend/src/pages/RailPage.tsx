@@ -3,6 +3,7 @@ import { useGapPrefill } from "../hooks/useGapPrefill";
 import { railGapDraft } from "../components/rail/railGapDraft";
 import type { RailFormDraft } from "../components/rail/railFormModel";
 import DomainBulkBar from "../components/bulkEdit/DomainBulkBar";
+import { collectAllPages } from "../lib/collectPages";
 import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
 import { railBulkRow } from "../components/bulkEdit/bulkRows";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -71,9 +72,36 @@ const RAIL_COLUMN_IDS: readonly RailColumnId[] = [
 ];
 /** The mark, title, subtitle and pill a phone keeps, plus the actions. */
 const RAIL_ALWAYS_VISIBLE = ["operator", "route", "time", "status", "actions"] as const;
-/** A ride has one order — its first departure (`GET /rail/connections`). */
-const RAIL_SORT_FIELDS = ["departure"] as const;
+/** The connection list's server-side orders (`GET /rail/connections`). */
+const RAIL_SORT_FIELDS = [
+  "departure",
+  "operator",
+  "route",
+  "duration",
+  "distance",
+  "status",
+  "trip",
+] as const;
 type RailSortField = (typeof RAIL_SORT_FIELDS)[number];
+const RAIL_SORT_BY_COLUMN: Partial<Record<RailColumnId, RailSortField>> = {
+  operator: "operator",
+  route: "route",
+  time: "departure",
+  duration: "duration",
+  distance: "distance",
+  status: "status",
+  trip: "trip",
+};
+/** A first click on a column: newest and longest first, words from A. */
+const DEFAULT_ORDER: Record<RailSortField, "asc" | "desc"> = {
+  departure: "desc",
+  operator: "asc",
+  route: "asc",
+  duration: "desc",
+  distance: "desc",
+  status: "asc",
+  trip: "asc",
+};
 
 type Filters = Pick<RailListQuery, "q" | "status" | "year">;
 type Editing = { journey: RailJourney | null; draft?: RailFormDraft } | null;
@@ -88,15 +116,18 @@ async function loadPage(
   filters: Filters,
   membershipId: string | null,
   linkedYear: number | null,
-  page: { limit: number; offset: number; order: "asc" | "desc" }
+  page: { limit: number; offset: number; order: "asc" | "desc"; sort: RailSortField }
 ): Promise<RailConnectionPage> {
   if (membershipId === null) return railApi.listConnections({ ...filters, ...page });
   const result = await railApi.list({
     ...filters,
     year: filters.year ?? linkedYear ?? undefined,
     membershipId,
+    // The card's leg list has one order: its departure.
     sort: "departure",
-    ...page,
+    limit: page.limit,
+    offset: page.offset,
+    order: page.order,
   });
   return {
     connections: result.journeys.map((journey) => ({ id: journey.id, legs: [journey] })),
@@ -184,6 +215,7 @@ export default function RailPage(): JSX.Element {
           limit,
           offset,
           order: sortOrder,
+          sort: sortBy,
         });
         if (cancelled) return;
         setEntries(page.connections);
@@ -204,7 +236,7 @@ export default function RailPage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [filters, membershipId, linkedYear, limit, offset, sortOrder, reloadToken]);
+  }, [filters, membershipId, linkedYear, limit, offset, sortBy, sortOrder, reloadToken]);
 
   // The year options: every year the account rode in, not just the filtered
   // set's — picking a year must not take the other years off the list.
@@ -254,14 +286,24 @@ export default function RailPage(): JSX.Element {
         layout: RAIL_COLUMN_LAYOUT,
         isVisible: columnPrefs.isVisible,
         label: (id) => t(`rail:list.columns.${id}`),
-        sortKeyByColumn: { time: "departure" },
+        // The card's leg list has only the departure order; every other
+        // column's header is plain text there instead of a button that lies.
+        sortKeyByColumn:
+          membershipId === null ? RAIL_SORT_BY_COLUMN : { time: "departure" as const },
         sortBy,
         sortOrder,
-        onSort: () => setSort("departure", sortOrder === "asc" ? "desc" : "asc"),
+        onSort: (key) =>
+          setSort(
+            key,
+            key === sortBy ? (sortOrder === "asc" ? "desc" : "asc") : DEFAULT_ORDER[key]
+          ),
         sortAriaLabel: (col) => t("rail:list.sortBy", { col }),
       }),
-    [columnPrefs, t, sortBy, sortOrder, setSort]
+    [columnPrefs, t, sortBy, sortOrder, setSort, membershipId]
   );
+
+  // The card's leg list always runs by departure whatever the stored sort says.
+  const shownSortBy: RailSortField = membershipId === null ? sortBy : "departure";
 
   const resetFilters = (): void => {
     setSearch("");
@@ -357,6 +399,22 @@ export default function RailPage(): JSX.Element {
           domain="rail"
           selection={selection}
           pageRows={bulkRows}
+          matching={{
+            total,
+            shown: entries.length,
+            resolve: async () => {
+              const entries = await collectAllPages(async ({ limit: size, offset: skip }) => {
+                const page = await loadPage(filters, membershipId, linkedYear, {
+                  limit: size,
+                  offset: skip,
+                  order: sortOrder,
+                  sort: sortBy,
+                });
+                return { items: page.connections, total: page.total };
+              });
+              return entries.flatMap((entry) => entry.legs.map(railBulkRow));
+            },
+          }}
           onApplied={() => void reload()}
         />
         {loadFailed ? (
@@ -421,9 +479,13 @@ export default function RailPage(): JSX.Element {
               })}
             </Table>
             <TablePagination {...pagination} allowAll={false} />
-            <p className="mt-2 px-1 text-xs text-(--text-muted)">
+            <p
+              className="mt-2 px-1 text-xs text-(--text-muted)"
+              data-testid="rail-sorted-by"
+              data-sort={shownSortBy}
+            >
               {t("rail:list.sortedBy", {
-                col: t("rail:list.columns.time"),
+                col: t(`rail:list.columns.${shownSortBy === "departure" ? "time" : shownSortBy}`),
                 dir: t(sortOrder === "asc" ? "rail:list.ascending" : "rail:list.descending"),
               })}
             </p>

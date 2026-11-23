@@ -51,6 +51,8 @@
     "coPassengersTakeOver": "Übernehmen",
     "submit": "Flug speichern",
     "submitAndReturn": "Speichern + Rückflug anlegen",
+    "submitAndNext": "Speichern + weiteren Flug anlegen",
+    "nextFlightHint": "Flug gespeichert — der nächste startet am letzten Ziel; bitte Ziel, Flugnummer und Zeiten ergänzen",
     "returnFlightHint": "Hinflug gespeichert — bitte Datum und Zeiten für den Rückflug ergänzen",
     "saving": "Speichert...",
     "cancel": "Abbrechen",

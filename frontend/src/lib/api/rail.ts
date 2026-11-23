@@ -61,8 +61,14 @@ export interface RailConnectionPage {
   summary: RailListSummary;
 }
 
-/** The connection list orders by first departure only, and takes no card filter. */
-export type RailConnectionQuery = Omit<RailListQuery, "sort" | "membershipId">;
+/** What a connection can be ordered by: each is derived per ride, server-side. */
+export type RailConnectionSort =
+  "departure" | "operator" | "route" | "duration" | "distance" | "status" | "trip";
+
+/** The connection list takes its own sort keys and no card filter. */
+export type RailConnectionQuery = Omit<RailListQuery, "sort" | "membershipId"> & {
+  sort?: RailConnectionSort;
+};
 
 export const railApi = {
   async route(id: string): Promise<RailSaveResult> {

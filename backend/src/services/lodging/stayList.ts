@@ -1,7 +1,7 @@
 import { prisma } from "../../db";
 import { recordedStaySql } from "../provenance/recordedSql";
 import { Prisma } from "../../prisma";
-import type { StayListQuery } from "../../schemas/lodging";
+import type { StayListQuery, STAY_SORT_FIELDS } from "../../schemas/lodging";
 import { withStayTimes } from "./timesDto";
 
 export const STAY_LIST_DEFAULT_LIMIT = 25;
@@ -35,6 +35,20 @@ function stayListConditions(userId: string, query: StayListQuery): Prisma.Sql {
 }
 
 /**
+ * The primary sort expression of each key. Text keys sort case-insensitively;
+ * the price is the base-currency snapshot where one exists (a mixed-currency
+ * column compared raw would rank 300 USD against 300 EUR as equals).
+ */
+const SORT_EXPRESSION: Record<(typeof STAY_SORT_FIELDS)[number], Prisma.Sql> = {
+  checkIn: CHECK_IN_DAY,
+  checkOut: END_DAY,
+  house: Prisma.sql`lower(l.name)`,
+  trip: Prisma.sql`lower(t.name)`,
+  status: Prisma.sql`s.status`,
+  price: Prisma.sql`COALESCE(s.total_price_base, s.total_price)`,
+};
+
+/**
  * One page of the account's stays across all its houses, each carrying the
  * house it belongs to and the trip it is linked to, in check-in-day order with
  * the undated ones last. `id` breaks ties: a day is not unique, and paging on a
@@ -47,6 +61,7 @@ function stayListConditions(userId: string, query: StayListQuery): Prisma.Sql {
 export async function queryStayPage(userId: string, query: StayListQuery) {
   const conditions = stayListConditions(userId, query);
   const direction = query.order === "asc" ? Prisma.raw("ASC") : Prisma.raw("DESC");
+  const primary = SORT_EXPRESSION[query.sort ?? "checkIn"];
   const limit = query.limit ?? STAY_LIST_DEFAULT_LIMIT;
   const offset = query.offset ?? 0;
 
@@ -55,8 +70,12 @@ export async function queryStayPage(userId: string, query: StayListQuery) {
       Prisma.sql`SELECT count(*)::int AS total FROM lodging_stays s WHERE ${conditions}`
     ),
     prisma.$queryRaw<Array<{ id: string }>>(
-      Prisma.sql`SELECT s.id FROM lodging_stays s WHERE ${conditions}
-        ORDER BY ${CHECK_IN_DAY} ${direction} NULLS LAST, s.id ${direction}
+      Prisma.sql`SELECT s.id FROM lodging_stays s
+        JOIN lodgings l ON l.id = s.lodging_id
+        LEFT JOIN trips t ON t.id = s.trip_id
+        WHERE ${conditions}
+        ORDER BY ${primary} ${direction} NULLS LAST, ${CHECK_IN_DAY} ${direction} NULLS LAST,
+          s.id ${direction}
         LIMIT ${limit} OFFSET ${offset}`
     ),
   ]);
