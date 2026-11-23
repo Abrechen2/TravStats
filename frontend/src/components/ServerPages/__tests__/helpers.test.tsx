@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { addressProblem, originsProblem, parseOrigins, rpIdProblem } from "../fieldChecks";
 import { completeOrder, moveAmongEnabled } from "../cloudOrder";
@@ -147,5 +155,18 @@ describe("the instance settings copy", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("Wartung › Zeitzonen disclosure", () => {
+  it("is closed by default and opens on click", async () => {
+    api.getUsers.mockResolvedValue({ users: [] });
+    render(<MaintenanceTimeModel />);
+    await act(async () => {});
+    const box = screen.getByTestId("tz-legacy") as HTMLDetailsElement;
+    expect(box.open).toBe(false);
+    expect(screen.getByText("settingsRows:maintenance.tzLegacy.summary")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("settingsRows:maintenance.tzLegacy.summary"));
+    expect(box.open).toBe(true);
   });
 });

@@ -1527,6 +1527,10 @@
     },
     "logLoadFailed": "I couldn't load the log.",
     "systemLoadFailed": "I couldn't load the system data.",
+    "tzLegacy": {
+      "summary": "Time zones (for legacy data)",
+      "when": "Only needed when old imports or entries from before the time model carry wrong zones: here the zones can be determined again (dry run first)."
+    },
     "usersLoadFailed": "I couldn't load the accounts for the report.",
     "groups": {
       "logging": "Log"

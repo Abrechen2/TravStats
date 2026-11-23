@@ -9,7 +9,7 @@ import { ErrorLine, SettingItem } from "../ui/settings";
 import type { AdminUser } from "./types";
 
 /**
- * Maintenance › Zeitzonen (design C7, Expert): what the time-model migration did
+ * Maintenance › Zeitzonen (design C7, Expert; a closed disclosure for legacy data): what the time-model migration did
  * and the deliberate way to determine zones again (ADR 0002, D2). Both are
  * reports with their own dry-run flow, hosted in the two rows of the design.
  */
@@ -34,14 +34,25 @@ export default function MaintenanceTimeModel(): JSX.Element {
   const report = row("tzreport");
   const resolve = row("tzresolve");
   return (
-    <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-      <SettingItem title={report.title} scope="allAccounts" expert>
-        {failed ? <ErrorLine>{t("settingsRows:maintenance.usersLoadFailed")}</ErrorLine> : null}
-        <TimeMigrationReport users={users} />
-      </SettingItem>
-      <SettingItem title={resolve.title} sub={resolve.sub} scope="allAccounts" expert>
-        <ZoneReResolve />
-      </SettingItem>
-    </div>
+    <details data-testid="tz-legacy">
+      <summary
+        className="cursor-pointer"
+        style={{ minHeight: 44, display: "flex", alignItems: "center" }}
+      >
+        {t("settingsRows:maintenance.tzLegacy.summary")}
+      </summary>
+      <p className="t-caption" style={{ margin: "var(--ts-space-xs) 0 var(--ts-space-md)" }}>
+        {t("settingsRows:maintenance.tzLegacy.when")}
+      </p>
+      <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+        <SettingItem title={report.title} scope="allAccounts" expert>
+          {failed ? <ErrorLine>{t("settingsRows:maintenance.usersLoadFailed")}</ErrorLine> : null}
+          <TimeMigrationReport users={users} />
+        </SettingItem>
+        <SettingItem title={resolve.title} sub={resolve.sub} scope="allAccounts" expert>
+          <ZoneReResolve />
+        </SettingItem>
+      </div>
+    </details>
   );
 }
