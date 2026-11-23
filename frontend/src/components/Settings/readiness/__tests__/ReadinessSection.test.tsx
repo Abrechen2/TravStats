@@ -44,6 +44,7 @@ const item = (over: Partial<ReadinessItem> & { id: string }): ReadinessItem => (
   consequenceKey: `check.${over.id}.consequence`,
   actionKey: null,
   entryList: false,
+  failure: null,
   action: "/settings/reisearten",
   blockedBy: null,
   optOutAllowed: true,
@@ -95,6 +96,23 @@ describe("readiness page", () => {
     vi.clearAllMocks();
     demoFlag.on = false;
     setUser(true);
+  });
+
+  it("shows a check the server could not run as 'Prüfung fehlgeschlagen' with its reason, not as unchecked", async () => {
+    show(
+      response([
+        item({ id: "broken", status: "unknown", failure: { reason: "factsUnavailable" } }),
+        item({ id: "fine" }),
+      ])
+    );
+    await screen.findByText("readiness:check.fine.title");
+    const row = document.querySelector('[data-item="broken"]') as HTMLElement;
+    expect(row.querySelector("[data-check-failed]")?.getAttribute("data-check-failed")).toBe(
+      "factsUnavailable"
+    );
+    expect(within(row).getByRole("alert").textContent).toBe("readiness:failed.line");
+    expect(within(row).getByText("readiness:failed.pill")).toBeTruthy();
+    expect(within(row).queryByText("readiness:unchecked")).toBeNull();
   });
 
   it("tells the server the invitation was seen exactly once per open, even across re-renders", async () => {

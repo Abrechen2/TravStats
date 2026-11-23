@@ -39,6 +39,7 @@ export const PROBLEM_CHECK_IMPLS: Readonly<
     Extract<
       CheckId,
       | "admin.railRouter"
+      | "admin.railReroute"
       | "admin.roadRouting"
       | "admin.routingKeyUnused"
       | "admin.twoFactor"
@@ -53,6 +54,10 @@ export const PROBLEM_CHECK_IMPLS: Readonly<
 > = {
   "admin.railRouter": countCheck(({ problems }) =>
     problems.instance.railRouterConfigured ? null : problems.instance.railStraight
+  ),
+  // A router is set, yet rides are still chords: the bulk pass (feat/rail-reroute-all) draws them.
+  "admin.railReroute": countCheck(({ problems }) =>
+    problems.instance.railRouterConfigured ? problems.instance.railStraight : null
   ),
   "admin.roadRouting": countCheck(({ problems }) =>
     problems.instance.roadRoutingEffective ? null : problems.instance.roadStraight

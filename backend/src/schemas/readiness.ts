@@ -22,6 +22,8 @@ export const readinessItemSchema = z.object({
   consequenceKey: z.string(),
   actionKey: z.string().nullable(),
   entryList: z.boolean(),
+  /** The check could not run; status is then `unknown`. */
+  failure: z.object({ reason: z.enum(["factsUnavailable", "evaluatorError"]) }).nullable(),
   action: z.string().nullable(),
   blockedBy: z.string().nullable(),
   optOutAllowed: z.boolean(),

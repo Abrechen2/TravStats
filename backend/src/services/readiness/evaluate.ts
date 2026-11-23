@@ -18,7 +18,9 @@ import {
   type AccountReadinessState,
   type InvitationState,
 } from "./state";
-import type { CheckStatus, RegisteredCheck } from "./types";
+import type { CheckStatus, Evaluation, RegisteredCheck } from "./types";
+import { ReadinessFactError } from "./factError";
+import logger from "../../utils/logger";
 import { NOTES } from "./upgrades/notes";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -39,6 +41,12 @@ export interface ReadinessItem {
   actionKey: string | null;
   /** The page lists the entries this check found (`GET /readiness/items/:id/entries`). */
   entryList: boolean;
+  /**
+   * The check itself could not run (status `unknown`): its facts could not be
+   * loaded, or the evaluator threw. Shown as "Prüfung fehlgeschlagen"; the
+   * detail is in the server log, never in the answer.
+   */
+  failure: CheckFailure | null;
   action: string | null;
   blockedBy: string | null;
   optOutAllowed: boolean;
@@ -86,19 +94,56 @@ export interface ReadinessView {
   banner: ReadinessBanner;
 }
 
+export interface CheckFailure {
+  reason: "factsUnavailable" | "evaluatorError";
+}
+
 interface Evaluated {
   check: RegisteredCheck;
   status: CheckStatus;
   checkedAt: Date | null;
   count: number | null;
+  failure: CheckFailure | null;
+}
+
+/** Run one check on its own: a throw is that check's failure, never the whole answer's. */
+function runCheck(
+  check: RegisteredCheck,
+  ctx: ReadinessContext
+): Evaluation | null | { failure: CheckFailure } {
+  try {
+    if (!check.appliesWhen(ctx)) return null;
+    return check.evaluate(ctx);
+  } catch (err) {
+    const reason = err instanceof ReadinessFactError ? "factsUnavailable" : "evaluatorError";
+    logger.error(
+      {
+        checkId: check.id,
+        reason,
+        error: err instanceof Error ? err.message : String(err),
+      },
+      "readiness: a check failed; it is shown as failed and the others still answer"
+    );
+    return { failure: { reason } };
+  }
 }
 
 /** Evaluate every applicable check; a result older than the check's `maxAgeDays` reads `unknown`. */
 export function evaluateChecks(ctx: ReadinessContext): Map<CheckId, Evaluated> {
   const out = new Map<CheckId, Evaluated>();
   for (const check of CHECKS) {
-    if (!check.appliesWhen(ctx)) continue;
-    const result = check.evaluate(ctx);
+    const result = runCheck(check, ctx);
+    if (result === null) continue;
+    if ("failure" in result) {
+      out.set(check.id, {
+        check,
+        status: "unknown",
+        checkedAt: null,
+        count: null,
+        failure: result.failure,
+      });
+      continue;
+    }
     const stale =
       check.maxAgeDays !== null &&
       result.checkedAt !== null &&
@@ -108,6 +153,7 @@ export function evaluateChecks(ctx: ReadinessContext): Map<CheckId, Evaluated> {
       status: stale ? "unknown" : result.status,
       checkedAt: result.checkedAt,
       count: result.count ?? null,
+      failure: null,
     });
   }
   return out;
@@ -120,6 +166,19 @@ function userStateOf(check: RegisteredCheck, state: AccountReadinessState, now: 
   if (row.kind === "optedOut") return check.severity === "required" ? null : { kind: "optedOut" };
   if (!row.until || row.until <= now) return null;
   return { kind: "snoozed", until: row.until.toISOString() };
+}
+
+/** A note whose condition cannot be read is left out and logged, never the whole answer. */
+function noteApplies(note: (typeof NOTES)[number], ctx: ReadinessContext): boolean {
+  try {
+    return note.appliesWhen(ctx);
+  } catch (err) {
+    logger.error(
+      { noteId: note.id, error: err instanceof Error ? err.message : String(err) },
+      "readiness: an update note's condition failed; the note is left out"
+    );
+    return false;
+  }
 }
 
 function inRange(version: string, from: string, to: string): boolean {
@@ -209,7 +268,7 @@ function buildItems(
     ready: 0,
   };
 
-  for (const { check, status, checkedAt, count } of evaluated.values()) {
+  for (const { check, status, checkedAt, count, failure } of evaluated.values()) {
     if (check.scope === "admin" && !isAdmin) continue;
     const blocker = check.blockedBy ? evaluated.get(check.blockedBy) : undefined;
     const blocked = status === "needsAction" && blocker?.status === "needsAction";
@@ -226,6 +285,7 @@ function buildItems(
       consequenceKey: check.consequenceKey,
       actionKey: check.actionKey,
       entryList: check.entryList,
+      failure,
       action: blocked ? null : check.action,
       blockedBy: blocked ? check.blockedBy : null,
       optOutAllowed: check.severity !== "required",
@@ -275,7 +335,7 @@ export async function buildReadinessView(
   for (const note of NOTES) {
     if (note.audience === "admin" && !isAdmin) continue;
     if (!inRange(note.version, state.ackVersion, appVersion)) continue;
-    if (!note.appliesWhen(ctx)) continue;
+    if (!noteApplies(note, ctx)) continue;
     const acknowledged = state.ackedNotes.has(note.id);
     // A note with a check stays open until that check is ready, whatever "seen" says.
     const open =
@@ -344,5 +404,5 @@ export async function findApplicableNote(
   const note = NOTES.find((n) => n.id === noteId);
   if (!note) return false;
   if (note.audience === "admin" && !isAdmin) return false;
-  return inRange(note.version, state.ackVersion, appVersion) && note.appliesWhen(ctx);
+  return inRange(note.version, state.ackVersion, appVersion) && noteApplies(note, ctx);
 }

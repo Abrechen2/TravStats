@@ -31,6 +31,8 @@ export interface ReadinessItem {
   actionKey: string | null;
   /** The fix is per entry: the page lists them (`fetchReadinessEntries`). */
   entryList: boolean;
+  /** The check could not run (status `unknown`); shown as "Prüfung fehlgeschlagen". */
+  failure: { reason: "factsUnavailable" | "evaluatorError" } | null;
   /** A settings address for `resolveAddress`; null for an item blocked by an admin item. */
   action: string | null;
   /** The admin item this one waits for. An ordinary account gets no detail beyond that fact. */

@@ -11,6 +11,7 @@ import { logger } from "../../../lib/logger";
 import { profileDateTime } from "../../../lib/profileInstant";
 import Button from "../../ui/Button";
 import Pill from "../../ui/Pill";
+import { ErrorLine } from "../../ui/settings";
 import { token } from "../../ui/tokens";
 import { readinessKey, TONE_COLOR, type ReadinessGroupId } from "./readinessModel";
 
@@ -52,7 +53,9 @@ export function ItemRow({
 }: ItemRowProps): JSX.Element {
   const { t } = useTranslation(["readiness"]);
   const checked = profileDateTime(item.checkedAt);
-  const unknown = item.status === "unknown";
+  // Older servers send no `failure`; read it as "the check ran".
+  const failed = item.failure ?? null;
+  const unknown = item.status === "unknown" && !failed;
   const active = group !== "ready" && group !== "parked";
   const prominent = active && group !== "blocked" && item.status === "needsAction";
   const tone = item.severity === "required" ? "problem" : "warning";
@@ -63,6 +66,10 @@ export function ItemRow({
       ? t("readiness:checkNow")
       : t("readiness:openAction");
   const [entriesOpen, setEntriesOpen] = useState(initiallyOpen && item.entryList);
+  const failedReason = failed?.reason ?? null;
+  useEffect(() => {
+    if (failedReason) logger.warn("Readiness check failed on the server", item.id, failedReason);
+  }, [failedReason, item.id]);
 
   return (
     <li
@@ -85,11 +92,20 @@ export function ItemRow({
             {t("readiness:unchecked")}
           </Pill>
         )}
+        {failed && <Pill color={TONE_COLOR.problem}>{t("readiness:failed.pill")}</Pill>}
         {isAdmin && item.scope === "admin" && (
           <Pill color={token("muted")}>{t("readiness:scope.server")}</Pill>
         )}
       </div>
       <p className={prominent ? undefined : "t-caption"}>{t(readinessKey(item.consequenceKey))}</p>
+      {failed && (
+        <div data-check-failed={failed.reason}>
+          <ErrorLine>
+            {t("readiness:failed.line", { reason: t(`readiness:failed.reason.${failed.reason}`) })}
+          </ErrorLine>
+          <p className="t-caption">{t("readiness:failed.hint")}</p>
+        </div>
+      )}
       {unknown && !checked && <p className="t-caption">{t("readiness:neverChecked")}</p>}
       {checked && <p className="t-caption">{t("readiness:checkedAt", { time: checked })}</p>}
       {group === "blocked" && !href && <p className="t-caption">{t("readiness:blockedHint")}</p>}

@@ -9,14 +9,12 @@
  * the two must never disagree about what they found.
  */
 import { prisma } from "../../db";
-import { getApiKey } from "../apiKeyResolver";
+import logger from "../../utils/logger";
+import { ReadinessFactError } from "./factError";
 import { isServiceDisabledByAdmin } from "../externalServices/policy";
 import { LEG_MODES, type LegMode } from "../tour/tourDistance";
-import {
-  isRoutableMode,
-  ROUTING_PROVIDER_IDS,
-  type RoutingProviderId,
-} from "../tour/routing/types";
+import { resolveRouting } from "../tour/routing/resolveProvider";
+import { isRoutableMode } from "../tour/routing/types";
 import { VISITS_BIT } from "../travtrack/dirtyDays";
 import { PROBLEM_RULES, type ProblemRuleId } from "./problemEntries";
 
@@ -29,13 +27,16 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface InstanceProblemFacts {
   railRouterConfigured: boolean;
-  /** Rail journeys of every account drawn as a chord; counted only while no router is set. */
+  /** Rail journeys of every account drawn as a chord (with or without a router). */
   railStraight: number;
   /** A road provider answers for the instance itself (admin global key or own OSRM). */
   roadRoutingEffective: boolean;
   /** Straight routable legs and coach rides of every account; counted only while no provider answers. */
   roadStraight: number;
-  /** Some account or the instance holds a routing key, yet no provider is selected. */
+  /**
+   * Some account or the instance holds a routing key, yet routing is switched
+   * off ("Aus") or the selected provider cannot answer for the instance.
+   */
   routingKeyWithoutProvider: boolean;
   demoAccounts: number;
 }
@@ -53,24 +54,13 @@ export interface AccountProblemFacts {
   entries: Readonly<Record<ProblemRuleId, number>>;
 }
 
-function isProviderId(v: string | null | undefined): v is RoutingProviderId {
-  return !!v && (ROUTING_PROVIDER_IDS as readonly string[]).includes(v);
-}
-
 /**
- * Whether a road provider answers, by the rule of `resolveRouteProvider` but
- * without building a client or logging a warning on every page read.
+ * Whether a road provider answers, by `resolveRouting` itself (fix/routing-auto:
+ * an unset provider is "Automatisch", so a stored key routes without a choice).
+ * Without a user it is the instance's own answer: instance keys and the own server.
  */
-async function roadRoutingWorks(
-  provider: string | null,
-  customUrl: string | null,
-  userId?: string
-): Promise<boolean> {
-  if (!isProviderId(provider)) return false;
-  if (provider === "custom") {
-    return !!customUrl && !(await isServiceDisabledByAdmin("selfHostedRouting"));
-  }
-  return (await getApiKey(provider, userId)) !== null;
+async function roadRoutingWorks(userId?: string): Promise<boolean> {
+  return (await resolveRouting(userId)).provider !== null;
 }
 
 const straightLegs = (userId?: string) =>
@@ -89,13 +79,11 @@ const straightRail = (userId?: string) =>
   });
 
 export async function loadInstanceProblemFacts(): Promise<InstanceProblemFacts> {
-  const [admin, demoAccounts, keyHolder, routingOff] = await Promise.all([
+  const [admin, demoAccounts, keyHolder, routingOff, instanceRouting] = await Promise.all([
     prisma.adminSettings.findFirst({
       orderBy: { id: "asc" },
       select: {
         railRoutingUrl: true,
-        routingProvider: true,
-        routingCustomUrl: true,
         globalOpenrouteserviceApiKey: true,
         globalGraphhopperApiKey: true,
       },
@@ -108,14 +96,12 @@ export async function loadInstanceProblemFacts(): Promise<InstanceProblemFacts> 
       select: { userId: true },
     }),
     isServiceDisabledByAdmin("selfHostedRouting"),
+    resolveRouting(),
   ]);
   const railRouterConfigured = !!admin?.railRoutingUrl && !routingOff;
-  const roadRoutingEffective = await roadRoutingWorks(
-    admin?.routingProvider ?? null,
-    admin?.routingCustomUrl ?? null
-  );
+  const roadRoutingEffective = instanceRouting.provider !== null;
   const [railStraight, legs, bus] = await Promise.all([
-    railRouterConfigured ? 0 : straightRail(),
+    straightRail(),
     roadRoutingEffective ? 0 : straightLegs(),
     roadRoutingEffective ? 0 : straightBus(),
   ]);
@@ -126,7 +112,8 @@ export async function loadInstanceProblemFacts(): Promise<InstanceProblemFacts> 
     railStraight,
     roadRoutingEffective,
     roadStraight: legs + bus,
-    routingKeyWithoutProvider: anyKey && !isProviderId(admin?.routingProvider),
+    routingKeyWithoutProvider:
+      anyKey && (instanceRouting.mode === "off" || instanceRouting.hint === "selectedUnavailable"),
     demoAccounts,
   };
 }
@@ -140,22 +127,40 @@ async function visitBacklog(userId: string, now: Date): Promise<number> {
   return Number(rows[0]?.n ?? 0);
 }
 
+/**
+ * One count per entry rule, each on its own: a rule whose query fails reads as
+ * unavailable (its check shows "Prüfung fehlgeschlagen"), the others still count.
+ */
+async function entryCountsOf(userId: string): Promise<Readonly<Record<ProblemRuleId, number>>> {
+  const ids = Object.keys(PROBLEM_RULES) as ProblemRuleId[];
+  const results = await Promise.allSettled(ids.map((id) => PROBLEM_RULES[id].count(userId)));
+  const entries = {} as Record<ProblemRuleId, number>;
+  ids.forEach((id, i) => {
+    const r = results[i];
+    if (r.status === "fulfilled") {
+      entries[id] = r.value;
+      return;
+    }
+    logger.error(
+      { rule: id, error: r.reason instanceof Error ? r.reason.message : String(r.reason) },
+      "readiness: an entry rule failed to count; its check shows as failed"
+    );
+    Object.defineProperty(entries, id, {
+      enumerable: true,
+      get: () => {
+        throw new ReadinessFactError(`entries.${id}`, r.reason);
+      },
+    });
+  });
+  return entries;
+}
+
 export async function loadAccountProblemFacts(
   userId: string,
   instance: InstanceProblemFacts,
   now: Date
 ): Promise<AccountProblemFacts> {
-  const settings = await prisma.adminSettings.findFirst({
-    orderBy: { id: "asc" },
-    select: { routingProvider: true, routingCustomUrl: true },
-  });
-  const roadWorks =
-    instance.roadRoutingEffective ||
-    (await roadRoutingWorks(
-      settings?.routingProvider ?? null,
-      settings?.routingCustomUrl ?? null,
-      userId
-    ));
+  const roadWorks = instance.roadRoutingEffective || (await roadRoutingWorks(userId));
   const [user, passkey, rail, legs, bus, point, backlog, entryCounts] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { twoFactorEnabledAt: true } }),
     prisma.webAuthnCredential.findFirst({ where: { userId }, select: { id: true } }),
@@ -168,11 +173,7 @@ export async function loadAccountProblemFacts(
       select: { t: true },
     }),
     visitBacklog(userId, now),
-    Promise.all(
-      (Object.keys(PROBLEM_RULES) as ProblemRuleId[]).map(
-        async (id) => [id, await PROBLEM_RULES[id].count(userId)] as const
-      )
-    ),
+    entryCountsOf(userId),
   ]);
   return {
     hasSecondFactor: user?.twoFactorEnabledAt != null || passkey !== null,
@@ -180,6 +181,6 @@ export async function loadAccountProblemFacts(
     roadStraight: legs === null || bus === null ? null : legs + bus,
     lastPointAt: point?.t ?? null,
     visitBacklogDays: backlog,
-    entries: Object.fromEntries(entryCounts) as Record<ProblemRuleId, number>,
+    entries: entryCounts,
   };
 }

@@ -102,6 +102,13 @@
       "consequence": "Ohne Bahn-Router zeichnet die Karte jede Fahrt als gerade Linie quer übers Land – und die Kilometer stimmen nicht.",
       "action": "Bahn-Routing einrichten"
     },
+    "adminRailReroute": {
+      "title": "Bahnstrecken neu routen",
+      "title_one": "{{count}} Bahnfahrt noch als Luftlinie",
+      "title_other": "{{count}} Bahnfahrten noch als Luftlinie",
+      "consequence": "Ein Bahn-Router ist eingerichtet, aber diese Fahrten sind noch als gerade Linie gespeichert. Ein Durchlauf zeichnet sie entlang der Gleise neu.",
+      "action": "Bahnstrecken neu routen"
+    },
     "adminRoadRouting": {
       "title": "Straßenetappen als Luftlinie",
       "title_one": "{{count}} Etappe als Luftlinie",
@@ -111,7 +118,7 @@
     },
     "adminRoutingKeyUnused": {
       "title": "Straßen-Routing ist nicht aktiv, obwohl ein Schlüssel hinterlegt ist",
-      "consequence": "Ein Schlüssel für OpenRouteService oder GraphHopper ist gespeichert, aber kein Routing-Anbieter ausgewählt. Darum bleibt jede Etappe eine Luftlinie.",
+      "consequence": "Ein Schlüssel für OpenRouteService oder GraphHopper ist gespeichert, aber der Routing-Anbieter steht auf „Aus“ oder der gewählte Anbieter kann nicht antworten. Darum bleibt jede Etappe eine Luftlinie.",
       "action": "Routing-Anbieter auswählen"
     },
     "adminTwoFactor": {
@@ -278,5 +285,14 @@
     "error": "Die Einträge ließen sich nicht laden.",
     "more": "{{shown}} von {{total}} gezeigt",
     "zoneFix": "Zonen erneut bestimmen (Wartung)"
+  },
+  "failed": {
+    "pill": "fehlgeschlagen",
+    "line": "Prüfung fehlgeschlagen: {{reason}}",
+    "reason": {
+      "factsUnavailable": "Die Daten dafür konnten nicht gelesen werden.",
+      "evaluatorError": "Die Prüfung selbst hat einen Fehler gemeldet."
+    },
+    "hint": "Die anderen Prüfungen sind davon nicht betroffen. Details stehen im Server-Log."
   }
 }

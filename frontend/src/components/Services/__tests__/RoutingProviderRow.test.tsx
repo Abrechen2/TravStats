@@ -33,4 +33,19 @@ describe("RoutingProviderRow", () => {
       "settingsRows:services.routing.off"
     );
   });
+
+  it("scrolls to the choice when the address names it (readiness admin.routingKeyUnused)", async () => {
+    const scroll = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scroll;
+    window.history.pushState(
+      {},
+      "",
+      "/settings/dienste?service=openrouteservice&match=routingProvider"
+    );
+    render(<RoutingProviderRow />);
+    await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1));
+    window.history.pushState({}, "", "/");
+    Element.prototype.scrollIntoView = original;
+  });
 });

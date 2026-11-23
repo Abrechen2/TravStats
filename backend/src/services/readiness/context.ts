@@ -6,6 +6,8 @@
  */
 import { statfs } from "fs/promises";
 import { prisma } from "../../db";
+import logger from "../../utils/logger";
+import { unavailable } from "./factError";
 import { BACKUP_BASE_DIR } from "../backup/backupConfig";
 import { loadAllTests } from "../externalServices/tests";
 import type { LastTest } from "../externalServices/types";
@@ -198,17 +200,31 @@ async function loadAccount(userId: string, now: Date): Promise<AccountFacts> {
   };
 }
 
+async function settle<T extends object>(group: string, load: () => Promise<T>): Promise<T> {
+  try {
+    return await load();
+  } catch (err) {
+    logger.error(
+      { group, error: err instanceof Error ? err.message : String(err) },
+      "readiness: a fact group failed to load; the checks that read it show as failed"
+    );
+    return unavailable<T>(group, err);
+  }
+}
+
 export async function loadReadinessContext(
   userId: string,
   isAdmin: boolean,
   now: Date = new Date()
 ): Promise<ReadinessContext> {
   const [instance, account, problemInstance] = await Promise.all([
-    loadInstance(now),
-    loadAccount(userId, now),
-    loadInstanceProblemFacts(),
+    settle("instance", () => loadInstance(now)),
+    settle("account", () => loadAccount(userId, now)),
+    settle("problems.instance", () => loadInstanceProblemFacts()),
   ]);
-  const problemAccount = await loadAccountProblemFacts(userId, problemInstance, now);
+  const problemAccount = await settle("problems.account", () =>
+    loadAccountProblemFacts(userId, problemInstance, now)
+  );
   return {
     now,
     userId,

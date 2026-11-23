@@ -102,6 +102,13 @@
       "consequence": "Without a rail router the map draws every journey as a straight line across the country, and the distances are off.",
       "action": "Set up rail routing"
     },
+    "adminRailReroute": {
+      "title": "Re-route rail journeys",
+      "title_one": "{{count}} rail journey still a straight line",
+      "title_other": "{{count}} rail journeys still straight lines",
+      "consequence": "A rail router is set up, but these journeys are still stored as straight lines. One pass redraws them along the tracks.",
+      "action": "Re-route rail journeys"
+    },
     "adminRoadRouting": {
       "title": "Road legs drawn as straight lines",
       "title_one": "{{count}} leg as a straight line",
@@ -111,7 +118,7 @@
     },
     "adminRoutingKeyUnused": {
       "title": "Road routing is off although a key is stored",
-      "consequence": "A key for OpenRouteService or GraphHopper is stored, but no routing provider is selected, so every leg stays a straight line.",
+      "consequence": "A key for OpenRouteService or GraphHopper is stored, but the routing provider is set to \"Off\" or the chosen provider cannot answer, so every leg stays a straight line.",
       "action": "Choose a routing provider"
     },
     "adminTwoFactor": {
@@ -278,5 +285,14 @@
     "error": "The entries could not be loaded.",
     "more": "{{shown}} of {{total}} shown",
     "zoneFix": "Re-resolve zones (maintenance)"
+  },
+  "failed": {
+    "pill": "failed",
+    "line": "Check failed: {{reason}}",
+    "reason": {
+      "factsUnavailable": "The data it needs could not be read.",
+      "evaluatorError": "The check itself reported an error."
+    },
+    "hint": "The other checks are not affected. The server log has the details."
   }
 }

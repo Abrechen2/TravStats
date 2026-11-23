@@ -2,7 +2,8 @@ import { prisma } from "../../../db";
 import { hashPassword } from "../../../utils/password";
 import { generateApiToken } from "../../../utils/apiTokens";
 import { loadReadinessContext, resetDiskCache } from "../context";
-import { evaluateChecks } from "../evaluate";
+import { buildReadinessView, evaluateChecks } from "../evaluate";
+import { CHECKS } from "../registry";
 import { PROBLEM_RULES, resetZoneMismatchCache } from "../problemEntries";
 import type { CheckId } from "../../../shared/readinessCatalogue";
 
@@ -286,14 +287,58 @@ describe("visible-problem checks", () => {
       expect(await statusOf("user.railStraight")).toBeUndefined();
     });
 
-    it("names a stored routing key nobody selected as a provider", async () => {
+    it("asks to re-route the rail chords once a router is set, and never alongside the router item", async () => {
+      await rail();
+      await prisma.adminSettings.updateMany({ data: { railRoutingUrl: "http://router.lan:8989" } });
+      const reroute = await statusOf("admin.railReroute", "admin");
+      expect(reroute?.status).toBe("needsAction");
+      expect(reroute?.count).toBeGreaterThanOrEqual(1);
+      expect(await statusOf("admin.railRouter", "admin")).toBeUndefined();
+      await prisma.adminSettings.updateMany({ data: { railRoutingUrl: null } });
+      expect(await statusOf("admin.railReroute", "admin")).toBeUndefined();
+    });
+
+    it("names a stored routing key only where routing is off or the chosen provider cannot answer", async () => {
       expect(await statusOf("admin.routingKeyUnused", "admin")).toBeUndefined();
       await prisma.userSettings.create({
         data: { userId: adminId, data: {}, openrouteserviceApiKey: "encrypted-placeholder" },
       });
-      expect((await statusOf("admin.routingKeyUnused", "admin"))?.status).toBe("needsAction");
-      await prisma.adminSettings.updateMany({ data: { routingProvider: "openrouteservice" } });
+      // Unset is "Automatisch" (fix/routing-auto): the key routes for its owner, nothing to say.
       expect(await statusOf("admin.routingKeyUnused", "admin")).toBeUndefined();
+      await prisma.adminSettings.updateMany({ data: { routingProvider: "off" } });
+      expect((await statusOf("admin.routingKeyUnused", "admin"))?.status).toBe("needsAction");
+      await prisma.adminSettings.updateMany({ data: { routingProvider: "graphhopper" } });
+      expect((await statusOf("admin.routingKeyUnused", "admin"))?.status).toBe("needsAction");
+    });
+  });
+
+  describe("a failing check stays its own (rc.45)", () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it("shows a check whose facts fail as failed, and every other check still answers", async () => {
+      await flight({ departureTime: null });
+      jest
+        .spyOn(PROBLEM_RULES["user.flightsNoTimes"], "count")
+        .mockRejectedValue(new Error("relation does not exist"));
+      const ctx = await loadReadinessContext(userId, false, NOW);
+      const evaluated = evaluateChecks(ctx);
+      expect(evaluated.get("user.flightsNoTimes")).toMatchObject({
+        status: "unknown",
+        failure: { reason: "factsUnavailable" },
+      });
+      expect(evaluated.get("user.domains")?.failure).toBeNull();
+    });
+
+    it("answers GET /readiness with the failed item instead of a 500 when an evaluator throws", async () => {
+      const check = CHECKS.find((c) => c.id === "user.domains")!;
+      jest.spyOn(check, "evaluate").mockImplementation(() => {
+        throw new Error("boom");
+      });
+      const view = await buildReadinessView(userId, false, NOW);
+      expect(view.items.find((i) => i.id === "user.domains")).toMatchObject({
+        status: "unknown",
+        failure: { reason: "evaluatorError" },
+      });
     });
   });
 
