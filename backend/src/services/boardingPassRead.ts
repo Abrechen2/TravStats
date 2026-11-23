@@ -33,7 +33,11 @@ import { readPrintedTimes } from "./boardingPass/printedTimes";
 import { getTesseractParser } from "./parsers/vision/tesseractParser";
 import { cropPassBands } from "./boardingPass/bands";
 import { llmStage, lookupStage } from "./boardingPass/fill";
-import { BoardingPassReadError, type BoardingPassStage } from "./boardingPass/stages";
+import {
+  BoardingPassReadError,
+  MAX_LEGS_PER_IMAGE,
+  type BoardingPassStage,
+} from "./boardingPass/stages";
 
 export { BoardingPassReadError, type BoardingPassStage } from "./boardingPass/stages";
 
@@ -127,6 +131,17 @@ async function barcodeStage(
     },
     "[BoardingPassRead] barcode stage"
   );
+  if (decoded.length > MAX_LEGS_PER_IMAGE) {
+    return {
+      decoded: decoded.slice(0, MAX_LEGS_PER_IMAGE),
+      stage: {
+        stage: "barcode",
+        status: "partial",
+        code: "BARCODE_TOO_MANY_LEGS",
+        count: MAX_LEGS_PER_IMAGE,
+      },
+    };
+  }
   if (decoded.length > 0) {
     return {
       decoded,

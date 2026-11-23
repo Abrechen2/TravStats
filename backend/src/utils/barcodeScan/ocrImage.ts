@@ -94,6 +94,15 @@ export function boundedOcrImage(bytes: Buffer): Buffer {
       deflateLevel: 1,
     });
   }
+  return boundedForeignImage(bytes);
+}
+
+/**
+ * A GIF or WebP whose every frame/canvas dimension is within the pixel cap, as
+ * is — the formats decoded by the consumer's own library (Tesseract, zxing).
+ * Anything else is refused: no decoder here is ever handed unchecked bytes.
+ */
+export function boundedForeignImage(bytes: Buffer): Buffer {
   if (bytes.subarray(0, 4).toString("latin1") === "GIF8") {
     if (gifWithinCap(bytes)) return bytes;
     throw new ImageRefusedError("GIF over the limits or malformed");
@@ -102,5 +111,5 @@ export function boundedOcrImage(bytes: Buffer): Buffer {
     if (webpWithinCap(bytes)) return bytes;
     throw new ImageRefusedError("WebP over the limits or malformed");
   }
-  throw new ImageRefusedError("format not accepted for OCR");
+  throw new ImageRefusedError("format not accepted");
 }

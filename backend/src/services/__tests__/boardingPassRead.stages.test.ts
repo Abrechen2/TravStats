@@ -3,6 +3,8 @@ import { scanBarcodesFromImageBase64 } from "../../utils/barcodeImage";
 import { getParserConfig, parseBoardingPass } from "../parsers/factory";
 import { getTextParserInstance } from "../parsers/providers";
 import { lookupFlightWithHistorical } from "../flightLookup";
+import { consumeFlightLookup, resetFlightLookupBudget } from "../../middleware/flightLookupBudget";
+import { RATE_LIMITS } from "../../config/constants";
 
 /**
  * The stage contract of reading a boarding pass (owner report 2026-11-22: the
@@ -73,6 +75,7 @@ const USER = "user-1";
 
 beforeEach(() => {
   jest.clearAllMocks();
+  resetFlightLookupBudget();
   mockedScan.mockResolvedValue(scanOf());
   mockedOcr.mockResolvedValue(ocrOf(""));
   mockedConfig.mockResolvedValue({ textFallbacks: ["regex", "ollama"] });
@@ -289,5 +292,32 @@ describe("readBoardingPass — per-stage error codes", () => {
     const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
     expect(reading.legs[1].departureTime).toBe("2026-01-08T17:50");
     expect(reading.legs[0].departureTime).toBe("2026-01-08T00:00");
+  });
+});
+
+describe("readBoardingPass — bounded work per image (security review)", () => {
+  const flights = ["0101", "0102", "0103", "0104", "0105", "0106"];
+  const many = flights.map((f, i) => pass("MCOORD", f, `0${10 + i}A`));
+
+  it("reads at most four legs from one image and says the rest were left out", async () => {
+    mockedScan.mockResolvedValue(scanOf(...many));
+    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER, enrich: true });
+    expect(reading.decodedAll).toHaveLength(4);
+    expect(reading.stages[0]).toMatchObject({
+      stage: "barcode",
+      status: "partial",
+      code: "BARCODE_TOO_MANY_LEGS",
+      count: 4,
+    });
+    // One lookup per kept leg at most, never one per barcode on the image.
+    expect(mockedLookup.mock.calls.length).toBeLessThanOrEqual(4);
+  });
+
+  it("spends each leg's lookup from the user's flight-lookup bucket and stops when it is empty", async () => {
+    for (let i = 0; i < RATE_LIMITS.FLIGHT_LOOKUP_MAX; i++) await consumeFlightLookup(USER);
+    mockedScan.mockResolvedValue(scanOf(UA633));
+    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER, enrich: true });
+    expect(mockedLookup).not.toHaveBeenCalled();
+    expect(reading.stages.find((s) => s.stage === "lookup")?.code).toBe("LOOKUP_RATE_LIMITED");
   });
 });

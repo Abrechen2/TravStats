@@ -11,7 +11,7 @@ import {
   lookupFlightWithHistorical,
   parseFlightNumber,
 } from "../services/flightLookup";
-import { flightLookupLimiter } from "../middleware/rateLimit";
+import { flightLookupLimiter } from "../middleware/flightLookupBudget";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { rejectDemoQuota } from "../middleware/demoGuard";
 import { LookupOutcomeLog } from "../services/flightLookup/providerOutcome";

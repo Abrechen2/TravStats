@@ -24,15 +24,20 @@ import {
   otsuLevel,
   threshold,
   upscale,
-  ImageRefusedError,
   type Box,
   type Gray,
 } from "./pixels";
 import { findBarcodeRegions } from "./regions";
+import { boundedForeignImage } from "./ocrImage";
 
 const FORMATS = ["PDF417", "Aztec", "QRCode"];
 /** Wall-clock budget for the region search; the full-frame pass always runs. */
 const SEARCH_BUDGET_MS = 20_000;
+/**
+ * A region larger than this is downscaled before any variant is built: every
+ * threshold pass allocates a copy, and the 2× upscale quadruples it.
+ */
+export const REGION_MAX_PIXELS = 4_000_000;
 /** Crops whose long side is below this get a 2× variant. */
 const UPSCALE_BELOW_PX = 1400;
 /** Above this long side the analysis grid works on a downscaled copy. */
@@ -95,25 +100,42 @@ async function decodeGray(g: Gray): Promise<ReadResult[]> {
   });
 }
 
-function variantsOf(region: Gray): Array<{ gray: Gray; scale: number }> {
-  const long = Math.max(region.width, region.height);
-  const scales = long < UPSCALE_BELOW_PX ? [1, 2] : [1];
-  const out: Array<{ gray: Gray; scale: number }> = [];
-  for (const scale of scales) {
-    const g = upscale(region, scale);
+/**
+ * The variants of one region, built one at a time: the caller checks the time
+ * budget before asking for the next, so no threshold pass runs past it.
+ * `scale` maps a variant's pixels back to the region's (variant px / scale).
+ */
+export function* variantsOf(region: Gray): Generator<{ gray: Gray; scale: number }> {
+  // Large regions first come down to the cap; only then threshold or upscale.
+  const down = Math.max(
+    1,
+    Math.ceil(Math.sqrt((region.width * region.height) / REGION_MAX_PIXELS))
+  );
+  const base = downscale(region, down);
+  const long = Math.max(base.width, base.height);
+  const ups = long < UPSCALE_BELOW_PX ? [1, 2] : [1];
+  for (const up of ups) {
+    const g = upscale(base, up);
+    const scale = up / down;
     const radius = Math.max(8, Math.round(Math.min(g.width, g.height) / 10));
-    out.push(
-      { gray: g, scale },
-      { gray: threshold(g, otsuLevel(g)), scale },
-      { gray: threshold(g, FAINT_PRINT_LEVEL), scale },
-      { gray: localMeanThreshold(g, radius, LOCAL_INK_OFFSET), scale },
-      { gray: localMeanThreshold(g, radius, -LOCAL_INK_OFFSET), scale }
-    );
+    yield { gray: g, scale };
+    yield { gray: threshold(g, otsuLevel(g)), scale };
+    yield { gray: threshold(g, FAINT_PRINT_LEVEL), scale };
+    yield { gray: localMeanThreshold(g, radius, LOCAL_INK_OFFSET), scale };
+    yield { gray: localMeanThreshold(g, radius, -LOCAL_INK_OFFSET), scale };
   }
-  return out;
 }
 
-export async function scanBoardingPassBarcodes(imageBytes: Buffer): Promise<BarcodeScan> {
+/** Test seam: the region search's wall-clock budget. */
+export interface ScanOptions {
+  readonly budgetMs?: number;
+}
+
+export async function scanBoardingPassBarcodes(
+  imageBytes: Buffer,
+  options: ScanOptions = {}
+): Promise<BarcodeScan> {
+  const budgetMs = options.budgetMs ?? SEARCH_BUDGET_MS;
   const found = new Map<string, FoundBarcode>();
   let attempts = 0;
   const keep = (r: ReadResult, offset: Box, scale: number): void => {
@@ -126,16 +148,17 @@ export async function scanBoardingPassBarcodes(imageBytes: Buffer): Promise<Barc
   // PNG over them is refused outright — zxing's own decoder would otherwise
   // inflate the same bytes unguarded. For a decoded image zxing reads OUR
   // pixmap, so its internal image decoder never touches JPEG/PNG bytes.
+  // zxing never sees unchecked bytes: a JPEG/PNG it reads as OUR pixmap, a GIF/WebP only once
+  // every dimension in its header is within the cap, anything else not at all. A JPEG or PNG
+  // that fails the bounded decode is refused too, rather than handed to zxing's own decoder.
   let gray: Gray | null;
   try {
     gray = decodeToGray(imageBytes);
+    if (gray === null) boundedForeignImage(imageBytes);
   } catch (err) {
-    if (err instanceof ImageRefusedError) {
-      logger.warn({ reason: err.message }, "[BarcodeScan] image refused before decoding");
-      return { ...finish(found, false, 0, attempts, false, err.message), refused: true };
-    }
-    logger.warn({ err }, "[BarcodeScan] image could not be decoded for cropping");
-    gray = null;
+    const reason = describe(err);
+    logger.warn({ reason }, "[BarcodeScan] image refused before decoding");
+    return { ...finish(found, false, 0, attempts, false, reason), refused: true };
   }
 
   try {
@@ -164,15 +187,25 @@ export async function scanBoardingPassBarcodes(imageBytes: Buffer): Promise<Barc
   const started = Date.now();
   let regionsTried = 0;
   let budgetExhausted = false;
+  const overBudget = (): boolean => Date.now() - started > budgetMs;
   for (const region of regions) {
     if (alreadyCovered(region, found)) continue;
+    // Checked before the crop and before each variant is built, not only before decoding it.
+    if (overBudget()) {
+      budgetExhausted = true;
+      break;
+    }
     regionsTried++;
-    const cropped = crop(gray, region);
-    for (const { gray: variant, scale } of variantsOf(cropped)) {
-      if (Date.now() - started > SEARCH_BUDGET_MS) {
+    const variants = variantsOf(crop(gray, region));
+    for (;;) {
+      // Before the next variant is BUILT: the generator does its threshold pass on `next()`.
+      if (overBudget()) {
         budgetExhausted = true;
         break;
       }
+      const next = variants.next();
+      if (next.done) break;
+      const { gray: variant, scale } = next.value;
       attempts++;
       let results: ReadResult[];
       try {

@@ -24,6 +24,7 @@ export const BOARDING_PASS_STAGE_CODES = [
   "BARCODE_NOT_BOARDING_PASS",
   "BARCODE_DECODE_ERROR",
   "BARCODE_IMAGE_REFUSED",
+  "BARCODE_TOO_MANY_LEGS",
   // ocr
   "OCR_OK",
   "OCR_FAILED",
@@ -40,6 +41,7 @@ export const BOARDING_PASS_STAGE_CODES = [
   "LOOKUP_FAILED",
   "LOOKUP_NOT_NEEDED",
   "LOOKUP_NOT_REQUESTED",
+  "LOOKUP_RATE_LIMITED",
   // llm
   "LLM_OK",
   "LLM_NOTHING",
@@ -59,6 +61,13 @@ export interface BoardingPassStage {
   /** Fields still missing after this stage (parser), or filled by it (lookup, llm). */
   readonly fields?: readonly string[];
 }
+
+/**
+ * Legs one image may yield. Every leg can cost a flight lookup, so an image tiled with barcodes
+ * must not fan out into dozens of provider requests; past this the first legs are read and the
+ * stage says the rest were left out.
+ */
+export const MAX_LEGS_PER_IMAGE = 4;
 
 /** Fields without which a scanned leg cannot be saved as it stands. */
 export const ESSENTIAL_LEG_FIELDS = [

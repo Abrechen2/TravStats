@@ -9,8 +9,9 @@ import type { ParsedBooking } from "../bookingParser";
 import type { ParserConfig } from "../parsers/types";
 import { getTextParserInstance } from "../parsers/providers";
 import logger from "../../utils/logger";
+import { consumeFlightLookup } from "../../middleware/flightLookupBudget";
 import { needsClock, openFields } from "./legs";
-import type { BoardingPassStage } from "./stages";
+import { MAX_LEGS_PER_IMAGE, type BoardingPassStage } from "./stages";
 
 type Legs = readonly ParsedBooking[];
 
@@ -52,9 +53,10 @@ export async function lookupStage(
   legs: Legs,
   userId: string
 ): Promise<{ legs: ParsedBooking[]; stage: BoardingPassStage }> {
-  const wanting = legs.filter(
-    (l) => l.flightNumber && l.departureTime && (needsClock(l) || !l.arrivalTime)
-  );
+  // Never more lookups than legs one image may yield, whatever reached this stage.
+  const wanting = legs
+    .filter((l) => l.flightNumber && l.departureTime && (needsClock(l) || !l.arrivalTime))
+    .slice(0, MAX_LEGS_PER_IMAGE);
   if (wanting.length === 0) {
     return {
       legs: [...legs],
@@ -63,10 +65,17 @@ export async function lookupStage(
   }
   const { lookupFlightWithHistorical } = await import("../flightLookup");
   let failed = false;
+  let limited = false;
   const filled: string[] = [];
   const out: ParsedBooking[] = [];
   for (const leg of legs) {
     if (!wanting.includes(leg)) {
+      out.push(leg);
+      continue;
+    }
+    // Each lookup is spent from the account's flight-lookup bucket, like one on the lookup route.
+    if (!(await consumeFlightLookup(userId))) {
+      limited = true;
       out.push(leg);
       continue;
     }
@@ -107,9 +116,11 @@ export async function lookupStage(
   }
   return {
     legs: out,
-    stage: failed
-      ? { stage: "lookup", status: "failed", code: "LOOKUP_FAILED" }
-      : { stage: "lookup", status: "failed", code: "LOOKUP_NOT_FOUND" },
+    stage: limited
+      ? { stage: "lookup", status: "failed", code: "LOOKUP_RATE_LIMITED" }
+      : failed
+        ? { stage: "lookup", status: "failed", code: "LOOKUP_FAILED" }
+        : { stage: "lookup", status: "failed", code: "LOOKUP_NOT_FOUND" },
   };
 }
 
