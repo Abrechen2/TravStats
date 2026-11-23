@@ -215,9 +215,30 @@ export async function updateSource(
   return prisma.calendarSource.update({ where: { id: row.id }, data });
 }
 
+/**
+ * Removing a source removes what it left on open findings (council, 2026-11-23):
+ * a finding that exists only because of it goes, every other loses its
+ * `evidence.calendar` and the purpose the calendar suggested. Answered findings
+ * already hold no more than the event's span. Its rules go with it (cascade).
+ */
 export async function deleteSource(userId: string, id: string): Promise<void> {
   const row = await ownSource(userId, id);
-  await prisma.calendarSource.delete({ where: { id: row.id } });
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`
+      DELETE FROM dawarich_stays
+       WHERE user_id = ${userId} AND status = 'pending'
+         AND evidence->>'createdFrom' = 'calendar'
+         AND evidence->'calendar'->>'sourceId' = ${row.id}`;
+    await tx.$executeRaw`
+      UPDATE dawarich_stays
+         SET evidence = (evidence - 'calendar') -
+             (CASE WHEN evidence->>'suggestedPurposeFrom' = 'calendar'
+                   THEN ARRAY['suggestedPurpose', 'suggestedPurposeFrom']
+                   ELSE ARRAY[]::text[] END)
+       WHERE user_id = ${userId} AND status = 'pending'
+         AND evidence->'calendar'->>'sourceId' = ${row.id}`;
+    await tx.calendarSource.delete({ where: { id: row.id } });
+  });
 }
 
 /** One ICS feed, whole (there is no other way), filtered to the window in memory. */

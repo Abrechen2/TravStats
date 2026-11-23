@@ -25,7 +25,7 @@
  * it has its days acknowledged unread — enabling suggestions later does not
  * ask about the past; "scan now" does (`rescanVisitDays`).
  */
-import { prisma, type DbTransaction } from "../../../db";
+import { prisma } from "../../../db";
 import logger from "../../../utils/logger";
 import { zoneOf } from "../../../shared/time/zoneOf";
 import { localDay } from "../../../shared/time/instant";
@@ -43,7 +43,6 @@ import { visitEvidenceKey } from "../../locationEvidence/key";
 import { STAY_ALGORITHM } from "../../locationEvidence/types";
 import { getLocationProvider } from "../../locationProvider/provider";
 import { readSuggestionSwitches } from "../../settings/suggestionSwitches";
-import { travTrackInstanceOnIn } from "../availability";
 import { inPrivacyZone } from "../classify";
 import { profileZoneOf } from "../../../shared/time/profileZone";
 import { deriveDay } from "../dayDerivation";
@@ -61,6 +60,15 @@ import { stopTimes, visitEvidence, visitStopsOf } from "./stops";
 import { matchBrandRules, type BrandRuleInput } from "./brandMatch";
 import { BRAND_RULE, loadBrandRules } from "../../places/brandRules";
 import { acceptStay } from "../../dawarich/stays/review";
+import {
+  loadCalendarContext,
+  matchStop,
+  withCalendar,
+  type CalendarContext,
+  type CalendarMatchDeps,
+} from "./calendarMatch";
+import { publish } from "./publish";
+import { createFromCalendar, enrichKnown, type KnownRow } from "./calendarFindings";
 
 export const VISIT_DAYS_PER_RUN = 5;
 export const VISIT_LOOKUPS_PER_RUN = 20;
@@ -89,8 +97,10 @@ export type VisitProjectionResult = {
   noVenue: number;
   /** Lookups the run's budget did not reach, or findings past its cap: they wait for the next run. */
   deferred: number;
-  /** Stops whose lookup failed, by reason. The day stays open. */
-  failed: Record<LookupFailure, number>;
+  /** Stops whose lookup failed, by reason (`calendar`: a source or an event's geocoding). The day stays open. */
+  failed: Record<LookupFailure | "calendar", number>;
+  /** Findings that gained a calendar event as evidence (new or already there). */
+  calendarMatched: number;
   /** Matches of a smart list taken without asking (`autoAccept`), and those that could not be. */
   autoAccepted: number;
   autoFailed: number;
@@ -110,6 +120,8 @@ export type VisitProjectionDeps = {
   resolve?: ResolveDeps;
   /** Test seam: replaces the per-stop resolution. */
   resolveStop?: (stop: Stop, allowLookup: boolean) => Promise<VisitResolution>;
+  /** The calendar's reader and geocoder (test seams). */
+  calendar?: CalendarMatchDeps;
 };
 
 const empty = (status: VisitProjectionResult["status"]): VisitProjectionResult => ({
@@ -125,7 +137,8 @@ const empty = (status: VisitProjectionResult["status"]): VisitProjectionResult =
   lodging: 0,
   noVenue: 0,
   deferred: 0,
-  failed: { places: 0, venues: 0 },
+  failed: { places: 0, venues: 0, calendar: 0 },
+  calendarMatched: 0,
   autoAccepted: 0,
   autoFailed: 0,
   stopMinutes: [],
@@ -179,6 +192,8 @@ type RunContext = {
   lookupsLeft: number;
   findingsLeft: number;
   deps: VisitProjectionDeps;
+  /** The run's calendar events, in memory; null when the account has no calendar. */
+  calendar: CalendarContext | null;
 };
 
 const loadTrips = (userId: string) =>
@@ -186,35 +201,6 @@ const loadTrips = (userId: string) =>
     where: { userId, status: { not: "cancelled" } },
     select: TRIP_SPAN_SELECT,
   });
-
-type Published = "created" | "duplicate" | "stale" | "revoked";
-
-/** One transaction under the TravTrack lock: still permitted, history unchanged, then the write. */
-async function publish(
-  userId: string,
-  generation: bigint,
-  write: (tx: DbTransaction) => Promise<Published>
-): Promise<Published> {
-  return prisma.$transaction(async (tx) => {
-    await takeTravTrackLock(tx, userId);
-    const owned = await tx.dawarichStayScan.findFirst({
-      where: { userId, enabled: true, ...stayScanAllowed(true, "travtrack") },
-      select: { userId: true },
-    });
-    if (!owned || !(await travTrackInstanceOnIn(tx))) return "revoked";
-    if ((await historyGeneration(tx, userId)) !== generation) return "stale";
-    return write(tx);
-  });
-}
-
-type KnownRow = {
-  id: string;
-  status: string;
-  provider: string;
-  evidence: unknown;
-  sourceStartAt: Date;
-  sourceEndAt: Date;
-};
 
 /** The pending visit finding a longer reading of the same stop continues, or null. */
 function growable(rows: readonly KnownRow[], stop: Stop): KnownRow | null {
@@ -356,7 +342,7 @@ async function handleStop(
     if (!grow) {
       result.known++;
       outcome("known");
-      return { open: false, go: true };
+      return enrichKnown(ctx, near, stop, generation);
     }
     const done = await publish(userId, generation, async (tx) => {
       const n = await tx.dawarichStay.updateMany({
@@ -439,15 +425,33 @@ async function handleStop(
     outcome(`failed:${resolution.reason}`);
     return { open: true, go: true };
   }
+  const span = { fromMs: stop.fromMs, untilMs: stop.untilMs, ...stop.anchor };
   if (resolution.kind === "none") {
-    if (resolution.why === "lodging") result.lodging++;
-    else {
-      ctx.lookupsLeft--;
-      result.noVenue++;
+    if (resolution.why !== "lodging") ctx.lookupsLeft--;
+    // No venue, address only: a calendar event naming a place beside the stop still makes it a
+    // suggestion (the business-park case). An own lodging beside it stays nothing.
+    const cal =
+      resolution.why === "noVenue" && ctx.calendar
+        ? await matchStop(ctx.calendar, span, null)
+        : { match: null, failed: false };
+    if (cal.failed) result.failed.calendar++;
+    if (cal.match?.place) {
+      return createFromCalendar(ctx, stop, cal.match, cal.failed, {
+        key,
+        generation,
+        startAt,
+        endAt,
+        startDay,
+        zone,
+        readCoverage,
+      });
     }
-    rememberNoVenue(memoryKey, Date.now());
+    if (resolution.why === "lodging") result.lodging++;
+    else result.noVenue++;
+    // A calendar that did not answer leaves the stop to be asked again, not remembered as empty.
+    if (!cal.failed) rememberNoVenue(memoryKey, Date.now());
     outcome(resolution.why);
-    return { open: false, go: true };
+    return { open: cal.failed, go: true };
   }
   if (resolution.lookedUp) ctx.lookupsLeft--;
   const { pick, lookup } = resolution;
@@ -467,7 +471,18 @@ async function handleStop(
     dwellMinutes: minutes,
     distanceM: pick.distanceM,
   });
-  const evidence = { ...visitEvidence(stop, pick, lookup, readCoverage, matches), zone };
+  const cal = ctx.calendar
+    ? await matchStop(ctx.calendar, span, {
+        id: pick.placeId,
+        name: pick.name,
+        lat: pick.lat,
+        lon: pick.lon,
+      })
+    : { match: null, failed: false };
+  if (cal.failed) result.failed.calendar++;
+  const base = { ...visitEvidence(stop, pick, lookup, readCoverage, matches), zone };
+  const evidence = (cal.match && withCalendar(base, cal.match)) || base;
+  if (cal.match) result.calendarMatched++;
   const made = await publish(userId, generation, async (tx) => {
     const r = await tx.dawarichStay.createMany({
       skipDuplicates: true,
@@ -509,7 +524,8 @@ async function handleStop(
       await autoAccept(ctx, key, pick, tripMatch.trip?.id ?? null, startAt, endAt);
   }
   outcome(made === "created" ? `created:${pick.source}` : "duplicate");
-  return { open: false, go: true };
+  // A calendar that did not answer: the finding stands, the day is asked again (`enrichKnown`).
+  return { open: cal.failed, go: true };
 }
 
 /** One day. True when the day was fully answered and may be acknowledged. */
@@ -594,7 +610,18 @@ export async function projectVisitSuggestions(
       lookupsLeft: deps.maxLookups ?? VISIT_LOOKUPS_PER_RUN,
       findingsLeft: deps.maxFindings ?? VISIT_FINDINGS_PER_RUN,
       deps,
+      calendar: null,
     };
+    // The run's days, read once with half a day either side (a local day spills over the UTC one).
+    ctx.calendar = await loadCalendarContext(
+      userId,
+      {
+        fromMs: utcMidnight(days[0].day).getTime() - DAY_MS / 2,
+        untilMs: utcMidnight(days[days.length - 1].day).getTime() + DAY_MS * 1.5,
+      },
+      ctx.profileZone,
+      deps.calendar
+    );
     const horizon = now.getTime() - VISIT_HORIZON_DAYS * DAY_MS;
     for (const dirty of days) {
       // Asked before every day: a switch stops the run, not the next one.
@@ -631,7 +658,7 @@ export async function scheduledVisitSuggestions(
   const now = (deps.now ?? new Date()).getTime();
   if (visitRetryAfter(userId) > now) return empty("skipped");
   const result = await projectVisitSuggestions(userId, deps);
-  const failures = result.failed.places + result.failed.venues;
+  const failures = result.failed.places + result.failed.venues + result.failed.calendar;
   if (failures > 0 || result.status === "failed") {
     const previous = retry.get(userId)?.failures ?? 0;
     retry.set(userId, {
@@ -643,6 +670,7 @@ export async function scheduledVisitSuggestions(
       userId,
       places: result.failed.places,
       venues: result.failed.venues,
+      calendar: result.failed.calendar,
     });
   } else retry.delete(userId);
   return result;

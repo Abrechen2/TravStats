@@ -9,6 +9,11 @@ export const stayReviewSchema = z
     lon: z.number().min(-180).max(180),
     startAt: timeFieldSchema({ impliedPlace: true }),
     endAt: timeFieldSchema({ impliedPlace: true }),
+    /**
+     * Private or business for the visit (spec 2026-11-23-plugins-and-calendar.md). Absent:
+     * the finding's `evidence.suggestedPurpose`, if any; null: deliberately unknown.
+     */
+    purpose: z.enum(["private", "business"]).nullable().optional(),
   })
   .strict();
 export type StayReview = z.infer<typeof stayReviewSchema>;

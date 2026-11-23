@@ -35,6 +35,12 @@ import { CalendarError, toCalendarError } from "../../services/calendar/errors";
 import { egressBlock, assertEgressAllowed } from "../../services/externalServices/egress";
 import { profileZoneOf } from "../../shared/time/profileZone";
 import logger from "../../utils/logger";
+import {
+  calendarRulesPutSchema,
+  listRules,
+  replaceRules,
+  ruleView,
+} from "../../services/calendar/rules";
 
 const router = Router();
 const TEST_WINDOW_DAYS = 30;
@@ -59,6 +65,24 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const rows = await listSources(req.userId!);
     const block = await egressBlock(CALENDAR_SERVICE_ID);
     res.json({ sources: rows.map(viewOf), blocked: block });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/rules", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    res.json({ rules: (await listRules(req.userId!)).map(ruleView) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/** The whole ordered list at once: the order is what decides which rule wins. */
+router.put("/rules", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { rules } = calendarRulesPutSchema.parse(req.body);
+    res.json({ rules: (await replaceRules(req.userId!, rules)).map(ruleView) });
   } catch (error) {
     next(error);
   }

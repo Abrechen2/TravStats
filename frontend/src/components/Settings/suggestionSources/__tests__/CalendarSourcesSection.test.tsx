@@ -16,6 +16,11 @@ const api = vi.hoisted(() => ({
   remove: vi.fn(),
   test: vi.fn(),
   discover: vi.fn(),
+  rules: vi.fn(async () => []),
+  saveRules: vi.fn(),
+}));
+vi.mock("../../../../lib/api/dawarichStays", () => ({
+  dawarichStaysApi: { choices: vi.fn(async () => ({ places: [], trips: [] })) },
 }));
 vi.mock("../../../../lib/api/calendarSources", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../../lib/api/calendarSources")>()),
@@ -49,6 +54,7 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   Object.values(api).forEach((f) => f.mockReset());
+  api.rules.mockResolvedValue([]);
 });
 
 describe("CalendarSourcesSection", () => {

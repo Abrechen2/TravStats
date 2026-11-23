@@ -14,6 +14,7 @@ import {
   calendarSourceViewSchema,
   calendarTestResultSchema,
 } from "../../../schemas/calendarSources";
+import { calendarRuleViewSchema, calendarRulesPutSchema } from "../../calendar/rules";
 
 const tags = ["Settings"];
 const json = <T extends z.ZodTypeAny>(schema: T) => ({ "application/json": { schema } });
@@ -116,5 +117,38 @@ registry.registerPath({
     },
     400: failed,
     429: { description: "Too many tests", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/settings/calendar-sources/rules",
+  summary: "List the calendar rules",
+  description: "Ordered; the first rule that matches an event decides its purpose and name.",
+  tags,
+  responses: {
+    200: {
+      description: "Rules",
+      content: json(z.object({ rules: z.array(calendarRuleViewSchema) })),
+    },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/settings/calendar-sources/rules",
+  summary: "Replace the calendar rules",
+  description:
+    "The whole ordered list (at most 50, CALENDAR_RULE_LIMIT). A calendar rule names a source; " +
+    "a keyword rule a token matched at word boundaries, optionally an own place.",
+  tags,
+  request: { body: { content: json(calendarRulesPutSchema) } },
+  responses: {
+    200: {
+      description: "Saved",
+      content: json(z.object({ rules: z.array(calendarRuleViewSchema) })),
+    },
+    400: { description: "Invalid", content: errorContent },
+    404: { description: "Source or place not found", content: errorContent },
   },
 });

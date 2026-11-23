@@ -111,7 +111,13 @@ export interface DawarichStay {
       durationMs: number;
       observedMs: number;
       inferredMs: number;
-      venue: { name: string; source: "known" | "osm"; osmRef: string | null; category: string };
+      /** null: a stop with no venue that a calendar event placed (`createdFrom: "calendar"`). */
+      venue: {
+        name: string;
+        source: "known" | "osm";
+        osmRef: string | null;
+        category: string;
+      } | null;
       alternatives: { name: string; foldedInto: string | null }[];
       /** Smart lists (chain rules) whose brand this stop's venue matched. `name`: only the brand string agreed. */
       brandMatches?: {
@@ -123,7 +129,29 @@ export interface DawarichStay {
         auto: boolean;
       }[];
     };
+    /** The calendar event that belongs to the stop (spec 2026-11-23, P2); after an answer only its span. */
+    calendar?: StayCalendarEvidence;
+    /** What the evidence suggests for the visit's purpose; the accept dialog starts with it. */
+    suggestedPurpose?: "private" | "business";
+    suggestedPurposeFrom?: string;
+    createdFrom?: "calendar";
   };
+}
+export interface StayCalendarEvidence {
+  sourceId: string;
+  uidHash: string;
+  start: string;
+  end: string;
+  sourceLabel?: string;
+  title?: string;
+  allDay?: boolean;
+  location?: string | null;
+  match?: "geocoded" | "placeName" | "rulePlace" | "context";
+  timeMatch?: "overlap" | "startNear";
+  overlapMinutes?: number;
+  geocoded?: { lat: number; lon: number; distanceM: number };
+  rule?: { id: string; kind: "calendar" | "keyword"; purpose: "private" | "business" | null };
+  proposedName?: string;
 }
 export interface StayChoices {
   places: { id: string; name: string; lat: number; lon: number }[];
@@ -137,6 +165,7 @@ export interface StayReviewInput {
   lon: number;
   startAt: { local: string };
   endAt: { local: string };
+  purpose?: "private" | "business" | null;
 }
 /** Where a stay's identity source stands; `degraded` = the lookup failed, not "nothing here". */
 export type StaySourceState = "ok" | "empty" | "degraded";

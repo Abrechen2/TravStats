@@ -143,6 +143,7 @@ model User {
   externalServiceTests            ExternalServiceTest[]
   webdavSync                      UserWebdavSync?
   calendarSources                 CalendarSource[]
+  calendarRules                   CalendarRule[]
   analyticsEvents                 AnalyticsEvent[]
   createdInvitations              Invitation[]                 @relation("CreatedInvitations")
   usedInvitations                 Invitation[]                 @relation("UsedInvitations")
@@ -3853,6 +3854,7 @@ model Place {
   /// left of the place folded into it (forgejo#232).
   externalRefAliases PlaceExternalRef[]
   captures           PlaceCapture[]
+  calendarRules      CalendarRule[]
 
   @@unique([userId, externalRef])
   @@unique([userId, curatedItemId])
@@ -8079,8 +8081,41 @@ model CalendarSource {
   createdAt               DateTime  @default(now()) @map("created_at")
   updatedAt               DateTime  @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rules CalendarRule[]
 
   @@index([userId])
   @@map("calendar_sources")
+}
+
+/// How a matched calendar event turns into a purpose and a name (spec
+/// 2026-11-23-plugins-and-calendar.md, "Rules → purpose and name"). Ordered by
+/// `position`; the first rule that matches wins. No rule ships by default: an
+/// event without one proposes a name and no purpose.
+model CalendarRule {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  position     Int
+  /// "calendar" (every event of `sourceId`) | "keyword" (`token` in the title).
+  kind         String
+  sourceId     String?  @map("source_id")
+  /// keyword: matched case-insensitively at word boundaries.
+  token        String?
+  /// keyword: "contains" | "startsWith".
+  matchMode    String   @default("contains") @map("match_mode")
+  /// "private" | "business" | null (the rule names no purpose).
+  purpose      String?
+  /// `{title}`, `{location}`, `{titleAfterToken}`; null proposes the title.
+  nameTemplate String?  @map("name_template")
+  /// keyword: an own place the event names when it carries no location.
+  placeId      String?  @map("place_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source CalendarSource? @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  place  Place?          @relation(fields: [placeId], references: [id], onDelete: SetNull)
+
+  @@index([userId, position])
+  @@map("calendar_rules")
 }

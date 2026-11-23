@@ -266,7 +266,7 @@ describe("projectVisitSuggestions", () => {
     await stand(25);
     await dirty();
     const first = await projectVisitSuggestions(userId, deps());
-    expect(first.failed).toEqual({ places: 0, venues: 1 });
+    expect(first.failed).toEqual({ places: 0, venues: 1, calendar: 0 });
     expect(first.created).toBe(0);
     // A day left open still cost its derivation: it counts against the tick's budget.
     expect(first.days).toBe(1);

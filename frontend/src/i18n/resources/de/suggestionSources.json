@@ -76,5 +76,52 @@
         "CALENDAR_UNSAFE_TIMEZONE": "Der Kalender enthält eine Zeitzone mit unzulässigen Regeln und wird nicht gelesen."
       }
     }
+  },
+  "inbox": {
+    "calendar": {
+      "source": "Kalender „{{label}}“",
+      "match": {
+        "geocoded": "Der Ort des Termins liegt {{meters}} m vom Stopp.",
+        "placeName": "Der Ort des Termins nennt diesen Ort.",
+        "rulePlace": "Eine Regel nennt diesen Ort.",
+        "context": "Nur die Zeit passt, kein Ort: der Termin schlägt höchstens den Zweck vor."
+      },
+      "time": {
+        "overlap": "{{minutes}} Min. gemeinsam",
+        "startNear": "Stopp beginnt innerhalb einer Stunde um den Terminbeginn"
+      }
+    },
+    "purposeSuggested": "Vorgeschlagen: {{purpose}}"
+  },
+  "rules": {
+    "title": "Regeln",
+    "sub": "Was ein passender Termin als Zweck und Name vorschlägt",
+    "help": "Von oben nach unten, die erste passende Regel gilt. Ohne Regel schlägt ein Termin seinen Titel als Namen vor und keinen Zweck.",
+    "empty": "Keine Regeln.",
+    "kind": {
+      "calendar": "Ganzer Kalender",
+      "keyword": "Stichwort im Titel"
+    },
+    "source": "Kalender",
+    "anySource": "Jeder Kalender",
+    "token": "Stichwort",
+    "matchMode": {
+      "contains": "enthält",
+      "startsWith": "beginnt mit"
+    },
+    "purpose": "Zweck",
+    "nameTemplate": "Name",
+    "nameTemplateHint": "Platzhalter: {title}, {location}, {titleAfterToken}. Leer: der Titel.",
+    "add": "Regel hinzufügen",
+    "remove": "Entfernen",
+    "up": "Nach oben",
+    "down": "Nach unten",
+    "save": "Regeln speichern",
+    "saved": "Regeln gespeichert.",
+    "error": "Die Regeln konnten nicht gespeichert werden. Bitte versuche es noch einmal.",
+    "limit": "Es sind höchstens 50 Regeln möglich.",
+    "place": "Ort",
+    "placeHint": "Für Termine ohne Ortsangabe: dieser eigene Ort, wenn er beim Stopp liegt.",
+    "noPlace": "Kein Ort"
   }
 }

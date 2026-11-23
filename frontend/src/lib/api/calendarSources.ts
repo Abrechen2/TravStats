@@ -94,7 +94,25 @@ export function calendarRequestFailureKey(error: unknown): string {
   return calendarFailureKey(data?.error, data?.code);
 }
 
+export interface CalendarRule {
+  kind: "calendar" | "keyword";
+  sourceId: string | null;
+  token: string | null;
+  matchMode: "contains" | "startsWith";
+  purpose: "private" | "business" | null;
+  nameTemplate: string | null;
+  placeId: string | null;
+}
+
 export const calendarSourcesApi = {
+  async rules(): Promise<CalendarRule[]> {
+    const { data } = await api.get("/settings/calendar-sources/rules");
+    return data.rules;
+  },
+  async saveRules(rules: CalendarRule[]): Promise<CalendarRule[]> {
+    const { data } = await api.put("/settings/calendar-sources/rules", { rules });
+    return data.rules;
+  },
   async list(): Promise<CalendarSourceList> {
     const { data } = await api.get("/settings/calendar-sources");
     return data;

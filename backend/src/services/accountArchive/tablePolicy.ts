@@ -352,6 +352,8 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   user_webdav_syncs: excluded(CREDENTIALS),
   // An ICS address or a CalDAV password: the account adds its calendars again on the target.
   calendar_sources: excluded(CREDENTIALS),
+  // They name calendar sources, which do not travel (credentials): a rule without its source means nothing.
+  calendar_rules: excluded("bound to the calendar sources, which do not travel"),
   trip_share_invites: excluded(CREDENTIALS),
   comparison_invites: excluded(CREDENTIALS),
   leaderboard_invites: excluded(CREDENTIALS),

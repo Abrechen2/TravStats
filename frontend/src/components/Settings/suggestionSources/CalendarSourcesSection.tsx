@@ -14,6 +14,7 @@ import {
   type CalendarSourceList,
 } from "../../../lib/api/calendarSources";
 import CalendarSourceForm from "./CalendarSourceForm";
+import CalendarRulesEditor from "./CalendarRulesEditor";
 
 const NS = "suggestionSources:calendar";
 
@@ -39,10 +40,10 @@ export default function CalendarSourcesSection(): JSX.Element {
       setList(await calendarSourcesApi.list());
       setLoadError(null);
     } catch (e) {
-      setLoadError(t(`suggestionSources:${calendarRequestFailureKey(e)}`));
+      setLoadError(`suggestionSources:${calendarRequestFailureKey(e)}`);
       console.warn("calendar sources could not be loaded", e);
     }
-  }, [t]);
+  }, []);
   useEffect(() => {
     void load();
   }, [load]);
@@ -116,7 +117,7 @@ export default function CalendarSourcesSection(): JSX.Element {
             )}
             {loadError && (
               <p role="alert" className="t-body" style={{ color: "var(--ts-bad)" }}>
-                {loadError}
+                {t(loadError)}
               </p>
             )}
             {list?.sources.length === 0 && <p className="t-body">{t(`${NS}.empty`)}</p>}
@@ -204,6 +205,9 @@ export default function CalendarSourcesSection(): JSX.Element {
           </div>
         </SettingItem>
         <SettingItem title={t(`${NS}.privacy.title`)} sub={t(`${NS}.privacy.sub`)} />
+        {list && list.sources.length > 0 && (
+          <CalendarRulesEditor sources={list.sources} disabled={isDemo} />
+        )}
       </SettingRows>
       <ConfirmDialog
         open={removing !== null}

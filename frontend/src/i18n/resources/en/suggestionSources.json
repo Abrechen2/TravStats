@@ -76,5 +76,52 @@
         "CALENDAR_UNSAFE_TIMEZONE": "The calendar contains a time zone with invalid rules and is not read."
       }
     }
+  },
+  "inbox": {
+    "calendar": {
+      "source": "Calendar “{{label}}”",
+      "match": {
+        "geocoded": "The appointment's place is {{meters}} m from the stop.",
+        "placeName": "The appointment's place names this place.",
+        "rulePlace": "A rule names this place.",
+        "context": "Only the time fits, no place: the appointment suggests the purpose at most."
+      },
+      "time": {
+        "overlap": "{{minutes}} min in common",
+        "startNear": "The stop starts within an hour of the appointment's start"
+      }
+    },
+    "purposeSuggested": "Suggested: {{purpose}}"
+  },
+  "rules": {
+    "title": "Rules",
+    "sub": "What a matching appointment suggests as purpose and name",
+    "help": "Top to bottom, the first matching rule applies. Without a rule an appointment suggests its title as name and no purpose.",
+    "empty": "No rules.",
+    "kind": {
+      "calendar": "Whole calendar",
+      "keyword": "Keyword in the title"
+    },
+    "source": "Calendar",
+    "anySource": "Any calendar",
+    "token": "Keyword",
+    "matchMode": {
+      "contains": "contains",
+      "startsWith": "starts with"
+    },
+    "purpose": "Purpose",
+    "nameTemplate": "Name",
+    "nameTemplateHint": "Placeholders: {title}, {location}, {titleAfterToken}. Empty: the title.",
+    "add": "Add rule",
+    "remove": "Remove",
+    "up": "Move up",
+    "down": "Move down",
+    "save": "Save rules",
+    "saved": "Rules saved.",
+    "error": "The rules could not be saved. Please try again.",
+    "limit": "At most 50 rules are possible.",
+    "place": "Place",
+    "placeHint": "For appointments without a location: this own place, when it is beside the stop.",
+    "noPlace": "No place"
   }
 }

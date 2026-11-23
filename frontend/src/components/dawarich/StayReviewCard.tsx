@@ -8,6 +8,9 @@ import { Card } from "../ui/Card";
 import StayIdentityPanel from "./StayIdentityPanel";
 import TrackSectionPanel from "../inbox/track/TrackSectionPanel";
 import { staySectionProps } from "../inbox/track/sectionProps";
+import StayCalendarEvidence from "./StayCalendarEvidence";
+
+type Purpose = "private" | "business" | "";
 
 /**
  * How often an accept is asked again when the server says "try again" — it is
@@ -27,7 +30,7 @@ export default function StayReviewCard({
   choices: StayChoices;
   onDone: () => void;
 }): JSX.Element {
-  const { t } = useTranslation(["trips", "places"]);
+  const { t } = useTranslation(["trips", "places", "purpose", "suggestionSources"]);
   const text = (key: string) => t(`trips:dawarichStays.${key}`);
   // A TravTrack finding (plan E4) names its source and explains itself; a
   // Dawarich one reads exactly as it always did.
@@ -53,6 +56,8 @@ export default function StayReviewCard({
   const [end, setEnd] = useState(
     (row.times?.endAt?.local ?? toLocal(row.endAt, row.zone).local).slice(0, 16)
   );
+  // Starts with what the evidence suggests (a calendar rule); the user may change it.
+  const [purpose, setPurpose] = useState<Purpose>(row.evidence.suggestedPurpose ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submit = async (accept: boolean) => {
@@ -66,6 +71,7 @@ export default function StayReviewCard({
       lon: Number(lon),
       startAt: { local: start },
       endAt: { local: end },
+      purpose: purpose || null,
     };
     try {
       if (accept) {
@@ -167,6 +173,9 @@ export default function StayReviewCard({
           {m.strength === "name" && ` · ${t("places:smartList.weaker")}`}
         </p>
       ))}
+      {row.evidence.calendar && (
+        <StayCalendarEvidence evidence={row.evidence.calendar} zone={row.evidence.zone} />
+      )}
       {section && <TrackSectionPanel {...section} />}
       <StayIdentityPanel
         stayId={row.id}
@@ -328,6 +337,27 @@ export default function StayReviewCard({
               onChange={(e) => setEnd(e.target.value)}
             />
           </label>
+          <label>
+            {t("purpose:field.legend")}
+            <select
+              className="input"
+              value={purpose}
+              disabled={busy}
+              onChange={(e) => setPurpose(e.target.value as Purpose)}
+              data-testid="stay-purpose"
+            >
+              <option value="">{t("purpose:field.unknown")}</option>
+              <option value="private">{t("purpose:field.private")}</option>
+              <option value="business">{t("purpose:field.business")}</option>
+            </select>
+          </label>
+          {row.evidence.suggestedPurpose && (
+            <p className="t-caption">
+              {t("suggestionSources:inbox.purposeSuggested", {
+                purpose: t(`purpose:field.${row.evidence.suggestedPurpose}`),
+              })}
+            </p>
+          )}
           <label>
             {text("trip")}
             <select
