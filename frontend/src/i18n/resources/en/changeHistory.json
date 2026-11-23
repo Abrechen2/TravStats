@@ -79,6 +79,14 @@
     "sub": "How long each entry's history is kept. Older changes are deleted overnight and are no longer in the account archive.",
     "loadFailed": "The setting could not be loaded.",
     "option_one": "1 month",
-    "option_other": "{{count}} months"
+    "option_other": "{{count}} months",
+    "confirm": {
+      "title": "Keep a shorter history?",
+      "amount_one": "Entries older than 1 month will be deleted tonight – this cannot be undone.",
+      "amount_other": "Entries older than {{count}} months will be deleted tonight – this cannot be undone.",
+      "after": "They will also be missing from the account archive.",
+      "button_one": "Shorten to 1 month",
+      "button_other": "Shorten to {{count}} months"
+    }
   }
 }

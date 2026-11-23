@@ -112,4 +112,27 @@ describe("the retention setting", () => {
     await userEvent.selectOptions(choice, "24");
     await waitFor(() => expect(api.setRetention).toHaveBeenCalledWith(24));
   });
+
+  it("asks before a SHORTER window is saved, and saves nothing until it is confirmed", async () => {
+    api.retention.mockResolvedValue({ months: 12, options: [3, 6, 12, 24] });
+    api.setRetention.mockResolvedValue({ months: 6, options: [3, 6, 12, 24] });
+    render(<ChangeHistoryRetentionRow />);
+    await userEvent.selectOptions(await screen.findByRole("combobox"), "6");
+    expect(await screen.findByText("changeHistory:retention.confirm.amount")).toBeInTheDocument();
+    expect(api.setRetention).not.toHaveBeenCalled();
+    await userEvent.click(
+      screen.getByRole("button", { name: "changeHistory:retention.confirm.button" })
+    );
+    await waitFor(() => expect(api.setRetention).toHaveBeenCalledWith(6));
+  });
+
+  it("drops a declined shorter window without saving", async () => {
+    api.retention.mockResolvedValue({ months: 12, options: [3, 6, 12, 24] });
+    render(<ChangeHistoryRetentionRow />);
+    await userEvent.selectOptions(await screen.findByRole("combobox"), "3");
+    await userEvent.click(await screen.findByRole("button", { name: /cancel/i }));
+    expect(api.setRetention).not.toHaveBeenCalled();
+    screen.debug(screen.getByRole("combobox"));
+    expect(screen.getByRole("combobox")).toHaveValue("12");
+  });
 });

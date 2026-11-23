@@ -79,6 +79,14 @@
     "sub": "Wie lange der Verlauf jedes Eintrags aufbewahrt wird. Ältere Änderungen werden nachts gelöscht und sind auch nicht mehr im Konto-Archiv.",
     "loadFailed": "Die Einstellung konnte nicht geladen werden.",
     "option_one": "1 Monat",
-    "option_other": "{{count}} Monate"
+    "option_other": "{{count}} Monate",
+    "confirm": {
+      "title": "Kürzeren Verlauf übernehmen?",
+      "amount_one": "Einträge älter als 1 Monat werden heute Nacht gelöscht – das lässt sich nicht rückgängig machen.",
+      "amount_other": "Einträge älter als {{count}} Monate werden heute Nacht gelöscht – das lässt sich nicht rückgängig machen.",
+      "after": "Diese fehlen danach auch im Konto-Archiv.",
+      "button_one": "Auf 1 Monat kürzen",
+      "button_other": "Auf {{count}} Monate kürzen"
+    }
   }
 }
