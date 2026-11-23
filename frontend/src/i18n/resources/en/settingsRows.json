@@ -1510,6 +1510,15 @@
         "seedingFailed": "Reading the airports stopped halfway."
       }
     },
+    "demorecreate": {
+      "t": "Re-create demo account",
+      "s": "Creates the demo account again with sample data. This takes about a minute.",
+      "btn": "Re-create",
+      "forced": "The demo account is re-created at start by CREATE_DEMO_USER. Remove the variable if it should stay deleted.",
+      "removed": "You deleted the demo account on {{date}}. It stays gone until you re-create it here.",
+      "running": "Creating the demo account …",
+      "done": "The demo account is back."
+    },
     "demodel": {
       "t": "Delete demo account"
     },
@@ -1537,7 +1546,8 @@
     "errors": {
       "range": "I take values from {{min}} to {{max}}.",
       "export": "I couldn't put the data together.",
-      "demo": "I couldn't delete the demo account."
+      "demo": "I couldn't delete the demo account.",
+      "recreate": "I couldn't create the demo account."
     },
     "nothingOld": "No file is older than the retention.",
     "download": "Download",

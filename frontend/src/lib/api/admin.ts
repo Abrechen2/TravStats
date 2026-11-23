@@ -210,6 +210,23 @@ export interface PasswordResetRequest {
   requestedAt: string;
 }
 
+/** `GET /admin/system/info`. */
+export interface AdminSystemInfo {
+  instanceName: string;
+  userCount: number;
+  activeUserCount: number;
+  flightCount: number;
+  maxUsers: number;
+  warningThreshold: boolean;
+  registrationEnabled: boolean;
+  demoUserExists?: boolean;
+  demoUserActive?: boolean;
+  demoRemovedAt?: string | null;
+  demoForcedByEnv?: boolean;
+  version: string;
+  buildVersion: string;
+}
+
 export const adminApi = {
   /**
    * The open password-reset requests.
@@ -237,32 +254,8 @@ export const adminApi = {
     return data;
   },
 
-  getSystemInfo: async (): Promise<{
-    instanceName: string;
-    userCount: number;
-    activeUserCount: number;
-    flightCount: number;
-    maxUsers: number;
-    warningThreshold: boolean;
-    registrationEnabled: boolean;
-    demoUserExists?: boolean;
-    demoUserActive?: boolean;
-    version: string;
-    buildVersion: string;
-  }> => {
-    const { data } = await api.get<{
-      instanceName: string;
-      userCount: number;
-      activeUserCount: number;
-      flightCount: number;
-      maxUsers: number;
-      warningThreshold: boolean;
-      registrationEnabled: boolean;
-      demoUserExists?: boolean;
-      demoUserActive?: boolean;
-      version: string;
-      buildVersion: string;
-    }>("/admin/system/info");
+  getSystemInfo: async (): Promise<AdminSystemInfo> => {
+    const { data } = await api.get<AdminSystemInfo>("/admin/system/info");
     return data;
   },
 
@@ -327,6 +320,12 @@ export const adminApi = {
   /** The way back in for a user who lost both phone and recovery codes. */
   disableUserTwoFactor: async (userId: string): Promise<{ disabled: boolean }> => {
     const { data } = await api.post<{ disabled: boolean }>(`/admin/users/${userId}/disable-2fa`);
+    return data;
+  },
+
+  /** Start re-creating the demo account; the seed runs as a job. */
+  recreateDemo: async (): Promise<{ jobId: string }> => {
+    const { data } = await api.post<{ jobId: string }>("/admin/demo/recreate");
     return data;
   },
 

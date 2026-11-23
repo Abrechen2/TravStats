@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useDemoAccountStore } from "../../store/demoAccountStore";
 import { useToastStore } from "../../store/toastStore";
 import { useDialogCopy, useRowCopy } from "../Settings/rowCopy";
+import { waitForJob } from "../../lib/api/jobs";
 import Button from "../ui/Button";
 import {
   ActionControl,
@@ -38,6 +39,8 @@ export default function MaintenanceSystem(): JSX.Element {
   const [asking, setAsking] = useState<"reseed" | "demo" | null>(null);
   const [demoBusy, setDemoBusy] = useState(false);
   const [demoFailed, setDemoFailed] = useState(false);
+  const [recreating, setRecreating] = useState(false);
+  const [recreateFailed, setRecreateFailed] = useState(false);
 
   const reseed = useCatalogueReseed({
     running: (kind) => t(`settingsRows:maintenance.reseed.running.${kind}`),
@@ -106,6 +109,29 @@ export default function MaintenanceSystem(): JSX.Element {
   const full = row("fulljson");
   const seed = row("reseed");
   const del = row("demodel");
+  const recreate = row("demorecreate");
+
+  const recreateDemo = async (): Promise<void> => {
+    setRecreating(true);
+    setRecreateFailed(false);
+    try {
+      const { jobId } = await adminApi.recreateDemo();
+      await waitForJob(jobId);
+      addToast("success", t("settingsRows:maintenance.demorecreate.done"));
+      await load();
+      await refreshDemoNotice();
+    } catch (error) {
+      logger.error("Failed to re-create the demo account:", error);
+      setRecreateFailed(true);
+      await load();
+    } finally {
+      setRecreating(false);
+    }
+  };
+  // Why the account is absent, so an admin understands a demo that comes back
+  // (env var) or one that stays gone (their own removal).
+  const forcedByEnv = info?.demoForcedByEnv === true;
+  const removedAt = info?.demoRemovedAt ?? null;
   const asked =
     asking === "reseed"
       ? dialog("reseed")
@@ -169,9 +195,34 @@ export default function MaintenanceSystem(): JSX.Element {
         )}
       </SettingItem>
       <MaintenanceAirportEnrich />
+      {!demo ? (
+        <SettingItem
+          title={recreate.title}
+          sub={
+            forcedByEnv
+              ? t("settingsRows:maintenance.demorecreate.forced")
+              : removedAt
+                ? t("settingsRows:maintenance.demorecreate.removed", {
+                    date: new Date(removedAt).toLocaleDateString(undefined, { timeZone: "UTC" }),
+                  })
+                : recreate.sub
+          }
+          scope="allAccounts"
+          expert
+          error={recreateFailed ? t("settingsRows:maintenance.errors.recreate") : undefined}
+          control={
+            <ActionControl
+              label={recreate.title}
+              busy={recreating}
+              onClick={() => void recreateDemo()}
+            />
+          }
+        />
+      ) : null}
       {demo ? (
         <SettingItem
           title={del.title}
+          sub={forcedByEnv ? t("settingsRows:maintenance.demorecreate.forced") : undefined}
           scope="allAccounts"
           expert
           error={demoFailed ? t("settingsRows:maintenance.errors.demo") : undefined}

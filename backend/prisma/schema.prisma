@@ -1334,6 +1334,11 @@ model Invitation {
 model AdminSettings {
   id Int @id @default(autoincrement())
 
+  /// Set when an administrator deletes the demo account: no seed path
+  /// (entrypoint, init, `seed:demo`) brings it back until an admin re-creates
+  /// it explicitly. `CREATE_DEMO_USER=true` is the operator's explicit override.
+  demoRemovedAt DateTime? @map("demo_removed_at")
+
   /// The template repository's raw-file root, set by the admin (forgejo#309).
   /// Wins over the `TEMPLATE_REPO_BASE_URL` env var; null = env, then the
   /// official repository. https, or plain http to a local/LAN host only

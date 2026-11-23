@@ -5,6 +5,10 @@ import { adminExportLimiter, adminReseedLimiter } from "../../middleware/rateLim
 import { getInstanceSettings } from "../../services/instanceSettingsService";
 import { startAirportSeeding, getSeedingStatus } from "../../services/airportSeedingService";
 import { sweepStaleLogos } from "../../jobs/airlineLogoRefreshScheduler";
+import { clearDemoRemoved, demoForcedByEnv, getDemoRemovedAt } from "../../services/demoAccount";
+import { seedDemoInstance } from "../../seedDemoAccount";
+import { startJob, findRunningJob } from "../../services/jobs/jobRegistry";
+import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 import { appVersion, buildVersion } from "../../utils/version";
 import {
@@ -187,6 +191,26 @@ router.post(
   }
 );
 
+// POST /admin/demo/recreate — the explicit "Demo-Konto wieder anlegen". Clears
+// the removal marker, then seeds as a job (the seed takes about a minute).
+router.post(
+  "/demo/recreate",
+  adminReseedLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      if (findRunningJob(["demo.recreate"])) {
+        throw new AppError("The demo account is already being created", 409);
+      }
+      await clearDemoRemoved();
+      const job = startJob("demo.recreate", req.userId!, () => seedDemoInstance());
+      logger.info({ operation: "admin_demo_recreate", adminId: req.userId, jobId: job.id });
+      res.status(202).json({ jobId: job.id });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // Get system information
 router.get("/system/info", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -211,6 +235,10 @@ router.get("/system/info", async (req: AuthRequest, res: Response, next: NextFun
       registrationEnabled: allowRegistration,
       demoUserExists: !!demoUser,
       demoUserActive: demoUser?.isActive || false,
+      // Why the account is (not) there: removed by an admin, or re-created at
+      // every start by the operator's env var.
+      demoRemovedAt: (await getDemoRemovedAt())?.toISOString() ?? null,
+      demoForcedByEnv: demoForcedByEnv(),
       version: appVersion,
       buildVersion,
     });

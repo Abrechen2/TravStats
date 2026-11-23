@@ -12,6 +12,7 @@ import {
   isReservedUsername,
 } from "../../schemas/auth";
 import { sendAdminPasswordResetEmail } from "../../services/emailService";
+import { markDemoRemoved } from "../../services/demoAccount";
 import { removeAccount } from "../../services/account/removeAccount";
 import { SMTP_CONFIG_ID } from "./smtp";
 import { countEntriesByUser, emptyByDomain } from "../../services/admin/userEntryCounts";
@@ -182,7 +183,7 @@ router.delete("/users/:id", async (req: AuthRequest, res: Response, next: NextFu
 
     const user = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, username: true, isAdmin: true },
+      select: { id: true, username: true, isAdmin: true, isDemo: true },
     });
 
     if (!user) {
@@ -197,6 +198,10 @@ router.delete("/users/:id", async (req: AuthRequest, res: Response, next: NextFu
     }
 
     await removeAccount(id, { actorId: req.userId!, ip: req.ip });
+
+    // An admin's removal of the demo account is final: record it, or the next
+    // boot seeds the account again (CREATE_DEMO_USER, first install).
+    if (user.isDemo) await markDemoRemoved();
 
     logger.info({
       operation: "admin_delete_user",

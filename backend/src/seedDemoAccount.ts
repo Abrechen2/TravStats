@@ -32,6 +32,7 @@ import { AVAILABLE_DOMAINS } from "./shared/domains";
 import { seedRealisticDemo } from "./seedDemo/realistic";
 import { fillSeededTimeColumns } from "./services/timeModel/seedTimeColumns";
 import { ensureDemoCatalogues, enableBetaForDemo } from "./seedDemo/instance";
+import { demoSeedAllowed } from "./services/demoAccount";
 import { deleteAccountWithFiles } from "./services/files/accountFiles";
 
 const DEMO_PASSWORD = "demo123";
@@ -469,10 +470,29 @@ export async function seedDemoInstance(
   return runDemoSeed();
 }
 
+/**
+ * What a BOOT (entrypoint, `init.ts`, `npm run seed:demo`) does: seed the demo
+ * account unless an administrator removed it. The operator's explicit
+ * `CREATE_DEMO_USER=true` still seeds, and the admin's explicit "re-create"
+ * action calls `seedDemoInstance` directly. Returns null when it stood down.
+ */
+export async function bootSeedDemo(): Promise<Awaited<ReturnType<typeof seedDemoInstance>> | null> {
+  if (!(await demoSeedAllowed())) return null;
+  return seedDemoInstance();
+}
+
 async function main(): Promise<void> {
   const started = Date.now();
   console.log("🌱 Seeding demo account (demo / demo123) ...");
-  const { userId, counts } = await seedDemoInstance();
+  const seeded = await bootSeedDemo();
+  if (!seeded) {
+    console.log(
+      "⏭  Demo account was removed by an administrator — not re-creating it " +
+        "(Admin → Wartung → Demo-Konto wieder anlegen, or CREATE_DEMO_USER=true)."
+    );
+    return;
+  }
+  const { userId, counts } = seeded;
   console.log("");
   console.log(`✅ Demo seed complete in ${((Date.now() - started) / 1000).toFixed(1)} s`);
   console.log(`   Username: ${DEMO_USERNAME}`);

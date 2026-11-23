@@ -19,7 +19,10 @@ const admin = vi.hoisted(() => ({
   getUsers: vi.fn(),
   exportAllData: vi.fn(),
   deleteUser: vi.fn(),
+  recreateDemo: vi.fn(),
 }));
+const jobs = vi.hoisted(() => ({ waitForJob: vi.fn() }));
+vi.mock("../../../lib/api/jobs", () => jobs);
 vi.mock("../../../lib/api", () => ({ adminApi: admin }));
 const client = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock("../../../lib/api/client", () => ({ api: client }));
@@ -228,6 +231,34 @@ describe("Wartung › System", () => {
       })
     );
     expect(await screen.findByText("settingsRows:maintenance.errors.demo")).toBeInTheDocument();
+  });
+
+  it("says why the demo account returns at start when CREATE_DEMO_USER forces it", async () => {
+    admin.getSystemInfo.mockResolvedValue({
+      version: "2.8.0",
+      demoForcedByEnv: true,
+      demoRemovedAt: "2026-11-22T10:00:00Z",
+    });
+    render(<MaintenanceSystem />);
+    expect(
+      await screen.findByText("settingsRows:maintenance.demorecreate.forced")
+    ).toBeInTheDocument();
+  });
+
+  it("offers 'Demo-Konto wieder anlegen' after the admin removed it, and starts the job", async () => {
+    admin.getSystemInfo.mockResolvedValue({
+      version: "2.8.0",
+      demoForcedByEnv: false,
+      demoRemovedAt: "2026-11-22T10:00:00Z",
+    });
+    admin.recreateDemo.mockResolvedValue({ jobId: "j1" });
+    jobs.waitForJob.mockResolvedValue({});
+    render(<MaintenanceSystem />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "settingsRows:maintenance.demorecreate.t" })
+    );
+    await waitFor(() => expect(jobs.waitForJob).toHaveBeenCalledWith("j1"));
+    expect(admin.recreateDemo).toHaveBeenCalledTimes(1);
   });
 
   it("offers a retry when the system data cannot be loaded", async () => {
