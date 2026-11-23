@@ -1,9 +1,13 @@
 import { prisma } from "../../../db";
 import { Prisma } from "../../../prisma";
+import { AppError } from "../../../middleware/errorHandler";
 import logger from "../../../utils/logger";
 import { isSharedDemoUser } from "../../../utils/sharedDemo";
 import { fetchBusLine } from "../../bus/busRouting";
 import { routeStraightRide } from "../../bus/busRouteAgain";
+import { railRoutingBaseUrl } from "../../rail/openRailRouting";
+import type { GeometryFallbackReason } from "../../rail/railGeometry";
+import { routeRailJourneyAgain } from "../../rail/railRouteAgain";
 import { findRunningJob, startJob } from "../../jobs/jobRegistry";
 import { applyRoutedLegIfStillStraight, withTimeout } from "./autoRouteLegs";
 import { providerCallGate, takeBulkProviderCall } from "./providerBudget";
@@ -13,6 +17,7 @@ import {
   nextItem,
   type BusItem,
   type LegItem,
+  type RailItem,
   type RerouteItem,
   type RerouteMode,
   type RunScope,
@@ -37,11 +42,17 @@ import { asRoutableMode } from "./legMode";
  */
 
 export type RerouteStatus = "running" | "paused" | "done" | "cancelled" | "failed";
-export type RerouteFailureReason = RouteFallbackReason | "timeout" | "no_coordinates" | "changed";
+export type RerouteFailureReason =
+  | RouteFallbackReason
+  | GeometryFallbackReason
+  | "timeout"
+  | "no_coordinates"
+  | "changed"
+  | "unchanged";
 
 export interface RerouteRunView {
   id: string;
-  scope: "instance" | "roadtrip";
+  scope: "instance" | "roadtrip" | "rail";
   routeId: string | null;
   mode: RerouteMode;
   status: RerouteStatus;
@@ -69,6 +80,8 @@ const LEG_TIMEOUT_MS = 20_000;
 const PAUSE_MS: Record<string, number> = { openrouteservice: 1600, graphhopper: 1100, custom: 150 };
 /** Reasons that repeat for every following item (a missing provider is caught before an item). */
 const STOP_FAILED: readonly string[] = ["auth"];
+/** Reasons that mean the provider (or the rail router) is not answering at all. */
+const DOWN_REASONS: readonly string[] = ["provider_error", "timeout", "railRoutingUnavailable"];
 
 export interface RunDeps {
   /** Test seam: replaces the pause between provider calls. */
@@ -78,9 +91,12 @@ export interface RunDeps {
   now?: () => Date;
 }
 
+const scopeNameOf = (scope: string): RunScope["scope"] =>
+  scope === "roadtrip" ? "roadtrip" : scope === "rail" ? "rail" : "instance";
+
 const toView = (r: Prisma.RerouteRunGetPayload<object>): RerouteRunView => ({
   id: r.id,
-  scope: r.scope === "roadtrip" ? "roadtrip" : "instance",
+  scope: scopeNameOf(r.scope),
   routeId: r.routeId,
   mode: r.mode === "all" ? "all" : "straight",
   status: r.status as RerouteStatus,
@@ -102,7 +118,7 @@ export function nextQuotaWindow(now: Date): Date {
 }
 
 const scopeOf = (r: { scope: string; routeId: string | null; mode: string }): RunScope => ({
-  scope: r.scope === "roadtrip" ? "roadtrip" : "instance",
+  scope: scopeNameOf(r.scope),
   routeId: r.routeId,
   mode: r.mode === "all" ? "all" : "straight",
 });
@@ -168,6 +184,28 @@ async function routeBus(
   return { kind: "kept", reason: report.fallback ?? "provider_error" };
 }
 
+/**
+ * One rail journey through the same path as "route again": the Transitous trace
+ * when it has a lookup ref, then the self-hosted router over the ride's own
+ * network. A line the router could not deliver, a drawn line and a row that
+ * changed meanwhile keep what is stored, each with its reason.
+ */
+async function routeRail(item: RailItem): Promise<Outcome> {
+  try {
+    const done = await routeRailJourneyAgain(item.userId, item.id);
+    if (!done) return { kind: "kept", reason: "changed" };
+    const { outcome, fallback } = done.report;
+    if (outcome === "routed" || outcome === "traced") return { kind: "routed" };
+    return { kind: "kept", reason: fallback ?? "unchanged" };
+  } catch (error) {
+    // The write is conditional on the row; a 409 is a row edited while it was routed.
+    if (error instanceof AppError && error.statusCode === 409) {
+      return { kind: "kept", reason: "changed" };
+    }
+    throw error;
+  }
+}
+
 async function loadRun(id: string) {
   return prisma.rerouteRun.findUnique({ where: { id } });
 }
@@ -215,7 +253,21 @@ export async function executeRerouteRun(
     if (!demo.has(item.userId)) demo.set(item.userId, await isSharedDemoUser(item.userId));
     let outcome: Outcome;
     let providerId = "custom";
-    if (demo.get(item.userId)) {
+    if (item.kind === "rail") {
+      // Self-hosted router: no key, no quota, no per-account provider; the courtesy pause stays.
+      try {
+        outcome = await routeRail(item);
+      } catch (error) {
+        logger.warn({
+          operation: "reroute_run_item",
+          runId,
+          kind: item.kind,
+          itemId: item.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        outcome = { kind: "kept", reason: "railRoutingUnavailable" };
+      }
+    } else if (demo.get(item.userId)) {
       // The shared demo account never spends the instance's key.
       outcome = { kind: "kept", reason: "no_provider" };
     } else {
@@ -273,8 +325,7 @@ export async function executeRerouteRun(
       counts[outcome.reason] = (counts[outcome.reason] ?? 0) + 1;
       sample.push({ kind: item.kind, id: item.id, reason: outcome.reason });
       if (sample.length > FAILURE_SAMPLE_MAX) sample.shift();
-      consecutive =
-        outcome.reason === "provider_error" || outcome.reason === "timeout" ? consecutive + 1 : 0;
+      consecutive = DOWN_REASONS.includes(outcome.reason) ? consecutive + 1 : 0;
     }
     total = Math.max(total, processed);
     await prisma.rerouteRun.update({
@@ -291,7 +342,10 @@ export async function executeRerouteRun(
     });
     reportProgress(processed, total);
     if (consecutive >= CONSECUTIVE_FAILURES_STOP) {
-      end = { status: "failed", stopReason: "provider_error" };
+      end = {
+        status: "failed",
+        stopReason: scope.scope === "rail" ? "railRoutingUnavailable" : "provider_error",
+      };
       break;
     }
     const wait = pauseMs(providerId);
@@ -357,8 +411,11 @@ async function startOne(userId: string, input: RunScope, deps?: RunDeps): Promis
     orderBy: { createdAt: "desc" },
   });
   if (active) return { kind: "alreadyActive", run: toView(active) };
-  const provider = await (deps?.resolveProvider ?? resolveRouteProvider)(userId);
-  if (!provider) return { kind: "notConfigured" };
+  if (input.scope === "rail") {
+    if (!(await railRoutingBaseUrl())) return { kind: "notConfigured" };
+  } else if (!(await (deps?.resolveProvider ?? resolveRouteProvider)(userId))) {
+    return { kind: "notConfigured" };
+  }
   const row = await prisma.rerouteRun.create({
     data: {
       userId,
@@ -373,9 +430,11 @@ async function startOne(userId: string, input: RunScope, deps?: RunDeps): Promis
   return { kind: "started", run: toView(row) };
 }
 
-export async function latestInstanceRun(): Promise<RerouteRunView | null> {
+export async function latestInstanceRun(
+  scope: "instance" | "rail" = "instance"
+): Promise<RerouteRunView | null> {
   const row = await prisma.rerouteRun.findFirst({
-    where: { scope: "instance" },
+    where: { scope },
     orderBy: { createdAt: "desc" },
   });
   return row ? toView(row) : null;
@@ -405,7 +464,7 @@ export async function getRerouteRun(id: string, userId: string): Promise<Reroute
  */
 export async function cancelRerouteRun(
   id: string,
-  owner: { userId: string } | { scope: "instance" }
+  owner: { userId: string } | { scope: "instance" | "rail" }
 ): Promise<RerouteRunView | null> {
   const run = await prisma.rerouteRun.findFirst({ where: { id, ...owner } });
   if (!run) return null;

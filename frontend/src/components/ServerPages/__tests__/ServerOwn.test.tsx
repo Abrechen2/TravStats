@@ -15,6 +15,12 @@ vi.mock("../useInternetDependency", () => ({
       ? { reason: "internet-off-reason", jump: { label: "jump", onJump: () => {} } }
       : undefined,
 }));
+// The rail pass reads its own endpoint; its behaviour is tested in RailRerouteRows.test.tsx.
+vi.mock("../../Services/RailRerouteRows", () => ({
+  default: ({ railUrl }: { railUrl: string | null }) => (
+    <div data-testid="rail-pass">{String(railUrl)}</div>
+  ),
+}));
 const api = vi.hoisted(() => ({
   adminOverview: vi.fn(),
   accountOverview: vi.fn(),
@@ -116,6 +122,14 @@ describe("Eigene Server (settings v3 S5)", () => {
     expect(groups).toEqual(["places", "routes", "maps", "templates", "rates"]);
     // The public fallback is not an own server: it is not drawn here.
     expect(screen.queryByText("externalServices:fields.fx.cdnFallback")).toBeNull();
+  });
+
+  it("carries the rail pass under the routes group only, so a saved address can offer it there", async () => {
+    await show();
+    await screen.findByDisplayValue("https://photon.example");
+    const pass = screen.getAllByTestId("rail-pass");
+    expect(pass).toHaveLength(1);
+    expect(pass[0].closest("[data-own-group]")?.getAttribute("data-own-group")).toBe("routes");
   });
 
   it("writes the fields of one group to the card they belong to, and only those", async () => {

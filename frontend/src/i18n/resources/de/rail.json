@@ -198,7 +198,10 @@
     "lineRoadtrip": "Linie: aus dem Roadtrip übernommen — geplant, nicht aus dem Fahrplan.",
     "lineStraight": "Linie: Luftlinie zwischen den Bahnhöfen — nicht der Weg des Zuges.",
     "lineRouted": "Linie: über das Gleisnetz berechnet (OpenRailRouting, OpenStreetMap) — der wahrscheinliche Weg, nicht aus dem Fahrplan.",
-    "lineRoutedDemo": "Linie: über das Gleisnetz berechnet (BRouter, OpenStreetMap) — der wahrscheinliche Weg, nicht aus dem Fahrplan."
+    "lineRoutedDemo": "Linie: über das Gleisnetz berechnet (BRouter, OpenStreetMap) — der wahrscheinliche Weg, nicht aus dem Fahrplan.",
+    "lineNoRouter": "Gerade Linie – kein Bahn-Routing eingerichtet.",
+    "lineNoRouterSetUp": "Streckenrouter einrichten",
+    "lineNoRouterAskAdmin": "Das kann nur ein Administrator einrichten."
   },
   "connection": {
     "add": "Anschluss hinzufügen",

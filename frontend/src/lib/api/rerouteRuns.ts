@@ -6,7 +6,7 @@ export type RerouteMode = "straight" | "all";
 
 export interface RerouteRun {
   id: string;
-  scope: "instance" | "roadtrip";
+  scope: "instance" | "roadtrip" | "rail";
   routeId: string | null;
   mode: RerouteMode;
   status: RerouteStatus;
@@ -46,4 +46,31 @@ export const roadtripRerouteApi = {
     (await api.get<{ run: RerouteRun }>(`/routing-runs/${id}`)).data.run,
   cancel: async (id: string): Promise<RerouteRun> =>
     (await api.post<{ run: RerouteRun }>(`/routing-runs/${id}/cancel`)).data.run,
+};
+
+/** What the rail pass needs to show: the latest run and how many rides are still straight lines. */
+export interface RailRerouteStatus {
+  run: RerouteRun | null;
+  /** Rides on the whole instance drawn as the chord between their stations. */
+  straightJourneys: number;
+  /** A rail router (OpenRailRouting) is set and not switched off. */
+  routerConfigured: boolean;
+}
+
+/** "Bahnstrecken neu routen": the administrator's pass over every account's rail journeys. */
+export const railRerouteApi = {
+  status: async (): Promise<RailRerouteStatus> =>
+    (await api.get<RailRerouteStatus>("/admin/instance-settings/routing/reroute-rail")).data,
+  start: async (mode: RerouteMode): Promise<RerouteRun> =>
+    (
+      await api.post<{ run: RerouteRun }>("/admin/instance-settings/routing/reroute-rail", {
+        mode,
+      })
+    ).data.run,
+  cancel: async (id: string): Promise<RerouteRun> =>
+    (
+      await api.post<{ run: RerouteRun }>(
+        `/admin/instance-settings/routing/reroute-rail/${id}/cancel`
+      )
+    ).data.run,
 };

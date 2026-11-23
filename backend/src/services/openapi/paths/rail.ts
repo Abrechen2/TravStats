@@ -105,6 +105,14 @@ const railJourney = registry.register(
       geometrySource: z
         .enum(RAIL_GEOMETRY_SOURCES)
         .describe("Where the line comes from; a track-routed line may not be the train's path"),
+      geometryReason: z
+        .enum(["noRouter"])
+        .nullable()
+        .optional()
+        .describe(
+          "Read on the list and the detail: `noRouter` = the line is straight because the " +
+            "instance has no rail router configured (not stored; it ends when one is set)"
+        ),
       actualDepartureTime: z
         .string()
         .datetime()

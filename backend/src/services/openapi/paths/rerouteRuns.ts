@@ -14,7 +14,7 @@ const rerouteRun = registry.register(
   "RerouteRun",
   z.object({
     id: z.string().uuid(),
-    scope: z.enum(["instance", "roadtrip"]),
+    scope: z.enum(["instance", "roadtrip", "rail"]),
     routeId: z.string().uuid().nullable(),
     mode: z.enum(["straight", "all"]).describe("`all` routes lines already routed again too"),
     status: z

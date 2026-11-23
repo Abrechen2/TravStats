@@ -93,6 +93,11 @@ export interface RailJourney {
   /** `[lon, lat]` points frozen at logging time; null = straight line. */
   geometry: [number, number][] | null;
   geometrySource: "none" | "straight" | "transitous" | "openrailrouting" | "brouter" | "manual";
+  /**
+   * Why a straight line is straight when the instance is the reason: `noRouter` =
+   * no rail router is set up. Read, not stored; absent on a server before this field.
+   */
+  geometryReason?: "noRouter" | null;
   actualDepartureTime: string | null;
   actualArrivalTime: string | null;
   lookupProvider: RailLookupProvider | null;

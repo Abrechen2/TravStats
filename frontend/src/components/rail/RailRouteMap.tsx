@@ -2,6 +2,7 @@ import { SharedMapOverlays } from "../map/SharedMapOverlays";
 import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
+import { Link } from "react-router-dom";
 import MapGL from "react-map-gl/maplibre";
 import type { Layer } from "@deck.gl/core";
 import { DeckGLOverlay } from "../map/DeckGLOverlay";
@@ -16,6 +17,7 @@ import {
 import { hexToRgb } from "../../lib/domainColor";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useAuthStore } from "../../store/authStore";
 import type { RailJourney } from "../../types/rail";
 import { reuseMapsEnabled } from "../../lib/mapReuse";
 
@@ -61,6 +63,7 @@ export function RailRouteMap({ journey }: { journey: RailJourney }): JSX.Element
   );
   const bounds = useMemo(() => railBounds(railPathOf(journey)), [journey]);
   const traced = isTracedRailLine(journey);
+  const isAdmin = useAuthStore((s) => s.user?.isAdmin ?? false);
 
   return (
     <div className="flex flex-col gap-2">
@@ -90,7 +93,25 @@ export function RailRouteMap({ journey }: { journey: RailJourney }): JSX.Element
               )
             : journey.geometrySource === "manual" && journey.geometry
               ? t("rail:detail.lineRoadtrip")
-              : t("rail:detail.lineStraight")}
+              : journey.geometryReason === "noRouter"
+                ? t("rail:detail.lineNoRouter")
+                : t("rail:detail.lineStraight")}
+        {!traced && journey.geometryReason === "noRouter" && (
+          <>
+            {" "}
+            {isAdmin ? (
+              <Link
+                to="/settings/dienstek?service=selfHostedRouting"
+                className="underline"
+                data-testid="rail-no-router-setup"
+              >
+                {t("rail:detail.lineNoRouterSetUp")}
+              </Link>
+            ) : (
+              t("rail:detail.lineNoRouterAskAdmin")
+            )}
+          </>
+        )}
       </p>
     </div>
   );

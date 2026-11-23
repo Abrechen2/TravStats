@@ -198,7 +198,10 @@
     "lineRoadtrip": "Line: brought over from the roadtrip — as planned, not from a timetable.",
     "lineStraight": "Line: straight line between the stations — not the train's path.",
     "lineRouted": "Line: routed over the rail network (OpenRailRouting, OpenStreetMap) — the likely path, not from a timetable.",
-    "lineRoutedDemo": "Line: routed over the rail network (BRouter, OpenStreetMap) — the likely path, not from a timetable."
+    "lineRoutedDemo": "Line: routed over the rail network (BRouter, OpenStreetMap) — the likely path, not from a timetable.",
+    "lineNoRouter": "Straight line – no rail routing is set up.",
+    "lineNoRouterSetUp": "Set up a rail router",
+    "lineNoRouterAskAdmin": "Only an administrator can set one up."
   },
   "connection": {
     "add": "Add connection",

@@ -33,7 +33,8 @@
       "rate_limited": "Das Tageskontingent des Routing-Dienstes ist aufgebraucht.",
       "auth": "Der Routing-Dienst hat den Schlüssel abgelehnt.",
       "no_provider": "Es ist kein Routing-Dienst mehr eingerichtet oder er ist ausgeschaltet.",
-      "provider_error": "Der Routing-Dienst antwortet nicht mehr."
+      "provider_error": "Der Routing-Dienst antwortet nicht mehr.",
+      "railRoutingUnavailable": "Der Streckenrouter antwortet nicht mehr."
     },
     "reason": {
       "rate_limited_one": "{{count}} Strecke wegen des Kontingents zurückgestellt",
@@ -57,7 +58,31 @@
       "changed_one": "{{count}} Strecke wurde währenddessen geändert und nicht überschrieben",
       "changed_other": "{{count}} Strecken wurden währenddessen geändert und nicht überschrieben",
       "unroutable_mode_one": "{{count}} Strecke: dafür gibt es kein Straßenrouting",
-      "unroutable_mode_other": "{{count}} Strecken: dafür gibt es kein Straßenrouting"
+      "unroutable_mode_other": "{{count}} Strecken: dafür gibt es kein Straßenrouting",
+      "railRoutingNoRoute_one": "{{count}} Bahnfahrt: der Streckenrouter findet keine Verbindung, die Linie bleibt",
+      "railRoutingNoRoute_other": "{{count}} Bahnfahrten: der Streckenrouter findet keine Verbindung, die Linie bleibt",
+      "railRoutingUnavailable_one": "{{count}} Bahnfahrt: der Streckenrouter antwortet nicht, die Linie bleibt",
+      "railRoutingUnavailable_other": "{{count}} Bahnfahrten: der Streckenrouter antwortet nicht, die Linie bleibt",
+      "railRoutingModeUnsupported_one": "{{count}} Bahnfahrt: der Streckenrouter kennt kein Netz für diese Zugart, die Linie bleibt",
+      "railRoutingModeUnsupported_other": "{{count}} Bahnfahrten: der Streckenrouter kennt kein Netz für diese Zugart, die Linie bleibt",
+      "railRoutingNotConfigured_one": "{{count}} Bahnfahrt: kein Streckenrouter eingerichtet, die Linie bleibt",
+      "railRoutingNotConfigured_other": "{{count}} Bahnfahrten: kein Streckenrouter eingerichtet, die Linie bleibt",
+      "unchanged_one": "{{count}} Bahnfahrt: nichts Besseres gefunden, die Linie bleibt",
+      "unchanged_other": "{{count}} Bahnfahrten: nichts Besseres gefunden, die Linie bleibt"
     }
+  },
+  "rail": {
+    "title": "Bahnstrecken neu routen",
+    "hint": "Routet Bahnfahrten aller Konten, die nur als Luftlinie gezeichnet sind: erst über den Verlauf des Fahrplans (Transitous), sonst über den Streckenrouter, je nach Zugart auf dem passenden Netz. Eine selbst gezeichnete oder übernommene Linie wird nie ersetzt, und scheitert eine Anfrage, bleibt die gespeicherte Linie.",
+    "modeAllHint": "„Alle“ berechnet auch schon über den Streckenrouter geführte Fahrten neu. Fahrplan-Verläufe und gezeichnete Linien bleiben.",
+    "start": "Bahnstrecken neu routen",
+    "readiness_one": "{{count}} Bahnfahrt als Luftlinie – kein Bahn-Routing eingerichtet. Trage oben die Adresse eines Streckenrouters ein, dann lassen sie sich neu routen.",
+    "readiness_other": "{{count}} Bahnfahrten als Luftlinie – kein Bahn-Routing eingerichtet. Trage oben die Adresse eines Streckenrouters ein, dann lassen sie sich neu routen.",
+    "offer_one": "Adresse gespeichert. {{count}} Bahnfahrt ist noch eine Luftlinie.",
+    "offer_other": "Adresse gespeichert. {{count}} Bahnfahrten sind noch Luftlinien.",
+    "offerAction": "Jetzt alle Bahn-Luftlinien neu routen",
+    "notConfigured": "Es ist kein Streckenrouter eingerichtet – ohne ihn gibt es nichts zu routen.",
+    "failed": "Der Lauf konnte nicht gestartet werden.",
+    "loadFailed": "Der Stand des letzten Laufs konnte nicht geladen werden."
   }
 }
