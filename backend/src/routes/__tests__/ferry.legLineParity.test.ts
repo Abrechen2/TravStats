@@ -166,3 +166,31 @@ it("dropping the ferry's drawn line clears the drawn line on the linked leg too"
   expect(lines.ferry).toBeNull();
   expect(lines.tour).toEqual([seaLine[0], seaLine[3]]);
 });
+
+it("clearing the drawn leg line in the tour editor drops the crossing's drawn line too", async () => {
+  const { id, routeId, a, b } = await linkedCrossing("straight");
+  const tripId = (await prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId } })).tripId;
+  const url = `/api/v1/trips/${tripId}/routes/${routeId}/legs/${a.id}/${b.id}`;
+  await request(app)
+    .put(url)
+    .set("Cookie", cookie)
+    .send({ source: "drawn", waypoints: withEnds(viaB) });
+  expect((await request(app).delete(url).set("Cookie", cookie)).status).toBe(204);
+  const lines = await bothLines(id, routeId);
+  expect(lines.ferrySource).not.toBe("manual");
+  expect(lines.tour).not.toEqual(withEnds(viaB));
+  expect(lines.ferry === null ? lines.tour : lines.ferry).toEqual(lines.tour);
+});
+
+it("a leg line ending 0.5 km off the pier is stored snapped on both maps", async () => {
+  const { id, routeId, a, b } = await linkedCrossing("straight");
+  const tripId = (await prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId } })).tripId;
+  const loose = [[dep.lon + 0.004, dep.lat], ...viaB, [arr.lon, arr.lat]];
+  await request(app)
+    .put(`/api/v1/trips/${tripId}/routes/${routeId}/legs/${a.id}/${b.id}`)
+    .set("Cookie", cookie)
+    .send({ source: "drawn", waypoints: loose });
+  const lines = await bothLines(id, routeId);
+  expect(lines.ferry).toEqual(withEnds(viaB));
+  expect(lines.tour).toEqual(lines.ferry);
+});

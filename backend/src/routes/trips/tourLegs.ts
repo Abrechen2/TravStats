@@ -9,7 +9,10 @@ import { legDistanceKm } from "../../services/tour/tourDistance";
 import { adoptSegment, ANCHOR_TOLERANCE_KM } from "../../services/tour/tracks/adoptTrack";
 import { haversineKm } from "../../shared/geo/haversine";
 import logger from "../../utils/logger";
-import { adoptDrawnLegLineOnFerry } from "../../services/ferry/ferryManualRoute";
+import {
+  adoptDrawnLegLineOnFerry,
+  dropManualFerryLineOfLeg,
+} from "../../services/ferry/ferryManualRoute";
 import { resolveRouteFromRequest, toLegDto } from "./tourRoutes";
 import { resolveTrack } from "./tourTracks";
 import { isCoordinatePolyline, readStoredTrack } from "../../services/trackCoverage/storedTrack";
@@ -260,6 +263,7 @@ router.put(
         { timeout: SHARE_TX_TIMEOUT_MS }
       );
 
+      if (body.source === "straight") await dropManualFerryLineOfLeg(userId, leg.id);
       logger.info({ operation: "tour.leg.override", legId: updated.id, source: updated.source });
       res.json({
         leg: toLegDto(updated),
@@ -304,6 +308,7 @@ router.delete(
         },
       });
       await propagateWrite(prisma, userId, "roadtrip", routeId, roadtripBefore);
+      await dropManualFerryLineOfLeg(userId, leg.id);
 
       res.status(204).send();
     } catch (error) {

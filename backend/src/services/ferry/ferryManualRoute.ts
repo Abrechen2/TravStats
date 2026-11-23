@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma, type DbTransaction } from "../../db";
 import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
+import logger from "../../utils/logger";
 import { haversineKm, polylineLengthKm } from "../../shared/geo/haversine";
 import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
 import { routeCrossingIfStraight, syncCopiesLegs, syncFerryLeg } from "./ferryRouting";
@@ -181,7 +182,11 @@ export async function adoptDrawnLegLineOnFerry(
   waypoints: Array<[number, number]>
 ): Promise<void> {
   const ferry = await tx.ferryJourney.findFirst({ where: { roadtripLegId: legId, userId } });
-  if (!ferry || waypoints.length < 3) return;
+  if (!ferry) return;
+  if (waypoints.length < 3) {
+    logger.warn({ operation: "ferry.leg_line_not_adopted", ferryId: ferry.id, reason: "chord" });
+    return;
+  }
   const near = (a: { lat: number; lon: number }, b: [number, number]) =>
     haversineKm(a, { lat: b[1], lon: b[0] }) <= ANCHOR_TOLERANCE_KM;
   const first = waypoints[0];
@@ -198,9 +203,16 @@ export async function adoptDrawnLegLineOnFerry(
   if (
     !Number.isFinite(km) ||
     km > Math.max(haversineKm(dep, arr) * MAX_DETOUR_FACTOR, MIN_ALLOWED_KM)
-  )
+  ) {
+    logger.warn({ operation: "ferry.leg_line_not_adopted", ferryId: ferry.id, reason: "too_long" });
     return;
+  }
   const before = await shareSnapshot(tx, "ferry", ferry.id);
+  // The leg carries the same snapped line as the crossing: one line, two maps.
+  await tx.tripRouteLeg.update({
+    where: { id: legId },
+    data: { waypoints: line as unknown as Prisma.InputJsonValue },
+  });
   await tx.ferryJourney.update({
     where: { id: ferry.id },
     data: {
@@ -214,4 +226,17 @@ export async function adoptDrawnLegLineOnFerry(
   });
   await propagateWrite(tx, userId, "ferry", ferry.id, before);
   if (ferry.shareKey) await syncCopiesLegs(tx, ferry.shareKey, ferry.id);
+}
+
+/**
+ * The leg's drawn line was cleared in the tour editor: a linked crossing that
+ * carries a hand-drawn line on the piers drops it too, so neither map keeps a
+ * line the user removed (the router gets another go, as after "clear").
+ */
+export async function dropManualFerryLineOfLeg(userId: string, legId: string): Promise<void> {
+  const ferry = await prisma.ferryJourney.findFirst({
+    where: { roadtripLegId: legId, userId, geometrySource: "manual" },
+    select: { id: true },
+  });
+  if (ferry) await clearFerryManualRoute(userId, ferry.id);
 }
