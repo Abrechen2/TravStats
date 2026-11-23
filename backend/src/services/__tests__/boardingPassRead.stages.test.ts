@@ -3,7 +3,14 @@ import { scanBarcodesFromImageBase64 } from "../../utils/barcodeImage";
 import { getParserConfig, parseBoardingPass } from "../parsers/factory";
 import { getTextParserInstance } from "../parsers/providers";
 import { lookupFlightWithHistorical } from "../flightLookup";
-import { consumeFlightLookup, resetFlightLookupBudget } from "../../middleware/flightLookupBudget";
+import express from "express";
+import request from "supertest";
+import {
+  consumeFlightLookup,
+  flightLookupLimiter,
+  resetFlightLookupBudget,
+} from "../../middleware/flightLookupBudget";
+import { userOrIpKey } from "../../middleware/rateLimit";
 import { RATE_LIMITS } from "../../config/constants";
 
 /**
@@ -95,7 +102,11 @@ describe("readBoardingPass — stage order barcode → parser → LLM", () => {
       ocrOf("FRI 08 JAN 2016\nFlight Departs: 12:46 PM\nFlight Arrives: 2:49 PM")
     );
 
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
 
     expect(codes(reading.stages)).toEqual([
       "barcode:BARCODE_FOUND",
@@ -120,7 +131,11 @@ describe("readBoardingPass — stage order barcode → parser → LLM", () => {
       .mockResolvedValueOnce(ocrOf("08 JAN 2016 Flight Departs: 12:46 PM Flight Arrives: 2:49 PM"))
       .mockResolvedValueOnce(ocrOf("08 JAN 2016 Flight Departs: 5:50 PM Flight Arrives: 9:50 AM"));
 
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
 
     expect(reading.legs.map((l) => [l.flightNumber, l.departureCode, l.arrivalCode])).toEqual([
       ["UA633", "MCO", "ORD"],
@@ -145,7 +160,11 @@ describe("readBoardingPass — stage order barcode → parser → LLM", () => {
       },
     ]);
 
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
 
     expect(codes(reading.stages).slice(-1)).toEqual(["llm:LLM_OK"]);
     expect(llm.parseEmail).toHaveBeenCalledWith(
@@ -171,7 +190,12 @@ describe("readBoardingPass — stage order barcode → parser → LLM", () => {
       ],
     });
 
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER, enrich: true });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+      enrich: true,
+    });
 
     expect(codes(reading.stages).slice(-2)).toEqual(["lookup:LOOKUP_OK", "llm:LLM_NOT_NEEDED"]);
     expect(reading.enriched).toBe(true);
@@ -184,7 +208,12 @@ describe("readBoardingPass — per-stage error codes", () => {
     mockedOcr.mockResolvedValue(
       ocrOf("LH117 MUC FRA", { flightNumber: "LH117", departureCode: "MUC", arrivalCode: "FRA" })
     );
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER, allowLlm: false });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+      allowLlm: false,
+    });
     expect(reading.stages[0]).toMatchObject({
       stage: "barcode",
       status: "failed",
@@ -199,13 +228,22 @@ describe("readBoardingPass — per-stage error codes", () => {
 
   it("names a barcode that is not a boarding pass", async () => {
     mockedScan.mockResolvedValue(scanOf("https://example.com/loyalty"));
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
     expect(reading.stages[0].code).toBe("BARCODE_NOT_BOARDING_PASS");
   });
 
   it("says the flight was not found when the lookup has no match", async () => {
     mockedScan.mockResolvedValue(scanOf(UA633));
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER, enrich: true });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+      enrich: true,
+    });
     expect(reading.stages.find((s) => s.stage === "lookup")?.code).toBe("LOOKUP_NOT_FOUND");
   });
 
@@ -213,7 +251,11 @@ describe("readBoardingPass — per-stage error codes", () => {
     mockedScan.mockResolvedValue(scanOf(UA633));
     mockedOcr.mockResolvedValue(ocrOf("unreadable"));
     mockedConfig.mockResolvedValue({ textFallbacks: ["regex"] });
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
     expect(reading.stages.at(-1)?.code).toBe("LLM_NOT_CONFIGURED");
   });
 
@@ -221,7 +263,11 @@ describe("readBoardingPass — per-stage error codes", () => {
     mockedScan.mockResolvedValue(scanOf(UA633));
     mockedOcr.mockResolvedValue(ocrOf("unreadable"));
     llm.checkAvailability.mockResolvedValue({ available: false, reason: "down" });
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
     expect(reading.stages.at(-1)).toMatchObject({ status: "failed", code: "LLM_UNREACHABLE" });
   });
 
@@ -229,14 +275,20 @@ describe("readBoardingPass — per-stage error codes", () => {
     mockedScan.mockResolvedValue(scanOf(UA633));
     mockedOcr.mockResolvedValue(ocrOf("unreadable"));
     llm.parseEmail.mockRejectedValue(new Error("timeout"));
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
     expect(reading.stages.at(-1)?.code).toBe("LLM_FAILED");
     expect(reading.legs).toHaveLength(1);
   });
 
   it("carries the stages on the error when nothing at all could be read", async () => {
     mockedOcr.mockRejectedValue(new Error("tesseract exploded"));
-    await expect(readBoardingPass({ imageBase64: IMAGE, userId: USER })).rejects.toMatchObject({
+    await expect(
+      readBoardingPass({ imageBase64: IMAGE, userId: USER, lookupKey: `user:${USER}` })
+    ).rejects.toMatchObject({
       name: "BoardingPassReadError",
       stages: [
         expect.objectContaining({ code: "BARCODE_NOT_FOUND" }),
@@ -248,7 +300,12 @@ describe("readBoardingPass — per-stage error codes", () => {
   it("keeps two travellers on the same flight as two legs", async () => {
     const companion = UA633.replace("DOE/JANEMS  ", "DOE/JOHNMR  ").replace("024F", "024E");
     mockedScan.mockResolvedValue(scanOf(UA633, companion));
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER, allowLlm: false });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+      allowLlm: false,
+    });
     expect(reading.legs.map((l) => l.seat)).toEqual(["24F", "24E"]);
   });
 
@@ -259,7 +316,11 @@ describe("readBoardingPass — per-stage error codes", () => {
       { flightNumber: "LH633", departureTime: "2026-01-08T07:00", missing: [] },
       { flightNumber: "LH634", missing: [] },
     ]);
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
     expect(reading.merged.departureTime).toBe("2026-01-08T00:00");
     expect(reading.stages.at(-1)?.code).toBe("LLM_NOTHING");
   });
@@ -268,7 +329,11 @@ describe("readBoardingPass — per-stage error codes", () => {
     mockedScan.mockResolvedValue(scanOf(UA633));
     mockedOcr.mockResolvedValue(ocrOf("unreadable"));
     llm.checkAvailability.mockRejectedValue(new Error("ECONNREFUSED"));
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
     expect(reading.stages.at(-1)?.code).toBe("LLM_UNREACHABLE");
     expect(reading.legs).toHaveLength(1);
   });
@@ -279,7 +344,11 @@ describe("readBoardingPass — per-stage error codes", () => {
     llm.parseEmail.mockResolvedValue([
       { flightNumber: "LH633", departureTime: "2026-01-08T07:00", missing: [] },
     ]);
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
     expect(reading.merged.departureTime).toBe("2026-01-08T00:00");
   });
 
@@ -289,7 +358,11 @@ describe("readBoardingPass — per-stage error codes", () => {
     llm.parseEmail.mockResolvedValue([
       { flightNumber: "952", departureTime: "2026-01-08T17:50", missing: [] },
     ]);
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
     expect(reading.legs[1].departureTime).toBe("2026-01-08T17:50");
     expect(reading.legs[0].departureTime).toBe("2026-01-08T00:00");
   });
@@ -301,7 +374,12 @@ describe("readBoardingPass — bounded work per image (security review)", () => 
 
   it("reads at most four legs from one image and says the rest were left out", async () => {
     mockedScan.mockResolvedValue(scanOf(...many));
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER, enrich: true });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+      enrich: true,
+    });
     expect(reading.decodedAll).toHaveLength(4);
     expect(reading.stages[0]).toMatchObject({
       stage: "barcode",
@@ -314,9 +392,55 @@ describe("readBoardingPass — bounded work per image (security review)", () => 
   });
 
   it("spends each leg's lookup from the user's flight-lookup bucket and stops when it is empty", async () => {
-    for (let i = 0; i < RATE_LIMITS.FLIGHT_LOOKUP_MAX; i++) await consumeFlightLookup(USER);
+    for (let i = 0; i < RATE_LIMITS.FLIGHT_LOOKUP_MAX; i++)
+      await consumeFlightLookup(`user:${USER}`);
     mockedScan.mockResolvedValue(scanOf(UA633));
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER, enrich: true });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+      enrich: true,
+    });
+    expect(mockedLookup).not.toHaveBeenCalled();
+    expect(reading.stages.find((s) => s.stage === "lookup")?.code).toBe("LOOKUP_RATE_LIMITED");
+  });
+});
+
+describe("readBoardingPass — the lookup spends the route limiter's bucket (security review)", () => {
+  /** A route behind the flight-lookup limiter that answers with the key the limiter used. */
+  const appAs = (who: Record<string, unknown>) => {
+    const app = express();
+    app.set("trust proxy", false);
+    app.use((req, _res, next) => {
+      Object.assign(req, who);
+      next();
+    });
+    app.get("/lookup", flightLookupLimiter, (req, res) => {
+      res.json({ key: userOrIpKey(req) });
+    });
+    return app;
+  };
+
+  it.each([
+    ["an API token", { userId: USER, apiToken: { id: "pat-1" } }],
+    ["the shared demo account", { userId: USER, isSharedDemo: true }],
+  ])("for %s, a full route bucket stops the boarding-pass lookup too", async (_who, who) => {
+    const app = appAs(who);
+    let key = "";
+    for (let i = 0; i < RATE_LIMITS.FLIGHT_LOOKUP_MAX; i++) {
+      key = (await request(app).get("/lookup").expect(200)).body.key;
+    }
+    // The route's bucket is empty now: its own next request is refused.
+    await request(app).get("/lookup").expect(429);
+    // A hand-built `user:<id>` key would be a different, full bucket — that was the bug.
+    expect(key).not.toBe(`user:${USER}`);
+    mockedScan.mockResolvedValue(scanOf(UA633));
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: key,
+      enrich: true,
+    });
     expect(mockedLookup).not.toHaveBeenCalled();
     expect(reading.stages.find((s) => s.stage === "lookup")?.code).toBe("LOOKUP_RATE_LIMITED");
   });

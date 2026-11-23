@@ -51,7 +51,9 @@ const changedFields = (before: ParsedBooking, after: ParsedBooking): string[] =>
  */
 export async function lookupStage(
   legs: Legs,
-  userId: string
+  userId: string,
+  /** The route limiter's key (`userOrIpKey(req)`), never built here. */
+  lookupKey: string
 ): Promise<{ legs: ParsedBooking[]; stage: BoardingPassStage }> {
   // Never more lookups than legs one image may yield, whatever reached this stage.
   const wanting = legs
@@ -74,7 +76,7 @@ export async function lookupStage(
       continue;
     }
     // Each lookup is spent from the account's flight-lookup bucket, like one on the lookup route.
-    if (!(await consumeFlightLookup(userId))) {
+    if (!(await consumeFlightLookup(lookupKey))) {
       limited = true;
       out.push(leg);
       continue;

@@ -5,7 +5,7 @@ import { isValidZone } from "../shared/time/zonedParts";
 import { z } from "zod";
 
 import { authenticate, AuthRequest } from "../middleware/auth";
-import { boardingPassParseLimiter } from "../middleware/rateLimit";
+import { boardingPassParseLimiter, userOrIpKey } from "../middleware/rateLimit";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { readBoardingPass } from "../services/boardingPassRead";
@@ -83,6 +83,7 @@ router.post(
         imageBase64: validation?.valid ? (validation.base64 ?? imageBase64) : imageBase64,
         barcode,
         userId,
+        lookupKey: userOrIpKey(req),
         allowOcr: validation === null ? false : validation.valid,
         // Scheduled times for the clock a barcode never carries (owner, 2026-11-22).
         enrich: true,

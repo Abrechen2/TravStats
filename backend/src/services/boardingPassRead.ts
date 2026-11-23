@@ -67,6 +67,12 @@ export interface BoardingPassInput {
   readonly barcode?: string;
   readonly userId: string;
   /**
+   * The route limiter's key for this request (`userOrIpKey(req)`): the flight lookups spend the
+   * same bucket the lookup route does — per API token, per masked address for the shared demo.
+   * Never built by hand; a hand-built `user:` key split or shared the wrong bucket.
+   */
+  readonly lookupKey: string;
+  /**
    * False when the caller has already judged the image unusable for OCR (it
    * failed magic-number validation, say) but still wants the barcode read out
    * of it. Defaults to true.
@@ -332,7 +338,7 @@ export async function readBoardingPass(input: BoardingPassInput): Promise<Boardi
   // 4. flight lookup
   let enriched = false;
   if (enrich) {
-    const looked = await lookupStage(legs, userId);
+    const looked = await lookupStage(legs, userId, input.lookupKey);
     legs = looked.legs;
     enriched = looked.stage.code === "LOOKUP_OK";
     stages.push(looked.stage);

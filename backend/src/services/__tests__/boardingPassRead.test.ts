@@ -61,7 +61,11 @@ describe("readBoardingPass — where each field comes from", () => {
       ocrResult({ flightNumber: "LH999", departureCode: "GRP", arrivalCode: "MUC", missing: [] })
     );
 
-    const { merged } = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const { merged } = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
 
     expect(merged).toMatchObject({
       flightNumber: "LH117",
@@ -78,7 +82,11 @@ describe("readBoardingPass — where each field comes from", () => {
       ocrResult({ gate: "G28", terminal: "2", boardingGroup: "2", aircraft: "A320", missing: [] })
     );
 
-    const { merged } = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const { merged } = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
 
     expect(merged).toMatchObject({
       gate: "G28",
@@ -94,7 +102,11 @@ describe("readBoardingPass — where each field comes from", () => {
     mockedBarcode.mockResolvedValue(BCBP);
     mockedOcr.mockResolvedValue(ocrResult({ airline: "Lufthansa", missing: [] }));
 
-    const { merged } = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const { merged } = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
 
     expect(merged.airline).toBe("Lufthansa");
   });
@@ -102,7 +114,11 @@ describe("readBoardingPass — where each field comes from", () => {
   it("falls back to the carrier code when OCR read no name", async () => {
     mockedBarcode.mockResolvedValue(BCBP);
 
-    const { merged } = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const { merged } = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
 
     expect(merged.airline).toBe("LH");
   });
@@ -111,7 +127,11 @@ describe("readBoardingPass — where each field comes from", () => {
     // A BCBP string holds a day of the year and no clock at all.
     mockedBarcode.mockResolvedValue(BCBP);
 
-    const { merged } = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const { merged } = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
 
     expect(merged.departureTime).toMatch(/^\d{4}-08-30T00:00$/);
   });
@@ -122,7 +142,11 @@ describe("readBoardingPass — where each field comes from", () => {
       ocrResult({ missing: ["flightNumber", "departureCode", "arrivalCode"] })
     );
 
-    const { merged } = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const { merged } = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
 
     expect(merged.missing).not.toContain("flightNumber");
     expect(merged.missing).toContain("arrivalTime");
@@ -133,12 +157,16 @@ describe("readBoardingPass — the two callers use it differently", () => {
   it("trusts a supplied barcode over re-reading one from the image", async () => {
     // The live scanner decodes from a camera frame and sends no photograph;
     // re-reading a JPEG of the same card would be strictly worse.
-    await readBoardingPass({ barcode: BCBP, userId: USER });
+    await readBoardingPass({ barcode: BCBP, userId: USER, lookupKey: `user:${USER}` });
     expect(mockedScan).not.toHaveBeenCalled();
   });
 
   it("works with a barcode and no image at all", async () => {
-    const reading = await readBoardingPass({ barcode: BCBP, userId: USER });
+    const reading = await readBoardingPass({
+      barcode: BCBP,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
     expect(reading.merged.flightNumber).toBe("LH117");
     expect(reading.sources).toEqual({ barcode: true, ocr: false });
     expect(mockedOcr).not.toHaveBeenCalled();
@@ -148,7 +176,12 @@ describe("readBoardingPass — the two callers use it differently", () => {
     // An image that failed validation can hold a perfectly good barcode.
     mockedBarcode.mockResolvedValue(BCBP);
 
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER, allowOcr: false });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+      allowOcr: false,
+    });
 
     expect(reading.merged.flightNumber).toBe("LH117");
     expect(mockedOcr).not.toHaveBeenCalled();
@@ -161,7 +194,11 @@ describe("readBoardingPass — when a half fails", () => {
     mockedBarcode.mockResolvedValue(BCBP);
     mockedOcr.mockRejectedValue(new Error("tesseract exploded"));
 
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
 
     expect(reading.merged.flightNumber).toBe("LH117");
     expect(reading.sources).toEqual({ barcode: true, ocr: false });
@@ -172,9 +209,9 @@ describe("readBoardingPass — when a half fails", () => {
     // silently empty result.
     mockedOcr.mockRejectedValue(new Error("tesseract exploded"));
 
-    await expect(readBoardingPass({ imageBase64: IMAGE, userId: USER })).rejects.toThrow(
-      "tesseract exploded"
-    );
+    await expect(
+      readBoardingPass({ imageBase64: IMAGE, userId: USER, lookupKey: `user:${USER}` })
+    ).rejects.toThrow("tesseract exploded");
   });
 
   it("ignores a barcode that is not a boarding pass", async () => {
@@ -182,7 +219,11 @@ describe("readBoardingPass — when a half fails", () => {
     mockedBarcode.mockResolvedValue("https://example.com/not-a-pass");
     mockedOcr.mockResolvedValue(ocrResult({ flightNumber: "LH103", missing: [] }));
 
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
 
     expect(reading.decoded).toBeNull();
     expect(reading.merged.flightNumber).toBe("LH103");
@@ -192,7 +233,11 @@ describe("readBoardingPass — when a half fails", () => {
   it("reports an empty reading so callers can answer 422", async () => {
     mockedOcr.mockResolvedValue({ flights: [], provider: "tesseract", fallbackUsed: true });
 
-    const reading = await readBoardingPass({ imageBase64: IMAGE, userId: USER });
+    const reading = await readBoardingPass({
+      imageBase64: IMAGE,
+      userId: USER,
+      lookupKey: `user:${USER}`,
+    });
 
     expect(isEmpty(reading)).toBe(true);
   });
@@ -201,6 +246,10 @@ describe("readBoardingPass — when a half fails", () => {
     mockedBarcode.mockResolvedValue(BCBP);
     mockedOcr.mockResolvedValue({ flights: [], provider: "tesseract", fallbackUsed: true });
 
-    expect(isEmpty(await readBoardingPass({ imageBase64: IMAGE, userId: USER }))).toBe(false);
+    expect(
+      isEmpty(
+        await readBoardingPass({ imageBase64: IMAGE, userId: USER, lookupKey: `user:${USER}` })
+      )
+    ).toBe(false);
   });
 });

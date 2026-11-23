@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { authenticate, AuthRequest } from "../middleware/auth";
-import { boardingPassParseLimiter } from "../middleware/rateLimit";
+import { boardingPassParseLimiter, userOrIpKey } from "../middleware/rateLimit";
 import { z } from "zod";
 import logger from "../utils/logger";
 import { getAvailableProviders } from "../services/parsers/factory";
@@ -120,6 +120,7 @@ router.post(
       const reading = await readBoardingPass({
         imageBase64: validatedImage,
         userId,
+        lookupKey: userOrIpKey(req),
         enrich: enrichWithApi,
       });
 

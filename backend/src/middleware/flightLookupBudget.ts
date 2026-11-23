@@ -30,11 +30,13 @@ export const flightLookupLimiter = rateLimit({
 });
 
 /**
- * Spends one flight lookup from the user's bucket (the same key `userOrIpKey` gives a signed-in
- * request). False when the bucket is empty: the caller skips the lookup and says so.
+ * Spends one flight lookup from a bucket. `key` is the route limiter's own key for the request
+ * (`userOrIpKey(req)`), so a lookup made while reading a boarding pass draws on exactly the bucket
+ * a lookup on the route would. False when the bucket is empty: the caller skips the lookup and
+ * says so.
  */
-export async function consumeFlightLookup(userId: string): Promise<boolean> {
-  const { totalHits } = await flightLookupStore.increment(`user:${userId}`);
+export async function consumeFlightLookup(key: string): Promise<boolean> {
+  const { totalHits } = await flightLookupStore.increment(key);
   return totalHits <= RATE_LIMITS.FLIGHT_LOOKUP_MAX;
 }
 
