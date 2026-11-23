@@ -15,7 +15,6 @@ import {
 import { MAX_VALUE_CHARS } from "../values";
 import { asPropagation } from "../../sharing/propagationGuard";
 import { injectLedgerFaultForTests, ledgerStats, resetLedgerStats } from "../capture";
-import { changeHistoryRetentionDays, pruneChangeHistory } from "../retention";
 
 /**
  * The change ledger (spec docs/superpowers/specs/2026-11-22-change-history.md):
@@ -426,24 +425,6 @@ describe("change ledger", () => {
     expect(await rowsFor(f.id)).toHaveLength(1);
     await prisma.user.delete({ where: { id: temp.id } });
     expect(await prisma.changeLedgerEntry.count({ where: { userId: temp.id } })).toBe(0);
-  });
-
-  it("keeps everything by default, and prunes past a configured horizon only", async () => {
-    expect(changeHistoryRetentionDays(undefined)).toBeNull();
-    expect(changeHistoryRetentionDays("30")).toBe(30);
-    expect(() => changeHistoryRetentionDays("-3")).toThrow(/positive whole number/);
-
-    const f = await flight(userId, { gate: "A" });
-    await prisma.flight.update({ where: { id: f.id }, data: { gate: "B" } });
-    const [row] = await rowsFor(f.id);
-    await prisma.changeLedgerEntry.update({
-      where: { id: row.id },
-      data: { createdAt: new Date("2020-01-01T00:00:00Z") },
-    });
-    expect(await pruneChangeHistory(null)).toBeNull();
-    expect(await rowsFor(f.id)).toHaveLength(1);
-    await pruneChangeHistory(365, new Date("2026-11-22T00:00:00Z"));
-    expect(await rowsFor(f.id)).toHaveLength(0);
   });
 
   it("travels in the account archive as the account's own rows, actor stripped", () => {

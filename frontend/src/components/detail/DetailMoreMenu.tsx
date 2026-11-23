@@ -3,6 +3,10 @@ import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useLodgingEnrich } from "../lodging/LodgingEnrichButton";
 import OverflowMenu from "../ui/OverflowMenu";
+import {
+  useChangeHistoryMenu,
+  type ChangeHistoryTarget,
+} from "../changeHistory/useChangeHistoryMenu";
 import type { OverflowEntry } from "../ui/OverflowMenu";
 
 /**
@@ -14,6 +18,7 @@ import type { OverflowEntry } from "../ui/OverflowMenu";
 export default function DetailMoreMenu({
   entries = [],
   enrich,
+  history,
   onDelete,
   deleteLabel,
   children,
@@ -21,6 +26,8 @@ export default function DetailMoreMenu({
   /** Page-specific entries, in the order they should appear. */
   entries?: OverflowEntry[];
   enrich?: { lodgingId: string; onDone: () => void };
+  /** "Änderungsverlauf" of this entry (owner, 2026-11-23): an item that opens the history in a dialog. */
+  history?: ChangeHistoryTarget;
   onDelete: () => void;
   /** The page's own wording of delete ("Ort löschen"); defaults to the common one. */
   deleteLabel?: string;
@@ -31,8 +38,13 @@ export default function DetailMoreMenu({
   // Hooks must run unconditionally; a page without the feature passes an inert target.
   const osm = useLodgingEnrich(enrich?.lodgingId ?? "", enrich?.onDone ?? (() => undefined));
 
+  const changeHistory = useChangeHistoryMenu(
+    history ?? { entityType: "flight", entityId: "", onRestored: undefined }
+  );
+
   const all: OverflowEntry[] = [
     ...entries,
+    ...(history ? [changeHistory.entry] : []),
     ...(enrich && osm.available
       ? [
           {
@@ -59,6 +71,7 @@ export default function DetailMoreMenu({
       testId="detail-more-menu"
     >
       {enrich && osm.node}
+      {history && changeHistory.node}
       {children}
     </OverflowMenu>
   );

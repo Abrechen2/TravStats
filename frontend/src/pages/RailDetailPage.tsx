@@ -56,7 +56,6 @@ import { useToastStore } from "../store/toastStore";
 import type { RailJourney, RailJourneyDetail } from "../types/rail";
 import { StationShortCode } from "../components/rail/StationShortCode";
 import WebGLGuard from "../components/map/WebGLGuard";
-import ChangeHistorySection from "../components/changeHistory/ChangeHistorySection";
 
 type Editing = { mode: "edit" } | { mode: "connection" } | null;
 
@@ -287,6 +286,11 @@ export default function RailDetailPage(): JSX.Element {
           <>
             <Button onClick={() => setEditing({ mode: "edit" })}>{t("rail:edit")}</Button>
             <DetailMoreMenu
+              history={{
+                entityType: "rail",
+                entityId: journey.id,
+                onRestored: () => setReloadKey((k) => k + 1),
+              }}
               entries={[
                 ...(packageSplit.entry ? [packageSplit.entry] : []),
                 {
@@ -462,15 +466,6 @@ export default function RailDetailPage(): JSX.Element {
             </DetailSection>
           )}
         </aside>
-      </div>
-
-      {/* Every recorded change of this entry, full width (spec 2026-11-22-change-history). */}
-      <div style={{ marginTop: "var(--ts-space-xl)" }}>
-        <ChangeHistorySection
-          entityType="rail"
-          entityId={journey.id}
-          onRestored={() => setReloadKey((k) => k + 1)}
-        />
       </div>
 
       {editing && (

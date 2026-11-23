@@ -46,7 +46,7 @@ import { fxOutcomeNotice } from "./expenseFx";
 import ExpensePayerField, { PAYER_NAME_ID } from "./ExpensePayerField";
 import ExpenseRateField, { RATE_ID } from "./ExpenseRateField";
 import { PendingReceiptPicker, ReceiptAttachFailed, attachPendingReceipt } from "./PendingReceipt";
-import ChangeHistorySection from "../changeHistory/ChangeHistorySection";
+import ChangeHistoryMenuButton from "../changeHistory/ChangeHistoryMenuButton";
 
 const AMOUNT_ID = "expense-amount";
 const HINT_ID = "expense-save-blocked";
@@ -427,12 +427,13 @@ export default function ExpenseDialog({
           )}
         </div>
         {expense && (
-          <ChangeHistorySection
-            compact
-            entityType="expense"
-            entityId={expense.id}
-            onRestored={onSaved}
-          />
+          <div className="flex justify-end">
+            <ChangeHistoryMenuButton
+              entityType="expense"
+              entityId={expense.id}
+              onRestored={onSaved}
+            />
+          </div>
         )}
         <RequiredLegend />
         <FormErrorBanner

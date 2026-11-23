@@ -2092,6 +2092,22 @@
               "en": ["Last own copy", "", ""],
               "m": "backup",
               "x": 0
+            },
+            {
+              "id": "chretention",
+              "t": "choice",
+              "o": ["3 Monate", "6 Monate", "12 Monate", "24 Monate"],
+              "oe": ["3 months", "6 months", "12 months", "24 months"],
+              "v": "12 Monate",
+              "inv": "Change history retention (owner 2026-11-23)",
+              "de": [
+                "Änderungsverlauf behalten",
+                "Wie lange der Verlauf jedes Eintrags aufbewahrt wird",
+                ""
+              ],
+              "en": ["Keep change history", "How long each entry's history is kept", ""],
+              "m": "backup",
+              "x": 0
             }
           ]
         },

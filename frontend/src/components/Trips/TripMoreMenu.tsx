@@ -9,6 +9,7 @@ import TripShareDialog from "../sharing/TripShareDialog";
 import { useTripSharingStore } from "../../store/tripSharingStore";
 import { useTripShareDialogs } from "../sharing/useTripShareDialogs";
 import OverflowMenu from "../ui/OverflowMenu";
+import { useChangeHistoryMenu } from "../changeHistory/useChangeHistoryMenu";
 import type { OverflowEntry } from "../ui/OverflowMenu";
 import { useCoverCropStore } from "../../store/coverCropStore";
 import CoverSuggestDialog from "./CoverSuggestDialog";
@@ -45,6 +46,11 @@ export default function TripMoreMenu({
   const summary = useTripSummaryAction(trip, language, t, onChanged);
   const bump = useTripSharingStore((s) => s.bump);
   const shareDialogs = useTripShareDialogs(trip.id, onChanged);
+  const changeHistory = useChangeHistoryMenu({
+    entityType: "trip",
+    entityId: trip.id,
+    onRestored: onChanged,
+  });
   const [exporting, setExporting] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [suggestingCover, setSuggestingCover] = useState(false);
@@ -106,6 +112,7 @@ export default function TripMoreMenu({
           },
         ]
       : []),
+    changeHistory.entry,
     { key: "delete", label: t("common:buttons.delete"), danger: true, onSelect: onDelete },
   ];
 
@@ -117,6 +124,7 @@ export default function TripMoreMenu({
       testId="trip-more-menu"
     >
       {shareDialogs.node}
+      {changeHistory.node}
       {suggestingCover && (
         <CoverSuggestDialog
           tripId={trip.id}

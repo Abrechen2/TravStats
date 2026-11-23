@@ -251,7 +251,10 @@ function whereFor(
 ): string {
   const p = plan.byName.get(tableName);
   if (!p) throw new ArchivePlanError(`${tableName} does not travel`);
-  if (p.policy.kind === "owner") return `${alias}.${quoteIdent(p.policy.column)} = $1`;
+  if (p.policy.kind === "owner") {
+    const own = `${alias}.${quoteIdent(p.policy.column)} = $1`;
+    return p.policy.extraWhere ? `${own} AND ${p.policy.extraWhere(alias)}` : own;
+  }
   if (visiting.has(tableName)) throw new ArchivePlanError(`selection cycle at ${tableName}`);
   const next = new Set(visiting).add(tableName);
   const into = (col: string, refTable: string) => {

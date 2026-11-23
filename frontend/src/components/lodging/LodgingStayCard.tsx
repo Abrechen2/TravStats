@@ -1,5 +1,6 @@
 import { useState } from "react";
 import OverflowMenu from "../ui/OverflowMenu";
+import { useChangeHistoryMenu } from "../changeHistory/useChangeHistoryMenu";
 import DocumentsSection from "../documents/DocumentsSection";
 import EntryPhotos from "../common/EntryPhotos";
 import ProvenanceDialog from "../provenance/ProvenanceDialog";
@@ -31,6 +32,8 @@ interface LodgingStayCardProps {
    * card is read-only.
    */
   onDelete?: (stay: LodgingStay) => void;
+  /** A restore from the stay's history wrote a value: the page reloads. */
+  onHistoryRestored?: () => void;
   /** Resolved from `stay.tripId` by the caller (a stay only stores the id).
    * Undefined when unresolved/not linked — the pill is skipped either way. */
   tripName?: string;
@@ -66,6 +69,7 @@ export function LodgingStayCard({
   stay,
   onEdit,
   onDelete,
+  onHistoryRestored,
   tripName,
   membershipName,
   membershipSource,
@@ -74,6 +78,11 @@ export function LodgingStayCard({
   const { t, i18n } = useTranslation(["lodging", "common", "provenance"]);
   const [editingOrigin, setEditingOrigin] = useState(false);
   const packageSplit = usePackageSplit();
+  const changeHistory = useChangeHistoryMenu({
+    entityType: "lodgingStay",
+    entityId: stay.id,
+    onRestored: onHistoryRestored,
+  });
   const { labelOf } = useRatingCategories();
   const baseCurrency = useSettingsStore((st) => st.baseCurrency);
   const nights = stayNights(stay);
@@ -168,7 +177,7 @@ export function LodgingStayCard({
         </span>
         {/* Edit and delete are one card ⋯ (owner, 2026-11-22). The red belongs to
             the confirmation, which is where the consequence is actually stated. */}
-        {(onEdit || onDelete || onProvenanceSaved || packageSplit.entry) && (
+        {(onEdit || onDelete || onProvenanceSaved || onHistoryRestored || packageSplit.entry) && (
           <OverflowMenu
             label={t("lodging:stay.menuLabel")}
             testId={`stay-menu-${stay.id}`}
@@ -194,6 +203,7 @@ export function LodgingStayCard({
                   ]
                 : []),
               ...(packageSplit.entry ? [packageSplit.entry] : []),
+              ...(onHistoryRestored ? [changeHistory.entry] : []),
               ...(onDelete
                 ? [
                     {
@@ -207,6 +217,7 @@ export function LodgingStayCard({
                 : []),
             ]}
           >
+            {onHistoryRestored && changeHistory.node}
             {editingOrigin && (
               <ProvenanceDialog
                 entryType="lodgingStay"

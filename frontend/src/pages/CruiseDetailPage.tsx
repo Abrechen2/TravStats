@@ -51,7 +51,6 @@ import { VesselLiveStatus } from "../components/vessel/VesselLiveStatus";
 import { VesselAssignDialog } from "../components/vessel/VesselAssignDialog";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import Toggletip from "../components/ui/Toggletip";
-import ChangeHistorySection from "../components/changeHistory/ChangeHistorySection";
 
 /** A cruise day at its port, in the user's format — never moved by the reader's zone. */
 const fmtDate = (day: LocalDateValue | null): string => (day ? formatLocalDate(day.date) : "—");
@@ -291,6 +290,11 @@ export default function CruiseDetailPage(): JSX.Element {
           <>
             <Button onClick={() => setEditing(true)}>{t("detail.edit")}</Button>
             <DetailMoreMenu
+              history={{
+                entityType: "cruise",
+                entityId: cruise.id,
+                onRestored: () => setReloadKey((k) => k + 1),
+              }}
               entries={[
                 {
                   key: "assign-vessel",
@@ -473,15 +477,6 @@ export default function CruiseDetailPage(): JSX.Element {
             </DetailSection>
           )}
         </aside>
-      </div>
-
-      {/* Every recorded change of this entry, full width (spec 2026-11-22-change-history). */}
-      <div style={{ marginTop: "var(--ts-space-xl)" }}>
-        <ChangeHistorySection
-          entityType="cruise"
-          entityId={cruise.id}
-          onRestored={() => setReloadKey((k) => k + 1)}
-        />
       </div>
 
       {editing && (

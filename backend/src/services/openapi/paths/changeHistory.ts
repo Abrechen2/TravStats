@@ -2,9 +2,13 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { errorContent } from "./shared";
-import { changeHistoryQuerySchema } from "../../../schemas/changeHistory";
+import {
+  changeHistoryQuerySchema,
+  changeHistoryRetentionSchema,
+} from "../../../schemas/changeHistory";
 import { CHANGE_SOURCES } from "../../changeLedger/context";
 import { ENTITY_TYPES } from "../../changeLedger/models";
+import { RETENTION_MONTHS_OPTIONS } from "../../changeLedger/retentionPolicy";
 
 /**
  * The change history (spec 2026-11-22-change-history): `routes/changeHistory.ts`. Bare.
@@ -68,5 +72,43 @@ registry.registerPath({
     },
     404: { description: "`CHANGE_NOT_FOUND`", content: errorContent },
     409: { description: "`CHANGE_NOT_RESTORABLE`", content: errorContent },
+  },
+});
+
+const retentionBody = z.object({
+  months: z.number().int().describe("Months of history this account keeps"),
+  options: z
+    .array(z.number().int())
+    .describe(`The choices: ${RETENTION_MONTHS_OPTIONS.join(", ")}`),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/change-history/retention",
+  summary: "How long the account's change history is kept",
+  description: "A rolling window in months (default 12); older rows are deleted nightly.",
+  tags: ["Change history"],
+  responses: {
+    200: {
+      description: "The window and the choices",
+      content: { "application/json": { schema: retentionBody } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/change-history/retention",
+  summary: "Choose how long the account's change history is kept",
+  tags: ["Change history"],
+  request: {
+    body: { content: { "application/json": { schema: changeHistoryRetentionSchema } } },
+  },
+  responses: {
+    200: {
+      description: "The window now in force",
+      content: { "application/json": { schema: retentionBody } },
+    },
+    400: { description: "Not one of the choices", content: errorContent },
   },
 });

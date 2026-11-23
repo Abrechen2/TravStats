@@ -78,6 +78,7 @@ describe("TripMoreMenu — the rare actions behind one Mehr button", () => {
       "immich:cover.menu",
       "trips:export.button",
       "trips:menu.summaryNone",
+      "changeHistory:menu",
       "common:buttons.delete",
     ]);
   });
@@ -200,6 +201,7 @@ describe("TripMoreMenu — the rare actions behind one Mehr button", () => {
     open();
     expect(screen.getAllByRole("menuitem").map((el) => el.textContent)).toEqual([
       "trips:export.button",
+      "changeHistory:menu",
       "common:buttons.delete",
     ]);
   });

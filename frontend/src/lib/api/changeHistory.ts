@@ -43,7 +43,25 @@ export interface ChangeHistoryPage {
   nextCursor: string | null;
 }
 
+/** How many months of history the account keeps, and the choices (3, 6, 12, 24). */
+export interface ChangeHistoryRetention {
+  months: number;
+  options: number[];
+}
+
 export const changeHistoryApi = {
+  async retention(): Promise<ChangeHistoryRetention> {
+    const { data } = await api.get<ChangeHistoryRetention>("/change-history/retention");
+    return data;
+  },
+
+  async setRetention(months: number): Promise<ChangeHistoryRetention> {
+    const { data } = await api.put<ChangeHistoryRetention>("/change-history/retention", {
+      months,
+    });
+    return data;
+  },
+
   async forEntry(
     entityType: ChangeEntityType,
     entityId: string,

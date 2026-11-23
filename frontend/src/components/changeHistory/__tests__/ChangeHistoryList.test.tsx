@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import ChangeHistorySection from "../ChangeHistorySection";
+import ChangeHistoryList from "../ChangeHistoryList";
 import { formatChangeValue } from "../formatChangeValue";
 import { changeHistoryApi, type ChangeHistoryEntry } from "../../../lib/api/changeHistory";
 
@@ -45,9 +45,7 @@ describe("change history on an entry's detail page", () => {
 
   it("lists who changed what, from → to", async () => {
     api.forEntry.mockResolvedValue({ entries: [row()], nextCursor: null });
-    render(<ChangeHistorySection entityType="flight" entityId="f1" />);
-    expect(api.forEntry).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByTestId("change-history-open"));
+    render(<ChangeHistoryList entityType="flight" entityId="f1" />);
     const line = await screen.findByTestId("change-history-row");
     expect(line).toHaveTextContent("changeHistory:field.seatNumber");
     expect(line).toHaveTextContent("12A → 30F");
@@ -59,8 +57,7 @@ describe("change history on an entry's detail page", () => {
     api.forEntry.mockResolvedValue({ entries: [row()], nextCursor: null });
     api.restore.mockResolvedValue([row({ id: "r2", restoredFromId: row().id })]);
     const onRestored = vi.fn();
-    render(<ChangeHistorySection entityType="flight" entityId="f1" onRestored={onRestored} />);
-    await userEvent.click(screen.getByTestId("change-history-open"));
+    render(<ChangeHistoryList entityType="flight" entityId="f1" onRestored={onRestored} />);
     await userEvent.click(await screen.findByTestId("change-history-restore"));
     await waitFor(() => expect(onRestored).toHaveBeenCalled());
     expect(api.restore).toHaveBeenCalledWith(row().id);
@@ -71,8 +68,7 @@ describe("change history on an entry's detail page", () => {
     api.forEntry.mockResolvedValue({ entries: [row()], nextCursor: null });
     api.restore.mockRejectedValue(axiosError("CHANGE_NOT_RESTORABLE"));
     const onRestored = vi.fn();
-    render(<ChangeHistorySection entityType="flight" entityId="f1" onRestored={onRestored} />);
-    await userEvent.click(screen.getByTestId("change-history-open"));
+    render(<ChangeHistoryList entityType="flight" entityId="f1" onRestored={onRestored} />);
     await userEvent.click(await screen.findByTestId("change-history-restore"));
     expect(await screen.findByRole("alert")).toHaveTextContent("changeHistory:restoreRefused");
     expect(onRestored).not.toHaveBeenCalled();
@@ -81,8 +77,7 @@ describe("change history on an entry's detail page", () => {
   it("shows a failed load as a failure with a retry, not as an empty history", async () => {
     api.forEntry.mockRejectedValueOnce(new Error("Network Error"));
     api.forEntry.mockResolvedValueOnce({ entries: [], nextCursor: null });
-    render(<ChangeHistorySection entityType="bus" entityId="b1" />);
-    await userEvent.click(screen.getByTestId("change-history-open"));
+    render(<ChangeHistoryList entityType="bus" entityId="b1" />);
     expect(await screen.findByRole("alert")).toHaveTextContent("changeHistory:loadFailed");
     expect(screen.queryByText("changeHistory:empty")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "changeHistory:retry" }));
@@ -98,28 +93,11 @@ describe("change history on an entry's detail page", () => {
       ],
       nextCursor: null,
     });
-    render(<ChangeHistorySection entityType="flight" entityId="f1" />);
-    await userEvent.click(screen.getByTestId("change-history-open"));
+    render(<ChangeHistoryList entityType="flight" entityId="f1" />);
     expect(await screen.findAllByTestId("change-history-row")).toHaveLength(3);
     expect(screen.queryByTestId("change-history-restore")).toBeNull();
     expect(screen.getByText("changeHistory:notRestorable")).toBeInTheDocument();
     expect(screen.getByText("changeHistory:deleted")).toBeInTheDocument();
-  });
-});
-
-describe("change history inside a card (stay, visit, cruise stop, expense)", () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it("draws no section frame, opens on its 'Verlauf' button and asks for that entry", async () => {
-    api.forEntry.mockResolvedValue({
-      entries: [row({ entityType: "cruiseStop", entityId: "s1", field: "excursionNote" })],
-      nextCursor: null,
-    });
-    render(<ChangeHistorySection compact entityType="cruiseStop" entityId="s1" />);
-    expect(screen.queryByRole("heading")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "changeHistory:title" }));
-    expect(await screen.findByTestId("change-history-row")).toBeInTheDocument();
-    expect(api.forEntry).toHaveBeenCalledWith("cruiseStop", "s1");
   });
 });
 
