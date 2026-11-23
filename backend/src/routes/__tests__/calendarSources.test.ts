@@ -159,6 +159,17 @@ describe("calendar sources: egress (forgejo#411)", () => {
     expect(dav.body).toMatchObject({ error: "invalidUrl", code: "PRIVATE_TARGET" });
   });
 
+  it("refuses plain http for an ordinary account: the secret address would travel readable", async () => {
+    const { cookie } = await account(false);
+    const res = await api(cookie).add({
+      kind: "ics",
+      label: "Arbeit",
+      icsUrl: "http://calendar.example.com/secret.ics",
+    });
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({ error: "invalidUrl", code: "CALENDAR_HTTPS_REQUIRED" });
+  });
+
   it("lets an admin's own source reach the LAN, and reads it", async () => {
     const { cookie } = await account(true);
     const added = await api(cookie).add({ kind: "ics", label: "Arbeit", icsUrl: `${base}/ok.ics` });

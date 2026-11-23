@@ -23,8 +23,8 @@
       "button": "Test",
       "ok_one": "Read: {{count}} appointment between {{from}} and {{to}}.",
       "ok_other": "Read: {{count}} appointments between {{from}} and {{to}}.",
-      "skipped_one": "{{count}} recurring appointment was cut short (too many repetitions).",
-      "skipped_other": "{{count}} recurring appointments were cut short (too many repetitions)."
+      "skipped_one": "{{count}} recurring appointment was cut short or skipped (too many or invalid repetitions).",
+      "skipped_other": "{{count}} recurring appointments were cut short or skipped (too many or invalid repetitions)."
     },
     "privacy": {
       "title": "What is stored",
@@ -71,7 +71,9 @@
         "CALENDAR_NO_COLLECTIONS": "No calendar with appointments was found on this server.",
         "CALENDAR_EGRESS_INTERNET_OFF": "The server's internet access is switched off.",
         "CALENDAR_EGRESS_SERVICE_OFF": "The admin switched calendars off on this server.",
-        "CALENDAR_SOURCE_LIMIT": "At most 10 calendars are possible."
+        "CALENDAR_SOURCE_LIMIT": "At most 10 calendars are possible.",
+        "CALENDAR_HTTPS_REQUIRED": "Please use an https address. Over http the address and password would travel readable.",
+        "CALENDAR_UNSAFE_TIMEZONE": "The calendar contains a time zone with invalid rules and is not read."
       }
     }
   }

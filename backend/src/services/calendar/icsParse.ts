@@ -26,6 +26,13 @@ export const MAX_EXPANSIONS_PER_RULE = 500;
 /** Iterations a rule may spend before it reaches the window (a daily rule from 1990 is ~13 000). */
 export const MAX_ITERATIONS_PER_RULE = 20_000;
 export const PARSE_DEADLINE_MS = 5_000;
+/** Rules starting earlier than this are refused: nobody's calendar needs them, a loop does. */
+export const EARLIEST_RULE_YEAR = 1900;
+/** Event recurrences finer than this make the library walk every minute up to the window. */
+const UNSAFE_EVENT_FREQS = new Set(["SECONDLY", "MINUTELY"]);
+/** A time zone changes its offset at most a few times a year: anything finer is an attack. */
+const SAFE_ZONE_FREQS = new Set(["MONTHLY", "YEARLY"]);
+const MONTH_DAYS = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 const TEXT_CAP = 500;
 const DAY_MS = 86_400_000;
 
@@ -54,12 +61,23 @@ export interface ParseOptions {
   fromMs: number;
   untilMs: number;
   profileZone: string;
+  /** VEVENT components AND events produced, across every text of one read. */
   maxEvents?: number;
   maxExpansionsPerRule?: number;
   maxIterationsPerRule?: number;
+  /** Relative deadline, when no absolute `deadlineAt` is given. */
   deadlineMs?: number;
+  /** One absolute deadline for the whole read (epoch ms), shared by every text. */
+  deadlineAt?: number;
   /** Test seam for the deadline. */
   now?: () => number;
+}
+
+/** What one read may still spend: shared by every text, so many small texts cannot add up. */
+interface Budget {
+  deadlineAt: number;
+  components: number;
+  events: number;
 }
 
 const pad = (n: number, width = 2) => String(n).padStart(width, "0");
@@ -146,12 +164,69 @@ function countEvents(text: string): number {
   return (text.match(/^BEGIN:VEVENT\s*$/gim) ?? []).length;
 }
 
-export function parseIcsWindow(text: string, options: ParseOptions): ParsedWindow {
-  const now = options.now ?? Date.now;
-  const deadline = now() + (options.deadlineMs ?? PARSE_DEADLINE_MS);
-  const maxEvents = options.maxEvents ?? MAX_EVENTS_PER_FILE;
-  if (countEvents(text) > maxEvents)
-    throw new CalendarError("protocol", "CALENDAR_TOO_MANY_EVENTS");
+type RecurLike = { freq?: string; parts?: Record<string, unknown[]> };
+const numbers = (v: unknown): number[] =>
+  Array.isArray(v) ? v.map(Number).filter((n) => Number.isFinite(n)) : [];
+
+/**
+ * A recurrence the library would walk without ever producing an occurrence, or
+ * walk minute by minute: BYMONTH + BYMONTHDAY with no real day between them
+ * (30 February), BYWEEKNO outside a yearly rule, and SECONDLY/MINUTELY.
+ */
+export function unsafeEventRule(recur: RecurLike): boolean {
+  const freq = String(recur.freq ?? "").toUpperCase();
+  if (UNSAFE_EVENT_FREQS.has(freq)) return true;
+  const parts = recur.parts ?? {};
+  const months = numbers(parts.BYMONTH);
+  const days = numbers(parts.BYMONTHDAY);
+  if (months.some((m) => m < 1 || m > 12)) return true;
+  if (days.some((d) => d === 0 || Math.abs(d) > 31)) return true;
+  if (months.length && days.length) {
+    const possible = months.some((m) => days.some((d) => Math.abs(d) <= MONTH_DAYS[m - 1]));
+    if (!possible) return true;
+  }
+  if (numbers(parts.BYWEEKNO).length && freq !== "YEARLY") return true;
+  if (numbers(parts.BYYEARDAY).some((d) => d === 0 || Math.abs(d) > 366)) return true;
+  return false;
+}
+
+/** A VTIMEZONE whose STANDARD/DAYLIGHT rules recur finer than monthly: every offset lookup would expand it. */
+function assertSafeTimezones(root: ICAL.Component): void {
+  for (const vtz of root.getAllSubcomponents("vtimezone")) {
+    for (const sub of [
+      ...vtz.getAllSubcomponents("standard"),
+      ...vtz.getAllSubcomponents("daylight"),
+    ]) {
+      for (const prop of sub.getAllProperties("rrule")) {
+        const freq = String((prop.getFirstValue() as RecurLike | null)?.freq ?? "").toUpperCase();
+        if (!SAFE_ZONE_FREQS.has(freq))
+          throw new CalendarError("protocol", "CALENDAR_UNSAFE_TIMEZONE");
+      }
+    }
+  }
+}
+
+/** Why a master event is not expanded at all, or null: counted with the cut rules. */
+function refusedEvent(master: ICAL.Component): boolean {
+  const start = master.getFirstPropertyValue("dtstart") as ICAL.Time | null;
+  if (start && typeof start.year === "number" && start.year < EARLIEST_RULE_YEAR) return true;
+  return master
+    .getAllProperties("rrule")
+    .some((p) => unsafeEventRule((p.getFirstValue() ?? {}) as RecurLike));
+}
+
+function parseOne(
+  text: string,
+  options: ParseOptions,
+  budget: Budget,
+  now: () => number
+): ParsedWindow {
+  const checkDeadline = () => {
+    if (now() > budget.deadlineAt) throw new CalendarError("protocol", "CALENDAR_PARSE_TIMEOUT");
+  };
+  checkDeadline();
+  budget.components -= countEvents(text);
+  if (budget.components < 0) throw new CalendarError("protocol", "CALENDAR_TOO_MANY_EVENTS");
   let root: ICAL.Component;
   try {
     root = new ICAL.Component(ICAL.parse(text) as unknown[]);
@@ -159,8 +234,8 @@ export function parseIcsWindow(text: string, options: ParseOptions): ParsedWindo
     throw new CalendarError("protocol", "CALENDAR_PARSE");
   }
   if (root.name !== "vcalendar") throw new CalendarError("protocol", "CALENDAR_PARSE");
+  assertSafeTimezones(root);
   const vevents = root.getAllSubcomponents("vevent");
-  if (vevents.length > maxEvents) throw new CalendarError("protocol", "CALENDAR_TOO_MANY_EVENTS");
 
   // A changed occurrence (RECURRENCE-ID) belongs to its master; the master's iterator replaces it.
   const masters: ICAL.Component[] = [];
@@ -176,14 +251,19 @@ export function parseIcsWindow(text: string, options: ParseOptions): ParsedWindo
   let skippedRules = 0;
   const maxExpansions = options.maxExpansionsPerRule ?? MAX_EXPANSIONS_PER_RULE;
   const maxIterations = options.maxIterationsPerRule ?? MAX_ITERATIONS_PER_RULE;
-  const checkDeadline = () => {
-    if (now() > deadline) throw new CalendarError("protocol", "CALENDAR_PARSE_TIMEOUT");
+  const keep = (one: CalendarEvent) => {
+    if (--budget.events < 0) throw new CalendarError("protocol", "CALENDAR_TOO_MANY_EVENTS");
+    events.push(one);
   };
 
   for (const master of masters) {
     checkDeadline();
     if (String(master.getFirstPropertyValue("status") ?? "").toUpperCase() === "CANCELLED")
       continue;
+    if (refusedEvent(master)) {
+      skippedRules++;
+      continue;
+    }
     let event: ICAL.Event;
     try {
       event = new ICAL.Event(master, {
@@ -195,14 +275,21 @@ export function parseIcsWindow(text: string, options: ParseOptions): ParsedWindo
     if (!event.startDate) continue;
     if (!event.isRecurring()) {
       const one = eventOf(event, event.startDate, event.endDate ?? null, options.profileZone);
-      if (overlaps(one, options)) events.push(one);
+      if (overlaps(one, options)) keep(one);
       continue;
     }
-    const iterator = event.iterator();
+    let iterator: ReturnType<ICAL.Event["iterator"]>;
+    try {
+      iterator = event.iterator();
+    } catch {
+      // The library refuses some BY* combinations outright: a cut rule, not a dead calendar.
+      skippedRules++;
+      continue;
+    }
     let produced = 0;
     let reachedEnd = false;
     for (let i = 0; i < maxIterations; i++) {
-      if (i % 500 === 0) checkDeadline();
+      if (i % 100 === 0) checkDeadline();
       const next = iterator.next();
       if (!next) {
         reachedEnd = true;
@@ -221,7 +308,7 @@ export function parseIcsWindow(text: string, options: ParseOptions): ParsedWindo
         break;
       }
       if (!overlaps(one, options)) continue;
-      events.push(one);
+      keep(one);
       if (++produced >= maxExpansions) {
         // More occurrences may lie inside the window: counted, so the cut is visible.
         skippedRules++;
@@ -231,6 +318,35 @@ export function parseIcsWindow(text: string, options: ParseOptions): ParsedWindo
     }
     if (!reachedEnd) skippedRules++;
   }
+  return { events, skippedRules };
+}
+
+/**
+ * Every text of ONE read (an ICS feed, or all calendar-data of all CalDAV
+ * collections) under one deadline and one event budget. In-process: the caller
+ * that must survive a parser stuck inside the library runs this in a worker
+ * (`icsWorker.ts`), which is terminated at the same deadline.
+ */
+export function parseIcsTexts(texts: readonly string[], options: ParseOptions): ParsedWindow {
+  const now = options.now ?? Date.now;
+  const max = options.maxEvents ?? MAX_EVENTS_PER_FILE;
+  const budget: Budget = {
+    deadlineAt: options.deadlineAt ?? now() + (options.deadlineMs ?? PARSE_DEADLINE_MS),
+    components: max,
+    events: max,
+  };
+  const events: CalendarEvent[] = [];
+  let skippedRules = 0;
+  for (const text of texts) {
+    const one = parseOne(text, options, budget, now);
+    events.push(...one.events);
+    skippedRules += one.skippedRules;
+  }
   events.sort((a, b) => a.startMs - b.startMs);
   return { events, skippedRules };
+}
+
+/** One text: `parseIcsTexts` of a single feed. */
+export function parseIcsWindow(text: string, options: ParseOptions): ParsedWindow {
+  return parseIcsTexts([text], options);
 }

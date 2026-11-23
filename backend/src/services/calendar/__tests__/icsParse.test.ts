@@ -142,7 +142,7 @@ describe("parseIcsWindow", () => {
           "SUMMARY:Ticker",
           "DTSTART:20261101T000000Z",
           "DTEND:20261101T000100Z",
-          "RRULE:FREQ=MINUTELY;INTERVAL=5",
+          "RRULE:FREQ=HOURLY",
         ])
       ),
       NOV

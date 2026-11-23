@@ -60,11 +60,13 @@ const KINDS: readonly string[] = [
 /** Codes the page names on their own; any other falls back to the kind. */
 const CODES: readonly string[] = [
   "PRIVATE_TARGET",
+  "CALENDAR_HTTPS_REQUIRED",
   "CALENDAR_TIMEOUT",
   "CALENDAR_TOO_LARGE",
   "CALENDAR_TOO_MANY_EVENTS",
   "CALENDAR_PARSE",
   "CALENDAR_PARSE_TIMEOUT",
+  "CALENDAR_UNSAFE_TIMEZONE",
   "CALENDAR_REDIRECT",
   "CALENDAR_XML_TOO_DEEP",
   "CALENDAR_FOREIGN_HREF",

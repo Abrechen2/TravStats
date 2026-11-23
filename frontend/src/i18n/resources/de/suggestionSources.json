@@ -23,8 +23,8 @@
       "button": "Testen",
       "ok_one": "Gelesen: {{count}} Termin zwischen {{from}} und {{to}}.",
       "ok_other": "Gelesen: {{count}} Termine zwischen {{from}} und {{to}}.",
-      "skipped_one": "{{count}} Serientermin wurde gekürzt (zu viele Wiederholungen).",
-      "skipped_other": "{{count}} Serientermine wurden gekürzt (zu viele Wiederholungen)."
+      "skipped_one": "{{count}} Serientermin wurde gekürzt oder übersprungen (zu viele oder ungültige Wiederholungen).",
+      "skipped_other": "{{count}} Serientermine wurden gekürzt oder übersprungen (zu viele oder ungültige Wiederholungen)."
     },
     "privacy": {
       "title": "Was gespeichert wird",
@@ -71,7 +71,9 @@
         "CALENDAR_NO_COLLECTIONS": "Auf diesem Server wurde kein Kalender mit Terminen gefunden.",
         "CALENDAR_EGRESS_INTERNET_OFF": "Der Internetzugang des Servers ist ausgeschaltet.",
         "CALENDAR_EGRESS_SERVICE_OFF": "Der Admin hat Kalender auf diesem Server ausgeschaltet.",
-        "CALENDAR_SOURCE_LIMIT": "Es sind höchstens 10 Kalender möglich."
+        "CALENDAR_SOURCE_LIMIT": "Es sind höchstens 10 Kalender möglich.",
+        "CALENDAR_HTTPS_REQUIRED": "Bitte eine https-Adresse verwenden. Über http würden Adresse und Passwort lesbar übertragen.",
+        "CALENDAR_UNSAFE_TIMEZONE": "Der Kalender enthält eine Zeitzone mit unzulässigen Regeln und wird nicht gelesen."
       }
     }
   }

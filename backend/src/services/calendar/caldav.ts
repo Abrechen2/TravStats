@@ -15,6 +15,8 @@ import { CalendarError, calendarErrorOfStatus } from "./errors";
 export const CALDAV_TIMEOUT_MS = 20_000;
 export const CALDAV_MAX_BYTES = 5 * 1024 * 1024;
 export const XML_MAX_DEPTH = 32;
+/** calendar-data texts one REPORT may answer with; more is refused, not cut. */
+export const MAX_TEXTS_PER_REPORT = 2_000;
 const MAX_COLLECTIONS = 50;
 
 export interface CaldavCredentials {
@@ -112,7 +114,8 @@ async function dav(
   body: string,
   c: CaldavCredentials,
   policy: TargetPolicy,
-  fetchImpl?: FetchLike
+  fetchImpl?: FetchLike,
+  timeoutMs: number = CALDAV_TIMEOUT_MS
 ): Promise<string> {
   const res = await boundedFetch(
     url,
@@ -121,7 +124,8 @@ async function dav(
       headers: DAV_HEADERS(c, depth),
       body,
       policy,
-      timeoutMs: CALDAV_TIMEOUT_MS,
+      timeoutMs,
+      httpsOnly: !policy.allowPrivate,
       maxBytes: CALDAV_MAX_BYTES,
     },
     fetchImpl
@@ -209,7 +213,8 @@ export async function queryCollection(
   collectionHref: string,
   window: { fromMs: number; untilMs: number },
   policy: TargetPolicy,
-  fetchImpl?: FetchLike
+  fetchImpl?: FetchLike,
+  timeoutMs: number = CALDAV_TIMEOUT_MS
 ): Promise<string[]> {
   const url = resolveHref(c.url, collectionHref);
   const body =
@@ -219,9 +224,12 @@ export async function queryCollection(
     `<c:filter><c:comp-filter name="VCALENDAR"><c:comp-filter name="VEVENT">` +
     `<c:time-range start="${caldavTime(window.fromMs)}" end="${caldavTime(window.untilMs)}"/>` +
     `</c:comp-filter></c:comp-filter></c:filter></c:calendar-query>`;
-  const xml = await dav(url, "REPORT", "1", body, c, policy, fetchImpl);
-  return responses(xml).flatMap((r) => {
+  const xml = await dav(url, "REPORT", "1", body, c, policy, fetchImpl, timeoutMs);
+  const texts = responses(xml).flatMap((r) => {
     const data = text(r.prop["calendar-data"]);
     return data ? [data] : [];
   });
+  if (texts.length > MAX_TEXTS_PER_REPORT)
+    throw new CalendarError("protocol", "CALENDAR_TOO_MANY_EVENTS");
+  return texts;
 }

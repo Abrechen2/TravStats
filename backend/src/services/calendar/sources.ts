@@ -28,13 +28,25 @@ import {
   type CalendarSourceUpdate,
   type CalendarSourceView,
 } from "../../schemas/calendarSources";
-import { parseIcsWindow, type ParsedWindow } from "./icsParse";
-import { queryCollection, type CaldavCollection, type CaldavCredentials } from "./caldav";
+import { MAX_EVENTS_PER_FILE, type ParsedWindow } from "./icsParse";
+import { parseIcsInWorker } from "./icsWorker";
+import {
+  CALDAV_TIMEOUT_MS,
+  queryCollection,
+  type CaldavCollection,
+  type CaldavCredentials,
+} from "./caldav";
 import { CalendarError, calendarErrorOfStatus, toCalendarError } from "./errors";
 
 export const CALENDAR_SERVICE_ID = "calendar";
 export const ICS_MAX_BYTES = 5 * 1024 * 1024;
 export const ICS_TIMEOUT_MS = 20_000;
+/**
+ * One read (all fetches and the parse) under ONE absolute deadline, and one
+ * event budget shared by every text it brings back (security review): twenty
+ * collections must not mean twenty deadlines and twenty budgets.
+ */
+export const READ_DEADLINE_MS = 60_000;
 
 export interface CalendarWindow {
   fromMs: number;
@@ -43,9 +55,23 @@ export interface CalendarWindow {
 
 export interface CalendarReadDeps {
   fetch?: FetchLike;
+  /** Absolute deadline of the read (epoch ms); default now + READ_DEADLINE_MS. */
+  deadlineAt?: number;
+  /** Test seam: the total events allowed across the read. */
+  maxEvents?: number;
 }
 
-/** `webcal://` is the subscription scheme of the same https address. */
+const remaining = (deadlineAt: number, cap: number): number => {
+  const left = deadlineAt - Date.now();
+  if (left <= 0) throw new CalendarError("unreachable", "CALENDAR_TIMEOUT");
+  return Math.min(cap, left);
+};
+
+/**
+ * `webcal://` is the subscription scheme of the same https address. Plain http
+ * only for an admin's own LAN server: anywhere else the secret ICS address and
+ * the CalDAV password would cross the internet readable (review, P1).
+ */
 export function normaliseCalendarUrl(raw: string, policy: TargetPolicy): string {
   const trimmed = raw.trim().replace(/^webcals?:\/\//i, "https://");
   let parsed: URL;
@@ -63,6 +89,8 @@ export function normaliseCalendarUrl(raw: string, policy: TargetPolicy): string 
       throw new AppError("invalidUrl", 400, "PRIVATE_TARGET");
     throw error;
   }
+  if (parsed.protocol === "http:" && !policy.allowPrivate)
+    throw new AppError("invalidUrl", 400, "CALENDAR_HTTPS_REQUIRED");
   return parsed.toString();
 }
 
@@ -200,19 +228,26 @@ export async function readIcs(
   policy: TargetPolicy,
   deps: CalendarReadDeps = {}
 ): Promise<ParsedWindow> {
+  const deadlineAt = deps.deadlineAt ?? Date.now() + READ_DEADLINE_MS;
   const res = await boundedFetch(
     url,
     {
       headers: { Accept: "text/calendar, */*;q=0.5" },
       policy,
-      timeoutMs: ICS_TIMEOUT_MS,
+      timeoutMs: remaining(deadlineAt, ICS_TIMEOUT_MS),
+      httpsOnly: !policy.allowPrivate,
       maxBytes: ICS_MAX_BYTES,
     },
     deps.fetch
   );
   const failed = calendarErrorOfStatus(res.status);
   if (failed) throw failed;
-  return parseIcsWindow(res.body.toString("utf8"), { ...window, profileZone });
+  return parseIcsInWorker([res.body.toString("utf8")], {
+    ...window,
+    profileZone,
+    deadlineAt,
+    maxEvents: deps.maxEvents ?? MAX_EVENTS_PER_FILE,
+  });
 }
 
 /** The chosen CalDAV collections, each asked for the window only (`time-range`). */
@@ -224,18 +259,16 @@ export async function readCaldav(
   policy: TargetPolicy,
   deps: CalendarReadDeps = {}
 ): Promise<ParsedWindow> {
-  const events: ParsedWindow["events"] = [];
-  let skippedRules = 0;
+  const deadlineAt = deps.deadlineAt ?? Date.now() + READ_DEADLINE_MS;
+  const maxEvents = deps.maxEvents ?? MAX_EVENTS_PER_FILE;
+  const texts: string[] = [];
   for (const c of collections) {
-    const texts = await queryCollection(creds, c.href, window, policy, deps.fetch);
-    for (const text of texts) {
-      const parsed = parseIcsWindow(text, { ...window, profileZone });
-      events.push(...parsed.events);
-      skippedRules += parsed.skippedRules;
-    }
+    const timeoutMs = remaining(deadlineAt, CALDAV_TIMEOUT_MS);
+    texts.push(...(await queryCollection(creds, c.href, window, policy, deps.fetch, timeoutMs)));
+    // Each text holds at least one event: more texts than the budget can never fit it.
+    if (texts.length > maxEvents) throw new CalendarError("protocol", "CALENDAR_TOO_MANY_EVENTS");
   }
-  events.sort((a, b) => a.startMs - b.startMs);
-  return { events, skippedRules };
+  return parseIcsInWorker(texts, { ...window, profileZone, deadlineAt, maxEvents });
 }
 
 /** A stored source, read for one window. Records the outcome on the row. */
@@ -285,6 +318,8 @@ function normaliseOrFail(url: string, policy: TargetPolicy): void {
   } catch (error) {
     if (error instanceof AppError && error.code === "PRIVATE_TARGET")
       throw new CalendarError("invalidUrl", "PRIVATE_TARGET");
+    if (error instanceof AppError && error.code === "CALENDAR_HTTPS_REQUIRED")
+      throw new CalendarError("invalidUrl", "CALENDAR_HTTPS_REQUIRED");
     throw new CalendarError("invalidUrl");
   }
 }
