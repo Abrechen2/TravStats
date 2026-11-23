@@ -32,6 +32,7 @@ jest.mock("../middleware/rateLimit", () => ({
   adminReseedLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
   generalLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
   settingsLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
+  statsLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 jest.mock("../services/loggingConfig", () => ({
   getLoggingConfig: jest.fn(),

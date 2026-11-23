@@ -218,6 +218,9 @@ export const NON_TRAVEL_RELATIONS = [
   // AIS positions of the member's own journeys in progress (2026-11-22): server bookkeeping per
   // account, never shared — a shared cruise's copies receive its AIS recording as a cruise track.
   "vesselPositionFixes",
+  // A member's own drawn sea line per port pair (feat/ferry-route-pair): their drawing aid,
+  // derived and re-drawn per account, never published to a friend.
+  "ferryPairRoutes",
   "settings",
   "analyticsEvents",
   "createdInvitations",

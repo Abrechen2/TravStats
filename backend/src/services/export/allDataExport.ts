@@ -134,6 +134,8 @@ export const USER_EXPORT_SELECT = {
   // companion links — the terminals' frozen names and zones included.
   busJourneys: { include: { companionLinks: true } },
   ferryJourneys: { include: { companionLinks: true } },
+  // Sea lines the account drew once for a port pair (feat/ferry-route-pair): hand-drawn work.
+  ferryPairRoutes: true,
   // AIS positions recorded during a crossing or cruise (2026-11-22): recorded data,
   // and for a ferry the server's only copy of the track.
   vesselPositionFixes: true,

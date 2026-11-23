@@ -269,7 +269,7 @@
     "personal": "seat notes tags companions",
     "photos": "",
     "documents": "bookingReference",
-    "excluded": "userId shareKey railAndFlyFlightId railAndFlyOptOut provenance rememberedOn rememberedNote purpose"
+    "excluded": "userId shareKey railAndFlyFlightId railAndFlyOptOut provenance rememberedOn rememberedNote purpose operatorSource"
   },
   "RailStation": {
     "details": "id name searchName uic dbId shortCode lat lon country timezone parentSourceId isUserAdded",
@@ -301,7 +301,7 @@
     "personal": "cabinType seat notes tags companions vehicleRegistration",
     "photos": "",
     "documents": "bookingReference ticketReference",
-    "excluded": "userId shareKey roadtripLegBefore provenance rememberedOn rememberedNote purpose vesselMmsi vesselMmsiSource"
+    "excluded": "userId shareKey roadtripLegBefore provenance rememberedOn rememberedNote purpose vesselMmsi vesselMmsiSource manualScope"
   },
   "Companion": {
     "details": "",

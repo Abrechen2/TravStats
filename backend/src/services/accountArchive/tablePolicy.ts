@@ -157,6 +157,8 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   bus_journeys: owner({ strip: SHARE_KEY }),
   bus_journey_companions: child(),
   ferry_journeys: owner({ strip: SHARE_KEY }),
+  // The account's own drawn sea line per port pair (feat/ferry-route-pair): hand-drawn, not re-derivable.
+  ferry_pair_routes: owner(),
   ferry_journey_companions: child(),
   // AIS positions recorded during a crossing or cruise (2026-11-22): recorded data,
   // the server's only copy of a ferry's track.
