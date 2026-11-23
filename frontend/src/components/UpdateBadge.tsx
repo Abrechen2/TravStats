@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { versionApi, type VersionInfo } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 import { useClickOutside } from "../hooks/useClickOutside";
+import { useEscapeClose } from "../hooks/useEscapeClose";
 import { logger } from "../lib/logger";
 import { formatDate as formatUserDate } from "../lib/displayFormat";
 
@@ -49,6 +50,7 @@ export default function UpdateBadge(): JSX.Element | null {
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   useClickOutside(popoverRef, () => setPopoverOpen(false));
+  useEscapeClose(popoverOpen, () => setPopoverOpen(false));
 
   useEffect(() => {
     let cancelled = false;

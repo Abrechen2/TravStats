@@ -22,6 +22,7 @@ import { PasswordInput } from "../components/Auth/PasswordInput";
 import { Icon } from "../components/ui/Icon";
 import { loginFailure, type LoginFailureCopy } from "../lib/loginFailure";
 import { logger } from "../lib/logger";
+import { useEscapeClose } from "../hooks/useEscapeClose";
 
 export default function LoginPage(): JSX.Element {
   const { t } = useTranslation(["auth", "common"]);
@@ -203,6 +204,7 @@ export default function LoginPage(): JSX.Element {
   };
   const forgotPanelRef = useRef<HTMLDivElement>(null);
   const forgotScrim = useScrimDismiss(forgotPanelRef, handleCloseForgotModal);
+  useEscapeClose(showForgotModal, handleCloseForgotModal, forgotLoading);
 
   // Round 4 ("Anmelden"): the brand and what TravStats is on the left, the
   // form on the right. The public counts the export draws there (entries,

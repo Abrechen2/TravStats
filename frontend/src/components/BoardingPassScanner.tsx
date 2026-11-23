@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { parseApi } from "../lib/api";
 import type { BoardingPassStage } from "../lib/api/types";
 import { useTranslation } from "../hooks/useTranslation";
+import { useEscapeClose } from "../hooks/useEscapeClose";
 import { extractBarcodeFromImage } from "../lib/barcodeExtractor";
 import { parseBCBP } from "../lib/bcbpParser";
 import { logger } from "../lib/logger";
@@ -62,6 +63,7 @@ export default function BoardingPassScanner({
   onClose,
 }: BoardingPassScannerProps): JSX.Element {
   const { t } = useTranslation(["flights", "common", "errors", "import"]);
+  useEscapeClose(true, onClose);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<string | null>(null);

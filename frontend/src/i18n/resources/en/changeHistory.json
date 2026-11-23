@@ -1,6 +1,7 @@
 {
   "title": "History",
   "show": "Show history",
+  "hide": "Hide history",
   "loading": "Loading history …",
   "empty": "No changes recorded yet.",
   "loadFailed": "The history could not be loaded.",

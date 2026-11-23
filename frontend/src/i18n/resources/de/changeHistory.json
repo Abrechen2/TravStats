@@ -1,6 +1,7 @@
 {
   "title": "Verlauf",
   "show": "Verlauf anzeigen",
+  "hide": "Verlauf ausblenden",
   "loading": "Verlauf wird geladen …",
   "empty": "Noch keine Änderungen aufgezeichnet.",
   "loadFailed": "Der Verlauf konnte nicht geladen werden.",

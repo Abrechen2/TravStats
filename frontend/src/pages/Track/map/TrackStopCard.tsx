@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { token } from "../../../components/ui/tokens";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useEscapeClose } from "../../../hooks/useEscapeClose";
 import { trackErrorKey } from "../../../lib/api/travtrack";
 import { dawarichStaysApi } from "../../../lib/api/dawarichStays";
 import { travTrackLegsApi, type TravTrackStop } from "../../../lib/api/travtrackLegs";
@@ -33,6 +34,7 @@ export default function TrackStopCard({
   /** Reads the day again after the stay was declined. */
   onChanged: () => Promise<void>;
 }): JSX.Element {
+  useEscapeClose(true, onClose);
   const { t } = useTranslation(["track"]);
   const coarse = useCoarsePointer();
   const [busy, setBusy] = useState(false);

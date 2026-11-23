@@ -4,6 +4,7 @@ import type { JSX } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { token } from "../../../components/ui/tokens";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useEscapeClose } from "../../../hooks/useEscapeClose";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTodayZone } from "../../../hooks/useTodayZone";
 import type { Feature, Geometry } from "geojson";
@@ -409,6 +410,8 @@ export default function TrackMapView(): JSX.Element {
   const stopCount = long
     ? null
     : loaded.reduce((n, r) => n + (r.day.stops ?? []).filter((s) => !s.dismissed).length, 0);
+  // The photo popup is drawn inline here; the cards close themselves on Escape.
+  useEscapeClose(detail === "photo" && photo !== null, () => setPhoto(null));
   const closeLeg = () => {
     setPick(null);
     // "Ganzer Tag" also ends a "play this leg" window.

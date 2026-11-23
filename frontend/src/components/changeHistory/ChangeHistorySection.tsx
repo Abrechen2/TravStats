@@ -71,6 +71,11 @@ export default function ChangeHistorySection({
     setCursor(null);
   }, [entityType, entityId]);
 
+  const close = (): void => {
+    setLoad({ state: "closed" });
+    setRestoreError(null);
+  };
+
   const fetchMore = async () => {
     if (!cursor) return;
     try {
@@ -155,6 +160,22 @@ export default function ChangeHistorySection({
             style={chipStyle(coarse)}
           >
             {compact ? t("changeHistory:title") : t("changeHistory:show")}
+          </button>
+        </div>
+      )}
+      {load.state !== "closed" && (
+        // Where the open button was, so the same spot closes it again. The
+        // section opened inline and had no way back (owner report 2026-11-23).
+        <div>
+          <button
+            type="button"
+            className="ts-chip"
+            data-testid="change-history-close"
+            aria-expanded="true"
+            onClick={close}
+            style={chipStyle(coarse)}
+          >
+            {t("changeHistory:hide")}
           </button>
         </div>
       )}
