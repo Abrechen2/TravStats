@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import MapGL from "react-map-gl/maplibre";
 import { PathLayer } from "@deck.gl/layers";
@@ -26,8 +26,9 @@ import { railBounds } from "../rail/RailRouteMap";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
-import { ferryApi } from "../../lib/api/ferry";
+import { ferryApi, type FerryPairReach } from "../../lib/api/ferry";
 import { apiErrorMachineCode } from "../../lib/apiError";
+import { logger } from "../../lib/logger";
 import { reuseMapsEnabled } from "../../lib/mapReuse";
 import type { FerryJourney } from "../../types/ferry";
 
@@ -81,6 +82,25 @@ export function FerryRouteEditor({ ride, onSaved, onClose }: Props): JSX.Element
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // How far the line reaches (GitHub #406): the user's other crossings between the same two ports.
+  const [reach, setReach] = useState<FerryPairReach | null>(null);
+  const [reachFailed, setReachFailed] = useState(false);
+  const [onlyThis, setOnlyThis] = useState(ride.manualScope === "journey");
+  useEffect(() => {
+    let cancelled = false;
+    void (async (): Promise<void> => {
+      try {
+        const found = await ferryApi.routePair(ride.id);
+        if (!cancelled) setReach(found);
+      } catch (err) {
+        logger.error("FerryRouteEditor: could not read the pair reach", err);
+        if (!cancelled) setReachFailed(true);
+      }
+    })();
+    return (): void => {
+      cancelled = true;
+    };
+  }, [ride.id]);
   const [r, g, b] = useMemo(() => hexToRgb(colorOf("ferry")), [colorOf]);
 
   const insert = useCallback((segment: number, at: LonLat): void => {
@@ -119,7 +139,14 @@ export function FerryRouteEditor({ ride, onSaved, onClose }: Props): JSX.Element
     setSaving(true);
     setError(null);
     try {
-      onSaved(await ferryApi.setManualRoute(ride.id, state.waypoints, ride.updatedAt));
+      onSaved(
+        await ferryApi.setManualRoute(
+          ride.id,
+          state.waypoints,
+          ride.updatedAt,
+          onlyThis ? "journey" : "pair"
+        )
+      );
     } catch (err) {
       const code = apiErrorMachineCode(err);
       setError(
@@ -169,6 +196,35 @@ export function FerryRouteEditor({ ride, onSaved, onClose }: Props): JSX.Element
         </MapGL>
       </div>
       <p className="t-caption">{t("ferry:routeEditor.hint")}</p>
+      {reach && (
+        <div className="flex flex-col gap-1" data-testid="ferry-route-scope">
+          <p className="t-caption">
+            {onlyThis
+              ? t("ferry:routeEditor.scope.onlyThis")
+              : t("ferry:routeEditor.scope.pair", {
+                  count: reach.count,
+                  from: reach.from,
+                  to: reach.to,
+                })}
+          </p>
+          {(reach.count > 1 || onlyThis) && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={onlyThis}
+                onChange={(e): void => setOnlyThis(e.target.checked)}
+                data-testid="ferry-route-only-this"
+              />
+              {t("ferry:routeEditor.scope.onlyThisToggle")}
+            </label>
+          )}
+        </div>
+      )}
+      {reachFailed && (
+        <p role="alert" className="text-sm text-(--danger)" data-testid="ferry-route-scope-failed">
+          {t("ferry:routeEditor.scope.failed")}
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-sm text-(--danger)" data-testid="ferry-route-editor-error">
           {error}

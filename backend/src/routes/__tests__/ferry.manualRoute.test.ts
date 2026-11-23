@@ -70,6 +70,7 @@ beforeEach(() => {
 });
 afterEach(async () => {
   await prisma.ferryJourney.deleteMany({ where: { userId } });
+  await prisma.ferryPairRoute.deleteMany({ where: { userId } });
   await ferryCreationLimiter.resetKey(`user:${userId}`);
 });
 afterAll(async () => {

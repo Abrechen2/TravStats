@@ -4,7 +4,11 @@ import { rejectDemo } from "../../middleware/demoGuard";
 import { ferryCreationLimiter } from "../../middleware/ferryCreationLimiter";
 import { routeFerryJourney } from "../../services/ferry/ferryRouting";
 import { requestedBaseVersion } from "../../services/sync/versionPrecondition";
-import { clearFerryManualRoute, setFerryManualRoute } from "../../services/ferry/ferryManualRoute";
+import {
+  clearFerryManualRoute,
+  ferryPairInfo,
+  setFerryManualRoute,
+} from "../../services/ferry/ferryManualRoute";
 
 /** Mounted behind the ferry router's authentication and write-scope guards. */
 const router = Router();
@@ -41,6 +45,14 @@ router.put(
     }
   }
 );
+/** How far a pair line reaches from this crossing: N crossings between the two ports. */
+router.get("/:id/route-pair", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    res.json({ success: true, data: await ferryPairInfo(req.userId!, req.params.id) });
+  } catch (error) {
+    next(error);
+  }
+});
 router.delete(
   "/:id/route-override",
   ferryCreationLimiter,
@@ -50,7 +62,8 @@ router.delete(
       const { outcome, ride } = await clearFerryManualRoute(
         req.userId!,
         req.params.id,
-        requestedBaseVersion(req)
+        requestedBaseVersion(req),
+        req.query.scope === "journey" ? "journey" : "all"
       );
       res.json({ success: true, data: ride, meta: { seaRoute: outcome } });
     } catch (error) {

@@ -48,6 +48,8 @@ export interface FerryJourney {
   distanceSource: FerryDistanceSource | null;
   geometry: [number, number][] | null;
   geometrySource: FerryGeometrySource;
+  /** Who owns a manual line: `pair` follows the line for the two ports, `journey` is this crossing's own. Absent on older servers. */
+  manualScope?: "pair" | "journey" | null;
   actualDepartureTime: string | null;
   actualArrivalTime: string | null;
   fareClass: string | null;

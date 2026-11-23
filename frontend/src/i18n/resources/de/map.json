@@ -440,6 +440,7 @@
       "cruise_other": "{{count}} Abfahrten"
     },
     "picture": "Bild",
-    "pictureUnavailable": "Bild gerade nicht verfügbar."
+    "pictureUnavailable": "Bild gerade nicht verfügbar.",
+    "editRoute": "Strecke bearbeiten"
   }
 }

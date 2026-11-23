@@ -265,6 +265,16 @@
     "clearConfirm": {
       "title": "Remove the hand-drawn route?",
       "message": "The hand-drawn route is discarded and the sea route is calculated again."
+    },
+    "clearAll": "Remove for all crossings",
+    "clearOne": "Remove for this crossing only",
+    "clearOneConfirm": {
+      "title": "Reset this crossing only?",
+      "message": "This crossing gets a computed sea route again and stops following the drawn line. The other crossings keep it."
+    },
+    "clearAllConfirm": {
+      "title": "Remove the line for all crossings?",
+      "message": "The drawn line is dropped for every crossing between these ports and the sea route is computed again. Crossings with their own line keep it."
     }
   },
   "map": {
@@ -292,6 +302,14 @@
       "FERRY_ROUTE_INVALID": "The route is not valid: at least one point between the terminals, at most 64 points, and not absurdly longer than the crossing.",
       "FERRY_ROUTE_NOT_ANCHORED": "The route must start at the departure terminal and end at the arrival terminal.",
       "VERSION_CONFLICT": "The crossing changed in the meantime. Reload the page and draw again."
-    }
+    },
+    "scope": {
+      "pair_one": "Applies to {{count}} crossing between {{from}} and {{to}} (both directions).",
+      "pair_other": "Applies to {{count}} crossings between {{from}} and {{to}} (both directions).",
+      "onlyThis": "Applies to this crossing only; the others keep their line.",
+      "onlyThisToggle": "This crossing only",
+      "failed": "How many crossings the line affects could not be loaded. It applies to every crossing between the two ports unless \"This crossing only\" is ticked."
+    },
+    "loadFailed": "The crossing could not be loaded. Please try again."
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import deMap from "../../../../../i18n/resources/de/map.json";
 import enMap from "../../../../../i18n/resources/en/map.json";
@@ -12,6 +12,7 @@ import enRental from "../../../../../i18n/resources/en/rental.json";
 import deCommon from "../../../../../i18n/resources/de/common.json";
 import enCommon from "../../../../../i18n/resources/en/common.json";
 import { PinnedCard } from "../../PinnedCard";
+import { useFerryRouteEditStore } from "../../../../../store/ferryRouteEditStore";
 import type { MapPinned } from "../../pinnedTypes";
 import { journeyFromFerry, journeyFromRental } from "../journeyNormalize";
 import type { MapJourney } from "../journeyTypes";
@@ -192,6 +193,27 @@ function rentalRow(id: string, over: Record<string, unknown>): MapJourney {
     ...over,
   } as Parameters<typeof journeyFromRental>[0]);
 }
+
+describe("ferry route card: edit the line from the dashboard map (GitHub #407)", () => {
+  it.each(["de", "en"] as const)(
+    "offers 'edit route' in %s and opens the editor for the latest crossing",
+    (l) => {
+      lang.current = l;
+      useFerryRouteEditStore.getState().close();
+      show(route([crossing("older", 1, 20, null), crossing("newest", 12, 20, null)]));
+      const button = screen.getByRole("button", {
+        name: l === "de" ? "Strecke bearbeiten" : "Edit route",
+      });
+      fireEvent.click(button);
+      expect(useFerryRouteEditStore.getState().crossingId).toBe("newest");
+    }
+  );
+
+  it("offers it on no other domain's route card", () => {
+    show(route([rentalRow("a", {})], "rental"));
+    expect(screen.queryByRole("button", { name: "Strecke bearbeiten" })).toBeNull();
+  });
+});
 
 describe("rental route card figures", () => {
   it.each(["de", "en"] as const)("prints km and cost per day per currency in %s", (l) => {

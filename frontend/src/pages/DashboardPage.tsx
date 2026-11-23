@@ -1,3 +1,4 @@
+import { FerryRouteEditHost } from "../components/ferry/FerryRouteEditHost";
 import { useEffect, useState } from "react";
 import { useToursAccess } from "../hooks/useToursVisible";
 import { useBetaFeatureAccess } from "../hooks/useBetaFeatures";
@@ -205,6 +206,7 @@ export default function DashboardPage(): JSX.Element {
       countsLoaded={countsLoaded}
       onDataChanged={() => setRefreshToken((n) => n + 1)}
     >
+      <FerryRouteEditHost onSaved={() => setRefreshToken((n) => n + 1)} />
       {tab === "all" && <AllTab key={refreshToken} />}
       {tab === "flight" && <FlightsTab key={refreshToken} />}
       {tab === "cruise" && <CruisesTab key={refreshToken} />}

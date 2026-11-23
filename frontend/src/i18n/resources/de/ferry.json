@@ -265,6 +265,16 @@
     "clearConfirm": {
       "title": "Handroute entfernen?",
       "message": "Die von Hand gezeichnete Route wird verworfen und der Seeweg neu berechnet."
+    },
+    "clearAll": "Für alle Überfahrten entfernen",
+    "clearOne": "Nur für diese Überfahrt entfernen",
+    "clearOneConfirm": {
+      "title": "Nur diese Überfahrt zurücksetzen?",
+      "message": "Diese Überfahrt bekommt wieder einen berechneten Seeweg und folgt der gezeichneten Strecke nicht mehr. Die anderen Überfahrten behalten sie."
+    },
+    "clearAllConfirm": {
+      "title": "Strecke für alle Überfahrten entfernen?",
+      "message": "Die gezeichnete Strecke wird für alle Überfahrten zwischen diesen Häfen verworfen und der Seeweg neu berechnet. Überfahrten mit eigener Strecke behalten sie."
     }
   },
   "map": {
@@ -292,6 +302,14 @@
       "FERRY_ROUTE_INVALID": "Die Strecke ist ungültig: mindestens ein Punkt zwischen den Häfen, höchstens 64 Punkte, und nicht unsinnig länger als die Überfahrt.",
       "FERRY_ROUTE_NOT_ANCHORED": "Die Strecke muss im Abfahrtshafen beginnen und im Ankunftshafen enden.",
       "VERSION_CONFLICT": "Die Überfahrt wurde zwischenzeitlich geändert. Seite neu laden und erneut zeichnen."
-    }
+    },
+    "scope": {
+      "pair_one": "Gilt für {{count}} Überfahrt zwischen {{from}} und {{to}} (beide Richtungen).",
+      "pair_other": "Gilt für {{count}} Überfahrten zwischen {{from}} und {{to}} (beide Richtungen).",
+      "onlyThis": "Gilt nur für diese Überfahrt; die anderen behalten ihre Strecke.",
+      "onlyThisToggle": "Nur diese Überfahrt",
+      "failed": "Wie viele Überfahrten die Strecke betrifft, konnte nicht geladen werden. Die Strecke gilt für alle Überfahrten zwischen den beiden Häfen, außer „Nur diese Überfahrt“ ist gewählt."
+    },
+    "loadFailed": "Die Überfahrt konnte nicht geladen werden. Bitte erneut versuchen."
   }
 }
