@@ -184,7 +184,7 @@ describe("RailTableRow operator tile", () => {
   });
 
   it("invents no letters for a ride without an operator", () => {
-    const row = renderRow([{ ...base, operator: null }]);
+    const row = renderRow([{ ...base, operator: null, trainCategory: null }]);
     const tile = within(cellOf(row, "operator")).getByTestId("operator-tile");
     expect(tile).not.toHaveAttribute("title");
     expect(tile.textContent).toBe("");

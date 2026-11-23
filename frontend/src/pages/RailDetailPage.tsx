@@ -1,3 +1,4 @@
+import { legOperator } from "../lib/rail/primaryOperator";
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { PackageBookingCard } from "../components/bookings/PackageBookingCard";
 import { usePackageSplit } from "../components/bookings/usePackageSplit";
@@ -238,9 +239,10 @@ export default function RailDetailPage(): JSX.Element {
         domain="rail"
         icon={
           <OperatorTile
-            name={journey.operator}
+            name={legOperator(journey)?.name ?? null}
             domain="rail"
-            logoUrl={railOperatorLogoUrl(journey.operator)}
+            logoUrl={railOperatorLogoUrl(legOperator(journey)?.name ?? null)}
+            inferred={legOperator(journey)?.inferred}
             size={48}
           />
         }

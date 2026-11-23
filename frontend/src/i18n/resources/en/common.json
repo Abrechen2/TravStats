@@ -531,5 +531,6 @@
     "label": "Warning: demo account active",
     "short": "Demo account active",
     "hint": "A demo account is still active. Go to Maintenance to delete it."
-  }
+  },
+  "operatorInferred": "Inferred from train category, number and stations – not entered"
 }

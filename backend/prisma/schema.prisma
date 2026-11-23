@@ -4858,6 +4858,10 @@ model RailJourney {
   userId          String           @map("user_id")
 
   operator      String?
+  /// null = typed by the user (or written before the column existed);
+  /// "inferred" = filled by `shared/railOperatorInference.ts`, which a typed
+  /// operator always replaces and the backfill never overwrites.
+  operatorSource String? @map("operator_source")
   /// "ICE", "TGV", "RJX" — apart from the number because statistics group by it.
   trainCategory String? @map("train_category")
   trainNumber   String? @map("train_number")

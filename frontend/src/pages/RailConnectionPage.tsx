@@ -8,7 +8,7 @@ import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
 import DetailSection from "../components/ui/DetailSection";
 import Button from "../components/ui/Button";
 import { OperatorTile, railOperatorLogoUrl } from "../components/table/OperatorTile";
-import { primaryOperator } from "../lib/rail/primaryOperator";
+import { primaryOperatorShown } from "../lib/rail/primaryOperator";
 import { useTranslation } from "../hooks/useTranslation";
 import { railApi } from "../lib/api/rail";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
@@ -129,9 +129,10 @@ export default function RailConnectionPage(): JSX.Element {
         domain="rail"
         icon={
           <OperatorTile
-            name={primaryOperator(legs)}
+            name={primaryOperatorShown(legs)?.name ?? null}
             domain="rail"
-            logoUrl={railOperatorLogoUrl(primaryOperator(legs))}
+            logoUrl={railOperatorLogoUrl(primaryOperatorShown(legs)?.name ?? null)}
+            inferred={primaryOperatorShown(legs)?.inferred}
             size={48}
           />
         }
