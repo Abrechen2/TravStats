@@ -41,7 +41,7 @@ import type { SafeSpan, Span } from "./readSafe";
  * listed without an anchor. A trip frames the day and has none.
  */
 
-export type DayContextKind = DomainKey | "trip" | "home" | "suggestion" | "movement";
+export type DayContextKind = DomainKey | "trip" | "home" | "suggestion" | "movement" | "stationary";
 
 export type DayContextEntry = Span & {
   kind: DayContextKind;
@@ -55,6 +55,8 @@ export type DayContextEntry = Span & {
   unlabelled: boolean;
   /** Which TravTrack question, on a `suggestion`. */
   suggestion?: "stay" | "journey";
+  /** A stretch with no points, inferred from standing at a known place (`silence/`); never recorded. */
+  inferred?: true;
 };
 
 /**

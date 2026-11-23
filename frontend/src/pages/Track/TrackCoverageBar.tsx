@@ -20,6 +20,7 @@ export const COVERAGE_STATES: readonly TrackCoverageState[] = [
   "phonePaused",
   "deleted",
   "entry",
+  "stationary",
   "noData",
 ];
 
@@ -29,6 +30,8 @@ const COLOUR: Record<TrackCoverageState, string> = {
   deleted: token("bad"),
   noData: alpha(token("muted"), 35),
   entry: alpha(token("good"), 45),
+  // Inferred, not recorded: the same hue as a recorded stretch, lighter.
+  stationary: alpha(token("good"), 25),
 };
 
 interface Props {
@@ -65,8 +68,20 @@ export default function TrackCoverageBar({
             piece.state === "entry" && piece.entry
               ? context.find((c) => c.kind === piece.entry?.domain && c.id === piece.entry?.id)
               : undefined;
+          const stateText = entry
+            ? contextLabel(entry, t)
+            : piece.state === "stationary" && piece.place
+              ? t(
+                  piece.place.kind === "home"
+                    ? "track:timeline.stationaryHome"
+                    : "track:timeline.stationary",
+                  { label: piece.place.name }
+                )
+              : piece.state === "noData" && piece.why
+                ? `${t("track:coverage.noData")} — ${t(`track:coverage.why.${piece.why}`)}`
+                : t(`track:coverage.${piece.state}`);
           const label = t("track:coverage.piece", {
-            state: entry ? contextLabel(entry, t) : t(`track:coverage.${piece.state}`),
+            state: stateText,
             from: clock(piece.fromMs),
             to: clock(piece.untilMs),
           });

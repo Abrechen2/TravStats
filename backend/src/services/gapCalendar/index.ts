@@ -3,7 +3,14 @@ import { profileZoneFromSettings } from "../../shared/time/profileZone";
 import { now, todayIn } from "../../shared/time/clock";
 import { homePeriodsFromData } from "../home/homeStore";
 import { cacheGet, cachePut, currentGeneration, ensureCacheInvalidation } from "./cache";
-import { classifyDay, countStates, toRuns, type DayRun, type DayState } from "./classify";
+import {
+  classifyDay,
+  countStates,
+  isInferredHome,
+  toRuns,
+  type DayRun,
+  type DayState,
+} from "./classify";
 import { gapCalendarFacts } from "./query";
 
 export interface GapCalendarYear {
@@ -50,13 +57,15 @@ export async function gapCalendarYear(userId: string, year: number): Promise<Gap
   });
   const today = todayIn(facts.zone);
   const { firstDay } = facts;
-  const days = facts.days.map(({ day, facts: f }) => ({
-    day,
+  const days = facts.days.map(({ day, facts: f }) => {
     // Outside the history (before the first record, after today) is not a gap.
-    state: (firstDay === null || day < firstDay || day > today
-      ? "outside"
-      : classifyDay(f)) as DayState,
-  }));
+    const outside = firstDay === null || day < firstDay || day > today;
+    return {
+      day,
+      state: (outside ? "outside" : classifyDay(f)) as DayState,
+      inferred: !outside && isInferredHome(f),
+    };
+  });
   const firstYear = firstDay ? Number(firstDay.slice(0, 4)) : null;
   const lastYear = Number(today.slice(0, 4));
   const result: GapCalendarYear = {

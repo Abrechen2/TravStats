@@ -13,16 +13,29 @@
     "truncated": "This day holds more positions than one view shows — the line is incomplete.",
     "map": "Map of the day"
   },
+  "homeSuggestion": {
+    "question": "Is this your home? A gap with no recording began and ended here, and TravStats does not know a home yet.",
+    "action": "Set as home"
+  },
   "coverage": {
     "title": "What is recorded",
     "recorded": "Recorded",
     "noData": "No data",
     "entry": "In the logbook",
     "deleted": "Deleted",
+    "stationary": "No movement recorded",
+    "why": {
+      "openEnd": "The gap has no end yet",
+      "differentPlaces": "The gap begins and ends at different places",
+      "outsidePlaces": "The gap begins and ends outside any known place",
+      "contradicted": "A logbook entry or a pause lies inside the gap"
+    },
     "phonePaused": "Phone paused",
     "piece": "{{state}}, {{from}}–{{to}}"
   },
   "timeline": {
+    "stationaryHome": "Home (no movement recorded)",
+    "stationary": "{{label}} (no movement recorded)",
     "title": "The day",
     "none": "TravStats knows of no entry, no trip and no time at home on this day.",
     "flight": "Flight {{label}}",

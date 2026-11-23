@@ -10,6 +10,7 @@ import type { Feature, Geometry } from "geojson";
 import type { TrackPoint } from "../../../lib/api/travtrack";
 import type { TravTrackFlightPanel, TravTrackPhoto } from "../../../lib/api/travtrackViews";
 import { todayIn } from "../../../shared/time/clock";
+import HomeSuggestionPrompt from "../HomeSuggestionPrompt";
 import TrackCoverageBar from "../TrackCoverageBar";
 import TrackLegCard from "./TrackLegCard";
 import TrackStopCard from "./TrackStopCard";
@@ -534,11 +535,16 @@ export default function TrackMapView(): JSX.Element {
     ) : null;
   const strip =
     span.kind === "day" && loaded[0] ? (
-      <TrackCoverageBar
-        coverage={loaded[0].day.coverage}
-        zone={loaded[0].day.zone}
-        context={loaded[0].day.context}
-      />
+      <>
+        <TrackCoverageBar
+          coverage={loaded[0].day.coverage}
+          zone={loaded[0].day.zone}
+          context={loaded[0].day.context}
+        />
+        {loaded[0].day.homeSuggestion ? (
+          <HomeSuggestionPrompt suggestion={loaded[0].day.homeSuggestion} />
+        ) : null}
+      </>
     ) : null;
 
   return (

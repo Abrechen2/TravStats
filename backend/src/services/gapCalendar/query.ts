@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import { Prisma } from "../../prisma";
 import { MAX_ACCURACY_M } from "../locationEvidence/anomaly";
 import type { HomePeriod } from "../../utils/homeAirport";
+import { FOLD_BAND_M } from "../travtrack/legs/fold";
 import type { DayFacts } from "./classify";
 
 /**
@@ -24,6 +25,25 @@ export interface YearFacts {
   /** Earliest local day with an entry or a fix, in any year; null when there is none. */
   firstDay: string | null;
   days: Array<{ day: string; facts: DayFacts }>;
+}
+
+/**
+ * One end of a silence: the nearest GOOD fix (plausible, outside every privacy circle) on one
+ * side of the local day `d`, read through the same filters the day view uses.
+ */
+function silenceEnd(userId: string, side: "before" | "after", at: string): Prisma.Sql {
+  const [cmp, order] = side === "before" ? ["<", "DESC"] : [">=", "ASC"];
+  return Prisma.sql`
+    SELECT p.t, p.lat, p.lon, ${localDay("p.t", PROFILE)} AS day
+    FROM travtrack_points p
+    WHERE p.user_id = ${userId} AND p.t ${Prisma.raw(cmp)} ${Prisma.raw(at)}
+      AND NOT COALESCE(p.accuracy_m > ${MAX_ACCURACY_M}, false)
+      AND NOT (abs(p.lat) < ${NULL_ISLAND_DEG} AND abs(p.lon) < ${NULL_ISLAND_DEG})
+      AND NOT EXISTS (
+        SELECT 1 FROM circles c
+        WHERE (c.until_at IS NULL OR p.t < c.until_at)
+          AND ${HAVERSINE("p.lat", "p.lon", "c.lat", "c.lon")} <= c.radius_m)
+    ORDER BY p.t ${Prisma.raw(order)} LIMIT 1`;
 }
 
 /** Same bound as `anomaly.ts`'s null island (`NULL_ISLAND_DEG`, not exported). */
@@ -125,6 +145,7 @@ type Row = {
   home: number;
   zone_fixes: number;
   bad: number;
+  silent_home: boolean;
 };
 
 const HAVERSINE = (aLat: string, aLon: string, bLat: string, bLon: string): Prisma.Sql =>
@@ -206,14 +227,45 @@ export async function gapCalendarFacts(input: {
         count(*) FILTER (WHERE in_zone)::int AS zone_fixes,
         count(*) FILTER (WHERE NOT in_zone AND bad)::int AS bad
       FROM judged GROUP BY day
+    ),
+    -- A day with no fix and no entry. Quiet at home sends no points (iOS suspends the app), so
+    -- the day is home when the last good fix before it and the first after it are both at home
+    -- and nothing between them contradicts it: no entry, no reported pause, no deleted span.
+    bare AS (
+      SELECT d.day,
+             ((d.day::timestamp) AT TIME ZONE (SELECT z FROM pz)) AT TIME ZONE 'UTC' AS start_utc,
+             ((d.day + 1)::timestamp AT TIME ZONE (SELECT z FROM pz)) AT TIME ZONE 'UTC' AS end_utc
+      FROM days d
+      WHERE NOT EXISTS (SELECT 1 FROM fix_days x WHERE x.day = d.day)
+        AND NOT EXISTS (SELECT 1 FROM entry_days e WHERE e.day = d.day)
+    ),
+    silent AS (
+      SELECT b.day
+      FROM bare b
+      CROSS JOIN LATERAL (${silenceEnd(userId, "before", "b.start_utc")}) pv
+      CROSS JOIN LATERAL (${silenceEnd(userId, "after", "b.end_utc")}) nx
+      WHERE EXISTS (
+          SELECT 1 FROM homes h
+          WHERE b.day >= h."from" AND (h."to" IS NULL OR b.day < h."to")
+            AND ${HAVERSINE("pv.lat", "pv.lon", "h.lat", "h.lon")} <= ${input.homeRadiusM + FOLD_BAND_M}
+            AND ${HAVERSINE("nx.lat", "nx.lon", "h.lat", "h.lon")} <= ${input.homeRadiusM + FOLD_BAND_M})
+        AND NOT EXISTS (SELECT 1 FROM all_spans s WHERE s.d_from <= nx.day AND s.d_to >= pv.day)
+        AND NOT EXISTS (
+          SELECT 1 FROM travtrack_deleted_ranges r
+          WHERE r.user_id = ${userId} AND r.from_at < nx.t AND r.to_at > pv.t)
+        AND NOT EXISTS (
+          SELECT 1 FROM travtrack_gaps g
+          WHERE g.user_id = ${userId} AND g.from_at < nx.t AND g.to_at > pv.t)
     )
     SELECT (SELECT z FROM pz) AS zone,
            to_char((SELECT first_day FROM bounds), 'YYYY-MM-DD') AS first_day,
            to_char(d.day, 'YYYY-MM-DD') AS day,
            COALESCE(e.n, 0) AS entries, COALESCE(x.good, 0) AS good,
            COALESCE(x.home, 0) AS home, COALESCE(x.zone_fixes, 0) AS zone_fixes,
-           COALESCE(x.bad, 0) AS bad
+           COALESCE(x.bad, 0) AS bad,
+           (sh.day IS NOT NULL) AS silent_home
     FROM days d
+    LEFT JOIN silent sh ON sh.day = d.day
     LEFT JOIN entry_days e ON e.day = d.day
     LEFT JOIN fix_days x ON x.day = d.day
     ORDER BY d.day`);
@@ -228,6 +280,7 @@ export async function gapCalendarFacts(input: {
         homeFixes: r.home,
         zoneFixes: r.zone_fixes,
         badFixes: r.bad,
+        silentHome: r.silent_home,
       },
     })),
   };

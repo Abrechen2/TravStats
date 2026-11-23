@@ -13,16 +13,29 @@
     "truncated": "Dieser Tag hält mehr Positionen, als eine Ansicht zeigt — die Linie ist unvollständig.",
     "map": "Karte des Tages"
   },
+  "homeSuggestion": {
+    "question": "Ist das dein Zuhause? Hier begann und endete eine Lücke ohne Aufzeichnung, und TravStats kennt noch kein Zuhause.",
+    "action": "Als Zuhause festlegen"
+  },
   "coverage": {
     "title": "Was aufgezeichnet ist",
     "recorded": "Aufgezeichnet",
     "noData": "Keine Daten",
     "entry": "Im Logbuch",
     "deleted": "Gelöscht",
+    "stationary": "Keine Bewegung aufgezeichnet",
+    "why": {
+      "openEnd": "Die Lücke hat noch kein Ende",
+      "differentPlaces": "Lücke beginnt und endet an verschiedenen Orten",
+      "outsidePlaces": "Lücke beginnt und endet außerhalb bekannter Orte",
+      "contradicted": "Ein Logbuch-Eintrag oder eine Pause liegt in der Lücke"
+    },
     "phonePaused": "Telefon pausiert",
     "piece": "{{state}}, {{from}}–{{to}}"
   },
   "timeline": {
+    "stationaryHome": "Zuhause (keine Bewegung aufgezeichnet)",
+    "stationary": "{{label}} (keine Bewegung aufgezeichnet)",
     "title": "Tagesablauf",
     "none": "TravStats kennt an diesem Tag keinen Eintrag, keine Reise und keine Zeit zuhause.",
     "flight": "Flug {{label}}",

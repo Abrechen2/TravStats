@@ -244,11 +244,13 @@ describe("TravTrack — the day view", () => {
       state: "deleted",
     });
     // The hours in the zone read like any hour without a fix.
-    expect(coverage).toContainEqual({
-      fromMs: DAY_START + 65 * MIN,
-      untilMs: DAY_START + 240 * MIN,
-      state: "noData",
-    });
+    expect(coverage).toContainEqual(
+      expect.objectContaining({
+        fromMs: DAY_START + 65 * MIN,
+        untilMs: DAY_START + 240 * MIN,
+        state: "noData",
+      })
+    );
   });
 
   it("answers 403 TRAVTRACK_DISABLED while TravTrack is off, and 400 for a bad date", async () => {

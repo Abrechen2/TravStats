@@ -28,6 +28,12 @@ export interface DayFacts {
   zoneFixes: number;
   /** Fixes that are implausible (null island, accuracy over 10 km) and outside every zone. */
   badFixes: number;
+  /**
+   * No fix at all that day, but the last good fix before it and the first after it both lie at
+   * home and nothing in the logbook or the recording contradicts it: a quiet day at home
+   * (iOS suspends the app when the phone stands still). Inferred, never recorded.
+   */
+  silentHome?: boolean;
 }
 
 /**
@@ -39,22 +45,32 @@ export function classifyDay(facts: DayFacts): Exclude<DayState, "outside"> {
   if (facts.goodFixes > 0) return facts.homeFixes === facts.goodFixes ? "home" : "track";
   if (facts.zoneFixes > 0) return "privacyZone";
   if (facts.badFixes > 0) return "implausible";
-  return "unknown";
+  return facts.silentHome ? "home" : "unknown";
 }
+
+/** Whether `classifyDay` read the day as home from standing still, not from a fix. */
+export const isInferredHome = (facts: DayFacts): boolean =>
+  classifyDay(facts) === "home" && facts.goodFixes === 0;
 
 export interface DayRun {
   from: string;
   to: string;
   state: DayState;
+  /** `home` only: inferred from the silence around the day, no fix recorded on it. */
+  inferred?: true;
 }
 
 /** Adjacent days of one state as one inclusive run. `days` are consecutive local dates in order. */
-export function toRuns(days: ReadonlyArray<{ day: string; state: DayState }>): DayRun[] {
+export function toRuns(
+  days: ReadonlyArray<{ day: string; state: DayState; inferred?: boolean }>
+): DayRun[] {
   const runs: DayRun[] = [];
-  for (const { day, state } of days) {
+  for (const { day, state, inferred } of days) {
     const last = runs[runs.length - 1];
-    if (last && last.state === state) last.to = day;
-    else runs.push({ from: day, to: day, state });
+    if (last && last.state === state && (last.inferred === true) === (inferred === true)) {
+      last.to = day;
+    } else
+      runs.push({ from: day, to: day, state, ...(inferred ? { inferred: true as const } : {}) });
   }
   return runs;
 }

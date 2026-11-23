@@ -6,6 +6,11 @@ import { explainingEntries, fillWithEntries, type CoverageEntryRef } from "./day
 import type { Leg, Stop } from "./legs";
 import { dayAfter, midnightOf } from "./range";
 import type { SafeSpan, Span } from "./readSafe";
+import {
+  explainStationary,
+  type HomeSuggestion,
+  type StationaryPiece,
+} from "./silence/stationaryCoverage";
 import { badVertexIn } from "./legs/stops";
 
 /**
@@ -33,9 +38,19 @@ import { badVertexIn } from "./legs/stops";
  *     stretches no entry covers. This file keeps the geometry.
  */
 
-export type CoverageState = "recorded" | "noData" | "deleted" | "phonePaused" | "entry";
+export type CoverageState =
+  "recorded" | "noData" | "deleted" | "phonePaused" | "entry" | "stationary";
 /** An `entry` piece names the logbook entry that explains the silence in `entry`. */
-export type DayCoverage = Array<Span & { state: CoverageState; entry?: CoverageEntryRef }>;
+export type DayCoverage = Array<
+  Span & {
+    state: CoverageState;
+    entry?: CoverageEntryRef;
+    /** On `stationary` only: the known place both ends of the silence lie in (inferred, no points). */
+    place?: StationaryPiece["place"];
+    /** On `noData` only: why the silence was not explained by standing still. */
+    why?: StationaryPiece["why"];
+  }
+>;
 export type PointDetail = {
   speedMps: number | null;
   altitudeM: number | null;
@@ -71,6 +86,11 @@ export type TravTrackDay = {
   pointDetails: PointDetail[][];
   coverage: DayCoverage;
   context: DayContext;
+  /**
+   * No home is known and a silence began and ended at one spot: "Ist das dein Zuhause?" offers
+   * it, linking to the home setting. Null when nothing like that happened.
+   */
+  homeSuggestion: HomeSuggestion | null;
   legs: Leg[];
   stops: Stop[];
   pointCount: number;
@@ -87,6 +107,7 @@ export type TravTrackDay = {
 const RANK: Record<CoverageState, number> = {
   noData: 0,
   entry: 0,
+  stationary: 0,
   recorded: 1,
   phonePaused: 2,
   deleted: 3,
@@ -133,6 +154,27 @@ function coverageOf(window: Span, read: SafeSpan, stops: readonly Stop[]): DayCo
   ]);
 }
 
+/** The day's labels for the silences spent standing at a known place. */
+function stationaryContext(coverage: readonly StationaryPiece[]): DayContextEntry[] {
+  return coverage.flatMap((c) =>
+    c.state === "stationary" && c.place
+      ? [
+          {
+            kind: "stationary" as const,
+            id: c.place.id,
+            label: c.place.kind === "home" ? "" : c.place.name,
+            href: null,
+            anchor: { lat: c.place.lat, lon: c.place.lon },
+            unlabelled: false,
+            inferred: true as const,
+            fromMs: c.fromMs,
+            untilMs: c.untilMs,
+          },
+        ]
+      : []
+  );
+}
+
 const vertices = (r: Pick<SafeSpan, "segments">) => r.segments.reduce((n, s) => n + s.length, 0);
 
 export async function travTrackDay(
@@ -151,18 +193,24 @@ export async function travTrackDay(
     options.includeImplausible === true
   );
   const dayContextEntries = await dayContext(userId, window, read, stops);
+  // A silence a logbook entry covers reads as that entry; one spent standing at a known place as
+  // that place (inferred, never points); everything else stays "no data" and says why.
+  const withEntries = fillWithEntries(
+    coverageOf(window, read, stops),
+    explainingEntries(dayContextEntries)
+  );
+  const stationary = await explainStationary(userId, window, date, withEntries);
   return {
     date,
     zone,
     segments: read.segments,
     pointIds: read.segments.map((s) => s.map((p) => read.rowOf(p)?.id ?? "")),
     pointDetails: pointDetailsOf(read.segments, read.rowOf),
-    // A silence a logbook entry covers reads as that entry, never as "no data".
-    coverage: fillWithEntries(
-      coverageOf(window, read, stops),
-      explainingEntries(dayContextEntries)
-    ) as DayCoverage,
-    context: dayContextEntries,
+    coverage: stationary.coverage as DayCoverage,
+    context: [...dayContextEntries, ...stationaryContext(stationary.coverage)].sort(
+      (a, b) => a.fromMs - b.fromMs || a.kind.localeCompare(b.kind)
+    ),
+    homeSuggestion: stationary.homeSuggestion,
     legs,
     stops,
     pointCount: vertices(read),

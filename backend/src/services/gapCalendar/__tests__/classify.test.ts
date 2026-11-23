@@ -7,6 +7,12 @@ describe("gap calendar — classification precedence", () => {
     expect(classifyDay(none)).toBe("unknown");
   });
 
+  it("a silent day between two home fixes is home, but never over a fix or an entry", () => {
+    expect(classifyDay({ ...none, silentHome: true })).toBe("home");
+    expect(classifyDay({ ...none, silentHome: true, entries: 1 })).toBe("entry");
+    expect(classifyDay({ ...none, silentHome: true, goodFixes: 2, homeFixes: 1 })).toBe("track");
+  });
+
   it("an entry outranks every fix-based state", () => {
     expect(classifyDay({ entries: 1, goodFixes: 9, homeFixes: 9, zoneFixes: 3, badFixes: 2 })).toBe(
       "entry"
