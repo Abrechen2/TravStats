@@ -226,6 +226,19 @@ describe("RailPage", () => {
     expect(list).not.toHaveBeenCalled();
   });
 
+  it("sorts by the route column through the server query, not in the browser", async () => {
+    listConnections.mockResolvedValue(page([journey()]));
+    renderPage();
+    await screen.findByTestId("rail-row-j1");
+    // Headers in column order: operator, route, time, ... (the stub echoes the key).
+    fireEvent.click(screen.getAllByRole("button", { name: "rail:list.sortBy" })[1]);
+    await waitFor(() =>
+      expect(listConnections).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: "route", order: "asc" })
+      )
+    );
+  });
+
   it("says a failed load instead of drawing an empty logbook", async () => {
     listConnections.mockRejectedValue(new Error("down"));
     renderPage();

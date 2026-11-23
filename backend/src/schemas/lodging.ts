@@ -393,6 +393,15 @@ const stayListDay = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD")
   .refine((v) => isLocalDate(v), "is not a real day");
 
+export const STAY_SORT_FIELDS = [
+  "checkIn",
+  "checkOut",
+  "house",
+  "trip",
+  "status",
+  "price",
+] as const;
+
 export const stayListQuerySchema = z
   .object({
     from: stayListDay.optional(),
@@ -402,6 +411,8 @@ export const stayListQuerySchema = z
     offset: z.coerce.number().int().min(0).optional(),
     /** Newest first unless asked otherwise - what a logbook reads first. */
     order: z.enum(["asc", "desc"]).optional(),
+    /** What the list is ordered by; check-in is the logbook's own order. */
+    sort: z.enum(STAY_SORT_FIELDS).optional(),
   })
   .refine((q) => q.from === undefined || q.to === undefined || q.from <= q.to, {
     message: "from must not be after to",
