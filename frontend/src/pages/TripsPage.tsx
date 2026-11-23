@@ -44,7 +44,13 @@ export default function TripsPage(): JSX.Element {
     NO_TRIP_FILTERS.category,
     stringParam as QueryCodec<TripsFilters["category"]>
   );
-  const filters = useMemo<TripsFilters>(() => ({ q, status, category }), [q, status, category]);
+  // The pills are single-select (owner, 2026-11-23). An old link carrying both
+  // keeps the category, so the list and the one lit pill agree.
+  const effectiveStatus = category !== "all" ? "all" : status;
+  const filters = useMemo<TripsFilters>(
+    () => ({ q, status: effectiveStatus, category }),
+    [q, effectiveStatus, category]
+  );
   // How many trips "mehr laden" had brought in, so Back from a trip reloads
   // that many and the scroll can land on the card the reader left.
   const [shown, setShown] = useQueryState("shown", TRIPS_PAGE_SIZE, positiveIntParam);

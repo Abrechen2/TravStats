@@ -71,7 +71,7 @@ describe("TripsTab — filters are the server's job", () => {
       </MemoryRouter>
     );
     fireEvent.click(screen.getByRole("button", { name: /trips:status.in_progress/ }));
-    expect(onFiltersChange).toHaveBeenCalledWith({ status: "in_progress" });
+    expect(onFiltersChange).toHaveBeenCalledWith({ status: "in_progress", category: "all" });
     // Rows are whatever the server sent; the tab never drops one itself.
     expect(screen.getByText("Planned trip")).toBeInTheDocument();
   });
