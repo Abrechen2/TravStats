@@ -1075,10 +1075,12 @@
       "trip": "Reise",
       "status": "Status",
       "price": "Preis",
+      "ascending": "aufsteigend",
+      "descending": "absteigend",
       "ascAria": "Aufsteigend sortiert – zum Umkehren tippen",
       "descAria": "Absteigend sortiert – zum Umkehren tippen"
     },
-    "footer": "Neueste Anreise zuerst; Aufenthalte ohne Datum stehen am Ende."
+    "footer": "Sortiert nach {{sort}} ({{dir}}); Aufenthalte ohne Datum bzw. Wert stehen am Ende."
   },
   "conflict": {
     "title": "Diese Tage überschneiden sich mit anderen Aufenthalten",

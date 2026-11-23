@@ -225,6 +225,15 @@ describe("LodgingStaysView", () => {
     );
   });
 
+  it("names the active sort in the footer, not always the newest check-in", async () => {
+    renderView();
+    await screen.findByTestId("stay-view-row-s-june");
+    await userEvent.selectOptions(screen.getByTestId("stay-view-sort"), "price");
+    await waitFor(() =>
+      expect(screen.getByTestId("stay-view-footer")).toHaveAttribute("data-sort", "price")
+    );
+  });
+
   it("a period that ends before it begins is said at the field and not sent", async () => {
     const { container } = renderView();
     await screen.findByTestId("stay-view-row-s-june");

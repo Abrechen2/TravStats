@@ -1075,10 +1075,12 @@
       "trip": "Trip",
       "status": "Status",
       "price": "Price",
+      "ascending": "ascending",
+      "descending": "descending",
       "ascAria": "Sorted ascending – tap to reverse",
       "descAria": "Sorted descending – tap to reverse"
     },
-    "footer": "Latest check-in first; stays without a date come last."
+    "footer": "Sorted by {{sort}} ({{dir}}); stays without a date or value come last."
   },
   "conflict": {
     "title": "These days overlap other stays",

@@ -437,8 +437,19 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
             })}
           </Table>
           <TablePagination {...pagination} allowAll={false} />
-          <p className="mt-2 px-1 text-xs text-[var(--text-muted)]">
-            {t("lodging:stayView.footer")}
+          <p
+            className="mt-2 px-1 text-xs text-[var(--text-muted)]"
+            data-testid="stay-view-footer"
+            data-sort={sortBy}
+          >
+            {t("lodging:stayView.footer", {
+              sort: t(`lodging:stayView.sort.${sortBy}`),
+              dir: t(
+                sortOrder === "asc"
+                  ? "lodging:stayView.sort.ascending"
+                  : "lodging:stayView.sort.descending"
+              ),
+            })}
           </p>
         </>
       )}

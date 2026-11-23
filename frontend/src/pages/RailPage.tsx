@@ -302,6 +302,9 @@ export default function RailPage(): JSX.Element {
     [columnPrefs, t, sortBy, sortOrder, setSort, membershipId]
   );
 
+  // The card's leg list always runs by departure whatever the stored sort says.
+  const shownSortBy: RailSortField = membershipId === null ? sortBy : "departure";
+
   const resetFilters = (): void => {
     setSearch("");
     setStatusFilter("all");
@@ -476,9 +479,13 @@ export default function RailPage(): JSX.Element {
               })}
             </Table>
             <TablePagination {...pagination} allowAll={false} />
-            <p className="mt-2 px-1 text-xs text-(--text-muted)">
+            <p
+              className="mt-2 px-1 text-xs text-(--text-muted)"
+              data-testid="rail-sorted-by"
+              data-sort={shownSortBy}
+            >
               {t("rail:list.sortedBy", {
-                col: t(`rail:list.columns.${sortBy === "departure" ? "time" : sortBy}`),
+                col: t(`rail:list.columns.${shownSortBy === "departure" ? "time" : shownSortBy}`),
                 dir: t(sortOrder === "asc" ? "rail:list.ascending" : "rail:list.descending"),
               })}
             </p>
