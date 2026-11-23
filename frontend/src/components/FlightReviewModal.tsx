@@ -609,7 +609,7 @@ export default function FlightReviewModal({
             {(["departureTime", "arrivalTime"] as const)
               .filter((f) => isInferred(f, initialData.inferredFields))
               .map((f) => (
-                <p key={f} className="text-xs mb-1 text-amber-300">
+                <p key={f} className="text-xs mb-1" style={{ color: "var(--warning)" }}>
                   {t(`flights:form.${f}`)}: {t("flights:review.inferredDateHint")}
                 </p>
               ))}

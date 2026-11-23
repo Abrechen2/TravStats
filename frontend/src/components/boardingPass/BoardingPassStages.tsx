@@ -1,12 +1,23 @@
+import type { CSSProperties } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { BoardingPassStage } from "../../lib/api/types";
 import { stageMessage } from "./stageCopy";
 
-const TONE: Record<BoardingPassStage["status"], string> = {
-  ok: "bg-green-900/20 border-green-800 text-green-200",
-  partial: "bg-amber-900/20 border-amber-700 text-amber-200",
-  failed: "bg-red-900/20 border-red-800 text-red-200",
-  skipped: "bg-(--bg-elevated) border-border text-(--text-muted)",
+/** Each status in the token layer's colours: a tinted surface, its border and text. */
+const tone = (token: string) => ({
+  background: `color-mix(in srgb, var(${token}) 12%, transparent)`,
+  borderColor: `color-mix(in srgb, var(${token}) 45%, transparent)`,
+  color: `var(${token})`,
+});
+const TONE: Record<BoardingPassStage["status"], CSSProperties> = {
+  ok: tone("--success"),
+  partial: tone("--warning"),
+  failed: tone("--danger"),
+  skipped: {
+    background: "var(--bg-elevated)",
+    borderColor: "var(--border)",
+    color: "var(--text-muted)",
+  },
 };
 
 const MARK: Record<BoardingPassStage["status"], string> = {
@@ -33,7 +44,8 @@ export default function BoardingPassStages({
       {stages.map((stage) => (
         <li
           key={stage.stage}
-          className={`flex items-start gap-3 p-3 rounded-lg border ${TONE[stage.status]}`}
+          className="flex items-start gap-3 p-3 rounded-lg border"
+          style={TONE[stage.status]}
           data-stage={stage.stage}
           data-status={stage.status}
         >

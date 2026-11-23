@@ -6,7 +6,7 @@
  */
 import { Router, Response, NextFunction } from "express";
 import { AuthRequest } from "../../middleware/auth";
-import { serviceTestLimiter } from "../../middleware/rateLimit";
+import { serviceTestLimiter } from "../../middleware/serviceTestLimiter";
 import {
   accountServiceUpdateSchema,
   aiConsentBodySchema,
