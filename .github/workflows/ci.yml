@@ -82,7 +82,7 @@ jobs:
       # `npm ci` in backend/ triggers its postinstall (`prisma generate`).
       # tsc needs the generated client types, so this is not optional.
       - name: Install backend dependencies
-        run: cd backend && npm ci
+        run: cd backend && npm ci && cd ../packages/travstats-mcp && npm ci
 
       - name: Install frontend dependencies
         run: cd frontend && npm ci
@@ -134,6 +134,29 @@ jobs:
   # Folding it into `static` would put a postgres service in front of the
   # typecheck, which runs on every push and does not need one.
   # ---------------------------------------------------------------------
+  # packages/travstats-mcp: its own install, typecheck, lint, unit tests and build. The contract
+  # and semantic tests need the backend and run in the backend jobs (which install this package too).
+  mcp-package:
+    name: travstats-mcp (typecheck, lint, tests, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: packages/travstats-mcp/package-lock.json
+      - name: Install
+        run: cd packages/travstats-mcp && npm ci
+      - name: Typecheck
+        run: cd packages/travstats-mcp && npx tsc --noEmit
+      - name: Lint
+        run: cd packages/travstats-mcp && npm run lint
+      - name: Tests
+        run: cd packages/travstats-mcp && npm test
+      - name: Build
+        run: cd packages/travstats-mcp && npm run build
+
   schema-drift:
     name: Prisma schema drift
     runs-on: ubuntu-latest
@@ -176,7 +199,7 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
-        run: cd backend && npm ci
+        run: cd backend && npm ci && cd ../packages/travstats-mcp && npm ci
 
       - name: Schema drift
         run: npm run check:drift
@@ -503,7 +526,7 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
-        run: cd backend && npm ci
+        run: cd backend && npm ci && cd ../packages/travstats-mcp && npm ci
 
       - name: Apply migrations
         run: cd backend && npx prisma migrate deploy
@@ -554,7 +577,7 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
-        run: cd backend && npm ci
+        run: cd backend && npm ci && cd ../packages/travstats-mcp && npm ci
 
       - name: Collect the shards' coverage
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
@@ -641,7 +664,7 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
-        run: cd backend && npm ci
+        run: cd backend && npm ci && cd ../packages/travstats-mcp && npm ci
 
       - name: Apply migrations
         run: cd backend && npx prisma migrate deploy

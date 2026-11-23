@@ -94,14 +94,23 @@ describe("travstats-mcp against the real API", () => {
         get: async (p: string) =>
           p === "/auth/me" ? { tokenScope: "superuser" } : { version: "9.9.9" },
       };
-      await expect(preflight(odd as never)).rejects.toThrow(/did not report/);
+      await expect(preflight(odd as never)).rejects.toThrow(/unknown scope/);
     });
 
-    it("fails closed when the server does not report a scope at all (older server)", async () => {
+    it("fails closed when a current server does not report a scope", async () => {
       const old = {
         get: async (p: string) => (p === "/auth/me" ? { user: {} } : { version: "9.9.9" }),
       };
-      await expect(preflight(old as never)).rejects.toThrow(/did not report/);
+      await expect(preflight(old as never)).rejects.toThrow(/unknown scope/);
+    });
+
+    it("runs read-only with a warning on a server too old to report the scope", async () => {
+      const older = {
+        get: async (p: string) => (p === "/auth/me" ? { user: {} } : { version: "2.8.0-rc.44" }),
+      };
+      const out = await preflight(older as never);
+      expect(out.scope).toBeNull();
+      expect(out.warning).toMatch(/read-only/);
     });
   });
 

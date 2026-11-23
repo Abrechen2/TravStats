@@ -17,15 +17,21 @@
   },
   "scripts": {
     "build": "esbuild src/index.ts --bundle --platform=node --format=esm --packages=external --banner:js='#!/usr/bin/env node' --outfile=dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest --run"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.0.0",
-    "esbuild": "^0.25.0",
-    "typescript": "^5.9.0"
+    "esbuild": "^0.28.2",
+    "eslint": "^10.15.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.74.0",
+    "vitest": "^5.1.1"
   }
 }

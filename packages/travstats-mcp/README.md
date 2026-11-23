@@ -39,21 +39,21 @@ Nothing is collected by this package. It makes no calls except to the server you
 
    Claude Code: `claude mcp add travstats --env TRAVSTATS_URL=https://travstats.example.org --env TRAVSTATS_TOKEN_FILE=$HOME/.config/travstats-mcp/token -- node /path/to/TravStats/packages/travstats-mcp/dist/index.js`
 
-| Variable | Meaning |
-|---|---|
-| `TRAVSTATS_URL` | Base address of your instance (required) |
+| Variable                                    | Meaning                                                                                                                |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `TRAVSTATS_URL`                             | Base address of your instance (required)                                                                               |
 | `TRAVSTATS_TOKEN` or `TRAVSTATS_TOKEN_FILE` | The `ts_pat_…` key, or a file that holds it. Prefer the file: an `env` entry sits in plain text in the client's config |
-| `TRAVSTATS_MCP_CALLS_PER_MINUTE` | Client-side call budget, default 60 |
+| `TRAVSTATS_MCP_CALLS_PER_MINUTE`            | Client-side call budget, default 60                                                                                    |
 
 ## Scopes
 
-| Token scope | Result |
-|---|---|
-| `read` | All tools below. |
-| `write` | Same in M1 (no write tools yet). |
-| `admin` | Refused at start-up. There is no flag to allow it. |
+| Token scope | Result                                             |
+| ----------- | -------------------------------------------------- |
+| `read`      | All tools below.                                   |
+| `write`     | Same in M1 (no write tools yet).                   |
+| `admin`     | Refused at start-up. There is no flag to allow it. |
 
-At start the package asks `GET /auth/me` for the token's scope and `GET /version` for the server version (2.8.0 or newer). If the server does not report a scope, the package stops rather than guessing.
+At start the package asks `GET /auth/me` for the token's scope and `GET /version` for the server version (2.8.0-rc.45 or newer report the scope). A current server that reports no valid scope stops the package. An older server runs read-only with a warning, because it cannot say whether the token is an admin token.
 
 ## Tools (all read-only)
 
@@ -66,7 +66,7 @@ At start the package asks `GET /auth/me` for the token's scope and `GET /version
 
 ## Development
 
-The tools live in `src/core` (no MCP dependency); `src/index.ts` is the stdio adapter. Tests run in the backend's Jest suite, because they need the generated OpenAPI document and a database:
+The tools live in `src/core` (no MCP dependency); `src/index.ts` is the stdio adapter. `npm test` runs the package's own unit tests (Vitest). The contract and semantic tests run in the backend's Jest suite, because they need the generated OpenAPI document and a database:
 
 ```bash
 cd backend && npx jest src/__tests__/mcp.contract.test.ts src/routes/__tests__/mcp.package.test.ts --forceExit

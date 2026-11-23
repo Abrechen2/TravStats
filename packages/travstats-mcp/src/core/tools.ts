@@ -153,25 +153,25 @@ const get_trip_summary: ToolDef = {
       method: "GET",
       path: "/trips/{id}",
       fields: [
-        "id",
-        "name",
-        "startDay",
-        "endDay",
-        "startZone",
-        "endZone",
-        "status",
-        "summary",
-        "summarySource",
-        "countries",
-        "provenance",
-        "rememberedOn",
-        "rememberedNote",
-        "_count",
-        "stops[].title",
-        "stops[].domain",
-        "stops[].startDate",
-        "stops[].endDate",
-        "stops[].overnight",
+        "trip.id",
+        "trip.name",
+        "trip.startDay",
+        "trip.endDay",
+        "trip.startZone",
+        "trip.endZone",
+        "trip.status",
+        "trip.summary",
+        "trip.summarySource",
+        "trip.countries",
+        "trip.provenance",
+        "trip.rememberedOn",
+        "trip.rememberedNote",
+        "trip._count",
+        "trip.stops[].title",
+        "trip.stops[].domain",
+        "trip.stops[].startDate",
+        "trip.stops[].endDate",
+        "trip.stops[].overnight",
       ],
     },
     {
@@ -195,9 +195,7 @@ const get_trip_summary: ToolDef = {
       client.get<Rec>(`/trips/${id}`),
       client.get<Rec>(`/trips/${id}/routes`),
     ]);
-    // The route answers { trip: {...} } while openapi.json documents the bare object; accept both
-    // so the package keeps working when the spec or the route is corrected.
-    const trip = (tripRes.trip as Rec | undefined) ?? tripRes;
+    const trip = tripRes.trip as Rec;
     return {
       summary: `Trip "${(trip.name as string | null) ?? "(unnamed)"}", ${trip.startDay ?? "?"} to ${trip.endDay ?? "?"}.`,
       data: {
@@ -448,7 +446,12 @@ const list_inbox: ToolDef = {
         "flags[].createdAt",
       ],
     },
-    { method: "GET", path: "/pending-updates" },
+    {
+      method: "GET",
+      path: "/pending-updates",
+      query: ["status"],
+      fields: ["updates[].id", "updates[].flightId", "updates[].status", "updates[].createdAt"],
+    },
     {
       method: "GET",
       path: "/provenance/notices",
@@ -514,8 +517,8 @@ const list_inbox: ToolDef = {
         };
       },
       pending_updates: async () => {
-        const r = await client.get<Rec>("/pending-updates");
-        const l = arr(r.updates).filter((u) => u.status === "pending");
+        const r = await client.get<Rec>("/pending-updates", { status: "pending" });
+        const l = arr(r.updates);
         return {
           total: l.length,
           items: l.map((u) => ({

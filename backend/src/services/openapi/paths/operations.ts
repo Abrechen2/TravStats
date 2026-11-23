@@ -239,7 +239,39 @@ registry.registerPath({
     "waits here until it is applied or rejected — which is what keeps a wrong " +
     "match from silently rewriting a flight that was recorded correctly.",
   tags: pendingTag,
-  responses: { 200: { description: "Pending updates" } },
+  request: {
+    query: z.object({
+      status: z
+        .string()
+        .optional()
+        .describe("pending, applied, rejected, expired, edited or superseded"),
+      flightId: z.string().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Pending updates",
+      content: {
+        "application/json": {
+          schema: z.object({
+            updates: z.array(
+              z.object({
+                id: z.string(),
+                flightId: z.string(),
+                status: z.string(),
+                apiSource: z.string(),
+                fetchedAt: z.string(),
+                expiresAt: z.string(),
+                createdAt: z.string(),
+                changes: z.unknown(),
+              })
+            ),
+            count: z.number().int(),
+          }),
+        },
+      },
+    },
+  },
 });
 
 registry.registerPath({

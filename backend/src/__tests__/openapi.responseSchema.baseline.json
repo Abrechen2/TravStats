@@ -26,7 +26,6 @@
   "GET /parse-boardingpass/providers",
   "GET /parser-templates",
   "GET /parser-templates/{id}",
-  "GET /pending-updates",
   "GET /pending-updates/statistics",
   "GET /pending-updates/{id}",
   "GET /place-lists/curated",

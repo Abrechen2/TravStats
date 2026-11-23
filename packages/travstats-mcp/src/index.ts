@@ -11,7 +11,8 @@ const VERSION = "0.1.0";
 async function main(): Promise<void> {
   const config = loadConfig(process.env);
   const client = createClient(config);
-  const { scope, serverVersion } = await preflight(client);
+  const { scope, serverVersion, warning } = await preflight(client);
+  if (warning) process.stderr.write(`travstats-mcp WARNING: ${warning}\n`);
   const ctx = { client, instance: config.instance };
 
   const server = new McpServer({ name: "travstats-mcp", version: VERSION });
@@ -69,7 +70,7 @@ async function main(): Promise<void> {
 
   await server.connect(new StdioServerTransport());
   process.stderr.write(
-    `travstats-mcp ${VERSION}: connected to ${config.instance} (server ${serverVersion}, token scope ${scope}, read-only tools)\n`
+    `travstats-mcp ${VERSION}: connected to ${config.instance} (server ${serverVersion}, token scope ${scope ?? "unchecked"}, read-only tools)\n`
   );
 }
 
