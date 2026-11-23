@@ -35,6 +35,7 @@ import {
   SeedFiles,
   seedAccount,
   seedCatalogue,
+  TEST_PORT_CODES,
   seedCrossLinks,
   seedOtherAccount,
   U,
@@ -145,8 +146,8 @@ beforeAll(async () => {
   dstPrisma = createPrismaClient({ url: urlFor(TARGET_DB) });
   // The target's own catalogue, under its own ids; it lacks the rail station.
   await dst.query(
-    `INSERT INTO ports (id, name, lat, lon, unlocode) VALUES ($1, 'Kiel', 54.3, 10.1, 'DEKEL'), ($1 + 1, 'Oslo', 59.9, 10.7, 'NOOSL')`,
-    [TARGET_PORT_ID]
+    `INSERT INTO ports (id, name, lat, lon, unlocode) VALUES ($1, 'AZ Kiel', 54.3, 10.1, $2), ($1 + 1, 'AZ Oslo', 59.9, 10.7, $3)`,
+    [TARGET_PORT_ID, TEST_PORT_CODES.port, TEST_PORT_CODES.port2]
   );
   await dst.query(
     `INSERT INTO airports (id, name, lat, lon, iata, icao) VALUES (5000, 'Frankfurt', 50, 8.5, 'ZZF', 'ZZZF')`
@@ -589,7 +590,8 @@ describe("account archive round trip", () => {
     for (const [rel, digest] of seeded.files) expect(sha(path.join(sameRoot, rel))).toBe(digest);
     const port = await one<{ n: number }>(
       src,
-      `SELECT count(*)::int AS n FROM ports WHERE unlocode = 'DEKEL'`
+      `SELECT count(*)::int AS n FROM ports WHERE unlocode = $1`,
+      [TEST_PORT_CODES.port]
     );
     expect(port.n).toBe(1);
     expect(CATALOGUE.port).toBeGreaterThan(0);
@@ -614,7 +616,7 @@ describe("account archive round trip", () => {
     const { rows } = await dst.query(`SELECT user_id FROM lodging_chains WHERE name = 'AZ Poison'`);
     expect(rows).toEqual([{ user_id: user }]);
     expect(await one(dst, `SELECT name FROM ports WHERE id = $1`, [TARGET_PORT_ID])).toEqual({
-      name: "Kiel",
+      name: "AZ Kiel",
     });
     expect(await one(dst, `SELECT count(*)::int AS n FROM rail_stations`)).toEqual({ n: 0 });
     expect(await one(dst, `SELECT count(*)::int AS n FROM ports WHERE name = 'Poisoned'`)).toEqual({

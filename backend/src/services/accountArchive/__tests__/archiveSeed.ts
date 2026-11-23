@@ -36,6 +36,14 @@ export const CATALOGUE = {
   chain: 900006,
 };
 
+/**
+ * The seed's port codes: not real UN/LOCODEs ("ZZ" is unassigned), so the seed
+ * never collides with the real catalogue and its cleanup never has to touch a
+ * catalogue row. Deleting the real Kiel by name once broke every later suite
+ * that needs DEKEL (the demo seed).
+ */
+export const TEST_PORT_CODES = { port: "ZZKEL", port2: "ZZOSL" } as const;
+
 export async function insert(
   client: Client,
   table: string,
@@ -81,21 +89,21 @@ export class SeedFiles {
 export async function seedCatalogue(client: Client): Promise<void> {
   await insert(client, "ports", {
     id: CATALOGUE.port,
-    name: "Kiel",
+    name: "AZ Kiel",
     lat: 54.3,
     lon: 10.1,
-    unlocode: "DEKEL",
+    unlocode: TEST_PORT_CODES.port,
   });
   await insert(client, "ports", {
     id: CATALOGUE.port2,
-    name: "Oslo",
+    name: "AZ Oslo",
     lat: 59.9,
     lon: 10.7,
-    unlocode: "NOOSL",
+    unlocode: TEST_PORT_CODES.port2,
   });
   await insert(client, "airports", {
     id: CATALOGUE.airport,
-    name: "Frankfurt",
+    name: "AZ Frankfurt",
     lat: 50,
     lon: 8.5,
     iata: "ZZF",
@@ -103,8 +111,8 @@ export async function seedCatalogue(client: Client): Promise<void> {
   });
   await insert(client, "rail_stations", {
     id: CATALOGUE.station,
-    name: "Hamburg Hbf",
-    search_name: "hamburg hbf",
+    name: "AZ Hamburg Hbf",
+    search_name: "az hamburg hbf",
     lat: 53.55,
     lon: 10,
     source_id: "az-src-hh",
@@ -589,10 +597,15 @@ async function seedTravTrack(client: Client): Promise<void> {
 export async function cleanSeed(client: Client): Promise<void> {
   await client.query(`DELETE FROM users WHERE id IN ($1, $2) OR username LIKE 'az-%'`, [U, FRIEND]);
   await client.query(`DELETE FROM lodging_chains WHERE id >= 900000 OR name LIKE 'AZ %'`);
-  for (const t of ["ports", "airports", "rail_stations", "ships"]) {
-    await client.query(
-      `DELETE FROM ${t} WHERE id >= 900000 OR name IN ('Kiel', 'Oslo', 'Frankfurt', 'Hamburg Hbf', 'AZ Ship')`
-    );
+  // Only the rows this seed wrote, by their ids: never a catalogue row by name.
+  const own: Record<string, number[]> = {
+    ports: [CATALOGUE.port, CATALOGUE.port2],
+    airports: [CATALOGUE.airport],
+    rail_stations: [CATALOGUE.station],
+    ships: [CATALOGUE.ship],
+  };
+  for (const [t, ids] of Object.entries(own)) {
+    await client.query(`DELETE FROM ${t} WHERE id = ANY($1::int[])`, [ids]);
   }
   await client.query(`DELETE FROM achievements WHERE code = 'AZ_FIRST'`);
 }
