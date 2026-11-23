@@ -42,6 +42,7 @@ beforeEach(() => {
   vi.mocked(fetchReadiness).mockResolvedValue({
     invitation: invitation({ show: false, reason: null }),
     banner: { show: false, itemIds: [] },
+    summary: { required: 0, recommended: 0, unknown: 0, newNotes: 0, blockedByAdmin: 0, ready: 0 },
   } as never);
 });
 afterEach(cleanup);
@@ -168,6 +169,14 @@ describe("invitation card actions", () => {
     vi.mocked(fetchReadiness).mockResolvedValue({
       invitation: invitation(),
       banner: { show: false, itemIds: [] },
+      summary: {
+        required: 0,
+        recommended: 0,
+        unknown: 0,
+        newNotes: 0,
+        blockedByAdmin: 0,
+        ready: 0,
+      },
     } as never);
     useReadinessShellStore.setState({ invitation: invitation() });
     mount();

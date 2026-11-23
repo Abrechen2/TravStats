@@ -2,10 +2,10 @@ import { create } from "zustand";
 
 import {
   fetchReadiness,
-  fetchReadinessAttention,
   type ReadinessAttention,
   type ReadinessBanner,
   type ReadinessInvitation,
+  type ReadinessSummary,
 } from "../lib/api/readiness";
 import { logger } from "../lib/logger";
 
@@ -22,7 +22,7 @@ import { logger } from "../lib/logger";
 interface ReadinessShellState {
   invitation: ReadinessInvitation | null;
   banner: ReadinessBanner | null;
-  /** The header dot and the settings menu's glow (`GET /readiness/attention`). */
+  /** The header dot and the settings menu's glow, from the same read's summary. */
   attention: ReadinessAttention | null;
   /** Epoch ms of the last read that was started; drives the focus throttle. */
   lastReadAt: number | null;
@@ -32,6 +32,11 @@ interface ReadinessShellState {
   /** Optimistic: a snooze succeeded; the next read replaces this either way. */
   hideInvitation: () => void;
   reset: () => void;
+}
+
+/** The header dot's counts from the page's summary — the server's `buildReadinessAttention` rule. */
+export function attentionOfSummary(summary: ReadinessSummary): ReadinessAttention {
+  return { problem: summary.required, warning: summary.recommended };
 }
 
 /** Focus refresh: at most every 10 minutes (§12). */
@@ -48,19 +53,22 @@ export const useReadinessShellStore = create<ReadinessShellState>((set, get) => 
   refresh: async () => {
     const mine = ++readSeq;
     set({ lastReadAt: Date.now() });
-    // Two reads, two outcomes: a failed card read must not hold back the dot.
-    const [view, attention] = await Promise.allSettled([
-      fetchReadiness(),
-      fetchReadinessAttention(),
-    ]);
-    if (mine !== readSeq) return;
-    if (view.status === "fulfilled") {
-      set({ invitation: view.value.invitation, banner: view.value.banner });
-    } else {
-      logger.debug("readiness shell refresh failed", view.reason);
+    // ONE evaluation per refresh (Codex, rc.45): the dot's counts are the page's
+    // own summary (`required` red, `recommended` amber), exactly what
+    // `GET /readiness/attention` computes, so a second read would only evaluate
+    // every check twice.
+    try {
+      const view = await fetchReadiness();
+      if (mine !== readSeq) return;
+      set({
+        invitation: view.invitation,
+        banner: view.banner,
+        attention: attentionOfSummary(view.summary),
+      });
+    } catch (err) {
+      if (mine !== readSeq) return;
+      logger.warn("readiness shell refresh failed", err);
     }
-    if (attention.status === "fulfilled") set({ attention: attention.value });
-    else logger.warn("readiness attention read failed", attention.reason);
   },
   refreshOnFocus: async (nowMs) => {
     const last = get().lastReadAt;

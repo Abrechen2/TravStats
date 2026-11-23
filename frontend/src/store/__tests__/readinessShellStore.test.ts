@@ -14,6 +14,7 @@ const answer = (show: boolean) =>
   ({
     invitation: { show, reason: show ? "update" : null, snoozedUntil: null, keys: [] },
     banner: { show: false, itemIds: [] },
+    summary: { required: 0, recommended: 2, unknown: 0, newNotes: 0, blockedByAdmin: 0, ready: 0 },
   }) as never;
 
 beforeEach(() => {
@@ -24,17 +25,16 @@ beforeEach(() => {
 });
 
 describe("the header's attention counts", () => {
-  it("reads them from the light endpoint, beside the card read", async () => {
+  it("come from the same read as the card: one evaluation per refresh, not two (Codex, rc.45)", async () => {
     await useReadinessShellStore.getState().refresh();
-    expect(fetchReadinessAttention).toHaveBeenCalledTimes(1);
+    expect(fetchReadiness).toHaveBeenCalledTimes(1);
+    expect(fetchReadinessAttention).not.toHaveBeenCalled();
     expect(useReadinessShellStore.getState().attention).toEqual({ problem: 0, warning: 2 });
   });
 
-  it("keeps the dot when only the card read fails, and the card when only the dot fails", async () => {
-    vi.mocked(fetchReadiness).mockRejectedValueOnce(new Error("down"));
+  it("keeps the dot and the card when a read fails", async () => {
     await useReadinessShellStore.getState().refresh();
-    expect(useReadinessShellStore.getState().attention).toEqual({ problem: 0, warning: 2 });
-    vi.mocked(fetchReadinessAttention).mockRejectedValueOnce(new Error("down"));
+    vi.mocked(fetchReadiness).mockRejectedValueOnce(new Error("down"));
     await useReadinessShellStore.getState().refresh();
     expect(useReadinessShellStore.getState().invitation?.show).toBe(true);
     expect(useReadinessShellStore.getState().attention).toEqual({ problem: 0, warning: 2 });
