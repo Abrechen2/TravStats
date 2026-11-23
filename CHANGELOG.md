@@ -6,6 +6,39 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.44.** Eleven new migrations: the change history, the trip cover crop and its source, private/business purpose on entries, smart place lists, the re-route runs, the order of cruise stops within a day, and the automatic vessel identity with its AIS positions. All columns are additive, and existing entries keep their values; purpose stays unknown until set. Nothing is deleted.
+
+### Added
+
+- **Private or business.** Every entry can be marked "geschäftlich" or "privat". A new entry takes it from its trip. Each domain can hide business or private entries in its settings, and hidden entries leave every list, map, statistic, the leaderboard and badges together. A line under the totals says how many are hidden. "Zweck aus der Reise übernehmen" fills unknown entries in one go.
+- **Smart place lists.** A list can follow a chain such as McDonald's or Subway. TravTrack stops at an outlet become a suggestion in the inbox and on the place page ("Warst du am … um … hier? 25 Min. — erkannt durch TravTrack"). A stop within 60 m can be taken over automatically, and every automatic entry can be undone.
+- **A change history** on entries: what changed, when and from which source.
+- **Cover suggestions and a crop editor.** A trip suggests three cover photos, preferring ones with you in them, at the destination, and favourites. Every cover can be moved and zoomed inside a visible frame, and automatic covers never replace one you chose.
+- **A trip itinerary for family.** The trip link is now a day-by-day plan in the TravStats design, with flight numbers, terminals, hotels and a "jetzt" marker, and it prints as a PDF. Booking codes, prices and notes never appear.
+- **Airline logos as tiles or symbols**, set under Einheiten und Formate. They show on every list, detail header, trip timeline and inbox card, along with operator logos for trains, buses, ferries and cruises.
+- **"Strecken neu routen"** for admins routes every straight-line leg again, in batches within the routing provider's daily quota; a run can be cancelled. Each roadtrip has "Alle Etappen neu routen".
+- **Ships are identified automatically.** Ferries and cruises no longer ask for an MMSI. The server finds the ship and records its AIS positions during the journey, and it says so when the ship is out of reception.
+- **"Aus Album wählen"** picks a stay's photos from an Immich or PhotoPrism album, also regardless of the dates.
+- **A demo-account warning** for admins in the header and the settings.
+
+### Changed
+
+- **Single entries are no longer shared by link.** Flight, cruise, stay and visit links are retired, and old links say so. Trip and year-review links remain.
+- **Photos, documents and provenance sit inside each stay card**, and photo strips keep their actions in a menu.
+- **A package booking is one line**: reference, package price and number of entries. Splitting moved into the ⋯ menu.
+- **The admin user list counts all entries**, and its labels say what they mean ("2FA an/aus", "Konto aktiv").
+- **The trip gallery says "Album verknüpfen"** and names the photo source.
+- **Service settings name the key in use.** Status, key row and test agree, and a user's test checks the key that applies to them (own or the server's).
+
+### Fixed
+
+- **A boarding pass scan reads both passes on one photo**, with small or turned PDF417 codes. The printed departure and arrival times are read, an overnight arrival moves to the next day, and each stage reports what it found. Before, everything ended in one vague error.
+- **The dashboard map counts planned and flown places the same way** in the hover and the panel ("0 geflogen · 2 geplant"), marks planned-only places, and leaves cancelled entries off the map.
+- **The stay photo picker closes and scrolls again**, searches the whole check-in and check-out days, and says when it shows only part of the photos.
+- **PhotoPrism albums no longer show "0 Fotos"** when PhotoPrism does not report a count.
+- **Cruise stops on the same day keep their order**, which the stops editor can change.
+- **A service test no longer says "nicht gefunden"** when only the server key is missing.
+
 **Upgrading to 2.8.0-rc.43.** One new migration adds the "remembered" provenance to trips and entries (empty for everything existing) and the table of its contradiction notices. Nothing is deleted.
 
 ### Added
