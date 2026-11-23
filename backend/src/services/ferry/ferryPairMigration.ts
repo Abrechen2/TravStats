@@ -37,10 +37,17 @@ export async function adoptLegacyManualLines(): Promise<{ adopted: number; kept:
     await prisma.$transaction(
       async (tx) => {
         if (alone && line) {
-          await tx.ferryJourney.updateMany({
-            where: { id: crossing.id, manualScope: null },
+          const claimed = await tx.ferryJourney.updateMany({
+            where: {
+              id: crossing.id,
+              manualScope: null,
+              geometrySource: "manual",
+              updatedAt: crossing.updatedAt,
+            },
             data: { manualScope: "pair" },
           });
+          // Edited since it was read: leave it for the next boot instead of sharing a stale line.
+          if (claimed.count !== 1) return;
           await storePairLine(tx, crossing.userId, { ...crossing, manualScope: "pair" }, line);
         } else {
           await tx.ferryJourney.updateMany({

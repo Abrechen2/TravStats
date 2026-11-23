@@ -154,6 +154,105 @@ it("clear for all drops the pair line everywhere; clear for one detaches only th
   expect((await row(third)).geometry).toBeNull();
 });
 
+it("a line drawn on the linked leg stays that crossing's own and survives a pair redraw", async () => {
+  const out = await crossing(galtby, langnas, 1);
+  const other = await crossing(galtby, langnas, 2);
+  await draw(out);
+  const { adoptDrawnLegLineOnFerry } = await import("../../services/ferry/ferryManualRoute");
+  const trip = await prisma.trip.create({ data: { userId, name: "Leg trip" } });
+  const route = await prisma.tripRoute.create({
+    data: { userId, tripId: trip.id, name: "R", kind: "roadtrip", mode: "road" },
+  });
+  const a = await prisma.tripStop.create({
+    data: {
+      tripId: trip.id,
+      routeId: route.id,
+      title: "G",
+      lat: galtby.lat,
+      lon: galtby.lon,
+      orderIdx: 0,
+    },
+  });
+  const b = await prisma.tripStop.create({
+    data: {
+      tripId: trip.id,
+      routeId: route.id,
+      title: "L",
+      lat: langnas.lat,
+      lon: langnas.lon,
+      orderIdx: 1,
+    },
+  });
+  const leg = await prisma.tripRouteLeg.create({
+    data: {
+      routeId: route.id,
+      fromStopId: a.id,
+      toStopId: b.id,
+      mode: "ferry",
+      source: "straight",
+      distanceKm: 90,
+    },
+  });
+  await prisma.ferryJourney.update({ where: { id: other }, data: { roadtripLegId: leg.id } });
+  const own: Array<[number, number]> = [
+    [galtby.lon, galtby.lat],
+    [21.2, 59.7],
+    [langnas.lon, langnas.lat],
+  ];
+  await prisma.$transaction((tx) => adoptDrawnLegLineOnFerry(tx, userId, leg.id, own));
+  expect((await row(other)).manualScope).toBe("journey");
+  await draw(out);
+  expect((await row(other)).geometry).toEqual(own);
+});
+
+it("clearing a linked leg's line clears only that crossing, not the pair line", async () => {
+  const out = await crossing(galtby, langnas, 1);
+  const other = await crossing(galtby, langnas, 2);
+  await draw(out);
+  const { dropManualFerryLineOfLeg } = await import("../../services/ferry/ferryManualRoute");
+  const trip = await prisma.trip.create({ data: { userId, name: "Drop trip" } });
+  const route = await prisma.tripRoute.create({
+    data: { userId, tripId: trip.id, name: "R2", kind: "roadtrip", mode: "road" },
+  });
+  const a = await prisma.tripStop.create({
+    data: {
+      tripId: trip.id,
+      routeId: route.id,
+      title: "G",
+      lat: galtby.lat,
+      lon: galtby.lon,
+      orderIdx: 0,
+    },
+  });
+  const b = await prisma.tripStop.create({
+    data: {
+      tripId: trip.id,
+      routeId: route.id,
+      title: "L",
+      lat: langnas.lat,
+      lon: langnas.lon,
+      orderIdx: 1,
+    },
+  });
+  const leg = await prisma.tripRouteLeg.create({
+    data: {
+      routeId: route.id,
+      fromStopId: a.id,
+      toStopId: b.id,
+      mode: "ferry",
+      source: "straight",
+      distanceKm: 90,
+    },
+  });
+  await prisma.ferryJourney.update({
+    where: { id: other },
+    data: { roadtripLegId: leg.id, tripId: trip.id },
+  });
+  await dropManualFerryLineOfLeg(userId, leg.id);
+  expect(await prisma.ferryPairRoute.count({ where: { userId } })).toBe(1);
+  expect((await row(out)).geometrySource).toBe("manual");
+});
+
 it("reports how many crossings a pair line would reach", async () => {
   const out = await crossing(galtby, langnas, 1);
   await crossing(langnas, galtby, 2);

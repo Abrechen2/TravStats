@@ -369,6 +369,8 @@ export async function adoptDrawnLegLineOnFerry(
     data: {
       geometry: line as unknown as Prisma.InputJsonValue,
       geometrySource: "manual",
+      // Drawn on this crossing's own leg: not the pair's line, and a later pair redraw leaves it.
+      manualScope: "journey",
       ...(ferry.distanceSource !== "user" && {
         distanceKm: Math.round(km * 10) / 10,
         distanceSource: "sea_route",
@@ -389,5 +391,5 @@ export async function dropManualFerryLineOfLeg(userId: string, legId: string): P
     where: { roadtripLegId: legId, userId, geometrySource: "manual" },
     select: { id: true },
   });
-  if (ferry) await clearFerryManualRoute(userId, ferry.id);
+  if (ferry) await clearFerryManualRoute(userId, ferry.id, null, "journey");
 }

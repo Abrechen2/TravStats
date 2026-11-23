@@ -197,28 +197,26 @@ export function FerryRouteEditor({ ride, onSaved, onClose }: Props): JSX.Element
       </div>
       <p className="t-caption">{t("ferry:routeEditor.hint")}</p>
       {reach && (
-        <div className="flex flex-col gap-1" data-testid="ferry-route-scope">
-          <p className="t-caption">
-            {onlyThis
-              ? t("ferry:routeEditor.scope.onlyThis")
-              : t("ferry:routeEditor.scope.pair", {
-                  count: reach.count,
-                  from: reach.from,
-                  to: reach.to,
-                })}
-          </p>
-          {(reach.count > 1 || onlyThis) && (
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={onlyThis}
-                onChange={(e): void => setOnlyThis(e.target.checked)}
-                data-testid="ferry-route-only-this"
-              />
-              {t("ferry:routeEditor.scope.onlyThisToggle")}
-            </label>
-          )}
-        </div>
+        <p className="t-caption" data-testid="ferry-route-scope">
+          {onlyThis
+            ? t("ferry:routeEditor.scope.onlyThis")
+            : t("ferry:routeEditor.scope.pair", {
+                count: reach.count,
+                from: reach.from,
+                to: reach.to,
+              })}
+        </p>
+      )}
+      {(reachFailed || (reach && (reach.count > 1 || onlyThis))) && (
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={onlyThis}
+            onChange={(e): void => setOnlyThis(e.target.checked)}
+            data-testid="ferry-route-only-this"
+          />
+          {t("ferry:routeEditor.scope.onlyThisToggle")}
+        </label>
       )}
       {reachFailed && (
         <p role="alert" className="text-sm text-(--danger)" data-testid="ferry-route-scope-failed">
