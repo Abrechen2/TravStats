@@ -7,6 +7,8 @@ export type CheckStatus = "ready" | "needsAction" | "unknown";
 export interface Evaluation {
   status: CheckStatus;
   checkedAt: Date | null;
+  /** What the copy counts ("N Bahnfahrten"), where the check counts something. */
+  count?: number | null;
 }
 
 export interface CheckImpl {

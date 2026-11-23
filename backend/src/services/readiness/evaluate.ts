@@ -32,8 +32,13 @@ export interface ReadinessItem {
   severity: "required" | "recommended";
   status: CheckStatus;
   checkedAt: string | null;
+  /** The number the copy names; null where the check counts nothing. */
+  count: number | null;
   titleKey: string;
   consequenceKey: string;
+  actionKey: string | null;
+  /** The page lists the entries this check found (`GET /readiness/items/:id/entries`). */
+  entryList: boolean;
   action: string | null;
   blockedBy: string | null;
   optOutAllowed: boolean;
@@ -85,6 +90,7 @@ interface Evaluated {
   check: RegisteredCheck;
   status: CheckStatus;
   checkedAt: Date | null;
+  count: number | null;
 }
 
 /** Evaluate every applicable check; a result older than the check's `maxAgeDays` reads `unknown`. */
@@ -101,6 +107,7 @@ export function evaluateChecks(ctx: ReadinessContext): Map<CheckId, Evaluated> {
       check,
       status: stale ? "unknown" : result.status,
       checkedAt: result.checkedAt,
+      count: result.count ?? null,
     });
   }
   return out;
@@ -173,6 +180,83 @@ export function bannerOf(items: readonly ReadinessItem[], isAdmin: boolean): Rea
   return { show: itemIds.length > 0, itemIds };
 }
 
+/** Severity counts for the shell: the header dot and the settings menu (owner, 2026-11-23). */
+export interface ReadinessAttention {
+  /** `required` items that need action — red. */
+  problem: number;
+  /** `recommended` items that need action — amber. */
+  warning: number;
+}
+
+/**
+ * The items this account is shown and the counts over them. Snoozed and opted-out
+ * items are listed but not counted; an item blocked by an admin item counts as
+ * the admin's, never twice.
+ */
+function buildItems(
+  evaluated: Map<CheckId, Evaluated>,
+  state: AccountReadinessState,
+  isAdmin: boolean,
+  now: Date
+): { items: ReadinessItem[]; summary: ReadinessView["summary"] } {
+  const items: ReadinessItem[] = [];
+  const summary = {
+    required: 0,
+    recommended: 0,
+    unknown: 0,
+    newNotes: 0,
+    blockedByAdmin: 0,
+    ready: 0,
+  };
+
+  for (const { check, status, checkedAt, count } of evaluated.values()) {
+    if (check.scope === "admin" && !isAdmin) continue;
+    const blocker = check.blockedBy ? evaluated.get(check.blockedBy) : undefined;
+    const blocked = status === "needsAction" && blocker?.status === "needsAction";
+    const userState = userStateOf(check, state, now);
+    items.push({
+      id: check.id,
+      revision: check.revision,
+      scope: check.scope,
+      severity: check.severity,
+      status,
+      checkedAt: checkedAt ? checkedAt.toISOString() : null,
+      count,
+      titleKey: check.titleKey,
+      consequenceKey: check.consequenceKey,
+      actionKey: check.actionKey,
+      entryList: check.entryList,
+      action: blocked ? null : check.action,
+      blockedBy: blocked ? check.blockedBy : null,
+      optOutAllowed: check.severity !== "required",
+      userState,
+    });
+    if (userState) continue;
+    if (status === "ready") summary.ready++;
+    else if (status === "unknown") summary.unknown++;
+    else if (blocked) summary.blockedByAdmin++;
+    else summary[check.severity]++;
+  }
+  return { items, summary };
+}
+
+/**
+ * The light read behind the header dot: the same evaluation as the page, but no
+ * notes, no invitation bookkeeping and no write — counts only.
+ */
+export async function buildReadinessAttention(
+  userId: string,
+  isAdmin: boolean,
+  now: Date = new Date()
+): Promise<ReadinessAttention> {
+  const [ctx, state] = await Promise.all([
+    loadReadinessContext(userId, isAdmin, now),
+    loadAccountState(userId),
+  ]);
+  const { summary } = buildItems(evaluateChecks(ctx), state, isAdmin, now);
+  return { problem: summary.required, warning: summary.recommended };
+}
+
 export async function buildReadinessView(
   userId: string,
   isAdmin: boolean,
@@ -185,42 +269,7 @@ export async function buildReadinessView(
     loadInvitationState(userId),
   ]);
   const evaluated = evaluateChecks(ctx);
-
-  const items: ReadinessItem[] = [];
-  const summary = {
-    required: 0,
-    recommended: 0,
-    unknown: 0,
-    newNotes: 0,
-    blockedByAdmin: 0,
-    ready: 0,
-  };
-
-  for (const { check, status, checkedAt } of evaluated.values()) {
-    if (check.scope === "admin" && !isAdmin) continue;
-    const blocker = check.blockedBy ? evaluated.get(check.blockedBy) : undefined;
-    const blocked = status === "needsAction" && blocker?.status === "needsAction";
-    const userState = userStateOf(check, state, now);
-    items.push({
-      id: check.id,
-      revision: check.revision,
-      scope: check.scope,
-      severity: check.severity,
-      status,
-      checkedAt: checkedAt ? checkedAt.toISOString() : null,
-      titleKey: check.titleKey,
-      consequenceKey: check.consequenceKey,
-      action: blocked ? null : check.action,
-      blockedBy: blocked ? check.blockedBy : null,
-      optOutAllowed: check.severity !== "required",
-      userState,
-    });
-    if (userState) continue;
-    if (status === "ready") summary.ready++;
-    else if (status === "unknown") summary.unknown++;
-    else if (blocked) summary.blockedByAdmin++;
-    else summary[check.severity]++;
-  }
+  const { items, summary } = buildItems(evaluated, state, isAdmin, now);
 
   const notes: ReadinessNote[] = [];
   for (const note of NOTES) {
