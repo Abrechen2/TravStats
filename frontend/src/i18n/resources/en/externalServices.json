@@ -29,6 +29,7 @@
     "flight": "Flight data",
     "mapsRoutes": "Maps, routes & places",
     "photosLocation": "Photos, location & sport",
+    "personal": "Personal sources",
     "ai": "AI",
     "openData": "Open data & logos",
     "syncMail": "Sync, mail & notifications",
@@ -757,6 +758,15 @@
       "dataOut": "Stays between TravStats and your receiver; only the aircraft's ICAO24 code and the day are requested.",
       "quotaLine": "your own server",
       "adminPurpose": "The instance's receiver address (LAN allowed); accounts can enter their own public one"
+    },
+    "calendar": {
+      "name": "Calendar",
+      "purpose": "Read appointments as evidence for stops",
+      "why": "Reads a calendar (ICS address or CalDAV) only for the days the scan looks at. An appointment that fits a stop can suggest its purpose and name.",
+      "cost": "Free.",
+      "quota": "None.",
+      "dataOut": "TravStats only reads. Only an appointment that fits a stop is kept, inside the suggestion.",
+      "adminPurpose": "Accounts read their own calendars; switched off, no account reads any more"
     }
   },
   "alwaysOn": {

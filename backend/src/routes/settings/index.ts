@@ -20,6 +20,7 @@ import locationProviderRouter from "./locationProvider";
 import trackGapRouter from "./trackGap";
 import externalServicesRouter from "./externalServices";
 import instanceBackupRouter from "./instanceBackup";
+import calendarSourcesRouter from "./calendarSources";
 import { guardAccountKeyWrite, guardConnectionWrite } from "../../services/externalServices/guards";
 
 const router = Router();
@@ -72,6 +73,9 @@ router.use(
     "/track-gap",
     // Keys, connections and the AI consent of the shared account would be everyone's.
     "/external-services",
+    // Outbound calendar and plugin targets with credentials: one visitor's would be everyone's.
+    "/calendar-sources",
+    "/suggestion-plugins",
   ],
   rejectDemoWrites
 );
@@ -100,6 +104,7 @@ router.use("/webdav-sync", webdavSyncRouter);
 router.use("/personal", personalRouter);
 router.use("/location-provider", locationProviderRouter);
 router.use("/track-gap", trackGapRouter);
+router.use("/calendar-sources", calendarSourcesRouter);
 router.use("/external-services", externalServicesRouter);
 router.use("/instance-backup", instanceBackupRouter);
 

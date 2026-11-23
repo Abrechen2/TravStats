@@ -371,6 +371,17 @@ export const SERVICES: readonly ServiceDef[] = [
     requiredFields: ["clientId", "clientSecret"],
   }),
 
+  // ---- personal sources (spec 2026-11-23-plugins-and-calendar.md) -------------
+  // Account-level and personal data: nothing is read until an account adds a
+  // source, and the admin's switch (the policy) turns the feature off for the
+  // whole instance — the kill switch. Both stay under the internet master switch.
+  svc({
+    id: "calendar",
+    category: "personal",
+    level: "account",
+    credential: "urlKey",
+  }),
+
   // ---- AI --------------------------------------------------------------------
   svc({
     id: "ollama",

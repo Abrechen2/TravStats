@@ -8,6 +8,7 @@ export const CATEGORY_ORDER = [
   "flight",
   "mapsRoutes",
   "photosLocation",
+  "personal",
   "ai",
   "openData",
   "syncMail",

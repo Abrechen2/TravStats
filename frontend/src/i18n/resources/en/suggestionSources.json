@@ -1,0 +1,78 @@
+{
+  "calendar": {
+    "title": "Calendar",
+    "sub": "Appointments as evidence for your stops",
+    "help": "TravStats only reads the days the scan is looking at (at most 30 days back). An appointment that fits a stop in time and place becomes evidence in the suggestion. No other appointment is stored.",
+    "empty": "No calendar connected yet.",
+    "add": "Add calendar",
+    "remove": "Remove",
+    "removeConfirm": {
+      "title": "Remove calendar “{{label}}”?",
+      "affects": "Calendar",
+      "after": "Open suggestions lose the evidence from this calendar. Accepted visits stay."
+    },
+    "icsLine": "ICS subscription · {{host}}",
+    "caldavLine_one": "CalDAV · {{user}} · {{count}} calendar",
+    "caldavLine_other": "CalDAV · {{user}} · {{count}} calendars",
+    "lastFailed": "Last attempt failed",
+    "blocked": {
+      "internet_off": "The server's internet access is switched off. No calendar is read.",
+      "service_off": "The admin switched calendars off on this server. No calendar is read."
+    },
+    "test": {
+      "button": "Test",
+      "ok_one": "Read: {{count}} appointment between {{from}} and {{to}}.",
+      "ok_other": "Read: {{count}} appointments between {{from}} and {{to}}.",
+      "skipped_one": "{{count}} recurring appointment was cut short (too many repetitions).",
+      "skipped_other": "{{count}} recurring appointments were cut short (too many repetitions)."
+    },
+    "privacy": {
+      "title": "What is stored",
+      "sub": "Only an appointment that fits a stop, with title, time and place, inside the suggestion. Once accepted or rejected only its time and calendar remain. The calendar's address and password are stored encrypted and never shown again."
+    },
+    "form": {
+      "kind": "Kind of calendar",
+      "ics": "ICS address",
+      "caldav": "CalDAV",
+      "label": "Name",
+      "labelHint": "e.g. Work or Private. Rules can refer to this calendar.",
+      "icsUrl": "Secret address (ICS)",
+      "icsHint": "The subscription address from iCloud, Google or Outlook. It is the key to the calendar and is stored encrypted.",
+      "server": "Server address",
+      "serverHint": "e.g. https://caldav.example.com/",
+      "username": "User",
+      "password": "App password",
+      "passwordHint": "Stored encrypted and never shown again.",
+      "discover": "Find calendars",
+      "collections": "Which calendars are read",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "failure": {
+      "unknown": "That did not work. Please try again later.",
+      "kind": {
+        "notConfigured": "The calendar is not fully set up.",
+        "unreachable": "The calendar server cannot be reached.",
+        "auth": "Access refused. Check the address, user or password.",
+        "notFound": "There is no calendar at this address.",
+        "protocol": "The server did not send a readable calendar answer.",
+        "invalidUrl": "This address is not valid."
+      },
+      "code": {
+        "PRIVATE_TARGET": "This address is on the local network. Only the admin account may use a server on the local network.",
+        "CALENDAR_TIMEOUT": "The calendar server did not answer in time.",
+        "CALENDAR_TOO_LARGE": "The calendar is larger than 5 MB.",
+        "CALENDAR_TOO_MANY_EVENTS": "The calendar has more than 10,000 appointments.",
+        "CALENDAR_PARSE": "The answer is not a readable calendar (perhaps a login page).",
+        "CALENDAR_PARSE_TIMEOUT": "The calendar could not be read in the time allowed.",
+        "CALENDAR_REDIRECT": "The server redirects. TravStats follows no redirect; please enter the final address.",
+        "CALENDAR_XML_TOO_DEEP": "The CalDAV server's answer is nested too deeply.",
+        "CALENDAR_FOREIGN_HREF": "The CalDAV server points to another server. That is not followed.",
+        "CALENDAR_NO_COLLECTIONS": "No calendar with appointments was found on this server.",
+        "CALENDAR_EGRESS_INTERNET_OFF": "The server's internet access is switched off.",
+        "CALENDAR_EGRESS_SERVICE_OFF": "The admin switched calendars off on this server.",
+        "CALENDAR_SOURCE_LIMIT": "At most 10 calendars are possible."
+      }
+    }
+  }
+}

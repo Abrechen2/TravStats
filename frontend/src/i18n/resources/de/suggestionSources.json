@@ -1,0 +1,78 @@
+{
+  "calendar": {
+    "title": "Kalender",
+    "sub": "Termine als Beleg für deine Stopps",
+    "help": "TravStats liest nur die Tage, die der Suchlauf gerade prüft (höchstens 30 Tage zurück). Ein Termin, der zeitlich und örtlich zu einem Stopp passt, landet als Beleg im Vorschlag. Alle anderen Termine werden nicht gespeichert.",
+    "empty": "Noch kein Kalender verbunden.",
+    "add": "Kalender hinzufügen",
+    "remove": "Entfernen",
+    "removeConfirm": {
+      "title": "Kalender „{{label}}“ entfernen?",
+      "affects": "Kalender",
+      "after": "Offene Vorschläge verlieren den Beleg aus diesem Kalender. Angenommene Besuche bleiben."
+    },
+    "icsLine": "ICS-Abo · {{host}}",
+    "caldavLine_one": "CalDAV · {{user}} · {{count}} Kalender",
+    "caldavLine_other": "CalDAV · {{user}} · {{count}} Kalender",
+    "lastFailed": "Letzter Versuch fehlgeschlagen",
+    "blocked": {
+      "internet_off": "Der Internetzugang des Servers ist ausgeschaltet. Kein Kalender wird gelesen.",
+      "service_off": "Der Admin hat Kalender auf diesem Server ausgeschaltet. Kein Kalender wird gelesen."
+    },
+    "test": {
+      "button": "Testen",
+      "ok_one": "Gelesen: {{count}} Termin zwischen {{from}} und {{to}}.",
+      "ok_other": "Gelesen: {{count}} Termine zwischen {{from}} und {{to}}.",
+      "skipped_one": "{{count}} Serientermin wurde gekürzt (zu viele Wiederholungen).",
+      "skipped_other": "{{count}} Serientermine wurden gekürzt (zu viele Wiederholungen)."
+    },
+    "privacy": {
+      "title": "Was gespeichert wird",
+      "sub": "Nur ein Termin, der zu einem Stopp passt, mit Titel, Zeit und Ort im Vorschlag. Nach Annehmen oder Ablehnen bleiben davon nur Zeit und Kalender. Adresse und Passwort des Kalenders werden verschlüsselt gespeichert und nie wieder angezeigt."
+    },
+    "form": {
+      "kind": "Art des Kalenders",
+      "ics": "ICS-Adresse",
+      "caldav": "CalDAV",
+      "label": "Name",
+      "labelHint": "z. B. Arbeit oder Privat. Regeln können sich auf diesen Kalender beziehen.",
+      "icsUrl": "Geheime Adresse (ICS)",
+      "icsHint": "Die Abo-Adresse aus iCloud, Google oder Outlook. Diese Adresse ist der Schlüssel zum Kalender und wird verschlüsselt gespeichert.",
+      "server": "Server-Adresse",
+      "serverHint": "z. B. https://caldav.example.com/",
+      "username": "Benutzer",
+      "password": "App-Passwort",
+      "passwordHint": "Wird verschlüsselt gespeichert und nie wieder angezeigt.",
+      "discover": "Kalender suchen",
+      "collections": "Welche Kalender gelesen werden",
+      "save": "Speichern",
+      "cancel": "Abbrechen"
+    },
+    "failure": {
+      "unknown": "Das hat nicht geklappt. Bitte später noch einmal versuchen.",
+      "kind": {
+        "notConfigured": "Der Kalender ist nicht vollständig eingerichtet.",
+        "unreachable": "Der Kalender-Server ist nicht erreichbar.",
+        "auth": "Zugang abgelehnt. Adresse, Benutzer oder Passwort prüfen.",
+        "notFound": "Unter dieser Adresse gibt es keinen Kalender.",
+        "protocol": "Der Server hat keine lesbare Kalender-Antwort geschickt.",
+        "invalidUrl": "Diese Adresse ist ungültig."
+      },
+      "code": {
+        "PRIVATE_TARGET": "Diese Adresse liegt im lokalen Netz. Nur das Admin-Konto darf einen Server im lokalen Netz verwenden.",
+        "CALENDAR_TIMEOUT": "Der Kalender-Server hat nicht rechtzeitig geantwortet.",
+        "CALENDAR_TOO_LARGE": "Der Kalender ist größer als 5 MB.",
+        "CALENDAR_TOO_MANY_EVENTS": "Der Kalender hat mehr als 10 000 Termine.",
+        "CALENDAR_PARSE": "Die Antwort ist kein lesbarer Kalender (vielleicht eine Anmeldeseite).",
+        "CALENDAR_PARSE_TIMEOUT": "Der Kalender ließ sich nicht in der vorgesehenen Zeit lesen.",
+        "CALENDAR_REDIRECT": "Der Server leitet weiter. TravStats folgt keiner Weiterleitung; bitte die endgültige Adresse eintragen.",
+        "CALENDAR_XML_TOO_DEEP": "Die Antwort des CalDAV-Servers ist zu tief verschachtelt.",
+        "CALENDAR_FOREIGN_HREF": "Der CalDAV-Server verweist auf einen anderen Server. Das wird nicht befolgt.",
+        "CALENDAR_NO_COLLECTIONS": "Auf diesem Server wurde kein Kalender mit Terminen gefunden.",
+        "CALENDAR_EGRESS_INTERNET_OFF": "Der Internetzugang des Servers ist ausgeschaltet.",
+        "CALENDAR_EGRESS_SERVICE_OFF": "Der Admin hat Kalender auf diesem Server ausgeschaltet.",
+        "CALENDAR_SOURCE_LIMIT": "Es sind höchstens 10 Kalender möglich."
+      }
+    }
+  }
+}

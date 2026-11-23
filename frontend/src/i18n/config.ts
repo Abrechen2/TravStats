@@ -58,6 +58,7 @@ import enRoadtrips from "./resources/en/roadtrips.json";
 import enRouting from "./resources/en/routing.json";
 import enOpenData from "./resources/en/openData.json";
 import enExternalServices from "./resources/en/externalServices.json";
+import enSuggestionSources from "./resources/en/suggestionSources.json";
 import enLoyalty from "./resources/en/loyalty.json";
 import enTravplan from "./resources/en/travplan.json";
 import deTravplan from "./resources/de/travplan.json";
@@ -112,6 +113,7 @@ import deRoadtrips from "./resources/de/roadtrips.json";
 import deRouting from "./resources/de/routing.json";
 import deOpenData from "./resources/de/openData.json";
 import deExternalServices from "./resources/de/externalServices.json";
+import deSuggestionSources from "./resources/de/suggestionSources.json";
 import deLoyalty from "./resources/de/loyalty.json";
 import deNotes from "./resources/de/notes.json";
 
@@ -188,6 +190,7 @@ const resources = {
     routing: enRouting,
     openData: enOpenData,
     externalServices: enExternalServices,
+    suggestionSources: enSuggestionSources,
     loyalty: enLoyalty,
     notes: enNotes,
     comparison: enComparison,
@@ -245,6 +248,7 @@ const resources = {
     routing: deRouting,
     openData: deOpenData,
     externalServices: deExternalServices,
+    suggestionSources: deSuggestionSources,
     loyalty: deLoyalty,
     notes: deNotes,
     comparison: deComparison,
@@ -311,6 +315,7 @@ i18n.use(initReactI18next).init({
     "routing",
     "openData",
     "externalServices",
+    "suggestionSources",
     "loyalty",
     "notes",
   ],

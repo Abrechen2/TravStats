@@ -2,6 +2,7 @@ import TravTrackRecordingSection from "../../components/Settings/travtrack/TravT
 import TravTrackPlacesSection from "../../components/Settings/travtrack/TravTrackPlacesSection";
 import TravTrackZonesSection from "../../components/Settings/travtrack/TravTrackZonesSection";
 import TravTrackDetectSection from "../../components/Settings/travtrack/TravTrackDetectSection";
+import CalendarSourcesSection from "../../components/Settings/suggestionSources/CalendarSourcesSection";
 import TravTrackSourcesSection from "../../components/Settings/travtrack/TravTrackSourcesSection";
 import TravTrackExportSection from "../../components/Settings/travtrack/TravTrackExportSection";
 import TravTrackDeleteSection from "../../components/Settings/travtrack/TravTrackDeleteSection";
@@ -130,6 +131,8 @@ export default function SettingsSectionSwitch({
       return <TravTrackZonesSection />;
     case "ttDetect":
       return <TravTrackDetectSection />;
+    case "ttCalendar":
+      return <CalendarSourcesSection />;
     case "ttSources":
       return <TravTrackSourcesSection />;
     case "ttExport":

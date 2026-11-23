@@ -2688,6 +2688,30 @@
               "m": "ttDetect"
             }
           ]
+        },
+        {
+          "id": "tt-erk-kalender",
+          "de": "Kalender",
+          "en": "Calendar",
+          "rows": [
+            {
+              "id": "kalender",
+              "t": "list",
+              "inv": "Calendar source (spec 2026-11-23-plugins-and-calendar.md, P1)",
+              "de": [
+                "Kalender",
+                "Termine als Beleg für deine Stopps",
+                "ICS-Adresse oder CalDAV, nur gelesen. Gespeichert wird nur ein Termin, der zu einem Stopp passt."
+              ],
+              "en": [
+                "Calendar",
+                "Appointments as evidence for your stops",
+                "ICS address or CalDAV, read only. Only an appointment that fits a stop is kept."
+              ],
+              "m": "ttCalendar",
+              "x": 0
+            }
+          ]
         }
       ]
     },

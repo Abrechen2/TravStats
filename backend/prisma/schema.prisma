@@ -142,6 +142,7 @@ model User {
   settings                        UserSettings?
   externalServiceTests            ExternalServiceTest[]
   webdavSync                      UserWebdavSync?
+  calendarSources                 CalendarSource[]
   analyticsEvents                 AnalyticsEvent[]
   createdInvitations              Invitation[]                 @relation("CreatedInvitations")
   usedInvitations                 Invitation[]                 @relation("UsedInvitations")
@@ -8047,4 +8048,39 @@ model RerouteRun {
   @@index([status, resumeAfter])
   @@index([scope, userId, createdAt])
   @@map("reroute_runs")
+}
+
+/// A calendar an account reads as evidence for its TravTrack stops (spec
+/// 2026-11-23-plugins-and-calendar.md, Part A). Read-only and never mirrored:
+/// the events are read into memory for one job and only an event that matched
+/// a stop survives, inside that finding's evidence. No event table exists.
+model CalendarSource {
+  id                      String    @id @default(uuid())
+  userId                  String    @map("user_id")
+  /// The user's own name for it ("Arbeit", "Privat"); calendar rules match on the source.
+  label                   String
+  /// "ics" | "caldav" — validated by the route's Zod schema.
+  kind                    String
+  enabled                 Boolean   @default(true)
+  /// ICS: the subscription URL is itself the credential (iCloud/Google "secret address"),
+  /// so it is stored encrypted and never sent back. `icsHost` is what the page shows.
+  icsUrlEncrypted         String?   @map("ics_url_encrypted")
+  icsHost                 String?   @map("ics_host")
+  /// CalDAV: the server URL and user are shown; the app password is not.
+  caldavUrl               String?   @map("caldav_url")
+  caldavUsername          String?   @map("caldav_username")
+  caldavPasswordEncrypted String?   @map("caldav_password_encrypted")
+  /// The chosen collections: `[{ href, name }]`, hrefs absolute on the server's origin.
+  caldavCollections       Json      @default("[]") @map("caldav_collections")
+  /// The last test or read: `ok`, or a failure kind of `services/calendar/errors.ts`.
+  lastStatus              String?   @map("last_status")
+  lastErrorCode           String?   @map("last_error_code")
+  lastCheckedAt           DateTime? @map("last_checked_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("calendar_sources")
 }

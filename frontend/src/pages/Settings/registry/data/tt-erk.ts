@@ -24,5 +24,8 @@ export const TT_ERK_PAGE: RegistryPage = {
         {"id":"kiort","mount":"ttDetect","kind":"toggle","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Ortsart per KI erkennen","en":"Detect place type with AI","terms":{"de":"Nur Ortsnamen, keine Koordinaten","en":"Place names only, no coordinates"}},
         {"id":"scanzeit","mount":"ttDetect","kind":"select","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Zeitraum für „Jetzt suchen“","en":"Period for “Search now”","terms":{"de":"","en":""}},
       ]},
+      {"id":"tt-erk-kalender","de":"Kalender","en":"Calendar","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
+        {"id":"kalender","mount":"ttCalendar","kind":"list","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Kalender","en":"Calendar","terms":{"de":"Termine als Beleg für deine Stopps ICS-Adresse oder CalDAV, nur gelesen. Gespeichert wird nur ein Termin, der zu einem Stopp passt.","en":"Appointments as evidence for your stops ICS address or CalDAV, read only. Only an appointment that fits a stop is kept."}},
+      ]},
   ],
 };

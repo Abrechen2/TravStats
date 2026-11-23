@@ -2230,6 +2230,9 @@
       "suchlauf": "Suchlauf",
       "belege": "Belege",
       "feinabstimmung": "Feinabstimmung"
+    },
+    "calendar": {
+      "title": "Kalender"
     }
   },
   "lodgingRatings": {

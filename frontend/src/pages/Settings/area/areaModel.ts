@@ -280,7 +280,7 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
   page("ueber", "info", [mount("about", "about", "about")]),
   // ---- TravTrack (only where the server offers it, or the account holds data)
   page("tt-aufz", "map-pin", [P("ttRecording", LOC), P("ttPlaces", TT), P("ttZones", TT)]),
-  page("tt-erk", "sparkles", [P("ttDetect", LOC)]),
+  page("tt-erk", "sparkles", [P("ttDetect", LOC), P("ttCalendar", TT)]),
   page("tt-daten", "database", [
     P("ttSources", TT),
     P("ttExport", TT),

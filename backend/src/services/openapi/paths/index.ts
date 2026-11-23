@@ -80,6 +80,7 @@ import "./lodging";
 import "./lodgingRatingCategories";
 import "./loyalty";
 import "./settings";
+import "./calendarSources";
 import "./places";
 import "./smartLists";
 import "./placeVisitPhotoAuto";
