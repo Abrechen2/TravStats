@@ -8,6 +8,8 @@ import {
   publicUrlCheckResponseSchema,
   readinessIdParamsSchema,
   readinessResponseSchema,
+  readinessAttentionSchema,
+  readinessEntriesResponseSchema,
   snoozeBodySchema,
   invitationSeenBodySchema,
 } from "../../../schemas/readiness";
@@ -143,5 +145,44 @@ registry.registerPath({
       content: { "application/json": { schema: publicUrlCheckResponseSchema } },
     },
     403: { description: "Not an admin", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/readiness/attention",
+  summary: "How many items need this account's attention, by severity",
+  description:
+    "The header's light read: the same evaluation as `GET /readiness`, without notes, invitation " +
+    "bookkeeping or any write. `problem` counts `required` items that need action, `warning` the " +
+    "`recommended` ones. Snoozed, opted-out, unchecked and admin-blocked items are not counted; " +
+    "admin items count for admins only.",
+  tags,
+  responses: {
+    200: {
+      description: "Counts by severity",
+      content: { "application/json": { schema: readinessAttentionSchema } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/readiness/items/{id}/entries",
+  summary: "The entries a data check found",
+  description:
+    "For an item with `entryList: true`: the account's own entries the check counted (capped at " +
+    "100), each with a link to its page. `total` is the full count.",
+  tags,
+  request: { params: readinessIdParamsSchema },
+  responses: {
+    200: {
+      description: "The entries",
+      content: { "application/json": { schema: readinessEntriesResponseSchema } },
+    },
+    404: {
+      description: "READINESS_ITEM_NOT_FOUND: unknown, not applicable, or no entry list",
+      content: errorContent,
+    },
   },
 });

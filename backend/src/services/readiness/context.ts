@@ -10,6 +10,12 @@ import { BACKUP_BASE_DIR } from "../backup/backupConfig";
 import { loadAllTests } from "../externalServices/tests";
 import type { LastTest } from "../externalServices/types";
 import { getEffectivePublicUrl } from "./effectivePublicUrl";
+import {
+  loadAccountProblemFacts,
+  loadInstanceProblemFacts,
+  type AccountProblemFacts,
+  type InstanceProblemFacts,
+} from "./problemFacts";
 
 export interface InstanceFacts {
   smtp: { enabled: boolean } | null;
@@ -50,6 +56,8 @@ export interface ReadinessContext {
   isAdmin: boolean;
   instance: InstanceFacts;
   account: AccountFacts;
+  /** The visible-problem checks' counts (`problemFacts.ts`). */
+  problems: { instance: InstanceProblemFacts; account: AccountProblemFacts };
 }
 
 /** The services whose instance-level key a provider check judges. */
@@ -195,6 +203,18 @@ export async function loadReadinessContext(
   isAdmin: boolean,
   now: Date = new Date()
 ): Promise<ReadinessContext> {
-  const [instance, account] = await Promise.all([loadInstance(now), loadAccount(userId, now)]);
-  return { now, userId, isAdmin, instance, account };
+  const [instance, account, problemInstance] = await Promise.all([
+    loadInstance(now),
+    loadAccount(userId, now),
+    loadInstanceProblemFacts(),
+  ]);
+  const problemAccount = await loadAccountProblemFacts(userId, problemInstance, now);
+  return {
+    now,
+    userId,
+    isAdmin,
+    instance,
+    account,
+    problems: { instance: problemInstance, account: problemAccount },
+  };
 }

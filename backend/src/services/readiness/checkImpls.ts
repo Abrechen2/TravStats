@@ -10,6 +10,7 @@
 import type { ReadinessContext } from "./context";
 import type { LastTest } from "../externalServices/types";
 import type { CheckImpls, Evaluation } from "./types";
+import { ENTRY_CHECK_IMPLS, PROBLEM_CHECK_IMPLS } from "./problemChecks";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -56,6 +57,8 @@ function travtrackInUse(ctx: ReadinessContext): boolean {
 }
 
 export const CHECK_IMPLS: CheckImpls = {
+  ...PROBLEM_CHECK_IMPLS,
+  ...ENTRY_CHECK_IMPLS,
   "admin.smtp": {
     appliesWhen: always,
     evaluate: ({ instance }) => {

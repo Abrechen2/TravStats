@@ -15,6 +15,8 @@ import { SettingsLayout } from "../components/Settings/frame/SettingsLayout";
 import { SectionFrame } from "../components/Settings/frame/SectionFrame";
 import { ExpertPageNotice, PageExpertNote } from "../components/Settings/frame/ExpertNote";
 import { DemoAccountNotice } from "../components/DemoAccountNotice";
+import { useAttention } from "../components/Readiness/AttentionIndicator";
+import { TONE_COLOR } from "../components/Settings/readiness/readinessModel";
 import { VersionLine } from "../components/Settings/frame/VersionLine";
 import {
   PageExpertNoteShownContext,
@@ -116,7 +118,9 @@ function scopeLineKey(page: AreaPageDef): string {
  * address lands on their own pages with a line that says why.
  */
 export default function SettingsPage(): JSX.Element {
-  const { t } = useTranslation(["settings", "common", "settingsRows"]);
+  const { t } = useTranslation(["settings", "common", "settingsRows", "readiness"]);
+  // The Einrichtung entry glows while something needs attention (owner, 2026-11-23).
+  const attention = useAttention();
   const params = useParams<{ page?: string }>();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -250,6 +254,15 @@ export default function SettingsPage(): JSX.Element {
         icon: p.icon,
         color: p.domain ? colorOf(p.domain) : undefined,
         indent: INDENTED_PAGES.has(p.id),
+        ...(p.id === "einrichtung" && attention
+          ? {
+              attention: {
+                ...attention,
+                color: TONE_COLOR[attention.tone],
+                label: t("readiness:attention.menuLine", { count: attention.count }),
+              },
+            }
+          : {}),
         ...(p.id === "allgemein" && publicUrlMissing
           ? { warn: { label: t("settingsRows:server.publicUrlMissing") } }
           : {}),

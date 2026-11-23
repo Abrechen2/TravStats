@@ -94,6 +94,131 @@
     "userNotificationEmail": {
       "title": "E-Mail für Erinnerungen",
       "consequence": "Erinnerungen per E-Mail brauchen eine Adresse, an die sie gehen können."
+    },
+    "adminRailRouter": {
+      "title": "Bahnfahrten als Luftlinie",
+      "title_one": "{{count}} Bahnfahrt als Luftlinie",
+      "title_other": "{{count}} Bahnfahrten als Luftlinie",
+      "consequence": "Ohne Bahn-Router zeichnet die Karte jede Fahrt als gerade Linie quer übers Land – und die Kilometer stimmen nicht.",
+      "action": "Bahn-Routing einrichten"
+    },
+    "adminRoadRouting": {
+      "title": "Straßenetappen als Luftlinie",
+      "title_one": "{{count}} Etappe als Luftlinie",
+      "title_other": "{{count}} Etappen als Luftlinie",
+      "consequence": "Für Roadtrips, Touren, Fähren und Busse ist kein Routing-Dienst aktiv. Strecken und Fahrzeiten sind darum nur geschätzt.",
+      "action": "Routing-Dienst einrichten"
+    },
+    "adminRoutingKeyUnused": {
+      "title": "Straßen-Routing ist nicht aktiv, obwohl ein Schlüssel hinterlegt ist",
+      "consequence": "Ein Schlüssel für OpenRouteService oder GraphHopper ist gespeichert, aber kein Routing-Anbieter ausgewählt. Darum bleibt jede Etappe eine Luftlinie.",
+      "action": "Routing-Anbieter auswählen"
+    },
+    "adminTwoFactor": {
+      "title": "Admin-Konto ohne zweiten Faktor",
+      "consequence": "Wer dein Passwort errät, verwaltet den ganzen Server. Ein zweiter Faktor oder ein Passkey verhindert das.",
+      "action": "Zweiten Faktor einrichten"
+    },
+    "adminDemoAccount": {
+      "title": "Demo-Konto ist aktiv",
+      "consequence": "Jeder mit den öffentlichen Demo-Zugangsdaten kann sich auf diesem Server anmelden.",
+      "action": "Demo-Konto entfernen"
+    },
+    "userRailStraight": {
+      "title": "Bahnfahrten als Luftlinie",
+      "title_one": "{{count}} Bahnfahrt als Luftlinie",
+      "title_other": "{{count}} Bahnfahrten als Luftlinie",
+      "consequence": "Auf deiner Karte erscheinen sie als gerade Linien, und ihre Kilometer sind geschätzt. Den Bahn-Router richtet der Admin ein.",
+      "action": "Bahn-Routing einrichten"
+    },
+    "userRoadStraight": {
+      "title": "Etappen als Luftlinie",
+      "title_one": "{{count}} Etappe als Luftlinie",
+      "title_other": "{{count}} Etappen als Luftlinie",
+      "consequence": "Roadtrips, Touren und Busfahrten ohne Routing-Dienst zeigen gerade Linien und geschätzte Fahrzeiten.",
+      "action": "Eigenen Routing-Schlüssel hinterlegen"
+    },
+    "userTravtrackSilent": {
+      "title": "Seit über einem Tag keine Position vom Telefon",
+      "consequence": "TravTrack zeichnet auf, aber es kommt nichts an. Vielleicht ist die Companion-App beendet, der Standort verweigert oder das Telefon nicht mehr gekoppelt.",
+      "action": "Telefon prüfen"
+    },
+    "userVisitScanBacklog": {
+      "title": "Ortssuche gestört",
+      "title_one": "Ortssuche gestört – {{count}} Tag wartet",
+      "title_other": "Ortssuche gestört – {{count}} Tage warten",
+      "consequence": "Die Halte dieser Tage wurden noch nicht nach besuchten Orten durchsucht, meist weil der Ortsdienst nicht antwortet. Bis dahin fehlen Vorschläge.",
+      "action": "Ortserkennung ansehen"
+    },
+    "userFlightsNoTimes": {
+      "title": "Flüge ohne Uhrzeit",
+      "title_one": "{{count}} Flug ohne Uhrzeit",
+      "title_other": "{{count}} Flüge ohne Uhrzeit",
+      "consequence": "Ohne Abflugzeit fehlen Flugdauer, Reihenfolge und der Tag in der Statistik.",
+      "action": "Uhrzeit aus Bordkarte oder Buchung nachtragen"
+    },
+    "userFlightsNoArrival": {
+      "title": "Flüge ohne Ankunftszeit",
+      "title_one": "{{count}} Flug ohne Ankunftszeit",
+      "title_other": "{{count}} Flüge ohne Ankunftszeit",
+      "consequence": "Ohne Ankunft kann die Flugdauer nur geschätzt werden.",
+      "action": "Ankunft aus Bordkarte oder Buchung nachtragen"
+    },
+    "userFlightsLegacyTime": {
+      "title": "Flüge mit alter Import-Uhrzeit",
+      "title_one": "{{count}} Flug mit alter Import-Uhrzeit",
+      "title_other": "{{count}} Flüge mit alter Import-Uhrzeit",
+      "consequence": "Ein früherer Import hat die Uhrzeit als Platzhalter gespeichert. Die Zeit kann um Stunden danebenliegen.",
+      "action": "Uhrzeit aus Bordkarte oder Buchung nachtragen"
+    },
+    "userFlightsMidnightPlaceholder": {
+      "title": "Flüge um genau Mitternacht",
+      "title_one": "{{count}} Flug um genau Mitternacht",
+      "title_other": "{{count}} Flüge um genau Mitternacht",
+      "consequence": "00:00 Ortszeit sieht genau aus, ist aber meist ein Platzhalter für „Uhrzeit unbekannt“. Dauer und Tag können falsch sein.",
+      "action": "Echte Uhrzeit nachtragen"
+    },
+    "userFlightsDateOnly": {
+      "title": "Flüge nur mit Datum",
+      "title_one": "{{count}} Flug nur mit Datum",
+      "title_other": "{{count}} Flüge nur mit Datum",
+      "consequence": "Das Datum stimmt, die Uhrzeit fehlt. Für die Flugdauer ist eine Uhrzeit nötig.",
+      "action": "Uhrzeit nachtragen"
+    },
+    "userStaysNoCoords": {
+      "title": "Unterkünfte ohne Ort",
+      "title_one": "{{count}} Unterkunft ohne Ort",
+      "title_other": "{{count}} Unterkünfte ohne Ort",
+      "consequence": "Diese Unterkünfte fehlen auf der Karte und zählen in keinem Land.",
+      "action": "Ort festlegen"
+    },
+    "userDuplicateVisits": {
+      "title": "Doppelte Besuche",
+      "title_one": "{{count}} Ort am selben Tag doppelt besucht",
+      "title_other": "{{count}} Orte am selben Tag doppelt besucht",
+      "consequence": "Zwei Besuche am selben Ort und Tag zählen doppelt in Statistik und Listen.",
+      "action": "Doppelten Besuch löschen"
+    },
+    "userTripCountryMismatch": {
+      "title": "Reiseländer widersprechen den Einträgen",
+      "title_one": "{{count}} Reise mit falscher Länderliste",
+      "title_other": "{{count}} Reisen mit falscher Länderliste",
+      "consequence": "Die gespeicherte Länderliste lässt ein Land aus, in dem ein Eintrag der Reise liegt. Die Liste gewinnt, das Land fehlt.",
+      "action": "Länderliste der Reise korrigieren"
+    },
+    "userPackageDoublePriced": {
+      "title": "Pauschalreise doppelt bezahlt",
+      "title_one": "{{count}} Reise mit doppeltem Preis",
+      "title_other": "{{count}} Reisen mit doppeltem Preis",
+      "consequence": "Zwei Buchungen derselben Reise tragen denselben Preis oder dieselbe Buchungsnummer. Die Kosten zählen doppelt.",
+      "action": "Doppelte Buchung entfernen"
+    },
+    "userZoneMismatch": {
+      "title": "Zeitzone passt nicht zum Ort",
+      "title_one": "{{count}} Eintrag mit falscher Zeitzone",
+      "title_other": "{{count}} Einträge mit falscher Zeitzone",
+      "consequence": "Die gespeicherte Zeitzone eines Aufenthalts oder Besuchs gehört nicht zu seinem Ort. Uhrzeiten werden darum verschoben angezeigt. Ein Admin kann unter Wartung › Zeitmodell die Zonen erneut bestimmen.",
+      "action": "Zonen erneut bestimmen"
     }
   },
   "notes": {
@@ -136,5 +261,22 @@
     "text_one": "{{count}} Einrichtung am Server braucht dich.",
     "text_other": "{{count}} Einrichtungen am Server brauchen dich.",
     "link": "Einrichtung öffnen"
+  },
+  "attention": {
+    "heading": "Braucht deine Aufmerksamkeit",
+    "menuLine_one": "{{count}} Punkt braucht deine Aufmerksamkeit",
+    "menuLine_other": "{{count}} Punkte brauchen deine Aufmerksamkeit",
+    "menuLine": "Punkte brauchen deine Aufmerksamkeit",
+    "badgeProblem": "{{count}} Probleme",
+    "badgeWarning": "{{count}} Hinweise",
+    "dot": "{{count}} offene Punkte in Einrichtung & Zustand"
+  },
+  "entries": {
+    "show": "Einträge ansehen",
+    "hide": "Einträge ausblenden",
+    "loading": "Einträge werden geladen …",
+    "error": "Die Einträge ließen sich nicht laden.",
+    "more": "{{shown}} von {{total}} gezeigt",
+    "zoneFix": "Zonen erneut bestimmen (Wartung)"
   }
 }

@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import ReadinessSection from "../ReadinessSection";
 import {
   fetchReadiness,
+  fetchReadinessEntries,
   markInvitationSeen,
   optOutReadinessItem,
   snoozeReadinessItem,
@@ -22,6 +23,8 @@ vi.mock("../../../../lib/api/readiness", async (importOriginal) => {
   return {
     ...actual,
     fetchReadiness: vi.fn(),
+    fetchReadinessAttention: vi.fn().mockResolvedValue({ problem: 0, warning: 0 }),
+    fetchReadinessEntries: vi.fn(),
     markInvitationSeen: vi.fn().mockResolvedValue(undefined),
     snoozeReadinessItem: vi.fn().mockResolvedValue(undefined),
     optOutReadinessItem: vi.fn().mockResolvedValue(undefined),
@@ -36,8 +39,11 @@ const item = (over: Partial<ReadinessItem> & { id: string }): ReadinessItem => (
   severity: "recommended",
   status: "needsAction",
   checkedAt: null,
+  count: null,
   titleKey: `check.${over.id}.title`,
   consequenceKey: `check.${over.id}.consequence`,
+  actionKey: null,
+  entryList: false,
   action: "/settings/reisearten",
   blockedBy: null,
   optOutAllowed: true,
@@ -138,7 +144,7 @@ describe("readiness page", () => {
     expect(await screen.findByText("readiness:check.a.title")).toBeInTheDocument();
   });
 
-  it("orders the groups muss, neu, empfohlen, Braucht den Admin, bereit", async () => {
+  it("orders the groups muss, empfohlen, neu, Braucht den Admin, bereit (owner, 2026-11-23)", async () => {
     show(
       response(
         [
@@ -156,8 +162,8 @@ describe("readiness page", () => {
     );
     expect(order).toEqual([
       "readiness-group-required",
-      "readiness-group-new",
       "readiness-group-recommended",
+      "readiness-group-new",
       "readiness-group-blocked",
       "readiness-group-ready",
     ]);
@@ -193,13 +199,72 @@ describe("readiness page", () => {
 
   // Owner, 2026-11-20: "Öffnen" was near-black on the dark card. The link wore
   // --ts-accent-text, the ink meant for text ON an accent fill.
-  it("draws the open link in the accent colour, not the ink for text on an accent fill", async () => {
-    show(response([item({ id: "optional1" })]));
+  it("draws a plain link in the accent colour, and a filled one only with the ink for an accent fill", async () => {
+    show(
+      response([
+        item({ id: "unchecked1", status: "unknown" }),
+        item({ id: "optional1", actionKey: "check.optional1.action" }),
+      ])
+    );
     await screen.findByText("readiness:check.optional1.title");
-    const links = screen.getAllByText("readiness:openAction");
-    for (const link of links) {
-      expect(link.style.color).toBe("var(--ts-accent)");
-    }
+    const plain = screen.getByText("readiness:checkNow");
+    expect(plain.style.color).toBe("var(--ts-accent)");
+    const filled = screen.getByText("readiness:check.optional1.action");
+    expect(filled.style.background).toBe("var(--ts-accent)");
+    expect(filled.style.color).toBe("var(--ts-accent-text)");
+  });
+
+  it("draws an item that needs action large, with its severity's edge and its own fix (owner, 2026-11-23)", async () => {
+    show(
+      response([
+        item({ id: "req1", scope: "admin", severity: "required", optOutAllowed: false }),
+        item({ id: "rec1", count: 3, actionKey: "check.rec1.action" }),
+        item({ id: "unchecked1", status: "unknown" }),
+      ])
+    );
+    await screen.findByText("readiness:check.rec1.title");
+    const row = (id: string) => document.querySelector(`[data-item="${id}"]`) as HTMLElement;
+    expect(row("req1").dataset.prominent).toBe("problem");
+    expect(row("req1").style.borderLeft).toContain("var(--ts-bad)");
+    expect(row("rec1").dataset.prominent).toBe("warning");
+    expect(row("rec1").style.borderLeft).toContain("var(--ts-warn)");
+    expect(row("unchecked1").dataset.prominent).toBeUndefined();
+    // Verified "needs action" first inside the recommendations.
+    const recs = Array.from(
+      document.querySelectorAll("#readiness-group-recommended [data-item]")
+    ).map((el) => el.getAttribute("data-item"));
+    expect(recs).toEqual(["rec1", "unchecked1"]);
+    expect(within(row("rec1")).getByText("readiness:check.rec1.action").tagName).toBe("A");
+  });
+
+  it("lists a data check's entries on demand, each linking to its page, and says so when the list fails", async () => {
+    vi.mocked(fetchReadinessEntries).mockResolvedValueOnce({
+      total: 2,
+      entries: [
+        { id: "f1", kind: "flight", label: "LH400 FRA–JFK", date: null, href: "/flights/f1" },
+        { id: "f2", kind: "flight", label: "LH401 JFK–FRA", date: null, href: "/flights/f2" },
+      ],
+    });
+    show(
+      response([
+        item({
+          id: "user.flightsNoTimes",
+          count: 2,
+          entryList: true,
+          actionKey: "check.noTimes.action",
+          action: "/settings/einrichtung",
+        }),
+      ])
+    );
+    fireEvent.click(await screen.findByText("readiness:check.noTimes.action"));
+    const link = await screen.findByText("LH400 FRA–JFK");
+    expect(link.closest("a")?.getAttribute("href")).toBe("/flights/f1");
+    expect(fetchReadinessEntries).toHaveBeenCalledWith("user.flightsNoTimes");
+
+    fireEvent.click(screen.getByText("readiness:entries.hide"));
+    vi.mocked(fetchReadinessEntries).mockRejectedValueOnce(new Error("down"));
+    fireEvent.click(screen.getByText("readiness:check.noTimes.action"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("readiness:entries.error");
   });
 
   it("offers 'nutze ich nicht' only where the item allows it, never for a required one", async () => {

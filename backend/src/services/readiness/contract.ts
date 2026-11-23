@@ -6,6 +6,9 @@
 import type { CheckCatalogueEntry, NoteCatalogueEntry } from "../../shared/readinessCatalogue";
 import { isValidVersion } from "../parsers/templates/v2/version";
 
+/** Where a check with an entry list sends its button: the readiness page that draws the list. */
+export const ENTRY_LIST_ACTION = "/settings/einrichtung";
+
 export function catalogueProblems(
   checks: readonly (CheckCatalogueEntry & { evaluate?: unknown; appliesWhen?: unknown })[],
   notes: readonly (NoteCatalogueEntry & { appliesWhen?: unknown })[]
@@ -32,6 +35,10 @@ export function catalogueProblems(
       problems.push(`check "${c.id}": id prefix does not match scope`);
     claimKey(`check "${c.id}"`, c.titleKey);
     claimKey(`check "${c.id}"`, c.consequenceKey);
+    if (c.actionKey !== null) claimKey(`check "${c.id}"`, c.actionKey);
+    // An entry list is drawn on the readiness page; any other address would leave it.
+    if (c.entryList && c.action !== ENTRY_LIST_ACTION)
+      problems.push(`check "${c.id}": an entry list's action is ${ENTRY_LIST_ACTION}`);
   }
   for (const c of checks) {
     if (c.blockedBy === null) continue;

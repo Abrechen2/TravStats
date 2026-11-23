@@ -94,6 +94,131 @@
     "userNotificationEmail": {
       "title": "E-mail for reminders",
       "consequence": "Reminders by e-mail need an address to go to."
+    },
+    "adminRailRouter": {
+      "title": "Rail journeys drawn as straight lines",
+      "title_one": "{{count}} rail journey as a straight line",
+      "title_other": "{{count}} rail journeys as straight lines",
+      "consequence": "Without a rail router the map draws every journey as a straight line across the country, and the distances are off.",
+      "action": "Set up rail routing"
+    },
+    "adminRoadRouting": {
+      "title": "Road legs drawn as straight lines",
+      "title_one": "{{count}} leg as a straight line",
+      "title_other": "{{count}} legs as straight lines",
+      "consequence": "No routing service is active for roadtrips, tours, ferries and coaches, so distances and driving times are only estimates.",
+      "action": "Set up a routing service"
+    },
+    "adminRoutingKeyUnused": {
+      "title": "Road routing is off although a key is stored",
+      "consequence": "A key for OpenRouteService or GraphHopper is stored, but no routing provider is selected, so every leg stays a straight line.",
+      "action": "Choose a routing provider"
+    },
+    "adminTwoFactor": {
+      "title": "Admin account without a second factor",
+      "consequence": "Whoever guesses your password runs the whole server. A second factor or a passkey stops that.",
+      "action": "Set up a second factor"
+    },
+    "adminDemoAccount": {
+      "title": "Demo account is active",
+      "consequence": "Anyone with the public demo credentials can sign in to this server.",
+      "action": "Remove the demo account"
+    },
+    "userRailStraight": {
+      "title": "Rail journeys drawn as straight lines",
+      "title_one": "{{count}} rail journey as a straight line",
+      "title_other": "{{count}} rail journeys as straight lines",
+      "consequence": "Your map shows them as straight lines and their distances are estimates. The admin sets up the rail router.",
+      "action": "Set up rail routing"
+    },
+    "userRoadStraight": {
+      "title": "Legs drawn as straight lines",
+      "title_one": "{{count}} leg as a straight line",
+      "title_other": "{{count}} legs as straight lines",
+      "consequence": "Roadtrips, tours and coach rides without a routing service show straight lines and estimated driving times.",
+      "action": "Add your own routing key"
+    },
+    "userTravtrackSilent": {
+      "title": "No position from the phone for over a day",
+      "consequence": "TravTrack is recording but nothing arrives. The Companion app may have been closed, location access denied, or the phone unpaired.",
+      "action": "Check the phone"
+    },
+    "userVisitScanBacklog": {
+      "title": "Place search disrupted",
+      "title_one": "Place search disrupted – {{count}} day waiting",
+      "title_other": "Place search disrupted – {{count}} days waiting",
+      "consequence": "The stops of these days have not been searched for visited places yet, usually because the place service does not answer. Suggestions are missing until then.",
+      "action": "Open place detection"
+    },
+    "userFlightsNoTimes": {
+      "title": "Flights without a time",
+      "title_one": "{{count}} flight without a time",
+      "title_other": "{{count}} flights without a time",
+      "consequence": "Without a departure time the duration, the order and the day in your statistics are missing.",
+      "action": "Add the time from the boarding pass or booking"
+    },
+    "userFlightsNoArrival": {
+      "title": "Flights without an arrival time",
+      "title_one": "{{count}} flight without an arrival time",
+      "title_other": "{{count}} flights without an arrival time",
+      "consequence": "Without an arrival the flight time can only be estimated.",
+      "action": "Add the arrival from the boarding pass or booking"
+    },
+    "userFlightsLegacyTime": {
+      "title": "Flights with an old import time",
+      "title_one": "{{count}} flight with an old import time",
+      "title_other": "{{count}} flights with an old import time",
+      "consequence": "An earlier import stored the time as a placeholder. It can be hours off.",
+      "action": "Add the time from the boarding pass or booking"
+    },
+    "userFlightsMidnightPlaceholder": {
+      "title": "Flights at exactly midnight",
+      "title_one": "{{count}} flight at exactly midnight",
+      "title_other": "{{count}} flights at exactly midnight",
+      "consequence": "00:00 local time looks exact but is usually a placeholder for “time unknown”. Duration and day may be wrong.",
+      "action": "Add the real time"
+    },
+    "userFlightsDateOnly": {
+      "title": "Flights with a date only",
+      "title_one": "{{count}} flight with a date only",
+      "title_other": "{{count}} flights with a date only",
+      "consequence": "The date is right, the time is missing. The flight time needs one.",
+      "action": "Add the time"
+    },
+    "userStaysNoCoords": {
+      "title": "Stays without a location",
+      "title_one": "{{count}} stay without a location",
+      "title_other": "{{count}} stays without a location",
+      "consequence": "They are missing from the map and count in no country.",
+      "action": "Set the location"
+    },
+    "userDuplicateVisits": {
+      "title": "Duplicate visits",
+      "title_one": "{{count}} place visited twice on the same day",
+      "title_other": "{{count}} places visited twice on the same day",
+      "consequence": "Two visits to the same place on the same day count twice in statistics and lists.",
+      "action": "Delete the duplicate visit"
+    },
+    "userTripCountryMismatch": {
+      "title": "Trip countries contradict the entries",
+      "title_one": "{{count}} trip with a wrong country list",
+      "title_other": "{{count}} trips with a wrong country list",
+      "consequence": "The stored country list leaves out a country one of the trip's entries is in. The list wins, so the country is missing.",
+      "action": "Correct the trip's country list"
+    },
+    "userPackageDoublePriced": {
+      "title": "Package priced twice",
+      "title_one": "{{count}} trip with a doubled price",
+      "title_other": "{{count}} trips with a doubled price",
+      "consequence": "Two bookings on the same trip carry the same price or booking number, so the cost counts twice.",
+      "action": "Remove the duplicate booking"
+    },
+    "userZoneMismatch": {
+      "title": "Time zone does not match the place",
+      "title_one": "{{count}} entry with a wrong time zone",
+      "title_other": "{{count}} entries with a wrong time zone",
+      "consequence": "The stored time zone of a stay or visit does not belong to its place, so its times show shifted. An admin can re-resolve the zones under Maintenance › Time model.",
+      "action": "Re-resolve the zones"
     }
   },
   "notes": {
@@ -136,5 +261,22 @@
     "text_one": "{{count}} server setup item needs you.",
     "text_other": "{{count}} server setup items need you.",
     "link": "Open setup"
+  },
+  "attention": {
+    "heading": "Needs your attention",
+    "menuLine_one": "{{count}} item needs your attention",
+    "menuLine_other": "{{count}} items need your attention",
+    "menuLine": "items need your attention",
+    "badgeProblem": "{{count}} problems",
+    "badgeWarning": "{{count}} hints",
+    "dot": "{{count}} open items in Setup & status"
+  },
+  "entries": {
+    "show": "Show entries",
+    "hide": "Hide entries",
+    "loading": "Loading entries …",
+    "error": "The entries could not be loaded.",
+    "more": "{{shown}} of {{total}} shown",
+    "zoneFix": "Re-resolve zones (maintenance)"
   }
 }

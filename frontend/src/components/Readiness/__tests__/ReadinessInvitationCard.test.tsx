@@ -12,7 +12,12 @@ const demoFlag = vi.hoisted(() => ({ on: false }));
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => demoFlag.on }));
 vi.mock("../../../lib/api/readiness", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../lib/api/readiness")>();
-  return { ...actual, fetchReadiness: vi.fn(), snoozeInvitation: vi.fn() };
+  return {
+    ...actual,
+    fetchReadiness: vi.fn(),
+    fetchReadinessAttention: vi.fn().mockResolvedValue({ problem: 0, warning: 0 }),
+    snoozeInvitation: vi.fn(),
+  };
 });
 
 const invitation = (over = {}) => ({

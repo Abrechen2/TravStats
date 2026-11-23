@@ -234,6 +234,8 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
     P("visibility"),
     P("deletion"),
   ]),
+  // Directly below the profile (owner, 2026-11-23): what needs attention is found first.
+  page("einrichtung", "shield", [mount("readiness", "readiness", "readiness")]),
   page("anzeige", "languages", [P("display", { as: "language" }), P("units")]),
   page("reisearten", "layers", [P("domains"), P("countryCounting"), P("home"), P("homeAirport")]),
   page("reisen", "route", [P("trips"), P("suggestions"), P("calendarFeed")]),
@@ -276,7 +278,6 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
     P("backup", { anchors: ["export"] }),
     P("import", { anchors: ["railImport"] }),
   ]),
-  page("einrichtung", "shield", [mount("readiness", "readiness", "readiness")]),
   page("ueber", "info", [mount("about", "about", "about")]),
   // ---- TravTrack (only where the server offers it, or the account holds data)
   page("tt-aufz", "map-pin", [P("ttRecording", LOC), P("ttPlaces", TT), P("ttZones", TT)]),

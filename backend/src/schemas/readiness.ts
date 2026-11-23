@@ -17,8 +17,11 @@ export const readinessItemSchema = z.object({
   severity: z.enum(["required", "recommended"]),
   status: z.enum(["ready", "needsAction", "unknown"]),
   checkedAt: z.string().datetime().nullable(),
+  count: z.number().int().nullable(),
   titleKey: z.string(),
   consequenceKey: z.string(),
+  actionKey: z.string().nullable(),
+  entryList: z.boolean(),
   action: z.string().nullable(),
   blockedBy: z.string().nullable(),
   optOutAllowed: z.boolean(),
@@ -91,4 +94,23 @@ export const snoozeBodySchema = z
 /** `POST /readiness/invitation/seen`: the keys the page rendered (optional; none = all current keys). */
 export const invitationSeenBodySchema = z.object({
   keys: z.array(z.string().min(1).max(200)).max(100).optional(),
+});
+
+/** `GET /readiness/attention`: counts only, for the header dot (owner, 2026-11-23). */
+export const readinessAttentionSchema = z.object({
+  problem: z.number().int(),
+  warning: z.number().int(),
+});
+
+export const readinessEntriesResponseSchema = z.object({
+  total: z.number().int(),
+  entries: z.array(
+    z.object({
+      id: z.string(),
+      kind: z.enum(["flight", "lodging", "visit", "trip", "stay"]),
+      label: z.string(),
+      date: z.string().nullable(),
+      href: z.string(),
+    })
+  ),
 });

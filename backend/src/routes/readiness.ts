@@ -6,6 +6,7 @@ import { settingsLimiter } from "../middleware/rateLimit";
 import { prisma } from "../db";
 import { invitationSeenBodySchema, snoozeBodySchema } from "../schemas/readiness";
 import {
+  buildReadinessAttention,
   buildReadinessView,
   invitationKeys,
   findApplicableItem,
@@ -21,6 +22,7 @@ import {
   SNOOZE_DEFAULT_MS,
   SNOOZE_MAX_MS,
 } from "../services/readiness/state";
+import { ENTRY_LIST_LIMIT, problemRuleOf } from "../services/readiness/problemEntries";
 
 /**
  * Setup & readiness (`/api/v1/readiness`, spec 2026-11-14 §11). Bare response
@@ -64,6 +66,38 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     next(error);
   }
 });
+
+// The header dot: counts only, nothing written (owner, 2026-11-23).
+router.get(
+  "/attention",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.json(await buildReadinessAttention(req.userId!, await callerIsAdmin(req)));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// What a data check found, each entry with its own page.
+router.get(
+  "/items/:id/entries",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const check = await findApplicableItem(req.userId!, await callerIsAdmin(req), id);
+      const rule = check?.entryList ? problemRuleOf(id) : null;
+      if (!rule) throw itemNotFound();
+      const [total, entries] = await Promise.all([
+        rule.count(req.userId!),
+        rule.list(req.userId!, ENTRY_LIST_LIMIT),
+      ]);
+      res.json({ total, entries });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 // The page marks what the card showed as seen; "Morgen erinnern" hides the card for a day.
 router.post(

@@ -23,8 +23,14 @@ export interface ReadinessItem {
   status: ReadinessStatus;
   /** ISO instant of the stored result; null where nothing was ever checked. */
   checkedAt: string | null;
+  /** The number the copy names (`{{count}}`); null where the check counts nothing. */
+  count: number | null;
   titleKey: string;
   consequenceKey: string;
+  /** The button's own words; null = the generic "Öffnen". */
+  actionKey: string | null;
+  /** The fix is per entry: the page lists them (`fetchReadinessEntries`). */
+  entryList: boolean;
   /** A settings address for `resolveAddress`; null for an item blocked by an admin item. */
   action: string | null;
   /** The admin item this one waits for. An ordinary account gets no detail beyond that fact. */
@@ -87,6 +93,37 @@ export interface ReadinessResponse {
 
 export async function fetchReadiness(): Promise<ReadinessResponse> {
   const { data } = await api.get<ReadinessResponse>("/readiness");
+  return data;
+}
+
+/** The header dot and the settings menu: counts by severity, nothing else (owner, 2026-11-23). */
+export interface ReadinessAttention {
+  /** `required` items that need action — red. */
+  problem: number;
+  /** `recommended` items that need action — amber. */
+  warning: number;
+}
+
+export async function fetchReadinessAttention(): Promise<ReadinessAttention> {
+  const { data } = await api.get<ReadinessAttention>("/readiness/attention");
+  return data;
+}
+
+export interface ReadinessEntry {
+  id: string;
+  kind: "flight" | "lodging" | "visit" | "trip" | "stay";
+  label: string;
+  date: string | null;
+  /** The entry's own page. */
+  href: string;
+}
+
+export async function fetchReadinessEntries(
+  id: string
+): Promise<{ total: number; entries: ReadinessEntry[] }> {
+  const { data } = await api.get<{ total: number; entries: ReadinessEntry[] }>(
+    `${itemPath(id)}/entries`
+  );
   return data;
 }
 
