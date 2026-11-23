@@ -565,22 +565,24 @@ async function projectDay(ctx: RunContext, dirty: DirtyDay): Promise<boolean> {
   // days at the front of every run. Its findings say so (`readCoverage: "truncated"`).
   if (readCoverage === "truncated")
     logger.warn({ operation: "travtrack.visits.truncatedDay", userId, day: dirty.day });
-  if (open && ctx.waiting > waitingBefore)
-    await holdDay(ctx, dirty.day, ctx.waiting - waitingBefore);
+  if (open && ctx.waiting > waitingBefore) await holdDay(ctx, dirty, ctx.waiting - waitingBefore);
   return !open;
 }
 
-/** The day waits for its own stops' lookup: its backoff doubles with each failed round. */
-async function holdDay(ctx: RunContext, day: string, stops: number): Promise<void> {
-  const [row] = await prisma.$queryRaw<{ visits_failures: number }[]>`
-    UPDATE travtrack_dirty_days SET visits_failures = visits_failures + 1, visits_waiting = ${stops}
-     WHERE user_id = ${ctx.userId} AND day = ${day}::date
- RETURNING visits_failures`;
-  if (!row) return;
-  const until = new Date(ctx.now.getTime() + visitRetryMs(row.visits_failures));
+/**
+ * The day waits for its own stops' lookup: its backoff doubles with each failed round. One
+ * statement, guarded by the version read and the open bit, so a day answered or marked again
+ * meanwhile does not inherit a stale wait. The SQL mirrors `visitRetryMs`.
+ */
+async function holdDay(ctx: RunContext, dirty: DirtyDay, stops: number): Promise<void> {
   await prisma.$executeRaw`
-    UPDATE travtrack_dirty_days SET visits_retry_after = ${until}
-     WHERE user_id = ${ctx.userId} AND day = ${day}::date`;
+    UPDATE travtrack_dirty_days
+       SET visits_failures = visits_failures + 1, visits_waiting = ${stops},
+           visits_retry_after = ${ctx.now}::timestamptz + LEAST(
+             ${RETRY_MAX_MS}::double precision * interval '1 millisecond',
+             ${RETRY_BASE_MS}::double precision * interval '1 millisecond' * power(2, LEAST(visits_failures, 20)))
+     WHERE user_id = ${ctx.userId} AND day = ${dirty.day}::date AND version = ${dirty.version}
+       AND (done & ${VISITS_BIT}) = 0`;
 }
 
 /**
