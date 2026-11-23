@@ -10,6 +10,8 @@ describe("settings menu order", () => {
     expect(AREA_MENU.flatMap((g) => g.pages)).toEqual([
       // Mein Konto
       "profil",
+      // Einrichtung & Zustand right under the profile (owner, 2026-11-23, feat/readiness-visible)
+      "einrichtung",
       "anzeige",
       "reisearten",
       "reisen",
@@ -22,7 +24,6 @@ describe("settings menu order", () => {
       "telefone",
       "dienstek",
       "daten",
-      "einrichtung",
       "ueber",
       // TravTrack, TravPlan
       "tt-aufz",

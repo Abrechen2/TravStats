@@ -105,7 +105,7 @@ export function OperatorTile({
             bottom: 0,
             fontSize: 10,
             lineHeight: 1,
-            color: "var(--ts-text-muted, currentColor)",
+            color: "var(--ts-muted)",
           }}
         >
           ~

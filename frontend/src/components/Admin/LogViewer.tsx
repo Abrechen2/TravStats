@@ -89,9 +89,7 @@ function LogRow({
         >
           {level}
         </span>
-        <span className="min-w-0 flex-1 truncate font-mono" title={entryEvent(entry)}>
-          {entryEvent(entry)}
-        </span>
+        <span className="min-w-0 flex-1 truncate font-mono">{entryEvent(entry)}</span>
       </button>
       {open ? (
         <pre className="m-0 px-3 pb-3 text-xs whitespace-pre-wrap break-all text-(--text-muted)">

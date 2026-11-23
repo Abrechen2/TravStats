@@ -18,6 +18,6 @@ describe("HomeSuggestionPrompt", () => {
     expect(screen.getByText("track:homeSuggestion.question")).toBeTruthy();
     expect(
       screen.getByRole("link", { name: "track:homeSuggestion.action" }).getAttribute("href")
-    ).toBe("/settings?section=home");
+    ).toBe("/settings/reisearten#home");
   });
 });

@@ -22,7 +22,7 @@ export default function HomeSuggestionPrompt({
       data-lon={suggestion.lon}
     >
       <span>{t("track:homeSuggestion.question")}</span>
-      <Link to="/settings?section=home" className="underline">
+      <Link to="/settings/reisearten#home" className="underline">
         {t("track:homeSuggestion.action")}
       </Link>
     </p>
