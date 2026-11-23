@@ -1,6 +1,5 @@
 {
   "title": "Verlauf",
-  "show": "Verlauf anzeigen",
   "loading": "Verlauf wird geladen …",
   "empty": "Noch keine Änderungen aufgezeichnet.",
   "loadFailed": "Der Verlauf konnte nicht geladen werden.",
@@ -71,5 +70,15 @@
     "operator": "Betreiber",
     "trainNumber": "Zugnummer",
     "delayMinutes": "Verspätung (min)"
+  },
+  "menu": "Änderungsverlauf",
+  "window_one": "Verlauf des letzten Monats",
+  "window_other": "Verlauf der letzten {{count}} Monate",
+  "retention": {
+    "title": "Änderungsverlauf behalten",
+    "sub": "Wie lange der Verlauf jedes Eintrags aufbewahrt wird. Ältere Änderungen werden nachts gelöscht und sind auch nicht mehr im Konto-Archiv.",
+    "loadFailed": "Die Einstellung konnte nicht geladen werden.",
+    "option_one": "1 Monat",
+    "option_other": "{{count}} Monate"
   }
 }

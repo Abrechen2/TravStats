@@ -12,7 +12,7 @@ import type { PlaceVisit } from "../../types/place";
 import type { VisitEntry } from "./placeVisitListModel";
 import { VisitExpenses } from "./VisitExpenses";
 import { VisitPhotoStrip } from "./VisitPhotoStrip";
-import ChangeHistorySection from "../changeHistory/ChangeHistorySection";
+import ChangeHistoryMenuButton from "../changeHistory/ChangeHistoryMenuButton";
 
 interface Props {
   entry: VisitEntry;
@@ -164,6 +164,11 @@ export function PlaceVisitRow({
               }
               onClick={() => onDelete(visit)}
             />
+            <ChangeHistoryMenuButton
+              entityType="placeVisit"
+              entityId={visit.id}
+              onRestored={onChanged}
+            />
           </RowActions>
         </div>
       </div>
@@ -199,12 +204,6 @@ export function PlaceVisitRow({
           />
           <VisitExpenses visitId={visit.id} />
           <ProvenanceDetails entryType="placeVisit" entry={visit} onSaved={onChanged} />
-          <ChangeHistorySection
-            compact
-            entityType="placeVisit"
-            entityId={visit.id}
-            onRestored={onChanged}
-          />
         </div>
       )}
     </li>

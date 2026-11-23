@@ -1052,6 +1052,11 @@ model UserSettings {
   /// 2026-11-21). The user's own picks count toward it.
   photoAutoLinkCap Int @default(6) @map("photo_auto_link_cap")
 
+  /// How many months of change history are kept per entry (3, 6, 12 or 24; owner,
+  /// 2026-11-23). A nightly job deletes older ledger rows; the account archive
+  /// carries only what is still inside the window.
+  changeHistoryRetentionMonths Int @default(12) @map("change_history_retention_months")
+
   /// The outcome of the last automatic linking pass, per source, so a failing
   /// source is visible in the settings instead of reading as "no photos":
   /// `{ at, linked, sources: { immich: "ok" | <failure kind> | "notConfigured", … } }`.

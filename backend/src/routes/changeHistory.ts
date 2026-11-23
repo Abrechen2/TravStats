@@ -3,7 +3,15 @@ import { Router, Response, NextFunction } from "express";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { rejectDemoWrites } from "../middleware/demoGuard";
 import { batchLimiter } from "../middleware/rateLimit";
-import { changeHistoryQuerySchema, changeIdParamSchema } from "../schemas/changeHistory";
+import { prisma } from "../db";
+import { AppError } from "../middleware/errorHandler";
+import {
+  changeHistoryQuerySchema,
+  changeHistoryRetentionSchema,
+  changeIdParamSchema,
+} from "../schemas/changeHistory";
+import { retentionMonthsFor } from "../services/changeLedger/retention";
+import { RETENTION_MONTHS_OPTIONS } from "../services/changeLedger/retentionPolicy";
 import { listHistory, restoreChange } from "../services/changeLedger/history";
 
 /**
@@ -25,6 +33,42 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response, next: Next
     next(err);
   }
 });
+
+/** How long this account's history is kept, and the choices (Einstellungen → Daten). */
+router.get(
+  "/retention",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      res.json({
+        months: await retentionMonthsFor(req.userId!),
+        options: RETENTION_MONTHS_OPTIONS,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.put(
+  "/retention",
+  authenticate,
+  requireWriteScope,
+  rejectDemoWrites,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { months } = changeHistoryRetentionSchema.parse(req.body);
+      const saved = await prisma.userSettings.updateMany({
+        where: { userId: req.userId! },
+        data: { changeHistoryRetentionMonths: months },
+      });
+      if (saved.count === 0) throw new AppError("Settings not found", 404);
+      res.json({ months, options: RETENTION_MONTHS_OPTIONS });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.post(
   "/:id/restore",

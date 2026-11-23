@@ -11,6 +11,7 @@ import { DataJumpList, DATA_PART_ANCHOR } from "./DataJumpList";
 import MeExportRow from "./MeExportRow";
 import AccountArchiveRows from "./AccountArchiveRows";
 import LifeBookRow from "./LifeBookRow";
+import ChangeHistoryRetentionRow from "./ChangeHistoryRetentionRow";
 import SpreadsheetSection from "./SpreadsheetSection";
 import TrackArchiveSection from "./TrackArchiveSection";
 import WebdavSyncRow from "./WebdavSyncRow";
@@ -103,6 +104,7 @@ export default function BackupSection(): JSX.Element {
           <SettingRows>
             <InstanceBackupRow />
             <WebdavSyncRow />
+            <ChangeHistoryRetentionRow />
           </SettingRows>
         </SectionCard>
       </div>

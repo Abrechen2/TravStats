@@ -9,6 +9,7 @@ import { MemoryRouter } from "react-router-dom";
  * no row at all; and a failed read must not read as "no backup yet".
  */
 // The account archive rows read their status on mount; a unit test must not reach the network.
+vi.mock("../ChangeHistoryRetentionRow", () => ({ default: () => null }));
 vi.mock("../../../lib/api/accountArchive", () => ({
   accountArchiveApi: { status: async () => ({ empty: false, busy: false, maxBytes: 1_000_000 }) },
 }));

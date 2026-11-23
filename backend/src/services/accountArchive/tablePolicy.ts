@@ -1,4 +1,5 @@
 import type { UploadDirName } from "../../config/uploadDirs";
+import { retainedLedgerRowsSql } from "../changeLedger/retentionPolicy";
 
 /**
  * What the account archive (forgejo#433) does with every table of the database.
@@ -24,6 +25,11 @@ import type { UploadDirName } from "../../config/uploadDirs";
  */
 
 export interface DataTableOptions {
+  /**
+   * An extra predicate on an `owner` table's selection (`$1` is the account): rows
+   * the account no longer keeps — the change history's rolling window — stay out.
+   */
+  extraWhere?: (alias: string) => string;
   /** Columns written as null: credentials, server-keyed digests, share state. */
   strip?: readonly string[];
   /** Unique replay keys with no meaning elsewhere: re-keyed like an id on import. */
@@ -284,6 +290,7 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   // and is skipped. The actor may be another account of this server, and a
   // restore's link to its source row is not re-keyed: both are cleared.
   change_ledger_entries: owner({
+    extraWhere: retainedLedgerRowsSql,
     idColumns: ["entity_id"],
     strip: ["actor_user_id", "restored_from_id"],
   }),

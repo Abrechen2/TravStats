@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
-import DetailSection from "../ui/DetailSection";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { useDisplayFormat } from "../../lib/displayFormat";
@@ -14,40 +13,34 @@ import {
 } from "../../lib/api/changeHistory";
 import { formatChangeValue } from "./formatChangeValue";
 
-interface ChangeHistorySectionProps {
+interface ChangeHistoryListProps {
   entityType: ChangeEntityType;
   entityId: string;
   /** Called after a restore wrote a value, so the page can show the entry as it now is. */
   onRestored?: () => Promise<void> | void;
-  /**
-   * Inside a card or a dialog (a stay, a visit, a cruise stop, an expense):
-   * no section frame of its own, only the "Verlauf" button and, once opened, the list.
-   */
-  compact?: boolean;
 }
 
-type Load = { state: "closed" } | { state: "loading" } | { state: "failed" } | { state: "ready" };
+type Load = { state: "loading" } | { state: "failed" } | { state: "ready" };
 
 /**
- * "Verlauf" on an entry's detail page (spec 2026-11-22-change-history): every
- * recorded change — when, by whom or what, which field, from → to — and a
- * restore on the values that can be written back. Spans the page's full width:
- * the from → to column needs it. Loaded when opened, so a detail page costs no
- * extra request until someone asks for its history.
+ * An entry's change history (spec 2026-11-22-change-history): every recorded
+ * change — when, by whom or what, which field, from → to — and a restore on the
+ * values that can be written back. It lives in `ChangeHistoryDialog`, opened
+ * from the entry's ⋯ menu (owner, 2026-11-23), and loads when it mounts, so an
+ * entry costs no request until someone asks for its history.
  */
-export default function ChangeHistorySection({
+export default function ChangeHistoryList({
   entityType,
   entityId,
   onRestored,
-  compact = false,
-}: ChangeHistorySectionProps): JSX.Element {
+}: ChangeHistoryListProps): JSX.Element {
   const { t } = useTranslation(["changeHistory"]);
   const format = useDisplayFormat();
   const coarse = useCoarsePointer();
   const addToast = useToastStore((s) => s.addToast);
   const [entries, setEntries] = useState<ChangeHistoryEntry[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
-  const [load, setLoad] = useState<Load>({ state: "closed" });
+  const [load, setLoad] = useState<Load>({ state: "loading" });
   const [restoring, setRestoring] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
 
@@ -64,12 +57,11 @@ export default function ChangeHistorySection({
     }
   }, [entityType, entityId]);
 
-  // A different entry on the same page instance starts closed again.
   useEffect(() => {
-    setLoad({ state: "closed" });
     setEntries([]);
     setCursor(null);
-  }, [entityType, entityId]);
+    void fetchFirst();
+  }, [fetchFirst]);
 
   const fetchMore = async () => {
     if (!cursor) return;
@@ -145,19 +137,6 @@ export default function ChangeHistorySection({
       className="flex flex-col"
       style={{ gap: "var(--ts-space-md)" }}
     >
-      {load.state === "closed" && (
-        <div>
-          <button
-            type="button"
-            className="ts-chip"
-            data-testid="change-history-open"
-            onClick={() => void fetchFirst()}
-            style={chipStyle(coarse)}
-          >
-            {compact ? t("changeHistory:title") : t("changeHistory:show")}
-          </button>
-        </div>
-      )}
       {load.state === "loading" && <p className="t-caption">{t("changeHistory:loading")}</p>}
       {load.state === "failed" && (
         <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
@@ -269,7 +248,7 @@ export default function ChangeHistorySection({
       )}
     </div>
   );
-  return compact ? body : <DetailSection title={t("changeHistory:title")}>{body}</DetailSection>;
+  return body;
 }
 
 function chipStyle(coarse: boolean) {

@@ -157,22 +157,24 @@ is gone answers 409 `CHANGE_NOT_RESTORABLE`; a row of another account 404
 
 ## Retention
 
-Default: keep. `CHANGE_HISTORY_RETENTION_DAYS=<n>` (positive whole number) prunes rows
-older than n days daily at 03:58 UTC (`jobs/changeHistoryRetentionScheduler.ts`); an
-invalid value is logged at start and nothing is deleted.
+Rolling window per account (owner, 2026-11-23): 3, 6, 12 or 24 months, 12 by default
+(`user_settings.change_history_retention_months`, Einstellungen → Daten). A nightly job at
+03:58 UTC (`jobs/changeHistoryRetentionScheduler.ts`) deletes older rows in batches of 2000
+(indexed on `created_at`, a short pause between batches). The account archive selects only rows
+inside the window; the history dialog says "Verlauf der letzten 12 Monate". The env variable
+`CHANGE_HISTORY_RETENTION_DAYS` is gone.
 
 ## UI
 
-Each detail page (flight, rail, bus, ferry, rental, cruise, trip) shows "Verlauf" /
-"History" full width below its grid: who (source), when, what (field), from → to, and a
-restore button on restorable rows. The same component, `compact`, sits on each stay card of
-a lodging, each visit of a place, each day card of a cruise (its stop) and in the expense
-dialog. Loaded only when opened. DE first, EN mirrored; tokens only (design wardens).
+No visible button or section (owner, 2026-11-23). "Änderungsverlauf" / "Change history" is an
+item of the entry's ⋯ menu (detail pages, trip menu, stay card) or of a bare ⋯ on a place visit,
+a cruise day card and in the expense dialog; it opens a dialog with who (source), when, what
+(field), from → to and a restore button on restorable rows. Loaded only when opened. DE first,
+EN mirrored; tokens only (design wardens).
 
 ## Open
 
 Left for later (coordinator, 2026-11-22):
 
-- Retention stays an env variable; an admin setting is a later step.
 - An account-wide view including delete rows (the API already serves it without
   `entityType`).
