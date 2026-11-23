@@ -49,6 +49,59 @@ function entryEvent(entry: LogFileEntry): string {
   return entry.operation ?? entry.message ?? "—";
 }
 
+/** About eight one-line entries show before the list scrolls. */
+const VISIBLE_ROWS = 8;
+const ROW_HEIGHT_PX = 36;
+
+const LEVEL_COLOR: Record<string, string> = {
+  error: "var(--danger)",
+  fatal: "var(--danger)",
+  warn: "var(--warning, var(--text-muted))",
+};
+
+/** One entry on one line; a click opens the full record under it. */
+function LogRow({
+  entry,
+  locale,
+  first,
+}: {
+  entry: LogFileEntry;
+  locale: string;
+  first: boolean;
+}): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const level = typeof entry.level === "string" ? entry.level : "—";
+  return (
+    <li className={first ? "" : "border-t border-border"} data-testid="log-entry">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-3 px-3 text-left"
+        style={{ minHeight: ROW_HEIGHT_PX }}
+      >
+        <span className="shrink-0 whitespace-nowrap text-xs text-(--text-muted)">
+          {entryTimeLabel(entry, locale)}
+        </span>
+        <span
+          className="shrink-0 rounded px-1.5 font-mono text-xs uppercase border border-border"
+          style={{ color: LEVEL_COLOR[level] ?? "var(--text-muted)" }}
+        >
+          {level}
+        </span>
+        <span className="min-w-0 flex-1 truncate font-mono" title={entryEvent(entry)}>
+          {entryEvent(entry)}
+        </span>
+      </button>
+      {open ? (
+        <pre className="m-0 px-3 pb-3 text-xs whitespace-pre-wrap break-all text-(--text-muted)">
+          {JSON.stringify(entry, null, 2)}
+        </pre>
+      ) : null}
+    </li>
+  );
+}
+
 export default function LogViewer({
   files,
   selectedFile,
@@ -229,42 +282,24 @@ export default function LogViewer({
         <p className="text-sm text-(--text-muted)">{t("admin:logging.viewer.empty")}</p>
       )}
       {!loading && page && page.entries.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-(--bg-base)">
-              <tr>
-                {(["colTime", "colLevel", "colCategory", "colEvent"] as const).map((col) => (
-                  <th
-                    key={col}
-                    className="px-3 py-2 text-left text-xs font-medium text-(--text-muted) uppercase"
-                  >
-                    {t(`admin:logging.viewer.${col}`)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {page.entries.map((entry, i) => (
-                <tr key={`${page.offset + i}`} className="align-top border-t border-border">
-                  <td className="px-3 py-2 whitespace-nowrap text-(--text-muted)">
-                    {entryTimeLabel(entry, i18n.language)}
-                  </td>
-                  <td className="px-3 py-2 font-mono">{entry.level ?? "—"}</td>
-                  <td className="px-3 py-2 font-mono">{entry.category ?? "—"}</td>
-                  <td className="px-3 py-2">
-                    <details>
-                      <summary className="cursor-pointer font-mono break-all">
-                        {entryEvent(entry)}
-                      </summary>
-                      <pre className="mt-2 text-xs whitespace-pre-wrap break-all text-(--text-muted)">
-                        {JSON.stringify(entry, null, 2)}
-                      </pre>
-                    </details>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div
+          role="region"
+          tabIndex={0}
+          aria-label={t("admin:logging.viewer.list")}
+          data-testid="log-viewer-list"
+          className="overflow-y-auto border border-border rounded-lg"
+          style={{ maxHeight: `${VISIBLE_ROWS * ROW_HEIGHT_PX}px` }}
+        >
+          <ul className="m-0 p-0 text-sm" style={{ listStyle: "none" }}>
+            {page.entries.map((entry, i) => (
+              <LogRow
+                key={`${page.offset + i}`}
+                entry={entry}
+                locale={i18n.language}
+                first={i === 0}
+              />
+            ))}
+          </ul>
         </div>
       )}
     </AdminSubBlock>

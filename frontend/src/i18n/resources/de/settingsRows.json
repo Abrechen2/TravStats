@@ -1536,6 +1536,10 @@
     },
     "logLoadFailed": "Ich konnte das Protokoll nicht laden.",
     "systemLoadFailed": "Ich konnte die Systemdaten nicht laden.",
+    "tzLegacy": {
+      "summary": "Zeitzonen (für Altdaten)",
+      "when": "Nur nötig, wenn alte Importe oder Einträge aus der Zeit vor dem Zeitmodell falsche Zonen tragen: hier lassen sich die Zonen erneut bestimmen (erst Probelauf)."
+    },
     "usersLoadFailed": "Ich konnte die Konten für den Bericht nicht laden.",
     "groups": {
       "logging": "Protokoll"

@@ -429,6 +429,7 @@
       "range": "{{from}}–{{to}} von {{total}} (neueste zuerst)",
       "empty": "Keine passenden Einträge.",
       "loading": "Lade Einträge …",
+      "list": "Log-Einträge",
       "colTime": "Zeit",
       "colLevel": "Level",
       "colCategory": "Kategorie",
