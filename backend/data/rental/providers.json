@@ -8,6 +8,7 @@
     { "id": "enterprise", "name": "Enterprise", "aliases": ["enterprise rent-a-car", "enterprise rent a car"], "domain": "enterprise.com" },
     { "id": "budget", "name": "Budget", "aliases": ["budget rent a car"], "domain": "budget.com" },
     { "id": "alamo", "name": "Alamo", "aliases": ["alamo rent a car"], "domain": "alamo.com" },
+    { "id": "cruise-america", "name": "Cruise America", "aliases": ["cruiseamerica", "cruise america rv rental"], "domain": "cruiseamerica.com" },
     { "id": "national", "name": "National", "aliases": ["national car rental"], "domain": "nationalcar.com" },
     { "id": "thrifty", "name": "Thrifty", "aliases": ["thrifty car rental"], "domain": "thrifty.com" },
     { "id": "dollar", "name": "Dollar", "aliases": ["dollar rent a car"], "domain": "dollar.com" },

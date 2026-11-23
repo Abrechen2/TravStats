@@ -12,7 +12,7 @@ import {
   connectionTrains,
 } from "../../lib/rail/railConnection";
 import { formatRailDuration } from "../../lib/rail/railDuration";
-import { primaryOperator } from "../../lib/rail/primaryOperator";
+import { primaryOperatorShown } from "../../lib/rail/primaryOperator";
 import type { RailConnection, RailJourney } from "../../types/rail";
 import { OperatorTile, railOperatorLogoUrl } from "../table/OperatorTile";
 import { statusPillProps } from "../table/statusPillStyle";
@@ -147,12 +147,14 @@ export function RailTableRow({ connection, columns, onOpen, actions }: Props): J
     </span>
   );
 
+  const shownOperator = primaryOperatorShown(legs);
   const cell: Record<RailColumnId, ReactNode> = {
     operator: (
       <OperatorTile
-        name={primaryOperator(legs)}
+        name={shownOperator?.name ?? null}
         domain="rail"
-        logoUrl={railOperatorLogoUrl(primaryOperator(legs))}
+        logoUrl={railOperatorLogoUrl(shownOperator?.name ?? null)}
+        inferred={shownOperator?.inferred}
       />
     ),
     route: single ? <StationPair journey={single} /> : connectionStations(legs).join(" → "),

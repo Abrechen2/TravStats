@@ -50,3 +50,34 @@ describe("primaryOperator — truth table", () => {
     expect(primaryOperator([leg("db regio", 10), leg("DB Regio", 10)])).toBe("db regio");
   });
 });
+
+describe("an operator nobody typed (operator-logos)", () => {
+  const ice = {
+    ...leg(null, 600),
+    trainCategory: "ICE",
+    trainNumber: "633",
+    depCountry: "DE",
+    arrCountry: "DE",
+  };
+
+  it("is inferred from category and countries and flagged as inferred", async () => {
+    const { primaryOperatorShown } = await import("../primaryOperator");
+    expect(primaryOperatorShown([ice])).toEqual({ name: "DB Fernverkehr", inferred: true });
+  });
+
+  it("keeps a typed operator as entered, and abstains without a category", async () => {
+    const { primaryOperatorShown } = await import("../primaryOperator");
+    expect(primaryOperatorShown([{ ...ice, operator: "Korail" }])).toEqual({
+      name: "Korail",
+      inferred: false,
+    });
+    expect(primaryOperatorShown([{ ...ice, trainCategory: null }])).toBeNull();
+  });
+
+  it("flags a stored inference by its source", async () => {
+    const { primaryOperatorShown } = await import("../primaryOperator");
+    expect(
+      primaryOperatorShown([{ ...leg("DB Fernverkehr", 600), operatorSource: "inferred" }])
+    ).toEqual({ name: "DB Fernverkehr", inferred: true });
+  });
+});

@@ -60,6 +60,8 @@ export interface RailJourney {
   /** Estimated CO2 (forgejo#395); null where the ride has no known distance. */
   co2?: import("./co2").Co2Estimate | null;
   operator: string | null;
+  /** "inferred" = filled by the server from category, number and stations; null = entered. */
+  operatorSource?: string | null;
   trainCategory: string | null;
   trainNumber: string | null;
   depStationName: string;

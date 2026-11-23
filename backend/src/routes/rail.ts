@@ -1,3 +1,4 @@
+import { operatorColumnsFor } from "../services/rail/inferredOperator";
 import { Router, Response, NextFunction } from "express";
 import { propagateWrite, shareSnapshot } from "../services/sharing/propagate";
 import type { z } from "zod";
@@ -493,6 +494,12 @@ export async function prepareRailRide(
     const created = await tx.railJourney.create({
       data: {
         ...plainColumns(input),
+        // After plainColumns: an inferred operator replaces the blank one.
+        ...operatorColumnsFor(input.operator ?? null, {
+          trainCategory: input.trainCategory,
+          trainNumber: input.trainNumber,
+          ...state,
+        }),
         ...state,
         ...fxColumns,
         ...(geometryColumns(lookup, geo) as Prisma.RailJourneyUncheckedCreateInput),
@@ -657,6 +664,17 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         where: { id: existing.id },
         data: {
           ...plainColumns(input),
+          ...operatorColumnsFor(
+            input.operator,
+            {
+              trainCategory:
+                input.trainCategory === undefined ? existing.trainCategory : input.trainCategory,
+              trainNumber:
+                input.trainNumber === undefined ? existing.trainNumber : input.trainNumber,
+              ...state,
+            },
+            { operator: existing.operator, operatorSource: existing.operatorSource }
+          ),
           ...state,
           ...fxColumns,
           ...(written && geometryColumns(lookup, written)),

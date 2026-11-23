@@ -1,4 +1,5 @@
 import { useEffect, useState, type JSX } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
 import { operatorMonogram } from "../../lib/operatorMonogram";
 import { Icon } from "../ui/Icon";
 
@@ -38,6 +39,8 @@ interface Props {
    * repainted rail sees the new colour on the line AND on its card.
    */
   colour?: string;
+  /** The operator was inferred, not entered: a marker and a tooltip say so. */
+  inferred?: boolean;
 }
 
 /** The logo URL of a rental provider, by the name the rental records. */
@@ -67,7 +70,9 @@ export function OperatorTile({
   logoUrl,
   size = TILE_PX,
   colour: colourOverride,
+  inferred = false,
 }: Props): JSX.Element {
+  const { t } = useTranslation(["common"]);
   const { colour: brandColour, icon } = DOMAIN[domain];
   const colour = colourOverride ?? brandColour;
   const letters = operatorMonogram(name);
@@ -76,8 +81,8 @@ export function OperatorTile({
   const showLogo = Boolean(logoUrl) && !logoFailed;
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center overflow-hidden"
-      title={name ?? undefined}
+      className="relative inline-flex shrink-0 items-center justify-center overflow-hidden"
+      title={name ? (inferred ? `${name} – ${t("common:operatorInferred")}` : name) : undefined}
       data-testid="operator-tile"
       style={{
         width: size,
@@ -90,6 +95,22 @@ export function OperatorTile({
         fontWeight: 700,
       }}
     >
+      {inferred ? (
+        <span
+          aria-hidden="true"
+          data-testid="operator-inferred"
+          style={{
+            position: "absolute",
+            right: 1,
+            bottom: 0,
+            fontSize: 10,
+            lineHeight: 1,
+            color: "var(--ts-text-muted, currentColor)",
+          }}
+        >
+          ~
+        </span>
+      ) : null}
       {showLogo ? (
         <>
           <img

@@ -96,6 +96,14 @@ export const CRON_JOBS: CronJob[] = [
     stop: async () =>
       (await import("./ferryRouteBackfillScheduler")).stopFerryRouteBackfillScheduler(),
   },
+  // Once per boot: rail journeys without an operator get the inferred one.
+  {
+    name: "rail_operator_backfill",
+    start: async () =>
+      (await import("./railOperatorBackfillScheduler")).startRailOperatorBackfillScheduler(),
+    stop: async () =>
+      (await import("./railOperatorBackfillScheduler")).stopRailOperatorBackfillScheduler(),
+  },
   // Every 10 minutes: AIS positions of ferries and cruises in progress (2026-11-22).
   {
     name: "vessel_track",

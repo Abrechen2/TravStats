@@ -1,3 +1,4 @@
+import { legOperator } from "../../lib/rail/primaryOperator";
 import { useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
@@ -56,9 +57,10 @@ export function RailTripCard({
     <ExpandableEventCard
       mark={
         <OperatorTile
-          name={journey.operator}
+          name={legOperator(journey)?.name ?? null}
           domain="rail"
-          logoUrl={railOperatorLogoUrl(journey.operator)}
+          logoUrl={railOperatorLogoUrl(legOperator(journey)?.name ?? null)}
+          inferred={legOperator(journey)?.inferred}
           size={36}
         />
       }

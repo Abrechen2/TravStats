@@ -1,10 +1,16 @@
 [
-  { "id": "rail-db", "name": "Deutsche Bahn", "aliases": ["DB", "DB Fernverkehr", "DB Fernverkehr AG", "DB Regio", "DB Regio AG"], "domain": "bahn.de" },
+  { "id": "rail-db", "name": "Deutsche Bahn", "aliases": ["DB", "DB AG", "Deutsche Bahn AG", "DB Fernverkehr", "DB Fernverkehr AG", "DB Regio", "DB Regio AG", "DB Regio Bayern", "DB Regio NRW"], "domain": "bahn.de" },
   { "id": "rail-oebb", "name": "ÖBB", "aliases": ["Österreichische Bundesbahnen", "ÖBB-Personenverkehr AG"], "domain": "oebb.at" },
   { "id": "rail-sbb", "name": "SBB", "aliases": ["SBB CFF FFS", "Schweizerische Bundesbahnen"], "domain": "sbb.ch" },
   { "id": "rail-sncf", "name": "SNCF", "aliases": ["SNCF Voyageurs"], "domain": "sncf.com" },
   { "id": "rail-eurostar", "name": "Eurostar", "aliases": ["Eurostar International"], "domain": "eurostar.com" },
   { "id": "rail-trenitalia", "name": "Trenitalia", "aliases": ["Trenitalia S.p.A."], "domain": "trenitalia.com" },
   { "id": "rail-renfe", "name": "Renfe", "aliases": ["Renfe Operadora"], "domain": "renfe.com" },
-  { "id": "rail-ns", "name": "Nederlandse Spoorwegen", "aliases": ["NS", "NS International"], "domain": "ns.nl" }
+  { "id": "rail-ns", "name": "Nederlandse Spoorwegen", "aliases": ["NS", "NS International"], "domain": "ns.nl" },
+  { "id": "rail-sbahn-muenchen", "name": "S-Bahn München", "aliases": ["S-Bahn Muenchen", "S Bahn München", "DB S-Bahn München"], "domain": "s-bahn-muenchen.de" },
+  { "id": "rail-meridian", "name": "Meridian", "aliases": ["BRB Meridian", "Bayerische Regiobahn", "BRB"], "domain": "meridian-bayern.de" },
+  { "id": "rail-china-railway", "name": "China Railway", "aliases": ["CR", "China Railway High-speed", "CRH", "China State Railway Group", "12306"], "domain": "12306.cn" },
+  { "id": "rail-korail", "name": "Korail", "aliases": ["KORAIL", "Korea Railroad Corporation", "한국철도공사"], "domain": "letskorail.com" },
+  { "id": "rail-mtr", "name": "MTR", "aliases": ["MTR Corporation", "MTR Hong Kong"], "domain": "mtr.com.hk" },
+  { "id": "rail-shanghai-maglev", "name": "Shanghai Maglev", "aliases": ["Shanghai Maglev (Transrapid)", "Shanghai Maglev Transrapid", "Transrapid Shanghai", "Shanghai Transrapid"], "domain": "smtdc.com" }
 ]

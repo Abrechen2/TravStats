@@ -30,6 +30,11 @@ describe("rental provider catalogue", () => {
     expect(findRentalProvider("car2go")?.id).toBe("share-now");
   });
 
+  it("catalogues Cruise America, which showed no logo (operator-logos)", () => {
+    expect(findRentalProvider("Cruise America")?.id).toBe("cruise-america");
+    expect(findRentalProvider("CRUISE AMERICA")?.domain).toBe("cruiseamerica.com");
+  });
+
   it("never guesses: a near name or a local company is no match", () => {
     expect(findRentalProvider("Sixt Leasing")).toBeNull();
     expect(findRentalProvider("Autovermietung Müller")).toBeNull();
