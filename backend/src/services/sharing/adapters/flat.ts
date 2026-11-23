@@ -1,4 +1,5 @@
 import type { Flight, Prisma, RailJourney, RentalBooking } from "../../../prisma";
+import { OPERATOR_SOURCE_INFERRED } from "../../../shared/railOperatorInference";
 import { SHARED_SOURCE } from "../shareTypes";
 import {
   FLIGHT_FACT_FIELDS,
@@ -93,13 +94,23 @@ export const flightAdapter: EntityAdapter = {
   },
 };
 
+/**
+ * An operator the server guessed from the train (`operatorSource = "inferred"`)
+ * is not a fact the owner stated, so it is not shared: the fact reads null on
+ * both sides, and each server infers its own from the shared train.
+ */
+function railFactsOf(row: RailJourney): Pick<RailJourney, RailFactField> {
+  const facts = pickFacts(row, RAIL_FACT_FIELDS);
+  return row.operatorSource === OPERATOR_SOURCE_INFERRED ? { ...facts, operator: null } : facts;
+}
+
 function railRow(row: RailJourney): SharedRow {
   return {
     id: row.id,
     userId: row.userId,
     tripId: row.tripId,
     shareKey: row.shareKey,
-    facts: pickFacts(row, RAIL_FACT_FIELDS),
+    facts: railFactsOf(row),
     label: joinLabel(
       row.trainCategory,
       row.trainNumber,
@@ -144,9 +155,11 @@ export const railAdapter: EntityAdapter = {
   },
   async apply(c, copy, values, keys) {
     const data = plainData(values, keys, RAIL_FACT_FIELDS, RAIL_JSON);
+    // A shared operator is the owner's word: it replaces this copy's own guess.
+    const written = keys.includes("operator") ? { ...data, operatorSource: null } : data;
     await c.railJourney.update({
       where: { id: copy.id },
-      data: data as Prisma.RailJourneyUncheckedUpdateInput,
+      data: written as Prisma.RailJourneyUncheckedUpdateInput,
     });
   },
   async remove(c, id) {
