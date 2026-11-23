@@ -3,6 +3,8 @@ import type {
   ImmichAlbumSummary,
   ImmichConnectionStatus,
   ImmichFailureKind,
+  AlbumDayPage,
+  AlbumDays,
   ImmichGalleryAsset,
   ImmichMode,
   ImmichTestResult,
@@ -121,6 +123,26 @@ export const immichApi = {
     linkId: string
   ): Promise<{ assets: ImmichGalleryAsset[]; truncated?: boolean }> {
     const { data } = await api.get(`/trips/${tripId}/immich/albums/${linkId}/assets`);
+    return data;
+  },
+
+  /** Photos per local day — counts only, no asset is listed. */
+  async getAlbumDays(tripId: string, linkId: string): Promise<AlbumDays> {
+    const { data } = await api.get(`/trips/${tripId}/immich/albums/${linkId}/days`);
+    return data;
+  },
+
+  /** One page of a day's photos; `day` is `YYYY-MM-DD`, `undated` or `all`. */
+  async getAlbumDayAssets(
+    tripId: string,
+    linkId: string,
+    day: string,
+    offset: number,
+    limit: number
+  ): Promise<AlbumDayPage> {
+    const { data } = await api.get(`/trips/${tripId}/immich/albums/${linkId}/days/${day}/assets`, {
+      params: { offset, limit },
+    });
     return data;
   },
 

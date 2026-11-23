@@ -59,6 +59,27 @@ export interface ImmichGalleryAsset {
   lon: number | null;
 }
 
+export interface AlbumDayCount {
+  /** `YYYY-MM-DD` in `zone`, or null for photos without a capture time. */
+  day: string | null;
+  count: number;
+}
+
+export interface AlbumDays {
+  zone: string;
+  truncated: boolean;
+  total: number;
+  days: AlbumDayCount[];
+}
+
+export interface AlbumDayPage {
+  day: string;
+  total: number;
+  offset: number;
+  nextOffset: number | null;
+  assets: ImmichGalleryAsset[];
+}
+
 export interface ImportJob {
   status: "pending" | "running" | "completed" | "failed";
   totalAssets: number;

@@ -14,19 +14,20 @@ import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { resolveTrip } from "../trips";
-import { albumListQuerySchema, linkAlbumsSchema, unlinkQuerySchema } from "../../schemas/immich";
 import {
-  createPhotoSource,
-  listAllAlbumAssets,
-  type AlbumAssetList,
-} from "../../services/photoSource";
+  albumListQuerySchema,
+  galleryDayParamSchema,
+  galleryDayQuerySchema,
+  linkAlbumsSchema,
+  unlinkQuerySchema,
+} from "../../schemas/immich";
+import { profileZoneOf } from "../../shared/time/profileZone";
+import { assetsOfDay, countByDay, listGalleryAssets } from "../../services/immich/albumGallery";
+import { createPhotoSource } from "../../services/photoSource";
 import { getImmichDefaultMode } from "../../services/immich/immichResolver";
 import { getPhotoSourceConnection, toPhotoSourceKind } from "../../services/photoSource/connection";
 import type { PhotoSourceKind } from "../../services/photoSource/types";
-import {
-  getCachedAlbumAssets,
-  invalidateAlbumAssets,
-} from "../../services/immich/immichAssetCache";
+import { invalidateAlbumAssets } from "../../services/immich/immichAssetCache";
 import {
   deleteImportedPhotoFiles,
   estimateAlbumImport,
@@ -34,12 +35,7 @@ import {
   isImportInFlight,
   startAlbumImport,
 } from "../../services/immich/immichImport";
-import {
-  ImmichAsset,
-  ImmichConnection,
-  ImmichError,
-  ImmichMode,
-} from "../../services/immich/types";
+import { ImmichConnection, ImmichError, ImmichMode } from "../../services/immich/types";
 import { immichImportLimiter, immichProxyLimiter } from "../../middleware/rateLimit";
 import logger from "../../utils/logger";
 import { manualCoverData } from "../../services/trip/tripCover";
@@ -140,9 +136,6 @@ const toLinkDto = (row: {
   sortIdx: row.sortIdx,
   lastSyncedAt: row.lastSyncedAt?.toISOString() ?? null,
 });
-
-const proxyUrl = (tripId: string, linkId: string, assetId: string, size: string): string =>
-  `/api/v1/trips/${tripId}/immich/albums/${linkId}/assets/${assetId}/file?size=${size}`;
 
 /* ─── Album picker ─── */
 
@@ -340,64 +333,87 @@ router.get(
 
       const link = await resolveLink(tripId, req.params.linkId);
 
-      if (link.mode === "import") {
-        const photos = await prisma.tripPhoto.findMany({
-          where: { immichAlbumLinkId: link.id },
-          // Chronological, because an album of a trip is read as a diary. A
-          // photo without an EXIF date has nothing to sort by, so it keeps its
-          // link position at the end rather than leading the album.
-          orderBy: [{ takenAt: { sort: "asc", nulls: "last" } }, { sortIdx: "asc" }],
-          select: { id: true, tripId: true, takenAt: true, lat: true, lon: true },
-        });
-        const fileUrl = (photoId: string): string =>
-          `/api/v1/trips/${tripId}/photos/${photoId}/file`;
+      const conn =
+        link.mode === "import" ? null : await requireConnection(userId, res, link.provider);
+      if (link.mode !== "import" && !conn) return;
 
-        res.json({
-          assets: photos.map((p) => ({
-            id: p.id,
-            url: fileUrl(p.id),
-            previewUrl: fileUrl(p.id),
-            takenAt: p.takenAt?.toISOString() ?? null,
-            lat: p.lat,
-            lon: p.lon,
-          })),
-        });
-        return;
-      }
-
-      const conn = await requireConnection(userId, res, link.provider);
-      if (!conn) return;
-
-      const assets = await getCachedAlbumAssets(
-        userId,
-        link.immichAlbumId,
-        () => listAllAlbumAssets(createPhotoSource(link.provider, conn), link.immichAlbumId),
-        link.provider
+      const { assets, truncated } = await listGalleryAssets(userId, tripId, link, conn);
+      res.json(
+        link.mode === "import"
+          ? { assets }
+          : {
+              // True when the album is longer than the client could page through;
+              // the gallery then shows a prefix and must say so.
+              truncated,
+              assets,
+            }
       );
+    } catch (error) {
+      sendImmichFailure(res, error, next);
+    }
+  }
+);
 
+/* ─── Day-wise reading of a linked album ─── */
+
+/**
+ * The album's photos per local day — counts only, no asset list. The day is
+ * read in the user's profile zone (ADR 0002 Q1), the zone the gallery's own
+ * grouping uses, so the strip and the headers can never disagree.
+ */
+router.get(
+  "/trips/:id/immich/albums/:linkId/days",
+  authenticate,
+  immichProxyLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const tripId = req.params.id;
+      await resolveTrip(userId, tripId);
+      const link = await resolveLink(tripId, req.params.linkId);
+      const conn =
+        link.mode === "import" ? null : await requireConnection(userId, res, link.provider);
+      if (link.mode !== "import" && !conn) return;
+
+      const { zone } = await profileZoneOf(userId);
+      const { assets, truncated } = await listGalleryAssets(userId, tripId, link, conn);
+      res.json({ zone, truncated, total: assets.length, days: countByDay(assets, zone) });
+    } catch (error) {
+      sendImmichFailure(res, error, next);
+    }
+  }
+);
+
+/** One day's photos (or `all`), paged. */
+router.get(
+  "/trips/:id/immich/albums/:linkId/days/:day/assets",
+  authenticate,
+  immichProxyLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const tripId = req.params.id;
+      await resolveTrip(userId, tripId);
+      const day = galleryDayParamSchema.safeParse(req.params.day);
+      const page = galleryDayQuerySchema.safeParse(req.query);
+      if (!day.success || !page.success) throw new AppError("Invalid day or page", 400);
+
+      const link = await resolveLink(tripId, req.params.linkId);
+      const conn =
+        link.mode === "import" ? null : await requireConnection(userId, res, link.provider);
+      if (link.mode !== "import" && !conn) return;
+
+      const { zone } = await profileZoneOf(userId);
+      const { assets } = await listGalleryAssets(userId, tripId, link, conn);
+      const ofDay = assetsOfDay(assets, day.data, zone);
+      const { offset, limit } = page.data;
+      const slice = ofDay.slice(offset, offset + limit);
       res.json({
-        // True when the album is longer than the client could page through;
-        // the gallery then shows a prefix and must say so.
-        truncated: (assets as AlbumAssetList).truncated === true,
-        assets: assets
-          .filter((a: ImmichAsset) => a.type === "IMAGE")
-          // The source answers in its own order; the gallery reads chronologically.
-          // A photo with no capture time (`null`) has nothing to sort by and goes
-          // last, in the source's order — not to 1970, and not to the front.
-          .slice()
-          .sort((a: ImmichAsset, b: ImmichAsset) =>
-            a.fileCreatedAt === null || b.fileCreatedAt === null
-              ? Number(a.fileCreatedAt === null) - Number(b.fileCreatedAt === null)
-              : a.fileCreatedAt.localeCompare(b.fileCreatedAt)
-          )
-          .map((a: ImmichAsset) => ({
-            id: a.id,
-            url: proxyUrl(tripId, link.id, a.id, "thumbnail"),
-            previewUrl: proxyUrl(tripId, link.id, a.id, "preview"),
-            takenAt: a.fileCreatedAt,
-            lat: a.lat,
-            lon: a.lon,
-          })),
+        day: day.data,
+        total: ofDay.length,
+        offset,
+        nextOffset: offset + slice.length < ofDay.length ? offset + slice.length : null,
+        assets: slice,
       });
     } catch (error) {
       sendImmichFailure(res, error, next);

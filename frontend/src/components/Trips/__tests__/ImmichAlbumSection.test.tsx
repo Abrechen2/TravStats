@@ -5,12 +5,15 @@ import userEvent from "@testing-library/user-event";
 
 // vi.hoisted lets these vi.fn()s survive vi.mock factory hoisting and stay
 // reachable from the test bodies below (see ImmichConnectionCard.test.tsx).
-const { getAlbumAssets, unlinkAlbum, resyncAlbum, getImportJob } = vi.hoisted(() => ({
-  getAlbumAssets: vi.fn(),
-  unlinkAlbum: vi.fn(),
-  resyncAlbum: vi.fn(),
-  getImportJob: vi.fn(),
-}));
+const { getAlbumDays, getAlbumDayAssets, unlinkAlbum, resyncAlbum, getImportJob } = vi.hoisted(
+  () => ({
+    getAlbumDays: vi.fn(),
+    getAlbumDayAssets: vi.fn(),
+    unlinkAlbum: vi.fn(),
+    resyncAlbum: vi.fn(),
+    getImportJob: vi.fn(),
+  })
+);
 const KNOWN_FAILURE_KINDS = [
   "notConfigured",
   "unreachable",
@@ -20,7 +23,7 @@ const KNOWN_FAILURE_KINDS = [
   "invalidUrl",
 ];
 vi.mock("../../../lib/api/immich", () => ({
-  immichApi: { getAlbumAssets, unlinkAlbum, resyncAlbum, getImportJob },
+  immichApi: { getAlbumDays, getAlbumDayAssets, unlinkAlbum, resyncAlbum, getImportJob },
   immichFailureKind: (e: unknown) =>
     (e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? null,
   failureKey: (kind: unknown, provider = "immich") => {
@@ -43,7 +46,11 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 
-vi.mock("../PhotoLightbox", () => ({ default: () => <div data-testid="lightbox" /> }));
+vi.mock("../PhotoLightbox", () => ({
+  default: ({ items }: { items: unknown[] }) => (
+    <div data-testid="lightbox" data-count={items.length} />
+  ),
+}));
 
 import ImmichAlbumSection from "../ImmichAlbumSection";
 import type { LinkedAlbum } from "../../../types/immich";
@@ -80,13 +87,39 @@ const ASSETS = [
   { id: "p2", url: "/t2.jpg", previewUrl: "/p2.jpg", takenAt: null, lat: null, lon: null },
 ];
 
+interface Asset {
+  id: string;
+  url: string;
+  previewUrl: string;
+  takenAt: string | null;
+  lat: number | null;
+  lon: number | null;
+}
+
+/** Stand in for the server: counts per UTC day, and a day's photos on request. */
+function serve(assets: Asset[], truncated = false): void {
+  const dayOf = (a: Asset): string | null => (a.takenAt ? a.takenAt.slice(0, 10) : null);
+  const keys = [...new Set(assets.map(dayOf))];
+  const ordered = [...keys.filter((k) => k !== null).sort(), ...keys.filter((k) => k === null)];
+  getAlbumDays.mockResolvedValue({
+    zone: "UTC",
+    truncated,
+    total: assets.length,
+    days: ordered.map((day) => ({ day, count: assets.filter((a) => dayOf(a) === day).length })),
+  });
+  getAlbumDayAssets.mockImplementation(async (_t: string, _l: string, day: string) => {
+    const of = assets.filter((a) => day === "all" || (dayOf(a) ?? "undated") === day);
+    return { day, total: of.length, offset: 0, nextOffset: null, assets: of };
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   // The day-grouping preference lives in localStorage, which jsdom keeps
   // across tests in a file — without this, a test that switches grouping OFF
   // silently decides the starting state of every test after it.
   localStorage.clear();
-  getAlbumAssets.mockResolvedValue({ assets: ASSETS });
+  serve(ASSETS);
   unlinkAlbum.mockResolvedValue(undefined);
   resyncAlbum.mockResolvedValue({ job: { status: "running" } });
   getImportJob.mockResolvedValue({ job: null });
@@ -133,16 +166,90 @@ describe("ImmichAlbumSection", () => {
     },
   ];
 
-  it("divides the album into days with a header between the pictures", async () => {
-    getAlbumAssets.mockResolvedValue({ assets: DATED });
+  it("opens on the first day only: a day strip with counts, and just that day's pictures", async () => {
+    serve(DATED);
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
 
-    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(3));
-    // Two capture days -> two headers, and every picture still on screen.
-    expect(screen.getAllByTestId("gallery-day-header")).toHaveLength(2);
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
+    // "Alle" + two capture days, each with its count; the third picture (day 2) is NOT loaded.
+    const chips = screen.getAllByTestId("gallery-day-chip");
+    expect(chips).toHaveLength(3);
+    expect(chips[0]).toHaveTextContent("3");
+    expect(chips[1]).toHaveTextContent("2");
+    expect(chips[2]).toHaveTextContent("1");
+    expect(getAlbumDayAssets).toHaveBeenCalledTimes(1);
+    expect(getAlbumDayAssets.mock.calls[0][2]).toBe("2026-05-01");
   });
 
-  it("puts photos without a capture date in their own last group, headed as undated (not 1970)", async () => {
+  it("loads only the chosen day when the user switches, and remembers it for the trip", async () => {
+    serve(DATED);
+    const { unmount } = render(
+      <ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />
+    );
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
+
+    await userEvent.click(screen.getAllByTestId("gallery-day-chip")[2]);
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(1));
+    expect(getAlbumDayAssets.mock.calls.map((c) => c[2])).toEqual(["2026-05-01", "2026-05-02"]);
+    unmount();
+
+    // Next visit starts on the day the user left on, not on the first one.
+    getAlbumDayAssets.mockClear();
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(1));
+    expect(getAlbumDayAssets.mock.calls[0][2]).toBe("2026-05-02");
+  });
+
+  it('"Alle" shows every picture under a header per day, paged from the server', async () => {
+    serve(DATED);
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
+
+    await userEvent.click(screen.getAllByTestId("gallery-day-chip")[0]);
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(3));
+    expect(screen.getAllByTestId("gallery-day-header")).toHaveLength(2);
+    expect(getAlbumDayAssets.mock.calls[getAlbumDayAssets.mock.calls.length - 1][2]).toBe("all");
+  });
+
+  it("offers a next page of a long day and appends it", async () => {
+    serve(DATED);
+    getAlbumDayAssets.mockImplementation(
+      async (_t: string, _l: string, day: string, off: number) =>
+        off === 0
+          ? { day, total: 3, offset: 0, nextOffset: 2, assets: DATED.slice(0, 2) }
+          : { day, total: 3, offset: 2, nextOffset: null, assets: DATED.slice(2) }
+    );
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+    await userEvent.click(await screen.findByRole("button", { name: "albums.loadMore" }));
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(3));
+    expect(getAlbumDayAssets.mock.calls.map((c) => c[3])).toEqual([0, 2]);
+  });
+
+  it("hands the lightbox the whole day, not only the pages scrolled into view", async () => {
+    serve(DATED);
+    getAlbumDayAssets.mockImplementation(
+      async (_t: string, _l: string, day: string, off: number) =>
+        off === 0
+          ? { day, total: 3, offset: 0, nextOffset: 2, assets: DATED.slice(0, 2) }
+          : { day, total: 3, offset: 2, nextOffset: null, assets: DATED.slice(2) }
+    );
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+    await userEvent.click((await screen.findAllByRole("img"))[0]);
+    expect((await screen.findByTestId("lightbox")).dataset.count).toBe("3");
+  });
+
+  it("says why a day could not be loaded instead of showing an empty grid", async () => {
+    serve(DATED);
+    getAlbumDayAssets.mockRejectedValue({ response: { data: { error: "unreachable" } } });
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("errors.unreachable");
+    expect(screen.getByRole("button", { name: "errors.retry" })).toBeInTheDocument();
+    expect(screen.queryAllByRole("img")).toHaveLength(0);
+  });
+
+  it("puts photos without a capture date in their own last chip, named as undated (not 1970)", async () => {
     const undated = {
       id: "u1",
       url: "/u.jpg",
@@ -151,35 +258,34 @@ describe("ImmichAlbumSection", () => {
       lat: null,
       lon: null,
     };
-    getAlbumAssets.mockResolvedValue({ assets: [...DATED, undated] });
+    serve([...DATED, undated]);
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
 
-    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(4));
-    expect(screen.getAllByTestId("gallery-day-header")).toHaveLength(2);
-    const header = screen.getByTestId("gallery-undated-header");
-    expect(header).toHaveTextContent("albums.undated");
-    // Last group: nothing follows it.
-    const headers = screen.getAllByRole("heading", { level: 4 });
-    expect(headers[headers.length - 1]).toBe(header);
+    await waitFor(() => expect(screen.getAllByTestId("gallery-day-chip")).toHaveLength(4));
+    const chips = screen.getAllByTestId("gallery-day-chip");
+    expect(chips[3]).toHaveTextContent("albums.undated");
+    await userEvent.click(chips[3]);
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(1));
     expect(screen.queryByText(/1970/)).not.toBeInTheDocument();
   });
 
   it("lets the grouping be turned off, showing one plain grid again", async () => {
-    getAlbumAssets.mockResolvedValue({ assets: DATED });
+    serve(DATED);
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
 
-    await waitFor(() => expect(screen.getAllByTestId("gallery-day-header")).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByTestId("gallery-day-chip")).toHaveLength(3));
     await userEvent.click(screen.getByRole("switch", { name: "albums.groupByDay" }));
 
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(3));
+    expect(screen.queryByTestId("gallery-day-chip")).not.toBeInTheDocument();
     expect(screen.queryByTestId("gallery-day-header")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("img")).toHaveLength(3);
   });
 
   it("offers the grouping as a switch that reports its state, not a text link", async () => {
     // Alex on the rc.4 UAT: it was an underlined text link, which reads as
     // navigation and never says whether grouping is currently on. The active-
     // domains setting already establishes the switch pattern.
-    getAlbumAssets.mockResolvedValue({ assets: DATED });
+    serve(DATED);
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
 
     const sw = await screen.findByRole("switch", { name: "albums.groupByDay" });
@@ -235,7 +341,7 @@ describe("ImmichAlbumSection", () => {
   });
 
   it("names PhotoPrism, not Immich, when a PhotoPrism album rejects the app password", async () => {
-    getAlbumAssets.mockRejectedValue({ response: { data: { error: "auth" } } });
+    getAlbumDays.mockRejectedValue({ response: { data: { error: "auth" } } });
     render(
       <ImmichAlbumSection
         tripId="trip-1"
@@ -248,7 +354,7 @@ describe("ImmichAlbumSection", () => {
   });
 
   it("renders a degraded panel instead of tiles when Immich is unreachable", async () => {
-    getAlbumAssets.mockRejectedValue({ response: { data: { error: "unreachable" } } });
+    getAlbumDays.mockRejectedValue({ response: { data: { error: "unreachable" } } });
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByText("errors.unreachable")).toBeInTheDocument());
@@ -261,7 +367,7 @@ describe("ImmichAlbumSection", () => {
   // degrade to the neutral "errors.unknown" panel — never "errors.unreachable",
   // which would falsely assert a network failure that was never established.
   it("renders errors.unknown (not errors.unreachable) for an unrecognised failure kind", async () => {
-    getAlbumAssets.mockRejectedValue({ response: { data: { error: "brand-new-kind" } } });
+    getAlbumDays.mockRejectedValue({ response: { data: { error: "brand-new-kind" } } });
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByText("errors.unknown")).toBeInTheDocument());
@@ -269,7 +375,7 @@ describe("ImmichAlbumSection", () => {
   });
 
   it("offers unlink for a deleted album", async () => {
-    getAlbumAssets.mockRejectedValue({ response: { data: { error: "notFound" } } });
+    getAlbumDays.mockRejectedValue({ response: { data: { error: "notFound" } } });
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByText("errors.notFound")).toBeInTheDocument());
@@ -284,7 +390,7 @@ describe("ImmichAlbumSection", () => {
   // since re-fetching a permanently-gone album can never succeed — while every
   // other test still passes.
   it("does NOT render a retry button when the album was not found (permanent failure)", async () => {
-    getAlbumAssets.mockRejectedValue({ response: { data: { error: "notFound" } } });
+    getAlbumDays.mockRejectedValue({ response: { data: { error: "notFound" } } });
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByText("errors.notFound")).toBeInTheDocument());
@@ -292,7 +398,7 @@ describe("ImmichAlbumSection", () => {
   });
 
   it("DOES render a retry button for a retryable failure (unreachable)", async () => {
-    getAlbumAssets.mockRejectedValue({ response: { data: { error: "unreachable" } } });
+    getAlbumDays.mockRejectedValue({ response: { data: { error: "unreachable" } } });
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByText("errors.unreachable")).toBeInTheDocument());
@@ -303,7 +409,7 @@ describe("ImmichAlbumSection", () => {
     const onChanged = vi.fn();
     const user = userEvent.setup();
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={onChanged} />);
-    await waitFor(() => expect(getAlbumAssets).toHaveBeenCalled());
+    await waitFor(() => expect(getAlbumDays).toHaveBeenCalled());
 
     await user.click(menuItem("albums.unlink"));
 
@@ -314,7 +420,7 @@ describe("ImmichAlbumSection", () => {
   it("asks whether to delete the copies when unlinking an import-mode album", async () => {
     const user = userEvent.setup();
     render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
-    await waitFor(() => expect(getAlbumAssets).toHaveBeenCalled());
+    await waitFor(() => expect(getAlbumDays).toHaveBeenCalled());
 
     await user.click(menuItem("albums.unlink"));
     expect(unlinkAlbum).not.toHaveBeenCalled();
@@ -362,7 +468,7 @@ describe("ImmichAlbumSection", () => {
 
     const user = userEvent.setup();
     render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
-    await waitFor(() => expect(getAlbumAssets).toHaveBeenCalled());
+    await waitFor(() => expect(getAlbumDays).toHaveBeenCalled());
 
     // The mount probe read the prior `completed` and did NOT start a poller.
     await waitFor(() => expect(getImportJob).toHaveBeenCalledTimes(1));
@@ -437,7 +543,7 @@ describe("ImmichAlbumSection", () => {
 
     // Absent job row: same — idle.
     vi.clearAllMocks();
-    getAlbumAssets.mockResolvedValue({ assets: ASSETS });
+    serve(ASSETS);
     getImportJob.mockResolvedValue({ job: null });
     render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
     await waitFor(() => expect(getImportJob).toHaveBeenCalledTimes(1));
@@ -463,7 +569,7 @@ describe("ImmichAlbumSection", () => {
       const { unmount } = render(
         <ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />
       );
-      // Flush mount effects: getAlbumAssets + probe -> startPolling -> immediate poll.
+      // Flush mount effects: getAlbumDays + probe -> startPolling -> immediate poll.
       await vi.advanceTimersByTimeAsync(0);
       await vi.advanceTimersByTimeAsync(1500); // one interval tick
       const callsBefore = getImportJob.mock.calls.length;
@@ -644,14 +750,14 @@ describe("ImmichAlbumSection — a failing import poll (forgejo#375)", () => {
   }, 15000);
 
   it("says the gallery shows only a prefix when the album outgrew the paging cap", async () => {
-    getAlbumAssets.mockResolvedValue({ assets: ASSETS, truncated: true });
+    serve(ASSETS, true);
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
     await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
     expect(screen.getByTestId("album-truncated")).toHaveTextContent("albums.truncated");
   });
 
   it("names PhotoPrism, not Immich, in the truncation notice of a PhotoPrism album", async () => {
-    getAlbumAssets.mockResolvedValue({ assets: ASSETS, truncated: true });
+    serve(ASSETS, true);
     render(
       <ImmichAlbumSection
         tripId="trip-1"
@@ -664,7 +770,7 @@ describe("ImmichAlbumSection — a failing import poll (forgejo#375)", () => {
   });
 
   it("shows no truncation notice for a complete album", async () => {
-    getAlbumAssets.mockResolvedValue({ assets: ASSETS, truncated: false });
+    serve(ASSETS, false);
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
     await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
     expect(screen.queryByTestId("album-truncated")).not.toBeInTheDocument();

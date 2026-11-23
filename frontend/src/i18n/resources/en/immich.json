@@ -64,7 +64,12 @@
     "partialLink": "Some albums could not be linked: {{reason}}",
     "badgePhotoprism": "PhotoPrism",
     "badgeImmich": "Immich",
-    "menuLabel": "More actions for album {{name}}"
+    "menuLabel": "More actions for album {{name}}",
+    "dayAll": "All",
+    "dayStripLabel": "Days of the trip",
+    "dayPhotos": "{{count}} photos",
+    "loadMore": "Load more photos",
+    "loadingDay": "Loading photos …"
   },
   "gallery": {
     "uploaded": "Uploaded",
