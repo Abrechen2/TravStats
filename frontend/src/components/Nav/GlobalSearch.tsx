@@ -13,7 +13,11 @@ import {
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { TOUR_COLOR, type DomainKey } from "../../shared/domains";
 import { Icon } from "../ui/Icon";
+import { useAuthStore } from "../../store/authStore";
+import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import { useToursVisible } from "../../hooks/useToursVisible";
 import { useGlobalSearch } from "./useGlobalSearch";
+import { clearRecentSearches, readRecentSearches, rememberSearch } from "./recentSearches";
 
 interface Group {
   domain: SearchDomain;
@@ -55,7 +59,18 @@ export default function GlobalSearch(): JSX.Element {
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
-  const { state, retry } = useGlobalSearch(value);
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  const { enabled } = useEnabledDomains();
+  const toursVisible = useToursVisible();
+  // Domain chips narrow the search; none chosen = every domain the account shows.
+  const [only, setOnly] = useState<SearchDomain[]>([]);
+  const chipDomains = useMemo<SearchDomain[]>(
+    () => [...enabled, "trip", ...(toursVisible ? (["tour"] as const) : [])],
+    [enabled, toursVisible]
+  );
+  const { state, retry } = useGlobalSearch(value, only);
+  const [recent, setRecent] = useState<string[]>(() => readRecentSearches(userId));
+  useEffect(() => setRecent(readRecentSearches(userId)), [userId]);
 
   useClickOutside(boxRef, () => setOpen(false));
 
@@ -71,21 +86,24 @@ export default function GlobalSearch(): JSX.Element {
   }, []);
 
   const trimmed = value.trim();
+  // An empty field with remembered queries offers them, walkable like hits.
+  const showRecent = open && trimmed.length === 0 && recent.length > 0;
   const tooShort = trimmed.length < MIN_SEARCH_LENGTH;
   const groups = useMemo(
     () => (state.status === "ready" ? groupHits(state.result.hits) : []),
     [state]
   );
   const flat = useMemo(() => groups.flatMap((g) => g.hits), [groups]);
+  const listLength = showRecent ? recent.length : flat.length;
 
-  useEffect(() => setActive(0), [flat]);
+  useEffect(() => setActive(0), [flat, showRecent]);
 
   // Keep the keyboard's choice on screen inside the scrolling panel.
   useEffect(() => {
-    if (open && flat.length > 0) {
+    if (open && listLength > 0) {
       document.getElementById(`${listId}-opt-${active}`)?.scrollIntoView?.({ block: "nearest" });
     }
-  }, [active, open, flat, listId]);
+  }, [active, open, listLength, listId]);
 
   const colorFor = (domain: SearchDomain): string =>
     domain === "tour"
@@ -95,6 +113,9 @@ export default function GlobalSearch(): JSX.Element {
         : colorOf(domain as DomainKey);
 
   const go = (hit: SearchHit): void => {
+    // Remembered once a result was actually opened: a typed-and-abandoned
+    // query says nothing about what the user was looking for.
+    if (trimmed.length >= MIN_SEARCH_LENGTH) setRecent(rememberSearch(userId, trimmed));
     setOpen(false);
     setValue("");
     inputRef.current?.blur();
@@ -106,13 +127,16 @@ export default function GlobalSearch(): JSX.Element {
       if (value) setValue("");
       else inputRef.current?.blur();
       setOpen(false);
-    } else if (e.key === "ArrowDown" && flat.length > 0) {
+    } else if (e.key === "ArrowDown" && listLength > 0) {
       e.preventDefault();
       setOpen(true);
-      setActive((i) => (i + 1) % flat.length);
-    } else if (e.key === "ArrowUp" && flat.length > 0) {
+      setActive((i) => (i + 1) % listLength);
+    } else if (e.key === "ArrowUp" && listLength > 0) {
       e.preventDefault();
-      setActive((i) => (i - 1 + flat.length) % flat.length);
+      setActive((i) => (i - 1 + listLength) % listLength);
+    } else if (e.key === "Enter" && open && showRecent && recent[active]) {
+      e.preventDefault();
+      setValue(recent[active]);
     } else if (e.key === "Enter" && open && flat[active]) {
       e.preventDefault();
       go(flat[active]);
@@ -120,7 +144,11 @@ export default function GlobalSearch(): JSX.Element {
   };
 
   const optionId = (i: number): string => `${listId}-opt-${i}`;
-  const showPanel = open && trimmed.length > 0;
+  const showPanel = (open && trimmed.length > 0) || showRecent;
+  const toggleChip = (domain: SearchDomain): void =>
+    setOnly((prev) =>
+      prev.includes(domain) ? prev.filter((d) => d !== domain) : [...prev, domain]
+    );
   let flatIndex = -1;
 
   return (
@@ -137,7 +165,7 @@ export default function GlobalSearch(): JSX.Element {
           aria-expanded={showPanel}
           aria-controls={listId}
           aria-autocomplete="list"
-          aria-activedescendant={showPanel && flat.length > 0 ? optionId(active) : undefined}
+          aria-activedescendant={showPanel && listLength > 0 ? optionId(active) : undefined}
           aria-label={t("dashboard:search.ariaLabel")}
           title={t("dashboard:search.shortcutHint")}
           placeholder={t("dashboard:search.placeholder")}
@@ -163,7 +191,83 @@ export default function GlobalSearch(): JSX.Element {
           className="absolute right-0 top-full z-50 mt-1 max-h-[70vh] w-[min(92vw,420px)] overflow-y-auto rounded-md py-1 text-sm"
           style={{ background: "var(--ts-bg)", border: "1px solid var(--ts-border)" }}
         >
-          {tooShort && (
+          {/* Chips never take the focus: the input keeps "/", arrows and Enter. */}
+          <div
+            role="group"
+            aria-label={t("dashboard:search.chips.label")}
+            className="flex flex-wrap gap-1 px-3 pb-1 pt-2"
+          >
+            {chipDomains.map((domain) => {
+              const on = only.includes(domain);
+              return (
+                <button
+                  key={domain}
+                  type="button"
+                  tabIndex={-1}
+                  aria-pressed={on}
+                  data-testid={`search-chip-${domain}`}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => toggleChip(domain)}
+                  className="rounded-full px-2 py-0.5 text-xs pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-3"
+                  style={{
+                    background: on ? colorFor(domain) : "transparent",
+                    color: on ? "var(--ts-bg)" : "var(--ts-muted)",
+                    border: `1px solid ${on ? colorFor(domain) : "var(--ts-border)"}`,
+                  }}
+                >
+                  {t(`dashboard:search.group.${domain}`)}
+                </button>
+              );
+            })}
+          </div>
+
+          {showRecent && (
+            <div role="group" aria-label={t("dashboard:search.recent.label")}>
+              <div
+                className="flex items-center justify-between px-3 pb-1 pt-2 text-xs"
+                style={{ color: "var(--ts-muted)" }}
+              >
+                <span className="font-semibold uppercase tracking-wide">
+                  {t("dashboard:search.recent.label")}
+                </span>
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  data-testid="search-recent-clear"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    clearRecentSearches(userId);
+                    setRecent([]);
+                  }}
+                  className="underline pointer-coarse:min-h-(--ts-size-touch-min)"
+                >
+                  {t("dashboard:search.recent.clear")}
+                </button>
+              </div>
+              {recent.map((q, i) => (
+                <div
+                  key={q}
+                  id={optionId(i)}
+                  role="option"
+                  aria-selected={i === active}
+                  tabIndex={-1}
+                  data-testid={`search-recent-${i}`}
+                  onMouseEnter={() => setActive(i)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setValue(q)}
+                  className="cursor-pointer px-3 py-1.5 pointer-coarse:py-3"
+                  style={{
+                    color: "var(--ts-text-bright)",
+                    background: i === active ? "var(--ts-tile)" : "transparent",
+                  }}
+                >
+                  {q}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!showRecent && tooShort && (
             <p role="status" className="px-3 py-2" style={{ color: "var(--ts-muted)" }}>
               {t("dashboard:search.tooMuchTooLittle", { min: MIN_SEARCH_LENGTH })}
             </p>

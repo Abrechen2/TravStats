@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import axios from "axios";
 
 import GlobalSearch from "../GlobalSearch";
 import { searchApi, type SearchResult } from "../../../lib/api/search";
+import { useAuthStore } from "../../../store/authStore";
 
 vi.mock("../../../lib/api/search", async (orig) => ({
   ...(await orig<typeof import("../../../lib/api/search")>()),
@@ -120,6 +121,68 @@ describe("the header search (forgejo#403)", () => {
     expect(screen.getAllByRole("option")[1]).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(box, { key: "Enter" });
     expect(screen.getByTestId("where")).toHaveTextContent("/lodging/l1");
+  });
+
+  it("narrows the search to the chosen domain chips and keeps the typing field focused", async () => {
+    vi.mocked(searchApi.search).mockResolvedValue(result());
+    const box = renderBox();
+    act(() => box.focus());
+    fireEvent.change(box, { target: { value: "lh" } });
+    await screen.findByText("LH123");
+    fireEvent.click(screen.getByTestId("search-chip-lodging"));
+    await waitFor(() =>
+      expect(searchApi.search).toHaveBeenLastCalledWith(
+        expect.objectContaining({ q: "lh", domains: ["lodging"] }),
+        expect.anything()
+      )
+    );
+    await waitFor(() => expect(screen.queryByText("dashboard:search.loading")).toBeNull());
+    expect(screen.getByTestId("search-chip-lodging")).toHaveAttribute("aria-pressed", "true");
+    // The chip is not a tab stop and does not steal the field's arrow keys.
+    expect(screen.getByTestId("search-chip-lodging")).toHaveAttribute("tabindex", "-1");
+    expect(box).toHaveFocus();
+  });
+
+  describe("recent queries", () => {
+    beforeEach(() => {
+      localStorage.clear();
+      useAuthStore.setState({ user: { id: "u1" } as never });
+    });
+    afterEach(() => {
+      cleanup();
+      useAuthStore.setState({ user: null });
+    });
+
+    it("remembers a query once a result was opened, offers it on an empty field and can forget it", async () => {
+      vi.mocked(searchApi.search).mockResolvedValue(result());
+      const box = renderBox();
+      fireEvent.change(box, { target: { value: "lh" } });
+      await screen.findByText("LH123");
+      fireEvent.keyDown(box, { key: "Enter" });
+      expect(JSON.parse(localStorage.getItem("travstats:global-search-recent:u1") ?? "[]")).toEqual(
+        ["lh"]
+      );
+
+      // Back on an empty, focused field: the remembered query, walkable with arrows.
+      fireEvent.change(box, { target: { value: "" } });
+      fireEvent.focus(box);
+      expect(screen.getByTestId("search-recent-0")).toHaveTextContent("lh");
+      fireEvent.keyDown(box, { key: "Enter" });
+      expect(box.value).toBe("lh");
+      await waitFor(() => expect(screen.queryByText("dashboard:search.loading")).toBeNull());
+
+      fireEvent.change(box, { target: { value: "" } });
+      fireEvent.click(screen.getByTestId("search-recent-clear"));
+      expect(localStorage.getItem("travstats:global-search-recent:u1")).toBeNull();
+      expect(screen.queryByTestId("search-recent-0")).toBeNull();
+    });
+
+    it("never offers another account's queries", () => {
+      localStorage.setItem("travstats:global-search-recent:u2", JSON.stringify(["secret"]));
+      const box = renderBox();
+      fireEvent.focus(box);
+      expect(screen.queryByText("secret")).toBeNull();
+    });
   });
 
   it("asks for more characters instead of searching on one", () => {

@@ -478,6 +478,13 @@
       "bad": "This input cannot be searched.",
       "retry": "Try again"
     },
+    "chips": {
+      "label": "Narrow the search to"
+    },
+    "recent": {
+      "label": "Recent searches",
+      "clear": "Clear history"
+    },
     "group": {
       "flight": "Flights",
       "cruise": "Cruises",
