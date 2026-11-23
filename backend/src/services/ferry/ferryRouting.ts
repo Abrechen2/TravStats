@@ -32,7 +32,22 @@ interface LinkedCrossing extends FerryEnds {
 export async function syncFerryLeg(
   tx: DbTransaction,
   ferry: LinkedCrossing,
-  { onMismatch = "refuse" }: { onMismatch?: "refuse" | "keep" } = {}
+  {
+    onMismatch = "refuse",
+    replaceUserLine = "none",
+  }: {
+    onMismatch?: "refuse" | "keep";
+    /**
+     * A line the user chose on the leg (`drawn`, an adopted `track`) normally
+     * outlives a routing refresh. The user drawing the CROSSING's line by hand
+     * (or dropping it) is a newer choice about the same sea lane, so those two
+     * routes replace a drawn leg ("drawn") - and a recorded one when the
+     * crossing is drawn ("all"): manual outranks a recording, and the
+     * recording stays on its section for re-adoption. Without it the dashboard
+     * drew the crossing twice, once per line.
+     */
+    replaceUserLine?: "none" | "drawn" | "all";
+  } = {}
 ): Promise<void> {
   if (!ferry.roadtripLegId) return;
   const leg = await tx.tripRouteLeg.findFirst({
@@ -41,7 +56,10 @@ export async function syncFerryLeg(
   });
   if (!leg || leg.mode !== "ferry")
     throw new AppError("The linked sea leg changed; reload", 409, "VERSION_CONFLICT");
-  if (leg.source === "drawn" || leg.source === "track") return;
+  const userLine =
+    (leg.source === "drawn" && replaceUserLine !== "none") ||
+    (leg.source === "track" && replaceUserLine === "all");
+  if ((leg.source === "drawn" || leg.source === "track") && !userLine) return;
   const matches = (stop: { lat: number | null; lon: number | null }, lat: number, lon: number) =>
     stop.lat !== null &&
     stop.lon !== null &&
