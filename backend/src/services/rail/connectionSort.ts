@@ -50,10 +50,10 @@ function sortValue(group: readonly SortableLeg[], field: ConnectionSortField): S
       return last.arrivalTime.getTime() - first.departureTime.getTime();
     }
     case "distance": {
-      const measured = group.filter((leg) => leg.distanceKm !== null);
-      return measured.length === 0
-        ? null
-        : measured.reduce((sum, leg) => sum + (leg.distanceKm ?? 0), 0);
+      // A ride with one unmeasured leg has no known total: a partial sum
+      // would rank it as shorter than it is.
+      if (group.some((leg) => leg.distanceKm === null)) return null;
+      return group.reduce((sum, leg) => sum + (leg.distanceKm ?? 0), 0);
     }
     case "status":
       return first.status;

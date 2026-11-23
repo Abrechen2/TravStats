@@ -25,7 +25,12 @@ export async function collectAllPages<T>(
   for (let offset = 0; ; offset += COLLECT_PAGE_SIZE) {
     const page = await fetchPage({ limit: COLLECT_PAGE_SIZE, offset });
     items.push(...page.items);
-    if (page.items.length < COLLECT_PAGE_SIZE || items.length >= page.total) return items;
+    if (items.length >= page.total) return items;
+    // A short page while the server still counts more would hand back a
+    // prefix as if it were the whole set.
+    if (page.items.length < COLLECT_PAGE_SIZE) {
+      throw new Error(`incomplete read: ${items.length} of ${page.total}`);
+    }
     if (items.length >= BULK_SELECT_MAX) return items;
   }
 }

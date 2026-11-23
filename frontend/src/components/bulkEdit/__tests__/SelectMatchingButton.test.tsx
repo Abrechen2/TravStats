@@ -119,6 +119,11 @@ describe("collectAllPages", () => {
     expect(fetchPage).toHaveBeenNthCalledWith(2, { limit: 500, offset: 500 });
   });
 
+  it("rejects a short page while the server still counts more, instead of returning a prefix", async () => {
+    const fetchPage = vi.fn().mockResolvedValueOnce({ items: new Array(40).fill(1), total: 60 });
+    await expect(collectAllPages(fetchPage)).rejects.toThrow("incomplete");
+  });
+
   it("rejects when a page fails instead of returning a prefix", async () => {
     const fetchPage = vi
       .fn()

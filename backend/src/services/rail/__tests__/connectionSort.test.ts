@@ -34,6 +34,14 @@ describe("sortConnections", () => {
     expect(ids(sortConnections(groups, "distance", "desc"))).toEqual(["b", "a"]);
   });
 
+  it("treats a ride with an unmeasured leg as having no known distance", () => {
+    const groups = [
+      [leg("a", { distanceKm: 500 })],
+      [leg("b", { distanceKm: 10 }), leg("b2", { distanceKm: null })],
+    ];
+    expect(ids(sortConnections(groups, "distance", "asc"))).toEqual(["a", "b"]);
+  });
+
   it("reads a connection's duration from first departure to last arrival", () => {
     const long = [
       leg("l1", { arrivalTime: new Date("2025-01-01T08:30:00Z") }),
