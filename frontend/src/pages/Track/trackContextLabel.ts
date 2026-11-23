@@ -22,10 +22,17 @@ const KNOWN_KINDS = new Set([
   "roadtrip",
   "lodging",
   "poi",
+  "stationary",
 ]);
 
 export function contextLabel(item: TravTrackDayEntry, t: Translate): string {
   if (item.unlabelled) return t("track:timeline.movement");
+  // A silence spent at home reads "Zuhause (…)", at any other known place with its name.
+  if (item.kind === "stationary") {
+    return t(item.id === "home" ? "track:timeline.stationaryHome" : "track:timeline.stationary", {
+      label: item.label,
+    }).trim();
+  }
   const key =
     item.kind === "suggestion"
       ? `track:timeline.suggestion.${item.suggestion === "journey" ? "journey" : "stay"}`

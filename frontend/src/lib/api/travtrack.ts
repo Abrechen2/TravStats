@@ -69,7 +69,11 @@ export interface PrivacyZoneInput {
 export type TrackPoint = [number, number, number, number | null];
 
 /** `entry`: a silence a logbook entry (`TrackCoveragePiece.entry`) explains; older servers never send it. */
-export type TrackCoverageState = "recorded" | "noData" | "deleted" | "phonePaused" | "entry";
+export type TrackCoverageState =
+  "recorded" | "noData" | "deleted" | "phonePaused" | "entry" | "stationary";
+
+/** Why a `noData` silence was not explained by standing still; absent on older servers. */
+export type TrackSilenceReason = "openEnd" | "differentPlaces" | "outsidePlaces" | "contradicted";
 
 export interface TrackCoveragePiece {
   fromMs: number;
@@ -77,6 +81,16 @@ export interface TrackCoveragePiece {
   state: TrackCoverageState;
   /** On `entry` only: the logbook entry explaining the silence (`domain` = a `context` entry's `kind`). */
   entry?: { domain: string; id: string };
+  /** On `stationary` only: the known place the silence was spent at. Inferred — no points exist. */
+  place?: {
+    id: string;
+    kind: "home" | "work" | "custom" | "place";
+    name: string;
+    lat: number;
+    lon: number;
+  };
+  /** On `noData` only. */
+  why?: TrackSilenceReason;
 }
 
 /**
@@ -97,6 +111,8 @@ export interface TravTrackDayEntry {
   anchor: { lat: number; lon: number } | null;
   unlabelled: boolean;
   suggestion?: "stay" | "journey";
+  /** `stationary` entries: inferred from standing at a known place, never recorded points. */
+  inferred?: true;
   fromMs: number;
   untilMs: number;
 }
@@ -111,6 +127,8 @@ export interface TravTrackDay {
   pointIds?: string[][];
   coverage: TrackCoveragePiece[];
   context: TravTrackDayEntry[];
+  /** No home is known and a silence began and ended at this spot; absent on an older server. */
+  homeSuggestion?: { lat: number; lon: number; fromMs: number; untilMs: number } | null;
   pointCount: number;
   truncated: boolean;
   /** Journeys and dwells (spec 2026-11-03-travtrack-legs); absent on an older server. */

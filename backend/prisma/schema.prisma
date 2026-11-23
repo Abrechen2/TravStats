@@ -7427,6 +7427,9 @@ model TravTrackDerivationState {
   /// rows or a run deferred questions past its cap; cleared by a question
   /// run that finished with nothing deferred. Keeps the account scheduled.
   countryQuestionsDue   Boolean   @default(false) @map("country_questions_due")
+  /// History was deleted or a zone changed: the inferred country days were wiped and the next
+  /// run rebuilds them over the whole history, once (`silence/inferredCountryDays.ts`).
+  inferredRebuildDue    Boolean   @default(false) @map("inferred_rebuild_due")
   /// Consecutive failed projection runs; the backoff below grows with it.
   failureCount          Int       @default(0) @map("failure_count")
   /// Not scheduled again before this instant after a failure (backoff).

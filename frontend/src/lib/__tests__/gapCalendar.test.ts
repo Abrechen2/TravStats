@@ -8,7 +8,16 @@ const data = (runs: GapCalendar["runs"], year = 2028): GapCalendar => ({
   today: `${year}-12-31`,
   firstDay: `${year}-01-01`,
   years: [year],
-  counts: { entry: 0, home: 0, track: 0, privacyZone: 0, implausible: 0, unknown: 0, outside: 0 },
+  counts: {
+    entry: 0,
+    home: 0,
+    place: 0,
+    track: 0,
+    privacyZone: 0,
+    implausible: 0,
+    unknown: 0,
+    outside: 0,
+  },
   runs,
 });
 
@@ -17,6 +26,21 @@ describe("gap calendar helpers", () => {
     const months = gapMonths(data([{ from: "2028-01-01", to: "2028-12-31", state: "track" }]));
     expect(months.map((m) => m.cells.length)).toEqual([
       31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+    ]);
+  });
+
+  it("an inferred run keeps its flag on every day it covers, and a recorded day has none", () => {
+    const months = gapMonths(
+      data([
+        { from: "2028-01-01", to: "2028-01-02", state: "home" },
+        { from: "2028-01-03", to: "2028-01-04", state: "home", inferred: true },
+      ])
+    );
+    expect(months[0].cells.slice(0, 4).map((c) => c.inferred ?? false)).toEqual([
+      false,
+      false,
+      true,
+      true,
     ]);
   });
 

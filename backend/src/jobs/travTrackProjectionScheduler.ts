@@ -28,10 +28,12 @@ import {
 } from "../services/travtrack/countryProjection";
 import {
   ALL_PROJECTION_BITS,
+  COUNTRY_DAYS_BIT,
   EXPLORED_BIT,
   MONTHS_BIT,
   pendingDirtyDays,
 } from "../services/travtrack/dirtyDays";
+import { projectInferredCountryDays } from "../services/travtrack/silence/inferredCountryDays";
 import { projectExploredCells } from "../services/travtrack/explored/project";
 import { projectMonths } from "../services/travtrack/months/project";
 import { CITY_LOOKUPS_PER_TICK } from "../services/travtrack/months/cities";
@@ -104,6 +106,7 @@ async function accountsWithWork(now: Date, limit: number): Promise<string[]> {
                WHERE d.user_id = u.id
                  AND (d.done & ${ALL_PROJECTION_BITS}) <> ${ALL_PROJECTION_BITS})
             OR COALESCE(s.country_questions_due, false)
+            OR COALESCE(s.inferred_rebuild_due, false)
             OR (COALESCE(s.country_reducer_version, 0) < ${COUNTRY_DAY_REDUCER_VERSION}
                 AND EXISTS (SELECT 1 FROM travtrack_points p WHERE p.user_id = u.id)))
      ORDER BY s.last_run_at ASC NULLS FIRST, u.id
@@ -124,6 +127,41 @@ async function recordFailure(userId: string, now: Date): Promise<void> {
   });
 }
 
+/** Rebuild everything once after a deletion or zone change; otherwise only what the dirty days touch. */
+async function runInferred(
+  userId: string,
+  countryAt: (lat: number, lon: number) => string | null,
+  owedDays: readonly string[]
+): Promise<void> {
+  const state = await prisma.travTrackDerivationState.findUnique({
+    where: { userId },
+    select: { inferredRebuildDue: true },
+  });
+  if (state?.inferredRebuildDue) {
+    // Cleared first: a deletion landing during the rebuild sets it again and is not lost.
+    await prisma.travTrackDerivationState.update({
+      where: { userId },
+      data: { inferredRebuildDue: false },
+    });
+    try {
+      await projectInferredCountryDays(userId, countryAt, null);
+    } catch (error) {
+      await prisma.travTrackDerivationState.update({
+        where: { userId },
+        data: { inferredRebuildDue: true },
+      });
+      throw error;
+    }
+    return;
+  }
+  if (owedDays.length === 0) return;
+  const sorted = [...owedDays].sort();
+  await projectInferredCountryDays(userId, countryAt, {
+    fromDay: sorted[0],
+    toDay: sorted[sorted.length - 1],
+  });
+}
+
 /** One account: project, then ask what is owed. Throws nothing; answers whether it failed. */
 async function runAccount(
   userId: string,
@@ -141,11 +179,27 @@ async function runAccount(
     const monthsOwed = (await pendingDirtyDays(userId, MONTHS_BIT, 1)).length > 0;
     const sharers = 1 + Number(exploredOwed) + Number(monthsOwed);
     const countryBudget = Math.ceil(maxDays / sharers);
+    // The days this run will project, read before it acknowledges them: the inferred silences
+    // touching them are recomputed after it.
+    const owed = await pendingDirtyDays(userId, COUNTRY_DAYS_BIT, countryBudget);
     const projected = await projectTravTrackCountryDays(userId, {
       countryAt,
       maxDays: countryBudget,
     });
     const days = projected.projected + projected.rerun;
+    // Silences spent at a known place: a new upload may have closed one, so every run of an
+    // account with owed work recomputes them. A failure here never holds the real days back.
+    if (projected.status === "done") {
+      try {
+        await runInferred(
+          userId,
+          countryAt,
+          owed.map((d) => d.day)
+        );
+      } catch (error) {
+        logger.warn({ operation: "travtrack.inferredDays.failed", userId, error });
+      }
+    }
     if (projected.status === "failed") {
       await recordFailure(userId, now);
       return { failed: true, questions: 0, days };

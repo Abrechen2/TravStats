@@ -89,3 +89,26 @@ describe("TrackCoverageBar — a silence the logbook explains", () => {
     expect(screen.getByText("track:coverage.entry")).toBeInTheDocument();
   });
 });
+
+describe("TrackCoverageBar — a silence spent at a known place", () => {
+  it("names a stationary piece after its place and a noData piece after why it stayed unexplained", () => {
+    render(
+      <TrackCoverageBar
+        zone="Asia/Seoul"
+        coverage={[
+          {
+            fromMs: D0,
+            untilMs: D0 + 12 * H,
+            state: "stationary",
+            place: { id: "home", kind: "home", name: "Wohnung", lat: 37.5, lon: 127 },
+          },
+          { fromMs: D0 + 12 * H, untilMs: D0 + 24 * H, state: "noData", why: "differentPlaces" },
+        ]}
+      />
+    );
+    const [stationary, noData] = [...screen.getByTestId("track-coverage-bar").children];
+    expect(stationary.getAttribute("data-state")).toBe("stationary");
+    expect(stationary.getAttribute("aria-label")).toContain("track:timeline.stationaryHome");
+    expect(noData.getAttribute("aria-label")).toContain("track:coverage.why.differentPlaces");
+  });
+});

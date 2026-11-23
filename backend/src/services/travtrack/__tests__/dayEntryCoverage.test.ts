@@ -52,7 +52,11 @@ describe("TravTrack — a silence a logbook entry explains", () => {
     await storePoint(userId, { t: at("2026-10-12T14:05:00Z"), lat: 38.771, lon: -9.131 });
   };
 
-  const states = async () => (await travTrackDay(userId, DAY)).coverage;
+  // `why` (the reason a silence was not explained by standing still) is covered in stationarySilence.test.ts.
+  const states = async () =>
+    (await travTrackDay(userId, DAY)).coverage
+      .map((c) => ({ ...c, why: undefined }))
+      .map(({ why: _why, ...c }) => c);
 
   beforeAll(async () => {
     userId = await makeUser(`${PREFIX}a`);

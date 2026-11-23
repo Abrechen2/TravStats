@@ -8,6 +8,7 @@ import { api } from "./client";
 export const GAP_STATES = [
   "entry",
   "home",
+  "place",
   "track",
   "privacyZone",
   "implausible",
@@ -16,7 +17,8 @@ export const GAP_STATES = [
 ] as const;
 export type GapState = (typeof GAP_STATES)[number];
 
-export type GapRun = { from: string; to: string; state: GapState };
+/** `inferred`: a `home` / `place` run with no fix on its days, read from the silence around them. */
+export type GapRun = { from: string; to: string; state: GapState; inferred?: true };
 
 export type GapCalendar = {
   year: number;

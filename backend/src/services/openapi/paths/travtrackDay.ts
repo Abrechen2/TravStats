@@ -48,7 +48,24 @@ const day = z.object({
     .array(
       z.object({
         ...span,
-        state: z.enum(["recorded", "noData", "deleted", "phonePaused", "entry"]),
+        state: z.enum(["recorded", "noData", "deleted", "phonePaused", "entry", "stationary"]),
+        place: z
+          .object({
+            id: z.string(),
+            kind: z.enum(["home", "work", "custom", "place"]),
+            name: z.string(),
+            lat: z.number(),
+            lon: z.number(),
+          })
+          .optional()
+          .describe(
+            "On `stationary` only: the known place both ends of the silence lie in. Inferred, " +
+              "no points were recorded."
+          ),
+        why: z
+          .enum(["openEnd", "differentPlaces", "outsidePlaces", "contradicted"])
+          .optional()
+          .describe("On `noData` only: why standing still did not explain the silence"),
         entry: z
           .object({ domain: z.string(), id: z.string() })
           .optional()
@@ -58,14 +75,15 @@ const day = z.object({
     .describe(
       "The whole day in consecutive pieces. A privacy zone is never a state of its own: " +
         "an hour inside one reads as noData. A noData stretch a logbook entry (flight, rail, bus, " +
-        "ferry, a lodging night …) covers is `entry` for that part."
+        "ferry, a lodging night …) covers is `entry` for that part; one spent at a known place " +
+        "(home first, fixed places, accepted stay places) is `stationary`, inferred."
     ),
   context: z
     .array(
       z.object({
         ...span,
         kind: z
-          .enum([...DOMAIN_KEYS, "trip", "home", "suggestion", "movement"])
+          .enum([...DOMAIN_KEYS, "trip", "home", "suggestion", "movement", "stationary"])
           .describe(
             "A domain's entry (every domain with an entry-window adapter), a trip, time at " +
               "home, an open TravTrack question, or a moving stretch no entry covers"
@@ -90,12 +108,25 @@ const day = z.object({
           .boolean()
           .describe("A moving stretch (≥ 2 km) no entry covers; never carries a guessed mode"),
         suggestion: z.enum(["stay", "journey"]).optional().describe("On a `suggestion`: which"),
+        inferred: z
+          .literal(true)
+          .optional()
+          .describe(
+            "On `stationary`: no points were recorded; presence inferred from standing still"
+          ),
       })
     )
     .describe(
       "What TravStats knows of the day, from its own records: every visible domain's entries, " +
         "trips, stretches within 300 m of home, the open TravTrack questions and the unlabelled " +
         "moving stretches"
+    ),
+  homeSuggestion: z
+    .object({ lat: z.number(), lon: z.number(), fromMs: z.number(), untilMs: z.number() })
+    .nullable()
+    .describe(
+      "No home is known and a silence began and ended at this spot: offer it as the home " +
+        "(the existing home setting is where it is written)"
     ),
   pointCount: z.number().int(),
   truncated: z.boolean().describe("More points than one day answer carries"),

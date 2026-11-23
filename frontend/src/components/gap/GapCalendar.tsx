@@ -31,17 +31,32 @@ type State =
 const CELL = 22;
 
 /** States only TravTrack's fixes can produce: not drawn in the legend where TravTrack is not offered. */
-const TRACK_ONLY: ReadonlySet<GapState> = new Set(["home", "track", "privacyZone", "implausible"]);
+const TRACK_ONLY: ReadonlySet<GapState> = new Set([
+  "home",
+  "place",
+  "track",
+  "privacyZone",
+  "implausible",
+]);
 
 const hatch = (color: string) =>
   `repeating-linear-gradient(45deg, ${alpha(color, 55)} 0 3px, transparent 3px 6px)`;
 
 /** One fill per state; colour is never the only signal (hatching and the legend say the rest). */
-function cellStyle(state: GapState): { background: string; border: string; opacity?: number } {
+function cellStyle(
+  state: GapState,
+  inferred = false
+): { background: string; border: string; opacity?: number } {
+  // Inferred from a silence, not recorded: the hatch (not the colour) says so, dashed edge too.
+  if (inferred && (state === "home" || state === "place")) {
+    return { background: hatch(token("good")), border: `1px dashed ${token("good")}` };
+  }
   switch (state) {
     case "entry":
       return { background: token("good"), border: `1px solid ${token("good")}` };
     case "home":
+      return { background: alpha(token("good"), 40), border: `1px solid ${token("good")}` };
+    case "place":
       return { background: alpha(token("good"), 40), border: `1px solid ${token("good")}` };
     case "track":
       return { background: TRACK_COLOR, border: `1px solid ${TRACK_COLOR}` };
@@ -103,11 +118,14 @@ export default function GapCalendar({ withTrack }: { withTrack: boolean }): JSX.
     `${year}-01`;
   const stretches = data ? unknownStretches(data, shown) : [];
   const years = data && data.years.length > 0 ? data.years : [thisYear];
-  const dayLabel = (day: string, s: GapState) =>
+  const dayLabel = (day: string, s: GapState, inferred = false) =>
     t("track:gaps.cell", {
       day: formatDayLong(day, lang, { day: "numeric", month: "long" }),
-      state: t(`track:gaps.state.${s}`),
+      state: t(
+        `track:gaps.state.${inferred && (s === "home" || s === "place") ? `${s}Inferred` : s}`
+      ),
     });
+  const hasInferred = (data?.runs ?? []).some((r) => r.inferred && r.state === "home");
 
   return (
     <section className="flex flex-col gap-3" data-testid="gap-calendar">
@@ -183,8 +201,8 @@ export default function GapCalendar({ withTrack }: { withTrack: boolean }): JSX.
                 </button>
                 <div className="flex gap-[2px]" style={{ flex: "none" }}>
                   {m.cells.map((cell) => {
-                    const label = dayLabel(cell.day, cell.state);
-                    const style = cellStyle(cell.state);
+                    const label = dayLabel(cell.day, cell.state, cell.inferred === true);
+                    const style = cellStyle(cell.state, cell.inferred === true);
                     return (
                       <button
                         key={cell.day}
@@ -192,6 +210,7 @@ export default function GapCalendar({ withTrack }: { withTrack: boolean }): JSX.
                         title={label}
                         aria-label={label}
                         data-state={cell.state}
+                        data-inferred={cell.inferred ? "true" : undefined}
                         disabled={cell.state === "outside"}
                         onClick={() => navigate(`/track/${cell.day}`)}
                         style={{ width: CELL, height: CELL, padding: 0, borderRadius: 3, ...style }}
@@ -220,6 +239,21 @@ export default function GapCalendar({ withTrack }: { withTrack: boolean }): JSX.
                 {t(`track:gaps.state.${s}`)}
               </li>
             ))}
+            {hasInferred && (
+              <li className="flex items-center gap-1" data-testid="gaps-legend-inferred">
+                <span
+                  aria-hidden
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: 3,
+                    display: "inline-block",
+                    ...cellStyle("home", true),
+                  }}
+                />
+                {t("track:gaps.state.homeInferred")}
+              </li>
+            )}
           </ul>
           <section className="flex flex-col gap-2" data-testid="gaps-month">
             <h3 className="t-card-title">

@@ -7,21 +7,25 @@ export function isDayString(value: string): boolean {
   return addDays(value, 0) === value;
 }
 
-export type GapCell = { day: string; state: GapState };
+export type GapCell = { day: string; state: GapState; inferred?: true };
 export type GapMonth = { month: string; cells: GapCell[] };
 
 /** The state of every day, from the server's runs: 12 months of their own length. */
 export function gapMonths(data: GapCalendar): GapMonth[] {
-  const stateOf = new Map<string, GapState>();
+  const stateOf = new Map<string, { state: GapState; inferred?: true }>();
   for (const run of data.runs) {
-    for (let d = run.from; d <= run.to; d = addDays(d, 1)) stateOf.set(d, run.state);
+    for (let d = run.from; d <= run.to; d = addDays(d, 1))
+      stateOf.set(d, { state: run.state, inferred: run.inferred });
   }
   return Array.from({ length: 12 }, (_, i) => {
     const month = `${data.year}-${String(i + 1).padStart(2, "0")}`;
     const cells = Array.from({ length: daysInMonth(data.year, i + 1) }, (_, k) => {
       const day = `${month}-${String(k + 1).padStart(2, "0")}`;
       // A day the server did not name is never drawn as a gap: it is outside.
-      return { day, state: stateOf.get(day) ?? ("outside" as const) };
+      const found = stateOf.get(day);
+      return found?.inferred
+        ? { day, state: found.state, inferred: true as const }
+        : { day, state: found?.state ?? ("outside" as const) };
     });
     return { month, cells };
   });
