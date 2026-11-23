@@ -8,7 +8,9 @@ import { toursApi } from "../../lib/api/tours";
 import type { RoadtripDetail } from "../../types/roadtrip";
 
 vi.mock("../../components/NavigationBar", () => ({ default: () => <div /> }));
-vi.mock("../../components/Trips/TripMap", () => ({ default: () => <div data-testid="map" /> }));
+vi.mock("../../components/Trips/TripMap", () => ({
+  default: ({ fill }: { fill?: boolean }) => <div data-testid="map" data-fill={String(!!fill)} />,
+}));
 vi.mock("../../components/Roadtrips/StationEditor", () => ({
   default: ({ start }: { start: string }) => <div data-testid="editor">{start}</div>,
 }));
@@ -107,6 +109,7 @@ describe("RoadtripDetailPage", () => {
     renderAt("/roadtrips/rt");
     fireEvent.click(await screen.findByTestId("roadtrip-more"));
     expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual([
+      "roadtrips:editLegs",
       "roadtrips:odometerDialog.open",
       "roadtrips:gpx.export",
       "routing:roadtrip.action",
@@ -115,7 +118,15 @@ describe("RoadtripDetailPage", () => {
     fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
     // The only "delete" left on the page is inside the closed menu, not a footer link.
     expect(screen.queryByText("roadtrips:delete")).toBeNull();
-    expect(screen.getByRole("button", { name: "roadtrips:editLegs" })).toBeInTheDocument();
+    // The route editor is no second button beside "Bearbeiten" any more.
+    expect(screen.queryByRole("button", { name: "roadtrips:editLegs" })).toBeNull();
+  });
+
+  it("fills the map card instead of leaving a gap under a fixed-height map", async () => {
+    renderAt("/roadtrips/rt");
+    const map = await screen.findByTestId("map");
+    expect(map).toHaveAttribute("data-fill", "true");
+    expect(screen.getByTestId("roadtrip-map-card").style.height).not.toBe("");
   });
 
   it("starts the re-route of the roadtrip's own legs from the ⋯ and shows its progress", async () => {
@@ -239,7 +250,7 @@ describe("RoadtripDetailPage", () => {
       expect(pill).toHaveStyle({ color: "var(--ts-status-scheduled)" });
     });
 
-    it("offers “edit legs” as the shared button, which opens the section", async () => {
+    it("reaches the route editor from the ⋯ with exactly one edit button", async () => {
       render(
         <MemoryRouter initialEntries={["/roadtrips/rt"]}>
           <Routes>
@@ -248,18 +259,18 @@ describe("RoadtripDetailPage", () => {
           </Routes>
         </MemoryRouter>
       );
-      const legs = await screen.findByRole("button", { name: "roadtrips:editLegs" });
-      expect(legs).toHaveClass("ts-button");
-      fireEvent.click(legs);
+      fireEvent.click(await screen.findByTestId("roadtrip-more"));
+      expect(
+        screen.getAllByRole("button", { name: /^roadtrips:(detail\.edit|editLegs)$/ })
+      ).toHaveLength(1);
+      fireEvent.click(screen.getByRole("menuitem", { name: "roadtrips:editLegs" }));
       expect(await screen.findByTestId("tour-page")).toBeInTheDocument();
     });
 
     it("draws “edit” as the same secondary button as the other detail pages", async () => {
       renderAt("/roadtrips/rt");
-      const legs = await screen.findByRole("button", { name: "roadtrips:editLegs" });
-      const edit = screen.getByRole("button", { name: "roadtrips:detail.edit" });
+      const edit = await screen.findByRole("button", { name: "roadtrips:detail.edit" });
       expect(edit).toHaveAttribute("data-variant", "secondary");
-      expect(legs).toHaveAttribute("data-variant", "secondary");
     });
   });
 });

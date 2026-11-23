@@ -79,6 +79,8 @@ type PointDatum = TripPointDatum;
 
 interface TripMapProps {
   trip: TripMapContent;
+  /** Fill the parent's (definite) height instead of the fixed 540 px. */
+  fill?: boolean;
   tourGeometries?: readonly {
     routeId: string;
     /** The tour's day; the day filter dims a tour on another day, and keeps an undated one faint too. */
@@ -130,6 +132,7 @@ const TRIP_PICKING_RADIUS = 8;
 
 export default function TripMap({
   trip,
+  fill = false,
   tourGeometries = NO_TOUR_GEOMETRIES,
   extraLayers,
   extraPoints = NO_EXTRA_POINTS,
@@ -656,9 +659,10 @@ export default function TripMap({
   return (
     <div
       className="relative rounded-xl overflow-hidden"
+      data-testid="trip-map-frame"
       style={{
-        height: 540,
-        border: "1px solid var(--color-border)",
+        height: fill ? "100%" : 540,
+        border: fill ? undefined : "1px solid var(--color-border)",
       }}
     >
       <MapGL

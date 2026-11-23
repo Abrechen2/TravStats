@@ -398,7 +398,6 @@ export default function RoadtripDetailPage(): JSX.Element {
   ) : (
     <div className="flex flex-wrap items-center" style={{ gap: 8 }}>
       {gpx.failure}
-      <Button onClick={() => navigate(`/tours/${id}`)}>{t("roadtrips:editLegs")}</Button>
       {/* Secondary and without an icon, like "Bearbeiten" on rail, ferry, bus
           and rentals: a primary button is taller and stood out (forgejo#307). */}
       <Button
@@ -414,6 +413,11 @@ export default function RoadtripDetailPage(): JSX.Element {
         triggerLabel={t("common:buttons.more")}
         testId="roadtrip-more"
         entries={[
+          {
+            key: "editLegs",
+            label: t("roadtrips:editLegs"),
+            onSelect: () => navigate(`/tours/${id}`),
+          },
           {
             key: "odometer",
             label: t("roadtrips:odometerDialog.open"),
@@ -602,6 +606,7 @@ export default function RoadtripDetailPage(): JSX.Element {
         <aside className="order-1 flex flex-col lg:sticky lg:order-2" style={{ gap: 8, top: 72 }}>
           <div
             className="overflow-hidden"
+            data-testid="roadtrip-map-card"
             style={{
               borderRadius: 20,
               border: "1px solid var(--ts-border)",
@@ -611,6 +616,7 @@ export default function RoadtripDetailPage(): JSX.Element {
           >
             <WebGLGuard>
               <TripMap
+                fill
                 trip={mapContent}
                 tourGeometries={mapGeometries}
                 extraLayers={highlight}
