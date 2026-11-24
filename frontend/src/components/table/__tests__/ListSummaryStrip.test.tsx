@@ -7,7 +7,7 @@
  * "Die Kreuzfahrten konnten nicht geladen werden" — four zeros reading as facts
  * about an empty logbook, on top of a sentence saying we do not know.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ListSummaryStrip from "../ListSummaryStrip";
 
@@ -72,5 +72,25 @@ describe("ListSummaryStrip", () => {
       <ListSummaryStrip figures={[]} filtered={false} filteredLabel="gefiltert" />
     );
     expect(container).toBeEmptyDOMElement();
+  });
+
+  // UAT rc.45: the lists' totals did not say what the purpose setting hides.
+  it("says under the totals how many entries of its area are hidden", async () => {
+    const { purposeApi } = await import("../../../lib/api/purpose");
+    const hidden = vi
+      .spyOn(purposeApi, "hidden")
+      .mockResolvedValue({ flight: { business: 3 }, lodging: { business: 9 } });
+    render(
+      <ListSummaryStrip
+        figures={[{ key: "n", value: "12", label: "Flüge" }]}
+        filtered={false}
+        filteredLabel="gefiltert"
+        purposeDomain="flight"
+      />
+    );
+    expect(await screen.findByTestId("purpose-hidden-hint")).toHaveTextContent(
+      "purpose:hidden.business"
+    );
+    hidden.mockRestore();
   });
 });

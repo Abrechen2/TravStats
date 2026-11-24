@@ -293,6 +293,7 @@ export default function RentalsPage(): JSX.Element {
         </div>
 
         <ListSummaryStrip
+          purposeDomain="rental"
           figures={rentalSummaryFigures(summary ?? { rentals: 0, days: 0, providers: 0 }, {
             rentals: (count: number) => t("rental:summary.rentals", { count }),
             days: (count: number) => t("rental:summary.days", { count }),

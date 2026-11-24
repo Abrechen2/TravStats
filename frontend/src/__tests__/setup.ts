@@ -50,6 +50,16 @@ vi.mock("../lib/api/readiness", async (importActual) => {
   const actual = await importActual<typeof import("../lib/api/readiness")>();
   return { ...actual, fetchReadiness: () => new Promise<never>(() => {}) };
 });
+// Every list's totals ask how many entries the purpose setting hides (UAT rc.45). Same rule:
+// the call stays pending, so the hint shows nothing and no request escapes. A test about the
+// hint mocks this module with its own data.
+vi.mock("../lib/api/purpose", async (importActual) => {
+  const actual = await importActual<typeof import("../lib/api/purpose")>();
+  return {
+    ...actual,
+    purposeApi: { ...actual.purposeApi, hidden: () => new Promise<never>(() => {}) },
+  };
+});
 // Every place glyph asks for the user's own place categories. Same rule as above: a test that
 // draws a place neither reaches the network nor settles a state update outside act(), so the
 // list stays pending and the built-in glyphs show. A test about the categories mocks this module.

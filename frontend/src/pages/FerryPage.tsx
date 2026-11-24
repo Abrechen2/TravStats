@@ -281,6 +281,7 @@ export default function FerryPage(): JSX.Element {
         </div>
 
         <ListSummaryStrip
+          purposeDomain="ferry"
           figures={railSummaryFigures(summary ?? EMPTY_FERRY_SUMMARY, {
             journeys: (count: number) => t("ferry:summary.journeys", { count }),
             operators: (count: number) => t("ferry:summary.operators", { count }),

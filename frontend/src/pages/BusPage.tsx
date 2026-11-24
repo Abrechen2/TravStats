@@ -276,6 +276,7 @@ export default function BusPage(): JSX.Element {
         </div>
 
         <ListSummaryStrip
+          purposeDomain="bus"
           figures={railSummaryFigures(summary ?? EMPTY_BUS_SUMMARY, {
             journeys: (count: number) => t("bus:summary.journeys", { count }),
             operators: (count: number) => t("bus:summary.operators", { count }),

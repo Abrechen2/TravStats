@@ -434,6 +434,7 @@ export default function CruisesPage(): JSX.Element {
         </div>
 
         <ListSummaryStrip
+          purposeDomain="cruise"
           figures={summaryFigures}
           filtered={hasActiveFilter}
           filteredLabel={t("common:filters.filtered")}

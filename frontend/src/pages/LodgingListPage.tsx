@@ -537,6 +537,7 @@ export default function LodgingListPage(): JSX.Element {
             next to a filter-aware "7 angezeigt" in the bar. The strip keeps its
             home on the dashboard tab; this list summarises the rows it shows. */}
             <ListSummaryStrip
+              purposeDomain="lodging"
               figures={summaryFigures}
               filtered={hasActiveFilter}
               filteredLabel={t("common:filters.filtered")}

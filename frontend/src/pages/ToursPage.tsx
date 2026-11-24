@@ -184,6 +184,7 @@ export default function ToursPage(): JSX.Element {
       )}
 
       <ListSummaryStrip
+        purposeDomain="tour"
         figures={tourSummaryFigures(visibleTours, {
           tours: (count: number) => t("trips:tours.summary.tours", { count }),
           trips: (count: number) => t("trips:tours.summary.trips", { count }),

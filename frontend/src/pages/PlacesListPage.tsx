@@ -501,6 +501,7 @@ export default function PlacesListPage(): JSX.Element {
         )}
 
         <ListSummaryStrip
+          purposeDomain="poi"
           figures={summaryFigures}
           filtered={hasActiveFilter}
           filteredLabel={t("common:filters.filtered")}

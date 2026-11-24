@@ -361,6 +361,7 @@ export default function RailPage(): JSX.Element {
 
         {/* The strip counts TRAINS in the whole filtered list, not rides (forgejo#187). */}
         <ListSummaryStrip
+          purposeDomain="rail"
           figures={railSummaryFigures(summary ?? EMPTY_RAIL_SUMMARY, {
             journeys: (count: number) => t("rail:summary.journeys", { count }),
             operators: (count: number) => t("rail:summary.operators", { count }),

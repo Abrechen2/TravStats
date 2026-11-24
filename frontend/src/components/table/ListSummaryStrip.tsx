@@ -1,4 +1,6 @@
 import type { JSX } from "react";
+import type { PurposeDomain } from "../../shared/purpose";
+import PurposeHiddenHint from "../purpose/PurposeHiddenHint";
 
 /**
  * A few numbers about the rows you can currently see.
@@ -59,6 +61,12 @@ interface Props {
    * state, reintroduced one element higher up.
    */
   unknown?: boolean;
+  /**
+   * The area these totals count. Given, the strip says under the totals how many entries the
+   * account's "ausblenden" setting leaves out — the statistics page said so and the lists did
+   * not, so a hidden entry read as a missing one (UAT rc.45).
+   */
+  purposeDomain?: PurposeDomain;
 }
 
 export default function ListSummaryStrip({
@@ -66,6 +74,7 @@ export default function ListSummaryStrip({
   filtered,
   filteredLabel,
   unknown = false,
+  purposeDomain,
 }: Props): JSX.Element | null {
   if (unknown || figures.length === 0) return null;
 
@@ -73,37 +82,44 @@ export default function ListSummaryStrip({
   // as round 4 draws it. The figures used to stand as 24px numbers between
   // the title and the table, pushing the first row down.
   return (
-    <p
-      className="t-caption -mt-2 mb-4 flex flex-wrap items-center"
-      style={{ fontFamily: "var(--ts-font-mono)", gap: "4px 8px" }}
-    >
-      {figures.map((f, index) => (
-        <span key={f.key} className="whitespace-nowrap">
-          {index > 0 && <span aria-hidden="true">· </span>}
-          <span style={{ color: "var(--ts-text)", fontVariantNumeric: "tabular-nums" }}>
-            {f.value}
-          </span>{" "}
-          {f.label}
-          {/* The qualifier rides WITH the figure, not beside the strip: an
+    <>
+      <p
+        className="t-caption -mt-2 mb-4 flex flex-wrap items-center"
+        style={{ fontFamily: "var(--ts-font-mono)", gap: "4px 8px" }}
+      >
+        {figures.map((f, index) => (
+          <span key={f.key} className="whitespace-nowrap">
+            {index > 0 && <span aria-hidden="true">· </span>}
+            <span style={{ color: "var(--ts-text)", fontVariantNumeric: "tabular-nums" }}>
+              {f.value}
+            </span>{" "}
+            {f.label}
+            {/* The qualifier rides WITH the figure, not beside the strip: an
               airline count that quietly omits the flights whose carrier was
               never recorded is a different number than it looks, and the
               reader has to see that where they read the number. */}
-          {f.note && <span style={{ opacity: 0.8 }}> {f.note}</span>}
-        </span>
-      ))}
-      {filtered && (
-        <span
-          data-testid="list-summary-filtered"
-          className="rounded-full border px-2 py-0.5 text-[11px]"
-          style={{
-            borderColor: "var(--ts-border)",
-            color: "var(--ts-muted)",
-            fontFamily: "var(--ts-font-ui)",
-          }}
-        >
-          {filteredLabel}
-        </span>
+            {f.note && <span style={{ opacity: 0.8 }}> {f.note}</span>}
+          </span>
+        ))}
+        {filtered && (
+          <span
+            data-testid="list-summary-filtered"
+            className="rounded-full border px-2 py-0.5 text-[11px]"
+            style={{
+              borderColor: "var(--ts-border)",
+              color: "var(--ts-muted)",
+              fontFamily: "var(--ts-font-ui)",
+            }}
+          >
+            {filteredLabel}
+          </span>
+        )}
+      </p>
+      {purposeDomain && (
+        <div className="-mt-3 mb-4">
+          <PurposeHiddenHint domain={purposeDomain} />
+        </div>
       )}
-    </p>
+    </>
   );
 }

@@ -530,6 +530,7 @@ export default function FlightsTablePage(): JSX.Element {
         </div>
 
         <ListSummaryStrip
+          purposeDomain="flight"
           figures={summaryFigures}
           filtered={hasActiveFilter}
           filteredLabel={t("common:filters.filtered")}

@@ -169,6 +169,7 @@ export default function RoadtripsPage(): JSX.Element {
       </div>
 
       <ListSummaryStrip
+        purposeDomain="roadtrip"
         figures={roadtripSummaryFigures(shown, {
           roadtrips: (count: number) => t("roadtrips:list.summary.roadtrips", { count }),
           countries: (count: number) => t("roadtrips:list.summary.countries", { count }),
