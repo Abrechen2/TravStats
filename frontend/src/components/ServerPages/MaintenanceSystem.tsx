@@ -1,6 +1,7 @@
 import { useEffect, useState, type JSX } from "react";
 import { adminApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
+import { useDisplayFormat } from "../../lib/displayFormat";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDemoAccountStore } from "../../store/demoAccountStore";
 import { useToastStore } from "../../store/toastStore";
@@ -40,6 +41,9 @@ export default function MaintenanceSystem(): JSX.Element {
   const [demoBusy, setDemoBusy] = useState(false);
   const [demoFailed, setDemoFailed] = useState(false);
   const [recreating, setRecreating] = useState(false);
+  // Said on the page, not only in a toast that may be missed (UAT rc.45).
+  const [recreated, setRecreated] = useState(false);
+  const fmt = useDisplayFormat();
   const [recreateFailed, setRecreateFailed] = useState(false);
 
   const reseed = useCatalogueReseed({
@@ -114,10 +118,12 @@ export default function MaintenanceSystem(): JSX.Element {
   const recreateDemo = async (): Promise<void> => {
     setRecreating(true);
     setRecreateFailed(false);
+    setRecreated(false);
     try {
       const { jobId } = await adminApi.recreateDemo();
       await waitForJob(jobId);
       addToast("success", t("settingsRows:maintenance.demorecreate.done"));
+      setRecreated(true);
       await load();
       await refreshDemoNotice();
     } catch (error) {
@@ -199,13 +205,16 @@ export default function MaintenanceSystem(): JSX.Element {
         <SettingItem
           title={recreate.title}
           sub={
-            forcedByEnv
-              ? t("settingsRows:maintenance.demorecreate.forced")
-              : removedAt
-                ? t("settingsRows:maintenance.demorecreate.removed", {
-                    date: new Date(removedAt).toLocaleDateString(undefined, { timeZone: "UTC" }),
-                  })
-                : recreate.sub
+            recreating
+              ? t("settingsRows:maintenance.demorecreate.running")
+              : forcedByEnv
+                ? t("settingsRows:maintenance.demorecreate.forced")
+                : removedAt
+                  ? t("settingsRows:maintenance.demorecreate.removed", {
+                      // The account's own date format, not the browser's (UAT rc.45).
+                      date: fmt.date(removedAt),
+                    })
+                  : recreate.sub
           }
           scope="allAccounts"
           expert
@@ -222,7 +231,13 @@ export default function MaintenanceSystem(): JSX.Element {
       {demo ? (
         <SettingItem
           title={del.title}
-          sub={forcedByEnv ? t("settingsRows:maintenance.demorecreate.forced") : undefined}
+          sub={
+            forcedByEnv
+              ? t("settingsRows:maintenance.demorecreate.forced")
+              : recreated
+                ? t("settingsRows:maintenance.demorecreate.done")
+                : undefined
+          }
           scope="allAccounts"
           expert
           error={demoFailed ? t("settingsRows:maintenance.errors.demo") : undefined}

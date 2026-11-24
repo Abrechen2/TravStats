@@ -27,6 +27,14 @@ vi.mock("../../../lib/api", () => ({ adminApi: admin }));
 const client = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock("../../../lib/api/client", () => ({ api: client }));
 vi.mock("../../Admin/LogViewer", () => ({ default: () => null }));
+// The key, plus a `date` argument where one is given, so the date's format is visible.
+vi.mock("../../../hooks/useTranslation", () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { date?: string }) =>
+      options?.date ? `${key} ${options.date}` : key,
+    i18n: { language: "de" },
+  }),
+}));
 
 const config = (over = {}) => ({
   logLevel: "info",
@@ -275,6 +283,34 @@ describe("Wartung › System", () => {
     );
     await waitFor(() => expect(jobs.waitForJob).toHaveBeenCalledWith("j1"));
     expect(admin.recreateDemo).toHaveBeenCalledTimes(1);
+  });
+
+  // UAT rc.45: the date came in the browser's format (11/24/2026), and the
+  // re-creation showed neither that it ran nor that it finished.
+  it("dates the removal in the account's format and says when re-creating runs and is done", async () => {
+    admin.getSystemInfo.mockResolvedValue({
+      version: "2.8.0",
+      demoForcedByEnv: false,
+      demoRemovedAt: "2026-11-22T10:00:00Z",
+    });
+    let finish!: () => void;
+    admin.recreateDemo.mockResolvedValue({ jobId: "j2" });
+    jobs.waitForJob.mockImplementation(() => new Promise<void>((r) => (finish = r)));
+    render(<MaintenanceSystem />);
+    expect(
+      await screen.findByText("settingsRows:maintenance.demorecreate.removed 22.11.2026")
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "settingsRows:maintenance.demorecreate.t" })
+    );
+    expect(
+      await screen.findByText("settingsRows:maintenance.demorecreate.running")
+    ).toBeInTheDocument();
+    admin.getUsers.mockResolvedValue({ users: [{ id: "d", username: "demo", entryTotal: 3 }] });
+    finish();
+    expect(
+      await screen.findByText("settingsRows:maintenance.demorecreate.done")
+    ).toBeInTheDocument();
   });
 
   it("offers a retry when the system data cannot be loaded", async () => {
