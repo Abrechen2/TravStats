@@ -1170,6 +1170,10 @@ model UserSettings {
   // the API nests them as `tripSuggestions.enabled` / `staySuggestions.*`.
   tripSuggestionsEnabled                Boolean @default(true) @map("trip_suggestions_enabled")
   staySuggestionsEnabled                Boolean @default(true) @map("stay_suggestions_enabled")
+  /// Look calendar event locations up in the geocoder to match them to stops (spec
+  /// 2026-11-23-plugins-and-calendar.md). Off by default: a location is personal text, and
+  /// matching against own places and the venue works without it.
+  calendarGeocodeLocations              Boolean @default(false) @map("calendar_geocode_locations")
   /// Immich photos as evidence for which place a stay was at. Read by the stay
   /// place identification of forgejo#305; it only ever applies where the
   /// account has an Immich connection.

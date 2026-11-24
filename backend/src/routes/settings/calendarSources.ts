@@ -35,6 +35,7 @@ import { CalendarError, toCalendarError } from "../../services/calendar/errors";
 import { egressBlock, assertEgressAllowed } from "../../services/externalServices/egress";
 import { profileZoneOf } from "../../shared/time/profileZone";
 import logger from "../../utils/logger";
+import { prisma } from "../../db";
 import {
   calendarRulesPutSchema,
   listRules,
@@ -64,7 +65,33 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const rows = await listSources(req.userId!);
     const block = await egressBlock(CALENDAR_SERVICE_ID);
-    res.json({ sources: rows.map(viewOf), blocked: block });
+    const settings = await prisma.userSettings.findUnique({
+      where: { userId: req.userId! },
+      select: { calendarGeocodeLocations: true },
+    });
+    res.json({
+      sources: rows.map(viewOf),
+      blocked: block,
+      geocodeLocations: settings?.calendarGeocodeLocations ?? false,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/** "Kalenderorte zur Zuordnung nachschlagen": off by default, an event location is personal text. */
+router.patch("/preferences", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { geocodeLocations } = z
+      .object({ geocodeLocations: z.boolean() })
+      .strict()
+      .parse(req.body);
+    await prisma.userSettings.upsert({
+      where: { userId: req.userId! },
+      update: { calendarGeocodeLocations: geocodeLocations },
+      create: { userId: req.userId!, data: {}, calendarGeocodeLocations: geocodeLocations },
+    });
+    res.json({ geocodeLocations });
   } catch (error) {
     next(error);
   }

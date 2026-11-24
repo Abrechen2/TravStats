@@ -48,6 +48,21 @@ export default function CalendarSourcesSection(): JSX.Element {
     void load();
   }, [load]);
 
+  const [geocodeError, setGeocodeError] = useState<string | null>(null);
+  const setGeocode = async (on: boolean) => {
+    setBusy("geocode");
+    setGeocodeError(null);
+    try {
+      const saved = await calendarSourcesApi.setGeocodeLocations(on);
+      setList((l) => l && { ...l, geocodeLocations: saved });
+    } catch (e) {
+      console.warn("calendar geocode switch could not be saved", e);
+      setGeocodeError("suggestionSources:calendar.geocode.error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const runTest = async (source: CalendarSource) => {
     setBusy(source.id);
     try {
@@ -205,6 +220,23 @@ export default function CalendarSourcesSection(): JSX.Element {
           </div>
         </SettingItem>
         <SettingItem title={t(`${NS}.privacy.title`)} sub={t(`${NS}.privacy.sub`)} />
+        {list && (
+          <SettingItem title={t(`${NS}.geocode.title`)} help={t(`${NS}.geocode.help`)}>
+            <Switch
+              id="cal-geocode"
+              checked={list.geocodeLocations}
+              disabled={isDemo || busy === "geocode"}
+              onChange={(on) => void setGeocode(on)}
+              label={t(`${NS}.geocode.label`)}
+              sub={t(`${NS}.geocode.sub`)}
+            />
+            {geocodeError && (
+              <p role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
+                {t(geocodeError)}
+              </p>
+            )}
+          </SettingItem>
+        )}
         {list && list.sources.length > 0 && (
           <CalendarRulesEditor sources={list.sources} disabled={isDemo} />
         )}

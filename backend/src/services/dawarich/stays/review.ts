@@ -18,7 +18,6 @@ import { travTrackInstanceOn, travTrackInstanceOnIn } from "../../travtrack/avai
 import { recheckFinding } from "../../locationEvidence/recheck";
 import { scheduleVisitAutoLink } from "../../places/visitPhotoAutoLink";
 import { applyBrandMatches } from "../../places/brandRules";
-import { scrubCalendar } from "../../travtrack/visits/calendarMatch";
 
 /** The purpose the accept writes: the dialog's choice, else what the finding suggested. */
 function purposeOf(input: StayReview, evidence: unknown): "private" | "business" | null {
@@ -223,7 +222,8 @@ export async function applyStayAcceptance(
     await tx.placeVisit.update({ where: { id: existing.id }, data: { tripId: input.tripId } });
   // A visit already there keeps the purpose its owner set; an explicit choice in the dialog wins.
   const purpose = purposeOf(input, row.evidence);
-  if (existing && purpose && (input.purpose !== undefined || existing.purpose === null))
+  // An explicit choice (null included: "deliberately unknown") is written as chosen.
+  if (existing && (input.purpose !== undefined || (purpose && existing.purpose === null)))
     await tx.placeVisit.update({ where: { id: existing.id }, data: { purpose } });
   // An automatic acceptance remembers whether it is what made the place visited, so undoing it
   // reverses exactly that and never a flag the owner had set (brandRules.undoAutoAccepted).
@@ -243,12 +243,13 @@ export async function applyStayAcceptance(
     zone: zone!,
     startAt: start.visitedAtUtc,
     endAt: end.visitedAtUtc,
-    // The matched calendar event shrinks to its source, keyed UID and span once answered.
-    ...(promotedVisited || scrubCalendar(row.evidence)
+    // The matched calendar event shrinks to its source, keyed UID and span in the database
+    // itself (trigger `dawarich_stays_shrink_calendar`), on this and every other status change.
+    ...(promotedVisited
       ? {
           evidence: {
-            ...(scrubCalendar(row.evidence) ?? ((row.evidence ?? {}) as Record<string, unknown>)),
-            ...(promotedVisited ? { promotedVisited: true } : {}),
+            ...((row.evidence ?? {}) as Record<string, unknown>),
+            promotedVisited: true,
           } as unknown as Prisma.InputJsonValue,
         }
       : {}),
@@ -312,13 +313,6 @@ export async function rejectStay(userId: string, id: string) {
       where: { id, userId },
       select: { evidence: true },
     });
-    // A rejected finding keeps of its calendar event only source, keyed UID and span (council).
-    const scrubbed = scrubCalendar(row?.evidence);
-    if (scrubbed)
-      await tx.dawarichStay.update({
-        where: { id },
-        data: { evidence: scrubbed as unknown as Prisma.InputJsonValue },
-      });
     const replaced = (row?.evidence as { supersededFindingIds?: unknown } | null)
       ?.supersededFindingIds;
     const ids = Array.isArray(replaced)

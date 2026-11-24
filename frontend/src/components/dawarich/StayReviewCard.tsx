@@ -58,6 +58,9 @@ export default function StayReviewCard({
   );
   // Starts with what the evidence suggests (a calendar rule); the user may change it.
   const [purpose, setPurpose] = useState<Purpose>(row.evidence.suggestedPurpose ?? "");
+  // Sent only when there is something to say: a suggestion, or the user's own choice. An
+  // untouched "Nicht festgelegt" must not clear the purpose of a visit that already exists.
+  const [purposeTouched, setPurposeTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submit = async (accept: boolean) => {
@@ -71,7 +74,7 @@ export default function StayReviewCard({
       lon: Number(lon),
       startAt: { local: start },
       endAt: { local: end },
-      purpose: purpose || null,
+      ...(purposeTouched || row.evidence.suggestedPurpose ? { purpose: purpose || null } : {}),
     };
     try {
       if (accept) {
@@ -343,7 +346,10 @@ export default function StayReviewCard({
               className="input"
               value={purpose}
               disabled={busy}
-              onChange={(e) => setPurpose(e.target.value as Purpose)}
+              onChange={(e) => {
+                setPurposeTouched(true);
+                setPurpose(e.target.value as Purpose);
+              }}
               data-testid="stay-purpose"
             >
               <option value="">{t("purpose:field.unknown")}</option>

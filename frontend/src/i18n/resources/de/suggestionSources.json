@@ -75,6 +75,13 @@
         "CALENDAR_HTTPS_REQUIRED": "Bitte eine https-Adresse verwenden. Über http würden Adresse und Passwort lesbar übertragen.",
         "CALENDAR_UNSAFE_TIMEZONE": "Der Kalender enthält eine Zeitzone mit unzulässigen Regeln und wird nicht gelesen."
       }
+    },
+    "geocode": {
+      "title": "Orte von Terminen",
+      "label": "Kalenderorte zur Zuordnung nachschlagen",
+      "sub": "Aus: Termine passen nur über eigene Orte, den gefundenen Ort beim Stopp oder den Ort einer Regel.",
+      "help": "An: der Ort eines Termins, den eine Regel auswählt, wird beim Geodienst des Servers nachgeschlagen, um ihn einem Stopp zuzuordnen. Nur für Stopps außerhalb deiner Privatzonen. Der Text wird nicht gespeichert und nicht protokolliert.",
+      "error": "Die Einstellung konnte nicht gespeichert werden. Bitte versuche es noch einmal."
     }
   },
   "inbox": {

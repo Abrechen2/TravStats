@@ -88,8 +88,6 @@ describe("Dawarich stays remain reviewable suggestions", () => {
       lon: 126.98,
       startAt: { local: "2026-10-10T23:55" },
       endAt: { local: "2026-10-11T00:20" },
-      // No purpose suggested and none chosen: sent as deliberately unknown.
-      purpose: null,
     });
   });
   it("keeps the form and corrections when acceptance fails", async () => {

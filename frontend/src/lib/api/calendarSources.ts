@@ -27,6 +27,8 @@ export interface CalendarSource {
 export interface CalendarSourceList {
   sources: CalendarSource[];
   blocked: "internet_off" | "service_off" | null;
+  /** "Kalenderorte zur Zuordnung nachschlagen" — off by default. */
+  geocodeLocations: boolean;
 }
 
 export interface CalendarTestResult {
@@ -105,6 +107,12 @@ export interface CalendarRule {
 }
 
 export const calendarSourcesApi = {
+  async setGeocodeLocations(geocodeLocations: boolean): Promise<boolean> {
+    const { data } = await api.patch("/settings/calendar-sources/preferences", {
+      geocodeLocations,
+    });
+    return data.geocodeLocations;
+  },
   async rules(): Promise<CalendarRule[]> {
     const { data } = await api.get("/settings/calendar-sources/rules");
     return data.rules;

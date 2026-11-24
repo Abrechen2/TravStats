@@ -11,6 +11,7 @@ import { prisma } from "../../../db";
 import logger from "../../../utils/logger";
 import { deriveInstanceSecret } from "../../../utils/encryptionKey";
 import { geocodeAddressDetailed, type GeocodeOutcome } from "../../geo/nominatim";
+import { egressBlock } from "../../externalServices/egress";
 import { readSourceWindow, type CalendarReadDeps } from "../../calendar/sources";
 import { toCalendarError } from "../../calendar/errors";
 import type { CalendarEvent } from "../../calendar/icsParse";
@@ -30,6 +31,41 @@ import {
 export const CALENDAR_GEOCODES_PER_RUN = 20;
 const NEAR_DEG = 0.005;
 const UID_LABEL = "travstats-calendar-uid-v1";
+const GEOCODE_CACHE_MAX = 2000;
+const GEOCODE_CACHE_MS = 7 * 86_400_000;
+
+/**
+ * Event locations already asked, keyed by a hash of the normalised text — the text itself is
+ * kept nowhere (security review). Answers only: a failure is not cached, so it is asked again.
+ */
+const geocodeCache = new Map<string, { coords: { lat: number; lon: number } | null; at: number }>();
+export const clearCalendarGeocodeCache = (): void => geocodeCache.clear();
+const locationKey = (location: string): string =>
+  crypto
+    .createHash("sha256")
+    .update(location.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim())
+    .digest("hex");
+
+async function cachedGeocode(
+  location: string,
+  geocode: (query: string) => Promise<GeocodeOutcome>
+): Promise<GeocodeOutcome> {
+  const key = locationKey(location);
+  const hit = geocodeCache.get(key);
+  if (hit && Date.now() - hit.at < GEOCODE_CACHE_MS) return { coords: hit.coords, failed: false };
+  const answer = await geocode(location);
+  if (!answer.failed) {
+    if (geocodeCache.size >= GEOCODE_CACHE_MAX) {
+      const oldest = geocodeCache.keys().next().value;
+      if (oldest !== undefined) geocodeCache.delete(oldest);
+    }
+    geocodeCache.set(key, {
+      coords: answer.coords ? { lat: answer.coords.lat, lon: answer.coords.lon } : null,
+      at: Date.now(),
+    });
+  }
+  return answer;
+}
 
 export interface DayEvent {
   sourceId: string;
@@ -56,6 +92,12 @@ export interface CalendarContext {
   rulePlaces: Map<string, NamedPlace>;
   geocode: (query: string) => Promise<GeocodeOutcome>;
   geocodesLeft: number;
+  /**
+   * Whether event locations may go to the geocoder: the account's own switch (off by default)
+   * and the geocoder's catalogue entry under the internet switch. Without it an event still
+   * matches by an own place's or the venue's name, or a rule's place.
+   */
+  geocodeAllowed: boolean;
 }
 
 export interface CalendarEvidence {
@@ -139,6 +181,12 @@ export async function loadCalendarContext(
     ? await deps.read(userId, window)
     : await readCalendarDay(userId, window, profileZone, deps.readDeps);
   const rules = (await listRules(userId)).map(ruleView);
+  const settings = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: { calendarGeocodeLocations: true },
+  });
+  const geocodeAllowed =
+    settings?.calendarGeocodeLocations === true && (await egressBlock("geocoder")) === null;
   const placeIds = rules.flatMap((r) => (r.placeId ? [r.placeId] : []));
   const places = placeIds.length
     ? await prisma.place.findMany({
@@ -151,8 +199,10 @@ export async function loadCalendarContext(
     day,
     rules,
     rulePlaces: new Map(places.map((p) => [p.id, p])),
-    geocode: deps.geocode ?? ((q) => geocodeAddressDetailed({ address: q })),
+    geocode:
+      deps.geocode ?? ((q) => geocodeAddressDetailed({ address: q }, { privateQuery: true })),
     geocodesLeft: CALENDAR_GEOCODES_PER_RUN,
+    geocodeAllowed,
   };
 }
 
@@ -226,11 +276,13 @@ export async function matchStop(
     const rulePlace = rule.placeId ? (ctx.rulePlaces.get(rule.placeId) ?? null) : null;
     let geocoded: { lat: number; lon: number } | null = null;
     const nameMatch = placeMatch(c.event, stop, { geocoded: null, named, rulePlace: null });
-    if (c.event.location && !nameMatch) {
+    // Only an event a rule selected, only with the account's switch on, and only for a stop the
+    // caller has already held against the privacy zones (`handleStop` asks before anything else).
+    if (c.event.location && !nameMatch && rule.ruleId && ctx.geocodeAllowed) {
       if (ctx.geocodesLeft <= 0) failed = true;
       else {
         ctx.geocodesLeft--;
-        const answer = await ctx.geocode(c.event.location);
+        const answer = await cachedGeocode(c.event.location, ctx.geocode);
         if (answer.failed) failed = true;
         else if (answer.coords) geocoded = { lat: answer.coords.lat, lon: answer.coords.lon };
       }
@@ -276,20 +328,5 @@ export function withCalendar(
     ...(match.purpose && !prior.suggestedPurpose
       ? { suggestedPurpose: match.purpose, suggestedPurposeFrom: "calendar" }
       : {}),
-  };
-}
-
-/**
- * What survives of a matched event once the finding is answered (council,
- * 2026-11-23): its source, keyed UID and span — no title, no location. The
- * title lives on only in what the user accepted.
- */
-export function scrubCalendar(evidence: unknown): Record<string, unknown> | null {
-  const prior = (evidence ?? null) as Record<string, unknown> | null;
-  const cal = prior?.calendar as Partial<CalendarEvidence> | undefined;
-  if (!prior || !cal) return null;
-  return {
-    ...prior,
-    calendar: { sourceId: cal.sourceId, uidHash: cal.uidHash, start: cal.start, end: cal.end },
   };
 }

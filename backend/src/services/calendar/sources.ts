@@ -218,8 +218,9 @@ export async function updateSource(
 /**
  * Removing a source removes what it left on open findings (council, 2026-11-23):
  * a finding that exists only because of it goes, every other loses its
- * `evidence.calendar` and the purpose the calendar suggested. Answered findings
- * already hold no more than the event's span. Its rules go with it (cascade).
+ * `evidence.calendar` and the purpose the calendar suggested, and every answered
+ * one keeps no more than the event's span (the trigger already holds that; this
+ * holds it for any row a past path left). Its rules go with it (cascade).
  */
 export async function deleteSource(userId: string, id: string): Promise<void> {
   const row = await ownSource(userId, id);
@@ -236,6 +237,15 @@ export async function deleteSource(userId: string, id: string): Promise<void> {
                    THEN ARRAY['suggestedPurpose', 'suggestedPurposeFrom']
                    ELSE ARRAY[]::text[] END)
        WHERE user_id = ${userId} AND status = 'pending'
+         AND evidence->'calendar'->>'sourceId' = ${row.id}`;
+    // Every other row of the source, whatever its status: nothing of the event's text stays.
+    await tx.$executeRaw`
+      UPDATE dawarich_stays
+         SET evidence = jsonb_set(evidence, '{calendar}',
+             (evidence->'calendar') - ARRAY['title', 'location', 'sourceLabel', 'proposedName',
+                                            'geocoded', 'rule', 'allDay', 'match', 'timeMatch',
+                                            'overlapMinutes'])
+       WHERE user_id = ${userId}
          AND evidence->'calendar'->>'sourceId' = ${row.id}`;
     await tx.calendarSource.delete({ where: { id: row.id } });
   });

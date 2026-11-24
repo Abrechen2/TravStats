@@ -40,6 +40,7 @@ registry.registerPath({
         z.object({
           sources: z.array(calendarSourceViewSchema),
           blocked: z.enum(["internet_off", "service_off"]).nullable(),
+          geocodeLocations: z.boolean(),
         })
       ),
     },
@@ -150,5 +151,20 @@ registry.registerPath({
     },
     400: { description: "Invalid", content: errorContent },
     404: { description: "Source or place not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/settings/calendar-sources/preferences",
+  summary: "Whether event locations may be looked up in the geocoder",
+  description:
+    "Off by default: an event location is personal text. Without it an event still matches a " +
+    "stop by an own place's or the venue's name, or by a rule's place.",
+  tags,
+  request: { body: { content: json(z.object({ geocodeLocations: z.boolean() })) } },
+  responses: {
+    200: { description: "Saved", content: json(z.object({ geocodeLocations: z.boolean() })) },
+    400: { description: "Invalid", content: errorContent },
   },
 });

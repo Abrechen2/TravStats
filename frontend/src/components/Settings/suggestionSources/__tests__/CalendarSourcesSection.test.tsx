@@ -17,6 +17,7 @@ const api = vi.hoisted(() => ({
   test: vi.fn(),
   discover: vi.fn(),
   rules: vi.fn(async () => []),
+  setGeocodeLocations: vi.fn(),
   saveRules: vi.fn(),
 }));
 vi.mock("../../../../lib/api/dawarichStays", () => ({
@@ -48,7 +49,7 @@ const rejectWith = (error: string, code?: string) =>
 
 beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
-  api.list.mockResolvedValue({ sources: [SOURCE], blocked: null });
+  api.list.mockResolvedValue({ sources: [SOURCE], blocked: null, geocodeLocations: false });
 });
 afterEach(() => {
   cleanup();
@@ -79,14 +80,25 @@ describe("CalendarSourcesSection", () => {
     expect(await screen.findByText("suggestionSources:calendar.failure.kind.auth")).toBeTruthy();
   });
 
+  it("keeps place lookups off until the account switches them on", async () => {
+    api.setGeocodeLocations.mockResolvedValue(true);
+    render(<CalendarSourcesSection />);
+    const toggle = (await screen.findByLabelText(
+      "suggestionSources:calendar.geocode.label"
+    )) as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+    await userEvent.click(toggle);
+    await waitFor(() => expect(api.setGeocodeLocations).toHaveBeenCalledWith(true));
+  });
+
   it("says when the server switched calendars off", async () => {
-    api.list.mockResolvedValue({ sources: [], blocked: "service_off" });
+    api.list.mockResolvedValue({ sources: [], blocked: "service_off", geocodeLocations: false });
     render(<CalendarSourcesSection />);
     expect(await screen.findByText("suggestionSources:calendar.blocked.service_off")).toBeTruthy();
   });
 
   it("adds a CalDAV source with the calendars picked after discovery", async () => {
-    api.list.mockResolvedValue({ sources: [], blocked: null });
+    api.list.mockResolvedValue({ sources: [], blocked: null, geocodeLocations: false });
     api.discover.mockResolvedValue([
       { href: "https://dav.example.com/cal/work/", name: "Arbeit" },
       { href: "https://dav.example.com/cal/home/", name: "Privat" },

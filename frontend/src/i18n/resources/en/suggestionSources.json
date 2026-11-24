@@ -75,6 +75,13 @@
         "CALENDAR_HTTPS_REQUIRED": "Please use an https address. Over http the address and password would travel readable.",
         "CALENDAR_UNSAFE_TIMEZONE": "The calendar contains a time zone with invalid rules and is not read."
       }
+    },
+    "geocode": {
+      "title": "Appointment places",
+      "label": "Look calendar places up for matching",
+      "sub": "Off: appointments match only through own places, the place found at the stop, or a rule's place.",
+      "help": "On: the place of an appointment a rule selects is looked up with the server's geocoder to match it to a stop. Only for stops outside your privacy zones. The text is neither stored nor logged.",
+      "error": "The setting could not be saved. Please try again."
     }
   },
   "inbox": {

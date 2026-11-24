@@ -9,7 +9,8 @@ import { makeUser, storePoint, wipeTravTrack } from "../../__tests__/fixtures";
 import { travTrackSwitches } from "../../__tests__/switches";
 import { clearVisitRetry, projectVisitSuggestions, type VisitProjectionDeps } from "../project";
 import type { VisitResolution } from "../resolve";
-import type { CalendarDay } from "../calendarMatch";
+import { clearCalendarGeocodeCache, type CalendarDay } from "../calendarMatch";
+import { updatePolicy } from "../../../externalServices/policy";
 import type { GeocodeOutcome } from "../../../geo/nominatim";
 
 jest.mock("../../../../utils/achievements", () => ({
@@ -130,8 +131,14 @@ describe("projectVisitSuggestions with a calendar", () => {
     await setLocationProvider(userId, "travtrack");
     await prisma.userSettings.update({
       where: { userId },
-      data: { enabledDomains: ["poi"], staySuggestionsEnabled: true },
+      data: {
+        enabledDomains: ["poi"],
+        staySuggestionsEnabled: true,
+        calendarGeocodeLocations: true,
+      },
     });
+    await prisma.travTrackPrivacyZone.deleteMany({ where: { userId } });
+    clearCalendarGeocodeCache();
     await prisma.dawarichStay.deleteMany({ where: { userId } });
     await prisma.placeVisit.deleteMany({ where: { userId } });
     await prisma.place.deleteMany({ where: { userId } });
@@ -280,6 +287,44 @@ describe("projectVisitSuggestions with a calendar", () => {
     );
   });
 
+  it("an explicit 'unknown' in the dialog clears the purpose of the visit it lands on", async () => {
+    resolveStop.mockResolvedValue(noVenue);
+    await projectVisitSuggestions(userId, deps);
+    const [first] = await rows();
+    await acceptStay(userId, first.id, review(first));
+    const accepted = await prisma.dawarichStay.findUniqueOrThrow({ where: { id: first.id } });
+    // A second (Dawarich) finding of the same place and time reuses that visit.
+    const second = await prisma.dawarichStay.create({
+      data: {
+        userId,
+        fingerprint: "second",
+        sourceStartAt: accepted.sourceStartAt,
+        sourceEndAt: accepted.sourceEndAt,
+        sourceLat: accepted.sourceLat,
+        sourceLon: accepted.sourceLon,
+        startAt: accepted.startAt,
+        endAt: accepted.endAt,
+        lat: accepted.lat,
+        lon: accepted.lon,
+        zone: accepted.zone,
+        pointCount: 3,
+        evidence: { suggestedPurpose: "business" },
+        name: accepted.name,
+        provider: "dawarich",
+        providerRev: 0,
+        algorithmVersion: 1,
+      },
+    });
+    await acceptStay(userId, second.id, {
+      ...review(accepted),
+      placeId: accepted.placeId,
+      purpose: null,
+    });
+    const visits = await prisma.placeVisit.findMany({ where: { userId } });
+    expect(visits).toHaveLength(1);
+    expect(visits[0].purpose).toBeNull();
+  });
+
   it("rejecting keeps only the event's span", async () => {
     resolveStop.mockResolvedValue(noVenue);
     await projectVisitSuggestions(userId, deps);
@@ -288,6 +333,121 @@ describe("projectVisitSuggestions with a calendar", () => {
     const [after] = await rows();
     expect(JSON.stringify(after.evidence)).not.toContain("Musterfirma");
     expect(after.status).toBe("rejected");
+    // The calendar made it: the name it took from the event's title goes as well.
+    expect(after.name).toBeNull();
+    expect(after.evidence).not.toHaveProperty("suggestedPurpose");
+  });
+
+  describe("geocoding event locations (security review)", () => {
+    it("asks nothing while the account's switch is off (the default)", async () => {
+      await prisma.userSettings.update({
+        where: { userId },
+        data: { calendarGeocodeLocations: false },
+      });
+      resolveStop.mockResolvedValue(noVenue);
+      expect(await projectVisitSuggestions(userId, deps)).toMatchObject({ created: 0 });
+      expect(geocode).not.toHaveBeenCalled();
+    });
+
+    it("still matches by the venue's name without geocoding", async () => {
+      await prisma.userSettings.update({
+        where: { userId },
+        data: { calendarGeocodeLocations: false },
+      });
+      read.mockResolvedValue({
+        failed: 0,
+        events: [event("WAR Bürohaus-Termin", FROM, FROM + 30 * MIN, "Bürohaus, 2. OG")],
+      });
+      resolveStop.mockResolvedValue(venue);
+      await projectVisitSuggestions(userId, deps);
+      expect(geocode).not.toHaveBeenCalled();
+      expect((await rows())[0].evidence).toMatchObject({ calendar: { match: "placeName" } });
+    });
+
+    it("asks only for an event a rule selected", async () => {
+      await prisma.calendarRule.deleteMany({ where: { userId } });
+      resolveStop.mockResolvedValue(noVenue);
+      await projectVisitSuggestions(userId, deps);
+      expect(geocode).not.toHaveBeenCalled();
+    });
+
+    it("asks nothing for a stop inside a privacy zone", async () => {
+      await prisma.travTrackPrivacyZone.create({
+        data: { userId, name: "Home", ...AT, radiusM: 200 },
+      });
+      resolveStop.mockResolvedValue(noVenue);
+      expect(await projectVisitSuggestions(userId, deps)).toMatchObject({ created: 0 });
+      expect(geocode).not.toHaveBeenCalled();
+    });
+
+    it("asks nothing while the admin switched the geocoder off", async () => {
+      await updatePolicy((p) => ({ ...p, disabled: [...p.disabled, "geocoder"] }));
+      try {
+        resolveStop.mockResolvedValue(noVenue);
+        await projectVisitSuggestions(userId, deps);
+        expect(geocode).not.toHaveBeenCalled();
+      } finally {
+        await updatePolicy((p) => ({ ...p, disabled: p.disabled.filter((d) => d !== "geocoder") }));
+      }
+    });
+
+    it("asks once per location: the answer is cached under a hash", async () => {
+      resolveStop.mockResolvedValue(noVenue);
+      geocode.mockResolvedValue({ coords: null, failed: false });
+      await projectVisitSuggestions(userId, deps);
+      await prisma.$executeRaw`UPDATE travtrack_dirty_days SET done = 0, version = version + 1 WHERE user_id = ${userId}`;
+      await projectVisitSuggestions(userId, deps);
+      expect(geocode).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("what an answered finding keeps (trigger)", () => {
+    it.each(["accepted", "rejected", "superseded", "covered", "invalidated"])(
+      "a move to %s keeps only source, keyed UID and span",
+      async (status) => {
+        resolveStop.mockResolvedValue(noVenue);
+        await projectVisitSuggestions(userId, deps);
+        const [row] = await rows();
+        await prisma.dawarichStay.update({ where: { id: row.id }, data: { status } });
+        const [after] = await rows();
+        expect(Object.keys((after.evidence as { calendar: object }).calendar).sort()).toEqual([
+          "end",
+          "sourceId",
+          "start",
+          "uidHash",
+        ]);
+        expect(after.evidence).not.toHaveProperty("suggestedPurpose");
+        expect(after.name).toBe(status === "accepted" ? "Musterfirma" : null);
+      }
+    );
+
+    it("an open finding keeps the whole event", async () => {
+      resolveStop.mockResolvedValue(noVenue);
+      await projectVisitSuggestions(userId, deps);
+      await prisma.dawarichStay.updateMany({ where: { userId }, data: { status: "accepting" } });
+      expect((await rows())[0].evidence).toMatchObject({ calendar: { title: "WAR Musterfirma" } });
+    });
+
+    it("removing the source strips the text from answered rows a past path left whole", async () => {
+      resolveStop.mockResolvedValue(noVenue);
+      await projectVisitSuggestions(userId, deps);
+      await prisma.$executeRawUnsafe(
+        "ALTER TABLE dawarich_stays DISABLE TRIGGER dawarich_stays_shrink_calendar"
+      );
+      try {
+        await prisma.dawarichStay.updateMany({ where: { userId }, data: { status: "accepted" } });
+      } finally {
+        await prisma.$executeRawUnsafe(
+          "ALTER TABLE dawarich_stays ENABLE TRIGGER dawarich_stays_shrink_calendar"
+        );
+      }
+      expect((await rows())[0].evidence).toMatchObject({ calendar: { title: "WAR Musterfirma" } });
+      await deleteSource(userId, sourceId);
+      const text = JSON.stringify((await rows())[0].evidence);
+      expect(text).not.toContain("Musterfirma");
+      expect(text).not.toContain("Musterstraße");
+      expect(text).not.toContain("Arbeit");
+    });
   });
 
   it("removing the source removes its finding and its evidence on open findings", async () => {
