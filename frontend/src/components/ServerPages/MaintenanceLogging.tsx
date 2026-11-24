@@ -102,6 +102,17 @@ function Rows({
   const fmt = useDisplayFormat();
   const addToast = useToastStore((s) => s.addToast);
   const [viewer, setViewer] = useState<string | null>(null);
+  // "Anzeigen" opened the file in the viewer far below the file list, out of
+  // sight, so the button seemed to do nothing (UAT rc.45). It scrolls there now.
+  const viewerRef = useRef<HTMLDivElement>(null);
+  const [reveal, setReveal] = useState(0);
+  useEffect(() => {
+    if (reveal > 0) viewerRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, [reveal]);
+  const show = (filename: string): void => {
+    setViewer(filename);
+    setReveal((n) => n + 1);
+  };
   const [asking, setAsking] = useState<"cleanup" | { file: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -282,7 +293,7 @@ function Rows({
                     {fmt.dateTime(file.modified) || "—"}
                   </span>
                 </span>
-                <Button variant="secondary" onClick={() => setViewer(file.filename)}>
+                <Button variant="secondary" onClick={() => show(file.filename)}>
                   {t("admin:logging.files.view")}
                 </Button>
                 <Button variant="secondary" onClick={() => void download(file.filename)}>
@@ -296,7 +307,9 @@ function Rows({
           </ul>
         )}
       </SettingItem>
-      <LogViewer files={files} selectedFile={viewer} onSelectFile={setViewer} />
+      <div ref={viewerRef} style={{ scrollMarginTop: "var(--ts-header-h, 64px)" }}>
+        <LogViewer files={files} selectedFile={viewer} onSelectFile={setViewer} />
+      </div>
       <SettingItem
         title={clean.title}
         scope="allAccounts"

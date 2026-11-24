@@ -152,6 +152,22 @@ describe("Wartung › Protokoll", () => {
     );
     expect(await screen.findByText("admin:toasts.logFileDeletFailed")).toBeInTheDocument();
   });
+
+  // UAT rc.45: "Anzeigen" filled the viewer far below the file list, out of sight.
+  it("scrolls the log viewer into view when a file is opened from the list", async () => {
+    const scroll = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scroll;
+    try {
+      render(<MaintenanceLogging />);
+      await userEvent.click(
+        await screen.findByRole("button", { name: "admin:logging.files.view" })
+      );
+      expect(scroll).toHaveBeenCalled();
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
 });
 
 describe("Wartung › System", () => {
