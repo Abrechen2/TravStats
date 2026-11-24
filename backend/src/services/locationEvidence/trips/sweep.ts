@@ -6,6 +6,9 @@
  * never selected (open owner decision (c)). One account's failure is logged
  * and stops no other.
  *
+ * Accounts with trip suggestions switched off are not selected at all
+ * (trip suggestions v2: one gate for every trip question).
+ *
  * Bounded (Codex review of L4, P3): a run never overlaps the previous one in
  * this process (single flight — the server runs as one process, like the
  * projection scheduler), and takes at most `TRIP_ACCOUNTS_PER_RUN` accounts,
@@ -30,6 +33,7 @@ async function accountsToScan(limit: number): Promise<string[]> {
     SELECT us.user_id FROM user_settings us
       LEFT JOIN travtrack_derivation_state s ON s.user_id = us.user_id
      WHERE us.location_provider = 'travtrack'
+       AND us.trip_suggestions_enabled
      ORDER BY s.trip_scanned_at ASC NULLS FIRST, us.user_id
      LIMIT ${limit}`;
   return rows.map((r) => r.user_id);

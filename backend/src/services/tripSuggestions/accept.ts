@@ -14,6 +14,8 @@ import { recheckAchievements } from "../../utils/achievements";
 import { recomputeTripStatus } from "../tripStatusService";
 import { invalidateTripSuggestions } from "./engine";
 import { proposalId } from "./proposals";
+import { resolveHome } from "./context";
+import { homeSignature } from "./rejectionMemory";
 import { dayColumn as dayDate } from "./time";
 import { typedTripDays } from "../timeModel/tripColumns";
 import { visitColumnsFromDay } from "../timeModel/visitColumns";
@@ -174,6 +176,8 @@ async function acceptTrip(
         endDate: dayDate(endDay),
         ...typedTripDays({ startDate: dayDate(startDay), endDate: dayDate(endDay) }),
         destinationLabel: proposal.destination,
+        // An all-business absence is proposed as a business trip (v2).
+        ...(proposal.purpose === "business" ? { category: "business" } : {}),
         status: (await statusFromOwnDates(userId, dayDate(startDay), dayDate(endDay))) ?? undefined,
       },
     });
@@ -249,11 +253,18 @@ async function recordAnswer(
   userId: string,
   proposal: TripSuggestion,
   status: "accepted" | "dismissed",
-  created: { createdTripId?: string; createdPlaceVisitId?: string } = {}
+  created: { createdTripId?: string; createdPlaceVisitId?: string } = {},
+  homeSignature: string | null = null
 ): Promise<void> {
   const data = {
     kind: proposal.kind,
     status,
+    // The days the answer settles — what the rejection memory reads (v2).
+    startDay: dayDate(proposal.startDay),
+    endDay: dayDate(proposal.endDay),
+    homeSignature,
+    source: "engine",
+    expanded: proposal.expanded === true,
     targetId: proposal.trip?.id ?? proposal.place?.id ?? null,
     // A visit proposal has no members; its anchor is what the answer settles.
     memberKeys:
@@ -299,6 +310,8 @@ async function recordDeclined(
     targetId: tripId,
     memberKeys: declined,
     memberContentKeys: declinedMembers.map((m) => contentKey(m.domain, m.startDay, m.label)),
+    // No days: they are the trip just made; only this member set is settled.
+    source: "declined",
     createdTripId: null,
     createdPlaceVisitId: null,
   };
@@ -333,6 +346,8 @@ export async function acceptSuggestion(
 }
 
 export async function dismissSuggestion(userId: string, proposal: TripSuggestion): Promise<void> {
-  await prisma.$transaction((tx) => recordAnswer(tx, userId, proposal, "dismissed"));
+  const { homeAt } = await resolveHome(userId);
+  const signature = homeSignature(homeAt(proposal.startDay));
+  await prisma.$transaction((tx) => recordAnswer(tx, userId, proposal, "dismissed", {}, signature));
   invalidateTripSuggestions(userId);
 }

@@ -1178,6 +1178,9 @@ model UserSettings {
   // back on resumes where the user left. Flat columns like `autoCreateTrips`;
   // the API nests them as `tripSuggestions.enabled` / `staySuggestions.*`.
   tripSuggestionsEnabled                Boolean @default(true) @map("trip_suggestions_enabled")
+  /// Days after a dismissed trip suggestion during which no proposal over the
+  /// same days is asked again, not even an expanded one (trip suggestions v2).
+  tripSuggestionQuietDays               Int     @default(14) @map("trip_suggestion_quiet_days")
   staySuggestionsEnabled                Boolean @default(true) @map("stay_suggestions_enabled")
   /// Immich photos as evidence for which place a stay was at. Read by the stay
   /// place identification of forgejo#305; it only ever applies where the
@@ -4630,6 +4633,19 @@ model TripSuggestionDecision {
   /// deleted later, and the answer stays an answer.
   createdTripId       String?  @map("created_trip_id")
   createdPlaceVisitId String?  @map("created_place_visit_id")
+  /// The days the answered proposal spanned (trip suggestions v2). A dismissal
+  /// suppresses every later candidate overlapping these days unless it is more
+  /// than double their length. Null on rows older than the column: the span is
+  /// then derived from the members still in the logbook.
+  startDay            DateTime? @map("start_day") @db.Date
+  endDay              DateTime? @map("end_day") @db.Date
+  /// The home the proposal was judged against, `lat,lon` to two decimals. Null
+  /// where unknown (TravTrack questions carry no coordinate).
+  homeSignature       String?  @map("home_signature")
+  /// engine | travtrack — which detector asked.
+  source              String   @default("engine")
+  /// The answer was to a re-ask of a span that had grown past double.
+  expanded            Boolean  @default(false)
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 

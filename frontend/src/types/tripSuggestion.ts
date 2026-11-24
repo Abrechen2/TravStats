@@ -42,7 +42,7 @@ export interface TripSuggestion {
   nights: number | null;
   planned: boolean;
   destination: string | null;
-  signals: Array<"pnr" | "home_loop" | "continuity">;
+  signals: Array<"pnr" | "home_loop" | "continuity" | "package">;
   /** Entries whose place had no known zone — their day may be one off. */
   zoneUnknown: number;
   members: TripSuggestionMember[];
@@ -51,6 +51,10 @@ export interface TripSuggestion {
   place?: { id: string; name: string };
   anchor?: { key: string; domain: TripSuggestionDomain; label: string; tripId: string | null };
   distanceM?: number;
+  /** A dismissed proposal over these days came back because it grew past double ("erweitert"). */
+  expanded?: true;
+  /** Every member is a business entry: proposed as a business trip. */
+  purpose?: "business";
 }
 
 /** How the server knew where home was — `missing` limits what it can propose. */

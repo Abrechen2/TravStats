@@ -297,4 +297,54 @@ describe("/api/v1/trip-suggestions", () => {
     const shown = (await list()).suggestions.flatMap((s) => s.members.map((m) => m.domain));
     expect(shown).toContain("rail");
   });
+  it("v2: a dismissal keeps its days and stays quiet after a stay is added and a date shifts", async () => {
+    const { stayB } = await seedItaly(userId);
+    const [proposal] = (await list()).suggestions.filter((s) => s.kind === "new_trip");
+    await request(app)
+      .post(`/api/v1/trip-suggestions/${encodeURIComponent(proposal.id)}/dismiss`)
+      .set("Cookie", cookie)
+      .expect(200);
+    const decision = await prisma.tripSuggestionDecision.findFirstOrThrow({ where: { userId } });
+    expect(decision.startDay?.toISOString().slice(0, 10)).toBe("2025-05-03");
+    expect(decision.endDay?.toISOString().slice(0, 10)).toBe("2025-05-09");
+    expect(decision.homeSignature).not.toBeNull();
+
+    // Edit the logbook: one more night in Rome, and a third hotel.
+    await prisma.lodgingStay.update({
+      where: { id: stayB.id },
+      data: { checkOut: new Date("2025-05-10T00:00:00Z") },
+    });
+    const naples = await prisma.lodging.create({
+      data: { userId, name: "Neapel", city: "Neapel", ...ROMA },
+    });
+    await prisma.lodgingStay.create({
+      data: {
+        userId,
+        lodgingId: naples.id,
+        checkIn: new Date("2025-05-10T00:00:00Z"),
+        checkOut: new Date("2025-05-11T00:00:00Z"),
+      },
+    });
+    expect((await list()).suggestions.filter((s) => s.kind !== "place_visit")).toEqual([]);
+    const count = await request(app).get("/api/v1/trip-suggestions/count").set("Cookie", cookie);
+    expect(count.body.data.count).toBe(0);
+  });
+
+  it("v2: an all-business week is proposed and accepted as a business trip", async () => {
+    const { stayA, stayB, visit } = await seedItaly(userId);
+    await prisma.lodgingStay.updateMany({
+      where: { id: { in: [stayA.id, stayB.id] } },
+      data: { purpose: "business" },
+    });
+    await prisma.placeVisit.update({ where: { id: visit.id }, data: { purpose: "business" } });
+    const [proposal] = (await list()).suggestions.filter((s) => s.kind === "new_trip");
+    expect(proposal.purpose).toBe("business");
+    const res = await request(app)
+      .post(`/api/v1/trip-suggestions/${encodeURIComponent(proposal.id)}/accept`)
+      .set("Cookie", cookie)
+      .send({})
+      .expect(200);
+    const trip = await prisma.trip.findUniqueOrThrow({ where: { id: res.body.data.tripId } });
+    expect(trip.category).toBe("business");
+  });
 });

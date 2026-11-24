@@ -29,6 +29,8 @@ import { SWITCH_PAYLOADS } from "./suggestionSwitchPayloads";
  */
 interface SuggestionSwitchesState {
   trips: boolean;
+  /** Days after a dismissed trip suggestion during which nothing over the same days is asked (v2). */
+  tripQuietDays: number;
   stays: boolean;
   /** Immich photos as evidence for a stay's place (forgejo#305); server default on. */
   stayImmichEvidence: boolean;
@@ -100,6 +102,10 @@ const booleanIn = (group: unknown, key: string): boolean | undefined => {
   return typeof value === "boolean" ? value : undefined;
 };
 const enabledIn = (group: unknown): boolean | undefined => booleanIn(group, "enabled");
+const quietDaysIn = (group: unknown): number | undefined => {
+  const value = (group as Record<string, unknown> | null | undefined)?.quietDays;
+  return typeof value === "number" && Number.isInteger(value) ? value : undefined;
+};
 /** `tripDefaults.color`: a string, or null for automatic; anything else is no answer. */
 const colorIn = (group: unknown): string | null | undefined => {
   if (group === null || typeof group !== "object" || !("color" in group)) return undefined;
@@ -109,6 +115,7 @@ const colorIn = (group: unknown): string | null | undefined => {
 
 export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, get) => ({
   trips: true,
+  tripQuietDays: 14,
   stays: true,
   stayImmichEvidence: true,
   stayLlmPlaceClassification: false,
@@ -141,6 +148,7 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
     const color = colorIn(body?.tripDefaults);
     set({
       trips: enabledIn(body?.tripSuggestions) ?? get().trips,
+      tripQuietDays: quietDaysIn(body?.tripSuggestions) ?? get().tripQuietDays,
       stays: enabledIn(stay) ?? get().stays,
       stayImmichEvidence: booleanIn(stay, "immichEvidence") ?? get().stayImmichEvidence,
       stayLlmPlaceClassification:

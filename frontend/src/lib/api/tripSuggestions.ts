@@ -36,6 +36,14 @@ export const tripSuggestionsApi = {
     return data.data.count;
   },
 
+  /** "Abgelehnte zurücksetzen": forget every dismissed trip suggestion of the account. */
+  resetRejections: async (): Promise<number> => {
+    const { data } = await api.post<Envelope<{ reset: number }>>(
+      "/trip-suggestions/rejections/reset"
+    );
+    return data.data.reset;
+  },
+
   accept: async (id: string, edits: TripSuggestionEdits): Promise<TripSuggestionAccepted> => {
     const { data } = await api.post<Envelope<TripSuggestionAccepted>>(path(id, "accept"), edits);
     return data.data;

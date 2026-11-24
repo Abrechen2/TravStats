@@ -85,6 +85,10 @@ export interface PresenceEntry {
   zoneUnknown?: boolean;
   /** A flight's booking reference — the PNR signal. */
   pnr?: string | null;
+  /** The package booking (`bookings`) that sold it with other entries — one booking is one trip. */
+  bookingId?: string | null;
+  /** `private` | `business` | null — the entry's own purpose field. */
+  purpose?: string | null;
 }
 
 /** A trip the account already has, as the engine needs it. */
@@ -109,7 +113,7 @@ export type HomeAt = (day: string) => Coordinate | null;
 export type SuggestionKind = "new_trip" | "assign" | "extend" | "place_visit";
 
 /** A clustering signal the flight heuristics contributed (`tripDetectionService`). */
-export type SuggestionSignal = "pnr" | "home_loop" | "continuity";
+export type SuggestionSignal = "pnr" | "home_loop" | "continuity" | "package";
 
 export interface SuggestionMember {
   key: string;
@@ -147,6 +151,14 @@ export interface TripSuggestion {
   place?: { id: string; name: string };
   anchor?: { key: string; domain: LinkableDomain; label: string; tripId: string | null };
   distanceM?: number;
+  /**
+   * A dismissed proposal over these days came back because it grew past double
+   * its rejected length ("erweitert", trip suggestions v2). Asked once: its
+   * dismissal then covers the larger span.
+   */
+  expanded?: true;
+  /** Every member is a business entry: proposed as a business trip. */
+  purpose?: "business";
 }
 
 /** How the engine knew where home was. */

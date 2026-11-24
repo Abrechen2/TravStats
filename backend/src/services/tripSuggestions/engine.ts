@@ -15,8 +15,16 @@ import {
   type Loaded,
 } from "./loadTransport";
 import type { AnsweredProposal } from "./proposals";
-import { todayIn } from "./time";
-import type { HomeSource, PlaceContext, SuggestionKind, TripSuggestion } from "./types";
+import { readSuggestionSwitches } from "../settings/suggestionSwitches";
+import { clampQuietDays } from "./rejectionMemory";
+import { storedDay, todayIn } from "./time";
+import type {
+  HomeSource,
+  PlaceContext,
+  PresenceEntry,
+  SuggestionKind,
+  TripSuggestion,
+} from "./types";
 
 /**
  * The trip-suggestion engine (owner decision 2026-09-26): one presence timeline
@@ -35,6 +43,11 @@ export interface EngineResult {
   home: HomeSource;
   /** Some table held more rows than one pass reads; the list may be incomplete. */
   truncated: boolean;
+  /**
+   * Every entry the pass read — server-side only, for the merged stream
+   * (`stream.ts`), which judges TravTrack rows against the same logbook.
+   */
+  entries: PresenceEntry[];
 }
 
 /** Users whose result is held; the oldest is dropped past this. */
@@ -85,18 +98,32 @@ async function dataStamp(
 
 const EMPTY: Loaded = { entries: [], truncated: false };
 
-async function loadAnswered(userId: string): Promise<AnsweredProposal[]> {
+export async function loadAnswered(userId: string): Promise<AnsweredProposal[]> {
   const rows = await prisma.tripSuggestionDecision.findMany({
     where: { userId },
     select: {
       kind: true,
       fingerprint: true,
+      status: true,
       targetId: true,
       memberKeys: true,
       memberContentKeys: true,
+      createdTripId: true,
+      startDay: true,
+      endDay: true,
+      homeSignature: true,
+      source: true,
+      updatedAt: true,
     },
   });
-  return rows.map((r) => ({ ...r, kind: r.kind as SuggestionKind }));
+  return rows.map(({ updatedAt, startDay, endDay, ...r }) => ({
+    ...r,
+    kind: r.kind as SuggestionKind,
+    status: r.status === "accepted" ? ("accepted" as const) : ("dismissed" as const),
+    startDay: startDay ? storedDay(startDay) : null,
+    endDay: endDay ? storedDay(endDay) : null,
+    decidedDay: updatedAt.toISOString().slice(0, 10),
+  }));
 }
 
 /** The flight heuristics as signals — `POST /trips/detect` itself is unchanged. */
@@ -129,6 +156,7 @@ async function compute(
     answered,
     clusters,
     home,
+    switches,
   ] = await Promise.all([
     has("flight") ? loadFlights(userId) : EMPTY,
     has("rail") ? loadRail(userId) : EMPTY,
@@ -144,18 +172,26 @@ async function compute(
     loadAnswered(userId),
     has("flight") ? flightClusters(userId) : Promise.resolve([]),
     resolveHome(userId),
+    readSuggestionSwitches(userId),
   ]);
   const loaded = [flights, rail, bus, ferry, rentals, cruises, stays, visits, routes, photos];
+  const entries = loaded.flatMap((l) => l.entries);
   const suggestions = composeSuggestions({
-    entries: loaded.flatMap((l) => l.entries),
+    entries,
     trips,
     places: visits.places,
     homeAt: home.homeAt,
     homeKnown: home.source !== "missing",
     clusters,
     answered,
+    memory: { today, quietDays: clampQuietDays(switches.tripSuggestionQuietDays) },
   });
-  return { suggestions, home: home.source, truncated: loaded.some((l) => l.truncated) };
+  return {
+    suggestions,
+    home: home.source,
+    truncated: loaded.some((l) => l.truncated),
+    entries,
+  };
 }
 
 export async function computeTripSuggestions(userId: string): Promise<EngineResult> {

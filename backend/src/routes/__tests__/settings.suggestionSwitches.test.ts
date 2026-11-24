@@ -31,7 +31,7 @@ describe("settings — inbox suggestion switches", () => {
 
   it("GET reports the defaults: both on, Immich evidence on, LLM classification off", async () => {
     const res = await request(app).get("/api/v1/settings").set("Cookie", cookie).expect(200);
-    expect(res.body.tripSuggestions).toEqual({ enabled: true });
+    expect(res.body.tripSuggestions).toEqual({ enabled: true, quietDays: 14 });
     expect(res.body.staySuggestions).toEqual({
       enabled: true,
       immichEvidence: true,
@@ -39,16 +39,24 @@ describe("settings — inbox suggestion switches", () => {
     });
   });
 
+  it("refuses a quiet period outside 0–90 days", async () => {
+    await request(app)
+      .put("/api/v1/settings")
+      .set("Cookie", cookie)
+      .send({ tripSuggestions: { quietDays: 91 } })
+      .expect(400);
+  });
+
   it("PUT persists each switch to its column and echoes it back", async () => {
     const put = await request(app)
       .put("/api/v1/settings")
       .set("Cookie", cookie)
       .send({
-        tripSuggestions: { enabled: false },
+        tripSuggestions: { enabled: false, quietDays: 30 },
         staySuggestions: { enabled: false, immichEvidence: false, llmPlaceClassification: true },
       })
       .expect(200);
-    expect(put.body.tripSuggestions).toEqual({ enabled: false });
+    expect(put.body.tripSuggestions).toEqual({ enabled: false, quietDays: 30 });
     expect(put.body.staySuggestions).toEqual({
       enabled: false,
       immichEvidence: false,
@@ -57,6 +65,7 @@ describe("settings — inbox suggestion switches", () => {
     const row = await prisma.userSettings.findUniqueOrThrow({ where: { userId } });
     expect(row).toMatchObject({
       tripSuggestionsEnabled: false,
+      tripSuggestionQuietDays: 30,
       staySuggestionsEnabled: false,
       staySuggestionsImmichEvidence: false,
       staySuggestionsLlmPlaceClassification: true,

@@ -27,7 +27,14 @@ import { prisma } from "../../db";
  * and keeps every plan. Default off, like every domain but flights.
  */
 
-export const tripSuggestionsSettingsSchema = z.object({ enabled: z.boolean() }).partial().strict();
+export const tripSuggestionsSettingsSchema = z
+  .object({
+    enabled: z.boolean(),
+    /** Days after a dismissal during which nothing over the same days is asked (v2). */
+    quietDays: z.number().int().min(0).max(90),
+  })
+  .partial()
+  .strict();
 
 export const staySuggestionsSettingsSchema = z
   .object({
@@ -66,6 +73,7 @@ type StaySuggestionsPatch = z.infer<typeof staySuggestionsSettingsSchema>;
 /** The columns behind the switches, as Prisma selects them. */
 export const SUGGESTION_SWITCH_SELECT = {
   tripSuggestionsEnabled: true,
+  tripSuggestionQuietDays: true,
   staySuggestionsEnabled: true,
   staySuggestionsImmichEvidence: true,
   staySuggestionsLlmPlaceClassification: true,
@@ -77,6 +85,7 @@ export const SUGGESTION_SWITCH_SELECT = {
 
 export interface SuggestionSwitchColumns {
   tripSuggestionsEnabled: boolean;
+  tripSuggestionQuietDays: number;
   staySuggestionsEnabled: boolean;
   staySuggestionsImmichEvidence: boolean;
   staySuggestionsLlmPlaceClassification: boolean;
@@ -89,6 +98,7 @@ export interface SuggestionSwitchColumns {
 /** The column defaults — what an account without a settings row is answered with. */
 export const SUGGESTION_SWITCH_DEFAULTS: SuggestionSwitchColumns = {
   tripSuggestionsEnabled: true,
+  tripSuggestionQuietDays: 14,
   staySuggestionsEnabled: true,
   staySuggestionsImmichEvidence: true,
   staySuggestionsLlmPlaceClassification: false,
@@ -99,7 +109,7 @@ export const SUGGESTION_SWITCH_DEFAULTS: SuggestionSwitchColumns = {
 };
 
 export interface SuggestionSwitchesView {
-  tripSuggestions: { enabled: boolean };
+  tripSuggestions: { enabled: boolean; quietDays: number };
   staySuggestions: { enabled: boolean; immichEvidence: boolean; llmPlaceClassification: boolean };
   /** Whether the server stores the Companion's trip positions (forgejo#316). */
   tripRecording: { enabled: boolean };
@@ -109,7 +119,10 @@ export interface SuggestionSwitchesView {
 
 export function suggestionSwitchesView(record: SuggestionSwitchColumns): SuggestionSwitchesView {
   return {
-    tripSuggestions: { enabled: record.tripSuggestionsEnabled },
+    tripSuggestions: {
+      enabled: record.tripSuggestionsEnabled,
+      quietDays: record.tripSuggestionQuietDays,
+    },
     staySuggestions: {
       enabled: record.staySuggestionsEnabled,
       immichEvidence: record.staySuggestionsImmichEvidence,
@@ -137,6 +150,7 @@ export function suggestionSwitchesUpdate(
     ...(travPlan?.weather !== undefined ? { travPlanWeatherEnabled: travPlan.weather } : {}),
     ...(recording?.enabled !== undefined ? { tripRecordingEnabled: recording.enabled } : {}),
     ...(trip?.enabled !== undefined ? { tripSuggestionsEnabled: trip.enabled } : {}),
+    ...(trip?.quietDays !== undefined ? { tripSuggestionQuietDays: trip.quietDays } : {}),
     ...(stay?.enabled !== undefined ? { staySuggestionsEnabled: stay.enabled } : {}),
     ...(stay?.immichEvidence !== undefined
       ? { staySuggestionsImmichEvidence: stay.immichEvidence }

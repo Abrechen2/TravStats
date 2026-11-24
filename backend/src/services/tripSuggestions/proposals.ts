@@ -14,6 +14,14 @@ import {
 } from "../../shared/tripSuggestionRules";
 import { addDays, dayDiff } from "./time";
 import type { Absence } from "./absences";
+import {
+  familyOf,
+  homeSignature,
+  judgeSpan,
+  overlapDays,
+  spanDays,
+  type SpanDecision,
+} from "./rejectionMemory";
 import type {
   HomeAt,
   LinkableDomain,
@@ -32,7 +40,7 @@ import type {
  * user starts.
  */
 
-/** A previous answer, as `decisions.ts` loads it. */
+/** A previous answer, as `engine.ts` loads it. */
 export interface AnsweredProposal {
   kind: SuggestionKind;
   fingerprint: string;
@@ -40,6 +48,29 @@ export interface AnsweredProposal {
   memberKeys: readonly string[];
   /** Aligned with `memberKeys`; missing or empty on rows older than the column. */
   memberContentKeys?: readonly string[];
+  /** Missing on fixtures older than v2: read as accepted-or-dismissed alike, the old rule. */
+  status?: "accepted" | "dismissed";
+  /** The answered days (v2); null on older rows — derived from the members then. */
+  startDay?: string | null;
+  endDay?: string | null;
+  homeSignature?: string | null;
+  /** UTC day of the answer. */
+  decidedDay?: string | null;
+  /**
+   * `engine` | `travtrack` | `declined`. A `declined` answer (members unticked
+   * on accept) keeps the member-set rule only: its days are the trip just made.
+   */
+  source?: string;
+  /** What accepting created — tells an old unticked-member answer by its trip. */
+  createdTripId?: string | null;
+}
+
+/** What the rejection memory needs beyond the answers (`rejectionMemory.ts`). */
+export interface MemoryContext {
+  today: string;
+  quietDays: number;
+  homeAt: HomeAt;
+  entries: readonly PresenceEntry[];
 }
 
 const minDay = (a: string, b: string): string => (a < b ? a : b);
@@ -131,15 +162,6 @@ export function tripSpans(
   return spans;
 }
 
-const overlapDays = (
-  a: { startDay: string; endDay: string },
-  b: { startDay: string; endDay: string }
-): number => {
-  const start = maxDay(a.startDay, b.startDay);
-  const end = minDay(a.endDay, b.endDay);
-  return start > end ? 0 : dayDiff(start, end) + 1;
-};
-
 /** The existing trip an absence belongs to, if any: the one it shares entries or days with most. */
 function tripFor(absence: Absence, spans: Map<string, TripSpan>): string | null {
   const byMembers = new Map<string, number>();
@@ -169,7 +191,8 @@ function base(
   targetId: string | null,
   members: readonly PresenceEntry[],
   homeAt: HomeAt
-): Pick<TripSuggestion, "id" | "kind" | "planned" | "destination" | "members"> {
+): Pick<TripSuggestion, "id" | "kind" | "planned" | "destination" | "members" | "purpose"> {
+  const business = members.length > 0 && members.every((m) => m.purpose === "business");
   return {
     id: proposalId(
       kind,
@@ -180,8 +203,29 @@ function base(
     planned: members.every((m) => m.state === "planned"),
     destination: destinationOf(members, homeAt),
     members: [...members].sort((a, b) => a.startDay.localeCompare(b.startDay)).map(toMember),
+    ...(business ? { purpose: "business" as const } : {}),
   };
 }
+
+/** Share of a span's days that the account's trips already cover. */
+export function coveredShare(
+  span: { startDay: string; endDay: string },
+  spans: Iterable<{ startDay: string; endDay: string }>
+): number {
+  const days = spanDays(span);
+  const covered = new Set<number>();
+  for (const s of spans) {
+    const n = overlapDays(s, span);
+    if (n === 0) continue;
+    const from = s.startDay > span.startDay ? s.startDay : span.startDay;
+    const offset = dayDiff(span.startDay, from);
+    for (let i = 0; i < n; i++) covered.add(offset + i);
+  }
+  return covered.size / days;
+}
+
+/** Trips covering more than this share of a candidate's days already hold it. */
+export const COVERED_SHARE = 0.5;
 
 /** New-trip, assign and extend proposals for every absence. */
 export function proposalsFromAbsences(
@@ -289,36 +333,118 @@ export function proposalsByWindow(
   }));
 }
 
+/** The days an answer covered: stored, or derived from the members still in the logbook. */
+function answeredSpan(
+  a: AnsweredProposal,
+  byKey: ReadonlyMap<string, PresenceEntry>
+): { startDay: string; endDay: string } | null {
+  if (a.startDay && a.endDay) return { startDay: a.startDay, endDay: a.endDay };
+  const days: string[] = [];
+  a.memberKeys.forEach((key, i) => {
+    const entry = byKey.get(key);
+    if (entry) {
+      days.push(entry.startDay, entry.endDay);
+      return;
+    }
+    // A content key carries the member's day: `domain|day|label`.
+    const day = a.memberContentKeys?.[i]?.split("|")[1];
+    if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) days.push(day);
+  });
+  if (days.length === 0) return null;
+  days.sort();
+  return { startDay: days[0], endDay: days[days.length - 1] };
+}
+
 /**
- * Drop what the user already answered, unless it has materially changed.
+ * The dismissals that speak by their days. An unticked-member answer does not
+ * (`source: declined`), nor — for rows older than that marker — a dismissed
+ * link to a trip an accepted answer created: both are the trip just made.
+ */
+export function spanDecisions(
+  answered: readonly AnsweredProposal[],
+  entries: readonly PresenceEntry[]
+): Map<AnsweredProposal, SpanDecision> {
+  const byKey = new Map(entries.map((e) => [e.key, e]));
+  const created = new Set(
+    answered.flatMap((a) =>
+      a.status === "accepted" ? [a.createdTripId, a.targetId].filter((id) => !!id) : []
+    )
+  );
+  const out = new Map<AnsweredProposal, SpanDecision>();
+  for (const a of answered) {
+    if (a.status !== "dismissed" || a.source === "declined") continue;
+    if (a.kind === "assign" && !a.startDay && a.targetId && created.has(a.targetId)) continue;
+    const span = answeredSpan(a, byKey);
+    if (!span) continue;
+    out.set(a, {
+      family: familyOf(a.kind),
+      targetId: a.targetId,
+      ...span,
+      decidedDay: a.decidedDay ?? "0000-01-01",
+      homeSignature: a.homeSignature ?? null,
+    });
+  }
+  return out;
+}
+
+/** The pre-v2 rule: same family and an unchanged member set (or the same place visit). */
+function answeredByMembers(p: TripSuggestion, a: AnsweredProposal): boolean {
+  // A member whose id is new but whose content matches an answered one
+  // (deleted and re-imported) counts as that answered member.
+  const byContent = new Map<string, string>();
+  (a.memberContentKeys ?? []).forEach((ck, i) => {
+    const key = a.memberKeys[i];
+    if (key !== undefined) byContent.set(ck, key);
+  });
+  const keys = p.members.map(
+    (m) => byContent.get(contentKey(m.domain, m.startDay, m.label)) ?? m.key
+  );
+  if (p.kind === "place_visit" || a.kind === "place_visit") return a.fingerprint === p.id;
+  const sameFamily =
+    (p.kind === "new_trip" && a.kind === "new_trip") ||
+    (p.kind !== "new_trip" && a.kind !== "new_trip" && a.targetId === (p.trip?.id ?? null));
+  return sameFamily && a.memberKeys.length > 0 && !isMaterialChange(a.memberKeys, keys);
+}
+
+/**
+ * Drop what the user already answered.
  *
- * A place visit is matched by its id (place and anchor). A trip proposal is
- * matched by FAMILY — a new trip against new trips, a link against links to the
- * same trip — and by member overlap (`isMaterialChange`), because its id moves
- * with every entry added or removed. Accepted answers count too: a user who
- * accepted a trip and then deleted it has answered the question twice.
+ * A dismissal with days (stored, or derived from its members) is judged by the
+ * rejection memory (`rejectionMemory.ts`): any trip candidate overlapping it by
+ * a day stays quiet unless it has grown past double — then it comes back once,
+ * `expanded`. A place visit is judged the same way, per place. Everything else
+ * — accepted answers, unticked members, rows whose days cannot be told — keeps
+ * the member-set rule: a trip proposal by FAMILY and member overlap
+ * (`isMaterialChange`), a place visit by its id. Accepted answers count there
+ * too: a user who accepted a trip and then deleted it has answered twice.
  */
 export function withoutAnswered(
   proposals: readonly TripSuggestion[],
-  answered: readonly AnsweredProposal[]
+  answered: readonly AnsweredProposal[],
+  memory: MemoryContext | null = null
 ): TripSuggestion[] {
-  return proposals.filter((p) => {
-    return !answered.some((a) => {
-      // A member whose id is new but whose content matches an answered one
-      // (deleted and re-imported) counts as that answered member.
-      const byContent = new Map<string, string>();
-      (a.memberContentKeys ?? []).forEach((ck, i) => {
-        const key = a.memberKeys[i];
-        if (key !== undefined) byContent.set(ck, key);
-      });
-      const keys = p.members.map(
-        (m) => byContent.get(contentKey(m.domain, m.startDay, m.label)) ?? m.key
-      );
-      if (p.kind === "place_visit" || a.kind === "place_visit") return a.fingerprint === p.id;
-      const sameFamily =
-        (p.kind === "new_trip" && a.kind === "new_trip") ||
-        (p.kind !== "new_trip" && a.kind !== "new_trip" && a.targetId === (p.trip?.id ?? null));
-      return sameFamily && !isMaterialChange(a.memberKeys, keys);
-    });
-  });
+  const bySpan = spanDecisions(answered, memory?.entries ?? []);
+  const spans = [...bySpan.values()];
+  const rest = answered.filter((a) => !bySpan.has(a));
+  const today = memory?.today ?? "9999-12-31";
+  const quietDays = memory?.quietDays ?? 0;
+  const out: TripSuggestion[] = [];
+  for (const p of proposals) {
+    const verdict = judgeSpan(
+      {
+        family: familyOf(p.kind),
+        targetId: p.place?.id ?? null,
+        startDay: p.startDay,
+        endDay: p.endDay,
+        homeSignature: homeSignature(memory?.homeAt(p.startDay) ?? null),
+      },
+      spans,
+      today,
+      quietDays
+    );
+    if (verdict === "suppressed") continue;
+    if (rest.some((a) => answeredByMembers(p, a))) continue;
+    out.push(verdict === "expanded" ? { ...p, expanded: true } : p);
+  }
+  return out;
 }

@@ -11,6 +11,7 @@ type Payload = Parameters<typeof settingsApi.update>[0];
  */
 export const SWITCH_PAYLOADS = {
   trips: (enabled: boolean): Payload => ({ tripSuggestions: { enabled } }),
+  tripQuietDays: (quietDays: number): Payload => ({ tripSuggestions: { quietDays } }),
   stays: (enabled: boolean): Payload => ({ staySuggestions: { enabled } }),
   stayImmichEvidence: (immichEvidence: boolean): Payload => ({
     staySuggestions: { immichEvidence },

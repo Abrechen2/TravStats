@@ -48,6 +48,8 @@ export async function loadFlights(userId: string): Promise<Loaded> {
       id: true,
       tripId: true,
       status: true,
+      bookingId: true,
+      purpose: true,
       flightNumber: true,
       airline: true,
       airlineIata: true,
@@ -125,6 +127,8 @@ export async function loadFlights(userId: string): Promise<Loaded> {
       ],
       zoneUnknown: !out.zoneKnown || !inn.zoneKnown,
       pnr: row.bookingReference,
+      bookingId: row.bookingId,
+      purpose: row.purpose,
     });
   }
   return { entries, truncated: rows.length > ROW_CAP };
@@ -167,6 +171,8 @@ export async function loadRail(userId: string): Promise<Loaded> {
       id: true,
       tripId: true,
       status: true,
+      bookingId: true,
+      purpose: true,
       trainCategory: true,
       trainNumber: true,
       operator: true,
@@ -220,6 +226,8 @@ export async function loadRail(userId: string): Promise<Loaded> {
       pointCities: [stationCity(row.depStationName), stationCity(row.arrStationName)],
       zoneUnknown: !out.zoneKnown || !inn.zoneKnown,
       pnr: row.bookingReference,
+      bookingId: row.bookingId,
+      purpose: row.purpose,
     });
   }
   return { entries, truncated: rows.length > ROW_CAP };
@@ -235,6 +243,8 @@ const TERMINAL_RIDE_SELECT = {
   operator: true,
   tripId: true,
   status: true,
+  bookingId: true,
+  purpose: true,
   depStationName: true,
   arrStationName: true,
   depLat: true,
@@ -270,6 +280,8 @@ interface TerminalRideRow {
   arrPrecision: string | null;
   bookingReference: string | null;
   operator: string | null;
+  bookingId: string | null;
+  purpose: string | null;
 }
 
 function terminalRideEntry(
@@ -302,6 +314,8 @@ function terminalRideEntry(
     pointCities: [stationCity(row.depStationName), stationCity(row.arrStationName)],
     zoneUnknown: !out.zoneKnown || !inn.zoneKnown,
     pnr: row.bookingReference,
+    bookingId: row.bookingId,
+    purpose: row.purpose,
   };
 }
 
@@ -350,6 +364,8 @@ export async function loadRentals(userId: string): Promise<Loaded> {
       id: true,
       tripId: true,
       status: true,
+      bookingId: true,
+      purpose: true,
       provider: true,
       confirmationNumber: true,
       pickupStationName: true,
@@ -395,6 +411,8 @@ export async function loadRentals(userId: string): Promise<Loaded> {
       pointCities: [stationCity(row.pickupStationName), stationCity(row.returnStationName)],
       zoneUnknown: !out.zoneKnown || !back.zoneKnown,
       pnr: row.confirmationNumber,
+      bookingId: row.bookingId,
+      purpose: row.purpose,
     });
   }
   return { entries, truncated: rows.length > ROW_CAP };
@@ -411,6 +429,8 @@ export async function loadCruises(userId: string): Promise<Loaded> {
       id: true,
       tripId: true,
       status: true,
+      bookingId: true,
+      purpose: true,
       routeName: true,
       cruiseLine: true,
       shipNameOverride: true,
@@ -468,6 +488,8 @@ export async function loadCruises(userId: string): Promise<Loaded> {
       city: row.arrivalPort?.city ?? null,
       country: row.arrivalPort?.country ?? null,
       pointCities: cities,
+      bookingId: row.bookingId,
+      purpose: row.purpose,
     });
   }
   return { entries, truncated: rows.length > ROW_CAP };
