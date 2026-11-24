@@ -420,6 +420,18 @@ describe("projectVisitSuggestions", () => {
     expect(await done()).toBe(true);
   });
 
+  it("a long backlog of old days does not hold the recent day back (a 13-year import)", async () => {
+    await stand(25);
+    const old = Array.from({ length: 12 }, (_, i) => `2020-01-${String(i + 1).padStart(2, "0")}`);
+    await dirty([...old, DAY]);
+    resolveStop.mockResolvedValue(picked());
+    // maxDays 5 < 12 old days: oldest first, the recent day used to wait for the third tick
+    const r = await projectVisitSuggestions(userId, deps({ maxDays: 5 }));
+    expect(r.created).toBe(1);
+    expect(await done(DAY)).toBe(true);
+    for (const d of old) expect(await done(d)).toBe(true);
+  });
+
   it("history deleted under a read publishes nothing", async () => {
     await stand(25);
     await dirty();

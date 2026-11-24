@@ -556,6 +556,24 @@ async function pendingVisitDays(
   return rows.map((r) => ({ day: r.day.toISOString().slice(0, 10), version: r.version }));
 }
 
+/**
+ * Acknowledges every dirty day older than the horizon in one statement. The queue
+ * is oldest first and a tick reads only `VISIT_DAYS_PER_RUN` days, so an import of
+ * thirteen years (a Google Timeline file, 2026-11-23 on the RC) put ~4,400 days
+ * that are acknowledged unread anyway AHEAD of the recent ones: the current days'
+ * suggestions waited about ten days for the queue to drain, five days a tick.
+ */
+async function ackDaysBeyondHorizon(userId: string, now: Date): Promise<void> {
+  const firstKept = new Date(
+    Math.ceil((now.getTime() - VISIT_HORIZON_DAYS * DAY_MS) / DAY_MS) * DAY_MS
+  )
+    .toISOString()
+    .slice(0, 10);
+  await prisma.$executeRaw`
+    UPDATE travtrack_dirty_days SET done = done | ${VISITS_BIT}
+     WHERE user_id = ${userId} AND (done & ${VISITS_BIT}) = 0 AND day < ${firstKept}::date`;
+}
+
 async function ack(userId: string, dirty: DirtyDay): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await takeTravTrackLock(tx, userId);
@@ -572,6 +590,8 @@ export async function projectVisitSuggestions(
   if (allowance !== "ok")
     return { ...result, status: allowance === "disabled" ? "disabled" : "skipped" };
   const now = deps.now ?? new Date();
+  // Not for "scan now": it names its own window and leaves the older backlog as it is.
+  if (!deps.fromDay) await ackDaysBeyondHorizon(userId, now);
   const days = await pendingVisitDays(userId, deps.maxDays ?? VISIT_DAYS_PER_RUN, deps.fromDay);
   if (days.length === 0) return result;
   if (!(await permitted(userId))) {
