@@ -685,7 +685,69 @@
     "description": "Diese Uploads gehören zu keinem Eintrag. Ordne sie einem Flug, einer Kreuzfahrt, einer Unterkunft, einem Ort oder einer Reise zu — sonst werden sie {{days}} Tage, nachdem sie ohne Eintrag dastanden, gelöscht, samt Datei.",
     "uploaded": "Hochgeladen am",
     "deletesOn": "Wird gelöscht am",
-    "open": "Öffnen"
+    "open": "Öffnen",
+    "select": "{{name}} auswählen",
+    "previewLabel": "{{name}} ansehen",
+    "preview": {
+      "download": "Herunterladen",
+      "noPreview": "Dieses Format lässt sich nicht im Browser anzeigen. Lade die Datei herunter, um sie zu öffnen.",
+      "imageFailed": "Das Bild konnte nicht geladen werden. Versuche es mit „Herunterladen“."
+    },
+    "actions": {
+      "link": "Verknüpfen",
+      "linkLabel": "{{name}} mit Einträgen verknüpfen",
+      "edit": "Bearbeiten",
+      "create": "Neu anlegen aus Dokument …",
+      "delete": "Löschen"
+    },
+    "edit": {
+      "title": "Dokument bearbeiten",
+      "name": "Titel",
+      "issuedOn": "Datum auf dem Dokument",
+      "kind": "Art",
+      "kindNone": "Keine Angabe"
+    },
+    "create": {
+      "title": "„{{name}}“: Neu anlegen aus Dokument",
+      "hint": "Wähle, was angelegt werden soll. Das Dokument wird ausgelesen und im Formular vorausgefüllt; was du speicherst, wird mit diesem Dokument verknüpft.",
+      "unreadable": "Dieses Format kann nicht ausgelesen werden. Ausgelesen werden PDF-Dateien, Bilder und E-Mails.",
+      "noDomains": "Keine Domäne aktiv, aus der sich etwas anlegen ließe.",
+      "recognised": "erkannt",
+      "fetchFailed": "Das Dokument konnte nicht geladen werden. Es wurde nichts angelegt.",
+      "domains": {
+        "flight": "Flug",
+        "cruise": "Kreuzfahrt",
+        "lodging": "Unterkunft",
+        "rail": "Bahnfahrt",
+        "rental": "Mietwagen"
+      }
+    },
+    "delete": {
+      "title": "Dokument löschen?",
+      "message": "„{{name}}“ wird dauerhaft gelöscht, mit der Datei.",
+      "bulkTitle_one": "1 Dokument löschen?",
+      "bulkTitle_other": "{{count}} Dokumente löschen?",
+      "bulkMessage_one": "Das ausgewählte Dokument wird dauerhaft gelöscht, mit der Datei.",
+      "bulkMessage_other": "Die {{count}} ausgewählten Dokumente werden dauerhaft gelöscht, mit den Dateien."
+    },
+    "bulk": {
+      "label": "Auswahl",
+      "selected_one": "1 Dokument ausgewählt",
+      "selected_other": "{{count}} Dokumente ausgewählt",
+      "link": "Mit einem Eintrag verknüpfen",
+      "clear": "Auswahl aufheben",
+      "delete": "Löschen"
+    },
+    "empty": {
+      "title": "Keine nicht zugeordneten Dokumente",
+      "body": "Hier landen Dokumente, die zu keinem Eintrag gehören — etwa ein Upload, den du erst später zuordnen willst, oder eine Datei aus der Companion-App. Nicht zugeordnete Dokumente werden nach einer Frist automatisch gelöscht.",
+      "drop": "Zieh Dateien hierher oder wähle „Dokument hinzufügen“."
+    },
+    "errors": {
+      "loadFailed": "Die nicht zugeordneten Dokumente konnten nicht geladen werden.",
+      "saveFailed": "Die Änderung konnte nicht gespeichert werden.",
+      "demo": "Im Demo-Konto lässt sich hier nichts ändern."
+    }
   },
   "documentLinkSuggestions": {
     "title": "Dokumente, die mehr belegen",
