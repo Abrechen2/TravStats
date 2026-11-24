@@ -241,6 +241,17 @@ export const travTrackApi = {
   deleteDays: async (span: DaySpan): Promise<number> =>
     (await api.delete<{ deleted: number }>("/travtrack/points", { params: span })).data.deleted,
   /** The last position, or null while the history holds none. */
+  /** Every point of one stretch (`[fromMs, untilMs]`, the end included); the count deleted. */
+  deleteSpan: async (span: { fromMs: number; untilMs: number }): Promise<number> =>
+    (
+      await api.delete<{ deleted: number }>("/travtrack/points", {
+        params: {
+          from: new Date(span.fromMs).toISOString(),
+          to: new Date(span.untilMs + 1).toISOString(),
+        },
+      })
+    ).data.deleted,
+
   lastSeen: async (): Promise<TravTrackLastSeen | null> =>
     (await api.get<{ lastSeen: TravTrackLastSeen | null }>("/travtrack/last-seen")).data.lastSeen,
   /** `includeImplausible` also draws the coarse fixes normally left out; the privacy cut still holds. */

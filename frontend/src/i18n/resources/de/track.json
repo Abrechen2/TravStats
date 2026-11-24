@@ -753,11 +753,22 @@
       "avgSpeed": "Ø Tempo",
       "maxSpeed": "Höchstes Tempo",
       "ascent": "Aufstieg",
-      "descent": "Abstieg"
+      "descent": "Abstieg",
+      "points": "Punkte"
     },
     "replay": "Diese Etappe abspielen",
     "showPoints": "Punkte zeigen",
-    "hidePoints": "Punkte ausblenden"
+    "hidePoints": "Punkte ausblenden",
+    "pickLoading": "Etappe wird geladen …",
+    "pickFailed": "Die Etappe konnte nicht geladen werden. {{reason}}",
+    "pickNone": "An dieser Stelle gibt es keine Etappe (ein Halt oder eine Lücke).",
+    "openDay": "Tag öffnen",
+    "delete": "Punkte löschen",
+    "deleteConfirm": "{{n}} Punkte dieser Etappe endgültig löschen?",
+    "deleteYes": "Ja, löschen",
+    "deleteNo": "Abbrechen",
+    "deleted": "Die Punkte der Etappe wurden gelöscht.",
+    "deleteFailed": "Die Punkte wurden nicht gelöscht. {{reason}}"
   },
   "stop": {
     "title": "Stopp",

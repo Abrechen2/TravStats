@@ -753,11 +753,22 @@
       "avgSpeed": "Avg speed",
       "maxSpeed": "Top speed",
       "ascent": "Ascent",
-      "descent": "Descent"
+      "descent": "Descent",
+      "points": "Points"
     },
     "replay": "Replay this leg",
     "showPoints": "Show points",
-    "hidePoints": "Hide points"
+    "hidePoints": "Hide points",
+    "pickLoading": "Loading the section …",
+    "pickFailed": "The section could not be loaded. {{reason}}",
+    "pickNone": "There is no section here (a stop or a gap).",
+    "openDay": "Open day",
+    "delete": "Delete points",
+    "deleteConfirm": "Permanently delete the {{n}} points of this section?",
+    "deleteYes": "Yes, delete",
+    "deleteNo": "Cancel",
+    "deleted": "The section's points were deleted.",
+    "deleteFailed": "The points were not deleted. {{reason}}"
   },
   "stop": {
     "title": "Stop",

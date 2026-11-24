@@ -10,6 +10,8 @@ import { linesBounds, type LonLat } from "./trackGeometry";
 import TrackFogLayer, { type FogStatus } from "./TrackFogLayer";
 import { reuseMapsEnabled } from "../../../lib/mapReuse";
 
+/** Picking tolerance in px on a coarse pointer (deck.gl's default is 5). */
+const COARSE_PICKING_RADIUS = 14;
 const FRAME_PADDING = { top: 40, right: 24, bottom: 40, left: 24 };
 
 export interface TrackRangeMapProps extends Omit<TrackLayerInput, "lines"> {
@@ -26,6 +28,8 @@ export interface TrackRangeMapProps extends Omit<TrackLayerInput, "lines"> {
   refit?: string;
   /** The padding the refit leaves around the lines; omitted, the default frame. */
   fitPadding?: typeof FRAME_PADDING;
+  /** A finger operates the map: wider picking. */
+  coarse?: boolean;
   onFogStatus: (status: FogStatus) => void;
 }
 
@@ -45,6 +49,7 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
   const { photos, onPhoto, countries, highlight } = props;
   const { selection, selectionSegments, legLines, onLeg, stops, onStop, speedStops, legPoints } =
     props;
+  const { pickWidth, rangeLines, onRangePick } = props;
   const deckLayers = useMemo(
     () =>
       buildTrackLayers({
@@ -65,6 +70,9 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
         selectionSegments,
         legLines,
         onLeg,
+        pickWidth,
+        rangeLines,
+        onRangePick,
         stops,
         onStop,
         speedStops,
@@ -88,6 +96,9 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
       selectionSegments,
       legLines,
       onLeg,
+      pickWidth,
+      rangeLines,
+      onRangePick,
       stops,
       onStop,
       speedStops,
@@ -137,7 +148,13 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
         onLoad={(): void => setMapLoaded(true)}
       >
         {mapLoaded && layers.fog && <TrackFogLayer onStatus={props.onFogStatus} />}
-        {mapLoaded && <DeckGLOverlay layers={deckLayers} getTooltip={tooltipOf} />}
+        {mapLoaded && (
+          <DeckGLOverlay
+            layers={deckLayers}
+            getTooltip={tooltipOf}
+            pickingRadius={props.coarse ? COARSE_PICKING_RADIUS : undefined}
+          />
+        )}
         <SharedMapOverlays />
       </MapGL>
       <span

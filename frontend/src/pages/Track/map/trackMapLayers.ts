@@ -85,6 +85,31 @@ export interface MapLegLine {
   path: LonLat[];
 }
 
+/** One drawn stretch of a long span, for picking: a click names the instant of the nearest vertex. */
+export interface MapRangeLine {
+  path: LonLat[];
+  /** The fix instant of each vertex of `path`. */
+  times: number[];
+}
+
+/** The instant of the vertex of `line` nearest to a clicked coordinate; null for an empty line. */
+export function nearestTime(line: MapRangeLine, at: readonly number[]): number | null {
+  let best: number | null = null;
+  let bestD = Infinity;
+  line.path.forEach(([lon, lat], i) => {
+    const d = (lon - at[0]) ** 2 + (lat - at[1]) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = line.times[i] ?? null;
+    }
+  });
+  return best;
+}
+
+/** The leg line's hit width in px: a fingertip on a coarse pointer, a pencil line otherwise. */
+export const LEG_PICK_WIDTH = 16;
+export const LEG_PICK_WIDTH_COARSE = 40;
+
 /** A dwell between legs, drawn as a marker that opens its card. */
 export interface MapStop {
   date: string;
@@ -122,6 +147,14 @@ export interface TrackLayerInput {
   /** Every leg's stretches, pickable (clear but present); omitted, no line is clickable. */
   legLines?: readonly MapLegLine[];
   onLeg?: (leg: MapLegLine) => void;
+  /** The leg lines' and the range lines' hit width in px; omitted, `LEG_PICK_WIDTH`. */
+  pickWidth?: number;
+  /**
+   * A long span's drawn stretches, pickable: its legs are not shipped with the range read, so a
+   * click names an instant and the view reads that day to find the leg.
+   */
+  rangeLines?: readonly MapRangeLine[];
+  onRangePick?: (atMs: number) => void;
   stops?: readonly MapStop[];
   onStop?: (stop: MapStop) => void;
   /** The speed ramp's stops; omitted, the default ramp. */
@@ -337,11 +370,31 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
         getPath: (d) => d.path,
         // Alpha 1, not 0: a fully clear stroke is not offered to picking.
         getColor: [0, 0, 0, 1],
-        getWidth: 16,
+        getWidth: input.pickWidth ?? LEG_PICK_WIDTH,
         widthUnits: "pixels",
         pickable: true,
         onClick: (info: PickingInfo<MapLegLine>) => {
           if (info.object) onLeg(info.object);
+          return true;
+        },
+      })
+    );
+  }
+  if (on.routes && input.rangeLines && input.rangeLines.length > 0 && input.onRangePick) {
+    const onRangePick = input.onRangePick;
+    out.push(
+      new PathLayer<MapRangeLine>({
+        id: "track-range-pick",
+        data: input.rangeLines as MapRangeLine[],
+        getPath: (d) => d.path,
+        getColor: [0, 0, 0, 1],
+        getWidth: input.pickWidth ?? LEG_PICK_WIDTH,
+        widthUnits: "pixels",
+        pickable: true,
+        onClick: (info: PickingInfo<MapRangeLine>) => {
+          if (!info.object || !info.coordinate) return false;
+          const at = nearestTime(info.object, info.coordinate);
+          if (at !== null) onRangePick(at);
           return true;
         },
       })
