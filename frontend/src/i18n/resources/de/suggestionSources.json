@@ -53,7 +53,7 @@
       "kind": {
         "notConfigured": "Der Kalender ist nicht vollständig eingerichtet.",
         "unreachable": "Der Kalender-Server ist nicht erreichbar.",
-        "auth": "Zugang abgelehnt. Adresse, Benutzer oder Passwort prüfen.",
+        "auth": "Zugang abgelehnt. Adresse, Benutzer oder Passwort prüfen. iCloud und Google verlangen ein App-spezifisches Passwort, nicht das normale Konto-Passwort.",
         "notFound": "Unter dieser Adresse gibt es keinen Kalender.",
         "protocol": "Der Server hat keine lesbare Kalender-Antwort geschickt.",
         "invalidUrl": "Diese Adresse ist ungültig."
