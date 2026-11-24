@@ -314,3 +314,36 @@ describe("UnfiledDocumentsSection", () => {
     );
   });
 });
+
+describe("UnfiledDocumentsSection — link search ordering", () => {
+  it("keeps the results of the newest search when an older one answers late", async () => {
+    for (const fn of Object.values(api)) fn.mockReset();
+    api.limits.mockResolvedValue({ image: 1e7, pdf: 1e7, eml: 1e7, emailText: 1, pkpass: 1 });
+    api.listUnfiled.mockResolvedValue(listOf(unfiled()));
+    let releaseOld: (value: unknown) => void = () => {};
+    api.linkCandidates.mockImplementation((_id: string, q?: string) =>
+      q === "alt"
+        ? new Promise((resolve) => {
+            releaseOld = resolve;
+          })
+        : Promise.resolve({
+            tripEntries: [],
+            otherEntries: [{ ...ENTRY, label: q ? "NEU-TREFFER" : "START" }],
+          })
+    );
+    renderSection();
+    fireEvent.click(await screen.findByRole("button", { name: /linkLabel/ }));
+    const dialog = await screen.findByTestId("link-document-dialog");
+    await within(dialog).findByText("START");
+
+    fireEvent.change(within(dialog).getByRole("searchbox"), { target: { value: "alt" } });
+    await waitFor(() => expect(api.linkCandidates).toHaveBeenCalledWith("doc-1", "alt"));
+    fireEvent.change(within(dialog).getByRole("searchbox"), { target: { value: "neu" } });
+    await within(dialog).findByText("NEU-TREFFER");
+
+    releaseOld({ tripEntries: [], otherEntries: [{ ...ENTRY, label: "ALT-TREFFER" }] });
+    await Promise.resolve();
+    expect(within(dialog).queryByText("ALT-TREFFER")).not.toBeInTheDocument();
+    expect(within(dialog).getByText("NEU-TREFFER")).toBeInTheDocument();
+  });
+});

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 
 import Modal from "../Modal";
@@ -66,11 +66,18 @@ export default function LinkDocumentDialog({
     return () => window.clearTimeout(timer);
   }, [filter]);
 
+  // Only the newest search may answer: a slow reply to an older text must not replace the results
+  // of the one the user is looking at.
+  const latestSearch = useRef(0);
   const load = useCallback(async (): Promise<void> => {
+    const mine = ++latestSearch.current;
     try {
-      setCandidates(await documentsApi.linkCandidates(document.id, searchText));
+      const found = await documentsApi.linkCandidates(document.id, searchText);
+      if (mine !== latestSearch.current) return;
+      setCandidates(found);
       setLoadFailed(false);
     } catch (err: unknown) {
+      if (mine !== latestSearch.current) return;
       logger.error({ err, id: document.id }, "LinkDocumentDialog: candidates failed");
       setLoadFailed(true);
     }
