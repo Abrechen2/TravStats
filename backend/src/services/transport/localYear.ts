@@ -36,3 +36,26 @@ export async function idsInLocalYear<Row extends { id: string }>(
   const candidates = await fetchCandidates(utcWindowForLocalYear(year));
   return candidates.filter((row) => yearOf(row) === year).map((row) => row.id);
 }
+
+/** The widest UTC window that can contain any instant of the local month in some zone. */
+export function utcWindowForLocalMonth(year: number, month: number): UtcWindow {
+  return {
+    gte: new Date(Date.UTC(year, month - 1, 1) - MAX_AHEAD_OF_UTC_MS),
+    lt: new Date(Date.UTC(year, month, 1) + MAX_BEHIND_UTC_MS),
+  };
+}
+
+/**
+ * `idsInLocalYear` for one month of it (`?year=&month=`, from a statistics year card).
+ * @param dayOf the row's local calendar day, `YYYY-MM-DD` — the day the domain's year rule reads
+ */
+export async function idsInLocalMonth<Row extends { id: string }>(
+  year: number,
+  month: number,
+  fetchCandidates: (window: UtcWindow) => Promise<Row[]>,
+  dayOf: (row: Row) => string
+): Promise<string[]> {
+  const key = `${year}-${String(month).padStart(2, "0")}`;
+  const candidates = await fetchCandidates(utcWindowForLocalMonth(year, month));
+  return candidates.filter((row) => dayOf(row).startsWith(key)).map((row) => row.id);
+}

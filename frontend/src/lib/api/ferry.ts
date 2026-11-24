@@ -32,6 +32,8 @@ export interface FerryPage {
 export interface FerryListQuery {
   q?: string;
   year?: number;
+  /** 1-12, with `year`. */
+  month?: number;
   status?: string;
   tripId?: string;
   sort?: "departure" | "distance" | "created";

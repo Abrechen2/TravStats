@@ -1,4 +1,5 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
+import { LinkedMonthChip, useLinkedMonth } from "../components/Stats/LinkedMonth";
 import { yearFromSearch } from "../lib/stats/yearLinks";
 import { useGapPrefill } from "../hooks/useGapPrefill";
 import type { GapDates } from "../lib/gapCalendar";
@@ -70,7 +71,7 @@ const RENTAL_ALWAYS_VISIBLE = ["provider", "route", "period", "status", "actions
 const RENTAL_SORT_FIELDS = ["pickup"] as const;
 type RentalSortField = (typeof RENTAL_SORT_FIELDS)[number];
 
-type Filters = Pick<RentalListQuery, "q" | "status" | "year" | "provider">;
+type Filters = Pick<RentalListQuery, "q" | "status" | "year" | "month" | "provider">;
 type Editing = { rental: RentalBooking | null; dates?: GapDates } | null;
 
 /** The year and provider options: every one the account has, not just the filtered set's. */
@@ -133,16 +134,20 @@ export default function RentalsPage(): JSX.Element {
     RENTAL_SORT_FIELDS
   );
 
+  const linkedMonth = useLinkedMonth(yearFilter);
   const filters = useMemo<Filters>(() => {
     const needle = debouncedSearch.trim().slice(0, SEARCH_MAX_LENGTH);
     return {
       ...(needle && { q: needle }),
       ...(statusFilter !== "all" && { status: statusFilter }),
       ...(yearFilter !== "all" && { year: yearFilter }),
+      ...(linkedMonth.month !== null && { month: linkedMonth.month }),
       ...(providerFilter !== "all" && { provider: providerFilter }),
     };
-  }, [debouncedSearch, statusFilter, yearFilter, providerFilter]);
-  const signature = [filters.q, filters.status, filters.year, filters.provider].join("|");
+  }, [debouncedSearch, statusFilter, yearFilter, providerFilter, linkedMonth.month]);
+  const signature = [filters.q, filters.status, filters.year, filters.month, filters.provider].join(
+    "|"
+  );
   const pagination = useServerPagination(total, "rental-list", signature);
   const { limit, offset } = pagination;
 
@@ -293,6 +298,7 @@ export default function RentalsPage(): JSX.Element {
         />
         <p className="mb-4 text-xs text-(--text-muted)">{t("rental:subtitle")}</p>
 
+        <LinkedMonthChip month={linkedMonth.month} year={yearFilter} onClear={linkedMonth.clear} />
         <ListFilterBar
           search={{ value: search, onChange: setSearch, placeholder: t("rental:search") }}
           status={{

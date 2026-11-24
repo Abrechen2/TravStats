@@ -36,6 +36,8 @@ export interface RentalPage {
 export interface RentalListQuery {
   q?: string;
   year?: number;
+  /** 1-12, with `year`. */
+  month?: number;
   status?: string;
   provider?: string;
   tripId?: string;

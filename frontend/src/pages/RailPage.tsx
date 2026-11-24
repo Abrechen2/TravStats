@@ -1,4 +1,5 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
+import { LinkedMonthChip, useLinkedMonth } from "../components/Stats/LinkedMonth";
 import { yearFromSearch } from "../lib/stats/yearLinks";
 import { useGapPrefill } from "../hooks/useGapPrefill";
 import { railGapDraft } from "../components/rail/railGapDraft";
@@ -76,7 +77,7 @@ const RAIL_ALWAYS_VISIBLE = ["operator", "route", "time", "status", "actions"] a
 const RAIL_SORT_FIELDS = ["departure"] as const;
 type RailSortField = (typeof RAIL_SORT_FIELDS)[number];
 
-type Filters = Pick<RailListQuery, "q" | "status" | "year">;
+type Filters = Pick<RailListQuery, "q" | "status" | "year" | "month">;
 type Editing = { journey: RailJourney | null; draft?: RailFormDraft } | null;
 
 /**
@@ -167,15 +168,17 @@ export default function RailPage(): JSX.Element {
   const loyaltyFilter = useLoyaltyListFilter();
   const { membershipId, linkedYear } = loyaltyFilter;
 
+  const linkedMonth = useLinkedMonth(yearFilter);
   const filters = useMemo<Filters>(() => {
     const needle = debouncedSearch.trim().slice(0, SEARCH_MAX_LENGTH);
     return {
       ...(needle && { q: needle }),
       ...(statusFilter !== "all" && { status: statusFilter }),
       ...(yearFilter !== "all" && { year: yearFilter }),
+      ...(linkedMonth.month !== null && { month: linkedMonth.month }),
     };
-  }, [debouncedSearch, statusFilter, yearFilter]);
-  const signature = `${filters.q ?? ""}|${filters.status ?? ""}|${filters.year ?? ""}|${membershipId ?? ""}`;
+  }, [debouncedSearch, statusFilter, yearFilter, linkedMonth.month]);
+  const signature = `${filters.q ?? ""}|${filters.status ?? ""}|${filters.year ?? ""}|${filters.month ?? ""}|${membershipId ?? ""}`;
   const pagination = useServerPagination(total, "rail-list", signature);
   const { limit, offset } = pagination;
 
@@ -335,6 +338,7 @@ export default function RailPage(): JSX.Element {
           </div>
         )}
 
+        <LinkedMonthChip month={linkedMonth.month} year={yearFilter} onClear={linkedMonth.clear} />
         <ListFilterBar
           search={{ value: search, onChange: setSearch, placeholder: t("rail:search") }}
           status={{

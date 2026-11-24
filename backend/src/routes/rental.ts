@@ -1,5 +1,6 @@
 import { Router, Response, NextFunction } from "express";
-import { idsInLocalYear } from "../services/transport/localYear";
+import { idsInLocalMonth, idsInLocalYear, type UtcWindow } from "../services/transport/localYear";
+import { localDay } from "../shared/time/instant";
 import { readLogbookPage } from "../services/transport/logbookPage";
 import { deleteTransportEntry } from "../services/transport/deleteEntry";
 import type { z } from "zod";
@@ -91,16 +92,17 @@ async function assertRoadtripOwned(
  * window any zone could put in that year is read, the rule picks the rows
  * (`services/transport/localYear`).
  */
-async function idsPickedUpInYear(userId: string, year: number): Promise<string[]> {
-  return idsInLocalYear(
-    year,
-    (window) =>
-      prisma.rentalBooking.findMany({
-        where: { userId, pickupTime: window },
-        select: { id: true, pickupTime: true, pickupTimezone: true },
-      }),
-    (r) => rentalYear(r)
-  );
+async function idsPickedUpInYear(userId: string, year: number, month?: number): Promise<string[]> {
+  const fetchRows = (window: UtcWindow) =>
+    prisma.rentalBooking.findMany({
+      where: { userId, pickupTime: window },
+      select: { id: true, pickupTime: true, pickupTimezone: true },
+    });
+  // `?month=` (a statistics year card): the same local day the year rule reads, cut to the month.
+  if (month !== undefined) {
+    return idsInLocalMonth(year, month, fetchRows, (r) => localDay(r.pickupTime, r.pickupTimezone));
+  }
+  return idsInLocalYear(year, fetchRows, (r) => rentalYear(r));
 }
 
 const SEARCH_FIELDS = [
@@ -127,7 +129,9 @@ async function buildWhere(
     ...(statuses && { status: { in: statuses } }),
     ...(query.tripId && { tripId: query.tripId }),
     ...(query.provider && { provider: { equals: query.provider, mode: "insensitive" as const } }),
-    ...(query.year !== undefined && { id: { in: await idsPickedUpInYear(userId, query.year) } }),
+    ...(query.year !== undefined && {
+      id: { in: await idsPickedUpInYear(userId, query.year, query.month) },
+    }),
     ...(q && {
       OR: SEARCH_FIELDS.map((field) => ({
         [field]: { contains: q, mode: "insensitive" as const },

@@ -34,7 +34,8 @@ import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../services/
 import { ferryYear } from "../shared/ferryCounting";
 import { resolveCompanions } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
-import { idsInLocalYear } from "../services/transport/localYear";
+import { idsInLocalMonth, idsInLocalYear, type UtcWindow } from "../services/transport/localYear";
+import { localDay } from "../shared/time/instant";
 import { linkCompanions, replaceCompanionLinks } from "../services/transport/companionLinks";
 import { fxColumnsOnEdit } from "../services/transport/fxOnEdit";
 import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
@@ -122,20 +123,25 @@ const requireUser = (req: AuthRequest): string => {
   return req.userId;
 };
 
-async function idsDepartingInYear(userId: string, year: number): Promise<string[]> {
-  return idsInLocalYear(
-    year,
-    (window) =>
-      prisma.ferryJourney.findMany({
-        where: { userId, departureTime: window },
-        select: { id: true, departureTime: true, depTimezone: true },
-      }),
-    (r) => ferryYear({ ...r, arrivalTime: null, arrTimezone: null })
+async function idsDepartingInYear(userId: string, year: number, month?: number): Promise<string[]> {
+  const fetchRows = (window: UtcWindow) =>
+    prisma.ferryJourney.findMany({
+      where: { userId, departureTime: window },
+      select: { id: true, departureTime: true, depTimezone: true },
+    });
+  // `?month=` (a statistics year card): the same local day the year rule reads, cut to the month.
+  if (month !== undefined) {
+    return idsInLocalMonth(year, month, fetchRows, (r) =>
+      localDay(r.departureTime, r.depTimezone ?? "UTC")
+    );
+  }
+  return idsInLocalYear(year, fetchRows, (r) =>
+    ferryYear({ ...r, arrivalTime: null, arrTimezone: null })
   );
 }
 
 export async function buildFerryWhere(
-  query: Pick<FerryQueryInput, "status" | "q" | "year" | "tripId">,
+  query: Pick<FerryQueryInput, "status" | "q" | "year" | "month" | "tripId">,
   userId: string
 ): Promise<Prisma.FerryJourneyWhereInput> {
   const statuses = query.status === undefined ? undefined : [query.status].flat();
@@ -144,7 +150,9 @@ export async function buildFerryWhere(
     userId,
     ...(statuses && { status: { in: statuses } }),
     ...(query.tripId && { tripId: query.tripId }),
-    ...(query.year !== undefined && { id: { in: await idsDepartingInYear(userId, query.year) } }),
+    ...(query.year !== undefined && {
+      id: { in: await idsDepartingInYear(userId, query.year, query.month) },
+    }),
     ...(q && {
       OR: (
         ["operator", "vesselName", "depStationName", "arrStationName", "bookingReference"] as const

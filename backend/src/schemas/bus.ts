@@ -109,6 +109,8 @@ export const busQuerySchema = z.object({
   q: z.string().trim().min(1).max(100).optional(),
   /** Calendar year of the departure, on the departure terminal's calendar. */
   year: z.coerce.number().int().min(1900).max(2200).optional(),
+  /** Month 1-12 of `year`, same calendar as the year; ignored without a year. */
+  month: z.coerce.number().int().min(1).max(12).optional(),
   tripId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),

@@ -1,4 +1,5 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
+import { LinkedMonthChip, useLinkedMonth } from "../components/Stats/LinkedMonth";
 import { yearFromSearch } from "../lib/stats/yearLinks";
 import { useGapPrefill } from "../hooks/useGapPrefill";
 import type { GapDates } from "../lib/gapCalendar";
@@ -74,7 +75,7 @@ type FerrySortField = (typeof FERRY_SORT_FIELDS)[number];
 /** The endpoint's page cap — one request covers the years of any realistic logbook. */
 const YEAR_SCAN_LIMIT = 500;
 
-type Filters = Pick<FerryListQuery, "q" | "status" | "year">;
+type Filters = Pick<FerryListQuery, "q" | "status" | "year" | "month">;
 type Editing = { journey: FerryJourney | null; dates?: GapDates } | null;
 
 /** Ferry logbook using the shared responsive table and filter controls. */
@@ -122,15 +123,17 @@ export default function FerryPage(): JSX.Element {
     FERRY_SORT_FIELDS
   );
 
+  const linkedMonth = useLinkedMonth(yearFilter);
   const filters = useMemo<Filters>(() => {
     const needle = debouncedSearch.trim().slice(0, SEARCH_MAX_LENGTH);
     return {
       ...(needle && { q: needle }),
       ...(statusFilter !== "all" && { status: statusFilter }),
       ...(yearFilter !== "all" && { year: yearFilter }),
+      ...(linkedMonth.month !== null && { month: linkedMonth.month }),
     };
-  }, [debouncedSearch, statusFilter, yearFilter]);
-  const signature = `${filters.q ?? ""}|${filters.status ?? ""}|${filters.year ?? ""}`;
+  }, [debouncedSearch, statusFilter, yearFilter, linkedMonth.month]);
+  const signature = `${filters.q ?? ""}|${filters.status ?? ""}|${filters.year ?? ""}|${filters.month ?? ""}`;
   const pagination = useServerPagination(total, "ferry-list", signature);
   const { limit, offset } = pagination;
 
@@ -287,6 +290,7 @@ export default function FerryPage(): JSX.Element {
           {t("ferry:subtitle")} {t("ferry:pageNote")}
         </p>
 
+        <LinkedMonthChip month={linkedMonth.month} year={yearFilter} onClear={linkedMonth.clear} />
         <ListFilterBar
           search={{ value: search, onChange: setSearch, placeholder: t("ferry:search") }}
           status={{

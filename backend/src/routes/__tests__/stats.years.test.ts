@@ -169,4 +169,16 @@ describe("GET /stats/years", () => {
     expect(again.status).toBe(304);
     expect((await request(app).get("/api/v1/stats/years")).status).toBe(401);
   });
+
+  it("the rail list narrows to a month of the year on the departure station's clock", async () => {
+    const ids = async (query: string): Promise<number> =>
+      (await request(app).get(`/api/v1/rail?${query}`).set("Cookie", cookieOf(userId)).expect(200))
+        .body.data.length;
+    // March 2024 holds four rides (100, 1000, 2000 km and the 2021-free ones are elsewhere);
+    // the New York ride is December 2024 on its own clock.
+    expect(await ids("year=2024&month=3&limit=50")).toBe(3);
+    expect(await ids("year=2024&month=12&limit=50")).toBe(1);
+    expect(await ids("year=2024&month=7&limit=50")).toBe(0);
+    expect(await ids("year=2024&limit=50")).toBe(4);
+  });
 });
