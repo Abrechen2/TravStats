@@ -201,7 +201,9 @@
       "invalid_one": "{{count}} unusable",
       "invalid_other": "{{count}} unusable",
       "withoutTime_one": "{{count}} without a time skipped",
-      "withoutTime_other": "{{count}} without a time skipped"
+      "withoutTime_other": "{{count}} without a time skipped",
+      "left_one": "{{count}} still stored",
+      "left_other": "{{count}} still stored"
     },
     "points_one": "{{count}} position",
     "points_other": "{{count}} positions",

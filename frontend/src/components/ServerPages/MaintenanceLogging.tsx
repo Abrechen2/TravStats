@@ -307,7 +307,7 @@ function Rows({
           </ul>
         )}
       </SettingItem>
-      <div ref={viewerRef} style={{ scrollMarginTop: "var(--ts-header-h, 64px)" }}>
+      <div ref={viewerRef} style={{ scrollMarginTop: 80 }}>
         <LogViewer files={files} selectedFile={viewer} onSelectFile={setViewer} />
       </div>
       <SettingItem

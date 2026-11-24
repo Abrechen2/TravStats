@@ -201,7 +201,9 @@
       "invalid_one": "{{count}} unbrauchbar",
       "invalid_other": "{{count}} unbrauchbar",
       "withoutTime_one": "{{count}} ohne Zeit übersprungen",
-      "withoutTime_other": "{{count}} ohne Zeit übersprungen"
+      "withoutTime_other": "{{count}} ohne Zeit übersprungen",
+      "left_one": "davon noch {{count}} vorhanden",
+      "left_other": "davon noch {{count}} vorhanden"
     },
     "points_one": "{{count}} Position",
     "points_other": "{{count}} Positionen",

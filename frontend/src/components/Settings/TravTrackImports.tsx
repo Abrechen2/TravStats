@@ -136,7 +136,12 @@ export default function TravTrackImports({
     // lead with the stored count as "N Positionen", so "268534 Positionen · 268534 gespeichert ·
     // 7805 schon vorhanden" did not add up (UAT rc.45).
     const read = row.report.read > 0 ? t(`${NS}.report.read`, { count: row.report.read }) : points;
-    return [kind, read, describe(row.report)].filter(Boolean).join(" · ");
+    // Removed since (a deleted span, a privacy zone drawn later): say how many are left.
+    const left =
+      row.pointCount !== row.report.stored
+        ? t(`${NS}.report.left`, { count: row.pointCount })
+        : null;
+    return [kind, read, describe(row.report), left].filter(Boolean).join(" · ");
   };
 
   return (

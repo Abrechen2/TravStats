@@ -23,13 +23,15 @@ describe("OperatorTile", () => {
   });
 
   // UAT rc.45: a muted "~" on the monogram's colour could not be seen.
-  it("draws the marker in the page's own colours, above a logo, with its own tooltip", () => {
+  it("draws the marker in the page's own colours, above a logo, under the explaining tooltip", () => {
     render(<OperatorTile name="Korail" domain="rail" logoUrl="/x.png" inferred />);
     const marker = screen.getByTestId("operator-inferred");
     expect(marker.style.background).toBe("var(--ts-bg)");
     expect(marker.style.color).toBe("var(--ts-text)");
     expect(marker.style.zIndex).toBe("1");
-    expect(marker.getAttribute("title")).toBe("common:operatorInferred");
+    expect(screen.getByTestId("operator-tile").getAttribute("title")).toContain(
+      "common:operatorInferred"
+    );
   });
 
   it("shows no marker for an entered operator", () => {

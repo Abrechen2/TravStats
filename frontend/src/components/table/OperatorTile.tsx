@@ -97,12 +97,11 @@ export function OperatorTile({
     >
       {inferred ? (
         // A muted "~" on the monogram's colour (or over a logo) was not visible at all
-        // (UAT rc.45): it is a small chip in the page's own colours now, above the logo, and it
-        // carries the explanation as its own tooltip.
+        // (UAT rc.45): it is a small chip in the page's own colours now, above the logo. The
+        // explanation is the tile's own tooltip (name – "abgeleitet …"), which covers the chip.
         <span
           aria-hidden="true"
           data-testid="operator-inferred"
-          title={t("common:operatorInferred")}
           style={{
             position: "absolute",
             right: 1,

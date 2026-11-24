@@ -255,7 +255,9 @@ describe("Track › Importe — GPX import", () => {
     const remove = vi.spyOn(travTrackImportsApi, "remove").mockResolvedValue(42);
     show();
     const row = (await screen.findByText("Bukhansan.gpx")).closest("li")!;
-    expect(within(row).getByText(/track:imports.points \{"count":42\}/)).toBeInTheDocument();
+    // What the file held first, and what is left after later removals (UAT rc.45).
+    expect(within(row).getByText(/track:imports.report.read \{"count":120\}/)).toBeInTheDocument();
+    expect(within(row).getByText(/track:imports.report.left \{"count":42\}/)).toBeInTheDocument();
     const failed = screen.getByText("plan.gpx").closest("li")!;
     expect(within(failed).getByText("track:imports.errors.noTimes")).toBeInTheDocument();
     await userEvent.click(within(row).getByRole("button", { name: "track:imports.delete" }));
