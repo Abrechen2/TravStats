@@ -16,6 +16,7 @@ import {
   type LinkRole,
 } from "./documentLinks";
 import { autoAssignInTx } from "./documentCompanions";
+import { entrySearchWhere } from "./entrySearch";
 import { describeEntries, entryKey, type EntryInfo } from "./entryRefs";
 
 /**
@@ -385,8 +386,8 @@ export interface LinkCandidates {
 }
 
 const OTHER_PER_TYPE = 40;
-/** With a search text the net is wider: the label is matched after describing, so more rows are read. */
-const SEARCH_PER_TYPE = 400;
+/** A search is answered by the database, so the cap is on the answer, not on the rows read. */
+const SEARCH_PER_TYPE = 100;
 const SEARCH_RESULT_CAP = 100;
 
 type Reader = { findMany(args: object): Promise<Array<{ id: string }>> };
@@ -394,24 +395,26 @@ type Reader = { findMany(args: object): Promise<Array<{ id: string }>> };
 /**
  * The entries a document may still be linked to: everything of the account it
  * is not linked to yet, those that share a trip with one of its links first.
- * Capped — a picker is not an export — and the client filters the rest by text.
+ * Capped — a picker is not an export. With `query` the database searches the label
+ * fields (see `entrySearch.ts`) and the cap applies to the answer.
  */
 export async function listLinkCandidates(
   userId: string,
   documentId: string,
   query?: string
 ): Promise<LinkCandidates> {
-  const needle = query?.trim().toLowerCase() || null;
+  const needle = query?.trim() || null;
   const links = await listDocumentLinks(userId, documentId);
   const linked = new Set(links.map((l) => entryKey(l.entry)));
   const tripIds = [...new Set(links.flatMap((l) => (l.entry.tripId ? [l.entry.tripId] : [])))];
 
   const refs: EntryRef[] = [];
   const tripRefs: EntryRef[] = [];
+  // A total ordering (id breaks ties), so `take` cuts the same rows every time.
   const recent = {
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }],
     take: needle ? SEARCH_PER_TYPE : OTHER_PER_TYPE,
-  } as const;
+  };
   const select = { id: true } as const;
   const inTrips = { userId, tripId: { in: tripIds } };
   // One reader per type; the entry models share no common Prisma type.
@@ -428,15 +431,18 @@ export async function listLinkCandidates(
   ] as Array<[EntryRef["type"], unknown]> as Array<[EntryRef["type"], Reader]>;
   for (const [type, model] of readers) {
     if (tripIds.length > 0) {
-      for (const r of await model.findMany({ where: inTrips, select })) {
+      const where = { ...inTrips, ...(needle ? entrySearchWhere(type, needle) : {}) };
+      for (const r of await model.findMany({ where, select })) {
         tripRefs.push({ type, id: r.id });
       }
     }
-    for (const r of await model.findMany({ where: { userId }, select, ...recent })) {
+    const where = { userId, ...(needle ? entrySearchWhere(type, needle) : {}) };
+    for (const r of await model.findMany({ where, select, ...recent })) {
       refs.push({ type, id: r.id });
     }
   }
-  for (const r of await prisma.trip.findMany({ where: { userId }, select, ...recent })) {
+  const tripWhere = { userId, ...(needle ? entrySearchWhere("trip", needle) : {}) };
+  for (const r of await prisma.trip.findMany({ where: tripWhere, select, ...recent })) {
     refs.push({ type: "trip", id: r.id });
   }
   for (const id of tripIds) tripRefs.push({ type: "trip", id });
@@ -448,8 +454,6 @@ export async function listLinkCandidates(
       const key = entryKey(ref);
       const found = info.get(key);
       if (!found || taken.has(key)) return [];
-      // Matched on the label the user sees, so a hit is always explainable.
-      if (needle && !found.label.toLowerCase().includes(needle)) return [];
       taken.add(key);
       return [found];
     });

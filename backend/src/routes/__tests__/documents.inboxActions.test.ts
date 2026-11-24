@@ -69,54 +69,80 @@ describe("documents — inbox actions", () => {
     expect(row.originalName).toBe("Hotel Lissabon.pdf");
   });
 
-  it("finds an entry older than the recent-40 cap by searching its label (picker searched a derived subset)", async () => {
-    const doc = await keep("search");
-    const old = new Date("2020-01-01T00:00:00Z");
-    await prisma.flight.create({ data: flight("ZZ9999", old) });
-    await prisma.flight.createMany({
-      data: Array.from({ length: 45 }, (_, i) => flight(`AB${1000 + i}`)),
+  it("keeps a note, clears it with blank, and shows it on the document", async () => {
+    const doc = await keep("note");
+    const set = await api("patch", `/documents/${doc.id}`).send({
+      note: "  Zimmer 12, Frühstück inklusive ",
     });
-
-    const capped = await api("get", `/documents/${doc.id}/link-candidates`);
-    const labels = (capped.body.data.otherEntries as { label: string }[]).map((e) => e.label);
-    expect(labels.some((l) => l.includes("ZZ9999"))).toBe(false);
-
-    const found = await api("get", `/documents/${doc.id}/link-candidates?q=zz9999`);
-    expect(found.status).toBe(200);
-    const hits = found.body.data.otherEntries as { label: string; type: string }[];
-    expect(hits).toHaveLength(1);
-    expect(hits[0].label).toContain("ZZ9999");
+    expect(set.status).toBe(200);
+    expect(set.body.data.note).toBe("Zimmer 12, Frühstück inklusive");
+    expect((await api("get", `/documents/${doc.id}`)).body.data.note).toBe(
+      "Zimmer 12, Frühstück inklusive"
+    );
+    const cleared = await api("patch", `/documents/${doc.id}`).send({ note: "   " });
+    expect(cleared.body.data.note).toBeNull();
   });
 
-  it("files a document with the entry created since the dialog opened, and reports null when none", async () => {
-    const doc = await keep("new-entry");
-    const before = new Date();
-    const none = await api("post", `/documents/${doc.id}/file-with-new-entry`).send({
-      domain: "flight",
-      openedAt: new Date(Date.now() + 60_000).toISOString(),
-    });
-    expect(none.status).toBe(200);
-    expect(none.body.data.entry).toBeNull();
+  describe("entry search (the picker searched a derived subset)", () => {
+    const hits = async (docId: string, q: string) =>
+      (
+        (await api("get", `/documents/${docId}/link-candidates?q=${encodeURIComponent(q)}`)).body
+          .data.otherEntries as { label: string }[]
+      ).map((e) => e.label);
 
-    const created = await prisma.flight.create({ data: flight("NE0001") });
-    const filed = await api("post", `/documents/${doc.id}/file-with-new-entry`).send({
-      domain: "flight",
-      openedAt: before.toISOString(),
+    it("finds an entry that sits beyond the 400th row of its type, by text, case-insensitively", async () => {
+      const doc = await keep("search");
+      await prisma.flight.create({ data: flight("ZZ9999", new Date("2020-01-01T00:00:00Z")) });
+      await prisma.flight.createMany({
+        data: Array.from({ length: 450 }, (_, i) => flight(`AB${1000 + i}`)),
+      });
+
+      const recent = await api("get", `/documents/${doc.id}/link-candidates`);
+      const labels = (recent.body.data.otherEntries as { label: string }[]).map((e) => e.label);
+      expect(labels.some((l) => l.includes("ZZ9999"))).toBe(false);
+
+      const found = await hits(doc.id, "zz9999");
+      expect(found).toHaveLength(1);
+      expect(found[0]).toContain("ZZ9999");
     });
-    expect(filed.status).toBe(200);
-    expect(filed.body.data.entry).toEqual({ type: "flight", id: created.id });
+
+    it("matches every term, and a year or month term against the entry's date", async () => {
+      const doc = await keep("terms");
+      await prisma.flight.create({
+        data: { ...flight("QQ1111"), departureTime: new Date("2019-03-15T08:00:00Z") },
+      });
+      await prisma.flight.create({
+        data: { ...flight("QQ2222"), departureTime: new Date("2018-03-15T08:00:00Z") },
+      });
+      expect(await hits(doc.id, "QQ 2019")).toEqual([expect.stringContaining("QQ1111")]);
+      expect(await hits(doc.id, "qq 2019-03")).toEqual([expect.stringContaining("QQ1111")]);
+      expect(await hits(doc.id, "QQ 2020")).toEqual([]);
+    });
+  });
+
+  it("files with the entry the request created, not with another of the same domain created at the same time", async () => {
+    const doc = await keep("exact");
+    const body = (day: string, extra: object = {}) => ({
+      departure: { iata: "MUC", lat: 48.35, lon: 11.79 },
+      arrival: { iata: "CGN", lat: 50.87, lon: 7.14 },
+      departureLocal: `${day}T08:25`,
+      depTimezone: "Europe/Berlin",
+      arrivalLocal: `${day}T09:30`,
+      arrTimezone: "Europe/Berlin",
+      status: "flown",
+      ...extra,
+    });
+    // Two creates of the same domain in flight together: only one carries the document.
+    const [other, mine] = await Promise.all([
+      api("post", "/flights").send(body("2011-05-01")),
+      api("post", "/flights").send(body("2011-05-02", { documentIds: [doc.id] })),
+    ]);
+    expect(other.status).toBe(201);
+    expect(mine.status).toBe(201);
     expect(await prisma.document.findUnique({ where: { id: doc.id } })).toMatchObject({
-      flightId: created.id,
+      flightId: mine.body.flight.id,
       unlinkedAt: null,
     });
-  });
-
-  it("does not file somebody else's document", async () => {
-    const doc = await keep("foreign");
-    const res = await api("post", `/documents/${doc.id}/file-with-new-entry`, otherCookie).send({
-      domain: "flight",
-      openedAt: new Date(0).toISOString(),
-    });
-    expect(res.status).toBe(404);
+    expect(mine.body.flight.id).not.toBe(other.body.flight.id);
   });
 });

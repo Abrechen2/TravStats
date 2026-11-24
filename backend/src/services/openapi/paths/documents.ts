@@ -30,7 +30,6 @@ import {
   unfiledDocumentsResponseSchema,
   updateDocumentSchema,
   linkCandidatesQuerySchema,
-  fileWithNewEntryBodySchema,
 } from "../../../schemas/document";
 import {
   travellerFactsBodySchema,
@@ -378,35 +377,13 @@ registry.registerPath({
   summary: "Entries the document may still be linked to",
   description:
     "The account's own entries it is not linked to yet — those sharing a trip with one of its " +
-    "links first. Without `q` capped per type (the most recent); with `q` the account's entries " +
-    "are searched by the label they show on screen (capped overall), so an older entry is found.",
+    "links first. Without `q` capped per type (the most recent); with `q` the database searches the account's entries by the text of their label fields " +
+    "(every term must match; a year, month or date term matches the entry's date), so an older entry is found.",
   tags,
   request: { params: idParams, query: linkCandidatesQuerySchema },
   responses: {
     200: { description: "Candidates", content: json(envelope(linkCandidatesSchema)) },
     404: { description: "Not your document (`DOCUMENT_NOT_FOUND`)", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/documents/{id}/file-with-new-entry",
-  summary: "File a document with the entry just created from it",
-  description:
-    '"Neu anlegen aus Dokument": the entry is the first of `domain` the account created since ' +
-    "`openedAt`. `entry` is null when none was created — the document stays unfiled.",
-  tags,
-  request: { params: idParams, body: { content: json(fileWithNewEntryBodySchema) } },
-  responses: {
-    200: {
-      description: "The entry it was filed with, or null",
-      content: json(
-        envelope(z.object({ entry: z.object({ type: z.string(), id: z.string() }).nullable() }))
-      ),
-    },
-    400: badInput,
-    404: { description: "Not your document (`DOCUMENT_NOT_FOUND`)", content: errorContent },
-    409: { description: "Already filed with another entry", content: errorContent },
   },
 });
 

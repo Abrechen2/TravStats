@@ -5,7 +5,6 @@ import { documentFilingHandoffOf } from "../documentFilingHandoff";
 const file = new File(["%PDF"], "buchung.pdf", { type: "application/pdf" });
 const valid = {
   documentId: "d1",
-  openedAt: "2026-11-24T10:00:00Z",
   domain: "flight",
   document: { kind: "file", file },
 };

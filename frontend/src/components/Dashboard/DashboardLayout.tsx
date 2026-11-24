@@ -6,7 +6,7 @@ import {
   documentFilingHandoffOf,
   type DocumentFilingHandoff,
 } from "../inbox/documentFilingHandoff";
-import { documentsApi } from "../../lib/api/documents";
+import { canFileBy, clearFilingDocument, setFilingDocument } from "../../lib/api/filingDocument";
 import { mailIntakeApi } from "../../lib/api/mailIntake";
 import AppShell from "../ui/AppShell";
 import type { JSX, ReactNode } from "react";
@@ -80,11 +80,14 @@ export function DashboardLayout({
   // A document one import dialog found to belong to another (D1): the target
   // dialog opens with it and reads it, so the user never drops it twice.
   const [handedOver, setHandedOver] = useState<ImportDocument | null>(null);
-  // A kept document the inbox handed over: filed with the entry the dialog creates. Dropped when
-  // the dialog closes (after `onItemsCreated` has settled), so it never rides on a later import.
+  // A kept document the inbox handed over: the request that creates the entry carries its id
+  // (`lib/api/filingDocument`). Dropped when the dialog closes, so it never rides on a later import.
   const pendingDocument = useRef<DocumentFilingHandoff | null>(null);
   const setAddingDomain = (domain: AddableDomain | null): void => {
-    if (domain === null) pendingDocument.current = null;
+    if (domain === null && pendingDocument.current) {
+      pendingDocument.current = null;
+      clearFilingDocument();
+    }
     setHandedOver(null);
     setAddingDomainState(domain);
   };
@@ -98,21 +101,11 @@ export function DashboardLayout({
    * the entry exists either way and the mail stays in the inbox to be filed by hand.
    */
   const fileMailOriginal = async (): Promise<void> => {
-    const pendingDoc = pendingDocument.current;
-    if (pendingDoc) {
+    if (pendingDocument.current) {
       pendingDocument.current = null;
-      try {
-        const entry = await documentsApi.fileWithNewEntry(
-          pendingDoc.documentId,
-          pendingDoc.domain,
-          pendingDoc.openedAt
-        );
-        // Nothing found is not a silent success: the document is still unfiled and says so there.
-        if (!entry) addToast("error", t("dashboard:documentNotFiled"));
-      } catch (error) {
-        logger.error("Failed to file the document with the new entry", error);
-        addToast("error", t("dashboard:documentNotFiled"));
-      }
+      // Filed by id in the create request itself; where the domain's save path cannot carry an
+      // id, or no request did, the document stays unfiled and the user is told — never a guess.
+      if (!clearFilingDocument()) addToast("error", t("dashboard:documentNotFiled"));
     }
     const pending = pendingMail.current;
     if (!pending) return;
@@ -128,6 +121,9 @@ export function DashboardLayout({
     const documentHandoff = documentFilingHandoffOf(location.state);
     if (documentHandoff) {
       pendingDocument.current = documentHandoff;
+      if (canFileBy(documentHandoff.domain)) {
+        setFilingDocument(documentHandoff.documentId, documentHandoff.domain);
+      }
       setAddingDomainState(documentHandoff.domain as AddableDomain);
       setHandedOver(documentHandoff.document);
       navigate(location.pathname + location.search, { replace: true, state: null });

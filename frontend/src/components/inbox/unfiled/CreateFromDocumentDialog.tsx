@@ -49,7 +49,6 @@ export default function CreateFromDocumentDialog({ document, onClose }: Props): 
       });
       const handoff: DocumentFilingHandoff = {
         documentId: document.id,
-        openedAt: new Date().toISOString(),
         domain,
         document: { kind: "file", file },
       };

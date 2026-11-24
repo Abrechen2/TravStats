@@ -216,6 +216,23 @@ describe("UnfiledDocumentsSection", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("documents:deleteFailed");
   });
 
+  it("saves a note through PATCH and shows it in the viewer", async () => {
+    api.listUnfiled.mockResolvedValue(listOf(unfiled({ note: "Zimmer 12" })));
+    api.update.mockResolvedValue(unfiled({ note: "Zimmer 14" }));
+    renderSection();
+    fireEvent.click(await screen.findByRole("button", { name: /previewLabel/ }));
+    expect(await screen.findByTestId("document-note")).toHaveTextContent("Zimmer 12");
+    fireEvent.click(screen.getAllByRole("button", { name: "common:buttons.close" })[0]);
+
+    await openMenuEntry("bordkarte.pdf", "dataQuality:unfiledDocuments.actions.edit");
+    const dialog = await screen.findByTestId("edit-document-dialog");
+    fireEvent.change(within(dialog).getByDisplayValue("Zimmer 12"), {
+      target: { value: "Zimmer 14" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "common:buttons.save" }));
+    await waitFor(() => expect(api.update).toHaveBeenCalledWith("doc-1", { note: "Zimmer 14" }));
+  });
+
   it("saves a rename through PATCH and shows a refusal", async () => {
     api.listUnfiled.mockResolvedValue(listOf(unfiled()));
     api.update.mockRejectedValueOnce(new Error("boom"));

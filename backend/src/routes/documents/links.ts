@@ -8,7 +8,6 @@ import {
   addDocumentLinksSchema,
   assignLinkCompanionSchema,
   entryRefSchema,
-  fileWithNewEntryBodySchema,
   linkCandidatesQuerySchema,
   tripCandidatesQuerySchema,
 } from "../../schemas/document";
@@ -20,7 +19,6 @@ import {
   unlinkFromEntry,
 } from "../../services/documents/documentEntryLinks";
 import { assignLinkCompanion } from "../../services/documents/documentCompanions";
-import { fileDocumentWithNewEntry } from "../../services/documents/fileWithNewEntry";
 import { toDocumentDto } from "../../services/documents/documentService";
 
 /**
@@ -105,35 +103,6 @@ router.post(
         }))
       );
       res.status(201).json({ success: true, data: await listDocumentLinks(req.userId!, id) });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-/**
- * "Neu anlegen aus Dokument": the import dialog created an entry from this
- * document; file the document with the first entry of that domain created
- * since the user opened the dialog (the same lookup a proposal's mail uses).
- * `entry: null` means nothing was created — not an error, the document stays
- * unfiled and the screen says so.
- */
-router.post(
-  "/documents/:id/file-with-new-entry",
-  authenticate,
-  rejectDemo,
-  requireWriteScope,
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const id = parseOrThrow(uuid, req.params.id);
-      const body = parseOrThrow(fileWithNewEntryBodySchema, req.body);
-      const entry = await fileDocumentWithNewEntry(
-        req.userId!,
-        id,
-        body.domain,
-        new Date(body.openedAt)
-      );
-      res.json({ success: true, data: { entry } });
     } catch (error) {
       next(error);
     }

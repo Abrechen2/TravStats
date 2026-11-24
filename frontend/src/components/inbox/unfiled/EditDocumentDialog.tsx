@@ -24,13 +24,12 @@ interface Props {
  * `PATCH /documents/:id`. Only fields that changed are sent, so saving a date
  * cannot overwrite a kind someone else set a moment ago.
  *
- * There is no note field: documents carry none on the server, and a note that
- * lived only in this form would be a feature that loses data.
  */
 export default function EditDocumentDialog({ document, onClose, onSaved }: Props): JSX.Element {
   const { t } = useTranslation(["dataQuality", "documents", "common"]);
   const [name, setName] = useState(document.displayName);
   const [issuedOn, setIssuedOn] = useState(document.issuedOn ?? "");
+  const [note, setNote] = useState(document.note ?? "");
   const [kind, setKind] = useState<DocumentKind | "">(document.kind ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +38,7 @@ export default function EditDocumentDialog({ document, onClose, onSaved }: Props
   const patch = {
     ...(trimmed !== document.displayName && trimmed !== "" && { displayName: trimmed }),
     ...(issuedOn !== (document.issuedOn ?? "") && { issuedOn: issuedOn === "" ? null : issuedOn }),
+    ...(note.trim() !== (document.note ?? "") && { note: note.trim() === "" ? null : note.trim() }),
     ...(kind !== (document.kind ?? "") && { kind: kind === "" ? null : kind }),
   };
   const changed = Object.keys(patch).length > 0;
@@ -130,6 +130,17 @@ export default function EditDocumentDialog({ document, onClose, onSaved }: Props
               </option>
             ))}
           </select>
+        </label>
+        <label className="flex flex-col" style={{ gap: 4 }}>
+          <span className="t-caption">{t("dataQuality:unfiledDocuments.edit.note")}</span>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={2000}
+            rows={3}
+            className={field}
+            style={fieldStyle}
+          />
         </label>
         {error !== null && (
           <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>

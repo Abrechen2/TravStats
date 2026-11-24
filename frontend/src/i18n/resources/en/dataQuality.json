@@ -706,7 +706,8 @@
       "name": "Title",
       "issuedOn": "Date on the document",
       "kind": "Type",
-      "kindNone": "Not specified"
+      "kindNone": "Not specified",
+      "note": "Note"
     },
     "create": {
       "title": "\"{{name}}\": create from document",

@@ -99,6 +99,15 @@ export default function DocumentPreviewModal({ document, onClose }: Props): JSX.
         </>
       }
     >
+      {document.note && (
+        <p
+          data-testid="document-note"
+          className="t-caption"
+          style={{ marginBottom: "var(--ts-space-md)", whiteSpace: "pre-wrap" }}
+        >
+          {document.note}
+        </p>
+      )}
       {body}
     </Modal>
   );

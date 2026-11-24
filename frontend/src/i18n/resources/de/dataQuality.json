@@ -706,7 +706,8 @@
       "name": "Titel",
       "issuedOn": "Datum auf dem Dokument",
       "kind": "Art",
-      "kindNone": "Keine Angabe"
+      "kindNone": "Keine Angabe",
+      "note": "Notiz"
     },
     "create": {
       "title": "„{{name}}“: Neu anlegen aus Dokument",

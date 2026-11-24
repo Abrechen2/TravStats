@@ -65,6 +65,8 @@ export interface TravelDocument {
   sizeBytes: number;
   sha256: string;
   originalName: string | null;
+  /** The owner's own remark; null/absent = none. */
+  note?: string | null;
   /** What to call it on screen — already resolved server-side. */
   displayName: string;
   issuedOn: string | null;
@@ -175,6 +177,8 @@ export interface UnfiledDocuments {
 
 export interface UpdateDocumentInput {
   displayName?: string;
+  /** The owner's remark; null or blank clears it. */
+  note?: string | null;
   kind?: DocumentKind | null;
   /** YYYY-MM-DD, or null to clear. */
   issuedOn?: string | null;
@@ -374,19 +378,6 @@ export const documentsApi = {
   fetchFile: async (id: string): Promise<Blob> => {
     const { data } = await api.get<Blob>(`/documents/${id}/file`, { responseType: "blob" });
     return data;
-  },
-
-  /** "Neu anlegen aus Dokument": file the document with what was created from it since `openedAt`. */
-  fileWithNewEntry: async (
-    id: string,
-    domain: NewEntryDomain,
-    openedAt: string
-  ): Promise<DocumentEntryRef | null> => {
-    const { data } = await api.post<Envelope<{ entry: DocumentEntryRef | null }>>(
-      `/documents/${id}/file-with-new-entry`,
-      { domain, openedAt }
-    );
-    return data.data.entry;
   },
 
   remove: async (id: string): Promise<void> => {

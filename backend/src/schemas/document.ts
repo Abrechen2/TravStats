@@ -53,12 +53,6 @@ export const linkCandidatesQuerySchema = z.object({
   q: z.string().trim().max(100).optional(),
 });
 
-/** `POST /documents/:id/file-with-new-entry` — file a document with what the user just created from it. */
-export const fileWithNewEntryBodySchema = z.object({
-  domain: z.enum(["flight", "cruise", "lodging", "rail", "rental"]),
-  openedAt: z.string().datetime(),
-});
-
 export const entryRefSchema = z.object({ type: z.enum(ENTRY_TYPES), id: uuid });
 
 /** Multipart text fields arrive as strings; an empty one means "not sent". */
@@ -94,6 +88,12 @@ export const updateDocumentSchema = z
       .max(200)
       .optional()
       .describe("The name shown on screen (stored as the original name; the bytes keep theirs)"),
+    note: z
+      .string()
+      .max(2000)
+      .nullable()
+      .optional()
+      .describe("The owner's remark; null or blank clears it"),
     kind: z.enum(DOCUMENT_KINDS).nullable().optional(),
     issuedOn: documentDateSchema.nullable().optional(),
     entry: entryRefSchema.nullable().optional(),
@@ -138,6 +138,7 @@ export const documentDtoSchema = z.object({
         "non-PDF, a PDF whose page tree could not be read, and documents kept before 2.7. Never 0."
     ),
   originalName: z.string().nullable(),
+  note: z.string().nullable().optional().describe("The owner's own remark; null = none"),
   displayName: z.string(),
   issuedOn: z.string().nullable(),
   rentalCategory: z
