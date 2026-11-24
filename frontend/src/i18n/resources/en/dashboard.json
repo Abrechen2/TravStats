@@ -257,7 +257,10 @@
       "poi": "Add place",
       "roadtrip": "Add roadtrip",
       "rail": "Add train journey",
-      "tour": "Add tour"
+      "tour": "Add tour",
+      "rental": "Add rental",
+      "bus": "Add bus ride",
+      "ferry": "Add ferry crossing"
     }
   },
   "filter": {

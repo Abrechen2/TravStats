@@ -789,7 +789,8 @@
       "searchClose": "Hide search",
       "searchLabel": "Search for a place",
       "searchName": "Place name",
-      "searchSave": "Save as name"
+      "searchSave": "Save as name",
+      "partial": "The place service is not answering right now – only some suggestions are shown."
     },
     "toPlaces": {
       "open": "Add to Places",

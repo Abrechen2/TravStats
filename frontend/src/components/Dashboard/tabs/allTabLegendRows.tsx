@@ -127,7 +127,7 @@ export function buildUnvisitedListLegendRow(t: Translate, color: string): JSX.El
         }}
       />
       <span style={{ color: "var(--text-primary)" }}>
-        {t("dashboard:legend.unvisitedListMember")}
+        {t("dashboard:poi.legend.unvisitedListMember")}
       </span>
     </span>
   );

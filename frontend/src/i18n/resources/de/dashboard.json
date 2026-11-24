@@ -257,7 +257,10 @@
       "poi": "Ort anlegen",
       "roadtrip": "Roadtrip hinzufügen",
       "rail": "Zugfahrt hinzufügen",
-      "tour": "Tour hinzufügen"
+      "tour": "Tour hinzufügen",
+      "rental": "Mietwagen hinzufügen",
+      "bus": "Busfahrt hinzufügen",
+      "ferry": "Fährfahrt hinzufügen"
     }
   },
   "filter": {

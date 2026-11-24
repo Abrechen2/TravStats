@@ -47,7 +47,8 @@
     "globe": "Globe",
     "heatmap": "Heatmap",
     "trips": "Trips",
-    "label": "Visualization"
+    "label": "Visualization",
+    "tripRoutes": "Cruise"
   },
   "timeSlider": {
     "play": "Play",

@@ -789,7 +789,8 @@
       "searchClose": "Suche ausblenden",
       "searchLabel": "Ort suchen",
       "searchName": "Name des Ortes",
-      "searchSave": "Als Namen speichern"
+      "searchSave": "Als Namen speichern",
+      "partial": "Der Ortsdienst antwortet gerade nicht – nur ein Teil der Vorschläge ist da."
     },
     "toPlaces": {
       "open": "In Orte übernehmen",
