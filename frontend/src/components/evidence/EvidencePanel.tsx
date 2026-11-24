@@ -244,6 +244,7 @@ export default function EvidencePanel({
               entry={entry}
               aggregation={measure.aggregation}
               unit={measure.unit}
+              baseCurrency={baseCurrency}
             />
           ))}
         </ul>

@@ -1,8 +1,8 @@
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
-import type { Aggregation, EvidenceEntry } from "../../shared/evidence";
-import { composeI18nText, formatEvidenceDate } from "./evidenceText";
+import type { Aggregation, EvidenceEntry, EvidenceMeasure } from "../../shared/evidence";
+import { composeI18nText, formatEvidenceDate, formatMeasureValue } from "./evidenceText";
 import { countryName } from "../Passport/countryName";
 import { formatNumber } from "../../lib/units";
 import { PLACE_CATEGORIES } from "../../shared/placeCategories";
@@ -33,6 +33,8 @@ interface EvidenceEntryRowProps {
    * Airways and not Bosnia.
    */
   unit: string;
+  /** For a money measure: the currency its contributions are in. */
+  baseCurrency?: string;
 }
 
 /**
@@ -49,6 +51,7 @@ export default function EvidenceEntryRow({
   entry,
   aggregation,
   unit,
+  baseCurrency = "EUR",
 }: EvidenceEntryRowProps): JSX.Element {
   const { t, i18n } = useTranslation(["evidence", "places"]);
 
@@ -62,8 +65,15 @@ export default function EvidenceEntryRow({
   const contributionText =
     aggregation === "sum" && entry.contribution !== undefined
       ? t("evidence:entry.contribution", {
-          // In the reader's language: "430,51", not "430.51" (UAT rc.45).
-          value: formatNumber(roundForDisplay(entry.contribution), undefined, i18n.language),
+          // In the reader's language and with the measure's unit: "430,51 km", not "430.51"
+          // (UAT rc.45 and its retest, D14) — the same formatting as the panel's total.
+          value:
+            formatMeasureValue(
+              { unit, value: roundForDisplay(entry.contribution) } as EvidenceMeasure,
+              t,
+              i18n.language,
+              baseCurrency
+            ) ?? formatNumber(roundForDisplay(entry.contribution), undefined, i18n.language),
         })
       : null;
   // A credit is an IDENTITY key — that is what makes two rows witnessing the

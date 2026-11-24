@@ -21,6 +21,8 @@ const i18nState = vi.hoisted(() => ({ language: "en" }));
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
+      // A unit resolves to its own name, so the row's "value unit" is visible.
+      if (key.startsWith("evidence:unit.")) return key.slice("evidence:unit.".length);
       if (!options) return key;
       const { ns: _ns, keySeparator: _ks, ...values } = options;
       return Object.keys(values).length ? `${key}(${JSON.stringify(values)})` : key;
@@ -91,14 +93,27 @@ describe("EvidenceEntryRow", () => {
 
   it("a `sum` entry renders its contribution, not credits", () => {
     renderRow(baseEntry({ contribution: 612, credits: undefined }), "sum");
-    expect(screen.getByText('evidence:entry.contribution({"value":"612"})')).toBeInTheDocument();
+    expect(
+      screen.getByText('evidence:entry.contribution({"value":"612 flights"})')
+    ).toBeInTheDocument();
   });
 
   // UAT rc.45: "trägt 430.51 bei" in a German UI.
   it("writes the contribution in the reader's language", () => {
     i18nState.language = "de";
     renderRow(baseEntry({ contribution: 430.5149, credits: undefined }), "sum");
-    expect(screen.getByText('evidence:entry.contribution({"value":"430,51"})')).toBeInTheDocument();
+    expect(
+      screen.getByText('evidence:entry.contribution({"value":"430,51 flights"})')
+    ).toBeInTheDocument();
+  });
+
+  // UAT rc.45 retest D14: "trägt 430,51 bei" — of what? The measure's unit rides along.
+  it("gives the contribution the measure's unit", () => {
+    i18nState.language = "de";
+    renderRow(baseEntry({ contribution: 430.51, credits: undefined }), "sum", "km");
+    expect(
+      screen.getByText('evidence:entry.contribution({"value":"430,51 km"})')
+    ).toBeInTheDocument();
   });
 
   it("a `distinct` entry renders its credits, not a contribution — the two mean different things", () => {
