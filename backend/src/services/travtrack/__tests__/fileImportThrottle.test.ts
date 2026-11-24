@@ -16,6 +16,7 @@ import {
   PACE_MIN_MS,
 } from "../imports/importPacing";
 import { FairSlot } from "../imports/writeSlot";
+import logger, { dbLogger } from "../../../utils/logger";
 import { makeUser, wipeTravTrack } from "./fixtures";
 
 /**
@@ -229,6 +230,8 @@ describe("TravTrack — a large file import shares the database", () => {
       { timeout: 20_000 }
     );
     await isLocked;
+    const dbError = jest.spyOn(dbLogger, "error");
+    const warn = jest.spyOn(logger, "warn");
     const opts: RunOptions = {
       lockTimeoutMs: 200,
       // The first retry pause is where the lock is let go.
@@ -242,6 +245,71 @@ describe("TravTrack — a large file import shares the database", () => {
     expect(outcome.status).toBe("succeeded");
     expect(outcome.report.stored).toBe(50);
     expect(waits[0]).toBeGreaterThanOrEqual(1000);
+    // An expected retry is one warning with its attempt, not an error.
+    expect(dbError).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: "travtrack.import.batch_busy", attempt: 1 })
+    );
+    dbError.mockRestore();
+    warn.mockRestore();
+  });
+
+  it("a lock-timeout retry logs no error; only the last failed try does", async () => {
+    const row = await newRow();
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    let locked!: () => void;
+    const isLocked = new Promise<void>((r) => (locked = r));
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`travtrack:${userId}`}, 0))`;
+        locked();
+        await held;
+      },
+      { timeout: 20_000 }
+    );
+    await isLocked;
+    const dbError = jest.spyOn(dbLogger, "error");
+    const appError = jest.spyOn(logger, "error");
+    const warn = jest.spyOn(logger, "warn");
+    try {
+      await expect(
+        runGpxImport(
+          row.id,
+          userId,
+          { buffer: records(50) },
+          { lockTimeoutMs: 100, sleep: async () => {} }
+        )
+      ).rejects.toBeDefined();
+    } finally {
+      release();
+      await holder;
+    }
+    const busyWarnings = warn.mock.calls.filter(
+      ([e]) => (e as { operation?: string }).operation === "travtrack.import.batch_busy"
+    );
+    expect(busyWarnings.map(([e]) => (e as { attempt: number }).attempt)).toEqual([1, 2, 3]);
+    // The fourth and last try: one database error and one import error, nothing before it.
+    expect(dbError).toHaveBeenCalledTimes(1);
+    expect(appError).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: "travtrack.import.batch_failed", attempt: 4 })
+    );
+    expect((await rowOf(row.id)).status).toBe("failed");
+    dbError.mockRestore();
+    appError.mockRestore();
+    warn.mockRestore();
+  });
+
+  it("a run that stores nothing new says so in its report", async () => {
+    const { sleep } = noWait();
+    const file = records(500);
+    const first = await newRow();
+    await runGpxImport(first.id, userId, { buffer: file }, { sleep });
+    const again = await newRow();
+    const outcome = await runGpxImport(again.id, userId, { buffer: file }, { sleep });
+    expect(outcome.report).toMatchObject({ stored: 0, duplicate: 500, noNewPoints: true });
+    expect((await rowOf(again.id)).report).toMatchObject({ noNewPoints: true });
+    expect((await rowOf(first.id)).report).not.toHaveProperty("noNewPoints");
   });
 });
 
@@ -275,6 +343,9 @@ describe("TravTrack — file imports take turns across accounts", () => {
   async function race(aFixes: number, bFixes: number) {
     const slot = new FairSlot(1);
     const order: Array<{ who: "A" | "B"; at: number }> = [];
+    const parses = { A: 0, B: 0 };
+    const yields: Array<{ who: "A" | "B"; holdsPoints: boolean }> = [];
+    let bParsesWhileQueued = -1;
     const doneAt: Record<"A" | "B", number> = { A: -1, B: -1 };
     const [rowA, rowB] = await Promise.all([rowFor(a), rowFor(b)]);
     const common = { slot, sliceBatches: 2, batchSize: 100, sleep: async () => {} };
@@ -293,7 +364,10 @@ describe("TravTrack — file imports take turns across accounts", () => {
         // Hold A's first slice open until B is queued behind it.
         afterBatch: async (done) => {
           while (done === 1 && slot.waiting() === 0) await new Promise((r) => setTimeout(r, 5));
+          if (done === 1) bParsesWhileQueued = parses.B;
         },
+        onParse: () => (parses.A += 1),
+        onYield: ({ holdsPoints }) => yields.push({ who: "A", holdsPoints }),
       }
     ).then((o) => ((doneAt.A = order.length), o));
     // B arrives once A holds the turn.
@@ -303,12 +377,17 @@ describe("TravTrack — file imports take turns across accounts", () => {
           rowB.id,
           b,
           { buffer: records(bFixes, 1_000_000) },
-          { ...common, onBatch: ({ at }) => order.push({ who: "B", at }) }
+          {
+            ...common,
+            onBatch: ({ at }) => order.push({ who: "B", at }),
+            onParse: () => (parses.B += 1),
+            onYield: ({ holdsPoints }) => yields.push({ who: "B", holdsPoints }),
+          }
         )
       )
       .then((o) => ((doneAt.B = order.length), o));
     const [outA, outB] = await Promise.all([runA, runB]);
-    return { order, doneAt, outA, outB, rowA, rowB };
+    return { order, doneAt, outA, outB, rowA, rowB, parses, yields, bParsesWhileQueued };
   }
 
   it("two accounts' imports interleave in slices", async () => {
@@ -316,6 +395,16 @@ describe("TravTrack — file imports take turns across accounts", () => {
     expect(outA.status).toBe("succeeded");
     expect(outB.status).toBe("succeeded");
     expect(order.map((o) => o.who).join("")).toBe("AABBAABBAABBAABB");
+  });
+
+  it("a waiting import holds no parsed points: it parses on its turn, and again after giving one away", async () => {
+    const { parses, yields, bParsesWhileQueued } = await race(800, 800);
+    // B queued behind A before it had parsed anything.
+    expect(bParsesWhileQueued).toBe(0);
+    // A gave the turn away 3 times (after slices 1-3), B 3 times; each time without points.
+    expect(yields).toHaveLength(6);
+    expect(yields.every((y) => !y.holdsPoints)).toBe(true);
+    expect(parses).toEqual({ A: 4, B: 4 });
   });
 
   it("one account's large import cannot starve another's", async () => {

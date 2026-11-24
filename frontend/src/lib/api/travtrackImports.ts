@@ -27,6 +27,10 @@ export interface TravTrackImportReport {
   format?: string;
   /** The failure's code, for a failed import. */
   error?: string;
+  /** The run stored nothing new: every fix was a duplicate or dropped. */
+  noNewPoints?: boolean;
+  /** Waiting for its turn behind another account's import. */
+  queued?: boolean;
 }
 
 export interface TravTrackImport {

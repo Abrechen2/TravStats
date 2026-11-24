@@ -72,7 +72,10 @@ export default function TravTrackImports({
 
   const describe = (r: TravTrackImportReport) =>
     [
-      t(`${NS}.report.stored`, { count: r.stored }),
+      // Nothing new stored is said as such, not as "0 gespeichert" next to progress.
+      r.stored === 0 || r.noNewPoints
+        ? t(`${NS}.report.noNew`)
+        : t(`${NS}.report.stored`, { count: r.stored }),
       r.duplicate > 0 && t(`${NS}.report.duplicate`, { count: r.duplicate }),
       r.dropped.privacy_zone > 0 && t(`${NS}.report.zone`, { count: r.dropped.privacy_zone }),
       r.dropped.deleted_range > 0 && t(`${NS}.report.deleted`, { count: r.dropped.deleted_range }),
@@ -158,7 +161,8 @@ export default function TravTrackImports({
         .join(" · ");
     }
     if (row.status === "running") {
-      return [t(`${NS}.status.running`), sofar].filter(Boolean).join(" · ");
+      const state = row.report?.queued ? `${NS}.status.queued` : `${NS}.status.running`;
+      return [t(state), sofar].filter(Boolean).join(" · ");
     }
     if (row.status === "partial") {
       return [t(`${NS}.status.partial`), sofar].filter(Boolean).join(" · ");

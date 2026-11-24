@@ -203,7 +203,8 @@
       "withoutTime_one": "{{count}} ohne Zeit übersprungen",
       "withoutTime_other": "{{count}} ohne Zeit übersprungen",
       "left_one": "davon noch {{count}} vorhanden",
-      "left_other": "davon noch {{count}} vorhanden"
+      "left_other": "davon noch {{count}} vorhanden",
+      "noNew": "keine neuen Punkte"
     },
     "points_one": "{{count}} Position",
     "points_other": "{{count}} Positionen",
@@ -213,7 +214,8 @@
       "interrupted": "abgebrochen (Server neu gestartet) – mit „Fortsetzen“ dieselbe Datei wählen",
       "cancelled": "gelöscht",
       "paused": "angehalten – unter „Dawarich-Verlauf übernehmen“ fortsetzen",
-      "partial": "unterbrochen – mit „Fortsetzen“ dieselbe Datei wählen, dann geht es an der Stelle weiter"
+      "partial": "unterbrochen – mit „Fortsetzen“ dieselbe Datei wählen, dann geht es an der Stelle weiter",
+      "queued": "wartet, bis andere Importe an der Reihe waren"
     },
     "delete": "Import löschen",
     "deleteConfirm_one": "Den Import „{{name}}“ und seine {{count}} Position löschen? Positionen aus anderen Quellen bleiben.",

@@ -321,6 +321,29 @@ describe("Track › Importe — GPX import", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("track:imports.partial");
   });
 
+  it("an import that stored nothing new says so instead of looking like progress", async () => {
+    vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([
+      {
+        ...DONE,
+        status: "partial",
+        report: { ...REPORT, stored: 0, duplicate: 120, noNewPoints: true },
+      },
+    ]);
+    show();
+    const row = (await screen.findByText("Bukhansan.gpx")).closest("li")!;
+    expect(row.textContent).toContain("track:imports.report.noNew");
+    expect(row.textContent).not.toContain("track:imports.report.stored");
+  });
+
+  it("an import waiting for its turn says so", async () => {
+    vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([
+      { ...DONE, status: "running", report: { ...REPORT, queued: true } },
+    ]);
+    show();
+    const row = (await screen.findByText("Bukhansan.gpx")).closest("li")!;
+    expect(row.textContent).toContain("track:imports.status.queued");
+  });
+
   it("a finished import offers no resume", async () => {
     vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([DONE]);
     show();

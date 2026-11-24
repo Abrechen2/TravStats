@@ -31,6 +31,14 @@ const report = z
           "geojson, kml or tcx (joined with + when a file held several). Absent on imports made " +
           "before forgejo#394."
       ),
+    noNewPoints: z
+      .boolean()
+      .optional()
+      .describe("The run stored nothing new: every fix was a duplicate or dropped"),
+    queued: z
+      .boolean()
+      .optional()
+      .describe("Running, but waiting for its turn behind another account's import"),
     error: z
       .string()
       .optional()

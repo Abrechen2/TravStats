@@ -203,7 +203,8 @@
       "withoutTime_one": "{{count}} without a time skipped",
       "withoutTime_other": "{{count}} without a time skipped",
       "left_one": "{{count}} still stored",
-      "left_other": "{{count}} still stored"
+      "left_other": "{{count}} still stored",
+      "noNew": "no new points"
     },
     "points_one": "{{count}} position",
     "points_other": "{{count}} positions",
@@ -213,7 +214,8 @@
       "interrupted": "interrupted (the server restarted) – choose the same file with “Resume”",
       "cancelled": "deleted",
       "paused": "paused – resume it under “Copy your Dawarich history”",
-      "partial": "stopped part-way – choose the same file with “Resume” to carry on where it stopped"
+      "partial": "stopped part-way – choose the same file with “Resume” to carry on where it stopped",
+      "queued": "waiting while other imports take their turn"
     },
     "delete": "Delete import",
     "deleteConfirm_one": "Delete the import “{{name}}” and its {{count}} position? Positions from other sources stay.",
