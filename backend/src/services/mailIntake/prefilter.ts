@@ -1,8 +1,12 @@
 /**
  * The header-only pre-filter of the mail intake. A mail is downloaded only when
- * its From domain is a known booking sender, its From address is on the user's
- * allowlist, or its subject carries a booking keyword. Everything else is never
+ * its From domain is a known booking sender (built-in, template or added for the
+ * source) or its subject carries a booking keyword. Everything else is never
  * opened, parsed, stored, logged or flagged — the run counts it, nothing more.
+ *
+ * The forwarding allowlist (`mail_intake_senders`) deliberately does NOT count
+ * here: it names the user's own addresses, and on a private INBOX every note to
+ * self would pass. It serves the forwarding-address path only.
  *
  * Built for a private INBOX of ~12,800 mails where a few hundred are bookings:
  * the decision reads From, Subject and List-Id from an ENVELOPE fetch, never a
@@ -52,7 +56,6 @@ export interface PrefilterSettings {
 
 export interface PrefilterRules {
   domains: Map<string, SenderDomain>;
-  senders: Set<string>;
   keywords: Array<{ norm: string; domain?: BookingKind }>;
 }
 
@@ -149,7 +152,7 @@ export function defaultSenderDomains(): SenderDomain[] {
   return [...byDomain.values()].sort((a, b) => a.domain.localeCompare(b.domain));
 }
 
-export function buildRules(settings: PrefilterSettings, allowedSenders: string[]): PrefilterRules {
+export function buildRules(settings: PrefilterSettings): PrefilterRules {
   const removed = new Set(settings.removedSenderDomains.map(normalizeDomain));
   const domains = new Map<string, SenderDomain>();
   for (const entry of defaultSenderDomains()) {
@@ -168,7 +171,6 @@ export function buildRules(settings: PrefilterSettings, allowedSenders: string[]
   ].filter((k) => k.norm.length > 0);
   return {
     domains,
-    senders: new Set(allowedSenders.map((s) => s.trim().toLowerCase())),
     keywords,
   };
 }
@@ -197,14 +199,13 @@ export function brandOf(from: string | null, rules: PrefilterRules): SenderDomai
 /**
  * Takes a mail on its headers alone. A mailing-list mail (List-Id) from a
  * booking domain is the airline's newsletter, not a confirmation: it needs a
- * keyword or an allowlisted sender as well.
+ * keyword as well.
  */
 export function judge(header: HeaderInfo, rules: PrefilterRules): Verdict {
   const sender = brandOf(header.from, rules);
   const subject = header.subject ? normalizeText(header.subject) : "";
   const keyword = subject ? rules.keywords.find((k) => subject.includes(k.norm)) : undefined;
-  const allowlisted = !!header.from && rules.senders.has(header.from);
-  const take = allowlisted || !!keyword || (!!sender && !header.hasListId);
+  const take = !!keyword || (!!sender && !header.hasListId);
   return {
     take,
     brand: take ? (sender?.brand ?? null) : null,

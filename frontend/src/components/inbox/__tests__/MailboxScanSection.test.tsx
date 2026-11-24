@@ -4,6 +4,7 @@ import { render, screen, waitFor, fireEvent, within } from "@testing-library/rea
 import MailboxScanSection from "../MailboxScanSection";
 import { mailIntakeApi, type MailCandidateList } from "../../../lib/api/mailIntake";
 import { waitForJob } from "../../../lib/api/jobs";
+import { scanFailureReason } from "../../MailIntake/mailIntakeCopy";
 
 vi.mock("../../../lib/api/mailIntake", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../lib/api/mailIntake")>();
@@ -130,6 +131,25 @@ describe("MailboxScanSection (Postfach durchsuchen)", () => {
     expect(alert.textContent).toContain("mailIntake:scan.error");
   });
 
+  it("an import that cannot open the mailbox says why, in the settings card's words", async () => {
+    const { JobFailedError } = await import("../../../lib/api/jobs");
+    vi.mocked(mailIntakeApi.importCandidates).mockResolvedValue("job-3");
+    vi.mocked(waitForJob).mockRejectedValue(new JobFailedError("auth_failed", 502));
+    render(<MailboxScanSection />);
+    const [first] = await screen.findAllByTestId("mail-scan-candidate");
+    fireEvent.click(within(first).getByText("mailIntake:scan.import"));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("mailIntake:scan.error");
+  });
+
+  it("a failed scan shows its reason", async () => {
+    vi.mocked(mailIntakeApi.candidates).mockResolvedValue(
+      list({ scan: { ...list().scan!, status: "failed", error: "folder_missing" } })
+    );
+    render(<MailboxScanSection />);
+    expect((await screen.findByRole("alert")).textContent).toContain("mailIntake:scan.error");
+  });
+
   it("an interrupted scan offers 'Fortsetzen' and resumes", async () => {
     vi.mocked(mailIntakeApi.candidates).mockResolvedValue(
       list({ scan: { ...list().scan!, status: "interrupted" } })
@@ -139,5 +159,17 @@ describe("MailboxScanSection (Postfach durchsuchen)", () => {
     render(<MailboxScanSection />);
     fireEvent.click(await screen.findByText("mailIntake:scan.resume"));
     await waitFor(() => expect(mailIntakeApi.startScan).toHaveBeenCalledWith({ resume: true }));
+  });
+
+  it("words each mailbox failure kind distinctly", () => {
+    const t = (key: string) => key;
+    expect(scanFailureReason(t, "auth_failed")).toBe("mailIntake:errors.auth_failed");
+    expect(scanFailureReason(t, "folder_missing")).toBe("mailIntake:errors.folder_missing");
+    expect(scanFailureReason(t, "tls_error")).toBe("mailIntake:errors.tls_error");
+    expect(scanFailureReason(t, "unreachable")).toBe("mailIntake:errors.unreachable");
+    expect(scanFailureReason(t, "timeout")).toBe("mailIntake:errors.timeout");
+    expect(scanFailureReason(t, "MAIL_SCAN_RUNNING")).toBe(
+      "mailIntake:scan.errors.MAIL_SCAN_RUNNING"
+    );
   });
 });

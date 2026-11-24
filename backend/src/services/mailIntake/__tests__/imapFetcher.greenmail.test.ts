@@ -206,6 +206,10 @@ suite("IMAP fetcher against GreenMail", () => {
   });
 
   it("end to end: a forwarded mail from an allowed sender becomes a proposal and is flagged", async () => {
+    // A new mailbox starts "ab jetzt": an old mail is left alone, the forward after it is read.
+    await append(buildMail({ messageId: "<old@x>" }));
+    const source = await mkSource();
+    expect(await runSource(source.id)).toMatchObject({ ran: true, seen: 0 });
     await append(
       buildMail({
         deliveredTo: `trips+${token}@example.org`,
@@ -214,13 +218,12 @@ suite("IMAP fetcher against GreenMail", () => {
         authResults: "mx.example.org; dmarc=pass header.from=gmail.example",
       })
     );
-    const source = await mkSource();
     expect(await runSource(source.id)).toMatchObject({ ran: true, seen: 1, proposed: 1 });
     expect(await runSource(source.id)).toMatchObject({ ran: true, seen: 0 });
     const [row] = await prisma.mailIntakeMessage.findMany();
     expect(row).toMatchObject({ status: "proposed", userId });
     const stored = await prisma.mailIntakeSource.findUniqueOrThrow({ where: { id: source.id } });
-    expect(stored).toMatchObject({ lastError: null, lastUid: 1 });
+    expect(stored).toMatchObject({ lastError: null, lastUid: 2 });
   });
 
   it("IDLE reports new mail within seconds and stops when told to", async () => {

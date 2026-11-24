@@ -170,14 +170,8 @@ async function runScan(
 ): Promise<ScanView> {
   const scan = await prisma.mailIntakeScan.findUniqueOrThrow({ where: { id: scanId } });
   const source = await prisma.mailIntakeSource.findUniqueOrThrow({ where: { id: scan.sourceId } });
-  const senders = await prisma.mailIntakeSender.findMany({
-    where: { userId: scan.userId },
-    select: { address: true },
-  });
-  const rules = buildRules(
-    source,
-    senders.map((s) => s.address)
-  );
+  // The same rules as the live intake; the forwarding allowlist does not count here either.
+  const rules = buildRules(source);
   const known = await loadKnown(scan.userId);
   let final: Partial<ScanRow> = {};
   try {

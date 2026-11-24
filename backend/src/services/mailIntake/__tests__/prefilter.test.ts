@@ -29,11 +29,11 @@ const mail = (over: Partial<HeaderInfo>): HeaderInfo => ({
 
 describe("mail intake header pre-filter", () => {
   it("leaves a private mail out", () => {
-    expect(judge(mail({}), buildRules(none, [])).take).toBe(false);
+    expect(judge(mail({}), buildRules(none)).take).toBe(false);
   });
 
   it("takes a mail from a booking domain and its subdomains, with the brand", () => {
-    const rules = buildRules(none, []);
+    const rules = buildRules(none);
     expect(judge(mail({ from: "noreply@lufthansa.com", subject: "Hallo" }), rules)).toEqual({
       take: true,
       brand: "Lufthansa",
@@ -45,7 +45,7 @@ describe("mail intake header pre-filter", () => {
   });
 
   it("the default keywords are German AND English, both always active", () => {
-    const rules = buildRules(none, []);
+    const rules = buildRules(none);
     const langs = new Set(defaultKeywords().map((k) => k.lang));
     expect(langs).toEqual(new Set(["de", "en"]));
     expect(catalogue.keywords.de.length).toBeGreaterThan(5);
@@ -68,38 +68,41 @@ describe("mail intake header pre-filter", () => {
   });
 
   it("matches case-insensitively, as a substring, with ä/ae and ß/ss alike", () => {
-    const rules = buildRules(none, []);
+    const rules = buildRules(none);
     expect(judge(mail({ subject: "BUCHUNGSBESTAETIGUNG Nr. 1" }), rules).take).toBe(true);
     expect(judge(mail({ subject: "Online Check in jetzt möglich" }), rules).take).toBe(true);
     expect(normalizeText("Straße Fähre")).toBe(normalizeText("STRASSE faehre"));
   });
 
   it("a custom word lets a mail through; a switched-off default does not", () => {
-    const custom = buildRules({ ...none, subjectKeywords: ["Reisebüro Sonnenschein"] }, []);
+    const custom = buildRules({ ...none, subjectKeywords: ["Reisebüro Sonnenschein"] });
     expect(judge(mail({ subject: "Neues vom Reisebuero Sonnenschein" }), custom).take).toBe(true);
 
-    const off = buildRules({ ...none, removedSubjectKeywords: ["Reservierung"] }, []);
+    const off = buildRules({ ...none, removedSubjectKeywords: ["Reservierung"] });
     expect(judge(mail({ subject: "Reservierung Tisch Freitag" }), off).take).toBe(false);
     // the others stay on
     expect(judge(mail({ subject: "Buchungsbestätigung" }), off).take).toBe(true);
   });
 
   it("a removed default domain stops matching; an added one matches", () => {
-    const rules = buildRules(
-      { ...none, removedSenderDomains: ["ryanair.com"], senderDomains: ["my-agency.example"] },
-      []
-    );
+    const rules = buildRules({
+      ...none,
+      removedSenderDomains: ["ryanair.com"],
+      senderDomains: ["my-agency.example"],
+    });
     expect(judge(mail({ from: "a@ryanair.com", subject: "x" }), rules).take).toBe(false);
     expect(judge(mail({ from: "a@my-agency.example", subject: "x" }), rules).take).toBe(true);
   });
 
-  it("an allowlisted sender address counts", () => {
-    const rules = buildRules(none, ["me@forward.example"]);
-    expect(judge(mail({ from: "me@forward.example", subject: "fwd" }), rules).take).toBe(true);
+  it("an extra domain's newsletter (List-Id) needs a keyword too", () => {
+    const rules = buildRules({ ...none, senderDomains: ["my-agency.example"] });
+    expect(
+      judge(mail({ from: "n@my-agency.example", subject: "Angebote", hasListId: true }), rules).take
+    ).toBe(false);
   });
 
   it("a newsletter (List-Id) from a booking domain needs a keyword too", () => {
-    const rules = buildRules(none, []);
+    const rules = buildRules(none);
     expect(
       judge(mail({ from: "news@lufthansa.com", subject: "Sale!", hasListId: true }), rules).take
     ).toBe(false);

@@ -110,7 +110,9 @@ export async function startImport(
     } catch (error) {
       const kind = reportedKind(source, classifyImapError(error));
       logger.warn({ operation: "mail_intake_candidate_import_failed", kind });
-      throw new AppError("The mailbox could not be read", 502, "MAIL_MAILBOX_UNREADABLE");
+      // The job error's code is the source failure kind itself (`auth_failed`,
+      // `folder_missing`, `unreachable`, …): the client words it like the settings card.
+      throw new AppError(kind, 502);
     }
     return result;
   });

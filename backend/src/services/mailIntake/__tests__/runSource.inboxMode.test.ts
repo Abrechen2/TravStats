@@ -110,12 +110,44 @@ describe("mail intake on a private INBOX", () => {
     expect(rows.map((r) => r.uid)).toEqual([2]);
   });
 
-  it("the source's sender allowlist lets a forwarded mail through", async () => {
+  it("a mail from the user's own forwarding address with a private subject is not downloaded", async () => {
     const { id } = await mkSource();
-    await prisma.mailIntakeSender.create({ data: { userId, address: PRIVATE_FROM } });
-    box.add({ uid: 1, raw: privateMail("p1") });
+    // The forwarding allowlist names the user's own addresses: it must not open the private INBOX.
+    await prisma.mailIntakeSender.create({ data: { userId, address: "me@example.org" } });
+    box.add({
+      uid: 1,
+      raw: buildMail({
+        messageId: "<self@x>",
+        from: "Me <me@example.org>",
+        subject: PRIVATE_SUBJECT,
+      }),
+    });
+    const result = await runSource(id, box);
+    expect(box.downloads).toEqual([]);
+    expect(box.flags.size).toBe(0);
+    expect(result.filtered).toBe(1);
+    expect(await prisma.mailIntakeMessage.count()).toBe(0);
+  });
+
+  it("the instance mailbox also starts 'ab jetzt', never at UID 0", async () => {
+    const { id } = await prisma.mailIntakeSource.create({
+      data: {
+        kind: "instance_mailbox",
+        userId: null,
+        host: "imap.example.org",
+        port: 993,
+        tlsMode: "tls",
+        username: "trips@example.org",
+        address: "trips@example.org",
+        passwordEncrypted: encrypt("pw"),
+        folder: "INBOX",
+        enabled: true,
+      },
+    });
+    for (let uid = 1; uid <= 50; uid += 1) box.add({ uid, raw: bookingMail(`i${uid}`) });
     await runSource(id, box);
-    expect(box.downloads).toEqual([1]);
+    expect(box.downloads).toEqual([]);
+    expect((await prisma.mailIntakeSource.findUniqueOrThrow({ where: { id } })).lastUid).toBe(50);
   });
 
   it("a custom subject word lets a mail through; a switched-off default does not", async () => {

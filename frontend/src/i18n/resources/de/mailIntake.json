@@ -139,7 +139,7 @@
   },
   "admin": {
     "title": "Weiterleitungs-Postfach (Buchungsmails)",
-    "help": "Ein Postfach für die ganze Instanz. Jedes Konto bekommt daraus eine eigene Adresse mit Zusatz (zum Beispiel trips+k7m2q9xwab@beispiel.de). Der Anbieter muss Plus-Adressen unterstützen. TravStats liest das Postfach nur per IMAP.",
+    "help": "Ein Postfach für die ganze Instanz. Jedes Konto bekommt daraus eine eigene Adresse mit Zusatz (zum Beispiel trips+k7m2q9xwab@beispiel.de). Der Anbieter muss Plus-Adressen unterstützen. TravStats liest das Postfach nur per IMAP. Nimm ein eigenes Postfach nur für TravStats: Es liest jede neue Mail ohne Buchungsfilter, aber erst ab der Einrichtung – ältere Mails bleiben liegen.",
     "address": "Postfach-Adresse",
     "authservId": "Authserv-ID des Anbieters (optional)",
     "authservHelp": "Wenn gesetzt, gilt nur der Authentication-Results-Header mit dieser Kennung.",
@@ -164,7 +164,7 @@
     "counters": "Gelesen: {{processed}} · übersprungen: {{skipped}}",
     "senders": {
       "title": "Buchungsabsender",
-      "help": "Mails von diesen Domains (und ihren Subdomains) gelten als Buchung. Die Standardliste kommt aus TravStats und den Parser-Vorlagen; einzelne Einträge kannst du ausschalten.",
+      "help": "Mails von diesen Domains (und ihren Subdomains) gelten als Buchung. Newsletter (Mails mit List-Id) dieser Absender brauchen zusätzlich ein Betreff-Wort. Die Standardliste kommt aus TravStats und den Parser-Vorlagen; einzelne Einträge kannst du ausschalten. Die Absender aus „Weiterleitung“ zählen hier nicht – sonst würde jede Mail von dir selbst gelesen.",
       "defaults": "Standardliste ({{count}})",
       "custom": "Eigene Domains",
       "none": "Noch keine eigenen Domains.",
@@ -229,7 +229,6 @@
     "error": "Das hat nicht geklappt: {{reason}}",
     "errors": {
       "MAIL_SCAN_RUNNING": "Eine Durchsuchung läuft bereits.",
-      "MAIL_MAILBOX_UNREADABLE": "Das Postfach war nicht erreichbar.",
       "MAIL_CANDIDATE_NOT_FOUND": "Diese Mail ist nicht mehr in der Liste.",
       "lost": "Der Server hat den Auftrag vergessen (Neustart). Lade die Seite neu und setze fort.",
       "unknown": "Unbekannter Fehler."

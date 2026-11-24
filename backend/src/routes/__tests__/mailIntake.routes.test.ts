@@ -248,6 +248,9 @@ describe("mail intake routes (forgejo#313)", () => {
       await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
       const token = await rotateToken(userId);
       const box = new FakeMailbox();
+      const source = await prisma.mailIntakeSource.findFirstOrThrow({ where: { userId: null } });
+      // A first run positions the new mailbox "ab jetzt"; the forward arrives after it.
+      await runSource(source.id, box);
       const real = buildMail({
         deliveredTo: `trips+${token}@example.org`,
         from: "me@gmail.example",
@@ -258,7 +261,6 @@ describe("mail intake routes (forgejo#313)", () => {
         ],
       });
       box.add({ uid: 1, raw: real });
-      const source = await prisma.mailIntakeSource.findFirstOrThrow({ where: { userId: null } });
       await runSource(source.id, box);
       const row = await prisma.mailIntakeMessage.findFirstOrThrow({});
       expect(row).toMatchObject({ status: "rejected", reason: "dmarc_failed" });

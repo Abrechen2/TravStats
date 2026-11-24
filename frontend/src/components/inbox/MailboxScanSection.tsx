@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { formatDate } from "../../lib/displayFormat";
 import { JobLostError, jobErrorCode, waitForJob } from "../../lib/api/jobs";
+import { errorText, scanFailureReason } from "../MailIntake/mailIntakeCopy";
 import {
   mailIntakeApi,
   mailIntakeErrorCode,
@@ -58,9 +59,7 @@ export default function MailboxScanSection(): JSX.Element | null {
   const failText = (error: unknown): string => {
     const code =
       error instanceof JobLostError ? "lost" : (jobErrorCode(error) ?? mailIntakeErrorCode(error));
-    const reason = t(`mailIntake:scan.errors.${code ?? "unknown"}`, {
-      defaultValue: code ?? t("mailIntake:scan.errors.unknown"),
-    });
+    const reason = scanFailureReason(t, code);
     return t("mailIntake:scan.error", { reason });
   };
 
@@ -301,6 +300,13 @@ export default function MailboxScanSection(): JSX.Element | null {
           {ignoredCount > 0
             ? ` · ${t("mailIntake:scan.ignoredCount", { count: ignoredCount })}`
             : ""}
+        </p>
+      )}
+      {!busy && scan?.status === "failed" && (
+        <p role="alert" style={{ marginTop: "var(--ts-space-md)", color: "var(--ts-bad)" }}>
+          {t("mailIntake:scan.error", {
+            reason: errorText(t, scan.error, "mailIntake:scan.errors.unknown"),
+          })}
         </p>
       )}
       {notice && (

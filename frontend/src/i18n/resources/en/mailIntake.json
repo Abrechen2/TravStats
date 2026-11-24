@@ -139,7 +139,7 @@
   },
   "admin": {
     "title": "Forwarding mailbox (booking mails)",
-    "help": "One mailbox for the whole instance. Each account gets its own plus address from it (for example trips+k7m2q9xwab@example.org). The provider must support plus addresses. TravStats only reads the mailbox over IMAP.",
+    "help": "One mailbox for the whole instance. Each account gets its own plus address from it (for example trips+k7m2q9xwab@example.org). The provider must support plus addresses. TravStats only reads the mailbox over IMAP. Use a mailbox for TravStats only: it reads every new mail without the booking filter, but only from setup on – older mails stay where they are.",
     "address": "Mailbox address",
     "authservId": "Provider's authserv-id (optional)",
     "authservHelp": "When set, only the Authentication-Results header carrying this id is believed.",
@@ -164,7 +164,7 @@
     "counters": "Read: {{processed}} · skipped: {{skipped}}",
     "senders": {
       "title": "Booking senders",
-      "help": "Mails from these domains (and their subdomains) count as bookings. The default list comes from TravStats and the parser templates; you can switch single entries off.",
+      "help": "Mails from these domains (and their subdomains) count as bookings. Newsletters (mails with a List-Id) from these senders also need a subject word. The default list comes from TravStats and the parser templates; you can switch single entries off. The senders allowed for forwarding do not count here – otherwise every mail from yourself would be read.",
       "defaults": "Default list ({{count}})",
       "custom": "Your domains",
       "none": "No domains of your own yet.",
@@ -229,7 +229,6 @@
     "error": "That did not work: {{reason}}",
     "errors": {
       "MAIL_SCAN_RUNNING": "A search is already running.",
-      "MAIL_MAILBOX_UNREADABLE": "The mailbox could not be reached.",
       "MAIL_CANDIDATE_NOT_FOUND": "This mail is no longer in the list.",
       "lost": "The server forgot the job (restart). Reload the page and resume.",
       "unknown": "Unknown error."

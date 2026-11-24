@@ -159,34 +159,22 @@ export async function startingUid(fetchFrom: string, session: MailSession): Prom
 }
 
 /** The pre-filter of a personal folder, or null when every mail is read (instance mailbox, switched off). */
-export async function rulesFor(source: SourceRow): Promise<PrefilterRules | null> {
-  if (source.kind !== "imap_folder" || !source.prefilter || !source.userId) return null;
-  const senders = await prisma.mailIntakeSender.findMany({
-    where: { userId: source.userId },
-    select: { address: true },
-  });
-  return buildRules(
-    source,
-    senders.map((s) => s.address)
-  );
+export function rulesFor(source: SourceRow): PrefilterRules | null {
+  if (source.kind !== "imap_folder" || !source.prefilter) return null;
+  return buildRules(source);
 }
 
 async function readFolder(source: SourceRow, session: MailSession, result: RunResult) {
   // A changed UIDVALIDITY makes every stored UID meaningless, and a source that
-  // never ran has none. A personal folder (possibly the private main INBOX) is
-  // positioned by `fetchFrom`, never at 0. The instance mailbox exists only to
-  // receive forwards, so it reads from the start; the Message-ID key keeps a
-  // rescan from creating anything twice.
+  // never ran has none: the cursor is positioned by `fetchFrom` (default: only
+  // new mail, UIDNEXT-1), never at 0 — for the instance mailbox too. That one
+  // reads every new mail (no pre-filter): it is a dedicated mailbox that exists
+  // only to receive forwards.
   const restart = source.uidValidity === null || source.uidValidity !== session.uidValidity;
-  const personal = source.kind === "imap_folder";
-  let lastUid = !restart
-    ? source.lastUid
-    : personal
-      ? await startingUid(source.fetchFrom, session)
-      : 0;
+  let lastUid = restart ? await startingUid(source.fetchFrom, session) : source.lastUid;
   if (restart) await saveCursor(source, { lastUid, uidValidity: session.uidValidity });
 
-  const rules = await rulesFor(source);
+  const rules = rulesFor(source);
   const listed = (await session.listNew(lastUid)).slice(
     0,
     rules ? MAX_HEADERS_PER_RUN : MAX_MAILS_PER_RUN

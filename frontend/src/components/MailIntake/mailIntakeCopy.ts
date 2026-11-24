@@ -32,3 +32,17 @@ export function reasonText(t: TFunction, reason: string | null): string {
     ? t(`mailIntake:reasons.${reason}`)
     : t("mailIntake:inbox.actionError");
 }
+
+/**
+ * Why a mailbox-scan action failed, in words: a mailbox failure kind (`auth_failed`,
+ * `folder_missing`, `unreachable`, …) reads like the settings card, a request code
+ * (`MAIL_SCAN_RUNNING`, …) or a lost job has its own sentence.
+ */
+export function scanFailureReason(t: TFunction, code: string | null): string {
+  if (code && (MAIL_SOURCE_ERRORS as readonly string[]).includes(code)) {
+    return t(`mailIntake:errors.${code}`);
+  }
+  return t(`mailIntake:scan.errors.${code ?? "unknown"}`, {
+    defaultValue: t("mailIntake:scan.errors.unknown"),
+  });
+}

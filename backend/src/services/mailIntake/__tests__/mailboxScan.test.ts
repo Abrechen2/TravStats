@@ -189,6 +189,19 @@ describe("mailbox scan (Postfach durchsuchen)", () => {
     expect(await prisma.mailIntakeMessage.count({ where: { status: "failed" } })).toBe(1);
   });
 
+  it("an import that cannot open the mailbox says why (auth_failed), not just 'unreadable'", async () => {
+    box.add({ uid: 1, raw: bookingMail(1) });
+    await scanAll();
+    const [item] = (await listCandidates(userId)).items;
+    box.failWith = "auth_failed";
+    const job = await startImport(userId, [item.id], box);
+    await settleAllJobs();
+    expect(getJob(job.id, userId)).toMatchObject({
+      status: "failed",
+      error: { code: "auth_failed", status: 502 },
+    });
+  });
+
   it("import refuses a UID that now holds another mail", async () => {
     box.add({ uid: 1, raw: bookingMail(1) });
     await scanAll();
