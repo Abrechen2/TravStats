@@ -174,7 +174,11 @@ export default function TripDetailPage(): JSX.Element {
       />
       <div style={{ margin: "var(--ts-space-sm) 0" }}>
         <ProvenanceDetails entryType="trip" entry={shownTrip} onSaved={() => void load()} />
-        <TripPurposeAction tripId={trip.id} onApplied={() => void load()} />
+        <TripPurposeAction
+          tripId={trip.id}
+          category={shownTrip.category}
+          onApplied={() => void load()}
+        />
       </div>
       {/* On the overview tab the places panel carries the failure itself. */}
       {places.failed && tab !== "overview" && <TripPlacesError onRetry={places.reload} />}

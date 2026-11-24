@@ -42,6 +42,9 @@
     "confirm_one": "{{count}} Eintrag dieser Reise bekommt den Zweck „{{purpose}}“. Was dort bisher stand, wird überschrieben.",
     "confirm_other": "{{count}} Einträge dieser Reise bekommen den Zweck „{{purpose}}“. Was dort bisher stand, wird überschrieben.",
     "confirmAction": "Übertragen",
-    "nothing": "Alle Einträge dieser Reise haben diesen Zweck schon."
+    "nothing": "Alle Einträge dieser Reise haben diesen Zweck schon.",
+    "rowTitle": "Zweck der Einträge",
+    "rowCategory": "Die Kategorie dieser Reise ist „{{category}}“. Neue Einträge übernehmen daraus einmal ihren Zweck (geschäftlich oder privat); danach hat jeder Eintrag seinen eigenen.",
+    "rowNoCategory": "Diese Reise hat keine Kategorie, aus der ein Zweck folgt."
   }
 }

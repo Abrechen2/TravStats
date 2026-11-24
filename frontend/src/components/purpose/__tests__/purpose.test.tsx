@@ -80,6 +80,17 @@ describe("TripPurposeAction", () => {
     await waitFor(() => expect(purposeApi.applyToTrip).toHaveBeenCalledWith("t1", "business"));
     expect(await screen.findByText("purpose:trip.done")).toBeInTheDocument();
     expect(onApplied).toHaveBeenCalled();
+    // UAT rc.45 retest D6: the page reloads after the apply; the toast outlives that.
+    const { useToastStore } = await import("../../../store/toastStore");
+    expect(useToastStore.getState().toasts.map((x) => x.message)).toContain("purpose:trip.done");
+  });
+
+  // D8: its own row, naming the trip's category and what follows from it.
+  it("sits in a row of its own that names the trip's category", () => {
+    render(<TripPurposeAction tripId="t1" category="vacation" />);
+    const row = screen.getByTestId("trip-purpose-row");
+    expect(row).toHaveTextContent("purpose:trip.rowTitle");
+    expect(row).toHaveTextContent("purpose:trip.rowCategory");
   });
 
   it("says so and asks nothing when no entry would change", async () => {

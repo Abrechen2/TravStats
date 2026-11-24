@@ -89,6 +89,12 @@ const DONE: TravTrackImport = {
   finishedAt: "2026-10-20T10:00:05.000Z",
 };
 
+/** The hidden file input behind the one "Track-Datei importieren" button. */
+const fileInput = async (): Promise<HTMLInputElement> => {
+  await screen.findByRole("button", { name: "track:imports.choose" });
+  return document.getElementById("travtrack-gpx-file") as HTMLInputElement;
+};
+
 const show = () =>
   render(
     <MemoryRouter>
@@ -144,7 +150,7 @@ describe("Track › Importe — GPX import", () => {
       .spyOn(travTrackImportsApi, "importGpx")
       .mockResolvedValue({ importId: "imp-1", status: "succeeded", report: REPORT });
     show();
-    await userEvent.upload(await screen.findByLabelText("track:imports.choose"), gpx());
+    await userEvent.upload(await fileInput(), gpx());
     await waitFor(() => expect(importGpx).toHaveBeenCalledTimes(1));
     const status = await screen.findByText(/track:imports.report.stored \{"count":100\}/);
     expect(status.textContent).toContain('track:imports.report.duplicate {"count":12}');
@@ -164,7 +170,7 @@ describe("Track › Importe — GPX import", () => {
         })
     );
     show();
-    const input = await screen.findByLabelText("track:imports.choose");
+    const input = await fileInput();
     // The picker offers the Timeline and GeoJSON formats, not only GPX.
     expect(input.getAttribute("accept")).toContain(".json");
     expect(input.getAttribute("accept")).toContain(".kml");
@@ -180,7 +186,7 @@ describe("Track › Importe — GPX import", () => {
       new JobFailedError("TRAVTRACK_IMPORT_UNSUPPORTED_FORMAT", 422)
     );
     show();
-    await userEvent.upload(await screen.findByLabelText("track:imports.choose"), gpx());
+    await userEvent.upload(await fileInput(), gpx());
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "track:imports.errors.unsupportedFormat"
     );
@@ -194,7 +200,7 @@ describe("Track › Importe — GPX import", () => {
       new JobFailedError("TRAVTRACK_IMPORT_BUSY", 503)
     );
     show();
-    await userEvent.upload(await screen.findByLabelText("track:imports.choose"), gpx());
+    await userEvent.upload(await fileInput(), gpx());
     expect(await screen.findByRole("alert")).toHaveTextContent("track:imports.errors.busy");
   });
 
@@ -203,7 +209,7 @@ describe("Track › Importe — GPX import", () => {
       new JobFailedError("TRAVTRACK_IMPORT_NO_TIMES", 422)
     );
     show();
-    await userEvent.upload(await screen.findByLabelText("track:imports.choose"), gpx());
+    await userEvent.upload(await fileInput(), gpx());
     expect(await screen.findByRole("alert")).toHaveTextContent("track:imports.errors.noTimes");
   });
 
@@ -212,7 +218,7 @@ describe("Track › Importe — GPX import", () => {
       new JobFailedError("TRAVTRACK_IMPORT_TOO_MANY_POINTS", 422)
     );
     show();
-    await userEvent.upload(await screen.findByLabelText("track:imports.choose"), gpx());
+    await userEvent.upload(await fileInput(), gpx());
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "track:imports.errors.tooManyPoints"
     );
@@ -226,7 +232,7 @@ describe("Track › Importe — GPX import", () => {
       response: { status: 409, data: { code: "TRAVTRACK_IMPORT_RUNNING" } },
     });
     show();
-    await userEvent.upload(await screen.findByLabelText("track:imports.choose"), gpx());
+    await userEvent.upload(await fileInput(), gpx());
     expect(await screen.findByRole("alert")).toHaveTextContent("track:imports.errors.running");
   });
 
@@ -272,7 +278,14 @@ describe("Track › Importe — GPX import", () => {
     vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([DONE]);
     show();
     expect(await screen.findByText("Bukhansan.gpx")).toBeInTheDocument();
-    expect(screen.queryByLabelText("track:imports.choose")).toBeNull();
+    expect(document.getElementById("travtrack-gpx-file")).toBeNull();
     expect(screen.getByRole("button", { name: "track:imports.delete" })).toBeInTheDocument();
+  });
+
+  // UAT rc.45 retest D19: the label and the button both said "Track-Datei importieren".
+  it("names the import once", async () => {
+    show();
+    await fileInput();
+    expect(screen.getAllByText("track:imports.choose")).toHaveLength(1);
   });
 });

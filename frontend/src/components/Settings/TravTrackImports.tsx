@@ -153,13 +153,14 @@ export default function TravTrackImports({
       <p className="t-caption">{t(`${NS}.googleHint`)}</p>
       {canImport && (
         <div>
-          <label htmlFor="travtrack-gpx-file" className="sr-only">
-            {t(`${NS}.choose`)}
-          </label>
+          {/* The button is the control; the hidden input only opens the picker. A second,
+              screen-reader label repeated "Track-Datei importieren" (UAT rc.45 retest, D19). */}
           <input
             ref={input}
             id="travtrack-gpx-file"
             type="file"
+            aria-hidden="true"
+            tabIndex={-1}
             accept=".gpx,.json,.geojson,.kml,.tcx,application/gpx+xml,application/json,application/geo+json,application/vnd.google-earth.kml+xml"
             className="sr-only"
             disabled={busy}

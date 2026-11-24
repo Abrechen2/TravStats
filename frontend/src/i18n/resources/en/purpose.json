@@ -42,6 +42,9 @@
     "confirm_one": "{{count}} entry of this trip gets the purpose “{{purpose}}”. What it had before is overwritten.",
     "confirm_other": "{{count}} entries of this trip get the purpose “{{purpose}}”. What they had before is overwritten.",
     "confirmAction": "Apply",
-    "nothing": "Every entry of this trip already has this purpose."
+    "nothing": "Every entry of this trip already has this purpose.",
+    "rowTitle": "Purpose of the entries",
+    "rowCategory": "This trip's category is “{{category}}”. New entries take their purpose (business or private) from it once; after that each entry has its own.",
+    "rowNoCategory": "This trip has no category a purpose follows from."
   }
 }

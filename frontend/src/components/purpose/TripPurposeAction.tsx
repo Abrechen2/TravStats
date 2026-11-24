@@ -4,6 +4,7 @@ import { purposeApi } from "../../lib/api/purpose";
 import type { Purpose } from "../../shared/purpose";
 import { logger } from "../../lib/logger";
 import ConfirmModal from "../ui/ConfirmModal";
+import { useToastStore } from "../../store/toastStore";
 
 type State =
   | { kind: "idle" }
@@ -23,12 +24,16 @@ type State =
  */
 export default function TripPurposeAction({
   tripId,
+  category,
   onApplied,
 }: {
   tripId: string;
+  /** The trip's category, named beside the action so the two do not read as one control. */
+  category?: string | null;
   onApplied?: () => void;
 }): JSX.Element {
-  const { t } = useTranslation(["purpose"]);
+  const { t } = useTranslation(["purpose", "trips"]);
+  const addToast = useToastStore((s) => s.addToast);
   const [state, setState] = useState<State>({ kind: "idle" });
 
   const ask = async (): Promise<void> => {
@@ -50,6 +55,9 @@ export default function TripPurposeAction({
       // The purpose the user confirmed, not whatever the category says by now.
       const result = await purposeApi.applyToTrip(tripId, purpose);
       setState({ kind: "done", changed: result.changed });
+      // Also as a toast: the page reloads the trip after this, and the line below may be
+      // re-mounted before anyone reads it (UAT rc.45 retest, D6).
+      addToast("success", t("purpose:trip.done", { count: result.changed }));
       onApplied?.();
     } catch (error) {
       logger.warn("applying the trip purpose failed", error);
@@ -59,7 +67,25 @@ export default function TripPurposeAction({
 
   const dialog = state.kind === "asking" || state.kind === "applying" ? state : null;
   return (
-    <div className="t-caption">
+    // A row of its own, with what it means: it sat under "Herkunft der Angaben" and beside the
+    // category, and read as part of either (UAT rc.45 retest, D8).
+    <div
+      className="t-caption"
+      data-testid="trip-purpose-row"
+      style={{
+        marginTop: "var(--ts-space-sm)",
+        paddingTop: "var(--ts-space-sm)",
+        borderTop: "1px solid var(--ts-border)",
+      }}
+    >
+      <p className="font-semibold">{t("purpose:trip.rowTitle")}</p>
+      <p>
+        {category
+          ? t("purpose:trip.rowCategory", {
+              category: t(`trips:category.${category}`, { defaultValue: category }),
+            })
+          : t("purpose:trip.rowNoCategory")}
+      </p>
       <button
         type="button"
         onClick={() => void ask()}
