@@ -118,6 +118,7 @@ router.post(
       error: result.error ?? null,
       seen: result.seen,
       proposed: result.proposed,
+      filtered: result.filtered,
     });
   })
 );
