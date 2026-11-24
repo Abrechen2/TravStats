@@ -90,6 +90,39 @@ export function keepUnknownDomains(
   return [...sent, ...kept];
 }
 
+/** The body keys a request may carry and still count as "a domain switch, nothing else". */
+const DOMAIN_ONLY_KEYS = new Set(["enabledDomains", "knownDomains", "removedDomains"]);
+
+/**
+ * The stored domains a settings write would switch off WITHOUT saying so, or
+ * an empty list when the write may go ahead (UAT rc.45, B1).
+ *
+ * A web settings page used to PUT the whole store before the first load had
+ * landed, and the store default for `enabledDomains` is `["flight"]` — every
+ * other domain of the account was switched off by a page view. The web now
+ * sends a patch, and this is the server's own line behind that: a write that
+ * shrinks the list must name each domain it removes in `removedDomains`.
+ *
+ * One shape counts as explicit by itself: a request that carries nothing but
+ * the domain list. That is the installed Companion's domain switch (it sends
+ * `{ enabledDomains }` alone), and a body with no other field cannot be a full
+ * settings object written by accident.
+ */
+export function unconfirmedDomainRemovals(
+  next: readonly string[],
+  stored: readonly string[] | null | undefined,
+  body: Record<string, unknown>,
+  named: readonly string[] | undefined
+): string[] {
+  const removed = (stored ?? []).filter((key) => !next.includes(key));
+  if (removed.length === 0) return [];
+  const domainOnly = Object.keys(body).every(
+    (key) => DOMAIN_ONLY_KEYS.has(key) || body[key] === undefined
+  );
+  if (domainOnly) return [];
+  return removed.filter((key) => !named?.includes(key));
+}
+
 /** The domains a user sees, as a set — the one gate a trip's money and nights pass. */
 export type VisibleDomains = ReadonlySet<DomainKey>;
 

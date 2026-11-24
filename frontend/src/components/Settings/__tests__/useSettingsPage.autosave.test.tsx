@@ -52,6 +52,7 @@ describe("useSettingsPage — profile auto-save (#186)", () => {
   it("persists a birthdate typed into the profile form, with no explicit save click", async () => {
     const { result } = renderHook(() => useSettingsPage());
     await act(async () => {
+      await useSettingsStore.getState().loadRemoteSettings();
       await new Promise((r) => setTimeout(r, 700));
     });
     mocks.updateProfile.mockClear();
@@ -96,6 +97,28 @@ describe("useSettingsPage — profile auto-save (#186)", () => {
 
     await act(async () => {
       await useSettingsStore.getState().loadRemoteSettings();
+      await new Promise((r) => setTimeout(r, 1200));
+    });
+
+    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.updateProfile).not.toHaveBeenCalled();
+  });
+
+  /**
+   * UAT rc.45 B1: opening a settings page while GET /settings took longer than
+   * the 500 ms debounce wrote the store defaults over the account (language en,
+   * theme light, names null, domains cut to flights) with no click at all. The
+   * birthdate arrives on its own request BEFORE the settings, which changes the
+   * store, and "never loaded" counted as "pending".
+   */
+  it("writes no store defaults while a slow GET /settings is still in flight", async () => {
+    useSettingsStore.setState({ remoteSnapshot: null });
+    renderHook(() => useSettingsPage());
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+    await act(async () => {
+      useSettingsStore.setState((s) => ({ profile: { ...s.profile, birthdate: "1980-05-05" } }));
       await new Promise((r) => setTimeout(r, 1200));
     });
 

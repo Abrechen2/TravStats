@@ -32,7 +32,12 @@ export function useDocumentSetting<T>(
     applyRef.current = apply;
   });
   return useSettingWrite<T>(key, saved, async (value, { keepalive }) => {
-    if (useRemoteSettingsStatus.getState().failed) throw new SettingWriteError("notLoaded");
+    // Failed, or simply not loaded yet: either way there is nothing to diff against.
+    if (
+      useRemoteSettingsStatus.getState().failed ||
+      useSettingsStore.getState().remoteSnapshot === null
+    )
+      throw new SettingWriteError("notLoaded");
     const previous = savedRef.current;
     const account = useAuthStore.getState().user?.id ?? null;
     const version = (versions.get(key) ?? 0) + 1;

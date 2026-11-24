@@ -13,7 +13,7 @@ import {
   PLACEHOLDER_PROFILE_EMAIL,
 } from "./types";
 import { AVAILABLE_DOMAINS, DOMAIN_KEYS, type DomainKey } from "../../shared/domains";
-import { keepUnknownDomains } from "../../services/domainVisibility";
+import { keepUnknownDomains, unconfirmedDomainRemovals } from "../../services/domainVisibility";
 import { ECB_CURRENCIES } from "../../shared/currencies";
 import { COUNTRY_TIERS, parseCountryTier, type CountryTier } from "../../shared/countryEvidence";
 import { getInstanceSettings } from "../../services/instanceSettingsService";
@@ -210,6 +210,10 @@ const settingsSchema = z
     // The domain keys the writing client knows. Absent = an older client that
     // cannot have shown a switch for a newer domain (see `keepUnknownDomains`).
     knownDomains: z.array(z.string().max(32)).max(64).optional(),
+    // Each domain this write switches off, named on purpose. A write that
+    // shrinks `enabledDomains` without naming the removal is refused (UAT rc.45
+    // B1, see `unconfirmedDomainRemovals`).
+    removedDomains: z.array(z.string().max(32)).max(64).optional(),
     whatsNewSeenVersion: z.string().max(32).optional(),
     // Lodging-domain preference: single currency used to aggregate stay costs that
     // were originally billed in whatever currency the hotel uses.
@@ -533,6 +537,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     const {
       enabledDomains,
       knownDomains,
+      removedDomains,
       baseCurrency,
       displayCurrency,
       autoCreateTrips,
@@ -568,6 +573,29 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     const existing = await prisma.userSettings.findUnique({
       where: { userId },
     });
+
+    // Refuse BEFORE anything is written, names included.
+    const nextDomains =
+      enabledDomains === undefined
+        ? undefined
+        : keepUnknownDomains(enabledDomains, existing?.enabledDomains, knownDomains);
+    const unconfirmed =
+      nextDomains === undefined
+        ? []
+        : unconfirmedDomainRemovals(
+            nextDomains,
+            existing?.enabledDomains,
+            payload as Record<string, unknown>,
+            removedDomains
+          );
+    if (unconfirmed.length > 0) {
+      res.status(409).json({
+        error: "DOMAIN_REMOVAL_UNCONFIRMED",
+        message: "This write would switch domains off without naming them in removedDomains.",
+        domains: unconfirmed,
+      });
+      return;
+    }
 
     // Extract direct fields from payload since they're not part of JSON data
     const {
@@ -667,13 +695,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     }
 
     // Handle enabled domains (multi-domain foundation)
-    if (enabledDomains !== undefined) {
-      updateData.enabledDomains = keepUnknownDomains(
-        enabledDomains,
-        existing?.enabledDomains,
-        knownDomains
-      );
-    }
+    if (nextDomains !== undefined) updateData.enabledDomains = nextDomains;
 
     // Handle base currency (lodging-domain aggregation currency)
     if (baseCurrency !== undefined) {

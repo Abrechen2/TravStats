@@ -60,12 +60,13 @@ describe("settingsStore — the profile zone is confirmed, never guessed", () =>
     expect(mocks.update.mock.calls[0][0].display.timezone).toBe("Asia/Tokyo");
   });
 
-  it("a stored zone is confirmed and keeps travelling", async () => {
+  it("a stored zone is confirmed, and moving it is sent", async () => {
     mocks.get.mockResolvedValue({ display: { timezone: "Europe/Berlin" } });
     await useSettingsStore.getState().loadRemoteSettings();
     expect(useProfileZoneStore.getState().status).toBe("confirmed");
+    useSettingsStore.getState().setDisplay({ timezone: "America/Chicago" });
     await useSettingsStore.getState().saveRemoteSettings();
-    expect(mocks.update.mock.calls[0][0].display.timezone).toBe("Europe/Berlin");
+    expect(mocks.update.mock.calls[0][0].display.timezone).toBe("America/Chicago");
   });
 
   it("'today' is UTC until a zone is confirmed", () => {

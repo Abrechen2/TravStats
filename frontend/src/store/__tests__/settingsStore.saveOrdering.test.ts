@@ -13,7 +13,7 @@ vi.mock("../../lib/logger", () => ({
 }));
 vi.mock("../settingsStore", async () => vi.importActual("../settingsStore"));
 
-import { useSettingsStore } from "../settingsStore";
+import { snapshotOf, useSettingsStore } from "../settingsStore";
 
 /**
  * An edit made while a save is in flight is still an unsaved edit.
@@ -37,10 +37,13 @@ describe("settingsStore save ordering", () => {
   beforeEach(() => {
     mocks.update.mockReset();
     mocks.updateProfile.mockReset().mockResolvedValue(undefined);
+    // Loaded as "loaded", edited to "start": a save has something to send
+    // (it only sends what changed since the load — UAT rc.45 B1).
     useSettingsStore.setState((s) => ({
-      profile: { ...s.profile, firstName: "start", birthdate: undefined },
-      remoteSnapshot: null,
+      profile: { ...s.profile, firstName: "loaded", birthdate: undefined },
     }));
+    useSettingsStore.setState({ remoteSnapshot: snapshotOf(useSettingsStore.getState()) });
+    useSettingsStore.setState((s) => ({ profile: { ...s.profile, firstName: "start" } }));
   });
 
   it("still reports a change made while the save was in flight", async () => {
@@ -91,6 +94,8 @@ describe("settingsStore save ordering", () => {
     });
 
     const first = useSettingsStore.getState().saveRemoteSettings();
+    await tick();
+    useSettingsStore.setState((s) => ({ profile: { ...s.profile, firstName: "second" } }));
     const second = useSettingsStore.getState().saveRemoteSettings();
     await tick();
     releaseFirst();

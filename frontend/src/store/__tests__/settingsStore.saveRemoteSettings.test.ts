@@ -24,12 +24,18 @@ vi.mock("../settingsStore", async () => {
   return vi.importActual("../settingsStore");
 });
 
-import { useSettingsStore } from "../settingsStore";
+import { snapshotOf, useSettingsStore } from "../settingsStore";
 import { logger } from "../../lib/logger";
 
 describe("settingsStore.saveRemoteSettings (#186)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Loaded with an older birthdate and email, so a save has both writes to make
+    // (a save only sends what changed since the load — UAT rc.45 B1).
+    useSettingsStore.setState({
+      profile: { username: "u", email: "old@example.com", birthdate: "1980-01-01" },
+    });
+    useSettingsStore.setState({ remoteSnapshot: snapshotOf(useSettingsStore.getState()) });
     useSettingsStore.setState({
       profile: { username: "u", email: "e@example.com", birthdate: "1990-01-01" },
     });

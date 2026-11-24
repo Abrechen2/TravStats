@@ -4,8 +4,17 @@ vi.unmock("../settingsStore");
 
 import type { UserSettings } from "../../lib/api/types";
 import { settingsApi } from "../../lib/api";
-import { useSettingsStore } from "../settingsStore";
+import { snapshotOf, useSettingsStore } from "../settingsStore";
 import { scheduleAutosave } from "../settingsAutosave";
+
+/**
+ * A loaded snapshot whose `defaults` differ from the store's, so a save has a
+ * change to send (a save is a patch since UAT rc.45 B1).
+ */
+function loadedWithOtherDefaults(): string {
+  const state = useSettingsStore.getState();
+  return snapshotOf({ ...state, defaults: { ...state.defaults, favoriteAirline: "__loaded__" } });
+}
 
 describe("settings autosave on pagehide", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -13,7 +22,7 @@ describe("settings autosave on pagehide", () => {
   it("sends the pending settings PUT with fetch keepalive, not axios, when the page is hidden", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
-    useSettingsStore.setState({ remoteSnapshot: "baseline" });
+    useSettingsStore.setState({ remoteSnapshot: loadedWithOtherDefaults() });
 
     scheduleAutosave();
     window.dispatchEvent(new Event("pagehide"));
@@ -46,7 +55,7 @@ describe("settings autosave on pagehide while a save is in flight", () => {
           finish = () => resolve({} as UserSettings);
         })
     );
-    useSettingsStore.setState({ remoteSnapshot: "baseline" });
+    useSettingsStore.setState({ remoteSnapshot: loadedWithOtherDefaults() });
 
     scheduleAutosave();
     // Start the save (timer fires), then edit again so the snapshot is newer.
@@ -75,7 +84,7 @@ describe("settings autosave on pagehide while a save is in flight", () => {
           finish = () => resolve({} as UserSettings);
         })
     );
-    useSettingsStore.setState({ remoteSnapshot: "baseline-2" });
+    useSettingsStore.setState({ remoteSnapshot: loadedWithOtherDefaults() });
 
     scheduleAutosave();
     await new Promise((r) => setTimeout(r, 600));

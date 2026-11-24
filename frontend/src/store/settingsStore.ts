@@ -12,6 +12,7 @@ import { useSettingsLevelStore } from "./settingsLevelStore";
 import { deviceZone } from "../shared/time";
 import { serializedKey } from "./serializedSetting";
 import { markBirthdateSaved, markGeneralSaved } from "./settingsPartialSave";
+import { buildSettingsPatch, SettingsNotLoadedError } from "./settingsPatch";
 
 export { birthdateWasSaved, generalSettingsWereSaved } from "./settingsPartialSave";
 import type { WeightUnit } from "../lib/baggageAllowance";
@@ -512,7 +513,10 @@ export const useSettingsStore = create<SettingsState>()(
       resetSettings: () => set(defaultSettings),
       hasPendingChanges: () => {
         const state = get();
-        if (state.remoteSnapshot === null) return true;
+        // Nothing loaded yet means nothing to compare against, so nothing is
+        // pending: an auto-save before the first load wrote the store defaults
+        // over the account (UAT rc.45, B1). Hydration is not an edit.
+        if (state.remoteSnapshot === null) return false;
         return snapshotOf(state) !== state.remoteSnapshot;
       },
       loadRemoteSettings: async () => {
@@ -662,8 +666,8 @@ export const useSettingsStore = create<SettingsState>()(
           ? settingsApi.updateProfileKeepalive
           : settingsApi.updateProfile;
         // A keepalive save belongs to an unloading page: it must leave NOW, not queue behind a
-        // request the unload may cancel. Safe out of order because the PUT is a full snapshot
-        // taken at send time (last write wins) and this one carries the newest values.
+        // request the unload may cancel. Safe out of order because its patch is taken against
+        // the last CONFIRMED state, so it repeats whatever is still in flight (last write wins).
         let release: () => void = () => undefined;
         if (!options?.keepalive) {
           const previous = saveQueue;
@@ -673,46 +677,34 @@ export const useSettingsStore = create<SettingsState>()(
           await previous;
         }
         try {
-          const {
-            profile,
-            display,
-            units,
-            defaults,
-            notifications,
-            features,
-            cruise,
-            enabledDomains,
-          } = get();
-          // What this request is about to send. Captured BEFORE the awaits, so
-          // an edit made while it is in flight is not swept up by its response.
-          const sentSnapshot = snapshotOf(get());
-          // What the server is known to hold, for the rollback below. Also
-          // captured before the awaits, for the same reason.
+          // What the server is known to hold: the base of the patch and of the
+          // rollback below. Captured before the awaits, like `sentSnapshot`, so
+          // an edit made while the request is in flight is not swept up by it.
           const confirmedSnapshot = get().remoteSnapshot;
+          const confirmed = groupsFromSnapshot(confirmedSnapshot);
+          // Never write before the first successful load (UAT rc.45, B1): with
+          // nothing to diff against, every store default would look changed.
+          if (confirmed === null) throw new SettingsNotLoadedError();
+          const state = get();
+          const sentSnapshot = snapshotOf(state);
+          const current = { ...state, display: displayForSave(state.display) };
+          const patch = buildSettingsPatch(current, {
+            ...confirmed,
+            display: displayForSave(confirmed.display),
+          });
+          // birthdate lives on a separate endpoint (/settings/profile, the User
+          // row) and goes only when it changed; undefined = never loaded.
+          const birthdate = state.profile.birthdate;
+          const birthdateChanged =
+            birthdate !== undefined && birthdate !== confirmed.profile.birthdate;
 
-          // The two writes are independent (issue #186): a 400 from the
-          // general settings PUT (e.g. a rejected profilePicture value) used
-          // to throw before the birthdate PUT ever ran, silently losing the
-          // birthdate on every save that also touched the picture. Firing
-          // both up front and collecting results with allSettled means one
-          // failing never blocks the other.
+          // The two writes are independent (issue #186): one failing never
+          // blocks the other, so both start up front and are collected with
+          // allSettled.
           const results = await Promise.allSettled([
-            putSettings({
-              profile,
-              // Never the browser's guess as if the user had confirmed it.
-              display: displayForSave(display),
-              units,
-              defaults,
-              notifications,
-              features,
-              cruise,
-              enabledDomains,
-            }),
-            // birthdate lives on a separate endpoint (/settings/profile on the
-            // User row). Only PUT when the field was explicitly loaded or set
-            // — undefined means "not touched this session, leave backend as-is".
-            profile.birthdate !== undefined
-              ? putProfile({ birthdate: profile.birthdate })
+            Object.keys(patch).length > 0 ? putSettings(patch) : Promise.resolve(undefined),
+            birthdateChanged
+              ? putProfile({ birthdate: birthdate ?? null })
               : Promise.resolve(undefined),
           ]);
 
@@ -739,7 +731,7 @@ export const useSettingsStore = create<SettingsState>()(
             // Say so on the error itself: a row that wrote a units choice must
             // not undo it because only the birthdate PUT was refused.
             if (!generalFailed) markGeneralSaved(failures[0].reason);
-            else if (profile.birthdate !== undefined && results[1].status === "fulfilled")
+            else if (birthdateChanged && results[1].status === "fulfilled")
               markBirthdateSaved(failures[0].reason);
             const restore = generalFailed ? groupsFromSnapshot(confirmedSnapshot) : null;
             if (restore) {
