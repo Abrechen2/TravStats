@@ -34,6 +34,8 @@ export interface TravTrackSummary {
   devices: Array<{ deviceId: string | null; pointCount: number }>;
   deletedRanges: number;
   zones: number;
+  /** The day-by-day derivation behind the calendar and the country days. */
+  derivation: { pendingDays: number; totalDays: number; estimateMinutes: number };
 }
 
 /** „Zuletzt gesehen" (plan L2): the newest real, privacy-safe fix of the own history. */

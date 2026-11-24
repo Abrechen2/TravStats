@@ -66,6 +66,7 @@ const EMPTY = {
   devices: [],
   deletedRanges: 0,
   zones: 0,
+  derivation: { pendingDays: 0, totalDays: 0, estimateMinutes: 0 },
 };
 
 const dropped = { privacy_zone: 0, deleted_range: 0, invalid: 0, null_island: 0 };

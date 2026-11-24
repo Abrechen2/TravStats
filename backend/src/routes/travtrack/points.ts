@@ -1,5 +1,6 @@
 import { Router, type NextFunction, type Response } from "express";
 
+import { derivationProgress } from "../../services/travtrack/derivationProgress";
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, type AuthRequest } from "../../middleware/auth";
 import { rejectDemo } from "../../middleware/demoGuard";
@@ -205,6 +206,7 @@ router.get(
       userId,
       devices.map((d) => d.deviceId)
     );
+    const derivation = await derivationProgress(userId);
     res.json({
       pointCount: agg._count._all,
       firstAt: agg._min.t?.toISOString() ?? null,
@@ -219,6 +221,7 @@ router.get(
         .sort((a, b) => b.pointCount - a.pointCount),
       deletedRanges,
       zones,
+      derivation,
     });
   })
 );

@@ -2060,6 +2060,12 @@
   "tt": {
     "recording": {
       "title": "Recording",
+      "derivation": {
+        "name": "History being processed",
+        "done": "Processed",
+        "minutes": "{{pending}} of {{total}} days left, about {{minutes}} min to go",
+        "hours": "{{pending}} of {{total}} days left, about {{hours}} h to go"
+      },
       "stored": {
         "name": "Stored",
         "empty": "No points yet",

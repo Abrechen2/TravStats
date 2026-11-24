@@ -110,6 +110,7 @@ const EMPTY = {
   devices: [],
   deletedRanges: 0,
   zones: 0,
+  derivation: { pendingDays: 0, totalDays: 0, estimateMinutes: 0 },
 };
 const HELD = {
   ...EMPTY,
@@ -199,6 +200,22 @@ describe("Aufzeichnung: what is stored", () => {
     );
     // Named by its hash, or the closed beta gate hides the phones (Codex, rc.29 review).
     expect(navigate).toHaveBeenCalledWith("/settings/telefone#devices", undefined);
+  });
+
+  it("says how far the history derivation has come after a big import, and stays silent when done", async () => {
+    vi.spyOn(travTrackApi, "summary").mockResolvedValueOnce({
+      ...HELD,
+      derivation: { pendingDays: 4413, totalDays: 4800, estimateMinutes: 1080 },
+    });
+    show(<TravTrackRecordingSection />);
+    expect(
+      await screen.findByText(/settings:tt\.recording\.derivation\.hours/)
+    ).toBeInTheDocument();
+    cleanup();
+    vi.spyOn(travTrackApi, "summary").mockResolvedValue(HELD);
+    show(<TravTrackRecordingSection />);
+    await screen.findByText(/settings:tt\.recording\.stored\.value/);
+    expect(screen.queryByText(/settings:tt\.recording\.derivation/)).toBeNull();
   });
 
   it("keeps the stored count when last-seen is refused because TravTrack is off", async () => {

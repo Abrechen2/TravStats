@@ -262,6 +262,15 @@ registry.registerPath({
             ),
             deletedRanges: z.number().int().describe("Spans deleted, kept so they stay deleted"),
             zones: z.number().int().describe("Privacy zones of the account"),
+            derivation: z
+              .object({
+                pendingDays: z.number().int(),
+                totalDays: z.number().int(),
+                estimateMinutes: z.number().int(),
+              })
+              .describe(
+                "How far the day-by-day derivation (country days, explored cells, month figures) has come: days still waiting, days in all, and the minutes the schedule needs for the rest"
+              ),
           }),
         },
       },
