@@ -69,12 +69,7 @@ export default function RoadtripColorField({
         >
           {t("roadtrips:mapColor.auto")}
         </button>
-        <span
-          aria-hidden="true"
-          className="h-3 w-3 rounded-full"
-          style={{ background: shown }}
-          title={route.color ? t("roadtrips:mapColor.own") : t("roadtrips:mapColor.automatic")}
-        />
+        <span aria-hidden="true" className="h-3 w-3 rounded-full" style={{ background: shown }} />
       </div>
       {errorKey && (
         <p role="alert" className="text-sm text-(--danger)" data-testid="roadtrip-color-error">
