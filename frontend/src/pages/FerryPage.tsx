@@ -1,4 +1,5 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
+import { yearFromSearch } from "../lib/stats/yearLinks";
 import { useGapPrefill } from "../hooks/useGapPrefill";
 import type { GapDates } from "../lib/gapCalendar";
 import DomainBulkBar from "../components/bulkEdit/DomainBulkBar";
@@ -93,7 +94,10 @@ export default function FerryPage(): JSX.Element {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
   const [statusFilter, setStatusFilter] = useState<FerryStatus | "all">("all");
-  const [yearFilter, setYearFilter] = useState<number | "all">("all");
+  // `?year=` (a statistics year card) opens the list on that year.
+  const [yearFilter, setYearFilter] = useState<number | "all">(
+    () => yearFromSearch(window.location.search) ?? "all"
+  );
   const [editing, setEditing] = useState<Editing>(null);
   // The gap calendar's "Eintrag anlegen": a new crossing on the gap's days (`?addFrom=&addTo=`).
   const gap = useGapPrefill();

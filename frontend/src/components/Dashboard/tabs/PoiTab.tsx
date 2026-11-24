@@ -17,6 +17,8 @@ import type { PlaceList } from "../../../types/placeList";
 import { buildPlaceLegend, resolvePlaceListColors } from "../../../lib/placeColor";
 import { usePlaceColorStore } from "../../../store/placeColorStore";
 import { classifyPlace } from "../../../shared/placeCounting";
+import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
+import { placesInRange } from "../../../lib/stats/dashboardYearFilter";
 import MapContainer3D from "../../MapContainer3D";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
@@ -92,13 +94,17 @@ export function PoiTab(): JSX.Element {
 
   const listColors = useMemo(() => resolvePlaceListColors(lists), [lists]);
 
+  // The map's year filter (`?year=`), by VISIT date — the rule the "Alle" tab applies: a place
+  // whose visits carry no date occupies no known day, so it steps aside while a range is set.
+  const filterTime = useDashboardFilterStore((s) => s.time);
   const visiblePlaces = useMemo(() => {
-    if (listFilter === null) return places;
+    const inRange = placesInRange(places, filterTime);
+    if (listFilter === null) return inRange;
     const members = new Set(
       (lists.find((l) => l.id === listFilter)?.entries ?? []).map((e) => e.placeId)
     );
-    return places.filter((p) => members.has(p.id));
-  }, [places, lists, listFilter]);
+    return inRange.filter((p) => members.has(p.id));
+  }, [places, lists, listFilter, filterTime]);
 
   const layers = useMemo<Layer[]>(() => {
     if (visiblePlaces.length === 0) return [];

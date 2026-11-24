@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import type { Layer } from "@deck.gl/core";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
 import { useDashboardTours } from "../../../hooks/useDashboardTours";
+import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
+import { toursInRange } from "../../../lib/stats/dashboardYearFilter";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { TourSummary } from "../../../lib/api/tourIndex";
 import type { RouteKind } from "../../../shared/tour/roadtrip";
@@ -82,7 +84,16 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
   // No gate since 2026-09-18 (owner: everything out of the registry but the
   // phone app). The hook keeps its `enabled` argument for a future caller
   // that has a reason to say no.
-  const dashboardTours = useDashboardTours(true, kind);
+  const allTours = useDashboardTours(true, kind);
+  // The map's year filter (`?year=`) — the same overlap rule as the "Alle" tab. An undated tour
+  // has no known day and stays, as there.
+  const filterTime = useDashboardFilterStore((s) => s.time);
+  const filteredTours = useMemo(() => {
+    const tours = toursInRange(allTours.tours, filterTime);
+    const ids = new Set(tours.map((tour) => tour.id));
+    return { tours, geometries: allTours.geometries.filter((g) => ids.has(g.routeId)) };
+  }, [allTours.tours, allTours.geometries, filterTime]);
+  const dashboardTours = { ...allTours, ...filteredTours };
   const { colorOf } = useDomainColors();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const visMode = mode === "globe" ? "globe" : "routes";

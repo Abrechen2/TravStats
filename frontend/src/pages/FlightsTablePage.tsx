@@ -4,6 +4,7 @@
  * Dedicated page for viewing all flights in a comprehensive table format
  */
 
+import { monthFromSearch } from "../lib/stats/yearLinks";
 import AppShell from "../components/ui/AppShell";
 import { flightSummaryFiguresFromCounts } from "../lib/flights/flightSummaryFigures";
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -97,7 +98,11 @@ export default function FlightsTablePage(): JSX.Element {
   const [yearFilter, setYearFilter] = useState<string>(() =>
     loyaltyFilter.linkedYear !== null ? String(loyaltyFilter.linkedYear) : "all"
   );
-  const [monthFilter, setMonthFilter] = useState<string>("all");
+  // `?month=` (a statistics year card's month) opens the list on that month of the year.
+  const [monthFilter, setMonthFilter] = useState<string>(() => {
+    const month = monthFromSearch(window.location.search);
+    return month === null ? "all" : String(month);
+  });
   const [airlineFilter, setAirlineFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);

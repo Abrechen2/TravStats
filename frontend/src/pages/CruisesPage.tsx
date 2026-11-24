@@ -1,4 +1,5 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
+import { yearFromSearch } from "../lib/stats/yearLinks";
 import DomainBulkBar from "../components/bulkEdit/DomainBulkBar";
 import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
 import { cruiseBulkRow } from "../components/bulkEdit/bulkRows";
@@ -132,7 +133,10 @@ export default function CruisesPage(): JSX.Element {
   // without this, seven for a prefix nobody wanted to see.
   const debouncedSearch = useDebouncedValue(search);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [yearFilter, setYearFilter] = useState<YearFilter>("all");
+  // `?year=` (a statistics year card) opens the list on that year.
+  const [yearFilter, setYearFilter] = useState<YearFilter>(
+    () => yearFromSearch(window.location.search) ?? "all"
+  );
   // The one filter only cruises have. It lives behind the "Filter" button,
   // which is what that button is for — search/status/year stay open because
   // every domain has them.

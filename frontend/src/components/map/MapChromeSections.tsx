@@ -90,45 +90,40 @@ export function MapChromeSections(): JSX.Element {
         />
       </Section>
 
-      {/* Filter -- hidden entirely on the tour tab: the year select has no
-          effect on `useDashboardTours` (no date param exists on that
-          endpoint, see TourTab.tsx's own concerns section). A control that
-          visibly does nothing is the same defect this feature's tour
-          legend was fixed for -- offering it here would be the same lie
-          about a different control (fix-round review, 2026-08-30). */}
-      {tab !== "tour" && (
-        <Section>
-          <SectionLabel>{t("dashboard:filter.title")}</SectionLabel>
-          <div className="flex flex-col gap-2">
-            <label className="flex flex-col gap-1">
-              <span style={{ color: "rgba(241,245,249,0.55)" }} className="text-[10px]">
-                {t("dashboard:filter.year")}
-              </span>
-              <select
-                value={year ?? ""}
-                onChange={(e) => setYear(e.target.value === "" ? null : Number(e.target.value))}
-                className="cursor-pointer rounded-md px-2 py-1.5 text-[11px]"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: `1px solid ${BORDER}`,
-                  color: TEXT,
-                  colorScheme: "dark",
-                }}
-              >
-                {/* Options MUST be styled explicitly — the popup ignores the
+      {/* Filter -- the year select reaches every tab: the tour and roadtrip tabs filter their
+          routes by date like the "Alle" tab does, places by visit date. */}
+      <Section>
+        <SectionLabel>{t("dashboard:filter.title")}</SectionLabel>
+        <div className="flex flex-col gap-2">
+          <label className="flex flex-col gap-1">
+            <span style={{ color: "rgba(241,245,249,0.55)" }} className="text-[10px]">
+              {t("dashboard:filter.year")}
+            </span>
+            <select
+              value={year ?? ""}
+              onChange={(e) => setYear(e.target.value === "" ? null : Number(e.target.value))}
+              className="cursor-pointer rounded-md px-2 py-1.5 text-[11px]"
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                border: `1px solid ${BORDER}`,
+                color: TEXT,
+                colorScheme: "dark",
+              }}
+            >
+              {/* Options MUST be styled explicitly — the popup ignores the
                   select's colours on Windows and was white-on-white (#196). */}
-                <option value="" style={PANEL_OPTION_STYLE}>
-                  {t("dashboard:filter.allYears")}
+              <option value="" style={PANEL_OPTION_STYLE}>
+                {t("dashboard:filter.allYears")}
+              </option>
+              {yearOptions.map((y) => (
+                <option key={y} value={y} style={PANEL_OPTION_STYLE}>
+                  {y}
                 </option>
-                {yearOptions.map((y) => (
-                  <option key={y} value={y} style={PANEL_OPTION_STYLE}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </label>
+              ))}
+            </select>
+          </label>
 
-            {/* The domain pills that used to sit here are gone (owner,
+          {/* The domain pills that used to sit here are gone (owner,
                 2026-09-28). Domain visibility has ONE owner now: the
                 "Domänen · x/y" filter on the map. Two controls for one
                 question could contradict each other, and the losing one was
@@ -139,19 +134,18 @@ export function MapChromeSections(): JSX.Element {
                 domain someone had deselected here would otherwise have stayed
                 hidden forever, with no control left to bring it back. */}
 
-            {filterActive && (
-              <button
-                type="button"
-                onClick={resetFilter}
-                className="cursor-pointer self-start text-[10px] underline opacity-80 hover:opacity-100"
-                style={{ color: `rgb(${ACCENT})` }}
-              >
-                {t("dashboard:filter.reset")}
-              </button>
-            )}
-          </div>
-        </Section>
-      )}
+          {filterActive && (
+            <button
+              type="button"
+              onClick={resetFilter}
+              className="cursor-pointer self-start text-[10px] underline opacity-80 hover:opacity-100"
+              style={{ color: `rgb(${ACCENT})` }}
+            >
+              {t("dashboard:filter.reset")}
+            </button>
+          )}
+        </div>
+      </Section>
     </>
   );
 }
