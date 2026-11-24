@@ -416,7 +416,8 @@
       "ACCOUNT_ARCHIVE_ALREADY_IMPORTED": "Dieses Archiv wurde auf diesem Server schon in ein anderes Konto eingespielt.",
       "rate_limited": "Zu viele Versuche in kurzer Zeit. Bitte versuche es in einer Stunde erneut.",
       "generic": "Das hat nicht geklappt (Serverfehler). Nichts wurde übernommen. Bitte versuche es später erneut."
-    }
+    },
+    "notArchive": "„{{name}}“ ist kein Konto-Archiv (ZIP). Track-Dateien wie GPX liest Track → Importe ein."
   },
   "lifeBook": {
     "title": "Lebensbuch",

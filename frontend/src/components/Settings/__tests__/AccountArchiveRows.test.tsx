@@ -146,4 +146,19 @@ describe("AccountArchiveRows", () => {
     ).toBeInTheDocument();
     expect(api.importArchive).toHaveBeenCalledWith(file);
   });
+
+  // UAT rc.45 retest D25: a .gpx reached the "restore this archive?" question.
+  it("never offers a .gpx for restore, and says what the file is not", async () => {
+    render(<AccountArchiveRows />);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "settingsRows:data.archivein.btn" })).toBeEnabled()
+    );
+    const gpx = new File(["<gpx/>"], "places.gpx", { type: "application/gpx+xml" });
+    fireEvent.change(screen.getByTestId("account-archive-file"), { target: { files: [gpx] } });
+    expect(await screen.findByText(/accountArchive\.notArchive/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "settings:accountArchive.confirm.button" })
+    ).toBeNull();
+    expect(api.importArchive).not.toHaveBeenCalled();
+  });
 });

@@ -152,6 +152,11 @@ function ExportRow(): JSX.Element {
   );
 }
 
+/** A ZIP by name or type — the only thing an account archive can be. */
+export function isZipFile(file: Pick<File, "name" | "type">): boolean {
+  return /\.zip$/i.test(file.name) || /^application\/(x-)?zip/.test(file.type);
+}
+
 function ImportRow(): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const copy = useRowCopy("data")("archivein");
@@ -210,6 +215,9 @@ function ImportRow(): JSX.Element {
   );
 
   const tooLarge = file && status ? file.size > status.maxBytes : false;
+  // `accept` is a hint a drop or a file manager can step over: a .gpx reached the "restore this
+  // archive?" question (UAT rc.45 retest, D25). Only a ZIP is ever offered for restore.
+  const notArchive = file !== null && !isZipFile(file);
   const blocked = status !== null && !status.empty && phase.kind !== "done";
   const view = jobView(
     phase,
@@ -253,9 +261,12 @@ function ImportRow(): JSX.Element {
       {tooLarge ? (
         <ErrorLine>{t("settings:accountArchive.failed.ACCOUNT_ARCHIVE_TOO_LARGE")}</ErrorLine>
       ) : null}
+      {notArchive ? (
+        <ErrorLine>{t("settings:accountArchive.notArchive", { name: file?.name ?? "" })}</ErrorLine>
+      ) : null}
       <MovesNote />
       <ConfirmDialog
-        open={file !== null && !tooLarge}
+        open={file !== null && !tooLarge && !notArchive}
         title={t("settings:accountArchive.confirm.title")}
         affects={t("settings:accountArchive.confirm.affects")}
         amount={file ? `${file.name} · ${formatBytes(file.size)}` : ""}

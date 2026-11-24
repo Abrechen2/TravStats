@@ -416,7 +416,8 @@
       "ACCOUNT_ARCHIVE_ALREADY_IMPORTED": "This archive was already imported into another account on this server.",
       "rate_limited": "Too many attempts in a short time. Please try again in an hour.",
       "generic": "That did not work (server error). Nothing was imported. Please try again later."
-    }
+    },
+    "notArchive": "“{{name}}” is not an account archive (ZIP). Track files such as GPX go in under Track → Imports."
   },
   "lifeBook": {
     "title": "Life book",
