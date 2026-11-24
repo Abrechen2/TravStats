@@ -65,7 +65,10 @@ export default function GlobalSearch(): JSX.Element {
   // Domain chips narrow the search; none chosen = every domain the account shows.
   const [only, setOnly] = useState<SearchDomain[]>([]);
   const chipDomains = useMemo<SearchDomain[]>(
-    () => [...enabled, "trip", ...(toursVisible ? (["tour"] as const) : [])],
+    // A Set: "tour" is both a domain and the tours page, and was drawn twice (UAT rc.45).
+    () => [
+      ...new Set<SearchDomain>([...enabled, "trip", ...(toursVisible ? ["tour" as const] : [])]),
+    ],
     [enabled, toursVisible]
   );
   const { state, retry } = useGlobalSearch(value, only);

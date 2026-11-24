@@ -18,10 +18,11 @@ vi.mock("../../../hooks/useTranslation", () => ({
     i18n: { language: "de" },
   }),
 }));
+const shown = vi.hoisted(() => ({ enabled: ["flight", "lodging"], tours: false }));
 vi.mock("../../../hooks/useEnabledDomains", () => ({
-  useEnabledDomains: () => ({ enabled: ["flight", "lodging"], isEnabled: () => true }),
+  useEnabledDomains: () => ({ enabled: shown.enabled, isEnabled: () => true }),
 }));
-vi.mock("../../../hooks/useToursVisible", () => ({ useToursVisible: () => false }));
+vi.mock("../../../hooks/useToursVisible", () => ({ useToursVisible: () => shown.tours }));
 vi.mock("../../../hooks/useDebouncedValue", () => ({ useDebouncedValue: <T,>(v: T) => v }));
 vi.mock("../../../hooks/useDomainColors", () => ({
   useDomainColors: () => ({ colors: {}, colorOf: () => "#abcdef" }),
@@ -121,6 +122,21 @@ describe("the header search (forgejo#403)", () => {
     expect(screen.getAllByRole("option")[1]).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(box, { key: "Enter" });
     expect(screen.getByTestId("where")).toHaveTextContent("/lodging/l1");
+  });
+
+  // UAT rc.45: "Touren" showed twice — once as an enabled domain, once as the tours page.
+  it("shows the tours chip once when the tour domain is on as well", async () => {
+    shown.enabled = ["flight", "tour"];
+    shown.tours = true;
+    try {
+      vi.mocked(searchApi.search).mockResolvedValue(result());
+      const input = renderBox();
+      fireEvent.change(input, { target: { value: "Dubai" } });
+      expect(await screen.findAllByTestId("search-chip-tour")).toHaveLength(1);
+    } finally {
+      shown.enabled = ["flight", "lodging"];
+      shown.tours = false;
+    }
   });
 
   it("narrows the search to the chosen domain chips and keeps the typing field focused", async () => {
