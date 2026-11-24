@@ -153,7 +153,6 @@ export async function startingUid(fetchFrom: string, session: MailSession): Prom
   const days = /^days_(\d+)$/.exec(fetchFrom)?.[1];
   const atNow = Math.max(session.uidNext - 1, 0);
   if (!days) return atNow;
-  // eslint-disable-next-line time/no-ambient-now -- an IMAP SEARCH SINCE window, not a status clock
   const since = new Date(Date.now() - Number(days) * DAY_MS);
   const uids = await session.searchUids({ since, before: null });
   return uids.length > 0 ? uids[0] - 1 : atNow;
@@ -174,9 +173,17 @@ export async function rulesFor(source: SourceRow): Promise<PrefilterRules | null
 
 async function readFolder(source: SourceRow, session: MailSession, result: RunResult) {
   // A changed UIDVALIDITY makes every stored UID meaningless, and a source that
-  // never ran has none: the cursor is positioned by `fetchFrom`, never at 0.
+  // never ran has none. A personal folder (possibly the private main INBOX) is
+  // positioned by `fetchFrom`, never at 0. The instance mailbox exists only to
+  // receive forwards, so it reads from the start; the Message-ID key keeps a
+  // rescan from creating anything twice.
   const restart = source.uidValidity === null || source.uidValidity !== session.uidValidity;
-  let lastUid = restart ? await startingUid(source.fetchFrom, session) : source.lastUid;
+  const personal = source.kind === "imap_folder";
+  let lastUid = !restart
+    ? source.lastUid
+    : personal
+      ? await startingUid(source.fetchFrom, session)
+      : 0;
   if (restart) await saveCursor(source, { lastUid, uidValidity: session.uidValidity });
 
   const rules = await rulesFor(source);

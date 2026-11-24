@@ -9,4 +9,10 @@ export type MailIntakeApiErrorCode =
   /** The admin switched mail intake off or forbade it for accounts (409). */
   | "MAIL_INTAKE_OFF"
   /** A personal mailbox host resolves to a private or loopback address (400). */
-  | "MAIL_HOST_BLOCKED";
+  | "MAIL_HOST_BLOCKED"
+  /** No such scan candidate, or none of the given ones is still open (404). */
+  | "MAIL_CANDIDATE_NOT_FOUND"
+  /** A mailbox scan is already running for this source (409). */
+  | "MAIL_SCAN_RUNNING"
+  /** The mailbox could not be opened to import a listed mail (502, as a job error). */
+  | "MAIL_MAILBOX_UNREADABLE";

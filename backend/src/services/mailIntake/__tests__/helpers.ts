@@ -87,6 +87,8 @@ export class FakeMailbox implements MailFetcher {
   downloads: number[] = [];
   /** Every UID whose headers were fetched. */
   headerFetches: number[] = [];
+  /** Called before each header fetch (a test hook: cancel mid-scan, count batches). */
+  onFetchHeaders: (() => Promise<void>) | null = null;
   /** Flags set per UID. */
   flags = new Map<number, string[]>();
 
@@ -115,6 +117,7 @@ export class FakeMailbox implements MailFetcher {
           .sort((a, b) => a - b);
       },
       async fetchHeaders(uids) {
+        if (box.onFetchHeaders) await box.onFetchHeaders();
         box.headerFetches.push(...uids);
         const wanted = new Set(uids);
         return box.mails.filter((m) => wanted.has(m.uid)).map((m) => headersOf(m.uid, m.raw));

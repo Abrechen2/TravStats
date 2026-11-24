@@ -54,7 +54,9 @@ export type JobKind =
   | "lifeBook.export"
   | "demo.recreate"
   | "plugins.backfill"
-  | "stats.wrapped";
+  | "stats.wrapped"
+  | "mailIntake.scan"
+  | "mailIntake.import";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 

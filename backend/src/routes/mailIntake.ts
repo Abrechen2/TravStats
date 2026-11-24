@@ -20,7 +20,11 @@ import {
   personalSourceBodySchema,
   senderBodySchema,
   fileOriginalBodySchema,
+  scanBodySchema,
+  candidateIdsBodySchema,
 } from "../schemas/mailIntake";
+import { cancelScan, startScan } from "../services/mailIntake/mailboxScan";
+import { ignoreCandidates, listCandidates, startImport } from "../services/mailIntake/candidates";
 import { prisma } from "../db";
 import {
   allowSenderOf,
@@ -194,6 +198,58 @@ router.post(
   wrap(async (req, res) => {
     await allowSenderOf(req.userId!, idParamsSchema.parse(req.params).id);
     res.json({ ok: true });
+  })
+);
+
+// ---- "Postfach durchsuchen" ------------------------------------------------------------------
+
+const dayStart = (value: string | undefined): Date | null =>
+  value ? new Date(`${value}T00:00:00.000Z`) : null;
+
+router.post(
+  "/scan",
+  connectLimiter,
+  wrap(async (req, res) => {
+    await assertAllowed(req.userId!);
+    const body = scanBodySchema.parse(req.body ?? {});
+    const job = await startScan(req.userId!, {
+      since: dayStart(body.since),
+      before: dayStart(body.before),
+      resume: body.resume,
+    });
+    res.status(202).json({ jobId: job.id });
+  })
+);
+
+router.post(
+  "/scan/cancel",
+  wrap(async (req, res) => {
+    await cancelScan(req.userId!);
+    res.json({ ok: true });
+  })
+);
+
+router.get(
+  "/candidates",
+  wrap(async (req, res) => void res.json(await listCandidates(req.userId!)))
+);
+
+router.post(
+  "/candidates/import",
+  connectLimiter,
+  wrap(async (req, res) => {
+    await assertAllowed(req.userId!);
+    const { ids } = candidateIdsBodySchema.parse(req.body);
+    const job = await startImport(req.userId!, ids);
+    res.status(202).json({ jobId: job.id });
+  })
+);
+
+router.post(
+  "/candidates/ignore",
+  wrap(async (req, res) => {
+    const { ids } = candidateIdsBodySchema.parse(req.body);
+    res.json({ ignored: await ignoreCandidates(req.userId!, ids) });
   })
 );
 

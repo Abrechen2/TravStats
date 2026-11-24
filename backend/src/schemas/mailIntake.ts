@@ -153,3 +153,60 @@ export const fileOriginalBodySchema = z.strictObject({
 export const fileOriginalResultSchema = z.object({
   entry: z.object({ type: z.string(), id: z.string() }).nullable(),
 });
+
+// ---- "Postfach durchsuchen": the one-off header scan and its candidate list ----------------
+
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD");
+
+export const scanBodySchema = z.strictObject({
+  /** First day to look at; absent: the whole folder from its first mail. */
+  since: day.optional(),
+  /** Day after the last one (exclusive), as IMAP SEARCH BEFORE reads it. */
+  before: day.optional(),
+  /** Continue an interrupted or cancelled scan from its cursor. */
+  resume: z.boolean().optional(),
+});
+
+export const candidateIdsBodySchema = z.strictObject({
+  ids: z.array(z.string().uuid()).min(1).max(500),
+});
+
+export const jobStartedBareSchema = z.object({ jobId: z.string().uuid() });
+
+export const scanViewSchema = z.object({
+  status: z.enum(["running", "done", "cancelled", "interrupted", "failed"]),
+  since: z.string().nullable(),
+  before: z.string().nullable(),
+  total: z.number(),
+  scanned: z.number(),
+  /** Mails the pre-filter left untouched: counted, nothing else kept. */
+  skipped: z.number(),
+  /** Booking mails already in TravStats (reference or Message-ID). */
+  matched: z.number(),
+  candidates: z.number(),
+  error: z.string().nullable(),
+  startedAt: z.string(),
+  finishedAt: z.string().nullable(),
+});
+
+export const candidateListSchema = z.object({
+  scan: scanViewSchema.nullable(),
+  items: z.array(
+    z.object({
+      id: z.string(),
+      receivedAt: z.string().nullable(),
+      from: z.string().nullable(),
+      subject: z.string().nullable(),
+      brand: z.string().nullable(),
+      guessedDomain: z.string().nullable(),
+      /** `likely_present`: the brand has an entry near this date — maybe already recorded. */
+      matchHint: z.enum(["likely_present"]).nullable(),
+      status: z.enum(["open", "failed"]),
+      /** Why an import failed: `mail_gone` or `mail_too_large`. */
+      reason: z.string().nullable(),
+    })
+  ),
+  ignoredCount: z.number(),
+});
+
+export const ignoredResultSchema = z.object({ ignored: z.number() });
