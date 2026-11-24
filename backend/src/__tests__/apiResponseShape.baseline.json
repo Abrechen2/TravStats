@@ -106,6 +106,7 @@
     "roadtrips/stations.ts",
     "settings/apiKeys.ts",
     "settings/calendarSources.ts",
+    "settings/suggestionPlugins.ts",
     "settings/dawarich.ts",
     "settings/externalServices.ts",
     "settings/general.ts",

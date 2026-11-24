@@ -171,3 +171,27 @@ export function fetchDispatcherFor(policy: TargetPolicy): Dispatcher | undefined
   publicDispatcher ??= new UndiciAgent({ connect: { lookup: pinnedLookup } });
   return publicDispatcher;
 }
+
+const connectCapped = new Map<string, Dispatcher>();
+
+/**
+ * `fetchDispatcherFor` with a cap on the TCP/TLS connect, for callers that must
+ * not wait out a host that never answers the SYN (the suggestion plugins:
+ * 2 s connect inside a 5 s call). One dispatcher per policy and cap.
+ */
+export function fetchDispatcherWithConnectTimeout(
+  policy: TargetPolicy,
+  connectTimeoutMs: number
+): Dispatcher {
+  const key = `${policy.allowPrivate}:${connectTimeoutMs}`;
+  let dispatcher = connectCapped.get(key);
+  if (!dispatcher) {
+    dispatcher = new UndiciAgent({
+      connect: policy.allowPrivate
+        ? { timeout: connectTimeoutMs }
+        : { timeout: connectTimeoutMs, lookup: pinnedLookup },
+    });
+    connectCapped.set(key, dispatcher);
+  }
+  return dispatcher;
+}

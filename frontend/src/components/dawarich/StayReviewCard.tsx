@@ -9,6 +9,8 @@ import StayIdentityPanel from "./StayIdentityPanel";
 import TrackSectionPanel from "../inbox/track/TrackSectionPanel";
 import { staySectionProps } from "../inbox/track/sectionProps";
 import StayCalendarEvidence from "./StayCalendarEvidence";
+import StayPluginCandidates from "./StayPluginCandidates";
+import type { StayPluginEvidence } from "../../lib/api/dawarichStays";
 
 type Purpose = "private" | "business" | "";
 
@@ -61,6 +63,21 @@ export default function StayReviewCard({
   // Sent only when there is something to say: a suggestion, or the user's own choice. An
   // untouched "Nicht festgelegt" must not clear the purpose of a visit that already exists.
   const [purposeTouched, setPurposeTouched] = useState(false);
+  // The plugin suggestion taken over into the form; sent so the place keeps its reference.
+  const [picked, setPicked] = useState<StayPluginEvidence | null>(null);
+  const pickPlugin = (p: StayPluginEvidence) => {
+    setPicked(p);
+    setPlaceId("");
+    pickName(p.name);
+    if (p.lat !== undefined && p.lon !== undefined) {
+      setLat(String(p.lat));
+      setLon(String(p.lon));
+    }
+    if (p.purpose) {
+      setPurposeTouched(true);
+      setPurpose(p.purpose);
+    }
+  };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submit = async (accept: boolean) => {
@@ -75,6 +92,9 @@ export default function StayReviewCard({
       startAt: { local: start },
       endAt: { local: end },
       ...(purposeTouched || row.evidence.suggestedPurpose ? { purpose: purpose || null } : {}),
+      ...(picked?.externalRef
+        ? { pluginRef: { pluginId: picked.pluginId, externalRef: picked.externalRef } }
+        : {}),
     };
     try {
       if (accept) {
@@ -179,6 +199,17 @@ export default function StayReviewCard({
       {row.evidence.calendar && (
         <StayCalendarEvidence evidence={row.evidence.calendar} zone={row.evidence.zone} />
       )}
+      {travtrack &&
+      open &&
+      (row.evidence.plugins?.length || row.evidence.pluginsPending?.length) ? (
+        <StayPluginCandidates
+          stayId={row.id}
+          plugins={row.evidence.plugins ?? []}
+          pending={(row.evidence.pluginsPending?.length ?? 0) > 0}
+          picked={picked ? `${picked.pluginId}:${picked.externalRef ?? picked.name}` : null}
+          onPick={busy ? undefined : pickPlugin}
+        />
+      ) : null}
       {section && <TrackSectionPanel {...section} />}
       <StayIdentityPanel
         stayId={row.id}

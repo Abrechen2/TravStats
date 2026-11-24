@@ -20,6 +20,9 @@ vi.mock("../../inbox/track/TrackSectionPanel", () => ({ default: () => null }));
 vi.mock("../../../lib/api/dawarichStays", () => ({
   dawarichStaysApi: { accept: vi.fn(), reject: vi.fn() },
 }));
+vi.mock("../../../lib/api/suggestionPlugins", () => ({
+  suggestionPluginsApi: { reask: vi.fn(async () => 1) },
+}));
 
 const row = {
   id: "finding",
@@ -92,6 +95,61 @@ describe("a finding with a calendar event", () => {
       expect(dawarichStaysApi.accept).toHaveBeenCalledWith(
         "finding",
         expect.objectContaining({ purpose: "private" })
+      )
+    );
+  });
+});
+
+const withPlugin = {
+  ...row,
+  evidence: {
+    ...row.evidence,
+    plugins: [
+      {
+        pluginId: "11111111-1111-4111-8111-111111111111",
+        pluginName: "Projektarchiv",
+        name: "Projekt 4711",
+        lat: 48.6901,
+        lon: 9.3102,
+        purpose: "business",
+        externalRef: "4711",
+        url: "https://archive.example.com/p/4711",
+        confidence: 0.95,
+        distanceM: 30,
+      },
+    ],
+  },
+} as unknown as DawarichStay;
+
+describe("a finding with a plugin suggestion", () => {
+  it("names the plugin as source and links without a referrer", () => {
+    render(
+      <MemoryRouter>
+        <StayReviewCard row={withPlugin} choices={{ places: [], trips: [] }} onDone={vi.fn()} />
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/inbox\.plugins\.source .*Projektarchiv/)).toBeInTheDocument();
+    const link = screen.getByText("suggestionSources:inbox.plugins.link").closest("a")!;
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+  });
+
+  it("taking the suggestion over sends its reference with the accept", async () => {
+    vi.mocked(dawarichStaysApi.accept).mockResolvedValue(undefined as never);
+    render(
+      <MemoryRouter>
+        <StayReviewCard row={withPlugin} choices={{ places: [], trips: [] }} onDone={vi.fn()} />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByText("suggestionSources:inbox.plugins.pick"));
+    fireEvent.click(screen.getByText("trips:dawarichStays.accept"));
+    await waitFor(() =>
+      expect(dawarichStaysApi.accept).toHaveBeenCalledWith(
+        "finding",
+        expect.objectContaining({
+          name: "Projekt 4711",
+          lat: 48.6901,
+          pluginRef: { pluginId: "11111111-1111-4111-8111-111111111111", externalRef: "4711" },
+        })
       )
     );
   });

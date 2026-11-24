@@ -3,6 +3,7 @@ import TravTrackPlacesSection from "../../components/Settings/travtrack/TravTrac
 import TravTrackZonesSection from "../../components/Settings/travtrack/TravTrackZonesSection";
 import TravTrackDetectSection from "../../components/Settings/travtrack/TravTrackDetectSection";
 import CalendarSourcesSection from "../../components/Settings/suggestionSources/CalendarSourcesSection";
+import PluginsSection from "../../components/Settings/suggestionSources/PluginsSection";
 import TravTrackSourcesSection from "../../components/Settings/travtrack/TravTrackSourcesSection";
 import TravTrackExportSection from "../../components/Settings/travtrack/TravTrackExportSection";
 import TravTrackDeleteSection from "../../components/Settings/travtrack/TravTrackDeleteSection";
@@ -133,6 +134,8 @@ export default function SettingsSectionSwitch({
       return <TravTrackDetectSection />;
     case "ttCalendar":
       return <CalendarSourcesSection />;
+    case "ttPlugins":
+      return <PluginsSection />;
     case "ttSources":
       return <TravTrackSourcesSection />;
     case "ttExport":

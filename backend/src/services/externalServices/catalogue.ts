@@ -381,6 +381,13 @@ export const SERVICES: readonly ServiceDef[] = [
     level: "account",
     credential: "urlKey",
   }),
+  // A plugin row is a connection like Immich's: an account names its own endpoints.
+  svc({
+    id: "suggestionPlugins",
+    category: "personal",
+    level: "account",
+    credential: "urlKey",
+  }),
 
   // ---- AI --------------------------------------------------------------------
   svc({

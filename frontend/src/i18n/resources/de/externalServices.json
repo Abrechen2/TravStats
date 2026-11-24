@@ -767,6 +767,15 @@
       "quota": "Keins.",
       "dataOut": "TravStats liest nur. Gespeichert wird allein ein Termin, der zu einem Stopp passt, im Vorschlag.",
       "adminPurpose": "Konten lesen ihre eigenen Kalender; ausgeschaltet liest kein Konto mehr"
+    },
+    "suggestionPlugins": {
+      "name": "Externe Vorschlagsquellen",
+      "purpose": "Eigene Dienste schlagen Orte für Stopps vor",
+      "why": "Ein Plugin ist ein HTTPS-Dienst, den ein Konto selbst einträgt. TravStats fragt ihn signiert nach einem Stopp und zeigt seine Antwort als Vorschlag.",
+      "cost": "Kostenlos.",
+      "quota": "60 Anfragen pro Stunde und Plugin.",
+      "dataOut": "Zeit und gerundete Koordinaten eines Stopps, nie Konto, Name, E-Mail oder Standortverlauf.",
+      "adminPurpose": "Konten tragen ihre eigenen Plugins ein; ausgeschaltet fragt kein Konto mehr"
     }
   },
   "alwaysOn": {

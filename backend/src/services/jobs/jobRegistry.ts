@@ -51,7 +51,8 @@ export type JobKind =
   | "documentLinks.pass"
   | "accountArchive.export"
   | "accountArchive.import"
-  | "lifeBook.export";
+  | "lifeBook.export"
+  | "plugins.backfill";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 

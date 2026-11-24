@@ -134,8 +134,28 @@ export interface DawarichStay {
     /** What the evidence suggests for the visit's purpose; the accept dialog starts with it. */
     suggestedPurpose?: "private" | "business";
     suggestedPurposeFrom?: string;
-    createdFrom?: "calendar";
+    /** `calendar` or `plugin:<id>`: what made a finding of a stop with no venue. */
+    createdFrom?: string;
+    /** The suggestion plugins' answers (spec 2026-11-23, P3), each naming its plugin. */
+    plugins?: StayPluginEvidence[];
+    /** Plugins that have not answered yet; the scan asks them again. */
+    pluginsPending?: string[];
   };
+}
+export interface StayPluginEvidence {
+  pluginId: string;
+  pluginName: string;
+  name: string;
+  address?: string;
+  lat?: number;
+  lon?: number;
+  purpose?: "private" | "business";
+  note?: string;
+  externalRef?: string;
+  url?: string;
+  confidence: number;
+  distanceM?: number | null;
+  receivedAt?: string;
 }
 export interface StayCalendarEvidence {
   sourceId: string;
@@ -166,6 +186,7 @@ export interface StayReviewInput {
   startAt: { local: string };
   endAt: { local: string };
   purpose?: "private" | "business" | null;
+  pluginRef?: { pluginId: string; externalRef: string };
 }
 /** Where a stay's identity source stands; `degraded` = the lookup failed, not "nothing here". */
 export type StaySourceState = "ok" | "empty" | "degraded";

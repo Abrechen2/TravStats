@@ -21,6 +21,7 @@ import trackGapRouter from "./trackGap";
 import externalServicesRouter from "./externalServices";
 import instanceBackupRouter from "./instanceBackup";
 import calendarSourcesRouter from "./calendarSources";
+import suggestionPluginsRouter from "./suggestionPlugins";
 import { guardAccountKeyWrite, guardConnectionWrite } from "../../services/externalServices/guards";
 
 const router = Router();
@@ -105,6 +106,7 @@ router.use("/personal", personalRouter);
 router.use("/location-provider", locationProviderRouter);
 router.use("/track-gap", trackGapRouter);
 router.use("/calendar-sources", calendarSourcesRouter);
+router.use("/suggestion-plugins", suggestionPluginsRouter);
 router.use("/external-services", externalServicesRouter);
 router.use("/instance-backup", instanceBackupRouter);
 

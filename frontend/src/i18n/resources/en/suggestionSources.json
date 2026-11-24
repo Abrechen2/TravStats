@@ -98,7 +98,20 @@
         "startNear": "The stop starts within an hour of the appointment's start"
       }
     },
-    "purposeSuggested": "Suggested: {{purpose}}"
+    "purposeSuggested": "Suggested: {{purpose}}",
+    "plugins": {
+      "title": "Suggestions from plugins",
+      "source": "Source: {{name}}",
+      "confidence": "Confidence {{percent}} %",
+      "distance": "{{meters}} m from the stop",
+      "pick": "Use this one",
+      "link": "Open in the source system",
+      "pending": "A plugin has not answered yet; it will be asked again.",
+      "reask": "Ask again",
+      "reasked": "The plugins will be asked again on the next scan.",
+      "reaskError": "That did not work. Please try again."
+    },
+    "suggestedBy": "Suggested by {{name}}"
   },
   "rules": {
     "title": "Rules",
@@ -130,5 +143,86 @@
     "place": "Place",
     "placeHint": "For appointments without a location: this own place, when it is beside the stop.",
     "noPlace": "No place"
+  },
+  "plugins": {
+    "title": "External suggestion sources",
+    "sub": "Own services that answer stops with places",
+    "help": "A plugin is an HTTPS service you run yourself or trust. TravStats asks it, signed, about a stop; its answer appears as a suggestion in the inbox. A plugin never writes into TravStats itself. Guide: docs/features/plugins.md.",
+    "empty": "No plugin added yet.",
+    "add": "Add plugin",
+    "remove": "Remove",
+    "rotate": "New secret",
+    "lastAnswer": "Last answer: version {{version}} · {{at}}",
+    "lastError": "Last error",
+    "retryAt": "again from {{at}}",
+    "backfillAllowed": "Allow asking about past days",
+    "blocked": {
+      "internet_off": "The server's internet access is switched off. No plugin is asked.",
+      "service_off": "The admin switched plugins off on this server. No plugin is asked."
+    },
+    "precision": {
+      "label": "Coordinate precision",
+      "exact": "Exact",
+      "100m": "Rounded to 100 m",
+      "1km": "Rounded to 1 km (no address)"
+    },
+    "form": {
+      "name": "Name",
+      "url": "Address (HTTPS)",
+      "urlHint": "Only the admin account may add a service on the local network or over http.",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "secret": {
+      "once": "The secret for this plugin. It is shown only now: enter it in the plugin.",
+      "copy": "Copy",
+      "copied": "Copied.",
+      "copyFailed": "Copying did not work. Please select it by hand.",
+      "done": "Done"
+    },
+    "test": {
+      "button": "Test",
+      "ok": "Answer in {{ms}} ms, version {{version}}: “{{first}}”.",
+      "empty": "Answer in {{ms}} ms, version {{version}}: nothing at this place."
+    },
+    "backfill": {
+      "from": "From",
+      "to": "To",
+      "button": "Ask about past days",
+      "range": "At most 90 days, not in the future.",
+      "running": "Running … this can take a while because of the hourly limits.",
+      "done": "Done: {{days}} days, {{asked}} requests, {{created}} new and {{merged}} extended suggestions, {{failed}} errors.",
+      "stopped": "Stopped by the limits at {{at}}; starting again continues there."
+    },
+    "sent": {
+      "title": "What is sent",
+      "sub": "A stop's start and end, its coordinates rounded to the chosen precision and its time zone; plus what TravStats already knows: the nearest own place, the place found and (at exact and 100 m) the address.",
+      "help": "Never sent: your account, name or e-mail, the location history, other stops or entries. Every request is signed with the secret."
+    },
+    "removeConfirm": {
+      "title": "Remove plugin “{{name}}”?",
+      "affects": "Plugin",
+      "after": "Its suggestions in open findings disappear. Accepted visits stay."
+    },
+    "failure": {
+      "unknown": "That did not work. Please try again later.",
+      "reason": {
+        "timeout": "The plugin did not answer in time (5 s).",
+        "unreachable": "The plugin cannot be reached.",
+        "auth": "The plugin refused the request. Is the secret right?",
+        "rateLimited": "The plugin or the hourly limit allows no request right now.",
+        "protocol": "The plugin's answer does not fit the contract (version 1).",
+        "server": "The plugin reported a server error.",
+        "privateTarget": "This address is on the local network. Only the admin account may use it."
+      },
+      "code": {
+        "PRIVATE_TARGET": "This address is on the local network. Only the admin account may use it.",
+        "CALENDAR_HTTPS_REQUIRED": "Please use an https address.",
+        "PLUGIN_LIMIT": "At most 5 plugins are possible.",
+        "PLUGIN_BACKFILL_REFUSED": "Asking about past days is not allowed for this plugin, or the range is longer than 90 days.",
+        "PLUGIN_BACKFILL_RUNNING": "A request for this plugin is already running.",
+        "SERVICE_DISABLED": "Plugins are switched off on this server."
+      }
+    }
   }
 }

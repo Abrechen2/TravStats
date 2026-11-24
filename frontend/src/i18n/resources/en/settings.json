@@ -2233,6 +2233,9 @@
     },
     "calendar": {
       "title": "Calendar"
+    },
+    "plugins": {
+      "title": "External suggestion sources"
     }
   },
   "lodgingRatings": {

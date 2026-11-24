@@ -767,6 +767,15 @@
       "quota": "None.",
       "dataOut": "TravStats only reads. Only an appointment that fits a stop is kept, inside the suggestion.",
       "adminPurpose": "Accounts read their own calendars; switched off, no account reads any more"
+    },
+    "suggestionPlugins": {
+      "name": "External suggestion sources",
+      "purpose": "Own services suggest places for stops",
+      "why": "A plugin is an HTTPS service an account adds itself. TravStats asks it, signed, about a stop and shows its answer as a suggestion.",
+      "cost": "Free.",
+      "quota": "60 requests an hour per plugin.",
+      "dataOut": "A stop's time and rounded coordinates, never the account, name, e-mail or location history.",
+      "adminPurpose": "Accounts add their own plugins; switched off, no account asks any more"
     }
   },
   "alwaysOn": {

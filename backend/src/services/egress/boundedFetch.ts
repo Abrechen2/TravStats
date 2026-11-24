@@ -14,6 +14,7 @@ import {
   PrivateTargetError,
   assertTargetAllowed,
   fetchDispatcherFor,
+  fetchDispatcherWithConnectTimeout,
   isPrivateTargetRefusal,
   type TargetPolicy,
 } from "./privateTargets";
@@ -48,6 +49,8 @@ export interface BoundedRequest {
   maxBytes: number;
   /** `https:` only (a plugin of an ordinary account); default allows `http:` too. */
   httpsOnly?: boolean;
+  /** A cap on the connect alone, inside `timeoutMs`. */
+  connectTimeoutMs?: number;
 }
 
 export interface BoundedResponse {
@@ -66,15 +69,16 @@ function checkUrl(url: string, request: BoundedRequest): void {
   } catch {
     throw new BoundedFetchError("invalidUrl");
   }
-  const allowed = request.httpsOnly ? ["https:"] : ["https:", "http:"];
-  if (!allowed.includes(parsed.protocol) || parsed.username || parsed.password)
+  if (!["https:", "http:"].includes(parsed.protocol) || parsed.username || parsed.password)
     throw new BoundedFetchError("invalidUrl");
+  // The address rule first: a LAN target is refused as itself, whatever its scheme.
   try {
     assertTargetAllowed(url, request.policy);
   } catch (error) {
     if (error instanceof PrivateTargetError) throw new BoundedFetchError("privateTarget");
     throw error;
   }
+  if (request.httpsOnly && parsed.protocol !== "https:") throw new BoundedFetchError("invalidUrl");
 }
 
 async function readCapped(response: Response, maxBytes: number): Promise<Buffer> {
@@ -106,7 +110,9 @@ export async function boundedFetch(
   fetchImpl: FetchLike = fetch as FetchLike
 ): Promise<BoundedResponse> {
   checkUrl(url, request);
-  const dispatcher = fetchDispatcherFor(request.policy);
+  const dispatcher = request.connectTimeoutMs
+    ? fetchDispatcherWithConnectTimeout(request.policy, request.connectTimeoutMs)
+    : fetchDispatcherFor(request.policy);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), request.timeoutMs);
   try {
@@ -123,7 +129,9 @@ export async function boundedFetch(
       } as RequestInit);
     } catch (error) {
       if (isPrivateTargetRefusal(error)) throw new BoundedFetchError("privateTarget");
-      if (controller.signal.aborted) throw new BoundedFetchError("timeout");
+      const cause = (error as { cause?: { code?: string } } | null)?.cause;
+      if (controller.signal.aborted || cause?.code === "UND_ERR_CONNECT_TIMEOUT")
+        throw new BoundedFetchError("timeout");
       throw new BoundedFetchError("unreachable");
     }
     try {

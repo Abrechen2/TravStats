@@ -38,6 +38,7 @@ export type SettingsSectionId =
   | "ttZones"
   | "ttDetect"
   | "ttCalendar"
+  | "ttPlugins"
   | "ttSources"
   | "ttExport"
   | "ttDelete"
@@ -91,6 +92,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDef[] = [
   section("ttZones", "standard", { when: "travTrackHeld" }),
   section("ttDetect"),
   section("ttCalendar"),
+  section("ttPlugins"),
   section("ttSources", "standard", { when: "travTrackHeld" }),
   section("ttExport", "standard", { when: "travTrackHeld" }),
   section("ttDelete", "standard", { when: "travTrackHeld" }),

@@ -110,9 +110,21 @@ export async function applyStayAcceptance(
     sameVenue && /^wikidata:Q[1-9][0-9]*$/.test(evidence.market?.identity ?? "")
       ? evidence.market!.identity!.slice(9)
       : null;
+  // A plugin suggestion the finding really carries (never a reference the client made up).
+  const pluginRef =
+    input.pluginRef &&
+    Array.isArray((row.evidence as { plugins?: unknown } | null)?.plugins) &&
+    (row.evidence as { plugins: { pluginId?: string; externalRef?: string }[] }).plugins.some(
+      (p) =>
+        p.pluginId === input.pluginRef!.pluginId && p.externalRef === input.pluginRef!.externalRef
+    )
+      ? `plugin:${input.pluginRef.pluginId}:${input.pluginRef.externalRef}`
+      : null;
   let place = input.placeId
     ? await tx.place.findFirst({ where: { id: input.placeId, userId } })
     : null;
+  if (!place && pluginRef)
+    place = await tx.place.findFirst({ where: { userId, externalRef: pluginRef } });
   if (input.placeId && !place) throw new AppError("Place not found", 404);
   if (!place && (osmRef || wikidataId))
     place = await tx.place.findFirst({
@@ -157,6 +169,7 @@ export async function applyStayAcceptance(
             ? (visitVenue.category as string)
             : "other",
         ...(sameVenue || visitVenue ? { externalRef: osmRef, wikidataId } : {}),
+        ...(pluginRef ? { externalRef: pluginRef } : {}),
         dataSource: "dawarich",
         visited: true,
         ...(extra.createdBy ? { createdBy: extra.createdBy } : {}),

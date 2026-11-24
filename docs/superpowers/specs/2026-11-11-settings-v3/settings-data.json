@@ -2712,6 +2712,30 @@
               "x": 0
             }
           ]
+        },
+        {
+          "id": "tt-erk-plugins",
+          "de": "Externe Vorschlagsquellen",
+          "en": "External suggestion sources",
+          "rows": [
+            {
+              "id": "plugins",
+              "t": "list",
+              "inv": "Suggestion plugins (spec 2026-11-23-plugins-and-calendar.md, P3)",
+              "de": [
+                "Externe Vorschlagsquellen",
+                "Eigene Dienste, die Stopps mit Orten beantworten",
+                "Signierte HTTPS-Plugins. Gesendet werden Zeit und gerundete Koordinaten eines Stopps, nie Konto, Name oder E-Mail."
+              ],
+              "en": [
+                "External suggestion sources",
+                "Own services that answer stops with places",
+                "Signed HTTPS plugins. A stop's time and rounded coordinates are sent, never the account, name or e-mail."
+              ],
+              "m": "ttPlugins",
+              "x": 0
+            }
+          ]
         }
       ]
     },

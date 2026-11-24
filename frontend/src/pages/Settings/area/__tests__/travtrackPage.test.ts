@@ -13,6 +13,7 @@ const ORDER = [
   "ttZones",
   "ttDetect",
   "ttCalendar",
+  "ttPlugins",
   "ttSources",
   "ttExport",
   "ttDelete",

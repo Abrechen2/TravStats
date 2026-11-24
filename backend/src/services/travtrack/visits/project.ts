@@ -60,15 +60,11 @@ import { stopTimes, visitEvidence, visitStopsOf } from "./stops";
 import { matchBrandRules, type BrandRuleInput } from "./brandMatch";
 import { BRAND_RULE, loadBrandRules } from "../../places/brandRules";
 import { acceptStay } from "../../dawarich/stays/review";
-import {
-  loadCalendarContext,
-  matchStop,
-  withCalendar,
-  type CalendarContext,
-  type CalendarMatchDeps,
-} from "./calendarMatch";
+import { loadCalendarContext, type CalendarContext, type CalendarMatchDeps } from "./calendarMatch";
 import { publish } from "./publish";
-import { createFromCalendar, enrichKnown, type KnownRow } from "./calendarFindings";
+import { createFromEnrichment, enrichKnown, writeEvidence, type KnownRow } from "./stopFindings";
+import { catchUpPlugins, enrichStop, placeOfEnrichment, withEnrichment } from "./enrich";
+import type { AskDeps } from "../../plugins/ask";
 
 export const VISIT_DAYS_PER_RUN = 5;
 export const VISIT_LOOKUPS_PER_RUN = 20;
@@ -101,6 +97,8 @@ export type VisitProjectionResult = {
   failed: Record<LookupFailure | "calendar", number>;
   /** Findings that gained a calendar event as evidence (new or already there). */
   calendarMatched: number;
+  /** Plugin calls by outcome: ok, empty, known, held, off, tooFar and each failure reason. */
+  plugins: Record<string, number>;
   /** Matches of a smart list taken without asking (`autoAccept`), and those that could not be. */
   autoAccepted: number;
   autoFailed: number;
@@ -122,6 +120,8 @@ export type VisitProjectionDeps = {
   resolveStop?: (stop: Stop, allowLookup: boolean) => Promise<VisitResolution>;
   /** The calendar's reader and geocoder (test seams). */
   calendar?: CalendarMatchDeps;
+  /** The plugins' fetch and clock (test seams). */
+  plugins?: AskDeps;
 };
 
 const empty = (status: VisitProjectionResult["status"]): VisitProjectionResult => ({
@@ -139,6 +139,7 @@ const empty = (status: VisitProjectionResult["status"]): VisitProjectionResult =
   deferred: 0,
   failed: { places: 0, venues: 0, calendar: 0 },
   calendarMatched: 0,
+  plugins: {},
   autoAccepted: 0,
   autoFailed: 0,
   stopMinutes: [],
@@ -194,6 +195,9 @@ type RunContext = {
   deps: VisitProjectionDeps;
   /** The run's calendar events, in memory; null when the account has no calendar. */
   calendar: CalendarContext | null;
+  /** The account has an enabled suggestion plugin. */
+  plugins: boolean;
+  pluginDeps?: AskDeps;
 };
 
 const loadTrips = (userId: string) =>
@@ -430,13 +434,14 @@ async function handleStop(
     if (resolution.why !== "lodging") ctx.lookupsLeft--;
     // No venue, address only: a calendar event naming a place beside the stop still makes it a
     // suggestion (the business-park case). An own lodging beside it stays nothing.
-    const cal =
-      resolution.why === "noVenue" && ctx.calendar
-        ? await matchStop(ctx.calendar, span, null)
-        : { match: null, failed: false };
-    if (cal.failed) result.failed.calendar++;
-    if (cal.match?.place) {
-      return createFromCalendar(ctx, stop, cal.match, cal.failed, {
+    const e =
+      resolution.why === "noVenue"
+        ? await enrichStop(ctx, { ...span, zone }, null, resolution.address)
+        : null;
+    const place = e ? await placeOfEnrichment(userId, e) : null;
+    if (e && place) {
+      outcome(`created:${place.createdFrom}`);
+      return createFromEnrichment(ctx, stop, place, e, {
         key,
         generation,
         startAt,
@@ -449,9 +454,10 @@ async function handleStop(
     if (resolution.why === "lodging") result.lodging++;
     else result.noVenue++;
     // A calendar that did not answer leaves the stop to be asked again, not remembered as empty.
-    if (!cal.failed) rememberNoVenue(memoryKey, Date.now());
+    const owed = e?.calendarFailed ?? false;
+    if (!owed) rememberNoVenue(memoryKey, Date.now());
     outcome(resolution.why);
-    return { open: cal.failed, go: true };
+    return { open: owed, go: true };
   }
   if (resolution.lookedUp) ctx.lookupsLeft--;
   const { pick, lookup } = resolution;
@@ -471,18 +477,23 @@ async function handleStop(
     dwellMinutes: minutes,
     distanceM: pick.distanceM,
   });
-  const cal = ctx.calendar
-    ? await matchStop(ctx.calendar, span, {
-        id: pick.placeId,
-        name: pick.name,
-        lat: pick.lat,
-        lon: pick.lon,
-      })
-    : { match: null, failed: false };
-  if (cal.failed) result.failed.calendar++;
+  const enriched = await enrichStop(
+    ctx,
+    { ...span, zone },
+    {
+      id: pick.placeId,
+      name: pick.name,
+      lat: pick.lat,
+      lon: pick.lon,
+      category: pick.category,
+      own: pick.source === "known",
+      distanceM: pick.distanceM,
+    },
+    resolution.address
+  );
   const base = { ...visitEvidence(stop, pick, lookup, readCoverage, matches), zone };
-  const evidence = (cal.match && withCalendar(base, cal.match)) || base;
-  if (cal.match) result.calendarMatched++;
+  const evidence = withEnrichment(base, enriched) ?? base;
+  if (enriched.calendar) result.calendarMatched++;
   const made = await publish(userId, generation, async (tx) => {
     const r = await tx.dawarichStay.createMany({
       skipDuplicates: true,
@@ -525,7 +536,7 @@ async function handleStop(
   }
   outcome(made === "created" ? `created:${pick.source}` : "duplicate");
   // A calendar that did not answer: the finding stands, the day is asked again (`enrichKnown`).
-  return { open: cal.failed, go: true };
+  return { open: enriched.calendarFailed, go: true };
 }
 
 /** One day. True when the day was fully answered and may be acknowledged. */
@@ -611,6 +622,8 @@ export async function projectVisitSuggestions(
       findingsLeft: deps.maxFindings ?? VISIT_FINDINGS_PER_RUN,
       deps,
       calendar: null,
+      plugins: (await prisma.suggestionPlugin.count({ where: { userId, enabled: true } })) > 0,
+      pluginDeps: deps.plugins,
     };
     // The run's days, read once with half a day either side (a local day spills over the UTC one).
     ctx.calendar = await loadCalendarContext(
@@ -639,6 +652,12 @@ export async function projectVisitSuggestions(
       if (await projectDay(ctx, dirty)) await ack(userId, dirty);
       if (result.interrupted) break;
     }
+    // Open findings still waiting for a plugin that did not answer: a few per run.
+    if (!result.interrupted)
+      await catchUpPlugins(ctx, async (id, evidence) => {
+        const generation = await historyGeneration(prisma, userId);
+        return (await writeEvidence(ctx, generation, id, evidence)) === "created";
+      });
     return result;
   } catch (error) {
     logger.warn({ operation: "travtrack.visits.failed", userId, error: (error as Error).message });
