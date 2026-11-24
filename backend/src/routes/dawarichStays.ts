@@ -15,7 +15,7 @@ import { withStayTimes, withScanTimes } from "../services/dawarich/stays/times";
 import { publicMarketCoverage } from "../services/dawarich/stays/publicCoverage";
 import { startJob } from "../services/jobs/jobRegistry";
 import { assertTravTrackDerivationAllowed } from "../services/locationEvidence/allowed";
-import { rescanVisitDays, visitRetryAfter } from "../services/travtrack/visits/project";
+import { rescanVisitDays, visitLookupStatus } from "../services/travtrack/visits/project";
 import { stayIdentityFor } from "../services/dawarich/stays/identity";
 import { stayPlaceTypeFor } from "../services/dawarich/stays/placeType";
 
@@ -75,6 +75,7 @@ router.get("/settings", async (req: AuthRequest, res, next) => {
               ? "travTrackDisabled"
               : "connectionMissing"
             : null;
+    const lookupWait = source === "travtrack" ? await visitLookupStatus(userId) : null;
     res.json({
       success: true,
       data: {
@@ -89,8 +90,11 @@ router.get("/settings", async (req: AuthRequest, res, next) => {
         ...(source === "travtrack" ? { source } : {}),
         // TravTrack only: the venue lookup behind stop suggestions did not answer and is
         // waiting before it asks again (forgejo#316 slice 2). Absent while it works.
-        ...(source === "travtrack" && visitRetryAfter(userId) > Date.now()
-          ? { visitLookupRetryAt: new Date(visitRetryAfter(userId)).toISOString() }
+        ...(lookupWait
+          ? {
+              visitLookupRetryAt: lookupWait.retryAt.toISOString(),
+              visitLookupWaiting: lookupWait.waitingStops,
+            }
           : {}),
         marketEnabled: state?.marketEnabled ?? false,
         venueEnabled: state?.venueEnabled ?? false,

@@ -12,6 +12,8 @@ export interface StayScanState {
    * again at this time (ISO instant). Absent while it works.
    */
   visitLookupRetryAt?: string;
+  /** Stops waiting for the venue lookup; present with `visitLookupRetryAt`. */
+  visitLookupWaiting?: number;
   marketEnabled?: boolean;
   venueEnabled?: boolean;
   marketResult?: {

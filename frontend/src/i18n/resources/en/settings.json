@@ -1911,7 +1911,7 @@
       },
       "loadError": "I couldn't load the state of the search.",
       "next": "Next automatic search: {{at}}",
-      "visitLookup": "The venue search for stops did not answer just now (map service). Next try: {{at}}",
+      "visitLookup": "Venue search disrupted – {{n}} stops waiting (map service). Next try: {{at}}",
       "pause": {
         "disabled": "Automatic search is off. You can still review existing suggestions.",
         "suggestionsDisabled": "Paused: stay suggestions are off. Your consent and earlier decisions stay.",

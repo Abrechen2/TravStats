@@ -269,7 +269,10 @@ export default function StayScanSection({
             ) : null}
             {state?.visitLookupRetryAt ? (
               <ErrorLine>
-                {t("settings:location.stay.visitLookup", { at: at(state.visitLookupRetryAt) })}
+                {t("settings:location.stay.visitLookup", {
+                  at: at(state.visitLookupRetryAt),
+                  n: state.visitLookupWaiting ?? 0,
+                })}
               </ErrorLine>
             ) : null}
             {refusal ? <ErrorLine>{t(refusal)}</ErrorLine> : null}

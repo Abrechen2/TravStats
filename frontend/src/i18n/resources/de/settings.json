@@ -1911,7 +1911,7 @@
       },
       "loadError": "Ich konnte den Stand der Suche nicht laden.",
       "next": "Nächste automatische Suche: {{at}}",
-      "visitLookup": "Die Ortssuche für Aufenthalte hat gerade nicht geantwortet (Kartendienst). Nächster Versuch: {{at}}",
+      "visitLookup": "Ortssuche gestört – {{n}} Halte warten (Kartendienst). Nächster Versuch: {{at}}",
       "pause": {
         "disabled": "Die automatische Suche ist aus. Vorhandene Vorschläge kannst du weiter prüfen.",
         "suggestionsDisabled": "Pausiert: Aufenthaltsvorschläge sind aus. Deine Einwilligung und bisherige Entscheidungen bleiben.",

@@ -12,7 +12,7 @@ import {
   projectVisitSuggestions,
   rescanVisitDays,
   scheduledVisitSuggestions,
-  visitRetryAfter,
+  visitLookupStatus,
   type VisitProjectionDeps,
 } from "../project";
 import type { VisitPick, VisitResolution } from "../resolve";
@@ -271,21 +271,77 @@ describe("projectVisitSuggestions", () => {
     // A day left open still cost its derivation: it counts against the tick's budget.
     expect(first.days).toBe(1);
     expect(await done()).toBe(false);
-    const second = await projectVisitSuggestions(userId, deps());
+    // The day waits out its own backoff (15 minutes); asked again after it.
+    const early = await projectVisitSuggestions(userId, deps());
+    expect(early.days).toBe(0);
+    const second = await projectVisitSuggestions(
+      userId,
+      deps({ now: new Date(NOW.getTime() + 16 * MIN) })
+    );
     expect(second.created).toBe(1);
     expect(await done()).toBe(true);
   });
 
-  it("the schedule waits after a failed lookup and says when it will ask again", async () => {
+  const DAY2 = "2026-11-11";
+  const FROM2 = Date.parse(`${DAY2}T10:00:00Z`);
+
+  it("processes the newest pending day before an older backlog day", async () => {
+    await stand(25);
+    await stand(25, SEOUL, FROM2);
+    await dirty([DAY, DAY2]);
+    await projectVisitSuggestions(userId, deps({ maxDays: 1 }));
+    expect(await done(DAY2)).toBe(true);
+    expect(await done(DAY)).toBe(false);
+  });
+
+  it("one failed lookup does not block the other days: a day without stops completes during the outage", async () => {
+    // Newest day: a stop whose lookup fails. Older day: no stops at all (a single fix).
+    await stand(25, SEOUL, FROM2);
+    await storePoint(userId, { t: FROM, lat: 35.1796, lon: 129.0756 });
+    resolveStop.mockImplementation(async (_s, allow) =>
+      allow ? { kind: "failed", reason: "venues" } : { kind: "deferred" }
+    );
+    await dirty([DAY, DAY2]);
+    const r = await scheduledVisitSuggestions(userId, deps());
+    expect(r.failed.venues).toBe(1);
+    expect(await done(DAY2)).toBe(false);
+    expect(await done(DAY)).toBe(true);
+  });
+
+  it("an outage is probed once per run: further stops needing a lookup wait without being asked", async () => {
+    await stand(25, SEOUL, FROM2);
+    await stand(25, SEOUL, FROM);
+    resolveStop.mockImplementation(async (_s, allow) =>
+      allow ? { kind: "failed", reason: "venues" } : { kind: "deferred" }
+    );
+    await dirty([DAY, DAY2]);
+    await projectVisitSuggestions(userId, deps());
+    expect(resolveStop.mock.calls.filter(([, allow]) => allow)).toHaveLength(1);
+    const status = await visitLookupStatus(userId, NOW);
+    expect(status?.waitingStops).toBe(2);
+    expect(status?.retryAt.getTime()).toBeGreaterThan(NOW.getTime());
+  });
+
+  it("the wait for a failed day survives a restart and is per day", async () => {
     resolveStop.mockResolvedValue({ kind: "failed", reason: "places" });
     await stand(25);
     await dirty();
     await scheduledVisitSuggestions(userId, deps());
-    expect(visitRetryAfter(userId)).toBeGreaterThan(NOW.getTime());
+    // A restart forgets everything in memory; the wait is in the database.
+    clearVisitRetry();
     resolveStop.mockClear();
     const again = await scheduledVisitSuggestions(userId, deps());
-    expect(again.status).toBe("skipped");
+    expect(again.days).toBe(0);
     expect(resolveStop).not.toHaveBeenCalled();
+    expect((await visitLookupStatus(userId, NOW))?.waitingStops).toBe(1);
+    // Past the wait the day is asked again, and answered days leave no wait behind.
+    resolveStop.mockResolvedValue(picked());
+    const later = await scheduledVisitSuggestions(
+      userId,
+      deps({ now: new Date(NOW.getTime() + 16 * MIN) })
+    );
+    expect(later.created).toBe(1);
+    expect(await visitLookupStatus(userId, NOW)).toBeNull();
   });
 
   it("spends one lookup per stop and leaves the rest owed once the run's lookups are used", async () => {
@@ -425,11 +481,12 @@ describe("projectVisitSuggestions", () => {
     const old = Array.from({ length: 12 }, (_, i) => `2020-01-${String(i + 1).padStart(2, "0")}`);
     await dirty([...old, DAY]);
     resolveStop.mockResolvedValue(picked());
-    // maxDays 5 < 12 old days: oldest first, the recent day used to wait for the third tick
+    // maxDays 5 < 12 old days: the queue is newest first, so the recent day is read in the first tick
     const r = await projectVisitSuggestions(userId, deps({ maxDays: 5 }));
     expect(r.created).toBe(1);
     expect(await done(DAY)).toBe(true);
-    for (const d of old) expect(await done(d)).toBe(true);
+    // the backlog drains behind it, five days a tick
+    expect(await done(old[0])).toBe(false);
   });
 
   it("history deleted under a read publishes nothing", async () => {
