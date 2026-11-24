@@ -40,9 +40,12 @@ export function TravelPlanSummary({
     if (!offered) return;
     let live = true;
     travplanApi
-      .get(tripId)
+      .find(tripId)
       .then((p) => {
-        if (live) setPlan(p);
+        if (!live) return;
+        // null: the trip has no plan — the ordinary case, asked without a 404 (UAT rc.45).
+        if (p) setPlan(p);
+        else setAbsent("none");
       })
       .catch((cause: unknown) => {
         // Most trips have no plan: PLAN_NOT_FOUND, and that earns the "plan this trip" offer.

@@ -4,12 +4,23 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { planFixture } from "../../../pages/TravPlan/__tests__/planFixture";
 
-const mocks = vi.hoisted(() => ({ get: vi.fn(), capabilities: vi.fn(), create: vi.fn() }));
+// `get` stands for the read the summary makes: `find` since UAT rc.45 (null = no plan).
+const mocks = vi.hoisted(() => ({
+  get: vi.fn(),
+  plainGet: vi.fn(),
+  capabilities: vi.fn(),
+  create: vi.fn(),
+}));
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 vi.mock("../../../lib/api/travplan", () => ({
-  travplanApi: { get: mocks.get, capabilities: mocks.capabilities, create: mocks.create },
+  travplanApi: {
+    find: mocks.get,
+    get: mocks.plainGet,
+    capabilities: mocks.capabilities,
+    create: mocks.create,
+  },
 }));
 vi.mock("../../../store/authStore", () => ({
   useAuthStore: (sel: (s: { user: { id: string } }) => unknown) => sel({ user: { id: "u1" } }),
@@ -84,6 +95,17 @@ describe("TravelPlanSummary", () => {
       await userEvent.click(await screen.findByRole("button", { name: "planThis.action" }));
       expect(mocks.create).toHaveBeenCalledWith("newTrip", {}, "trip-one");
       expect(await screen.findByText("plan page")).toBeInTheDocument();
+    });
+
+    it("asks with ifExists and reads null as 'no plan' — no 404 per trip page (UAT rc.45)", async () => {
+      mocks.get.mockResolvedValueOnce(null);
+      render(
+        <MemoryRouter>
+          <TravelPlanSummary tripId="trip-one" />
+        </MemoryRouter>
+      );
+      expect(await screen.findByRole("button", { name: "planThis.action" })).toBeInTheDocument();
+      expect(mocks.plainGet).not.toHaveBeenCalled();
     });
 
     it("does not nag a completed trip without a plan to plan it (running or upcoming still do)", async () => {

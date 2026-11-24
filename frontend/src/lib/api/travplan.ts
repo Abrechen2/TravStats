@@ -173,6 +173,9 @@ export const travplanApi = {
     clientRef = newPlanId()
   ) => (await http().post<PlanView>("/travplan/plans", { name, settings, tripId, clientRef })).data,
   get: async (id: string) => (await http().get<PlanView>("/trips/" + id + "/plan")).data,
+  /** The trip's plan, or null when it has none — no 404 for the ordinary case (UAT rc.45). */
+  find: async (id: string) =>
+    (await http().get<PlanView | null>("/trips/" + id + "/plan", { params: { ifExists: 1 } })).data,
   /** The polling read: null while nothing changed (304 against the held revision). */
   poll: async (held: PlanView) => {
     const res = await http().get<PlanView>("/trips/" + held.tripId + "/plan", {

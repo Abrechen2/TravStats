@@ -156,6 +156,22 @@ router.get(
   "/trips/:tripId/plan",
   authenticate,
   route(async (req, res) => {
+    // `?ifExists=1`: a trip without a plan is an ordinary answer, not an error. Every trip page
+    // asks once, and most trips have no plan — a 404 per page view filled the console and the
+    // logs with failures that were none (UAT rc.45).
+    if (req.query.ifExists === "1") {
+      const found = await readPlan(req.userId!, tripId(req)).catch((error: unknown) => {
+        if (error instanceof AppError && error.code === "PLAN_NOT_FOUND") return null;
+        throw error;
+      });
+      if (!found) {
+        res.json(null);
+        return;
+      }
+      res.setHeader("ETag", planEtag(found));
+      res.json(found);
+      return;
+    }
     const result = await readPlan(req.userId!, tripId(req));
     // Per principal: the view leaves out other members' personal parts, so one revision is two
     // different bodies for two members. A client sends it back as If-None-Match; 304 = unchanged.

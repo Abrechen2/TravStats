@@ -187,7 +187,8 @@ register(
 register(
   "get",
   "/trips/{tripId}/plan",
-  "Read the plan and deterministic checks. ETag is the plan revision.",
+  "Read the plan and deterministic checks. ETag is the plan revision. With `?ifExists=1` a trip " +
+    "without a plan answers 200 with `null` instead of 404 PLAN_NOT_FOUND.",
   result
 );
 register(
