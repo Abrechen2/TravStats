@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import logger from "../../utils/logger";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { calculateDistance } from "../../utils/geo";
 import { localWallClockOf } from "../../utils/timezone";
@@ -41,6 +42,13 @@ export async function loadWrapped(
    */
   opts: { withTravTrack?: boolean } = {}
 ): Promise<Wrapped | null> {
+  // Where the time goes, per phase, in the log: the RC account took ~15 s where a synthetic
+  // one took 3.6 s, so the next hot spot is read off a real run (UAT rc.45 retest, M1).
+  const started = Date.now();
+  const phases: Record<string, number> = {};
+  const lap = (name: string): void => {
+    phases[name] = Date.now() - started - Object.values(phases).reduce((a, b) => a + b, 0);
+  };
   // One scan, not two: `loadPassport` reads the same countable flights of
   // the same user and is handed these rows (forgejo#49). `arrivalTime` and
   // `arrTimeSemantics` are here only because it needs them.
@@ -64,6 +72,7 @@ export async function loadWrapped(
     loadWrappedDomains(userId),
   ]);
 
+  lap("flightsAndDomains");
   // For `newCountries` only — the passport already decides what counts as
   // a country and when it was first reached.
   const passport = await loadWrappedPassport(userId, flights);
@@ -73,7 +82,9 @@ export async function loadWrapped(
   // and `/stats/timeseries` already follows. Resolved here, at the load,
   // so `buildWrapped` stays a pure function over rows that carry their own
   // answer rather than resolving timezones itself (AUD-077).
+  lap("passport");
   const flightsWithClock = await withDepartureClock(flights);
+  lap("departureClock");
 
   const rows = flightsWithClock.map((f) => ({
     ...f,
@@ -94,6 +105,7 @@ export async function loadWrapped(
     rows.map((r) => r.departureYear),
     domains
   );
+  lap("fingerprint");
   const wrapped = buildWrapped(
     rows,
     domains.cruises,
@@ -107,9 +119,12 @@ export async function loadWrapped(
         )
       : []
   );
+  lap("travTrackYearsAndBuild");
   if (!wrapped || !opts.withTravTrack) return wrapped;
   const travTrack = await cachedTravTrackPart(userId, `year:${wrapped.year}`, fingerprint, () =>
     travTrackYearStats(userId, wrapped.year)
   );
+  lap("travTrackYear");
+  logger.info({ operation: "wrapped_timing", userId, totalMs: Date.now() - started, phases });
   return { ...wrapped, travTrack };
 }
