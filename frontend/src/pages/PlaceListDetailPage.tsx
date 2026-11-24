@@ -465,16 +465,16 @@ export default function PlaceListDetailPage(): JSX.Element {
                   hint: t("places:smartList.menuHint"),
                   onSelect: () => setRuleOpen(true),
                 },
+                // Destructive actions live last in the ⋯ menu, in red, behind the page's own
+                // confirmation (the rc.43 rule; UAT rc.45 retest D24) — not as a red button.
+                {
+                  key: "delete-list",
+                  label: t("places:lists.deleteList"),
+                  danger: true,
+                  onSelect: () => setConfirmDelete(true),
+                },
               ]}
             />
-            <button
-              type="button"
-              onClick={() => setConfirmDelete(true)}
-              className={`rounded-lg px-4 py-2 text-sm ${COARSE_BOX}`}
-              style={{ border: "1px solid var(--color-border)", color: "var(--danger)" }}
-            >
-              {t("places:lists.deleteList")}
-            </button>
           </div>
         </div>
 

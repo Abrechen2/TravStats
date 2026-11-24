@@ -149,4 +149,16 @@ describe("PlaceListDetailPage — inline forms", () => {
       screen.getByRole("button", { name: "„Trevi“ aus der Liste entfernen" }).className
     ).toContain("pointer-coarse:min-w-(--ts-size-touch-min)");
   });
+
+  // UAT rc.45 retest D24: deleting a list sits last and red in the ⋯ menu, not as a red button.
+  it("offers 'Liste löschen' only in the ⋯ menu, last, and asks before deleting", async () => {
+    renderPage();
+    await screen.findByRole("button", { name: "Bearbeiten" });
+    expect(screen.queryByRole("button", { name: "Liste löschen" })).toBeNull();
+    fireEvent.click(screen.getByTestId("place-list-more"));
+    const items = await screen.findAllByRole("menuitem");
+    expect(items[items.length - 1]).toHaveTextContent("Liste löschen");
+    fireEvent.click(items[items.length - 1]);
+    expect(await screen.findByText("Liste löschen?")).toBeInTheDocument();
+  });
 });
