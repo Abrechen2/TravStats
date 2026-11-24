@@ -274,4 +274,59 @@ describe("ShareLinkDialog", () => {
     await userEvent.click(screen.getByRole("button", { name: "sharing:links.dialog.create" }));
     expect(await screen.findByText("sharing:links.errors.tripEnded")).toBeTruthy();
   });
+
+  // UAT rc.45 M2: the refusal left the owner with nothing to do.
+  it("offers an ended trip's itinerary for a week from now, or a recap without it", async () => {
+    api.create.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 409, data: { code: "SHARE_LINK_TRIP_ENDED" } },
+    });
+    api.create.mockResolvedValue({
+      id: "l1",
+      url: "https://x/share#t",
+      token: "t",
+      expiresAt: "2030-01-01T00:00:00Z",
+      effectiveExpiresAt: "2030-01-01T00:00:00Z",
+    });
+    renderDialog("trip");
+    await screen.findByTestId("share-preview");
+    await userEvent.click(screen.getByRole("button", { name: "sharing:links.dialog.create" }));
+    const week = await screen.findByRole("button", { name: "sharing:links.dialog.tripEndedWeek" });
+    expect(
+      screen.getByRole("button", { name: "sharing:links.dialog.tripEndedRecap" })
+    ).toBeTruthy();
+    const first = api.create.mock.calls[0][0];
+    await userEvent.click(week);
+    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(2));
+    expect(api.create.mock.calls[1][0]).toMatchObject({ fields: first.fields, afterTripEnd: true });
+  });
+
+  it("the recap option drops the itinerary sections and nothing else", async () => {
+    api.create.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 409, data: { code: "SHARE_LINK_TRIP_ENDED" } },
+    });
+    api.create.mockResolvedValue({
+      id: "l1",
+      url: "https://x/share#t",
+      token: "t",
+      expiresAt: "2030-01-01T00:00:00Z",
+      effectiveExpiresAt: "2030-01-01T00:00:00Z",
+    });
+    renderDialog("trip");
+    await screen.findByTestId("share-preview");
+    await userEvent.click(screen.getByRole("button", { name: "sharing:links.dialog.create" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "sharing:links.dialog.tripEndedRecap" })
+    );
+    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(2));
+    const sent = api.create.mock.calls[1][0];
+    expect(sent.afterTripEnd).toBeUndefined();
+    expect(sent.fields).toEqual(
+      api.create.mock.calls[0][0].fields.filter(
+        (f: string) => !["flights", "stays", "transport", "places"].includes(f)
+      )
+    );
+    expect(sent.fields.length).toBeGreaterThan(0);
+  });
 });

@@ -451,7 +451,9 @@
         "overLimit_other": "{{count}} Fotos über der Grenze von 12"
       },
       "itineraryHint": "Zeigt Tag für Tag, wo du wann bist – in der Ortszeit jedes Orts, mit dem Eintrag, der gerade läuft. Nie Buchungsnummern, Preise, Dokumente, Vielfliegernummern, Notizen oder Mitreisende. Mit Reiseplan endet der Link spätestens eine Woche nach dem letzten Reisetag.",
-      "itineraryTitle": "Reiseplan für die Familie"
+      "itineraryTitle": "Reiseplan für die Familie",
+      "tripEndedWeek": "Reiseplan 7 Tage ab heute teilen",
+      "tripEndedRecap": "Als Rückblick teilen (ohne Reiseplan)"
     },
     "fields": {
       "trip": {
@@ -537,7 +539,7 @@
       "notFound": "Das gibt es nicht (mehr).",
       "createFailed": "Der Link konnte nicht erstellt werden.",
       "revokeFailed": "Der Link konnte nicht widerrufen werden.",
-      "tripEnded": "Diese Reise ist schon vorbei – für einen Reiseplan gibt es keinen Link mehr. Ohne Reiseplan geht es weiterhin."
+      "tripEnded": "Diese Reise ist schon länger als eine Woche vorbei, deshalb endet ein Link mit Reiseplan nicht mehr von selbst. Du kannst den Reiseplan trotzdem 7 Tage ab heute teilen – oder die Reise als Rückblick ohne Reiseplan."
     }
   },
   "remote": {

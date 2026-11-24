@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { shareLinksApi } from "../../lib/api/shareLinks";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
+import { apiErrorMachineCode } from "../../lib/apiError";
 import {
   SHARE_LINK_DEFAULT_FIELDS,
   SHARE_LINK_FIELDS,
@@ -67,6 +68,7 @@ export default function ShareLinkDialog({
   const [previewFailed, setPreviewFailed] = useState(false);
   const [created, setCreated] = useState<CreatedShareLink | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tripEnded, setTripEnded] = useState(false);
   const [copied, setCopied] = useState<"yes" | "failed" | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -112,17 +114,36 @@ export default function ShareLinkDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- selectionKey stands for fields (see above)
   }, [open, status, kind, targetId, selectionKey, created]);
 
-  const toggle = (field: string, on: boolean): void =>
+  const toggle = (field: string, on: boolean): void => {
+    setTripEnded(false);
     setFields((current) => (on ? [...current, field] : current.filter((f) => f !== field)));
+  };
 
-  const create = async (): Promise<void> => {
+  const create = async (
+    choice: { fields?: string[]; afterTripEnd?: boolean } = {}
+  ): Promise<void> => {
     setBusy(true);
     setError(null);
+    setTripEnded(false);
+    const sent = choice.fields ?? fields;
     try {
-      const expiresInDays = EXPIRY_CHOICES[shownExpiry];
-      setCreated(await shareLinksApi.create({ kind, targetId, fields, expiresInDays }));
+      const withItinerary = kind === "trip" && sent.some((f) => SECTIONS.includes(f));
+      const expiresInDays = EXPIRY_CHOICES[withItinerary ? shownExpiry : nonTripEndExpiry];
+      setCreated(
+        await shareLinksApi.create({
+          kind,
+          targetId,
+          fields: sent,
+          expiresInDays,
+          ...(choice.afterTripEnd ? { afterTripEnd: true } : {}),
+        })
+      );
+      if (choice.fields) setFields(choice.fields);
     } catch (err) {
       logger.error("Creating a share link failed:", err);
+      // An ended trip is not a dead end (UAT rc.45 M2): the dialog offers the
+      // itinerary for a week from now, or the trip as a recap without it.
+      setTripEnded(apiErrorMachineCode(err) === "SHARE_LINK_TRIP_ENDED");
       setError(t(shareLinkErrorKey(err, `${NS}.errors.createFailed`)));
     } finally {
       setBusy(false);
@@ -147,6 +168,7 @@ export default function ShareLinkDialog({
     setCreated(null);
     setCopied(null);
     setError(null);
+    setTripEnded(false);
     onClose();
   };
 
@@ -154,6 +176,8 @@ export default function ShareLinkDialog({
   // trip-end cap applies to itinerary links alone, so without one it would mean 90 days.
   const hasItinerary = kind === "trip" && fields.some((f) => SECTIONS.includes(f));
   const shownExpiry: ExpiryChoice = expiry === "tripEnd" && !hasItinerary ? "week" : expiry;
+  const nonTripEndExpiry: ExpiryChoice = expiry === "tripEnd" ? "week" : expiry;
+  const recapFields = fields.filter((f) => !SECTIONS.includes(f));
   const choices = (Object.keys(EXPIRY_CHOICES) as ExpiryChoice[]).filter(
     (choice) => hasItinerary || choice !== "tripEnd"
   );
@@ -178,13 +202,38 @@ export default function ShareLinkDialog({
       maxWidth={560}
       footer={
         status === "enabled" && !created ? (
-          <Button
-            variant="primary"
-            disabled={busy || fields.length === 0}
-            onClick={() => void create()}
-          >
-            {t(`${NS}.dialog.create`)}
-          </Button>
+          <div className="flex w-full flex-col gap-2">
+            {/* In the footer, not under the preview: a long itinerary pushed the
+                reason out of sight and the dialog seemed to do nothing (M2). */}
+            {error && (
+              <p role="alert" style={{ color: "var(--ts-bad)" }}>
+                {error}
+              </p>
+            )}
+            <div className="flex flex-wrap justify-end gap-2">
+              {tripEnded && (
+                <>
+                  <Button disabled={busy} onClick={() => void create({ afterTripEnd: true })}>
+                    {t(`${NS}.dialog.tripEndedWeek`)}
+                  </Button>
+                  {recapFields.length > 0 && (
+                    <Button disabled={busy} onClick={() => void create({ fields: recapFields })}>
+                      {t(`${NS}.dialog.tripEndedRecap`)}
+                    </Button>
+                  )}
+                </>
+              )}
+              {!tripEnded && (
+                <Button
+                  variant="primary"
+                  disabled={busy || fields.length === 0}
+                  onClick={() => void create()}
+                >
+                  {t(`${NS}.dialog.create`)}
+                </Button>
+              )}
+            </div>
+          </div>
         ) : undefined
       }
     >
@@ -267,11 +316,6 @@ export default function ShareLinkDialog({
                 <PhotoOmissionNote omitted={preview.photosOmitted} />
               )}
             </section>
-            {error && (
-              <p role="alert" style={{ color: "var(--ts-bad)" }}>
-                {error}
-              </p>
-            )}
           </>
         )}
       </div>

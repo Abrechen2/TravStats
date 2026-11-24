@@ -66,7 +66,13 @@ const photo = (token: unknown, index: number) =>
 
 async function create(
   owner: TestAccount,
-  body: { kind: string; targetId: string; fields: string[]; expiresAt?: string }
+  body: {
+    kind: string;
+    targetId: string;
+    fields: string[];
+    expiresAt?: string;
+    afterTripEnd?: boolean;
+  }
 ) {
   return request(app)
     .post("/api/v1/share-links")
@@ -1128,6 +1134,28 @@ describe("trip itinerary (forgejo#302)", () => {
       expiresAt: "2030-06-25T00:00:00Z",
     });
     expect(plain.status).toBe(201);
+  });
+
+  // UAT rc.45 M2: the dialog offered no way out of SHARE_LINK_TRIP_ENDED. The
+  // owner may now share the itinerary on purpose for a week from now.
+  it("shares an ended trip's itinerary for a week from now when asked to", async () => {
+    const { trip } = await makeItineraryTrip(anna.id);
+    setClockForTests("2030-06-17T00:00:00Z");
+    const res = await create(anna, {
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["name", "stays"],
+      expiresAt: "2030-08-01T00:00:00Z",
+      afterTripEnd: true,
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.data.effectiveExpiresAt).toBe("2030-06-24T00:00:00.000Z");
+    const token = res.body.data.token as string;
+    setClockForTests("2030-06-23T00:00:00Z");
+    const live = await view(token);
+    expect(live.status).toBe(200);
+    setClockForTests("2030-06-24T00:00:01Z");
+    expect((await view(token)).status).toBe(404);
   });
 
   describe("a trip without dates of its own (forgejo#317)", () => {

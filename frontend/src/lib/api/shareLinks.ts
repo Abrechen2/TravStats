@@ -38,8 +38,12 @@ export const shareLinksApi = {
   },
 
   create: async (
-    selection: ShareLinkSelection &
-      ({ expiresAt: string; expiresInDays?: never } | { expiresInDays: number; expiresAt?: never })
+    selection: ShareLinkSelection & {
+      /** Share an ended trip's itinerary anyway, for a week from now (UAT rc.45 M2). */
+      afterTripEnd?: boolean;
+    } & (
+        { expiresAt: string; expiresInDays?: never } | { expiresInDays: number; expiresAt?: never }
+      )
   ): Promise<CreatedShareLink> => {
     const { data } = await api.post<Envelope<CreatedShareLink>>("/share-links", selection);
     return data.data;

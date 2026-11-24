@@ -451,7 +451,9 @@
         "overLimit_other": "{{count}} photos beyond the limit of 12"
       },
       "itineraryHint": "Shows day by day where you are when – in each place's local time, with the entry in progress marked. Never booking codes, prices, documents, frequent-flyer numbers, notes or fellow travellers. With an itinerary the link ends at the latest a week after the trip's last day.",
-      "itineraryTitle": "Itinerary for family"
+      "itineraryTitle": "Itinerary for family",
+      "tripEndedWeek": "Share itinerary for 7 days from today",
+      "tripEndedRecap": "Share as a recap (no itinerary)"
     },
     "fields": {
       "trip": {
@@ -537,7 +539,7 @@
       "notFound": "This does not exist (any more).",
       "createFailed": "The link could not be created.",
       "revokeFailed": "The link could not be revoked.",
-      "tripEnded": "This trip is already over – an itinerary link is no longer possible. A link without the itinerary still works."
+      "tripEnded": "This trip ended more than a week ago, so an itinerary link no longer ends by itself. You can still share the itinerary for 7 days from today – or share the trip as a recap without the itinerary."
     }
   },
   "remote": {

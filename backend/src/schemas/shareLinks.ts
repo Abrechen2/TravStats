@@ -158,6 +158,13 @@ export const shareLinkCreateSchema = selectionBase
       .describe(
         "Lifetime in days measured by the server clock. Supply exactly one of expiresInDays or expiresAt. Itinerary links still end seven days after the trip's last day, if earlier."
       ),
+    afterTripEnd: z
+      .boolean()
+      .optional()
+      .describe(
+        "Share the itinerary of a trip that ended more than seven days ago anyway: the link " +
+          "then ends seven days after it was made instead of answering SHARE_LINK_TRIP_ENDED."
+      ),
   })
   .refine((value) => (value.expiresAt !== undefined) !== (value.expiresInDays !== undefined), {
     message: "Supply exactly one of expiresAt or expiresInDays",

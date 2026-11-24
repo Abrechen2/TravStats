@@ -3,6 +3,7 @@ import { AppError } from "../../middleware/errorHandler";
 import {
   isRetiredShareLinkKind,
   publicViewSchema,
+  SHARE_LINK_ITINERARY_GRACE_MS,
   SHARE_LINK_MAX_ACTIVE,
   SHARE_LINK_MAX_DAYS,
   type OwnerShareLink,
@@ -150,7 +151,9 @@ export async function createShareLink(
   userId: string,
   selection: ShareLinkSelection,
   expiry: Date | number,
-  publicBaseUrl: string
+  publicBaseUrl: string,
+  /** The owner chose to share an ended trip's itinerary for a week from now (UAT rc.45 M2). */
+  options: { afterTripEnd?: boolean } = {}
 ): Promise<{
   id: string;
   url: string;
@@ -182,8 +185,13 @@ export async function createShareLink(
   const { ids: photoIds } = await snapshotFor(userId, target, selection.fields);
   const built = await buildView(userId, target, selection.fields, photoIds);
   if (!built) throw notFound();
-  if (built.autoExpiry && built.autoExpiry <= at) {
-    throw new AppError("This trip has already ended", 409, "SHARE_LINK_TRIP_ENDED");
+  let autoExpiry = built.autoExpiry;
+  if (autoExpiry && autoExpiry <= at) {
+    if (!options.afterTripEnd) {
+      throw new AppError("This trip has already ended", 409, "SHARE_LINK_TRIP_ENDED");
+    }
+    // Asked for on purpose: the week of grace runs from now (see `targetAutoExpiry`).
+    autoExpiry = new Date(at.getTime() + SHARE_LINK_ITINERARY_GRACE_MS);
   }
   // The same settled set the list shows: a link the owner cannot see must not
   // hold one of their slots.
@@ -197,7 +205,7 @@ export async function createShareLink(
   }
 
   const { token, tokenHash } = generateShareToken();
-  const effectiveExpiresAt = earlier(expiresAt, built.autoExpiry);
+  const effectiveExpiresAt = earlier(expiresAt, autoExpiry);
   const row = await prisma.publicShareLink.create({
     data: {
       userId,
@@ -207,6 +215,9 @@ export async function createShareLink(
       tokenHash,
       expiresAt,
       effectiveExpiresAt,
+      // The server clock, the same instant the expiry was measured from:
+      // `targetAutoExpiry` compares it with the trip's end.
+      createdAt: at,
     },
     select: { id: true },
   });
@@ -238,7 +249,13 @@ const targetIdOf = (
 async function targetAutoExpiry(row: LinkRow): Promise<Date | null> {
   if (row.tripId && itinerarySections(row.fields).length > 0) {
     const trip = await loadOwnedTrip(row.userId, row.tripId);
-    return trip ? await tripAutoExpiry(trip) : null;
+    const tripEnd = trip ? await tripAutoExpiry(trip) : null;
+    // A link made after its trip's week of grace was made on purpose
+    // (`afterTripEnd`): its week runs from the day it was made.
+    if (tripEnd && row.createdAt >= tripEnd) {
+      return new Date(row.createdAt.getTime() + SHARE_LINK_ITINERARY_GRACE_MS);
+    }
+    return tripEnd;
   }
   return null;
 }
@@ -366,7 +383,9 @@ export async function resolvePublicView(token: unknown): Promise<PublicViewResol
   });
   return {
     status: "live",
-    expiresAt: earlier(row.effectiveExpiresAt, built.autoExpiry).toISOString(),
+    // Already settled against the trip's end (`liveLink` → `settledExpiry`),
+    // including a link made after the trip on purpose.
+    expiresAt: row.effectiveExpiresAt.toISOString(),
     view: built.view,
   };
 }
