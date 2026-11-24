@@ -15,6 +15,7 @@ import { PlaceDocumentImportTile } from "../import/PlaceDocumentImportTile";
 import { AppImportTile } from "../import/AppImportTile";
 import { CheckinImportTile } from "../import/CheckinImportTile";
 import { RailBookmarkletTile } from "../import/RailBookmarkletTile";
+import { TimelineImportTile } from "../import/TimelineImportTile";
 import { RailImportMemoryRows } from "./RailImportMemoryRows";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { ImportLogSection } from "../import/ImportLogSection";
@@ -152,6 +153,12 @@ export default function ImportSection(): JSX.Element {
               </div>
             );
           })}
+          <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+            <span className="t-label-mono">{t("settings:import.timeline.group")}</span>
+            <SettingRows>
+              <TimelineImportTile key="timeline" />
+            </SettingRows>
+          </div>
         </SettingRows>
         {/*
         One log for every list import — behind a button, not unrolled beneath
