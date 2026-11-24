@@ -96,8 +96,14 @@ A plugin MUST:
 3. keep a **request-id replay cache** for at least the timestamp window and
    refuse an id it has seen. This is mandatory: without it a captured request
    could be sent again within the window.
+4. never forget an id while a request carrying it could still be accepted
+   (2 × 300 s). If the cache is bounded and full, refuse **new** requests
+   until ids age out — evicting a live id would make that request replayable.
 
-Refuse with `401`. TravStats shows that as "auth" on the settings page.
+Refuse a bad signature, a stale timestamp or a replay with `401`; TravStats
+shows that as "auth" on the settings page. Refuse with `503` while the replay
+cache is full, so TravStats asks again later instead of reading it as a wrong
+key.
 
 The secret is 32 random bytes (base64url) that TravStats generates when you add
 the plugin. It is shown once, on adding and on "Neues Geheimnis" (rotate), and
@@ -230,7 +236,9 @@ function lookUp(stop) {
 }
 ```
 
-The template adds a body cap, a bounded replay cache, a health endpoint
+The minimal example keeps every id for its window without a bound. The
+template adds a body cap, a bounded replay cache (full: `503` for new requests,
+never an evicted live id), a health endpoint
 (`GET /health`, unsigned) and the test.
 
 ### The same check in Python

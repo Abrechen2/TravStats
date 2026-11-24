@@ -79,7 +79,7 @@ function createServer({ secret, places }) {
         res.writeHead(status, { "Content-Type": "application/json" });
         res.end(payload === undefined ? "" : JSON.stringify(payload));
       };
-      if (refused) return send(refused, { error: "unauthorized" });
+      if (refused) return send(refused, { error: refused === 503 ? "busy" : "unauthorized" });
       if (req.method === "GET")
         return send(200, { name: "Template plugin", version: VERSION, kinds: ["stop"] });
       if (req.method !== "POST") return send(405, { error: "method" });

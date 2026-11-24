@@ -111,3 +111,44 @@ test("a signed stop is answered; refusals are 401", async (t) => {
     kinds: ["stop"],
   });
 });
+
+// rc.45 review: a full cache evicted the oldest id even while it was still inside its window,
+// so that request could be replayed. A full cache now refuses new requests instead.
+test("a full replay cache refuses new requests and never forgets a live id", () => {
+  const { ReplayCache, WINDOW_S } = require("../src/verify");
+  const cache = new ReplayCache(2);
+  const t = 1763900000;
+  assert.strictEqual(cache.claim("a", t), "ok");
+  assert.strictEqual(cache.claim("b", t), "ok");
+  assert.strictEqual(cache.claim("c", t + 10), "full");
+  assert.strictEqual(cache.claim("a", t + 10), "replay");
+  // Once the ids have aged out of both windows there is room again.
+  assert.strictEqual(cache.claim("c", t + WINDOW_S * 2 + 1), "ok");
+});
+
+test("checkRequest answers 503, not 401, while the replay cache is full", () => {
+  const { ReplayCache, checkRequest } = require("../src/verify");
+  const replay = new ReplayCache(1);
+  const nowS = 1763900000;
+  const signed = (requestId) => ({
+    secret: SECRET,
+    method: "POST",
+    path: "/",
+    body: "{}",
+    replay,
+    nowS,
+    headers: {
+      "travstats-timestamp": String(nowS),
+      "travstats-request-id": requestId,
+      "travstats-signature": sign(SECRET, {
+        method: "POST",
+        path: "/",
+        timestamp: nowS,
+        requestId,
+        body: "{}",
+      }),
+    },
+  });
+  assert.strictEqual(checkRequest(signed(crypto.randomUUID())), null);
+  assert.strictEqual(checkRequest(signed(crypto.randomUUID())), 503);
+});

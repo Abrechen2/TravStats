@@ -18,27 +18,36 @@ function sign(secret, parts) {
   return `v1=${crypto.createHmac("sha256", secret).update(signingString(parts), "utf8").digest("hex")}`;
 }
 
-/** Remembers request ids for the length of the timestamp window, bounded. */
+/**
+ * Remembers request ids for as long as a request carrying them could still be
+ * accepted (its timestamp may be up to WINDOW_S in the past or the future, so
+ * 2 x WINDOW_S), bounded. When the bound is reached it refuses NEW requests
+ * instead of forgetting a live id: evicting one would let that request be
+ * replayed inside its window.
+ */
 class ReplayCache {
   constructor(max = 10000) {
     this.max = max;
-    this.seen = new Map();
+    this.seen = new Map(); // insertion order = arrival order
   }
-  /** True the first time an id is offered; false for a replay. */
+  /** "ok" the first time an id is offered, "replay" for a seen one, "full" while no room is left. */
   claim(requestId, nowS) {
     for (const [id, at] of this.seen) {
-      if (nowS - at <= WINDOW_S * 2 && this.seen.size < this.max) break;
+      if (nowS - at <= WINDOW_S * 2) break;
       this.seen.delete(id);
     }
-    if (this.seen.has(requestId)) return false;
+    if (this.seen.has(requestId)) return "replay";
+    if (this.seen.size >= this.max) return "full";
     this.seen.set(requestId, nowS);
-    return true;
+    return "ok";
   }
 }
 
 /**
  * The whole check. Returns null when the request may be answered, else the
- * HTTP status to refuse it with (401 for a bad signature, stale timestamp or replay).
+ * HTTP status to refuse it with (401 for a bad signature, stale timestamp or replay;
+ * 503 while the replay cache is full, so TravStats retries later instead of
+ * reading it as a wrong key).
  */
 function checkRequest({
   secret,
@@ -57,7 +66,9 @@ function checkRequest({
   const expected = Buffer.from(sign(secret, { method, path, timestamp, requestId, body }));
   const actual = Buffer.from(given);
   if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) return 401;
-  if (!replay.claim(requestId, nowS)) return 401;
+  const claim = replay.claim(requestId, nowS);
+  if (claim === "replay") return 401;
+  if (claim === "full") return 503;
   return null;
 }
 
