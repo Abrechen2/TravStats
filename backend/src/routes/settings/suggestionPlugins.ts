@@ -78,7 +78,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
 });
 
 /** "Neu fragen" on one finding: its plugins' recorded answers are forgotten and it is owed again. */
-router.post("/reask", async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post("/reask", probeLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { stayId } = z.object({ stayId: z.string().uuid() }).strict().parse(req.body);
     const userId = req.userId!;
@@ -92,9 +92,13 @@ router.post("/reask", async (req: AuthRequest, res: Response, next: NextFunction
     });
     const ids = plugins.map((p) => p.id);
     const slack = (SAME_STOP_M + 1000) / 111_320;
+    // The answers are marked, never deleted: the hourly and daily limits keep counting every
+    // call ever made, so asking again can never buy a plugin more calls (security review).
     await prisma.$transaction([
-      prisma.suggestionPluginCall.deleteMany({
+      prisma.suggestionPluginCall.updateMany({
+        data: { invalidatedAt: new Date() },
         where: {
+          invalidatedAt: null,
           pluginId: { in: ids },
           outcome: { in: ["ok", "empty"] },
           stopStartAt: { lte: stay.sourceEndAt },
@@ -156,6 +160,7 @@ router.post(
       if (block) throw new AppError(block, 409, "SERVICE_DISABLED");
       // A test is asked for even while the plugin waits out a failure: that is what it is for.
       const outcome = await askPlugin({ ...plugin, retryAt: null }, TEST_STOP, "test");
+      if (outcome === "blocked") throw new AppError("service_off", 409, "SERVICE_DISABLED");
       if (outcome === "held" || outcome === "known")
         throw new AppError("rateLimited", 400, "PLUGIN_FAILED");
       if (outcome.kind === "failed") throw new AppError(outcome.reason, 400, "PLUGIN_FAILED");

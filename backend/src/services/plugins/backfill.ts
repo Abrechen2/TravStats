@@ -32,7 +32,8 @@ import {
   type FindingRunContext,
 } from "../travtrack/visits/stopFindings";
 import { askPlugin, MAX_SUGGESTION_DISTANCE_M, type AskDeps, type PluginAnswer } from "./ask";
-import { ownPlugin } from "./registry";
+import { ownPlugin, PLUGIN_SERVICE_ID } from "./registry";
+import { egressBlock } from "../externalServices/egress";
 
 export const BACKFILL_MAX_DAYS = 90;
 /** How long a backfill may wait on the limits in total before it stops (and says so). */
@@ -52,6 +53,8 @@ export interface BackfillResult {
   skipped: { private: number; covered: number; answered: number; suppressed: number };
   /** The limits held it longer than `BACKFILL_MAX_WAIT_MS`: the rest is undone (run it again). */
   stoppedAt: string | null;
+  /** The plugin, the admin's kill switch or the internet switch went off mid-run: it stopped. */
+  blocked: boolean;
 }
 
 export interface BackfillDeps extends AskDeps {
@@ -99,6 +102,7 @@ export async function runBackfill(
     failed: {},
     skipped: { private: 0, covered: 0, answered: 0, suppressed: 0 },
     stoppedAt: null,
+    blocked: false,
   };
   const sleep = deps.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
   let waited = 0;
@@ -152,9 +156,18 @@ export async function runBackfill(
         while (outcome === "held" && waited < (deps.maxWaitMs ?? BACKFILL_MAX_WAIT_MS)) {
           await sleep(POLL_MS);
           waited += POLL_MS;
+          // Every wait asks again whether it may go on at all (fails closed).
           const fresh = await prisma.suggestionPlugin.findUnique({ where: { id: plugin.id } });
-          if (!fresh || !fresh.enabled) break;
+          if (!fresh || !fresh.enabled || (await egressBlock(PLUGIN_SERVICE_ID))) {
+            outcome = "blocked";
+            break;
+          }
           outcome = await askPlugin(fresh, forPlugin, "stop", deps);
+        }
+        if (outcome === "blocked") {
+          result.blocked = true;
+          result.stoppedAt = new Date(stop.fromMs).toISOString();
+          return result;
         }
         if (outcome === "held") {
           result.stoppedAt = new Date(stop.fromMs).toISOString();

@@ -195,3 +195,18 @@ export function fetchDispatcherWithConnectTimeout(
   }
   return dispatcher;
 }
+
+/**
+ * Whether a URL may use plain http: only an account that may reach the LAN, and only
+ * towards a host that is visibly on it (a private IP literal, `localhost`, a `.local`/
+ * `.lan` or single-label name). A public host is https for everyone — over http a
+ * calendar password or a plugin's traffic would cross the internet readable.
+ */
+export function plainHttpAllowed(url: string, policy: TargetPolicy): boolean {
+  if (!policy.allowPrivate) return false;
+  try {
+    return isPrivateHostLiteral(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}

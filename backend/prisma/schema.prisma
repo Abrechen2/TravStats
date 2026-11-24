@@ -8163,16 +8163,19 @@ model SuggestionPlugin {
 /// (`ok` or `empty`) — the memory that keeps a rescan from asking about the same
 /// stop again. Coordinates are the rounded ones that were sent.
 model SuggestionPluginCall {
-  id          String    @id @default(uuid())
-  pluginId    String    @map("plugin_id")
-  userId      String    @map("user_id")
-  at          DateTime  @default(now())
-  outcome     String
-  stopStartAt DateTime? @map("stop_start_at")
-  stopEndAt   DateTime? @map("stop_end_at")
-  lat         Float?
-  lon         Float?
-  suggestions Int       @default(0)
+  id            String    @id @default(uuid())
+  pluginId      String    @map("plugin_id")
+  userId        String    @map("user_id")
+  at            DateTime  @default(now())
+  outcome       String
+  stopStartAt   DateTime? @map("stop_start_at")
+  stopEndAt     DateTime? @map("stop_end_at")
+  lat           Float?
+  lon           Float?
+  suggestions   Int       @default(0)
+  /// "Neu fragen": the answer no longer counts as given, so the stop is asked again. The row
+  /// stays — the hourly and daily limits count every call ever made.
+  invalidatedAt DateTime? @map("invalidated_at")
 
   plugin SuggestionPlugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
 

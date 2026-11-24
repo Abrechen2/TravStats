@@ -13,6 +13,7 @@ import type { VisitResolution } from "../resolve";
 import type { FetchLike } from "../../../egress/boundedFetch";
 import { placeOfEnrichment } from "../enrich";
 import { runBackfill } from "../../../plugins/backfill";
+import { updatePolicy } from "../../../externalServices/policy";
 
 jest.mock("../../../../utils/achievements", () => ({
   recheckAchievements: jest.fn(async () => {}),
@@ -234,6 +235,36 @@ describe("projectVisitSuggestions with a plugin", () => {
       expect(r.stoppedAt).not.toBeNull();
       expect(await rows()).toHaveLength(0);
     });
+  });
+
+  it("a backfill stops, as blocked, when the kill switch goes off while it waits", async () => {
+    await prisma.suggestionPlugin.update({
+      where: { id: pluginId },
+      data: { backfillAllowed: true, retryAt: new Date(Date.now() + 3_600_000) },
+    });
+    let calls = 0;
+    const counting: FetchLike = async () => {
+      calls++;
+      return answer();
+    };
+    const sleep = jest.fn(async () => {
+      await updatePolicy((p) => ({ ...p, disabled: [...p.disabled, "suggestionPlugins"] }));
+      await prisma.suggestionPlugin.update({ where: { id: pluginId }, data: { retryAt: null } });
+    });
+    try {
+      const r = await runBackfill(userId, pluginId, DAY, DAY, undefined, {
+        fetch: counting,
+        sleep,
+      });
+      expect(r).toMatchObject({ blocked: true, asked: 0 });
+      expect(sleep).toHaveBeenCalledTimes(1);
+      expect(calls).toBe(0);
+    } finally {
+      await updatePolicy((p) => ({
+        ...p,
+        disabled: p.disabled.filter((d) => d !== "suggestionPlugins"),
+      }));
+    }
   });
 
   it("removing the plugin removes the finding it alone made", async () => {

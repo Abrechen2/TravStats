@@ -85,6 +85,8 @@ const meters = (a: { lat: number; lon: number }, b: { lat: number; lon: number }
 
 /** What leaves the server for this plugin: the stop, rounded, and only what the account derived. */
 export function stopPayload(stop: StopForPlugins, precision: Precision) {
+  // At 1 km only the rounded point leaves: a venue's or a place's name, an exact distance or a
+  // street address would each undo the rounding (security review).
   const exactish = precision !== "1km";
   return {
     start: new Date(stop.fromMs).toISOString(),
@@ -93,9 +95,8 @@ export function stopPayload(stop: StopForPlugins, precision: Precision) {
     lat: roundTo(stop.lat, precision),
     lon: roundTo(stop.lon, precision),
     precisionMeters: PRECISION_METERS[precision],
-    ...(stop.nearestPlace ? { nearestPlace: stop.nearestPlace } : {}),
-    ...(stop.venue ? { venue: stop.venue } : {}),
-    // The street address only at exact and 100 m: at 1 km it would undo the rounding.
+    ...(exactish && stop.nearestPlace ? { nearestPlace: stop.nearestPlace } : {}),
+    ...(exactish && stop.venue ? { venue: stop.venue } : {}),
     ...(exactish && stop.address ? { address: stop.address } : {}),
   };
 }
@@ -106,6 +107,8 @@ async function answered(plugin: SuggestionPlugin, stop: StopForPlugins): Promise
     where: {
       pluginId: plugin.id,
       outcome: { in: ["ok", "empty"] },
+      // An answer the user asked to forget ("Neu fragen") no longer counts as given.
+      invalidatedAt: null,
       stopStartAt: { lte: new Date(stop.untilMs) },
       stopEndAt: { gte: new Date(stop.fromMs) },
     },
@@ -184,8 +187,11 @@ export async function askPlugin(
   stop: StopForPlugins,
   kind: "stop" | "test",
   deps: AskDeps = {}
-): Promise<PluginOutcome | "known" | "held"> {
+): Promise<PluginOutcome | "known" | "held" | "blocked"> {
   const now = (deps.now ?? Date.now)();
+  // Fails closed: the admin's kill switch and the internet switch are read before EVERY call,
+  // so a switch turned off mid-run (a backfill) stops the next call, not the next run.
+  if (await egressBlock(PLUGIN_SERVICE_ID)) return "blocked";
   if (kind === "stop" && (await answered(plugin, stop))) return "known";
   if (plugin.retryAt && plugin.retryAt.getTime() > now) return "held";
   if (inFlight.has(plugin.id)) return "held";
@@ -229,6 +235,10 @@ export async function askPlugins(
   }
   for (const plugin of plugins) {
     const outcome = await askPlugin(plugin, stop, "stop", deps);
+    if (outcome === "blocked") {
+      count("off");
+      return { ...result, asked: false };
+    }
     if (outcome === "known" || outcome === "held") {
       count(outcome);
       if (outcome === "held") {

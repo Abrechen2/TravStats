@@ -6,7 +6,7 @@ import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import { updatePolicy } from "../../services/externalServices/policy";
 import { verify } from "../../services/plugins/signing";
-import { clearPluginInFlight } from "../../services/plugins/ask";
+import { askPlugins, clearPluginInFlight, CALLS_PER_HOUR } from "../../services/plugins/ask";
 
 /**
  * Suggestion plugin settings (spec 2026-11-23-plugins-and-calendar.md, P3):
@@ -111,6 +111,15 @@ describe("suggestion plugins", () => {
     expect(http.body).toMatchObject({ error: "invalidUrl", code: "CALENDAR_HTTPS_REQUIRED" });
   });
 
+  it("allows plain http even for an admin only towards a LAN host (review P1)", async () => {
+    const { cookie } = await account(true);
+    const res = await request(app)
+      .post(root)
+      .set("Cookie", cookie)
+      .send({ name: "x", url: "http://plugin.example.com/hook" });
+    expect(res.body).toMatchObject({ error: "invalidUrl", code: "CALENDAR_HTTPS_REQUIRED" });
+  });
+
   it("holds an account to five plugins", async () => {
     const { cookie } = await account(true);
     for (let i = 0; i < 5; i++)
@@ -207,5 +216,70 @@ describe("suggestion plugins", () => {
       .set("Cookie", cookie)
       .send({ from: "2026-01-01", to: "2026-06-01" });
     expect(long.body.code).toBe("PLUGIN_BACKFILL_REFUSED");
+  });
+
+  it("'Neu fragen' asks again, but never buys a plugin more calls than its limits", async () => {
+    const { id: userId, cookie } = await account(true);
+    const made = await request(app)
+      .post(root)
+      .set("Cookie", cookie)
+      .send({ name: "A", url: `${base}/hook` });
+    const pluginId = made.body.plugin.id;
+    const at = new Date(Date.UTC(2026, 10, 10, 9));
+    const until = new Date(Date.UTC(2026, 10, 10, 10));
+    const stay = await prisma.dawarichStay.create({
+      data: {
+        userId,
+        fingerprint: "reask",
+        sourceStartAt: at,
+        sourceEndAt: until,
+        sourceLat: 48.69,
+        sourceLon: 9.31,
+        startAt: at,
+        endAt: until,
+        lat: 48.69,
+        lon: 9.31,
+        zone: "Europe/Berlin",
+        pointCount: 0,
+        evidence: { visit: {} },
+        provider: "travtrack",
+        providerRev: 0,
+        algorithmVersion: 1,
+      },
+    });
+    // The stop was answered, and the hour's calls are spent.
+    await prisma.suggestionPluginCall.create({
+      data: {
+        pluginId,
+        userId,
+        outcome: "empty",
+        stopStartAt: at,
+        stopEndAt: until,
+        lat: 48.69,
+        lon: 9.31,
+      },
+    });
+    await prisma.suggestionPluginCall.createMany({
+      data: Array.from({ length: CALLS_PER_HOUR }, () => ({ pluginId, userId, outcome: "empty" })),
+    });
+    const res = await request(app)
+      .post(`${root}/reask`)
+      .set("Cookie", cookie)
+      .send({ stayId: stay.id });
+    expect(res.status).toBe(200);
+    // Nothing deleted: every call still counts.
+    expect(await prisma.suggestionPluginCall.count({ where: { pluginId } })).toBe(
+      CALLS_PER_HOUR + 1
+    );
+    const stop = {
+      fromMs: at.getTime(),
+      untilMs: until.getTime(),
+      lat: 48.69,
+      lon: 9.31,
+      zone: "Europe/Berlin",
+    };
+    // No longer "known" — and still held by the limit, so no call leaves.
+    const asked = await askPlugins(userId, stop);
+    expect(asked.outcomes).toEqual({ held: 1 });
   });
 });

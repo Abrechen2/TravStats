@@ -14,6 +14,7 @@ import {
   PrivateTargetError,
   accountMayReachPrivate,
   assertTargetAllowed,
+  plainHttpAllowed,
   type TargetPolicy,
 } from "../egress/privateTargets";
 import { newSecret } from "./signing";
@@ -99,7 +100,7 @@ export function normalisePluginUrl(raw: string, policy: TargetPolicy): string {
       throw new AppError("invalidUrl", 400, "PRIVATE_TARGET");
     throw error;
   }
-  if (url.protocol === "http:" && !policy.allowPrivate)
+  if (url.protocol === "http:" && !plainHttpAllowed(url.toString(), policy))
     throw new AppError("invalidUrl", 400, "CALENDAR_HTTPS_REQUIRED");
   return url.toString();
 }

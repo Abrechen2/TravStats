@@ -170,6 +170,16 @@ describe("calendar sources: egress (forgejo#411)", () => {
     expect(res.body).toMatchObject({ error: "invalidUrl", code: "CALENDAR_HTTPS_REQUIRED" });
   });
 
+  it("refuses plain http to a public host even for an admin (review P1)", async () => {
+    const { cookie } = await account(true);
+    const res = await api(cookie).add({
+      kind: "ics",
+      label: "Arbeit",
+      icsUrl: "http://calendar.example.com/secret.ics",
+    });
+    expect(res.body).toMatchObject({ error: "invalidUrl", code: "CALENDAR_HTTPS_REQUIRED" });
+  });
+
   it("lets an admin's own source reach the LAN, and reads it", async () => {
     const { cookie } = await account(true);
     const added = await api(cookie).add({ kind: "ics", label: "Arbeit", icsUrl: `${base}/ok.ics` });

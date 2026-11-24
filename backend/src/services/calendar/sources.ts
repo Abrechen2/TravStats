@@ -19,6 +19,7 @@ import {
   PrivateTargetError,
   accountMayReachPrivate,
   assertTargetAllowed,
+  plainHttpAllowed,
   type TargetPolicy,
 } from "../egress/privateTargets";
 import { boundedFetch, type FetchLike } from "../egress/boundedFetch";
@@ -89,7 +90,7 @@ export function normaliseCalendarUrl(raw: string, policy: TargetPolicy): string 
       throw new AppError("invalidUrl", 400, "PRIVATE_TARGET");
     throw error;
   }
-  if (parsed.protocol === "http:" && !policy.allowPrivate)
+  if (parsed.protocol === "http:" && !plainHttpAllowed(parsed.toString(), policy))
     throw new AppError("invalidUrl", 400, "CALENDAR_HTTPS_REQUIRED");
   return parsed.toString();
 }
@@ -266,7 +267,7 @@ export async function readIcs(
       headers: { Accept: "text/calendar, */*;q=0.5" },
       policy,
       timeoutMs: remaining(deadlineAt, ICS_TIMEOUT_MS),
-      httpsOnly: !policy.allowPrivate,
+      httpsOnly: !plainHttpAllowed(url, policy),
       maxBytes: ICS_MAX_BYTES,
     },
     deps.fetch

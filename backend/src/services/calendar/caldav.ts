@@ -9,7 +9,7 @@
  */
 import { XMLParser } from "fast-xml-parser";
 import { boundedFetch, type FetchLike } from "../egress/boundedFetch";
-import type { TargetPolicy } from "../egress/privateTargets";
+import { plainHttpAllowed, type TargetPolicy } from "../egress/privateTargets";
 import { CalendarError, calendarErrorOfStatus } from "./errors";
 
 export const CALDAV_TIMEOUT_MS = 20_000;
@@ -125,7 +125,7 @@ async function dav(
       body,
       policy,
       timeoutMs,
-      httpsOnly: !policy.allowPrivate,
+      httpsOnly: !plainHttpAllowed(url, policy),
       maxBytes: CALDAV_MAX_BYTES,
     },
     fetchImpl

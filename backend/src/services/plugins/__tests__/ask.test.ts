@@ -1,6 +1,8 @@
 import { prisma } from "../../../db";
 import { encryptApiKey } from "../../../utils/encryption";
+import { updatePolicy } from "../../externalServices/policy";
 import {
+  askPlugin,
   askPlugins,
   clearPluginInFlight,
   CALLS_PER_HOUR,
@@ -75,9 +77,35 @@ describe("rounding", () => {
     expect(roundTo(48.123456, precision)).toBe(lat);
     expect(stopPayload(STOP, precision)).toMatchObject({ lat, precisionMeters: meters });
   });
-  it("sends the address at exact and 100 m only", () => {
-    expect(stopPayload(STOP, "100m")).toHaveProperty("address");
-    expect(stopPayload(STOP, "1km")).not.toHaveProperty("address");
+  it.each(["exact", "100m"] as const)(
+    "at %s sends what the account derived beside the point",
+    (p) => {
+      const full = { ...STOP, nearestPlace: { name: "Büro", distanceMeters: 37 } };
+      expect(Object.keys(stopPayload(full, p)).sort()).toEqual([
+        "address",
+        "end",
+        "lat",
+        "lon",
+        "nearestPlace",
+        "precisionMeters",
+        "start",
+        "timeZone",
+        "venue",
+      ]);
+    }
+  );
+  it("at 1 km sends only the rounded point: no venue, no place, no distance, no address", () => {
+    const full = { ...STOP, nearestPlace: { name: "Büro", distanceMeters: 37 } };
+    const sent = stopPayload(full, "1km");
+    expect(Object.keys(sent).sort()).toEqual([
+      "end",
+      "lat",
+      "lon",
+      "precisionMeters",
+      "start",
+      "timeZone",
+    ]);
+    expect(JSON.stringify(sent)).not.toMatch(/Büro|Bürohaus|Musterstraße|37/);
   });
 });
 
@@ -143,5 +171,21 @@ describe("askPlugins", () => {
     expect(r.outcomes).toMatchObject({ ok: 1, tooFar: 1 });
     const row = await prisma.suggestionPlugin.findUniqueOrThrow({ where: { id: pluginId } });
     expect(row).toMatchObject({ lastOutcome: "ok", lastVersion: 1, failures: 0 });
+  });
+});
+
+describe("the kill switch", () => {
+  it("is read before every call: off, nothing leaves", async () => {
+    await updatePolicy((p) => ({ ...p, disabled: [...p.disabled, "suggestionPlugins"] }));
+    try {
+      const plugin = await prisma.suggestionPlugin.findUniqueOrThrow({ where: { id: pluginId } });
+      expect(await askPlugin(plugin, STOP, "stop", { fetch: fetchImpl })).toBe("blocked");
+      expect(bodies).toHaveLength(0);
+    } finally {
+      await updatePolicy((p) => ({
+        ...p,
+        disabled: p.disabled.filter((d) => d !== "suggestionPlugins"),
+      }));
+    }
   });
 });

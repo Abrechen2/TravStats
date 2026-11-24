@@ -14,7 +14,7 @@
  */
 import crypto from "crypto";
 import { boundedFetch, BoundedFetchError, type FetchLike } from "../egress/boundedFetch";
-import type { TargetPolicy } from "../egress/privateTargets";
+import { plainHttpAllowed, type TargetPolicy } from "../egress/privateTargets";
 import { sign } from "./signing";
 import {
   PLUGIN_CONTRACT_VERSION,
@@ -117,7 +117,7 @@ async function send(
       timeoutMs: PLUGIN_TIMEOUT_MS,
       connectTimeoutMs: PLUGIN_CONNECT_TIMEOUT_MS,
       maxBytes: PLUGIN_MAX_BYTES,
-      httpsOnly: !target.policy.allowPrivate,
+      httpsOnly: !plainHttpAllowed(target.url, target.policy),
     },
     fetchImpl
   );
