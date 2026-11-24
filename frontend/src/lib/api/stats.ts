@@ -7,6 +7,7 @@ import type { FlightInsights } from "../../types/flightInsights";
 import type { CruiseInsights } from "../../types/cruiseInsights";
 import type { DomainRecord } from "../../types/domainRecords";
 import type { CrossDomainStats } from "../../types/crossDomainStats";
+import type { YearStats } from "../../types/yearStats";
 import type {
   AircraftProfileResponse,
   AircraftRankingResponse,
@@ -136,6 +137,12 @@ export const statsApi = {
   /** Cheap cross-domain statistics (forgejo#399). */
   getCrossDomainStats: async (): Promise<CrossDomainStats> => {
     const { data } = await api.get<CrossDomainStats>("/stats/cross-domain");
+    return data;
+  },
+
+  /** Distance per year and month, logged and recorded apart (the "Jahre" cards). */
+  getYearStats: async (): Promise<YearStats> => {
+    const { data } = await api.get<YearStats>("/stats/years");
     return data;
   },
 

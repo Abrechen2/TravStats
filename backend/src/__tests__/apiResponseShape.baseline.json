@@ -139,6 +139,7 @@
     "stats/networkRoute.ts",
     "stats/page.ts",
     "stats/passport.ts",
+    "stats/years.ts",
     "suggestions.ts",
     "syncPreconditions.ts",
     "tags.ts",

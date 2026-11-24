@@ -1796,5 +1796,24 @@
     "loadError": "CO₂-Werte konnten nicht geladen werden.",
     "reasonNetwork": "Der Server hat nicht geantwortet (Netzwerk).",
     "reasonStatus": "Der Server antwortete mit Fehler {{status}}."
+  },
+  "years": {
+    "title": "Jahre",
+    "help": "Die Strecke deines Logbuchs pro Jahr und Monat, nach Reiseart eingefärbt. Die aufgezeichnete Strecke (TravTrack) steht daneben und wird nie dazugerechnet: eine Aufzeichnung kann dieselbe Zugfahrt enthalten, die du eingetragen hast.",
+    "loadFailed": "Die Jahresübersicht konnte nicht geladen werden.",
+    "mapLink": "Karte",
+    "mapLinkLabel": "Karte für {{year}} öffnen",
+    "noDistance": "keine Strecken",
+    "recordedLine": "Aufgezeichnet (TravTrack): {{distance}}, nicht in der Summe",
+    "chartLabel": "Strecke pro Monat {{year}}",
+    "monthTotal": "{{month}}: {{distance}}",
+    "monthEmpty": "{{month}}: keine Strecke",
+    "legend": "Reisearten",
+    "totalLogged": "Strecke im Logbuch",
+    "totalLoggedHint": "Alle Reisearten, alle Jahre",
+    "totalRecorded": "Aufgezeichnete Strecke",
+    "totalRecordedHint": "TravTrack, getrennt vom Logbuch",
+    "totalPoints": "Aufgezeichnete Punkte",
+    "totalPointsHint": "Gespeicherte Standortpunkte"
   }
 }

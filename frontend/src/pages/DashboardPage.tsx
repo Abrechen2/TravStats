@@ -7,6 +7,7 @@ import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
 import { useDashboardRoute } from "../hooks/useDashboardRoute";
 import { usePublishRoutesBlocked } from "../hooks/usePublishRoutesBlocked";
 import { useClearMapSelectionsOnTabChange } from "../hooks/useClearMapSelectionsOnTabChange";
+import { useDashboardYearParam } from "../hooks/useDashboardYearParam";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesAccess, usePlacesVisible } from "../hooks/usePlacesVisible";
 import { flightsApi } from "../lib/api/flights";
@@ -36,6 +37,8 @@ export default function DashboardPage(): JSX.Element {
   // #257: a selected flight/cruise (popup + rings) must not survive into
   // another domain's map.
   useClearMapSelectionsOnTabChange(tab);
+  // `?year=2024` (the statistics page's "Karte" link) is the map's year filter.
+  useDashboardYearParam();
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
   const placesAccess = usePlacesAccess();

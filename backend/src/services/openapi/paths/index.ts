@@ -62,6 +62,7 @@ import "./railStats";
 import "./busStats";
 import "./statsDomainRecords";
 import "./statsCrossDomain";
+import "./statsYears";
 import "./railEntrySuggestions";
 import "./railRoadtripConversion";
 import "./bus";

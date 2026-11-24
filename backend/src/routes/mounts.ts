@@ -57,6 +57,7 @@ import statsNetworkRouteRoutes from "./stats/networkRoute";
 import statsInsightRoutes from "./stats/insights";
 import statsDomainRecordsRoutes from "./stats/domainRecords";
 import statsCrossDomainRoutes from "./stats/crossDomain";
+import statsYearsRoutes from "./stats/years";
 import airportRoutes from "./airports";
 import airlineLogoRoutes from "./airlineLogos";
 import countryFlagRoutes from "./countryFlags";
@@ -383,6 +384,8 @@ export const apiMounts: ApiMount[] = [
     base: "/api/v1/stats/cross-domain",
     router: statsCrossDomainRoutes,
   },
+  // Distance per year and month (the statistics page's "Jahre" cards); same reason again.
+  { id: "stats.years", base: "/api/v1/stats/years", router: statsYearsRoutes },
   { id: "stats", base: "/api/v1/stats", router: statsRoutes },
   // The user's own verdicts on passport countries (forgejo#308).
   { id: "passportOverrides", base: "/api/v1/passport/overrides", router: passportOverrideRoutes },

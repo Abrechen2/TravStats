@@ -25,6 +25,7 @@ import TravelAccountSection from "./TravelAccountSection";
 import CarbonByModeSection from "./CarbonByModeSection";
 import DomainRecordsSection from "./DomainRecordsSection";
 import CrossDomainSection from "./CrossDomainSection";
+import YearsSection from "./YearsSection";
 import CompanionsTogetherSection from "./CompanionsTogetherSection";
 import PurposeHiddenHint from "../../purpose/PurposeHiddenHint";
 import { todayZoneNow } from "../../../hooks/useTodayZone";
@@ -207,6 +208,9 @@ export default function OverviewTab({
 
       {/* Streaks, time shift, Schengen days and more from data already held (forgejo#399). */}
       {show("crossDomain") && <CrossDomainSection />}
+
+      {/* Distance per year and month, logged and recorded apart. */}
+      {show("years") && <YearsSection />}
 
       {/* Who the reader travels with, across every visible domain (all time). */}
       {show("companions") && <CompanionsTogetherSection />}

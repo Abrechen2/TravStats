@@ -47,6 +47,7 @@ export const OVERVIEW_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "carbon", label: t("stats:carbon.title") },
   { key: "domainRecords", label: t("stats:domainRecords.title") },
   { key: "crossDomain", label: t("stats:crossDomain.title") },
+  { key: "years", label: t("stats:years.title") },
   { key: "companions", label: t("stats:companionsTogether.title") },
 ];
 

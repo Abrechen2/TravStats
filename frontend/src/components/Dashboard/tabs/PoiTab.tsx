@@ -22,6 +22,8 @@ import { placeOpenPath } from "../../../lib/mapPlaceLists";
 import { PlaceListPicker } from "./PlaceListPicker";
 import { usePlaceColorStore } from "../../../store/placeColorStore";
 import { classifyPlace } from "../../../shared/placeCounting";
+import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
+import { placesInRange } from "../../../lib/stats/dashboardYearFilter";
 import MapContainer3D from "../../MapContainer3D";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
@@ -99,7 +101,13 @@ export function PoiTab(): JSX.Element {
 
   // The same list choice as the "Alle" map: one picker, one store.
   const listed = useListedPlaces(places, lists, poiEnabled);
-  const visiblePlaces = listed.drawn as Place[];
+  // The map's year filter (`?year=`), by VISIT date — the rule the "Alle" tab applies: a place
+  // whose visits carry no date occupies no known day, so it steps aside while a range is set.
+  const filterTime = useDashboardFilterStore((s) => s.time);
+  const visiblePlaces = useMemo(
+    () => placesInRange(listed.drawn as Place[], filterTime),
+    [listed.drawn, filterTime]
+  );
 
   const layers = useMemo<Layer[]>(() => {
     if (visiblePlaces.length === 0) return [];

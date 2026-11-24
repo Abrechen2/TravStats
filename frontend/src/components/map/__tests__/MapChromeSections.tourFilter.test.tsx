@@ -2,12 +2,10 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 /**
- * L2 (fix round 1 review, 2026-08-30): the year filter select had no
- * effect on the tour tab (`useDashboardTours` takes no date param) but
- * rendered fully functional-looking regardless -- a control that visibly
- * does nothing. Fixed by hiding the whole Filter section (year select +
- * domain pills + reset) on the tour tab; the Modus section stays, since
- * routes/globe both actually work there.
+ * The year filter used to be hidden on the tour tab because `useDashboardTours` takes no date
+ * param, so the select visibly did nothing (L2, fix round 1 review, 2026-08-30). The tabs now
+ * filter their routes client-side by the tour's dates (the rule the "Alle" tab already used), so
+ * the select is offered on every tab and `/dashboard/tour?year=2024` means something.
  */
 
 const mockUseDashboardRoute = vi.hoisted(() => vi.fn());
@@ -31,10 +29,10 @@ function renderAt(tab: string, mode: string): ReturnType<typeof render> {
 }
 
 describe("MapChromeSections: the Filter section on the tour tab", () => {
-  it("hides the year filter entirely on the tour tab", () => {
+  it("offers the year filter on the tour tab, which now filters by it", () => {
     renderAt("tour", "routes");
-    expect(screen.queryByText("dashboard:filter.title")).not.toBeInTheDocument();
-    expect(screen.queryByText("dashboard:filter.year")).not.toBeInTheDocument();
+    expect(screen.getByText("dashboard:filter.title")).toBeInTheDocument();
+    expect(screen.getByText("dashboard:filter.year")).toBeInTheDocument();
   });
 
   it("still offers the Modus section on the tour tab", () => {

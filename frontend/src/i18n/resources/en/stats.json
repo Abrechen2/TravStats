@@ -1796,5 +1796,24 @@
     "loadError": "The CO₂ figures could not be loaded.",
     "reasonNetwork": "The server did not respond (network).",
     "reasonStatus": "The server answered with error {{status}}."
+  },
+  "years": {
+    "title": "Years",
+    "help": "The distance in your logbook per year and month, coloured by mode of travel. The recorded distance (TravTrack) sits beside it and is never added: a recording can contain the very train ride you logged.",
+    "loadFailed": "The yearly overview could not be loaded.",
+    "mapLink": "Map",
+    "mapLinkLabel": "Open the map for {{year}}",
+    "noDistance": "no distances",
+    "recordedLine": "Recorded (TravTrack): {{distance}}, not part of the total",
+    "chartLabel": "Distance per month {{year}}",
+    "monthTotal": "{{month}}: {{distance}}",
+    "monthEmpty": "{{month}}: no distance",
+    "legend": "Modes of travel",
+    "totalLogged": "Logged distance",
+    "totalLoggedHint": "All modes of travel, all years",
+    "totalRecorded": "Recorded distance",
+    "totalRecordedHint": "TravTrack, separate from the logbook",
+    "totalPoints": "Recorded points",
+    "totalPointsHint": "Stored location points"
   }
 }
