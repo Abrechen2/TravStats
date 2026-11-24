@@ -22,7 +22,8 @@ import {
 import { displayFileName } from "./mapGpx";
 import { FairSlot, importWriteSlot, SLICE_BATCHES, SLICE_MS } from "./writeSlot";
 import { discardSpool, readHead, spoolBuffer } from "./spool";
-import { readTrackFile, type MappedTrack } from "./trackFile";
+import { spoolPoints, type PointSpool } from "./pointSpool";
+import { readTrackFile } from "./trackFile";
 import { assertImportSize, sniffFormat } from "./trackFormat";
 import { readerQueueFull, busy } from "./trackFileChild";
 
@@ -76,7 +77,7 @@ export type ImportReport = {
   error?: string;
   /** The run stored nothing new (every fix a duplicate or dropped): not progress. */
   noNewPoints?: boolean;
-  /** Waiting for its turn behind another account's import; its points are let go meanwhile. */
+  /** Waiting for its turn behind another account's import; its points wait on disk. */
   queued?: boolean;
 };
 
@@ -199,10 +200,10 @@ export type RunOptions = {
   /** Batches, and milliseconds, one turn lasts at most (tests shorten them). */
   sliceBatches?: number;
   sliceMs?: number;
-  /** Test seam: after each parse of the file (once, plus once per turn given away). */
+  /** Test seam: after each parse of the file (once per run). */
   onParse?: () => void;
-  /** Test seam: right before the import queues again, with whether it still holds points. */
-  onYield?: (state: { holdsPoints: boolean }) => void;
+  /** Test seam: the points file this run reads its batches from. */
+  onSpool?: (path: string) => void;
 };
 
 /**
@@ -216,6 +217,29 @@ export async function runGpxImport(
   opts: RunOptions = {}
 ): Promise<ImportOutcome> {
   const state: RunState = { report: emptyReport(), cursor: 0, completed: false };
+  let spool: PointSpool | null = null;
+  try {
+    return await runWithSpool(importId, userId, file, opts, state, (s) => (spool = s));
+  } finally {
+    // The points file goes however the import ends: succeeded, partial, failed, cancelled.
+    await (spool as PointSpool | null)?.discard().catch((err: unknown) =>
+      logger.warn({
+        operation: "travtrack.import.point_spool_discard_failed",
+        importId,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    );
+  }
+}
+
+async function runWithSpool(
+  importId: string,
+  userId: string,
+  file: { buffer?: Buffer | null; path?: string },
+  opts: RunOptions,
+  state: RunState,
+  keep: (spool: PointSpool) => void
+): Promise<ImportOutcome> {
   try {
     const input = file.path ? { path: file.path } : (file.buffer ?? Buffer.alloc(0));
     file.buffer = null;
@@ -229,13 +253,16 @@ export async function runGpxImport(
       state.cursor = prior.cursor;
       state.report = reportFrom(prior.report);
     }
+    // Parsed once, before the turn: the points go to disk and only their
+    // offsets stay in memory while the import waits (`pointSpool.ts`).
+    const { spool, span } = await parseToSpool(input, resuming, state, opts);
+    keep(spool);
+    opts.onSpool?.(spool.path);
+    await writeProgress(importId, state, { fileSha256: digest });
     const slot = opts.slot ?? importWriteSlot;
-    // The turn first, the parse second: an import waiting for its turn holds
-    // the spooled file and its cursor, never the parsed points (`writeSlot.ts`).
     await slot.acquire(userId);
-    let span: { fromMs: number | null; untilMs: number | null };
     try {
-      span = await storeInTurns(importId, userId, input, digest, resuming, state, slot, opts);
+      await storeInTurns(importId, userId, spool, state, slot, opts);
     } finally {
       slot.release();
     }
@@ -289,16 +316,48 @@ function finalReport(report: ImportReport): ImportReport {
  * import waiting, the parsed points are let go before this import queues
  * again, and the file is parsed anew when its turn comes back.
  */
+/** Parses the file once and writes its points to disk; the parsed track is let go. */
+async function parseToSpool(
+  input: Buffer | { path: string },
+  resuming: boolean,
+  state: RunState,
+  opts: RunOptions
+): Promise<{ spool: PointSpool; span: { fromMs: number | null; untilMs: number | null } }> {
+  const { track } = await readTrackFile(input, {
+    ...opts.reader,
+    onProgress: (done, total) => opts.onProgress?.(Math.floor((done / Math.max(total, 1)) * 50)),
+  });
+  opts.onParse?.();
+  state.report = {
+    ...state.report,
+    format: track.formats.join("+"),
+    read: track.read,
+    withoutTime: track.withoutTime,
+    // On a resume the stored count already holds the reader's invalid fixes.
+    dropped: resuming ? state.report.dropped : { ...state.report.dropped, invalid: track.invalid },
+  };
+  if (track.count === 0) {
+    throw new AppError("The file holds no point with a time", 422, "TRAVTRACK_IMPORT_NO_TIMES");
+  }
+  return {
+    spool: await spoolPoints(track),
+    span: { fromMs: track.fromMs, untilMs: track.untilMs },
+  };
+}
+
+/**
+ * Stores the spooled points from the cursor on, in turns: at a slice end with
+ * another import waiting, the turn is handed over and this import carries on
+ * from its committed cursor when it comes back — no second parse.
+ */
 async function storeInTurns(
   importId: string,
   userId: string,
-  input: Buffer | { path: string },
-  digest: string,
-  resuming: boolean,
+  spool: PointSpool,
   state: RunState,
   slot: FairSlot,
   opts: RunOptions
-): Promise<{ fromMs: number | null; untilMs: number | null }> {
+): Promise<void> {
   const origin = `gpx:${importId}`;
   const wait = opts.sleep ?? realSleep;
   const fence = async (tx: DbTransaction) => {
@@ -308,39 +367,13 @@ async function storeInTurns(
     });
     if (row?.status !== "running") throw new ImportCancelled();
   };
-  const parse = async (first: boolean): Promise<MappedTrack> => {
-    const { track } = await readTrackFile(input, {
-      ...opts.reader,
-      // Only the first parse reports reading progress: a re-parse would set the bar back.
-      onProgress: first
-        ? (done, total) => opts.onProgress?.(Math.floor((done / Math.max(total, 1)) * 50))
-        : undefined,
-    });
-    opts.onParse?.();
-    return track;
-  };
-  let mapped: MappedTrack | null = await parse(true);
-  state.report = {
-    ...state.report,
-    format: mapped.formats.join("+"),
-    read: mapped.read,
-    withoutTime: mapped.withoutTime,
-    // On a resume the stored count already holds the reader's invalid fixes.
-    dropped: resuming ? state.report.dropped : { ...state.report.dropped, invalid: mapped.invalid },
-  };
-  if (mapped.count === 0) {
-    throw new AppError("The file holds no point with a time", 422, "TRAVTRACK_IMPORT_NO_TIMES");
-  }
-  const total = mapped.count;
-  const span = { fromMs: mapped.fromMs, untilMs: mapped.untilMs };
-  await writeProgress(importId, state, { fileSha256: digest });
+  const total = spool.count;
   const size = opts.batchSize ?? IMPORT_BATCH_SIZE;
   const sliceBatches = opts.sliceBatches ?? SLICE_BATCHES;
   const sliceMs = opts.sliceMs ?? SLICE_MS;
   let sliceStart = performance.now();
   let inSlice = 0;
   for (let done = 0; state.cursor < total;) {
-    mapped ??= await parse(false);
     const at = state.cursor;
     const next = Math.min(at + size, total);
     const started = performance.now();
@@ -348,7 +381,7 @@ async function storeInTurns(
       userId,
       importId,
       origin,
-      points: mapped.batch(at, size),
+      points: await spool.batch(at, size),
       fence,
       report: state.report,
       cursorAfter: next,
@@ -366,19 +399,14 @@ async function storeInTurns(
     inSlice += 1;
     if (inSlice < sliceBatches && performance.now() - sliceStart < sliceMs) continue;
     if (slot.waiting() > 0) {
-      // The slice is over and another import waits: let the points go, queue
-      // behind it, and carry on from the committed cursor when the turn is back.
-      mapped = null;
       state.report = { ...state.report, queued: true };
       await writeProgress(importId, state);
-      opts.onYield?.({ holdsPoints: mapped !== null });
       await slot.yieldTurn(userId);
       state.report = withoutQueued(state.report);
     }
     sliceStart = performance.now();
     inSlice = 0;
   }
-  return span;
 }
 
 function withoutQueued(report: ImportReport): ImportReport {

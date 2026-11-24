@@ -1,3 +1,5 @@
+import fs from "node:fs";
+
 import { prisma } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
 import { settleAllJobs } from "../../jobs/jobRegistry";
@@ -112,6 +114,7 @@ describe("TravTrack — a large file import shares the database", () => {
     const file = records(total);
     const row = await newRow();
     const { sleep } = noWait();
+    let crashedSpool = "";
     const crashed = await runGpxImport(
       row.id,
       userId,
@@ -122,9 +125,12 @@ describe("TravTrack — a large file import shares the database", () => {
         afterBatch: async (done) => {
           if (done === 3) throw new Error("the process went away");
         },
+        onSpool: (path) => (crashedSpool = path),
       }
     );
     expect(crashed.status).toBe("partial");
+    // A stop removes the points file as well.
+    expect(fs.existsSync(crashedSpool)).toBe(false);
     const stopped = await rowOf(row.id);
     expect(stopped.status).toBe("partial");
     expect(stopped.cursor).toBe(3000);
@@ -132,18 +138,59 @@ describe("TravTrack — a large file import shares the database", () => {
     expect(await pointCount()).toBe(3000);
 
     await prisma.travTrackImport.update({ where: { id: row.id }, data: { status: "running" } });
+    const resumedAt: number[] = [];
+    let parses = 0;
     const resumed = await runGpxImport(
       row.id,
       userId,
       { buffer: file },
-      { sleep, batchSize: 1000, resume: true }
+      {
+        sleep,
+        batchSize: 1000,
+        resume: true,
+        onBatch: ({ at }) => resumedAt.push(at),
+        onParse: () => (parses += 1),
+      }
     );
+    // Read from the points file at the stored cursor, after one parse.
+    expect(resumedAt).toEqual([3000, 4000]);
+    expect(parses).toBe(1);
     expect(resumed.status).toBe("succeeded");
     // Continued at the cursor: nothing re-read as a duplicate, the report counts the whole file.
     expect(resumed.report.stored).toBe(total);
     expect(resumed.report.duplicate).toBe(0);
     expect(await pointCount()).toBe(total);
     expect((await rowOf(row.id)).cursor).toBe(total);
+  });
+
+  it("a cancelled import removes its points file too", async () => {
+    const row = await newRow();
+    const { sleep } = noWait();
+    let spool = "";
+    const outcome = await runGpxImport(
+      row.id,
+      userId,
+      { buffer: records(3_000) },
+      {
+        sleep,
+        batchSize: 1000,
+        onSpool: (path) => {
+          spool = path;
+          expect(fs.statSync(path).mode & 0o777).toBe(0o600);
+        },
+        afterBatch: async (done) => {
+          if (done === 1) {
+            await prisma.travTrackImport.update({
+              where: { id: row.id },
+              data: { status: "cancelled" },
+            });
+          }
+        },
+      }
+    );
+    expect(outcome.status).toBe("cancelled");
+    expect(spool).not.toBe("");
+    expect(fs.existsSync(spool)).toBe(false);
   });
 
   it("a restart mid-import leaves a partial import, not an interrupted one, when a batch had committed", async () => {
@@ -269,6 +316,7 @@ describe("TravTrack — a large file import shares the database", () => {
       { timeout: 20_000 }
     );
     await isLocked;
+    let spool = "";
     const dbError = jest.spyOn(dbLogger, "error");
     const appError = jest.spyOn(logger, "error");
     const warn = jest.spyOn(logger, "warn");
@@ -278,7 +326,7 @@ describe("TravTrack — a large file import shares the database", () => {
           row.id,
           userId,
           { buffer: records(50) },
-          { lockTimeoutMs: 100, sleep: async () => {} }
+          { lockTimeoutMs: 100, sleep: async () => {}, onSpool: (path) => (spool = path) }
         )
       ).rejects.toBeDefined();
     } finally {
@@ -295,6 +343,9 @@ describe("TravTrack — a large file import shares the database", () => {
       expect.objectContaining({ operation: "travtrack.import.batch_failed", attempt: 4 })
     );
     expect((await rowOf(row.id)).status).toBe("failed");
+    // A failed import removes its points file as well.
+    expect(spool).not.toBe("");
+    expect(fs.existsSync(spool)).toBe(false);
     dbError.mockRestore();
     appError.mockRestore();
     warn.mockRestore();
@@ -344,8 +395,7 @@ describe("TravTrack — file imports take turns across accounts", () => {
     const slot = new FairSlot(1);
     const order: Array<{ who: "A" | "B"; at: number }> = [];
     const parses = { A: 0, B: 0 };
-    const yields: Array<{ who: "A" | "B"; holdsPoints: boolean }> = [];
-    let bParsesWhileQueued = -1;
+    const spools: Record<"A" | "B", string> = { A: "", B: "" };
     const doneAt: Record<"A" | "B", number> = { A: -1, B: -1 };
     const [rowA, rowB] = await Promise.all([rowFor(a), rowFor(b)]);
     const common = { slot, sliceBatches: 2, batchSize: 100, sleep: async () => {} };
@@ -364,10 +414,9 @@ describe("TravTrack — file imports take turns across accounts", () => {
         // Hold A's first slice open until B is queued behind it.
         afterBatch: async (done) => {
           while (done === 1 && slot.waiting() === 0) await new Promise((r) => setTimeout(r, 5));
-          if (done === 1) bParsesWhileQueued = parses.B;
         },
         onParse: () => (parses.A += 1),
-        onYield: ({ holdsPoints }) => yields.push({ who: "A", holdsPoints }),
+        onSpool: (path) => (spools.A = path),
       }
     ).then((o) => ((doneAt.A = order.length), o));
     // B arrives once A holds the turn.
@@ -381,13 +430,13 @@ describe("TravTrack — file imports take turns across accounts", () => {
             ...common,
             onBatch: ({ at }) => order.push({ who: "B", at }),
             onParse: () => (parses.B += 1),
-            onYield: ({ holdsPoints }) => yields.push({ who: "B", holdsPoints }),
+            onSpool: (path) => (spools.B = path),
           }
         )
       )
       .then((o) => ((doneAt.B = order.length), o));
     const [outA, outB] = await Promise.all([runA, runB]);
-    return { order, doneAt, outA, outB, rowA, rowB, parses, yields, bParsesWhileQueued };
+    return { order, doneAt, outA, outB, rowA, rowB, parses, spools };
   }
 
   it("two accounts' imports interleave in slices", async () => {
@@ -397,14 +446,14 @@ describe("TravTrack — file imports take turns across accounts", () => {
     expect(order.map((o) => o.who).join("")).toBe("AABBAABBAABBAABB");
   });
 
-  it("a waiting import holds no parsed points: it parses on its turn, and again after giving one away", async () => {
-    const { parses, yields, bParsesWhileQueued } = await race(800, 800);
-    // B queued behind A before it had parsed anything.
-    expect(bParsesWhileQueued).toBe(0);
-    // A gave the turn away 3 times (after slices 1-3), B 3 times; each time without points.
-    expect(yields).toHaveLength(6);
-    expect(yields.every((y) => !y.holdsPoints)).toBe(true);
-    expect(parses).toEqual({ A: 4, B: 4 });
+  it("each import parses its file once however many turns it takes, and its points file goes at the end", async () => {
+    const { parses, spools, order } = await race(800, 800);
+    // Four turns each (slices of two batches), one parse each.
+    expect(order.map((o) => o.who).join("")).toBe("AABBAABBAABBAABB");
+    expect(parses).toEqual({ A: 1, B: 1 });
+    expect(spools.A).not.toBe("");
+    expect(fs.existsSync(spools.A)).toBe(false);
+    expect(fs.existsSync(spools.B)).toBe(false);
   });
 
   it("one account's large import cannot starve another's", async () => {
