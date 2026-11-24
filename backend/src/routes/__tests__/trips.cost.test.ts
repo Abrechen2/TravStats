@@ -217,8 +217,9 @@ describe("GET /trips and /trips/:id — the trip's cost", () => {
       };
     };
 
+    // Roadtrips left beta on 2026-11-24: the switch no longer takes their fuel out.
     await updateInstanceSettings({ betaFeaturesEnabled: false });
-    expect(await surfaces()).toEqual({ card: { EUR: 304 }, stats: { EUR: 304 }, railNights: 1 });
+    expect(await surfaces()).toEqual({ card: { EUR: 334 }, stats: { EUR: 334 }, railNights: 1 });
 
     await updateInstanceSettings({ betaFeaturesEnabled: true });
     expect(await surfaces()).toEqual({ card: { EUR: 334 }, stats: { EUR: 334 }, railNights: 1 });

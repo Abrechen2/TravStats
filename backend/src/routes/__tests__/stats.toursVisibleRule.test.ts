@@ -88,9 +88,10 @@ describe("tours follow the tour domain and the beta switch, not the roadtrip tog
     }
   });
 
-  it("drops both while the beta switch is off", async () => {
+  // Tours left beta on 2026-11-24: the switch no longer drops them.
+  it("keeps both while the beta switch is off", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: false });
-    expect((await wrapped()).status).toBe(404);
-    expect(await codes()).not.toContain("TOUR_FIRST_STEPS");
+    expect((await wrapped()).status).not.toBe(404);
+    expect(await codes()).toContain("TOUR_FIRST_STEPS");
   });
 });

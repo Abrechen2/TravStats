@@ -301,6 +301,8 @@ describe("TravTrack — /travtrack/points", () => {
     expect(Object.keys(summary.body).sort()).toEqual(
       [
         "deletedRanges",
+        // Day counts of the derivation (fix/timeline-import): no place, no zone, no time of day.
+        "derivation",
         "devices",
         "firstAt",
         "lastAt",

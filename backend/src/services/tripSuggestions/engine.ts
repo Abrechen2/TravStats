@@ -166,7 +166,9 @@ async function compute(
     has("cruise") ? loadCruises(userId) : EMPTY,
     has("lodging") ? loadStays(userId) : EMPTY,
     has("poi") ? loadPlaceVisits(userId) : { ...EMPTY, places: [] as PlaceContext[] },
-    has("roadtrip") ? loadRoutes(userId, today) : EMPTY,
+    has("roadtrip") || has("tour")
+      ? loadRoutes(userId, today, { roadtrip: has("roadtrip"), tour: has("tour") })
+      : EMPTY,
     loadAcceptedPhotoJourneys(userId),
     loadTrips(userId),
     loadAnswered(userId),

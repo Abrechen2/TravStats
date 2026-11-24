@@ -110,11 +110,11 @@ describe("a tour inside a trip is counted once", () => {
     expect(counted.body.tours).toEqual([
       expect.objectContaining({ year: 2024, day: "2024-05-01", km: 12 }),
     ]);
-    // Beta switch closed: no tour figure at all, not an empty list.
+    // Tours left beta on 2026-11-24: the instance's switch no longer closes the figure.
     await updateInstanceSettings({ betaFeaturesEnabled: false });
     expect(
       (await request(app).get("/api/v1/stats/insights/tours/counted").set("Cookie", cookie)).status
-    ).toBe(404);
+    ).toBe(200);
     await updateInstanceSettings({ betaFeaturesEnabled: true });
   });
 });

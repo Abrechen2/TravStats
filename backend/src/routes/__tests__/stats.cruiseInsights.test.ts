@@ -266,8 +266,7 @@ describe("GET /stats/cruise-insights", () => {
   });
 
   it("drops the tours, and only the tours, while the reader does not see them", async () => {
-    await updateInstanceSettings({ betaFeaturesEnabled: false });
-    try {
+    await withoutTourDomain(userId, async () => {
       const res = await request(app).get("/api/v1/stats/cruise-insights").set("Cookie", cookie);
       expect(res.body.excursions.toursVisible).toBe(false);
       const second = res.body.excursions.perCruise.find(
@@ -275,9 +274,7 @@ describe("GET /stats/cruise-insights", () => {
       );
       expect(second).toMatchObject({ documentedCalls: 1, tours: null, activities: null });
       expect((await badgeProgress(userId, ["SHORE_EXCURSIONS_5"])).SHORE_EXCURSIONS_5).toBe(1);
-    } finally {
-      await updateInstanceSettings({ betaFeaturesEnabled: true });
-    }
+    });
   });
   it("answers cruise money in the base currency and the ship profile from the catalogue", async () => {
     const ship = await prisma.ship.create({
@@ -333,3 +330,22 @@ describe("GET /stats/cruise-insights", () => {
     }
   });
 });
+
+/** The reader's domain list without `tour`, restored afterwards (tours left beta 2026-11-24). */
+async function withoutTourDomain(userId: string, run: () => Promise<void>): Promise<void> {
+  const row = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: { enabledDomains: true },
+  });
+  const before = row?.enabledDomains ?? ["flight"];
+  await prisma.userSettings.upsert({
+    where: { userId },
+    update: { enabledDomains: before.filter((d) => d !== "tour") },
+    create: { userId, data: {}, enabledDomains: before.filter((d) => d !== "tour") },
+  });
+  try {
+    await run();
+  } finally {
+    await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: before } });
+  }
+}

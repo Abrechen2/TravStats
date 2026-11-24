@@ -4,17 +4,20 @@ import { AVAILABLE_DOMAINS, type DomainKey } from "../../shared/domains";
 import { BETA_GATED_DOMAINS, visibleDomainKeys } from "../domainVisibility";
 
 describe("visibleDomainKeys", () => {
-  it("hides roadtrips while the instance's beta switch is off, and shows them when on", () => {
-    const enabled = ["flight", "roadtrip"];
-    expect(visibleDomainKeys(enabled, false)).toEqual(["flight"]);
-    expect(visibleDomainKeys(enabled, true)).toEqual(["flight", "roadtrip"]);
+  // Roadtrips and tours left beta on 2026-11-24 (feat/map-lists-ungate): the web dropped the
+  // `roadtrips` key, so the server shows them with the switch off as well (rc.45).
+  it("shows roadtrips and tours with the beta switch off once the user has them on", () => {
+    const enabled = ["flight", "roadtrip", "tour"];
+    expect(visibleDomainKeys(enabled, false)).toEqual(visibleDomainKeys(enabled, true));
+    expect(visibleDomainKeys(enabled, false)).toEqual(
+      expect.arrayContaining(["flight", "roadtrip", "tour"])
+    );
+    expect(BETA_GATED_DOMAINS.roadtrip).toBeUndefined();
+    expect(BETA_GATED_DOMAINS.tour).toBeUndefined();
   });
 
   it("keeps an ungated domain visible with the switch off", () => {
-    expect(visibleDomainKeys(["flight", "cruise", "roadtrip"], false)).toEqual([
-      "flight",
-      "cruise",
-    ]);
+    expect(visibleDomainKeys(["flight", "cruise"], false)).toEqual(["flight", "cruise"]);
   });
 
   // Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22): like cruises, the
@@ -53,8 +56,9 @@ describe("BETA_GATED_DOMAINS", () => {
     (key) => key.endsWith("Domain") || key === "roadtrips"
   );
 
-  it("finds the domain gates in the registry (the scan itself works)", () => {
-    expect(domainGateKeys).toEqual(expect.arrayContaining(["roadtrips"]));
+  it("finds the registry's gates (the scan itself works) and no domain gate among them", () => {
+    expect(registryKeys.length).toBeGreaterThan(0);
+    expect(domainGateKeys).toEqual([]);
   });
 
   it("has an entry, on a real domain, for every domain gate in the registry", () => {

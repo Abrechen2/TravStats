@@ -12,13 +12,13 @@ import { getInstanceSettings } from "./instanceSettingsService";
 
 /**
  * Domains that sit behind the instance's beta switch, and the key that gates
- * each (`frontend/src/config/betaFeatures.ts`). `tour` shares the roadtrip
- * key (tours became a domain on 2026-11-09).
+ * each (`frontend/src/config/betaFeatures.ts`). Empty since roadtrips and tours
+ * left beta (feat/map-lists-ungate, 2026-11-24): the web dropped the
+ * `roadtrips` key, so the server must stop hiding them too, or search, badges,
+ * trip suggestions and sync would leave out what the web now shows. A domain
+ * that goes back into beta gets its key here again.
  */
-export const BETA_GATED_DOMAINS: Partial<Record<DomainKey, string>> = {
-  roadtrip: "roadtrips",
-  tour: "roadtrips",
-};
+export const BETA_GATED_DOMAINS: Partial<Record<DomainKey, string>> = {};
 
 /**
  * The visible domains, in registry order. A user without a settings row has

@@ -50,11 +50,12 @@ describe("sync scope and toursVisible for the tour domain", () => {
     expect(await toursVisible(userId)).toBe(false);
   });
 
-  it("hides tours when beta is off, even with the domain on", async () => {
+  // Tours left beta on 2026-11-24: the domain alone decides.
+  it("shows tours with beta off once the domain is on", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: false });
     await setDomains(["flight", "tour"]);
-    expect((await loadSyncScope(userId)).tours).toBe(false);
-    expect(await toursVisible(userId)).toBe(false);
+    expect((await loadSyncScope(userId)).tours).toBe(true);
+    expect(await toursVisible(userId)).toBe(true);
   });
 
   it("changes the cursor fingerprint when the switch changes", async () => {

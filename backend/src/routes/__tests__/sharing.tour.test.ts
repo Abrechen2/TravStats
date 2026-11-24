@@ -288,10 +288,12 @@ describe("trip sharing — tours", () => {
     expect(await bensRoutes("roadtrip")).toHaveLength(1);
   });
 
-  it("a member on an instance with the beta switch off is not handed a tour", async () => {
+  // Tours left beta on 2026-11-24: the instance's switch no longer decides, only the member's
+  // own domain choice (the case above).
+  it("a member on an instance with the beta switch off is still handed a tour", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: false });
     await share();
-    expect(await bensRoutes("tour")).toHaveLength(0);
+    expect(await bensRoutes("tour")).toHaveLength(1);
   });
 
   it("a standalone tour is never shared", async () => {

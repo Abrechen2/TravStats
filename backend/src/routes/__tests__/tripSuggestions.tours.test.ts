@@ -80,7 +80,7 @@ describe("trip suggestions — tours join the trip", () => {
     await prisma.userSettings.create({
       data: {
         userId,
-        enabledDomains: ["flight", "lodging", "roadtrip"],
+        enabledDomains: ["flight", "lodging", "roadtrip", "tour"],
         data: { homeAirportHistory: [{ iata: "MUC", fromDate: "2000-01-01", toDate: null }] },
       },
     });
@@ -207,14 +207,33 @@ describe("trip suggestions — tours join the trip", () => {
     expect(await prisma.tripSuggestionDecision.count({ where: { userId } })).toBe(0);
   });
 
-  it("leaves tours out while the instance hides the roadtrip beta", async () => {
+  // Tours left beta on 2026-11-24: the account's own domain choice hides them, not the switch.
+  it("leaves tours out while the account has the tour domain switched off", async () => {
     await stay();
     await tour("Fiesole", ["2025-05-04"]);
-    await updateInstanceSettings({ betaFeaturesEnabled: false });
-    try {
-      expect(await newTrips()).toEqual([]);
-    } finally {
-      await updateInstanceSettings({ betaFeaturesEnabled: true });
-    }
+    await withoutTourDomain(userId, async () => {
+      // The stay may still make its own suggestion; no tour joins it.
+      const members = (await newTrips()).flatMap((s) => s.members);
+      expect(members.some((m) => m.domain === "tour")).toBe(false);
+    });
   });
 });
+
+/** The reader's domain list without `tour`, restored afterwards (tours left beta 2026-11-24). */
+async function withoutTourDomain(userId: string, run: () => Promise<void>): Promise<void> {
+  const row = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: { enabledDomains: true },
+  });
+  const before = row?.enabledDomains ?? ["flight"];
+  await prisma.userSettings.upsert({
+    where: { userId },
+    update: { enabledDomains: before.filter((d) => d !== "tour") },
+    create: { userId, data: {}, enabledDomains: before.filter((d) => d !== "tour") },
+  });
+  try {
+    await run();
+  } finally {
+    await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: before } });
+  }
+}

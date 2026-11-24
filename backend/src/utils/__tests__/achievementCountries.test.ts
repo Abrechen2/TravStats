@@ -148,12 +148,12 @@ describe("achievementCountries — the passport's evidence, the gates' visibilit
     expect([...(await achievementCountries(userId, new Set()))]).toEqual(["NO"]);
   });
 
-  it("leaves roadtrip evidence out while the instance's beta switch is off", async () => {
-    // Rail left the beta registry; the roadtrip domain is still behind it.
+  // Roadtrips left beta on 2026-11-24: the instance's switch no longer hides their evidence.
+  it("keeps roadtrip evidence while the instance's beta switch is off", async () => {
     await ride("DE", "CH", "2025-03-01");
     await roadtripToNorway();
     await updateInstanceSettings({ betaFeaturesEnabled: false });
-    expect([...(await achievementCountries(userId, new Set()))].sort()).toEqual(["CH", "DE"]);
+    expect([...(await achievementCountries(userId, new Set()))]).toContain("NO");
   });
 
   it("leaves a domain out that the user switched off", async () => {

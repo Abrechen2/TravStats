@@ -1,3 +1,4 @@
+import type { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { datedPresence, stayPresence, visitPresence } from "../../shared/tripSuggestionRules";
 import { ROW_CAP, type Loaded } from "./loadTransport";
@@ -143,9 +144,20 @@ export async function loadPlaceVisits(
  * already on a trip are not loaded at all — they are that trip's, and are
  * never moved.
  */
-export async function loadRoutes(userId: string, today: string): Promise<Loaded> {
+export async function loadRoutes(
+  userId: string,
+  today: string,
+  kinds: { roadtrip: boolean; tour: boolean } = { roadtrip: true, tour: true }
+): Promise<Loaded> {
+  // Each kind follows its own domain: a tour is the `tour` domain since 2026-11-09, so an
+  // account with tours switched off is never offered one (rc.45, once tours left beta).
+  const or: Prisma.TripRouteWhereInput[] = [
+    ...(kinds.roadtrip ? [{ kind: "roadtrip" }] : []),
+    ...(kinds.tour ? [{ kind: "tour", tripId: null }] : []),
+  ];
+  if (or.length === 0) return { entries: [], truncated: false };
   const rows = await prisma.tripRoute.findMany({
-    where: { userId, OR: [{ kind: "roadtrip" }, { kind: "tour", tripId: null }] },
+    where: { userId, OR: or },
     orderBy: { id: "asc" },
     take: ROW_CAP + 1,
     select: {
