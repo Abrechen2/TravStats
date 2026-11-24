@@ -5,7 +5,7 @@
     "running": "Building the file …",
     "failed": "The export failed.",
     "empty": "There is nothing to export.",
-    "description": "The editable Excel spreadsheet contains travel entries from supported areas, including bus journeys – a sheet per area, with an ID column for editing and reimporting. Trips, bookings, place lists and documents are included as read-only overviews (documents as a list only, without the files). Standalone notes, photos and settings are not included. For a full backup, use the instance backup under Administration → Backups; ask your administrator if you do not have access."
+    "description": "The editable Excel spreadsheet contains travel entries from supported areas, including bus journeys – a sheet per area, with an ID column for editing and reimporting. Trips, bookings, place lists and documents are included as read-only overviews (documents as a list only, without the files). Standalone notes, photos and settings are not included. For a full backup, use the instance backup under Settings → Server → Backups; ask your administrator if you do not have access."
   },
   "sheets": {
     "flights": "Flights",

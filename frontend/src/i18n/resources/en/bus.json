@@ -325,8 +325,8 @@
   },
   "routing": {
     "noProvider": "Without a routing service, rides stay a straight line.",
-    "setUp": "Set up a routing service (Administration → External services)",
-    "askAdmin": "An administrator sets up a routing service under Administration → External services.",
+    "setUp": "Set up a routing service (Settings → Server → Services)",
+    "askAdmin": "An administrator sets up a routing service under Settings → Server → Services.",
     "again": "Route along the road",
     "againBusy": "Routing …",
     "routed": "Routed along the road: {{km}} km.",

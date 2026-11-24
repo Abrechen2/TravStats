@@ -439,7 +439,7 @@
       "copied": "Link copied.",
       "copyFailed": "Copying failed – select the link and copy it by hand.",
       "endsAt": "Ends on {{date}}",
-      "disabled": "Public links are disabled. An administrator can enable them under Administration → Instance → Public links.",
+      "disabled": "Public links are disabled. An administrator can enable them under Settings → Server → Features (“Allow public links”).",
       "statusFailed": "Could not check whether public links are allowed.",
       "photosOmitted": {
         "lead": "Not in the link:",

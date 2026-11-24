@@ -960,7 +960,7 @@
     "revoke": "Widerrufen",
     "urlLabel": "Dein Kalender-Link",
     "keepSecret": "Wer den Link kennt, sieht deine Reisen – teile ihn nicht. Gerät er in falsche Hände, erzeuge einen neuen.",
-    "unreachable": "Google Kalender kann diese Adresse nicht erreichen – trage unter Admin → Instanz eine öffentliche Adresse ein.",
+    "unreachable": "Google Kalender kann diese Adresse nicht erreichen – trage unter Einstellungen → Server → Allgemein eine Öffentliche Adresse ein.",
     "notRecoverable": "Dieser Link stammt aus einer älteren Version und lässt sich nicht mehr anzeigen. Er funktioniert weiter; brauchst du ihn erneut, erzeuge einen neuen.",
     "copy": "Link kopieren",
     "copied": "Kopiert.",

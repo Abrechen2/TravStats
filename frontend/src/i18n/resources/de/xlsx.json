@@ -5,7 +5,7 @@
     "running": "Datei wird erstellt …",
     "failed": "Der Export ist fehlgeschlagen.",
     "empty": "Es gibt nichts zu exportieren.",
-    "description": "Die bearbeitbare Excel-Tabelle enthält Reiseeinträge der unterstützten Bereiche, einschließlich Busfahrten – ein Blatt je Bereich, mit ID-Spalte zum Ändern und Wiedereinlesen. Reisen, Buchungen, Ortslisten und Dokumente stehen als Übersicht zum Lesen darin (Dokumente nur als Liste, ohne die Dateien). Eigenständige Notizen, Fotos und Einstellungen sind nicht enthalten. Für eine vollständige Sicherung nutze das Instanz-Backup unter Administration → Backups; bei fehlenden Rechten frage deinen Administrator."
+    "description": "Die bearbeitbare Excel-Tabelle enthält Reiseeinträge der unterstützten Bereiche, einschließlich Busfahrten – ein Blatt je Bereich, mit ID-Spalte zum Ändern und Wiedereinlesen. Reisen, Buchungen, Ortslisten und Dokumente stehen als Übersicht zum Lesen darin (Dokumente nur als Liste, ohne die Dateien). Eigenständige Notizen, Fotos und Einstellungen sind nicht enthalten. Für eine vollständige Sicherung nutze das Instanz-Backup unter Einstellungen → Server → Sicherungen; bei fehlenden Rechten frage deinen Administrator."
   },
   "sheets": {
     "flights": "Flüge",

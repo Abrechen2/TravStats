@@ -960,7 +960,7 @@
     "revoke": "Revoke",
     "urlLabel": "Your calendar link",
     "keepSecret": "Anyone who has the link sees your trips – do not share it. If it gets into the wrong hands, create a new one.",
-    "unreachable": "Google Calendar cannot reach this address — set a public address under Admin → Instance.",
+    "unreachable": "Google Calendar cannot reach this address — set a Public address under Settings → Server → General.",
     "notRecoverable": "This link comes from an older version and can no longer be shown. It keeps working; if you need it again, create a new one.",
     "copy": "Copy link",
     "copied": "Copied.",

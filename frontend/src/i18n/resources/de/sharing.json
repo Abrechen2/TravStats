@@ -439,7 +439,7 @@
       "copied": "Link kopiert.",
       "copyFailed": "Kopieren ging nicht – markiere den Link und kopiere ihn von Hand.",
       "endsAt": "Endet am {{date}}",
-      "disabled": "Öffentliche Links sind ausgeschaltet. Ein Administrator kann sie unter Administration → Instanz → Öffentliche Links freischalten.",
+      "disabled": "Öffentliche Links sind ausgeschaltet. Ein Administrator kann sie unter Einstellungen → Server → Funktionen („Öffentliche Links erlauben“) freischalten.",
       "statusFailed": "Konnte nicht prüfen, ob öffentliche Links erlaubt sind.",
       "photosOmitted": {
         "lead": "Nicht im Link:",

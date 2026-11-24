@@ -325,8 +325,8 @@
   },
   "routing": {
     "noProvider": "Ohne Routing-Dienst bleibt es bei der Luftlinie.",
-    "setUp": "Routing-Dienst einrichten (Administration → Externe Dienste)",
-    "askAdmin": "Einen Routing-Dienst richtet ein Administrator unter Administration → Externe Dienste ein.",
+    "setUp": "Routing-Dienst einrichten (Einstellungen → Server → Dienste)",
+    "askAdmin": "Einen Routing-Dienst richtet ein Administrator unter Einstellungen → Server → Dienste ein.",
     "again": "Über die Straße berechnen",
     "againBusy": "Wird berechnet …",
     "routed": "Über die Straße berechnet: {{km}} km.",

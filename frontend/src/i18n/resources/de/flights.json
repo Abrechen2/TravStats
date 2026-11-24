@@ -106,7 +106,7 @@
       "textPlaceholder": "Email-Inhalt hier einfügen...",
       "regexWarning": {
         "title": "Automatischer Import noch eingeschränkt",
-        "body": "Ohne lokales LLM (Ollama) wird ein regel-basierter Import genutzt. Dieser unterstützt aktuell nur einige Airlines und kann noch keine E-Mails mit mehreren Flügen verarbeiten. Wir arbeiten aktiv an der Erweiterung.\n\nEmpfehlung: In Admin → Parser einen Ollama-Endpoint (z.B. gemma3:12b) hinterlegen oder Flüge manuell erfassen."
+        "body": "Ohne lokales LLM (Ollama) wird ein regel-basierter Import genutzt. Dieser unterstützt aktuell nur einige Airlines und kann noch keine E-Mails mit mehreren Flügen verarbeiten. Wir arbeiten aktiv an der Erweiterung.\n\nEmpfehlung: Unter Einstellungen → Server → Buchungen lesen einen Ollama-Endpoint (z.B. gemma3:12b) hinterlegen oder Flüge manuell erfassen."
       }
     },
     "simplified": {

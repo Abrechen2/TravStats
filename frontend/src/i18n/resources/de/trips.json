@@ -496,8 +496,8 @@
     "generating": "Schreibt … das kann ein paar Minuten dauern",
     "generated": "Zusammenfassung erstellt",
     "error": "Zusammenfassung fehlgeschlagen",
-    "unavailable": "KI-Dienst nicht erreichbar. Ollama richtet der Admin unter Admin → Parser ein.",
-    "disabled": "Die KI-Zusammenfassung ist abgeschaltet – der Admin hat das KI-Modell unter Admin → Parser deaktiviert.",
+    "unavailable": "KI-Dienst nicht erreichbar. Ollama richtet der Admin unter Einstellungen → Server → Buchungen lesen ein.",
+    "disabled": "Die KI-Zusammenfassung ist abgeschaltet – der Admin hat das KI-Modell unter Einstellungen → Server → Buchungen lesen deaktiviert.",
     "cloudNotConsented": "Der KI-Anbieter liegt außerhalb des Netzwerks, und der Administrator hat dem Senden von Reisedaten dorthin nicht zugestimmt."
   },
   "gallery": {
