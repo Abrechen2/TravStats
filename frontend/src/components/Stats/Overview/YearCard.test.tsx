@@ -79,4 +79,16 @@ describe("YearCard", () => {
     expect(screen.getByText(/stats:years.recordedLine/)).toBeTruthy();
     expect(screen.getByTestId("year-total-2024").textContent).not.toContain("610");
   });
+
+  // UAT rc.45 retest D22: a year still being derived showed no recorded line at all.
+  it("says the recorded km are still being prepared instead of showing nothing", () => {
+    renderCard({
+      year: 2025,
+      loggedKm: 300,
+      recordedKm: null,
+      recordedPending: true,
+      months: months({ 5: { loggedKm: 300, byDomain: { rail: 300 } } }),
+    });
+    expect(screen.getByText("stats:years.recordedPending")).toBeTruthy();
+  });
 });

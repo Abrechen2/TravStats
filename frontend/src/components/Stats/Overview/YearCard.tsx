@@ -87,6 +87,12 @@ export default function YearCard({ card }: { card: YearCardData }): JSX.Element 
           {t("stats:years.recordedLine", { distance: km(card.recordedKm) })}
         </p>
       )}
+      {/* A large import is derived over hours: say so rather than show nothing (D22). */}
+      {card.recordedPending && (
+        <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }} role="status">
+          {t("stats:years.recordedPending")}
+        </p>
+      )}
 
       {card.loggedKm !== null && (
         <>
@@ -207,6 +213,11 @@ export default function YearCard({ card }: { card: YearCardData }): JSX.Element 
               {month.recordedKm !== null && (
                 <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
                   {t("stats:years.recordedLine", { distance: km(month.recordedKm) })}
+                </p>
+              )}
+              {month.recordedPending && (
+                <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
+                  {t("stats:years.recordedPending")}
                 </p>
               )}
             </div>

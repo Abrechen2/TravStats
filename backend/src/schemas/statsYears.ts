@@ -11,6 +11,9 @@ const yearMonth = z.object({
     .record(z.string(), z.number())
     .openapi({ description: "Logged km by domain key; only domains with a distance." }),
   recordedKm: z.number().nullable(),
+  recordedPending: z
+    .boolean()
+    .openapi({ description: "TravTrack's projection still owes this month's recorded km." }),
 });
 
 export const yearStatsSchema = z.object({
@@ -24,6 +27,7 @@ export const yearStatsSchema = z.object({
       year: z.number().int(),
       loggedKm: z.number().nullable(),
       recordedKm: z.number().nullable(),
+      recordedPending: z.boolean(),
       months: z.array(yearMonth).length(12).openapi({ description: "January first." }),
     })
   ),

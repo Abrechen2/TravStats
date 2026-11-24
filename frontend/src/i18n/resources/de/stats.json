@@ -1839,6 +1839,7 @@
         "coverage": "Jeder gespeicherte Punkt zählt einmal.",
         "exclusions": "Gelöschte Zeiträume und verworfene Punkte."
       }
-    }
+    },
+    "recordedPending": "Aufgezeichnet (TravTrack): wird noch aufbereitet"
   }
 }

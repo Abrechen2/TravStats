@@ -7,12 +7,16 @@ export interface YearMonth {
   loggedKm: number | null;
   byDomain: Partial<Record<DomainKey, number>>;
   recordedKm: number | null;
+  /** TravTrack's projection still owes these figures (older servers: absent). */
+  recordedPending?: boolean;
 }
 
 export interface YearCardData {
   year: number;
   loggedKm: number | null;
   recordedKm: number | null;
+  /** TravTrack's projection still owes these figures (older servers: absent). */
+  recordedPending?: boolean;
   /** Twelve, January first. */
   months: YearMonth[];
 }

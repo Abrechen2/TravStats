@@ -1839,6 +1839,7 @@
         "coverage": "Each stored point counts once.",
         "exclusions": "Deleted periods and discarded points."
       }
-    }
+    },
+    "recordedPending": "Recorded (TravTrack): still being prepared"
   }
 }

@@ -47,12 +47,16 @@ export interface YearMonth {
   loggedKm: number | null;
   byDomain: Partial<Record<DomainKey, number>>;
   recordedKm: number | null;
+  /** TravTrack still owes this month's figures: shown as "being prepared", not as nothing. */
+  recordedPending: boolean;
 }
 
 export interface YearCard {
   year: number;
   loggedKm: number | null;
   recordedKm: number | null;
+  /** Some month of the year still waits on TravTrack's projection. */
+  recordedPending: boolean;
   /** Always twelve, January first. */
   months: YearMonth[];
 }
@@ -80,6 +84,8 @@ export function buildYearStats(input: {
   entries: readonly DistanceEntry[];
   recordedMonths: readonly RecordedMonth[] | null;
   recordedPoints: number | null;
+  /** "YYYY-MM" months the projection still owes. */
+  recordedPending?: readonly string[];
 }): YearStats {
   const cards = new Map<number, YearCard>();
   const card = (year: number): YearCard => {
@@ -89,11 +95,13 @@ export function buildYearStats(input: {
         year,
         loggedKm: null,
         recordedKm: null,
+        recordedPending: false,
         months: Array.from({ length: 12 }, (_, i) => ({
           month: i + 1,
           loggedKm: null,
           byDomain: {},
           recordedKm: null,
+          recordedPending: false,
         })),
       };
       cards.set(year, c);
@@ -118,6 +126,14 @@ export function buildYearStats(input: {
     const m = c.months[at.month - 1];
     m.recordedKm = (m.recordedKm ?? 0) + r.km;
     c.recordedKm = (c.recordedKm ?? 0) + r.km;
+  }
+
+  for (const key of input.recordedPending ?? []) {
+    const at = parts(key);
+    if (!at) continue;
+    const c = card(at.year);
+    c.recordedPending = true;
+    c.months[at.month - 1].recordedPending = true;
   }
 
   const years = [...cards.values()].sort((a, b) => b.year - a.year);

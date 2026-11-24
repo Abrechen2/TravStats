@@ -66,3 +66,21 @@ describe("year statistics aggregation", () => {
     );
   });
 });
+
+// UAT rc.45 retest D22: a year whose TravTrack months are still being derived showed no
+// recorded km at all, as if nothing had been recorded.
+describe("buildYearStats — months the projection still owes", () => {
+  it("marks the month and its year as pending, without inventing km", () => {
+    const stats = buildYearStats({
+      entries: [],
+      recordedMonths: [],
+      recordedPoints: 1000,
+      recordedPending: ["2025-03", "2025-04"],
+    });
+    const y2025 = stats.years.find((y) => y.year === 2025)!;
+    expect(y2025.recordedPending).toBe(true);
+    expect(y2025.recordedKm).toBeNull();
+    expect(y2025.months[2].recordedPending).toBe(true);
+    expect(y2025.months[0].recordedPending).toBe(false);
+  });
+});
