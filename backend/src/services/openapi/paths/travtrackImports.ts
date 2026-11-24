@@ -35,8 +35,8 @@ const report = z
       .string()
       .optional()
       .describe(
-        "Why the import failed: TRAVTRACK_IMPORT_NO_TIMES, TRAVTRACK_IMPORT_UNREADABLE, " +
-          "TRAVTRACK_IMPORT_TOO_MANY_POINTS or JOB_FAILED"
+        "Why the import failed or stopped: TRAVTRACK_IMPORT_NO_TIMES, TRAVTRACK_IMPORT_UNREADABLE, " +
+          "TRAVTRACK_IMPORT_TOO_MANY_POINTS, TRAVTRACK_IMPORT_INTERRUPTED (a restart) or JOB_FAILED"
       ),
   })
   .nullable();
@@ -45,8 +45,14 @@ const travTrackImport = z.object({
   id: z.string(),
   kind: z.enum(["gpx", "dawarich"]),
   fileName: z.string().describe("The name the file was given; a label only"),
-  status: z.enum(["running", "succeeded", "failed", "interrupted", "cancelled"]),
-  report,
+  status: z
+    .enum(["running", "succeeded", "partial", "failed", "interrupted", "cancelled"])
+    .describe(
+      "partial: stopped mid-way with points stored, resumable (`POST /travtrack/imports/{id}/resume`); " +
+        "failed: nothing could be stored"
+    ),
+  report: report.describe("Updated with every committed batch, so a running import shows progress"),
+  cursor: z.number().int().describe("Fixes of the file handled so far; a resume starts here"),
   pointCount: z.number().int().describe("Points of this import stored now"),
   // An instant in UTC, as the summary's firstAt/lastAt: the file's first and
   // last fix, shown on the profile clock by the client.
@@ -127,6 +133,51 @@ registry.registerPath({
       description: "RATE_LIMITED: at most 30 imports per account in 15 minutes, whatever the token",
       content: errorContent,
     },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/travtrack/imports/{id}/resume",
+  summary: "Resume a stopped file import with the same file",
+  description:
+    "multipart/form-data with one `file`. A `partial`, `failed` or `interrupted` file import goes " +
+    "on under its own origin: at its cursor when the file's SHA-256 is the one it started with, " +
+    "else from the start, the points it stored already answering as duplicates. Answers with a " +
+    "job, as the import itself.",
+  tags: ["TravTrack"],
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      content: {
+        "multipart/form-data": {
+          schema: z.object({
+            file: z.string().openapi({ format: "binary" }).describe("The same track file"),
+          }),
+        },
+      },
+      required: true,
+    },
+  },
+  responses: {
+    202: {
+      description: "Resumed",
+      content: {
+        "application/json": {
+          schema: z.object({ jobId: z.string(), importId: z.string() }),
+        },
+      },
+    },
+    400: { description: "VALIDATION_FAILED: no file", content: errorContent },
+    403: disabled,
+    404: { description: "TRAVTRACK_IMPORT_NOT_FOUND", content: errorContent },
+    409: {
+      description:
+        "TRAVTRACK_IMPORT_RUNNING (another import runs) or TRAVTRACK_IMPORT_NOT_RESUMABLE " +
+        "(a Dawarich copy, or an import that succeeded or was deleted)",
+      content: errorContent,
+    },
+    503: { description: "TRAVTRACK_IMPORT_BUSY", content: errorContent },
   },
 });
 

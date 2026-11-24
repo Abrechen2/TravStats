@@ -8,7 +8,14 @@ import { JobFailedError, JobLostError, jobErrorCode, waitForJob } from "./jobs";
  */
 
 export type TravTrackImportStatus =
-  "running" | "succeeded" | "failed" | "interrupted" | "cancelled";
+  "running" | "succeeded" | "partial" | "failed" | "interrupted" | "cancelled";
+
+/** A file import in one of these states goes on when the same file is given again. */
+export const RESUMABLE_IMPORT_STATUSES: readonly TravTrackImportStatus[] = [
+  "partial",
+  "failed",
+  "interrupted",
+];
 
 export interface TravTrackImportReport {
   read: number;
@@ -30,6 +37,8 @@ export interface TravTrackImport {
   report: TravTrackImportReport | null;
   /** Points of this import stored now. */
   pointCount: number;
+  /** Fixes of the file handled so far: a resume starts here. */
+  cursor: number;
   fromAt: string | null;
   toAt: string | null;
   createdAt: string;
@@ -38,32 +47,38 @@ export interface TravTrackImport {
 
 export interface TravTrackImportOutcome {
   importId: string;
-  status: "succeeded" | "cancelled";
+  /** `partial`: it stopped part-way with points stored; resume it with the same file. */
+  status: "succeeded" | "partial" | "cancelled";
   report: TravTrackImportReport;
+}
+
+async function uploadAndWait(
+  path: string,
+  file: File,
+  onProgress?: (percent: number) => void
+): Promise<TravTrackImportOutcome> {
+  const form = new FormData();
+  form.append("file", file);
+  // The shared client sends JSON by default; naming multipart lets axios add the boundary.
+  const { data } = await api.post<{ jobId: string; importId: string }>(path, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return waitForJob<TravTrackImportOutcome>(data.jobId, {
+    onPoll: (job) => {
+      if (job.progress && job.progress.total > 0) onProgress?.(job.progress.done);
+    },
+  });
 }
 
 export const travTrackImportsApi = {
   list: async (): Promise<TravTrackImport[]> =>
     (await api.get<{ imports: TravTrackImport[] }>("/travtrack/imports")).data.imports,
   /** Uploads the file and waits for the import's outcome. */
-  importGpx: async (
-    file: File,
-    onProgress?: (percent: number) => void
-  ): Promise<TravTrackImportOutcome> => {
-    const form = new FormData();
-    form.append("file", file);
-    // The shared client sends JSON by default; naming multipart lets axios add the boundary.
-    const { data } = await api.post<{ jobId: string; importId: string }>(
-      "/travtrack/imports",
-      form,
-      { headers: { "Content-Type": "multipart/form-data" } }
-    );
-    return waitForJob<TravTrackImportOutcome>(data.jobId, {
-      onPoll: (job) => {
-        if (job.progress && job.progress.total > 0) onProgress?.(job.progress.done);
-      },
-    });
-  },
+  importGpx: (file: File, onProgress?: (percent: number) => void) =>
+    uploadAndWait("/travtrack/imports", file, onProgress),
+  /** Gives a stopped import its file again and waits for the outcome. */
+  resume: (id: string, file: File, onProgress?: (percent: number) => void) =>
+    uploadAndWait(`/travtrack/imports/${encodeURIComponent(id)}/resume`, file, onProgress),
   remove: async (id: string): Promise<number> =>
     (await api.delete<{ deleted: number }>(`/travtrack/imports/${encodeURIComponent(id)}`)).data
       .deleted,
@@ -96,6 +111,8 @@ export function importErrorKey(err: unknown): string {
       return "track:imports.errors.tooLarge";
     case "TRAVTRACK_IMPORT_NOT_FOUND":
       return "track:imports.errors.notFound";
+    case "TRAVTRACK_IMPORT_NOT_RESUMABLE":
+      return "track:imports.errors.notResumable";
     case "TRAVTRACK_DISABLED":
       return "track:errors.disabled";
     default:

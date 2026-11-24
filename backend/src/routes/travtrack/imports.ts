@@ -74,14 +74,17 @@ const UPLOAD_IDLE_MS = 60_000;
 function refuseEarly(req: AuthRequest, res: Response, next: NextFunction): void {
   const userId = req.userId!;
   void (async () => {
+    // The account's own running import first: with one file import per instance
+    // it would otherwise read as the instance being busy (503) instead of 409.
+    const running = () =>
+      new AppError("An import is running already", 409, "TRAVTRACK_IMPORT_RUNNING");
+    if (uploading.has(userId)) throw running();
     if (readerQueueFull() || fileImportsFull() || uploading.size >= MAX_CONCURRENT_UPLOADS) {
+      if (await hasLiveImport(userId)) throw running();
       throw busy();
     }
     // One body at a time per account, and a handful on the instance: capacity is
     // reserved here, before the first byte of a file is read, and released with the response.
-    const running = () =>
-      new AppError("An import is running already", 409, "TRAVTRACK_IMPORT_RUNNING");
-    if (uploading.has(userId)) throw running();
     // Reserved synchronously, before the await below, so two requests cannot both pass.
     uploading.add(userId);
     res.once("close", () => uploading.delete(userId));
@@ -189,6 +192,34 @@ router.post(
   })
 );
 
+/**
+ * POST /travtrack/imports/:id/resume (after the /dawarich routes, which `:id` would shadow) — multipart `file`, the same file again → 202
+ * `{ jobId, importId }`. A `partial`, `failed` or `interrupted` file import goes on under
+ * its own origin: at its cursor when the file is the one it started with, else from the
+ * start, the points it stored already answering as duplicates.
+ */
+router.post(
+  "/travtrack/imports/:id/resume",
+  authenticate,
+  travTrackTier("on"),
+  requireWriteScope,
+  rejectDemo,
+  travTrackImportLimiter,
+  refuseEarly,
+  oneFile,
+  route(async (req, res) => {
+    const file = req.file;
+    if (!file) throw new AppError("No file was uploaded", 400, "VALIDATION_FAILED");
+    const started = await startGpxImport(
+      req.userId!,
+      { path: file.path, size: file.size, originalName: file.originalname },
+      { resumeOf: String(req.params.id) }
+    );
+    logger.info({ operation: "travtrack.import.resume", importId: started.importId });
+    res.status(202).json(started);
+  })
+);
+
 /** GET /travtrack/imports — the account's imports, newest first, each with its points' count. */
 router.get(
   "/travtrack/imports",
@@ -210,6 +241,7 @@ router.get(
         fileName: r.fileName,
         status: r.status,
         report: r.report ?? null,
+        cursor: r.cursor,
         pointCount: countOf.get(importOrigin(r.kind, r.id)) ?? 0,
         fromAt: r.fromAt?.toISOString() ?? null,
         toAt: r.toAt?.toISOString() ?? null,

@@ -34,6 +34,7 @@ import {
   removalDays,
   type DirtyDay,
 } from "../dirtyDays";
+import { noPace, type Pace } from "../imports/importPacing";
 import { takeTravTrackLock } from "../lock";
 import { cellKey, cellsOfPoints, type Cell } from "./cells";
 
@@ -43,6 +44,8 @@ const MAX_PAGES_PER_DAY = 40;
 
 export type ExploredProjectionDeps = {
   maxDays?: number;
+  /** Pause after each day so a backlog cannot starve the web (`adaptivePacer`); none unless given. */
+  pace?: Pace;
   /** The derivation read's cap; its default unless a test needs a small one. */
   maxPoints?: number;
   /** Test seam: runs inside the day's transaction, after the replace, before the ack. */
@@ -155,7 +158,8 @@ export async function projectExploredCells(
       const now = await travTrackDerivationAllowed(userId);
       if (now !== "ok") return stop(now);
       try {
-        if (await projectDay(userId, day, deps)) result.projected += 1;
+        const pace = deps.pace ?? noPace;
+        if (await pace(() => projectDay(userId, day, deps))) result.projected += 1;
         else result.rerun += 1;
       } catch (error) {
         if (!(error instanceof Cancelled)) throw error;

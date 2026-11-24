@@ -210,9 +210,10 @@
     "span": "{{from}} – {{to}}",
     "status": {
       "running": "läuft",
-      "interrupted": "abgebrochen (Server neu gestartet) – importiere die Datei erneut",
+      "interrupted": "abgebrochen (Server neu gestartet) – mit „Fortsetzen“ dieselbe Datei wählen",
       "cancelled": "gelöscht",
-      "paused": "angehalten – unter „Dawarich-Verlauf übernehmen“ fortsetzen"
+      "paused": "angehalten – unter „Dawarich-Verlauf übernehmen“ fortsetzen",
+      "partial": "unterbrochen – mit „Fortsetzen“ dieselbe Datei wählen, dann geht es an der Stelle weiter"
     },
     "delete": "Import löschen",
     "deleteConfirm_one": "Den Import „{{name}}“ und seine {{count}} Position löschen? Positionen aus anderen Quellen bleiben.",
@@ -229,8 +230,11 @@
       "notFound": "Diesen Import gibt es nicht mehr.",
       "rateLimited": "Zu viele Importe in kurzer Zeit. Versuche es in einer Viertelstunde noch einmal.",
       "lost": "Ob der Import fertig wurde, ist nicht bekannt – der Server hat neu gestartet. Sieh in der Liste nach.",
-      "tooManyPoints": "Die Datei enthält zu viele Positionen – ein Import nimmt höchstens 200.000 aus GPX und 2 Millionen aus den übrigen Formaten. Teile sie auf, etwa nach Monaten."
-    }
+      "tooManyPoints": "Die Datei enthält zu viele Positionen – ein Import nimmt höchstens 200.000 aus GPX und 2 Millionen aus den übrigen Formaten. Teile sie auf, etwa nach Monaten.",
+      "notResumable": "Dieser Import lässt sich nicht fortsetzen."
+    },
+    "resume": "Fortsetzen",
+    "partial": "Der Import wurde unterbrochen: {{summary}}. Mit „Fortsetzen“ und derselben Datei geht er weiter."
   },
   "dawarichCopy": {
     "title": "Dawarich-Verlauf übernehmen",

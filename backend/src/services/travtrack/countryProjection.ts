@@ -52,6 +52,7 @@ import {
   pendingDirtyDays,
   type DirtyDay,
 } from "./dirtyDays";
+import { noPace, type Pace } from "./imports/importPacing";
 import { takeTravTrackLock } from "./lock";
 
 /** Dirty days one run projects at most. */
@@ -74,6 +75,8 @@ export type CountryProjectionDeps = {
   maxPoints?: number;
   /** Test seam: runs inside the day's transaction, after the replace, before the ack. */
   beforeAck?: (day: string) => Promise<void>;
+  /** Pause after each day so a backlog cannot starve the web (`adaptivePacer`); none unless given. */
+  pace?: Pace;
 };
 
 export type CountryProjectionResult = {
@@ -234,7 +237,8 @@ export async function projectTravTrackCountryDays(
         const now = await travTrackDerivationAllowed(userId);
         if (now !== "ok") return stop(now);
         try {
-          if (await projectDay(userId, day, resolved, deps)) result.projected += 1;
+          const pace = deps.pace ?? noPace;
+          if (await pace(() => projectDay(userId, day, resolved, deps))) result.projected += 1;
           else result.rerun += 1;
         } catch (error) {
           if (!(error instanceof Cancelled)) throw error;
