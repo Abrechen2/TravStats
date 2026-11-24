@@ -1,6 +1,8 @@
 import { prisma } from "../../db";
 import { parseTripEvidence } from "../locationEvidence/trips/evidence";
+import { resolveHome } from "./context";
 import { invalidateTripSuggestions } from "./engine";
+import { homeSignature } from "./rejectionMemory";
 import { dayColumn } from "./time";
 
 /**
@@ -24,6 +26,9 @@ export async function recordTravTrackTripDecision(
   const evidence = row ? parseTripEvidence(row.evidence) : null;
   if (!row || !evidence) return;
   const fingerprint = `travtrack:${row.evidenceKey}`;
+  // The residence the period was judged against, as the engine stores it: a
+  // rejection made before a move does not silence the same days after it.
+  const { homeAt } = await resolveHome(userId);
   const data = {
     kind: evidence.tripId ? "extend" : "new_trip",
     status,
@@ -32,8 +37,9 @@ export async function recordTravTrackTripDecision(
     memberContentKeys: [],
     startDay: dayColumn(evidence.fromDay),
     endDay: dayColumn(evidence.toDay),
-    homeSignature: null,
+    homeSignature: homeSignature(homeAt(evidence.fromDay)),
     source: "travtrack",
+    expanded: evidence.expanded === true,
   };
   await prisma.tripSuggestionDecision.upsert({
     where: { userId_fingerprint: { userId, fingerprint } },

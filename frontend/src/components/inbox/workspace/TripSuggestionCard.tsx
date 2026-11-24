@@ -130,6 +130,7 @@ export default function TripSuggestionCard({
           : t(`${T}.question`, { first, last })}
       </h3>
       <p className="t-caption">{t(`${T}.source`)}</p>
+      {trip.expanded && <p className="t-caption">{t(`${T}.expanded`)}</p>}
       <p className="text-sm">
         {trip.km === null
           ? t(`${T}.evidenceDays`, { count: trip.days })

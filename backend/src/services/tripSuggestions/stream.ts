@@ -1,10 +1,10 @@
 import { prisma } from "../../db";
 import { parseTripEvidence } from "../locationEvidence/trips/evidence";
 import { readSuggestionSwitches } from "../settings/suggestionSwitches";
-import { loadTrips, readUserScope } from "./context";
+import { loadTrips, readUserScope, resolveHome } from "./context";
 import { computeTripSuggestions, loadAnswered, type EngineResult } from "./engine";
 import { COVERED_SHARE, coveredShare, spanDecisions, tripSpans } from "./proposals";
-import { clampQuietDays, judgeSpan, overlapDays } from "./rejectionMemory";
+import { clampQuietDays, homeSignature, judgeSpan, overlapDays } from "./rejectionMemory";
 import { todayIn } from "./time";
 import type { TripSuggestion } from "./types";
 
@@ -42,6 +42,8 @@ interface TravTrackRow {
   id: string;
   fromDay: string;
   toDay: string;
+  /** The sweep re-asked a rejected period that grew past double ("erweitert"). */
+  expanded?: boolean;
 }
 
 async function pendingTravTrackTrips(userId: string): Promise<TravTrackRow[]> {
@@ -51,7 +53,7 @@ async function pendingTravTrackTrips(userId: string): Promise<TravTrackRow[]> {
   });
   return rows.flatMap((r) => {
     const e = parseTripEvidence(r.evidence);
-    return e ? [{ id: r.id, fromDay: e.fromDay, toDay: e.toDay }] : [];
+    return e ? [{ id: r.id, fromDay: e.fromDay, toDay: e.toDay, expanded: e.expanded }] : [];
   });
 }
 
@@ -60,14 +62,14 @@ export function mergeStream(input: {
   engine: readonly TripSuggestion[];
   travTrack: readonly TravTrackRow[];
   tripSpans: Iterable<{ startDay: string; endDay: string }>;
-  isRejected: (span: { startDay: string; endDay: string }) => boolean;
+  isRejected: (span: { startDay: string; endDay: string }, expanded: boolean) => boolean;
   cap?: number;
 }): { engine: TripSuggestion[]; travTrackIds: Set<string>; total: number } {
   const spans = [...input.tripSpans];
   const tripCards = input.engine.filter((p) => p.kind !== "place_visit");
   const travTrack = input.travTrack.filter((row) => {
     const span = { startDay: row.fromDay, endDay: row.toDay };
-    if (input.isRejected(span)) return false;
+    if (input.isRejected(span, row.expanded === true)) return false;
     if (coveredShare(span, spans) > COVERED_SHARE) return false;
     return !tripCards.some((p) => overlapDays(p, span) > 0);
   });
@@ -86,12 +88,13 @@ export function mergeStream(input: {
 export async function openTripCards(userId: string): Promise<TripCardStream | null> {
   const switches = await readSuggestionSwitches(userId);
   if (!switches.tripSuggestionsEnabled) return null;
-  const [result, rows, answered, trips, scope] = await Promise.all([
+  const [result, rows, answered, trips, scope, home] = await Promise.all([
     computeTripSuggestions(userId),
     pendingTravTrackTrips(userId),
     loadAnswered(userId),
     loadTrips(userId),
     readUserScope(userId),
+    resolveHome(userId),
   ]);
   const today = todayIn(scope.profileZone);
   const quietDays = clampQuietDays(switches.tripSuggestionQuietDays);
@@ -102,15 +105,22 @@ export async function openTripCards(userId: string): Promise<TripCardStream | nu
     // Own dates widened by linked entries; a dateless trip whose entries reach
     // across years is no window and covers nothing.
     tripSpans: [...tripSpans(trips, result.entries).values()].filter((s) => s.window),
-    // A TravTrack question is never "expanded": the sweep keeps one question
-    // per period, so only a clean pass is shown.
-    isRejected: (span) =>
-      judgeSpan(
-        { family: "trip", targetId: null, ...span, homeSignature: null },
+    // The sweep marks a question it re-asked as expanded; only such a question
+    // may pass an "expanded" verdict, every other needs a clean one.
+    isRejected: (span, expanded) => {
+      const verdict = judgeSpan(
+        {
+          family: "trip",
+          targetId: null,
+          ...span,
+          homeSignature: homeSignature(home.homeAt(span.startDay)),
+        },
         decisions,
         today,
         quietDays
-      ) !== "open",
+      );
+      return verdict === "suppressed" || (verdict === "expanded" && !expanded);
+    },
   });
   return { ...merged, home: result.home, truncated: result.truncated };
 }

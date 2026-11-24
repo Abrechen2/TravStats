@@ -406,6 +406,7 @@
         }
       },
       "tripAway": {
+        "expanded": "Extended: more than twice as long since you declined it",
         "cardTitle": "Trip from your location history",
         "subject_one": "{{count}} day away",
         "subject_other": "{{count}} days away",

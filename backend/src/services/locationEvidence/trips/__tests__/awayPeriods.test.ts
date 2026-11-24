@@ -7,6 +7,7 @@ import {
   classifyDays,
   confirmedHomes,
   dayRange,
+  homeBySilence,
   type AwayPoint,
   type HomeAt,
 } from "../awayPeriods";
@@ -184,6 +185,48 @@ describe("a move between zones", () => {
   });
 });
 
+describe("homeBySilence — a quiet day at home (inferred stationary home)", () => {
+  const days = classifyDays([], dayRange("2026-10-10", "2026-10-12"), homeAt, {
+    fallbackZone: ZONE,
+  });
+  const place = { id: "home", name: "Zuhause", kind: "home" as const, ...HOME, radiusM: 150 };
+  // Berlin local days in October are UTC+2: 10-11 runs 10-10T22:00Z..10-11T22:00Z.
+  const silence = (from: string, until: string, at = place) => ({
+    fromMs: Date.parse(from),
+    untilMs: Date.parse(until),
+    place: at,
+  });
+
+  it("a silent day wholly inside a silence at home is home, never away", () => {
+    const out = homeBySilence(
+      days,
+      [silence("2026-10-10T20:00:00Z", "2026-10-12T05:00:00Z")],
+      homeAt
+    );
+    expect(out.map((d) => d.state)).toEqual(["unknown", "home", "unknown"]);
+    expect(out[1]).toMatchObject({ pointCount: 0, firstAway: false, lastAway: false });
+  });
+
+  it("a silence at a place far from the residence infers nothing", () => {
+    const far = { ...place, id: "x", kind: "place" as const, ...ABROAD };
+    const out = homeBySilence(
+      days,
+      [silence("2026-10-10T20:00:00Z", "2026-10-12T05:00:00Z", far)],
+      homeAt
+    );
+    expect(out.map((d) => d.state)).toEqual(["unknown", "unknown", "unknown"]);
+  });
+
+  it("a day only partly inside the silence stays unknown", () => {
+    const out = homeBySilence(
+      days,
+      [silence("2026-10-11T08:00:00Z", "2026-10-12T05:00:00Z")],
+      homeAt
+    );
+    expect(out[1].state).toBe("unknown");
+  });
+});
+
 describe("awayPeriods", () => {
   const switches = travTrackSwitches();
   const PREFIX = "trip-away-";
@@ -217,6 +260,16 @@ describe("awayPeriods", () => {
     expect(read.runs).toHaveLength(1);
     expect(read.runs[0]).toMatchObject({ fromDay: "2026-10-11", toDay: "2026-10-12" });
     expect(read.runs[0].countries).toEqual(["AT", "DE"]);
+  });
+
+  it("a silent day between two fixes at home reads as home (inferred)", async () => {
+    await storeDay(userId, "2026-10-10", HOME);
+    await storeDay(userId, "2026-10-12", HOME);
+    const read = await awayPeriods(userId, { fromDay: "2026-10-10", untilDay: "2026-10-12" });
+    expect(read.status).toBe("ok");
+    if (read.status !== "ok") return;
+    expect(read.days.map((d) => d.state)).toEqual(["home", "home", "home"]);
+    expect(read.days[1].pointCount).toBe(0);
   });
 
   it("no confirmed residence → nothing inferred", async () => {

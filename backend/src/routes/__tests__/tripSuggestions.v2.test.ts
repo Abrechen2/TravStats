@@ -125,6 +125,88 @@ describe("trip suggestions v2 — TravTrack questions in the one stream", () => 
     expect(await count()).toBe(0);
   });
 
+  it("stores the residence a TravTrack rejection was judged against", async () => {
+    const id = await question();
+    await request(app)
+      .post(`/api/v1/location-suggestions/${id}/reject`)
+      .set("Cookie", cookie)
+      .send({})
+      .expect(200);
+    const decision = await prisma.tripSuggestionDecision.findFirstOrThrow({ where: { userId } });
+    expect(decision.homeSignature).toBe("50.11,8.68");
+  });
+
+  describe("the sweep re-asks once over a rejected period grown past double", () => {
+    const rejectAndAge = async () => {
+      const id = await question(); // 10-10..10-11, two days
+      await request(app)
+        .post(`/api/v1/location-suggestions/${id}/reject`)
+        .set("Cookie", cookie)
+        .send({})
+        .expect(200);
+      // Answered well before the sweep's day: the quiet period is over.
+      await prisma.$executeRaw`UPDATE trip_suggestion_decisions SET updated_at = '2026-10-01' WHERE user_id = ${userId}`;
+      return id;
+    };
+
+    it("reopens the rejected row, flagged expanded, when the run keeps its first day", async () => {
+      const id = await rejectAndAge();
+      for (const day of ["2026-10-12", "2026-10-13", "2026-10-14"])
+        await storeDay(userId, day, AWAY);
+      await suggestTrips(userId, { nowMs: NOW });
+      const row = await prisma.locationSuggestion.findUniqueOrThrow({ where: { id } });
+      expect(row.status).toBe("pending");
+      expect(row.evidence).toMatchObject({
+        fromDay: "2026-10-10",
+        toDay: "2026-10-14",
+        expanded: true,
+      });
+      const res = await request(app)
+        .get("/api/v1/location-suggestions?status=pending")
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(res.body.data.find((r: { id: string }) => r.id === id)?.trip.expanded).toBe(true);
+      expect(await count()).toBe(1);
+
+      // Rejected again: the decision now covers the larger span and says so.
+      await request(app)
+        .post(`/api/v1/location-suggestions/${id}/reject`)
+        .set("Cookie", cookie)
+        .send({})
+        .expect(200);
+      const decision = await prisma.tripSuggestionDecision.findFirstOrThrow({ where: { userId } });
+      expect(decision.expanded).toBe(true);
+      expect(decision.endDay?.toISOString().slice(0, 10)).toBe("2026-10-14");
+    });
+
+    it("asks a new expanded question when the grown run starts earlier", async () => {
+      await rejectAndAge();
+      for (const day of ["2026-10-07", "2026-10-08", "2026-10-09"])
+        await storeDay(userId, day, AWAY);
+      await suggestTrips(userId, { nowMs: NOW });
+      const ids = await pendingTripIds();
+      expect(ids).toHaveLength(1);
+      const row = await prisma.locationSuggestion.findUniqueOrThrow({ where: { id: ids[0] } });
+      expect(row.evidence).toMatchObject({ fromDay: "2026-10-07", expanded: true });
+    });
+
+    it("stays quiet inside the quiet period, even grown past double", async () => {
+      const id = await question();
+      await request(app)
+        .post(`/api/v1/location-suggestions/${id}/reject`)
+        .set("Cookie", cookie)
+        .send({})
+        .expect(200);
+      await prisma.$executeRaw`UPDATE trip_suggestion_decisions SET updated_at = '2026-10-20' WHERE user_id = ${userId}`;
+      for (const day of ["2026-10-12", "2026-10-13", "2026-10-14"])
+        await storeDay(userId, day, AWAY);
+      await suggestTrips(userId, { nowMs: NOW });
+      expect((await prisma.locationSuggestion.findUniqueOrThrow({ where: { id } })).status).toBe(
+        "rejected"
+      );
+    });
+  });
+
   it("hides a question whose days an existing trip came to cover", async () => {
     await question();
     await makeDatedTrip(userId, "2026-10-10", "2026-10-11");

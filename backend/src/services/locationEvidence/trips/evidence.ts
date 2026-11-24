@@ -28,6 +28,11 @@ const tripEvidence = z.object({
   /** Beyond the per-run cap: shown inside "Weitere N Zeiträume unterwegs", not as a card. */
   aggregated: z.boolean(),
   readCoverage: z.enum(["complete", "truncated", "unreachable"]),
+  /**
+   * Re-asked once over a rejected period that grew past double its days
+   * (trip suggestions v2, "erweitert"). Absent on every other question.
+   */
+  expanded: z.boolean().optional(),
 });
 
 export type TripEvidence = z.infer<typeof tripEvidence>;
@@ -53,6 +58,8 @@ export type PublicTrip = {
   tripId: string | null;
   tripName: string | null;
   aggregated: boolean;
+  /** Re-asked once: the rejected period grew past double ("erweitert"). */
+  expanded?: true;
 };
 
 const spanDays = (from: string, to: string) =>
@@ -72,6 +79,7 @@ export function publicTrip(value: unknown, names: ReadonlyMap<string, string>): 
       tripId: full.tripId,
       tripName: full.tripId ? (names.get(full.tripId) ?? null) : null,
       aggregated: full.aggregated,
+      ...(full.expanded ? { expanded: true as const } : {}),
     };
   }
   const summary = tripSummary.safeParse(value);

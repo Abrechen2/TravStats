@@ -23,8 +23,12 @@
  * (`trip.extend`); any other asks for a new one (`trip.away`).
  *
  * One question per run, keyed by its first day: a pending question grows while
- * the run goes on; an answered one (rejected, accepted, invalidated) is never
- * asked again, nor is a run that overlaps it.
+ * the run goes on; an answered one (accepted, invalidated) is never asked
+ * again, nor is a run that overlaps it. A REJECTED one is asked once more,
+ * flagged `expanded` ("erweitert"), when the shared rejection memory says the
+ * run has grown past double the rejected days and the quiet period is over
+ * (trip suggestions v2, `tripSuggestions/rejectionMemory.ts`) — the rejected
+ * row itself is reopened when the run keeps its first day.
  *
  * Published under the TravTrack lock with the generation the read captured
  * (E5's fence): a removal that landed while it read publishes nothing.
@@ -37,7 +41,11 @@ import { fromDbDate } from "../../../shared/time/localDate";
 import logger from "../../../utils/logger";
 import { getLocationProvider } from "../../locationProvider/provider";
 import { takeTravTrackLock } from "../../travtrack/lock";
-import { tripSuggestionsEnabled } from "../../settings/suggestionSwitches";
+import { readSuggestionSwitches, tripSuggestionsEnabled } from "../../settings/suggestionSwitches";
+import { resolveHome } from "../../tripSuggestions/context";
+import { loadAnswered } from "../../tripSuggestions/engine";
+import { spanDecisions } from "../../tripSuggestions/proposals";
+import { clampQuietDays, homeSignature, judgeSpan } from "../../tripSuggestions/rejectionMemory";
 import { travTrackDerivationAllowed, type DerivationAllowance } from "../allowed";
 import { explanation } from "../envelope";
 import { historyGeneration } from "../generation";
@@ -116,9 +124,11 @@ function evidenceOf(
   run: AwayRun,
   tripId: string | null,
   aggregated: boolean,
-  coverage: TripEvidence["readCoverage"]
+  coverage: TripEvidence["readCoverage"],
+  expanded = false
 ): TripEvidence {
   return {
+    ...(expanded ? { expanded: true } : {}),
     source: "travtrack",
     fromDay: run.fromDay,
     toDay: run.toDay,
@@ -166,28 +176,75 @@ async function existingQuestions(userId: string) {
 
 type Plan = {
   create: Prisma.LocationSuggestionCreateManyInput[];
+  /** Rejected rows asked once more over their grown run (`expanded`). */
+  reopen: Array<{ id: string; data: ReturnType<typeof columnsOf> }>;
   grow: Array<{ id: string; before: Prisma.InputJsonValue; data: ReturnType<typeof columnsOf> }>;
   aggregated: number;
 };
 
+/** The shared rejection memory, as the sweep asks it: may this run be re-asked as expanded? */
+async function expandedJudge(userId: string, today: string) {
+  const [answered, switches, home] = await Promise.all([
+    loadAnswered(userId),
+    readSuggestionSwitches(userId),
+    resolveHome(userId),
+  ]);
+  const decisions = [...spanDecisions(answered, []).values()];
+  const quietDays = clampQuietDays(switches.tripSuggestionQuietDays);
+  return (run: AwayRun) =>
+    judgeSpan(
+      {
+        family: "trip",
+        targetId: null,
+        startDay: run.fromDay,
+        endDay: run.toDay,
+        homeSignature: homeSignature(home.homeAt(run.fromDay)),
+      },
+      decisions,
+      today,
+      quietDays
+    ) === "expanded";
+}
+
+const OPEN = new Set(["pending", "accepting"]);
+
 async function plan(
   userId: string,
   runs: AwayRun[],
-  coverage: TripEvidence["readCoverage"]
+  coverage: TripEvidence["readCoverage"],
+  today: string
 ): Promise<Plan> {
-  const [trips, existing, provider] = await Promise.all([
+  const [trips, existing, provider, mayExpand] = await Promise.all([
     tripSpans(userId),
     existingQuestions(userId),
     getLocationProvider(userId),
+    expandedJudge(userId, today),
   ]);
   const fresh: Array<{ run: AwayRun; tripId: string | null }> = [];
   const grow: Plan["grow"] = [];
+  const reopen: Plan["reopen"] = [];
+  const expandedFresh: Array<{ run: AwayRun; tripId: string | null }> = [];
   for (const run of runs) {
     const match = logbookMatch(run, trips);
     if (match === null) continue;
     const tripId = match || null;
     const key = tripEvidenceKey(run.fromDay);
     const same = existing.find((q) => q.evidenceKey === key);
+    const answered = existing.filter((q) => !OPEN.has(q.status) && overlaps(q, run));
+    if (answered.length > 0 && !(same && OPEN.has(same.status))) {
+      // Settled — unless every answer over it was a rejection, no other
+      // question is open over it, and the memory lets it back as expanded.
+      const openElsewhere = existing.some((q) => OPEN.has(q.status) && overlaps(q, run));
+      const rejectedOnly = answered.every((q) => q.status === "rejected");
+      if (openElsewhere || !rejectedOnly || !mayExpand(run)) continue;
+      if (same) {
+        reopen.push({
+          id: same.id,
+          data: columnsOf(evidenceOf(run, tripId, false, coverage, true)),
+        });
+      } else expandedFresh.push({ run, tripId });
+      continue;
+    }
     if (same) {
       // A question asked about this run: it grows while pending, else it is settled.
       if (same.status !== "pending" || !same.full) continue;
@@ -204,6 +261,15 @@ async function plan(
     if (existing.some((q) => overlaps(q, run))) continue;
     fresh.push({ run, tripId });
   }
+  const expandedCreate = expandedFresh.map(({ run, tripId }) => ({
+    userId,
+    kind: "trip",
+    provider: "travtrack",
+    providerRev: provider.rev,
+    algorithm: TRIP_ALGORITHM,
+    evidenceKey: tripEvidenceKey(run.fromDay),
+    ...columnsOf(evidenceOf(run, tripId, false, coverage, true)),
+  }));
   // The newest runs become cards; the older ones wait in the aggregate entry.
   const newestFirst = [...fresh].sort((a, b) => b.run.fromDay.localeCompare(a.run.fromDay));
   const create = newestFirst.map(({ run, tripId }, i) => ({
@@ -215,7 +281,12 @@ async function plan(
     evidenceKey: tripEvidenceKey(run.fromDay),
     ...columnsOf(evidenceOf(run, tripId, i >= MAX_NEW_TRIP_QUESTIONS, coverage)),
   }));
-  return { create, grow, aggregated: Math.max(0, create.length - MAX_NEW_TRIP_QUESTIONS) };
+  return {
+    create: [...create, ...expandedCreate],
+    reopen,
+    grow,
+    aggregated: Math.max(0, create.length - MAX_NEW_TRIP_QUESTIONS),
+  };
 }
 
 export async function suggestTrips(
@@ -247,8 +318,8 @@ export async function suggestTrips(
   await opts.hooks?.afterRead?.();
 
   const runs = read.runs.filter((r) => !r.openStart);
-  const { create, grow, aggregated } = await plan(userId, runs, read.coverage);
-  if (create.length === 0 && grow.length === 0) return result("done");
+  const { create, reopen, grow, aggregated } = await plan(userId, runs, read.coverage, today);
+  if (create.length === 0 && grow.length === 0 && reopen.length === 0) return result("done");
 
   const published = await prisma.$transaction(async (tx) => {
     await takeTravTrackLock(tx, userId);
@@ -261,6 +332,15 @@ export async function suggestTrips(
       data: create,
       skipDuplicates: true,
     });
+    let reopened = 0;
+    for (const r of reopen) {
+      // Only while it is still the rejection the plan read.
+      const updated = await tx.locationSuggestion.updateMany({
+        where: { id: r.id, userId, status: "rejected" },
+        data: { ...r.data, status: "pending", resolvedAt: null, claimToken: null, claimedAt: null },
+      });
+      reopened += updated.count;
+    }
     let grown = 0;
     for (const g of grow) {
       // Only the row as read, and only while nobody answers it.
@@ -270,7 +350,7 @@ export async function suggestTrips(
       });
       grown += updated.count;
     }
-    return { created: count, grown };
+    return { created: count + reopened, grown };
   });
   if (published === "stale") {
     logger.info({ operation: "travtrack_trips_stale", userId });
