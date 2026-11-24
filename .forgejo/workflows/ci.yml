@@ -65,6 +65,15 @@ jobs:
       - name: Build
         run: cd packages/travstats-mcp && npm run build
 
+  # The reference suggestion plugin: no dependencies, so no install.
+  plugin-template:
+    name: travstats-plugin-template (tests)
+    runs-on: homelab-docker
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Tests
+        run: cd packages/travstats-plugin-template && npm test
+
   schema-drift:
     name: Prisma schema drift
     runs-on: homelab-docker
