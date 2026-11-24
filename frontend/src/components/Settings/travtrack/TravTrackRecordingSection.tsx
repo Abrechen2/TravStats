@@ -95,6 +95,26 @@ export default function TravTrackRecordingSection(): JSX.Element {
               )}
               {caps.enabled ? <TravTrackTripNote /> : null}
             </SettingItem>
+            {summary && summary.derivation.pendingDays > 0 ? (
+              <SettingItem
+                title={t(`${NS}.derivation.name`)}
+                control={
+                  <StatusValue>
+                    {summary.derivation.estimateMinutes >= 120
+                      ? t(`${NS}.derivation.hours`, {
+                          pending: summary.derivation.pendingDays,
+                          total: summary.derivation.totalDays,
+                          hours: Math.ceil(summary.derivation.estimateMinutes / 60),
+                        })
+                      : t(`${NS}.derivation.minutes`, {
+                          pending: summary.derivation.pendingDays,
+                          total: summary.derivation.totalDays,
+                          minutes: summary.derivation.estimateMinutes,
+                        })}
+                  </StatusValue>
+                }
+              />
+            ) : null}
             <SettingItem
               title={t(`${NS}.lastSeenName`)}
               control={

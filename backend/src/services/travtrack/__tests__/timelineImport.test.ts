@@ -295,6 +295,36 @@ describe("TravTrack — Google Timeline and other track files", () => {
       expect(rows[0].accuracyM).toBeNull();
     });
 
+    it("an activity endpoint stamped inside a path's span is dropped (Google's mis-timed Bavaria-among-Swiss-points case); one outside is kept as a coarse fix", async () => {
+      const day = [
+        {
+          startTime: "2025-02-21T07:56:51.034+01:00",
+          endTime: "2025-02-21T13:05:10.743+01:00",
+          activity: {
+            start: "geo:47.765194,11.727784",
+            end: "geo:47.707982,11.755660",
+            topCandidate: { type: "in passenger vehicle" },
+          },
+        },
+        {
+          startTime: "2025-02-21T06:00:00.000Z",
+          endTime: "2025-02-21T10:00:00.000Z",
+          timelinePath: [
+            { point: "geo:47.0197,7.4987", time: "2025-02-21T06:54:00.000Z" },
+            { point: "geo:47.0206,7.4998", time: "2025-02-21T07:57:00.000Z" },
+          ],
+        },
+      ];
+      const { outcome } = await importFile(json(day));
+      const rows = await stored();
+      // the start (06:56:51Z) lies inside the path's span, the end (12:05Z) does not
+      expect(rows.map((r) => r.lat.toFixed(2))).toEqual(["47.02", "47.02", "47.71"]);
+      expect(outcome.report).toMatchObject({ stored: 3 });
+      const kept = rows.find((r) => r.lat.toFixed(2) === "47.71")!;
+      expect(kept.accuracyM).toBe(2000);
+      expect(rows[0].accuracyM).toBeNull();
+    });
+
     it("reads the older Android array form with geo: strings and minute offsets", async () => {
       const legacy = [
         {

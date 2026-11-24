@@ -65,6 +65,7 @@ const EMPTY = {
   devices: [],
   deletedRanges: 0,
   zones: 0,
+  derivation: { pendingDays: 0, totalDays: 0, estimateMinutes: 0 },
 };
 
 const REPORT = {

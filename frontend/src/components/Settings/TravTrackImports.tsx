@@ -140,6 +140,7 @@ export default function TravTrackImports({
         {t(`${NS}.title`)}
       </h3>
       <p className="t-caption">{t(`${NS}.intro`)}</p>
+      <p className="t-caption">{t(`${NS}.googleHint`)}</p>
       {canImport && (
         <div>
           <label htmlFor="travtrack-gpx-file" className="sr-only">

@@ -2061,6 +2061,12 @@
   "tt": {
     "recording": {
       "title": "Aufzeichnung",
+      "derivation": {
+        "name": "Verlauf wird aufbereitet",
+        "done": "Aufbereitet",
+        "minutes": "{{pending}} von {{total}} Tagen offen, noch etwa {{minutes}} Min.",
+        "hours": "{{pending}} von {{total}} Tagen offen, noch etwa {{hours}} Std."
+      },
       "stored": {
         "name": "Gespeichert",
         "empty": "Noch keine Punkte",
