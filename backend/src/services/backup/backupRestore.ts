@@ -503,7 +503,9 @@ export async function restoreBackup(
       // has to add the schema entry AND show the resolved target before writing.
       const dbUrl = options.targetDatabaseUrl || DATABASE_URL;
       const dbInfo = parseDatabaseUrl(dbUrl);
-      const swap = archiveKeyHex ? await prepareKeySwap(archiveKeyHex) : null;
+      const swap = archiveKeyHex
+        ? await prepareKeySwap(archiveKeyHex, options.requestedBy ?? null)
+        : null;
       let replaced = false;
 
       try {

@@ -5,6 +5,9 @@ import { RECOVERY_KEY_STATUS_EVENT, recoveryKeyApi } from "../../lib/api/recover
 import { logger } from "../../lib/logger";
 import RecoveryKeyDialog from "./RecoveryKeyDialog";
 
+/** How soon a failed status read is asked again. */
+export const STATUS_RETRY_MS = 15_000;
+
 /**
  * Owner requirement, 2026-11-24: on an instance with a WebDAV/cloud backup
  * target whose recovery key is unconfirmed — or confirmed for a key since
@@ -32,16 +35,23 @@ export default function RecoveryKeyGate({
       return;
     }
     let alive = true;
+    let retry: ReturnType<typeof setTimeout> | undefined;
     const load = (): void => {
+      clearTimeout(retry);
       recoveryKeyApi.status().then(
         (status) => alive && setRequired(status.required),
-        (error: unknown) => logger.warn("Failed to read the recovery-key status", error)
+        (error: unknown) => {
+          logger.warn("Failed to read the recovery-key status", error);
+          // Not an answer: ask again rather than leave a first failure as "not required".
+          if (alive) retry = setTimeout(load, STATUS_RETRY_MS);
+        }
       );
     };
     load();
     window.addEventListener(RECOVERY_KEY_STATUS_EVENT, load);
     return () => {
       alive = false;
+      clearTimeout(retry);
       window.removeEventListener(RECOVERY_KEY_STATUS_EVENT, load);
     };
   }, [active, pathname]);

@@ -36,6 +36,8 @@ export interface RestoreOptions {
    * dump replays (restoreRecoveryKey.ts). Never logged.
    */
   recoveryKey?: string;
+  /** The admin who asked for the restore — named in the audit line of a key replacement. */
+  requestedBy?: string;
 }
 
 /**

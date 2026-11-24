@@ -137,7 +137,7 @@ export default function RecoveryKeyFlow({
             display: "block",
             padding: "var(--ts-space-sm)",
             borderRadius: 8,
-            background: "var(--bg-secondary)",
+            background: "var(--ts-surface2)",
             color: "var(--text-primary)",
             wordSpacing: "0.4em",
             lineHeight: 1.8,

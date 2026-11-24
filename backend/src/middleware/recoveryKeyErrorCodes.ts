@@ -18,4 +18,6 @@ export type RecoveryKeyApiErrorCode =
   /** The key is set by the ENCRYPTION_KEY environment variable; a file write would not survive a restart. */
   | "RESTORE_RECOVERY_KEY_ENV_PINNED"
   /** The pasted key could not be written to the secrets directory. */
-  | "RESTORE_RECOVERY_KEY_WRITE_FAILED";
+  | "RESTORE_RECOVERY_KEY_WRITE_FAILED"
+  /** The replay failed and the previous key could not be written back; the message names the copy. */
+  | "RESTORE_RECOVERY_KEY_REVERT_FAILED";

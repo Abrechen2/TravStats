@@ -22,9 +22,12 @@
  */
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
-import logger from "../../utils/logger";
+import logger, { securityLogger } from "../../utils/logger";
+import { writeFileSync } from "fs";
+
 import {
   activeEncryptionKeyHex,
+  encryptionKeyFilePath,
   encryptionKeyPinnedByEnv,
   installEncryptionKey,
 } from "../../utils/encryptionKey";
@@ -37,7 +40,9 @@ type EncryptedIdentityColumn = (typeof ENCRYPTED_IDENTITY_COLUMNS)[number];
 
 export interface KeySwap {
   readonly archiveKeyHex: string;
+  readonly requestedBy: string | null;
   readonly previousKeyHex: string;
+  readonly previousKeyCopy: string;
   readonly identityPlain: Readonly<Record<EncryptedIdentityColumn, string | null>>;
 }
 
@@ -76,14 +81,19 @@ export function resolveArchiveRecoveryKey(input: string, archiveFingerprint: str
 }
 
 /** Read what has to survive the swap while the old key still decrypts it. */
-export async function prepareKeySwap(archiveKeyHex: string): Promise<KeySwap> {
+export async function prepareKeySwap(
+  archiveKeyHex: string,
+  requestedBy: string | null
+): Promise<KeySwap> {
   const row = await prisma.adminSettings.findFirst({
     orderBy: { id: "asc" },
     select: { federationPrivateKey: true, pushInstanceSecret: true },
   });
   return {
     archiveKeyHex,
+    requestedBy,
     previousKeyHex: activeEncryptionKeyHex(),
+    previousKeyCopy: previousKeyCopyPath(),
     identityPlain: {
       federationPrivateKey: decryptApiKey(row?.federationPrivateKey),
       pushInstanceSecret: decryptApiKey(row?.pushInstanceSecret),
@@ -91,9 +101,19 @@ export async function prepareKeySwap(archiveKeyHex: string): Promise<KeySwap> {
   };
 }
 
+/**
+ * Where the key in force before the swap is kept: next to the key file, 0600.
+ * It is what decrypts the safety backup taken just before, and the way back by
+ * hand should the process die between the swap and the end of the replay.
+ */
+export function previousKeyCopyPath(at: Date = new Date()): string {
+  return `${encryptionKeyFilePath()}.before-restore-${at.getTime()}`;
+}
+
 /** Install the archive's key. A failed write refuses the restore before psql runs. */
 export function installArchiveKey(swap: KeySwap): void {
   try {
+    writeFileSync(swap.previousKeyCopy, swap.previousKeyHex, { mode: 0o600, flag: "wx" });
     installEncryptionKey(swap.archiveKeyHex);
   } catch (error) {
     logger.error({
@@ -107,13 +127,21 @@ export function installArchiveKey(swap: KeySwap): void {
       "RESTORE_RECOVERY_KEY_WRITE_FAILED"
     );
   }
-  logger.warn({
-    operation: "restore_recovery_key_installed",
-    message: "The archive's recovery key replaced this instance's encryption key for the restore",
+  securityLogger.warn({
+    operation: "security_event",
+    event: "encryption_key_replaced_via_restore",
+    message: "Encryption key replaced via restore (the archive's recovery key)",
+    userId: swap.requestedBy,
+    fingerprint: encryptionKeyFingerprintFor(swap.archiveKeyHex),
   });
 }
 
-/** The dump replay failed and was rolled back: its rows are still under the old key. */
+/**
+ * The dump replay failed and was rolled back: its rows are still under the old
+ * key, so the old key goes back. If even that write fails, the restore's error
+ * becomes this one — the admin has to repair the key file, and must be told so,
+ * rather than read "restore failed" over credentials that no longer decrypt.
+ */
 export function revertKeySwap(swap: KeySwap): void {
   try {
     installEncryptionKey(swap.previousKeyHex);
@@ -127,8 +155,16 @@ export function revertKeySwap(swap: KeySwap): void {
       message:
         "The restore failed AND the previous encryption key could not be written back; " +
         "stored credentials will not decrypt until the secrets file is repaired",
+      previousKeyCopy: swap.previousKeyCopy,
       error: error instanceof Error ? error.message : "Unknown error",
     });
+    throw new AppError(
+      "The restore failed and was rolled back, but the previous encryption key could not be " +
+        `written back. Copy ${swap.previousKeyCopy} over the encryption.key file next to it and ` +
+        "restart the server.",
+      500,
+      "RESTORE_RECOVERY_KEY_REVERT_FAILED"
+    );
   }
 }
 

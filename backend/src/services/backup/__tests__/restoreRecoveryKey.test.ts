@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { Client } from "pg";
+import request from "supertest";
 
 /**
  * A restore onto a server with ANOTHER instance key, handed the recovery key of
@@ -41,6 +42,7 @@ const TARGET_DB = `${BASE_NAME}_rk_dst`;
 const KEY_A = "a1".repeat(32);
 const KEY_B = "b2".repeat(32);
 const KEY_C = "c3".repeat(32);
+const ADMIN_PASSWORD = "restore-admin-pw-1";
 
 function urlFor(database: string): string {
   const url = new URL(BASE_URL.toString());
@@ -91,6 +93,11 @@ type Modules = {
   service: typeof import("../../backupService");
   prisma: typeof import("../../../db").prisma;
   encryption: typeof import("../../../utils/encryption");
+  app: typeof import("../../../index").default;
+  jobs: typeof import("../../jobs/jobRegistry");
+  jwt: typeof import("../../../utils/jwt");
+  password: typeof import("../../../utils/password");
+  logger: typeof import("../../../utils/logger");
 };
 
 describeWithTools("a restore handed the archive's recovery key", () => {
@@ -103,6 +110,8 @@ describeWithTools("a restore handed the archive's recovery key", () => {
   let archivePath: string;
   let target: Modules;
   let backupId: string;
+  let adminId: string;
+  let cookie: string;
 
   /** A fresh module graph against `database`, whose key file holds `keyHex`. */
   async function boot(database: string, keyHex: string): Promise<Modules> {
@@ -114,6 +123,11 @@ describeWithTools("a restore handed the archive's recovery key", () => {
       service: await import("../../backupService"),
       prisma: (await import("../../../db")).prisma,
       encryption: await import("../../../utils/encryption"),
+      app: (await import("../../../index")).default,
+      jobs: await import("../../jobs/jobRegistry"),
+      jwt: await import("../../../utils/jwt"),
+      password: await import("../../../utils/password"),
+      logger: await import("../../../utils/logger"),
     };
   }
 
@@ -149,6 +163,17 @@ describeWithTools("a restore handed the archive's recovery key", () => {
     await target.prisma.adminSettings.create({
       data: { federationPrivateKey: target.encryption.encryptApiKey("server-b-federation-pem") },
     });
+    adminId = (
+      await target.prisma.user.create({
+        data: {
+          username: "rk-restore-admin",
+          passwordHash: await target.password.hashPassword(ADMIN_PASSWORD),
+          isAdmin: true,
+          isActive: true,
+        },
+      })
+    ).id;
+    cookie = `auth_token=${target.jwt.generateToken(adminId)}`;
     backupId = (
       await target.prisma.backup.create({
         data: { status: "completed", backupPath: archivePath, completedAt: new Date() },
@@ -182,11 +207,66 @@ describeWithTools("a restore handed the archive's recovery key", () => {
     expect(row.webdavUrl).toBeNull();
   });
 
-  it("archive from key A, server with key B, pasted key A: the credentials read afterwards", async () => {
+  const post = (body: object) =>
+    request(target.app)
+      .post(`/api/v1/backup/${backupId}/restore`)
+      .set("Cookie", cookie)
+      .send({ scope: "database", createBackupBefore: false, ...body });
+
+  async function settled(jobId: string) {
+    for (let i = 0; i < 600; i += 1) {
+      const job = target.jobs.getJob(jobId, adminId);
+      if (job && job.status !== "running") return job;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    throw new Error("restore job did not finish");
+  }
+
+  it("a pasted key without a fresh re-authentication is refused and changes nothing", async () => {
+    const res = await post({ recoveryKey: KEY_A });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("RECOVERY_KEY_REAUTH_REQUIRED");
+    const wrong = await post({ recoveryKey: KEY_A, password: "not-it" });
+    expect(wrong.status).toBe(403);
+    expect(wrong.body.code).toBe("REAUTH_PASSWORD_INCORRECT");
+    expect(fs.readFileSync(keyFile, "utf-8")).toBe(KEY_B);
+  });
+
+  it("re-authenticated but with a key that did not write the archive: refused, key unchanged", async () => {
+    const res = await post({ recoveryKey: KEY_C, password: ADMIN_PASSWORD });
+    expect(res.status).toBe(202);
+    const job = await settled(res.body.data.jobId);
+    expect(job.error?.code).toBe("RESTORE_RECOVERY_KEY_WRONG");
+    expect(fs.readFileSync(keyFile, "utf-8")).toBe(KEY_B);
+  });
+
+  it("archive from key A, server with key B, re-auth + pasted key A: replaced, logged, credentials read", async () => {
+    const audit: string[] = [];
+    const warn = jest
+      .spyOn(target.logger.securityLogger, "warn")
+      .mockImplementation(((obj: unknown) => void audit.push(JSON.stringify(obj))) as never);
     const grouped = KEY_A.toUpperCase().match(/.{4}/g)!.join(" ");
-    await restore(grouped);
+    // Three restores an hour per account; the refusals above spent them.
+    const limits = await import("../../../middleware/rateLimit");
+    await limits.backupRestoreLimiter.resetKey(`user:${adminId}`);
+    try {
+      const res = await post({ recoveryKey: grouped, password: ADMIN_PASSWORD });
+      expect(res.status).toBe(202);
+      const job = await settled(res.body.data.jobId);
+      expect(job.error).toBeNull();
+    } finally {
+      warn.mockRestore();
+    }
 
     expect(fs.readFileSync(keyFile, "utf-8")).toBe(KEY_A);
+    // The key in force before is kept beside it: it decrypts the safety backup.
+    const kept = fs.readdirSync(secretsDir).filter((f) => f.includes(".before-restore-"));
+    expect(kept.map((f) => fs.readFileSync(path.join(secretsDir, f), "utf-8"))).toEqual([KEY_B]);
+    const line = audit.find((l) => l.includes("encryption_key_replaced_via_restore"));
+    expect(line).toBeDefined();
+    expect(line).toContain(adminId);
+    expect(audit.join("\n").toLowerCase()).not.toContain(KEY_A);
+
     const row = await target.prisma.adminSettings.findFirstOrThrow({ orderBy: { id: "asc" } });
     expect(row.webdavUrl).toBe("https://dav.example.test/");
     expect(target.encryption.decryptApiKey(row.webdavPasswordEncrypted)).toBe("dav-secret");

@@ -25,7 +25,7 @@ vi.mock("../../../lib/api/passkeys", () => ({
 vi.mock("@simplewebauthn/browser", () => ({ startAuthentication: vi.fn() }));
 
 import { useAuthStore } from "../../../store/authStore";
-import RecoveryKeyGate from "../RecoveryKeyGate";
+import RecoveryKeyGate, { STATUS_RETRY_MS } from "../RecoveryKeyGate";
 
 /**
  * Owner requirement 2026-11-24: an instance with a backup target whose recovery
@@ -127,6 +127,23 @@ describe("RecoveryKeyGate", () => {
     await act(async () => goTo("/trips"));
     await settle();
     expect(screen.getByTestId("recovery-key-dialog")).toBeTruthy();
+  });
+
+  it("a first status read that fails is asked again, and then blocks", async () => {
+    vi.useFakeTimers();
+    try {
+      status.mockRejectedValueOnce(new Error("offline")).mockResolvedValue(required);
+      mount(true);
+      await act(async () => {});
+      expect(screen.queryByTestId("recovery-key-dialog")).toBeNull();
+      await act(async () => {
+        vi.advanceTimersByTime(STATUS_RETRY_MS);
+      });
+      await act(async () => {});
+      expect(screen.getByTestId("recovery-key-dialog")).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("a failed status read does not unblock", async () => {

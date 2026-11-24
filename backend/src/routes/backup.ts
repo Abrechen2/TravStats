@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from "express";
-import { authenticate, requireAdmin, AuthRequest } from "../middleware/auth";
+import { authenticate, requireAdmin, requireBrowserSession, AuthRequest } from "../middleware/auth";
 import { asBackupJobError } from "../services/backup/backupFailure";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
@@ -27,7 +27,9 @@ import {
   importBackupFromCloud,
 } from "../services/backup/cloudBackupImport";
 import { serializeBigInt } from "../utils/serializeBigInt";
-import { backupRestoreLimiter } from "../middleware/rateLimit";
+import { backupRestoreLimiter, recoveryKeyLimiter } from "../middleware/rateLimit";
+import { requirePasswordReauth } from "../services/account/reauthPassword";
+import { verifyReauthAssertion } from "../services/webauthn/reauth";
 import { BACKUP_BASE_DIR } from "../services/backup/backupConfig";
 import { normalizeRecoveryKey } from "../services/backup/recoveryKey";
 import { invalidRecoveryKey } from "../services/backup/restoreRecoveryKey";
@@ -78,7 +80,33 @@ const restoreBackupSchema = z.object({
    * a Zod issue can never carry the value; the format is checked below.
    */
   recoveryKey: z.string().max(256).optional(),
+  /**
+   * A restore with `recoveryKey` REPLACES the instance's encryption key, so it
+   * carries the same fresh re-authentication as reading the key does: the
+   * password (+ `code` / `recoveryCode` with two-factor on) or a passkey
+   * assertion. Ignored without `recoveryKey`.
+   */
+  password: z.string().max(1024).optional(),
+  code: z.string().max(32).optional(),
+  recoveryCode: z.string().max(64).optional(),
+  passkeyResponse: z.record(z.string(), z.unknown()).optional(),
 });
+
+/** The recovery-key gate, only for a restore that carries a key: browser session + limiter. */
+function recoveryKeyRestoreGate(req: AuthRequest, res: Response, next: NextFunction): void {
+  const body = req.body as { recoveryKey?: unknown } | undefined;
+  if (body?.recoveryKey === undefined) {
+    next();
+    return;
+  }
+  requireBrowserSession(req, res, (blocked?: unknown) => {
+    if (blocked) {
+      next(blocked);
+      return;
+    }
+    recoveryKeyLimiter(req, res, next);
+  });
+}
 
 // ─── Literal routes (must be defined before parametric /:id routes) ──────────
 
@@ -351,12 +379,25 @@ router.get("/:id/download", async (req: AuthRequest, res: Response, next: NextFu
 router.post(
   "/:id/restore",
   backupRestoreLimiter,
+  recoveryKeyRestoreGate,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
       const body = restoreBackupSchema.parse(req.body);
-      if (body.recoveryKey !== undefined && normalizeRecoveryKey(body.recoveryKey) === null) {
-        throw invalidRecoveryKey();
+      if (body.recoveryKey !== undefined) {
+        if (normalizeRecoveryKey(body.recoveryKey) === null) throw invalidRecoveryKey();
+        // Replacing the encryption key is as sensitive as reading it.
+        if (body.passkeyResponse) {
+          await verifyReauthAssertion(req.userId!, body.passkeyResponse);
+        } else if (body.password) {
+          await requirePasswordReauth(req.userId!, body);
+        } else {
+          throw new AppError(
+            "Confirm with your password or a passkey",
+            400,
+            "RECOVERY_KEY_REAUTH_REQUIRED"
+          );
+        }
       }
 
       // Check if there's already a running backup or restore
@@ -400,6 +441,7 @@ router.post(
             createBackupBefore: body.createBackupBefore,
             acceptEncryptionKeyChange: body.acceptEncryptionKeyChange,
             recoveryKey: body.recoveryKey,
+            requestedBy: req.userId,
           });
         } catch (err) {
           throw asBackupJobError(err, "RESTORE_FAILED");
