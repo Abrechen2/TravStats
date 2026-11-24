@@ -53,6 +53,14 @@ const finite = (v) => {
 
 // ---- outputs ---------------------------------------------------------------
 const lat = [], lon = [], time = [], acc = [], alt = [], speed = [], course = [], motion = [];
+// Device-export activity/visit endpoints (index into the arrays above) and the time spans the
+// path points cover. Google stamps an endpoint with its segment's start/end, which can sit hours
+// from where the path puts the phone (2025-02-21 on the owner's file: a Bavarian endpoint among
+// Swiss path points), so an endpoint is kept only where no path covers its time.
+const endpoints = [];
+const pathSpans = [];
+const ENDPOINT_MARGIN_MS = 5 * 60000;
+const ENDPOINT_ACCURACY_M = 2000;
 let invalid = 0;
 const formats = {};
 let max = 0;
@@ -71,6 +79,37 @@ function emit(la, lo, t, o) {
   speed.push(o && Number.isFinite(o.speed) && o.speed >= 0 ? o.speed : NaN);
   course.push(o && Number.isFinite(o.course) && o.course >= 0 && o.course <= 360 ? o.course : NaN);
   motion.push(o && o.motion !== undefined ? o.motion : -1);
+  if (o && o.endpoint) endpoints.push(lat.length - 1);
+}
+
+/** Drops the endpoints a path covers; the rest get a coarse accuracy, so no line or distance trusts them. */
+function settleEndpoints() {
+  const spans = pathSpans.slice().sort((a, b) => a[0] - b[0]);
+  const merged = [];
+  for (const sp of spans) {
+    const last = merged[merged.length - 1];
+    if (last && sp[0] <= last[1] + 2 * ENDPOINT_MARGIN_MS) last[1] = Math.max(last[1], sp[1]);
+    else merged.push([sp[0], sp[1]]);
+  }
+  const covered = (t) => {
+    let lo = 0, hi = merged.length - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1, m = merged[mid];
+      if (t < m[0] - ENDPOINT_MARGIN_MS) hi = mid - 1;
+      else if (t > m[1] + ENDPOINT_MARGIN_MS) lo = mid + 1;
+      else return true;
+    }
+    return false;
+  };
+  const drop = new Set();
+  for (const i of endpoints) {
+    if (Number.isFinite(time[i]) && covered(time[i])) drop.add(i);
+    else acc[i] = ENDPOINT_ACCURACY_M;
+  }
+  if (drop.size === 0) return;
+  const keep = (arr2) => arr2.filter((_, i) => !drop.has(i));
+  const cols = [lat, lon, time, acc, alt, speed, course, motion];
+  for (const c of cols) { const k = keep(c); c.length = 0; for (const v of k) c.push(v); }
 }
 
 // ---- values ------------------------------------------------------------------
@@ -170,6 +209,7 @@ const latLngOf = (v) => geo(isObj(v) ? (v.latLng !== undefined ? v.latLng : v.La
 function deviceSegment(e) {
   formats["google-timeline"] = 1;
   const t0 = instant(e.startTime), t1 = instant(e.endTime);
+  let pathMin = Infinity, pathMax = -Infinity;
   for (const p of arr(e.timelinePath)) {
     if (!isObj(p)) continue;
     const g = geo(p.point);
@@ -180,18 +220,20 @@ function deviceSegment(e) {
       t = Number.isFinite(m) && m >= 0 ? t0 + m * 60000 : NaN;
     }
     emit(g[0], g[1], t, { alt: g[2] });
+    if (Number.isFinite(t)) { if (t < pathMin) pathMin = t; if (t > pathMax) pathMax = t; }
   }
+  if (pathMin <= pathMax) pathSpans.push([pathMin, pathMax]);
   if (isObj(e.visit)) {
     const top = e.visit.topCandidate;
     const g = isObj(top) ? latLngOf(top.placeLocation) : null;
-    if (g) emit(g[0], g[1], t0, { alt: g[2] });
+    if (g) emit(g[0], g[1], t0, { alt: g[2], endpoint: true });
   }
   if (isObj(e.activity)) {
     const a = e.activity;
     const mo = isObj(a.topCandidate) ? motionOf(a.topCandidate.type) : undefined;
     const s = latLngOf(a.start), f = latLngOf(a.end);
-    if (s) emit(s[0], s[1], t0, { alt: s[2], motion: mo });
-    if (f) emit(f[0], f[1], t1, { alt: f[2], motion: mo });
+    if (s) emit(s[0], s[1], t0, { alt: s[2], motion: mo, endpoint: true });
+    if (f) emit(f[0], f[1], t1, { alt: f[2], motion: mo, endpoint: true });
   }
 }
 
@@ -328,6 +370,7 @@ async function main(job) {
     fs.closeSync(fd);
   }
   if (!scanner.finish() || Object.keys(formats).length === 0) return { type: "error", code: "UNREADABLE" };
+  settleEndpoints();
   return {
     type: "result",
     lat: Float64Array.from(lat), lon: Float64Array.from(lon), time: Float64Array.from(time),
