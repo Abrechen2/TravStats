@@ -90,20 +90,52 @@ describe("Smart lists API", () => {
   });
 
   describe("brand search", () => {
-    const answer = (body: unknown) =>
-      jest.spyOn(http, "fetchOpenData").mockResolvedValue({ ok: true, body });
+    const claimsOf = (p31: string) => ({
+      P31: [{ mainsnak: { datavalue: { value: { id: p31 } } } }],
+    });
+    /** The search answer, then the claims answer — the two requests a search makes. */
+    const answerBoth = (search: unknown, entities: unknown) =>
+      jest
+        .spyOn(http, "fetchOpenData")
+        .mockImplementation(async (_service, url) =>
+          url.includes("wbgetentities")
+            ? { ok: true, body: { entities } }
+            : { ok: true, body: { search } }
+        );
 
     it("returns Wikidata items and caches the answer", async () => {
       jest.spyOn(http, "isOpenDataEnabled").mockResolvedValue(true);
-      const spy = answer({
-        search: [{ id: "Q38076", label: "McDonald's", description: "fast-food chain" }],
-      });
+      const spy = answerBoth(
+        [{ id: "Q38076", label: "McDonald's", description: "fast-food chain" }],
+        { Q38076: { claims: claimsOf("Q18509232") } }
+      );
       const first = await get(`${BASE}/brands?q=mcdon&lang=de`);
       expect(first.body.data).toEqual([
         { id: "Q38076", label: "McDonald's", description: "fast-food chain" },
       ]);
       await get(`${BASE}/brands?q=mcdon&lang=de`);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
+
+    // UAT rc.45: "McDonald" offered the surname and a crater beside the chain.
+    it("offers only brands and chains — no surnames, no craters", async () => {
+      jest.spyOn(http, "isOpenDataEnabled").mockResolvedValue(true);
+      answerBoth(
+        [
+          { id: "Q38076", label: "McDonald's" },
+          { id: "Q1", label: "McDonald", description: "family name" },
+          { id: "Q2", label: "McDonald", description: "lunar crater" },
+          { id: "Q3", label: "Lidl" },
+        ],
+        {
+          Q38076: { claims: claimsOf("Q18509232") },
+          Q1: { claims: claimsOf("Q101352") },
+          Q2: { claims: {} },
+          Q3: { claims: { P1454: [{ mainsnak: {} }] } },
+        }
+      );
+      const res = await get(`${BASE}/brands?q=mcdonald-brands`);
+      expect(res.body.data.map((h: { id: string }) => h.id)).toEqual(["Q38076", "Q3"]);
     });
 
     it("says why when the service is off, slow, refusing or malformed — never an empty list", async () => {
@@ -126,6 +158,11 @@ describe("Smart lists API", () => {
       // A failure is not remembered as "no hits".
       fetchSpy.mockResolvedValueOnce({ ok: true, body: { search: [] } });
       expect((await get(`${BASE}/brands?q=failure-timeout`)).body.data).toEqual([]);
+      // The claims read failing is a failure too, never the unfiltered list.
+      fetchSpy
+        .mockResolvedValueOnce({ ok: true, body: { search: [{ id: "Q9", label: "X" }] } })
+        .mockResolvedValueOnce({ ok: false, failure: "timeout", status: null });
+      expect((await get(`${BASE}/brands?q=claims-fail`)).status).toBe(504);
     });
   });
 
