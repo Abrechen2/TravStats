@@ -29,16 +29,22 @@ export type DaySourceExtras = {
   bridgeLines: BridgeLine[];
 };
 
-const CHORD_SAMPLES = 24;
-
-/** A straight chord that passes through a privacy circle would draw what the zone hides. */
-function chordCrossesZone(a: StoredPoint, b: StoredPoint, span: SafeSpan): boolean {
-  for (let i = 0; i <= CHORD_SAMPLES; i++) {
-    const f = i / CHORD_SAMPLES;
-    const p = { lat: a[1] + (b[1] - a[1]) * f, lon: a[2] + (b[2] - a[2]) * f };
-    if (inPrivacyZone(p, span.circles)) return true;
-  }
-  return false;
+/**
+ * A straight chord that passes through a privacy circle would draw what the
+ * zone hides: the chord's point nearest each circle's centre (on a local flat
+ * projection around the centre) is tested, so no circle slips between samples.
+ */
+export function chordCrossesZone(a: StoredPoint, b: StoredPoint, span: Pick<SafeSpan, "circles">) {
+  return span.circles.some((z) => {
+    const k = Math.cos((z.lat * Math.PI) / 180);
+    const [ax, ay] = [(a[2] - z.lon) * k, a[1] - z.lat];
+    const [bx, by] = [(b[2] - z.lon) * k, b[1] - z.lat];
+    const [dx, dy] = [bx - ax, by - ay];
+    const len2 = dx * dx + dy * dy;
+    const f = len2 === 0 ? 0 : Math.min(1, Math.max(0, -(ax * dx + ay * dy) / len2));
+    const p = { lat: z.lat + ay + dy * f, lon: z.lon + (ax + dx * f) / k };
+    return inPrivacyZone(p, [z]);
+  });
 }
 
 /**

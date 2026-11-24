@@ -1,4 +1,5 @@
 import { detectClockOffset } from "../clockOffset";
+import { chordCrossesZone } from "../dayExtras";
 import { resolveDay, keepsRow } from "../resolveDay";
 import { rankSources, scoreOf, sourceSignals } from "../score";
 import type { SourcePoint, TravelEntry } from "../types";
@@ -235,5 +236,15 @@ describe("ranking", () => {
       DAY
     );
     expect(ranked.map((r) => r.source)).toEqual(["a:1", "b:1"]);
+  });
+});
+
+describe("estimated chords and privacy zones", () => {
+  it("refuses a chord through a small zone that lies between any fixed samples (was: 25 samples)", () => {
+    const a: [number, number, number, null] = [0, 48.0, 11.0, null];
+    const b: [number, number, number, null] = [1, 48.0, 13.0, null];
+    const zone = { lat: 48.0, lon: 12.03, radiusM: 300 };
+    expect(chordCrossesZone(a, b, { circles: [zone] })).toBe(true);
+    expect(chordCrossesZone(a, b, { circles: [{ ...zone, lat: 48.05 }] })).toBe(false);
   });
 });

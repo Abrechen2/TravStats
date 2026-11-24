@@ -1,5 +1,5 @@
 import { Prisma } from "../../../prisma";
-import { prisma } from "../../../db";
+import { prisma, type DbTransaction } from "../../../db";
 import { localDay } from "../../../shared/time/instant";
 import { profileZoneOf } from "../../../shared/time/profileZone";
 import { inPrivacyZone } from "../classify";
@@ -73,9 +73,13 @@ function utcDaysOfWindow(w: Window): string[] {
  * Hands the day's other projections back to the queue without raising its
  * version: the points did not change, the stream they read did.
  */
-export async function requeueDownstream(userId: string, w: Window): Promise<void> {
+export async function requeueDownstream(
+  userId: string,
+  w: Window,
+  db: Pick<DbTransaction, "$executeRaw"> = prisma
+): Promise<void> {
   const days = utcDaysOfWindow(w);
-  await prisma.$executeRaw`
+  await db.$executeRaw`
     INSERT INTO travtrack_dirty_days (user_id, day, version, done)
     SELECT ${userId}, d::date, 1, ${SOURCES_BIT} FROM unnest(${days}::text[]) AS d
     ON CONFLICT (user_id, day) DO UPDATE SET done = travtrack_dirty_days.done & ${SOURCES_BIT}`;
@@ -116,9 +120,11 @@ export async function deriveDaySource(
   ]);
   if (points.length === 0) {
     if (!previous) return { changed: false, resolution: null };
-    await prisma.travTrackDaySource.delete({ where: { userId_day: { userId, day: dayDate } } });
     const changed = readEffect(previous) !== null;
-    if (changed) await requeueDownstream(userId, w);
+    await prisma.$transaction(async (tx) => {
+      await tx.travTrackDaySource.delete({ where: { userId_day: { userId, day: dayDate } } });
+      if (changed) await requeueDownstream(userId, w, tx);
+    });
     return { changed, resolution: null };
   }
   const override =
@@ -142,13 +148,16 @@ export async function deriveDaySource(
     truncated,
     derivedAt: new Date(),
   };
-  await prisma.travTrackDaySource.upsert({
-    where: { userId_day: { userId, day: dayDate } },
-    create: { userId, day: dayDate, ...derived },
-    update: { ...derived, overrideSource: override },
-  });
   const changed = (previous ? readEffect(previous) : null) !== readEffect(r);
-  if (changed) await requeueDownstream(userId, w);
+  // One transaction: a stored change whose requeue failed would look settled to the next run.
+  await prisma.$transaction(async (tx) => {
+    await tx.travTrackDaySource.upsert({
+      where: { userId_day: { userId, day: dayDate } },
+      create: { userId, day: dayDate, ...derived },
+      update: { ...derived, overrideSource: override },
+    });
+    if (changed) await requeueDownstream(userId, w, tx);
+  });
   return { changed, resolution: r };
 }
 

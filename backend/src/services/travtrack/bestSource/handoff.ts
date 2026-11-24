@@ -21,20 +21,25 @@ export const BIN_MS = 15 * 60_000;
 export const MIN_SEGMENT_MS = 60 * 60_000;
 const MIN_BINS = Math.ceil(MIN_SEGMENT_MS / BIN_MS);
 
-type Interval = [number, number];
-
-function coverageOf(points: readonly SourcePoint[]): Interval[] {
-  const out: Interval[] = points.map((p) => [p.tMs - BIN_MS / 2, p.tMs + BIN_MS / 2]);
-  for (let i = 1; i < points.length; i++) {
-    if (points[i].tMs - points[i - 1].tMs <= LONG_GAP_MS) {
-      out.push([points[i - 1].tMs, points[i].tMs]);
-    }
-  }
+/**
+ * Which bins a source covers, swept once over its fixes and short steps: a
+ * fix covers the bins within half a bin of it, a step up to `LONG_GAP_MS` the
+ * bins it spans. Linear in the points, so a dense 50,000-fix day stays cheap.
+ */
+function coveredBins(points: readonly SourcePoint[], window: Window, bins: number): boolean[] {
+  const out = new Array<boolean>(bins).fill(false);
+  const mark = (fromMs: number, untilMs: number) => {
+    const a = Math.max(0, Math.floor((fromMs - window.fromMs) / BIN_MS));
+    const b = Math.min(bins - 1, Math.floor((untilMs - window.fromMs) / BIN_MS));
+    for (let i = a; i <= b; i++) out[i] = true;
+  };
+  points.forEach((p, i) => {
+    mark(p.tMs - BIN_MS / 2, p.tMs + BIN_MS / 2);
+    const next = points[i + 1];
+    if (next && next.tMs - p.tMs <= LONG_GAP_MS) mark(p.tMs, next.tMs);
+  });
   return out;
 }
-
-const covers = (intervals: readonly Interval[], from: number, until: number) =>
-  intervals.some(([a, b]) => a < until && b >= from);
 
 /** Runs of equal values: `[value, start, end)` over bin indexes. */
 function runsOf<T>(values: readonly T[]): Array<[T, number, number]> {
@@ -59,11 +64,10 @@ export function assignSegments(
   const primary = ranking[0];
   if (!primary) return [];
   if (ranking.length === 1) return [{ ...window, source: primary }];
-  const cover = new Map(ranking.map((o) => [o, coverageOf(byOrigin.get(o) ?? [])]));
   const bins = Math.max(1, Math.ceil((window.untilMs - window.fromMs) / BIN_MS));
+  const cover = new Map(ranking.map((o) => [o, coveredBins(byOrigin.get(o) ?? [], window, bins)]));
   const binFrom = (i: number) => window.fromMs + i * BIN_MS;
-  const binUntil = (i: number) => Math.min(window.untilMs, binFrom(i + 1));
-  const coveredBy = (o: string, i: number) => covers(cover.get(o)!, binFrom(i), binUntil(i));
+  const coveredBy = (o: string, i: number) => cover.get(o)![i];
 
   // 1. Each bin: the best source that records in it, or none.
   const pick: Array<string | null> = Array.from(

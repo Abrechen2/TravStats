@@ -207,8 +207,6 @@ async function runAccount(
     }
     // Disabled or switched away: nothing ran, nothing failed.
     if (projected.status !== "done") return { failed: false, questions: 0, days };
-    // Best source per day (bestSource/): a day whose resolved stream changed is handed back to every projection.
-    await projectDaySources(userId, { maxDays: Math.min(SOURCE_DAYS_PER_RUN, maxDays - days) });
     // The explored map's cells (L1): the same days on its own bit, from what
     // is left of the budget — a day either projection works counts once each.
     const exploredBudget = monthsOwed ? Math.ceil((maxDays - days) / 2) : maxDays - days;
@@ -259,6 +257,11 @@ async function runAccount(
         });
       }
     }
+    // Best source per day (bestSource/), from what the tick left: a day whose resolved stream
+    // changed is handed back to every projection above for the next tick.
+    const sourced = await projectDaySources(userId, {
+      maxDays: Math.min(SOURCE_DAYS_PER_RUN, maxDays - spent - visitDays),
+    });
     if (projected.projected > 0) {
       await prisma.travTrackDerivationState.update({
         where: { userId },
@@ -286,7 +289,7 @@ async function runAccount(
       where: { userId },
       data: { failureCount: 0, retryAfter: null },
     });
-    return { failed: false, questions, days: spent + visitDays };
+    return { failed: false, questions, days: spent + visitDays + sourced.days };
   } catch (error) {
     logger.warn({
       operation: "travtrack_projections_account_failed",
