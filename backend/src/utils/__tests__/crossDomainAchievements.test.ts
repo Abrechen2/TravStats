@@ -87,10 +87,12 @@ describe("three modes on one trip", () => {
     }
   });
 
-  it("lets no beta domain that is switched off feed the badge", () => {
+  // Roadtrips left beta on 2026-11-24 (6dfbf7c55 emptied BETA_GATED_DOMAINS): like rail and
+  // bus, a roadtrip counts with the instance's beta switch off. This test pinned the old gate.
+  it("counts a roadtrip with the beta switch off now that roadtrips left beta", () => {
     const t = trip({ flights: done, railJourneys: ride, routes: roadtrip });
     expect(foldCrossDomainAchievementStats([t], ALL_VISIBLE, NOW).tripsThreeModes).toBe(1);
-    expect(foldCrossDomainAchievementStats([t], BETA_OFF, NOW).tripsThreeModes).toBe(0);
+    expect(foldCrossDomainAchievementStats([t], BETA_OFF, NOW).tripsThreeModes).toBe(1);
   });
 
   // Bus left beta on 2026-10-26 (owner): like rail, it counts with the switch off.
@@ -145,10 +147,12 @@ describe("the fully documented trip", () => {
     );
   });
 
-  it("does not count a trip whose only movement is hidden, nor one without photos", () => {
+  // A roadtrip is no longer hidden by the beta switch (left beta 2026-11-24), so a trip moved
+  // only by one counts; without photos a trip still does not.
+  it("counts a trip moved only by a roadtrip with the beta switch off, not one without photos", () => {
     const byRoadtrip = trip({ ...documented, routes: roadtrip });
     expect(foldCrossDomainAchievementStats([byRoadtrip], BETA_OFF, NOW).tripsFullyDocumented).toBe(
-      0
+      1
     );
     const noPhotos = trip({
       ...documented,
