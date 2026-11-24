@@ -22,5 +22,6 @@ export type LocationEvidenceApiErrorCode =
   | "TRAVTRACK_IMPORT_RUNNING" // an import of this account is running already (409)
   | "TRAVTRACK_IMPORT_NOT_FOUND" // no such import of this account (404)
   | "TRAVTRACK_IMPORT_NOT_RUNNING" // no Dawarich copy of this account is running to stop (409)
-  | "TRAVTRACK_IMPORT_NOT_RESUMABLE" // the Dawarich copy is complete or cancelled (409)
+  | "TRAVTRACK_IMPORT_NOT_RESUMABLE" // a Dawarich copy complete or cancelled, a file import that succeeded or was deleted (409)
+  | "TRAVTRACK_IMPORT_FILE_MISMATCH" // a resume with another file than the import started with (409)
   | "TRAVTRACK_IMPORT_PAUSED"; // a paused Dawarich copy must be resumed or deleted before a new one (409)

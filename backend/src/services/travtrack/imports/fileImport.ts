@@ -20,6 +20,7 @@ import {
   type Sleep,
 } from "./importPacing";
 import { displayFileName } from "./mapGpx";
+import { FairSlot, importWriteSlot, SLICE_BATCHES, SLICE_MS } from "./writeSlot";
 import { discardSpool, readHead, spoolBuffer } from "./spool";
 import { readTrackFile } from "./trackFile";
 import { assertImportSize, sniffFormat } from "./trackFormat";
@@ -189,6 +190,11 @@ export type RunOptions = {
   sleep?: Sleep;
   /** How long a batch waits for the account's lock (tests shorten it). */
   lockTimeoutMs?: number;
+  /** The turn at storing points (tests give their own). */
+  slot?: FairSlot;
+  /** Batches, and milliseconds, one turn lasts at most (tests shorten them). */
+  sliceBatches?: number;
+  sliceMs?: number;
 };
 
 /**
@@ -250,28 +256,48 @@ export async function runGpxImport(
       },
     });
     const size = opts.batchSize ?? IMPORT_BATCH_SIZE;
-    for (let done = 0; cursor < mapped.count;) {
-      const at = cursor;
-      const next = Math.min(at + size, mapped.count);
-      const started = performance.now();
-      report = await storeBatch({
-        userId,
-        importId,
-        origin,
-        points: mapped.batch(at, size),
-        fence,
-        report,
-        cursorAfter: next,
-        wait,
-        lockTimeoutMs: opts.lockTimeoutMs ?? BATCH_LOCK_TIMEOUT_MS,
-      });
-      cursor = next;
-      const durationMs = performance.now() - started;
-      done += 1;
-      opts.onBatch?.({ at, size: next - at, durationMs });
-      opts.onProgress?.(50 + Math.floor((cursor / mapped.count) * 50));
-      await opts.afterBatch?.(done);
-      if (cursor < mapped.count) await wait(paceAfter(durationMs));
+    const slot = opts.slot ?? importWriteSlot;
+    const sliceBatches = opts.sliceBatches ?? SLICE_BATCHES;
+    const sliceMs = opts.sliceMs ?? SLICE_MS;
+    // The instance's one turn at storing points, taken in slices (`writeSlot.ts`).
+    await slot.acquire(userId);
+    let sliceStart = performance.now();
+    let inSlice = 0;
+    try {
+      for (let done = 0; cursor < mapped.count;) {
+        const at = cursor;
+        const next = Math.min(at + size, mapped.count);
+        const started = performance.now();
+        report = await storeBatch({
+          userId,
+          importId,
+          origin,
+          points: mapped.batch(at, size),
+          fence,
+          report,
+          cursorAfter: next,
+          wait,
+          lockTimeoutMs: opts.lockTimeoutMs ?? BATCH_LOCK_TIMEOUT_MS,
+        });
+        cursor = next;
+        const durationMs = performance.now() - started;
+        done += 1;
+        opts.onBatch?.({ at, size: next - at, durationMs });
+        opts.onProgress?.(50 + Math.floor((cursor / mapped.count) * 50));
+        await opts.afterBatch?.(done);
+        if (cursor >= mapped.count) break;
+        await wait(paceAfter(durationMs));
+        inSlice += 1;
+        if (inSlice >= sliceBatches || performance.now() - sliceStart >= sliceMs) {
+          // The slice is over: another account's import waiting gets the turn,
+          // and this one carries on from its committed cursor when it comes back.
+          await slot.yieldTurn(userId);
+          sliceStart = performance.now();
+          inSlice = 0;
+        }
+      }
+    } finally {
+      slot.release();
     }
     completed = true;
     const finished = await finish(importId, {
@@ -447,7 +473,7 @@ export async function startGpxImport(
     slotHeld = true;
     const importId =
       opts.resumeOf !== undefined
-        ? await reopenImport(userId, opts.resumeOf)
+        ? await reopenImport(userId, opts.resumeOf, await fileDigest({ path: spooled }))
         : await createRunningImport(userId, file.originalName);
     const path = spooled;
     const job = startJob("travtrack.fileImport", userId, async (reportProgress) => {
@@ -524,7 +550,7 @@ const RESUMABLE = ["partial", "failed", "interrupted"];
  * stored already answer as duplicates; the cursor is kept for the run to use
  * when the file is the same.
  */
-async function reopenImport(userId: string, importId: string): Promise<string> {
+async function reopenImport(userId: string, importId: string, digest: string): Promise<string> {
   await prisma
     .$transaction(async (tx) => {
       await takeTravTrackLock(tx, userId);
@@ -533,9 +559,18 @@ async function reopenImport(userId: string, importId: string): Promise<string> {
       }
       const row = await tx.travTrackImport.findFirst({
         where: { id: importId, userId },
-        select: { kind: true, status: true },
+        select: { kind: true, status: true, fileSha256: true },
       });
       if (!row) throw notFound();
+      // Another file under this import's origin would mix two files' points into
+      // one import. Only a row from before the digest existed takes any file.
+      if (row.fileSha256 !== null && row.fileSha256 !== digest) {
+        throw new AppError(
+          "This is not the file the import was started with",
+          409,
+          "TRAVTRACK_IMPORT_FILE_MISMATCH"
+        );
+      }
       if (row.kind !== "gpx" || !RESUMABLE.includes(row.status)) {
         throw new AppError("This import cannot be resumed", 409, "TRAVTRACK_IMPORT_NOT_RESUMABLE");
       }
@@ -553,11 +588,12 @@ async function reopenImport(userId: string, importId: string): Promise<string> {
 }
 
 /**
- * File imports between "accepted" and "finished": one per instance. The
- * points of each wait in memory until stored, and two at once only compete
- * for the same disk (Dawarich gives imports a queue of their own for this).
+ * File imports between "accepted" and "finished": the points of each wait in
+ * memory until stored. Only one of them stores at a time, in slices that go
+ * round the accounts (`writeSlot.ts`): two at once would only compete for the
+ * same disk, and one account's large file must not keep another's waiting.
  */
-export const MAX_FILE_IMPORTS = 1;
+export const MAX_FILE_IMPORTS = 3;
 let fileImportsRunning = 0;
 
 /** True when no further file import is taken: reading AND storing are bounded, not only reading. */

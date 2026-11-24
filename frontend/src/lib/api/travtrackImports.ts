@@ -113,6 +113,8 @@ export function importErrorKey(err: unknown): string {
       return "track:imports.errors.notFound";
     case "TRAVTRACK_IMPORT_NOT_RESUMABLE":
       return "track:imports.errors.notResumable";
+    case "TRAVTRACK_IMPORT_FILE_MISMATCH":
+      return "track:imports.errors.fileMismatch";
     case "TRAVTRACK_DISABLED":
       return "track:errors.disabled";
     default:

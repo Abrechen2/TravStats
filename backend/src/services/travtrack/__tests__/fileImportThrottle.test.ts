@@ -15,6 +15,7 @@ import {
   PACE_MAX_MS,
   PACE_MIN_MS,
 } from "../imports/importPacing";
+import { FairSlot } from "../imports/writeSlot";
 import { makeUser, wipeTravTrack } from "./fixtures";
 
 /**
@@ -180,6 +181,24 @@ describe("TravTrack — a large file import shares the database", () => {
     expect(await pointCount()).toBe(total);
   });
 
+  it("a resume with another file than the import was started with is refused", async () => {
+    const row = await newRow();
+    const { sleep } = noWait();
+    await runGpxImport(row.id, userId, { buffer: records(1_500) }, { sleep, batchSize: 1000 });
+    await prisma.travTrackImport.update({ where: { id: row.id }, data: { status: "partial" } });
+    const code = await startGpxImport(
+      userId,
+      { buffer: records(1_500, 50_000), originalName: "other.json" },
+      { resumeOf: row.id, sleep }
+    ).then(
+      () => null,
+      (err: unknown) => (err instanceof AppError ? err.code : String(err))
+    );
+    expect(code).toBe("TRAVTRACK_IMPORT_FILE_MISMATCH");
+    expect((await rowOf(row.id)).status).toBe("partial");
+    expect(await pointCount()).toBe(1_500);
+  });
+
   it("a succeeded import or a Dawarich copy cannot be resumed", async () => {
     const row = await newRow();
     await prisma.travTrackImport.update({ where: { id: row.id }, data: { status: "succeeded" } });
@@ -223,6 +242,115 @@ describe("TravTrack — a large file import shares the database", () => {
     expect(outcome.status).toBe("succeeded");
     expect(outcome.report.stored).toBe(50);
     expect(waits[0]).toBeGreaterThanOrEqual(1000);
+  });
+});
+
+describe("TravTrack — file imports take turns across accounts", () => {
+  let a: string;
+  let b: string;
+
+  beforeAll(async () => {
+    a = await makeUser(`${PREFIX}turn-a`);
+    b = await makeUser(`${PREFIX}turn-b`);
+  });
+
+  beforeEach(async () => {
+    await wipeTravTrack([a, b]);
+    await prisma.travTrackImport.deleteMany({ where: { userId: { in: [a, b] } } });
+  });
+
+  afterAll(async () => {
+    await wipeTravTrack([a, b]);
+  });
+
+  const rowFor = (userId: string) =>
+    prisma.travTrackImport.create({
+      data: { userId, kind: "gpx", fileName: "Records.json", status: "running" },
+    });
+
+  /**
+   * A's import starts and holds the turn; B's arrives while A stores its first
+   * batch. Slices of two batches of 100, no pauses.
+   */
+  async function race(aFixes: number, bFixes: number) {
+    const slot = new FairSlot(1);
+    const order: Array<{ who: "A" | "B"; at: number }> = [];
+    const doneAt: Record<"A" | "B", number> = { A: -1, B: -1 };
+    const [rowA, rowB] = await Promise.all([rowFor(a), rowFor(b)]);
+    const common = { slot, sliceBatches: 2, batchSize: 100, sleep: async () => {} };
+    let aHolds!: () => void;
+    const aStarted = new Promise<void>((r) => (aHolds = r));
+    const runA = runGpxImport(
+      rowA.id,
+      a,
+      { buffer: records(aFixes) },
+      {
+        ...common,
+        onBatch: ({ at }) => {
+          order.push({ who: "A", at });
+          aHolds();
+        },
+        // Hold A's first slice open until B is queued behind it.
+        afterBatch: async (done) => {
+          while (done === 1 && slot.waiting() === 0) await new Promise((r) => setTimeout(r, 5));
+        },
+      }
+    ).then((o) => ((doneAt.A = order.length), o));
+    // B arrives once A holds the turn.
+    const runB = aStarted
+      .then(() =>
+        runGpxImport(
+          rowB.id,
+          b,
+          { buffer: records(bFixes, 1_000_000) },
+          { ...common, onBatch: ({ at }) => order.push({ who: "B", at }) }
+        )
+      )
+      .then((o) => ((doneAt.B = order.length), o));
+    const [outA, outB] = await Promise.all([runA, runB]);
+    return { order, doneAt, outA, outB, rowA, rowB };
+  }
+
+  it("two accounts' imports interleave in slices", async () => {
+    const { order, outA, outB } = await race(800, 800);
+    expect(outA.status).toBe("succeeded");
+    expect(outB.status).toBe("succeeded");
+    expect(order.map((o) => o.who).join("")).toBe("AABBAABBAABBAABB");
+  });
+
+  it("one account's large import cannot starve another's", async () => {
+    const { order, doneAt, outB } = await race(4_000, 200);
+    expect(outB.report.stored).toBe(200);
+    // B was done after A's first slice, with 38 of A's 40 batches still to go.
+    expect(doneAt.B).toBe(4);
+    expect(order.filter((o) => o.who === "A")).toHaveLength(40);
+  });
+
+  it("a slice end resumes exactly where the import stopped", async () => {
+    const { order, outA, outB, rowA, rowB } = await race(1_000, 600);
+    const atsOf = (who: "A" | "B") => order.filter((o) => o.who === who).map((o) => o.at);
+    expect(atsOf("A")).toEqual(Array.from({ length: 10 }, (_, i) => i * 100));
+    expect(atsOf("B")).toEqual(Array.from({ length: 6 }, (_, i) => i * 100));
+    expect(outA.report).toMatchObject({ stored: 1_000, duplicate: 0 });
+    expect(outB.report).toMatchObject({ stored: 600, duplicate: 0 });
+    expect(await prisma.travTrackPoint.count({ where: { userId: a } })).toBe(1_000);
+    expect(await prisma.travTrackPoint.count({ where: { userId: b } })).toBe(600);
+    expect(
+      (await prisma.travTrackImport.findUniqueOrThrow({ where: { id: rowA.id } })).cursor
+    ).toBe(1_000);
+    expect(
+      (await prisma.travTrackImport.findUniqueOrThrow({ where: { id: rowB.id } })).cursor
+    ).toBe(600);
+  });
+
+  it("with nobody waiting a slice end keeps the turn, and the turn is freed at the end", async () => {
+    const slot = new FairSlot(1);
+    await slot.acquire("x");
+    expect(await slot.yieldTurn("x")).toBe(false);
+    slot.release();
+    let got = false;
+    await slot.acquire("y").then(() => (got = true));
+    expect(got).toBe(true);
   });
 });
 

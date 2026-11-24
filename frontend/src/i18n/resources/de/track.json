@@ -231,7 +231,8 @@
       "rateLimited": "Zu viele Importe in kurzer Zeit. Versuche es in einer Viertelstunde noch einmal.",
       "lost": "Ob der Import fertig wurde, ist nicht bekannt – der Server hat neu gestartet. Sieh in der Liste nach.",
       "tooManyPoints": "Die Datei enthält zu viele Positionen – ein Import nimmt höchstens 200.000 aus GPX und 2 Millionen aus den übrigen Formaten. Teile sie auf, etwa nach Monaten.",
-      "notResumable": "Dieser Import lässt sich nicht fortsetzen."
+      "notResumable": "Dieser Import lässt sich nicht fortsetzen.",
+      "fileMismatch": "Das ist nicht die Datei, mit der dieser Import begonnen hat. Wähle zum Fortsetzen dieselbe Datei."
     },
     "resume": "Fortsetzen",
     "partial": "Der Import wurde unterbrochen: {{summary}}. Mit „Fortsetzen“ und derselben Datei geht er weiter."

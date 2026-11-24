@@ -231,7 +231,8 @@
       "rateLimited": "Too many imports in a short time. Try again in a quarter of an hour.",
       "lost": "Whether the import finished is not known – the server restarted. Check the list.",
       "tooManyPoints": "The file holds too many positions – one import takes at most 200,000 from GPX and 2 million from the other formats. Split it, say by month.",
-      "notResumable": "This import cannot be resumed."
+      "notResumable": "This import cannot be resumed.",
+      "fileMismatch": "This is not the file this import was started with. Choose the same file to resume."
     },
     "resume": "Resume",
     "partial": "The import stopped part-way: {{summary}}. Choose the same file with “Resume” to carry on."

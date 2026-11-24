@@ -173,7 +173,8 @@ registry.registerPath({
     404: { description: "TRAVTRACK_IMPORT_NOT_FOUND", content: errorContent },
     409: {
       description:
-        "TRAVTRACK_IMPORT_RUNNING (another import runs) or TRAVTRACK_IMPORT_NOT_RESUMABLE " +
+        "TRAVTRACK_IMPORT_RUNNING (another import runs), TRAVTRACK_IMPORT_FILE_MISMATCH (not the file " +
+        "the import was started with) or TRAVTRACK_IMPORT_NOT_RESUMABLE " +
         "(a Dawarich copy, or an import that succeeded or was deleted)",
       content: errorContent,
     },

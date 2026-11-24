@@ -74,7 +74,7 @@ const UPLOAD_IDLE_MS = 60_000;
 function refuseEarly(req: AuthRequest, res: Response, next: NextFunction): void {
   const userId = req.userId!;
   void (async () => {
-    // The account's own running import first: with one file import per instance
+    // The account's own running import first: with the instance's imports full
     // it would otherwise read as the instance being busy (503) instead of 409.
     const running = () =>
       new AppError("An import is running already", 409, "TRAVTRACK_IMPORT_RUNNING");
