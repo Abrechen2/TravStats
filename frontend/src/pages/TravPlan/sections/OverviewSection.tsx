@@ -3,9 +3,9 @@ import { Card, HeroCard, Pill, StatTile, StatusPill } from "../../../components/
 import { daysBetween, todayIn } from "../../../shared/time";
 import { PlanCardHead, PlanGrid, PlanGrow, PlanLink, PlanRow, PlanStack } from "../planLayout";
 import { PlanMetrics } from "../PlanParts";
-import { shortDay } from "../route/RouteTimeline";
 import { FindingCards } from "./FindingCards";
 import type { PlanCtx } from "../planContext";
+import { planDay, planRange } from "../format";
 
 const NIGHT_CODES = ["nightGap", "nightUndecided", "hotelDates"];
 const TRANSPORT_CODES = ["stageUndecided", "stageMissing", "transferOpen", "durationMissing"];
@@ -57,8 +57,7 @@ export function OverviewSection({ ctx }: { ctx: PlanCtx }) {
           <h2 className="t-card-title">{state.destination || plan.name}</h2>
           <p className="t-body">
             {t("overview.countdown." + count.key, { count: count.count })}
-            {state.startDay &&
-              ` · ${shortDay(state.startDay)}${state.endDay ? " – " + shortDay(state.endDay) : ""}`}
+            {state.startDay && ` · ${planRange(state.startDay, state.endDay)}`}
           </p>
           <div>
             <PlanLink variant="primary" to={prefix + "/workspace"}>
@@ -104,7 +103,7 @@ export function OverviewSection({ ctx }: { ctx: PlanCtx }) {
             <PlanCardHead title={t("overview.weather")} />
             <p className="t-body">
               {forecastDay
-                ? `${shortDay(forecastDay.day)} · ${forecastDay.min ?? "–"}° / ${forecastDay.max ?? "–"}°`
+                ? `${planDay(forecastDay.day)} · ${forecastDay.min ?? "–"}° / ${forecastDay.max ?? "–"}°`
                 : t("weatherUnknown")}
             </p>
             <PlanLink to={prefix + "/packing"}>{t("overview.weatherMore")}</PlanLink>

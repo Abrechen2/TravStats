@@ -7,7 +7,6 @@ import { apiErrorMachineCode } from "../../lib/apiError";
 import { remotePlanPath, remotePlansApi, type RemotePlanSummary } from "../../lib/api/remotePlans";
 import RemotePlanInvitations from "../../components/sharing/RemotePlanInvitations";
 import { PlanCreate } from "./PlanCreate";
-import { shortDay } from "./route/RouteTimeline";
 import {
   Button,
   Card,
@@ -18,6 +17,7 @@ import {
   StatusPill,
 } from "../../components/ui";
 import { PlanGrid, PlanLink, PlanNotice, PlanStack } from "./planLayout";
+import { planRange } from "./format";
 
 export function PlanList() {
   const { t } = useTranslation("travplan"),
@@ -126,8 +126,7 @@ export function PlanList() {
                 <p className="t-caption">{t("members.sharedBy", { owner: p.ownerName ?? "" })}</p>
               )}
               <p className="t-body">
-                {p.destination} ·{" "}
-                {[shortDay(p.startDay), shortDay(p.endDay)].filter(Boolean).join(" – ")}
+                {p.destination} · {planRange(p.startDay, p.endDay)}
               </p>
               <p className="t-caption">
                 {p.shape === "route"

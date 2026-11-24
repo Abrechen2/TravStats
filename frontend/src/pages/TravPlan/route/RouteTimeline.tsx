@@ -1,6 +1,4 @@
 import type { ReactNode } from "react";
-import { appLocale } from "../../../lib/units";
-import { formatDayLong } from "../../../shared/time";
 import { Button, Card, Pill } from "../../../components/ui";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type {
@@ -20,6 +18,7 @@ import {
   wroteRecords,
   type RouteTone,
 } from "./routeModel";
+import { planDay } from "../format";
 
 /** Booked is solid, a placeholder dashed in the accent, spontaneous dashed and neutral, own driving good. */
 export const TONE: Record<RouteTone, { color: string; dashed: boolean }> = {
@@ -30,11 +29,6 @@ export const TONE: Record<RouteTone, { color: string; dashed: boolean }> = {
   undecided: { color: "var(--ts-warn)", dashed: true },
   idea: { color: "var(--ts-info)", dashed: true },
 };
-
-export const shortDay = (day: string | null) =>
-  day
-    ? formatDayLong(day, appLocale(), { weekday: "short", day: "numeric", month: "short" })
-    : null;
 
 function TonePill({ tone }: { tone: RouteTone }) {
   const { t } = useTranslation("travplan");
@@ -88,8 +82,8 @@ export function StationCard({
     link = linkOf(state, station.id),
     trips = dayTripsOf(state, station.id),
     weather = state.stationWeather.find((w) => w.stationId === station.id);
-  const arrive = shortDay(when?.arriveDay ?? null),
-    depart = shortDay(when?.departDay ?? null);
+  const arrive = planDay(when?.arriveDay ?? null),
+    depart = planDay(when?.departDay ?? null);
   const candidates = station.night.kind === "idea" ? station.night.candidates : [];
   return (
     <Card

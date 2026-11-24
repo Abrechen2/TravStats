@@ -20,7 +20,6 @@ import { BudgetSection } from "./sections/BudgetSection";
 import { PlanActualPanel } from "./sections/PlanActualPanel";
 import PlanAI from "./PlanAI";
 import { RouteSection } from "./route/RouteSection";
-import { shortDay } from "./route/RouteTimeline";
 import { PlanDeleteDialog } from "./PlanDeleteDialog";
 import { PlanMenu } from "./PlanMenu";
 import { UndoToast } from "./UndoToast";
@@ -29,6 +28,7 @@ import { PlanMembersDialog } from "./PlanMembersDialog";
 import { MemberNoteCard, MemberNotices } from "./MemberPanels";
 import { PlanHandover } from "./PlanHandover";
 import { PlanDocumentsPanel } from "./PlanDocumentsPanel";
+import { planRange } from "./format";
 
 export const PLAN_SECTIONS = [
   "overview",
@@ -178,10 +178,7 @@ export default function PlanContent({
       <SectionLabel>{t("tagline")}</SectionLabel>
       <PageHeader
         title={plan.name}
-        meta={[
-          state.destination,
-          [shortDay(state.startDay), shortDay(state.endDay)].filter(Boolean).join(" – "),
-        ]
+        meta={[state.destination, planRange(state.startDay, state.endDay)]
           .filter(Boolean)
           .join(" · ")}
         actions={

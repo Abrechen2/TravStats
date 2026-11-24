@@ -325,7 +325,9 @@ Frontend (`frontend/src/`):
 **Interfaces:**
 - `travplanApi` adds: `routeStage(tripId, stageId, write: {clientRef, baseRevision})`, `placeholderMatches(tripId, booking)`, `places(q, kind, language)`, `stationWeather(tripId, write)`; every request sends header `X-TravPlan-Client: 2`.
 - `planDay(day: string | null, locale: string): string` → `"Sa, 24. Okt"` (de) / `"Sat, 24 Oct"` (en), `"—"` for null; `planRange(start, end, locale)` → `"Sa, 24. – Do, 29. Okt 2026"`; `nightsLabel(n, t)`. Built on `formatDayLong` with options (UTC, no host zone).
-- [ ] **Step 1: Failing tests:** `"planDay formats 2026-10-24 as Sa, 24. Okt in de"`, `"planRange collapses the shared month"`, `"usePlan sends X-TravPlan-Client 2"`.
+> **Status 2026-11-24 (`feat/travplan-dates`):** `planDay`/`planRange` built in `pages/TravPlan/format.ts` and used for every plan day the UI showed raw or hand-joined. The `X-TravPlan-Client 2` header is NOT built: it only means something together with Task 10, which is open, and Companion PR companion#96 already accepts version 2 — whether Task 10 is still needed is an owner/coordinator question.
+
+- [x] **Step 1: Failing tests:** `"planDay formats 2026-10-24 as Sa, 24. Okt in de"`, `"planRange collapses the shared month"`, `"usePlan sends X-TravPlan-Client 2"`.
 - [ ] **Step 2–4:** FAIL → implement → PASS (`npx vitest --run src/pages/TravPlan`).
 - [ ] **Step 5: Commit** `feat(travplan-web): v2 API client and localised plan dates`.
 
