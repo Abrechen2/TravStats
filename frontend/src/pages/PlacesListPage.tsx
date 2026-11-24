@@ -499,7 +499,6 @@ export default function PlacesListPage(): JSX.Element {
             />
           </div>
         )}
-
         <ListSummaryStrip
           purposeDomain="poi"
           figures={summaryFigures}
