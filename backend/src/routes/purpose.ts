@@ -14,7 +14,11 @@ import {
 import { runUnfiltered } from "../services/provenance/recordedOnly";
 import { countHiddenByPurpose } from "../services/purpose/hiddenCounts";
 import { setEntryPurpose } from "../services/purpose/setPurpose";
-import { applyTripPurpose, fillPurposeFromTrips } from "../services/purpose/tripActions";
+import {
+  applyTripPurpose,
+  fillPurposeFromTrips,
+  previewTripPurpose,
+} from "../services/purpose/tripActions";
 import type { Prisma } from "../prisma";
 
 /**
@@ -107,6 +111,25 @@ router.get(
 
 const tripParams = z.object({ tripId: z.string().uuid() });
 const applyBody = z.object({ purpose: z.enum(PURPOSES).optional() }).strict();
+
+/** What the apply below would change, so the page can ask first with the count (UAT rc.45). */
+router.get(
+  "/trips/:tripId/apply",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { tripId } = tripParams.parse(req.params);
+      const purpose = z.enum(PURPOSES).optional().parse(req.query.purpose);
+      const result = await previewTripPurpose(req.userId!, tripId, purpose);
+      if (!result) {
+        res.status(404).json({ success: false, error: "Trip not found", code: "TRIP_NOT_FOUND" });
+        return;
+      }
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 /** "Zweck auf alle Einträge übertragen": the trip's purpose onto every entry of that trip. */
 router.post(

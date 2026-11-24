@@ -277,6 +277,26 @@ describe("purpose: private or business", () => {
       expect(stranger.status).toBe(404);
     });
 
+    // UAT rc.45: the action asks first, with the count, before it writes anything.
+    it("previews how many entries the apply would change, and writes nothing", async () => {
+      const trip = await biz();
+      const a = await flight({ tripId: trip.id, purpose: "private" });
+      await flight({ tripId: trip.id, purpose: null });
+      await flight({ tripId: trip.id, purpose: "business" });
+      const res = await request(app)
+        .get(`/api/v1/purpose/trips/${trip.id}/apply`)
+        .set("Cookie", cookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({ purpose: "business", wouldChange: 2 });
+      expect((await prisma.flight.findUniqueOrThrow({ where: { id: a.id } })).purpose).toBe(
+        "private"
+      );
+      const stranger = await request(app)
+        .get(`/api/v1/purpose/trips/${trip.id}/apply`)
+        .set("Cookie", otherCookie);
+      expect(stranger.status).toBe(404);
+    });
+
     it("from-trips fills only entries without a purpose", async () => {
       const trip = await biz();
       const kept = await flight({ tripId: trip.id, purpose: "private" });

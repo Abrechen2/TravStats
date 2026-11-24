@@ -51,6 +51,37 @@ async function fill(
   );
 }
 
+type Counter = { count(args: { where: Record<string, unknown> }): Promise<number> };
+
+/**
+ * What "Zweck auf alle Einträge übertragen" would do, without doing it: the purpose and how many
+ * entries it would change (UAT rc.45 — the action asks first, with the count). Null: no trip.
+ */
+export async function previewTripPurpose(
+  userId: string,
+  tripId: string,
+  chosen: Purpose | undefined
+): Promise<{ purpose: Purpose | null; wouldChange: number } | null> {
+  const trip = await prisma.trip.findFirst({
+    where: { id: tripId, userId },
+    select: { category: true },
+  });
+  if (!trip) return null;
+  const purpose = chosen ?? purposeFromTripCategory(trip.category);
+  if (!purpose) return { purpose: null, wouldChange: 0 };
+  const counts = await runUnfiltered(() =>
+    Promise.all(
+      DELEGATES.map((name) =>
+        (prisma as unknown as Record<string, Counter>)[name].count({
+          // `purpose: { not }` skips NULL in SQL, so the unset ones are counted on their own.
+          where: { userId, tripId, OR: [{ purpose: null }, { purpose: { not: purpose } }] },
+        })
+      )
+    )
+  );
+  return { purpose, wouldChange: counts.reduce((sum, n) => sum + n, 0) };
+}
+
 /** "Zweck auf alle Einträge übertragen": the trip's category (or a chosen purpose) onto its entries. */
 export async function applyTripPurpose(
   userId: string,

@@ -124,4 +124,19 @@ describe("provenance details on a detail page", () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
     expect(provenanceApi.set).toHaveBeenCalledWith("lodgingStay", "s-1", expect.any(Object));
   });
+
+  // UAT rc.45: the purpose sat folded inside "Herkunft der Angaben" and read as an origin.
+  it("keeps the purpose out of the provenance block, in a block of its own", () => {
+    render(<ProvenanceDetails entryType="flight" entry={{ id: "f-1", purpose: "business" }} />);
+    const provenance = screen.getByTestId("provenance-details-f-1");
+    const purpose = screen.getByTestId("purpose-details-f-1");
+    expect(provenance.contains(purpose)).toBe(false);
+    expect(provenance.querySelector("[data-testid='purpose-chip']")).toBeNull();
+    expect(purpose.querySelector("[data-testid='purpose-chip']")).not.toBeNull();
+  });
+
+  it("draws no purpose block on a trip, whose purpose is its category", () => {
+    render(<ProvenanceDetails entryType="trip" entry={{ id: "t-1" }} />);
+    expect(screen.queryByTestId("purpose-details-t-1")).toBeNull();
+  });
 });

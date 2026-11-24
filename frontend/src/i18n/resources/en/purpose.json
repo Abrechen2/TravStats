@@ -8,7 +8,7 @@
     "unknown": "Not set",
     "private": "Private",
     "business": "Business",
-    "hint": "New entries in a trip take the purpose of the trip's category. Not set is never hidden."
+    "hint": "Whether this entry was for business or private. This is not the trip's category: a new entry in a trip takes its purpose once from that category (business trip → business; vacation, weekend, family → private); after that, what is set here counts. Not set is never hidden."
   },
   "editor": {
     "saved": "Purpose saved.",
@@ -38,6 +38,10 @@
     "done_one": "{{count}} entry updated.",
     "done_other": "{{count}} entries updated.",
     "none": "This trip's category says nothing about the purpose.",
-    "error": "The purpose could not be applied. Please try again."
+    "error": "The purpose could not be applied. Please try again.",
+    "confirm_one": "{{count}} entry of this trip gets the purpose “{{purpose}}”. What it had before is overwritten.",
+    "confirm_other": "{{count}} entries of this trip get the purpose “{{purpose}}”. What they had before is overwritten.",
+    "confirmAction": "Apply",
+    "nothing": "Every entry of this trip already has this purpose."
   }
 }

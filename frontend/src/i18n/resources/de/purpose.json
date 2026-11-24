@@ -8,7 +8,7 @@
     "unknown": "Nicht festgelegt",
     "private": "Privat",
     "business": "Geschäftlich",
-    "hint": "Neue Einträge in einer Reise übernehmen den Zweck der Reise-Kategorie. Nicht festgelegt wird nie ausgeblendet."
+    "hint": "Ob dieser Eintrag geschäftlich oder privat war. Das ist nicht die Kategorie der Reise: Ein neuer Eintrag in einer Reise übernimmt den Zweck nur einmal aus deren Kategorie (Geschäftsreise → geschäftlich; Urlaub, Wochenende, Familie → privat), danach gilt, was hier steht. Nicht festgelegt wird nie ausgeblendet."
   },
   "editor": {
     "saved": "Zweck gespeichert.",
@@ -38,6 +38,10 @@
     "done_one": "{{count}} Eintrag aktualisiert.",
     "done_other": "{{count}} Einträge aktualisiert.",
     "none": "Die Kategorie dieser Reise sagt nichts über den Zweck aus.",
-    "error": "Der Zweck konnte nicht übertragen werden. Bitte versuche es noch einmal."
+    "error": "Der Zweck konnte nicht übertragen werden. Bitte versuche es noch einmal.",
+    "confirm_one": "{{count}} Eintrag dieser Reise bekommt den Zweck „{{purpose}}“. Was dort bisher stand, wird überschrieben.",
+    "confirm_other": "{{count}} Einträge dieser Reise bekommen den Zweck „{{purpose}}“. Was dort bisher stand, wird überschrieben.",
+    "confirmAction": "Übertragen",
+    "nothing": "Alle Einträge dieser Reise haben diesen Zweck schon."
   }
 }

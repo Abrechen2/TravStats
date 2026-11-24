@@ -85,6 +85,25 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/purpose/trips/{tripId}/apply",
+  summary: "Preview: what applying a purpose to a trip's entries would change",
+  description: "Writes nothing. `wouldChange` counts the entries whose purpose differs.",
+  tags,
+  request: {
+    params: z.object({ tripId: z.string().uuid() }),
+    query: z.object({ purpose: z.enum(PURPOSES).optional() }),
+  },
+  responses: {
+    200: {
+      description: "The purpose that would be written and how many entries it would change",
+      ...ok(z.object({ purpose: z.enum(PURPOSES).nullable(), wouldChange: z.number() })),
+    },
+    404: { description: "`TRIP_NOT_FOUND`", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/purpose/trips/{tripId}/apply",
   summary: "Apply a purpose to every entry of a trip",

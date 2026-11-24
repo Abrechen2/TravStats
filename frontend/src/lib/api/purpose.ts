@@ -55,10 +55,23 @@ export const purposeApi = {
     return data.data.hidden;
   },
 
-  applyToTrip: async (tripId: string): Promise<{ purpose: Purpose | null; changed: number }> => {
+  applyToTrip: async (
+    tripId: string,
+    purpose?: Purpose
+  ): Promise<{ purpose: Purpose | null; changed: number }> => {
     const { data } = await api.post<Envelope<{ purpose: Purpose | null; changed: number }>>(
       `/purpose/trips/${tripId}/apply`,
-      {}
+      purpose ? { purpose } : {}
+    );
+    return data.data;
+  },
+
+  /** What `applyToTrip` would change, without writing (UAT rc.45: ask first, with the count). */
+  previewTrip: async (
+    tripId: string
+  ): Promise<{ purpose: Purpose | null; wouldChange: number }> => {
+    const { data } = await api.get<Envelope<{ purpose: Purpose | null; wouldChange: number }>>(
+      `/purpose/trips/${tripId}/apply`
     );
     return data.data;
   },
