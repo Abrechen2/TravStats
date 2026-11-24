@@ -13,6 +13,7 @@ import {
   completeAddressFromCoordinates,
 } from "../nominatim";
 import { resolveGeocoderUrls } from "../../instanceSettingsService";
+import logger from "../../../utils/logger";
 
 const okResponse = (rows: unknown) => ({ ok: true, json: async () => rows }) as unknown as Response;
 
@@ -565,6 +566,33 @@ describe("nominatim geocoder", () => {
 
       expect(await geocodeAddress({ address: "Nirgendgasse 9, Schweden" })).toBeNull();
       expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("never logs the address it geocodes (rc.45)", () => {
+    const ADDRESS = "Geheimweg 7, 12345 Musterstadt";
+    const everyLogLine = (spies: jest.SpyInstance[]) =>
+      JSON.stringify(spies.flatMap((spy) => spy.mock.calls));
+
+    it("logs a hash and a length, never the text, on a miss, a non-OK answer and a failure", async () => {
+      const spies = (["debug", "info", "warn", "error"] as const).map((level) =>
+        jest.spyOn(logger, level).mockImplementation(() => logger)
+      );
+      global.fetch = jest.fn().mockResolvedValue(okResponse([]));
+      await geocodeAddressDetailed({ address: "Geheimweg 7", city: "12345 Musterstadt" });
+      global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 404 } as Response);
+      await geocodeAddressDetailed({ address: "Geheimweg 8", city: "12345 Musterstadt" });
+      global.fetch = jest.fn().mockRejectedValue(new Error("network down"));
+      await geocodeAddressDetailed({ address: "Geheimweg 9", city: "12345 Musterstadt" });
+      global.fetch = jest
+        .fn()
+        .mockResolvedValue(okResponse([{ lat: "x", lon: "y", display_name: ADDRESS }]));
+      await geocodeAddressDetailed({ address: "Geheimweg 10", city: "12345 Musterstadt" });
+
+      const logged = everyLogLine(spies);
+      expect(logged).not.toMatch(/Geheimweg|Musterstadt|12345/);
+      expect(logged).toMatch(/"queryHash":"[0-9a-f]{12}"/);
+      spies.forEach((spy) => spy.mockRestore());
     });
   });
 });

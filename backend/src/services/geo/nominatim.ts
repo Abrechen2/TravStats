@@ -1,4 +1,5 @@
 import { resolveGeocoderUrls, DEFAULT_NOMINATIM_URL } from "../instanceSettingsService";
+import { createHash } from "crypto";
 import logger from "../../utils/logger";
 import { formatStreetAddress } from "./streetAddress";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
@@ -293,6 +294,18 @@ function localityRetry(query: string): { query: string; localityWords: string[] 
   return { query: `${segments[0]}, ${segments[segments.length - 1]}`, localityWords };
 }
 
+/**
+ * What a log line may say about a geocoder query: a short hash (to tell repeats
+ * apart) and its length — never the text. A query is somebody's address, hotel
+ * or calendar location, and debug logs travel into support bundles (rc.45).
+ */
+export function queryLogRef(query: string): { queryHash: string; queryLength: number } {
+  return {
+    queryHash: createHash("sha256").update(query).digest("hex").slice(0, 12),
+    queryLength: query.length,
+  };
+}
+
 async function fetchVerifiedCoordinates(
   retry: { query: string; localityWords: string[] },
   baseUrl: string,
@@ -319,7 +332,10 @@ async function fetchVerifiedCoordinates(
   if (!match) {
     logger.warn("geocoding locality retry found no hit in the named locality");
     if (!quiet)
-      logger.debug({ retry }, "geocoding locality retry found no hit in the named locality");
+      logger.debug(
+        queryLogRef(retry.query),
+        "geocoding locality retry found no hit in the named locality"
+      );
     return null;
   }
   return parseRow(match);
@@ -330,8 +346,9 @@ async function fetchCoordinates(
   baseUrl: string,
   quiet = false
 ): Promise<Coordinates | null> {
-  // A private query (a calendar location) never reaches the logs, not even at debug level.
-  const q = quiet ? {} : { query };
+  // No query text ever reaches the logs: a hash and a length at most, and nothing at all for
+  // a private query (a calendar location).
+  const q = quiet ? {} : queryLogRef(query);
   const url = `${baseUrl}/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=1`;
   const res = await fetch(url, {
     headers: { "User-Agent": USER_AGENT },
@@ -359,7 +376,11 @@ async function fetchCoordinates(
   const coords = parseRow(rows[0]);
   if (coords === null) {
     logger.warn("geocoding response had unparseable coordinates");
-    logger.debug({ ...q, row: rows[0] }, "geocoding response had unparseable coordinates");
+    // The answer row names the place too: only its field names.
+    logger.debug(
+      { ...q, rowFields: Object.keys(rows[0] ?? {}) },
+      "geocoding response had unparseable coordinates"
+    );
   }
   return coords;
 }
@@ -410,7 +431,7 @@ export async function geocodeAddressDetailed(
       return { coords, failed: false };
     } catch (error) {
       logger.warn({ error }, "geocoding failed");
-      if (!quiet) logger.debug({ query }, "geocoding failed");
+      if (!quiet) logger.debug(queryLogRef(query), "geocoding failed");
       return { coords: null, failed: true };
     }
   });
