@@ -3,6 +3,7 @@ import type { TravelAccountResponse } from "../../types/travelAccount";
 import type { CountryDetail, Passport } from "../../types/passport";
 import type { TravelRecord, TravelRecordsResponse } from "../../types/travelRecords";
 import type { Wrapped } from "../../types/wrapped";
+import { waitForJob } from "./jobs";
 import type { FlightInsights } from "../../types/flightInsights";
 import type { CruiseInsights } from "../../types/cruiseInsights";
 import type { DomainRecord } from "../../types/domainRecords";
@@ -98,10 +99,13 @@ export const statsApi = {
    * a load that failed.
    */
   getWrapped: async (year?: number): Promise<Wrapped> => {
-    const { data } = await api.get<Wrapped>("/stats/wrapped", {
+    const { data, status } = await api.get<Wrapped | { jobId: string }>("/stats/wrapped", {
       params: year === undefined ? undefined : { year },
     });
-    return data;
+    // A story slower than the request may wait comes back as a job (UAT rc.45
+    // M1): poll it instead of letting the 10 s timeout call it a failure.
+    if (status === 202 && "jobId" in data) return waitForJob<Wrapped>(data.jobId);
+    return data as Wrapped;
   },
 
   /**

@@ -7,6 +7,8 @@ import { travTrackYears, travTrackYearStats } from "../travtrack/everyday/view";
 import { buildWrapped, type Wrapped } from "./wrapped";
 import { chapterYears } from "./wrappedChapters";
 import { loadWrappedDomains, loadWrappedPassport } from "./wrappedDomains";
+import { cachedTravTrackPart, travTrackFingerprint } from "./wrappedTravTrackCache";
+import { profileZoneOf } from "../../shared/time/profileZone";
 
 /** Years the logbook already names, so TravTrack's scan skips them (a miss only costs a scan). */
 function logbookYears(
@@ -83,6 +85,15 @@ export async function loadWrapped(
     // buckets — so the year's distance agrees with its bar on the chart.
     distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),
   }));
+  // The TravTrack half is the slow one (a year of fixes read through the
+  // privacy-safe read); it is kept until its inputs change (UAT rc.45 M1).
+  const fingerprint = opts.withTravTrack
+    ? await travTrackFingerprint(userId, (await profileZoneOf(userId)).zone)
+    : "";
+  const skip = logbookYears(
+    rows.map((r) => r.departureYear),
+    domains
+  );
   const wrapped = buildWrapped(
     rows,
     domains.cruises,
@@ -91,15 +102,14 @@ export async function loadWrapped(
     domains.rail,
     domains.chapters,
     opts.withTravTrack
-      ? await travTrackYears(
-          userId,
-          logbookYears(
-            rows.map((r) => r.departureYear),
-            domains
-          )
+      ? await cachedTravTrackPart(userId, `years:${[...skip].sort().join(",")}`, fingerprint, () =>
+          travTrackYears(userId, skip)
         )
       : []
   );
   if (!wrapped || !opts.withTravTrack) return wrapped;
-  return { ...wrapped, travTrack: await travTrackYearStats(userId, wrapped.year) };
+  const travTrack = await cachedTravTrackPart(userId, `year:${wrapped.year}`, fingerprint, () =>
+    travTrackYearStats(userId, wrapped.year)
+  );
+  return { ...wrapped, travTrack };
 }

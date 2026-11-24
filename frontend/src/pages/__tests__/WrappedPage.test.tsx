@@ -22,6 +22,7 @@ vi.mock("../../components/NavigationBar", () => ({
 }));
 
 import WrappedPage from "../WrappedPage";
+import { JobFailedError } from "../../lib/api/jobs";
 
 /**
  * Dein Jahr renders what `/stats/wrapped` sends. Four things are this side's
@@ -250,6 +251,28 @@ describe("WrappedPage", () => {
     renderAtRoute();
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     expect(screen.getByText("stats:wrapped.loadError")).toBeTruthy();
+  });
+
+  // UAT rc.45 M1: a slow story runs as a job. "Nothing to look back on" comes
+  // back as a failed job (404), and a timeout must always offer a retry.
+  it("reads a failed job's 404 as 'no story yet', and retries after a timeout", async () => {
+    getWrappedMock.mockRejectedValue(new JobFailedError("nothing_to_look_back_on", 404));
+    const { unmount } = renderAtRoute();
+    await waitFor(() => expect(screen.getByText("stats:wrapped.nothingYet")).toBeTruthy());
+    unmount();
+
+    getWrappedMock.mockRejectedValueOnce(
+      Object.assign(new Error("timeout of 10000ms exceeded"), {
+        isAxiosError: true,
+        code: "ECONNABORTED",
+      })
+    );
+    getWrappedMock.mockResolvedValueOnce(wrapped());
+    renderAtRoute();
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button"));
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+    expect(getWrappedMock).toHaveBeenCalledTimes(3);
   });
 
   // forgejo#265: the story is no longer flights only. With flights switched

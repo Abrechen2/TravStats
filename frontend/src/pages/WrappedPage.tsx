@@ -11,6 +11,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { statsApi } from "../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
+import { JobFailedError } from "../lib/api/jobs";
 import { formatDistance, localeForLanguage } from "../lib/units";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
@@ -96,7 +97,9 @@ export default function WrappedPage(): JSX.Element {
         if (ticket !== latestRequest.current) return;
         // A 404 is the server saying there is no story at all, which is a
         // different sentence from "I could not ask".
-        setFailure(classifyLoadFailure(err));
+        // The job's "nothing to look back on" is the sync path's 404.
+        const noStory = err instanceof JobFailedError && err.status === 404;
+        setFailure(noStory ? "notFound" : classifyLoadFailure(err));
         logger.error("Failed to load the year in review:", err);
       })
       .finally(() => {

@@ -526,6 +526,13 @@ registry.registerPath({
       description: "The year in review",
       content: { "application/json": { schema: wrapped } },
     },
+    202: {
+      description:
+        "The story takes longer than the request may wait; poll GET /jobs/{jobId}. " +
+        "The job's result is the Wrapped object; a failed job with code " +
+        "`nothing_to_look_back_on` (404) means no countable activity.",
+      content: { "application/json": { schema: z.object({ jobId: z.string() }) } },
+    },
     404: { description: "No countable activity in any year" },
   },
 });

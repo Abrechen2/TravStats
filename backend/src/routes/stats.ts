@@ -26,7 +26,7 @@ import logger from "../utils/logger";
 import { FLIGHT_CLOCK_SELECT } from "../services/stats/departureClock";
 import { buildWhere, computeSummary, countableFlightsWhere } from "../services/stats/summary";
 import { loadDaysAway } from "../services/stats/daysAwayLoader";
-import { loadWrapped } from "../services/stats/wrappedLoad";
+import { answerWrapped } from "../services/stats/wrappedRequest";
 import { fetchFlightDatedRows, fetchCruiseDatedRows } from "../services/stats/timeseriesRows";
 import { buildTravelRecords, loadRecordFlights } from "../services/stats/records";
 import { countableFlightWhere } from "../shared/flightCounting";
@@ -406,7 +406,14 @@ router.get(
         return;
       }
 
-      const wrapped = await loadWrapped(userId, parsed.data.year ?? null, { withTravTrack: true });
+      // A story that takes longer than the browser waits runs as a job the
+      // client polls (UAT rc.45 M1): 202 with its id, never a dropped request.
+      const answer = await answerWrapped(userId, parsed.data.year ?? null);
+      if (answer.kind === "job") {
+        res.status(202).json({ jobId: answer.jobId });
+        return;
+      }
+      const wrapped = answer.wrapped;
 
       if (!wrapped) {
         // No countable activity in any year. There is no story, and a grid of
