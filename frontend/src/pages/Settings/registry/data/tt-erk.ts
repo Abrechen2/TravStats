@@ -24,5 +24,11 @@ export const TT_ERK_PAGE: RegistryPage = {
         {"id":"kiort","mount":"ttDetect","kind":"toggle","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Ortsart per KI erkennen","en":"Detect place type with AI","terms":{"de":"Nur Ortsnamen, keine Koordinaten","en":"Place names only, no coordinates"}},
         {"id":"scanzeit","mount":"ttDetect","kind":"select","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Zeitraum für „Jetzt suchen“","en":"Period for “Search now”","terms":{"de":"","en":""}},
       ]},
+      {"id":"tt-erk-kalender","de":"Kalender","en":"Calendar","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
+        {"id":"kalender","mount":"ttCalendar","kind":"list","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Kalender","en":"Calendar","terms":{"de":"Termine als Beleg für deine Stopps ICS-Adresse oder CalDAV, nur gelesen. Gespeichert wird nur ein Termin, der zu einem Stopp passt.","en":"Appointments as evidence for your stops ICS address or CalDAV, read only. Only an appointment that fits a stop is kept."}},
+      ]},
+      {"id":"tt-erk-plugins","de":"Externe Vorschlagsquellen","en":"External suggestion sources","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
+        {"id":"plugins","mount":"ttPlugins","kind":"list","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Externe Vorschlagsquellen","en":"External suggestion sources","terms":{"de":"Eigene Dienste, die Stopps mit Orten beantworten Signierte HTTPS-Plugins. Gesendet werden Zeit und gerundete Koordinaten eines Stopps, nie Konto, Name oder E-Mail.","en":"Own services that answer stops with places Signed HTTPS plugins. A stop's time and rounded coordinates are sent, never the account, name or e-mail."}},
+      ]},
   ],
 };

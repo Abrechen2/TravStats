@@ -1,0 +1,23 @@
+# Beside TravStats: join its network so the admin's own plugin is reached as
+# http://travstats-plugin:8080/ (plain http only for an admin account and only
+# towards a LAN host; every other plugin must be https).
+services:
+  travstats-plugin:
+    build: .
+    container_name: travstats-plugin
+    restart: unless-stopped
+    read_only: true
+    environment:
+      # The secret TravStats shows once when you add the plugin.
+      PLUGIN_SECRET: ${PLUGIN_SECRET:?set PLUGIN_SECRET}
+      PLACES_FILE: /app/data/places.json
+    volumes:
+      - ./data/places.json:/app/data/places.json:ro
+    networks:
+      - travstats
+
+networks:
+  travstats:
+    external: true
+    # The network your TravStats container is on (`docker network ls`).
+    name: travstats_default

@@ -1,0 +1,11 @@
+[
+  {
+    "id": "example-1",
+    "name": "Marienplatz",
+    "lat": 48.13743,
+    "lon": 11.57549,
+    "address": "Marienplatz 1, 80331 München",
+    "purpose": "private",
+    "url": "https://example.com/places/example-1"
+  }
+]

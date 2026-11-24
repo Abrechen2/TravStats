@@ -12,6 +12,8 @@ const ORDER = [
   "ttPlaces",
   "ttZones",
   "ttDetect",
+  "ttCalendar",
+  "ttPlugins",
   "ttSources",
   "ttExport",
   "ttDelete",
@@ -37,7 +39,7 @@ describe("the TravTrack settings pages", () => {
     expect(Object.keys(de.area.pages)).not.toContain("location");
   });
 
-  it("hold the eight sections in the spec's order, in the registry and on the pages", () => {
+  it("hold the sections in the spec's order (the calendar since 2026-11-23), in the registry and on the pages", () => {
     const rows = TT_PAGES.flatMap((id) => registryPage(id)!.sections.flatMap((s) => s.rows));
     expect([...new Set(rows.map((r) => r.mount))]).toEqual(ORDER);
     expect(mountsOnTravTrackPages()).toEqual(ORDER);

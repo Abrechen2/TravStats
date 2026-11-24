@@ -1,0 +1,228 @@
+{
+  "calendar": {
+    "title": "Calendar",
+    "sub": "Appointments as evidence for your stops",
+    "help": "TravStats only reads the days the scan is looking at (at most 30 days back). An appointment that fits a stop in time and place becomes evidence in the suggestion. No other appointment is stored.",
+    "empty": "No calendar connected yet.",
+    "add": "Add calendar",
+    "remove": "Remove",
+    "removeConfirm": {
+      "title": "Remove calendar “{{label}}”?",
+      "affects": "Calendar",
+      "after": "Open suggestions lose the evidence from this calendar. Accepted visits stay."
+    },
+    "icsLine": "ICS subscription · {{host}}",
+    "caldavLine_one": "CalDAV · {{user}} · {{count}} calendar",
+    "caldavLine_other": "CalDAV · {{user}} · {{count}} calendars",
+    "lastFailed": "Last attempt failed",
+    "blocked": {
+      "internet_off": "The server's internet access is switched off. No calendar is read.",
+      "service_off": "The admin switched calendars off on this server. No calendar is read."
+    },
+    "test": {
+      "button": "Test",
+      "ok_one": "Read: {{count}} appointment between {{from}} and {{to}}.",
+      "ok_other": "Read: {{count}} appointments between {{from}} and {{to}}.",
+      "skipped_one": "{{count}} recurring appointment was cut short or skipped (too many or invalid repetitions).",
+      "skipped_other": "{{count}} recurring appointments were cut short or skipped (too many or invalid repetitions)."
+    },
+    "privacy": {
+      "title": "What is stored",
+      "sub": "Only an appointment that fits a stop, with title, time and place, inside the suggestion. Once accepted or rejected only its time and calendar remain. The calendar's address and password are stored encrypted and never shown again."
+    },
+    "form": {
+      "kind": "Kind of calendar",
+      "ics": "ICS address",
+      "caldav": "CalDAV",
+      "label": "Name",
+      "labelHint": "e.g. Work or Private. Rules can refer to this calendar.",
+      "icsUrl": "Secret address (ICS)",
+      "icsHint": "The subscription address from iCloud, Google or Outlook. It is the key to the calendar and is stored encrypted.",
+      "server": "Server address",
+      "serverHint": "e.g. https://caldav.example.com/",
+      "username": "User",
+      "password": "App password",
+      "passwordHint": "Stored encrypted and never shown again.",
+      "discover": "Find calendars",
+      "collections": "Which calendars are read",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "failure": {
+      "unknown": "That did not work. Please try again later.",
+      "kind": {
+        "notConfigured": "The calendar is not fully set up.",
+        "unreachable": "The calendar server cannot be reached.",
+        "auth": "Access refused. Check the address, user or password.",
+        "notFound": "There is no calendar at this address.",
+        "protocol": "The server did not send a readable calendar answer.",
+        "invalidUrl": "This address is not valid."
+      },
+      "code": {
+        "PRIVATE_TARGET": "This address is on the local network. Only the admin account may use a server on the local network.",
+        "CALENDAR_TIMEOUT": "The calendar server did not answer in time.",
+        "CALENDAR_TOO_LARGE": "The calendar is larger than 5 MB.",
+        "CALENDAR_TOO_MANY_EVENTS": "The calendar has more than 10,000 appointments.",
+        "CALENDAR_PARSE": "The answer is not a readable calendar (perhaps a login page).",
+        "CALENDAR_PARSE_TIMEOUT": "The calendar could not be read in the time allowed.",
+        "CALENDAR_REDIRECT": "The server redirects. TravStats follows no redirect; please enter the final address.",
+        "CALENDAR_XML_TOO_DEEP": "The CalDAV server's answer is nested too deeply.",
+        "CALENDAR_FOREIGN_HREF": "The CalDAV server points to another server. That is not followed.",
+        "CALENDAR_NO_COLLECTIONS": "No calendar with appointments was found on this server.",
+        "CALENDAR_EGRESS_INTERNET_OFF": "The server's internet access is switched off.",
+        "CALENDAR_EGRESS_SERVICE_OFF": "The admin switched calendars off on this server.",
+        "CALENDAR_SOURCE_LIMIT": "At most 10 calendars are possible.",
+        "CALENDAR_HTTPS_REQUIRED": "Please use an https address. Over http the address and password would travel readable.",
+        "CALENDAR_UNSAFE_TIMEZONE": "The calendar contains a time zone with invalid rules and is not read."
+      }
+    },
+    "geocode": {
+      "title": "Appointment places",
+      "label": "Look calendar places up for matching",
+      "sub": "Off: appointments match only through own places, the place found at the stop, or a rule's place.",
+      "help": "On: the place of an appointment a rule selects is looked up with the server's geocoder to match it to a stop. Only for stops outside your privacy zones. The text is neither stored nor logged.",
+      "error": "The setting could not be saved. Please try again."
+    }
+  },
+  "inbox": {
+    "calendar": {
+      "source": "Calendar “{{label}}”",
+      "match": {
+        "geocoded": "The appointment's place is {{meters}} m from the stop.",
+        "placeName": "The appointment's place names this place.",
+        "rulePlace": "A rule names this place.",
+        "context": "Only the time fits, no place: the appointment suggests the purpose at most."
+      },
+      "time": {
+        "overlap": "{{minutes}} min in common",
+        "startNear": "The stop starts within an hour of the appointment's start"
+      }
+    },
+    "purposeSuggested": "Suggested: {{purpose}}",
+    "plugins": {
+      "title": "Suggestions from plugins",
+      "source": "Source: {{name}}",
+      "confidence": "Confidence {{percent}} %",
+      "distance": "{{meters}} m from the stop",
+      "pick": "Use this one",
+      "link": "Open in the source system",
+      "pending": "A plugin has not answered yet; it will be asked again.",
+      "reask": "Ask again",
+      "reasked": "The plugins will be asked again on the next scan.",
+      "reaskError": "That did not work. Please try again."
+    },
+    "suggestedBy": "Suggested by {{name}}"
+  },
+  "rules": {
+    "title": "Rules",
+    "sub": "What a matching appointment suggests as purpose and name",
+    "help": "Top to bottom, the first matching rule applies. Without a rule an appointment suggests its title as name and no purpose.",
+    "empty": "No rules.",
+    "kind": {
+      "calendar": "Whole calendar",
+      "keyword": "Keyword in the title"
+    },
+    "source": "Calendar",
+    "anySource": "Any calendar",
+    "token": "Keyword",
+    "matchMode": {
+      "contains": "contains",
+      "startsWith": "starts with"
+    },
+    "purpose": "Purpose",
+    "nameTemplate": "Name",
+    "nameTemplateHint": "Placeholders: {title}, {location}, {titleAfterToken}. Empty: the title.",
+    "add": "Add rule",
+    "remove": "Remove",
+    "up": "Move up",
+    "down": "Move down",
+    "save": "Save rules",
+    "saved": "Rules saved.",
+    "error": "The rules could not be saved. Please try again.",
+    "limit": "At most 50 rules are possible.",
+    "place": "Place",
+    "placeHint": "For appointments without a location: this own place, when it is beside the stop.",
+    "noPlace": "No place"
+  },
+  "plugins": {
+    "title": "External suggestion sources",
+    "sub": "Own services that answer stops with places",
+    "help": "A plugin is an HTTPS service you run yourself or trust. TravStats asks it, signed, about a stop; its answer appears as a suggestion in the inbox. A plugin never writes into TravStats itself. Guide: docs/features/plugins.md.",
+    "empty": "No plugin added yet.",
+    "add": "Add plugin",
+    "remove": "Remove",
+    "rotate": "New secret",
+    "lastAnswer": "Last answer: version {{version}} · {{at}}",
+    "lastError": "Last error",
+    "retryAt": "again from {{at}}",
+    "backfillAllowed": "Allow asking about past days",
+    "blocked": {
+      "internet_off": "The server's internet access is switched off. No plugin is asked.",
+      "service_off": "The admin switched plugins off on this server. No plugin is asked."
+    },
+    "precision": {
+      "label": "Coordinate precision",
+      "exact": "Exact",
+      "100m": "Rounded to 100 m",
+      "1km": "Rounded to 1 km (no address)"
+    },
+    "form": {
+      "name": "Name",
+      "url": "Address (HTTPS)",
+      "urlHint": "Only the admin account may add a service on the local network or over http.",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "secret": {
+      "once": "The secret for this plugin. It is shown only now: enter it in the plugin.",
+      "copy": "Copy",
+      "copied": "Copied.",
+      "copyFailed": "Copying did not work. Please select it by hand.",
+      "done": "Done"
+    },
+    "test": {
+      "button": "Test",
+      "ok": "Answer in {{ms}} ms, version {{version}}: “{{first}}”.",
+      "empty": "Answer in {{ms}} ms, version {{version}}: nothing at this place."
+    },
+    "backfill": {
+      "from": "From",
+      "to": "To",
+      "button": "Ask about past days",
+      "range": "At most 90 days, not in the future.",
+      "running": "Running … this can take a while because of the hourly limits.",
+      "done": "Done: {{days}} days, {{asked}} requests, {{created}} new and {{merged}} extended suggestions, {{failed}} errors.",
+      "stopped": "Stopped by the limits at {{at}}; starting again continues there."
+    },
+    "sent": {
+      "title": "What is sent",
+      "sub": "A stop's start and end, its coordinates rounded to the chosen precision and its time zone; plus what TravStats already knows: the nearest own place, the place found and (at exact and 100 m) the address.",
+      "help": "Never sent: your account, name or e-mail, the location history, other stops or entries. Every request is signed with the secret."
+    },
+    "removeConfirm": {
+      "title": "Remove plugin “{{name}}”?",
+      "affects": "Plugin",
+      "after": "Its suggestions in open findings disappear. Accepted visits stay."
+    },
+    "failure": {
+      "unknown": "That did not work. Please try again later.",
+      "reason": {
+        "timeout": "The plugin did not answer in time (5 s).",
+        "unreachable": "The plugin cannot be reached.",
+        "auth": "The plugin refused the request. Is the secret right?",
+        "rateLimited": "The plugin or the hourly limit allows no request right now.",
+        "protocol": "The plugin's answer does not fit the contract (version 1).",
+        "server": "The plugin reported a server error.",
+        "privateTarget": "This address is on the local network. Only the admin account may use it."
+      },
+      "code": {
+        "PRIVATE_TARGET": "This address is on the local network. Only the admin account may use it.",
+        "CALENDAR_HTTPS_REQUIRED": "Please use an https address.",
+        "PLUGIN_LIMIT": "At most 5 plugins are possible.",
+        "PLUGIN_BACKFILL_REFUSED": "Asking about past days is not allowed for this plugin, or the range is longer than 90 days.",
+        "PLUGIN_BACKFILL_RUNNING": "A request for this plugin is already running.",
+        "SERVICE_DISABLED": "Plugins are switched off on this server."
+      }
+    }
+  }
+}

@@ -21,6 +21,7 @@ import { FormErrorBanner } from "../components/form";
 import { isTransientSaveError, saveErrorKey } from "../lib/saveErrorMessage";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
+import { usePluginSource } from "../hooks/usePluginSource";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { FlagImg } from "../lib/countryFlag";
 import { placeCountryLabel, placeCountryCode } from "../lib/placeCountry";
@@ -43,13 +44,15 @@ import BackLink from "../components/navigation/BackLink";
 
 export default function PlaceDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
-  const { t, i18n } = useTranslation(["places", "common"]);
+  const { t, i18n } = useTranslation(["places", "common", "suggestionSources"]);
   const { customs } = usePlaceCategories();
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
   const access = usePlacesAccess();
 
   const [place, setPlace] = useState<Place | null>(null);
+  // "Vorgeschlagen von …": a place an accepted plugin suggestion made (spec 2026-11-23, P3).
+  const pluginSource = usePluginSource(place?.externalRef);
   const [loading, setLoading] = useState(true);
   // Two states, not one: a 404 means the place is gone, anything else means
   // we could not ask. Same distinction the flight, cruise and lodging detail
@@ -404,7 +407,14 @@ export default function PlaceDetailPage(): JSX.Element {
             title={t("places:detail.masterData")}
             facts={[
               { label: t("places:form.category"), value: placeCategoryLabel(t, place.category) },
-              { label: t("places:detail.source"), value: place.externalRef, mono: true },
+              pluginSource.fromPlugin
+                ? {
+                    label: t("places:detail.source"),
+                    value: t("suggestionSources:inbox.suggestedBy", {
+                      name: pluginSource.name ?? place.externalRef,
+                    }),
+                  }
+                : { label: t("places:detail.source"), value: place.externalRef, mono: true },
             ]}
           />
         </div>

@@ -64,8 +64,10 @@ export type VisitResolution =
       lookup: { geocoder: string; venues: string };
       /** Whether the geocoder and the building layer were asked (an own place beside the stop asks nobody). */
       lookedUp: boolean;
+      /** The stop's address as the same lookup reverse-geocoded it (plugins may receive it). */
+      address?: StayIdentityView["address"];
     }
-  | { kind: "none"; why: "lodging" | "noVenue" }
+  | { kind: "none"; why: "lodging" | "noVenue"; address?: StayIdentityView["address"] }
   | { kind: "failed"; reason: LookupFailure }
   /** A lookup was needed and this run's budget for them was spent. */
   | { kind: "deferred" };
@@ -194,9 +196,11 @@ export async function resolveVisit(
   if (view.candidatesState === "degraded") return { kind: "failed", reason: "places" };
   if (VENUE_FAILURES.includes(view.venues.state)) return { kind: "failed", reason: "venues" };
   const probable = view.probable;
-  if (!probable || probable.source !== "nearbyPlace") return { kind: "none", why: "noVenue" };
+  const address = view.address ?? undefined;
+  if (!probable || probable.source !== "nearbyPlace")
+    return { kind: "none", why: "noVenue", address };
   const chosen = view.candidates.find((c) => c.name === probable.name);
-  if (!chosen) return { kind: "none", why: "noVenue" };
+  if (!chosen) return { kind: "none", why: "noVenue", address };
 
   const alternatives = view.candidates
     .filter((c) => c !== chosen)
@@ -216,6 +220,7 @@ export async function resolveVisit(
     kind: "pick",
     lookup,
     lookedUp: true,
+    address,
     pick: {
       source: same ? "known" : "osm",
       name: same?.name ?? chosen.name,

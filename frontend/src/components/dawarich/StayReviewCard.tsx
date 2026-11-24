@@ -8,6 +8,11 @@ import { Card } from "../ui/Card";
 import StayIdentityPanel from "./StayIdentityPanel";
 import TrackSectionPanel from "../inbox/track/TrackSectionPanel";
 import { staySectionProps } from "../inbox/track/sectionProps";
+import StayCalendarEvidence from "./StayCalendarEvidence";
+import StayPluginCandidates from "./StayPluginCandidates";
+import type { StayPluginEvidence } from "../../lib/api/dawarichStays";
+
+type Purpose = "private" | "business" | "";
 
 /**
  * How often an accept is asked again when the server says "try again" — it is
@@ -27,7 +32,7 @@ export default function StayReviewCard({
   choices: StayChoices;
   onDone: () => void;
 }): JSX.Element {
-  const { t } = useTranslation(["trips", "places"]);
+  const { t } = useTranslation(["trips", "places", "purpose", "suggestionSources"]);
   const text = (key: string) => t(`trips:dawarichStays.${key}`);
   // A TravTrack finding (plan E4) names its source and explains itself; a
   // Dawarich one reads exactly as it always did.
@@ -53,6 +58,26 @@ export default function StayReviewCard({
   const [end, setEnd] = useState(
     (row.times?.endAt?.local ?? toLocal(row.endAt, row.zone).local).slice(0, 16)
   );
+  // Starts with what the evidence suggests (a calendar rule); the user may change it.
+  const [purpose, setPurpose] = useState<Purpose>(row.evidence.suggestedPurpose ?? "");
+  // Sent only when there is something to say: a suggestion, or the user's own choice. An
+  // untouched "Nicht festgelegt" must not clear the purpose of a visit that already exists.
+  const [purposeTouched, setPurposeTouched] = useState(false);
+  // The plugin suggestion taken over into the form; sent so the place keeps its reference.
+  const [picked, setPicked] = useState<StayPluginEvidence | null>(null);
+  const pickPlugin = (p: StayPluginEvidence) => {
+    setPicked(p);
+    setPlaceId("");
+    pickName(p.name);
+    if (p.lat !== undefined && p.lon !== undefined) {
+      setLat(String(p.lat));
+      setLon(String(p.lon));
+    }
+    if (p.purpose) {
+      setPurposeTouched(true);
+      setPurpose(p.purpose);
+    }
+  };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submit = async (accept: boolean) => {
@@ -66,6 +91,10 @@ export default function StayReviewCard({
       lon: Number(lon),
       startAt: { local: start },
       endAt: { local: end },
+      ...(purposeTouched || row.evidence.suggestedPurpose ? { purpose: purpose || null } : {}),
+      ...(picked?.externalRef
+        ? { pluginRef: { pluginId: picked.pluginId, externalRef: picked.externalRef } }
+        : {}),
     };
     try {
       if (accept) {
@@ -167,6 +196,20 @@ export default function StayReviewCard({
           {m.strength === "name" && ` · ${t("places:smartList.weaker")}`}
         </p>
       ))}
+      {row.evidence.calendar && (
+        <StayCalendarEvidence evidence={row.evidence.calendar} zone={row.evidence.zone} />
+      )}
+      {travtrack &&
+      open &&
+      (row.evidence.plugins?.length || row.evidence.pluginsPending?.length) ? (
+        <StayPluginCandidates
+          stayId={row.id}
+          plugins={row.evidence.plugins ?? []}
+          pending={(row.evidence.pluginsPending?.length ?? 0) > 0}
+          picked={picked ? `${picked.pluginId}:${picked.externalRef ?? picked.name}` : null}
+          onPick={busy ? undefined : pickPlugin}
+        />
+      ) : null}
       {section && <TrackSectionPanel {...section} />}
       <StayIdentityPanel
         stayId={row.id}
@@ -328,6 +371,30 @@ export default function StayReviewCard({
               onChange={(e) => setEnd(e.target.value)}
             />
           </label>
+          <label>
+            {t("purpose:field.legend")}
+            <select
+              className="input"
+              value={purpose}
+              disabled={busy}
+              onChange={(e) => {
+                setPurposeTouched(true);
+                setPurpose(e.target.value as Purpose);
+              }}
+              data-testid="stay-purpose"
+            >
+              <option value="">{t("purpose:field.unknown")}</option>
+              <option value="private">{t("purpose:field.private")}</option>
+              <option value="business">{t("purpose:field.business")}</option>
+            </select>
+          </label>
+          {row.evidence.suggestedPurpose && (
+            <p className="t-caption">
+              {t("suggestionSources:inbox.purposeSuggested", {
+                purpose: t(`purpose:field.${row.evidence.suggestedPurpose}`),
+              })}
+            </p>
+          )}
           <label>
             {text("trip")}
             <select

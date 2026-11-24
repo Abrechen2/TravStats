@@ -2701,6 +2701,54 @@
               "m": "ttDetect"
             }
           ]
+        },
+        {
+          "id": "tt-erk-kalender",
+          "de": "Kalender",
+          "en": "Calendar",
+          "rows": [
+            {
+              "id": "kalender",
+              "t": "list",
+              "inv": "Calendar source (spec 2026-11-23-plugins-and-calendar.md, P1)",
+              "de": [
+                "Kalender",
+                "Termine als Beleg für deine Stopps",
+                "ICS-Adresse oder CalDAV, nur gelesen. Gespeichert wird nur ein Termin, der zu einem Stopp passt."
+              ],
+              "en": [
+                "Calendar",
+                "Appointments as evidence for your stops",
+                "ICS address or CalDAV, read only. Only an appointment that fits a stop is kept."
+              ],
+              "m": "ttCalendar",
+              "x": 0
+            }
+          ]
+        },
+        {
+          "id": "tt-erk-plugins",
+          "de": "Externe Vorschlagsquellen",
+          "en": "External suggestion sources",
+          "rows": [
+            {
+              "id": "plugins",
+              "t": "list",
+              "inv": "Suggestion plugins (spec 2026-11-23-plugins-and-calendar.md, P3)",
+              "de": [
+                "Externe Vorschlagsquellen",
+                "Eigene Dienste, die Stopps mit Orten beantworten",
+                "Signierte HTTPS-Plugins. Gesendet werden Zeit und gerundete Koordinaten eines Stopps, nie Konto, Name oder E-Mail."
+              ],
+              "en": [
+                "External suggestion sources",
+                "Own services that answer stops with places",
+                "Signed HTTPS plugins. A stop's time and rounded coordinates are sent, never the account, name or e-mail."
+              ],
+              "m": "ttPlugins",
+              "x": 0
+            }
+          ]
         }
       ]
     },

@@ -142,6 +142,9 @@ model User {
   settings                        UserSettings?
   externalServiceTests            ExternalServiceTest[]
   webdavSync                      UserWebdavSync?
+  calendarSources                 CalendarSource[]
+  calendarRules                   CalendarRule[]
+  suggestionPlugins               SuggestionPlugin[]
   analyticsEvents                 AnalyticsEvent[]
   createdInvitations              Invitation[]                 @relation("CreatedInvitations")
   usedInvitations                 Invitation[]                 @relation("UsedInvitations")
@@ -1182,6 +1185,10 @@ model UserSettings {
   /// same days is asked again, not even an expanded one (trip suggestions v2).
   tripSuggestionQuietDays               Int     @default(14) @map("trip_suggestion_quiet_days")
   staySuggestionsEnabled                Boolean @default(true) @map("stay_suggestions_enabled")
+  /// Look calendar event locations up in the geocoder to match them to stops (spec
+  /// 2026-11-23-plugins-and-calendar.md). Off by default: a location is personal text, and
+  /// matching against own places and the venue works without it.
+  calendarGeocodeLocations              Boolean @default(false) @map("calendar_geocode_locations")
   /// Immich photos as evidence for which place a stay was at. Read by the stay
   /// place identification of forgejo#305; it only ever applies where the
   /// account has an Immich connection.
@@ -3871,6 +3878,7 @@ model Place {
   /// left of the place folded into it (forgejo#232).
   externalRefAliases PlaceExternalRef[]
   captures           PlaceCapture[]
+  calendarRules      CalendarRule[]
 
   @@unique([userId, externalRef])
   @@unique([userId, curatedItemId])
@@ -8124,4 +8132,131 @@ model RerouteRun {
   @@index([status, resumeAfter])
   @@index([scope, userId, createdAt])
   @@map("reroute_runs")
+}
+
+/// A calendar an account reads as evidence for its TravTrack stops (spec
+/// 2026-11-23-plugins-and-calendar.md, Part A). Read-only and never mirrored:
+/// the events are read into memory for one job and only an event that matched
+/// a stop survives, inside that finding's evidence. No event table exists.
+model CalendarSource {
+  id                      String    @id @default(uuid())
+  userId                  String    @map("user_id")
+  /// The user's own name for it ("Arbeit", "Privat"); calendar rules match on the source.
+  label                   String
+  /// "ics" | "caldav" — validated by the route's Zod schema.
+  kind                    String
+  enabled                 Boolean   @default(true)
+  /// ICS: the subscription URL is itself the credential (iCloud/Google "secret address"),
+  /// so it is stored encrypted and never sent back. `icsHost` is what the page shows.
+  icsUrlEncrypted         String?   @map("ics_url_encrypted")
+  icsHost                 String?   @map("ics_host")
+  /// CalDAV: the server URL and user are shown; the app password is not.
+  caldavUrl               String?   @map("caldav_url")
+  caldavUsername          String?   @map("caldav_username")
+  caldavPasswordEncrypted String?   @map("caldav_password_encrypted")
+  /// The chosen collections: `[{ href, name }]`, hrefs absolute on the server's origin.
+  caldavCollections       Json      @default("[]") @map("caldav_collections")
+  /// The last test or read: `ok`, or a failure kind of `services/calendar/errors.ts`.
+  lastStatus              String?   @map("last_status")
+  lastErrorCode           String?   @map("last_error_code")
+  lastCheckedAt           DateTime? @map("last_checked_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rules CalendarRule[]
+
+  @@index([userId])
+  @@map("calendar_sources")
+}
+
+/// How a matched calendar event turns into a purpose and a name (spec
+/// 2026-11-23-plugins-and-calendar.md, "Rules → purpose and name"). Ordered by
+/// `position`; the first rule that matches wins. No rule ships by default: an
+/// event without one proposes a name and no purpose.
+model CalendarRule {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  position     Int
+  /// "calendar" (every event of `sourceId`) | "keyword" (`token` in the title).
+  kind         String
+  sourceId     String?  @map("source_id")
+  /// keyword: matched case-insensitively at word boundaries.
+  token        String?
+  /// keyword: "contains" | "startsWith".
+  matchMode    String   @default("contains") @map("match_mode")
+  /// "private" | "business" | null (the rule names no purpose).
+  purpose      String?
+  /// `{title}`, `{location}`, `{titleAfterToken}`; null proposes the title.
+  nameTemplate String?  @map("name_template")
+  /// keyword: an own place the event names when it carries no location.
+  placeId      String?  @map("place_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source CalendarSource? @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  place  Place?          @relation(fields: [placeId], references: [id], onDelete: SetNull)
+
+  @@index([userId, position])
+  @@map("calendar_rules")
+}
+
+/// An external suggestion source (spec 2026-11-23-plugins-and-calendar.md, Part B):
+/// a signed HTTPS endpoint that answers a TravTrack stop with place suggestions.
+/// TravStats knows nothing about what is behind the URL; the plugin never writes
+/// into TravStats, it only answers.
+model SuggestionPlugin {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  name            String
+  url             String
+  /// 32 random bytes, generated by TravStats, shown once, stored encrypted; the HMAC key.
+  secretEncrypted String    @map("secret_encrypted")
+  /// "exact" | "100m" | "1km": coordinates are rounded to this before they leave.
+  precision       String    @default("100m")
+  enabled         Boolean   @default(true)
+  backfillAllowed Boolean   @default(false) @map("backfill_allowed")
+  /// The contract major the plugin answered with last.
+  lastVersion     Int?      @map("last_version")
+  /// `ok` | `empty` | a failure reason of `services/plugins/client.ts`.
+  lastOutcome     String?   @map("last_outcome")
+  lastCalledAt    DateTime? @map("last_called_at")
+  lastErrorAt     DateTime? @map("last_error_at")
+  /// No call before this: a failure's backoff (15 min doubling to 6 h) or the plugin's Retry-After.
+  retryAt         DateTime? @map("retry_at")
+  failures        Int       @default(0)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calls SuggestionPluginCall[]
+
+  @@index([userId])
+  @@map("suggestion_plugins")
+}
+
+/// One call to a plugin: what the hourly/daily limits count, and — for an answer
+/// (`ok` or `empty`) — the memory that keeps a rescan from asking about the same
+/// stop again. Coordinates are the rounded ones that were sent.
+model SuggestionPluginCall {
+  id            String    @id @default(uuid())
+  pluginId      String    @map("plugin_id")
+  userId        String    @map("user_id")
+  at            DateTime  @default(now())
+  outcome       String
+  stopStartAt   DateTime? @map("stop_start_at")
+  stopEndAt     DateTime? @map("stop_end_at")
+  lat           Float?
+  lon           Float?
+  suggestions   Int       @default(0)
+  /// "Neu fragen": the answer no longer counts as given, so the stop is asked again. The row
+  /// stays — the hourly and daily limits count every call ever made.
+  invalidatedAt DateTime? @map("invalidated_at")
+
+  plugin SuggestionPlugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+
+  @@index([pluginId, at])
+  @@index([pluginId, stopStartAt])
+  @@map("suggestion_plugin_calls")
 }

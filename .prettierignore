@@ -17,6 +17,9 @@ package-lock.json
 # Generated, and compared byte for byte against their generator. Formatting
 # them would turn the next regeneration into a diff, or a guard red.
 frontend/src/lib/generated/
+# The plugin contract, exported from the server's OpenAPI document and compared byte
+# for byte by backend/src/services/plugins/__tests__/contractSchema.test.ts.
+packages/travstats-plugin-template/contract/
 # The settings registry, emitted by frontend/scripts/generate-settings-registry.mjs
 # from the designer's settings-data.json: one row per line, and the generator's
 # own --check compares it byte for byte.

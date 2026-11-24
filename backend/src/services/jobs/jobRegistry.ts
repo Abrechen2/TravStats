@@ -52,7 +52,8 @@ export type JobKind =
   | "accountArchive.export"
   | "accountArchive.import"
   | "lifeBook.export"
-  | "demo.recreate";
+  | "demo.recreate"
+  | "plugins.backfill";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 

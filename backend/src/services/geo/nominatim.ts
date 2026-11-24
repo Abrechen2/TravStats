@@ -295,7 +295,8 @@ function localityRetry(query: string): { query: string; localityWords: string[] 
 
 async function fetchVerifiedCoordinates(
   retry: { query: string; localityWords: string[] },
-  baseUrl: string
+  baseUrl: string,
+  quiet = false
 ): Promise<Coordinates | null> {
   const url = `${baseUrl}/search?q=${encodeURIComponent(retry.query)}&format=json&addressdetails=1&limit=${RETRY_LIMIT}`;
   const res = await fetch(url, {
@@ -317,13 +318,20 @@ async function fetchVerifiedCoordinates(
   });
   if (!match) {
     logger.warn("geocoding locality retry found no hit in the named locality");
-    logger.debug({ retry }, "geocoding locality retry found no hit in the named locality");
+    if (!quiet)
+      logger.debug({ retry }, "geocoding locality retry found no hit in the named locality");
     return null;
   }
   return parseRow(match);
 }
 
-async function fetchCoordinates(query: string, baseUrl: string): Promise<Coordinates | null> {
+async function fetchCoordinates(
+  query: string,
+  baseUrl: string,
+  quiet = false
+): Promise<Coordinates | null> {
+  // A private query (a calendar location) never reaches the logs, not even at debug level.
+  const q = quiet ? {} : { query };
   const url = `${baseUrl}/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=1`;
   const res = await fetch(url, {
     headers: { "User-Agent": USER_AGENT },
@@ -331,7 +339,7 @@ async function fetchCoordinates(query: string, baseUrl: string): Promise<Coordin
   });
   if (!res.ok) {
     logger.warn({ status: res.status }, "geocoding lookup non-OK");
-    logger.debug({ query, status: res.status }, "geocoding lookup non-OK");
+    logger.debug({ ...q, status: res.status }, "geocoding lookup non-OK");
     // A 5xx, a 429 or a timeout says nothing about the place — it says the
     // provider is having a moment. Returning null here made the caller cache
     // it as a confirmed miss for the life of the process, so one bad minute
@@ -345,13 +353,13 @@ async function fetchCoordinates(query: string, baseUrl: string): Promise<Coordin
   const rows = (await res.json()) as NominatimRow[];
   if (!Array.isArray(rows) || rows.length === 0) {
     logger.warn("geocoding found no results");
-    logger.debug({ query }, "geocoding found no results");
+    logger.debug(q, "geocoding found no results");
     return null;
   }
   const coords = parseRow(rows[0]);
   if (coords === null) {
     logger.warn("geocoding response had unparseable coordinates");
-    logger.debug({ query, row: rows[0] }, "geocoding response had unparseable coordinates");
+    logger.debug({ ...q, row: rows[0] }, "geocoding response had unparseable coordinates");
   }
   return coords;
 }
@@ -366,14 +374,22 @@ export async function geocodeAddress(parts: GeocodeParts): Promise<Coordinates |
   return (await geocodeAddressDetailed(parts)).coords;
 }
 
-/** `geocodeAddress` that also says whether a null was a provider failure. */
-export async function geocodeAddressDetailed(parts: GeocodeParts): Promise<GeocodeOutcome> {
+/**
+ * `geocodeAddress` that also says whether a null was a provider failure.
+ * `privateQuery`: the text is personal (a calendar location) — it is neither kept in this
+ * module's cache nor written to any log; the caller keeps its own hashed cache.
+ */
+export async function geocodeAddressDetailed(
+  parts: GeocodeParts,
+  options: { privateQuery?: boolean } = {}
+): Promise<GeocodeOutcome> {
   const query = buildQuery(parts);
   if (!query) return { coords: null, failed: false };
+  const quiet = options.privateQuery === true;
 
   const baseUrl = await resolveNominatimBase();
   const key = `${baseUrl}|${query.toLowerCase()}`;
-  const cached = cache.get(key);
+  const cached = quiet ? undefined : cache.get(key);
   if (cached !== undefined) return { coords: cached, failed: false };
 
   // Chain onto the shared queue so this call's request (and its throttle
@@ -381,20 +397,20 @@ export async function geocodeAddressDetailed(parts: GeocodeParts): Promise<Geoco
   const task = queue.then(async () => {
     await throttle();
     try {
-      let coords = await fetchCoordinates(query, baseUrl);
+      let coords = await fetchCoordinates(query, baseUrl, quiet);
       const retry = coords === null ? localityRetry(query) : null;
       if (retry) {
         await throttle();
-        coords = await fetchVerifiedCoordinates(retry, baseUrl);
+        coords = await fetchVerifiedCoordinates(retry, baseUrl, quiet);
       }
       // Only cache a definitive answer (found or confirmed-empty/unparseable).
       // A thrown error is transient (network blip, timeout) and must not
       // poison the cache for the process lifetime.
-      cache.set(key, coords);
+      if (!quiet) cache.set(key, coords);
       return { coords, failed: false };
     } catch (error) {
       logger.warn({ error }, "geocoding failed");
-      logger.debug({ query }, "geocoding failed");
+      if (!quiet) logger.debug({ query }, "geocoding failed");
       return { coords: null, failed: true };
     }
   });

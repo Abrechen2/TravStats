@@ -16,6 +16,13 @@ vi.mock("../../pages/Settings/useSectionConditions", () => ({
   }),
 }));
 vi.mock("../../components/Settings/location/StayScanSection", () => ({ default: () => null }));
+// The calendar and plugin cards load their own lists; they have their own tests.
+vi.mock("../../components/Settings/suggestionSources/CalendarSourcesSection", () => ({
+  default: () => null,
+}));
+vi.mock("../../components/Settings/suggestionSources/PluginsSection", () => ({
+  default: () => null,
+}));
 vi.mock("../../lib/api/trackGap", () => ({
   trackGapApi: {
     get: vi.fn().mockResolvedValue({ minutes: 120, default: 120, min: 5, max: 720 }),

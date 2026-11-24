@@ -10,6 +10,7 @@ import type { AdminStepUpApiErrorCode } from "./adminStepUpErrorCodes";
 import type { AccountArchiveApiErrorCode } from "./accountArchiveErrorCodes";
 import type { LifeBookApiErrorCode } from "./lifeBookErrorCodes";
 import type { LocationProviderApiErrorCode } from "./locationProviderErrorCodes";
+import type { SuggestionSourceApiErrorCode } from "./suggestionSourceErrorCodes";
 
 /**
  * Every machine-readable cause an `/api` error body may carry in `code`.
@@ -391,6 +392,7 @@ export type ApiErrorCode =
   | "TOKEN_STILL_ACTIVE" // removing an API token that is neither revoked nor expired: revoke it first (409)
   | CompanionAppApiErrorCode // packing lists and personal settings (companionAppErrorCodes.ts)
   | LocationProviderApiErrorCode // choosing the location provider (locationProviderErrorCodes.ts)
+  | SuggestionSourceApiErrorCode // calendar sources and suggestion plugins (suggestionSourceErrorCodes.ts)
   /** Observed takeoff/landing (forgejo#194): a time in the future (400). */
   | "OBSERVED_TIME_IN_FUTURE"
   /** Observed takeoff/landing: more than 12 h from the schedule (422). */

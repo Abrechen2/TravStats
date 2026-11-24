@@ -228,6 +228,12 @@ export const USER_EXPORT_SELECT = {
 
 /** Every `User` list relation the export leaves out, and why. */
 export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
+  calendarSources:
+    "calendar connections: an ICS secret address or a CalDAV password, credentials that never travel (spec 2026-11-23-plugins-and-calendar)",
+  calendarRules:
+    "they name calendar sources, which do not travel; a rule without its source means nothing",
+  suggestionPlugins:
+    "suggestion plugin endpoints with their HMAC secrets: credentials that never travel; their answers live in the stay findings, which are exported",
   changeLedgerEntries:
     "the change history of the entries (spec 2026-11-22-change-history); it travels in the account archive, this export carries the records as they are now",
   entryPhotoDirty: "the photo pass's work marker; a restored account is covered by the full pass",

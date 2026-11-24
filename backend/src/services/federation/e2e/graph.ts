@@ -324,4 +324,9 @@ export const NON_TRAVEL_RELATIONS = [
   // The account's WebDAV export target (forgejo#321): a URL, a username and an
   // encrypted password. A credential, so it never travels.
   "webdavSync",
+  // Calendar connections, their rules and the suggestion plugins (spec
+  // 2026-11-23-plugins-and-calendar): credentials and their configuration.
+  "calendarSources",
+  "calendarRules",
+  "suggestionPlugins",
 ] as const;

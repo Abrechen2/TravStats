@@ -171,3 +171,42 @@ export function fetchDispatcherFor(policy: TargetPolicy): Dispatcher | undefined
   publicDispatcher ??= new UndiciAgent({ connect: { lookup: pinnedLookup } });
   return publicDispatcher;
 }
+
+const connectCapped = new Map<string, Dispatcher>();
+
+/**
+ * `fetchDispatcherFor` with a cap on the TCP/TLS connect, for callers that must
+ * not wait out a host that never answers the SYN (the suggestion plugins:
+ * 2 s connect inside a 5 s call). One dispatcher per policy and cap.
+ */
+export function fetchDispatcherWithConnectTimeout(
+  policy: TargetPolicy,
+  connectTimeoutMs: number
+): Dispatcher {
+  const key = `${policy.allowPrivate}:${connectTimeoutMs}`;
+  let dispatcher = connectCapped.get(key);
+  if (!dispatcher) {
+    dispatcher = new UndiciAgent({
+      connect: policy.allowPrivate
+        ? { timeout: connectTimeoutMs }
+        : { timeout: connectTimeoutMs, lookup: pinnedLookup },
+    });
+    connectCapped.set(key, dispatcher);
+  }
+  return dispatcher;
+}
+
+/**
+ * Whether a URL may use plain http: only an account that may reach the LAN, and only
+ * towards a host that is visibly on it (a private IP literal, `localhost`, a `.local`/
+ * `.lan` or single-label name). A public host is https for everyone — over http a
+ * calendar password or a plugin's traffic would cross the internet readable.
+ */
+export function plainHttpAllowed(url: string, policy: TargetPolicy): boolean {
+  if (!policy.allowPrivate) return false;
+  try {
+    return isPrivateHostLiteral(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}

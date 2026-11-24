@@ -1,0 +1,228 @@
+{
+  "calendar": {
+    "title": "Kalender",
+    "sub": "Termine als Beleg für deine Stopps",
+    "help": "TravStats liest nur die Tage, die der Suchlauf gerade prüft (höchstens 30 Tage zurück). Ein Termin, der zeitlich und örtlich zu einem Stopp passt, landet als Beleg im Vorschlag. Alle anderen Termine werden nicht gespeichert.",
+    "empty": "Noch kein Kalender verbunden.",
+    "add": "Kalender hinzufügen",
+    "remove": "Entfernen",
+    "removeConfirm": {
+      "title": "Kalender „{{label}}“ entfernen?",
+      "affects": "Kalender",
+      "after": "Offene Vorschläge verlieren den Beleg aus diesem Kalender. Angenommene Besuche bleiben."
+    },
+    "icsLine": "ICS-Abo · {{host}}",
+    "caldavLine_one": "CalDAV · {{user}} · {{count}} Kalender",
+    "caldavLine_other": "CalDAV · {{user}} · {{count}} Kalender",
+    "lastFailed": "Letzter Versuch fehlgeschlagen",
+    "blocked": {
+      "internet_off": "Der Internetzugang des Servers ist ausgeschaltet. Kein Kalender wird gelesen.",
+      "service_off": "Der Admin hat Kalender auf diesem Server ausgeschaltet. Kein Kalender wird gelesen."
+    },
+    "test": {
+      "button": "Testen",
+      "ok_one": "Gelesen: {{count}} Termin zwischen {{from}} und {{to}}.",
+      "ok_other": "Gelesen: {{count}} Termine zwischen {{from}} und {{to}}.",
+      "skipped_one": "{{count}} Serientermin wurde gekürzt oder übersprungen (zu viele oder ungültige Wiederholungen).",
+      "skipped_other": "{{count}} Serientermine wurden gekürzt oder übersprungen (zu viele oder ungültige Wiederholungen)."
+    },
+    "privacy": {
+      "title": "Was gespeichert wird",
+      "sub": "Nur ein Termin, der zu einem Stopp passt, mit Titel, Zeit und Ort im Vorschlag. Nach Annehmen oder Ablehnen bleiben davon nur Zeit und Kalender. Adresse und Passwort des Kalenders werden verschlüsselt gespeichert und nie wieder angezeigt."
+    },
+    "form": {
+      "kind": "Art des Kalenders",
+      "ics": "ICS-Adresse",
+      "caldav": "CalDAV",
+      "label": "Name",
+      "labelHint": "z. B. Arbeit oder Privat. Regeln können sich auf diesen Kalender beziehen.",
+      "icsUrl": "Geheime Adresse (ICS)",
+      "icsHint": "Die Abo-Adresse aus iCloud, Google oder Outlook. Diese Adresse ist der Schlüssel zum Kalender und wird verschlüsselt gespeichert.",
+      "server": "Server-Adresse",
+      "serverHint": "z. B. https://caldav.example.com/",
+      "username": "Benutzer",
+      "password": "App-Passwort",
+      "passwordHint": "Wird verschlüsselt gespeichert und nie wieder angezeigt.",
+      "discover": "Kalender suchen",
+      "collections": "Welche Kalender gelesen werden",
+      "save": "Speichern",
+      "cancel": "Abbrechen"
+    },
+    "failure": {
+      "unknown": "Das hat nicht geklappt. Bitte später noch einmal versuchen.",
+      "kind": {
+        "notConfigured": "Der Kalender ist nicht vollständig eingerichtet.",
+        "unreachable": "Der Kalender-Server ist nicht erreichbar.",
+        "auth": "Zugang abgelehnt. Adresse, Benutzer oder Passwort prüfen.",
+        "notFound": "Unter dieser Adresse gibt es keinen Kalender.",
+        "protocol": "Der Server hat keine lesbare Kalender-Antwort geschickt.",
+        "invalidUrl": "Diese Adresse ist ungültig."
+      },
+      "code": {
+        "PRIVATE_TARGET": "Diese Adresse liegt im lokalen Netz. Nur das Admin-Konto darf einen Server im lokalen Netz verwenden.",
+        "CALENDAR_TIMEOUT": "Der Kalender-Server hat nicht rechtzeitig geantwortet.",
+        "CALENDAR_TOO_LARGE": "Der Kalender ist größer als 5 MB.",
+        "CALENDAR_TOO_MANY_EVENTS": "Der Kalender hat mehr als 10 000 Termine.",
+        "CALENDAR_PARSE": "Die Antwort ist kein lesbarer Kalender (vielleicht eine Anmeldeseite).",
+        "CALENDAR_PARSE_TIMEOUT": "Der Kalender ließ sich nicht in der vorgesehenen Zeit lesen.",
+        "CALENDAR_REDIRECT": "Der Server leitet weiter. TravStats folgt keiner Weiterleitung; bitte die endgültige Adresse eintragen.",
+        "CALENDAR_XML_TOO_DEEP": "Die Antwort des CalDAV-Servers ist zu tief verschachtelt.",
+        "CALENDAR_FOREIGN_HREF": "Der CalDAV-Server verweist auf einen anderen Server. Das wird nicht befolgt.",
+        "CALENDAR_NO_COLLECTIONS": "Auf diesem Server wurde kein Kalender mit Terminen gefunden.",
+        "CALENDAR_EGRESS_INTERNET_OFF": "Der Internetzugang des Servers ist ausgeschaltet.",
+        "CALENDAR_EGRESS_SERVICE_OFF": "Der Admin hat Kalender auf diesem Server ausgeschaltet.",
+        "CALENDAR_SOURCE_LIMIT": "Es sind höchstens 10 Kalender möglich.",
+        "CALENDAR_HTTPS_REQUIRED": "Bitte eine https-Adresse verwenden. Über http würden Adresse und Passwort lesbar übertragen.",
+        "CALENDAR_UNSAFE_TIMEZONE": "Der Kalender enthält eine Zeitzone mit unzulässigen Regeln und wird nicht gelesen."
+      }
+    },
+    "geocode": {
+      "title": "Orte von Terminen",
+      "label": "Kalenderorte zur Zuordnung nachschlagen",
+      "sub": "Aus: Termine passen nur über eigene Orte, den gefundenen Ort beim Stopp oder den Ort einer Regel.",
+      "help": "An: der Ort eines Termins, den eine Regel auswählt, wird beim Geodienst des Servers nachgeschlagen, um ihn einem Stopp zuzuordnen. Nur für Stopps außerhalb deiner Privatzonen. Der Text wird nicht gespeichert und nicht protokolliert.",
+      "error": "Die Einstellung konnte nicht gespeichert werden. Bitte versuche es noch einmal."
+    }
+  },
+  "inbox": {
+    "calendar": {
+      "source": "Kalender „{{label}}“",
+      "match": {
+        "geocoded": "Der Ort des Termins liegt {{meters}} m vom Stopp.",
+        "placeName": "Der Ort des Termins nennt diesen Ort.",
+        "rulePlace": "Eine Regel nennt diesen Ort.",
+        "context": "Nur die Zeit passt, kein Ort: der Termin schlägt höchstens den Zweck vor."
+      },
+      "time": {
+        "overlap": "{{minutes}} Min. gemeinsam",
+        "startNear": "Stopp beginnt innerhalb einer Stunde um den Terminbeginn"
+      }
+    },
+    "purposeSuggested": "Vorgeschlagen: {{purpose}}",
+    "plugins": {
+      "title": "Vorschläge aus Plugins",
+      "source": "Quelle: {{name}}",
+      "confidence": "Sicherheit {{percent}} %",
+      "distance": "{{meters}} m vom Stopp",
+      "pick": "Diesen übernehmen",
+      "link": "Im Quellsystem öffnen",
+      "pending": "Ein Plugin hat noch nicht geantwortet; es wird erneut gefragt.",
+      "reask": "Neu fragen",
+      "reasked": "Die Plugins werden beim nächsten Suchlauf erneut gefragt.",
+      "reaskError": "Das ging nicht. Bitte versuche es noch einmal."
+    },
+    "suggestedBy": "Vorgeschlagen von {{name}}"
+  },
+  "rules": {
+    "title": "Regeln",
+    "sub": "Was ein passender Termin als Zweck und Name vorschlägt",
+    "help": "Von oben nach unten, die erste passende Regel gilt. Ohne Regel schlägt ein Termin seinen Titel als Namen vor und keinen Zweck.",
+    "empty": "Keine Regeln.",
+    "kind": {
+      "calendar": "Ganzer Kalender",
+      "keyword": "Stichwort im Titel"
+    },
+    "source": "Kalender",
+    "anySource": "Jeder Kalender",
+    "token": "Stichwort",
+    "matchMode": {
+      "contains": "enthält",
+      "startsWith": "beginnt mit"
+    },
+    "purpose": "Zweck",
+    "nameTemplate": "Name",
+    "nameTemplateHint": "Platzhalter: {title}, {location}, {titleAfterToken}. Leer: der Titel.",
+    "add": "Regel hinzufügen",
+    "remove": "Entfernen",
+    "up": "Nach oben",
+    "down": "Nach unten",
+    "save": "Regeln speichern",
+    "saved": "Regeln gespeichert.",
+    "error": "Die Regeln konnten nicht gespeichert werden. Bitte versuche es noch einmal.",
+    "limit": "Es sind höchstens 50 Regeln möglich.",
+    "place": "Ort",
+    "placeHint": "Für Termine ohne Ortsangabe: dieser eigene Ort, wenn er beim Stopp liegt.",
+    "noPlace": "Kein Ort"
+  },
+  "plugins": {
+    "title": "Externe Vorschlagsquellen",
+    "sub": "Eigene Dienste, die Stopps mit Orten beantworten",
+    "help": "Ein Plugin ist ein HTTPS-Dienst, den du selbst betreibst oder dem du vertraust. TravStats fragt ihn signiert nach einem Stopp; seine Antwort erscheint als Vorschlag im Posteingang. Ein Plugin schreibt nie selbst in TravStats. Anleitung: docs/features/plugins.md.",
+    "empty": "Noch kein Plugin eingetragen.",
+    "add": "Plugin hinzufügen",
+    "remove": "Entfernen",
+    "rotate": "Neues Geheimnis",
+    "lastAnswer": "Letzte Antwort: Version {{version}} · {{at}}",
+    "lastError": "Letzter Fehler",
+    "retryAt": "wieder ab {{at}}",
+    "backfillAllowed": "Vergangene Tage abfragen erlauben",
+    "blocked": {
+      "internet_off": "Der Internetzugang des Servers ist ausgeschaltet. Kein Plugin wird gefragt.",
+      "service_off": "Der Admin hat Plugins auf diesem Server ausgeschaltet. Kein Plugin wird gefragt."
+    },
+    "precision": {
+      "label": "Genauigkeit der Koordinaten",
+      "exact": "Genau",
+      "100m": "Auf 100 m gerundet",
+      "1km": "Auf 1 km gerundet (ohne Adresse)"
+    },
+    "form": {
+      "name": "Name",
+      "url": "Adresse (HTTPS)",
+      "urlHint": "Nur das Admin-Konto darf einen Dienst im lokalen Netz oder über http eintragen.",
+      "save": "Speichern",
+      "cancel": "Abbrechen"
+    },
+    "secret": {
+      "once": "Das Geheimnis für dieses Plugin. Es wird nur jetzt angezeigt: trage es im Plugin ein.",
+      "copy": "Kopieren",
+      "copied": "Kopiert.",
+      "copyFailed": "Kopieren ging nicht. Bitte von Hand markieren.",
+      "done": "Fertig"
+    },
+    "test": {
+      "button": "Testen",
+      "ok": "Antwort in {{ms}} ms, Version {{version}}: „{{first}}“.",
+      "empty": "Antwort in {{ms}} ms, Version {{version}}: nichts an diesem Ort."
+    },
+    "backfill": {
+      "from": "Von",
+      "to": "Bis",
+      "button": "Vergangene Tage abfragen",
+      "range": "Höchstens 90 Tage, nicht in der Zukunft.",
+      "running": "Läuft … das kann wegen der Grenzen pro Stunde eine Weile dauern.",
+      "done": "Fertig: {{days}} Tage, {{asked}} Anfragen, {{created}} neue und {{merged}} ergänzte Vorschläge, {{failed}} Fehler.",
+      "stopped": "Wegen der Grenzen angehalten bei {{at}}; noch einmal starten setzt dort fort."
+    },
+    "sent": {
+      "title": "Was gesendet wird",
+      "sub": "Beginn und Ende eines Stopps, seine auf die gewählte Genauigkeit gerundeten Koordinaten und die Zeitzone; dazu, was TravStats selbst schon kennt: der nächste eigene Ort, der gefundene Ort und (bei genau und 100 m) die Adresse.",
+      "help": "Nie gesendet: dein Konto, Name oder E-Mail, der Standortverlauf, andere Stopps oder Einträge. Jede Anfrage ist mit dem Geheimnis signiert."
+    },
+    "removeConfirm": {
+      "title": "Plugin „{{name}}“ entfernen?",
+      "affects": "Plugin",
+      "after": "Seine Vorschläge in offenen Funden verschwinden. Angenommene Besuche bleiben."
+    },
+    "failure": {
+      "unknown": "Das hat nicht geklappt. Bitte später noch einmal versuchen.",
+      "reason": {
+        "timeout": "Das Plugin hat nicht rechtzeitig geantwortet (5 s).",
+        "unreachable": "Das Plugin ist nicht erreichbar.",
+        "auth": "Das Plugin hat die Anfrage abgelehnt. Stimmt das Geheimnis?",
+        "rateLimited": "Das Plugin oder die Grenze pro Stunde lässt gerade keine Anfrage zu.",
+        "protocol": "Die Antwort des Plugins passt nicht zum Vertrag (Version 1).",
+        "server": "Das Plugin hat einen Serverfehler gemeldet.",
+        "privateTarget": "Diese Adresse liegt im lokalen Netz. Nur das Admin-Konto darf sie verwenden."
+      },
+      "code": {
+        "PRIVATE_TARGET": "Diese Adresse liegt im lokalen Netz. Nur das Admin-Konto darf sie verwenden.",
+        "CALENDAR_HTTPS_REQUIRED": "Bitte eine https-Adresse verwenden.",
+        "PLUGIN_LIMIT": "Es sind höchstens 5 Plugins möglich.",
+        "PLUGIN_BACKFILL_REFUSED": "Abfragen vergangener Tage ist für dieses Plugin nicht erlaubt, oder der Zeitraum ist länger als 90 Tage.",
+        "PLUGIN_BACKFILL_RUNNING": "Für dieses Plugin läuft schon eine Abfrage.",
+        "SERVICE_DISABLED": "Plugins sind auf diesem Server ausgeschaltet."
+      }
+    }
+  }
+}

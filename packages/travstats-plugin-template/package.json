@@ -1,0 +1,16 @@
+{
+  "name": "travstats-plugin-template",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A minimal TravStats suggestion plugin: answers a stop with places from a JSON file.",
+  "license": "MIT",
+  "type": "commonjs",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  }
+}

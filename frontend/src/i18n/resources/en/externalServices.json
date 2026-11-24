@@ -29,6 +29,7 @@
     "flight": "Flight data",
     "mapsRoutes": "Maps, routes & places",
     "photosLocation": "Photos, location & sport",
+    "personal": "Personal sources",
     "ai": "AI",
     "openData": "Open data & logos",
     "syncMail": "Sync, mail & notifications",
@@ -757,6 +758,24 @@
       "dataOut": "Stays between TravStats and your receiver; only the aircraft's ICAO24 code and the day are requested.",
       "quotaLine": "your own server",
       "adminPurpose": "The instance's receiver address (LAN allowed); accounts can enter their own public one"
+    },
+    "calendar": {
+      "name": "Calendar",
+      "purpose": "Read appointments as evidence for stops",
+      "why": "Reads a calendar (ICS address or CalDAV) only for the days the scan looks at. An appointment that fits a stop can suggest its purpose and name.",
+      "cost": "Free.",
+      "quota": "None.",
+      "dataOut": "TravStats only reads. Only an appointment that fits a stop is kept, inside the suggestion.",
+      "adminPurpose": "Accounts read their own calendars; switched off, no account reads any more"
+    },
+    "suggestionPlugins": {
+      "name": "External suggestion sources",
+      "purpose": "Own services suggest places for stops",
+      "why": "A plugin is an HTTPS service an account adds itself. TravStats asks it, signed, about a stop and shows its answer as a suggestion.",
+      "cost": "Free.",
+      "quota": "60 requests an hour per plugin.",
+      "dataOut": "A stop's time and rounded coordinates, never the account, name, e-mail or location history.",
+      "adminPurpose": "Accounts add their own plugins; switched off, no account asks any more"
     }
   },
   "alwaysOn": {

@@ -19,6 +19,13 @@ import { recheckFinding } from "../../locationEvidence/recheck";
 import { scheduleVisitAutoLink } from "../../places/visitPhotoAutoLink";
 import { applyBrandMatches } from "../../places/brandRules";
 
+/** The purpose the accept writes: the dialog's choice, else what the finding suggested. */
+function purposeOf(input: StayReview, evidence: unknown): "private" | "business" | null {
+  if (input.purpose !== undefined) return input.purpose;
+  const suggested = (evidence as { suggestedPurpose?: unknown } | null)?.suggestedPurpose;
+  return suggested === "private" || suggested === "business" ? suggested : null;
+}
+
 async function acceptStayOnce(userId: string, id: string, input: StayReview) {
   let createdPlaceId: string | null = null;
   const outcome = await prisma.$transaction(
@@ -103,9 +110,21 @@ export async function applyStayAcceptance(
     sameVenue && /^wikidata:Q[1-9][0-9]*$/.test(evidence.market?.identity ?? "")
       ? evidence.market!.identity!.slice(9)
       : null;
+  // A plugin suggestion the finding really carries (never a reference the client made up).
+  const pluginRef =
+    input.pluginRef &&
+    Array.isArray((row.evidence as { plugins?: unknown } | null)?.plugins) &&
+    (row.evidence as { plugins: { pluginId?: string; externalRef?: string }[] }).plugins.some(
+      (p) =>
+        p.pluginId === input.pluginRef!.pluginId && p.externalRef === input.pluginRef!.externalRef
+    )
+      ? `plugin:${input.pluginRef.pluginId}:${input.pluginRef.externalRef}`
+      : null;
   let place = input.placeId
     ? await tx.place.findFirst({ where: { id: input.placeId, userId } })
     : null;
+  if (!place && pluginRef)
+    place = await tx.place.findFirst({ where: { userId, externalRef: pluginRef } });
   if (input.placeId && !place) throw new AppError("Place not found", 404);
   if (!place && (osmRef || wikidataId))
     place = await tx.place.findFirst({
@@ -150,6 +169,7 @@ export async function applyStayAcceptance(
             ? (visitVenue.category as string)
             : "other",
         ...(sameVenue || visitVenue ? { externalRef: osmRef, wikidataId } : {}),
+        ...(pluginRef ? { externalRef: pluginRef } : {}),
         dataSource: "dawarich",
         visited: true,
         ...(extra.createdBy ? { createdBy: extra.createdBy } : {}),
@@ -205,6 +225,7 @@ export async function applyStayAcceptance(
         tripId: input.tripId,
         ...start,
         writtenVia: "suggestion",
+        ...(purposeOf(input, row.evidence) ? { purpose: purposeOf(input, row.evidence) } : {}),
         ...(extra.createdBy ? { createdBy: extra.createdBy } : {}),
         // The finding that made it (TravTrack plan E4): never its own cover.
         ...(extra.suggestionRef ? { suggestionRef: extra.suggestionRef } : {}),
@@ -212,6 +233,11 @@ export async function applyStayAcceptance(
     }));
   if (existing && !existing.tripId && input.tripId)
     await tx.placeVisit.update({ where: { id: existing.id }, data: { tripId: input.tripId } });
+  // A visit already there keeps the purpose its owner set; an explicit choice in the dialog wins.
+  const purpose = purposeOf(input, row.evidence);
+  // An explicit choice (null included: "deliberately unknown") is written as chosen.
+  if (existing && (input.purpose !== undefined || (purpose && existing.purpose === null)))
+    await tx.placeVisit.update({ where: { id: existing.id }, data: { purpose } });
   // An automatic acceptance remembers whether it is what made the place visited, so undoing it
   // reverses exactly that and never a flag the owner had set (brandRules.undoAutoAccepted).
   const promotedVisited = !!extra.createdBy && (createdPlaceId !== null || !place.visited);
@@ -230,6 +256,8 @@ export async function applyStayAcceptance(
     zone: zone!,
     startAt: start.visitedAtUtc,
     endAt: end.visitedAtUtc,
+    // The matched calendar event shrinks to its source, keyed UID and span in the database
+    // itself (trigger `dawarich_stays_shrink_calendar`), on this and every other status change.
     ...(promotedVisited
       ? {
           evidence: {

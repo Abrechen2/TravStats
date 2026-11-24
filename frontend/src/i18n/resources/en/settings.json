@@ -2237,6 +2237,12 @@
       "suchlauf": "Search",
       "belege": "Evidence",
       "feinabstimmung": "Fine-tuning"
+    },
+    "calendar": {
+      "title": "Calendar"
+    },
+    "plugins": {
+      "title": "External suggestion sources"
     }
   },
   "lodgingRatings": {
