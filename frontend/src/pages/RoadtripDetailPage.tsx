@@ -1,6 +1,9 @@
 import RoadtripVehicleSelect from "../components/Roadtrips/RoadtripVehicleSelect";
 import PurposeEditor from "../components/purpose/PurposeEditor";
 import RouteTagsEditor from "../components/Roadtrips/RouteTagsEditor";
+import RoadtripColorField from "../components/Roadtrips/RoadtripColorField";
+import { roadtripLineHex } from "../lib/roadtripColor";
+import { useRoadtripColorStore } from "../store/roadtripColorStore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -91,6 +94,7 @@ export default function RoadtripDetailPage(): JSX.Element {
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
   const roadtripColor = useDomainColors().colorOf("roadtrip");
+  const roadtripColorMode = useRoadtripColorStore((s) => s.mode);
   const todayZone = useTodayZone();
   const today = useMemo(() => todayIn(todayZone), [todayZone]);
 
@@ -238,9 +242,16 @@ export default function RoadtripDetailPage(): JSX.Element {
   const mapGeometries = useMemo(
     () =>
       geometry && detail
-        ? [{ routeId: id, name: detail.roadtrip.name, geometry, rgb: hexToRgb(roadtripColor) }]
+        ? [
+            {
+              routeId: id,
+              name: detail.roadtrip.name,
+              geometry,
+              rgb: hexToRgb(roadtripLineHex(roadtripColorMode, detail.roadtrip, roadtripColor)),
+            },
+          ]
         : [],
-    [geometry, detail, id, roadtripColor]
+    [geometry, detail, id, roadtripColor, roadtripColorMode]
   );
   const weather = useRoadtripWeather(id, detail?.stations ?? NO_STATIONS, today);
   const selected = detail?.stations.find((s) => s.id === selectedId) ?? null;
@@ -478,6 +489,13 @@ export default function RoadtripDetailPage(): JSX.Element {
         <RouteTagsEditor
           route={r}
           tripId={undefined}
+          onSaved={(route) => setDetail({ ...detail, roadtrip: route })}
+        />
+      </div>
+
+      <div style={{ marginTop: "var(--ts-space-md)" }}>
+        <RoadtripColorField
+          route={r}
           onSaved={(route) => setDetail({ ...detail, roadtrip: route })}
         />
       </div>

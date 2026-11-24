@@ -1,3 +1,4 @@
+import { roadtripLineHex, type RoadtripColorMode } from "../../../lib/roadtripColor";
 import { useRoutesVisible } from "../../../store/mapRoutesStore";
 import { useMemo } from "react";
 import type { JSX } from "react";
@@ -60,7 +61,13 @@ export interface TourFetchState {
   toursLoading: boolean;
   toursLoadError: boolean;
   /** `kind` — roadtrips get their own legend row (2.7) — and each tour's `mode`. */
-  tours: ReadonlyArray<{ kind?: string; mode?: string }>;
+  tours: ReadonlyArray<{
+    id?: string;
+    name?: string;
+    color?: string | null;
+    kind?: string;
+    mode?: string;
+  }>;
 }
 
 /**
@@ -77,7 +84,12 @@ export function buildTourLegendRows(
   t: (key: string) => string,
   legendRow: (background: string, label: string, key: string) => JSX.Element,
   /** Roadtrips (2.7) draw in their own hue, so they get their own row. */
-  roadtrip?: { color: string; label: string },
+  roadtrip?: {
+    color: string;
+    label: string;
+    /** Per-roadtrip mode (GitHub #408): one row per roadtrip instead of the one domain row. */
+    mode?: RoadtripColorMode;
+  },
   /** The panel's "Routen" switches: a hidden kind of line leaves the key. */
   lines: { tour: boolean; roadtrip: boolean } = { tour: true, roadtrip: true }
 ): TourLegendState {
@@ -104,7 +116,21 @@ export function buildTourLegendRows(
         )
       ),
     ...(lines.roadtrip && hasRoadtrips && roadtrip
-      ? [legendRow(roadtrip.color, roadtrip.label, "roadtrip")]
+      ? roadtrip.mode === "perRoadtrip"
+        ? fetch.tours
+            .filter((tour) => tour.kind === "roadtrip" && tour.id !== undefined)
+            .map((tour) =>
+              legendRow(
+                roadtripLineHex(
+                  "perRoadtrip",
+                  { id: tour.id ?? "", color: tour.color },
+                  roadtrip.color
+                ),
+                tour.name ?? roadtrip.label,
+                `roadtrip-${tour.id}`
+              )
+            )
+        : [legendRow(roadtrip.color, roadtrip.label, "roadtrip")]
       : []),
   ];
   return { hasData, rows };

@@ -25,7 +25,9 @@ import {
 import { useOverlayAppearanceStore } from "../../store/overlayAppearanceStore";
 import { useRoutesVisible } from "../../store/mapRoutesStore";
 import { RoutesSwitch } from "./RoutesSwitch";
-import { CollapsibleSection, Slider, type AppearanceDomain } from "./controlPanelKit";
+import { CollapsibleSection, SegControl, Slider, type AppearanceDomain } from "./controlPanelKit";
+import { ROADTRIP_COLOR_MODES, type RoadtripColorMode } from "../../lib/roadtripColor";
+import { useRoadtripColorStore } from "../../store/roadtripColorStore";
 import { useDomainVisible } from "../../hooks/useDomainVisible";
 import { RouteOnlyControls } from "./RouteOnlyControls";
 
@@ -42,6 +44,31 @@ function WidthSlider({ field }: { field: NumericKey }): JSX.Element {
       {...OVERLAY_WIDTH_RANGE}
       onChange={(v) => setValue(field, v)}
     />
+  );
+}
+
+/** Roadtrip colour mode (GitHub #408): the explicit choice, never a view's implicit one. */
+function RoadtripColorPicker(): JSX.Element {
+  const { t } = useTranslation();
+  const mode = useRoadtripColorStore((s) => s.mode);
+  const setMode = useRoadtripColorStore((s) => s.setMode);
+  return (
+    <div className="mt-1.5">
+      <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
+        {t("map:globe.panel.colorMode.label")}
+      </div>
+      <SegControl<RoadtripColorMode>
+        value={mode}
+        onChange={setMode}
+        options={ROADTRIP_COLOR_MODES.map((m) => ({
+          value: m,
+          label: t(`map:globe.panel.roadtripColorMode.${m}.label`),
+        }))}
+      />
+      <div className="mt-1 text-[10px] leading-snug" style={{ color: "rgba(241,245,249,0.55)" }}>
+        {t(`map:globe.panel.roadtripColorMode.${mode}.hint`)}
+      </div>
+    </div>
   );
 }
 
@@ -127,6 +154,7 @@ export function OverlayAppearanceSections({
           <RoutesSwitch domain="roadtrip" />
           <RouteOnlyControls domain="roadtrip">
             <WidthSlider field="roadtripLineWidth" />
+            <RoadtripColorPicker />
           </RouteOnlyControls>
           {appearanceDomains.includes("roadtripStations") && (
             <SizeSlider field="roadtripStationSize" label={t("map:globe.panel.stations")} />

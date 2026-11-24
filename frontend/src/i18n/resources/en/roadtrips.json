@@ -1123,5 +1123,12 @@
     "noLocation": "Without a place or a date there is no weather.",
     "hint": "Measured weather of the arrival day (Open-Meteo). Today and coming days can only be loaded afterwards."
   },
-  "vehicleChangeError": "The vehicle could not be changed."
+  "vehicleChangeError": "The vehicle could not be changed.",
+  "mapColor": {
+    "label": "Map colour",
+    "auto": "Automatic",
+    "own": "Own colour",
+    "automatic": "Automatic colour from the palette",
+    "saveFailed": "The colour could not be saved."
+  }
 }

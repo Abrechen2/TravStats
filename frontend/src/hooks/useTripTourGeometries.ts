@@ -4,6 +4,8 @@ import { roadtripsApi } from "../lib/api/roadtrips";
 import { legDays } from "../lib/roadtrip/legDays";
 import { tourIndexApi, type TourGeometryEntry } from "../lib/api/tourIndex";
 import { hexToRgb } from "../lib/domainColor";
+import { roadtripLineHex } from "../lib/roadtripColor";
+import { useRoadtripColorStore } from "../store/roadtripColorStore";
 import { logger } from "../lib/logger";
 import type { TourGeometry, TourRoute } from "../types/tour";
 import { useDomainColors } from "./useDomainColors";
@@ -66,6 +68,7 @@ async function roadtripLegDays(route: TourRoute): Promise<Record<string, string[
 export function useTripTourGeometries(tripId: string, enabled: boolean): TripTourGeometries {
   const { colorOf } = useDomainColors();
   const roadtripHex = colorOf("roadtrip");
+  const roadtripMode = useRoadtripColorStore((st) => st.mode);
   const [loaded, setLoaded] = useState<{ routes: TourRoute[]; lines: TourGeometryEntry[] }>({
     routes: [],
     lines: [],
@@ -131,16 +134,20 @@ export function useTripTourGeometries(tripId: string, enabled: boolean): TripTou
   // roadtrip takes its domain colour and the heavier one (`buildTourPaths`).
   const geometries = useMemo(() => {
     if (loaded.lines.length === 0) return NONE;
-    const roadtripIds = new Set(
-      loaded.routes.filter((r) => r.kind === "roadtrip").map((r) => r.id)
+    const roadtrips = new Map(
+      loaded.routes.filter((r) => r.kind === "roadtrip").map((r) => [r.id, r])
     );
-    const roadtripRgb = hexToRgb(roadtripHex);
-    return loaded.lines.map((line) =>
-      roadtripIds.has(line.routeId.replace(/:tracks$/, ""))
-        ? { ...line, rgb: roadtripRgb, isRoadtrip: true }
-        : line
-    );
-  }, [loaded, roadtripHex]);
+    return loaded.lines.map((line) => {
+      const roadtrip = roadtrips.get(line.routeId.replace(/:tracks$/, ""));
+      return roadtrip
+        ? {
+            ...line,
+            rgb: hexToRgb(roadtripLineHex(roadtripMode, roadtrip, roadtripHex)),
+            isRoadtrip: true,
+          }
+        : line;
+    });
+  }, [loaded, roadtripHex, roadtripMode]);
 
   return { geometries, failed };
 }

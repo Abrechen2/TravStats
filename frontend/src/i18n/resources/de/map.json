@@ -215,6 +215,16 @@
           "label": "Symbol",
           "hint": "Überall das Listensymbol. Listen ohne Symbol behalten den Namen."
         }
+      },
+      "roadtripColorMode": {
+        "single": {
+          "label": "Einfarbig",
+          "hint": "Alle Roadtrips in der Roadtrip-Farbe aus den Einstellungen."
+        },
+        "perRoadtrip": {
+          "label": "Je Roadtrip",
+          "hint": "Jeder Roadtrip in einer eigenen Farbe – der am Roadtrip gespeicherten, sonst einer festen aus der Palette."
+        }
       }
     },
     "timesFlown": "{{count}}× geflogen",

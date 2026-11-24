@@ -9,6 +9,7 @@
 // Map-specific chrome that has no 2D↔3D meaning (globe auto-rotation, day/
 // night, performance mode) stays out of here — those live per map.
 
+import type { RoadtripColorMode } from "../../lib/roadtripColor";
 import type { LabelsMode } from "./labelPriority";
 import type { PlaceLabelSource } from "../../lib/placeLabel";
 import {
@@ -64,6 +65,8 @@ export interface MapAppearance {
   flightRouteWidth?: number;
   airportColor?: [number, number, number] | null;
   flightMarkerSize?: number;
+  /** How roadtrip lines are coloured (GitHub #408). Owned by `store/roadtripColorStore.ts`. */
+  roadtripColorMode?: RoadtripColorMode;
   // Cruise domain
   /** How cruise routes are coloured + the user's colour per slot. Owned by
    *  `store/cruiseColorStore.ts`; both maps and the dashboard legend read it

@@ -3,6 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 import { buildTourLegendRows, useTourDeckLayers } from "../tourMapOverlay";
 import { useMapRoutesStore } from "../../../../store/mapRoutesStore";
 import { ALL_ROUTES_VISIBLE } from "../../../../lib/mapRoutes";
+import { paletteColorForRoadtrip } from "../../../../lib/roadtripColor";
 import type { TourPathDatum } from "../../../layers/tourPathsLayer";
 
 const datum = (legId: string, isRoadtrip: boolean): TourPathDatum => ({
@@ -70,5 +71,50 @@ describe("route switches: a hidden line leaves the legend", () => {
     expect(rows({ tour: false, roadtrip: true })).toEqual(["roadtrip"]);
     expect(rows({ tour: true, roadtrip: false })).toEqual(["tour-road"]);
     expect(rows({ tour: false, roadtrip: false })).toEqual([]);
+  });
+});
+
+describe("per-roadtrip colour mode: the legend lists each roadtrip with its swatch (GitHub #408)", () => {
+  const fetch = {
+    toursLoading: false,
+    toursLoadError: false,
+    tours: [
+      { id: "r1", name: "Island loop", kind: "roadtrip", color: "#ef4444" },
+      { id: "r2", name: "Alps", kind: "roadtrip", color: null },
+      { id: "t1", name: "Day tour", kind: "tour", mode: "road" },
+    ],
+  };
+  const t = (k: string): string => k;
+  const row = (bg: string, label: string, key: string) => ({ bg, label, key }) as never;
+  const both = { tour: true, roadtrip: true };
+
+  it("names every roadtrip, in the colour its line is drawn in", () => {
+    const rows = buildTourLegendRows(
+      true,
+      fetch,
+      t,
+      row,
+      { color: "#112233", label: "Roadtrip", mode: "perRoadtrip" },
+      both
+    ).rows.map((r) => r as unknown as { bg: string; label: string; key: string });
+    const roadtrips = rows.filter((r) => r.key.startsWith("roadtrip-"));
+    expect(roadtrips.map((r) => [r.key, r.label])).toEqual([
+      ["roadtrip-r1", "Island loop"],
+      ["roadtrip-r2", "Alps"],
+    ]);
+    expect(roadtrips[0].bg).toBe("#ef4444");
+    expect(roadtrips[1].bg).toBe(paletteColorForRoadtrip("r2"));
+  });
+
+  it("single mode keeps the one domain row", () => {
+    const rows = buildTourLegendRows(
+      true,
+      fetch,
+      t,
+      row,
+      { color: "#112233", label: "Roadtrip", mode: "single" },
+      both
+    ).rows.map((r) => (r as unknown as { key: string }).key);
+    expect(rows.filter((k) => k.startsWith("roadtrip"))).toEqual(["roadtrip"]);
   });
 });

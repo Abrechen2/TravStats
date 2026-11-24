@@ -1123,5 +1123,12 @@
     "noLocation": "Ohne Ort oder Datum gibt es kein Wetter.",
     "hint": "Gemessenes Wetter des Ankunftstags (Open-Meteo). Heute und kommende Tage lassen sich erst nachträglich laden."
   },
-  "vehicleChangeError": "Das Fahrzeug konnte nicht geändert werden."
+  "vehicleChangeError": "Das Fahrzeug konnte nicht geändert werden.",
+  "mapColor": {
+    "label": "Farbe auf der Karte",
+    "auto": "Automatisch",
+    "own": "Eigene Farbe",
+    "automatic": "Automatische Farbe aus der Palette",
+    "saveFailed": "Die Farbe konnte nicht gespeichert werden."
+  }
 }
