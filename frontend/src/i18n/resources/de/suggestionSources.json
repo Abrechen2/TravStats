@@ -74,7 +74,9 @@
         "CALENDAR_SOURCE_LIMIT": "Es sind höchstens 10 Kalender möglich.",
         "CALENDAR_HTTPS_REQUIRED": "Bitte eine https-Adresse verwenden. Über http würden Adresse und Passwort lesbar übertragen.",
         "CALENDAR_UNSAFE_TIMEZONE": "Der Kalender enthält eine Zeitzone mit unzulässigen Regeln und wird nicht gelesen."
-      }
+      },
+      "network": "Der TravStats-Server war nicht erreichbar. Verbindung prüfen und erneut testen.",
+      "rateLimited": "Zu viele Tests in kurzer Zeit. Bitte in ein paar Minuten noch einmal."
     },
     "geocode": {
       "title": "Orte von Terminen",

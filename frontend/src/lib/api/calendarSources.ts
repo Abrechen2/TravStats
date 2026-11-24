@@ -89,12 +89,30 @@ export function calendarFailureKey(kind: unknown, code: unknown): string {
   return "calendar.failure.unknown";
 }
 
-/** The failure key of a rejected request. */
+/**
+ * The failure key of a rejected request. A request that got no answer has its own reasons: the
+ * test used to give up after the client's 10 s while the server allows the calendar 20 s, so a
+ * slow calendar always read "Das hat nicht geklappt" (UAT rc.45).
+ */
 export function calendarRequestFailureKey(error: unknown): string {
-  const data = (error as { response?: { data?: { error?: unknown; code?: unknown } } })?.response
-    ?.data;
+  const failed = error as {
+    code?: unknown;
+    response?: { status?: number; data?: { error?: unknown; code?: unknown } };
+  } | null;
+  if (failed && !failed.response) {
+    return failed.code === "ECONNABORTED" || failed.code === "ETIMEDOUT"
+      ? "calendar.failure.code.CALENDAR_TIMEOUT"
+      : failed.code === "ERR_NETWORK"
+        ? "calendar.failure.network"
+        : "calendar.failure.unknown";
+  }
+  if (failed?.response?.status === 429) return "calendar.failure.rateLimited";
+  const data = failed?.response?.data;
   return calendarFailureKey(data?.error, data?.code);
 }
+
+/** Longer than the server's own 20 s per calendar read, so the server's reason arrives. */
+const CALENDAR_REQUEST_TIMEOUT_MS = 45_000;
 
 export interface CalendarRule {
   kind: "calendar" | "keyword";
@@ -148,7 +166,11 @@ export const calendarSourcesApi = {
     await api.delete(`/settings/calendar-sources/${id}`);
   },
   async test(id: string): Promise<CalendarTestResult> {
-    const { data } = await api.post(`/settings/calendar-sources/${id}/test`, {});
+    const { data } = await api.post(
+      `/settings/calendar-sources/${id}/test`,
+      {},
+      { timeout: CALENDAR_REQUEST_TIMEOUT_MS }
+    );
     return data;
   },
   async discover(input: {
@@ -156,7 +178,9 @@ export const calendarSourcesApi = {
     username: string;
     password: string;
   }): Promise<CalendarCollection[]> {
-    const { data } = await api.post("/settings/calendar-sources/caldav/discover", input);
+    const { data } = await api.post("/settings/calendar-sources/caldav/discover", input, {
+      timeout: CALENDAR_REQUEST_TIMEOUT_MS,
+    });
     return data.collections;
   },
 };

@@ -74,7 +74,9 @@
         "CALENDAR_SOURCE_LIMIT": "At most 10 calendars are possible.",
         "CALENDAR_HTTPS_REQUIRED": "Please use an https address. Over http the address and password would travel readable.",
         "CALENDAR_UNSAFE_TIMEZONE": "The calendar contains a time zone with invalid rules and is not read."
-      }
+      },
+      "network": "The TravStats server could not be reached. Check the connection and test again.",
+      "rateLimited": "Too many tests in a short time. Please try again in a few minutes."
     },
     "geocode": {
       "title": "Appointment places",
