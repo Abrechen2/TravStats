@@ -140,6 +140,7 @@ import "./travplanDocuments";
 import "./remotePlans";
 import "./travtrack";
 import "./travtrackDay";
+import "./travtrackDaySources";
 import "./travtrackPlaces";
 import "./travtrackLegs";
 import "./travtrackDiagnostics";

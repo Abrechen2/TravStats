@@ -155,6 +155,7 @@
     "travplan/routeEndpoints.ts",
     "travtrack.ts",
     "travtrack/day.ts",
+    "travtrack/daySources.ts",
     "travtrack/diagnostics.ts",
     "travtrack/explored.ts",
     "travtrack/export.ts",

@@ -42,6 +42,7 @@ import {
   VISIT_DAYS_PER_RUN,
 } from "../services/travtrack/visits/project";
 import { buildPendingZoneRasters } from "../services/travtrack/explored/zoneCells";
+import { projectDaySources, SOURCE_DAYS_PER_RUN } from "../services/travtrack/bestSource/store";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
@@ -206,6 +207,8 @@ async function runAccount(
     }
     // Disabled or switched away: nothing ran, nothing failed.
     if (projected.status !== "done") return { failed: false, questions: 0, days };
+    // Best source per day (bestSource/): a day whose resolved stream changed is handed back to every projection.
+    await projectDaySources(userId, { maxDays: Math.min(SOURCE_DAYS_PER_RUN, maxDays - days) });
     // The explored map's cells (L1): the same days on its own bit, from what
     // is left of the budget — a day either projection works counts once each.
     const exploredBudget = monthsOwed ? Math.ceil((maxDays - days) / 2) : maxDays - days;

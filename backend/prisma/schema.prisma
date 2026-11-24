@@ -238,6 +238,7 @@ model User {
 
   locationSuggestions      LocationSuggestion[]
   travTrackDirtyDays       TravTrackDirtyDay[]
+  travTrackDaySources      TravTrackDaySource[]
   travTrackExploredCells   TravTrackExploredCell[]
   travTrackMonthValues     TravTrackMonthValue[]
   travTrackZoneCells       TravTrackZoneCell[]
@@ -6778,6 +6779,53 @@ model TravTrackConfig {
   @@map("travtrack_config")
 }
 
+/// Which source a profile-local day of the TravTrack history is drawn and
+/// counted from (`services/travtrack/bestSource/`). Derived per day by the
+/// paced projection; the raw points are never altered by it. `segments`,
+/// `scores`, `outlierIds`, `breaks` and `bridges` are the derivation's and
+/// are rewritten on every run; `overrideSource` and `outlierDecision` are the
+/// user's and survive it. Holds no positions: instants, origins and point ids.
+model TravTrackDaySource {
+  userId          String   @map("user_id")
+  /// The profile-local calendar day.
+  day             DateTime @db.Date
+  /// The zone the day was cut in, and its instants `[fromAt, untilAt)`.
+  zone            String
+  fromAt          DateTime @map("from_at")
+  untilAt         DateTime @map("until_at")
+  /// `[{ fromMs, untilMs, source }]`: which origin is used when.
+  segments        Json
+  /// `[{ source, score, points, signals }]`, best first.
+  scores          Json
+  /// Ids of the points excluded as unsupported jumps.
+  outlierIds      Json     @map("outlier_ids")
+  outlierCount    Int      @default(0) @map("outlier_count")
+  /// `[[fromMs, untilMs]]`: steps no line is drawn across (an unsupported jump).
+  breaks          Json
+  /// `[{ fromMs, untilMs, kind, entryId }]`: jumps a logged entry explains.
+  bridges         Json
+  /// More than one origin on the day.
+  mixed           Boolean  @default(false)
+  /// The best score, 0..1.
+  bestScore       Float    @map("best_score")
+  /// `{ source, relativeTo, offsetS }` when a constant clock offset was seen; reported, never applied.
+  clockOffset     Json?    @map("clock_offset")
+  /// The read hit its cap: the scores rest on part of the day.
+  truncated       Boolean  @default(false)
+  /// The user's choice of origin for the whole day; null = automatic.
+  overrideSource  String?  @map("override_source")
+  /// `discard` (outliers stay excluded, acknowledged) | `keep` (drawn again); null = automatic.
+  outlierDecision String?  @map("outlier_decision")
+  derivedAt       DateTime @map("derived_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day])
+  @@index([userId, fromAt])
+  @@map("travtrack_day_sources")
+}
+
 /// One position of an account's TravTrack history. Raw and immutable: what
 /// the phone measured, never thinned or rewritten here. The same position
 /// twice is one row — Dawarich's key `(user, whole second, lon, lat)`, plus
@@ -6820,6 +6868,8 @@ model TravTrackPoint {
   @@unique([userId, origin, originRef])
   @@index([userId, t, seq])
   @@index([userId, seq])
+  /// The per-source reads of a day's best-source scoring (`bestSource/`).
+  @@index([userId, origin, t])
   @@map("travtrack_points")
 }
 

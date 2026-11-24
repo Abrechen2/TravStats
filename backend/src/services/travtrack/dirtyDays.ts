@@ -19,9 +19,12 @@ export const EXPLORED_BIT = 2;
 export const MONTHS_BIT = 4;
 /** `done` bit of the place-visit suggestions read from the day's stops (`visits/project.ts`). */
 export const VISITS_BIT = 8;
+/** `done` bit of the best-source resolution (`bestSource/store.ts`): the day's sources were scored. */
+export const SOURCES_BIT = 16;
 
 /** Every projection's bit: a day with any of them unset still has work. */
-export const ALL_PROJECTION_BITS = COUNTRY_DAYS_BIT | EXPLORED_BIT | MONTHS_BIT | VISITS_BIT;
+export const ALL_PROJECTION_BITS =
+  COUNTRY_DAYS_BIT | EXPLORED_BIT | MONTHS_BIT | VISITS_BIT | SOURCES_BIT;
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_MS = 86_400_000;
