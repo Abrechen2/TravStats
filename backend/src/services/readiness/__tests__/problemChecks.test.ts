@@ -409,6 +409,23 @@ describe("visible-problem checks", () => {
       expect((await statusOf("user.travtrackSilent"))?.status).toBe("needsAction");
     });
 
+    it("says 'Verlauf wird aufbereitet' while imported days are still being derived, and clears itself", async () => {
+      const day = (d: string, done: number) =>
+        prisma.travTrackDirtyDay.create({
+          data: { userId, day: new Date(d), version: BigInt(1), done },
+        });
+      await day("2026-10-01", 15); // every derived figure done
+      expect(await statusOf("user.travtrackDerivation")).toBeUndefined();
+      await day("2026-10-02", 8); // only the visit scan done
+      await day("2026-10-03", 1);
+      expect(await statusOf("user.travtrackDerivation")).toEqual({
+        status: "needsAction",
+        count: 2,
+      });
+      await prisma.travTrackDirtyDay.updateMany({ where: { userId }, data: { done: 15 } });
+      expect(await statusOf("user.travtrackDerivation")).toBeUndefined();
+    });
+
     it("counts visit days the scan left open past the grace period", async () => {
       const day = (d: string, done: number) =>
         prisma.travTrackDirtyDay.create({

@@ -164,6 +164,13 @@
       "consequence": "The stops of these days have not been searched for visited places yet, usually because the place service does not answer. Suggestions are missing until then.",
       "action": "Open place detection"
     },
+    "userTravtrackDerivation": {
+      "title": "History is being prepared",
+      "title_one": "History is being prepared – {{count}} day left",
+      "title_other": "History is being prepared – {{count}} days left",
+      "consequence": "After an import TravStats works through every recorded day: countries, months and explored areas. Until it is done those days are missing from the calendar and statistics. It runs on its own; there is nothing to do.",
+      "action": "See progress"
+    },
     "userFlightsNoTimes": {
       "title": "Flights without a time",
       "title_one": "{{count}} flight without a time",

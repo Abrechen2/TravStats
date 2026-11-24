@@ -15,6 +15,7 @@ import { isServiceDisabledByAdmin } from "../externalServices/policy";
 import { LEG_MODES, type LegMode } from "../tour/tourDistance";
 import { resolveRouting } from "../tour/routing/resolveProvider";
 import { isRoutableMode } from "../tour/routing/types";
+import { derivationProgress } from "../travtrack/derivationProgress";
 import { VISITS_BIT } from "../travtrack/dirtyDays";
 import { PROBLEM_RULES, type ProblemRuleId } from "./problemEntries";
 
@@ -54,6 +55,8 @@ export interface AccountProblemFacts {
   lastPointAt: Date | null;
   /** Visit-scan days older than the grace period that are still open. */
   visitBacklogDays: number;
+  /** Recorded days whose country/month/explored figures are still being derived (after an import). */
+  derivationPendingDays: number;
   /** The "falsch getrackt" counts, by check id (`problemEntries.ts`). */
   entries: Readonly<Record<ProblemRuleId, number>>;
 }
@@ -173,26 +176,29 @@ export async function loadAccountProblemFacts(
   now: Date
 ): Promise<AccountProblemFacts> {
   const roadWorks = instance.roadRoutingEffective || (await roadRoutingWorks(userId));
-  const [user, passkey, rail, legs, bus, point, backlog, entryCounts] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { twoFactorEnabledAt: true } }),
-    prisma.webAuthnCredential.findFirst({ where: { userId }, select: { id: true } }),
-    instance.railRouterConfigured ? null : straightRail(userId),
-    roadWorks ? null : straightLegs(userId),
-    roadWorks ? null : straightBus(userId),
-    prisma.travTrackPoint.findFirst({
-      where: { userId },
-      orderBy: [{ t: "desc" }, { seq: "desc" }],
-      select: { t: true },
-    }),
-    visitBacklog(userId, now),
-    entryCountsOf(userId),
-  ]);
+  const [user, passkey, rail, legs, bus, point, backlog, entryCounts, derivation] =
+    await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { twoFactorEnabledAt: true } }),
+      prisma.webAuthnCredential.findFirst({ where: { userId }, select: { id: true } }),
+      instance.railRouterConfigured ? null : straightRail(userId),
+      roadWorks ? null : straightLegs(userId),
+      roadWorks ? null : straightBus(userId),
+      prisma.travTrackPoint.findFirst({
+        where: { userId },
+        orderBy: [{ t: "desc" }, { seq: "desc" }],
+        select: { t: true },
+      }),
+      visitBacklog(userId, now),
+      entryCountsOf(userId),
+      derivationProgress(userId),
+    ]);
   return {
     hasSecondFactor: user?.twoFactorEnabledAt != null || passkey !== null,
     railStraight: rail,
     roadStraight: legs === null || bus === null ? null : legs + bus,
     lastPointAt: point?.t ?? null,
     visitBacklogDays: backlog,
+    derivationPendingDays: derivation.pendingDays,
     entries: entryCounts,
   };
 }

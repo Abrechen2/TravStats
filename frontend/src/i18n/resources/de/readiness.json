@@ -164,6 +164,13 @@
       "consequence": "Die Halte dieser Tage wurden noch nicht nach besuchten Orten durchsucht, meist weil der Ortsdienst nicht antwortet. Bis dahin fehlen Vorschläge.",
       "action": "Ortserkennung ansehen"
     },
+    "userTravtrackDerivation": {
+      "title": "Verlauf wird aufbereitet",
+      "title_one": "Verlauf wird aufbereitet – noch {{count}} Tag",
+      "title_other": "Verlauf wird aufbereitet – noch {{count}} Tage",
+      "consequence": "Nach einem Import rechnet TravStats jeden aufgezeichneten Tag nach: Länder, Monate und erkundete Gebiete. Bis das fertig ist, fehlen diese Tage in Kalender und Statistik. Das läuft von selbst, du musst nichts tun.",
+      "action": "Fortschritt ansehen"
+    },
     "userFlightsNoTimes": {
       "title": "Flüge ohne Uhrzeit",
       "title_one": "{{count}} Flug ohne Uhrzeit",
