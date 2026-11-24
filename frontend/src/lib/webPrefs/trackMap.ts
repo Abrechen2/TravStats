@@ -10,6 +10,7 @@
  */
 
 import { emitLocalPrefWrite } from "./prefEvents";
+import { parseModeColors, type ModeColorOverrides } from "../trackModeColor";
 
 export const TRACK_LAYERS = [
   "routes",
@@ -23,7 +24,7 @@ export const TRACK_LAYERS = [
 ] as const;
 export type TrackLayer = (typeof TRACK_LAYERS)[number];
 
-export type RouteColorMode = "speed" | "plain";
+export type RouteColorMode = "speed" | "plain" | "mode";
 
 /** Minutes after which a pause splits a stretch; null keeps the server's cuts only. */
 export const SPLIT_OPTIONS = [null, 5, 15, 30, 120, 360] as const;
@@ -49,6 +50,8 @@ export interface TrackMapPrefs {
   version: number;
   layers: Record<TrackLayer, boolean>;
   color: RouteColorMode;
+  /** The user's colour per transport mode (`#rrggbb`); a mode not listed keeps its default. */
+  modeColors: ModeColorOverrides;
   /** 0.2 … 1 */
   opacity: number;
   splitMinutes: SplitMinutes;
@@ -73,6 +76,7 @@ export const DEFAULT_PREFS: TrackMapPrefs = {
     countries: false,
   },
   color: "speed",
+  modeColors: {},
   opacity: 0.85,
   splitMinutes: null,
   speedScale: "default",
@@ -123,7 +127,11 @@ export function parsePrefs(raw: string | null): TrackMapPrefs {
   return {
     version: PREFS_VERSION,
     layers,
-    color: v.color === "plain" || v.color === "speed" ? v.color : DEFAULT_PREFS.color,
+    color:
+      v.color === "plain" || v.color === "speed" || v.color === "mode"
+        ? v.color
+        : DEFAULT_PREFS.color,
+    modeColors: parseModeColors(v.modeColors),
     opacity,
     splitMinutes: split,
     speedScale,

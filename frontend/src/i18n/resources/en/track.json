@@ -464,7 +464,12 @@
       "accuracy": "Points by accuracy",
       "accuracyAll": "All points",
       "accuracyMax": "Only better than {{m}} m",
-      "accuracyHint": "Applies to points and the heatmap, not to the line. Points with no reported accuracy stay visible."
+      "accuracyHint": "Applies to points and the heatmap, not to the line. Points with no reported accuracy stay visible.",
+      "mode": "Transport mode",
+      "modeLong": "Colouring by transport mode is available for a day or a week. Month, year and custom range are drawn in one colour.",
+      "modeNone": "No legs in the span.",
+      "modeColor": "Colour for {{mode}}",
+      "modeReset": "Default colours"
     },
     "replay": {
       "play": "Start replay",

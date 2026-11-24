@@ -11,6 +11,7 @@ import { contextLabel } from "../trackContextLabel";
 import type { SpeedStop } from "./trackSpeedScale";
 import { lonLat, speedColor, speedPieces, type LonLat, type SpeedPiece } from "./trackGeometry";
 import type { RouteColorMode, TrackLayer } from "./trackMapPrefs";
+import type { ModeColorKey } from "../../../lib/trackModeColor";
 
 /**
  * The deck.gl layers of the Track map (TravTrack plan T5.2), built from the
@@ -110,6 +111,12 @@ export function nearestTime(line: MapRangeLine, at: readonly number[]): number |
 export const LEG_PICK_WIDTH = 16;
 export const LEG_PICK_WIDTH_COARSE = 40;
 
+/** One leg's drawn stretch with its mode, for colouring by transport mode. */
+export interface MapModePath {
+  path: LonLat[];
+  mode: ModeColorKey;
+}
+
 /** A dwell between legs, drawn as a marker that opens its card. */
 export interface MapStop {
   date: string;
@@ -147,6 +154,9 @@ export interface TrackLayerInput {
   /** Every leg's stretches, pickable (clear but present); omitted, no line is clickable. */
   legLines?: readonly MapLegLine[];
   onLeg?: (leg: MapLegLine) => void;
+  /** Colour by transport mode: the legs' stretches and the colour of each mode. */
+  modePaths?: readonly MapModePath[];
+  modeColors?: Record<ModeColorKey, Rgb>;
   /** The leg lines' and the range lines' hit width in px; omitted, `LEG_PICK_WIDTH`. */
   pickWidth?: number;
   /**
@@ -206,6 +216,22 @@ const entryAnchorsOf = byRef((anchors: readonly MapAnchor[]) =>
 );
 
 function routeLayer(input: TrackLayerInput, alpha: number): Layer {
+  if (input.color === "mode" && input.modeColors && input.modePaths && input.modePaths.length > 0) {
+    const table = input.modeColors;
+    return new PathLayer<MapModePath>({
+      id: "track-route-mode",
+      data: input.modePaths as MapModePath[],
+      getPath: (d) => d.path,
+      getColor: (d) => [...table[d.mode], alpha],
+      updateTriggers: { getColor: [alpha, table] },
+      getWidth: 4,
+      widthUnits: "pixels",
+      widthMinPixels: 2,
+      capRounded: true,
+      jointRounded: true,
+      pickable: false,
+    });
+  }
   if (input.color === "speed") {
     return new PathLayer<SpeedPiece>({
       id: "track-route-speed",

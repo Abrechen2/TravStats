@@ -32,6 +32,13 @@ import TrackPointInspector from "./TrackPointInspector";
 import TrackRangeBar from "./TrackRangeBar";
 import TrackRangeMap from "./TrackRangeMap";
 import { useRangePick } from "./useRangePick";
+import { useDomainColors } from "../../../hooks/useDomainColors";
+import {
+  modeColor,
+  modeColorKeyOf,
+  modeColorTable,
+  type ModeColorKey,
+} from "../../../lib/trackModeColor";
 import TrackReplayDock from "./TrackReplayDock";
 import TrackTotalsPanel from "./TrackTotalsPanel";
 import { lonLat, rangeTotals, splitAfterPause, type LonLat } from "./trackGeometry";
@@ -300,6 +307,25 @@ export default function TrackMapView(): JSX.Element {
       ),
     [loaded]
   );
+  // Colour by transport mode: one stretch per leg of the loaded days (a long span has no legs).
+  const { colors: domainColors } = useDomainColors();
+  const modeColors = useMemo(
+    () => modeColorTable(prefs.modeColors, domainColors),
+    [prefs.modeColors, domainColors]
+  );
+  const modePaths = useMemo(
+    () =>
+      loaded.flatMap((r) =>
+        (r.day.legs ?? []).flatMap((leg) =>
+          legLines(r.day, leg).map((path) => ({ path, mode: modeColorKeyOf(leg.mode) }))
+        )
+      ),
+    [loaded]
+  );
+  const modesShown = useMemo(
+    () => [...new Set(modePaths.map((p) => p.mode))] as ModeColorKey[],
+    [modePaths]
+  );
   const resolved = useMemo(() => {
     if (!pick) return null;
     const day =
@@ -473,6 +499,7 @@ export default function TrackMapView(): JSX.Element {
         leg={resolved.leg}
         zone={resolved.day.zone}
         entryHref={entryHref}
+        modeColor={modeColor(modeColorKeyOf(resolved.leg.mode), prefs.modeColors, domainColors)}
         onClose={closeLeg}
         onChanged={() =>
           long ? rangePick.reread(resolved.day.date) : data.refresh(resolved.day.date)
@@ -542,6 +569,7 @@ export default function TrackMapView(): JSX.Element {
         prefs={prefs}
         onChange={setPrefs}
         long={long}
+        modesShown={modesShown}
         speedStops={speedStops}
         embedded
         saveFailed={prefsSaveFailed}
@@ -616,6 +644,8 @@ export default function TrackMapView(): JSX.Element {
                 fitPadding={fitPadding}
                 layers={prefs.layers}
                 color={prefs.color}
+                modePaths={replay.t === null ? modePaths : undefined}
+                modeColors={modeColors}
                 opacity={prefs.opacity}
                 frameLines={framed}
                 highlight={highlight}

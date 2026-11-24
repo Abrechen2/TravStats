@@ -13,6 +13,8 @@ import {
   type SplitMinutes,
   type TrackMapPrefs,
 } from "./trackMapPrefs";
+import { useDomainColors } from "../../../hooks/useDomainColors";
+import { modeColor, type ModeColorKey } from "../../../lib/trackModeColor";
 import { makeNumber } from "./trackLegFormat";
 import { panelStyle, pillStyle } from "./trackMapStyle";
 
@@ -36,6 +38,7 @@ export default function TrackLayersPanel({
   saveFailed = false,
   noPhotoSource = false,
   speedStops = SPEED_STOPS,
+  modesShown = [],
 }: {
   prefs: TrackMapPrefs;
   onChange: (patch: Partial<TrackMapPrefs>) => void;
@@ -47,12 +50,15 @@ export default function TrackLayersPanel({
   saveFailed?: boolean;
   /** No photo source is connected: the photos row says how to connect one. */
   noPhotoSource?: boolean;
+  /** The modes the shown legs have; the colour legend lists exactly these. */
+  modesShown?: readonly ModeColorKey[];
   /** The ramp's stops for the chosen scale; the legend follows them. */
   speedStops?: ReadonlyArray<{ kmh: number }>;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["track"]);
   const number = makeNumber(i18n.language);
   const coarse = useCoarsePointer();
+  const { colors: domainColors } = useDomainColors();
   const rowMin = coarse ? 44 : 40;
   return (
     <aside
@@ -92,7 +98,7 @@ export default function TrackLayersPanel({
       <div className="flex flex-col gap-3" style={embedded ? undefined : panelStyle}>
         <h2 className="t-card-title">{t("track:map.route.title")}</h2>
         <div role="radiogroup" aria-label={t("track:map.route.color")} className="flex gap-2">
-          {(["speed", "plain"] as RouteColorMode[]).map((mode) => (
+          {(["speed", "mode", "plain"] as RouteColorMode[]).map((mode) => (
             <button
               key={mode}
               type="button"
@@ -105,6 +111,43 @@ export default function TrackLayersPanel({
             </button>
           ))}
         </div>
+        {prefs.color === "mode" && (
+          <div className="flex flex-col gap-2" data-testid="track-mode-legend">
+            {long ? (
+              <p className="t-caption" data-testid="track-mode-long">
+                {t("track:map.route.modeLong")}
+              </p>
+            ) : modesShown.length === 0 ? (
+              <p className="t-caption">{t("track:map.route.modeNone")}</p>
+            ) : (
+              modesShown.map((key) => (
+                <label key={key} className="flex items-center gap-2 t-caption" data-mode-key={key}>
+                  <input
+                    type="color"
+                    aria-label={t("track:map.route.modeColor", {
+                      mode: t(`track:legs.mode.${key}`),
+                    })}
+                    value={modeColor(key, prefs.modeColors, domainColors)}
+                    onChange={(e) =>
+                      onChange({ modeColors: { ...prefs.modeColors, [key]: e.target.value } })
+                    }
+                    style={{ width: coarse ? 44 : 28, height: coarse ? 44 : 28 }}
+                  />
+                  {t(`track:legs.mode.${key}`)}
+                </label>
+              ))
+            )}
+            {Object.keys(prefs.modeColors).length > 0 && (
+              <button
+                type="button"
+                className="underline self-start"
+                onClick={() => onChange({ modeColors: {} })}
+              >
+                {t("track:map.route.modeReset")}
+              </button>
+            )}
+          </div>
+        )}
         {prefs.color === "speed" && (
           <div className="flex flex-col gap-2">
             <div

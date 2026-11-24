@@ -53,4 +53,28 @@ describe("picking a drawn route", () => {
     }
     expect(LEG_PICK_WIDTH_COARSE).toBeGreaterThan(LEG_PICK_WIDTH);
   });
+
+  it("colour by mode draws each leg in the table's colour, and falls back to plain without legs", () => {
+    const table = { walk: [1, 2, 3], car: [4, 5, 6] } as unknown as Record<
+      string,
+      [number, number, number]
+    >;
+    const out = buildTrackLayers({
+      ...base,
+      color: "mode",
+      modeColors: table as never,
+      modePaths: [{ path: line.path, mode: "walk" }],
+    });
+    const layer = out.find((l) => l.id === "track-route-mode");
+    expect(layer).toBeDefined();
+    const getColor = (layer!.props as unknown as { getColor: (d: unknown) => number[] }).getColor;
+    expect(getColor({ mode: "walk" }).slice(0, 3)).toEqual([1, 2, 3]);
+    const plain = buildTrackLayers({
+      ...base,
+      color: "mode",
+      modeColors: table as never,
+      modePaths: [],
+    });
+    expect(plain.find((l) => l.id === "track-route-mode")).toBeUndefined();
+  });
 });

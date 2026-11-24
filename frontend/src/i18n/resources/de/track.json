@@ -464,7 +464,12 @@
       "accuracy": "Punkte nach Genauigkeit",
       "accuracyAll": "Alle Punkte",
       "accuracyMax": "Nur besser als {{m}} m",
-      "accuracyHint": "Gilt für Punkte und Heatmap, nicht für die Linie. Punkte ohne gemeldete Genauigkeit bleiben sichtbar."
+      "accuracyHint": "Gilt für Punkte und Heatmap, nicht für die Linie. Punkte ohne gemeldete Genauigkeit bleiben sichtbar.",
+      "mode": "Verkehrsmittel",
+      "modeLong": "Die Farbe nach Verkehrsmittel gibt es für einen Tag oder eine Woche. Monat, Jahr und Zeitraum zeichnen einfarbig.",
+      "modeNone": "Keine Etappen im Zeitraum.",
+      "modeColor": "Farbe für {{mode}}",
+      "modeReset": "Standardfarben"
     },
     "replay": {
       "play": "Wiedergabe starten",
