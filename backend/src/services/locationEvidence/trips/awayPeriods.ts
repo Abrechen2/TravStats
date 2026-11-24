@@ -21,6 +21,11 @@
  * over the day it began or ended on: a trip left on an evening starts that
  * day.
  *
+ * A day with no fix that lies wholly inside a stationary silence — the last good
+ * fix before it and the first after it in one known place within `AWAY_KM` of
+ * that day's residence (`travtrack/silence`) — is `home`, inferred: iOS sends
+ * nothing while the phone lies still, and a quiet day at home is not away.
+ *
  * Without any confirmed residence nothing is inferred (`noResidence`): a home
  * migrated from the old airport list is the airport, not where the user lives.
  */
@@ -32,6 +37,11 @@ import { getCountryResolver } from "../../geo/countryFromCoordinates";
 import { loadHomePeriods } from "../../home/homeStore";
 import type { Coverage } from "../../locationProvider/types";
 import { distanceM } from "../../travtrack/classify";
+import { startOfDayAt } from "../../../shared/time/legacyValues";
+import {
+  stationarySilences,
+  type StationarySilence,
+} from "../../travtrack/silence/inferredCountryDays";
 import { readTravTrackDerivation } from "../derivationRead";
 
 /** Further than this from the residence is away. */
@@ -160,6 +170,32 @@ export function classifyDays(
   });
 }
 
+/** How far beyond the window a silence may reach and still be found (its ends must both be read). */
+const SILENCE_REACH_MS = 30 * DAY_MS;
+
+/**
+ * Pure: an `unknown` day wholly inside a stationary silence at a place near that
+ * day's residence becomes `home` (inferred; `pointCount` stays 0). Any other day
+ * is left as it is.
+ */
+export function homeBySilence(
+  days: readonly AwayDay[],
+  silences: readonly Pick<StationarySilence, "fromMs" | "untilMs" | "place">[],
+  homeAt: HomeAt
+): AwayDay[] {
+  return days.map((d) => {
+    if (d.state !== "unknown") return d;
+    const home = homeAt(d.day);
+    if (!home) return d;
+    const start = startOfDayAt(d.day, d.zone).getTime();
+    const end = startOfDayAt(shiftDay(d.day, 1), d.zone).getTime();
+    const still = silences.some(
+      (s) => s.fromMs <= start && end <= s.untilMs && distanceM(s.place, home) <= AWAY_KM * 1000
+    );
+    return still ? { ...d, state: "home", firstAway: false, lastAway: false } : d;
+  });
+}
+
 /** Whether the night between two consecutive known days was spent away. */
 const awayNight = (before: AwayDay | undefined, after: AwayDay | undefined) =>
   !!before &&
@@ -276,10 +312,19 @@ export async function awayPeriods(
     countryAt: resolver.countryAt,
     dayOf: homes.dayOf,
   });
+  const { silences } = await stationarySilences(
+    userId,
+    Date.parse(`${window.fromDay}T00:00:00.000Z`) - SILENCE_REACH_MS,
+    Date.parse(`${window.untilDay}T00:00:00.000Z`) + SILENCE_REACH_MS,
+    fallbackZone
+  );
+  const inferred = homeBySilence(days, silences, homes.at);
   const last = read.points[read.points.length - 1];
   const cutDay = read.coverage === "complete" ? null : last ? homes.dayOf(last.atMs) : "";
   const judged =
-    cutDay === null ? days : days.map((d) => (d.day >= cutDay ? unknownDay(d.day, d.zone) : d));
+    cutDay === null
+      ? inferred
+      : inferred.map((d) => (d.day >= cutDay ? unknownDay(d.day, d.zone) : d));
   return {
     status: "ok",
     days: judged,

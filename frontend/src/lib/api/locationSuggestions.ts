@@ -45,6 +45,8 @@ export interface TripQuestion {
   tripName: string | null;
   /** Beyond the per-run cap: shown inside the "Weitere N Zeiträume unterwegs" entry. */
   aggregated: boolean;
+  /** Re-asked once: the rejected period grew past double its days ("erweitert"). */
+  expanded?: true;
 }
 
 export interface LocationSuggestion {

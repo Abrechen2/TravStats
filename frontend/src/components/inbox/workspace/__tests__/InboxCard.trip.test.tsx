@@ -112,6 +112,19 @@ describe("trip question card", () => {
     expect(document.querySelector("canvas, .maplibregl-map")).toBeNull();
   });
 
+  it("says when the sweep re-asked a rejected period that grew past double", () => {
+    const q = away("q1", "2026-10-10");
+    mount({ ...q, trip: { ...q.trip!, expanded: true } });
+    expect(
+      screen.getByText("Erweitert: seit deiner Ablehnung mehr als doppelt so lang")
+    ).toBeInTheDocument();
+  });
+
+  it("draws no such mark on a first question", () => {
+    mount(away("q1", "2026-10-10"));
+    expect(screen.queryByText(/^Erweitert:/)).toBeNull();
+  });
+
   it("„Als Reise anlegen“ creates the trip under the name typed", async () => {
     vi.mocked(locationSuggestionsApi.acceptTrip).mockResolvedValue({
       ...away("q1", "2026-10-10"),

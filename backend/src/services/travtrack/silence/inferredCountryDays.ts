@@ -6,7 +6,7 @@ import { MAX_ACCURACY_M } from "../../locationEvidence/anomaly";
 import { replaceCountryDays, utcMidnight } from "../../countryDays/store";
 import { privacyCircleSet } from "../privacyCircles";
 import { distanceM } from "../classify";
-import { judgeSilence, type SilenceEnd } from "./stationary";
+import { judgeSilence, type SilenceEnd, type StationaryPlace } from "./stationary";
 import { interrupted, placesFor } from "./stationaryCoverage";
 
 /**
@@ -103,6 +103,38 @@ async function gapsBetween(userId: string, fromMs: number, untilMs: number): Pro
     }));
 }
 
+/** A silence whose two good ends lie in one known place, with nothing contradicting it. */
+export type StationarySilence = { fromMs: number; untilMs: number; place: StationaryPlace };
+
+/**
+ * The stationary silences whose ends both lie in `[fromMs, untilMs]` — the country days
+ * below and the trip sweep's away days (`locationEvidence/trips/awayPeriods.ts`) read the
+ * same ones, so a quiet day at home is home in both.
+ */
+export async function stationarySilences(
+  userId: string,
+  fromMs: number,
+  untilMs: number,
+  zone?: string
+): Promise<{ gaps: number; silences: StationarySilence[] }> {
+  const dayZone = zone ?? (await profileZoneOf(userId)).zone;
+  const gaps = await gapsBetween(userId, fromMs, untilMs);
+  const silences: StationarySilence[] = [];
+  for (const g of gaps) {
+    const before: SilenceEnd = { tMs: g.b_t.getTime(), lat: g.b_lat, lon: g.b_lon };
+    const after: SilenceEnd = { tMs: g.a_t.getTime(), lat: g.a_lat, lon: g.a_lon };
+    const span = { fromMs: before.tMs, untilMs: after.tMs };
+    if (await interrupted(userId, span)) continue;
+    const { places } = await placesFor(userId, span, localDay(new Date(before.tMs), dayZone), [
+      before,
+      after,
+    ]);
+    const verdict = judgeSilence(before, after, places);
+    if (verdict.kind === "stationary") silences.push({ ...span, place: verdict.place });
+  }
+  return { gaps: gaps.length, silences };
+}
+
 /** The UTC days (`YYYY-MM-DD`, inclusive) whose data changed; null recomputes the whole history. */
 export type InferredScope = { fromDay: string; toDay: string } | null;
 
@@ -141,24 +173,14 @@ export async function projectInferredCountryDays(
   }
   const { zone } = await profileZoneOf(userId);
   const byDate = new Map<string, string>();
-  const gaps = await gapsBetween(userId, fromMs, untilMs);
-  for (const g of gaps) {
-    const before: SilenceEnd = { tMs: g.b_t.getTime(), lat: g.b_lat, lon: g.b_lon };
-    const after: SilenceEnd = { tMs: g.a_t.getTime(), lat: g.a_lat, lon: g.a_lon };
-    const span = { fromMs: before.tMs, untilMs: after.tMs };
-    if (await interrupted(userId, span)) continue;
-    const { places } = await placesFor(userId, span, localDay(new Date(before.tMs), zone), [
-      before,
-      after,
-    ]);
-    const verdict = judgeSilence(before, after, places);
-    if (verdict.kind !== "stationary") continue;
-    const code = countryAt(verdict.place.lat, verdict.place.lon);
+  const { gaps, silences } = await stationarySilences(userId, fromMs, untilMs, zone);
+  for (const silence of silences) {
+    const code = countryAt(silence.place.lat, silence.place.lon);
     if (!code) continue;
     // Whole UTC days inside the silence, within the window and never today or later.
     for (
-      let d = Math.ceil(before.tMs / DAY_MS) * DAY_MS;
-      d + DAY_MS <= after.tMs && d < endAtExclusive.getTime();
+      let d = Math.ceil(silence.fromMs / DAY_MS) * DAY_MS;
+      d + DAY_MS <= silence.untilMs && d < endAtExclusive.getTime();
       d += DAY_MS
     ) {
       if (d >= startAt.getTime()) byDate.set(new Date(d).toISOString().slice(0, 10), code);
@@ -177,5 +199,5 @@ export async function projectInferredCountryDays(
     { startAt, endAtExclusive },
     observations
   );
-  return { gaps: gaps.length, written };
+  return { gaps, written };
 }

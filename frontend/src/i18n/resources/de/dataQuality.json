@@ -406,6 +406,7 @@
         }
       },
       "tripAway": {
+        "expanded": "Erweitert: seit deiner Ablehnung mehr als doppelt so lang",
         "cardTitle": "Reise aus deinem Standortverlauf",
         "subject_one": "{{count}} Tag unterwegs",
         "subject_other": "{{count}} Tage unterwegs",
