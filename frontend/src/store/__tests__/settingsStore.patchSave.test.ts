@@ -88,4 +88,19 @@ describe("settings save is a patch, never a default object (UAT rc.45 B1)", () =
     expect(mocks.update).not.toHaveBeenCalled();
     expect(mocks.updateProfile).not.toHaveBeenCalled();
   });
+
+  it("sends the profile when a field was removed from it", async () => {
+    useSettingsStore.setState((s) => ({
+      profile: { ...s.profile, profilePicture: "https://x/p.png" },
+    }));
+    markLoaded();
+    useSettingsStore.setState((s) => {
+      const { profilePicture: _gone, ...rest } = s.profile;
+      return { profile: rest };
+    });
+    await useSettingsStore.getState().saveRemoteSettings();
+    expect(mocks.update).toHaveBeenCalledTimes(1);
+    expect(mocks.update.mock.calls[0][0].profile).not.toHaveProperty("profilePicture");
+    expect(mocks.update.mock.calls[0][0].profile).toHaveProperty("email", "u@example.com");
+  });
 });

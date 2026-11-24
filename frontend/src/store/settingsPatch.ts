@@ -21,12 +21,16 @@ export type SettingsPatch = Partial<UserSettings> & { removedDomains?: DomainKey
 
 const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
-/** The fields of `current` whose value differs from `confirmed`. */
+/**
+ * The fields whose value differs between `current` and `confirmed` — a key gone from `current`
+ * counts too (as `undefined`), so removing a profile field alone still sends the profile.
+ */
 function changedFields(current: object, confirmed: object): Record<string, unknown> {
+  const now = current as Record<string, unknown>;
   const before = confirmed as Record<string, unknown>;
   const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(current)) {
-    if (!same(value, before[key])) out[key] = value;
+  for (const key of new Set([...Object.keys(now), ...Object.keys(before)])) {
+    if (!same(now[key], before[key])) out[key] = now[key];
   }
   return out;
 }
