@@ -140,3 +140,29 @@ describe("provenance details on a detail page", () => {
     expect(screen.queryByTestId("purpose-details-t-1")).toBeNull();
   });
 });
+
+// UAT rc.45: the boundary drew its checkbox itself, above the app header.
+describe("the 'Nur belegte' switch", () => {
+  it("draws its control where the page puts it, not above the page", async () => {
+    const { default: RecordedOnlyBoundary, RecordedOnlyToggle } =
+      await import("../RecordedOnlyBoundary");
+    render(
+      <RecordedOnlyBoundary>
+        <header data-testid="page-header" />
+        <RecordedOnlyToggle />
+      </RecordedOnlyBoundary>
+    );
+    const header = screen.getByTestId("page-header");
+    const toggle = screen.getByTestId("recorded-only-toggle");
+    expect(header.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    await userEvent.click(screen.getByRole("checkbox"));
+    expect(screen.getByRole("checkbox")).toBeChecked();
+  });
+
+  it("draws nothing outside the statistics page's boundary", async () => {
+    const { RecordedOnlyToggle } = await import("../RecordedOnlyBoundary");
+    render(<RecordedOnlyToggle />);
+    expect(screen.queryByTestId("recorded-only-toggle")).toBeNull();
+  });
+});

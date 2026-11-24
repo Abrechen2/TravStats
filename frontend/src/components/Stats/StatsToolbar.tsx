@@ -3,6 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import type { SectionVisibility } from "../../hooks/useSectionVisibility";
 import type { DomainKey } from "../../shared/domains";
 import SectionVisibilityMenu from "./SectionVisibilityMenu";
+import { RecordedOnlyToggle } from "../provenance/RecordedOnlyBoundary";
 import StatsPeriodBar from "./StatsPeriodBar";
 import { statsSectionsFor } from "./statsSections";
 import type { StatsPeriod } from "./useStatsPeriod";
@@ -39,7 +40,8 @@ export default function StatsToolbar({ tab, years, period, visibility }: Props):
           <StatsPeriodBar years={years} period={period} />
         </div>
       )}
-      <div className="self-end sm:ml-auto">
+      <div className="self-end sm:ml-auto flex items-center gap-3">
+        <RecordedOnlyToggle />
         <SectionVisibilityMenu options={statsSectionsFor(tab, t)} visibility={visibility} />
       </div>
     </div>
