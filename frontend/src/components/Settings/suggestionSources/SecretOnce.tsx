@@ -23,7 +23,7 @@ export default function SecretOnce({
         gap: "var(--ts-space-xs)",
         padding: "var(--ts-space-md)",
         border: "1px solid var(--ts-accent)",
-        borderRadius: "var(--ts-radius-md)",
+        borderRadius: "var(--ts-radius-card)",
       }}
       data-testid="plugin-secret"
     >

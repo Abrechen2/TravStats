@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://travstats.de/schemas/suggestion-plugin/v1.schema.json",
+  "title": "TravStats suggestion plugin contract, version 1",
+  "description": "Exported from the TravStats server's OpenAPI document (scripts/export-plugin-contract.ts). Do not edit by hand. Request: what TravStats POSTs; response: what the plugin answers; hello: the optional signed GET.",
+  "$defs": {
+    "SuggestionPluginRequestV1": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "enum": [
+            1
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "stop",
+            "test"
+          ]
+        },
+        "requestId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "stop": {
+          "$ref": "#/$defs/SuggestionPluginStopV1"
+        },
+        "locale": {
+          "type": "string",
+          "enum": [
+            "de",
+            "en"
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "requestId",
+        "stop",
+        "locale"
+      ]
+    },
+    "SuggestionPluginStopV1": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "timeZone": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "precisionMeters": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "nearestPlace": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "distanceMeters": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "name",
+            "distanceMeters"
+          ]
+        },
+        "venue": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "category": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        "address": {
+          "type": "object",
+          "properties": {
+            "street": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "postcode": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "town": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "country": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "timeZone",
+        "lat",
+        "lon",
+        "precisionMeters"
+      ]
+    },
+    "SuggestionPluginResponseV1": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "suggestions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SuggestionPluginSuggestionV1"
+          },
+          "maxItems": 5
+        }
+      },
+      "required": [
+        "version",
+        "suggestions"
+      ]
+    },
+    "SuggestionPluginSuggestionV1": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "address": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "private",
+            "business"
+          ]
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "externalRef": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 2000,
+          "format": "uri"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "name",
+        "confidence"
+      ]
+    },
+    "SuggestionPluginHelloV1": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "kinds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "maxItems": 10
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "kinds"
+      ]
+    }
+  },
+  "properties": {
+    "request": {
+      "$ref": "#/$defs/SuggestionPluginRequestV1"
+    },
+    "response": {
+      "$ref": "#/$defs/SuggestionPluginResponseV1"
+    },
+    "hello": {
+      "$ref": "#/$defs/SuggestionPluginHelloV1"
+    }
+  }
+}

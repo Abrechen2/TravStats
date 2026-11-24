@@ -98,7 +98,7 @@ export default function CalendarRulesEditor({
               gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
               padding: "var(--ts-space-md)",
               border: "1px solid var(--ts-border)",
-              borderRadius: "var(--ts-radius-md)",
+              borderRadius: "var(--ts-radius-card)",
             }}
             data-testid="calendar-rule"
           >

@@ -125,7 +125,7 @@ export default function PluginCard({
         gap: "var(--ts-space-sm)",
         padding: "var(--ts-space-md)",
         border: "1px solid var(--ts-border)",
-        borderRadius: "var(--ts-radius-md)",
+        borderRadius: "var(--ts-radius-card)",
       }}
       data-testid="suggestion-plugin"
     >
