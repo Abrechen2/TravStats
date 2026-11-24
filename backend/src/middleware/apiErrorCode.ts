@@ -217,6 +217,8 @@ export type ApiErrorCode =
   | "FERRY_ROUTE_INVALID"
   /** A hand-drawn crossing line does not start and end at the crossing's terminals. */
   | "FERRY_ROUTE_NOT_ANCHORED"
+  | "BUS_ROUTE_INVALID"
+  | "BUS_ROUTE_NOT_ANCHORED"
   /** A vessel search or pick failed validation; `field` names it (`q` or `mmsi`). */
   | "VESSEL_INVALID_INPUT"
   /** A picked vessel is not one the server offered for this journey or search. */
