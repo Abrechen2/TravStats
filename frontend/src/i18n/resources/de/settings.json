@@ -2164,6 +2164,9 @@
       "title": "Schutzzonen",
       "difference": "In einer Schutzzone wird nichts gespeichert und nichts gezeichnet, anders als bei festen Orten, die nur zusammenfassen. Eine Schutzzone geht immer vor."
     },
+    "quality": {
+      "title": "Tage mit fragwürdigen Spuren"
+    },
     "detect": {
       "title": "Erkennung & Vorschläge",
       "stops": {

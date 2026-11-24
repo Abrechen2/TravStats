@@ -441,7 +441,7 @@ export const CHECK_CATALOGUE: readonly CheckCatalogueEntry[] = [
     severity: "recommended",
     titleKey: "checks.userTravtrackQuestionableDays.title",
     consequenceKey: "checks.userTravtrackQuestionableDays.consequence",
-    action: "/settings/tt-aufz#ttQuality",
+    action: "/settings/tt-daten#ttQuality",
     maxAgeDays: null,
     blockedBy: null,
     actionKey: "checks.userTravtrackQuestionableDays.action",

@@ -2164,6 +2164,9 @@
       "title": "Privacy zones",
       "difference": "Nothing is stored or drawn inside a privacy zone, unlike fixed places, which only summarise. A privacy zone always wins."
     },
+    "quality": {
+      "title": "Days with questionable tracks"
+    },
     "detect": {
       "title": "Detection & suggestions",
       "stops": {

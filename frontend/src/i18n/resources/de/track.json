@@ -102,7 +102,9 @@
     "legInvalid": "Diese Etappe lässt sich so nicht ändern.",
     "legGone": "Diese Etappe gibt es nicht mehr – die Ansicht wird neu berechnet.",
     "stopInvalid": "Dieser Stopp lässt sich so nicht benennen.",
-    "stopGone": "Diesen Stopp gibt es nicht mehr – die Ansicht wird neu berechnet."
+    "stopGone": "Diesen Stopp gibt es nicht mehr – die Ansicht wird neu berechnet.",
+    "sourceNotOnDay": "Diese Quelle hat an dem Tag keine Punkte. Lade die Seite neu und wähle erneut.",
+    "dayNoPoints": "An diesem Tag ist nichts gespeichert – es gibt keine Quelle zu wählen."
   },
   "settings": {
     "tripsNoResidence": "Reisen erkennt TravTrack erst, wenn dein Wohnort bestätigt ist: Gemessen wird der Abstand zu deinem Zuhause. Bestätige ihn unter Einstellungen → Zuhause.",
@@ -900,5 +902,55 @@
     "openTrack": "Zum Track",
     "pageTitle": "Lücken im Logbuch",
     "menu": "Lücken"
+  },
+  "daySources": {
+    "title": "Quelle des Tages",
+    "kind": {
+      "phone": "Telefon",
+      "dawarich": "Dawarich",
+      "import": "Import",
+      "other": "Andere Quelle"
+    },
+    "used": "Verwendet: {{source}}",
+    "usedChosen": "Von dir gewählt: {{source}}",
+    "segment": "{{source}} ab {{from}}",
+    "none": "keine Quelle",
+    "notScored": "Die Quellen dieses Tages werden noch bewertet; bis dahin sind alle Punkte gezeichnet.",
+    "choose": "Quelle",
+    "auto": "Automatisch (beste Quelle)",
+    "option": "{{source}} – Qualität {{score}} %, {{count}} Punkte",
+    "outliers_one": "{{count}} Ausreißer nicht gezeichnet und nicht gezählt",
+    "outliers_other": "{{count}} Ausreißer nicht gezeichnet und nicht gezählt",
+    "outliersKept_one": "{{count}} Ausreißer wird auf deinen Wunsch gezeichnet",
+    "outliersKept_other": "{{count}} Ausreißer werden auf deinen Wunsch gezeichnet",
+    "outliersShow": "Trotzdem zeigen",
+    "outliersHide": "Wieder ausblenden",
+    "estimated_one": "{{count}} Lücke gestrichelt – geschätzt, nicht gezählt",
+    "estimated_other": "{{count}} Lücken gestrichelt – geschätzt, nicht gezählt",
+    "bridged_one": "{{count}} Sprung als Eintrag aus dem Logbuch gezeichnet",
+    "bridged_other": "{{count}} Sprünge als Einträge aus dem Logbuch gezeichnet",
+    "clockOffset": "{{source}} läuft um {{minutes}} Minuten versetzt – vermutlich eine falsche Zeitzone im Export. Nichts wurde verschoben."
+  },
+  "quality": {
+    "title": "Tage mit fragwürdigen Spuren",
+    "intro": "An diesen Tagen passen die Quellen nicht zusammen, die Qualität ist niedrig oder es gibt Ausreißer. Gespeicherte Punkte werden dabei nie verändert; jede Entscheidung lässt sich zurücknehmen.",
+    "loading": "Tage werden geladen …",
+    "none": "Keine fragwürdigen Tage – alles passt.",
+    "total_one": "{{count}} Tag",
+    "total_other": "{{count}} Tage",
+    "reason": {
+      "lowScore": "niedrige Qualität",
+      "mixed": "mehrere Quellen",
+      "outliers": "Ausreißer"
+    },
+    "score": "Qualität {{score}} %",
+    "open": "Tag ansehen",
+    "chooseSource": "Quelle wählen",
+    "discardOutliers": "Ausreißer verwerfen",
+    "deleteRange": "Zeitraum löschen …",
+    "more": "Weitere Tage laden",
+    "saved": "Gespeichert.",
+    "previewDays_one": "Betroffen: {{count}} Tag",
+    "previewDays_other": "Betroffen: {{count}} Tage"
   }
 }

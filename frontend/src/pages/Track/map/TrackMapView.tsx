@@ -28,6 +28,8 @@ import TrackLayersPanel from "./TrackLayersPanel";
 import TrackMapAside, { newAsideMemory } from "./TrackMapAside";
 import TrackEmptyReasons from "./TrackEmptyReasons";
 import TrackMapNotices from "./TrackMapNotices";
+import TrackDaySources from "../TrackDaySources";
+import { daySourceLines } from "../trackDaySources";
 import TrackPointInspector from "./TrackPointInspector";
 import TrackRangeBar from "./TrackRangeBar";
 import TrackRangeMap from "./TrackRangeMap";
@@ -185,6 +187,7 @@ export default function TrackMapView(): JSX.Element {
     [dayResults]
   );
   const zone = loaded[0]?.day.zone ?? profileZone;
+  const sourceLines = useMemo(() => daySourceLines(loaded.map((r) => r.day)), [loaded]);
 
   // A folded stop (fixed place, lodging) is one point on the line; the raw fixes stay for the Points layer.
   const foldedSpans = useMemo<FoldedSpan[]>(
@@ -544,6 +547,10 @@ export default function TrackMapView(): JSX.Element {
           zone={loaded[0].day.zone}
           context={loaded[0].day.context}
         />
+        <TrackDaySources
+          day={loaded[0].day}
+          onChanged={() => void data.refresh(loaded[0].day.date)}
+        />
         {loaded[0].day.homeSuggestion ? (
           <HomeSuggestionPrompt suggestion={loaded[0].day.homeSuggestion} />
         ) : null}
@@ -598,6 +605,8 @@ export default function TrackMapView(): JSX.Element {
                 photos={photoList}
                 onPhoto={onPhoto}
                 countries={countryShapes}
+                estimated={sourceLines.estimated}
+                bridges={sourceLines.bridges}
                 follow={null}
                 onFogStatus={setFog}
               />

@@ -55,6 +55,8 @@ vi.mock("../../TripRecordingSection", () => ({
   TripRecordingRow: () => null,
 }));
 vi.mock("../../TravTrackDiagnostics", () => ({ default: () => <div data-testid="diagnostics" /> }));
+// The per-day breakdown has its own suite (TravTrackDeleteBreakdown.test.tsx).
+vi.mock("../TravTrackDeleteBreakdown", () => ({ default: () => null }));
 vi.mock("../../../../hooks/useTodayZone", () => ({
   useTodayZone: () => "UTC",
   todayZoneNow: () => "UTC",

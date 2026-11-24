@@ -2759,6 +2759,31 @@
       "en": "Data & sources",
       "s": [
         {
+          "id": "tt-daten-qualitaet",
+          "de": "Tage mit fragwürdigen Spuren",
+          "en": "Days with questionable tracks",
+          "rows": [
+            {
+              "id": "ttquality",
+              "t": "list",
+              "inv": "Best source per day: questionable days",
+              "de": [
+                "Tage mit fragwürdigen Spuren",
+                "Mehrere Quellen, niedrige Qualität oder Ausreißer",
+                "Quelle wählen, Ausreißer verwerfen oder einen Zeitraum löschen. Gespeicherte Punkte bleiben unverändert."
+              ],
+              "en": [
+                "Days with questionable tracks",
+                "Several sources, low quality or outliers",
+                "Choose a source, discard outliers or delete a period. Stored points stay unchanged."
+              ],
+              "m": "ttQuality",
+              "x": 0,
+              "beta": "travTrack"
+            }
+          ]
+        },
+        {
           "id": "tt-daten-quellen",
           "de": "Quellen",
           "en": "Sources",
