@@ -27,6 +27,15 @@ export async function projectionsOnHistoryDeleted(
   userId: string,
   days: readonly string[]
 ): Promise<void> {
+  // An inferred silence spans days that hold no point, so no day list can name them: every
+  // inferred row of the account goes, and the next projection run rebuilds the ones that still
+  // have both end fixes. Before the early return: a zone change may name no day at all.
+  await tx.countryDay.deleteMany({ where: { userId, source: "travtrack-inferred" } });
+  await tx.travTrackDerivationState.upsert({
+    where: { userId },
+    create: { userId, inferredRebuildDue: true },
+    update: { inferredRebuildDue: true },
+  });
   const affected = removalDays(days);
   if (affected.length === 0) return;
   await tx.countryDay.deleteMany({

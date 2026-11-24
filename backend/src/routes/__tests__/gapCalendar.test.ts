@@ -206,6 +206,122 @@ describe("gap calendar", () => {
       expect(stateOf(body, "2026-06-11")).toBe("track");
     });
 
+    describe("a quiet stretch at home (iOS sends no points while the phone stands still)", () => {
+      const homeSettings = () =>
+        setZone("Asia/Seoul", {
+          data: {
+            display: { timezone: "Asia/Seoul" },
+            homePeriods: [
+              {
+                fromDate: "2020-01-01",
+                toDate: null,
+                residence: { name: "Wohnung", lat: 37.5, lon: 127.0 },
+                residenceConfirmed: true,
+                airports: [{ code: "ICN", primary: true }],
+              },
+            ],
+          },
+        });
+      const at = (iso: string, lat = 37.5, lon = 127.0) =>
+        storePoint(userId, { t: Date.parse(iso), lat, lon });
+
+      it("days between two home fixes with no point of their own are home, marked inferred", async () => {
+        await homeSettings();
+        await at("2026-06-10T03:00:00Z");
+        await at("2026-06-13T03:00:00Z");
+        const body = (await year()).body as Body & { runs: Array<{ inferred?: boolean }> };
+        expect(stateOf(body, "2026-06-11")).toBe("home");
+        expect(stateOf(body, "2026-06-12")).toBe("home");
+        const run = body.runs.find((r) => r.from <= "2026-06-11" && "2026-06-11" <= r.to);
+        expect(run).toMatchObject({ from: "2026-06-11", to: "2026-06-12", inferred: true });
+        // The days WITH a fix are plain home, not inferred.
+        expect(body.runs.find((r) => r.from === "2026-06-10")?.inferred).toBeUndefined();
+      });
+
+      it("a work or custom place without a window explains a silence too, as `place`; one with a window does not", async () => {
+        await homeSettings();
+        const spot = { lat: 35.1, lon: 129.0 };
+        await prisma.travTrackFixedPlace.create({
+          data: { userId, name: "Büro", kind: "work", ...spot, radiusM: 150 },
+        });
+        await prisma.travTrackFixedPlace.create({
+          data: {
+            userId,
+            name: "Atelier",
+            kind: "custom",
+            lat: 36.0,
+            lon: 128.0,
+            radiusM: 150,
+            window: { days: [1], from: "09:00", until: "17:00" },
+          },
+        });
+        await at("2026-06-10T03:00:00Z", spot.lat, spot.lon);
+        await at("2026-06-13T03:00:00Z", spot.lat, spot.lon);
+        await at("2026-07-10T03:00:00Z", 36.0, 128.0);
+        await at("2026-07-13T03:00:00Z", 36.0, 128.0);
+        const body = (await year()).body as Body & { runs: Array<{ inferred?: boolean }> };
+        expect(stateOf(body, "2026-06-11")).toBe("place");
+        expect(
+          body.runs.find((r) => r.from <= "2026-06-11" && "2026-06-11" <= r.to)?.inferred
+        ).toBe(true);
+        expect(stateOf(body, "2026-07-11")).toBe("unknown");
+      });
+
+      it("ends at different places keep the silent days unknown", async () => {
+        await homeSettings();
+        await at("2026-06-10T03:00:00Z");
+        await at("2026-06-13T03:00:00Z", 35.1, 129.0);
+        expect(stateOf((await year()).body as Body, "2026-06-11")).toBe("unknown");
+      });
+
+      it("a stored fix the calendar ignores, or a deleted point, inside the silence is no quiet home", async () => {
+        await homeSettings();
+        await at("2026-06-10T03:00:00Z");
+        await at("2026-06-20T03:00:00Z");
+        // Implausible (accuracy over 10 km): never an end of a silence, but it was recorded.
+        await storePoint(userId, {
+          t: Date.parse("2026-06-15T03:00:00Z"),
+          lat: 35.1,
+          lon: 129.0,
+          accuracyM: 20_000,
+        });
+        await prisma.travTrackDeletedPoint.create({
+          data: {
+            userId,
+            digest: "d".repeat(64),
+            tS: Math.floor(Date.parse("2026-06-17T03:00:00Z") / 1000),
+          },
+        });
+        const body = (await year()).body as Body;
+        for (const day of ["2026-06-11", "2026-06-14", "2026-06-16", "2026-06-18"]) {
+          expect(stateOf(body, day)).toBe("unknown");
+        }
+      });
+
+      it("a flight inside the silence wins: the days are not read as home", async () => {
+        await homeSettings();
+        await at("2026-06-10T03:00:00Z");
+        await at("2026-06-14T03:00:00Z");
+        await makeFlight(userId); // 12 Oct: separate; add one inside the silence below
+        await prisma.flight.create({
+          data: {
+            userId,
+            depIata: "ICN",
+            arrIata: "NRT",
+            ...AIRPORTS,
+            flightNumber: "KE1",
+            departureTime: new Date("2026-06-12T01:00:00Z"),
+            arrivalTime: new Date("2026-06-12T03:00:00Z"),
+            status: "flown",
+          },
+        });
+        const body = (await year()).body as Body;
+        expect(stateOf(body, "2026-06-12")).toBe("entry");
+        expect(stateOf(body, "2026-06-11")).toBe("unknown");
+        expect(stateOf(body, "2026-06-13")).toBe("unknown");
+      });
+    });
+
     it("a day whose fixes all lie in a privacy zone is privacyZone and reveals no position or count", async () => {
       await prisma.travTrackPrivacyZone.create({ data: { userId, name: "Heim", ...ZONE } });
       // 400 m from the zone centre: inside the 500 m radius.

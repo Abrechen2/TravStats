@@ -14,7 +14,13 @@ export type CoverageEntryRef = { domain: string; id: string };
 export type CoveragePiece = Span & { state: string; entry?: CoverageEntryRef };
 
 /** The context kinds that are not a logbook entry of a domain. */
-const NOT_AN_ENTRY: ReadonlySet<string> = new Set(["trip", "home", "suggestion", "movement"]);
+const NOT_AN_ENTRY: ReadonlySet<string> = new Set([
+  "trip",
+  "home",
+  "suggestion",
+  "movement",
+  "stationary",
+]);
 
 /**
  * The entries that can explain a silence: the day's visible domain entries

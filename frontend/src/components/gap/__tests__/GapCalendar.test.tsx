@@ -37,6 +37,7 @@ const counts = {
   entry: 3,
   home: 0,
   track: 1,
+  place: 0,
   privacyZone: 1,
   implausible: 0,
   unknown: 5,
@@ -92,6 +93,28 @@ describe("GapCalendar", () => {
     expect(
       within(stretches[0]).getByText("track:gaps.openDay").closest("a")?.getAttribute("href")
     ).toBe("/track/2026-03-04");
+  });
+
+  it("draws an inferred home day hatched, with its own legend entry 'zu Hause (abgeleitet)'", async () => {
+    api.year.mockResolvedValue({
+      ...DATA,
+      runs: [
+        { from: "2026-01-01", to: "2026-02-28", state: "outside" },
+        { from: "2026-03-01", to: "2026-03-03", state: "home" },
+        { from: "2026-03-04", to: "2026-03-07", state: "home", inferred: true },
+        { from: "2026-03-08", to: "2026-12-31", state: "unknown" },
+      ],
+    });
+    show();
+    const march = await screen.findByTestId("gaps-2026-03");
+    const recorded = march.querySelector('[data-state="home"]:not([data-inferred])') as HTMLElement;
+    const inferred = march.querySelector('[data-inferred="true"]') as HTMLElement;
+    expect(inferred.style.background).toContain("repeating-linear-gradient");
+    expect(recorded.style.background).not.toContain("repeating-linear-gradient");
+    expect(inferred.getAttribute("aria-label")).toContain("track:gaps.state.homeInferred");
+    expect(screen.getByTestId("gaps-legend-inferred").textContent).toContain(
+      "track:gaps.state.homeInferred"
+    );
   });
 
   it("a stretch continuing past the month's end is cut at the month", async () => {

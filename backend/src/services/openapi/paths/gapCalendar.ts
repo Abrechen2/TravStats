@@ -9,6 +9,7 @@ import { errorContent } from "./shared";
 const state = z.enum([
   "entry",
   "home",
+  "place",
   "track",
   "privacyZone",
   "implausible",
@@ -27,11 +28,14 @@ const gapCalendar = z.object({
   years: z.array(z.number().int()).describe("From the first record to today; empty if none"),
   counts: z.record(state, z.number().int()),
   runs: z
-    .array(z.object({ from: z.string(), to: z.string(), state }))
+    .array(
+      z.object({ from: z.string(), to: z.string(), state, inferred: z.literal(true).optional() })
+    )
     .describe(
       "Inclusive runs of one state, ordered, covering the whole year. Precedence per day: " +
-        "entry, home, track, privacyZone, implausible, unknown; days before the first record " +
-        "or after today are `outside`, never a gap. A privacyZone day reveals no position."
+        "entry, home, place, track, privacyZone, implausible, unknown; days before the first record " +
+        "or after today are `outside`, never a gap. A privacyZone day reveals no position. " +
+        "`inferred` marks home/place days with no fix at all, read from the silence around them."
     ),
 });
 
