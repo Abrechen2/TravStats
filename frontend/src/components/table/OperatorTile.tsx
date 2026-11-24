@@ -96,16 +96,24 @@ export function OperatorTile({
       }}
     >
       {inferred ? (
+        // A muted "~" on the monogram's colour (or over a logo) was not visible at all
+        // (UAT rc.45): it is a small chip in the page's own colours now, above the logo, and it
+        // carries the explanation as its own tooltip.
         <span
           aria-hidden="true"
           data-testid="operator-inferred"
+          title={t("common:operatorInferred")}
           style={{
             position: "absolute",
             right: 1,
-            bottom: 0,
-            fontSize: 10,
+            bottom: 1,
+            zIndex: 1,
+            fontSize: 11,
             lineHeight: 1,
-            color: "var(--ts-muted)",
+            padding: "1px 3px",
+            borderRadius: 4,
+            background: "var(--ts-bg)",
+            color: "var(--ts-text)",
           }}
         >
           ~
