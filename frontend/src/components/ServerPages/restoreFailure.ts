@@ -4,6 +4,10 @@ import { JobLostError, jobErrorCode } from "../../lib/api/jobs";
 /** Why a restore did not happen, as the one thing the page tells the admin. */
 export type RestoreOutcome =
   | "keyMismatch"
+  | "recoveryKeyInvalid"
+  | "recoveryKeyWrong"
+  | "recoveryKeyEnvPinned"
+  | "recoveryKeyWriteFailed"
   | "unknown"
   | "incomplete"
   | "unreadable"
@@ -17,6 +21,10 @@ export type RestoreOutcome =
 
 const BY_CODE: Record<string, RestoreOutcome> = {
   RESTORE_ENCRYPTION_KEY_MISMATCH: "keyMismatch",
+  RESTORE_RECOVERY_KEY_INVALID: "recoveryKeyInvalid",
+  RESTORE_RECOVERY_KEY_WRONG: "recoveryKeyWrong",
+  RESTORE_RECOVERY_KEY_ENV_PINNED: "recoveryKeyEnvPinned",
+  RESTORE_RECOVERY_KEY_WRITE_FAILED: "recoveryKeyWriteFailed",
   RESTORE_ARCHIVE_INCOMPLETE: "incomplete",
   RESTORE_ARCHIVE_UNREADABLE: "unreadable",
   RESTORE_MIGRATION_FAILED: "migrationFailed",
@@ -42,3 +50,12 @@ export function restoreOutcome(error: unknown): RestoreOutcome {
   if (status === 409) return "busy";
   return "failed";
 }
+
+/** Outcomes of a pasted recovery key that keep the key dialog open: nothing was
+ *  restored, and the admin can correct the key and try again. */
+export const RECOVERY_KEY_OUTCOMES: ReadonlySet<RestoreOutcome> = new Set([
+  "recoveryKeyInvalid",
+  "recoveryKeyWrong",
+  "recoveryKeyEnvPinned",
+  "recoveryKeyWriteFailed",
+]);

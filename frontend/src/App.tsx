@@ -29,6 +29,7 @@ import WhatsNewModal from "./components/WhatsNewModal";
 import ProfileZonePrompt from "./components/ProfileZonePrompt";
 import DemoBetaNotice from "./components/DemoBetaNotice";
 import SetupIncompleteBanner from "./components/SetupIncompleteBanner";
+import RecoveryKeyGate from "./components/RecoveryKey/RecoveryKeyGate";
 import UsageStatsConsentDialog from "./components/UsageStatsConsentDialog";
 import RecordedOnlyBoundary from "./components/provenance/RecordedOnlyBoundary";
 
@@ -229,6 +230,7 @@ function AppContent() {
         <AirportSeedingBanner />
         <SetupIncompleteBanner sessionConfirmed={sessionConfirmed} requiresSetup={requiresSetup} />
         {sessionConfirmed && <ReadinessBanner />}
+        <RecoveryKeyGate sessionConfirmed={sessionConfirmed} />
         <AirportSeedingModal isOpen={showSeedingModal} onClose={handleCloseSeedingModal} />
         <WhatsNewModal isOpen={shouldShow} entry={entry} onClose={() => void dismiss()} />
         <UsageStatsConsentDialog isOpen={consentStep.shouldShow} onClose={consentStep.close} />

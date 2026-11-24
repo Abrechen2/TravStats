@@ -25,7 +25,8 @@ import {
 } from "../ui/settings";
 import BackupsSummary from "./BackupsSummary";
 import { MenuItem, RowMenu } from "./RowMenu";
-import { restoreOutcome, type RestoreOutcome } from "./restoreFailure";
+import { RECOVERY_KEY_OUTCOMES, restoreOutcome, type RestoreOutcome } from "./restoreFailure";
+import RestoreKeyMismatchDialog from "./RestoreKeyMismatchDialog";
 import { useWebdavEnabled } from "./useWebdavEnabled";
 
 /** While a backup runs the list must follow it closely; idle, only a scheduled one changes it. */
@@ -66,6 +67,7 @@ export default function BackupsExisting(): JSX.Element {
   const [rowError, setRowError] = useState<string | null>(null);
   const [restore, setRestore] = useState<{ backup: Backup; scope: Scope } | null>(null);
   const [acceptKey, setAcceptKey] = useState(false);
+  const [keyError, setKeyError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [restoreFailed, setRestoreFailed] = useState<RestoreOutcome | null>(null);
   const [removing, setRemoving] = useState<Backup | null>(null);
@@ -176,15 +178,17 @@ export default function BackupsExisting(): JSX.Element {
     }
   };
 
-  const runRestore = async (accept: boolean): Promise<void> => {
+  const runRestore = async (accept: boolean, recoveryKey?: string): Promise<void> => {
     if (!restore) return;
     setRestoring(true);
     setRestoreFailed(null);
+    setKeyError(null);
     try {
       const { jobId } = await backupApi.restore(restore.backup.id, {
         scope: restore.scope,
         createBackupBefore: true,
         acceptEncryptionKeyChange: accept,
+        ...(recoveryKey !== undefined ? { recoveryKey } : {}),
       });
       await waitForJob(jobId);
       addToast("success", t("settingsRows:backups.restored"));
@@ -194,9 +198,12 @@ export default function BackupsExisting(): JSX.Element {
       logger.error("Failed to restore backup:", error);
       const outcome = restoreOutcome(error);
       // The key refusal is a question, not an error: nothing was written, and the
-      // admin decides whether to go on without the services' credentials.
+      // admin decides whether to paste the recovery key or go on without the
+      // services' credentials. A refused pasted key keeps that question open.
       if (outcome === "keyMismatch") setAcceptKey(true);
-      else {
+      else if (RECOVERY_KEY_OUTCOMES.has(outcome)) {
+        setKeyError(t(`settingsRows:backups.restoreFailure.${outcome}`));
+      } else {
         setRestore(null);
         setRestoreFailed(outcome);
       }
@@ -404,15 +411,17 @@ export default function BackupsExisting(): JSX.Element {
         />
       ) : null}
       {restore && acceptKey ? (
-        <ConfirmDialog
-          open
-          {...dialog("restorekey", { date: when(restore.backup.completedAt) })}
+        <RestoreKeyMismatchDialog
+          copy={dialog("restorekey", { date: when(restore.backup.completedAt) })}
           busy={restoring}
+          error={keyError}
           onCancel={() => {
             setRestore(null);
             setAcceptKey(false);
+            setKeyError(null);
           }}
-          onConfirm={() => void runRestore(true)}
+          onRestoreWithKey={(recoveryKey) => void runRestore(false, recoveryKey)}
+          onRestoreWithout={() => void runRestore(true)}
         />
       ) : null}
       {removing ? (

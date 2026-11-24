@@ -1447,7 +1447,11 @@
       "unversioned": "Ich kann den Datenbankstand dieses Archivs keiner Version zuordnen. Ich habe nichts verändert.",
       "busy": "Gerade läuft eine Sicherung oder ein Zurückspielen. Versuch es danach noch einmal.",
       "rateLimited": "Ich spiele nur wenige Sicherungen pro Stunde zurück. Versuch es später noch einmal.",
-      "failed": "Ich konnte die Sicherung nicht zurückspielen."
+      "failed": "Ich konnte die Sicherung nicht zurückspielen.",
+      "recoveryKeyInvalid": "Das ist kein Wiederherstellungsschlüssel: Er hat 64 Zeichen aus 0–9 und A–F (Leerzeichen sind egal). Ich habe nichts zurückgespielt.",
+      "recoveryKeyWrong": "Dieser Schlüssel hat die Sicherung nicht geschrieben. Ich habe nichts zurückgespielt.",
+      "recoveryKeyEnvPinned": "Der Schlüssel dieses Servers steht in der Umgebungsvariable ENCRYPTION_KEY. Trag dort den Wiederherstellungsschlüssel ein, starte neu und spiel die Sicherung dann zurück. Ich habe nichts zurückgespielt.",
+      "recoveryKeyWriteFailed": "Ich konnte den Schlüssel nicht in den Ordner für Geheimnisse schreiben. Ich habe nichts zurückgespielt."
     },
     "retry": "Erneut versuchen",
     "baknow": {

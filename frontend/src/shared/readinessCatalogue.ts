@@ -27,6 +27,7 @@ export const CHECK_IDS = [
   "admin.backup",
   "admin.disk",
   "admin.offsite",
+  "admin.recoveryKey",
   "admin.providerKeys",
   "admin.bookingMailbox",
   "user.domains",
@@ -155,6 +156,22 @@ export const CHECK_CATALOGUE: readonly CheckCatalogueEntry[] = [
     maxAgeDays: null,
     blockedBy: null,
     actionKey: null,
+    entryList: false,
+  }),
+  c({
+    // Owner, 2026-11-24: an off-site backup is only a backup if its credentials
+    // can be decrypted after the server is gone — that takes the instance key,
+    // which the archive deliberately does not carry.
+    id: "admin.recoveryKey",
+    revision: 1,
+    scope: "admin",
+    severity: "required",
+    titleKey: "checks.adminRecoveryKey.title",
+    consequenceKey: "checks.adminRecoveryKey.consequence",
+    action: "/settings/sicherungen",
+    maxAgeDays: null,
+    blockedBy: null,
+    actionKey: "checks.adminRecoveryKey.action",
     entryList: false,
   }),
   c({
