@@ -36,9 +36,9 @@ describe("loadConfig", () => {
   it("needs a URL and a token shaped like a TravStats token", () => {
     expect(() => loadConfig({})).toThrow(/TRAVSTATS_URL/);
     expect(() => loadConfig({ TRAVSTATS_URL: "ftp://x", TRAVSTATS_TOKEN: TOKEN })).toThrow(/http/);
-    expect(() => loadConfig({ TRAVSTATS_URL: "http://localhost", TRAVSTATS_TOKEN: "nope" })).toThrow(
-      /ts_pat_/
-    );
+    expect(() =>
+      loadConfig({ TRAVSTATS_URL: "http://localhost", TRAVSTATS_TOKEN: "nope" })
+    ).toThrow(/ts_pat_/);
     expect(
       loadConfig({ TRAVSTATS_URL: "https://t.example/", TRAVSTATS_TOKEN: TOKEN }).apiBase
     ).toBe("https://t.example/api/v1");
