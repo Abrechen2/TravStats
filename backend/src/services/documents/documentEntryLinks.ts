@@ -385,6 +385,9 @@ export interface LinkCandidates {
 }
 
 const OTHER_PER_TYPE = 40;
+/** With a search text the net is wider: the label is matched after describing, so more rows are read. */
+const SEARCH_PER_TYPE = 400;
+const SEARCH_RESULT_CAP = 100;
 
 type Reader = { findMany(args: object): Promise<Array<{ id: string }>> };
 
@@ -395,15 +398,20 @@ type Reader = { findMany(args: object): Promise<Array<{ id: string }>> };
  */
 export async function listLinkCandidates(
   userId: string,
-  documentId: string
+  documentId: string,
+  query?: string
 ): Promise<LinkCandidates> {
+  const needle = query?.trim().toLowerCase() || null;
   const links = await listDocumentLinks(userId, documentId);
   const linked = new Set(links.map((l) => entryKey(l.entry)));
   const tripIds = [...new Set(links.flatMap((l) => (l.entry.tripId ? [l.entry.tripId] : [])))];
 
   const refs: EntryRef[] = [];
   const tripRefs: EntryRef[] = [];
-  const recent = { orderBy: { createdAt: "desc" }, take: OTHER_PER_TYPE } as const;
+  const recent = {
+    orderBy: { createdAt: "desc" },
+    take: needle ? SEARCH_PER_TYPE : OTHER_PER_TYPE,
+  } as const;
   const select = { id: true } as const;
   const inTrips = { userId, tripId: { in: tripIds } };
   // One reader per type; the entry models share no common Prisma type.
@@ -440,10 +448,19 @@ export async function listLinkCandidates(
       const key = entryKey(ref);
       const found = info.get(key);
       if (!found || taken.has(key)) return [];
+      // Matched on the label the user sees, so a hit is always explainable.
+      if (needle && !found.label.toLowerCase().includes(needle)) return [];
       taken.add(key);
       return [found];
     });
-  return { tripEntries: take(tripRefs), otherEntries: take(refs) };
+  const tripEntries = take(tripRefs);
+  const otherEntries = take(refs);
+  if (!needle) return { tripEntries, otherEntries };
+  const room = Math.max(0, SEARCH_RESULT_CAP - Math.min(tripEntries.length, SEARCH_RESULT_CAP));
+  return {
+    tripEntries: tripEntries.slice(0, SEARCH_RESULT_CAP),
+    otherEntries: otherEntries.slice(0, room),
+  };
 }
 
 /**

@@ -494,6 +494,8 @@ export async function unlinkDocument(userId: string, id: string): Promise<Docume
 }
 
 export interface UpdateDocumentInput {
+  /** Stored as the original name: the on-disk name is generated and never changes. */
+  displayName?: string;
   kind?: DocumentKind | null;
   issuedOn?: Date | null;
   /** An entry files it there; null takes it off its entry; absent leaves it. */
@@ -568,6 +570,9 @@ export async function updateDocument(
     return tx.document.update({
       where: { id: document.id },
       data: {
+        ...(input.displayName !== undefined && {
+          originalName: sanitizeOriginalName(input.displayName),
+        }),
         ...(input.kind !== undefined && { kind: input.kind }),
         ...(input.issuedOn !== undefined && { issuedOn: input.issuedOn }),
       },

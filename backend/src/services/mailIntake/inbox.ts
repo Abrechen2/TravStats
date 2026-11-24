@@ -162,6 +162,20 @@ const ENTRY_TYPE = {
 } as const;
 
 /**
+ * The first entry of `domain` the account created since `since`, as a document
+ * ref — shared with `fileDocumentWithNewEntry`, which files a kept document the
+ * same way a proposal's mail is filed.
+ */
+export async function entryCreatedSince(
+  userId: string,
+  domain: keyof typeof ENTRY_LOOKUP,
+  since: Date
+): Promise<{ type: (typeof ENTRY_TYPE)[keyof typeof ENTRY_TYPE]; id: string } | null> {
+  const entry = await ENTRY_LOOKUP[domain](userId, since);
+  return entry ? { type: ENTRY_TYPE[domain], id: entry.id } : null;
+}
+
+/**
  * Files the proposal's original mail with the entry the user created from it
  * (owner rule: always attach the original). The import dialogs create entries
  * through domain-specific routes that do not hand an id back, so the entry is

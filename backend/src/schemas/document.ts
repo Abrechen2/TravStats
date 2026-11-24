@@ -48,6 +48,17 @@ export const documentIdsBodySchema = z.object({
     .describe("Kept documents (POST /documents) to file with the new entry"),
 });
 
+/** `GET /documents/:id/link-candidates?q=` — a text search over the whole account's entries. */
+export const linkCandidatesQuerySchema = z.object({
+  q: z.string().trim().max(100).optional(),
+});
+
+/** `POST /documents/:id/file-with-new-entry` — file a document with what the user just created from it. */
+export const fileWithNewEntryBodySchema = z.object({
+  domain: z.enum(["flight", "cruise", "lodging", "rail", "rental"]),
+  openedAt: z.string().datetime(),
+});
+
 export const entryRefSchema = z.object({ type: z.enum(ENTRY_TYPES), id: uuid });
 
 /** Multipart text fields arrive as strings; an empty one means "not sent". */
@@ -76,6 +87,13 @@ export const documentUploadFieldsSchema = documentUploadFieldsObject.refine(
 
 export const updateDocumentSchema = z
   .object({
+    displayName: z
+      .string()
+      .trim()
+      .min(1)
+      .max(200)
+      .optional()
+      .describe("The name shown on screen (stored as the original name; the bytes keep theirs)"),
     kind: z.enum(DOCUMENT_KINDS).nullable().optional(),
     issuedOn: documentDateSchema.nullable().optional(),
     entry: entryRefSchema.nullable().optional(),
