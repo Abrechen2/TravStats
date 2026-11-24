@@ -131,7 +131,12 @@ export default function TravTrackImports({
     const kind = format
       ? `${t(`${NS}.formats.${format.split("+")[0]}`, { defaultValue: "" })}`
       : "";
-    return row.report ? [kind, points, describe(row.report)].filter(Boolean).join(" · ") : points;
+    if (!row.report) return points;
+    // What the FILE held, then what became of it — the Dawarich card's order. The row used to
+    // lead with the stored count as "N Positionen", so "268534 Positionen · 268534 gespeichert ·
+    // 7805 schon vorhanden" did not add up (UAT rc.45).
+    const read = row.report.read > 0 ? t(`${NS}.report.read`, { count: row.report.read }) : points;
+    return [kind, read, describe(row.report)].filter(Boolean).join(" · ");
   };
 
   return (

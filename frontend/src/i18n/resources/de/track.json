@@ -188,6 +188,8 @@
     "running": "{{name}} wird importiert …",
     "cancelled": "Der Import wurde gelöscht, bevor er fertig war.",
     "report": {
+      "read_one": "{{count}} Position gelesen",
+      "read_other": "{{count}} Positionen gelesen",
       "stored_one": "{{count}} Position gespeichert",
       "stored_other": "{{count}} Positionen gespeichert",
       "duplicate_one": "{{count}} schon vorhanden",
