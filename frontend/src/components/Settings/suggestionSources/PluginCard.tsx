@@ -1,5 +1,6 @@
 import { useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useDisplayFormat } from "../../../lib/displayFormat";
 import Button from "../../ui/Button";
 import { Field, Input, Select, Switch } from "../../ui/Field";
 import { waitForJob, JobFailedError } from "../../../lib/api/jobs";
@@ -41,6 +42,7 @@ export default function PluginCard({
   onRemove: () => void;
 }): JSX.Element {
   const { t } = useTranslation(["suggestionSources"]);
+  const fmt = useDisplayFormat();
   const [line, setLine] = useState<Line | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -140,15 +142,14 @@ export default function PluginCard({
       <p className="t-caption">
         {t(`${NS}.lastAnswer`, {
           version: plugin.lastVersion ?? "—",
-          at: plugin.lastCalledAt?.replace("T", " ").slice(0, 16) ?? "—",
+          // In the account's zone and format, not the stored UTC text (UAT rc.45).
+          at: plugin.lastCalledAt ? fmt.dateTime(plugin.lastCalledAt) : "—",
         })}
       </p>
       {outcome && (
         <p className="t-caption" role="status" style={{ color: "var(--ts-bad)" }}>
           {t(`${NS}.lastError`)}: {outcome}
-          {plugin.retryAt
-            ? ` · ${t(`${NS}.retryAt`, { at: plugin.retryAt.replace("T", " ").slice(0, 16) })}`
-            : ""}
+          {plugin.retryAt ? ` · ${t(`${NS}.retryAt`, { at: fmt.dateTime(plugin.retryAt) })}` : ""}
         </p>
       )}
       <div

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useDisplayFormat } from "../../../lib/displayFormat";
 import { useIsDemoAccount } from "../../../hooks/useIsDemoAccount";
 import Button from "../../ui/Button";
 import { Switch } from "../../ui/Field";
@@ -27,6 +28,7 @@ type TestLine = { ok: boolean; text: string };
  */
 export default function CalendarSourcesSection(): JSX.Element {
   const { t } = useTranslation(["suggestionSources"]);
+  const fmt = useDisplayFormat();
   const isDemo = useIsDemoAccount();
   const [list, setList] = useState<CalendarSourceList | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -74,8 +76,8 @@ export default function CalendarSourcesSection(): JSX.Element {
           text:
             t(`${NS}.test.ok`, {
               count: r.events,
-              from: r.from.slice(0, 10),
-              to: r.to.slice(0, 10),
+              from: fmt.date(r.from),
+              to: fmt.date(r.to),
             }) + (r.skippedRules ? ` ${t(`${NS}.test.skipped`, { count: r.skippedRules })}` : ""),
         },
       }));

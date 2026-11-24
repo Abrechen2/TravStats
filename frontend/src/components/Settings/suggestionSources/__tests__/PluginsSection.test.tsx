@@ -90,4 +90,12 @@ describe("PluginsSection", () => {
     render(<PluginsSection />);
     expect(await screen.findByText("suggestionSources:plugins.sent.title")).toBeTruthy();
   });
+
+  // UAT rc.45: "Letzte Antwort … 2026-11-24 09:56" was the stored UTC text.
+  it("shows the last answer in the account's date format, not the stored UTC text", async () => {
+    render(<PluginsSection />);
+    const line = await screen.findByText(/lastAnswer/);
+    expect(line.textContent).not.toContain("2026-11-23 10:00");
+    expect(line.textContent).toContain("23.11.2026");
+  });
 });
