@@ -89,5 +89,6 @@
       "button_one": "Shorten to 1 month",
       "button_other": "Shorten to {{count}} months"
     }
-  }
+  },
+  "notRestorablePurpose": "Change the purpose on the entry's page, in the “Purpose” block."
 }

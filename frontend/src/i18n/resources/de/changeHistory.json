@@ -89,5 +89,6 @@
       "button_one": "Auf 1 Monat kürzen",
       "button_other": "Auf {{count}} Monate kürzen"
     }
-  }
+  },
+  "notRestorablePurpose": "Den Zweck änderst du auf der Seite des Eintrags im Block „Zweck“."
 }

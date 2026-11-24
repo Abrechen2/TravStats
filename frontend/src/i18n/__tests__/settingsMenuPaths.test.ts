@@ -41,3 +41,17 @@ describe("menu paths in the copy name pages that exist", () => {
     expect(broken).toEqual([]);
   });
 });
+
+// UAT rc.45 retest: copy that named things the app no longer does or spelled them wrong.
+describe("retest copy", () => {
+  const read = (lang: string, ns: string): unknown =>
+    JSON.parse(fs.readFileSync(path.join(RESOURCES, lang, `${ns}.json`), "utf8"));
+  it("names no flight as a place a share link is made (flight links are retired)", () => {
+    const rows = JSON.stringify(read("de", "settingsRows"));
+    expect(rows).not.toContain("Erstellt an Flug");
+  });
+  it("writes 'öffentliche Adresse' in lower case inside a sentence", () => {
+    expect(JSON.stringify(read("de", "settings"))).not.toMatch(/eine Öffentliche Adresse/);
+    expect(JSON.stringify(read("de", "settings"))).not.toContain("Admin-Einstellungen");
+  });
+});

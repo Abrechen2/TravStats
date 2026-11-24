@@ -63,6 +63,8 @@ describe("change history on an entry's detail page", () => {
     const line = await screen.findByTestId("change-history-row");
     expect(line).toHaveTextContent("changeHistory:field.purpose");
     expect(line).toHaveTextContent("changeHistory:emptyValue → purpose:field.business");
+    // Retest: not "im Bearbeiten-Dialog ändern" — no dialog has the purpose.
+    expect(line).toHaveTextContent("changeHistory:notRestorablePurpose");
   });
 
   it("writes a flight's coded status as a word, other free text as stored", () => {

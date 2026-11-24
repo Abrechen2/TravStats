@@ -241,7 +241,14 @@ export default function ChangeHistoryList({
                         {t("changeHistory:restore")}
                       </button>
                     ) : entry.operation === "update" && !entry.omitted ? (
-                      <span className="t-caption">{t("changeHistory:notRestorable")}</span>
+                      <span className="t-caption">
+                        {t(
+                          // The purpose is not in any edit dialog: say where it is (retest).
+                          entry.field === "purpose"
+                            ? "changeHistory:notRestorablePurpose"
+                            : "changeHistory:notRestorable"
+                        )}
+                      </span>
                     ) : null}
                   </td>
                 </tr>
