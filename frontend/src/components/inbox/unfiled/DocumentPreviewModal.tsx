@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
 import Modal from "../../Modal";
@@ -26,6 +26,18 @@ interface Props {
 export default function DocumentPreviewModal({ document, onClose }: Props): JSX.Element {
   const { t } = useTranslation(["dataQuality", "common"]);
   const [imageFailed, setImageFailed] = useState(false);
+  const [frameBlocked, setFrameBlocked] = useState(false);
+  // A frame the page's policy refuses leaves no error on the element, only this
+  // event — without it a strict proxy would give the user an empty box.
+  useEffect(() => {
+    const onViolation = (event: SecurityPolicyViolationEvent): void => {
+      if (event.effectiveDirective === "frame-src" || event.effectiveDirective === "child-src") {
+        setFrameBlocked(true);
+      }
+    };
+    window.document.addEventListener("securitypolicyviolation", onViolation);
+    return () => window.document.removeEventListener("securitypolicyviolation", onViolation);
+  }, []);
   const src = documentFileUrl(document);
 
   let body: JSX.Element;
@@ -44,6 +56,12 @@ export default function DocumentPreviewModal({ document, onClose }: Props): JSX.
     );
   } else if (document.format === "pkpass") {
     body = <p className="t-caption">{t("dataQuality:unfiledDocuments.preview.noPreview")}</p>;
+  } else if (frameBlocked) {
+    body = (
+      <p role="alert" style={{ color: "var(--ts-bad)" }}>
+        {t("dataQuality:unfiledDocuments.preview.frameBlocked")}
+      </p>
+    );
   } else {
     body = (
       <iframe

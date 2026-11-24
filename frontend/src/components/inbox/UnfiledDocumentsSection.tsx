@@ -162,7 +162,7 @@ export default function UnfiledDocumentsSection(): JSX.Element {
         className="flex flex-wrap items-start justify-between"
         style={{ gap: "var(--ts-space-md)" }}
       >
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1" style={{ flexBasis: 320 }}>
           <h3
             id="unfiled-documents-title"
             style={{ fontSize: 16, fontWeight: 700, color: "var(--ts-text-bright)" }}

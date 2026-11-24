@@ -691,7 +691,8 @@
     "preview": {
       "download": "Herunterladen",
       "noPreview": "Dieses Format lässt sich nicht im Browser anzeigen. Lade die Datei herunter, um sie zu öffnen.",
-      "imageFailed": "Das Bild konnte nicht geladen werden. Versuche es mit „Herunterladen“."
+      "imageFailed": "Das Bild konnte nicht geladen werden. Versuche es mit „Herunterladen“.",
+      "frameBlocked": "Das Dokument kann hier nicht eingebettet angezeigt werden. Öffne es in einem neuen Tab oder lade es herunter."
     },
     "actions": {
       "link": "Verknüpfen",

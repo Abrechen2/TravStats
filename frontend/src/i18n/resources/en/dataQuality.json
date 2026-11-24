@@ -691,7 +691,8 @@
     "preview": {
       "download": "Download",
       "noPreview": "This format cannot be shown in the browser. Download the file to open it.",
-      "imageFailed": "The image could not be loaded. Try \"Download\"."
+      "imageFailed": "The image could not be loaded. Try \"Download\".",
+      "frameBlocked": "The document cannot be shown embedded here. Open it in a new tab or download it."
     },
     "actions": {
       "link": "Link",
