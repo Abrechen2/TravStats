@@ -180,6 +180,23 @@ export async function deletePlugin(userId: string, id: string): Promise<void> {
                 WHERE e->>'pluginId' <> ${p.id}), '[]'::jsonb))
        WHERE user_id = ${userId} AND status = 'pending'
          AND jsonb_typeof(evidence->'plugins') = 'array'`;
+    // Nothing else may still name it: a purpose it suggested goes, and the catch-up must not
+    // keep owing an answer from a plugin that no longer exists (review, rc.45).
+    await tx.$executeRaw`
+      UPDATE dawarich_stays
+         SET evidence = evidence - ARRAY['suggestedPurpose', 'suggestedPurposeFrom']
+       WHERE user_id = ${userId} AND status = 'pending'
+         AND evidence->>'suggestedPurposeFrom' = ${`plugin:${p.id}`}`;
+    await tx.$executeRaw`
+      UPDATE dawarich_stays
+         SET evidence = CASE
+               WHEN jsonb_array_length((evidence->'pluginsPending') - ${p.id}::text) = 0
+                 THEN evidence - 'pluginsPending'
+               ELSE jsonb_set(evidence, '{pluginsPending}', (evidence->'pluginsPending') - ${p.id}::text)
+             END
+       WHERE user_id = ${userId}
+         AND jsonb_typeof(evidence->'pluginsPending') = 'array'
+         AND (evidence->'pluginsPending') @> jsonb_build_array(${p.id}::text)`;
     await tx.suggestionPlugin.delete({ where: { id: p.id } });
   });
 }
