@@ -29,12 +29,15 @@ type Load = { state: "loading" } | { state: "failed" } | { state: "ready" };
  * from the entry's ⋯ menu (owner, 2026-11-23), and loads when it mounts, so an
  * entry costs no request until someone asks for its history.
  */
+/** Flight fields whose stored value is a code with its own word in `flights`. */
+const FLIGHT_CODED_FIELDS: ReadonlySet<string> = new Set(["status", "seatClass", "category"]);
+
 export default function ChangeHistoryList({
   entityType,
   entityId,
   onRestored,
 }: ChangeHistoryListProps): JSX.Element {
-  const { t } = useTranslation(["changeHistory"]);
+  const { t } = useTranslation(["changeHistory", "purpose", "flights"]);
   const format = useDisplayFormat();
   const coarse = useCoarsePointer();
   const addToast = useToastStore((s) => s.addToast);
@@ -86,7 +89,20 @@ export default function ChangeHistoryList({
           empty: t("changeHistory:emptyValue"),
           yes: t("changeHistory:yes"),
           no: t("changeHistory:no"),
+          label: (stored) => codedValueLabel(entry.entityType, entry.field, stored),
         });
+
+  // A coded value in words, as the entry's own page writes it: "business" read
+  // as an English word in the German history (UAT rc.45).
+  const codedValueLabel = (entity: string, field: string | null, stored: string): string | null => {
+    const prefix =
+      field === "purpose"
+        ? "purpose:field"
+        : entity === "flight" && field && FLIGHT_CODED_FIELDS.has(field)
+          ? `flights:${field}`
+          : null;
+    return prefix ? t(`${prefix}.${stored}`, { defaultValue: stored }) : null;
+  };
 
   const restore = async (entry: ChangeHistoryEntry) => {
     setRestoring(entry.id);

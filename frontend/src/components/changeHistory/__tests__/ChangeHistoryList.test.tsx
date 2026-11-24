@@ -53,6 +53,30 @@ describe("change history on an entry's detail page", () => {
     expect(api.forEntry).toHaveBeenCalledWith("flight", "f1");
   });
 
+  // UAT rc.45: the history read "purpose  leer → business" in the German UI.
+  it("names the purpose field and writes coded values as words", async () => {
+    api.forEntry.mockResolvedValue({
+      entries: [row({ field: "purpose", oldValue: null, newValue: "business", restorable: false })],
+      nextCursor: null,
+    });
+    render(<ChangeHistoryList entityType="flight" entityId="f1" />);
+    const line = await screen.findByTestId("change-history-row");
+    expect(line).toHaveTextContent("changeHistory:field.purpose");
+    expect(line).toHaveTextContent("changeHistory:emptyValue → purpose:field.business");
+  });
+
+  it("writes a flight's coded status as a word, other free text as stored", () => {
+    const words = {
+      dateTime: (iso: string) => iso,
+      empty: "leer",
+      yes: "ja",
+      no: "nein",
+      label: (v: string) => (v === "flown" ? "Geflogen" : null),
+    };
+    expect(formatChangeValue("flown", "String", "status", words)).toBe("Geflogen");
+    expect(formatChangeValue("12A", "String", "seatNumber", words)).toBe("12A");
+  });
+
   it("restores a value, then reloads the entry and the history", async () => {
     api.forEntry.mockResolvedValue({ entries: [row()], nextCursor: null });
     api.restore.mockResolvedValue([row({ id: "r2", restoredFromId: row().id })]);

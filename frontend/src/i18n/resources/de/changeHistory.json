@@ -69,7 +69,8 @@
     "distanceKm": "Strecke (km)",
     "operator": "Betreiber",
     "trainNumber": "Zugnummer",
-    "delayMinutes": "Verspätung (min)"
+    "delayMinutes": "Verspätung (min)",
+    "purpose": "Zweck"
   },
   "menu": "Änderungsverlauf",
   "window_one": "Verlauf des letzten Monats",

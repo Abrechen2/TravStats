@@ -69,7 +69,8 @@
     "distanceKm": "Distance (km)",
     "operator": "Operator",
     "trainNumber": "Train number",
-    "delayMinutes": "Delay (min)"
+    "delayMinutes": "Delay (min)",
+    "purpose": "Purpose"
   },
   "menu": "Change history",
   "window_one": "History of the last month",

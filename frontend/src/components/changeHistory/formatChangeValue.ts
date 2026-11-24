@@ -9,6 +9,8 @@ export interface ChangeValueWords {
   empty: string;
   yes: string;
   no: string;
+  /** The word for a coded value ("business" → "Geschäftlich"), or null to show it as stored. */
+  label?: (value: string) => string | null;
 }
 
 export function formatChangeValue(
@@ -27,5 +29,5 @@ export function formatChangeValue(
     return field?.endsWith("Utc") ? `${shown} UTC` : shown;
   }
   if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
+  return (typeof value === "string" ? words.label?.(value) : null) ?? String(value);
 }
