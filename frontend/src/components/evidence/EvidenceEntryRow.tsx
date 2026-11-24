@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import type { Aggregation, EvidenceEntry } from "../../shared/evidence";
 import { composeI18nText, formatEvidenceDate } from "./evidenceText";
 import { countryName } from "../Passport/countryName";
+import { formatNumber } from "../../lib/units";
 import { PLACE_CATEGORIES } from "../../shared/placeCategories";
 
 /** The `measure.unit` whose credits are ISO 3166-1 alpha-2 country codes. */
@@ -60,7 +61,10 @@ export default function EvidenceEntryRow({
   // but the two sentences say different things and must not share a phrase.
   const contributionText =
     aggregation === "sum" && entry.contribution !== undefined
-      ? t("evidence:entry.contribution", { value: roundForDisplay(entry.contribution) })
+      ? t("evidence:entry.contribution", {
+          // In the reader's language: "430,51", not "430.51" (UAT rc.45).
+          value: formatNumber(roundForDisplay(entry.contribution), undefined, i18n.language),
+        })
       : null;
   // A credit is an IDENTITY key — that is what makes two rows witnessing the
   // same unit count once — and for an entity-keyed measure it is a UUID. What

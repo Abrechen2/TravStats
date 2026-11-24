@@ -91,7 +91,14 @@ describe("EvidenceEntryRow", () => {
 
   it("a `sum` entry renders its contribution, not credits", () => {
     renderRow(baseEntry({ contribution: 612, credits: undefined }), "sum");
-    expect(screen.getByText('evidence:entry.contribution({"value":612})')).toBeInTheDocument();
+    expect(screen.getByText('evidence:entry.contribution({"value":"612"})')).toBeInTheDocument();
+  });
+
+  // UAT rc.45: "trägt 430.51 bei" in a German UI.
+  it("writes the contribution in the reader's language", () => {
+    i18nState.language = "de";
+    renderRow(baseEntry({ contribution: 430.5149, credits: undefined }), "sum");
+    expect(screen.getByText('evidence:entry.contribution({"value":"430,51"})')).toBeInTheDocument();
   });
 
   it("a `distinct` entry renders its credits, not a contribution — the two mean different things", () => {
