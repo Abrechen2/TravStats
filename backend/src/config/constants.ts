@@ -102,6 +102,8 @@ export const RATE_LIMITS = {
   // Backup restore rate limits
   BACKUP_RESTORE_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   BACKUP_RESTORE_MAX: 3, // 3 restores per hour
+  RECOVERY_KEY_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+  RECOVERY_KEY_MAX: 10, // reveal + confirm attempts per account
 
   // Boarding pass parse rate limits
   BOARDING_PASS_PARSE_WINDOW_MS: 15 * 60 * 1000, // 15 minutes

@@ -29,6 +29,8 @@ import {
 import { serializeBigInt } from "../utils/serializeBigInt";
 import { backupRestoreLimiter } from "../middleware/rateLimit";
 import { BACKUP_BASE_DIR } from "../services/backup/backupConfig";
+import { normalizeRecoveryKey } from "../services/backup/recoveryKey";
+import { invalidRecoveryKey } from "../services/backup/restoreRecoveryKey";
 import { findRunningJob, startJob, type JobKind } from "../services/jobs/jobRegistry";
 
 /** A backup and a restore must never overlap, whichever of the two started first. */
@@ -69,6 +71,13 @@ const restoreBackupSchema = z.object({
    * told the stored credentials will be unreadable and said yes anyway.
    */
   acceptEncryptionKeyChange: z.boolean().optional().default(false),
+  /**
+   * The recovery key of the instance that wrote the archive, pasted after a
+   * `RESTORE_ENCRYPTION_KEY_MISMATCH`. Checked against the archive inside the
+   * job and installed before the dump replays. A plain bounded string here so
+   * a Zod issue can never carry the value; the format is checked below.
+   */
+  recoveryKey: z.string().max(256).optional(),
 });
 
 // ─── Literal routes (must be defined before parametric /:id routes) ──────────
@@ -346,6 +355,9 @@ router.post(
     try {
       const { id } = req.params;
       const body = restoreBackupSchema.parse(req.body);
+      if (body.recoveryKey !== undefined && normalizeRecoveryKey(body.recoveryKey) === null) {
+        throw invalidRecoveryKey();
+      }
 
       // Check if there's already a running backup or restore
       const allBackups = await listBackups();
@@ -387,6 +399,7 @@ router.post(
             scope: body.scope,
             createBackupBefore: body.createBackupBefore,
             acceptEncryptionKeyChange: body.acceptEncryptionKeyChange,
+            recoveryKey: body.recoveryKey,
           });
         } catch (err) {
           throw asBackupJobError(err, "RESTORE_FAILED");

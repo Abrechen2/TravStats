@@ -31,6 +31,13 @@ import {
   readArchiveSchema,
 } from "./restoreMigrations";
 import { restoreDatabaseThenSettle } from "./restoreAftermath";
+import {
+  installArchiveKey,
+  prepareKeySwap,
+  reencryptKeptIdentity,
+  resolveArchiveRecoveryKey,
+  revertKeySwap,
+} from "./restoreRecoveryKey";
 
 // Their home is restoreAftermath.ts; the tests and the share-link suite still
 // reach them through this module.
@@ -421,8 +428,20 @@ export async function restoreBackup(
     // database nor a pointless archive. See `inspectRestoreArchive` for the
     // three audit findings this ordering answers.
     const problems = await inspectRestoreArchive(tempDir, options.scope);
+    // A pasted recovery key is checked against the archive's fingerprint
+    // here, before the safety backup and before a byte is written; it is
+    // installed only right before the dump replays (restoreRecoveryKey.ts).
+    const mismatch = problems.find((problem) => problem.kind === "encryptionKeyMismatch");
+    const archiveKeyHex =
+      mismatch && options.recoveryKey !== undefined
+        ? resolveArchiveRecoveryKey(options.recoveryKey, mismatch.archiveFingerprint)
+        : null;
     const refusals = problems.filter(
-      (problem) => !(problem.kind === "encryptionKeyMismatch" && options.acceptEncryptionKeyChange)
+      (problem) =>
+        !(
+          problem.kind === "encryptionKeyMismatch" &&
+          (options.acceptEncryptionKeyChange || archiveKeyHex !== null)
+        )
     );
     if (refusals.length > 0) {
       logger.warn({
@@ -434,7 +453,7 @@ export async function restoreBackup(
       });
       throw toRestoreError(refusals[0]);
     }
-    if (problems.some((problem) => problem.kind === "encryptionKeyMismatch")) {
+    if (mismatch && archiveKeyHex === null) {
       logger.warn({
         operation: "restore_encryption_key_mismatch_accepted",
         message:
@@ -484,23 +503,36 @@ export async function restoreBackup(
       // has to add the schema entry AND show the resolved target before writing.
       const dbUrl = options.targetDatabaseUrl || DATABASE_URL;
       const dbInfo = parseDatabaseUrl(dbUrl);
+      const swap = archiveKeyHex ? await prepareKeySwap(archiveKeyHex) : null;
+      let replaced = false;
 
-      await restoreDatabaseThenSettle(
-        backup,
-        async () => {
-          try {
-            await runRestorePsql(dbInfo, dbBackupPath, migrationEpilogue(pendingMigrations));
-          } catch (error) {
-            throw asMigrationFailure(error);
-          }
-          logger.info({
-            operation: "restore_db_complete",
-            message: "Database restored",
-            migrationsApplied: pendingMigrations.length,
-          });
-        },
-        () => assertRestoredSchema(localMigrations)
-      );
+      try {
+        await restoreDatabaseThenSettle(
+          backup,
+          async () => {
+            if (swap) installArchiveKey(swap);
+            try {
+              await runRestorePsql(dbInfo, dbBackupPath, migrationEpilogue(pendingMigrations));
+            } catch (error) {
+              // psql rolled back: the rows are still under the previous key.
+              if (swap) revertKeySwap(swap);
+              throw asMigrationFailure(error);
+            }
+            replaced = true;
+            logger.info({
+              operation: "restore_db_complete",
+              message: "Database restored",
+              migrationsApplied: pendingMigrations.length,
+            });
+          },
+          () => assertRestoredSchema(localMigrations)
+        );
+      } finally {
+        // The identity kept from before the dump was encrypted under the old
+        // key; once the dump is in, it belongs under the new one — also when a
+        // later verification step failed, because the key has changed either way.
+        if (swap && replaced) await reencryptKeptIdentity(swap);
+      }
     }
 
     // Restore files if requested. The part is known to be present and

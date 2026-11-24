@@ -1692,6 +1692,12 @@ model AdminSettings {
   webdavUsername          String? @map("webdav_username")
   webdavPasswordEncrypted String? @map("webdav_password_encrypted")
   webdavBackupPath        String  @default("/TravStats/backups/") @map("webdav_backup_path")
+  /// When an admin last proved they hold the instance's recovery key (the
+  /// encryption key the backups need but do not carry), and the fingerprint of
+  /// the key that proof was for (services/backup/recoveryKey.ts). A key change
+  /// makes the confirmation stale; the value itself is never stored here.
+  recoveryKeyConfirmedAt  DateTime? @map("recovery_key_confirmed_at")
+  recoveryKeyFingerprint  String?   @map("recovery_key_fingerprint")
 
   // === LOGGING CONFIGURATION ===
   // Log level for file output (error | warn | info | debug | trace)

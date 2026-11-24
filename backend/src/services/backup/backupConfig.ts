@@ -29,6 +29,13 @@ export interface RestoreOptions {
    * see `inspectRestoreArchive` in backupRestore.ts.
    */
   acceptEncryptionKeyChange?: boolean;
+  /**
+   * The recovery key of the instance that wrote the archive, pasted by the
+   * admin after a RESTORE_ENCRYPTION_KEY_MISMATCH. Checked against the
+   * archive's fingerprint and installed as this instance's key before the
+   * dump replays (restoreRecoveryKey.ts). Never logged.
+   */
+  recoveryKey?: string;
 }
 
 /**

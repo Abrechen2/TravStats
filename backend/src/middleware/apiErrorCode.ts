@@ -7,6 +7,7 @@ import type { ReadinessApiErrorCode } from "./readinessErrorCodes";
 import type { CompanionAppApiErrorCode } from "./companionAppErrorCodes";
 import type { ConnectionFileApiErrorCode } from "./connectionFileErrorCodes";
 import type { AdminStepUpApiErrorCode } from "./adminStepUpErrorCodes";
+import type { RecoveryKeyApiErrorCode } from "./recoveryKeyErrorCodes";
 import type { AccountArchiveApiErrorCode } from "./accountArchiveErrorCodes";
 import type { LifeBookApiErrorCode } from "./lifeBookErrorCodes";
 import type { LocationProviderApiErrorCode } from "./locationProviderErrorCodes";
@@ -629,6 +630,7 @@ export type ApiErrorCode =
   | "COMPARISON_PEER_UNREACHABLE"
   | "COMPARISON_PEER_OUTDATED" // the other server predates the leaderboard protocol
   | "COMPARISON_PEER_KEY_INVALID"
+  | RecoveryKeyApiErrorCode // the instance recovery key: reveal, confirm, restore
   | AdminStepUpApiErrorCode // a Companion's admin step-up on the federation pin calls
   | AccountArchiveApiErrorCode // the account archive export and import (forgejo#433)
   | LifeBookApiErrorCode // the life book export
