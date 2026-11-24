@@ -1,4 +1,5 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
+import { LinkedMonthChip, useLinkedMonth } from "../components/Stats/LinkedMonth";
 import DomainBulkBar from "../components/bulkEdit/DomainBulkBar";
 import { collectAllPages } from "../lib/collectPages";
 import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
@@ -221,17 +222,19 @@ export default function CruisesPage(): JSX.Element {
    * The filter bar's answers as ONE value, so the query, the effect
    * dependencies and the pager's reset key cannot drift apart.
    */
+  const linkedMonth = useLinkedMonth(yearFilter);
   const filterQuery = useMemo<CruiseListQuery>(() => {
     const query: CruiseListQuery = {};
     const needle = debouncedSearch.trim().slice(0, SEARCH_MAX_LENGTH);
     if (needle) query.q = needle;
     if (statusFilter !== "all") query.status = statusFilter;
     if (yearFilter !== "all") query.year = yearFilter;
+    if (linkedMonth.month !== null) query.month = linkedMonth.month;
     // `shipLine`, not `cruiseLine`: the dropdown lists the line a row DRAWS,
     // which falls back to the ship's, and the column filter cannot see that.
     if (lineFilter !== "all") query.shipLine = lineFilter;
     return query;
-  }, [debouncedSearch, statusFilter, yearFilter, lineFilter]);
+  }, [debouncedSearch, statusFilter, yearFilter, lineFilter, linkedMonth.month]);
   const filterSignature = useMemo(
     () =>
       Object.keys(filterQuery)
@@ -447,6 +450,7 @@ export default function CruisesPage(): JSX.Element {
           </Link>
         </p>
 
+        <LinkedMonthChip month={linkedMonth.month} year={yearFilter} onClear={linkedMonth.clear} />
         <ListFilterBar
           search={{
             value: search,

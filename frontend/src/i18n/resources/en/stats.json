@@ -1814,6 +1814,8 @@
     "totalRecorded": "Recorded distance",
     "totalRecordedHint": "TravTrack, separate from the logbook",
     "totalPoints": "Recorded points",
-    "totalPointsHint": "Stored location points"
+    "totalPointsHint": "Stored location points",
+    "linkedMonth": "Only {{month}} {{year}}",
+    "linkedMonthClear": "Clear month"
   }
 }

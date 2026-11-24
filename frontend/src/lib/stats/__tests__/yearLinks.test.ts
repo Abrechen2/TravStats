@@ -7,7 +7,9 @@ describe("year card links", () => {
   });
 
   it("a domain list gets the year, and flights also the month", () => {
-    expect(domainListHref("rail", 2024, 3)).toBe("/rail?year=2024");
+    expect(domainListHref("rail", 2024, 3)).toBe("/rail?year=2024&month=3");
+    expect(domainListHref("cruise", 2024, 3)).toBe("/cruises?year=2024&month=3");
+    expect(domainListHref("roadtrip", 2024, 3)).toBe("/roadtrips?year=2024");
     expect(domainListHref("flight", 2024, 3)).toBe("/flights?year=2024&month=3");
     expect(domainListHref("rental", 2023)).toBe("/rentals?year=2023");
   });

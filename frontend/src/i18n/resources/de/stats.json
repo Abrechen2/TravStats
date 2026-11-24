@@ -1814,6 +1814,8 @@
     "totalRecorded": "Aufgezeichnete Strecke",
     "totalRecordedHint": "TravTrack, getrennt vom Logbuch",
     "totalPoints": "Aufgezeichnete Punkte",
-    "totalPointsHint": "Gespeicherte Standortpunkte"
+    "totalPointsHint": "Gespeicherte Standortpunkte",
+    "linkedMonth": "Nur {{month}} {{year}}",
+    "linkedMonthClear": "Monat aufheben"
   }
 }

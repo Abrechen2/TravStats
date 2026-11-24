@@ -42,7 +42,8 @@ import {
   upsertPlannedCompanions,
 } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
-import { idsInLocalYear } from "../services/transport/localYear";
+import { idsInLocalMonth, idsInLocalYear, type UtcWindow } from "../services/transport/localYear";
+import { localDay } from "../shared/time/instant";
 import { linkCompanions, replaceCompanionLinks } from "../services/transport/companionLinks";
 import { fxColumnsOnEdit } from "../services/transport/fxOnEdit";
 import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
@@ -203,15 +204,20 @@ const requireUser = (req: AuthRequest): string => {
  * the widest UTC window any zone could put in that year is read (ids and
  * clocks only), the rule picks the rows, and the list query takes their ids.
  */
-async function idsDepartingInYear(userId: string, year: number): Promise<string[]> {
-  return idsInLocalYear(
-    year,
-    (window) =>
-      prisma.railJourney.findMany({
-        where: { userId, departureTime: window },
-        select: { id: true, departureTime: true, depTimezone: true },
-      }),
-    (r) => railYear({ ...r, arrivalTime: null, arrTimezone: null })
+async function idsDepartingInYear(userId: string, year: number, month?: number): Promise<string[]> {
+  const fetchRows = (window: UtcWindow) =>
+    prisma.railJourney.findMany({
+      where: { userId, departureTime: window },
+      select: { id: true, departureTime: true, depTimezone: true },
+    });
+  // `?month=` (a statistics year card): the same local day the year rule reads, cut to the month.
+  if (month !== undefined) {
+    return idsInLocalMonth(year, month, fetchRows, (r) =>
+      localDay(r.departureTime, r.depTimezone ?? "UTC")
+    );
+  }
+  return idsInLocalYear(year, fetchRows, (r) =>
+    railYear({ ...r, arrivalTime: null, arrTimezone: null })
   );
 }
 
@@ -220,7 +226,7 @@ async function idsDepartingInYear(userId: string, year: number): Promise<string[
  * (`rail/journeys.ts`, forgejo#187) asks the same question as this leg list.
  */
 export async function buildRailWhere(
-  query: Pick<RailQueryInput, "status" | "q" | "year" | "tripId" | "membershipId">,
+  query: Pick<RailQueryInput, "status" | "q" | "year" | "month" | "tripId" | "membershipId">,
   userId: string
 ): Promise<Prisma.RailJourneyWhereInput> {
   const statuses = query.status === undefined ? undefined : [query.status].flat();
@@ -229,7 +235,9 @@ export async function buildRailWhere(
     userId,
     ...(statuses && { status: { in: statuses } }),
     ...(query.tripId && { tripId: query.tripId }),
-    ...(query.year !== undefined && { id: { in: await idsDepartingInYear(userId, query.year) } }),
+    ...(query.year !== undefined && {
+      id: { in: await idsDepartingInYear(userId, query.year, query.month) },
+    }),
     // The card's rides, AND-ed with the year above: two `id` clauses, so the
     // second goes through AND rather than overwriting the first.
     ...(query.membershipId !== undefined && {

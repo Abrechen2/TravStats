@@ -1,4 +1,5 @@
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
+import { LinkedMonthChip, useLinkedMonth } from "../components/Stats/LinkedMonth";
 import { useGapPrefill } from "../hooks/useGapPrefill";
 import { busGapDraft } from "../components/bus/busGapDraft";
 import type { BusFormDraft } from "../components/bus/busFormModel";
@@ -73,7 +74,7 @@ type BusSortField = (typeof BUS_SORT_FIELDS)[number];
 /** The endpoint's page cap — one request covers the years of any realistic logbook. */
 const YEAR_SCAN_LIMIT = 500;
 
-type Filters = Pick<BusListQuery, "q" | "status" | "year">;
+type Filters = Pick<BusListQuery, "q" | "status" | "year" | "month">;
 type Editing = { journey: BusJourney | null; draft?: BusFormDraft } | null;
 
 /**
@@ -124,15 +125,17 @@ export default function BusPage(): JSX.Element {
     BUS_SORT_FIELDS
   );
 
+  const linkedMonth = useLinkedMonth(yearFilter);
   const filters = useMemo<Filters>(() => {
     const needle = debouncedSearch.trim().slice(0, SEARCH_MAX_LENGTH);
     return {
       ...(needle && { q: needle }),
       ...(statusFilter !== "all" && { status: statusFilter }),
       ...(yearFilter !== "all" && { year: yearFilter }),
+      ...(linkedMonth.month !== null && { month: linkedMonth.month }),
     };
-  }, [debouncedSearch, statusFilter, yearFilter]);
-  const signature = `${filters.q ?? ""}|${filters.status ?? ""}|${filters.year ?? ""}`;
+  }, [debouncedSearch, statusFilter, yearFilter, linkedMonth.month]);
+  const signature = `${filters.q ?? ""}|${filters.status ?? ""}|${filters.year ?? ""}|${filters.month ?? ""}`;
   const pagination = useServerPagination(total, "bus-list", signature);
   // Back to this list waits for the rows before it restores the scroll.
   useScrollRestoreReady(!loading);
@@ -292,6 +295,7 @@ export default function BusPage(): JSX.Element {
           onDone={reload}
         />
 
+        <LinkedMonthChip month={linkedMonth.month} year={yearFilter} onClear={linkedMonth.clear} />
         <ListFilterBar
           search={{ value: search, onChange: setSearch, placeholder: t("bus:search") }}
           status={{

@@ -306,4 +306,24 @@ describe("statistics ETag", () => {
     expect(matchesIfNoneMatch('W/"abd"', 'W/"abc"')).toBe(false);
     expect(matchesIfNoneMatch(undefined, 'W/"abc"')).toBe(false);
   });
+
+  it("sees a TravTrack point deletion below the newest point: /stats/years answers 200, not 304", async () => {
+    const yearsUrl = "/api/v1/stats/years";
+    const years = (etag?: string): request.Test => {
+      const req = request(app).get(yearsUrl).set("Cookie", cookie);
+      return etag ? req.set("If-None-Match", etag) : req;
+    };
+    const first = await years();
+    expect((await years(first.headers.etag)).status).toBe(304);
+    // The point deleted is NOT the newest, so max(seq) does not move; only its tombstone does.
+    await prisma.travTrackDeletedPoint.create({
+      data: { userId, digest: `digest-${Date.now()}`, tS: 1_700_000_000 },
+    });
+    expect((await years(first.headers.etag)).status).toBe(200);
+    const second = await years();
+    await prisma.travTrackDeletedRange.create({
+      data: { userId, fromAt: new Date("2024-01-01"), toAt: new Date("2024-01-02") },
+    });
+    expect((await years(second.headers.etag)).status).toBe(200);
+  });
 });

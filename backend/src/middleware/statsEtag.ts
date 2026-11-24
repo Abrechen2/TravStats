@@ -86,6 +86,10 @@ function fingerprintQuery(userId: string): Prisma.Sql {
     UNION ALL SELECT 'trip_photos', count(*), max(p.created_at) FROM trip_photos p JOIN trips t ON t.id = p.trip_id WHERE t.user_id = ${userId}
     UNION ALL SELECT 'travtrack_month_values', count(*), max(computed_at) FROM travtrack_month_values WHERE user_id = ${userId}
     UNION ALL SELECT 'travtrack_points', coalesce(max(seq), 0), NULL FROM travtrack_points WHERE user_id = ${userId}
+    -- A deleted point or range leaves a tombstone: count + newest, both cheap (tombstones only), and
+    -- the one thing that moves when a point below max(seq) is deleted.
+    UNION ALL SELECT 'travtrack_deleted_points', count(*), max(created_at) FROM travtrack_deleted_points WHERE user_id = ${userId}
+    UNION ALL SELECT 'travtrack_deleted_ranges', count(*), max(created_at) FROM travtrack_deleted_ranges WHERE user_id = ${userId}
     UNION ALL SELECT 'user_achievements', count(*), max(updated_at) FROM user_achievements WHERE user_id = ${userId}
     UNION ALL SELECT 'user_settings', count(*), max(updated_at) FROM user_settings WHERE user_id = ${userId}
     UNION ALL SELECT 'admin_settings', count(*), max(updated_at) FROM admin_settings

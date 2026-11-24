@@ -65,7 +65,7 @@ describe("YearCard", () => {
     const links = screen.getAllByTestId(/year-month-link-/);
     expect(links.map((l) => l.getAttribute("href"))).toEqual([
       "/flights?year=2024&month=3",
-      "/rail?year=2024",
+      "/rail?year=2024&month=3",
     ]);
   });
 

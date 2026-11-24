@@ -46,6 +46,8 @@ export interface RailPage {
 export interface RailListQuery {
   q?: string;
   year?: number;
+  /** 1-12, with `year`. */
+  month?: number;
   /** A rail loyalty card: only the rides it counts. */
   membershipId?: string;
   status?: string;

@@ -14,10 +14,20 @@ export function dashboardYearHref(year: number): string {
   return `/dashboard?year=${year}`;
 }
 
-/** The domain's list for a year, and for flights a month of it. */
+/** The lists that take `?month=` beside `?year=`: flights (client-side) and the server-filtered ones. */
+const MONTH_LISTS: ReadonlySet<DomainKey> = new Set([
+  "flight",
+  "rail",
+  "bus",
+  "ferry",
+  "rental",
+  "cruise",
+]);
+
+/** The domain's list for a year, and where the list can, a month of it. */
 export function domainListHref(domain: DomainKey, year: number, month?: number): string {
   const query = new URLSearchParams({ year: String(year) });
-  if (month !== undefined && domain === "flight") query.set("month", String(month));
+  if (month !== undefined && MONTH_LISTS.has(domain)) query.set("month", String(month));
   return `${DOMAINS[domain].routePrefix}?${query.toString()}`;
 }
 
