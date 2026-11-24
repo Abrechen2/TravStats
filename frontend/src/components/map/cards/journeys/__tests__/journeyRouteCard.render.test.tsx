@@ -12,6 +12,7 @@ import enRental from "../../../../../i18n/resources/en/rental.json";
 import deCommon from "../../../../../i18n/resources/de/common.json";
 import enCommon from "../../../../../i18n/resources/en/common.json";
 import { PinnedCard } from "../../PinnedCard";
+import { useBusRouteEditStore } from "../../../../../store/busRouteEditStore";
 import { useFerryRouteEditStore } from "../../../../../store/ferryRouteEditStore";
 import type { MapPinned } from "../../pinnedTypes";
 import { journeyFromFerry, journeyFromRental } from "../journeyNormalize";
@@ -206,6 +207,23 @@ describe("ferry route card: edit the line from the dashboard map (GitHub #407)",
       });
       fireEvent.click(button);
       expect(useFerryRouteEditStore.getState().crossingId).toBe("newest");
+    }
+  );
+
+  it.each(["de", "en"] as const)(
+    "offers 'edit route' on a bus card in %s and opens the editor for the latest ride (GitHub #409)",
+    (l) => {
+      lang.current = l;
+      useBusRouteEditStore.getState().close();
+      const ride = (id: string, day: number): MapJourney => ({
+        ...crossing(id, day, 20, null),
+        domain: "bus",
+      });
+      show(route([ride("older", 1), ride("newest", 12)], "bus"));
+      fireEvent.click(
+        screen.getByRole("button", { name: l === "de" ? "Strecke bearbeiten" : "Edit route" })
+      );
+      expect(useBusRouteEditStore.getState().rideId).toBe("newest");
     }
   );
 

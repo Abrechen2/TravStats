@@ -403,5 +403,45 @@
       "price": "Preis",
       "currency": "Währung"
     }
+  },
+  "routeEditor": {
+    "hint": "Klicke auf die Linie, um einen Punkt einzufügen. Ziehe einen Punkt, um ihn zu verschieben.",
+    "save": "Speichern",
+    "saving": "Wird gespeichert …",
+    "cancel": "Abbrechen",
+    "undo": "Rückgängig",
+    "redo": "Wiederholen",
+    "removePoint": "Punkt entfernen",
+    "point": "Punkt {{index}}",
+    "terminal": "Haltestelle {{index}}",
+    "discardConfirm": "Ungespeicherte Änderungen an der Linie verwerfen?",
+    "failed": "Die Linie konnte nicht gespeichert werden. Bitte erneut versuchen.",
+    "loadFailed": "Die Fahrt konnte nicht geladen werden. Bitte erneut versuchen.",
+    "errors": {
+      "BUS_ROUTE_INVALID": "Die Linie ist ungültig: mindestens ein Punkt zwischen den Haltestellen, höchstens 64 Punkte, und nicht unsinnig länger als die Fahrt.",
+      "BUS_ROUTE_NOT_ANCHORED": "Die Linie muss an der Abfahrts- beginnen und an der Ankunftshaltestelle enden.",
+      "VERSION_CONFLICT": "Die Fahrt wurde zwischenzeitlich geändert. Seite neu laden und erneut zeichnen."
+    }
+  },
+  "drawRoute": {
+    "edit": "Linie von Hand zeichnen",
+    "editManual": "Linie bearbeiten",
+    "keepStraight": "Bei der Luftlinie lassen",
+    "keepStraightConfirm": {
+      "title": "Bei der Luftlinie lassen?",
+      "message": "Die Fahrt wird als gerade Linie gezeichnet und nicht mehr neu über die Straße berechnet."
+    },
+    "keptStraight": "Die Fahrt bleibt bei der Luftlinie.",
+    "keepFailed": "Das Beibehalten der Luftlinie ist nicht angekommen. Bitte erneut versuchen.",
+    "clear": "Handgezeichnete Linie entfernen",
+    "clearing": "Wird entfernt …",
+    "clearConfirm": {
+      "title": "Handlinie entfernen?",
+      "message": "Die von Hand festgelegte Linie wird verworfen und die Straße neu berechnet."
+    },
+    "cleared": "Handgezeichnete Linie entfernt.",
+    "clearedRouted": "Handgezeichnete Linie entfernt, die Straße wurde neu berechnet.",
+    "clearFailed": "Die Linie konnte nicht entfernt werden. Bitte erneut versuchen.",
+    "menuLabel": "Weitere Aktionen zur Linie"
   }
 }
