@@ -1816,6 +1816,29 @@
     "totalPoints": "Recorded points",
     "totalPointsHint": "Stored location points",
     "linkedMonth": "Only {{month}} {{year}}",
-    "linkedMonthClear": "Clear month"
+    "linkedMonthClear": "Clear month",
+    "countingHelp": {
+      "logged": {
+        "unit": "Kilometres (or miles, per your setting) of logged distance.",
+        "time": "All years; each entry counts in the year it began.",
+        "source": "Flights, rail, bus and ferry rides, cruises, roadtrips and tours from your logbook.",
+        "coverage": "Only entries with a known distance.",
+        "exclusions": "Entries without a distance are left out rather than counted as zero; the TravTrack recording is never added."
+      },
+      "recorded": {
+        "unit": "Kilometres (or miles) of recorded distance.",
+        "time": "All years of the recording.",
+        "source": "The location points of your TravTrack recording.",
+        "coverage": "Only days on which you recorded.",
+        "exclusions": "Deleted periods. It stays apart from the logbook because a recording can contain the same ride you logged."
+      },
+      "points": {
+        "unit": "Number of stored location points.",
+        "time": "All years of the recording.",
+        "source": "Your TravTrack recording and imported history.",
+        "coverage": "Each stored point counts once.",
+        "exclusions": "Deleted periods and discarded points."
+      }
+    }
   }
 }

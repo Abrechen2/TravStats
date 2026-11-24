@@ -48,7 +48,7 @@ export default function GalleryDayStrip({ days, total, selected, onSelect }: Pro
       className={`flex shrink-0 flex-col items-center rounded-md border px-3 py-1 text-xs ${
         key === selected
           ? "border-(--accent) bg-(--accent) text-(--bg-base)"
-          : "border-slate-600 text-slate-300"
+          : "border-(--color-border) text-(--text-secondary)"
       }`}
     >
       <span className="font-medium whitespace-nowrap">{label}</span>

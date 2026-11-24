@@ -1816,6 +1816,29 @@
     "totalPoints": "Aufgezeichnete Punkte",
     "totalPointsHint": "Gespeicherte Standortpunkte",
     "linkedMonth": "Nur {{month}} {{year}}",
-    "linkedMonthClear": "Monat aufheben"
+    "linkedMonthClear": "Monat aufheben",
+    "countingHelp": {
+      "logged": {
+        "unit": "Kilometer (oder Meilen, je nach Einstellung) der eingetragenen Strecke.",
+        "time": "Alle Jahre; jeder Eintrag zählt im Jahr seines Beginns.",
+        "source": "Flüge, Bahn-, Bus- und Fährfahrten, Kreuzfahrten, Roadtrips und Touren aus deinem Logbuch.",
+        "coverage": "Nur Einträge mit bekannter Strecke.",
+        "exclusions": "Einträge ohne Strecke zählen nicht mit, statt mit null Kilometern; die TravTrack-Aufzeichnung wird nie dazugerechnet."
+      },
+      "recorded": {
+        "unit": "Kilometer (oder Meilen) der aufgezeichneten Strecke.",
+        "time": "Alle Jahre der Aufzeichnung.",
+        "source": "Die Standortpunkte deiner TravTrack-Aufzeichnung.",
+        "coverage": "Nur Tage, an denen aufgezeichnet wurde.",
+        "exclusions": "Gelöschte Zeiträume. Die Zahl steht getrennt vom Logbuch, weil eine Aufzeichnung dieselbe Fahrt enthalten kann, die du eingetragen hast."
+      },
+      "points": {
+        "unit": "Anzahl gespeicherter Standortpunkte.",
+        "time": "Alle Jahre der Aufzeichnung.",
+        "source": "Deine TravTrack-Aufzeichnung und importierte Verläufe.",
+        "coverage": "Jeder gespeicherte Punkt zählt einmal.",
+        "exclusions": "Gelöschte Zeiträume und verworfene Punkte."
+      }
+    }
   }
 }

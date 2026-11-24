@@ -7,6 +7,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useSettingsStore } from "../../../store/settingsStore";
 import { formatDistance, formatNumber } from "../../../lib/units";
 import type { YearStats } from "../../../types/yearStats";
+import CountingHelp from "../counting/CountingHelp";
 import StatCard from "../StatCard";
 import YearCard from "./YearCard";
 
@@ -88,6 +89,24 @@ export default function YearsSection(): JSX.Element | null {
           />
         )}
       </div>
+      <CountingHelp
+        entries={[
+          ...(loggedKm !== null
+            ? [{ term: t("stats:years.totalLogged"), helpKey: "stats:years.countingHelp.logged" }]
+            : []),
+          ...(recordedKm !== null
+            ? [
+                {
+                  term: t("stats:years.totalRecorded"),
+                  helpKey: "stats:years.countingHelp.recorded",
+                },
+              ]
+            : []),
+          ...(recordedPoints !== null
+            ? [{ term: t("stats:years.totalPoints"), helpKey: "stats:years.countingHelp.points" }]
+            : []),
+        ]}
+      />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {data.years.map((card) => (
           <YearCard key={card.year} card={card} />

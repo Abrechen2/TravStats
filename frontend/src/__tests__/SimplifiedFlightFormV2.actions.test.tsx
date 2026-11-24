@@ -106,6 +106,8 @@ describe("SimplifiedFlightFormV2 — the footer's actions", () => {
     expect(labels).toEqual([
       "flights:form.cancel",
       "flights:form.submitAndReturn",
+      // feat/qol-lists: save and start the next flight from this one's destination.
+      "flights:form.submitAndNext",
       "flights:form.submit",
     ]);
 
@@ -114,6 +116,9 @@ describe("SimplifiedFlightFormV2 — the footer's actions", () => {
     expect(save.className).toContain("btn-primary");
     expect(withReturn.className).toContain("btn-secondary");
     expect(withReturn.className).not.toContain("btn-primary");
+    expect(getNamed("button", /flights:form\.submitAndNext/i).className).not.toContain(
+      "btn-primary"
+    );
   });
 
   it("focuses the first empty required field when the form refuses to save", async () => {

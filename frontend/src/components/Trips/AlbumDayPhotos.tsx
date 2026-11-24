@@ -154,7 +154,7 @@ export default function AlbumDayPhotos({
             <div key={group.day ?? "undated"}>
               <h4
                 data-testid={group.day ? "gallery-day-header" : "gallery-undated-header"}
-                className="mb-1.5 text-sm font-semibold text-slate-300"
+                className="mb-1.5 text-sm font-semibold text-(--text-secondary)"
               >
                 {group.day ? formatDayChip(group.day, locale) : t("albums.undated")}
               </h4>
@@ -167,8 +167,8 @@ export default function AlbumDayPhotos({
       )}
 
       {failure && (
-        <div role="alert" className="mt-2 rounded-sm border border-slate-700 p-3 text-sm">
-          <p className="text-rose-400">{t(failure)}</p>
+        <div role="alert" className="mt-2 rounded-sm border border-(--color-border) p-3 text-sm">
+          <p className="text-(--danger)">{t(failure)}</p>
           {failure !== "errors.notFound" && (
             <button
               type="button"
@@ -184,7 +184,7 @@ export default function AlbumDayPhotos({
       )}
 
       {loading && !failure && (
-        <p role="status" className="mt-2 text-xs text-slate-400">
+        <p role="status" className="mt-2 text-xs text-(--text-muted)">
           {t("albums.loadingDay")}
         </p>
       )}
