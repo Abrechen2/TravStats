@@ -2346,7 +2346,8 @@
       "intro": "Paste the recovery key of the server that wrote this backup. The stored credentials then stay readable.",
       "label": "Recovery key",
       "withKey": "Restore with the key",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "reauth": "Replacing this server's key needs your password."
     }
   }
 }

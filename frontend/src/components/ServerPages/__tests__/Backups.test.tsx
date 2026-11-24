@@ -29,6 +29,9 @@ vi.mock("../../../lib/api/jobs", async (original) => ({
 }));
 vi.mock("../../Admin/CloudBackupList", () => ({ default: () => <div data-testid="cloud-list" /> }));
 const recovery = vi.hoisted(() => ({ status: vi.fn() }));
+vi.mock("../../../lib/api/twoFactor", () => ({
+  twoFactorApi: { getTwoFactorStatus: () => Promise.resolve({ enabled: false }) },
+}));
 vi.mock("../../../lib/api/recoveryKey", async (original) => ({
   ...(await original<typeof import("../../../lib/api/recoveryKey")>()),
   recoveryKeyApi: { status: recovery.status, reveal: vi.fn(), confirm: vi.fn() },
@@ -222,12 +225,19 @@ describe("Sicherungen › Vorhandene", () => {
       within(dialog).getByLabelText("settings:recoveryKey.restore.label"),
       "c3c3 c3c3"
     );
+    // Replacing the key needs the password as well.
+    expect(withKey).toBeDisabled();
+    await userEvent.type(
+      within(dialog).getByLabelText("settings:recoveryKey.reauth.password"),
+      "pw"
+    );
     await userEvent.click(withKey);
     expect(
       await screen.findByText("settingsRows:backups.restoreFailure.recoveryKeyWrong")
     ).toBeInTheDocument();
     expect(backup.restore.mock.calls[1][1]).toMatchObject({
       recoveryKey: "c3c3 c3c3",
+      password: "pw",
       acceptEncryptionKeyChange: false,
     });
     // Still the same question, not a closed dialog.

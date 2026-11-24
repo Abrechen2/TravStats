@@ -103,6 +103,10 @@ export const backupApi = {
        * archive and installs it before the restore, so the credentials stay readable.
        */
       recoveryKey?: string;
+      /** The fresh re-authentication a restore with `recoveryKey` needs. */
+      password?: string;
+      code?: string;
+      recoveryCode?: string;
     }
   ): Promise<{ jobId: string }> => {
     // A job, like `create`: the preflight refusals (RESTORE_*) arrive as the

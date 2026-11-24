@@ -1451,7 +1451,9 @@
       "recoveryKeyInvalid": "That is not a recovery key: it has 64 characters from 0–9 and A–F (spaces do not matter). Nothing was restored.",
       "recoveryKeyWrong": "This key did not write the backup. Nothing was restored.",
       "recoveryKeyEnvPinned": "This server's key is set by the ENCRYPTION_KEY environment variable. Put the recovery key there, restart, and then restore the backup. Nothing was restored.",
-      "recoveryKeyWriteFailed": "The key could not be written to the secrets folder. Nothing was restored."
+      "recoveryKeyWriteFailed": "The key could not be written to the secrets folder. Nothing was restored.",
+      "recoveryKeyReauth": "The password is missing or not right. Nothing was restored.",
+      "recoveryKeySecondFactor": "Enter the right code from your authenticator app. Nothing was restored."
     },
     "retry": "Try again",
     "baknow": {

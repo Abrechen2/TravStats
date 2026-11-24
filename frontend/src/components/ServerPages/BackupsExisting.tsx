@@ -26,7 +26,7 @@ import {
 import BackupsSummary from "./BackupsSummary";
 import { MenuItem, RowMenu } from "./RowMenu";
 import { RECOVERY_KEY_OUTCOMES, restoreOutcome, type RestoreOutcome } from "./restoreFailure";
-import RestoreKeyMismatchDialog from "./RestoreKeyMismatchDialog";
+import RestoreKeyMismatchDialog, { type RestoreReauth } from "./RestoreKeyMismatchDialog";
 import { useWebdavEnabled } from "./useWebdavEnabled";
 
 /** While a backup runs the list must follow it closely; idle, only a scheduled one changes it. */
@@ -178,7 +178,10 @@ export default function BackupsExisting(): JSX.Element {
     }
   };
 
-  const runRestore = async (accept: boolean, recoveryKey?: string): Promise<void> => {
+  const runRestore = async (
+    accept: boolean,
+    withKey?: { recoveryKey: string; reauth: RestoreReauth }
+  ): Promise<void> => {
     if (!restore) return;
     setRestoring(true);
     setRestoreFailed(null);
@@ -188,7 +191,7 @@ export default function BackupsExisting(): JSX.Element {
         scope: restore.scope,
         createBackupBefore: true,
         acceptEncryptionKeyChange: accept,
-        ...(recoveryKey !== undefined ? { recoveryKey } : {}),
+        ...(withKey ? { recoveryKey: withKey.recoveryKey, ...withKey.reauth } : {}),
       });
       await waitForJob(jobId);
       addToast("success", t("settingsRows:backups.restored"));
@@ -420,7 +423,9 @@ export default function BackupsExisting(): JSX.Element {
             setAcceptKey(false);
             setKeyError(null);
           }}
-          onRestoreWithKey={(recoveryKey) => void runRestore(false, recoveryKey)}
+          onRestoreWithKey={(recoveryKey, reauth) =>
+            void runRestore(false, { recoveryKey, reauth })
+          }
           onRestoreWithout={() => void runRestore(true)}
         />
       ) : null}

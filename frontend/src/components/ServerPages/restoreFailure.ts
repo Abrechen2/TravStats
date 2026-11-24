@@ -8,6 +8,8 @@ export type RestoreOutcome =
   | "recoveryKeyWrong"
   | "recoveryKeyEnvPinned"
   | "recoveryKeyWriteFailed"
+  | "recoveryKeyReauth"
+  | "recoveryKeySecondFactor"
   | "unknown"
   | "incomplete"
   | "unreadable"
@@ -25,6 +27,11 @@ const BY_CODE: Record<string, RestoreOutcome> = {
   RESTORE_RECOVERY_KEY_WRONG: "recoveryKeyWrong",
   RESTORE_RECOVERY_KEY_ENV_PINNED: "recoveryKeyEnvPinned",
   RESTORE_RECOVERY_KEY_WRITE_FAILED: "recoveryKeyWriteFailed",
+  RESTORE_RECOVERY_KEY_REVERT_FAILED: "failed",
+  RECOVERY_KEY_REAUTH_REQUIRED: "recoveryKeyReauth",
+  REAUTH_PASSWORD_INCORRECT: "recoveryKeyReauth",
+  REAUTH_SECOND_FACTOR_REQUIRED: "recoveryKeySecondFactor",
+  REAUTH_SECOND_FACTOR_INVALID: "recoveryKeySecondFactor",
   RESTORE_ARCHIVE_INCOMPLETE: "incomplete",
   RESTORE_ARCHIVE_UNREADABLE: "unreadable",
   RESTORE_MIGRATION_FAILED: "migrationFailed",
@@ -58,4 +65,6 @@ export const RECOVERY_KEY_OUTCOMES: ReadonlySet<RestoreOutcome> = new Set([
   "recoveryKeyWrong",
   "recoveryKeyEnvPinned",
   "recoveryKeyWriteFailed",
+  "recoveryKeyReauth",
+  "recoveryKeySecondFactor",
 ]);

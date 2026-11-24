@@ -1,9 +1,15 @@
-import { useState, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import Modal from "../Modal";
 import Button from "../ui/Button";
 import { ErrorLine } from "../ui/settings";
 import type { DialogCopy } from "../Settings/rowCopy";
+import { twoFactorApi } from "../../lib/api/twoFactor";
+import { secondFactorField } from "../../lib/secondFactorInput";
+import { logger } from "../../lib/logger";
+
+/** The fresh re-authentication a key replacement needs (the server refuses without it). */
+export type RestoreReauth = { password: string; code?: string; recoveryCode?: string };
 
 /**
  * A restore refused with RESTORE_ENCRYPTION_KEY_MISMATCH: the archive was
@@ -26,12 +32,27 @@ export default function RestoreKeyMismatchDialog({
   /** Why the pasted key was refused, already worded. */
   error: string | null;
   onCancel: () => void;
-  onRestoreWithKey: (recoveryKey: string) => void;
+  onRestoreWithKey: (recoveryKey: string, reauth: RestoreReauth) => void;
   onRestoreWithout: () => void;
 }): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const [key, setKey] = useState("");
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [hasTwoFactor, setHasTwoFactor] = useState(false);
   const pasted = key.replace(/[\s-]+/g, "");
+  const ready = pasted.length > 0 && password !== "" && (!hasTwoFactor || code.trim() !== "");
+
+  useEffect(() => {
+    let alive = true;
+    twoFactorApi
+      .getTwoFactorStatus()
+      .then((status) => alive && setHasTwoFactor(status.enabled))
+      .catch((err: unknown) => logger.warn("Failed to read two-factor status", err));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   return (
     <Modal
@@ -50,8 +71,13 @@ export default function RestoreKeyMismatchDialog({
           </Button>
           <Button
             variant="primary"
-            onClick={() => onRestoreWithKey(key)}
-            disabled={busy || pasted.length === 0}
+            onClick={() =>
+              onRestoreWithKey(key, {
+                password,
+                ...(hasTwoFactor ? secondFactorField(code) : {}),
+              })
+            }
+            disabled={busy || !ready}
             aria-busy={busy || undefined}
           >
             {t("settings:recoveryKey.restore.withKey")}
@@ -77,6 +103,32 @@ export default function RestoreKeyMismatchDialog({
             onChange={(e) => setKey(e.target.value)}
           />
         </label>
+        <p className="t-caption" style={{ margin: 0 }}>
+          {t("settings:recoveryKey.restore.reauth")}
+        </p>
+        <label className="flex flex-col" style={{ gap: 4 }}>
+          <span className="t-caption">{t("settings:recoveryKey.reauth.password")}</span>
+          <input
+            type="password"
+            className="input"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
+        {hasTwoFactor ? (
+          <label className="flex flex-col" style={{ gap: 4 }}>
+            <span className="t-caption">{t("settings:recoveryKey.reauth.code")}</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              className="input"
+              autoComplete="one-time-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+            />
+          </label>
+        ) : null}
         {error ? <ErrorLine>{error}</ErrorLine> : null}
         <p className="t-caption" style={{ margin: 0 }}>
           {copy.after}

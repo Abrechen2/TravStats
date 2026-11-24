@@ -2346,7 +2346,8 @@
       "intro": "Füge den Wiederherstellungsschlüssel des Servers ein, der diese Sicherung geschrieben hat. Dann bleiben die gespeicherten Zugangsdaten lesbar.",
       "label": "Wiederherstellungsschlüssel",
       "withKey": "Mit Schlüssel zurückspielen",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "reauth": "Den Schlüssel dieses Servers zu ersetzen braucht dein Passwort."
     }
   }
 }
