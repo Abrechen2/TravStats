@@ -178,6 +178,17 @@ describe("mailbox scan (Postfach durchsuchen)", () => {
     expect((await listCandidates(userId)).items.map((i) => i.id)).not.toContain(target.id);
   });
 
+  it("an import whose parse fails is counted as failed, not as a success", async () => {
+    parseDocument.mockRejectedValue(new Error("parser timeout"));
+    box.add({ uid: 1, raw: bookingMail(1) });
+    await scanAll();
+    const [item] = (await listCandidates(userId)).items;
+    const job = await startImport(userId, [item.id], box);
+    await settleAllJobs();
+    expect(getJob(job.id, userId)?.result).toMatchObject({ failed: 1, proposed: 0 });
+    expect(await prisma.mailIntakeMessage.count({ where: { status: "failed" } })).toBe(1);
+  });
+
   it("import refuses a UID that now holds another mail", async () => {
     box.add({ uid: 1, raw: bookingMail(1) });
     await scanAll();

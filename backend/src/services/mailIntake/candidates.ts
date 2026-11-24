@@ -150,5 +150,8 @@ async function importOne(
     where: { id: row.id },
     data: { status: "imported", reason: null },
   });
+  // The mail is the intake's now either way, but a pipeline failure is counted as one: the
+  // inbox shows it with its reason and a retry, and the summary must not say "0 failed".
+  if (outcome.status === "failed") return "failed";
   return outcome.status === "proposed" ? "proposed" : "imported";
 }
