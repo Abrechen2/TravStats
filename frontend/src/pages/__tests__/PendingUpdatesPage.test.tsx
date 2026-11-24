@@ -50,6 +50,9 @@ vi.mock("../../components/NavigationBar", () => ({
 vi.mock("../../components/inbox/MailIntakeSection", () => ({
   default: () => null,
 }));
+vi.mock("../../components/inbox/MailboxScanSection", () => ({
+  default: () => null,
+}));
 vi.mock("../../components/inbox/UnfiledDocumentsSection", () => ({
   default: () => <div data-testid="unfiled-documents-stub" />,
 }));

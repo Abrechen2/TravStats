@@ -40,6 +40,25 @@ export type MailReason = (typeof MAIL_REASONS)[number];
 
 export type MailTlsMode = "tls" | "starttls" | "none";
 
+export const MAIL_FETCH_FROM = ["now", "days_30", "days_90", "days_365"] as const;
+export type MailFetchFrom = (typeof MAIL_FETCH_FROM)[number];
+
+/** The per-source pre-filter settings of a personal folder (a private INBOX). */
+export interface MailPrefilterSettings {
+  prefilter: boolean;
+  keepUnread: boolean;
+  fetchFrom: MailFetchFrom;
+  senderDomains: string[];
+  removedSenderDomains: string[];
+  subjectKeywords: string[];
+  removedSubjectKeywords: string[];
+}
+
+export interface MailPrefilterDefaults {
+  senderDomains: Array<{ domain: string; brand: string; kind: string | null }>;
+  keywords: { de: string[]; en: string[] };
+}
+
 export interface MailSourceView {
   host: string;
   port: number;
@@ -54,6 +73,15 @@ export interface MailSourceView {
   lastOkAt: string | null;
   lastError: MailSourceError | null;
   lastErrorAt: string | null;
+  prefilter: boolean;
+  keepUnread: boolean;
+  fetchFrom: MailFetchFrom;
+  senderDomains: string[];
+  removedSenderDomains: string[];
+  subjectKeywords: string[];
+  removedSubjectKeywords: string[];
+  skippedCount: number;
+  processedCount: number;
 }
 
 export interface MailIntakeStatus {
@@ -62,9 +90,10 @@ export interface MailIntakeStatus {
   address: string | null;
   forwardingAvailable: boolean;
   senders: Array<{ id: string; address: string }>;
+  prefilterDefaults: MailPrefilterDefaults;
 }
 
-export interface MailSourceInput {
+export interface MailSourceInput extends Partial<MailPrefilterSettings> {
   host: string;
   port: number;
   tlsMode: MailTlsMode;
@@ -103,6 +132,47 @@ export interface MailRunResult {
   error: MailSourceError | null;
   seen: number;
   proposed: number;
+  filtered: number;
+}
+
+export type MailScanStatus = "running" | "done" | "cancelled" | "interrupted" | "failed";
+
+export interface MailScanView {
+  status: MailScanStatus;
+  since: string | null;
+  before: string | null;
+  total: number;
+  scanned: number;
+  skipped: number;
+  matched: number;
+  candidates: number;
+  error: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+}
+
+export interface MailCandidate {
+  id: string;
+  receivedAt: string | null;
+  from: string | null;
+  subject: string | null;
+  brand: string | null;
+  guessedDomain: string | null;
+  matchHint: "likely_present" | null;
+  status: "open" | "failed";
+  reason: string | null;
+}
+
+export interface MailCandidateList {
+  scan: MailScanView | null;
+  items: MailCandidate[];
+  ignoredCount: number;
+}
+
+export interface MailImportResult {
+  imported: number;
+  proposed: number;
+  failed: number;
 }
 
 const base = "/mail-intake";
@@ -150,6 +220,21 @@ export const mailIntakeApi = {
   allowSender: async (id: string): Promise<void> => {
     await api.post(`${base}/messages/${id}/allow-sender`);
   },
+  /** Starts (or resumes) "Postfach durchsuchen"; poll the job id with `waitForJob`. */
+  startScan: async (input: {
+    since?: string;
+    before?: string;
+    resume?: boolean;
+  }): Promise<string> => (await api.post<{ jobId: string }>(`${base}/scan`, input)).data.jobId,
+  cancelScan: async (): Promise<void> => {
+    await api.post(`${base}/scan/cancel`);
+  },
+  candidates: async (): Promise<MailCandidateList> =>
+    (await api.get<MailCandidateList>(`${base}/candidates`)).data,
+  importCandidates: async (ids: string[]): Promise<string> =>
+    (await api.post<{ jobId: string }>(`${base}/candidates/import`, { ids })).data.jobId,
+  ignoreCandidates: async (ids: string[]): Promise<number> =>
+    (await api.post<{ ignored: number }>(`${base}/candidates/ignore`, { ids })).data.ignored,
   instance: async (): Promise<{ source: MailSourceView | null }> =>
     (await api.get(`${base}/instance`)).data,
   saveInstance: async (input: MailInstanceInput): Promise<{ source: MailSourceView }> =>
