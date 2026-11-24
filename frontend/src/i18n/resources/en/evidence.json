@@ -469,5 +469,6 @@
   "evidence.metric.co2SavedVsFlightKg": "CO₂ saved versus flying (estimate)",
   "evidence.metric.flightAirborneMinutes": "Time in the air (wheels-off to wheels-on)",
   "evidence.metric.flightOverflownCountriesCount": "Countries on the flight path",
-  "evidence.metric.flightCodeshareCount": "Codeshare flights"
+  "evidence.metric.flightCodeshareCount": "Codeshare flights",
+  "evidence.metric.loggedDistanceKm": "Logged distance"
 }

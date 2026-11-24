@@ -80,6 +80,7 @@ import {
   resolveCo2RentalKg,
   resolveCo2SavedVsFlightKg,
 } from "./metricEvidenceCo2";
+import { resolveLoggedDistanceKm } from "./metricEvidenceYears";
 import {
   resolveBusRideCount,
   resolveBusDistanceKmTotal,
@@ -326,6 +327,7 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   rentalLongest: resolveRentalLongest,
   rentalFarthest: resolveRentalFarthest,
   co2RailKg: resolveCo2RailKg,
+  loggedDistanceKm: resolveLoggedDistanceKm,
   co2BusKg: resolveCo2BusKg,
   co2FerryKg: resolveCo2FerryKg,
   co2CruiseKg: resolveCo2CruiseKg,

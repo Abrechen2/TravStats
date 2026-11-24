@@ -469,5 +469,6 @@
   "evidence.metric.co2SavedVsFlightKg": "CO₂ gespart gegenüber dem Flug (Schätzung)",
   "evidence.metric.flightAirborneMinutes": "Zeit in der Luft (Abheben bis Aufsetzen)",
   "evidence.metric.flightOverflownCountriesCount": "Länder auf der Flugstrecke",
-  "evidence.metric.flightCodeshareCount": "Codeshare-Flüge"
+  "evidence.metric.flightCodeshareCount": "Codeshare-Flüge",
+  "evidence.metric.loggedDistanceKm": "Strecke im Logbuch"
 }

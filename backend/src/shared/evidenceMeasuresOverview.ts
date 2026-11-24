@@ -29,6 +29,16 @@ const record = (unit: string): MeasureSpec => ({
 });
 
 export const OVERVIEW_MEASURES: Record<string, MeasureSpec> = {
+  // The "Jahre" section's logged distance (feat/year-stats): every domain's entries with km.
+  loggedDistanceKm: {
+    aggregation: "sum",
+    unit: "km",
+    scopes: ["allTime", "year"],
+    surface: "YearsSection",
+    calculator:
+      "services/evidence/metricEvidenceYears.ts over services/stats/yearStats/loadEntries.ts",
+    servedIn: 1,
+  },
   wrappedStayCount: chapter("stays"),
   wrappedPlaceVisitCount: chapter("visits"),
   wrappedRoadtripCount: chapter("roadtrips"),

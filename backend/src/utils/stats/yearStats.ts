@@ -21,6 +21,18 @@ export interface DistanceEntry {
   month: string;
   /** Null or not positive = no measured distance. */
   km: number | null;
+  /**
+   * The entry itself, for the evidence panel behind the "Strecke im Logbuch" figure
+   * (`services/evidence/metricEvidenceYears.ts`); the figure's own arithmetic ignores it.
+   */
+  ref?: DistanceRef;
+}
+
+export interface DistanceRef {
+  id: string;
+  label: string;
+  /** `YYYY-MM-DD` on the entry's own calendar — the day its month was cut from. */
+  day: string;
 }
 
 export interface RecordedMonth {

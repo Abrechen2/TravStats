@@ -38,6 +38,8 @@ const loadFlights: Loader = async (userId) => {
       where: { userId, ...countableFlightWhere() },
       select: {
         ...FLIGHT_CLOCK_SELECT,
+        id: true,
+        flightNumber: true,
         depLat: true,
         depLon: true,
         arrLat: true,
@@ -56,6 +58,13 @@ const loadFlights: Loader = async (userId) => {
         domain: "flight" as const,
         month: `${at.year}-${String(at.month + 1).padStart(2, "0")}`,
         km: km > 0 ? km : null,
+        ref: {
+          id: f.id,
+          label: [f.flightNumber, `${f.depIata ?? "?"} → ${f.arrIata ?? "?"}`]
+            .filter(Boolean)
+            .join(" · "),
+          day: at.date,
+        },
       },
     ];
   });
@@ -64,7 +73,15 @@ const loadFlights: Loader = async (userId) => {
 const loadCruises: Loader = async (userId) => {
   const rows = await prisma.cruise.findMany({
     where: { userId, ...countableCruiseWhere(), startDate: { not: null } },
-    select: { startDate: true, legs: { select: { distanceKm: true } } },
+    select: {
+      id: true,
+      routeName: true,
+      shipNameOverride: true,
+      cruiseLine: true,
+      ship: { select: { name: true } },
+      startDate: true,
+      legs: { select: { distanceKm: true } },
+    },
   });
   return rows.flatMap((c) =>
     c.startDate
@@ -73,6 +90,12 @@ const loadCruises: Loader = async (userId) => {
             domain: "cruise" as const,
             month: c.startDate.toISOString().slice(0, 7),
             km: sum(c.legs),
+            ref: {
+              id: c.id,
+              // The cruise list's own label rule (`cruiseStatsData.ts`).
+              label: c.routeName ?? c.shipNameOverride ?? c.ship?.name ?? c.cruiseLine ?? "—",
+              day: c.startDate.toISOString().slice(0, 10),
+            },
           },
         ]
       : []
@@ -81,17 +104,27 @@ const loadCruises: Loader = async (userId) => {
 
 function ride(domain: DomainKey) {
   return (r: {
+    id: string;
+    depStationName: string;
+    arrStationName: string;
     departureTime: Date;
     depTimezone: string | null;
     distanceKm: number | null;
-  }): DistanceEntry => ({
-    domain,
-    month: monthOf(localDay(r.departureTime, r.depTimezone ?? "UTC")),
-    km: r.distanceKm,
-  });
+  }): DistanceEntry => {
+    const day = localDay(r.departureTime, r.depTimezone ?? "UTC");
+    return {
+      domain,
+      month: monthOf(day),
+      km: r.distanceKm,
+      ref: { id: r.id, label: `${r.depStationName} → ${r.arrStationName}`, day },
+    };
+  };
 }
 
 const rideSelect = {
+  id: true,
+  depStationName: true,
+  arrStationName: true,
   departureTime: true,
   depTimezone: true,
   distanceKm: true,
@@ -126,6 +159,9 @@ const loadRentals: Loader = async (userId) =>
     await prisma.rentalBooking.findMany({
       where: { userId, ...countableRentalWhere() },
       select: {
+        id: true,
+        provider: true,
+        pickupStationName: true,
         pickupTime: true,
         pickupTimezone: true,
         distanceKm: true,
@@ -134,16 +170,22 @@ const loadRentals: Loader = async (userId) =>
         odometerInKm: true,
       },
     })
-  ).map((r) => ({
-    domain: "rental" as const,
-    month: monthOf(localDay(r.pickupTime, r.pickupTimezone)),
-    km: rentalDrivenKm(r)?.km ?? null,
-  }));
+  ).map((r) => {
+    const day = localDay(r.pickupTime, r.pickupTimezone);
+    return {
+      domain: "rental" as const,
+      month: monthOf(day),
+      km: rentalDrivenKm(r)?.km ?? null,
+      ref: { id: r.id, label: `${r.provider} · ${r.pickupStationName}`, day },
+    };
+  });
 
 const loadRoadtrips: Loader = async (userId, now) => {
   const rows = await prisma.tripRoute.findMany({
     where: { userId, kind: "roadtrip" },
     select: {
+      id: true,
+      name: true,
       legs: { select: { distanceKm: true } },
       stops: {
         where: { viaPoint: false },
@@ -163,6 +205,7 @@ const loadRoadtrips: Loader = async (userId, now) => {
         domain: "roadtrip" as const,
         month: starts[0].toISOString().slice(0, 7),
         km: route.legs.length > 0 ? travelledKm(route.legs) : null,
+        ref: { id: route.id, label: route.name, day: starts[0].toISOString().slice(0, 10) },
       },
     ];
   });
@@ -173,6 +216,8 @@ const loadTours: Loader = async (userId, now) => {
   const rows = await prisma.tripRoute.findMany({
     where: { userId, kind: "tour", tourDate: { not: null } },
     select: {
+      id: true,
+      name: true,
       tourDate: true,
       legs: { select: { distanceKm: true } },
       tracks: { select: { distanceKm: true } },
@@ -184,7 +229,14 @@ const loadTours: Loader = async (userId, now) => {
     if (!day || day > today) return [];
     // A recording measures a day tour better than its drawn legs.
     const km = route.tracks.length > 0 ? sum(route.tracks) : sum(route.legs);
-    return [{ domain: "tour" as const, month: monthOf(day), km }];
+    return [
+      {
+        domain: "tour" as const,
+        month: monthOf(day),
+        km,
+        ref: { id: route.id, label: route.name, day },
+      },
+    ];
   });
 };
 
