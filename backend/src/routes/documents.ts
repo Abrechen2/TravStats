@@ -296,6 +296,8 @@ router.patch(
       const id = parseOrThrow(uuid, req.params.id);
       const input = parseOrThrow(updateDocumentSchema, req.body);
       const document = await updateDocument(req.userId!, id, {
+        displayName: input.displayName,
+        note: input.note,
         kind: input.kind,
         issuedOn: toDate(input.issuedOn),
         entry: input.entry,

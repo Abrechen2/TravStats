@@ -2,6 +2,11 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useToursVisible } from "../../hooks/useToursVisible";
 import { useLocation, useNavigate } from "react-router-dom";
 import { mailIntakeHandoffOf, type MailIntakeHandoff } from "../inbox/mailIntakeHandoff";
+import {
+  documentFilingHandoffOf,
+  type DocumentFilingHandoff,
+} from "../inbox/documentFilingHandoff";
+import { canFileBy, clearFilingDocument, setFilingDocument } from "../../lib/api/filingDocument";
 import { mailIntakeApi } from "../../lib/api/mailIntake";
 import AppShell from "../ui/AppShell";
 import type { JSX, ReactNode } from "react";
@@ -75,7 +80,14 @@ export function DashboardLayout({
   // A document one import dialog found to belong to another (D1): the target
   // dialog opens with it and reads it, so the user never drops it twice.
   const [handedOver, setHandedOver] = useState<ImportDocument | null>(null);
+  // A kept document the inbox handed over: the request that creates the entry carries its id
+  // (`lib/api/filingDocument`). Dropped when the dialog closes, so it never rides on a later import.
+  const pendingDocument = useRef<DocumentFilingHandoff | null>(null);
   const setAddingDomain = (domain: AddableDomain | null): void => {
+    if (domain === null && pendingDocument.current) {
+      pendingDocument.current = null;
+      clearFilingDocument();
+    }
     setHandedOver(null);
     setAddingDomainState(domain);
   };
@@ -89,6 +101,12 @@ export function DashboardLayout({
    * the entry exists either way and the mail stays in the inbox to be filed by hand.
    */
   const fileMailOriginal = async (): Promise<void> => {
+    if (pendingDocument.current) {
+      pendingDocument.current = null;
+      // Filed by id in the create request itself; where the domain's save path cannot carry an
+      // id, or no request did, the document stays unfiled and the user is told — never a guess.
+      if (!clearFilingDocument()) addToast("error", t("dashboard:documentNotFiled"));
+    }
     const pending = pendingMail.current;
     if (!pending) return;
     pendingMail.current = null;
@@ -100,6 +118,17 @@ export function DashboardLayout({
     }
   };
   useEffect(() => {
+    const documentHandoff = documentFilingHandoffOf(location.state);
+    if (documentHandoff) {
+      pendingDocument.current = documentHandoff;
+      if (canFileBy(documentHandoff.domain)) {
+        setFilingDocument(documentHandoff.documentId, documentHandoff.domain);
+      }
+      setAddingDomainState(documentHandoff.domain as AddableDomain);
+      setHandedOver(documentHandoff.document);
+      navigate(location.pathname + location.search, { replace: true, state: null });
+      return;
+    }
     const handoff = mailIntakeHandoffOf(location.state);
     if (!handoff) return;
     pendingMail.current = handoff;

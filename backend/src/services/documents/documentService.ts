@@ -494,6 +494,10 @@ export async function unlinkDocument(userId: string, id: string): Promise<Docume
 }
 
 export interface UpdateDocumentInput {
+  /** Stored as the original name: the on-disk name is generated and never changes. */
+  displayName?: string;
+  /** The owner's remark; null clears it; absent leaves it. */
+  note?: string | null;
   kind?: DocumentKind | null;
   issuedOn?: Date | null;
   /** An entry files it there; null takes it off its entry; absent leaves it. */
@@ -568,6 +572,10 @@ export async function updateDocument(
     return tx.document.update({
       where: { id: document.id },
       data: {
+        ...(input.displayName !== undefined && {
+          originalName: sanitizeOriginalName(input.displayName),
+        }),
+        ...(input.note !== undefined && { note: input.note?.trim() ? input.note.trim() : null }),
         ...(input.kind !== undefined && { kind: input.kind }),
         ...(input.issuedOn !== undefined && { issuedOn: input.issuedOn }),
       },
@@ -687,6 +695,8 @@ export interface DocumentDto {
   /** Pages of a PDF, counted at upload; null when unknown (every non-PDF, older rows). */
   pageCount: number | null;
   originalName: string | null;
+  /** The owner's own remark; null = none. */
+  note: string | null;
   /** What to call it on screen: the client's name, or a generic one with the right extension. */
   displayName: string;
   issuedOn: string | null;
@@ -726,6 +736,7 @@ export function toDocumentDto(document: Document): DocumentDto {
     sha256: document.sha256,
     pageCount: document.pageCount,
     originalName: document.originalName,
+    note: document.note,
     displayName: document.originalName ?? `document${path.extname(document.storedName)}`,
     issuedOn: document.issuedOn ? document.issuedOn.toISOString().slice(0, 10) : null,
     rentalCategory: document.rentalCategory,

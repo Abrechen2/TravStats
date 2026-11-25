@@ -8,6 +8,7 @@ import {
   addDocumentLinksSchema,
   assignLinkCompanionSchema,
   entryRefSchema,
+  linkCandidatesQuerySchema,
   tripCandidatesQuerySchema,
 } from "../../schemas/document";
 import {
@@ -73,7 +74,8 @@ router.get(
   authenticate,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const data = await listLinkCandidates(req.userId!, parseOrThrow(uuid, req.params.id));
+      const { q } = parseOrThrow(linkCandidatesQuerySchema, req.query);
+      const data = await listLinkCandidates(req.userId!, parseOrThrow(uuid, req.params.id), q);
       res.json({ success: true, data });
     } catch (error) {
       next(error);

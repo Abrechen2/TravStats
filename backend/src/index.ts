@@ -80,7 +80,8 @@ app.use(
         fontSrc: ["'self'", "data:"], // Fonts from same origin and data URIs
         objectSrc: ["'none'"], // Disallow plugins
         mediaSrc: ["'self'"],
-        frameSrc: ["'none'"], // Disallow iframes
+        // Same-origin frames only: the inbox previews a kept PDF in one (frame-ancestors stays 'self').
+        frameSrc: ["'self'"],
         upgradeInsecureRequests: process.env.NODE_ENV === "production" ? [] : null, // Upgrade HTTP to HTTPS in production
       },
     },

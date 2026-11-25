@@ -4724,6 +4724,8 @@ model Document {
   kind          String?
   /// The date printed ON the document, when known.
   issuedOn      DateTime? @map("issued_on") @db.Date
+  /// The owner's own remark on the document (inbox edit dialog); null = none.
+  note          String?
   /// How the row came to be: upload | parse.
   source        String    @default("upload")
   /// What the parse decided and extracted, kept for a later diff.
