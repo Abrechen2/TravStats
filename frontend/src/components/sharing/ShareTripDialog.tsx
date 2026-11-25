@@ -203,7 +203,10 @@ function ShareTripForm({
             )}
           </>
         )}
-        {shownBlocked.length > 0 && (
+        {/* While the link panel is open it speaks for the chosen person: the others'
+            "Gerade nicht möglich …" read as its answer (rc46 UAT: "ist mit keinem Konto
+            verknüpft" over a pending consent, whose own copy is the panel's awaitingConsent). */}
+        {shownBlocked.length > 0 && !linking && (
           <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
             <p className="t-caption" style={{ color: "var(--ts-muted)" }}>
               {t(`${NS}.blockedTitle`)}
