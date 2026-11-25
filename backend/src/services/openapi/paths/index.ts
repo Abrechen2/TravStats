@@ -145,6 +145,7 @@ import "./travtrackDay";
 import "./travtrackDaySources";
 import "./travtrackPlaces";
 import "./travtrackLegs";
+import "./travtrackCleanup";
 import "./travtrackDiagnostics";
 import "./travtrackExplored";
 import "./travtrackMonths";

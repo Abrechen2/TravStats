@@ -33,6 +33,7 @@ import stopPlaceRoutes from "./travtrack/stopPlaces";
 import shareSnapshotRoutes from "./travtrack/shareSnapshot";
 import viewRoutes from "./travtrack/views";
 import zoneRoutes from "./travtrack/zones";
+import cleanupRoutes from "./travtrack/cleanup";
 
 /**
  * TravTrack, the own location history (TravTrack plan, phase 2): the router
@@ -115,6 +116,7 @@ router.patch(
 
 router.use(pointRoutes);
 router.use(zoneRoutes);
+router.use(cleanupRoutes);
 router.use(placeRoutes);
 router.use(dayRoutes);
 router.use(daySourceRoutes);
