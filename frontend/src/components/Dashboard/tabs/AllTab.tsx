@@ -1,3 +1,4 @@
+import { useRoadtripColorStore } from "../../../store/roadtripColorStore";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useToursVisible } from "../../../hooks/useToursVisible";
 import type { JSX } from "react";
@@ -170,6 +171,7 @@ export function AllTab(): JSX.Element {
   // One fetch carries day tours AND roadtrips: it runs while either domain is
   // on (gated on `tour` alone, roadtrips vanished — tester, 2026-11-18).
   const toursVisible = useToursVisible();
+  const roadtripColorMode = useRoadtripColorStore((st) => st.mode);
   const dashboardTours = useDashboardTours(toursVisible || isEnabled("roadtrip"));
   // The "Alle" tab's domain-filter (decision 2026-09-27; `rail` joined 2026-09-28).
   const { domainFilter, dayTourCount, visible, lines } = useAllTabDomainVisibility(
@@ -490,7 +492,11 @@ export function AllTab(): JSX.Element {
 
   // See `buildTourLegendRows` (`./tourMapOverlay.tsx`) for why "empty"
   // shows no row here — `tourStatusOverlay` below carries loading/error.
-  const roadtripKey = { color: colorOfDomain("roadtrip"), label: t("roadtrips:kind.roadtrip") };
+  const roadtripKey = {
+    color: colorOfDomain("roadtrip"),
+    label: t("roadtrips:kind.roadtrip"),
+    mode: roadtripColorMode,
+  };
   const tourLegend = buildTourLegendRows(showTours, shownTours, t, legendRow, roadtripKey, lines);
   const tourHasData = tourLegend.hasData;
 

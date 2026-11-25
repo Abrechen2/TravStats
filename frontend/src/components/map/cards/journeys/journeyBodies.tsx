@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { FlagImg } from "../../../../lib/countryFlag";
 import { tokens } from "../../../../theme/tokens";
 import { useFerryRouteEditStore } from "../../../../store/ferryRouteEditStore";
+import { useBusRouteEditStore } from "../../../../store/busRouteEditStore";
 import {
   Actions,
   Grid,
@@ -231,14 +232,19 @@ function OpenAction({
         label: t(latest.upcoming ? "map:journey.openNext" : "map:journey.openLatest"),
         onClick: () => navigate(journeyPath(target)),
       }}
-      // A ferry line is drawn once per pair of ports (GitHub #407): edit it from the map.
+      // A ferry line is drawn once per pair of ports (GitHub #407), a bus line per ride (#409): edit it from the map.
       secondary={
         editRouteOf === "ferry"
           ? {
               label: t("map:journey.editRoute"),
               onClick: () => useFerryRouteEditStore.getState().open(target.id),
             }
-          : undefined
+          : editRouteOf === "bus"
+            ? {
+                label: t("map:journey.editRoute"),
+                onClick: () => useBusRouteEditStore.getState().open(target.id),
+              }
+            : undefined
       }
     />
   );

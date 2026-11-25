@@ -44,6 +44,12 @@ const tourSummary = registry.register(
         .describe("The owning trip's name, so a dashboard list needs no second lookup"),
       name: z.string(),
       mode: legMode.describe("The section's own default mode, not any one leg's"),
+      color: z
+        .string()
+        .nullable()
+        .describe(
+          "The section's own colour (#rrggbb); a roadtrip is drawn in it in the per-roadtrip map colour mode"
+        ),
       kind: z.enum(ROUTE_KINDS),
       activity: z.enum(TOUR_ACTIVITIES).nullable(),
       vehicle: z.enum(STORED_ROADTRIP_VEHICLES).nullable(),
@@ -109,6 +115,7 @@ const tourSummary = registry.register(
         tripName: "Norwegen 2024",
         name: "Süd-Norwegen",
         mode: "road",
+        color: null,
         kind: "tour",
         activity: "hike",
         vehicle: null,

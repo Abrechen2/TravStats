@@ -131,6 +131,42 @@ export const busApi = {
     return { ride: res.data.data, geometry: res.data.meta?.geometry ?? null };
   },
 
+  /** Draw the ride's line by hand: `[lon, lat]` points, both ends on the stops (GitHub #409). */
+  async setManualRoute(
+    id: string,
+    waypoints: Array<[number, number]>,
+    baseVersion?: string
+  ): Promise<BusJourney> {
+    return (
+      await api.put<Envelope<BusJourney>>(`/bus/${encodeURIComponent(id)}/route-override`, {
+        waypoints,
+        ...(baseVersion ? { baseVersion } : {}),
+      })
+    ).data.data;
+  },
+
+  /** Keep the ride on the straight line: the router's answer is not wanted and none is drawn. */
+  async keepStraight(id: string, baseVersion?: string): Promise<BusJourney> {
+    return (
+      await api.put<Envelope<BusJourney>>(`/bus/${encodeURIComponent(id)}/route-override`, {
+        keepStraight: true,
+        ...(baseVersion ? { baseVersion } : {}),
+      })
+    ).data.data;
+  },
+
+  /** Drop the manual line; the server asks the road router once and says what came of it. */
+  async clearManualRoute(id: string, baseVersion?: string) {
+    return (
+      await api.delete<
+        Envelope<BusJourney> & { meta: { busRoute: "routed" | "straight" | "unchanged" } }
+      >(`/bus/${encodeURIComponent(id)}/route-override`, {
+        timeout: 60000,
+        ...(baseVersion ? { headers: { "If-Match": `"${baseVersion}"` } } : {}),
+      })
+    ).data;
+  },
+
   /** Every straight ride, as a background job; resolves with each ride's outcome. */
   async routeAll(
     onProgress?: (progress: { done: number; total: number } | null) => void

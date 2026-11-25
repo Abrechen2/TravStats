@@ -51,6 +51,8 @@ interface TourSummaryRow {
   tripId: string | null;
   name: string;
   mode: string;
+  /** The section's own colour; a roadtrip's line takes it in the per-roadtrip colour mode. */
+  color: string | null;
   kind: string;
   activity: string | null;
   vehicle: string | null;
@@ -86,6 +88,7 @@ const TOUR_SUMMARY_SELECT = {
   tripId: true,
   name: true,
   mode: true,
+  color: true,
   kind: true,
   activity: true,
   vehicle: true,
@@ -163,6 +166,7 @@ function toTourSummary(route: TourSummaryRow): Record<string, unknown> {
     tripName: route.trip?.name ?? null,
     name: route.name,
     mode: route.mode,
+    color: route.color,
     kind: route.kind,
     activity: route.activity,
     vehicle: route.vehicle,

@@ -52,6 +52,8 @@ import { assertReferencesOwned } from "../utils/ownedReferences";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import logger from "../utils/logger";
 import ticketRoutes from "./bus/tickets";
+import { clearBusManualRoute, setBusManualRoute } from "../services/bus/busManualRoute";
+import { requestedBaseVersion } from "../services/sync/versionPrecondition";
 import {
   readLogbookPage,
   STATION_GROUP_BY,
@@ -455,6 +457,59 @@ router.post(
         include: BUS_INCLUDE,
       });
       res.json({ success: true, data: withBusCo2(withBusTimes(ride)), meta: { geometry: report } });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/** A hand-drawn line for the ride, or "keep straight" (GitHub #409). */
+router.put(
+  "/:id/route-override",
+  busRouteLimiter,
+  rejectDemo,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = requireUser(req);
+      const ride = await setBusManualRoute(
+        userId,
+        req.params.id,
+        req.body,
+        requestedBaseVersion(req)
+      );
+      const full = await prisma.busJourney.findUniqueOrThrow({
+        where: { id: ride.id },
+        include: BUS_INCLUDE,
+      });
+      res.json({ success: true, data: withBusCo2(withBusTimes(full)) });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/** Drop the manual line; the router gets one try, the chord stands otherwise. */
+router.delete(
+  "/:id/route-override",
+  busRouteLimiter,
+  rejectDemo,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = requireUser(req);
+      const { outcome, ride } = await clearBusManualRoute(
+        userId,
+        req.params.id,
+        requestedBaseVersion(req)
+      );
+      const full = await prisma.busJourney.findUniqueOrThrow({
+        where: { id: ride.id },
+        include: BUS_INCLUDE,
+      });
+      res.json({
+        success: true,
+        data: withBusCo2(withBusTimes(full)),
+        meta: { busRoute: outcome },
+      });
     } catch (err) {
       next(err);
     }

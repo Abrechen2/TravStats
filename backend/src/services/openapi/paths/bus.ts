@@ -25,6 +25,7 @@ import {
 } from "../../../schemas/bus";
 import { busTimesSchema } from "../../../schemas/times";
 import { ROUTE_FALLBACK_REASONS } from "../../tour/routing/types";
+import { busManualRouteSchema } from "../../bus/busManualRoute";
 import { BUS_LINE_MISSES } from "../../bus/transitousBusLine";
 
 const busJourney = registry.register(
@@ -314,6 +315,62 @@ registry.registerPath({
     403: { description: "The shared demo account may not route", content: errorContent },
     404: { description: "Not found", content: errorContent },
     429: { description: "Too many routing requests", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/bus/{id}/route-override",
+  summary: "Draw a ride's line by hand, or keep it straight",
+  description:
+    "Body A: `waypoints`, 3 to 64 [lon, lat] points; both ends within 1 km of the stops (they are snapped onto them), at least one via point between. Body B: `keepStraight: true` pins the chord. Either stores `geometrySource: manual` (B with no geometry); the distance follows the line (or the great-circle figure) unless the user typed one. A re-route, single or bulk, never replaces it; moving a terminal drops it. `baseVersion` (or If-Match) is the ride's `updatedAt`; a newer row answers 409 VERSION_CONFLICT. Error codes: BUS_ROUTE_INVALID, BUS_ROUTE_NOT_ANCHORED. Rate-limited; the shared demo account is refused.",
+  tags: ["Bus"],
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: { "application/json": { schema: busManualRouteSchema.openapi("BusManualRoute") } },
+    },
+  },
+  responses: {
+    200: {
+      description: "The updated ride",
+      content: {
+        "application/json": { schema: z.object({ success: z.literal(true), data: busJourney }) },
+      },
+    },
+    400: { description: "Route invalid or not anchored", content: errorContent },
+    403: { description: "The shared demo account may not draw", content: errorContent },
+    404: { description: "Not found", content: errorContent },
+    409: { description: "The ride changed elsewhere", content: errorContent },
+    429: { description: "Too many requests", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/bus/{id}/route-override",
+  summary: "Drop a hand-drawn line",
+  description:
+    "Returns the ride to a straight line and gives the road router one try; `meta.busRoute` is `routed`, `straight` or `unchanged` (there was no manual line). A typed ticket distance is kept.",
+  tags: ["Bus"],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "The updated ride",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: busJourney,
+            meta: z.object({ busRoute: z.enum(["routed", "straight", "unchanged"]) }),
+          }),
+        },
+      },
+    },
+    403: { description: "The shared demo account may not route", content: errorContent },
+    404: { description: "Not found", content: errorContent },
+    409: { description: "The ride changed elsewhere", content: errorContent },
+    429: { description: "Too many requests", content: errorContent },
   },
 });
 

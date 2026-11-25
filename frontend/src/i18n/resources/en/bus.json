@@ -403,5 +403,45 @@
       "price": "Price",
       "currency": "Currency"
     }
+  },
+  "routeEditor": {
+    "hint": "Click the line to insert a point. Drag a point to move it.",
+    "save": "Save",
+    "saving": "Saving …",
+    "cancel": "Cancel",
+    "undo": "Undo",
+    "redo": "Redo",
+    "removePoint": "Remove point",
+    "point": "Point {{index}}",
+    "terminal": "Stop {{index}}",
+    "discardConfirm": "Discard unsaved changes to the line?",
+    "failed": "The line could not be saved. Please try again.",
+    "loadFailed": "The ride could not be loaded. Please try again.",
+    "errors": {
+      "BUS_ROUTE_INVALID": "The line is invalid: at least one point between the stops, at most 64 points, and not absurdly longer than the ride.",
+      "BUS_ROUTE_NOT_ANCHORED": "The line must start at the departure stop and end at the arrival stop.",
+      "VERSION_CONFLICT": "The ride was changed in the meantime. Reload the page and draw again."
+    }
+  },
+  "drawRoute": {
+    "edit": "Draw the line by hand",
+    "editManual": "Edit the line",
+    "keepStraight": "Keep the straight line",
+    "keepStraightConfirm": {
+      "title": "Keep the straight line?",
+      "message": "The ride is drawn as a straight line and is no longer routed along the road again."
+    },
+    "keptStraight": "The ride stays on the straight line.",
+    "keepFailed": "Keeping the straight line did not go through. Please try again.",
+    "clear": "Remove the hand-drawn line",
+    "clearing": "Removing …",
+    "clearConfirm": {
+      "title": "Remove the hand-drawn line?",
+      "message": "The line you set by hand is discarded and the road is routed again."
+    },
+    "cleared": "Hand-drawn line removed.",
+    "clearedRouted": "Hand-drawn line removed, the road was routed again.",
+    "clearFailed": "The line could not be removed. Please try again.",
+    "menuLabel": "More line actions"
   }
 }
