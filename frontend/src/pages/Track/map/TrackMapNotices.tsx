@@ -30,12 +30,25 @@ export default function TrackMapNotices({
   const { t, i18n } = useTranslation(["track"]);
   const failed = dayResults.filter((r): r is Failed => r.kind === "failed");
   const truncated = dayResults.filter((r): r is Loaded => r.kind === "loaded" && r.day.truncated);
+  const loadedDays = dayResults.filter((r): r is Loaded => r.kind === "loaded");
+  const smoothed = loadedDays.some((r) => r.day.smoothedShown);
+  const matched = loadedDays.some((r) => (r.day.cleanup?.matched.length ?? 0) > 0);
   const parts = range?.parts ?? [];
   const simplified = parts.some((p) => p.simplified);
   const omitted = parts.reduce((n, p) => n + p.omittedSegments, 0);
   const warn = { color: token("warn") };
   return (
     <>
+      {(smoothed || matched) && (
+        <p className="t-caption" role="note" data-testid="track-cleanup-labels">
+          {[
+            smoothed ? t("track:cleanup.smoothedLabel") : null,
+            matched ? t("track:cleanup.matchedLabel") : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      )}
       {failed.length > 0 && (
         <div role="alert" className="flex flex-col gap-1" data-testid="track-failed-days">
           {failed.map((f) => (

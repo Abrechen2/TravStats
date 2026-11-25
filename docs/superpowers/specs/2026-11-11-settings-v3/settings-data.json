@@ -4398,6 +4398,21 @@
           "ad": 1
         },
         {
+          "id": "mapMatching",
+          "cat": "karte",
+          "svc": {
+            "n": ["An Straßen anpassen", "Snap to roads"],
+            "de": "Eigener Valhalla- oder GraphHopper-Router",
+            "en": "Your own Valhalla or GraphHopper router",
+            "st": ["Aus", "Off"],
+            "tone": "muted"
+          },
+          "use": ["on", "instKey"],
+          "rows": [],
+          "ov": { "on": { "v": false } },
+          "ad": 1
+        },
+        {
           "id": "logos",
           "cat": "karte",
           "svc": {
@@ -4509,6 +4524,21 @@
           ],
           "ad": 1,
           "x": 1
+        },
+        {
+          "id": "aiSuggestionHelp",
+          "cat": "ki",
+          "svc": {
+            "n": ["KI-Hilfe für unklare Vorschläge", "AI help for unclear suggestions"],
+            "de": "„KI fragen“ bei mehrdeutigen Aufenthalten",
+            "en": "\"Ask the AI\" for ambiguous stays",
+            "st": ["Aus", "Off"],
+            "tone": "muted"
+          },
+          "use": ["on"],
+          "rows": [],
+          "ov": { "on": { "v": false } },
+          "ad": 1
         },
         {
           "id": "openData",

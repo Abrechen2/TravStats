@@ -1130,5 +1130,6 @@
     "own": "Eigene Farbe",
     "automatic": "Automatische Farbe aus der Palette",
     "saveFailed": "Die Farbe konnte nicht gespeichert werden."
-  }
+  },
+  "fromTrack": "Aus TravTrack übernommen – Spur ansehen"
 }

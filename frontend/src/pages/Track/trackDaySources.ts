@@ -30,6 +30,8 @@ export function kindOf(day: TravTrackDay, source: string): DaySourceKind {
 export function daySourceLines(days: readonly TravTrackDay[]): {
   estimated: LonLat[][];
   bridges: LonLat[][];
+  /** Stretches matched to roads (rc46 extras C2), drawn over the track and labelled. */
+  matched: LonLat[][];
 } {
   return {
     estimated: days.flatMap((d) =>
@@ -40,6 +42,11 @@ export function daySourceLines(days: readonly TravTrackDay[]): {
     ),
     bridges: days.flatMap((d) =>
       (d.bridgeLines ?? []).map((b) => b.coordinates.map((c): LonLat => [c[0], c[1]]))
+    ),
+    matched: days.flatMap((d) =>
+      (d.cleanup?.matched ?? []).flatMap((m) =>
+        m.lines.map((l) => l.map((c): LonLat => [c[0], c[1]]))
+      )
     ),
   };
 }

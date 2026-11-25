@@ -993,5 +993,71 @@
       "plugin": "{{plugin}}: {{name}}, {{m}} m",
       "pluginNoDistance": "{{plugin}}: {{name}}"
     }
+  },
+  "roadtrip": {
+    "open": "Als Roadtrip übernehmen",
+    "title": "Als Roadtrip übernehmen",
+    "loading": "Stationen werden aus der Spur gelesen …",
+    "name": "Name des Roadtrips",
+    "defaultName": "Roadtrip ab {{day}}",
+    "stations": "Stationen",
+    "stationName": "Name der Station {{n}}",
+    "stopName": "Halt {{n}}",
+    "stay": "{{from}}–{{until}} · {{dwell}}",
+    "departs": "ab {{at}}",
+    "arrives": "an {{at}}",
+    "linkedPlace": "mit deinem Ort verknüpft",
+    "drop": "Entfernen",
+    "nameNeeded": "Jede Station braucht einen Namen.",
+    "distance": "{{km}} km",
+    "estimated": "davon {{km}} km geschätzt (Aufzeichnungslücke, gestrichelt)",
+    "sketch": "Strecke aus der Spur, Lücken gestrichelt",
+    "save": "Roadtrip anlegen",
+    "saving": "Wird angelegt …",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "preview": {
+      "tooLong": "Höchstens 14 Tage auf einmal – wähle einen kürzeren Zeitraum.",
+      "noPoints": "In diesem Zeitraum gibt es keine aufgezeichneten Punkte.",
+      "truncated": "Dieser Zeitraum hat zu viele Punkte – wähle einen kürzeren.",
+      "tooFewStations": "Daraus ergibt sich nur eine Station – es gibt keine Strecke zu übernehmen."
+    },
+    "saveFailed": {
+      "create": "Der Roadtrip konnte nicht angelegt werden. Es wurde nichts gespeichert.",
+      "stations": "Die Stationen konnten nicht gespeichert werden. Der Roadtrip wurde wieder entfernt.",
+      "line": "Die Strecke konnte nicht gespeichert werden. Der Roadtrip wurde wieder entfernt."
+    },
+    "saveFailedKept": {
+      "create": "Der Roadtrip konnte nicht angelegt werden.",
+      "stations": "Die Stationen konnten nicht gespeichert werden, und der halb angelegte Roadtrip ließ sich nicht entfernen – lösche ihn unter Roadtrips.",
+      "line": "Die Strecke konnte nicht gespeichert werden, und der halb angelegte Roadtrip ließ sich nicht entfernen – lösche ihn unter Roadtrips."
+    }
+  },
+  "cleanup": {
+    "smoothDay": "Diesen Tag glätten (nur Anzeige)",
+    "smoothAll": "Dünne Spuren an allen Tagen glätten",
+    "smoothHint": "Nur Quellen mit niedriger Qualität werden geglättet; die gespeicherten Punkte bleiben unverändert.",
+    "smoothedLabel": "geglättet",
+    "matchedLabel": "an Straßen angepasst",
+    "matchedLine": "An Straßen angepasst über {{provider}}",
+    "undo": "Rückgängig",
+    "match": "An Straßen anpassen",
+    "matching": "Wird angepasst …",
+    "matched": "Abschnitt an Straßen angepasst.",
+    "error": {
+      "serviceOff": "Das Anpassen an Straßen ist auf diesem Server ausgeschaltet.",
+      "notConfigured": "Es ist kein Router eingerichtet.",
+      "internetOff": "Der Server darf gerade keine externen Dienste erreichen.",
+      "privateTarget": "Die Router-Adresse ist nicht erlaubt.",
+      "invalidUrl": "Die Router-Adresse ist ungültig.",
+      "timeout": "Der Router hat nicht rechtzeitig geantwortet.",
+      "unreachable": "Der Router war nicht erreichbar.",
+      "badResponse": "Der Router hat keine brauchbare Antwort gegeben.",
+      "tooLarge": "Der Abschnitt hat zu viele Punkte.",
+      "tooFewPoints": "Der Abschnitt hat zu wenige Punkte außerhalb deiner Schutzzonen.",
+      "lowConfidence": "Der Router war sich zu unsicher – der Abschnitt bleibt wie aufgezeichnet.",
+      "saveFailed": "Die Einstellung konnte nicht gespeichert werden.",
+      "undoFailed": "Das Rückgängigmachen ist fehlgeschlagen."
+    }
   }
 }

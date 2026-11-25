@@ -323,6 +323,8 @@ export const NON_TRAVEL_RELATIONS = [
   "travTrackZoneCells",
   "travTrackMonthValues",
   "travTrackDaySources",
+  // Smoothing choices and road-matched stretches of the private history (rc46 extras C).
+  "travTrackCleanups",
   "travTrackDawarichImport",
   // The account's WebDAV export target (forgejo#321): a URL, a username and an
   // encrypted password. A credential, so it never travels.

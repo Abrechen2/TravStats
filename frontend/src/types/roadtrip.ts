@@ -174,6 +174,8 @@ export interface CreateRoadtripInput {
   tripId?: string | null;
   startOdometerKm?: number;
   tags?: string[];
+  /** "Als Roadtrip übernehmen": the TravTrack days it was taken from. */
+  trackSpan?: { fromDay: string; toDay: string } | null;
 }
 
 /** A station's measured weather (`GET /roadtrips/:id/stations/:stationId/weather`). */

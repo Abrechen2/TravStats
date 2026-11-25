@@ -695,6 +695,14 @@
       "vesselData": {
         "n": "Wikidata",
         "p": "Schiffs-MMSI und -IMO"
+      },
+      "aiSuggestionHelp": {
+        "n": "KI-Hilfe für unklare Vorschläge",
+        "p": "„KI fragen“ bei Aufenthalten mit mehreren möglichen Orten"
+      },
+      "mapMatching": {
+        "n": "An Straßen anpassen",
+        "p": "Dünne TravTrack-Strecken über deinen eigenen Router auf die Straße legen"
       }
     },
     "rows": {

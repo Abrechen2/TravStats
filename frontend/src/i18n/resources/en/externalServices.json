@@ -337,6 +337,10 @@
       "primaryUrl": "Address of the custom rate source",
       "fallbackSource": "Second rate source",
       "fallbackUrl": "Address of the second rate source"
+    },
+    "mapMatching": {
+      "url": "Router address",
+      "engine": "Router type"
     }
   },
   "services": {
@@ -776,6 +780,21 @@
       "quota": "60 requests an hour per plugin.",
       "dataOut": "A stop's time and rounded coordinates, never the account, name, e-mail or location history.",
       "adminPurpose": "Accounts add their own plugins; switched off, no account asks any more"
+    },
+    "aiSuggestionHelp": {
+      "name": "AI help for unclear suggestions",
+      "purpose": "A language model suggests which place an unclear stop was",
+      "why": "For a stay with several possible places an account can \"Ask the AI\": the model ranks the candidates and gives a reason. Only what the person clicks is written.",
+      "cost": "Depends on the model: a local Ollama costs nothing, a cloud model its own price.",
+      "dataOut": "The candidate names, the distance, the dwell, names of own places nearby and the day – no coordinates, no track. With a cloud model they leave the home network. Every account confirms the target before its first request."
+    },
+    "mapMatching": {
+      "name": "Snap to roads (map matching)",
+      "purpose": "Lays sparse or noisy TravTrack car stretches onto the road",
+      "why": "Sends the points of one stretch to a router you run yourself (Valhalla or GraphHopper) and draws the result, labelled, over the track. The raw points stay unchanged; undo is one click.",
+      "cost": "Free, self-hosted. No service is preconfigured.",
+      "dataOut": "Only the points of the chosen stretch, privacy zones cut out first. Every account confirms the target before its first request.",
+      "adminPurpose": "Address of your Valhalla or GraphHopper server (LAN allowed)"
     }
   },
   "alwaysOn": {
@@ -802,6 +821,12 @@
         "allratestoday": "AllRatesToday",
         "custom": "Custom address"
       }
+    },
+    "mapMatching": {
+      "engine": {
+        "valhalla": "Valhalla (trace_attributes)",
+        "graphhopper": "GraphHopper (/match)"
+      }
     }
   },
   "legacy": {
@@ -825,5 +850,46 @@
         "linkUrl": "https://allratestoday.com"
       }
     }
+  },
+  "useConsent": {
+    "title": "Send data to a service?",
+    "intro": "For this action TravStats would send the following data to an external service. Nothing is sent without your permission.",
+    "service": "Service",
+    "host": "Target",
+    "provider": "Provider",
+    "location": "Location",
+    "fields": "Fields sent",
+    "points": "Number of positions",
+    "zones": "Privacy zones",
+    "zonesApplied": "cut out first",
+    "zonesNone": "no zone set up",
+    "locations": {
+      "cloud": "Cloud – leaves your home network",
+      "lan": "Local in your home network (LAN)"
+    },
+    "services": {
+      "aiSuggestionHelp": "AI help for unclear suggestions",
+      "mapMatching": "Snap to roads"
+    },
+    "fieldNames": {
+      "candidates": "Candidate names",
+      "distanceM": "Distance",
+      "dwellMin": "Dwell",
+      "nearbyPlaces": "Names of nearby places",
+      "localDay": "Day",
+      "points": "Positions with time",
+      "costing": "Vehicle type"
+    },
+    "cloudNote": "The provider processes the data under its own terms.",
+    "once": "Allow once",
+    "always": "Always allow for this service",
+    "cancel": "Cancel",
+    "listTitle": "Allowed data sharing",
+    "listEmpty": "No service has a standing permission.",
+    "listSince": "allowed since {{date}} for {{target}}",
+    "revoke": "Revoke",
+    "revoked": "Permission revoked – you will be asked again next time.",
+    "revokeFailed": "The permission could not be revoked.",
+    "loadFailed": "The permissions could not be loaded."
   }
 }

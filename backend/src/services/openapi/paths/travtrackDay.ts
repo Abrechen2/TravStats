@@ -162,6 +162,40 @@ const day = z.object({
   bridgeLines: z
     .array(bridgeSchema.extend({ coordinates: z.array(z.array(z.number())) }))
     .describe("Jumps and gaps a logged entry explains, drawn with the entry's line `[lon, lat]`"),
+  cleanup: z
+    .object({
+      smoothing: z.object({
+        eligible: z
+          .boolean()
+          .describe(
+            "A source the day draws from scores below `threshold` (only such stretches are smoothed)"
+          ),
+        on: z.boolean(),
+        from: z.enum(["day", "global"]).describe("This day's own choice, or the account default"),
+        global: z.boolean().describe("The account-wide default; off unless switched on"),
+        threshold: z.number(),
+      }),
+      smoothed: z
+        .array(z.array(z.tuple([z.number(), z.number(), z.number(), z.number().nullable()])))
+        .nullable()
+        .describe(
+          "Drawing-only: `segments` with the low-scoring stretches through a speed-gated moving median, labelled 'geglättet'; null while off or not eligible. `segments` stay the raw read"
+        ),
+      matched: z
+        .array(
+          z.object({
+            id: z.string(),
+            ...span,
+            lines: z.array(z.array(z.tuple([z.number(), z.number()]))),
+            confidence: z.number(),
+            provider: z.string(),
+          })
+        )
+        .describe(
+          "Stretches matched to roads ('an Straßen angepasst'), `[lon, lat]`, privacy-cut on the way out; DELETE /travtrack/cleanup/match/{id} undoes one"
+        ),
+    })
+    .describe("The optional cleanup of a sparse or noisy day (raw points never change)"),
 });
 
 registry.registerPath({

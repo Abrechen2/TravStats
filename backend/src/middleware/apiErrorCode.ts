@@ -12,6 +12,7 @@ import type { AccountArchiveApiErrorCode } from "./accountArchiveErrorCodes";
 import type { LifeBookApiErrorCode } from "./lifeBookErrorCodes";
 import type { LocationProviderApiErrorCode } from "./locationProviderErrorCodes";
 import type { SuggestionSourceApiErrorCode } from "./suggestionSourceErrorCodes";
+import type { ServiceUseApiErrorCode } from "./serviceUseErrorCodes";
 
 /**
  * Every machine-readable cause an `/api` error body may carry in `code`.
@@ -399,6 +400,7 @@ export type ApiErrorCode =
   | CompanionAppApiErrorCode // packing lists and personal settings (companionAppErrorCodes.ts)
   | LocationProviderApiErrorCode // choosing the location provider (locationProviderErrorCodes.ts)
   | SuggestionSourceApiErrorCode // calendar sources and suggestion plugins (suggestionSourceErrorCodes.ts)
+  | ServiceUseApiErrorCode // confirmed outbound uses: AI help, map matching (serviceUseErrorCodes.ts)
   /** Observed takeoff/landing (forgejo#194): a time in the future (400). */
   | "OBSERVED_TIME_IN_FUTURE"
   /** Observed takeoff/landing: more than 12 h from the schedule (422). */

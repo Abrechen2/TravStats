@@ -14,6 +14,13 @@ import {
 } from "../../schemas/externalServices";
 import { buildAccountView } from "../../services/externalServices/accountView";
 import { applyAccountUpdate, setAiConsent } from "../../services/externalServices/accountWrite";
+import {
+  listUseConsents,
+  revokeUseConsent,
+  USE_CONSENT_SERVICES,
+  type UseConsentServiceId,
+} from "../../services/externalServices/useConsent";
+import { AppError } from "../../middleware/errorHandler";
 import { testAccountService } from "../../services/externalServices/testRunner";
 
 const router = Router();
@@ -33,6 +40,37 @@ router.put(
       const { provider } = aiConsentParamsSchema.parse(req.params);
       const { consent, destination } = aiConsentBodySchema.parse(req.body);
       res.json(await setAiConsent(req.userId!, provider, consent, destination));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * "Immer erlauben" of each outbound use (owner, 2026-11-25): what this account
+ * allowed for good, and the revoke that brings the confirmation back.
+ */
+router.get(
+  "/use-consents",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.json({ consents: await listUseConsents(req.userId!) });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.delete(
+  "/use-consents/:id",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      if (!(USE_CONSENT_SERVICES as readonly string[]).includes(id)) {
+        throw new AppError("Unknown service", 404);
+      }
+      await revokeUseConsent(req.userId!, id as UseConsentServiceId);
+      res.status(204).end();
     } catch (error) {
       next(error);
     }

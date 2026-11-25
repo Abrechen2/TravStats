@@ -234,6 +234,7 @@ model User {
   travTrackStopDismissals    TravTrackStopDismissal[]
   travTrackFixedPlaces       TravTrackFixedPlace[]
   travTrackPlaceSettings     TravTrackPlaceSettings?
+  travTrackCleanups          TravTrackCleanup[]
   travTrackDiagnosticEvents  TravTrackDiagnosticEvent[]
   travTrackDiagnosticUploads TravTrackDiagnosticUpload[]
   travTrackShareSnapshots    TravTrackShareSnapshot[]
@@ -1545,6 +1546,17 @@ model AdminSettings {
   /// unconsented, never inheriting it.
   llmCustomOptIn      Boolean @default(false) @map("llm_custom_opt_in")
 
+  /// "KI fragen" for an ambiguous inbox suggestion (forgejo#439 phase 2). Off by
+  /// default: candidate names, a distance and a day leave the server.
+  aiSuggestionHelpEnabled Boolean @default(false) @map("ai_suggestion_help_enabled")
+  /// Map matching of sparse TravTrack road stretches through a router the admin
+  /// runs (Valhalla or GraphHopper, rc46 extras C2). Off by default; nothing is
+  /// preconfigured.
+  mapMatchingEnabled      Boolean @default(false) @map("map_matching_enabled")
+  mapMatchingUrl          String? @map("map_matching_url")
+  /// `valhalla` | `graphhopper`
+  mapMatchingEngine       String? @map("map_matching_engine")
+
   /// OpenAI — fixed endpoint (`services/llm/llmProvider.ts` `OPENAI_BASE_URL`),
   /// so only a key and a model are asked for; no base-URL field.
   llmOpenaiApiKey String? @map("llm_openai_api_key")
@@ -2568,6 +2580,10 @@ model TripRoute {
   /// it has a point, so no zone can be resolved at write time; the instant is
   /// derived from the place when needed, never stored beside this.
   tourStartMinute           Int?      @map("tour_start_minute")
+  /// Roadtrip taken over from TravTrack ("Als Roadtrip übernehmen"): the
+  /// recorded span, as profile days, the roadtrip page links back to.
+  trackFromDay              DateTime? @map("track_from_day") @db.Date
+  trackToDay                DateTime? @map("track_to_day") @db.Date
   /// Trip sharing (forgejo#404): the same key on every member's copy of a
   /// ROADTRIP. Null for a tour (never shared) and for a roadtrip outside a
   /// shared trip. Unique per owner, like the other shareable tables.
@@ -7133,6 +7149,33 @@ model TravTrackFixedPlace {
 /// One row per account: the home entry's radius and window, and the
 /// "hotel while booked" switch with its radius (spec
 /// 2026-11-05-travtrack-fixed-places). No home point is stored here.
+/// The optional cleanup of a sparse or noisy track (rc46 extras, part C). Raw
+/// points are never changed; this holds only the account's choices and the
+/// derived geometry, each labelled where it is drawn.
+///   kind `smooth`: light smoothing for drawing. Null bounds = the account-wide
+///     default; a span = the choice for those days (`enabled` true or false).
+///   kind `mapMatch`: a stretch matched to roads (`geometry` `[[lon, lat], …]`,
+///     `confidence` 0..1, `provider` the router's host). Deleting it is the undo.
+model TravTrackCleanup {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  kind       String
+  fromMs     BigInt?  @map("from_ms")
+  untilMs    BigInt?  @map("until_ms")
+  enabled    Boolean  @default(true)
+  geometry   Json?
+  confidence Float?
+  provider   String?
+  pointCount Int?     @map("point_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+  @@map("travtrack_cleanups")
+}
+
 model TravTrackPlaceSettings {
   userId         String   @id @map("user_id")
   homeRadiusM    Int      @default(150) @map("home_radius_m")

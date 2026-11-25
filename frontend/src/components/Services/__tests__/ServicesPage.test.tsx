@@ -25,6 +25,7 @@ vi.mock("../../../lib/api/rerouteRuns", () => ({
   adminRerouteApi: { latest: async () => null, start: vi.fn(), cancel: vi.fn() },
 }));
 vi.mock("../RoutingProviderRow", () => ({ default: () => null }));
+vi.mock("../../ExternalServices/UseConsentList", () => ({ default: () => null }));
 vi.mock("../../Settings/StravaConnectionCard", () => ({ default: () => <div>strava-card</div> }));
 vi.mock("../../Settings/PhotoJourneyNightlyScanCard", () => ({ default: () => null }));
 vi.mock("../../Settings/VisitPhotoImmichLink", () => ({ default: () => null }));
@@ -99,13 +100,13 @@ describe("ServicesPage", () => {
     act(() => resetWriteQueue());
   });
 
-  it("draws one card per catalogue entry — 34 — and asks the server's side of nobody but an admin", async () => {
+  it("draws one card per catalogue entry — 36 — and asks the server's side of nobody but an admin", async () => {
     await show(false);
     await waitFor(
-      () => expect(document.querySelectorAll("[data-service-card-id]")).toHaveLength(34),
+      () => expect(document.querySelectorAll("[data-service-card-id]")).toHaveLength(36),
       WAIT
     );
-    expect(SERVICE_CARDS).toHaveLength(34);
+    expect(SERVICE_CARDS).toHaveLength(36);
     expect(api.adminOverview).not.toHaveBeenCalled();
   });
 
@@ -480,7 +481,7 @@ describe("ServicesPage", () => {
     await show(false);
     await waitFor(() => expect(card("airlabs")).toBeTruthy(), WAIT);
     await userEvent.click(screen.getByRole("button", { name: "settingsRows:services.groups.ki" }));
-    expect(document.querySelectorAll("[data-service-card-id]:not([hidden])")).toHaveLength(5);
+    expect(document.querySelectorAll("[data-service-card-id]:not([hidden])")).toHaveLength(6);
   });
 
   it("'only active or set-up services' hides the cards nothing is set up for, and is off by default", async () => {
@@ -687,7 +688,7 @@ describe("ServicesPage", () => {
       useSettingsLevelStore.setState({ level: "standard" });
       await showSide("server");
       await waitFor(() => expect(ids().length).toBeGreaterThan(0), WAIT);
-      expect(ids()).toHaveLength(24);
+      expect(ids()).toHaveLength(26);
       for (const id of [
         "smtp",
         "push",
@@ -715,7 +716,7 @@ describe("ServicesPage", () => {
       cleanup();
       useSettingsLevelStore.setState({ level: "expert" });
       await showSide("server");
-      await waitFor(() => expect(ids()).toHaveLength(28), WAIT);
+      await waitFor(() => expect(ids()).toHaveLength(30), WAIT);
       // Nothing of the account's half on the server's page.
       expect(document.querySelector("[data-service-side='account']")).toBeNull();
     });

@@ -44,6 +44,7 @@ import { sameStationList } from "../lib/roadtrip/stationMerge";
 import { roadtripDeleteMessage } from "../lib/roadtrip/roadtripDeleteMessage";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
+import { trackSpanPath } from "./Track/roadtrip/trackSpanPath";
 import { useDomainColors } from "../hooks/useDomainColors";
 import { roadtripsApi } from "../lib/api/roadtrips";
 import { toursApi } from "../lib/api/tours";
@@ -473,6 +474,14 @@ export default function RoadtripDetailPage(): JSX.Element {
                 {" · "}
                 <Link to={`/trips/${detail.trip.id}`}>
                   {t("roadtrips:inTrip", { name: detail.trip.name })}
+                </Link>
+              </>
+            )}
+            {r.trackSpan && (
+              <>
+                {" · "}
+                <Link to={trackSpanPath(r.trackSpan)} data-testid="roadtrip-track-link">
+                  {t("roadtrips:fromTrack")}
                 </Link>
               </>
             )}

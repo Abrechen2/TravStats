@@ -1,3 +1,4 @@
+import type { UseConfirmation } from "./serviceUse";
 import type { TimeValue } from "../../shared/time/wire";
 import { api } from "./client";
 import { API_TIMEOUTS } from "../../config/constants";
@@ -314,4 +315,20 @@ export const dawarichStaysApi = {
   reject: async (id: string): Promise<void> => {
     await api.post(`${base}/${id}/reject`, {});
   },
+  /** Whether "KI fragen" may show (forgejo#439 phase 2). */
+  aiHelpAvailability: async (): Promise<{ available: boolean; reason: string | null }> =>
+    (await api.get(`${base}/ai-help/availability`)).data.data,
+  /** Advice only; a first use answers 409 CONFIRMATION_REQUIRED (`withUseConsent`). */
+  aiHelp: async (id: string, confirmation?: UseConfirmation): Promise<StayAiHelpResult> =>
+    (
+      await api.post(`${base}/${id}/ai-help`, confirmation ? { confirmation } : {}, {
+        timeout: API_TIMEOUTS.STAY_AI_HELP,
+      })
+    ).data.data,
 };
+
+/** `POST /dawarich-stays/:id/ai-help`: a ranked choice with reasons, and who answered. */
+export interface StayAiHelpResult {
+  answer: { ranking: Array<{ name: string; reason: string }> };
+  provider: { kind: string; model: string; host: string; location: "cloud" | "lan" };
+}

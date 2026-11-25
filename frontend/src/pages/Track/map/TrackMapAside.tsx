@@ -1,3 +1,5 @@
+import TrackDayCleanup from "../cleanup/TrackDayCleanup";
+import TrackSpanRoadtrip from "../cleanup/TrackSpanRoadtrip";
 import { useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import type { JSX, ReactNode } from "react";
@@ -142,6 +144,7 @@ export default function TrackMapAside({
           </button>
         ))}
       </div>
+      <TrackSpanRoadtrip span={span} />
       {long && (
         <p className="t-caption" data-testid="track-range-days-note">
           {t("track:map.rangeNoTimeline")}
@@ -168,6 +171,9 @@ export default function TrackMapAside({
           {multi && <h2 className="t-card-title">{formatDayLong(r.date, i18n.language)}</h2>}
           {multi && (
             <TrackCoverageBar coverage={r.day.coverage} zone={r.day.zone} context={r.day.context} />
+          )}
+          {tab === "legs" && (
+            <TrackDayCleanup day={r.day} onChanged={() => onStopPlaceChanged?.(r.date)} />
           )}
           {tab === "legs" ? (
             (r.day.legs?.length ?? 0) + (r.day.stops?.length ?? 0) > 0 && (

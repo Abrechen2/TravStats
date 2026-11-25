@@ -270,3 +270,86 @@ registry.registerPath({
     404: failure,
   },
 });
+
+// ---- "KI fragen" (forgejo#439 phase 2) -----------------------------------------
+const disclosure = z
+  .object({
+    serviceId: z.enum(["aiSuggestionHelp", "mapMatching"]),
+    host: z.string(),
+    provider: z.string(),
+    location: z.enum(["cloud", "lan"]),
+    fields: z.array(z.string()),
+    pointCount: z.number().int(),
+    privacyZonesApplied: z.boolean().nullable(),
+  })
+  .describe("What the request WOULD send; nothing was sent");
+registry.registerPath({
+  method: "get",
+  path: "/dawarich-stays/ai-help/availability",
+  tags,
+  summary: "Whether the 'KI fragen' button may show",
+  description:
+    "Available only while the admin switched the catalogue entry `aiSuggestionHelp` on (off by default), the internet switch is on and a model is usable for the account (a local Ollama counts). `reason` names the first gate that refuses.",
+  responses: {
+    200: response(
+      z.object({
+        available: z.boolean(),
+        reason: z
+          .enum(["serviceOff", "internetOff", "noProvider"])
+          .nullable()
+          .describe("Null while available"),
+      })
+    ),
+  },
+});
+registry.registerPath({
+  method: "post",
+  path: "/dawarich-stays/{id}/ai-help",
+  tags,
+  summary: "Ask the model which candidate an ambiguous stay was (advice only)",
+  description:
+    "Sends the candidate names, the distance to the nearest candidate, the dwell, names of the account's places within 1 km and the local day — never a coordinate or a point. Answers a ranked choice with a reason; nothing is written. Without a confirmation for the current target (`provider@host`) the answer is 409 `CONFIRMATION_REQUIRED` with `disclosure`, and nothing is sent; `mode: always` stores the confirmation for that target. Failures answer `AI_HELP_FAILED` with `reason`: 409 for setup (`serviceOff`, `internetOff`, `noProvider`, `notAmbiguous`, `providerConsent`, `providerOff`), 502 for `unreachable`, `providerError`, `badAnswer`, 504 for `timeout`.",
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            confirmation: z
+              .object({ mode: z.enum(["once", "always"]), target: z.string() })
+              .optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: response(
+      z.object({
+        answer: z.object({
+          ranking: z.array(z.object({ name: z.string(), reason: z.string() })),
+        }),
+        provider: z.object({
+          kind: z.string(),
+          model: z.string(),
+          host: z.string(),
+          location: z.enum(["cloud", "lan"]),
+        }),
+      })
+    ),
+    409: {
+      description: "Confirmation required (with `disclosure`) or a setup refusal",
+      content: {
+        "application/json": {
+          schema: z.object({
+            error: z.string(),
+            code: z.string(),
+            disclosure: disclosure.optional(),
+          }),
+        },
+      },
+    },
+    502: failure,
+    504: failure,
+  },
+});

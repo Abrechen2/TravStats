@@ -27,6 +27,19 @@ export const createRoadtripSchema = z.object({
   startOdometerKm: odometer.optional(),
   endOdometerKm: odometer.optional(),
   tripId: z.string().uuid().nullish(),
+  /**
+   * "Als Roadtrip übernehmen" (rc46 extras A): the TravTrack days the roadtrip
+   * was taken from, on the profile clock, both inclusive — the roadtrip page
+   * links back to them.
+   */
+  trackSpan: z
+    .object({
+      fromDay: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      toDay: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    })
+    .strict()
+    .refine((s) => s.fromDay <= s.toDay, { message: "fromDay must not be after toDay" })
+    .nullish(),
   /** Private or business; omitted: the trip's category decides (spec 2026-11-22-private-business-purpose). */
   purpose: purposeField,
 });

@@ -695,6 +695,14 @@
       "vesselData": {
         "n": "Wikidata",
         "p": "Ship MMSI and IMO"
+      },
+      "aiSuggestionHelp": {
+        "n": "AI help for unclear suggestions",
+        "p": "\"Ask the AI\" for stays with several possible places"
+      },
+      "mapMatching": {
+        "n": "Snap to roads",
+        "p": "Lay sparse TravTrack stretches onto the road through your own router"
       }
     },
     "rows": {
