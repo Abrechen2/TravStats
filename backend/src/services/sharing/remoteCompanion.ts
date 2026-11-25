@@ -8,7 +8,8 @@
  * order folded) only ever produces a question — "Ist das <Name>?" — answered with link or
  * not-link; "not the same" is remembered (`notSameAs`) so it is not asked again.
  */
-import { prisma, type DbTransaction } from "../../db";
+import { expectingUniqueConflict, prisma, type DbTransaction } from "../../db";
+import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import { mayOfferTripTo } from "../friends/authz";
 import {
@@ -138,13 +139,27 @@ export async function linkRemoteCompanion(
       { companionId: other.id, companionName: other.displayName }
     );
   }
-  const updated = await prisma.companion.update({
-    where: { id: companion.id },
-    data: {
-      linkedRemoteId: remoteId,
-      notSameAs: companion.notSameAs.filter((k) => k !== remoteKey(remoteId)),
-    },
-  });
+  let updated;
+  try {
+    updated = await expectingUniqueConflict("Companion", () =>
+      prisma.companion.update({
+        where: { id: companion.id },
+        data: {
+          linkedRemoteId: remoteId,
+          notSameAs: companion.notSameAs.filter((k) => k !== remoteKey(remoteId)),
+        },
+      })
+    );
+  } catch (error) {
+    // Two links at once: the unique index decides, and the loser hears what the check says.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")
+      throw new AppError(
+        "Another companion is already linked to that person",
+        409,
+        "SHARE_COMPANION_ALREADY_LINKED"
+      );
+    throw error;
+  }
   return { id: updated.id, name: updated.displayName, remoteId };
 }
 
