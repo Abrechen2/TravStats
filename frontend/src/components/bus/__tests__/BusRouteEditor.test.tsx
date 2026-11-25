@@ -29,7 +29,12 @@ vi.mock("../../../hooks/useDomainColors", () => ({
 const setManualRoute = vi.hoisted(() => vi.fn());
 vi.mock("../../../lib/api/bus", () => ({ busApi: { setManualRoute } }));
 
-import { BusRouteEditor, editorStartLine } from "../BusRouteEditor";
+import {
+  BUS_EDITOR_HANDLES,
+  BusRouteEditor,
+  editorBounds,
+  editorStartLine,
+} from "../BusRouteEditor";
 
 const ride = { ...rideFixture(), geometry: null, geometrySource: "straight" as const };
 const clickSegment = (index: number, coordinate: [number, number]) => {
@@ -64,6 +69,22 @@ describe("BusRouteEditor (GitHub #409)", () => {
       [ride.arrLon, ride.arrLat],
     ];
     expect(editorStartLine({ ...ride, geometry: stored, geometrySource: "road" })).toEqual(stored);
+  });
+
+  it("a short road line keeps few handles and is framed at its own size, so the line stays visible", () => {
+    // A 5 km city ride with a 200-point road line (rc46 UAT: only circles, no line).
+    const road: Array<[number, number]> = Array.from({ length: 200 }, (_, i) => {
+      const t = i / 199;
+      return [11.55 + 0.05 * t + 0.004 * Math.sin(t * 30), 48.142 + 0.028 * t];
+    });
+    const line = editorStartLine({ ...ride, geometry: road, geometrySource: "road" });
+    expect(line.length).toBeLessThanOrEqual(BUS_EDITOR_HANDLES);
+    const [[w, s], [e, n]] = editorBounds(line);
+    // Framed around the line (a few km), not padded by 0.3° (~30 km) on each side.
+    expect(e - w).toBeLessThan(0.1);
+    expect(n - s).toBeLessThan(0.1);
+    expect(w).toBeLessThan(11.55);
+    expect(e).toBeGreaterThan(11.6);
   });
 
   it("offers no save until a via point was added, then sends the whole line with the version", async () => {

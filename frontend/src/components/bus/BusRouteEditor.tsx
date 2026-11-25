@@ -22,7 +22,6 @@ import {
   type LonLat,
   type RouteEditorState,
 } from "../Cruise/routeEditorState";
-import { railBounds } from "../rail/RailRouteMap";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -37,6 +36,34 @@ const KNOWN_ERRORS = new Set(["BUS_ROUTE_INVALID", "BUS_ROUTE_NOT_ANCHORED", "VE
 /** Degrees per arrow press — about 1 km; a tenth of that with Shift held. */
 const NUDGE_STEP_DEG = 0.01;
 
+/**
+ * Handles a stored road line starts with. The shared budget (25) suits a sea
+ * lane hundreds of km long; a coach ride's road line is often a few km, and 25
+ * handles at that size covered the line completely — the editor showed only
+ * circles and "click the line" could not be followed (rc46 UAT).
+ */
+export const BUS_EDITOR_HANDLES = 10;
+
+/** A tenth of the line's extent on each side, at least this much (≈ 200 m). */
+const MIN_PAD_DEG = 0.002;
+
+/**
+ * The camera frame of the line being edited: the line's own extent plus a
+ * margin relative to it. The detail maps pad a fixed 0.3° (≈ 30 km), which
+ * shrank a city ride to a dot under its handles.
+ */
+export function editorBounds(line: readonly LonLat[]): [[number, number], [number, number]] {
+  const lons = line.map((p) => p[0]);
+  const lats = line.map((p) => p[1]);
+  const [w, e, s, n] = [Math.min(...lons), Math.max(...lons), Math.min(...lats), Math.max(...lats)];
+  const padLon = Math.max((e - w) * 0.1, MIN_PAD_DEG);
+  const padLat = Math.max((n - s) * 0.1, MIN_PAD_DEG);
+  return [
+    [w - padLon, s - padLat],
+    [e + padLon, n + padLat],
+  ];
+}
+
 /** The line the editor starts from: the stored one, else the chord between the stops. */
 export function editorStartLine(ride: BusJourney): LonLat[] {
   const ends: LonLat[] = [
@@ -45,7 +72,10 @@ export function editorStartLine(ride: BusJourney): LonLat[] {
   ];
   const stored = ride.geometry;
   if (ride.geometrySource !== "straight" && stored && stored.length >= 3)
-    return simplifyForEditing(stored.map(([lon, lat]) => [lon, lat] as LonLat));
+    return simplifyForEditing(
+      stored.map(([lon, lat]) => [lon, lat] as LonLat),
+      BUS_EDITOR_HANDLES
+    );
   return ends;
 }
 
@@ -133,7 +163,7 @@ export function BusRouteEditor({ ride, onSaved, onClose }: Props): JSX.Element {
         <MapGL
           reuseMaps={reuseMapsEnabled()}
           initialViewState={{
-            bounds: railBounds(state.original.map(([lon, lat]) => [lon, lat])),
+            bounds: editorBounds(state.original),
             fitBoundsOptions: { padding: 40 },
           }}
           mapStyle={mapStyle}
