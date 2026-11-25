@@ -320,6 +320,7 @@
     "endZone": "End time zone",
     "stops": "Port calls",
     "legs": "Sea legs",
+    "legRoutes": "Drawn sea routes",
     "name": "Name",
     "mode": "Mode of travel",
     "vehicle": "Vehicle",

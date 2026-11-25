@@ -320,6 +320,7 @@
     "endZone": "Zeitzone Ende",
     "stops": "Hafenstopps",
     "legs": "Seestrecken",
+    "legRoutes": "Gezeichnete Seewege",
     "name": "Name",
     "mode": "Fortbewegung",
     "vehicle": "Fahrzeug",

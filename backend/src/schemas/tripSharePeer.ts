@@ -50,6 +50,8 @@ export const TRIP_SHARE_FEATURES = [
   "plans",
   // Achievements over a connection (2026-11-03): achievements-read, gated by the `achievements` switch.
   "achievements",
+  // Hand-drawn cruise lines as a cruise fact (2026-11-24): `legRoutes` in entries and changes.
+  "leg-routes",
 ] as const;
 export type TripShareFeature = (typeof TRIP_SHARE_FEATURES)[number];
 

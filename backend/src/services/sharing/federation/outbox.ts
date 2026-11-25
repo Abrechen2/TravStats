@@ -122,9 +122,41 @@ async function stillSendable(id: string): Promise<boolean> {
   return !!fresh && !fresh.parkedAt && !isHeld(fresh.member) && (await stillReceives(fresh));
 }
 
-function messageOf(row: Row, seq: number): GroupMessage {
+/** The cruise fact a peer reads only when its ping names `leg-routes` (2026-11-24). */
+const LEG_ROUTES = "legRoutes";
+
+/**
+ * The payload without hand-drawn cruise lines, for a peer from before them: its strict shapes
+ * would refuse the whole message. Every `legRoutes` key goes, and a change list loses the
+ * `legRoutes` change; null when nothing is left to say.
+ */
+export function withoutLegRoutes(payload: unknown): unknown {
+  const strip = (value: unknown): unknown => {
+    if (Array.isArray(value))
+      return value
+        .filter(
+          (v) => !(v && typeof v === "object" && (v as { field?: unknown }).field === LEG_ROUTES)
+        )
+        .map(strip);
+    if (value && typeof value === "object")
+      return Object.fromEntries(
+        Object.entries(value)
+          .filter(([k]) => k !== LEG_ROUTES)
+          .map(([k, v]) => [k, strip(v)])
+      );
+    return value;
+  };
+  const stripped = strip(payload) as Record<string, unknown>;
+  const changes = stripped.changes;
+  return Array.isArray(changes) && changes.length === 0 ? null : stripped;
+}
+
+const mentionsLegRoutes = (payload: unknown): boolean =>
+  JSON.stringify(payload ?? null).includes(`"${LEG_ROUTES}"`);
+
+function messageOf(row: Row, seq: number, payload: unknown = row.payload): GroupMessage {
   return {
-    ...(row.payload as Record<string, unknown>),
+    ...(payload as Record<string, unknown>),
     kind: row.kind,
     messageId: row.id,
     sentAt: new Date().toISOString(),
@@ -280,11 +312,29 @@ async function deliverStream(
         continue;
       }
     }
+    // Hand-drawn cruise lines go only to a server that reads them; an older one gets the rest.
+    let payload: unknown = row.payload;
+    if (mentionsLegRoutes(payload)) {
+      let reads: boolean;
+      try {
+        reads = await peerSupports(peerOrigin, "leg-routes");
+      } catch (error) {
+        await failed(row, kindOf(error), now);
+        run.failed++;
+        return;
+      }
+      if (!reads) payload = withoutLegRoutes(payload);
+      if (payload === null) {
+        await prisma.tripShareOutbox.delete({ where: { id: row.id } });
+        run.dropped++;
+        continue;
+      }
+    }
     try {
       await sendOnStream(
         groupId,
         peerOrigin,
-        (seq) => messageOf(row, seq),
+        (seq) => messageOf(row, seq, payload),
         transport,
         (tx, ack) => delivered(tx, row, ack, now),
         () => stillSendable(row.id)

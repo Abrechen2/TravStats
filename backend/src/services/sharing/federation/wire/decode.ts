@@ -64,10 +64,12 @@ async function resolver(c: DbTransaction, entries: readonly WireEntry[]): Promis
   const f = entries.map((e) => e.facts);
   const stops = f.flatMap((x) => (Array.isArray(x.stops) ? (x.stops as Facts[]) : []));
   const legs = f.flatMap((x) => (Array.isArray(x.legs) ? (x.legs as Facts[]) : []));
+  const routes = f.flatMap((x) => (Array.isArray(x.legRoutes) ? (x.legRoutes as Facts[]) : []));
   const portRefs = [
     ...f.flatMap((x) => [x.departurePort, x.arrivalPort]),
     ...stops.map((s) => s.port),
     ...legs.flatMap((l) => [l.fromPort, l.toPort]),
+    ...routes.flatMap((l) => [l.fromPort, l.toPort]),
   ] as (PortRef | null)[];
   const stations = f.flatMap((x) => [x.depStation, x.arrStation]) as (StationRef | null)[];
   const airports = f.flatMap((x) => [x.pickupAirport, x.returnAirport]) as (AirportRef | null)[];
@@ -194,6 +196,8 @@ const DECODERS: Readonly<
     arrivalPort: ["arrivalPortId", (v, r) => r.port(v as PortRef | null)],
     stops: ["stops", (v, r) => stopsOf(v as Facts[], r)],
     legs: ["legs", (v, r) => legsOf(v as Facts[], r)],
+    // A line whose ports this catalogue cannot match cannot be anchored here: left out.
+    legRoutes: ["legRoutes", (v, r) => (Array.isArray(v) ? legsOf(v as Facts[], r) : null)],
   },
   rail: {
     depStation: ["depStationId", (v, r) => r.station(v as StationRef | null)],
