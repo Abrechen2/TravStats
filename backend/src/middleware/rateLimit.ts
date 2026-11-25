@@ -419,6 +419,22 @@ function humanRateLimitHandler(message: string) {
 }
 
 /**
+ * The recovery-key reveal and confirm calls (backup settings). Strict and per
+ * account: a reveal re-proves the password, and a confirm compares four
+ * characters of the key, so both are guesses an attacker with a stolen session
+ * would want many of. Shared by both calls on purpose — the honest flow needs
+ * one reveal and one or two confirms.
+ */
+export const recoveryKeyLimiter = rateLimit({
+  windowMs: RATE_LIMITS.RECOVERY_KEY_WINDOW_MS,
+  max: RATE_LIMITS.RECOVERY_KEY_MAX,
+  handler: humanRateLimitHandler("Too many recovery-key attempts, please try again later"),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Rate limiter for authentication endpoints (login, register)
  * Protects against brute-force attacks and mass registration
  * Allows 10 attempts per 15 minutes per IP

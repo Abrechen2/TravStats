@@ -105,7 +105,12 @@ registry.registerPath({
     "or RESTORE_ARCHIVE_UNREADABLE (status 400) and nothing restored, and an archive " +
     "whose encrypted values were written with another instance's key fails it with " +
     "RESTORE_ENCRYPTION_KEY_MISMATCH (409) until the caller repeats the request with " +
-    "acceptEncryptionKeyChange. An archive written by a newer version fails it with " +
+    "acceptEncryptionKeyChange, or with `recoveryKey` — the recovery key of the instance that " +
+    "wrote the archive, which is checked against the archive's fingerprint (RESTORE_RECOVERY_KEY_WRONG, " +
+    "400, nothing restored) and installed as this instance's key before the dump replays, so the " +
+    "restored credentials stay readable. A malformed key answers RESTORE_RECOVERY_KEY_INVALID (400) " +
+    "synchronously; an instance whose key the ENCRYPTION_KEY variable pins fails the job with " +
+    "RESTORE_RECOVERY_KEY_ENV_PINNED (409). An archive written by a newer version fails it with " +
     "RESTORE_ARCHIVE_NEWER (409), one without a usable migration history with " +
     "RESTORE_ARCHIVE_UNVERSIONED or RESTORE_ARCHIVE_FAILED_MIGRATION (400). An archive " +
     "from an older version is replayed and migrated to this version in one transaction; " +

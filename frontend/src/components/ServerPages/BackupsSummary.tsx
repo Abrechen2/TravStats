@@ -8,6 +8,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useRowCopy } from "../Settings/rowCopy";
 import { SettingItem, StatusValue } from "../ui/settings";
 import type { Backup } from "../Admin/backupTypes";
+import RecoveryKeyRow from "../RecoveryKey/RecoveryKeyRow";
 
 const formatSize = (bytes: string): string => {
   const size = parseInt(bytes, 10);
@@ -65,6 +66,7 @@ export default function BackupsSummary({ backups }: { backups: Backup[] | null }
           and never the key folder that decrypts stored credentials. */}
       <SettingItem title={machine.title} sub={machine.sub} scope="allAccounts" />
       <SettingItem title={secrets.title} sub={secrets.sub} scope="allAccounts" />
+      <RecoveryKeyRow />
       {schedule ? (
         <SettingItem
           title={auto.title}

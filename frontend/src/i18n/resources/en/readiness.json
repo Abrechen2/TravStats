@@ -59,6 +59,11 @@
       "title": "Copy off site",
       "consequence": "A backup on the same machine does not survive losing that machine."
     },
+    "adminRecoveryKey": {
+      "title": "Recovery key not saved",
+      "consequence": "Your backups hold API keys, tokens and the SMTP password only in encrypted form. Without this server's recovery key they cannot be read after the server is lost.",
+      "action": "Save the key"
+    },
     "adminProviderKeys": {
       "title": "Data service keys",
       "consequence": "Without a valid key, flight search and live data return nothing, and nobody notices."

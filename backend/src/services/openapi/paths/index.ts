@@ -127,6 +127,7 @@ import "./passportOverrides";
 import "./jobs";
 import "./placeImportResolve";
 import "./timeMigration";
+import "./recoveryKey";
 import "./federationConnectionFile";
 import "./federationIdentity";
 import "./sync";

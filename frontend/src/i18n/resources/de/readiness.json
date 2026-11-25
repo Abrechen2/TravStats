@@ -59,6 +59,11 @@
       "title": "Kopie außer Haus",
       "consequence": "Eine Sicherung auf demselben Gerät übersteht dessen Verlust nicht."
     },
+    "adminRecoveryKey": {
+      "title": "Wiederherstellungsschlüssel nicht gesichert",
+      "consequence": "Deine Sicherungen enthalten API-Schlüssel, Tokens und das SMTP-Passwort nur verschlüsselt. Ohne den Wiederherstellungsschlüssel dieses Servers sind sie nach einem Serververlust unlesbar.",
+      "action": "Schlüssel sichern"
+    },
     "adminProviderKeys": {
       "title": "Schlüssel der Datendienste",
       "consequence": "Ohne gültigen Schlüssel liefern Flugsuche und Live-Daten nichts, ohne dass es auffällt."

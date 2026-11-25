@@ -14,7 +14,11 @@
  */
 import crypto from "crypto";
 
-import { deriveInstanceSecret, deriveSecretFrom } from "../../utils/encryptionKey";
+import {
+  deriveInstanceSecret,
+  deriveSecretFrom,
+  encryptionKeyGeneration,
+} from "../../utils/encryptionKey";
 import type { KeyedObservation } from "./types";
 
 /** The HKDF label of the evidence secret. Changing it re-keys every stored digest. */
@@ -33,10 +37,16 @@ export function evidenceSecretFrom(instanceKeyHex: string): Buffer {
   return deriveSecretFrom(instanceKeyHex, EVIDENCE_SECRET_LABEL);
 }
 
-let instanceSecret: Buffer | null = null;
+let instanceSecret: { secret: Buffer; generation: number } | null = null;
 function evidenceSecret(): Buffer {
-  instanceSecret ??= deriveInstanceSecret(EVIDENCE_SECRET_LABEL);
-  return instanceSecret;
+  // Rebuilt after a restore installed another instance key (recovery key).
+  if (!instanceSecret || instanceSecret.generation !== encryptionKeyGeneration()) {
+    instanceSecret = {
+      secret: deriveInstanceSecret(EVIDENCE_SECRET_LABEL),
+      generation: encryptionKeyGeneration(),
+    };
+  }
+  return instanceSecret.secret;
 }
 
 const hmac = (secret: Buffer, parts: readonly (string | number)[]) =>

@@ -21,6 +21,7 @@
     "admin/publicUrlCheck.ts",
     "admin/rerouteRuns.ts",
     "admin/push.ts",
+    "admin/recoveryKey.ts",
     "admin/smtp.ts",
     "admin/strava.ts",
     "admin/system.ts",
