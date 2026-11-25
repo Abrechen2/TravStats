@@ -147,8 +147,7 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
                 <LinkExistingPanel
                   otherName={`${offer.from.displayName} (${offer.from.origin})`}
                   loadCandidates={() => sharingLinkApi.offerCandidates(offer.id)}
-                  // The caller's own trips are always listed, so a trip is always named here.
-                  preview={(tripId) => sharingLinkApi.offerPreview(offer.id, tripId ?? "")}
+                  preview={(tripId) => sharingLinkApi.offerPreview(offer.id, tripId)}
                   link={(tripId, decision) => sharingLinkApi.offerLink(offer.id, tripId, decision)}
                   failure={(err, fallback) => remoteSharingError(err, fallback)}
                   onLinked={(result, tripId) => {

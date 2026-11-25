@@ -3,7 +3,7 @@ import { api } from "./client";
 import type {
   LinkCandidates,
   LinkDecision,
-  LinkPreview,
+  LinkPreviewAnswer,
   LinkResult,
 } from "../../types/sharingLink";
 
@@ -26,14 +26,13 @@ export const sharingLinkApi = {
         params: { userId },
       })
     ).data.data,
-  /** `targetTripId` null: before the other side agreed, the server picks the candidate. */
   preview: async (
     tripId: string,
     userId: string,
-    targetTripId: string | null
-  ): Promise<LinkPreview> =>
+    targetTripId: string
+  ): Promise<LinkPreviewAnswer> =>
     (
-      await api.post<Envelope<LinkPreview>>(`/sharing/trips/${enc(tripId)}/link-preview`, {
+      await api.post<Envelope<LinkPreviewAnswer>>(`/sharing/trips/${enc(tripId)}/link-preview`, {
         userId,
         targetTripId,
       })
@@ -58,9 +57,9 @@ export const sharingLinkApi = {
         `/sharing/remote/offers/${enc(offerId)}/link-candidates`
       )
     ).data.data,
-  offerPreview: async (offerId: string, tripId: string): Promise<LinkPreview> =>
+  offerPreview: async (offerId: string, tripId: string): Promise<LinkPreviewAnswer> =>
     (
-      await api.post<Envelope<LinkPreview>>(
+      await api.post<Envelope<LinkPreviewAnswer>>(
         `/sharing/remote/offers/${enc(offerId)}/link-preview`,
         { tripId },
         ACROSS

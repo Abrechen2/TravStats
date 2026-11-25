@@ -12,7 +12,7 @@ const candidate = {
   reason: "period" as const,
 };
 const dryRun: LinkPreview = {
-  redacted: false,
+  access: "full",
   here: { id: "t1", name: "Portugal 2030", startDay: "2030-06-01", endDay: "2030-06-10" },
   there: { id: "t2", name: "Portugal", startDay: "2030-06-01", endDay: "2030-06-10" },
   counts: { matched: 2, onlyHere: 0, onlyThere: 1, conflicting: 1 },
@@ -33,7 +33,7 @@ const dryRun: LinkPreview = {
 function setup(overrides: Partial<Parameters<typeof LinkExistingPanel>[0]> = {}) {
   const props = {
     otherName: "Ben",
-    loadCandidates: vi.fn().mockResolvedValue({ candidates: [candidate], possibleCopy: true }),
+    loadCandidates: vi.fn().mockResolvedValue({ access: "full", candidates: [candidate] }),
     preview: vi.fn().mockResolvedValue(dryRun),
     link: vi.fn().mockResolvedValue({ linked: 2 }),
     failure: vi.fn((_e: unknown, key: string) => ({ key })),
@@ -66,32 +66,30 @@ describe("LinkExistingPanel — link an existing copy (forgejo#440)", () => {
   });
 
   it("no matching trip on the other side says so", async () => {
-    setup({ loadCandidates: vi.fn().mockResolvedValue({ candidates: [], possibleCopy: false }) });
+    setup({ loadCandidates: vi.fn().mockResolvedValue({ access: "full", candidates: [] }) });
     expect(await screen.findByText("sharing:link.noCandidates")).toBeInTheDocument();
   });
 });
 
 describe("LinkExistingPanel — before the other side agreed", () => {
-  it("lists no trip of theirs, compares without naming one, shows aggregates only and no link button", async () => {
+  it("says the other side must accept first and shows no trip, count or link button", async () => {
     const props = setup({
-      loadCandidates: vi.fn().mockResolvedValue({ candidates: [], possibleCopy: true }),
-      preview: vi.fn().mockResolvedValue({
-        ...dryRun,
-        redacted: true,
-        there: { id: "", name: "", startDay: null, endDay: null },
-        counts: { ...dryRun.counts, onlyThere: null },
-        byType: [],
-        matched: [],
-        onlyThere: [],
-      }),
+      loadCandidates: vi.fn().mockResolvedValue({ access: "awaitingConsent" }),
     });
-    expect(await screen.findByTestId("link-possible-copy")).toBeInTheDocument();
+    expect(await screen.findByTestId("link-awaiting-consent")).toHaveTextContent(
+      "sharing:link.awaitingConsent"
+    );
     expect(screen.queryByRole("radio")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "sharing:link.compare" }));
-    await waitFor(() => expect(props.preview).toHaveBeenCalledWith(null));
-    expect(await screen.findByTestId("link-redacted")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "sharing:link.compare" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "sharing:link.confirm" })).toBeNull();
+    expect(props.preview).not.toHaveBeenCalled();
+  });
+
+  it("an awaiting answer to the comparison shows the same sentence, no dry run", async () => {
+    setup({ preview: vi.fn().mockResolvedValue({ access: "awaitingConsent" }) });
+    fireEvent.click(await screen.findByRole("button", { name: "sharing:link.compare" }));
+    expect(await screen.findByTestId("link-awaiting-consent")).toBeInTheDocument();
     expect(screen.queryByText(/Pensão Amor/)).toBeNull();
-    expect(screen.queryByText(/TP571/)).toBeNull();
     expect(screen.queryByRole("button", { name: "sharing:link.confirm" })).toBeNull();
   });
 });

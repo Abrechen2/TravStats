@@ -9,6 +9,7 @@ import type {
   LinkDecision,
   LinkEntryView,
   LinkPreview,
+  LinkPreviewAnswer,
   LinkResult,
 } from "../../types/sharingLink";
 import { Button } from "../ui";
@@ -27,8 +28,7 @@ interface Props {
   /** Who holds the other copy, for the copy ("Ben", "Anna (b.example)"). */
   otherName: string;
   loadCandidates: () => Promise<LinkCandidates>;
-  /** `null`: no trip of theirs may be named yet; the server compares with its best candidate. */
-  preview: (tripId: string | null) => Promise<LinkPreview>;
+  preview: (tripId: string) => Promise<LinkPreviewAnswer>;
   link: (tripId: string, decision: LinkDecision) => Promise<LinkResult>;
   failure: (err: unknown, fallbackKey: string) => LinkFailure;
   onLinked: (result: LinkResult, tripId: string) => void;
@@ -47,7 +47,8 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
   const { otherName, loadCandidates, preview, link, failure, onLinked } = props;
   const { t } = useTranslation(["sharing"]);
   const [candidates, setCandidates] = useState<LinkCandidate[] | null>(null);
-  const [possibleCopy, setPossibleCopy] = useState(false);
+  // The other side has not accepted sharing yet: nothing of theirs is shown (forgejo#440 review).
+  const [awaiting, setAwaiting] = useState(false);
   const [tripId, setTripId] = useState("");
   const [dryRun, setDryRun] = useState<LinkPreview | null>(null);
   const [decision, setDecision] = useState<LinkDecision>("both");
@@ -59,8 +60,12 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
     loadCandidates()
       .then((found) => {
         if (!live) return;
+        if (found.access === "awaitingConsent") {
+          setAwaiting(true);
+          setCandidates([]);
+          return;
+        }
         setCandidates(found.candidates);
-        setPossibleCopy(found.possibleCopy);
         setTripId(found.candidates[0]?.id ?? "");
       })
       .catch((err: unknown) => {
@@ -91,7 +96,11 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
   };
 
   const compare = () =>
-    run(async () => setDryRun(await preview(tripId || null)), `${NS}.errors.previewFailed`);
+    run(async () => {
+      const answer = await preview(tripId);
+      if (answer.access === "awaitingConsent") setAwaiting(true);
+      else setDryRun(answer);
+    }, `${NS}.errors.previewFailed`);
   const confirm = () =>
     run(async () => onLinked(await link(tripId, decision), tripId), `${NS}.errors.linkFailed`);
 
@@ -114,20 +123,15 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
     <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
       <p className="text-sm">{t(`${NS}.intro`, { name: otherName })}</p>
       {candidates === null && <p className="text-sm">{t(`${NS}.loading`)}</p>}
-      {candidates?.length === 0 && !possibleCopy && !error && (
+      {awaiting && (
+        <p className="text-sm" role="status" data-testid="link-awaiting-consent">
+          {t(`${NS}.awaitingConsent`)}
+        </p>
+      )}
+      {candidates?.length === 0 && !awaiting && !error && (
         <p className="text-sm">{t(`${NS}.noCandidates`, { name: otherName })}</p>
       )}
-      {candidates?.length === 0 && possibleCopy && !dryRun && (
-        <div className="flex flex-col text-sm" style={{ gap: "var(--ts-space-xs)" }}>
-          <p data-testid="link-possible-copy">{t(`${NS}.possibleCopy`, { name: otherName })}</p>
-          <span>
-            <Button disabled={busy} onClick={() => void compare()}>
-              {t(`${NS}.compare`)}
-            </Button>
-          </span>
-        </div>
-      )}
-      {candidates && candidates.length > 0 && (
+      {!awaiting && candidates && candidates.length > 0 && (
         <fieldset className="flex flex-col text-sm" style={{ gap: "var(--ts-space-xs)" }}>
           <legend className="t-caption">{t(`${NS}.pickTrip`, { name: otherName })}</legend>
           {candidates.map((c) => (
@@ -153,19 +157,14 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
           </span>
         </fieldset>
       )}
-      {dryRun && (
+      {dryRun && !awaiting && (
         <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
           <p className="text-sm" role="status">
-            {t(dryRun.redacted ? `${NS}.summaryRedacted` : `${NS}.summary`, {
+            {t(`${NS}.summary`, {
               ...dryRun.counts,
               name: otherName,
             })}
           </p>
-          {dryRun.redacted && (
-            <p className="text-sm" data-testid="link-redacted" style={{ color: "var(--ts-warn)" }}>
-              {t(`${NS}.redacted`, { name: otherName })}
-            </p>
-          )}
           {dryRun.byType.length > 0 && (
             <ul className="text-sm">
               {dryRun.byType.map((b) => (
@@ -201,31 +200,27 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
           {entries(t(`${NS}.onlyHereTitle`), dryRun.onlyHere)}
           {entries(t(`${NS}.onlyThereTitle`, { name: otherName }), dryRun.onlyThere)}
           <p className="t-caption">{t(`${NS}.nothingCreated`)}</p>
-          {!dryRun.redacted && (
-            <>
-              <fieldset className="flex flex-col text-sm" style={{ gap: "var(--ts-space-xs)" }}>
-                <legend className="t-caption">{t(`${NS}.decisionTitle`)}</legend>
-                {DECISIONS.map((d) => (
-                  <label key={d} className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="link-decision"
-                      value={d}
-                      checked={decision === d}
-                      disabled={busy}
-                      onChange={() => setDecision(d)}
-                    />
-                    {t(`${NS}.decision.${d}`, { name: otherName })}
-                  </label>
-                ))}
-              </fieldset>
-              <span>
-                <Button variant="primary" disabled={busy} onClick={() => void confirm()}>
-                  {t(`${NS}.confirm`)}
-                </Button>
-              </span>
-            </>
-          )}
+          <fieldset className="flex flex-col text-sm" style={{ gap: "var(--ts-space-xs)" }}>
+            <legend className="t-caption">{t(`${NS}.decisionTitle`)}</legend>
+            {DECISIONS.map((d) => (
+              <label key={d} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="link-decision"
+                  value={d}
+                  checked={decision === d}
+                  disabled={busy}
+                  onChange={() => setDecision(d)}
+                />
+                {t(`${NS}.decision.${d}`, { name: otherName })}
+              </label>
+            ))}
+          </fieldset>
+          <span>
+            <Button variant="primary" disabled={busy} onClick={() => void confirm()}>
+              {t(`${NS}.confirm`)}
+            </Button>
+          </span>
         </div>
       )}
       {error && (

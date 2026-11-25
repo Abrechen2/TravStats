@@ -98,7 +98,8 @@ it("the dry run reads the offered entries from A and names every difference, wri
   ]);
 
   const preview = await b.offerLink.previewOfferLink(ben, offer.id, bensTrip.id);
-  expect(preview.redacted).toBe(false);
+  expect(preview.access).toBe("full");
+  if (preview.access !== "full") throw new Error("expected the full dry run");
   expect(preview.byType).toEqual(
     expect.arrayContaining([
       { entity: "lodgingStay", here: 2, there: 1, matched: 1, differing: 0 },
@@ -148,7 +149,7 @@ it("'mine' sends Ben's departure to the home as an ordinary fact update", async 
   expect(homeFlight.departureTime.toISOString()).toBe("2030-06-01T08:30:00.000Z");
 });
 
-it("before the consent with Anna is accepted, the dry run is counts only", async () => {
+it("before the consent with Anna is accepted, the dry run holds nothing of hers", async () => {
   const { ben, bensTrip, offer } = await setup();
   const remoteIds = (
     await b.prisma.remoteShareAccount.findMany({ where: { userId: ben }, select: { id: true } })
@@ -160,13 +161,7 @@ it("before the consent with Anna is accepted, the dry run is counts only", async
     data: { status: "pending" },
   });
   const preview = await b.offerLink.previewOfferLink(ben, offer.id, bensTrip.id);
-  expect(preview.redacted).toBe(true);
-  expect(preview.matched).toEqual([]);
-  expect(preview.onlyThere).toEqual([]);
-  expect(preview.counts).toMatchObject({ onlyThere: null, conflicting: 1 });
-  expect(preview.byType).toEqual([]);
-  expect(preview.there).toEqual({ id: "", name: "", startDay: null, endDay: null });
-  expect(JSON.stringify(preview)).not.toContain("Porto");
+  expect(preview).toEqual({ access: "awaitingConsent" });
 });
 
 it("an answer that does not arrive puts every entry's prior key back and the offer waits again", async () => {
