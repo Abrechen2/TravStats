@@ -1,8 +1,9 @@
 import { prisma } from "../../db";
 import { consentStatusSchema, type ConsentStatus } from "../../schemas/sharing";
 import { acceptedWith, missingGroupConsent } from "./members";
-import { mayOfferTripTo, offerStatuses } from "../friends/authz";
+import { offerStatuses } from "../friends/authz";
 import { localKey, nameMatches, type NameMatch } from "./remoteCompanion";
+import { mayLinkCompanionTo } from "./companionLinkRule";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
 /**
@@ -38,7 +39,7 @@ export interface TripPerson {
   /**
    * A member who is none of the caller's companions: the caller's unlinked companions whose
    * name may be theirs, for "Ist das <Name>?" — as for a person on another server. Only where
-   * the caller may link to them (`mayOfferTripTo`); empty otherwise and on every other row.
+   * the caller may link to them (`mayLinkCompanionTo`); empty otherwise and on every other row.
    */
   nameMatches: NameMatch[];
 }
@@ -126,7 +127,7 @@ export async function tripPeople(
   for (const member of members) {
     if (!shown.has(member.id)) {
       const row = await rowFor(`u:${member.id}`, null, member.displayName, member);
-      const askable = await mayOfferTripTo(prisma, userId, member.id);
+      const askable = await mayLinkCompanionTo(userId, member.id);
       people.push({
         ...row,
         nameMatches: askable

@@ -1,7 +1,8 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { consentRequired } from "./consent";
-import { mayOfferTripTo, offerStatuses } from "../friends/authz";
+import { mayLinkCompanionTo } from "./companionLinkRule";
+import { offerStatuses } from "../friends/authz";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
 /**
@@ -73,7 +74,7 @@ export async function linkCompanion(
   }
   // Checked before the target is looked up, so an id that is no account and
   // an account that never said yes answer alike: no probing for ids.
-  if (!(await mayOfferTripTo(prisma, userId, targetUserId))) throw consentRequired();
+  if (!(await mayLinkCompanionTo(userId, targetUserId))) throw consentRequired();
   // One identity per companion: a person on another server is unlinked first.
   if (companion.linkedRemoteId) {
     throw new AppError(
