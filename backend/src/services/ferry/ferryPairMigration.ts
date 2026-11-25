@@ -37,7 +37,7 @@ export async function adoptLegacyManualLines(): Promise<{ adopted: number; kept:
     await prisma.$transaction(
       async (tx) => {
         if (alone && line) {
-          // share-exempt: manualScope is per-account line bookkeeping, not a shared fact.
+          // share-exempt: a boot-time sort of legacy lines, run per account over its own rows.
           const claimed = await tx.ferryJourney.updateMany({
             where: {
               id: crossing.id,
@@ -51,7 +51,7 @@ export async function adoptLegacyManualLines(): Promise<{ adopted: number; kept:
           if (claimed.count !== 1) return;
           await storePairLine(tx, crossing.userId, { ...crossing, manualScope: "pair" }, line);
         } else {
-          // share-exempt: manualScope is per-account line bookkeeping, not a shared fact.
+          // share-exempt: a boot-time sort of legacy lines, run per account over its own rows.
           await tx.ferryJourney.updateMany({
             where: { id: { in: [...mine, crossing.id] }, manualScope: null },
             data: { manualScope: "journey" },

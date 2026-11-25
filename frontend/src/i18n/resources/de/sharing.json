@@ -351,6 +351,7 @@
     "distanceSource": "Quelle der Strecke",
     "geometry": "Streckenverlauf",
     "geometrySource": "Quelle des Verlaufs",
+    "manualScope": "Verlauf gilt für",
     "actualDepartureTime": "Tatsächliche Abfahrt",
     "actualArrivalTime": "Tatsächliche Ankunft",
     "lookupProvider": "Abfragequelle",

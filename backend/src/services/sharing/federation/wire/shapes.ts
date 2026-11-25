@@ -326,6 +326,7 @@ export const FERRY_SHAPE = {
   operator: C.optText(200),
   vesselName: C.optText(200),
   ...TERMINALS,
+  manualScope: C.ferryManualScope,
 } as const satisfies Shape<FerryFactField>;
 
 const airport = C.readOnly(airportRef.nullable());
