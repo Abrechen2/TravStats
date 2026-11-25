@@ -1,3 +1,4 @@
+import { drawnDay, type TravTrackDayCleanup } from "./travtrackCleanup";
 import { api } from "./client";
 import { apiErrorMachineCode } from "../apiError";
 import type { TravTrackLeg, TravTrackPointDetail, TravTrackStop } from "./travtrackLegs";
@@ -150,6 +151,10 @@ export interface TravTrackDay {
   estimated?: EstimatedGap[];
   /** Jumps and gaps a logged entry explains, drawn with its line; absent on an older server. */
   bridgeLines?: BridgeLine[];
+  /** The optional cleanup (smoothing, road matches); absent on an older server. */
+  cleanup?: TravTrackDayCleanup;
+  /** Set by `drawnDay` while `segments` holds the smoothed stretches ("geglättet"). */
+  smoothedShown?: true;
 }
 
 export type TravTrackExportFormat = "gpx" | "json";
@@ -263,11 +268,14 @@ export const travTrackApi = {
     (await api.get<{ lastSeen: TravTrackLastSeen | null }>("/travtrack/last-seen")).data.lastSeen,
   /** `includeImplausible` also draws the coarse fixes normally left out; the privacy cut still holds. */
   day: async (date: string, includeImplausible = false): Promise<TravTrackDay> =>
-    (
-      await api.get<TravTrackDay>("/travtrack/day", {
-        params: includeImplausible ? { date, includeImplausible: 1 } : { date },
-      })
-    ).data,
+    // As drawn: the smoothed stretches in place of the raw ones while smoothing is on.
+    drawnDay(
+      (
+        await api.get<TravTrackDay>("/travtrack/day", {
+          params: includeImplausible ? { date, includeImplausible: 1 } : { date },
+        })
+      ).data
+    ),
   /** The explored zoom-14 tiles in a box (plan L1); zones drawn as explored ground. */
   explored: async (box: ExploredBox): Promise<ExploredCell[]> =>
     (

@@ -654,6 +654,7 @@ export default function TrackMapView(): JSX.Element {
                 countries={countryShapes}
                 estimated={sourceLines.estimated}
                 bridges={sourceLines.bridges}
+                matched={sourceLines.matched}
                 follow={null}
                 onFogStatus={setFog}
               />

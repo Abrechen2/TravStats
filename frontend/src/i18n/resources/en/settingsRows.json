@@ -212,10 +212,7 @@
     },
     "webdavtakt": {
       "t": "How often",
-      "o": [
-        "daily",
-        "weekly"
-      ]
+      "o": ["daily", "weekly"]
     },
     "webdavvers": {
       "t": "Versions to keep",
@@ -276,17 +273,11 @@
     },
     "ubahn": {
       "t": "Metro and tram on rail import",
-      "o": [
-        "Skip",
-        "Import"
-      ]
+      "o": ["Skip", "Import"]
     },
     "busleg": {
       "t": "Bus legs on rail import",
-      "o": [
-        "Skip",
-        "Import"
-      ]
+      "o": ["Skip", "Import"]
     },
     "webdavlast": {
       "t": "Last own copy"
@@ -980,10 +971,7 @@
         "t": "Send anonymous usage statistics",
         "s": "Once a day, without names",
         "h": "The install ID is shown in the help. If the receiver is disabled at start, nothing is sent.",
-        "o": [
-          "nein",
-          "ja"
-        ]
+        "o": ["nein", "ja"]
       },
       "tplrepo": {
         "t": "Booking template source",

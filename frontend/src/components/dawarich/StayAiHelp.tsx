@@ -90,8 +90,8 @@ export default function StayAiHelp({
   useEffect(() => {
     let live = true;
     const check = async () => {
-      const ok = await helpAvailable();
-      if (live) setShown(ok);
+      // Only a "yes" changes anything: the button starts hidden.
+      if ((await helpAvailable()) && live) setShown(true);
     };
     if (ambiguous) void check();
     return () => {

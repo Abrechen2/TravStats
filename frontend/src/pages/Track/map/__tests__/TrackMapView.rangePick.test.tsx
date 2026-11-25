@@ -15,6 +15,17 @@ const api = vi.hoisted(() => ({
   lastSeen: vi.fn(),
   explored: vi.fn(),
 }));
+// The leg card asks whether road matching is offered (rc46 extras C2): no router here.
+vi.mock("../../../../lib/api/travtrackCleanup", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../lib/api/travtrackCleanup")>();
+  return {
+    ...actual,
+    travTrackCleanupApi: {
+      ...actual.travTrackCleanupApi,
+      availability: vi.fn(async () => ({ available: false, reason: "serviceOff" })),
+    },
+  };
+});
 vi.mock("../../../../lib/api/travtrack", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../../lib/api/travtrack")>()),
   travTrackApi: api,

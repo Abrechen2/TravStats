@@ -1,3 +1,4 @@
+import TrackLegTools from "../cleanup/TrackLegTools";
 import { useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
@@ -264,6 +265,7 @@ export default function TrackLegCard({
           </div>
         </div>
       )}
+      <TrackLegTools leg={leg} zone={zone} onChanged={onChanged} />
       <button
         type="button"
         className="underline"

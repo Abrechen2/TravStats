@@ -992,5 +992,71 @@
       "plugin": "{{plugin}}: {{name}}, {{m}} m",
       "pluginNoDistance": "{{plugin}}: {{name}}"
     }
+  },
+  "roadtrip": {
+    "open": "Take over as a roadtrip",
+    "title": "Take over as a roadtrip",
+    "loading": "Reading the stations from the track …",
+    "name": "Roadtrip name",
+    "defaultName": "Roadtrip from {{day}}",
+    "stations": "Stations",
+    "stationName": "Name of station {{n}}",
+    "stopName": "Stop {{n}}",
+    "stay": "{{from}}–{{until}} · {{dwell}}",
+    "departs": "leaves {{at}}",
+    "arrives": "arrives {{at}}",
+    "linkedPlace": "linked to your place",
+    "drop": "Remove",
+    "nameNeeded": "Every station needs a name.",
+    "distance": "{{km}} km",
+    "estimated": "of which {{km}} km estimated (recording gap, dashed)",
+    "sketch": "Route from the track, gaps dashed",
+    "save": "Create roadtrip",
+    "saving": "Creating …",
+    "cancel": "Cancel",
+    "close": "Close",
+    "preview": {
+      "tooLong": "At most 14 days at a time – choose a shorter span.",
+      "noPoints": "There are no recorded points in this span.",
+      "truncated": "This span has too many points – choose a shorter one.",
+      "tooFewStations": "This gives only one station – there is no route to take over."
+    },
+    "saveFailed": {
+      "create": "The roadtrip could not be created. Nothing was saved.",
+      "stations": "The stations could not be saved. The roadtrip was removed again.",
+      "line": "The route could not be saved. The roadtrip was removed again."
+    },
+    "saveFailedKept": {
+      "create": "The roadtrip could not be created.",
+      "stations": "The stations could not be saved, and the half-made roadtrip could not be removed – delete it under Roadtrips.",
+      "line": "The route could not be saved, and the half-made roadtrip could not be removed – delete it under Roadtrips."
+    }
+  },
+  "cleanup": {
+    "smoothDay": "Smooth this day (display only)",
+    "smoothAll": "Smooth sparse tracks on all days",
+    "smoothHint": "Only low-quality sources are smoothed; the stored points stay unchanged.",
+    "smoothedLabel": "smoothed",
+    "matchedLabel": "snapped to roads",
+    "matchedLine": "Snapped to roads via {{provider}}",
+    "undo": "Undo",
+    "match": "Snap to roads",
+    "matching": "Snapping …",
+    "matched": "Stretch snapped to roads.",
+    "error": {
+      "serviceOff": "Snapping to roads is switched off on this server.",
+      "notConfigured": "No router is set up.",
+      "internetOff": "The server may not reach external services right now.",
+      "privateTarget": "The router address is not allowed.",
+      "invalidUrl": "The router address is invalid.",
+      "timeout": "The router did not answer in time.",
+      "unreachable": "The router could not be reached.",
+      "badResponse": "The router gave no usable answer.",
+      "tooLarge": "The stretch has too many points.",
+      "tooFewPoints": "The stretch has too few points outside your privacy zones.",
+      "lowConfidence": "The router was too unsure – the stretch stays as recorded.",
+      "saveFailed": "The setting could not be saved.",
+      "undoFailed": "Undo failed."
+    }
   }
 }

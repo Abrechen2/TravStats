@@ -1,4 +1,5 @@
 import { prisma } from "../../../db";
+import { profileZoneOf } from "../../../shared/time/profileZone";
 import { deriveDay } from "../dayDerivation";
 import type { Span } from "../readSafe";
 import { buildRoadtripPreview, type PreviewPlace, type RoadtripPreview } from "./preview";
@@ -43,7 +44,7 @@ export async function roadtripPreviewFor(
   userId: string,
   span: Span,
   days: number
-): Promise<RoadtripPreview> {
+): Promise<RoadtripPreview & { zone: string }> {
   if (days > PREVIEW_MAX_DAYS) throw new PreviewError("tooLong");
   const { raw, read, stops } = await deriveDay(userId, span);
   if (raw.next !== null) throw new PreviewError("truncated");
@@ -55,5 +56,6 @@ export async function roadtripPreviewFor(
   const preview = buildRoadtripPreview(read.segments, stops, await placesAround(userId, anchors));
   if (!preview) throw new PreviewError("noPoints");
   if (preview.stations.length < 2) throw new PreviewError("tooFewStations");
-  return preview;
+  // The clock the stations are dated on: the profile zone the days were read in.
+  return { ...preview, zone: (await profileZoneOf(userId)).zone };
 }

@@ -78,6 +78,7 @@ describe("TravTrack — roadtrip from a recorded span", () => {
     ]);
     expect(res.body.stations[1]).toMatchObject({ name: "Titisee", placeId: expect.any(String) });
     expect(res.body.distanceKm).toBeGreaterThan(30);
+    expect(res.body.zone).toBe("Europe/Berlin");
     expect(res.body.legs).toHaveLength(2);
   });
 

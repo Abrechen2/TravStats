@@ -1130,5 +1130,6 @@
     "own": "Own colour",
     "automatic": "Automatic colour from the palette",
     "saveFailed": "The colour could not be saved."
-  }
+  },
+  "fromTrack": "Taken over from TravTrack – view the track"
 }

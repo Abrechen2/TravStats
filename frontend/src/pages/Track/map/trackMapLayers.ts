@@ -183,6 +183,8 @@ export interface TrackLayerInput {
   estimated?: readonly LonLat[][];
   /** Jumps a logged entry explains, drawn with the entry's own line. */
   bridges?: readonly LonLat[][];
+  /** Stretches matched to roads ("an Straßen angepasst"), drawn over the recorded line. */
+  matched?: readonly LonLat[][];
 }
 
 /** The dash of an estimated stretch, in pixels: dash, gap. */
@@ -190,6 +192,9 @@ const ESTIMATED_DASH: [number, number] = [6, 6];
 
 /** The open flight's line: bright, over the span's line, never joined across its own breaks. */
 const HIGHLIGHT_RGB: [number, number, number] = [244, 236, 224];
+
+/** A road-matched stretch: apart from the track's own colour, so the label has something to point at. */
+const MATCHED_RGB: [number, number, number] = [96, 196, 140];
 
 /** The photo markers' colour: the Stats accent, apart from the track's own. */
 const PHOTO_RGB: [number, number, number] = [240, 169, 71];
@@ -367,6 +372,20 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
         getDashArray: ESTIMATED_DASH,
         dashJustified: true,
         extensions: [new PathStyleExtension({ dash: true })],
+        pickable: false,
+      })
+    );
+  }
+  if (on.routes && (input.matched?.length ?? 0) > 0) {
+    out.push(
+      new PathLayer<LonLat[]>({
+        id: "track-matched",
+        data: input.matched as LonLat[][],
+        getPath: (d) => d,
+        getColor: [...MATCHED_RGB, 230],
+        getWidth: 3,
+        widthUnits: "pixels",
+        wrapLongitude: false,
         pickable: false,
       })
     );

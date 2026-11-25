@@ -212,10 +212,7 @@
     },
     "webdavtakt": {
       "t": "Wie oft",
-      "o": [
-        "täglich",
-        "wöchentlich"
-      ]
+      "o": ["täglich", "wöchentlich"]
     },
     "webdavvers": {
       "t": "Versionen behalten",
@@ -276,17 +273,11 @@
     },
     "ubahn": {
       "t": "U-Bahn und Tram beim Bahn-Import",
-      "o": [
-        "Überspringen",
-        "Importieren"
-      ]
+      "o": ["Überspringen", "Importieren"]
     },
     "busleg": {
       "t": "Busabschnitte beim Bahn-Import",
-      "o": [
-        "Überspringen",
-        "Importieren"
-      ]
+      "o": ["Überspringen", "Importieren"]
     },
     "webdavlast": {
       "t": "Letzte eigene Kopie"
@@ -980,10 +971,7 @@
         "t": "Anonyme Nutzungsstatistik senden",
         "s": "Einmal am Tag, ohne Namen",
         "h": "Die Installations-ID steht in der Hilfe. Ist der Empfänger beim Start abgeschaltet, geht nichts raus.",
-        "o": [
-          "nein",
-          "ja"
-        ]
+        "o": ["nein", "ja"]
       },
       "tplrepo": {
         "t": "Quelle der Buchungsvorlagen",

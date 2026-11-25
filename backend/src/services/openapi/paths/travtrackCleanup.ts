@@ -174,6 +174,7 @@ registry.registerPath({
           ),
           distanceKm: z.number(),
           estimatedKm: z.number(),
+          zone: z.string().describe("The profile zone the stations' days are read on"),
         })
       ),
     },
