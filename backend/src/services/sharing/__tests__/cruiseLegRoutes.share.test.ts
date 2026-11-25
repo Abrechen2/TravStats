@@ -137,4 +137,17 @@ it("the backfill gives a group shared before the line, and keeps a recipient's o
     where: { userId: missing.ben, kind: "updated", entityType: "cruise" },
   });
   expect(told).not.toBeNull();
+  // The kept line is said, not kept silently: Ben sees his line beside Anna's and decides.
+  const conflict = await prisma.shareNotice.findFirst({
+    where: { userId: own.ben, kind: "conflict", entityType: "cruise", undoneAt: null },
+  });
+  expect(conflict).not.toBeNull();
+  expect(JSON.stringify(conflict!.after)).toContain("legRoutes");
+  // A second run does not stack a second notice for the same open question.
+  await backfillSharedCruiseRoutes({ apply: true });
+  expect(
+    await prisma.shareNotice.count({
+      where: { userId: own.ben, kind: "conflict", entityType: "cruise", undoneAt: null },
+    })
+  ).toBe(1);
 });
