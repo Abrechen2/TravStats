@@ -17,6 +17,7 @@ const api = vi.hoisted(() => ({
   test: vi.fn(),
   backfill: vi.fn(),
   reask: vi.fn(),
+  capabilities: vi.fn(),
 }));
 vi.mock("../../../../lib/api/suggestionPlugins", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../../lib/api/suggestionPlugins")>()),
@@ -43,6 +44,7 @@ const PLUGIN = {
 beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   api.list.mockResolvedValue({ plugins: [PLUGIN], blocked: null });
+  api.capabilities.mockResolvedValue({ capabilities: [], maintenance: false, error: null });
 });
 afterEach(() => {
   cleanup();

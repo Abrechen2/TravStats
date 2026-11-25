@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDisplayFormat } from "../../../lib/displayFormat";
 import Button from "../../ui/Button";
@@ -12,6 +12,7 @@ import {
   type SuggestionPlugin,
 } from "../../../lib/api/suggestionPlugins";
 import SecretOnce from "./SecretOnce";
+import PluginMaintenanceDialog from "./PluginMaintenanceDialog";
 
 const NS = "suggestionSources:plugins";
 const MAX_BACKFILL_DAYS = 90;
@@ -48,6 +49,32 @@ export default function PluginCard({
   const [busy, setBusy] = useState(false);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  // "Standorte pflegen" only for a plugin whose hello announces `maintenance`.
+  const [maintenance, setMaintenance] = useState<{ offered: boolean; error: string | null }>({
+    offered: false,
+    error: null,
+  });
+  const [maintaining, setMaintaining] = useState(false);
+
+  useEffect(() => {
+    if (!plugin.enabled || disabled) {
+      setMaintenance({ offered: false, error: null });
+      return;
+    }
+    let live = true;
+    suggestionPluginsApi
+      .capabilities(plugin.id)
+      .then((c) => live && setMaintenance({ offered: c.maintenance, error: c.error }))
+      .catch((e: unknown) => {
+        // Visible below the card: a capability we could not read is not "none".
+        const key = pluginRequestFailureKey(e);
+        console.warn("plugin capabilities failed", key);
+        if (live) setMaintenance({ offered: false, error: key });
+      });
+    return () => {
+      live = false;
+    };
+  }, [plugin.id, plugin.enabled, plugin.url, disabled]);
 
   const run = async (work: () => Promise<Line | void>) => {
     setBusy(true);
@@ -189,6 +216,18 @@ export default function PluginCard({
         </p>
       )}
       {secret && <SecretOnce secret={secret} onDone={() => setSecret(null)} />}
+      {maintenance.error && (
+        <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
+          {t(`${NS}.maintenance.helloFailed`)}:{" "}
+          {t(
+            `suggestionSources:${
+              maintenance.error.startsWith("plugins.")
+                ? maintenance.error
+                : pluginFailureKey(maintenance.error)
+            }`
+          )}
+        </p>
+      )}
       <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
         <Button disabled={disabled || busy} onClick={() => void test()}>
           {t(`${NS}.test.button`)}
@@ -203,10 +242,22 @@ export default function PluginCard({
         >
           {t(`${NS}.rotate`)}
         </Button>
+        {maintenance.offered && (
+          <Button disabled={disabled || busy} onClick={() => setMaintaining(true)}>
+            {t(`${NS}.maintenance.open`)}
+          </Button>
+        )}
         <Button disabled={disabled || busy} onClick={onRemove}>
           {t(`${NS}.remove`)}
         </Button>
       </div>
+      {maintaining && (
+        <PluginMaintenanceDialog
+          plugin={plugin}
+          open={maintaining}
+          onClose={() => setMaintaining(false)}
+        />
+      )}
       {plugin.backfillAllowed && (
         <div className="flex flex-wrap items-end" style={{ gap: "var(--ts-space-sm)" }}>
           <Field label={t(`${NS}.backfill.from`)} htmlFor={`plugin-from-${plugin.id}`}>
