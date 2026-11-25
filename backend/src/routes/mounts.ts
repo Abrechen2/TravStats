@@ -211,6 +211,7 @@ import geoExportRoutes from "./geoExport";
 import syncRoutes from "./sync";
 import syncPreconditionRoutes from "./syncPreconditions";
 import dataQualityAfterCreateRoutes from "./dataQualityAfterCreate";
+import suggestionsAfterWriteRoutes from "./suggestionsAfterWrite";
 
 export interface ApiMount {
   /** Mount path, always absolute and always under /api/v1. */
@@ -287,6 +288,9 @@ export const apiMounts: ApiMount[] = [
   // created (spec 2026-10-25 C3). Answers nothing — it listens for the
   // create's response — so it sits before the routers it watches.
   { id: "dataQualityAfterCreate", base: "/api/v1", router: dataQualityAfterCreateRoutes },
+  // Re-judges the pending place suggestions after a visit, stay, flight or
+  // trip write (forgejo#439). Listens only, like the line above.
+  { id: "suggestionsAfterWrite", base: "/api/v1", router: suggestionsAfterWriteRoutes },
   // The incremental change feed, forgejo#141. Its only path is `/sync/...`.
   { id: "sync", base: "/api/v1", router: syncRoutes },
   // Kept originals (forgejo#116). At /api/v1 because the per-entry lists span

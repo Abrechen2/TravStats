@@ -4614,6 +4614,11 @@ model PhotoJourney {
   createdLodgingStayId String? @map("created_lodging_stay_id")
 
   resolvedAt DateTime? @map("resolved_at")
+  /// How a finding closed without an answer (forgejo#439): `{ resolution:
+  /// "covered", coveredBy, at }` names the entry that already holds it
+  /// (`services/suggestions/covered.ts`). After the user takes a `covered`
+  /// back it holds `{ coverUndone }`, and the matcher never closes it again.
+  resolution Json?
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 

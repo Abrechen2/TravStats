@@ -490,7 +490,15 @@
         "hide": "Hide answered",
         "title": "Already answered",
         "empty": "You haven't answered anything here yet.",
-        "failed": "The answered items could not be loaded."
+        "failed": "The answered items could not be loaded.",
+        "undoCovered": "Not recorded after all",
+        "undoFailed": "Could not be taken back.",
+        "unnamedPhotoStop": "Photo stop",
+        "photoStatus": {
+          "accepted": "Accepted",
+          "dismissed": "Dismissed",
+          "covered": "Already recorded"
+        }
       },
       "moreAnswers": "More answers to this question"
     }

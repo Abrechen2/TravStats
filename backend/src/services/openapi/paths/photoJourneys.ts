@@ -33,8 +33,13 @@ registry.registerPath({
     "trip's days — `tripId`, `tripName` — that no visit, slept-in lodging or flown airport within " +
     "200 m explains; `suggestedName`, `suggestedLocalName`, `suggestedRef` and `suggestedCategory` " +
     "are what the reverse lookup found within 150 m, all null when nothing there had a name; " +
-    "`placeId` is set when an own place within 200 m has no visit that day, and accepting " +
-    "records the visit there). " +
+    "`placeId` is set when an own place within venue reach (400 m, 150 m for a restaurant, shop or " +
+    "service area) has no visit that day, and accepting records the visit there). " +
+    "`covered` (forgejo#439) lists `place`/`visit` findings closed because the logbook already holds " +
+    "them — an own place's visit within venue reach on the finding's local day (±1 when overnight), " +
+    "a lodging stay or a flight there, on the finding's trip or on none; `resolution.coveredBy` names " +
+    "that entry, and `POST /photo-journeys/{id}/reopen` takes it back. Reading `pending` re-judges " +
+    "first: newly covered findings close, a covered one whose entry is gone opens again. " +
     "Suggestions only: nothing is recorded until the client creates the entry and PATCHes the row " +
     "— except a `visit`, whose place and visit the PATCH itself creates. " +
     "Each row is named from what is stored (no lookup per request): `placeName` is the own place " +
@@ -42,7 +47,9 @@ registry.registerPath({
     "country, the scan's reverse lookup stored — null when nothing is known.",
   tags: miscTag,
   request: {
-    query: z.object({ status: z.enum(["pending", "accepted", "dismissed"]).optional() }),
+    query: z.object({
+      status: z.enum(["pending", "accepted", "dismissed", "covered"]).optional(),
+    }),
   },
   responses: {
     200: {
@@ -459,5 +466,29 @@ registry.registerPath({
       },
     },
     400: badInput,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/photo-journeys/{id}/reopen",
+  summary: "Take a covered photo finding back",
+  description:
+    'Undo for `covered` (forgejo#439): the finding is pending again and the "already recorded" ' +
+    "rule never closes it a second time (`resolution.coverUndone`). 404 " +
+    "`PHOTO_JOURNEY_NOT_COVERED` when no covered finding of the caller has that id.",
+  tags: miscTag,
+  request: { params: z.object({ id: uuid }) },
+  responses: {
+    200: {
+      description: "Pending again",
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.literal(true), data: z.null() }),
+        },
+      },
+    },
+    400: badInput,
+    404: notFound,
   },
 });

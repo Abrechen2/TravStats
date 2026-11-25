@@ -490,7 +490,15 @@
         "hide": "Erledigte ausblenden",
         "title": "Bereits beantwortet",
         "empty": "Hier hast du noch nichts beantwortet.",
-        "failed": "Die erledigten Einträge konnten nicht geladen werden."
+        "failed": "Die erledigten Einträge konnten nicht geladen werden.",
+        "undoCovered": "Doch nicht erfasst",
+        "undoFailed": "Konnte nicht zurückgenommen werden.",
+        "unnamedPhotoStop": "Fotostopp",
+        "photoStatus": {
+          "accepted": "Übernommen",
+          "dismissed": "Verworfen",
+          "covered": "Bereits erfasst"
+        }
       },
       "moreAnswers": "Weitere Entscheidungen zu dieser Frage"
     }

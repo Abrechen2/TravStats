@@ -16,6 +16,7 @@ import { nightlyScanView } from "../services/photoJourneys/nightlyScanView";
 import { reviewPhotoFindings } from "../services/photoJourneys/batchReview";
 import { nearestVisits } from "../services/photoJourneys/nearestVisits";
 import { timeFieldSchema } from "../shared/time/timeInput";
+import { reconcilePhotoSuggestions, undoCovered } from "../services/suggestions/reconcile";
 
 const router = Router();
 router.use(authenticate);
@@ -42,7 +43,8 @@ router.use(requireWriteScope);
 const DEFAULT_LOOKBACK_YEARS = 10;
 
 const listQuerySchema = z.object({
-  status: z.enum(["pending", "accepted", "dismissed"]).default("pending"),
+  // `covered`: closed by the "already recorded" rule (forgejo#439), with undo.
+  status: z.enum(["pending", "accepted", "dismissed", "covered"]).default("pending"),
 });
 
 const scanBodySchema = z.object({
@@ -214,6 +216,9 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
     const userId = req.userId!;
+    // A visit logged since the last scan covers its finding from that moment
+    // (forgejo#439); the inbox must not offer it until the next scan.
+    if (parsed.data.status === "pending") await reconcilePhotoSuggestions(userId);
     // Bounded, and totally ordered so the cut is stable: every finding of a
     // status used to load, and the nearest-visit lookup scaled with it.
     const journeys = await prisma.photoJourney.findMany({
@@ -389,6 +394,25 @@ router.post(
           },
         },
       });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * Take a `covered` back (forgejo#439): the finding is a question again, and
+ * the "already recorded" rule never closes it a second time.
+ */
+router.post(
+  "/:id/reopen",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = z.string().uuid().safeParse(req.params.id);
+      if (!id.success) throw new AppError("Invalid id", 400);
+      if (!(await undoCovered(req.userId!, "photo", id.data)))
+        throw new AppError("Covered photo finding not found", 404, "PHOTO_JOURNEY_NOT_COVERED");
+      res.json({ success: true, data: null });
     } catch (err) {
       next(err);
     }

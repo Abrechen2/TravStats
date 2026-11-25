@@ -46,7 +46,7 @@ registry.registerPath({
   tags,
   summary: "Own location-history suggestions and retained decisions",
   description:
-    "Conservative stationary clusters; not proof of GPS measurement or overnight accommodation. Original evidence and corrected times remain separate. Up to 200 most recent rows per status. `covered` lists findings resolved because a recorded place visit or lodging stay already holds them (within 250 m, a visit clock within 2 h or on the same local day); `evidence.coveredBy` names that record. Reading `pending` resolves newly covered findings first. With the account's `staySuggestions.enabled` setting off, `pending` answers an empty list, nothing is resolved, and accept/reject/scan are refused with `STAY_SUGGESTIONS_DISABLED` (409); stored rows are kept.",
+    "Conservative stationary clusters; not proof of GPS measurement or overnight accommodation. Original evidence and corrected times remain separate. Up to 200 most recent rows per status. `covered` lists findings resolved because the logbook already holds them (forgejo#439, the rule photo findings share): a place visit within venue reach (400 m, 150 m for a restaurant, shop or service area) on the stay's local day (±1 when overnight), a lodging stay within 250 m over that day, or a flight from or to an airport within 1 km that day — on the stay's trip or on none; `evidence.coveredBy` names that record, and `POST /dawarich-stays/{id}/reopen` takes it back. Reading `pending` re-judges first: newly covered findings close, a covered one whose record is gone opens again. With the account's `staySuggestions.enabled` setting off, `pending` answers an empty list, nothing is resolved, and accept/reject/scan are refused with `STAY_SUGGESTIONS_DISABLED` (409); stored rows are kept.",
   request: {
     query: z.object({
       status: z.enum(["pending", "accepted", "rejected", "covered", "invalidated"]).optional(),
@@ -252,5 +252,21 @@ registry.registerPath({
     },
     404: failure,
     409: failure,
+  },
+});
+registry.registerPath({
+  method: "post",
+  path: "/dawarich-stays/{id}/reopen",
+  tags,
+  summary: "Take a covered finding back",
+  description:
+    'Undo for `covered` (forgejo#439): pending again, and the "already recorded" rule never closes it a second time (`evidence.coverUndone`). 404 `STAY_NOT_COVERED` when no covered finding of the caller has that id.',
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "Pending again",
+      content: { "application/json": { schema: z.object({ success: z.literal(true) }) } },
+    },
+    404: failure,
   },
 });
