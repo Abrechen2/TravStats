@@ -41,6 +41,13 @@ vi.mock("../../../lib/api/sharing", () => ({
   },
 }));
 
+// Trips offered from other servers: off unless a test turns them on.
+const remote = vi.hoisted(() => ({
+  status: vi.fn(async () => ({ available: false })),
+  listOffers: vi.fn(async () => [] as unknown[]),
+}));
+vi.mock("../../../lib/api/sharingRemote", () => ({ sharingRemoteApi: remote }));
+
 // The real globe paints a canvas jsdom cannot; keep its status semantics.
 vi.mock("../../GlobeLoader", () => ({
   GlobeLoader: ({ label }: { label?: string }) => <div role="status" aria-label={label} />,

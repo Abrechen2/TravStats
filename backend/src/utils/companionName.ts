@@ -20,3 +20,17 @@ export function searchableCompanionName(raw: string): string {
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "");
 }
+
+/**
+ * The key two names share when they MAY be one person (one person, one companion, 2026-11-24):
+ * case, diacritics and word order folded — "Wittke, Norbert", "norbert wittke" and "Nörbert
+ * Wittke" all meet. A QUESTION aid only: it decides what the owner is asked ("Ist das …?"),
+ * never a link by itself.
+ */
+export function personMatchKey(raw: string): string {
+  return searchableCompanionName(raw)
+    .split(/[\s,.;]+/u)
+    .filter((part) => part.length > 0)
+    .sort()
+    .join(" ");
+}

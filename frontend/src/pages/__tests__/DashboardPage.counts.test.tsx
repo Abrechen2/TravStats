@@ -19,6 +19,7 @@ import { MemoryRouter, Routes, Route, useLocation, useNavigate } from "react-rou
  * mocking it away, so it actually exercises the remount that causes the bug.
  */
 
+vi.mock("../../components/sharing/ReceivedTripsBanner", () => ({ default: () => null }));
 vi.mock("../../hooks/useClearMapSelectionsOnTabChange", () => ({
   useClearMapSelectionsOnTabChange: () => {},
 }));

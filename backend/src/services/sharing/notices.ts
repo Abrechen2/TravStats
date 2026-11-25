@@ -50,7 +50,7 @@ const remoteActorSchema = z.object({
 });
 
 /** The name a notice kept of a remote author, else the pairing it came through. */
-function remoteActorOf(
+export function remoteActorOf(
   after: Prisma.JsonValue | null,
   pairing: { displayName: string; origin: string } | null
 ): RemoteActorView | null {

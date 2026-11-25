@@ -32,9 +32,11 @@ const COUNT_ORDER: readonly (keyof OfferCounts)[] = [
 interface Props {
   /** Changed by the caller when an offer may have arrived (a redeemed trip-page code). */
   refresh?: number;
+  /** The number of offers waiting, after every load (the inbox tab counts them). */
+  onCount?: (count: number) => void;
 }
 
-export default function ReceivedRemoteOffers({ refresh = 0 }: Props): JSX.Element | null {
+export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): JSX.Element | null {
   const { t } = useTranslation(["sharing"]);
   const [offers, setOffers] = useState<ReceivedOffer[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -45,13 +47,15 @@ export default function ReceivedRemoteOffers({ refresh = 0 }: Props): JSX.Elemen
 
   const load = useCallback(async () => {
     try {
-      setOffers(await sharingRemoteApi.listOffers());
+      const list = await sharingRemoteApi.listOffers();
+      setOffers(list);
       setLoadFailed(false);
+      onCount?.(list.length);
     } catch (error) {
       logger.error("Failed to load trips offered from other servers:", error);
       setLoadFailed(true);
     }
-  }, []);
+  }, [onCount]);
 
   useEffect(() => {
     void load();

@@ -11,6 +11,7 @@ import { prisma } from "../../db";
 import { Prisma } from "../../prisma";
 import { placeZone } from "../timeMigration/core";
 import { findTripCountryMismatches } from "./tripCountryCheck";
+import { allCompanionDuplicates } from "../sharing/remoteCompanion";
 
 export interface ProblemEntry {
   id: string;
@@ -302,6 +303,19 @@ export const PROBLEM_RULES = {
         label: t.name,
         date: dayIso(t.start_date),
         href: `/trips/${t.id}`,
+      })),
+  },
+  // One person, one companion (2026-11-24): someone listed twice on a shared trip — the
+  // companion typed by hand and the person the share brought. Linked on the trip's share dialog.
+  "user.companionDuplicates": {
+    count: async (userId) => (await allCompanionDuplicates(prisma, userId)).length,
+    list: async (userId, limit) =>
+      (await allCompanionDuplicates(prisma, userId)).slice(0, limit).map((d) => ({
+        id: `${d.tripId}:${d.remote.remoteId}`,
+        kind: "trip" as const,
+        label: `${d.tripName}: ${d.companion.name} = ${d.remote.username}@${d.remote.origin.replace(/^https?:\/\//, "")}`,
+        date: null,
+        href: `/trips/${d.tripId}`,
       })),
   },
   "user.zoneMismatch": {

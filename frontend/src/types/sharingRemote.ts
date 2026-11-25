@@ -137,6 +137,12 @@ export interface RemoteMember {
   stateReason: string | null;
   stateSince: string;
   delivery: RemoteDelivery;
+  /**
+   * The trip page only (one person, one companion): the reader's companion that IS this person,
+   * or — with none — their unlinked companions whose name may be this person's.
+   */
+  companion?: { id: string; name: string } | null;
+  nameMatches?: { id: string; name: string; onTrip: boolean }[];
 }
 
 export interface OfferablePerson {

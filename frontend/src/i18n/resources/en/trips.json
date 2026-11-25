@@ -765,7 +765,8 @@
     "countries_other": "{{count}} countries",
     "travellers": "Travellers",
     "travellersMore_other": "Show {{count}} more travellers",
-    "travellersMore_one": "Show {{count}} more travellers"
+    "travellersMore_one": "Show {{count}} more travellers",
+    "travellerShared": "shared"
   },
   "overview": {
     "daysAway": "Days away",

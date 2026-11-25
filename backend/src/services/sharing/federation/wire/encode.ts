@@ -46,10 +46,12 @@ async function loadCatalogue(c: DbTransaction, rows: readonly SharedRow[]): Prom
   const f = rows.map((r) => r.facts);
   const stops = f.flatMap((x) => (Array.isArray(x.stops) ? (x.stops as Facts[]) : []));
   const legs = f.flatMap((x) => (Array.isArray(x.legs) ? (x.legs as Facts[]) : []));
+  const routes = f.flatMap((x) => (Array.isArray(x.legRoutes) ? (x.legRoutes as Facts[]) : []));
   const portIds = ids([
     ...f.flatMap((x) => [x.departurePortId, x.arrivalPortId]),
     ...stops.map((s) => s.portId),
     ...legs.flatMap((l) => [l.fromPortId, l.toPortId]),
+    ...routes.flatMap((l) => [l.fromPortId, l.toPortId]),
   ]);
   const houses = f.flatMap((x) => (x.lodging ? [x.lodging as Facts] : []));
   const [ports, ships, stations, airports, chains] = await Promise.all([
@@ -144,6 +146,14 @@ function withRefs(entity: ShareEntity, f: Facts, cat: Catalogue): Facts {
           const toPort = lookup(cat.ports, l.toPortId);
           return fromPort && toPort ? [{ ...l, fromPort, toPort }] : [];
         }),
+        // The same for a hand-drawn line (2026-11-24); null stays null ("not said").
+        legRoutes: Array.isArray(f.legRoutes)
+          ? (f.legRoutes as Facts[]).flatMap((l) => {
+              const fromPort = lookup(cat.ports, l.fromPortId);
+              const toPort = lookup(cat.ports, l.toPortId);
+              return fromPort && toPort ? [{ waypoints: l.waypoints, fromPort, toPort }] : [];
+            })
+          : null,
       };
     case "rail":
       return {

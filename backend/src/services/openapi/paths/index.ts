@@ -103,6 +103,7 @@ import "./galleryDays";
 import "./photoJourneys";
 import "./tripSuggestions";
 import "./sharing";
+import "./sharingCompanions";
 import "./comparison";
 import "./comparisonInviteLinks";
 import "./shareLinks";

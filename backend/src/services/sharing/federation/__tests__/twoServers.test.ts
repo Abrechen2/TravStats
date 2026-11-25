@@ -149,6 +149,7 @@ describe("cross-purpose over the wire", () => {
         "connections",
         "plans",
         "achievements",
+        "leg-routes",
       ],
     });
   });

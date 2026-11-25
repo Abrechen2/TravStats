@@ -32,6 +32,8 @@ const TABLES = [
   "tripRouteLeg",
   // A tour's recorded tracks travel with the tour (tours-own-domain T1b).
   "tripRouteTrack",
+  // A cruise's hand-drawn lines travel with the cruise (2026-11-24).
+  "cruiseLegRoute",
 ];
 const WRITE = new RegExp(
   `\\.(${TABLES.join("|")})\\s*\\.(create|createMany|createManyAndReturn|update|updateMany|upsert|delete|deleteMany)\\(`,

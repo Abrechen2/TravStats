@@ -17,6 +17,8 @@ export interface NavLeaf {
   label: string;
   icon?: IconName;
   badge?: number;
+  /** Something new waits behind this entry (a trip shared with the reader on "Reisen"). */
+  dot?: boolean;
   warn?: boolean;
   /**
    * When the leaf counts as the current page, where a path prefix says too

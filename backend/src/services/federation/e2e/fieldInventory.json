@@ -309,7 +309,7 @@
     "personal": "id canonicalName displayName searchName createdAt updatedAt",
     "photos": "",
     "documents": "",
-    "excluded": "userId linkedUserId"
+    "excluded": "userId linkedUserId linkedRemoteId notSameAs"
   },
   "FlightCompanion": {
     "details": "",

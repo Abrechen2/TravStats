@@ -176,6 +176,7 @@ describe("ping", () => {
         "connections",
         "plans",
         "achievements",
+        "leg-routes",
       ],
     });
   });
