@@ -61,6 +61,19 @@ describe("withUseConsent", () => {
     expect(ask.mock.calls.map(([d]) => d.host)).toEqual(["a.lan", "b.lan"]);
   });
 
+  it("a target that keeps changing is reported, not asked about a third time", async () => {
+    const third = confirmFirst("c.lan");
+    const send = vi
+      .fn()
+      .mockRejectedValueOnce(confirmFirst("a.lan"))
+      .mockRejectedValueOnce(confirmFirst("b.lan"))
+      .mockRejectedValueOnce(third);
+    const ask = vi.fn().mockResolvedValue({ mode: "once", target: "x" });
+    await expect(withUseConsent(send, ask)).rejects.toBe(third);
+    expect(ask).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenCalledTimes(3);
+  });
+
   it("a cancelled dialog sends nothing further", async () => {
     const send = vi.fn().mockRejectedValueOnce(confirmFirst("a.lan"));
     await expect(withUseConsent(send, vi.fn().mockResolvedValue(null))).rejects.toBeInstanceOf(

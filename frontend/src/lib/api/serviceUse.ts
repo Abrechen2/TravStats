@@ -20,6 +20,9 @@ export interface UseConfirmation {
 
 export const CONFIRMATION_REQUIRED = "CONFIRMATION_REQUIRED";
 
+/** How often one action may ask before a still-changing target is reported instead. */
+const MAX_ASKS = 2;
+
 /** The person closed the confirmation without allowing: nothing was sent. */
 export class UseCancelledError extends Error {
   constructor() {
@@ -45,18 +48,19 @@ export async function withUseConsent<T>(
   ask: (disclosure: ServiceDisclosure) => Promise<UseConfirmation | null>
 ): Promise<T> {
   let confirmation: UseConfirmation | undefined;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 1; ; attempt++) {
     try {
       return await send(confirmation);
     } catch (error) {
       const disclosure = disclosureOf(error);
-      if (!disclosure) throw error;
+      // A target that keeps changing under the person is not asked about forever: the third
+      // refusal is shown as itself instead of opening a dialog whose answer would be thrown away.
+      if (!disclosure || attempt >= MAX_ASKS + 1) throw error;
       const answer = await ask(disclosure);
       if (!answer) throw new UseCancelledError();
       confirmation = answer;
     }
   }
-  throw new UseCancelledError();
 }
 
 export interface UseConsentRow {
