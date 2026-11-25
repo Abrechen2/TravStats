@@ -3,6 +3,11 @@ import { prisma } from "../../../db";
 import { loadVisibleDomains } from "../../domainVisibility";
 import { buildLeaderboardSnapshot } from "../aggregates";
 import {
+  cachedYearlyTotals,
+  clearYearlyTotalsCache,
+  invalidateYearlyTotals,
+} from "../yearlyTotalsCache";
+import {
   anyLeaderboardSnapshotSchema,
   leaderboardScopeSchema,
   type LeaderboardScope,
@@ -47,7 +52,10 @@ beforeAll(async () => {
     ],
   });
 });
-beforeEach(() => jest.mocked(loadVisibleDomains).mockResolvedValue(["ferry", "poi"]));
+beforeEach(() => {
+  clearYearlyTotalsCache();
+  jest.mocked(loadVisibleDomains).mockResolvedValue(["ferry", "poi"]);
+});
 afterAll(async () => {
   await prisma.user.delete({ where: { id: userId } });
   await prisma.$disconnect();
@@ -62,7 +70,7 @@ describe("yearly totals are an opt-in", () => {
   });
 
   it("with the switch, ONE snapshot carries every year that has data, as totals", async () => {
-    const s = await buildLeaderboardSnapshot(userId, ON, null, 3);
+    const s = await buildLeaderboardSnapshot(userId, ON, null, 3, true);
     if (s.version !== 3) throw new Error("expected v3");
     expect(Object.keys(s.years ?? {})).toEqual(["2023", "2025"]); // 2024 had nothing: not listed
     expect(s.years?.["2023"]).toMatchObject({ ferryCrossings: 2 });
@@ -75,8 +83,8 @@ describe("yearly totals are an opt-in", () => {
   });
 
   it("an older peer (v2) and a year view never get years, whatever the consent says", async () => {
-    expect("years" in (await buildLeaderboardSnapshot(userId, ON, null, 2))).toBe(false);
-    expect("years" in (await buildLeaderboardSnapshot(userId, ON, 2025, 3))).toBe(false);
+    expect("years" in (await buildLeaderboardSnapshot(userId, ON, null, 2, true))).toBe(false);
+    expect("years" in (await buildLeaderboardSnapshot(userId, ON, 2025, 3, true))).toBe(false);
   });
 });
 
@@ -108,5 +116,62 @@ describe("the v3 schema takes totals only", () => {
     expect(
       anyLeaderboardSnapshotSchema.safeParse({ ...base, version: 2, years: { "2024": {} } }).success
     ).toBe(false);
+  });
+});
+
+describe("the yearly-totals build is cached, coalesced and invalidated", () => {
+  const built = { "2024": { flights: 1 } };
+  it("two pulls, one build — also when they arrive together", async () => {
+    const build = jest.fn(async () => built);
+    const [a, b] = await Promise.all([
+      cachedYearlyTotals("u-cache", "s", build),
+      cachedYearlyTotals("u-cache", "s", build),
+    ]);
+    await cachedYearlyTotals("u-cache", "s", build);
+    expect([a, b]).toEqual([built, built]);
+    expect(build).toHaveBeenCalledTimes(1);
+  });
+
+  it("one user never has two builds running at once, whatever the scope", async () => {
+    let running = 0;
+    let peak = 0;
+    const build = async () => {
+      peak = Math.max(peak, ++running);
+      await new Promise((r) => setTimeout(r, 15));
+      running--;
+      return built;
+    };
+    await Promise.all([
+      cachedYearlyTotals("u-serial", "scope-a", build),
+      cachedYearlyTotals("u-serial", "scope-b", build),
+    ]);
+    expect(peak).toBe(1);
+  });
+
+  it("expires after its TTL and on invalidation, and a build overtaken by a write is not stored", async () => {
+    const build = jest.fn(async () => built);
+    await cachedYearlyTotals("u-ttl", "s", build, 0);
+    await cachedYearlyTotals("u-ttl", "s", build, 6 * 60 * 60_000 + 1);
+    expect(build).toHaveBeenCalledTimes(2);
+    invalidateYearlyTotals("u-ttl");
+    await cachedYearlyTotals("u-ttl", "s", build, 6 * 60 * 60_000 + 2);
+    expect(build).toHaveBeenCalledTimes(3);
+    const slow = jest.fn(async () => {
+      invalidateYearlyTotals("u-race");
+      return built;
+    });
+    await cachedYearlyTotals("u-race", "s", slow);
+    await cachedYearlyTotals("u-race", "s", slow);
+    expect(slow).toHaveBeenCalledTimes(2);
+  });
+
+  it("a write to a counted table of that user invalidates: the next pull sees the new row", async () => {
+    const first = await buildLeaderboardSnapshot(userId, ON, null, 3, true);
+    if (first.version !== 3) throw new Error("expected v3");
+    const before = first.years?.["2025"]?.ferryCrossings;
+    await prisma.ferryJourney.create({ data: ferry("2025-08-01T12:00:00Z") });
+    const second = await buildLeaderboardSnapshot(userId, ON, null, 3, true);
+    if (second.version !== 3) throw new Error("expected v3");
+    expect(second.years?.["2025"]?.ferryCrossings).toBe((before as number) + 1);
   });
 });

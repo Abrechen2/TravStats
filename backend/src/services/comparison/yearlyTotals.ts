@@ -12,6 +12,8 @@ export type YearlyTotals = Record<string, Record<string, number | null>>;
 
 /** Never walk further back than this, so a stray 1970 row cannot turn one request into 55 sweeps. */
 export const MAX_YEARS = 40;
+/** Pause between two years' loader sweeps, so a build never holds the database for its whole run. */
+export const PACE_MS = 25;
 
 /** Metrics that exist for the lifetime view only. */
 const LIFETIME_ONLY = (key: string): boolean => key === "countries" || key.startsWith("curated");
@@ -52,7 +54,8 @@ async function firstYear(userId: string): Promise<number | null> {
  */
 export async function buildYearlyTotals(
   userId: string,
-  figuresFor: (year: number) => Promise<Record<string, number | null | undefined>>
+  figuresFor: (year: number) => Promise<Record<string, number | null | undefined>>,
+  paceMs: number = PACE_MS
 ): Promise<YearlyTotals | undefined> {
   const first = await firstYear(userId);
   if (first === null) return undefined;
@@ -60,6 +63,7 @@ export async function buildYearlyTotals(
   const from = Math.max(first, last - MAX_YEARS + 1);
   const out: YearlyTotals = {};
   for (let year = from; year <= last; year++) {
+    if (year > from && paceMs > 0) await new Promise((resolve) => setTimeout(resolve, paceMs));
     const figures = Object.entries(await figuresFor(year)).filter(
       (e): e is [string, number | null] => e[1] !== undefined && !LIFETIME_ONLY(e[0])
     );

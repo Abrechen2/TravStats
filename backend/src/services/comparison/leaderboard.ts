@@ -83,6 +83,16 @@ async function mapInOrder<T, R>(
   return out;
 }
 
+/** Whether the viewer's own accepted consent toward the owner of `consent` carries the yearly totals. */
+async function viewerSharesYears(consent: LeaderboardConsent): Promise<boolean> {
+  if (!consent.viewerId) return false;
+  const back = await prisma.leaderboardConsent.findUnique({
+    where: { ownerId_viewerId: { ownerId: consent.viewerId, viewerId: consent.ownerId } },
+  });
+  if (back?.status !== "accepted") return false;
+  return readScope(back.scope, back.id)?.years === true;
+}
+
 async function localRow(
   consent: LeaderboardConsent,
   person: Person,
@@ -93,7 +103,13 @@ async function localRow(
   if (scope.year !== null && scope.year !== year)
     return { person, status: "yearNotShared", snapshot: null, sharedYear: scope.year };
   try {
-    const snapshot = await buildLeaderboardSnapshot(consent.ownerId, scope, year, 3);
+    const snapshot = await buildLeaderboardSnapshot(
+      consent.ownerId,
+      scope,
+      year,
+      3,
+      await viewerSharesYears(consent)
+    );
     return {
       person,
       status: "ok",
@@ -202,7 +218,8 @@ export async function readLeaderboard(
     // the page draws them against a friend (spec: only when both sides opted in).
     { groups: [...METRIC_GROUPS], domains: visible, year: null, years: true },
     year,
-    3
+    3,
+    true
   );
   const rows: LeaderboardRow[] = [
     {

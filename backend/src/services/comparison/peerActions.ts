@@ -71,7 +71,8 @@ export async function serveAggregate(
       remote.userId,
       scope,
       body.year,
-      highestCommonVersion(body.accept)
+      highestCommonVersion(body.accept),
+      body.viewerYears === true
     ),
   };
 }

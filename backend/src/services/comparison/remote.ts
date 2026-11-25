@@ -12,6 +12,7 @@
 import { randomBytes } from "crypto";
 import type { AppError } from "../../middleware/errorHandler";
 import { prisma, type DbTransaction } from "../../db";
+import { readScope } from "./consents";
 import { Prisma, type LeaderboardRemote } from "../../prisma";
 import logger from "../../utils/logger";
 import { PERSON_SELECT, toPerson } from "../sharing/people";
@@ -24,6 +25,7 @@ import { hash } from "../federation/refusal";
 import { pingReplySchema } from "../../schemas/federationAdmin";
 import {
   MUTUAL_PROTOCOL_VERSION,
+  YEARLY_PROTOCOL_VERSION,
   SERVED_VERSIONS,
   aggregateReplySchema,
   lbClaimReplySchema,
@@ -145,10 +147,14 @@ async function aggregateBody(remote: LeaderboardRemote, year: number | null, ask
   if (!peer?.leaderboardVersions.includes(MUTUAL_PROTOCOL_VERSION)) return { ...base, accept: [1] };
   const mine = await prisma.leaderboardConsent.findUnique({
     where: { ownerId_remoteId: { ownerId: remote.userId, remoteId: remote.id } },
-    select: { status: true },
+    select: { id: true, status: true, scope: true },
   });
   asked.viewerShares = mine?.status === "accepted";
-  return { ...base, accept: [...SERVED_VERSIONS], viewerShares: asked.viewerShares };
+  const body = { ...base, accept: [...SERVED_VERSIONS], viewerShares: asked.viewerShares };
+  // `viewerYears` exists from protocol 3 on: an older strict schema would refuse the field.
+  if (!peer.leaderboardVersions.includes(YEARLY_PROTOCOL_VERSION)) return body;
+  const myScope = mine?.status === "accepted" ? readScope(mine.scope, remote.id) : null;
+  return { ...body, viewerYears: myScope?.years === true };
 }
 
 /** The status a pull outcome leaves on the remote row; null: it says nothing about the friend. */

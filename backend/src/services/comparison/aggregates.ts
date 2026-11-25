@@ -16,6 +16,7 @@ import { DOMAIN_AGGREGATES } from "./domainAggregates";
 import { comparisonError } from "./errors";
 import { loadCuratedFigures } from "./curatedAggregates";
 import { buildYearlyTotals } from "./yearlyTotals";
+import { cachedYearlyTotals } from "./yearlyTotalsCache";
 import { buildAchievementSection } from "./achievementSection";
 
 /**
@@ -94,7 +95,13 @@ export async function buildLeaderboardSnapshot(
   userId: string,
   scope: LeaderboardScope,
   year: number | null,
-  version: 1 | 2 | 3 = 1
+  version: 1 | 2 | 3 = 1,
+  /**
+   * Whether the one asking ALSO shares yearly totals back (their own accepted consent toward this
+   * owner has `years`). Yearly totals are mutual: without it the figures are not even built, so
+   * the rule holds on the server and not only on the page. The owner's own views pass true.
+   */
+  viewerYears = false
 ): Promise<LeaderboardSnapshot> {
   if (scope.year !== null && scope.year !== year)
     throw comparisonError("COMPARISON_YEAR_NOT_SHARED", 403, "Shared for another year only", {
@@ -122,8 +129,13 @@ export async function buildLeaderboardSnapshot(
     });
   // Yearly totals are an opt-in family: only a lifetime request, only with the consent's switch.
   const years =
-    year === null && scope.years === true
-      ? await buildYearlyTotals(userId, (y) => buildTotals(userId, scope, y).then((t) => t.values))
+    year === null && scope.years === true && viewerYears
+      ? await cachedYearlyTotals(
+          userId,
+          `${[...scope.groups].sort().join(",")}|${[...scope.domains].sort().join(",")}`,
+          () =>
+            buildYearlyTotals(userId, (y) => buildTotals(userId, scope, y).then((t) => t.values))
+        )
       : undefined;
   return leaderboardSnapshotV3Schema.parse({
     ...common,

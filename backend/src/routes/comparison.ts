@@ -100,7 +100,7 @@ router.post(
   "/preview",
   handle(async (req, res) => {
     const scope = leaderboardScopeSchema.parse(req.body);
-    send(res, await buildLeaderboardSnapshot(req.userId!, scope, scope.year, 3));
+    send(res, await buildLeaderboardSnapshot(req.userId!, scope, scope.year, 3, true));
   })
 );
 router.get(

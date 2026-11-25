@@ -102,7 +102,7 @@ export function clearGapCalendarCache(): void {
 }
 
 /** The user a write names in its arguments or result, or null when it names none. */
-function userOf(event: WriteEvent): string | null {
+export function userOf(event: WriteEvent): string | null {
   const args = event.args as {
     where?: { userId?: unknown };
     data?: { userId?: unknown } | Array<{ userId?: unknown }>;

@@ -20,6 +20,8 @@ export const LEADERBOARD_SCHEMA = "travstats-leaderboard" as const;
 export const SERVED_VERSIONS = [1, 2, 3] as const;
 /** The first protocol version whose aggregate request carries `viewerShares`. */
 export const MUTUAL_PROTOCOL_VERSION = 2;
+/** The first protocol version whose aggregate request carries `viewerYears` and whose snapshot may carry `years`. */
+export const YEARLY_PROTOCOL_VERSION = 3;
 
 export const leaderboardScopeSchema = z.strictObject({
   groups: z
@@ -144,6 +146,11 @@ export const aggregateRequestSchema = z.strictObject({
    * on a v1 request (an older server cannot assert it).
    */
   viewerShares: z.boolean().optional(),
+  /**
+   * Snapshot v3: whether the asking side shares ITS yearly totals with this owner too. Yearly
+   * totals are mutual; absent (an older asker) counts as false.
+   */
+  viewerYears: z.boolean().optional(),
 });
 export const lbClaimRequestSchema = z.strictObject({
   action: z.literal("lb-claim"),
