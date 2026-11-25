@@ -33,7 +33,12 @@ import { verifyReauthAssertion } from "../services/webauthn/reauth";
 import { BACKUP_BASE_DIR } from "../services/backup/backupConfig";
 import { normalizeRecoveryKey } from "../services/backup/recoveryKey";
 import { invalidRecoveryKey } from "../services/backup/restoreRecoveryKey";
-import { findRunningJob, startJob, type JobKind } from "../services/jobs/jobRegistry";
+import {
+  findRunningJob,
+  startExclusiveJob,
+  startJob,
+  type JobKind,
+} from "../services/jobs/jobRegistry";
 
 /** A backup and a restore must never overlap, whichever of the two started first. */
 const BACKUP_JOB_KINDS: readonly JobKind[] = ["backup.create", "backup.restore"];
@@ -434,7 +439,10 @@ router.post(
       // refusals (RESTORE_ARCHIVE_*, RESTORE_ENCRYPTION_KEY_MISMATCH) arrive
       // as the job's error code, before anything was written, exactly as they
       // did as a response.
-      const job = startJob("backup.restore", req.userId!, async () => {
+      // The check above answers early; this is the one that holds — checked
+      // and registered in one step, after the awaits a second request could
+      // have slipped through.
+      const job = startExclusiveJob("backup.restore", BACKUP_JOB_KINDS, req.userId!, async () => {
         try {
           await restoreBackup(id, {
             scope: body.scope,
@@ -448,6 +456,7 @@ router.post(
         }
         return { backupId: id, scope: body.scope };
       });
+      if (!job) throw new AppError("A backup operation is already running", 409);
 
       res.status(202).json({ success: true, data: { jobId: job.id } });
     } catch (error) {
