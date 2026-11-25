@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { open, realpath } from "node:fs/promises";
+import { lstat, open, realpath } from "node:fs/promises";
 import path from "node:path";
 import { ToolFailure } from "./errors";
 
@@ -92,6 +92,22 @@ export async function loadFile(filesDir: string | null, fileName: string): Promi
   }
   try {
     const stat = await handle.stat();
+    // O_NOFOLLOW guards only the last component. A directory on the way swapped for a symlink since
+    // realpath() would make this open land elsewhere: the opened file must still be the one the
+    // path names inside the folder (same device and inode), or it is refused.
+    const named = await lstat(real).catch(() => null);
+    const again = await realpath(wanted).catch(() => null);
+    if (
+      !named ||
+      !again ||
+      !inside(root, again) ||
+      named.ino !== stat.ino ||
+      named.dev !== stat.dev
+    )
+      throw new ToolFailure(
+        "invalid_input",
+        "The file changed while it was being opened. Refused."
+      );
     if (!stat.isFile()) throw new ToolFailure("invalid_input", "fileName is not a regular file.");
     const ceiling = Math.max(...Object.values(SIZE_LIMITS));
     if (stat.size > ceiling)
