@@ -42,6 +42,7 @@ import {
   VISIT_DAYS_PER_RUN,
 } from "../services/travtrack/visits/project";
 import { buildPendingZoneRasters } from "../services/travtrack/explored/zoneCells";
+import { adaptivePacer, type Pace } from "../services/travtrack/imports/importPacing";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
@@ -65,6 +66,11 @@ export type ProjectionRunOptions = {
   maxDays?: number;
   /** Shared by the tick's accounts: cells sent to the geocoder at most (L3). */
   cityBudget?: { left: number };
+  /**
+   * The pause after each projected day or month: the cron passes `adaptivePacer()`, so a
+   * backlog of thousands of days (a large import) never runs back to back against the web.
+   */
+  pace?: Pace;
 };
 
 /**
@@ -185,6 +191,7 @@ async function runAccount(
     const projected = await projectTravTrackCountryDays(userId, {
       countryAt,
       maxDays: countryBudget,
+      pace: options.pace,
     });
     const days = projected.projected + projected.rerun;
     // Silences spent at a known place: a new upload may have closed one, so every run of an
@@ -211,7 +218,7 @@ async function runAccount(
     const exploredBudget = monthsOwed ? Math.ceil((maxDays - days) / 2) : maxDays - days;
     const explored =
       exploredBudget > 0
-        ? await projectExploredCells(userId, { maxDays: exploredBudget })
+        ? await projectExploredCells(userId, { maxDays: exploredBudget, pace: options.pace })
         : { status: "done" as const, projected: 0, rerun: 0 };
     if (explored.status === "failed") {
       await recordFailure(userId, now);
@@ -226,6 +233,7 @@ async function runAccount(
             countryAt,
             cityBudget: options.cityBudget,
             maxDays: monthsBudget,
+            pace: options.pace,
           })
         : { status: "done" as const, spentDays: 0 };
     // A month costs every day it owed, acknowledged or not.
@@ -348,7 +356,7 @@ export function startTravTrackProjectionScheduler(): void {
     () => {
       if (running) return;
       running = true;
-      void runTravTrackProjections()
+      void runTravTrackProjections({ pace: adaptivePacer() })
         .then((result) => {
           if (result.accounts > 0)
             logger.info({ operation: "travtrack_projections_done", ...result });

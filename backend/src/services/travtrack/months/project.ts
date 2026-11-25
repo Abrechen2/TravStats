@@ -45,6 +45,7 @@ import {
   removalDays,
   unprojectedDaysIn,
 } from "../dirtyDays";
+import { noPace, type Pace } from "../imports/importPacing";
 import { takeTravTrackLock } from "../lock";
 import { readSafeTravTrack, type SafeCursor } from "../readSafe";
 import {
@@ -79,6 +80,8 @@ export type MonthsProjectionDeps = {
    * starts once they are spent. Unbounded unless the scheduler passes its budget.
    */
   maxDays?: number;
+  /** Pause after each month so a backlog cannot starve the web (`adaptivePacer`); none unless given. */
+  pace?: Pace;
   /** Lookups left in the whole tick, shared by its accounts (`cityTickBudget`). */
   cityBudget?: { left: number };
   /** The job's spacing between geocoder requests; its default unless a test needs none. */
@@ -284,7 +287,7 @@ export async function projectMonths(
       // Asked before every month: a switch stops the run, not the next one.
       const now = await travTrackDerivationAllowed(userId);
       if (now !== "ok") return stop(now);
-      let outcome = await projectMonth(userId, month, deps);
+      let outcome = await (deps.pace ?? noPace)(() => projectMonth(userId, month, deps));
       result.spentDays += outcome.pendingDays;
       const lookupsLeft = Math.min(
         MAX_CITY_LOOKUPS_PER_RUN - result.lookups,

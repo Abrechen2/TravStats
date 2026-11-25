@@ -1,6 +1,7 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { createReadStream } from "node:fs";
 
-import { prisma, type DbTransaction } from "../../../db";
+import { expectingBusyWait, prisma, type DbTransaction } from "../../../db";
 import { Prisma } from "../../../prisma";
 import { AppError } from "../../../middleware/errorHandler";
 import logger from "../../../utils/logger";
@@ -11,8 +12,17 @@ import { utcDaysOf } from "../dirtyDays";
 import { ingestPoints, type IngestResult } from "../ingest";
 import { takeTravTrackLock } from "../lock";
 import type { GpxWorkerOptions } from "./gpxWorker";
+import {
+  importEndStatus,
+  isTransientDbError,
+  paceAfter,
+  sleep as realSleep,
+  type Sleep,
+} from "./importPacing";
 import { displayFileName } from "./mapGpx";
+import { FairSlot, importWriteSlot, SLICE_BATCHES, SLICE_MS } from "./writeSlot";
 import { discardSpool, readHead, spoolBuffer } from "./spool";
+import { spoolPoints, type PointSpool } from "./pointSpool";
 import { readTrackFile } from "./trackFile";
 import { assertImportSize, sniffFormat } from "./trackFormat";
 import { readerQueueFull, busy } from "./trackFileChild";
@@ -32,9 +42,25 @@ import { readerQueueFull, busy } from "./trackFileChild";
  *
  * An import never triggers a stay, country or journey scan of its span and
  * never prompts (review focus 19): it only stores points.
+ *
+ * Sharing the database (2026-11-24, a 45 MB Google Timeline held prod at load
+ * 15 for seven minutes and then failed on a 347 s transaction): a batch is
+ * small, commits on its own together with the import's cursor and report, and
+ * waits for the account's lock only so long — a batch that could not get it is
+ * retried after a pause. After every batch the job sleeps as long as the batch
+ * took (`importPacing.ts`). An import that stops mid-way is `partial` and
+ * resumes at its cursor when the same file is given again.
  */
 
-export const IMPORT_BATCH_SIZE = 5000;
+export const IMPORT_BATCH_SIZE = 1000;
+/** A batch's own transaction: far below the 60 s ingest default. */
+const BATCH_TX_TIMEOUT_MS = 30_000;
+/** How long a batch waits for the account's lock (and each statement twice that). */
+const BATCH_LOCK_TIMEOUT_MS = 10_000;
+/** Tries per batch when the database was only busy; then the import stops as `partial`. */
+const BATCH_ATTEMPTS = 4;
+/** The pause before the second try; doubled for each further one. */
+const BATCH_RETRY_MS = 2_000;
 
 /** The minutes two removed points may lie apart and still count as one span. */
 const SPAN_JOIN_MS = 30 * 60_000;
@@ -49,11 +75,15 @@ export type ImportReport = {
   format?: string;
   /** The failure's code, when the import failed. */
   error?: string;
+  /** The run stored nothing new (every fix a duplicate or dropped): not progress. */
+  noNewPoints?: boolean;
+  /** Waiting for its turn behind another account's import; its points wait on disk. */
+  queued?: boolean;
 };
 
 export type ImportOutcome = {
   importId: string;
-  status: "succeeded" | "cancelled";
+  status: "succeeded" | "partial" | "cancelled";
   report: ImportReport;
 };
 
@@ -89,16 +119,54 @@ class ImportCancelled extends Error {
 const notFound = () =>
   new AppError("No such import of this account", 404, "TRAVTRACK_IMPORT_NOT_FOUND");
 
-function addBatch(report: ImportReport, result: IngestResult): void {
-  report.stored += result.stored;
-  report.duplicate += result.duplicate;
-  for (const o of result.outcomes) if (o.outcome === "dropped") report.dropped[o.reason] += 1;
+/** The report with one committed batch added. */
+function withBatch(report: ImportReport, result: IngestResult): ImportReport {
+  const dropped = { ...report.dropped };
+  for (const o of result.outcomes) if (o.outcome === "dropped") dropped[o.reason] += 1;
+  return {
+    ...report,
+    stored: report.stored + result.stored,
+    duplicate: report.duplicate + result.duplicate,
+    dropped,
+  };
+}
+
+/** A stored report read back for a resume; anything unreadable counts from zero. */
+function reportFrom(json: unknown): ImportReport {
+  const base = emptyReport();
+  if (!json || typeof json !== "object") return base;
+  const r = json as Partial<ImportReport>;
+  const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  return {
+    ...base,
+    stored: n(r.stored),
+    duplicate: n(r.duplicate),
+    dropped: {
+      privacy_zone: n(r.dropped?.privacy_zone),
+      deleted_range: n(r.dropped?.deleted_range),
+      invalid: n(r.dropped?.invalid),
+      null_island: n(r.dropped?.null_island),
+    },
+  };
+}
+
+/** SHA-256 of the file, streamed: a resume continues at the cursor only for the same bytes. */
+async function fileDigest(input: Buffer | { path: string }): Promise<string> {
+  const hash = createHash("sha256");
+  if (Buffer.isBuffer(input)) return hash.update(input).digest("hex");
+  for await (const chunk of createReadStream(input.path)) hash.update(chunk as Buffer);
+  return hash.digest("hex");
 }
 
 /** Writes the outcome only while the row is still `running`: a delete meanwhile wins. */
 async function finish(
   importId: string,
-  data: { status: "succeeded" | "failed"; report: ImportReport; fromAt?: Date; toAt?: Date }
+  data: {
+    status: "succeeded" | "partial" | "failed";
+    report: ImportReport;
+    fromAt?: Date;
+    toAt?: Date;
+  }
 ): Promise<boolean> {
   const { count } = await prisma.travTrackImport.updateMany({
     where: { id: importId, status: "running" },
@@ -119,6 +187,23 @@ export type RunOptions = {
   onProgress?: (percent: number) => void;
   /** Test seam: after each committed batch, with the number of batches done. */
   afterBatch?: (done: number) => Promise<void>;
+  /** Test seam: each committed batch's first point, size and wall time (its transaction included). */
+  onBatch?: (batch: { at: number; size: number; durationMs: number }) => void;
+  /** Continue at the row's cursor when the file is the one it was started with. */
+  resume?: boolean;
+  /** The pause between batches and before a retry (tests record it instead of waiting). */
+  sleep?: Sleep;
+  /** How long a batch waits for the account's lock (tests shorten it). */
+  lockTimeoutMs?: number;
+  /** The turn at storing points (tests give their own). */
+  slot?: FairSlot;
+  /** Batches, and milliseconds, one turn lasts at most (tests shorten them). */
+  sliceBatches?: number;
+  sliceMs?: number;
+  /** Test seam: after each parse of the file (once per run). */
+  onParse?: () => void;
+  /** Test seam: the points file this run reads its batches from. */
+  onSpool?: (path: string) => void;
 };
 
 /**
@@ -131,56 +216,79 @@ export async function runGpxImport(
   file: { buffer?: Buffer | null; path?: string },
   opts: RunOptions = {}
 ): Promise<ImportOutcome> {
-  const report = emptyReport();
-  const origin = `gpx:${importId}`;
-  const fence = async (tx: DbTransaction) => {
-    const row = await tx.travTrackImport.findFirst({
-      where: { id: importId, userId },
-      select: { status: true },
-    });
-    if (row?.status !== "running") throw new ImportCancelled();
-  };
+  const state: RunState = { report: emptyReport(), cursor: 0, completed: false };
+  let spool: PointSpool | null = null;
+  try {
+    return await runWithSpool(importId, userId, file, opts, state, (s) => (spool = s));
+  } finally {
+    // The points file goes however the import ends: succeeded, partial, failed, cancelled.
+    await (spool as PointSpool | null)?.discard().catch((err: unknown) =>
+      logger.warn({
+        operation: "travtrack.import.point_spool_discard_failed",
+        importId,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    );
+  }
+}
+
+async function runWithSpool(
+  importId: string,
+  userId: string,
+  file: { buffer?: Buffer | null; path?: string },
+  opts: RunOptions,
+  state: RunState,
+  keep: (spool: PointSpool) => void
+): Promise<ImportOutcome> {
   try {
     const input = file.path ? { path: file.path } : (file.buffer ?? Buffer.alloc(0));
     file.buffer = null;
-    const { track: mapped } = await readTrackFile(input, {
-      ...opts.reader,
-      onProgress: (done, total) => opts.onProgress?.(Math.floor((done / Math.max(total, 1)) * 50)),
+    const digest = await fileDigest(input);
+    const prior = await prisma.travTrackImport.findFirst({
+      where: { id: importId, userId },
+      select: { cursor: true, report: true, fileSha256: true },
     });
-    report.format = mapped.formats.join("+");
-    report.read = mapped.read;
-    report.dropped.invalid = mapped.invalid;
-    report.withoutTime = mapped.withoutTime;
-    if (mapped.count === 0) {
-      throw new AppError("The file holds no point with a time", 422, "TRAVTRACK_IMPORT_NO_TIMES");
+    const resuming = opts.resume === true && prior?.fileSha256 === digest && prior.cursor > 0;
+    if (resuming) {
+      state.cursor = prior.cursor;
+      state.report = reportFrom(prior.report);
     }
-    const size = opts.batchSize ?? IMPORT_BATCH_SIZE;
-    for (let at = 0, done = 0; at < mapped.count; at += size) {
-      const { result } = await ingestPoints({
-        userId,
-        origin,
-        deviceId: `file:${importId}`,
-        uploadId: null,
-        points: mapped.batch(at, size),
-        fence,
-      });
-      addBatch(report, result);
-      done += 1;
-      opts.onProgress?.(50 + Math.floor((Math.min(at + size, mapped.count) / mapped.count) * 50));
-      await opts.afterBatch?.(done);
+    // Parsed once, before the turn: the points go to disk and only their
+    // offsets stay in memory while the import waits (`pointSpool.ts`).
+    const { spool, span } = await parseToSpool(input, resuming, state, opts);
+    keep(spool);
+    opts.onSpool?.(spool.path);
+    await writeProgress(importId, state, { fileSha256: digest });
+    const slot = opts.slot ?? importWriteSlot;
+    await slot.acquire(userId);
+    try {
+      await storeInTurns(importId, userId, spool, state, slot, opts);
+    } finally {
+      slot.release();
     }
+    state.completed = true;
+    const report = finalReport(state.report);
     const finished = await finish(importId, {
       status: "succeeded",
       report,
-      ...(mapped.fromMs !== null ? { fromAt: new Date(mapped.fromMs) } : {}),
-      ...(mapped.untilMs !== null ? { toAt: new Date(mapped.untilMs) } : {}),
+      ...(span.fromMs !== null ? { fromAt: new Date(span.fromMs) } : {}),
+      ...(span.untilMs !== null ? { toAt: new Date(span.untilMs) } : {}),
     });
     return { importId, status: finished ? "succeeded" : "cancelled", report };
   } catch (err) {
-    if (err instanceof ImportCancelled) return { importId, status: "cancelled", report };
+    if (err instanceof ImportCancelled) {
+      return { importId, status: "cancelled", report: state.report };
+    }
     const code = jobErrorOf(err).code;
+    const { cursor } = state;
+    const status = importEndStatus({
+      completed: state.completed,
+      cursor,
+      stored: state.report.stored,
+    });
+    const ended = { ...finalReport(state.report), error: code };
     try {
-      await finish(importId, { status: "failed", report: { ...report, error: code } });
+      await finish(importId, { status, report: ended });
     } catch (writeErr) {
       logger.error({
         operation: "travtrack.import.finish_failed",
@@ -188,7 +296,205 @@ export async function runGpxImport(
         error: writeErr instanceof Error ? writeErr.message : String(writeErr),
       });
     }
+    logger.warn({ operation: "travtrack.import.stopped", importId, status, cursor, code });
+    // Stored points are not a failure: the job answers with the partial report.
+    if (status === "partial") return { importId, status: "partial", report: ended };
     throw err;
+  }
+}
+
+type RunState = { report: ImportReport; cursor: number; completed: boolean };
+
+/** The report as it ends: a run that stored nothing new says so instead of looking like progress. */
+function finalReport(report: ImportReport): ImportReport {
+  const rest = withoutQueued(report);
+  return rest.stored === 0 ? { ...rest, noNewPoints: true } : rest;
+}
+
+/**
+ * Parses the file and stores its points in turns. At a slice end with another
+ * import waiting, the parsed points are let go before this import queues
+ * again, and the file is parsed anew when its turn comes back.
+ */
+/** Parses the file once and writes its points to disk; the parsed track is let go. */
+async function parseToSpool(
+  input: Buffer | { path: string },
+  resuming: boolean,
+  state: RunState,
+  opts: RunOptions
+): Promise<{ spool: PointSpool; span: { fromMs: number | null; untilMs: number | null } }> {
+  const { track } = await readTrackFile(input, {
+    ...opts.reader,
+    onProgress: (done, total) => opts.onProgress?.(Math.floor((done / Math.max(total, 1)) * 50)),
+  });
+  opts.onParse?.();
+  state.report = {
+    ...state.report,
+    format: track.formats.join("+"),
+    read: track.read,
+    withoutTime: track.withoutTime,
+    // On a resume the stored count already holds the reader's invalid fixes.
+    dropped: resuming ? state.report.dropped : { ...state.report.dropped, invalid: track.invalid },
+  };
+  if (track.count === 0) {
+    throw new AppError("The file holds no point with a time", 422, "TRAVTRACK_IMPORT_NO_TIMES");
+  }
+  return {
+    spool: await spoolPoints(track),
+    span: { fromMs: track.fromMs, untilMs: track.untilMs },
+  };
+}
+
+/**
+ * Stores the spooled points from the cursor on, in turns: at a slice end with
+ * another import waiting, the turn is handed over and this import carries on
+ * from its committed cursor when it comes back — no second parse.
+ */
+async function storeInTurns(
+  importId: string,
+  userId: string,
+  spool: PointSpool,
+  state: RunState,
+  slot: FairSlot,
+  opts: RunOptions
+): Promise<void> {
+  const origin = `gpx:${importId}`;
+  const wait = opts.sleep ?? realSleep;
+  const fence = async (tx: DbTransaction) => {
+    const row = await tx.travTrackImport.findFirst({
+      where: { id: importId, userId },
+      select: { status: true },
+    });
+    if (row?.status !== "running") throw new ImportCancelled();
+  };
+  const total = spool.count;
+  const size = opts.batchSize ?? IMPORT_BATCH_SIZE;
+  const sliceBatches = opts.sliceBatches ?? SLICE_BATCHES;
+  const sliceMs = opts.sliceMs ?? SLICE_MS;
+  let sliceStart = performance.now();
+  let inSlice = 0;
+  for (let done = 0; state.cursor < total;) {
+    const at = state.cursor;
+    const next = Math.min(at + size, total);
+    const started = performance.now();
+    state.report = await storeBatch({
+      userId,
+      importId,
+      origin,
+      points: await spool.batch(at, size),
+      fence,
+      report: state.report,
+      cursorAfter: next,
+      wait,
+      lockTimeoutMs: opts.lockTimeoutMs ?? BATCH_LOCK_TIMEOUT_MS,
+    });
+    state.cursor = next;
+    const durationMs = performance.now() - started;
+    done += 1;
+    opts.onBatch?.({ at, size: next - at, durationMs });
+    opts.onProgress?.(50 + Math.floor((state.cursor / total) * 50));
+    await opts.afterBatch?.(done);
+    if (state.cursor >= total) break;
+    await wait(paceAfter(durationMs));
+    inSlice += 1;
+    if (inSlice < sliceBatches && performance.now() - sliceStart < sliceMs) continue;
+    if (slot.waiting() > 0) {
+      state.report = { ...state.report, queued: true };
+      await writeProgress(importId, state);
+      await slot.yieldTurn(userId);
+      state.report = withoutQueued(state.report);
+    }
+    sliceStart = performance.now();
+    inSlice = 0;
+  }
+}
+
+function withoutQueued(report: ImportReport): ImportReport {
+  const { queued: _queued, ...rest } = report;
+  return rest;
+}
+
+/** The row's cursor and report as they stand (only while it is still running). */
+async function writeProgress(
+  importId: string,
+  state: RunState,
+  extra: { fileSha256?: string } = {}
+): Promise<void> {
+  await prisma.travTrackImport.updateMany({
+    where: { id: importId, status: "running" },
+    data: {
+      ...extra,
+      cursor: state.cursor,
+      report: state.report as unknown as Prisma.InputJsonValue,
+    },
+  });
+}
+
+/**
+ * One batch in its own short transaction, the import's cursor and report
+ * committed with its points. Busy (lock or statement timeout, an expired
+ * transaction) is retried after a growing pause; anything else, or the last
+ * try, is thrown and the import stops with what it has.
+ */
+async function storeBatch(b: {
+  userId: string;
+  importId: string;
+  origin: string;
+  points: Record<string, unknown>[];
+  fence: (tx: DbTransaction) => Promise<void>;
+  report: ImportReport;
+  cursorAfter: number;
+  wait: Sleep;
+  lockTimeoutMs: number;
+}): Promise<ImportReport> {
+  for (let attempt = 1; ; attempt++) {
+    let next = b.report;
+    const last = attempt >= BATCH_ATTEMPTS;
+    try {
+      // An expected busy wait is the caller's to report (one warning per retry);
+      // only the last try's failure reaches the error log.
+      const ingest = () =>
+        ingestPoints({
+          userId: b.userId,
+          origin: b.origin,
+          deviceId: `file:${b.importId}`,
+          uploadId: null,
+          points: b.points,
+          fence: b.fence,
+          timeoutMs: BATCH_TX_TIMEOUT_MS,
+          lockTimeoutMs: b.lockTimeoutMs,
+          afterIn: async (tx, result) => {
+            next = withBatch(b.report, result);
+            await tx.travTrackImport.update({
+              where: { id: b.importId },
+              data: {
+                cursor: b.cursorAfter,
+                report: next as unknown as Prisma.InputJsonValue,
+              },
+            });
+          },
+        });
+      await (last ? ingest() : expectingBusyWait(ingest));
+      return next;
+    } catch (err) {
+      if (!isTransientDbError(err)) throw err;
+      if (last) {
+        logger.error({
+          operation: "travtrack.import.batch_failed",
+          importId: b.importId,
+          attempt,
+          cursor: b.cursorAfter,
+        });
+        throw err;
+      }
+      logger.warn({
+        operation: "travtrack.import.batch_busy",
+        importId: b.importId,
+        attempt,
+        cursor: b.cursorAfter,
+      });
+      await b.wait(BATCH_RETRY_MS * 2 ** (attempt - 1));
+    }
   }
 }
 
@@ -200,10 +506,17 @@ export async function settleLeftovers(tx: DbTransaction, userId: string): Promis
   });
   const stale = running.filter((r) => !active.has(r.id)).map((r) => r.id);
   if (stale.length > 0) {
-    await tx.travTrackImport.updateMany({
-      where: { id: { in: stale }, status: "running" },
-      data: { status: "interrupted", finishedAt: new Date() },
-    });
+    // A file import that committed a batch before the restart is `partial`:
+    // its cursor says where a resume picks up. One that stored nothing (and
+    // a Dawarich copy, which keeps its own checkpoint) stays `interrupted`.
+    await tx.$executeRaw`
+      UPDATE travtrack_imports
+         SET status = CASE WHEN kind = 'gpx' AND cursor > 0 THEN 'partial' ELSE 'interrupted' END,
+             report = CASE WHEN kind = 'gpx' AND cursor > 0
+                           THEN jsonb_set(COALESCE(report, '{}'::jsonb), '{error}', '"TRAVTRACK_IMPORT_INTERRUPTED"')
+                           ELSE report END,
+             finished_at = now()
+       WHERE id = ANY(${stale}::text[]) AND status = 'running'`;
   }
   return running.length > stale.length;
 }
@@ -224,6 +537,7 @@ export async function listTravTrackImports(userId: string) {
       fileName: true,
       status: true,
       report: true,
+      cursor: true,
       fromAt: true,
       toAt: true,
       createdAt: true,
@@ -246,6 +560,8 @@ export async function startGpxImport(
     beforeRun?: () => Promise<void>;
     /** Test seam: lowers the size caps. */
     maxBytes?: { json?: number; xml?: number };
+    /** Resume this stopped import (`partial`, `failed`, `interrupted`) with the file given again. */
+    resumeOf?: string;
   } = {}
 ): Promise<{ jobId: string; importId: string }> {
   // The service owns the spooled file from here on: it is removed on every refusal
@@ -260,12 +576,21 @@ export async function startGpxImport(
       spooled = file.path;
       assertImportSize(sniffFormat(await readHead(spooled)), file.size, opts.maxBytes);
     }
-    if (readerQueueFull() || fileImportsFull()) throw busy();
+    if (readerQueueFull() || fileImportsFull()) {
+      // This account's own import is the reason: say so (409), not "the server is busy".
+      if (await hasLiveImport(userId)) {
+        throw new AppError("An import is running already", 409, "TRAVTRACK_IMPORT_RUNNING");
+      }
+      throw busy();
+    }
     // Reserve the slot in the same tick as the check: two requests awaiting
     // createRunningImport would otherwise both pass a full-minus-one check.
     fileImportsRunning += 1;
     slotHeld = true;
-    const importId = await createRunningImport(userId, file.originalName);
+    const importId =
+      opts.resumeOf !== undefined
+        ? await reopenImport(userId, opts.resumeOf, await fileDigest({ path: spooled }))
+        : await createRunningImport(userId, file.originalName);
     const path = spooled;
     const job = startJob("travtrack.fileImport", userId, async (reportProgress) => {
       try {
@@ -274,7 +599,11 @@ export async function startGpxImport(
           importId,
           userId,
           { path },
-          { ...opts, onProgress: (percent) => reportProgress(percent, 100) }
+          {
+            ...opts,
+            resume: opts.resumeOf !== undefined,
+            onProgress: (percent) => reportProgress(percent, 100),
+          }
         );
       } finally {
         releaseActiveImport(importId, importId);
@@ -328,7 +657,58 @@ async function createRunningImport(userId: string, originalName: string | undefi
   return importId;
 }
 
-/** File imports between "accepted" and "finished": the points of each wait in memory until stored. */
+/** Statuses a file import can be resumed from. */
+const RESUMABLE = ["partial", "failed", "interrupted"];
+
+/**
+ * A stopped file import back to `running`, under the lock and with the same
+ * one-running-import rule as a new one. Its origin stays, so the points it has
+ * stored already answer as duplicates; the cursor is kept for the run to use
+ * when the file is the same.
+ */
+async function reopenImport(userId: string, importId: string, digest: string): Promise<string> {
+  await prisma
+    .$transaction(async (tx) => {
+      await takeTravTrackLock(tx, userId);
+      if (await settleLeftovers(tx, userId)) {
+        throw new AppError("An import is running already", 409, "TRAVTRACK_IMPORT_RUNNING");
+      }
+      const row = await tx.travTrackImport.findFirst({
+        where: { id: importId, userId },
+        select: { kind: true, status: true, fileSha256: true },
+      });
+      if (!row) throw notFound();
+      // Another file under this import's origin would mix two files' points into
+      // one import. Only a row from before the digest existed takes any file.
+      if (row.fileSha256 !== null && row.fileSha256 !== digest) {
+        throw new AppError(
+          "This is not the file the import was started with",
+          409,
+          "TRAVTRACK_IMPORT_FILE_MISMATCH"
+        );
+      }
+      if (row.kind !== "gpx" || !RESUMABLE.includes(row.status)) {
+        throw new AppError("This import cannot be resumed", 409, "TRAVTRACK_IMPORT_NOT_RESUMABLE");
+      }
+      active.set(importId, importId);
+      await tx.travTrackImport.update({
+        where: { id: importId },
+        data: { status: "running", finishedAt: null },
+      });
+    })
+    .catch((err: unknown) => {
+      releaseActiveImport(importId, importId);
+      throw err;
+    });
+  return importId;
+}
+
+/**
+ * File imports between "accepted" and "finished": the points of each wait in
+ * memory until stored. Only one of them stores at a time, in slices that go
+ * round the accounts (`writeSlot.ts`): two at once would only compete for the
+ * same disk, and one account's large file must not keep another's waiting.
+ */
 export const MAX_FILE_IMPORTS = 3;
 let fileImportsRunning = 0;
 

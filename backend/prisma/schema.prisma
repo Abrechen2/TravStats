@@ -7556,9 +7556,13 @@ model TravTrackImport {
   /// `gpx | dawarich` (CHECK).
   kind       String
   fileName   String    @map("file_name") @db.VarChar(200)
-  /// `running | succeeded | failed | interrupted | cancelled` (CHECK).
+  /// `running | succeeded | partial | failed | interrupted | cancelled` (CHECK).
   status     String
   report     Json?
+  /// Points of the file handled so far, committed with each batch: a resume starts here.
+  cursor     Int       @default(0)
+  /// SHA-256 of the imported file (hex): a resume continues at `cursor` only for the same file.
+  fileSha256 String?   @map("file_sha256") @db.Char(64)
   fromAt     DateTime? @map("from_at")
   toAt       DateTime? @map("to_at")
   createdAt  DateTime  @default(now()) @map("created_at")
