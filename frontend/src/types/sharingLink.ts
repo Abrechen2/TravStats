@@ -27,11 +27,12 @@ export interface LinkCandidate extends LinkTripView {
   reason: "period" | "name" | "overlap";
 }
 
-export interface LinkCandidates {
-  /** Empty until the other side agreed to sharing. */
-  candidates: LinkCandidate[];
-  possibleCopy: boolean;
+/** Before the other side agreed to sharing: this and nothing else. */
+export interface AwaitingConsent {
+  access: "awaitingConsent";
 }
+
+export type LinkCandidates = { access: "full"; candidates: LinkCandidate[] } | AwaitingConsent;
 
 export interface LinkEntryView {
   entity: LinkEntity;
@@ -45,12 +46,10 @@ export interface LinkMatchView extends LinkEntryView {
 }
 
 export interface LinkPreview {
-  /** The other side has not agreed to sharing yet: counts only, none of their entries. */
-  redacted: boolean;
+  access: "full";
   here: LinkTripView;
   there: LinkTripView;
-  /** `onlyThere` is null while redacted. */
-  counts: { matched: number; onlyHere: number; onlyThere: number | null; conflicting: number };
+  counts: { matched: number; onlyHere: number; onlyThere: number; conflicting: number };
   byType: {
     entity: LinkEntity;
     here: number;
@@ -74,3 +73,5 @@ export interface LinkResult {
   /** Across servers: linked, but the differing facts could not be settled. */
   settleFailed: boolean;
 }
+
+export type LinkPreviewAnswer = LinkPreview | AwaitingConsent;

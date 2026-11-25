@@ -16,13 +16,17 @@ import { planLink, type LinkDecision, type LinkPair, type LinkRow } from "../lin
 import {
   describePlan,
   rankCandidates,
-  redactPreview,
   tripRows,
   tripView,
   type LinkPreview,
   type LinkTripView,
 } from "../linkPreview";
-import type { LinkCandidates, LinkResult } from "../linkExisting";
+import {
+  AWAITING_CONSENT,
+  type LinkCandidates,
+  type LinkPreviewAnswer,
+  type LinkResult,
+} from "../linkExisting";
 import { acceptedParties } from "../members";
 import { propagateWrite, SHARE_TX_TIMEOUT_MS } from "../propagate";
 import { placeSharerCompanion } from "../remoteCompanion";
@@ -175,7 +179,10 @@ async function ownUnsharedTrip(c: DbTransaction, userId: string, tripId: string)
 }
 
 /** The caller's trips that may be the offered one: same period, same name, or overlapping. */
-export async function offerLinkCandidates(userId: string, id: string): Promise<LinkCandidates> {
+export async function offerLinkCandidates(
+  userId: string,
+  id: string
+): Promise<Extract<LinkCandidates, { access: "full" }>> {
   await requireTripFederation(userId);
   const row = await openOffer(userId, id);
   const trips = await prisma.trip.findMany({
@@ -184,7 +191,7 @@ export async function offerLinkCandidates(userId: string, id: string): Promise<L
   });
   // The caller's own trips: listed in full.
   const candidates = rankCandidates(offeredTrip(row), trips.map(tripView));
-  return { candidates, possibleCopy: candidates.length > 0 };
+  return { access: "full", candidates };
 }
 
 async function planOffer(tx: DbTransaction, userId: string, tripId: string, wire: WireEntry[]) {
@@ -194,24 +201,29 @@ async function planOffer(tx: DbTransaction, userId: string, tripId: string, wire
   return { trip, here, there, plan: planLink(here, there) };
 }
 
-/** The dry run against the offered entries; nothing is written on either server. */
+/**
+ * The dry run against the offered entries; nothing is written on either server. Before the
+ * consent between the two is accepted nothing is read from the home and nothing compared — the
+ * answer is `awaitingConsent`, as for a local link.
+ */
 export async function previewOfferLink(
   userId: string,
   id: string,
   tripId: string
-): Promise<LinkPreview> {
+): Promise<LinkPreviewAnswer> {
   await requireTripFederation(userId);
   const row = await openOffer(userId, id);
-  const wire = await fetchOffered(userId, row);
-  // The home person's entries in full only once the consent between the two is accepted, as for
-  // a local link; before that the dry run is counts only.
   const consenting = await acceptedParties(prisma, { kind: "user", id: userId }, [
     { kind: "remote", id: row.remoteId },
   ]);
+  if (consenting.size === 0) return AWAITING_CONSENT;
+  const wire = await fetchOffered(userId, row);
   return prisma.$transaction(async (tx) => {
     const { trip, here, there, plan } = await planOffer(tx, userId, tripId, wire);
-    const preview = describePlan(plan, tripView(trip), offeredTrip(row), here, there);
-    return consenting.size > 0 ? preview : redactPreview(preview);
+    return {
+      access: "full" as const,
+      ...describePlan(plan, tripView(trip), offeredTrip(row), here, there),
+    };
   });
 }
 

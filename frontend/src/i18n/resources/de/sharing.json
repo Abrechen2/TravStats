@@ -1109,8 +1109,6 @@
       "previewFailed": "Der Vergleich ist fehlgeschlagen.",
       "linkFailed": "Die Reisen konnten nicht verknüpft werden."
     },
-    "redacted": "{{name}} hat dem Teilen noch nicht zugestimmt. Bis dahin siehst du nur Anzahlen, keine Einträge oder Angaben von {{name}}.",
-    "possibleCopy": "{{name}} hat vielleicht schon eine eigene Kopie dieser Reise. Bis {{name}} dem Teilen zustimmt, zeigt der Vergleich nur Anzahlen.",
-    "summaryRedacted": "{{matched}} Einträge gefunden, {{conflicting}} mit Abweichungen; {{onlyHere}} nur bei dir."
+    "awaitingConsent": "Die andere Seite muss das Teilen erst annehmen; danach siehst du den Vergleich."
   }
 }

@@ -10,10 +10,7 @@ const id = z.string().min(1).max(100);
 const decision = z.enum(["mine", "theirs", "both"]);
 
 export const linkCandidatesQuerySchema = z.object({ userId: id }).strict();
-/** `targetTripId` is ignored before the other account agreed: the server picks the candidate. */
-export const linkPreviewBodySchema = z
-  .object({ userId: id, targetTripId: id.nullable().optional() })
-  .strict();
+export const linkPreviewBodySchema = z.object({ userId: id, targetTripId: id }).strict();
 export const linkBodySchema = z.object({ userId: id, targetTripId: id, decision }).strict();
 
 export const offerLinkPreviewBodySchema = z.object({ tripId: id }).strict();
@@ -24,19 +21,25 @@ const tripView = z.strictObject({ id: z.string(), name: z.string(), startDay: da
 const entity = z.enum(SHARE_ENTITIES);
 const entry = z.strictObject({ entity, label: z.string(), when: z.string().nullable() });
 
-export const linkCandidatesSchema = z.strictObject({
-  candidates: z.array(tripView.extend({ reason: z.enum(["period", "name", "overlap"]) })),
-  possibleCopy: z.boolean(),
-});
+/** Before the other account agreed to sharing: this and nothing else (no derived field). */
+const awaitingConsent = z.strictObject({ access: z.literal("awaitingConsent") });
 
-export const linkPreviewSchema = z.strictObject({
-  redacted: z.boolean(),
+export const linkCandidatesSchema = z.union([
+  z.strictObject({
+    access: z.literal("full"),
+    candidates: z.array(tripView.extend({ reason: z.enum(["period", "name", "overlap"]) })),
+  }),
+  awaitingConsent,
+]);
+
+const linkPreviewFull = z.strictObject({
+  access: z.literal("full"),
   here: tripView,
   there: tripView,
   counts: z.strictObject({
     matched: z.number().int(),
     onlyHere: z.number().int(),
-    onlyThere: z.number().int().nullable(),
+    onlyThere: z.number().int(),
     conflicting: z.number().int(),
   }),
   byType: z.array(
@@ -59,6 +62,8 @@ export const linkPreviewSchema = z.strictObject({
   onlyHere: z.array(entry),
   onlyThere: z.array(entry),
 });
+
+export const linkPreviewSchema = z.union([linkPreviewFull, awaitingConsent]);
 
 export const linkResultSchema = z.strictObject({
   groupId: z.string(),
