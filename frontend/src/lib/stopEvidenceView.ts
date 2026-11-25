@@ -30,6 +30,21 @@ const NEAR_PLUGIN_M = 150;
 const FAR_PLUGIN_M = 1000;
 const LONG_DWELL_MIN = 30;
 
+/**
+ * The thresholds as the „Warum?" line explains them — the same numbers the
+ * level is computed from, so the explanation cannot say one thing while the
+ * meter does another (a mirror test reads the server's file for them too).
+ */
+export const EVIDENCE_THRESHOLDS = {
+  highPoints: HIGH_POINTS,
+  mediumPoints: MEDIUM_POINTS,
+  nearVenueM: NEAR_VENUE_M,
+  closeVenueM: CLOSE_VENUE_M,
+  nearPluginM: NEAR_PLUGIN_M,
+  farPluginM: FAR_PLUGIN_M,
+  longDwellMin: LONG_DWELL_MIN,
+} as const;
+
 const obj = (v: unknown): Record<string, unknown> | null =>
   typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
