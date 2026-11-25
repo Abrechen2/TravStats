@@ -88,6 +88,39 @@ describe("RoadtripFromTrackDialog", () => {
     expect(screen.getByTestId("roadtrip-distance").textContent).toContain(`${K}.estimated`);
   });
 
+  it("each leg shows its own recorded km beside the station it arrives at", async () => {
+    preview.mockResolvedValue(ready);
+    show();
+    await screen.findAllByTestId("roadtrip-station");
+    const legs = screen.getAllByTestId("roadtrip-leg-km");
+    expect(legs).toHaveLength(2);
+    expect(legs[0].textContent).toContain('"km":"20"');
+    expect(legs[1].textContent).toContain('"km":"30"');
+  });
+
+  it("the default name gives the day in the account's date format, not the ISO key", async () => {
+    preview.mockResolvedValue(ready);
+    show();
+    await screen.findAllByTestId("roadtrip-station");
+    const name = screen.getByDisplayValue(new RegExp(`${K}.defaultName`)) as HTMLInputElement;
+    expect(name.value).not.toContain("2026-10-12");
+    expect(name.value).toMatch(/12/);
+  });
+
+  it("saving gives each drawn leg its recorded km", async () => {
+    preview.mockResolvedValue(ready);
+    vi.mocked(roadtripsApi.create).mockResolvedValue({ id: "rt" } as never);
+    vi.mocked(roadtripsApi.replaceStations).mockResolvedValue({
+      stations: [{ id: "s0" }, { id: "s1" }, { id: "s2" }],
+    } as never);
+    vi.mocked(toursApi.setLeg).mockResolvedValue({} as never);
+    show();
+    await screen.findAllByTestId("roadtrip-station");
+    await userEvent.click(screen.getByTestId("roadtrip-save"));
+    await waitFor(() => expect(toursApi.setLeg).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(toursApi.setLeg).mock.calls.map((c) => c[4].distanceKm)).toEqual([20, 30]);
+  });
+
   it("dropping the middle station leaves a two-station roadtrip with the joined distance", async () => {
     preview.mockResolvedValue(ready);
     show();

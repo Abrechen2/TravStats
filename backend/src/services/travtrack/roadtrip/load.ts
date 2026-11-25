@@ -2,7 +2,13 @@ import { prisma } from "../../../db";
 import { profileZoneOf } from "../../../shared/time/profileZone";
 import { deriveDay } from "../dayDerivation";
 import type { Span } from "../readSafe";
-import { buildRoadtripPreview, type PreviewPlace, type RoadtripPreview } from "./preview";
+import type { Stop } from "../legs/types";
+import {
+  buildRoadtripPreview,
+  type PreviewPlace,
+  type RoadtripPreview,
+  type SuggestedName,
+} from "./preview";
 
 /**
  * The read behind "Als Roadtrip übernehmen" (rc46 extras A): one derivation
@@ -40,6 +46,32 @@ async function placesAround(userId: string, preview: { lat: number; lon: number 
   return rows as PreviewPlace[];
 }
 
+/**
+ * The names the stops' visit suggestions carry: the suggestion's place, else
+ * its own name, else what its evidence names (a plugin's venue, a calendar
+ * entry's title). Read in one query for the stops of the span.
+ */
+async function suggestedNames(userId: string, stops: readonly Stop[]): Promise<SuggestedName> {
+  const ids = [...new Set(stops.map((s) => s.stayRef?.id).filter((id): id is string => !!id))];
+  const rows = ids.length
+    ? await prisma.dawarichStay.findMany({
+        where: { userId, id: { in: ids } },
+        select: { id: true, name: true, place: { select: { name: true } } },
+      })
+    : [];
+  const byId = new Map(
+    rows.map((r) => [r.id, r.place?.name?.trim() || r.name?.trim() || null] as const)
+  );
+  return (stop) => {
+    const fromStay = stop.stayRef ? (byId.get(stop.stayRef.id) ?? null) : null;
+    if (fromStay) return fromStay;
+    const source = stop.evidence?.source;
+    if (source?.kind === "plugin") return source.name.trim() || null;
+    if (source?.kind === "calendar") return source.title.trim() || null;
+    return null;
+  };
+}
+
 export async function roadtripPreviewFor(
   userId: string,
   span: Span,
@@ -53,7 +85,13 @@ export async function roadtripPreviewFor(
     ...stops.map((s) => s.anchor),
   ];
   if (anchors.length === 0) throw new PreviewError("noPoints");
-  const preview = buildRoadtripPreview(read.segments, stops, await placesAround(userId, anchors));
+  const preview = buildRoadtripPreview(
+    read.segments,
+    stops,
+    await placesAround(userId, anchors),
+    {},
+    await suggestedNames(userId, stops)
+  );
   if (!preview) throw new PreviewError("noPoints");
   if (preview.stations.length < 2) throw new PreviewError("tooFewStations");
   // The clock the stations are dated on: the profile zone the days were read in.

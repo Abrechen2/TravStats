@@ -36,6 +36,8 @@ interface Props {
   onToggle: (group: LayerGroup) => void;
   /** Colours of the layers `TripMap` resolves itself (flights, cruises, hotels, stops). */
   colors: Partial<Record<LayerGroup, Rgb>>;
+  /** A group's label key where the group's default word does not fit what it holds. */
+  labelKeys?: Partial<Record<LayerGroup, string>>;
 }
 
 function Swatch({
@@ -73,7 +75,13 @@ function Swatch({
   );
 }
 
-export function TripMapLegend({ present, hidden, onToggle, colors }: Props): JSX.Element | null {
+export function TripMapLegend({
+  present,
+  hidden,
+  onToggle,
+  colors,
+  labelKeys,
+}: Props): JSX.Element | null {
   const { t } = useTranslation(["trips"]);
   const coarse = useCoarsePointer();
   const { colorOf } = useDomainColors();
@@ -136,7 +144,7 @@ export function TripMapLegend({ present, hidden, onToggle, colors }: Props): JSX
                 >
                   <Swatch rgb={colorFor(group)} style={GROUP_STYLE[group]} />
                   <span className={off ? "line-through" : ""}>
-                    {t(`trips:detail.map.legend.group.${group}`)}
+                    {t(labelKeys?.[group] ?? `trips:detail.map.legend.group.${group}`)}
                   </span>
                   <span className="ml-auto pl-2 opacity-70">
                     {t(`trips:detail.map.legend.style.${GROUP_STYLE[group]}`)}

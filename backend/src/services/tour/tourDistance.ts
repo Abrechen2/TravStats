@@ -63,6 +63,23 @@ export function legDistanceKm(input: LegDistanceInput): number {
   return measured > 0 ? measured : chord;
 }
 
+/** A recorded length may exceed its simplified line by at most this factor. */
+export const MAX_RECORDED_RATIO = 3;
+/** Simplification never lengthens a line; a little rounding is allowed below it. */
+const MIN_RECORDED_RATIO = 0.98;
+
+/**
+ * The length of a drawn leg that came from a recording: the recorded km when
+ * it is plausible for that line (never shorter than the simplified line, at
+ * most `MAX_RECORDED_RATIO` times it), otherwise the line's own length.
+ */
+export function recordedLegKm(lineKm: number, recordedKm: number | undefined): number {
+  if (recordedKm === undefined || !Number.isFinite(recordedKm)) return lineKm;
+  if (recordedKm < lineKm * MIN_RECORDED_RATIO || recordedKm > lineKm * MAX_RECORDED_RATIO)
+    return lineKm;
+  return recordedKm;
+}
+
 export function drivenKm(legs: readonly { mode: string; distanceKm: number }[]): number {
   return legs.reduce((sum, l) => (DRIVEN_MODES.has(l.mode) ? sum + l.distanceKm : sum), 0);
 }

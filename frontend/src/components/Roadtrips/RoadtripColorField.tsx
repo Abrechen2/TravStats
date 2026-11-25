@@ -4,7 +4,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { toursApi } from "../../lib/api/tours";
 import { logger } from "../../lib/logger";
-import { LIST_PALETTE_HEX } from "../../lib/listPalette";
+import { LIST_COLOR_NAMES, LIST_PALETTE_HEX } from "../../lib/listPalette";
 import { paletteColorForRoadtrip } from "../../lib/roadtripColor";
 import { saveErrorKey } from "../../lib/saveErrorMessage";
 import type { TourRoute } from "../../types/tour";
@@ -44,11 +44,13 @@ export default function RoadtripColorField({
     <div className="flex flex-col gap-1" data-testid="roadtrip-color-field">
       <div className="flex flex-wrap items-center gap-2">
         <span className="t-caption">{t("roadtrips:mapColor.label")}</span>
-        {LIST_PALETTE_HEX.map((hex) => (
+        {LIST_PALETTE_HEX.map((hex, i) => (
           <button
             key={hex}
             type="button"
-            aria-label={hex}
+            // A colour's name, never its hex code: a user picks "Koralle", not "#ef9a86".
+            aria-label={t(`common:listColor.${LIST_COLOR_NAMES[i]}`)}
+            title={t(`common:listColor.${LIST_COLOR_NAMES[i]}`)}
             aria-pressed={route.color === hex}
             disabled={saving}
             data-testid={`roadtrip-color-${hex.slice(1)}`}

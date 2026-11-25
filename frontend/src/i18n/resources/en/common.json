@@ -537,5 +537,17 @@
     "short": "Demo account active",
     "hint": "A demo account is still active. Go to Maintenance to delete it."
   },
-  "operatorInferred": "Inferred from train category, number and stations – not entered"
+  "operatorInferred": "Inferred from train category, number and stations – not entered",
+  "listColor": {
+    "slate": "Slate",
+    "sand": "Sand",
+    "rose": "Rose",
+    "violet": "Violet",
+    "sky": "Sky blue",
+    "mint": "Mint",
+    "amberSoft": "Amber",
+    "coral": "Coral",
+    "teal": "Teal",
+    "lime": "Lime"
+  }
 }

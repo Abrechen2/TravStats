@@ -204,6 +204,12 @@ const manualLegShape = z.object({
   source: manualLegSource,
   mode: z.enum(LEG_MODES).optional(),
   waypoints: z.array(coordinate).min(2).max(256).optional(),
+  /**
+   * A drawn leg's RECORDED length (TravTrack "Als Roadtrip übernehmen"): the
+   * waypoints are a simplified copy of a recording, so their own length cuts
+   * every corner. Taken only within the plausible band `recordedLegKm` checks.
+   */
+  distanceKm: z.number().min(0).max(100_000).optional(),
   drivingMinutes: z.number().int().min(0).max(100_000).nullable().optional(),
   /**
    * Kept for existing clients: since forgejo#140 a leg has no toll column.

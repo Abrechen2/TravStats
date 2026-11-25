@@ -537,5 +537,17 @@
     "short": "Demo-Konto aktiv",
     "hint": "Ein Demo-Konto ist noch aktiv. Zur Wartung, um es zu löschen."
   },
-  "operatorInferred": "Abgeleitet aus Zugart, Nummer und Stationen – nicht eingetragen"
+  "operatorInferred": "Abgeleitet aus Zugart, Nummer und Stationen – nicht eingetragen",
+  "listColor": {
+    "slate": "Schiefer",
+    "sand": "Sand",
+    "rose": "Rosé",
+    "violet": "Violett",
+    "sky": "Himmelblau",
+    "mint": "Mint",
+    "amberSoft": "Bernstein",
+    "coral": "Koralle",
+    "teal": "Petrol",
+    "lime": "Limette"
+  }
 }

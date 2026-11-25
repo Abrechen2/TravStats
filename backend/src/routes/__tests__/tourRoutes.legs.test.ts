@@ -73,6 +73,28 @@ describe("Tour route sections — leg overrides", () => {
     expect(res.body.leg.distanceKm).toBeGreaterThan(before.distanceKm);
   });
 
+  it("a drawn line from a recording keeps the recorded km, within a plausible band", async () => {
+    const plain = await request(app)
+      .put(url())
+      .set("Cookie", cookie)
+      .send({ source: "drawn", waypoints: LINE });
+    const lineKm = plain.body.leg.distanceKm as number;
+
+    const recorded = await request(app)
+      .put(url())
+      .set("Cookie", cookie)
+      .send({ source: "drawn", waypoints: LINE, distanceKm: lineKm * 1.4 });
+    expect(recorded.status).toBe(200);
+    expect(recorded.body.leg.distanceKm).toBeCloseTo(lineKm * 1.4, 3);
+
+    // Shorter than the line itself cannot be a recording of it: the line's own length stands.
+    const implausible = await request(app)
+      .put(url())
+      .set("Cookie", cookie)
+      .send({ source: "drawn", waypoints: LINE, distanceKm: lineKm / 2 });
+    expect(implausible.body.leg.distanceKm).toBeCloseTo(lineKm, 3);
+  });
+
   it("rejects a line that does not start at the leg's first stop", async () => {
     const wrong: Array<[number, number]> = [
       [0, 0],

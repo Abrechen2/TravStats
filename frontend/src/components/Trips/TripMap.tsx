@@ -46,7 +46,7 @@ import {
 } from "./tripMapData";
 import { buildMercatorTripLayers } from "./tripMapMercatorLayers";
 import type { DirectionLine } from "./tripMapArrows";
-import { groupsPresentIn, withoutHidden, type LayerGroup } from "./tripMapGroups";
+import { groupsPresentIn, toursLegendKey, withoutHidden, type LayerGroup } from "./tripMapGroups";
 import { TripMapLegend } from "./TripMapLegend";
 import { TripMapInfoCard } from "./TripMapInfoCard";
 import { splitToursByDay } from "./tripMapTourDays";
@@ -89,6 +89,8 @@ interface TripMapProps {
     geometry: TourGeometry;
     /** A roadtrip's line takes the roadtrip hue instead of the tour one. */
     rgb?: [number, number, number];
+    /** A roadtrip, not a day tour: the legend names the group after what it holds. */
+    isRoadtrip?: boolean;
   }[];
   /** Drawn over everything else — the roadtrip page's selected station. */
   extraLayers?: readonly Layer[];
@@ -708,6 +710,7 @@ export default function TripMap({
         hidden={hidden}
         onToggle={toggleGroup}
         colors={legendColors}
+        labelKeys={{ tours: toursLegendKey(tourGeometries) }}
       />
       <TripMapInfoCard seqOf={seqOf} />
       {(built.failed || mercator.failed) && (

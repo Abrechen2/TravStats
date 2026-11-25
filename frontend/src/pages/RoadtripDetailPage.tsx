@@ -249,6 +249,7 @@ export default function RoadtripDetailPage(): JSX.Element {
               name: detail.roadtrip.name,
               geometry,
               rgb: hexToRgb(roadtripLineHex(roadtripColorMode, detail.roadtrip, roadtripColor)),
+              isRoadtrip: true,
             },
           ]
         : [],

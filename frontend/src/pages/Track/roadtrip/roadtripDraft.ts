@@ -115,7 +115,9 @@ export interface RoadtripSaveApis {
     id: string,
     from: string,
     to: string,
-    waypoints: [number, number][]
+    waypoints: [number, number][],
+    /** The leg's recorded km: the simplified line alone would cut every corner. */
+    distanceKm: number
   ) => Promise<unknown>;
   remove: (id: string) => Promise<void>;
 }
@@ -154,7 +156,14 @@ export async function saveRoadtrip(
     );
     step = "line";
     for (let i = 1; i < stations.length; i++) {
-      await apis.setDrawnLeg(id, stations[i - 1].id, stations[i].id, draft.legs[i - 1].coordinates);
+      const leg = draft.legs[i - 1];
+      await apis.setDrawnLeg(
+        id,
+        stations[i - 1].id,
+        stations[i].id,
+        leg.coordinates,
+        leg.distanceKm
+      );
     }
     return id;
   } catch (error) {

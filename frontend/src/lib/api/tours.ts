@@ -83,6 +83,8 @@ export interface SetTourLegInput {
   waypoints?: Array<[number, number]>;
   drivingMinutes?: number | null;
   trackId?: string;
+  /** A drawn leg's recorded length; the server takes it only when plausible for the line. */
+  distanceKm?: number;
 }
 
 /**

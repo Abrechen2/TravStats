@@ -5,7 +5,7 @@ export interface PreviewStation {
   key: string;
   kind: "start" | "stop" | "end";
   name: string | null;
-  nameSource: "place" | "stop" | null;
+  nameSource: "place" | "stop" | "suggestion" | null;
   placeId: string | null;
   lat: number;
   lon: number;

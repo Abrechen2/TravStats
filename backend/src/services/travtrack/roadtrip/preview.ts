@@ -17,8 +17,10 @@ import type { Stop } from "../legs";
  *   joined by a straight chord and that chord is counted as ESTIMATED — it is
  *   drawn dashed and its kilometres are said apart from the measured ones.
  * - A station names the user's place it lies at (within `placeRadiusM`),
- *   otherwise the name the owner accepted for the stop, otherwise nothing:
- *   the dialog then offers "Halt N" for the user to rename.
+ *   otherwise the name the owner accepted for the stop, otherwise the name the
+ *   stop's visit suggestion carries (rc46 UAT: stations read "Halt 3" while the
+ *   day view suggested a name), otherwise nothing: the dialog then offers
+ *   "Halt N" for the user to rename.
  */
 
 export const PREVIEW_DEFAULTS = {
@@ -36,7 +38,7 @@ export type PreviewStation = {
   key: string;
   kind: "start" | "stop" | "end";
   name: string | null;
-  nameSource: "place" | "stop" | null;
+  nameSource: "place" | "stop" | "suggestion" | null;
   placeId: string | null;
   lat: number;
   lon: number;
@@ -91,7 +93,8 @@ function station(
   times: { arriveMs: number | null; departMs: number | null },
   stopName: string | null,
   places: readonly PreviewPlace[],
-  radiusM: number
+  radiusM: number,
+  suggestedName: string | null = null
 ): PreviewStation {
   const place = nearestPlace(at, places, radiusM);
   const dwellMs =
@@ -99,8 +102,8 @@ function station(
   return {
     key,
     kind,
-    name: place?.name ?? stopName,
-    nameSource: place ? "place" : stopName ? "stop" : null,
+    name: place?.name ?? stopName ?? suggestedName,
+    nameSource: place ? "place" : stopName ? "stop" : suggestedName ? "suggestion" : null,
     placeId: place?.id ?? null,
     lat: at.lat,
     lon: at.lon,
@@ -109,11 +112,15 @@ function station(
   };
 }
 
+/** The name a stop's suggestion carries, when the stop has one (`load.ts` reads them). */
+export type SuggestedName = (stop: Stop) => string | null;
+
 function stationsOf(
   vertices: readonly Vertex[],
   stops: readonly Stop[],
   places: readonly PreviewPlace[],
-  o: typeof PREVIEW_DEFAULTS
+  o: typeof PREVIEW_DEFAULTS,
+  suggested: SuggestedName
 ): PreviewStation[] {
   const first = vertices[0];
   const last = vertices[vertices.length - 1];
@@ -144,7 +151,8 @@ function stationsOf(
         { arriveMs: s.fromMs, departMs: s.untilMs },
         s.place?.name ?? null,
         places,
-        o.placeRadiusM
+        o.placeRadiusM,
+        suggested(s)
       )
     );
   }
@@ -227,7 +235,8 @@ export function buildRoadtripPreview(
   segments: readonly (readonly StoredPoint[])[],
   stops: readonly Stop[],
   places: readonly PreviewPlace[],
-  options: Partial<typeof PREVIEW_DEFAULTS> = {}
+  options: Partial<typeof PREVIEW_DEFAULTS> = {},
+  suggested: SuggestedName = () => null
 ): RoadtripPreview | null {
   const o = { ...PREVIEW_DEFAULTS, ...options };
   const vertices: Vertex[] = segments.flatMap((s, seg) =>
@@ -235,7 +244,7 @@ export function buildRoadtripPreview(
   );
   if (vertices.length === 0) return null;
   vertices.sort((a, b) => a.t - b.t);
-  const stations = stationsOf(vertices, stops, places, o);
+  const stations = stationsOf(vertices, stops, places, o, suggested);
   const legs: PreviewLeg[] = [];
   for (let i = 1; i < stations.length; i++) {
     legs.push(legBetween(stations[i - 1], stations[i], vertices, o.maxWaypoints));

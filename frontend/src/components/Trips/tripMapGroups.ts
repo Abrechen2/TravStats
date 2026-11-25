@@ -90,3 +90,15 @@ export function groupsPresentIn(layers: readonly Layer[]): Set<LayerGroup> {
   }
   return out;
 }
+
+/**
+ * The legend word for the "tours" group, by what it holds: a roadtrip read
+ * "Touren" on its own map (rc46 UAT).
+ */
+export function toursLegendKey(lines: readonly { isRoadtrip?: boolean }[]): string {
+  const roadtrips = lines.filter((l) => l.isRoadtrip === true).length;
+  if (roadtrips === 0) return "trips:detail.map.legend.group.tours";
+  return roadtrips === lines.length
+    ? "trips:detail.map.legend.group.roadtrips"
+    : "trips:detail.map.legend.group.toursAndRoadtrips";
+}

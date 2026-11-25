@@ -5,7 +5,7 @@ import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { legOverrideSchema } from "../../schemas/tour";
-import { legDistanceKm } from "../../services/tour/tourDistance";
+import { legDistanceKm, recordedLegKm } from "../../services/tour/tourDistance";
 import { adoptSegment, ANCHOR_TOLERANCE_KM } from "../../services/tour/tracks/adoptTrack";
 import { haversineKm } from "../../shared/geo/haversine";
 import logger from "../../utils/logger";
@@ -232,12 +232,17 @@ router.put(
               // reliable discriminator.
               drivingMinutes:
                 "drivingMinutes" in body ? (body.drivingMinutes ?? null) : leg.drivingMinutes,
-              distanceKm: legDistanceKm({
-                source: body.source,
-                from: fromCoord,
-                to: toCoord,
-                waypoints,
-              }),
+              distanceKm: ((): number => {
+                const lineKm = legDistanceKm({
+                  source: body.source,
+                  from: fromCoord,
+                  to: toCoord,
+                  waypoints,
+                });
+                return body.source === "drawn" && "distanceKm" in body
+                  ? recordedLegKm(lineKm, body.distanceKm)
+                  : lineKm;
+              })(),
             },
           });
           // `tollCost` / `currency` live on the leg's toll EXPENSE since

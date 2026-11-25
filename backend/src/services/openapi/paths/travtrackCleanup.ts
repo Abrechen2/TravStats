@@ -133,7 +133,7 @@ const station = z.object({
   key: z.string(),
   kind: z.enum(["start", "stop", "end"]),
   name: z.string().nullable().describe("The user's place there, else the stop's accepted name"),
-  nameSource: z.enum(["place", "stop"]).nullable(),
+  nameSource: z.enum(["place", "stop", "suggestion"]).nullable(),
   placeId: z.string().nullable().describe("The user's place within 200 m, linked on save"),
   lat: z.number(),
   lon: z.number(),

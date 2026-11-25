@@ -9,6 +9,7 @@ import { roadtripsApi } from "../../../lib/api/roadtrips";
 import { toursApi } from "../../../lib/api/tours";
 import { trackErrorKey } from "../../../lib/api/travtrack";
 import { travTrackRoadtripApi, type RoadtripSpan } from "../../../lib/api/travtrackRoadtrip";
+import { formatLocalDate } from "../../../lib/displayFormat";
 import { logger } from "../../../lib/logger";
 import { localDay, toLocal } from "../../../shared/time/zone";
 import { durationText, makeNumber } from "../map/trackLegFormat";
@@ -61,7 +62,10 @@ export default function RoadtripFromTrackDialog({
     t(`track:roadtrip.${key}`, values);
   const num = useMemo(() => makeNumber(i18n.language), [i18n.language]);
   const [load, setLoad] = useState<Load>({ phase: "loading" });
-  const [name, setName] = useState(() => t("track:roadtrip.defaultName", { day: days.fromDay }));
+  // The day in the account's own date format, as everywhere else — never the ISO key.
+  const [name, setName] = useState(() =>
+    t("track:roadtrip.defaultName", { day: formatLocalDate(days.fromDay) })
+  );
   const [tripId, setTripId] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -104,8 +108,8 @@ export default function RoadtripFromTrackDialog({
         {
           create: (input) => roadtripsApi.create(input),
           replaceStations: (rid, stations) => roadtripsApi.replaceStations(rid, stations),
-          setDrawnLeg: (rid, from, to, waypoints) =>
-            toursApi.setLeg(undefined, rid, from, to, { source: "drawn", waypoints }),
+          setDrawnLeg: (rid, from, to, waypoints, distanceKm) =>
+            toursApi.setLeg(undefined, rid, from, to, { source: "drawn", waypoints, distanceKm }),
           remove: (rid) => toursApi.removeStandalone(rid),
         },
         localDay
@@ -169,12 +173,21 @@ export default function RoadtripFromTrackDialog({
           <ol className="flex flex-col gap-2" aria-label={text("stations")}>
             {ready.draft.stations.map((s, i) => {
               const inner = i > 0 && i < ready.draft.stations.length - 1;
+              const legIn = i > 0 ? ready.draft.legs[i - 1] : null;
               return (
                 <li
                   key={s.key}
                   className="flex flex-wrap items-center gap-2"
                   data-testid="roadtrip-station"
                 >
+                  {legIn && (
+                    <span className="t-caption w-full" data-testid="roadtrip-leg-km">
+                      {"↓ "}
+                      {text("distance", { km: num(legIn.distanceKm, 1) })}
+                      {legIn.estimatedKm > 0 &&
+                        ` · ${text("estimated", { km: num(legIn.estimatedKm, 1) })}`}
+                    </span>
+                  )}
                   <input
                     className="input"
                     aria-label={text("stationName", { n: i + 1 })}

@@ -52,6 +52,17 @@ describe("buildRoadtripPreview", () => {
     expect(preview.stations[0].name).toBeNull();
   });
 
+  it("a stop without an accepted name takes the name its visit suggestion carries", () => {
+    const suggested = stop(30, 75, 50.03, { stayRef: { id: "stay-1", status: "pending" } });
+    const preview = buildRoadtripPreview([drive1, drive2], [suggested], [], {}, (s) =>
+      s.stayRef?.id === "stay-1" ? "Café am Markt" : null
+    )!;
+    expect(preview.stations[1]).toMatchObject({
+      name: "Café am Markt",
+      nameSource: "suggestion",
+    });
+  });
+
   it("leaves out a stop shorter than the dwell threshold and a dismissed one", () => {
     const short = stop(10, 15, 50.01);
     const wait = stop(40, 70, 50.03, { dismissed: true });

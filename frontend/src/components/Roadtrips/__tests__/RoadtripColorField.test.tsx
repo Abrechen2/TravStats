@@ -18,6 +18,17 @@ describe("RoadtripColorField (GitHub #408)", () => {
     update.mockReset();
   });
 
+  it("names each swatch by its colour name, never by a hex code", () => {
+    render(<RoadtripColorField route={route} onSaved={vi.fn()} />);
+    const swatch = screen.getByTestId(`roadtrip-color-${pick.slice(1)}`);
+    expect(swatch.getAttribute("aria-label")).toBe("common:listColor.rose");
+    for (const hex of LIST_PALETTE_HEX) {
+      const el = screen.getByTestId(`roadtrip-color-${hex.slice(1)}`);
+      expect(el.getAttribute("aria-label")).not.toMatch(/#/);
+      expect(el.getAttribute("title") ?? "").not.toMatch(/#/);
+    }
+  });
+
   it("saves the picked colour on the roadtrip and hands back the server's answer", async () => {
     const saved = { ...route, color: pick };
     update.mockResolvedValue(saved);
