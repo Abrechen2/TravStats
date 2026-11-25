@@ -102,7 +102,14 @@ describe("linking an existing copy (forgejo#440)", () => {
     const before = await rowCount(ben.id);
     const res = await preview().expect(200);
     const data = res.body.data;
-    expect(data.byType).toContainEqual({ entity: "lodgingStay", here: 1, there: 2 });
+    expect(data.redacted).toBe(false);
+    expect(data.byType).toContainEqual({
+      entity: "lodgingStay",
+      here: 1,
+      there: 2,
+      matched: 1,
+      differing: 0,
+    });
     expect(data.onlyThere).toEqual([expect.objectContaining({ entity: "lodgingStay" })]);
     expect(data.onlyHere).toEqual([]);
     const flight = data.matched.find((m: { entity: string }) => m.entity === "flight");
@@ -190,8 +197,35 @@ describe("linking an existing copy (forgejo#440)", () => {
     );
   });
 
-  it("without Ben's consent nothing is previewed", async () => {
+  it("without any request to Ben nothing is previewed", async () => {
     await prisma.shareConsent.deleteMany({ where: { targetId: ben.id } });
     await preview().expect(403);
+  });
+
+  it("before Ben agrees, the dry run shows counts per type only — no label or value of his", async () => {
+    await prisma.shareConsent.updateMany({
+      where: { requesterId: anna.id, targetId: ben.id },
+      data: { status: "pending", decidedAt: null },
+    });
+    const candidates = await request(app)
+      .get(`/api/v1/sharing/trips/${annas.trip.id}/link-candidates`)
+      .query({ userId: ben.id })
+      .set("Cookie", anna.cookie)
+      .expect(200);
+    expect(candidates.body.data).toEqual([
+      expect.objectContaining({ id: bens.trip.id, name: "", reason: "period" }),
+    ]);
+    const data = (await preview().expect(200)).body.data;
+    expect(data.redacted).toBe(true);
+    expect(data.there.name).toBe("");
+    expect(data.matched).toEqual([]);
+    expect(data.onlyThere).toEqual([]);
+    expect(data.counts).toMatchObject({ onlyThere: 1, conflicting: 1 });
+    expect(data.byType).toContainEqual(
+      expect.objectContaining({ entity: "flight", matched: 1, differing: 1 })
+    );
+    expect(JSON.stringify(data)).not.toContain("Pestana");
+    // And no link without his yes.
+    await link("both").expect(403);
   });
 });

@@ -42,11 +42,25 @@ export interface LinkMatchView extends LinkEntryView {
   conflicts: LinkConflictView[];
 }
 
+export interface LinkTypeCount {
+  entity: ShareEntity;
+  here: number;
+  there: number;
+  matched: number;
+  /** Matched entries whose facts differ. */
+  differing: number;
+}
+
 export interface LinkPreview {
+  /**
+   * True while the other account has not agreed to sharing (no accepted consent, locally or
+   * across servers): only counts — no label, no value, no name of theirs.
+   */
+  redacted: boolean;
   here: LinkTripView;
   there: LinkTripView;
   counts: { matched: number; onlyHere: number; onlyThere: number; conflicting: number };
-  byType: { entity: ShareEntity; here: number; there: number }[];
+  byType: LinkTypeCount[];
   matched: LinkMatchView[];
   onlyHere: LinkEntryView[];
   onlyThere: LinkEntryView[];
@@ -97,6 +111,7 @@ export function describePlan(
     })),
   }));
   return {
+    redacted: false,
     here,
     there,
     counts: {
@@ -105,14 +120,33 @@ export function describePlan(
       onlyThere: plan.onlyThere.length,
       conflicting: plan.pairs.filter((p) => p.conflicts.length > 0).length,
     },
-    byType: SHARE_ENTITIES.map((entity) => ({
-      entity,
-      here: count(hereRows, entity),
-      there: count(thereRows, entity),
-    })).filter((t) => t.here > 0 || t.there > 0),
+    byType: SHARE_ENTITIES.map((entity) => {
+      const pairs = plan.pairs.filter((p) => p.entity === entity);
+      return {
+        entity,
+        here: count(hereRows, entity),
+        there: count(thereRows, entity),
+        matched: pairs.length,
+        differing: pairs.filter((p) => p.conflicts.length > 0).length,
+      };
+    }).filter((t) => t.here > 0 || t.there > 0),
     matched,
     onlyHere: plan.onlyHere.map(entryView),
     onlyThere: plan.onlyThere.map(entryView),
+  };
+}
+
+/**
+ * The dry run as someone may see it who has no accepted consent of the other account yet: the
+ * counts per type, the caller's own trip and own entries — nothing the other account wrote.
+ */
+export function redactPreview(preview: LinkPreview): LinkPreview {
+  return {
+    ...preview,
+    redacted: true,
+    there: { ...preview.there, name: "" },
+    matched: [],
+    onlyThere: [],
   };
 }
 

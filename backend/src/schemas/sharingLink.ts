@@ -26,6 +26,7 @@ export const linkCandidatesSchema = z.array(
 );
 
 export const linkPreviewSchema = z.strictObject({
+  redacted: z.boolean(),
   here: tripView,
   there: tripView,
   counts: z.strictObject({
@@ -34,7 +35,15 @@ export const linkPreviewSchema = z.strictObject({
     onlyThere: z.number().int(),
     conflicting: z.number().int(),
   }),
-  byType: z.array(z.strictObject({ entity, here: z.number().int(), there: z.number().int() })),
+  byType: z.array(
+    z.strictObject({
+      entity,
+      here: z.number().int(),
+      there: z.number().int(),
+      matched: z.number().int(),
+      differing: z.number().int(),
+    })
+  ),
   matched: z.array(
     entry.extend({
       linked: z.boolean(),

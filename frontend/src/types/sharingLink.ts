@@ -39,10 +39,18 @@ export interface LinkMatchView extends LinkEntryView {
 }
 
 export interface LinkPreview {
+  /** The other side has not agreed to sharing yet: counts only, none of their entries. */
+  redacted: boolean;
   here: LinkTripView;
   there: LinkTripView;
   counts: { matched: number; onlyHere: number; onlyThere: number; conflicting: number };
-  byType: { entity: LinkEntity; here: number; there: number }[];
+  byType: {
+    entity: LinkEntity;
+    here: number;
+    there: number;
+    matched: number;
+    differing: number;
+  }[];
   matched: LinkMatchView[];
   onlyHere: LinkEntryView[];
   onlyThere: LinkEntryView[];

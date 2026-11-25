@@ -144,10 +144,21 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
           <p className="text-sm" role="status">
             {t(`${NS}.summary`, { ...dryRun.counts, name: otherName })}
           </p>
+          {dryRun.redacted && (
+            <p className="text-sm" data-testid="link-redacted" style={{ color: "var(--ts-warn)" }}>
+              {t(`${NS}.redacted`, { name: otherName })}
+            </p>
+          )}
           <ul className="text-sm">
             {dryRun.byType.map((b) => (
               <li key={b.entity}>
-                {t(`${NS}.byType`, { type: typeName(b.entity), here: b.here, there: b.there })}
+                {t(`${NS}.byType`, {
+                  type: typeName(b.entity),
+                  here: b.here,
+                  there: b.there,
+                  matched: b.matched,
+                  differing: b.differing,
+                })}
               </li>
             ))}
           </ul>
@@ -171,27 +182,31 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
           {entries(t(`${NS}.onlyHereTitle`), dryRun.onlyHere)}
           {entries(t(`${NS}.onlyThereTitle`, { name: otherName }), dryRun.onlyThere)}
           <p className="t-caption">{t(`${NS}.nothingCreated`)}</p>
-          <fieldset className="flex flex-col text-sm" style={{ gap: "var(--ts-space-xs)" }}>
-            <legend className="t-caption">{t(`${NS}.decisionTitle`)}</legend>
-            {DECISIONS.map((d) => (
-              <label key={d} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="link-decision"
-                  value={d}
-                  checked={decision === d}
-                  disabled={busy}
-                  onChange={() => setDecision(d)}
-                />
-                {t(`${NS}.decision.${d}`, { name: otherName })}
-              </label>
-            ))}
-          </fieldset>
-          <span>
-            <Button variant="primary" disabled={busy} onClick={() => void confirm()}>
-              {t(`${NS}.confirm`)}
-            </Button>
-          </span>
+          {!dryRun.redacted && (
+            <>
+              <fieldset className="flex flex-col text-sm" style={{ gap: "var(--ts-space-xs)" }}>
+                <legend className="t-caption">{t(`${NS}.decisionTitle`)}</legend>
+                {DECISIONS.map((d) => (
+                  <label key={d} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="link-decision"
+                      value={d}
+                      checked={decision === d}
+                      disabled={busy}
+                      onChange={() => setDecision(d)}
+                    />
+                    {t(`${NS}.decision.${d}`, { name: otherName })}
+                  </label>
+                ))}
+              </fieldset>
+              <span>
+                <Button variant="primary" disabled={busy} onClick={() => void confirm()}>
+                  {t(`${NS}.confirm`)}
+                </Button>
+              </span>
+            </>
+          )}
         </div>
       )}
       {error && (

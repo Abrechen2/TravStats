@@ -16,6 +16,7 @@ import { planLink, type LinkDecision, type LinkPair, type LinkRow } from "../lin
 import {
   describePlan,
   rankCandidates,
+  redactPreview,
   tripRows,
   tripView,
   type LinkCandidate,
@@ -201,9 +202,15 @@ export async function previewOfferLink(
   await requireTripFederation(userId);
   const row = await openOffer(userId, id);
   const wire = await fetchOffered(userId, row);
+  // The home person's entries in full only once the consent between the two is accepted, as for
+  // a local link; before that the dry run is counts only.
+  const consenting = await acceptedParties(prisma, { kind: "user", id: userId }, [
+    { kind: "remote", id: row.remoteId },
+  ]);
   return prisma.$transaction(async (tx) => {
     const { trip, here, there, plan } = await planOffer(tx, userId, tripId, wire);
-    return describePlan(plan, tripView(trip), offeredTrip(row), here, there);
+    const preview = describePlan(plan, tripView(trip), offeredTrip(row), here, there);
+    return consenting.size > 0 ? preview : redactPreview(preview);
   });
 }
 

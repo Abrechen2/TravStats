@@ -15,6 +15,7 @@ import { planLink, type LinkDecision, type LinkPair, type LinkPlan } from "./lin
 import {
   describePlan,
   rankCandidates,
+  redactPreview,
   tripRows,
   tripView,
   type LinkCandidate,
@@ -64,8 +65,41 @@ export interface LinkResult {
   settleFailed: boolean;
 }
 
+/**
+ * What the caller may see of the other account. `full` once the other account agreed to sharing
+ * (the rule a share asks, `mayOfferTripTo`); `counts` while the caller has only asked — a pending
+ * consent request of theirs, or a connection between the two — so the dry run names numbers, not
+ * the other account's entries. Anyone else learns nothing.
+ */
+type Access = "full" | "counts";
+
+async function accessTo(c: DbTransaction, userId: string, otherId: string): Promise<Access> {
+  if (await mayOfferTripTo(c, userId, otherId)) return "full";
+  const asked = await c.shareConsent.findFirst({
+    where: { requesterId: userId, targetId: otherId, status: "pending" },
+    select: { id: true },
+  });
+  const connected = await c.localConnection.findFirst({
+    where: {
+      OR: [
+        { userLowId: userId, userHighId: otherId },
+        { userLowId: otherId, userHighId: userId },
+      ],
+    },
+    select: { id: true },
+  });
+  if (asked || connected) return "counts";
+  throw consentRequired();
+}
+
 /** The caller's trip and the other account, checked as a share would check them. */
-async function sides(c: DbTransaction, userId: string, tripId: string, otherId: string) {
+async function sides(
+  c: DbTransaction,
+  userId: string,
+  tripId: string,
+  otherId: string,
+  need: Access = "full"
+) {
   const trip = await c.trip.findFirst({ where: { id: tripId, userId } });
   if (!trip) throw tripNotFound();
   const other = await c.user.findFirst({
@@ -73,10 +107,11 @@ async function sides(c: DbTransaction, userId: string, tripId: string, otherId: 
     select: { id: true },
   });
   if (!other) throw new AppError("No such user on this server", 404, "SHARE_USER_NOT_FOUND");
-  if (!(await mayOfferTripTo(c, userId, otherId))) throw consentRequired();
+  const access = await accessTo(c, userId, otherId);
+  if (need === "full" && access !== "full") throw consentRequired();
   // A trip that came from another server is linked on from its home, as it is shared from there.
   await requireHome(c, userId, trip.shareGroupId);
-  return trip;
+  return { trip, access };
 }
 
 /** The other account's trip, which must be in no group or in the caller's. */
@@ -104,7 +139,7 @@ export async function linkCandidates(
   otherId: string
 ): Promise<LinkCandidate[]> {
   return prisma.$transaction(async (tx) => {
-    const trip = await sides(tx, userId, tripId, otherId);
+    const { trip, access } = await sides(tx, userId, tripId, otherId, "counts");
     const trips = await tx.trip.findMany({
       where: {
         userId: otherId,
@@ -115,7 +150,9 @@ export async function linkCandidates(
       },
       select: { id: true, name: true, startDay: true, endDay: true },
     });
-    return rankCandidates(tripView(trip), trips.map(tripView));
+    const ranked = rankCandidates(tripView(trip), trips.map(tripView));
+    // Before their yes, the other account's trips are offered by period only, never by name.
+    return access === "full" ? ranked : ranked.map((c) => ({ ...c, name: "" }));
   });
 }
 
@@ -124,13 +161,14 @@ async function planFor(
   userId: string,
   tripId: string,
   otherId: string,
-  targetTripId: string
+  targetTripId: string,
+  need: Access = "full"
 ) {
-  const trip = await sides(tx, userId, tripId, otherId);
+  const { trip, access } = await sides(tx, userId, tripId, otherId, need);
   const target = await counterpart(tx, otherId, targetTripId, trip.shareGroupId);
   const here = await tripRows(tx, userId, trip.id);
   const there = await tripRows(tx, otherId, target.id);
-  return { trip, target, here, there, plan: planLink(here, there) };
+  return { trip, target, here, there, access, plan: planLink(here, there) };
 }
 
 /** The dry run: what linking would match, what only one side holds, where the facts differ. */
@@ -141,14 +179,16 @@ export async function previewLink(
   targetTripId: string
 ): Promise<LinkPreview> {
   return prisma.$transaction(async (tx) => {
-    const { trip, target, here, there, plan } = await planFor(
+    const { trip, target, here, there, access, plan } = await planFor(
       tx,
       userId,
       tripId,
       otherId,
-      targetTripId
+      targetTripId,
+      "counts"
     );
-    return describePlan(plan, tripView(trip), tripView(target), here, there);
+    const preview = describePlan(plan, tripView(trip), tripView(target), here, there);
+    return access === "full" ? preview : redactPreview(preview);
   });
 }
 

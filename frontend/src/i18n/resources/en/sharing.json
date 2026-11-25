@@ -1077,7 +1077,7 @@
     },
     "compare": "Compare",
     "summary": "{{matched}} entries matched, {{conflicting}} with differences; {{onlyHere}} only on your side, {{onlyThere}} only at {{name}}'s.",
-    "byType": "{{type}}: {{here}} yours, {{there}} theirs",
+    "byType": "{{type}}: {{here}} yours, {{there}} theirs – {{matched}} matched, {{differing}} differing",
     "conflictsTitle": "Differing details",
     "conflict": "yours {{here}}, {{name}}'s {{there}}",
     "onlyHereTitle": "Only on your side",
@@ -1107,6 +1107,7 @@
       "candidatesFailed": "The matching trips could not be loaded.",
       "previewFailed": "The comparison failed.",
       "linkFailed": "The trips could not be linked."
-    }
+    },
+    "redacted": "{{name}} has not agreed to sharing yet. Until then you see counts only, none of {{name}}'s entries or details."
   }
 }

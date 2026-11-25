@@ -12,10 +12,11 @@ const candidate = {
   reason: "period" as const,
 };
 const dryRun: LinkPreview = {
+  redacted: false,
   here: { id: "t1", name: "Portugal 2030", startDay: "2030-06-01", endDay: "2030-06-10" },
   there: { id: "t2", name: "Portugal", startDay: "2030-06-01", endDay: "2030-06-10" },
   counts: { matched: 2, onlyHere: 0, onlyThere: 1, conflicting: 1 },
-  byType: [{ entity: "lodgingStay", here: 1, there: 2 }],
+  byType: [{ entity: "lodgingStay", here: 1, there: 2, matched: 1, differing: 0 }],
   matched: [
     {
       entity: "flight",
@@ -67,5 +68,24 @@ describe("LinkExistingPanel — link an existing copy (forgejo#440)", () => {
   it("no matching trip on the other side says so", async () => {
     setup({ loadCandidates: vi.fn().mockResolvedValue([]) });
     expect(await screen.findByText("sharing:link.noCandidates")).toBeInTheDocument();
+  });
+});
+
+describe("LinkExistingPanel — before the other side agreed", () => {
+  it("shows counts only, and no decision or link button", async () => {
+    setup({
+      preview: vi.fn().mockResolvedValue({
+        ...dryRun,
+        redacted: true,
+        there: { ...dryRun.there, name: "" },
+        matched: [],
+        onlyThere: [],
+      }),
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "sharing:link.compare" }));
+    expect(await screen.findByTestId("link-redacted")).toBeInTheDocument();
+    expect(screen.queryByText(/Pensão Amor/)).toBeNull();
+    expect(screen.queryByText(/TP571/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "sharing:link.confirm" })).toBeNull();
   });
 });

@@ -1077,7 +1077,7 @@
     },
     "compare": "Vergleichen",
     "summary": "{{matched}} Einträge gefunden, {{conflicting}} mit Abweichungen; {{onlyHere}} nur bei dir, {{onlyThere}} nur bei {{name}}.",
-    "byType": "{{type}}: {{here}} bei dir, {{there}} dort",
+    "byType": "{{type}}: {{here}} bei dir, {{there}} dort – {{matched}} gefunden, {{differing}} mit Abweichungen",
     "conflictsTitle": "Abweichende Angaben",
     "conflict": "bei dir {{here}}, bei {{name}} {{there}}",
     "onlyHereTitle": "Nur bei dir",
@@ -1107,6 +1107,7 @@
       "candidatesFailed": "Die passenden Reisen konnten nicht geladen werden.",
       "previewFailed": "Der Vergleich ist fehlgeschlagen.",
       "linkFailed": "Die Reisen konnten nicht verknüpft werden."
-    }
+    },
+    "redacted": "{{name}} hat dem Teilen noch nicht zugestimmt. Bis dahin siehst du nur Anzahlen, keine Einträge oder Angaben von {{name}}."
   }
 }
