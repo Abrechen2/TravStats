@@ -257,7 +257,9 @@ const rowIdSchema = z.string().min(1).max(64);
 
 router.get(
   "/:id/maintenance",
-  probeLimiter,
+  // The list reloads after every apply/undo/ignore: the probe limit (20 per
+  // 10 min) would lock a user out halfway through an archive.
+  maintenanceLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const plugin = await maintainedPlugin(req);
