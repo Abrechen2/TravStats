@@ -201,7 +201,9 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     // instance, and the browser gives up after ten seconds — it used to report
     // "failed" over a backup that went on to complete. The row is written, so
     // the work runs as a job and the answer is its handle (202).
-    const job = startJob("backup.create", req.userId!, () =>
+    // Checked and registered in one step: a restore that started while the row was
+    // being written (the awaits above) would otherwise run alongside this backup.
+    const job = startExclusiveJob("backup.create", BACKUP_JOB_KINDS, req.userId!, () =>
       createBackup({
         type: body.type,
         retentionDays: body.retentionDays,
@@ -218,6 +220,12 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
         }
       )
     );
+
+    if (!job) {
+      // The row this request wrote describes a backup that will never run.
+      await prisma.backup.delete({ where: { id: precomputedId } });
+      throw new AppError("A backup operation is already running", 409);
+    }
 
     res.status(202).json({
       success: true,

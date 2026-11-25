@@ -158,6 +158,45 @@ describe("backup and restore answer with a job, and the job carries the real out
     await backupRestoreLimiter.resetKey(`user:${otherAdminId}`);
   });
 
+  it("a restore that starts while a backup writes its row wins; the backup is refused and leaves no row", async () => {
+    // Hold the backup inside its row transaction — past its own running-job check — until the
+    // restore has started: the window a check-then-await-then-start route leaves open.
+    const realTransaction = prisma.$transaction.bind(prisma) as (...a: unknown[]) => unknown;
+    let entered!: () => void;
+    const inTransaction = new Promise<void>((resolve) => (entered = resolve));
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const spy = jest.spyOn(prisma, "$transaction").mockImplementation((async (
+      ...args: unknown[]
+    ) => {
+      const opts = args[1] as { isolationLevel?: string } | undefined;
+      if (opts?.isolationLevel === "Serializable") {
+        entered();
+        await held;
+      }
+      return realTransaction(...args);
+    }) as never);
+    try {
+      const backup = request(app).post("/api/v1/backup").set("Cookie", adminCookie).send({});
+      const backupDone = backup.then((r) => r);
+      await inTransaction;
+      const restore = await request(app)
+        .post(`/api/v1/backup/${backupId}/restore`)
+        .set("Cookie", otherCookie)
+        .send({ scope: "full", createBackupBefore: false });
+      expect(restore.status).toBe(202);
+      release();
+      expect((await backupDone).status).toBe(409);
+      expect(await prisma.backup.count({ where: { status: "running" } })).toBe(0);
+    } finally {
+      spy.mockRestore();
+      releaseRestore?.();
+      await settleAllJobs();
+      const { backupRestoreLimiter } = await import("../../middleware/rateLimit");
+      await backupRestoreLimiter.resetKey(`user:${otherAdminId}`);
+    }
+  });
+
   it("a restore the preflight refuses fails its job with the refusal's code and status", async () => {
     const started = await request(app)
       .post(`/api/v1/backup/${backupId}/restore`)
