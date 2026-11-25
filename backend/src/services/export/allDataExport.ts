@@ -335,6 +335,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
     "projection of the TravTrack history: the explored map's cells, re-derived",
   travTrackZoneCells: "projection of the privacy zones: the explored map's zone raster, rebuilt",
   travTrackMonthValues: "projection of the TravTrack history: monthly values, re-derived",
+  travTrackCleanups:
+    "TravTrack cleanup choices (smoothing on/off) and road-matched stretches: drawing aids over the raw points, which the `travtrack` section carries in full; not exported on their own yet",
   travTrackDaySources:
     "projection of the TravTrack history: the best source per day, re-derived (a hand-made choice does not travel yet)",
   travTrackImports: "import job bookkeeping: status and per-run reports of a file import",

@@ -304,6 +304,8 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   travtrack_stop_dismissals: owner(),
   travtrack_fixed_places: owner(),
   travtrack_place_settings: owner(),
+  // rc46 extras C: the smoothing choices and road-matched stretches the owner made.
+  travtrack_cleanups: owner(),
   travtrack_zone_tombstones: owner(),
   reroute_runs: excluded(
     "Bulk re-routing progress of this server (forgejo#436): the cursor and counts describe a pass over this server's rows"
