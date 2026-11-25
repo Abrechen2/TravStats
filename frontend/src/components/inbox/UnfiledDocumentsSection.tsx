@@ -74,7 +74,7 @@ export default function UnfiledDocumentsSection(): JSX.Element {
     void load();
   }, [load]);
 
-  const { upload, busy: uploading, errors: uploadErrors } = useDocumentUpload(load);
+  const { upload, busy: uploading, errors: uploadErrors, repeats } = useDocumentUpload(load);
 
   const documents = unfiled.documents;
   const chosen = documents.filter((d) => selected.has(d.id));
@@ -209,6 +209,16 @@ export default function UnfiledDocumentsSection(): JSX.Element {
         </ul>
       )}
 
+      {repeats.names.length > 0 && (
+        <ul role="status" data-testid="unfiled-repeats" style={{ marginTop: "var(--ts-space-md)" }}>
+          {repeats.names.map((name) => (
+            <li key={name} className="text-sm" style={{ fontWeight: 600 }}>
+              {`${name}: ${t("dataQuality:unfiledDocuments.alreadyThere")}`}
+            </li>
+          ))}
+        </ul>
+      )}
+
       {state === "ok" && documents.length === 0 && (
         <div
           data-testid="unfiled-empty"
@@ -272,6 +282,7 @@ export default function UnfiledDocumentsSection(): JSX.Element {
               key={document.id}
               document={document}
               selected={selected.has(document.id)}
+              highlighted={repeats.ids.includes(document.id)}
               onToggle={() => toggle(document.id)}
               onPreview={() => setPreview(document)}
               onLink={() => setLinking([document])}
@@ -299,6 +310,7 @@ export default function UnfiledDocumentsSection(): JSX.Element {
           document={linking[0]}
           documents={linking}
           single={linking.length > 1}
+          unassigned
           onClose={() => setLinking(null)}
           onLinked={() => void load()}
         />

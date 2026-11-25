@@ -88,6 +88,8 @@
   },
   "links": {
     "evidenceFrom": "Beleg aus:",
+    "linkTo": "„{{name}}“ verknüpfen mit …",
+    "linkToHint": "Das Dokument wird an den gewählten Einträgen angezeigt und verlässt die Liste der nicht zugeordneten Dokumente. Reisen und Einträge derselben Reise stehen oben.",
     "alsoLink": "„{{name}}“ auch verknüpfen mit …",
     "alsoLinkHint": "Das Dokument bleibt eine Datei und wird nur zusätzlich an den gewählten Einträgen angezeigt. Reisen und Einträge derselben Reise stehen oben.",
     "alsoLinkAction": "Auch verknüpfen mit …",

@@ -15,10 +15,16 @@ export function useDocumentUpload(onUploaded: () => void | Promise<void>): {
   upload: (files: File[]) => Promise<void>;
   busy: boolean;
   errors: string[];
+  /** Files whose bytes were already in the list: their names, and the documents they matched. */
+  repeats: { names: string[]; ids: string[] };
 } {
   const { t } = useTranslation(["dataQuality", "documents"]);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [repeats, setRepeats] = useState<{ names: string[]; ids: string[] }>({
+    names: [],
+    ids: [],
+  });
   const limits = useRef<DocumentLimits | null>(null);
 
   useEffect(() => {
@@ -36,7 +42,9 @@ export function useDocumentUpload(onUploaded: () => void | Promise<void>): {
       if (files.length === 0) return;
       setBusy(true);
       setErrors([]);
+      setRepeats({ names: [], ids: [] });
       const problems: string[] = [];
+      const repeated = { names: [] as string[], ids: [] as string[] };
       let stored = 0;
       for (const file of files) {
         const broken = exceededDocumentLimit(file, limits.current);
@@ -45,8 +53,11 @@ export function useDocumentUpload(onUploaded: () => void | Promise<void>): {
           continue;
         }
         try {
-          await documentsApi.upload({ file });
-          stored += 1;
+          const { document, alreadyThere } = await documentsApi.uploadUnfiled(file);
+          if (alreadyThere) {
+            repeated.names.push(file.name);
+            repeated.ids.push(document.id);
+          } else stored += 1;
         } catch (err: unknown) {
           logger.error({ err, name: file.name }, "useDocumentUpload: upload failed");
           problems.push(
@@ -59,11 +70,12 @@ export function useDocumentUpload(onUploaded: () => void | Promise<void>): {
         }
       }
       setErrors(problems);
+      setRepeats(repeated);
       setBusy(false);
       if (stored > 0) await onUploaded();
     },
     [onUploaded, t]
   );
 
-  return { upload, busy, errors };
+  return { upload, busy, errors, repeats };
 }

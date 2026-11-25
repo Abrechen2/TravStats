@@ -689,6 +689,7 @@
     "handleFailed": "Die Anfrage konnte nicht als erledigt markiert werden."
   },
   "unfiledDocuments": {
+    "alreadyThere": "Dieses Dokument ist schon vorhanden.",
     "title": "Nicht zugeordnete Dokumente",
     "description": "Diese Uploads gehören zu keinem Eintrag. Ordne sie einem Flug, einer Kreuzfahrt, einer Unterkunft, einem Ort oder einer Reise zu — sonst werden sie {{days}} Tage, nachdem sie ohne Eintrag dastanden, gelöscht, samt Datei.",
     "uploaded": "Hochgeladen am",

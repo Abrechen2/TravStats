@@ -271,6 +271,14 @@ const DOCUMENT_UPLOAD_TIMEOUT_MS = 120_000;
  */
 let limitsRequest: Promise<DocumentLimits> | null = null;
 
+async function postDocument(form: FormData): Promise<{ document: TravelDocument; status: number }> {
+  const { data, status } = await api.post<Envelope<TravelDocument>>("/documents", form, {
+    timeout: DOCUMENT_UPLOAD_TIMEOUT_MS,
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return { document: data.data, status };
+}
+
 export const documentsApi = {
   listForEntry: async (entry: DocumentEntryRef): Promise<TravelDocument[]> => {
     const { data } = await api.get<Envelope<TravelDocument[]>>(documentListPath(entry));
@@ -350,11 +358,21 @@ export const documentsApi = {
     // 2026-09-19). Naming `multipart/form-data` lets axios recognise the
     // FormData and write the boundary itself, as the photo uploaders do
     // (`uploadLodgingPhotos` in lodging.ts says why).
-    const { data } = await api.post<Envelope<TravelDocument>>("/documents", form, {
-      timeout: DOCUMENT_UPLOAD_TIMEOUT_MS,
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return data.data;
+    return (await postDocument(form)).document;
+  },
+
+  /**
+   * An upload into the unassigned list that also says whether these BYTES were
+   * already on file there: the server answers 200 with the existing document
+   * for a repeat, 201 for a new one.
+   */
+  uploadUnfiled: async (
+    file: File
+  ): Promise<{ document: TravelDocument; alreadyThere: boolean }> => {
+    const form = new FormData();
+    form.append("file", file);
+    const { document, status } = await postDocument(form);
+    return { document, alreadyThere: status === 200 };
   },
 
   /** Re-file a rental's evidence under another category, or none (null) — the same document. */

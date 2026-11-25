@@ -88,6 +88,8 @@
   },
   "links": {
     "evidenceFrom": "Evidence from:",
+    "linkTo": "Link “{{name}}” to …",
+    "linkToHint": "The document is shown on the chosen entries and leaves the list of unassigned documents. Trips and entries of the same trip are listed first.",
     "alsoLink": "Also link “{{name}}” to …",
     "alsoLinkHint": "The document stays one file and is only shown at the entries you pick as well. Entries of the same trip are listed first.",
     "alsoLinkAction": "Also link to …",

@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import { useEffect, useRef, type JSX } from "react";
 
 import OverflowMenu, { type OverflowEntry } from "../../ui/OverflowMenu";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -9,6 +9,8 @@ import { formatBytes } from "../../../lib/fileSize";
 interface Props {
   document: UnfiledDocument;
   selected: boolean;
+  /** An upload of the same bytes matched this document: it is marked and scrolled into view. */
+  highlighted?: boolean;
   onToggle: () => void;
   onPreview: () => void;
   onLink: () => void;
@@ -25,6 +27,7 @@ interface Props {
 export default function UnfiledDocumentRow({
   document,
   selected,
+  highlighted = false,
   onToggle,
   onPreview,
   onLink,
@@ -34,6 +37,10 @@ export default function UnfiledDocumentRow({
 }: Props): JSX.Element {
   const { t } = useTranslation(["dataQuality", "documents"]);
   const name = document.displayName;
+  const rowRef = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (highlighted) rowRef.current?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+  }, [highlighted]);
   const entries: OverflowEntry[] = [
     {
       key: "edit",
@@ -65,12 +72,21 @@ export default function UnfiledDocumentRow({
 
   return (
     <li
+      ref={rowRef}
       data-testid="unfiled-document"
+      data-highlighted={highlighted ? "true" : undefined}
       className="flex flex-wrap items-center"
       style={{
         gap: "var(--ts-space-md)",
         borderTop: "1px solid var(--ts-border)",
         paddingTop: "var(--ts-space-md)",
+        ...(highlighted
+          ? {
+              outline: "2px solid var(--ts-accent)",
+              outlineOffset: 4,
+              borderRadius: 6,
+            }
+          : {}),
       }}
     >
       <input

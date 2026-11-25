@@ -21,6 +21,7 @@ const api = vi.hoisted(() => ({
   listUnfiled: vi.fn(),
   limits: vi.fn(),
   upload: vi.fn(),
+  uploadUnfiled: vi.fn(),
   remove: vi.fn(),
   update: vi.fn(),
   addLinks: vi.fn(),
@@ -169,9 +170,9 @@ describe("UnfiledDocumentsSection", () => {
 
   it("uploads dropped files into the list and names every file that failed, with its own reason", async () => {
     api.listUnfiled.mockResolvedValue(listOf());
-    api.upload.mockImplementation(async ({ file }: { file: File }) => {
+    api.uploadUnfiled.mockImplementation(async (file: File) => {
       if (file.name === "kaputt.pdf") throw new Error("boom");
-      return unfiled();
+      return { document: unfiled(), alreadyThere: false };
     });
     renderSection();
     const zone = await screen.findByTestId("unfiled-documents");
@@ -181,9 +182,9 @@ describe("UnfiledDocumentsSection", () => {
     ];
     fireEvent.drop(zone, { dataTransfer: { files } });
 
-    await waitFor(() => expect(api.upload).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(api.uploadUnfiled).toHaveBeenCalledTimes(2));
     // No entry: the document is kept unfiled.
-    expect(api.upload.mock.calls[0][0]).toEqual({ file: files[0] });
+    expect(api.uploadUnfiled.mock.calls[0][0]).toBe(files[0]);
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("kaputt.pdf");
     expect(alert).toHaveTextContent("documents:uploadFailed");
@@ -202,7 +203,20 @@ describe("UnfiledDocumentsSection", () => {
     const big = new File(["x".repeat(50)], "gross.pdf", { type: "application/pdf" });
     fireEvent.change(screen.getByTestId("unfiled-file-input"), { target: { files: [big] } });
     expect(await screen.findByRole("alert")).toHaveTextContent("gross.pdf");
-    expect(api.upload).not.toHaveBeenCalled();
+    expect(api.uploadUnfiled).not.toHaveBeenCalled();
+  });
+
+  it("uploading identical bytes again says the document is already there and marks it", async () => {
+    api.listUnfiled.mockResolvedValue(listOf(unfiled()));
+    api.uploadUnfiled.mockResolvedValue({ document: unfiled(), alreadyThere: true });
+    renderSection();
+    await screen.findByText("bordkarte.pdf");
+    const again = new File(["a"], "kopie.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByTestId("unfiled-file-input"), { target: { files: [again] } });
+    expect(await screen.findByTestId("unfiled-repeats")).toHaveTextContent(
+      "kopie.pdf: dataQuality:unfiledDocuments.alreadyThere"
+    );
+    expect(screen.getByTestId("unfiled-document")).toHaveAttribute("data-highlighted", "true");
   });
 
   it("deletes after the confirmation and shows a failure instead of dropping the row quietly", async () => {
@@ -259,6 +273,16 @@ describe("UnfiledDocumentsSection", () => {
     await waitFor(() =>
       expect(screen.queryByTestId("edit-document-dialog")).not.toBeInTheDocument()
     );
+  });
+
+  it("the link dialog of an unassigned document says 'Verknüpfen mit …', not 'auch verknüpfen'", async () => {
+    api.listUnfiled.mockResolvedValue(listOf(unfiled()));
+    renderSection();
+    fireEvent.click(await screen.findByRole("button", { name: /linkLabel/ }));
+    const dialog = await screen.findByTestId("link-document-dialog");
+    expect(within(dialog).getByText("documents:links.linkTo")).toBeTruthy();
+    expect(within(dialog).queryByText("documents:links.alsoLink")).toBeNull();
+    expect(within(dialog).getByText("documents:links.linkToHint")).toBeTruthy();
   });
 
   it("links to an entry found by SEARCH (the server, not the recent subset) and re-reads the list", async () => {

@@ -24,6 +24,11 @@ interface Props {
   documents?: TravelDocument[];
   /** One entry only (bulk link): a radio list instead of checkboxes. */
   single?: boolean;
+  /**
+   * The document belongs to no entry yet (the inbox): it is linked, not "also"
+   * linked, so the title and hint say "Verknüpfen mit …".
+   */
+  unassigned?: boolean;
   onClose: () => void;
   /** After at least one link was made, so the list behind can re-read. */
   onLinked: () => void;
@@ -46,6 +51,7 @@ export default function LinkDocumentDialog({
   document,
   documents,
   single = false,
+  unassigned = false,
   onClose,
   onLinked,
 }: Props): JSX.Element {
@@ -177,7 +183,9 @@ export default function LinkDocumentDialog({
       title={
         targets.length > 1
           ? t("documents:links.bulkTitle", { count: targets.length })
-          : t("documents:links.alsoLink", { name: document.displayName })
+          : t(unassigned ? "documents:links.linkTo" : "documents:links.alsoLink", {
+              name: document.displayName,
+            })
       }
       maxWidth={560}
       testId="link-document-dialog"
@@ -206,7 +214,13 @@ export default function LinkDocumentDialog({
     >
       <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
         <p className="t-caption">
-          {t(targets.length > 1 ? "documents:links.bulkHint" : "documents:links.alsoLinkHint")}
+          {t(
+            targets.length > 1
+              ? "documents:links.bulkHint"
+              : unassigned
+                ? "documents:links.linkToHint"
+                : "documents:links.alsoLinkHint"
+          )}
         </p>
         <input
           type="search"
