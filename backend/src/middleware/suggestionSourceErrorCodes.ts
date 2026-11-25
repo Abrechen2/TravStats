@@ -18,4 +18,6 @@ export type SuggestionSourceApiErrorCode =
   /** A backfill for a plugin that does not allow it, or a range over 90 days (400). */
   | "PLUGIN_BACKFILL_REFUSED"
   /** A backfill of this plugin is already running (409). */
-  | "PLUGIN_BACKFILL_RUNNING";
+  | "PLUGIN_BACKFILL_RUNNING"
+  /** The plugin does not announce location maintenance in its hello (409). */
+  | "PLUGIN_NO_MAINTENANCE";

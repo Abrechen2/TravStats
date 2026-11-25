@@ -111,7 +111,8 @@
       "pending": "A plugin has not answered yet; it will be asked again.",
       "reask": "Ask again",
       "reasked": "The plugins will be asked again on the next scan.",
-      "reaskError": "That did not work. Please try again."
+      "reaskError": "That did not work. Please try again.",
+      "nameMatch": "Name matches ({{token}}), {{meters}} m"
     },
     "suggestedBy": "Suggested by {{name}}"
   },
@@ -215,7 +216,12 @@
         "rateLimited": "The plugin or the hourly limit allows no request right now.",
         "protocol": "The plugin's answer does not fit the contract (version 1).",
         "server": "The plugin reported a server error.",
-        "privateTarget": "This address is on the local network. Only the admin account may use it."
+        "privateTarget": "This address is on the local network. Only the admin account may use it.",
+        "readOnly": "The plugin's archive does not allow writing (token without write permission).",
+        "changed": "The entry was changed in the archive since; undo is no longer possible.",
+        "notFound": "The plugin does not know this entry (any more).",
+        "notReady": "The plugin is still loading its archive. Please try again shortly.",
+        "unsupported": "This plugin does not offer location maintenance."
       },
       "code": {
         "PRIVATE_TARGET": "This address is on the local network. Only the admin account may use it.",
@@ -223,8 +229,71 @@
         "PLUGIN_LIMIT": "At most 5 plugins are possible.",
         "PLUGIN_BACKFILL_REFUSED": "Asking about past days is not allowed for this plugin, or the range is longer than 90 days.",
         "PLUGIN_BACKFILL_RUNNING": "A request for this plugin is already running.",
-        "SERVICE_DISABLED": "Plugins are switched off on this server."
+        "SERVICE_DISABLED": "Plugins are switched off on this server.",
+        "PLUGIN_NO_MAINTENANCE": "This plugin does not offer location maintenance."
       }
+    },
+    "maintenance": {
+      "open": "Maintain locations",
+      "helloFailed": "Plugin query failed",
+      "title": "Maintain locations – {{name}}",
+      "intro": "The plugin's entries without a usable location, with proposals from your TravTrack stops and from the geocoder. Nothing is written before you confirm it.",
+      "loading": "Loading entries …",
+      "reload": "Reload",
+      "empty": "No entries without a location.",
+      "showIgnored": "Show ignored",
+      "stopsSent": "{{count}} TravTrack stops with place names were sent along for matching.",
+      "stopsWithheld": {
+        "precision": "No stops sent: the plugin is set to 1 km precision.",
+        "travtrackOff": "No stops sent: TravTrack is not this account's location source."
+      },
+      "pendingSearches": "The geocoder is still searching for {{count}} entries – reload later.",
+      "mapLabel": "Map with proposals for {{name}}",
+      "noAddress": "No address in the archive",
+      "noProposals": "No proposal yet.",
+      "issue": {
+        "noCoordinates": "no coordinates",
+        "noStreet": "no street",
+        "lowPrecision": "town centre only"
+      },
+      "source": {
+        "stop": "TravTrack stop",
+        "geocoder": "Geocoder"
+      },
+      "confidence": {
+        "high": "certain",
+        "medium": "likely",
+        "low": "uncertain"
+      },
+      "distance": "{{meters}} m from the current location",
+      "evidence": {
+        "stop": "Stop “{{venue}}” on {{at}} · shared word: {{tokens}}",
+        "geocoder": "Geocoder hit: {{label}}"
+      },
+      "take": "Apply",
+      "otherAddress": "Other address",
+      "ignore": "Ignore",
+      "unignore": "Show again",
+      "searchLabel": "Search address",
+      "search": "Search",
+      "searchFailed": "The address search is not reachable right now.",
+      "searchEmpty": "Nothing found.",
+      "confirm": {
+        "title": "Write to the archive?",
+        "intro": "The plugin “{{plugin}}” writes for “{{name}}” into its archive:",
+        "coords": "• Latitude {{lat}}, longitude {{lon}}",
+        "street": "• Street: {{street}} (the field is empty so far)",
+        "streetKept": "• Street stays unchanged ({{street}})",
+        "source": "Source: {{source}}",
+        "undo": "The plugin keeps the previous values; “Undo” restores them."
+      },
+      "applied": "“{{name}}” was written to the archive.",
+      "undone": "“{{name}}” was reset.",
+      "ignored": "“{{name}}” is ignored.",
+      "unignored": "“{{name}}” is shown again.",
+      "appliedTitle": "Applied",
+      "appliedLine": "{{name}}: {{lat}}, {{lon}} ({{at}})",
+      "undo": "Undo"
     }
   }
 }

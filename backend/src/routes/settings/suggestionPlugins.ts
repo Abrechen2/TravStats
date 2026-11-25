@@ -33,6 +33,15 @@ import {
 import { askPlugin, SAME_STOP_M } from "../../services/plugins/ask";
 import { helloPlugin } from "../../services/plugins/client";
 import { assertBackfillRange, prepareBackfill, runBackfill } from "../../services/plugins/backfill";
+import {
+  assertMaintenanceCapable,
+  candidateStops,
+  offersMaintenance,
+  probeHello,
+  runMaintenance,
+} from "../../services/plugins/maintenance";
+import { MAINTENANCE_SOURCES } from "../../services/plugins/contract";
+import type { Precision } from "../../services/plugins/registry";
 
 const router = Router();
 
@@ -56,6 +65,15 @@ export const TEST_STOP = {
   lon: 11.57549,
   zone: "Europe/Berlin",
 };
+
+/** Maintenance writes reach an outside server and change its data: bounded per account. */
+const maintenanceLimiter = rateLimit({
+  windowMs: 10 * 60_000,
+  max: patAwareMax(120),
+  keyGenerator: userOrIpKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -196,6 +214,113 @@ router.post(
         runBackfill(userId, id, from, to, progress)
       );
       res.status(202).json({ jobId: job.id });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * The plugin's announced capabilities (its signed hello); `[]` when it has no
+ * hello. `error` names a failed hello (auth = signature refused, unreachable, …).
+ */
+router.get("/:id/capabilities", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const plugin = await ownPlugin(req.userId!, z.string().uuid().parse(req.params.id));
+    if (!plugin.enabled || (await egressBlock(PLUGIN_SERVICE_ID)))
+      return res.json({ capabilities: [], maintenance: false, error: null });
+    const probe = await probeHello(plugin);
+    res.json({
+      capabilities: probe.kind === "ok" ? (probe.hello.capabilities ?? []) : [],
+      maintenance: offersMaintenance(probe),
+      error: probe.kind === "failed" ? probe.reason : null,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Location maintenance (spec "Maintenance"). Owner of the registration only:
+ * `ownPlugin` finds a plugin of THIS account, and the candidate stops sent with
+ * the proposals request are this account's own.
+ */
+async function maintainedPlugin(req: AuthRequest) {
+  const plugin = await ownPlugin(req.userId!, z.string().uuid().parse(req.params.id));
+  const block = await egressBlock(PLUGIN_SERVICE_ID);
+  if (block) throw new AppError(block, 409, "SERVICE_DISABLED");
+  await assertMaintenanceCapable(plugin);
+  return plugin;
+}
+
+const rowIdSchema = z.string().min(1).max(64);
+
+router.get(
+  "/:id/maintenance",
+  // The list reloads after every apply/undo/ignore: the probe limit (20 per
+  // 10 min) would lock a user out halfway through an archive.
+  maintenanceLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const plugin = await maintainedPlugin(req);
+      const { stops, withheld } = await candidateStops(req.userId!, plugin.precision as Precision);
+      const locale = req.query.locale === "en" ? "en" : "de";
+      const data = await runMaintenance(plugin, "proposals", { locale, stops });
+      res.json({ ...data, stopsSent: stops.length, stopsWithheld: withheld });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/:id/maintenance/apply",
+  maintenanceLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const body = z
+        .object({
+          rowId: rowIdSchema,
+          lat: z.number().min(-90).max(90),
+          lon: z.number().min(-180).max(180),
+          street: z.string().trim().min(1).max(200).optional(),
+          source: z.enum(MAINTENANCE_SOURCES),
+        })
+        .strict()
+        .parse(req.body);
+      const plugin = await maintainedPlugin(req);
+      res.json(await runMaintenance(plugin, "apply", body));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/:id/maintenance/undo",
+  maintenanceLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const body = z
+        .object({ undoId: z.string().min(1).max(64) })
+        .strict()
+        .parse(req.body);
+      const plugin = await maintainedPlugin(req);
+      res.json(await runMaintenance(plugin, "undo", body));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/:id/maintenance/ignore",
+  maintenanceLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const body = z.object({ rowId: rowIdSchema, ignored: z.boolean() }).strict().parse(req.body);
+      const plugin = await maintainedPlugin(req);
+      res.json(await runMaintenance(plugin, "ignore", body));
     } catch (error) {
       next(error);
     }
