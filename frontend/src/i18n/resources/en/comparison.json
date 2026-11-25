@@ -100,7 +100,9 @@
     "remoteNotice": "The numbers go to the server {{origin}}. Whoever runs that server can read them.",
     "pendingNotice": "Until {{name}} agrees, nothing is shared and nobody sees numbers of yours.",
     "acceptNotice": "Once you choose “Share”, you see each other’s numbers — you only the ones {{name}} released, {{name}} only these.",
-    "shareAll": "Share everything"
+    "shareAll": "Share everything",
+    "years": "Share yearly totals",
+    "yearsHint": "On top of the lifetime totals: the same sums per calendar year, numbers only. Off by default."
   },
   "requests": {
     "title": "Requests",
@@ -489,5 +491,10 @@
     "theyShare": "{{name}} shares: {{state}}",
     "yes": "yes",
     "no": "no"
+  },
+  "years": {
+    "theyNot": "{{name}} does not share yearly totals, so there are no trends here.",
+    "youNot": "Turn on \"Share yearly totals\" in your comparison with this person to see trends.",
+    "sparkAlt": "Trend per year: {{metric}}"
   }
 }

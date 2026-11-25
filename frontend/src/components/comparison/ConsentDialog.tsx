@@ -210,6 +210,8 @@ export default function ConsentDialog({
               setScope((s) => ({
                 ...s,
                 year: e.target.value === "all" ? null : Number(e.target.value),
+                // Yearly totals belong to the lifetime view; a one-year consent cannot carry them.
+                years: e.target.value === "all" ? s.years : undefined,
               }))
             }
           >
@@ -221,6 +223,23 @@ export default function ConsentDialog({
             ))}
           </Select>
         </Field>
+        {scope.year === null && (
+          <label className="flex items-start" style={gap("sm")} data-testid="consent-years">
+            <input
+              type="checkbox"
+              checked={scope.years === true}
+              onChange={(e) =>
+                setScope((s) => ({ ...s, years: e.target.checked ? true : undefined }))
+              }
+            />
+            <span>
+              {tr("consent.years")}
+              <span className="t-caption" style={{ display: "block" }}>
+                {tr("consent.yearsHint")}
+              </span>
+            </span>
+          </label>
+        )}
         {!valid && <p className="t-caption">{tr("consent.nothingChosen")}</p>}
         {valid && current && (
           <dl aria-label={tr("consent.preview")} className="grid grid-cols-2" style={gap("xs")}>

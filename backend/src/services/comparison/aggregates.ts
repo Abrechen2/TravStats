@@ -1,8 +1,10 @@
+import type { DomainKey } from "../../shared/domains";
 import { LEADERBOARD_METRICS, type MetricKey } from "../../shared/comparisonMetrics";
 import {
   LEADERBOARD_SCHEMA,
   leaderboardSnapshotSchema,
   leaderboardSnapshotV2Schema,
+  leaderboardSnapshotV3Schema,
   type LeaderboardScope,
   type LeaderboardSnapshot,
 } from "../../schemas/comparison";
@@ -13,6 +15,7 @@ import { loadDaysAway } from "../stats/daysAwayLoader";
 import { DOMAIN_AGGREGATES } from "./domainAggregates";
 import { comparisonError } from "./errors";
 import { loadCuratedFigures } from "./curatedAggregates";
+import { buildYearlyTotals } from "./yearlyTotals";
 import { buildAchievementSection } from "./achievementSection";
 
 /**
@@ -30,18 +33,16 @@ import { buildAchievementSection } from "./achievementSection";
  * `version` is the snapshot version the reader speaks: 1 is byte-identical to what servers
  * before the achievements section produced; 2 adds the section when the scope carries it.
  */
-export async function buildLeaderboardSnapshot(
+/** One year's (or the lifetime's) figures under a scope; the loaders' only entry point here. */
+async function buildTotals(
   userId: string,
   scope: LeaderboardScope,
-  year: number | null,
-  version: 1 | 2 = 1
-): Promise<LeaderboardSnapshot> {
-  if (scope.year !== null && scope.year !== year)
-    throw comparisonError("COMPARISON_YEAR_NOT_SHARED", 403, "Shared for another year only", {
-      userId,
-      year,
-      sharedYear: scope.year,
-    });
+  year: number | null
+): Promise<{
+  domains: DomainKey[];
+  values: Partial<Record<MetricKey, number | null>>;
+  partial: MetricKey[];
+}> {
   const visible = await loadVisibleDomains(userId);
   const domains = visible.filter((d) => scope.domains.includes(d));
   const wholeAccount = domains.length === visible.length;
@@ -86,6 +87,22 @@ export async function buildLeaderboardSnapshot(
     domains.includes("poi") ? loadCuratedFigures(userId, year, allowedKeys) : Promise.resolve({})
   );
   Object.assign(values, curated);
+  return { domains, values, partial };
+}
+
+export async function buildLeaderboardSnapshot(
+  userId: string,
+  scope: LeaderboardScope,
+  year: number | null,
+  version: 1 | 2 | 3 = 1
+): Promise<LeaderboardSnapshot> {
+  if (scope.year !== null && scope.year !== year)
+    throw comparisonError("COMPARISON_YEAR_NOT_SHARED", 403, "Shared for another year only", {
+      userId,
+      year,
+      sharedYear: scope.year,
+    });
+  const { domains, values, partial } = await buildTotals(userId, scope, year);
   const common = {
     schema: LEADERBOARD_SCHEMA,
     asOf: new Date().toISOString(),
@@ -97,9 +114,21 @@ export async function buildLeaderboardSnapshot(
   if (version === 1) return leaderboardSnapshotSchema.parse({ ...common, version: 1 });
   // Lifetime only: a year view never carries the section, whatever the consent says.
   const achievements = year === null ? await buildAchievementSection(userId, scope) : undefined;
-  return leaderboardSnapshotV2Schema.parse({
+  if (version === 2)
+    return leaderboardSnapshotV2Schema.parse({
+      ...common,
+      version: 2,
+      ...(achievements ? { achievements } : {}),
+    });
+  // Yearly totals are an opt-in family: only a lifetime request, only with the consent's switch.
+  const years =
+    year === null && scope.years === true
+      ? await buildYearlyTotals(userId, (y) => buildTotals(userId, scope, y).then((t) => t.values))
+      : undefined;
+  return leaderboardSnapshotV3Schema.parse({
     ...common,
-    version: 2,
+    version: 3,
     ...(achievements ? { achievements } : {}),
+    ...(years ? { years } : {}),
   });
 }

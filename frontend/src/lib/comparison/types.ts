@@ -6,19 +6,23 @@ export interface LeaderboardScope {
   groups: MetricGroup[];
   domains: DomainKey[];
   year: number | null;
+  /** Opt-in "Jahreswerte teilen"; absent = off (every consent made before it). */
+  years?: boolean;
 }
 export interface LeaderboardSnapshot {
   schema: "travstats-leaderboard";
   /** 2 may carry `achievements`; the row lifts it out, so readers use `LeaderboardRow.achievements`. */
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   asOf: string;
   year: number | null;
   domains: string[];
   /** Absent = not shared; null = shared but not derivable. Unknown keys are ignored. */
   metrics: Record<string, number | null>;
   partial: string[];
-  /** Snapshot v2 only. */
+  /** Snapshot v2 and later. */
   achievements?: AchievementSection;
+  /** Snapshot v3 with the sender's yearly-totals consent: `{"2024": {flights: 12, …}}`. */
+  years?: Record<string, Record<string, number | null>>;
 }
 export interface AchievementSection {
   catalogue: string;

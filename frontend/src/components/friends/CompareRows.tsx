@@ -16,6 +16,8 @@ import CompareCurated from "./CompareCurated";
 import CompareFun from "./CompareFun";
 import CompareRadar, { radarAxes, RADAR_METRICS } from "./CompareRadar";
 import MetricHelp from "./MetricHelp";
+import Sparkline from "./Sparkline";
+import { seriesPair, yearlyOf } from "../../lib/comparison/yearly";
 import { CURATED_KEYS } from "../../lib/comparison/curatedProgress";
 
 type Metric = (typeof LEADERBOARD_METRICS)[number];
@@ -31,6 +33,8 @@ interface Props {
   /** What the reader gives the friend, for the consent line; undefined when not known. */
   iShare?: boolean;
   theyShare?: boolean;
+  /** Whether the reader's own consent to this friend carries the yearly totals ("Jahreswerte teilen"). */
+  iShareYears?: boolean;
 }
 
 type Lead = "you" | "them" | "tie" | null;
@@ -56,6 +60,7 @@ export default function CompareRows({
   isEnabled,
   iShare,
   theyShare,
+  iShareYears,
 }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["comparison", "common"]);
   const { colorOf } = useDomainColors();
@@ -96,6 +101,18 @@ export default function CompareRows({
       timeStyle: "short",
       timeZone: "UTC",
     }).format(new Date(iso)) + " UTC";
+  // Sparklines need BOTH sides' opt-in: the friend's yearly totals AND the reader's own switch.
+  const theirYears = yearlyOf(row);
+  const myYears = yearlyOf(self);
+  const sparkOn = year === null && iShareYears === true && theirYears !== null;
+  const yearsHint: string | null =
+    year !== null || row?.snapshot?.version !== 3
+      ? null
+      : theirYears === null
+        ? tr("years.theyNot", { name: friend.name })
+        : iShareYears === true
+          ? null
+          : tr("years.youNot");
   const radarCells = Object.fromEntries(
     RADAR_METRICS.map((key) => {
       const m = LEADERBOARD_METRICS.find((x) => x.key === key) as Metric;
@@ -178,6 +195,11 @@ export default function CompareRows({
           <CompareFun self={self} friend={friend} year={year} />
         </div>
       </div>
+      {yearsHint && (
+        <p className="t-caption" data-testid="years-hint">
+          {yearsHint}
+        </p>
+      )}
       {sections.map(({ domain, metrics }) => {
         const rows = metrics.flatMap((m) => {
           const { mine, theirs } = pair(m);
@@ -213,6 +235,7 @@ export default function CompareRows({
                   theirs={theirs}
                   lead={leadOf(mine, theirs)}
                   fmt={text}
+                  spark={sparkOn ? seriesPair(myYears, theirYears, m.key) : null}
                   reason={reason(theirs, m.domain)}
                   name={friend.name}
                   tr={tr}
@@ -239,10 +262,21 @@ interface RowProps {
   reason: string;
   name: string;
   tr: Translate;
+  spark: ReturnType<typeof seriesPair>;
 }
 
 /** Two bars on one scale. A bar exists only for a real number; the leader's is solid, the other's softer. */
-function MetricRow({ metric, mine, theirs, lead, fmt, reason, name, tr }: RowProps): JSX.Element {
+function MetricRow({
+  metric,
+  mine,
+  theirs,
+  lead,
+  fmt,
+  reason,
+  name,
+  tr,
+  spark,
+}: RowProps): JSX.Element {
   const top = Math.max(mine.value ?? 0, theirs.value ?? 0);
   const width = (c: Cell): string =>
     top > 0 && c.value !== null ? `${(c.value / top) * 100}%` : "0%";
@@ -296,9 +330,18 @@ function MetricRow({ metric, mine, theirs, lead, fmt, reason, name, tr }: RowPro
           <span className="t-caption">{tr("compare.notComparable")}</span>
         )}
       </div>
-      <div className="flex flex-col" style={{ gap: 4, marginTop: 4 }}>
-        {bar("you", mine)}
-        {bar("them", theirs)}
+      <div className="flex items-center" style={{ gap: "var(--ts-space-md)" }}>
+        <div className="flex flex-1 flex-col" style={{ gap: 4, marginTop: 4 }}>
+          {bar("you", mine)}
+          {bar("them", theirs)}
+        </div>
+        {spark && (
+          <Sparkline
+            mine={spark.mine}
+            theirs={spark.theirs}
+            label={tr("years.sparkAlt", { metric: tr(`metric.${metric.key}`) })}
+          />
+        )}
       </div>
     </li>
   );

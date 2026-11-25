@@ -17,7 +17,7 @@ export const LEADERBOARD_SCHEMA = "travstats-leaderboard" as const;
  * Peer protocol versions this server reads and serves. 2 adds the mutual-consent assertion
  * (`viewerShares`) to the aggregate request and the achievements to the snapshot.
  */
-export const SERVED_VERSIONS = [1, 2] as const;
+export const SERVED_VERSIONS = [1, 2, 3] as const;
 /** The first protocol version whose aggregate request carries `viewerShares`. */
 export const MUTUAL_PROTOCOL_VERSION = 2;
 
@@ -34,6 +34,11 @@ export const leaderboardScopeSchema = z.strictObject({
     .refine(unique, "No duplicates"),
   /** null: every year and the lifetime view; a number: that year only. */
   year: year.nullable(),
+  /**
+   * Opt-in "Jahreswerte teilen": the totals per calendar year, in the lifetime snapshot. Absent
+   * (every consent made before it) and false are the same: not shared.
+   */
+  years: z.boolean().optional(),
 });
 
 const metricName = z.string().regex(/^[a-zA-Z]{1,40}$/);
@@ -94,10 +99,39 @@ export const leaderboardSnapshotV2Schema = z.strictObject({
   version: z.literal(2),
   achievements: achievementSectionSchema.optional(),
 });
+
+const yearKey = z.string().regex(/^(19|20|21)\d\d$/);
+/**
+ * Snapshot v3: v2 plus the opt-in yearly totals — `years: {"2024": {flights: 12, …}}`. Each year
+ * is the same record of numbers a lifetime snapshot carries, so nothing here can hold a record
+ * of a trip, place or date; the year key is an integer in a sane range.
+ */
+export const yearlyTotalsSchema = z
+  .unknown()
+  .refine(notPrototypeName, "Reserved year")
+  .pipe(
+    z
+      .record(
+        yearKey,
+        z
+          .unknown()
+          .refine(notPrototypeName, "Reserved metric name")
+          .pipe(z.record(metricName, z.number().finite().nonnegative().nullable()))
+          .refine((m) => Object.keys(m).length <= 64, "At most 64 metrics")
+      )
+      .refine((y) => Object.keys(y).length <= 40, "At most 40 years")
+  );
+export const leaderboardSnapshotV3Schema = z.strictObject({
+  ...snapshotFields,
+  version: z.literal(3),
+  achievements: achievementSectionSchema.optional(),
+  years: yearlyTotalsSchema.optional(),
+});
 /** Any snapshot version this server reads; the version literal tells them apart. */
 export const anyLeaderboardSnapshotSchema = z.discriminatedUnion("version", [
   leaderboardSnapshotSchema,
   leaderboardSnapshotV2Schema,
+  leaderboardSnapshotV3Schema,
 ]);
 
 export const aggregateRequestSchema = z.strictObject({

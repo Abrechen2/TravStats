@@ -93,7 +93,7 @@ async function localRow(
   if (scope.year !== null && scope.year !== year)
     return { person, status: "yearNotShared", snapshot: null, sharedYear: scope.year };
   try {
-    const snapshot = await buildLeaderboardSnapshot(consent.ownerId, scope, year, 2);
+    const snapshot = await buildLeaderboardSnapshot(consent.ownerId, scope, year, 3);
     return {
       person,
       status: "ok",
@@ -198,9 +198,11 @@ export async function readLeaderboard(
   const visible = await loadVisibleDomains(viewerId);
   const own = await buildLeaderboardSnapshot(
     viewerId,
-    { groups: [...METRIC_GROUPS], domains: visible, year: null },
+    // Own figures: the yearly totals are always built, the reader's own consent decides whether
+    // the page draws them against a friend (spec: only when both sides opted in).
+    { groups: [...METRIC_GROUPS], domains: visible, year: null, years: true },
     year,
-    2
+    3
   );
   const rows: LeaderboardRow[] = [
     {

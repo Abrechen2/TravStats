@@ -150,7 +150,7 @@ describe("peer readiness", () => {
   const stored = () => prisma.comparisonPeer.findUniqueOrThrow({ where: { origin: PEER } });
 
   it("trusts a stored version list without asking again", async () => {
-    await cached([1, 2], null);
+    await cached([1, 2, 3], null);
     expect(await peerReadiness(PEER)).toBe("ready");
     expect(exchange).not.toHaveBeenCalled();
   });
@@ -445,12 +445,12 @@ describe("pulling a remote friend's totals", () => {
   });
 
   it("reports a version mismatch as outdated and stops trusting the stored version list", async () => {
-    jest.mocked(exchange).mockResolvedValueOnce({ status: "unsupportedVersion", supported: [3] });
+    jest.mocked(exchange).mockResolvedValueOnce({ status: "unsupportedVersion", supported: [9] });
     expect(await pullRemote(remote(), null)).toEqual({ status: "outdated" });
     const peer = await prisma.comparisonPeer.findUniqueOrThrow({ where: { origin: PEER } });
     expect(peer.leaderboardVersions).toEqual([]);
     // The next check asks the peer again instead of reading "ready" from the stale list.
-    jest.mocked(exchange).mockResolvedValueOnce({ ready: true, leaderboard: [3] });
+    jest.mocked(exchange).mockResolvedValueOnce({ ready: true, leaderboard: [9] });
     expect(await pullRemote(remote(), null)).toEqual({ status: "outdated" });
     expect(exchange).toHaveBeenLastCalledWith(PEER, { action: "ping" });
   });

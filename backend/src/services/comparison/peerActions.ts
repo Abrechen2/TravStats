@@ -32,8 +32,10 @@ import {
 } from "./consents";
 
 /** The newest snapshot version both sides read: the asker's `accept` list meets what we serve. */
-function highestCommonVersion(accept: readonly number[]): 1 | 2 {
-  return accept.includes(2) && (SERVED_VERSIONS as readonly number[]).includes(2) ? 2 : 1;
+function highestCommonVersion(accept: readonly number[]): 1 | 2 | 3 {
+  for (const v of [3, 2] as const)
+    if (accept.includes(v) && (SERVED_VERSIONS as readonly number[]).includes(v)) return v;
+  return 1;
 }
 
 export async function serveAggregate(

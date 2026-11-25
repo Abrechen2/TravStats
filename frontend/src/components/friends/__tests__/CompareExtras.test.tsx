@@ -116,3 +116,45 @@ describe("lower bounds", () => {
     expect(screen.queryByTestId("rivalry-countries")).toBeNull();
   });
 });
+
+describe("yearly totals are drawn only when both sides opted in", () => {
+  const years = { "2022": { flightKm: 100 }, "2024": { flightKm: 300 } };
+  const withYears = (r: LeaderboardRow, y: typeof years | null, version: 2 | 3 = 3) => {
+    if (r.snapshot) {
+      r.snapshot.version = version;
+      if (y) r.snapshot.years = y;
+    }
+    return r;
+  };
+  const go = (iShareYears: boolean | undefined, theirs: typeof years | null, version: 2 | 3 = 3) =>
+    render(
+      <CompareRows
+        self={withYears(row("self", { flightKm: 400 }, "self"), years)}
+        friend={{ name: "Norbert", row: withYears(row("n", { flightKm: 300 }), theirs, version) }}
+        year={null}
+        domains={null}
+        isEnabled={(d) => d === "flight"}
+        iShareYears={iShareYears}
+      />
+    );
+  it("both sides: a sparkline per metric, no hint", () => {
+    go(true, years);
+    expect(screen.getAllByTestId("sparkline").length).toBeGreaterThan(0);
+    expect(screen.queryByTestId("years-hint")).toBeNull();
+  });
+  it("only the friend opted in: no sparkline, a hint to switch on one's own", () => {
+    go(false, years);
+    expect(screen.queryByTestId("sparkline")).toBeNull();
+    expect(screen.getByTestId("years-hint").textContent).toContain("years.youNot");
+  });
+  it("only the reader opted in: no sparkline, a hint that the friend has not shared", () => {
+    go(true, null);
+    expect(screen.queryByTestId("sparkline")).toBeNull();
+    expect(screen.getByTestId("years-hint").textContent).toContain("years.theyNot");
+  });
+  it("an old peer (v2): nothing at all, not even a hint", () => {
+    go(true, null, 2);
+    expect(screen.queryByTestId("sparkline")).toBeNull();
+    expect(screen.queryByTestId("years-hint")).toBeNull();
+  });
+});

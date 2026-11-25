@@ -114,6 +114,7 @@ export default function FriendPanel({
         isEnabled={isEnabled}
         iShare={friend.mine.leaderboard}
         theyShare={friend.theirs.leaderboard}
+        iShareYears={friend.scope?.years === true}
       />
     );
   };
