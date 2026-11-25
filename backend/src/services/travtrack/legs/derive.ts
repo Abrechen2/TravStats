@@ -1,3 +1,4 @@
+import { stopEvidenceView } from "./stopEvidence";
 import type { EntryWindow } from "../../locationEvidence/journeys/entryWindows";
 import { overlapShare } from "../../locationEvidence/journeys/entryWindows";
 import { inFlightBy } from "../months/values";
@@ -159,6 +160,13 @@ function stayFor(span: { fromMs: number; untilMs: number }, stays: readonly Stay
   return best ? { id: best.id, status: best.status } : null;
 }
 
+/** The evidence view of the stay a span belongs to, as an optional property to spread. */
+function evidenceFor(span: { fromMs: number; untilMs: number }, stays: readonly StayCandidate[]) {
+  const ref = stayFor(span, stays);
+  const view = ref ? stopEvidenceView(stays.find((s) => s.id === ref.id)?.evidence) : null;
+  return view ? { evidence: view } : {};
+}
+
 /** The newest accepted name whose span covers the stop by more than half. */
 function placeFor(
   span: { fromMs: number; untilMs: number },
@@ -312,11 +320,19 @@ function stopOf(
       place: null,
       folded: null,
       stayRef: stayFor(span, inputs.stays),
+      ...evidenceFor(span, inputs.stays),
       ...open,
     };
   }
   const place = hide ? null : shown.place;
-  return { ...span, ...shown, place, stayRef: stayFor(span, inputs.stays), ...open };
+  return {
+    ...span,
+    ...shown,
+    place,
+    stayRef: stayFor(span, inputs.stays),
+    ...evidenceFor(span, inputs.stays),
+    ...open,
+  };
 }
 
 /**

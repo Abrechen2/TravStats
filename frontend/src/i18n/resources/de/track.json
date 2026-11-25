@@ -916,5 +916,22 @@
     "openTrack": "Zum Track",
     "pageTitle": "Lücken im Logbuch",
     "menu": "Lücken"
+  },
+  "evidence": {
+    "calendar": "Kalender: {{title}}",
+    "venue": "Ort aus Kartendaten",
+    "whyLabel": "Warum?",
+    "level": {
+      "high": "Sicherheit hoch",
+      "medium": "Sicherheit mittel",
+      "low": "Sicherheit niedrig"
+    },
+    "why": {
+      "venue": "{{m}} m vom Ort",
+      "dwell": "{{min}} min Aufenthalt",
+      "calendar": "Kalendertermin passt",
+      "plugin": "{{plugin}}: {{name}}, {{m}} m",
+      "pluginNoDistance": "{{plugin}}: {{name}}"
+    }
   }
 }

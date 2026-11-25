@@ -916,5 +916,22 @@
     "openTrack": "Open Track",
     "pageTitle": "Logbook gaps",
     "menu": "Gaps"
+  },
+  "evidence": {
+    "calendar": "Calendar: {{title}}",
+    "venue": "Place from map data",
+    "whyLabel": "Why?",
+    "level": {
+      "high": "Confidence high",
+      "medium": "Confidence medium",
+      "low": "Confidence low"
+    },
+    "why": {
+      "venue": "{{m}} m from the place",
+      "dwell": "{{min}} min stay",
+      "calendar": "calendar event fits",
+      "plugin": "{{plugin}}: {{name}}, {{m}} m",
+      "pluginNoDistance": "{{plugin}}: {{name}}"
+    }
   }
 }
