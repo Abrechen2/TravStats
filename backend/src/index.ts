@@ -369,6 +369,11 @@ if (process.env.NODE_ENV !== "test") {
       logger.error({ operation: "restore_key_swap_reconcile_error", error });
     }
 
+    // An import that died with the last process left its upload and points file behind.
+    void import("./services/travtrack/imports/spool")
+      .then(({ sweepSpoolAtStart }) => sweepSpoolAtStart())
+      .catch((error: unknown) => logger.warn({ operation: "travtrack_spool_sweep_error", error }));
+
     // The instance's upgrade history for the readiness page (never throws).
     void import("./services/readiness/state").then(({ recordRunningVersion }) =>
       recordRunningVersion()

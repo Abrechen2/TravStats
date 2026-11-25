@@ -19,7 +19,9 @@ import { sniffFormat, XML_IMPORT_MAX_BYTES } from "./trackFormat";
  *
  * The directory is the system's temp directory, not `uploads/`: these files
  * live for the length of one import, belong in no backup, and a leftover of a
- * crash is swept (older than a day) the first time the directory is used.
+ * crash is swept at start (`sweepSpoolAtStart`: everything written before this
+ * process began — no import survives a restart, a resume needs the file again)
+ * and, older than a day, the first time the directory is used.
  *
  * The upload is judged WHILE it streams in: the first bytes name the format,
  * and a file that is not JSON is aborted with 413 the moment it passes the XML
@@ -46,6 +48,34 @@ function ensureDir(): void {
       error: err instanceof Error ? err.message : String(err),
     });
   }
+}
+
+/**
+ * At start: remove what an import of an earlier process left — its upload and
+ * its points file (`pointSpool.ts`), up to the import's whole file in size.
+ * Only files older than this process: an upload that began since is spared.
+ * Returns how many files went.
+ */
+export function sweepSpoolAtStart(
+  startedAtMs: number = Date.now() - process.uptime() * 1000
+): number {
+  let removed = 0;
+  try {
+    if (!fs.existsSync(SPOOL_DIR)) return 0;
+    for (const name of fs.readdirSync(SPOOL_DIR)) {
+      const file = path.join(SPOOL_DIR, name);
+      if (fs.statSync(file).mtimeMs >= startedAtMs) continue;
+      fs.rmSync(file, { force: true });
+      removed++;
+    }
+    if (removed > 0) logger.info({ operation: "travtrack.import.spool_start_sweep", removed });
+  } catch (err) {
+    logger.warn({
+      operation: "travtrack.import.spool_sweep_failed",
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+  return removed;
 }
 
 export function newSpoolPath(): string {
