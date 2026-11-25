@@ -933,7 +933,7 @@
     },
     "timeline": {
       "title": "Google Zeitachse (Timeline)",
-      "description": "Deine Standort-Zeitachse von Google kommt in den TravTrack-Verlauf. Die Datei holst du auf dem Handy: Telefon-Einstellungen → Standort → Standortdienste → Zeitachse → Zeitachsendaten exportieren (Timeline.json) — Google speichert die Zeitachse inzwischen nur noch auf dem Gerät. Ältere Exporte aus Google Takeout funktionieren auch.",
+      "description": "Deine Standort-Zeitachse von Google kommt in den TravTrack-Verlauf. Google speichert die Zeitachse nur noch auf dem Gerät, deshalb holst du die Datei (Timeline.json) auf dem Handy – laut Google-Hilfe: Android „Einstellungen → Standort → Standortdienste → Zeitachse → Zeitachsendaten exportieren“, iPhone „Google Maps → Profilbild → Einstellungen → Persönliche Inhalte → Zeitachsendaten exportieren“. Ältere Exporte aus Google Takeout funktionieren auch.",
       "group": "TravTrack",
       "off": "TravTrack ist auf diesem Server aus, deshalb kann keine Zeitachse importiert werden.",
       "offAdmin": "TravTrack einschalten",

@@ -933,7 +933,7 @@
     },
     "timeline": {
       "title": "Google Timeline",
-      "description": "Your Google location Timeline goes into your TravTrack history. Get the file on your phone: phone Settings → Location → Location services → Timeline → Export Timeline data (Timeline.json) — Google now keeps the Timeline on the device only. Older Google Takeout exports work too.",
+      "description": "Your Google location Timeline goes into your TravTrack history. Google keeps the Timeline on the device only, so you get the file (Timeline.json) on your phone – according to Google's help: Android “Settings → Location → Location services → Timeline → Export Timeline data”, iPhone “Google Maps → profile picture → Settings → Personal content → Export Timeline data”. Older Google Takeout exports work too.",
       "group": "TravTrack",
       "off": "TravTrack is off on this server, so no Timeline can be imported.",
       "offAdmin": "Switch TravTrack on",

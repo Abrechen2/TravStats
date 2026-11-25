@@ -64,21 +64,38 @@ describe("rc46 menu paths", () => {
     expect(broken).toEqual([]);
   });
 
+  // The owner uses an iPhone: both platforms' paths, sourced (Google's help), and the
+  // reason the file lives on the phone at all.
   it.each([
     [
       "de",
-      "Telefon-Einstellungen → Standort → Standortdienste → Zeitachse → Zeitachsendaten exportieren",
+      [
+        "laut Google-Hilfe",
+        "Android „Einstellungen → Standort → Standortdienste → Zeitachse → Zeitachsendaten exportieren“",
+        "iPhone „Google Maps → Profilbild → Einstellungen → Persönliche Inhalte → Zeitachsendaten exportieren“",
+        "nur",
+      ],
     ],
-    ["en", "phone Settings → Location → Location services → Timeline → Export Timeline data"],
+    [
+      "en",
+      [
+        "according to Google's help",
+        "Android “Settings → Location → Location services → Timeline → Export Timeline data”",
+        "iPhone “Google Maps → profile picture → Settings → Personal content → Export Timeline data”",
+        "on the device only",
+      ],
+    ],
   ] as const)(
-    "%s: the Timeline tile and the TravTrack hint give the same Google export path",
-    (lang, googlePath) => {
+    "%s: the Timeline tile and the TravTrack hint give both Google export paths",
+    (lang, parts) => {
       const read = (ns: string): Record<string, Record<string, unknown>> =>
         JSON.parse(fs.readFileSync(path.join(RESOURCES, lang, `${ns}.json`), "utf8"));
       const tile = (read("settings").import.timeline as Record<string, string>).description;
       const hint = read("track").imports.googleHint as string;
-      expect(tile).toContain(googlePath);
-      expect(hint).toContain(googlePath);
+      for (const part of parts) {
+        expect(tile).toContain(part);
+        expect(hint).toContain(part);
+      }
     }
   );
 });
