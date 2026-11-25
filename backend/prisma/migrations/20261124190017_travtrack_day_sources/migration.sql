@@ -26,8 +26,5 @@ CREATE TABLE "travtrack_day_sources" (
 -- CreateIndex
 CREATE INDEX "travtrack_day_sources_user_id_from_at_idx" ON "travtrack_day_sources"("user_id", "from_at");
 
--- CreateIndex
-CREATE INDEX "travtrack_points_user_id_origin_t_idx" ON "travtrack_points"("user_id", "origin", "t");
-
 -- AddForeignKey
 ALTER TABLE "travtrack_day_sources" ADD CONSTRAINT "travtrack_day_sources_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
