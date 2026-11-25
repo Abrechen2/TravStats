@@ -25,3 +25,15 @@ export function subscribeMapAppearance(notify: () => void): () => void {
 export function useBasemapStyle(): ReturnType<typeof resolveFlatStyle> {
   return useResilientStyle(useSyncExternalStore(subscribeMapAppearance, snapshot, () => "dark"));
 }
+
+/** Basemap styles with a light ground; the satellite and dark ones are drawn on dark. */
+const LIGHT_STYLE_IDS: ReadonlySet<string> = new Set(["standard", "light", "voyager", "osm"]);
+
+/** Whether the saved basemap has a light ground (map overlays then need ink that holds on it). */
+export function useLightBasemap(): boolean {
+  return useSyncExternalStore(
+    subscribeMapAppearance,
+    () => LIGHT_STYLE_IDS.has(loadMapAppearance().styleId ?? "dark"),
+    () => false
+  );
+}

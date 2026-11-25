@@ -32,6 +32,7 @@ import TrackPointInspector from "./TrackPointInspector";
 import TrackRangeBar from "./TrackRangeBar";
 import TrackRangeMap from "./TrackRangeMap";
 import { useRangePick } from "./useRangePick";
+import { useLightBasemap } from "../../../components/map/useBasemapStyle";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import {
   modeColor,
@@ -309,9 +310,10 @@ export default function TrackMapView(): JSX.Element {
   );
   // Colour by transport mode: one stretch per leg of the loaded days (a long span has no legs).
   const { colors: domainColors } = useDomainColors();
+  const lightBasemap = useLightBasemap();
   const modeColors = useMemo(
-    () => modeColorTable(prefs.modeColors, domainColors),
-    [prefs.modeColors, domainColors]
+    () => modeColorTable(prefs.modeColors, domainColors, lightBasemap),
+    [prefs.modeColors, domainColors, lightBasemap]
   );
   const modePaths = useMemo(
     () =>
@@ -499,7 +501,12 @@ export default function TrackMapView(): JSX.Element {
         leg={resolved.leg}
         zone={resolved.day.zone}
         entryHref={entryHref}
-        modeColor={modeColor(modeColorKeyOf(resolved.leg.mode), prefs.modeColors, domainColors)}
+        modeColor={modeColor(
+          modeColorKeyOf(resolved.leg.mode),
+          prefs.modeColors,
+          domainColors,
+          lightBasemap
+        )}
         onClose={closeLeg}
         onChanged={() =>
           long ? rangePick.reread(resolved.day.date) : data.refresh(resolved.day.date)

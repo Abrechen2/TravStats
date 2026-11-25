@@ -205,7 +205,7 @@ export default function TrackMapAside({
             data-testid="track-detail"
             style={{
               flexShrink: 0,
-              maxHeight: "45%",
+              maxHeight: "65%",
               padding: "0 14px 12px",
               borderBottom: `1px solid ${token("border")}`,
             }}

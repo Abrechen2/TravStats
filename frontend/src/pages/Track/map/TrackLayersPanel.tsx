@@ -13,6 +13,7 @@ import {
   type SplitMinutes,
   type TrackMapPrefs,
 } from "./trackMapPrefs";
+import { useLightBasemap } from "../../../components/map/useBasemapStyle";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { modeColor, type ModeColorKey } from "../../../lib/trackModeColor";
 import { makeNumber } from "./trackLegFormat";
@@ -59,6 +60,7 @@ export default function TrackLayersPanel({
   const number = makeNumber(i18n.language);
   const coarse = useCoarsePointer();
   const { colors: domainColors } = useDomainColors();
+  const lightBasemap = useLightBasemap();
   const rowMin = coarse ? 44 : 40;
   return (
     <aside
@@ -127,7 +129,7 @@ export default function TrackLayersPanel({
                     aria-label={t("track:map.route.modeColor", {
                       mode: t(`track:legs.mode.${key}`),
                     })}
-                    value={modeColor(key, prefs.modeColors, domainColors)}
+                    value={modeColor(key, prefs.modeColors, domainColors, lightBasemap)}
                     onChange={(e) =>
                       onChange({ modeColors: { ...prefs.modeColors, [key]: e.target.value } })
                     }
