@@ -509,7 +509,9 @@ export default function TrackMapView(): JSX.Element {
         stop={resolved.stop}
         zone={resolved.day.zone}
         onClose={() => setPick(null)}
-        onChanged={() => data.refresh(resolved.day.date)}
+        onChanged={() =>
+          long ? rangePick.reread(resolved.day.date) : data.refresh(resolved.day.date)
+        }
       />
     ) : flight ? (
       <>
