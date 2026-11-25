@@ -726,5 +726,9 @@
         "unknown": "The invitation could not be sent."
       }
     }
+  },
+  "budgetRow": {
+    "estimated": "Estimated {{amount}}",
+    "priceOpen": "Price not known yet"
   }
 }

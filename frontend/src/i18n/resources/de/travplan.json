@@ -726,5 +726,9 @@
         "unknown": "Die Einladung konnte nicht verschickt werden."
       }
     }
+  },
+  "budgetRow": {
+    "estimated": "Geschätzt {{amount}}",
+    "priceOpen": "Preis offen"
   }
 }
