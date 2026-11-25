@@ -426,6 +426,9 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   immich_import_jobs: excluded(BOOKKEEPING),
   location_suggestions: excluded(DERIVED),
   mail_intake_messages: excluded(BOOKKEEPING),
+  // A mailbox scan and its found mails hang off a mail_intake_sources row, which does not travel.
+  mail_intake_scans: excluded(BOOKKEEPING),
+  mail_intake_candidates: excluded(BOOKKEEPING),
   mail_intake_senders: excluded("mailbox configuration of this server's intake address"),
   packing_mutations: excluded(BOOKKEEPING),
   parse_training_logs: excluded("parser training log, operational"),
@@ -440,6 +443,9 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   travel_plan_usage: excluded(BOOKKEEPING),
   travtrack_dawarich_imports: excluded(BOOKKEEPING),
   travtrack_derivation_state: excluded(DERIVED),
+  // Best source per day: re-derived from the restored points. A per-day source or outlier
+  // choice made by hand does not travel yet (integrate/rc46, reported as open).
+  travtrack_day_sources: excluded(DERIVED),
   travtrack_diagnostic_events: excluded("14-day diagnostics log with its own export"),
   travtrack_diagnostic_uploads: excluded(BOOKKEEPING),
   travtrack_dirty_days: excluded(DERIVED),

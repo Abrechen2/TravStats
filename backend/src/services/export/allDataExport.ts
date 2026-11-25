@@ -267,6 +267,9 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   mailIntakeSources: "mailbox connections carrying an encrypted password; re-entered after restore",
   mailIntakeSenders:
     "the allowed-sender list of the forwarding address, mailbox configuration rather than travel records",
+  mailIntakeScans: "progress of a mailbox scan, bound to a mailbox connection that is not exported",
+  mailIntakeCandidates:
+    "mails a mailbox scan found for review, transient intake state of a connection that is not exported",
   mailIntakeMessages:
     "the pickup queue of fetched mails; each original is exported as its Document, the proposal itself is transient",
   externalServiceTests:
@@ -332,6 +335,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
     "projection of the TravTrack history: the explored map's cells, re-derived",
   travTrackZoneCells: "projection of the privacy zones: the explored map's zone raster, rebuilt",
   travTrackMonthValues: "projection of the TravTrack history: monthly values, re-derived",
+  travTrackDaySources:
+    "projection of the TravTrack history: the best source per day, re-derived (a hand-made choice does not travel yet)",
   travTrackImports: "import job bookkeeping: status and per-run reports of a file import",
   travTrackIngestTokens: "credential material",
   travTrackDiagnosticEvents:

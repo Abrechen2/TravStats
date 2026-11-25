@@ -133,6 +133,8 @@ describe("TravTrack gate", () => {
       "post /travtrack/imports/dawarich": "on",
       "post /travtrack/imports/dawarich/resume": "on",
       "post /travtrack/imports/dawarich/stop": "held",
+      // A paused file import (fix/travtrack-import-throttle) resumes like the Dawarich copy.
+      "post /travtrack/imports/:id/resume": "on",
       "get /travtrack/imports": "held",
       "get /travtrack/imports/dawarich": "held",
       "delete /travtrack/imports/:id": "held",
