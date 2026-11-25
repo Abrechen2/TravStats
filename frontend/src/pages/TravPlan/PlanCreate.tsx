@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { Button, Chip, Dialog, Field, Input, Select } from "../../components/ui";
 import { useTranslation } from "../../hooks/useTranslation";
 import { currencyForCountry } from "../../shared/countryCurrency";
+import { supportedZones } from "../../shared/time";
 import { travplanApi, type PlanKind, type PlanPlace, type PlanView } from "../../lib/api/travplan";
 import { newPlanId } from "../../lib/travplanId";
 import { apiErrorMachineCode } from "../../lib/apiError";
@@ -27,6 +28,15 @@ const label = (p: PlanPlace | null) =>
  * booked. A destination is PICKED, so time zone, currency and weather location arrive with it and
  * are shown, editable, instead of being typed into three blank fields afterwards.
  */
+/** ISO 4217 shape; the server refuses anything else and the dialog said only "did not work". */
+const CURRENCY_CODE = /^[A-Z]{3}$/;
+
+/** The runtime's zone list, plus the picked zone should an older runtime not list it. */
+function zoneOptions(current: string): string[] {
+  const all = supportedZones();
+  return current && !all.includes(current) ? [current, ...all] : all;
+}
+
 export function PlanCreate({
   onClose,
   onCreated,
@@ -66,7 +76,8 @@ export function PlanCreate({
     !!startDay &&
     !!endDay &&
     endDay >= startDay &&
-    !!name.trim();
+    !!name.trim() &&
+    (currency === "" || CURRENCY_CODE.test(currency));
   const message = (cause: unknown) => {
     const code = apiErrorMachineCode(cause);
     return t("errors." + (code ?? "unknown"), { defaultValue: t("errors.unknown") });
@@ -235,7 +246,14 @@ export function PlanCreate({
           {main && (
             <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "var(--ts-space-lg)" }}>
               <Field label={t("fields.timezone")} htmlFor={uid + "-zone"} hint={t("create.taken")}>
-                <Input id={uid + "-zone"} value={zone} onChange={(e) => setZone(e.target.value)} />
+                <Select id={uid + "-zone"} value={zone} onChange={(e) => setZone(e.target.value)}>
+                  <option value="">{t("create.zoneUnknown")}</option>
+                  {zoneOptions(zone).map((z) => (
+                    <option key={z} value={z}>
+                      {z}
+                    </option>
+                  ))}
+                </Select>
               </Field>
               <Field label={t("fields.currency")} htmlFor={uid + "-cur"}>
                 <Input

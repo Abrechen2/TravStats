@@ -380,7 +380,8 @@
     "estimate": "Estimate",
     "finish": "Create plan",
     "openPlan": "Open plan",
-    "partial": "The plan was created, but not everything could be added: {{reason}}"
+    "partial": "The plan was created, but not everything could be added: {{reason}}",
+    "zoneUnknown": "Time zone not set yet"
   },
   "deletePlan": {
     "open": "Delete plan",

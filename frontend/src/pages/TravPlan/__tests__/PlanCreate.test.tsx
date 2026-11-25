@@ -55,6 +55,31 @@ describe("PlanCreate", () => {
     expect(screen.getByLabelText("create.name")).toHaveValue("Oslo");
   });
 
+  it("offers the time zone as a list, so a typo cannot reach the server", async () => {
+    mocks.places.mockResolvedValue(hit(oslo));
+    render(<PlanCreate onClose={vi.fn()} onCreated={vi.fn()} />);
+    await pick("create.destinationSearch", "oslo", "Oslo");
+    const zone = screen.getByLabelText("fields.timezone");
+    expect(zone.tagName).toBe("SELECT");
+    await userEvent.selectOptions(zone, "Europe/Rome");
+    expect(zone).toHaveValue("Europe/Rome");
+  });
+
+  it("an invalid currency code keeps Weiter disabled", async () => {
+    mocks.places.mockResolvedValue(hit(oslo));
+    render(<PlanCreate onClose={vi.fn()} onCreated={vi.fn()} />);
+    await pick("create.destinationSearch", "oslo", "Oslo");
+    await userEvent.type(screen.getByLabelText("fields.startDay"), "2027-05-08");
+    await userEvent.type(screen.getByLabelText("fields.endDay"), "2027-05-12");
+    const cur = screen.getByLabelText("fields.currency");
+    await userEvent.clear(cur);
+    await userEvent.type(cur, "E1");
+    expect(screen.getByRole("button", { name: "create.next" })).toBeDisabled();
+    await userEvent.clear(cur);
+    await userEvent.type(cur, "eur");
+    expect(screen.getByRole("button", { name: "create.next" })).toBeEnabled();
+  });
+
   it("creates a destination plan with the picked coordinates", async () => {
     mocks.places.mockResolvedValue(hit(oslo));
     const onCreated = vi.fn();

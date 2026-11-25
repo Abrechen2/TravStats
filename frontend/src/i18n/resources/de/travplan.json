@@ -380,7 +380,8 @@
     "estimate": "Schätzung",
     "finish": "Plan anlegen",
     "openPlan": "Plan öffnen",
-    "partial": "Der Plan ist angelegt, aber nicht alles konnte übernommen werden: {{reason}}"
+    "partial": "Der Plan ist angelegt, aber nicht alles konnte übernommen werden: {{reason}}",
+    "zoneUnknown": "Zeitzone noch offen"
   },
   "deletePlan": {
     "open": "Plan löschen",
