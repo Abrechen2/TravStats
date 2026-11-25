@@ -10,6 +10,7 @@ import { reserveScan, scanStays } from "../services/dawarich/stays/scan";
 import { requireConsentSource, staySourceStatus } from "../services/dawarich/stays/scanSource";
 import { acceptStay, rejectStay } from "../services/dawarich/stays/review";
 import { resolveCoveredStays } from "../services/dawarich/stays/coverage";
+import { undoCovered } from "../services/suggestions/reconcile";
 import { stayReviewSchema } from "../schemas/dawarichStays";
 import { withStayTimes, withScanTimes } from "../services/dawarich/stays/times";
 import { publicMarketCoverage } from "../services/dawarich/stays/publicCoverage";
@@ -358,6 +359,21 @@ router.post("/:id/reject", rejectDemo, async (req: AuthRequest, res, next) => {
       .parse(req.body ?? {});
     await requireStaySuggestionsEnabled(user(req));
     await rejectStay(user(req), z.string().uuid().parse(req.params.id));
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+});
+// Take a `covered` back (forgejo#439): the finding is a question again, and
+// the "already recorded" rule never closes it a second time.
+router.post("/:id/reopen", rejectDemo, async (req: AuthRequest, res, next) => {
+  try {
+    z.object({})
+      .strict()
+      .parse(req.body ?? {});
+    const id = z.string().uuid().parse(req.params.id);
+    if (!(await undoCovered(user(req), "stay", id)))
+      throw new AppError("Covered stay not found", 404, "STAY_NOT_COVERED");
     res.json({ success: true });
   } catch (e) {
     next(e);

@@ -90,12 +90,13 @@ export interface DawarichStay {
     matchingVisitId?: string | null;
     /** Set when the finding was resolved because a recorded visit or hotel stay already holds it. */
     coveredBy?: {
-      kind: "visit" | "lodging";
+      kind: "visit" | "lodging" | "flight";
       id: string;
       placeId?: string;
       lodgingId?: string;
       name: string;
       distanceM: number;
+      day?: string;
     };
     zone: string;
     /** Dawarich only: a TravTrack finding names its points by server-side digests. */
@@ -303,6 +304,10 @@ export const dawarichStaysApi = {
   placeType: async (id: string): Promise<StayPlaceTypeResult> =>
     (await api.get(`${base}/${id}/place-type`, { timeout: API_TIMEOUTS.STAY_PLACE_TYPE })).data
       .data,
+  /** Take a `covered` back (forgejo#439): pending again, never auto-closed again. */
+  reopen: async (id: string): Promise<void> => {
+    await api.post(`${base}/${id}/reopen`, {});
+  },
   reject: async (id: string): Promise<void> => {
     await api.post(`${base}/${id}/reject`, {});
   },

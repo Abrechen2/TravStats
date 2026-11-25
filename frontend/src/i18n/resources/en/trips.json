@@ -897,7 +897,8 @@
     "historyChanged": "The location history changed several times while this was being accepted. The suggestion is kept; please try again in a moment.",
     "coveredBy": {
       "visit": "Already recorded as a visit: {{name}}",
-      "lodging": "Already recorded as a stay: {{name}}"
+      "lodging": "Already recorded as a stay: {{name}}",
+      "flight": "Already recorded as a flight: {{name}}"
     },
     "uncertainty": {
       "staleMapData": "Some venue boundaries are older.",

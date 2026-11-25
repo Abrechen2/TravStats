@@ -144,6 +144,7 @@
     "stats/passport.ts",
     "stats/years.ts",
     "suggestions.ts",
+    "suggestionsAfterWrite.ts",
     "syncPreconditions.ts",
     "tags.ts",
     "templateStatus.ts",

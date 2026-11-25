@@ -897,7 +897,8 @@
     "historyChanged": "Der Standortverlauf hat sich während der Übernahme mehrfach geändert. Der Vorschlag bleibt erhalten; bitte versuche es gleich noch einmal.",
     "coveredBy": {
       "visit": "Bereits erfasst als Besuch: {{name}}",
-      "lodging": "Bereits erfasst als Unterkunft: {{name}}"
+      "lodging": "Bereits erfasst als Unterkunft: {{name}}",
+      "flight": "Bereits erfasst als Flug: {{name}}"
     },
     "uncertainty": {
       "staleMapData": "Die verwendeten Ortsflächen sind älter.",

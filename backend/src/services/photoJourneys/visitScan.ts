@@ -5,6 +5,8 @@ import type { PlaceNameGeocoder } from "../places/placeNameBackfill";
 import { throttledPhotonGeocoder } from "../places/photonNameGeocoder";
 import { clusterPhotosByStop, type ScanPhoto } from "./cluster";
 import { loadAnsweredIndex } from "./answeredMatch";
+import { photoCoverTarget } from "./coverAtScan";
+import { judgeCover, type CoverContext } from "../suggestions/covered";
 import { visitFingerprint } from "./fingerprint";
 import { nameVisitStop, type VisitName } from "./visitNaming";
 import {
@@ -39,6 +41,8 @@ export interface VisitScanRows {
   places: readonly VisitStopPlace[];
   lodgings: readonly VisitStopLodging[];
   flights: readonly VisitStopFlight[];
+  /** The shared "already recorded" rule's rows (forgejo#439); none skips that check. */
+  cover?: CoverContext;
 }
 
 export interface VisitScanOutcome {
@@ -79,9 +83,17 @@ export async function scanVisitFindings(
     if (existing !== null && existing.status !== "pending") continue;
     if (existing === null && answered.covers(cluster)) continue;
 
+    // forgejo#439: covered by the shared rule → never offered; an own place
+    // within venue reach that lacks only the visit → accepting adds the visit.
+    const verdict = rows.cover
+      ? judgeCover(photoCoverTarget(cluster, cluster.position!, stop.tripId, stop.zone), rows.cover)
+      : null;
+    if (existing === null && verdict?.covered) continue;
+    const place = stop.place ?? verdict?.nearPlace ?? null;
+
     let naming: Naming;
-    if (stop.place) {
-      naming = { source: "place", name: stop.place.name, localName: stop.place.localName };
+    if (place) {
+      naming = { source: "place", name: place.name, localName: place.localName };
     } else if (existing?.suggestedName) {
       naming = { source: "stored" };
     } else {
@@ -94,7 +106,7 @@ export async function scanVisitFindings(
     const data = {
       kind: "visit",
       tripId: stop.tripId,
-      placeId: stop.place?.id ?? null,
+      placeId: place?.id ?? null,
       ...namedColumns(naming),
       distanceKm: null,
       nights: nightsBetween(cluster.startMs, cluster.endMs),

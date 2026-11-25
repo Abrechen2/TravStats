@@ -323,7 +323,7 @@ describe("POST /photo-journeys/batch (forgejo#211, O5)", () => {
     expect((await batch(many)).status).toBe(400);
   });
 
-  it("lists each suggestion with the nearest logged visit, and flags one logged since the scan", async () => {
+  it("lists each suggestion with the nearest logged visit, and closes one a visit logged since the scan covers (forgejo#439)", async () => {
     await findings();
     const station = await prisma.place.create({
       data: { userId, name: "Yongsan Station", lat: 37.5298, lon: 126.9648 },
@@ -347,10 +347,16 @@ describe("POST /photo-journeys/batch (forgejo#211, O5)", () => {
       withinReach: false,
       distanceKm: expect.closeTo(1.3, 0),
     });
-    expect(byName("Gyeongbokgung").nearestVisit).toMatchObject({
-      placeId: gate.id,
-      sameDay: true,
-      withinReach: true,
+    // Used to be listed with a "logged since" flag; the shared rule now
+    // closes it as covered before the list is read.
+    expect(byName("Gyeongbokgung")).toBeUndefined();
+    const covered = await request(app)
+      .get("/api/v1/photo-journeys?status=covered")
+      .set("Cookie", cookie);
+    expect(covered.body.data).toHaveLength(1);
+    expect(covered.body.data[0]).toMatchObject({
+      suggestedName: "Gyeongbokgung",
+      resolution: { resolution: "covered", coveredBy: { kind: "visit", placeId: gate.id } },
     });
   });
 });
