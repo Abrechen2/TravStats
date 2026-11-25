@@ -28,7 +28,6 @@ import {
 } from "../linkExisting";
 import { acceptedParties } from "../members";
 import { propagateWrite, SHARE_TX_TIMEOUT_MS } from "../propagate";
-import { placeSharerCompanion } from "../remoteCompanion";
 import { SHARE_TYPES, emptyCounts } from "../shareTypes";
 import { requireTripFederation } from "./access";
 import { ENTRIES_BYTES, wireEntriesOf } from "./entries";
@@ -341,7 +340,11 @@ async function undoLink(userId: string, row: OpenOffer, tripId: string, keyed: K
   });
 }
 
-/** After the answer: the sharer as a companion, and the decision on the facts. */
+/**
+ * After the answer: the decision on the facts. The sharer is NOT put on the trip as a
+ * companion: the trip already existed, and its companions are the owner's own choice
+ * (rc46 UAT); the trip's people section offers "Ist das …?" instead.
+ */
 async function settleAfterAnswer(
   userId: string,
   row: OpenOffer,
@@ -351,10 +354,6 @@ async function settleAfterAnswer(
 ): Promise<number> {
   return prisma.$transaction(
     async (tx) => {
-      await placeSharerCompanion(tx, userId, tripId, {
-        id: row.remoteId,
-        displayName: row.remote.displayName,
-      });
       let settled = 0;
       for (const pair of pairs) {
         if (decision === "both" || pair.conflicts.length === 0) continue;

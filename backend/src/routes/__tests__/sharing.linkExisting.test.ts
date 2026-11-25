@@ -87,6 +87,25 @@ describe("linking an existing copy (forgejo#440)", () => {
       .set("Cookie", anna.cookie)
       .send({ userId: ben.id, targetTripId: bens.trip.id, decision });
 
+  it("never puts a companion on the other side's existing trip (rc46 UAT: a removed companion came back)", async () => {
+    // Ben's companion IS Anna (linked), and Ben took her off his trip on purpose.
+    const annaCompanion = await prisma.companion.create({
+      data: {
+        userId: ben.id,
+        canonicalName: "anna",
+        displayName: "Anna",
+        searchName: "anna",
+        linkedUserId: anna.id,
+      },
+    });
+    await prisma.tripCompanion.deleteMany({ where: { tripId: bens.trip.id } });
+    await link("both").expect(200);
+    const onBensTrip = await prisma.tripCompanion.findMany({ where: { tripId: bens.trip.id } });
+    expect(onBensTrip.map((r) => r.companionId)).not.toContain(annaCompanion.id);
+    const bensTrip = await prisma.trip.findUniqueOrThrow({ where: { id: bens.trip.id } });
+    expect(bensTrip.companions).not.toContain("Anna");
+  });
+
   it("offers Ben's trip with the same period as the candidate", async () => {
     const res = await request(app)
       .get(`/api/v1/sharing/trips/${annas.trip.id}/link-candidates`)

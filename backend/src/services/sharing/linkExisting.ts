@@ -21,9 +21,7 @@ import {
   type LinkPreview,
 } from "./linkPreview";
 import { missingGroupConsent } from "./members";
-import { PERSON_SELECT, toPerson } from "./people";
 import { propagateWrite, shareSnapshot } from "./propagate";
-import { placeLocalSharerCompanion } from "./remoteCompanion";
 import { SHARE_TYPES, emptyCounts } from "./shareTypes";
 
 /**
@@ -264,11 +262,9 @@ export async function linkTrip(
       await restatusTrips([trip.id, target.id], tx);
       if (joining) {
         await queueRoster(tx, groupId);
-        const sharer = await tx.user.findUniqueOrThrow({
-          where: { id: userId },
-          select: PERSON_SELECT,
-        });
-        await placeLocalSharerCompanion(tx, otherId, target.id, toPerson(sharer));
+        // No companion is put on the other account's EXISTING trip: it is theirs, and a
+        // companion they took off must not come back because someone linked a copy (rc46
+        // UAT, "Robin Wittke" reappeared). The trip's people section asks them instead.
       }
       if (joining || result.linked > 0) {
         await tx.shareNotice.create({
