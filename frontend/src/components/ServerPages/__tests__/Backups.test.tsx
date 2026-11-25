@@ -32,6 +32,17 @@ const recovery = vi.hoisted(() => ({ status: vi.fn() }));
 vi.mock("../../../lib/api/twoFactor", () => ({
   twoFactorApi: { getTwoFactorStatus: () => Promise.resolve({ enabled: false }) },
 }));
+const passkeys = vi.hoisted(() => ({
+  list: vi.fn(() => Promise.resolve([] as unknown[])),
+  reauthOptions: vi.fn(() => Promise.resolve({ challenge: "c" })),
+  startAuthentication: vi.fn(() => Promise.resolve({ id: "cred", type: "public-key" })),
+}));
+vi.mock("../../../lib/api/passkeys", () => ({
+  passkeyApi: { list: passkeys.list, reauthOptions: passkeys.reauthOptions },
+}));
+vi.mock("@simplewebauthn/browser", () => ({
+  startAuthentication: passkeys.startAuthentication,
+}));
 vi.mock("../../../lib/api/recoveryKey", async (original) => ({
   ...(await original<typeof import("../../../lib/api/recoveryKey")>()),
   recoveryKeyApi: { status: recovery.status, reveal: vi.fn(), confirm: vi.fn() },
@@ -249,6 +260,87 @@ describe("Sicherungen › Vorhandene", () => {
     );
     await waitFor(() => expect(backup.restore).toHaveBeenCalledTimes(3));
     await waitFor(() => expect(screen.queryByTestId("restore-key-mismatch")).toBeNull());
+  });
+
+  it("restores with the recovery key confirmed by a passkey instead of the password", async () => {
+    passkeys.list.mockResolvedValueOnce([{ id: "pk1" }]);
+    backup.restore.mockResolvedValue({ jobId: "j2" });
+    jobs.waitForJob
+      .mockRejectedValueOnce(new JobFailedError("RESTORE_ENCRYPTION_KEY_MISMATCH", 409))
+      .mockResolvedValueOnce(undefined);
+    renderExisting();
+    await openMenu();
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: "settingsRows:backups.restoreAction.full" })
+    );
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "settingsRows:dialogs.restore.confirm",
+      })
+    );
+    const dialog = await screen.findByTestId("restore-key-mismatch");
+    await userEvent.type(
+      within(dialog).getByLabelText("settings:recoveryKey.restore.label"),
+      "c3c3 c3c3"
+    );
+    await userEvent.click(
+      await within(dialog).findByRole("button", { name: "settings:recoveryKey.reauth.usePasskey" })
+    );
+    expect(within(dialog).queryByLabelText("settings:recoveryKey.reauth.password")).toBeNull();
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "settings:recoveryKey.restore.withKey" })
+    );
+    await waitFor(() => expect(backup.restore).toHaveBeenCalledTimes(2));
+    const sent = backup.restore.mock.calls[1][1];
+    expect(sent).toMatchObject({
+      recoveryKey: "c3c3 c3c3",
+      passkeyResponse: { id: "cred", type: "public-key" },
+      acceptEncryptionKeyChange: false,
+    });
+    expect(sent).not.toHaveProperty("password");
+    await waitFor(() => expect(screen.queryByTestId("restore-key-mismatch")).toBeNull());
+  });
+
+  it("keeps the key dialog open and says so when the passkey prompt is cancelled", async () => {
+    passkeys.list.mockResolvedValueOnce([{ id: "pk1" }]);
+    passkeys.startAuthentication.mockRejectedValueOnce(
+      Object.assign(new Error("no"), { name: "NotAllowedError" })
+    );
+    backup.restore.mockResolvedValue({ jobId: "j2" });
+    jobs.waitForJob.mockRejectedValueOnce(
+      new JobFailedError("RESTORE_ENCRYPTION_KEY_MISMATCH", 409)
+    );
+    renderExisting();
+    await openMenu();
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: "settingsRows:backups.restoreAction.full" })
+    );
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "settingsRows:dialogs.restore.confirm",
+      })
+    );
+    const dialog = await screen.findByTestId("restore-key-mismatch");
+    await userEvent.type(within(dialog).getByLabelText("settings:recoveryKey.restore.label"), "c3");
+    await userEvent.click(
+      await within(dialog).findByRole("button", { name: "settings:recoveryKey.reauth.usePasskey" })
+    );
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "settings:recoveryKey.restore.withKey" })
+    );
+    expect(
+      await within(dialog).findByText("settings:recoveryKey.reauth.refused.passkeyCancelled")
+    ).toBeInTheDocument();
+    expect(backup.restore).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps a refused restore passkey to its own sentence", () => {
+    expect(restoreOutcome(new JobFailedError("DELETE_PASSKEY_INVALID", 400))).toBe(
+      "recoveryKeyPasskey"
+    );
+    expect(restoreOutcome(new JobFailedError("REAUTH_PASSKEY_TOO_NEW", 400))).toBe(
+      "recoveryKeyPasskeyTooNew"
+    );
   });
 
   it("names why a restore was refused and that nothing was written", async () => {

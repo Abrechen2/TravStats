@@ -107,6 +107,8 @@ export const backupApi = {
       password?: string;
       code?: string;
       recoveryCode?: string;
+      /** Or a passkey assertion instead of the password (the reveal step's other way). */
+      passkeyResponse?: Record<string, unknown>;
     }
   ): Promise<{ jobId: string }> => {
     // A job, like `create`: the preflight refusals (RESTORE_*) arrive as the

@@ -1,15 +1,23 @@
 import { useEffect, useState, type JSX } from "react";
+import { startAuthentication } from "@simplewebauthn/browser";
 import { useTranslation } from "../../hooks/useTranslation";
 import Modal from "../Modal";
 import Button from "../ui/Button";
-import { ErrorLine } from "../ui/settings";
+import { ErrorLine, LinkButton } from "../ui/settings";
 import type { DialogCopy } from "../Settings/rowCopy";
 import { twoFactorApi } from "../../lib/api/twoFactor";
+import { passkeyApi } from "../../lib/api/passkeys";
 import { secondFactorField } from "../../lib/secondFactorInput";
 import { logger } from "../../lib/logger";
 
-/** The fresh re-authentication a key replacement needs (the server refuses without it). */
-export type RestoreReauth = { password: string; code?: string; recoveryCode?: string };
+/**
+ * The fresh re-authentication a key replacement needs (the server refuses
+ * without it): the password (+ second factor), or a passkey assertion — the
+ * same two ways the reveal step accepts.
+ */
+export type RestoreReauth =
+  | { password: string; code?: string; recoveryCode?: string }
+  | { passkeyResponse: Record<string, unknown> };
 
 /**
  * A restore refused with RESTORE_ENCRYPTION_KEY_MISMATCH: the archive was
@@ -40,8 +48,39 @@ export default function RestoreKeyMismatchDialog({
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [hasTwoFactor, setHasTwoFactor] = useState(false);
+  const [hasPasskey, setHasPasskey] = useState(false);
+  const [method, setMethod] = useState<"password" | "passkey">("password");
+  const [passkeyBusy, setPasskeyBusy] = useState(false);
+  const [passkeyFailed, setPasskeyFailed] = useState<"cancelled" | "failed" | null>(null);
+  const usePasskey = method === "passkey" && hasPasskey;
   const pasted = key.replace(/[\s-]+/g, "");
-  const ready = pasted.length > 0 && password !== "" && (!hasTwoFactor || code.trim() !== "");
+  const ready =
+    pasted.length > 0 &&
+    (usePasskey || (password !== "" && (!hasTwoFactor || code.trim() !== "")));
+  const working = busy || passkeyBusy;
+
+  const submit = async (): Promise<void> => {
+    if (!usePasskey) {
+      onRestoreWithKey(key, { password, ...(hasTwoFactor ? secondFactorField(code) : {}) });
+      return;
+    }
+    setPasskeyBusy(true);
+    setPasskeyFailed(null);
+    try {
+      const passkeyResponse = (await startAuthentication({
+        optionsJSON: await passkeyApi.reauthOptions(),
+      })) as unknown as Record<string, unknown>;
+      onRestoreWithKey(key, { passkeyResponse });
+    } catch (error) {
+      const cancelled =
+        error instanceof Error && (error.name === "NotAllowedError" || error.name === "AbortError");
+      // A visible error plus a console line (owner, 2026-11-18).
+      logger.warn(`Restore passkey confirmation failed: ${cancelled ? "cancelled" : "failed"}`);
+      setPasskeyFailed(cancelled ? "cancelled" : "failed");
+    } finally {
+      setPasskeyBusy(false);
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -49,6 +88,10 @@ export default function RestoreKeyMismatchDialog({
       .getTwoFactorStatus()
       .then((status) => alive && setHasTwoFactor(status.enabled))
       .catch((err: unknown) => logger.warn("Failed to read two-factor status", err));
+    passkeyApi
+      .list()
+      .then((keys) => alive && setHasPasskey(keys.length > 0))
+      .catch((err: unknown) => logger.warn("Failed to read passkeys", err));
     return () => {
       alive = false;
     };
@@ -58,27 +101,22 @@ export default function RestoreKeyMismatchDialog({
     <Modal
       open
       onClose={onCancel}
-      busy={busy}
+      busy={working}
       title={copy.title}
       testId="restore-key-mismatch"
       footer={(requestClose) => (
         <div className="flex w-full flex-wrap justify-end" style={{ gap: 8 }}>
-          <Button onClick={requestClose} disabled={busy}>
+          <Button onClick={requestClose} disabled={working}>
             {t("settings:recoveryKey.restore.cancel")}
           </Button>
-          <Button variant="danger" onClick={onRestoreWithout} disabled={busy}>
+          <Button variant="danger" onClick={onRestoreWithout} disabled={working}>
             {copy.confirmLabel}
           </Button>
           <Button
             variant="primary"
-            onClick={() =>
-              onRestoreWithKey(key, {
-                password,
-                ...(hasTwoFactor ? secondFactorField(code) : {}),
-              })
-            }
-            disabled={busy || !ready}
-            aria-busy={busy || undefined}
+            onClick={() => void submit()}
+            disabled={working || !ready}
+            aria-busy={working || undefined}
           >
             {t("settings:recoveryKey.restore.withKey")}
           </Button>
@@ -106,17 +144,37 @@ export default function RestoreKeyMismatchDialog({
         <p className="t-caption" style={{ margin: 0 }}>
           {t("settings:recoveryKey.restore.reauth")}
         </p>
-        <label className="flex flex-col" style={{ gap: 4 }}>
-          <span className="t-caption">{t("settings:recoveryKey.reauth.password")}</span>
-          <input
-            type="password"
-            className="input"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
-        {hasTwoFactor ? (
+        {usePasskey ? (
+          <p className="t-caption" style={{ margin: 0 }}>
+            {t("settings:recoveryKey.reauth.passkeyHint")}
+          </p>
+        ) : (
+          <label className="flex flex-col" style={{ gap: 4 }}>
+            <span className="t-caption">{t("settings:recoveryKey.reauth.password")}</span>
+            <input
+              type="password"
+              className="input"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+        )}
+        {hasPasskey ? (
+          <span>
+            <LinkButton
+              onClick={() => {
+                setPasskeyFailed(null);
+                setMethod(usePasskey ? "password" : "passkey");
+              }}
+            >
+              {usePasskey
+                ? t("settings:recoveryKey.reauth.usePassword")
+                : t("settings:recoveryKey.reauth.usePasskey")}
+            </LinkButton>
+          </span>
+        ) : null}
+        {hasTwoFactor && !usePasskey ? (
           <label className="flex flex-col" style={{ gap: 4 }}>
             <span className="t-caption">{t("settings:recoveryKey.reauth.code")}</span>
             <input
@@ -128,6 +186,11 @@ export default function RestoreKeyMismatchDialog({
               onChange={(e) => setCode(e.target.value)}
             />
           </label>
+        ) : null}
+        {passkeyFailed === "cancelled" ? (
+          <ErrorLine>{t("settings:recoveryKey.reauth.refused.passkeyCancelled")}</ErrorLine>
+        ) : passkeyFailed === "failed" ? (
+          <ErrorLine>{t("settings:recoveryKey.reauth.refused.other")}</ErrorLine>
         ) : null}
         {error ? <ErrorLine>{error}</ErrorLine> : null}
         <p className="t-caption" style={{ margin: 0 }}>
