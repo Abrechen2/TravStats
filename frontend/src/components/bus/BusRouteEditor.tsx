@@ -6,6 +6,7 @@ import type { Layer, PickingInfo } from "@deck.gl/core";
 import { DeckGLOverlay } from "../map/DeckGLOverlay";
 import { useBasemapStyle } from "../map/useBasemapStyle";
 import { RouteEditorOverlay } from "../Cruise/RouteEditorOverlay";
+import { RIDE_EDITOR_HANDLES, rideEditorBounds } from "../map/routeEditorFraming";
 import { BAR_BUTTON } from "../Cruise/RouteEditorActions";
 import {
   initRouteEditor,
@@ -36,33 +37,9 @@ const KNOWN_ERRORS = new Set(["BUS_ROUTE_INVALID", "BUS_ROUTE_NOT_ANCHORED", "VE
 /** Degrees per arrow press — about 1 km; a tenth of that with Shift held. */
 const NUDGE_STEP_DEG = 0.01;
 
-/**
- * Handles a stored road line starts with. The shared budget (25) suits a sea
- * lane hundreds of km long; a coach ride's road line is often a few km, and 25
- * handles at that size covered the line completely — the editor showed only
- * circles and "click the line" could not be followed (rc46 UAT).
- */
-export const BUS_EDITOR_HANDLES = 10;
-
-/** A tenth of the line's extent on each side, at least this much (≈ 200 m). */
-const MIN_PAD_DEG = 0.002;
-
-/**
- * The camera frame of the line being edited: the line's own extent plus a
- * margin relative to it. The detail maps pad a fixed 0.3° (≈ 30 km), which
- * shrank a city ride to a dot under its handles.
- */
-export function editorBounds(line: readonly LonLat[]): [[number, number], [number, number]] {
-  const lons = line.map((p) => p[0]);
-  const lats = line.map((p) => p[1]);
-  const [w, e, s, n] = [Math.min(...lons), Math.max(...lons), Math.min(...lats), Math.max(...lats)];
-  const padLon = Math.max((e - w) * 0.1, MIN_PAD_DEG);
-  const padLat = Math.max((n - s) * 0.1, MIN_PAD_DEG);
-  return [
-    [w - padLon, s - padLat],
-    [e + padLon, n + padLat],
-  ];
-}
+/** Re-exported under the bus names the tests and callers use. */
+export const BUS_EDITOR_HANDLES = RIDE_EDITOR_HANDLES;
+export const editorBounds = rideEditorBounds;
 
 /** The line the editor starts from: the stored one, else the chord between the stops. */
 export function editorStartLine(ride: BusJourney): LonLat[] {

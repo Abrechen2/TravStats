@@ -22,7 +22,7 @@ import {
   type LonLat,
   type RouteEditorState,
 } from "../Cruise/routeEditorState";
-import { railBounds } from "../rail/RailRouteMap";
+import { RIDE_EDITOR_HANDLES, rideEditorBounds } from "../map/routeEditorFraming";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -54,7 +54,10 @@ export function editorStartLine(ride: FerryJourney): LonLat[] {
     stored &&
     stored.length >= 3
   )
-    return simplifyForEditing(stored.map(([lon, lat]) => [lon, lat] as LonLat));
+    return simplifyForEditing(
+      stored.map(([lon, lat]) => [lon, lat] as LonLat),
+      RIDE_EDITOR_HANDLES
+    );
   return ends;
 }
 
@@ -168,7 +171,7 @@ export function FerryRouteEditor({ ride, onSaved, onClose }: Props): JSX.Element
         <MapGL
           reuseMaps={reuseMapsEnabled()}
           initialViewState={{
-            bounds: railBounds(state.original.map(([lon, lat]) => [lon, lat])),
+            bounds: rideEditorBounds(state.original),
             fitBoundsOptions: { padding: 40 },
           }}
           mapStyle={mapStyle}
