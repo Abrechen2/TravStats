@@ -266,7 +266,7 @@ describe("parse routes keep their originals", () => {
    * the reading recorded on one — so a read-scoped token may parse, but not
    * keep or overwrite anything, and is refused before the parser runs.
    */
-  it("refuses retain and documentId to a read-scoped token, but lets it parse", async () => {
+  it("refuses retain, documentId and (since forgejo#303 M2) a plain parse to a read-scoped token", async () => {
     const tok = await generateApiToken();
     await prisma.apiToken.create({
       data: {
@@ -303,10 +303,12 @@ describe("parse routes keep their originals", () => {
     ).toBeNull();
     expect(await prisma.document.count({ where: { userId } })).toBe(before);
 
+    // A parse spends the server's OCR and model, so a read token may not start one at all
+    // (feat/mcp-m2-write, parseRoutes.patScope.test.ts); it used to be allowed without retain.
     const plain = await request(app)
       .post("/api/v1/parse-pdf")
       .set("Authorization", bearer)
       .send({ pdfBase64: PDF(`read-plain-${stamp}`).toString("base64") });
-    expect(plain.status).toBe(200);
+    expect(plain.status).toBe(403);
   });
 });

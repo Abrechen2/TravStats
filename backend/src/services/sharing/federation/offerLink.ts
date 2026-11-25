@@ -25,7 +25,7 @@ import {
 } from "../linkPreview";
 import type { LinkResult } from "../linkExisting";
 import { acceptedParties } from "../members";
-import { propagateWrite } from "../propagate";
+import { propagateWrite, SHARE_TX_TIMEOUT_MS } from "../propagate";
 import { placeSharerCompanion } from "../remoteCompanion";
 import { SHARE_TYPES, emptyCounts } from "../shareTypes";
 import { requireTripFederation } from "./access";
@@ -337,34 +337,37 @@ async function settleAfterAnswer(
   pairs: LinkPair[],
   decision: LinkDecision
 ): Promise<number> {
-  return prisma.$transaction(async (tx) => {
-    await placeSharerCompanion(tx, userId, tripId, {
-      id: row.remoteId,
-      displayName: row.remote.displayName,
-    });
-    let settled = 0;
-    for (const pair of pairs) {
-      if (decision === "both" || pair.conflicts.length === 0) continue;
-      const { entity, here, there, conflicts } = pair;
-      if (decision === "theirs") {
-        await ADAPTERS[entity].apply(tx, here, there.facts, conflicts, here.facts);
-        await DERIVE[entity](tx, here.id, userId);
-      } else {
-        // As if the person had just changed these facts from the home's values to their own.
-        const homeValues = Object.fromEntries(conflicts.map((k) => [k, there.facts[k]]));
-        const before = {
-          ...here,
-          entity,
-          groupId: row.groupId,
-          facts: { ...here.facts, ...homeValues },
-        };
-        await propagateWrite(tx, userId, entity, here.id, before);
+  return prisma.$transaction(
+    async (tx) => {
+      await placeSharerCompanion(tx, userId, tripId, {
+        id: row.remoteId,
+        displayName: row.remote.displayName,
+      });
+      let settled = 0;
+      for (const pair of pairs) {
+        if (decision === "both" || pair.conflicts.length === 0) continue;
+        const { entity, here, there, conflicts } = pair;
+        if (decision === "theirs") {
+          await ADAPTERS[entity].apply(tx, here, there.facts, conflicts, here.facts);
+          await DERIVE[entity](tx, here.id, userId);
+        } else {
+          // As if the person had just changed these facts from the home's values to their own.
+          const homeValues = Object.fromEntries(conflicts.map((k) => [k, there.facts[k]]));
+          const before = {
+            ...here,
+            entity,
+            groupId: row.groupId,
+            facts: { ...here.facts, ...homeValues },
+          };
+          await propagateWrite(tx, userId, entity, here.id, before);
+        }
+        settled += 1;
       }
-      settled += 1;
-    }
-    await restatusTrips([tripId], tx);
-    return settled;
-  });
+      await restatusTrips([tripId], tx);
+      return settled;
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
 }
 
 /** Link the offered trip with the caller's own trip; see the file comment. */

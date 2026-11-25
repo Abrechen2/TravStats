@@ -405,7 +405,7 @@
     "personal": "",
     "photos": "photoCount",
     "documents": "",
-    "excluded": "userId previewAssetIds fingerprint"
+    "excluded": "userId previewAssetIds fingerprint resolution"
   },
   "DawarichStay": {
     "details": "id sourceStartAt sourceEndAt sourceLat sourceLon status startAt endAt lat lon zone pointCount evidence placeId tripId name visitId detectedAt resolvedAt",
