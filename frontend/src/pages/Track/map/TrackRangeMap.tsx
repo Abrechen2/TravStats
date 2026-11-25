@@ -49,7 +49,7 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
   const { photos, onPhoto, countries, highlight } = props;
   const { selection, selectionSegments, legLines, onLeg, stops, onStop, speedStops, legPoints } =
     props;
-  const { pickWidth, rangeLines, onRangePick } = props;
+  const { pickWidth, rangeLines, onRangePick, modePaths, modeColors } = props;
   const deckLayers = useMemo(
     () =>
       buildTrackLayers({
@@ -73,6 +73,8 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
         pickWidth,
         rangeLines,
         onRangePick,
+        modePaths,
+        modeColors,
         stops,
         onStop,
         speedStops,
@@ -99,6 +101,8 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
       pickWidth,
       rangeLines,
       onRangePick,
+      modePaths,
+      modeColors,
       stops,
       onStop,
       speedStops,
