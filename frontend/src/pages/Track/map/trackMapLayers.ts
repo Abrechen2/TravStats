@@ -94,6 +94,13 @@ export interface MapRangeLine {
   times: number[];
 }
 
+/** The pickable stretches of a long span: every drawn segment of two or more fixes. */
+export function rangeLinesOf(segments: readonly TrackPoint[][]): MapRangeLine[] {
+  return segments.flatMap((segment) =>
+    segment.length > 1 ? [{ path: segment.map(lonLat), times: segment.map((p) => p[0]) }] : []
+  );
+}
+
 /** The instant of the vertex of `line` nearest to a clicked coordinate; null for an empty line. */
 export function nearestTime(line: MapRangeLine, at: readonly number[]): number | null {
   let best: number | null = null;
