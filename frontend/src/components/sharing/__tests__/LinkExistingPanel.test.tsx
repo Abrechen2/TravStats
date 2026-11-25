@@ -33,7 +33,7 @@ const dryRun: LinkPreview = {
 function setup(overrides: Partial<Parameters<typeof LinkExistingPanel>[0]> = {}) {
   const props = {
     otherName: "Ben",
-    loadCandidates: vi.fn().mockResolvedValue([candidate]),
+    loadCandidates: vi.fn().mockResolvedValue({ candidates: [candidate], possibleCopy: true }),
     preview: vi.fn().mockResolvedValue(dryRun),
     link: vi.fn().mockResolvedValue({ linked: 2 }),
     failure: vi.fn((_e: unknown, key: string) => ({ key })),
@@ -66,23 +66,29 @@ describe("LinkExistingPanel — link an existing copy (forgejo#440)", () => {
   });
 
   it("no matching trip on the other side says so", async () => {
-    setup({ loadCandidates: vi.fn().mockResolvedValue([]) });
+    setup({ loadCandidates: vi.fn().mockResolvedValue({ candidates: [], possibleCopy: false }) });
     expect(await screen.findByText("sharing:link.noCandidates")).toBeInTheDocument();
   });
 });
 
 describe("LinkExistingPanel — before the other side agreed", () => {
-  it("shows counts only, and no decision or link button", async () => {
-    setup({
+  it("lists no trip of theirs, compares without naming one, shows aggregates only and no link button", async () => {
+    const props = setup({
+      loadCandidates: vi.fn().mockResolvedValue({ candidates: [], possibleCopy: true }),
       preview: vi.fn().mockResolvedValue({
         ...dryRun,
         redacted: true,
-        there: { ...dryRun.there, name: "" },
+        there: { id: "", name: "", startDay: null, endDay: null },
+        counts: { ...dryRun.counts, onlyThere: null },
+        byType: [],
         matched: [],
         onlyThere: [],
       }),
     });
-    fireEvent.click(await screen.findByRole("button", { name: "sharing:link.compare" }));
+    expect(await screen.findByTestId("link-possible-copy")).toBeInTheDocument();
+    expect(screen.queryByRole("radio")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "sharing:link.compare" }));
+    await waitFor(() => expect(props.preview).toHaveBeenCalledWith(null));
     expect(await screen.findByTestId("link-redacted")).toBeInTheDocument();
     expect(screen.queryByText(/Pensão Amor/)).toBeNull();
     expect(screen.queryByText(/TP571/)).toBeNull();

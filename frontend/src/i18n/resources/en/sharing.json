@@ -1108,6 +1108,8 @@
       "previewFailed": "The comparison failed.",
       "linkFailed": "The trips could not be linked."
     },
-    "redacted": "{{name}} has not agreed to sharing yet. Until then you see counts only, none of {{name}}'s entries or details."
+    "redacted": "{{name}} has not agreed to sharing yet. Until then you see counts only, none of {{name}}'s entries or details.",
+    "possibleCopy": "{{name}} may already hold a copy of this trip. Until {{name}} agrees to sharing, the comparison shows numbers only.",
+    "summaryRedacted": "{{matched}} entries matched, {{conflicting}} with differences; {{onlyHere}} only on your side."
   }
 }

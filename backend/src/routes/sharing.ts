@@ -217,7 +217,7 @@ router.post(
     const body = linkPreviewBodySchema.parse(req.body ?? {});
     res.json({
       success: true,
-      data: await previewLink(req.userId!, tripId, body.userId, body.targetTripId),
+      data: await previewLink(req.userId!, tripId, body.userId, body.targetTripId ?? null),
     });
   })
 );

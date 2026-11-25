@@ -27,6 +27,12 @@ export interface LinkCandidate extends LinkTripView {
   reason: "period" | "name" | "overlap";
 }
 
+export interface LinkCandidates {
+  /** Empty until the other side agreed to sharing. */
+  candidates: LinkCandidate[];
+  possibleCopy: boolean;
+}
+
 export interface LinkEntryView {
   entity: LinkEntity;
   label: string;
@@ -43,7 +49,8 @@ export interface LinkPreview {
   redacted: boolean;
   here: LinkTripView;
   there: LinkTripView;
-  counts: { matched: number; onlyHere: number; onlyThere: number; conflicting: number };
+  /** `onlyThere` is null while redacted. */
+  counts: { matched: number; onlyHere: number; onlyThere: number | null; conflicting: number };
   byType: {
     entity: LinkEntity;
     here: number;

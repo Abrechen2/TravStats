@@ -10,7 +10,10 @@ const id = z.string().min(1).max(100);
 const decision = z.enum(["mine", "theirs", "both"]);
 
 export const linkCandidatesQuerySchema = z.object({ userId: id }).strict();
-export const linkPreviewBodySchema = z.object({ userId: id, targetTripId: id }).strict();
+/** `targetTripId` is ignored before the other account agreed: the server picks the candidate. */
+export const linkPreviewBodySchema = z
+  .object({ userId: id, targetTripId: id.nullable().optional() })
+  .strict();
 export const linkBodySchema = z.object({ userId: id, targetTripId: id, decision }).strict();
 
 export const offerLinkPreviewBodySchema = z.object({ tripId: id }).strict();
@@ -21,9 +24,10 @@ const tripView = z.strictObject({ id: z.string(), name: z.string(), startDay: da
 const entity = z.enum(SHARE_ENTITIES);
 const entry = z.strictObject({ entity, label: z.string(), when: z.string().nullable() });
 
-export const linkCandidatesSchema = z.array(
-  tripView.extend({ reason: z.enum(["period", "name", "overlap"]) })
-);
+export const linkCandidatesSchema = z.strictObject({
+  candidates: z.array(tripView.extend({ reason: z.enum(["period", "name", "overlap"]) })),
+  possibleCopy: z.boolean(),
+});
 
 export const linkPreviewSchema = z.strictObject({
   redacted: z.boolean(),
@@ -32,7 +36,7 @@ export const linkPreviewSchema = z.strictObject({
   counts: z.strictObject({
     matched: z.number().int(),
     onlyHere: z.number().int(),
-    onlyThere: z.number().int(),
+    onlyThere: z.number().int().nullable(),
     conflicting: z.number().int(),
   }),
   byType: z.array(
