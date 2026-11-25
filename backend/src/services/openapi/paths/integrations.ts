@@ -242,30 +242,6 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: "post",
-  path: "/lodging-import/preview",
-  summary: "Preview a lodging import",
-  tags: importTag,
-  responses: { 200: { description: "Preview" }, 400: badInput },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/lodging-import/suggest-mapping",
-  summary: "Guess which column means what",
-  tags: importTag,
-  responses: { 200: { description: "Suggested mapping" }, 400: badInput },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/lodging-import/commit",
-  summary: "Write a previewed lodging import",
-  tags: importTag,
-  responses: { 200: { description: "Imported" }, 400: badInput },
-});
-
-registry.registerPath({
   method: "get",
   path: "/lodging-import/batches",
   summary: "Lodging imports that have run",

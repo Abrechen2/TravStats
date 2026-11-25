@@ -1,7 +1,7 @@
 {
   "name": "travstats-mcp",
-  "version": "0.1.0",
-  "description": "Read-only MCP server for a self-hosted TravStats instance (local stdio, personal access token).",
+  "version": "0.2.0",
+  "description": "MCP server (read tools, optional write tools) for a self-hosted TravStats instance (local stdio, personal access token).",
   "license": "AGPL-3.0-only",
   "type": "module",
   "private": true,

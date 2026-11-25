@@ -23,7 +23,7 @@ export interface ChangeHistoryEntry {
   changeSetId: string;
   entityType: ChangeEntityType;
   entityId: string;
-  operation: "update" | "delete";
+  operation: "update" | "delete" | "create";
   field: string | null;
   oldValue: unknown;
   newValue: unknown;

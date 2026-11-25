@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { pdfParseLimiter } from "../middleware/rateLimit";
 import { z } from "zod";
 import logger from "../utils/logger";
@@ -58,6 +58,7 @@ const parsePdfSchema = parsePdfBodySchema.refine((b) => !b.pdfBase64 !== !b.docu
 router.post(
   "/parse-pdf",
   authenticate,
+  requireWriteScope,
   pdfParseLimiter,
   async (req: AuthRequest, res: Response) => {
     try {

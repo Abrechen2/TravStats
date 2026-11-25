@@ -4,7 +4,7 @@ import { isLocalDate } from "../shared/time/localDate";
 import { isValidZone } from "../shared/time/zonedParts";
 import { z } from "zod";
 
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { boardingPassParseLimiter, userOrIpKey } from "../middleware/rateLimit";
 import { prisma } from "../db";
 import logger from "../utils/logger";
@@ -47,12 +47,13 @@ const normalize = (s: string): string => s.replace(/\s+/g, "").toUpperCase();
  * an existing one. The app shows this for a 1-tap confirm, then commits via the
  * standard POST /api/v1/flights (?merge=true) route.
  *
- * Open endpoint — no Pro gating. PAT bearer auth (read scope is enough; it does
+ * Open endpoint — no Pro gating. PAT bearer auth (write scope: it spends the OCR and the model; it does
  * not persist anything).
  */
 router.post(
   "/propose",
   authenticate,
+  requireWriteScope,
   boardingPassParseLimiter,
   async (req: AuthRequest, res: Response) => {
     try {

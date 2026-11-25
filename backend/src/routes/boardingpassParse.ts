@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { boardingPassParseLimiter, userOrIpKey } from "../middleware/rateLimit";
 import { z } from "zod";
 import logger from "../utils/logger";
@@ -61,6 +61,7 @@ const parseBoardingpassSchema = z
 router.post(
   "/parse-boardingpass",
   authenticate,
+  requireWriteScope,
   boardingPassParseLimiter,
   async (req: AuthRequest, res: Response) => {
     try {

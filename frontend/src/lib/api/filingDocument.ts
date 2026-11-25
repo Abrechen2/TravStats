@@ -13,16 +13,17 @@ import type { NewEntryDomain } from "./documents";
  * another one made at the same moment).
  *
  * Only the FIRST successful create carries it: a document belongs to one
- * entry, and a second create with the same id would be refused. A domain with
- * no single-entry create route (the lodging batch commit) cannot carry it —
- * `canFileBy` says so, and the caller tells the user the document stays unfiled.
+ * entry, and a second create with the same id would be refused. The lodging
+ * batch commit carries it too and answers `documentFiled`; `false` there (no stay
+ * was created, or the link failed) leaves the document unfiled and says so.
  */
 const CREATE_ROUTE: Record<NewEntryDomain, RegExp | null> = {
   flight: /^\/flights$/,
   cruise: /^\/cruises$/,
   rail: /^\/rail$/,
   rental: /^\/rentals\/import$/,
-  lodging: null,
+  // The lodging import files it with the first stay it creates and says whether it did.
+  lodging: /^\/lodging-import\/commit$/,
 };
 
 interface Pending {
@@ -81,7 +82,10 @@ api.interceptors.response.use(
   (response) => {
     if (pending?.carrying && response.config.headers?.get?.(CARRIER)) {
       pending.carrying = false;
-      pending.filed = true;
+      // Only the lodging commit answers `documentFiled`; every other create files it by existing.
+      const answered = (response.data as { data?: { documentFiled?: unknown } } | undefined)?.data
+        ?.documentFiled;
+      pending.filed = answered !== false;
     }
     return response;
   },

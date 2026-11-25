@@ -12,6 +12,9 @@ import {
   applyInvoice,
 } from "../../services/rental/rentalImport";
 import logger from "../../utils/logger";
+import { createOnce, takeClientRef } from "../../services/sync/clientRef";
+import { prisma } from "../../db";
+import { RENTAL_INCLUDE } from "../../services/rental/rentalRowWrite";
 
 /**
  * POST /api/v1/rentals/import — one reviewed rental document applied (spec
@@ -41,32 +44,49 @@ router.post(
     try {
       if (!req.userId) throw new AppError("Not authenticated", 401);
       const userId = req.userId;
-      const parsed = rentalImportSchema.safeParse(req.body);
+      // A retry with the same `clientRef` and body answers the booking the first call made (200),
+      // and creates nothing. Only a CREATE claims the key; a cancellation or an invoice is
+      // idempotent by itself (it addresses a stored booking).
+      const { clientRef, rest } = takeClientRef(req.body);
+      const parsed = rentalImportSchema.safeParse(rest);
       if (!parsed.success) {
         const field = parsed.error.issues[0]?.path.join(".");
         throw new AppError(parsed.error.message, 400, "RENTAL_INVALID_INPUT", field || undefined);
       }
       const body = parsed.data;
       const sentAt = body.mailSentAt ? new Date(body.mailSentAt) : null;
-      const documentIds = await takeDocumentIds(userId, req.body);
-      const result =
-        body.kind === "confirmation"
-          ? await applyConfirmation(userId, body.input, sentAt, documentIds)
-          : body.kind === "cancellation"
-            ? await applyCancellation(
-                userId,
-                body.provider,
-                body.confirmationNumber,
-                body.fee ?? null,
-                sentAt
-              )
-            : await applyInvoice(
-                userId,
-                body.invoice,
-                body.replaceUserDistance ?? false,
-                sentAt,
-                body.adopt ?? {}
-              );
+      const documentIds = await takeDocumentIds(userId, rest);
+      const { created: first, result } = await createOnce({
+        userId,
+        clientRef,
+        kind: "rentalBooking",
+        payload: rest,
+        create: async (claim) =>
+          body.kind === "confirmation"
+            ? await applyConfirmation(userId, body.input, sentAt, documentIds, claim)
+            : body.kind === "cancellation"
+              ? await applyCancellation(
+                  userId,
+                  body.provider,
+                  body.confirmationNumber,
+                  body.fee ?? null,
+                  sentAt
+                )
+              : await applyInvoice(
+                  userId,
+                  body.invoice,
+                  body.replaceUserDistance ?? false,
+                  sentAt,
+                  body.adopt ?? {}
+                ),
+        replay: async (id) => {
+          const row = await prisma.rentalBooking.findFirst({
+            where: { id, userId },
+            include: RENTAL_INCLUDE,
+          });
+          return row ? { outcome: "unchanged" as const, row } : null;
+        },
+      });
       // The mail or invoice the row came from is kept with it (§4.5).
       // A created row was filed inside its own transaction; a stored one is linked now.
       if (result.outcome !== "created") {
@@ -78,7 +98,7 @@ router.post(
         rentalBookingId: result.row.id,
         userId,
       });
-      res.status(result.outcome === "created" ? 201 : 200).json({
+      res.status(first && result.outcome === "created" ? 201 : 200).json({
         success: true,
         data: withRentalReadFields(result.row),
         meta: {

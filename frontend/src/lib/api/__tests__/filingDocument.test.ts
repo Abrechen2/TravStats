@@ -60,8 +60,38 @@ describe("filing a handed-over document by id", () => {
     ).toHaveLength(1);
   });
 
-  it("says a domain with no single-entry create route cannot carry the id", () => {
-    expect(canFileBy("lodging")).toBe(false);
-    expect(canFileBy("flight")).toBe(true);
+  it("carries the id on the lodging import commit, and reports a document the server left unfiled", async () => {
+    expect(canFileBy("lodging")).toBe(true);
+    const sent: unknown[] = [];
+    api.defaults.adapter = (async (config: InternalAxiosRequestConfig) => {
+      sent.push(JSON.parse(String(config.data)));
+      return {
+        data: {
+          success: true,
+          data: { documentFiled: false, documentNotFiledReason: "link_failed" },
+        },
+        status: 201,
+        statusText: "",
+        headers: {},
+        config,
+      };
+    }) as AxiosAdapter;
+    setFilingDocument("doc-9", "lodging");
+    await api.post("/lodging-import/commit", { rows: [] });
+    expect(sent[0]).toMatchObject({ documentIds: ["doc-9"] });
+    expect(clearFilingDocument()).toBe(false);
+  });
+
+  it("counts a lodging commit that filed the document as filed", async () => {
+    api.defaults.adapter = (async (config: InternalAxiosRequestConfig) => ({
+      data: { success: true, data: { documentFiled: true } },
+      status: 201,
+      statusText: "",
+      headers: {},
+      config,
+    })) as AxiosAdapter;
+    setFilingDocument("doc-9", "lodging");
+    await api.post("/lodging-import/commit", { rows: [] });
+    expect(clearFilingDocument()).toBe(true);
   });
 });

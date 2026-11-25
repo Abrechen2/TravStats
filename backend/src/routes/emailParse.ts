@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { emailParseLimiter } from "../middleware/rateLimit";
 import { parseDocument, REQUESTABLE_DOMAINS } from "../services/parsing/parseDocument";
 import { extractEmailFromFile } from "../services/emailExtractor";
@@ -48,6 +48,7 @@ const router = Router();
 router.post(
   "/parse-email",
   authenticate,
+  requireWriteScope,
   emailParseLimiter,
   async (req: AuthRequest, res: Response) => {
     try {
@@ -170,6 +171,7 @@ router.post(
 router.post(
   "/parse-email-file",
   authenticate,
+  requireWriteScope,
   // Before multer, deliberately: a refused request must not write its bytes
   // first. /parse-email has carried this limiter since it was written; the file
   // variant, which costs disk as well as parsing, had only the general API

@@ -12,6 +12,7 @@ import {
 } from "../schemas/lodgingImport";
 import { buildLodgingPreviewRows } from "../services/lodging/lodgingImportPreview";
 import { commitLodgingImport } from "../services/lodging/lodgingImportCommit";
+import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 import {
   listLodgingImportBatches,
   revertLodgingImportBatch,
@@ -72,6 +73,9 @@ router.post("/commit", rejectDemo, async (req: AuthRequest, res: Response, next:
     const parsed = lodgingImportCommitRequestSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
+    // Kept documents to file with the FIRST stay this run creates (a document belongs to one entry).
+    // Checked before anything is written: an unknown or already-filed id fails the request.
+    const documentIds = await takeDocumentIds(userId, req.body);
     const result = await commitLodgingImport(
       userId,
       parsed.data.source,
@@ -121,7 +125,33 @@ router.post("/commit", rejectDemo, async (req: AuthRequest, res: Response, next:
         })
       );
 
-    res.status(201).json({ success: true, data: result });
+    let documentFiled: boolean | undefined;
+    let documentNotFiledReason: "no_stay_created" | "link_failed" | undefined;
+    if (documentIds.length > 0) {
+      const first = result.createdStayRefs[0];
+      if (!first) {
+        documentFiled = false;
+        documentNotFiledReason = "no_stay_created";
+      } else {
+        try {
+          await linkDocuments(userId, documentIds, { type: "lodgingStay", id: first.stayId });
+          documentFiled = true;
+        } catch (error) {
+          // The stays exist either way; the document stays unfiled and the answer says so.
+          logger.warn({ operation: "lodging_import_document_not_filed", userId, error });
+          documentFiled = false;
+          documentNotFiledReason = "link_failed";
+        }
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      data: {
+        ...result,
+        ...(documentFiled !== undefined ? { documentFiled, documentNotFiledReason } : {}),
+      },
+    });
   } catch (err) {
     next(err);
   }

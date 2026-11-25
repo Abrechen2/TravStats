@@ -53,6 +53,28 @@ describe("change history on an entry's detail page", () => {
     expect(api.forEntry).toHaveBeenCalledWith("flight", "f1");
   });
 
+  it("shows an entry the MCP package created, with the key that made it", async () => {
+    api.forEntry.mockResolvedValue({
+      entries: [
+        row({
+          operation: "create",
+          field: null,
+          oldValue: null,
+          newValue: null,
+          restorable: false,
+          source: "api",
+          reason: "via MCP / Claude Desktop",
+        }),
+      ],
+      nextCursor: null,
+    });
+    render(<ChangeHistoryList entityType="flight" entityId="f1" />);
+    const line = await screen.findByTestId("change-history-row");
+    expect(line).toHaveTextContent("changeHistory:created");
+    expect(line).toHaveTextContent("via MCP / Claude Desktop");
+    expect(line).not.toHaveTextContent("changeHistory:notRestorable");
+  });
+
   // UAT rc.45: the history read "purpose  leer → business" in the German UI.
   it("names the purpose field and writes coded values as words", async () => {
     api.forEntry.mockResolvedValue({

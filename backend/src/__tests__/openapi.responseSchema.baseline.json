@@ -71,7 +71,6 @@
   "POST /flights/{id}/enrich-historical",
   "POST /import/parse",
   "POST /import/preview",
-  "POST /lodging-import/commit",
   "POST /lodging-import/preview",
   "POST /lodging-import/suggest-mapping",
   "POST /pairing/claim",

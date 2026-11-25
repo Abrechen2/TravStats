@@ -12,6 +12,7 @@ import type {
 import { toLocal } from "../../shared/time/instant";
 import { rentalExternalRef } from "./parser/rentalCandidates";
 import { filledDeadlineFields, type DeadlineField } from "../deadlines/parsedDeadlines";
+import type { DbTransaction } from "../../db";
 import {
   RENTAL_INCLUDE,
   createRentalRow,
@@ -185,7 +186,9 @@ export async function applyConfirmation(
   userId: string,
   input: CreateRentalInput,
   sentAt: Date | null = null,
-  documentIds: readonly string[] = []
+  documentIds: readonly string[] = [],
+  /** Claims a client-ref key inside the create's transaction (only a CREATE can claim one). */
+  claim?: (tx: DbTransaction, id: string) => Promise<void>
 ): Promise<{ outcome: ImportOutcome; row: RentalRow; filledDeadlines?: DeadlineField[] }> {
   const existing = input.confirmationNumber
     ? await findBooking(userId, input.provider, { confirmation: input.confirmationNumber })
@@ -201,6 +204,7 @@ export async function applyConfirmation(
         externalRef,
         mailSentAt: sentAt,
         documentIds,
+        ...(claim ? { inTransaction: claim } : {}),
       }),
     };
   }

@@ -24,6 +24,21 @@ export interface AuthRequest extends Request {
   requestId?: string;
 }
 
+const CLIENT_HEADER_MAX = 64;
+
+/**
+ * A client-chosen header as a log value: printable ASCII only (no control characters that could
+ * forge a log line), cut at 64 characters. Absent or empty stays absent.
+ */
+export function headerForLog(value: string | undefined): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const clean = value
+    .replace(/[^\x20-\x7e]/g, "?")
+    .trim()
+    .slice(0, CLIENT_HEADER_MAX);
+  return clean || undefined;
+}
+
 /**
  * Request logger middleware
  * Attaches correlation ID and logs HTTP traffic when enabled
@@ -58,6 +73,9 @@ export function requestLoggerMiddleware(req: AuthRequest, res: Response, next: N
         statusClass: getStatusClass(res.statusCode),
         ip: req.ip,
         userAgent: req.get("user-agent"),
+        // travstats-mcp names itself and the tool, so a write can be traced to the assistant's call.
+        clientName: headerForLog(req.get("x-travstats-client")),
+        clientTool: headerForLog(req.get("x-travstats-tool")),
         // `authenticate` sets `req.userId`; `req.user` is never populated, which left every
         // request line without an owner (and out of a user's own diagnostic package).
         userId: req.userId ?? req.user?.id,

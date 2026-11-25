@@ -19,7 +19,7 @@ const historyRow = z.object({
   changeSetId: z.string().describe("Shared by every field row of one write"),
   entityType: z.enum(ENTITY_TYPES as [string, ...string[]]),
   entityId: z.string(),
-  operation: z.enum(["update", "delete"]),
+  operation: z.enum(["update", "delete", "create"]),
   field: z.string().nullable().describe("Null on a delete row"),
   oldValue: z.unknown().describe("The JSON value before; null when omitted or empty"),
   newValue: z.unknown().describe("The JSON value after; null when omitted or empty"),

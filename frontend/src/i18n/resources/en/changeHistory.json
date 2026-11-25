@@ -17,6 +17,7 @@
   "omitted": "too large to keep",
   "emptyValue": "empty",
   "deleted": "Deleted",
+  "created": "Created",
   "restoreOf": "Restore",
   "columns": {
     "when": "When",
