@@ -39,6 +39,10 @@ vi.mock("@/lib/api/sharing", () => ({
     inboxCount: vi.fn().mockResolvedValue(0),
   },
 }));
+// SharingTab asks whether cross-server sharing is on (fix/shared-trip-companions).
+vi.mock("../../lib/api/sharingRemote", () => ({
+  sharingRemoteApi: { status: vi.fn().mockResolvedValue({ available: false }) },
+}));
 vi.mock("../../components/inbox/usePhotoJourneysVisible", () => ({
   usePhotoJourneysVisible: () => visible.value,
 }));

@@ -5,7 +5,7 @@ import { useBasemapStyle } from "../../map/useBasemapStyle";
 import type { MaintenanceProposal } from "../../../lib/api/suggestionPlugins";
 
 /** Proposal pins: numbered like the list, stop and geocoder in their own colour. */
-const COLOUR = { stop: "var(--ts-accent, #c2410c)", geocoder: "var(--ts-good, #15803d)" };
+const COLOUR = { stop: "var(--ts-accent)", geocoder: "var(--ts-good)" };
 
 /**
  * One archive row on a small read-only map: where the archive puts it today

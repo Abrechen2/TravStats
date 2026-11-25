@@ -87,7 +87,7 @@ export default function MaintenanceRowCard({
       style={{
         gap: "var(--ts-space-xs)",
         padding: "var(--ts-space-sm)",
-        border: `1px solid ${selected ? "var(--ts-accent, #c2410c)" : "var(--ts-border)"}`,
+        border: `1px solid ${selected ? "var(--ts-accent)" : "var(--ts-border)"}`,
         borderRadius: "var(--ts-radius-card)",
         opacity: row.ignored ? 0.6 : 1,
       }}
