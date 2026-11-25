@@ -32,6 +32,12 @@ vi.mock("../../../lib/api/documents", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../lib/api/documents")>();
   return { ...actual, documentsApi: api };
 });
+vi.mock("../../../lib/api/parse", () => ({
+  parseApi: {
+    parsePdf: () => Promise.resolve({ flights: [{ flightNumber: "LH1" }] }),
+    parseEmailFile: () => Promise.resolve({ flights: [] }),
+  },
+}));
 vi.mock("../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ enabled: [], isEnabled: () => true }),
 }));

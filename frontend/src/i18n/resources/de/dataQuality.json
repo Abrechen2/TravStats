@@ -724,6 +724,10 @@
       "noDomains": "Keine Domäne aktiv, aus der sich etwas anlegen ließe.",
       "recognised": "erkannt",
       "fetchFailed": "Das Dokument konnte nicht geladen werden. Es wurde nichts angelegt.",
+      "reading": "Das Dokument wird ausgelesen …",
+      "nothingFound": "Im Dokument wurde nichts erkannt:",
+      "createEmpty": "Leer anlegen mit Dokument",
+      "createEmptyHint": "Das leere Formular öffnet sich; was du speicherst, wird mit diesem Dokument verknüpft.",
       "domains": {
         "flight": "Flug",
         "cruise": "Kreuzfahrt",

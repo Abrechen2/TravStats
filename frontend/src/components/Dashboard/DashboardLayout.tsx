@@ -31,7 +31,7 @@ import { DomainFilterButton } from "./tabs/DomainFilterButton";
 import { AddDomainPicker, type AddableDomain } from "./AddDomainPicker";
 import { isValidDomain } from "../../shared/domains";
 import DomainImportPanel from "../import/DomainImportPanel";
-import { useLodgingImportAdapter } from "../import/adapters/lodgingAdapter";
+import { useLodgingImportAdapter, WITH_STAY_PREFILL } from "../import/adapters/lodgingAdapter";
 import { DashboardEmptyState } from "./DashboardEmptyState";
 import { PlaceFormModal } from "../places/PlaceFormModal";
 import { QuickVisitHost } from "../places/QuickVisitHost";
@@ -80,6 +80,10 @@ export function DashboardLayout({
   // A document one import dialog found to belong to another (D1): the target
   // dialog opens with it and reads it, so the user never drops it twice.
   const [handedOver, setHandedOver] = useState<ImportDocument | null>(null);
+  // From the inbox: what it already read (the review opens on it, no second
+  // read), or "create empty with the document" (the empty form opens at once).
+  const [inboxReading, setInboxReading] = useState<DocumentFilingHandoff["reading"] | null>(null);
+  const [inboxManual, setInboxManual] = useState(false);
   // A kept document the inbox handed over: the request that creates the entry carries its id
   // (`lib/api/filingDocument`). Dropped when the dialog closes, so it never rides on a later import.
   const pendingDocument = useRef<DocumentFilingHandoff | null>(null);
@@ -89,6 +93,8 @@ export function DashboardLayout({
       clearFilingDocument();
     }
     setHandedOver(null);
+    setInboxReading(null);
+    setInboxManual(false);
     setAddingDomainState(domain);
   };
   // A booking mail the inbox hands over (forgejo#313): open its domain's dialog with the
@@ -125,7 +131,15 @@ export function DashboardLayout({
         setFilingDocument(documentHandoff.documentId, documentHandoff.domain);
       }
       setAddingDomainState(documentHandoff.domain as AddableDomain);
-      setHandedOver(documentHandoff.document);
+      setInboxReading(documentHandoff.reading ?? null);
+      setInboxManual(documentHandoff.manual === true);
+      // An empty flight form reads nothing; the other dialogs get the file
+      // only when the inbox did not read it already.
+      setHandedOver(
+        documentHandoff.manual || (documentHandoff.reading && documentHandoff.domain !== "flight")
+          ? null
+          : documentHandoff.document
+      );
       navigate(location.pathname + location.search, { replace: true, state: null });
       return;
     }
@@ -137,11 +151,30 @@ export function DashboardLayout({
     navigate(location.pathname + location.search, { replace: true, state: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- consumes the handoff once per location.state; pathname/search are read at that moment
   }, [location.state]);
+  // The props that hand the inbox's document to one import dialog.
+  const inboxProps = (domain: AddableDomain) =>
+    addingDomain === domain && pendingDocument.current
+      ? {
+          initialReading:
+            inboxReading && pendingDocument.current.document.kind === "file"
+              ? {
+                  reading: inboxReading,
+                  fileName: pendingDocument.current.document.file.name,
+                  document: pendingDocument.current.document,
+                }
+              : null,
+          initialManual: inboxManual
+            ? { prefill: domain === "lodging" ? WITH_STAY_PREFILL : undefined }
+            : null,
+        }
+      : {};
   const openOtherImport = (domain: ParseDomain, document: ImportDocument): void => {
     // A package tour is imported on the trips page and a place document in
     // the place import; neither is in `openableImports`, so no dialog here
     // offers the jump.
     if (domain === "package" || domain === "place") return;
+    setInboxReading(null);
+    setInboxManual(false);
     setAddingDomainState(domain);
     setHandedOver(document);
   };
@@ -431,6 +464,7 @@ export function DashboardLayout({
         }}
         adapter={cruiseAdapter}
         initialDocument={addingDomain === "cruise" ? handedOver : null}
+        {...inboxProps("cruise")}
         onOpenOtherImport={openOtherImport}
         openableDomains={openableImports}
       />
@@ -446,6 +480,7 @@ export function DashboardLayout({
         }}
         adapter={lodgingAdapter}
         initialDocument={addingDomain === "lodging" ? handedOver : null}
+        {...inboxProps("lodging")}
         onOpenOtherImport={openOtherImport}
         openableDomains={openableImports}
       />
@@ -464,6 +499,7 @@ export function DashboardLayout({
         }}
         adapter={railAdapter}
         initialDocument={addingDomain === "rail" ? handedOver : null}
+        {...inboxProps("rail")}
         onOpenOtherImport={openOtherImport}
         openableDomains={openableImports}
       />
@@ -476,6 +512,7 @@ export function DashboardLayout({
         }}
         adapter={rentalAdapter}
         initialDocument={addingDomain === "rental" ? handedOver : null}
+        {...inboxProps("rental")}
         onOpenOtherImport={openOtherImport}
         openableDomains={openableImports}
       />

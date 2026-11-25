@@ -215,4 +215,27 @@ describe("DomainImportPanel — initialManual (the gap calendar)", () => {
     expect(screen.getByText("Test Import")).toBeTruthy();
     expect(screen.queryByTestId("manual-modal")).toBeNull();
   });
+
+  it("opens the review on the inbox's reading, without reading the file again", () => {
+    renderReviewSpy.mockClear();
+    const result = { domain: "cruise", cruises: [{}] };
+    const file = new File(["%PDF"], "buchung.pdf", { type: "application/pdf" });
+    render(
+      <DomainImportPanel
+        open
+        onClose={vi.fn()}
+        onItemsCreated={vi.fn()}
+        adapter={adapter}
+        initialReading={{
+          reading: { kind: "pdf", result: result as never },
+          fileName: "buchung.pdf",
+          document: { kind: "file", file },
+        }}
+      />
+    );
+    expect(screen.getByTestId("review-modal")).toBeTruthy();
+    expect(renderReviewSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({ parseResult: result, sourceFileName: "buchung.pdf" })
+    );
+  });
 });

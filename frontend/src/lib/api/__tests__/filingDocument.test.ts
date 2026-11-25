@@ -39,6 +39,22 @@ describe("filing a handed-over document by id", () => {
     expect(clearFilingDocument()).toBe(true);
   });
 
+  it("the empty stay form's create files the document (Leer anlegen mit Dokument)", async () => {
+    const { sent } = capture();
+    setFilingDocument("doc-1", "lodging");
+    await api.post("/lodging", { name: "Haus" });
+    await api.post("/lodging/l-1/stays", { checkIn: "2026-01-01" });
+    expect(sent[0].body).not.toHaveProperty("documentIds");
+    expect(sent[1].body).toMatchObject({ documentIds: ["doc-1"] });
+  });
+
+  it("the empty rental form's create files the document (Leer anlegen mit Dokument)", async () => {
+    const { sent } = capture();
+    setFilingDocument("doc-1", "rental");
+    await api.post("/rentals", { company: "X" });
+    expect(sent[0].body).toMatchObject({ documentIds: ["doc-1"] });
+  });
+
   it("leaves other routes and other methods alone", async () => {
     const { sent } = capture();
     setFilingDocument("doc-1", "flight");

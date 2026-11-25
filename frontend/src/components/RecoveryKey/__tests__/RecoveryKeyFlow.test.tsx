@@ -77,9 +77,7 @@ describe("RecoveryKeyFlow", () => {
       fireEvent.click(screen.getByRole("button", { name: "settings:recoveryKey.show.copy" }));
       await settle();
       expect(screen.getByText("settings:recoveryKey.show.copyFailed")).toBeTruthy();
-      expect(window.getSelection()?.toString().replace(/\s+/g, " ")).toBe(
-        KEY.replace(/\s+/g, " ")
-      );
+      expect(window.getSelection()?.toString().replace(/\s+/g, " ")).toBe(KEY.replace(/\s+/g, " "));
     });
   });
 

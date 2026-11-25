@@ -5,6 +5,8 @@ import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
 import { LodgingFormModal } from "../../lodging/LodgingFormModal";
 import { LodgingImportPreviewModal } from "../../lodging/LodgingImportPreviewModal";
+import { StayEditor } from "../../lodging/StayEditor";
+import type { Lodging } from "../../../types/lodging";
 import { commitLodgingImport, previewLodgingImport } from "../../../lib/api/lodgingImport";
 import { describeLodgingCommitResult } from "../../../lib/lodgingImportResult";
 import type {
@@ -67,15 +69,18 @@ export function useLodgingImportAdapter(): DomainImportAdapter {
     panelTitle: t("import:lodging.panelTitle"),
     panelHint: t("import:lodging.panelHint"),
     acceptedEmailExtensions: [".eml", ".msg", ".txt"],
-    renderManual: ({ onClose, onSaved }) => (
-      <LodgingFormModal
-        mode="create"
-        onClose={onClose}
-        onSaved={async () => {
-          await onSaved();
-        }}
-      />
-    ),
+    renderManual: ({ onClose, onSaved, prefill }) =>
+      isWithStay(prefill) ? (
+        <LodgingThenStay onClose={onClose} onSaved={onSaved} />
+      ) : (
+        <LodgingFormModal
+          mode="create"
+          onClose={onClose}
+          onSaved={async () => {
+            await onSaved();
+          }}
+        />
+      ),
     renderReviewModal: (props) => (
       <LodgingReviewSlot
         {...props}
@@ -168,6 +173,53 @@ function LodgingReviewSlot({
         const result = await commitLodgingImport(source, sourceFileName ?? null, commitRows);
         onCommitResult(result);
         await onCommit();
+      }}
+    />
+  );
+}
+
+/** The manual prefill that asks for a stay after the house (a kept booking document). */
+export const WITH_STAY_PREFILL = { withStay: true } as const;
+
+function isWithStay(prefill: unknown): boolean {
+  return (prefill as { withStay?: unknown } | null | undefined)?.withStay === true;
+}
+
+/**
+ * "Leer anlegen mit Dokument" for a stay: a document belongs to a stay, never
+ * to the house, so the empty house form is followed by the empty stay form for
+ * that house, and the stay's create request files the document
+ * (`lib/api/filingDocument`).
+ */
+function LodgingThenStay({
+  onClose,
+  onSaved,
+}: {
+  onClose: () => void;
+  onSaved: () => void | Promise<void>;
+}): JSX.Element {
+  const [lodging, setLodging] = useState<Lodging | null>(null);
+  if (!lodging) {
+    return (
+      <LodgingFormModal
+        mode="create"
+        onClose={onClose}
+        onSaved={(stored: Lodging) => {
+          setLodging(stored);
+        }}
+      />
+    );
+  }
+  return (
+    <StayEditor
+      mode="create"
+      lodgingId={lodging.id}
+      lodgingName={lodging.name}
+      lodgingChainId={lodging.chainId}
+      lodgingCountryCode={lodging.isoCountryCode}
+      onClose={onClose}
+      onSaved={async () => {
+        await onSaved();
       }}
     />
   );

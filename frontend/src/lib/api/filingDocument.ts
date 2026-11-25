@@ -17,13 +17,15 @@ import type { NewEntryDomain } from "./documents";
  * batch commit carries it too and answers `documentFiled`; `false` there (no stay
  * was created, or the link failed) leaves the document unfiled and says so.
  */
-const CREATE_ROUTE: Record<NewEntryDomain, RegExp | null> = {
-  flight: /^\/flights$/,
-  cruise: /^\/cruises$/,
-  rail: /^\/rail$/,
-  rental: /^\/rentals\/import$/,
-  // The lodging import files it with the first stay it creates and says whether it did.
-  lodging: /^\/lodging-import\/commit$/,
+const CREATE_ROUTE: Record<NewEntryDomain, readonly RegExp[]> = {
+  flight: [/^\/flights$/],
+  cruise: [/^\/cruises$/],
+  rail: [/^\/rail$/],
+  // The import's commit, and the empty form's own create ("Leer anlegen mit Dokument").
+  rental: [/^\/rentals\/import$/, /^\/rentals$/],
+  // The lodging import files it with the first stay it creates and says whether it did;
+  // the empty form ("Leer anlegen mit Dokument") files it with the stay it creates.
+  lodging: [/^\/lodging-import\/commit$/, /^\/lodging\/[^/]+\/stays$/],
 };
 
 interface Pending {
@@ -36,7 +38,7 @@ interface Pending {
 let pending: Pending | null = null;
 
 export function canFileBy(domain: NewEntryDomain): boolean {
-  return CREATE_ROUTE[domain] !== null;
+  return CREATE_ROUTE[domain].length > 0;
 }
 
 export function setFilingDocument(documentId: string, domain: NewEntryDomain): void {
@@ -53,10 +55,8 @@ export function clearFilingDocument(): boolean {
 const pathOf = (url: string | undefined): string => (url ?? "").split("?")[0].replace(/\/$/, "");
 
 function matches(config: { method?: string; url?: string }): boolean {
-  const route = pending && CREATE_ROUTE[pending.domain];
-  return Boolean(
-    route && config.method?.toLowerCase() === "post" && route.test(pathOf(config.url))
-  );
+  const routes = pending ? CREATE_ROUTE[pending.domain] : [];
+  return config.method?.toLowerCase() === "post" && routes.some((r) => r.test(pathOf(config.url)));
 }
 
 const CARRIER = "X-Filing-Document";

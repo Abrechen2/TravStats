@@ -33,6 +33,15 @@ interface DomainImportPanelProps {
    * (the gap calendar's "Eintrag anlegen"). The adapter narrows `prefill`.
    */
   initialManual?: { prefill: unknown } | null;
+  /**
+   * A document already read elsewhere (the inbox's "Neu anlegen aus Dokument"):
+   * the review opens on this reading at once, and the file is not read again.
+   */
+  initialReading?: {
+    reading: { kind: "pdf"; result: ParsePdfResult } | { kind: "email"; result: ParseEmailResult };
+    fileName: string | null;
+    document: ImportDocument;
+  } | null;
 }
 
 interface Mismatch {
@@ -72,6 +81,7 @@ export default function DomainImportPanel({
   onOpenOtherImport,
   openableDomains = [],
   initialManual = null,
+  initialReading = null,
 }: DomainImportPanelProps): JSX.Element | null {
   const { t } = useTranslation(["import", "common"]);
   const addToast = useToastStore((s) => s.addToast);
@@ -89,6 +99,11 @@ export default function DomainImportPanel({
       setManualPrefill(initialManual?.prefill);
       setShowManual(initialManual !== null);
       setMismatch(null);
+      if (initialReading) {
+        const { reading, fileName, document } = initialReading;
+        if (reading.kind === "pdf") handlePdfResult(reading.result, fileName, document);
+        else handleEmailResult(reading.result, fileName, document);
+      }
     }
     // Read when the panel opens: a later change of the request must not reopen a form.
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -29,4 +29,18 @@ describe("documentFilingHandoffOf", () => {
     ).toBeNull();
     expect(documentFilingHandoffOf(null)).toBeNull();
   });
+
+  it("carries the inbox's reading and the empty-form choice, and drops a malformed reading", () => {
+    const reading = { kind: "pdf", result: { domain: "lodging", candidates: [{}] } };
+    expect(
+      documentFilingHandoffOf({ documentFilingHandoff: { ...valid, reading } })?.reading
+    ).toEqual(reading);
+    expect(
+      documentFilingHandoffOf({ documentFilingHandoff: { ...valid, manual: true } })?.manual
+    ).toBe(true);
+    expect(
+      documentFilingHandoffOf({ documentFilingHandoff: { ...valid, reading: { kind: "x" } } })
+        ?.reading
+    ).toBeUndefined();
+  });
 });

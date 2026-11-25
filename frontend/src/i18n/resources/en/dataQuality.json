@@ -724,6 +724,10 @@
       "noDomains": "No domain is active that something could be created in.",
       "recognised": "recognised",
       "fetchFailed": "The document could not be loaded. Nothing was created.",
+      "reading": "Reading the document …",
+      "nothingFound": "Nothing was recognised in the document:",
+      "createEmpty": "Create empty with document",
+      "createEmptyHint": "The empty form opens; whatever you save is linked to this document.",
       "domains": {
         "flight": "Flight",
         "cruise": "Cruise",
