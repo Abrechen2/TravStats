@@ -794,7 +794,8 @@
         "declineFailed": "The offer could not be declined."
       },
       "link": "Link with an existing trip",
-      "linked": "“{{trip}}” is linked with your trip."
+      "linked": "“{{trip}}” is linked with your trip.",
+      "settleFailed": "The trips are linked, but the differing details could not be settled. Please check them on the trip."
     },
     "connected": {
       "stats": {

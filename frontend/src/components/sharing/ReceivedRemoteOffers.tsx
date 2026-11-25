@@ -48,6 +48,7 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
     name: string;
     tripId: string;
     linked?: boolean;
+    settleFailed?: boolean;
   } | null>(null);
   const [declined, setDeclined] = useState(false);
   // forgejo#440: the offer whose trip the person links with one of their own instead.
@@ -149,9 +150,14 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
                   preview={(tripId) => sharingLinkApi.offerPreview(offer.id, tripId)}
                   link={(tripId, decision) => sharingLinkApi.offerLink(offer.id, tripId, decision)}
                   failure={(err, fallback) => remoteSharingError(err, fallback)}
-                  onLinked={(_result, tripId) => {
+                  onLinked={(result, tripId) => {
                     setLinkingId(null);
-                    setAccepted({ name: offer.trip.name, tripId, linked: true });
+                    setAccepted({
+                      name: offer.trip.name,
+                      tripId,
+                      linked: true,
+                      settleFailed: result.settleFailed,
+                    });
                     void load();
                   }}
                 />
@@ -169,6 +175,11 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
         <p role="status" className="mt-2 text-sm">
           {t(accepted.linked ? `${NS}.linked` : `${NS}.accepted`, { trip: accepted.name })}{" "}
           <Link to={`/trips/${accepted.tripId}`}>{t(`${NS}.open`)}</Link>
+        </p>
+      )}
+      {accepted?.settleFailed && (
+        <p role="alert" className="mt-2 text-sm" style={{ color: "var(--ts-warn)" }}>
+          {t(`${NS}.settleFailed`)}
         </p>
       )}
       {declined && (

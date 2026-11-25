@@ -1,4 +1,5 @@
 import { prisma, type DbTransaction } from "../../../db";
+import logger from "../../../utils/logger";
 import { Prisma } from "../../../prisma";
 import {
   MAX_ENTRIES_PER_TRIP,
@@ -208,6 +209,8 @@ export async function previewOfferLink(
 
 interface Keyed {
   pairs: LinkPair[];
+  /** What each keyed entry held before (a stale key, usually none), for the undo. */
+  previousKeys: Map<string, string | null>;
   skipped: number;
   alreadyLinked: number;
   onlyHere: number;
@@ -243,15 +246,27 @@ async function linkStructure(
     const { trip, plan } = await planOffer(tx, userId, tripId, wire);
     const out: Keyed = {
       pairs: [],
+      previousKeys: new Map(),
       skipped: 0,
       alreadyLinked: 0,
       onlyHere: plan.onlyHere.length,
       onlyThere: plan.onlyThere.length,
     };
     for (const pair of plan.pairs) {
-      if (await keyHere(tx, userId, pair)) out.pairs.push(pair);
-      else out.skipped += 1;
+      const previous = pair.here.shareKey;
+      if (pair.linked) out.alreadyLinked += 1;
+      if (await keyHere(tx, userId, pair)) {
+        out.pairs.push(pair);
+        out.previousKeys.set(pair.here.id, previous);
+      } else out.skipped += 1;
     }
+    // Taking the trip says yes to the people the offer showed on it, as an accept does (F-S4e).
+    await acceptOfferedRoster(
+      tx,
+      row.groupId,
+      userId,
+      storedOfferSchema.parse(row.offer).roster.map((r) => r.ref)
+    );
     await tx.trip.update({ where: { id: trip.id }, data: { shareGroupId: row.groupId } });
     const skip = plan.onlyThere.flatMap((r) => (r.row.shareKey ? [r.row.shareKey] : []));
     await tx.tripShareRemoteMember.update({
@@ -285,9 +300,14 @@ async function linkStructure(
 }
 
 /** The answer did not arrive: keys, group and membership go back to the waiting offer. */
-async function undoLink(userId: string, row: OpenOffer, tripId: string, pairs: LinkPair[]) {
+async function undoLink(userId: string, row: OpenOffer, tripId: string, keyed: Keyed) {
   await prisma.$transaction(async (tx) => {
-    for (const pair of pairs) await ADAPTERS[pair.entity].setKey(tx, pair.here.id, null);
+    for (const pair of keyed.pairs)
+      await ADAPTERS[pair.entity].setKey(
+        tx,
+        pair.here.id,
+        keyed.previousKeys.get(pair.here.id) ?? null
+      );
     await tx.trip.update({ where: { id: tripId }, data: { shareGroupId: null } });
     await tx.shareNotice.deleteMany({ where: { userId, entityType: "trip", entityKey: tripId } });
     await tx.tripShareRemoteMember.update({
@@ -302,7 +322,7 @@ async function undoLink(userId: string, row: OpenOffer, tripId: string, pairs: L
   });
 }
 
-/** After the answer: the roster, the sharer as a companion, and the decision on the facts. */
+/** After the answer: the sharer as a companion, and the decision on the facts. */
 async function settleAfterAnswer(
   userId: string,
   row: OpenOffer,
@@ -311,12 +331,6 @@ async function settleAfterAnswer(
   decision: LinkDecision
 ): Promise<number> {
   return prisma.$transaction(async (tx) => {
-    await acceptOfferedRoster(
-      tx,
-      row.groupId,
-      userId,
-      storedOfferSchema.parse(row.offer).roster.map((r) => r.ref)
-    );
     await placeSharerCompanion(tx, userId, tripId, {
       id: row.remoteId,
       displayName: row.remote.displayName,
@@ -375,11 +389,24 @@ export async function linkOffer(
   try {
     await answerTo(row, "accept");
   } catch (error) {
-    await undoLink(userId, row, tripId, keyed.pairs);
+    await undoLink(userId, row, tripId, keyed);
     throw refusedThere(userId, row.remote.origin, error);
   }
-  const settled = await settleAfterAnswer(userId, row, tripId, keyed.pairs, decision);
+  // The other server has the answer: the link stands. A failure from here on is reported with the
+  // result (`settleFailed`) so the person sees it, instead of an error for a link that happened.
+  let settled = 0;
+  let settleFailed = false;
+  try {
+    settled = await settleAfterAnswer(userId, row, tripId, keyed.pairs, decision);
+  } catch (error) {
+    settleFailed = true;
+    logger.error(
+      { operation: "share_link_settle_failed", userId, origin: row.remote.origin, error },
+      "Linked an offer, but settling the differing facts failed"
+    );
+  }
   return {
+    settleFailed,
     groupId: row.groupId,
     linked: keyed.pairs.length,
     alreadyLinked: keyed.alreadyLinked,

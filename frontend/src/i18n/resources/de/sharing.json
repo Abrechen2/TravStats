@@ -794,7 +794,8 @@
         "declineFailed": "Das Angebot konnte nicht abgelehnt werden."
       },
       "link": "Mit vorhandener Reise verknüpfen",
-      "linked": "„{{trip}}“ ist mit deiner Reise verknüpft."
+      "linked": "„{{trip}}“ ist mit deiner Reise verknüpft.",
+      "settleFailed": "Die Reisen sind verknüpft, aber die abweichenden Angaben konnten nicht angeglichen werden. Bitte prüfe sie in der Reise."
     },
     "connected": {
       "stats": {

@@ -55,4 +55,5 @@ export const linkResultSchema = z.strictObject({
   settled: z.number().int(),
   onlyHere: z.number().int(),
   onlyThere: z.number().int(),
+  settleFailed: z.boolean(),
 });

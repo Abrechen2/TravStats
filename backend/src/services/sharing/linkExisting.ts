@@ -57,6 +57,11 @@ export interface LinkResult {
   settled: number;
   onlyHere: number;
   onlyThere: number;
+  /**
+   * Across servers only: the link stands (the other server has the answer) but settling the
+   * differing facts failed — the person is told and may settle them by hand.
+   */
+  settleFailed: boolean;
 }
 
 /** The caller's trip and the other account, checked as a share would check them. */
@@ -276,6 +281,7 @@ async function applyPlan(
   decision: LinkDecision
 ): Promise<Omit<LinkResult, "groupId">> {
   const result = {
+    settleFailed: false,
     linked: 0,
     alreadyLinked: 0,
     skipped: 0,

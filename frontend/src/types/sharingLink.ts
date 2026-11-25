@@ -56,4 +56,6 @@ export interface LinkResult {
   settled: number;
   onlyHere: number;
   onlyThere: number;
+  /** Across servers: linked, but the differing facts could not be settled. */
+  settleFailed: boolean;
 }
