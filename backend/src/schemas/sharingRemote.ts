@@ -175,6 +175,18 @@ export const remoteMemberSchema = z.strictObject({
     })
     .describe("Where the changes made here stand on their way to this person (F-S4d)"),
 });
+const companionRefSchema = z.strictObject({ id: z.string().uuid(), name: z.string() });
+/** A member as the trip page lists it: the caller's companion that IS them, or same-name candidates. */
+export const tripRemoteMemberSchema = remoteMemberSchema.extend({
+  companion: companionRefSchema
+    .nullable()
+    .describe("The caller's companion linked to this person — listed once, as that companion"),
+  nameMatches: z
+    .array(companionRefSchema.extend({ onTrip: z.boolean() }))
+    .describe(
+      "With no linked companion: the caller's unlinked companions whose name may be this person's, for the question \"Is this <name>?\" — never linked on the name alone"
+    ),
+});
 export const offerablePersonSchema = z.strictObject({
   remoteId: z.string().uuid(),
   displayName: z.string(),
@@ -196,7 +208,7 @@ export const tripRemoteSharingSchema = z.strictObject({
     .string()
     .nullable()
     .describe("The server this trip came from; null when this server is its home"),
-  members: z.array(remoteMemberSchema),
+  members: z.array(tripRemoteMemberSchema),
   roster: z
     .array(rosterPersonSchema)
     .describe("Everyone on the trip on other servers, with whether their changes reach the caller"),

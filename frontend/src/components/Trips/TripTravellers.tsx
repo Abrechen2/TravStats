@@ -14,11 +14,15 @@ const VISIBLE = 6;
 /** A person on another server who is, or is about to be, on the trip. */
 const SHOWN_STATES = new Set(["active", "unreachable", "invited"]);
 
-interface Traveller {
+export interface Traveller {
   key: string;
   name: string;
   /** Where somebody on another server lives; absent for companions. */
   origin?: string;
+  /** Their account there (`username`), shown as `username@host` once linked. */
+  username?: string;
+  /** A companion of the reader linked to this person: listed once, as the companion, "geteilt". */
+  linkedName?: string;
 }
 
 /**
@@ -46,7 +50,13 @@ function useRemoteTravellers(tripId: string): Traveller[] {
           tripId,
           people: (view?.members ?? [])
             .filter((m) => SHOWN_STATES.has(m.state))
-            .map((m) => ({ key: `r:${m.id}`, name: m.displayName, origin: m.origin })),
+            .map((m) => ({
+              key: `r:${m.id}`,
+              name: m.companion?.name ?? m.displayName,
+              origin: m.origin,
+              username: m.username,
+              linkedName: m.companion?.name,
+            })),
         });
       } catch (error) {
         logger.error("Failed to load the trip's people on other servers:", error);
@@ -58,6 +68,21 @@ function useRemoteTravellers(tripId: string): Traveller[] {
   }, [tripId, visible, isSharedDemo, revision]);
 
   return visible && !isSharedDemo && loaded?.tripId === tripId ? loaded.people : [];
+}
+
+/**
+ * One person, one companion (2026-11-24): a person on another server whom the reader linked to
+ * one of their companions is listed once — the companion's entry gives way to the linked one.
+ */
+export function mergeTravellers(companions: readonly string[], remote: Traveller[]): Traveller[] {
+  const linked = remote.flatMap((r) => (r.linkedName ? [r.linkedName] : []));
+  const rest: string[] = [];
+  for (const name of companions) {
+    const at = linked.indexOf(name);
+    if (at >= 0) linked.splice(at, 1);
+    else rest.push(name);
+  }
+  return [...rest.map((name, index) => ({ key: `c:${index}:${name}`, name })), ...remote];
 }
 
 /**
@@ -77,10 +102,7 @@ export default function TripTravellers({
   const { t } = useTranslation(["trips"]);
   const remote = useRemoteTravellers(tripId);
   const [expanded, setExpanded] = useState(false);
-  const all: Traveller[] = [
-    ...(companions ?? []).map((name, index) => ({ key: `c:${index}:${name}`, name })),
-    ...remote,
-  ];
+  const all = mergeTravellers(companions ?? [], remote);
   if (all.length === 0) return null;
   const shown = expanded ? all : all.slice(0, VISIBLE);
   const rest = all.length - shown.length;
@@ -122,7 +144,12 @@ export default function TripTravellers({
           {p.name}
           {p.origin && (
             <span className="t-caption" style={{ marginLeft: -2 }}>
-              @{p.origin.replace(/^https?:\/\//, "")}
+              {p.linkedName && p.username ? p.username : ""}@{p.origin.replace(/^https?:\/\//, "")}
+            </span>
+          )}
+          {p.linkedName && (
+            <span className="t-caption" data-testid="traveller-shared">
+              {t("trips:head.travellerShared")}
             </span>
           )}
         </li>

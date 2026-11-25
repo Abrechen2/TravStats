@@ -50,7 +50,9 @@
       "leftRevoked": "{{name}} hat die Zustimmung zum Teilen entzogen. „{{trip}}“ wird nicht mehr abgeglichen; deine Reise bleibt dir.",
       "addRequest": "{{name}} bittet dich, „{{trip}}“ auch mit {{person}} zu teilen.",
       "addRequestFrom": "{{name}} bittet dich, „{{trip}}“ auch mit {{person}} ({{personOrigin}}) zu teilen.",
-      "addRequestHint": "Auf der Reiseseite kannst du sie einer verbundenen Person anbieten oder einen Code für diese Reise erstellen und weitergeben."
+      "addRequestHint": "Auf der Reiseseite kannst du sie einer verbundenen Person anbieten oder einen Code für diese Reise erstellen und weitergeben.",
+      "autoAccepted": "Automatisch angenommen (Einwilligung).",
+      "autoAcceptedSetting": "Einwilligung ansehen"
     },
     "empty": {
       "title": "Nichts Neues",
@@ -737,6 +739,15 @@
         "requested": "Anfrage an {{name}} auf {{origin}} gesendet. Sobald die Person zugestimmt hat, erscheint sie oben in der Liste und du kannst ihr die Reise anbieten.",
         "waiting": "Die Anfrage an {{name}} auf {{origin}} ist noch offen. Die Person muss sie erst bestätigen.",
         "failed": "Die Person auf dem anderen Server konnte nicht erreicht werden."
+      },
+      "companion": {
+        "linked": "Mitreisende(r) „{{name}}“ – geteilt",
+        "unlink": "Verknüpfung lösen",
+        "question": "Ist das „{{name}}“? ({{person}})",
+        "yes": "Ja, verknüpfen",
+        "no": "Nein, andere Person",
+        "failed": "Das hat nicht geklappt. Bitte versuche es noch einmal.",
+        "alreadyLinked": "Mit dieser Person ist schon ein anderer Mitreisender verknüpft."
       }
     },
     "offers": {
@@ -1032,5 +1043,16 @@
     "menu": {
       "label": "Aktionen für {{name}}"
     }
+  },
+  "receivedBanner": {
+    "shared": "{{name}} hat die Reise „{{trip}}“ mit dir geteilt.",
+    "offered": "{{name}} möchte die Reise „{{trip}}“ mit dir teilen.",
+    "autoAccepted": "automatisch angenommen (Einwilligung)",
+    "open": "Reise öffnen",
+    "answer": "Annehmen oder ablehnen",
+    "more_one": "und {{count}} weitere",
+    "more_other": "und {{count}} weitere",
+    "seen": "Gesehen",
+    "seenFailed": "Das hat nicht geklappt. Bitte versuche es noch einmal."
   }
 }

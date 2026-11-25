@@ -541,6 +541,8 @@ export type ApiErrorCode =
   | "COMPANION_NOT_FOUND"
   /** Another of the caller's companions is already linked to that account (409). */
   | "SHARE_COMPANION_ALREADY_LINKED"
+  /** No pairing of this caller with a person on another server under that id (404). */
+  | "SHARE_REMOTE_PERSON_NOT_FOUND"
   /** Sharing with a companion that is not linked to an account (409). */
   | "SHARE_COMPANION_NOT_LINKED"
   /** Leaving a group with a trip that is in none (409). */

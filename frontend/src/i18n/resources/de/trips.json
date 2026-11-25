@@ -765,7 +765,8 @@
     "countries_other": "{{count}} Länder",
     "travellers": "Reisende",
     "travellersMore_other": "{{count}} weitere Reisende anzeigen",
-    "travellersMore_one": "{{count}} weitere Reisende anzeigen"
+    "travellersMore_one": "{{count}} weitere Reisende anzeigen",
+    "travellerShared": "geteilt"
   },
   "overview": {
     "daysAway": "Tage unterwegs",

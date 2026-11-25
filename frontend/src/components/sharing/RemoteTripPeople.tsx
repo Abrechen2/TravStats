@@ -19,6 +19,7 @@ import { Button, Pill } from "../ui";
 import DetailSection from "../ui/DetailSection";
 import { Field, Input } from "../ui/Field";
 import RemoteAddRequest from "./RemoteAddRequest";
+import RemoteCompanionLink from "./RemoteCompanionLink";
 import RemotePersonField from "./RemotePersonField";
 import RemoteTripRoster from "./RemoteTripRoster";
 import { remoteSharingError, type RemoteSharingError } from "./remoteSharingCopy";
@@ -270,6 +271,7 @@ export default function RemoteTripPeople({
                   {line}
                 </span>
               ))}
+              <RemoteCompanionLink tripId={tripId} member={m} busy={busy} run={run} />
               {m.delivery.state === "rejected" && (
                 <span>
                   <Button disabled={busy} onClick={() => dismiss(m)}>

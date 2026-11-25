@@ -240,6 +240,13 @@
       "title_other": "{{count}} entries with a wrong time zone",
       "consequence": "The stored time zone of a stay or visit does not belong to its place, so its times show shifted. An admin can re-resolve the zones under Maintenance › Time model.",
       "action": "Re-resolve the zones"
+    },
+    "userCompanionDuplicates": {
+      "title": "Travellers listed twice",
+      "title_one": "{{count}} person listed twice on a shared trip",
+      "title_other": "{{count}} people listed twice on shared trips",
+      "consequence": "A companion typed in by hand and the same person the trip is shared with stand side by side. Link them in the trip's share dialog and the person is listed once.",
+      "action": "Link the companion"
     }
   },
   "notes": {

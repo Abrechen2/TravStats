@@ -284,3 +284,25 @@ export function entryReminderMessage(
   const body = [entry.detail, when].filter((part) => part).join(" · ");
   return { title: `${entry.label}: ${c[domain](hours)}`, body };
 }
+
+/** "Norbert hat die Reise „Antarktis 2027“ mit dir geteilt" — arrived or waiting for an answer. */
+export function tripSharedMessage(
+  share: { state: "accepted" | "pending"; tripName: string; from: string },
+  locale: Locale
+): Message {
+  if (locale === "en")
+    return {
+      title: "Trip shared with you",
+      body:
+        share.state === "pending"
+          ? `${share.from} wants to share the trip "${share.tripName}" with you.`
+          : `${share.from} shared the trip "${share.tripName}" with you.`,
+    };
+  return {
+    title: "Reise mit dir geteilt",
+    body:
+      share.state === "pending"
+        ? `${share.from} möchte die Reise „${share.tripName}“ mit dir teilen.`
+        : `${share.from} hat die Reise „${share.tripName}“ mit dir geteilt.`,
+  };
+}

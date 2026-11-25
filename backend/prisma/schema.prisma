@@ -4404,11 +4404,19 @@ model Companion {
   /// with an accepted `ShareConsent` from that account; SetNull keeps the
   /// companion as a plain name when the account goes away.
   linkedUserId  String?  @map("linked_user_id")
+  /// The person on another server this companion IS (one person, one companion, 2026-11-24):
+  /// the pairing they are reached through. Set only by the owner's confirmation, never on a
+  /// name guess alone; SetNull keeps the companion as a plain name when the pairing goes.
+  linkedRemoteId String? @map("linked_remote_id")
+  /// Pairings (`r:<remoteId>`) and accounts (`u:<userId>`) the owner said this companion is NOT,
+  /// so the same-name question is not asked again.
+  notSameAs     String[] @default([]) @map("not_same_as")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   linkedUser    User?                    @relation("CompanionLinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
+  linkedRemote  RemoteShareAccount?      @relation("CompanionLinkedRemote", fields: [linkedRemoteId], references: [id], onDelete: SetNull)
   flights       FlightCompanion[]
   trips         TripCompanion[]
   cruises       CruiseCompanion[]
@@ -4426,8 +4434,10 @@ model Companion {
   /// One companion per linked account and owner — two names for the same
   /// person would each get a share tick.
   @@unique([userId, linkedUserId])
+  @@unique([userId, linkedRemoteId])
   @@index([userId, searchName])
   @@index([linkedUserId])
+  @@index([linkedRemoteId])
   @@map("companions")
 }
 
@@ -5698,6 +5708,8 @@ model RemoteShareAccount {
   planMembers       TravelPlanMember[]       @relation("TravelPlanMemberConnection")
   remotePlans       RemotePlanMembership[]
   announcements     ConnectionAnnouncement[]
+  /// The companions on this server that are this person (one person, one companion).
+  companions        Companion[]              @relation("CompanionLinkedRemote")
 
   @@unique([origin, channel])
   @@unique([origin, localChannel])

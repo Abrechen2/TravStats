@@ -19,10 +19,12 @@ import { missingGroupConsent, type MemberTrip } from "./members";
 import { noticeMeta, recordEntryNotice } from "./propagate";
 import { tripFacts } from "./facts";
 import { restatusTrips } from "../trip/restatusTrips";
-import type { SharePerson } from "./people";
 import { tripPeople, type TripPerson } from "./tripPeople";
 import { requireHome } from "./federation/offerBuild";
 import { queueRoster } from "./federation/roster";
+import { placeLocalSharerCompanion } from "./remoteCompanion";
+import { notifyTripShared } from "../notifications/dispatcher";
+import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
 /**
  * Sharing one trip with a linked, consenting companion (design 2026-10-09,
@@ -151,7 +153,10 @@ export async function shareTripWithUser(
   tripId: string,
   recipientId: string
 ): Promise<ShareResult> {
-  return prisma.$transaction(
+  // The phone is told after the commit, never from inside the transaction.
+  type Told = { id: string; tripName: string; from: string };
+  let told: Told | null = null;
+  const result = await prisma.$transaction(
     async (tx) => {
       const trip = await ownTrip(tx, userId, tripId);
       // Same answer as `requestConsent` gives for a deactivated account.
@@ -204,6 +209,16 @@ export async function shareTripWithUser(
       // Someone joined a trip that is also shared across servers: they learn it (F-S4e roster).
       if (target.created) await queueRoster(tx, groupId);
 
+      // One person, one companion (2026-11-24): the new trip names its sharer.
+      if (target.created) {
+        const sharer = await tx.user.findUniqueOrThrow({
+          where: { id: userId },
+          select: PERSON_SELECT,
+        });
+        const from = toPerson(sharer).displayName;
+        await placeLocalSharerCompanion(tx, recipientId, target.id, toPerson(sharer));
+        told = { id: target.id, tripName: trip.name, from };
+      }
       const anything = target.created || Object.values(created).some((n) => n > 0);
       if (anything) {
         await tx.shareNotice.create({
@@ -214,7 +229,14 @@ export async function shareTripWithUser(
             kind: "shared",
             entityType: "trip",
             entityKey: target.id,
-            after: { tripName: trip.name, tripCreated: target.created, created: { ...created } },
+            after: {
+              tripName: trip.name,
+              tripCreated: target.created,
+              created: { ...created },
+              // Taken without a question: the recipient's consent said yes beforehand. The inbox
+              // says so and links to that setting.
+              autoAccepted: true,
+            },
           },
         });
       }
@@ -222,6 +244,10 @@ export async function shareTripWithUser(
     },
     { timeout: SHARE_TX_TIMEOUT_MS }
   );
+  // Assigned inside the callback, which TypeScript's narrowing does not follow.
+  const arrived = told as Told | null;
+  if (arrived) void notifyTripShared(recipientId, { state: "accepted", ...arrived });
+  return result;
 }
 
 /**

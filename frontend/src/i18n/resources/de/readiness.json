@@ -240,6 +240,13 @@
       "title_other": "{{count}} Einträge mit falscher Zeitzone",
       "consequence": "Die gespeicherte Zeitzone eines Aufenthalts oder Besuchs gehört nicht zu seinem Ort. Uhrzeiten werden darum verschoben angezeigt. Ein Admin kann unter Wartung › Zeitmodell die Zonen erneut bestimmen.",
       "action": "Zonen erneut bestimmen"
+    },
+    "userCompanionDuplicates": {
+      "title": "Doppelt aufgeführte Mitreisende",
+      "title_one": "{{count}} Person auf einer geteilten Reise doppelt",
+      "title_other": "{{count}} Personen auf geteilten Reisen doppelt",
+      "consequence": "Ein von Hand eingetragener Mitreisender und dieselbe Person, mit der die Reise geteilt ist, stehen nebeneinander. Verknüpfe sie im Teilen-Dialog der Reise, dann steht die Person einmal da.",
+      "action": "Mitreisenden verknüpfen"
     }
   },
   "notes": {
