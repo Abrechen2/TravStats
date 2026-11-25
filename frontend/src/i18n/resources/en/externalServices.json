@@ -227,7 +227,7 @@
   },
   "pointer": {
     "text": "All external services – switches, keys and tests – are collected under",
-    "link": "External services"
+    "link": "Settings → Server → Services"
   },
   "account": {
     "intro": "Your connections to Immich, Dawarich, Strava and your storage, own keys and your AI approvals. What the instance provides for everyone is below.",

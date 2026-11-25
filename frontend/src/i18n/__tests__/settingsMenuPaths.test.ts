@@ -100,6 +100,19 @@ describe("rc46 menu paths", () => {
   );
 });
 
+// UAT rc.46 retest: "Buchungen lesen" (and every page with the pointer) still said
+// "… unter Externe Dienste"; the link goes to /settings/dienste and must say so.
+describe("external services pointer", () => {
+  it.each(["de", "en"] as const)("%s: names the page its link opens", (lang) => {
+    const ns = JSON.parse(
+      fs.readFileSync(path.join(RESOURCES, lang, "externalServices.json"), "utf8")
+    ) as { pointer: { link: string } };
+    const page = REGISTRY_PAGES.find((p) => p.id === "dienste");
+    expect(page).toBeTruthy();
+    expect(ns.pointer.link.endsWith(` → ${page![lang]}`)).toBe(true);
+  });
+});
+
 // UAT rc.45 retest: copy that named things the app no longer does or spelled them wrong.
 describe("retest copy", () => {
   const read = (lang: string, ns: string): unknown =>

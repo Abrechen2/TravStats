@@ -227,7 +227,7 @@
   },
   "pointer": {
     "text": "Alle externen Dienste – Schalter, Schlüssel und Tests – findest du gesammelt unter",
-    "link": "Externe Dienste"
+    "link": "Einstellungen → Server → Dienste"
   },
   "account": {
     "intro": "Deine Verbindungen zu Immich, Dawarich, Strava und deinem Speicher, eigene Schlüssel und deine KI-Freigaben. Was die Instanz für alle bereitstellt, steht unten.",
