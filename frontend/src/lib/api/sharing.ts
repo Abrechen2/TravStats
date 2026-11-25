@@ -74,6 +74,11 @@ export const sharingApi = {
     await api.post(`/sharing/companions/${enc(companionId)}/not-same`, { remoteId });
   },
 
+  /** The same for a member of this server: remembered, the question is not asked again. */
+  markNotSameLocal: async (companionId: string, userId: string): Promise<void> => {
+    await api.post(`/sharing/companions/${enc(companionId)}/not-same`, { userId });
+  },
+
   /** Trips shared with the reader not looked at yet (dashboard banner, nav dot). */
   receivedTrips: async (): Promise<ReceivedTrips> => {
     const { data } = await api.get<Envelope<ReceivedTrips>>("/sharing/received-trips");

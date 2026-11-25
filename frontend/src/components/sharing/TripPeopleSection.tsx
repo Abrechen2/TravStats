@@ -20,6 +20,8 @@ import { nameKey } from "./addTraveller";
 import { shareBlockKey, sharingErrorKey } from "./sharingCopy";
 
 const NS = "sharing:people";
+/** The same-person question shares its words with the one for people on other servers. */
+const COMPANION_NS = "sharing:remote.trip.companion";
 
 /** A loaded view, a failure or a picked row — each remembers the trip it belongs to. */
 type ForTrip<T> = { tripId: string; value: T } | null;
@@ -163,7 +165,60 @@ export default function TripPeopleSection({
     }
     return p.account ? `@${p.account.username}` : undefined;
   };
+  /**
+   * A member of this server who is none of the reader's companions, but one of them has their
+   * name: the same "Ist das <Name>?" a person on another server gets. Only "Ja" links.
+   */
+  const answer = async (task: () => Promise<void>): Promise<void> => {
+    setBusy(true);
+    try {
+      await task();
+      changed();
+    } catch (error) {
+      logger.error("Failed to answer the same-person question:", error);
+      addToast("error", t(sharingErrorKey(error, `${COMPANION_NS}.failed`)));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const question = (p: TripPerson): JSX.Element | undefined => {
+    const account = p.account;
+    const matches = p.nameMatches ?? [];
+    if (!account || p.companionId || matches.length === 0) return undefined;
+    return (
+      <span className="flex flex-col gap-1">
+        {matches.map((match) => (
+          <span
+            key={match.id}
+            className="flex flex-wrap items-center gap-2"
+            data-testid="local-companion-question"
+          >
+            <span>{t(`${COMPANION_NS}.question`, { name: match.name, person: p.name })}</span>
+            <Button
+              variant="primary"
+              disabled={busy}
+              onClick={() =>
+                void answer(async () => {
+                  await sharingApi.linkCompanion(match.id, account.id);
+                })
+              }
+            >
+              {t(`${COMPANION_NS}.yes`)}
+            </Button>
+            <Button
+              disabled={busy}
+              onClick={() => void answer(() => sharingApi.markNotSameLocal(match.id, account.id))}
+            >
+              {t(`${COMPANION_NS}.no`)}
+            </Button>
+          </span>
+        ))}
+      </span>
+    );
+  };
   const action = (p: TripPerson): JSX.Element | undefined => {
+    const asked = question(p);
+    if (asked) return asked;
     if (p.shareBlockedBy === "notLinked" && p.companionId) {
       return (
         <button

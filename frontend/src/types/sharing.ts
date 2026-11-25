@@ -73,6 +73,11 @@ export interface TripPerson {
   /** Members only: an accepted consent in either direction lets changes through. */
   receivesChanges: boolean | null;
   shareBlockedBy: ShareBlock | null;
+  /**
+   * A member who is none of the reader's companions: the reader's unlinked companions whose
+   * name may be theirs ("Ist das <Name>?"). Optional: an older server sends none.
+   */
+  nameMatches?: { id: string; name: string; onTrip: boolean }[];
 }
 
 export interface TripSharing {
