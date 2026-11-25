@@ -85,6 +85,12 @@ export const pluginResponseSchema = z
   .object({
     version: z.number().int().min(1),
     suggestions: z.array(pluginSuggestionSchema).max(MAX_SUGGESTIONS),
+    /**
+     * Additive within v1: how far from the stop this plugin looked for `reason:
+     * "name"` matches. Name suggestions are accepted up to this radius, capped
+     * at 2 km; without it, and for every other suggestion, the 1 km limit holds.
+     */
+    nameRadiusMeters: z.number().int().min(0).max(100_000).optional(),
   })
   .openapi("SuggestionPluginResponseV1");
 

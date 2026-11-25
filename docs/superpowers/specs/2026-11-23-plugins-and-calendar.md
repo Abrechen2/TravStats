@@ -203,9 +203,11 @@ Additive since 2026-11-24 (optional, ignored when unknown): `reason`
 (`distance` | `name`), `distanceMeters`, `matchedToken`, `lowPrecision`. A
 `name` suggestion matched a distinctive word of the stop's venue name further
 away than the plugin's distance radius; the inbox reads it as "Name passt (MSA),
-780 m". The hello may carry `capabilities` (e.g. `["maintenance"]`). Note: the
-1 km drop rule above still applies, so a plugin's name match beyond 1 km never
-reaches the inbox.
+780 m". The hello may carry `capabilities` (e.g. `["maintenance"]`). The
+response may carry `nameRadiusMeters`, the radius the plugin searched names in:
+a `name` suggestion is then accepted up to that radius, capped at 2 km. Distance
+suggestions, and name suggestions without an announced radius, keep the 1 km
+drop rule above.
 
 ### Maintenance (optional capability, owner 2026-11-24)
 
