@@ -32,6 +32,7 @@ import * as claimModule from "../claim";
 import * as invitesModule from "../invites";
 import * as offersModule from "../offers";
 import * as offerInboxModule from "../offerInbox";
+import * as offerLinkModule from "../offerLink";
 import * as entriesModule from "../entries";
 import * as tripRemoteSharingModule from "../tripRemoteSharing";
 import * as outboxModule from "../outbox";
@@ -84,6 +85,7 @@ export interface Server {
   invites: typeof invitesModule;
   offers: typeof offersModule;
   offerInbox: typeof offerInboxModule;
+  offerLink: typeof offerLinkModule;
   entries: typeof entriesModule;
   tripRemoteSharing: typeof tripRemoteSharingModule;
   outbox: typeof outboxModule;
@@ -145,6 +147,7 @@ const serverA = (): Server => ({
   invites: invitesModule,
   offers: offersModule,
   offerInbox: offerInboxModule,
+  offerLink: offerLinkModule,
   entries: entriesModule,
   tripRemoteSharing: tripRemoteSharingModule,
   outbox: outboxModule,
@@ -200,6 +203,7 @@ function isolatedServer(origin: string, databaseUrl: string): Server {
         invites: require("../invites"),
         offers: require("../offers"),
         offerInbox: require("../offerInbox"),
+        offerLink: require("../offerLink"),
         entries: require("../entries"),
         tripRemoteSharing: require("../tripRemoteSharing"),
         outbox: require("../outbox"),

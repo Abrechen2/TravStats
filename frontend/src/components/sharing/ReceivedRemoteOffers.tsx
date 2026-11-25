@@ -7,6 +7,8 @@ import { sharingRemoteApi } from "../../lib/api/sharingRemote";
 import { logger } from "../../lib/logger";
 import type { OfferCounts, ReceivedOffer } from "../../types/sharingRemote";
 import Button from "../ui/Button";
+import LinkExistingPanel from "./LinkExistingPanel";
+import { sharingLinkApi } from "../../lib/api/sharingLink";
 import { remoteSharingError, type RemoteSharingError } from "./remoteSharingCopy";
 
 const NS = "sharing:remote.offers";
@@ -42,8 +44,15 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<RemoteSharingError | null>(null);
-  const [accepted, setAccepted] = useState<{ name: string; tripId: string } | null>(null);
+  const [accepted, setAccepted] = useState<{
+    name: string;
+    tripId: string;
+    linked?: boolean;
+    settleFailed?: boolean;
+  } | null>(null);
   const [declined, setDeclined] = useState(false);
+  // forgejo#440: the offer whose trip the person links with one of their own instead.
+  const [linkingId, setLinkingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -127,7 +136,32 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
                 <Button disabled={busy} onClick={() => void answer(offer, false)}>
                   {t(`${NS}.decline`)}
                 </Button>
+                <Button
+                  disabled={busy}
+                  onClick={() => setLinkingId(linkingId === offer.id ? null : offer.id)}
+                >
+                  {t(`${NS}.link`)}
+                </Button>
               </span>
+              {linkingId === offer.id && (
+                <LinkExistingPanel
+                  otherName={`${offer.from.displayName} (${offer.from.origin})`}
+                  loadCandidates={() => sharingLinkApi.offerCandidates(offer.id)}
+                  preview={(tripId) => sharingLinkApi.offerPreview(offer.id, tripId)}
+                  link={(tripId, decision) => sharingLinkApi.offerLink(offer.id, tripId, decision)}
+                  failure={(err, fallback) => remoteSharingError(err, fallback)}
+                  onLinked={(result, tripId) => {
+                    setLinkingId(null);
+                    setAccepted({
+                      name: offer.trip.name,
+                      tripId,
+                      linked: true,
+                      settleFailed: result.settleFailed,
+                    });
+                    void load();
+                  }}
+                />
+              )}
             </li>
           ))}
         </ul>
@@ -139,8 +173,13 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
       )}
       {accepted && (
         <p role="status" className="mt-2 text-sm">
-          {t(`${NS}.accepted`, { trip: accepted.name })}{" "}
+          {t(accepted.linked ? `${NS}.linked` : `${NS}.accepted`, { trip: accepted.name })}{" "}
           <Link to={`/trips/${accepted.tripId}`}>{t(`${NS}.open`)}</Link>
+        </p>
+      )}
+      {accepted?.settleFailed && (
+        <p role="alert" className="mt-2 text-sm" style={{ color: "var(--ts-warn)" }}>
+          {t(`${NS}.settleFailed`)}
         </p>
       )}
       {declined && (

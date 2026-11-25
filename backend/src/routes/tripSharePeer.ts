@@ -44,6 +44,7 @@ import { serveEntriesUp } from "../services/sharing/federation/entriesUp";
 import { serveNudge } from "../services/sharing/federation/nudge";
 import { serveDirectoryPair } from "../services/sharing/federation/directory";
 import { serveStatsRead } from "../services/sharing/federation/remoteStats";
+import { serveOfferPreview } from "../services/sharing/federation/offerLink";
 import { serveAchievementsRead } from "../services/sharing/federation/remoteAchievements";
 import {
   serveConnectAccept,
@@ -96,6 +97,8 @@ function serve(
       return serveInviteClaim(origin, body, local);
     case "offer":
       return serveOffer(origin, body);
+    case "offer-preview":
+      return serveOfferPreview(origin, body);
     case "offer-answer":
       return serveOfferAnswer(origin, body);
     case "entries":

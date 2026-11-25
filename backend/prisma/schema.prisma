@@ -5799,7 +5799,9 @@ model TripShareRemoteMember {
   /// Why the state is what it is, or what last went wrong (`entries-undelivered`); null when fine.
   stateReason String?  @map("state_reason")
   stateSince  DateTime @default(now()) @map("state_since")
-  /// Receiving side only: the offer as it arrived (trip facts, roster, counts); null once answered.
+  /// Receiving side only: the offer as it arrived (trip facts, roster, counts); null once answered
+  /// — or, once linked with a trip the person already held (forgejo#440), `{ linked: { tripId,
+  /// skip } }`: the home's keys the link left with the home (`federation/linkState.ts`).
   offer       Json?
   createdAt   DateTime @default(now()) @map("created_at")
   /// The remote person's id in the group's roster (F-S4e): minted here at the home, as the home

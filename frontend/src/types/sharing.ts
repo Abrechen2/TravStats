@@ -168,6 +168,8 @@ export interface ShareNoticeAfter {
   note?: string;
   /** `shared`: taken without a question because the reader's consent said yes beforehand. */
   autoAccepted?: boolean;
+  /** `shared` by linking an existing copy (forgejo#440): how many entries were joined, nothing copied. */
+  linked?: { matched: number; decision: string | null };
 }
 
 /** A person on another server, as their server names them: shown as „Ben (andere.instanz.tld)". */

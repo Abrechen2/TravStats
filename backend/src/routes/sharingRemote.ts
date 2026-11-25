@@ -1,3 +1,9 @@
+import {
+  linkOffer,
+  offerLinkCandidates,
+  previewOfferLink,
+} from "../services/sharing/federation/offerLink";
+import { offerLinkBodySchema, offerLinkPreviewBodySchema } from "../schemas/sharingLink";
 import { Router, type NextFunction, type Response } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import type { Request } from "express";
@@ -298,6 +304,35 @@ router.post(
   handle(async (req, res) => {
     const id = remoteOfferIdSchema.parse(req.params.id);
     res.json({ success: true, data: await acceptOffer(req.userId!, id) });
+  })
+);
+
+/** Linking an offer with a trip the caller already holds (forgejo#440). */
+router.get(
+  "/offers/:id/link-candidates",
+  handle(async (req, res) => {
+    const id = remoteOfferIdSchema.parse(req.params.id);
+    res.json({ success: true, data: await offerLinkCandidates(req.userId!, id) });
+  })
+);
+
+router.post(
+  "/offers/:id/link-preview",
+  remoteInviteLimiter,
+  handle(async (req, res) => {
+    const id = remoteOfferIdSchema.parse(req.params.id);
+    const { tripId } = offerLinkPreviewBodySchema.parse(req.body ?? {});
+    res.json({ success: true, data: await previewOfferLink(req.userId!, id, tripId) });
+  })
+);
+
+router.post(
+  "/offers/:id/link",
+  remoteInviteLimiter,
+  handle(async (req, res) => {
+    const id = remoteOfferIdSchema.parse(req.params.id);
+    const { tripId, decision } = offerLinkBodySchema.parse(req.body ?? {});
+    res.json({ success: true, data: await linkOffer(req.userId!, id, tripId, decision) });
   })
 );
 

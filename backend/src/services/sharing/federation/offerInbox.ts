@@ -39,7 +39,7 @@ import { placeSharerCompanion } from "../remoteCompanion";
 import { notifyTripShared } from "../../notifications/dispatcher";
 
 /** What is kept of an offer until it is answered: the wire form, read again on accept. */
-const storedOfferSchema = z.object({
+export const storedOfferSchema = z.object({
   trip: z.record(z.string(), z.unknown()),
   roster: z.array(rosterEntrySchema),
   counts: offerCountsSchema,
@@ -188,7 +188,7 @@ export async function pendingOfferSummaries(userId: string): Promise<ReceivedOff
   return rows.map(offerView);
 }
 
-async function openOffer(userId: string, id: string) {
+export async function openOffer(userId: string, id: string) {
   const row = await prisma.tripShareRemoteMember.findFirst({
     where: { id, ...OPEN(userId) },
     include: { remote: true, group: true },
@@ -198,9 +198,9 @@ async function openOffer(userId: string, id: string) {
   return row;
 }
 
-type OpenOffer = Awaited<ReturnType<typeof openOffer>>;
+export type OpenOffer = Awaited<ReturnType<typeof openOffer>>;
 
-const answerTo = (row: OpenOffer, answer: "accept" | "decline") =>
+export const answerTo = (row: OpenOffer, answer: "accept" | "decline") =>
   sendOnStream(
     row.groupId,
     row.remote.origin,
