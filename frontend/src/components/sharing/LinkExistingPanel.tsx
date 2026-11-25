@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import type {
   LinkCandidate,
+  LinkCandidates,
   LinkDecision,
   LinkEntryView,
   LinkPreview,
@@ -25,8 +26,9 @@ export interface LinkFailure {
 interface Props {
   /** Who holds the other copy, for the copy ("Ben", "Anna (b.example)"). */
   otherName: string;
-  loadCandidates: () => Promise<LinkCandidate[]>;
-  preview: (tripId: string) => Promise<LinkPreview>;
+  loadCandidates: () => Promise<LinkCandidates>;
+  /** `null`: no trip of theirs may be named yet; the server compares with its best candidate. */
+  preview: (tripId: string | null) => Promise<LinkPreview>;
   link: (tripId: string, decision: LinkDecision) => Promise<LinkResult>;
   failure: (err: unknown, fallbackKey: string) => LinkFailure;
   onLinked: (result: LinkResult, tripId: string) => void;
@@ -45,6 +47,7 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
   const { otherName, loadCandidates, preview, link, failure, onLinked } = props;
   const { t } = useTranslation(["sharing"]);
   const [candidates, setCandidates] = useState<LinkCandidate[] | null>(null);
+  const [possibleCopy, setPossibleCopy] = useState(false);
   const [tripId, setTripId] = useState("");
   const [dryRun, setDryRun] = useState<LinkPreview | null>(null);
   const [decision, setDecision] = useState<LinkDecision>("both");
@@ -54,10 +57,11 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
   useEffect(() => {
     let live = true;
     loadCandidates()
-      .then((list) => {
+      .then((found) => {
         if (!live) return;
-        setCandidates(list);
-        setTripId(list[0]?.id ?? "");
+        setCandidates(found.candidates);
+        setPossibleCopy(found.possibleCopy);
+        setTripId(found.candidates[0]?.id ?? "");
       })
       .catch((err: unknown) => {
         logger.error("Loading link candidates failed:", err);
@@ -87,7 +91,7 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
   };
 
   const compare = () =>
-    run(async () => setDryRun(await preview(tripId)), `${NS}.errors.previewFailed`);
+    run(async () => setDryRun(await preview(tripId || null)), `${NS}.errors.previewFailed`);
   const confirm = () =>
     run(async () => onLinked(await link(tripId, decision), tripId), `${NS}.errors.linkFailed`);
 
@@ -110,8 +114,18 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
     <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
       <p className="text-sm">{t(`${NS}.intro`, { name: otherName })}</p>
       {candidates === null && <p className="text-sm">{t(`${NS}.loading`)}</p>}
-      {candidates?.length === 0 && !error && (
+      {candidates?.length === 0 && !possibleCopy && !error && (
         <p className="text-sm">{t(`${NS}.noCandidates`, { name: otherName })}</p>
+      )}
+      {candidates?.length === 0 && possibleCopy && !dryRun && (
+        <div className="flex flex-col text-sm" style={{ gap: "var(--ts-space-xs)" }}>
+          <p data-testid="link-possible-copy">{t(`${NS}.possibleCopy`, { name: otherName })}</p>
+          <span>
+            <Button disabled={busy} onClick={() => void compare()}>
+              {t(`${NS}.compare`)}
+            </Button>
+          </span>
+        </div>
       )}
       {candidates && candidates.length > 0 && (
         <fieldset className="flex flex-col text-sm" style={{ gap: "var(--ts-space-xs)" }}>
@@ -142,26 +156,31 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
       {dryRun && (
         <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
           <p className="text-sm" role="status">
-            {t(`${NS}.summary`, { ...dryRun.counts, name: otherName })}
+            {t(dryRun.redacted ? `${NS}.summaryRedacted` : `${NS}.summary`, {
+              ...dryRun.counts,
+              name: otherName,
+            })}
           </p>
           {dryRun.redacted && (
             <p className="text-sm" data-testid="link-redacted" style={{ color: "var(--ts-warn)" }}>
               {t(`${NS}.redacted`, { name: otherName })}
             </p>
           )}
-          <ul className="text-sm">
-            {dryRun.byType.map((b) => (
-              <li key={b.entity}>
-                {t(`${NS}.byType`, {
-                  type: typeName(b.entity),
-                  here: b.here,
-                  there: b.there,
-                  matched: b.matched,
-                  differing: b.differing,
-                })}
-              </li>
-            ))}
-          </ul>
+          {dryRun.byType.length > 0 && (
+            <ul className="text-sm">
+              {dryRun.byType.map((b) => (
+                <li key={b.entity}>
+                  {t(`${NS}.byType`, {
+                    type: typeName(b.entity),
+                    here: b.here,
+                    there: b.there,
+                    matched: b.matched,
+                    differing: b.differing,
+                  })}
+                </li>
+              ))}
+            </ul>
+          )}
           {dryRun.matched.some((m) => m.conflicts.length > 0) && (
             <div>
               <p className="t-caption">{t(`${NS}.conflictsTitle`)}</p>

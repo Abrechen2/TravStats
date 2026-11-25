@@ -93,9 +93,10 @@ describe("linking an existing copy (forgejo#440)", () => {
       .query({ userId: ben.id })
       .set("Cookie", anna.cookie)
       .expect(200);
-    expect(res.body.data).toEqual([
-      expect.objectContaining({ id: bens.trip.id, reason: "period" }),
-    ]);
+    expect(res.body.data).toEqual({
+      candidates: [expect.objectContaining({ id: bens.trip.id, reason: "period" })],
+      possibleCopy: true,
+    });
   });
 
   it("the dry run reports the different stay count and the differing departure, writing nothing", async () => {
@@ -202,29 +203,48 @@ describe("linking an existing copy (forgejo#440)", () => {
     await preview().expect(403);
   });
 
-  it("before Ben agrees, the dry run shows counts per type only — no label or value of his", async () => {
+  it("Anna's own pending request grants nothing: no candidates, no dry run", async () => {
     await prisma.shareConsent.updateMany({
       where: { requesterId: anna.id, targetId: ben.id },
       data: { status: "pending", decidedAt: null },
+    });
+    await request(app)
+      .get(`/api/v1/sharing/trips/${annas.trip.id}/link-candidates`)
+      .query({ userId: ben.id })
+      .set("Cookie", anna.cookie)
+      .expect(403);
+    await preview().expect(403);
+  });
+
+  it("when Ben has asked but not agreed: only 'a copy may exist' and aggregate numbers, nothing of his", async () => {
+    await prisma.shareConsent.deleteMany({ where: { requesterId: anna.id, targetId: ben.id } });
+    await prisma.shareConsent.create({
+      data: { requesterId: ben.id, targetId: anna.id, status: "pending" },
     });
     const candidates = await request(app)
       .get(`/api/v1/sharing/trips/${annas.trip.id}/link-candidates`)
       .query({ userId: ben.id })
       .set("Cookie", anna.cookie)
       .expect(200);
-    expect(candidates.body.data).toEqual([
-      expect.objectContaining({ id: bens.trip.id, name: "", reason: "period" }),
-    ]);
-    const data = (await preview().expect(200)).body.data;
+    expect(candidates.body.data).toEqual({ candidates: [], possibleCopy: true });
+    // No trip id to name: the server picks the candidate, and ignores an id sent anyway.
+    const data = (
+      await request(app)
+        .post(`/api/v1/sharing/trips/${annas.trip.id}/link-preview`)
+        .set("Cookie", anna.cookie)
+        .send({ userId: ben.id })
+        .expect(200)
+    ).body.data;
     expect(data.redacted).toBe(true);
-    expect(data.there.name).toBe("");
+    expect(data.there).toEqual({ id: "", name: "", startDay: null, endDay: null });
+    expect(data.byType).toEqual([]);
     expect(data.matched).toEqual([]);
     expect(data.onlyThere).toEqual([]);
-    expect(data.counts).toMatchObject({ onlyThere: 1, conflicting: 1 });
-    expect(data.byType).toContainEqual(
-      expect.objectContaining({ entity: "flight", matched: 1, differing: 1 })
-    );
-    expect(JSON.stringify(data)).not.toContain("Pestana");
+    expect(data.counts).toMatchObject({ onlyThere: null, conflicting: 1 });
+    expect(data.counts.matched).toBeGreaterThan(0);
+    const body = JSON.stringify(data);
+    expect(body).not.toContain(bens.trip.id);
+    expect(body).not.toContain("Pestana");
     // And no link without his yes.
     await link("both").expect(403);
   });

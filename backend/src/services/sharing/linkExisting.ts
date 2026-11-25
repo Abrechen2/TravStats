@@ -67,28 +67,33 @@ export interface LinkResult {
 
 /**
  * What the caller may see of the other account. `full` once the other account agreed to sharing
- * (the rule a share asks, `mayOfferTripTo`); `counts` while the caller has only asked — a pending
- * consent request of theirs, or a connection between the two — so the dry run names numbers, not
- * the other account's entries. Anyone else learns nothing.
+ * (the rule a share asks, `mayOfferTripTo`). `counts` only where the OTHER account has shown
+ * intent — a pending sharing request from them to the caller, a connection request they sent, or
+ * an active connection (which they confirmed) — and then the dry run names aggregate numbers only
+ * (`redactPreview`). A request the caller made themselves grants nothing; anyone else learns
+ * nothing either.
  */
 type Access = "full" | "counts";
 
 async function accessTo(c: DbTransaction, userId: string, otherId: string): Promise<Access> {
   if (await mayOfferTripTo(c, userId, otherId)) return "full";
-  const asked = await c.shareConsent.findFirst({
-    where: { requesterId: userId, targetId: otherId, status: "pending" },
+  const theyAsked = await c.shareConsent.findFirst({
+    where: { requesterId: otherId, targetId: userId, status: "pending" },
     select: { id: true },
   });
-  const connected = await c.localConnection.findFirst({
+  const connection = await c.localConnection.findFirst({
     where: {
       OR: [
         { userLowId: userId, userHighId: otherId },
         { userLowId: otherId, userHighId: userId },
       ],
     },
-    select: { id: true },
+    select: { state: true, requestedBy: true },
   });
-  if (asked || connected) return "counts";
+  const theyConnected =
+    connection?.state === "active" ||
+    (connection?.state === "pending" && connection.requestedBy === otherId);
+  if (theyAsked || theyConnected) return "counts";
   throw consentRequired();
 }
 
@@ -132,40 +137,72 @@ async function counterpart(
   return target;
 }
 
+export interface LinkCandidates {
+  /** Empty until the other account agreed to sharing: their trips are not listed before. */
+  candidates: LinkCandidate[];
+  /** Whether a trip of theirs looks like this one — the one thing said before their yes. */
+  possibleCopy: boolean;
+}
+
+async function rankedCounterparts(
+  tx: DbTransaction,
+  trip: {
+    id: string;
+    name: string;
+    startDay: Date | null;
+    endDay: Date | null;
+    shareGroupId: string | null;
+  },
+  otherId: string
+): Promise<LinkCandidate[]> {
+  const trips = await tx.trip.findMany({
+    where: {
+      userId: otherId,
+      OR: [
+        { shareGroupId: null },
+        ...(trip.shareGroupId ? [{ shareGroupId: trip.shareGroupId }] : []),
+      ],
+    },
+    select: { id: true, name: true, startDay: true, endDay: true },
+  });
+  return rankCandidates(tripView(trip), trips.map(tripView));
+}
+
 /** The trips of the other account that may be the caller's trip (same period, name or overlap). */
 export async function linkCandidates(
   userId: string,
   tripId: string,
   otherId: string
-): Promise<LinkCandidate[]> {
+): Promise<LinkCandidates> {
   return prisma.$transaction(async (tx) => {
     const { trip, access } = await sides(tx, userId, tripId, otherId, "counts");
-    const trips = await tx.trip.findMany({
-      where: {
-        userId: otherId,
-        OR: [
-          { shareGroupId: null },
-          ...(trip.shareGroupId ? [{ shareGroupId: trip.shareGroupId }] : []),
-        ],
-      },
-      select: { id: true, name: true, startDay: true, endDay: true },
-    });
-    const ranked = rankCandidates(tripView(trip), trips.map(tripView));
-    // Before their yes, the other account's trips are offered by period only, never by name.
-    return access === "full" ? ranked : ranked.map((c) => ({ ...c, name: "" }));
+    const ranked = await rankedCounterparts(tx, trip, otherId);
+    return {
+      candidates: access === "full" ? ranked : [],
+      possibleCopy: ranked.length > 0,
+    };
   });
 }
 
+/**
+ * The pair to compare. With full access the caller names the other trip; before that the server
+ * picks the best candidate itself and ignores any id sent, so no trip of theirs can be probed.
+ */
 async function planFor(
   tx: DbTransaction,
   userId: string,
   tripId: string,
   otherId: string,
-  targetTripId: string,
+  targetTripId: string | null,
   need: Access = "full"
 ) {
   const { trip, access } = await sides(tx, userId, tripId, otherId, need);
-  const target = await counterpart(tx, otherId, targetTripId, trip.shareGroupId);
+  const chosen =
+    access === "full" && targetTripId
+      ? targetTripId
+      : ((await rankedCounterparts(tx, trip, otherId))[0]?.id ?? null);
+  if (!chosen) throw tripNotFound();
+  const target = await counterpart(tx, otherId, chosen, trip.shareGroupId);
   const here = await tripRows(tx, userId, trip.id);
   const there = await tripRows(tx, otherId, target.id);
   return { trip, target, here, there, access, plan: planLink(here, there) };
@@ -176,7 +213,7 @@ export async function previewLink(
   userId: string,
   tripId: string,
   otherId: string,
-  targetTripId: string
+  targetTripId: string | null
 ): Promise<LinkPreview> {
   return prisma.$transaction(async (tx) => {
     const { trip, target, here, there, access, plan } = await planFor(

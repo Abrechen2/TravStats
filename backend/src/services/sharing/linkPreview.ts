@@ -59,7 +59,9 @@ export interface LinkPreview {
   redacted: boolean;
   here: LinkTripView;
   there: LinkTripView;
-  counts: { matched: number; onlyHere: number; onlyThere: number; conflicting: number };
+  /** `onlyThere` is null while redacted: how much the other account holds is theirs to tell. */
+  counts: { matched: number; onlyHere: number; onlyThere: number | null; conflicting: number };
+  /** Empty while redacted. */
   byType: LinkTypeCount[];
   matched: LinkMatchView[];
   onlyHere: LinkEntryView[];
@@ -137,14 +139,17 @@ export function describePlan(
 }
 
 /**
- * The dry run as someone may see it who has no accepted consent of the other account yet: the
- * counts per type, the caller's own trip and own entries — nothing the other account wrote.
+ * The dry run as someone may see it whose counterpart has shown intent but not agreed to sharing:
+ * the caller's own trip and own entries, and how many entries matched and differ in total.
+ * Nothing of the other account — no trip id, name or dates, no per-type count, no entry.
  */
 export function redactPreview(preview: LinkPreview): LinkPreview {
   return {
     ...preview,
     redacted: true,
-    there: { ...preview.there, name: "" },
+    there: { id: "", name: "", startDay: null, endDay: null },
+    counts: { ...preview.counts, onlyThere: null },
+    byType: [],
     matched: [],
     onlyThere: [],
   };

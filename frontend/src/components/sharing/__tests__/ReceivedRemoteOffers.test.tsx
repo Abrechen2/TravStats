@@ -122,15 +122,18 @@ describe("ReceivedRemoteOffers", () => {
   });
 
   it("a link whose settle failed after the other server accepted shows the warning", async () => {
-    linkApi.offerCandidates.mockResolvedValue([
-      {
-        id: "t2",
-        name: "Portugal",
-        startDay: "2030-06-01",
-        endDay: "2030-06-10",
-        reason: "period",
-      },
-    ]);
+    linkApi.offerCandidates.mockResolvedValue({
+      candidates: [
+        {
+          id: "t2",
+          name: "Portugal",
+          startDay: "2030-06-01",
+          endDay: "2030-06-10",
+          reason: "period",
+        },
+      ],
+      possibleCopy: true,
+    });
     linkApi.offerPreview.mockResolvedValue({
       redacted: false,
       here: { id: "t2", name: "Portugal", startDay: "2030-06-01", endDay: "2030-06-10" },

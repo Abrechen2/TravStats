@@ -93,7 +93,9 @@ const count = async (s: Server, userId: string) => ({
 it("the dry run reads the offered entries from A and names every difference, writing nothing", async () => {
   const { ben, bensTrip, offer } = await setup();
   const candidates = await b.offerLink.offerLinkCandidates(ben, offer.id);
-  expect(candidates).toEqual([expect.objectContaining({ id: bensTrip.id, reason: "period" })]);
+  expect(candidates.candidates).toEqual([
+    expect.objectContaining({ id: bensTrip.id, reason: "period" }),
+  ]);
 
   const preview = await b.offerLink.previewOfferLink(ben, offer.id, bensTrip.id);
   expect(preview.redacted).toBe(false);
@@ -161,7 +163,9 @@ it("before the consent with Anna is accepted, the dry run is counts only", async
   expect(preview.redacted).toBe(true);
   expect(preview.matched).toEqual([]);
   expect(preview.onlyThere).toEqual([]);
-  expect(preview.counts).toMatchObject({ onlyThere: 1, conflicting: 1 });
+  expect(preview.counts).toMatchObject({ onlyThere: null, conflicting: 1 });
+  expect(preview.byType).toEqual([]);
+  expect(preview.there).toEqual({ id: "", name: "", startDay: null, endDay: null });
   expect(JSON.stringify(preview)).not.toContain("Porto");
 });
 

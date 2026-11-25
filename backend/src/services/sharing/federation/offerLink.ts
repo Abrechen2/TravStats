@@ -19,11 +19,10 @@ import {
   redactPreview,
   tripRows,
   tripView,
-  type LinkCandidate,
   type LinkPreview,
   type LinkTripView,
 } from "../linkPreview";
-import type { LinkResult } from "../linkExisting";
+import type { LinkCandidates, LinkResult } from "../linkExisting";
 import { acceptedParties } from "../members";
 import { propagateWrite, SHARE_TX_TIMEOUT_MS } from "../propagate";
 import { placeSharerCompanion } from "../remoteCompanion";
@@ -176,14 +175,16 @@ async function ownUnsharedTrip(c: DbTransaction, userId: string, tripId: string)
 }
 
 /** The caller's trips that may be the offered one: same period, same name, or overlapping. */
-export async function offerLinkCandidates(userId: string, id: string): Promise<LinkCandidate[]> {
+export async function offerLinkCandidates(userId: string, id: string): Promise<LinkCandidates> {
   await requireTripFederation(userId);
   const row = await openOffer(userId, id);
   const trips = await prisma.trip.findMany({
     where: { userId, shareGroupId: null },
     select: { id: true, name: true, startDay: true, endDay: true },
   });
-  return rankCandidates(offeredTrip(row), trips.map(tripView));
+  // The caller's own trips: listed in full.
+  const candidates = rankCandidates(offeredTrip(row), trips.map(tripView));
+  return { candidates, possibleCopy: candidates.length > 0 };
 }
 
 async function planOffer(tx: DbTransaction, userId: string, tripId: string, wire: WireEntry[]) {
