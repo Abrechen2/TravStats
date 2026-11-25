@@ -2,17 +2,29 @@ import { useId, useState, type FormEvent } from "react";
 import { Button, Dialog, Field, Input, Select, TextArea } from "../../../components/ui";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { newPlanId } from "../../../lib/travplanId";
-import type { PlanBooking, PlanNight, PlanPlace, PlanStation } from "../../../lib/api/travplan";
+import type {
+  PlanBooking,
+  PlanNight,
+  PlanNightCandidate,
+  PlanPlace,
+  PlanStation,
+  PlanVehicle,
+} from "../../../lib/api/travplan";
 import { PlanActions, PlanRow, PlanGrow } from "../planLayout";
 import { PlacePicker } from "./PlacePicker";
+import { NightSuggestions } from "./NightSuggestions";
 
 const NIGHT_KINDS: PlanNight["kind"][] = ["spontaneous", "pitch", "idea", "booked", "onboard"];
 const MAX_NIGHTS = 60;
+const MAX_CANDIDATES = 10;
+/** Nights where a place to sleep is still to be found. */
+const SEEKING: PlanNight["kind"][] = ["spontaneous", "pitch", "idea"];
 
 /** Edit one station: its place (picked, never typed), nights, pinned day and what happens at night. */
 export function StationEditor({
   station,
   bookings,
+  vehicle = null,
   allowOnboard,
   busy,
   onSave,
@@ -20,6 +32,7 @@ export function StationEditor({
 }: {
   station: PlanStation;
   bookings: PlanBooking[];
+  vehicle?: PlanVehicle["kind"] | null;
   /** Only an overnight ferry arriving here makes "an Bord" a valid night. */
   allowOnboard: boolean;
   busy: boolean;
@@ -51,6 +64,10 @@ export function StationEditor({
       place,
       title: value.title && value.title !== value.place.name ? value.title : place.name,
     });
+  const candidates = night.kind === "idea" ? night.candidates : [];
+  /** Taking a suggestion turns the night into an idea that names it. */
+  const take = (c: PlanNightCandidate) =>
+    setValue({ ...value, night: { kind: "idea", candidates: [...candidates, c] } });
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (night.kind === "booked" && !night.bookingId) return;
@@ -177,7 +194,7 @@ export function StationEditor({
                 onChange={(e) => setCandidate(e.target.value)}
               />
               <Button
-                disabled={!candidate.trim() || night.candidates.length >= 10}
+                disabled={!candidate.trim() || night.candidates.length >= MAX_CANDIDATES}
                 onClick={() => {
                   setValue({
                     ...value,
@@ -202,6 +219,14 @@ export function StationEditor({
               </Button>
             </PlanActions>
           </div>
+        )}
+        {SEEKING.includes(night.kind) && value.nights > 0 && (
+          <NightSuggestions
+            near={value.place}
+            vehicle={vehicle}
+            taken={candidates.map((c) => c.title)}
+            onTake={(c) => candidates.length < MAX_CANDIDATES && take(c)}
+          />
         )}
         <Field label={t("fields.note")} htmlFor={uid + "-note"}>
           <TextArea

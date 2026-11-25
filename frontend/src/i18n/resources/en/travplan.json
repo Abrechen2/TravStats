@@ -603,6 +603,35 @@
       "records_other": "{{count}} entries written by the plan. Withdrawing deletes only what you have not changed since.",
       "placeholders_one": "{{count}} placeholder stays in the plan and is not taken over.",
       "placeholders_other": "{{count}} placeholders stay in the plan and are not taken over."
+    },
+    "suggest": {
+      "search": "Find a place to sleep within {{km}} km",
+      "searching": "Searching …",
+      "list": "Places to sleep",
+      "none": "OpenStreetMap knows no place to sleep within {{km}} km.",
+      "distance": "{{km}} km away",
+      "take": "Add {{name}} as an idea",
+      "takeShort": "Add",
+      "more": "Show more",
+      "source": "From OpenStreetMap. Check prices and free pitches with the place itself.",
+      "failed": {
+        "timeout": "OpenStreetMap did not answer in time. Try again in a moment.",
+        "rateLimited": "OpenStreetMap is slowing requests down. Try again in a minute.",
+        "unavailable": "OpenStreetMap cannot be reached right now.",
+        "disabled": "Open data services are switched off on this server. An admin can switch them on in the settings."
+      },
+      "kind": {
+        "camp_site": "Campsite",
+        "caravan_site": "Motorhome pitch",
+        "hotel": "Hotel",
+        "guest_house": "Guest house",
+        "hostel": "Hostel",
+        "motel": "Motel",
+        "apartment": "Holiday flat",
+        "chalet": "Holiday home",
+        "alpine_hut": "Hut",
+        "other": "Lodging"
+      }
     }
   },
   "match": {

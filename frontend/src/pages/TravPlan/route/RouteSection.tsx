@@ -229,6 +229,7 @@ export function RouteSection({ ctx }: { ctx: PlanCtx }) {
           key={station.id}
           station={station}
           bookings={state.bookings}
+          vehicle={state.vehicle?.kind ?? null}
           allowOnboard={state.stages.some(
             (g) => g.toStationId === station.id && g.overnight && g.mode === "ferry"
           )}

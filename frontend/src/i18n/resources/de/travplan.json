@@ -603,6 +603,35 @@
       "records_other": "{{count}} Einträge vom Plan geschrieben. Zurücknehmen löscht nur, was du seither nicht verändert hast.",
       "placeholders_one": "{{count}} Platzhalter bleibt im Plan und wird nicht übernommen.",
       "placeholders_other": "{{count}} Platzhalter bleiben im Plan und werden nicht übernommen."
+    },
+    "suggest": {
+      "search": "Übernachtung im Umkreis von {{km}} km suchen",
+      "searching": "Suche …",
+      "list": "Übernachtungsvorschläge",
+      "none": "OpenStreetMap kennt im Umkreis von {{km}} km nichts zum Übernachten.",
+      "distance": "{{km}} km entfernt",
+      "take": "{{name}} als Idee übernehmen",
+      "takeShort": "Übernehmen",
+      "more": "Weitere zeigen",
+      "source": "Aus OpenStreetMap. Preise und freie Plätze prüfst du beim Platz selbst.",
+      "failed": {
+        "timeout": "OpenStreetMap hat nicht rechtzeitig geantwortet. Versuch es gleich noch einmal.",
+        "rateLimited": "OpenStreetMap bremst gerade Anfragen. Versuch es in einer Minute noch einmal.",
+        "unavailable": "OpenStreetMap ist gerade nicht erreichbar.",
+        "disabled": "Die offenen Datendienste sind auf diesem Server ausgeschaltet. Ein Admin schaltet sie in den Einstellungen ein."
+      },
+      "kind": {
+        "camp_site": "Campingplatz",
+        "caravan_site": "Wohnmobil-Stellplatz",
+        "hotel": "Hotel",
+        "guest_house": "Pension",
+        "hostel": "Hostel",
+        "motel": "Motel",
+        "apartment": "Ferienwohnung",
+        "chalet": "Ferienhaus",
+        "alpine_hut": "Hütte",
+        "other": "Unterkunft"
+      }
     }
   },
   "match": {
