@@ -30,6 +30,7 @@ export const SECTION_LABEL_KEY: Record<SettingsSectionId, string> = {
   ttRecording: "settings:tt.recording.title",
   ttPlaces: "settings:tt.places.title",
   ttZones: "settings:tt.zones.title",
+  ttQuality: "settings:tt.quality.title",
   ttDetect: "settings:tt.detect.title",
   ttCalendar: "settings:tt.calendar.title",
   ttPlugins: "settings:tt.plugins.title",

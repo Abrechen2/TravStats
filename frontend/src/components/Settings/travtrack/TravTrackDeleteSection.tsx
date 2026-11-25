@@ -10,6 +10,7 @@ import { SectionCard } from "../SettingsShared";
 import { useBlockConfirm } from "../useBlockConfirm";
 import { RowFailure, useRowAction } from "../location/useRowAction";
 import { useSpanCount, useSpanPreset } from "./useSpan";
+import TravTrackDeleteBreakdown from "./TravTrackDeleteBreakdown";
 
 const NS = "settings:tt.delete";
 
@@ -103,6 +104,9 @@ export default function TravTrackDeleteSection(): JSX.Element | null {
             </p>
           ) : count.kind === "failed" ? (
             <ErrorLine>{t(count.key)}</ErrorLine>
+          ) : null}
+          {count.kind === "count" && count.count > 0 ? (
+            <TravTrackDeleteBreakdown from={from} until={until} version={version} />
           ) : null}
           <RowFailure error={del.error} onRetry={del.retry} />
           {note ? (

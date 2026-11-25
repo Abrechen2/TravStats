@@ -176,6 +176,13 @@
       "consequence": "Nach einem Import rechnet TravStats jeden aufgezeichneten Tag nach: Länder, Monate und erkundete Gebiete. Bis das fertig ist, fehlen diese Tage in Kalender und Statistik. Das läuft von selbst, du musst nichts tun.",
       "action": "Fortschritt ansehen"
     },
+    "userTravtrackQuestionableDays": {
+      "title": "Fragwürdige Spuren",
+      "title_one": "Fragwürdige Spuren – {{count}} Tag",
+      "title_other": "Fragwürdige Spuren – {{count}} Tage",
+      "consequence": "An diesen Tagen passen die Quellen nicht zusammen, die Qualität ist niedrig oder es gibt Ausreißer. TravStats wählt automatisch die beste Quelle; prüfe die Tage und entscheide selbst, wenn die Wahl nicht stimmt.",
+      "action": "Tage prüfen"
+    },
     "userFlightsNoTimes": {
       "title": "Flüge ohne Uhrzeit",
       "title_one": "{{count}} Flug ohne Uhrzeit",

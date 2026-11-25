@@ -17,6 +17,7 @@ import {
 import { setTravTrackConfig, travTrackConfig } from "../services/travtrack/config";
 import { travTrackTier } from "./travtrack/gate";
 import dayRoutes from "./travtrack/day";
+import daySourceRoutes from "./travtrack/daySources";
 import diagnosticsRoutes from "./travtrack/diagnostics";
 import exploredRoutes from "./travtrack/explored";
 import exportRoutes from "./travtrack/export";
@@ -116,6 +117,7 @@ router.use(pointRoutes);
 router.use(zoneRoutes);
 router.use(placeRoutes);
 router.use(dayRoutes);
+router.use(daySourceRoutes);
 router.use(legRoutes);
 router.use(stopPlaceRoutes);
 router.use(exportRoutes);

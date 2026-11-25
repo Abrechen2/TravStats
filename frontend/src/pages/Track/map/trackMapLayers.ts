@@ -1,3 +1,4 @@
+import { PathStyleExtension, type PathStyleExtensionProps } from "@deck.gl/extensions";
 import { GeoJsonLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Feature, Geometry } from "geojson";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
@@ -128,7 +129,14 @@ export interface TrackLayerInput {
   speedStops?: readonly SpeedStop[];
   /** The picked leg's vertices, drawn whatever the points layer says; empty draws nothing. */
   legPoints?: readonly MapPoint[];
+  /** Long silences, drawn dashed and faint: estimated, never counted (best source per day). */
+  estimated?: readonly LonLat[][];
+  /** Jumps a logged entry explains, drawn with the entry's own line. */
+  bridges?: readonly LonLat[][];
 }
+
+/** The dash of an estimated stretch, in pixels: dash, gap. */
+const ESTIMATED_DASH: [number, number] = [6, 6];
 
 /** The open flight's line: bright, over the span's line, never joined across its own breaks. */
 const HIGHLIGHT_RGB: [number, number, number] = [244, 236, 224];
@@ -267,6 +275,36 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
     );
   }
   if (on.routes) out.push(routeLayer(input, alpha));
+  if (on.routes && (input.bridges?.length ?? 0) > 0) {
+    out.push(
+      new PathLayer<LonLat[]>({
+        id: "track-bridges",
+        data: input.bridges as LonLat[][],
+        getPath: (d) => d,
+        getColor: [...TRACK_RGB, Math.round(alpha * 0.7)],
+        getWidth: 2,
+        widthUnits: "pixels",
+        wrapLongitude: false,
+        pickable: false,
+      })
+    );
+  }
+  if (on.routes && (input.estimated?.length ?? 0) > 0) {
+    out.push(
+      new PathLayer<LonLat[], PathStyleExtensionProps<LonLat[]>>({
+        id: "track-estimated",
+        data: input.estimated as LonLat[][],
+        getPath: (d) => d,
+        getColor: [...TRACK_RGB, Math.round(alpha * 0.55)],
+        getWidth: 2,
+        widthUnits: "pixels",
+        getDashArray: ESTIMATED_DASH,
+        dashJustified: true,
+        extensions: [new PathStyleExtension({ dash: true })],
+        pickable: false,
+      })
+    );
+  }
   if (input.highlight && input.highlight.length > 0) {
     out.push(
       new PathLayer<LonLat[]>({

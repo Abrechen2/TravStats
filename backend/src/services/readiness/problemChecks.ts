@@ -50,6 +50,7 @@ export const PROBLEM_CHECK_IMPLS: Readonly<
       | "user.travtrackSilent"
       | "user.visitScanBacklog"
       | "user.travtrackDerivation"
+      | "user.travtrackQuestionableDays"
     >,
     CheckImpl
   >
@@ -100,6 +101,10 @@ export const PROBLEM_CHECK_IMPLS: Readonly<
   "user.visitScanBacklog": countCheck(({ problems }) => problems.account.visitBacklogDays),
   // "Verlauf wird aufbereitet": shown while an import's days are still being derived; clears itself.
   "user.travtrackDerivation": countCheck(({ problems }) => problems.account.derivationPendingDays),
+  // "Tage mit fragwürdigen Spuren": low score, mixed sources or open outliers (bestSource/).
+  "user.travtrackQuestionableDays": countCheck(
+    ({ problems }) => problems.account.questionableTrackDays
+  ),
 };
 
 /** One count check per entry rule: the rule decides what is wrong, the check only shows it. */

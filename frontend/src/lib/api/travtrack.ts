@@ -1,6 +1,7 @@
 import { api } from "./client";
 import { apiErrorMachineCode } from "../apiError";
 import type { TravTrackLeg, TravTrackPointDetail, TravTrackStop } from "./travtrackLegs";
+import type { BridgeLine, DaySourceSummary, EstimatedGap } from "./travtrackDaySources";
 
 /**
  * TravTrack, the own location history (TravTrack plan, phase 2): what it does
@@ -142,7 +143,13 @@ export interface TravTrackDay {
    * Why the day may draw fewer points than were stored: counts of fixes the privacy cut hid and
    * fixes left out as implausible; absent on an older server (then the reason is unknown).
    */
-  omitted?: { privacyZone: number; implausible: number };
+  omitted?: { privacyZone: number; implausible: number; sourceExcluded?: number };
+  /** Which source the day is drawn from (best source per day); absent on an older server. */
+  sources?: DaySourceSummary;
+  /** Long silences drawn dashed as estimated, never counted; absent on an older server. */
+  estimated?: EstimatedGap[];
+  /** Jumps and gaps a logged entry explains, drawn with its line; absent on an older server. */
+  bridgeLines?: BridgeLine[];
 }
 
 export type TravTrackExportFormat = "gpx" | "json";
@@ -388,6 +395,10 @@ export function trackErrorKey(err: unknown): string {
       return "track:explored.preparing";
     case "LOCATION_ZONE_LIMIT":
       return "track:errors.zoneLimit";
+    case "TRAVTRACK_SOURCE_NOT_ON_DAY":
+      return "track:errors.sourceNotOnDay";
+    case "TRAVTRACK_DAY_NO_POINTS":
+      return "track:errors.dayNoPoints";
     default:
       return (err as { response?: unknown } | null)?.response
         ? "track:errors.generic"

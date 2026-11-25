@@ -176,6 +176,13 @@
       "consequence": "After an import TravStats works through every recorded day: countries, months and explored areas. Until it is done those days are missing from the calendar and statistics. It runs on its own; there is nothing to do.",
       "action": "See progress"
     },
+    "userTravtrackQuestionableDays": {
+      "title": "Questionable tracks",
+      "title_one": "Questionable tracks – {{count}} day",
+      "title_other": "Questionable tracks – {{count}} days",
+      "consequence": "On these days the sources disagree, the quality is low or there are outliers. TravStats picks the best source automatically; check the days and decide yourself where the choice is wrong.",
+      "action": "Check the days"
+    },
     "userFlightsNoTimes": {
       "title": "Flights without a time",
       "title_one": "{{count}} flight without a time",

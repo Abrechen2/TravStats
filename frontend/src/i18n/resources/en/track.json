@@ -102,7 +102,9 @@
     "legInvalid": "This leg cannot be changed like that.",
     "legGone": "This leg no longer exists – the view is being recalculated.",
     "stopInvalid": "This stop cannot be named like that.",
-    "stopGone": "This stop no longer exists – the view is being recalculated."
+    "stopGone": "This stop no longer exists – the view is being recalculated.",
+    "sourceNotOnDay": "That source holds no points on the day. Reload the page and choose again.",
+    "dayNoPoints": "Nothing is stored on this day – there is no source to choose."
   },
   "settings": {
     "tripsNoResidence": "TravTrack recognises trips only once your home is confirmed: it measures the distance from where you live. Confirm it under Settings → Home.",
@@ -907,5 +909,55 @@
     "openTrack": "Open Track",
     "pageTitle": "Logbook gaps",
     "menu": "Gaps"
+  },
+  "daySources": {
+    "title": "Source of the day",
+    "kind": {
+      "phone": "Phone",
+      "dawarich": "Dawarich",
+      "import": "Import",
+      "other": "Other source"
+    },
+    "used": "Used: {{source}}",
+    "usedChosen": "Chosen by you: {{source}}",
+    "segment": "{{source}} from {{from}}",
+    "none": "no source",
+    "notScored": "The sources of this day are still being rated; until then every point is drawn.",
+    "choose": "Source",
+    "auto": "Automatic (best source)",
+    "option": "{{source}} – quality {{score}} %, {{count}} points",
+    "outliers_one": "{{count}} outlier neither drawn nor counted",
+    "outliers_other": "{{count}} outliers neither drawn nor counted",
+    "outliersKept_one": "{{count}} outlier drawn at your request",
+    "outliersKept_other": "{{count}} outliers drawn at your request",
+    "outliersShow": "Show anyway",
+    "outliersHide": "Hide again",
+    "estimated_one": "{{count}} gap dashed – estimated, not counted",
+    "estimated_other": "{{count}} gaps dashed – estimated, not counted",
+    "bridged_one": "{{count}} jump drawn as a logbook entry",
+    "bridged_other": "{{count}} jumps drawn as logbook entries",
+    "clockOffset": "{{source}} runs {{minutes}} minutes off – probably a wrong time zone in the export. Nothing was shifted."
+  },
+  "quality": {
+    "title": "Days with questionable tracks",
+    "intro": "On these days the sources disagree, the quality is low or there are outliers. Stored points are never changed by this; every decision can be undone.",
+    "loading": "Loading days …",
+    "none": "No questionable days – everything fits.",
+    "total_one": "{{count}} day",
+    "total_other": "{{count}} days",
+    "reason": {
+      "lowScore": "low quality",
+      "mixed": "several sources",
+      "outliers": "outliers"
+    },
+    "score": "quality {{score}} %",
+    "open": "Open day",
+    "chooseSource": "Choose source",
+    "discardOutliers": "Discard outliers",
+    "deleteRange": "Delete range …",
+    "more": "Load more days",
+    "saved": "Saved.",
+    "previewDays_one": "Affected: {{count}} day",
+    "previewDays_other": "Affected: {{count}} days"
   }
 }

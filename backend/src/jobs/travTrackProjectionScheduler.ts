@@ -43,6 +43,7 @@ import {
 } from "../services/travtrack/visits/project";
 import { buildPendingZoneRasters } from "../services/travtrack/explored/zoneCells";
 import { adaptivePacer, type Pace } from "../services/travtrack/imports/importPacing";
+import { projectDaySources, SOURCE_DAYS_PER_RUN } from "../services/travtrack/bestSource/store";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
@@ -264,6 +265,12 @@ async function runAccount(
         });
       }
     }
+    // Best source per day (bestSource/), from what the tick left: a day whose resolved stream
+    // changed is handed back to every projection above for the next tick.
+    const sourced = await projectDaySources(userId, {
+      maxDays: Math.min(SOURCE_DAYS_PER_RUN, maxDays - spent - visitDays),
+      pace: options.pace,
+    });
     if (projected.projected > 0) {
       await prisma.travTrackDerivationState.update({
         where: { userId },
@@ -291,7 +298,7 @@ async function runAccount(
       where: { userId },
       data: { failureCount: 0, retryAfter: null },
     });
-    return { failed: false, questions, days: spent + visitDays };
+    return { failed: false, questions, days: spent + visitDays + sourced.days };
   } catch (error) {
     logger.warn({
       operation: "travtrack_projections_account_failed",

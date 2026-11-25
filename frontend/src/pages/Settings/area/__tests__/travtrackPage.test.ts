@@ -14,6 +14,7 @@ const ORDER = [
   "ttDetect",
   "ttCalendar",
   "ttPlugins",
+  "ttQuality",
   "ttSources",
   "ttExport",
   "ttDelete",
