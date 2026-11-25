@@ -107,3 +107,12 @@ describe("compare extras", () => {
     expect(screen.queryByTestId("compare-podium")).toBeNull();
   });
 });
+
+describe("lower bounds", () => {
+  it("a partial total is left out of the radar and the rivalry lines", () => {
+    const partialRow = row("n", { countries: 40, railKm: 100 });
+    partialRow.snapshot!.partial = ["countries", "railKm"];
+    show(row("self", { countries: 5, railKm: 50 }, "self"), partialRow);
+    expect(screen.queryByTestId("rivalry-countries")).toBeNull();
+  });
+});

@@ -28,7 +28,9 @@ export interface RadarAxis {
 export function radarAxes(cells: Record<string, { mine: Cell; theirs: Cell }>): RadarAxis[] {
   return RADAR_METRICS.flatMap((key) => {
     const c = cells[key];
+    // A lower bound ("≥") is no point on a shared scale: leave the axis out, as the bars do.
     if (!c || c.mine.value === null || c.theirs.value === null) return [];
+    if (c.mine.partial || c.theirs.partial) return [];
     if (c.mine.value === 0 && c.theirs.value === 0) return [];
     return [{ key, mine: c.mine.value, theirs: c.theirs.value }];
   });

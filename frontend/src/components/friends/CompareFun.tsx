@@ -13,8 +13,12 @@ interface Props {
   year: number | null;
 }
 
-const metricsOf = (row: LeaderboardRow | undefined): Record<string, number | null> =>
-  row?.status === "ok" && row.snapshot ? row.snapshot.metrics : {};
+/** Exact totals only: a lower bound cannot say who is ahead, so it is left out of the jabs. */
+const metricsOf = (row: LeaderboardRow | undefined): Record<string, number | null> => {
+  if (row?.status !== "ok" || !row.snapshot) return {};
+  const { metrics, partial } = row.snapshot;
+  return Object.fromEntries(Object.entries(metrics).filter(([k]) => !partial.includes(k)));
+};
 
 /** Fun figures, rivalry lines and badges for both people — all computed from the signed totals. */
 export default function CompareFun({ self, friend, year }: Props): JSX.Element {
