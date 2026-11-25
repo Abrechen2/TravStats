@@ -12,7 +12,7 @@ import { errorContent } from "./shared";
 
 const tags = ["TravTrack"];
 const json = <T extends z.ZodType>(schema: T) => ({ "application/json": { schema } });
-const failure = { description: "MAP_MATCH_FAILED with `reason`", content: errorContent };
+const failure = { description: "Failure with a stable `code` and `reason`", content: errorContent };
 const disclosure = z.object({
   serviceId: z.literal("mapMatching"),
   host: z.string(),
@@ -125,5 +125,59 @@ registry.registerPath({
   responses: {
     204: { description: "Removed; the stretch draws as recorded again" },
     404: { description: "No such match of this account", content: errorContent },
+  },
+});
+
+// ---- "Als Roadtrip übernehmen" (rc46 extras A) -----------------------------------
+const station = z.object({
+  key: z.string(),
+  kind: z.enum(["start", "stop", "end"]),
+  name: z.string().nullable().describe("The user's place there, else the stop's accepted name"),
+  nameSource: z.enum(["place", "stop"]).nullable(),
+  placeId: z.string().nullable().describe("The user's place within 200 m, linked on save"),
+  lat: z.number(),
+  lon: z.number(),
+  arriveMs: z.number().int().nullable(),
+  departMs: z.number().int().nullable(),
+  dwellMs: z.number().int().nullable(),
+});
+registry.registerPath({
+  method: "get",
+  path: "/travtrack/roadtrip-preview",
+  summary: "Stations and line a roadtrip would get from a recorded span",
+  description:
+    "A leg (`fromMs`/`untilMs`) or days on the profile clock (`fromDay`/`toDay`, inclusive, at most 14). Stations are the span's first and last fix and every stop of at least 15 minutes not dismissed as a wait, from the same privacy-safe derivation the day view draws. Each leg's line is the recorded fixes (at most 256 vertices, the drawn-leg limit); a chord across a recording gap is listed in `estimated` and its kilometres in `estimatedKm`. Reads only. Failures answer `TRAVTRACK_ROADTRIP_PREVIEW_FAILED` with `reason` (`tooLong` 400; `noPoints`, `truncated`, `tooFewStations` 422).",
+  tags,
+  request: {
+    query: z.object({
+      fromDay: z.string().optional(),
+      toDay: z.string().optional(),
+      fromMs: z.number().int().optional(),
+      untilMs: z.number().int().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "The preview",
+      content: json(
+        z.object({
+          stations: z.array(station),
+          legs: z.array(
+            z.object({
+              fromKey: z.string(),
+              toKey: z.string(),
+              coordinates: z.array(z.tuple([z.number(), z.number()])),
+              estimated: z.array(z.array(z.tuple([z.number(), z.number()]))),
+              distanceKm: z.number(),
+              estimatedKm: z.number(),
+            })
+          ),
+          distanceKm: z.number(),
+          estimatedKm: z.number(),
+        })
+      ),
+    },
+    400: failure,
+    422: failure,
   },
 });

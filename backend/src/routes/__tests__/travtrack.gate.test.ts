@@ -127,6 +127,8 @@ describe("TravTrack gate", () => {
       "put /travtrack/legs/mode": "on",
       // rc46 extras C: the cleanup; the undo of a road match is a delete like the others.
       "get /travtrack/cleanup/availability": "on",
+      // rc46 extras A: "Als Roadtrip übernehmen" reads the span like the day view.
+      "get /travtrack/roadtrip-preview": "on",
       "put /travtrack/cleanup/smoothing": "on",
       "post /travtrack/cleanup/match": "on",
       "delete /travtrack/cleanup/match/:id": "held",
