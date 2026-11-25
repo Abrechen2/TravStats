@@ -11,7 +11,7 @@ import { countingSource } from "../counting/countingEntry";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
 
 const STYLES = ["pitch", "campsite", "lodging"] as const;
-const SOURCES = ["track", "routed", "drawn", "straight"] as const;
+const SOURCES = ["track", "recorded", "routed", "drawn", "straight"] as const;
 
 /**
  * The roadtrip insights (forgejo#260): what has happened against today and

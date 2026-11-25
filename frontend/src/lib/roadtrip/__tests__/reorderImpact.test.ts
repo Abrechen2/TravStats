@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { TourLeg } from "../../../types/tour";
-import { moveStation, reorderImpact, type ReorderStation } from "../reorderImpact";
+import {
+  isProtectedSource,
+  moveStation,
+  reorderImpact,
+  type ReorderStation,
+} from "../reorderImpact";
 
 const st = (id: string, startDate: string | null = null): ReorderStation => ({
   key: id,
@@ -69,5 +74,11 @@ describe("reorderImpact", () => {
 
   it("moves an item and leaves the rest in order", () => {
     expect(moveStation(["a", "b", "c", "d"], 0, 2)).toEqual(["b", "c", "a", "d"]);
+  });
+});
+
+describe("a line taken from a recording (TravTrack roadtrip, rc46)", () => {
+  it("is protected like a drawn line", () => {
+    expect(isProtectedSource("recorded")).toBe(true);
   });
 });

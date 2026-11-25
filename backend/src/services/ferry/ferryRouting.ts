@@ -59,8 +59,9 @@ export async function syncFerryLeg(
     throw new AppError("The linked sea leg changed; reload", 409, "VERSION_CONFLICT");
   const userLine =
     (leg.source === "drawn" && replaceUserLine !== "none") ||
-    (leg.source === "track" && replaceUserLine === "all");
-  if ((leg.source === "drawn" || leg.source === "track") && !userLine) return;
+    ((leg.source === "track" || leg.source === "recorded") && replaceUserLine === "all");
+  if ((leg.source === "drawn" || leg.source === "track" || leg.source === "recorded") && !userLine)
+    return;
   const matches = (stop: { lat: number | null; lon: number | null }, lat: number, lon: number) =>
     stop.lat !== null &&
     stop.lon !== null &&

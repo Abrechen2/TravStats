@@ -562,7 +562,8 @@
       "straight": "Luftlinie",
       "drawn": "gezogen",
       "routed": "berechnet",
-      "track": "aus der Spur"
+      "track": "aus der Spur",
+      "recorded": "aus Aufzeichnung"
     },
     "routing": {
       "routeAll": "Ganze Tour berechnen",

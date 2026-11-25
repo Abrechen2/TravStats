@@ -8,7 +8,7 @@ import type { RoadtripStation } from "../../types/roadtrip";
 import type { LegSource, TourLeg } from "../../types/tour";
 
 /** The order sources are named in: what was measured first, the crow's line last. */
-const SOURCE_ORDER: LegSource[] = ["track", "routed", "drawn", "straight"];
+const SOURCE_ORDER: LegSource[] = ["track", "recorded", "routed", "drawn", "straight"];
 
 /**
  * The compact day view (forgejo#243): one card per travel day — from where,

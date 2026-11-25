@@ -107,7 +107,7 @@ export interface RoadtripDayTour {
 }
 
 /** What a leg's kilometres were measured on. */
-export type RoadtripDistanceSource = "straight" | "drawn" | "routed" | "track";
+export type RoadtripDistanceSource = "straight" | "drawn" | "routed" | "track" | "recorded";
 
 /**
  * Road kilometres by where each stretch stands — `recorded` = driven (its

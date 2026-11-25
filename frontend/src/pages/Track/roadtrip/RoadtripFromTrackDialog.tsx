@@ -109,7 +109,11 @@ export default function RoadtripFromTrackDialog({
           create: (input) => roadtripsApi.create(input),
           replaceStations: (rid, stations) => roadtripsApi.replaceStations(rid, stations),
           setDrawnLeg: (rid, from, to, waypoints, distanceKm) =>
-            toursApi.setLeg(undefined, rid, from, to, { source: "drawn", waypoints, distanceKm }),
+            toursApi.setLeg(undefined, rid, from, to, {
+              source: "recorded",
+              waypoints,
+              distanceKm,
+            }),
           remove: (rid) => toursApi.removeStandalone(rid),
         },
         localDay

@@ -95,6 +95,17 @@ describe("Tour route sections — leg overrides", () => {
     expect(implausible.body.leg.distanceKm).toBeCloseTo(lineKm, 3);
   });
 
+  it("stores a line taken from a recording as its own source, kept like a drawn one", async () => {
+    const res = await request(app)
+      .put(url())
+      .set("Cookie", cookie)
+      .send({ source: "recorded", waypoints: LINE });
+    expect(res.status).toBe(200);
+    expect(res.body.leg).toMatchObject({ source: "recorded", confidence: "high" });
+    const bare = await request(app).put(url()).set("Cookie", cookie).send({ source: "recorded" });
+    expect(bare.status).toBe(400);
+  });
+
   it("rejects a line that does not start at the leg's first stop", async () => {
     const wrong: Array<[number, number]> = [
       [0, 0],

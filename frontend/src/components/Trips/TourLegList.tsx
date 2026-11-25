@@ -105,6 +105,8 @@ function buildOptions(
   const hasLine = leg.waypoints !== null && leg.waypoints.length >= 2;
   const options: LegSourceOption[] = [{ source: "straight", disabled: false }];
   if (hasLine) {
+    // A line taken from a recording is offered as itself while it is the leg's line.
+    if (leg.source === "recorded") options.push({ source: "recorded", disabled: false });
     options.push({ source: "drawn", disabled: false });
   }
   if (isRoutableLegMode(leg.mode)) {

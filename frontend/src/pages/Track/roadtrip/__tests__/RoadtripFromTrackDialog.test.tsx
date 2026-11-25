@@ -119,6 +119,11 @@ describe("RoadtripFromTrackDialog", () => {
     await userEvent.click(screen.getByTestId("roadtrip-save"));
     await waitFor(() => expect(toursApi.setLeg).toHaveBeenCalledTimes(2));
     expect(vi.mocked(toursApi.setLeg).mock.calls.map((c) => c[4].distanceKm)).toEqual([20, 30]);
+    // Labelled "aus Aufzeichnung", not "selbst gezeichnet", and kept by a re-route like a drawn line.
+    expect(vi.mocked(toursApi.setLeg).mock.calls.map((c) => c[4].source)).toEqual([
+      "recorded",
+      "recorded",
+    ]);
   });
 
   it("dropping the middle station leaves a two-station roadtrip with the joined distance", async () => {

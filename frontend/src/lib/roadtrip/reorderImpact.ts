@@ -40,7 +40,7 @@ export interface ReorderImpact {
 
 /** A leg whose line is somebody's work, not something the server can redo. */
 export function isProtectedSource(source: LegSource): boolean {
-  return source === "track" || source === "drawn";
+  return source === "track" || source === "drawn" || source === "recorded";
 }
 
 const pairs = (list: readonly ReorderStation[]): Array<[ReorderStation, ReorderStation]> =>

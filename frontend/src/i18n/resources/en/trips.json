@@ -562,7 +562,8 @@
       "straight": "Straight line",
       "drawn": "Drawn",
       "routed": "Routed",
-      "track": "From track"
+      "track": "From track",
+      "recorded": "From recording"
     },
     "routing": {
       "routeAll": "Route the whole tour",

@@ -15,7 +15,7 @@ import type { RouteKind, StoredRoadtripVehicle, TourActivity } from "../shared/t
  * later phase adds a value to the server's allow-list, not a migration of
  * this union. See `backend/src/schemas/tour.ts`'s `PHASE_1_SOURCES` note.
  */
-export const LEG_SOURCES = ["straight", "drawn", "routed", "track"] as const;
+export const LEG_SOURCES = ["straight", "drawn", "routed", "track", "recorded"] as const;
 export type LegSource = (typeof LEG_SOURCES)[number];
 
 export const LEG_MODES = ["road", "ferry", "rail", "foot", "bike"] as const;

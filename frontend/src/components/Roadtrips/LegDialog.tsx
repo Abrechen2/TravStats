@@ -24,7 +24,7 @@ function legChoice(leg: TourLeg): { mode: Mode; line: Line } {
     line:
       leg.source === "routed"
         ? "routed"
-        : leg.source === "drawn"
+        : leg.source === "drawn" || leg.source === "recorded"
           ? "drawn"
           : leg.source === "track"
             ? "track"
@@ -86,7 +86,7 @@ export default function LegDialog({
   const keepsRecording = effectiveLine === "track";
   // A line someone recorded or drew is replaced only on a press that says so.
   const replacing =
-    (leg.source === "track" || leg.source === "drawn") &&
+    (leg.source === "track" || leg.source === "drawn" || leg.source === "recorded") &&
     (effectiveLine === "straight" || effectiveLine === "routed");
 
   const apply = async (): Promise<void> => {

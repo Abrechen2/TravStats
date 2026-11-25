@@ -11,7 +11,15 @@ import { polylineDistanceKm } from "../cruiseDistance/polylineDistance";
 export const LEG_MODES = ["road", "ferry", "rail", "foot", "bike"] as const;
 export type LegMode = (typeof LEG_MODES)[number];
 
-export const LEG_SOURCES = ["straight", "drawn", "routed", "track"] as const;
+/**
+ * `recorded`: a line taken from the owner's own recording (TravTrack "Als
+ * Roadtrip übernehmen", rc46). Behaves exactly like `drawn` — the user's own
+ * geometry, never replaced by a re-route — and is only labelled apart.
+ */
+export const LEG_SOURCES = ["straight", "drawn", "routed", "track", "recorded"] as const;
+
+/** A line the user owns (drew or recorded): kept by every re-route. */
+export const isUserLine = (source: string): boolean => source === "drawn" || source === "recorded";
 export type LegSource = (typeof LEG_SOURCES)[number];
 
 /**

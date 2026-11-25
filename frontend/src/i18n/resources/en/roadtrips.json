@@ -183,7 +183,8 @@
         "track": "recording",
         "routed": "route",
         "drawn": "drawn",
-        "straight": "straight line"
+        "straight": "straight line",
+        "recorded": "recording (TravTrack)"
       },
       "mode": {
         "rail": "rail",
@@ -553,7 +554,8 @@
       "track": "GPS track",
       "routed": "route",
       "drawn": "drawn",
-      "straight": "straight line"
+      "straight": "straight line",
+      "recorded": "from recording"
     },
     "distanceRule": "Distance measured: {{parts}}. A straight line joins the stations directly, a route follows the roads of the routing provider, a GPS track is a recorded drive. A leg counts as driven once its destination was reached before today; “Driven” appears only when a GPS track covers every kilometre or both odometer readings are entered; then their difference counts.",
     "figDays": "Days",
@@ -604,7 +606,8 @@
       "routed": "along the road",
       "straight": "straight line",
       "drawn": "drawn by hand",
-      "track": "from the recording"
+      "track": "from the recording",
+      "recorded": "from recording"
     },
     "legEdit": "Edit leg",
     "duration": "{{h}} h {{m}}"
@@ -966,7 +969,8 @@
       "track": "from the recording",
       "drawn": "corrected by hand",
       "routed": "along the road",
-      "straight": "straight line"
+      "straight": "straight line",
+      "recorded": "from recording"
     },
     "lossTrack": "This leg loses the line from the recording. The recording itself stays under “Route & recordings”.",
     "lossDrawn": "The line drawn by hand for this leg is lost.",
@@ -1028,7 +1032,8 @@
       "track": "{{km}} km from the recording",
       "routed": "{{km}} km along the road",
       "drawn": "{{km}} km drawn by hand",
-      "straight": "{{km}} km as the crow flies"
+      "straight": "{{km}} km as the crow flies",
+      "recorded": "{{km}} km from recording"
     },
     "ferry": "of which {{km}} km by ferry",
     "driving": "Driving time {{h}} h {{m}} (calculated)",

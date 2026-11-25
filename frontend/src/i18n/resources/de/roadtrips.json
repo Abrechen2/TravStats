@@ -183,7 +183,8 @@
         "track": "Aufzeichnung",
         "routed": "Route",
         "drawn": "gezeichnet",
-        "straight": "Luftlinie"
+        "straight": "Luftlinie",
+        "recorded": "Aufzeichnung (TravTrack)"
       },
       "mode": {
         "rail": "Bahn",
@@ -553,7 +554,8 @@
       "track": "GPS-Spur",
       "routed": "Route",
       "drawn": "gezeichnet",
-      "straight": "Luftlinie"
+      "straight": "Luftlinie",
+      "recorded": "aus Aufzeichnung"
     },
     "distanceRule": "Strecke gemessen: {{parts}}. Luftlinie ist die gerade Verbindung der Stationen, Route der Straßenweg des Routing-Anbieters, GPS-Spur eine aufgezeichnete Fahrt. Als gefahren zählt eine Etappe, sobald ihre Zielstation vor heute erreicht ist; „Gefahren“ steht erst, wenn eine GPS-Spur jeden Kilometer belegt oder beide Kilometerstände eingetragen sind; dann gilt deren Differenz.",
     "figDays": "Tage",
@@ -604,7 +606,8 @@
       "routed": "entlang der Straße",
       "straight": "gerade Linie",
       "drawn": "selbst gezeichnet",
-      "track": "aus der Aufzeichnung"
+      "track": "aus der Aufzeichnung",
+      "recorded": "aus Aufzeichnung"
     },
     "legEdit": "Etappe bearbeiten",
     "duration": "{{h}} h {{m}}"
@@ -966,7 +969,8 @@
       "track": "aus der Aufzeichnung",
       "drawn": "von Hand korrigiert",
       "routed": "entlang der Straße",
-      "straight": "gerade Linie"
+      "straight": "gerade Linie",
+      "recorded": "aus Aufzeichnung"
     },
     "lossTrack": "Die Linie aus der Aufzeichnung geht für diese Etappe verloren. Die Aufzeichnung selbst bleibt unter „Strecke & Aufzeichnungen“ erhalten.",
     "lossDrawn": "Die von Hand gezeichnete Linie dieser Etappe geht verloren.",
@@ -1028,7 +1032,8 @@
       "track": "{{km}} km aus der Aufzeichnung",
       "routed": "{{km}} km entlang der Straße",
       "drawn": "{{km}} km von Hand gezeichnet",
-      "straight": "{{km}} km Luftlinie"
+      "straight": "{{km}} km Luftlinie",
+      "recorded": "{{km}} km aus Aufzeichnung"
     },
     "ferry": "davon {{km}} km mit der Fähre",
     "driving": "Fahrzeit {{h}} h {{m}} (berechnet)",
