@@ -18,7 +18,6 @@ import {
   rankCandidates,
   tripRows,
   tripView,
-  type LinkPreview,
   type LinkTripView,
 } from "../linkPreview";
 import {
