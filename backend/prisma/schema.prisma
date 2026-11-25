@@ -35,6 +35,8 @@ model User {
   mailIntakeAddress               MailIntakeAddress?
   mailIntakeSenders               MailIntakeSender[]
   mailIntakeMessages              MailIntakeMessage[]
+  mailIntakeScans                 MailIntakeScan[]
+  mailIntakeCandidates            MailIntakeCandidate[]
   comparisonDevices               ComparisonDevice[]
   comparisonPublications          ComparisonPublication[]
   comparisonLinks                 ComparisonLink[]
@@ -7675,11 +7677,29 @@ model MailIntakeSource {
   /// IMAP UIDVALIDITY of the folder at the last run; a change restarts the scan.
   uidValidity       String?   @map("uid_validity")
   lastUid           Int       @default(0) @map("last_uid")
+  /// Header-only pre-filter: a mail is downloaded only when its From domain or
+  /// subject looks like a booking. Everything else is never opened (personal folders).
+  prefilter         Boolean   @default(true)
+  /// Set only the invisible `$TravStats` keyword, never `\Seen`.
+  keepUnread        Boolean   @default(false) @map("keep_unread")
+  /// Where a fresh cursor starts: `now` (UIDNEXT-1) or `days_30|days_90|days_365`.
+  fetchFrom         String    @default("now") @map("fetch_from")
+  /// Booking-sender domains the user added to the built-in list, and built-in ones removed.
+  senderDomains        String[] @default([]) @map("sender_domains")
+  removedSenderDomains String[] @default([]) @map("removed_sender_domains")
+  /// Subject words the user added to the built-in keyword list, and built-in ones switched off.
+  subjectKeywords        String[] @default([]) @map("subject_keywords")
+  removedSubjectKeywords String[] @default([]) @map("removed_subject_keywords")
+  /// Aggregate counters only: a skipped mail leaves no other trace.
+  skippedCount      Int       @default(0) @map("skipped_count")
+  processedCount    Int       @default(0) @map("processed_count")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  user     User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages MailIntakeMessage[]
+  user       User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages   MailIntakeMessage[]
+  scans      MailIntakeScan[]
+  candidates MailIntakeCandidate[]
 
   @@unique([userId])
   @@unique([kind], where: raw("user_id IS NULL"), map: "mail_intake_sources_instance_key")
@@ -7745,6 +7765,65 @@ model MailIntakeMessage {
   @@unique([sourceId, messageId, userId])
   @@index([userId, status])
   @@map("mail_intake_messages")
+}
+
+/// The one-off "search the mailbox" job of a personal folder: headers only, resumable by cursor.
+model MailIntakeScan {
+  id          String    @id @default(uuid())
+  sourceId    String    @unique @map("source_id")
+  userId      String    @map("user_id")
+  /// running | done | cancelled | interrupted | failed
+  status      String
+  since       DateTime?
+  before      DateTime?
+  uidValidity String?   @map("uid_validity")
+  /// Highest UID already judged; a resumed scan continues above it.
+  cursorUid   Int       @default(0) @map("cursor_uid")
+  total       Int       @default(0)
+  scanned     Int       @default(0)
+  skipped     Int       @default(0)
+  matched     Int       @default(0)
+  candidates  Int       @default(0)
+  /// A stable failure kind, never prose.
+  error       String?
+  startedAt   DateTime  @default(now()) @map("started_at")
+  finishedAt  DateTime? @map("finished_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  source MailIntakeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("mail_intake_scans")
+}
+
+/// A booking mail the scan found that is probably missing in TravStats. Header fields only:
+/// the mail itself is downloaded when (and only when) the user imports it.
+model MailIntakeCandidate {
+  id            String    @id @default(uuid())
+  sourceId      String    @map("source_id")
+  userId        String    @map("user_id")
+  uidValidity   String    @map("uid_validity")
+  uid           Int
+  messageId     String?   @map("message_id")
+  receivedAt    DateTime? @map("received_at")
+  fromAddress   String?   @map("from_address")
+  subject       String?
+  brand         String?
+  guessedDomain String?   @map("guessed_domain")
+  /// null (nothing found) | likely_present (brand + date near an existing entry)
+  matchHint     String?   @map("match_hint")
+  /// open | ignored | imported | failed
+  status        String    @default("open")
+  reason        String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  source MailIntakeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, uidValidity, uid])
+  @@index([userId, status])
+  @@map("mail_intake_candidates")
 }
 
 /// A document a member put on the plan's trip (spec §6.8, D6). A member reads only the documents

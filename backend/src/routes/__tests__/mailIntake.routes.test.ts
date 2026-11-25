@@ -248,6 +248,9 @@ describe("mail intake routes (forgejo#313)", () => {
       await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
       const token = await rotateToken(userId);
       const box = new FakeMailbox();
+      const source = await prisma.mailIntakeSource.findFirstOrThrow({ where: { userId: null } });
+      // A first run positions the new mailbox "ab jetzt"; the forward arrives after it.
+      await runSource(source.id, box);
       const real = buildMail({
         deliveredTo: `trips+${token}@example.org`,
         from: "me@gmail.example",
@@ -258,7 +261,6 @@ describe("mail intake routes (forgejo#313)", () => {
         ],
       });
       box.add({ uid: 1, raw: real });
-      const source = await prisma.mailIntakeSource.findFirstOrThrow({ where: { userId: null } });
       await runSource(source.id, box);
       const row = await prisma.mailIntakeMessage.findFirstOrThrow({});
       expect(row).toMatchObject({ status: "rejected", reason: "dmarc_failed" });
@@ -304,5 +306,49 @@ describe("mail intake routes (forgejo#313)", () => {
     expect(await prisma.mailIntakeSource.count({ where: { id: src.id } })).toBe(0);
     expect(await prisma.mailIntakeAddress.count({ where: { userId: tmp.id } })).toBe(0);
     expect(await prisma.mailIntakeSender.count({ where: { userId: tmp.id } })).toBe(0);
+  });
+
+  describe("private INBOX settings and the mailbox scan", () => {
+    it("takes the pre-filter lists, refuses a non-domain, and shows the defaults in DE and EN", async () => {
+      const bad = await request(app)
+        .put("/api/v1/mail-intake/source")
+        .set("Cookie", cookie)
+        .send({ ...body, senderDomains: ["not a domain"] });
+      expect(bad.status).toBe(400);
+
+      const ok = await request(app)
+        .put("/api/v1/mail-intake/source")
+        .set("Cookie", cookie)
+        .send({
+          ...body,
+          folder: "INBOX",
+          senderDomains: ["Reisebuero.example"],
+          subjectKeywords: ["Ihre Reise"],
+          removedSubjectKeywords: ["Reservierung"],
+          fetchFrom: "days_30",
+        });
+      expect(ok.status).toBe(200);
+      expect(ok.body).toMatchObject({
+        keepUnread: true,
+        prefilter: true,
+        fetchFrom: "days_30",
+        senderDomains: ["reisebuero.example"],
+        skippedCount: 0,
+      });
+      const status = await request(app).get("/api/v1/mail-intake").set("Cookie", cookie);
+      expect(status.body.prefilterDefaults.keywords.de).toContain("Buchungsbestätigung");
+      expect(status.body.prefilterDefaults.keywords.en).toContain("booking confirmation");
+    });
+
+    it("a scan without a mailbox is a 404; the candidate list starts empty", async () => {
+      const scan = await request(app)
+        .post("/api/v1/mail-intake/scan")
+        .set("Cookie", cookie)
+        .send({});
+      expect(scan.status).toBe(404);
+      const list = await request(app).get("/api/v1/mail-intake/candidates").set("Cookie", cookie);
+      expect(list.status).toBe(200);
+      expect(list.body).toEqual({ scan: null, items: [], ignoredCount: 0 });
+    });
   });
 });

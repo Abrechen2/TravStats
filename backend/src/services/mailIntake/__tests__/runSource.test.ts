@@ -55,6 +55,8 @@ describe("mail intake run (forgejo#313)", () => {
         passwordEncrypted: encrypt("secret-pw"),
         folder: "TravStats",
         enabled: true,
+        // An established source: the cursor already stands where a fresh one would start (0 here).
+        uidValidity: "1000",
         ...over,
       },
     });
@@ -183,7 +185,7 @@ describe("mail intake run (forgejo#313)", () => {
 
     it("a mail the parser finds nothing in stays an unfiled document with the reason", async () => {
       parseDocument.mockImplementation(() => nothing());
-      box.add({ uid: 1, raw: buildMail({ subject: "Newsletter" }) });
+      box.add({ uid: 1, raw: buildMail({ subject: "Ihre Buchung" }) });
       await runSource(personalId, box);
       const [message] = await messages();
       expect(message).toMatchObject({ status: "nothing", reason: "nothing_found" });

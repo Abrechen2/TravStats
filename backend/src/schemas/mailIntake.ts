@@ -5,10 +5,28 @@
  */
 import { z } from "./zod";
 import { MESSAGE_REASONS, SOURCE_ERROR_KINDS } from "../services/mailIntake/errors";
+import { FETCH_FROM_OPTIONS } from "../services/mailIntake/constants";
+import { isValidDomain } from "../services/mailIntake/prefilter";
 
 const host = z.string().trim().min(1).max(253);
 const port = z.number().int().min(1).max(65535);
 const folder = z.string().trim().min(1).max(200);
+const MAX_LIST = 300;
+const domainList = z
+  .array(z.string().trim().toLowerCase().refine(isValidDomain, "must be a domain like example.com"))
+  .max(MAX_LIST);
+const keywordList = z.array(z.string().trim().min(2).max(100)).max(MAX_LIST);
+
+/** The pre-filter and cursor settings a personal folder takes (privacy for a private INBOX). */
+const prefilterFields = {
+  prefilter: z.boolean().optional(),
+  keepUnread: z.boolean().optional(),
+  fetchFrom: z.enum(FETCH_FROM_OPTIONS).optional(),
+  senderDomains: domainList.optional(),
+  removedSenderDomains: domainList.optional(),
+  subjectKeywords: keywordList.optional(),
+  removedSubjectKeywords: keywordList.optional(),
+};
 
 export const personalSourceBodySchema = z.strictObject({
   host,
@@ -19,6 +37,7 @@ export const personalSourceBodySchema = z.strictObject({
   password: z.string().min(1).max(500).optional(),
   folder,
   enabled: z.boolean().optional(),
+  ...prefilterFields,
 });
 
 export const instanceSourceBodySchema = z.strictObject({
@@ -55,6 +74,16 @@ export const sourceViewSchema = z.object({
   lastOkAt: z.string().nullable(),
   lastError: z.enum(SOURCE_ERROR_KINDS).nullable(),
   lastErrorAt: z.string().nullable(),
+  prefilter: z.boolean(),
+  keepUnread: z.boolean(),
+  fetchFrom: z.enum(FETCH_FROM_OPTIONS),
+  senderDomains: z.array(z.string()),
+  removedSenderDomains: z.array(z.string()),
+  subjectKeywords: z.array(z.string()),
+  removedSubjectKeywords: z.array(z.string()),
+  /** Mails the header pre-filter left untouched, and mails read — counts only. */
+  skippedCount: z.number(),
+  processedCount: z.number(),
 });
 
 export const mailIntakeStatusSchema = z.object({
@@ -66,6 +95,13 @@ export const mailIntakeStatusSchema = z.object({
   /** Whether the admin has set up and switched on the instance mailbox. */
   forwardingAvailable: z.boolean(),
   senders: z.array(z.object({ id: z.string(), address: z.string() })),
+  /** The built-in pre-filter lists: shown read-only, each entry can be switched off per source. */
+  prefilterDefaults: z.object({
+    senderDomains: z.array(
+      z.object({ domain: z.string(), brand: z.string(), kind: z.string().nullable() })
+    ),
+    keywords: z.object({ de: z.array(z.string()), en: z.array(z.string()) }),
+  }),
 });
 
 export const instanceStatusSchema = z.object({ source: sourceViewSchema.nullable() });
@@ -81,6 +117,7 @@ export const runResultSchema = z.object({
   error: z.enum(SOURCE_ERROR_KINDS).nullable(),
   seen: z.number(),
   proposed: z.number(),
+  filtered: z.number(),
 });
 
 export const inboxItemSchema = z.object({
@@ -116,3 +153,60 @@ export const fileOriginalBodySchema = z.strictObject({
 export const fileOriginalResultSchema = z.object({
   entry: z.object({ type: z.string(), id: z.string() }).nullable(),
 });
+
+// ---- "Postfach durchsuchen": the one-off header scan and its candidate list ----------------
+
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD");
+
+export const scanBodySchema = z.strictObject({
+  /** First day to look at; absent: the whole folder from its first mail. */
+  since: day.optional(),
+  /** Day after the last one (exclusive), as IMAP SEARCH BEFORE reads it. */
+  before: day.optional(),
+  /** Continue an interrupted or cancelled scan from its cursor. */
+  resume: z.boolean().optional(),
+});
+
+export const candidateIdsBodySchema = z.strictObject({
+  ids: z.array(z.string().uuid()).min(1).max(500),
+});
+
+export const jobStartedBareSchema = z.object({ jobId: z.string().uuid() });
+
+export const scanViewSchema = z.object({
+  status: z.enum(["running", "done", "cancelled", "interrupted", "failed"]),
+  since: z.string().nullable(),
+  before: z.string().nullable(),
+  total: z.number(),
+  scanned: z.number(),
+  /** Mails the pre-filter left untouched: counted, nothing else kept. */
+  skipped: z.number(),
+  /** Booking mails already in TravStats (reference or Message-ID). */
+  matched: z.number(),
+  candidates: z.number(),
+  error: z.string().nullable(),
+  startedAt: z.string(),
+  finishedAt: z.string().nullable(),
+});
+
+export const candidateListSchema = z.object({
+  scan: scanViewSchema.nullable(),
+  items: z.array(
+    z.object({
+      id: z.string(),
+      receivedAt: z.string().nullable(),
+      from: z.string().nullable(),
+      subject: z.string().nullable(),
+      brand: z.string().nullable(),
+      guessedDomain: z.string().nullable(),
+      /** `likely_present`: the brand has an entry near this date — maybe already recorded. */
+      matchHint: z.enum(["likely_present"]).nullable(),
+      status: z.enum(["open", "failed"]),
+      /** Why an import failed: `mail_gone` or `mail_too_large`. */
+      reason: z.string().nullable(),
+    })
+  ),
+  ignoredCount: z.number(),
+});
+
+export const ignoredResultSchema = z.object({ ignored: z.number() });

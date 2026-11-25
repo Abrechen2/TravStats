@@ -9,7 +9,12 @@ import { decrypt } from "../../utils/encryption";
 import logger from "../../utils/logger";
 import { DOCUMENT_SIZE_LIMITS } from "../documents/documentFormats";
 import { connectionGate, loadPolicy } from "../externalServices/policy";
-import { MAIL_INTAKE_SERVICE_ID, MAX_MAILS_PER_RUN } from "./constants";
+import {
+  HEADER_BATCH,
+  MAIL_INTAKE_SERVICE_ID,
+  MAX_HEADERS_PER_RUN,
+  MAX_MAILS_PER_RUN,
+} from "./constants";
 import {
   MailIntakeError,
   classifyImapError,
@@ -17,8 +22,15 @@ import {
   type SourceErrorKind,
 } from "./errors";
 import { pinPublic } from "./hostPolicy";
-import { imapFetcher, type MailFetcher, type MailboxConnection, type TlsMode } from "./mailFetcher";
+import {
+  imapFetcher,
+  type MailFetcher,
+  type MailSession,
+  type MailboxConnection,
+  type TlsMode,
+} from "./mailFetcher";
 import { processMail } from "./pipeline";
+import { buildRules, judge, type HeaderInfo, type PrefilterRules } from "./prefilter";
 
 export interface RunResult {
   ran: boolean;
@@ -27,7 +39,11 @@ export interface RunResult {
   error?: SourceErrorKind;
   seen: number;
   proposed: number;
+  /** Mails the header pre-filter left untouched (never downloaded, never flagged). */
+  filtered: number;
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const running = new Set<string>();
 
@@ -86,7 +102,7 @@ export async function runSource(
   sourceId: string,
   fetcher: MailFetcher = imapFetcher
 ): Promise<RunResult> {
-  const empty: RunResult = { ran: false, seen: 0, proposed: 0 };
+  const empty: RunResult = { ran: false, seen: 0, proposed: 0, filtered: 0 };
   // Taken before the first await: two callers (poll, IDLE, "check now") must not both enter.
   if (running.has(sourceId)) return { ...empty, skipped: "running" };
   running.add(sourceId);
@@ -108,47 +124,10 @@ async function runLocked(
   if (await isServiceOff(source)) return { ...empty, skipped: "service_off" };
 
   const startedAt = new Date();
-  const result: RunResult = { ran: true, seen: 0, proposed: 0 };
+  const result: RunResult = { ran: true, seen: 0, proposed: 0, filtered: 0 };
   try {
     const connection = await guardedConnection(source);
-    await fetcher.withFolder(connection, async (session) => {
-      // A changed UIDVALIDITY makes every stored UID meaningless: start over.
-      // The Message-ID key keeps the rescan from creating anything twice.
-      const restart = source.uidValidity !== null && source.uidValidity !== session.uidValidity;
-      let lastUid = restart ? 0 : source.lastUid;
-      const fresh = (await session.listNew(lastUid)).slice(0, MAX_MAILS_PER_RUN);
-
-      for (const item of fresh) {
-        result.seen += 1;
-        // The listing's size is a hint only: the cap is enforced while downloading.
-        const limit = DOCUMENT_SIZE_LIMITS.eml;
-        const fetched =
-          item.size > limit
-            ? { tooLarge: true as const }
-            : await session.fetchSource(item.uid, limit);
-        if (fetched && "tooLarge" in fetched) {
-          await recordTooLarge(source.id, source.userId, item.uid, session.uidValidity);
-        } else if (fetched) {
-          const outcome = await processMail(
-            {
-              id: source.id,
-              userId: source.userId,
-              kind: source.kind,
-              authservId: source.authservId,
-            },
-            { uid: item.uid, uidValidity: session.uidValidity, ...fetched }
-          );
-          if (outcome.status === "proposed") result.proposed += 1;
-        }
-        await session.markProcessed(item.uid);
-        lastUid = item.uid;
-        await saveCursor(source, { lastUid, uidValidity: session.uidValidity });
-      }
-      await saveCursor(source, {
-        uidValidity: session.uidValidity,
-        ...(restart ? { lastUid } : {}),
-      });
-    });
+    await fetcher.withFolder(connection, (session) => readFolder(source, session, result));
     await prisma.mailIntakeSource.update({
       where: { id: source.id },
       data: { lastRunAt: startedAt, lastOkAt: new Date(), lastError: null, lastErrorAt: null },
@@ -163,6 +142,104 @@ async function runLocked(
     });
   }
   return result;
+}
+
+/**
+ * Where a fresh cursor starts: never at 0 on a private mailbox. `now` skips
+ * everything already there (UIDNEXT-1); `days_N` starts at the first mail of
+ * the last N days, which the pre-filter still judges one by one.
+ */
+export async function startingUid(fetchFrom: string, session: MailSession): Promise<number> {
+  const days = /^days_(\d+)$/.exec(fetchFrom)?.[1];
+  const atNow = Math.max(session.uidNext - 1, 0);
+  if (!days) return atNow;
+  const since = new Date(Date.now() - Number(days) * DAY_MS);
+  const uids = await session.searchUids({ since, before: null });
+  return uids.length > 0 ? uids[0] - 1 : atNow;
+}
+
+/** The pre-filter of a personal folder, or null when every mail is read (instance mailbox, switched off). */
+export function rulesFor(source: SourceRow): PrefilterRules | null {
+  if (source.kind !== "imap_folder" || !source.prefilter) return null;
+  return buildRules(source);
+}
+
+async function readFolder(source: SourceRow, session: MailSession, result: RunResult) {
+  // A changed UIDVALIDITY makes every stored UID meaningless, and a source that
+  // never ran has none: the cursor is positioned by `fetchFrom` (default: only
+  // new mail, UIDNEXT-1), never at 0 — for the instance mailbox too. That one
+  // reads every new mail (no pre-filter): it is a dedicated mailbox that exists
+  // only to receive forwards.
+  const restart = source.uidValidity === null || source.uidValidity !== session.uidValidity;
+  let lastUid = restart ? await startingUid(source.fetchFrom, session) : source.lastUid;
+  if (restart) await saveCursor(source, { lastUid, uidValidity: session.uidValidity });
+
+  const rules = rulesFor(source);
+  const listed = (await session.listNew(lastUid)).slice(
+    0,
+    rules ? MAX_HEADERS_PER_RUN : MAX_MAILS_PER_RUN
+  );
+  let taken = 0;
+  for (let i = 0; i < listed.length && taken < MAX_MAILS_PER_RUN; i += HEADER_BATCH) {
+    const batch = listed.slice(i, i + HEADER_BATCH);
+    const headers = rules
+      ? new Map((await session.fetchHeaders(batch.map((b) => b.uid))).map((h) => [h.uid, h]))
+      : null;
+    let filtered = 0;
+    for (const item of batch) {
+      if (rules && headers && !passes(headers.get(item.uid), rules)) {
+        // Not a booking: never downloaded, parsed, stored, logged or flagged. Counted.
+        filtered += 1;
+        lastUid = item.uid;
+        continue;
+      }
+      if (taken >= MAX_MAILS_PER_RUN) break;
+      taken += 1;
+      await takeMail(source, session, item, result);
+      lastUid = item.uid;
+      await saveCursor(source, { lastUid, uidValidity: session.uidValidity });
+    }
+    if (filtered > 0) {
+      result.filtered += filtered;
+      await saveCursor(source, { lastUid, uidValidity: session.uidValidity });
+      await prisma.mailIntakeSource.update({
+        where: { id: source.id },
+        data: { skippedCount: { increment: filtered } },
+      });
+    }
+  }
+  await saveCursor(source, { uidValidity: session.uidValidity });
+}
+
+function passes(header: HeaderInfo | undefined, rules: PrefilterRules): boolean {
+  return !!header && judge(header, rules).take;
+}
+
+async function takeMail(
+  source: SourceRow,
+  session: MailSession,
+  item: { uid: number; size: number },
+  result: RunResult
+): Promise<void> {
+  result.seen += 1;
+  // The listing's size is a hint only: the cap is enforced while downloading.
+  const limit = DOCUMENT_SIZE_LIMITS.eml;
+  const fetched =
+    item.size > limit ? { tooLarge: true as const } : await session.fetchSource(item.uid, limit);
+  if (fetched && "tooLarge" in fetched) {
+    await recordTooLarge(source.id, source.userId, item.uid, session.uidValidity);
+  } else if (fetched) {
+    const outcome = await processMail(
+      { id: source.id, userId: source.userId, kind: source.kind, authservId: source.authservId },
+      { uid: item.uid, uidValidity: session.uidValidity, ...fetched }
+    );
+    if (outcome.status === "proposed") result.proposed += 1;
+  }
+  await session.markProcessed(item.uid, { keepUnread: source.keepUnread });
+  await prisma.mailIntakeSource.update({
+    where: { id: source.id },
+    data: { processedCount: { increment: 1 } },
+  });
 }
 
 /**
