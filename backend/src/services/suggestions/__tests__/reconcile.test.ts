@@ -117,6 +117,21 @@ describe("suggestions reconcile — forgejo#439", () => {
     expect(again.status).toBe(404);
   });
 
+  it("closes it from the write alone: the listener sees the authenticated user", async () => {
+    const row = await finding();
+    const res = await request(app)
+      .post(`/api/v1/places/${placeId}/visits`)
+      .set("Cookie", cookie)
+      .send({ tripId, visitedAt: { local: "2026-11-11T09:30" } });
+    expect(res.status).toBe(201);
+    let status = "pending";
+    for (let i = 0; i < 50 && status === "pending"; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      status = (await prisma.photoJourney.findUniqueOrThrow({ where: { id: row.id } })).status;
+    }
+    expect(status).toBe("covered");
+  });
+
   it("re-opens a covered suggestion when its covering visit is deleted", async () => {
     const row = await finding();
     const visitId = await logVisit();
