@@ -31,6 +31,12 @@ vi.mock("../../../../lib/api/travtrackViews", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../../lib/api/travtrackViews")>()),
   travTrackViewsApi: views,
 }));
+// The stop card asks who the stop is; a picked stop must not reach the network.
+const legsApi = vi.hoisted(() => ({ stopIdentity: vi.fn(), setStopPlace: vi.fn() }));
+vi.mock("../../../../lib/api/travtrackLegs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../../lib/api/travtrackLegs")>()),
+  travTrackLegsApi: legsApi,
+}));
 const months = vi.hoisted(() => ({ months: vi.fn() }));
 vi.mock("../../../../lib/api/travtrackMonths", () => ({ travTrackMonthsApi: months }));
 const world = vi.hoisted(() => ({ load: vi.fn() }));
@@ -155,6 +161,8 @@ describe("TrackMapView — a click on a long span's route picks its leg", () => 
     api.lastSeen.mockResolvedValue(null);
     window.localStorage.clear();
     mapProps.last = null;
+    legsApi.stopIdentity.mockReset();
+    legsApi.stopIdentity.mockResolvedValue({ candidates: [], accepted: null });
   });
   afterEach(() => setClockForTests(null));
 
@@ -219,6 +227,49 @@ describe("TrackMapView — a click on a long span's route picks its leg", () => 
     await screen.findByTestId("map-stub");
     fireEvent.click(screen.getByText("pick-range"));
     expect(await screen.findByTestId("track-pick-none")).toBeInTheDocument();
+  });
+
+  it("a click on a long span where the phone stood still opens that stop's card", async () => {
+    // The clicked instant (T0 + 1 min) lies in a stop, not in a leg.
+    api.day.mockResolvedValue({
+      ...day([]),
+      stops: [
+        {
+          fromMs: T0 - 30 * MIN,
+          untilMs: T0 + 5 * MIN,
+          anchor: { lat: 52.5, lon: 13.4 },
+          stayRef: null,
+          place: null,
+        },
+      ],
+    });
+    renderMonth();
+    await screen.findByTestId("map-stub");
+    fireEvent.click(screen.getByText("pick-range"));
+    expect(await screen.findByTestId("track-stop-card")).toBeInTheDocument();
+    expect(api.day).toHaveBeenCalledWith("2026-10-03");
+    expect(screen.queryByTestId("track-pick-none")).not.toBeInTheDocument();
+  });
+
+  it("a dismissed stop is no pick on a long span either", async () => {
+    api.day.mockResolvedValue({
+      ...day([]),
+      stops: [
+        {
+          fromMs: T0 - 30 * MIN,
+          untilMs: T0 + 5 * MIN,
+          anchor: { lat: 52.5, lon: 13.4 },
+          stayRef: null,
+          place: null,
+          dismissed: true,
+        },
+      ],
+    });
+    renderMonth();
+    await screen.findByTestId("map-stub");
+    fireEvent.click(screen.getByText("pick-range"));
+    expect(await screen.findByTestId("track-pick-none")).toBeInTheDocument();
+    expect(screen.queryByTestId("track-stop-card")).not.toBeInTheDocument();
   });
 
   it("„Tag öffnen“ navigates to that day", async () => {

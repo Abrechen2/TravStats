@@ -360,6 +360,9 @@ if (process.env.NODE_ENV !== "test") {
         logger.warn({ operation: "server_start_country_index_warm_error", error })
       );
 
+    // A dead process's half-done key swap and import files (services/crashLeftovers.ts).
+    await (await import("./services/crashLeftovers")).reportCrashLeftovers();
+
     // The instance's upgrade history for the readiness page (never throws).
     void import("./services/readiness/state").then(({ recordRunningVersion }) =>
       recordRunningVersion()

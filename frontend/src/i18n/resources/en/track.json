@@ -980,6 +980,7 @@
     "calendar": "Calendar: {{title}}",
     "venue": "Place from map data",
     "whyLabel": "Why?",
+    "scale": "How it is counted: suggestion source within {{nearPluginM}} m 2 points, within {{farPluginM}} m 1 (one less when it doubts its own answer); calendar event 2 (1 when it only fits the day); place from map data within {{nearVenueM}} m 2, within {{closeVenueM}} m 1; a stay of {{longDwellMin}} min or more adds 1. {{highPoints}} points or more is high, {{mediumPoints}} or more medium, otherwise low.",
     "level": {
       "high": "Confidence high",
       "medium": "Confidence medium",

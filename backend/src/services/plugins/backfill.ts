@@ -31,7 +31,7 @@ import {
   writeEvidence,
   type FindingRunContext,
 } from "../travtrack/visits/stopFindings";
-import { askPlugin, MAX_SUGGESTION_DISTANCE_M, type AskDeps, type PluginAnswer } from "./ask";
+import { askPlugin, maxSuggestionDistanceM, type AskDeps, type PluginAnswer } from "./ask";
 import { ownPlugin, PLUGIN_SERVICE_ID } from "./registry";
 import { egressBlock } from "../externalServices/egress";
 
@@ -188,7 +188,8 @@ export async function runBackfill(
             suggestion.lat !== undefined && suggestion.lon !== undefined
               ? meters({ lat: suggestion.lat, lon: suggestion.lon }, stop.anchor)
               : null;
-          return distanceM !== null && distanceM > MAX_SUGGESTION_DISTANCE_M
+          return distanceM !== null &&
+            distanceM > maxSuggestionDistanceM(suggestion, outcome.nameRadiusMeters)
             ? []
             : [{ pluginId: plugin.id, pluginName: plugin.name, suggestion, distanceM }];
         });

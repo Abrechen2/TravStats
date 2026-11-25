@@ -1453,7 +1453,10 @@
       "recoveryKeyEnvPinned": "Der Schlüssel dieses Servers steht in der Umgebungsvariable ENCRYPTION_KEY. Trag dort den Wiederherstellungsschlüssel ein, starte neu und spiel die Sicherung dann zurück. Ich habe nichts zurückgespielt.",
       "recoveryKeyWriteFailed": "Ich konnte den Schlüssel nicht in den Ordner für Geheimnisse schreiben. Ich habe nichts zurückgespielt.",
       "recoveryKeyReauth": "Das Passwort fehlt oder stimmt nicht. Ich habe nichts zurückgespielt.",
-      "recoveryKeySecondFactor": "Gib den richtigen Code aus deiner Authenticator-App ein. Ich habe nichts zurückgespielt."
+      "recoveryKeySecondFactor": "Gib den richtigen Code aus deiner Authenticator-App ein. Ich habe nichts zurückgespielt.",
+      "recoveryKeyPasskey": "Der Passkey wurde nicht bestätigt. Bestätige mit dem Passwort oder versuch es noch einmal. Ich habe nichts zurückgespielt.",
+      "recoveryKeyPasskeyTooNew": "Dieser Passkey ist noch keine 24 Stunden alt. Bestätige mit dem Passwort. Ich habe nichts zurückgespielt.",
+      "keySwapUnresolved": "Ein früheres Zurückspielen wurde beim Schlüsseltausch unterbrochen. Kläre das zuerst (siehe „Einrichtung & Zustand“). Ich habe nichts zurückgespielt."
     },
     "retry": "Erneut versuchen",
     "baknow": {

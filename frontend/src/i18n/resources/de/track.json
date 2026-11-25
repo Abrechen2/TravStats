@@ -980,6 +980,7 @@
     "calendar": "Kalender: {{title}}",
     "venue": "Ort aus Kartendaten",
     "whyLabel": "Warum?",
+    "scale": "So wird gezählt: Vorschlagsquelle bis {{nearPluginM}} m 2 Punkte, bis {{farPluginM}} m 1 (einer weniger, wenn sie sich selbst unsicher ist); Kalendertermin 2 (passt er nur zum Tag, 1); Ort aus Kartendaten bis {{nearVenueM}} m 2, bis {{closeVenueM}} m 1; ab {{longDwellMin}} min Aufenthalt 1 dazu. Ab {{highPoints}} Punkten hoch, ab {{mediumPoints}} mittel, sonst niedrig.",
     "level": {
       "high": "Sicherheit hoch",
       "medium": "Sicherheit mittel",

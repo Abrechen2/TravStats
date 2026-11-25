@@ -9,7 +9,8 @@
  *    is honoured;
  *  - coordinates rounded to the plugin's precision before they leave; never the
  *    account's id, name or e-mail, never track points or other entries;
- *  - a suggestion more than 1 km from the stop is dropped and logged.
+ *  - a suggestion more than 1 km from the stop is dropped and logged — a name
+ *    match (`reason: "name"`) up to the radius the plugin announced, at most 2 km.
  *
  * A plugin that failed, or that a limit holds back, leaves the stop owed for
  * that plugin only (`owed`); the others' answers stand.
@@ -30,6 +31,24 @@ export const RETRY_BASE_MS = 15 * 60_000;
 export const RETRY_MAX_MS = 6 * 60 * 60_000;
 export const SAME_STOP_M = 300;
 export const MAX_SUGGESTION_DISTANCE_M = 1000;
+/** The furthest a name match may lie, whatever radius the plugin announced. */
+export const MAX_NAME_MATCH_DISTANCE_M = 2000;
+
+/**
+ * How far from the stop `suggestion` may lie. A distance match keeps the 1 km
+ * limit; a name match ("MSA", 1.4 km) is allowed out to the radius the plugin
+ * said it searched names in, capped at 2 km — before, every name match between
+ * 1 and 2 km was dropped as "too far" and never reached the inbox.
+ */
+export function maxSuggestionDistanceM(
+  suggestion: Pick<PluginSuggestion, "reason">,
+  nameRadiusMeters: number | undefined
+): number {
+  if (suggestion.reason !== "name" || nameRadiusMeters === undefined) {
+    return MAX_SUGGESTION_DISTANCE_M;
+  }
+  return Math.min(MAX_NAME_MATCH_DISTANCE_M, Math.max(MAX_SUGGESTION_DISTANCE_M, nameRadiusMeters));
+}
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 
@@ -261,7 +280,10 @@ export async function askPlugins(
           ? meters({ lat: suggestion.lat, lon: suggestion.lon }, stop)
           : null;
       // A plugin cannot move a stop across town.
-      if (distanceM !== null && distanceM > MAX_SUGGESTION_DISTANCE_M) {
+      if (
+        distanceM !== null &&
+        distanceM > maxSuggestionDistanceM(suggestion, outcome.nameRadiusMeters)
+      ) {
         logger.warn({
           operation: "plugins.suggestionTooFar",
           userId,

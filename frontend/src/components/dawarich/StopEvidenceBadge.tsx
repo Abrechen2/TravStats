@@ -1,6 +1,10 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import type { EvidenceReason, StopEvidenceView } from "../../lib/stopEvidenceView";
+import {
+  EVIDENCE_THRESHOLDS,
+  type EvidenceReason,
+  type StopEvidenceView,
+} from "../../lib/stopEvidenceView";
 import { token } from "../ui/tokens";
 
 const LEVELS = ["low", "medium", "high"] as const;
@@ -94,6 +98,19 @@ export default function StopEvidenceBadge({
       {confidence && (
         <p className="t-caption" data-testid="stop-evidence-why">
           {t("track:evidence.whyLabel")} {confidence.reasons.map(reason).join(", ")}
+        </p>
+      )}
+      {confidence && (
+        <p className="t-caption" data-testid="stop-evidence-scale">
+          {t("track:evidence.scale", {
+            nearPluginM: EVIDENCE_THRESHOLDS.nearPluginM,
+            farPluginM: EVIDENCE_THRESHOLDS.farPluginM,
+            nearVenueM: EVIDENCE_THRESHOLDS.nearVenueM,
+            closeVenueM: EVIDENCE_THRESHOLDS.closeVenueM,
+            longDwellMin: EVIDENCE_THRESHOLDS.longDwellMin,
+            highPoints: EVIDENCE_THRESHOLDS.highPoints,
+            mediumPoints: EVIDENCE_THRESHOLDS.mediumPoints,
+          })}
         </p>
       )}
     </div>

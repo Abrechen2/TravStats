@@ -110,7 +110,8 @@ registry.registerPath({
     "400, nothing restored) and installed as this instance's key before the dump replays, so the " +
     "restored credentials stay readable. A malformed key answers RESTORE_RECOVERY_KEY_INVALID (400) " +
     "synchronously; an instance whose key the ENCRYPTION_KEY variable pins fails the job with " +
-    "RESTORE_RECOVERY_KEY_ENV_PINNED (409). An archive written by a newer version fails it with " +
+    "RESTORE_RECOVERY_KEY_ENV_PINNED (409), and while an earlier key swap that died half-way is " +
+    "unresolved with RESTORE_KEY_SWAP_UNRESOLVED (409). An archive written by a newer version fails it with " +
     "RESTORE_ARCHIVE_NEWER (409), one without a usable migration history with " +
     "RESTORE_ARCHIVE_UNVERSIONED or RESTORE_ARCHIVE_FAILED_MIGRATION (400). An archive " +
     "from an older version is replayed and migrated to this version in one transaction; " +

@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { errorContent } from "./shared";
-import { companionRemoteSchema } from "../../../routes/sharing";
+import { companionNotSameSchema, companionRemoteSchema } from "../../../routes/sharing";
 
 const tags = ["Sharing"];
 const err = (description: string) => ({ description, content: errorContent });
@@ -48,16 +48,18 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/sharing/companions/{id}/not-same",
-  summary: "Say a companion is not a person on another server",
-  description: "Remembered, so the same-name question is not asked again.",
+  summary: "Say a companion is not a person on another server, or not a member of this one",
+  description:
+    "Remembered, so the same-name question is not asked again. `remoteId` names a pairing; " +
+    "`userId` an account of this server that shares a trip group with the caller.",
   tags,
   request: {
     params: idParam,
-    body: { content: { "application/json": { schema: companionRemoteSchema } } },
+    body: { content: { "application/json": { schema: companionNotSameSchema } } },
   },
   responses: {
     200: ok("Remembered", done),
-    404: err("`COMPANION_NOT_FOUND`, or `SHARE_REMOTE_PERSON_NOT_FOUND`"),
+    404: err("`COMPANION_NOT_FOUND`, `SHARE_REMOTE_PERSON_NOT_FOUND`, or `SHARE_MEMBER_NOT_FOUND`"),
   },
 });
 

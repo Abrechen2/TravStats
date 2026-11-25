@@ -184,6 +184,36 @@ export async function markNotSameRemote(
   });
 }
 
+export const localKey = (userId: string): string => `u:${userId}`;
+
+/**
+ * The same for a member of this server: "not the same person" as `targetUserId`, remembered.
+ * Only for an account the caller shares a trip group with — the only place the question is asked.
+ */
+export async function markNotSameLocal(
+  userId: string,
+  companionId: string,
+  targetUserId: string
+): Promise<void> {
+  const companion = await prisma.companion.findFirst({ where: { id: companionId, userId } });
+  if (!companion) throw companionNotFound();
+  const together = await prisma.trip.findFirst({
+    where: {
+      userId: targetUserId,
+      shareGroupId: { not: null },
+      shareGroup: { trips: { some: { userId } } },
+    },
+    select: { id: true },
+  });
+  if (!together) throw new AppError("No such member", 404, "SHARE_MEMBER_NOT_FOUND");
+  const key = localKey(targetUserId);
+  if (companion.notSameAs.includes(key)) return;
+  await prisma.companion.update({
+    where: { id: companion.id },
+    data: { notSameAs: [...companion.notSameAs, key] },
+  });
+}
+
 type DuplicateTrip = {
   id: string;
   name: string;
@@ -390,7 +420,7 @@ export async function placeLocalSharerCompanion(
   }
   if (!(await mayOfferTripTo(tx, recipientId, sharer.id))) return "skipped";
   const asked = await nameMatches(tx, recipientId, sharer.displayName, {
-    notKey: `u:${sharer.id}`,
+    notKey: localKey(sharer.id),
   });
   if (asked.length > 0) return "ask";
   const canonicalName = canonicalizeCompanionName(sharer.displayName);

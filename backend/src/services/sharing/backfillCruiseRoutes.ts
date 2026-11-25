@@ -5,6 +5,7 @@ import type { CruiseLegRouteFact } from "./facts";
 import { receivingMembers } from "./members";
 import { noticeMeta, recordEntryNotice, SHARE_TX_TIMEOUT_MS } from "./propagate";
 import { queueFactUpdate } from "./federation/outbound";
+import { recordConflict } from "./federation/conflicts";
 
 /**
  * Hand-drawn cruise lines became a shared fact on 2026-11-24. A share group that existed before
@@ -13,7 +14,9 @@ import { queueFactUpdate } from "./federation/outbound";
  *
  * - on this server, every receiving member's copy that has NO lines of its own takes the
  *   sharer's, with an "updated" notice like any change; a copy with lines of its own keeps them
- *   (counted as `kept`) — a recipient's own drawing is never overwritten by a rollout;
+ *   (counted as `kept`) — a recipient's own drawing is never overwritten by a rollout, and the
+ *   recipient gets the same `conflict` notice a spoke would (their line beside the sharer's,
+ *   answered with "mine" or "theirs"), so a kept line is never kept silently;
  * - on other servers, a `fact-update` from "no lines" to the lines is queued. A spoke whose copy
  *   already has lines of its own sees a before-value that does not match and keeps its line as a
  *   conflict in the inbox (the facts model, `inbound.ts`), never silently.
@@ -55,6 +58,15 @@ async function backfillOne(
     const held = (copy.facts.legRoutes as CruiseLegRouteFact[] | undefined) ?? [];
     if (sameFact(held, routes)) continue;
     if (held.length > 0) {
+      await recordConflict(tx, {
+        recipient: member,
+        groupId,
+        author: { kind: "user", id: row.userId },
+        entity: "cruise",
+        copy,
+        theirs: row.facts,
+        keys: ["legRoutes"],
+      });
       result.kept++;
       continue;
     }

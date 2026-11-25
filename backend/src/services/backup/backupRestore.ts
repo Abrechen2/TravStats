@@ -34,7 +34,7 @@ import { restoreDatabaseThenSettle } from "./restoreAftermath";
 import {
   installArchiveKey,
   prepareKeySwap,
-  reencryptKeptIdentity,
+  finishKeySwap,
   resolveArchiveRecoveryKey,
   revertKeySwap,
 } from "./restoreRecoveryKey";
@@ -533,7 +533,7 @@ export async function restoreBackup(
         // The identity kept from before the dump was encrypted under the old
         // key; once the dump is in, it belongs under the new one — also when a
         // later verification step failed, because the key has changed either way.
-        if (swap && replaced) await reencryptKeptIdentity(swap);
+        if (swap && replaced) await finishKeySwap(swap);
       }
     }
 

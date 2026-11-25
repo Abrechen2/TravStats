@@ -354,6 +354,7 @@
     "distanceSource": "Distance source",
     "geometry": "Route line",
     "geometrySource": "Route line source",
+    "manualScope": "Line applies to",
     "actualDepartureTime": "Actual departure",
     "actualArrivalTime": "Actual arrival",
     "lookupProvider": "Lookup source",

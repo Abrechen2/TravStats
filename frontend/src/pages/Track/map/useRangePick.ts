@@ -5,12 +5,13 @@ import { localDay } from "../../../shared/time";
 import type { TrackSelection } from "./trackLegs";
 
 /**
- * Picking a leg on a long span (month, year, Zeitraum). The range read carries
- * no legs — shipping every leg's figures for a year would be most of the
- * payload — so a click names an instant, the day of that instant is read, and
- * the leg that holds the instant is the pick. Only the day that was clicked is
- * ever read. A failed read, or a click between two legs, says so instead of
- * doing nothing.
+ * Picking a leg or a stop on a long span (month, year, Zeitraum). The range
+ * read carries neither — shipping every leg's figures for a year would be most
+ * of the payload — so a click names an instant, the day of that instant is
+ * read, and the leg that holds the instant is the pick; with no leg there, the
+ * stop that holds it (the points recorded while standing still are on the same
+ * line). Only the day that was clicked is ever read. A failed read, or a click
+ * on neither, says so instead of doing nothing.
  */
 export type RangePickState =
   { kind: "idle" } | { kind: "loading" } | { kind: "failed"; key: string } | { kind: "none" };
@@ -45,13 +46,22 @@ export function useRangePick(
       }
       if (id !== run.current) return;
       const leg = (read.legs ?? []).find((l) => l.fromMs <= atMs && atMs <= l.untilMs);
-      if (!leg) {
+      // A dismissed stop is not drawn on a day either.
+      const stop = leg
+        ? undefined
+        : (read.stops ?? []).find((s) => !s.dismissed && s.fromMs <= atMs && atMs <= s.untilMs);
+      const selection: TrackSelection | null = leg
+        ? { kind: "leg", date: read.date, id: leg.id }
+        : stop
+          ? { kind: "stop", date: read.date, fromMs: stop.fromMs }
+          : null;
+      if (!selection) {
         setState({ kind: "none" });
         return;
       }
       setDay(read);
       setState({ kind: "idle" });
-      onSelect({ kind: "leg", date: read.date, id: leg.id });
+      onSelect(selection);
     },
     [zone, onSelect]
   );

@@ -230,6 +230,11 @@ registry.registerPath({
                   "accountInactive",
                 ])
                 .nullable(),
+              nameMatches: z
+                .array(z.object({ id: z.string(), name: z.string(), onTrip: z.boolean() }))
+                .describe(
+                  "A member who is none of the caller's companions: the caller's unlinked companions of the same name, for the question \"Ist das <Name>?\""
+                ),
             })
           )
           .describe("Every companion of the trip, then every group member who is none of them"),

@@ -99,5 +99,12 @@ module.exports = {
   moduleNameMapper: {
     "^uuid$": "<rootDir>/src/__mocks__/uuid.ts",
     "^webdav$": "<rootDir>/src/__mocks__/webdav.ts",
+    // mcp.package / mcp.contract import packages/travstats-mcp's source, and
+    // Node resolves its `zod` from packages/travstats-mcp/node_modules — which
+    // only exists where someone ran `npm ci` in the package (the Forgejo
+    // workflow does, the GitHub one and the worker sandboxes do not). Both
+    // ask for zod 4, so the package's source gets the backend's copy: one
+    // zod instance, and the suites no longer depend on a second install.
+    "^zod$": require.resolve("zod"),
   },
 };

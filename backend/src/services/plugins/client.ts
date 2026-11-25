@@ -41,7 +41,14 @@ export const PLUGIN_FAILURES = [
 export type PluginFailure = (typeof PLUGIN_FAILURES)[number];
 
 export type PluginOutcome =
-  | { kind: "ok"; version: number; suggestions: PluginSuggestion[]; latencyMs: number }
+  | {
+      kind: "ok";
+      version: number;
+      suggestions: PluginSuggestion[];
+      /** The radius the plugin announced for its name matches, if it did. */
+      nameRadiusMeters?: number;
+      latencyMs: number;
+    }
   | { kind: "empty"; version: number | null; latencyMs: number }
   | {
       kind: "failed";
@@ -190,6 +197,9 @@ export async function callPlugin(
     kind: "ok",
     version: parsed.data.version,
     suggestions: parsed.data.suggestions,
+    ...(parsed.data.nameRadiusMeters !== undefined
+      ? { nameRadiusMeters: parsed.data.nameRadiusMeters }
+      : {}),
     latencyMs,
   };
 }

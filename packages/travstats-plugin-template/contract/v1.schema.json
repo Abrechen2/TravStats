@@ -149,6 +149,11 @@
             "$ref": "#/$defs/SuggestionPluginSuggestionV1"
           },
           "maxItems": 5
+        },
+        "nameRadiusMeters": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
         }
       },
       "required": [

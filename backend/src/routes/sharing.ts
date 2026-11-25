@@ -30,6 +30,7 @@ import { deleteOwnCopy, undoNotice } from "../services/sharing/undo";
 import { resolveConflict } from "../services/sharing/federation/conflicts";
 import {
   linkRemoteCompanion,
+  markNotSameLocal,
   markNotSameRemote,
   tripCompanionDuplicates,
 } from "../services/sharing/remoteCompanion";
@@ -59,6 +60,8 @@ export const companionLinkSchema = z.object({ userId: idSchema }).strict();
 export const shareTripSchema = z.object({ companionId: idSchema }).strict();
 /** One person, one companion (2026-11-24): a companion linked to — or told apart from — a pairing. */
 export const companionRemoteSchema = z.object({ remoteId: idSchema }).strict();
+/** "Not the same person": a person on another server, or a member of this one. */
+export const companionNotSameSchema = z.union([companionRemoteSchema, companionLinkSchema]);
 /** F-S4d: a conflict is answered with the other side's value or one's own. */
 export const resolveConflictSchema = z.object({ choice: z.enum(["mine", "theirs"]) }).strict();
 
@@ -150,8 +153,9 @@ router.post(
   "/companions/:id/not-same",
   handle(async (req, res) => {
     const id = idSchema.parse(req.params.id);
-    const { remoteId } = companionRemoteSchema.parse(req.body ?? {});
-    await markNotSameRemote(req.userId!, id, remoteId);
+    const body = companionNotSameSchema.parse(req.body ?? {});
+    if ("remoteId" in body) await markNotSameRemote(req.userId!, id, body.remoteId);
+    else await markNotSameLocal(req.userId!, id, body.userId);
     res.json({ success: true, data: { ok: true } });
   })
 );

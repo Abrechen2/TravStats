@@ -13,6 +13,7 @@ import { loadAllTests } from "../externalServices/tests";
 import type { LastTest } from "../externalServices/types";
 import { getEffectivePublicUrl } from "./effectivePublicUrl";
 import { hasBackupTarget, isConfirmedForCurrentKey } from "../backup/recoveryKey";
+import { readInterruptedKeySwap } from "../backup/keySwapMarker";
 import {
   loadAccountProblemFacts,
   loadInstanceProblemFacts,
@@ -31,6 +32,8 @@ export interface InstanceFacts {
   offsiteConfigured: boolean;
   /** The instance key is confirmed as kept by an admin (services/backup/recoveryKey.ts). */
   recoveryKeyConfirmed: boolean;
+  /** A restore died mid key-swap and its marker is still there (services/backup/keySwapMarker.ts). */
+  keySwapInterrupted: boolean;
   /** Stored tests of the instance's keyed providers. */
   providerTests: ReadonlyMap<string, LastTest>;
   instanceMailbox: { lastOkAt: Date | null; lastErrorAt: Date | null } | null;
@@ -148,6 +151,7 @@ async function loadInstance(now: Date): Promise<InstanceFacts> {
       : null,
     offsiteConfigured: admin ? hasBackupTarget(admin) : false,
     recoveryKeyConfirmed: admin ? isConfirmedForCurrentKey(admin) : false,
+    keySwapInterrupted: readInterruptedKeySwap() !== null,
     providerTests,
     instanceMailbox: mailbox,
     travtrackOffered: travtrack?.enabled ?? false,

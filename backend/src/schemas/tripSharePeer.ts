@@ -54,6 +54,8 @@ export const TRIP_SHARE_FEATURES = [
   "leg-routes",
   // Linking an existing copy (forgejo#440): `offer-preview`, the offered entries before the answer.
   "offer-preview",
+  // A ferry's `manualScope` as a fact (rc.46): whether a hand-drawn line is the pair's or the crossing's.
+  "ferry-manual-scope",
 ] as const;
 export type TripShareFeature = (typeof TRIP_SHARE_FEATURES)[number];
 

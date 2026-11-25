@@ -2,6 +2,7 @@ import { prisma } from "../../../db";
 import { encryptApiKey } from "../../../utils/encryption";
 import { updatePolicy } from "../../externalServices/policy";
 import {
+  maxSuggestionDistanceM,
   askPlugin,
   askPlugins,
   clearPluginInFlight,
@@ -171,6 +172,45 @@ describe("askPlugins", () => {
     expect(r.outcomes).toMatchObject({ ok: 1, tooFar: 1 });
     const row = await prisma.suggestionPlugin.findUniqueOrThrow({ where: { id: pluginId } });
     expect(row).toMatchObject({ lastOutcome: "ok", lastVersion: 1, failures: 0 });
+  });
+
+  it("keeps a name match between 1 and 2 km when the plugin announced that radius", async () => {
+    // ~1.5 km and ~2.5 km north of the stop.
+    const at15 = { lat: 48.137, lon: 9.654321 };
+    const at25 = { lat: 48.146, lon: 9.654321 };
+    const answer = (nameRadiusMeters?: number) => () =>
+      new Response(
+        JSON.stringify({
+          version: 1,
+          ...(nameRadiusMeters !== undefined ? { nameRadiusMeters } : {}),
+          suggestions: [
+            { name: "MSA", ...at15, reason: "name", matchedToken: "MSA", confidence: 0.7 },
+            { name: "Beyond", ...at25, reason: "name", confidence: 0.7 },
+            { name: "DistanceFar", ...at15, reason: "distance", confidence: 0.9 },
+          ],
+        }),
+        { status: 200 }
+      );
+    reply = answer(2500);
+    const r = await ask();
+    // Name match at 1.5 km kept; 2.5 km beyond the 2 km cap; a distance match stays at 1 km.
+    expect(r.answers.map((a) => a.suggestion.name)).toEqual(["MSA"]);
+    expect(r.outcomes).toMatchObject({ ok: 1, tooFar: 2 });
+
+    // Without an announced radius the 1 km limit holds for name matches too.
+    await prisma.suggestionPluginCall.deleteMany({ where: { pluginId } });
+    clearPluginInFlight();
+    reply = answer(undefined);
+    const later = { ...STOP, fromMs: STOP.fromMs + 86_400_000, untilMs: STOP.untilMs + 86_400_000 };
+    const plain = await ask(later);
+    expect(plain.answers).toEqual([]);
+  });
+
+  it("caps the name-match radius at 2 km and never lowers the 1 km floor", () => {
+    expect(maxSuggestionDistanceM({ reason: "name" }, 5000)).toBe(2000);
+    expect(maxSuggestionDistanceM({ reason: "name" }, 300)).toBe(1000);
+    expect(maxSuggestionDistanceM({ reason: "distance" }, 2000)).toBe(1000);
+    expect(maxSuggestionDistanceM({}, 2000)).toBe(1000);
   });
 });
 

@@ -1,7 +1,8 @@
 import { prisma } from "../../db";
 import { consentStatusSchema, type ConsentStatus } from "../../schemas/sharing";
 import { acceptedWith, missingGroupConsent } from "./members";
-import { offerStatuses } from "../friends/authz";
+import { mayOfferTripTo, offerStatuses } from "../friends/authz";
+import { localKey, nameMatches, type NameMatch } from "./remoteCompanion";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
 /**
@@ -34,6 +35,12 @@ export interface TripPerson {
   /** Members only: an accepted consent in either direction lets changes through. */
   receivesChanges: boolean | null;
   shareBlockedBy: ShareBlock | null;
+  /**
+   * A member who is none of the caller's companions: the caller's unlinked companions whose
+   * name may be theirs, for "Ist das <Name>?" — as for a person on another server. Only where
+   * the caller may link to them (`mayOfferTripTo`); empty otherwise and on every other row.
+   */
+  nameMatches: NameMatch[];
 }
 
 export async function tripPeople(
@@ -104,6 +111,7 @@ export async function tripPeople(
       member,
       receivesChanges: member && account ? receiving.has(account.id) : null,
       shareBlockedBy,
+      nameMatches: [],
     };
   };
 
@@ -117,7 +125,17 @@ export async function tripPeople(
   const shown = new Set(people.flatMap((p) => (p.account ? [p.account.id] : [])));
   for (const member of members) {
     if (!shown.has(member.id)) {
-      people.push(await rowFor(`u:${member.id}`, null, member.displayName, member));
+      const row = await rowFor(`u:${member.id}`, null, member.displayName, member);
+      const askable = await mayOfferTripTo(prisma, userId, member.id);
+      people.push({
+        ...row,
+        nameMatches: askable
+          ? await nameMatches(prisma, userId, member.displayName, {
+              tripId: trip.id,
+              notKey: localKey(member.id),
+            })
+          : [],
+      });
     }
   }
   const acceptedIds = [...outgoing].flatMap(([id, status]) => (status === "accepted" ? [id] : []));

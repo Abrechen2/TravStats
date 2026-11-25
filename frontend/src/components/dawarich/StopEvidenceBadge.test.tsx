@@ -29,6 +29,13 @@ describe("StopEvidenceBadge", () => {
     expect(screen.getByTestId("stop-evidence-meter")).toHaveAttribute("data-level", "high");
     expect(screen.getByTestId("stop-evidence-why")).toHaveTextContent("Projektarchiv");
     expect(screen.getByTestId("stop-evidence-why")).toHaveTextContent("track:evidence.why.dwell");
+    // "Warum?" also says how the level is counted, with the thresholds it is computed from.
+    const scale = screen.getByTestId("stop-evidence-scale");
+    expect(scale).toHaveTextContent("track:evidence.scale");
+    expect(scale).toHaveTextContent('"highPoints":4');
+    expect(scale).toHaveTextContent('"mediumPoints":2');
+    expect(scale).toHaveTextContent('"nearVenueM":50');
+    expect(scale).toHaveTextContent('"farPluginM":1000');
   });
 
   it("a stop named only by the venue lookup says so", () => {
