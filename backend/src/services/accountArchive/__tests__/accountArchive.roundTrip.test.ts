@@ -358,6 +358,15 @@ describe("account archive round trip", () => {
     expect(link).toEqual({ entry_id: flight.id, t_s: 180 });
   });
 
+  it("carries the owner's per-day source and outlier choice (travtrack_day_sources)", async () => {
+    const row = await one<{ override_source: string; outlier_decision: string; day: Date }>(
+      dst,
+      `SELECT override_source, outlier_decision, day FROM travtrack_day_sources WHERE user_id = $1`,
+      [TARGET_USER]
+    );
+    expect(row).toMatchObject({ override_source: "device", outlier_decision: "keep" });
+  });
+
   it("resolves catalogue references by natural key and never writes a catalogue row", async () => {
     const stop = await one<{ port_id: number }>(
       dst,

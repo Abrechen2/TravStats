@@ -4,6 +4,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import { travTrackSwitches } from "../../services/travtrack/__tests__/switches";
+import { buildTravTrackDataExport } from "../../services/travtrack/accountExport";
 import { makeUser, wipeTravTrack } from "../../services/travtrack/__tests__/fixtures";
 
 /**
@@ -54,6 +55,24 @@ describe("TravTrack — best source per day (routes)", () => {
     await switches.restore();
     await prisma.user.deleteMany({ where: { username: { startsWith: PREFIX } } });
     await prisma.$disconnect();
+  });
+
+  it("the account export carries the owner's per-day source and outlier choices", async () => {
+    await walk("companion:phone-1", D10 + 8 * H, D10 + 12 * H, 1);
+    await walk("gpx:takeout", D10 + 8 * H, D10 + 12 * H, 15, 0.01);
+    await request(app)
+      .get("/api/v1/travtrack/day")
+      .query({ date: "2026-08-10" })
+      .set("Cookie", cookie);
+    const chosen = await request(app)
+      .put("/api/v1/travtrack/day-sources/2026-08-10")
+      .set("Cookie", cookie)
+      .send({ overrideSource: "gpx:takeout" });
+    expect(chosen.status).toBe(200);
+    const exported = await buildTravTrackDataExport(userId);
+    expect(exported.daySourceChoices).toEqual([
+      expect.objectContaining({ day: "2026-08-10", overrideSource: "gpx:takeout" }),
+    ]);
   });
 
   it("names a phone source by its paired device, not by its device id", async () => {

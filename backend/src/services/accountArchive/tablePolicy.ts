@@ -307,6 +307,14 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   // rc46 extras C: the smoothing choices and road-matched stretches the owner made.
   travtrack_cleanups: owner(),
   travtrack_zone_tombstones: owner(),
+  // Best source per day: only the days the owner decided by hand (a chosen source, an
+  // outlier decision) travel; the rest is re-derived from the restored points. The
+  // derived columns ride along and are refreshed by the next derivation, which keeps
+  // the choice (`bestSource/store.ts`).
+  travtrack_day_sources: owner({
+    extraWhere: (a) =>
+      `(${a}."override_source" IS NOT NULL OR ${a}."outlier_decision" IS NOT NULL)`,
+  }),
   reroute_runs: excluded(
     "Bulk re-routing progress of this server (forgejo#436): the cursor and counts describe a pass over this server's rows"
   ),
@@ -445,9 +453,6 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   travel_plan_usage: excluded(BOOKKEEPING),
   travtrack_dawarich_imports: excluded(BOOKKEEPING),
   travtrack_derivation_state: excluded(DERIVED),
-  // Best source per day: re-derived from the restored points. A per-day source or outlier
-  // choice made by hand does not travel yet (integrate/rc46, reported as open).
-  travtrack_day_sources: excluded(DERIVED),
   travtrack_diagnostic_events: excluded("14-day diagnostics log with its own export"),
   travtrack_diagnostic_uploads: excluded(BOOKKEEPING),
   travtrack_dirty_days: excluded(DERIVED),
