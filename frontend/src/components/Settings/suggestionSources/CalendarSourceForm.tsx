@@ -142,7 +142,11 @@ export default function CalendarSourceForm({
               onChange={(e) => setUsername(e.target.value)}
             />
           </Field>
-          <Field label={t(`${NS}.password`)} htmlFor="cal-dav-pw" hint={t(`${NS}.passwordHint`)}>
+          <Field
+            label={t(`${NS}.password`)}
+            htmlFor="cal-dav-pw"
+            hint={`${t(`${NS}.appPasswordHint`)} ${t(`${NS}.passwordHint`)}`}
+          >
             <Input
               id="cal-dav-pw"
               type="password"

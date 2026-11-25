@@ -830,7 +830,7 @@
     }
   },
   "legacy": {
-    "title": "Managed under External services",
+    "title": "Managed under Settings → Server → Services",
     "body": "Switch, credentials and tests for {{name}} now live in one place: the list of external services.",
     "statusLabel": "Status",
     "status": {

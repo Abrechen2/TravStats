@@ -933,11 +933,11 @@
     },
     "timeline": {
       "title": "Google Zeitachse (Timeline)",
-      "description": "Deine Standort-Zeitachse von Google kommt in den TravTrack-Verlauf. Die Datei holst du auf dem Handy: Google Maps → Einstellungen → Zeitachse → Zeitachse exportieren (Timeline.json) — Google speichert die Zeitachse inzwischen nur noch auf dem Gerät. Ältere Exporte aus Google Takeout funktionieren auch.",
+      "description": "Deine Standort-Zeitachse von Google kommt in den TravTrack-Verlauf. Die Datei holst du auf dem Handy: Telefon-Einstellungen → Standort → Standortdienste → Zeitachse → Zeitachsendaten exportieren (Timeline.json) — Google speichert die Zeitachse inzwischen nur noch auf dem Gerät. Ältere Exporte aus Google Takeout funktionieren auch.",
       "group": "TravTrack",
       "off": "TravTrack ist auf diesem Server aus, deshalb kann keine Zeitachse importiert werden.",
       "offAdmin": "TravTrack einschalten",
-      "offMember": "Ein Admin kann es unter Einstellungen → Instanz einschalten.",
+      "offMember": "Ein Admin kann es unter Einstellungen → TravTrack → Bereitstellung einschalten.",
       "unknown": "Ob TravTrack verfügbar ist, konnte nicht gelesen werden. Lade die Seite neu.",
       "demo": "Im Demo-Konto ist der Import gesperrt.",
       "toTravTrack": "Importe in den TravTrack-Einstellungen",

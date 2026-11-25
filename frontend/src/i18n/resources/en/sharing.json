@@ -742,7 +742,7 @@
         "submit": "Offer trip",
         "working": "Checking …",
         "invalid": "Enter it as username@server, e.g. anna@trav.example.org.",
-        "serverNotConnected": "{{origin}} is not admitted on this instance yet. Your admin does that under Settings → Instance – or you create an invitation code.",
+        "serverNotConnected": "{{origin}} is not admitted on this instance yet. Your admin does that under Settings → Server → Server connections – or you create an invitation code.",
         "requested": "Request sent to {{name}} on {{origin}}. Once they agree they appear in the list above and you can offer them the trip.",
         "waiting": "The request to {{name}} on {{origin}} is still open. They have to confirm it first.",
         "failed": "The person on the other server could not be reached."

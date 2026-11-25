@@ -42,6 +42,7 @@
       "serverHint": "z. B. https://caldav.example.com/",
       "username": "Benutzer",
       "password": "App-Passwort",
+      "appPasswordHint": "iCloud/Google: App-spezifisches Passwort verwenden.",
       "passwordHint": "Wird verschlüsselt gespeichert und nie wieder angezeigt.",
       "discover": "Kalender suchen",
       "collections": "Welche Kalender gelesen werden",

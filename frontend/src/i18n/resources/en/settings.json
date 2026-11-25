@@ -933,11 +933,11 @@
     },
     "timeline": {
       "title": "Google Timeline",
-      "description": "Your Google location Timeline goes into your TravTrack history. Get the file on your phone: Google Maps → Settings → Timeline → Export Timeline (Timeline.json) — Google now keeps the Timeline on the device only. Older Google Takeout exports work too.",
+      "description": "Your Google location Timeline goes into your TravTrack history. Get the file on your phone: phone Settings → Location → Location services → Timeline → Export Timeline data (Timeline.json) — Google now keeps the Timeline on the device only. Older Google Takeout exports work too.",
       "group": "TravTrack",
       "off": "TravTrack is off on this server, so no Timeline can be imported.",
       "offAdmin": "Switch TravTrack on",
-      "offMember": "An admin can switch it on under Settings → Instance.",
+      "offMember": "An admin can switch it on under Settings → TravTrack → Provisioning.",
       "unknown": "Whether TravTrack is available could not be read. Reload the page.",
       "demo": "Import is locked in the demo account.",
       "toTravTrack": "Imports in the TravTrack settings",

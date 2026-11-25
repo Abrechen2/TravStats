@@ -830,7 +830,7 @@
     }
   },
   "legacy": {
-    "title": "Verwaltet unter Externe Dienste",
+    "title": "Verwaltet unter Einstellungen → Server → Dienste",
     "body": "Schalter, Zugangsdaten und Tests von {{name}} liegen jetzt an einer Stelle: in der Liste der externen Dienste.",
     "statusLabel": "Status",
     "status": {

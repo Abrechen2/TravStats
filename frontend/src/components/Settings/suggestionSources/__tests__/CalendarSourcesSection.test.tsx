@@ -97,6 +97,16 @@ describe("CalendarSourcesSection", () => {
     expect(await screen.findByText("suggestionSources:calendar.blocked.service_off")).toBeTruthy();
   });
 
+  it("tells iCloud/Google users under the CalDAV password to use an app-specific password", async () => {
+    api.list.mockResolvedValue({ sources: [], blocked: null, geocodeLocations: false });
+    render(<CalendarSourcesSection />);
+    await userEvent.click(await screen.findByText("suggestionSources:calendar.add"));
+    await userEvent.click(screen.getByText("suggestionSources:calendar.form.caldav"));
+    expect(
+      screen.getByText(/suggestionSources:calendar\.form\.appPasswordHint/)
+    ).toBeInTheDocument();
+  });
+
   it("adds a CalDAV source with the calendars picked after discovery", async () => {
     api.list.mockResolvedValue({ sources: [], blocked: null, geocodeLocations: false });
     api.discover.mockResolvedValue([

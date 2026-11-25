@@ -459,7 +459,7 @@
     },
     "provider": {
       "title": "AI provider",
-      "description": "Who reads the bookings no template knows? Ollama always goes first when it is configured. If it does not answer, TravStats asks the cloud providers that are switched on below, in order. Switching on, key, model and consent are set under External services; only the order is set here.",
+      "description": "Who reads the bookings no template knows? Ollama always goes first when it is configured. If it does not answer, TravStats asks the cloud providers that are switched on below, in order. Switching on, key, model and consent are set under Settings → Server → Services; only the order is set here.",
       "chain": {
         "title": "Cloud provider priority",
         "hint": "If Ollama does not answer (not configured, or not reachable), TravStats tries these providers in order — but only the ones with BOTH a key AND consent. A provider missing either is skipped, never tried. A provider that answers ends the chain — even with a thin answer."

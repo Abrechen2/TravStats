@@ -459,7 +459,7 @@
     },
     "provider": {
       "title": "KI-Anbieter",
-      "description": "Wer liest die Buchungen, die keine Vorlage kennt? Ollama läuft immer zuerst, wenn es konfiguriert ist. Antwortet es nicht, fragt TravStats der Reihe nach die eingeschalteten Cloud-Anbieter unten. Einschalten, Schlüssel, Modell und Zustimmung stellst du unter Externe Dienste ein; hier legst du nur die Reihenfolge fest.",
+      "description": "Wer liest die Buchungen, die keine Vorlage kennt? Ollama läuft immer zuerst, wenn es konfiguriert ist. Antwortet es nicht, fragt TravStats der Reihe nach die eingeschalteten Cloud-Anbieter unten. Einschalten, Schlüssel, Modell und Zustimmung stellst du unter Einstellungen → Server → Dienste ein; hier legst du nur die Reihenfolge fest.",
       "chain": {
         "title": "Rangfolge der Cloud-Anbieter",
         "hint": "Antwortet Ollama nicht (nicht konfiguriert oder nicht erreichbar), versucht TravStats diese Anbieter der Reihe nach — aber nur, wenn Schlüssel UND Zustimmung vorliegen. Ein Anbieter ohne beides wird übersprungen, nie versucht. Ein Anbieter, der antwortet, beendet die Kette — auch bei einer mageren Antwort."

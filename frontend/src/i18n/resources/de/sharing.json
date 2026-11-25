@@ -742,7 +742,7 @@
         "submit": "Reise anbieten",
         "working": "Wird geprüft …",
         "invalid": "Bitte als benutzer@server eingeben, z. B. anna@trav.example.org.",
-        "serverNotConnected": "{{origin}} ist für diese Instanz noch nicht zugelassen. Das macht dein Admin unter Einstellungen → Instanz – oder du erstellst einen Einladungscode.",
+        "serverNotConnected": "{{origin}} ist für diese Instanz noch nicht zugelassen. Das macht dein Admin unter Einstellungen → Server → Server-Verbindungen – oder du erstellst einen Einladungscode.",
         "requested": "Anfrage an {{name}} auf {{origin}} gesendet. Sobald die Person zugestimmt hat, erscheint sie oben in der Liste und du kannst ihr die Reise anbieten.",
         "waiting": "Die Anfrage an {{name}} auf {{origin}} ist noch offen. Die Person muss sie erst bestätigen.",
         "failed": "Die Person auf dem anderen Server konnte nicht erreicht werden."
