@@ -114,6 +114,18 @@ describe("an interrupted key swap", () => {
     expect(m.marker.readInterruptedKeySwap()).toBeNull();
   });
 
+  it("a swap refused because an earlier marker is there leaves that marker in place", () => {
+    m.swap.installArchiveKey(swapFor(KEY_NEW, KEY_OLD));
+    m.swap.revertKeySwap(swapFor(KEY_NEW, KEY_OLD));
+    // An earlier swap's record, written by someone else between the check and the install.
+    fs.writeFileSync(m.marker.keySwapMarkerPath(), JSON.stringify({ previousKeyCopy: "/other" }));
+    expect(() => m.swap.installArchiveKey(swapFor(KEY_NEW, KEY_OLD))).toThrow(
+      expect.objectContaining({ code: "RESTORE_RECOVERY_KEY_WRITE_FAILED" })
+    );
+    expect(fs.readFileSync(keyFile, "utf-8")).toBe(KEY_OLD);
+    expect(m.marker.readInterruptedKeySwap()).toMatchObject({ previousKeyCopy: "/other" });
+  });
+
   it("an unreadable marker still counts as an interrupted swap", () => {
     fs.writeFileSync(m.marker.keySwapMarkerPath(), "{not json");
     expect(m.marker.readInterruptedKeySwap()).toMatchObject({ previousKeyCopyExists: false });

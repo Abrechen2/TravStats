@@ -124,6 +124,9 @@ export function previousKeyCopyPath(at: Date = new Date()): string {
 
 /** Install the archive's key. A failed write refuses the restore before psql runs. */
 export function installArchiveKey(swap: KeySwap): void {
+  // Only a marker this call wrote may be taken back: one already there is an
+  // earlier swap's record (`wx` refuses to overwrite it).
+  let wroteMarker = false;
   try {
     writeFileSync(swap.previousKeyCopy, swap.previousKeyHex, { mode: 0o600, flag: "wx" });
     writeKeySwapMarker({
@@ -132,10 +135,11 @@ export function installArchiveKey(swap: KeySwap): void {
       archiveFingerprint: encryptionKeyFingerprintFor(swap.archiveKeyHex),
       startedAt: new Date().toISOString(),
     });
+    wroteMarker = true;
     installEncryptionKey(swap.archiveKeyHex);
   } catch (error) {
     // The key never changed, so there is no half-done swap to report.
-    if (activeEncryptionKeyHex() === swap.previousKeyHex) clearKeySwapMarker();
+    if (wroteMarker && activeEncryptionKeyHex() === swap.previousKeyHex) clearKeySwapMarker();
     logger.error({
       operation: "restore_recovery_key_write_failed",
       message: "Could not write the recovery key to the secrets directory",
