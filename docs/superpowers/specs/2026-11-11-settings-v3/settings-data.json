@@ -2464,8 +2464,7 @@
               "items": [],
               "btn": ["Ort hinzufügen", "Add place"],
               "m": "ttPlaces",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             },
             {
               "id": "unterkunft",
@@ -2482,8 +2481,7 @@
               ],
               "v": false,
               "m": "ttPlaces",
-              "x": 1,
-              "beta": "travTrack"
+              "x": 1
             }
           ]
         },
@@ -2512,8 +2510,7 @@
                 "A new zone deletes points already inside; you see how many first. Removing brings nothing back."
               ],
               "m": "ttZones",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             }
           ]
         }
@@ -2778,8 +2775,7 @@
                 "Choose a source, discard outliers or delete a period. Stored points stay unchanged."
               ],
               "m": "ttQuality",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             }
           ]
         },
@@ -2805,8 +2801,7 @@
                 "Needs your own Dawarich connection. Can be paused and resumed."
               ],
               "m": "ttSources",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             },
             {
               "id": "dawimp",
@@ -2817,8 +2812,7 @@
               "de": ["Letzte Übernahme", "", ""],
               "en": ["Last copy", "", ""],
               "m": "ttSources",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             },
             {
               "id": "gpxtrack",
@@ -2837,8 +2831,7 @@
                 "Earlier imports can be removed one by one."
               ],
               "m": "ttSources",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             },
             {
               "id": "ttimp",
@@ -2848,8 +2841,7 @@
               "de": ["Bisherige Importe", "", ""],
               "en": ["Earlier imports", "", ""],
               "m": "ttSources",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             },
             {
               "id": "apps",
@@ -2868,8 +2860,7 @@
                 "OwnTracks and Overland",
                 "These apps don't know your privacy zones; the server drops points inside. You see the key only once."
               ],
-              "m": "ttSources",
-              "beta": "travTrack"
+              "m": "ttSources"
             },
             {
               "id": "dawconn",
@@ -2877,8 +2868,7 @@
               "de": ["Dawarich-Verbindung in Dienste", "", ""],
               "en": ["Dawarich connection in Services", "", ""],
               "m": "ttSources",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             }
           ]
         },
@@ -2904,8 +2894,7 @@
               ],
               "res": ["Fertig · Herunterladen", "Ready · Download"],
               "m": "ttExport",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             }
           ]
         },
@@ -2930,8 +2919,7 @@
                 "Deleted days stay deleted, even if a phone sends them later. Logbook entries stay untouched."
               ],
               "m": "ttDelete",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             }
           ]
         },
@@ -2956,8 +2944,7 @@
                 "Why points are missing",
                 "Needs the diagnostics log in the Companion app."
               ],
-              "m": "ttDiag",
-              "beta": "travTrack"
+              "m": "ttDiag"
             }
           ],
           "x": 1
