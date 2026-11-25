@@ -13,6 +13,7 @@ import {
   adminServiceUpdateSchema,
   adminServiceViewSchema,
   aiConsentBodySchema,
+  useConsentListResponseSchema,
   aiConsentParamsSchema,
   aiConsentResponseSchema,
   connectionAllowedSchema,
@@ -155,5 +156,29 @@ registry.registerPath({
   responses: {
     200: { description: "The stored consent", content: json(aiConsentResponseSchema) },
     409: { description: "SERVICE_DISABLED", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/settings/external-services/use-consents",
+  summary: "Services this account allowed for good ('Immer erlauben')",
+  description:
+    "One row per service with the target (`provider@host`) the permission was given for. A changed target asks again.",
+  tags: accountTags,
+  responses: {
+    200: { description: "The standing permissions", content: json(useConsentListResponseSchema) },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/settings/external-services/use-consents/{id}",
+  summary: "Revoke a standing permission; the next use asks again",
+  tags: accountTags,
+  request: { params: z.object({ id: z.enum(["aiSuggestionHelp", "mapMatching"]) }) },
+  responses: {
+    204: { description: "Revoked (also when none was stored)" },
+    404: { description: "Unknown service", content: errorContent },
   },
 });

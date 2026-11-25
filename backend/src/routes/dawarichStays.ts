@@ -18,6 +18,10 @@ import { assertTravTrackDerivationAllowed } from "../services/locationEvidence/a
 import { rescanVisitDays, visitLookupStatus } from "../services/travtrack/visits/project";
 import { stayIdentityFor } from "../services/dawarich/stays/identity";
 import { stayPlaceTypeFor } from "../services/dawarich/stays/placeType";
+import { aiHelpAvailability, askStayAiHelp } from "../services/suggestionHelp/askStay";
+import { aiHelpErrorOf } from "../services/suggestionHelp/httpError";
+import { sendConfirmationRequired } from "../services/externalServices/useConsent";
+import { useConfirmationSchema } from "../schemas/externalServices";
 
 import {
   placesEnabled,
@@ -28,6 +32,14 @@ import {
 import { staySuggestionsEnabled } from "../services/settings/suggestionSwitches";
 
 const router = Router();
+/** A model request per click; 20 a minute is a person working through the inbox. */
+const aiHelpLimiter = rateLimit({
+  windowMs: 60_000,
+  max: patAwareMax(20),
+  keyGenerator: userOrIpKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 router.use(authenticate, requireWriteScope);
 const user = (req: AuthRequest) => {
   if (!req.userId) throw new AppError("Not authenticated", 401);
@@ -337,6 +349,34 @@ router.get("/:id/place-type", identityLimiter, async (req: AuthRequest, res, nex
     res.json({ success: true, data: await stayPlaceTypeFor(userId, id) });
   } catch (e) {
     next(e);
+  }
+});
+/**
+ * "KI fragen" (forgejo#439 phase 2): whether the button may show, and the ask.
+ * The answer is advice for the card — nothing here writes. A first use (or a
+ * changed target) answers 409 CONFIRMATION_REQUIRED with what WOULD be sent.
+ */
+router.get("/ai-help/availability", async (req: AuthRequest, res, next) => {
+  try {
+    res.json({ success: true, data: await aiHelpAvailability(user(req)) });
+  } catch (e) {
+    next(e);
+  }
+});
+router.post("/:id/ai-help", rejectDemo, aiHelpLimiter, async (req: AuthRequest, res, next) => {
+  try {
+    const userId = user(req);
+    const id = z.string().uuid().parse(req.params.id);
+    const body = z
+      .object({ confirmation: useConfirmationSchema.optional() })
+      .strict()
+      .parse(req.body ?? {});
+    await requireStaySuggestionsEnabled(userId);
+    const outcome = await askStayAiHelp(userId, id, body.confirmation);
+    if (outcome.kind === "confirm") return sendConfirmationRequired(res, outcome.disclosure);
+    res.json({ success: true, data: { answer: outcome.answer, provider: outcome.provider } });
+  } catch (e) {
+    next(aiHelpErrorOf(e));
   }
 });
 router.post("/:id/accept", rejectDemo, async (req: AuthRequest, res, next) => {

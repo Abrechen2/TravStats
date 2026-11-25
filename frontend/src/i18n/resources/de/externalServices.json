@@ -337,6 +337,10 @@
       "primaryUrl": "Adresse der eigenen Kursquelle",
       "fallbackSource": "Zweite Kursquelle",
       "fallbackUrl": "Adresse der zweiten Kursquelle"
+    },
+    "mapMatching": {
+      "url": "Router-Adresse",
+      "engine": "Router-Art"
     }
   },
   "services": {
@@ -776,6 +780,21 @@
       "quota": "60 Anfragen pro Stunde und Plugin.",
       "dataOut": "Zeit und gerundete Koordinaten eines Stopps, nie Konto, Name, E-Mail oder Standortverlauf.",
       "adminPurpose": "Konten tragen ihre eigenen Plugins ein; ausgeschaltet fragt kein Konto mehr"
+    },
+    "aiSuggestionHelp": {
+      "name": "KI-Hilfe für unklare Vorschläge",
+      "purpose": "Ein Sprachmodell schlägt vor, welcher Ort ein unklarer Halt war",
+      "why": "Bei einem Aufenthalt mit mehreren möglichen Orten kann das Konto „KI fragen“: das Modell ordnet die Kandidaten und nennt einen Grund. Geschrieben wird nur, was die Person anklickt.",
+      "cost": "Hängt vom Modell ab: ein lokales Ollama kostet nichts, ein Cloud-Modell nach dessen Tarif.",
+      "dataOut": "Die Kandidatennamen, die Entfernung, die Aufenthaltsdauer, Namen naher eigener Orte und der Tag – keine Koordinaten, keine Spur. Bei einem Cloud-Modell verlassen sie das Heimnetz. Jedes Konto bestätigt das Ziel vor der ersten Anfrage."
+    },
+    "mapMatching": {
+      "name": "An Straßen anpassen (Map Matching)",
+      "purpose": "Legt dünne oder verrauschte Autostrecken aus TravTrack auf die Straße",
+      "why": "Schickt die Punkte eines einzelnen Abschnitts an einen Router, den du selbst betreibst (Valhalla oder GraphHopper), und zeichnet das Ergebnis beschriftet über die Spur. Die Rohpunkte bleiben unverändert; rückgängig mit einem Klick.",
+      "cost": "Kostenlos, selbst gehostet. Kein Dienst ist voreingestellt.",
+      "dataOut": "Nur die Punkte des gewählten Abschnitts, Privatsphäre-Zonen vorher herausgeschnitten. Jedes Konto bestätigt das Ziel vor der ersten Anfrage.",
+      "adminPurpose": "Adresse deines Valhalla- oder GraphHopper-Servers (LAN erlaubt)"
     }
   },
   "alwaysOn": {
@@ -802,6 +821,12 @@
         "allratestoday": "AllRatesToday",
         "custom": "Eigene Adresse"
       }
+    },
+    "mapMatching": {
+      "engine": {
+        "valhalla": "Valhalla (trace_attributes)",
+        "graphhopper": "GraphHopper (/match)"
+      }
     }
   },
   "legacy": {
@@ -825,5 +850,46 @@
         "linkUrl": "https://allratestoday.com"
       }
     }
+  },
+  "useConsent": {
+    "title": "Daten an einen Dienst senden?",
+    "intro": "Für diese Aktion würde TravStats folgende Daten an einen externen Dienst senden. Ohne deine Erlaubnis wird nichts gesendet.",
+    "service": "Dienst",
+    "host": "Ziel",
+    "provider": "Anbieter",
+    "location": "Standort",
+    "fields": "Gesendete Felder",
+    "points": "Anzahl Positionen",
+    "zones": "Privatsphäre-Zonen",
+    "zonesApplied": "vorher herausgeschnitten",
+    "zonesNone": "keine Zone betroffen",
+    "locations": {
+      "cloud": "Cloud – verlässt dein Heimnetz",
+      "lan": "Lokal im Heimnetz (LAN)"
+    },
+    "services": {
+      "aiSuggestionHelp": "KI-Hilfe für unklare Vorschläge",
+      "mapMatching": "An Straßen anpassen"
+    },
+    "fieldNames": {
+      "candidates": "Kandidatennamen",
+      "distanceM": "Entfernung",
+      "dwellMin": "Aufenthaltsdauer",
+      "nearbyPlaces": "Namen naher Orte",
+      "localDay": "Tag",
+      "points": "Positionen mit Zeit",
+      "costing": "Fahrzeugart"
+    },
+    "cloudNote": "Der Anbieter verarbeitet die Daten nach seinen eigenen Bedingungen.",
+    "once": "Einmal erlauben",
+    "always": "Immer erlauben für diesen Dienst",
+    "cancel": "Abbrechen",
+    "listTitle": "Erlaubte Datenweitergaben",
+    "listEmpty": "Kein Dienst hat eine dauerhafte Erlaubnis.",
+    "listSince": "erlaubt seit {{date}} für {{target}}",
+    "revoke": "Widerrufen",
+    "revoked": "Erlaubnis widerrufen – beim nächsten Mal wird wieder gefragt.",
+    "revokeFailed": "Die Erlaubnis konnte nicht widerrufen werden.",
+    "loadFailed": "Die Erlaubnisse konnten nicht geladen werden."
   }
 }

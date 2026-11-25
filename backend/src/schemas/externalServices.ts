@@ -158,3 +158,28 @@ export const aiConsentResponseSchema = z.object({
   provider: z.string(),
   consentedAt: z.string().nullable(),
 });
+
+/**
+ * The answer of the "Daten an einen Dienst senden?" dialog, sent with the
+ * request it confirms (owner, 2026-11-25). `target` is the `provider@host` the
+ * dialog showed; a target that changed since is asked again.
+ */
+export const useConfirmationSchema = z.strictObject({
+  mode: z.enum(["once", "always"]),
+  target: z.string().min(1).max(300),
+});
+
+/** What an outbound use would send, answered with 409 CONFIRMATION_REQUIRED before anything goes. */
+export const disclosureSchema = z.object({
+  serviceId: z.enum(["aiSuggestionHelp", "mapMatching"]),
+  host: z.string(),
+  provider: z.string(),
+  location: z.enum(["cloud", "lan"]),
+  fields: z.array(z.string()),
+  pointCount: z.number().int(),
+  privacyZonesApplied: z.boolean().nullable(),
+});
+
+export const useConsentListResponseSchema = z.object({
+  consents: z.array(z.object({ serviceId: z.string(), at: z.string(), target: z.string() })),
+});
