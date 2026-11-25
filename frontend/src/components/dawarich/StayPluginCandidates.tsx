@@ -52,9 +52,14 @@ export default function StayPluginCandidates({
               {t("suggestionSources:inbox.plugins.confidence", {
                 percent: Math.round(p.confidence * 100),
               })}
-              {p.distanceM !== null && p.distanceM !== undefined
-                ? ` · ${t("suggestionSources:inbox.plugins.distance", { meters: p.distanceM })}`
-                : ""}
+              {p.reason === "name" && p.matchedToken
+                ? ` · ${t("suggestionSources:inbox.plugins.nameMatch", {
+                    token: p.matchedToken,
+                    meters: p.distanceM ?? "—",
+                  })}`
+                : p.distanceM !== null && p.distanceM !== undefined
+                  ? ` · ${t("suggestionSources:inbox.plugins.distance", { meters: p.distanceM })}`
+                  : ""}
             </p>
             {p.note && <p>{p.note}</p>}
             <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>

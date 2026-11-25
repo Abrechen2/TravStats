@@ -46,6 +46,8 @@ import * as shareTripModule from "../../shareTrip";
 import * as propagateModule from "../../propagate";
 import * as undoModule from "../../undo";
 import * as noticesModule from "../../notices";
+import * as remoteCompanionModule from "../../remoteCompanion";
+import * as receivedTripsModule from "../../receivedTrips";
 import * as adaptersModule from "../../adapters";
 import * as securityModule from "../../../federation/security";
 import * as transportModule from "../transport";
@@ -96,6 +98,8 @@ export interface Server {
   propagate: typeof propagateModule;
   undo: typeof undoModule;
   notices: typeof noticesModule;
+  remoteCompanion: typeof remoteCompanionModule;
+  receivedTrips: typeof receivedTripsModule;
   adapters: typeof adaptersModule;
   security: typeof securityModule;
   transport: typeof transportModule;
@@ -155,6 +159,8 @@ const serverA = (): Server => ({
   propagate: propagateModule,
   undo: undoModule,
   notices: noticesModule,
+  remoteCompanion: remoteCompanionModule,
+  receivedTrips: receivedTripsModule,
   adapters: adaptersModule,
   security: securityModule,
   transport: transportModule,
@@ -208,6 +214,8 @@ function isolatedServer(origin: string, databaseUrl: string): Server {
         propagate: require("../../propagate"),
         undo: require("../../undo"),
         notices: require("../../notices"),
+        remoteCompanion: require("../../remoteCompanion"),
+        receivedTrips: require("../../receivedTrips"),
         adapters: require("../../adapters"),
         security: require("../../../federation/security"),
         transport: require("../transport"),

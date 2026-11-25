@@ -6,6 +6,45 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.45.** Fourteen new migrations, all additive: a marker for a removed demo account, TravTrack rebuild and visit-retry state, shared ferry routes per port pair, rail operator source and reroute misses, change-history retention, calendar sources and rules, automatic covers, the merged trip-suggestion decisions and suggestion plugins. Answered TravTrack trip questions are copied into the shared decision table. Nothing is deleted. Instances with no road-routing provider chosen now route automatically with a stored key; pick a provider or "Aus" under Dienste to change that.
+
+### Fixed
+
+- **Opening a settings page no longer overwrites your settings.** When the settings loaded slowly, a page could save the defaults (English, no name, only flights) before your own values arrived. Saving now waits for the load and sends only what changed, and the server refuses a write that drops domains without saying so.
+- **"Dein Jahr" loads on large accounts.** The recorded-track part is cached, and a slow first build runs as a job the page waits for.
+- **A link for an ended trip says why it fails** and offers a seven-day itinerary or a recap.
+- **Back is a real back.** Lists keep their page, filters and scroll position when you return, and every dialog and panel closes with × or Escape.
+- **The stay photo picker closes and scrolls,** searches the whole check-in and check-out days and says when it shows only part.
+- **The dashboard map counts planned and flown places the same way** in hover and panel, marks planned-only places, and leaves cancelled entries off.
+- **A quiet day at home is no longer "kein Standort".** A gap that starts and ends at home or another fixed place shows as "Zuhause (keine Bewegung aufgezeichnet)" and counts as an inferred home day.
+- **Today's visits are suggested first.** The visit scan works newest day first, and one failing place lookup no longer pauses the whole account.
+- **A deleted demo account stays deleted.**
+- **Missing translations** on the map legend and the bus, ferry and rental tabs.
+
+### Added
+
+- **Einrichtung & Zustand** sits under Profil, glows amber or red when something needs you, and puts a dot on your name. Its checks name the fix: rail lines without a router, roads drawn straight, an unused routing key, flights without times or with placeholder times, stays without a position, duplicate visits, trip countries that disagree, a package priced twice, history still being prepared, and more.
+- **Trip suggestions, rebuilt.** One switch covers everything, a rejected period stays rejected unless it more than doubles ("Erweitert"), at most three cards are open, a package booking becomes one trip, and all-business entries are proposed as a business trip.
+- **Calendar source and suggestion plugins.** A read-only ICS or CalDAV calendar can name and classify TravTrack stops; your own signed plugin can suggest places for a stop. Guide and template included.
+- **Ferry routes drawn once per port pair,** in both directions, editable straight from the dashboard map.
+- **"Bahnstrecken neu routen"** and **"Strecken neu routen"** for admins, and an automatic road-routing mode with a provider choice.
+- **Automatic trip covers** from your own photos when one clearly stands out, never over a cover you chose.
+- **Trip gallery by day:** only the chosen day loads.
+- **Year statistics:** a card per year with monthly bars by domain and a link to that year on the map.
+- **Place lists on the map:** show one or more lists, with not-yet-visited places greyed.
+- **Operator logos** inferred for rail rides without an operator, and more rental brands.
+- **Lists:** select every match, more sort columns, "Speichern + weiteren Flug anlegen", one-click import review, recent searches.
+- **Google Timeline import** keeps Google's unreliable activity endpoints out of lines and shows how far the history has been prepared.
+- **A read-only MCP package** (`travstats-mcp`) lets an AI assistant read your logbook with a token.
+
+### Changed
+
+- **Out of beta:** tours, roadtrips, TravTrack, the leaderboard and cruise tracks.
+- **Change history** moved into the ⋯ menu and keeps 12 months by default (3, 6, 12 or 24).
+- **Roadtrip page:** the map fills its card and route editing sits in ⋯.
+- **Trip filter pills** are single-choice.
+- **Maintenance:** compact log list and the time-zone tools folded away.
+
 **Upgrading to 2.8.0-rc.44.** Eleven new migrations: the change history, the trip cover crop and its source, private/business purpose on entries, smart place lists, the re-route runs, the order of cruise stops within a day, and the automatic vessel identity with its AIS positions. All columns are additive, and existing entries keep their values; purpose stays unknown until set. Nothing is deleted.
 
 ### Added

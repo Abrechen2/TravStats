@@ -930,6 +930,18 @@
         "bus": "als Busfahrt"
       },
       "openImport": "Zum Bahn-Import"
+    },
+    "timeline": {
+      "title": "Google Zeitachse (Timeline)",
+      "description": "Deine Standort-Zeitachse von Google kommt in den TravTrack-Verlauf. Die Datei holst du auf dem Handy: Google Maps → Einstellungen → Zeitachse → Zeitachse exportieren (Timeline.json) — Google speichert die Zeitachse inzwischen nur noch auf dem Gerät. Ältere Exporte aus Google Takeout funktionieren auch.",
+      "group": "TravTrack",
+      "off": "TravTrack ist auf diesem Server aus, deshalb kann keine Zeitachse importiert werden.",
+      "offAdmin": "TravTrack einschalten",
+      "offMember": "Ein Admin kann es unter Einstellungen → Instanz einschalten.",
+      "unknown": "Ob TravTrack verfügbar ist, konnte nicht gelesen werden. Lade die Seite neu.",
+      "demo": "Im Demo-Konto ist der Import gesperrt.",
+      "toTravTrack": "Importe in den TravTrack-Einstellungen",
+      "fromTravTrack": "Google Zeitachse: Anleitung auf der Import-Seite"
     }
   },
   "trips": {
@@ -2164,6 +2176,9 @@
       "title": "Schutzzonen",
       "difference": "In einer Schutzzone wird nichts gespeichert und nichts gezeichnet, anders als bei festen Orten, die nur zusammenfassen. Eine Schutzzone geht immer vor."
     },
+    "quality": {
+      "title": "Tage mit fragwürdigen Spuren"
+    },
     "detect": {
       "title": "Erkennung & Vorschläge",
       "stops": {
@@ -2278,6 +2293,76 @@
       "rateLimited": "Zu viele Prüfungen in kurzer Zeit. Bitte warte einen Moment.",
       "forbidden": "Nur Admins dürfen die Erreichbarkeit prüfen.",
       "generic": "Die Prüfung ließ sich nicht starten. Bitte versuche es erneut."
+    }
+  },
+  "recoveryKey": {
+    "title": "Wiederherstellungsschlüssel",
+    "blocking": "Ohne gesicherten Schlüssel geht es hier nicht weiter. Sicherungen laufen weiter.",
+    "signOut": "Abmelden",
+    "row": {
+      "title": "Wiederherstellungsschlüssel",
+      "sub": "Entschlüsselt die Zugangsdaten in deinen Sicherungen.",
+      "confirmed": "Gesichert und bestätigt am {{when}}.",
+      "unconfirmed": "Noch nicht bestätigt: Ohne diesen Schlüssel sind die Zugangsdaten in deinen Sicherungen nach einem Serververlust unlesbar.",
+      "otherKey": "Der Schlüssel hat sich geändert. Sichere den neuen Schlüssel und bestätige ihn.",
+      "open": "Wiederherstellungsschlüssel anzeigen",
+      "loadFailed": "Ich konnte den Stand des Schlüssels nicht laden."
+    },
+    "reauth": {
+      "intro": "Bestätige zuerst, dass du es bist. Danach zeige ich dir den Schlüssel einmal an.",
+      "password": "Passwort",
+      "code": "Code aus der Authenticator-App oder Wiederherstellungscode",
+      "passkeyHint": "Du bestätigst mit deinem Passkey.",
+      "usePasskey": "Stattdessen mit Passkey bestätigen",
+      "usePassword": "Stattdessen mit Passwort bestätigen",
+      "submit": "Bestätigen und Schlüssel anzeigen",
+      "refused": {
+        "REAUTH_PASSWORD_INCORRECT": "Das Passwort stimmt nicht.",
+        "REAUTH_SECOND_FACTOR_REQUIRED": "Gib auch den Code aus deiner Authenticator-App ein.",
+        "REAUTH_SECOND_FACTOR_INVALID": "Der Code stimmt nicht.",
+        "DELETE_PASSKEY_INVALID": "Der Passkey ließ sich nicht prüfen.",
+        "REAUTH_PASSKEY_TOO_NEW": "Dieser Passkey ist jünger als ein Tag. Bestätige mit deinem Passwort.",
+        "PASSKEY_UNAVAILABLE": "Passkeys sind auf diesem Server nicht eingerichtet. Bestätige mit deinem Passwort.",
+        "RATE_LIMITED": "Zu viele Versuche. Warte eine Viertelstunde und versuch es dann noch einmal.",
+        "passkeyCancelled": "Die Passkey-Abfrage wurde abgebrochen.",
+        "offline": "Der Server ist nicht erreichbar.",
+        "other": "Das hat nicht geklappt. Versuch es noch einmal."
+      }
+    },
+    "show": {
+      "why": "Deine Sicherungen – lokal und auf WebDAV – enthalten API-Schlüssel, Tokens und das SMTP-Passwort nur verschlüsselt. Der Schlüssel dazu liegt absichtlich nicht in der Sicherung. Geht dieser Server verloren, kann nur dieser Schlüssel die Zugangsdaten wieder lesbar machen.",
+      "keep": "Bewahre ihn außerhalb dieses Servers auf, am besten in deinem Passwort-Manager. Ich zeige ihn nur jetzt an.",
+      "copy": "Kopieren",
+      "download": "Als Datei herunterladen",
+      "copied": "In die Zwischenablage kopiert.",
+      "copyFailed": "Kopieren hat nicht geklappt. Markiere den Schlüssel und kopiere ihn von Hand, oder lade ihn als Datei herunter.",
+      "next": "Weiter"
+    },
+    "confirm": {
+      "label": "Gib zur Bestätigung die letzten {{count}} Zeichen des Schlüssels ein.",
+      "submit": "Bestätigen",
+      "back": "Schlüssel noch einmal anzeigen",
+      "mismatch": "Das sind nicht die letzten Zeichen des Schlüssels. Sieh noch einmal nach.",
+      "format": "Gib genau {{count}} Zeichen ein.",
+      "expired": "Die Bestätigung hat zu lange gedauert. Bestätige noch einmal, dass du es bist.",
+      "rateLimited": "Zu viele Versuche. Warte eine Viertelstunde und versuch es dann noch einmal.",
+      "failed": "Die Bestätigung hat nicht geklappt. Versuch es noch einmal."
+    },
+    "file": {
+      "title": "TravStats – Wiederherstellungsschlüssel",
+      "instance": "Instanz",
+      "key": "Schlüssel",
+      "fingerprint": "Fingerabdruck",
+      "restore": "Wiederherstellen: TravStats neu installieren, die Sicherung zurückspielen und diesen Schlüssel einfügen, wenn das Zurückspielen danach fragt.",
+      "restoreManual": "Alternativ die 64 Zeichen ohne Leerzeichen als ENCRYPTION_KEY setzen oder in /app/data/secrets/encryption.key schreiben, bevor du zurückspielst.",
+      "keep": "Bewahre diese Datei außerhalb des Servers auf, z. B. in deinem Passwort-Manager. Wer sie hat, kann die Zugangsdaten in deinen Sicherungen entschlüsseln."
+    },
+    "restore": {
+      "intro": "Füge den Wiederherstellungsschlüssel des Servers ein, der diese Sicherung geschrieben hat. Dann bleiben die gespeicherten Zugangsdaten lesbar.",
+      "label": "Wiederherstellungsschlüssel",
+      "withKey": "Mit Schlüssel zurückspielen",
+      "cancel": "Abbrechen",
+      "reauth": "Den Schlüssel dieses Servers zu ersetzen braucht dein Passwort."
     }
   }
 }

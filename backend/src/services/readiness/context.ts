@@ -12,6 +12,7 @@ import { BACKUP_BASE_DIR } from "../backup/backupConfig";
 import { loadAllTests } from "../externalServices/tests";
 import type { LastTest } from "../externalServices/types";
 import { getEffectivePublicUrl } from "./effectivePublicUrl";
+import { hasBackupTarget, isConfirmedForCurrentKey } from "../backup/recoveryKey";
 import {
   loadAccountProblemFacts,
   loadInstanceProblemFacts,
@@ -28,6 +29,8 @@ export interface InstanceFacts {
   /** The latest scheduled backup that finished one way or the other. */
   latestScheduledBackup: { status: string; at: Date } | null;
   offsiteConfigured: boolean;
+  /** The instance key is confirmed as kept by an admin (services/backup/recoveryKey.ts). */
+  recoveryKeyConfirmed: boolean;
   /** Stored tests of the instance's keyed providers. */
   providerTests: ReadonlyMap<string, LastTest>;
   instanceMailbox: { lastOkAt: Date | null; lastErrorAt: Date | null } | null;
@@ -143,7 +146,8 @@ async function loadInstance(now: Date): Promise<InstanceFacts> {
     latestScheduledBackup: backup
       ? { status: backup.status, at: backup.completedAt ?? backup.createdAt }
       : null,
-    offsiteConfigured: Boolean(admin?.webdavSyncEnabled && admin.webdavUrl),
+    offsiteConfigured: admin ? hasBackupTarget(admin) : false,
+    recoveryKeyConfirmed: admin ? isConfirmedForCurrentKey(admin) : false,
     providerTests,
     instanceMailbox: mailbox,
     travtrackOffered: travtrack?.enabled ?? false,

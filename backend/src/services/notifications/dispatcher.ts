@@ -12,6 +12,7 @@ import type { ReminderDomain } from "../reminders/prefs";
 import {
   flightChangedMessage,
   reminderMessage,
+  tripSharedMessage,
   type FlightForMessage,
   type Locale,
   type Message,
@@ -30,10 +31,11 @@ import {
  * must never fail because of a push.
  */
 type Deps = { send?: (push: RelayPush) => Promise<RelayOutcome>; now?: () => Date };
-type Kind = "flight.changed" | "flight.reminder";
+type Kind = "flight.changed" | "flight.reminder" | "trip.shared";
 const COLLAPSE: Record<Kind, string> = {
   "flight.changed": "change",
   "flight.reminder": "reminder",
+  "trip.shared": "shared",
 };
 
 /** Fields that can reach the phone as words (see messages.ts); the rest never make an event. */
@@ -68,13 +70,17 @@ function isUniqueViolation(err: unknown): boolean {
 async function deliver(
   userId: string,
   kind: Kind,
-  flightId: string,
+  /** The flight for a flight kind; the trip or offer for `trip.shared` (the collapse key). */
+  subjectId: string,
   eventKey: string,
-  switchField: "flightChanges" | "reminders",
+  /** null: no per-kind switch on the phone — every phone with push gets it. */
+  switchField: "flightChanges" | "reminders" | null,
   render: (locale: Locale) => Message | null,
   deps: Deps,
   /** A reminder's trip: a phone that muted it is skipped (forgejo#286). */
-  mutedBy: string | null = null
+  mutedBy: string | null = null,
+  /** Ids put into the push data instead of `flightId` (non-flight kinds). */
+  data: Record<string, string> | null = null
 ): Promise<void> {
   if (!(await serverPushEnabled())) return;
   const send = deps.send ?? sendToRelay;
@@ -85,7 +91,7 @@ async function deliver(
   const devices = await prisma.devicePush.findMany({
     where: {
       userId,
-      [switchField]: true,
+      ...(switchField !== null && { [switchField]: true }),
       ...(mutedBy !== null && { NOT: { mutedTripIds: { has: mutedBy } } }),
       tokenRejectedAt: null,
       user: { isActive: true },
@@ -116,7 +122,7 @@ async function deliver(
       id: deliveryId,
       title: message.title,
       body: message.body,
-      flightId,
+      ...(data ?? { flightId: subjectId }),
       sentAt: now().toISOString(),
     });
     let outcome: RelayOutcome;
@@ -129,7 +135,7 @@ async function deliver(
         // Per kind: a reminder must not replace an unread change (or the
         // other way round). A flight id is a UUID, so this stays well under
         // the relay's and APNs' 64 characters.
-        collapseId: `${COLLAPSE[kind]}:${flightId}`,
+        collapseId: `${COLLAPSE[kind]}:${subjectId}`.slice(0, 64),
         lang: locale,
       });
     } catch {
@@ -187,6 +193,38 @@ export async function notifyFlightChanged(
       "flightChanges",
       (locale) => flightChangedMessage(flight, changes, opts, locale),
       deps
+    )
+  );
+}
+
+/**
+ * A trip was shared with the user (2026-11-24): arrived (taken by their consent) or offered from
+ * another server and waiting for an answer. Push type `trip.shared`, data `tripId` (arrived) or
+ * `offerId` (waiting) plus `state` (`accepted` | `pending`); once per trip or offer and phone.
+ */
+export async function notifyTripShared(
+  userId: string,
+  share: {
+    state: "accepted" | "pending";
+    /** The user's own trip (accepted) or the offer (pending). */
+    id: string;
+    tripName: string;
+    from: string;
+  },
+  deps: Deps = {}
+): Promise<void> {
+  const idKey = share.state === "accepted" ? "tripId" : "offerId";
+  await guarded("trip.shared", () =>
+    deliver(
+      userId,
+      "trip.shared",
+      share.id,
+      `trip.shared:${share.id}`,
+      null,
+      (locale) => tripSharedMessage(share, locale),
+      deps,
+      null,
+      { [idKey]: share.id, state: share.state }
     )
   );
 }

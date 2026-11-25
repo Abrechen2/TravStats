@@ -40,6 +40,7 @@ const CODES: Readonly<Record<string, string>> = {
   SHARE_REMOTE_CONNECTION_REQUIRED: "sharing:remote.errors.connectionRequired",
   SHARE_REMOTE_SERVER_NOT_CONNECTED: "sharing:remote.errors.serverNotConnected",
   TRIP_NOT_FOUND: "sharing:remote.errors.tripNotFound",
+  SHARE_COMPANION_ALREADY_LINKED: "sharing:remote.trip.companion.alreadyLinked",
 };
 
 export interface RemoteSharingError {

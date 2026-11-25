@@ -12,6 +12,8 @@ import { Button, Card, Pill } from "../ui";
 
 const NS = "sharing:inbox.notices";
 const INLINE = 3;
+/** Where the consent that took a trip without a question is given (CompanionsSection's address). */
+const SHARING_SETTINGS_PATH = "/settings/freunde#accounts";
 const KIND_COLOR: Record<ShareNotice["kind"], string> = {
   shared: "var(--ts-info)",
   created: "var(--ts-good)",
@@ -132,6 +134,12 @@ export default function ShareNoticeCard({
         <p className="text-sm" style={{ fontWeight: unread ? 600 : 400 }}>
           {text}
         </p>
+        {notice.kind === "shared" && after.autoAccepted && (
+          <p className="t-caption" data-testid="share-auto-accepted">
+            {t(`${NS}.autoAccepted`)}{" "}
+            <Link to={SHARING_SETTINGS_PATH}>{t(`${NS}.autoAcceptedSetting`)}</Link>
+          </p>
+        )}
         {notice.kind === "add-request" && (
           <>
             {after.note && (

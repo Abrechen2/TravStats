@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { tourIndexApi, type TourGeometryEntry, type TourSummary } from "../lib/api/tourIndex";
 import { logger } from "../lib/logger";
 import { hexToRgb } from "../lib/domainColor";
+import { roadtripLineHex } from "../lib/roadtripColor";
+import { useRoadtripColorStore } from "../store/roadtripColorStore";
 import { useDomainColors } from "./useDomainColors";
 import type { RouteKind } from "../shared/tour/roadtrip";
 
@@ -42,6 +44,7 @@ export function useDashboardTours(
 ): UseDashboardToursResult {
   const { colorOf } = useDomainColors();
   const roadtripHex = colorOf("roadtrip");
+  const roadtripMode = useRoadtripColorStore((st) => st.mode);
   const [tours, setTours] = useState<TourSummary[]>([]);
   const [toursLoading, setToursLoading] = useState(true);
   const [toursLoadError, setToursLoadError] = useState(false);
@@ -117,12 +120,18 @@ export function useDashboardTours(
   // The colour is applied here, not in the fetch, so changing the roadtrip
   // hue in settings recolours the lines without refetching them.
   const geometries = useMemo(() => {
-    const kindById = new Map(tours.map((t) => [t.id, t.kind]));
-    const roadtripRgb = hexToRgb(roadtripHex);
-    return Array.from(geometryById.values()).map((g) =>
-      kindById.get(g.routeId) === "roadtrip" ? { ...g, rgb: roadtripRgb, isRoadtrip: true } : g
-    );
-  }, [geometryById, tours, roadtripHex]);
+    const byId = new Map(tours.map((t) => [t.id, t]));
+    return Array.from(geometryById.values()).map((g) => {
+      const tour = byId.get(g.routeId);
+      return tour?.kind === "roadtrip"
+        ? {
+            ...g,
+            rgb: hexToRgb(roadtripLineHex(roadtripMode, tour, roadtripHex)),
+            isRoadtrip: true,
+          }
+        : g;
+    });
+  }, [geometryById, tours, roadtripHex, roadtripMode]);
 
   return { tours, toursLoading, toursLoadError, geometries, reload };
 }

@@ -18,6 +18,11 @@ import {
   senderBodySchema,
   sourceViewSchema,
   testResultSchema,
+  scanBodySchema,
+  candidateIdsBodySchema,
+  candidateListSchema,
+  ignoredResultSchema,
+  jobStartedBareSchema,
 } from "../../../schemas/mailIntake";
 import { errorContent } from "./shared";
 
@@ -69,7 +74,10 @@ op(
   "/source",
   "Save the account's own IMAP folder",
   "TLS or STARTTLS only. Omitting `password` keeps the stored one. A new host, user or folder " +
-    "restarts the scan; mails already taken are never taken twice.",
+    "restarts the scan; mails already taken are never taken twice. The header pre-filter " +
+    "(`prefilter`, on by default) downloads only mails whose sender domain, allowed address or " +
+    "subject looks like a booking; `keepUnread` sets only `$TravStats`, never `\\Seen`; " +
+    "`fetchFrom` positions a fresh cursor (`now` = only new mail, or the last 30/90/365 days).",
   sourceViewSchema,
   personalSourceBodySchema
 );
@@ -197,4 +205,65 @@ op(
   "Test the instance mailbox (admin)",
   "As the personal test.",
   testResultSchema
+);
+
+const jobStart = (
+  path: string,
+  summary: string,
+  description: string,
+  body: import("zod").ZodType
+) =>
+  registry.registerPath({
+    method: "post",
+    path: `/mail-intake${path}`,
+    summary,
+    description,
+    tags,
+    request: { body: { content: json(body) } },
+    responses: {
+      202: { description: "Started as a background job", content: json(jobStartedBareSchema) },
+      400: { description: "VALIDATION_FAILED", content: errorContent },
+      404: {
+        description: "MAIL_SOURCE_NOT_FOUND or MAIL_CANDIDATE_NOT_FOUND",
+        content: errorContent,
+      },
+      409: { description: "MAIL_INTAKE_OFF or MAIL_SCAN_RUNNING", content: errorContent },
+    },
+  });
+
+jobStart(
+  "/scan",
+  "Search the mailbox for booking mails probably missing in TravStats",
+  "A job over the whole folder or a date range, headers only (batched UID FETCH of the " +
+    "envelope), through the same pre-filter as the intake. A mail that fails it leaves only the " +
+    "skipped count. `resume` continues an interrupted or cancelled scan from its cursor.",
+  scanBodySchema
+);
+op(
+  "post",
+  "/scan/cancel",
+  "Stop the mailbox scan",
+  "Stops after the current batch; the cursor stays for a later resume.",
+  okSchema
+);
+op(
+  "get",
+  "/candidates",
+  "The scan's list of booking mails probably missing",
+  "Header fields only. Ignored mails are remembered and not listed again.",
+  candidateListSchema
+);
+jobStart(
+  "/candidates/import",
+  "Import listed mails",
+  "Downloads exactly these mails, runs the normal pipeline and flags them `$TravStats`.",
+  candidateIdsBodySchema
+);
+op(
+  "post",
+  "/candidates/ignore",
+  "Ignore listed mails",
+  "Remembered: a later scan does not list them again.",
+  ignoredResultSchema,
+  candidateIdsBodySchema
 );

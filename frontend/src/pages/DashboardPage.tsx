@@ -1,4 +1,6 @@
 import { FerryRouteEditHost } from "../components/ferry/FerryRouteEditHost";
+import { BusRouteEditHost } from "../components/bus/BusRouteEditHost";
+import ReceivedTripsBanner from "../components/sharing/ReceivedTripsBanner";
 import { useEffect, useState } from "react";
 import { useToursAccess } from "../hooks/useToursVisible";
 import { Navigate } from "react-router-dom";
@@ -204,7 +206,9 @@ export default function DashboardPage(): JSX.Element {
       countsLoaded={countsLoaded}
       onDataChanged={() => setRefreshToken((n) => n + 1)}
     >
+      <ReceivedTripsBanner />
       <FerryRouteEditHost onSaved={() => setRefreshToken((n) => n + 1)} />
+      <BusRouteEditHost onSaved={() => setRefreshToken((n) => n + 1)} />
       {tab === "all" && <AllTab key={refreshToken} />}
       {tab === "flight" && <FlightsTab key={refreshToken} />}
       {tab === "cruise" && <CruisesTab key={refreshToken} />}

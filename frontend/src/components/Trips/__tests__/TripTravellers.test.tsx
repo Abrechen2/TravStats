@@ -89,6 +89,30 @@ describe("TripHead — the travellers under the country flags", () => {
     expect(screen.queryByText("Dan")).toBeNull();
   });
 
+  it("lists a person once when the reader linked a companion to them (shared, with their handle)", async () => {
+    beta.federated = true;
+    remote.status.mockResolvedValue({ available: true });
+    remote.tripSharing.mockResolvedValue({
+      members: [
+        {
+          id: "m1",
+          displayName: "Norbert",
+          username: "norbert",
+          origin: "https://trav.example",
+          state: "active",
+          companion: { id: "c1", name: "Ben" },
+          nameMatches: [],
+        },
+      ],
+    });
+    head();
+    const shared = await screen.findByTestId("traveller-shared");
+    const row = screen.getByTestId("trip-head-travellers");
+    expect(within(row).getAllByText("Ben")).toHaveLength(1);
+    expect(shared.closest("li")).toHaveTextContent("norbert@trav.example");
+    expect(within(row).getByText("Anna Beck")).toBeInTheDocument();
+  });
+
   it("asks the other servers for nothing on the shared demo account", async () => {
     beta.federated = true;
     demo.shared = true;

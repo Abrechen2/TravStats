@@ -31,4 +31,6 @@ export type TravTrackApiErrorCode =
   | "TRAVTRACK_STOP_INVALID" // a stop place request names a bad span, position or name (400)
   | "TRAVTRACK_STOP_NOT_FOUND" // no stop lies under the span (404)
   | "TRAVTRACK_PLACE_NOT_FOUND" // no such fixed place of this account (404)
-  | "TRAVTRACK_HOME_IS_DERIVED"; // home is the home setting's: it is neither created nor deleted here (400)
+  | "TRAVTRACK_HOME_IS_DERIVED" // home is the home setting's: it is neither created nor deleted here (400)
+  | "TRAVTRACK_DAY_NO_POINTS" // the day holds no points, so there is no source to choose (404)
+  | "TRAVTRACK_SOURCE_NOT_ON_DAY"; // the chosen source holds no points on that day (400)

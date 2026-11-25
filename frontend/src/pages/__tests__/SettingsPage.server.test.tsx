@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // The services page asks the parser whether a model is there (forgejo#321);
 // not the subject here.
+// The recovery-key gate / row asks its status on mount (RecoveryKeyGate, RecoveryKeyRow).
+vi.mock("../../lib/api/recoveryKey", async (original) => ({
+  ...(await original<typeof import("../../lib/api/recoveryKey")>()),
+  recoveryKeyApi: {
+    status: () => Promise.resolve({ required: false, confirmed: true, confirmedAt: null }),
+    reveal: () => Promise.reject(new Error("not in this test")),
+    confirm: () => Promise.reject(new Error("not in this test")),
+  },
+}));
 vi.mock("../../hooks/useHasLlm", () => ({ useHasLlm: () => null, resetHasLlmCache: () => {} }));
 // The page asks where the account's location comes from (the TravTrack area stays
 // for an account on Dawarich alone, settings v3 S4); not the subject here.

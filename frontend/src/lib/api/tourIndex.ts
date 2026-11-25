@@ -20,6 +20,8 @@ export interface TourSummary {
   tripName: string | null;
   name: string;
   mode: string;
+  /** The section's own colour (#rrggbb); null when none was set, absent on older backends. */
+  color?: string | null;
   kind: RouteKind;
   activity: TourActivity | null;
   vehicle: StoredRoadtripVehicle | null;

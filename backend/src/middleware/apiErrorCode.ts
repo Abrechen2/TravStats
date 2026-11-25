@@ -7,6 +7,7 @@ import type { ReadinessApiErrorCode } from "./readinessErrorCodes";
 import type { CompanionAppApiErrorCode } from "./companionAppErrorCodes";
 import type { ConnectionFileApiErrorCode } from "./connectionFileErrorCodes";
 import type { AdminStepUpApiErrorCode } from "./adminStepUpErrorCodes";
+import type { RecoveryKeyApiErrorCode } from "./recoveryKeyErrorCodes";
 import type { AccountArchiveApiErrorCode } from "./accountArchiveErrorCodes";
 import type { LifeBookApiErrorCode } from "./lifeBookErrorCodes";
 import type { LocationProviderApiErrorCode } from "./locationProviderErrorCodes";
@@ -217,6 +218,8 @@ export type ApiErrorCode =
   | "FERRY_ROUTE_INVALID"
   /** A hand-drawn crossing line does not start and end at the crossing's terminals. */
   | "FERRY_ROUTE_NOT_ANCHORED"
+  | "BUS_ROUTE_INVALID"
+  | "BUS_ROUTE_NOT_ANCHORED"
   /** A vessel search or pick failed validation; `field` names it (`q` or `mmsi`). */
   | "VESSEL_INVALID_INPUT"
   /** A picked vessel is not one the server offered for this journey or search. */
@@ -541,6 +544,8 @@ export type ApiErrorCode =
   | "COMPANION_NOT_FOUND"
   /** Another of the caller's companions is already linked to that account (409). */
   | "SHARE_COMPANION_ALREADY_LINKED"
+  /** No pairing of this caller with a person on another server under that id (404). */
+  | "SHARE_REMOTE_PERSON_NOT_FOUND"
   /** Sharing with a companion that is not linked to an account (409). */
   | "SHARE_COMPANION_NOT_LINKED"
   /** Leaving a group with a trip that is in none (409). */
@@ -629,6 +634,7 @@ export type ApiErrorCode =
   | "COMPARISON_PEER_UNREACHABLE"
   | "COMPARISON_PEER_OUTDATED" // the other server predates the leaderboard protocol
   | "COMPARISON_PEER_KEY_INVALID"
+  | RecoveryKeyApiErrorCode // the instance recovery key: reveal, confirm, restore
   | AdminStepUpApiErrorCode // a Companion's admin step-up on the federation pin calls
   | AccountArchiveApiErrorCode // the account archive export and import (forgejo#433)
   | LifeBookApiErrorCode // the life book export

@@ -685,7 +685,71 @@
     "description": "These uploads do not belong to an entry. File them with a flight, cruise, stay, place or trip — otherwise they are deleted, file and all, {{days}} days after they came to belong to nothing.",
     "uploaded": "Uploaded on",
     "deletesOn": "Will be deleted on",
-    "open": "Open"
+    "open": "Open",
+    "select": "Select {{name}}",
+    "previewLabel": "View {{name}}",
+    "preview": {
+      "download": "Download",
+      "noPreview": "This format cannot be shown in the browser. Download the file to open it.",
+      "imageFailed": "The image could not be loaded. Try \"Download\".",
+      "frameBlocked": "The document cannot be shown embedded here. Open it in a new tab or download it."
+    },
+    "actions": {
+      "link": "Link",
+      "linkLabel": "Link {{name}} to entries",
+      "edit": "Edit",
+      "create": "Create from document …",
+      "delete": "Delete"
+    },
+    "edit": {
+      "title": "Edit document",
+      "name": "Title",
+      "issuedOn": "Date on the document",
+      "kind": "Type",
+      "kindNone": "Not specified",
+      "note": "Note"
+    },
+    "create": {
+      "title": "\"{{name}}\": create from document",
+      "hint": "Choose what to create. The document is read and pre-fills the form; whatever you save is linked to this document.",
+      "unreadable": "This format cannot be read. PDF files, images and emails can.",
+      "noDomains": "No domain is active that something could be created in.",
+      "recognised": "recognised",
+      "fetchFailed": "The document could not be loaded. Nothing was created.",
+      "domains": {
+        "flight": "Flight",
+        "cruise": "Cruise",
+        "lodging": "Stay",
+        "rail": "Rail journey",
+        "rental": "Rental car"
+      }
+    },
+    "delete": {
+      "title": "Delete document?",
+      "message": "\"{{name}}\" will be deleted permanently, file included.",
+      "bulkTitle_one": "Delete 1 document?",
+      "bulkTitle_other": "Delete {{count}} documents?",
+      "bulkMessage_one": "The selected document will be deleted permanently, file included.",
+      "bulkMessage_other": "The {{count}} selected documents will be deleted permanently, files included."
+    },
+    "bulk": {
+      "label": "Selection",
+      "selected_one": "1 document selected",
+      "selected_other": "{{count}} documents selected",
+      "link": "Link to one entry",
+      "clear": "Clear selection",
+      "delete": "Delete"
+    },
+    "empty": {
+      "title": "No unassigned documents",
+      "body": "Documents that belong to no entry end up here — an upload you want to assign later, or a file from the Companion app. Unassigned documents are deleted automatically after a grace period.",
+      "drop": "Drop files here or choose \"Add document\"."
+    },
+    "errors": {
+      "loadFailed": "The unassigned documents could not be loaded.",
+      "saveFailed": "The change could not be saved.",
+      "demo": "Nothing can be changed here in the demo account."
+    }
   },
   "documentLinkSuggestions": {
     "title": "Documents that cover more",

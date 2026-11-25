@@ -35,7 +35,7 @@ const consoleDestination: pino.DestinationStream =
 
 const initialLevel = resolveEffectiveLogLevel(null).level;
 
-const pinoConfig: pino.LoggerOptions = {
+export const pinoConfig: pino.LoggerOptions = {
   level: initialLevel,
 
   // No hostname, no pid: neither helps read a log, and both identified the
@@ -103,6 +103,11 @@ const pinoConfig: pino.LoggerOptions = {
       "googlePlacesApiKey",
       "*.googlePlacesApiKey",
       "*.password",
+      // The instance recovery key (services/backup/recoveryKey.ts) and what proves it.
+      "recoveryKey",
+      "*.recoveryKey",
+      "lastFour",
+      "*.lastFour",
       "*.passwordHash",
       "*.token",
       "*.apiKey",

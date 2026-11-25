@@ -12,6 +12,10 @@ import {
 } from "../../lib/api/mailIntake";
 import { SectionCard, SectionTitle } from "../Settings/SettingsShared";
 import { errorText, minuteOf, requestErrorText } from "./mailIntakeCopy";
+import MailPrefilterSettings, {
+  EMPTY_PREFILTER,
+  type PrefilterDraft,
+} from "./MailPrefilterSettings";
 
 interface Draft {
   host: string;
@@ -45,6 +49,7 @@ export default function MailIntakeSettingsCard(): JSX.Element | null {
   const [status, setStatus] = useState<MailIntakeStatus | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [draft, setDraft] = useState<Draft>(EMPTY);
+  const [prefs, setPrefs] = useState<PrefilterDraft>(EMPTY_PREFILTER);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [sender, setSender] = useState("");
@@ -64,6 +69,15 @@ export default function MailIntakeSettingsCard(): JSX.Element | null {
           password: "",
           folder: next.source.folder,
           enabled: next.source.enabled,
+        });
+        setPrefs({
+          prefilter: next.source.prefilter ?? true,
+          keepUnread: next.source.keepUnread ?? null,
+          fetchFrom: next.source.fetchFrom ?? "now",
+          senderDomains: next.source.senderDomains ?? [],
+          removedSenderDomains: next.source.removedSenderDomains ?? [],
+          subjectKeywords: next.source.subjectKeywords ?? [],
+          removedSubjectKeywords: next.source.removedSubjectKeywords ?? [],
         });
       }
     } catch (err) {
@@ -98,6 +112,14 @@ export default function MailIntakeSettingsCard(): JSX.Element | null {
         folder: draft.folder.trim(),
         enabled: draft.enabled,
         ...(draft.password ? { password: draft.password } : {}),
+        prefilter: prefs.prefilter,
+        fetchFrom: prefs.fetchFrom,
+        senderDomains: prefs.senderDomains,
+        removedSenderDomains: prefs.removedSenderDomains,
+        subjectKeywords: prefs.subjectKeywords,
+        removedSubjectKeywords: prefs.removedSubjectKeywords,
+        // Unset: the server's default for the folder (a private INBOX keeps mails unread).
+        ...(prefs.keepUnread !== null ? { keepUnread: prefs.keepUnread } : {}),
       };
       await mailIntakeApi.saveSource(input);
       await load();
@@ -228,6 +250,20 @@ export default function MailIntakeSettingsCard(): JSX.Element | null {
                 />
               </label>
             </div>
+            {status.prefilterDefaults && (
+              <MailPrefilterSettings
+                draft={prefs}
+                folder={draft.folder}
+                defaults={status.prefilterDefaults}
+                counters={
+                  source
+                    ? { skipped: source.skippedCount ?? 0, processed: source.processedCount ?? 0 }
+                    : null
+                }
+                disabled={isDemo || busy}
+                onChange={setPrefs}
+              />
+            )}
             <label className="inline-flex items-center gap-2">
               <input
                 type="checkbox"
@@ -282,6 +318,7 @@ export default function MailIntakeSettingsCard(): JSX.Element | null {
                         void run(async () => {
                           await mailIntakeApi.removeSource();
                           setDraft(EMPTY);
+                          setPrefs(EMPTY_PREFILTER);
                           await load();
                           return null;
                         }),

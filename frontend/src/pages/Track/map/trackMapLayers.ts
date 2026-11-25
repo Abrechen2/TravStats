@@ -1,3 +1,4 @@
+import { PathStyleExtension, type PathStyleExtensionProps } from "@deck.gl/extensions";
 import { GeoJsonLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Feature, Geometry } from "geojson";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
@@ -11,6 +12,7 @@ import { contextLabel } from "../trackContextLabel";
 import type { SpeedStop } from "./trackSpeedScale";
 import { lonLat, speedColor, speedPieces, type LonLat, type SpeedPiece } from "./trackGeometry";
 import type { RouteColorMode, TrackLayer } from "./trackMapPrefs";
+import type { ModeColorKey } from "../../../lib/trackModeColor";
 
 /**
  * The deck.gl layers of the Track map (TravTrack plan T5.2), built from the
@@ -85,6 +87,44 @@ export interface MapLegLine {
   path: LonLat[];
 }
 
+/** One drawn stretch of a long span, for picking: a click names the instant of the nearest vertex. */
+export interface MapRangeLine {
+  path: LonLat[];
+  /** The fix instant of each vertex of `path`. */
+  times: number[];
+}
+
+/** The pickable stretches of a long span: every drawn segment of two or more fixes. */
+export function rangeLinesOf(segments: readonly TrackPoint[][]): MapRangeLine[] {
+  return segments.flatMap((segment) =>
+    segment.length > 1 ? [{ path: segment.map(lonLat), times: segment.map((p) => p[0]) }] : []
+  );
+}
+
+/** The instant of the vertex of `line` nearest to a clicked coordinate; null for an empty line. */
+export function nearestTime(line: MapRangeLine, at: readonly number[]): number | null {
+  let best: number | null = null;
+  let bestD = Infinity;
+  line.path.forEach(([lon, lat], i) => {
+    const d = (lon - at[0]) ** 2 + (lat - at[1]) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = line.times[i] ?? null;
+    }
+  });
+  return best;
+}
+
+/** The leg line's hit width in px: a fingertip on a coarse pointer, a pencil line otherwise. */
+export const LEG_PICK_WIDTH = 16;
+export const LEG_PICK_WIDTH_COARSE = 40;
+
+/** One leg's drawn stretch with its mode, for colouring by transport mode. */
+export interface MapModePath {
+  path: LonLat[];
+  mode: ModeColorKey;
+}
+
 /** A dwell between legs, drawn as a marker that opens its card. */
 export interface MapStop {
   date: string;
@@ -122,13 +162,31 @@ export interface TrackLayerInput {
   /** Every leg's stretches, pickable (clear but present); omitted, no line is clickable. */
   legLines?: readonly MapLegLine[];
   onLeg?: (leg: MapLegLine) => void;
+  /** Colour by transport mode: the legs' stretches and the colour of each mode. */
+  modePaths?: readonly MapModePath[];
+  modeColors?: Record<ModeColorKey, Rgb>;
+  /** The leg lines' and the range lines' hit width in px; omitted, `LEG_PICK_WIDTH`. */
+  pickWidth?: number;
+  /**
+   * A long span's drawn stretches, pickable: its legs are not shipped with the range read, so a
+   * click names an instant and the view reads that day to find the leg.
+   */
+  rangeLines?: readonly MapRangeLine[];
+  onRangePick?: (atMs: number) => void;
   stops?: readonly MapStop[];
   onStop?: (stop: MapStop) => void;
   /** The speed ramp's stops; omitted, the default ramp. */
   speedStops?: readonly SpeedStop[];
   /** The picked leg's vertices, drawn whatever the points layer says; empty draws nothing. */
   legPoints?: readonly MapPoint[];
+  /** Long silences, drawn dashed and faint: estimated, never counted (best source per day). */
+  estimated?: readonly LonLat[][];
+  /** Jumps a logged entry explains, drawn with the entry's own line. */
+  bridges?: readonly LonLat[][];
 }
+
+/** The dash of an estimated stretch, in pixels: dash, gap. */
+const ESTIMATED_DASH: [number, number] = [6, 6];
 
 /** The open flight's line: bright, over the span's line, never joined across its own breaks. */
 const HIGHLIGHT_RGB: [number, number, number] = [244, 236, 224];
@@ -173,6 +231,22 @@ const entryAnchorsOf = byRef((anchors: readonly MapAnchor[]) =>
 );
 
 function routeLayer(input: TrackLayerInput, alpha: number): Layer {
+  if (input.color === "mode" && input.modeColors && input.modePaths && input.modePaths.length > 0) {
+    const table = input.modeColors;
+    return new PathLayer<MapModePath>({
+      id: "track-route-mode",
+      data: input.modePaths as MapModePath[],
+      getPath: (d) => d.path,
+      getColor: (d) => [...table[d.mode], alpha],
+      updateTriggers: { getColor: [alpha, table] },
+      getWidth: 4,
+      widthUnits: "pixels",
+      widthMinPixels: 2,
+      capRounded: true,
+      jointRounded: true,
+      pickable: false,
+    });
+  }
   if (input.color === "speed") {
     return new PathLayer<SpeedPiece>({
       id: "track-route-speed",
@@ -267,6 +341,36 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
     );
   }
   if (on.routes) out.push(routeLayer(input, alpha));
+  if (on.routes && (input.bridges?.length ?? 0) > 0) {
+    out.push(
+      new PathLayer<LonLat[]>({
+        id: "track-bridges",
+        data: input.bridges as LonLat[][],
+        getPath: (d) => d,
+        getColor: [...TRACK_RGB, Math.round(alpha * 0.7)],
+        getWidth: 2,
+        widthUnits: "pixels",
+        wrapLongitude: false,
+        pickable: false,
+      })
+    );
+  }
+  if (on.routes && (input.estimated?.length ?? 0) > 0) {
+    out.push(
+      new PathLayer<LonLat[], PathStyleExtensionProps<LonLat[]>>({
+        id: "track-estimated",
+        data: input.estimated as LonLat[][],
+        getPath: (d) => d,
+        getColor: [...TRACK_RGB, Math.round(alpha * 0.55)],
+        getWidth: 2,
+        widthUnits: "pixels",
+        getDashArray: ESTIMATED_DASH,
+        dashJustified: true,
+        extensions: [new PathStyleExtension({ dash: true })],
+        pickable: false,
+      })
+    );
+  }
   if (input.highlight && input.highlight.length > 0) {
     out.push(
       new PathLayer<LonLat[]>({
@@ -337,11 +441,31 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
         getPath: (d) => d.path,
         // Alpha 1, not 0: a fully clear stroke is not offered to picking.
         getColor: [0, 0, 0, 1],
-        getWidth: 16,
+        getWidth: input.pickWidth ?? LEG_PICK_WIDTH,
         widthUnits: "pixels",
         pickable: true,
         onClick: (info: PickingInfo<MapLegLine>) => {
           if (info.object) onLeg(info.object);
+          return true;
+        },
+      })
+    );
+  }
+  if (on.routes && input.rangeLines && input.rangeLines.length > 0 && input.onRangePick) {
+    const onRangePick = input.onRangePick;
+    out.push(
+      new PathLayer<MapRangeLine>({
+        id: "track-range-pick",
+        data: input.rangeLines as MapRangeLine[],
+        getPath: (d) => d.path,
+        getColor: [0, 0, 0, 1],
+        getWidth: input.pickWidth ?? LEG_PICK_WIDTH,
+        widthUnits: "pixels",
+        pickable: true,
+        onClick: (info: PickingInfo<MapRangeLine>) => {
+          if (!info.object || !info.coordinate) return false;
+          const at = nearestTime(info.object, info.coordinate);
+          if (at !== null) onRangePick(at);
           return true;
         },
       })

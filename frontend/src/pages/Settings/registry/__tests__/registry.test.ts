@@ -47,14 +47,14 @@ describe("the settings registry follows the settings v3 page model", () => {
     }
   });
 
-  it("counts 34 pages, 125 groups and cards (47 of them service cards: 19 the account's, 28 the server's) and 275 rows", () => {
+  it("counts 34 pages, 126 groups and cards (47 of them service cards: 19 the account's, 28 the server's) and 276 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
     expect(SETTINGS_REGISTRY).toHaveLength(34);
-    expect(sections).toHaveLength(125);
+    expect(sections).toHaveLength(126);
     expect(sections.filter((s) => s.serviceCategory)).toHaveLength(47);
     expect(registryPage("dienstek")!.sections).toHaveLength(19);
     expect(registryPage("dienste")!.sections).toHaveLength(28);
-    expect(sections.flatMap((s) => s.rows)).toHaveLength(275);
+    expect(sections.flatMap((s) => s.rows)).toHaveLength(276);
   });
 
   it("lists the rows added after the first generation, so search can find them (forgejo#407)", () => {

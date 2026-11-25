@@ -102,7 +102,9 @@
     "legInvalid": "This leg cannot be changed like that.",
     "legGone": "This leg no longer exists – the view is being recalculated.",
     "stopInvalid": "This stop cannot be named like that.",
-    "stopGone": "This stop no longer exists – the view is being recalculated."
+    "stopGone": "This stop no longer exists – the view is being recalculated.",
+    "sourceNotOnDay": "That source holds no points on the day. Reload the page and choose again.",
+    "dayNoPoints": "Nothing is stored on this day – there is no source to choose."
   },
   "settings": {
     "tripsNoResidence": "TravTrack recognises trips only once your home is confirmed: it measures the distance from where you live. Confirm it under Settings → Home.",
@@ -203,16 +205,19 @@
       "withoutTime_one": "{{count}} without a time skipped",
       "withoutTime_other": "{{count}} without a time skipped",
       "left_one": "{{count}} still stored",
-      "left_other": "{{count}} still stored"
+      "left_other": "{{count}} still stored",
+      "noNew": "no new points"
     },
     "points_one": "{{count}} position",
     "points_other": "{{count}} positions",
     "span": "{{from}} – {{to}}",
     "status": {
       "running": "running",
-      "interrupted": "interrupted (the server restarted) – import the file again",
+      "interrupted": "interrupted (the server restarted) – choose the same file with “Resume”",
       "cancelled": "deleted",
-      "paused": "paused – resume it under “Copy your Dawarich history”"
+      "paused": "paused – resume it under “Copy your Dawarich history”",
+      "partial": "stopped part-way – choose the same file with “Resume” to carry on where it stopped",
+      "queued": "waiting while other imports take their turn"
     },
     "delete": "Delete import",
     "deleteConfirm_one": "Delete the import “{{name}}” and its {{count}} position? Positions from other sources stay.",
@@ -229,8 +234,12 @@
       "notFound": "This import no longer exists.",
       "rateLimited": "Too many imports in a short time. Try again in a quarter of an hour.",
       "lost": "Whether the import finished is not known – the server restarted. Check the list.",
-      "tooManyPoints": "The file holds too many positions – one import takes at most 200,000 from GPX and 2 million from the other formats. Split it, say by month."
-    }
+      "tooManyPoints": "The file holds too many positions – one import takes at most 200,000 from GPX and 2 million from the other formats. Split it, say by month.",
+      "notResumable": "This import cannot be resumed.",
+      "fileMismatch": "This is not the file this import was started with. Choose the same file to resume."
+    },
+    "resume": "Resume",
+    "partial": "The import stopped part-way: {{summary}}. Choose the same file with “Resume” to carry on."
   },
   "dawarichCopy": {
     "title": "Copy your Dawarich history",
@@ -464,7 +473,12 @@
       "accuracy": "Points by accuracy",
       "accuracyAll": "All points",
       "accuracyMax": "Only better than {{m}} m",
-      "accuracyHint": "Applies to points and the heatmap, not to the line. Points with no reported accuracy stay visible."
+      "accuracyHint": "Applies to points and the heatmap, not to the line. Points with no reported accuracy stay visible.",
+      "mode": "Transport mode",
+      "modeLong": "Colouring by transport mode is available for a day or a week. Month, year and custom range are drawn in one colour.",
+      "modeNone": "No legs in the span.",
+      "modeColor": "Colour for {{mode}}",
+      "modeReset": "Default colours"
     },
     "replay": {
       "play": "Start replay",
@@ -753,11 +767,22 @@
       "avgSpeed": "Avg speed",
       "maxSpeed": "Top speed",
       "ascent": "Ascent",
-      "descent": "Descent"
+      "descent": "Descent",
+      "points": "Points"
     },
     "replay": "Replay this leg",
     "showPoints": "Show points",
-    "hidePoints": "Hide points"
+    "hidePoints": "Hide points",
+    "pickLoading": "Loading the section …",
+    "pickFailed": "The section could not be loaded. {{reason}}",
+    "pickNone": "There is no section here (a stop or a gap).",
+    "openDay": "Open day",
+    "delete": "Delete points",
+    "deleteConfirm": "Permanently delete the {{n}} points of this section?",
+    "deleteYes": "Yes, delete",
+    "deleteNo": "Cancel",
+    "deleted": "The section's points were deleted.",
+    "deleteFailed": "The points were not deleted. {{reason}}"
   },
   "stop": {
     "title": "Stop",
@@ -900,5 +925,72 @@
     "openTrack": "Open Track",
     "pageTitle": "Logbook gaps",
     "menu": "Gaps"
+  },
+  "daySources": {
+    "title": "Source of the day",
+    "kind": {
+      "phone": "Phone",
+      "dawarich": "Dawarich",
+      "import": "Import",
+      "other": "Other source"
+    },
+    "used": "Used: {{source}}",
+    "usedChosen": "Chosen by you: {{source}}",
+    "segment": "{{source}} from {{from}}",
+    "none": "no source",
+    "notScored": "The sources of this day are still being rated; until then every point is drawn.",
+    "choose": "Source",
+    "auto": "Automatic (best source)",
+    "option": "{{source}} – quality {{score}} %, {{count}} points",
+    "outliers_one": "{{count}} outlier neither drawn nor counted",
+    "outliers_other": "{{count}} outliers neither drawn nor counted",
+    "outliersKept_one": "{{count}} outlier drawn at your request",
+    "outliersKept_other": "{{count}} outliers drawn at your request",
+    "outliersShow": "Show anyway",
+    "outliersHide": "Hide again",
+    "estimated_one": "{{count}} gap dashed – estimated, not counted",
+    "estimated_other": "{{count}} gaps dashed – estimated, not counted",
+    "bridged_one": "{{count}} jump drawn as a logbook entry",
+    "bridged_other": "{{count}} jumps drawn as logbook entries",
+    "clockOffset": "{{source}} runs {{minutes}} minutes off – probably a wrong time zone in the export. Nothing was shifted."
+  },
+  "quality": {
+    "title": "Days with questionable tracks",
+    "intro": "On these days the sources disagree, the quality is low or there are outliers. Stored points are never changed by this; every decision can be undone.",
+    "loading": "Loading days …",
+    "none": "No questionable days – everything fits.",
+    "total_one": "{{count}} day",
+    "total_other": "{{count}} days",
+    "reason": {
+      "lowScore": "low quality",
+      "mixed": "several sources",
+      "outliers": "outliers"
+    },
+    "score": "quality {{score}} %",
+    "open": "Open day",
+    "chooseSource": "Choose source",
+    "discardOutliers": "Discard outliers",
+    "deleteRange": "Delete range …",
+    "more": "Load more days",
+    "saved": "Saved.",
+    "previewDays_one": "Affected: {{count}} day",
+    "previewDays_other": "Affected: {{count}} days"
+  },
+  "evidence": {
+    "calendar": "Calendar: {{title}}",
+    "venue": "Place from map data",
+    "whyLabel": "Why?",
+    "level": {
+      "high": "Confidence high",
+      "medium": "Confidence medium",
+      "low": "Confidence low"
+    },
+    "why": {
+      "venue": "{{m}} m from the place",
+      "dwell": "{{min}} min stay",
+      "calendar": "calendar event fits",
+      "plugin": "{{plugin}}: {{name}}, {{m}} m",
+      "pluginNoDistance": "{{plugin}}: {{name}}"
+    }
   }
 }

@@ -930,6 +930,18 @@
         "bus": "as bus ride"
       },
       "openImport": "Go to rail import"
+    },
+    "timeline": {
+      "title": "Google Timeline",
+      "description": "Your Google location Timeline goes into your TravTrack history. Get the file on your phone: Google Maps → Settings → Timeline → Export Timeline (Timeline.json) — Google now keeps the Timeline on the device only. Older Google Takeout exports work too.",
+      "group": "TravTrack",
+      "off": "TravTrack is off on this server, so no Timeline can be imported.",
+      "offAdmin": "Switch TravTrack on",
+      "offMember": "An admin can switch it on under Settings → Instance.",
+      "unknown": "Whether TravTrack is available could not be read. Reload the page.",
+      "demo": "Import is locked in the demo account.",
+      "toTravTrack": "Imports in the TravTrack settings",
+      "fromTravTrack": "Google Timeline: instructions on the Import page"
     }
   },
   "trips": {
@@ -2164,6 +2176,9 @@
       "title": "Privacy zones",
       "difference": "Nothing is stored or drawn inside a privacy zone, unlike fixed places, which only summarise. A privacy zone always wins."
     },
+    "quality": {
+      "title": "Days with questionable tracks"
+    },
     "detect": {
       "title": "Detection & suggestions",
       "stops": {
@@ -2278,6 +2293,76 @@
       "rateLimited": "Too many checks in a short time. Please wait a moment.",
       "forbidden": "Only admins can check reachability.",
       "generic": "The check could not be started. Please try again."
+    }
+  },
+  "recoveryKey": {
+    "title": "Recovery key",
+    "blocking": "You cannot continue until the key is saved. Backups keep running.",
+    "signOut": "Sign out",
+    "row": {
+      "title": "Recovery key",
+      "sub": "Decrypts the credentials in your backups.",
+      "confirmed": "Saved and confirmed on {{when}}.",
+      "unconfirmed": "Not confirmed yet: without this key the credentials in your backups cannot be read after the server is lost.",
+      "otherKey": "The key has changed. Save the new key and confirm it.",
+      "open": "Show recovery key",
+      "loadFailed": "The key's status could not be loaded."
+    },
+    "reauth": {
+      "intro": "First confirm it is you. Then the key is shown once.",
+      "password": "Password",
+      "code": "Code from the authenticator app or a recovery code",
+      "passkeyHint": "You confirm with your passkey.",
+      "usePasskey": "Confirm with a passkey instead",
+      "usePassword": "Confirm with the password instead",
+      "submit": "Confirm and show the key",
+      "refused": {
+        "REAUTH_PASSWORD_INCORRECT": "The password is not right.",
+        "REAUTH_SECOND_FACTOR_REQUIRED": "Enter the code from your authenticator app as well.",
+        "REAUTH_SECOND_FACTOR_INVALID": "The code is not right.",
+        "DELETE_PASSKEY_INVALID": "The passkey could not be verified.",
+        "REAUTH_PASSKEY_TOO_NEW": "This passkey is less than a day old. Confirm with your password.",
+        "PASSKEY_UNAVAILABLE": "Passkeys are not set up on this server. Confirm with your password.",
+        "RATE_LIMITED": "Too many attempts. Wait a quarter of an hour, then try again.",
+        "passkeyCancelled": "The passkey prompt was cancelled.",
+        "offline": "The server cannot be reached.",
+        "other": "That did not work. Try again."
+      }
+    },
+    "show": {
+      "why": "Your backups – local and on WebDAV – hold API keys, tokens and the SMTP password only in encrypted form. The key for them is deliberately not in the backup. If this server is lost, only this key can make those credentials readable again.",
+      "keep": "Keep it outside this server, ideally in your password manager. It is shown only now.",
+      "copy": "Copy",
+      "download": "Download as a file",
+      "copied": "Copied to the clipboard.",
+      "copyFailed": "Copying did not work. Select the key and copy it by hand, or download it as a file.",
+      "next": "Next"
+    },
+    "confirm": {
+      "label": "To confirm, enter the last {{count}} characters of the key.",
+      "submit": "Confirm",
+      "back": "Show the key again",
+      "mismatch": "Those are not the last characters of the key. Have another look.",
+      "format": "Enter exactly {{count}} characters.",
+      "expired": "The confirmation took too long. Confirm it is you once more.",
+      "rateLimited": "Too many attempts. Wait a quarter of an hour, then try again.",
+      "failed": "The confirmation did not work. Try again."
+    },
+    "file": {
+      "title": "TravStats – recovery key",
+      "instance": "Instance",
+      "key": "Key",
+      "fingerprint": "Fingerprint",
+      "restore": "To restore: install TravStats again, restore the backup and paste this key when the restore asks for it.",
+      "restoreManual": "Alternatively set the 64 characters without spaces as ENCRYPTION_KEY, or write them to /app/data/secrets/encryption.key, before you restore.",
+      "keep": "Keep this file outside the server, e.g. in your password manager. Whoever has it can decrypt the credentials in your backups."
+    },
+    "restore": {
+      "intro": "Paste the recovery key of the server that wrote this backup. The stored credentials then stay readable.",
+      "label": "Recovery key",
+      "withKey": "Restore with the key",
+      "cancel": "Cancel",
+      "reauth": "Replacing this server's key needs your password."
     }
   }
 }

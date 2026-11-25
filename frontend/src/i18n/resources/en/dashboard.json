@@ -515,5 +515,6 @@
       "trip": "Trips"
     }
   },
-  "mailOriginalNotFiled": "The entry was created, but the original mail could not be filed with it. It stays in the inbox."
+  "mailOriginalNotFiled": "The entry was created, but the original mail could not be filed with it. It stays in the inbox.",
+  "documentNotFiled": "The entry was created, but the document could not be filed with it. It stays under \"Documents filed with nothing\" in the inbox."
 }

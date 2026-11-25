@@ -14,7 +14,18 @@ export interface LinkableCompanion {
   id: string;
   name: string;
   linkedUser: SharePerson | null;
+  /** The person on another server this companion is (2026-11-24); listed only, never both. */
+  linkedRemote?: { remoteId: string; displayName: string; username: string; origin: string } | null;
 }
+
+const LINKED_REMOTE_SELECT = {
+  select: { id: true, displayName: true, username: true, origin: true },
+} as const;
+
+const remoteRef = (
+  r: { id: string; displayName: string; username: string; origin: string } | null
+): LinkableCompanion["linkedRemote"] =>
+  r ? { remoteId: r.id, displayName: r.displayName, username: r.username, origin: r.origin } : null;
 
 const companionNotFound = () => new AppError("Companion not found", 404, "COMPANION_NOT_FOUND");
 
@@ -26,7 +37,7 @@ export async function listLinkableCompanions(userId: string): Promise<{
   const [companions, statuses] = await Promise.all([
     prisma.companion.findMany({
       where: { userId },
-      include: { linkedUser: { select: PERSON_SELECT } },
+      include: { linkedUser: { select: PERSON_SELECT }, linkedRemote: LINKED_REMOTE_SELECT },
       orderBy: { displayName: "asc" },
     }),
     // A person on another server is never a linkable account here (spec 2026-10-20 F2); a
@@ -44,6 +55,7 @@ export async function listLinkableCompanions(userId: string): Promise<{
       id: c.id,
       name: c.displayName,
       linkedUser: c.linkedUser ? toPerson(c.linkedUser) : null,
+      linkedRemote: remoteRef(c.linkedRemote),
     })),
     linkableUsers: targets.map(toPerson),
   };
@@ -62,6 +74,14 @@ export async function linkCompanion(
   // Checked before the target is looked up, so an id that is no account and
   // an account that never said yes answer alike: no probing for ids.
   if (!(await mayOfferTripTo(prisma, userId, targetUserId))) throw consentRequired();
+  // One identity per companion: a person on another server is unlinked first.
+  if (companion.linkedRemoteId) {
+    throw new AppError(
+      "This companion is already linked to a person on another server",
+      409,
+      "SHARE_COMPANION_ALREADY_LINKED"
+    );
+  }
 
   const other = await prisma.companion.findFirst({
     where: { userId, linkedUserId: targetUserId, NOT: { id: companionId } },
@@ -94,9 +114,10 @@ export async function unlinkCompanion(
 ): Promise<LinkableCompanion> {
   const companion = await prisma.companion.findFirst({ where: { id: companionId, userId } });
   if (!companion) throw companionNotFound();
+  // Either link goes: a companion is linked to one identity, local or on another server.
   const updated = await prisma.companion.update({
     where: { id: companion.id },
-    data: { linkedUserId: null },
+    data: { linkedUserId: null, linkedRemoteId: null },
   });
-  return { id: updated.id, name: updated.displayName, linkedUser: null };
+  return { id: updated.id, name: updated.displayName, linkedUser: null, linkedRemote: null };
 }

@@ -5,6 +5,7 @@ import type {
   ShareConsent,
   ShareConsentList,
   ShareNotice,
+  ReceivedTrips,
   ShareResult,
   TripSharing,
 } from "../../types/sharing";
@@ -61,6 +62,26 @@ export const sharingApi = {
       `/sharing/companions/${enc(companionId)}/link`
     );
     return data.data;
+  },
+
+  /** One person, one companion: the reader's companion IS this person on another server. */
+  linkRemoteCompanion: async (companionId: string, remoteId: string): Promise<void> => {
+    await api.put(`/sharing/companions/${enc(companionId)}/remote-link`, { remoteId });
+  },
+
+  /** "Not the same person": remembered, the question is not asked again. */
+  markNotSameRemote: async (companionId: string, remoteId: string): Promise<void> => {
+    await api.post(`/sharing/companions/${enc(companionId)}/not-same`, { remoteId });
+  },
+
+  /** Trips shared with the reader not looked at yet (dashboard banner, nav dot). */
+  receivedTrips: async (): Promise<ReceivedTrips> => {
+    const { data } = await api.get<Envelope<ReceivedTrips>>("/sharing/received-trips");
+    return data.data;
+  },
+
+  markReceivedTripsSeen: async (): Promise<void> => {
+    await api.post("/sharing/received-trips/seen");
   },
 
   tripSharing: async (tripId: string): Promise<TripSharing> => {

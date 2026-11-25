@@ -283,6 +283,7 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
   page("tt-aufz", "map-pin", [P("ttRecording", LOC), P("ttPlaces", TT), P("ttZones", TT)]),
   page("tt-erk", "sparkles", [P("ttDetect", LOC), P("ttCalendar", TT), P("ttPlugins", TT)]),
   page("tt-daten", "database", [
+    P("ttQuality", TT),
     P("ttSources", TT),
     P("ttExport", TT),
     P("ttDelete", TT),

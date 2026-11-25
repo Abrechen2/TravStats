@@ -83,6 +83,7 @@ const DONE: TravTrackImport = {
   status: "succeeded",
   report: REPORT,
   pointCount: 42,
+  cursor: 120,
   fromAt: "2026-10-12T01:00:00.000Z",
   toAt: "2026-10-12T05:00:00.000Z",
   createdAt: "2026-10-20T10:00:00.000Z",
@@ -280,6 +281,74 @@ describe("Track › Importe — GPX import", () => {
     expect(await screen.findByText("Bukhansan.gpx")).toBeInTheDocument();
     expect(document.getElementById("travtrack-gpx-file")).toBeNull();
     expect(screen.getByRole("button", { name: "track:imports.delete" })).toBeInTheDocument();
+  });
+
+  it("an import that stopped part-way shows what it stored and resumes with the same file", async () => {
+    const partial: TravTrackImport = {
+      ...DONE,
+      id: "imp-3",
+      fileName: "Timeline.json",
+      status: "partial",
+      cursor: 222_000,
+      report: { ...REPORT, read: 276_803, stored: 222_439, duplicate: 5_297 },
+    };
+    vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([partial]);
+    const resume = vi
+      .spyOn(travTrackImportsApi, "resume")
+      .mockResolvedValue({ importId: "imp-3", status: "succeeded", report: REPORT });
+    show();
+    const row = (await screen.findByText("Timeline.json")).closest("li")!;
+    expect(row.textContent).toContain("track:imports.status.partial");
+    expect(row.textContent).toContain('track:imports.report.stored {"count":222439}');
+    expect(row.textContent).toContain('track:imports.report.duplicate {"count":5297}');
+    await userEvent.click(within(row).getByRole("button", { name: "track:imports.resume" }));
+    const picker = document.getElementById("travtrack-gpx-resume-file") as HTMLInputElement;
+    const file = new File(["{}"], "Timeline.json", { type: "application/json" });
+    await userEvent.upload(picker, file);
+    await waitFor(() => expect(resume).toHaveBeenCalledTimes(1));
+    expect(resume.mock.calls[0][0]).toBe("imp-3");
+    expect(resume.mock.calls[0][1]).toBe(file);
+  });
+
+  it("an import that stops part-way says so instead of reporting success", async () => {
+    vi.spyOn(travTrackImportsApi, "importGpx").mockResolvedValue({
+      importId: "imp-1",
+      status: "partial",
+      report: { ...REPORT, error: "JOB_FAILED" },
+    });
+    show();
+    await userEvent.upload(await fileInput(), gpx());
+    expect(await screen.findByRole("alert")).toHaveTextContent("track:imports.partial");
+  });
+
+  it("an import that stored nothing new says so instead of looking like progress", async () => {
+    vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([
+      {
+        ...DONE,
+        status: "partial",
+        report: { ...REPORT, stored: 0, duplicate: 120, noNewPoints: true },
+      },
+    ]);
+    show();
+    const row = (await screen.findByText("Bukhansan.gpx")).closest("li")!;
+    expect(row.textContent).toContain("track:imports.report.noNew");
+    expect(row.textContent).not.toContain("track:imports.report.stored");
+  });
+
+  it("an import waiting for its turn says so", async () => {
+    vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([
+      { ...DONE, status: "running", report: { ...REPORT, queued: true } },
+    ]);
+    show();
+    const row = (await screen.findByText("Bukhansan.gpx")).closest("li")!;
+    expect(row.textContent).toContain("track:imports.status.queued");
+  });
+
+  it("a finished import offers no resume", async () => {
+    vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([DONE]);
+    show();
+    await screen.findByText("Bukhansan.gpx");
+    expect(screen.queryByRole("button", { name: "track:imports.resume" })).toBeNull();
   });
 
   // UAT rc.45 retest D19: the label and the button both said "Track-Datei importieren".

@@ -284,6 +284,8 @@ export const NON_TRAVEL_RELATIONS = [
   "mailIntakeSources",
   "mailIntakeSenders",
   "mailIntakeMessages",
+  "mailIntakeScans",
+  "mailIntakeCandidates",
   // TravTrack, the own location history (TravTrack plan, phase 2): private to its
   // owner like the trip recording — never part of a comparison or a federation
   // publication. A shared trip carries at most the owner's route snapshot (T7).
@@ -320,6 +322,7 @@ export const NON_TRAVEL_RELATIONS = [
   "travTrackExploredCells",
   "travTrackZoneCells",
   "travTrackMonthValues",
+  "travTrackDaySources",
   "travTrackDawarichImport",
   // The account's WebDAV export target (forgejo#321): a URL, a username and an
   // encrypted password. A credential, so it never travels.

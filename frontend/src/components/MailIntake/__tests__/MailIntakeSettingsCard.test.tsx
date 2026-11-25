@@ -40,10 +40,23 @@ const status = (over: Partial<MailIntakeStatus> = {}): MailIntakeStatus => ({
     lastOkAt: null,
     lastError: null,
     lastErrorAt: null,
+    prefilter: true,
+    keepUnread: false,
+    fetchFrom: "now",
+    senderDomains: [],
+    removedSenderDomains: [],
+    subjectKeywords: [],
+    removedSubjectKeywords: [],
+    skippedCount: 12,
+    processedCount: 3,
   },
   address: null,
   forwardingAvailable: false,
   senders: [],
+  prefilterDefaults: {
+    senderDomains: [{ domain: "lufthansa.com", brand: "Lufthansa", kind: "flight" }],
+    keywords: { de: ["Buchungsbestätigung", "Reservierung"], en: ["booking confirmation"] },
+  },
   ...over,
 });
 
@@ -156,5 +169,76 @@ describe("MailIntakeSettingsCard (forgejo#313)", () => {
     vi.mocked(mailIntakeApi.status).mockResolvedValue(status({ forwardingAvailable: false }));
     render(<MailIntakeSettingsCard />);
     expect(await screen.findByText("mailIntake:forwarding.unavailable")).toBeTruthy();
+  });
+
+  describe("privacy block for a private INBOX", () => {
+    it("shows both default keyword groups and the counters; saving sends the custom lists", async () => {
+      vi.mocked(mailIntakeApi.status).mockResolvedValue(status());
+      vi.mocked(mailIntakeApi.saveSource).mockResolvedValue(status().source!);
+      render(<MailIntakeSettingsCard />);
+      const block = await screen.findByTestId("mail-privacy");
+      expect(
+        within(screen.getByTestId("mail-keywords-groupDe")).getByText("Reservierung")
+      ).toBeTruthy();
+      expect(
+        within(screen.getByTestId("mail-keywords-groupEn")).getByText("booking confirmation")
+      ).toBeTruthy();
+      expect(screen.getByTestId("mail-privacy-counters").textContent).toContain(
+        "mailIntake:privacy.counters"
+      );
+
+      // switch a default word off, add an own word and an own domain
+      fireEvent.click(within(block).getByText("Reservierung"));
+      fireEvent.change(
+        within(block).getByPlaceholderText("mailIntake:privacy.keywords.placeholder"),
+        {
+          target: { value: "Ihre Reise" },
+        }
+      );
+      fireEvent.click(within(block).getByText("mailIntake:privacy.keywords.add"));
+      fireEvent.change(
+        within(block).getByPlaceholderText("mailIntake:privacy.senders.placeholder"),
+        {
+          target: { value: "@Mein-Reisebuero.de" },
+        }
+      );
+      fireEvent.click(within(block).getByText("mailIntake:privacy.senders.add"));
+      fireEvent.click(screen.getByText("mailIntake:folder.save"));
+
+      await waitFor(() => expect(mailIntakeApi.saveSource).toHaveBeenCalled());
+      expect(vi.mocked(mailIntakeApi.saveSource).mock.calls[0][0]).toMatchObject({
+        prefilter: true,
+        fetchFrom: "now",
+        keepUnread: false,
+        removedSubjectKeywords: ["Reservierung"],
+        subjectKeywords: ["Ihre Reise"],
+        senderDomains: ["mein-reisebuero.de"],
+      });
+    });
+
+    it("refuses a sender that is not a domain, visibly", async () => {
+      vi.mocked(mailIntakeApi.status).mockResolvedValue(status());
+      render(<MailIntakeSettingsCard />);
+      const block = await screen.findByTestId("mail-privacy");
+      fireEvent.change(
+        within(block).getByPlaceholderText("mailIntake:privacy.senders.placeholder"),
+        {
+          target: { value: "kein domain" },
+        }
+      );
+      fireEvent.click(within(block).getByText("mailIntake:privacy.senders.add"));
+      expect(within(block).getByRole("alert").textContent).toContain(
+        "mailIntake:privacy.senders.invalid"
+      );
+    });
+
+    it("a new INBOX folder shows 'nicht als gelesen markieren' on by default", async () => {
+      vi.mocked(mailIntakeApi.status).mockResolvedValue(status({ source: null }));
+      render(<MailIntakeSettingsCard />);
+      await screen.findByTestId("mail-privacy");
+      fireEvent.change(screen.getByDisplayValue("TravStats"), { target: { value: "INBOX" } });
+      const box = screen.getByLabelText("mailIntake:privacy.keepUnread") as HTMLInputElement;
+      expect(box.checked).toBe(true);
+    });
   });
 });

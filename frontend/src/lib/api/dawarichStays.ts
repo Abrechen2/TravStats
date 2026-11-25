@@ -158,6 +158,9 @@ export interface StayPluginEvidence {
   confidence: number;
   distanceM?: number | null;
   receivedAt?: string;
+  /** The plugin's reason: `name` = matched by a distinctive word, further away. */
+  reason?: "distance" | "name";
+  matchedToken?: string;
 }
 export interface StayCalendarEvidence {
   sourceId: string;

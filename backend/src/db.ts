@@ -147,6 +147,22 @@ export function expectingUniqueConflict<T>(model: string, run: () => Promise<T>)
 }
 
 /**
+ * A bounded wait the caller is about to retry is not a fault either: a
+ * TravTrack import batch sets `lock_timeout` and tries again later when the
+ * account's lock is busy (`imports/fileImport.ts`). Inside this scope a lock or
+ * statement timeout is logged at debug — the caller logs one warning per retry
+ * and leaves the scope for its last try, whose failure stays at error level.
+ */
+const expectedBusyWait = new AsyncLocalStorage<true>();
+
+export function expectingBusyWait<T>(run: () => Promise<T>): Promise<T> {
+  return expectedBusyWait.run(true, async () => await run());
+}
+
+/** Postgres's own words for a wait that gave up: lock timeout (55P03), statement timeout (57014). */
+const BUSY_WAIT = /\b55P03\b|\b57014\b|lock timeout|statement timeout/i;
+
+/**
  * Query logging, as a client extension.
  *
  * This was `prisma.$use(...)` until Prisma 7 removed client middleware
@@ -405,6 +421,16 @@ function logQueryFailure(
       operation: "database_expected_conflict",
       message: `${model}.${operation} - unique conflict, handled by the caller`,
       error: { code },
+    });
+    return;
+  }
+
+  if (expectedBusyWait.getStore() && BUSY_WAIT.test(originalMessage)) {
+    dbLogger.debug({
+      ...entry,
+      operation: "database_expected_busy_wait",
+      message: `${model}.${operation} - gave up waiting, retried by the caller`,
+      error: { code: typeof code === "string" ? code : undefined },
     });
     return;
   }

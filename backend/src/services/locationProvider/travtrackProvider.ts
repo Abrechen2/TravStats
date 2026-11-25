@@ -1,4 +1,6 @@
 import { prisma } from "../../db";
+import { keepsRow } from "../travtrack/bestSource/resolveDay";
+import { readResolutionsIn } from "../travtrack/bestSource/store";
 import type { LocationObservation, LocationProvider, ReadWindow } from "./types";
 
 /**
@@ -64,16 +66,21 @@ export function travtrackProvider(userId: string, cap = TRAVTRACK_PAGE_CAP): Loc
   return {
     kind: "travtrack",
     async readPoints(window, cursor) {
-      const rows = await prisma.travTrackPoint.findMany({
-        where: { ...inWindow(window), ...afterCursor(cursor) },
-        orderBy: [{ t: "asc" }, { seq: "asc" }],
-        take: cap + 1,
-        select: SELECT,
-      });
+      const [rows, resolutions] = await Promise.all([
+        prisma.travTrackPoint.findMany({
+          where: { ...inWindow(window), ...afterCursor(cursor) },
+          orderBy: [{ t: "asc" }, { seq: "asc" }],
+          take: cap + 1,
+          select: { ...SELECT, id: true, origin: true },
+        }),
+        // The resolved stream (best source per day), as every other TravTrack read sees it.
+        readResolutionsIn(userId, window),
+      ]);
       const page = rows.slice(0, cap);
       const last = page[page.length - 1];
+      const kept = resolutions.length ? page.filter((r) => keepsRow(resolutions, r)) : page;
       return {
-        points: page.map(observationOf),
+        points: kept.map(observationOf),
         next: rows.length > cap && last ? `${last.t.getTime()}:${last.seq}` : null,
         coverage: "complete",
       };

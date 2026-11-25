@@ -10,7 +10,7 @@
   },
   "folder": {
     "title": "Eigener Mail-Ordner (IMAP)",
-    "help": "TravStats liest nur diesen einen Ordner, zum Beispiel „TravStats“. Ein Filter oder du selbst legst Buchungen dort ab. Gelesene Mails bekommen das Kennzeichen „gelesen“ und die Markierung $TravStats; nichts wird gelöscht oder verschoben. Verwende ein App-Passwort (Gmail, iCloud, Outlook, GMX).",
+    "help": "TravStats liest nur diesen einen Ordner – auch dein Posteingang (INBOX) ist möglich. Nichts wird gelöscht oder verschoben. Verwende ein App-Passwort (Gmail, iCloud, Outlook, GMX).",
     "host": "IMAP-Server",
     "port": "Port",
     "security": "Verschlüsselung",
@@ -139,11 +139,99 @@
   },
   "admin": {
     "title": "Weiterleitungs-Postfach (Buchungsmails)",
-    "help": "Ein Postfach für die ganze Instanz. Jedes Konto bekommt daraus eine eigene Adresse mit Zusatz (zum Beispiel trips+k7m2q9xwab@beispiel.de). Der Anbieter muss Plus-Adressen unterstützen. TravStats liest das Postfach nur per IMAP.",
+    "help": "Ein Postfach für die ganze Instanz. Jedes Konto bekommt daraus eine eigene Adresse mit Zusatz (zum Beispiel trips+k7m2q9xwab@beispiel.de). Der Anbieter muss Plus-Adressen unterstützen. TravStats liest das Postfach nur per IMAP. Nimm ein eigenes Postfach nur für TravStats: Es liest jede neue Mail ohne Buchungsfilter, aber erst ab der Einrichtung – ältere Mails bleiben liegen.",
     "address": "Postfach-Adresse",
     "authservId": "Authserv-ID des Anbieters (optional)",
     "authservHelp": "Wenn gesetzt, gilt nur der Authentication-Results-Header mit dieser Kennung.",
     "plainNote": "Unverschlüsseltes IMAP ist hier für ein Postfach im eigenen Netz erlaubt.",
     "notSet": "Noch nicht eingerichtet."
+  },
+  "privacy": {
+    "title": "Privatsphäre",
+    "intro": "Nur Buchungsmails werden gelesen. TravStats sieht sich von jeder neuen Mail zuerst nur Absender und Betreff an. Passt beides nicht zu einer Buchung, bleibt die Mail unberührt: nicht heruntergeladen, nicht gespeichert, nicht protokolliert, nicht markiert – nur mitgezählt.",
+    "prefilter": "Nur Buchungsmails lesen (Absender- und Betreff-Filter)",
+    "prefilterOffWarning": "Ausgeschaltet liest TravStats jede neue Mail dieses Ordners. Nur für einen eigenen Buchungsordner sinnvoll, nie für den Posteingang.",
+    "keepUnread": "Mails nicht als gelesen markieren",
+    "keepUnreadHelp": "TravStats setzt nur die unsichtbare Markierung $TravStats; „gelesen“ bleibt deine Sache. Kennt der Server keine eigenen Markierungen, merkt sich TravStats die Position im Ordner.",
+    "fetchFrom": "Ab wann abholen",
+    "fetchFromHelp": "Gilt für einen neuen Ordner und nach jeder Änderung. Ältere Mails findest du über „Postfach durchsuchen“ im Posteingang.",
+    "fetchFromOption": {
+      "now": "Nur neue Mails ab jetzt",
+      "days_30": "Die letzten 30 Tage",
+      "days_90": "Die letzten 90 Tage",
+      "days_365": "Die letzten 365 Tage"
+    },
+    "counters": "Gelesen: {{processed}} · übersprungen: {{skipped}}",
+    "senders": {
+      "title": "Buchungsabsender",
+      "help": "Mails von diesen Domains (und ihren Subdomains) gelten als Buchung. Newsletter (Mails mit List-Id) dieser Absender brauchen zusätzlich ein Betreff-Wort. Die Standardliste kommt aus TravStats und den Parser-Vorlagen; einzelne Einträge kannst du ausschalten. Die Absender aus „Weiterleitung“ zählen hier nicht – sonst würde jede Mail von dir selbst gelesen.",
+      "defaults": "Standardliste ({{count}})",
+      "custom": "Eigene Domains",
+      "none": "Noch keine eigenen Domains.",
+      "placeholder": "z. B. mein-reisebuero.de",
+      "add": "Domain hinzufügen",
+      "invalid": "Das ist keine Domain wie beispiel.de.",
+      "remove": "Entfernen",
+      "switchOff": "Ausschalten",
+      "switchOn": "Einschalten",
+      "off": "aus"
+    },
+    "keywords": {
+      "title": "Betreff-Wörter",
+      "help": "Steht eines dieser Wörter im Betreff, gilt die Mail als Buchung – Groß- und Kleinschreibung egal, ä/ae und ß/ss gleich. Deutsch und Englisch sind immer beide aktiv.",
+      "defaults": "Standardwörter",
+      "groupDe": "Deutsch",
+      "groupEn": "English",
+      "custom": "Eigene Wörter",
+      "none": "Noch keine eigenen Wörter.",
+      "placeholder": "z. B. Reiseunterlagen, Mietvertrag, Name des Reisebüros",
+      "add": "Wort hinzufügen",
+      "remove": "Entfernen",
+      "switchOff": "Ausschalten",
+      "switchOn": "Einschalten"
+    }
+  },
+  "scan": {
+    "title": "Postfach durchsuchen",
+    "description": "Sucht im ganzen Ordner nach Buchungsmails, die in TravStats wahrscheinlich fehlen. Gelesen werden nur Absender, Betreff und Datum; eine Mail wird erst heruntergeladen, wenn du sie importierst.",
+    "range": "Zeitraum",
+    "rangeAll": "Ganzes Postfach",
+    "rangeCustom": "Von–bis",
+    "since": "Von",
+    "before": "Bis (einschließlich)",
+    "start": "Postfach durchsuchen",
+    "resume": "Fortsetzen",
+    "cancel": "Abbrechen",
+    "progress": "{{scanned}} von {{total}} Mails geprüft",
+    "summary": "{{scanned}} Mails geprüft · {{candidates}} fehlen wahrscheinlich · {{matched}} schon erfasst · {{skipped}} übersprungen",
+    "status": {
+      "running": "Läuft …",
+      "done": "Fertig.",
+      "cancelled": "Abgebrochen – du kannst später fortsetzen.",
+      "interrupted": "Unterbrochen (Neustart des Servers) – du kannst fortsetzen.",
+      "failed": "Fehlgeschlagen."
+    },
+    "missingTitle": "Wahrscheinlich fehlend ({{count}})",
+    "likelyTitle": "Vermutlich schon erfasst ({{count}})",
+    "likelyHint": "Zur selben Zeit gibt es einen Eintrag dieser Marke.",
+    "empty": "Keine fehlenden Buchungsmails gefunden.",
+    "import": "Importieren",
+    "ignore": "Ignorieren",
+    "importSelected": "Auswahl importieren ({{count}})",
+    "ignoreSelected": "Auswahl ignorieren ({{count}})",
+    "selectAll": "Alle auswählen",
+    "ignoredCount": "{{count}} ignoriert",
+    "importResult": "{{imported}} importiert, {{proposed}} Vorschläge im Posteingang, {{failed}} fehlgeschlagen.",
+    "reason": {
+      "mail_gone": "Die Mail liegt nicht mehr an dieser Stelle im Postfach.",
+      "mail_too_large": "Die Mail ist zu groß."
+    },
+    "error": "Das hat nicht geklappt: {{reason}}",
+    "errors": {
+      "MAIL_SCAN_RUNNING": "Eine Durchsuchung läuft bereits.",
+      "MAIL_CANDIDATE_NOT_FOUND": "Diese Mail ist nicht mehr in der Liste.",
+      "lost": "Der Server hat den Auftrag vergessen (Neustart). Lade die Seite neu und setze fort.",
+      "unknown": "Unbekannter Fehler."
+    }
   }
 }

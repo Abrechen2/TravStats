@@ -24,6 +24,7 @@ vi.mock("../../hooks/useDashboardRoute", () => ({
   useDashboardRoute: () => mockUseDashboardRoute(),
 }));
 
+vi.mock("../../components/sharing/ReceivedTripsBanner", () => ({ default: () => null }));
 vi.mock("../../hooks/useClearMapSelectionsOnTabChange", () => ({
   useClearMapSelectionsOnTabChange: () => {},
 }));

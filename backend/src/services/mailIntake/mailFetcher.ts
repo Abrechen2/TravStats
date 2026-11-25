@@ -5,12 +5,15 @@
  *
  * Only the configured folder is ever opened. The rest of the mailbox is never
  * listed (spec §3 A), and nothing is deleted or moved: a processed mail gets
- * `\Seen` and the keyword `$TravStats` (decision 3).
+ * the keyword `$TravStats` and, unless the source keeps mails unread, `\Seen`
+ * (decision 3). Headers are read through ENVELOPE and `BODY.PEEK[HEADER.FIELDS]`,
+ * the body through `BODY.PEEK[]`: reading never sets `\Seen` by itself.
  */
 import { ImapFlow } from "imapflow";
 
 import logger from "../../utils/logger";
 import { MailIntakeError, classifyImapError } from "./errors";
+import type { HeaderInfo } from "./prefilter";
 
 export const PROCESSED_KEYWORD = "$TravStats";
 
@@ -30,6 +33,14 @@ export interface MailboxConnection {
 export interface MailSession {
   /** UIDVALIDITY of the opened folder, as a decimal string. */
   readonly uidValidity: string;
+  /** UIDNEXT of the opened folder: every mail there now has a UID below it. */
+  readonly uidNext: number;
+  /** PERMANENTFLAGS carries `\*`: the server keeps keywords such as `$TravStats`. */
+  readonly supportsKeywords: boolean;
+  /** UIDs of the mails received on/after `since` and before `before` (UID SEARCH); all when both are null. */
+  searchUids(range: { since: Date | null; before: Date | null }): Promise<number[]>;
+  /** From, Subject, Date, Message-ID and List-Id of `uids` — never a body part. */
+  fetchHeaders(uids: number[]): Promise<HeaderInfo[]>;
   /** UIDs above `afterUid`, ascending, with their sizes. */
   listNew(afterUid: number): Promise<Array<{ uid: number; size: number }>>;
   /**
@@ -41,8 +52,12 @@ export interface MailSession {
     uid: number,
     maxBytes: number
   ): Promise<{ raw: Buffer; internalDate: Date | null } | { tooLarge: true } | null>;
-  /** Best effort: flags `\Seen` and `$TravStats`. Returns false when the server refused. */
-  markProcessed(uid: number): Promise<boolean>;
+  /**
+   * Best effort: flags `$TravStats` (when the server keeps keywords) and `\Seen`
+   * unless `keepUnread`. Returns false when nothing could be set; the UID cursor
+   * and the Message-ID dedupe then keep the mail from being taken twice.
+   */
+  markProcessed(uid: number, options: { keepUnread: boolean }): Promise<boolean>;
 }
 
 export interface MailFetcher {
@@ -91,6 +106,35 @@ function toNumber(value: unknown): number {
   return typeof value === "bigint" ? Number(value) : Number(value ?? 0);
 }
 
+/** `1,2,3,7,9,10` → `1:3,7,9:10`: a sequence set short enough for one command. */
+export function uidSet(uids: number[]): string {
+  const sorted = [...new Set(uids)].sort((a, b) => a - b);
+  const parts: string[] = [];
+  let start = sorted[0];
+  let prev = sorted[0];
+  for (const uid of sorted.slice(1).concat(Number.NaN)) {
+    if (uid === prev + 1) {
+      prev = uid;
+      continue;
+    }
+    parts.push(start === prev ? String(start) : `${start}:${prev}`);
+    start = uid;
+    prev = uid;
+  }
+  return parts.join(",");
+}
+
+/** The flags a processed mail gets; empty when there is nothing the server would keep. */
+export function processedFlags(keepUnread: boolean, supportsKeywords: boolean): string[] {
+  return [...(keepUnread ? [] : ["\\Seen"]), ...(supportsKeywords ? [PROCESSED_KEYWORD] : [])];
+}
+
+function validDate(value: unknown): Date | null {
+  if (!value) return null;
+  const date = new Date(value as string | Date);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export const imapFetcher: MailFetcher = {
   async withFolder(connection, run) {
     const client = clientFor(connection);
@@ -101,8 +145,39 @@ export const imapFetcher: MailFetcher = {
       });
       try {
         const mailbox = client.mailbox;
+        const supportsKeywords = mailbox ? !!mailbox.permanentFlags?.has("\\*") : false;
         const session: MailSession = {
           uidValidity: mailbox ? String(mailbox.uidValidity) : "0",
+          uidNext: mailbox ? toNumber(mailbox.uidNext) : 1,
+          supportsKeywords,
+          async searchUids({ since, before }) {
+            if (!mailbox || mailbox.exists === 0) return [];
+            const query =
+              since || before
+                ? { ...(since ? { since } : {}), ...(before ? { before } : {}) }
+                : { all: true };
+            const found = await client.search(query, { uid: true });
+            return (found || []).map(toNumber).sort((a, b) => a - b);
+          },
+          async fetchHeaders(uids) {
+            if (uids.length === 0) return [];
+            const rows = await client.fetchAll(
+              uidSet(uids),
+              { uid: true, envelope: true, headers: ["list-id"] },
+              { uid: true }
+            );
+            return rows.map((row) => {
+              const address = row.envelope?.from?.[0]?.address;
+              return {
+                uid: toNumber(row.uid),
+                from: address ? address.trim().toLowerCase() : null,
+                subject: row.envelope?.subject ?? null,
+                date: validDate(row.envelope?.date),
+                messageId: row.envelope?.messageId ?? null,
+                hasListId: !!row.headers && /^list-id:/im.test(row.headers.toString("utf8")),
+              };
+            });
+          },
           async listNew(afterUid) {
             if (!mailbox || mailbox.exists === 0) return [];
             const rows = await client.fetchAll(
@@ -143,11 +218,11 @@ export const imapFetcher: MailFetcher = {
               internalDate: date && !Number.isNaN(date.getTime()) ? date : null,
             };
           },
-          async markProcessed(uid) {
+          async markProcessed(uid, { keepUnread }) {
+            const flags = processedFlags(keepUnread, supportsKeywords);
+            if (flags.length === 0) return false;
             try {
-              return await client.messageFlagsAdd(String(uid), ["\\Seen", PROCESSED_KEYWORD], {
-                uid: true,
-              });
+              return await client.messageFlagsAdd(String(uid), flags, { uid: true });
             } catch (error) {
               logger.warn({ operation: "mail_intake_flag_failed", kind: classifyImapError(error) });
               return false;

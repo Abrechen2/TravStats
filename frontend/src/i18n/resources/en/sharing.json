@@ -50,7 +50,9 @@
       "leftRevoked": "{{name}} withdrew the consent to share. “{{trip}}” is no longer kept in step; your trip stays yours.",
       "addRequest": "{{name}} asks you to share “{{trip}}” with {{person}} too.",
       "addRequestFrom": "{{name}} asks you to share “{{trip}}” with {{person}} ({{personOrigin}}) too.",
-      "addRequestHint": "On the trip page you can offer it to a connected person, or create a code for this trip and pass it on."
+      "addRequestHint": "On the trip page you can offer it to a connected person, or create a code for this trip and pass it on.",
+      "autoAccepted": "Accepted automatically (consent).",
+      "autoAcceptedSetting": "Review consent"
     },
     "empty": {
       "title": "Nothing new",
@@ -318,6 +320,7 @@
     "endZone": "End time zone",
     "stops": "Port calls",
     "legs": "Sea legs",
+    "legRoutes": "Drawn sea routes",
     "name": "Name",
     "mode": "Mode of travel",
     "vehicle": "Vehicle",
@@ -737,6 +740,15 @@
         "requested": "Request sent to {{name}} on {{origin}}. Once they agree they appear in the list above and you can offer them the trip.",
         "waiting": "The request to {{name}} on {{origin}} is still open. They have to confirm it first.",
         "failed": "The person on the other server could not be reached."
+      },
+      "companion": {
+        "linked": "Companion “{{name}}” – shared",
+        "unlink": "Unlink",
+        "question": "Is this “{{name}}”? ({{person}})",
+        "yes": "Yes, link",
+        "no": "No, someone else",
+        "failed": "That did not work. Please try again.",
+        "alreadyLinked": "Another companion is already linked to this person."
       }
     },
     "offers": {
@@ -1032,5 +1044,16 @@
     "menu": {
       "label": "Actions for {{name}}"
     }
+  },
+  "receivedBanner": {
+    "shared": "{{name}} shared the trip “{{trip}}” with you.",
+    "offered": "{{name}} wants to share the trip “{{trip}}” with you.",
+    "autoAccepted": "accepted automatically (consent)",
+    "open": "Open trip",
+    "answer": "Accept or decline",
+    "more_one": "and {{count}} more",
+    "more_other": "and {{count}} more",
+    "seen": "Seen",
+    "seenFailed": "That did not work. Please try again."
   }
 }

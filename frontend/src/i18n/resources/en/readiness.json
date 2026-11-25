@@ -59,6 +59,11 @@
       "title": "Copy off site",
       "consequence": "A backup on the same machine does not survive losing that machine."
     },
+    "adminRecoveryKey": {
+      "title": "Recovery key not saved",
+      "consequence": "Your backups hold API keys, tokens and the SMTP password only in encrypted form. Without this server's recovery key they cannot be read after the server is lost.",
+      "action": "Save the key"
+    },
     "adminProviderKeys": {
       "title": "Data service keys",
       "consequence": "Without a valid key, flight search and live data return nothing, and nobody notices."
@@ -171,6 +176,13 @@
       "consequence": "After an import TravStats works through every recorded day: countries, months and explored areas. Until it is done those days are missing from the calendar and statistics. It runs on its own; there is nothing to do.",
       "action": "See progress"
     },
+    "userTravtrackQuestionableDays": {
+      "title": "Questionable tracks",
+      "title_one": "Questionable tracks – {{count}} day",
+      "title_other": "Questionable tracks – {{count}} days",
+      "consequence": "On these days the sources disagree, the quality is low or there are outliers. TravStats picks the best source automatically; check the days and decide yourself where the choice is wrong.",
+      "action": "Check the days"
+    },
     "userFlightsNoTimes": {
       "title": "Flights without a time",
       "title_one": "{{count}} flight without a time",
@@ -240,6 +252,13 @@
       "title_other": "{{count}} entries with a wrong time zone",
       "consequence": "The stored time zone of a stay or visit does not belong to its place, so its times show shifted. An admin can re-resolve the zones under Maintenance › Time model.",
       "action": "Re-resolve the zones"
+    },
+    "userCompanionDuplicates": {
+      "title": "Travellers listed twice",
+      "title_one": "{{count}} person listed twice on a shared trip",
+      "title_other": "{{count}} people listed twice on shared trips",
+      "consequence": "A companion typed in by hand and the same person the trip is shared with stand side by side. Link them in the trip's share dialog and the person is listed once.",
+      "action": "Link the companion"
     }
   },
   "notes": {

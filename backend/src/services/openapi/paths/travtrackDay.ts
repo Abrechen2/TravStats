@@ -6,6 +6,7 @@ import { travTrackDayQuerySchema, travTrackExportQuerySchema } from "../../../sc
 import { GAP_REASONS } from "../../travtrack/limits";
 import { DOMAIN_KEYS } from "../../../shared/domains";
 import { legSchema, pointDetailSchema, stopSchema } from "./travtrackLegs";
+import { bridgeSchema, daySourceSummarySchema } from "./travtrackDaySources";
 
 /**
  * TravTrack's day view and export (TravTrack plan T6). Beside `travtrack.ts`,
@@ -139,11 +140,28 @@ const day = z.object({
         .describe(
           "Fixes left out as implausible (coarse, null island); `includeImplausible=1` draws them"
         ),
+      sourceExcluded: z
+        .number()
+        .int()
+        .describe("Fixes left out by the best-source resolution: another source, or an outlier"),
     })
     .describe(
       "Why a day may show fewer points than were stored: counts only, never a position. With " +
         '`pointCount` 0 they tell "nothing recorded" from "recorded but not drawn"'
     ),
+  sources: daySourceSummarySchema,
+  estimated: z
+    .array(
+      z.object({
+        ...span,
+        from: z.tuple([z.number(), z.number()]),
+        to: z.tuple([z.number(), z.number()]),
+      })
+    )
+    .describe("Long silences drawn dashed as estimated; never counted"),
+  bridgeLines: z
+    .array(bridgeSchema.extend({ coordinates: z.array(z.array(z.number())) }))
+    .describe("Jumps and gaps a logged entry explains, drawn with the entry's line `[lon, lat]`"),
 });
 
 registry.registerPath({

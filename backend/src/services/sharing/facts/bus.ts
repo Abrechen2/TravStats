@@ -30,6 +30,10 @@ export const BUS_FACT_FIELDS = [
   "arrPrecision",
   "distanceKm",
   "distanceSource",
+  // The hand-drawn line (GitHub #409, `services/bus/busManualRoute.ts`) lives in exactly these
+  // two columns, `geometrySource = manual` with the points or with null for "keep straight", so
+  // it travels like the ferry's line; no pair table, no extra wire field
+  // (`__tests__/busManualRoute.share.test.ts`).
   "geometry",
   "geometrySource",
   "actualDepartureTime",

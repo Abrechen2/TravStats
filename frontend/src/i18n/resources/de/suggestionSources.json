@@ -53,7 +53,7 @@
       "kind": {
         "notConfigured": "Der Kalender ist nicht vollständig eingerichtet.",
         "unreachable": "Der Kalender-Server ist nicht erreichbar.",
-        "auth": "Zugang abgelehnt. Adresse, Benutzer oder Passwort prüfen.",
+        "auth": "Zugang abgelehnt. Adresse, Benutzer oder Passwort prüfen. iCloud und Google verlangen ein App-spezifisches Passwort, nicht das normale Konto-Passwort.",
         "notFound": "Unter dieser Adresse gibt es keinen Kalender.",
         "protocol": "Der Server hat keine lesbare Kalender-Antwort geschickt.",
         "invalidUrl": "Diese Adresse ist ungültig."
@@ -111,7 +111,8 @@
       "pending": "Ein Plugin hat noch nicht geantwortet; es wird erneut gefragt.",
       "reask": "Neu fragen",
       "reasked": "Die Plugins werden beim nächsten Suchlauf erneut gefragt.",
-      "reaskError": "Das ging nicht. Bitte versuche es noch einmal."
+      "reaskError": "Das ging nicht. Bitte versuche es noch einmal.",
+      "nameMatch": "Name passt ({{token}}), {{meters}} m"
     },
     "suggestedBy": "Vorgeschlagen von {{name}}"
   },
@@ -215,7 +216,12 @@
         "rateLimited": "Das Plugin oder die Grenze pro Stunde lässt gerade keine Anfrage zu.",
         "protocol": "Die Antwort des Plugins passt nicht zum Vertrag (Version 1).",
         "server": "Das Plugin hat einen Serverfehler gemeldet.",
-        "privateTarget": "Diese Adresse liegt im lokalen Netz. Nur das Admin-Konto darf sie verwenden."
+        "privateTarget": "Diese Adresse liegt im lokalen Netz. Nur das Admin-Konto darf sie verwenden.",
+        "readOnly": "Das Archiv des Plugins lässt kein Schreiben zu (Token ohne Schreibrecht).",
+        "changed": "Der Eintrag wurde seitdem im Archiv geändert; Rückgängig ist nicht mehr möglich.",
+        "notFound": "Diesen Eintrag kennt das Plugin nicht (mehr).",
+        "notReady": "Das Plugin lädt sein Archiv noch. Bitte gleich noch einmal.",
+        "unsupported": "Dieses Plugin bietet keine Standortpflege an."
       },
       "code": {
         "PRIVATE_TARGET": "Diese Adresse liegt im lokalen Netz. Nur das Admin-Konto darf sie verwenden.",
@@ -223,8 +229,71 @@
         "PLUGIN_LIMIT": "Es sind höchstens 5 Plugins möglich.",
         "PLUGIN_BACKFILL_REFUSED": "Abfragen vergangener Tage ist für dieses Plugin nicht erlaubt, oder der Zeitraum ist länger als 90 Tage.",
         "PLUGIN_BACKFILL_RUNNING": "Für dieses Plugin läuft schon eine Abfrage.",
-        "SERVICE_DISABLED": "Plugins sind auf diesem Server ausgeschaltet."
+        "SERVICE_DISABLED": "Plugins sind auf diesem Server ausgeschaltet.",
+        "PLUGIN_NO_MAINTENANCE": "Dieses Plugin bietet keine Standortpflege an."
       }
+    },
+    "maintenance": {
+      "open": "Standorte pflegen",
+      "helloFailed": "Plugin-Abfrage fehlgeschlagen",
+      "title": "Standorte pflegen – {{name}}",
+      "intro": "Einträge des Plugins ohne brauchbaren Standort, mit Vorschlägen aus deinen TravTrack-Stopps und aus dem Geocoder. Nichts wird geschrieben, bevor du es bestätigst.",
+      "loading": "Einträge werden geladen …",
+      "reload": "Neu laden",
+      "empty": "Keine Einträge ohne Standort.",
+      "showIgnored": "Ignorierte zeigen",
+      "stopsSent": "{{count}} TravTrack-Stopps mit Ortsnamen wurden zum Abgleich mitgeschickt.",
+      "stopsWithheld": {
+        "precision": "Keine Stopps mitgeschickt: Das Plugin ist auf 1 km Genauigkeit gestellt.",
+        "travtrackOff": "Keine Stopps mitgeschickt: TravTrack ist nicht die Standortquelle dieses Kontos."
+      },
+      "pendingSearches": "Der Geocoder sucht noch für {{count}} Einträge – später neu laden.",
+      "mapLabel": "Karte mit Vorschlägen für {{name}}",
+      "noAddress": "Keine Adresse im Archiv",
+      "noProposals": "Noch kein Vorschlag.",
+      "issue": {
+        "noCoordinates": "keine Koordinaten",
+        "noStreet": "keine Straße",
+        "lowPrecision": "nur Ortsmitte"
+      },
+      "source": {
+        "stop": "TravTrack-Stopp",
+        "geocoder": "Geocoder"
+      },
+      "confidence": {
+        "high": "sicher",
+        "medium": "wahrscheinlich",
+        "low": "unsicher"
+      },
+      "distance": "{{meters}} m vom bisherigen Standort",
+      "evidence": {
+        "stop": "Stopp „{{venue}}“ am {{at}} · gemeinsames Wort: {{tokens}}",
+        "geocoder": "Geocoder-Treffer: {{label}}"
+      },
+      "take": "Übernehmen",
+      "otherAddress": "Andere Adresse",
+      "ignore": "Ignorieren",
+      "unignore": "Wieder anzeigen",
+      "searchLabel": "Adresse suchen",
+      "search": "Suchen",
+      "searchFailed": "Die Adresssuche ist gerade nicht erreichbar.",
+      "searchEmpty": "Nichts gefunden.",
+      "confirm": {
+        "title": "In das Archiv schreiben?",
+        "intro": "Das Plugin „{{plugin}}“ schreibt für „{{name}}“ in sein Archiv:",
+        "coords": "• Breite {{lat}}, Länge {{lon}}",
+        "street": "• Straße: {{street}} (das Feld ist bisher leer)",
+        "streetKept": "• Straße bleibt unverändert ({{street}})",
+        "source": "Quelle: {{source}}",
+        "undo": "Die bisherigen Werte merkt sich das Plugin; „Rückgängig“ stellt sie wieder her."
+      },
+      "applied": "„{{name}}“ wurde ins Archiv geschrieben.",
+      "undone": "„{{name}}“ wurde zurückgesetzt.",
+      "ignored": "„{{name}}“ wird ignoriert.",
+      "unignored": "„{{name}}“ wird wieder angezeigt.",
+      "appliedTitle": "Übernommen",
+      "appliedLine": "{{name}}: {{lat}}, {{lon}} ({{at}})",
+      "undo": "Rückgängig"
     }
   }
 }

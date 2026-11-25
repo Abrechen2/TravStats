@@ -215,6 +215,16 @@
           "label": "Symbol",
           "hint": "The list's symbol everywhere. Lists without one keep the name."
         }
+      },
+      "roadtripColorMode": {
+        "single": {
+          "label": "Single colour",
+          "hint": "Every roadtrip in the roadtrip colour from Settings."
+        },
+        "perRoadtrip": {
+          "label": "Per roadtrip",
+          "hint": "Each roadtrip in a colour of its own – the one saved on the roadtrip, else a fixed one from the palette."
+        }
       }
     },
     "timesFlown": "Flown {{count}}×",

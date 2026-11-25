@@ -1447,7 +1447,13 @@
       "unversioned": "I can't match this archive's database state to a version. I changed nothing.",
       "busy": "A backup or restore is running right now. Try again afterwards.",
       "rateLimited": "I restore only a few backups an hour. Try again later.",
-      "failed": "I couldn't restore the backup."
+      "failed": "I couldn't restore the backup.",
+      "recoveryKeyInvalid": "That is not a recovery key: it has 64 characters from 0–9 and A–F (spaces do not matter). Nothing was restored.",
+      "recoveryKeyWrong": "This key did not write the backup. Nothing was restored.",
+      "recoveryKeyEnvPinned": "This server's key is set by the ENCRYPTION_KEY environment variable. Put the recovery key there, restart, and then restore the backup. Nothing was restored.",
+      "recoveryKeyWriteFailed": "The key could not be written to the secrets folder. Nothing was restored.",
+      "recoveryKeyReauth": "The password is missing or not right. Nothing was restored.",
+      "recoveryKeySecondFactor": "Enter the right code from your authenticator app. Nothing was restored."
     },
     "retry": "Try again",
     "baknow": {

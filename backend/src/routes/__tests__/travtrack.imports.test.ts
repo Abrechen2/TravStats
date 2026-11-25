@@ -100,6 +100,7 @@ describe("TravTrack — /travtrack/imports", () => {
           withoutTime: 0,
           format: "gpx",
         },
+        cursor: 4,
         pointCount: 4,
         fromAt: "2026-10-12T01:00:00.000Z",
         toAt: "2026-10-12T01:03:00.000Z",
@@ -107,6 +108,28 @@ describe("TravTrack — /travtrack/imports", () => {
         finishedAt: expect.any(String),
       },
     ]);
+  });
+
+  it("resumes a stopped import with the same file under its own id; a finished one is 409", async () => {
+    const file = gpxFile([minuteFixes("2026-10-12T01:00:00Z", 4)]);
+    const { importId } = await importDone(file);
+    const resume = (id: string) =>
+      request(app)
+        .post(`/api/v1/travtrack/imports/${id}/resume`)
+        .set("Cookie", cookie)
+        .attach("file", file, "walk.gpx");
+    const refused = await resume(importId);
+    expect(refused.status).toBe(409);
+    expect(refused.body.code).toBe("TRAVTRACK_IMPORT_NOT_RESUMABLE");
+    // As the prod import of 2026-11-24: points stored, the row ended `partial`.
+    await prisma.travTrackImport.update({ where: { id: importId }, data: { status: "partial" } });
+    const res = await resume(importId);
+    expect(res.status).toBe(202);
+    expect(res.body.importId).toBe(importId);
+    await settleAllJobs();
+    const [row] = (await list()).body.imports;
+    expect(row).toMatchObject({ id: importId, status: "succeeded", pointCount: 4 });
+    expect((await resume("no-such-import")).status).toBe(404);
   });
 
   it("a file without times fails the job with TRAVTRACK_IMPORT_NO_TIMES", async () => {

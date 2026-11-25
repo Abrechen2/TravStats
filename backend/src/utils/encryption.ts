@@ -237,10 +237,21 @@ export function encryptApiKey(apiKey: string | null | undefined): string | null 
  * hashed elsewhere.
  */
 export function encryptionKeyFingerprint(): string {
+  return fingerprintOf(getEncryptionKey());
+}
+
+/** The fingerprint a given instance key (64 hex characters) would have — how a
+ *  pasted recovery key is matched to an archive without installing it first. */
+export function encryptionKeyFingerprintFor(keyHex: string): string {
+  if (!/^[0-9a-fA-F]{64}$/.test(keyHex)) throw new Error("instance key must be 64 hex characters");
+  return fingerprintOf(Buffer.from(keyHex, "hex"));
+}
+
+function fingerprintOf(key: Buffer): string {
   return crypto
     .createHash("sha256")
     .update("travstats-encryption-key-fingerprint:")
-    .update(getEncryptionKey())
+    .update(key)
     .digest("hex")
     .slice(0, 16);
 }

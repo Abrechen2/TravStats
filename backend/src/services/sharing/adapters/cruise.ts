@@ -1,4 +1,4 @@
-import type { Cruise, CruiseLeg, CruiseStop, Prisma } from "../../../prisma";
+import type { Cruise, CruiseLeg, CruiseLegRoute, CruiseStop, Prisma } from "../../../prisma";
 import { SHARED_SOURCE } from "../shareTypes";
 import {
   CRUISE_FACT_FIELDS,
@@ -7,7 +7,10 @@ import {
   cruiseFacts,
   cruiseLegFacts,
   cruiseStopFacts,
+  cruiseLegRouteFacts,
+  cruiseLegRouteRows,
   pickFacts,
+  type CruiseLegRouteFact,
   type CruiseFactField,
   type CruiseLegFactField,
   type CruiseStopFactField,
@@ -17,8 +20,8 @@ import { joinLabel, plainData, type EntityAdapter, type SharedRow } from "./type
 import { CRUISE_STOP_ORDER_BY } from "../../../shared/cruise/stopOrder";
 
 /**
- * A cruise with its port calls (`stops`) and computed legs (`legs`) as two
- * pseudo-facts: a change to any call is a change to the cruise's itinerary.
+ * A cruise with its port calls (`stops`), computed legs (`legs`) and hand-drawn sea lines
+ * (`legRoutes`, 2026-11-24) as pseudo-facts: a change to any of them is a change to the voyage.
  */
 
 type StopFacts = Pick<CruiseStop, CruiseStopFactField>;
@@ -27,9 +30,14 @@ type LegFacts = Pick<CruiseLeg, CruiseLegFactField>;
 const INCLUDE = {
   stops: { orderBy: CRUISE_STOP_ORDER_BY },
   legs: { orderBy: { ordinal: "asc" } },
+  legRoutes: true,
 } as const satisfies Prisma.CruiseInclude;
 
-type CruiseWithParts = Cruise & { stops: CruiseStop[]; legs: CruiseLeg[] };
+type CruiseWithParts = Cruise & {
+  stops: CruiseStop[];
+  legs: CruiseLeg[];
+  legRoutes: CruiseLegRoute[];
+};
 
 function cruiseRow(row: CruiseWithParts): SharedRow {
   return {
@@ -41,6 +49,7 @@ function cruiseRow(row: CruiseWithParts): SharedRow {
       ...pickFacts(row, CRUISE_FACT_FIELDS),
       stops: row.stops.map((s) => pickFacts(s, CRUISE_STOP_FACT_FIELDS)),
       legs: row.legs.map((l) => pickFacts(l, CRUISE_LEG_FACT_FIELDS)),
+      legRoutes: cruiseLegRouteFacts(row.legRoutes, row.legs),
     },
     label: joinLabel(row.cruiseLine, row.shipNameOverride ?? row.routeName),
     zones: { startDay: row.startZone, endDay: row.endZone },
@@ -88,7 +97,7 @@ async function applyStops(
 
 export const cruiseAdapter: EntityAdapter = {
   entity: "cruise",
-  fields: [...CRUISE_FACT_FIELDS, "stops", "legs"],
+  fields: [...CRUISE_FACT_FIELDS, "stops", "legs", "legRoutes"],
   async load(c, ids) {
     const rows = await c.cruise.findMany({ where: { id: { in: [...ids] } }, include: INCLUDE });
     return rows.map(cruiseRow);
@@ -124,6 +133,10 @@ export const cruiseAdapter: EntityAdapter = {
       },
       select: { id: true },
     });
+    // Null: the sender's server does not carry lines (older than 2026-11-24) — none to copy.
+    const routes = source.facts.legRoutes as CruiseLegRouteFact[] | null | undefined;
+    if (routes && routes.length > 0)
+      await c.cruiseLegRoute.createMany({ data: cruiseLegRouteRows(copy.id, routes) });
     return copy.id;
   },
   async apply(c, copy, values, keys) {
@@ -141,6 +154,13 @@ export const cruiseAdapter: EntityAdapter = {
       await c.cruiseLeg.createMany({
         data: (values.legs as LegFacts[]).map((l) => ({ ...cruiseLegFacts(l), cruiseId: copy.id })),
       });
+    }
+    const routes = values.legRoutes as CruiseLegRouteFact[] | null | undefined;
+    // Null is "not said" (a sender without lines), never "delete them all".
+    if (keys.includes("legRoutes") && Array.isArray(routes)) {
+      await c.cruiseLegRoute.deleteMany({ where: { cruiseId: copy.id } });
+      if (routes.length > 0)
+        await c.cruiseLegRoute.createMany({ data: cruiseLegRouteRows(copy.id, routes) });
     }
   },
   async remove(c, id) {

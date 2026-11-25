@@ -128,8 +128,15 @@
       "linkGone": "Die Verknüpfung besteht nicht mehr. Die Liste wurde neu geladen.",
       "candidatesFailed": "Die Einträge konnten nicht geladen werden.",
       "demo": "Im Demo-Konto kann nichts verknüpft werden.",
-      "impactFailed": "Die betroffenen Einträge konnten nicht geladen werden. Gelöscht wird trotzdem überall."
-    }
+      "impactFailed": "Die betroffenen Einträge konnten nicht geladen werden. Gelöscht wird trotzdem überall.",
+      "someFailed": "Für {{count}} Dokument(e) ist die Verknüpfung fehlgeschlagen ({{names}}): {{reason}}"
+    },
+    "bulkTitle_one": "1 Dokument verknüpfen",
+    "bulkTitle_other": "{{count}} Dokumente verknüpfen",
+    "bulkHint": "Wähle den einen Eintrag, mit dem alle ausgewählten Dokumente verknüpft werden. Suche nach Flugnummer, Ort, Reise oder Datum — gesucht wird in allen Einträgen.",
+    "linkDocsToEntry_one": "Dokument verknüpfen",
+    "linkDocsToEntry_other": "{{count}} Dokumente verknüpfen",
+    "noMatches": "Kein Eintrag passt zu „{{text}}“."
   },
   "person": {
     "forLabel": "für",

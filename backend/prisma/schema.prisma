@@ -35,6 +35,8 @@ model User {
   mailIntakeAddress               MailIntakeAddress?
   mailIntakeSenders               MailIntakeSender[]
   mailIntakeMessages              MailIntakeMessage[]
+  mailIntakeScans                 MailIntakeScan[]
+  mailIntakeCandidates            MailIntakeCandidate[]
   comparisonDevices               ComparisonDevice[]
   comparisonPublications          ComparisonPublication[]
   comparisonLinks                 ComparisonLink[]
@@ -238,6 +240,7 @@ model User {
 
   locationSuggestions      LocationSuggestion[]
   travTrackDirtyDays       TravTrackDirtyDay[]
+  travTrackDaySources      TravTrackDaySource[]
   travTrackExploredCells   TravTrackExploredCell[]
   travTrackMonthValues     TravTrackMonthValue[]
   travTrackZoneCells       TravTrackZoneCell[]
@@ -1692,6 +1695,12 @@ model AdminSettings {
   webdavUsername          String? @map("webdav_username")
   webdavPasswordEncrypted String? @map("webdav_password_encrypted")
   webdavBackupPath        String  @default("/TravStats/backups/") @map("webdav_backup_path")
+  /// When an admin last proved they hold the instance's recovery key (the
+  /// encryption key the backups need but do not carry), and the fingerprint of
+  /// the key that proof was for (services/backup/recoveryKey.ts). A key change
+  /// makes the confirmation stale; the value itself is never stored here.
+  recoveryKeyConfirmedAt  DateTime? @map("recovery_key_confirmed_at")
+  recoveryKeyFingerprint  String?   @map("recovery_key_fingerprint")
 
   // === LOGGING CONFIGURATION ===
   // Log level for file output (error | warn | info | debug | trace)
@@ -4404,11 +4413,19 @@ model Companion {
   /// with an accepted `ShareConsent` from that account; SetNull keeps the
   /// companion as a plain name when the account goes away.
   linkedUserId  String?  @map("linked_user_id")
+  /// The person on another server this companion IS (one person, one companion, 2026-11-24):
+  /// the pairing they are reached through. Set only by the owner's confirmation, never on a
+  /// name guess alone; SetNull keeps the companion as a plain name when the pairing goes.
+  linkedRemoteId String? @map("linked_remote_id")
+  /// Pairings (`r:<remoteId>`) and accounts (`u:<userId>`) the owner said this companion is NOT,
+  /// so the same-name question is not asked again.
+  notSameAs     String[] @default([]) @map("not_same_as")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   linkedUser    User?                    @relation("CompanionLinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
+  linkedRemote  RemoteShareAccount?      @relation("CompanionLinkedRemote", fields: [linkedRemoteId], references: [id], onDelete: SetNull)
   flights       FlightCompanion[]
   trips         TripCompanion[]
   cruises       CruiseCompanion[]
@@ -4426,8 +4443,10 @@ model Companion {
   /// One companion per linked account and owner — two names for the same
   /// person would each get a share tick.
   @@unique([userId, linkedUserId])
+  @@unique([userId, linkedRemoteId])
   @@index([userId, searchName])
   @@index([linkedUserId])
+  @@index([linkedRemoteId])
   @@map("companions")
 }
 
@@ -4724,6 +4743,8 @@ model Document {
   kind          String?
   /// The date printed ON the document, when known.
   issuedOn      DateTime? @map("issued_on") @db.Date
+  /// The owner's own remark on the document (inbox edit dialog); null = none.
+  note          String?
   /// How the row came to be: upload | parse.
   source        String    @default("upload")
   /// What the parse decided and extracted, kept for a later diff.
@@ -5698,6 +5719,8 @@ model RemoteShareAccount {
   planMembers       TravelPlanMember[]       @relation("TravelPlanMemberConnection")
   remotePlans       RemotePlanMembership[]
   announcements     ConnectionAnnouncement[]
+  /// The companions on this server that are this person (one person, one companion).
+  companions        Companion[]              @relation("CompanionLinkedRemote")
 
   @@unique([origin, channel])
   @@unique([origin, localChannel])
@@ -6778,6 +6801,53 @@ model TravTrackConfig {
   @@map("travtrack_config")
 }
 
+/// Which source a profile-local day of the TravTrack history is drawn and
+/// counted from (`services/travtrack/bestSource/`). Derived per day by the
+/// paced projection; the raw points are never altered by it. `segments`,
+/// `scores`, `outlierIds`, `breaks` and `bridges` are the derivation's and
+/// are rewritten on every run; `overrideSource` and `outlierDecision` are the
+/// user's and survive it. Holds no positions: instants, origins and point ids.
+model TravTrackDaySource {
+  userId          String   @map("user_id")
+  /// The profile-local calendar day.
+  day             DateTime @db.Date
+  /// The zone the day was cut in, and its instants `[fromAt, untilAt)`.
+  zone            String
+  fromAt          DateTime @map("from_at")
+  untilAt         DateTime @map("until_at")
+  /// `[{ fromMs, untilMs, source }]`: which origin is used when.
+  segments        Json
+  /// `[{ source, score, points, signals }]`, best first.
+  scores          Json
+  /// Ids of the points excluded as unsupported jumps.
+  outlierIds      Json     @map("outlier_ids")
+  outlierCount    Int      @default(0) @map("outlier_count")
+  /// `[[fromMs, untilMs]]`: steps no line is drawn across (an unsupported jump).
+  breaks          Json
+  /// `[{ fromMs, untilMs, kind, entryId }]`: jumps a logged entry explains.
+  bridges         Json
+  /// More than one origin on the day.
+  mixed           Boolean  @default(false)
+  /// The best score, 0..1.
+  bestScore       Float    @map("best_score")
+  /// `{ source, relativeTo, offsetS }` when a constant clock offset was seen; reported, never applied.
+  clockOffset     Json?    @map("clock_offset")
+  /// The read hit its cap: the scores rest on part of the day.
+  truncated       Boolean  @default(false)
+  /// The user's choice of origin for the whole day; null = automatic.
+  overrideSource  String?  @map("override_source")
+  /// `discard` (outliers stay excluded, acknowledged) | `keep` (drawn again); null = automatic.
+  outlierDecision String?  @map("outlier_decision")
+  derivedAt       DateTime @map("derived_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day])
+  @@index([userId, fromAt])
+  @@map("travtrack_day_sources")
+}
+
 /// One position of an account's TravTrack history. Raw and immutable: what
 /// the phone measured, never thinned or rewritten here. The same position
 /// twice is one row — Dawarich's key `(user, whole second, lon, lat)`, plus
@@ -6820,6 +6890,8 @@ model TravTrackPoint {
   @@unique([userId, origin, originRef])
   @@index([userId, t, seq])
   @@index([userId, seq])
+  /// The per-source reads of a day's best-source scoring (`bestSource/`).
+  @@index([userId, origin, t])
   @@map("travtrack_points")
 }
 
@@ -7546,9 +7618,13 @@ model TravTrackImport {
   /// `gpx | dawarich` (CHECK).
   kind       String
   fileName   String    @map("file_name") @db.VarChar(200)
-  /// `running | succeeded | failed | interrupted | cancelled` (CHECK).
+  /// `running | succeeded | partial | failed | interrupted | cancelled` (CHECK).
   status     String
   report     Json?
+  /// Points of the file handled so far, committed with each batch: a resume starts here.
+  cursor     Int       @default(0)
+  /// SHA-256 of the imported file (hex): a resume continues at `cursor` only for the same file.
+  fileSha256 String?   @map("file_sha256") @db.Char(64)
   fromAt     DateTime? @map("from_at")
   toAt       DateTime? @map("to_at")
   createdAt  DateTime  @default(now()) @map("created_at")
@@ -7667,11 +7743,29 @@ model MailIntakeSource {
   /// IMAP UIDVALIDITY of the folder at the last run; a change restarts the scan.
   uidValidity       String?   @map("uid_validity")
   lastUid           Int       @default(0) @map("last_uid")
+  /// Header-only pre-filter: a mail is downloaded only when its From domain or
+  /// subject looks like a booking. Everything else is never opened (personal folders).
+  prefilter         Boolean   @default(true)
+  /// Set only the invisible `$TravStats` keyword, never `\Seen`.
+  keepUnread        Boolean   @default(false) @map("keep_unread")
+  /// Where a fresh cursor starts: `now` (UIDNEXT-1) or `days_30|days_90|days_365`.
+  fetchFrom         String    @default("now") @map("fetch_from")
+  /// Booking-sender domains the user added to the built-in list, and built-in ones removed.
+  senderDomains        String[] @default([]) @map("sender_domains")
+  removedSenderDomains String[] @default([]) @map("removed_sender_domains")
+  /// Subject words the user added to the built-in keyword list, and built-in ones switched off.
+  subjectKeywords        String[] @default([]) @map("subject_keywords")
+  removedSubjectKeywords String[] @default([]) @map("removed_subject_keywords")
+  /// Aggregate counters only: a skipped mail leaves no other trace.
+  skippedCount      Int       @default(0) @map("skipped_count")
+  processedCount    Int       @default(0) @map("processed_count")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  user     User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages MailIntakeMessage[]
+  user       User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages   MailIntakeMessage[]
+  scans      MailIntakeScan[]
+  candidates MailIntakeCandidate[]
 
   @@unique([userId])
   @@unique([kind], where: raw("user_id IS NULL"), map: "mail_intake_sources_instance_key")
@@ -7737,6 +7831,65 @@ model MailIntakeMessage {
   @@unique([sourceId, messageId, userId])
   @@index([userId, status])
   @@map("mail_intake_messages")
+}
+
+/// The one-off "search the mailbox" job of a personal folder: headers only, resumable by cursor.
+model MailIntakeScan {
+  id          String    @id @default(uuid())
+  sourceId    String    @unique @map("source_id")
+  userId      String    @map("user_id")
+  /// running | done | cancelled | interrupted | failed
+  status      String
+  since       DateTime?
+  before      DateTime?
+  uidValidity String?   @map("uid_validity")
+  /// Highest UID already judged; a resumed scan continues above it.
+  cursorUid   Int       @default(0) @map("cursor_uid")
+  total       Int       @default(0)
+  scanned     Int       @default(0)
+  skipped     Int       @default(0)
+  matched     Int       @default(0)
+  candidates  Int       @default(0)
+  /// A stable failure kind, never prose.
+  error       String?
+  startedAt   DateTime  @default(now()) @map("started_at")
+  finishedAt  DateTime? @map("finished_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  source MailIntakeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("mail_intake_scans")
+}
+
+/// A booking mail the scan found that is probably missing in TravStats. Header fields only:
+/// the mail itself is downloaded when (and only when) the user imports it.
+model MailIntakeCandidate {
+  id            String    @id @default(uuid())
+  sourceId      String    @map("source_id")
+  userId        String    @map("user_id")
+  uidValidity   String    @map("uid_validity")
+  uid           Int
+  messageId     String?   @map("message_id")
+  receivedAt    DateTime? @map("received_at")
+  fromAddress   String?   @map("from_address")
+  subject       String?
+  brand         String?
+  guessedDomain String?   @map("guessed_domain")
+  /// null (nothing found) | likely_present (brand + date near an existing entry)
+  matchHint     String?   @map("match_hint")
+  /// open | ignored | imported | failed
+  status        String    @default("open")
+  reason        String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  source MailIntakeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, uidValidity, uid])
+  @@index([userId, status])
+  @@map("mail_intake_candidates")
 }
 
 /// A document a member put on the plan's trip (spec §6.8, D6). A member reads only the documents

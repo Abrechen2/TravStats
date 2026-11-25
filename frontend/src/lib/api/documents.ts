@@ -65,6 +65,8 @@ export interface TravelDocument {
   sizeBytes: number;
   sha256: string;
   originalName: string | null;
+  /** The owner's own remark; null/absent = none. */
+  note?: string | null;
   /** What to call it on screen — already resolved server-side. */
   displayName: string;
   issuedOn: string | null;
@@ -173,6 +175,18 @@ export interface UnfiledDocuments {
   documents: UnfiledDocument[];
 }
 
+export interface UpdateDocumentInput {
+  displayName?: string;
+  /** The owner's remark; null or blank clears it. */
+  note?: string | null;
+  kind?: DocumentKind | null;
+  /** YYYY-MM-DD, or null to clear. */
+  issuedOn?: string | null;
+}
+
+/** The domains whose import dialog can read a document and create an entry from it. */
+export type NewEntryDomain = "flight" | "cruise" | "lodging" | "rail" | "rental";
+
 /** Bytes, per format. */
 export type DocumentLimits = Record<DocumentFormat, number>;
 
@@ -228,7 +242,8 @@ export function documentDownloadUrl(document: TravelDocument): string {
 }
 
 export interface UploadDocumentInput {
-  entry: DocumentEntryRef;
+  /** Absent: the document is kept unfiled, in the inbox's "nicht zugeordnet" list. */
+  entry?: DocumentEntryRef;
   file: File;
   kind?: DocumentKind;
   /** YYYY-MM-DD. */
@@ -318,8 +333,10 @@ export const documentsApi = {
   }: UploadDocumentInput): Promise<TravelDocument> => {
     const form = new FormData();
     form.append("file", file);
-    form.append("entryType", entry.type);
-    form.append("entryId", entry.id);
+    if (entry) {
+      form.append("entryType", entry.type);
+      form.append("entryId", entry.id);
+    }
     if (kind) form.append("kind", kind);
     if (issuedOn) form.append("issuedOn", issuedOn);
     if (rentalCategory) form.append("rentalCategory", rentalCategory);
@@ -351,6 +368,18 @@ export const documentsApi = {
     return data.data;
   },
 
+  /** Title, date and kind of ONE document (`PATCH /documents/:id`); a field left out stays. */
+  update: async (id: string, patch: UpdateDocumentInput): Promise<TravelDocument> => {
+    const { data } = await api.patch<Envelope<TravelDocument>>(`/documents/${id}`, patch);
+    return data.data;
+  },
+
+  /** The stored bytes, for handing a kept document to an import dialog. */
+  fetchFile: async (id: string): Promise<Blob> => {
+    const { data } = await api.get<Blob>(`/documents/${id}/file`, { responseType: "blob" });
+    return data;
+  },
+
   remove: async (id: string): Promise<void> => {
     await api.delete(`/documents/${id}`);
   },
@@ -361,9 +390,11 @@ export const documentsApi = {
     return data.data;
   },
 
-  linkCandidates: async (id: string): Promise<DocumentLinkCandidates> => {
+  /** With `q` the server searches ALL the account's entries by label, not just the recent ones. */
+  linkCandidates: async (id: string, q?: string): Promise<DocumentLinkCandidates> => {
     const { data } = await api.get<Envelope<DocumentLinkCandidates>>(
-      `/documents/${id}/link-candidates`
+      `/documents/${id}/link-candidates`,
+      { params: q?.trim() ? { q: q.trim() } : undefined }
     );
     return data.data;
   },

@@ -39,6 +39,10 @@ vi.mock("@/lib/api/sharing", () => ({
     inboxCount: vi.fn().mockResolvedValue(0),
   },
 }));
+// SharingTab asks whether cross-server sharing is on (fix/shared-trip-companions).
+vi.mock("../../lib/api/sharingRemote", () => ({
+  sharingRemoteApi: { status: vi.fn().mockResolvedValue({ available: false }) },
+}));
 vi.mock("../../components/inbox/usePhotoJourneysVisible", () => ({
   usePhotoJourneysVisible: () => visible.value,
 }));
@@ -48,6 +52,9 @@ vi.mock("../../components/NavigationBar", () => ({
 // Its own list on mount; it has its own tests.
 // The mail-intake cards load their own list; they have their own tests.
 vi.mock("../../components/inbox/MailIntakeSection", () => ({
+  default: () => null,
+}));
+vi.mock("../../components/inbox/MailboxScanSection", () => ({
   default: () => null,
 }));
 vi.mock("../../components/inbox/UnfiledDocumentsSection", () => ({

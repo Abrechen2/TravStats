@@ -165,7 +165,7 @@ describe("TravTrack — the day view", () => {
     it("a day with nothing stored says so: no point, nothing omitted (was: no field to tell it from a hidden day)", async () => {
       const res = await day();
       expect(res.body.pointCount).toBe(0);
-      expect(res.body.omitted).toEqual({ privacyZone: 0, implausible: 0 });
+      expect(res.body.omitted).toEqual({ privacyZone: 0, implausible: 0, sourceExcluded: 0 });
     });
 
     it("a day recorded only inside a privacy zone counts the hidden fixes, never their position", async () => {
@@ -177,7 +177,7 @@ describe("TravTrack — the day view", () => {
       }
       const res = await day();
       expect(res.body.pointCount).toBe(0);
-      expect(res.body.omitted).toEqual({ privacyZone: 3, implausible: 0 });
+      expect(res.body.omitted).toEqual({ privacyZone: 3, implausible: 0, sourceExcluded: 0 });
       expect(JSON.stringify(res.body)).not.toContain("127.1");
     });
 
@@ -188,7 +188,7 @@ describe("TravTrack — the day view", () => {
       await storePoint(userId, { t: DAY_START + 10 * MIN, lat: 37.5001, lon: 127, accuracyM: 5 });
       const plain = await day();
       expect(plain.body.pointCount).toBe(2);
-      expect(plain.body.omitted).toEqual({ privacyZone: 0, implausible: 1 });
+      expect(plain.body.omitted).toEqual({ privacyZone: 0, implausible: 1, sourceExcluded: 0 });
       const all = await request(app)
         .get("/api/v1/travtrack/day")
         .query({ date: "2026-10-12", includeImplausible: "1" })

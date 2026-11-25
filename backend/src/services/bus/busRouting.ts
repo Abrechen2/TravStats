@@ -223,6 +223,12 @@ export async function resolveEditedBusLine(
   existing: StoredBusLine,
   next: BusLineAsk
 ): Promise<BusLineEdit> {
+  // A hand-drawn line (or the "keep straight" choice) answers to the user, not
+  // to the timetable: a changed line name or time never re-fetches it. Moving a
+  // terminal does drop it, as for ferries - the drawn ends no longer fit.
+  if (existing.geometrySource === "manual" && !terminalsMoved(existing, next)) {
+    return { kind: "unchanged" };
+  }
   if (!terminalsMoved(existing, next) && !lineAskChanged(existing, next)) {
     return { kind: "unchanged" };
   }
