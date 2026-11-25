@@ -2335,7 +2335,7 @@
       "copy": "Kopieren",
       "download": "Als Datei herunterladen",
       "copied": "In die Zwischenablage kopiert.",
-      "copyFailed": "Kopieren hat nicht geklappt. Markiere den Schlüssel und kopiere ihn von Hand, oder lade ihn als Datei herunter.",
+      "copyFailed": "Bitte markierten Schlüssel manuell kopieren (Strg/Cmd+C) oder als Datei herunterladen.",
       "next": "Weiter"
     },
     "confirm": {

@@ -52,6 +52,37 @@ describe("RecoveryKeyFlow", () => {
   });
   afterEach(() => cleanup());
 
+  describe("copy on plain http (no secure context)", () => {
+    const original = document.execCommand;
+    afterEach(() => {
+      document.execCommand = original;
+      window.getSelection()?.removeAllRanges();
+    });
+
+    it("copies through the legacy path instead of failing on plain http", async () => {
+      document.execCommand = vi.fn(() => true);
+      render(<RecoveryKeyFlow onConfirmed={vi.fn()} />);
+      await settle();
+      await toKey();
+      fireEvent.click(screen.getByRole("button", { name: "settings:recoveryKey.show.copy" }));
+      await settle();
+      expect(screen.getByText("settings:recoveryKey.show.copied")).toBeTruthy();
+    });
+
+    it("a failed copy selects the key on screen and says to copy it by hand", async () => {
+      document.execCommand = vi.fn(() => false);
+      render(<RecoveryKeyFlow onConfirmed={vi.fn()} />);
+      await settle();
+      await toKey();
+      fireEvent.click(screen.getByRole("button", { name: "settings:recoveryKey.show.copy" }));
+      await settle();
+      expect(screen.getByText("settings:recoveryKey.show.copyFailed")).toBeTruthy();
+      expect(window.getSelection()?.toString().replace(/\s+/g, " ")).toBe(
+        KEY.replace(/\s+/g, " ")
+      );
+    });
+  });
+
   it("a wrong password shows the reason and no key", async () => {
     reveal.mockRejectedValue(refused("REAUTH_PASSWORD_INCORRECT"));
     render(<RecoveryKeyFlow onConfirmed={vi.fn()} />);

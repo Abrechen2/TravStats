@@ -2335,7 +2335,7 @@
       "copy": "Copy",
       "download": "Download as a file",
       "copied": "Copied to the clipboard.",
-      "copyFailed": "Copying did not work. Select the key and copy it by hand, or download it as a file.",
+      "copyFailed": "Please copy the selected key by hand (Ctrl/Cmd+C) or download it as a file.",
       "next": "Next"
     },
     "confirm": {

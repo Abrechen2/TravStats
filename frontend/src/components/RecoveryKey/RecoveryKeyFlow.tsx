@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useRef, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
   announceRecoveryKeyStatusChange,
@@ -7,6 +7,7 @@ import {
   type RevealedRecoveryKey,
 } from "../../lib/api/recoveryKey";
 import { apiErrorMachineCode } from "../../lib/apiError";
+import { copyToClipboard } from "../../lib/clipboard";
 import { logger } from "../../lib/logger";
 import Button from "../ui/Button";
 import { ErrorLine, LinkButton } from "../ui/settings";
@@ -16,6 +17,17 @@ import RecoveryKeyReauthStep from "./RecoveryKeyReauthStep";
 export const CONFIRM_LENGTH = 4;
 
 type Step = "reauth" | "show" | "confirm";
+
+/** Select an element's text, so the user can copy it by hand. */
+function selectText(element: HTMLElement | null): void {
+  if (!element) return;
+  const selection = window.getSelection();
+  if (!selection) return;
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
 
 /** The text of the downloaded file, in the UI's language. */
 function fileText(
@@ -66,6 +78,7 @@ export default function RecoveryKeyFlow({
   const [lastFour, setLastFour] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const keyRef = useRef<HTMLElement>(null);
 
   if (step === "reauth" || !revealed) {
     return (
@@ -80,12 +93,16 @@ export default function RecoveryKeyFlow({
     );
   }
 
+  // Plain http (no secure context) has no clipboard API, and the legacy path can
+  // be refused too. A failed copy must never look like nothing happened: the key
+  // is selected on screen so Ctrl/Cmd+C works, and the notice says so.
   const copy = async (): Promise<void> => {
     try {
-      await navigator.clipboard.writeText(revealed.key);
+      await copyToClipboard(revealed.key);
       setCopied("ok");
     } catch (err) {
       logger.warn("Copying the recovery key failed", err);
+      selectText(keyRef.current);
       setCopied("failed");
     }
   };
@@ -131,6 +148,7 @@ export default function RecoveryKeyFlow({
           {t("settings:recoveryKey.show.keep")}
         </p>
         <code
+          ref={keyRef}
           data-testid="recovery-key"
           className="t-mono"
           style={{
