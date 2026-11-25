@@ -134,6 +134,11 @@ export default function ShareNoticeCard({
         <p className="text-sm" style={{ fontWeight: unread ? 600 : 400 }}>
           {text}
         </p>
+        {notice.kind === "shared" && after.linked && (
+          <p className="t-caption" data-testid="share-linked">
+            {t(`${NS}.linked`, { count: after.linked.matched })}
+          </p>
+        )}
         {notice.kind === "shared" && after.autoAccepted && (
           <p className="t-caption" data-testid="share-auto-accepted">
             {t(`${NS}.autoAccepted`)}{" "}

@@ -8,6 +8,8 @@ import { useToastStore } from "../../store/toastStore";
 import type { SharePerson, TripPerson } from "../../types/sharing";
 import { Button, Dialog, Field, Select } from "../ui";
 import AddTravellerList from "./AddTravellerList";
+import LinkExistingPanel from "./LinkExistingPanel";
+import { sharingLinkApi } from "../../lib/api/sharingLink";
 import { AddTravellerError, addAndLinkTraveller } from "./addTraveller";
 import { shareBlockKey, sharingErrorKey } from "./sharingCopy";
 
@@ -69,6 +71,8 @@ function ShareTripForm({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // forgejo#440: link the person's own copy of this trip instead of copying it again.
+  const [linking, setLinking] = useState(false);
   const person = eligible.find((p) => p.key === key) ?? null;
   // A preselected person who cannot be shared with is explained and the user
   // picks someone else; the picker is hidden only for a selectable preselection.
@@ -129,7 +133,7 @@ function ShareTripForm({
       busy={busy}
       title={person ? t(`${NS}.title`, { name: person.name }) : t(`${NS}.titlePick`)}
       action={
-        person ? (
+        person && !linking ? (
           <Button variant="primary" disabled={busy} onClick={() => void share()}>
             {t(`${NS}.confirm`)}
           </Button>
@@ -149,7 +153,14 @@ function ShareTripForm({
           <>
             {!preselectionSelectable && (
               <Field label={t(`${NS}.person`)} htmlFor="share-trip-person">
-                <Select id="share-trip-person" value={key} onChange={(e) => setKey(e.target.value)}>
+                <Select
+                  id="share-trip-person"
+                  value={key}
+                  onChange={(e) => {
+                    setKey(e.target.value);
+                    setLinking(false);
+                  }}
+                >
                   {eligible.map((p) => (
                     <option key={p.key} value={p.key}>
                       {p.name} (@{p.account?.username})
@@ -158,7 +169,30 @@ function ShareTripForm({
                 </Select>
               </Field>
             )}
-            {person && (
+            {person?.account && linking && (
+              <LinkExistingPanel
+                otherName={person.name}
+                loadCandidates={() => sharingLinkApi.candidates(tripId, person.account!.id)}
+                preview={(target) => sharingLinkApi.preview(tripId, person.account!.id, target)}
+                link={(target, decision) =>
+                  sharingLinkApi.link(tripId, person.account!.id, target, decision)
+                }
+                failure={(err, fallback) => ({ key: sharingErrorKey(err, fallback) })}
+                onLinked={(result) => {
+                  addToast("success", t("sharing:link.done", { linked: result.linked }));
+                  onShared();
+                  onClose();
+                }}
+              />
+            )}
+            {person?.account && !linking && (
+              <span>
+                <Button disabled={busy} onClick={() => setLinking(true)}>
+                  {t("sharing:link.open")}
+                </Button>
+              </span>
+            )}
+            {person && !linking && (
               <>
                 <p className="text-sm">{t(`${NS}.copied`, { name: person.name })}</p>
                 <p className="text-sm">{t(`${NS}.private`)}</p>

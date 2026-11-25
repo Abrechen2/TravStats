@@ -104,6 +104,7 @@ import "./photoJourneys";
 import "./tripSuggestions";
 import "./sharing";
 import "./sharingCompanions";
+import "./sharingLink";
 import "./comparison";
 import "./comparisonInviteLinks";
 import "./shareLinks";

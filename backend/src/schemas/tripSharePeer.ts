@@ -52,6 +52,8 @@ export const TRIP_SHARE_FEATURES = [
   "achievements",
   // Hand-drawn cruise lines as a cruise fact (2026-11-24): `legRoutes` in entries and changes.
   "leg-routes",
+  // Linking an existing copy (forgejo#440): `offer-preview`, the offered entries before the answer.
+  "offer-preview",
 ] as const;
 export type TripShareFeature = (typeof TRIP_SHARE_FEATURES)[number];
 
@@ -330,6 +332,30 @@ export const offerSchema = z.strictObject({
   counts: offerCountsSchema,
 });
 
+/**
+ * Linking an existing copy (forgejo#440): before answering an offer, the person's server asks the
+ * home for the offered entries, so the person can compare them with a trip they already hold.
+ * Not a group message (no seq): a read, answered only for an offer still waiting for that pairing.
+ */
+export const offerPreviewSchema = z.strictObject({
+  kind: z.literal("offer-preview"),
+  ...header,
+  groupRef: uuid,
+  /** The asking person's channel (minted by their server), then the offering member's. */
+  from: uuid,
+  to: uuid,
+});
+
+export const offerPreviewReplySchema = z.union([
+  z.strictObject({ kind: z.literal("offer-preview-reply"), status: z.literal("notOffered") }),
+  z.strictObject({ kind: z.literal("offer-preview-reply"), status: z.literal("tooLarge") }),
+  z.strictObject({
+    kind: z.literal("offer-preview-reply"),
+    status: z.literal("ok"),
+    entries: z.array(wireEntrySchema).max(MAX_ENTRIES_PER_TRIP),
+  }),
+]);
+
 /** The person's own answer on their own server — consent on the receiving side. */
 export const offerAnswerSchema = z.strictObject({
   kind: z.literal("offer-answer"),
@@ -532,6 +558,7 @@ export const tripSharePacket = z.discriminatedUnion("kind", [
   tripPingSchema,
   inviteClaimSchema,
   offerSchema,
+  offerPreviewSchema,
   offerAnswerSchema,
   entriesSchema,
   factUpdateSchema,
@@ -702,6 +729,8 @@ export type InviteClaim = z.infer<typeof inviteClaimSchema>;
 export type InviteClaimReply = z.infer<typeof inviteClaimReplySchema>;
 export type TripOffer = z.infer<typeof offerSchema>;
 export type OfferAnswer = z.infer<typeof offerAnswerSchema>;
+export type OfferPreview = z.infer<typeof offerPreviewSchema>;
+export type OfferPreviewReply = z.infer<typeof offerPreviewReplySchema>;
 export type EntriesMessage = z.infer<typeof entriesSchema>;
 export type FactUpdateMessage = z.infer<typeof factUpdateSchema>;
 export type EntryCreateMessage = z.infer<typeof entryCreateSchema>;

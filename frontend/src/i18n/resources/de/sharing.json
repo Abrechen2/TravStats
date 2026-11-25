@@ -52,7 +52,9 @@
       "addRequestFrom": "{{name}} bittet dich, „{{trip}}“ auch mit {{person}} ({{personOrigin}}) zu teilen.",
       "addRequestHint": "Auf der Reiseseite kannst du sie einer verbundenen Person anbieten oder einen Code für diese Reise erstellen und weitergeben.",
       "autoAccepted": "Automatisch angenommen (Einwilligung).",
-      "autoAcceptedSetting": "Einwilligung ansehen"
+      "autoAcceptedSetting": "Einwilligung ansehen",
+      "linked_one": "Mit deiner eigenen Reise verknüpft: {{count}} Eintrag gehört jetzt zusammen, nichts wurde kopiert.",
+      "linked_other": "Mit deiner eigenen Reise verknüpft: {{count}} Einträge gehören jetzt zusammen, nichts wurde kopiert."
     },
     "empty": {
       "title": "Nichts Neues",
@@ -179,7 +181,8 @@
     "copyNotFound": "Deine Kopie dieses Eintrags gibt es nicht mehr.",
     "conflictStale": "Dein Eintrag hat sich seit diesem Konflikt geändert.",
     "conflictStaleFields": "Seit diesem Konflikt geändert: {{fields}}. Prüfe den Eintrag und entscheide neu.",
-    "notHomeLocal": "Diese Reise kommt von einem anderen Server. Weitere Personen lädt man dort ein – bitte die Person, mit der du sie teilst, auf der Reiseseite darum."
+    "notHomeLocal": "Diese Reise kommt von einem anderen Server. Weitere Personen lädt man dort ein – bitte die Person, mit der du sie teilst, auf der Reiseseite darum.",
+    "tripInOtherGroup": "Diese Reise der anderen Person ist schon mit jemand anderem geteilt."
   },
   "shareDialog": {
     "title": "Reise mit {{name}} teilen",
@@ -626,7 +629,9 @@
       "confirmFailed": "Die Bestätigung konnte nicht gesendet werden. Es hat sich nichts geändert.",
       "switchesFailed": "Die Einstellungen konnten nicht gespeichert werden.",
       "declineFailed": "Die Anfrage konnte nicht abgelehnt werden.",
-      "endFailed": "Die Verbindung konnte nicht beendet werden."
+      "endFailed": "Die Verbindung konnte nicht beendet werden.",
+      "linkTripShared": "Diese Reise ist schon geteilt; beende zuerst das Teilen.",
+      "linkTooLarge": "Die angebotene Reise hat zu viele Einträge für einen Vergleich."
     },
     "trip": {
       "title": "Reisende auf anderen Servern",
@@ -787,7 +792,9 @@
         "loadFailed": "Die angebotenen Reisen konnten nicht geladen werden.",
         "acceptFailed": "Die Reise konnte nicht übernommen werden.",
         "declineFailed": "Das Angebot konnte nicht abgelehnt werden."
-      }
+      },
+      "link": "Mit vorhandener Reise verknüpfen",
+      "linked": "„{{trip}}“ ist mit deiner Reise verknüpft."
     },
     "connected": {
       "stats": {
@@ -1055,5 +1062,50 @@
     "more_other": "und {{count}} weitere",
     "seen": "Gesehen",
     "seenFailed": "Das hat nicht geklappt. Bitte versuche es noch einmal."
+  },
+  "link": {
+    "open": "Mit vorhandener Kopie verknüpfen",
+    "intro": "Hat {{name}} diese Reise schon selbst eingetragen? Dann verknüpfe die beiden Reisen, statt eine zweite Kopie anzulegen. Es wird nichts neu angelegt.",
+    "loading": "Passende Reisen werden gesucht …",
+    "noCandidates": "Bei {{name}} gibt es keine Reise mit gleichem Zeitraum oder Namen.",
+    "pickTrip": "Welche Reise von {{name}} ist diese Reise?",
+    "reason": {
+      "period": "gleicher Zeitraum",
+      "name": "gleicher Name",
+      "overlap": "überschneidet sich"
+    },
+    "compare": "Vergleichen",
+    "summary": "{{matched}} Einträge gefunden, {{conflicting}} mit Abweichungen; {{onlyHere}} nur bei dir, {{onlyThere}} nur bei {{name}}.",
+    "byType": "{{type}}: {{here}} bei dir, {{there}} dort",
+    "conflictsTitle": "Abweichende Angaben",
+    "conflict": "bei dir {{here}}, bei {{name}} {{there}}",
+    "onlyHereTitle": "Nur bei dir",
+    "onlyThereTitle": "Nur bei {{name}}",
+    "nothingCreated": "Einträge, die nur eine Seite hat, bleiben, wo sie sind; beim Verknüpfen wird nichts kopiert.",
+    "decisionTitle": "Abweichende Angaben übernehmen",
+    "decision": {
+      "both": "Beide behalten (jede Seite behält ihre Angaben)",
+      "mine": "Meine übernehmen (an {{name}} geben)",
+      "theirs": "Die von {{name}} übernehmen"
+    },
+    "confirm": "Verknüpfen",
+    "done": "Verknüpft: {{linked}} Einträge gehören jetzt zusammen.",
+    "types": {
+      "flight": "Flug",
+      "lodgingStay": "Aufenthalt",
+      "cruise": "Kreuzfahrt",
+      "rail": "Bahnfahrt",
+      "bus": "Busfahrt",
+      "ferry": "Fährfahrt",
+      "rental": "Mietwagen",
+      "roadtrip": "Roadtrip",
+      "tour": "Tour",
+      "stop": "Stopp"
+    },
+    "errors": {
+      "candidatesFailed": "Die passenden Reisen konnten nicht geladen werden.",
+      "previewFailed": "Der Vergleich ist fehlgeschlagen.",
+      "linkFailed": "Die Reisen konnten nicht verknüpft werden."
+    }
   }
 }

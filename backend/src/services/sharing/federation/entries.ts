@@ -43,6 +43,7 @@ import { entryAuthorRefs } from "./entryAuthors";
 import { userRef } from "./rosterRef";
 import logger from "../../../utils/logger";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
+import { linkSkipKeys } from "./linkState";
 import { applyResync, type ResyncRecipient } from "./resyncApply";
 import { BODY_BUDGET, wireBytes } from "./transport";
 
@@ -271,10 +272,13 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
           stateReason: true,
           rosterRef: true,
           localRef: true,
+          offer: true,
           remote: { select: { id: true, userId: true, displayName: true, origin: true } },
         },
       })
     ).filter(isReceiving);
+    // A membership linked to an existing trip (forgejo#440) never copies what only the home held.
+    const skipOf = new Map(members.map((m) => [m.remote.userId, linkSkipKeys(m.offer)]));
     const recipients = (
       await Promise.all(
         members.map(async (m) => {
@@ -317,6 +321,7 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
         const ref = authorOf.get(row.shareKey as string);
         const ok =
           !!ref &&
+          !skipOf.get(recipient.userId)?.has(row.shareKey as string) &&
           (ref === recipient.pairingRef ||
             ref === recipient.ownRef ||
             (await mayReach(tx, group.id, recipient.userId, { pairingId: null, ref })));

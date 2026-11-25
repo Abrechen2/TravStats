@@ -52,7 +52,9 @@
       "addRequestFrom": "{{name}} asks you to share “{{trip}}” with {{person}} ({{personOrigin}}) too.",
       "addRequestHint": "On the trip page you can offer it to a connected person, or create a code for this trip and pass it on.",
       "autoAccepted": "Accepted automatically (consent).",
-      "autoAcceptedSetting": "Review consent"
+      "autoAcceptedSetting": "Review consent",
+      "linked_one": "Linked with your own trip: {{count}} entry now belongs together, nothing was copied.",
+      "linked_other": "Linked with your own trip: {{count}} entries now belong together, nothing was copied."
     },
     "empty": {
       "title": "Nothing new",
@@ -179,7 +181,8 @@
     "copyNotFound": "Your copy of this entry no longer exists.",
     "conflictStale": "Your entry has changed since this conflict.",
     "conflictStaleFields": "Changed since this conflict: {{fields}}. Check the entry and decide again.",
-    "notHomeLocal": "This trip comes from another server. Further people are invited from there – ask the person you share it with, on the trip page."
+    "notHomeLocal": "This trip comes from another server. Further people are invited from there – ask the person you share it with, on the trip page.",
+    "tripInOtherGroup": "That trip of the other person is already shared with someone else."
   },
   "shareDialog": {
     "title": "Share trip with {{name}}",
@@ -626,7 +629,9 @@
       "confirmFailed": "The confirmation could not be sent. Nothing changed.",
       "switchesFailed": "The settings could not be saved.",
       "declineFailed": "The request could not be declined.",
-      "endFailed": "The connection could not be ended."
+      "endFailed": "The connection could not be ended.",
+      "linkTripShared": "That trip is already shared; stop sharing it first.",
+      "linkTooLarge": "The offered trip has too many entries to compare."
     },
     "trip": {
       "title": "Travellers on other servers",
@@ -787,7 +792,9 @@
         "loadFailed": "The offered trips could not be loaded.",
         "acceptFailed": "The trip could not be accepted.",
         "declineFailed": "The offer could not be declined."
-      }
+      },
+      "link": "Link with an existing trip",
+      "linked": "“{{trip}}” is linked with your trip."
     },
     "connected": {
       "stats": {
@@ -1055,5 +1062,50 @@
     "more_other": "and {{count}} more",
     "seen": "Seen",
     "seenFailed": "That did not work. Please try again."
+  },
+  "link": {
+    "open": "Link with an existing copy",
+    "intro": "Has {{name}} already entered this trip? Then link the two trips instead of making a second copy. Nothing new is created.",
+    "loading": "Looking for matching trips …",
+    "noCandidates": "{{name}} has no trip with the same period or name.",
+    "pickTrip": "Which of {{name}}'s trips is this trip?",
+    "reason": {
+      "period": "same period",
+      "name": "same name",
+      "overlap": "overlaps"
+    },
+    "compare": "Compare",
+    "summary": "{{matched}} entries matched, {{conflicting}} with differences; {{onlyHere}} only on your side, {{onlyThere}} only at {{name}}'s.",
+    "byType": "{{type}}: {{here}} yours, {{there}} theirs",
+    "conflictsTitle": "Differing details",
+    "conflict": "yours {{here}}, {{name}}'s {{there}}",
+    "onlyHereTitle": "Only on your side",
+    "onlyThereTitle": "Only at {{name}}'s",
+    "nothingCreated": "Entries only one side holds stay where they are; linking copies nothing.",
+    "decisionTitle": "Settle differing details",
+    "decision": {
+      "both": "Keep both (each side keeps its own)",
+      "mine": "Take mine (give them to {{name}})",
+      "theirs": "Take {{name}}'s"
+    },
+    "confirm": "Link",
+    "done": "Linked: {{linked}} entries now belong together.",
+    "types": {
+      "flight": "Flight",
+      "lodgingStay": "Stay",
+      "cruise": "Cruise",
+      "rail": "Train ride",
+      "bus": "Bus ride",
+      "ferry": "Ferry crossing",
+      "rental": "Rental car",
+      "roadtrip": "Roadtrip",
+      "tour": "Tour",
+      "stop": "Stop"
+    },
+    "errors": {
+      "candidatesFailed": "The matching trips could not be loaded.",
+      "previewFailed": "The comparison failed.",
+      "linkFailed": "The trips could not be linked."
+    }
   }
 }

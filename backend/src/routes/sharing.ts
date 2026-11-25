@@ -20,6 +20,12 @@ import { countConnectionRequests } from "../services/sharing/federation/connecti
 import { countPlanInvites } from "../services/sharing/federation/plans/memberServe";
 import { inboxCount, listNotices, markNoticeRead } from "../services/sharing/notices";
 import { leaveGroup, shareTrip, tripSharingView } from "../services/sharing/shareTrip";
+import { linkCandidates, linkTrip, previewLink } from "../services/sharing/linkExisting";
+import {
+  linkBodySchema,
+  linkCandidatesQuerySchema,
+  linkPreviewBodySchema,
+} from "../schemas/sharingLink";
 import { deleteOwnCopy, undoNotice } from "../services/sharing/undo";
 import { resolveConflict } from "../services/sharing/federation/conflicts";
 import {
@@ -191,6 +197,40 @@ router.post(
     const tripId = idSchema.parse(req.params.tripId);
     const { companionId } = shareTripSchema.parse(req.body ?? {});
     res.json({ success: true, data: await shareTrip(req.userId!, tripId, companionId) });
+  })
+);
+
+/** Linking an existing copy (forgejo#440): candidates, the dry run, the link. */
+router.get(
+  "/trips/:tripId/link-candidates",
+  handle(async (req, res) => {
+    const tripId = idSchema.parse(req.params.tripId);
+    const { userId } = linkCandidatesQuerySchema.parse(req.query ?? {});
+    res.json({ success: true, data: await linkCandidates(req.userId!, tripId, userId) });
+  })
+);
+
+router.post(
+  "/trips/:tripId/link-preview",
+  handle(async (req, res) => {
+    const tripId = idSchema.parse(req.params.tripId);
+    const body = linkPreviewBodySchema.parse(req.body ?? {});
+    res.json({
+      success: true,
+      data: await previewLink(req.userId!, tripId, body.userId, body.targetTripId),
+    });
+  })
+);
+
+router.post(
+  "/trips/:tripId/link",
+  handle(async (req, res) => {
+    const tripId = idSchema.parse(req.params.tripId);
+    const body = linkBodySchema.parse(req.body ?? {});
+    res.json({
+      success: true,
+      data: await linkTrip(req.userId!, tripId, body.userId, body.targetTripId, body.decision),
+    });
   })
 );
 

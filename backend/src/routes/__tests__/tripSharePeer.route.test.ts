@@ -177,6 +177,7 @@ describe("ping", () => {
         "plans",
         "achievements",
         "leg-routes",
+        "offer-preview",
       ],
     });
   });

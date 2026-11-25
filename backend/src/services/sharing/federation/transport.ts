@@ -21,6 +21,8 @@ export const BODY_BUDGET = {
   "invite-claim": 8_192,
   "offer-answer": 8_192,
   offer: 32_768,
+  // Linking an existing copy (forgejo#440): a short request; the reply carries the entries.
+  "offer-preview": 8_192,
   entries: 1_048_576,
   "fact-update": 262_144,
   "entry-create": 262_144,
@@ -119,6 +121,12 @@ export const PROPAGATION_TRANSPORT: PeerTransport = transport(
  */
 export const STATS_TRANSPORT: PeerTransport = transport(
   BODY_BUDGET["stats-read"] + ENVELOPE_OVERHEAD,
+  BODY_BUDGET.entries + ENVELOPE_OVERHEAD
+);
+
+/** An offer preview (forgejo#440): a short request, the offered entries back (as large as `entries`). */
+export const OFFER_PREVIEW_TRANSPORT: PeerTransport = transport(
+  BODY_BUDGET["offer-preview"] + ENVELOPE_OVERHEAD,
   BODY_BUDGET.entries + ENVELOPE_OVERHEAD
 );
 
