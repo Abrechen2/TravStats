@@ -10,6 +10,7 @@ import { dawarichStaysApi } from "../../../lib/api/dawarichStays";
 import { travTrackLegsApi, type TravTrackStop } from "../../../lib/api/travtrackLegs";
 import { logger } from "../../../lib/logger";
 import { stayInboxHref, stayStatusColor } from "../TrackStays";
+import StopEvidenceBadge from "../../../components/dawarich/StopEvidenceBadge";
 import TrackStopCoverage from "./TrackStopCoverage";
 import TrackStopPlace from "./TrackStopPlace";
 import { durationText, spanText } from "./trackLegFormat";
@@ -103,6 +104,7 @@ export default function TrackStopCard({
       </p>
       <TrackStopCoverage stop={stop} zone={zone} />
       <TrackStopPlace stop={stop} zone={zone} onChanged={() => void onChanged()} />
+      <StopEvidenceBadge view={stop.evidence ?? null} />
       {stay ? (
         <p
           className="t-caption"

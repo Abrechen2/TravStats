@@ -33,6 +33,15 @@ import { daySourceLines } from "../trackDaySources";
 import TrackPointInspector from "./TrackPointInspector";
 import TrackRangeBar from "./TrackRangeBar";
 import TrackRangeMap from "./TrackRangeMap";
+import { useRangePick } from "./useRangePick";
+import { useLightBasemap } from "../../../components/map/useBasemapStyle";
+import { useDomainColors } from "../../../hooks/useDomainColors";
+import {
+  modeColor,
+  modeColorKeyOf,
+  modeColorTable,
+  type ModeColorKey,
+} from "../../../lib/trackModeColor";
 import TrackReplayDock from "./TrackReplayDock";
 import TrackTotalsPanel from "./TrackTotalsPanel";
 import { lonLat, rangeTotals, splitAfterPause, type LonLat } from "./trackGeometry";
@@ -44,7 +53,15 @@ import {
   totalsFromAggregates,
   type TrackSelection,
 } from "./trackLegs";
-import { mapAnchors, type MapLegLine, type MapPoint, type MapStop } from "./trackMapLayers";
+import {
+  LEG_PICK_WIDTH,
+  LEG_PICK_WIDTH_COARSE,
+  mapAnchors,
+  type MapLegLine,
+  type MapPoint,
+  type MapRangeLine,
+  type MapStop,
+} from "./trackMapLayers";
 import { useTrackMapPrefs } from "./trackMapPrefs";
 import type { DayResult } from "./trackRange";
 import {
@@ -73,6 +90,7 @@ const NO_LINES: LonLat[][] = [];
 const NO_SEGMENTS: TrackPoint[][] = [];
 const NO_LEG_LINES: MapLegLine[] = [];
 const NO_POINTS: MapPoint[] = [];
+const NO_RANGE_LINES: MapRangeLine[] = [];
 
 /** A flight named only by its id (a link): the panel reads its label from the server. */
 const flightById = (id: string): SelectedFlight => ({ id, label: "", href: `/flights/${id}` });
@@ -262,6 +280,27 @@ export default function TrackMapView(): JSX.Element {
     [shown, source, data.range]
   );
 
+  // Choosing a leg or stop takes the detail slot from an open point or photo.
+  const choose = useCallback((next: TrackSelection | null) => {
+    if (next) {
+      setSelected(null);
+      setPhoto(null);
+    }
+    setPick(next);
+  }, []);
+  // A long span has no legs of its own: a click reads the clicked day and picks the leg in it.
+  const rangePick = useRangePick(zone, choose);
+  const rangeLineList = useMemo<MapRangeLine[]>(
+    () =>
+      long
+        ? shown.flatMap((segment) =>
+            segment.length > 1
+              ? [{ path: segment.map(lonLat), times: segment.map((p) => p[0]) }]
+              : []
+          )
+        : NO_RANGE_LINES,
+    [long, shown]
+  );
   // Legs and stops of the loaded days (a long span has none): clicking one selects it on map and list.
   const legLineList = useMemo<MapLegLine[]>(
     () =>
@@ -272,9 +311,31 @@ export default function TrackMapView(): JSX.Element {
       ),
     [loaded]
   );
+  // Colour by transport mode: one stretch per leg of the loaded days (a long span has no legs).
+  const { colors: domainColors } = useDomainColors();
+  const lightBasemap = useLightBasemap();
+  const modeColors = useMemo(
+    () => modeColorTable(prefs.modeColors, domainColors, lightBasemap),
+    [prefs.modeColors, domainColors, lightBasemap]
+  );
+  const modePaths = useMemo(
+    () =>
+      loaded.flatMap((r) =>
+        (r.day.legs ?? []).flatMap((leg) =>
+          legLines(r.day, leg).map((path) => ({ path, mode: modeColorKeyOf(leg.mode) }))
+        )
+      ),
+    [loaded]
+  );
+  const modesShown = useMemo(
+    () => [...new Set(modePaths.map((p) => p.mode))] as ModeColorKey[],
+    [modePaths]
+  );
   const resolved = useMemo(() => {
     if (!pick) return null;
-    const day = loaded.find((r) => r.date === pick.date)?.day;
+    const day =
+      loaded.find((r) => r.date === pick.date)?.day ??
+      (rangePick.day?.date === pick.date ? rangePick.day : undefined);
     if (!day) return null;
     if (pick.kind === "leg") {
       const leg = day.legs?.find((l) => l.id === pick.id);
@@ -282,7 +343,7 @@ export default function TrackMapView(): JSX.Element {
     }
     const stop = day.stops?.find((s) => s.fromMs === pick.fromMs);
     return stop ? ({ kind: "stop", day, stop } as const) : null;
-  }, [pick, loaded]);
+  }, [pick, loaded, rangePick.day]);
   // A pick the day no longer holds (re-derived after late points) is no pick.
   const activePick = resolved ? pick : null;
   // The leg is cut from the whole stretches: while the replay runs it would show what the replay has not reached.
@@ -341,14 +402,6 @@ export default function TrackMapView(): JSX.Element {
       ),
     [loaded, pick]
   );
-  // Choosing a leg or stop takes the detail slot from an open point or photo.
-  const choose = useCallback((next: TrackSelection | null) => {
-    if (next) {
-      setSelected(null);
-      setPhoto(null);
-    }
-    setPick(next);
-  }, []);
   const onLeg = useCallback(
     (leg: MapLegLine) => choose({ kind: "leg", date: leg.date, id: leg.id }),
     [choose]
@@ -418,6 +471,7 @@ export default function TrackMapView(): JSX.Element {
   useEscapeClose(detail === "photo" && photo !== null, () => setPhoto(null));
   const closeLeg = () => {
     setPick(null);
+    rangePick.clear();
     // "Ganzer Tag" also ends a "play this leg" window.
     if (replayWindow) resetReplay();
   };
@@ -450,8 +504,26 @@ export default function TrackMapView(): JSX.Element {
         leg={resolved.leg}
         zone={resolved.day.zone}
         entryHref={entryHref}
+        modeColor={modeColor(
+          modeColorKeyOf(resolved.leg.mode),
+          prefs.modeColors,
+          domainColors,
+          lightBasemap
+        )}
         onClose={closeLeg}
-        onChanged={() => data.refresh(resolved.day.date)}
+        onChanged={() =>
+          long ? rangePick.reread(resolved.day.date) : data.refresh(resolved.day.date)
+        }
+        onOpenDay={
+          long
+            ? () => go({ kind: "day", fromDay: resolved.day.date, toDay: resolved.day.date })
+            : null
+        }
+        onDeleted={() => {
+          closeLeg();
+          setNotice(t("track:legs.deleted"));
+          reload();
+        }}
         onReplay={
           legReplayable
             ? () => {
@@ -507,6 +579,7 @@ export default function TrackMapView(): JSX.Element {
         prefs={prefs}
         onChange={setPrefs}
         long={long}
+        modesShown={modesShown}
         speedStops={speedStops}
         embedded
         saveFailed={prefsSaveFailed}
@@ -585,6 +658,8 @@ export default function TrackMapView(): JSX.Element {
                 fitPadding={fitPadding}
                 layers={prefs.layers}
                 color={prefs.color}
+                modePaths={replay.t === null ? modePaths : undefined}
+                modeColors={modeColors}
                 opacity={prefs.opacity}
                 frameLines={framed}
                 highlight={highlight}
@@ -592,6 +667,10 @@ export default function TrackMapView(): JSX.Element {
                 selectionSegments={selectedSegments}
                 legLines={replaying ? NO_LEG_LINES : legLineList}
                 onLeg={onLeg}
+                pickWidth={coarse ? LEG_PICK_WIDTH_COARSE : LEG_PICK_WIDTH}
+                rangeLines={rangeLineList}
+                onRangePick={(at) => void rangePick.pick(at)}
+                coarse={coarse}
                 stops={stopList}
                 onStop={onStop}
                 lines={lines}
@@ -630,6 +709,26 @@ export default function TrackMapView(): JSX.Element {
               {notice && (
                 <p className="t-body" role="status" style={{ color: token("good") }}>
                   {notice}
+                </p>
+              )}
+              {rangePick.state.kind === "loading" && (
+                <p className="t-caption" role="status" data-testid="track-pick-loading">
+                  {t("track:legs.pickLoading")}
+                </p>
+              )}
+              {rangePick.state.kind === "failed" && (
+                <p
+                  className="t-body"
+                  role="alert"
+                  data-testid="track-pick-failed"
+                  style={{ color: token("bad") }}
+                >
+                  {t("track:legs.pickFailed", { reason: t(rangePick.state.key) })}
+                </p>
+              )}
+              {rangePick.state.kind === "none" && (
+                <p className="t-body" role="status" data-testid="track-pick-none">
+                  {t("track:legs.pickNone")}
                 </p>
               )}
               <TrackMapNotices

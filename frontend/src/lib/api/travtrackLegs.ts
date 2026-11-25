@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { StopEvidenceView } from "../stopEvidenceView";
 
 /**
  * Legs and stops of a TravTrack day (spec 2026-11-03-travtrack-legs, §2): the
@@ -42,6 +43,8 @@ export interface TravTrackStop {
   anchor: { lat: number; lon: number };
   /** An existing stay suggestion / lodging; null when none (or suggestions are off). */
   stayRef: { id: string; status: string } | null;
+  /** Where the suggestion came from and how sure it is; absent without evidence or on an older server. */
+  evidence?: StopEvidenceView;
   /**
    * The stop's name: the one the owner accepted, else a fixed place or a booked
    * lodging (`fixed`/`lodging`, spec 2026-11-05-travtrack-fixed-places); null until then.

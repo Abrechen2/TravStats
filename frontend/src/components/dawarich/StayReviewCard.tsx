@@ -8,6 +8,8 @@ import { Card } from "../ui/Card";
 import StayIdentityPanel from "./StayIdentityPanel";
 import TrackSectionPanel from "../inbox/track/TrackSectionPanel";
 import { staySectionProps } from "../inbox/track/sectionProps";
+import StopEvidenceBadge from "./StopEvidenceBadge";
+import { stopEvidenceView } from "../../lib/stopEvidenceView";
 import StayCalendarEvidence from "./StayCalendarEvidence";
 import StayPluginCandidates from "./StayPluginCandidates";
 import type { StayPluginEvidence } from "../../lib/api/dawarichStays";
@@ -196,6 +198,7 @@ export default function StayReviewCard({
           {m.strength === "name" && ` · ${t("places:smartList.weaker")}`}
         </p>
       ))}
+      {travtrack && <StopEvidenceBadge view={stopEvidenceView(row.evidence)} />}
       {row.evidence.calendar && (
         <StayCalendarEvidence evidence={row.evidence.calendar} zone={row.evidence.zone} />
       )}

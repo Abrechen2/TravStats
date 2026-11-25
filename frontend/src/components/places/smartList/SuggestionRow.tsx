@@ -4,6 +4,8 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { apiErrorMachineCode } from "../../../lib/apiError";
 import { logger } from "../../../lib/logger";
 import { dawarichStaysApi } from "../../../lib/api/dawarichStays";
+import StopEvidenceBadge from "../../dawarich/StopEvidenceBadge";
+import { stopEvidenceView } from "../../../lib/stopEvidenceView";
 import { formatLocalClock, formatLocalDate } from "../../../lib/displayFormat";
 import type { SmartSuggestion } from "../../../lib/api/smartLists";
 
@@ -89,6 +91,16 @@ export function SuggestionRow({
         })}
         {suggestion.strength === "name" && ` · ${t("places:smartList.weaker")}`}
       </p>
+      <StopEvidenceBadge
+        view={stopEvidenceView({
+          visit: {
+            distanceM: suggestion.distanceM,
+            durationMs: suggestion.durationMinutes * 60_000,
+            // The venue lookup named this suggestion; its name is shown above, not here.
+            venue: { name: suggestion.name ?? "–" },
+          },
+        })}
+      />
       {suggestion.lists.length > 0 && (
         <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
           {t("places:smartList.fitsList", {

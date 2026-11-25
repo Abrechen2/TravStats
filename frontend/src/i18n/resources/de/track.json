@@ -473,7 +473,12 @@
       "accuracy": "Punkte nach Genauigkeit",
       "accuracyAll": "Alle Punkte",
       "accuracyMax": "Nur besser als {{m}} m",
-      "accuracyHint": "Gilt für Punkte und Heatmap, nicht für die Linie. Punkte ohne gemeldete Genauigkeit bleiben sichtbar."
+      "accuracyHint": "Gilt für Punkte und Heatmap, nicht für die Linie. Punkte ohne gemeldete Genauigkeit bleiben sichtbar.",
+      "mode": "Verkehrsmittel",
+      "modeLong": "Die Farbe nach Verkehrsmittel gibt es für einen Tag oder eine Woche. Monat, Jahr und Zeitraum zeichnen einfarbig.",
+      "modeNone": "Keine Etappen im Zeitraum.",
+      "modeColor": "Farbe für {{mode}}",
+      "modeReset": "Standardfarben"
     },
     "replay": {
       "play": "Wiedergabe starten",
@@ -762,11 +767,22 @@
       "avgSpeed": "Ø Tempo",
       "maxSpeed": "Höchstes Tempo",
       "ascent": "Aufstieg",
-      "descent": "Abstieg"
+      "descent": "Abstieg",
+      "points": "Punkte"
     },
     "replay": "Diese Etappe abspielen",
     "showPoints": "Punkte zeigen",
-    "hidePoints": "Punkte ausblenden"
+    "hidePoints": "Punkte ausblenden",
+    "pickLoading": "Etappe wird geladen …",
+    "pickFailed": "Die Etappe konnte nicht geladen werden. {{reason}}",
+    "pickNone": "An dieser Stelle gibt es keine Etappe (ein Halt oder eine Lücke).",
+    "openDay": "Tag öffnen",
+    "delete": "Punkte löschen",
+    "deleteConfirm": "{{n}} Punkte dieser Etappe endgültig löschen?",
+    "deleteYes": "Ja, löschen",
+    "deleteNo": "Abbrechen",
+    "deleted": "Die Punkte der Etappe wurden gelöscht.",
+    "deleteFailed": "Die Punkte wurden nicht gelöscht. {{reason}}"
   },
   "stop": {
     "title": "Stopp",
@@ -959,5 +975,22 @@
     "saved": "Gespeichert.",
     "previewDays_one": "Betroffen: {{count}} Tag",
     "previewDays_other": "Betroffen: {{count}} Tage"
+  },
+  "evidence": {
+    "calendar": "Kalender: {{title}}",
+    "venue": "Ort aus Kartendaten",
+    "whyLabel": "Warum?",
+    "level": {
+      "high": "Sicherheit hoch",
+      "medium": "Sicherheit mittel",
+      "low": "Sicherheit niedrig"
+    },
+    "why": {
+      "venue": "{{m}} m vom Ort",
+      "dwell": "{{min}} min Aufenthalt",
+      "calendar": "Kalendertermin passt",
+      "plugin": "{{plugin}}: {{name}}, {{m}} m",
+      "pluginNoDistance": "{{plugin}}: {{name}}"
+    }
   }
 }
