@@ -6,6 +6,7 @@ import { formatMetricValue } from "../../lib/comparison/formatMetric";
 import { funStats, rivalryLines, totalsOf, type FunStats } from "../../lib/comparison/funStats";
 import { evaluateBadges } from "../../lib/comparison/badges";
 import type { LeaderboardRow } from "../../lib/comparison/types";
+import Toggletip from "../ui/Toggletip";
 
 interface Props {
   self: LeaderboardRow;
@@ -52,8 +53,9 @@ export default function CompareFun({ self, friend, year }: Props): JSX.Element {
       ],
     ];
     return defs.map(([key, raw, value]) => (
-      <li key={key} data-testid={`fun-${who}-${key}`} title={tr(`fun.${key}Hint`)}>
+      <li key={key} data-testid={`fun-${who}-${key}`}>
         {raw === null ? <span className="t-caption">—</span> : tr(`fun.${key}`, { value })}
+        <Toggletip content={tr(`fun.${key}Hint`)} />
       </li>
     ));
   };
@@ -75,7 +77,6 @@ export default function CompareFun({ self, friend, year }: Props): JSX.Element {
           <li
             key={b.code}
             data-testid={`badge-${who}-${b.code}`}
-            title={tr(`badges.${b.code}Hint`)}
             style={{
               border: "1px solid var(--ts-border)",
               borderRadius: "var(--ts-radius-card)",
@@ -84,6 +85,7 @@ export default function CompareFun({ self, friend, year }: Props): JSX.Element {
           >
             <span aria-hidden="true">{b.glyph} </span>
             {tr(`badges.${b.code}`)}
+            <Toggletip content={tr(`badges.${b.code}Hint`)} subject={tr(`badges.${b.code}`)} />
           </li>
         ))}
       </ul>
