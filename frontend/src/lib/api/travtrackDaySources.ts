@@ -27,6 +27,8 @@ export interface DaySourceSummary {
     score: number;
     points: number;
     accuracyKnownShare: number;
+    /** A phone's paired device name; null (or absent on an older server) when unknown. */
+    name?: string | null;
   }>;
   segments: Array<{ fromMs: number; untilMs: number; source: string }>;
   override: string | null;

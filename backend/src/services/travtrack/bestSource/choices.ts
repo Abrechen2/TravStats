@@ -41,6 +41,8 @@ export type DaySourceSummary = {
     score: number;
     points: number;
     accuracyKnownShare: number;
+    /** A phone's paired device name (its pairing token's label); null when unknown. */
+    name: string | null;
   }>;
   segments: SourceSegment[];
   override: string | null;
@@ -88,6 +90,7 @@ export function summaryOf(row: Row | null): DaySourceSummary {
       score: s.score,
       points: s.signals.points,
       accuracyKnownShare: s.signals.accuracyKnownShare,
+      name: null,
     })),
     segments: row.segments as SourceSegment[],
     override: row.overrideSource,
@@ -108,11 +111,50 @@ export function summaryOf(row: Row | null): DaySourceSummary {
 const dayKey = (day: string) => new Date(`${day}T00:00:00.000Z`);
 
 export async function daySourceSummary(userId: string, day: string): Promise<DaySourceSummary> {
-  return summaryOf(
+  const summary = summaryOf(
     await prisma.travTrackDaySource.findUnique({
       where: { userId_day: { userId, day: dayKey(day) } },
     })
   );
+  return withDeviceNames(userId, summary);
+}
+
+const COMPANION_PREFIX = "companion:";
+
+/**
+ * Names each phone source by the device it was paired as, so the web never has
+ * to show a device id ("Telefon · 6df45852" in rc46 UAT). The pairing token's
+ * label is the name the phone gave itself; a revoked token still names its
+ * device, since the points it sent stay.
+ */
+async function withDeviceNames(
+  userId: string,
+  summary: DaySourceSummary
+): Promise<DaySourceSummary> {
+  const deviceIds = summary.sources
+    .filter((s) => s.source.startsWith(COMPANION_PREFIX))
+    .map((s) => s.source.slice(COMPANION_PREFIX.length))
+    .filter((id) => id.length > 0);
+  if (deviceIds.length === 0) return summary;
+  const tokens = await prisma.apiToken.findMany({
+    where: { userId, deviceId: { in: deviceIds } },
+    select: { deviceId: true, label: true },
+    orderBy: { createdAt: "desc" },
+  });
+  const names = new Map<string, string>();
+  for (const tk of tokens) {
+    // Newest first: a re-paired device keeps the name it was given last.
+    if (tk.deviceId && tk.label.trim() && !names.has(tk.deviceId))
+      names.set(tk.deviceId, tk.label.trim());
+  }
+  return {
+    ...summary,
+    sources: summary.sources.map((s) =>
+      s.source.startsWith(COMPANION_PREFIX)
+        ? { ...s, name: names.get(s.source.slice(COMPANION_PREFIX.length)) ?? null }
+        : s
+    ),
+  };
 }
 
 /**

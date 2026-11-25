@@ -8,7 +8,7 @@ import { daySourcesApi, type DaySourceChoice } from "../../lib/api/travtrackDayS
 import { Select } from "../../components/ui/Field";
 import Button from "../../components/ui/Button";
 import { token } from "../../components/ui/tokens";
-import { kindOf, sourceLabel } from "./trackDaySources";
+import { kindOf, nameOf, sourceLabel } from "./trackDaySources";
 
 interface Props {
   day: TravTrackDay;
@@ -56,7 +56,8 @@ export default function TrackDaySources({ day, onChanged }: Props): JSX.Element 
     }
   };
   const clock = (ms: number) => formatTime(ms, { timeZone: day.zone });
-  const label = (source: string) => sourceLabel(t, source, kindOf(day, source));
+  const label = (source: string) =>
+    sourceLabel(t, source, kindOf(day, source), nameOf(day, source));
   const used =
     s.segments.length > 1
       ? s.segments
@@ -85,9 +86,13 @@ export default function TrackDaySources({ day, onChanged }: Props): JSX.Element 
             })}
           </span>
           {s.sources.length > 1 && (
-            <label className="t-caption flex items-center gap-2">
+            <label className="t-caption flex max-w-full min-w-0 flex-wrap items-center gap-2">
               {t("track:daySources.choose")}
+              {/* The shared control is width 100%, which inside this row's wrapping
+                  flex label squeezed it to a sliver: it sizes to its longest option
+                  now, never wider than the row. */}
               <Select
+                style={{ width: "auto", maxWidth: "100%", minWidth: "14rem" }}
                 value={s.override ?? AUTO}
                 disabled={busy}
                 onChange={(e) =>
@@ -99,7 +104,7 @@ export default function TrackDaySources({ day, onChanged }: Props): JSX.Element 
                 {s.sources.map((src) => (
                   <option key={src.source} value={src.source}>
                     {t("track:daySources.option", {
-                      source: sourceLabel(t, src.source, src.kind),
+                      source: sourceLabel(t, src.source, src.kind, src.name),
                       score: Math.round(src.score * 100),
                       count: src.points,
                     })}

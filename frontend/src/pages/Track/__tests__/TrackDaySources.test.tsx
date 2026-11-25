@@ -13,6 +13,7 @@ vi.mock("../../../lib/api/travtrackDaySources", () => ({
 }));
 
 import TrackDaySources from "../TrackDaySources";
+import { sourceLabel } from "../trackDaySources";
 import type { TravTrackDay } from "../../../lib/api/travtrack";
 import type { DaySourceSummary } from "../../../lib/api/travtrackDaySources";
 
@@ -50,6 +51,26 @@ const day = (sources: DaySourceSummary, extra: Partial<TravTrackDay> = {}): Trav
 describe("TrackDaySources — which source the day is drawn from", () => {
   beforeEach(() => {
     choose.mockReset();
+  });
+
+  it("names a phone by its paired device, never by its raw device id", () => {
+    const named = summary();
+    named.sources[0] = { ...named.sources[0], name: "iPhone 15" };
+    render(<TrackDaySources day={day(named)} onChanged={vi.fn()} />);
+    expect(screen.getByTestId("track-day-sources-used").textContent).toContain("iPhone 15");
+    expect(screen.getByTestId("track-day-sources-select").textContent).not.toContain("phone-1");
+  });
+
+  it("an unnamed phone reads 'Telefon' alone, without its id", () => {
+    const t = (k: string) => k;
+    expect(sourceLabel(t, "companion:6df45852-aaaa", "phone")).toBe("track:daySources.kind.phone");
+  });
+
+  it("the source select sizes to its options instead of being squeezed in the header", () => {
+    render(<TrackDaySources day={day(summary())} onChanged={vi.fn()} />);
+    const select = screen.getByTestId("track-day-sources-select");
+    expect(select.style.width).toBe("auto");
+    expect(select.style.minWidth).not.toBe("");
   });
 
   it("names the source in use and stores a choice for the whole day", async () => {

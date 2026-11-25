@@ -56,6 +56,31 @@ describe("TravTrack — best source per day (routes)", () => {
     await prisma.$disconnect();
   });
 
+  it("names a phone source by its paired device, not by its device id", async () => {
+    await prisma.apiToken.deleteMany({ where: { userId } });
+    await prisma.apiToken.create({
+      data: {
+        userId,
+        label: "iPhone 15",
+        lookupHash: `lookup-${PREFIX}${Date.now()}`,
+        hash: "x",
+        scope: "write",
+        deviceId: "phone-1",
+      },
+    });
+    await walk("companion:phone-1", D10 + 8 * H, D10 + 12 * H, 1);
+    await walk("gpx:takeout", D10 + 8 * H, D10 + 12 * H, 15, 0.01);
+    const day = await request(app)
+      .get("/api/v1/travtrack/day")
+      .query({ date: "2026-08-10" })
+      .set("Cookie", cookie);
+    expect(day.status).toBe(200);
+    expect(day.body.sources.sources).toEqual([
+      expect.objectContaining({ source: "companion:phone-1", name: "iPhone 15" }),
+      expect.objectContaining({ source: "gpx:takeout", name: null }),
+    ]);
+  });
+
   it("the day view names the source in use and lists a mixed day as questionable", async () => {
     await walk("companion:phone-1", D10 + 8 * H, D10 + 12 * H, 1);
     await walk("gpx:takeout", D10 + 8 * H, D10 + 12 * H, 15, 0.01);

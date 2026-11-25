@@ -35,6 +35,7 @@ export const daySourceSummarySchema = z
         score: z.number().describe("Quality 0..1"),
         points: z.number().int(),
         accuracyKnownShare: z.number().describe("Share of points that carry an accuracy"),
+        name: z.string().nullable().describe("A phone's paired device name; null when unknown"),
       })
     ),
     segments: z.array(z.object({ ...span, source: z.string() })),

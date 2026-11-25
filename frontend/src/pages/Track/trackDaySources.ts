@@ -4,10 +4,20 @@ import type { LonLat } from "./map/trackGeometry";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
-/** A source in the user's words: what it is, and which one when there are several of a kind. */
-export function sourceLabel(t: Translate, source: string, kind: DaySourceKind): string {
+/**
+ * A source in the user's words: what it is, and which one when there are several
+ * of a kind. A phone is named by its paired device's name (the server sends it
+ * as `name`), else simply "Telefon" — its device id is no name a user knows.
+ */
+export function sourceLabel(
+  t: Translate,
+  source: string,
+  kind: DaySourceKind,
+  deviceName?: string | null
+): string {
   const name = t(`track:daySources.kind.${kind}`);
   const ref = source.includes(":") ? source.slice(source.indexOf(":") + 1) : source;
+  if (kind === "phone") return deviceName?.trim() || name;
   return ref ? `${name} · ${ref.slice(0, 8)}` : name;
 }
 
@@ -19,6 +29,11 @@ export function kindOfOrigin(origin: string): DaySourceKind {
   if (["gpx", "kml", "tcx", "fit", "geojson", "timeline", "import"].includes(prefix))
     return "import";
   return "other";
+}
+
+/** The paired device name the server sent for a phone source, when it knows one. */
+export function nameOf(day: TravTrackDay, source: string): string | null {
+  return day.sources?.sources.find((s) => s.source === source)?.name ?? null;
 }
 
 /** The kind of an origin the summary does not list (a choice the server made for an older read). */
