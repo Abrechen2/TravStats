@@ -166,9 +166,7 @@ describe("TripPeopleSection", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "sharing:remote.trip.companion.no" })
     );
-    await waitFor(() =>
-      expect(api.markNotSameLocal).toHaveBeenCalledWith("comp-carl", "u-carl")
-    );
+    await waitFor(() => expect(api.markNotSameLocal).toHaveBeenCalledWith("comp-carl", "u-carl"));
   });
 
   it("opens the share dialog for a row instead of sharing on click", async () => {

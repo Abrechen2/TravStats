@@ -53,7 +53,8 @@ export function clearKeySwapMarker(): void {
   } catch (error) {
     logger.error({
       operation: "restore_key_swap_marker_clear_failed",
-      message: "Could not remove the key-swap marker; the next start will report an interrupted swap",
+      message:
+        "Could not remove the key-swap marker; the next start will report an interrupted swap",
       marker: keySwapMarkerPath(),
       error: error instanceof Error ? error.message : "Unknown error",
     });
@@ -89,7 +90,12 @@ export function readInterruptedKeySwap(): InterruptedKeySwap | null {
       startedAt: String(parsed.startedAt ?? ""),
     };
   } catch {
-    marker = { previousKeyCopy: "", previousFingerprint: "", archiveFingerprint: "", startedAt: "" };
+    marker = {
+      previousKeyCopy: "",
+      previousFingerprint: "",
+      archiveFingerprint: "",
+      startedAt: "",
+    };
   }
   return {
     ...marker,

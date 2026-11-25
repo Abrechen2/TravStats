@@ -59,9 +59,7 @@ registry.registerPath({
   },
   responses: {
     200: ok("Remembered", done),
-    404: err(
-      "`COMPANION_NOT_FOUND`, `SHARE_REMOTE_PERSON_NOT_FOUND`, or `SHARE_MEMBER_NOT_FOUND`"
-    ),
+    404: err("`COMPANION_NOT_FOUND`, `SHARE_REMOTE_PERSON_NOT_FOUND`, or `SHARE_MEMBER_NOT_FOUND`"),
   },
 });
 

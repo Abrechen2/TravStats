@@ -22,8 +22,11 @@ describe("readiness: admin.keySwapInterrupted", () => {
   let userId: string;
   const item = async (id: string) =>
     (
-      (await request(app).get("/api/v1/readiness").set("Cookie", `auth_token=${generateToken(id)}`))
-        .body.items as Array<{ id: string; status: string; action: string | null }>
+      (
+        await request(app)
+          .get("/api/v1/readiness")
+          .set("Cookie", `auth_token=${generateToken(id)}`)
+      ).body.items as Array<{ id: string; status: string; action: string | null }>
     ).find((i) => i.id === "admin.keySwapInterrupted");
 
   beforeAll(async () => {

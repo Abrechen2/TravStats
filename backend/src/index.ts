@@ -360,19 +360,8 @@ if (process.env.NODE_ENV !== "test") {
         logger.warn({ operation: "server_start_country_index_warm_error", error })
       );
 
-    // A restore that died while replacing the instance key is reported, never
-    // repaired by guessing (services/backup/keySwapMarker.ts).
-    try {
-      const { reconcileKeySwapAtBoot } = await import("./services/backup/keySwapMarker");
-      reconcileKeySwapAtBoot();
-    } catch (error) {
-      logger.error({ operation: "restore_key_swap_reconcile_error", error });
-    }
-
-    // An import that died with the last process left its upload and points file behind.
-    void import("./services/travtrack/imports/spool")
-      .then(({ sweepSpoolAtStart }) => sweepSpoolAtStart())
-      .catch((error: unknown) => logger.warn({ operation: "travtrack_spool_sweep_error", error }));
+    // A dead process's half-done key swap and import files (services/crashLeftovers.ts).
+    await (await import("./services/crashLeftovers")).reportCrashLeftovers();
 
     // The instance's upgrade history for the readiness page (never throws).
     void import("./services/readiness/state").then(({ recordRunningVersion }) =>

@@ -55,8 +55,7 @@ export default function RestoreKeyMismatchDialog({
   const usePasskey = method === "passkey" && hasPasskey;
   const pasted = key.replace(/[\s-]+/g, "");
   const ready =
-    pasted.length > 0 &&
-    (usePasskey || (password !== "" && (!hasTwoFactor || code.trim() !== "")));
+    pasted.length > 0 && (usePasskey || (password !== "" && (!hasTwoFactor || code.trim() !== "")));
   const working = busy || passkeyBusy;
 
   const submit = async (): Promise<void> => {
