@@ -95,7 +95,9 @@ export function groupsPresentIn(layers: readonly Layer[]): Set<LayerGroup> {
  * The legend word for the "tours" group, by what it holds: a roadtrip read
  * "Touren" on its own map (rc46 UAT).
  */
-export function toursLegendKey(lines: readonly { isRoadtrip?: boolean }[]): string {
+export function toursLegendKey(
+  lines: readonly { routeId: string; isRoadtrip?: boolean }[]
+): string {
   const roadtrips = lines.filter((l) => l.isRoadtrip === true).length;
   if (roadtrips === 0) return "trips:detail.map.legend.group.tours";
   return roadtrips === lines.length

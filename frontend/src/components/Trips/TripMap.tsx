@@ -89,8 +89,6 @@ interface TripMapProps {
     geometry: TourGeometry;
     /** A roadtrip's line takes the roadtrip hue instead of the tour one. */
     rgb?: [number, number, number];
-    /** A roadtrip, not a day tour: the legend names the group after what it holds. */
-    isRoadtrip?: boolean;
   }[];
   /** Drawn over everything else — the roadtrip page's selected station. */
   extraLayers?: readonly Layer[];

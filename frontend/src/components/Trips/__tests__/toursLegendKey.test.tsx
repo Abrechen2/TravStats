@@ -10,9 +10,11 @@ import { TripMapLegend } from "../TripMapLegend";
 
 describe("the trip map legend names the tours group after what it holds (rc46 UAT)", () => {
   it("a roadtrip alone reads 'Roadtrips', not 'Touren'", () => {
-    expect(toursLegendKey([{ isRoadtrip: true }])).toBe("trips:detail.map.legend.group.roadtrips");
-    expect(toursLegendKey([{}])).toBe("trips:detail.map.legend.group.tours");
-    expect(toursLegendKey([{ isRoadtrip: true }, {}])).toBe(
+    expect(toursLegendKey([{ routeId: "r", isRoadtrip: true }])).toBe(
+      "trips:detail.map.legend.group.roadtrips"
+    );
+    expect(toursLegendKey([{ routeId: "r" }])).toBe("trips:detail.map.legend.group.tours");
+    expect(toursLegendKey([{ routeId: "r", isRoadtrip: true }, { routeId: "s" }])).toBe(
       "trips:detail.map.legend.group.toursAndRoadtrips"
     );
   });
