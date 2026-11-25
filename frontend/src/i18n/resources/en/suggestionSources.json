@@ -53,7 +53,7 @@
       "kind": {
         "notConfigured": "The calendar is not fully set up.",
         "unreachable": "The calendar server cannot be reached.",
-        "auth": "Access refused. Check the address, user or password.",
+        "auth": "Access refused. Check the address, user or password. iCloud and Google require an app-specific password, not your normal account password.",
         "notFound": "There is no calendar at this address.",
         "protocol": "The server did not send a readable calendar answer.",
         "invalidUrl": "This address is not valid."

@@ -94,16 +94,44 @@ function responses(xml: string): Array<{ href: string; prop: Node }> {
   });
 }
 
-/** An href of the server's answer, absolute and on the configured origin — or refused. */
-export function resolveHref(base: string, href: string): string {
+/** Second-level labels under which the registrable domain has three labels (no PSL dependency). */
+const MULTI_PART_SUFFIX_SECOND_LEVEL = new Set(["co", "com", "net", "org", "gov", "ac", "edu"]);
+const IPV4 = /^\d{1,3}(\.\d{1,3}){3}$/;
+
+/** The registrable domain of a host (`p42-caldav.icloud.com` -> `icloud.com`), or null for an IP/bare label. */
+export function registrableDomain(host: string): string | null {
+  if (host.includes(":") || IPV4.test(host)) return null;
+  const labels = host.toLowerCase().split(".");
+  if (labels.length < 2 || labels.some((l) => l === "")) return null;
+  const twoLevel = labels.length >= 3 && labels[labels.length - 1].length === 2;
+  const take = twoLevel && MULTI_PART_SUFFIX_SECOND_LEVEL.has(labels[labels.length - 2]) ? 3 : 2;
+  return labels.length < take ? null : labels.slice(-take).join(".");
+}
+
+/**
+ * An href of the server's answer, absolute — on the configured origin, or on
+ * another https host of the same registrable domain (iCloud answers
+ * caldav.icloud.com with p42-caldav.icloud.com). Anything else is refused.
+ */
+export function resolveHref(base: string, href: string, relativeTo: string = base): string {
   let resolved: URL;
+  let origin: URL;
   try {
-    resolved = new URL(href, base);
+    resolved = new URL(href, relativeTo);
+    origin = new URL(base);
   } catch {
     throw new CalendarError("protocol", "CALENDAR_FOREIGN_HREF");
   }
-  if (resolved.origin !== new URL(base).origin)
-    throw new CalendarError("protocol", "CALENDAR_FOREIGN_HREF");
+  if (resolved.origin === origin.origin) return resolved.toString();
+  const domain = registrableDomain(origin.hostname);
+  const sameSite =
+    domain !== null &&
+    resolved.protocol === "https:" &&
+    origin.protocol === "https:" &&
+    resolved.port === origin.port &&
+    resolved.username === "" &&
+    registrableDomain(resolved.hostname) === domain;
+  if (!sameSite) throw new CalendarError("protocol", "CALENDAR_FOREIGN_HREF");
   return resolved.toString();
 }
 
@@ -194,7 +222,8 @@ export async function discoverCollections(
     .filter((r) => isCalendar(r.prop) && takesEvents(r.prop))
     .slice(0, MAX_COLLECTIONS)
     .map((r) => ({
-      href: resolveHref(c.url, r.href),
+      // Relative to the home set: on iCloud that is the switched host.
+      href: resolveHref(c.url, r.href, homeUrl),
       name: (text(r.prop.displayname) ?? "").slice(0, 120),
     }));
   if (found.length === 0) throw new CalendarError("notFound", "CALENDAR_NO_COLLECTIONS");
