@@ -1025,6 +1025,29 @@
           "other": "Sonstiger Ort"
         }
       }
+    },
+    "aiHelp": {
+      "ask": "KI fragen",
+      "asking": "KI wird gefragt …",
+      "ranking": "Vorschlag der KI",
+      "use": "Übernehmen",
+      "advice": "Vorschlag von {{provider}} ({{host}}, {{where}}) – nur ein Rat, gespeichert wird erst, was du übernimmst und sicherst.",
+      "where": {
+        "cloud": "Cloud",
+        "lan": "im Heimnetz"
+      },
+      "error": {
+        "serviceOff": "Die KI-Hilfe ist auf diesem Server ausgeschaltet.",
+        "internetOff": "Der Server darf gerade keine externen Dienste erreichen.",
+        "noProvider": "Es ist kein KI-Modell eingerichtet, das dieses Konto nutzen darf.",
+        "notAmbiguous": "Für diesen Aufenthalt gibt es nur einen Kandidaten – nichts zu entscheiden.",
+        "providerConsent": "Du hast diesem KI-Anbieter noch nicht zugestimmt (Einstellungen › Dienste).",
+        "providerOff": "Das KI-Modell ist vom Administrator abgeschaltet.",
+        "timeout": "Die KI hat nicht rechtzeitig geantwortet.",
+        "unreachable": "Die KI war nicht erreichbar.",
+        "providerError": "Die KI hat mit einem Fehler geantwortet.",
+        "badAnswer": "Die KI hat keine brauchbare Antwort gegeben."
+      }
     }
   },
   "recording": {

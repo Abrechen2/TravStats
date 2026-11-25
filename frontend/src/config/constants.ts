@@ -37,6 +37,8 @@ export const API_TIMEOUTS = {
    * may take 15 s. The default ten seconds would call a busy geocoder "down".
    */
   STAY_IDENTITY: 30000,
+  /** "KI fragen": the server gives the model 45 s; the client waits a little longer. */
+  STAY_AI_HELP: 55000,
   /** Server: the model gets 20 s, after the identity it reads its names from. */
   STAY_PLACE_TYPE: 50000,
   /**

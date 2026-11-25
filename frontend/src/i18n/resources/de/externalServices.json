@@ -862,7 +862,7 @@
     "points": "Anzahl Positionen",
     "zones": "Privatsphäre-Zonen",
     "zonesApplied": "vorher herausgeschnitten",
-    "zonesNone": "keine Zone betroffen",
+    "zonesNone": "keine Zone eingerichtet",
     "locations": {
       "cloud": "Cloud – verlässt dein Heimnetz",
       "lan": "Lokal im Heimnetz (LAN)"

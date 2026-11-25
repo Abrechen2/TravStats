@@ -862,7 +862,7 @@
     "points": "Number of positions",
     "zones": "Privacy zones",
     "zonesApplied": "cut out first",
-    "zonesNone": "no zone affected",
+    "zonesNone": "no zone set up",
     "locations": {
       "cloud": "Cloud – leaves your home network",
       "lan": "Local in your home network (LAN)"

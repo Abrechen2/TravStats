@@ -197,6 +197,13 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
     group: "ki",
     use: ["aiConsent", "aiAllow", "instKey", "model", "test"],
   },
+  // rc46 extras (owner 2026-11-25): both off by default; each account also
+  // confirms the target before its first request.
+  {
+    id: "aiSuggestionHelp",
+    group: "ki",
+    use: ["on"],
+  },
   {
     id: "openData",
     group: "open",
@@ -211,6 +218,11 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
     id: "vesselData",
     group: "open",
     use: ["on"],
+  },
+  {
+    id: "mapMatching",
+    group: "karte",
+    use: ["on", "instKey"],
   },
   {
     id: "logos",

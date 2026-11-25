@@ -1025,6 +1025,29 @@
           "other": "Other place"
         }
       }
+    },
+    "aiHelp": {
+      "ask": "Ask the AI",
+      "asking": "Asking the AI …",
+      "ranking": "The AI's suggestion",
+      "use": "Use",
+      "advice": "Suggestion from {{provider}} ({{host}}, {{where}}) – advice only; nothing is saved until you use a name and save.",
+      "where": {
+        "cloud": "cloud",
+        "lan": "home network"
+      },
+      "error": {
+        "serviceOff": "The AI help is switched off on this server.",
+        "internetOff": "The server may not reach external services right now.",
+        "noProvider": "No AI model is set up that this account may use.",
+        "notAmbiguous": "This stay has only one candidate – nothing to decide.",
+        "providerConsent": "You have not agreed to this AI provider yet (Settings › Services).",
+        "providerOff": "The AI model is switched off by the administrator.",
+        "timeout": "The AI did not answer in time.",
+        "unreachable": "The AI could not be reached.",
+        "providerError": "The AI answered with an error.",
+        "badAnswer": "The AI gave no usable answer."
+      }
     }
   },
   "recording": {

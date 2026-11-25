@@ -84,6 +84,9 @@ export const DIENSTE_PAGE: RegistryPage = {
       {"id":"graphhopper","de":"GraphHopper","en":"GraphHopper","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"karte","rows":[
 
       ]},
+      {"id":"mapMatching","de":"An Straßen anpassen","en":"Snap to roads","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"karte","rows":[
+
+      ]},
       {"id":"logos","de":"Logostream","en":"Logostream","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"karte","rows":[
         {"id":"logorefresh","kind":"action","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Logos neu laden","en":"Reload logos","terms":{"de":"Passiert auch jede Nacht","en":"Also happens every night"}},
       ]},
@@ -95,6 +98,9 @@ export const DIENSTE_PAGE: RegistryPage = {
       ]},
       {"id":"railTimetables","de":"Transitous & db-rest","en":"Transitous & db-rest","level":"expert","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"karte","rows":[
         {"id":"bahnkontakt","kind":"input","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Kontakt für Anfragen","en":"Contact for requests","terms":{"de":"Wird den Betreibern mitgeschickt","en":"Sent along to the operators"}},
+      ]},
+      {"id":"aiSuggestionHelp","de":"KI-Hilfe für unklare Vorschläge","en":"AI help for unclear suggestions","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"ki","rows":[
+
       ]},
       {"id":"openData","de":"OpenStreetMap · Overpass","en":"OpenStreetMap · Overpass","level":"expert","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"open","rows":[
 

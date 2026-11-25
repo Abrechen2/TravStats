@@ -212,7 +212,10 @@
     },
     "webdavtakt": {
       "t": "Wie oft",
-      "o": ["täglich", "wöchentlich"]
+      "o": [
+        "täglich",
+        "wöchentlich"
+      ]
     },
     "webdavvers": {
       "t": "Versionen behalten",
@@ -273,11 +276,17 @@
     },
     "ubahn": {
       "t": "U-Bahn und Tram beim Bahn-Import",
-      "o": ["Überspringen", "Importieren"]
+      "o": [
+        "Überspringen",
+        "Importieren"
+      ]
     },
     "busleg": {
       "t": "Busabschnitte beim Bahn-Import",
-      "o": ["Überspringen", "Importieren"]
+      "o": [
+        "Überspringen",
+        "Importieren"
+      ]
     },
     "webdavlast": {
       "t": "Letzte eigene Kopie"
@@ -695,6 +704,14 @@
       "vesselData": {
         "n": "Wikidata",
         "p": "Schiffs-MMSI und -IMO"
+      },
+      "aiSuggestionHelp": {
+        "n": "KI-Hilfe für unklare Vorschläge",
+        "p": "„KI fragen“ bei Aufenthalten mit mehreren möglichen Orten"
+      },
+      "mapMatching": {
+        "n": "An Straßen anpassen",
+        "p": "Dünne TravTrack-Strecken über deinen eigenen Router auf die Straße legen"
       }
     },
     "rows": {
@@ -963,7 +980,10 @@
         "t": "Anonyme Nutzungsstatistik senden",
         "s": "Einmal am Tag, ohne Namen",
         "h": "Die Installations-ID steht in der Hilfe. Ist der Empfänger beim Start abgeschaltet, geht nichts raus.",
-        "o": ["nein", "ja"]
+        "o": [
+          "nein",
+          "ja"
+        ]
       },
       "tplrepo": {
         "t": "Quelle der Buchungsvorlagen",
