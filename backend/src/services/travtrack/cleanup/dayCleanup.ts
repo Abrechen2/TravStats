@@ -83,13 +83,16 @@ export async function dayCleanup(
       threshold: LOW_SCORE,
     },
     smoothed: on && eligible ? smoothedSegments(read, low) : null,
-    matched: matches.map((m) => ({
-      id: m.id,
-      fromMs: m.fromMs,
-      untilMs: m.untilMs,
-      lines: privacyCut(m.lines, read.circles),
-      confidence: m.confidence,
-      provider: m.provider,
-    })),
+    // Fail closed: a match over a deleted span is not drawn, even if a removal missed its row.
+    matched: matches
+      .filter((m) => !read.deleted.some((d) => d.fromMs < m.untilMs && d.untilMs > m.fromMs))
+      .map((m) => ({
+        id: m.id,
+        fromMs: m.fromMs,
+        untilMs: m.untilMs,
+        lines: privacyCut(m.lines, read.circles),
+        confidence: m.confidence,
+        provider: m.provider,
+      })),
   };
 }

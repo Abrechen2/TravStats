@@ -22,6 +22,7 @@ import {
 import type { FetchLike } from "../../egress/boundedFetch";
 import { internetAllowed } from "../../internetGate";
 import { privacyCirclesFor } from "../privacyCircles";
+import { privacyCut } from "../privacyCut";
 import { readSafeTravTrack, type Span } from "../readSafe";
 import {
   MIN_CONFIDENCE,
@@ -113,7 +114,11 @@ export async function matchStretch(
   const match = await storeMatch(userId, {
     fromMs: span.fromMs,
     untilMs: span.untilMs,
-    lines: matched.map((m) => m.coordinates),
+    // A road line may pass a zone the recorded fixes never entered: cut it before it is stored.
+    lines: privacyCut(
+      matched.map((m) => m.coordinates),
+      circles
+    ),
     confidence,
     provider: hostOf(target.url),
     pointCount,

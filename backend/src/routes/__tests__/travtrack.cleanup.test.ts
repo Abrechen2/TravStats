@@ -12,6 +12,8 @@ import { boundedFetch } from "../../services/egress/boundedFetch";
 import { travTrackSwitches } from "../../services/travtrack/__tests__/switches";
 import { makeUser, storePoint, wipeTravTrack } from "../../services/travtrack/__tests__/fixtures";
 import { generateToken } from "../../utils/jwt";
+import { deleteTravTrackRange } from "../../services/travtrack/deleteRange";
+import { createZone } from "../../services/travtrack/zones";
 
 /**
  * The optional cleanup of a TravTrack day (rc46 extras C): smoothing as a
@@ -27,10 +29,35 @@ const DAY_START = Date.parse("2026-10-11T22:00:00Z"); // 12 Oct 00:00 in Berlin
 const T0 = DAY_START + 9 * 60 * MIN;
 const fetchMock = jest.mocked(boundedFetch);
 const ROUTER = "http://192.168.1.5:8002";
+/** Google's encoded polyline, precision 6. */
+function encode(points: [number, number][]): string {
+  let out = "";
+  let pLat = 0;
+  let pLon = 0;
+  const one = (v: number) => {
+    let n = v < 0 ? ~(v << 1) : v << 1;
+    while (n >= 0x20) {
+      out += String.fromCharCode((0x20 | (n & 0x1f)) + 63);
+      n >>= 5;
+    }
+    out += String.fromCharCode(n + 63);
+  };
+  for (const [lon, lat] of points) {
+    const la = Math.round(lat * 1e6);
+    const lo = Math.round(lon * 1e6);
+    one(la - pLat);
+    one(lo - pLon);
+    pLat = la;
+    pLon = lo;
+  }
+  return out;
+}
+/** The road along the drive and a little on, 48.00 → 48.14 at 7.8. */
+const ROAD = encode(Array.from({ length: 15 }, (_, i): [number, number] => [7.8, 48 + i * 0.01]));
 const ok = (confidence = 0.9) => ({
   status: 200,
   headers: new Headers(),
-  body: Buffer.from(JSON.stringify({ shape: "_c`|@_c`|@??", confidence_score: confidence })),
+  body: Buffer.from(JSON.stringify({ shape: ROAD, confidence_score: confidence })),
 });
 
 describe("TravTrack — cleanup", () => {
@@ -158,6 +185,50 @@ describe("TravTrack — cleanup", () => {
       .set("Cookie", cookie)
       .expect(204);
     expect((await getDay()).body.cleanup.matched).toEqual([]);
+  });
+
+  describe("a match goes with the points it was matched from (security review)", () => {
+    const matchRows = () => prisma.travTrackCleanup.count({ where: { userId, kind: "mapMatch" } });
+
+    it("a range delete over the stretch removes the matched geometry", async () => {
+      expect((await match({ confirmation: confirm })).status).toBe(201);
+      await deleteTravTrackRange(userId, new Date(T0 + 5 * MIN), new Date(T0 + 10 * MIN));
+      expect(await matchRows()).toBe(0);
+      expect((await getDay()).body.cleanup.matched).toEqual([]);
+    });
+
+    it("a range delete elsewhere leaves it", async () => {
+      await match({ confirmation: confirm });
+      await deleteTravTrackRange(userId, new Date(T0 + 120 * MIN), new Date(T0 + 130 * MIN));
+      expect(await matchRows()).toBe(1);
+    });
+
+    it("a new privacy zone the road line enters removes it", async () => {
+      await match({ confirmation: confirm });
+      // Past the last recorded fix, on the matched road line: no stored point is removed.
+      await createZone(userId, { name: "New", lat: 48.135, lon: 7.8, radiusM: 300 }, false);
+      expect(await matchRows()).toBe(0);
+      expect((await getDay()).body.cleanup.matched).toEqual([]);
+    });
+
+    it("the stored line is privacy-cut before it is stored", async () => {
+      await prisma.travTrackPrivacyZone.create({
+        data: { userId, name: "Far", lat: 48.135, lon: 7.8, radiusM: 200 },
+      });
+      const res = await match({ confirmation: confirm });
+      const row = await prisma.travTrackCleanup.findUniqueOrThrow({ where: { id: res.body.id } });
+      const lats = (row.geometry as [number, number][][]).flat().map((c) => c[1]);
+      expect(lats.some((lat) => Math.abs(lat - 48.135) < 0.0018)).toBe(false);
+    });
+
+    it("account deletion leaves no row", async () => {
+      const other = await makeUser(`${PREFIX}gone`);
+      await prisma.travTrackCleanup.create({
+        data: { userId: other, kind: "mapMatch", fromMs: 0n, untilMs: 1n, geometry: [] },
+      });
+      await prisma.user.delete({ where: { id: other } });
+      expect(await prisma.travTrackCleanup.count({ where: { userId: other } })).toBe(0);
+    });
   });
 
   it("keeps a low-confidence match unmatched and says why", async () => {
