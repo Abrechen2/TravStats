@@ -2,8 +2,11 @@ import { prisma } from "../../../db";
 import { profileZoneOf } from "../../../shared/time/profileZone";
 import { deriveDay } from "../dayDerivation";
 import type { Span } from "../readSafe";
+import logger from "../../../utils/logger";
 import type { Stop } from "../legs/types";
+import { stopIdentityFor } from "../stopPlaces/identity";
 import {
+  PREVIEW_DEFAULTS,
   buildRoadtripPreview,
   type PreviewPlace,
   type RoadtripPreview,
@@ -62,7 +65,7 @@ async function suggestedNames(userId: string, stops: readonly Stop[]): Promise<S
   const byId = new Map(
     rows.map((r) => [r.id, r.place?.name?.trim() || r.name?.trim() || null] as const)
   );
-  return (stop) => {
+  const recorded = (stop: Stop): string | null => {
     const fromStay = stop.stayRef ? (byId.get(stop.stayRef.id) ?? null) : null;
     if (fromStay) return fromStay;
     const source = stop.evidence?.source;
@@ -70,7 +73,43 @@ async function suggestedNames(userId: string, stops: readonly Stop[]): Promise<S
     if (source?.kind === "calendar") return source.title.trim() || null;
     return null;
   };
+  // What the day view suggests for a stop with no name yet (rc46 UAT: "Halt 1–6" here,
+  // "Via Litoranea Nord" there): the same identity lookup, for the stations only.
+  const asked = stops
+    .filter(
+      (s) =>
+        !s.dismissed &&
+        s.untilMs - s.fromMs >= PREVIEW_DEFAULTS.minDwellMs &&
+        !s.place?.name &&
+        !recorded(s)
+    )
+    .slice(0, MAX_IDENTITY_LOOKUPS);
+  const looked = new Map<number, string>();
+  for (let i = 0; i < asked.length; i += IDENTITY_CONCURRENCY) {
+    await Promise.all(
+      asked.slice(i, i + IDENTITY_CONCURRENCY).map(async (s) => {
+        try {
+          const identity = await stopIdentityFor(userId, {
+            lat: s.anchor.lat,
+            lon: s.anchor.lon,
+            fromMs: s.fromMs,
+            untilMs: s.untilMs,
+          });
+          const name = identity.probable?.name.trim();
+          if (name) looked.set(s.fromMs, name);
+        } catch (err) {
+          // A name is a suggestion: the station stays "Halt N" for the user to name.
+          logger.warn({ err, fromMs: s.fromMs }, "roadtrip preview: stop identity failed");
+        }
+      })
+    );
+  }
+  return (stop) => recorded(stop) ?? looked.get(stop.fromMs) ?? null;
 }
+
+/** A two-week span can hold many stops; the lookup may reach a geocoder per stop. */
+const MAX_IDENTITY_LOOKUPS = 40;
+const IDENTITY_CONCURRENCY = 4;
 
 export async function roadtripPreviewFor(
   userId: string,
