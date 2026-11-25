@@ -12,6 +12,11 @@ import {
 import { cellFor, diffOf, domainSetOf, type Cell } from "../../lib/comparison/compareCells";
 import type { LeaderboardRow } from "../../lib/comparison/types";
 import FriendAvatar from "./FriendAvatar";
+import CompareCurated from "./CompareCurated";
+import CompareFun from "./CompareFun";
+import CompareRadar, { radarAxes, RADAR_METRICS } from "./CompareRadar";
+import MetricHelp from "./MetricHelp";
+import { CURATED_KEYS } from "../../lib/comparison/curatedProgress";
 
 type Metric = (typeof LEADERBOARD_METRICS)[number];
 /** The three figures every head card carries; cross-domain, so they exist whatever is switched on. */
@@ -23,6 +28,9 @@ interface Props {
   year: number | null;
   domains: ReadonlySet<DomainKey> | null;
   isEnabled: (domain: DomainKey) => boolean;
+  /** What the reader gives the friend, for the consent line; undefined when not known. */
+  iShare?: boolean;
+  theyShare?: boolean;
 }
 
 type Lead = "you" | "them" | "tie" | null;
@@ -46,6 +54,8 @@ export default function CompareRows({
   year,
   domains,
   isEnabled,
+  iShare,
+  theyShare,
 }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["comparison", "common"]);
   const { colorOf } = useDomainColors();
@@ -72,10 +82,26 @@ export default function CompareRows({
   const sections: { domain: DomainKey | null; metrics: readonly Metric[] }[] = [];
   for (const d of Object.keys(DOMAINS) as DomainKey[]) {
     if (!isEnabled(d) || (domains && !domains.has(d))) continue;
-    sections.push({ domain: d, metrics: LEADERBOARD_METRICS.filter((m) => m.domain === d) });
+    // The curated-list family has its own section: bars against each list's size, counts only.
+    sections.push({
+      domain: d,
+      metrics: LEADERBOARD_METRICS.filter((m) => m.domain === d && !CURATED_KEYS.includes(m.key)),
+    });
   }
   sections.push({ domain: null, metrics: LEADERBOARD_METRICS.filter((m) => m.domain === null) });
 
+  const asOf = (iso: string): string =>
+    new Intl.DateTimeFormat(i18n.language, {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "UTC",
+    }).format(new Date(iso)) + " UTC";
+  const radarCells = Object.fromEntries(
+    RADAR_METRICS.map((key) => {
+      const m = LEADERBOARD_METRICS.find((x) => x.key === key) as Metric;
+      return [key, pair(m)];
+    })
+  );
   const headCard = (who: "you" | "them"): JSX.Element => (
     <div
       className="flex-1"
@@ -116,6 +142,21 @@ export default function CompareRows({
           );
         })}
       </dl>
+      {who === "them" && (
+        <p
+          className="t-caption"
+          data-testid="friend-meta"
+          style={{ margin: "var(--ts-space-md) 0 0" }}
+        >
+          {row?.snapshot
+            ? tr("meta.asOf", { date: asOf(row.snapshot.asOf) })
+            : tr("meta.asOfUnknown")}
+          {iShare !== undefined &&
+            ` · ${tr("meta.iShare", { state: tr(iShare ? "meta.yes" : "meta.no") })}`}
+          {theyShare !== undefined &&
+            ` · ${tr("meta.theyShare", { name: friend.name, state: tr(theyShare ? "meta.yes" : "meta.no") })}`}
+        </p>
+      )}
     </div>
   );
 
@@ -124,6 +165,18 @@ export default function CompareRows({
       <div className="flex flex-wrap" style={{ gap: "var(--ts-space-lg)" }}>
         {headCard("you")}
         {headCard("them")}
+      </div>
+      <div className="flex flex-wrap" style={{ gap: "var(--ts-space-xl)" }}>
+        <div className="flex-1" style={{ minWidth: 280 }}>
+          <CompareRadar
+            axes={radarAxes(radarCells)}
+            youLabel={tr("compare.you")}
+            name={friend.name}
+          />
+        </div>
+        <div className="flex-1" style={{ minWidth: 320 }}>
+          <CompareFun self={self} friend={friend} year={year} />
+        </div>
       </div>
       {sections.map(({ domain, metrics }) => {
         const rows = metrics.flatMap((m) => {
@@ -169,6 +222,9 @@ export default function CompareRows({
           </section>
         );
       })}
+      {(domains === null || domains.has("poi")) && isEnabled("poi") && (
+        <CompareCurated self={self} friend={friend} year={year} />
+      )}
       <p className="t-caption">{tr("compare.partialHint")}</p>
     </div>
   );
@@ -226,7 +282,10 @@ function MetricRow({ metric, mine, theirs, lead, fmt, reason, name, tr }: RowPro
   return (
     <li data-testid={`metric-${metric.key}`} data-lead={lead ?? "none"}>
       <div className="flex items-baseline justify-between">
-        <span style={{ fontWeight: 500 }}>{tr(`metric.${metric.key}`)}</span>
+        <span style={{ fontWeight: 500 }}>
+          {tr(`metric.${metric.key}`)}{" "}
+          <MetricHelp metric={metric.key} name={tr(`metric.${metric.key}`)} />
+        </span>
         {lead === "tie" && <span className="t-caption">{tr("friend.tie")}</span>}
         {lead && lead !== "tie" && (
           <span className="t-caption" data-testid={`lead-${metric.key}`}>

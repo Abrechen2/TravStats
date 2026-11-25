@@ -112,6 +112,8 @@ export default function FriendPanel({
         year={year}
         domains={domains}
         isEnabled={isEnabled}
+        iShare={friend.mine.leaderboard}
+        theyShare={friend.theirs.leaderboard}
       />
     );
   };

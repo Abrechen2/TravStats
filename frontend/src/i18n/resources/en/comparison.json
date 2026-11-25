@@ -44,7 +44,15 @@
     "daysAway": "Days away",
     "countries": "Countries",
     "cruisePorts": "Ports",
-    "places": "Places"
+    "places": "Places",
+    "curatedNewSevenWonders": "New 7 Wonders",
+    "curatedAncientWonders": "Wonders of the Ancient World",
+    "curatedWorldHeritage": "UNESCO World Heritage",
+    "curatedNatureWonders": "New 7 Wonders of Nature",
+    "curatedBiosphereReserves": "Biosphere reserves",
+    "curatedNationalParksDe": "National parks, Germany",
+    "curatedNationalParksUs": "National parks, USA",
+    "curatedMuseumWarships": "Museum warships"
   },
   "unit": {
     "days_one": "{{value}} day",
@@ -386,5 +394,100 @@
     },
     "withdraw": "Withdraw request to {{name}}",
     "achievementsFailed": "The achievements could not be loaded."
+  },
+  "counting": {
+    "title": "How is this counted?",
+    "where": "The rule lives in {{home}}.",
+    "flight": "A flight counts once it has taken place – planned and cancelled ones do not. Distance is the great-circle line between the airports.",
+    "flightTime": "Flight time runs from take-off to landing of the counted flights. A flight with no time is left out and the total reads \"at least\".",
+    "cruise": "A cruise counts after its return. Ports count once per port, sea days not; distance follows the sea route.",
+    "rail": "A journey counts once it is over. Journeys with no known distance are missing from the kilometres, so the total reads \"at least\".",
+    "bus": "A ride counts once it is over. Rides with no known distance are missing from the kilometres.",
+    "rental": "A rental counts after the return; rental days are the days between pick-up and return.",
+    "ferry": "A crossing counts once it has taken place and belongs to the year it arrived in.",
+    "tour": "A tour counts once it has happened. If its recording was truncated, the distance is a minimum.",
+    "lodging": "A stay counts only after check-out – a house you have merely booked is not a visit. Nights are the nights between arrival and departure.",
+    "place": "A place counts when it is marked as visited; a wishlist place with a future date does not. Visits count only what has already happened.",
+    "daysAway": "Every calendar day you were away somewhere counts once, even when trips overlap. Only available when all your domains are shared.",
+    "countries": "Countries from all your trips and places, each once. A lifetime total across all domains only.",
+    "curated": "Of a standard list's targets, what you ticked as visited counts. Only the number is shared, never which places."
+  },
+  "fun": {
+    "title": "Fun with numbers",
+    "earth": "{{value}} times around the Earth",
+    "earthHint": "Flight kilometres divided by the Earth's circumference (40,075 km).",
+    "moon": "{{value}} % of the way to the Moon",
+    "moonHint": "Flight kilometres against 384,400 km.",
+    "air": "{{value}} days in the air",
+    "airHint": "All flight minutes added up, counted in whole days.",
+    "nights": "as many hotel nights as {{value}}× half a year",
+    "nightsHint": "Nights divided by 182.5.",
+    "avg": "avg. {{value}} per flight",
+    "avgHint": "Flight kilometres divided by the number of flights.",
+    "none": "Not enough numbers for this yet.",
+    "lowerBound": "at least",
+    "rivalryTitle": "Friendly jabs",
+    "rivalry": {
+      "countries_them": "{{name}} is {{count}} countries ahead of you.",
+      "countries_you": "You are {{count}} countries ahead of {{name}}.",
+      "flights_them": "{{name}} has taken off {{count}} more times.",
+      "flights_you": "You have taken off {{count}} more times than {{name}}.",
+      "nights_them": "{{name}} has spent {{count}} more nights in beds.",
+      "nights_you": "You have spent {{count}} more nights in beds than {{name}}.",
+      "places_them": "{{name}} knows {{count}} more places.",
+      "places_you": "You know {{count}} more places than {{name}}.",
+      "cruises_them": "{{name}} has {{count}} more cruises under their belt.",
+      "cruises_you": "You have {{count}} more cruises under your belt than {{name}}.",
+      "none": "All square – or not enough numbers for a jab yet."
+    }
+  },
+  "badges": {
+    "title": "Badges",
+    "none": "No badge yet.",
+    "unknown": "No numbers for badges.",
+    "globetrotter": "Globetrotter",
+    "globetrotterHint": "At least 30 countries",
+    "frequentFlyer": "Frequent flyer",
+    "frequentFlyerHint": "At least 100 flights",
+    "railFriend": "Rail enthusiast",
+    "railFriendHint": "At least 10,000 rail kilometres",
+    "seafarer": "Old salt",
+    "seafarerHint": "At least 20,000 cruise kilometres",
+    "homeAway": "Home away from home",
+    "homeAwayHint": "At least 365 hotel nights",
+    "heritageHunter": "Heritage hunter",
+    "heritageHunterHint": "At least 25 World Heritage sites"
+  },
+  "radar": {
+    "title": "At a glance",
+    "hint": "Each axis is scaled so the higher value sits at the rim.",
+    "tooFew": "No shared numbers for the chart.",
+    "alt": "Radar chart: {{you}} vs {{name}}"
+  },
+  "curated": {
+    "title": "Standard lists",
+    "hint": "How many targets of a list are visited. Which ones is not shared.",
+    "of": "{{visited}} / {{total}}",
+    "line": "{{name}} has seen {{count}} more {{list}} sites.",
+    "lineYou": "You have seen {{count}} more {{list}} sites than {{name}}.",
+    "lead": "{{name}} has seen {{count}} more",
+    "leadYou": "You have seen {{count}} more",
+    "oldPeer": "{{name}}'s server does not share this list yet."
+  },
+  "podium": {
+    "title": "Podium",
+    "metric": "Metric",
+    "place1": "1st",
+    "place2": "2nd",
+    "place3": "3rd",
+    "nobody": "Nobody has a number for this metric."
+  },
+  "meta": {
+    "asOf": "As of {{date}}",
+    "asOfUnknown": "As-of unknown",
+    "iShare": "You share: {{state}}",
+    "theyShare": "{{name}} shares: {{state}}",
+    "yes": "yes",
+    "no": "no"
   }
 }

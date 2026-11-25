@@ -12,6 +12,7 @@ import { loadPassport } from "../stats/passportLoader";
 import { loadDaysAway } from "../stats/daysAwayLoader";
 import { DOMAIN_AGGREGATES } from "./domainAggregates";
 import { comparisonError } from "./errors";
+import { loadCuratedFigures } from "./curatedAggregates";
 import { buildAchievementSection } from "./achievementSection";
 
 /**
@@ -80,6 +81,11 @@ export async function buildLeaderboardSnapshot(
       wholeAccount && year === null
         ? (await withPurposeVisibility(userId, () => loadPassport(userId))).summary.countries
         : null;
+  // Curated-list progress: a place-domain figure like `places`, read only when the consent covers it.
+  const curated = await withPurposeVisibility(userId, () =>
+    domains.includes("poi") ? loadCuratedFigures(userId, year, allowedKeys) : Promise.resolve({})
+  );
+  Object.assign(values, curated);
   const common = {
     schema: LEADERBOARD_SCHEMA,
     asOf: new Date().toISOString(),

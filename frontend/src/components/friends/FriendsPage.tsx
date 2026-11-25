@@ -15,6 +15,7 @@ import { recentYears } from "../../lib/comparison/years";
 import { logger } from "../../lib/logger";
 import BoardsSection from "../comparison/BoardsSection";
 import AddFriendDialog from "./AddFriendDialog";
+import ComparePodium from "./ComparePodium";
 import FriendPanel from "./FriendPanel";
 import FriendPicker, { MAX_PICKED } from "./FriendPicker";
 import RequestsSection from "./RequestsSection";
@@ -161,6 +162,7 @@ export default function FriendsPage(): JSX.Element {
     if (pickedKeys.length === 0) return <p className="t-caption">{tr("friends.pickOne")}</p>;
     return (
       <div className="flex flex-col" style={{ gap: "var(--ts-space-xxl)" }}>
+        {data && <ComparePodium rows={[data.self, ...data.friends]} year={year} />}
         {friends
           .filter((f) => pickedKeys.includes(f.key))
           .map((f) => (
