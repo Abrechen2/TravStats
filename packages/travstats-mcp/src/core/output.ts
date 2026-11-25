@@ -17,6 +17,7 @@ export function capOutput(
     if (!arrays.length) {
       return {
         instance: out.instance,
+        ...(out.untrusted ? { untrusted: out.untrusted } : {}),
         truncated: true,
         note: "The result is larger than the output cap and has no list to cut.",
       };

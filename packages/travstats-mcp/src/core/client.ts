@@ -4,17 +4,44 @@ import { redact } from "./redact";
 
 export type Query = Record<string, string | number | boolean | undefined>;
 
+/** A file part of a multipart request. */
+export interface FormFile {
+  field: string;
+  bytes: Uint8Array;
+  fileName: string;
+  mimeType: string;
+}
+
+export interface WriteOptions {
+  /** The tool that makes the call; sent as `X-TravStats-Tool` so the server's log can say which tool wrote. */
+  tool?: string;
+}
+
 export interface ApiClient {
   get<T = unknown>(path: string, query?: Query): Promise<T>;
+  post<T = unknown>(
+    path: string,
+    body: unknown,
+    options?: WriteOptions & { query?: Query }
+  ): Promise<T>;
+  postForm<T = unknown>(
+    path: string,
+    file: FormFile,
+    fields: Record<string, string | undefined>,
+    options?: WriteOptions
+  ): Promise<T>;
 }
 
 type FetchLike = typeof fetch;
+
+export const CLIENT_NAME = "travstats-mcp";
 
 /** Plain REST client: bearer token, no redirects, a per-minute client budget and one polite 429 retry. */
 export function createClient(
   config: Pick<Config, "apiBase" | "token" | "clientBudgetPerMinute" | "timeoutMs">,
   fetchImpl: FetchLike = fetch,
-  sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+  clientVersion = "0.0.0"
 ): ApiClient {
   const calls: number[] = [];
 
@@ -34,15 +61,37 @@ export function createClient(
     calls.push(now);
   }
 
-  async function once(path: string, query?: Query): Promise<Response> {
-    const url = new URL(`${config.apiBase}${path}`);
-    for (const [k, v] of Object.entries(query ?? {}))
+  interface Call {
+    method: "GET" | "POST";
+    path: string;
+    query?: Query;
+    json?: unknown;
+    form?: () => FormData;
+    tool?: string;
+  }
+
+  async function once(call: Call): Promise<Response> {
+    const url = new URL(`${config.apiBase}${call.path}`);
+    for (const [k, v] of Object.entries(call.query ?? {}))
       if (v !== undefined) url.searchParams.set(k, String(v));
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${config.token}`,
+      Accept: "application/json",
+      "X-TravStats-Client": `${CLIENT_NAME}/${clientVersion}`,
+    };
+    if (call.tool) headers["X-TravStats-Tool"] = call.tool;
+    let body: BodyInit | undefined;
+    if (call.form) body = call.form();
+    else if (call.json !== undefined) {
+      headers["Content-Type"] = "application/json";
+      body = JSON.stringify(call.json);
+    }
     try {
       return await fetchImpl(url, {
-        method: "GET",
+        method: call.method,
         redirect: "manual",
-        headers: { Authorization: `Bearer ${config.token}`, Accept: "application/json" },
+        headers,
+        ...(body !== undefined ? { body } : {}),
         signal: AbortSignal.timeout(config.timeoutMs),
       });
     } catch (err) {
@@ -82,26 +131,51 @@ export function createClient(
     );
   }
 
+  async function run<T>(call: Call): Promise<T> {
+    spendBudget();
+    let res = await once(call);
+    if (res.status === 429) {
+      const wait = Number(res.headers.get("retry-after"));
+      if (Number.isFinite(wait) && wait > 0 && wait <= 5) {
+        await sleep(wait * 1000);
+        spendBudget();
+        res = await once(call);
+      }
+    }
+    if (!res.ok) return fail(res);
+    try {
+      return (await res.json()) as T;
+    } catch {
+      throw new ToolFailure("server", "The server answered with something that is not JSON.", {
+        status: res.status,
+      });
+    }
+  }
+
   return {
-    async get<T>(path: string, query?: Query): Promise<T> {
-      spendBudget();
-      let res = await once(path, query);
-      if (res.status === 429) {
-        const wait = Number(res.headers.get("retry-after"));
-        if (Number.isFinite(wait) && wait > 0 && wait <= 5) {
-          await sleep(wait * 1000);
-          spendBudget();
-          res = await once(path, query);
-        }
-      }
-      if (!res.ok) return fail(res);
-      try {
-        return (await res.json()) as T;
-      } catch {
-        throw new ToolFailure("server", "The server answered with something that is not JSON.", {
-          status: res.status,
-        });
-      }
-    },
+    get: <T>(path: string, query?: Query) => run<T>({ method: "GET", path, query }),
+    post: <T>(path: string, body: unknown, options: WriteOptions & { query?: Query } = {}) =>
+      run<T>({ method: "POST", path, json: body, query: options.query, tool: options.tool }),
+    postForm: <T>(
+      path: string,
+      file: FormFile,
+      fields: Record<string, string | undefined>,
+      options: WriteOptions = {}
+    ) =>
+      run<T>({
+        method: "POST",
+        path,
+        tool: options.tool,
+        form: () => {
+          const form = new FormData();
+          for (const [k, v] of Object.entries(fields)) if (v !== undefined) form.set(k, v);
+          form.set(
+            file.field,
+            new Blob([file.bytes as BlobPart], { type: file.mimeType }),
+            file.fileName
+          );
+          return form;
+        },
+      }),
   };
 }

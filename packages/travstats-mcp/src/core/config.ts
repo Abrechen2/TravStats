@@ -8,6 +8,10 @@ export interface Config {
   token: string;
   clientBudgetPerMinute: number;
   timeoutMs: number;
+  /** The one directory file tools may read from (`TRAVSTATS_MCP_FILES_DIR`); absent: no file tool is offered. */
+  filesDir: string | null;
+  /** Where the local JSONL audit goes (`TRAVSTATS_MCP_AUDIT_FILE`); absent: no audit is written. */
+  auditFile: string | null;
 }
 
 const TOKEN_SHAPE = /^ts_pat_[0-9a-zA-Z]{16,}$/;
@@ -72,5 +76,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     token,
     clientBudgetPerMinute: Number.isFinite(budget) && budget > 0 ? Math.floor(budget) : 60,
     timeoutMs: 20_000,
+    filesDir: env.TRAVSTATS_MCP_FILES_DIR?.trim() || null,
+    auditFile: env.TRAVSTATS_MCP_AUDIT_FILE?.trim() || null,
   };
 }

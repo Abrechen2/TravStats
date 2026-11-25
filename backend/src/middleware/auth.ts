@@ -40,6 +40,8 @@ export interface AuthRequest extends Request {
     scope: ApiTokenScope;
     /** Set when the token was minted by device pairing — the Companion. */
     deviceId?: string | null;
+    /** The name its owner gave the token; the change history names it for an MCP write. */
+    label?: string | null;
   };
   /**
    * Is this the SHARED demo account — `isDemo` AND the published username?
@@ -329,6 +331,7 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
     id: token.id,
     scope: token.scope as ApiTokenScope,
     deviceId: token.deviceId,
+    label: token.label,
   };
   req.isSharedDemo = isSharedDemoAccount(token.user);
 

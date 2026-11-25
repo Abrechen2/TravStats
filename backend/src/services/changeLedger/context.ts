@@ -31,7 +31,25 @@ export type ChangeSource = (typeof CHANGE_SOURCES)[number];
 /** The part of an Express request the ledger reads. */
 interface RequestLike {
   userId?: string;
-  apiToken?: { deviceId?: string | null } | null;
+  apiToken?: { deviceId?: string | null; label?: string | null } | null;
+  headers?: Record<string, string | string[] | undefined>;
+}
+
+/** The header `travstats-mcp` sends on every call (`travstats-mcp/<version>`). */
+export const MCP_CLIENT_HEADER = "x-travstats-client";
+
+/**
+ * "via MCP / <token label>" for a write the MCP package made with a personal access token, so
+ * the history says which assistant's token wrote it. Only a token-authenticated request counts: a
+ * cookie session that sends the header is not an MCP call, and the label is the owner's own word.
+ */
+function mcpReason(request: RequestLike | undefined): string | null {
+  if (!request?.apiToken || request.apiToken.deviceId) return null;
+  const header = request.headers?.[MCP_CLIENT_HEADER];
+  const client = Array.isArray(header) ? header[0] : header;
+  if (typeof client !== "string" || !client.startsWith("travstats-mcp/")) return null;
+  const label = request.apiToken.label?.trim();
+  return `via MCP / ${label || "unnamed token"}`.slice(0, 200);
 }
 
 interface ChangeStore {
@@ -115,7 +133,7 @@ export function resolveChangeContext(): ResolvedChangeContext | null {
   return {
     source,
     actorUserId: current.actorUserId ?? current.request?.userId ?? null,
-    reason: current.reason ?? null,
+    reason: current.reason ?? mcpReason(current.request),
     restoredFromId: current.restoredFromId ?? null,
   };
 }
