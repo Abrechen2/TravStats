@@ -188,8 +188,17 @@ async function entriesPage(
     // A random key per row and per read: the real share key is a peer-only secret of a group
     // this person is not part of, and a viewer has no use for it.
     const keyed = shared.filter((r) => !r.excluded).map((r) => ({ ...r, shareKey: randomUUID() }));
-    return { total, entries: await toWireEntries(tx, entity, keyed) };
+    const entries = await toWireEntries(tx, entity, keyed);
+    // A ferry's line scope is share bookkeeping a viewer has no use for, and a reader from
+    // before rc.46 would refuse the whole page over the key (`ferry-manual-scope`).
+    return { total, entries: entries.map(withoutManualScope) };
   });
+}
+
+function withoutManualScope(entry: WireEntry): WireEntry {
+  if (!("manualScope" in entry.facts)) return entry;
+  const { manualScope: _scope, ...facts } = entry.facts;
+  return { ...entry, facts };
 }
 
 export async function serveStatsRead(origin: string, body: StatsRead): Promise<StatsReply> {

@@ -150,6 +150,7 @@ describe("cross-purpose over the wire", () => {
         "plans",
         "achievements",
         "leg-routes",
+        "ferry-manual-scope",
       ],
     });
   });

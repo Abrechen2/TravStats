@@ -52,6 +52,8 @@ export const TRIP_SHARE_FEATURES = [
   "achievements",
   // Hand-drawn cruise lines as a cruise fact (2026-11-24): `legRoutes` in entries and changes.
   "leg-routes",
+  // A ferry's `manualScope` as a fact (rc.46): whether a hand-drawn line is the pair's or the crossing's.
+  "ferry-manual-scope",
 ] as const;
 export type TripShareFeature = (typeof TRIP_SHARE_FEATURES)[number];
 
