@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, JSX } from "react";
 import Button from "../ui/Button";
 import { token } from "../ui/tokens";
+import { JumpControl } from "../ui/settings";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import { formatDateTime } from "../../lib/displayFormat";
@@ -31,6 +32,8 @@ export default function TravTrackImports({
   canDelete,
   version = 0,
   onChanged,
+  bare = false,
+  jump,
 }: {
   canImport: boolean;
   canDelete: boolean;
@@ -38,6 +41,10 @@ export default function TravTrackImports({
   version?: number;
   /** The stored positions changed: the card reloads its summary. */
   onChanged: () => void;
+  /** Embedded under another heading (the Import page's Timeline tile): no title or intro of its own. */
+  bare?: boolean;
+  /** A pointer to the other place this import lives (Settings ↔ Import page). */
+  jump?: { label: string; onJump: () => void };
 }): JSX.Element {
   const { t } = useTranslation(["track"]);
   const { confirmDelete, confirmDialog } = useConfirmDialog();
@@ -146,11 +153,16 @@ export default function TravTrackImports({
 
   return (
     <>
-      <h3 className="t-card-title" style={{ marginTop: "var(--ts-space-lg)" }}>
-        {t(`${NS}.title`)}
-      </h3>
-      <p className="t-caption">{t(`${NS}.intro`)}</p>
-      <p className="t-caption">{t(`${NS}.googleHint`)}</p>
+      {bare ? null : (
+        <>
+          <h3 className="t-card-title" style={{ marginTop: "var(--ts-space-lg)" }}>
+            {t(`${NS}.title`)}
+          </h3>
+          <p className="t-caption">{t(`${NS}.intro`)}</p>
+          <p className="t-caption">{t(`${NS}.googleHint`)}</p>
+        </>
+      )}
+      {jump ? <JumpControl label={jump.label} onJump={jump.onJump} /> : null}
       {canImport && (
         <div>
           {/* The button is the control; the hidden input only opens the picker. A second,
