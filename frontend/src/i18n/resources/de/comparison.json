@@ -44,7 +44,15 @@
     "daysAway": "Tage unterwegs",
     "countries": "Länder",
     "cruisePorts": "Häfen",
-    "places": "Orte"
+    "places": "Orte",
+    "curatedNewSevenWonders": "Neue 7 Weltwunder",
+    "curatedAncientWonders": "Weltwunder der Antike",
+    "curatedWorldHeritage": "UNESCO-Welterbe",
+    "curatedNatureWonders": "Weltwunder der Natur",
+    "curatedBiosphereReserves": "Biosphärenreservate",
+    "curatedNationalParksDe": "Nationalparks Deutschland",
+    "curatedNationalParksUs": "Nationalparks USA",
+    "curatedMuseumWarships": "Museumsschiffe (Kriegsschiffe)"
   },
   "unit": {
     "days_one": "{{value}} Tag",
@@ -92,7 +100,9 @@
     "remoteNotice": "Die Zahlen gehen an den Server {{origin}}. Wer diesen Server betreibt, kann sie lesen.",
     "pendingNotice": "Solange {{name}} nicht zugestimmt hat, wird nichts geteilt und niemand sieht Zahlen von dir.",
     "acceptNotice": "Mit „Teilen“ seht ihr gegenseitig eure Zahlen – du nur die, die {{name}} freigegeben hat, {{name}} nur diese hier.",
-    "shareAll": "Alles freigeben"
+    "shareAll": "Alles freigeben",
+    "years": "Jahreswerte teilen",
+    "yearsHint": "Zusätzlich zu den Gesamtwerten: dieselben Summen je Kalenderjahr, nur Zahlen. Standardmäßig aus."
   },
   "requests": {
     "title": "Anfragen",
@@ -386,5 +396,105 @@
     },
     "withdraw": "Anfrage an {{name}} zurückziehen",
     "achievementsFailed": "Die Erfolge konnten nicht geladen werden."
+  },
+  "counting": {
+    "title": "Wie gezählt?",
+    "where": "Die Regel steht in {{home}}.",
+    "flight": "Ein Flug zählt, sobald er stattgefunden hat – geplante und stornierte nicht. Die Strecke ist die Luftlinie zwischen den Flughäfen.",
+    "flightTime": "Flugzeit ist die Zeit von Start bis Landung der gezählten Flüge. Fehlt bei einem Flug die Zeit, bleibt er außen vor, die Summe gilt dann als „mindestens“.",
+    "cruise": "Eine Kreuzfahrt zählt nach der Rückkehr. Häfen zählen einmal je Hafen, Seetage nicht; die Strecke folgt der Seeroute.",
+    "rail": "Eine Fahrt zählt, wenn sie vorbei ist. Fahrten ohne bekannte Strecke fehlen in den Kilometern – die Summe ist dann „mindestens“.",
+    "bus": "Eine Fahrt zählt, wenn sie vorbei ist. Fahrten ohne bekannte Strecke fehlen in den Kilometern.",
+    "rental": "Ein Mietwagen zählt nach der Rückgabe; Miettage sind die Tage zwischen Abholung und Rückgabe.",
+    "ferry": "Eine Überfahrt zählt, sobald sie stattgefunden hat; sie gehört zum Jahr ihres Ankunftszeitpunkts.",
+    "tour": "Eine Tour zählt, wenn sie stattgefunden hat. Wurde ihre Aufzeichnung gekürzt, ist die Strecke ein Mindestwert.",
+    "lodging": "Ein Aufenthalt zählt erst, wenn der Check-out vorbei ist – ein vorgemerktes Haus ist kein Besuch. Nächte sind die Nächte zwischen An- und Abreise.",
+    "place": "Ein Ort zählt, wenn er als besucht markiert ist; ein Wunschort mit künftigem Termin zählt nicht. Besuche zählt nur, was schon passiert ist.",
+    "daysAway": "Jeder Kalendertag, an dem du irgendwo unterwegs warst, zählt einmal – auch bei Überschneidungen. Gilt nur, wenn alle deine Bereiche geteilt werden.",
+    "countries": "Länder aus allen deinen Reisen und Orten, jedes einmal. Nur als Gesamtwert über alle Zeit und alle Bereiche.",
+    "curated": "Von den Zielen einer Standardliste zählt, was du als besucht abgehakt hast. Geteilt wird nur die Anzahl, nie welche Orte."
+  },
+  "fun": {
+    "title": "Zahlenspielereien",
+    "earth": "{{value}}-mal um die Erde",
+    "earthHint": "Flugkilometer geteilt durch den Erdumfang (40.075 km).",
+    "moon": "{{value}} % des Wegs zum Mond",
+    "moonHint": "Flugkilometer im Verhältnis zu 384.400 km.",
+    "air": "{{value}} Tage in der Luft",
+    "airHint": "Alle Flugminuten zusammen, in ganzen Tagen gerechnet.",
+    "nights": "so viele Hotelnächte wie {{value}}× ein halbes Jahr",
+    "nightsHint": "Übernachtungen geteilt durch 182,5 Nächte.",
+    "avg": "Ø {{value}} je Flug",
+    "avgHint": "Flugkilometer geteilt durch die Zahl der Flüge.",
+    "none": "Dafür fehlen noch Zahlen.",
+    "lowerBound": "mindestens",
+    "rivalryTitle": "Kleine Sticheleien",
+    "rivalry": {
+      "countries_them": "{{name}} ist dir {{count}} Länder voraus.",
+      "countries_you": "Du bist {{name}} {{count}} Länder voraus.",
+      "flights_them": "{{name}} ist {{count}} Flüge öfter abgehoben.",
+      "flights_you": "Du bist {{count}} Flüge öfter abgehoben als {{name}}.",
+      "nights_them": "{{name}} hat {{count}} Nächte mehr in Betten verbracht.",
+      "nights_you": "Du hast {{count}} Nächte mehr in Betten verbracht als {{name}}.",
+      "places_them": "{{name}} kennt {{count}} Orte mehr.",
+      "places_you": "Du kennst {{count}} Orte mehr als {{name}}.",
+      "cruises_them": "{{name}} hat {{count}} Kreuzfahrten mehr auf dem Konto.",
+      "cruises_you": "Du hast {{count}} Kreuzfahrten mehr auf dem Konto als {{name}}.",
+      "none": "Gleichstand – oder noch zu wenig Zahlen für eine Stichelei."
+    }
+  },
+  "badges": {
+    "title": "Abzeichen",
+    "none": "Noch kein Abzeichen.",
+    "unknown": "Keine Zahlen für Abzeichen.",
+    "globetrotter": "Weltenbummler",
+    "globetrotterHint": "Mindestens 30 Länder",
+    "frequentFlyer": "Vielflieger",
+    "frequentFlyerHint": "Mindestens 100 Flüge",
+    "railFriend": "Schienenfreund",
+    "railFriendHint": "Mindestens 10.000 Bahnkilometer",
+    "seafarer": "Seebär",
+    "seafarerHint": "Mindestens 20.000 Kreuzfahrt-Kilometer",
+    "homeAway": "Zweites Zuhause: unterwegs",
+    "homeAwayHint": "Mindestens 365 Hotelnächte",
+    "heritageHunter": "Welterbe-Jäger",
+    "heritageHunterHint": "Mindestens 25 Welterbestätten"
+  },
+  "radar": {
+    "title": "Auf einen Blick",
+    "hint": "Jede Achse ist so skaliert, dass der höhere Wert ganz außen liegt.",
+    "tooFew": "Für das Netz fehlen gemeinsame Zahlen.",
+    "alt": "Netzdiagramm: {{you}} gegen {{name}}"
+  },
+  "curated": {
+    "title": "Standardlisten",
+    "hint": "Wie viele Ziele einer Liste schon besucht sind. Welche, wird nicht geteilt.",
+    "of": "{{visited}} / {{total}}",
+    "line": "{{name}} hat {{count}} {{list}}-Ziele mehr gesehen.",
+    "lineYou": "Du hast {{count}} {{list}}-Ziele mehr gesehen als {{name}}.",
+    "lead": "{{name}} hat {{count}} mehr gesehen",
+    "leadYou": "Du hast {{count}} mehr gesehen",
+    "oldPeer": "{{name}}s Server teilt diese Liste noch nicht."
+  },
+  "podium": {
+    "title": "Siegertreppchen",
+    "metric": "Kennzahl",
+    "place1": "Platz 1",
+    "place2": "Platz 2",
+    "place3": "Platz 3",
+    "nobody": "Für diese Kennzahl hat niemand eine Zahl."
+  },
+  "meta": {
+    "asOf": "Stand: {{date}}",
+    "asOfUnknown": "Stand unbekannt",
+    "iShare": "Du teilst: {{state}}",
+    "theyShare": "{{name}} teilt: {{state}}",
+    "yes": "ja",
+    "no": "nein"
+  },
+  "years": {
+    "theyNot": "{{name}} teilt keine Jahreswerte – deshalb gibt es hier keine Verläufe.",
+    "youNot": "Schalte „Jahreswerte teilen“ in deinem Vergleich mit dieser Person ein, dann siehst du Verläufe.",
+    "sparkAlt": "Verlauf je Jahr: {{metric}}"
   }
 }

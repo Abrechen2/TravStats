@@ -20,7 +20,31 @@ export interface MetricDef {
   /** null: a cross-domain figure, derivable only when every visible domain is shared. */
   domain: DomainKey | null;
   unit: MetricUnit;
+  /** Set on the curated-list family only: the `curated_lists.csv` key the count belongs to. */
+  curatedList?: string;
 }
+
+/**
+ * One metric per STANDARD curated place list (seedData/curated_lists.csv): how many of the list's
+ * targets this person has been to. A list is a global catalogue, so "23 of 1199" names no private
+ * place; WHICH ones never leaves. Metric keys are letters only (the snapshot schema's rule), so the
+ * list key is mapped here rather than derived. The list's size travels beside the count under
+ * `<key>Of` (see `curatedSizeKey`), so a bar is drawn against the sender's own catalogue.
+ * A list added to the CSV is added here; `curatedMetrics.test.ts` fails when the two drift.
+ */
+export const CURATED_LIST_METRICS = [
+  { key: "curatedNewSevenWonders", curatedList: "world-wonders-new7" },
+  { key: "curatedAncientWonders", curatedList: "world-wonders-ancient" },
+  { key: "curatedWorldHeritage", curatedList: "world-heritage" },
+  { key: "curatedNatureWonders", curatedList: "world-wonders-nature7" },
+  { key: "curatedBiosphereReserves", curatedList: "biosphere-reserves" },
+  { key: "curatedNationalParksDe", curatedList: "nationalparks-de" },
+  { key: "curatedNationalParksUs", curatedList: "nationalparks-us" },
+  { key: "curatedMuseumWarships", curatedList: "museum-warships" },
+] as const;
+
+/** The key under which a curated metric's list size travels. Never a metric of its own. */
+export const curatedSizeKey = (key: string): string => `${key}Of`;
 
 export const LEADERBOARD_METRICS = [
   { key: "flightKm", group: "distance", domain: "flight", unit: "km" },
@@ -46,6 +70,13 @@ export const LEADERBOARD_METRICS = [
   { key: "countries", group: "places", domain: null, unit: "count" },
   { key: "cruisePorts", group: "places", domain: "cruise", unit: "count" },
   { key: "places", group: "places", domain: "poi", unit: "count" },
+  ...CURATED_LIST_METRICS.map((m) => ({
+    key: m.key,
+    group: "places" as const,
+    domain: "poi" as const,
+    unit: "count" as const,
+    curatedList: m.curatedList,
+  })),
 ] as const satisfies readonly MetricDef[];
 
 export type MetricKey = (typeof LEADERBOARD_METRICS)[number]["key"];

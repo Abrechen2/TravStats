@@ -119,7 +119,7 @@ afterAll(async () => {
 it("advertises the snapshot versions it serves in the ping", async () => {
   expect((await send("remote", { action: "ping" })).data).toEqual({
     ready: true,
-    leaderboard: [1, 2],
+    leaderboard: [1, 2, 3],
   });
 });
 
@@ -178,7 +178,10 @@ it("serves totals only after the owner accepted, and only in a version the asker
     },
   });
   expect((await ask([1], null)).data).toEqual({ status: "yearNotShared", year: 2025 });
-  expect((await ask([3], 2025)).data).toEqual({ status: "unsupportedVersion", supported: [1, 2] });
+  expect((await ask([9], 2025)).data).toEqual({
+    status: "unsupportedVersion",
+    supported: [1, 2, 3],
+  });
 });
 
 it("leaves every metric outside the consent's scope absent, not null", async () => {

@@ -64,9 +64,9 @@ beforeAll(async () => {
       publicKey: "unused",
       enabled: true,
       verifiedAt: new Date(),
-      leaderboardVersions: [1, 2],
+      leaderboardVersions: [1, 2, 3],
     },
-    update: { enabled: true, verifiedAt: new Date(), leaderboardVersions: [1, 2] },
+    update: { enabled: true, verifiedAt: new Date(), leaderboardVersions: [1, 2, 3] },
   });
 });
 beforeEach(() => {

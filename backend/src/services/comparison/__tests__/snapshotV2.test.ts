@@ -130,7 +130,7 @@ it("a v1-only peer still yields stats and achievementsUnavailable: olderServer",
 });
 
 it("a v2 peer yields the section", async () => {
-  await peerWith(NEW, [1, 2]);
+  await peerWith(NEW, [1, 2, 3]);
   await remoteFor(NEW);
   jest.mocked(exchange).mockResolvedValueOnce({
     status: "ok",
@@ -141,11 +141,11 @@ it("a v2 peer yields the section", async () => {
   );
   expect(row?.achievements).toEqual(section);
   expect(row?.achievementsUnavailable).toBeUndefined();
-  expect(jest.mocked(exchange).mock.calls[0][1]).toMatchObject({ accept: [1, 2] });
+  expect(jest.mocked(exchange).mock.calls[0][1]).toMatchObject({ accept: [1, 2, 3] });
 });
 
 it("a v2 snapshot without the section reads notShared, and a year view reads yearView", async () => {
-  await peerWith(NEW, [1, 2]);
+  await peerWith(NEW, [1, 2, 3]);
   await remoteFor(NEW);
   jest.mocked(exchange).mockResolvedValueOnce({ status: "ok", snapshot: { ...base, version: 2 } });
   const row = (await readLeaderboard(viewer, { year: null })).rows.find(
@@ -178,7 +178,7 @@ it("a local friend gets the same section as a remote one would", async () => {
   const rows = (await readLeaderboard(viewer, { year: null })).rows;
   const local = rows.find((r) => r.person.key !== "self" && r.status === "ok");
   expect(local?.achievements?.catalogue).toBe(catalogueVersion());
-  expect(local?.snapshot?.version).toBe(2);
+  expect(local?.snapshot?.version).toBe(3);
   // Same shape as the wire section: parsed by the very schema a remote reply passes through.
   expect(Object.keys(local!.achievements!).sort()).toEqual(["catalogue", "items"]);
   expect(local?.achievementsUnavailable).toBeUndefined();
