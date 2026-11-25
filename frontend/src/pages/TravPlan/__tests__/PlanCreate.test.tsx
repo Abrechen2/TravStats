@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   write: vi.fn(),
   places: vi.fn(),
+  routeStage: vi.fn(),
   t: (key: string, opts?: Record<string, unknown>) =>
     opts ? `${key}:${Object.values(opts).join(",")}` : key,
 }));
@@ -15,7 +16,12 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: mocks.t, i18n: { language: "de" } }),
 }));
 vi.mock("../../../lib/api/travplan", () => ({
-  travplanApi: { create: mocks.create, write: mocks.write, places: mocks.places },
+  travplanApi: {
+    create: mocks.create,
+    write: mocks.write,
+    places: mocks.places,
+    routeStage: mocks.routeStage,
+  },
 }));
 
 const kiel = {
@@ -44,6 +50,7 @@ describe("PlanCreate", () => {
     mocks.create.mockReset().mockResolvedValue(routePlan());
     mocks.write.mockReset().mockImplementation(async (plan) => plan);
     mocks.places.mockReset();
+    mocks.routeStage.mockReset().mockImplementation(async (plan) => plan);
   });
 
   it("takes time zone and currency from the picked place and shows them editable", async () => {
@@ -116,9 +123,49 @@ describe("PlanCreate", () => {
     await userEvent.click(screen.getByRole("button", { name: "create.finish" }));
     await waitFor(() => expect(mocks.write).toHaveBeenCalledTimes(6));
     const ops = mocks.write.mock.calls.map((c) => c[1]);
-    expect(ops[0]).toEqual({ type: "route_settings", shape: "route" });
+    expect(ops[0]).toEqual({ type: "route_settings", shape: "route", vehicle: null });
     expect(ops.slice(1, 4).map((o) => o.value.title)).toEqual(["Kiel", "Oslo", "Kiel"]);
     expect(ops.slice(4).every((o) => o.collection === "stages")).toBe(true);
+    // The goal holds the trip's nights; both drive stages are measured right away.
+    expect(ops[2].value.nights).toBe(9);
+    expect(mocks.routeStage).toHaveBeenCalledTimes(2);
+  });
+
+  it("a ferry leg becomes a ferry stage with its placeholder, crossed again on the way back", async () => {
+    const genova = { ...kiel, name: "Genova", country: "IT", zone: "Europe/Rome" };
+    const palermo = { ...kiel, name: "Palermo", country: "IT", zone: "Europe/Rome" };
+    mocks.places
+      .mockResolvedValueOnce(hit(kiel))
+      .mockResolvedValueOnce(hit(genova))
+      .mockResolvedValueOnce(hit(palermo));
+    render(<PlanCreate onClose={vi.fn()} onCreated={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "create.shapeRoute" }));
+    await pick("create.startSearch", "kiel", "Kiel");
+    await pick("create.destinationSearch", "genova", "Genova");
+    await pick("create.destinationSearch", "palermo", "Palermo");
+    await userEvent.selectOptions(screen.getByLabelText("create.legMode:Palermo"), "ferry");
+    await userEvent.selectOptions(screen.getByLabelText("create.vehicle"), "motorhome");
+    await userEvent.click(screen.getByRole("checkbox"));
+    expect(screen.getByLabelText("create.name")).toHaveValue("Palermo");
+    await userEvent.type(screen.getByLabelText("fields.startDay"), "2027-05-01");
+    await userEvent.type(screen.getByLabelText("fields.endDay"), "2027-05-15");
+    await userEvent.click(screen.getByRole("button", { name: "create.next" }));
+    await userEvent.type(screen.getByLabelText("route.mode.ferry: Genova → Palermo"), "320");
+    await userEvent.click(screen.getByRole("button", { name: "create.finish" }));
+    await waitFor(() => expect(mocks.routeStage).toHaveBeenCalledTimes(4));
+    const ops = mocks.write.mock.calls.map((c) => c[1]);
+    expect(ops[0].vehicle).toMatchObject({ kind: "motorhome" });
+    const bookings = ops.filter((o) => o.collection === "bookings").map((o) => o.value);
+    expect(bookings.map((b) => [b.title, b.estimate])).toEqual([
+      ["Genova → Palermo", { amount: 320, currency: "EUR" }],
+      ["Palermo → Genova", null],
+    ]);
+    const stages = ops.filter((o) => o.collection === "stages").map((o) => o.value);
+    expect(stages.map((g) => g.mode)).toEqual(["drive", "ferry", "ferry", "drive"]);
+    expect(stages[1].bookingId).toBe(bookings[0].id);
+    // Every booking is written before the first stage that may name it.
+    const lastBooking = ops.map((o) => o.collection).lastIndexOf("bookings");
+    expect(ops.findIndex((o) => o.collection === "stages")).toBeGreaterThan(lastBooking);
   });
 
   it("keeps the plan it made when a later step fails, and never makes a second one", async () => {

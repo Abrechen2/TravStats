@@ -381,7 +381,14 @@
     "finish": "Plan anlegen",
     "openPlan": "Plan öffnen",
     "partial": "Der Plan ist angelegt, aber nicht alles konnte übernommen werden: {{reason}}",
-    "zoneUnknown": "Zeitzone noch offen"
+    "zoneUnknown": "Zeitzone noch offen",
+    "legMode": "Wie geht es nach {{place}}?",
+    "removeStop": "{{place}} entfernen",
+    "addStop": "Nächster Halt oder Ziel",
+    "stopHint": "Fährhafen, Zwischenstopp oder Ziel. Der letzte Halt ist das Ziel; bei jedem Halt wählst du, wie du hinkommst.",
+    "vehicle": "Unterwegs mit",
+    "vehicleNone": "Ohne eigenes Fahrzeug",
+    "legPlaceholder": "Wird als Platzhalter an dieser Etappe angelegt. Die echte Buchung ersetzt ihn später."
   },
   "deletePlan": {
     "open": "Plan löschen",
@@ -730,5 +737,14 @@
   "budgetRow": {
     "estimated": "Geschätzt {{amount}}",
     "priceOpen": "Preis offen"
+  },
+  "vehicle": {
+    "motorhome": "Wohnmobil",
+    "campervan": "Campervan",
+    "caravan": "Auto mit Wohnwagen",
+    "car": "Auto",
+    "motorcycle": "Motorrad",
+    "bicycle": "Fahrrad",
+    "other": "Anderes Fahrzeug"
   }
 }

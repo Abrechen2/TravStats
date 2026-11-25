@@ -381,7 +381,14 @@
     "finish": "Create plan",
     "openPlan": "Open plan",
     "partial": "The plan was created, but not everything could be added: {{reason}}",
-    "zoneUnknown": "Time zone not set yet"
+    "zoneUnknown": "Time zone not set yet",
+    "legMode": "How do you get to {{place}}?",
+    "removeStop": "Remove {{place}}",
+    "addStop": "Next stop or goal",
+    "stopHint": "Ferry port, stopover or goal. The last stop is the goal; for each stop you choose how you get there.",
+    "vehicle": "Travelling by",
+    "vehicleNone": "No vehicle of my own",
+    "legPlaceholder": "Added as a placeholder on this leg. The real booking replaces it later."
   },
   "deletePlan": {
     "open": "Delete plan",
@@ -730,5 +737,14 @@
   "budgetRow": {
     "estimated": "Estimated {{amount}}",
     "priceOpen": "Price not known yet"
+  },
+  "vehicle": {
+    "motorhome": "Motorhome",
+    "campervan": "Campervan",
+    "caravan": "Car with caravan",
+    "car": "Car",
+    "motorcycle": "Motorcycle",
+    "bicycle": "Bicycle",
+    "other": "Other vehicle"
   }
 }
