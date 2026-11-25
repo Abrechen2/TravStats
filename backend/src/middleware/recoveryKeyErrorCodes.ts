@@ -20,4 +20,6 @@ export type RecoveryKeyApiErrorCode =
   /** The pasted key could not be written to the secrets directory. */
   | "RESTORE_RECOVERY_KEY_WRITE_FAILED"
   /** The replay failed and the previous key could not be written back; the message names the copy. */
-  | "RESTORE_RECOVERY_KEY_REVERT_FAILED";
+  | "RESTORE_RECOVERY_KEY_REVERT_FAILED"
+  /** An earlier key-replacing restore died half-way and an admin has not resolved it yet. */
+  | "RESTORE_KEY_SWAP_UNRESOLVED";

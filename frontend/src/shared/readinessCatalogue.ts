@@ -28,6 +28,7 @@ export const CHECK_IDS = [
   "admin.disk",
   "admin.offsite",
   "admin.recoveryKey",
+  "admin.keySwapInterrupted",
   "admin.providerKeys",
   "admin.bookingMailbox",
   "user.domains",
@@ -174,6 +175,22 @@ export const CHECK_CATALOGUE: readonly CheckCatalogueEntry[] = [
     maxAgeDays: null,
     blockedBy: null,
     actionKey: "checks.adminRecoveryKey.action",
+    entryList: false,
+  }),
+  c({
+    // A restore died while it replaced the instance key (services/backup/
+    // keySwapMarker.ts): key file and rows may disagree, and only the admin
+    // can tell which key is right. Raised from a marker file, never guessed.
+    id: "admin.keySwapInterrupted",
+    revision: 1,
+    scope: "admin",
+    severity: "required",
+    titleKey: "checks.adminKeySwapInterrupted.title",
+    consequenceKey: "checks.adminKeySwapInterrupted.consequence",
+    action: "/settings/sicherungen",
+    maxAgeDays: null,
+    blockedBy: null,
+    actionKey: null,
     entryList: false,
   }),
   c({

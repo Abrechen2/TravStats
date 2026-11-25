@@ -1455,7 +1455,8 @@
       "recoveryKeyReauth": "The password is missing or not right. Nothing was restored.",
       "recoveryKeySecondFactor": "Enter the right code from your authenticator app. Nothing was restored.",
       "recoveryKeyPasskey": "The passkey was not confirmed. Confirm with your password or try again. Nothing was restored.",
-      "recoveryKeyPasskeyTooNew": "This passkey is less than a day old. Confirm with your password. Nothing was restored."
+      "recoveryKeyPasskeyTooNew": "This passkey is less than a day old. Confirm with your password. Nothing was restored.",
+      "keySwapUnresolved": "An earlier restore was interrupted while replacing the key. Resolve that first (see “Setup & status”). Nothing was restored."
     },
     "retry": "Try again",
     "baknow": {

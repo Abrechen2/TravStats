@@ -360,6 +360,15 @@ if (process.env.NODE_ENV !== "test") {
         logger.warn({ operation: "server_start_country_index_warm_error", error })
       );
 
+    // A restore that died while replacing the instance key is reported, never
+    // repaired by guessing (services/backup/keySwapMarker.ts).
+    try {
+      const { reconcileKeySwapAtBoot } = await import("./services/backup/keySwapMarker");
+      reconcileKeySwapAtBoot();
+    } catch (error) {
+      logger.error({ operation: "restore_key_swap_reconcile_error", error });
+    }
+
     // The instance's upgrade history for the readiness page (never throws).
     void import("./services/readiness/state").then(({ recordRunningVersion }) =>
       recordRunningVersion()

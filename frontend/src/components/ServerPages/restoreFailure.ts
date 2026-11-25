@@ -12,6 +12,7 @@ export type RestoreOutcome =
   | "recoveryKeySecondFactor"
   | "recoveryKeyPasskey"
   | "recoveryKeyPasskeyTooNew"
+  | "keySwapUnresolved"
   | "unknown"
   | "incomplete"
   | "unreadable"
@@ -30,6 +31,7 @@ const BY_CODE: Record<string, RestoreOutcome> = {
   RESTORE_RECOVERY_KEY_ENV_PINNED: "recoveryKeyEnvPinned",
   RESTORE_RECOVERY_KEY_WRITE_FAILED: "recoveryKeyWriteFailed",
   RESTORE_RECOVERY_KEY_REVERT_FAILED: "failed",
+  RESTORE_KEY_SWAP_UNRESOLVED: "keySwapUnresolved",
   RECOVERY_KEY_REAUTH_REQUIRED: "recoveryKeyReauth",
   REAUTH_PASSWORD_INCORRECT: "recoveryKeyReauth",
   REAUTH_SECOND_FACTOR_REQUIRED: "recoveryKeySecondFactor",
@@ -74,4 +76,5 @@ export const RECOVERY_KEY_OUTCOMES: ReadonlySet<RestoreOutcome> = new Set([
   "recoveryKeySecondFactor",
   "recoveryKeyPasskey",
   "recoveryKeyPasskeyTooNew",
+  "keySwapUnresolved",
 ]);

@@ -64,6 +64,10 @@
       "consequence": "Your backups hold API keys, tokens and the SMTP password only in encrypted form. Without this server's recovery key they cannot be read after the server is lost.",
       "action": "Save the key"
     },
+    "adminKeySwapInterrupted": {
+      "title": "Key swap during a restore was interrupted",
+      "consequence": "A restore with a recovery key was interrupted while the server replaced its key. Stored credentials may no longer match the key. Nothing was changed automatically: the server log (restore_key_swap_interrupted) names the file holding the previous key. If the restore did not finish, copy it over encryption.key; then delete encryption.key.restore-pending and restart the server."
+    },
     "adminProviderKeys": {
       "title": "Data service keys",
       "consequence": "Without a valid key, flight search and live data return nothing, and nobody notices."

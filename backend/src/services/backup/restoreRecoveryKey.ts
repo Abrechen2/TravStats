@@ -33,6 +33,7 @@ import {
 } from "../../utils/encryptionKey";
 import { decryptApiKey, encryptApiKey, encryptionKeyFingerprintFor } from "../../utils/encryption";
 import { normalizeRecoveryKey } from "./recoveryKey";
+import { clearKeySwapMarker, readInterruptedKeySwap, writeKeySwapMarker } from "./keySwapMarker";
 
 /** Instance-identity columns kept across a restore that hold ciphertext. */
 const ENCRYPTED_IDENTITY_COLUMNS = ["federationPrivateKey", "pushInstanceSecret"] as const;
@@ -77,6 +78,17 @@ export function resolveArchiveRecoveryKey(input: string, archiveFingerprint: str
       "RESTORE_RECOVERY_KEY_ENV_PINNED"
     );
   }
+  // An earlier swap died half-way (keySwapMarker.ts): which key the rows are
+  // under is still the admin's question, and a second swap would bury the
+  // record of the first.
+  if (readInterruptedKeySwap()) {
+    throw new AppError(
+      "An earlier restore stopped while replacing the encryption key. Resolve that first " +
+        "(see the readiness page). Nothing was restored.",
+      409,
+      "RESTORE_KEY_SWAP_UNRESOLVED"
+    );
+  }
   return keyHex;
 }
 
@@ -114,8 +126,16 @@ export function previousKeyCopyPath(at: Date = new Date()): string {
 export function installArchiveKey(swap: KeySwap): void {
   try {
     writeFileSync(swap.previousKeyCopy, swap.previousKeyHex, { mode: 0o600, flag: "wx" });
+    writeKeySwapMarker({
+      previousKeyCopy: swap.previousKeyCopy,
+      previousFingerprint: encryptionKeyFingerprintFor(swap.previousKeyHex),
+      archiveFingerprint: encryptionKeyFingerprintFor(swap.archiveKeyHex),
+      startedAt: new Date().toISOString(),
+    });
     installEncryptionKey(swap.archiveKeyHex);
   } catch (error) {
+    // The key never changed, so there is no half-done swap to report.
+    if (activeEncryptionKeyHex() === swap.previousKeyHex) clearKeySwapMarker();
     logger.error({
       operation: "restore_recovery_key_write_failed",
       message: "Could not write the recovery key to the secrets directory",
@@ -145,6 +165,7 @@ export function installArchiveKey(swap: KeySwap): void {
 export function revertKeySwap(swap: KeySwap): void {
   try {
     installEncryptionKey(swap.previousKeyHex);
+    clearKeySwapMarker();
     logger.warn({
       operation: "restore_recovery_key_reverted",
       message: "The restore failed; the previous encryption key is back in force",
@@ -166,6 +187,15 @@ export function revertKeySwap(swap: KeySwap): void {
       "RESTORE_RECOVERY_KEY_REVERT_FAILED"
     );
   }
+}
+
+/**
+ * The dump is in: re-encrypt the kept identity, then the swap is over and its
+ * marker goes. A failure here leaves the marker, so the next start reports it.
+ */
+export async function finishKeySwap(swap: KeySwap): Promise<void> {
+  await reencryptKeptIdentity(swap);
+  clearKeySwapMarker();
 }
 
 /** Re-encrypt the kept instance identity under the key now in force. */
