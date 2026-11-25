@@ -164,6 +164,35 @@ describe("travstats-mcp write tools against the real API", () => {
     expect(await prisma.documentLink.count({ where: { documentId } })).toBe(1);
     const doc = await prisma.document.findFirstOrThrow({ where: { id: documentId } });
     expect(doc.format).toBe("eml");
+
+    // The create itself is in the change history, named after the key that made it.
+    const created = await prisma.changeLedgerEntry.findMany({ where: { entityId: id } });
+    expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({
+      operation: "create",
+      field: null,
+      source: "api",
+      reason: "via MCP / mcp-write",
+    });
+    const listed = await fetch(`${url}/api/v1/change-history?entityType=flight&entityId=${id}`, {
+      headers: { Authorization: `Bearer ${writeToken}` },
+    });
+    expect(JSON.stringify(await listed.json())).toContain("via MCP / mcp-write");
+  });
+
+  it("a create that does not come from the MCP package leaves no history row", async () => {
+    const res = await fetch(`${url}/api/v1/places`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${writeToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Plain place", lat: 1, lon: 2 }),
+    });
+    expect(res.status).toBeLessThan(300);
+    const body = (await res.json()) as { id?: string; data?: { id?: string } };
+    const id = body.id ?? body.data?.id;
+    expect(id).toBeDefined();
+    expect(
+      await prisma.changeLedgerEntry.count({ where: { entityId: id, operation: "create" } })
+    ).toBe(0);
   });
 
   it("refuses a file outside the folder, and nothing is uploaded", async () => {

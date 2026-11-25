@@ -6,6 +6,7 @@ import {
   flightFieldsFrom,
   planCruise,
   planFlight,
+  planStay,
   planRail,
   planRental,
   planRide,
@@ -148,12 +149,19 @@ async function planFor(
   ctx: ToolContext,
   domain: string,
   item: Rec,
-  entry: Rec | undefined
+  entry: Rec | undefined,
+  source: DraftSource
 ): Promise<Plan> {
   assertAddable(domain);
   switch (domain) {
     case "flight":
       return planFlight(ctx.client, flightFieldsFrom(item, entry));
+    case "lodging":
+      return planStay(
+        ctx.client,
+        item,
+        source?.kind === "file" && source.file.kind === "pdf" ? "pdf" : "email"
+      );
     case "cruise":
       return planCruise(item);
     case "rail":
@@ -200,7 +208,7 @@ async function addEntry(
       "invalid_input",
       `This tool adds ${onlyDomain}s; use add_entry_from_draft for "${domain}".`
     );
-  const plan = await planFor(ctx, domain, item, entry);
+  const plan = await planFor(ctx, domain, item, entry, draft?.source ?? null);
   const original =
     sourceDocument(draft?.source ?? null) ??
     (typeof a.sourceFileName === "string"
@@ -227,18 +235,35 @@ async function addEntry(
   const documentId = original ? await uploadFile(ctx.client, original, tool) : null;
   const entries: Array<{ id: string; link: string; label: string }> = [];
   let failure: string | undefined;
+  let documentFiledOk = true;
   for (const [i, req] of plan.requests.entries()) {
     const key = `mcp-${draft?.id ?? "direct"}-${String(a.itemIndex ?? 0)}-${i}`.slice(0, 64);
     const body = {
       ...req.body,
       ...(i === 0 && documentId ? { documentIds: [documentId] } : {}),
-      ...(req.path === "/rentals/import" ? {} : { clientRef: key }),
+      ...(req.noClientRef ? {} : { clientRef: key }),
     };
     try {
       const res = await ctx.client.post<Rec>(req.path, body, { tool });
-      const id = idOf(res);
-      if (!id) throw new ToolFailure("server", "The server created the entry but returned no id.");
-      entries.push({ id, link: `${ctx.instance}/${req.segment}/${id}`, label: req.label });
+      const picked =
+        req.pick?.(res) ?? (idOf(res) ? { id: idOf(res)!, linkId: idOf(res)! } : undefined);
+      if (!picked)
+        throw new ToolFailure("server", "The server created the entry but returned no id.");
+      entries.push({
+        id: picked.id,
+        link: `${ctx.instance}/${req.segment}/${picked.linkId}`,
+        label: req.label,
+      });
+      // The stay import answers whether it filed the document; anything but yes is said, not assumed.
+      if (i === 0 && req.answersDocumentFiled && documentId) {
+        const filed = (res.data as Rec | undefined)?.documentFiled;
+        if (filed !== true) {
+          documentFiledOk = false;
+          warnings.push(
+            `The server did not file the original with the stay (${String((res.data as Rec | undefined)?.documentNotFiledReason ?? "unknown")}); it stays in the inbox as document ${documentId}.`
+          );
+        }
+      }
     } catch (err) {
       if (!(err instanceof ToolFailure)) throw err;
       if (i === 0) {
@@ -259,7 +284,7 @@ async function addEntry(
       id: first.id,
       link: first.link,
       documentId,
-      documentAttached: documentId !== null,
+      documentAttached: documentId !== null && documentFiledOk,
       entries,
       skipped: plan.skipped,
       warnings,
@@ -271,7 +296,7 @@ async function addEntry(
 const add_entry_from_draft: ToolDef = {
   name: "add_entry_from_draft",
   title: "Add an entry from a draft",
-  description: `${WRITES} Saves a draft from parse_booking (or explicit fields) as a flight, rail ride, cruise, rental, bus or ferry entry and ALWAYS attaches the original document to it. Stays, package tours and places are reviewed on the web instead. Never deletes or merges.`,
+  description: `${WRITES} Saves a draft from parse_booking (or explicit fields) as a flight, stay, rail ride, cruise, rental, bus or ferry entry and ALWAYS attaches the original document to it. A stay is added only when the server's own import preview says it is new and clean; package tours and places are reviewed on the web instead. Never deletes or merges.`,
   write: true,
   untrusted: true,
   wraps: [
@@ -280,6 +305,18 @@ const add_entry_from_draft: ToolDef = {
       path: "/flights",
       body: ["departure", "arrival", "departureLocal", "documentIds", "clientRef"],
       fields: ["flight.id"],
+    },
+    { method: "POST", path: "/lodging-import/preview", body: ["candidates"] },
+    {
+      method: "POST",
+      path: "/lodging-import/commit",
+      body: ["source", "fileName", "rows", "documentIds"],
+      fields: [
+        "data.createdStayRefs[].stayId",
+        "data.createdStayRefs[].lodgingId",
+        "data.documentFiled",
+        "data.documentNotFiledReason",
+      ],
     },
     { method: "POST", path: "/cruises", body: ["documentIds", "clientRef"], fields: ["data.id"] },
     {
@@ -291,7 +328,7 @@ const add_entry_from_draft: ToolDef = {
     {
       method: "POST",
       path: "/rentals/import",
-      body: ["kind", "input", "documentIds"],
+      body: ["kind", "input", "documentIds", "clientRef"],
       fields: ["data.id"],
     },
     {

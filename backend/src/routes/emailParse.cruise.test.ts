@@ -56,6 +56,7 @@ jest.mock("../middleware/auth", () => ({
     req.userId = "test-user";
     next();
   },
+  requireWriteScope: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 jest.mock("../middleware/rateLimit", () => ({
   emailParseLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),

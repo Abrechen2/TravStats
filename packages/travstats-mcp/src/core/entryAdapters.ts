@@ -10,6 +10,12 @@ export interface PlannedRequest {
   /** Web path segment of the created entry, e.g. `flights`. */
   segment: string;
   label: string;
+  /** Reads the created entry from the answer when it is not the usual `{id}` / `{data: {id}}` shape. */
+  pick?: (res: Rec) => { id: string; linkId: string } | undefined;
+  /** The route takes no `clientRef`. */
+  noClientRef?: boolean;
+  /** The route answers whether it filed the document sent with it. */
+  answersDocumentFiled?: boolean;
 }
 
 export interface Plan {
@@ -20,12 +26,18 @@ export interface Plan {
 }
 
 /** The domains an entry can be added for. The rest need the web review and say so. */
-export const ADDABLE_DOMAINS = ["flight", "cruise", "rail", "rental", "bus", "ferry"] as const;
+export const ADDABLE_DOMAINS = [
+  "flight",
+  "lodging",
+  "cruise",
+  "rail",
+  "rental",
+  "bus",
+  "ferry",
+] as const;
 export type AddableDomain = (typeof ADDABLE_DOMAINS)[number];
 
 const WEB_ONLY: Record<string, string> = {
-  lodging:
-    "A stay needs the hotel matched and its dates reviewed. Use the web import (Unterkünfte > Import); the document stays in the inbox.",
   package: "A package tour becomes a whole trip. Use the web preview (Reisen > Pauschalreise).",
   place: "A place document is confirmed in the place import on the web.",
 };
@@ -379,5 +391,69 @@ export function planRide(domain: "bus" | "ferry", item: Rec, entry?: Rec): Plan 
     ],
     skipped: [],
     warnings: more,
+  };
+}
+
+/**
+ * A stay: the server's own import preview decides what the row is (new, already stored, needs the
+ * user), and only a clean "create" is committed. The commit answers the stay's id, and files the
+ * document with it.
+ */
+export async function planStay(
+  client: ApiClient,
+  item: Rec,
+  source: "email" | "pdf"
+): Promise<Plan> {
+  const candidate = { ...item, sourceRowIndex: 0 };
+  const preview = await client.post<{ data?: { rows?: Rec[] } }>("/lodging-import/preview", {
+    candidates: [candidate],
+  });
+  const row = preview.data?.rows?.[0];
+  if (!row) need("The stay", ["the server's preview returned no row"]);
+  const r = row as Rec;
+  if (r.action !== "create") {
+    const flags = Array.isArray(r.flags) ? (r.flags as string[]).join(", ") : "";
+    need("The stay", [
+      r.action === "skip"
+        ? "it is already stored (nothing to add)"
+        : r.action === "update"
+          ? "a stored stay would change; review it on the web import"
+          : `it needs input on the web import${flags ? ` (${flags})` : ""}`,
+    ]);
+  }
+  const lodging = r.lodging as Rec | null;
+  return {
+    requests: [
+      {
+        path: "/lodging-import/commit",
+        segment: "lodging",
+        label: String(lodging?.name ?? r.lodgingName ?? "stay"),
+        noClientRef: true,
+        answersDocumentFiled: true,
+        body: {
+          source,
+          fileName: null,
+          rows: [
+            drop({
+              sourceRowIndex: 0,
+              action: "create",
+              matchedLodgingId: r.matchedLodgingId ?? undefined,
+              matchedStayId: r.matchedStayId ?? undefined,
+              lodging: r.lodging ?? null,
+              lodgingName: r.lodgingName ?? undefined,
+              stay: r.stay ?? null,
+            }),
+          ],
+        },
+        pick: (res) => {
+          const ref = ((res.data as Rec | undefined)?.createdStayRefs as Rec[] | undefined)?.[0];
+          return typeof ref?.stayId === "string" && typeof ref.lodgingId === "string"
+            ? { id: ref.stayId, linkId: ref.lodgingId }
+            : undefined;
+        },
+      },
+    ],
+    skipped: [],
+    warnings: [],
   };
 }

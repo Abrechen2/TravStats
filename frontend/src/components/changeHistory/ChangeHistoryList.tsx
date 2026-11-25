@@ -140,9 +140,12 @@ export default function ChangeHistoryList({
 
   const who = (entry: ChangeHistoryEntry): string => {
     const source = t(`changeHistory:source.${entry.source}`);
-    return entry.actor && entry.source !== "system"
-      ? `${source} · ${t(`changeHistory:actor.${entry.actor}`)}`
-      : source;
+    const base =
+      entry.actor && entry.source !== "system"
+        ? `${source} · ${t(`changeHistory:actor.${entry.actor}`)}`
+        : source;
+    // A write by the MCP package names the key that made it ("via MCP / <label>").
+    return entry.reason?.startsWith("via MCP") ? `${base} · ${entry.reason}` : base;
   };
 
   const cell = { padding: "var(--ts-space-sm) var(--ts-space-md)", verticalAlign: "top" as const };
@@ -208,7 +211,9 @@ export default function ChangeHistoryList({
                   <td style={cell}>
                     {entry.operation === "delete"
                       ? t("changeHistory:deleted")
-                      : fieldLabel(entry.field)}
+                      : entry.operation === "create"
+                        ? t("changeHistory:created")
+                        : fieldLabel(entry.field)}
                   </td>
                   <td style={{ ...cell, wordBreak: "break-word" }}>
                     {entry.operation === "update" && (

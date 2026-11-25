@@ -99,6 +99,7 @@ import "./accountArchive";
 import "./lifeBook";
 import "./changeHistory";
 import "./integrations";
+import "./lodgingImport";
 import "./galleryDays";
 import "./photoJourneys";
 import "./tripSuggestions";

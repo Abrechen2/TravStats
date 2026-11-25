@@ -608,9 +608,20 @@ describe("add_entry_from_draft", () => {
     ).toBeUndefined();
   });
 
-  it("sends nothing for a stay: it is reviewed on the web, and says so", async () => {
+  it("adds a stay only through the server's own preview, filing the original with it", async () => {
+    const stayItem = {
+      lodging: { name: "Hotel Test", city: "Graz" },
+      stay: { checkIn: "2031-10-01", checkOut: "2031-10-02" },
+    };
     const { client, calls } = recorder({
-      "POST /parse-email": { domain: "lodging", candidates: [{ lodging: { name: "Hotel" } }] },
+      "POST /parse-email": { domain: "lodging", candidates: [stayItem] },
+      "POST /lodging-import/preview": {
+        data: { rows: [{ ...stayItem, action: "create", flags: [] }] },
+      },
+      "POST /documents": { success: true, data: { id: "11111111-1111-4111-8111-111111111111" } },
+      "POST /lodging-import/commit": {
+        data: { createdStayRefs: [{ stayId: "s-1", lodgingId: "l-1" }], documentFiled: true },
+      },
     });
     const ctx = ctxOf(client);
     const draftId = await draftOf(ctx, {});
@@ -620,9 +631,77 @@ describe("add_entry_from_draft", () => {
       { draftId, confirm: true },
       TOKEN
     );
-    expect(out.isError).toBe(true);
-    expect(out.text).toMatch(/web import/);
-    expect(calls.filter((c) => c.kind === "postForm")).toEqual([]);
+    expect(out.isError).toBe(false);
+    expect(out.structured).toMatchObject({
+      id: "s-1",
+      link: "https://trav.example/lodging/l-1",
+      documentAttached: true,
+    });
+    const commit = calls.find((c) => c.path === "/lodging-import/commit")!.body as Record<
+      string,
+      unknown
+    >;
+    expect(commit.documentIds).toEqual(["11111111-1111-4111-8111-111111111111"]);
+    expect(commit.clientRef).toBeUndefined();
+  });
+
+  it("says so when the server did not file the original with the stay", async () => {
+    const stayItem = {
+      lodging: { name: "Hotel Test" },
+      stay: { checkIn: "2031-10-01", checkOut: "2031-10-02" },
+    };
+    const { client } = recorder({
+      "POST /parse-email": { domain: "lodging", candidates: [stayItem] },
+      "POST /lodging-import/preview": {
+        data: { rows: [{ ...stayItem, action: "create", flags: [] }] },
+      },
+      "POST /documents": { success: true, data: { id: "11111111-1111-4111-8111-111111111111" } },
+      "POST /lodging-import/commit": {
+        data: {
+          createdStayRefs: [{ stayId: "s-1", lodgingId: "l-1" }],
+          documentFiled: false,
+          documentNotFiledReason: "link_failed",
+        },
+      },
+    });
+    const ctx = ctxOf(client);
+    const draftId = await draftOf(ctx, {});
+    const out = await callTool(
+      ctx,
+      tool("add_entry_from_draft"),
+      { draftId, confirm: true },
+      TOKEN
+    );
+    expect(out.structured?.documentAttached).toBe(false);
+    expect((out.structured?.warnings as string[]).join(" ")).toMatch(/did not file the original/);
+  });
+
+  it("does not commit a stay the preview calls stored or in need of input, and writes no document", async () => {
+    const stayItem = { lodging: { name: "Hotel Test" }, stay: null };
+    for (const [action, text] of [
+      ["skip", /already stored/],
+      ["needs_input", /web import/],
+    ] as const) {
+      const { client, calls } = recorder({
+        "POST /parse-email": { domain: "lodging", candidates: [stayItem] },
+        "POST /lodging-import/preview": {
+          data: { rows: [{ ...stayItem, action, flags: ["missing_name"] }] },
+        },
+      });
+      const ctx = ctxOf(client);
+      const draftId = await draftOf(ctx, {});
+      const out = await callTool(
+        ctx,
+        tool("add_entry_from_draft"),
+        { draftId, confirm: true },
+        TOKEN
+      );
+      expect(out.isError).toBe(true);
+      expect(out.text).toMatch(text);
+      expect(calls.some((c) => c.kind === "postForm" || c.path === "/lodging-import/commit")).toBe(
+        false
+      );
+    }
   });
 
   it("refuses a draft it never made", async () => {

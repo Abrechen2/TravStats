@@ -19,7 +19,9 @@ import { createPrismaClient } from "./prismaClient";
 import {
   captureWrite,
   configureChangeLedger,
+  captureMcpCreate,
   isCapturedWrite,
+  isMcpCreate,
   isLedgerInternal,
   runLedgerTransaction,
   runNestedLedgerTransaction,
@@ -263,7 +265,14 @@ const queried = basePrisma.$extends({
               (params as { __internalParams?: { transaction?: unknown } }).__internalParams
                 ?.transaction != null
             )
-          : await query(args);
+          : isMcpCreate(model, operation)
+            ? await captureMcpCreate(
+                model as string,
+                () => query(args),
+                (params as { __internalParams?: { transaction?: unknown } }).__internalParams
+                  ?.transaction != null
+              )
+            : await query(args);
         const topLevel =
           hiddenVisitPurposes.length > 0
             ? await demoteHiddenOnlyVisited(
