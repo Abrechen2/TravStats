@@ -30,10 +30,10 @@ export const BUS_FACT_FIELDS = [
   "arrPrecision",
   "distanceKm",
   "distanceSource",
-  // A hand-drawn line written into these two columns travels as it is (2026-11-24).
-  // TODO(feat/issues-408-409): the bus manual line lands after this list was written. If it
-  // keeps its points anywhere but `geometry` (a pair table like ferry_pair_routes, a scope
-  // column), add that here and to BUS_SHAPE, gated like `legRoutes` (outbox `withoutLegRoutes`).
+  // The hand-drawn line (GitHub #409, `services/bus/busManualRoute.ts`) lives in exactly these
+  // two columns, `geometrySource = manual` with the points or with null for "keep straight", so
+  // it travels like the ferry's line; no pair table, no extra wire field
+  // (`__tests__/busManualRoute.share.test.ts`).
   "geometry",
   "geometrySource",
   "actualDepartureTime",
