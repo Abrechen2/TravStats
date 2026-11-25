@@ -173,7 +173,17 @@ describe("TrackMapView — a click on a long span's route picks its leg", () => 
     window.localStorage.clear();
     mapProps.last = null;
     legsApi.stopIdentity.mockReset();
-    legsApi.stopIdentity.mockResolvedValue({ candidates: [], accepted: null });
+    // The whole identity shape: the card reads `known[0]`, so a partial stub crashed it
+    // whenever the lookup settled before the assertion (flaky in the full run).
+    legsApi.stopIdentity.mockResolvedValue({
+      lat: 0,
+      lon: 0,
+      probable: null,
+      known: [],
+      geocoder: "ok",
+      candidates: [],
+      candidatesState: "ok",
+    });
   });
   afterEach(() => setClockForTests(null));
 
