@@ -35,6 +35,27 @@ Save, and the next bus ride you create gets its road line. The key is set
 in the admin settings (Admin › External services); a provider that is
 selected but has no key counts as "not configured" and the form says so.
 
+## When the provider refuses or fails
+
+- The provider is emptied only by an explicit routing choice: `PUT
+  /admin/api-keys` applies `routingProvider: null` only for a body of routing
+  fields alone (as the provider select sends it). A null riding along in a
+  larger body is ignored and logged; every provider change is logged with
+  before and after.
+- A provider that refuses the key (401, 403, and 410 which OpenRouteService
+  answers for a retired key) or errors three times in a row counts as down for
+  30 minutes. "Automatisch" then uses the next configured provider and never
+  picks OpenRouteService without a key. A provider-side 429 counts toward the
+  error streak like an error.
+- Health is kept per provider AND credential scope (the instance, or
+  `user:<id>` for an account's own key). Only the instance scope feeds the
+  automatic skip for everyone and the readiness item, so one account's refused
+  key does not take routing down for the instance.
+- Roadtrip and tour reads carry `routingFailing`; both pages say the provider is
+  not answering and the lines were just drawn straight, and the console warns.
+  Readiness shows `admin.routingProviderDown`, and `admin.routingProviderEmpty`
+  for an empty provider with a stored instance key, with a one-click "use …".
+
 ## What happens when a ride is saved
 
 1. The ride is saved with its two terminals.

@@ -549,6 +549,59 @@ enforced, and merely practised** below.
   switch and under the internet master switch. A default of "off" for the
   second kind would silently remove airport search, bus lines and maps on every
   existing instance. A new service picks its kind explicitly in the catalogue.
+- **Writing into someone else's data, or sending a location out, asks per item
+  first** — owner, 2026-11-24/-25. A suggestion plugin's location maintenance
+  writes into the plugin's OWN archive, so `maintenance/apply` and `undo` need a
+  single-use ticket from `maintenance/confirm`, bound to exactly the values the
+  user saw; a plugin refuses a write without it (`services/plugins/contract.ts`, `suggestionPluginMaintenance.test.ts`:
+  "an apply or undo without the confirmation ticket is refused"). The same
+  stance covers outbound use of an account's location data (AI help for a stay,
+  map matching): `services/externalServices/useConsent.ts` answers
+  `409 CONFIRMATION_REQUIRED` with a disclosure (host, provider, cloud or LAN,
+  the fields, the number of points, whether privacy zones were applied) before
+  anything leaves, and a confirmation is bound to the target it was given for.
+  The admin's catalogue switch and the account's confirmation are two gates.
+- **PhotoPrism is the source of truth for photo links; Immich is its subset**
+  (owner, 2026-11-26). Period links and album proposals read PhotoPrism whenever
+  it is connected, and an Immich photo that PhotoPrism also has is dropped
+  (`photoLinking/dedupe.ts`, `dedupe.test.ts`), so the same picture never shows
+  twice. A trip stores references only, never bytes; a failing source is named in
+  `failures` and never silently shortens the list
+  (`tripPhotoLinks/mergedPhotos.ts`).
+- **The plugin contract is exported, and `externalRef` is an object** —
+  `packages/travstats-plugin-template/contract/v1.schema.json` is generated from
+  the server's OpenAPI components; `plugins/__tests__/contractSchema.test.ts`
+  fails when the two differ and when any `$ref` in the exported file does not
+  resolve (a missing component once broke every vendored validator). A suggestion's
+  `externalRef` may be a plain string (means `{id}`) or `{id, label, fields}`, and
+  a plugin-fed list (`list` in the hello) holds only places of ACCEPTED
+  suggestions. Additive changes only; an unknown field is ignored on both sides.
+- **Heavy work takes a slot** — the nightly schedulers run through `runHeavyJob`
+  (`services/jobs/heavySlot.ts`): one at a time, first come first served, and a job
+  whose previous run is still waiting is skipped. File imports and the archive
+  restore take the other slot, the import write slot
+  (`travtrack/imports/writeSlot.ts`): one import stores at a time, turns are
+  sliced, and an import's cursor is committed with every batch so a slice end
+  loses nothing. Both show in the runtime card. A new cron that skips the slot
+  fails `heavySlot.test.ts` ("names no nightly cron that bypasses runHeavyJob").
+- **The pool carries its own timeouts** — `services/db/sessionTimeouts.ts`: 30 s
+  `statement_timeout` and 5 min `idle_in_transaction_session_timeout` per app
+  connection (`DB_STATEMENT_TIMEOUT_MS`, `DB_IDLE_IN_TRANSACTION_TIMEOUT_MS`, 0 =
+  off). A job with a known long statement (account delete, archive restore)
+  raises its limit with `SET LOCAL` inside its transaction so the raise ends with
+  it and never leaks onto a pooled connection. Migrations, `pg_dump` and the `psql`
+  restore use their own connections. Sizing advice for Postgres itself:
+  `docs/ops/postgres-tuning.md`.
+- **The recovery key is a gate, not a nudge** — the backup carries credentials
+  encrypted under the instance key and deliberately NOT the key
+  (`services/backup/recoveryKey.ts`). On an instance with a WebDAV target whose
+  key is unconfirmed — or confirmed for a key since replaced — every admin meets
+  a blocking dialog (`RecoveryKeyGate`) until the flow is done; ordinary accounts
+  never do, and backups keep running. Reveal is POST-only behind a fresh
+  re-authentication, confirm takes only the LAST FOUR characters, the key never
+  reaches a log line, an error body or the database, and a restore with the key
+  checks it against the archive's fingerprint before it writes anything
+  (`restoreRecoveryKey.test.ts`, `RecoveryKeyGate.test.tsx`).
 - **Every `/api` response is `Cache-Control: no-store` by default** — one
   middleware in `index.ts`, mounted above the health route. This is a security
   boundary, not a perf tweak: beta UAT caught Cloudflare caching an
@@ -606,6 +659,10 @@ as decoration — it is where the properties worth the most currently live.
 | Server and web answer every time question the same way | `shared/time/vectors.json`, run by `backend/src/shared/time/__tests__/vectors*.test.ts` and `frontend/src/shared/time/__tests__/vectors.test.ts`, each also under the two odd zones |
 | Every table with a `share_key` column is a registered shareable type, every domain is classified, every type has an adapter and is named in the DE+EN inbox, every fact field has a DE+EN label | `backend/src/services/sharing/__tests__/shareTypes.test.ts` |
 | Every write to a shareable table propagates or names its reason at the call | `backend/src/services/sharing/__tests__/propagate.writePaths.test.ts` |
+| Inline help is one line — help keys ≤ 120 characters, legends/notes/empty states ≤ 140, `…More` and settings-row `h` ≤ 400; warnings and errors are shortened, never hidden | `frontend/src/i18n/__tests__/inlineHelpLength.test.ts`; exceptions only through `inlineHelpLength.baseline.json` with a reason (today: the usage-statistics consent text) |
+| No nightly cron runs outside the heavy-job slot | `backend/src/services/jobs/__tests__/heavySlot.test.ts` |
+| The exported plugin contract equals the server's components and every `$ref` in it resolves | `backend/src/services/plugins/__tests__/contractSchema.test.ts` |
+| A plugin write needs the confirmation ticket for exactly the shown values | `backend/src/routes/__tests__/suggestionPluginMaintenance.test.ts` |
 
 Six of these are **ratchets** carrying a list of today's offenders — file
 size, OpenAPI coverage, OpenAPI response schemas, response-shape leaks, the

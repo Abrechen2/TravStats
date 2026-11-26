@@ -5,7 +5,7 @@
 # TravStats
 
 **Self-hosted travel logbook for small households and groups (1–10 users).**
-A logbook first — record trips by hand, scan a boarding pass, import a confirmation email, or let the Companion app (in beta) record them on your phone — and TravStats turns them into history, stats and maps.
+Flights, cruises, stays, rail, bus, ferries, rentals and places in one timeline — on your own server, with no cloud account and no telemetry.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Release](https://img.shields.io/github/v/release/Abrechen2/TravStats?include_prereleases&sort=semver)](https://github.com/Abrechen2/TravStats/releases)
@@ -19,6 +19,9 @@ A logbook first — record trips by hand, scan a boarding pass, import a confirm
 **[Documentation](https://travstats.de/docs/)** — installation, the parsers,
 the API and day-to-day operation.
 
+A project by [`<abrechen2 />`](https://www.abrechen2.de/en/) ·
+Ein Projekt von [`<abrechen2 />`](https://www.abrechen2.de/)
+
 </div>
 
 ---
@@ -29,67 +32,59 @@ the API and day-to-day operation.
   <sub>Multi-domain 3D globe — flights and cruises on one map, colour-coded by frequency and status</sub>
 </p>
 
-## Why TravStats
+## What TravStats is
 
-Log every flight **and cruise** you take, visualise your routes on
-interactive 2D and 3D maps, collect 270+ achievements, and import flights
-from boarding passes (QR / PDF417 / OCR), confirmation emails, or
-Excel/CSV — all on your own server, no cloud, no telemetry.
+TravStats is a logbook first. You record trips by hand, scan a boarding pass,
+import a confirmation e-mail or let the Companion app record them — and
+TravStats turns them into history, statistics and maps. Everything you record
+lives in your own PostgreSQL. It does not follow aircraft or people, nobody sees
+where you are unless you create a share link yourself, and every outside service
+(flight data, geocoding, AI parsing, photos) is optional and switched on by you.
 
-A logbook first — you record trips by hand, scan a boarding pass, or
-import a confirmation email, and TravStats turns them into history,
-stats and maps. Recording is optional and opt-in: the TravStats
-Companion app (in beta) can record your own flights and trips on your
-phone and upload them to your own server. TravTrack is an opt-in location
-history with privacy zones: positions arrive from the Companion, from
-OwnTracks and Overland (a per-device ingest token, `POST /api/v1/travtrack/ingest/owntracks`
-and `/overland`), or from files and a copy of your Dawarich history (below).
-TravStats does not follow
-other aircraft or people, and nobody sees where you are unless you
-create a share link yourself. Flight data is optionally enriched from
-AirLabs / Aviationstack / OpenSky, but everything you record lives in
-your own PostgreSQL. No accounts on someone else's servers, no analytics,
-no ads.
+## What it does
 
-- 🚢 **Flights *and* cruises** — import a cruise from email or PDF: the ship, every port of call and sea day; fly-and-cruise trips link both
-- 🗺️ **Multi-domain maps** — routes, heatmap, animated trips and a 3D globe for flights and cruises, colour-coded by frequency and status
-- 📊 **Cross-domain statistics** — distance, countries, active days, top airlines and cruise lines, with year and all-time views
-- 🏆 **270+ achievements** across flights, cruises and cross-domain — bronze to diamond
-- 🎫 **Boarding-pass scanner** — QR / barcode / OCR
-- 📧 **Email import** — plain text, HTML, Outlook `.msg`, `.eml`, with optional local LLM parsing via Ollama
-- 📍 **TravTrack location history** *(opt-in)* — record from the Companion, OwnTracks or Overland, or import GPX / KML / GeoJSON / TCX files, a Google Timeline export or a copy of your Dawarich history; privacy zones drop fixes on the server
-- 🚆 **More than flights and cruises** — rail, bus, ferry, rental cars, hotels and places, road trips and tours, each with its own map layer and statistics
-- 🖼️ **Immich albums** on trips, and **trip sharing** between servers with consent on both sides
-- 📑 **Excel/CSV round-trip import** — export, edit in Excel, re-import; rows with an `id` update existing flights
-- 🤖 **Public REST API + OpenAPI 3.0 / Swagger UI** — Personal Access Tokens with `read` / `write` / `admin` scopes for AI agents and automation
-- 💾 **Automated backups** with retention + optional WebDAV sync
-- 🔐 **Invite-only by default** — toggle public registration anytime from the admin UI; JWT in HttpOnly cookies, rate limiting on every sensitive endpoint
-- 🌐 **German + English UI** with browser-locale auto-detection, i18n-ready
+**Logbook** — flights, cruises (ports and sea days), stays and loyalty cards,
+rail, bus, ferries, rentals, roadtrips and tours, places and curated checklists,
+all with documents, costs and photos. Entries can be marked private or business
+(built-in or your own purposes) and filtered by it. Import from boarding passes
+(QR / PDF417 / OCR), e-mails (`.eml`, `.msg`), PDFs, spreadsheets, a mailbox
+folder or a forwarding address — always as a proposal you confirm.
+Statistics, 270+ achievements, a passport page, a year review and 2D/3D maps.
 
-## Is TravStats for you?
+**TravTrack** *(opt-in location history)* — record from the Companion, OwnTracks
+or Overland, or import GPX / KML / GeoJSON / TCX, a Google Timeline export or a
+copy of your Dawarich history. Days are drawn from the best source, with
+questionable days listed, privacy zones that cut points on the server, stops
+named from your places, a calendar or a plugin (with a stated confidence), and an
+optional road-matching cleanup. A recording can become a roadtrip.
 
-Being honest about the fit costs one paragraph and saves an evening of
-someone else's time.
+**Plugins and calendar** — suggestion plugins (small signed HTTPS services you run
+or trust) answer "what was here?" and can keep a list of their places or tidy
+their own locations after your per-item confirmation; ICS and CalDAV calendars
+(including iCloud) serve as read-only evidence. Template and contract:
+[`packages/travstats-plugin-template`](packages/travstats-plugin-template).
 
-**It probably is, if you** want your travel history on hardware you
-control; keep a household's or a small group's trips in one place; already
-run Docker and Postgres, or are happy to let the bundled compose file run
-Postgres for you; like filling in a logbook after the fact and getting
-maps, stats and achievements out of it; and want flights *and* cruises
-(and hotels and places) in one timeline rather than four apps.
+**Sharing and federation** — linked trip copies between accounts and between
+servers, with consent first; public trip links that expire; `.travstats` trip
+files. A new share can be linked to a copy that already exists instead of
+duplicating it.
 
-**It probably is not, if you** want live flight tracking or a radar — this
-records where you have been, it does not watch aircraft move; expect a
-hosted account you just sign up for, because there is no SaaS version and
-running it means running a server; need to onboard more than a handful of
-people, since it is built and tested for roughly 1–10 users on one
-instance and has no SSO, no org/tenant model and no per-team permissions;
-need it on a phone as the primary interface — the web UI is responsive,
-but the native app is not released yet; or need automatic, hands-off
-import of everything, because a lot of travel history is typed in or
-imported from files you supply.
+**Comparison** — compare totals, never single trips, with friends on your server
+or another one: head-to-head tables, fun figures, badges and curated-list progress.
 
----
+**MCP and API** — an authenticated REST API with OpenAPI, personal access tokens,
+and [`travstats-mcp`](packages/travstats-mcp), a local MCP server for assistants
+such as Claude: read tools, and write tools that add an entry only after you
+confirm it.
+
+**Backups** — scheduled backups of the database and every upload folder, an
+optional WebDAV copy, restore from the admin area, and a **recovery key** that
+lets a lost server be restored with its encrypted credentials intact.
+
+**Companion app** *(beta)* — pair a phone to record trips and flights, scan
+documents and read your logbook offline; it uploads to your own server, which
+stays the record. See the
+[Companion guide](https://travstats.de/docs/user-guide/companion-app/).
 
 ## Screenshots
 
@@ -174,7 +169,7 @@ Install `travstats-db` from there first, then `TravStats`, set the
 > **Optional local LLM parsing:** install the
 > [Ollama Community App](https://unraid.net/community/apps?q=ollama)
 > (or run Ollama anywhere else on your network), pull `gemma3:12b` (~7.5 GB),
-> then point TravStats at it from **Admin → Parser**. Multi-flight
+> then point TravStats at it from *Einstellungen → Server → Buchungen lesen*. Multi-flight
 > confirmation mails and unknown airline templates are then handled locally —
 > nothing leaves your network.
 
@@ -257,95 +252,74 @@ extension-based rules, but not for a rule that caches everything. So:
 - In any other proxy (Traefik, Caddy, plain nginx), do not put `proxy_cache`
   or an equivalent on `/api/`.
 
+
 ### Runtime-configurable from the admin UI
 
-- Instance name, public URL, user cap, registration mode
-- **AirLabs / OpenSky / Aviationstack** API keys (encrypted at rest)
-- **Ollama** endpoint + model (default `gemma3:12b`)
-- Backup schedule and retention
-- WebDAV off-site backup sync (Nextcloud, HiDrive, …)
-- SMTP for invitation and password-reset emails
-- Logging level and retention
+Instance name, public URL, user cap and registration mode; flight-data API keys
+(encrypted at rest); Ollama endpoint and model; routing; backup schedule and
+retention; WebDAV copy; SMTP; logging. TravStats works without any API key —
+manual entry and boarding-pass scanning cover the full feature set.
 
-TravStats works without any API key; manual flight entry and boarding-pass
-scanning cover the full feature set.
-
-Every field in that panel is documented under
-[Admin panel](https://travstats.de/docs/operations/admin-panel/), the optional
-third-party integrations (flight-data APIs, Ollama, SMTP) under
-[External services](https://travstats.de/docs/external-services/), and the
-backup schedule, retention and WebDAV sync under
+The optional integrations and every admin field are documented under
+[Admin panel](https://travstats.de/docs/operations/admin-panel/),
+[External services](https://travstats.de/docs/external-services/) and
 [Backups](https://travstats.de/docs/operations/backups/).
 
----
-
-## Upgrades
-
-**Service credentials move out of the environment (2.8).** API keys and addresses
-of external services (flight data, routing, geocoder, AI providers, Immich,
-Dawarich, Strava, WebDAV, federation, ferry positions and the like) are no longer
-read from environment variables. The first start of this version copies each such
-variable that is still set into the instance settings (only where the setting is
-empty, secrets encrypted) and never reads it again — a variable set later is
-ignored. Afterwards manage them under Admin › External services and remove them
-from your compose file.
-
-Starting a version you have not run on this data before takes a database
-snapshot BEFORE any migration runs, into `/app/data/backups/` as
-`pre-v<version>-upgrade-<timestamp>.sql`. It happens on every version change,
-not only a major one: the 2.4.0 → 2.5.0 upgrade applied seven migrations, and
-"major bumps only" would have skipped exactly the release that most needed a
-snapshot.
-
-**If that snapshot cannot be taken, the container refuses to start.** It
-logs a `[pre-migration-backup] FATAL` block naming the cause and stops before
-`prisma migrate deploy`. Nothing has been migrated at that point: the database
-is untouched, and the previous image still runs against it. That refusal is
-deliberate — it is recoverable, and a schema change taken without a snapshot
-may not be.
-
-The usual causes, in order of how often they happen:
-
-- **`pg_dump` is older than the server.** `pg_dump` refuses to dump a server
-  newer than itself, so the client must be at least the server's MAJOR version
-  (a newer client against an older server is fine). This is the normal outcome
-  of pointing TravStats at a Postgres you already run and later upgrading it.
-  The fatal message names the two versions when it can read them.
-- **The database container was renamed**, so the backup cannot reach it
-  (`DOCKER_DB_CONTAINER`).
-- **No free space** under the data volume.
-
-To upgrade anyway, without a snapshot:
-
-```yaml
-environment:
-  SKIP_PRE_MIGRATION_BACKUP: "true"
-```
-
-It boots with a warning instead of the refusal. Only the literal string `true`
-counts — `1` and `yes` do not, because this is consent to migrate with no way
-back. Take your own backup first, and unset it again afterwards.
+Maps use OpenFreeMap by default (no key, no server of your own). The map provider
+sees the visitor's IP address and the tiles requested; attributions must stay.
+Operators may set public https style URLs with `MAP_STYLE_STANDARD_URL`,
+`MAP_STYLE_LIGHT_URL`, `MAP_STYLE_DARK_URL` and `MAP_STYLE_VOYAGER_URL` (no
+credentials or query strings); `GET /api/v1/map-config` serves them to clients.
+Provider terms: <https://openfreemap.org/tos/>.
 
 ---
 
-## What's in a release
+## Updating and backups
 
-See [CHANGELOG.md](CHANGELOG.md) for the full history and
-[ROADMAP.md](ROADMAP.md) for where things are heading. A native iOS &
-Android app (boarding-pass scan, a 3D globe of your travels) is in the
-works — no release date yet. Hotels and places, rail, bus, ferry and
-rental, CO₂ figures, global search and the TravPlan planner (beta) are
-already in the server and the web app.
+**Update:** `docker compose -f docker-compose.prod.yml pull && docker compose -f
+docker-compose.prod.yml up -d`. Pin `VERSION` in `.env` to a release tag
+(`VERSION=X.Y.Z`) if you do not want `:latest`.
+
+**Service credentials live in the instance settings.** API keys and addresses of
+external services (flight data, routing, geocoder, AI providers, Immich, Dawarich,
+Strava, WebDAV, federation, ferry positions and the like) are not read from
+environment variables. The first start copies each such variable that is still set
+into the instance settings (only where the setting is empty, secrets encrypted) and
+never reads it again. Manage them under *Einstellungen → Server → Dienste* and
+remove them from your compose file.
+
+**A snapshot before every version change.** Starting a version you have not run on
+this data before takes a database snapshot BEFORE any migration, into
+`/app/data/backups/` as `pre-v<version>-upgrade-<timestamp>.sql`. If it cannot be
+taken, the container refuses to start with a `[pre-migration-backup] FATAL` block
+naming the cause — nothing has been migrated, and the previous image still runs.
+The usual causes: `pg_dump` older than the server (the client must be at least the
+server's major version), a renamed database container (`DOCKER_DB_CONTAINER`), or no
+free space. To upgrade anyway, set `SKIP_PRE_MIGRATION_BACKUP: "true"` (only the
+literal `true` counts), take your own backup first and unset it afterwards.
+
+**Scheduled backups** are off until you switch them on (*Einstellungen → Server →
+Sicherungen*). An archive holds the database dump, every upload folder and a
+metadata file; an optional **WebDAV** copy (Nextcloud, HiDrive, …) goes off-host.
+
+**Save the recovery key.** The archive holds API keys, tokens and the SMTP password
+only encrypted, and the key is deliberately not in it. Once an off-site copy exists,
+administrators are asked to reveal, store and confirm a **recovery key**; a restore
+on a new server can take it instead of the key file. Keep it outside the server, in
+a password manager. See
+[Recovery key](https://travstats.de/docs/operations/recovery-key/) and
+[Backups & Restore](https://travstats.de/docs/operations/backups/).
+
+---
 
 ## Known limitations
 
 Things worth knowing before you commit a weekend to this. None of them are
 secrets; they are just easier to read here than to discover later.
 
-- **amd64 only.** The published images carry a single `linux/amd64`
-  manifest. A Raspberry Pi or an Apple-Silicon Mac cannot run them
-  natively — you would have to build the image yourself for your
-  architecture.
+- **amd64 first.** Release candidates are published for `linux/amd64` only. Check
+  a final tag's platforms (`docker buildx imagetools inspect`) before running it on
+  a Raspberry Pi or an Apple-Silicon Mac; otherwise build the image yourself.
 - **Single instance, small groups.** Designed and tested for roughly 1–10
   users on one instance. There is no multi-tenancy, no SSO/OIDC/LDAP, and
   no per-team permission model; accounts are invite-only by default and
@@ -362,10 +336,11 @@ secrets; they are just easier to read here than to discover later.
   a token per second, which times out and falls back to the template
   parser. Budget a machine with a GPU or accept the regex path.
 - **Import is assisted, not automatic.** Boarding passes, confirmation
-  emails and CSV/Excel are parsed for you, but there is no mailbox polling
-  and no airline account linking. You bring the file or the text.
-- **The native mobile app is not released.** It is in development; the web
-  UI is responsive and is the way to use TravStats today.
+  e-mails and CSV/Excel are parsed for you, and a mailbox folder or forwarding
+  address can feed the inbox, but everything arrives as a proposal you confirm.
+  There is no airline account linking.
+- **The Companion app is in beta.** The web UI is drawn for tablets and is the
+  main interface; the phone app records and reads your logbook.
 - **Some features sit behind a beta flag.** An admin toggle hides
   unfinished areas on production instances. If something in the docs or a
   screenshot is not visible in your install, that is usually why.
@@ -394,8 +369,8 @@ scripts and integrations. Everything the web UI shows — flights,
 cruises, lodging, places, trips and the statistics over them — is
 reachable programmatically with the same token.
 
-**1. Mint a Personal Access Token**: in the app, go to **Settings →
-API Tokens**, give it a label and a scope (`read`, `write`, `admin`),
+**1. Mint a Personal Access Token**: in the app, go to *Einstellungen → Mein Konto →
+Profil & Anmeldung → API-Schlüssel* (expert view), give it a label and a scope (`read`, `write`, `admin`),
 and copy the `ts_pat_…` value. The plaintext is shown exactly once —
 only the bcrypt hash is persisted. Scopes, rotation and revocation:
 [Personal access tokens](https://travstats.de/docs/api/personal-access-tokens/).
@@ -438,9 +413,6 @@ of creating a duplicate. Read-only tokens are blocked from mutating
 endpoints with 403; admin endpoints additionally require an
 `admin`-scoped token even if the owning user is an admin.
 
-Token requests get their own per-token rate-limit bucket so an
-aggressive script can't lock the user out of the web UI.
-
 ## Contributing
 
 Bug reports, feature ideas and pull requests are welcome. The
@@ -458,26 +430,10 @@ npm run lint            # eslint on both
 npm run test:frontend   # Vitest (backend tests need Postgres)
 ```
 
-### What CI checks
-
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs typecheck and
-lint on both trees, the Vitest suite, and a Prettier check scoped to the
-frontend files a change touches. The Jest backend suite runs there too
-against a throwaway Postgres, but is marked advisory rather than blocking:
-it currently has pre-existing test-isolation failures that have nothing to
-do with the change under review. The measured numbers and both root causes
-are written at the top of that job.
-
-[`.github/workflows/security.yml`](.github/workflows/security.yml) runs
-`npm audit` over production dependencies (blocking at *critical*), plus
-Trivy, whose report is printed into the job log; nothing is uploaded to
-GitHub code scanning.
-
-Locally, [`.pre-commit-config.yaml`](.pre-commit-config.yaml) runs
-typecheck and lint for whichever tree a commit touches, alongside the
-formatting and hygiene hooks. Install it once with `pre-commit install`.
-
-Deep-dive developer reference: [CLAUDE.md](CLAUDE.md).
+CI (`.github/workflows/ci.yml`) runs typecheck, lint, Prettier, the file-size and
+schema-drift checks and the Vitest and Jest suites; `security.yml` runs `npm audit`
+and Trivy. [`.pre-commit-config.yaml`](.pre-commit-config.yaml) runs the same
+checks locally (`pre-commit install`). Developer reference: [CLAUDE.md](CLAUDE.md).
 
 ---
 
@@ -516,76 +472,19 @@ modifications available under the same licence. See [LICENSE](LICENSE).
 
 TravStats is a solo side project. If it's useful to you,
 [a small donation via PayPal](https://www.paypal.com/donate?hosted_button_id=HW9MPYVURCT42)
-keeps the lights on for AirLabs quota top-ups. ❤️
+keeps the lights on for AirLabs quota top-ups.
 
 ---
 
 <div align="center">
 
-**[⭐ Star on GitHub](https://github.com/Abrechen2/TravStats)** ·
+**[Star on GitHub](https://github.com/Abrechen2/TravStats)** ·
 [Releases](https://github.com/Abrechen2/TravStats/releases) ·
+[Documentation](https://travstats.de/docs/) ·
 [Roadmap](ROADMAP.md) ·
 [Issues](https://github.com/Abrechen2/TravStats/issues)
 
-<sub>Made with ❤️ and a bit of AI for flight enthusiasts.</sub>
+A project by [`<abrechen2 />`](https://www.abrechen2.de/en/) ·
+Ein Projekt von [`<abrechen2 />`](https://www.abrechen2.de/)
 
 </div>
-
-### Ferry data sources (beta)
-
-Ferry terminal search uses the configured Photon service with OpenStreetMap's
-`amenity=ferry_terminal` filter. The editor can switch back to general place
-search, coordinates or a map pin when a terminal is missing. Provider outages
-are shown separately from an empty search result.
-
-In **Ferries → Add crossing → Read ferry ticket**, upload a text PDF/EML or
-paste ticket text. A preview shows each proposed value with its source text.
-English/German labelled tickets work without AI; unfamiliar layouts can use the
-existing admin-enabled, consented AI provider chain. Scanned PDFs need pasted
-text or manual entry; an EML currently reads the message body. Dates without a
-printed year and ambiguous numeric dates are not guessed. Confirm port positions
-before saving. One crossing is created per save, and an uploaded original is
-attached to it. Cancelling leaves the original in the existing unfiled-document
-inbox, subject to its normal retention rules.
-
-Optional live vessel snapshots use [AISStream](https://aisstream.io/documentation).
-Enter the AISStream key under Admin › External services,
-then enter the ship's nine-digit MMSI on a crossing's detail page and request a
-position. The first MMSI that answers is stored on the crossing (`vesselMmsi`)
-and later lookups read only that vessel; edit the crossing to change it. This is
-an explicit current-vessel lookup, not automatic ship matching or a historical
-journey track. Requests wait at most 15 seconds, share requests for the same MMSI
-and cache answers for 30 seconds. An account holds at most one open lookup and a
-backend process at most two; beyond that the answer is `busy`.
-No signal is distinct from a stopped ship. Receipt time and source time are
-separate; no observation time is invented when the source omits it. No historical
-crossing, distance or status is changed. No API key is sent to the browser.
-
-### Maps in web and app
-
-The vector maps use OpenFreeMap by default (Liberty, Positron, Dark, Bright).
-No map server of your own and no API key is needed. The client loads map data
-directly from the provider, which sees the IP address and the requested map
-tiles. Trip overlays stay in the client. Attributions must not be removed.
-Provider terms: https://openfreemap.org/tos/ and
-https://openfreemap.org/privacy/. Availability is not guaranteed; offline
-downloads are subject to separate limits and are not offered by this integration.
-
-Operators may optionally set public HTTPS style URLs:
-`MAP_STYLE_STANDARD_URL`, `MAP_STYLE_LIGHT_URL`, `MAP_STYLE_DARK_URL`,
-`MAP_STYLE_VOYAGER_URL` (historical style ID for Bright). Do not use
-credentials, query parameters or fragments: these URLs are public. Alternative
-providers need matching usage rights and CORS for web and app; their styles must
-reference every source, font and sprite they need correctly.
-
-`GET /api/v1/map-config` returns version 1 and `styles` for clients. The web UI
-loads the same configuration through `/api/v1/map-config/runtime` before the app
-starts. The mobile map integration supports older servers without this endpoint
-through the OpenFreeMap default. Changes to the server environment take effect
-after an authorised restart; mobile code changes need a new app build.
-
-The web dashboard, globe and detail maps share the same basemap catalogue.
-Detail maps follow the saved basemap, place-label and relief settings, including
-changes received through web preference sync. Existing style IDs and route,
-marker and colour preferences are retained; `voyager` displays Bright.
-Satellite and relief still use Esri and the OSM raster option remains available.
