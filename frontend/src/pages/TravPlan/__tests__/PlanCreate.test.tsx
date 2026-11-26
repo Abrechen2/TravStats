@@ -116,7 +116,7 @@ describe("PlanCreate", () => {
     await userEvent.click(screen.getByRole("button", { name: "create.shapeRoute" }));
     await pick("create.startSearch", "kiel", "Kiel");
     await pick("create.destinationSearch", "oslo", "Oslo");
-    await userEvent.click(screen.getByRole("checkbox"));
+    await userEvent.click(screen.getByRole("checkbox", { name: "create.back" }));
     await userEvent.type(screen.getByLabelText("fields.startDay"), "2026-07-01");
     await userEvent.type(screen.getByLabelText("fields.endDay"), "2026-07-10");
     await userEvent.click(screen.getByRole("button", { name: "create.next" }));
@@ -144,11 +144,16 @@ describe("PlanCreate", () => {
     await pick("create.destinationSearch", "genova", "Genova");
     await pick("create.destinationSearch", "palermo", "Palermo");
     await userEvent.selectOptions(screen.getByLabelText("create.legMode:Palermo"), "ferry");
+    await userEvent.click(screen.getByRole("checkbox", { name: "create.overnight" }));
+    await userEvent.clear(screen.getByLabelText("create.stopNights:Genova"));
+    await userEvent.type(screen.getByLabelText("create.stopNights:Genova"), "1");
     await userEvent.selectOptions(screen.getByLabelText("create.vehicle"), "motorhome");
-    await userEvent.click(screen.getByRole("checkbox"));
+    await userEvent.click(screen.getByRole("checkbox", { name: "create.back" }));
     expect(screen.getByLabelText("create.name")).toHaveValue("Palermo");
     await userEvent.type(screen.getByLabelText("fields.startDay"), "2027-05-01");
     await userEvent.type(screen.getByLabelText("fields.endDay"), "2027-05-15");
+    // 14 nights: 1 in Genova, 2 on board, 11 left for Palermo.
+    expect(screen.getByText(/create.goalNights:11/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "create.next" }));
     await userEvent.type(screen.getByLabelText("route.mode.ferry: Genova → Palermo"), "320");
     await userEvent.click(screen.getByRole("button", { name: "create.finish" }));
@@ -162,6 +167,9 @@ describe("PlanCreate", () => {
     ]);
     const stages = ops.filter((o) => o.collection === "stages").map((o) => o.value);
     expect(stages.map((g) => g.mode)).toEqual(["drive", "ferry", "ferry", "drive"]);
+    expect(stages.map((g) => g.overnight)).toEqual([false, true, true, false]);
+    const stations = ops.filter((o) => o.collection === "stations").map((o) => o.value);
+    expect(stations.map((st) => st.nights)).toEqual([0, 1, 11, 0, 0]);
     expect(stages[1].bookingId).toBe(bookings[0].id);
     // Every booking is written before the first stage that may name it.
     const lastBooking = ops.map((o) => o.collection).lastIndexOf("bookings");

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildRoute, draftLegs, type RouteDraft } from "../routeDraft";
+import { buildRoute, draftLegs, goalNights, type RouteDraft } from "../routeDraft";
 import { place } from "../../route/__tests__/routeFixture";
 
 const home = place("Kassel", 51.3, 9.5),
@@ -63,5 +63,33 @@ describe("route draft", () => {
       nights: 3,
     });
     expect(built.stages).toHaveLength(2);
+  });
+});
+
+describe("nights on the way and overnight crossings", () => {
+  const roundTrip: RouteDraft = {
+    start: home,
+    stops: [
+      { place: genova, mode: "drive", nights: 1 },
+      { place: palermo, mode: "ferry", overnight: true },
+    ],
+    back: true,
+  };
+
+  it("gives each stop on the way its nights, the goal the rest, minus the nights on board", () => {
+    const built = buildRoute(roundTrip, { nights: 14, currency: "EUR", estimates: {} });
+    // 14 = 1 in Genova + 2 on board (out and back) + 11 in Palermo; the way back stops nowhere.
+    expect(built.stations.map((s) => [s.title, s.nights])).toEqual([
+      ["Kassel", 0],
+      ["Genova", 1],
+      ["Palermo", 11],
+      ["Genova", 0],
+      ["Kassel", 0],
+    ]);
+    expect(built.stages.map((g) => g.overnight)).toEqual([false, true, true, false]);
+  });
+
+  it("never gives the goal fewer than zero nights", () => {
+    expect(goalNights(roundTrip, 2)).toBe(0);
   });
 });

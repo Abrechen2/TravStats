@@ -12,6 +12,10 @@ const BOOKED_MODES = new Set<LegMode>(["ferry", "rail", "flight"]);
 export interface DraftStop {
   place: PlanPlace;
   mode: LegMode;
+  /** Nights spent at a stop on the way; the goal takes what is left. */
+  nights?: number;
+  /** The leg arriving here runs through a night (night ferry, sleeper train). */
+  overnight?: boolean;
 }
 export interface RouteDraft {
   start: PlanPlace;
@@ -23,6 +27,7 @@ export interface DraftLeg {
   from: PlanPlace;
   to: PlanPlace;
   mode: LegMode;
+  overnight: boolean;
 }
 
 /**
@@ -31,10 +36,25 @@ export interface DraftLeg {
  */
 export function draftLegs(draft: RouteDraft): DraftLeg[] {
   const places = [draft.start, ...draft.stops.map((s) => s.place)];
-  const out = draft.stops.map((s, i) => ({ from: places[i], to: s.place, mode: s.mode }));
+  const out = draft.stops.map((s, i) => ({
+    from: places[i],
+    to: s.place,
+    mode: s.mode,
+    overnight: s.overnight === true,
+  }));
   if (!draft.back) return out;
-  const home = [...out].reverse().map((l) => ({ from: l.to, to: l.from, mode: l.mode }));
+  const home = [...out].reverse().map((l) => ({ ...l, from: l.to, to: l.from }));
   return [...out, ...home];
+}
+
+/**
+ * The goal's nights: the trip's nights less those spent at stops on the way and those spent on
+ * board, never below zero. The way back stops nowhere until the traveller adds a stop.
+ */
+export function goalNights(draft: RouteDraft, tripNights: number): number {
+  const onTheWay = draft.stops.slice(0, -1).reduce((n, s) => n + Math.max(0, s.nights ?? 0), 0),
+    onBoard = draftLegs(draft).filter((l) => l.overnight).length;
+  return Math.max(0, tripNights - onTheWay - onBoard);
 }
 
 export const needsBooking = (mode: LegMode) => BOOKED_MODES.has(mode);
@@ -48,9 +68,9 @@ export interface BuiltRoute {
 }
 
 /**
- * Stations, stages and the placeholders of booked legs. The goal holds the nights of the trip
- * until the traveller spreads them, so the schedule starts from the real dates instead of
- * putting every station on day one.
+ * Stations, stages and the placeholders of booked legs. Stops on the way keep the nights the
+ * traveller gave them, the goal holds the rest, so the schedule starts from the real dates
+ * instead of putting every station on day one.
  */
 export function buildRoute(
   draft: RouteDraft,
@@ -58,12 +78,22 @@ export function buildRoute(
 ): BuiltRoute {
   const legs = draftLegs(draft);
   const goalIndex = draft.stops.length;
+  const nightsAt = (i: number) =>
+    i === goalIndex
+      ? goalNights(draft, opts.nights)
+      : i > 0 && i < goalIndex
+        ? Math.max(0, draft.stops[i - 1].nights ?? 0)
+        : 0;
   const stations = [newStation(draft.start, 0), ...legs.map((l) => newStation(l.to, 0))].map(
-    (s, i) => (i === goalIndex ? { ...s, nights: Math.max(0, opts.nights) } : s)
+    (s, i) => ({ ...s, nights: nightsAt(i) })
   );
   const bookings: PlanBooking[] = [];
   const stages = legs.map((leg, i) => {
-    const stage = { ...newStage(stations[i].id, stations[i + 1].id), mode: leg.mode };
+    const stage = {
+      ...newStage(stations[i].id, stations[i + 1].id),
+      mode: leg.mode,
+      overnight: leg.overnight,
+    };
     if (!needsBooking(leg.mode)) return stage;
     const estimate = opts.estimates[i] ?? null;
     const booking: PlanBooking = {

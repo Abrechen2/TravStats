@@ -389,7 +389,12 @@
     "stopHint": "Ferry port, stopover or goal. The last stop is the goal; for each stop you choose how you get there.",
     "vehicle": "Travelling by",
     "vehicleNone": "No vehicle of my own",
-    "legPlaceholder": "Added as a placeholder on this leg. The real booking replaces it later."
+    "legPlaceholder": "Added as a placeholder on this leg. The real booking replaces it later.",
+    "overnight": "overnight",
+    "stopNights": "Nights in {{place}}",
+    "goalNights_one": "{{count}} night",
+    "goalNights_other": "{{count}} nights",
+    "nightsLabel": "nights"
   },
   "deletePlan": {
     "open": "Delete plan",

@@ -16,7 +16,14 @@ import { PlanActions, PlanNotice } from "./planLayout";
 import { PlacePicker } from "./route/PlacePicker";
 import { entryRecord } from "./planContext";
 import { RouteLegs } from "./create/RouteLegs";
-import { buildRoute, draftLegs, legTitle, needsBooking, type DraftStop } from "./create/routeDraft";
+import {
+  buildRoute,
+  draftLegs,
+  goalNights,
+  legTitle,
+  needsBooking,
+  type DraftStop,
+} from "./create/routeDraft";
 
 type Shape = "stay" | "route";
 interface Held {
@@ -233,6 +240,11 @@ export function PlanCreate({
               onStart={setStart}
               onAdd={(p) => changeStops([...stops, { place: p, mode: "drive" }])}
               onStops={changeStops}
+              goalNights={
+                draft && startDay && endDay
+                  ? goalNights(draft, daysBetween(startDay, endDay))
+                  : null
+              }
             />
           ) : (
             <Field label={t("create.destination")} htmlFor={uid + "-dest"} hint={label(start)}>

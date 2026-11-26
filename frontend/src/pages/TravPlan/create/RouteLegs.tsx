@@ -1,8 +1,12 @@
-import { Button, Field, Select } from "../../../components/ui";
+import { Button, Field, Input, Select } from "../../../components/ui";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { PlanPlace } from "../../../lib/api/travplan";
 import { PlacePicker } from "../route/PlacePicker";
+import { PlanCheck } from "../PlanParts";
 import { LEG_MODES, type DraftStop, type LegMode } from "./routeDraft";
+
+/** Modes that can run through a night: a night ferry, a sleeper train. */
+const NIGHT_MODES = new Set<LegMode>(["ferry", "rail"]);
 
 const label = (p: PlanPlace | null) =>
   p ? [p.name, p.country, p.zone].filter(Boolean).join(" · ") : "";
@@ -18,6 +22,7 @@ export function RouteLegs({
   onStart,
   onAdd,
   onStops,
+  goalNights,
 }: {
   uid: string;
   start: PlanPlace | null;
@@ -25,10 +30,14 @@ export function RouteLegs({
   onStart: (place: PlanPlace) => void;
   onAdd: (place: PlanPlace) => void;
   onStops: (stops: DraftStop[]) => void;
+  /** The nights left for the goal, or null while the dates are not set. */
+  goalNights: number | null;
 }) {
   const { t } = useTranslation("travplan");
+  const change = (i: number, patch: Partial<DraftStop>) =>
+    onStops(stops.map((s, j) => (j === i ? { ...s, ...patch } : s)));
   const setMode = (i: number, mode: LegMode) =>
-    onStops(stops.map((s, j) => (j === i ? { ...s, mode } : s)));
+    change(i, { mode, overnight: NIGHT_MODES.has(mode) ? stops[i].overnight : false });
   return (
     <>
       <Field label={t("create.start")} htmlFor={uid + "-start"} hint={label(start)}>
@@ -52,8 +61,42 @@ export function RouteLegs({
               </Select>
               <span className="t-body min-w-0 flex-1">
                 → {s.place.name}
-                {i === stops.length - 1 && <span className="t-caption"> · {t("create.goal")}</span>}
+                {i === stops.length - 1 && (
+                  <span className="t-caption">
+                    {" · "}
+                    {t("create.goal")}
+                    {goalNights !== null
+                      ? " · " + t("create.goalNights", { count: goalNights })
+                      : ""}
+                  </span>
+                )}
               </span>
+              {NIGHT_MODES.has(s.mode) && (
+                <PlanCheck
+                  checked={s.overnight === true}
+                  onChange={(overnight) => change(i, { overnight })}
+                >
+                  {t("create.overnight")}
+                </PlanCheck>
+              )}
+              {i < stops.length - 1 && (
+                <label
+                  className="t-caption flex items-center"
+                  style={{ gap: "var(--ts-space-sm)" }}
+                >
+                  <Input
+                    type="number"
+                    min={0}
+                    aria-label={t("create.stopNights", { place: s.place.name })}
+                    value={String(s.nights ?? 0)}
+                    onChange={(e) =>
+                      change(i, { nights: Math.max(0, Number(e.target.value) || 0) })
+                    }
+                    style={{ width: "5rem", flex: "none" }}
+                  />
+                  {t("create.nightsLabel")}
+                </label>
+              )}
               <Button
                 aria-label={t("create.removeStop", { place: s.place.name })}
                 onClick={() => onStops(stops.filter((_, j) => j !== i))}

@@ -389,7 +389,12 @@
     "stopHint": "Fährhafen, Zwischenstopp oder Ziel. Der letzte Halt ist das Ziel; bei jedem Halt wählst du, wie du hinkommst.",
     "vehicle": "Unterwegs mit",
     "vehicleNone": "Ohne eigenes Fahrzeug",
-    "legPlaceholder": "Wird als Platzhalter an dieser Etappe angelegt. Die echte Buchung ersetzt ihn später."
+    "legPlaceholder": "Wird als Platzhalter an dieser Etappe angelegt. Die echte Buchung ersetzt ihn später.",
+    "overnight": "über Nacht",
+    "stopNights": "Nächte in {{place}}",
+    "goalNights_one": "{{count}} Nacht",
+    "goalNights_other": "{{count}} Nächte",
+    "nightsLabel": "Nächte"
   },
   "deletePlan": {
     "open": "Plan löschen",
