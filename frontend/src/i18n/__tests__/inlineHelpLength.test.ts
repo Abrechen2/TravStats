@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 /**
  * Inline help stays one line (owner, 2026-11-26: "nobody reads the big text
- * blocks"). Before this guard, 246 description/hint/help/intro strings ran past
+ * blocks"). Before this guard, 248 description/hint/help/intro strings ran past
  * 120 characters — the longest 728 — because every rule that asked for an
  * explanation ("a failure must reach the user as itself", provenance, "say why
  * instead of drawing a broken button") was met with another paragraph, and no
