@@ -54,3 +54,10 @@ describe("SearchInput", () => {
     expect(onChange).toHaveBeenLastCalledWith("");
   });
 });
+
+describe("SearchInput when it cannot be edited", () => {
+  it("offers no clear button on a disabled box, so the clear cannot change what the box would not let you type", () => {
+    render(<SearchInput label="Suche" value="Rom" onChange={() => {}} disabled />);
+    expect(screen.queryByRole("button", { name: "common:ui.clearSearch" })).toBeNull();
+  });
+});

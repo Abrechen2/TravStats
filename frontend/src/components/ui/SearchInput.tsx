@@ -118,10 +118,10 @@ export function SearchInput({
         data-testid={testId}
         value={text}
         onChange={(event) => emit(event.target.value)}
-        className={`min-w-0 flex-1 bg-transparent text-sm outline-hidden pointer-coarse:min-h-(--ts-size-touch-min) [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden${inputClassName ? ` ${inputClassName}` : ""}`}
+        className={`min-w-0 flex-1 bg-transparent text-sm focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-(--ts-accent) outline-hidden pointer-coarse:min-h-(--ts-size-touch-min) [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden${inputClassName ? ` ${inputClassName}` : ""}`}
         style={{ color: "var(--ts-text-bright)", minHeight: "inherit" }}
       />
-      {text.length > 0 ? (
+      {text.length > 0 && !rest.disabled && !rest.readOnly ? (
         <button
           type="button"
           onClick={clear}

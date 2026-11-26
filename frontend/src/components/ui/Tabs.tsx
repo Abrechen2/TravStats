@@ -110,7 +110,7 @@ export function Tabs<T extends string>({
       style={
         pill
           ? { gap: "var(--ts-space-sm)" }
-          : { borderBottom: borderless ? undefined : "1px solid var(--ts-border)", flexShrink: 0 }
+          : { borderBottom: borderless ? undefined : "1px solid var(--ts-border)", minWidth: 0 }
       }
     >
       {tabs.map((tab, index) => {
