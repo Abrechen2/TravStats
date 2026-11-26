@@ -12,6 +12,7 @@ import { FormErrorBanner, navigateAfterSave } from "../components/form";
 import { saveErrorKey } from "../lib/saveErrorMessage";
 import { listCuratedChecklists, listPlaceLists, subscribeChecklist } from "../lib/api/placeLists";
 import { DOMAINS } from "../shared/domains";
+import { listPendingCounts } from "../lib/api/smartLists";
 import type { CuratedListSummary, PlaceList } from "../types/placeList";
 
 /**
@@ -33,6 +34,7 @@ export default function PlaceListsPage(): JSX.Element {
   const access = usePlacesAccess();
 
   const [lists, setLists] = useState<PlaceList[]>([]);
+  const [pendingCounts, setPendingCounts] = useState<Record<string, number>>({});
   const [curated, setCurated] = useState<CuratedListSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -60,6 +62,12 @@ export default function PlaceListsPage(): JSX.Element {
   useEffect(() => {
     if (access !== "allowed") return;
     void load();
+    // The badge is a pointer, not the record: without it the list still opens with its section.
+    listPendingCounts()
+      .then(setPendingCounts)
+      .catch((err: unknown) => {
+        logger.warn({ err }, "PlaceListsPage: pending counts could not be read");
+      });
   }, [access, load]);
 
   // A subscribed checklist is shown under checklists, with its progress — so it
@@ -204,6 +212,20 @@ export default function PlaceListsPage(): JSX.Element {
                           />
                           {list.icon && <span aria-hidden>{list.icon}</span>}
                           <span className="font-medium">{list.name}</span>
+                          {(pendingCounts[list.id] ?? 0) > 0 && (
+                            <span
+                              className="ml-auto rounded-full px-2 py-0.5 text-xs"
+                              style={{
+                                background: "var(--ts-accent)",
+                                color: "var(--ts-on-accent, #fff)",
+                              }}
+                              data-testid="list-pending-badge"
+                            >
+                              {t("places:smartList.pendingBadge", {
+                                count: pendingCounts[list.id],
+                              })}
+                            </span>
+                          )}
                         </span>
                         <span className="mt-2 block text-xs" style={{ color: "var(--text-muted)" }}>
                           {t("places:lists.counts", {

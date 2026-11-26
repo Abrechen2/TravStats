@@ -7,12 +7,15 @@ import {
   getListRule,
   listAutoAccepted,
   listNewOutlets,
+  listPendingConfirmations,
   undoAutoAccepted,
   type ListRule,
   type SmartSuggestion,
 } from "../../../lib/api/smartLists";
 import { BrandRuleDialog } from "./BrandRuleDialog";
 import { SuggestionRow } from "./SuggestionRow";
+import PendingConfirmations from "./PendingConfirmations";
+import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
 
 const COARSE =
   "pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)";
@@ -34,9 +37,12 @@ export default function SmartListPanel({
   const [rule, setRule] = useState<ListRule | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [outlets, setOutlets] = useState<SmartSuggestion[]>([]);
+  const [pending, setPending] = useState<SmartSuggestion[]>([]);
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [auto, setAuto] = useState<SmartSuggestion[]>([]);
   const [failed, setFailed] = useState(false);
   const [undoError, setUndoError] = useState<string | null>(null);
+  const [undoFailedCount, setUndoFailedCount] = useState(0);
   const [undoing, setUndoing] = useState<string | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
@@ -44,10 +50,16 @@ export default function SmartListPanel({
       const next = await getListRule(listId);
       setRule(next);
       if (next) {
-        const [o, a] = await Promise.all([listNewOutlets(listId), listAutoAccepted(listId)]);
+        const [p, o, a] = await Promise.all([
+          listPendingConfirmations(listId),
+          listNewOutlets(listId),
+          listAutoAccepted(listId),
+        ]);
+        setPending(p);
         setOutlets(o);
         setAuto(a);
       } else {
+        setPending([]);
         setOutlets([]);
         setAuto([]);
       }
@@ -79,6 +91,33 @@ export default function SmartListPanel({
     }
   };
 
+  /** Take back every automatic entry the feed shows, after one confirmation; failures are named. */
+  const undoAll = async (): Promise<void> => {
+    const ok = await confirm({
+      title: t("places:smartList.undoAllTitle"),
+      message: t("places:smartList.undoAllMessage", { count: auto.length }),
+      confirmText: t("places:smartList.undoAll"),
+      destructive: true,
+    });
+    if (!ok) return;
+    setUndoing("all");
+    setUndoError(null);
+    let failed = 0;
+    for (const row of auto) {
+      try {
+        await undoAutoAccepted(row.id);
+      } catch (err: unknown) {
+        logger.error({ err }, "SmartListPanel: one undo failed");
+        failed += 1;
+      }
+    }
+    setUndoFailedCount(failed);
+    if (failed > 0) setUndoError("places:smartList.undoAllFailed");
+    setUndoing(null);
+    await load();
+    onChanged();
+  };
+
   return (
     <>
       {loaded && failed && (
@@ -107,6 +146,14 @@ export default function SmartListPanel({
             })}
           </p>
 
+          <PendingConfirmations
+            rows={pending}
+            onAnswered={() => {
+              void load();
+              onChanged();
+            }}
+          />
+
           {outlets.length > 0 && (
             <div className="mt-4">
               <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
@@ -130,12 +177,28 @@ export default function SmartListPanel({
 
           {auto.length > 0 && (
             <div className="mt-4">
-              <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                {t("places:smartList.recentAuto")}
-              </h2>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  {t("places:smartList.recentAuto")}
+                </h2>
+                {auto.length > 1 && (
+                  <button
+                    type="button"
+                    disabled={undoing !== null}
+                    onClick={() => void undoAll()}
+                    className="ml-auto rounded-lg px-3 py-1 text-sm disabled:opacity-50"
+                    style={{
+                      border: "1px solid var(--color-border)",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    {t("places:smartList.undoAll")}
+                  </button>
+                )}
+              </div>
               {undoError && (
                 <p role="alert" className="mb-2 text-sm" style={{ color: "var(--danger)" }}>
-                  {t(undoError)}
+                  {t(undoError, { count: undoFailedCount })}
                 </p>
               )}
               <ul className="grid gap-2" style={{ listStyle: "none", padding: 0 }}>
@@ -181,6 +244,7 @@ export default function SmartListPanel({
           )}
         </section>
       )}
+      {confirmDialog}
       {ruleOpen && (
         <BrandRuleDialog
           listId={listId}

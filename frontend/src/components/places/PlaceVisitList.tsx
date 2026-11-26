@@ -16,6 +16,10 @@ import {
   type VisitGroup,
 } from "./placeVisitListModel";
 import { PlaceVisitRow } from "./PlaceVisitRow";
+import Toggletip from "../ui/Toggletip";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import { logger } from "../../lib/logger";
+import { isAutomatic, undoAutomaticVisits } from "../../lib/api/smartLists";
 
 interface Props {
   visits: readonly PlaceVisit[];
@@ -62,11 +66,44 @@ export function PlaceVisitList({
   const [filter, setFilter] = useState<VisitFilter>("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const [pastLimit, setPastLimit] = useState(PAST_PAGE_SIZE);
+  // "Automatisch eingetragen" (owner 2026-11-26): review what automation wrote, undo it in bulk.
+  const [autoOnly, setAutoOnly] = useState(false);
+  const [undoLine, setUndoLine] = useState<{ ok: boolean; text: string } | null>(null);
+  const [undoing, setUndoing] = useState(false);
+  const { confirm, confirmDialog } = useConfirmDialog();
+  const automatic = useMemo(() => visits.filter(isAutomatic), [visits]);
+  const shown = autoOnly && automatic.length > 0 ? automatic : visits;
 
   const model = useMemo(
-    () => buildVisitList(visits, { now: clockNow(), fallbackZone, filter, pastLimit }),
-    [visits, fallbackZone, filter, pastLimit]
+    () => buildVisitList(shown, { now: clockNow(), fallbackZone, filter, pastLimit }),
+    [shown, fallbackZone, filter, pastLimit]
   );
+
+  const undoAll = async (): Promise<void> => {
+    const ok = await confirm({
+      title: t("places:autoFilter.undoTitle"),
+      message: t("places:autoFilter.undoMessage", { count: automatic.length }),
+      confirmText: t("places:autoFilter.undoAll"),
+      destructive: true,
+    });
+    if (!ok) return;
+    setUndoing(true);
+    setUndoLine(null);
+    try {
+      const results = await undoAutomaticVisits(automatic.map((v) => v.id));
+      const removed = results.filter((r) => r.outcome === "removed").length;
+      setUndoLine({
+        ok: true,
+        text: t("places:autoFilter.result", { removed, kept: results.length - removed }),
+      });
+      onVisitChanged();
+    } catch (err: unknown) {
+      logger.error({ err }, "PlaceVisitList: bulk undo failed");
+      setUndoLine({ ok: false, text: t("places:autoFilter.failed") });
+    } finally {
+      setUndoing(false);
+    }
+  };
 
   const dayText = (e: VisitEntry | null): string | null => (e?.day ? fmt.localDate(e.day) : null);
 
@@ -132,11 +169,44 @@ export function PlaceVisitList({
               ))}
             </div>
           )}
+          {automatic.length > 0 && (
+            <span className="flex items-center gap-1">
+              <button
+                type="button"
+                aria-pressed={autoOnly}
+                onClick={() => setAutoOnly((v) => !v)}
+                className="rounded-full px-3.5 text-sm"
+                style={{
+                  minHeight: "var(--ts-size-touch-min)",
+                  border: `1px solid ${autoOnly ? "var(--ts-accent)" : "var(--ts-border-button)"}`,
+                  color: autoOnly ? "var(--ts-accent)" : "var(--ts-muted)",
+                }}
+              >
+                {t("places:autoFilter.label")} ({automatic.length})
+              </button>
+              <Toggletip content={t("places:autoFilter.info")} />
+            </span>
+          )}
+          {autoOnly && automatic.length > 0 && (
+            <Button disabled={undoing} onClick={() => void undoAll()}>
+              {t("places:autoFilter.undoAll")}
+            </Button>
+          )}
           <Button variant="primary" onClick={onAdd}>
             + {t("places:detail.addVisit")}
           </Button>
         </div>
       </div>
+      {undoLine && (
+        <p
+          className="t-caption m-0"
+          role={undoLine.ok ? "status" : "alert"}
+          style={{ color: undoLine.ok ? "var(--ts-good)" : "var(--ts-bad)" }}
+        >
+          {undoLine.text}
+        </p>
+      )}
+      {confirmDialog}
 
       {model.counts.total > 0 && (
         <p className="t-caption m-0" data-testid="visit-summary">
