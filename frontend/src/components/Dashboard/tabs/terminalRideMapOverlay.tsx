@@ -2,6 +2,7 @@ import { useRoutesVisible } from "../../../store/mapRoutesStore";
 import { PLANNED_FILL_ALPHA, PLANNED_RING_PX } from "../../../lib/mapPresence";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
+import type { ActivityDates } from "../../Globe/timeSliderUtils";
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import {
@@ -219,6 +220,8 @@ export interface TerminalRideOverlay {
   legendRows: JSX.Element[];
   /** The drawn rides and their colour, for the map's ONE station-label pass. */
   stations: StationLabelGroup;
+  /** Departure instant of every drawn ride, for the globe's activity histogram. */
+  dates: ActivityDates["dates"];
   /** Still loading (the dedicated tab says so rather than "no rides"). */
   loading: boolean;
   /** How many rides are drawn, for the dedicated tab's empty state. */
@@ -260,12 +263,14 @@ export function useTerminalRideOverlay<R extends TerminalRideLine & StationLabel
     [drawn, color, onGlobe, spec.idPrefix, spec.domain]
   );
   const stations = useMemo(() => ({ rides: drawn, color: hexToRgb(color) }), [drawn, color]);
+  const dates = useMemo(() => drawn.map((r) => r.departureTime ?? null), [drawn]);
   return {
     layers,
     legendRows: linesShown
       ? buildTerminalRideLegendRows(drawn, color, t, legendRow, spec.legend)
       : [],
     stations,
+    dates,
     loading: show && loading,
     count: drawn.length,
     status:

@@ -65,6 +65,7 @@ import { initialLegendOpen, isPhoneViewport } from "./legendInitialState";
 import { SidebarToggle } from "../SidebarToggle";
 import { Icon } from "../../ui/Icon";
 import { useDomainColors } from "../../../hooks/useDomainColors";
+import { useAllTabActivity } from "./allTabActivity";
 import { DomainFilterButton } from "./DomainFilterButton";
 import { DomainFilterEmptyOverlay } from "./DomainFilterEmptyOverlay";
 import { allTabAppearanceDomains, useAllTabDomainVisibility } from "./useAllTabDomainVisibility";
@@ -103,9 +104,7 @@ function dedupeByKey(rows: JSX.Element[]): JSX.Element[] {
   return rows.filter((row) => {
     const key = String(row.key ?? "");
     if (key === "") return true;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+    return seen.has(key) ? false : (seen.add(key), true);
   });
 }
 
@@ -453,6 +452,7 @@ export function AllTab(): JSX.Element {
   // "journey" a few lines up.
   // Rail, bus, ferry and rentals beside the tours, each behind its own gates and filter row.
   const transport = useTransportOverlays(showTours, domainFilter.isVisible, visMode === "globe", t);
+  const activity = useAllTabActivity(transport.activity, visibleLodgings, visiblePlaces);
   const tourDeck = useTourDeckLayers(tourPathData, visMode === "globe", dashboardTours.tours);
   const tourLayers = useMemo<Layer[]>(
     () => [...tourDeck, ...transport.layers],
@@ -772,6 +772,7 @@ export function AllTab(): JSX.Element {
         onCruiseOpen={handleCruiseOpen}
         cruisesOverride={visibleCruises}
         lodgingsOverride={visibleLodgings}
+        activity={activity}
         onLodgingClick={handleLodgingClick}
         hideInfoPill
         filterSlot={

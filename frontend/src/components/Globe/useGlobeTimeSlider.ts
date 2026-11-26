@@ -6,6 +6,8 @@ import {
   computeCruiseLegDates,
   computeMonthlyBuckets,
   computeTimeRange,
+  NO_ACTIVITY,
+  type ActivityDates,
   flightVisibleFilter,
   flightVisibleLive,
   type CruiseLegDates,
@@ -17,7 +19,11 @@ const safeTime = (iso: string | null | undefined): number | null => {
   return Number.isFinite(t) ? t : null;
 };
 
-export function useGlobeTimeSlider(flights: GeoJSONFeature[], cruises: Cruise[]) {
+export function useGlobeTimeSlider(
+  flights: GeoJSONFeature[],
+  cruises: Cruise[],
+  activity: readonly ActivityDates[] = NO_ACTIVITY
+) {
   // don't re-render the whole component. The store mode drives whether
   // flights / cruise legs / ports get filtered before they reach the
   // deck.gl layers.
@@ -31,15 +37,15 @@ export function useGlobeTimeSlider(flights: GeoJSONFeature[], cruises: Cruise[])
   // or cruises change identity. The store dedupes if the bounds didn't
   // actually move, so this stays O(1) on the hot selection-change path.
   useEffect(() => {
-    const range = computeTimeRange(flights, cruises);
+    const range = computeTimeRange(flights, cruises, activity);
     if (range) setSliderRange(range.min, range.max);
-  }, [flights, cruises, setSliderRange]);
+  }, [flights, cruises, activity, setSliderRange]);
 
-  // Monthly activity buckets for the time histogram (flights + cruises).
+  // Monthly activity buckets for the time histogram (every domain with dated entries).
   const monthBuckets = useMemo<MonthBucket[]>(() => {
-    const range = computeTimeRange(flights, cruises);
-    return range ? computeMonthlyBuckets(flights, cruises, range.min, range.max) : [];
-  }, [flights, cruises]);
+    const range = computeTimeRange(flights, cruises, activity);
+    return range ? computeMonthlyBuckets(flights, cruises, range.min, range.max, activity) : [];
+  }, [flights, cruises, activity]);
 
   // Per-leg date metadata for every cruise. Computed once per cruises
   // identity. Keyed by cruiseId so the live-mode partial-draw can pair

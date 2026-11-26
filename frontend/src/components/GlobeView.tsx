@@ -58,6 +58,7 @@ import { useMapFocusRequests } from "./map/cards/useMapFocusRequests";
 import { resolveFlightTipColor } from "../lib/flightColor";
 import { useTranslation } from "../hooks/useTranslation";
 import { GlobeTimeHistogram } from "./Globe/GlobeTimeHistogram";
+import { NO_ACTIVITY, type ActivityDates } from "./Globe/timeSliderUtils";
 import { GlobeCoachmark } from "./Globe/GlobeCoachmark";
 
 /**
@@ -129,6 +130,8 @@ interface GlobeViewProps {
    * never drew.
    */
   lodgings?: readonly Lodging[];
+  /** Dated entries of the other domains — they only feed the activity histogram. */
+  activity?: readonly ActivityDates[];
   /**
    * Fired by the pinned card's "open" CTA — the globe's counterpart of the
    * flat map's pin click. It is deliberately NOT called on the click itself:
@@ -179,6 +182,7 @@ export default function GlobeView({
   appearanceDomains = ["flight", "cruise"],
   extraLayers = NO_LAYERS,
   lodgings = NO_LODGINGS,
+  activity = NO_ACTIVITY,
   onLodgingOpen,
   places = NO_PLACES,
   onPlaceOpen,
@@ -361,7 +365,6 @@ export default function GlobeView({
   // pops. Click the active band again to clear.
   const [activeQuartile, setActiveQuartile] = useState<Quartile | null>(null);
 
-  // Time-slider state. Sliced per-field so unrelated store changes
   const {
     sliderMode,
     sliderCurrent,
@@ -372,7 +375,7 @@ export default function GlobeView({
     filteredFlights,
     arcFlights,
     arcTimeline,
-  } = useGlobeTimeSlider(flights, cruises);
+  } = useGlobeTimeSlider(flights, cruises, activity);
 
   // Aggregate flights into city-pair routes with count + heatmap colour.
   const { arcsData, antipodalArcs, heatmapThresholds } = useMemo(
@@ -730,10 +733,8 @@ export default function GlobeView({
         />
       </div>
 
-      {/* Top-center: activity histogram — filter (brush) + playback (▶) in
-          one strip, replacing the old three-mode slider. Sits at the top
-          centre: the dashboard's colour legend now lives in a bottom-right
-          table (AllTab), so the top band is clear. */}
+      {/* Top-center: activity histogram — filter (brush) + playback (▶) in one
+          strip; the dashboard's colour legend lives bottom-right (AllTab). */}
       <div
         className="absolute top-3 left-1/2 z-10 -translate-x-1/2"
         style={{ pointerEvents: "auto" }}

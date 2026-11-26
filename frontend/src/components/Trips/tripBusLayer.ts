@@ -38,6 +38,8 @@ export interface TerminalRideLine {
   arrLat: number;
   arrLon: number;
   geometry: [number, number][] | null;
+  /** Departure instant; only the activity histogram reads it. */
+  departureTime?: string;
 }
 
 /**

@@ -15,14 +15,21 @@
 // State still lives in `useTimeSliderStore`; this component only drives it,
 // so GlobeView's visibility logic is unchanged.
 
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTimeSliderStore } from "../../store/timeSliderStore";
-import type { MonthBucket } from "./timeSliderUtils";
+import { useDomainColors } from "../../hooks/useDomainColors";
+import { AVAILABLE_DOMAINS, type DomainKey } from "../../shared/domains";
+import { coarsenBuckets, type MonthBucket } from "./timeSliderUtils";
 import { MAP_CHROME } from "../map/mapChrome";
 
 const AMBER = "240,169,71";
-const CRUISE = "111,160,214";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 // Bar-row height in each state. The row animates between the two so the
@@ -35,6 +42,18 @@ interface Props {
   visibleFlights: number;
   visibleCruises: number;
   disabled?: boolean;
+}
+
+/** A bucket's entries per domain, in the order the stack draws them (bottom first). */
+export function bucketSegments(b: MonthBucket): { domain: DomainKey; count: number }[] {
+  const counts: Partial<Record<DomainKey, number>> = {
+    ...b.others,
+    flight: b.flights,
+    cruise: b.cruises,
+  };
+  return AVAILABLE_DOMAINS.map((domain) => ({ domain, count: counts[domain] ?? 0 })).filter(
+    (s) => s.count > 0
+  );
 }
 
 // "Nice" step sizes for a year axis, in ascending order — pick the smallest
@@ -70,12 +89,14 @@ const fmt = (d: Date | null, locale: string): string =>
   d ? d.toLocaleDateString(locale, { year: "numeric", month: "short", timeZone: "UTC" }) : "—";
 
 export const GlobeTimeHistogram = ({
-  buckets,
+  buckets: monthly,
   visibleFlights,
   visibleCruises,
   disabled = false,
 }: Props): JSX.Element => {
   const { t, i18n } = useTranslation(["map"]);
+  const { colorOf } = useDomainColors();
+  const buckets = useMemo(() => coarsenBuckets(monthly), [monthly]);
   const locale = i18n.language || "de";
 
   const mode = useTimeSliderStore((s) => s.mode);
@@ -224,7 +245,9 @@ export const GlobeTimeHistogram = ({
 
   const expanded = hovered || isPlaying || dragRange !== null || scrubbing;
 
-  const maxTotal = Math.max(1, ...buckets.map((b) => b.flights + b.cruises));
+  const totalOf = (b: MonthBucket): number =>
+    b.flights + b.cruises + Object.values(b.others).reduce((n, c) => n + (c ?? 0), 0);
+  const maxTotal = Math.max(1, ...buckets.map(totalOf));
   const inFilter = mode === "filter" && filterStart !== null && filterEnd !== null;
   const filterLo = inFilter ? fracOfDate(filterStart) : 0;
   const filterHi = inFilter ? fracOfDate(filterEnd) : 1;
@@ -332,12 +355,11 @@ export const GlobeTimeHistogram = ({
           }}
         >
           {buckets.map((b, i) => {
-            const total = b.flights + b.cruises;
+            const total = totalOf(b);
             const h = total === 0 ? 3 : 6 + (total / maxTotal) * 94;
             const [bf0, bf1] = [i / buckets.length, (i + 1) / buckets.length];
             const outside = inFilter && (bf1 <= filterLo || bf0 >= filterHi);
             const isPlay = i === playBar;
-            const fShare = total ? (b.flights / total) * 100 : 0;
             return (
               <div
                 key={i}
@@ -348,8 +370,16 @@ export const GlobeTimeHistogram = ({
                   boxShadow: isPlay ? `0 0 8px rgba(${AMBER},0.6)` : undefined,
                 }}
               >
-                <div style={{ height: `${fShare}%`, background: `rgb(${AMBER})` }} />
-                <div style={{ height: `${100 - fShare}%`, background: `rgb(${CRUISE})` }} />
+                {bucketSegments(b).map((seg) => (
+                  <div
+                    key={seg.domain}
+                    data-domain={seg.domain}
+                    style={{
+                      height: `${(seg.count / total) * 100}%`,
+                      background: colorOf(seg.domain),
+                    }}
+                  />
+                ))}
               </div>
             );
           })}

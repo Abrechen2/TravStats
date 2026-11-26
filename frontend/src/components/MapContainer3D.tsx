@@ -4,6 +4,7 @@ import { DeckGLMap } from "./DeckGLMap";
 import { GlobeLoader } from "./GlobeLoader";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { Lodging } from "../types/lodging";
+import type { ActivityDates } from "./Globe/timeSliderUtils";
 import type { Place } from "../types/place";
 import type { Layer } from "@deck.gl/core";
 import type { AppearanceDomain } from "./map/controlPanelKit";
@@ -98,6 +99,8 @@ interface MapContainer3DProps {
    * beside a sidebar listing 31 hotels.
    */
   lodgingsOverride?: Lodging[];
+  /** Dated entries of the other domains, for the globe's activity histogram. */
+  activity?: readonly ActivityDates[];
   /**
    * Fired when a lodging pin is clicked — receives the lodging id.
    * Threaded straight through to DeckGLMap, which builds the actual pin
@@ -149,6 +152,7 @@ export default function MapContainer3D({
   hideInfoPill = false,
   cruisesOverride,
   lodgingsOverride,
+  activity,
   onLodgingClick,
   placesOverride,
   onPlaceClick,
@@ -279,6 +283,7 @@ export default function MapContainer3D({
                 appearanceDomains={appearanceDomains}
                 extraLayers={extraLayers}
                 lodgings={lodgingsOverride}
+                activity={activity}
                 onLodgingOpen={onLodgingClick}
                 places={placesOverride}
                 onPlaceOpen={onPlaceClick}

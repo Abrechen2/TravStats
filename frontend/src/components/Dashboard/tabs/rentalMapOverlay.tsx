@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
+import type { ActivityDates } from "../../Globe/timeSliderUtils";
 import type { Layer } from "@deck.gl/core";
 import {
   RENTAL_GLOBE_ALTITUDE_M,
@@ -153,6 +154,8 @@ export interface RentalOverlay {
   loading: boolean;
   /** How many rentals are drawn, for the dedicated tab's empty state. */
   count: number;
+  /** Pick-up instant of every drawn rental, for the globe's activity histogram. */
+  dates: ActivityDates["dates"];
 }
 
 /** The rental layer of the "Alle" map as one hook, so that tab gains a line, not a block. */
@@ -172,9 +175,11 @@ export function useRentalOverlay(show: boolean, onGlobe: boolean, t: Translate):
     () => buildRentalMapLayers(drawn, color, onGlobe, "all-rental", style),
     [drawn, color, onGlobe, style]
   );
+  const dates = useMemo(() => drawn.map((r) => r.times?.pickup?.utc), [drawn]);
   return {
     layers,
     legendRows: buildRentalLegendRows(drawn, color, t, legendRow, style),
+    dates,
     loading: show && loading,
     count: drawn.length,
     status:

@@ -1,6 +1,7 @@
 import { useRoutesVisible } from "../../../store/mapRoutesStore";
 import { useMemo } from "react";
 import type { JSX } from "react";
+import type { ActivityDates } from "../../Globe/timeSliderUtils";
 import type { Layer } from "@deck.gl/core";
 import {
   buildRailDeckLayers,
@@ -133,6 +134,8 @@ export interface RailOverlay {
   legendRows: JSX.Element[];
   /** The drawn journeys and their colour, for the map's ONE station-label pass. */
   stations: StationLabelGroup;
+  /** Departure instant of every drawn journey, for the globe's activity histogram. */
+  dates: ActivityDates["dates"];
 }
 
 /**
@@ -156,10 +159,12 @@ export function useRailOverlay(show: boolean, onGlobe: boolean, t: Translate): R
     [drawn, color, onGlobe, style]
   );
   const stations = useMemo(() => ({ rides: drawn, color: hexToRgb(color) }), [drawn, color]);
+  const dates = useMemo(() => (show ? journeys : []).map((j) => j.departureTime), [show, journeys]);
   return {
     layers,
     legendRows: linesShown ? buildRailLegendRows(drawn, color, t, legendRow) : [],
     stations,
+    dates,
   };
 }
 
