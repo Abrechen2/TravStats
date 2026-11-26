@@ -189,6 +189,18 @@ describe("plugin-fed place lists", () => {
     expect(entry.externalFields).toMatchObject({ fields: { colA: "4711" } });
   });
 
+  it("without a hello this time, a new member keeps the fields of the list's saved columns", async () => {
+    const { listId } = await syncPluginList(userId, await plugin(), HELLO, "de");
+    await acceptTheSuggestion();
+    await prisma.placeListEntry.deleteMany({ where: { listId: listId! } });
+    // The hello failed: no columns announced now.
+    await syncPluginList(userId, await plugin(), null, "de");
+    const [entry] = await prisma.placeListEntry.findMany({ where: { listId: listId! } });
+    expect(entry.externalFields).toMatchObject({
+      fields: { colA: "4711", colB: "Neubau Halle 3" },
+    });
+  });
+
   it("a plugin without `list` gets no list until switched on, then generic columns only", async () => {
     const bare = pluginHelloSchema.parse({ name: "Bare", version: 1, kinds: ["stop"] });
     expect(await syncPluginList(userId, await plugin(), bare, "de")).toMatchObject({

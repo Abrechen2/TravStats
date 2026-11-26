@@ -237,6 +237,20 @@ describe("PlaceListTable", () => {
     );
   });
 
+  it("a slower answer to an older sort does not overwrite the newer one", async () => {
+    let releaseOld: (v: ListMembersPage) => void = () => {};
+    getListMembers
+      .mockImplementationOnce(() => new Promise<ListMembersPage>((r) => (releaseOld = r)))
+      .mockResolvedValue(page({ rows: [row({ name: "Neu" })] }));
+    renderTable();
+    await userEvent.click(screen.getByRole("button", { name: "Nach Name sortieren" }));
+    await screen.findByText("Neu");
+    releaseOld(page({ rows: [row({ name: "Alt" })] }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByText("Alt")).toBeNull();
+    expect(screen.getByText("Neu")).toBeTruthy();
+  });
+
   it("says when the places could not be loaded, and retries", async () => {
     getListMembers.mockRejectedValueOnce(new Error("boom"));
     renderTable();

@@ -209,8 +209,15 @@ export async function syncPluginList(
   }
   // Fill (first time) and top up: places made since, also outside the accept flow, join on the
   // next look at the settings card. Only missing members are written.
+  // Without a hello this time, the columns the list keeps decide which fields a new member gets.
   if (enabled && list)
-    await backfillMembers(userId, plugin.id, list.id, columns, hello?.list?.refNamespace ?? null);
+    await backfillMembers(
+      userId,
+      plugin.id,
+      list.id,
+      hello?.list ? columns : pluginColumnsOf(list.pluginColumns),
+      hello?.list?.refNamespace ?? null
+    );
   return { enabled, announced, listId: list?.id ?? null, listName: list?.name ?? null };
 }
 

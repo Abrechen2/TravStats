@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type JSX } from "react";
+import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { logger } from "../../../lib/logger";
 import { getListMembers } from "../../../lib/api/placeLists";
@@ -67,25 +67,30 @@ export default function PlaceListTable({
     return () => clearTimeout(id);
   }, [query]);
 
+  // Only the newest request may fill the table: a slower answer to an older sort, search or page
+  // must not overwrite what the controls now say.
+  const latest = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++latest.current;
     setLoading(true);
     try {
-      setData(
-        await getListMembers(listId, {
-          sort,
-          order,
-          page: pager.page,
-          pageSize,
-          q,
-          ...(autoOnly ? { auto: true } : {}),
-        })
-      );
+      const next = await getListMembers(listId, {
+        sort,
+        order,
+        page: pager.page,
+        pageSize,
+        q,
+        ...(autoOnly ? { auto: true } : {}),
+      });
+      if (seq !== latest.current) return;
+      setData(next);
       setFailed(false);
     } catch (err: unknown) {
+      if (seq !== latest.current) return;
       logger.error({ err }, "PlaceListTable: members not loaded");
       setFailed(true);
     } finally {
-      setLoading(false);
+      if (seq === latest.current) setLoading(false);
     }
   }, [listId, sort, order, pager.page, pageSize, q, autoOnly]);
 
