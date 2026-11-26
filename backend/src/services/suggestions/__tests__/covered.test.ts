@@ -124,3 +124,30 @@ describe("judgeCover — forgejo#439", () => {
     expect(verdict.nearPlace).toMatchObject({ id: "place-1", name: "Rathaus" });
   });
 });
+
+describe("judgeCover — a hotel's check-out morning", () => {
+  it("covers a morning stop at the hotel on the check-out day, read in the stop's zone", () => {
+    // Prod 26.11.2026: check-out stored as local midnight (25.11. 23:00 UTC) in Vienna.
+    const HOTEL = { lat: 47.1411, lon: 10.5482 };
+    const stay = {
+      id: "stay-1",
+      tripId: null,
+      checkIn: new Date("2026-11-24T23:00:00Z"),
+      checkOut: new Date("2026-11-25T23:00:00Z"),
+      checkInDate: null,
+      checkOutDate: null,
+      lodging: { id: "lodging-1", name: "Hotel Bruggner", ...HOTEL },
+    };
+    const morning = target({
+      startAt: new Date("2026-11-26T06:56:00Z"),
+      endAt: new Date("2026-11-26T07:51:00Z"),
+      ...HOTEL,
+      zone: "Europe/Vienna",
+      tripId: null,
+    });
+    expect(judgeCover(morning, ctx([], { lodgingStays: [stay] })).covered).toMatchObject({
+      kind: "lodging",
+      day: "2026-11-26",
+    });
+  });
+});
