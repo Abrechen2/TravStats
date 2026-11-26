@@ -14,6 +14,7 @@ import { assignIdeaToDay } from "../ideaAssignment";
 import { buildDayPlan, foldQuietDays, type DayLeg, type DaySpan } from "./dayPlan";
 import { IdeaPicker, unplannedIdeas } from "./IdeaPicker";
 import { ItemLine } from "./ItemLine";
+import { QuickStop } from "./QuickStop";
 
 function LegLine({ leg, ctx, onEdit }: { leg: DayLeg; ctx: PlanCtx; onEdit: () => void }) {
   const { t } = useTranslation("travplan"),
@@ -175,6 +176,17 @@ function DayCard({
         >
           {t("days.addEntry")}
         </Button>
+        <QuickStop
+          vehicle={ctx.state.vehicle?.kind ?? null}
+          busy={ctx.busy}
+          onPick={(title, duration) =>
+            ctx.edit("items", {
+              ...newEntry("items", ctx.state.timezone, ctx.state.currency, chosen),
+              title,
+              duration,
+            })
+          }
+        />
         <IdeaPicker
           day={chosen}
           ideas={unplannedIdeas(ctx.state)}

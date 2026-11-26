@@ -813,6 +813,15 @@
     "unplan": "Zurück zu den Ideen",
     "editLeg": "Etappe {{from}} → {{to}} bearbeiten",
     "addEntry": "+ Eintrag",
-    "setDates": "Reisedaten setzen"
+    "setDates": "Reisedaten setzen",
+    "quickStop": "Kurzen Halt einplanen",
+    "quickStopPrompt": "+ Kurzer Halt",
+    "stop": {
+      "shopping": "Einkaufen",
+      "fuel": "Tanken",
+      "meal": "Essen",
+      "break": "Pause",
+      "service": "Ver- und Entsorgung"
+    }
   }
 }

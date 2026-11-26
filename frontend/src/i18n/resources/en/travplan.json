@@ -813,6 +813,15 @@
     "unplan": "Back to ideas",
     "editLeg": "Edit leg {{from}} → {{to}}",
     "addEntry": "+ Entry",
-    "setDates": "Set travel dates"
+    "setDates": "Set travel dates",
+    "quickStop": "Plan a short stop",
+    "quickStopPrompt": "+ Short stop",
+    "stop": {
+      "shopping": "Shopping",
+      "fuel": "Fuel",
+      "meal": "Meal",
+      "break": "Break",
+      "service": "Water and waste"
+    }
   }
 }

@@ -18,7 +18,7 @@ export const SUGGEST_RADIUS_KM = 10;
 /** Three at a time: a short list to choose from, not a directory to read. */
 export const SUGGEST_PAGE = 3;
 const CAMP_KINDS = new Set(["camp_site", "caravan_site"]);
-const CAMPING_VEHICLES = new Set<PlanVehicle["kind"]>(["motorhome", "campervan", "caravan"]);
+export const CAMPING_VEHICLES = new Set<PlanVehicle["kind"]>(["motorhome", "campervan", "caravan"]);
 
 /**
  * Places to sleep in the order that fits the trip: someone in a motorhome sees campsites and

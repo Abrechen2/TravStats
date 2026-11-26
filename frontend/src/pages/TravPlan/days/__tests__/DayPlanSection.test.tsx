@@ -114,14 +114,15 @@ describe("planning an idea from the day plan", () => {
     const spanCard = screen
       .getByRole("heading", { name: "2026-05-04–2026-05-06" })
       .closest("div")!.parentElement!;
-    const pickers = within(spanCard).getAllByRole("combobox");
+    const dayPicker = within(spanCard).getByRole("combobox", { name: "days.pickDay" });
+    const ideaPicker = within(spanCard).getByRole("combobox", { name: "days.pickIdea" });
     expect(
-      within(pickers[1])
+      within(ideaPicker)
         .getAllByRole("option")
         .map((o) => o.textContent)
     ).toEqual(["days.pickIdeaPrompt:2", "Monreale · options.must", "Teatro Massimo"]);
-    await userEvent.selectOptions(pickers[0], "2026-05-05");
-    await userEvent.selectOptions(pickers[1], "i2");
+    await userEvent.selectOptions(dayPicker, "2026-05-05");
+    await userEvent.selectOptions(ideaPicker, "i2");
     expect(mutate).toHaveBeenCalledWith(
       expect.objectContaining({ type: "assign_idea", ideaId: "i2", day: "2026-05-05" })
     );
