@@ -144,6 +144,8 @@ export interface DawarichStay {
     plugins?: StayPluginEvidence[];
     /** Plugins that have not answered yet; the scan asks them again. */
     pluginsPending?: string[];
+    /** Plugins that answered about this stop, "nothing here" included. */
+    pluginsAsked?: string[];
   };
 }
 export interface StayPluginEvidence {

@@ -32,6 +32,8 @@ import { tripForStay } from "./tripMatch";
 import { suppressionReason, type loadSuppression } from "./suppression";
 import { coverageFor, type loadCoverage } from "./coverage";
 import type { StaySourceKind } from "./availability";
+import { carriedEvidence, carriedName } from "./carryEvidence";
+import { applyOwnerName, ownerStopName } from "../../travtrack/stopPlaces/ownerName";
 import {
   evidenceKeyOf,
   findingEvidence,
@@ -116,6 +118,96 @@ function grownPendingRow<
   return holds && longer ? row : null;
 }
 
+/**
+ * Two or more open plain findings of one source that the candidate holds entirely: the
+ * fragments of one stay an older detector split (prod, 24./25.11.2026). Null when any of them
+ * was answered — an accepted or rejected fragment keeps its answer and the stay stays split.
+ */
+function mergedPendingRows<
+  T extends {
+    status: string;
+    provider: string;
+    sourceStartAt: Date;
+    sourceEndAt: Date;
+    evidence: unknown;
+  },
+>(known: readonly T[], c: { startAt: Date; endAt: Date }, source: StaySourceKind): T[] | null {
+  if (known.length < 2) return null;
+  const all = known.every(
+    (row) =>
+      row.status === "pending" &&
+      row.provider === source &&
+      !(row.evidence as { market?: unknown } | null)?.market &&
+      c.startAt <= row.sourceStartAt &&
+      c.endAt >= row.sourceEndAt
+  );
+  return all
+    ? [...known].sort((a, b) => a.sourceStartAt.getTime() - b.sourceStartAt.getTime())
+    : null;
+}
+
+/** How far an own place may lie from a stay and still name it (the stay radius). */
+export const NAMING_RADIUS_M = RADIUS_METERS;
+
+/**
+ * The own place nearest to the stay within `NAMING_RADIUS_M`; ties broken by id, so every
+ * scan picks the same one. Before, a stay was named only by the ONE place within 100 m, and
+ * the McDonald's 140 m away or a Gasthof with a second pin beside it left it nameless.
+ */
+export function nearestPlace<P extends { id: string; lat: number; lon: number }>(
+  places: readonly P[],
+  at: { lat: number; lon: number }
+): (P & { distance: number }) | null {
+  let best: (P & { distance: number }) | null = null;
+  for (const p of places) {
+    const distance = meters(p, at);
+    if (distance > NAMING_RADIUS_M) continue;
+    if (!best || distance < best.distance || (distance === best.distance && p.id < best.id))
+      best = { ...p, distance };
+  }
+  return best;
+}
+
+/**
+ * Open findings of this source a rescan reaches: one the owner named in the day view takes that
+ * name (and loses any brand or venue guess); a nameless one is named after the nearest own place.
+ */
+async function nameKnown(
+  userId: string,
+  known: readonly {
+    id: string;
+    status: string;
+    provider: string;
+    name: string | null;
+    sourceLat: number;
+    sourceLon: number;
+    sourceStartAt: Date;
+    sourceEndAt: Date;
+    evidence: unknown;
+  }[],
+  source: StaySourceKind,
+  places: readonly { id: string; name: string; lat: number; lon: number }[]
+): Promise<void> {
+  for (const row of known) {
+    if (row.status !== "pending" || row.provider !== source) continue;
+    const evidence = row.evidence as { market?: unknown; ownerNamed?: unknown } | null;
+    if (evidence?.market || evidence?.ownerNamed) continue;
+    const span = { fromMs: row.sourceStartAt.getTime(), untilMs: row.sourceEndAt.getTime() };
+    const owner = source === "travtrack" ? await ownerStopName(userId, span) : null;
+    if (owner) {
+      await applyOwnerName(userId, span, owner.name);
+      continue;
+    }
+    if (row.name) continue;
+    const place = nearestPlace(places, { lat: row.sourceLat, lon: row.sourceLon });
+    if (!place) continue;
+    await prisma.dawarichStay.updateMany({
+      where: { id: row.id, userId, status: "pending", name: null },
+      data: { name: place.name, placeId: place.id },
+    });
+  }
+}
+
 export async function scanCandidates(
   ctx: ScanContext,
   candidates: readonly (StayCandidate | MarketFinding)[]
@@ -163,6 +255,8 @@ export async function scanCandidates(
         sourceStartAt: true,
         sourceEndAt: true,
         evidence: true,
+        name: true,
+        placeId: true,
       },
     });
     const fragments =
@@ -205,8 +299,16 @@ export async function scanCandidates(
     // The one exception is a pending stop that has grown since — a stay still
     // going on at the last scan froze at that scan's last point.
     const growing = !market && known.length ? grownPendingRow(known, c, source) : null;
-    if (known.length && !growing) continue;
+    // Several open fragments of one stay that this candidate now reads as one: replaced by it.
+    const merging = !market && !growing ? mergedPendingRows(known, c, source) : null;
+    if (known.length && !growing && !merging) {
+      if (!market) await nameKnown(userId, known, source, places);
+      continue;
+    }
+    const extending = growing !== null || merging !== null;
     const supersededFindingIds = fragments.filter((r) => r.status === "pending").map((r) => r.id);
+    const mergedFindingIds = merging?.map((r) => r.id) ?? [];
+    const replaced = growing ? [growing] : (merging ?? []);
     const zone = zoneOf(c);
     if (!zone) {
       // One position without a zone used to fail the whole scan, every scan,
@@ -233,7 +335,7 @@ export async function scanCandidates(
       month: "2-digit",
       day: "2-digit",
     }).format(c.endAt);
-    if (!market && !growing) {
+    if (!market && !extending) {
       const why = suppressionReason(c, day, suppression);
       if (why) {
         counts.suppressed++;
@@ -246,11 +348,11 @@ export async function scanCandidates(
     // confirmed shop inside it is not that visit — `collectMarketFindings`
     // answers "already recorded" for those by the venue's own identity.
     const evidenceKey = evidenceKeyOf(c, byId);
-    if (!market && !growing && coverageFor({ ...c, zone, evidenceKey }, coverage)) {
+    if (!market && !extending && coverageFor({ ...c, zone, evidenceKey }, coverage)) {
       counts.covered++;
       continue;
     }
-    if (ctx.travtrack && !growing && counts.created >= TRAVTRACK_FINDINGS_PER_RUN) {
+    if (ctx.travtrack && !extending && counts.created >= TRAVTRACK_FINDINGS_PER_RUN) {
       // Bounded prompting: the rest wait for the next run.
       counts.deferred++;
       continue;
@@ -263,14 +365,13 @@ export async function scanCandidates(
       .map((p) => ({ ...p, distance: meters(p, c) }))
       .filter((p) => p.distance <= 100)
       .sort((a, b) => a.distance - b.distance);
-    // Several nearby POIs can be different venues in the same building.
+    // Several nearby POIs can be different venues in the same building: the nearest is named,
+    // and the finding says it is ambiguous.
     const place = market
       ? market.placeId
         ? places.find((p) => p.id === market.placeId)
         : undefined
-      : nearby.length === 1
-        ? nearby[0]
-        : undefined;
+      : (nearestPlace(places, c) ?? undefined);
     const matchingVisit = place
       ? await prisma.placeVisit.findFirst({
           where: {
@@ -298,15 +399,26 @@ export async function scanCandidates(
       ...(overlappingTrips.length && !matchingTrips.length ? ["tripIncomplete"] : []),
       ...(!market && nearby.length > 1 ? ["placeAmbiguous"] : []),
     ];
-    const evidence = findingEvidence(c, {
-      market,
-      kind,
-      supersededFindingIds,
-      matchingVisitId: matchingVisit?.id ?? null,
-      zone,
-      uncertainties,
-      travtrack: ctx.travtrack ?? null,
-    });
+    const evidence = {
+      ...findingEvidence(c, {
+        market,
+        kind,
+        supersededFindingIds,
+        matchingVisitId: matchingVisit?.id ?? null,
+        zone,
+        uncertainties,
+        travtrack: ctx.travtrack ?? null,
+      }),
+      // What the replaced findings were told about the stop survives the rewrite.
+      ...carriedEvidence(replaced),
+      ...(mergedFindingIds.length ? { mergedFindingIds } : {}),
+    };
+    const carried = place || market ? {} : carriedName(replaced);
+    // The owner's own name for the stop wins over a market, a nearby place or a carried guess.
+    const owner = ctx.travtrack
+      ? await ownerStopName(userId, { fromMs: c.startAt.getTime(), untilMs: c.endAt.getTime() })
+      : null;
+    if (owner) Object.assign(evidence, { ownerNamed: true });
     const row = {
       sourceStartAt: c.startAt,
       sourceEndAt: c.endAt,
@@ -319,8 +431,8 @@ export async function scanCandidates(
       zone,
       pointCount: c.pointCount,
       evidence,
-      placeId: place?.id,
-      name: market?.name ?? place?.name,
+      placeId: owner ? null : (place?.id ?? carried.placeId),
+      name: owner?.name ?? market?.name ?? place?.name ?? carried.name,
       tripId: market ? market.tripId : (trip?.id ?? null),
       provider: source,
       providerRev: ctx.rev,
@@ -350,12 +462,13 @@ export async function scanCandidates(
       }
       // Claim pending fragments before inserting the parent. A concurrent review
       // either resolves first (and prevents replacement) or receives a conflict.
-      if (supersededFindingIds.length) {
+      const claimed = [...new Set([...supersededFindingIds, ...mergedFindingIds])];
+      if (claimed.length) {
         const superseded = await tx.dawarichStay.updateMany({
-          where: { userId, id: { in: supersededFindingIds }, status: "pending" },
+          where: { userId, id: { in: claimed }, status: "pending" },
           data: { status: "superseded", resolvedAt: new Date() },
         });
-        if (superseded.count !== supersededFindingIds.length)
+        if (superseded.count !== claimed.length)
           throw new AppError("Finding changed during scan", 409, "DAWARICH_ALREADY_RESOLVED");
       }
       if (growing) {

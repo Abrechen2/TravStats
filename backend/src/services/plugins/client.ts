@@ -49,7 +49,7 @@ export type PluginOutcome =
       nameRadiusMeters?: number;
       latencyMs: number;
     }
-  | { kind: "empty"; version: number | null; latencyMs: number }
+  | { kind: "empty"; version: number | null; nameRadiusMeters?: number; latencyMs: number }
   | {
       kind: "failed";
       reason: PluginFailure;
@@ -192,7 +192,14 @@ export async function callPlugin(
   if (!parsed.success || parsed.data.version !== PLUGIN_CONTRACT_VERSION)
     return failed("protocol", started);
   if (parsed.data.suggestions.length === 0)
-    return { kind: "empty", version: parsed.data.version, latencyMs };
+    return {
+      kind: "empty",
+      version: parsed.data.version,
+      ...(parsed.data.nameRadiusMeters !== undefined
+        ? { nameRadiusMeters: parsed.data.nameRadiusMeters }
+        : {}),
+      latencyMs,
+    };
   return {
     kind: "ok",
     version: parsed.data.version,

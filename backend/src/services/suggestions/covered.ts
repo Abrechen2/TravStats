@@ -152,13 +152,19 @@ export function coverDays(t: Pick<CoverTarget, "startAt" | "endAt" | "zone">): S
   return days;
 }
 
-function lodgingDays(s: CoverLodgingStay): { first: string; last: string } | null {
-  const first = s.checkInDate
-    ? fromDbDate(s.checkInDate)
-    : (s.checkIn?.toISOString().slice(0, 10) ?? null);
-  const last = s.checkOutDate
-    ? fromDbDate(s.checkOutDate)
-    : (s.checkOut?.toISOString().slice(0, 10) ?? null);
+/**
+ * The local days a lodging stay's nights touch, check-out day included (a morning stop at the
+ * hotel before leaving is covered). A stay with only instants is read in the suggestion's zone:
+ * its UTC date put a check-out at local midnight east of UTC on the day before, so the morning
+ * of the check-out day stayed a question (prod 26.11.2026, Hotel Bruggner, Europe/Vienna).
+ */
+function lodgingDays(
+  s: CoverLodgingStay,
+  zone: string | null
+): { first: string; last: string } | null {
+  const day = (d: Date) => (zone ? localDay(d, zone) : d.toISOString().slice(0, 10));
+  const first = s.checkInDate ? fromDbDate(s.checkInDate) : s.checkIn ? day(s.checkIn) : null;
+  const last = s.checkOutDate ? fromDbDate(s.checkOutDate) : s.checkOut ? day(s.checkOut) : null;
   return first && last ? { first, last } : null;
 }
 
@@ -195,7 +201,7 @@ export function judgeCover(target: CoverTarget, ctx: CoverContext): CoverVerdict
   for (const s of ctx.lodgingStays) {
     const { lat, lon } = s.lodging;
     if (lat === null || lon === null || !tripAllows(target, s.tripId)) continue;
-    const span = lodgingDays(s);
+    const span = lodgingDays(s, target.zone);
     const day = span && [...days].find((d) => d >= span.first && d <= span.last);
     if (!day) continue;
     consider(

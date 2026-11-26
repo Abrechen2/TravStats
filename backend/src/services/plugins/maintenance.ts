@@ -25,6 +25,7 @@ import {
   type PluginHello,
 } from "./contract";
 import { callMaintenance, type MaintenanceAction } from "./maintenanceClient";
+import { noteAnnounced } from "./announced";
 import { targetOf, type Precision } from "./registry";
 
 export const STOP_LOOKBACK_DAYS = 730;
@@ -108,12 +109,21 @@ export async function probeHello(
   if (res.status === 429) return { kind: "failed", reason: "rateLimited" };
   if (res.status >= 500) return { kind: "failed", reason: "server" };
   if (res.status !== 200) return { kind: "none" };
+  let body: unknown;
   try {
-    const parsed = pluginHelloSchema.safeParse(JSON.parse(res.body.toString("utf8")));
-    return parsed.success ? { kind: "ok", hello: parsed.data } : { kind: "none" };
+    body = JSON.parse(res.body.toString("utf8"));
   } catch {
     return { kind: "none" };
   }
+  const parsed = pluginHelloSchema.safeParse(body);
+  if (!parsed.success) return { kind: "none" };
+  // A changed announcement re-asks the stops it answered empty (`announced.ts`).
+  await noteAnnounced(
+    plugin,
+    { v: parsed.data.version, caps: parsed.data.capabilities ?? [] },
+    Date.now()
+  );
+  return { kind: "ok", hello: parsed.data };
 }
 
 export const offersMaintenance = (p: HelloProbe): boolean =>
