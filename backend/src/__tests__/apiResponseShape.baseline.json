@@ -105,6 +105,7 @@
     "places/visitTime.ts",
     "roadtrips/companion.ts",
     "roadtrips/index.ts",
+    "roadtrips/photos.ts",
     "roadtrips/stations.ts",
     "settings/apiKeys.ts",
     "settings/autoCover.ts",

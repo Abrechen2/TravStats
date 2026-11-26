@@ -193,6 +193,7 @@ export default function TrackFlightPanel({
                   photo={p}
                   window={photos.window}
                   zone={zone}
+                  all={list}
                 />
               ))}
               {picked && (

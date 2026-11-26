@@ -200,3 +200,29 @@ export interface RoutingFailing {
   providerId: "openrouteservice" | "graphhopper" | "custom";
   reason: string;
 }
+
+/** One photo of the roadtrip's "Fotos" tab (`GET /roadtrips/:id/photos`). */
+export interface RoadtripPhoto {
+  key: string;
+  /** `window`: only fits the roadtrip's days and route; not linked to anything yet. */
+  kind: "linked" | "window";
+  source: "upload" | "immich" | "photoprism";
+  via: "station" | "stay" | "visit" | "upload";
+  url: string;
+  caption: string | null;
+  takenAt: string | null;
+  lat: number | null;
+  lon: number | null;
+  day: string | null;
+  stationId: string | null;
+  stationTitle: string | null;
+  tripId: string | null;
+  tripPhotoId: string | null;
+}
+
+export interface RoadtripPhotos {
+  photos: RoadtripPhoto[];
+  span: { from: string; to: string } | null;
+  stations: Array<{ id: string; title: string; day: string | null }>;
+  truncated: boolean;
+}

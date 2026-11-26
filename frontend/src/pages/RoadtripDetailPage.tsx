@@ -21,6 +21,7 @@ import RoadtripFigures from "../components/Roadtrips/RoadtripFigures";
 import RoutingFailingNotice from "../components/Roadtrips/RoutingFailingNotice";
 import RoadtripTourCards from "../components/Roadtrips/RoadtripTourCards";
 import RoadtripCostsSection from "../components/Roadtrips/RoadtripCostsSection";
+import RoadtripPhotosSection from "../components/Roadtrips/RoadtripPhotosSection";
 import { RoadtripRailConversion } from "../components/rail/RoadtripRailConversion";
 import StationEditor, {
   type EditorSaveState,
@@ -684,6 +685,8 @@ export default function RoadtripDetailPage(): JSX.Element {
         costs={detail.costs}
         onChanged={() => void load()}
       />
+
+      <RoadtripPhotosSection roadtripId={id} />
 
       {legEdit && (
         <LegDialog

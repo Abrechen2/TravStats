@@ -9,6 +9,8 @@ import {
   type WindowPhoto,
 } from "../../lib/api/tripPhotoWindows";
 import DetailSection from "../ui/DetailSection";
+import EnlargeButton from "./photoViewer/EnlargeButton";
+import { usePhotoViewer } from "./photoViewer/usePhotoViewer";
 
 interface Props {
   entry: PhotoWindowEntry;
@@ -24,6 +26,7 @@ interface Props {
 export default function TripPhotoWindowStrip({ entry, id }: Props): JSX.Element | null {
   const { t } = useTranslation(["trips"]);
   const [photos, setPhotos] = useState<WindowPhoto[]>([]);
+  const viewer = usePhotoViewer();
 
   useEffect(() => {
     let cancelled = false;
@@ -44,8 +47,23 @@ export default function TripPhotoWindowStrip({ entry, id }: Props): JSX.Element 
   return (
     <DetailSection title={`${t("trips:photoWindow.title")} · ${photos.length}`}>
       <div className="flex flex-wrap gap-2">
-        {photos.map((photo) => (
-          <a key={photo.id} href={photo.url} target="_blank" rel="noreferrer">
+        {viewer.viewer}
+        {photos.map((photo, i) => (
+          <EnlargeButton
+            key={photo.id}
+            onOpen={() =>
+              viewer.open(
+                photos.map((p) => ({
+                  id: p.id,
+                  url: p.url,
+                  caption: p.caption,
+                  takenAt: p.takenAt,
+                  source: "upload",
+                })),
+                i
+              )
+            }
+          >
             <img
               src={photo.url}
               alt={photo.caption ?? t("trips:photoWindow.alt")}
@@ -61,7 +79,7 @@ export default function TripPhotoWindowStrip({ entry, id }: Props): JSX.Element 
                 display: "block",
               }}
             />
-          </a>
+          </EnlargeButton>
         ))}
       </div>
     </DetailSection>

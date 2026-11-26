@@ -1138,5 +1138,24 @@
     "saveFailed": "Die Farbe konnte nicht gespeichert werden.",
     "usedOn": "Gilt immer auf der Karte dieser Seite. Auf dem Dashboard und der Reisekarte nur im Farbmodus „Je Roadtrip“ (Kartenpanel)."
   },
-  "fromTrack": "Aus TravTrack übernommen – Spur ansehen"
+  "fromTrack": "Aus TravTrack übernommen – Spur ansehen",
+  "photos": {
+    "title": "Fotos",
+    "alt": "Foto der Reise",
+    "legend": "{{linked}} verknüpft (durchgezogener Rahmen), {{fits}} passen nur zu Tag und Strecke (gestrichelt).",
+    "linked": "verknüpft",
+    "fits": "passt zu Tag und Strecke",
+    "linkTo": "An {{station}} verknüpfen",
+    "days": "Tage",
+    "noDays": "Noch keine Fotos und keine datierten Stationen.",
+    "noneOnDay": "Für diesen Tag gibt es keine Fotos.",
+    "toRoadtrip": "Zum Roadtrip",
+    "loadFailed": "Die Fotos dieses Roadtrips konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "linkFailed": "Das Foto konnte nicht verknüpft werden. Es bleibt unverändert.",
+    "truncated": "Es gibt mehr verknüpfte Fotos, als hier angezeigt werden.",
+    "searchLibrary": "In der Bibliothek suchen (Immich / PhotoPrism)",
+    "libraryProblem": "Die Foto-Bibliothek ist nicht vollständig erreichbar; die Liste kann unvollständig sein.",
+    "libraryNone": "In der Bibliothek passt für diesen Tag nichts weiter."
+  }
 }

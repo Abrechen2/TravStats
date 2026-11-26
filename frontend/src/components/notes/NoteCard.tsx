@@ -5,6 +5,8 @@ import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
 import { notePhotoSrc, type Note } from "../../lib/api/notes";
 import { displayParts, formatDayLong } from "../../shared/time";
+import EnlargeButton from "../common/photoViewer/EnlargeButton";
+import { usePhotoViewer } from "../common/photoViewer/usePhotoViewer";
 
 interface NoteCardProps {
   note: Note;
@@ -27,6 +29,7 @@ export default function NoteCard({
   const { t, i18n } = useTranslation(["notes"]);
   const parts = displayParts(note.times.occurredAt);
   const dayWords = formatDayLong(note.times.day.date, i18n.language);
+  const viewer = usePhotoViewer();
 
   return (
     <Card style={{ padding: "var(--ts-space-lg)" }} data-testid="note-card">
@@ -67,14 +70,32 @@ export default function NoteCard({
           </div>
         </header>
         <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", margin: 0 }}>{note.body}</p>
+        {viewer.viewer}
         {note.photo && (
-          <img
-            src={notePhotoSrc(note.photo)}
-            alt={t("notes:card.photoAlt", { date: dayWords })}
-            loading="lazy"
-            className="max-h-72 w-auto self-start object-contain"
-            style={{ borderRadius: "var(--ts-radius-card)" }}
-          />
+          <EnlargeButton
+            className="self-start"
+            onOpen={() =>
+              viewer.open(
+                [
+                  {
+                    id: note.id,
+                    url: notePhotoSrc(note.photo!),
+                    takenAt: note.times.occurredAt.utc,
+                    source: "upload",
+                  },
+                ],
+                0
+              )
+            }
+          >
+            <img
+              src={notePhotoSrc(note.photo)}
+              alt={t("notes:card.photoAlt", { date: dayWords })}
+              loading="lazy"
+              className="max-h-72 w-auto self-start object-contain"
+              style={{ borderRadius: "var(--ts-radius-card)" }}
+            />
+          </EnlargeButton>
         )}
       </article>
     </Card>

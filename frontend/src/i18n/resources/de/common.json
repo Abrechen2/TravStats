@@ -549,5 +549,20 @@
     "coral": "Koralle",
     "teal": "Petrol",
     "lime": "Limette"
+  },
+  "photoViewer": {
+    "title": "Fotoansicht",
+    "alt": "Foto",
+    "previous": "Vorheriges Foto",
+    "next": "Nächstes Foto",
+    "close": "Schließen",
+    "loadFailed": "Das Foto konnte nicht geladen werden. Die Quelle ist nicht erreichbar oder das Foto wurde entfernt.",
+    "source": {
+      "upload": "eigener Upload",
+      "immich": "Immich",
+      "photoprism": "PhotoPrism"
+    },
+    "openEntry": "Zum Eintrag",
+    "enlarge": "Foto vergrößern"
   }
 }

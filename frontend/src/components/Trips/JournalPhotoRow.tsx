@@ -2,6 +2,8 @@ import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import type { TripPhoto } from "../../types";
+import EnlargeButton from "../common/photoViewer/EnlargeButton";
+import { usePhotoViewer } from "../common/photoViewer/usePhotoViewer";
 
 interface Props {
   photos: TripPhoto[];
@@ -15,11 +17,27 @@ interface Props {
  */
 export default function JournalPhotoRow({ photos, size = 64 }: Props): JSX.Element | null {
   const { t } = useTranslation(["trips"]);
+  const viewer = usePhotoViewer();
   if (photos.length === 0) return null;
   return (
     <div className="mt-2 flex flex-wrap gap-2">
-      {photos.map((photo) => (
-        <a key={photo.id} href={photo.url} target="_blank" rel="noreferrer">
+      {viewer.viewer}
+      {photos.map((photo, i) => (
+        <EnlargeButton
+          key={photo.id}
+          onOpen={() =>
+            viewer.open(
+              photos.map((p) => ({
+                id: p.id,
+                url: p.url,
+                caption: p.caption,
+                takenAt: p.takenAt ?? null,
+                source: "upload",
+              })),
+              i
+            )
+          }
+        >
           <img
             src={photo.url}
             alt={photo.caption ?? t("trips:journalModal.photoAlt")}
@@ -35,7 +53,7 @@ export default function JournalPhotoRow({ photos, size = 64 }: Props): JSX.Eleme
               display: "block",
             }}
           />
-        </a>
+        </EnlargeButton>
       ))}
     </div>
   );

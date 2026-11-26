@@ -1138,5 +1138,24 @@
     "saveFailed": "The colour could not be saved.",
     "usedOn": "Always used on this page's map. On the dashboard and the trip map only in the colour mode \"Per roadtrip\" (map panel)."
   },
-  "fromTrack": "Taken over from TravTrack – view the track"
+  "fromTrack": "Taken over from TravTrack – view the track",
+  "photos": {
+    "title": "Photos",
+    "alt": "Trip photo",
+    "legend": "{{linked}} linked (solid frame), {{fits}} only fit the day and the route (dashed).",
+    "linked": "linked",
+    "fits": "fits day and route",
+    "linkTo": "Link to {{station}}",
+    "days": "Days",
+    "noDays": "No photos and no dated stations yet.",
+    "noneOnDay": "There are no photos for this day.",
+    "toRoadtrip": "Go to roadtrip",
+    "loadFailed": "The photos of this roadtrip could not be loaded.",
+    "retry": "Try again",
+    "linkFailed": "The photo could not be linked. It is unchanged.",
+    "truncated": "More linked photos exist than are shown here.",
+    "searchLibrary": "Search the library (Immich / PhotoPrism)",
+    "libraryProblem": "The photo library is not fully reachable; the list may be incomplete.",
+    "libraryNone": "Nothing else in the library fits this day."
+  }
 }

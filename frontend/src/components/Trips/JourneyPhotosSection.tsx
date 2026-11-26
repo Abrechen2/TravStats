@@ -4,6 +4,9 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { photoJourneyPreviewUrl, photoJourneysApi } from "../../lib/api/photoJourneys";
+import EnlargeButton from "../common/photoViewer/EnlargeButton";
+import { usePhotoViewer } from "../common/photoViewer/usePhotoViewer";
+import { largeUrl } from "../common/photoViewer/viewerPhoto";
 
 interface Props {
   tripId: string;
@@ -38,6 +41,7 @@ export default function JourneyPhotosSection({ tripId }: Props): JSX.Element | n
     };
   }, [tripId]);
 
+  const viewer = usePhotoViewer();
   const tiles = journeys.flatMap((journey) =>
     Array.from({ length: journey.previewCount }, (_, index) => ({
       key: `${journey.id}-${index}`,
@@ -58,15 +62,25 @@ export default function JourneyPhotosSection({ tripId }: Props): JSX.Element | n
         </span>
       </h4>
       <div className="grid gap-2 grid-cols-3 sm:grid-cols-4 md:grid-cols-6">
-        {tiles.map((tile) => (
-          <img
+        {viewer.viewer}
+        {tiles.map((tile, i) => (
+          <EnlargeButton
             key={tile.key}
-            src={tile.url}
-            alt={t("trips:gallery.fromLibraryAlt")}
-            loading="lazy"
-            className="w-full aspect-square object-cover rounded-lg"
-            style={{ border: "1px solid var(--color-border)" }}
-          />
+            onOpen={() =>
+              viewer.open(
+                tiles.map((x) => ({ id: x.key, url: largeUrl(x.url), source: "immich" as const })),
+                i
+              )
+            }
+          >
+            <img
+              src={tile.url}
+              alt={t("trips:gallery.fromLibraryAlt")}
+              loading="lazy"
+              className="w-full aspect-square object-cover rounded-lg"
+              style={{ border: "1px solid var(--color-border)" }}
+            />
+          </EnlargeButton>
         ))}
       </div>
     </section>
