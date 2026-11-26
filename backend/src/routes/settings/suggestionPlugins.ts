@@ -40,7 +40,11 @@ import {
   probeHello,
   runMaintenance,
 } from "../../services/plugins/maintenance";
-import { MAINTENANCE_SOURCES } from "../../services/plugins/contract";
+import {
+  MAINTENANCE_MAX_QUERY,
+  MAINTENANCE_MAX_ROWS,
+  MAINTENANCE_SOURCES,
+} from "../../services/plugins/contract";
 import type { Precision } from "../../services/plugins/registry";
 
 const router = Router();
@@ -255,6 +259,25 @@ async function maintainedPlugin(req: AuthRequest) {
 
 const rowIdSchema = z.string().min(1).max(64);
 
+/** What the user confirmed; the plugin writes exactly these (coordinates, and the text fields given). */
+const applyValues = {
+  rowId: rowIdSchema,
+  lat: z.number().min(-90).max(90),
+  lon: z.number().min(-180).max(180),
+  street: z.string().trim().min(1).max(200).optional(),
+  postcode: z.string().trim().min(1).max(32).optional(),
+  town: z.string().trim().min(1).max(200).optional(),
+};
+
+/** Search and paging of the maintenance list; the plugin does both (its list is longer than one page). */
+const maintenanceListQuery = z
+  .object({
+    q: z.string().trim().max(MAINTENANCE_MAX_QUERY).optional(),
+    offset: z.coerce.number().int().min(0).optional(),
+    limit: z.coerce.number().int().min(1).max(MAINTENANCE_MAX_ROWS).optional(),
+  })
+  .transform(({ q, ...rest }) => ({ ...rest, ...(q ? { query: q } : {}) }));
+
 router.get(
   "/:id/maintenance",
   // The list reloads after every apply/undo/ignore: the probe limit (20 per
@@ -265,8 +288,52 @@ router.get(
       const plugin = await maintainedPlugin(req);
       const { stops, withheld } = await candidateStops(req.userId!, plugin.precision as Precision);
       const locale = req.query.locale === "en" ? "en" : "de";
-      const data = await runMaintenance(plugin, "proposals", { locale, stops });
+      const paging = maintenanceListQuery.parse(req.query);
+      const data = await runMaintenance(plugin, "proposals", { locale, stops, ...paging });
       res.json({ ...data, stopsSent: stops.length, stopsWithheld: withheld });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
+  "/:id/maintenance/notices",
+  maintenanceLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const plugin = await maintainedPlugin(req);
+      const { stops, withheld } = await candidateStops(req.userId!, plugin.precision as Precision);
+      const locale = req.query.locale === "en" ? "en" : "de";
+      // limit 1: only the counts and the notices are wanted, not the row list.
+      const data = await runMaintenance(plugin, "proposals", { locale, stops, limit: 1 });
+      res.json({
+        notices: data.notices ?? [],
+        noticeCount: data.noticeCount ?? 0,
+        totalRows: data.totalRows ?? 0,
+        stopsSent: stops.length,
+        stopsWithheld: withheld,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/** Called when the user confirms in the dialog: a single-use ticket for exactly the values shown. */
+router.post(
+  "/:id/maintenance/confirm",
+  maintenanceLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const body = z
+        .discriminatedUnion("kind", [
+          z.object({ kind: z.literal("undo"), undoId: z.string().min(1).max(64) }).strict(),
+          z.object({ kind: z.literal("apply"), ...applyValues }).strict(),
+        ])
+        .parse(req.body);
+      const plugin = await maintainedPlugin(req);
+      res.json(await runMaintenance(plugin, "confirm", body));
     } catch (error) {
       next(error);
     }
@@ -280,11 +347,9 @@ router.post(
     try {
       const body = z
         .object({
-          rowId: rowIdSchema,
-          lat: z.number().min(-90).max(90),
-          lon: z.number().min(-180).max(180),
-          street: z.string().trim().min(1).max(200).optional(),
+          ...applyValues,
           source: z.enum(MAINTENANCE_SOURCES),
+          token: z.string().min(1).max(200),
         })
         .strict()
         .parse(req.body);
@@ -302,7 +367,7 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const body = z
-        .object({ undoId: z.string().min(1).max(64) })
+        .object({ undoId: z.string().min(1).max(64), token: z.string().min(1).max(200) })
         .strict()
         .parse(req.body);
       const plugin = await maintainedPlugin(req);

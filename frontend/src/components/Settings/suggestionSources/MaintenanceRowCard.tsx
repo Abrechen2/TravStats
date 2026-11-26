@@ -72,6 +72,18 @@ export default function MaintenanceRowCard({
 
   const evidence = (p: MaintenanceProposal): string => {
     const e = p.evidence ?? {};
+    if (p.source === "stop" && (e.matchedTokens ?? []).length === 0 && e.stopStart) {
+      // A stop found by place, not by name: it lies at the row's geocoded address.
+      const minutes =
+        e.stopEnd && Date.parse(e.stopEnd) > Date.parse(e.stopStart)
+          ? Math.round((Date.parse(e.stopEnd) - Date.parse(e.stopStart)) / 60_000)
+          : null;
+      return t(`${NS}.evidence.stopHere`, {
+        at: fmt.date(e.stopStart),
+        duration: minutes === null ? "—" : `${Math.floor(minutes / 60)} h ${minutes % 60} min`,
+        meters: e.distanceMeters ?? 0,
+      });
+    }
     if (p.source === "stop")
       return t(`${NS}.evidence.stop`, {
         venue: e.venueName ?? "—",

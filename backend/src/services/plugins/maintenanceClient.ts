@@ -15,6 +15,7 @@ import { fetchFailure, headersFor, send, type PluginFailure, type PluginTarget }
 import {
   PLUGIN_CONTRACT_VERSION,
   maintenanceApplyResponseSchema,
+  maintenanceConfirmResponseSchema,
   maintenanceIgnoreResponseSchema,
   maintenanceProposalsResponseSchema,
   maintenanceUndoResponseSchema,
@@ -24,17 +25,24 @@ export const MAINTENANCE_TIMEOUT_MS = 15_000;
 export const MAINTENANCE_MAX_BYTES = 1024 * 1024;
 
 export type MaintenanceFailure =
-  PluginFailure | "readOnly" | "changed" | "notFound" | "unsupported" | "notReady";
+  | PluginFailure
+  | "readOnly"
+  | "changed"
+  | "confirmationRequired"
+  | "notFound"
+  | "unsupported"
+  | "notReady";
 
 export type MaintenanceOutcome<T> =
   { kind: "ok"; data: T } | { kind: "failed"; reason: MaintenanceFailure };
 
-export type MaintenanceAction = "proposals" | "apply" | "undo" | "ignore";
+export type MaintenanceAction = "proposals" | "confirm" | "apply" | "undo" | "ignore";
 
 // Plain ZodType values: indexing the precise schema types by a generic action
 // made the type checker run out of memory.
 const RESPONSE: Record<MaintenanceAction, { safeParse(v: unknown): SafeParse }> = {
   proposals: maintenanceProposalsResponseSchema,
+  confirm: maintenanceConfirmResponseSchema,
   apply: maintenanceApplyResponseSchema,
   undo: maintenanceUndoResponseSchema,
   ignore: maintenanceIgnoreResponseSchema,
@@ -81,6 +89,8 @@ export async function callMaintenance(
     return { kind: "failed", reason: f.kind === "failed" ? f.reason : "protocol" };
   }
   const error = errorOf(res.body);
+  if (res.status === 403 && error === "confirmationRequired")
+    return { kind: "failed", reason: "confirmationRequired" };
   if (res.status === 401 || res.status === 403) return { kind: "failed", reason: "auth" };
   if (res.status === 409 && (error === "readOnly" || error === "changed"))
     return { kind: "failed", reason: error };

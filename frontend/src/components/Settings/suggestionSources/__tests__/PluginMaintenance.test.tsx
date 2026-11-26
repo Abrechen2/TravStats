@@ -212,4 +212,60 @@ describe("plugin location maintenance", () => {
     await userEvent.click(within(applied).getByText("suggestionSources:plugins.maintenance.undo"));
     await waitFor(() => expect(api.undoLocation).toHaveBeenCalledWith("p1", "u-1"));
   });
+  it("searches the plugin's whole list and pages through it, so a row past the first page is findable", async () => {
+    api.maintenance.mockResolvedValue({ ...LIST, totalRows: 120, offset: 0 });
+    render(<PluginMaintenanceDialog plugin={PLUGIN} open onClose={() => {}} />);
+    await screen.findByTestId("maintenance-row");
+    expect(api.maintenance).toHaveBeenLastCalledWith("p1", "de", { q: "", offset: 0, limit: 50 });
+    await userEvent.click(screen.getByText("suggestionSources:plugins.maintenance.next"));
+    await waitFor(() =>
+      expect(api.maintenance).toHaveBeenLastCalledWith("p1", "de", { q: "", offset: 50, limit: 50 })
+    );
+    await userEvent.type(
+      screen.getByLabelText("suggestionSources:plugins.maintenance.searchLabel"),
+      "ragaz{Enter}"
+    );
+    await waitFor(() =>
+      expect(api.maintenance).toHaveBeenLastCalledWith("p1", "de", {
+        q: "ragaz",
+        offset: 0,
+        limit: 50,
+      })
+    );
+  });
+
+  it("shows a coordsMismatch row with the stop at the address as 'Dein Halt'", async () => {
+    api.maintenance.mockResolvedValue({
+      ...LIST,
+      rows: [
+        {
+          rowId: "21",
+          name: "Hotel Solaria, A-Ischgl",
+          issues: ["coordsMismatch"],
+          lat: 47.005,
+          lon: 10.29,
+          proposals: [
+            {
+              source: "stop",
+              lat: 47.0145,
+              lon: 10.2936,
+              confidence: "high",
+              evidence: {
+                venueName: "Hotel Solaria",
+                stopStart: "2026-11-26T07:38:00Z",
+                stopEnd: "2026-11-26T10:01:00Z",
+                matchedTokens: [],
+                distanceMeters: 20,
+              },
+            },
+          ],
+        },
+      ],
+    });
+    render(<PluginMaintenanceDialog plugin={PLUGIN} open onClose={() => {}} />);
+    const row = await screen.findByTestId("maintenance-row");
+    expect(row.textContent).toContain("plugins.maintenance.issue.coordsMismatch");
+    expect(row.textContent).toContain("plugins.maintenance.evidence.stopHere");
+    expect(row.textContent).toContain('"duration":"2 h 23 min"');
+  });
 });
