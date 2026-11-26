@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { DayPlanSection } from "../DayPlanSection";
 import type { PlanCtx } from "../../planContext";
@@ -84,5 +85,51 @@ describe("DayPlanSection on a long stay", () => {
     // Kiel 1.–2. folds; Gothenburg 3. has bookings, Oslo 4.–6. folds, the last day stands alone.
     expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(4);
     expect(screen.getByText("days.numbers:4,6")).toBeInTheDocument();
+  });
+});
+
+describe("planning an idea from the day plan", () => {
+  const ideas = [
+    {
+      id: "i1",
+      title: "Teatro Massimo",
+      category: "Kultur",
+      priority: "maybe",
+      note: "",
+      itemId: null,
+    },
+    { id: "i2", title: "Monreale", category: "Ausflug", priority: "must", note: "", itemId: null },
+  ] as PlanView["state"]["ideas"];
+
+  it("puts a picked idea on the chosen day of a folded span, must-dos offered first", async () => {
+    const base = routePlan();
+    const mutate = vi.fn().mockResolvedValue(true);
+    render(
+      <MemoryRouter>
+        <DayPlanSection
+          ctx={{ ...ctx({ ...base, state: { ...base.state, ideas } }), mutate, busy: false }}
+        />
+      </MemoryRouter>
+    );
+    const spanCard = screen
+      .getByRole("heading", { name: "2026-05-04–2026-05-06" })
+      .closest("div")!.parentElement!;
+    const pickers = within(spanCard).getAllByRole("combobox");
+    expect(
+      within(pickers[1])
+        .getAllByRole("option")
+        .map((o) => o.textContent)
+    ).toEqual(["days.pickIdeaPrompt:2", "Monreale · options.must", "Teatro Massimo"]);
+    await userEvent.selectOptions(pickers[0], "2026-05-05");
+    await userEvent.selectOptions(pickers[1], "i2");
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "assign_idea", ideaId: "i2", day: "2026-05-05" })
+    );
+  });
+
+  it("offers nothing when every idea already has a day", () => {
+    const base = routePlan();
+    show(ctx({ ...base, state: { ...base.state, ideas: [] } }));
+    expect(screen.queryByRole("combobox", { name: "days.pickIdea" })).not.toBeInTheDocument();
   });
 });

@@ -5,7 +5,9 @@ import { planDay, planRange } from "../format";
 import { PlanLink, PlanNotice } from "../planLayout";
 import { formatMinutes, nightTone, stageTone } from "../route/routeModel";
 import { TONE } from "../route/RouteTimeline";
+import { assignIdeaToDay } from "../ideaAssignment";
 import { buildDayPlan, foldQuietDays, type DayLeg, type DaySpan } from "./dayPlan";
+import { IdeaPicker, unplannedIdeas } from "./IdeaPicker";
 
 function LegLine({ leg, ctx }: { leg: DayLeg; ctx: PlanCtx }) {
   const { t } = useTranslation("travplan"),
@@ -96,6 +98,17 @@ function DayCard({ span, last, ctx }: { span: DaySpan; last: boolean; ctx: PlanC
           )}
         </p>
       )}
+      <div style={{ marginTop: "var(--ts-space-md)" }}>
+        <IdeaPicker
+          days={ctx.days.slice(span.first, span.last + 1)}
+          ideas={unplannedIdeas(ctx.state)}
+          busy={ctx.busy}
+          onAssign={(ideaId, day) => {
+            const op = assignIdeaToDay(ctx.state, ideaId, day);
+            if (op) void ctx.mutate(op);
+          }}
+        />
+      </div>
     </Card>
   );
 }

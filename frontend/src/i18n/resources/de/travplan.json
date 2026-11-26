@@ -788,6 +788,10 @@
     "noDatesHint": "Trag Beginn und Ende der Reise ein, dann steht hier jeder Tag.",
     "undated": "Noch ohne Tag: {{places}}. Davor fehlt eine Fahrzeit.",
     "toRoute": "Zur Route",
-    "numbers": "Tag {{from}}–{{to}}"
+    "numbers": "Tag {{from}}–{{to}}",
+    "pickDay": "An welchem Tag?",
+    "pickIdea": "Idee einplanen",
+    "pickIdeaPrompt_one": "+ Idee einplanen ({{count}} offen)",
+    "pickIdeaPrompt_other": "+ Idee einplanen ({{count}} offen)"
   }
 }

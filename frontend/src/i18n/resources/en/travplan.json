@@ -788,6 +788,10 @@
     "noDatesHint": "Enter when the trip starts and ends, and every day shows up here.",
     "undated": "No day yet: {{places}}. A travel time before them is missing.",
     "toRoute": "Go to the route",
-    "numbers": "Days {{from}}–{{to}}"
+    "numbers": "Days {{from}}–{{to}}",
+    "pickDay": "Which day?",
+    "pickIdea": "Plan an idea",
+    "pickIdeaPrompt_one": "+ Plan an idea ({{count}} open)",
+    "pickIdeaPrompt_other": "+ Plan an idea ({{count}} open)"
   }
 }
