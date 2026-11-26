@@ -33,6 +33,8 @@ export interface PhotoSourceAlbum {
    * PhotoPrism also has folders, moments, months and states (forgejo#434).
    */
   kind?: "album" | "folder" | "moment" | "month" | "state";
+  /** The year the source files the collection under (PhotoPrism `Year`); absent when it does not say. */
+  year?: number | null;
 }
 
 export interface PhotoSourceAsset {

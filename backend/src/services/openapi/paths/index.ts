@@ -28,6 +28,7 @@ import "./rerouteRuns";
 import "./tourTracks";
 import "./tourIndex";
 import "./roadtrips";
+import "./tripPhotoSources";
 import "./tripExpenses";
 import "./tripRecording";
 import "./geoExport";

@@ -12,6 +12,7 @@ import tokensRouter from "./tokens";
 import immichRouter from "./immich";
 import photoSourcePeopleRouter from "./photoSourcePeople";
 import autoCoverRouter from "./autoCover";
+import photoPeriodAutoRouter from "./photoPeriodAuto";
 import dawarichRouter from "./dawarich";
 import webPrefsRouter from "./webPrefs";
 import instanceServicesRouter from "./instanceServices";
@@ -60,6 +61,8 @@ router.use(
     "/photo-sources",
     // Whether the shared account picks covers on its own: one visitor's switch would be everyone's.
     "/auto-cover",
+    // Whether the shared account links trip periods on its own: one visitor's switch would be everyone's.
+    "/photo-period-auto",
     "/dawarich",
     "/profile-picture",
     "/notifications",
@@ -102,6 +105,7 @@ router.use("/tokens", tokensRouter);
 router.use("/immich", immichRouter);
 router.use("/photo-sources", photoSourcePeopleRouter);
 router.use("/auto-cover", autoCoverRouter);
+router.use("/photo-period-auto", photoPeriodAutoRouter);
 router.use("/dawarich", dawarichRouter);
 router.use("/web-prefs", webPrefsRouter);
 router.use("/instance-services", instanceServicesRouter);

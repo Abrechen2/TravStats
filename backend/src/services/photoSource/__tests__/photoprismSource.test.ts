@@ -178,9 +178,9 @@ describe("listAlbums", () => {
   it("sends BOTH type and count (either alone is a 400/403) and maps the albums", async () => {
     mockAlbumKinds({
       album: [
-        { UID: "as6sg6bxpogaaba8", Title: "Lisbon", PhotoCount: 3, Thumb: HASH },
+        { UID: "as6sg6bxpogaaba8", Title: "Lisbon", PhotoCount: 3, Thumb: HASH, Year: 2024 },
         { UID: "bad uid!", Title: "dropped" },
-        { UID: "as6sg6bxpogaaba9", Title: "No cover", PhotoCount: 0, Thumb: "" },
+        { UID: "as6sg6bxpogaaba9", Title: "No cover", PhotoCount: 0, Thumb: "", Year: -1 },
       ],
     });
     const albums = await createPhotoprismPhotoSource(CONN).listAlbums();
@@ -197,6 +197,7 @@ describe("listAlbums", () => {
         assetCount: 3,
         thumbnailAssetId: HASH,
         kind: "album",
+        year: 2024,
       },
       {
         id: "as6sg6bxpogaaba9",
@@ -204,6 +205,8 @@ describe("listAlbums", () => {
         assetCount: null,
         thumbnailAssetId: null,
         kind: "album",
+        // PhotoPrism's "no year" (-1) is not a year.
+        year: null,
       },
     ]);
   });
