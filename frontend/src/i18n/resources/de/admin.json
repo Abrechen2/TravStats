@@ -437,7 +437,7 @@
     },
     "ollama": {
       "title": "Ollama LLM Parser",
-      "description": "Lokales Sprachmodell für schwierige Buchungen. Wird zuerst gefragt, wenn eingetragen.",
+      "description": "Sprachmodell im Netzwerk. Eingetragen bekommt es Buchungen zuerst, ohne Rückfrage.",
       "urlLabel": "Ollama URL",
       "remoteOptIn": {
         "label": "Ich stimme zu, dass Buchungsdaten an diese Adresse gesendet werden, falls sie außerhalb meines Netzwerks liegt."
@@ -942,7 +942,7 @@
   },
   "templateRepo": {
     "title": "Vorlagen-Repository",
-    "description": "Quelle der Parser-Vorlagen, z. B. dein eigener Fork.",
+    "description": "Quelle der Parser-Vorlagen. Vorlagen, die nur die alte Quelle hatte, werden zurückgezogen.",
     "url": "Repository-URL (Rohdateien)",
     "readsFrom": {
       "admin": "Die Synchronisierung liest von {{url}} (hier eingestellt).",
@@ -1067,7 +1067,7 @@
   },
   "aeroapi": {
     "title": "FlightAware AeroAPI: Tarif und Monatsbudget",
-    "description": "Zählt jeden Aufruf pro Monat und stoppt beim Budget — keine Überraschungsrechnung.",
+    "description": "Zählt jeden Aufruf pro Monat und stoppt beim Budget. Kosten je Aufruf sind Schätzwerte.",
     "tier": "Tarif",
     "tiers": {
       "personal": "Personal (5 $ Guthaben)",
