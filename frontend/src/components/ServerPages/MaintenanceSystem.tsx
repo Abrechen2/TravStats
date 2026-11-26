@@ -18,6 +18,7 @@ import {
 } from "../ui/settings";
 import type { AdminUser, SystemInfoData } from "./types";
 import MaintenanceAirportEnrich from "./MaintenanceAirportEnrich";
+import MaintenanceRuntime from "./MaintenanceRuntime";
 import { CATALOGUE_KINDS, useCatalogueReseed } from "./useCatalogueReseed";
 
 /**
@@ -167,6 +168,7 @@ export default function MaintenanceSystem(): JSX.Element {
           </StatusValue>
         }
       />
+      <MaintenanceRuntime />
       <SettingItem
         title={full.title}
         sub={full.sub}

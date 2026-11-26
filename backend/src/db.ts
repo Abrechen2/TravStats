@@ -17,6 +17,7 @@ import {
 import { inheritPurposeOnCreate } from "./services/purpose/tripInheritance";
 import { createPrismaClient } from "./prismaClient";
 import { sessionTimeoutsFromEnv } from "./services/db/sessionTimeouts";
+import { slowQueries } from "./services/runtime/slowLog";
 import {
   captureWrite,
   configureChangeLedger,
@@ -33,6 +34,7 @@ import { getLoggingRuntimeFlags } from "./utils/logging/runtimeFlags";
 
 const basePrisma = createPrismaClient({
   sessionTimeouts: sessionTimeoutsFromEnv(),
+  observePool: true,
   log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
 });
 // The change ledger reads its snapshots and writes its rows on the unextended
@@ -294,6 +296,9 @@ const queried = basePrisma.$extends({
               (await import("./shared/time/clock")).now()
             )
           : topLevel;
+        // Always, whatever the query-logging flag says: rate-limited per model
+        // and operation (services/runtime/slowLog.ts, perf audit item 4).
+        slowQueries.note(model ? `${model}.${operation}` : operation, Date.now() - startTime);
         if (!READ_OPERATIONS.has(operation)) {
           for (const observer of [
             ...(writeObserver ? [writeObserver] : []),
@@ -328,6 +333,8 @@ const queried = basePrisma.$extends({
         }
         return result;
       } catch (error) {
+        // A statement cancelled by the timeout is the slowest query of all.
+        slowQueries.note(model ? `${model}.${operation}` : operation, Date.now() - startTime);
         logQuerySafely(
           () =>
             logQueryFailure(

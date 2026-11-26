@@ -15,7 +15,7 @@ import logger from "../../utils/logger";
  */
 
 export interface HeavySlotState {
-  running: { name: string; since: string } | null;
+  running: { name: string; stateSince: string } | null;
   waiting: string[];
 }
 
@@ -36,7 +36,7 @@ export class HeavySlot {
   state(): HeavySlotState {
     return {
       running: this.holder
-        ? { name: this.holder.name, since: this.holder.since.toISOString() }
+        ? { name: this.holder.name, stateSince: this.holder.since.toISOString() }
         : null,
       waiting: this.queue.map((w) => w.name),
     };

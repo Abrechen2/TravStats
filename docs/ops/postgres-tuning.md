@@ -55,7 +55,7 @@ Keep the lower value only if the plan and the time get better.
 
 ## pg_stat_statements (slow-query visibility)
 
-The admin runtime card (**Einstellungen → Admin → Laufzeit**) lists the
+The admin runtime card (**Admin → Wartung → System**, block "Laufzeit") lists the
 slowest queries when the extension is available, and otherwise says
 "nicht aktiviert". To enable it:
 

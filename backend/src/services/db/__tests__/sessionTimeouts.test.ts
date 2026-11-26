@@ -33,7 +33,10 @@ describe("sessionTimeoutsFromEnv", () => {
 
   it("reads overrides, 0 meaning off", () => {
     expect(
-      sessionTimeoutsFromEnv({ DB_STATEMENT_TIMEOUT_MS: "0", DB_IDLE_IN_TRANSACTION_TIMEOUT_MS: "60000" })
+      sessionTimeoutsFromEnv({
+        DB_STATEMENT_TIMEOUT_MS: "0",
+        DB_IDLE_IN_TRANSACTION_TIMEOUT_MS: "60000",
+      })
     ).toEqual({ statementTimeoutMs: 0, idleInTransactionMs: 60_000 });
   });
 

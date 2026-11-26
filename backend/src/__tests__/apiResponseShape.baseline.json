@@ -19,6 +19,7 @@
     "admin/parserSettings.ts",
     "admin/passwordResetRequests.ts",
     "admin/publicUrlCheck.ts",
+    "admin/runtime.ts",
     "admin/rerouteRuns.ts",
     "admin/push.ts",
     "admin/recoveryKey.ts",

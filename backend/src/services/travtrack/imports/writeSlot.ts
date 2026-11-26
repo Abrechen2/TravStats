@@ -43,6 +43,11 @@ export class FairSlot {
     return this.queue.length;
   }
 
+  /** Turns held right now (the admin runtime card). */
+  held(): number {
+    return this.holders;
+  }
+
   /**
    * A slice ended: when another import waits, hand it the turn and queue again
    * behind it (true); with nobody waiting keep the turn (false).

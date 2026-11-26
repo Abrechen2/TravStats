@@ -72,7 +72,7 @@ services:
         #     -c max_wal_size=2GB -c checkpoint_completion_target=0.9
         # SSD/NVMe only, after the benchmark in the runbook:
         #     -c random_page_cost=1.1
-        # Slow-query visibility (Admin → Laufzeit), then once
+        # Slow-query visibility (Admin → Wartung → System → Laufzeit), then once
         # `CREATE EXTENSION pg_stat_statements;` as the superuser:
         #     -c shared_preload_libraries=pg_stat_statements
         #     -c track_io_timing=on -c log_min_duration_statement=500ms
