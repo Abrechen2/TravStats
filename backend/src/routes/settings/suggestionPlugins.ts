@@ -265,7 +265,7 @@ const applyValues = {
   lat: z.number().min(-90).max(90),
   lon: z.number().min(-180).max(180),
   street: z.string().trim().min(1).max(200).optional(),
-  postcode: z.string().trim().min(1).max(200).optional(),
+  postcode: z.string().trim().min(1).max(32).optional(),
   town: z.string().trim().min(1).max(200).optional(),
 };
 

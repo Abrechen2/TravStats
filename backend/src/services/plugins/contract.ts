@@ -261,7 +261,7 @@ export const maintenanceApplyRequestSchema = z
     lon: z.number().min(-180).max(180),
     /** The values the user confirmed (editable before confirming); exactly these are written. */
     street: text(200).optional(),
-    postcode: text(200).optional(),
+    postcode: text(32).optional(),
     town: text(200).optional(),
     source: z.enum(MAINTENANCE_SOURCES),
     /** From `maintenance/confirm`: single use, bound to exactly these values. */
@@ -279,7 +279,7 @@ export const maintenanceConfirmRequestSchema = z
     lat: z.number().min(-90).max(90).optional(),
     lon: z.number().min(-180).max(180).optional(),
     street: text(200).optional(),
-    postcode: text(200).optional(),
+    postcode: text(32).optional(),
     town: text(200).optional(),
     undoId: text(64).optional(),
   })

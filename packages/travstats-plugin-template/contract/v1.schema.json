@@ -623,7 +623,7 @@
         },
         "postcode": {
           "type": "string",
-          "maxLength": 200
+          "maxLength": 32
         },
         "town": {
           "type": "string",
@@ -846,7 +846,7 @@
         },
         "postcode": {
           "type": "string",
-          "maxLength": 200
+          "maxLength": 32
         },
         "town": {
           "type": "string",
