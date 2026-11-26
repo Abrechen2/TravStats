@@ -50,10 +50,13 @@ async function candidateFor(
   const resolved = await resolveApiKey(id, userId);
   if (!resolved.key) return null;
   if (ownKeyOnly && resolved.source !== "user") return null;
-  const provider =
+  const built =
     id === "openrouteservice"
       ? createOpenRouteService(resolved.key)
       : createGraphHopper(resolved.key);
+  // An account's own key keeps its health apart from the instance's (providerHealth).
+  const provider: RouteProvider =
+    resolved.source === "user" && userId ? { ...built, healthScope: `user:${userId}` } : built;
   return { provider, keySource: resolved.source === "user" ? "account" : "instance" };
 }
 
@@ -98,7 +101,7 @@ export async function resolveRouting(userId?: string): Promise<RoutingResolution
     for (const id of AUTO_ORDER) {
       const c = await candidateFor(id, userId, customUrl, false);
       if (!c) continue;
-      if (providerDown(c.provider.id) === null) {
+      if (providerDown(c.provider.id, undefined, c.provider.healthScope) === null) {
         return { provider: c.provider, mode: "auto", selected: null, ...pick(c) };
       }
       firstDown ??= c;
@@ -178,7 +181,7 @@ export async function describeRoutingAvailability(userId?: string): Promise<{
   try {
     const provider = await resolveRouteProvider(userId);
     if (!provider) return { configured: false, providerId: null, failing: null };
-    const down = providerDown(provider.id);
+    const down = providerDown(provider.id, undefined, provider.healthScope);
     return {
       configured: true,
       providerId: provider.id,

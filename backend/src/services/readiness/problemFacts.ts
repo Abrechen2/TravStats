@@ -124,7 +124,9 @@ export async function loadInstanceProblemFacts(): Promise<InstanceProblemFacts> 
   ]);
   const railRouterConfigured = !!admin?.railRoutingUrl && !routingOff;
   const instanceDown =
-    instanceRouting.provider !== null && providerDown(instanceRouting.provider.id) !== null;
+    instanceRouting.provider !== null &&
+    providerDown(instanceRouting.provider.id, undefined, instanceRouting.provider.healthScope) !==
+      null;
   // A provider that refuses every request draws no road: its legs are chords like no provider's.
   const roadRoutingEffective = instanceRouting.provider !== null && !instanceDown;
   const [railStraight, railRerouteMissed, legs, bus] = await Promise.all([

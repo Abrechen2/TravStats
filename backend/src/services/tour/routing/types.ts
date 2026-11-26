@@ -76,6 +76,12 @@ export interface RouteProvider {
   readonly id: RoutingProviderId;
   /** Stable provider/configuration identity; never include credentials. */
   readonly cacheIdentity?: string;
+  /**
+   * Whose credential this provider instance uses, for `providerHealth`: an
+   * account's own key (`user:<id>`) or the instance's (absent). One account's
+   * refused key must never mark the instance's provider down for everyone.
+   */
+  readonly healthScope?: string;
   cacheProfile?(req: RouteRequest): string;
   route(req: RouteRequest): Promise<RouteResult | RouteFailure | null>;
 }

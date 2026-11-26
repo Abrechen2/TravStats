@@ -40,4 +40,14 @@ describe("routing provider health (#411)", () => {
     const later = new Date(at.getTime() + PROVIDER_DOWN_TTL_MS + 1);
     expect(providerDown("openrouteservice", later)).toBeNull();
   });
+
+  it("a user's own refused key does not mark the instance's provider down; an instance 410 does", () => {
+    recordProviderOutcome("openrouteservice", "auth", undefined, "user:someone");
+    expect(providerDown("openrouteservice")).toBeNull();
+    expect(downProviders()).toEqual([]);
+    expect(providerDown("openrouteservice", undefined, "user:someone")).not.toBeNull();
+
+    recordProviderOutcome("openrouteservice", orsFailureReason(410, null));
+    expect(downProviders().map((d) => d.providerId)).toEqual(["openrouteservice"]);
+  });
 });

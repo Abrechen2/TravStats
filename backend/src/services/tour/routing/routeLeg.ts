@@ -222,14 +222,14 @@ async function computeLegGeometry(
 
   const result = await provider.route({ from, to, mode, vehicle });
   if (result === null) {
-    recordProviderOutcome(provider.id, "provider_error");
+    recordProviderOutcome(provider.id, "provider_error", undefined, provider.healthScope);
     return straightFallback({ from, to, reason: "provider_error" });
   }
   if (isRouteFailure(result)) {
-    recordProviderOutcome(provider.id, result.failure);
+    recordProviderOutcome(provider.id, result.failure, undefined, provider.healthScope);
     return straightFallback({ from, to, reason: result.failure });
   }
-  recordProviderOutcome(provider.id, null);
+  recordProviderOutcome(provider.id, null, undefined, provider.healthScope);
 
   const chordKm = haversineKm(from, to);
   if (!isTrustworthy(result, from, to, chordKm, provider.id)) {
