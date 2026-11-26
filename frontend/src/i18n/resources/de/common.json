@@ -556,6 +556,16 @@
     "next": "Nächstes Jahr",
     "open": "Jahr wählen",
     "all": "Alle Jahre",
-    "gridLabel": "Jahre"
+    "gridLabel": "Jahre",
+    "count": {
+      "flights_one": "{{count}} Flug",
+      "flights_other": "{{count}} Flüge",
+      "cruises_one": "{{count}} Kreuzfahrt",
+      "cruises_other": "{{count}} Kreuzfahrten",
+      "stays_one": "{{count}} Aufenthalt",
+      "stays_other": "{{count}} Aufenthalte",
+      "events_one": "{{count}} Eintrag",
+      "events_other": "{{count}} Einträge"
+    }
   }
 }

@@ -141,4 +141,13 @@ describe("YearPicker", () => {
     fireEvent.click(trigger());
     expect(screen.queryByText(/Reisen/)).toBeNull();
   });
+
+  it("re-points the tokens for the dark tone, so the map panel is not light-on-light", () => {
+    const { container } = render(
+      <YearPicker years={[{ year: 2024 }]} value={2024} tone="dark" onChange={() => undefined} />
+    );
+    expect((container.firstChild as HTMLElement).style.getPropertyValue("--ts-surface")).not.toBe(
+      ""
+    );
+  });
 });

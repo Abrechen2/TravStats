@@ -14,9 +14,17 @@ import { useStatsCompareStore } from "../../../store/statsCompareStore";
 const triggers = (): HTMLElement[] =>
   Array.from(document.querySelectorAll<HTMLElement>('button[aria-haspopup="true"]'));
 
-function Period({ years, loading = false }: { years: number[]; loading?: boolean }): JSX.Element {
+function Period({
+  years,
+  loading = false,
+  counts,
+}: {
+  years: number[];
+  loading?: boolean;
+  counts?: Record<number, number>;
+}): JSX.Element {
   const period = useStatsPeriod(years, loading);
-  return <StatsPeriodBar years={years} period={period} />;
+  return <StatsPeriodBar years={years} period={period} counts={counts} />;
 }
 
 const checkbox = (): HTMLInputElement => screen.getByRole("checkbox") as HTMLInputElement;
@@ -118,5 +126,13 @@ describe("statistics period — compare persistence (issue #188)", () => {
     expect(useStatsCompareStore.getState().compareEnabled).toBe(false);
     expect(useStatsCompareStore.getState().compareYear).toBeNull();
     expect(checkbox().checked).toBe(false);
+  });
+});
+
+describe("statistics period bar counts", () => {
+  it("shows the events per year under each year in the grid", () => {
+    render(<Period years={[2023, 2024]} counts={{ 2024: 9 }} />);
+    fireEvent.click(document.querySelector<HTMLElement>('button[aria-haspopup="true"]')!);
+    expect(screen.getByText("common:yearPicker.count.events")).toBeTruthy();
   });
 });

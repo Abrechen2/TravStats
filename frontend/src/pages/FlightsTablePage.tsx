@@ -441,6 +441,10 @@ export default function FlightsTablePage(): JSX.Element {
   /** Counted by the database under every OTHER filter, so picking a carrier
    *  no longer leaves the carrier list holding only that carrier. */
   const availableYears = useMemo(() => (facets?.years ?? []).map((y) => y.value), [facets]);
+  const yearCounts = useMemo(
+    () => Object.fromEntries((facets?.years ?? []).map((y) => [y.value, y.count])),
+    [facets]
+  );
   const availableAirlines = useMemo(
     () => (facets?.airlines ?? []).map((a) => ({ name: a.value, count: a.count })),
     [facets]
@@ -580,6 +584,7 @@ export default function FlightsTablePage(): JSX.Element {
           yearFilter={yearFilter}
           onYearChange={setYearFilter}
           availableYears={availableYears}
+          yearCounts={yearCounts}
           monthFilter={monthFilter}
           onMonthChange={setMonthFilter}
           airlineFilter={airlineFilter}

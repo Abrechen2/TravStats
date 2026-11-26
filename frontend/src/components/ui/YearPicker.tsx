@@ -25,9 +25,19 @@ interface Props {
   /** Accessible name of the whole control. */
   label?: string;
   className?: string;
+  /** "dark" for the map panel, which is a dark glass pane in both themes. */
+  tone?: "theme" | "dark";
 }
 
 const GRID_COLUMNS = 5;
+
+/** Re-points the tokens the picker reads, for a surface that is dark in light mode too. */
+const DARK_TONE: CSSProperties = {
+  ["--ts-surface" as string]: "rgb(30, 34, 44)",
+  ["--ts-border" as string]: "rgba(255, 255, 255, 0.12)",
+  ["--ts-text-bright" as string]: "rgba(241, 245, 249, 0.95)",
+  ["--ts-accent-text" as string]: "rgb(24, 24, 27)",
+};
 const GRID_WIDTH_PX = 340;
 
 /**
@@ -46,6 +56,7 @@ export default function YearPicker({
   formatCount,
   allowAll = true,
   disabled = false,
+  tone = "theme",
   label,
   className,
 }: Props): JSX.Element {
@@ -221,6 +232,7 @@ export default function YearPicker({
       role="group"
       aria-label={label ?? t("common:yearPicker.label")}
       className={`relative inline-flex ${className ?? ""}`}
+      style={tone === "dark" ? DARK_TONE : undefined}
     >
       <div
         className="inline-flex items-center rounded-full border"

@@ -21,6 +21,8 @@ export interface FlightsFilterBarProps {
   yearFilter: string;
   onYearChange: (value: string) => void;
   availableYears: readonly number[];
+  /** Flights per year from the facet call; a year without an entry shows no count. */
+  yearCounts?: Readonly<Record<number, number>>;
   monthFilter: string;
   onMonthChange: (value: string) => void;
   airlineFilter: string;
@@ -48,6 +50,7 @@ export function FlightsFilterBar({
   yearFilter,
   onYearChange,
   availableYears,
+  yearCounts,
   monthFilter,
   onMonthChange,
   airlineFilter,
@@ -89,7 +92,12 @@ export function FlightsFilterBar({
         value: yearFilter,
         onChange: onYearChange,
         allLabel: t("flights:filter.allYears"),
-        options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
+        options: availableYears.map((y) => ({
+          value: String(y),
+          label: String(y),
+          count: yearCounts?.[y],
+        })),
+        formatCount: (n): string => t("common:yearPicker.count.flights", { count: n }),
       }}
       extraActiveCount={extraActiveCount}
       extra={

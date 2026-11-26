@@ -7,6 +7,8 @@ interface Props {
   /** Every year any enabled domain has data for, ascending. */
   years: number[];
   period: StatsPeriod;
+  /** Events per year across the enabled domains; a year without an entry shows no count. */
+  counts?: Readonly<Record<number, number>>;
 }
 
 /**
@@ -22,8 +24,8 @@ interface Props {
  * The year list is the union across domains rather than the flight years: a
  * year with only a cruise in it is still a year somebody travelled.
  */
-export default function StatsPeriodBar({ years, period }: Props): JSX.Element {
-  const { t } = useTranslation(["stats"]);
+export default function StatsPeriodBar({ years, period, counts }: Props): JSX.Element {
+  const { t } = useTranslation(["stats", "common"]);
   const {
     selectedYear,
     setSelectedYear,
@@ -39,7 +41,8 @@ export default function StatsPeriodBar({ years, period }: Props): JSX.Element {
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
       <span className="t-label-mono sm:hidden">{t("stats:overviewFilter.range")}</span>
       <YearPicker
-        years={years.map((year) => ({ year }))}
+        years={years.map((year) => ({ year, count: counts?.[year] }))}
+        formatCount={(n): string => t("common:yearPicker.count.events", { count: n })}
         value={selectedYear ?? "all"}
         onChange={(v): void => setSelectedYear(v === "all" ? null : v)}
         label={t("stats:overviewFilter.range")}

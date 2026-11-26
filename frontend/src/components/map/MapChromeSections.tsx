@@ -96,6 +96,7 @@ export function MapChromeSections(): JSX.Element {
             value={year ?? "all"}
             onChange={(v): void => setYear(v === "all" ? null : v)}
             label={t("dashboard:filter.year")}
+            tone="dark"
           />
 
           {/* The domain pills that used to sit here are gone (owner,

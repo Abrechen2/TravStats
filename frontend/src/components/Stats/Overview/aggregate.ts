@@ -199,3 +199,14 @@ export function resolveStaleCompareYear(
   const fallback = pickAdjacentYear(years, selectedYear);
   return { compareYear: fallback, disableCompare: fallback === null };
 }
+
+/** Events per year summed over every domain that has data — the caption under a year in the picker. */
+export function yearEventTotals(statsMap: DomainStatsMap): Record<number, number> {
+  const out: Record<number, number> = {};
+  for (const stats of Object.values(statsMap)) {
+    if (!stats || !isWithData(stats)) continue;
+    for (const [y, n] of Object.entries(stats.yearlyEvents))
+      out[Number(y)] = (out[Number(y)] ?? 0) + n;
+  }
+  return out;
+}

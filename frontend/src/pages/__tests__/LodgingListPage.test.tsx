@@ -429,7 +429,9 @@ describe("LodgingListPage", () => {
     renderListPage();
 
     await waitFor(() =>
-      expect(openYearGrid("lodging:filter.year").map((b) => b.textContent)).toContain("2024")
+      expect(openYearGrid("lodging:filter.year").map((b) => b.textContent?.slice(0, 4))).toContain(
+        "2024"
+      )
     );
     listLodgingPageMock.mockClear();
 

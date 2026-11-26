@@ -193,7 +193,7 @@ describe("CruisesPage — server-side paging", () => {
     fireEvent.click(screen.getByTestId("list-filter-more"));
     // 40 AIDA sailings, from a page that carries 50 rows in total.
     expect(screen.getByLabelText("filter.line")).toHaveTextContent("AIDA Cruises");
-    expect(openYearGrid("filter.year").map((b) => b.textContent)).toContain("2024");
+    expect(openYearGrid("filter.year").map((b) => b.textContent?.slice(0, 4))).toContain("2024");
   });
 
   it("draws the summary strip from the server's counts, over the whole filtered set", async () => {

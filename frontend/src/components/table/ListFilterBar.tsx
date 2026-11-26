@@ -29,7 +29,9 @@ export interface SelectFilterConfig {
   onChange: (value: string) => void;
   /** The "no restriction" entry, always first. */
   allLabel: string;
-  options: ReadonlyArray<{ value: string; label: string }>;
+  options: ReadonlyArray<{ value: string; label: string; count?: number }>;
+  /** Caption under a year in the year grid, e.g. "12 Flüge"; only used by the year filter. */
+  formatCount?: (count: number) => string;
 }
 
 interface Props {
@@ -72,13 +74,14 @@ function FilterSelect({ config }: { config: SelectFilterConfig }): JSX.Element {
 
 /** The year filter: the shared year pill over the same string-valued config. */
 function YearFilter({ config }: { config: SelectFilterConfig }): JSX.Element {
-  const years = config.options.map((o) => ({ year: Number.parseInt(o.value, 10) }));
+  const years = config.options.map((o) => ({ year: Number.parseInt(o.value, 10), count: o.count }));
   return (
     <YearPicker
       years={years.filter((y) => Number.isFinite(y.year))}
       value={config.value === "all" ? "all" : Number.parseInt(config.value, 10)}
       onChange={(v): void => config.onChange(v === "all" ? "all" : String(v))}
       label={config.label}
+      formatCount={config.formatCount}
     />
   );
 }

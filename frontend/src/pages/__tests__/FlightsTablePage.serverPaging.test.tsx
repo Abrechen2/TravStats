@@ -235,7 +235,9 @@ describe("FlightsTablePage — server-side paging", () => {
     const airlineSelect = screen.getByLabelText("flights:table.airline");
     expect(airlineSelect).toHaveTextContent("Lufthansa (120)");
     // 120 Lufthansa flights, from a page that carries 50 rows in total.
-    expect(openYearGrid("flights:filter.year").map((b) => b.textContent)).toContain("2024");
+    expect(openYearGrid("flights:filter.year").map((b) => b.textContent?.slice(0, 4))).toContain(
+      "2024"
+    );
   });
 
   it("counts the filtered set from `total`, not from the page", async () => {
