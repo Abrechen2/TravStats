@@ -1,12 +1,12 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { countryName } from "../../../lib/countryFlag";
 import type { LodgingPlace, LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
 import CountingHelp from "../counting/CountingHelp";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RankedBarList from "./RankedBarList";
 import { formatLatitude as formatLat, formatLongitude as formatLon } from "../../../lib/hemisphere";
+import { CountryLabel } from "../../../lib/countryFlag";
 
 const LODGING_ACCENT = "var(--domain-lodging, #d4778f)";
 const LIST_LIMIT = 8;
@@ -36,9 +36,8 @@ function placeLabel(place: LodgingPlace): string {
  * out presents a partial answer as a complete one.
  */
 export default function LodgingGeoSection({ stats, evidenceScope }: Props): JSX.Element {
-  const { t, i18n } = useTranslation(["lodging"]);
+  const { t } = useTranslation(["lodging"]);
   const { geo } = stats;
-  const locale = i18n.language.startsWith("en") ? "en" : "de";
   // The extremes and the centre are read off the stays with coordinates; each
   // tile opens that list, every stay naming its position and night weight.
   const located = evidenceScope
@@ -135,7 +134,7 @@ export default function LodgingGeoSection({ stats, evidenceScope }: Props): JSX.
           accent={LODGING_ACCENT}
           rows={geo.topCountries.map((c) => ({
             key: c.key,
-            label: countryName(c.key, locale) || c.key,
+            label: <CountryLabel country={c.key} />,
             weight: c.nights,
             value: t("lodging:stats.geo.nights", { count: c.nights }),
             hint: t("lodging:stats.geo.stays", { count: c.stays }),

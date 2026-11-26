@@ -66,7 +66,7 @@ describe("RoadtripTableRow", () => {
     renderRow({});
     expect(screen.getByText("QA Roadtrip")).toBeInTheDocument();
     expect(screen.getByText("Campervan")).toBeInTheDocument();
-    expect(screen.getByText("Norwegen")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Norwegen" })).toBeInTheDocument();
     expect(screen.getByText("254 km")).toBeInTheDocument();
   });
 

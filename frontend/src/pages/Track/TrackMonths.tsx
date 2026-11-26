@@ -15,10 +15,10 @@ import {
 import { logger } from "../../lib/logger";
 import { appLocale, formatDistance, formatShortDistance } from "../../lib/units";
 import { todayIn } from "../../shared/time/clock";
-import { countryName } from "../../shared/geo/countryCode";
 import { useSettingsStore } from "../../store/settingsStore";
 import TrackCalendar from "./stats/TrackCalendar";
 import TrackKmChart from "./stats/TrackKmChart";
+import { CountryLabel } from "../../lib/countryFlag";
 
 type State =
   { kind: "loading" } | { kind: "failed"; key: string } | { kind: "loaded"; data: TravTrackMonths };
@@ -78,7 +78,6 @@ export default function TrackMonths(): JSX.Element {
     value < 10
       ? formatShortDistance(value, units.distanceUnit, t, lang)
       : formatDistance(value, units.distanceUnit, t, lang);
-  const country = (code: string) => countryName(code, lang) || code;
   const head = "px-2 py-1 text-left font-medium";
   const cell = "px-2 py-1 align-top";
 
@@ -147,7 +146,7 @@ export default function TrackMonths(): JSX.Element {
                         {row.values === null ? (
                           <td className={cell} colSpan={4} />
                         ) : (
-                          <MonthCells values={row.values} km={km} country={country} cell={cell} />
+                          <MonthCells values={row.values} km={km} cell={cell} />
                         )}
                       </tr>
                     ))}
@@ -172,12 +171,10 @@ export default function TrackMonths(): JSX.Element {
 function MonthCells({
   values,
   km,
-  country,
   cell,
 }: {
   values: TravTrackMonth;
   km: (value: number) => string;
-  country: (code: string) => string;
   cell: string;
 }): JSX.Element {
   const { t } = useTranslation(["track"]);
@@ -193,9 +190,15 @@ function MonthCells({
         )}
       </td>
       <td className={cell}>
-        {values.countries.length === 0
-          ? t("track:months.noCountries")
-          : values.countries.map(country).join(", ")}
+        {values.countries.length === 0 ? (
+          t("track:months.noCountries")
+        ) : (
+          <span className="inline-flex flex-wrap gap-1.5">
+            {values.countries.map((code) => (
+              <CountryLabel key={code} country={code} compact height={16} />
+            ))}
+          </span>
+        )}
       </td>
       <td className={cell} data-testid="track-month-cities">
         {values.cities === null ? (

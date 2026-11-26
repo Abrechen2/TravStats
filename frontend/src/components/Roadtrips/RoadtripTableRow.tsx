@@ -5,9 +5,9 @@ import Pill from "../ui/Pill";
 import { TableRow, type TableColumn } from "../ui/Table";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { RoadtripPhase } from "../../lib/roadtrip/roadtripView";
-import { countryName } from "../../shared/geo/countryCode";
 import type { RoadtripSummary } from "../../types/roadtrip";
 import { useRoadtripSpan } from "./useRoadtripSpan";
+import { CountryLabel } from "../../lib/countryFlag";
 
 export type RoadtripColumnId =
   "name" | "vehicle" | "dates" | "trip" | "countries" | "stations" | "distance";
@@ -86,7 +86,15 @@ export function RoadtripTableRow({ roadtrip: r, phase, columns, onOpen }: Props)
     ),
     dates: span(r),
     trip: <span className="text-(--text-muted)">{r.tripName ?? "—"}</span>,
-    countries: r.countries.map((c) => countryName(c, i18n.language) || c).join(" · ") || "—",
+    countries: r.countries.length ? (
+      <span className="inline-flex flex-wrap gap-1.5">
+        {r.countries.map((c) => (
+          <CountryLabel key={c} country={c} compact height={16} />
+        ))}
+      </span>
+    ) : (
+      "—"
+    ),
     stations: nf.format(r.stationCount),
     distance: kmKnown ? `${nf.format(r.drivenKm)} km` : "—",
   };

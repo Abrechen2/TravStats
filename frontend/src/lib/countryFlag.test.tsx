@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
-import { countryFromUnlocode, FlagImg, flagImgHtml, resolveCountryCode } from "./countryFlag";
+import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  CountryLabel,
+  countryFromUnlocode,
+  FlagImg,
+  flagImgHtml,
+  resolveCountryCode,
+} from "./countryFlag";
 
 describe("countryFromUnlocode", () => {
   it("takes the ISO prefix of the LOCODE, upper-cased", () => {
@@ -129,5 +135,37 @@ describe("FlagImg", () => {
   it("draws nothing at all when the country cannot be resolved", () => {
     const { container } = render(<FlagImg country="Nirgendwo" />);
     expect(container.querySelector("img")).toBeNull();
+  });
+});
+
+describe("CountryLabel", () => {
+  it("shows the flag with the name beside it, the flag itself hidden from screen readers", () => {
+    const { container } = render(<CountryLabel country="DE" />);
+    expect(screen.getByText(/Germany|Deutschland/)).toBeInTheDocument();
+    const img = container.querySelector("img");
+    expect(img?.getAttribute("src")).toBe("/flags/de.svg");
+    expect(img?.getAttribute("aria-hidden")).toBe("true");
+  });
+  it("compact variant is a flag alone that names the country as aria-label and tooltip", () => {
+    render(<CountryLabel country="DE" compact />);
+    const el = screen.getByRole("img", { name: /Germany|Deutschland/ });
+    expect(el.getAttribute("title")).toBe(el.getAttribute("aria-label"));
+  });
+  it("an unknown code falls back to a neutral marker with the text kept, no broken image", () => {
+    const { container } = render(<CountryLabel country="Atlantis" />);
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByTestId("country-fallback-marker")).toBeInTheDocument();
+    expect(screen.getByText("Atlantis")).toBeInTheDocument();
+  });
+  it("a code whose flag file fails to load swaps to the neutral marker instead of a broken image", () => {
+    const { container } = render(<CountryLabel country="DE" compact />);
+    fireEvent.error(container.querySelector("img") as HTMLImageElement);
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByTestId("country-fallback-marker")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Germany|Deutschland/ })).toBeInTheDocument();
+  });
+  it("renders nothing for an empty value", () => {
+    const { container } = render(<CountryLabel country="  " />);
+    expect(container.firstChild).toBeNull();
   });
 });

@@ -435,16 +435,11 @@ export default function PassportPage(): JSX.Element {
                   {/* ── the full table, which is what a desktop adds ──────
                       Every country with any evidence, including the ones the
                       headline does not count: those are greyed, never dropped. */}
-                  <CountryTable
-                    countries={passport.countries}
-                    locale={locale}
-                    onCorrect={correct}
-                  />
+                  <CountryTable countries={passport.countries} onCorrect={correct} />
                 </>
               )}
               <ExcludedCountries
                 countries={passport.excludedCountries ?? []}
-                locale={locale}
                 onChanged={reloadPassport}
               />
               <UnconfirmedCountries

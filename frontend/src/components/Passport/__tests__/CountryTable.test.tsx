@@ -62,7 +62,7 @@ const emptyDetail = (code: string): CountryDetail => ({
 const renderTable = (countries: PassportCountry[]): void => {
   render(
     <MemoryRouter>
-      <CountryTable countries={countries} locale="de-DE" />
+      <CountryTable countries={countries} />
     </MemoryRouter>
   );
 };
@@ -77,7 +77,6 @@ describe("CountryTable — a country that does not count is greyed, not hidden",
     render(
       <MemoryRouter>
         <CountryTable
-          locale="en"
           countries={[
             country({ code: "DE", visited: true, counted: true }),
             country({ code: "QA", visited: false, counted: false, tier: "connection" }),

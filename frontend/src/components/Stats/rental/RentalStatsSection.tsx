@@ -4,7 +4,6 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { rentalLinksApi, type RentalStats } from "../../../lib/api/rentalLinks";
 import { formatAmount, dateLocaleForLanguage } from "../../../lib/units";
-import { countryName } from "../../../shared/geo/countryCode";
 import { logger } from "../../../lib/logger";
 import {
   comparisonEvidenceScope,
@@ -18,6 +17,7 @@ import StatCard from "../StatCard";
 import PeriodComparisonStrip from "../PeriodComparisonStrip";
 import CountingHelp from "../counting/CountingHelp";
 import RentalStatsDetails, { type RentalEvidence } from "./RentalStatsDetails";
+import { CountryLabel } from "../../../lib/countryFlag";
 
 const ALL_VISIBLE: SectionVisibility = {
   isVisible: () => true,
@@ -191,7 +191,13 @@ export default function RentalStatsSection({
           <div>
             <h3 className="text-sm font-semibold">{t("rental:stats.countries")}</h3>
             <p className="text-sm">
-              {stats.countries.map((c) => countryName(c, i18n.language) || c).join(", ") || "–"}
+              {stats.countries.length === 0
+                ? "–"
+                : stats.countries.map((c) => (
+                    <span key={c} className="mr-3 inline-block">
+                      <CountryLabel country={c} />
+                    </span>
+                  ))}
             </p>
             <p className="t-caption">{t("rental:stats.countriesNote")}</p>
           </div>

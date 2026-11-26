@@ -7,6 +7,7 @@ import CountingHelp from "./counting/CountingHelp";
 import EvidenceTrigger from "./EvidenceTrigger";
 import { rankingKey } from "../../shared/evidence";
 import { countryName } from "../../shared/geo/countryCode";
+import { CountryLabel } from "../../lib/countryFlag";
 
 /** Every ranking dimension this section resolves is `allTime`-only — see `rankingEvidence.ts` on the backend. */
 const ALL_TIME = { period: "allTime" as const };
@@ -240,7 +241,7 @@ export default function StatsAirportsSection({
                         {i + 1}.
                       </span>
                       <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                        {name}
+                        <CountryLabel country={c.country} />
                       </span>
                       <span
                         className="text-sm ml-auto font-medium"

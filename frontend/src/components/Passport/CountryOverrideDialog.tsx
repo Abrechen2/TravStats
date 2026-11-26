@@ -9,6 +9,7 @@ import { logger } from "../../lib/logger";
 import type { CountryOverrideVerdict, CountryOverrideView } from "../../types/passport";
 import { countryName } from "./countryName";
 import { overrideErrorKey } from "./overrideErrors";
+import { CountryLabel } from "../../lib/countryFlag";
 
 /**
  * Add or correct a country by hand (forgejo#308).
@@ -181,7 +182,7 @@ export default function CountryOverrideDialog({
         {editing ? (
           <p className="text-sm font-medium">
             <span className="font-mono text-xs mr-2 opacity-70">{code}</span>
-            {countryName(code, locale)}
+            <CountryLabel country={code} />
           </p>
         ) : listFailed ? (
           <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>

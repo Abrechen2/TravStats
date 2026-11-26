@@ -6,6 +6,7 @@ import CountryProvenance from "./CountryProvenance";
 import GroundTimeCell from "./GroundTimeCell";
 import TierBadge from "./TierBadge";
 import Toggletip from "../ui/Toggletip";
+import { CountryLabel } from "../../lib/countryFlag";
 
 /**
  * One country in the passport table.
@@ -49,11 +50,9 @@ const period = (from: number | null, to: number | null): string | null => {
 
 export default function CountryRow({
   row,
-  countryLabel,
   onCorrect,
 }: {
   row: PassportCountry;
-  countryLabel: string;
   /** Open the correction dialog for this country (forgejo#308). */
   onCorrect?: (row: PassportCountry) => void;
 }): JSX.Element {
@@ -74,7 +73,7 @@ export default function CountryRow({
       <tr className="border-t" style={rowStyle} data-counted={row.counted ? "true" : "false"}>
         <td className="px-6 py-2.5" data-wide>
           <span className="font-mono text-xs mr-2 opacity-70">{row.code}</span>
-          {countryLabel}
+          <CountryLabel country={row.code} />
           {row.isHome && (
             <span
               className="ml-2 text-[10px] uppercase tracking-wide"

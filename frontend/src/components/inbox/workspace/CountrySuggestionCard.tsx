@@ -13,6 +13,7 @@ import Button from "../../ui/Button";
 import TrackSectionPanel from "../track/TrackSectionPanel";
 import { countrySectionProps } from "../track/sectionProps";
 import { W } from "./model";
+import { CountryLabel } from "../../../lib/countryFlag";
 
 const L = `${W}.location`;
 
@@ -113,7 +114,10 @@ export default function CountrySuggestionCard({
           {error}
         </p>
       )}
-      <h3 className="text-base font-semibold">{t(`${L}.question`, { country })}</h3>
+      <h3 className="text-base font-semibold flex items-center gap-2">
+        <CountryLabel country={code} compact height={18} />
+        {t(`${L}.question`, { country })}
+      </h3>
       <p className="t-caption">{t(`${L}.source`)}</p>
       <p className="text-sm">
         {t(`${L}.evidence`, {
