@@ -240,6 +240,30 @@
         "confidence"
       ]
     },
+    "SuggestionPluginExternalRefV1": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 200
+          }
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
     "SuggestionPluginHelloV1": {
       "type": "object",
       "properties": {
