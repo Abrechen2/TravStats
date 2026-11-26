@@ -158,6 +158,55 @@ template (`test/replay.test.js`) both test against these.
 - The body is capped at **64 KB**; strings are length-capped (name 200, address
   300, note 500 characters).
 
+## Name matches
+
+A suggestion may say why it was made: `reason` is `distance` or `name`, with
+optional `distanceMeters`, `matchedToken` and `lowPrecision`. A `name` suggestion
+matched a distinctive word of the stop's venue name further away than the
+plugin's distance radius; the inbox reads "Name passt (MSA), 780 m". The response
+may carry `nameRadiusMeters`: a `name` suggestion is then accepted up to that
+radius, capped at 2 km. Distance suggestions, and name suggestions without a
+radius, keep the 1 km rule above. All of these are additive and ignored when
+unknown.
+
+## Location maintenance (optional capability)
+
+A hello with `capabilities: ["maintenance"]` offers location maintenance of the
+plugin's OWN data. Settings: TravTrack → Erkennung & Vorschläge → Externe
+Vorschlagsquellen → the plugin → "Standorte pflegen"; the same rows are in the
+inbox tab "Plugins". All calls are signed like a stop call and go to
+`<plugin url>/maintenance/<action>` (the URL read as a directory); the components
+are `PluginMaintenance*V1` in the exported contract.
+
+| Call | Body | Answer |
+|---|---|---|
+| `POST maintenance/proposals` | `{version, requestId, locale, stops[]}` (≤ 2000), optional search and paging | rows with `issues` (`noCoordinates`, `noStreet`, `lowPrecision`), `proposals` with `confidence` and `evidence`, `applied`, `notices` |
+| `POST maintenance/confirm` | `{kind: apply\|undo, …the values about to be written}` | `{token, expiresAt}`; writes nothing |
+| `POST maintenance/apply` | `{rowId, lat, lon, street?, postcode?, town?, source, token}` | `{undoId, rowId, written}` |
+| `POST maintenance/undo` | `{undoId, token}` | `{undoId, rowId, restored}` |
+| `POST maintenance/ignore` | `{rowId, ignored}` | `{rowId, ignored}` |
+
+- **One confirmation per write.** The user confirms each row in a dialog that names
+  what will be written; TravStats then asks `confirm` for a single-use ticket bound
+  to exactly those values and sends it with `apply` or `undo`. A plugin MUST refuse
+  a write without a valid ticket.
+- **Who sends the stops.** TravStats sends, with each proposals request, the
+  account's venue-named TravTrack findings of the last two years, deduped and
+  rounded to the plugin's precision; unnamed stays of 20+ minutes outside privacy
+  zones are sent too. At `1km` none are sent, and none when TravTrack is not the
+  account's source. The plugin uses them for that answer only and keeps no history.
+- **Writes.** Only on `apply`: the coordinates, and the street only when the row's
+  own street is empty. The plugin keeps the previous values in a local undo log;
+  `undo` restores them and answers `409 {"error":"changed"}` when the row was
+  edited since. A source that refuses writes answers `409 {"error":"readOnly"}`; an
+  unknown row or undo `404 {"error":"notFound"}`.
+- **Routes** (owner of the registration only; an admin does not reach another
+  account's plugin): `GET /settings/suggestion-plugins/:id/capabilities`,
+  `GET …/:id/maintenance`, `POST …/:id/maintenance/{confirm,apply,undo,ignore}`. A
+  failure is `400 PLUGIN_FAILED` with the reason in `error`; a missing capability
+  is `409 PLUGIN_NO_MAINTENANCE`. Timeout 15 s, body cap 1 MB. The inbox reads a
+  cached copy and polls the notices without the row list.
+
 ## Errors, limits and `Retry-After`
 
 What TravStats does with each answer, and what the settings page shows as the
