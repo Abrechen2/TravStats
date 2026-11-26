@@ -30,7 +30,7 @@ import {
 
 jest.setTimeout(120_000);
 
-const USERS = ["az-paced-1", "az-paced-2", "az-paced-3"];
+const USERS = ["az-paced-1", "az-paced-2", "az-paced-3", "az-paced-4", "az-paced-5"];
 let work: string;
 let root: string;
 let zipPath: string;
@@ -143,5 +143,43 @@ describe("the paced account-archive restore", () => {
     expect(await counts(USERS[2])).toEqual(await counts(U));
     const { rows } = await db.query(`SELECT 1 FROM flights WHERE id = 'az-paced-stray'`);
     expect(rows).toEqual([]);
+  });
+
+  it("refuses an account that gained data while waiting, and deletes none of it", async () => {
+    const slot = new FairSlot(1);
+    await slot.acquire("someone-importing");
+    const run = importAccountArchive(zipPath, USERS[3], undefined, {
+      uploadsRoot: root,
+      slot,
+      sleep: noSleep,
+    });
+    await new Promise((r) => setTimeout(r, 300));
+    await db.query(
+      `INSERT INTO flights (id, user_id, dep_lat, dep_lon, arr_lat, arr_lon) VALUES ('az-paced-own', $1, 1, 2, 3, 4)`,
+      [USERS[3]]
+    );
+    slot.release();
+    await expect(run).rejects.toMatchObject({ code: "ACCOUNT_ARCHIVE_TARGET_NOT_EMPTY" });
+    const { rows } = await db.query(`SELECT 1 FROM flights WHERE id = 'az-paced-own'`);
+    expect(rows).toHaveLength(1);
+  });
+
+  it("puts the account's own settings row back when a restore fails half-way", async () => {
+    await db.query(
+      `INSERT INTO user_settings (id, user_id, data, immich_api_key, updated_at) VALUES ('az-paced-settings', $1, '{}', 'OWN-KEY', now())`,
+      [USERS[4]]
+    );
+    await expect(
+      importAccountArchive(zipPath, USERS[4], undefined, {
+        uploadsRoot: root,
+        sleep: noSleep,
+        failAfterRows: 30,
+      })
+    ).rejects.toThrow("injected failure");
+    const { rows } = await db.query(`SELECT immich_api_key FROM user_settings WHERE user_id = $1`, [
+      USERS[4],
+    ]);
+    expect(rows).toEqual([{ immich_api_key: "OWN-KEY" }]);
+    expect(await counts(USERS[4])).toEqual({ user_settings: 1 });
   });
 });

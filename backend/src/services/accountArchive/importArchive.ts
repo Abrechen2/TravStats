@@ -180,7 +180,8 @@ export async function importAccountArchive(
         message: "An earlier restore of this archive was interrupted; undoing it before retrying",
         context: { archiveId: manifest.archiveId, userId: targetUserId },
       });
-      await undoImport(client, plan, targetUserId, null);
+      const kept = (earlier.counts as { replaced?: Record<string, unknown[]> }).replaced;
+      await undoImport(client, plan, targetUserId, kept ? new Map(Object.entries(kept)) : null);
       await client.accountArchiveImport.delete({ where: { archiveId: manifest.archiveId } });
     } else if (earlier) {
       if (earlier.userId !== targetUserId) {
@@ -224,23 +225,32 @@ export async function importAccountArchive(
     const { verdicts, refused } = await writeFiles(reader, contents, remap, root, written, tick);
     const outcome = { skipped: {} as Record<string, number>, unmatched: 0 };
 
-    const snapshot = await snapshotReplaced(client as unknown as Db, contents, targetUserId);
-    // Committed at once: a concurrent second import of this archive hits the
-    // unique id (P2002) and is refused; a crash leaves `inProgress` behind.
-    await client.accountArchiveImport.create({
-      data: {
-        archiveId: manifest.archiveId,
-        userId: targetUserId,
-        sourceServerVersion: manifest.serverVersion,
-        formatVersion: manifest.formatVersion,
-        counts: { inProgress: true },
-      },
-    });
-    restoresRunning.add(manifest.archiveId);
     const slot = options.slot ?? importWriteSlot;
     let tables: Record<string, number>;
+    // The write slot first: a restore may wait here behind a file import.
+    await slot.acquire(targetUserId);
     try {
-      await slot.acquire(targetUserId);
+      // Checked again right before writing, OUTSIDE the compensated block
+      // below: an account that is not empty is refused, never "undone".
+      if ((await nonEmptyTables(client as unknown as Db, plan, targetUserId)).length > 0)
+        throw notEmpty();
+      const snapshot = await snapshotReplaced(client as unknown as Db, contents, targetUserId);
+      // Committed at once: a concurrent second import of this archive hits the
+      // unique id (P2002) and is refused; a crash leaves `inProgress` behind,
+      // with the replaced rows, so an undo after a crash puts them back too.
+      await client.accountArchiveImport.create({
+        data: {
+          archiveId: manifest.archiveId,
+          userId: targetUserId,
+          sourceServerVersion: manifest.serverVersion,
+          formatVersion: manifest.formatVersion,
+          counts: {
+            inProgress: true,
+            replaced: Object.fromEntries(snapshot),
+          } as unknown as Prisma.InputJsonValue,
+        },
+      });
+      restoresRunning.add(manifest.archiveId);
       try {
         tables = await restoreRows(client, {
           plan,
@@ -257,23 +267,23 @@ export async function importAccountArchive(
           afterWrite: restorePacer(slot, targetUserId, options.sleep ?? realSleep),
           failAfterRows: options.failAfterRows,
         });
-      } finally {
-        slot.release();
-      }
-    } catch (err) {
-      await undoImport(client, plan, targetUserId, snapshot).catch((undoErr: unknown) => {
-        logger.error({
-          operation: "account_archive_import_undo_failed",
-          message: "A failed restore could not be undone; the next attempt will retry the undo",
-          context: { archiveId: manifest.archiveId, userId: targetUserId },
-          error: undoErr instanceof Error ? undoErr.message : String(undoErr),
+      } catch (err) {
+        await undoImport(client, plan, targetUserId, snapshot).catch((undoErr: unknown) => {
+          logger.error({
+            operation: "account_archive_import_undo_failed",
+            message: "A failed restore could not be undone; the next attempt will retry the undo",
+            context: { archiveId: manifest.archiveId, userId: targetUserId },
+            error: undoErr instanceof Error ? undoErr.message : String(undoErr),
+          });
+          throw undoErr;
         });
-        throw undoErr;
-      });
-      await client.accountArchiveImport.delete({ where: { archiveId: manifest.archiveId } });
-      throw err;
+        await client.accountArchiveImport.delete({ where: { archiveId: manifest.archiveId } });
+        throw err;
+      } finally {
+        restoresRunning.delete(manifest.archiveId);
+      }
     } finally {
-      restoresRunning.delete(manifest.archiveId);
+      slot.release();
     }
     report(total, total);
     return {
@@ -346,7 +356,6 @@ async function restoreRows(
 ): Promise<Record<string, number>> {
   const { plan, reader, contents, remap, verdicts, outcome, targetUserId } = input;
   const db = client as unknown as Db;
-  if ((await nonEmptyTables(db, plan, targetUserId)).length > 0) throw notEmpty();
   const keyMaps: KeyMaps = await resolveCatalogue(db, reader, plan, contents.catalogueTables);
   const deferred: DeferredUpdate[] = [];
   const skipped = new Set<string>();
