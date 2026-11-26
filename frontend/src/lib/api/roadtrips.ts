@@ -7,6 +7,7 @@ import type {
   CreateRoadtripInput,
   RoadtripDetail,
   RoadtripNights,
+  RoadtripPhotos,
   RoadtripStation,
   RoadtripSummary,
   StationInput,
@@ -29,6 +30,21 @@ export const roadtripsApi = {
   get: async (id: string): Promise<RoadtripDetail> => {
     const { data } = await api.get<RoadtripDetail>(`/roadtrips/${id}`);
     return data;
+  },
+
+  /** Every photo that belongs to the roadtrip: linked ones and those that only fit. */
+  photos: async (id: string): Promise<RoadtripPhotos> => {
+    const { data } = await api.get<RoadtripPhotos>(`/roadtrips/${id}/photos`);
+    return data;
+  },
+
+  /** One click: file an unfiled trip upload at a station of the roadtrip. */
+  fileUploadAtStation: async (
+    tripId: string,
+    photoId: string,
+    stationId: string
+  ): Promise<void> => {
+    await api.patch(`/trips/${tripId}/photos/${photoId}`, { stopId: stationId });
   },
 
   create: async (input: CreateRoadtripInput): Promise<TourRoute> => {

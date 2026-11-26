@@ -549,5 +549,20 @@
     "coral": "Coral",
     "teal": "Teal",
     "lime": "Lime"
+  },
+  "photoViewer": {
+    "title": "Photo viewer",
+    "alt": "Photo",
+    "previous": "Previous photo",
+    "next": "Next photo",
+    "close": "Close",
+    "loadFailed": "The photo could not be loaded. The source is unreachable or the photo was removed.",
+    "source": {
+      "upload": "own upload",
+      "immich": "Immich",
+      "photoprism": "PhotoPrism"
+    },
+    "openEntry": "Go to entry",
+    "enlarge": "Enlarge photo"
   }
 }

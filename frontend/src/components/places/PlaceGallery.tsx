@@ -6,6 +6,9 @@ import { logger } from "../../lib/logger";
 import { setPlaceCover } from "../../lib/api/places";
 import type { Place } from "../../types/place";
 import type { PlaceVisitPhoto } from "../../types/placeList";
+import EnlargeButton, { EnlargeCorner } from "../common/photoViewer/EnlargeButton";
+import { usePhotoViewer } from "../common/photoViewer/usePhotoViewer";
+import { largeUrl, sourceOf } from "../common/photoViewer/viewerPhoto";
 
 interface Props {
   place: Place;
@@ -28,6 +31,7 @@ export function PlaceGallery({ place }: Props): JSX.Element | null {
   const [coverFailed, setCoverFailed] = useState(false);
 
   const photos = galleryPhotos(place);
+  const viewer = usePhotoViewer();
   if (photos.length === 0) return null;
   const lead = photos.find((p) => p.id === coverId) ?? photos[0];
 
@@ -44,48 +48,69 @@ export function PlaceGallery({ place }: Props): JSX.Element | null {
     }
   };
 
+  const viewerItems = photos.map((p) => ({
+    id: p.id,
+    url: largeUrl(p.url),
+    caption: p.caption,
+    place: place.name,
+    source: sourceOf(p.provider),
+  }));
+
   return (
     <section className="flex flex-col gap-2" aria-label={t("places:gallery.title")}>
-      <img
-        src={lead.url}
-        alt={lead.caption ?? t("places:gallery.lead", { name: place.name })}
-        className="w-full rounded-[var(--ts-radius-card)] object-cover"
-        style={{ maxHeight: 320, border: "1px solid var(--ts-border)" }}
-      />
+      {viewer.viewer}
+      <EnlargeButton
+        className="w-full"
+        onOpen={() =>
+          viewer.open(
+            viewerItems,
+            photos.findIndex((p) => p.id === lead.id)
+          )
+        }
+      >
+        <img
+          src={lead.url}
+          alt={lead.caption ?? t("places:gallery.lead", { name: place.name })}
+          className="w-full rounded-[var(--ts-radius-card)] object-cover"
+          style={{ maxHeight: 320, border: "1px solid var(--ts-border)" }}
+        />
+      </EnlargeButton>
       {photos.length > 1 && (
         <div className="flex flex-wrap gap-2">
           {photos.map((photo) => (
-            <button
-              key={photo.id}
-              type="button"
-              onClick={() => void choose(photo.id)}
-              aria-pressed={photo.id === lead.id}
-              // What a tap does is in the name, not in a hover-only `title`
-              // (forgejo#249); the hint below says it for the eye.
-              aria-label={`${t("places:gallery.makeCover")}: ${photo.caption ?? t("places:photos.alt")}`}
-              style={{
-                padding: 0,
-                borderRadius: 6,
-                border:
-                  photo.id === lead.id ? "2px solid var(--accent)" : "1px solid var(--ts-border)",
-                cursor: "pointer",
-              }}
-            >
-              <img
-                src={photo.url}
-                alt={photo.caption ?? t("places:photos.alt")}
-                width={56}
-                height={56}
-                loading="lazy"
+            <span key={photo.id} className="relative inline-block">
+              <button
+                type="button"
+                onClick={() => void choose(photo.id)}
+                aria-pressed={photo.id === lead.id}
+                // What a tap does is in the name, not in a hover-only `title`
+                // (forgejo#249); the hint below says it for the eye.
+                aria-label={`${t("places:gallery.makeCover")}: ${photo.caption ?? t("places:photos.alt")}`}
                 style={{
-                  width: 56,
-                  height: 56,
-                  objectFit: "cover",
-                  borderRadius: 5,
-                  display: "block",
+                  padding: 0,
+                  borderRadius: 6,
+                  border:
+                    photo.id === lead.id ? "2px solid var(--accent)" : "1px solid var(--ts-border)",
+                  cursor: "pointer",
                 }}
-              />
-            </button>
+              >
+                <img
+                  src={photo.url}
+                  alt={photo.caption ?? t("places:photos.alt")}
+                  width={56}
+                  height={56}
+                  loading="lazy"
+                  style={{
+                    width: 56,
+                    height: 56,
+                    objectFit: "cover",
+                    borderRadius: 5,
+                    display: "block",
+                  }}
+                />
+              </button>
+              <EnlargeCorner onOpen={() => viewer.open(viewerItems, photos.indexOf(photo))} />
+            </span>
           ))}
         </div>
       )}

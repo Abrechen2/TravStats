@@ -19,6 +19,9 @@ import { useToastStore } from "../../store/toastStore";
 import PhotoChoosePanel from "./PhotoChoosePanel";
 import DetailSection from "../ui/DetailSection";
 import OverflowMenu, { type OverflowEntry } from "../ui/OverflowMenu";
+import EnlargeButton, { EnlargeCorner } from "./photoViewer/EnlargeButton";
+import { usePhotoViewer } from "./photoViewer/usePhotoViewer";
+import { largeUrl, sourceOf, type ViewerPhoto } from "./photoViewer/viewerPhoto";
 
 interface Props {
   kind: EntryPhotoKind;
@@ -48,6 +51,7 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [choosing, setChoosing] = useState(false);
+  const viewer = usePhotoViewer();
 
   const reload = useCallback(async (): Promise<void> => {
     try {
@@ -195,12 +199,20 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
     padding: 0,
   } as const;
 
+  const linkedItems: ViewerPhoto[] = (photos ?? []).map((p) => ({
+    id: p.id,
+    url: largeUrl(p.url),
+    takenAt: p.takenAt,
+    source: sourceOf(p.provider),
+  }));
+
   return (
     <section
       aria-label={t("common:entryPhotos.title")}
       data-testid="entry-photos"
       className="flex w-full flex-col gap-2"
     >
+      {viewer.viewer}
       {/* The photos stay in view; the rare actions are one section ⋯, remove-all last, red and
           confirmed (owner, 2026-11-22). */}
       <div className="flex items-center justify-between gap-2">
@@ -223,14 +235,16 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
         <ul className="flex flex-wrap gap-3">
           {photos.map((p) => (
             <li key={p.id} className="flex flex-col gap-1" style={{ width: TILE + 24 }}>
-              <img
-                src={p.url}
-                alt={t("common:entryPhotos.alt")}
-                width={TILE}
-                height={TILE}
-                loading="lazy"
-                style={{ width: TILE, height: TILE, objectFit: "cover", borderRadius: 6 }}
-              />
+              <EnlargeButton onOpen={() => viewer.open(linkedItems, photos.indexOf(p))}>
+                <img
+                  src={p.url}
+                  alt={t("common:entryPhotos.alt")}
+                  width={TILE}
+                  height={TILE}
+                  loading="lazy"
+                  style={{ width: TILE, height: TILE, objectFit: "cover", borderRadius: 6 }}
+                />
+              </EnlargeButton>
               <span className="text-[10px] leading-4" style={{ color: "var(--text-muted)" }}>
                 {label(p)}
               </span>
@@ -268,29 +282,43 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
                 aria-label={t("common:entryPhotos.add")}
               >
                 {found.suggestions.map((s) => (
-                  <button
-                    key={keyOf(s)}
-                    type="button"
-                    aria-pressed={picked.has(keyOf(s))}
-                    onClick={() => toggle(keyOf(s))}
-                    style={{
-                      padding: 0,
-                      borderRadius: 6,
-                      border: picked.has(keyOf(s))
-                        ? "2px solid var(--accent)"
-                        : "1px solid var(--color-border)",
-                      opacity: picked.has(keyOf(s)) ? 1 : 0.75,
-                    }}
-                  >
-                    <img
-                      src={s.url}
-                      alt={t("common:entryPhotos.alt")}
-                      width={56}
-                      height={56}
-                      loading="lazy"
-                      style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 5 }}
+                  <span key={keyOf(s)} className="relative inline-block">
+                    <button
+                      type="button"
+                      aria-pressed={picked.has(keyOf(s))}
+                      onClick={() => toggle(keyOf(s))}
+                      style={{
+                        padding: 0,
+                        borderRadius: 6,
+                        border: picked.has(keyOf(s))
+                          ? "2px solid var(--accent)"
+                          : "1px solid var(--color-border)",
+                        opacity: picked.has(keyOf(s)) ? 1 : 0.75,
+                      }}
+                    >
+                      <img
+                        src={s.url}
+                        alt={t("common:entryPhotos.alt")}
+                        width={56}
+                        height={56}
+                        loading="lazy"
+                        style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 5 }}
+                      />
+                    </button>
+                    <EnlargeCorner
+                      onOpen={() =>
+                        viewer.open(
+                          found.suggestions.map((x) => ({
+                            id: keyOf(x),
+                            url: largeUrl(x.url),
+                            takenAt: x.takenAt,
+                            source: sourceOf(x.provider),
+                          })),
+                          found.suggestions.indexOf(s)
+                        )
+                      }
                     />
-                  </button>
+                  </span>
                 ))}
               </div>
               <button

@@ -56,6 +56,7 @@ export default function TripGallery({
     id: p.id,
     previewUrl: p.url,
     caption: p.caption,
+    takenAt: p.takenAt ?? null,
     source: { kind: "photo" },
   }));
 
