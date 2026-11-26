@@ -74,12 +74,15 @@ export function NightSuggestions({
   near,
   vehicle,
   taken,
+  full = false,
   onTake,
 }: {
   near: PlanPlace;
   vehicle: PlanVehicle["kind"] | null;
   /** Names already among the candidates, so a suggestion is not offered twice. */
   taken: string[];
+  /** The night holds as many candidates as it may; taking is off and the card says why. */
+  full?: boolean;
   onTake: (candidate: PlanNightCandidate) => void;
 }) {
   const { t } = useTranslation("travplan"),
@@ -152,6 +155,7 @@ export function NightSuggestions({
                   </span>
                 </span>
                 <Button
+                  disabled={full}
                   aria-label={t("route.suggest.take", { name: p.name })}
                   onClick={() => onTake(candidateFrom(p, near, kindLabel(p.kind)))}
                 >
@@ -167,6 +171,7 @@ export function NightSuggestions({
               </Button>
             </div>
           )}
+          {full && <p className="t-caption">{t("route.suggest.full")}</p>}
           <p className="t-caption">{t("route.suggest.source")}</p>
         </>
       )}

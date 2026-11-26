@@ -213,3 +213,53 @@ describe("a folded span", () => {
     expect(edit).toHaveBeenCalledWith("items", expect.objectContaining({ day: "2026-05-05" }));
   });
 });
+
+describe("a span that shrinks", () => {
+  it("does not keep a chosen day the card no longer shows", async () => {
+    const edit = vi.fn();
+    const base = routePlan();
+    const view = render(
+      <MemoryRouter>
+        <DayPlanSection ctx={{ ...ctx(base), edit, busy: false }} />
+      </MemoryRouter>
+    );
+    const card = () =>
+      screen.getByRole("heading", { name: /^2026-05-04–/ }).closest("div")!.parentElement!;
+    await userEvent.selectOptions(
+      within(card()).getByRole("combobox", { name: "days.pickDay" }),
+      "2026-05-06"
+    );
+    // An entry lands on the 6th; the span is now the 4th–5th.
+    const withEntry = {
+      ...base,
+      state: {
+        ...base.state,
+        items: [
+          {
+            id: "x",
+            title: "x",
+            kind: "activity",
+            day: "2026-05-06",
+            time: null,
+            duration: null,
+            timezone: null,
+            place: "",
+            note: "",
+            booked: false,
+            bookingId: null,
+            stationId: null,
+            execution: "unconfirmed",
+            source: null,
+          },
+        ],
+      },
+    } as PlanView;
+    view.rerender(
+      <MemoryRouter>
+        <DayPlanSection ctx={{ ...ctx(withEntry), edit, busy: false }} />
+      </MemoryRouter>
+    );
+    await userEvent.click(within(card()).getByRole("button", { name: "days.addEntry" }));
+    expect(edit).toHaveBeenCalledWith("items", expect.objectContaining({ day: "2026-05-04" }));
+  });
+});

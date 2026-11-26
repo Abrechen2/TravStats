@@ -394,7 +394,11 @@
     "stopNights": "Nights in {{place}}",
     "goalNights_one": "{{count}} night",
     "goalNights_other": "{{count}} nights",
-    "nightsLabel": "nights"
+    "nightsLabel": "nights",
+    "nights": {
+      "tooMany": "The stops and the nights on board need more nights than the trip has. Shorten a stop or lengthen the trip.",
+      "goalTooLong": "A stop can hold at most {{max}} nights. Spread them over several stops."
+    }
   },
   "deletePlan": {
     "open": "Delete plan",
@@ -638,7 +642,8 @@
         "chalet": "Holiday home",
         "alpine_hut": "Hut",
         "other": "Lodging"
-      }
+      },
+      "full": "This night already has 10 candidates. Remove one to take a suggestion."
     },
     "insert": {
       "open": "+ Add a stop between {{from}} and {{to}}",

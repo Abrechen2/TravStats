@@ -65,5 +65,8 @@ export function insertStop(state: PlanState, index: number, place: PlanPlace): P
       onward = { ...newStage(stop.id, next.id), mode: leaving.mode };
     return [...operations, stage(first), stage(onward)];
   }
-  return [...operations, stage(arrive)];
+  // No stage joined the two yet: the stop gets both its legs, so nothing is left unconnected.
+  return next
+    ? [...operations, stage(arrive), stage(newStage(stop.id, next.id))]
+    : [...operations, stage(arrive)];
 }

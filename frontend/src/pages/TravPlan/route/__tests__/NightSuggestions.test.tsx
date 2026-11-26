@@ -103,4 +103,15 @@ describe("NightSuggestions", () => {
     expect(await screen.findByText("route.suggest.failed.unavailable")).toBeInTheDocument();
     expect(screen.queryByText(/route.suggest.none/)).not.toBeInTheDocument();
   });
+
+  it("says the night is full instead of ignoring a take", async () => {
+    mocks.nearby.mockResolvedValue([hotel]);
+    const onTake = vi.fn();
+    render(<NightSuggestions near={palermo} vehicle={null} taken={[]} full onTake={onTake} />);
+    await userEvent.click(screen.getByRole("button", { name: /route.suggest.search/ }));
+    expect(await screen.findByText("route.suggest.full")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "route.suggest.take:Hotel Centrale" })
+    ).toBeDisabled();
+  });
 });

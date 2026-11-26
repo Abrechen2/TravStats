@@ -21,6 +21,8 @@ import {
   draftLegs,
   goalNights,
   legTitle,
+  MAX_STATION_NIGHTS,
+  nightsProblem,
   needsBooking,
   type DraftStop,
 } from "./create/routeDraft";
@@ -111,7 +113,10 @@ export function PlanCreate({
     const last = next[next.length - 1]?.place;
     if (last && last !== goal) primary(last);
   };
+  const nightsIssue =
+    draft && startDay && endDay ? nightsProblem(draft, daysBetween(startDay, endDay)) : null;
   const ready =
+    !nightsIssue &&
     !!main &&
     (shape === "stay" || !!draft) &&
     !!startDay &&
@@ -362,6 +367,11 @@ export function PlanCreate({
               }}
             />
           </Field>
+          {nightsIssue && (
+            <PlanNotice tone="bad">
+              {t("create.nights." + nightsIssue, { max: MAX_STATION_NIGHTS })}
+            </PlanNotice>
+          )}
           <PlanActions>
             <Button variant="primary" disabled={!ready} onClick={() => setStep(2)}>
               {t("create.next")}

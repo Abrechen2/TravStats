@@ -65,3 +65,18 @@ describe("NightStepper", () => {
     );
   });
 });
+
+describe("NightStepper at the limit", () => {
+  it("offers no night beyond what one station may hold", () => {
+    const state = routeState();
+    render(
+      <NightStepper
+        state={state}
+        station={{ ...state.stations[1], nights: 60 }}
+        busy={false}
+        onWrite={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("button", { name: "route.nights.more:Gothenburg" })).toBeDisabled();
+  });
+});

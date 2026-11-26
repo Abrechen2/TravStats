@@ -394,7 +394,11 @@
     "stopNights": "Nächte in {{place}}",
     "goalNights_one": "{{count}} Nacht",
     "goalNights_other": "{{count}} Nächte",
-    "nightsLabel": "Nächte"
+    "nightsLabel": "Nächte",
+    "nights": {
+      "tooMany": "Zwischenhalte und Nächte an Bord brauchen mehr Nächte, als die Reise hat. Kürze einen Halt oder verlängere die Reise.",
+      "goalTooLong": "Ein Halt kann höchstens {{max}} Nächte haben. Verteile die Nächte auf mehrere Halte."
+    }
   },
   "deletePlan": {
     "open": "Plan löschen",
@@ -638,7 +642,8 @@
         "chalet": "Ferienhaus",
         "alpine_hut": "Hütte",
         "other": "Unterkunft"
-      }
+      },
+      "full": "Diese Nacht hat schon 10 Kandidaten. Entferne einen, um einen Vorschlag zu übernehmen."
     },
     "insert": {
       "open": "+ Ort zwischen {{from}} und {{to}} einfügen",

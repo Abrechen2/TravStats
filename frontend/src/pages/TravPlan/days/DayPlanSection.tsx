@@ -57,7 +57,9 @@ function DayCard({
   const { t } = useTranslation("travplan"),
     row = span.row,
     spanDays = ctx.days.slice(span.first, span.last + 1),
-    [chosen, setChosen] = useState(row.day),
+    [picked, setChosen] = useState(row.day),
+    // A span that shrinks (an entry split it) must not keep a day it no longer shows.
+    chosen = spanDays.includes(picked) ? picked : row.day,
     route = ctx.state.shape === "route",
     empty = !row.legs.length && !row.items.length && !row.bookings.length && !row.tasks.length;
   return (

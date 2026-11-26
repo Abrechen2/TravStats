@@ -6,6 +6,7 @@ import { entryRecord } from "../planContext";
 import { planDay } from "../format";
 import { PlanNotice } from "../planLayout";
 import { fixedAfter } from "./nightStep";
+import { MAX_STATION_NIGHTS } from "../create/routeDraft";
 
 /**
  * One night more or less at a station, where the nights are read. When a booked leg or a pinned
@@ -47,7 +48,7 @@ export function NightStepper({
           {t("route.station.nightsCount", { count: station.nights })}
         </span>
         <Button
-          disabled={busy}
+          disabled={busy || station.nights >= MAX_STATION_NIGHTS}
           aria-label={t("route.nights.more", { place: station.title })}
           onClick={() => (fixed.length ? setAsking(true) : write(station.nights + 1))}
         >

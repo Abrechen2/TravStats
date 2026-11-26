@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildRoute, draftLegs, goalNights, type RouteDraft } from "../routeDraft";
+import { buildRoute, draftLegs, goalNights, nightsProblem, type RouteDraft } from "../routeDraft";
 import { place } from "../../route/__tests__/routeFixture";
 
 const home = place("Kassel", 51.3, 9.5),
@@ -91,5 +91,24 @@ describe("nights on the way and overnight crossings", () => {
 
   it("never gives the goal fewer than zero nights", () => {
     expect(goalNights(roundTrip, 2)).toBe(0);
+  });
+});
+
+describe("nightsProblem", () => {
+  const trip = (genovaNights: number): RouteDraft => ({
+    start: home,
+    stops: [
+      { place: genova, mode: "drive", nights: genovaNights },
+      { place: palermo, mode: "ferry", overnight: true },
+    ],
+    back: true,
+  });
+  it("refuses stops and nights on board that need more nights than the trip has", () => {
+    expect(nightsProblem(trip(3), 4)).toBe("tooMany");
+    expect(nightsProblem(trip(2), 4)).toBeNull();
+  });
+  it("refuses a goal that would hold more nights than one station may", () => {
+    expect(nightsProblem(trip(0), 63)).toBe("goalTooLong");
+    expect(nightsProblem(trip(0), 62)).toBeNull();
   });
 });

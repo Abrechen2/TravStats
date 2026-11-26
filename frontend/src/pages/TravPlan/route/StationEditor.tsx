@@ -225,7 +225,8 @@ export function StationEditor({
             near={value.place}
             vehicle={vehicle}
             taken={candidates.map((c) => c.title)}
-            onTake={(c) => candidates.length < MAX_CANDIDATES && take(c)}
+            full={candidates.length >= MAX_CANDIDATES}
+            onTake={take}
           />
         )}
         <Field label={t("fields.note")} htmlFor={uid + "-note"}>

@@ -57,6 +57,24 @@ export function goalNights(draft: RouteDraft, tripNights: number): number {
   return Math.max(0, tripNights - onTheWay - onBoard);
 }
 
+/** The most nights one station may hold; the server refuses more. */
+export const MAX_STATION_NIGHTS = 60;
+
+/**
+ * Why the nights do not add up, or null: the stops and the nights on board need more nights than
+ * the trip has, or the goal would hold more than one station may.
+ */
+export function nightsProblem(
+  draft: RouteDraft,
+  tripNights: number
+): "tooMany" | "goalTooLong" | null {
+  const onTheWay = draft.stops.slice(0, -1).reduce((n, s) => n + Math.max(0, s.nights ?? 0), 0),
+    onBoard = draftLegs(draft).filter((l) => l.overnight).length;
+  if (onTheWay + onBoard > tripNights) return "tooMany";
+  if (goalNights(draft, tripNights) > MAX_STATION_NIGHTS) return "goalTooLong";
+  return null;
+}
+
 export const needsBooking = (mode: LegMode) => BOOKED_MODES.has(mode);
 export const legTitle = (leg: DraftLeg) => `${leg.from.name} → ${leg.to.name}`;
 

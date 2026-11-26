@@ -3,7 +3,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import type { PlanPlace } from "../../../lib/api/travplan";
 import { PlacePicker } from "../route/PlacePicker";
 import { PlanCheck } from "../PlanParts";
-import { LEG_MODES, type DraftStop, type LegMode } from "./routeDraft";
+import { LEG_MODES, MAX_STATION_NIGHTS, type DraftStop, type LegMode } from "./routeDraft";
 
 /** Modes that can run through a night: a night ferry, a sleeper train. */
 const NIGHT_MODES = new Set<LegMode>(["ferry", "rail"]);
@@ -87,10 +87,16 @@ export function RouteLegs({
                   <Input
                     type="number"
                     min={0}
+                    max={MAX_STATION_NIGHTS}
                     aria-label={t("create.stopNights", { place: s.place.name })}
                     value={String(s.nights ?? 0)}
                     onChange={(e) =>
-                      change(i, { nights: Math.max(0, Number(e.target.value) || 0) })
+                      change(i, {
+                        nights: Math.min(
+                          MAX_STATION_NIGHTS,
+                          Math.max(0, Number(e.target.value) || 0)
+                        ),
+                      })
                     }
                     style={{ width: "5rem", flex: "none" }}
                   />

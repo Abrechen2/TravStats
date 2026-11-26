@@ -88,3 +88,16 @@ describe("insertStop", () => {
     ]);
   });
 });
+
+describe("insertStop into a gap", () => {
+  it("joins the stop on both sides when no stage joined the two stations", () => {
+    const base = routeState();
+    const before = { ...base, stages: base.stages.filter((g) => g.id !== "g2") };
+    const after = apply(before, insertStop(before, 1, cefalu));
+    expect(legs(after)).toEqual([
+      "Kiel>drive>Gothenburg",
+      "Gothenburg>drive>Cefalù",
+      "Cefalù>drive>Oslo",
+    ]);
+  });
+});
