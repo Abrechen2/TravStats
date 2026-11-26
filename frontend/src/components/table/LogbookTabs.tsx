@@ -1,4 +1,5 @@
 import type { JSX } from "react";
+import PurposeFilterControl from "../purpose/PurposeFilterControl";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
@@ -29,7 +30,8 @@ export default function LogbookTabs(): JSX.Element | null {
   // The same rule as the navigation: places ask their own hook, every other
   // domain's beta switch is already applied by `isEnabled`.
   const areas = AVAILABLE_DOMAINS.filter((key) => (key === "poi" ? placesVisible : isEnabled(key)));
-  if (areas.length < 2) return null;
+  // The purpose filter belongs to every logbook list, also to one with no tabs to switch.
+  if (areas.length < 2) return <PurposeFilterControl />;
 
   const onLists = pathname.startsWith(PLACE_LISTS_PATH);
   const tabs: { id: string; path: string; icon: IconName; label: string; active: boolean }[] =
@@ -60,27 +62,30 @@ export default function LogbookTabs(): JSX.Element | null {
     });
 
   return (
-    <nav
-      aria-label={t("dashboard:nav.logbook")}
-      className="-mt-2 mb-6 flex overflow-x-auto scrollbar-none"
-      style={{ borderBottom: "1px solid var(--ts-border)" }}
-    >
-      {tabs.map(({ id, path, icon, label, active }) => (
-        <Link
-          key={id}
-          to={path}
-          aria-current={active ? "page" : undefined}
-          className="flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-3 text-sm"
-          style={{
-            fontWeight: active ? 700 : 500,
-            color: active ? "var(--ts-text-bright)" : "var(--ts-muted)",
-            boxShadow: `inset 0 -2px 0 ${active ? "var(--ts-accent)" : "transparent"}`,
-          }}
-        >
-          <Icon name={icon} size={16} />
-          {label}
-        </Link>
-      ))}
-    </nav>
+    <>
+      <nav
+        aria-label={t("dashboard:nav.logbook")}
+        className="-mt-2 mb-6 flex overflow-x-auto scrollbar-none"
+        style={{ borderBottom: "1px solid var(--ts-border)" }}
+      >
+        {tabs.map(({ id, path, icon, label, active }) => (
+          <Link
+            key={id}
+            to={path}
+            aria-current={active ? "page" : undefined}
+            className="flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-3 text-sm"
+            style={{
+              fontWeight: active ? 700 : 500,
+              color: active ? "var(--ts-text-bright)" : "var(--ts-muted)",
+              boxShadow: `inset 0 -2px 0 ${active ? "var(--ts-accent)" : "transparent"}`,
+            }}
+          >
+            <Icon name={icon} size={16} />
+            {label}
+          </Link>
+        ))}
+      </nav>
+      <PurposeFilterControl />
+    </>
   );
 }

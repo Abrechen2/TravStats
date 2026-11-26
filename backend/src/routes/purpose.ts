@@ -26,6 +26,7 @@ import {
   previewTripPurpose,
   resolveChosenPurpose,
 } from "../services/purpose/tripActions";
+import { purposeUsage } from "../services/purpose/purposeUsage";
 import {
   createCustomPurpose,
   deleteCustomPurpose,
@@ -186,6 +187,15 @@ router.post(
     }
   }
 );
+
+/** Entries per purpose and domain, for the counts beside the purpose filter's options. */
+router.get("/usage", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    res.json({ success: true, data: { usage: await purposeUsage(req.userId!) } });
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get(
   "/catalogue",

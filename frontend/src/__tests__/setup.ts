@@ -62,6 +62,7 @@ vi.mock("../lib/api/purpose", async (importActual) => {
       ...actual.purposeApi,
       hidden: () => new Promise<never>(() => {}),
       catalogue: () => new Promise<never>(() => {}),
+      usage: () => new Promise<never>(() => {}),
     },
   };
 });

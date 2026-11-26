@@ -92,5 +92,14 @@
     "unknown": "Not set",
     "entries_one": "{{count}} entry",
     "entries_other": "{{count}} entries"
+  },
+  "filter": {
+    "label": "Purpose",
+    "all": "All purposes",
+    "allOfKind": {
+      "private": "All private",
+      "business": "All business"
+    },
+    "countsFailed": "The counts could not be loaded."
   }
 }

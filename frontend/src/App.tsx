@@ -32,6 +32,7 @@ import SetupIncompleteBanner from "./components/SetupIncompleteBanner";
 import RecoveryKeyGate from "./components/RecoveryKey/RecoveryKeyGate";
 import UsageStatsConsentDialog from "./components/UsageStatsConsentDialog";
 import RecordedOnlyBoundary from "./components/provenance/RecordedOnlyBoundary";
+import { usePurposeFilterSync } from "./lib/purposeFilter";
 
 const ComparisonPage = lazy(() => import("./pages/ComparisonPage"));
 
@@ -97,6 +98,7 @@ function AppContent() {
   const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
   const language = useSettingsStore((s) => s.display.language);
   const location = useLocation();
+  const purposeFilter = usePurposeFilterSync(location);
   const { t } = useTranslation("common");
   // A persisted user is only a CLAIM until the server confirms the cookie.
   // Nothing authenticated may be fetched or rendered before it does — hence
@@ -255,7 +257,7 @@ function AppContent() {
         />
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
-            <Routes location={location} key={location.pathname}>
+            <Routes location={location} key={`${location.pathname}|${purposeFilter ?? ""}`}>
               {/* One lazy page for both: it picks the friends page or the encrypted share. */}
               {["/freunde", "/encrypted-share"].map((path) => (
                 <Route key={path} path={path} element={<ComparisonPage />} />

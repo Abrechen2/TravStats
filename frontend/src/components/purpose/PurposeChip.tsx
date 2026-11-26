@@ -27,7 +27,6 @@ export default function PurposeChip({
     <span
       className="t-caption"
       data-testid="purpose-chip"
-      title={shown ? shown.label : t("purpose:chip.title")}
       style={{
         border: `1px solid ${shown?.color ?? "var(--ts-border)"}`,
         borderRadius: 999,

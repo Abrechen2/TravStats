@@ -5,20 +5,22 @@
  * (docs/superpowers/specs/2026-11-22-private-business-purpose.md, "Purpose catalogue").
  *
  * Mirrored at backend/src/shared/purposeCatalogue.ts — change both together; each side has its own
- * test asserting the same table.
+ * test asserting the same table. Here the colours come from `theme/purposeColors.ts` (the design
+ * warden keeps hex literals in the theme); the values are the server's.
  *
  * A key is `builtin:<key>` or `custom:<uuid>`. The legacy values `private` and `business` stay valid
  * forever (older Companion versions send nothing else): they are a kind without a detail, shown as
  * "Privat (sonstiges)" and "Geschäftlich".
  */
 import type { Purpose } from "./purpose";
+import { BUILTIN_PURPOSE_COLOR } from "../theme/purposeColors";
 
 export const BUILTIN_PURPOSES = [
   {
     key: "vacation",
     kind: "private",
     icon: "beach",
-    color: "#0EA5E9",
+    color: BUILTIN_PURPOSE_COLOR.vacation,
     de: "Urlaub",
     en: "Vacation",
   },
@@ -26,7 +28,7 @@ export const BUILTIN_PURPOSES = [
     key: "business",
     kind: "business",
     icon: "briefcase",
-    color: "#475569",
+    color: BUILTIN_PURPOSE_COLOR.business,
     de: "Geschäftlich",
     en: "Business",
   },
@@ -34,7 +36,7 @@ export const BUILTIN_PURPOSES = [
     key: "family_friends",
     kind: "private",
     icon: "people",
-    color: "#DB2777",
+    color: BUILTIN_PURPOSE_COLOR.family_friends,
     de: "Familie & Freunde",
     en: "Family & friends",
   },
@@ -42,7 +44,7 @@ export const BUILTIN_PURPOSES = [
     key: "short_break",
     kind: "private",
     icon: "backpack",
-    color: "#16A34A",
+    color: BUILTIN_PURPOSE_COLOR.short_break,
     de: "Kurztrip & Wochenende",
     en: "Short break",
   },
@@ -50,7 +52,7 @@ export const BUILTIN_PURPOSES = [
     key: "event",
     kind: "private",
     icon: "ticket",
-    color: "#9333EA",
+    color: BUILTIN_PURPOSE_COLOR.event,
     de: "Veranstaltung",
     en: "Event",
   },
@@ -58,7 +60,7 @@ export const BUILTIN_PURPOSES = [
     key: "trade_fair",
     kind: "business",
     icon: "podium",
-    color: "#B45309",
+    color: BUILTIN_PURPOSE_COLOR.trade_fair,
     de: "Messe & Konferenz",
     en: "Trade fair & conference",
   },
@@ -66,7 +68,7 @@ export const BUILTIN_PURPOSES = [
     key: "education",
     kind: "private",
     icon: "school",
-    color: "#2563EB",
+    color: BUILTIN_PURPOSE_COLOR.education,
     de: "Ausbildung & Studium",
     en: "Education",
   },
@@ -74,7 +76,7 @@ export const BUILTIN_PURPOSES = [
     key: "health",
     kind: "private",
     icon: "health",
-    color: "#DC2626",
+    color: BUILTIN_PURPOSE_COLOR.health,
     de: "Gesundheit",
     en: "Health",
   },
@@ -82,7 +84,7 @@ export const BUILTIN_PURPOSES = [
     key: "relocation",
     kind: "private",
     icon: "box",
-    color: "#78716C",
+    color: BUILTIN_PURPOSE_COLOR.relocation,
     de: "Umzug",
     en: "Relocation",
   },
@@ -90,7 +92,7 @@ export const BUILTIN_PURPOSES = [
     key: "private_other",
     kind: "private",
     icon: "home",
-    color: "#64748B",
+    color: BUILTIN_PURPOSE_COLOR.private_other,
     de: "Privat (sonstiges)",
     en: "Private (other)",
   },

@@ -233,3 +233,19 @@ registry.registerPath({
     409: { description: "`PURPOSE_IN_USE`: archive it instead", content: errorContent },
   },
 });
+
+registry.registerPath({
+  method: "get",
+  path: "/purpose/usage",
+  summary: "Entries per purpose and domain (counts beside the purpose filter)",
+  description:
+    "Keyed by the effective purpose key; `unknown` counts entries without a purpose. What the " +
+    "account hides is left out. Lists take `?purposeFilter=<key|private|business|unknown>`.",
+  tags,
+  responses: {
+    200: {
+      description: "Counts per domain and key",
+      ...ok(z.object({ usage: z.record(z.string(), z.record(z.string(), z.number())) })),
+    },
+  },
+});

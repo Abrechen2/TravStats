@@ -9,8 +9,8 @@ import { usePurposeCatalogue, usePurposeCatalogueStore } from "../../store/purpo
 import { PURPOSES, type Purpose } from "../../shared/purpose";
 import { PURPOSE_ICONS, BUILTIN_PREFIX } from "../../shared/purposeCatalogue";
 import { SectionCard } from "./SettingsShared";
+import { DEFAULT_CUSTOM_PURPOSE_COLOR } from "../../theme/purposeColors";
 
-const DEFAULT_COLOR = "#0EA5E9";
 const COARSE = "pointer-coarse:min-h-(--ts-size-touch-min)";
 
 interface Draft {
@@ -21,7 +21,13 @@ interface Draft {
   icon: string;
 }
 
-const EMPTY: Draft = { name: "", nameEn: "", kind: "private", color: DEFAULT_COLOR, icon: "star" };
+const EMPTY: Draft = {
+  name: "",
+  nameEn: "",
+  kind: "private",
+  color: DEFAULT_CUSTOM_PURPOSE_COLOR,
+  icon: "star",
+};
 
 /**
  * "Reisezwecke": the built-in purposes (read-only, each with its kind) and the user's own —

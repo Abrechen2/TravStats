@@ -92,5 +92,14 @@
     "unknown": "Nicht festgelegt",
     "entries_one": "{{count}} Eintrag",
     "entries_other": "{{count}} Einträge"
+  },
+  "filter": {
+    "label": "Zweck",
+    "all": "Alle Zwecke",
+    "allOfKind": {
+      "private": "Alle privaten",
+      "business": "Alle geschäftlichen"
+    },
+    "countsFailed": "Die Anzahlen konnten nicht geladen werden."
   }
 }

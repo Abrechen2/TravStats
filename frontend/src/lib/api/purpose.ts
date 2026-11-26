@@ -83,6 +83,15 @@ export const purposeApi = {
     return { purpose: data.data.purpose, purposeKey: data.data.purposeKey ?? null };
   },
 
+  /** Entries per domain and effective purpose key (`unknown`: no purpose), for the filter. */
+  usage: async (): Promise<Partial<Record<PurposeDomain, Record<string, number>>>> => {
+    const { data } =
+      await api.get<Envelope<{ usage: Partial<Record<PurposeDomain, Record<string, number>>> }>>(
+        "/purpose/usage"
+      );
+    return data.data.usage;
+  },
+
   catalogue: async (): Promise<PurposeCatalogue> => {
     const { data } = await api.get<Envelope<PurposeCatalogue>>("/purpose/catalogue");
     return data.data;
