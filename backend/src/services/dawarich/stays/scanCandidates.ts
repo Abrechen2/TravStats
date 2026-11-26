@@ -32,6 +32,7 @@ import { tripForStay } from "./tripMatch";
 import { suppressionReason, type loadSuppression } from "./suppression";
 import { coverageFor, type loadCoverage } from "./coverage";
 import type { StaySourceKind } from "./availability";
+import { carriedEvidence, carriedName } from "./carryEvidence";
 import {
   evidenceKeyOf,
   findingEvidence,
@@ -116,6 +117,34 @@ function grownPendingRow<
   return holds && longer ? row : null;
 }
 
+/**
+ * Two or more open plain findings of one source that the candidate holds entirely: the
+ * fragments of one stay an older detector split (prod, 24./25.11.2026). Null when any of them
+ * was answered — an accepted or rejected fragment keeps its answer and the stay stays split.
+ */
+function mergedPendingRows<
+  T extends {
+    status: string;
+    provider: string;
+    sourceStartAt: Date;
+    sourceEndAt: Date;
+    evidence: unknown;
+  },
+>(known: readonly T[], c: { startAt: Date; endAt: Date }, source: StaySourceKind): T[] | null {
+  if (known.length < 2) return null;
+  const all = known.every(
+    (row) =>
+      row.status === "pending" &&
+      row.provider === source &&
+      !(row.evidence as { market?: unknown } | null)?.market &&
+      c.startAt <= row.sourceStartAt &&
+      c.endAt >= row.sourceEndAt
+  );
+  return all
+    ? [...known].sort((a, b) => a.sourceStartAt.getTime() - b.sourceStartAt.getTime())
+    : null;
+}
+
 export async function scanCandidates(
   ctx: ScanContext,
   candidates: readonly (StayCandidate | MarketFinding)[]
@@ -163,6 +192,8 @@ export async function scanCandidates(
         sourceStartAt: true,
         sourceEndAt: true,
         evidence: true,
+        name: true,
+        placeId: true,
       },
     });
     const fragments =
@@ -205,8 +236,13 @@ export async function scanCandidates(
     // The one exception is a pending stop that has grown since — a stay still
     // going on at the last scan froze at that scan's last point.
     const growing = !market && known.length ? grownPendingRow(known, c, source) : null;
-    if (known.length && !growing) continue;
+    // Several open fragments of one stay that this candidate now reads as one: replaced by it.
+    const merging = !market && !growing ? mergedPendingRows(known, c, source) : null;
+    if (known.length && !growing && !merging) continue;
+    const extending = growing !== null || merging !== null;
     const supersededFindingIds = fragments.filter((r) => r.status === "pending").map((r) => r.id);
+    const mergedFindingIds = merging?.map((r) => r.id) ?? [];
+    const replaced = growing ? [growing] : (merging ?? []);
     const zone = zoneOf(c);
     if (!zone) {
       // One position without a zone used to fail the whole scan, every scan,
@@ -233,7 +269,7 @@ export async function scanCandidates(
       month: "2-digit",
       day: "2-digit",
     }).format(c.endAt);
-    if (!market && !growing) {
+    if (!market && !extending) {
       const why = suppressionReason(c, day, suppression);
       if (why) {
         counts.suppressed++;
@@ -246,11 +282,11 @@ export async function scanCandidates(
     // confirmed shop inside it is not that visit — `collectMarketFindings`
     // answers "already recorded" for those by the venue's own identity.
     const evidenceKey = evidenceKeyOf(c, byId);
-    if (!market && !growing && coverageFor({ ...c, zone, evidenceKey }, coverage)) {
+    if (!market && !extending && coverageFor({ ...c, zone, evidenceKey }, coverage)) {
       counts.covered++;
       continue;
     }
-    if (ctx.travtrack && !growing && counts.created >= TRAVTRACK_FINDINGS_PER_RUN) {
+    if (ctx.travtrack && !extending && counts.created >= TRAVTRACK_FINDINGS_PER_RUN) {
       // Bounded prompting: the rest wait for the next run.
       counts.deferred++;
       continue;
@@ -298,15 +334,21 @@ export async function scanCandidates(
       ...(overlappingTrips.length && !matchingTrips.length ? ["tripIncomplete"] : []),
       ...(!market && nearby.length > 1 ? ["placeAmbiguous"] : []),
     ];
-    const evidence = findingEvidence(c, {
-      market,
-      kind,
-      supersededFindingIds,
-      matchingVisitId: matchingVisit?.id ?? null,
-      zone,
-      uncertainties,
-      travtrack: ctx.travtrack ?? null,
-    });
+    const evidence = {
+      ...findingEvidence(c, {
+        market,
+        kind,
+        supersededFindingIds,
+        matchingVisitId: matchingVisit?.id ?? null,
+        zone,
+        uncertainties,
+        travtrack: ctx.travtrack ?? null,
+      }),
+      // What the replaced findings were told about the stop survives the rewrite.
+      ...carriedEvidence(replaced),
+      ...(mergedFindingIds.length ? { mergedFindingIds } : {}),
+    };
+    const carried = place || market ? {} : carriedName(replaced);
     const row = {
       sourceStartAt: c.startAt,
       sourceEndAt: c.endAt,
@@ -319,8 +361,8 @@ export async function scanCandidates(
       zone,
       pointCount: c.pointCount,
       evidence,
-      placeId: place?.id,
-      name: market?.name ?? place?.name,
+      placeId: place?.id ?? carried.placeId,
+      name: market?.name ?? place?.name ?? carried.name,
       tripId: market ? market.tripId : (trip?.id ?? null),
       provider: source,
       providerRev: ctx.rev,
@@ -350,12 +392,13 @@ export async function scanCandidates(
       }
       // Claim pending fragments before inserting the parent. A concurrent review
       // either resolves first (and prevents replacement) or receives a conflict.
-      if (supersededFindingIds.length) {
+      const claimed = [...supersededFindingIds, ...mergedFindingIds];
+      if (claimed.length) {
         const superseded = await tx.dawarichStay.updateMany({
-          where: { userId, id: { in: supersededFindingIds }, status: "pending" },
+          where: { userId, id: { in: claimed }, status: "pending" },
           data: { status: "superseded", resolvedAt: new Date() },
         });
-        if (superseded.count !== supersededFindingIds.length)
+        if (superseded.count !== claimed.length)
           throw new AppError("Finding changed during scan", 409, "DAWARICH_ALREADY_RESOLVED");
       }
       if (growing) {

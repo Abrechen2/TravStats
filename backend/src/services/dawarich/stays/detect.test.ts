@@ -1,4 +1,4 @@
-import { detectStays } from "./detect";
+import { detectStays, MERGE_GAP_MS } from "./detect";
 import type { DawarichPoint } from "../dawarichClient";
 const point = (minute: number, over: Partial<DawarichPoint> = {}): DawarichPoint => ({
   id: minute,
@@ -75,4 +75,47 @@ it("summarises a month-long stay with hundreds of thousands of points", () => {
   const [stay] = detectStays(points);
   expect(stay.pointCount).toBe(300_000);
   expect(stay.maxGapMinutes).toBeCloseTo(0.1);
+});
+
+describe("one place, one stay: fragments are merged (prod 24./25.11.2026)", () => {
+  // One fix a minute from `from` to `to` (minutes after 14:50 UTC), at an offset in metres north.
+  const run = (from: number, to: number, over: Partial<DawarichPoint> = {}) =>
+    Array.from({ length: to - from + 1 }, (_, i) => point(from + i, over));
+  const north = (m: number) => ({ latitude: 37.57 + m / 111_000 });
+
+  it("joins a stay split by one fast fix a minute apart, keeping every point", () => {
+    // 24.11.: 10:16-11:55 and 11:56-14:15 at the same spot.
+    const points = [...run(0, 99), point(99.5, { velocity: 8 }), ...run(100, 239)];
+    const stays = detectStays(points);
+    expect(stays).toHaveLength(1);
+    expect(stays[0].pointCount).toBe(240);
+    expect(stays[0].uncertainties).toContain("outliersIgnored");
+  });
+
+  it("joins four stays at one building with gaps of 0-40 minutes", () => {
+    // 25.11.: 10:40-12:58, 12:58-13:32, 14:11-15:03, 15:42-16:04, the anchor drifting a little.
+    const points = [
+      ...run(0, 138),
+      point(138.1, { velocity: 4 }),
+      ...run(139, 172, north(20)),
+      ...run(211, 263, north(-15)),
+      ...run(302, 324, north(10)),
+    ];
+    const stays = detectStays(points);
+    expect(stays).toHaveLength(1);
+    expect(stays[0].startAt.toISOString()).toBe("2026-10-10T14:50:00.000Z");
+    expect(stays[0].endAt.getTime() - stays[0].startAt.getTime()).toBe(324 * 60_000);
+    expect(stays[0].uncertainties).toContain("signalGaps");
+  });
+
+  it("keeps two stays when the gap's fixes show the device left", () => {
+    const away = run(41, 60, north(600));
+    expect(detectStays([...run(0, 30), ...away, ...run(70, 100)])).toHaveLength(2);
+  });
+
+  it("keeps two stays at neighbouring places, and two stays too far apart in time", () => {
+    expect(detectStays([...run(0, 30), ...run(32, 62, north(250))])).toHaveLength(2);
+    const later = 30 + MERGE_GAP_MS / 60_000 + 5;
+    expect(detectStays([...run(0, 30), ...run(later, later + 30)])).toHaveLength(2);
+  });
 });
