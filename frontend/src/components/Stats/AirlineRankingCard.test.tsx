@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AirlineRankingCard from "./AirlineRankingCard";
 import type { AirlineRankingResponse } from "../../types";
@@ -43,8 +43,11 @@ describe("AirlineRankingCard", () => {
 
   // The API has carried `iata` since 2.5.0 and the release notes promised it on
   // screen, but the card only ever rendered the airline name.
-  it("renders the IATA code the API returns", () => {
-    renderCard();
+  it("shows the logo for the IATA code the API returns, and the code itself when the logo fails", () => {
+    const { container } = renderCard();
+    const img = container.querySelector('img[src*="/airline-logos/LH"]') as HTMLImageElement;
+    expect(img).not.toBeNull();
+    fireEvent.error(img);
     expect(screen.getByText("LH")).toBeInTheDocument();
   });
 

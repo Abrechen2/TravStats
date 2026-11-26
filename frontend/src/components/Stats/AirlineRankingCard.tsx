@@ -1,6 +1,7 @@
 import { useTranslation } from "../../hooks/useTranslation";
 import CountingHelp from "./counting/CountingHelp";
 import type { AirlineRankingResponse } from "../../types";
+import AirlineLogo from "../AirlineLogo";
 import EvidenceTrigger from "./EvidenceTrigger";
 import { rankingKey } from "../../shared/evidence";
 
@@ -64,7 +65,9 @@ export default function AirlineRankingCard({
               />
             </div>
             <span className="w-8 text-xs font-mono shrink-0" style={{ color: "var(--text-muted)" }}>
-              {row.iata ?? ""}
+              {row.iata ? (
+                <AirlineLogo iata={row.iata} size={24} alt="" fallback={<span>{row.iata}</span>} />
+              ) : null}
             </span>
             <span className="w-28 text-sm truncate" title={row.airline}>
               {row.airline}

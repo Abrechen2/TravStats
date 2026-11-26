@@ -173,3 +173,12 @@ describe("CountryLabel", () => {
     expect(container.firstChild).toBeNull();
   });
 });
+
+describe("ContinentMark", () => {
+  it("puts a decorative globe before the continent name, which stays the accessible text", async () => {
+    const { ContinentMark } = await import("../components/common/ContinentMark");
+    const { container } = render(<ContinentMark>Europe</ContinentMark>);
+    expect(screen.getByText("Europe")).toBeInTheDocument();
+    expect(container.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+  });
+});

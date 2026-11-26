@@ -8,6 +8,7 @@ import EvidenceTrigger from "./EvidenceTrigger";
 import { rankingKey } from "../../shared/evidence";
 import { countryName } from "../../shared/geo/countryCode";
 import { CountryLabel } from "../../lib/countryFlag";
+import { ContinentMark } from "../common/ContinentMark";
 
 /** Every ranking dimension this section resolves is `allTime`-only — see `rankingEvidence.ts` on the backend. */
 const ALL_TIME = { period: "allTime" as const };
@@ -404,7 +405,9 @@ export default function StatsAirportsSection({
                 return (
                   <li key={cont}>
                     <div className="flex items-center justify-between text-sm mb-1">
-                      <span style={{ color: "var(--text-primary)" }}>{t(continentKey(cont))}</span>
+                      <span style={{ color: "var(--text-primary)" }}>
+                        <ContinentMark>{t(continentKey(cont))}</ContinentMark>
+                      </span>
                       <span style={{ color: "var(--text-muted)" }}>
                         {count} ({percent}%)
                       </span>

@@ -10,6 +10,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { countryName } from "../../../lib/countryFlag";
 import { formatDate as formatUserDate } from "../../../lib/displayFormat";
 import { rgb, tokens } from "../../../theme/tokens";
+import { CountryLabel } from "../../../lib/countryFlag";
 
 export type TFn = ReturnType<typeof useTranslation>["t"];
 
@@ -103,11 +104,12 @@ export function Place({
   country?: string | null;
   locale: string;
 }): JSX.Element | null {
-  const parts = [city, countryName(country, locale)].filter((s): s is string => !!s);
-  if (parts.length === 0) return null;
+  if (!city && !countryName(country, locale)) return null;
   return (
     <div className="mb-2 text-[11px]" style={{ color: tokens.color.faint }}>
-      {parts.join(", ")}
+      {city}
+      {city && country ? ", " : null}
+      {country ? <CountryLabel country={country} height={11} /> : null}
     </div>
   );
 }

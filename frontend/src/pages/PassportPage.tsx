@@ -17,6 +17,7 @@ import { useAuthStore } from "../store/authStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { logger } from "../lib/logger";
 import type { Passport, PassportContinentGroup, PassportCountry } from "../types/passport";
+import { ContinentMark } from "../components/common/ContinentMark";
 
 /**
  * The passport.
@@ -404,7 +405,7 @@ export default function PassportPage(): JSX.Element {
                       {quotaByGroup.map((row) => (
                         <li key={row.key} className="flex items-center gap-3">
                           <span className="w-40 shrink-0 text-sm">
-                            {t(`passport:continents.${row.key}`)}
+                            <ContinentMark>{t(`passport:continents.${row.key}`)}</ContinentMark>
                           </span>
                           <span
                             className="flex-1 h-2 rounded-full overflow-hidden"

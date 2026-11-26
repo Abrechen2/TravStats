@@ -54,6 +54,7 @@ import {
 } from "./cardBodies";
 import { JourneyBody, JourneyHeading, isJourneyPinned } from "./journeys/journeyBodies";
 import { OperatorRow } from "./journeys/journeyCardParts";
+import { CountryLabel } from "../../../lib/countryFlag";
 
 interface PinnedCardProps {
   pinned: MapPinned;
@@ -462,15 +463,19 @@ function ArcBody({
     <>
       <div className="mb-2.5 space-y-1.5">
         {[data.departure, data.arrival].map((ep, i) => {
-          const place = [ep.city, countryName(ep.country, locale)]
-            .filter((s): s is string => !!s)
-            .join(", ");
+          const hasPlace = !!ep.city || !!countryName(ep.country, locale);
           return (
             <div key={i} className="text-[11px]">
               <div className="text-[12px] font-medium" style={{ color: tokens.color.text }}>
                 {ep.iata ?? "?"} · {ep.name ?? ""}
               </div>
-              {place && <div style={{ color: tokens.color.faint }}>{place}</div>}
+              {hasPlace && (
+                <div style={{ color: tokens.color.faint }}>
+                  {ep.city}
+                  {ep.city && ep.country ? ", " : null}
+                  {ep.country ? <CountryLabel country={ep.country} height={11} /> : null}
+                </div>
+              )}
             </div>
           );
         })}

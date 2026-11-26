@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { FlagImg } from "../../lib/countryFlag";
@@ -15,7 +15,7 @@ interface Props {
   busy: boolean;
   /** The country or continent this row was sorted into, or null when the list
    *  is in its own catalog order. Shown so the ordering is visible. */
-  groupLabel?: string | null;
+  groupLabel?: ReactNode;
   onToggle: (item: CuratedProgressItem, visitedAt?: string | null) => void;
 }
 
