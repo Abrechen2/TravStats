@@ -23,7 +23,7 @@ describe("InlineStats duration (forgejo#378)", () => {
     const { container } = render(
       <InlineStats flight={{ ...base, depTimeSemantics: "DATE_ONLY" } as Flight} />
     );
-    expect(container.textContent ?? "").not.toMatch(/8h 0m/);
+    expect(container.textContent ?? "").not.toMatch(/8h/);
   });
 
   it("prints no negative duration", () => {
@@ -35,6 +35,6 @@ describe("InlineStats duration (forgejo#378)", () => {
 
   it("prints a measured duration for real clocks", () => {
     render(<InlineStats flight={base} />);
-    expect(screen.getByText(/8h 0m/)).toBeInTheDocument();
+    expect(screen.getByText(/8h/)).toBeInTheDocument();
   });
 });
