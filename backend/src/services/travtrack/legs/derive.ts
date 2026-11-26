@@ -167,13 +167,26 @@ function evidenceFor(span: { fromMs: number; untilMs: number }, stays: readonly 
   return view ? { evidence: view } : {};
 }
 
-/** The newest accepted name whose span covers the stop by more than half. */
+/** How far from the stop an accepted name's own position may lie when the stop outgrew its span. */
+export const GROWN_NAME_REACH_M = 500;
+
+/**
+ * The newest accepted name whose span covers the stop by more than half — or whose span the
+ * stop now holds by more than half, near where the name was given. A stop that later points or
+ * a merged fragment made more than twice as long kept its points but lost the name the owner
+ * had given it (prod, 24.11.2026: "MSA - Menü Service Allgäu").
+ */
 function placeFor(
   span: { fromMs: number; untilMs: number },
-  places: readonly StopPlaceRow[]
+  places: readonly StopPlaceRow[],
+  anchor: { lat: number; lon: number }
 ): StopPlace | null {
+  const near = (p: StopPlaceRow) =>
+    p.lat === null ||
+    p.lon === null ||
+    distanceM(anchor, { lat: p.lat, lon: p.lon }) <= GROWN_NAME_REACH_M;
   const best = places
-    .filter((p) => overlapShare(span, p) > 0.5)
+    .filter((p) => overlapShare(span, p) > 0.5 || (overlapShare(p, span) > 0.5 && near(p)))
     .reduce<StopPlaceRow | null>(
       (b, p) => (b === null || p.updatedAtMs > b.updatedAtMs ? p : b),
       null
@@ -291,7 +304,10 @@ function stopOf(
   inputs: LegInputs
 ): Stop | null {
   const span = { fromMs: segment[d.from][0], untilMs: segment[d.to][0] };
-  const accepted = placeFor(span, inputs.places ?? []);
+  const accepted = placeFor(span, inputs.places ?? [], {
+    lat: segment[d.from][1],
+    lon: segment[d.from][2],
+  });
   // A stop standing inside a valid fixed place or booking is named at once, whether or not a
   // fold run qualified (a dwell that never reached `STOP_MS` inside the circle, for one).
   const inside =

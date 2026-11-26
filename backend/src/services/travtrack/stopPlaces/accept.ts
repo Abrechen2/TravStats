@@ -38,7 +38,9 @@ export async function setStopPlace(
         (r) =>
           (Number(r.fromMs) === span.fromMs && Number(r.untilMs) === span.untilMs) ||
           (stay !== null &&
-            overlapShare(stay, { fromMs: Number(r.fromMs), untilMs: Number(r.untilMs) }) > 0.5)
+            // Either way round: the day view also names a stop that outgrew its stored span.
+            (overlapShare(stay, { fromMs: Number(r.fromMs), untilMs: Number(r.untilMs) }) > 0.5 ||
+              overlapShare({ fromMs: Number(r.fromMs), untilMs: Number(r.untilMs) }, stay) > 0.5))
       )
       .map((r) => r.id);
     await prisma.travTrackStopPlace.deleteMany({ where: { userId, id: { in: drop } } });

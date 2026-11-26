@@ -288,6 +288,23 @@ describe("TravTrack — stop places", () => {
       expect((await getDay()).body.stops[0].place).toBeNull();
     });
 
+    it("keeps the name when the stop grows past twice the span it was given for", async () => {
+      // Prod, 24.11.2026: the stop outgrew its named span and showed no name any more.
+      await stand(0, 30);
+      const span = { fromMs: T0, untilMs: T0 + 30 * MIN };
+      expect(
+        (await putPlace({ ...span, place: { name: "MSA", lat: LAT0, lon: LON0 } })).status
+      ).toBe(200);
+      await stand(35, 120);
+      const stops = (await getDay()).body.stops;
+      expect(stops).toHaveLength(1);
+      expect(stops[0].untilMs - stops[0].fromMs).toBeGreaterThan(60 * MIN);
+      expect(stops[0].place).toMatchObject({ name: "MSA", source: "accepted" });
+      // And the owner can still take it back on the grown stop.
+      const grown = { fromMs: stops[0].fromMs, untilMs: stops[0].untilMs };
+      expect((await putPlace({ ...grown, place: null })).body.place).toBeNull();
+    });
+
     it("404s a span under no stop and stores nothing; 400s an empty name", async () => {
       const span = { fromMs: T0, untilMs: T0 + 30 * MIN };
       const none = await putPlace({ ...span, place: { name: "Lidl" } });
