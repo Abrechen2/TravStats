@@ -37,3 +37,11 @@ The second PhotoPrism (unraid-2) is NOT connected: only the owner's own Cardinal
 ## Was open for the owner
 
 - Connect the second PhotoPrism (unraid-2, his mother's library) to his account: a credential is needed (Infisical `travstats/prod /ops`: `PHOTOPRISM_UNRAID2_URL`, `PHOTOPRISM_UNRAID2_TOKEN`, created as CHANGE_ME once he agrees).
+
+
+## Owner decision 2 (2026-11-26): PhotoPrism is the source of truth
+
+PhotoPrism holds ALL photos; Immich holds only the phone photos (a subset of the same pictures). So:
+- Period links and album proposals use **PhotoPrism only** by default. Immich is not queried for periods, so the same photo never shows twice.
+- Existing Immich album links stay valid and keep working; the trip view de-duplicates them against PhotoPrism (capture instant ±2 s plus dimensions) and prefers the PhotoPrism asset.
+- A per-account setting "Bevorzugte Fotoquelle" (default PhotoPrism when both are connected) makes this explicit; other instances with only Immich keep using Immich.
