@@ -156,4 +156,32 @@ describe("GET /roadtrips/:id/photos", () => {
     expect(row).toMatchObject({ kind: "linked", source: "photoprism", via: "station" });
     expect(row.url).toBe(`/api/v1/entry-photos/roadtripStop/${stationId}/photos/${link.id}/file`);
   });
+
+  it("shows a photo once when Immich and PhotoPrism both hold it (PhotoPrism wins)", async () => {
+    const t = new Date(anchor.day.getTime() + 3_600_000);
+    const prism = await prisma.entryPhotoLink.create({
+      data: {
+        userId: ownerId,
+        tripStopId: stationId,
+        provider: "photoprism",
+        assetId: "p9",
+        takenAt: t,
+      },
+    });
+    const immich = await prisma.entryPhotoLink.create({
+      data: {
+        userId: ownerId,
+        tripStopId: stationId,
+        provider: "immich",
+        assetId: "i9",
+        takenAt: new Date(t.getTime() + 1000),
+      },
+    });
+    const res = await request(app)
+      .get(`/api/v1/roadtrips/${roadtripId}/photos`)
+      .set("Cookie", ownerCookie);
+    const keys = res.body.photos.map((p: { key: string }) => p.key);
+    expect(keys).toContain(`link:${prism.id}`);
+    expect(keys).not.toContain(`link:${immich.id}`);
+  });
 });

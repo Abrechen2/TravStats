@@ -114,6 +114,25 @@ export interface Found {
 }
 
 /**
+ * A roadtrip station reads PhotoPrism alone when it answers (it holds every photo; Immich
+ * only the phone's, a subset), and falls back to every source only when it does not — so
+ * nothing is shown twice and Immich still serves an account without PhotoPrism. Every other
+ * kind searches all sources as before.
+ */
+export async function windowCandidates(
+  kind: EntryKind,
+  search: WindowSearch,
+  window: { start: Date; end: Date }
+) {
+  if (kind === "roadtripStop") {
+    const prism = await candidatesForWindow(search, window, ["photoprism"]);
+    const state = prism.sources.photoprism;
+    if (state === "ok" || state === "truncated") return prism;
+  }
+  return candidatesForWindow(search, window);
+}
+
+/**
  * What the matcher finds for the entry, minus refusals and what is already
  * linked. Every leg of the plan is searched; a failing source is in `sources`,
  * never a silent empty result.
@@ -141,7 +160,7 @@ export async function findMatches(
   const matched = new Map<string, SourcedAsset>();
   let sources: Found["sources"] = {};
   for (const leg of plan.legs) {
-    const { sources: s, candidates } = await candidatesForWindow(search, leg.window);
+    const { sources: s, candidates } = await windowCandidates(kind, search, leg.window);
     sources = mergeSources(sources, s);
     const spec: MatchSpec = {
       window: leg.window,

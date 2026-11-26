@@ -110,7 +110,11 @@ export default function PhotoLightbox({
         return (
           <button
             type="button"
-            className="rounded-sm border border-slate-500 px-3 py-1 text-sm"
+            className="rounded-sm px-3 py-1 text-sm"
+            style={{
+              border: "1px solid rgba(255, 255, 255, 0.9)",
+              color: "rgba(255, 255, 255, 0.9)",
+            }}
             onClick={() => void handleSetCover(item)}
             disabled={settingCover}
           >

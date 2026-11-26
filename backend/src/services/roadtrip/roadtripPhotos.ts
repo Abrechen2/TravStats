@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import { haversineKm } from "../../shared/geo/haversine";
 import { NOT_A_COVER } from "../trips/photoStation";
 import { toKind } from "../photoLinking/entryPhotos";
+import { dropImmichDuplicates } from "../photoLinking/dedupe";
 
 /** A photo taken this far from every station is not "on the roadtrip" (km). */
 export const ROADTRIP_PHOTO_CORRIDOR_KM = 10;
@@ -143,7 +144,16 @@ export async function loadRoadtripPhotos(
       orderBy: [{ takenAt: "asc" }, { createdAt: "asc" }],
       take: ROADTRIP_LINKED_CAP + 1,
     });
-    for (const l of links) {
+    const kept = new Set(
+      dropImmichDuplicates(
+        links.map((l) => ({
+          id: l.id,
+          provider: toKind(l.provider),
+          takenMs: l.takenAt?.getTime() ?? null,
+        }))
+      ).map((x) => x.id)
+    );
+    for (const l of links.filter((x) => kept.has(x.id))) {
       const viaStay = l.tripStopId === null && l.lodgingStayId !== null;
       const s = viaStay ? stationOfStay.get(l.lodgingStayId!) : stationOf.get(l.tripStopId!);
       const base = viaStay

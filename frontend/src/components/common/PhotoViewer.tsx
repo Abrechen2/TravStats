@@ -7,6 +7,10 @@ import { useDisplayFormat } from "../../lib/displayFormat";
 import { useZoomPan } from "./photoViewer/useZoomPan";
 import type { ViewerPhoto } from "./photoViewer/viewerPhoto";
 
+/** The viewer is a photo on black in both themes, so its chrome is fixed light-on-dark. */
+const LIGHT = "rgba(255, 255, 255, 0.9)";
+const NAV_STYLE = { background: "rgba(0, 0, 0, 0.6)", color: LIGHT } as const;
+
 interface Props {
   items: ViewerPhoto[];
   startIndex: number;
@@ -86,7 +90,8 @@ export default function PhotoViewer({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+      style={{ background: "rgba(0, 0, 0, 0.9)" }}
       onClick={(e) => {
         e.stopPropagation();
         onClose();
@@ -108,7 +113,7 @@ export default function PhotoViewer({
             role="alert"
             data-testid="photo-viewer-error"
             className="rounded-md px-4 py-3 text-sm"
-            style={{ background: "var(--bg-elevated)", color: "var(--color-danger, #f87171)" }}
+            style={{ background: "var(--bg-elevated)", color: "var(--color-danger)" }}
           >
             {t("common:photoViewer.loadFailed")}
           </p>
@@ -133,7 +138,8 @@ export default function PhotoViewer({
             <button
               type="button"
               aria-label={t("common:photoViewer.previous")}
-              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-3 text-white"
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full p-3"
+              style={NAV_STYLE}
               onClick={() => step(-1)}
             >
               ‹
@@ -141,7 +147,8 @@ export default function PhotoViewer({
             <button
               type="button"
               aria-label={t("common:photoViewer.next")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-3 text-white"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-3"
+              style={NAV_STYLE}
               onClick={() => step(1)}
             >
               ›
@@ -151,14 +158,15 @@ export default function PhotoViewer({
       </div>
 
       <div
-        className="mt-3 flex max-w-[95vw] flex-wrap items-center justify-center gap-3 px-3 text-sm text-slate-200"
+        className="mt-3 flex max-w-[95vw] flex-wrap items-center justify-center gap-3 px-3 text-sm"
+        style={{ color: LIGHT }}
         onClick={(e) => e.stopPropagation()}
         data-testid="photo-viewer-caption"
       >
         {item.caption && <span>{item.caption}</span>}
-        {meta.length > 0 && <span className="text-slate-300">{meta.join(" · ")}</span>}
+        {meta.length > 0 && <span style={{ opacity: 0.8 }}>{meta.join(" · ")}</span>}
         {count > 1 && (
-          <span className="tabular-nums text-slate-400">
+          <span className="tabular-nums" style={{ opacity: 0.6 }}>
             {safeIndex + 1} / {count}
           </span>
         )}
@@ -176,7 +184,8 @@ export default function PhotoViewer({
         <button
           type="button"
           aria-label={t("common:photoViewer.close")}
-          className="rounded-sm border border-slate-500 px-3 py-1 text-white"
+          className="rounded-sm px-3 py-1"
+          style={{ border: `1px solid ${LIGHT}`, color: LIGHT }}
           onClick={onClose}
         >
           ✕
