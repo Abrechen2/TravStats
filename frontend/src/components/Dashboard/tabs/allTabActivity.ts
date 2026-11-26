@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { Lodging } from "../../../types/lodging";
+import type { TourSummary } from "../../../lib/api/tourIndex";
 import type { Place } from "../../../types/place";
 import {
   intervalOverlapsRange,
@@ -18,7 +19,8 @@ import type { ActivityDates } from "../../Globe/timeSliderUtils";
 export function useAllTabActivity(
   transport: readonly ActivityDates[],
   lodgings: readonly Lodging[],
-  places: readonly Place[]
+  places: readonly Place[],
+  tours: readonly Pick<TourSummary, "kind" | "startDate">[]
 ): ActivityDates[] {
   const { from, to } = useDashboardFilterStore((st) => st.time);
   return useMemo(() => {
@@ -26,8 +28,12 @@ export function useAllTabActivity(
     // range; the strip counts only the stays and visits that are.
     const inRange = (d: string | null): boolean =>
       d !== null && (!from && !to ? true : intervalOverlapsRange(d, d, from, to));
+    const toursOf = (kind: TourSummary["kind"]): string[] =>
+      tours.filter((t) => t.kind === kind).map((t) => t.startDate ?? "");
     return [
       ...transport,
+      { domain: "tour", dates: toursOf("tour") },
+      { domain: "roadtrip", dates: toursOf("roadtrip") },
       {
         domain: "lodging",
         dates: lodgings.flatMap((l) => (l.stays ?? []).map((s) => s.checkIn).filter(inRange)),
@@ -42,5 +48,5 @@ export function useAllTabActivity(
         ),
       },
     ];
-  }, [transport, lodgings, places, from, to]);
+  }, [transport, lodgings, places, tours, from, to]);
 }
