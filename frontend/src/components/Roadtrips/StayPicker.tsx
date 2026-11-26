@@ -1,3 +1,4 @@
+import { SearchInput } from "../ui/SearchInput";
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 
@@ -228,12 +229,11 @@ export default function StayPicker({
       {/* A visible label, not only a placeholder that vanishes on typing (#249). */}
       <label className={LABEL}>
         {t("roadtrips:stay.search")}
-        <input
-          type="search"
+        <SearchInput
+          label={t("roadtrips:stay.search")}
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={setQuery}
           placeholder={t("roadtrips:stay.search")}
-          className={`w-full ${FIELD}`}
         />
       </label>
       {lodgings === null && <p className="text-xs text-(--text-muted)">…</p>}

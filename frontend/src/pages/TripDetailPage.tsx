@@ -54,6 +54,7 @@ import {
   StopCard,
   dotColor,
 } from "../components/Trips/TimelineEventCards";
+import { Tabs } from "../components/ui/Tabs";
 
 // Re-exported so the cabin-label tests keep importing it from the page.
 export { cabinLabel } from "../components/Trips/TimelineEventCards";
@@ -294,32 +295,12 @@ export function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
 
   // Round 4: text tabs with the accent underline, like the logbook's; no emoji.
   return (
-    <div
-      role="tablist"
-      className="flex overflow-x-auto overflow-y-hidden scrollbar-none"
-      style={{ borderBottom: "1px solid var(--ts-border)" }}
-    >
-      {visibleTabs.map((key) => {
-        const isActive = tab === key;
-        return (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={isActive}
-            onClick={() => onChange(key)}
-            className="flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-3 text-sm"
-            style={{
-              fontWeight: isActive ? 700 : 500,
-              color: isActive ? "var(--ts-text-bright)" : "var(--ts-muted)",
-              boxShadow: `inset 0 -2px 0 ${isActive ? "var(--ts-accent)" : "transparent"}`,
-            }}
-          >
-            {t(`trips:detail.tabs.${key}`)}
-          </button>
-        );
-      })}
-    </div>
+    <Tabs
+      label={t("trips:detail.tabs.label")}
+      value={tab}
+      onChange={onChange}
+      tabs={visibleTabs.map((key) => ({ value: key, label: t(`trips:detail.tabs.${key}`) }))}
+    />
   );
 }
 

@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import type { JSX } from "react";
 
 import { useDisplayFormat } from "../../lib/displayFormat";
@@ -31,13 +32,8 @@ export function StayDatesOfferButton({
         : t("lodging:stayEditor.tripDates.checkOut", { date: day(offer.checkOut ?? "") });
 
   return (
-    <button
-      type="button"
-      data-testid="stay-trip-dates-offer"
-      onClick={onAccept}
-      className="mt-2 rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent)"
-    >
+    <Chip dashed size="sm" className="mt-2" testId="stay-trip-dates-offer" onClick={onAccept}>
       {label}
-    </button>
+    </Chip>
   );
 }

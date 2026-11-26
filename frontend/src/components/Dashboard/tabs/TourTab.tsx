@@ -1,3 +1,4 @@
+import { Icon } from "../../ui/Icon";
 import { useRoadtripColorStore } from "../../../store/roadtripColorStore";
 import { effectiveRoutes, useMapRoutesStore } from "../../../store/mapRoutesStore";
 import { useMemo, useState } from "react";
@@ -243,7 +244,7 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
                 fontSize: 18,
               }}
             >
-              ×
+              <Icon name="x" size={16} />
             </button>
           </div>
 

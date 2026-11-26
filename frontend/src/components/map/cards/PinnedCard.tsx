@@ -12,6 +12,7 @@
 // Purely the inner content: no positioning, no occlusion, no anchor logic.
 // Each renderer mounts it wherever its own projection says the anchor is.
 
+import { Icon } from "../../ui/Icon";
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import {
@@ -136,7 +137,7 @@ export function PinnedCard({
           className="cursor-pointer rounded-sm px-1 text-[11px] leading-none opacity-70 hover:opacity-100 pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)"
           style={{ background: "rgba(255,255,255,0.08)" }}
         >
-          ✕
+          <Icon name="x" size={16} />
         </button>
       </div>
 

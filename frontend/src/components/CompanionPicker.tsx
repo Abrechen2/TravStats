@@ -1,3 +1,4 @@
+import Chip from "./ui/Chip";
 import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { companionsApi, type Companion } from "../lib/api";
 import { logger } from "../lib/logger";
@@ -84,26 +85,19 @@ export default function CompanionPicker({ value, onChange }: Props): JSX.Element
       {value.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {value.map((name) => (
-            <span
+            <Chip
               key={name}
-              className="inline-flex items-center gap-1 rounded-full border border-border bg-(--bg-elevated) px-2 py-0.5 text-sm text-(--text-primary)"
+              onRemove={(): void => handleRemove(name)}
+              removeLabel={t("picker.remove", { name })}
+              // The Vitest-global react-i18next mock is an identity function
+              // that ignores interpolation options, so every chip's aria-label
+              // resolves to the same literal string ("picker.remove") under
+              // test regardless of `name` — a per-name test id is what lets
+              // tests target one specific chip's remove button.
+              removeTestId={`companion-remove-${name}`}
             >
               {name}
-              <button
-                type="button"
-                aria-label={t("picker.remove", { name })}
-                // The Vitest-global react-i18next mock is an identity function
-                // that ignores interpolation options, so every chip's aria-label
-                // resolves to the same literal string ("picker.remove") under
-                // test regardless of `name` — a per-name test id is what lets
-                // tests target one specific chip's remove button.
-                data-testid={`companion-remove-${name}`}
-                onClick={(): void => handleRemove(name)}
-                className="text-(--text-muted) hover:text-(--text-primary)"
-              >
-                ×
-              </button>
-            </span>
+            </Chip>
           ))}
         </div>
       )}

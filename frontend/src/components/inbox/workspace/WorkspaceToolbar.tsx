@@ -1,3 +1,4 @@
+import { SearchInput } from "../../ui/SearchInput";
 import { useTranslation } from "../../../hooks/useTranslation";
 import Button from "../../ui/Button";
 import { W, type InboxSource } from "./model";
@@ -44,11 +45,10 @@ export default function WorkspaceToolbar({
       <div className="flex flex-wrap items-end gap-3">
         <label className="min-w-0 w-full text-sm sm:w-auto sm:flex-1">
           {t(`${W}.search`)}
-          <input
-            type="search"
-            className="input mt-1 w-full"
+          <SearchInput
+            label={t(`${W}.searchHint`)}
             value={query}
-            onChange={(e) => onQuery(e.target.value)}
+            onChange={onQuery}
             placeholder={t(`${W}.searchHint`)}
           />
         </label>

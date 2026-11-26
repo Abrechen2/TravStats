@@ -549,5 +549,16 @@
     "coral": "Koralle",
     "teal": "Petrol",
     "lime": "Limette"
+  },
+  "ui": {
+    "clearSearch": "Suche leeren",
+    "sortBy": "Sortieren nach {{column}}",
+    "picker": {
+      "loading": "Suche läuft …",
+      "failed": "Die Suche ist fehlgeschlagen.",
+      "retry": "Erneut versuchen",
+      "none": "Keine Treffer.",
+      "results": "Ergebnisse"
+    }
   }
 }

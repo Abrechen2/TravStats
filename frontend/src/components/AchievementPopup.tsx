@@ -4,6 +4,7 @@
  * Displays a celebration popup when user unlocks new achievements
  */
 
+import { Icon } from "./ui/Icon";
 import { useEffect, useState, useRef } from "react";
 import { useTranslation } from "../hooks/useTranslation";
 import { useEscapeClose } from "../hooks/useEscapeClose";
@@ -157,14 +158,7 @@ export default function AchievementPopup({
           style={{ color: "var(--text-muted)" }}
           aria-label={t("common:buttons.close")}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
+          <Icon name="x" size={20} />
         </button>
 
         {/* Achievement Icon */}

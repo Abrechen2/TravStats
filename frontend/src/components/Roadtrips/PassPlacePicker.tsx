@@ -6,10 +6,9 @@ import { listPlaces } from "../../lib/api/places";
 import { logger } from "../../lib/logger";
 import { greatCircleKm } from "../../shared/flightDuration";
 import type { Place } from "../../types/place";
+import { EntityPicker } from "../ui/EntityPicker";
 
 const SHOWN = 8;
-const ROW =
-  "w-full rounded-sm px-2 py-1 text-left text-sm hover:bg-(--bg-surface) pointer-coarse:min-h-(--ts-size-touch-min)";
 
 /**
  * Picks the place a pass-through passed (tester 2026-09-26) — the POI
@@ -74,32 +73,13 @@ export default function PassPlacePicker({
   if (places.length === 0) return <p className="t-caption">{t("roadtrips:place.none")}</p>;
 
   return (
-    <div className="flex flex-col" style={{ gap: 6 }}>
-      {/* A visible label, not only a placeholder that vanishes on typing (#249). */}
-      <label className="flex flex-col gap-1 text-xs text-(--text-muted)">
-        {t("roadtrips:place.search")}
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("roadtrips:place.search")}
-          className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm pointer-coarse:min-h-(--ts-size-touch-min)"
-        />
-      </label>
-      {shown.length === 0 ? (
-        <p className="t-caption">{t("roadtrips:place.noMatch")}</p>
-      ) : (
-        <ul className="flex flex-col" style={{ listStyle: "none", margin: 0, padding: 0 }}>
-          {shown.map((p) => (
-            <li key={p.id}>
-              <button type="button" className={ROW} onClick={() => onPick(p)}>
-                {p.name}
-                {p.city ? <span className="t-caption"> · {p.city}</span> : null}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <EntityPicker
+      label={t("roadtrips:place.search")}
+      query={query}
+      onQueryChange={setQuery}
+      options={shown.map((p) => ({ ...p, label: p.name, detail: p.city }))}
+      onPick={onPick}
+      emptyText={t("roadtrips:place.noMatch")}
+    />
   );
 }

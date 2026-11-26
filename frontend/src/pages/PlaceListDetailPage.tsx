@@ -1,3 +1,4 @@
+import { Icon } from "../components/ui/Icon";
 import { LIST_PALETTE_HEX } from "../lib/listPalette";
 import GeoExportButtons from "../components/export/GeoExportButtons";
 import { geoExportPaths } from "../lib/api/geoExport";
@@ -637,7 +638,7 @@ export default function PlaceListDetailPage(): JSX.Element {
                     className={`text-sm ${COARSE_BOX}`}
                     style={{ color: "var(--text-muted)" }}
                   >
-                    ✕
+                    <Icon name="x" size={16} />
                   </button>
                 </li>
               );

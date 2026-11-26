@@ -1,6 +1,7 @@
 import { useTranslation } from "../hooks/useTranslation";
 import { Flight } from "../types";
 import Toggletip from "./ui/Toggletip";
+import { Icon, type IconName } from "./ui/Icon";
 import { TRACKER_FORMATS } from "../lib/importers/types";
 
 interface DataSourceBadgesProps {
@@ -10,7 +11,7 @@ interface DataSourceBadgesProps {
 export default function DataSourceBadges({ flight }: DataSourceBadgesProps): JSX.Element | null {
   const { t } = useTranslation(["flights", "common"]);
 
-  const badges: Array<{ icon: string; label: string; color: string; tooltip?: string }> = [];
+  const badges: Array<{ icon: IconName; label: string; color: string; tooltip?: string }> = [];
 
   // Check if we should show combined "Live + Auto Update" badge
   const hasLiveUpdate = flight.dataSource === "live_update";
@@ -36,7 +37,7 @@ export default function DataSourceBadges({ flight }: DataSourceBadgesProps): JSX
   // Add combined "Live + Auto Update" badge if both conditions are met
   if (showCombinedBadge) {
     badges.push({
-      icon: "🔄",
+      icon: "refresh-cw",
       label: t("flights:dataSource.live_update_auto"),
       color: "bg-green-100 text-green-800",
       tooltip: t("flights:dataSource.live_update_auto_tooltip"),
@@ -47,7 +48,7 @@ export default function DataSourceBadges({ flight }: DataSourceBadgesProps): JSX
   if (flight.enrichmentHistory && flight.enrichmentHistory.length > 0) {
     const enrichmentCount = flight.enrichmentHistory.length;
     badges.push({
-      icon: "🔍",
+      icon: "search",
       label:
         enrichmentCount > 1
           ? t("flights:enrichmentCount", { count: enrichmentCount })
@@ -69,7 +70,7 @@ export default function DataSourceBadges({ flight }: DataSourceBadgesProps): JSX
       // Only add AUTO UPDATE badge if dataSource is not already 'live_update' (to avoid duplicates)
       if (flight.dataSource !== "live_update") {
         badges.push({
-          icon: "🔄",
+          icon: "refresh-cw",
           label: t("flights:dataSource.auto_update"),
           color: "bg-green-100 text-green-800",
         });
@@ -89,9 +90,9 @@ export default function DataSourceBadges({ flight }: DataSourceBadgesProps): JSX
         <Toggletip
           key={index}
           content={badge.tooltip}
-          triggerClassName={`px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}
+          triggerClassName={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}
         >
-          {badge.icon} {badge.label}
+          <Icon name={badge.icon} size={14} /> {badge.label}
         </Toggletip>
       ))}
     </div>
@@ -101,7 +102,7 @@ export default function DataSourceBadges({ flight }: DataSourceBadgesProps): JSX
 function getDataSourceConfig(
   source: string,
   t: (key: string, options?: Record<string, unknown>) => string
-): { icon: string; label: string; color: string } | null {
+): { icon: IconName; label: string; color: string } | null {
   // Per BRAND.md §"❌ Don't"-list: don't convey state by colour alone, and
   // don't borrow domain colours for non-domain UI. The previous palette
   // (blue/purple/cyan/green for individual data sources) leaked Cruise,
@@ -111,49 +112,49 @@ function getDataSourceConfig(
   // badge keeps brand amber as the single intentional exception
   // (it's the parser's own "we improved this" stamp, brand voice).
   const NEUTRAL_BADGE = "bg-(--bg-elevated) text-(--text-muted)";
-  const configs: Record<string, { icon: string; label: string; color: string }> = {
+  const configs: Record<string, { icon: IconName; label: string; color: string }> = {
     manual: {
-      icon: "✏️",
+      icon: "pencil",
       label: t("flights:dataSource.manual"),
       color: NEUTRAL_BADGE,
     },
     email_import: {
-      icon: "📧",
+      icon: "mail",
       label: t("flights:dataSource.email_import"),
       color: NEUTRAL_BADGE,
     },
     boarding_pass_scan: {
-      icon: "🎫",
+      icon: "ticket",
       label: t("flights:dataSource.boarding_pass_scan"),
       color: NEUTRAL_BADGE,
     },
     historical_enrichment: {
-      icon: "🔍",
+      icon: "search",
       label: t("flights:dataSource.historical_enrichment"),
       color: "bg-(--accent-soft) text-(--accent)",
     },
     live_update: {
-      icon: "🔄",
+      icon: "refresh-cw",
       label: t("flights:dataSource.live_update"),
       color: NEUTRAL_BADGE,
     },
     api_lookup: {
-      icon: "🌐",
+      icon: "globe",
       label: t("flights:dataSource.api_lookup"),
       color: NEUTRAL_BADGE,
     },
     imported_fr24: {
-      icon: "📊",
+      icon: "bar-chart-3",
       label: t("flights:dataSource.imported_fr24"),
       color: NEUTRAL_BADGE,
     },
     imported_generic_csv: {
-      icon: "📥",
+      icon: "download",
       label: t("flights:dataSource.imported_generic_csv"),
       color: NEUTRAL_BADGE,
     },
     imported_roundtrip: {
-      icon: "↻",
+      icon: "rotate-cw",
       label: t("flights:dataSource.imported_roundtrip"),
       color: NEUTRAL_BADGE,
     },
@@ -161,7 +162,7 @@ function getDataSourceConfig(
     ...Object.fromEntries(
       TRACKER_FORMATS.map((f) => [
         `imported_${f}`,
-        { icon: "📲", label: t(`flights:dataSource.imported_${f}`), color: NEUTRAL_BADGE },
+        { icon: "smartphone", label: t(`flights:dataSource.imported_${f}`), color: NEUTRAL_BADGE },
       ])
     ),
   };

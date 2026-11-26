@@ -15,7 +15,6 @@ import {
   type PlaceSortKey,
 } from "../components/places/PlaceRow";
 import { Table, type TableColumn } from "../components/ui/Table";
-import { SortableHeader } from "../components/table/SortableHeader";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
@@ -324,20 +323,16 @@ export default function PlacesListPage(): JSX.Element {
           align: layout.align,
           mono: layout.mono,
           onNarrow: layout.onNarrow,
-          label:
-            sortKey === undefined ? (
-              label
-            ) : (
-              <SortableHeader
-                column={sortKey}
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={handleSort}
-                ariaLabel={t("places:list.sortBy", { col: label })}
-              >
-                {label}
-              </SortableHeader>
-            ),
+          label,
+          sort:
+            sortKey === undefined
+              ? undefined
+              : {
+                  active: sortBy === sortKey,
+                  order: sortOrder,
+                  onSort: (): void => handleSort(sortKey),
+                  ariaLabel: t("places:list.sortBy", { col: label }),
+                },
         };
       }),
     [columnPrefs, t, sortBy, sortOrder, handleSort]

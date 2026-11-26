@@ -1,3 +1,4 @@
+import { Icon } from "./ui/Icon";
 import { useToastStore, type Toast } from "../store/toastStore";
 import { useTranslation } from "../hooks/useTranslation";
 
@@ -13,11 +14,11 @@ const ToastItem = ({ toast }: { toast: Toast }) => {
   };
 
   const icons = {
-    success: "✓",
-    error: "✕",
-    warning: "⚠",
-    info: "ℹ",
-  };
+    success: "circle-check",
+    error: "circle-alert",
+    warning: "triangle-alert",
+    info: "info",
+  } as const;
 
   return (
     <div
@@ -30,7 +31,9 @@ const ToastItem = ({ toast }: { toast: Toast }) => {
       style={{ background: "var(--bg-elevated)", color: "var(--text-primary)" }}
       role="alert"
     >
-      <div className="shrink-0 text-lg">{icons[toast.type]}</div>
+      <div className="shrink-0">
+        <Icon name={icons[toast.type]} size={20} />
+      </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium wrap-break-word">{toast.message}</p>
       </div>
@@ -40,14 +43,7 @@ const ToastItem = ({ toast }: { toast: Toast }) => {
         style={{ color: "var(--text-muted)" }}
         aria-label={t("buttons.close")}
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
+        <Icon name="x" size={20} />
       </button>
     </div>
   );

@@ -1,3 +1,4 @@
+import { Icon } from "../../ui/Icon";
 import { useRoutesVisible } from "../../../store/mapRoutesStore";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
@@ -101,7 +102,7 @@ export function RailTab(): JSX.Element {
               aria-label={t("common:buttons.close")}
               style={{ background: "none", border: "none", color: "inherit", fontSize: 18 }}
             >
-              ×
+              <Icon name="x" size={16} />
             </button>
           </div>
           {!loading && !loadError && (

@@ -1,3 +1,4 @@
+import { SearchInput } from "../../ui/SearchInput";
 import { useEffect, useState } from "react";
 import { airportsApi } from "../../../lib/api/airports";
 import type { Airport } from "../../../lib/api";
@@ -174,12 +175,11 @@ export default function AirportsSection(): JSX.Element {
       </div>
 
       {/* Search + list */}
-      <input
-        type="search"
-        className="input mb-3"
-        placeholder={t("admin:airlineAircraftMasterData.airport.searchPlaceholder")}
+      <SearchInput
+        label={t("admin:airlineAircraftMasterData.airport.searchPlaceholder")}
         value={query}
-        onChange={(e): void => setQuery(e.target.value)}
+        onChange={setQuery}
+        placeholder={t("admin:airlineAircraftMasterData.airport.searchPlaceholder")}
       />
 
       {loading ? (

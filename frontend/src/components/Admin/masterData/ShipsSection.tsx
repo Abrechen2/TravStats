@@ -1,3 +1,4 @@
+import { SearchInput } from "../../ui/SearchInput";
 import { useEffect, useState } from "react";
 import { shipsApi } from "../../../lib/api/cruise";
 import type { Ship } from "../../../types/cruise";
@@ -124,12 +125,11 @@ export default function ShipsSection(): JSX.Element {
       </div>
 
       {/* Search + list */}
-      <input
-        type="search"
-        className="input mb-3"
-        placeholder={t("admin:cruiseMasterData.ship.searchPlaceholder")}
+      <SearchInput
+        label={t("admin:cruiseMasterData.ship.searchPlaceholder")}
         value={query}
-        onChange={(e): void => setQuery(e.target.value)}
+        onChange={setQuery}
+        placeholder={t("admin:cruiseMasterData.ship.searchPlaceholder")}
       />
 
       {loading ? (

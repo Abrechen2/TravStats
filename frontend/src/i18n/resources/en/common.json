@@ -549,5 +549,16 @@
     "coral": "Coral",
     "teal": "Teal",
     "lime": "Lime"
+  },
+  "ui": {
+    "clearSearch": "Clear search",
+    "sortBy": "Sort by {{column}}",
+    "picker": {
+      "loading": "Searching …",
+      "failed": "The search failed.",
+      "retry": "Try again",
+      "none": "No matches.",
+      "results": "Results"
+    }
   }
 }

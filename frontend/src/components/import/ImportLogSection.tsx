@@ -4,7 +4,6 @@ import type { JSX, ReactNode } from "react";
 import { Table, TableRow, type TableColumn } from "../ui/Table";
 import { useTableHints } from "../ui/useTableHints";
 import { ColumnPicker } from "../table/ColumnPicker";
-import { SortableHeader } from "../table/SortableHeader";
 import TablePagination from "../table/TablePagination";
 import { RowActionButton, RowActions } from "../table/RowActionButton";
 import { useColumnPrefs } from "../table/useColumnPrefs";
@@ -284,19 +283,15 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
         return {
           key: id,
           ...layout,
-          label: SORTABLE.includes(id) ? (
-            <SortableHeader
-              column={id}
-              sortBy={sortBy}
-              sortOrder={sortOrder}
-              onSort={handleSort}
-              ariaLabel={t("settings:import.log.sortBy", { col: label })}
-            >
-              {label}
-            </SortableHeader>
-          ) : (
-            label
-          ),
+          label,
+          sort: SORTABLE.includes(id)
+            ? {
+                active: sortBy === id,
+                order: sortOrder,
+                onSort: (): void => handleSort(id),
+                ariaLabel: t("settings:import.log.sortBy", { col: label }),
+              }
+            : undefined,
         };
       }),
     [columnPrefs, t, sortBy, sortOrder, handleSort]

@@ -501,7 +501,8 @@
         }
       },
       "moreAnswers": "More answers to this question"
-    }
+    },
+    "tabsLabel": "Inbox and sharing"
   },
   "flag": {
     "unnamedRecord": "Record without a name",

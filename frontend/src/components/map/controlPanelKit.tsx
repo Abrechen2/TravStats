@@ -98,17 +98,11 @@ export function PanelHeader({
         <Icon name="map" size={16} />
         {title}
       </span>
-      <svg
-        aria-hidden
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2.5}
-        className="h-4 w-4 shrink-0 transition-transform"
+      <Icon
+        name="chevron-down"
+        size={16}
         style={{ transform: expanded ? "none" : "rotate(180deg)", opacity: 0.75, color: TEXT }}
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
-      </svg>
+      />
     </button>
   );
 }
@@ -179,21 +173,16 @@ export function CollapsibleSection({
         style={{ background: "transparent" }}
       >
         <SectionLabel>{title}</SectionLabel>
-        <svg
-          aria-hidden
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2.5}
-          className="mb-1.5 h-3 w-3 shrink-0 transition-transform"
+        <Icon
+          name="chevron-down"
+          size={14}
           style={{
             transform: expanded ? "none" : "rotate(-90deg)",
             opacity: 0.55,
             color: TEXT,
+            marginBottom: 6,
           }}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
-        </svg>
+        />
       </button>
       {expanded && children}
     </div>

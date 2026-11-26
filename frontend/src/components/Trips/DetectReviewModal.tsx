@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useCallback, useMemo, useState } from "react";
 import { tripsApi } from "../../lib/api";
 import type { ProposedTrip, ProposedTripLeg } from "../../lib/api/trips";
@@ -167,7 +168,7 @@ export default function DetectReviewModal({
             style={{ color: "var(--text-muted)" }}
             aria-label={t("common:accessibility.close")}
           >
-            ✕
+            <Icon name="x" size={16} />
           </button>
         </div>
 
@@ -267,19 +268,12 @@ export default function DetectReviewModal({
                           : t("trips:detectReview.expandLegs", { defaultValue: "Flüge anzeigen" })
                       }
                     >
-                      <svg
-                        viewBox="0 0 16 16"
-                        className="w-4 h-4 transition-transform"
+                      <Icon
+                        name="chevron-down"
+                        size={16}
+                        className="transition-transform"
                         style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.75"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M4 6l4 4 4-4" />
-                      </svg>
+                      />
                     </button>
                   )}
                 </div>

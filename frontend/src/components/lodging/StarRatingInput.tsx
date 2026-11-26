@@ -1,3 +1,5 @@
+import { Icon } from "../ui/Icon";
+import { useTranslation } from "../../hooks/useTranslation";
 import type { JSX } from "react";
 
 const STAR_COUNT = 5;
@@ -41,6 +43,7 @@ export function StarRatingInput({
   onChange,
   disabled,
 }: StarRatingInputProps): JSX.Element {
+  const { t } = useTranslation(["common"]);
   const current = value ?? 0;
 
   return (
@@ -86,10 +89,11 @@ export function StarRatingInput({
             type="button"
             disabled={disabled}
             data-testid={`star-${fieldKey}-clear`}
+            aria-label={`${label} — ${t("common:buttons.reset")}`}
             onClick={() => onChange(null)}
             className="ml-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)"
           >
-            ×
+            <Icon name="x" size={16} />
           </button>
         )}
       </div>

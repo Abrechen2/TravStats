@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useState, type JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
@@ -209,7 +210,7 @@ export default function MailPrefilterSettings({
                   )
                 }
               >
-                ×
+                <Icon name="x" size={16} />
               </button>
             </li>
           ))}
@@ -261,7 +262,7 @@ export default function MailPrefilterSettings({
                   )
                 }
               >
-                ×
+                <Icon name="x" size={16} />
               </button>
             </li>
           ))}

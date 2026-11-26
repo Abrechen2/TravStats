@@ -1,3 +1,4 @@
+import { Icon } from "../../ui/Icon";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import Modal from "../../Modal";
@@ -286,7 +287,7 @@ export function BrandRuleDialog({
                     className={`px-1 ${COARSE}`}
                     style={{ color: "var(--text-muted)" }}
                   >
-                    ×
+                    <Icon name="x" size={16} />
                   </button>
                 </li>
               ))}

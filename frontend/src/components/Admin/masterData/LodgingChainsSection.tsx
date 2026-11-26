@@ -1,3 +1,4 @@
+import { SearchInput } from "../../ui/SearchInput";
 import { useCallback, useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
@@ -101,12 +102,11 @@ export default function LodgingChainsSection(): JSX.Element {
         </Button>
       </div>
 
-      <Input
-        type="search"
-        aria-label={t("admin:lodgingChains.search")}
+      <SearchInput
+        label={t("admin:lodgingChains.search")}
         placeholder={t("admin:lodgingChains.search")}
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={setQuery}
       />
 
       <p className="t-caption" data-testid="lodging-chains-count">

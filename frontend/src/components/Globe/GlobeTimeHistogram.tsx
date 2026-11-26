@@ -15,6 +15,7 @@
 // State still lives in `useTimeSliderStore`; this component only drives it,
 // so GlobeView's visibility logic is unchanged.
 
+import { Icon } from "../ui/Icon";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTimeSliderStore } from "../../store/timeSliderStore";
@@ -312,7 +313,7 @@ export const GlobeTimeHistogram = ({
                   style={{ color: "rgba(241,245,249,0.6)", background: "rgba(255,255,255,0.06)" }}
                   title={t("map:globe.timeSlider.reset")}
                 >
-                  ✕
+                  <Icon name="x" size={16} />
                 </button>
               )}
             </span>

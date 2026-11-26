@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEscapeClose } from "../../hooks/useEscapeClose";
@@ -191,7 +192,7 @@ export function PreviewModal({
             style={{ color: "var(--text-muted)" }}
             aria-label={t("settings:import.preview.success.close")}
           >
-            ×
+            <Icon name="x" size={16} />
           </button>
         </header>
 

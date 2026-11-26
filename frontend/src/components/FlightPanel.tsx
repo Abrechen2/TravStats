@@ -1,3 +1,4 @@
+import { Icon } from "./ui/Icon";
 import ConfirmModal from "./ui/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { useMemo, useState, useEffect } from "react";
@@ -289,7 +290,7 @@ export function FlightPanel({
                 className="text-sm transition-colors"
                 style={{ color: "var(--text-muted)" }}
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </div>
 

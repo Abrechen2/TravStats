@@ -1,3 +1,4 @@
+import { SearchInput } from "../ui/SearchInput";
 import Modal from "../Modal";
 import CoverCropHost from "./CoverCropHost";
 import { useGapPrefill } from "../../hooks/useGapPrefill";
@@ -301,18 +302,11 @@ export default function TripsTab({
                 </FilterPill>
               ))}
             </div>
-            <input
-              type="search"
+            <SearchInput
+              label={t("trips:filterBar.search")}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={setSearch}
               placeholder={t("trips:filterBar.search")}
-              aria-label={t("trips:filterBar.search")}
-              className="ml-auto w-full rounded-[var(--ts-radius-button)] px-3 py-2 text-sm sm:w-60"
-              style={{
-                background: "var(--ts-surface)",
-                border: "1px solid var(--ts-border)",
-                color: "var(--ts-text-bright)",
-              }}
             />
           </div>
         )}

@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEscapeClose } from "../../hooks/useEscapeClose";
@@ -243,7 +244,7 @@ export function ColumnMappingWizard<F extends string>({
             style={{ color: "var(--text-muted)" }}
             aria-label={t("common:buttons.close")}
           >
-            ×
+            <Icon name="x" size={16} />
           </button>
         </header>
 

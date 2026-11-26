@@ -16,7 +16,6 @@ import {
 } from "../components/Cruise/CruiseRow";
 import { Table, type TableColumn } from "../components/ui/Table";
 import ListHeaderMenu from "../components/table/ListHeaderMenu";
-import { SortableHeader } from "../components/table/SortableHeader";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
@@ -332,20 +331,16 @@ export default function CruisesPage(): JSX.Element {
           align: layout.align,
           mono: layout.mono,
           onNarrow: layout.onNarrow,
-          label:
-            sortKey === undefined ? (
-              label
-            ) : (
-              <SortableHeader
-                column={sortKey}
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={handleSort}
-                ariaLabel={t("list.sortBy", { col: label })}
-              >
-                {label}
-              </SortableHeader>
-            ),
+          label,
+          sort:
+            sortKey === undefined
+              ? undefined
+              : {
+                  active: sortBy === sortKey,
+                  order: sortOrder,
+                  onSort: (): void => handleSort(sortKey),
+                  ariaLabel: t("list.sortBy", { col: label }),
+                },
         };
       }),
     [columnPrefs, t, sortBy, sortOrder, handleSort]

@@ -1,3 +1,4 @@
+import Chip from "../components/ui/Chip";
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { PackageBookingCard } from "../components/bookings/PackageBookingCard";
 import { usePackageSplit } from "../components/bookings/usePackageSplit";
@@ -485,13 +486,9 @@ export default function BusDetailPage(): JSX.Element {
               {ride.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {ride.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border px-2.5 py-0.5 text-xs"
-                      style={{ borderColor: "var(--ts-border)", color: "var(--ts-muted)" }}
-                    >
+                    <Chip key={tag} size="sm">
                       #{tag}
-                    </span>
+                    </Chip>
                   ))}
                 </div>
               )}

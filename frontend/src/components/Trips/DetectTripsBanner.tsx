@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useEffect, useState } from "react";
 import { tripsApi } from "../../lib/api";
 import type { DetectTripsResult } from "../../lib/api/trips";
@@ -95,7 +96,7 @@ export default function DetectTripsBanner({ onChange }: Props): JSX.Element | nu
         >
           <span className="hidden sm:inline">{t("common:buttons.close")}</span>
           <span className="sm:hidden" aria-hidden="true">
-            ✕
+            <Icon name="x" size={16} />
           </span>
         </button>
         <button

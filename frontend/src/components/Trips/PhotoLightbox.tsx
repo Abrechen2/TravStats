@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCoverCropStore } from "../../store/coverCropStore";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -160,7 +161,7 @@ export default function PhotoLightbox({
           className="rounded-sm border border-slate-500 px-3 py-1 text-sm"
           onClick={onClose}
         >
-          ✕
+          <Icon name="x" size={16} />
         </button>
       </div>
     </div>

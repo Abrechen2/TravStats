@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import type { CSSProperties, ReactNode } from "react";
 import type { Trip, TripCategory } from "../../types";
 import { TRIP_COLORS as PALETTE } from "../../lib/tripColors";
@@ -7,6 +8,7 @@ import TagInput from "../TagInput";
 import SuggestionChips from "../common/SuggestionChips";
 import { formatDate } from "../../lib/displayFormat";
 import type { TripModalForm } from "./tripModalForm";
+import type { IconName } from "../ui/Icon";
 
 const CATEGORIES: TripCategory[] = ["vacation", "business", "weekend", "family", "other"];
 
@@ -20,11 +22,11 @@ const CATEGORY_ICON: Record<TripCategory, string> = {
 
 export type ModalTab = "general" | "people" | "appearance" | "notes";
 
-export const TABS: ReadonlyArray<{ id: ModalTab; icon: string }> = [
-  { id: "general", icon: "📋" },
-  { id: "people", icon: "👥" },
-  { id: "appearance", icon: "🎨" },
-  { id: "notes", icon: "📝" },
+export const TABS: ReadonlyArray<{ id: ModalTab; icon: IconName }> = [
+  { id: "general", icon: "clipboard-list" },
+  { id: "people", icon: "users" },
+  { id: "appearance", icon: "palette" },
+  { id: "notes", icon: "notebook-pen" },
 ];
 
 export const inputStyle: CSSProperties = {
@@ -179,19 +181,20 @@ function DateFields({ f }: { f: TripModalForm }): JSX.Element {
         </Field>
       </div>
       {f.offerEntrySpan && entrySpan && (
-        <button
-          type="button"
+        <Chip
+          dashed
+          size="sm"
+          className="-mt-2"
           onClick={() => {
             f.setStartDate(entrySpan.start);
             f.setEndDate(entrySpan.end);
           }}
-          className="-mt-2 rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent)"
         >
           {t("trips:modal.useEntrySpan", {
             start: formatDate(entrySpan.start, { timeZone: "UTC" }),
             end: formatDate(entrySpan.end, { timeZone: "UTC" }),
           })}
-        </button>
+        </Chip>
       )}
     </>
   );

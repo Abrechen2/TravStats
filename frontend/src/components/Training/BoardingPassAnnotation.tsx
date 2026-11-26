@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useState, useRef, useEffect } from "react";
 import { trainingApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
@@ -603,7 +604,7 @@ export default function BoardingPassAnnotation({
                     style={{ color: "var(--accent)" }}
                     aria-label={`Tag ${tag} entfernen`}
                   >
-                    ×
+                    <Icon name="x" size={16} />
                   </button>
                 </span>
               ))}

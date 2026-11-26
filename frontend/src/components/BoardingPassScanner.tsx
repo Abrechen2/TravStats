@@ -1,3 +1,4 @@
+import { Icon } from "./ui/Icon";
 import { useState, useRef } from "react";
 import { parseApi } from "../lib/api";
 import type { BoardingPassStage } from "../lib/api/types";
@@ -154,14 +155,7 @@ export default function BoardingPassScanner({
             className="p-2 text-(--text-muted) hover:bg-(--bg-elevated) rounded-lg transition-colors"
             aria-label={t("common:buttons.close")}
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <Icon name="x" size={24} />
           </button>
         </div>
 

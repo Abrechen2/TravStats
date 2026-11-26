@@ -1,3 +1,4 @@
+import { SearchInput } from "../ui/SearchInput";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 
@@ -222,14 +223,11 @@ export default function LinkDocumentDialog({
                 : "documents:links.alsoLinkHint"
           )}
         </p>
-        <input
-          type="search"
+        <SearchInput
+          label={t("documents:links.filter")}
           value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+          onChange={setFilter}
           placeholder={t("documents:links.filter")}
-          aria-label={t("documents:links.filter")}
-          className="rounded-md px-3 py-2 text-sm pointer-coarse:min-h-(--ts-size-touch-min)"
-          style={{ border: "1px solid var(--ts-border)", background: "transparent" }}
         />
         {loadFailed && (
           <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>

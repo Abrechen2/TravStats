@@ -1,3 +1,4 @@
+import { SearchInput } from "../ui/SearchInput";
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 
@@ -156,14 +157,11 @@ export default function AssignFlightsToBookingModal({ booking, onClose }: Props)
         )}
         {load.status === "ready" && (
           <>
-            <input
-              type="search"
+            <SearchInput
+              label={t("trips:bookingAssign.searchLabel")}
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              aria-label={t("trips:bookingAssign.searchLabel")}
+              onChange={setQuery}
               placeholder={t("trips:bookingAssign.searchPlaceholder")}
-              className="mb-3 w-full rounded-md border px-3 py-1.5 text-sm"
-              style={{ borderColor: "var(--color-border)", background: "var(--bg-elevated)" }}
             />
             {visible.length === 0 ? (
               <p className="text-sm" style={muted}>

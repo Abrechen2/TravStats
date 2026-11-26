@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useId, useState } from "react";
 import type { JSX, KeyboardEvent } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -73,7 +74,7 @@ export default function ValueChips({
                 onClick={() => onChange(values.filter((v) => v !== value))}
                 style={{ color: "var(--ts-muted)" }}
               >
-                ×
+                <Icon name="x" size={16} />
               </button>
             </li>
           ))}

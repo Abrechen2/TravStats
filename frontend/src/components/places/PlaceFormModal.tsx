@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import { useCallback, useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { LocationInput, type LocationSelection } from "../location/LocationInput";
@@ -583,24 +584,14 @@ export function PlaceFormModal({
           </label>
           <ChipGroup label={t("places:form.status")} hintId="place-form-status-hint">
             {([true, false] as const).map((v) => (
-              <button
+              <Chip
                 key={String(v)}
-                type="button"
-                aria-pressed={visited === v}
+                color="var(--domain-poi)"
+                active={visited === v}
                 onClick={() => setVisited(v)}
-                className={`rounded-full px-4 py-2 text-sm ${COARSE}`}
-                style={
-                  visited === v
-                    ? {
-                        border: "1px solid var(--domain-poi)",
-                        color: "var(--domain-poi)",
-                        background: "var(--domain-poi-soft)",
-                      }
-                    : { border: "1px solid var(--color-border)", color: "var(--text-muted)" }
-                }
               >
                 {v ? t("places:form.wasHere") : t("places:form.onWishlist")}
-              </button>
+              </Chip>
             ))}
           </ChipGroup>
           {/* The default is the wishlist, and saying so beats letting the user

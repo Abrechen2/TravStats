@@ -5,7 +5,8 @@
     "annotate": "Create a template",
     "myTemplates": "My templates",
     "communityTemplates": "Community templates",
-    "parseLogs": "Parse Logs"
+    "parseLogs": "Parse Logs",
+    "label": "Template sections"
   },
   "annotate": {
     "title": "Annotate file",

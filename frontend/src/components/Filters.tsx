@@ -1,3 +1,4 @@
+import { Icon } from "./ui/Icon";
 import { useState, useEffect, useRef } from "react";
 import { flightsApi } from "../lib/api";
 import HelpIcon from "./Help/HelpIcon";
@@ -241,14 +242,7 @@ export default function Filters({
           backdropFilter: "blur(8px)",
         }}
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-          />
-        </svg>
+        <Icon name="filter" size={20} />
         <span className="font-semibold text-sm">{t("map:filters.title")}</span>
         {activeFilterCount() > 0 && (
           <span
@@ -275,14 +269,7 @@ export default function Filters({
                 className="p-1 rounded-sm transition-colors"
                 style={{ color: "var(--text-muted)" }}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <Icon name="x" size={20} />
               </button>
             </div>
 
@@ -292,7 +279,7 @@ export default function Filters({
                 className="text-sm font-semibold mb-2 flex items-center gap-2"
                 style={{ color: "var(--text-muted)" }}
               >
-                📅 {t("map:filters.timePeriod")}
+                <Icon name="calendar" size={16} /> {t("map:filters.timePeriod")}
                 <HelpIcon
                   content={t("map:filters.help.timePeriod")}
                   subject={t("map:filters.timePeriod")}
@@ -341,7 +328,7 @@ export default function Filters({
             {showMapOnlyFilters && (
               <div className="mb-4">
                 <h4 className="text-sm font-semibold mb-2" style={{ color: "var(--text-muted)" }}>
-                  🛫 {t("map:filters.routeFrequency")}
+                  <Icon name="plane-takeoff" size={16} /> {t("map:filters.routeFrequency")}
                 </h4>
                 <label className="text-xs block mb-1" style={{ color: "var(--text-muted)" }}>
                   {t("map:filters.minFlown", { count: minRouteCount })}
@@ -373,7 +360,7 @@ export default function Filters({
                     className="text-sm font-semibold flex items-center gap-2"
                     style={{ color: "var(--text-muted)" }}
                   >
-                    🏢 {t("map:filters.airlines")}
+                    <Icon name="building-2" size={16} /> {t("map:filters.airlines")}
                     <HelpIcon
                       content={t("map:filters.help.airlines")}
                       subject={t("map:filters.airlines")}
@@ -434,7 +421,7 @@ export default function Filters({
             {/* Status-Filter */}
             <div className="mb-4">
               <h4 className="text-sm font-semibold mb-2" style={{ color: "var(--text-muted)" }}>
-                ✈️ {t("map:filters.status")}
+                <Icon name="plane" size={16} /> {t("map:filters.status")}
               </h4>
               <label
                 className="flex items-center gap-2 text-sm mb-1 cursor-pointer"

@@ -1,3 +1,4 @@
+import { SearchInput } from "../../ui/SearchInput";
 import { useEffect, useState } from "react";
 import { portsApi } from "../../../lib/api/cruise";
 import type { Port } from "../../../types/cruise";
@@ -143,12 +144,11 @@ export default function PortsSection(): JSX.Element {
         </button>
       </div>
 
-      <input
-        type="search"
-        className="input mb-3"
-        placeholder={t("admin:cruiseMasterData.port.searchPlaceholder")}
+      <SearchInput
+        label={t("admin:cruiseMasterData.port.searchPlaceholder")}
         value={query}
-        onChange={(e): void => setQuery(e.target.value)}
+        onChange={setQuery}
+        placeholder={t("admin:cruiseMasterData.port.searchPlaceholder")}
       />
 
       {loading ? (

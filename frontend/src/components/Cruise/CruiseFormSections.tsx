@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import type { JSX, ReactNode } from "react";
 import { CRUISE_DISTINCT_PALETTE } from "../../lib/cruiseColor";
 import type { CabinType, Trip } from "../../types";
@@ -89,7 +90,7 @@ export function CruiseColorSection({
             color: "var(--text-muted)",
           }}
         >
-          ×
+          <Icon name="x" size={16} />
         </button>
         {COLOR_PALETTE.map((c, index) => (
           <button
