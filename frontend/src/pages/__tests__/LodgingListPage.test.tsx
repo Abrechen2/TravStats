@@ -1,3 +1,4 @@
+import { chooseYear, openYearGrid } from "../../__tests__/helpers/yearPicker";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -427,7 +428,9 @@ describe("LodgingListPage", () => {
     const user = userEvent.setup();
     renderListPage();
 
-    await findNamed("option", "2024");
+    await waitFor(() =>
+      expect(openYearGrid("lodging:filter.year").map((b) => b.textContent)).toContain("2024")
+    );
     listLodgingPageMock.mockClear();
 
     await openFilterPanel();
@@ -439,7 +442,7 @@ describe("LodgingListPage", () => {
     });
 
     listLodgingPageMock.mockClear();
-    await user.selectOptions(screen.getByLabelText("lodging:filter.year"), "2023");
+    chooseYear("lodging:filter.year", 2023);
     await waitFor(() => {
       expect(listLodgingPageMock).toHaveBeenCalledWith(
         expect.objectContaining({ type: "campsite", year: 2023 })
@@ -447,7 +450,8 @@ describe("LodgingListPage", () => {
     });
 
     listLodgingPageMock.mockClear();
-    await openFilterPanel();
+    // A real pointer press on the year pill closes the panel; a synthetic click does not.
+    if (!screen.queryByLabelText("lodging:filter.country")) await openFilterPanel();
     await user.selectOptions(screen.getByLabelText("lodging:filter.country"), "US");
     await waitFor(() => {
       expect(listLodgingPageMock).toHaveBeenCalledWith(

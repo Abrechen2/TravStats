@@ -1,3 +1,4 @@
+import { yearTrigger, openYearGrid } from "./helpers/yearPicker";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import Filters from "../components/Filters";
@@ -53,7 +54,7 @@ describe("Filters", () => {
 
     await waitFor(() => {
       // The panel opens and shows filter-specific content like allYears
-      expect(screen.getByText(/map:filters\.allYears/i)).toBeInTheDocument();
+      expect(yearTrigger("map:filters.timePeriod")).toBeInTheDocument();
     });
   });
 
@@ -63,14 +64,14 @@ describe("Filters", () => {
     const filterButton = screen.getByText(/map:filters\.title/i);
     fireEvent.click(filterButton);
 
-    await waitFor(() => {
-      // The default option in year select is map:filters.allYears
-      const allYearsOption = screen.getByText(/map:filters\.allYears/i);
-      const yearSelect = allYearsOption.closest("select");
-      if (yearSelect) {
-        fireEvent.change(yearSelect, { target: { value: "2024" } });
-      }
-    });
+    // The years come from the flights the component loads, so the cell arrives async.
+    await waitFor(() =>
+      expect(openYearGrid("map:filters.timePeriod").map((b) => b.textContent)).toContain("2024")
+    );
+    mockOnFilterChange.mockClear();
+    fireEvent.click(
+      openYearGrid("map:filters.timePeriod").find((b) => b.textContent === "2024") as HTMLElement
+    );
 
     await waitFor(() => {
       expect(mockOnFilterChange).toHaveBeenCalled();

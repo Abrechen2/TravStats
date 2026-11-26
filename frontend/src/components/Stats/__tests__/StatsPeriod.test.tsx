@@ -11,6 +11,9 @@ import { useStatsCompareStore } from "../../../store/statsCompareStore";
  * overview tab until the period moved up to the page (2026-09-16); what they
  * pin did not change, only where the state is owned.
  */
+const triggers = (): HTMLElement[] =>
+  Array.from(document.querySelectorAll<HTMLElement>('button[aria-haspopup="true"]'));
+
 function Period({ years, loading = false }: { years: number[]; loading?: boolean }): JSX.Element {
   const period = useStatsPeriod(years, loading);
   return <StatsPeriodBar years={years} period={period} />;
@@ -32,7 +35,7 @@ describe("statistics period — compare persistence (issue #188)", () => {
 
   it("selects the most recent year once data lands", () => {
     render(<Period years={[2022, 2023, 2024]} />);
-    expect(screen.getByRole("button", { name: "2024" })).toHaveAttribute("aria-pressed", "true");
+    expect(triggers()[0].textContent).toBe("2024");
   });
 
   it("a user turning the toggle OFF stays off after remounting", () => {
@@ -52,14 +55,14 @@ describe("statistics period — compare persistence (issue #188)", () => {
   it("a user-chosen comparison year stays selected after remounting", () => {
     const { unmount } = render(<Period years={[2021, 2022, 2023, 2024]} />);
 
-    const select = screen.getByRole("combobox") as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: "2021" } });
-    expect(select.value).toBe("2021");
+    fireEvent.click(triggers()[1]);
+    fireEvent.click(screen.getByRole("button", { name: "2021" }));
+    expect(triggers()[1].textContent).toBe("2021");
     unmount();
     cleanup();
 
     render(<Period years={[2021, 2022, 2023, 2024]} />);
-    expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe("2021");
+    expect(triggers()[1].textContent).toBe("2021");
   });
 
   it("turns comparison off (no crash) when a persisted compare year is no longer available", () => {

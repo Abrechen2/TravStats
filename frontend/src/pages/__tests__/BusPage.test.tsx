@@ -1,3 +1,4 @@
+import { openYearGrid } from "../../__tests__/helpers/yearPicker";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -190,9 +191,8 @@ describe("BusPage", () => {
     list.mockResolvedValue(page(rideFixture(), second));
     renderPage();
     await screen.findByTestId("bus-row-r1");
-    const yearSelect = await screen.findByRole("option", { name: "2025" });
-    const options = within(yearSelect.parentElement as HTMLElement).getAllByRole("option");
-    expect(options.map((o) => o.textContent)).toEqual(["Alle Jahre", "2026", "2025"]);
+    const cells = openYearGrid("Jahr");
+    expect(cells.map((o) => o.textContent)).toEqual(["Alle Jahre", "2026", "2025"]);
   });
 
   it("names the add button in the empty state", async () => {

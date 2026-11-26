@@ -1,6 +1,7 @@
+import YearPicker from "../ui/YearPicker";
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
-import { AppShell, Button, Chip, EmptyState, Field, PageHeader, Select } from "../ui";
+import { AppShell, Button, Chip, EmptyState, Field, PageHeader } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -207,18 +208,12 @@ export default function FriendsPage(): JSX.Element {
         style={{ gap: "var(--ts-space-lg)", marginBottom: "var(--ts-space-xl)" }}
       >
         <Field label={tr("period.label")} htmlFor="friends-year">
-          <Select
-            id="friends-year"
-            value={year === null ? "all" : String(year)}
-            onChange={(e) => setYear(e.target.value === "all" ? null : Number(e.target.value))}
-          >
-            <option value="all">{tr("period.all")}</option>
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </Select>
+          <YearPicker
+            years={years.map((y) => ({ year: y }))}
+            value={year ?? "all"}
+            onChange={(v) => setYear(v === "all" ? null : v)}
+            label={tr("period.label")}
+          />
         </Field>
         <div
           role="group"

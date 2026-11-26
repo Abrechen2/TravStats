@@ -549,5 +549,13 @@
     "coral": "Coral",
     "teal": "Teal",
     "lime": "Lime"
+  },
+  "yearPicker": {
+    "label": "Year",
+    "previous": "Previous year",
+    "next": "Next year",
+    "open": "Choose year",
+    "all": "All years",
+    "gridLabel": "Years"
   }
 }

@@ -1,3 +1,4 @@
+import { chooseYear, openYearGrid } from "../../__tests__/helpers/yearPicker";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
@@ -477,15 +478,14 @@ describe("RailPage — filters", () => {
   it("sends the chosen status and year to the server and offers every year ridden", async () => {
     renderPage();
     await screen.findByTestId("rail-row-j1");
-    const year = screen.getByRole("combobox", { name: "rail:list.filterYear" });
     await waitFor(() =>
-      expect(Array.from(year.querySelectorAll("option")).map((o) => o.value)).toEqual([
-        "all",
+      expect(openYearGrid("rail:list.filterYear").map((o) => o.textContent)).toEqual([
+        "common:yearPicker.all",
         "2026",
         "2024",
       ])
     );
-    fireEvent.change(year, { target: { value: "2024" } });
+    chooseYear("rail:list.filterYear", 2024);
     fireEvent.change(screen.getByRole("combobox", { name: "rail:list.filterStatus" }), {
       target: { value: "cancelled" },
     });

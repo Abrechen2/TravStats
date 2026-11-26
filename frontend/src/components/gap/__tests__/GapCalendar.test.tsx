@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { GapCalendar as GapCalendarData } from "../../../lib/api/gapCalendar";
 
@@ -132,6 +132,14 @@ describe("GapCalendar", () => {
     expect(screen.queryByText("track:gaps.target.flight")).toBeNull();
     expect(screen.getAllByText("track:gaps.target.trip").length).toBeGreaterThan(0);
     expect(screen.getAllByText("track:gaps.openDay").length).toBeGreaterThan(0);
+  });
+
+  it("steps to the previous year through the year picker and loads it", async () => {
+    show();
+    await screen.findByTestId("gaps-2026-03");
+    fireEvent.click(screen.getByRole("button", { name: "common:yearPicker.previous" }));
+    await waitFor(() => expect(api.year).toHaveBeenLastCalledWith(2025));
+    await screen.findByTestId("gaps-2026-03");
   });
 
   it("a failed load is shown with a retry, never as an empty year", async () => {

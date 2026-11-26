@@ -35,10 +35,7 @@ const renderAt = (url: string): ReturnType<typeof render> =>
   );
 
 const pressed = (): string | undefined =>
-  screen
-    .getAllByRole("button")
-    .find((b) => b.getAttribute("aria-pressed") === "true")
-    ?.textContent?.trim();
+  document.querySelector<HTMLElement>('button[aria-haspopup="true"]')?.textContent?.trim();
 
 describe("the statistics year lives in the URL", () => {
   beforeEach(() => {
@@ -53,7 +50,7 @@ describe("the statistics year lives in the URL", () => {
 
   it("opens on all years when the link says so", () => {
     renderAt("/stats?year=all");
-    expect(pressed()).toBe("stats:overviewFilter.allYears");
+    expect(pressed()).toBe("common:yearPicker.all");
   });
 
   it("still picks the newest year when nothing was chosen", () => {
@@ -63,6 +60,7 @@ describe("the statistics year lives in the URL", () => {
 
   it("writes a chosen year into the URL, keeping the tab", () => {
     renderAt("/stats?tab=lodging");
+    fireEvent.click(document.querySelector<HTMLElement>('button[aria-haspopup="true"]')!);
     fireEvent.click(screen.getByRole("button", { name: "2005" }));
     expect(screen.getByTestId("search").textContent).toBe("?tab=lodging&year=2005");
   });

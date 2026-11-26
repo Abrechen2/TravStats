@@ -1,3 +1,4 @@
+import YearPicker from "../ui/YearPicker";
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -131,24 +132,17 @@ export default function GapCalendar({ withTrack }: { withTrack: boolean }): JSX.
     <section className="flex flex-col gap-3" data-testid="gap-calendar">
       <header className="flex flex-wrap items-center gap-3">
         <h2 className="t-card-title">{t("track:gaps.title", { year })}</h2>
-        <label className="flex items-center gap-2 t-caption">
-          {t("track:gaps.year")}
-          <select
+        <span data-testid="gaps-year">
+          <YearPicker
+            years={[...new Set([...years, year])].map((y) => ({ year: y }))}
             value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            data-testid="gaps-year"
-            className="t-body"
-            style={{ minHeight: 44 }}
-          >
-            {[...new Set([...years, year])]
-              .sort((a, b) => b - a)
-              .map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-          </select>
-        </label>
+            onChange={(v) => {
+              if (v !== "all") setYear(v);
+            }}
+            allowAll={false}
+            label={t("track:gaps.year")}
+          />
+        </span>
       </header>
       <p className="t-caption">{t("track:gaps.intro")}</p>
       {!withTrack && (

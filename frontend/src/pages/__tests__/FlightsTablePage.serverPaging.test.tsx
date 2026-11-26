@@ -1,3 +1,4 @@
+import { openYearGrid } from "../../__tests__/helpers/yearPicker";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { readFileSync } from "fs";
@@ -234,7 +235,7 @@ describe("FlightsTablePage — server-side paging", () => {
     const airlineSelect = screen.getByLabelText("flights:table.airline");
     expect(airlineSelect).toHaveTextContent("Lufthansa (120)");
     // 120 Lufthansa flights, from a page that carries 50 rows in total.
-    expect(screen.getByLabelText("flights:filter.year")).toHaveTextContent("2024");
+    expect(openYearGrid("flights:filter.year").map((b) => b.textContent)).toContain("2024");
   });
 
   it("counts the filtered set from `total`, not from the page", async () => {
