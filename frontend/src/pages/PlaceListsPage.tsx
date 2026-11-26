@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import PurposeSegment from "../components/purpose/PurposeSegment";
 import AppShell from "../components/ui/AppShell";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
@@ -121,6 +122,8 @@ export default function PlaceListsPage(): JSX.Element {
             + {t("places:lists.newList")}
           </button>
         </div>
+
+        <PurposeSegment />
 
         {creating && (
           <PlaceListCreateDialog

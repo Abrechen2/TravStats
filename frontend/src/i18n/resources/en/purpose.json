@@ -100,6 +100,7 @@
       "private": "All private",
       "business": "All business"
     },
-    "countsFailed": "The counts could not be loaded."
+    "countsFailed": "The counts could not be loaded.",
+    "segmentAll": "All"
   }
 }

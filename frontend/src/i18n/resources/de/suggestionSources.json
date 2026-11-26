@@ -305,6 +305,12 @@
       "range": "{{from}}–{{to}} von {{total}}",
       "prev": "Zurück",
       "next": "Weiter"
+    },
+    "list": {
+      "label": "Orte dieses Plugins als Liste führen",
+      "generic": "Das Plugin meldet keine Liste: nur Standardspalten.",
+      "open": "Liste „{{name}}“ öffnen",
+      "failed": "Liste nicht umgeschaltet"
     }
   }
 }

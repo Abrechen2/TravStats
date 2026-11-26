@@ -127,7 +127,7 @@ describe("plugin location maintenance", () => {
   it("hides 'Standorte pflegen' for a plugin without the capability", async () => {
     api.capabilities.mockResolvedValue({ capabilities: [], maintenance: false, error: null });
     card();
-    await waitFor(() => expect(api.capabilities).toHaveBeenCalledWith("p1"));
+    await waitFor(() => expect(api.capabilities).toHaveBeenCalledWith("p1", "de"));
     expect(screen.queryByText("suggestionSources:plugins.maintenance.open")).toBeNull();
   });
 
