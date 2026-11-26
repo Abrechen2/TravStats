@@ -26,7 +26,7 @@ type Delegate = {
   count(args: { where: Record<string, unknown> }): Promise<number>;
   updateMany(args: {
     where: Record<string, unknown>;
-    data: { purpose: string };
+    data: { purpose: string } | { purposeKey: null };
   }): Promise<{ count: number }>;
 };
 const delegate = (c: unknown, name: string): Delegate => (c as Record<string, Delegate>)[name];
@@ -181,6 +181,44 @@ export async function deleteCustomPurpose(
       if (counts.some((c) => c > 0)) return "in-use" as const;
       await tx.customPurpose.delete({ where: { id } });
       return "deleted" as const;
+    })
+  );
+}
+
+/**
+ * Settles a write that stored `key` without holding the purpose's row (a write outside a
+ * transaction read the purpose, then wrote). Runs after that write committed:
+ *
+ * - the purpose was deleted meanwhile -> the key is cleared (the kind the entry carries stays);
+ * - its kind changed meanwhile -> every entry with the key takes the current kind.
+ *
+ * It holds the purpose's row FOR SHARE, and delete and re-kind take it FOR UPDATE, so the two
+ * always converge: a delete or re-kind in flight is waited for and repaired here; one that starts
+ * later waits for this check and then sees the committed entry (counted as "in use", or
+ * re-kinded with the rest).
+ */
+export async function reconcileCustomPurposeKey(key: string): Promise<void> {
+  if (!key.startsWith(CUSTOM_PREFIX)) return;
+  const id = key.slice(CUSTOM_PREFIX.length);
+  await runUnfiltered(() =>
+    prisma.$transaction(async (tx) => {
+      // FOR SHARE waits for a delete or re-kind in flight, so this reads its outcome.
+      const rows = await tx.$queryRaw<{ kind: string }[]>`
+        SELECT kind FROM custom_purposes WHERE id = ${id} FOR SHARE`;
+      const kind = rows[0]?.kind ?? null;
+      for (const name of DELEGATES) {
+        // Purpose is the member's own view, never a share fact: nothing to propagate.
+        if (kind === null)
+          await delegate(tx, name).updateMany({
+            where: { purposeKey: key },
+            data: { purposeKey: null },
+          });
+        else
+          await delegate(tx, name).updateMany({
+            where: { purposeKey: key, NOT: { purpose: kind } },
+            data: { purpose: kind },
+          });
+      }
     })
   );
 }

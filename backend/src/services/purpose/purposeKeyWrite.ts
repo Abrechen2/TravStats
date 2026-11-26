@@ -160,3 +160,23 @@ export async function resolvePurposeKeysOnWrite<A>(
       return args;
   }
 }
+
+/**
+ * The custom purpose key a write stores, if any (`custom:<uuid>`). The hook uses it to settle a
+ * race with a concurrent delete or re-kind of that purpose (`reconcileCustomPurposeKey`).
+ */
+export function writtenCustomKey(operation: string, args: unknown): string | null {
+  if (!isObject(args)) return null;
+  const bodies: unknown[] =
+    operation === "upsert"
+      ? [args.create, args.update]
+      : Array.isArray(args.data)
+        ? args.data
+        : [args.data];
+  for (const body of bodies) {
+    if (!isObject(body)) continue;
+    const key = scalar(body.purposeKey);
+    if (typeof key === "string" && key.startsWith("custom:")) return key;
+  }
+  return null;
+}

@@ -35,7 +35,8 @@ async function withPurpose(
   lookup: TripCategoryLookup,
   cache: Map<string, string | null>
 ) {
-  if (data.purpose !== undefined) return data;
+  // A purpose sent either way — the kind or the detail — is the caller's choice, never the trip's.
+  if (data.purpose !== undefined || data.purposeKey !== undefined) return data;
   const tripId = tripIdOf(data);
   if (!tripId) return data;
   if (!cache.has(tripId)) cache.set(tripId, await lookup(tripId));
