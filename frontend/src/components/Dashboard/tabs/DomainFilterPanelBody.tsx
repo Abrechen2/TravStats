@@ -1,4 +1,5 @@
 import type { JSX } from "react";
+import PurposeFilterControl from "../../purpose/PurposeFilterControl";
 import { Fragment, useRef } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDomainColors } from "../../../hooks/useDomainColors";
@@ -232,6 +233,9 @@ export function DomainFilterPanelBody({
         {linkBanner}
         <div style={{ padding: "0 10px" }}>{quickActions}</div>
         {rowsList}
+        <div style={{ padding: "0 10px" }}>
+          <PurposeFilterControl compact />
+        </div>
         {persistHint}
       </div>
     );
@@ -245,6 +249,7 @@ export function DomainFilterPanelBody({
       </div>
       {linkBanner}
       {rowsList}
+      <PurposeFilterControl compact />
       {persistHint}
     </div>
   );

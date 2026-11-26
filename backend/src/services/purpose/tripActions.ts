@@ -1,13 +1,56 @@
 import { prisma } from "../../db";
 import { runUnfiltered } from "../provenance/recordedOnly";
-import { purposeFromTripCategory, type Purpose } from "../../shared/purpose";
+import type { Purpose } from "../../shared/purpose";
+import {
+  DEFAULT_KEY_OF_KIND,
+  parsePurposeKey,
+  purposeKeyFromTripCategory,
+} from "../../shared/purposeCatalogue";
+import { AppError } from "../../middleware/errorHandler";
 
 type Writer = {
   updateMany(args: {
     where: Record<string, unknown>;
-    data: { purpose: Purpose | null };
+    data: { purpose: string | null };
   }): Promise<{ count: number }>;
 };
+
+/** A purpose to apply: its kind and detailed key (a legacy kind stands for its default key). */
+export interface ChosenPurpose {
+  kind: Purpose;
+  key: string | null;
+}
+
+/**
+ * Reads a purpose value the caller chose (legacy kind, built-in or own custom key). A custom key
+ * of another account, or an unknown one, is refused with `PURPOSE_UNKNOWN`.
+ */
+export async function resolveChosenPurpose(
+  userId: string,
+  value: string | undefined | null
+): Promise<ChosenPurpose | undefined> {
+  if (value === undefined || value === null) return undefined;
+  const parsed = parsePurposeKey(value);
+  if (parsed?.type === "legacy") return { kind: parsed.kind, key: null };
+  if (parsed?.type === "builtin") return { kind: parsed.kind, key: parsed.key };
+  if (parsed?.type === "custom") {
+    const custom = await prisma.customPurpose.findFirst({
+      where: { id: parsed.id, userId },
+      select: { kind: true },
+    });
+    if (custom) return { kind: custom.kind as Purpose, key: parsed.key };
+  }
+  throw new AppError("Unknown purpose", 400, "PURPOSE_UNKNOWN", "purpose");
+}
+
+const fromCategory = (category: string | null): ChosenPurpose | undefined => {
+  const key = purposeKeyFromTripCategory(category);
+  const parsed = parsePurposeKey(key);
+  return parsed?.type === "builtin" ? { kind: parsed.kind, key: parsed.key } : undefined;
+};
+
+/** What a write stores: the key when there is one (the hook splits it), else the kind. */
+const writeValue = (p: ChosenPurpose): string => p.key ?? p.kind;
 
 /** The Prisma delegates of the eight purpose models. */
 const DELEGATES = [
@@ -30,7 +73,7 @@ const DELEGATES = [
 async function fill(
   userId: string,
   tripWhere: { tripId: string } | { tripId: { in: string[] } },
-  purpose: Purpose,
+  purpose: ChosenPurpose,
   onlyUnknown: boolean
 ): Promise<number> {
   // One transaction: a failure part-way leaves no domain overwritten.
@@ -42,7 +85,7 @@ async function fill(
         // Purpose is the member's own view, never a share fact: nothing to propagate.
         const res = await delegate.updateMany({
           where: { userId, ...tripWhere, ...(onlyUnknown ? { purpose: null } : {}) },
-          data: { purpose },
+          data: { purpose: writeValue(purpose) },
         });
         changed += res.count;
       }
@@ -60,42 +103,60 @@ type Counter = { count(args: { where: Record<string, unknown> }): Promise<number
 export async function previewTripPurpose(
   userId: string,
   tripId: string,
-  chosen: Purpose | undefined
-): Promise<{ purpose: Purpose | null; wouldChange: number } | null> {
+  chosen: ChosenPurpose | undefined
+): Promise<{ purpose: Purpose | null; purposeKey: string | null; wouldChange: number } | null> {
   const trip = await prisma.trip.findFirst({
     where: { id: tripId, userId },
     select: { category: true },
   });
   if (!trip) return null;
-  const purpose = chosen ?? purposeFromTripCategory(trip.category);
-  if (!purpose) return { purpose: null, wouldChange: 0 };
+  const purpose = chosen ?? fromCategory(trip.category);
+  if (!purpose) return { purpose: null, purposeKey: null, wouldChange: 0 };
+  const differs = [
+    { purpose: null },
+    { purpose: { not: purpose.kind } },
+    // A row with no detail already reads as the kind's default key, so it only differs from a
+    // detail that is not the default. `{ not }` skips NULL in SQL.
+    ...(purpose.key ? [{ purpose: purpose.kind, purposeKey: { not: purpose.key } }] : []),
+    ...(purpose.key && purpose.key !== DEFAULT_KEY_OF_KIND[purpose.kind]
+      ? [{ purposeKey: null }]
+      : []),
+  ];
   const counts = await runUnfiltered(() =>
     Promise.all(
       DELEGATES.map((name) =>
         (prisma as unknown as Record<string, Counter>)[name].count({
           // `purpose: { not }` skips NULL in SQL, so the unset ones are counted on their own.
-          where: { userId, tripId, OR: [{ purpose: null }, { purpose: { not: purpose } }] },
+          where: { userId, tripId, OR: differs },
         })
       )
     )
   );
-  return { purpose, wouldChange: counts.reduce((sum, n) => sum + n, 0) };
+  return {
+    purpose: purpose.kind,
+    purposeKey: purpose.key,
+    wouldChange: counts.reduce((sum, n) => sum + n, 0),
+  };
 }
 
 /** "Zweck auf alle Einträge übertragen": the trip's category (or a chosen purpose) onto its entries. */
 export async function applyTripPurpose(
   userId: string,
   tripId: string,
-  chosen: Purpose | undefined
-): Promise<{ purpose: Purpose | null; changed: number } | null> {
+  chosen: ChosenPurpose | undefined
+): Promise<{ purpose: Purpose | null; purposeKey: string | null; changed: number } | null> {
   const trip = await prisma.trip.findFirst({
     where: { id: tripId, userId },
     select: { category: true },
   });
   if (!trip) return null;
-  const purpose = chosen ?? purposeFromTripCategory(trip.category);
-  if (!purpose) return { purpose: null, changed: 0 };
-  return { purpose, changed: await fill(userId, { tripId }, purpose, false) };
+  const purpose = chosen ?? fromCategory(trip.category);
+  if (!purpose) return { purpose: null, purposeKey: null, changed: 0 };
+  return {
+    purpose: purpose.kind,
+    purposeKey: purpose.key,
+    changed: await fill(userId, { tripId }, purpose, false),
+  };
 }
 
 /**
@@ -107,13 +168,15 @@ export async function fillPurposeFromTrips(userId: string): Promise<number> {
     where: { userId, category: { not: null } },
     select: { id: true, category: true },
   });
-  const byPurpose = new Map<Purpose, string[]>();
+  const byKey = new Map<string, { purpose: ChosenPurpose; ids: string[] }>();
   for (const t of trips) {
-    const p = purposeFromTripCategory(t.category);
-    if (p) byPurpose.set(p, [...(byPurpose.get(p) ?? []), t.id]);
+    const p = fromCategory(t.category);
+    if (!p?.key) continue;
+    const entry = byKey.get(p.key) ?? { purpose: p, ids: [] };
+    byKey.set(p.key, { ...entry, ids: [...entry.ids, t.id] });
   }
   let changed = 0;
-  for (const [purpose, ids] of byPurpose) {
+  for (const { purpose, ids } of byKey.values()) {
     changed += await fill(userId, { tripId: { in: ids } }, purpose, true);
   }
   return changed;

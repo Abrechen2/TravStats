@@ -3,6 +3,11 @@ import type { NextFunction, Request, Response } from "express";
 
 import { prismaModelFields } from "../openapi/prismaDatamodel";
 import type { PurposeVisibility } from "../../shared/purpose";
+import {
+  parsePurposeFilter,
+  purposeFilterWhere,
+  type PurposeFilter,
+} from "../purpose/purposeFilter";
 
 /**
  * "Nur belegte" — the ONE filter behind every statistic that can leave out entries typed in from
@@ -35,6 +40,8 @@ interface Store {
   recorded: boolean;
   /** Purposes hidden per Prisma model, set after authentication; null until then. */
   hidden: Record<string, string[]> | null;
+  /** `?purposeFilter=`: only entries of this purpose (services/purpose/purposeFilter.ts). */
+  filter?: PurposeFilter | null;
 }
 const scope = new AsyncLocalStorage<Store>();
 
@@ -176,6 +183,8 @@ function entryCondition(store: Store, model: string): Json | null {
   if (hidden && hidden.length > 0) {
     parts.push({ OR: [{ purpose: null }, { purpose: { notIn: hidden } }] });
   }
+  if (store.filter && PURPOSE_FILTERED_MODELS.has(model))
+    parts.push(purposeFilterWhere(store.filter));
   return parts.length === 0 ? null : parts.length === 1 ? parts[0] : { AND: parts };
 }
 
@@ -201,6 +210,16 @@ function tripThroughEntries(own: Map<string, Json>): Json | null {
   };
 }
 
+/** Under a purpose filter: a trip with at least one entry the filter lets through. */
+function tripWithSomeEntry(own: Map<string, Json>): Json {
+  const purposeRelations = [...relationsOf("Trip")].filter(
+    ([, r]) => r.isList && PURPOSE_FILTERED_MODELS.has(r.target)
+  );
+  return {
+    OR: purposeRelations.map(([name, r]) => ({ [name]: { some: visibleOf(own, r.target) } })),
+  };
+}
+
 /** Does the condition of this model come from a hidden purpose (not only from "nur belegte")? */
 function hasPurposeCond(own: Map<string, Json>, model: string): boolean {
   return JSON.stringify(own.get(model)).includes('"purpose"');
@@ -219,7 +238,9 @@ function activeConditions(store: Store): Active {
   for (const [model, c] of own) active.set(model, c);
   // A trip that exists only through entries the purpose filter hides is hidden with them, so a
   // trip count, a trip country and the days away agree with the entries left on screen.
-  const tripCond = tripThroughEntries(own);
+  // Filtered to one purpose, a trip (and a lodging or place) stays only through an entry of it:
+  // a trip with no such entry is not "a Messe trip", whether it has other entries or none.
+  const tripCond = store.filter ? tripWithSomeEntry(own) : tripThroughEntries(own);
   if (tripCond) {
     const ownTrip = own.get("Trip");
     active.set("Trip", ownTrip ? { AND: [ownTrip, tripCond] } : tripCond);
@@ -229,9 +250,12 @@ function activeConditions(store: Store): Active {
     const child = PARENT_CHILD_MODEL[parent];
     const c = own.get(child);
     if (c) {
-      active.set(parent, {
-        NOT: { AND: [{ [relation]: { some: {} } }, { [relation]: { none: c } }] },
-      });
+      active.set(
+        parent,
+        store.filter
+          ? { [relation]: { some: c } }
+          : { NOT: { AND: [{ [relation]: { some: {} } }, { [relation]: { none: c } }] } }
+      );
     }
   }
   for (const [child, relation] of Object.entries(CHILDREN)) {
@@ -317,9 +341,16 @@ export function recordedOnlyScope(req: Request, res: Response, next: NextFunctio
     return;
   }
   const asked = "onlyRecorded" in req.query && req.query.onlyRecorded === "true";
+  const rawFilter = req.query.purposeFilter;
   // Strict query schemas downstream must never see a parameter they do not know.
   delete req.query.onlyRecorded;
-  const store: Store = { done: false, recorded: asked, hidden: null };
+  delete req.query.purposeFilter;
+  const filter = rawFilter === undefined ? null : parsePurposeFilter(rawFilter);
+  if (filter === "invalid") {
+    res.status(400).json({ error: "Unknown purpose filter", code: "PURPOSE_UNKNOWN" });
+    return;
+  }
+  const store: Store = { done: false, recorded: asked, hidden: null, filter };
   const end = (): void => {
     store.done = true;
   };
@@ -332,6 +363,18 @@ export function recordedOnlyScope(req: Request, res: Response, next: NextFunctio
 export function setScopeHidden(hidden: Record<string, string[]>): void {
   const store = scope.getStore();
   if (store && !store.done) store.hidden = hidden;
+}
+
+/** Completes the open scope's purpose filter (a custom key's kind, stale keys); no filter, no effect. */
+export function completeScopeFilter(complete: (f: PurposeFilter) => PurposeFilter): void {
+  const store = scope.getStore();
+  if (store && !store.done && store.filter) store.filter = complete(store.filter);
+}
+
+/** Does the open scope carry a purpose filter that wants the owner's purposes? */
+export function scopeFilterWantsOwner(): boolean {
+  const f = scope.getStore()?.filter;
+  return !!f && f.type === "key" && (f.kind === null || f.isDefault);
 }
 
 /** Prisma model -> the domain whose `purposeVisibility` row governs it. */
@@ -440,10 +483,21 @@ export function entryFilterActive(): {
   open: boolean;
   recorded: boolean;
   hidden: Record<string, string[]>;
+  filter: PurposeFilter | null;
 } {
   const store = scope.getStore();
-  if (!store || store.done) return { open: false, recorded: false, hidden: {} };
-  return { open: true, recorded: store.recorded, hidden: store.hidden ?? {} };
+  if (!store || store.done) return { open: false, recorded: false, hidden: {}, filter: null };
+  return {
+    open: true,
+    recorded: store.recorded,
+    hidden: store.hidden ?? {},
+    filter: store.filter ?? null,
+  };
+}
+
+/** Test seam: runs `fn` in a scope filtered to one purpose, as `?purposeFilter=` would. */
+export function runWithPurposeFilter<T>(filter: PurposeFilter, fn: () => T): T {
+  return scope.run({ done: false, recorded: false, hidden: null, filter }, fn);
 }
 
 /** Test seam: runs `fn` inside an open scope, as the middleware would. */

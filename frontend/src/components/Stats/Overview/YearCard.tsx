@@ -10,6 +10,7 @@ import { useSettingsStore } from "../../../store/settingsStore";
 import { needsOutline } from "../../../lib/domainColor";
 import { formatDistance } from "../../../lib/units";
 import { dashboardYearHref, domainListHref } from "../../../lib/stats/yearLinks";
+import YearPurposeBreakdown from "./YearPurposeBreakdown";
 
 const MONTH_KEYS = [
   "jan",
@@ -224,6 +225,7 @@ export default function YearCard({ card }: { card: YearCardData }): JSX.Element 
           )}
         </>
       )}
+      <YearPurposeBreakdown year={card.year} rows={card.byPurpose} />
     </article>
   );
 }

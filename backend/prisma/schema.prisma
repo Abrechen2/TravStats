@@ -146,6 +146,7 @@ model User {
   webdavSync                      UserWebdavSync?
   calendarSources                 CalendarSource[]
   calendarRules                   CalendarRule[]
+  customPurposes                  CustomPurpose[]
   suggestionPlugins               SuggestionPlugin[]
   analyticsEvents                 AnalyticsEvent[]
   createdInvitations              Invitation[]                 @relation("CreatedInvitations")
@@ -767,6 +768,9 @@ model Flight {
   /// `private` | `business` | NULL (unknown — every row older than the field; never read as
   /// private). The member's own view: never a share fact, so a copy starts unknown.
   purpose              String?   @map("purpose")
+  /// The detailed purpose behind the kind in `purpose`: `builtin:<key>` or `custom:<uuid>`
+  /// (shared/purposeCatalogue.ts). Null: the kind alone. Never shared or federated.
+  purposeKey String? @map("purpose_key")
   /// Bumped by every Prisma write. Read by the statistics ETag (forgejo#50):
   /// without it an edited flight could not be told apart from an unchanged one.
   updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at")
@@ -2594,6 +2598,9 @@ model TripRoute {
   /// tour or a roadtrip: `private` | `business` | NULL (unknown, never read as private). The
   /// member's own view: never a share fact, so a shared roadtrip's copy starts unknown.
   purpose String? @map("purpose")
+  /// The detailed purpose behind the kind in `purpose`: `builtin:<key>` or `custom:<uuid>`
+  /// (shared/purposeCatalogue.ts). Null: the kind alone. Never shared or federated.
+  purposeKey String? @map("purpose_key")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -2992,6 +2999,9 @@ model Cruise {
   /// `private` | `business` | NULL (unknown — every row older than the field; never read as
   /// private). The member's own view: never a share fact, so a copy starts unknown.
   purpose   String?  @map("purpose")
+  /// The detailed purpose behind the kind in `purpose`: `builtin:<key>` or `custom:<uuid>`
+  /// (shared/purposeCatalogue.ts). Null: the kind alone. Never shared or federated.
+  purposeKey String? @map("purpose_key")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -3614,6 +3624,9 @@ model LodgingStay {
   /// `private` | `business` | NULL (unknown — every row older than the field; never read as
   /// private). The member's own view: never a share fact, so a copy starts unknown.
   purpose   String?  @map("purpose")
+  /// The detailed purpose behind the kind in `purpose`: `builtin:<key>` or `custom:<uuid>`
+  /// (shared/purposeCatalogue.ts). Null: the kind alone. Never shared or federated.
+  purposeKey String? @map("purpose_key")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   lodging    Lodging            @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
@@ -4041,6 +4054,9 @@ model PlaceVisit {
   /// `private` | `business` | NULL (unknown — every row older than the field; never read as
   /// private). The member's own view: never a share fact, so a copy starts unknown.
   purpose   String?  @map("purpose")
+  /// The detailed purpose behind the kind in `purpose`: `builtin:<key>` or `custom:<uuid>`
+  /// (shared/purposeCatalogue.ts). Null: the kind alone. Never shared or federated.
+  purposeKey String? @map("purpose_key")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
@@ -5070,6 +5086,9 @@ model RailJourney {
   /// `private` | `business` | NULL (unknown — every row older than the field; never read as
   /// private). The member's own view: never a share fact, so a copy starts unknown.
   purpose   String?  @map("purpose")
+  /// The detailed purpose behind the kind in `purpose`: `builtin:<key>` or `custom:<uuid>`
+  /// (shared/purposeCatalogue.ts). Null: the kind alone. Never shared or federated.
+  purposeKey String? @map("purpose_key")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -5264,6 +5283,9 @@ model BusJourney {
   /// `private` | `business` | NULL (unknown — every row older than the field; never read as
   /// private). The member's own view: never a share fact, so a copy starts unknown.
   purpose   String?  @map("purpose")
+  /// The detailed purpose behind the kind in `purpose`: `builtin:<key>` or `custom:<uuid>`
+  /// (shared/purposeCatalogue.ts). Null: the kind alone. Never shared or federated.
+  purposeKey String? @map("purpose_key")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -5490,6 +5512,9 @@ model RentalBooking {
   /// `private` | `business` | NULL (unknown — every row older than the field; never read as
   /// private). The member's own view: never a share fact, so a copy starts unknown.
   purpose   String?  @map("purpose")
+  /// The detailed purpose behind the kind in `purpose`: `builtin:<key>` or `custom:<uuid>`
+  /// (shared/purposeCatalogue.ts). Null: the kind alone. Never shared or federated.
+  purposeKey String? @map("purpose_key")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -6172,6 +6197,9 @@ model FerryJourney {
   /// `private` | `business` | NULL (unknown — every row older than the field; never read as
   /// private). The member's own view: never a share fact, so a copy starts unknown.
   purpose   String?  @map("purpose")
+  /// The detailed purpose behind the kind in `purpose`: `builtin:<key>` or `custom:<uuid>`
+  /// (shared/purposeCatalogue.ts). Null: the kind alone. Never shared or federated.
+  purposeKey String? @map("purpose_key")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -8505,4 +8533,27 @@ model SuggestionPluginCall {
   @@index([pluginId, at])
   @@index([pluginId, stopStartAt])
   @@map("suggestion_plugin_calls")
+}
+
+/// A user's own travel purpose (docs/superpowers/specs/2026-11-22-private-business-purpose.md,
+/// "Custom purposes"). Private to its owner: entries reference it as `custom:<id>` in
+/// `purpose_key`, and the KIND (private | business) is copied into each entry's `purpose`, so
+/// filters and counts never need this table. Deleted only while unused; otherwise archived.
+model CustomPurpose {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  /// The name as typed (German or whatever the user writes); `nameEn` is an optional English name.
+  name       String
+  nameEn     String?   @map("name_en")
+  /// "private" | "business" — checked in the migration.
+  kind       String
+  color      String
+  icon       String
+  archivedAt DateTime? @map("archived_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("custom_purposes")
 }

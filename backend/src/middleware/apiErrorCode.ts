@@ -310,6 +310,12 @@ export type ApiErrorCode =
   /** A request body failed its schema. Sent on every ZodError answer, so a
    *  form shows its own sentence instead of zod's JSON issue dump. */
   | "VALIDATION_FAILED"
+  /** A purpose key names no built-in purpose and no custom purpose of the entry's owner. */
+  | "PURPOSE_UNKNOWN"
+  /** A custom purpose that entries still use cannot be deleted, only archived. */
+  | "PURPOSE_IN_USE"
+  /** No custom purpose with that id belongs to the caller. */
+  | "PURPOSE_NOT_FOUND"
   /** Time-zone re-resolution (ADR 0002 D2): `apply` named a dry run that
    *  does not exist or expired — run the dry run again. */
   | "DRY_RUN_NOT_FOUND"

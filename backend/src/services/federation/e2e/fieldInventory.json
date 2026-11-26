@@ -5,7 +5,7 @@
     "personal": "operatingAirline operatingAirlineIata operatingAirlineIcao notes seatNumber seatClass tags companions aerodataboxQualityTags coPassengers boardingGroup",
     "photos": "",
     "documents": "bookingReference ticketNumber frequentFlyerNumber",
-    "excluded": "userId receiptUrl dataSource parserTemplate parserConfidence shareKey provenance rememberedOn rememberedNote purpose"
+    "excluded": "userId receiptUrl dataSource parserTemplate parserConfidence shareKey provenance rememberedOn rememberedNote purpose purposeKey"
   },
   "FlightTrack": {
     "details": "id flightId source startedAt endedAt geometry segmentStarts cumulativeKm elevations pointCount jitterDropped distanceKm createdAt updatedAt",
@@ -21,7 +21,7 @@
     "personal": "cabinNumber cabinType notes tags companions",
     "photos": "",
     "documents": "bookingReference",
-    "excluded": "userId parserTemplate parserConfidence dataSource shareKey provenance rememberedOn rememberedNote purpose vesselMmsi vesselMmsiSource"
+    "excluded": "userId parserTemplate parserConfidence dataSource shareKey provenance rememberedOn rememberedNote purpose purposeKey vesselMmsi vesselMmsiSource"
   },
   "CruiseStop": {
     "details": "id cruiseId portId dayNumber position date isAtSea arrivalTime departureTime arrivalUtc departureUtc stopZone stopDate timePrecision updatedAt allAboardTime unresolvedPortName",
@@ -109,7 +109,7 @@
     "personal": "notes tags",
     "photos": "",
     "documents": "",
-    "excluded": "userId shareKey purpose trackFromDay trackToDay"
+    "excluded": "userId shareKey purpose purposeKey trackFromDay trackToDay"
   },
   "TripRouteLeg": {
     "details": "id routeId fromStopId toStopId distanceKm source mode confidence drivingMinutes computedAt updatedAt",
@@ -173,7 +173,7 @@
     "personal": "roomNumber ratingRoom ratingBreakfast ratingService ratingOverall ratings companions notes guests",
     "photos": "",
     "documents": "bookingReference",
-    "excluded": "userId receiptUrl parserTemplate parserConfidence dataSource batchId shareKey provenance rememberedOn rememberedNote purpose"
+    "excluded": "userId receiptUrl parserTemplate parserConfidence dataSource batchId shareKey provenance rememberedOn rememberedNote purpose purposeKey"
   },
   "LodgingPhoto": {
     "details": "",
@@ -237,7 +237,7 @@
     "personal": "notes rating",
     "photos": "",
     "documents": "",
-    "excluded": "userId suggestionRef provenance rememberedOn rememberedNote createdBy purpose"
+    "excluded": "userId suggestionRef provenance rememberedOn rememberedNote createdBy purpose purposeKey"
   },
   "PlaceVisitPhoto": {
     "details": "",
@@ -269,7 +269,7 @@
     "personal": "seat notes tags companions",
     "photos": "",
     "documents": "bookingReference",
-    "excluded": "userId shareKey railAndFlyFlightId railAndFlyOptOut provenance rememberedOn rememberedNote purpose operatorSource rerouteMissReason rerouteMissAt"
+    "excluded": "userId shareKey railAndFlyFlightId railAndFlyOptOut provenance rememberedOn rememberedNote purpose purposeKey operatorSource rerouteMissReason rerouteMissAt"
   },
   "RailStation": {
     "details": "id name searchName uic dbId shortCode lat lon country timezone parentSourceId isUserAdded",
@@ -285,7 +285,7 @@
     "personal": "seat notes tags companions",
     "photos": "",
     "documents": "bookingReference",
-    "excluded": "userId shareKey provenance rememberedOn rememberedNote purpose"
+    "excluded": "userId shareKey provenance rememberedOn rememberedNote purpose purposeKey"
   },
   "RentalBooking": {
     "details": "id provider operatedBy broker pickupStationName pickupAddress pickupAirportId pickupLat pickupLon pickupCountry pickupTimezone returnStationName returnAddress returnAirportId returnLat returnLon returnCountry returnTimezone pickupTime returnTime pickupPrecision returnPrecision actualPickupTime actualReturnTime actualPickupPrecision actualReturnPrecision vehicleClass acrissCode vehicleExample vehicleDriven odometerOutKm odometerInKm distanceKm distanceSource lastMailSentAt mileagePolicy mileageCapKm fuelPolicy freeCancellationUntil freeCancellationZone freeCancellationOn inclusions arrivalFlightNumber status userEditedFields tripId bookingId routeId externalRef importBatchId createdAt updatedAt",
@@ -293,7 +293,7 @@
     "personal": "licensePlate notes tags companions",
     "photos": "",
     "documents": "confirmationNumber brokerReference agreementNumber invoiceNumber",
-    "excluded": "userId shareKey provenance rememberedOn rememberedNote purpose"
+    "excluded": "userId shareKey provenance rememberedOn rememberedNote purpose purposeKey"
   },
   "FerryJourney": {
     "details": "roadtripLegId id operator vesselName vehicleType vehicleLengthM vehicleWidthM vehicleHeightM passengerCount depStationName depAddress depLat depLon depCountry depTimezone arrStationName arrAddress arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime fareClass status delayMinutes tripId bookingId externalRef importBatchId createdAt updatedAt",
@@ -301,7 +301,7 @@
     "personal": "cabinType seat notes tags companions vehicleRegistration",
     "photos": "",
     "documents": "bookingReference ticketReference",
-    "excluded": "userId shareKey roadtripLegBefore provenance rememberedOn rememberedNote purpose vesselMmsi vesselMmsiSource manualScope"
+    "excluded": "userId shareKey roadtripLegBefore provenance rememberedOn rememberedNote purpose purposeKey vesselMmsi vesselMmsiSource manualScope"
   },
   "Companion": {
     "details": "",

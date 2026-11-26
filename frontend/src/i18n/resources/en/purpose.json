@@ -8,7 +8,8 @@
     "unknown": "Not set",
     "private": "Private",
     "business": "Business",
-    "hint": "Business or private. Follows the trip category once, then your value counts."
+    "hint": "Business or private. Follows the trip category once, then your value counts.",
+    "loading": "Loading purpose …"
   },
   "editor": {
     "saved": "Purpose saved.",
@@ -34,7 +35,7 @@
   },
   "trip": {
     "apply": "Apply purpose to all entries",
-    "applyHelp": "Sets the purpose of the trip category on every entry of this trip.",
+    "applyHelp": "Sets the chosen purpose, or else the one the trip category implies, on every entry of this trip.",
     "done_one": "{{count}} entry updated.",
     "done_other": "{{count}} entries updated.",
     "none": "This trip's category says nothing about the purpose.",
@@ -45,6 +46,60 @@
     "nothing": "Every entry of this trip already has this purpose.",
     "rowTitle": "Purpose of the entries",
     "rowCategory": "Category “{{category}}”: new entries take their purpose from it once.",
-    "rowNoCategory": "This trip has no category a purpose follows from."
+    "rowNoCategory": "This trip has no category a purpose follows from.",
+    "fromCategory": "From the trip category"
+  },
+  "kind": {
+    "private": "Private",
+    "business": "Business"
+  },
+  "builtin": {
+    "vacation": "Vacation",
+    "business": "Business",
+    "family_friends": "Family & friends",
+    "short_break": "Short break",
+    "event": "Event",
+    "trade_fair": "Trade fair & conference",
+    "education": "Education",
+    "health": "Health",
+    "relocation": "Relocation",
+    "private_other": "Private (other)"
+  },
+  "custom": {
+    "title": "Travel purposes",
+    "intro": "Every purpose belongs to “private” or “business”. Hiding, counts and suggestions follow that. Your own purposes are visible to you only; someone you share a trip with does not see them.",
+    "own": "Your own purposes",
+    "none": "No purposes of your own yet.",
+    "name": "Name",
+    "nameEn": "English name (optional)",
+    "kind": "Kind",
+    "icon": "Icon",
+    "color": "Colour",
+    "add": "Add purpose",
+    "edit": "Edit",
+    "archive": "Archive",
+    "unarchive": "Offer again",
+    "delete": "Delete",
+    "archivedTag": "archived",
+    "usage_one": "{{count}} entry",
+    "usage_other": "{{count}} entries",
+    "inUse": "This purpose is still in use and can only be archived.",
+    "error": "The purpose could not be saved. Please try again.",
+    "loadError": "Your own purposes could not be loaded."
+  },
+  "stats": {
+    "title": "By purpose",
+    "unknown": "Not set",
+    "entries_one": "{{count}} entry",
+    "entries_other": "{{count}} entries"
+  },
+  "filter": {
+    "label": "Purpose",
+    "all": "All purposes",
+    "allOfKind": {
+      "private": "All private",
+      "business": "All business"
+    },
+    "countsFailed": "The counts could not be loaded."
   }
 }

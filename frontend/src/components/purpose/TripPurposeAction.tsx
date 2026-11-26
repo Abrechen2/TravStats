@@ -1,16 +1,18 @@
 import { useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { purposeApi } from "../../lib/api/purpose";
-import type { Purpose } from "../../shared/purpose";
 import { logger } from "../../lib/logger";
+import { describePurpose } from "../../lib/purposeDisplay";
+import { usePurposeCatalogue } from "../../store/purposeCatalogueStore";
+import PurposeSelect, { PURPOSE_UNSET, type PurposeChoice } from "./PurposeSelect";
 import ConfirmModal from "../ui/ConfirmModal";
 import { useToastStore } from "../../store/toastStore";
 
 type State =
   | { kind: "idle" }
   | { kind: "checking" }
-  | { kind: "asking"; purpose: Purpose; count: number }
-  | { kind: "applying"; purpose: Purpose; count: number }
+  | { kind: "asking"; purpose: string; count: number }
+  | { kind: "applying"; purpose: string; count: number }
   | { kind: "done"; changed: number }
   | { kind: "nothing" }
   | { kind: "none" }
@@ -32,24 +34,35 @@ export default function TripPurposeAction({
   category?: string | null;
   onApplied?: () => void;
 }): JSX.Element {
-  const { t } = useTranslation(["purpose", "trips"]);
+  const { t, i18n } = useTranslation(["purpose", "trips"]);
   const addToast = useToastStore((s) => s.addToast);
+  const catalogue = usePurposeCatalogue();
   const [state, setState] = useState<State>({ kind: "idle" });
+  // Unset: the trip's category decides, as before; any purpose of the catalogue can be chosen.
+  const [choice, setChoice] = useState<PurposeChoice>(PURPOSE_UNSET);
+
+  const purposeLabel = (value: string): string =>
+    describePurpose(t, catalogue, value, i18n.language ?? "de")?.label ??
+    t(`purpose:field.${value}`, { defaultValue: value });
 
   const ask = async (): Promise<void> => {
     setState({ kind: "checking" });
     try {
-      const preview = await purposeApi.previewTrip(tripId);
+      const preview = await purposeApi.previewTrip(tripId, choice || undefined);
       if (preview.purpose === null) return setState({ kind: "none" });
       if (preview.wouldChange === 0) return setState({ kind: "nothing" });
-      setState({ kind: "asking", purpose: preview.purpose, count: preview.wouldChange });
+      setState({
+        kind: "asking",
+        purpose: preview.purposeKey ?? preview.purpose,
+        count: preview.wouldChange,
+      });
     } catch (error) {
       logger.warn("previewing the trip purpose failed", error);
       setState({ kind: "error" });
     }
   };
 
-  const apply = async (purpose: Purpose, count: number): Promise<void> => {
+  const apply = async (purpose: string, count: number): Promise<void> => {
     setState({ kind: "applying", purpose, count });
     try {
       // The purpose the user confirmed, not whatever the category says by now.
@@ -86,6 +99,14 @@ export default function TripPurposeAction({
             })
           : t("purpose:trip.rowNoCategory")}
       </p>
+      <div style={{ maxWidth: 320 }}>
+        <PurposeSelect
+          id={`trip-purpose-${tripId}`}
+          value={choice}
+          onChange={setChoice}
+          unsetLabel={t("purpose:trip.fromCategory")}
+        />
+      </div>
       <button
         type="button"
         onClick={() => void ask()}
@@ -111,7 +132,7 @@ export default function TripPurposeAction({
           dialog
             ? t("purpose:trip.confirm", {
                 count: dialog.count,
-                purpose: t(`purpose:field.${dialog.purpose}`),
+                purpose: purposeLabel(dialog.purpose),
               })
             : ""
         }

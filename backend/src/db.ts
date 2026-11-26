@@ -15,6 +15,7 @@ import {
   type VisitFact,
 } from "./services/purpose/placeVisited";
 import { inheritPurposeOnCreate } from "./services/purpose/tripInheritance";
+import { resolvePurposeKeysOnWrite } from "./services/purpose/purposeKeyWrite";
 import { createPrismaClient } from "./prismaClient";
 import { sessionTimeoutsFromEnv } from "./services/db/sessionTimeouts";
 import { slowQueries } from "./services/runtime/slowLog";
@@ -212,10 +213,33 @@ const queried = basePrisma.$extends({
         );
         return trip?.category ?? null;
       });
+      // A detailed purpose (`builtin:<key>`, `custom:<uuid>`) becomes kind + key
+      // (services/purpose/purposeKeyWrite.ts); a custom key of another account is refused.
+      const keyed = await resolvePurposeKeysOnWrite(model, operation, inherited, {
+        customOf: async (id) => {
+          const reader = openTransaction.getStore() ?? basePrisma;
+          return await reader.customPurpose.findFirst({
+            where: { id },
+            select: { userId: true, kind: true },
+          });
+        },
+        ownersOf: async (m, where) => {
+          const reader = (openTransaction.getStore() ?? basePrisma) as unknown as Record<
+            string,
+            { findMany(a: unknown): Promise<{ userId: string }[]> }
+          >;
+          const delegate = reader[m.charAt(0).toLowerCase() + m.slice(1)];
+          const rows = await runUnfiltered(
+            async () =>
+              await delegate.findMany({ where, select: { userId: true }, distinct: ["userId"] })
+          );
+          return rows.map((r) => r.userId);
+        },
+      });
       const scoped = applyRecordedOnly(
         model,
         operation,
-        inherited,
+        keyed,
         placeVisitHiddenActive() ? (await import("./shared/time/clock")).now() : undefined
       );
       // A place that is "visited" only through a hidden business visit stops counting as visited.
@@ -383,6 +407,12 @@ type TripReader = {
         provenance: string | null;
       }>
     >;
+  };
+  customPurpose: {
+    findFirst(args: {
+      where: { id: string };
+      select: { userId: true; kind: true };
+    }): Promise<{ userId: string; kind: string } | null>;
   };
 };
 const openTransaction = new AsyncLocalStorage<TripReader>();

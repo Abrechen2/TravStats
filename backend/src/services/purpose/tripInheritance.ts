@@ -1,7 +1,8 @@
-import { purposeFromTripCategory, type Purpose } from "../../shared/purpose";
+import { purposeFromTripCategory } from "../../shared/purpose";
+import { purposeKeyFromTripCategory } from "../../shared/purposeCatalogue";
 
-/** The eight Prisma models that carry a purpose. */
-const PURPOSE_MODELS = new Set([
+/** The Prisma models that carry a purpose. */
+export const PURPOSE_MODELS = new Set([
   "PlaceVisit",
   "Flight",
   "LodgingStay",
@@ -32,14 +33,16 @@ function tripIdOf(data: Json): string | null {
 async function withPurpose(
   data: Json,
   lookup: TripCategoryLookup,
-  cache: Map<string, Purpose | null>
+  cache: Map<string, string | null>
 ) {
   if (data.purpose !== undefined) return data;
   const tripId = tripIdOf(data);
   if (!tripId) return data;
-  if (!cache.has(tripId)) cache.set(tripId, purposeFromTripCategory(await lookup(tripId)));
-  const purpose = cache.get(tripId) ?? null;
-  return purpose ? { ...data, purpose } : data;
+  if (!cache.has(tripId)) cache.set(tripId, await lookup(tripId));
+  const category = cache.get(tripId) ?? null;
+  const purpose = purposeFromTripCategory(category);
+  // The detail travels too (vacation -> "Urlaub", weekend -> "Kurztrip & Wochenende").
+  return purpose ? { ...data, purpose, purposeKey: purposeKeyFromTripCategory(category) } : data;
 }
 
 /**
@@ -60,7 +63,7 @@ export async function inheritPurposeOnCreate<A>(
     return args;
   }
   if (!isObject(args) || !("data" in args)) return args;
-  const cache = new Map<string, Purpose | null>();
+  const cache = new Map<string, string | null>();
   const data = (args as Json).data;
   if (Array.isArray(data)) {
     const rows = [];

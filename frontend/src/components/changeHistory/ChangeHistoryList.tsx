@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { describePurpose } from "../../lib/purposeDisplay";
+import { usePurposeCatalogue } from "../../store/purposeCatalogueStore";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
@@ -37,7 +39,8 @@ export default function ChangeHistoryList({
   entityId,
   onRestored,
 }: ChangeHistoryListProps): JSX.Element {
-  const { t } = useTranslation(["changeHistory", "purpose", "flights"]);
+  const { t, i18n } = useTranslation(["changeHistory", "purpose", "flights"]);
+  const purposeCatalogue = usePurposeCatalogue();
   const format = useDisplayFormat();
   const coarse = useCoarsePointer();
   const addToast = useToastStore((s) => s.addToast);
@@ -95,6 +98,10 @@ export default function ChangeHistoryList({
   // A coded value in words, as the entry's own page writes it: "business" read
   // as an English word in the German history (UAT rc.45).
   const codedValueLabel = (entity: string, field: string | null, stored: string): string | null => {
+    // A detailed purpose by its name (a built-in translated, a custom one as the user named it).
+    if (field === "purposeKey") {
+      return describePurpose(t, purposeCatalogue, stored, i18n.language ?? "de")?.label ?? null;
+    }
     const prefix =
       field === "purpose"
         ? "purpose:field"
@@ -249,7 +256,7 @@ export default function ChangeHistoryList({
                       <span className="t-caption">
                         {t(
                           // The purpose is not in any edit dialog: say where it is (retest).
-                          entry.field === "purpose"
+                          entry.field === "purpose" || entry.field === "purposeKey"
                             ? "changeHistory:notRestorablePurpose"
                             : "changeHistory:notRestorable"
                         )}

@@ -228,6 +228,8 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
     ],
   }),
   place_categories: owner(),
+  // Entries name one as `custom:<id>` in `purpose_key`; the text remap rewrites the id.
+  custom_purposes: owner(),
   place_external_refs: owner(),
   place_captures: owner(),
   place_lists: owner(),

@@ -112,6 +112,9 @@ export const USER_EXPORT_SELECT = {
   // rating names them by id (`custom:<id>`), so the labels travel with the records.
   placeCategories: true,
   lodgingRatingCategories: true,
+  // The user's own travel purposes: an entry names one by `purposeKey` (`custom:<id>`) beside its
+  // kind, so the names travel with the records. Built-in keys are labelled by the catalogue.
+  customPurposes: true,
   // The other OSM/Google references a place answers to after a merge
   // (forgejo#232): without them a re-import of the export's source would
   // bring the merged duplicate back.

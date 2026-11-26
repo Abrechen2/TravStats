@@ -412,3 +412,12 @@ export const routingFields = {
     .nullable()
     .describe("The routing provider refuses requests right now (#411); null while it answers"),
 };
+
+/** The purpose of an entry row: the kind every filter reads and the detail beside it. */
+export const purposeRowFields = {
+  purpose: z.enum(["private", "business"]).nullable(),
+  purposeKey: z
+    .string()
+    .nullable()
+    .describe("`builtin:<key>` | `custom:<uuid>`; null: the kind alone"),
+};

@@ -26,6 +26,20 @@ export interface DistanceEntry {
    * (`services/evidence/metricEvidenceYears.ts`); the figure's own arithmetic ignores it.
    */
   ref?: DistanceRef;
+  /**
+   * The entry's effective detailed purpose (`builtin:<key>` | `custom:<uuid>`), null when unknown;
+   * absent when the loader did not read it. Feeds the card's "Nach Zweck" breakdown.
+   */
+  purposeKey?: string | null;
+}
+
+/** One row of a year's "Nach Zweck" breakdown. */
+export interface PurposeShare {
+  /** Null: entries without a purpose (unknown, never read as private). */
+  key: string | null;
+  count: number;
+  /** Null when none of the entries has a measured distance. */
+  km: number | null;
 }
 
 export interface DistanceRef {
@@ -59,6 +73,8 @@ export interface YearCard {
   recordedPending: boolean;
   /** Always twelve, January first. */
   months: YearMonth[];
+  /** Entries and kilometres per purpose, most entries first. */
+  byPurpose: PurposeShare[];
 }
 
 export interface YearStats {
@@ -103,16 +119,28 @@ export function buildYearStats(input: {
           recordedKm: null,
           recordedPending: false,
         })),
+        byPurpose: [],
       };
       cards.set(year, c);
     }
     return c;
   };
 
+  const purposeRows = new Map<number, Map<string | null, PurposeShare>>();
   for (const e of input.entries) {
     const at = parts(e.month);
     if (!at) continue;
     const c = card(at.year);
+    if (e.purposeKey !== undefined) {
+      const rows = purposeRows.get(at.year) ?? new Map<string | null, PurposeShare>();
+      purposeRows.set(at.year, rows);
+      const row = rows.get(e.purposeKey) ?? { key: e.purposeKey, count: 0, km: null };
+      rows.set(e.purposeKey, {
+        ...row,
+        count: row.count + 1,
+        km: measured(e.km) ? (row.km ?? 0) + e.km : row.km,
+      });
+    }
     if (!measured(e.km)) continue;
     const m = c.months[at.month - 1];
     m.byDomain[e.domain] = (m.byDomain[e.domain] ?? 0) + e.km;
@@ -134,6 +162,18 @@ export function buildYearStats(input: {
     const c = card(at.year);
     c.recordedPending = true;
     c.months[at.month - 1].recordedPending = true;
+  }
+
+  for (const [year, rows] of purposeRows) {
+    card(year).byPurpose = [...rows.values()]
+      .map((r) => ({ ...r, km: r.km === null ? null : round1(r.km) }))
+      .sort(
+        (a, b) =>
+          b.count - a.count ||
+          // Unknown last among equals, then by key.
+          Number(a.key === null) - Number(b.key === null) ||
+          (a.key ?? "").localeCompare(b.key ?? "")
+      );
   }
 
   const years = [...cards.values()].sort((a, b) => b.year - a.year);

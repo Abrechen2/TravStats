@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import PurposeFilterControl from "../components/purpose/PurposeFilterControl";
 import { useTranslation } from "../hooks/useTranslation";
 import { tripsApi, type TripCostSuperlative, type TripsListPage } from "../lib/api";
 import { logger } from "../lib/logger";
@@ -190,6 +191,7 @@ export default function TripsPage(): JSX.Element {
         header={{ title: t("trips:tab"), meta: t("trips:count", { count: total ?? trips.length }) }}
         insights={
           <>
+            <PurposeFilterControl />
             {hasMore && total !== null && (
               <p role="status" className="t-caption mb-3" data-testid="trips-truncated">
                 {t("trips:listTruncated", { shown: trips.length, total })}

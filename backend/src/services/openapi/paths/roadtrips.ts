@@ -78,6 +78,7 @@ const roadtripSummary = registry.register(
         .enum(["private", "business"])
         .nullable()
         .describe("Private or business; null is unknown"),
+      purposeKey: z.string().nullable().describe("The detailed purpose beside the kind"),
       startDate: z.string().datetime().nullable(),
       endDate: z.string().datetime().nullable(),
       distanceKm: z.number(),

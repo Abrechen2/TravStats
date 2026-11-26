@@ -36,6 +36,7 @@ export interface RoadtripSummary extends RoadtripNights {
   kindAssignedAutomatically: boolean;
   /** Private or business; null is unknown (never read as private). */
   purpose?: string | null;
+  purposeKey?: string | null;
   startDate: string | null;
   endDate: string | null;
   distanceKm: number;

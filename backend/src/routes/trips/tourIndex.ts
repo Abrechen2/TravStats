@@ -58,6 +58,7 @@ interface TourSummaryRow {
   vehicle: string | null;
   kindAssignedAutomatically: boolean;
   purpose: string | null;
+  purposeKey: string | null;
   notes: string | null;
   tags: string[];
   tourDate: Date | null;
@@ -94,6 +95,7 @@ const TOUR_SUMMARY_SELECT = {
   vehicle: true,
   kindAssignedAutomatically: true,
   purpose: true,
+  purposeKey: true,
   notes: true,
   tags: true,
   tourDate: true,
@@ -172,6 +174,7 @@ function toTourSummary(route: TourSummaryRow): Record<string, unknown> {
     vehicle: route.vehicle,
     kindAssignedAutomatically: route.kindAssignedAutomatically,
     purpose: route.purpose,
+    purposeKey: route.purposeKey,
     notes: route.notes,
     tags: route.tags,
     // The spreadsheet writes the anchor as "Station [id]"; the title saves it
