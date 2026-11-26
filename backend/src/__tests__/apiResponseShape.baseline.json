@@ -228,6 +228,7 @@
     "dataQualityFlags.ts",
     "domainBulkEdit.ts",
     "dawarichStays.ts",
+    "inboxBulk.ts",
     "documentLinkSuggestions.ts",
     "provenance.ts",
     "purpose.ts",

@@ -41,6 +41,7 @@ import upcomingRoutes from "./upcoming";
 import activityRoutes from "./activity";
 import searchRoutes from "./search";
 import dawarichStayRoutes from "./dawarichStays";
+import inboxBulkRoutes from "./inboxBulk";
 import locationSuggestionRoutes from "./locationSuggestions";
 import gapCalendarRoutes from "./gapCalendar";
 import locationCapabilitiesRoutes from "./locationCapabilities";
@@ -257,6 +258,7 @@ export const apiMounts: ApiMount[] = [
   // Public and unauthenticated, like the spec: the About section reads it before login.
   { id: "version", base: "/api/v1", router: versionRoutes },
   { id: "dawarichStays", base: "/api/v1/dawarich-stays", router: dawarichStayRoutes },
+  { id: "inboxBulk", base: "/api/v1/inbox", router: inboxBulkRoutes },
   // What location history asks the user: country (E6) and journey (E7) questions.
   {
     id: "locationSuggestions",

@@ -508,6 +508,34 @@
         "photos": "Fotos",
         "travtrack": "TravTrack",
         "calendar": "Kalender"
+      },
+      "bulk": {
+        "accept": "Alle annehmen",
+        "reject": "Alle verwerfen",
+        "acceptTitle": "Alle annehmen?",
+        "rejectTitle": "Alle verwerfen?",
+        "summary": "{{count}} Vorschläge: {{kinds}}",
+        "acceptNote": "Angenommen wird nur, was ohne Eingabe geht. Der Rest bleibt als „braucht Eingabe“.",
+        "rejectNote": "Alle werden abgelehnt und verschwinden aus dem Posteingang.",
+        "result": "{{done}} erledigt · {{skipped}} braucht Eingabe · {{failed}} fehlgeschlagen",
+        "failed": "Die Sammelantwort hat nicht geklappt. Bitte später erneut versuchen.",
+        "undo": "Rückgängig ({{count}})",
+        "undone": "Zurückgenommen.",
+        "undoFailed": "{{count}} konnten nicht zurückgenommen werden.",
+        "reasons": {
+          "needsInput": "braucht Eingabe",
+          "SUGGESTION_NOT_FOUND": "nicht mehr vorhanden",
+          "NOT_FOUND": "nicht mehr vorhanden",
+          "STAY_SUGGESTIONS_DISABLED": "Aufenthaltsvorschläge sind ausgeschaltet",
+          "TRIP_SUGGESTIONS_DISABLED": "Reisevorschläge sind ausgeschaltet",
+          "failed": "fehlgeschlagen"
+        }
+      },
+      "period": {
+        "label": "Zeitraum",
+        "from": "Von",
+        "to": "Bis",
+        "clear": "Zeitraum löschen"
       }
     },
     "tabs": {

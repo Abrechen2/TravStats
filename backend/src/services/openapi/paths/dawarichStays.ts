@@ -371,3 +371,54 @@ registry.registerPath({
     504: failure,
   },
 });
+
+registry.registerPath({
+  method: "post",
+  path: "/inbox/bulk",
+  tags: ["Inbox"],
+  summary: "Answer several inbox items at once",
+  description:
+    "Each item goes through its kind's own accept or reject and is answered on its own. `accept` takes only what needs no input (a flight update as proposed, a stay finding that names its place); the rest is `skipped` with `needsInput` and stays. Plugin archive proposals are never part of a bulk answer. Rate-limited (10 a minute).",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            action: z.enum(["accept", "reject"]),
+            items: z
+              .array(
+                z.object({
+                  kind: z.enum(["review", "trips", "updates", "photos", "dawarich", "location"]),
+                  id: z.string(),
+                })
+              )
+              .min(1)
+              .max(200),
+          }),
+        },
+      },
+      required: true,
+    },
+  },
+  responses: {
+    200: response(
+      z.object({
+        results: z.array(
+          z.object({
+            kind: z.string(),
+            id: z.string(),
+            outcome: z.enum(["done", "skipped", "failed"]),
+            reason: z.string().optional(),
+            undoable: z.literal(true).optional(),
+          })
+        ),
+        summary: z.object({
+          done: z.number().int(),
+          skipped: z.number().int(),
+          failed: z.number().int(),
+        }),
+      })
+    ),
+    400: failure,
+  },
+});

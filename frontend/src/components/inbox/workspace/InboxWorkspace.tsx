@@ -28,6 +28,8 @@ import SourcePanel from "./SourcePanel";
 import TripContext from "./TripContext";
 import WorkspaceToolbar from "./WorkspaceToolbar";
 import OriginChips from "./OriginChips";
+import BulkActions from "./BulkActions";
+import PeriodFilter, { dayParam, inPeriod } from "./PeriodFilter";
 import { hasOrigin, originChips } from "./originFilter";
 import "./workspace.css";
 
@@ -114,15 +116,20 @@ export default function InboxWorkspace({
   );
   const visitReview = useVisitReview(visitJourneys, data.reload);
   // The source filter (owner 2026-11-26), in `?origin=`; a chip that no longer exists shows all.
+  // The period (owner 2026-11-26), `?from=` / `?to=`: combinable with the kind and the source.
+  const from = dayParam(params.get("from"));
+  const to = dayParam(params.get("to"));
   const narrowed = items.filter(
     (item) =>
-      (source === "all" || item.source === source) && deferred.has(item.key) === showDeferred
+      (source === "all" || item.source === source) &&
+      deferred.has(item.key) === showDeferred &&
+      inPeriod(item.day, from, to)
   );
   const chips = originChips(narrowed, t);
   const requestedOrigin = params.get("origin");
   const origin = chips.some((c) => c.key === requestedOrigin) ? requestedOrigin : null;
-  const visible = filterInbox(items, query, source, deferred, showDeferred).filter((item) =>
-    hasOrigin(item, origin, t)
+  const visible = filterInbox(items, query, source, deferred, showDeferred).filter(
+    (item) => hasOrigin(item, origin, t) && inPeriod(item.day, from, to)
   );
   const visibleKeys = new Set(visible.map((item) => item.key));
   const visibleVisits = visitJourneys.filter((j) => visibleKeys.has(`photos:${j.id}`));
@@ -251,6 +258,28 @@ export default function InboxWorkspace({
             onReload={() => void data.reload()}
             onRecheck={() => void recheck()}
           />
+        </div>
+      )}
+      {!nothingAtAll && (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <PeriodFilter
+            from={from}
+            to={to}
+            onChange={(f, t2) =>
+              setParams(
+                (current) => {
+                  const next = new URLSearchParams(current);
+                  if (f) next.set("from", f);
+                  else next.delete("from");
+                  if (t2) next.set("to", t2);
+                  else next.delete("to");
+                  return next;
+                },
+                { replace: true }
+              )
+            }
+          />
+          <BulkActions items={visible} onDone={data.reload} testId="inbox-bulk-all" />
         </div>
       )}
       {!nothingAtAll && (
@@ -410,6 +439,11 @@ export default function InboxWorkspace({
                     })}
                   </p>
                   {item.tripId && <TripContext tripId={item.tripId} />}
+                  <BulkActions
+                    items={visible.filter((other) => other.groupKey === item.groupKey)}
+                    onDone={data.reload}
+                    testId={`inbox-bulk-group-${item.groupKey}`}
+                  />
                 </div>
               )}
               <article
