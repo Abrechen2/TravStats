@@ -44,7 +44,8 @@ vi.mock("../../../lib/api/airports", () => ({
 }));
 
 const addToast = vi.fn();
-vi.mock("../../../store/pageErrorStore", () => ({
+vi.mock("../../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   reportPageError: (message: string, tone = "error") => addToast(tone, message),
 }));
 vi.mock("../../../store/toastStore", () => ({
@@ -159,10 +160,8 @@ describe("flight master-data sections", () => {
     await user.click(within(section).getByRole("button", { name: "Hinzufügen" }));
 
     expect(airportCreate).not.toHaveBeenCalled();
-    expect(addToast).toHaveBeenCalledWith(
-      "error",
-      expect.stringContaining("Koordinaten müssen Zahlen sein")
-    );
+    // The failure is said inside the form, next to the fields.
+    expect(within(section).getByRole("alert")).toHaveTextContent("Koordinaten müssen Zahlen sein");
   });
 
   // The catalogues run to thousands of rows. Before the split they rendered

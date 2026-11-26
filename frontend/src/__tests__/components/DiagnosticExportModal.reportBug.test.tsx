@@ -30,7 +30,8 @@ vi.mock("../../hooks/useTranslation", () => ({
 }));
 
 const mockAddToast = vi.fn();
-vi.mock("../../store/pageErrorStore", () => ({
+vi.mock("../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   reportPageError: (message: string, tone = "error") => mockAddToast(tone, message),
 }));
 vi.mock("../../store/toastStore", () => ({

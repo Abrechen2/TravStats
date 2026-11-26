@@ -1,4 +1,4 @@
-import { useRef, type CSSProperties, type JSX, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type JSX, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import IconButton from "./IconButton";
 import { Icon } from "./Icon";
@@ -7,6 +7,8 @@ import { useScrimDismiss } from "./useScrimDismiss";
 import { useDiscardGuard } from "../form/useDiscardGuard";
 import { DiscardQuestion } from "./DiscardQuestion";
 import { useTranslation } from "../../hooks/useTranslation";
+import { PageErrorList } from "../PageErrorHost";
+import { useDialogStackStore } from "../../store/dialogStackStore";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 
 interface DialogProps {
@@ -95,6 +97,16 @@ export default function Dialog({
     titleIdRef.current = `dialog-title-${idCounter}`;
   }
   const panelRef = useRef<HTMLDivElement>(null);
+  const stackId = titleIdRef.current;
+  const isTop = useDialogStackStore((s) => s.open[s.open.length - 1] === stackId);
+  useEffect(() => {
+    if (!open) return;
+    const { push, remove } = useDialogStackStore.getState();
+    push(stackId);
+    return () => remove(stackId);
+  }, [open, stackId]);
+  // `reportPageError` while this dialog is on top lands HERE, at the top of the body.
+  const errors = isTop ? <PageErrorList inDialog /> : null;
   const guard = useDiscardGuard({ open, dirty, busy, onClose, panelRef });
   const { requestClose } = guard;
   useDialogChrome({ open, onClose: requestClose, panelRef, busy });
@@ -147,6 +159,7 @@ export default function Dialog({
         </div>
 
         <div className="t-body" style={{ textWrap: "pretty" }}>
+          {errors}
           {children}
         </div>
 
@@ -229,7 +242,10 @@ export default function Dialog({
             </IconButton>
           )}
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 pb-4">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 pb-4">
+          {errors}
+          {children}
+        </div>
         {footerContent && (
           <div
             data-touch={coarse ? "coarse" : undefined}

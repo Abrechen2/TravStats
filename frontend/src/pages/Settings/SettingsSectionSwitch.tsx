@@ -69,6 +69,7 @@ export default function SettingsSectionSwitch({
             profile={page.profile}
             uploadingProfilePicture={page.uploadingProfilePicture}
             removingProfilePicture={page.removingProfilePicture}
+            avatarError={page.avatarError}
             onAvatarUpload={page.handleAvatarUpload}
             onAvatarDelete={page.handleAvatarDelete}
           />

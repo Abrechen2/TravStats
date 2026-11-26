@@ -50,7 +50,8 @@ vi.mock("../../lib/api/places", () => ({
 }));
 
 const toasts = vi.hoisted(() => ({ addToast: vi.fn() }));
-vi.mock("../../store/pageErrorStore", () => ({
+vi.mock("../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   reportPageError: (message: string, tone = "error") => toasts.addToast(tone, message),
 }));
 vi.mock("../../store/toastStore", () => ({

@@ -4,7 +4,7 @@ import type { Airline } from "../../../types/catalogue";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
-import { reportPageError } from "../../../store/pageErrorStore";
+import { useFormError } from "../../form/useFormError";
 
 /**
  * Admin master data for airlines: a searchable list of the seeded catalogue
@@ -25,6 +25,7 @@ export default function AirlinesSection(): JSX.Element {
   const [newCallsign, setNewCallsign] = useState("");
   const [newCountry, setNewCountry] = useState("");
   const [creating, setCreating] = useState(false);
+  const formError = useFormError();
 
   useEffect(() => {
     let cancelled = false;
@@ -52,10 +53,11 @@ export default function AirlinesSection(): JSX.Element {
 
   const createAirline = async (): Promise<void> => {
     if (!newName.trim()) {
-      reportPageError(t("admin:airlineAircraftMasterData.airline.missingFields"));
+      formError.set(t("admin:airlineAircraftMasterData.airline.missingFields"));
       return;
     }
     setCreating(true);
+    formError.clear();
     try {
       const created = await airlinesApi.create({
         name: newName.trim(),
@@ -75,7 +77,7 @@ export default function AirlinesSection(): JSX.Element {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         t("admin:airlineAircraftMasterData.airline.createFailed");
-      reportPageError(msg);
+      formError.set(msg);
     } finally {
       setCreating(false);
     }
@@ -85,6 +87,7 @@ export default function AirlinesSection(): JSX.Element {
     <div data-testid="admin-airlines-section">
       <p className="t-caption mb-4">{t("admin:airlineAircraftMasterData.airline.description")}</p>
 
+      {formError.node}
       {/* Add form */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-2 mb-4">
         <input

@@ -10,7 +10,8 @@ const { get, post, patch, del, addToast } = vi.hoisted(() => ({
   addToast: vi.fn(),
 }));
 vi.mock("../../../../lib/api/client", () => ({ api: { get, post, patch, delete: del } }));
-vi.mock("../../../../store/pageErrorStore", () => ({
+vi.mock("../../../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   reportPageError: (message: string, tone = "error") => addToast(tone, message),
 }));
 vi.mock("../../../../store/toastStore", () => ({
@@ -154,7 +155,9 @@ describe("LodgingChainsSection", () => {
     await userEvent.type(screen.getByLabelText("admin:lodgingChains.name"), "hilton");
     await userEvent.click(screen.getByRole("button", { name: "admin:lodgingChains.add" }));
     await waitFor(() =>
-      expect(addToast).toHaveBeenCalledWith("error", "admin:lodgingChains.errors.chainNameTaken")
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "admin:lodgingChains.errors.chainNameTaken"
+      )
     );
   });
 

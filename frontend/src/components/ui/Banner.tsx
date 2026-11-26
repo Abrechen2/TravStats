@@ -67,7 +67,7 @@ export default function Banner({
       </div>
       {action}
       {onDismiss && (
-        <IconButton label={t("common:buttons.close")} onClick={onDismiss}>
+        <IconButton label={t("common:buttons.dismiss")} onClick={onDismiss}>
           <Icon name="x" size={16} />
         </IconButton>
       )}

@@ -29,7 +29,8 @@ vi.mock("../../hooks/useTranslation", () => ({
 }));
 
 const addToast = vi.hoisted(() => vi.fn());
-vi.mock("../../store/pageErrorStore", () => ({
+vi.mock("../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   reportPageError: (message: string, tone = "error") => addToast(tone, message),
 }));
 vi.mock("../../store/toastStore", () => ({

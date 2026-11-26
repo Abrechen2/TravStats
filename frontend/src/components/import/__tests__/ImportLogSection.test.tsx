@@ -21,7 +21,8 @@ vi.mock("../../../lib/logger", () => ({
 }));
 
 const addToastMock = vi.fn();
-vi.mock("../../../store/pageErrorStore", () => ({
+vi.mock("../../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   reportPageError: (message: string, tone = "error") => addToastMock(tone, message),
 }));
 vi.mock("../../../store/toastStore", () => ({

@@ -4,7 +4,7 @@ import type { Port } from "../../../types/cruise";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
-import { reportPageError } from "../../../store/pageErrorStore";
+import { useFormError } from "../../form/useFormError";
 
 /** Admin master data for ports. See ShipsSection for the shape. */
 export default function PortsSection(): JSX.Element {
@@ -22,6 +22,7 @@ export default function PortsSection(): JSX.Element {
   const [newLon, setNewLon] = useState("");
   const [newUnlocode, setNewUnlocode] = useState("");
   const [creating, setCreating] = useState(false);
+  const formError = useFormError();
 
   useEffect(() => {
     let cancelled = false;
@@ -48,10 +49,11 @@ export default function PortsSection(): JSX.Element {
     const lat = Number.parseFloat(newLat);
     const lon = Number.parseFloat(newLon);
     if (!newName.trim() || Number.isNaN(lat) || Number.isNaN(lon)) {
-      reportPageError(t("admin:cruiseMasterData.port.missingFields"));
+      formError.set(t("admin:cruiseMasterData.port.missingFields"));
       return;
     }
     setCreating(true);
+    formError.clear();
     try {
       const created = await portsApi.create({
         name: newName.trim(),
@@ -73,7 +75,7 @@ export default function PortsSection(): JSX.Element {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         t("admin:cruiseMasterData.port.createFailed");
-      reportPageError(msg);
+      formError.set(msg);
     } finally {
       setCreating(false);
     }
@@ -83,6 +85,7 @@ export default function PortsSection(): JSX.Element {
     <div data-testid="admin-ports-section">
       <p className="t-caption mb-4">{t("admin:cruiseMasterData.port.description")}</p>
 
+      {formError.node}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
         <input
           type="text"

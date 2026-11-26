@@ -74,6 +74,7 @@ function newTourButton(): HTMLElement {
 
 describe("the tours page", () => {
   beforeEach(() => {
+    usePageErrorStore.getState().clear();
     vi.clearAllMocks();
   });
 

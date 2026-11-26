@@ -45,6 +45,7 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
   // which means the load succeeded and genuinely found no sections.
   const [routes, setRoutes] = useState<TourRoute[] | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newMode, setNewMode] = useState<LegMode>(DEFAULT_MODE);
@@ -85,6 +86,7 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
     setSaveTried(true);
     if (!name) return;
     setSaving(true);
+    setCreateError(null);
     try {
       const route = await toursApi.create(tripId, { name, mode: newMode });
       if (!mountedRef.current) return;
@@ -100,7 +102,7 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
       setNewMode(DEFAULT_MODE);
       setCreating(false);
     } catch {
-      if (mountedRef.current) reportPageError(t("trips:tours.createError"));
+      if (mountedRef.current) setCreateError(t("trips:tours.createError"));
     } finally {
       if (mountedRef.current) setSaving(false);
     }
@@ -177,6 +179,7 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
           >
             {t("trips:tours.save")}
           </button>
+          {createError && <InlineError className="basis-full">{createError}</InlineError>}
           {showNameMissing && (
             <InlineError id="tour-name-error" className="basis-full">
               {t("trips:tours.nameRequired")}

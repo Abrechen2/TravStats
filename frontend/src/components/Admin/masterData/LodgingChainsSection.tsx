@@ -11,7 +11,7 @@ import {
 } from "../../../lib/api/adminLodgingChains";
 import LodgingChainDialogs, { type ChainAction } from "./LodgingChainDialogs";
 import InlineError from "../../ui/InlineError";
-import { reportPageError } from "../../../store/pageErrorStore";
+import { useFormError } from "../../form/useFormError";
 
 /**
  * Admin › Unterkünfte › Hotelketten (forgejo#321): the chain catalogue every
@@ -33,6 +33,7 @@ export default function LodgingChainsSection(): JSX.Element {
   const [newName, setNewName] = useState("");
   const [newProgram, setNewProgram] = useState("");
   const [creating, setCreating] = useState(false);
+  const formError = useFormError();
   const [action, setAction] = useState<ChainAction | null>(null);
 
   const load = useCallback(async (search: string, signal?: { cancelled: boolean }) => {
@@ -62,6 +63,7 @@ export default function LodgingChainsSection(): JSX.Element {
   const create = async (): Promise<void> => {
     if (!newName.trim()) return;
     setCreating(true);
+    formError.clear();
     try {
       await adminLodgingChainsApi.create({
         name: newName.trim(),
@@ -72,7 +74,7 @@ export default function LodgingChainsSection(): JSX.Element {
       setNewProgram("");
       await load(query);
     } catch (err) {
-      reportPageError(t(chainErrorKey(err)));
+      formError.set(t(chainErrorKey(err)));
     } finally {
       setCreating(false);
     }
@@ -82,6 +84,7 @@ export default function LodgingChainsSection(): JSX.Element {
     <div data-testid="admin-lodging-chains-section" className="flex flex-col" style={{ gap: 12 }}>
       <p className="t-caption">{t("admin:lodgingChains.description")}</p>
 
+      {formError.node}
       <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_auto] items-end" style={{ gap: 8 }}>
         <Field label={t("admin:lodgingChains.name")} htmlFor="chain-new-name">
           <Input id="chain-new-name" value={newName} onChange={(e) => setNewName(e.target.value)} />

@@ -36,7 +36,8 @@ vi.mock("../../GlobeLoader", () => ({
 
 const addToast = vi.fn();
 const toastState = { addToast: (...args: unknown[]) => addToast(...args) };
-vi.mock("../../../store/pageErrorStore", () => ({
+vi.mock("../../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   reportPageError: (message: string, tone = "error") => addToast(tone, message),
 }));
 vi.mock("../../../store/toastStore", () => ({

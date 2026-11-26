@@ -5,7 +5,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
 import { countryName } from "../../../shared/geo/countryCode";
-import { reportPageError } from "../../../store/pageErrorStore";
+import { useFormError } from "../../form/useFormError";
 
 /**
  * Admin master data for airports (#191). Codes are optional on purpose — a
@@ -28,6 +28,7 @@ export default function AirportsSection(): JSX.Element {
   const [newLat, setNewLat] = useState("");
   const [newLon, setNewLon] = useState("");
   const [creating, setCreating] = useState(false);
+  const formError = useFormError();
 
   useEffect(() => {
     // The airport search endpoint needs at least two characters — unlike the
@@ -58,7 +59,7 @@ export default function AirportsSection(): JSX.Element {
 
   const createAirport = async (): Promise<void> => {
     if (!newName.trim() || !newLat.trim() || !newLon.trim()) {
-      reportPageError(t("admin:airlineAircraftMasterData.airport.missingFields"));
+      formError.set(t("admin:airlineAircraftMasterData.airport.missingFields"));
       return;
     }
     const lat = Number(newLat.replace(",", "."));
@@ -69,10 +70,11 @@ export default function AirportsSection(): JSX.Element {
       Math.abs(lat) > 90 ||
       Math.abs(lon) > 180
     ) {
-      reportPageError(t("admin:airlineAircraftMasterData.airport.invalidCoords"));
+      formError.set(t("admin:airlineAircraftMasterData.airport.invalidCoords"));
       return;
     }
     setCreating(true);
+    formError.clear();
     try {
       const created = await airportsApi.create({
         name: newName.trim(),
@@ -96,7 +98,7 @@ export default function AirportsSection(): JSX.Element {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         t("admin:airlineAircraftMasterData.airport.createFailed");
-      reportPageError(msg);
+      formError.set(msg);
     } finally {
       setCreating(false);
     }
@@ -106,6 +108,7 @@ export default function AirportsSection(): JSX.Element {
     <div data-testid="admin-airports-section">
       <p className="t-caption mb-4">{t("admin:airlineAircraftMasterData.airport.description")}</p>
 
+      {formError.node}
       {/* Add form */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
         <input

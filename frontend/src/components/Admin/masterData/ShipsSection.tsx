@@ -4,7 +4,7 @@ import type { Ship } from "../../../types/cruise";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
-import { reportPageError } from "../../../store/pageErrorStore";
+import { useFormError } from "../../form/useFormError";
 
 /**
  * Admin master data for ships. Split out of the former combined cruise
@@ -24,6 +24,7 @@ export default function ShipsSection(): JSX.Element {
   const [newImo, setNewImo] = useState("");
   const [newYear, setNewYear] = useState("");
   const [creating, setCreating] = useState(false);
+  const formError = useFormError();
 
   useEffect(() => {
     let cancelled = false;
@@ -48,10 +49,11 @@ export default function ShipsSection(): JSX.Element {
 
   const createShip = async (): Promise<void> => {
     if (!newName.trim() || !newLine.trim()) {
-      reportPageError(t("admin:cruiseMasterData.ship.missingFields"));
+      formError.set(t("admin:cruiseMasterData.ship.missingFields"));
       return;
     }
     setCreating(true);
+    formError.clear();
     try {
       const { ship: created, existing } = await shipsApi.create({
         name: newName.trim(),
@@ -72,7 +74,7 @@ export default function ShipsSection(): JSX.Element {
       setNewImo("");
       setNewYear("");
     } catch {
-      reportPageError(t("admin:cruiseMasterData.ship.createFailed"));
+      formError.set(t("admin:cruiseMasterData.ship.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -82,6 +84,7 @@ export default function ShipsSection(): JSX.Element {
     <div data-testid="admin-ships-section">
       <p className="t-caption mb-4">{t("admin:cruiseMasterData.ship.description")}</p>
 
+      {formError.node}
       {/* Add form */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-4">
         <input

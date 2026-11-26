@@ -11,7 +11,8 @@ vi.mock("../../lib/api", () => ({
   flightsApi: { getTrackLines: (...args: unknown[]) => getTrackLinesMock(...args) },
 }));
 const addToastMock = vi.fn();
-vi.mock("../../store/pageErrorStore", () => ({
+vi.mock("../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   reportPageError: (message: string, tone = "error") => addToastMock(tone, message),
 }));
 vi.mock("../../store/toastStore", () => ({
