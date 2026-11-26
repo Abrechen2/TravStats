@@ -14,6 +14,8 @@ import { PURPOSE_MODELS } from "./tripInheritance";
  * - `purpose: null` clears both.
  * - A custom key must belong to the owner of every row written; anything else is refused with
  *   `PURPOSE_UNKNOWN`, never stored.
+ * - `purposeKey` written directly is held to the same rule and sets its kind; a key beside a
+ *   contradicting `purpose`, or beside `purpose: null`, is refused.
  */
 
 type Json = Record<string, unknown>;
@@ -42,23 +44,55 @@ function ownerFromData(data: Json): string | null {
   return null;
 }
 
+/** `{ set: v }` is Prisma's long form of a scalar write; both mean v. */
+const scalar = (v: unknown): unknown => (isObject(v) && "set" in v ? v.set : v);
+
+/** A purpose value (legacy kind or key) as kind + detail, or a refusal. */
+async function resolveValue(
+  value: unknown,
+  owners: () => Promise<string[]>,
+  deps: PurposeKeyDeps
+): Promise<{ purpose: Purpose; purposeKey?: string }> {
+  const parsed = parsePurposeKey(value);
+  if (!parsed) return refuse();
+  if (parsed.type === "legacy") return { purpose: parsed.kind };
+  if (parsed.type === "builtin") return { purpose: parsed.kind, purposeKey: parsed.key };
+  const custom = await deps.customOf(parsed.id);
+  if (!custom) return refuse();
+  const who = await owners();
+  if (who.length === 0 || who.some((u) => u !== custom.userId)) return refuse();
+  return { purpose: custom.kind as Purpose, purposeKey: parsed.key };
+}
+
 async function resolveData(
   data: Json,
   owners: () => Promise<string[]>,
   deps: PurposeKeyDeps
 ): Promise<Json> {
-  const value = data.purpose;
+  const value = scalar(data.purpose);
+  const key = scalar(data.purposeKey);
+  // A detail written directly (an import, a script, a future route) passes the same check as one
+  // written through `purpose`: it must name a built-in or the owner's own purpose, it brings its
+  // kind along, and it may not contradict a kind or key written beside it.
+  if (key !== undefined && key !== null) {
+    if (value === null) return refuse();
+    const fromKey = await resolveValue(key, owners, deps);
+    if (fromKey.purposeKey === undefined) return refuse();
+    if (value !== undefined) {
+      const fromValue = await resolveValue(value, owners, deps);
+      const agrees =
+        fromValue.purpose === fromKey.purpose &&
+        (fromValue.purposeKey === undefined || fromValue.purposeKey === fromKey.purposeKey);
+      if (!agrees) return refuse();
+    }
+    return { ...data, purpose: fromKey.purpose, purposeKey: fromKey.purposeKey };
+  }
   if (value === undefined) return data;
-  if (value === null) return data.purposeKey === undefined ? { ...data, purposeKey: null } : data;
-  const parsed = parsePurposeKey(value);
-  if (!parsed) return refuse();
-  if (parsed.type === "legacy") return data;
-  if (parsed.type === "builtin") return { ...data, purpose: parsed.kind, purposeKey: parsed.key };
-  const custom = await deps.customOf(parsed.id);
-  if (!custom) return refuse();
-  const who = await owners();
-  if (who.length === 0 || who.some((u) => u !== custom.userId)) return refuse();
-  return { ...data, purpose: custom.kind as Purpose, purposeKey: parsed.key };
+  if (value === null) return { ...data, purposeKey: null };
+  const resolved = await resolveValue(value, owners, deps);
+  return resolved.purposeKey === undefined
+    ? { ...data, purpose: resolved.purpose }
+    : { ...data, ...resolved };
 }
 
 export async function resolvePurposeKeysOnWrite<A>(
