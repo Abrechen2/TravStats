@@ -90,7 +90,7 @@ describe("plan list card counts", () => {
     expect(screen.getByText("remote.from:Ben,far.example.org")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "continue" })).toHaveAttribute(
       "href",
-      "/plan/remote/c1/p9/overview"
+      "/plan/remote/c1/p9/days"
     );
     expect(screen.queryByText("Only invited")).not.toBeInTheDocument();
   });

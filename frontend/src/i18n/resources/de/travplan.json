@@ -30,7 +30,8 @@
     "budget": "Budget & Aufgaben",
     "handover": "Reisebereit",
     "actual": "Plan & Wirklichkeit",
-    "route": "Route"
+    "route": "Route",
+    "days": "Tagesplan"
   },
   "fields": {
     "name": "Reisename",
@@ -775,5 +776,18 @@
     "motorcycle": "Motorrad",
     "bicycle": "Fahrrad",
     "other": "Anderes Fahrzeug"
+  },
+  "days": {
+    "number": "Tag {{n}}",
+    "night": "Übernachtung: {{place}}",
+    "nightUnknown": "Übernachtung noch offen – der Tag ist noch nicht berechnet.",
+    "empty": "Noch nichts geplant.",
+    "task": "Erledigen: {{title}}",
+    "notMeasured": "Strecke noch nicht berechnet",
+    "noDates": "Noch keine Reisedaten",
+    "noDatesHint": "Trag Beginn und Ende der Reise ein, dann steht hier jeder Tag.",
+    "undated": "Noch ohne Tag: {{places}}. Davor fehlt eine Fahrzeit.",
+    "toRoute": "Zur Route",
+    "numbers": "Tag {{from}}–{{to}}"
   }
 }

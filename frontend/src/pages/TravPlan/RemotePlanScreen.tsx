@@ -9,7 +9,7 @@ import {
   setRemotePlanSource,
   type RemotePlanSummary,
 } from "../../lib/api/remotePlans";
-import PlanContent, { PLAN_SECTIONS } from "./PlanContent";
+import PlanContent, { DEFAULT_SECTION, PLAN_SECTIONS } from "./PlanContent";
 import { PlanActions, PlanNotice } from "./planLayout";
 import { remotePlanErrorKey } from "./remotePlanErrors";
 
@@ -29,7 +29,7 @@ type View =
  */
 export default function RemotePlanScreen() {
   const { t } = useTranslation("travplan");
-  const { connectionId = "", planId = "", section = "overview" } = useParams();
+  const { connectionId = "", planId = "", section = DEFAULT_SECTION } = useParams();
   const navigate = useNavigate();
   const [view, setView] = useState<View>({ kind: "loading" });
   const [error, setError] = useState("");
@@ -155,7 +155,7 @@ export default function RemotePlanScreen() {
         key={plan.tripId}
         tripId={plan.tripId}
         remote
-        section={PLAN_SECTIONS.includes(section) ? section : "overview"}
+        section={PLAN_SECTIONS.includes(section) ? section : DEFAULT_SECTION}
       />
     </>
   );

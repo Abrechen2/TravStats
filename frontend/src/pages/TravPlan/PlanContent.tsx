@@ -20,6 +20,7 @@ import { BudgetSection } from "./sections/BudgetSection";
 import { PlanActualPanel } from "./sections/PlanActualPanel";
 import PlanAI from "./PlanAI";
 import { RouteSection } from "./route/RouteSection";
+import { DayPlanSection } from "./days/DayPlanSection";
 import { PlanDeleteDialog } from "./PlanDeleteDialog";
 import { PlanMenu } from "./PlanMenu";
 import { UndoToast } from "./UndoToast";
@@ -31,6 +32,7 @@ import { PlanDocumentsPanel } from "./PlanDocumentsPanel";
 import { planRange } from "./format";
 
 export const PLAN_SECTIONS = [
+  "days",
   "overview",
   "workspace",
   "import",
@@ -42,8 +44,13 @@ export const PLAN_SECTIONS = [
   "actual",
 ];
 
-/** The strip shows five places; the rest are reached from the overview, the header or a finding. */
-const STRIP_SECTIONS = ["overview", "workspace", "import", "packing", "budget"];
+/**
+ * The strip shows six places, the day plan first: a trip is lived day by day, so that is where a
+ * plan opens. The rest are reached from the overview, the header or a finding.
+ */
+const STRIP_SECTIONS = ["days", "overview", "workspace", "import", "packing", "budget"];
+/** Where a plan opens when the address names no section. */
+export const DEFAULT_SECTION = "days";
 /** What a member from another server is not offered: the parsers and the owner's logbook acts. */
 const REMOTE_HIDDEN = ["import", "ai", "handover", "actual"];
 
@@ -260,6 +267,7 @@ export default function PlanContent({
         </PlanNotice>
       )}
       <MemberNotices collab={collab} onRead={() => void markRead()} />
+      {section === "days" && <DayPlanSection ctx={ctx} />}
       {section === "overview" && <OverviewSection ctx={ctx} />}
       {section === "overview" && <PlanDocumentsPanel tripId={tripId} revision={plan.revision} />}
       {section === "overview" && (

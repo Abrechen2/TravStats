@@ -108,7 +108,7 @@ export function PlanList() {
                 {t("remote.from", { owner: p.ownerDisplayName, server: new URL(p.origin).host })}
               </p>
               <div>
-                <PlanLink to={remotePlanPath(p) + "/overview"}>{t("continue")}</PlanLink>
+                <PlanLink to={remotePlanPath(p) + "/days"}>{t("continue")}</PlanLink>
               </div>
             </PlanStack>
           </HeroCard>
@@ -134,7 +134,7 @@ export function PlanList() {
                   : t("listCountsStay", { ideas: p.ideasCount, bookings: p.bookingsCount })}
               </p>
               <div>
-                <PlanLink to={"/plan/" + p.tripId + "/overview"}>{t("continue")}</PlanLink>
+                <PlanLink to={"/plan/" + p.tripId + "/days"}>{t("continue")}</PlanLink>
               </div>
             </PlanStack>
           </HeroCard>
@@ -153,7 +153,7 @@ export function PlanList() {
       {create && (
         <PlanCreate
           onClose={() => setCreate(false)}
-          onCreated={(plan) => navigate("/plan/" + plan.tripId + "/overview")}
+          onCreated={(plan) => navigate("/plan/" + plan.tripId + "/days")}
         />
       )}
     </>

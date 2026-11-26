@@ -30,7 +30,8 @@
     "budget": "Budget & tasks",
     "handover": "Ready to travel",
     "actual": "Plan vs. actual",
-    "route": "Route"
+    "route": "Route",
+    "days": "Day by day"
   },
   "fields": {
     "name": "Trip name",
@@ -775,5 +776,18 @@
     "motorcycle": "Motorcycle",
     "bicycle": "Bicycle",
     "other": "Other vehicle"
+  },
+  "days": {
+    "number": "Day {{n}}",
+    "night": "Night: {{place}}",
+    "nightUnknown": "Night still open – this day is not worked out yet.",
+    "empty": "Nothing planned yet.",
+    "task": "To do: {{title}}",
+    "notMeasured": "Not measured yet",
+    "noDates": "No travel dates yet",
+    "noDatesHint": "Enter when the trip starts and ends, and every day shows up here.",
+    "undated": "No day yet: {{places}}. A travel time before them is missing.",
+    "toRoute": "Go to the route",
+    "numbers": "Days {{from}}–{{to}}"
   }
 }
