@@ -4,6 +4,7 @@ import path from "path";
 import { prisma } from "../../../db";
 import { UPLOADS_ROOT } from "../../../config/uploadDirs";
 import * as accountFiles from "../../files/accountFiles";
+import * as sessionTimeouts from "../../db/sessionTimeouts";
 import { STALLED_DELETION_MS, recoverStalledDeletions, removeAccount } from "../removeAccount";
 
 /**
@@ -57,6 +58,17 @@ describe("an interrupted account deletion is settled, never left half-done (forg
     expect(run).toEqual({ completed: 1, restored: 0 });
     expect(await prisma.user.findUnique({ where: { id } })).toBeNull();
     await expect(fs.access(file)).rejects.toThrow();
+  });
+
+  it("raises the 30 s statement timeout for the one-statement delete cascade (perf audit item 13)", async () => {
+    const raise = jest.spyOn(sessionTimeouts, "raiseStatementTimeout");
+    const id = await makeUser(NAMES[0]);
+    await reserve(id, stale, false);
+
+    await recoverStalledDeletions(NOW);
+
+    expect(raise).toHaveBeenCalledWith(expect.anything(), "accountDeletion");
+    expect(await prisma.user.findUnique({ where: { id } })).toBeNull();
   });
 
   it("restores a stalled admin when finishing would leave the instance without one", async () => {

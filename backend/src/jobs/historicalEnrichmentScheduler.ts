@@ -18,6 +18,7 @@ import {
 } from "../services/flightEnrichmentService";
 import { applyPendingUpdate } from "../services/pendingUpdateService";
 import { schedulerZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "../services/jobs/heavySlot";
 
 let schedulerRunning = false;
 let schedulerTask: ScheduledTask | null = null;
@@ -309,7 +310,7 @@ export function startHistoricalEnrichmentScheduler(): void {
           message: "Running scheduled historical enrichment",
         });
 
-        await processAllUsersHistoricalEnrichment();
+        await runHeavyJob("historicalEnrichment", () => processAllUsersHistoricalEnrichment());
 
         logger.info({
           operation: "historical_enrichment_scheduler_run_complete",

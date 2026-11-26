@@ -33,39 +33,53 @@ export type RemovedHistory = {
 
 export const NOTHING_REMOVED: RemovedHistory = { spans: [], days: [], keys: new Set() };
 
-/** The history `where` (a condition on `travtrack_points` of this account) is about to lose. */
+/**
+ * The history `where` (a condition on `travtrack_points` of this account) is
+ * about to lose. One pass over the matching points (a materialised CTE):
+ * count, days and spans used to be three separate scans plus a fourth for the
+ * keys, and a zone's circle has no index, so each of them read the account's
+ * whole history (perf audit 2026-11, item 6).
+ */
 export async function collectRemoved(
   tx: DbTransaction,
   userId: string,
   where: Prisma.Sql
 ): Promise<RemovedHistory> {
   const scope = Prisma.sql`user_id = ${userId} AND (${where})`;
-  const [{ n }] = await tx.$queryRaw<{ n: bigint }[]>`
-    SELECT count(*) AS n FROM travtrack_points WHERE ${scope}`;
-  if (n === 0n) return NOTHING_REMOVED;
-  const days = await tx.$queryRaw<{ day: string }[]>`
-    SELECT DISTINCT to_char(t, 'YYYY-MM-DD') AS day FROM travtrack_points
-     WHERE ${scope} ORDER BY day`;
-  const spans = await tx.$queryRaw<{ from_t: Date; to_t: Date }[]>`
-    SELECT min(t) AS from_t, max(t) AS to_t FROM (
-      SELECT t, sum(fresh) OVER (ORDER BY t) AS grp FROM (
-        SELECT t,
-               CASE WHEN lag(t) OVER (ORDER BY t) IS NULL
-                      OR t - lag(t) OVER (ORDER BY t) >= ${SPAN_JOIN_MS} * interval '1 millisecond'
-                    THEN 1 ELSE 0 END AS fresh
-          FROM travtrack_points WHERE ${scope}
-      ) marked
-    ) grouped
-    GROUP BY grp ORDER BY from_t`;
-  let keys: Set<string> | null = null;
-  if (n <= BigInt(KEY_CAP)) {
-    const rows = await tx.$queryRaw<{ t_s: number; lat: number; lon: number }[]>`
-      SELECT t_s, lat, lon FROM travtrack_points WHERE ${scope}`;
-    keys = new Set(rows.map((r) => positionKey({ tS: r.t_s, lat: r.lat, lon: r.lon })));
-  }
+  const [row] = await tx.$queryRaw<
+    {
+      n: bigint;
+      days: string[] | null;
+      spans: Array<{ f: string; u: string }> | null;
+      keys: Array<[number, number, number]> | null;
+    }[]
+  >`
+    WITH m AS MATERIALIZED (
+      SELECT t, t_s, lat, lon FROM travtrack_points WHERE ${scope}
+    ),
+    marked AS (
+      SELECT t,
+             CASE WHEN lag(t) OVER (ORDER BY t) IS NULL
+                    OR t - lag(t) OVER (ORDER BY t) >= ${SPAN_JOIN_MS} * interval '1 millisecond'
+                  THEN 1 ELSE 0 END AS fresh
+        FROM m
+    ),
+    grouped AS (SELECT t, sum(fresh) OVER (ORDER BY t) AS grp FROM marked)
+    SELECT
+      (SELECT count(*) FROM m) AS n,
+      (SELECT array_agg(d ORDER BY d) FROM (SELECT DISTINCT to_char(t, 'YYYY-MM-DD') AS d FROM m) x) AS days,
+      (SELECT json_agg(json_build_object('f', f, 'u', u) ORDER BY f) FROM (
+         SELECT to_char(min(t), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS f,
+                to_char(max(t), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS u
+           FROM grouped GROUP BY grp) s) AS spans,
+      (SELECT CASE WHEN count(*) <= ${KEY_CAP} THEN json_agg(json_build_array(t_s, lat, lon)) END
+         FROM m) AS keys`;
+  if (!row || row.n === 0n) return NOTHING_REMOVED;
   return {
-    spans: spans.map((s) => [s.from_t.getTime(), s.to_t.getTime()]),
-    days: days.map((d) => d.day),
-    keys,
+    spans: (row.spans ?? []).map((s) => [Date.parse(s.f), Date.parse(s.u)]),
+    days: row.days ?? [],
+    keys: row.keys
+      ? new Set(row.keys.map(([tS, lat, lon]) => positionKey({ tS, lat, lon })))
+      : null,
   };
 }

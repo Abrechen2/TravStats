@@ -8,6 +8,7 @@ import type { ScheduledTask } from "node-cron";
 import logger from "../utils/logger";
 import { runAutoCoverSweep } from "../services/coverSuggestions/autoCover";
 import { schedulerZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "../services/jobs/heavySlot";
 
 // 4 AM UTC, after the 3 AM logo sweep.
 const CRON_EXPRESSION = "0 4 * * *";
@@ -19,7 +20,7 @@ export function startAutoCoverScheduler(): void {
   schedulerTask = cron.schedule(
     CRON_EXPRESSION,
     () => {
-      runAutoCoverSweep().catch((error: unknown) => {
+      runHeavyJob("autoCover", () => runAutoCoverSweep()).catch((error: unknown) => {
         logger.error({ message: "auto_cover_sweep_failed", error });
       });
     },

@@ -17,6 +17,7 @@ import type { ScheduledTask } from "node-cron";
 import { runPublicUrlCheck } from "../services/readiness/publicUrlProbe";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "../services/jobs/heavySlot";
 
 const CRON_EXPRESSION = "35 5 * * *";
 
@@ -45,7 +46,7 @@ export function startPublicUrlCheckScheduler(): void {
   schedulerTask = cron.schedule(
     CRON_EXPRESSION,
     () => {
-      void runPublicUrlCheckJob();
+      void runHeavyJob("publicUrlCheck", () => runPublicUrlCheckJob());
     },
     { timezone: schedulerZone("publicUrlCheck") }
   );

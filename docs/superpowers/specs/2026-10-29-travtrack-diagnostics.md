@@ -67,7 +67,7 @@ frozen batch into two new batches with new ids and drops the old one.
 
 Per event (a bad event is `rejected`, the rest of the upload goes in):
 
-- `t`: ISO instant with zone; not older than 14 days, not more than 10 min in
+- `t`: ISO instant with zone; not older than 7 days, not more than 10 min in
   the future (`reason: "time"`).
 - `kind`: `^[a-z][a-zA-Z0-9.]{0,39}$` (`reason: "kind"`). ANY such kind is
   stored, so the app can add kinds without a server release.
@@ -137,7 +137,7 @@ and last point, plus the day's edges where the log has events. Reported gaps
 their own parts (`reportedGap`); each remaining part ≥ 2 min is classified
 alone. State (`permission`, `recorder`, `lifecycle`) is **carried forward**
 from the latest event before the part, looked up across midnight and back to
-the 14-day horizon. The first rule that holds wins:
+the 7-day horizon. The first rule that holds wins:
 
 1. carried or in-part `permission.status ≠ always` → `permission`
 2. carried `recorder` `stop`/`pause` (no `start`/`resume` before the part
@@ -161,7 +161,7 @@ the 14-day horizon. The first rule that holds wins:
 
 Tier `held`. `Content-Disposition: attachment`. JSON
 `{ exportedAt, from, to, devices, events, pointsPerMinute }` with every event
-(fixes included) — for a session to read. Span ≤ 14 days.
+(fixes included) — for a session to read. Span ≤ 7 days.
 
 ### `DELETE /api/v1/travtrack/diagnostics`
 
@@ -177,14 +177,14 @@ Tier `held`. Deletes every diagnostics row of the account. `200 { deleted }`.
 jsonb; index `(user_id, t)`, `(t)`), `travtrack_diagnostic_uploads`
 (`user_id`, `device_id`, `upload_id`, `payload_hash`, `device` jsonb,
 `result` jsonb; unique `(user_id, device_id, upload_id)`). Cascade on user
-delete. **Retention 14 days** (events by `t`, receipts by `created_at`): a
+delete. **Retention 7 days** (14 until 2026-11; perf audit item 8), at most 200k events per account, pruned in batches of 5000 (events by `t`, receipts by `created_at`): a
 daily sweep at 03:40 UTC beside the other retention jobs, and once at start.
 
 ## Privacy
 
 - Owner only. Not part of sharing, `.travstats`, public links, comparison,
   federation, the TravTrack export or the full data export: a diagnostic with
-  a 14-day life, read through its own export. Account delete cascades.
+  a 7-day life, read through its own export. Account delete cascades.
 - No coordinates by construction: typed values, two-decimal numbers,
   identifier strings, and a rejected key list.
 - `privacyZone` appears only as a drop count per minute, in the owner's own

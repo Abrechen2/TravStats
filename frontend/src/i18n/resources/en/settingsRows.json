@@ -1615,6 +1615,52 @@
       "off": "Switch off",
       "running": "Runs until {{until}} · {{hours}} h {{minutes}} min left",
       "failed": "I couldn't switch the verbose log."
+    },
+    "runtime": {
+      "title": "Runtime",
+      "refresh": "Refresh",
+      "loadFailed": "I couldn't load the runtime data.",
+      "loop": {
+        "title": "Event loop",
+        "sub": "Delay over the last minute. Above 500 ms (p99) every request waits noticeably.",
+        "value": "p50 {{p50}} ms · p99 {{p99}} ms · max {{max}} ms",
+        "slow": "Slow: p99 {{p99}} ms · max {{max}} ms"
+      },
+      "memory": {
+        "title": "Memory",
+        "value": "Heap {{heap}} / {{limit}} MB · RSS {{rss}} MB"
+      },
+      "database": {
+        "title": "Database",
+        "value": "{{latency}} ms · connections {{total}}/{{max}} ({{idle}} idle, {{waiting}} waiting)",
+        "valueNoPool": "{{latency}} ms",
+        "failed": "The database does not answer."
+      },
+      "statements": {
+        "title": "Slowest queries",
+        "sub": "From pg_stat_statements, by mean time.",
+        "none": "No queries recorded yet.",
+        "row": "avg {{mean}} ms · max {{max}} ms · {{calls}}×",
+        "notInstalled": "Not enabled. Add pg_stat_statements to the database's shared_preload_libraries, restart it and run CREATE EXTENSION pg_stat_statements once (docs/ops/postgres-tuning.md).",
+        "notLoaded": "Not enabled: the extension exists but is missing from shared_preload_libraries. Add it and restart the database (docs/ops/postgres-tuning.md).",
+        "error": "I couldn't read pg_stat_statements."
+      },
+      "jobs": {
+        "title": "Background jobs",
+        "idle": "No heavy job running",
+        "running": "Running: {{name}}",
+        "waiting": "{{count}} waiting",
+        "importRunning": "Import writing ({{count}} waiting)"
+      },
+      "slowRequests": {
+        "title": "Slow requests",
+        "sub": "Over 1 s, since the last restart."
+      },
+      "slowQueries": {
+        "title": "Slow database calls",
+        "sub": "Over 500 ms, since the last restart."
+      },
+      "slowNone": "None since the start."
     }
   },
   "lodging": {

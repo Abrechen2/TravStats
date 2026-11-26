@@ -58,14 +58,14 @@ describe("zoneOf when the lookup is broken", () => {
     expect(zoneOf({ catalogueZone: "Europe/Vienna", lat: 48.2, lon: 16.37 })).toBe("Europe/Vienna");
   });
 
-  it("marks the boot self-check failed, and /health degraded", () => {
+  it("marks the boot self-check failed, and /health degraded", async () => {
     const geo = loadWithBrokenFind();
     expect(geo.runZoneSelfCheck()).toEqual({ ok: false, reason: expect.any(String) });
 
     const { healthHandler } =
       require("../../../routes/health") as typeof import("../../../routes/health");
     const json = jest.fn();
-    healthHandler({} as never, { json } as never);
+    await healthHandler({} as never, { json } as never);
     expect(json).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "degraded",

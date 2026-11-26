@@ -27,6 +27,8 @@ vi.mock("../../../lib/api", () => ({ adminApi: admin }));
 const client = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock("../../../lib/api/client", () => ({ api: client }));
 vi.mock("../../Admin/LogViewer", () => ({ default: () => null }));
+// The runtime card has its own test (MaintenanceRuntime.test.tsx).
+vi.mock("../MaintenanceRuntime", () => ({ default: () => null }));
 // The key, plus a `date` argument where one is given, so the date's format is visible.
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({

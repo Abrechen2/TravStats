@@ -90,9 +90,23 @@ export async function travTrackYears(
 ): Promise<number[]> {
   if (!(await providerIs(userId, "travtrack"))) return [];
   const { zone } = await profileZoneOf(userId);
+  // A loose index scan on (user_id, t, seq): one probe per year, starting at
+  // the account's first point and jumping to the first point at or after the
+  // next 1 January in the profile zone. The `SELECT DISTINCT year` it replaces
+  // read every point (perf audit 2026-11, item 6: Seq Scan of 873k rows + JIT).
   const rows = await prisma.$queryRaw<{ y: number }[]>`
-    SELECT DISTINCT EXTRACT(YEAR FROM (t AT TIME ZONE 'UTC') AT TIME ZONE ${zone})::int AS y
-    FROM travtrack_points WHERE user_id = ${userId}`;
+    WITH RECURSIVE years(y) AS (
+      SELECT EXTRACT(YEAR FROM (min(t) AT TIME ZONE 'UTC') AT TIME ZONE ${zone})::int
+        FROM travtrack_points WHERE user_id = ${userId}
+      UNION ALL
+      SELECT (SELECT EXTRACT(YEAR FROM (p.t AT TIME ZONE 'UTC') AT TIME ZONE ${zone})::int
+                FROM travtrack_points p
+               WHERE p.user_id = ${userId}
+                 AND p.t >= (make_timestamptz(years.y + 1, 1, 1, 0, 0, 0, ${zone}) AT TIME ZONE 'UTC')
+               ORDER BY p.t LIMIT 1)
+        FROM years WHERE years.y IS NOT NULL
+    )
+    SELECT y FROM years WHERE y IS NOT NULL`;
   const out: number[] = [];
   for (const { y } of rows.sort((a, b) => a.y - b.y)) {
     if (skip.has(y)) continue;

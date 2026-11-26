@@ -1615,6 +1615,52 @@
       "off": "Ausschalten",
       "running": "Läuft bis {{until}} · noch {{hours}} h {{minutes}} min",
       "failed": "Ich konnte das ausführliche Protokoll nicht umschalten."
+    },
+    "runtime": {
+      "title": "Laufzeit",
+      "refresh": "Aktualisieren",
+      "loadFailed": "Ich konnte die Laufzeitdaten nicht laden.",
+      "loop": {
+        "title": "Event-Loop",
+        "sub": "Verzögerung der letzten Minute. Über 500 ms (p99) wartet jede Anfrage spürbar.",
+        "value": "p50 {{p50}} ms · p99 {{p99}} ms · max {{max}} ms",
+        "slow": "Langsam: p99 {{p99}} ms · max {{max}} ms"
+      },
+      "memory": {
+        "title": "Speicher",
+        "value": "Heap {{heap}} / {{limit}} MB · RSS {{rss}} MB"
+      },
+      "database": {
+        "title": "Datenbank",
+        "value": "{{latency}} ms · Verbindungen {{total}}/{{max}} ({{idle}} frei, {{waiting}} wartend)",
+        "valueNoPool": "{{latency}} ms",
+        "failed": "Die Datenbank antwortet nicht."
+      },
+      "statements": {
+        "title": "Langsamste Abfragen",
+        "sub": "Aus pg_stat_statements, nach mittlerer Dauer.",
+        "none": "Noch keine Abfragen erfasst.",
+        "row": "Ø {{mean}} ms · max {{max}} ms · {{calls}}×",
+        "notInstalled": "Nicht aktiviert. pg_stat_statements in die shared_preload_libraries der Datenbank eintragen, neu starten und einmal CREATE EXTENSION pg_stat_statements ausführen (docs/ops/postgres-tuning.md).",
+        "notLoaded": "Nicht aktiviert: Die Erweiterung ist angelegt, fehlt aber in shared_preload_libraries. Eintragen und die Datenbank neu starten (docs/ops/postgres-tuning.md).",
+        "error": "Ich konnte pg_stat_statements nicht lesen."
+      },
+      "jobs": {
+        "title": "Hintergrundjobs",
+        "idle": "Kein schwerer Job läuft",
+        "running": "Läuft: {{name}}",
+        "waiting": "{{count}} wartend",
+        "importRunning": "Import schreibt ({{count}} wartend)"
+      },
+      "slowRequests": {
+        "title": "Langsame Anfragen",
+        "sub": "Über 1 s, seit dem letzten Neustart."
+      },
+      "slowQueries": {
+        "title": "Langsame Datenbankzugriffe",
+        "sub": "Über 500 ms, seit dem letzten Neustart."
+      },
+      "slowNone": "Keine seit dem Start."
     }
   },
   "lodging": {

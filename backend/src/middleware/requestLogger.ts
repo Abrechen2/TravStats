@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { httpLogger, generateRequestId } from "../utils/logger";
 import { getLoggingRuntimeFlags } from "../utils/logging/runtimeFlags";
 import { requestPathForLog } from "../utils/logging/requestPath";
+import { SLOW_REQUEST_MS, slowRequests } from "../services/runtime/slowLog";
 
 /**
  * Request Logger Middleware
@@ -55,9 +56,20 @@ export function requestLoggerMiddleware(req: AuthRequest, res: Response, next: N
   // admin UI takes effect on the next request. It used to sit behind a
   // five-minute cache of its own that no save invalidated.
   res.on("finish", () => {
+    const duration = Date.now() - startTime;
+    // A slow request is logged whatever the flag says (perf audit item 4),
+    // keyed by the route pattern so ids do not make every line a new key.
+    if (duration >= SLOW_REQUEST_MS) {
+      slowRequests.note(`${req.method} ${req.baseUrl}${req.route?.path ?? ""}`, duration, {
+        method: req.method,
+        path: requestPathForLog(req),
+        status: res.statusCode,
+        userId: req.userId,
+        requestId: req.requestId,
+      });
+    }
     if (!getLoggingRuntimeFlags().httpRequests) return;
 
-    const duration = Date.now() - startTime;
     const memoryDelta = process.memoryUsage().heapUsed - startMemory;
     // The full path (a router only sees its own tail) and never the query
     // string, which carries search terms, names and booking references.

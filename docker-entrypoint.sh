@@ -3,6 +3,76 @@ set -e
 
 echo "[entrypoint] Starting TravStats..."
 
+# >>> node-heap
+# Size the Node heap to the memory the container may actually use (perf audit
+# 2026-11, item 2). Without a cap V8 picked 4144 MB inside a 2 GiB box on prod,
+# so memory growth ended in swap on Ceph or the OOM killer instead of a GC.
+# Order: NODE_MAX_OLD_SPACE_MB > an existing --max-old-space-size in
+# NODE_OPTIONS > the cgroup limit (v2 memory.max, v1 limit_in_bytes) > half of
+# MemTotal when no limit is set (capped). The heap is 55 % of that, 512..4096 MB.
+# CGROUP_ROOT and MEMINFO_FILE exist for the test only.
+HEAP_CGROUP_ROOT="${CGROUP_ROOT:-/sys/fs/cgroup}"
+HEAP_MEMINFO="${MEMINFO_FILE:-/proc/meminfo}"
+HEAP_UNLIMITED_SHARE=50
+HEAP_UNLIMITED_CAP_MB=8192
+HEAP_SHARE=55
+HEAP_MIN_MB=512
+HEAP_MAX_MB=4096
+heap_mem_total_mb=$(awk '/^MemTotal:/ { printf "%d", $2 / 1024 }' "$HEAP_MEMINFO" 2>/dev/null || true)
+heap_limit_bytes=""
+if [ -r "$HEAP_CGROUP_ROOT/memory.max" ]; then
+    heap_limit_bytes=$(cat "$HEAP_CGROUP_ROOT/memory.max" 2>/dev/null || true)
+elif [ -r "$HEAP_CGROUP_ROOT/memory/memory.limit_in_bytes" ]; then
+    heap_limit_bytes=$(cat "$HEAP_CGROUP_ROOT/memory/memory.limit_in_bytes" 2>/dev/null || true)
+fi
+heap_limit_mb=""
+heap_source=""
+case "$heap_limit_bytes" in
+    ''|max|*[!0-9]*) ;;
+    *)
+        # cgroup v1 reports "no limit" as a number near 2^63; anything above
+        # the host's RAM is no limit either.
+        heap_limit_mb=$(awk -v b="$heap_limit_bytes" 'BEGIN { printf "%d", b / 1048576 }')
+        if [ -n "$heap_mem_total_mb" ] && [ "$heap_mem_total_mb" -gt 0 ] && [ "$heap_limit_mb" -ge "$heap_mem_total_mb" ]; then
+            heap_limit_mb=""
+        else
+            heap_source="cgroup limit ${heap_limit_mb} MB"
+        fi
+        ;;
+esac
+if [ -z "$heap_limit_mb" ] && [ -n "$heap_mem_total_mb" ] && [ "$heap_mem_total_mb" -gt 0 ]; then
+    heap_limit_mb=$((heap_mem_total_mb * HEAP_UNLIMITED_SHARE / 100))
+    [ "$heap_limit_mb" -gt "$HEAP_UNLIMITED_CAP_MB" ] && heap_limit_mb=$HEAP_UNLIMITED_CAP_MB
+    heap_source="no cgroup limit, ${HEAP_UNLIMITED_SHARE} % of MemTotal ${heap_mem_total_mb} MB"
+fi
+case "${NODE_MAX_OLD_SPACE_MB:-}" in
+    '') ;;
+    *[!0-9]*) echo "[entrypoint] ⚠️  NODE_MAX_OLD_SPACE_MB='${NODE_MAX_OLD_SPACE_MB}' is not a number of MB, ignored" ;;
+    *)
+        heap_mb=$NODE_MAX_OLD_SPACE_MB
+        heap_source="NODE_MAX_OLD_SPACE_MB"
+        ;;
+esac
+if [ -n "${heap_mb:-}" ]; then
+    :
+elif printf '%s' "${NODE_OPTIONS:-}" | grep -q -- '--max-old-space-size'; then
+    heap_source="NODE_OPTIONS"
+elif [ -n "$heap_limit_mb" ]; then
+    heap_mb=$((heap_limit_mb * HEAP_SHARE / 100))
+    [ "$heap_mb" -lt "$HEAP_MIN_MB" ] && heap_mb=$HEAP_MIN_MB
+    [ "$heap_mb" -gt "$HEAP_MAX_MB" ] && heap_mb=$HEAP_MAX_MB
+fi
+if [ -n "${heap_mb:-}" ]; then
+    NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=${heap_mb}"
+    export NODE_OPTIONS
+    echo "[entrypoint] Node heap: ${heap_mb} MB (${heap_source})"
+elif [ "$heap_source" = "NODE_OPTIONS" ]; then
+    echo "[entrypoint] Node heap: as set in NODE_OPTIONS (${NODE_OPTIONS})"
+else
+    echo "[entrypoint] ⚠️  Node heap: no memory limit or MemTotal readable, V8 default kept"
+fi
+# <<< node-heap
+
 # Ensure data directory structure exists with proper permissions
 echo "[entrypoint] Ensuring data directory structure..."
 # Create directories if they don't exist

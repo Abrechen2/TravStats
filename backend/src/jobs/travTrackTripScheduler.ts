@@ -12,6 +12,7 @@ import type { ScheduledTask } from "node-cron";
 import { runTravTrackTripSweep } from "../services/locationEvidence/trips/sweep";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "../services/jobs/heavySlot";
 
 const CRON_EXPRESSION = "25 4 * * *";
 
@@ -31,7 +32,7 @@ export function startTravTrackTripScheduler(): void {
   schedulerTask = cron.schedule(
     CRON_EXPRESSION,
     () => {
-      void runTravTrackTripJob();
+      void runHeavyJob("travTrackTrips", () => runTravTrackTripJob());
     },
     { timezone: schedulerZone("travTrackTrips") }
   );

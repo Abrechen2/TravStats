@@ -14,6 +14,7 @@ import { DIAGNOSTICS_RETENTION_DAYS } from "../schemas/travtrackDiagnostics";
 import { pruneDiagnostics } from "../services/travtrack/diagnostics/ingest";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "../services/jobs/heavySlot";
 
 const CRON_EXPRESSION = "40 3 * * *";
 
@@ -34,7 +35,7 @@ export function startTravTrackDiagnosticsRetentionScheduler(): void {
   schedulerTask = cron.schedule(
     CRON_EXPRESSION,
     () => {
-      void runTravTrackDiagnosticsRetention();
+      void runHeavyJob("travTrackDiagnosticsRetention", () => runTravTrackDiagnosticsRetention());
     },
     { timezone: schedulerZone("travTrackDiagnosticsRetention") }
   );

@@ -244,6 +244,7 @@ model User {
   travTrackDaySources      TravTrackDaySource[]
   travTrackExploredCells   TravTrackExploredCell[]
   travTrackMonthValues     TravTrackMonthValue[]
+  travTrackYearSummaries   TravTrackYearSummary[]
   travTrackZoneCells       TravTrackZoneCell[]
   travTrackDerivationState TravTrackDerivationState?
   travTrackImports         TravTrackImport[]
@@ -7556,6 +7557,27 @@ model TravTrackExploredCell {
   @@map("travtrack_explored_cells")
 }
 
+/// The year in review's TravTrack figures of one account and profile-zone year
+/// (perf audit 2026-11, item 9), kept until that year's own inputs change:
+/// `fingerprint` folds the year's dirty-day versions (raised by every stored
+/// or removed point of a day) with the account-wide inputs (zones, flights,
+/// gaps, deletions, provider, profile zone). A Companion upload therefore
+/// invalidates only the years it touched, and a deploy keeps every figure.
+/// `value` is `{ v: TravTrackYearStats | null }`. A cache: deleting rows only
+/// costs a recomputation.
+model TravTrackYearSummary {
+  userId      String   @map("user_id")
+  year        Int
+  fingerprint String
+  value       Json
+  computedAt  DateTime @default(now()) @map("computed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, year])
+  @@map("travtrack_year_summaries")
+}
+
 /// TravTrack's monthly values (TravTrack plan L3): ground kilometres from the
 /// privacy-safe line, the countries of the month's `travtrack` country days and,
 /// only when the account switched the lookup on, the cities stayed in. One row
@@ -8219,10 +8241,28 @@ model AccountArchiveImport {
   counts              Json
   importedAt          DateTime @default(now()) @map("imported_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rows AccountArchiveImportRow[]
 
   @@index([userId])
   @@map("account_archive_imports")
+}
+
+/// One row a running account-archive restore wrote: its table and primary key
+/// (`json_build_array` of the key columns, as text), recorded in the same
+/// statement as the insert. Undoing a failed or crashed restore deletes exactly
+/// these rows and nothing written meanwhile; a finished restore drops its
+/// entries. Gone with its import marker.
+model AccountArchiveImportRow {
+  id        BigInt @id @default(autoincrement())
+  archiveId String @map("archive_id")
+  tableName String @map("table_name")
+  rowKey    String @map("row_key")
+
+  import AccountArchiveImport @relation(fields: [archiveId], references: [archiveId], onDelete: Cascade)
+
+  @@index([archiveId, tableName])
+  @@map("account_archive_import_rows")
 }
 
 /// "Your recollection and your record disagree" — a notice in the Posteingang that a remembered

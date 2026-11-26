@@ -32,6 +32,7 @@ import templateRepoRouter from "./templateRepo";
 import lodgingChainsAdminRouter from "./lodgingChains";
 import externalServicesAdminRouter from "./externalServices";
 import publicUrlCheckRouter from "./publicUrlCheck";
+import runtimeRouter from "./runtime";
 
 const router = Router();
 
@@ -87,5 +88,6 @@ router.use("/", templateRepoRouter);
 router.use("/", lodgingChainsAdminRouter);
 router.use("/external-services", externalServicesAdminRouter);
 router.use("/public-url", publicUrlCheckRouter);
+router.use("/", runtimeRouter);
 
 export default router;

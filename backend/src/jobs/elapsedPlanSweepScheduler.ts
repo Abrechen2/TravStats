@@ -4,6 +4,7 @@ import type { ScheduledTask } from "node-cron";
 import logger from "../utils/logger";
 import { sweepElapsedPlannedVisits } from "../services/places/elapsedPlanSweep";
 import { schedulerZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "../services/jobs/heavySlot";
 
 const CRON_EXPRESSION = "30 4 * * *";
 
@@ -15,7 +16,7 @@ export function startElapsedPlanSweepScheduler(): void {
     CRON_EXPRESSION,
     async () => {
       try {
-        await sweepElapsedPlannedVisits();
+        await runHeavyJob("elapsedPlanSweep", () => sweepElapsedPlannedVisits());
       } catch (error) {
         logger.warn({ operation: "elapsed_plan_sweep_error", error }, "Elapsed plan sweep failed");
       }

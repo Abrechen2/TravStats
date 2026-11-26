@@ -65,11 +65,21 @@ export async function markTravTrackDaysDirty(
 
 /** Marks dirty every UTC day on which this account holds a TravTrack point. */
 export async function markAllPointDaysDirty(tx: DbTransaction, userId: string): Promise<number> {
-  // `t` is a TIMESTAMP holding UTC, so its date is the UTC day.
+  // `t` is a TIMESTAMP holding UTC, so its date is the UTC day. A loose index
+  // scan on (user_id, t, seq): one probe per day with points, jumping to the
+  // next midnight, instead of a `SELECT DISTINCT t::date` over every point
+  // (perf audit 2026-11, item 6).
   return tx.$executeRaw`
+    WITH RECURSIVE days(day) AS (
+      SELECT (SELECT min(t)::date FROM travtrack_points WHERE user_id = ${userId})
+      UNION ALL
+      SELECT (SELECT p.t::date FROM travtrack_points p
+               WHERE p.user_id = ${userId} AND p.t >= (days.day + 1)::timestamp
+               ORDER BY p.t LIMIT 1)
+        FROM days WHERE days.day IS NOT NULL
+    )
     INSERT INTO travtrack_dirty_days (user_id, day, version, done)
-    SELECT DISTINCT ${userId}, t::date, 1, 0
-      FROM travtrack_points WHERE user_id = ${userId}
+    SELECT ${userId}, day, 1, 0 FROM days WHERE day IS NOT NULL
     ON CONFLICT (user_id, day)
     DO UPDATE SET version = travtrack_dirty_days.version + 1, done = 0`;
 }

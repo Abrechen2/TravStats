@@ -15,6 +15,7 @@ import {
 import {
   applyDeferred,
   insertTable,
+  rowKeyExpr,
   resolveCatalogue,
   type DeferredUpdate,
   type KeyMaps,
@@ -25,17 +26,34 @@ import { Remapper } from "./remap";
 import { removeFiles, writeFiles, type WrittenFile } from "./importFiles";
 import { USER_SETTINGS_SECRETS } from "./tablePolicy";
 import { ArchiveReader, invalidArchive } from "./zipReader";
+import { paceAfter, sleep as realSleep, type Sleep } from "../travtrack/imports/importPacing";
+import { FairSlot, importWriteSlot, SLICE_BATCHES } from "../travtrack/imports/writeSlot";
+import { raiseStatementTimeout } from "../db/sessionTimeouts";
+import logger from "../../utils/logger";
 
 /**
  * Imports an account archive into an EMPTY account (forgejo#433).
  *
  * All or nothing: the archive is checked in full first (manifest, sizes, every
  * entry's sha256, every table and column known here), then the files are written
- * under new names and the rows inserted in ONE transaction. Any failure rolls the
- * rows back and removes the files already written, so a failed import leaves the
- * account exactly as empty as it was. The archive id is recorded in the same
- * transaction: a second import of the same archive answers with the first one's
+ * under new names and the rows inserted. Any failure removes the rows and the
+ * files already written, so a failed import leaves the account exactly as empty
+ * as it was. A second import of the same archive answers with the first one's
  * outcome (same account) or is refused (another account).
+ *
+ * Paced, not one transaction (perf audit 2026-11, item 5). The rows used to go
+ * in through ONE interactive transaction of up to six hours: it held the xmin
+ * horizon (no vacuum anywhere) for the whole restore and wrote unpaced, the
+ * pattern that made prod unusable during the 24.11 Timeline import. Now every
+ * batch commits on its own, the restore pauses after each in proportion to
+ * what it cost (`paceAfter`), and it holds the import write slot so it never
+ * writes at the same time as a file import. "All or nothing" is kept by
+ * compensation instead: every inserted row's key is recorded under the
+ * archive id in the same statement (`account_archive_import_rows`), and an
+ * undo deletes exactly those rows and puts back the rows it replaced, so
+ * whatever the account gained meanwhile survives. The archive id is
+ * recorded first with `inProgress`, so a restore interrupted by a crash is
+ * undone and run again by the next attempt instead of being reported done.
  */
 
 export interface ImportResult {
@@ -53,7 +71,14 @@ export interface ImportResult {
 
 type ReportProgress = (done: number, total: number) => void;
 
-const IMPORT_TX_TIMEOUT_MS = 6 * 60 * 60 * 1000;
+/** The closing transaction: the account's profile, kept secrets and the outcome. */
+const FINISH_TX_TIMEOUT_MS = 60_000;
+/** Archive ids being restored by THIS process; a marker without one was left by a crash. */
+const restoresRunning = new Set<string>();
+/** Undoing a restore deletes everything it wrote, 870k TravTrack points on the largest account. */
+const LONG_UNDO_TX_TIMEOUT_MS = 30 * 60_000;
+/** Row-record entries a finished restore removes per statement. */
+const ROW_RECORD_BATCH = 10_000;
 /** account.json holds a handful of profile fields. */
 export const PROFILE_MAX_BYTES = 64 * 1024;
 
@@ -69,8 +94,12 @@ export interface ImportOptions {
   maxBytes?: number;
   /** The database to write; tests pass a second one. */
   client?: PrismaClient;
-  /** Test seam: called after the given number of inserted rows, inside the transaction. */
+  /** Test seam: called after the given number of inserted rows. */
   failAfterRows?: number;
+  /** Test seam: the pause between batches. */
+  sleep?: Sleep;
+  /** Test seam: the instance's write slot. */
+  slot?: FairSlot;
 }
 
 /** The tables in which the account already has rows that an import would collide with. */
@@ -137,7 +166,33 @@ export async function importAccountArchive(
     const earlier = await client.accountArchiveImport.findUnique({
       where: { archiveId: manifest.archiveId },
     });
-    if (earlier) {
+    const interrupted =
+      earlier !== null &&
+      (earlier.counts as { inProgress?: boolean } | null)?.inProgress === true &&
+      earlier.userId === targetUserId;
+    if (interrupted && restoresRunning.has(manifest.archiveId)) {
+      throw new AppError(
+        "This archive is being imported already",
+        409,
+        "ACCOUNT_ARCHIVE_ALREADY_IMPORTED"
+      );
+    }
+    if (interrupted) {
+      // A crash ended the previous attempt half-way: undo it, then start afresh.
+      logger.warn({
+        operation: "account_archive_import_interrupted",
+        message: "An earlier restore of this archive was interrupted; undoing it before retrying",
+        context: { archiveId: manifest.archiveId, userId: targetUserId },
+      });
+      const kept = (earlier.counts as { replaced?: Record<string, unknown[]> }).replaced;
+      await undoImport(
+        client,
+        plan,
+        manifest.archiveId,
+        kept ? new Map(Object.entries(kept)) : null
+      );
+      await client.accountArchiveImport.delete({ where: { archiveId: manifest.archiveId } });
+    } else if (earlier) {
       if (earlier.userId !== targetUserId) {
         throw new AppError(
           "This archive was already imported into another account",
@@ -179,55 +234,67 @@ export async function importAccountArchive(
     const { verdicts, refused } = await writeFiles(reader, contents, remap, root, written, tick);
     const outcome = { skipped: {} as Record<string, number>, unmatched: 0 };
 
-    const tables = await client.$transaction(
-      async (tx) => {
-        const db = tx as unknown as Db;
-        await tx.accountArchiveImport.create({
-          data: {
-            archiveId: manifest.archiveId,
-            userId: targetUserId,
-            sourceServerVersion: manifest.serverVersion,
-            formatVersion: manifest.formatVersion,
-            counts: {},
-          },
+    const slot = options.slot ?? importWriteSlot;
+    let tables: Record<string, number>;
+    // The write slot first: a restore may wait here behind a file import.
+    await slot.acquire(targetUserId);
+    try {
+      // Checked again right before writing, OUTSIDE the compensated block
+      // below: an account that is not empty is refused, never "undone".
+      if ((await nonEmptyTables(client as unknown as Db, plan, targetUserId)).length > 0)
+        throw notEmpty();
+      const snapshot = await snapshotReplaced(client as unknown as Db, contents, targetUserId);
+      // Committed at once: a concurrent second import of this archive hits the
+      // unique id (P2002) and is refused; a crash leaves `inProgress` behind,
+      // with the replaced rows, so an undo after a crash puts them back too.
+      await client.accountArchiveImport.create({
+        data: {
+          archiveId: manifest.archiveId,
+          userId: targetUserId,
+          sourceServerVersion: manifest.serverVersion,
+          formatVersion: manifest.formatVersion,
+          counts: {
+            inProgress: true,
+            replaced: Object.fromEntries(snapshot),
+          } as unknown as Prisma.InputJsonValue,
+        },
+      });
+      restoresRunning.add(manifest.archiveId);
+      try {
+        tables = await restoreRows(client, {
+          plan,
+          reader,
+          contents,
+          remap,
+          verdicts,
+          refused,
+          profile,
+          outcome,
+          targetUserId,
+          archiveId: manifest.archiveId,
+          tick,
+          afterWrite: restorePacer(slot, targetUserId, options.sleep ?? realSleep),
+          failAfterRows: options.failAfterRows,
         });
-        if ((await nonEmptyTables(db, plan, targetUserId)).length > 0) throw notEmpty();
-        const keptSecrets = await clearReplaced(db, contents, targetUserId);
-        const keyMaps: KeyMaps = await resolveCatalogue(db, reader, plan, contents.catalogueTables);
-        const deferred: DeferredUpdate[] = [];
-        const skipped = new Set<string>();
-        const ctx = { plan, remap, keyMaps, deferred, verdicts, skipped, report: outcome };
-        const counts: Record<string, number> = {};
-        let inserted = 0;
-        for (const p of plan.tables) {
-          if (!contents.dataTables.has(p.table.name)) continue;
-          counts[p.table.name] = await insertTable(db, reader, ctx, p, () => {
-            inserted += 1;
-            if (options.failAfterRows !== undefined && inserted > options.failAfterRows) {
-              throw new Error("account archive import: injected failure");
-            }
-            tick();
+      } catch (err) {
+        await undoImport(client, plan, manifest.archiveId, snapshot).catch((undoErr: unknown) => {
+          logger.error({
+            operation: "account_archive_import_undo_failed",
+            message: "A failed restore could not be undone; the next attempt will retry the undo",
+            context: { archiveId: manifest.archiveId, userId: targetUserId },
+            error: undoErr instanceof Error ? undoErr.message : String(undoErr),
           });
-        }
-        await applyDeferred(db, deferred, skipped);
-        await restoreSecrets(db, keptSecrets, targetUserId);
-        if (profile) await applyProfile(db, profile, targetUserId);
-        await tx.accountArchiveImport.update({
-          where: { archiveId: manifest.archiveId },
-          data: {
-            counts: {
-              tables: counts,
-              files: verdicts.size,
-              skipped: outcome.skipped,
-              unmatched: outcome.unmatched,
-              refusedFiles: refused,
-            } as unknown as Prisma.InputJsonValue,
-          },
+          throw undoErr;
         });
-        return counts;
-      },
-      { timeout: IMPORT_TX_TIMEOUT_MS, maxWait: 30_000 }
-    );
+        await client.accountArchiveImport.delete({ where: { archiveId: manifest.archiveId } });
+        throw err;
+      } finally {
+        restoresRunning.delete(manifest.archiveId);
+      }
+      await dropRowRecord(client, manifest.archiveId);
+    } finally {
+      slot.release();
+    }
     report(total, total);
     return {
       archiveId: manifest.archiveId,
@@ -253,31 +320,221 @@ export async function importAccountArchive(
   }
 }
 
+interface RestoreInput {
+  plan: ArchivePlan;
+  reader: ArchiveReader;
+  contents: ArchiveContents;
+  remap: Remapper;
+  verdicts: Awaited<ReturnType<typeof writeFiles>>["verdicts"];
+  refused: number;
+  profile: AccountProfile | null;
+  outcome: { skipped: Record<string, number>; unmatched: number };
+  targetUserId: string;
+  archiveId: string;
+  tick: () => void;
+  afterWrite: () => Promise<void>;
+  failAfterRows?: number;
+}
+
 /**
- * Removes the target's own rows of the replaced tables that the archive brings,
- * keeping the target's stored provider keys: those never travel, and an account
- * that had entered some keeps them.
+ * The pause after a batch, as long as the batch took (`paceAfter`), and every
+ * `SLICE_BATCHES` batches the write slot is offered to a waiting file import.
  */
-async function clearReplaced(
+export function restorePacer(
+  slot: FairSlot,
+  userId: string,
+  wait: Sleep,
+  now: () => number = () => performance.now()
+): () => Promise<void> {
+  let since = now();
+  let batches = 0;
+  return async () => {
+    await wait(paceAfter(now() - since));
+    batches += 1;
+    if (batches >= SLICE_BATCHES) {
+      batches = 0;
+      await slot.yieldTurn(userId);
+    }
+    since = now();
+  };
+}
+
+/** Inserts the rows table by table, each batch its own commit; returns rows per table. */
+async function restoreRows(
+  client: PrismaClient,
+  input: RestoreInput
+): Promise<Record<string, number>> {
+  const { plan, reader, contents, remap, verdicts, outcome, targetUserId } = input;
+  const db = client as unknown as Db;
+  const keyMaps: KeyMaps = await resolveCatalogue(db, reader, plan, contents.catalogueTables);
+  const deferred: DeferredUpdate[] = [];
+  const skipped = new Set<string>();
+  const ctx = {
+    plan,
+    remap,
+    keyMaps,
+    deferred,
+    verdicts,
+    skipped,
+    report: outcome,
+    runId: input.archiveId,
+  };
+  const counts: Record<string, number> = {};
+  let keptSecrets: Record<string, unknown> | null = null;
+  let inserted = 0;
+  const onRow = () => {
+    inserted += 1;
+    if (input.failAfterRows !== undefined && inserted > input.failAfterRows) {
+      throw new Error("account archive import: injected failure");
+    }
+    input.tick();
+  };
+  for (const p of plan.tables) {
+    if (!contents.dataTables.has(p.table.name)) continue;
+    if ((REPLACED_ON_IMPORT as readonly string[]).includes(p.table.name)) {
+      // One row each: cleared and written in one short transaction, so the
+      // account is never left without its settings row in between.
+      counts[p.table.name] = await client.$transaction(async (tx) => {
+        const txDb = tx as unknown as Db;
+        const kept = await clearReplaced(txDb, p.table.name, targetUserId);
+        if (kept) keptSecrets = kept;
+        return insertTable(txDb, reader, ctx, p, onRow);
+      });
+      continue;
+    }
+    counts[p.table.name] = await insertTable(db, reader, ctx, p, onRow, input.afterWrite);
+  }
+  await applyDeferred(db, deferred, skipped, input.afterWrite);
+  await client.$transaction(
+    async (tx) => {
+      const txDb = tx as unknown as Db;
+      await restoreSecrets(txDb, keptSecrets, targetUserId);
+      if (input.profile) await applyProfile(txDb, input.profile, targetUserId);
+      await tx.accountArchiveImport.update({
+        where: { archiveId: input.archiveId },
+        data: {
+          counts: {
+            tables: counts,
+            files: verdicts.size,
+            skipped: outcome.skipped,
+            unmatched: outcome.unmatched,
+            refusedFiles: input.refused,
+          } as unknown as Prisma.InputJsonValue,
+        },
+      });
+    },
+    { timeout: FINISH_TX_TIMEOUT_MS }
+  );
+  return counts;
+}
+
+/** The target's own rows of the replaced tables, to put back when the restore is undone. */
+async function snapshotReplaced(
   db: Db,
   contents: ArchiveContents,
   userId: string
-): Promise<Record<string, unknown> | null> {
-  let secrets: Record<string, unknown> | null = null;
+): Promise<Map<string, unknown[]>> {
+  const out = new Map<string, unknown[]>();
   for (const table of REPLACED_ON_IMPORT) {
     if (!contents.dataTables.has(table)) continue;
-    if (table === "user_settings") {
-      const cols = [...USER_SETTINGS_SECRETS, ...Object.values(CREDENTIAL_ENDPOINTS)]
-        .map(quoteIdent)
-        .join(", ");
-      const [row] = await db.$queryRawUnsafe<Array<{ j: Record<string, unknown> }>>(
-        `SELECT row_to_json(x) AS j FROM (SELECT ${cols} FROM user_settings WHERE user_id = $1) x`,
-        userId
-      );
-      secrets = row?.j ?? null;
-    }
-    await db.$executeRawUnsafe(`DELETE FROM ${quoteIdent(table)} WHERE user_id = $1`, userId);
+    const rows = await db.$queryRawUnsafe<Array<{ j: unknown }>>(
+      `SELECT row_to_json(t)::text AS j FROM ${quoteIdent(table)} t WHERE user_id = $1`,
+      userId
+    );
+    out.set(
+      table,
+      rows.map((r) => JSON.parse(r.j as string))
+    );
   }
+  return out;
+}
+
+/**
+ * Undoes a restore: deletes exactly the rows it recorded under its archive id
+ * (`account_archive_import_rows`, written in the same statement as each
+ * insert), never a row the account gained meanwhile. Late and cycle columns
+ * of those rows are cleared first, then the tables are emptied children
+ * first, then the account's replaced rows are put back (unless the account
+ * already has a new one). One transaction, with the restore's raised
+ * statement timeout. A child row someone added under a restored parent goes
+ * with that parent through its foreign key's cascade.
+ */
+async function undoImport(
+  client: PrismaClient,
+  plan: ArchivePlan,
+  archiveId: string,
+  snapshot: Map<string, unknown[]> | null
+): Promise<void> {
+  const mine = (p: ArchivePlan["tables"][number]) =>
+    `EXISTS (SELECT 1 FROM account_archive_import_rows r WHERE r.archive_id = $1 ` +
+    `AND r.table_name = '${p.table.name.split("'").join("''")}' AND r.row_key = ${rowKeyExpr(p.table, "t0")})`;
+  await client.$transaction(
+    async (tx) => {
+      const db = tx as unknown as Db;
+      await raiseStatementTimeout(tx, "archiveRestore");
+      for (const p of plan.tables) {
+        const late = [...(plan.deferred.get(p.table.name) ?? []), ...(p.policy.late ?? [])].filter(
+          (c) => !p.table.columns.find((x) => x.name === c)?.notNull
+        );
+        if (late.length === 0) continue;
+        const set = late.map((c) => `${quoteIdent(c)} = NULL`).join(", ");
+        await db.$executeRawUnsafe(
+          `UPDATE ${quoteIdent(p.table.name)} t0 SET ${set} WHERE ${mine(p)}`,
+          archiveId
+        );
+      }
+      for (const p of [...plan.tables].reverse()) {
+        await db.$executeRawUnsafe(
+          `DELETE FROM ${quoteIdent(p.table.name)} t0 WHERE ${mine(p)}`,
+          archiveId
+        );
+      }
+      for (const [table, rows] of snapshot ?? []) {
+        if (rows.length === 0) continue;
+        await db.$executeRawUnsafe(
+          `INSERT INTO ${quoteIdent(table)} SELECT * FROM json_populate_recordset(NULL::${quoteIdent(table)}, $1::json) ON CONFLICT DO NOTHING`,
+          JSON.stringify(rows)
+        );
+      }
+    },
+    { timeout: LONG_UNDO_TX_TIMEOUT_MS }
+  );
+}
+
+/** A finished restore's row record, removed in short batches. */
+async function dropRowRecord(client: PrismaClient, archiveId: string): Promise<void> {
+  for (;;) {
+    const n = await client.$executeRawUnsafe(
+      `DELETE FROM account_archive_import_rows WHERE id IN (
+         SELECT id FROM account_archive_import_rows WHERE archive_id = $1 LIMIT ${ROW_RECORD_BATCH})`,
+      archiveId
+    );
+    if (n < ROW_RECORD_BATCH) return;
+  }
+}
+
+/**
+ * Removes the target's own row of a replaced table, keeping the target's stored
+ * provider keys (returned for `user_settings`): those never travel, and an
+ * account that had entered some keeps them.
+ */
+async function clearReplaced(
+  db: Db,
+  table: string,
+  userId: string
+): Promise<Record<string, unknown> | null> {
+  let secrets: Record<string, unknown> | null = null;
+  if (table === "user_settings") {
+    const cols = [...USER_SETTINGS_SECRETS, ...Object.values(CREDENTIAL_ENDPOINTS)]
+      .map(quoteIdent)
+      .join(", ");
+    const [row] = await db.$queryRawUnsafe<Array<{ j: Record<string, unknown> }>>(
+      `SELECT row_to_json(x) AS j FROM (SELECT ${cols} FROM user_settings WHERE user_id = $1) x`,
+      userId
+    );
+    secrets = row?.j ?? null;
+  }
+  await db.$executeRawUnsafe(`DELETE FROM ${quoteIdent(table)} WHERE user_id = $1`, userId);
   return secrets;
 }
 

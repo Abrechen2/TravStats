@@ -11,6 +11,7 @@ import type { ScheduledTask } from "node-cron";
 import logger from "../utils/logger";
 import { backfillMissingStayFx } from "../services/lodging/stayFxBackfill";
 import { schedulerZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "../services/jobs/heavySlot";
 
 const CRON_EXPRESSION = "30 3 * * *";
 /** Out of the way of startup (migrations, seeds, the first requests). */
@@ -31,9 +32,13 @@ export function startStayFxBackfillScheduler(): void {
   if (schedulerTask) return;
   bootTimer = setTimeout(() => void runLogged("stay_fx_backfill_boot_error"), BOOT_DELAY_MS);
   bootTimer.unref?.();
-  schedulerTask = cron.schedule(CRON_EXPRESSION, () => runLogged("stay_fx_backfill_error"), {
-    timezone: schedulerZone("stayFxBackfill"),
-  });
+  schedulerTask = cron.schedule(
+    CRON_EXPRESSION,
+    () => void runHeavyJob("stayFxBackfill", () => runLogged("stay_fx_backfill_error")),
+    {
+      timezone: schedulerZone("stayFxBackfill"),
+    }
+  );
   logger.info(
     { operation: "stay_fx_backfill_scheduler_started", cron: CRON_EXPRESSION },
     "lodging FX backfill scheduler started"

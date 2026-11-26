@@ -420,6 +420,7 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
 
   // Derived or bookkeeping.
   account_archive_imports: excluded("this server's record of archives it imported"),
+  account_archive_import_rows: excluded("rows a running restore wrote, kept only to undo it"),
   analytics_events: excluded("anonymous usage telemetry"),
   aeroapi_track_attempts: excluded(BOOKKEEPING),
   client_write_refs: excluded(BOOKKEEPING),
@@ -459,6 +460,7 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   travtrack_explored_cells: excluded(DERIVED),
   travtrack_imports: excluded(BOOKKEEPING),
   travtrack_month_values: excluded(DERIVED),
+  travtrack_year_summaries: excluded(DERIVED),
   travtrack_uploads: excluded(BOOKKEEPING),
   travtrack_zone_cells: excluded(DERIVED),
 

@@ -18,6 +18,7 @@ import { pruneSyncChanges } from "../services/sync/state";
 import { pruneClientRefs } from "../services/sync/clientRef";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "../services/jobs/heavySlot";
 
 const CRON_EXPRESSION = "50 3 * * *";
 
@@ -41,7 +42,7 @@ export function startSyncRetentionScheduler(): void {
   schedulerTask = cron.schedule(
     CRON_EXPRESSION,
     () => {
-      void runSyncRetention();
+      void runHeavyJob("syncRetention", () => runSyncRetention());
     },
     { timezone: schedulerZone("syncRetention") }
   );

@@ -21,6 +21,7 @@ import { runWebdavSync } from "../services/webdavSync/runSync";
 import { WebdavSyncError } from "../services/webdavSync/errors";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "../services/jobs/heavySlot";
 
 const CRON_EXPRESSION = "15 5 * * *";
 
@@ -80,7 +81,7 @@ export function startWebdavSyncScheduler(): void {
   schedulerTask = cron.schedule(
     CRON_EXPRESSION,
     () => {
-      void runDueWebdavSyncs();
+      void runHeavyJob("webdavSync", () => runDueWebdavSyncs());
     },
     { timezone: schedulerZone("webdavSync") }
   );

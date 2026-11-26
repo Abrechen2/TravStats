@@ -9,15 +9,17 @@ import { tableEntryName } from "./format";
 import { checkFileColumns, MissingFile, type FileVerdict } from "./importFiles";
 
 /**
- * Writes an archive's rows into the target database inside the import's
- * transaction (forgejo#433): catalogue references resolved, every id re-keyed,
- * rows inserted in batches through `json_populate_recordset`, so Postgres itself
- * turns each JSON value back into its column's type.
+ * Writes an archive's rows into the target database (forgejo#433): catalogue
+ * references resolved, every id re-keyed, rows inserted in batches through
+ * `json_populate_recordset`, so Postgres itself turns each JSON value back into
+ * its column's type. Each batch commits on its own and is followed by
+ * `afterWrite` (the restore's pacing and write-slot turn, `importArchive.ts`).
  */
 
 type Row = Record<string, unknown>;
 
-const BATCH_ROWS = 500;
+/** Rows per INSERT (each its own commit since the restore is paced, perf audit item 5). */
+const BATCH_ROWS = 2000;
 const BATCH_BYTES = 4 * 1024 * 1024;
 const TEXT_LIKE = new Set(["text", "varchar", "bpchar", "jsonb", "json", "_text", "_varchar"]);
 
@@ -102,6 +104,44 @@ export interface RowContext {
   skipped: Set<string>;
   /** Rows refused, per table, and references cleared for want of a match. */
   report: { skipped: Record<string, number>; unmatched: number };
+  /**
+   * The restore's archive id: every inserted row's key is recorded under it in
+   * `account_archive_import_rows`, in the same statement, so an undo removes
+   * exactly these rows. Absent, nothing is recorded.
+   */
+  runId?: string;
+}
+
+/** The row's primary key as the text recorded for the undo. */
+export function rowKeyExpr(table: TableInfo, alias?: string): string {
+  const prefix = alias ? `${alias}.` : "";
+  return `json_build_array(${table.primaryKey.map((c) => prefix + quoteIdent(c)).join(", ")})::text`;
+}
+
+function quoteLiteral(value: string): string {
+  return `'${value.split("'").join("''")}'`;
+}
+
+/**
+ * `insert` (an INSERT ... SELECT without RETURNING) as ONE statement that also
+ * records the inserted rows' keys under `runId` (parameter `$runIdParam`).
+ * `returning` is an optional `<expr> AS <name>` the caller reads back as `name`.
+ */
+function tagged(
+  table: TableInfo,
+  insert: string,
+  runId: string | undefined,
+  runIdParam: number,
+  returning?: { expr: string; name: string }
+): string {
+  const back = returning ? `${returning.expr} AS ${returning.name}` : "";
+  if (!runId) return back ? `${insert} RETURNING ${back}` : insert;
+  return (
+    `WITH ins AS (${insert} RETURNING ${rowKeyExpr(table)} AS k${back ? `, ${back}` : ""}), ` +
+    `tag AS (INSERT INTO account_archive_import_rows (archive_id, table_name, row_key) ` +
+    `SELECT $${runIdParam}, ${quoteLiteral(table.name)}, k FROM ins) ` +
+    `SELECT ${returning ? returning.name : "count(*)::int AS n"} FROM ins`
+  );
 }
 
 /** The row cannot be imported as it stands (its file, its parent, its catalogue row is missing). */
@@ -227,13 +267,17 @@ function columnsOf(p: DataTablePlan, row: Row): string[] {
     .sort();
 }
 
-/** Inserts one table's rows; returns how many. */
+/** Serial-keyed rows are written one by one; the pause comes after this many. */
+const SERIAL_ROWS_PER_PAUSE = 500;
+
+/** Inserts one table's rows; returns how many. `afterWrite` runs after every batch. */
 export async function insertTable(
   db: Db,
   reader: ArchiveReader,
   ctx: RowContext,
   p: DataTablePlan,
-  onRow: () => void
+  onRow: () => void,
+  afterWrite: () => Promise<void> = async () => {}
 ): Promise<number> {
   let columns: string[] | null = null;
   let batch: Row[] = [];
@@ -245,13 +289,15 @@ export async function insertTable(
     const list = writeCols.map(quoteIdent).join(", ");
     // An imported account starts unshared: share keys and groups never travel, so
     // nothing here propagates to another account.
-    await db.$executeRawUnsafe(
-      `INSERT INTO ${quoteIdent(p.table.name)} (${list})
-       SELECT ${list} FROM json_populate_recordset(NULL::${quoteIdent(p.table.name)}, $1::json)`,
-      JSON.stringify(batch)
-    );
+    const insert = `INSERT INTO ${quoteIdent(p.table.name)} (${list})
+       SELECT ${list} FROM json_populate_recordset(NULL::${quoteIdent(p.table.name)}, $1::json)`;
+    const sql = tagged(p.table, insert, ctx.runId, 2);
+    const params: unknown[] = [JSON.stringify(batch), ...(ctx.runId ? [ctx.runId] : [])];
+    if (ctx.runId) await db.$queryRawUnsafe(sql, ...params);
+    else await db.$executeRawUnsafe(sql, ...params);
     batch = [];
     batchBytes = 0;
+    await afterWrite();
   };
   const ownKeys = new Map<string, string>();
   for await (const row of reader.jsonLines(tableEntryName("data", p.table.name))) {
@@ -275,7 +321,11 @@ export async function insertTable(
     count += 1;
     onRow();
     if (p.serialIdColumn) {
-      ownKeys.set(String(row[p.serialIdColumn]), await insertSerialRow(db, p, out, columns));
+      ownKeys.set(
+        String(row[p.serialIdColumn]),
+        await insertSerialRow(db, p, out, columns, ctx.runId)
+      );
+      if (count % SERIAL_ROWS_PER_PAUSE === 0) await afterWrite();
       continue;
     }
     const json = JSON.stringify(out);
@@ -292,16 +342,21 @@ async function insertSerialRow(
   db: Db,
   p: DataTablePlan,
   row: Row,
-  columns: string[]
+  columns: string[],
+  runId?: string
 ): Promise<string> {
   const writeCols = columns.filter((c) => c !== p.serialIdColumn);
   const list = writeCols.map(quoteIdent).join(", ");
   const { [p.serialIdColumn!]: _old, ...value } = row;
+  const insert = `INSERT INTO ${quoteIdent(p.table.name)} (${list})
+     SELECT ${list} FROM json_populate_record(NULL::${quoteIdent(p.table.name)}, $1::json)`;
   const [inserted] = await db.$queryRawUnsafe<Array<{ id: string }>>(
-    `INSERT INTO ${quoteIdent(p.table.name)} (${list})
-     SELECT ${list} FROM json_populate_record(NULL::${quoteIdent(p.table.name)}, $1::json)
-     RETURNING ${quoteIdent(p.serialIdColumn!)}::text AS id`,
-    JSON.stringify(value)
+    tagged(p.table, insert, runId, 2, {
+      expr: `${quoteIdent(p.serialIdColumn!)}::text`,
+      name: "id",
+    }),
+    JSON.stringify(value),
+    ...(runId ? [runId] : [])
   );
   return inserted.id;
 }
@@ -310,9 +365,13 @@ async function insertSerialRow(
 export async function applyDeferred(
   db: Db,
   updates: readonly DeferredUpdate[],
-  skipped: ReadonlySet<string>
+  skipped: ReadonlySet<string>,
+  afterWrite: () => Promise<void> = async () => {}
 ): Promise<void> {
+  let n = 0;
   for (const u of updates) {
+    n += 1;
+    if (n % SERIAL_ROWS_PER_PAUSE === 0) await afterWrite();
     if (skipped.has(u.id)) continue;
     // A key to a row refused after this one was queued stays unset.
     const values = Object.fromEntries(

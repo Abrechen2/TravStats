@@ -6,6 +6,7 @@ import { deleteAccountWithFiles } from "../files/accountFiles";
 import { cancelAccountExports, deleteAccountArchives } from "../accountArchive/archiveJobs";
 import { deleteAccountLifeBooks } from "../lifeBook/lifeBookJobs";
 import { notifyPeersOfDeparture, type DepartureNotice } from "./notifyPeersOfDeparture";
+import { LONG_JOB_STATEMENT_TIMEOUT_MS, raiseStatementTimeout } from "../db/sessionTimeouts";
 
 export interface RemovalContext {
   /** Who asked: the account itself, or the administrator who deleted it. */
@@ -99,13 +100,19 @@ export async function removeAccount(userId: string, context: RemovalContext): Pr
 async function finishDeletion(userId: string): Promise<DepartureNotice> {
   const peers = await notifyPeersOfDeparture(userId);
   await deleteAccountWithFiles(userId, () =>
-    prisma.$transaction(async (tx) => {
-      const gone = await tx.user.deleteMany({
-        where: { id: userId, deletionStartedAt: { not: null } },
-      });
-      if (gone.count !== 1) throw new AppError("The deletion is no longer reserved", 409);
-      await tx.syncChange.deleteMany({ where: { userId } });
-    })
+    prisma.$transaction(
+      async (tx) => {
+        // The cascade below is one statement through every row the account
+        // owns (1.7M TravTrack rows on the largest one): above the pool's 30 s.
+        await raiseStatementTimeout(tx, "accountDeletion");
+        const gone = await tx.user.deleteMany({
+          where: { id: userId, deletionStartedAt: { not: null } },
+        });
+        if (gone.count !== 1) throw new AppError("The deletion is no longer reserved", 409);
+        await tx.syncChange.deleteMany({ where: { userId } });
+      },
+      { timeout: LONG_JOB_STATEMENT_TIMEOUT_MS.accountDeletion }
+    )
   );
   // Finished account ZIPs (forgejo#433) are copies of every file just removed.
   await deleteAccountArchives(userId);
