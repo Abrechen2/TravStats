@@ -113,3 +113,18 @@ describe("folding quiet days", () => {
     ]);
   });
 });
+
+describe("bookings an entry carries", () => {
+  it("shows a booking once, with its entry, and not at all when the entry was cancelled", () => {
+    const state = {
+      ...routeState(),
+      items: [
+        item("ferry dinner", "2026-05-03", "19:00", { bookingId: "bk-booked", booked: true }),
+        item("dropped", "2026-05-03", "08:00", { bookingId: "bk-hold", execution: "cancelled" }),
+      ],
+    };
+    const day = buildDayPlan(state, schedule(), days).days[2];
+    expect(day.items.map((i) => i.id)).toEqual(["ferry dinner"]);
+    expect(day.bookings).toEqual([]);
+  });
+});

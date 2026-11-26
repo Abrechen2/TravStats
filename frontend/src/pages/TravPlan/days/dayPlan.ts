@@ -51,7 +51,13 @@ export function buildDayPlan(
   const station = new Map(state.stations.map((s) => [s.id, s]));
   const rows = schedule?.stations ?? [];
   const stageRows = schedule?.stages ?? [];
-  const carried = new Set(state.stages.map((g) => g.bookingId).filter(Boolean));
+  // A booking a stage or an entry carries shows there; one whose entry was skipped or cancelled
+  // stays out with it rather than coming back as a loose booking.
+  const carried = new Set(
+    [...state.stages.map((g) => g.bookingId), ...state.items.map((i) => i.bookingId)].filter(
+      Boolean
+    )
+  );
   const nightAt = (day: string) => {
     const row = rows.find(
       (r) => r.arriveDay !== null && r.departDay !== null && r.arriveDay <= day && day < r.departDay
