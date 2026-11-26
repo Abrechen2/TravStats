@@ -153,6 +153,10 @@ describe("PluginsTab", () => {
       })
     );
     await userEvent.click(await screen.findByRole("button", { name: "Zurücknehmen" }));
+    // Undo writes to the archive too: nothing until its own confirmation.
+    const undoDialog = await screen.findByRole("dialog");
+    expect(api.undoLocation).not.toHaveBeenCalled();
+    await userEvent.click(within(undoDialog).getByRole("button", { name: "Zurücknehmen" }));
     await waitFor(() => expect(api.undoLocation).toHaveBeenCalledWith("p1", "u1"));
   });
 

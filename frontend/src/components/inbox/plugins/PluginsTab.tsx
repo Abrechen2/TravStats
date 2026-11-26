@@ -1,6 +1,7 @@
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
 import Button from "../../ui/Button";
 import Toggletip from "../../ui/Toggletip";
 import { pluginRequestFailureKey, suggestionPluginsApi } from "../../../lib/api/suggestionPlugins";
@@ -29,6 +30,7 @@ export default function PluginsTab({
 }): JSX.Element {
   const { t, i18n } = useTranslation(["dataQuality", "suggestionSources"]);
   const fmt = useDisplayFormat();
+  const { confirm, confirmDialog } = useConfirmDialog();
   const locale = i18n.language?.startsWith("en") ? "en" : "de";
   const inbox = usePluginInbox(locale, true);
   const [sort, setSort] = useState<PluginSort>("severity");
@@ -243,6 +245,15 @@ export default function PluginsTab({
               </span>
               <Button
                 onClick={async () => {
+                  const ok = await confirm({
+                    title: t(`${NS}.undoConfirm.title`),
+                    message: t(`${NS}.undoConfirm.message`, {
+                      plugin: plugin.name,
+                      name: item.name,
+                    }),
+                    confirmText: t(`${NS}.undo`),
+                  });
+                  if (!ok) return;
                   setLine(null);
                   try {
                     await suggestionPluginsApi.undoLocation(plugin.id, item.undoId);
@@ -261,6 +272,7 @@ export default function PluginsTab({
           ))}
         </section>
       )}
+      {confirmDialog}
     </section>
   );
 }

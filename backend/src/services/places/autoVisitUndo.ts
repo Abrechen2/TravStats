@@ -9,6 +9,8 @@ import { prisma } from "../../db";
 import { recheckAchievements } from "../../utils/achievements";
 import { BRAND_RULE, matchesOf, undoAutoAccepted } from "./brandRules";
 
+/** A write and its bookkeeping land within this of each other; a later update is an edit. */
+const EDIT_GRACE_MS = 5_000;
 /** `created_by` values automation writes. */
 export const AUTO_CREATED_BY = [BRAND_RULE, "import", "auto", "plugin"] as const;
 /** `written_via` values that name automation (a plugin or a brand rule wrote the row). */
@@ -54,8 +56,13 @@ async function undoOne(userId: string, visitId: string): Promise<AutoUndoOutcome
         };
   }
 
+  // An edit since it was written (date, trip, place) also makes the visit the owner's.
+  const edited = visit.updatedAt.getTime() - visit.createdAt.getTime() > EDIT_GRACE_MS;
   const added =
-    !!visit.notes || visit.rating !== null || Object.values(visit._count).some((n) => n > 0);
+    edited ||
+    !!visit.notes ||
+    visit.rating !== null ||
+    Object.values(visit._count).some((n) => n > 0);
   if (added) return { visitId, outcome: "kept", reason: "ownerAdded" };
   await prisma.placeVisit.delete({ where: { id: visit.id } });
   return { visitId, outcome: "removed" };

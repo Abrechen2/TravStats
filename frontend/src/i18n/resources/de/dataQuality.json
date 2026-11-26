@@ -886,6 +886,10 @@
       "kept": "{{label}} bleibt: {{value}}",
       "undo": "Lässt sich danach zurücknehmen.",
       "button": "Bestätigen"
+    },
+    "undoConfirm": {
+      "title": "Im Projektarchiv zurücknehmen?",
+      "message": "Die vorherigen Werte von {{name}} werden wieder ins Projektarchiv ({{plugin}}) geschrieben."
     }
   }
 }

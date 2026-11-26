@@ -41,7 +41,7 @@ export function staySourcesOf(
   }
   const evidence = row.evidence as Evidence;
   for (const p of Array.isArray(evidence?.plugins) ? evidence.plugins : []) {
-    if (typeof p.pluginId !== "string") continue;
+    if (!p || typeof p !== "object" || typeof p.pluginId !== "string") continue;
     const stored = typeof p.pluginName === "string" ? p.pluginName : null;
     add({ kind: "plugin", id: p.pluginId, name: names.plugins.get(p.pluginId) ?? stored });
   }

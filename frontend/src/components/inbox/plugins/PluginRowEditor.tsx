@@ -109,6 +109,13 @@ export default function PluginRowEditor({
 
   const undo = async () => {
     if (!undoId) return;
+    // Undo writes to the archive too: it is confirmed like the write itself.
+    const ok = await confirm({
+      title: t(`${NS}.undoConfirm.title`),
+      message: t(`${NS}.undoConfirm.message`, { plugin: plugin.name, name: row.name }),
+      confirmText: t(`${NS}.undo`),
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await suggestionPluginsApi.undoLocation(plugin.id, undoId);

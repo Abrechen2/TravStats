@@ -68,7 +68,7 @@ registry.registerPath({
         .string()
         .optional()
         .describe(
-          "Only findings with this source: `smartList:<id>`, `plugin:<id>`, `plugin`, `calendar`, `travtrack` or `dawarich`. Applied to the 200 rows read"
+          "Only findings with this source: `smartList:<id>`, `plugin:<id>`, `plugin`, `calendar`, `travtrack` or `dawarich`. Up to 200 matches among the 2000 newest rows; `meta.truncated` says when cut"
         ),
     }),
   },

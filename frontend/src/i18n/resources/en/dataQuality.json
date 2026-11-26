@@ -886,6 +886,10 @@
       "kept": "{{label}} stays: {{value}}",
       "undo": "Can be undone afterwards.",
       "button": "Confirm"
+    },
+    "undoConfirm": {
+      "title": "Undo in the project archive?",
+      "message": "The previous values of {{name}} are written back to the project archive ({{plugin}})."
     }
   }
 }

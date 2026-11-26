@@ -159,6 +159,11 @@ describe("Smart lists: pending confirmations, inbox sources, automatic visits", 
     expect((await ids("travtrack")).sort()).toEqual(
       [listRow.id, pluginRow.id, calRow.id, plain.id].sort()
     );
+    // A malformed plugin entry in old evidence is skipped, never a failed inbox.
+    await stay({ evidence: { plugins: [null, { pluginId: 7 }] } });
+    expect((await request(app).get("/api/v1/dawarich-stays").set("Cookie", cookie)).status).toBe(
+      200
+    );
     const bad = await request(app).get("/api/v1/dawarich-stays?source=nope").set("Cookie", cookie);
     expect(bad.status).toBe(400);
   });
@@ -184,6 +189,18 @@ describe("Smart lists: pending confirmations, inbox sources, automatic visits", 
       ]);
       const left = await prisma.placeVisit.findMany({ where: { placeId }, select: { id: true } });
       expect(left.map((v) => v.id).sort()).toEqual([own.id, noted.id].sort());
+    });
+
+    it("keeps an automatic visit the owner edited since (date, trip, place)", async () => {
+      const v = await visit("import");
+      await prisma.placeVisit.update({
+        where: { id: v.id },
+        data: { updatedAt: new Date(v.createdAt.getTime() + 60_000) },
+      });
+      const res = await undo([v.id]);
+      expect(res.body.data.results).toEqual([
+        { visitId: v.id, outcome: "kept", reason: "ownerAdded" },
+      ]);
     });
 
     it("takes a smart list's automatic visit back through the list's undo", async () => {
