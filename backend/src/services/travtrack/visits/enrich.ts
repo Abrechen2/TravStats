@@ -19,6 +19,7 @@ import {
   type StopForPlugins,
 } from "../../plugins/ask";
 import type { NamedPlace } from "../../calendar/match";
+import { ownerStopName } from "../stopPlaces/ownerName";
 import { matchStop, withCalendar, type CalendarContext, type CalendarMatch } from "./calendarMatch";
 
 export interface EnrichContext {
@@ -41,6 +42,8 @@ export interface StopEnrichment {
   calendarFailed: boolean;
   /** Plugins that did not answer this time (asked again by `catchUpPlugins`); null: none asked. */
   pluginsPending: string[] | null;
+  /** Plugins that answered this time, "nothing here" included (the inbox offers "Neu fragen"). */
+  pluginsAnswered?: string[];
 }
 
 export interface StopInput {
@@ -98,6 +101,7 @@ export async function enrichStop(
     plugins: asked.answers,
     calendarFailed: cal.failed,
     pluginsPending: asked.asked ? asked.owedIds : null,
+    pluginsAnswered: asked.answeredIds,
   };
 }
 
@@ -112,7 +116,8 @@ const best = (answers: readonly PluginAnswer[]) =>
 export function withPlugins(
   evidence: Record<string, unknown>,
   answers: readonly PluginAnswer[],
-  pending: readonly string[] | null
+  pending: readonly string[] | null,
+  answered: readonly string[] = []
 ): Record<string, unknown> {
   const answeredIds = new Set(answers.map((a) => a.pluginId));
   const prior = Array.isArray(evidence.plugins)
@@ -140,6 +145,12 @@ export function withPlugins(
   if (plugins.length) next.plugins = plugins;
   if (stillPending.length) next.pluginsPending = stillPending;
   else delete next.pluginsPending;
+  // Which plugins were asked about this stop, so an empty answer can still be asked again.
+  const asked = new Set([
+    ...(Array.isArray(evidence.pluginsAsked) ? (evidence.pluginsAsked as string[]) : []),
+    ...answered,
+  ]);
+  if (asked.size) next.pluginsAsked = [...asked];
   if (top?.suggestion.purpose && !next.suggestedPurpose) {
     next.suggestedPurpose = top.suggestion.purpose;
     next.suggestedPurposeFrom = `plugin:${top.pluginId}`;
@@ -162,7 +173,7 @@ export function withEnrichment(
     }
   }
   if (e.pluginsPending !== null) {
-    const merged = withPlugins(next, e.plugins, e.pluginsPending);
+    const merged = withPlugins(next, e.plugins, e.pluginsPending, e.pluginsAnswered);
     if (JSON.stringify(merged) !== JSON.stringify(next)) {
       next = merged;
       changed = true;
@@ -242,24 +253,16 @@ async function stopName(
   userId: string,
   r: CatchUpRow
 ): Promise<Pick<StopForPlugins, "venue" | "nearestPlace">> {
-  if (r.name) {
-    return r.place_id
-      ? { nearestPlace: { name: r.name, distanceMeters: 0 } }
-      : { venue: { name: r.name } };
-  }
-  const from = r.source_start_at.getTime();
-  const until = r.source_end_at.getTime();
-  const named = await prisma.travTrackStopPlace.findMany({
-    where: { userId, fromMs: { lt: BigInt(until) }, untilMs: { gt: BigInt(from) } },
-    select: { name: true, fromMs: true, untilMs: true },
-    orderBy: { updatedAt: "desc" },
-    take: 5,
+  // The owner's own name for the stop first: it wins over the finding's guess.
+  const owner = await ownerStopName(userId, {
+    fromMs: r.source_start_at.getTime(),
+    untilMs: r.source_end_at.getTime(),
   });
-  const span = Math.max(1, until - from);
-  const hit = named.find(
-    (p) => (Math.min(until, Number(p.untilMs)) - Math.max(from, Number(p.fromMs))) / span > 0.5
-  );
-  return hit ? { venue: { name: hit.name } } : {};
+  if (owner) return { venue: { name: owner.name } };
+  if (!r.name) return {};
+  return r.place_id
+    ? { nearestPlace: { name: r.name, distanceMeters: 0 } }
+    : { venue: { name: r.name } };
 }
 
 /**
@@ -323,7 +326,12 @@ export async function catchUpPlugins(
     for (const [k, n] of Object.entries(asked.outcomes))
       ctx.result.plugins[k] = (ctx.result.plugins[k] ?? 0) + n;
     if (!asked.asked) return;
-    const merged = withPlugins(r.evidence as Record<string, unknown>, asked.answers, asked.owedIds);
+    const merged = withPlugins(
+      r.evidence as Record<string, unknown>,
+      asked.answers,
+      asked.owedIds,
+      asked.answeredIds
+    );
     // Nothing new (every plugin had answered already): no write, no publish.
     if (JSON.stringify(merged) === JSON.stringify(r.evidence)) continue;
     if (!(await write(r.id, merged)))

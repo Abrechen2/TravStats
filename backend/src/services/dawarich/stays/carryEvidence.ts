@@ -17,6 +17,7 @@ export function carriedEvidence(rows: readonly Carrier[]): Record<string, unknow
   const out: Record<string, unknown> = {};
   const plugins: Record<string, unknown>[] = [];
   const pending = new Set<string>();
+  const asked = new Set<string>();
   for (const row of rows) {
     const e = asRecord(row.evidence);
     if (Array.isArray(e.plugins)) {
@@ -28,11 +29,14 @@ export function carriedEvidence(rows: readonly Carrier[]): Record<string, unknow
     }
     if (Array.isArray(e.pluginsPending))
       for (const id of e.pluginsPending) if (typeof id === "string") pending.add(id);
-    for (const key of ["suggestedPurpose", "suggestedPurposeFrom", "calendar"] as const)
+    if (Array.isArray(e.pluginsAsked))
+      for (const id of e.pluginsAsked) if (typeof id === "string") asked.add(id);
+    for (const key of ["suggestedPurpose", "suggestedPurposeFrom", "calendar", "visit"] as const)
       if (e[key] !== undefined && out[key] === undefined) out[key] = e[key];
   }
   if (plugins.length) out.plugins = plugins;
   if (pending.size) out.pluginsPending = [...pending];
+  if (asked.size) out.pluginsAsked = [...asked];
   return out;
 }
 

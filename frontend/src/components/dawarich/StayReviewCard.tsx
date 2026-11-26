@@ -204,7 +204,9 @@ export default function StayReviewCard({
       )}
       {travtrack &&
       open &&
-      (row.evidence.plugins?.length || row.evidence.pluginsPending?.length) ? (
+      (row.evidence.plugins?.length ||
+        row.evidence.pluginsPending?.length ||
+        row.evidence.pluginsAsked?.length) ? (
         <StayPluginCandidates
           stayId={row.id}
           plugins={row.evidence.plugins ?? []}

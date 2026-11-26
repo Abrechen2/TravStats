@@ -8422,6 +8422,9 @@ model SuggestionPlugin {
   backfillAllowed Boolean   @default(false) @map("backfill_allowed")
   /// The contract major the plugin answered with last.
   lastVersion     Int?      @map("last_version")
+  /// What the plugin announced with its last answer or hello (version, name radius,
+  /// capabilities), as a stable string. A change re-asks the stops it answered empty.
+  announced       String?
   /// `ok` | `empty` | a failure reason of `services/plugins/client.ts`.
   lastOutcome     String?   @map("last_outcome")
   lastCalledAt    DateTime? @map("last_called_at")

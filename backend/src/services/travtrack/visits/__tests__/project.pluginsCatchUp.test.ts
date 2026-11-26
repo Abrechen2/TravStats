@@ -42,11 +42,10 @@ describe("plugins asked automatically", () => {
   let userId: string;
   const resolveStop = jest.fn<Promise<VisitResolution>, [unknown, boolean]>();
   const sent: Record<string, unknown>[] = [];
+  let reply: () => object = () => ({ version: 1, suggestions: [suggestion] });
   const fetchImpl: FetchLike = async (_url, init) => {
     sent.push(JSON.parse(String(init.body)) as Record<string, unknown>);
-    return new Response(JSON.stringify({ version: 1, suggestions: [suggestion] }), {
-      status: 200,
-    });
+    return new Response(JSON.stringify(reply()), { status: 200 });
   };
   const deps: VisitProjectionDeps = {
     now: NOW,
@@ -110,6 +109,7 @@ describe("plugins asked automatically", () => {
       },
     });
     sent.length = 0;
+    reply = () => ({ version: 1, suggestions: [suggestion] });
     resolveStop.mockReset();
     resolveStop.mockResolvedValue(noVenue);
     clearVisitRetry();
@@ -178,5 +178,26 @@ describe("plugins asked automatically", () => {
     await dwellFinding(NOW.getTime() - 20 * 86_400_000, NOW.getTime() - 20 * 86_400_000 + 30 * MIN);
     await projectVisitSuggestions(userId, deps);
     expect(sent).toHaveLength(0);
+  });
+
+  it("re-asks the stops a plugin answered empty once it announces a change (a name-match release)", async () => {
+    reply = () => ({ version: 1, suggestions: [] });
+    const older = await dwellFinding(FROM - 3 * 3_600_000, FROM - 3 * 3_600_000 + 30 * MIN);
+    await projectVisitSuggestions(userId, deps);
+    expect(sent).toHaveLength(1);
+    const asked = await prisma.dawarichStay.findUniqueOrThrow({ where: { id: older.id } });
+    // The inbox offers "Neu fragen" on an empty answer too.
+    expect(asked.evidence).toMatchObject({ pluginsAsked: [expect.any(String)] });
+    await projectVisitSuggestions(userId, deps);
+    expect(sent).toHaveLength(1);
+    // The plugin's next answer announces a name radius: its empty answers are forgotten.
+    reply = () => ({ version: 1, suggestions: [], nameRadiusMeters: 2000 });
+    await dwellFinding();
+    await projectVisitSuggestions(userId, deps);
+    expect(sent).toHaveLength(2);
+    await projectVisitSuggestions(userId, deps);
+    expect(sent).toHaveLength(3);
+    await projectVisitSuggestions(userId, deps);
+    expect(sent).toHaveLength(3);
   });
 });

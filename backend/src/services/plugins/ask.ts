@@ -21,6 +21,7 @@ import logger from "../../utils/logger";
 import { haversineKm } from "../../shared/geo/haversine";
 import { egressBlock } from "../externalServices/egress";
 import { callPlugin, type PluginOutcome } from "./client";
+import { noteAnnounced } from "./announced";
 import { targetOf, PLUGIN_SERVICE_ID, type Precision } from "./registry";
 import type { FetchLike } from "../egress/boundedFetch";
 import type { PluginSuggestion } from "./contract";
@@ -84,6 +85,8 @@ export interface AskResult {
   /** Plugins that failed or were held back: the stop is owed for them. */
   owed: number;
   owedIds: string[];
+  /** Plugins that gave an answer this time, "nothing here" included. */
+  answeredIds: string[];
   /** False when nothing could be asked at all (switched off): what was owed stays owed. */
   asked: boolean;
   /** By outcome, for the job result: ok, empty, known, held, and each failure reason. */
@@ -159,7 +162,7 @@ async function record(
   now: number
 ): Promise<void> {
   const kind = outcome.kind === "failed" ? outcome.reason : outcome.kind;
-  await prisma.suggestionPluginCall.create({
+  const call = await prisma.suggestionPluginCall.create({
     data: {
       pluginId: plugin.id,
       userId: plugin.userId,
@@ -197,6 +200,12 @@ async function record(
         ...(outcome.version !== null ? { lastVersion: outcome.version } : {}),
       },
     });
+    await noteAnnounced(
+      plugin,
+      { v: outcome.version, nr: outcome.nameRadiusMeters ?? null },
+      now,
+      call.id
+    );
   }
 }
 
@@ -243,7 +252,14 @@ export async function askPlugins(
   stop: StopForPlugins,
   deps: AskDeps = {}
 ): Promise<AskResult> {
-  const result: AskResult = { answers: [], owed: 0, owedIds: [], asked: true, outcomes: {} };
+  const result: AskResult = {
+    answers: [],
+    owed: 0,
+    owedIds: [],
+    answeredIds: [],
+    asked: true,
+    outcomes: {},
+  };
   const count = (k: string) => (result.outcomes[k] = (result.outcomes[k] ?? 0) + 1);
   const plugins = await prisma.suggestionPlugin.findMany({ where: { userId, enabled: true } });
   if (plugins.length === 0) return result;
@@ -273,6 +289,7 @@ export async function askPlugins(
       continue;
     }
     count(outcome.kind);
+    result.answeredIds.push(plugin.id);
     if (outcome.kind !== "ok") continue;
     for (const suggestion of outcome.suggestions) {
       const distanceM =
