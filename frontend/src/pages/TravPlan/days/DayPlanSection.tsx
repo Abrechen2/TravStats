@@ -1,6 +1,10 @@
-import { Card, EmptyState, Pill } from "../../../components/ui";
+import { useState } from "react";
+import { Button, Card, EmptyState, Pill, Select } from "../../../components/ui";
 import { useTranslation } from "../../../hooks/useTranslation";
-import type { PlanCtx } from "../planContext";
+import { entryRecord, type PlanCtx } from "../planContext";
+import { newEntry } from "../editorModel";
+import { PlanCheck } from "../PlanParts";
+import { StageEditor } from "../route/StageEditor";
 import { planDay, planRange } from "../format";
 import { PlanLink, PlanNotice } from "../planLayout";
 import { formatMinutes, nightTone, stageTone } from "../route/routeModel";
@@ -10,7 +14,7 @@ import { buildDayPlan, foldQuietDays, type DayLeg, type DaySpan } from "./dayPla
 import { IdeaPicker, unplannedIdeas } from "./IdeaPicker";
 import { ItemLine } from "./ItemLine";
 
-function LegLine({ leg, ctx }: { leg: DayLeg; ctx: PlanCtx }) {
+function LegLine({ leg, ctx, onEdit }: { leg: DayLeg; ctx: PlanCtx; onEdit: () => void }) {
   const { t } = useTranslation("travplan"),
     tone = stageTone(leg.stage, ctx.state.bookings),
     km = leg.stage.distanceKm === null ? null : `${Math.round(leg.stage.distanceKm)} km`,
@@ -26,13 +30,32 @@ function LegLine({ leg, ctx }: { leg: DayLeg; ctx: PlanCtx }) {
       <Pill color={TONE[tone].color} dashed={TONE[tone].dashed}>
         {t("route.tone." + tone)}
       </Pill>
+      <Button
+        disabled={ctx.busy}
+        aria-label={t("days.editLeg", { from: leg.from.title, to: leg.to.title })}
+        onClick={onEdit}
+      >
+        {t("edit")}
+      </Button>
     </li>
   );
 }
 
-function DayCard({ span, last, ctx }: { span: DaySpan; last: boolean; ctx: PlanCtx }) {
+function DayCard({
+  span,
+  last,
+  ctx,
+  onEditLeg,
+}: {
+  span: DaySpan;
+  last: boolean;
+  ctx: PlanCtx;
+  onEditLeg: (stageId: string) => void;
+}) {
   const { t } = useTranslation("travplan"),
     row = span.row,
+    spanDays = ctx.days.slice(span.first, span.last + 1),
+    [chosen, setChosen] = useState(row.day),
     route = ctx.state.shape === "route",
     empty = !row.legs.length && !row.items.length && !row.bookings.length && !row.tasks.length;
   return (
@@ -56,7 +79,7 @@ function DayCard({ span, last, ctx }: { span: DaySpan; last: boolean; ctx: PlanC
         style={{ gap: "var(--ts-space-sm)", marginTop: "var(--ts-space-md)" }}
       >
         {row.legs.map((leg) => (
-          <LegLine key={leg.stage.id} leg={leg} ctx={ctx} />
+          <LegLine key={leg.stage.id} leg={leg} ctx={ctx} onEdit={() => onEditLeg(leg.stage.id)} />
         ))}
         {row.items.map((i) => (
           <ItemLine
@@ -79,8 +102,20 @@ function DayCard({ span, last, ctx }: { span: DaySpan; last: boolean; ctx: PlanC
           </li>
         ))}
         {row.tasks.map((task) => (
-          <li key={task.id} className="t-body">
-            {t("days.task", { title: task.title })}
+          <li key={task.id}>
+            <PlanCheck
+              checked={task.done}
+              disabled={ctx.busy}
+              onChange={(done) =>
+                void ctx.mutate({
+                  type: "upsert",
+                  collection: "tasks",
+                  value: entryRecord({ ...task, done }),
+                })
+              }
+            >
+              {t("days.task", { title: task.title })}
+            </PlanCheck>
           </li>
         ))}
         {empty && <li className="t-caption">{t("days.empty")}</li>}
@@ -102,9 +137,35 @@ function DayCard({ span, last, ctx }: { span: DaySpan; last: boolean; ctx: PlanC
           )}
         </p>
       )}
-      <div style={{ marginTop: "var(--ts-space-md)" }}>
+      <div
+        className="flex flex-wrap items-center"
+        style={{ gap: "var(--ts-space-sm)", marginTop: "var(--ts-space-md)" }}
+      >
+        {spanDays.length > 1 && (
+          <Select
+            aria-label={t("days.pickDay")}
+            value={chosen}
+            disabled={ctx.busy}
+            onChange={(e) => setChosen(e.target.value)}
+            style={{ width: "12rem", flex: "none" }}
+          >
+            {spanDays.map((d) => (
+              <option key={d} value={d}>
+                {planDay(d)}
+              </option>
+            ))}
+          </Select>
+        )}
+        <Button
+          disabled={ctx.busy}
+          onClick={() =>
+            ctx.edit("items", newEntry("items", ctx.state.timezone, ctx.state.currency, chosen))
+          }
+        >
+          {t("days.addEntry")}
+        </Button>
         <IdeaPicker
-          days={ctx.days.slice(span.first, span.last + 1)}
+          day={chosen}
           ideas={unplannedIdeas(ctx.state)}
           busy={ctx.busy}
           onAssign={(ideaId, day) => {
@@ -125,9 +186,23 @@ function DayCard({ span, last, ctx }: { span: DaySpan; last: boolean; ctx: PlanC
 export function DayPlanSection({ ctx }: { ctx: PlanCtx }) {
   const { t } = useTranslation("travplan"),
     { state, plan, days, prefix } = ctx,
-    dayPlan = buildDayPlan(state, plan.schedule, days);
+    dayPlan = buildDayPlan(state, plan.schedule, days),
+    [editStage, setEditStage] = useState<string | null>(null),
+    stage = state.stages.find((g) => g.id === editStage);
   if (!days.length)
-    return <EmptyState title={t("days.noDates")} description={t("days.noDatesHint")} />;
+    return (
+      <EmptyState
+        title={t("days.noDates")}
+        description={t("days.noDatesHint")}
+        action={
+          ctx.editTrip ? (
+            <Button variant="primary" onClick={ctx.editTrip}>
+              {t("days.setDates")}
+            </Button>
+          ) : undefined
+        }
+      />
+    );
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
       {dayPlan.undated.length > 0 && (
@@ -139,8 +214,26 @@ export function DayPlanSection({ ctx }: { ctx: PlanCtx }) {
         </PlanNotice>
       )}
       {foldQuietDays(dayPlan.days).map((span) => (
-        <DayCard key={span.row.day} span={span} last={span.last === days.length - 1} ctx={ctx} />
+        <DayCard
+          key={span.row.day}
+          span={span}
+          last={span.last === days.length - 1}
+          ctx={ctx}
+          onEditLeg={setEditStage}
+        />
       ))}
+      {stage && (
+        <StageEditor
+          key={stage.id}
+          stage={stage}
+          title={t("route.stage.edit")}
+          busy={ctx.busy}
+          onClose={() => setEditStage(null)}
+          onSave={(value) =>
+            ctx.mutate({ type: "upsert", collection: "stages", value: entryRecord(value) })
+          }
+        />
+      )}
     </div>
   );
 }

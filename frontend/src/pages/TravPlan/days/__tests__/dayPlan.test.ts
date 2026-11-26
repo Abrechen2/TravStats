@@ -85,7 +85,10 @@ describe("day plan", () => {
     };
     const day = buildDayPlan(state, schedule(), days).days[1];
     expect(day.items.map((i) => i.id)).toEqual(["museum", "dinner", "someday"]);
-    expect(day.tasks.map((t) => t.title)).toEqual(["Gas"]);
+    expect(day.tasks.map((t) => [t.title, t.done])).toEqual([
+      ["Gas", false],
+      ["Done", true],
+    ]);
   });
 
   it("shows a booking with its leg, not twice", () => {

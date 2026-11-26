@@ -133,3 +133,82 @@ describe("planning an idea from the day plan", () => {
     expect(screen.queryByRole("combobox", { name: "days.pickIdea" })).not.toBeInTheDocument();
   });
 });
+
+describe("working on a day", () => {
+  const legPlan = () => {
+    const base = routePlan();
+    return {
+      ...base,
+      state: {
+        ...base.state,
+        tasks: [{ id: "t1", title: "Gas", due: "2026-05-03", done: false }],
+      },
+      schedule: {
+        ...base.schedule!,
+        stages: [{ stageId: "g1", departDay: "2026-05-03", arriveDay: "2026-05-03" }],
+      },
+    };
+  };
+  const render2 = (over: Partial<PlanCtx>) =>
+    render(
+      <MemoryRouter>
+        <DayPlanSection ctx={{ ...ctx(legPlan()), busy: false, ...over }} />
+      </MemoryRouter>
+    );
+
+  it("ticks a task off where it is due", async () => {
+    const mutate = vi.fn().mockResolvedValue(true);
+    render2({ mutate });
+    await userEvent.click(screen.getByRole("checkbox", { name: "days.task:Gas" }));
+    expect(mutate).toHaveBeenCalledWith({
+      type: "upsert",
+      collection: "tasks",
+      value: expect.objectContaining({ id: "t1", done: true }),
+    });
+  });
+
+  it("adds an entry on the day it was asked for", async () => {
+    const edit = vi.fn();
+    render2({ edit });
+    const card = screen.getByRole("heading", { name: "2026-05-03" }).closest("div")!.parentElement!;
+    await userEvent.click(within(card).getByRole("button", { name: "days.addEntry" }));
+    expect(edit).toHaveBeenCalledWith("items", expect.objectContaining({ day: "2026-05-03" }));
+  });
+
+  it("opens the leg's editor from the day it is travelled", async () => {
+    render2({});
+    await userEvent.click(screen.getByRole("button", { name: "days.editLeg:Kiel,Gothenburg" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("offers to set the dates when the trip has none", async () => {
+    const editTrip = vi.fn();
+    render(
+      <MemoryRouter>
+        <DayPlanSection ctx={{ ...ctx(routePlan(), []), editTrip }} />
+      </MemoryRouter>
+    );
+    await userEvent.click(screen.getByRole("button", { name: "days.setDates" }));
+    expect(editTrip).toHaveBeenCalled();
+  });
+});
+
+describe("a folded span", () => {
+  it("adds an entry on the day chosen inside the span, not on its first day", async () => {
+    const edit = vi.fn();
+    render(
+      <MemoryRouter>
+        <DayPlanSection ctx={{ ...ctx(routePlan()), edit, busy: false }} />
+      </MemoryRouter>
+    );
+    const card = screen
+      .getByRole("heading", { name: "2026-05-04–2026-05-06" })
+      .closest("div")!.parentElement!;
+    await userEvent.selectOptions(
+      within(card).getByRole("combobox", { name: "days.pickDay" }),
+      "2026-05-05"
+    );
+    await userEvent.click(within(card).getByRole("button", { name: "days.addEntry" }));
+    expect(edit).toHaveBeenCalledWith("items", expect.objectContaining({ day: "2026-05-05" }));
+  });
+});

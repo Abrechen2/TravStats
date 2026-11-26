@@ -84,7 +84,8 @@ export function buildDayPlan(
       legs: legsOn(day),
       items: state.items.filter((i) => i.day === day && isActive(i)).sort(byTime),
       bookings: state.bookings.filter((b) => b.day === day && !carried.has(b.id)),
-      tasks: state.tasks.filter((t) => t.due === day && !t.done),
+      // Done tasks stay on their day, ticked, so a tick can be taken back where it was made.
+      tasks: state.tasks.filter((t) => t.due === day),
       free: state.freeDays.includes(day),
     })),
     undated: state.shape === "route" ? state.stations.filter((s) => !placed.has(s.id)) : [],

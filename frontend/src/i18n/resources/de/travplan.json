@@ -804,6 +804,9 @@
     "pickIdeaPrompt_other": "+ Idee einplanen ({{count}} offen)",
     "moveItem": "Tag für {{title}}",
     "unplanItem": "{{title}} zurück zu den Ideen",
-    "unplan": "Zurück zu den Ideen"
+    "unplan": "Zurück zu den Ideen",
+    "editLeg": "Etappe {{from}} → {{to}} bearbeiten",
+    "addEntry": "+ Eintrag",
+    "setDates": "Reisedaten setzen"
   }
 }

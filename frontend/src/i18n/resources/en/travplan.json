@@ -804,6 +804,9 @@
     "pickIdeaPrompt_other": "+ Plan an idea ({{count}} open)",
     "moveItem": "Day for {{title}}",
     "unplanItem": "Put {{title}} back among the ideas",
-    "unplan": "Back to ideas"
+    "unplan": "Back to ideas",
+    "editLeg": "Edit leg {{from}} → {{to}}",
+    "addEntry": "+ Entry",
+    "setDates": "Set travel dates"
   }
 }

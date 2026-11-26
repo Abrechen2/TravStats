@@ -158,7 +158,14 @@ export default function PlanContent({
     );
     return mutate({ type: "settings", name: String(name), values: values as Partial<PlanState> });
   }
+  const editTrip = () =>
+    setEditor({
+      title: t("editTrip"),
+      fields: settingFields,
+      value: { name: plan.name, ...state },
+    });
   const ctx: PlanCtx = {
+    editTrip,
     plan,
     state,
     busy,
@@ -196,12 +203,7 @@ export default function PlanContent({
                 {
                   key: "edit",
                   label: t("editTrip"),
-                  onSelect: () =>
-                    setEditor({
-                      title: t("editTrip"),
-                      fields: settingFields,
-                      value: { name: plan.name, ...state },
-                    }),
+                  onSelect: editTrip,
                 },
                 {
                   key: "refresh",
