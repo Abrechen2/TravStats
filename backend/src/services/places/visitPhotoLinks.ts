@@ -5,6 +5,8 @@ import { getCachedAlbumAssets } from "../immich/immichAssetCache";
 import { getImmichConnection } from "../immich/immichResolver";
 import { ImmichError, type ImmichAsset, type ImmichErrorKind } from "../immich/types";
 import type { SourcedAsset } from "../photoLinking/matcher";
+import { haversineKm } from "../../shared/geo/haversine";
+import { VISIT_STOP_OPTIONS } from "../photoJourneys/visitStops";
 
 /**
  * Library photographs attached to a place visit as LINKS — a row that carries
@@ -104,11 +106,18 @@ export async function attachJourneyPhotosToVisit(
 ): Promise<AttachOutcome> {
   const journey = await prisma.photoJourney.findFirst({
     where: { id: journeyId, userId },
-    select: { previewAssetIds: true, startDate: true, endDate: true },
+    select: {
+      previewAssetIds: true,
+      startDate: true,
+      endDate: true,
+      kind: true,
+      lat: true,
+      lon: true,
+    },
   });
   const visit = await prisma.placeVisit.findFirst({
     where: { id: visitId, userId },
-    select: { id: true },
+    select: { id: true, placeId: true },
   });
   if (!journey || !visit || journey.previewAssetIds.length === 0) {
     return { kind: "linked", linked: 0, skipped: 0 };
@@ -140,6 +149,44 @@ export async function attachJourneyPhotosToVisit(
   const proven = journey.previewAssetIds
     .map((id) => byId.get(id))
     .filter((asset): asset is ImmichAsset => asset !== undefined);
-  const linked = await linkImmichAssetsToVisit(visitId, proven);
+  // A photo stop keeps only three preview ids, so linking those left a "58 photos" stop
+  // with three (#414). Its cluster is every located photo of the span within the stop's
+  // radius — the scan's own rule — and accepting the stop is the user's explicit choice
+  // for all of them, so the automatic 5–10 cap does not apply here.
+  const cluster =
+    journey.kind === "visit"
+      ? library.filter((asset) => inStopRadius(asset, journey) && !proven.includes(asset))
+      : [];
+  const linked = await linkImmichAssetsToVisit(visitId, [...proven, ...sortByTime(cluster)]);
+  if (linked > 0) await coverPlaceIfBare(visit.placeId, visitId);
   return { kind: "linked", linked, skipped: journey.previewAssetIds.length - proven.length };
+}
+
+function inStopRadius(asset: ImmichAsset, stop: { lat: number; lon: number }): boolean {
+  if (asset.lat === null || asset.lon === null) return false;
+  return haversineKm(stop, { lat: asset.lat, lon: asset.lon }) * 1000 <= VISIT_STOP_OPTIONS.radiusM;
+}
+
+function sortByTime(assets: ImmichAsset[]): ImmichAsset[] {
+  return [...assets].sort((a, b) => (a.fileCreatedAt ?? "").localeCompare(b.fileCreatedAt ?? ""));
+}
+
+/** A place with no cover takes the first photo of the visit just linked (#414). */
+async function coverPlaceIfBare(placeId: string, visitId: string): Promise<void> {
+  const place = await prisma.place.findUnique({
+    where: { id: placeId },
+    select: { coverPhotoId: true },
+  });
+  if (!place || place.coverPhotoId !== null) return;
+  const first = await prisma.placeVisitPhoto.findFirst({
+    where: { placeVisitId: visitId },
+    orderBy: { sortIdx: "asc" },
+    select: { id: true },
+  });
+  if (first) {
+    await prisma.place.updateMany({
+      where: { id: placeId, coverPhotoId: null },
+      data: { coverPhotoId: first.id },
+    });
+  }
 }

@@ -237,6 +237,36 @@ describe("visit findings (forgejo#211)", () => {
         .set("Cookie", cookie)
         .send({ status: "accepted", ...body });
 
+    it("links every photo of the stop, not only the three preview ids, and makes one the cover (#414)", async () => {
+      await scan();
+      const [row] = await pending();
+      expect(row.previewAssetIds).toHaveLength(3);
+      // A photo far from the stop in the same span is no part of it.
+      const elsewhere = asset("elsewhere", "2026-05-01T05:15:00.000Z", {
+        lat: PALACE.lat + 0.05,
+        lon: PALACE.lon,
+      });
+      searchAssetsByDate.mockResolvedValue({
+        assets: [...PALACE_STOP, elsewhere],
+        truncated: false,
+      });
+
+      const res = await accept(row.id);
+      expect(res.status).toBe(200);
+      expect(res.body.data.photos).toEqual({ kind: "linked", linked: 5, skipped: 0 });
+      const photos = await prisma.placeVisitPhoto.findMany({
+        where: { placeVisitId: res.body.data.created.placeVisitId },
+        orderBy: { sortIdx: "asc" },
+      });
+      expect(photos.map((p) => p.immichAssetId).sort()).toEqual(
+        PALACE_STOP.map((a) => a.id).sort()
+      );
+      const place = await prisma.place.findUniqueOrThrow({
+        where: { id: res.body.data.created.placeId },
+      });
+      expect(place.coverPhotoId).toBe(photos[0].id);
+    });
+
     it("creates the place and the visit in the trip, and links them to the row", async () => {
       await scan();
       const [row] = await pending();
