@@ -301,7 +301,7 @@ export function PoiTab(): JSX.Element {
       )}
       {isEmpty && (
         <MapEmptyOverlay
-          emoji="📍"
+          icon="map-pin"
           title={t("dashboard:poi.emptyTitle")}
           body={t("dashboard:poi.emptyBody")}
           ctaLabel={t("dashboard:poi.emptyCta")}

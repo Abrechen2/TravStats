@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import Button from "../ui/Button";
 import Dialog from "../ui/Dialog";
+import { EntityPicker } from "../ui/EntityPicker";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import InlineError from "../ui/InlineError";
 
 export interface GapPick<T = unknown> {
   id: string;
@@ -75,48 +75,23 @@ export default function GapEntityPicker<T>({
     >
       <div className="flex flex-col gap-3" data-testid="gap-picker">
         <p className="t-caption">{hint}</p>
-        <label className="flex flex-col gap-1 t-caption">
-          {searchLabel}
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="t-body"
-            style={{ minHeight: 44 }}
-            data-testid="gap-picker-search"
-          />
-        </label>
-        {state.kind === "loading" && <p className="t-caption">{t("track:gaps.picker.loading")}</p>}
-        {state.kind === "failed" && (
-          <div role="alert" className="flex flex-col gap-2">
-            <InlineError announce={false}>{t("track:gaps.picker.failed")}</InlineError>
-            <Button variant="secondary" onClick={() => setAttempt((n) => n + 1)}>
-              {t("track:gaps.retry")}
-            </Button>
-          </div>
-        )}
-        {state.kind === "loaded" && state.rows.length === 0 && (
-          <p className="t-body" data-testid="gap-picker-none">
-            {t("track:gaps.picker.none")}
-          </p>
-        )}
-        {state.kind === "loaded" && (
-          <ul className="flex flex-col gap-1">
-            {state.rows.map((row) => (
-              <li key={row.id}>
-                <button
-                  type="button"
-                  className="t-body"
-                  onClick={() => onPick(row)}
-                  style={{ minHeight: 44, width: "100%", textAlign: "left" }}
-                >
-                  {row.name}
-                  {row.detail ? <span className="t-caption"> · {row.detail}</span> : null}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        <EntityPicker
+          label={searchLabel}
+          query={query}
+          onQueryChange={setQuery}
+          status={state.kind === "loaded" ? "ready" : state.kind}
+          onRetry={() => setAttempt((n) => n + 1)}
+          options={
+            state.kind === "loaded" ? state.rows.map((row) => ({ ...row, label: row.name })) : []
+          }
+          onPick={(row) => onPick(row)}
+          emptyText={t("track:gaps.picker.none")}
+          loadingText={t("track:gaps.picker.loading")}
+          failedText={t("track:gaps.picker.failed")}
+          retryText={t("track:gaps.retry")}
+          searchTestId="gap-picker-search"
+          emptyTestId="gap-picker-none"
+        />
         <Button variant="secondary" onClick={onCreate} data-testid="gap-picker-create">
           {createLabel}
         </Button>

@@ -92,20 +92,7 @@ export default function SetupIncompleteBanner({
           aria-label={t("common:buttons.close")}
           className="shrink-0 rounded-md p-1 hover:bg-black/5"
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M18 6 6 18" />
-            <path d="m6 6 12 12" />
-          </svg>
+          <Icon name="x" size={16} />
         </button>
       </div>
     </div>

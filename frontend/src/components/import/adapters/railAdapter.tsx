@@ -1,3 +1,4 @@
+import { Icon } from "../../ui/Icon";
 import type { JSX } from "react";
 import { useEffect } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -47,7 +48,7 @@ export function useRailImportAdapter(): DomainImportAdapter {
     routes: [
       {
         id: "railShareLink",
-        icon: "🔗",
+        icon: <Icon name="link" size={18} />,
         title: t("rail:shareLink.title"),
         description: t("rail:shareLink.description"),
         render: (context) => <RailShareLinkRoute context={context} />,

@@ -4,7 +4,7 @@ import type { TripBusJourney } from "../../types/bus";
 
 const BUS: LegTripDomain = {
   ns: "bus",
-  icon: "🚌",
+  icon: "bus",
   openKey: "bus:tripCard.open",
   service: (ride) => {
     const bus = ride as TripBusJourney;

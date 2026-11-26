@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import type { JSX } from "react";
 import CurrencySelect from "../common/CurrencySelect";
 import CompanionPicker from "../CompanionPicker";
@@ -55,8 +56,6 @@ export interface RentalStepProps {
 const PAYMENT_TIMINGS: RentalPaymentTiming[] = ["prepaid", "pay_at_counter", "package"];
 const FUEL_POLICIES: RentalFuelPolicy[] = ["full_to_full", "prepaid_tank", "full_to_empty"];
 const PROVIDER_LIST_ID = "rental-provider-suggestions";
-const CHIP_CLASS =
-  "rounded-full border px-3 py-1 text-xs pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-4";
 
 function useSetter(update: RentalStepProps["update"]) {
   return <K extends keyof RentalDraft>(key: K, value: RentalDraft[K]): void =>
@@ -306,19 +305,13 @@ export function RentalBookingStep(props: RentalStepProps): JSX.Element {
         <legend className="text-sm">{t("rental:form.inclusions")}</legend>
         <div className="flex flex-wrap gap-2">
           {RENTAL_INCLUSIONS.map((code) => (
-            <button
+            <Chip
               key={code}
-              type="button"
-              aria-pressed={draft.inclusions.includes(code)}
+              active={draft.inclusions.includes(code)}
               onClick={(): void => toggleInclusion(code)}
-              className={`${CHIP_CLASS} ${
-                draft.inclusions.includes(code)
-                  ? "border-(--accent) text-(--accent)"
-                  : "border-border"
-              }`}
             >
               {t(`rental:inclusion.${code}`)}
-            </button>
+            </Chip>
           ))}
         </div>
       </fieldset>

@@ -90,7 +90,8 @@
     "general": "General",
     "people": "Travellers & Tags",
     "appearance": "Appearance",
-    "notes": "Notes"
+    "notes": "Notes",
+    "label": "Trip sections"
   },
   "badge": {
     "noTrip": "—"
@@ -180,7 +181,8 @@
       "map": "Map",
       "gallery": "Gallery",
       "logistics": "Logistics",
-      "tours": "Tours"
+      "tours": "Tours",
+      "label": "Trip views"
     },
     "tabPlaceholder": {
       "gallery": "Gallery comes in the next iteration once photo upload + storage are in place.",
@@ -244,7 +246,9 @@
       "ferries": "Ferries",
       "date": "Date",
       "route": "Route",
-      "open": "open"
+      "open": "open",
+      "cruiseLine": "Cruise line",
+      "cruiseFallback": "Cruise"
     },
     "timeline": {
       "addEntry": "+ Add entry",

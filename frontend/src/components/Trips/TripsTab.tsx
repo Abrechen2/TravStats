@@ -1,4 +1,7 @@
 import Dialog from "../ui/Dialog";
+import Chip from "../ui/Chip";
+import { Icon } from "../ui/Icon";
+import { SearchInput } from "../ui/SearchInput";
 import CoverCropHost from "./CoverCropHost";
 import { useGapPrefill } from "../../hooks/useGapPrefill";
 import { gapPrefill } from "../../lib/gapCalendar";
@@ -302,18 +305,11 @@ export default function TripsTab({
                 </FilterPill>
               ))}
             </div>
-            <input
-              type="search"
+            <SearchInput
+              label={t("trips:filterBar.search")}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={setSearch}
               placeholder={t("trips:filterBar.search")}
-              aria-label={t("trips:filterBar.search")}
-              className="ml-auto w-full rounded-[var(--ts-radius-button)] px-3 py-2 text-sm sm:w-60"
-              style={{
-                background: "var(--ts-surface)",
-                border: "1px solid var(--ts-border)",
-                color: "var(--ts-text-bright)",
-              }}
             />
           </div>
         )}
@@ -331,7 +327,9 @@ export default function TripsTab({
           </p>
         ) : trips.length === 0 && !filtersActive ? (
           <div className="text-center py-16">
-            <p className="text-2xl mb-2">🗺</p>
+            <p className="mb-2 flex justify-center">
+              <Icon name="map" size={24} />
+            </p>
             <p className="font-medium" style={{ color: "var(--text-primary)" }}>
               {t("trips:noTrips")}
             </p>
@@ -541,22 +539,9 @@ function FilterPill({
   children: React.ReactNode;
 }): JSX.Element {
   return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold"
-      style={{
-        background: active ? "var(--ts-accent)" : "transparent",
-        color: active ? "var(--ts-accent-text)" : "var(--ts-text-bright)",
-        border: `1px solid ${active ? "var(--ts-accent)" : "var(--ts-border)"}`,
-      }}
-    >
+    <Chip active={active} onClick={onClick} meta={String(count)}>
       {children}
-      <span className="text-xs" style={{ fontFamily: "var(--ts-font-mono)", opacity: 0.75 }}>
-        {count}
-      </span>
-    </button>
+    </Chip>
   );
 }
 

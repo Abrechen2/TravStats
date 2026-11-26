@@ -7,12 +7,14 @@
  * Data, not markup: each icon is a list of SVG elements, rendered by `Icon`
  * as React elements. No `dangerouslySetInnerHTML`, no runtime dependency.
  */
+import { MORE } from "./lucideMore";
+
 export type IconElement = readonly [
   tag: "path" | "circle" | "rect" | "line" | "polyline" | "polygon" | "ellipse",
   attrs: Readonly<Record<string, string>>,
 ];
 
-export const LUCIDE = {
+const CORE = {
   activity: [
     [
       "path",
@@ -427,5 +429,11 @@ export const LUCIDE = {
     ["path", { d: "m6 6 12 12" }],
   ],
 } as const satisfies Record<string, readonly IconElement[]>;
+
+/** The core set plus the icons added since (see `lucideMore.ts`), one lookup. */
+export const LUCIDE = { ...CORE, ...MORE } as const satisfies Record<
+  string,
+  readonly IconElement[]
+>;
 
 export type IconName = keyof typeof LUCIDE;

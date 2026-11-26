@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useCallback, useRef, useState } from "react";
 import type { JSX, ReactNode } from "react";
 
@@ -207,7 +208,7 @@ export function PhotoStrip<T extends StripPhoto>({
                   cursor: "pointer",
                 }}
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </span>
 

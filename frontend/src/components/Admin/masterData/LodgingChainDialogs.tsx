@@ -1,3 +1,4 @@
+import { SearchInput } from "../../ui/SearchInput";
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
@@ -207,12 +208,11 @@ function MergeDialog({ chain, onClose, onDone }: DialogProps): JSX.Element {
       }
     >
       <div className="flex flex-col" style={{ gap: 12 }}>
-        <Input
-          type="search"
-          aria-label={t("admin:lodgingChains.mergeSearch")}
+        <SearchInput
+          label={t("admin:lodgingChains.mergeSearch")}
           placeholder={t("admin:lodgingChains.mergeSearch")}
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={setQuery}
         />
         <Field label={t("admin:lodgingChains.mergeTarget")} htmlFor="chain-merge-target">
           <Select

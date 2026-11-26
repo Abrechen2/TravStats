@@ -204,9 +204,9 @@ describe("FlightCompleteStep status field", () => {
 
   it("renders the historical pill in amber, not red — historical is archival data, not an error", () => {
     const { container } = render(<FlightCompleteStep {...baseProps({ status: "historical" })} />);
-    const pill = container.querySelector(".rounded-full") as HTMLElement;
+    const pill = container.querySelector(".ts-chip-static") as HTMLElement;
     expect(pill).toBeTruthy();
-    expect(pill.style.color).toBe("rgb(251, 191, 36)");
+    expect(pill.style.border).toMatch(/251, 191, 36/);
   });
 
   it("reflects the status prop directly — no stale local state across a return-leg re-render", () => {

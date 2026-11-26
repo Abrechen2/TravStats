@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useState, type JSX } from "react";
 import { Link } from "react-router-dom";
 
@@ -42,7 +43,7 @@ export function TimelineNoteCard({
 
   return (
     <ExpandableEventCard
-      icon="🗒"
+      icon={<Icon name="file-text" size={18} />}
       bg="var(--ts-surface2)"
       iconColor="var(--text-muted)"
       title={headline(ev.note.body)}

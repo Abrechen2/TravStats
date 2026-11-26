@@ -4,6 +4,7 @@
  * SPECIAL_TYPE_META so the colour scheme stays consistent across
  * table / map / legend.
  */
+import Chip from "../ui/Chip";
 import { useTranslation } from "../../hooks/useTranslation";
 import { SPECIAL_TYPE_META, rgbToCss, type SpecialType } from "./specialTypeMeta";
 
@@ -15,16 +16,9 @@ export default function SpecialTypeBadge({ type }: Props): JSX.Element {
   const { t } = useTranslation(["specialFlights"]);
   const meta = SPECIAL_TYPE_META[type];
   return (
-    <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border"
-      style={{
-        background: rgbToCss(meta.rgb, 0.15),
-        borderColor: rgbToCss(meta.rgb, 0.45),
-        color: rgbToCss(meta.rgb, 1),
-      }}
-    >
+    <Chip size="sm" color={rgbToCss(meta.rgb, 1)}>
       <span aria-hidden>{meta.icon}</span>
       <span>{t(`specialFlights:specialType.${type}`)}</span>
-    </span>
+    </Chip>
   );
 }

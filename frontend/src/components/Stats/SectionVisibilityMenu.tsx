@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import { useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 
@@ -64,12 +65,9 @@ export default function SectionVisibilityMenu({ options, visibility }: Props): J
       >
         {t("stats:sections.button")}
         {visibility.hiddenCount > 0 && (
-          <span
-            className="rounded-full px-1.5 text-xs"
-            style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}
-          >
+          <Chip size="sm">
             {t("stats:sections.hiddenCount", { count: visibility.hiddenCount })}
-          </span>
+          </Chip>
         )}
         <span aria-hidden>{open ? "▾" : "▸"}</span>
       </button>

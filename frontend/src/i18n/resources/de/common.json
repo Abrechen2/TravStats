@@ -8,7 +8,7 @@
   "buttons": {
     "save": "Speichern",
     "cancel": "Abbrechen",
-    "dismiss": "Meldung ausblenden",
+    "dismiss": "Verwerfen",
     "undo": "Rückgängig",
     "delete": "Löschen",
     "duplicate": "Duplizieren",
@@ -39,7 +39,6 @@
     "no": "Nein",
     "later": "Später",
     "details": "Details",
-    "dismiss": "Verwerfen",
     "retry": "Erneut versuchen",
     "reloadList": "Liste neu laden",
     "showLess": "Weniger anzeigen",
@@ -613,6 +612,17 @@
       "month_ymd": "JJJJ-MM",
       "clock24": "HH:MM",
       "clock12": "h:MM AM"
+    }
+  },
+  "ui": {
+    "clearSearch": "Suche leeren",
+    "sortBy": "Sortieren nach {{column}}",
+    "picker": {
+      "loading": "Suche läuft …",
+      "failed": "Die Suche ist fehlgeschlagen.",
+      "retry": "Erneut versuchen",
+      "none": "Keine Treffer.",
+      "results": "Ergebnisse"
     }
   }
 }

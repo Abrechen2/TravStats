@@ -1,5 +1,6 @@
 import DateRangeField from "../../../components/ui/DateRangeField";
 import DateField from "../../../components/ui/DateField";
+import { Icon } from "../../../components/ui/Icon";
 import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { Link } from "react-router-dom";
@@ -218,7 +219,7 @@ export default function TrackRangeBar({
             fontSize: 18,
           }}
         >
-          <span aria-hidden>⚙</span>
+          <Icon name="settings" size={16} />
         </Link>
       </div>
     </div>

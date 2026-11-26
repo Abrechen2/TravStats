@@ -178,7 +178,7 @@ describe("LodgingChainDetailPage", () => {
     });
     await renderChainDetail(detail);
 
-    const row = screen.getByText("Sheraton Zürich").closest("tr");
+    const row = screen.getByText("Sheraton Zürich").closest("[role=row]");
     expect(row?.textContent).not.toMatch(/0\s?€/);
     expect(row?.textContent).toContain("—");
     expect(row?.textContent).toContain("lodging:list.spendPlanned");

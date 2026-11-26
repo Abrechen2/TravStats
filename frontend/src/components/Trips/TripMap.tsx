@@ -1,3 +1,5 @@
+import { TripMapCounts } from "./TripMapCounts";
+import Chip from "../ui/Chip";
 import { STYLE_OPTIONS } from "../Globe/globeStyles";
 import { SharedMapOverlays } from "../map/SharedMapOverlays";
 import { useBasemapStyle } from "../map/useBasemapStyle";
@@ -758,30 +760,26 @@ export default function TripMap({
           {t(trip.emptyKey ?? "trips:detail.map.empty")}
         </div>
       )}
-      <button
-        type="button"
+      <Chip
+        className="absolute top-3 right-3"
         onClick={toggleProjection}
-        className="absolute top-3 right-3 px-3 py-1.5 rounded-full text-xs font-medium transition-colors pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)"
-        style={{
-          background: "rgba(13,17,23,0.85)",
-          backdropFilter: "blur(6px)",
-          border: "1px solid var(--color-border)",
-          color: projection === "globe" ? "var(--accent)" : "var(--text-muted)",
-        }}
-        aria-pressed={projection === "globe"}
         title={t("trips:detail.map.toggleProjectionHint")}
+        active={projection === "globe"}
+        size="sm"
       >
         {t(`trips:detail.map.${projection === "globe" ? "projectionGlobe" : "projectionFlat"}`)}
-      </button>
+      </Chip>
       <div
-        className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-mono"
+        className="absolute bottom-3 right-3 px-2.5 py-1 rounded-(--ts-radius-chip) text-[10px] font-mono"
         style={{
           background: "rgba(13,17,23,0.75)",
           backdropFilter: "blur(4px)",
           color: "var(--text-muted)",
         }}
       >
-        {flightArcs.length}✈ · {cruisePaths.length}⚓ · {lodgings.length}🏨 · {stopPoints.length}📍
+        <TripMapCounts
+          n={[flightArcs.length, cruisePaths.length, lodgings.length, stopPoints.length]}
+        />
       </div>
       {!empty && (
         <div

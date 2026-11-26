@@ -1,3 +1,4 @@
+import { Icon, type IconName } from "../ui/Icon";
 import { useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
@@ -18,7 +19,7 @@ export type LegTrip = TripBusJourney | TripFerryJourney;
 export interface LegTripDomain {
   /** i18n namespace and the route segment (`/bus/:id`) alike. */
   ns: "bus" | "ferry";
-  icon: string;
+  icon: IconName;
   /** Full i18n key of the link to the ride's own page. */
   openKey: string;
   /** "Kobus · Premium" — the operator and the line or vessel, whatever is known. */
@@ -59,7 +60,7 @@ export function LegTripCard({
   return (
     <ExpandableEventCard
       mark={<OperatorMarkTile name={ride.operator} domain={ns} size={MARK_PX} />}
-      icon={domain.icon}
+      icon={<Icon name={domain.icon} size={18} />}
       bg={`color-mix(in srgb, var(--ts-domain-${ns}) 18%, transparent)`}
       iconColor={`var(--ts-domain-${ns})`}
       title={`${ride.depStationName} → ${ride.arrStationName}`}

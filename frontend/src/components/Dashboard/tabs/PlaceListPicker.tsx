@@ -1,3 +1,4 @@
+import { Icon } from "../../ui/Icon";
 import type { JSX } from "react";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -101,7 +102,7 @@ export function PlaceListPicker({ touch }: { touch: boolean }): JSX.Element {
         style={rowStyle}
       >
         <span aria-hidden="true" style={{ width: 14 }}>
-          {checked ? "✓" : ""}
+          {checked ? <Icon name="check" size={14} /> : null}
         </span>
         <span className="flex-1 truncate">{choice.label}</span>
       </button>
@@ -155,7 +156,7 @@ export function PlaceListPicker({ touch }: { touch: boolean }): JSX.Element {
             style={rowStyle}
           >
             <span aria-hidden="true" style={{ width: 14 }}>
-              {selection.length === 0 ? "✓" : ""}
+              {selection.length === 0 ? <Icon name="check" size={14} /> : null}
             </span>
             <span className="flex-1 truncate">{t("dashboard:domainFilter.placeLists.all")}</span>
           </button>

@@ -40,6 +40,7 @@ import MailIntakeSection from "../components/inbox/MailIntakeSection";
 import MailboxScanSection from "../components/inbox/MailboxScanSection";
 import { usePhotoJourneysVisible } from "../components/inbox/usePhotoJourneysVisible";
 import PluginsTab from "../components/inbox/plugins/PluginsTab";
+import { Tabs } from "../components/ui/Tabs";
 
 type PageTab = "inbox" | "sharing" | "documents" | "plugins";
 const PAGE_TABS: readonly PageTab[] = ["inbox", "sharing", "documents", "plugins"];
@@ -92,40 +93,19 @@ export default function PendingUpdatesPage(): JSX.Element {
           meta={t("dataQuality:inbox.description")}
         />
 
-        <div
-          role="tablist"
-          className="mb-6 flex overflow-x-auto scrollbar-none"
-          style={{ borderBottom: "1px solid var(--ts-border)" }}
-        >
-          {tabs.map((item) => {
-            const active = tab === item.key;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() =>
-                  setSearchParams(item.key === "inbox" ? {} : { tab: item.key }, {
-                    replace: true,
-                  })
-                }
-                className="flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-3 text-sm"
-                style={{
-                  fontWeight: active ? 700 : 500,
-                  color: active ? "var(--ts-text-bright)" : "var(--ts-muted)",
-                  boxShadow: `inset 0 -2px 0 ${active ? "var(--ts-accent)" : "transparent"}`,
-                }}
-              >
-                {item.label}
-                {item.count !== null && (
-                  <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
-                    {item.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        <div className="mb-6">
+          <Tabs
+            label={t("dataQuality:inbox.tabsLabel")}
+            value={tab}
+            onChange={(key) =>
+              setSearchParams(key === "inbox" ? {} : { tab: key }, { replace: true })
+            }
+            tabs={tabs.map((item) => ({
+              value: item.key,
+              label: item.label,
+              count: item.count,
+            }))}
+          />
         </div>
 
         {/* Lockouts and uploads with retention deadlines precede record questions. */}

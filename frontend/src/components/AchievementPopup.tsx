@@ -4,6 +4,8 @@
  * Displays a celebration popup when user unlocks new achievements
  */
 
+import Chip from "./ui/Chip";
+import { Icon } from "./ui/Icon";
 import { useEffect, useState, useRef } from "react";
 import { useTranslation } from "../hooks/useTranslation";
 import { useEscapeClose } from "../hooks/useEscapeClose";
@@ -157,14 +159,7 @@ export default function AchievementPopup({
           style={{ color: "var(--text-muted)" }}
           aria-label={t("common:buttons.close")}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
+          <Icon name="x" size={20} />
         </button>
 
         {/* Achievement Icon */}
@@ -188,7 +183,8 @@ export default function AchievementPopup({
               className="text-sm font-semibold uppercase tracking-wider mb-2"
               style={{ color: "var(--text-muted)" }}
             >
-              🏆 {t("achievements:popup.unlocked")}
+              <Icon name="trophy" size={16} className="mr-1 inline" />{" "}
+              {t("achievements:popup.unlocked")}
             </div>
             <h2 className="text-3xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
               {currentAchievement.achievement.name}
@@ -200,23 +196,12 @@ export default function AchievementPopup({
 
           {/* Tier Badge */}
           <div className="flex items-center justify-center gap-2">
-            <span
-              className={`
-              px-4 py-2 rounded-full text-sm font-bold uppercase
-              bg-linear-to-r ${tierColors[tier]}
-              text-white shadow-lg
-            `}
-            >
+            <Chip active uppercase>
               {t(`achievements:tiers.${tier}`)} {t("achievements:popup.tier")}
-            </span>
-            <span
-              className={`
-              px-3 py-1 rounded-full text-xs font-semibold
-              bg-blue-900 text-blue-200
-            `}
-            >
+            </Chip>
+            <Chip tone="info" size="sm">
               +{currentAchievement.achievement.points} {t("achievements:popup.points")}
-            </span>
+            </Chip>
           </div>
 
           {/* Progress Indicator */}
@@ -267,7 +252,8 @@ export default function AchievementPopup({
                 onClick={handleClose}
                 className={`w-full px-4 py-2 rounded-lg font-medium bg-linear-to-r ${tierColors[tier]} text-white shadow-lg hover:shadow-xl transition-all`}
               >
-                {t("achievements:popup.awesome")} 🎉
+                {t("achievements:popup.awesome")}{" "}
+                <Icon name="party-popper" size={16} className="ml-1 inline" />
               </button>
             )}
           </div>

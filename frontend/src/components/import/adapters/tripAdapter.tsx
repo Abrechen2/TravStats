@@ -1,3 +1,4 @@
+import { Icon } from "../../ui/Icon";
 import { useCallback, useRef, useState } from "react";
 import { isGapPrefill } from "../../../lib/gapCalendar";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -96,7 +97,7 @@ export function useTripImportAdapter(onTripsChanged: () => void): DomainImportAd
     routes: [
       {
         id: "from-existing",
-        icon: "🧩",
+        icon: <Icon name="puzzle" size={18} />,
         title: t("import:trip.fromExisting.title"),
         description: t("import:trip.fromExisting.description"),
         primary: true,
@@ -116,7 +117,7 @@ export function useTripImportAdapter(onTripsChanged: () => void): DomainImportAd
       },
       {
         id: "from-file",
-        icon: "📦",
+        icon: <Icon name="package" size={18} />,
         title: t("import:tripFile.routeTitle"),
         description: t("import:tripFile.routeDescription"),
         actionLabel: t("import:tripFile.action"),

@@ -5,7 +5,7 @@ import type { TripFerryJourney } from "../../types/ferry";
 
 const FERRY: LegTripDomain = {
   ns: "ferry",
-  icon: "⛴",
+  icon: "ship",
   openKey: "ferry:details",
   service: (ride) => {
     const ferry = ride as TripFerryJourney;

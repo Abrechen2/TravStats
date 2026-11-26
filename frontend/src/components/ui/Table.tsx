@@ -1,4 +1,5 @@
 import { createContext, useContext, useLayoutEffect, useRef, useState } from "react";
+import { SortButton, ariaSortOf } from "./SortButton";
 import type { CSSProperties, ReactNode } from "react";
 
 interface ListRowProps {
@@ -97,8 +98,19 @@ export function ListRow({
   );
 }
 
+/** A column the list can be sorted by. `Table` draws the header button and `aria-sort`. */
+export interface ColumnSort {
+  active: boolean;
+  order: "asc" | "desc";
+  onSort: () => void;
+  /** "Nach Name sortieren". */
+  ariaLabel: string;
+}
+
 export interface TableColumn {
   key: string;
+  /** Present: the header is a sort button (see `useSort`). */
+  sort?: ColumnSort;
   label: ReactNode;
   /**
    * The narrowest this column can be and still say what it says, in CSS px.
@@ -284,12 +296,26 @@ export function Table({
             <span
               key={column.key}
               role="columnheader"
+              aria-sort={
+                column.sort ? ariaSortOf(column.sort.active, column.sort.order) : undefined
+              }
               className="t-label-mono"
               data-narrow={column.onNarrow ?? "hide"}
               data-stepped-aside={hiddenKeys.has(column.key) ? "yes" : undefined}
               style={{ textAlign: column.align === "end" ? "right" : "left", minWidth: 0 }}
             >
-              {column.label}
+              {column.sort ? (
+                <SortButton
+                  active={column.sort.active}
+                  order={column.sort.order}
+                  onSort={column.sort.onSort}
+                  ariaLabel={column.sort.ariaLabel}
+                >
+                  {column.label}
+                </SortButton>
+              ) : (
+                column.label
+              )}
             </span>
           ))}
         </div>

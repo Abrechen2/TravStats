@@ -1,4 +1,5 @@
 import Dialog from "../ui/Dialog";
+import { Icon } from "../ui/Icon";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -239,7 +240,7 @@ export default function DomainImportPanel({
             <div ref={documentRouteRef}>
               <ImportRouteRow
                 primary
-                icon="✉️"
+                icon={<Icon name="mail" size={18} />}
                 title={adapter.documentRoute?.title ?? t("import:route.document.title")}
                 description={
                   adapter.documentRoute?.description ?? t("import:route.document.description")

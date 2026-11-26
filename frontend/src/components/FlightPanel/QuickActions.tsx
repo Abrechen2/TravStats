@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import type { Flight } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -25,11 +26,19 @@ export function QuickActions({
     <div className="flex gap-1 items-center shrink-0" onClick={stop} onMouseEnter={stop}>
       {(
         [
-          { label: "✏️", title: t("common:buttons.edit"), onClick: () => onEdit(flight) },
-          { label: "🗺️", title: t("flights:quickActions.showOnMap"), onClick: onMapFocus },
-          { label: "📊", title: t("flights:quickActions.stats"), onClick: onStatsToggle },
-          { label: "📋", title: t("common:buttons.duplicate"), onClick: () => onDuplicate(flight) },
-          { label: "🗑️", title: t("common:buttons.delete"), onClick: () => onDelete(flight.id) },
+          { label: "pencil", title: t("common:buttons.edit"), onClick: () => onEdit(flight) },
+          { label: "map", title: t("flights:quickActions.showOnMap"), onClick: onMapFocus },
+          { label: "bar-chart-3", title: t("flights:quickActions.stats"), onClick: onStatsToggle },
+          {
+            label: "copy",
+            title: t("common:buttons.duplicate"),
+            onClick: () => onDuplicate(flight),
+          },
+          {
+            label: "trash-2",
+            title: t("common:buttons.delete"),
+            onClick: () => onDelete(flight.id),
+          },
         ] as const
       ).map(({ label, title, onClick }) => (
         <button
@@ -42,7 +51,7 @@ export function QuickActions({
           type="button"
           aria-label={title}
         >
-          {label}
+          <Icon name={label} size={14} />
         </button>
       ))}
     </div>

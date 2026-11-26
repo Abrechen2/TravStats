@@ -1,23 +1,13 @@
+import { DOMAIN_ICON as LINE_ICON } from "../ui/domainIcons";
+import { Icon, type IconName } from "../ui/Icon";
 import { entryCountdown, nextUpCountdownKey } from "./nextUpCountdown";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { UpcomingEntry } from "../../lib/api/upcoming";
 
-const DOMAIN_ICON: Record<UpcomingEntry["domain"], string> = {
-  flight: "✈",
-  cruise: "⚓",
-  lodging: "🏨",
-  poi: "📍",
-  roadtrip: "🚐",
-  rail: "🚆",
-  rental: "🚗",
-  // B2 (spec 2026-10-07 §8): /upcoming names a bus ride only once B2 lands.
-  bus: "🚌",
-  ferry: "⛴",
-  tour: "🥾",
-  trip: "🧳",
-};
+const entryIconName = (domain: UpcomingEntry["domain"]): IconName =>
+  domain === "trip" ? "luggage" : LINE_ICON[domain];
 
 /**
  * Where a click goes: the ITEM's own page.
@@ -86,7 +76,7 @@ export function NextUpEntry({ entry, nowMs }: NextUpEntryProps): JSX.Element {
       }}
     >
       <span aria-hidden style={{ opacity: 0.8 }}>
-        {DOMAIN_ICON[entry.domain]}
+        <Icon name={entryIconName(entry.domain)} size={14} />
       </span>
       <span style={{ color: "var(--accent)", fontWeight: 600, whiteSpace: "nowrap" }}>
         {t("dashboard:nextUp.label")} · {countdown}
@@ -116,7 +106,7 @@ export function NextUpEntry({ entry, nowMs }: NextUpEntryProps): JSX.Element {
             whiteSpace: "nowrap",
           }}
         >
-          🧳 {entry.tripName}
+          <Icon name="luggage" size={14} /> {entry.tripName}
         </span>
       )}
       {entry.secondary && (

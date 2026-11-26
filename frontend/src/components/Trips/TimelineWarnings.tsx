@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -57,7 +58,7 @@ export function TimelineWarnings({
           }}
         >
           <span role="note">
-            <span aria-hidden="true">⚠︎ </span>
+            <Icon name="triangle-alert" size={14} className="mr-1 inline" />
             {t(`trips:detail.plausibility.${f.code}`)}
           </span>
           {path && (

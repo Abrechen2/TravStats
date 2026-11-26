@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import type { JSX } from "react";
 
 import Dialog from "../ui/Dialog";
@@ -91,7 +92,7 @@ export default function AchievementDetailModal({
       title={
         <span className="flex items-center gap-3">
           <span className="text-3xl" aria-hidden="true">
-            {isMystery ? "❔" : achievement.icon}
+            {isMystery ? <Icon name="circle-help" size={24} /> : achievement.icon}
           </span>
           <span>{name}</span>
         </span>

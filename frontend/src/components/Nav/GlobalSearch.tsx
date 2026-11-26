@@ -1,3 +1,5 @@
+import Chip from "../ui/Chip";
+import { SearchInput } from "../ui/SearchInput";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -12,7 +14,6 @@ import {
 } from "../../lib/api/search";
 import { useDisplayFormat } from "../../lib/format";
 import { TOUR_COLOR, type DomainKey } from "../../shared/domains";
-import { Icon } from "../ui/Icon";
 import { useAuthStore } from "../../store/authStore";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useToursVisible } from "../../hooks/useToursVisible";
@@ -157,35 +158,28 @@ export default function GlobalSearch(): JSX.Element {
 
   return (
     <div ref={boxRef} className="relative" data-testid="global-search">
-      <div
-        className="flex items-center gap-1 rounded-md px-2"
-        style={{ height: 36, background: "var(--ts-tile)", color: "var(--ts-muted)" }}
-      >
-        <Icon name="search" size={16} />
-        <input
-          ref={inputRef}
-          type="search"
-          role="combobox"
-          aria-expanded={showPanel}
-          aria-controls={listId}
-          aria-autocomplete="list"
-          aria-activedescendant={showPanel && listLength > 0 ? optionId(active) : undefined}
-          aria-label={t("dashboard:search.ariaLabel")}
-          title={t("dashboard:search.shortcutHint")}
-          placeholder={t("dashboard:search.placeholder")}
-          value={value}
-          maxLength={100}
-          onChange={(e) => {
-            setValue(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          onKeyDown={onInputKey}
-          className="w-14 min-[380px]:w-24 bg-transparent text-sm outline-hidden focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-(--ts-accent) sm:w-36 lg:w-52"
-          style={{ color: "var(--ts-text-bright)" }}
-          autoComplete="off"
-        />
-      </div>
+      <SearchInput
+        variant="inline"
+        inputClassName="w-14 min-[380px]:w-24 sm:w-36 lg:w-52"
+        inputRef={inputRef}
+        role="combobox"
+        aria-expanded={showPanel}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-activedescendant={showPanel && listLength > 0 ? optionId(active) : undefined}
+        label={t("dashboard:search.ariaLabel")}
+        title={t("dashboard:search.shortcutHint")}
+        placeholder={t("dashboard:search.placeholder")}
+        value={value}
+        maxLength={100}
+        onChange={(next) => {
+          setValue(next);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onKeyDown={onInputKey}
+        autoComplete="off"
+      />
 
       {showPanel && (
         <div
@@ -204,23 +198,18 @@ export default function GlobalSearch(): JSX.Element {
             {chipDomains.map((domain) => {
               const on = only.includes(domain);
               return (
-                <button
+                <Chip
                   key={domain}
-                  type="button"
+                  size="sm"
                   tabIndex={-1}
-                  aria-pressed={on}
-                  data-testid={`search-chip-${domain}`}
+                  active={on}
+                  color={colorFor(domain)}
+                  testId={`search-chip-${domain}`}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => toggleChip(domain)}
-                  className="rounded-full px-2 py-0.5 text-xs pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-3"
-                  style={{
-                    background: on ? colorFor(domain) : "transparent",
-                    color: on ? "var(--ts-bg)" : "var(--ts-muted)",
-                    border: `1px solid ${on ? colorFor(domain) : "var(--ts-border)"}`,
-                  }}
                 >
                   {t(`dashboard:search.group.${domain}`)}
-                </button>
+                </Chip>
               );
             })}
           </div>

@@ -1,3 +1,4 @@
+import Chip from "./ui/Chip";
 import {
   useId,
   useMemo,
@@ -142,9 +143,6 @@ export default function TagInput({
   };
 
   const activeOption = open && active >= 0 && active < options.length ? active : -1;
-  const chipStyle: CSSProperties | undefined = accent
-    ? { background: `${accent}1f`, border: `1px solid ${accent}66`, color: accent }
-    : undefined;
 
   return (
     <div className="relative">
@@ -160,26 +158,18 @@ export default function TagInput({
         }}
       >
         {value.map((tag) => (
-          <span
+          <Chip
             key={tag}
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-sm ${
-              accent ? "" : "border border-border bg-(--bg-elevated) text-(--text-primary)"
-            }`}
-            style={chipStyle}
+            size="sm"
+            color={accent}
+            onRemove={() => remove(tag)}
+            removeLabel={removeLabel ? removeLabel(tag) : t("tagInput.remove", { name: tag })}
+            // The test i18n mock ignores interpolation, so every chip's label
+            // reads the same there; a per-tag id is what can address one.
+            removeTestId={`tag-remove-${tag}`}
           >
             {tag}
-            <button
-              type="button"
-              aria-label={removeLabel ? removeLabel(tag) : t("tagInput.remove", { name: tag })}
-              // The test i18n mock ignores interpolation, so every chip's label
-              // reads the same there; a per-tag id is what can address one.
-              data-testid={`tag-remove-${tag}`}
-              onClick={() => remove(tag)}
-              className="opacity-70 hover:opacity-100"
-            >
-              ×
-            </button>
-          </span>
+          </Chip>
         ))}
         <input
           ref={inputRef}

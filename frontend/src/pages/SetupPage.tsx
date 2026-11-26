@@ -1,3 +1,4 @@
+import { Icon } from "../components/ui/Icon";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authApi, settingsApi, setupApi, versionApi } from "../lib/api";
@@ -170,15 +171,18 @@ export default function SetupPage(): JSX.Element {
       <div className="max-w-md w-full">
         <div className="bg-(--bg-elevated) rounded-lg shadow-xl p-8">
           <div className="text-center mb-8">
-            <div className="text-5xl mb-4">✈️</div>
+            <div className="mb-4 flex justify-center" style={{ color: "var(--ts-accent)" }}>
+              <Icon name="plane" size={24} />
+            </div>
             <h1 className="t-screen-title mb-2">
               {t("setup:title", { appName: t("common:app.name") })}
             </h1>
             <p className="text-(--text-muted)">{t("setup:subtitle")}</p>
           </div>
 
-          <p className="text-sm text-center text-(--text-muted) mb-6">
-            🔒 {t("setup:privacy.items.dataStays")}
+          <p className="text-sm text-center text-(--text-muted) mb-6 flex items-center justify-center gap-2">
+            <Icon name="lock" size={16} />
+            {t("setup:privacy.items.dataStays")}
           </p>
 
           {!success && demoAccountAvailable && (
@@ -217,7 +221,9 @@ export default function SetupPage(): JSX.Element {
                   border: "1px solid rgba(63,185,80,0.35)",
                 }}
               >
-                <div className="text-5xl mb-4">✅</div>
+                <div className="mb-4 flex justify-center" style={{ color: "var(--success)" }}>
+                  <Icon name="circle-check" size={24} />
+                </div>
                 <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--success)" }}>
                   {t("setup:success.title")}
                 </h2>

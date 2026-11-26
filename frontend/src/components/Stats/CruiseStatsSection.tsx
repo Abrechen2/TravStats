@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useEffect, useState } from "react";
 import { statsApi, type CruiseStatsResponse } from "../../lib/api/stats";
 import { cruiseApi } from "../../lib/api/cruise";
@@ -181,8 +182,8 @@ export default function CruiseStatsSection({
           color: "var(--text-muted)",
         }}
       >
-        <p className="mb-2 text-3xl" aria-hidden>
-          🚢
+        <p className="mb-2 flex justify-center" aria-hidden>
+          <Icon name="ship" size={24} />
         </p>
         <p className="font-medium text-(--text-primary)">{t("stats:cruiseSection.emptyTitle")}</p>
         <p className="mt-1 text-sm">{t("stats:cruiseSection.emptyHint")}</p>
@@ -498,24 +499,26 @@ export default function CruiseStatsSection({
       {show("flags") && (
         <div className="flex flex-wrap gap-2 text-xs">
           {stats.hasBalconyCabin && (
-            <Flag label={t("stats:cruiseSection.flags.balcony")} emoji="🏝️" />
+            <Flag label={t("stats:cruiseSection.flags.balcony")} icon="tree-palm" />
           )}
-          {stats.hasSuiteCabin && <Flag label={t("stats:cruiseSection.flags.suite")} emoji="👑" />}
-          {stats.hasPolar && <Flag label={t("stats:cruiseSection.flags.polar")} emoji="🧊" />}
+          {stats.hasSuiteCabin && (
+            <Flag label={t("stats:cruiseSection.flags.suite")} icon="crown" />
+          )}
+          {stats.hasPolar && <Flag label={t("stats:cruiseSection.flags.polar")} icon="snowflake" />}
           {stats.hasColdWater && (
-            <Flag label={t("stats:cruiseSection.flags.coldWater")} emoji="❄️" />
+            <Flag label={t("stats:cruiseSection.flags.coldWater")} icon="snowflake" />
           )}
           {stats.hasCanalTransit && (
-            <Flag label={t("stats:cruiseSection.flags.canal")} emoji="⛴️" />
+            <Flag label={t("stats:cruiseSection.flags.canal")} icon="ship" />
           )}
           {stats.hasDatelineCrossing && (
-            <Flag label={t("stats:cruiseSection.flags.dateline")} emoji="🌐" />
+            <Flag label={t("stats:cruiseSection.flags.dateline")} icon="globe" />
           )}
           {stats.hasBirthdayAtSea && (
-            <Flag label={t("stats:cruiseSection.flags.birthday")} emoji="🎂" />
+            <Flag label={t("stats:cruiseSection.flags.birthday")} icon="cake" />
           )}
           {stats.hasNewYearsAtSea && (
-            <Flag label={t("stats:cruiseSection.flags.newYears")} emoji="🎇" />
+            <Flag label={t("stats:cruiseSection.flags.newYears")} icon="sparkles" />
           )}
         </div>
       )}

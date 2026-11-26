@@ -1,8 +1,9 @@
+import { DOMAIN_ICON as LINE_ICON } from "../ui/domainIcons";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { UpcomingEntry } from "../../lib/api/upcoming";
-import { Icon } from "../ui/Icon";
+import { Icon, type IconName } from "../ui/Icon";
 import { entryCountdown, nextUpCountdownKey } from "./nextUpCountdown";
 
 /**
@@ -20,20 +21,8 @@ import { entryCountdown, nextUpCountdownKey } from "./nextUpCountdown";
  * one the design reserves for chrome, and the "+ hinzufügen" button above it
  * is cleared by the same `top: 64` offset `GlobeStatsCard` already uses.
  */
-const DOMAIN_ICON: Record<UpcomingEntry["domain"], string> = {
-  flight: "✈",
-  cruise: "⚓",
-  lodging: "🏨",
-  poi: "📍",
-  roadtrip: "🚐",
-  rail: "🚆",
-  rental: "🚗",
-  // B2 (spec 2026-10-07 §8): /upcoming names a bus ride only once B2 lands.
-  bus: "🚌",
-  ferry: "⛴",
-  tour: "🥾",
-  trip: "🧳",
-};
+const entryIconName = (domain: UpcomingEntry["domain"]): IconName =>
+  domain === "trip" ? "luggage" : LINE_ICON[domain];
 
 /** Where a click goes: the ITEM's own page (see NextUpEntry — same rule, #314). */
 const DOMAIN_DETAIL_ROUTE: Record<UpcomingEntry["domain"], string> = {
@@ -116,7 +105,7 @@ export function MapNextUpCard({ entry, nowMs }: MapNextUpCardProps): JSX.Element
         }}
       >
         <span aria-hidden style={{ opacity: 0.8, flexShrink: 0 }}>
-          {DOMAIN_ICON[entry.domain]}
+          <Icon name={entryIconName(entry.domain)} size={14} />
         </span>
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {entry.primary}
@@ -161,7 +150,7 @@ export function MapNextUpCard({ entry, nowMs }: MapNextUpCardProps): JSX.Element
             whiteSpace: "nowrap",
           }}
         >
-          🧳 {entry.tripName}
+          <Icon name="luggage" size={14} /> {entry.tripName}
         </span>
       )}
     </div>

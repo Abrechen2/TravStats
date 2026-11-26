@@ -33,7 +33,7 @@ describe("AirportAutocomplete — AIRPORT_LOOKUP_UNAVAILABLE (503)", () => {
   async function typeCode(): Promise<void> {
     render(<AirportAutocomplete value={null} onChange={vi.fn()} label="Nach" />);
     await act(async () => {});
-    const input = screen.getByRole("textbox");
+    const input = screen.getByRole("combobox");
     input.focus();
     fireEvent.change(input, { target: { value: "ZZZ" } });
     await act(async () => {

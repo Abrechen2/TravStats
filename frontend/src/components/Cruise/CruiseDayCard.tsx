@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import { useEffect, useRef } from "react";
 import EntryPhotos from "../common/EntryPhotos";
 import type { JSX } from "react";
@@ -86,9 +87,9 @@ export function CruiseDayCard({
         {stop ? `${t("detail.day")} ${stop.dayNumber}` : null}
         {entry.date ? <span>· {formatLocalDate(entry.date)}</span> : null}
         {isToday && (
-          <span className="rounded-full bg-(--ts-domain-cruise) px-2 py-0.5 text-xs text-(--bg-base)">
+          <Chip size="sm" active color="var(--ts-domain-cruise)">
             {t("dayCard.today")}
-          </span>
+          </Chip>
         )}
       </h3>
       <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm">

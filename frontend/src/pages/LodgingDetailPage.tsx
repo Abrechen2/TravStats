@@ -1,3 +1,4 @@
+import Chip from "../components/ui/Chip";
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { useEffect, useState } from "react";
 import TagChips from "../components/common/TagChips";
@@ -611,13 +612,9 @@ export default function LodgingDetailPage(): JSX.Element {
             <DetailSection title={t("lodging:field.amenities")}>
               <div className="flex flex-wrap gap-1.5">
                 {lodging.amenities.map((a) => (
-                  <span
-                    key={a}
-                    className="rounded-full border px-2.5 py-0.5 text-xs"
-                    style={{ borderColor: "var(--ts-border)", color: "var(--ts-text)" }}
-                  >
+                  <Chip key={a} size="sm">
                     {a}
-                  </span>
+                  </Chip>
                 ))}
               </div>
             </DetailSection>

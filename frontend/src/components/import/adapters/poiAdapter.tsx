@@ -1,3 +1,4 @@
+import { Icon } from "../../ui/Icon";
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { DomainImportAdapter } from "../types";
@@ -31,7 +32,7 @@ export function usePoiImportAdapter(): DomainImportAdapter {
     routes: [
       {
         id: "search",
-        icon: "🔎",
+        icon: <Icon name="search" size={18} />,
         title: t("import:poi.search.title"),
         description: t("import:poi.search.description"),
         primary: true,
@@ -40,7 +41,7 @@ export function usePoiImportAdapter(): DomainImportAdapter {
       },
       {
         id: "on-map",
-        icon: "📍",
+        icon: <Icon name="map-pin" size={18} />,
         title: t("import:poi.onMap.title"),
         description: t("import:poi.onMap.description"),
         actionLabel: t("import:poi.onMap.action"),

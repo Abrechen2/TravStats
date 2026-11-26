@@ -1,3 +1,5 @@
+import { Tabs } from "../ui/Tabs";
+import type { IconName } from "../ui/Icon";
 import type { JSX } from "react";
 import { useToursVisible } from "../../hooks/useToursVisible";
 import { useNavigate } from "react-router-dom";
@@ -5,7 +7,6 @@ import { useTranslation } from "../../hooks/useTranslation";
 import type { DashboardTab } from "../../types/dashboard";
 import type { UpcomingEntry } from "../../lib/api/upcoming";
 import { NextUpEntry } from "./NextUpEntry";
-import { Icon, type IconName } from "../ui/Icon";
 import { DASHBOARD_TABS } from "../../types/dashboard";
 import { DOMAINS, isValidDomain, type DomainKey } from "../../shared/domains";
 
@@ -134,9 +135,7 @@ export function DomainTabStrip({
 
   return (
     <div
-      role="tablist"
-      aria-label={t("dashboard:tabStrip.label")}
-      className="flex items-center overflow-x-auto whitespace-nowrap scrollbar-none"
+      className="flex items-center"
       style={{
         background: "var(--ts-bg)",
         padding: "0 16px",
@@ -145,82 +144,68 @@ export function DomainTabStrip({
         fontSize: 14,
       }}
     >
-      {visibleTabs.map((tab) => {
-        const isActive = tab === active;
-        // `tab` ranges over every DASHBOARD_TAB, but `enabled`/`counts` are
-        // keyed by DOMAIN — "Touren" is a tab with no domain behind it, so it
-        // is never dimmed (there is nothing to disable) and never carries a
-        // count badge (there is nothing this strip fetched to count).
-        const domain = isValidDomain(tab) ? (tab as TabDomain) : null;
-        const isDisabled = domain !== null && !enabled[domain];
-        const count = domain === null ? null : counts[domain];
-        const scheduled = domain === null ? 0 : (scheduledCounts?.[domain] ?? 0);
-        const label = t(`dashboard:tabStrip.tabs.${tab}`);
-        const icon = TAB_ICON[tab as keyof typeof TAB_ICON];
-        // A dimmed tab used to be a dead end: `onSelect` navigated to
-        // /dashboard/<domain>, and `useDashboardRoute` bounced straight back
-        // to /dashboard, so the pointer cursor promised an action that never
-        // happened and nothing said why (beta audit 2026-09-19, forgejo#88
-        // P5). The click now goes to the domain's OWN route, where
-        // `DomainRouteGuard` draws `DomainDisabledNotice` with the link that
-        // switches the area back on — and the hint says so before the click.
-        const disabledHint = isDisabled ? t("dashboard:tabStrip.disabledHint") : undefined;
-
-        return (
-          <button
-            key={tab}
-            role="tab"
-            aria-selected={isActive}
-            // No `aria-disabled`: the tab IS operable, and says where it
-            // goes. It carried one while the click did nothing, which was at
-            // least honest then; keeping it once the click reaches the notice
-            // would tell assistive tech to skip the only route back to the
-            // switch (review, 2026-09-19). `data-disabled` stays -- it is
-            // what dims the tab, and dimming is a fact about the AREA, not a
+      <Tabs
+        label={t("dashboard:tabStrip.label")}
+        borderless
+        className="min-w-0"
+        value={active}
+        onChange={(tab) => {
+          const domain = isValidDomain(tab) ? (tab as TabDomain) : null;
+          // A dimmed tab used to be a dead end: `onSelect` navigated to
+          // /dashboard/<domain>, and `useDashboardRoute` bounced straight back
+          // to /dashboard, so the pointer cursor promised an action that never
+          // happened and nothing said why (beta audit 2026-09-19, forgejo#88
+          // P5). The click now goes to the domain's OWN route, where
+          // `DomainRouteGuard` draws `DomainDisabledNotice` with the link that
+          // switches the area back on — and the hint says so before the click.
+          if (domain !== null && !enabled[domain]) navigate(DOMAINS[domain].routePrefix);
+          else onSelect(tab);
+        }}
+        tabs={visibleTabs.map((tab) => {
+          // `tab` ranges over every DASHBOARD_TAB, but `enabled`/`counts` are
+          // keyed by DOMAIN — "Touren" is a tab with no domain behind it, so it
+          // is never dimmed (there is nothing to disable) and never carries a
+          // count badge (there is nothing this strip fetched to count).
+          const domain = isValidDomain(tab) ? (tab as TabDomain) : null;
+          const isDisabled = domain !== null && !enabled[domain];
+          const count = domain === null ? null : counts[domain];
+          const scheduled = domain === null ? 0 : (scheduledCounts?.[domain] ?? 0);
+          const label = t(`dashboard:tabStrip.tabs.${tab}`);
+          const disabledHint = isDisabled ? t("dashboard:tabStrip.disabledHint") : undefined;
+          return {
+            value: tab,
+            label,
+            icon: TAB_ICON[tab as keyof typeof TAB_ICON] ?? undefined,
+            // No `aria-disabled`: the tab IS operable, and says where it goes.
+            // Keeping one once the click reaches the notice would tell
+            // assistive tech to skip the only route back to the switch
+            // (review, 2026-09-19). `dimmed` is a fact about the AREA, not a
             // claim about this control.
-            data-disabled={isDisabled ? "true" : "false"}
-            title={disabledHint}
-            aria-label={disabledHint === undefined ? undefined : `${label} — ${disabledHint}`}
-            onClick={() =>
-              isDisabled && domain !== null ? navigate(DOMAINS[domain].routePrefix) : onSelect(tab)
-            }
-            className="flex shrink-0 items-center"
-            style={{
-              gap: 8,
-              padding: "14px 14px",
-              background: "transparent",
-              color: isActive ? "var(--ts-text-bright)" : "var(--ts-muted)",
-              boxShadow: `inset 0 -2px 0 ${isActive ? "var(--ts-accent)" : "transparent"}`,
-              opacity: isDisabled ? 0.55 : 1,
-              fontWeight: isActive ? 700 : 500,
-              cursor: "pointer",
-              border: "none",
-              borderRadius: 0,
-            }}
-          >
-            {icon && <Icon name={icon} size={16} />}
-            {label}
-            {count !== null && (
-              <span
-                className="t-caption"
-                style={{ fontFamily: "var(--ts-font-mono)", fontWeight: 400 }}
-              >
-                {count}
-                {scheduled > 0 && (
-                  <span style={{ marginLeft: 4 }}>
-                    {t(
-                      domain !== null && PLANNED_IS_INCLUDED[domain] === true
-                        ? "dashboard:tabStrip.scheduledHint"
-                        : "dashboard:tabStrip.plannedExtraHint",
-                      { count: scheduled }
-                    )}
-                  </span>
-                )}
-              </span>
-            )}
-          </button>
-        );
-      })}
+            dimmed: isDisabled,
+            title: disabledHint,
+            name: disabledHint === undefined ? undefined : `${label} — ${disabledHint}`,
+            extra:
+              count !== null ? (
+                <span
+                  className="t-caption"
+                  style={{ fontFamily: "var(--ts-font-mono)", fontWeight: 400 }}
+                >
+                  {count}
+                  {scheduled > 0 && (
+                    <span style={{ marginLeft: 4 }}>
+                      {t(
+                        domain !== null && PLANNED_IS_INCLUDED[domain] === true
+                          ? "dashboard:tabStrip.scheduledHint"
+                          : "dashboard:tabStrip.plannedExtraHint",
+                        { count: scheduled }
+                      )}
+                    </span>
+                  )}
+                </span>
+              ) : undefined,
+          };
+        })}
+      />
       {nextUp && <NextUpEntry entry={nextUp} nowMs={nowMs} />}
     </div>
   );

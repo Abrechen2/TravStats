@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useState, useRef, useEffect } from "react";
 import { trainingApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
@@ -555,7 +556,8 @@ export default function BoardingPassAnnotation({
             }}
           >
             <p className="text-sm" style={{ color: "var(--accent)" }}>
-              🔍 OCR läuft... Text wird extrahiert...
+              <Icon name="search" size={14} className="mr-1 inline" /> OCR läuft... Text wird
+              extrahiert...
             </p>
           </div>
         )}
@@ -603,7 +605,7 @@ export default function BoardingPassAnnotation({
                     style={{ color: "var(--accent)" }}
                     aria-label={`Tag ${tag} entfernen`}
                   >
-                    ×
+                    <Icon name="x" size={16} />
                   </button>
                 </span>
               ))}

@@ -1,4 +1,5 @@
 import DateRangeField from "../../components/ui/DateRangeField";
+import { Icon } from "../../components/ui/Icon";
 import { useId, useState } from "react";
 import { Button, Chip, Dialog, Field, Input, Select } from "../../components/ui";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -311,7 +312,7 @@ export function PlanCreate({
                   aria-label={t("delete")}
                   onClick={() => setHeld(held.filter((_, j) => j !== i))}
                 >
-                  ×
+                  <Icon name="x" size={16} />
                 </Button>
               </div>
             </div>

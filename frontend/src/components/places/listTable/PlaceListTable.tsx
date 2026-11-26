@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { logger } from "../../../lib/logger";
 import { getListMembers } from "../../../lib/api/placeLists";
-import { SortableHeader } from "../../table/SortableHeader";
+import { SortButton } from "../../ui/SortButton";
 import TablePagination from "../../table/TablePagination";
 import { useServerPagination } from "../../table/useServerPagination";
 import type { ListMembersPage, ListSortKey } from "../../../types/placeList";
@@ -104,15 +104,16 @@ export default function PlaceListTable({
   };
 
   const header = (key: ListSortKey, label: string) => (
-    <SortableHeader
-      column={key}
-      sortBy={sort}
-      sortOrder={order}
-      onSort={(k) => setSort(k, k === sort ? (order === "asc" ? "desc" : "asc") : firstOrderOf(k))}
+    <SortButton
+      active={sort === key}
+      order={order}
+      onSort={() =>
+        setSort(key, key === sort ? (order === "asc" ? "desc" : "asc") : firstOrderOf(key))
+      }
       ariaLabel={t("places:lists.table.sortBy", { col: label })}
     >
       {label}
-    </SortableHeader>
+    </SortButton>
   );
 
   const rows = data?.rows ?? [];

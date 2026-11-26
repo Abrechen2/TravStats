@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import Button from "../ui/Button";
@@ -32,7 +33,11 @@ export default function FlightReportActions({
       aria-label={t("stats:reportActions.label")}
       className="mb-4 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-end"
     >
-      <Button variant="primary" onClick={onGenerateCertificate} icon={<span aria-hidden>✈</span>}>
+      <Button
+        variant="primary"
+        onClick={onGenerateCertificate}
+        icon={<Icon name="plane" size={16} />}
+      >
         {t("stats:certificate.generate")}
       </Button>
       <Button variant="secondary" onClick={onYearReport} disabled={yearReportDisabled}>

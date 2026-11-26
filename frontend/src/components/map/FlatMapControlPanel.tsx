@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { usesOwnGeoServer } from "../../lib/ownGeoServer";
 // Consolidated control panel for the flat 2D routes map.
 //
@@ -111,14 +112,14 @@ export function FlatMapControlPanel({
                 <Toggle
                   checked={showPlaceLabels}
                   onChange={onShowPlaceLabelsChange}
-                  icon="🗺️"
+                  icon="map"
                   label={t("map:globe.panel.placeLabels")}
                 />
                 {!usesOwnGeoServer() && (
                   <Toggle
                     checked={showTerrain}
                     onChange={onShowTerrainChange}
-                    icon="⛰️"
+                    icon="mountain"
                     label={t("map:globe.panel.terrain")}
                   />
                 )}
@@ -129,8 +130,8 @@ export function FlatMapControlPanel({
                   className="mb-1 flex items-center gap-2 px-1 text-xs font-medium"
                   style={{ color: TEXT }}
                 >
-                  <span aria-hidden style={{ opacity: 0.9 }}>
-                    🏷️
+                  <span aria-hidden style={{ opacity: 0.9 }} className="flex">
+                    <Icon name="tag" size={14} />
                   </span>
                   {t("map:globe.panel.labels")}
                 </div>

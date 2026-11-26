@@ -39,7 +39,6 @@
     "no": "No",
     "later": "Later",
     "details": "Details",
-    "dismiss": "Dismiss",
     "retry": "Try again",
     "reloadList": "Reload list",
     "showLess": "Show less",
@@ -613,6 +612,17 @@
       "month_ymd": "YYYY-MM",
       "clock24": "HH:MM",
       "clock12": "h:MM AM"
+    }
+  },
+  "ui": {
+    "clearSearch": "Clear search",
+    "sortBy": "Sort by {{column}}",
+    "picker": {
+      "loading": "Searching …",
+      "failed": "The search failed.",
+      "retry": "Try again",
+      "none": "No matches.",
+      "results": "Results"
     }
   }
 }

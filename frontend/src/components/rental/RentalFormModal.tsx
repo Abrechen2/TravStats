@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { GapDates } from "../../lib/gapCalendar";
-import type { JSX, KeyboardEvent } from "react";
 import Dialog from "../ui/Dialog";
+import type { JSX } from "react";
 import {
   FormErrorBanner,
   RequiredLegend,
@@ -32,6 +32,7 @@ import {
   type RentalFormStep,
 } from "./rentalFormSteps";
 import { RentalBookingStep, RentalPickupStep, RentalReturnStep } from "./RentalFormStepViews";
+import { Tabs, tabId, tabPanelId } from "../ui/Tabs";
 
 interface Props {
   rental: RentalBooking | null;
@@ -51,8 +52,7 @@ interface Props {
   initialDates?: GapDates;
 }
 
-const tabId = (step: RentalFormStep): string => `rental-form-step-${step}`;
-const panelId = (step: RentalFormStep): string => `rental-form-panel-${step}`;
+const TAB_PREFIX = "rental-form";
 const STEP_VIEWS = {
   booking: RentalBookingStep,
   pickup: RentalPickupStep,
@@ -155,15 +155,6 @@ export function RentalFormModal({
     errorOf,
   };
   const next = RENTAL_FORM_STEPS[RENTAL_FORM_STEPS.indexOf(step) + 1];
-  const moveBetweenTabs = (e: KeyboardEvent<HTMLDivElement>): void => {
-    const delta = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-    if (delta === 0) return;
-    e.preventDefault();
-    const count = RENTAL_FORM_STEPS.length;
-    const to = RENTAL_FORM_STEPS[(RENTAL_FORM_STEPS.indexOf(step) + delta + count) % count];
-    setStep(to);
-    document.getElementById(tabId(to))?.focus();
-  };
 
   return (
     <Dialog
@@ -227,42 +218,26 @@ export function RentalFormModal({
               : undefined
           }
         />
-        <div
-          role="tablist"
-          aria-label={t("rental:form.steps.label")}
-          className="flex gap-1"
-          onKeyDown={moveBetweenTabs}
-        >
-          {RENTAL_FORM_STEPS.map((s) => (
-            <button
-              key={s}
-              id={tabId(s)}
-              type="button"
-              role="tab"
-              aria-selected={step === s}
-              aria-controls={panelId(s)}
-              // Roving tab stop (WAI-ARIA tabs): Tab reaches the chosen step,
-              // the arrow keys move between steps.
-              tabIndex={step === s ? 0 : -1}
-              onClick={(): void => setStep(s)}
-              className={`flex-1 rounded-md border px-3 py-2 text-sm pointer-coarse:min-h-(--ts-size-touch-min) ${
-                step === s
-                  ? "border-(--accent) font-medium text-(--accent)"
-                  : "border-border text-(--text-muted)"
-              }`}
-            >
-              {t(`rental:form.steps.${s}`)}
-              {perStep[s] > 0 ? (
-                <span className="ml-1 text-(--danger)" data-testid={`rental-step-gaps-${s}`}>
+        <Tabs
+          label={t("rental:form.steps.label")}
+          variant="pill"
+          idPrefix={TAB_PREFIX}
+          value={step}
+          onChange={setStep}
+          tabs={RENTAL_FORM_STEPS.map((s) => ({
+            value: s,
+            label: t(`rental:form.steps.${s}`),
+            extra:
+              perStep[s] > 0 ? (
+                <span className="text-(--danger)" data-testid={`rental-step-gaps-${s}`}>
                   <span aria-hidden="true">({perStep[s]})</span>
                   <span className="sr-only">
                     {t("rental:form.steps.gaps", { count: perStep[s] })}
                   </span>
                 </span>
-              ) : null}
-            </button>
-          ))}
-        </div>
+              ) : null,
+          }))}
+        />
         {/* Every step stays mounted, the others hidden: a station search typed
             but not yet picked, or the address mode, survives a step switch
             (review, minor 5). The draft itself lives above all three. */}
@@ -271,9 +246,9 @@ export function RentalFormModal({
           return (
             <div
               key={s}
-              id={panelId(s)}
+              id={tabPanelId(TAB_PREFIX, s)}
               role="tabpanel"
-              aria-labelledby={tabId(s)}
+              aria-labelledby={tabId(TAB_PREFIX, s)}
               hidden={step !== s}
             >
               <View {...stepProps} />

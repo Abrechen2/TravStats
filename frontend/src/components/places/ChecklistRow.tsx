@@ -1,4 +1,5 @@
 import type { JSX, ReactNode } from "react";
+import { Icon } from "../ui/Icon";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { FlagImg } from "../../lib/countryFlag";
@@ -100,7 +101,7 @@ export function ChecklistRow({
           lineHeight: "22px",
         }}
       >
-        {item.ticked ? "✓" : ""}
+        {item.ticked ? <Icon name="check" size={14} /> : null}
       </button>
 
       <div className="min-w-0 flex-1">

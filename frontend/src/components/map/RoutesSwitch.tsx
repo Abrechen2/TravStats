@@ -35,7 +35,7 @@ export function RoutesSwitch({ domain }: { domain: RouteDomain }): JSX.Element {
       <Toggle
         checked={blocked ? true : checked}
         onChange={(v) => setVisible(domain, v)}
-        icon="🛤️"
+        icon="route"
         label={t("map:globe.panel.routes")}
         sub={
           blocked ? t(`map:globe.panel.routesBlocked.${blocked}`) : t("map:globe.panel.routesHint")

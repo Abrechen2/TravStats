@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import type { Flight } from "../../types";
 import { FlagImg } from "../../lib/countryFlag";
 
@@ -20,7 +21,12 @@ export default function RouteCell({ flight }: { flight: Flight }): JSX.Element {
           {/* No rotation: U+2708 already points due east, so the 45° this used
               to carry tipped the nose down and read as a plane going in
               (Alex, Discord 2026-08-09). Level flight is the unrotated glyph. */}
-          <span className="text-[16px] mx-0.5 inline-block">✈</span>
+          <Icon
+            name="plane"
+            size={16}
+            className="mx-0.5 inline-block"
+            style={{ transform: "rotate(45deg)" }}
+          />
           <span className="inline-block w-3 h-px" style={{ background: "var(--color-border)" }} />
         </span>
         <FlagImg country={flight.arrCountry} height={12} />

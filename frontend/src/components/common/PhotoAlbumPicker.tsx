@@ -1,3 +1,4 @@
+import { SearchInput } from "../ui/SearchInput";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
@@ -89,14 +90,11 @@ export function PhotoAlbumPicker({ target, onPick, onCancel, minSize }: Props): 
         </button>
       </div>
       <p className="t-caption">{t("common:photoChoose.album.hint")}</p>
-      <input
-        type="search"
+      <SearchInput
+        label={t("common:photoChoose.album.filter")}
         value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        aria-label={t("common:photoChoose.album.filter")}
+        onChange={setFilter}
         placeholder={t("common:photoChoose.album.filter")}
-        className="rounded-md px-3 text-sm"
-        style={{ minHeight: minSize, border: "1px solid var(--color-border)", background: "none" }}
       />
       {shown.length === 0 && <p className="t-caption">{t("common:photoChoose.album.noSource")}</p>}
       {shown.map((provider) => {

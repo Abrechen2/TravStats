@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { usesOwnGeoServer } from "../../lib/ownGeoServer";
 // Consolidated map control panel for the globe.
 //
@@ -165,27 +166,27 @@ export function GlobeControlPanel({
                 <Toggle
                   checked={showNight}
                   onChange={onShowNightChange}
-                  icon="🌓"
+                  icon="sun-moon"
                   label={t("map:globe.panel.dayNight")}
                 />
                 <Toggle
                   checked={showPlaceLabels}
                   onChange={onShowPlaceLabelsChange}
-                  icon="🗺️"
+                  icon="map"
                   label={t("map:globe.panel.placeLabels")}
                 />
                 {!usesOwnGeoServer() && (
                   <Toggle
                     checked={showTerrain}
                     onChange={onShowTerrainChange}
-                    icon="⛰️"
+                    icon="mountain"
                     label={t("map:globe.panel.terrain")}
                   />
                 )}
                 <Toggle
                   checked={autoRotate}
                   onChange={onAutoRotateChange}
-                  icon="🌍"
+                  icon="globe"
                   label={t("map:globe.autoRotation")}
                 />
               </div>
@@ -195,8 +196,8 @@ export function GlobeControlPanel({
                   className="mb-1 flex items-center gap-2 px-1 text-xs font-medium"
                   style={{ color: TEXT }}
                 >
-                  <span aria-hidden style={{ opacity: 0.9 }}>
-                    🏷️
+                  <span aria-hidden style={{ opacity: 0.9 }} className="flex">
+                    <Icon name="tag" size={14} />
                   </span>
                   {t("map:globe.panel.labels")}
                 </div>
@@ -358,7 +359,7 @@ export function GlobeControlPanel({
               }}
               title={t("map:globe.recenterHint")}
             >
-              <span aria-hidden>🧭</span>
+              <Icon name="compass" size={14} />
               {t("map:globe.recenter")}
             </button>
             <select
@@ -376,14 +377,14 @@ export function GlobeControlPanel({
               {/* Options MUST be styled explicitly — the popup ignores the
                   select's colours on Windows and was white-on-white (#196). */}
               <option value="auto" style={PANEL_OPTION_STYLE}>
-                ⚡ {t("map:globe.performanceAuto")} (
+                {t("map:globe.performanceAuto")} (
                 {lite ? t("map:globe.performanceOn") : t("map:globe.performanceOff")})
               </option>
               <option value="on" style={PANEL_OPTION_STYLE}>
-                ⚡ {t("map:globe.performanceOn")}
+                {t("map:globe.performanceOn")}
               </option>
               <option value="off" style={PANEL_OPTION_STYLE}>
-                ⚡ {t("map:globe.performanceOff")}
+                {t("map:globe.performanceOff")}
               </option>
             </select>
           </div>

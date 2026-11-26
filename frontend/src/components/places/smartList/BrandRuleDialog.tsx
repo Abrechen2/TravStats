@@ -1,3 +1,4 @@
+import Chip from "../../ui/Chip";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import Dialog from "../../ui/Dialog";
@@ -268,23 +269,15 @@ export function BrandRuleDialog({
           ) : (
             <ul className="flex flex-wrap gap-2" style={{ listStyle: "none", padding: 0 }}>
               {brands.map((b) => (
-                <li
-                  key={b.brandWikidataId}
-                  className="flex items-center gap-1 rounded-full px-3 py-1 text-sm"
-                  style={{ border: "1px solid var(--color-border)", color: "var(--text-primary)" }}
-                >
-                  {b.brandName}
-                  <button
-                    type="button"
-                    aria-label={t("places:smartList.removeBrand", { name: b.brandName })}
-                    onClick={() =>
+                <li key={b.brandWikidataId}>
+                  <Chip
+                    onRemove={() =>
                       setBrands((all) => all.filter((x) => x.brandWikidataId !== b.brandWikidataId))
                     }
-                    className={`px-1 ${COARSE}`}
-                    style={{ color: "var(--text-muted)" }}
+                    removeLabel={t("places:smartList.removeBrand", { name: b.brandName })}
                   >
-                    ×
-                  </button>
+                    {b.brandName}
+                  </Chip>
                 </li>
               ))}
             </ul>

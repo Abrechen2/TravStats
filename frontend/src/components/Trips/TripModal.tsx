@@ -3,6 +3,8 @@ import type { Trip } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTripModalForm } from "./tripModalForm";
 import { AppearanceTab, GeneralTab, NotesTab, PeopleTab, TABS } from "./tripModalParts";
+import { Tabs } from "../ui/Tabs";
+import { Icon } from "../ui/Icon";
 
 interface TripModalProps {
   trip: Trip | null; // null = create mode
@@ -49,34 +51,21 @@ export default function TripModal({
         </>
       }
     >
-      <div
-        className="flex gap-1 pb-3"
-        style={{ borderBottom: "1px solid var(--color-border)" }}
-        role="tablist"
-      >
-        {TABS.map((tDef) => {
-          const active = f.tab === tDef.id;
-          return (
-            <button
-              key={tDef.id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => f.setTab(tDef.id)}
-              className="px-3 py-2 text-sm rounded-t-md transition-colors flex items-center gap-1.5"
-              style={{
-                background: active ? "var(--bg-surface)" : "transparent",
-                borderBottom: active ? "2px solid var(--accent)" : "2px solid transparent",
-                color: active ? "var(--text-primary)" : "var(--text-secondary)",
-                fontWeight: active ? 600 : 400,
-                marginBottom: "-1px",
-              }}
-            >
-              <span>{tDef.icon}</span>
-              <span>{t(`trips:modalTabs.${tDef.id}`)}</span>
-            </button>
-          );
-        })}
+      <div className="pb-3">
+        <Tabs
+          label={t("trips:modalTabs.label")}
+          value={f.tab}
+          onChange={f.setTab}
+          tabs={TABS.map((tDef) => ({
+            value: tDef.id,
+            label: (
+              <>
+                <Icon name={tDef.icon} size={16} />
+                {t(`trips:modalTabs.${tDef.id}`)}
+              </>
+            ),
+          }))}
+        />
       </div>
 
       <div className="space-y-4">

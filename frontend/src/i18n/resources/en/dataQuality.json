@@ -542,7 +542,8 @@
       "documents": "Documents",
       "plugins": "Plugins",
       "documentsLink": "{{count}} documents waiting to be filed"
-    }
+    },
+    "tabsLabel": "Inbox and sharing"
   },
   "flag": {
     "unnamedRecord": "Record without a name",

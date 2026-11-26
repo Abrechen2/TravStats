@@ -3,6 +3,7 @@
 // hover tooltip — and sits in a fixed corner instead of floating over the dot,
 // so it can neither run off a tablet's edge nor hide the thing it describes.
 
+import { Icon } from "../ui/Icon";
 import { type JSX } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -67,7 +68,7 @@ export function TripMapInfoCard({
           aria-label={t("trips:detail.map.info.close")}
           className={`rounded-md px-2 ${coarse ? "min-h-(--ts-size-touch-min) min-w-(--ts-size-touch-min)" : "py-0.5"}`}
         >
-          ×
+          <Icon name="x" size={16} />
         </button>
       </div>
       <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>

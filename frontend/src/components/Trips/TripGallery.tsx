@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useRef, useState } from "react";
 import type { LinkedAlbum } from "../../types/immich";
 import type { TripPhoto } from "../../types";
@@ -244,7 +245,7 @@ function PhotoTile({ photo, onClick, onDelete }: PhotoTileProps): JSX.Element {
         }}
         aria-label={t("common:buttons.delete")}
       >
-        ✕
+        <Icon name="x" size={16} />
       </button>
       {photo.caption && (
         <div

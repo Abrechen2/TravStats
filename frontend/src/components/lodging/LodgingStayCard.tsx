@@ -1,3 +1,5 @@
+import Chip from "../ui/Chip";
+import { Icon } from "../ui/Icon";
 import { useState } from "react";
 import OverflowMenu from "../ui/OverflowMenu";
 import { useChangeHistoryMenu } from "../changeHistory/useChangeHistoryMenu";
@@ -146,25 +148,21 @@ export function LodgingStayCard({
         <StayStatusPill status={stay.status} testId={`stay-status-${stay.id}`} />
         <PurposeChip entry={stay} />
         {stay.isAwardStay && (
-          <span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-xs font-medium text-[var(--accent)]">
+          <Chip size="sm" tone="accent">
             {t("lodging:field.awardStay")}
-          </span>
+          </Chip>
         )}
         {stay.tripId && tripName && (
-          <span
-            data-testid={`stay-trip-pill-${stay.id}`}
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
-            style={{ background: "rgba(240,169,71,0.13)", color: "var(--accent)" }}
-          >
-            🧳 {t("lodging:field.trip")}: {tripName}
-          </span>
+          <Chip size="sm" tone="accent" testId={`stay-trip-pill-${stay.id}`} icon="luggage">
+            {t("lodging:field.trip")}: {tripName}
+          </Chip>
         )}
         {membershipName !== undefined && (
           <span
             data-testid={`stay-membership-chip-${stay.id}`}
             className="inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--bg-surface-2,transparent)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
           >
-            🎖️ {membershipName}
+            <Icon name="award" size={14} /> {membershipName}
             {membershipSource && membershipSource !== "none" && (
               <span className="text-[var(--text-faint,#5c6878)]">
                 ({t(`lodging:field.membershipSource.${membershipSource}`)})

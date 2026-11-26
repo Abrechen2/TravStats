@@ -542,7 +542,8 @@
       "documents": "Dokumente",
       "plugins": "Plugins",
       "documentsLink": "{{count}} Dokumente warten auf Zuordnung"
-    }
+    },
+    "tabsLabel": "Posteingang und Teilen"
   },
   "flag": {
     "unnamedRecord": "Eintrag ohne Namen",

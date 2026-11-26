@@ -1,4 +1,5 @@
 import DateField from "../../components/ui/DateField";
+import Chip from "../ui/Chip";
 import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import Dialog from "../ui/Dialog";
@@ -304,21 +305,11 @@ export function VisitDialog({
           <legend className="t-caption mb-1">{t("places:visit.when")}</legend>
           <div className="flex flex-wrap gap-2">
             {MODES.map((m) => (
-              <button
+              <Chip
                 key={m}
-                type="button"
-                aria-pressed={mode === m}
+                color="var(--domain-poi)"
+                active={mode === m}
                 onClick={() => setMode(m)}
-                className={`rounded-full px-4 py-2 text-sm ${COARSE}`}
-                style={
-                  mode === m
-                    ? {
-                        border: "1px solid var(--domain-poi)",
-                        color: "var(--domain-poi)",
-                        background: "var(--domain-poi-soft)",
-                      }
-                    : { border: "1px solid var(--color-border)", color: "var(--text-muted)" }
-                }
               >
                 {t(`places:visit.mode.${m}`)}
                 {/* The day in words, not ISO: the default writes a date, so it
@@ -326,7 +317,7 @@ export function VisitDialog({
                 {m === "today" && mode === "today"
                   ? ` · ${formatDayLong(today, i18n.language, { day: "numeric", month: "short" })}`
                   : ""}
-              </button>
+              </Chip>
             ))}
           </div>
         </fieldset>

@@ -53,7 +53,7 @@ import { makeRental } from "./rentalFixture";
 // By id and text, not by role: role queries walk the accessibility tree of
 // all three mounted steps on every call.
 const tab = (step: string): HTMLElement =>
-  document.getElementById(`rental-form-step-${step}`) as HTMLElement;
+  document.getElementById(`rental-form-tab-${step}`) as HTMLElement;
 const panel = (step: string): HTMLElement =>
   document.getElementById(`rental-form-panel-${step}`) as HTMLElement;
 const save = (): HTMLElement => screen.getByText("rental:form.save");

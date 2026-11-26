@@ -1,4 +1,7 @@
 import YearPicker from "../ui/YearPicker";
+import Chip from "../ui/Chip";
+import { Icon } from "../ui/Icon";
+import { SearchInput } from "../ui/SearchInput";
 import { useEffect, useRef, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -132,14 +135,12 @@ export default function ListFilterBar({
               meant to type a search. The client-side truncation in
               `buildFlightFilterQuery` is the real guard; this one stops the
               box accepting characters it will silently drop. */}
-          <input
-            type="search"
-            maxLength={SEARCH_MAX_LENGTH}
+          <SearchInput
+            label={search.placeholder}
             value={search.value}
-            onChange={(e): void => search.onChange(e.target.value)}
+            onChange={search.onChange}
             placeholder={search.placeholder}
-            aria-label={search.placeholder}
-            className={`w-full ${CONTROL_CLASS} placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] md:max-w-xs`}
+            maxLength={SEARCH_MAX_LENGTH}
           />
           {/* On a phone the controls share ONE row that scrolls sideways; they
               used to wrap into two, pushing the first entry further down
@@ -164,29 +165,12 @@ export default function ListFilterBar({
                     extraActiveCount > 0 ? "border-[var(--accent)]" : ""
                   }`}
                 >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                    />
-                  </svg>
+                  <Icon name="filter" size={16} />
                   <span>{t("common:filters.more")}</span>
                   {extraActiveCount > 0 && (
-                    <span
-                      data-testid="list-filter-badge"
-                      className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs"
-                      style={{ background: "var(--accent)", color: "var(--bg-base)" }}
-                    >
+                    <Chip testId="list-filter-badge" tone="accent" size="sm">
                       {extraActiveCount}
-                    </span>
+                    </Chip>
                   )}
                 </button>
 

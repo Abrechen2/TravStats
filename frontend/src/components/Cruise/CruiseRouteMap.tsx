@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { SharedMapOverlays } from "../map/SharedMapOverlays";
 import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -780,7 +781,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
                 onClick={onCancel}
                 aria-label={t("cruise:routeEditor.cancel")}
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </div>
           )}

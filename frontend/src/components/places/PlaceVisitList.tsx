@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 
@@ -150,24 +151,9 @@ export function PlaceVisitList({
               className="flex flex-wrap gap-1.5"
             >
               {FILTERS.map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  aria-pressed={filter === f}
-                  onClick={() => setFilter(f)}
-                  className="rounded-full px-3.5 text-sm"
-                  style={{
-                    minHeight: "var(--ts-size-touch-min)",
-                    border: `1px solid ${filter === f ? "var(--ts-accent)" : "var(--ts-border-button)"}`,
-                    background:
-                      filter === f
-                        ? "color-mix(in srgb, var(--ts-accent) 14%, transparent)"
-                        : "transparent",
-                    color: filter === f ? "var(--ts-accent)" : "var(--ts-muted)",
-                  }}
-                >
+                <Chip key={f} active={filter === f} onClick={() => setFilter(f)}>
                   {filterLabel(f)}
-                </button>
+                </Chip>
               ))}
             </div>
           )}

@@ -59,7 +59,7 @@ describe("TripGroundLists", () => {
       </MemoryRouter>
     );
     const panel = screen.getByTestId("trip-ferry-list");
-    expect(panel.querySelector("table")).not.toBeNull();
+    expect(panel.querySelector("[role=table]")).not.toBeNull();
     expect(panel).toHaveTextContent("Mopanshan-Pier → Yangshuo");
     expect(screen.getByRole("link")).toHaveAttribute("href", "/ferry/f1");
   });

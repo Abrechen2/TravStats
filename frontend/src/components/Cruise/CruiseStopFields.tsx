@@ -1,4 +1,5 @@
 import DateField from "../../components/ui/DateField";
+import { Icon } from "../ui/Icon";
 import type { JSX } from "react";
 import type { CruiseStopInput, Port } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -117,7 +118,10 @@ export function CruiseStopFields({
         <>
           {stop.portId == null && stop.unresolvedPortName ? (
             <div className="rounded-md border border-(--warning)/40 bg-(--warning)/10 px-2 py-1.5 text-xs text-(--warning)">
-              <span className="font-medium">🔶 {t("stops.unresolved")}:</span>{" "}
+              <span className="font-medium">
+                <Icon name="diamond" size={14} className="mr-1 inline" />
+                {t("stops.unresolved")}:
+              </span>{" "}
               {stop.unresolvedPortName}
               <div className="mt-0.5 text-[11px] text-(--warning)/80">
                 {t("stops.unresolvedHint")}

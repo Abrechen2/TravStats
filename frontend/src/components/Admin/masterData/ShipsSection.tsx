@@ -1,3 +1,5 @@
+import Chip from "../../ui/Chip";
+import { SearchInput } from "../../ui/SearchInput";
 import { useEffect, useState } from "react";
 import { shipsApi } from "../../../lib/api/cruise";
 import type { Ship } from "../../../types/cruise";
@@ -128,12 +130,11 @@ export default function ShipsSection(): JSX.Element {
       </div>
 
       {/* Search + list */}
-      <input
-        type="search"
-        className="input mb-3"
-        placeholder={t("admin:cruiseMasterData.ship.searchPlaceholder")}
+      <SearchInput
+        label={t("admin:cruiseMasterData.ship.searchPlaceholder")}
         value={query}
-        onChange={(e): void => setQuery(e.target.value)}
+        onChange={setQuery}
+        placeholder={t("admin:cruiseMasterData.ship.searchPlaceholder")}
       />
 
       {loading ? (
@@ -154,16 +155,9 @@ export default function ShipsSection(): JSX.Element {
               </div>
               <div className="flex items-center gap-2 text-xs">
                 {s.isUserAdded && (
-                  <span
-                    className="px-2 py-0.5 rounded-full"
-                    style={{
-                      background: "var(--bg-elevated)",
-                      color: "var(--accent)",
-                      border: "1px solid var(--accent)",
-                    }}
-                  >
+                  <Chip tone="accent" size="sm">
                     {t("admin:cruiseMasterData.userAdded")}
-                  </span>
+                  </Chip>
                 )}
                 {s.imo && <span className="text-(--text-muted) font-mono">IMO {s.imo}</span>}
               </div>

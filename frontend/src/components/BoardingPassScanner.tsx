@@ -1,3 +1,4 @@
+import { Icon } from "./ui/Icon";
 import { useState, useRef } from "react";
 import Dialog from "./ui/Dialog";
 import { parseApi } from "../lib/api";
@@ -172,7 +173,7 @@ export default function BoardingPassScanner({
               />
               <div className="space-y-3">
                 <div className="text-5xl" aria-hidden="true">
-                  🎫
+                  <Icon name="ticket" size={24} />
                 </div>
                 <p className="text-lg font-medium text-white">{t("flights:scanner.uploadTitle")}</p>
                 <p className="text-sm mt-1 text-(--text-muted)">

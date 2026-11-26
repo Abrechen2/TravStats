@@ -1,6 +1,6 @@
+import { Icon } from "./ui/Icon";
 import { useToastStore, type Toast } from "../store/toastStore";
 import { useTranslation } from "../hooks/useTranslation";
-import { Icon } from "./ui/Icon";
 import Button from "./ui/Button";
 
 const ToastItem = ({ toast }: { toast: Toast }) => {
@@ -15,11 +15,11 @@ const ToastItem = ({ toast }: { toast: Toast }) => {
   };
 
   const icons = {
-    success: <Icon name="check" size={20} />,
-    error: <Icon name="x" size={20} />,
-    warning: <Icon name="triangle-alert" size={20} />,
-    info: <Icon name="info" size={20} />,
-  };
+    success: "circle-check",
+    error: "circle-alert",
+    warning: "triangle-alert",
+    info: "info",
+  } as const;
 
   return (
     <div
@@ -32,7 +32,9 @@ const ToastItem = ({ toast }: { toast: Toast }) => {
       style={{ background: "var(--bg-elevated)", color: "var(--text-primary)" }}
       role="alert"
     >
-      <div className="shrink-0 text-lg">{icons[toast.type]}</div>
+      <div className="shrink-0">
+        <Icon name={icons[toast.type]} size={20} />
+      </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium wrap-break-word">{toast.message}</p>
         {toast.undo?.detail && <p className="t-caption">{toast.undo.detail}</p>}

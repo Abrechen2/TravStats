@@ -1,3 +1,4 @@
+import Chip from "../components/ui/Chip";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -492,21 +493,15 @@ export default function CuratedChecklistPage(): JSX.Element {
             <option value="continent">{t("places:checklist.sortContinent")}</option>
           </select>
           {FILTERS.map((f) => (
-            <button
+            <Chip
               key={f.id}
-              type="button"
+              active={rowFilter === f.id}
               onClick={() => setRowFilter(f.id)}
               disabled={f.id === "suggested" && suggestions.length === 0}
-              className="rounded-full px-3 py-1.5 text-xs disabled:opacity-40"
-              style={{
-                border: "1px solid var(--color-border)",
-                background: rowFilter === f.id ? "var(--bg-elevated)" : "transparent",
-                color: rowFilter === f.id ? "var(--accent)" : "var(--text-muted)",
-                fontWeight: rowFilter === f.id ? 600 : 400,
-              }}
+              size="sm"
             >
               {f.label} · {f.count}
-            </button>
+            </Chip>
           ))}
         </div>
 

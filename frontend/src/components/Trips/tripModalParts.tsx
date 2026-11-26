@@ -1,4 +1,5 @@
 import DateField from "../../components/ui/DateField";
+import Chip from "../ui/Chip";
 import type { CSSProperties, ReactNode } from "react";
 import type { Trip, TripCategory } from "../../types";
 import { TRIP_COLORS as PALETTE } from "../../lib/tripColors";
@@ -9,24 +10,17 @@ import SuggestionChips from "../common/SuggestionChips";
 import { formatDate } from "../../lib/format";
 import type { TripModalForm } from "./tripModalForm";
 import InlineError from "../ui/InlineError";
+import { Icon, type IconName } from "../ui/Icon";
 
 const CATEGORIES: TripCategory[] = ["vacation", "business", "weekend", "family", "other"];
 
-const CATEGORY_ICON: Record<TripCategory, string> = {
-  vacation: "🏖",
-  business: "💼",
-  weekend: "🎒",
-  family: "👨‍👩‍👧",
-  other: "🗺",
-};
-
 export type ModalTab = "general" | "people" | "appearance" | "notes";
 
-export const TABS: ReadonlyArray<{ id: ModalTab; icon: string }> = [
-  { id: "general", icon: "📋" },
-  { id: "people", icon: "👥" },
-  { id: "appearance", icon: "🎨" },
-  { id: "notes", icon: "📝" },
+export const TABS: ReadonlyArray<{ id: ModalTab; icon: IconName }> = [
+  { id: "general", icon: "clipboard-list" },
+  { id: "people", icon: "users" },
+  { id: "appearance", icon: "palette" },
+  { id: "notes", icon: "notebook-pen" },
 ];
 
 export const inputStyle: CSSProperties = {
@@ -93,7 +87,7 @@ function CoverPreview({ url, accent, title, onClick }: CoverPreviewProps): JSX.E
           className="absolute inset-0 flex items-center justify-center text-3xl opacity-40"
           aria-hidden
         >
-          🌍
+          <Icon name="globe" size={24} />
         </div>
       )}
       <div
@@ -140,7 +134,7 @@ function NameCategoryFields({ f }: { f: TripModalForm }): JSX.Element {
           <option value="">—</option>
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
-              {CATEGORY_ICON[c]} {t(`trips:category.${c}`)}
+              {t(`trips:category.${c}`)}
             </option>
           ))}
         </select>
@@ -179,19 +173,20 @@ function DateFields({ f }: { f: TripModalForm }): JSX.Element {
         </Field>
       </div>
       {f.offerEntrySpan && entrySpan && (
-        <button
-          type="button"
+        <Chip
+          dashed
+          size="sm"
+          className="-mt-2"
           onClick={() => {
             f.setStartDate(entrySpan.start);
             f.setEndDate(entrySpan.end);
           }}
-          className="-mt-2 rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent)"
         >
           {t("trips:modal.useEntrySpan", {
             start: formatDate(entrySpan.start, { timeZone: "UTC" }),
             end: formatDate(entrySpan.end, { timeZone: "UTC" }),
           })}
-        </button>
+        </Chip>
       )}
     </>
   );

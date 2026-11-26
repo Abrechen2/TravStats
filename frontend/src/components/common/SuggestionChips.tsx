@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
@@ -41,15 +42,15 @@ export default function SuggestionChips({
   return (
     <div className="mt-1 flex flex-wrap gap-1 pointer-coarse:gap-2">
       {visible.map((s) => (
-        <button
+        <Chip
           key={s}
-          type="button"
+          dashed
+          size="sm"
           onClick={() => onPick(s)}
-          aria-label={t("common:suggestionChip", { field: fieldLabel, value: s })}
-          className="rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent) pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-3 pointer-coarse:text-sm"
+          ariaLabel={t("common:suggestionChip", { field: fieldLabel, value: s })}
         >
           {s}
-        </button>
+        </Chip>
       ))}
     </div>
   );

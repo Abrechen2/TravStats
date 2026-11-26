@@ -90,7 +90,8 @@
     "general": "Allgemein",
     "people": "Reisende & Tags",
     "appearance": "Erscheinungsbild",
-    "notes": "Notizen"
+    "notes": "Notizen",
+    "label": "Bereiche der Reise"
   },
   "badge": {
     "noTrip": "—"
@@ -180,7 +181,8 @@
       "map": "Karte",
       "gallery": "Galerie",
       "logistics": "Logistik",
-      "tours": "Touren"
+      "tours": "Touren",
+      "label": "Reiseansichten"
     },
     "tabPlaceholder": {
       "gallery": "Galerie kommt in der nächsten Iteration — sobald Foto-Upload und Speicher-Backend stehen.",
@@ -244,7 +246,9 @@
       "ferries": "Fähren",
       "date": "Datum",
       "route": "Strecke",
-      "open": "öffnen"
+      "open": "öffnen",
+      "cruiseLine": "Reederei",
+      "cruiseFallback": "Kreuzfahrt"
     },
     "timeline": {
       "addEntry": "+ Eintrag hinzufügen",

@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { legOperator } from "../../lib/rail/primaryOperator";
 import { useState } from "react";
 import type { JSX } from "react";
@@ -64,7 +65,7 @@ export function RailTripCard({
           size={36}
         />
       }
-      icon="🚆"
+      icon={<Icon name="train-front" size={18} />}
       bg="var(--domain-rail-soft)"
       iconColor="var(--domain-rail)"
       title={`${journey.depStationName} → ${journey.arrStationName}`}

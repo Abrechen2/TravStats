@@ -14,7 +14,7 @@ import { loadMapAppearance, saveMapAppearance } from "./mapAppearance";
 import { mapPanelRoutesRequested, ROUTE_DOMAINS, type RouteDomain } from "../../lib/mapRoutes";
 import { type Rgb } from "../../lib/cruiseColor";
 import { rgbCss } from "../../lib/flightColor";
-import { Icon } from "../ui/Icon";
+import { Icon, type IconName } from "../ui/Icon";
 
 // ── Design tokens ────────────────────────────────────────────────────
 export const ACCENT = "240,169,71"; // amber — the app's primary action colour
@@ -98,17 +98,11 @@ export function PanelHeader({
         <Icon name="map" size={16} />
         {title}
       </span>
-      <svg
-        aria-hidden
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2.5}
-        className="h-4 w-4 shrink-0 transition-transform"
+      <Icon
+        name="chevron-down"
+        size={16}
         style={{ transform: expanded ? "none" : "rotate(180deg)", opacity: 0.75, color: TEXT }}
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
-      </svg>
+      />
     </button>
   );
 }
@@ -179,21 +173,16 @@ export function CollapsibleSection({
         style={{ background: "transparent" }}
       >
         <SectionLabel>{title}</SectionLabel>
-        <svg
-          aria-hidden
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2.5}
-          className="mb-1.5 h-3 w-3 shrink-0 transition-transform"
+        <Icon
+          name="chevron-down"
+          size={14}
           style={{
             transform: expanded ? "none" : "rotate(-90deg)",
             opacity: 0.55,
             color: TEXT,
+            marginBottom: 6,
           }}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
-        </svg>
+        />
       </button>
       {expanded && children}
     </div>
@@ -259,7 +248,7 @@ export function Toggle({
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
-  icon?: string;
+  icon?: IconName;
   label: string;
   /** One line under the label (the Track layers' hints). */
   sub?: string;
@@ -288,8 +277,8 @@ export function Toggle({
       <span className="flex min-w-0 flex-col">
         <span className="flex items-center gap-2 text-xs font-medium" style={{ color: c.text }}>
           {icon && (
-            <span aria-hidden style={{ opacity: 0.9 }}>
-              {icon}
+            <span aria-hidden style={{ opacity: 0.9, display: "flex" }}>
+              <Icon name={icon} size={14} />
             </span>
           )}
           <span id={labelId}>{label}</span>
@@ -412,7 +401,7 @@ export function SegControl<V extends string>({
 }: {
   value: V;
   onChange: (v: V) => void;
-  options: readonly { value: V; label: string; icon?: string }[];
+  options: readonly { value: V; label: string; icon?: IconName }[];
   columns?: number;
 }): JSX.Element {
   const cols = columns ?? options.length;
@@ -440,8 +429,8 @@ export function SegControl<V extends string>({
             }}
           >
             {opt.icon && (
-              <span aria-hidden className="text-[13px] leading-none">
-                {opt.icon}
+              <span aria-hidden className="flex">
+                <Icon name={opt.icon} size={14} />
               </span>
             )}
             {opt.label}

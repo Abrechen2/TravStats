@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
@@ -71,19 +72,19 @@ export function VisitDateChips({
           // date format and read in UTC so it cannot shift a day.
           const shown = display.date(`${s.date}T00:00:00Z`, { timeZone: "UTC" });
           return (
-            <button
+            <Chip
+              dashed
+              size="sm"
               key={s.date}
-              type="button"
               onClick={() => onPick(s.date)}
-              aria-label={t("common:suggestionChip", {
+              ariaLabel={t("common:suggestionChip", {
                 field: t("places:detail.date"),
                 value: shown,
               })}
-              className="rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent) pointer-coarse:min-h-(--ts-size-touch-min)"
             >
               {shown}
               {detail ? ` · ${detail}` : ""}
-            </button>
+            </Chip>
           );
         })}
       </div>

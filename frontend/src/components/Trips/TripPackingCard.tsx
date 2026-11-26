@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
@@ -255,7 +256,7 @@ export default function TripPackingCard({
                       aria-label={t("trips:packing.remove", { label: item.label })}
                       onClick={() => void remove(item.id)}
                     >
-                      ×
+                      <Icon name="x" size={16} />
                     </button>
                   </li>
                 ))}

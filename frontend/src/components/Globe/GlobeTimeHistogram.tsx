@@ -15,6 +15,7 @@
 // State still lives in `useTimeSliderStore`; this component only drives it,
 // so GlobeView's visibility logic is unchanged.
 
+import { Icon } from "../ui/Icon";
 import { formatDayLabel } from "../../lib/format";
 import {
   useEffect,
@@ -325,7 +326,7 @@ export const GlobeTimeHistogram = ({
             aria-label={t(`map:globe.timeSlider.${isPlaying ? "pause" : "play"}`)}
             title={t(`map:globe.timeSlider.${isPlaying ? "pause" : "play"}`)}
           >
-            {isPlaying ? "❚❚" : "▶"}
+            <Icon name={isPlaying ? "pause" : "play"} size={18} />
           </button>
         </div>
       )}
@@ -338,7 +339,7 @@ export const GlobeTimeHistogram = ({
               className="flex items-center gap-1.5 text-[11px] font-semibold"
               style={{ color: "rgba(241,245,249,0.62)" }}
             >
-              📊 {t("map:globe.timeSlider.title")}
+              <Icon name="bar-chart-3" size={14} /> {t("map:globe.timeSlider.title")}
             </span>
             <span className="flex items-center gap-2 text-[12px] font-semibold tabular-nums">
               <span>{readout}</span>
@@ -354,7 +355,7 @@ export const GlobeTimeHistogram = ({
                   style={{ color: "rgba(241,245,249,0.6)", background: "rgba(255,255,255,0.06)" }}
                   title={t("map:globe.timeSlider.reset")}
                 >
-                  ✕
+                  <Icon name="x" size={16} />
                 </button>
               )}
             </span>

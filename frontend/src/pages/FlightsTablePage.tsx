@@ -10,7 +10,6 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { flightsApi, tripsApi } from "../lib/api";
 import ListHeaderMenu from "../components/table/ListHeaderMenu";
-import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
@@ -330,20 +329,16 @@ export default function FlightsTablePage(): JSX.Element {
           align: layout.align,
           mono: layout.mono,
           onNarrow: layout.onNarrow,
-          label:
-            sortKey === undefined ? (
-              label
-            ) : (
-              <SortableHeader
-                column={sortKey}
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={handleSort}
-                ariaLabel={t("flights:table.sortBy", { col: label })}
-              >
-                {label}
-              </SortableHeader>
-            ),
+          label,
+          sort:
+            sortKey === undefined
+              ? undefined
+              : {
+                  active: sortBy === sortKey,
+                  order: sortOrder,
+                  onSort: (): void => handleSort(sortKey),
+                  ariaLabel: t("flights:table.sortBy", { col: label }),
+                },
         };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- handleSort reads sortBy/sortOrder, which are listed, and a stable store setter

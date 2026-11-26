@@ -50,7 +50,7 @@ export default function RoadtripColorField({
           <button
             key={hex}
             type="button"
-            // A colour's name, never its hex code: a user picks "Koralle", not "#ef9a86".
+            // A colour's name, never its hex code: a user picks "Koralle", not a hex string.
             aria-label={t(`common:listColor.${LIST_COLOR_NAMES[i]}`)}
             title={t(`common:listColor.${LIST_COLOR_NAMES[i]}`)}
             aria-pressed={route.color === hex}
