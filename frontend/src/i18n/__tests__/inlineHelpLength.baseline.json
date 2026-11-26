@@ -1,0 +1,10 @@
+{
+  "de/usageStats:consent.body": {
+    "length": 413,
+    "reason": "Consent disclosure: it must name everything that is sent before the admin agrees, so it stays whole and visible."
+  },
+  "en/usageStats:consent.body": {
+    "length": 337,
+    "reason": "Consent disclosure: it must name everything that is sent before the admin agrees, so it stays whole and visible."
+  }
+}

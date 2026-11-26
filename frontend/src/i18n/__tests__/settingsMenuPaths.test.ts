@@ -70,7 +70,7 @@ describe("rc46 menu paths", () => {
     [
       "de",
       [
-        "laut Google-Hilfe",
+        "Laut Google-Hilfe",
         "Android „Einstellungen → Standort → Standortdienste → Zeitachse → Zeitachsendaten exportieren“",
         "iPhone „Google Maps → Profilbild → Einstellungen → Persönliche Inhalte → Zeitachsendaten exportieren“",
         "nur",
@@ -79,7 +79,7 @@ describe("rc46 menu paths", () => {
     [
       "en",
       [
-        "according to Google's help",
+        "According to Google's help",
         "Android “Settings → Location → Location services → Timeline → Export Timeline data”",
         "iPhone “Google Maps → profile picture → Settings → Personal content → Export Timeline data”",
         "on the device only",
@@ -90,8 +90,9 @@ describe("rc46 menu paths", () => {
     (lang, parts) => {
       const read = (ns: string): Record<string, Record<string, unknown>> =>
         JSON.parse(fs.readFileSync(path.join(RESOURCES, lang, `${ns}.json`), "utf8"));
-      const tile = (read("settings").import.timeline as Record<string, string>).description;
-      const hint = read("track").imports.googleHint as string;
+      // The paths sit behind the ⓘ of each line since the copy diet (2026-11-26).
+      const tile = (read("settings").import.timeline as Record<string, string>).descriptionMore;
+      const hint = read("track").imports.googleHintMore as string;
       for (const part of parts) {
         expect(tile).toContain(part);
         expect(hint).toContain(part);

@@ -5,7 +5,7 @@
   "rejectedAt": "Abgelehnt am:",
   "empty": {
     "title": "Keine ausstehenden Updates",
-    "description": "Es gibt derzeit keine ausstehenden Flug-Updates. Updates erscheinen hier, wenn automatische Updates aktiviert sind und neue Daten verfügbar sind."
+    "description": "Keine ausstehenden Flug-Updates."
   },
   "status": {
     "pending": "Ausstehend",

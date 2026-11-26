@@ -75,7 +75,7 @@
   "cruiseTab": {
     "loading": "Kreuzfahrten werden geladen …",
     "emptyTitle": "Noch keine Kreuzfahrten",
-    "emptyBody": "Füge deine erste Kreuzfahrt über „+ Kreuzfahrt hinzufügen“ hinzu oder importiere eine Buchungs-E-Mail bzw. ein PDF auf der Kreuzfahrten-Seite.",
+    "emptyBody": "Erste Kreuzfahrt hinzufügen oder eine Buchung importieren.",
     "emptyCta": "Zur Kreuzfahrten-Seite"
   },
   "tourTab": {
@@ -124,7 +124,7 @@
       "title": "Ausgaben nach Währung",
       "baseLabel": "In Basiswährung",
       "empty": "Noch keine Ausgaben erfasst",
-      "hint": "Die Einzelbeträge werden in ihrer jeweiligen Originalwährung angezeigt und nicht addiert — der umgerechnete Gesamtbetrag oben kann daher von einer einfachen Summe abweichen.",
+      "hint": "Beträge in Originalwährung, nicht addiert. Die Summe oben ist umgerechnet.",
       "otherBaseLabel": "Ältere Basiswährungen (vor einem Wechsel gespeichert, hier nicht mitgezählt)"
     }
   },
@@ -516,5 +516,5 @@
     }
   },
   "mailOriginalNotFiled": "Der Eintrag ist angelegt, die Original-Mail konnte aber nicht daran abgelegt werden. Die Mail bleibt im Posteingang.",
-  "documentNotFiled": "Der Eintrag ist angelegt, das Dokument konnte aber nicht daran abgelegt werden. Es bleibt unter „Nicht zugeordnete Dokumente“ im Posteingang."
+  "documentNotFiled": "Eintrag angelegt, Dokument aber nicht angehängt. Es liegt unter „Nicht zugeordnete Dokumente“."
 }

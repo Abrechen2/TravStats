@@ -139,7 +139,7 @@
         },
         "perCruise": {
           "label": "Per cruise",
-          "hint": "Each cruise gets its own colour. In the \"All\" view these colours share the map with the flight colours and can compete with them."
+          "hint": "Each cruise its own colour. In “All” they may clash with flight colours."
         },
         "solid": {
           "label": "Solid",

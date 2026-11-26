@@ -41,7 +41,8 @@ describe("ConnectionQr validity statement", () => {
     const find = (o: unknown): string | undefined => {
       if (!o || typeof o !== "object") return undefined;
       const r = o as Record<string, unknown>;
-      if (typeof r.qrHint === "string") return r.qrHint;
+      // The validity rule sits behind the hint's ⓘ since the copy diet (2026-11-26).
+      if (typeof r.qrHintMore === "string") return r.qrHintMore;
       for (const v of Object.values(r)) {
         const hit = find(v);
         if (hit) return hit;

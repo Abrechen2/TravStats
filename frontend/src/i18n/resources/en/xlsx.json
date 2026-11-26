@@ -4,8 +4,7 @@
     "filename": "travstats-export",
     "running": "Building the file …",
     "failed": "The export failed.",
-    "empty": "There is nothing to export.",
-    "description": "The editable Excel spreadsheet contains travel entries from supported areas, including bus journeys – a sheet per area, with an ID column for editing and reimporting. Trips, bookings, place lists and documents are included as read-only overviews (documents as a list only, without the files). Standalone notes, photos and settings are not included. For a full backup, use the instance backup under Settings → Server → Backups; ask your administrator if you do not have access."
+    "empty": "There is nothing to export."
   },
   "sheets": {
     "flights": "Flights",
@@ -277,7 +276,7 @@
   },
   "import": {
     "title": "Excel import",
-    "description": "Read an edited export file back in — also into a different account. Rows carrying an ID from your account update that entry. Rows without an ID, or with an ID from another account, are created; entries that already exist (the same flight on the same day, the same property with the same check-in …) are recognised instead of duplicated. The file is checked first — nothing is written until you confirm.",
+    "description": "Load an edited file back. Checked first, written when you confirm.",
     "choose": "Choose file",
     "checking": "Checking the file …",
     "applying": "Applying …",
@@ -368,7 +367,7 @@
       },
       "merge": {
         "label": "Merge",
-        "hint": "Rows with an ID change the existing entry. Rows without one are created where the sheet allows it (flights, places, visits, roadtrips, stations, tours, tour points). Nothing is deleted."
+        "hint": "With an ID it updates, without one it creates. Nothing is deleted."
       },
       "replace": {
         "label": "Replace",
@@ -385,7 +384,7 @@
     "backupRunning": "A backup is already running. Please wait until it has finished, then start the import again – nothing was changed.",
     "importTooManyRows": "The file has more than {{max}} entries. Split it into smaller files and import them one by one – nothing was changed.",
     "emptySheetNote": "An empty sheet deletes nothing. To empty a domain, remove its rows one by one.",
-    "transferNote": "The spreadsheet carries entries, not photos, documents or receipts. Trips are not a sheet of their own: an entry is linked to the trip of the same name in the target account, otherwise it stays without a trip. Moving a whole installation, photos and documents included, to another server is what the backup is for; it cannot move a single account into another account.",
+    "transferNote": "Entries only, no photos or documents. Use the backup to move a server.",
     "rowsToggle": "Rows in detail",
     "rowLine": "Row {{row}}: {{label}}",
     "actions": {

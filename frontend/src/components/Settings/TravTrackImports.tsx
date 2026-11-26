@@ -16,6 +16,7 @@ import {
   type TravTrackImportOutcome,
   type TravTrackImportReport,
 } from "../../lib/api/travtrackImports";
+import InfoLine from "../ui/InfoLine";
 
 const NS = "track:imports";
 
@@ -204,8 +205,8 @@ export default function TravTrackImports({
           <h3 className="t-card-title" style={{ marginTop: "var(--ts-space-lg)" }}>
             {t(`${NS}.title`)}
           </h3>
-          <p className="t-caption">{t(`${NS}.intro`)}</p>
-          <p className="t-caption">{t(`${NS}.googleHint`)}</p>
+          <InfoLine text={t(`${NS}.intro`)} more={t(`${NS}.introMore`)} />
+          <InfoLine text={t(`${NS}.googleHint`)} more={t(`${NS}.googleHintMore`)} />
         </>
       )}
       {jump ? <JumpControl label={jump.label} onJump={jump.onJump} /> : null}

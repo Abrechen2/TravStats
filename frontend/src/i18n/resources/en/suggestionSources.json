@@ -2,7 +2,7 @@
   "calendar": {
     "title": "Calendar",
     "sub": "Appointments as evidence for your stops",
-    "help": "TravStats only reads the days the scan is looking at (at most 30 days back). An appointment that fits a stop in time and place becomes evidence in the suggestion. No other appointment is stored.",
+    "help": "Reads only the days being checked. Matching events become evidence, the rest is not stored.",
     "empty": "No calendar connected yet.",
     "add": "Add calendar",
     "remove": "Remove",
@@ -28,7 +28,7 @@
     },
     "privacy": {
       "title": "What is stored",
-      "sub": "Only an appointment that fits a stop, with title, time and place, inside the suggestion. Once accepted or rejected only its time and calendar remain. The calendar's address and password are stored encrypted and never shown again."
+      "sub": "Only matching events enter suggestions; then only time and calendar stay. Access encrypted."
     },
     "form": {
       "kind": "Kind of calendar",
@@ -37,7 +37,7 @@
       "label": "Name",
       "labelHint": "e.g. Work or Private. Rules can refer to this calendar.",
       "icsUrl": "Secret address (ICS)",
-      "icsHint": "The subscription address from iCloud, Google or Outlook. It is the key to the calendar and is stored encrypted.",
+      "icsHint": "Subscription address from iCloud, Google or Outlook. Stored encrypted.",
       "server": "Server address",
       "serverHint": "e.g. https://caldav.example.com/",
       "username": "User",
@@ -83,7 +83,7 @@
       "title": "Appointment places",
       "label": "Look calendar places up for matching",
       "sub": "Off: appointments match only through own places, the place found at the stop, or a rule's place.",
-      "help": "On: the place of an appointment a rule selects is looked up with the server's geocoder to match it to a stop. Only for stops outside your privacy zones. The text is neither stored nor logged.",
+      "help": "Looks up event places outside your private zones. Nothing is stored.",
       "error": "The setting could not be saved. Please try again."
     }
   },
@@ -120,7 +120,7 @@
   "rules": {
     "title": "Rules",
     "sub": "What a matching appointment suggests as purpose and name",
-    "help": "Top to bottom, the first matching rule applies. Without a rule an appointment suggests its title as name and no purpose.",
+    "help": "The first matching rule wins. No rule: title becomes the name.",
     "empty": "No rules.",
     "kind": {
       "calendar": "Whole calendar",
@@ -151,7 +151,7 @@
   "plugins": {
     "title": "External suggestion sources",
     "sub": "Own services that answer stops with places",
-    "help": "A plugin is an HTTPS service you run yourself or trust. TravStats asks it, signed, about a stop; its answer appears as a suggestion in the inbox. A plugin never writes into TravStats itself. Guide: docs/features/plugins.md.",
+    "help": "An HTTPS service you trust. It only suggests, never writes.",
     "empty": "No plugin added yet.",
     "add": "Add plugin",
     "remove": "Remove",
@@ -200,8 +200,8 @@
     },
     "sent": {
       "title": "What is sent",
-      "sub": "A stop's start and end, its coordinates rounded to the chosen precision and its time zone; plus what TravStats already knows: the nearest own place, the place found and (at exact and 100 m) the address.",
-      "help": "Never sent: your account, name or e-mail, the location history, other stops or entries. Every request is signed with the secret."
+      "sub": "A stop's start, end, rounded coordinates and time zone, plus known places.",
+      "help": "Never sent: account, name, email or history. Every request is signed."
     },
     "removeConfirm": {
       "title": "Remove plugin “{{name}}”?",
@@ -238,7 +238,7 @@
       "open": "Maintain locations",
       "helloFailed": "Plugin query failed",
       "title": "Maintain locations – {{name}}",
-      "intro": "The plugin's entries without a usable location, with proposals from your TravTrack stops and from the geocoder. Nothing is written before you confirm it.",
+      "intro": "Plugin entries without a location, with suggestions. Written only when you confirm.",
       "loading": "Loading entries …",
       "reload": "Reload",
       "empty": "No entries without a location.",

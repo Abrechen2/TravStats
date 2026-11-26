@@ -28,7 +28,7 @@
       },
       "time": {
         "title": "Fragen zur Zeit",
-        "description": "Hier fehlt uns etwas, um eine Zeit richtig anzuzeigen: die Zeitzone des Ortes, die Uhrzeit oder der genaue Tag. Wir raten nicht – ergänze es, wenn du es weißt, oder lass es so."
+        "description": "Zeitzone, Uhrzeit oder Tag fehlt. Wir raten nicht — ergänze es oder lass es so."
       },
       "home": {
         "title": "Zuhause",
@@ -61,7 +61,7 @@
       "creates": {
         "trip": "Übernehmen legt eine Reise mit diesem Zeitraum an.",
         "placeVisit": "Übernehmen legt einen Besuch an diesem Ort am ersten Tag an.",
-        "stayAnswerOnly": "Übernehmen merkt die Frage nur als beantwortet. Eine Übernachtung braucht eine Unterkunft, die dieser Fund nicht nennt — die legst du selbst an.",
+        "stayAnswerOnly": "Merkt die Frage nur als beantwortet. Die Unterkunft legst du selbst an.",
         "placeMissingAnswerOnly": "Übernehmen merkt die Frage nur als beantwortet. Den Ort, den dieser Fund nannte, gibt es nicht mehr — angelegt wird nichts."
       },
       "actions": {
@@ -105,7 +105,7 @@
       "nightlyLink": "Nächtliche Suche einstellen",
       "review": {
         "title": "Besuchsvorschläge aus deinen Reisen",
-        "description": "Fotos, die während einer erfassten Reise an einer Stelle ohne Besuch entstanden sind. Wähle mehrere aus und übernimm oder lehne sie gemeinsam ab; vorher lassen sich Ort, Name und Zeit korrigieren. Abgelehnte Vorschläge kommen nicht wieder.",
+        "description": "Fotos unterwegs ohne Besuch. Übernehmen oder ablehnen; Abgelehntes kommt nicht wieder.",
         "selectAll": "Alle auswählen",
         "selectOne": "{{label}} auswählen",
         "selected": "{{count}} ausgewählt",
@@ -124,7 +124,7 @@
           "nearest": "nächster erfasster Besuch: {{name}}, {{distance}}",
           "noNearest": "kein erfasster Besuch in dieser Reise"
         },
-        "alreadyVisited": "Seit der Suche wurde am selben Tag „{{name}}“ ganz in der Nähe eingetragen. Übernehmen würde den Halt doppelt erfassen — ablehnen, oder unter „Korrigieren“ diesen Ort wählen.",
+        "alreadyVisited": "„{{name}}“ wurde am selben Tag nebenan eingetragen. Ablehnen oder unter „Korrigieren“ wählen.",
         "correction": {
           "place": "Ort",
           "placeNew": "Vorgeschlagen ist ein neuer Ort an dieser Stelle. Oder wähle einen deiner Orte:",
@@ -152,7 +152,7 @@
         "creates": {
           "newPlace": "Übernehmen legt den Ort an und trägt einen Besuch in der Reise ein — zur Zeit des ersten Fotos, wenn du sie nicht korrigierst.",
           "ownPlace": "Übernehmen trägt einen Besuch an deinem Ort ganz in der Nähe in der Reise ein — der Ort ist schon da.",
-          "chosenPlace": "Übernehmen trägt den Besuch an „{{name}}“ ein; ein neuer Ort wird nicht angelegt. Hat er an dem Tag schon einen Besuch, wird der Vorschlag damit verknüpft."
+          "chosenPlace": "Trägt den Besuch an „{{name}}“ ein; ein vorhandener Besuch am Tag wird verknüpft."
         }
       }
     },
@@ -171,7 +171,7 @@
     },
     "tripSuggestions": {
       "title": "Reise-Vorschläge",
-      "description": "Aus deinen Einträgen abgeleitet: wann du unterwegs warst und was zusammengehört. Vorschläge — angelegt oder verknüpft wird erst, wenn du übernimmst.",
+      "description": "Vorschläge aus deinen Einträgen. Angelegt wird erst beim Übernehmen.",
       "nameFallback": "Reise",
       "planned": "geplant",
       "capped": "{{shown}} von {{total}} Vorschlägen angezeigt — beantworte einige, dann rücken die nächsten nach.",
@@ -341,14 +341,14 @@
         "cardTitle": "Land aus deinem Standortverlauf",
         "question": "Warst du in {{country}}?",
         "source": "aus TravTrack",
-        "evidence": "TravTrack hat dich an {{days}} Tagen am Boden in diesem Land gesehen ({{points}} Positionen), vom {{first}} bis {{last}}. Dein Reisepass kennt das Land noch nicht.",
+        "evidence": "TravTrack sah dich an {{days}} Tagen hier ({{points}} Punkte), {{first}}–{{last}}. Neu im Pass.",
         "partial": "An mindestens einem dieser Tage wurden nicht alle Positionen gelesen.",
-        "effect": "„Besucht“ und „Nur am Boden durchgereist“ speichern deine eigene Angabe zu diesem Land im Reisepass. „Nicht dort gewesen“ ändert nichts, und diese Tage werden nicht noch einmal gefragt.",
+        "effect": "Deine Antwort kommt in den Reisepass. „Nicht dort“: diese Tage werden nicht mehr gefragt.",
         "visited": "Besucht",
         "ground": "Nur am Boden durchgereist",
         "notThere": "Nicht dort gewesen",
         "emptyTitle": "Keine offenen Fragen aus TravTrack",
-        "emptyDescription": "Hier erscheint eine Frage, sobald TravTrack dich an mindestens zwei Tagen am Boden in einem Land sieht, das dein Reisepass noch nicht kennt – oder an einem Tag eine Fahrt aufzeichnet, die zu keinem Eintrag in deinem Logbuch passt.",
+        "emptyDescription": "Fragen erscheinen, wenn TravTrack ein neues Land oder eine unbekannte Fahrt sieht.",
         "errors": {
           "invalidated": "Die Standortdaten zu dieser Frage wurden inzwischen gelöscht oder geändert. Die Frage entfällt.",
           "resolved": "Diese Frage wurde bereits beantwortet.",
@@ -390,7 +390,7 @@
         },
         "closed": "Kein Eintrag nötig",
         "invalidated": "Die Standortdaten belegen diese Fahrt nicht mehr.",
-        "effect": "Eintragen öffnet das passende Formular mit Zeiten und Positionen; gespeichert wird erst, wenn du speicherst. „Kein Eintrag nötig“ ändert nichts, und dieser Tag wird nicht noch einmal gefragt.",
+        "effect": "„Eintragen“ öffnet das Formular. „Kein Eintrag nötig“: dieser Tag wird nicht mehr gefragt.",
         "roadtripName": "Roadtrip am {{day}}",
         "stationStart": "Start der Fahrt",
         "stationEnd": "Ziel der Fahrt",
@@ -419,8 +419,8 @@
         "evidenceDays_other": "Der Zeitraum umfasst {{count}} Tage.",
         "countries": "Länder: {{list}}",
         "partial": "In diesem Zeitraum wurden nicht alle Positionen gelesen.",
-        "effect": "„Als Reise anlegen“ legt eine Reise mit genau diesen Tagen an; Einträge werden nicht zugeordnet. „Keine Reise“ ändert nichts, und dieser Zeitraum wird nicht noch einmal gefragt.",
-        "effectExtend": "Erweitert nur den Zeitraum der Reise; Name, Einträge und alles andere bleiben, wie sie sind. „Nicht erweitern“ ändert nichts, und dieser Zeitraum wird nicht noch einmal gefragt.",
+        "effect": "Legt eine Reise für diese Tage an. „Keine Reise“: wird nicht mehr gefragt.",
+        "effectExtend": "Erweitert nur den Zeitraum. „Nicht erweitern“: wird nicht mehr gefragt.",
         "name": "Name der Reise",
         "create": "Als Reise anlegen",
         "notTrip": "Keine Reise",
@@ -477,7 +477,7 @@
       "stay": "Aufenthalt",
       "gpsProposal": "Möglichen Aufenthalt aus GPS-Daten ergänzen",
       "recheckAll": "Erneut prüfen",
-      "recheckHint": "„Erneut prüfen“ sucht in deinen vorhandenen Daten noch einmal nach offenen Fragen, etwa fehlenden Angaben oder Widersprüchen, und lädt den Posteingang danach neu.",
+      "recheckHint": "Sucht in deinen vorhandenen Daten erneut nach Lücken oder Widersprüchen.",
       "refreshHint": "Lädt die Liste neu, ohne deine Daten erneut zu prüfen.",
       "shown_one": "1 Eintrag angezeigt",
       "shown_other": "{{count}} Einträge angezeigt",
@@ -546,7 +546,7 @@
       },
       "convert": {
         "label": "In Zug- oder Busfahrt umwandeln",
-        "hint": "Der Flug wird gelöscht und als Fahrt derselben Reise und Buchung angelegt; das lässt sich nicht zurücknehmen. Dafür brauchen beide Orte eine Position und der Abflug eine Uhrzeit – sonst bleibt der Flug unverändert und du korrigierst ihn zuerst."
+        "hint": "Wird zur Fahrt, nicht umkehrbar. Braucht Positionen und eine Abflugzeit."
       }
     },
     "timeUnchanged": "Am Eintrag wurde nichts geändert. Die Zeit steht, wie sie gespeichert war, bis du sie ergänzt.",
@@ -583,7 +583,7 @@
     },
     "time_zone_unresolved": {
       "title": "Zeitzone unbekannt",
-      "question": "Für diese Zeit ließ sich keine Zeitzone finden, deshalb wurde sie bei der Umstellung nicht umgerechnet. Wo war das? Ergänze den Ort – dann stimmt auch die Uhrzeit."
+      "question": "Keine Zeitzone gefunden, die Zeit blieb unverändert. Wo war das? Mit dem Ort stimmt die Uhrzeit."
     },
     "time_precision_unknown": {
       "title": "Uhrzeit unbekannt",
@@ -596,7 +596,7 @@
     "home_residence_unconfirmed": {
       "title": "Wohnort bestätigen",
       "question": "Wohnort bestätigen und weitere Heimatflughäfen wählen?",
-      "body": "Bisher kennt TravStats nur deinen Heimatflughafen ({{airports}}) und misst Abstände von dort aus. Bestätige, wo du wohnst, und wähle bis zu drei Flughäfen, von denen du fliegst.",
+      "body": "Bisher zählt nur dein Heimatflughafen ({{airports}}). Bestätige deinen Wohnort und bis zu drei Flughäfen.",
       "unchanged": "Bis du bestätigst, rechnen alle Statistiken genau wie bisher.",
       "action": "Zuhause einrichten"
     },
@@ -606,7 +606,7 @@
       "thisSource": "Dieser Eintrag: {{source}}",
       "copiesTitle": "Sieht aus wie:",
       "copyMeta": "({{source}}, angelegt am {{date}})",
-      "safePath": "Wenn ja: Öffne die überzählige Kopie, lösche sie dort und tippe dann „Ich habe es korrigiert“. Sind es zwei echte Einträge, tippe „Das stimmt so“.",
+      "safePath": "Doppelt? Kopie löschen, dann „Ich habe es korrigiert“. Zwei echte Einträge: „Das stimmt so“.",
       "fields": {
         "flightNumber": "Flugnummer",
         "trainNumber": "Zugnummer",
@@ -660,7 +660,7 @@
     },
     "trip_entries_outside": {
       "title": "Einträge außerhalb der Reise",
-      "question": "Diese Einträge gehören zur Reise ({{span}}), liegen aber außerhalb ihrer Tage. Stimmen die Reisedaten – oder gehört der Eintrag zu einer anderen Reise?",
+      "question": "Diese Einträge liegen außerhalb der Reisetage ({{span}}). Reisedaten falsch oder andere Reise?",
       "safePath": "Passe die Reisedaten an oder ordne den Eintrag einer anderen Reise zu."
     },
     "ferry_match": {
@@ -671,7 +671,7 @@
     },
     "surface_segment": {
       "title": "Flug, der eine Zug- oder Busfahrt ist",
-      "question": "{{flight}} ({{route}}) ist laut Buchungsdaten keine Flugverbindung, sondern {{mode}}. Als Flug zählt sie in Flugkilometern, Flug-CO₂ und den Flughäfen im Pass.",
+      "question": "{{flight}} ({{route}}) ist laut Buchung {{mode}}, kein Flug — zählt aber als Flug.",
       "mode": {
         "rail": "eine Zugfahrt",
         "bus": "eine Busfahrt"
@@ -691,7 +691,7 @@
   "unfiledDocuments": {
     "alreadyThere": "Dieses Dokument ist schon vorhanden.",
     "title": "Nicht zugeordnete Dokumente",
-    "description": "Diese Uploads gehören zu keinem Eintrag. Ordne sie einem Flug, einer Kreuzfahrt, einer Unterkunft, einem Ort oder einer Reise zu — sonst werden sie {{days}} Tage, nachdem sie ohne Eintrag dastanden, gelöscht, samt Datei.",
+    "description": "Ohne Eintrag. Ordne sie zu, sonst werden sie nach {{days}} Tagen samt Datei gelöscht.",
     "uploaded": "Hochgeladen am",
     "deletesOn": "Wird gelöscht am",
     "open": "Öffnen",
@@ -720,7 +720,7 @@
     },
     "create": {
       "title": "„{{name}}“: Neu anlegen aus Dokument",
-      "hint": "Wähle, was angelegt werden soll. Das Dokument wird ausgelesen und im Formular vorausgefüllt; was du speicherst, wird mit diesem Dokument verknüpft.",
+      "hint": "Wähle die Art. Das Formular wird aus dem Dokument vorausgefüllt und verknüpft.",
       "unreadable": "Dieses Format kann nicht ausgelesen werden. Ausgelesen werden PDF-Dateien, Bilder und E-Mails.",
       "noDomains": "Keine Domäne aktiv, aus der sich etwas anlegen ließe.",
       "recognised": "erkannt",
@@ -755,7 +755,7 @@
     },
     "empty": {
       "title": "Keine nicht zugeordneten Dokumente",
-      "body": "Hier landen Dokumente, die zu keinem Eintrag gehören — etwa ein Upload, den du erst später zuordnen willst, oder eine Datei aus der Companion-App. Nicht zugeordnete Dokumente werden nach einer Frist automatisch gelöscht.",
+      "body": "Hier landen Dokumente ohne Eintrag; nach einer Frist werden sie gelöscht.",
       "drop": "Zieh Dateien hierher oder wähle „Dokument hinzufügen“."
     },
     "errors": {
@@ -766,7 +766,7 @@
   },
   "documentLinkSuggestions": {
     "title": "Dokumente, die mehr belegen",
-    "description": "Diese Dokumente nennen Buchungen derselben Reise, mit denen sie noch nicht verknüpft sind. Hake an, was sie ebenfalls belegen — es wird erst verknüpft, wenn du bestätigst.",
+    "description": "Diese Dokumente passen zu weiteren Buchungen. Verknüpft wird erst beim Bestätigen.",
     "scanning": "Gespeicherte Dokumente werden geprüft … {{done}} von {{total}}",
     "alsoCovers": "„{{name}}“ belegt auch …",
     "accept": "Verknüpfen",
@@ -810,7 +810,7 @@
   },
   "placeCaptures": {
     "title": "Orte ohne Namen",
-    "description": "Diese Positionen hast du in der App mit „Ort jetzt“ festgehalten. Gib ihnen einen Namen, dann entstehen Ort und Besuch – oder verwirf sie.",
+    "description": "Mit „Ort jetzt“ festgehalten. Benennen ergibt Ort und Besuch — oder verwerfen.",
     "unnamed": "Unbenannter Ort",
     "accuracy": "± {{meters}} m",
     "name": "Benennen",

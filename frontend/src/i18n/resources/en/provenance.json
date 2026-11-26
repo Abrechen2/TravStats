@@ -20,7 +20,7 @@
   },
   "notices": {
     "title": "Memory and record disagree",
-    "description": "Something here comes from memory, and a record names another date. Nothing is overwritten – edit the entry or leave both as they are.",
+    "description": "Memory and document give different dates. Nothing is overwritten.",
     "outsideRememberedSpan": "\"{{remembered}}\" (from memory, {{rFrom}} – {{rTo}}) – but the entry \"{{recorded}}\" says {{cFrom}}.",
     "outsideRecordedSpan": "\"{{remembered}}\" (from memory, {{rFrom}}) lies outside \"{{recorded}}\" ({{cFrom}} – {{cTo}}).",
     "dismiss": "Leave both",

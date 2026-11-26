@@ -4,7 +4,7 @@
     "description": "Who wants to share trips with you, and what happened in shared trips.",
     "requests": {
       "title": "Requests",
-      "body": "{{name}} (@{{username}}) would like to share trips with you. If you agree, {{name}} can copy trips into your account — each one as your own trip.",
+      "body": "{{name}} (@{{username}}) wants to share trips as copies into your account.",
       "accept": "Agree",
       "decline": "Decline"
     },
@@ -21,7 +21,7 @@
       "deleted": "{{name}} deleted {{type}} “{{entry}}”. Your copy stays — it is your call.",
       "movedOut": "{{name}} took {{type}} “{{entry}}” out of the shared trip. Your copy stays — it is your call.",
       "joined": "{{name}} added {{type}} “{{entry}}” to the shared trip. Your own entry is now linked to it.",
-      "joinedMoved": "{{name}} added {{type}} “{{entry}}” to the shared trip. Your own entry from “{{from}}” is now linked to this trip and was moved here.",
+      "joinedMoved": "{{name}} added {{type}} “{{entry}}”. Your entry from “{{from}}” is now here.",
       "joinedMovedOnShare": "{{name}} shared the trip with you. Your own entry “{{entry}}” from “{{from}}” is now linked to it and was moved here.",
       "unknownEntry": "an entry",
       "undo": "Undo",
@@ -50,7 +50,7 @@
       "leftRevoked": "{{name}} withdrew the consent to share. “{{trip}}” is no longer kept in step; your trip stays yours.",
       "addRequest": "{{name}} asks you to share “{{trip}}” with {{person}} too.",
       "addRequestFrom": "{{name}} asks you to share “{{trip}}” with {{person}} ({{personOrigin}}) too.",
-      "addRequestHint": "On the trip page you can offer it to a connected person, or create a code for this trip and pass it on.",
+      "addRequestHint": "Offer it on the trip page or create a code.",
       "autoAccepted": "Accepted automatically (consent).",
       "autoAcceptedSetting": "Review consent",
       "linked_one": "Linked with your own trip: {{count}} entry now belongs together, nothing was copied.",
@@ -80,7 +80,7 @@
   },
   "settings": {
     "title": "Share trips",
-    "description": "Share trips with companions who have an account on this server. Everyone gets their own copy; seat, price, ratings and notes stay private.",
+    "description": "Share trips with accounts on this server. Price, seat and notes stay private.",
     "request": {
       "label": "Username",
       "placeholder": "e.g. anna",
@@ -188,20 +188,20 @@
     "title": "Share trip with {{name}}",
     "titlePick": "Share trip",
     "person": "With whom",
-    "copied": "{{name}} gets their own copy of this trip: flights, stays, cruises, train, bus and ferry rides, rentals and stops with their times, places and status. When one of you changes something later, it reaches everyone and can be undone in the inbox.",
+    "copied": "{{name}} gets their own copy. Later changes reach everyone.",
     "private": "Staying private: seat, cabin and room, your price, booking references, ratings, notes, photos, journal and documents.",
     "final": "This cannot be taken back: {{name}} keeps the copy even if one of you leaves the shared trip.",
     "confirm": "Share trip",
     "done": "Trip shared with {{name}}.",
-    "nobody": "Right now you can't share this trip with anyone. Link travellers to their account — that works once they have accepted your request.",
+    "nobody": "No one to share with yet. Link travellers once they have agreed.",
     "add": {
-      "title": "These accounts have agreed to share with you but are not travellers on this trip yet. Add a person and link them — then you can share the trip with them.",
+      "title": "These accounts agreed but are not among the travellers. Add and link them.",
       "action": "Add as traveller and link",
       "actionLabel": "Add {{name}} as a traveller and link their account",
       "addFailed": "{{name}} could not be added as a traveller. Nothing was changed.",
       "linkFailed": "{{name}} is now a traveller, but linking their account did not work. Please try again.",
       "reloadFailed": "{{name}} is added and linked, but the list could not be reloaded. Close the dialog and open it again.",
-      "nameTaken": "The name “{{name}}” already belongs to a traveller linked to another account. Rename that traveller on the trip — then you can add {{name}}."
+      "nameTaken": "“{{name}}” is already linked to another account. Rename them among the travellers first."
     },
     "blockedTitle": "Not possible right now",
     "blocked": {
@@ -221,7 +221,7 @@
     "choose": "Choose an account",
     "link": "Link",
     "linked": "{{name}} is now linked to @{{username}}.",
-    "requestIntro": "Nobody has accepted your request yet. Send {{name}} a request by username; once they accept, you can link here.",
+    "requestIntro": "No consent yet. Send {{name}} a request, then you can link.",
     "username": "Username",
     "request": "Send request",
     "requested": "Request sent to @{{username}}."
@@ -446,7 +446,7 @@
       "copied": "Link copied.",
       "copyFailed": "Copying failed – select the link and copy it by hand.",
       "endsAt": "Ends on {{date}}",
-      "disabled": "Public links are disabled. An administrator can enable them under Settings → Server → Features (“Allow public links”).",
+      "disabled": "Public links are off. An admin enables them under Server → Features.",
       "statusFailed": "Could not check whether public links are allowed.",
       "photosOmitted": {
         "lead": "Not in the link:",
@@ -457,7 +457,7 @@
         "overLimit_one": "{{count}} photo beyond the limit of 12",
         "overLimit_other": "{{count}} photos beyond the limit of 12"
       },
-      "itineraryHint": "Shows day by day where you are when – in each place's local time, with the entry in progress marked. Never booking codes, prices, documents, frequent-flyer numbers, notes or fellow travellers. With an itinerary the link ends at the latest a week after the trip's last day.",
+      "itineraryHint": "Shows day by day where you are — never prices, bookings or notes. Ends after a week.",
       "itineraryTitle": "Itinerary for family",
       "tripEndedWeek": "Share itinerary for 7 days from today",
       "tripEndedRecap": "Share as a recap (no itinerary)"
@@ -551,10 +551,10 @@
   },
   "remote": {
     "title": "Companions on other servers",
-    "description": "Share trips with people whose account is on another TravStats server. You connect with an invitation code; your server's admin must have added their server as trusted first.",
+    "description": "Share trips with accounts on other TravStats servers, by invite code.",
     "invites": {
       "title": "Invitation code",
-      "hint": "Create a code and pass it on another way (a message, a call). The person redeems it on their own server. Each code works once, for 72 hours.",
+      "hint": "Pass the code on another channel. Valid once, for 72 hours.",
       "create": "Create code",
       "codeLabel": "Your invitation code",
       "codeHint": "Shown only now – copy it right away. Valid until {{date}}.",
@@ -642,7 +642,7 @@
       "offer": "Offer trip",
       "offered": "Offered. {{name}} decides on {{origin}} whether to take the trip.",
       "createCode": "Create a code for this trip",
-      "codeHint": "For someone you are not connected with yet: whoever redeems the code on their own server is offered this trip.",
+      "codeHint": "For people not yet connected: redeeming the code offers them this trip.",
       "state": {
         "invited": "Offered",
         "active": "Has the trip",
@@ -675,7 +675,7 @@
         "delivered": "All changes have reached {{name}}.",
         "pending": "Changes are on their way to {{name}}.",
         "retrying": "Changes are not reaching {{name}} right now – {{origin}} has not answered since {{date}}. Retrying.",
-        "retryingLocal": "Changes are not reaching {{name}} right now – an error on your server since {{date}}. Retrying; if it stays like this, ask your admin.",
+        "retryingLocal": "Changes don't reach {{name}}, error since {{date}}. Still retrying; otherwise ask your admin.",
         "retryingRemote": "Changes are not reaching {{name}} right now – {{origin}} has reported an error taking them over since {{date}}. Retrying.",
         "unreachable": "Changes are not reaching {{name}} – their server has been unreachable since {{date}}.",
         "rejected": "{{name}}'s server could not accept a change to “{{entry}}” ({{why}}).",
@@ -687,16 +687,16 @@
           "too-large": "too large to send",
           "other": "refused"
         },
-        "retryingHeld": "Changes are not reaching {{name}} right now – on {{origin}} the trip has been waiting for {{name}} to confirm it again since {{date}}. Retrying.",
+        "retryingHeld": "Changes don't reach {{name}}: {{origin}} awaits confirmation since {{date}}.",
         "unsupported": "{{origin}} needs an update to catch up on missed changes. New changes still reach {{name}}."
       },
       "dismiss": "Dismiss",
       "reconfirm": "Confirm again",
-      "reconfirmHint": "The connection for this trip is suspended (after a restore, a block or a new key of the other server). Until you confirm again, nothing is sent or taken over.",
+      "reconfirmHint": "Connection paused. Nothing is sent until you confirm again.",
       "reconfirmed": "Confirmed again. Changes flow both ways again.",
       "roster": {
         "title": "Also on the trip",
-        "hint": "Changes by people who joined later reach you only once you agree. What they changed before is then caught up; where your copy differs, you decide.",
+        "hint": "Changes by new members arrive only after you agree.",
         "row": "{{name}} on {{origin}}",
         "relation": {
           "you": "You",
@@ -720,7 +720,7 @@
       },
       "addRequest": {
         "title": "Have someone added",
-        "hint": "This trip's home is {{origin}}, and it is shared further only from there. Ask the person you share it with to add someone.",
+        "hint": "This trip lives on {{origin}}. Ask the person who shares it to add someone.",
         "name": "Name",
         "origin": "Server (optional)",
         "originHint": "The address of the person's TravStats server, if you know it.",
@@ -742,8 +742,8 @@
         "submit": "Offer trip",
         "working": "Checking …",
         "invalid": "Enter it as username@server, e.g. anna@trav.example.org.",
-        "serverNotConnected": "{{origin}} is not admitted on this instance yet. Your admin does that under Settings → Server → Server connections – or you create an invitation code.",
-        "requested": "Request sent to {{name}} on {{origin}}. Once they agree they appear in the list above and you can offer them the trip.",
+        "serverNotConnected": "{{origin}} is not admitted. Your admin can change that, or you create a code.",
+        "requested": "Request to {{name}} on {{origin}} sent. The person appears above once they agree.",
         "waiting": "The request to {{name}} on {{origin}} is still open. They have to confirm it first.",
         "failed": "The person on the other server could not be reached."
       },
@@ -836,7 +836,7 @@
     },
     "connections": {
       "title": "Connections",
-      "hint": "The admins of both servers have connected them. You connect with a person on a connected server once – after both of you confirmed, each side shares exactly what it sets. Switches only apply in your direction and all start off.",
+      "hint": "Connect once, then each side shares what it chooses. Everything starts off.",
       "achievements": {
         "view": "View achievements",
         "close": "Close achievements",
@@ -847,7 +847,7 @@
       },
       "findable": {
         "label": "Findable by connected servers",
-        "sub": "Off: nobody on a connected server can send you a connection request. On: you can be asked by username – you decide on every request yourself, and nothing is shared until you confirm."
+        "sub": "On: people can request you by name; nothing is shared until you agree."
       },
       "request": {
         "title": "Request a connection",
@@ -856,7 +856,7 @@
         "username": "Username",
         "switchesHint": "This is what you give the person once they confirm. You can change it later.",
         "submit": "Request",
-        "sent": "The request to @{{username}} on {{origin}} is on its way. Neither side tells you whether the person exists or is findable – once they confirm, they appear here as connected."
+        "sent": "Request to @{{username}} on {{origin}} sent. It appears here once confirmed."
       },
       "waiting": {
         "title": "Waiting for your answer",
@@ -930,7 +930,7 @@
   },
   "route": {
     "title": "Share the route",
-    "intro": "Whoever shares this trip with you sees the line TravTrack recorded on it — the line only: no times, nothing inside your privacy zones and nothing within a kilometre of your home. What you record afterwards is added only with “Rebuild”.",
+    "intro": "Fellow travellers see the line only — no times, private zones or area around home.",
     "loading": "Loading …",
     "notShared": "This trip's route is not shared.",
     "shared": "The route is shared ({{count}} points on the line).",
@@ -949,7 +949,7 @@
   },
   "tripShare": {
     "people": "People",
-    "peopleHint": "Pick someone from the list. Anyone who is not on it yet can be invited through the field, where sharing across servers is set up here.",
+    "peopleHint": "Pick someone from the list or invite via the field.",
     "linkHint": "A public page showing what you choose – readable without an account.",
     "createLink": "Manage public link…",
     "addLocal": "Add another person from this server…"
@@ -958,7 +958,7 @@
     "title": "People",
     "intro": "Everyone you travel or share with, in one list. Each switch applies to exactly that person.",
     "loading": "Loading people …",
-    "empty": "Nobody in the list yet. Companions appear here once you write them into an entry; people with their own account you can connect below.",
+    "empty": "No one yet. Fellow travellers appear once you add them.",
     "retry": "Try again",
     "loadFailed": {
       "companions": "I couldn't load the travel companions.",
@@ -1011,7 +1011,7 @@
     "remote": {
       "submit": "Connect",
       "alreadyConnected": "{{name}} ({{origin}}) is already connected. You can share through \"Share trips\" in the list.",
-      "hint": "Username and server, e.g. anna@trav.example.org. This sends a connection request; the person confirms it on their side."
+      "hint": "Name and server, e.g. anna@trav.example.org. The person confirms."
     },
     "unusedLink": "Delete unused people ({{count}})",
     "encryptedManage": "Manage encrypted hand-overs",
@@ -1067,7 +1067,7 @@
   },
   "link": {
     "open": "Link with an existing copy",
-    "intro": "Has {{name}} already entered this trip? Then link the two trips instead of making a second copy. Nothing new is created.",
+    "intro": "Does {{name}} already have this trip? Link it instead of copying.",
     "loading": "Looking for matching trips …",
     "noCandidates": "{{name}} has no trip with the same period or name.",
     "pickTrip": "Which of {{name}}'s trips is this trip?",

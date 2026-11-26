@@ -148,7 +148,7 @@ describe("DiagnosticExportModal — Report Bug", () => {
     await screen.findByRole("textbox");
 
     expect(screen.queryByText(/Alle persönlichen Daten wurden entfernt/)).toBeNull();
-    expect(screen.getByText(/Nicht enthalten: Log-Texte, Namen/)).toBeInTheDocument();
+    expect(screen.getByText(/Nicht enthalten: Texte, Namen/)).toBeInTheDocument();
     expect(screen.getByText(/Dateiname:Zeile/)).toBeInTheDocument();
   });
 

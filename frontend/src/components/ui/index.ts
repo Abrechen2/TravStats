@@ -17,6 +17,7 @@ export { default as Chip } from "./Chip";
 export { default as StatTile, SectionLabel } from "./StatTile";
 export { default as Dialog } from "./Dialog";
 export { default as Toggletip } from "./Toggletip";
+export { default as InfoLine } from "./InfoLine";
 export { Field, Input, TextArea, Select, Switch } from "./Field";
 export { default as EmptyState, type EmptyStateKind } from "./EmptyState";
 export { default as TableScroll } from "./TableScroll";

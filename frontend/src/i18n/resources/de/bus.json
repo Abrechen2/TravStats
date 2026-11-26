@@ -376,7 +376,7 @@
   },
   "import": {
     "title": "Busticket einlesen",
-    "hint": "Liest ein Text-PDF, eine E-Mail (.eml) oder eingefügten Tickettext mit einer Bus-Vorlage — einer, die du in der Vorlagen-Werkstatt (Parser → Annotieren) angelernt hast, oder einer aus dem Vorlagen-Repository. Prüfe die Werte, bevor du sie übernimmst.",
+    "hint": "PDF, E-Mail oder Tickettext per Bus-Vorlage einlesen. Werte vor dem Übernehmen prüfen.",
     "file": "Ticketdatei (PDF oder EML)",
     "text": "Tickettext",
     "reading": "Wird gelesen …",
@@ -385,7 +385,7 @@
     "error": "Das Ticket konnte nicht gelesen werden. Du kannst die Fahrt trotzdem von Hand eintragen.",
     "noText": "Kein lesbarer Text gefunden. Bei einem gescannten Ticket füge den Text ein oder trage die Fahrt von Hand ein.",
     "noTemplate": "Noch keine Bus-Vorlage kennt dieses Ticket. Lerne mit diesem Ticket eine in der Vorlagen-Werkstatt an (Parser → Annotieren) oder trage die Fahrt von Hand ein.",
-    "nothingRead": "Eine Bus-Vorlage hat das Ticket erkannt, aber keine vollständige Fahrt darin gelesen. Prüfe die Vorlage in der Werkstatt oder trage die Fahrt von Hand ein.",
+    "nothingRead": "Vorlage erkannt, aber keine vollständige Fahrt gelesen. Vorlage prüfen oder von Hand eintragen.",
     "readByWorkshop": "Mit deiner eigenen Werkstatt-Vorlage gelesen.",
     "readByRepository": "Mit einer Vorlage aus dem Vorlagen-Repository gelesen.",
     "ride": "Fahrt wählen",

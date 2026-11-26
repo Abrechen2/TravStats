@@ -83,7 +83,7 @@
       "price": "Der Preis wird zusammen mit der Währung gespeichert. Du kannst später nach Preisen filtern und Statistiken anzeigen.",
       "tags": "Füge Tags hinzu, um Flüge später zu kategorisieren und zu filtern (z. B. 'business', 'international').",
       "tagsExpanded": "Enter oder ein Komma macht aus dem Text einen Tag; beim Tippen werden deine bisherigen Tags vorgeschlagen. Du kannst später nach Tags filtern und Statistiken nach Tags gruppieren. Beispiele: 'business', 'vacation', 'lufthansa', 'long-haul'.",
-      "flightNumber": "Gib die Flugnummer ein (z. B. LH400). Die automatische Suche funktioniert für heutige Flüge. Für vergangene oder zukünftige Flüge ist ein Aviationstack Basic+ Key nötig — sonst bitte manuell eintragen.",
+      "flightNumber": "Flugnummer, z. B. LH400. Automatisch nur für heute; sonst Aviationstack Basic+ oder von Hand.",
       "flightNumberExpanded": "Die Flugsuche kaskadiert über mehrere APIs:\n• Aviationstack (mit Basic+ Key: vergangene und zukünftige Flüge)\n• AirLabs (heutige Flüge)\n• OpenSky (heutige Flüge, Login erforderlich)\n\nFehlt ein passender Provider für das gewählte Datum, müssen die Daten manuell eingetragen werden. Auch bei konfiguriertem Key kann es passieren, dass die API einen bestimmten Flug nicht kennt."
     },
     "steps": {
@@ -106,7 +106,7 @@
       "textPlaceholder": "Email-Inhalt hier einfügen...",
       "regexWarning": {
         "title": "Automatischer Import noch eingeschränkt",
-        "body": "Ohne lokales LLM (Ollama) wird ein regel-basierter Import genutzt. Dieser unterstützt aktuell nur einige Airlines und kann noch keine E-Mails mit mehreren Flügen verarbeiten. Wir arbeiten aktiv an der Erweiterung.\n\nEmpfehlung: Unter Einstellungen → Server → Buchungen lesen einen Ollama-Endpoint (z.B. gemma3:12b) hinterlegen oder Flüge manuell erfassen."
+        "body": "Ohne Sprachmodell lesen nur Vorlagen — wenige Airlines, keine Mails mit mehreren Flügen."
       }
     },
     "simplified": {
@@ -153,8 +153,8 @@
     },
     "tagsHint": "Enter oder Komma fügt einen Tag hinzu; deine bisherigen Tags werden vorgeschlagen.",
     "loadingScanner": "Scanner wird geladen...",
-    "surfaceRailOff_one": "{{count}} Zug- oder Busstrecke der Buchung wurde nicht übernommen: Der Bereich Bahn ist ausgeschaltet. Schalte ihn in den Einstellungen ein und lies die Buchung erneut ein.",
-    "surfaceRailOff_other": "{{count}} Zug- oder Busstrecken der Buchung wurden nicht übernommen: Der Bereich Bahn ist ausgeschaltet. Schalte ihn in den Einstellungen ein und lies die Buchung erneut ein.",
+    "surfaceRailOff_one": "{{count}} Zug- oder Busstrecke nicht übernommen: Bahn ist aus. Einschalten und neu einlesen.",
+    "surfaceRailOff_other": "{{count}} Zug- oder Busstrecken nicht übernommen: Bahn ist aus. Einschalten und neu einlesen.",
     "noFlightsInEmail": "Keine Flüge in der E-Mail gefunden.",
     "noFlightsInText": "Keine Flüge im eingefügten Text gefunden.",
     "departureAirportCode": "Abflughafen (IATA)",
@@ -178,7 +178,7 @@
       "booking": "Buchung, Reise & Notizen",
       "filledIn": "ausgefüllt"
     },
-    "llmUnreachable": "In der E-Mail wurde kein Flug erkannt – der KI-Parser war dabei nicht erreichbar. Bitte später erneut versuchen oder den Flug manuell eintragen.",
+    "llmUnreachable": "Kein Flug erkannt, die KI war nicht erreichbar. Später erneut versuchen oder von Hand eintragen.",
     "missing": {
       "departureAirport": "Abflughafen",
       "arrivalAirport": "Zielflughafen",
@@ -215,7 +215,7 @@
     "title": "Flugliste",
     "backToMap": "Zurück zur Karte",
     "welcome": "Willkommen zur Flugtabelle!",
-    "description": "Hier siehst du alle deine Flüge in einer übersichtlichen Tabelle. Du kannst sortieren, filtern und Flüge bearbeiten oder löschen.",
+    "description": "Alle Flüge: sortieren, filtern, bearbeiten.",
     "backToDashboard": "Zurück zum Dashboard",
     "loading": "Flüge werden geladen...",
     "noFlights": "Noch keine Flüge erfasst",
@@ -297,13 +297,13 @@
     "batchImportedWithSkips": "{{created}} importiert, {{skipped}} übersprungen — die gab es schon",
     "batchAllDuplicates_one": "Nichts importiert — der Flug war bereits erfasst",
     "batchAllDuplicates_other": "Nichts importiert — alle {{count}} Flüge waren bereits erfasst",
-    "cancellationNotice": "Dieser Text enthält eine Stornierungsmitteilung. Übernimm den Vorschlag nicht als neue geflogene Buchung. Prüfe stattdessen den Status des bestehenden Flugs.",
+    "cancellationNotice": "Das ist eine Stornierung. Nicht als neuen Flug übernehmen, sondern den bestehenden prüfen.",
     "unconfirmedTimeNotice": "Uhrzeiten wurden nicht sicher aus dem Text gelesen. Insbesondere kann 00:00 nur ein Platzhalter für ein Datum ohne Uhrzeit sein. Prüfe und ergänze die tatsächlichen Zeiten vor dem Übernehmen."
   },
   "refresh": {
     "action": "Flüge aktualisieren",
     "title": "Flüge aktualisieren",
-    "intro": "Fragt für die gewählten Flüge den Flugdaten-Anbieter und ergänzt nur Felder, die bei dir noch leer sind: Flugzeugtyp, Kennzeichen und Mode-S-Code. Nichts Vorhandenes wird überschrieben.",
+    "intro": "Ergänzt nur leere Felder (Typ, Kennzeichen, Mode-S). Nichts wird überschrieben.",
     "start": "Anbieter fragen",
     "running": "Frage Anbieter … {{done}} von {{total}}",
     "apply": "{{count}} Flüge ergänzen",
@@ -595,7 +595,7 @@
     "loadError": "Die Aufzeichnung dieses Flugs konnte nicht geladen werden.",
     "captionFile": "Aus einer {{format}}-Datei · {{distance}} · {{points}} Punkte",
     "versusGreatCircle": "Aufgezeichnet {{flown}} · Großkreis {{greatCircle}} ({{difference}} %)",
-    "uploadIntro": "Eine Aufzeichnung dieses Flugs hochladen – aus einem GPS-Logger oder als Export von FlightAware oder Flightradar24. Die Karte zeichnet den Flug dann entlang der Aufzeichnung statt auf dem Großkreis.",
+    "uploadIntro": "GPS-Aufzeichnung hochladen (Logger, FlightAware, Flightradar24) — die Karte folgt ihr.",
     "upload": "Datei hochladen",
     "replace": "Ersetzen",
     "remove": "Aufzeichnung entfernen",
@@ -713,14 +713,14 @@
   "bookingPrice": {
     "total": "Gesamtpreis der Buchung: {{amount}}",
     "storedOnBooking": "Dieser Preis ist an der Buchung gespeichert, nicht an den einzelnen Flügen.",
-    "countedOnce": "In jeder Summe, die Flüge dieser Buchung enthält, zählt er genau einmal und schließt Steuern und Gebühren ein; Preise, Steuern und Gebühren, die einzelne Flüge zusätzlich tragen, zählen dann nicht mit. Liegen Flüge dieser Buchung auf zwei Reisen, steht der volle Gesamtpreis heute bei jeder dieser Reisen. Ein annullierter Flug kostet nichts.",
+    "countedOnce": "Zählt in Summen genau einmal, inklusive Steuern und Gebühren.",
     "zeroIsFree": "0 bedeutet: als kostenlos erfasst. Ein leeres Feld hieße: unbekannt.",
-    "noTotal": "Für diese Buchung ist kein Gesamtpreis erfasst. In Summen zählt deshalb jeder Flug mit seinem eigenen Preis plus Steuern und Gebühren; ein Flug ohne Preis, Steuern und Gebühren zählt als unbekannt, nicht als 0. Ein annullierter Flug kostet nichts.",
-    "otherEntries_one": "Zur Buchung gehört außer Flügen noch ein weiterer Eintrag (Bahn, Bus, Fähre, Kreuzfahrt oder Unterkunft); ihr Gesamtpreis gilt für alles zusammen.",
-    "otherEntries_other": "Zur Buchung gehören außer Flügen noch {{count}} weitere Einträge (Bahn, Bus, Fähre, Kreuzfahrt oder Unterkunft); ihr Gesamtpreis gilt für alles zusammen.",
+    "noTotal": "Kein Gesamtpreis: Summen nehmen jeden Flug einzeln; ohne Preis, Steuern und Gebühren: unbekannt.",
+    "otherEntries_one": "Zur Buchung gehört ein weiterer Eintrag; der Gesamtpreis gilt für alles.",
+    "otherEntries_other": "Zur Buchung gehören {{count}} weitere Einträge; der Gesamtpreis gilt für alles.",
     "editOnTrip": "Gesamtpreis auf der Seite der Reise bearbeiten",
     "splitTitle": "Aufteilung auf die Flüge (optional)",
-    "splitDisplayOnly": "Nur zur Ansicht: Summen zählen weiterhin den Gesamtpreis einmal, nie die Anteile dazu. Die Anteile ergeben den Gesamtpreis auf den Cent genau.",
+    "splitDisplayOnly": "Nur Ansicht: Summen zählen den Gesamtpreis einmal, nie die Anteile.",
     "splitEqual": "Gleichmäßig aufteilen",
     "splitDistance": "Nach Strecke aufteilen",
     "splitRemove": "Aufteilung entfernen",
@@ -744,7 +744,8 @@
       "generic": "Die Aufteilung konnte nicht gespeichert werden."
     },
     "editOnNamedTrip": "Gesamtpreis auf der Seite der Reise „{{name}}“ bearbeiten",
-    "noTrip": "Die Buchung hängt an keiner Reise; ihr Gesamtpreis lässt sich daher hier nicht öffnen."
+    "noTrip": "Die Buchung hängt an keiner Reise; ihr Gesamtpreis lässt sich daher hier nicht öffnen.",
+    "countedOnceMore": "Preise, Steuern und Gebühren einzelner Flüge zählen dann nicht zusätzlich. Liegen Flüge der Buchung auf zwei Reisen, steht der volle Preis bei jeder dieser Reisen. Ein annullierter Flug kostet nichts."
   },
   "bulk": {
     "start": "Mehrere bearbeiten",

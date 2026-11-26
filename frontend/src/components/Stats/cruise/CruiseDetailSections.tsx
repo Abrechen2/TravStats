@@ -10,6 +10,7 @@ import EvidenceNumber from "../EvidenceNumber";
 import CountingHelp from "../counting/CountingHelp";
 import type { CountingEntry } from "../counting/countingEntry";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
+import InfoLine from "../../ui/InfoLine";
 
 interface Props {
   detail: CruiseStatsDetail;
@@ -362,9 +363,12 @@ export function CruiseMoneySection({
         </p>
       )}
       {detail.spendByCurrency.length > 1 && (
-        <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
-          {t("cruise:stats.money.noTotalNote")}
-        </p>
+        <InfoLine
+          className="mt-1 text-xs"
+          style={{ color: "var(--text-muted)" }}
+          text={t("cruise:stats.money.noTotalNote")}
+          more={t("cruise:stats.money.noTotalNoteMore")}
+        />
       )}
 
       <CountingHelp

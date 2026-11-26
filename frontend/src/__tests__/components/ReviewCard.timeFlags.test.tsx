@@ -92,7 +92,9 @@ describe("time questions in the inbox", () => {
       )
     );
 
-    expect(screen.getByText(/Für diese Zeit ließ sich keine Zeitzone finden/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Keine Zeitzone gefunden, die Zeit blieb unverändert/)
+    ).toBeInTheDocument();
     expect(screen.getByText("Abfahrt/Abflug")).toBeInTheDocument();
     expect(screen.getByText("Keine Position (fehlt oder 0, 0)")).toBeInTheDocument();
     // The stored digits, labelled as having no zone — not re-read in the viewer's.

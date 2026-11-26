@@ -8,7 +8,7 @@
     "unknown": "Nicht festgelegt",
     "private": "Privat",
     "business": "Geschäftlich",
-    "hint": "Ob dieser Eintrag geschäftlich oder privat war. Das ist nicht die Kategorie der Reise: Ein neuer Eintrag in einer Reise übernimmt den Zweck nur einmal aus deren Kategorie (Geschäftsreise → geschäftlich; Urlaub, Wochenende, Familie → privat), danach gilt, was hier steht. Nicht festgelegt wird nie ausgeblendet."
+    "hint": "Geschäftlich oder privat. Folgt einmal der Reisekategorie, danach gilt dein Wert."
   },
   "editor": {
     "saved": "Zweck gespeichert.",
@@ -16,7 +16,7 @@
   },
   "visibility": {
     "title": "Geschäftliche und private Einträge",
-    "intro": "Pro Bereich festlegen, was ausgeblendet wird. Ausgeblendetes zählt in keiner Liste, Karte oder Statistik – auch nicht in der App.",
+    "intro": "Ausgeblendetes zählt nirgends — auch nicht in der App.",
     "show": "Alle zeigen",
     "hideBusiness": "Geschäftliche ausblenden",
     "hidePrivate": "Private ausblenden",
@@ -44,7 +44,7 @@
     "confirmAction": "Übertragen",
     "nothing": "Alle Einträge dieser Reise haben diesen Zweck schon.",
     "rowTitle": "Zweck der Einträge",
-    "rowCategory": "Die Kategorie dieser Reise ist „{{category}}“. Neue Einträge übernehmen daraus einmal ihren Zweck (geschäftlich oder privat); danach hat jeder Eintrag seinen eigenen.",
+    "rowCategory": "Kategorie „{{category}}“: neue Einträge übernehmen einmal ihren Zweck.",
     "rowNoCategory": "Diese Reise hat keine Kategorie, aus der ein Zweck folgt."
   }
 }

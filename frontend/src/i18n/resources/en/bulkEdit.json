@@ -10,7 +10,7 @@
   "selectOne": "Select {{name}}",
   "edit": "Edit {{count}} {{noun}} …",
   "title": "Edit {{count}} {{noun}} together",
-  "intro": "What you choose here applies to all {{count}} selected entries ({{noun}}). Anything left on “keep” stays as it is.",
+  "intro": "Applies to all {{count}} selected entries ({{noun}}). “Don't change” stays as is.",
   "confirm": "Apply to {{count}} {{noun}}",
   "tripPick": "Choose a trip",
   "tripPickPlaceholder": "– please choose –",

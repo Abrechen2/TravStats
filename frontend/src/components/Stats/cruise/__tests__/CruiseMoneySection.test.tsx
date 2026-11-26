@@ -171,7 +171,11 @@ describe("CruiseMoneySection base-currency total", () => {
     const { useEvidenceOpenStore } = await import("../../../evidence/evidenceOpenStore");
 
     await act(async () => {
-      screen.getByRole("button").click();
+      // The other button is the ⓘ beside the currency note (copy diet, 2026-11-26).
+      screen
+        .getAllByRole("button")
+        .filter((b) => !b.hasAttribute("aria-expanded"))[0]
+        .click();
     });
 
     expect(new URLSearchParams(search).get("evidence")).toBe("metric:cruiseTotalSpend");

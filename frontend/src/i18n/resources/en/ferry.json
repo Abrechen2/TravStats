@@ -137,7 +137,7 @@
   },
   "import": {
     "title": "Read ferry ticket",
-    "hint": "Read a text PDF, email (.eml) or pasted ticket text. A ferry template — your own from the template workshop, or one from the template repository — is asked first; unfamiliar layouts use the configured AI parser. Review suggestions before applying them.",
+    "hint": "Read a PDF, email or ticket text. Check the suggestions before saving.",
     "file": "Ticket file (PDF or EML)",
     "text": "Ticket text",
     "reading": "Reading …",

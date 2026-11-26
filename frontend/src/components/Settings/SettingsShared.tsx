@@ -3,6 +3,7 @@ import React, { createContext, useContext } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import HelpIcon from "../Help/HelpIcon";
 import { ExpertPill } from "../ui/ExpertPill";
+import InfoLine from "../ui/InfoLine";
 
 /**
  * The section is expert-only and on screen — at the expert level, or because a
@@ -76,7 +77,10 @@ export function SectionCard({ children }: SectionCardProps): JSX.Element {
 export const HeadingAboveContext = createContext<string | null>(null);
 interface SectionTitleProps {
   title: string;
+  /** One line (≤ ~90 characters). Anything longer goes into `descriptionMore`. */
   description?: string;
+  /** The detail behind an ⓘ beside the description line. */
+  descriptionMore?: string;
   /** Beside the label: "Beta", a version. Small, and never an action. */
   badge?: React.ReactNode;
   /** Right-aligned on the label's line: a pointer elsewhere, a link. */
@@ -111,6 +115,7 @@ export function UnreachableNote({ children }: { children: string }): JSX.Element
 export function SectionTitle({
   title,
   description,
+  descriptionMore,
   badge,
   aside,
   whenUnreachable,
@@ -130,7 +135,7 @@ export function SectionTitle({
           </span>
         ) : null}
       </div>
-      {description && <p className="t-caption">{description}</p>}
+      {description && <InfoLine text={description} more={descriptionMore} subject={title} />}
       {whenUnreachable && <UnreachableNote>{whenUnreachable}</UnreachableNote>}
     </div>
   );

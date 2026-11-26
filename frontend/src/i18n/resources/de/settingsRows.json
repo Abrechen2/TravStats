@@ -997,7 +997,7 @@
       "retry": "Erneut versuchen",
       "onlyConfigured": "Nur aktive oder eingerichtete Dienste",
       "noneConfigured": "Kein Dienst ist eingerichtet oder aktiv. Schalte den Filter aus, um alle zu sehen.",
-      "intro": "Hier steht, wo TravStats Daten herholt und wohin etwas geht. Oben auf jeder Karte steht, was für dein Konto gilt; als Admin siehst du darunter, was für alle gilt.",
+      "intro": "Woher Daten kommen und wohin etwas geht — oben dein Konto, darunter alle.",
       "groupsLabel": "Dienstgruppen",
       "withdraw": "Zurückziehen",
       "connectedAccounts_one": "{{count}} Konto ist verbunden.",
@@ -1113,7 +1113,7 @@
       "instanceEmptyOwn": "Kein Instanzschlüssel – dein persönlicher Schlüssel gilt nur für dich",
       "off": "Routing ist ausgeschaltet.",
       "pickT": "Routing-Anbieter",
-      "pickS": "Welcher Dienst Strecken auf der Straße berechnet. Automatisch nimmt für jedes Konto den ersten eingerichteten: OpenRouteService, GraphHopper, eigener Server.",
+      "pickS": "Wer Straßenstrecken berechnet. Automatisch: der erste eingerichtete Dienst.",
       "optAuto": "Automatisch (empfohlen)",
       "optCustom": "Eigener Server",
       "optOff": "Aus",
@@ -1264,7 +1264,7 @@
     "internet": {
       "t": "Server darf externe Dienste abfragen",
       "s": "Wechselkurse, Bahnfahrpläne, Logos, Offene Kartendaten und die Suche nach Updates. Aus = Betrieb ohne Internet",
-      "h": "Aus schaltet ab: Wechselkurse der EZB, die Bahn-Fahrpläne (Transitous, db-rest), Betreiber-Logos aus Wikidata, offene Kartendaten (Wetter, Wikipedia, Overpass, Wetter in Plänen) und die Suche nach neuen Versionen. Die einzelnen Schalter darunter (Experte) behalten ihren Wert und gelten wieder, sobald du das hier einschaltest. Dienste mit eigenem Schlüssel (Flugdaten, KI, Fotos) sind nicht betroffen."
+      "h": "Aus schaltet ab: EZB-Kurse, Bahn-Fahrpläne (Transitous, db-rest), Betreiber-Logos, offene Kartendaten (Wetter, Wikipedia, Overpass) und die Versionssuche. Die einzelnen Schalter darunter behalten ihren Wert. Dienste mit eigenem Schlüssel (Flugdaten, KI, Fotos) sind nicht betroffen."
     },
     "fxcdn": {
       "t": "Ersatzquelle für Wechselkurse",
@@ -1484,11 +1484,11 @@
     "notes": {
       "machine": {
         "t": "Was diese Sicherung ist",
-        "s": "Die vollständige Sicherung des Servers mit allen Konten, für eine Wiederherstellung der ganzen Maschine. Ein einzelnes Konto zieht mit dem Konto-Archiv (ZIP) unter Einstellungen → Daten um."
+        "s": "Ganze Maschine mit allen Konten. Ein Konto allein zieht per Konto-Archiv (Einstellungen → Daten) um."
       },
       "secrets": {
         "t": "Nicht in der Sicherung",
-        "s": "/app/data/secrets (Verschlüsselungs- und Sitzungsschlüssel) separat sichern. Ohne diesen Ordner lassen sich gespeicherte API-Schlüssel und Zugangsdaten nach einer Wiederherstellung auf einem neuen Host nicht mehr entschlüsseln."
+        "s": "/app/data/secrets separat sichern — ohne ihn sind Schlüssel nach einem Umzug nicht mehr lesbar."
       }
     }
   },
@@ -1590,7 +1590,7 @@
     "systemLoadFailed": "Ich konnte die Systemdaten nicht laden.",
     "tzLegacy": {
       "summary": "Zeitzonen (für Altdaten)",
-      "when": "Nur nötig, wenn alte Importe oder Einträge aus der Zeit vor dem Zeitmodell falsche Zonen tragen: hier lassen sich die Zonen erneut bestimmen (erst Probelauf)."
+      "when": "Nur bei falschen Zonen aus alten Importen: Zonen neu bestimmen (erst Probelauf)."
     },
     "usersLoadFailed": "Ich konnte die Konten für den Bericht nicht laden.",
     "groups": {

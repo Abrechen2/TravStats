@@ -8,7 +8,7 @@
   "loadError": "Die Notizen konnten nicht geladen werden.",
   "empty": {
     "title": "Noch keine Notizen",
-    "description": "Halte einen Moment fest, der zu keiner Reise gehört. Zu welcher Reise eine Notiz passt, ergibt sich später von selbst aus ihrem Datum.",
+    "description": "Halte einen Moment fest. Die passende Reise ergibt sich aus dem Datum.",
     "action": "Erste Notiz schreiben"
   },
   "card": {
@@ -28,7 +28,7 @@
     "time": "Uhrzeit",
     "timeHint": "Leer lassen, wenn nur der Tag zählt.",
     "zone": "Zeitzone",
-    "zoneHint": "Die Zeitzone, in der du die Notiz schreibst. Nach ihr richtet sich, zu welchem Tag die Notiz gehört – kurz nach Mitternacht in Berlin ist in London noch gestern.",
+    "zoneHint": "Die Zeitzone bestimmt, zu welchem Tag die Notiz gehört.",
     "zoneHelpLabel": "Warum eine Zeitzone?",
     "place": "Ort",
     "placePlaceholder": "z. B. Bayrischzell",
@@ -45,7 +45,7 @@
     "close": "Schließen",
     "dateRequired": "Bitte wähle ein Datum.",
     "shareable": "Teilbar",
-    "shareableHint": "Ohne Haken bleibt die Notiz privat. Mit Haken sehen sie auch die Mitreisenden einer geteilten Reise an diesem Tag, und ein öffentlicher Reise-Link kann sie zeigen, wenn du dort „Notizen“ auswählst."
+    "shareableHint": "Ohne Haken privat. Mit Haken sehen sie Mitreisende und ggf. ein öffentlicher Link."
   },
   "delete": {
     "title": "Notiz löschen?",

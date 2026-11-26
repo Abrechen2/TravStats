@@ -76,7 +76,7 @@
   "suggestions": {
     "open": "Take over from your flights",
     "title": "Found in your flights",
-    "hint": "Numbers that sit on flights but belong to no programme yet. Taking one over opens the form prefilled — nothing is saved until you confirm.",
+    "hint": "Numbers on flights with no programme. Saved only when you confirm.",
     "empty": "No further frequent flyer numbers found in your flights.",
     "loadError": "The suggestions could not be loaded.",
     "adopt": "Take over"

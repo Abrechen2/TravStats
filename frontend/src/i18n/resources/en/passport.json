@@ -24,13 +24,13 @@
   },
   "tiers": {
     "slept": "Stayed overnight",
-    "sleptExplained": "An actual lodging stay or confirmed overnight beyond transit locations. A calendar-day change alone is insufficient.",
+    "sleptExplained": "A stay or confirmed night outside pure transit places.",
     "visited": "Visited",
-    "visitedExplained": "A confirmed place visit, a port call, the country you live in, or a destination with an outbound and a return trip – by air, rail, bus or ferry, mixed too. Location points and connection duration are insufficient.",
+    "visitedExplained": "A place visit, shore leave, home country or destination with return.",
     "connection": "Flight endpoint / connection",
-    "connectionExplained": "The flight proves ground contact. A visit outside the airport is not established. Confirmed place visits or lodging can provide that evidence.",
+    "connectionExplained": "The flight proves ground contact, not yet a visit.",
     "transited": "Ground presence",
-    "transitedExplained": "A recorded stop or ground transit, such as a change station or a rest area. Counts as ground presence; an actual visit requires further evidence."
+    "transitedExplained": "A recorded stopover or transit. Counts as ground contact, not a visit."
   },
   "kinds": {
     "flight": "Flight",
@@ -50,14 +50,14 @@
     "notApplicableEntries": "Not applicable: no flight proves this country — not zero entries, but none there would be to count.",
     "notApplicableAirports": "Not applicable: no airport was used here.",
     "unknownPeriod": "Unknown: no record carries a date.",
-    "daysPresentExplained": "Distinct calendar days on which a record places you in this country. Counted, not estimated — and the number does not decide the tier.",
-    "noDatedDays": "Zero days counted: no record names a day. That is not a missing value but the result of the count — the “undated” note on this row says why."
+    "daysPresentExplained": "Calendar days a record places you here. Does not decide the tier.",
+    "noDatedDays": "0 days: no record names a day (see “no date”)."
   },
   "ground": {
     "unknown": "unknown",
-    "measuredExplained": "Measured: the longest spell on the ground between a landing and the next departure in this country. Shown raw rather than sorted into classes — and it does not decide the tier.",
-    "unknownExplained": "Unknown: a flight touched this country, but no pair of clocks bounds a spell — an outbound leg with no return, or a booking carrying only a date. Record the missing flight and a time appears here.",
-    "notApplicableExplained": "Not applicable: no flight touched this country. A lodging, a day in port or a place bounds no departure — there is nothing to add here and nothing to measure."
+    "measuredExplained": "Longest time on the ground between landing and next take-off. Does not decide the tier.",
+    "unknownExplained": "Unknown: a flight was here but no second one bounds the stay. Add the missing flight.",
+    "notApplicableExplained": "Not applicable: no flight touched this country."
   },
   "provenance": {
     "intro": "These records put the country in the passport. Each one opens the record — that is where you change it.",
@@ -65,7 +65,7 @@
     "truncated": "Only the most recent records are shown.",
     "none": "No individual record available. The country belongs in the list all the same — there is simply no single record to open here.",
     "trackLabel": "Location history — {{days}} days, {{points}} recorded points",
-    "trackNote": "These Dawarich locations do not prove ground presence. They may come from overflights or inaccurate positions and do not add to country counts or days present. Confirmed place visits and travel records are counted independently."
+    "trackNote": "These Dawarich points prove no ground contact and are not counted."
   },
   "continents": {
     "title": "Continents",
@@ -80,8 +80,8 @@
   "countries": {
     "title": "Countries",
     "listNote": "Ground presence includes confirmed transit stops and travel through a country. Select countries visited to show confirmed visits only.",
-    "dashLegend": "“—” does not mean zero, it means not derivable: a country proved only by a lodging or a port call has no flights and no airports — and without a dated record, no period either.",
-    "groundTimeLegend": "“Time on the ground” has three answers, and two of them are not a value: “unknown” means a flight was here but no second one bounds the stay — that you can fill in. “—” means no flight was here at all; a lodging bounds no departure, so there is nothing to add. “Days”, by contrast, is always counted: 0 means no record names a day.",
+    "dashLegend": "“—” does not mean zero, it means: not derivable.",
+    "groundTimeLegend": "Time on the ground: “unknown” can be filled in, “—” cannot.",
     "country": "Country",
     "evidence": "Evidence",
     "entries": "Entries",
@@ -103,7 +103,9 @@
       "openChain": "The recorded trip breaks off here (a one-way flight or ride, an open jaw, or the first or last trip).",
       "noDestination": "The trip never turns around – which country was the destination cannot be decided.",
       "undated": "The trip has no date and cannot be placed in a chain."
-    }
+    },
+    "dashLegendMore": "A country proved only by a lodging or a port call has no flights and no airports — and without a dated record, no period either.",
+    "groundTimeLegendMore": "“unknown”: a flight was here but no second one bounds the stay. “—”: no flight was here at all. “Days” is always counted: 0 means no record names a day."
   },
   "countingChanged": {
     "text": "Counting changed — {{before}} countries before, {{after}} now.",
@@ -117,7 +119,7 @@
     "observation": "Dawarich · Location days: {{days}} · Points: {{points}}",
     "observationTravTrack": "TravTrack · Location days: {{days}} · Points: {{points}}"
   },
-  "countingRule": "Ground presence includes connections and transit. Visits require a recorded stay beyond transit locations or an identifiable return flight chain. Nights and location points alone do not prove a visit.",
+  "countingRule": "Ground contact includes changes. A visit needs a recorded stay.",
   "overrides": {
     "add": "Add a country manually",
     "addTitle": "Add a country manually",

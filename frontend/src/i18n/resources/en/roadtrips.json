@@ -131,7 +131,7 @@
   "review": {
     "title_one": "One entry was classified automatically by the 2.7 update",
     "title_other": "{{count}} entries were classified automatically by the 2.7 update",
-    "intro": "Tours and roadtrips are separate now. Multi-day road, ferry and rail sections became roadtrips, everything else day tours. Is that right?",
+    "intro": "Multi-day trips are now roadtrips, the rest day tours. Is that right?",
     "isNow": {
       "tour": "now a day tour",
       "roadtrip": "now a roadtrip"
@@ -290,8 +290,8 @@
         "km": "Tour kilometres",
         "ascent": "Climb from recordings",
         "ascentValue": "{{m}} m climbed",
-        "row_one": "{{count}} tour · {{km}} km ({{kmTours}} with a distance) · {{ascent}} m climbed ({{ascentTours}} measured) · {{duration}} moving ({{movingTours}} recorded)",
-        "row_other": "{{count}} tours · {{km}} km ({{kmTours}} with a distance) · {{ascent}} m climbed ({{ascentTours}} measured) · {{duration}} moving ({{movingTours}} recorded)",
+        "row_one": "{{count}} tour · {{km}} km ({{kmTours}}) · {{ascent}} m up ({{ascentTours}}) · {{duration}} ({{movingTours}})",
+        "row_other": "{{count}} tours · {{km}} km ({{kmTours}}) · {{ascent}} m up ({{ascentTours}}) · {{duration}} ({{movingTours}})",
         "empty": "Appears once a day tour is recorded or its day has passed.",
         "help": {
           "unit": "One completed day tour — hike, bike ride, guided excursion and any other activity.",
@@ -447,7 +447,7 @@
     "connected": "Connected (athlete {{athlete}})",
     "askAdmin": "Strava is not set up on this instance. Someone with admin rights has to register a Strava app for it.",
     "adminTitle": "This instance's Strava app (admin)",
-    "adminHelp": "Create your own app at strava.com/settings/api and enter {{domain}} as its “Authorization Callback Domain”. Since June 2026 API access needs a Strava subscription.",
+    "adminHelp": "Own app at strava.com/settings/api, callback domain {{domain}}. Needs a Strava subscription.",
     "clientId": "Client ID",
     "clientSecret": "Client secret",
     "secretStored": "stored — leave empty to keep it",
@@ -474,7 +474,7 @@
       "rateLimited": "Strava's request limit is reached. Try again in a quarter of an hour."
     }
   },
-  "komootHint": "Komoot: export the tour from Komoot as GPX and upload it here — there is no direct connection, Komoot has no public API.",
+  "komootHint": "Komoot: export the tour as GPX and upload it here.",
   "phase": {
     "planned": "Planned",
     "underway": "On the road · day {{day}} of {{total}}",
@@ -557,7 +557,7 @@
       "straight": "straight line",
       "recorded": "from recording"
     },
-    "distanceRule": "Distance measured: {{parts}}. A straight line joins the stations directly, a route follows the roads of the routing provider, a GPS track is a recorded drive. A leg counts as driven once its destination was reached before today; “Driven” appears only when a GPS track covers every kilometre or both odometer readings are entered; then their difference counts.",
+    "distanceRule": "Distance measured: {{parts}}.",
     "figDays": "Days",
     "figDaysAhead_one": "one still ahead",
     "figDaysAhead_other": "{{count}} still ahead",
@@ -587,7 +587,8 @@
       "healthkit": "Apple Health",
       "healthconnect": "Health Connect",
       "ais": "AIS"
-    }
+    },
+    "distanceRuleMore": "A straight line joins the stations directly, a route follows the routing provider's roads, a GPS track is a recorded drive. A leg counts as driven once its destination was reached before today. “Driven” appears only when a GPS track covers every kilometre or both odometer readings are entered."
   },
   "timeline": {
     "day": "Day {{n}}",
@@ -613,7 +614,7 @@
     "duration": "{{h}} h {{m}}"
   },
   "editor": {
-    "hint": "Tap a station to edit it. Tap a leg for ferry or line. Every change is saved at once and can be undone.",
+    "hint": "Tap a stop or leg to edit. Every change saves at once and can be undone.",
     "status": {
       "pending": "About to be saved on the server",
       "saving": "Saving on the server …",
@@ -750,12 +751,12 @@
     "downloadOne": "As GPX",
     "downloadFailed": "The recording could not be downloaded.",
     "exportTitle": "Recordings as GPX",
-    "exportDescription": "Every recording of your tours and roadtrips as its own GPX file, together in one ZIP. Other programs read the track; when you read it back in, TravStats also restores distance, climb and moving time as they were measured.",
+    "exportDescription": "All tracks as GPX files in one ZIP.",
     "exportButton": "Download ZIP",
     "exportRunning": "Packing …",
     "exportFailed": "The ZIP could not be created.",
     "importTitle": "Read GPX or ZIP",
-    "importDescription": "GPX, TCX or FIT files, or a ZIP of them. A file from TravStats returns to its tour (or creates it); any other file becomes a day tour of its own. A recording that is already there is not added twice. Roadtrips come from the spreadsheet – read that first.",
+    "importDescription": "GPX, TCX, FIT or ZIP. Duplicates are detected. Load roadtrips from the sheet first.",
     "choose": "Choose files",
     "checking": "Checking …",
     "preview": "Preview – nothing saved yet:",
@@ -869,7 +870,7 @@
       },
       "recorded": "{{rate}} · {{source}} of {{day}} · ≈ {{amount}}",
       "none": "No rate recorded — the cost counts in its own currency only. Saving looks up the daily rate for the date.",
-      "noneUndated": "No rate: without a date there is no daily rate. The cost then counts in its own currency only — unless you enter a rate by hand.",
+      "noneUndated": "No rate without a date: counts only in its own currency unless you add one.",
       "relookupHint": "If you change the amount, currency or date, saving looks up a new daily rate.",
       "enterManual": "Enter a rate by hand",
       "remove": "Remove the rate",
@@ -919,7 +920,7 @@
     "discardMessage": "The version of the stations kept on this device is deleted. It is not stored anywhere else.",
     "discardConfirm": "Discard",
     "firstTitle": "The kept changes first?",
-    "firstMessage": "This device holds station changes that never reached the server. Restore them, or discard them on purpose before editing afresh — otherwise the first keystroke would overwrite them.",
+    "firstMessage": "Unsaved changes on this device. Restore or discard them, or they will be lost.",
     "discardAndEdit": "Discard and edit"
   },
   "conflict": {
@@ -984,7 +985,7 @@
     "open": "Shift from here …",
     "openHint": "Move this and every following station by days — with a preview.",
     "title": "Shift from “{{name}}”",
-    "intro": "This station and every one after it move by the same number of days. Linked stays keep their booking dates — they are listed below to check.",
+    "intro": "This and all later stops move along. Check the stays below.",
     "days": "By how many days?",
     "daysHint": "A positive number moves later, a negative one earlier.",
     "daysInvalid": "Please enter a whole number, e.g. 2 or -1.",
@@ -1045,7 +1046,7 @@
   },
   "odometerDialog": {
     "title": "Odometer",
-    "intro": "Enter the reading at the start and at the end. With both, the roadtrip counts as driven once it is over — with their difference as the kilometres. An empty field means unknown.",
+    "intro": "Reading at start and end. With both, the difference counts as kilometres.",
     "start": "Odometer at the start",
     "end": "Odometer at the end",
     "backwards": "The end reading is below the start reading.",

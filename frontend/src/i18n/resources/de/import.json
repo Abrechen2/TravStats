@@ -8,11 +8,11 @@
     "unsupportedFormat": "Unterstützte Formate: {{formats}}",
     "regexWarning": {
       "title": "Kein LLM-Parser verfügbar",
-      "body": "Es ist kein LLM (Ollama, OpenAI, Claude) konfiguriert. Der Regex-Fallback erkennt nur die häufigsten Buchungsformate; manuelle Korrekturen sind häufiger nötig."
+      "body": "Kein Sprachmodell eingerichtet. Vorlagen erkennen nur gängige Formate; prüfe die Werte."
     },
     "llmDisabled": {
       "title": "KI-Parser abgeschaltet",
-      "body": "Der Administrator hat das KI-Modell abgeschaltet. Buchungen werden nur mit den eingebauten Vorlagen gelesen; was keine Vorlage kennt, ergänzt du von Hand."
+      "body": "KI-Modell abgeschaltet. Nur Vorlagen lesen; den Rest ergänzt du von Hand."
     },
     "pasteFirst": "Füge zuerst den Text der E-Mail ein.",
     "provider": {
@@ -21,11 +21,11 @@
     },
     "cloudNotConsented": {
       "title": "KI-Parser wartet auf Zustimmung",
-      "body": "Der eingestellte KI-Anbieter liegt außerhalb des Netzwerks, und der Administrator hat dem Senden von Buchungen dorthin nicht zugestimmt. Buchungen werden nur mit den eingebauten Vorlagen gelesen."
+      "body": "Der Cloud-KI hat der Admin nicht zugestimmt. Buchungen lesen nur die eingebauten Vorlagen."
     },
     "providerIncomplete": {
       "title": "KI-Anbieter unvollständig eingerichtet",
-      "body": "Für den OpenAI-kompatiblen Anbieter fehlen Basis-URL oder Modell. Bis der Administrator das ergänzt, werden Buchungen nur mit den eingebauten Vorlagen gelesen."
+      "body": "Basis-URL oder Modell fehlt. Bis dahin lesen nur die eingebauten Vorlagen."
     }
   },
   "pdf": {
@@ -56,7 +56,7 @@
     "triggerLabel": "Reise hinzufügen",
     "document": {
       "title": "Reiseunterlagen einlesen",
-      "description": "Das PDF deines Veranstalters — Rechnung oder Reiseunterlagen — oder die E-Mail, an der es hängt. Flüge, Hotels und Preis werden zu einer Reise, die du vorher prüfst."
+      "description": "PDF oder E-Mail des Veranstalters. Daraus wird eine Reise, die du vorher prüfst."
     },
     "fromExisting": {
       "title": "Aus vorhandenen Einträgen bauen",
@@ -201,7 +201,7 @@
       "offer": "Für dieses Dokument gibt es keine Veranstalter-Vorlage. Das KI-Modell kann es trotzdem lesen und daraus eine Reise mit Flügen und Unterkünften vorschlagen. Du prüfst jede Zeile, bevor etwas gespeichert wird; das Original wird an die Reise gehängt.",
       "read": "Mit KI lesen",
       "reading": "Wird gelesen …",
-      "intro": "Vom KI-Modell gelesen, nicht von einer Vorlage — prüfe jede Zeile gegen dein Dokument. Nichts wird gespeichert, bevor du übernimmst.",
+      "intro": "Von der KI gelesen — jede Zeile prüfen. Gespeichert wird erst beim Übernehmen.",
       "dropped": "{{count}} Angaben des Modells stehen nicht im Dokument und wurden verworfen:",
       "droppedKind": {
         "bookingReference": "Buchungsnummer „{{value}}“",

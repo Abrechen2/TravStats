@@ -19,7 +19,7 @@
     "userAdded": "Benutzerdefiniert",
     "ship": {
       "title": "Schiffe",
-      "description": "Katalog aus Seed-CSV plus benutzerdefinierte Einträge. Neu angelegte Schiffe werden mit „Benutzerdefiniert\" markiert und bleiben bei Re-Seeds erhalten.",
+      "description": "Eigene Schiffe sind „Benutzerdefiniert“ und überstehen jedes Re-Seed.",
       "name": "Name",
       "cruiseLine": "Reederei",
       "year": "Baujahr",
@@ -34,7 +34,7 @@
     },
     "port": {
       "title": "Häfen",
-      "description": "Katalog aus Seed-CSV plus benutzerdefinierte Einträge. Koordinaten in Dezimalgrad — für unbekannte Häfen über Google Maps ermitteln.",
+      "description": "Eigene Häfen bleiben bei Re-Seeds. Koordinaten in Dezimalgrad.",
       "name": "Name",
       "city": "Stadt",
       "country": "Land",
@@ -53,7 +53,7 @@
     "userAdded": "Benutzerdefiniert",
     "airline": {
       "title": "Airlines",
-      "description": "Katalog aus Seed-CSV plus benutzerdefinierte Einträge. Neu angelegte Airlines werden mit „Benutzerdefiniert\" markiert und bleiben bei Re-Seeds erhalten.",
+      "description": "Eigene Airlines sind „Benutzerdefiniert“ und überstehen jedes Re-Seed.",
       "name": "Name",
       "callsign": "Rufzeichen",
       "country": "Land",
@@ -67,7 +67,7 @@
     },
     "aircraft": {
       "title": "Flugzeugtypen",
-      "description": "Katalog aus Seed-CSV plus benutzerdefinierte Einträge. Neu angelegte Flugzeugtypen werden mit „Benutzerdefiniert\" markiert und bleiben bei Re-Seeds erhalten.",
+      "description": "Eigene Flugzeugtypen sind „Benutzerdefiniert“ und überstehen jedes Re-Seed.",
       "name": "Name",
       "add": "Hinzufügen",
       "searchPlaceholder": "Flugzeugtyp oder ICAO suchen …",
@@ -79,7 +79,7 @@
     },
     "airport": {
       "title": "Flughäfen",
-      "description": "Katalog aus OurAirports-CSV plus benutzerdefinierte Einträge — für Flugplätze, die im Katalog fehlen (z. B. private Airfields). Neu angelegte Flughäfen bleiben bei Re-Seeds erhalten; die Zeitzone wird aus den Koordinaten abgeleitet.",
+      "description": "Für fehlende Flugplätze. Eigene Einträge überstehen jedes Re-Seed; die Zeitzone kommt aus den Koordinaten.",
       "name": "Name",
       "city": "Stadt",
       "country": "Land",
@@ -111,7 +111,7 @@
       },
       "publicUrl": {
         "label": "Öffentliche URL (Geräte-Pairing)",
-        "help": "Von außen erreichbare Adresse dieser Instanz, die für den QR-Code zum Geräte-Pairing verwendet wird, damit sich die mobile App auch außerhalb des LAN verbinden kann. Leer lassen, um die Anfrage-URL automatisch zu verwenden."
+        "help": "Adresse von außen, für das Koppeln der App unterwegs. Leer: automatisch."
       },
       "lanUrl": {
         "label": "Interne URL (LAN)",
@@ -127,7 +127,7 @@
       },
       "betaFeatures": {
         "label": "Beta-Funktionen anzeigen",
-        "help": "Blendet unfertige Funktionen für alle Nutzer dieser Instanz ein. Nur zum Testen gedacht — Beta-Funktionen können sich ändern oder wieder verschwinden.",
+        "help": "Zeigt unfertige Funktionen für alle. Nur zum Testen — sie können sich ändern.",
         "listTitle": "Was dieser Schalter freigibt",
         "listEmpty": "Zurzeit ist nichts hinter dem Schalter versteckt.",
         "listNote": "Diese Liste kommt aus dem Register im Quelltext und ist damit immer der tatsächliche Stand dieser Version.",
@@ -142,7 +142,7 @@
           },
           "travPlan": {
             "name": "TravPlan (Alpha)",
-            "what": "Der Planungsmodus für eine Reise, die noch bevorsteht: Tagesplan, Ideen, Buchungsimport, Transfers, Packliste, Budget und die Übergabe an das Reisetagebuch. Alpha-Versuch: kann sich noch grundlegend ändern."
+            "what": "Reisen planen: Tagesplan, Ideen, Budget, Packliste. Alpha — kann sich noch stark ändern."
           },
           "encryptedShare": {
             "name": "Verschlüsselt teilen",
@@ -150,13 +150,13 @@
           },
           "federatedTripSharing": {
             "name": "Reisen über Server teilen",
-            "what": "Mitreisende auf anderen TravStats-Servern per Einladungscode verbinden, unter Einstellungen → Reisen; dazu kommt ein eigener Schalter unter Server-Verbindungen. Geteilte Reisen gehen signiert an den Server der Mitreisenden. Mit ausgeschaltetem Schalter antwortet dieser Server anderen Servern dafür gar nicht."
+            "what": "Reisen mit Konten auf anderen Servern teilen, signiert. Aus: keine Antwort an andere Server."
           }
         }
       },
       "countryThreshold": {
         "label": "Ein Land zählt ab …",
-        "help": "Der Startpunkt für diese Instanz: Damit muss sich ein neues Konto nicht entscheiden. Jede Person kann den Wert in ihren eigenen Einstellungen überschreiben — „Zählt Umsteigen?“ ist eine persönliche Auffassung, keine Eigenschaft des Servers."
+        "help": "Vorgabe für neue Konten. Jede Person kann sie selbst ändern."
       }
     },
     "passkeys": {
@@ -169,11 +169,11 @@
       },
       "rpId": {
         "label": "Passkey-Domain",
-        "help": "Nur die nackte Domain, ohne https:// und ohne Port. Leer lassen = aus der ersten Origin ableiten. ACHTUNG: Ein Passkey hängt für immer an diesem Wert — änderst du ihn später, funktioniert kein bereits angelegter Passkey mehr."
+        "help": "Nur die Domain. Achtung: Ändern macht alle bestehenden Passkeys ungültig."
       },
       "origins": {
         "label": "Erlaubte Origins",
-        "help": "Eine pro Zeile, mit Schema und ggf. Port. Die erste ist die maßgebliche. Mehrere sind nur sinnvoll, wenn sie sich dieselbe Passkey-Domain teilen (etwa app.example.com und www.example.com)."
+        "help": "Eine pro Zeile, mit https:// und ggf. Port. Die erste zählt."
       }
     }
   },
@@ -265,7 +265,7 @@
       "title": "Zwei-Faktor zurücksetzen",
       "confirm": "Zurücksetzen"
     },
-    "description": "Alle Benutzer dieser Instanz — Rollen ändern und Konten deaktivieren. Ein deaktiviertes Konto kann sich nicht mehr anmelden, seine Daten bleiben erhalten.",
+    "description": "Rollen ändern, Konten deaktivieren. Deaktivierte Daten bleiben erhalten.",
     "twoFactor": {
       "on": "Aktiv",
       "off": "Aus"
@@ -369,7 +369,7 @@
       "info": "Info (Standard)",
       "debug": "Debug (Ausführlich)",
       "trace": "Trace (Sehr ausführlich)",
-      "pinned": "Durch die Umgebungsvariable LOG_LEVEL auf „{{level}}“ festgelegt. Die Einstellung hier wird gespeichert, wirkt aber erst, wenn LOG_LEVEL entfernt wird.",
+      "pinned": "LOG_LEVEL legt „{{level}}“ fest. Diese Einstellung wirkt erst ohne LOG_LEVEL.",
       "effective": "Aktiv: {{level}}"
     },
     "retention": {
@@ -429,15 +429,15 @@
   },
   "parserSettings": {
     "title": "Globale Parser-Konfiguration",
-    "description": "Standard-Parser für alle Benutzer. Lokale Verfahren sind kostenlos, Cloud-KI kostet je Anfrage und braucht einen Schlüssel.",
+    "description": "Standard für alle. Lokal ist kostenlos, Cloud-KI kostet und braucht einen Schlüssel.",
     "llmSwitch": {
       "title": "KI-Modell",
       "label": "KI-Modell verwenden (Buchungen lesen und Reise-Zusammenfassungen)",
-      "hint": "Aus: TravStats fragt kein Sprachmodell mehr – auch nicht, wenn oben eine Ollama-URL eingetragen oder OLLAMA_URL gesetzt ist. Buchungen werden dann nur mit den eingebauten Vorlagen gelesen."
+      "hint": "Aus: kein Sprachmodell, nur die eingebauten Vorlagen — auch wenn Ollama eingetragen ist."
     },
     "ollama": {
       "title": "Ollama LLM Parser",
-      "description": "Ollama läuft lokal oder im Netzwerk und analysiert Buchungsbestätigungen mit einem LLM. Ideal für Multi-Stopp und komplexe E-Mails. Wird immer zuerst versucht, wenn eine URL eingetragen ist — innerhalb deines Netzwerks ohne Zustimmung.",
+      "description": "Sprachmodell im Netzwerk. Eingetragen bekommt es Buchungen zuerst, ohne Rückfrage.",
       "urlLabel": "Ollama URL",
       "remoteOptIn": {
         "label": "Ich stimme zu, dass Buchungsdaten an diese Adresse gesendet werden, falls sie außerhalb meines Netzwerks liegt."
@@ -452,17 +452,17 @@
     },
     "order": {
       "label": "Wer liest zuerst?",
-      "hint": "Gilt für Flüge, Unterkünfte, Kreuzfahrten und Orte gleichermaßen. Gemessen am 17.09.2026 an 31 Flug-Mails: die Vorlagen lasen alle in unter einer Sekunde, das Sprachmodell brauchte 19 Minuten und übersah drei. „KI zuerst\" lohnt sich, wenn deine Absender von keiner Vorlage abgedeckt sind."
+      "hint": "Vorlagen sind schnell und genau. „KI zuerst“ lohnt nur bei unbekannten Absendern."
     },
     "userPermissions": {
       "title": "Benutzerrechte"
     },
     "provider": {
       "title": "KI-Anbieter",
-      "description": "Wer liest die Buchungen, die keine Vorlage kennt? Ollama läuft immer zuerst, wenn es konfiguriert ist. Antwortet es nicht, fragt TravStats der Reihe nach die eingeschalteten Cloud-Anbieter unten. Einschalten, Schlüssel, Modell und Zustimmung stellst du unter Einstellungen → Server → Dienste ein; hier legst du nur die Reihenfolge fest.",
+      "description": "Reihenfolge für Buchungen ohne Vorlage. Einrichten unter Server → Dienste.",
       "chain": {
         "title": "Rangfolge der Cloud-Anbieter",
-        "hint": "Antwortet Ollama nicht (nicht konfiguriert oder nicht erreichbar), versucht TravStats diese Anbieter der Reihe nach — aber nur, wenn Schlüssel UND Zustimmung vorliegen. Ein Anbieter ohne beides wird übersprungen, nie versucht. Ein Anbieter, der antwortet, beendet die Kette — auch bei einer mageren Antwort."
+        "hint": "Antwortet Ollama nicht, kommen diese der Reihe nach — nur mit Schlüssel und Zustimmung."
       },
       "test": {
         "errors": {
@@ -503,7 +503,7 @@
         },
         "custom": {
           "name": "Eigener Anbieter (OpenAI-kompatibel)",
-          "hint": "Ein eigener Server oder ein Cloud-Dienst mit OpenAI-kompatibler Schnittstelle — OpenRouter, Ollama Cloud, ein LAN-vLLM/LM Studio.",
+          "hint": "Eigener Server oder Dienst mit OpenAI-kompatibler Schnittstelle.",
           "consent": {
             "title": "Buchungen an diesen Anbieter senden",
             "warning": "Liegt dieser Anbieter außerhalb deines Netzwerks, schickt TravStats ihm für jede Buchung, die keine Vorlage kennt, den Text der E-Mail oder des PDFs (bis zu 12.000 Zeichen) — mit Namen, Buchungsnummern, Reisedaten und Preisen. Was der Anbieter damit tut, regeln seine Bedingungen, nicht TravStats.",
@@ -518,7 +518,7 @@
   },
   "backup": {
     "title": "Backup-Verwaltung",
-    "description": "Backups sichern alle Daten dieser Instanz und lassen sich bei Datenverlust oder Umzug wiederherstellen. Eine Wiederherstellung überschreibt den aktuellen Bestand vollständig — lege vorher ein zusätzliches Backup an.",
+    "description": "Sichert alle Daten. Wiederherstellen überschreibt alles — vorher ein Backup anlegen.",
     "loading": "Lade Backups...",
     "running": "Backup läuft",
     "startedAt": "Gestartet um {{date}}",
@@ -542,7 +542,7 @@
     },
     "schedule": {
       "title": "Automatisches Backup",
-      "description": "Geplante Backups laufen um 2:00 Uhr in der unten gewählten Zeitzone – je nach Intervall täglich, sonntags oder am 1. des Monats.",
+      "description": "Läuft um 2:00 Uhr in der gewählten Zeitzone.",
       "loadFailed": "Die Backup-Einstellungen konnten nicht geladen werden. Speichern ist gesperrt, damit nichts überschrieben wird."
     },
     "toasts": {
@@ -582,7 +582,7 @@
     "unverified": "Nicht per Prüfsumme geprüft",
     "cloudList": {
       "title": "Backups auf dem WebDAV-Server",
-      "description": "Hol ein Backup vom WebDAV-Server zurück in die Backup-Liste, z. B. nach einem Serverumzug. Danach lässt es sich wie jedes andere wiederherstellen.",
+      "description": "Holt ein Backup vom WebDAV-Server zurück, etwa nach einem Umzug.",
       "load": "Liste laden",
       "loading": "Lädt …",
       "empty": "Auf dem WebDAV-Server liegen keine Backups.",
@@ -617,7 +617,7 @@
   "fxCdn": {
     "title": "Wechselkurse",
     "label": "Kurse für Währungen ohne EZB-Kurs von cdn.jsdelivr.net holen",
-    "description": "Die EZB veröffentlicht 30 Währungen. Ist das aus, bleiben genau diese umrechenbar; alles andere wird gespeichert und angezeigt, aber als „kein Kurs“ markiert und nicht in Summen gezählt. Ist es an, fragt diese Instanz für die übrigen Währungen den kostenlosen jsDelivr-Datensatz ab — nur für Kurse, die die EZB nicht hat, und ohne Schlüssel."
+    "description": "Kurse für Währungen, die die EZB nicht führt. Aus: diese zählen nicht in Summen."
   },
   "loginBackgrounds": {
     "title": "Bilder der Anmeldeseite",
@@ -631,7 +631,7 @@
     "uploadFailed": "Hochladen fehlgeschlagen.",
     "removeFailed": "Entfernen fehlgeschlagen.",
     "replacesShipped": "Deine Bilder ersetzen die mitgelieferten vollständig. Lösche alle, um wieder zu den mitgelieferten zurückzukehren.",
-    "hint": "Am besten wirken dunkle Hochformat-Fotos mit ruhiger linker Hälfte — dort steht der Text. Auf hellen Fotos wird die Schrift schwer lesbar."
+    "hint": "Am besten dunkle Hochformat-Fotos mit ruhiger linker Hälfte."
   },
   "timeModel": {
     "unknownCode": "unbekannt ({{code}})",
@@ -723,10 +723,10 @@
         "converted_other": "{{count}} Einträge wurden umgerechnet; die neuen Werte stehen in eigenen Spalten.",
         "alreadyFilled_one": "{{count}} Eintrag hatte die neuen Werte schon (neu angelegt oder aus der Demo) und blieb unverändert.",
         "alreadyFilled_other": "{{count}} Einträge hatten die neuen Werte schon (neu angelegt oder aus der Demo) und blieben unverändert.",
-        "answered_one": "{{count}} Eintrag, den die Umstellung offen ließ, ist seither beantwortet – Zeitzone oder Uhrzeit ergänzt, die Frage bestätigt oder der Eintrag gelöscht.",
-        "answered_other": "{{count}} Einträge, die die Umstellung offen ließ, sind seither beantwortet – Zeitzone oder Uhrzeit ergänzt, die Frage bestätigt oder der Eintrag gelöscht.",
-        "open_one": "{{count}} Eintrag wurde nicht vollständig umgestellt – nichts wurde geraten. Jede offene Angabe steht als Frage im Posteingang ihres Besitzers.",
-        "open_other": "{{count}} Einträge wurden nicht vollständig umgestellt – nichts wurde geraten. Jede offene Angabe steht als Frage im Posteingang ihres Besitzers.",
+        "answered_one": "{{count}} offener Eintrag ist seither beantwortet.",
+        "answered_other": "{{count}} offene Einträge sind seither beantwortet.",
+        "open_one": "{{count}} Eintrag offen — nichts geraten, die Frage liegt im Posteingang.",
+        "open_other": "{{count}} Einträge offen — nichts geraten, jede Frage liegt im Posteingang.",
         "flags": "Fragen im Posteingang: {{open}} offen · {{resolved}} als korrigiert gemeldet · {{dismissed}} als richtig bestätigt",
         "legacyUntouched": "Die ursprünglichen Spalten wurden nicht verändert. Jede Umrechnung ist protokolliert und lässt sich zurücknehmen."
       },
@@ -770,7 +770,7 @@
     },
     "reResolve": {
       "title": "Zeitzonen neu zuordnen",
-      "description": "Jede Zeit trägt die Zone, mit der sie gespeichert wurde. Wurde ein Ort korrigiert oder hat ein Land seine Zeitzone geändert, zeigt ein Probelauf, welche Einträge eine andere Zone bekämen und um wie viel sich ihre Ortszeit verschiebt. Geschrieben wird erst, wenn du anwendest.",
+      "description": "Prüft gespeicherte Zeitzonen nach Korrekturen. Erst Probelauf, geschrieben wird beim Anwenden.",
       "dryRun": "Probelauf starten",
       "dryRunning": "Probelauf läuft …",
       "progress": "{{done}} von {{total}} geprüft",
@@ -803,14 +803,14 @@
   },
   "federation": {
     "title": "Server-Verbindungen",
-    "description": "Verbinde diesen Server mit anderen TravStats-Servern, damit sich Leute über Servergrenzen hinweg vergleichen können. Es gehen nur Summen über die Leitung, signiert, aber nicht Ende-zu-Ende-verschlüsselt.",
+    "description": "Vergleiche über Servergrenzen. Es gehen nur Summen raus, signiert, nicht Ende-zu-Ende-verschlüsselt.",
     "envNote": "Über Umgebungsvariablen festgelegt (FEDERATION_*). Ändern geht nur dort.",
     "enabled": "Mit anderen Servern verbinden",
     "enabledSub": "Ohne diese Einstellung bleibt der Vergleich auf diesen Server beschränkt.",
     "origin": "Öffentliche Adresse dieses Servers",
     "originHint": "https, ohne Port und Pfad – so, wie andere Server ihn erreichen.",
     "tripSharing": "Reisen mit anderen Servern teilen",
-    "tripSharingSub": "Leute auf vertrauten Servern können Reisen mit Konten auf diesem Server teilen. Die Fakten einer geteilten Reise gehen signiert über TLS zum Server des Mitreisenden; private Angaben nie. Wirkt nur mit einem Schlüssel und eingeschalteten Beta-Funktionen.",
+    "tripSharingSub": "Vertraute Server dürfen Reisen teilen, signiert, nie private Angaben. Braucht Beta-Funktionen.",
     "fingerprint": "Fingerabdruck – gib ihn dem Admin des anderen Servers auf einem zweiten Weg (z. B. am Telefon):",
     "verifiedAt": "geprüft am {{date}}",
     "unverified": "noch nicht geprüft",
@@ -831,12 +831,12 @@
     "showPublicKey": "Öffentlichen Schlüssel als Text anzeigen",
     "qrTitle": "Per QR koppeln",
     "qrAlt": "QR-Code der Verbindungsdatei",
-    "qrHint": "Scanne den Code mit der Companion-App des anderen Admins. Vergleiche danach den Fingerabdruck oben mit dem Admin des anderen Servers, bevor du den Server bestätigst. Der Code enthält kein Geheimnis und läuft nicht ab. Er gilt nur für den gespeicherten Schlüssel und die gespeicherte Adresse: Nach einem Schlüsselwechsel oder einer neuen Adresse muss der andere Admin ihn neu scannen.",
+    "qrHint": "Mit der Companion-App scannen, dann den Fingerabdruck mit dem anderen Admin vergleichen.",
     "downloadFile": "Verbindungsdatei herunterladen",
     "downloadHint": "Schick sie dem Admin des anderen Servers. Die Datei enthält kein Geheimnis.",
     "downloadOriginPending": "Speichere zuerst die geänderte Adresse – die Datei nennt die gespeicherte.",
     "importFile": "Verbindungsdatei einlesen",
-    "importHint": "Die ZIP- oder JSON-Datei, die dir der andere Admin geschickt hat. Hinterlegt wird erst, wenn du „Server hinterlegen“ drückst.",
+    "importHint": "Datei des anderen Admins. Hinterlegt erst mit „Server hinterlegen“.",
     "admissions": {
       "title": "Anfragen anderer Server",
       "direction": {
@@ -845,7 +845,7 @@
       },
       "fingerprint": "Fingerabdruck – vergleiche ihn mit dem Admin des anderen Servers auf einem zweiten Weg:",
       "askedBy": "Gefragt hat:",
-      "tripSharingNote": "Mit der Freigabe können die Leute beider Server ihre Zahlen vergleichen. Anfragen, Reisen zu teilen, werden möglich, sobald der Schalter „Reisen mit anderen Servern teilen“ an ist.",
+      "tripSharingNote": "Erlaubt Vergleiche. Teilen von Reisen erst mit dem Schalter „Reisen mit anderen Servern teilen“.",
       "approve": "Freigeben",
       "decline": "Ablehnen",
       "waitingForOther": "wartet auf den Admin des anderen Servers",
@@ -858,12 +858,12 @@
     },
     "peerListEmpty": "Noch ist kein Server verbunden.",
     "advanced": "Erweitert",
-    "advancedHint": "Verbindungsdatei, QR-Code und Server von Hand hinterlegen. Meist brauchst du das nicht: Einladungslinks legen die Anfrage von selbst hierher.",
+    "advancedHint": "Server von Hand verbinden. Meist unnötig: Einladungslinks erledigen das.",
     "connected": "Verbundene Server",
     "importedTitle": "Aus der Verbindungsdatei",
     "importedStatus": "Noch nicht überprüft",
     "importedCompare": "Vergleiche Server-Adresse und vollständigen Fingerabdruck mit dem anderen Admin über einen unabhängigen Kanal, z. B. am Telefon.",
-    "importedReplaces": "Diesen Server hast du schon mit einem anderen Schlüssel hinterlegt. Hinterlegst du diesen, ersetzt er den bisherigen – prüfe ihn deshalb noch einmal mit dem anderen Admin. Bisheriger Fingerabdruck: {{fingerprint}}",
+    "importedReplaces": "Ersetzt den bisherigen Schlüssel — mit dem Admin prüfen. Bisher: {{fingerprint}}",
     "importedAlreadyStored": "Dieser Server ist mit genau diesem Schlüssel schon hinterlegt. Es gibt nichts zu tun.",
     "manualEntry": "Von Hand eingeben",
     "error": {
@@ -916,19 +916,20 @@
       "peers": {
         "title": "Mindestens ein anderer Server ist zugelassen und erreichbar"
       },
-      "peersHint": "Der Admin des anderen Servers muss dasselbe auf seiner Seite tun; vergleicht eure Fingerabdrücke dabei per Telefon oder Chat.",
+      "peersHint": "Der andere Admin tut dasselbe; vergleicht die Fingerabdrücke.",
       "peerReached": "Zuletzt per Ping erreicht: {{date}}",
       "peerUnreached": "Noch nie per Ping erreicht",
       "peerSuspended": "Gesperrt",
       "ping": "Ping senden",
       "addPeer": "Server hinzufügen",
       "usersTitle": "Danach: so teilen die Nutzer",
-      "users": "Auf einer Reise unter „Teilen“ einen Einladungscode erzeugen; er gilt 72 Stunden und nur einmal. Die andere Person löst ihn auf ihrem eigenen Server unter Einstellungen → Reisen teilen ein."
-    }
+      "users": "Auf einer Reise unter „Teilen“ einen Code erzeugen (einmal, 72 Stunden)."
+    },
+    "qrHintMore": "Der Code enthält kein Geheimnis und läuft nicht ab. Er gilt nur für den gespeicherten Schlüssel und die Adresse: Nach einem Wechsel muss der andere Admin neu scannen."
   },
   "importMode": {
     "title": "Import-Modus",
-    "description": "Hebt die Mengenbremse für Uploads und Importe auf, damit ein Erst-Import mit allen Belegen nicht stundenlang blockiert. Gilt 24 Stunden und endet von selbst. Demo-Schutz und Token-Rechte bleiben bestehen.",
+    "description": "Hebt die Mengenbremse für einen Erst-Import auf. Endet nach 24 Stunden von selbst.",
     "off": "Aus — die normalen Limits gelten.",
     "activeAll": "Aktiv für alle Konten bis {{until}}.",
     "activeFor": "Aktiv für {{account}} bis {{until}}.",
@@ -941,7 +942,7 @@
   },
   "templateRepo": {
     "title": "Vorlagen-Repository",
-    "description": "Von wo die Parser-Vorlagen synchronisiert werden. Trage deine eigene Kopie des Vorlagen-Repositorys ein — einen Fork oder einen selbst gehosteten Spiegel —, um Vorlagen zu nutzen, die das offizielle nicht hat. Die Synchronisierung liest dann jede Vorlage von dieser URL; Vorlagen, die nur das alte Repository nannte, werden zurückgezogen.",
+    "description": "Quelle der Parser-Vorlagen. Vorlagen, die nur die alte Quelle hatte, werden zurückgezogen.",
     "url": "Repository-URL (Rohdateien)",
     "readsFrom": {
       "admin": "Die Synchronisierung liest von {{url}} (hier eingestellt).",
@@ -990,13 +991,13 @@
   },
   "operatorLogos": {
     "title": "Offene Daten für Logos und Bilder",
-    "description": "Logos von Bahnbetreibern, Busunternehmen, Reedereien und Vermietern sowie Bilder von Schiffen, Automodellen und Zuggattungen auf den Kartenkarten kommen aus Wikidata und Wikimedia Commons – nur frei lizenzierte Dateien, mit Nennung der Urheber. Der Server fragt dort nach, nie der Browser, und schickt nur den Namen des Unternehmens, des Schiffs, des Automodells oder der Zuggattung. Ausgeschaltet zeigen die Karten Monogramme und keine Bilder.",
+    "description": "Freie Logos und Bilder aus Wikimedia. Gesendet wird nur der Name. Aus: Monogramme.",
     "switch": "Logos und Bilder aus offenen Daten laden",
     "loadFailed": "Die Einstellung konnte nicht geladen werden.",
     "saveFailed": "Die Einstellung konnte nicht gespeichert werden."
   },
   "lodgingChains": {
-    "description": "Der Katalog der Hotelketten, aus dem jedes Konto wählt. Eigene Ketten einzelner Konten gehören diesen und erscheinen hier nicht.",
+    "description": "Hotelketten für alle Konten. Eigene Ketten einzelner Konten fehlen hier.",
     "name": "Name",
     "program": "Bonusprogramm",
     "color": "Markenfarbe",
@@ -1012,7 +1013,7 @@
     "links": "Unterkünfte: {{lodgings}} · Bonuskarten: {{memberships}}",
     "edit": "Bearbeiten",
     "editTitle": "{{name}} bearbeiten",
-    "renameNote": "Mit dieser Kette verknüpft: Unterkünfte {{lodgings}}, Bonuskarten {{memberships}}. Die Verknüpfungen bleiben bestehen und zeigen danach den neuen Namen.",
+    "renameNote": "Verknüpft: {{lodgings}} Unterkünfte, {{memberships}} Karten — danach mit dem neuen Namen.",
     "merge": "Zusammenführen",
     "mergeTitle": "{{name}} zusammenführen",
     "mergeTarget": "Zusammenführen mit",
@@ -1021,7 +1022,7 @@
     "mergeSearching": "Suche läuft …",
     "mergeSearchError": "Die Ketten konnten nicht durchsucht werden. Bitte erneut versuchen.",
     "mergeMore": "{{shown}} von {{total}} Ketten angezeigt — die Suche eingrenzen, um die übrigen zu finden.",
-    "mergeExplain": "Alle Unterkünfte ({{lodgings}}) und Bonuskarten ({{memberships}}) von „{{source}}“ werden mit „{{target}}“ verknüpft, aus allen Konten. Danach wird „{{source}}“ entfernt. Keine Verknüpfung geht verloren.",
+    "mergeExplain": "{{lodgings}} Unterkünfte und {{memberships}} Karten von „{{source}}“ gehen an „{{target}}“; nichts geht verloren.",
     "mergeConfirm": "Zusammenführen",
     "merged": "Mit {{name}} zusammengeführt.",
     "delete": "Löschen",
@@ -1040,7 +1041,7 @@
   },
   "travTrack": {
     "title": "TravTrack",
-    "description": "Der eigene Standortverlauf: Positionen kommen von der Companion-App, aus GPX-Dateien, von OwnTracks und Overland sowie aus einem Dawarich-Import auf diesen Server. Ausschalten löscht nichts — Konten mit Daten behalten Übersicht, Export und Löschen.",
+    "description": "Eigener Standortverlauf aus App, GPX und Importen. Ausschalten löscht nichts.",
     "switch": "TravTrack auf diesem Server anbieten",
     "errors": {
       "loadFailed": "Der TravTrack-Schalter konnte nicht geladen werden.",
@@ -1050,7 +1051,7 @@
   },
   "travPlan": {
     "title": "TravPlan",
-    "description": "Der Planungsmodus: Reisen vorab planen, unterwegs abgleichen. Ausschalten löscht keine Pläne — sie bleiben gespeichert und erscheinen wieder, sobald TravPlan eingeschaltet ist.",
+    "description": "Reisen vorab planen. Ausschalten löscht keine Pläne.",
     "switch": "TravPlan auf diesem Server anbieten",
     "errors": {
       "loadFailed": "Der TravPlan-Schalter konnte nicht geladen werden.",
@@ -1066,7 +1067,7 @@
   },
   "aeroapi": {
     "title": "FlightAware AeroAPI: Tarif und Monatsbudget",
-    "description": "AeroAPI rechnet pro Ergebnissatz ab. TravStats zählt jeden Aufruf im Kalendermonat (UTC) und sendet nichts mehr, sobald das Budget erreicht ist — nie eine Überraschungsrechnung. Die Kosten je Aufruf sind Richtwerte, bis sie mit einer echten Rechnung abgeglichen sind.",
+    "description": "Zählt jeden Aufruf pro Monat und stoppt beim Budget. Kosten je Aufruf sind Schätzwerte.",
     "tier": "Tarif",
     "tiers": {
       "personal": "Personal (5 $ Guthaben)",

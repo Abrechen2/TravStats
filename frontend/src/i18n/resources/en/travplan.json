@@ -181,7 +181,7 @@
   },
   "enabled": "Enable TravPlan on this server",
   "config": "TravPlan settings",
-  "configHelp": "The planner stays connected to TravStats. New hints appear inside the app; no new push notifications are configured.",
+  "configHelp": "The planner stays connected. Notes appear here, with no new push alerts.",
   "aiLimit": "AI requests per user and UTC day",
   "weatherLimit": "Forecast requests per user and UTC day",
   "disabled": "TravPlan has not been enabled on this server.",
@@ -305,7 +305,7 @@
   "knownTotal": "Known costs so far",
   "unknownValue": "Not yet known",
   "actual": {
-    "intro": "Your plan beside what your recording and your stays say about the trip. The plan is not changed.",
+    "intro": "Your plan next to what tracks and stays say. The plan stays unchanged.",
     "noRoute": "This plan has no route with stations",
     "noRouteHint": "Plan and reality can only be compared for a route with stations.",
     "failed": "I could not load the comparison just now",
@@ -375,7 +375,7 @@
     "weather": "The weather is fetched for {{place}}.",
     "next": "Next",
     "back1": "Back",
-    "bookingsIntro": "What is settled, what is still missing? For anything open add a placeholder (say, the ferry, estimated at 180 €). Import real bookings afterwards in the Bookings section - a matching placeholder is then replaced.",
+    "bookingsIntro": "Add a placeholder for what is open; a real booking replaces it later.",
     "addPlaceholder": "Add a placeholder",
     "estimate": "Estimate",
     "finish": "Create plan",
@@ -410,7 +410,7 @@
       "proposals_other": "{{count}} AI proposals"
     },
     "stays": "This stays",
-    "staysBody": "The trip itself and everything already in the logbook: flights, stays, ferries, stations and photos. A plan is not travel evidence, so deleting one removes none of it.",
+    "staysBody": "The trip and everything in the logbook stay — a plan is not a travel record.",
     "staysStations": "{{count}} station(s) were already taken into the logbook and stay there.",
     "shell": "The trip is then only a name and dates. You can delete it separately if you wish.",
     "undoNote": "Deleting cannot be undone.",
@@ -584,7 +584,7 @@
     },
     "handover": {
       "title": "Take stations into the logbook",
-      "intro": "Once a station is reached the plan writes it to the logbook: the stop on the roadtrip, the booked night as a stay and the ferry you arrived on. Open placeholders never become records.",
+      "intro": "Reached stops go into the logbook. Placeholders never become entries.",
       "noStations": "The plan has no stations yet.",
       "confirm": "Take into logbook",
       "withdraw": "Withdraw",
@@ -621,8 +621,8 @@
   "assignToDay": "Put on {{day}}",
   "members": {
     "title": "Plan together",
-    "introOwner": "Invite people from this server to plan with you. They may change everything except deleting the plan, managing members and changing the AI setting. Only you confirm into the logbook.",
-    "introMember": "You plan along. You may change everything except deleting the plan, managing members and changing the AI setting. Only you see your packing and your note.",
+    "introOwner": "Invite co-planners. They may do anything but delete, manage members or AI.",
+    "introMember": "You co-plan — everything but delete, members and AI. Packing and note are private.",
     "owner": "Owner",
     "status": {
       "invited": "Invited",
@@ -683,7 +683,7 @@
   },
   "planDocs": {
     "title": "Plan documents",
-    "intro": "These are the documents on the bookings and what co-planners uploaded for the plan. The trip's other documents are visible to the owner only.",
+    "intro": "Booking documents and uploads by co-planners.",
     "none": "No documents yet.",
     "uploadedBy": "uploaded by {{name}}",
     "onBooking": "on a booking",
@@ -701,7 +701,7 @@
     "listFailed": "The plans from other servers could not be loaded.",
     "leave": "Leave plan",
     "export": "Save the trip as a file",
-    "exportHint": "The .travstats file holds the route and the confirmed entries of this trip, without the plan owner's notes, prices, photos and documents. You can import it on your own TravStats server.",
+    "exportHint": "Route and confirmed entries, without notes, prices, photos and documents.",
     "exportFailed": "The file could not be created. Please try again.",
     "unreachableTitle": "The server of this plan is not answering",
     "ended": {
@@ -711,8 +711,8 @@
     },
     "invite": {
       "title": "Co-planner on another server",
-      "intro": "Invite a person you are connected with. Both sides must have “Share plans” switched on in the connection (Settings → Sharing → Connections). The person works on the plan through their own server, which sees the plan as it passes it on.",
-      "none": "No connection with plans switched on. Connect with the person under Settings → Sharing → Connections and switch on “Share plans”.",
+      "intro": "Invite a connected person. Both need “Share plans” on in the connection.",
+      "none": "No connection with “Share plans”. Turn it on under Sharing → Connections.",
       "send": "Invite {{name}}",
       "already": "Invited",
       "sent": "Invitation sent to {{name}}.",

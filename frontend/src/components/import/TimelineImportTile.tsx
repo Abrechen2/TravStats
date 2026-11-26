@@ -34,6 +34,7 @@ export function TimelineImportTile(): JSX.Element {
     <ImportTileShell
       title={t("settings:import.timeline.title")}
       description={t("settings:import.timeline.description")}
+      descriptionMore={t("settings:import.timeline.descriptionMore")}
       picker={null}
     >
       {note ? (

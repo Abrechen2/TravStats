@@ -142,6 +142,7 @@ export function CheckinImportTile({ onImported }: { onImported?: () => void }): 
     <ImportTileShell
       title={t("settings:import.tile.checkin.title")}
       description={t("settings:import.tile.checkin.description")}
+      descriptionMore={t("settings:import.tile.checkin.descriptionMore")}
       picker={
         <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex items-center gap-2">

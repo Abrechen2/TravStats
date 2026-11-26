@@ -1,7 +1,7 @@
 {
   "admin": {
     "title": "Strecken neu routen",
-    "hint": "Routet Etappen und Busfahrten aller Konten über den eingestellten Routing-Dienst. Eine selbst gezeichnete oder aufgezeichnete Linie wird nie ersetzt, und scheitert eine Anfrage, bleibt die gespeicherte Linie. Ist das Tageskontingent des Dienstes aufgebraucht, hält der Lauf an und macht am nächsten Tag von selbst weiter.",
+    "hint": "Routet Etappen aller Konten neu. Eigene Linien bleiben; bei Fehler bleibt die alte.",
     "mode": "Welche Strecken",
     "modeStraight": "Nur Luftlinien",
     "modeAll": "Alle",
@@ -73,11 +73,11 @@
   },
   "rail": {
     "title": "Bahnstrecken neu routen",
-    "hint": "Routet Bahnfahrten aller Konten, die nur als Luftlinie gezeichnet sind: erst über den Verlauf des Fahrplans (Transitous), sonst über den Streckenrouter, je nach Zugart auf dem passenden Netz. Eine selbst gezeichnete oder übernommene Linie wird nie ersetzt, und scheitert eine Anfrage, bleibt die gespeicherte Linie.",
-    "modeAllHint": "„Alle“ berechnet auch schon über den Streckenrouter geführte Fahrten neu. Fahrplan-Verläufe und gezeichnete Linien bleiben.",
+    "hint": "Routet Luftlinien-Bahnfahrten neu. Eigene Linien bleiben; bei Fehler bleibt die alte.",
+    "modeAllHint": "„Alle“ berechnet auch Geroutetes neu. Fahrplan- und gezeichnete Linien bleiben.",
     "start": "Bahnstrecken neu routen",
-    "readiness_one": "{{count}} Bahnfahrt als Luftlinie – kein Bahn-Routing eingerichtet. Trage oben die Adresse eines Streckenrouters ein, dann lassen sie sich neu routen.",
-    "readiness_other": "{{count}} Bahnfahrten als Luftlinie – kein Bahn-Routing eingerichtet. Trage oben die Adresse eines Streckenrouters ein, dann lassen sie sich neu routen.",
+    "readiness_one": "{{count}} Bahnfahrt als Luftlinie. Oben einen Streckenrouter eintragen, dann neu routen.",
+    "readiness_other": "{{count}} Bahnfahrten als Luftlinie. Oben einen Streckenrouter eintragen, dann neu routen.",
     "offer_one": "Adresse gespeichert. {{count}} Bahnfahrt ist noch eine Luftlinie.",
     "offer_other": "Adresse gespeichert. {{count}} Bahnfahrten sind noch Luftlinien.",
     "offerAction": "Jetzt alle Bahn-Luftlinien neu routen",

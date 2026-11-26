@@ -1,6 +1,6 @@
 {
   "title": "Read booking mails automatically",
-  "intro": "Booking confirmations arrive in the inbox as proposals by themselves – either from a mail folder TravStats reads, or through a forwarding address. An entry exists only once you confirm it. Off until you switch it on.",
+  "intro": "Booking mails become suggestions in your inbox. Nothing is created until you confirm.",
   "loadError": "The settings could not be loaded.",
   "saveError": "Saving did not work.",
   "off": {
@@ -10,7 +10,7 @@
   },
   "folder": {
     "title": "Your own mail folder (IMAP)",
-    "help": "TravStats reads only this one folder – your main INBOX works too. Nothing is deleted or moved. Use an app password (Gmail, iCloud, Outlook, GMX).",
+    "help": "Only this folder is read, nothing deleted. Use an app password.",
     "host": "IMAP server",
     "port": "Port",
     "security": "Encryption",
@@ -64,7 +64,7 @@
   },
   "forwarding": {
     "title": "Forwarding address",
-    "help": "Forward booking mails to this address, or set up an automatic forwarding rule in your mail program. Only mail from the senders you allow below is accepted, and your mail provider must confirm it is genuine (DMARC).",
+    "help": "Forward booking mails here. Accepted only from allowed, verified senders (DMARC).",
     "unavailable": "The administrator has not set up a forwarding address yet.",
     "none": "No address created yet.",
     "create": "Create address",
@@ -139,20 +139,21 @@
   },
   "admin": {
     "title": "Forwarding mailbox (booking mails)",
-    "help": "One mailbox for the whole instance. Each account gets its own plus address from it (for example trips+k7m2q9xwab@example.org). The provider must support plus addresses. TravStats only reads the mailbox over IMAP. Use a mailbox for TravStats only: it reads every new mail without the booking filter, but only from setup on – older mails stay where they are.",
+    "help": "A dedicated mailbox with plus addresses. Read via IMAP, from setup onwards.",
     "address": "Mailbox address",
     "authservId": "Provider's authserv-id (optional)",
     "authservHelp": "When set, only the Authentication-Results header carrying this id is believed.",
     "plainNote": "Unencrypted IMAP is allowed here for a mailbox on your own network.",
-    "notSet": "Not set up yet."
+    "notSet": "Not set up yet.",
+    "helpMore": "Each account gets its own address with a suffix (e.g. trips+k7m2q9xwab@example.com). Use a mailbox just for TravStats: it reads every new mail without a booking filter; older mails stay untouched."
   },
   "privacy": {
     "title": "Privacy",
-    "intro": "Only booking mails are read. For every new mail TravStats first looks at the sender and subject only. If neither looks like a booking, the mail stays untouched: not downloaded, not stored, not logged, not flagged – only counted.",
+    "intro": "Only booking mails are read. All others stay untouched and unstored.",
     "prefilter": "Read booking mails only (sender and subject filter)",
     "prefilterOffWarning": "Switched off, TravStats reads every new mail in this folder. Only sensible for a dedicated booking folder, never for your inbox.",
     "keepUnread": "Do not mark mails as read",
-    "keepUnreadHelp": "TravStats sets only the invisible $TravStats flag; \"read\" stays yours. If the server keeps no custom flags, TravStats remembers its position in the folder.",
+    "keepUnreadHelp": "TravStats sets only an invisible flag; “read” stays your call.",
     "fetchFrom": "Fetch from",
     "fetchFromHelp": "Applies to a new folder and after every change. Older mails can be found with \"Search mailbox\" in the inbox.",
     "fetchFromOption": {
@@ -164,7 +165,7 @@
     "counters": "Read: {{processed}} · skipped: {{skipped}}",
     "senders": {
       "title": "Booking senders",
-      "help": "Mails from these domains (and their subdomains) count as bookings. Newsletters (mails with a List-Id) from these senders also need a subject word. The default list comes from TravStats and the parser templates; you can switch single entries off. The senders allowed for forwarding do not count here – otherwise every mail from yourself would be read.",
+      "help": "Mails from these domains count as bookings. Newsletters also need a subject word.",
       "defaults": "Default list ({{count}})",
       "custom": "Your domains",
       "none": "No domains of your own yet.",
@@ -178,7 +179,7 @@
     },
     "keywords": {
       "title": "Subject words",
-      "help": "If one of these words is in the subject, the mail counts as a booking – case does not matter, ä/ae and ß/ss are alike. German and English are always both active.",
+      "help": "One word in the subject marks a booking. Case does not matter, DE and EN active.",
       "defaults": "Default words",
       "groupDe": "Deutsch",
       "groupEn": "English",
@@ -193,7 +194,7 @@
   },
   "scan": {
     "title": "Search mailbox",
-    "description": "Looks through the whole folder for booking mails that are probably missing in TravStats. Only sender, subject and date are read; a mail is downloaded only when you import it.",
+    "description": "Searches the folder for missing bookings. Only what you import is downloaded.",
     "range": "Period",
     "rangeAll": "Whole mailbox",
     "rangeCustom": "From–to",
