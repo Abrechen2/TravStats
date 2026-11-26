@@ -1,4 +1,4 @@
-import { monitorEventLoopDelay, type IntervalHistogram } from "perf_hooks";
+import { monitorEventLoopDelay } from "perf_hooks";
 import v8 from "v8";
 
 import { prisma } from "../../db";
@@ -32,13 +32,15 @@ export interface LoopDelay {
   windowMs: number;
 }
 
-let histogram: IntervalHistogram | null = null;
+type LoopHistogram = ReturnType<typeof monitorEventLoopDelay>;
+
+let histogram: LoopHistogram | null = null;
 let lastWindow: LoopDelay | null = null;
 let windowTimer: NodeJS.Timeout | null = null;
 
 const toMs = (ns: number) => Math.round((ns / 1e6) * 10) / 10;
 
-function readHistogram(h: IntervalHistogram, windowMs: number): LoopDelay {
+function readHistogram(h: LoopHistogram, windowMs: number): LoopDelay {
   return {
     p50Ms: toMs(h.percentile(50)),
     p99Ms: toMs(h.percentile(99)),
@@ -47,7 +49,11 @@ function readHistogram(h: IntervalHistogram, windowMs: number): LoopDelay {
   };
 }
 
-/** Starts the event-loop monitor once; called at boot. */
+/**
+ * Starts the event-loop monitor once. Started by the first /health probe or
+ * runtime report (the image's health check runs every 30 s), so index.ts
+ * needs no boot hook and a script that never serves HTTP never starts it.
+ */
 export function startRuntimeMonitor(): void {
   if (histogram) return;
   histogram = monitorEventLoopDelay({ resolution: LOOP_RESOLUTION_MS });
@@ -208,6 +214,7 @@ export interface RuntimeReport {
 const mb = (bytes: number) => Math.round(bytes / 1048576);
 
 export async function runtimeReport(): Promise<RuntimeReport> {
+  startRuntimeMonitor();
   const mem = process.memoryUsage();
   const [ping, statements] = await Promise.all([pingDatabase(), slowStatements()]);
   return {
@@ -236,6 +243,7 @@ export async function healthChecks(): Promise<{
   database: "ok" | "failed";
   eventLoop: "ok" | "slow" | "pending";
 }> {
+  startRuntimeMonitor();
   const ping = await cachedDatabasePing();
   const loop = loopDelay();
   return {

@@ -22,8 +22,6 @@ import { resolveTrustProxy } from "./utils/trustProxy";
 import { runZoneSelfCheck } from "./shared/time/zoneOf";
 import { backupZone } from "./shared/time/schedulerZone";
 import { healthHandler } from "./routes/health";
-import { startRuntimeMonitor } from "./services/runtime/runtimeStats";
-import v8 from "v8";
 import { templateRegistry } from "./services/parsers/templates/registry";
 import { seedPortsFromCSV } from "./seedPortsFromCSV";
 import { seedShipsFromCSV } from "./seedShipsFromCSV";
@@ -343,15 +341,12 @@ if (process.env.NODE_ENV !== "test") {
   installProvenanceNoticeTriggers();
   const HOST = process.env.HOST || "0.0.0.0"; // Bind to all interfaces for network access
   httpServer = app.listen(PORT, HOST, async () => {
-    // Event-loop delay for /health and the admin runtime card (perf audit item 4).
-    startRuntimeMonitor();
     logger.info({
       message: "TravStats backend started",
       host: HOST,
       port: PORT,
       environment: process.env.NODE_ENV,
       nodeVersion: process.version,
-      heapLimitMb: Math.round(v8.getHeapStatistics().heap_size_limit / 1048576),
     });
 
     // The ~10 MB country boundary index takes seconds to build cold, and the
