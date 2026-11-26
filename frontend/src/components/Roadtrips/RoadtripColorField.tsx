@@ -10,8 +10,9 @@ import { saveErrorKey } from "../../lib/saveErrorMessage";
 import type { TourRoute } from "../../types/tour";
 
 /**
- * A roadtrip's own map colour (GitHub #408). It is drawn in it when the map's
- * roadtrip colour mode is "per roadtrip"; with none chosen the roadtrip keeps
+ * A roadtrip's own map colour (GitHub #408). Its own page always draws it in it
+ * (#412); the dashboard and the trip map only when the map's roadtrip colour
+ * mode is "per roadtrip", and the field says so. With none chosen the roadtrip keeps
  * the fixed palette colour its id gives it. One request per pick; a failure
  * keeps the stored colour and says why.
  */
@@ -73,6 +74,9 @@ export default function RoadtripColorField({
         </button>
         <span aria-hidden="true" className="h-3 w-3 rounded-full" style={{ background: shown }} />
       </div>
+      <p className="t-caption" style={{ margin: 0 }} data-testid="roadtrip-color-used-on">
+        {t("roadtrips:mapColor.usedOn")}
+      </p>
       {errorKey && (
         <p role="alert" className="text-sm text-(--danger)" data-testid="roadtrip-color-error">
           {t(errorKey)}

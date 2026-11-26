@@ -2,7 +2,7 @@ import RoadtripVehicleSelect from "../components/Roadtrips/RoadtripVehicleSelect
 import PurposeEditor from "../components/purpose/PurposeEditor";
 import RouteTagsEditor from "../components/Roadtrips/RouteTagsEditor";
 import RoadtripColorField from "../components/Roadtrips/RoadtripColorField";
-import { roadtripLineHex } from "../lib/roadtripColor";
+import { roadtripOwnPageHex } from "../lib/roadtripColor";
 import { useRoadtripColorStore } from "../store/roadtripColorStore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
@@ -248,7 +248,7 @@ export default function RoadtripDetailPage(): JSX.Element {
               routeId: id,
               name: detail.roadtrip.name,
               geometry,
-              rgb: hexToRgb(roadtripLineHex(roadtripColorMode, detail.roadtrip, roadtripColor)),
+              rgb: hexToRgb(roadtripOwnPageHex(roadtripColorMode, detail.roadtrip, roadtripColor)),
               isRoadtrip: true,
             },
           ]
