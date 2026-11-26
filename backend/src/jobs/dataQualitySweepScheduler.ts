@@ -59,6 +59,7 @@ import { prisma } from "../db";
 import { runDataQualityChecks } from "../services/dataQuality";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "../services/jobs/heavySlot";
 
 const CRON_EXPRESSION = "10 4 * * *";
 
@@ -165,7 +166,7 @@ export function startDataQualitySweepScheduler(): void {
     CRON_EXPRESSION,
     async () => {
       try {
-        await runDataQualitySweep();
+        await runHeavyJob("dataQualitySweep", () => runDataQualitySweep());
       } catch (error) {
         // `runDataQualitySweep` already survives a single account; reaching here
         // means the eligibility query itself failed, which is a database problem

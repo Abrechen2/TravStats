@@ -17,6 +17,7 @@ import {
   RETRY_BACKOFF_MS,
 } from "../services/airlineLogo/airlineLogoService";
 import { schedulerZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "../services/jobs/heavySlot";
 
 // 3 AM UTC. node-cron reads the container clock, and both containers run
 // TZ=UTC (see the timezone note in CLAUDE.local.md) — so this really is 3 AM UTC.
@@ -71,7 +72,7 @@ export function startAirlineLogoRefreshScheduler(): void {
   schedulerTask = cron.schedule(
     CRON_EXPRESSION,
     () => {
-      void sweepStaleLogos();
+      void runHeavyJob("airlineLogoRefresh", () => sweepStaleLogos());
     },
     { timezone: schedulerZone("airlineLogoRefresh") }
   );
