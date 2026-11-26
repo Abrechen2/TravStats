@@ -9,15 +9,17 @@ import { tableEntryName } from "./format";
 import { checkFileColumns, MissingFile, type FileVerdict } from "./importFiles";
 
 /**
- * Writes an archive's rows into the target database inside the import's
- * transaction (forgejo#433): catalogue references resolved, every id re-keyed,
- * rows inserted in batches through `json_populate_recordset`, so Postgres itself
- * turns each JSON value back into its column's type.
+ * Writes an archive's rows into the target database (forgejo#433): catalogue
+ * references resolved, every id re-keyed, rows inserted in batches through
+ * `json_populate_recordset`, so Postgres itself turns each JSON value back into
+ * its column's type. Each batch commits on its own and is followed by
+ * `afterWrite` (the restore's pacing and write-slot turn, `importArchive.ts`).
  */
 
 type Row = Record<string, unknown>;
 
-const BATCH_ROWS = 500;
+/** Rows per INSERT (each its own commit since the restore is paced, perf audit item 5). */
+const BATCH_ROWS = 2000;
 const BATCH_BYTES = 4 * 1024 * 1024;
 const TEXT_LIKE = new Set(["text", "varchar", "bpchar", "jsonb", "json", "_text", "_varchar"]);
 
@@ -227,13 +229,17 @@ function columnsOf(p: DataTablePlan, row: Row): string[] {
     .sort();
 }
 
-/** Inserts one table's rows; returns how many. */
+/** Serial-keyed rows are written one by one; the pause comes after this many. */
+const SERIAL_ROWS_PER_PAUSE = 500;
+
+/** Inserts one table's rows; returns how many. `afterWrite` runs after every batch. */
 export async function insertTable(
   db: Db,
   reader: ArchiveReader,
   ctx: RowContext,
   p: DataTablePlan,
-  onRow: () => void
+  onRow: () => void,
+  afterWrite: () => Promise<void> = async () => {}
 ): Promise<number> {
   let columns: string[] | null = null;
   let batch: Row[] = [];
@@ -252,6 +258,7 @@ export async function insertTable(
     );
     batch = [];
     batchBytes = 0;
+    await afterWrite();
   };
   const ownKeys = new Map<string, string>();
   for await (const row of reader.jsonLines(tableEntryName("data", p.table.name))) {
@@ -276,6 +283,7 @@ export async function insertTable(
     onRow();
     if (p.serialIdColumn) {
       ownKeys.set(String(row[p.serialIdColumn]), await insertSerialRow(db, p, out, columns));
+      if (count % SERIAL_ROWS_PER_PAUSE === 0) await afterWrite();
       continue;
     }
     const json = JSON.stringify(out);
@@ -310,9 +318,13 @@ async function insertSerialRow(
 export async function applyDeferred(
   db: Db,
   updates: readonly DeferredUpdate[],
-  skipped: ReadonlySet<string>
+  skipped: ReadonlySet<string>,
+  afterWrite: () => Promise<void> = async () => {}
 ): Promise<void> {
+  let n = 0;
   for (const u of updates) {
+    n += 1;
+    if (n % SERIAL_ROWS_PER_PAUSE === 0) await afterWrite();
     if (skipped.has(u.id)) continue;
     // A key to a row refused after this one was queued stays unset.
     const values = Object.fromEntries(
