@@ -1,14 +1,15 @@
+import type { ReactNode } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useRatingCategories } from "../../../hooks/useRatingCategories";
 import { useSettingsStore } from "../../../store/settingsStore";
 import { formatCurrency } from "../../../lib/units";
-import { countryName } from "../../../lib/countryFlag";
 import type { LodgingRatingGroup, LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
 import CountingHelp from "../counting/CountingHelp";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RankedBarList, { type RankedRow } from "./RankedBarList";
+import { CountryLabel } from "../../../lib/countryFlag";
 
 const LODGING_ACCENT = "var(--domain-lodging, #d4778f)";
 const LIST_LIMIT = 6;
@@ -36,14 +37,16 @@ interface Props {
  * read along an axis.
  */
 export default function LodgingQualitySection({ stats, evidenceScope }: Props): JSX.Element {
-  const { t, i18n } = useTranslation(["lodging", "stats"]);
+  const { t } = useTranslation(["lodging", "stats"]);
   const { labelOf } = useRatingCategories();
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const { ratings } = stats;
-  const locale = i18n.language.startsWith("en") ? "en" : "de";
 
   const score = (value: number | null): string => (value !== null ? `★ ${value.toFixed(1)}` : "—");
-  const ratingRows = (groups: LodgingRatingGroup[], label: (key: string) => string): RankedRow[] =>
+  const ratingRows = (
+    groups: LodgingRatingGroup[],
+    label: (key: string) => ReactNode
+  ): RankedRow[] =>
     groups.map((g) => ({
       key: g.key,
       label: label(g.key),
@@ -127,7 +130,9 @@ export default function LodgingQualitySection({ stats, evidenceScope }: Props): 
         <RankedBarList
           title={t("lodging:stats.quality.byCountry")}
           accent={LODGING_ACCENT}
-          rows={ratingRows(ratings.byCountry, (k) => countryName(k, locale) || k)}
+          rows={ratingRows(ratings.byCountry, (k) => (
+            <CountryLabel country={k} />
+          ))}
           emptyLabel={t("lodging:stats.quality.nothingRated")}
           limit={LIST_LIMIT}
           moreLabel={(hidden) => t("lodging:stats.more", { count: hidden })}

@@ -1,6 +1,6 @@
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Passport } from "../../types/passport";
-import { countryName } from "./countryName";
+import { CountryLabel } from "../../lib/countryFlag";
 
 /** Raw observations stay visible without being presented as visits. */
 export default function UnconfirmedCountries({
@@ -44,7 +44,9 @@ export default function UnconfirmedCountries({
       <ul className="space-y-3">
         {countries.map((country) => (
           <li key={`${country.code}-${country.source}`} className="text-sm">
-            <span className="font-medium">{countryName(country.code, locale)}</span>
+            <span className="font-medium">
+              <CountryLabel country={country.code} />
+            </span>
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
               {t(
                 country.source === "travtrack"

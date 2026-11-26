@@ -70,10 +70,11 @@ describe("TrackMonths", () => {
     expect(api.months).toHaveBeenCalledWith(2026);
     expect(within(october).getByText("October")).toBeInTheDocument();
     expect(within(october).getByText("400 m")).toBeInTheDocument();
-    expect(within(october).getByText("South Korea")).toBeInTheDocument();
+    expect(within(october).getByRole("img", { name: "South Korea" })).toBeInTheDocument();
     expect(within(october).getByText("Busan, Seoul")).toBeInTheDocument();
     const march = screen.getByTestId("track-month-2026-03");
-    expect(within(march).getByText("Germany, South Korea")).toBeInTheDocument();
+    expect(within(march).getByRole("img", { name: "Germany" })).toBeInTheDocument();
+    expect(within(march).getByRole("img", { name: "South Korea" })).toBeInTheDocument();
     expect(within(march).getByText(/412/)).toBeInTheDocument();
     expect(within(march).getByText(/track:months.pausedCount/)).toBeInTheDocument();
     const rows = screen.getAllByTestId(/^track-month-\d/);

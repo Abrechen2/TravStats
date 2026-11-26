@@ -4,10 +4,10 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { rentalApi } from "../../lib/api/rental";
 import { logger } from "../../lib/logger";
 import type { RentalStationHit } from "../../types/rental";
-import { countryName } from "../../shared/geo/countryCode";
 import { LocationInput, type LocationSelection } from "../location/LocationInput";
 import { FieldError, RequiredMark, fieldErrorProps } from "../form";
 import { EMPTY_RENTAL_STATION, stationFromHit, type RentalStationDraft } from "./rentalFormModel";
+import { CountryLabel } from "../../lib/countryFlag";
 
 interface Props {
   label: string;
@@ -48,7 +48,7 @@ export function RentalStationPicker({
   error,
   required = false,
 }: Props): JSX.Element {
-  const { t, i18n } = useTranslation(["rental"]);
+  const { t } = useTranslation(["rental"]);
   const [mode, setMode] = useState<"search" | "address">(
     value.airportId === null && value.lat !== null ? "address" : "search"
   );
@@ -203,12 +203,9 @@ export function RentalStationPicker({
                   {hit.iata ? <span className="ml-1 font-mono text-xs">({hit.iata})</span> : null}
                 </span>
                 <span className="t-caption">
-                  {[
-                    hit.kind === "earlier" ? t("rental:station.earlier") : hit.city,
-                    countryName(hit.country, i18n.language) || hit.country,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
+                  {hit.kind === "earlier" ? t("rental:station.earlier") : hit.city}
+                  {(hit.kind === "earlier" || hit.city) && hit.country ? " · " : null}
+                  {hit.country ? <CountryLabel country={hit.country} height={12} /> : null}
                 </span>
               </button>
             </li>

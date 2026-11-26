@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { PassportCountry } from "../../types/passport";
 import CountryRow from "./CountryRow";
-import { countryName } from "./countryName";
 import InfoLine from "../ui/InfoLine";
 
 /**
@@ -45,11 +44,9 @@ const VIEW_LABEL: Record<CountryView, string> = {
 
 export default function CountryTable({
   countries,
-  locale,
   onCorrect,
 }: {
   countries: PassportCountry[];
-  locale: string;
   onCorrect?: (row: PassportCountry) => void;
 }): JSX.Element {
   const { t } = useTranslation(["passport"]);
@@ -113,12 +110,7 @@ export default function CountryTable({
           </thead>
           <tbody>
             {visible.map((row) => (
-              <CountryRow
-                key={row.code}
-                row={row}
-                countryLabel={countryName(row.code, locale)}
-                onCorrect={onCorrect}
-              />
+              <CountryRow key={row.code} row={row} onCorrect={onCorrect} />
             ))}
           </tbody>
         </table>

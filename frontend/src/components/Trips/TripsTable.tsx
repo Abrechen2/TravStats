@@ -3,11 +3,11 @@ import RememberedMarker from "../provenance/RememberedMarker";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Trip } from "../../types";
 import { formatLocalDate } from "../../lib/displayFormat";
-import { countryName } from "../../shared/geo/countryCode";
 import { statusPillStyle } from "../table/statusPillStyle";
 import { Table, TableRow, type TableColumn } from "../ui/Table";
 import { useTableHints } from "../ui/useTableHints";
 import { tripDays, tripSpan } from "./TripCard";
+import { CountryLabel } from "../../lib/countryFlag";
 
 type TripColumnId = "name" | "dates" | "days" | "countries" | "status" | "places";
 
@@ -45,7 +45,7 @@ export default function TripsTable({
   /** Merge mode: the picked trips. A row click toggles, so the pick is drawn on the row. */
   selection?: ReadonlySet<string>;
 }): JSX.Element {
-  const { t, i18n } = useTranslation(["trips"]);
+  const { t } = useTranslation(["trips"]);
   const hints = useTableHints();
   const columns: TableColumn[] = ORDER.map((key) => ({
     key,
@@ -78,9 +78,15 @@ export default function TripsTable({
           ),
           dates: range || "—",
           days: days !== null ? String(days) : "—",
-          countries: trip.countries.length
-            ? trip.countries.map((cc) => countryName(cc, i18n.language)).join(", ")
-            : "—",
+          countries: trip.countries.length ? (
+            <span className="inline-flex flex-wrap gap-1.5">
+              {trip.countries.map((cc) => (
+                <CountryLabel key={cc} country={cc} compact height={16} />
+              ))}
+            </span>
+          ) : (
+            "—"
+          ),
           status: (
             <span className="inline-flex flex-col items-start gap-1">
               <span className="ts-status-pill" style={statusPillStyle(STATUS_TONE[trip.status])}>

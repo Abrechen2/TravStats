@@ -4,6 +4,7 @@ import type { CountryStatsResponse } from "../../types";
 import EvidenceTrigger from "./EvidenceTrigger";
 import { rankingKey } from "../../shared/evidence";
 import { countryName } from "../../shared/geo/countryCode";
+import { CountryLabel } from "../../lib/countryFlag";
 
 const MAX_ROWS = 15;
 
@@ -69,8 +70,8 @@ export default function CountryDistributionCard({
                   style={{ width: `${(row.count / maxCount) * 100}%`, background: "var(--accent)" }}
                 />
               </div>
-              <span className="w-36 text-sm truncate" title={name}>
-                {name}
+              <span className="w-44 text-sm truncate" title={name}>
+                {row.country === "Unknown" ? name : <CountryLabel country={row.country} />}
               </span>
               <span className="w-8 text-right text-sm font-semibold">{row.count}</span>
             </EvidenceTrigger>

@@ -13,6 +13,7 @@ import TrackSectionPanel from "../track/TrackSectionPanel";
 import { tripSectionProps } from "../track/sectionProps";
 import { Field, Input } from "../../ui/Field";
 import { W } from "./model";
+import { CountryLabel } from "../../../lib/countryFlag";
 
 const T = `${W}.tripAway`;
 
@@ -137,7 +138,14 @@ export default function TripSuggestionCard({
           : t(`${T}.evidence`, { count: trip.days, km: trip.km })}
       </p>
       {countries.length > 0 && (
-        <p className="text-sm">{t(`${T}.countries`, { list: countries.join(", ") })}</p>
+        <p className="text-sm flex flex-wrap items-center gap-2">
+          <span className="inline-flex gap-1.5">
+            {(trip.countries ?? []).map((c) => (
+              <CountryLabel key={c} country={c} compact />
+            ))}
+          </span>
+          {t(`${T}.countries`, { list: countries.join(", ") })}
+        </p>
       )}
       {suggestion.coverage === "truncated" && <p className="t-caption">{t(`${T}.partial`)}</p>}
       <TrackSectionPanel {...tripSectionProps(suggestion, tripName)} />

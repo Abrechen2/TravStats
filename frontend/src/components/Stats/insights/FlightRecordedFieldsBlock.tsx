@@ -5,8 +5,8 @@ import EvidenceCount from "./EvidenceCount";
 import { InsightHeading, insightCounting } from "./InsightHeading";
 import { useInsightFormat } from "./insightFormat";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { countryName } from "../../../shared/geo/countryCode";
 import type { RecordedFields } from "../../../types/flightInsights";
+import { CountryLabel } from "../../../lib/countryFlag";
 
 /**
  * Three figures from fields only enriched flights carry: time between wheels-off
@@ -19,7 +19,7 @@ export default function FlightRecordedFieldsBlock({
 }: {
   recorded: RecordedFields;
 }): JSX.Element | null {
-  const { t, i18n } = useTranslation(["stats"]);
+  const { t } = useTranslation(["stats"]);
   const fmt = useInsightFormat();
   const muted = { color: "var(--text-muted)" };
   const { airborne, overflown, codeshare } = recorded;
@@ -81,7 +81,11 @@ export default function FlightRecordedFieldsBlock({
                 })}
               </span>
               <p className="mt-1" style={muted}>
-                {overflown.countries.map((c) => countryName(c, i18n.language) || c).join(", ")}
+                {overflown.countries.map((c) => (
+                  <span key={c} className="mr-3 inline-block">
+                    <CountryLabel country={c} />
+                  </span>
+                ))}
               </p>
             </dd>
           </div>
