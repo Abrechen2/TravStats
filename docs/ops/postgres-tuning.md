@@ -91,6 +91,12 @@ candidate; check `pg_stat_statements` for a query that should use it, then
 drop it with `DROP INDEX CONCURRENTLY` through a migration, never by hand.
 Every index change on these tables uses `CONCURRENTLY`.
 
+**Due re-check:** `travtrack_points_user_id_origin_t_idx` (101 MB on prod)
+was created on 2026-11-24 and had 0 scans two days later. Run the script on
+prod after 2026-12-08 and EXPLAIN the best-source query
+(`services/travtrack/bestSource/choices.ts`) before deciding. Nothing is
+dropped until then.
+
 ## Autovacuum for the bulk-written tables
 
 The default scale factors re-analyse `travtrack_points` only after ~20 % of
