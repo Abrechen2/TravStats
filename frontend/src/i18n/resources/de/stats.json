@@ -824,7 +824,7 @@
     "seatClassTitle": "Sitzklasse",
     "positionTitle": "Fenster / Mitte / Gang",
     "zoneTitle": "Vorne / Mitte / Hinten",
-    "noDataHint": "Sobald deine Flüge eine Sitznummer (etwa 14C) oder eine Sitzklasse tragen, erscheinen hier Fenster, Gang, Reihen und Klassen.",
+    "noDataHint": "Erscheint, sobald Flüge eine Sitznummer oder Klasse tragen.",
     "unplaced_one": "{{count}} Sitz lässt sich ohne Kabinenlayout nicht zuordnen",
     "unplaced_other": "{{count}} Sitze lassen sich ohne Kabinenlayout nicht zuordnen",
     "noSeat_one": "{{count}} Flug ohne Sitznummer ist hier nicht enthalten",
@@ -906,7 +906,7 @@
   "travelAccount": {
     "title": "Wo du geschlafen hast",
     "subtitle": "Jedes Jahr Nacht für Nacht aufgeteilt. Der Balken ist immer ein ganzes Jahr.",
-    "help": "Der graue Rest ist nicht zugeordnet: Nächte, für die kein Eintrag sagt, wo du warst. Das heißt nicht zuhause — ein fehlender Eintrag beweist nichts, und je vollständiger dein Logbuch, desto kleiner der Rest. Belegen zwei Einträge dieselbe Nacht, zählt sie einmal: Schiff vor Unterkunft vor Flugzeug. Das laufende Jahr zählt bis zur letzten Nacht.",
+    "help": "Grau: Nächte ohne Eintrag — nicht unbedingt zuhause. Jede Nacht zählt einmal.",
     "helpWithRail": "Der graue Rest ist nicht zugeordnet: Nächte, für die kein Eintrag sagt, wo du warst. Das heißt nicht zuhause — ein fehlender Eintrag beweist nichts, und je vollständiger dein Logbuch, desto kleiner der Rest. Belegen zwei Einträge dieselbe Nacht, zählt sie einmal: Schiff vor Unterkunft vor Nachtzug vor Flugzeug. Das laufende Jahr zählt bis zur letzten Nacht.",
     "contested": "{{count}} Nächte von mehreren Einträgen beansprucht und nur einmal gezählt",
     "contested_one": "{{count}} Nacht von mehreren Einträgen beansprucht und nur einmal gezählt",
@@ -1208,7 +1208,7 @@
   },
   "insights": {
     "title": "Entdeckungen, Wiedersehen und Umstiege",
-    "intro": "„Neu“ heißt: zum ersten Mal in deinem Logbuch erfasst. Referenz ist alles, was du seit {{firstYear}} eingetragen hast – Reisen davor kennt die App nicht.",
+    "intro": "„Neu“ heißt: zum ersten Mal im Logbuch seit {{firstYear}}.",
     "empty": "Noch keine geflogenen Flüge mit Datum. Diese Auswertungen entstehen aus geflogenen und nachgetragenen Flügen mit Abflugdatum und Flughäfen.",
     "openFlight": "Flug öffnen",
     "coverage": {
@@ -1799,7 +1799,7 @@
   },
   "years": {
     "title": "Jahre",
-    "help": "Die Strecke deines Logbuchs pro Jahr und Monat, nach Reiseart eingefärbt. Die aufgezeichnete Strecke (TravTrack) steht daneben und wird nie dazugerechnet: eine Aufzeichnung kann dieselbe Zugfahrt enthalten, die du eingetragen hast.",
+    "help": "Strecke pro Jahr nach Reiseart. TravTrack steht daneben und zählt nicht mit.",
     "loadFailed": "Die Jahresübersicht konnte nicht geladen werden.",
     "mapLink": "Karte",
     "mapLinkLabel": "Karte für {{year}} öffnen",

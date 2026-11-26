@@ -56,7 +56,7 @@
     "triggerLabel": "Add trip",
     "document": {
       "title": "Read travel documents",
-      "description": "Your tour operator's PDF — invoice or travel documents — or the e-mail it came with. Flights, hotels and price become one trip you review first."
+      "description": "The operator's PDF or email. It becomes a trip you check first."
     },
     "fromExisting": {
       "title": "Build from existing entries",
@@ -201,7 +201,7 @@
       "offer": "There is no tour operator template for this document. The AI model can still read it and propose a trip with flights and stays. You review every row before anything is saved; the original is attached to the trip.",
       "read": "Read with AI",
       "reading": "Reading …",
-      "intro": "Read by the AI model, not by a template — check every row against your document. Nothing is saved before you confirm.",
+      "intro": "Read by AI — check every row. Saved only when you accept.",
       "dropped": "{{count}} details from the model are not in the document and were discarded:",
       "droppedKind": {
         "bookingReference": "Booking number “{{value}}”",

@@ -28,7 +28,7 @@
       },
       "time": {
         "title": "Fragen zur Zeit",
-        "description": "Hier fehlt uns etwas, um eine Zeit richtig anzuzeigen: die Zeitzone des Ortes, die Uhrzeit oder der genaue Tag. Wir raten nicht – ergänze es, wenn du es weißt, oder lass es so."
+        "description": "Zeitzone, Uhrzeit oder Tag fehlt. Wir raten nicht — ergänze es oder lass es so."
       },
       "home": {
         "title": "Zuhause",
@@ -105,7 +105,7 @@
       "nightlyLink": "Nächtliche Suche einstellen",
       "review": {
         "title": "Besuchsvorschläge aus deinen Reisen",
-        "description": "Fotos, die während einer erfassten Reise an einer Stelle ohne Besuch entstanden sind. Wähle mehrere aus und übernimm oder lehne sie gemeinsam ab; vorher lassen sich Ort, Name und Zeit korrigieren. Abgelehnte Vorschläge kommen nicht wieder.",
+        "description": "Fotos unterwegs ohne Besuch. Übernehmen oder ablehnen; Abgelehntes kommt nicht wieder.",
         "selectAll": "Alle auswählen",
         "selectOne": "{{label}} auswählen",
         "selected": "{{count}} ausgewählt",
@@ -171,7 +171,7 @@
     },
     "tripSuggestions": {
       "title": "Reise-Vorschläge",
-      "description": "Aus deinen Einträgen abgeleitet: wann du unterwegs warst und was zusammengehört. Vorschläge — angelegt oder verknüpft wird erst, wenn du übernimmst.",
+      "description": "Vorschläge aus deinen Einträgen. Angelegt wird erst beim Übernehmen.",
       "nameFallback": "Reise",
       "planned": "geplant",
       "capped": "{{shown}} von {{total}} Vorschlägen angezeigt — beantworte einige, dann rücken die nächsten nach.",
@@ -348,7 +348,7 @@
         "ground": "Nur am Boden durchgereist",
         "notThere": "Nicht dort gewesen",
         "emptyTitle": "Keine offenen Fragen aus TravTrack",
-        "emptyDescription": "Hier erscheint eine Frage, sobald TravTrack dich an mindestens zwei Tagen am Boden in einem Land sieht, das dein Reisepass noch nicht kennt – oder an einem Tag eine Fahrt aufzeichnet, die zu keinem Eintrag in deinem Logbuch passt.",
+        "emptyDescription": "Fragen erscheinen, wenn TravTrack ein neues Land oder eine unbekannte Fahrt sieht.",
         "errors": {
           "invalidated": "Die Standortdaten zu dieser Frage wurden inzwischen gelöscht oder geändert. Die Frage entfällt.",
           "resolved": "Diese Frage wurde bereits beantwortet.",
@@ -477,7 +477,7 @@
       "stay": "Aufenthalt",
       "gpsProposal": "Möglichen Aufenthalt aus GPS-Daten ergänzen",
       "recheckAll": "Erneut prüfen",
-      "recheckHint": "„Erneut prüfen“ sucht in deinen vorhandenen Daten noch einmal nach offenen Fragen, etwa fehlenden Angaben oder Widersprüchen, und lädt den Posteingang danach neu.",
+      "recheckHint": "Sucht in deinen vorhandenen Daten erneut nach Lücken oder Widersprüchen.",
       "refreshHint": "Lädt die Liste neu, ohne deine Daten erneut zu prüfen.",
       "shown_one": "1 Eintrag angezeigt",
       "shown_other": "{{count}} Einträge angezeigt",
@@ -546,7 +546,7 @@
       },
       "convert": {
         "label": "In Zug- oder Busfahrt umwandeln",
-        "hint": "Der Flug wird gelöscht und als Fahrt derselben Reise und Buchung angelegt; das lässt sich nicht zurücknehmen. Dafür brauchen beide Orte eine Position und der Abflug eine Uhrzeit – sonst bleibt der Flug unverändert und du korrigierst ihn zuerst."
+        "hint": "Wird zur Fahrt, nicht umkehrbar. Braucht Positionen und eine Abflugzeit."
       }
     },
     "timeUnchanged": "Am Eintrag wurde nichts geändert. Die Zeit steht, wie sie gespeichert war, bis du sie ergänzt.",
@@ -691,7 +691,7 @@
   "unfiledDocuments": {
     "alreadyThere": "Dieses Dokument ist schon vorhanden.",
     "title": "Nicht zugeordnete Dokumente",
-    "description": "Diese Uploads gehören zu keinem Eintrag. Ordne sie einem Flug, einer Kreuzfahrt, einer Unterkunft, einem Ort oder einer Reise zu — sonst werden sie {{days}} Tage, nachdem sie ohne Eintrag dastanden, gelöscht, samt Datei.",
+    "description": "Ohne Eintrag. Ordne sie zu, sonst werden sie nach {{days}} Tagen samt Datei gelöscht.",
     "uploaded": "Hochgeladen am",
     "deletesOn": "Wird gelöscht am",
     "open": "Öffnen",
@@ -720,7 +720,7 @@
     },
     "create": {
       "title": "„{{name}}“: Neu anlegen aus Dokument",
-      "hint": "Wähle, was angelegt werden soll. Das Dokument wird ausgelesen und im Formular vorausgefüllt; was du speicherst, wird mit diesem Dokument verknüpft.",
+      "hint": "Wähle die Art. Das Formular wird aus dem Dokument vorausgefüllt und verknüpft.",
       "unreadable": "Dieses Format kann nicht ausgelesen werden. Ausgelesen werden PDF-Dateien, Bilder und E-Mails.",
       "noDomains": "Keine Domäne aktiv, aus der sich etwas anlegen ließe.",
       "recognised": "erkannt",
@@ -766,7 +766,7 @@
   },
   "documentLinkSuggestions": {
     "title": "Dokumente, die mehr belegen",
-    "description": "Diese Dokumente nennen Buchungen derselben Reise, mit denen sie noch nicht verknüpft sind. Hake an, was sie ebenfalls belegen — es wird erst verknüpft, wenn du bestätigst.",
+    "description": "Diese Dokumente passen zu weiteren Buchungen. Verknüpft wird erst beim Bestätigen.",
     "scanning": "Gespeicherte Dokumente werden geprüft … {{done}} von {{total}}",
     "alsoCovers": "„{{name}}“ belegt auch …",
     "accept": "Verknüpfen",
@@ -810,7 +810,7 @@
   },
   "placeCaptures": {
     "title": "Orte ohne Namen",
-    "description": "Diese Positionen hast du in der App mit „Ort jetzt“ festgehalten. Gib ihnen einen Namen, dann entstehen Ort und Besuch – oder verwirf sie.",
+    "description": "Mit „Ort jetzt“ festgehalten. Benennen ergibt Ort und Besuch — oder verwerfen.",
     "unnamed": "Unbenannter Ort",
     "accuracy": "± {{meters}} m",
     "name": "Benennen",

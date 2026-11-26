@@ -19,7 +19,7 @@
     "userAdded": "User-added",
     "ship": {
       "title": "Ships",
-      "description": "Catalog from the seed CSV plus user-added entries. User-added ships are marked and kept across re-seeds.",
+      "description": "Your own ships are marked “Custom” and survive every re-seed.",
       "name": "Name",
       "cruiseLine": "Cruise line",
       "year": "Year built",
@@ -34,7 +34,7 @@
     },
     "port": {
       "title": "Ports",
-      "description": "Catalog from the seed CSV plus user-added entries. Coordinates in decimal degrees — look unknown ports up on Google Maps.",
+      "description": "Your own ports survive re-seeds. Coordinates in decimal degrees.",
       "name": "Name",
       "city": "City",
       "country": "Country",
@@ -53,7 +53,7 @@
     "userAdded": "User-added",
     "airline": {
       "title": "Airlines",
-      "description": "Catalog from the seed CSV plus user-added entries. User-added airlines are marked and kept across re-seeds.",
+      "description": "Your own airlines are marked “Custom” and survive every re-seed.",
       "name": "Name",
       "callsign": "Callsign",
       "country": "Country",
@@ -67,7 +67,7 @@
     },
     "aircraft": {
       "title": "Aircraft types",
-      "description": "Catalog from the seed CSV plus user-added entries. User-added aircraft types are marked and kept across re-seeds.",
+      "description": "Your own aircraft types are marked “Custom” and survive every re-seed.",
       "name": "Name",
       "add": "Add",
       "searchPlaceholder": "Search aircraft type or ICAO …",
@@ -79,7 +79,7 @@
     },
     "airport": {
       "title": "Airports",
-      "description": "Catalogue from the OurAirports CSV plus custom entries — for airfields the catalogue is missing (e.g. private airstrips). Newly added airports survive re-seeds; the timezone is derived from the coordinates.",
+      "description": "For missing airfields. Your entries survive every re-seed; the time zone comes from the coordinates.",
       "name": "Name",
       "city": "City",
       "country": "Country",
@@ -111,7 +111,7 @@
       },
       "publicUrl": {
         "label": "Public URL (device pairing)",
-        "help": "Externally reachable address of this instance, used for the device-pairing QR code so the mobile app can connect from outside the LAN. Leave empty to auto-detect from the request URL."
+        "help": "Public address, so the app can pair from outside your network. Empty: automatic."
       },
       "lanUrl": {
         "label": "Internal URL (LAN)",
@@ -127,7 +127,7 @@
       },
       "betaFeatures": {
         "label": "Show beta features",
-        "help": "Reveals unfinished features for everyone on this instance. For testing only — beta features may change or disappear again.",
+        "help": "Shows unfinished features to everyone. For testing only — they may change.",
         "listTitle": "What this switch turns on",
         "listEmpty": "Nothing is behind the switch at the moment.",
         "listNote": "This list is read from the registry in the source, so it always matches what this build actually gates.",
@@ -156,7 +156,7 @@
       },
       "countryThreshold": {
         "label": "A country counts from …",
-        "help": "The starting point for this instance, so a fresh account does not have to decide anything. Anyone may override it in their own settings — “does a connection count?” is a personal definition, not a property of the server."
+        "help": "Default for new accounts. Each person can change it."
       }
     },
     "passkeys": {
@@ -169,11 +169,11 @@
       },
       "rpId": {
         "label": "Passkey domain",
-        "help": "The bare domain only — no https:// and no port. Leave empty to derive it from the first origin. NOTE: a passkey is bound to this value forever; changing it later breaks every passkey already registered."
+        "help": "Domain only. Warning: changing it breaks every existing passkey."
       },
       "origins": {
         "label": "Allowed origins",
-        "help": "One per line, with scheme and port if any. The first one is authoritative. Several only make sense when they share the same passkey domain (e.g. app.example.com and www.example.com)."
+        "help": "One per line, with https:// and port if any. The first one counts."
       }
     }
   },
@@ -265,7 +265,7 @@
       "title": "Reset two-factor",
       "confirm": "Reset"
     },
-    "description": "Everyone on this instance — change roles and deactivate accounts. A deactivated account can no longer sign in; its data is kept.",
+    "description": "Change roles, deactivate accounts. A deactivated account keeps its data.",
     "twoFactor": {
       "on": "On",
       "off": "Off"
@@ -429,15 +429,15 @@
   },
   "parserSettings": {
     "title": "Global Parser Configuration",
-    "description": "Default parsers for all users. Local ones are free; cloud AI costs per request and needs a key.",
+    "description": "Default for everyone. Local is free, cloud AI costs and needs a key.",
     "llmSwitch": {
       "title": "AI model",
       "label": "Use the AI model (reading bookings and trip summaries)",
-      "hint": "Off: TravStats asks no language model at all – not even when an Ollama URL is entered above or OLLAMA_URL is set. Bookings are then read with the built-in templates only."
+      "hint": "Off: no language model, built-in templates only — even if Ollama is set."
     },
     "ollama": {
       "title": "Ollama LLM Parser",
-      "description": "Ollama runs locally or on your network and analyzes booking confirmations with an LLM. Ideal for multi-stop and complex emails. Always tried first when a URL is set — no consent needed within your network.",
+      "description": "Local language model for hard bookings. Asked first when set.",
       "urlLabel": "Ollama URL",
       "remoteOptIn": {
         "label": "I agree that booking data is sent to this address if it is outside my network."
@@ -452,17 +452,17 @@
     },
     "order": {
       "label": "Who reads first?",
-      "hint": "Applies to flights, stays, cruises and places alike. Measured 2026-09-17 on 31 flight mails: the templates read every one in under a second, the language model took 19 minutes and missed three. \"AI first\" is worth it when no template covers your senders."
+      "hint": "Templates are fast and accurate. “AI first” only pays off for unknown senders."
     },
     "userPermissions": {
       "title": "User permissions"
     },
     "provider": {
       "title": "AI provider",
-      "description": "Who reads the bookings no template knows? Ollama always goes first when it is configured. If it does not answer, TravStats asks the cloud providers that are switched on below, in order. Switching on, key, model and consent are set under Settings → Server → Services; only the order is set here.",
+      "description": "Order for bookings no template knows. Set up under Server → Services.",
       "chain": {
         "title": "Cloud provider priority",
-        "hint": "If Ollama does not answer (not configured, or not reachable), TravStats tries these providers in order — but only the ones with BOTH a key AND consent. A provider missing either is skipped, never tried. A provider that answers ends the chain — even with a thin answer."
+        "hint": "If Ollama does not answer, these are tried in order — only with key and consent."
       },
       "test": {
         "errors": {
@@ -503,7 +503,7 @@
         },
         "custom": {
           "name": "Custom provider (OpenAI-compatible)",
-          "hint": "Your own server or a cloud service with an OpenAI-compatible interface — OpenRouter, Ollama Cloud, a LAN vLLM/LM Studio.",
+          "hint": "Your own server or a service with an OpenAI-compatible API.",
           "consent": {
             "title": "Send bookings to this provider",
             "warning": "If this provider is outside your network, TravStats sends it the text of the email or PDF (up to 12,000 characters) for every booking no template knows — including names, booking numbers, travel dates and prices. What the provider does with it is governed by its terms, not by TravStats.",
@@ -518,7 +518,7 @@
   },
   "backup": {
     "title": "Backup Management",
-    "description": "Backups capture all data on this instance and can be restored after data loss or a move. A restore replaces the current data entirely — take another backup first.",
+    "description": "Saves all data. Restoring overwrites everything — make a backup first.",
     "loading": "Loading backups...",
     "running": "Backup running",
     "startedAt": "Started at {{date}}",
@@ -542,7 +542,7 @@
     },
     "schedule": {
       "title": "Automatic Backup",
-      "description": "Scheduled backups run at 02:00 in the zone chosen below – daily, on Sundays or on the 1st of the month, depending on the interval.",
+      "description": "Runs at 2:00 in the chosen time zone.",
       "loadFailed": "The backup settings could not be loaded. Saving is disabled so nothing gets overwritten."
     },
     "toasts": {
@@ -582,7 +582,7 @@
     "unverified": "Not checked by checksum",
     "cloudList": {
       "title": "Backups on the WebDAV server",
-      "description": "Bring a backup back from the WebDAV server into the backup list, e.g. after moving servers. It can then be restored like any other.",
+      "description": "Fetches a backup back from the WebDAV server, e.g. after a move.",
       "load": "Load list",
       "loading": "Loading …",
       "empty": "There are no backups on the WebDAV server.",
@@ -617,7 +617,7 @@
   "fxCdn": {
     "title": "Exchange rates",
     "label": "Fetch rates for currencies the ECB does not publish from cdn.jsdelivr.net",
-    "description": "The ECB publishes 30 currencies. With this off, exactly those stay convertible; everything else is stored and shown but marked “no rate” and left out of totals. With it on, this instance asks the free jsDelivr dataset for the rest — only for rates the ECB lacks, and without a key."
+    "description": "Rates for currencies the ECB does not publish. Off: those stay out of totals."
   },
   "loginBackgrounds": {
     "title": "Sign-in page images",
@@ -631,7 +631,7 @@
     "uploadFailed": "Upload failed.",
     "removeFailed": "Could not remove the image.",
     "replacesShipped": "Your images replace the shipped ones entirely. Remove them all to go back to the shipped set.",
-    "hint": "Dark portrait photographs with a quiet left half work best — that is where the text sits. On bright ones the text becomes hard to read."
+    "hint": "Dark portrait photos with a calm left half work best."
   },
   "timeModel": {
     "unknownCode": "unknown ({{code}})",
@@ -770,7 +770,7 @@
     },
     "reResolve": {
       "title": "Re-resolve time zones",
-      "description": "Every time carries the zone it was stored with. If a place was corrected or a country changed its time zone, a dry run shows which entries would get a different zone and how far their local time would shift. Nothing is written until you apply.",
+      "description": "Rechecks stored time zones after fixes. Dry run first, written only when you apply.",
       "dryRun": "Start dry run",
       "dryRunning": "Dry run running …",
       "progress": "{{done}} of {{total}} checked",
@@ -803,7 +803,7 @@
   },
   "federation": {
     "title": "Server connections",
-    "description": "Connect this server to other TravStats servers so people can compare across servers. Only totals travel, signed but not end-to-end encrypted.",
+    "description": "Compare across servers. Only totals leave, signed but not end-to-end encrypted.",
     "envNote": "Set by environment variables (FEDERATION_*). Change it there.",
     "enabled": "Connect to other servers",
     "enabledSub": "Without this, comparing stays on this server.",
@@ -831,12 +831,12 @@
     "showPublicKey": "Show public key as text",
     "qrTitle": "Pair by QR",
     "qrAlt": "Connection file QR code",
-    "qrHint": "Scan the code with the other admin's Companion app. Then compare the fingerprint above with the other server's admin before confirming the server. The code contains no secret and does not expire. It is only good for the saved key and the saved address: after a key change or a new address, the other admin has to scan it again.",
+    "qrHint": "Scan with the Companion app, then compare the fingerprint with the other admin.",
     "downloadFile": "Download connection file",
     "downloadHint": "Send it to the other server's admin. It contains no secret.",
     "downloadOriginPending": "Save the changed address first – the file names the saved one.",
     "importFile": "Import connection file",
-    "importHint": "The ZIP or JSON file the other admin sent you. Nothing is pinned until you press “Pin server”.",
+    "importHint": "The other admin's file. Stored only with “Add server”.",
     "admissions": {
       "title": "Requests from other servers",
       "direction": {
@@ -858,7 +858,7 @@
     },
     "peerListEmpty": "No server is connected yet.",
     "advanced": "Advanced",
-    "advancedHint": "Connection file, QR code and pinning a server by hand. You rarely need this: invitation links put the request here by themselves.",
+    "advancedHint": "Connect servers by hand. Rarely needed: invite links do this for you.",
     "connected": "Connected servers",
     "importedTitle": "From the connection file",
     "importedStatus": "Not checked yet",
@@ -916,7 +916,7 @@
       "peers": {
         "title": "At least one other server is admitted and reachable"
       },
-      "peersHint": "The other server's admin must do the same on their side; compare your fingerprints by phone or chat while you do.",
+      "peersHint": "The other admin does the same; compare your fingerprints.",
       "peerReached": "Last reached by ping: {{date}}",
       "peerUnreached": "Never reached by ping yet",
       "peerSuspended": "Suspended",
@@ -924,11 +924,12 @@
       "addPeer": "Add a server",
       "usersTitle": "Then: how users share",
       "users": "On a trip, under \"Share\", create an invitation code; it is valid for 72 hours and works once. The other person redeems it on their own server under Settings → Share trips."
-    }
+    },
+    "qrHintMore": "The code holds no secret and does not expire. It is valid only for the stored key and address: after a change, the other admin must scan again."
   },
   "importMode": {
     "title": "Import mode",
-    "description": "Lifts the quantity limits on uploads and imports, so a first import with all its documents is not blocked for hours. Lasts 24 hours and ends by itself. Demo protection and token permissions stay in place.",
+    "description": "Lifts upload limits for a first import. Ends by itself after 24 hours.",
     "off": "Off — the normal limits apply.",
     "activeAll": "On for every account until {{until}}.",
     "activeFor": "On for {{account}} until {{until}}.",
@@ -941,7 +942,7 @@
   },
   "templateRepo": {
     "title": "Template repository",
-    "description": "Where the parser templates are synced from. Point it at your own copy of the template repository — a fork, or a self-hosted mirror — to use templates the official one does not have. The sync then reads every template from that URL; templates only the old repository named are withdrawn.",
+    "description": "Where parser templates sync from, e.g. your own fork.",
     "url": "Repository URL (raw files)",
     "readsFrom": {
       "admin": "The sync reads from {{url}} (set here).",
@@ -990,13 +991,13 @@
   },
   "operatorLogos": {
     "title": "Open data for logos and pictures",
-    "description": "Logos of rail operators, coach companies, ferry lines and rental companies, and pictures of ships, car models and train categories on the map cards come from Wikidata and Wikimedia Commons – freely licensed files only, with their authors credited. The server asks, never the browser, and sends only the name of the company, ship, car model or train category. Switched off, the cards show monograms and no pictures.",
+    "description": "Free logos and images from Wikimedia. Only the name is sent. Off: monograms.",
     "switch": "Load logos and pictures from open data",
     "loadFailed": "The setting could not be loaded.",
     "saveFailed": "The setting could not be saved."
   },
   "lodgingChains": {
-    "description": "The catalogue of hotel chains every account picks from. Chains an account added itself belong to that account and do not appear here.",
+    "description": "Hotel chains for all accounts. Accounts' own chains are not listed.",
     "name": "Name",
     "program": "Loyalty programme",
     "color": "Brand colour",
@@ -1040,7 +1041,7 @@
   },
   "travTrack": {
     "title": "TravTrack",
-    "description": "The own location history: positions reach this server from the Companion app, GPX files, OwnTracks, Overland and a Dawarich import. Switching it off deletes nothing — accounts holding data keep their summary, export and delete.",
+    "description": "Your own location history from the app, GPX and imports. Turning it off deletes nothing.",
     "switch": "Offer TravTrack on this server",
     "errors": {
       "loadFailed": "The TravTrack switch could not be loaded.",
@@ -1050,7 +1051,7 @@
   },
   "travPlan": {
     "title": "TravPlan",
-    "description": "The planning mode: plan trips ahead and compare them on the way. Switching it off deletes no plans — they stay stored and reappear once TravPlan is switched on.",
+    "description": "Plan trips ahead. Turning it off deletes no plans.",
     "switch": "Offer TravPlan on this server",
     "errors": {
       "loadFailed": "The TravPlan switch could not be loaded.",
@@ -1066,7 +1067,7 @@
   },
   "aeroapi": {
     "title": "FlightAware AeroAPI: plan and monthly budget",
-    "description": "AeroAPI bills per result set. TravStats counts every call in the UTC calendar month and sends nothing once the budget is reached — never a surprise bill. The per-call costs are estimates until they are compared with a real invoice.",
+    "description": "Counts every call per month and stops at the budget — no surprise bill.",
     "tier": "Plan",
     "tiers": {
       "personal": "Personal ($5 credit)",

@@ -76,7 +76,7 @@
   "suggestions": {
     "open": "Aus deinen Flügen übernehmen",
     "title": "In deinen Flügen gefunden",
-    "hint": "Nummern, die an Flügen stehen, aber noch zu keinem Programm gehören. Übernehmen öffnet das Formular vorausgefüllt — gespeichert wird erst, wenn du bestätigst.",
+    "hint": "Nummern an Flügen ohne Programm. Gespeichert wird erst beim Bestätigen.",
     "empty": "Keine weiteren Vielfliegernummern in deinen Flügen gefunden.",
     "loadError": "Die Vorschläge konnten nicht geladen werden.",
     "adopt": "Übernehmen"

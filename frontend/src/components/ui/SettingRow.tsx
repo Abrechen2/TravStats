@@ -1,10 +1,13 @@
 import type { JSX, ReactNode } from "react";
 import { ExpertPill } from "./ExpertPill";
+import Toggletip from "./Toggletip";
 
 interface SettingRowProps {
   title: ReactNode;
   /** One line saying what the setting does. */
   sub?: ReactNode;
+  /** The detail behind an ⓘ after `sub`; keeps `sub` to one line. */
+  more?: ReactNode;
   /** The control: pills, a switch, a select, a button. Absent for a row that only informs. */
   control?: ReactNode;
   /** Ties the title to a form control that has an id. */
@@ -23,6 +26,7 @@ interface SettingRowProps {
 export function SettingRow({
   title,
   sub,
+  more,
   control,
   htmlFor,
   expert = false,
@@ -43,7 +47,21 @@ export function SettingRow({
           </Title>
           {expert && <ExpertPill />}
         </span>
-        {sub ? <span className="t-caption">{sub}</span> : null}
+        {sub ? (
+          <span className="t-caption">
+            {sub}
+            {more ? (
+              <>
+                {" "}
+                <Toggletip
+                  content={more}
+                  subject={typeof title === "string" ? title : undefined}
+                  className="align-middle"
+                />
+              </>
+            ) : null}
+          </span>
+        ) : null}
       </span>
       {control ? (
         // min-w-0/max-w-full, and a select capped at the row: a native select is as

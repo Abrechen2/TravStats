@@ -139,7 +139,7 @@
         },
         "perCruise": {
           "label": "Pro Reise",
-          "hint": "Jede Reise bekommt eine eigene Farbe. In der Ansicht „Alle“ teilen sich diese Farben die Karte mit den Flugfarben und können mit ihnen konkurrieren."
+          "hint": "Jede Reise eine eigene Farbe. In „Alle“ können sie mit Flugfarben verwechselt werden."
         },
         "solid": {
           "label": "Einfarbig",

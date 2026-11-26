@@ -65,7 +65,7 @@
   },
   "export": {
     "title": "Export the history",
-    "intro": "Downloads your TravTrack positions of these days, both included, on your profile's clock. What a privacy zone hides is not in the file.",
+    "intro": "Downloads the positions of these days, without private zones.",
     "from": "From",
     "to": "To",
     "format": "Format",
@@ -80,7 +80,7 @@
   },
   "delete": {
     "title": "Delete a span",
-    "intro": "Deletes every position of these days, both included, on your profile's clock. The span stays deleted: not even a phone that was still offline brings them back. Flights and trips stay.",
+    "intro": "Deletes all positions of these days for good. Flights and trips stay.",
     "from": "From",
     "to": "To",
     "counting": "Counting the stored positions …",
@@ -174,8 +174,8 @@
   },
   "imports": {
     "title": "Track files",
-    "intro": "A track file goes into your TravTrack history: GPX, KML or TCX from a sports app or a tracker, GeoJSON with times, and the Google location history (Takeout “Records.json”, “Semantic Location History” or the on-device Timeline export). The file is read on this server only. Times without a time zone are not guessed, and a missing accuracy stays unknown. Positions inside a privacy zone or a deleted span are discarded, and what is stored already is not added twice. An import starts no suggestions.",
-    "googleHint": "Google Timeline: Google keeps the Timeline on the device only; the “Timeline.json” file from there is read (according to Google's help: Android “Settings → Location → Location services → Timeline → Export Timeline data”, iPhone “Google Maps → profile picture → Settings → Personal content → Export Timeline data”). Privacy zones cut points out. The calendar fills over hours because every day is processed on its own. Visit suggestions are created only for the last 30 days. The file never leaves the server. Activity start and end points, which Google often stamps with the wrong time, are stored only where no path covers that time, and are never used for lines or distances.",
+    "intro": "Upload GPX, KML, TCX, GeoJSON or Google history. Read on this server only.",
+    "googleHint": "Google Timeline: export “Timeline.json” from your phone. The file stays on the server.",
     "choose": "Import track file",
     "runningPercent": "Importing {{name}} … {{percent}} %",
     "formats": {
@@ -239,11 +239,13 @@
       "fileMismatch": "This is not the file this import was started with. Choose the same file to resume."
     },
     "resume": "Resume",
-    "partial": "The import stopped part-way: {{summary}}. Choose the same file with “Resume” to carry on."
+    "partial": "The import stopped part-way: {{summary}}. Choose the same file with “Resume” to carry on.",
+    "googleHintMore": "Google keeps the timeline on the device only. According to Google's help: Android “Settings → Location → Location services → Timeline → Export Timeline data”, iPhone “Google Maps → profile picture → Settings → Personal content → Export Timeline data”. Private zones cut points out; visit suggestions only for the last 30 days.",
+    "introMore": "Google Takeout works too (“Records.json”, “Semantic Location History”). Times without a zone are not guessed. Positions in private zones or deleted periods are dropped, nothing is duplicated. An import triggers no suggestions."
   },
   "dawarichCopy": {
     "title": "Copy your Dawarich history",
-    "intro": "Copies your location history from your own Dawarich into TravTrack – all of it or a span of days. Dawarich is only read: nothing there is changed or deleted, and your location source stays as it is. Positions inside a privacy zone or a deleted span are discarded, and what is stored already is not added twice. The copy starts no suggestions; you delete it like an import.",
+    "intro": "Copies your history from Dawarich. Dawarich is only read, nothing is duplicated.",
     "connection": {
       "none": "Connect your own Dawarich first (Settings → Dawarich). Only then can the history be copied.",
       "shared": "This server only has a shared Dawarich set up. A copy reads from your own only – enter your own connection for it."
@@ -308,7 +310,7 @@
   },
   "sources": {
     "title": "Further sources",
-    "intro": "OwnTracks (Android, iOS) and Overland (iOS) can send positions straight to TravTrack. Each device gets its own key, which can deliver positions and nothing else – it reads nothing and opens no other page.",
+    "intro": "OwnTracks and Overland send directly. Each device key can only deliver positions.",
     "privacy": "Unlike the Companion app, these apps cannot know your privacy zones: positions inside a privacy zone reach the server and are only discarded there.",
     "kind": "App",
     "kinds": {
@@ -608,7 +610,7 @@
   },
   "stays": {
     "title": "Stays",
-    "intro": "Stays TravTrack detected. They are confirmed in the inbox; confirmed ones become a place or lodging in the logbook.",
+    "intro": "Detected stays. Confirm them in the inbox.",
     "loading": "Loading stays …",
     "empty": "There are no stays for this selection.",
     "more": "Load more",
@@ -635,7 +637,7 @@
   },
   "importsTab": {
     "title": "Imports",
-    "intro": "Everything that brings positions into your history: track files (GPX, KML, TCX, GeoJSON, Google location history), the copy from Dawarich and OwnTracks/Overland.",
+    "intro": "Everything that brings positions into your history.",
     "loading": "Loading …"
   },
   "calendar": {
@@ -712,7 +714,7 @@
   },
   "start": {
     "title": "How data gets into TravTrack",
-    "intro": "TravTrack is switched on, but your account holds nothing yet. Three ways bring your location history here:",
+    "intro": "No data yet. Three ways bring your history here:",
     "companion": {
       "title": "Record with the Companion",
       "body": "Set your location source to TravTrack (Settings → Location history → Location source). The Companion then records your ways here.",
@@ -869,7 +871,7 @@
   "gaps": {
     "title": "Logbook gaps {{year}}",
     "year": "Year",
-    "intro": "Which days your logbook explains – and which it does not. A day counts when an entry covers it or TravTrack holds positions.",
+    "intro": "Which days your logbook explains — and which not.",
     "loading": "Loading the year …",
     "retry": "Try again",
     "nothingYet": "Nothing is entered or recorded yet, so there are no gaps.",
@@ -956,7 +958,7 @@
   },
   "quality": {
     "title": "Days with questionable tracks",
-    "intro": "On these days the sources disagree, the quality is low or there are outliers. Stored points are never changed by this; every decision can be undone.",
+    "intro": "Days with conflicts or outliers. Points stay unchanged, everything can be undone.",
     "loading": "Loading days …",
     "none": "No questionable days – everything fits.",
     "total_one": "{{count}} day",

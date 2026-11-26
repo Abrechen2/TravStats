@@ -131,7 +131,7 @@
   "review": {
     "title_one": "Ein Eintrag wurde beim Update auf 2.7 automatisch eingeordnet",
     "title_other": "{{count}} Einträge wurden beim Update auf 2.7 automatisch eingeordnet",
-    "intro": "Touren und Roadtrips sind jetzt getrennt. Mehrtägige Straßen-, Fähr- und Bahnabschnitte sind Roadtrips geworden, alles andere Tagestouren. Stimmt das?",
+    "intro": "Mehrtägiges ist jetzt Roadtrip, der Rest Tagestour. Stimmt das?",
     "isNow": {
       "tour": "jetzt Tagestour",
       "roadtrip": "jetzt Roadtrip"
@@ -447,7 +447,7 @@
     "connected": "Verbunden (Athlet {{athlete}})",
     "askAdmin": "Strava ist auf dieser Instanz nicht eingerichtet. Eine Person mit Admin-Rechten muss dafür eine eigene Strava-App hinterlegen.",
     "adminTitle": "Strava-App dieser Instanz (Admin)",
-    "adminHelp": "Leg unter strava.com/settings/api eine eigene App an und trag als „Authorization Callback Domain“ {{domain}} ein. Seit Juni 2026 braucht der API-Zugang ein Strava-Abo.",
+    "adminHelp": "Eigene App unter strava.com/settings/api, Callback-Domain {{domain}}. Braucht ein Strava-Abo.",
     "clientId": "Client ID",
     "clientSecret": "Client Secret",
     "secretStored": "gespeichert — leer lassen, um es zu behalten",
@@ -474,7 +474,7 @@
       "rateLimited": "Das Strava-Anfragelimit ist erreicht. In einer Viertelstunde noch einmal versuchen."
     }
   },
-  "komootHint": "Komoot: Tour in Komoot als GPX exportieren und hier hochladen — eine direkte Anbindung gibt es nicht, Komoot hat keine öffentliche Schnittstelle.",
+  "komootHint": "Komoot: Tour als GPX exportieren und hier hochladen.",
   "phase": {
     "planned": "Geplant",
     "underway": "Unterwegs · Tag {{day}} von {{total}}",
@@ -557,7 +557,7 @@
       "straight": "Luftlinie",
       "recorded": "aus Aufzeichnung"
     },
-    "distanceRule": "Strecke gemessen: {{parts}}. Luftlinie ist die gerade Verbindung der Stationen, Route der Straßenweg des Routing-Anbieters, GPS-Spur eine aufgezeichnete Fahrt. Als gefahren zählt eine Etappe, sobald ihre Zielstation vor heute erreicht ist; „Gefahren“ steht erst, wenn eine GPS-Spur jeden Kilometer belegt oder beide Kilometerstände eingetragen sind; dann gilt deren Differenz.",
+    "distanceRule": "Strecke gemessen: {{parts}}.",
     "figDays": "Tage",
     "figDaysAhead_one": "davon einer noch vor dir",
     "figDaysAhead_other": "davon {{count}} noch vor dir",
@@ -587,7 +587,8 @@
       "healthkit": "Apple Health",
       "healthconnect": "Health Connect",
       "ais": "AIS"
-    }
+    },
+    "distanceRuleMore": "Luftlinie ist die gerade Verbindung der Stationen, Route der Straßenweg des Routing-Anbieters, GPS-Spur eine aufgezeichnete Fahrt. Eine Etappe zählt als gefahren, sobald ihr Ziel vor heute erreicht ist. „Gefahren“ steht erst, wenn eine GPS-Spur jeden Kilometer belegt oder beide Kilometerstände eingetragen sind."
   },
   "timeline": {
     "day": "Tag {{n}}",
@@ -613,7 +614,7 @@
     "duration": "{{h}} h {{m}}"
   },
   "editor": {
-    "hint": "Station antippen, um sie zu bearbeiten. Etappe antippen für Fähre oder Linienführung. Jede Änderung wird sofort gespeichert und lässt sich rückgängig machen.",
+    "hint": "Station oder Etappe antippen zum Bearbeiten. Alles wird sofort gespeichert.",
     "status": {
       "pending": "Wird gleich auf dem Server gespeichert",
       "saving": "Wird auf dem Server gespeichert …",
@@ -750,12 +751,12 @@
     "downloadOne": "Als GPX",
     "downloadFailed": "Die Aufzeichnung konnte nicht heruntergeladen werden.",
     "exportTitle": "Aufzeichnungen als GPX",
-    "exportDescription": "Jede Aufzeichnung deiner Touren und Roadtrips als eigene GPX-Datei, zusammen in einem ZIP. Andere Programme lesen die Strecke; TravStats liest beim Einspielen auch Distanz, Höhenmeter und Bewegungszeit so zurück, wie sie gemessen wurden.",
+    "exportDescription": "Alle Aufzeichnungen als GPX-Dateien in einem ZIP.",
     "exportButton": "ZIP herunterladen",
     "exportRunning": "Wird gepackt …",
     "exportFailed": "Das ZIP konnte nicht erstellt werden.",
     "importTitle": "GPX oder ZIP einlesen",
-    "importDescription": "GPX-, TCX- oder FIT-Dateien oder ein ZIP davon. Eine Datei aus TravStats kommt an ihre Tour zurück (oder legt sie an); jede andere wird eine eigene Tagestour. Eine Aufzeichnung, die schon da ist, wird nicht doppelt angelegt. Roadtrips kommen aus der Tabelle – lies sie zuerst ein.",
+    "importDescription": "GPX, TCX, FIT oder ZIP. Doppeltes wird erkannt. Roadtrips zuerst aus der Tabelle laden.",
     "choose": "Dateien wählen",
     "checking": "Wird geprüft …",
     "preview": "Vorschau – noch nichts gespeichert:",
@@ -984,7 +985,7 @@
     "open": "Ab hier verschieben …",
     "openHint": "Diese und alle folgenden Stationen um Tage verschieben – mit Vorschau.",
     "title": "Ab „{{name}}“ verschieben",
-    "intro": "Diese Station und alle danach rücken um dieselbe Zahl von Tagen. Verknüpfte Unterkünfte behalten ihre Buchungsdaten – sie stehen unten zum Prüfen.",
+    "intro": "Diese und alle folgenden Stationen rücken mit. Unterkünfte unten prüfen.",
     "days": "Um wie viele Tage?",
     "daysHint": "Eine positive Zahl verschiebt nach hinten (später), eine negative nach vorne (früher).",
     "daysInvalid": "Bitte eine ganze Zahl eingeben, z. B. 2 oder -1.",
@@ -1045,7 +1046,7 @@
   },
   "odometerDialog": {
     "title": "Kilometerstand",
-    "intro": "Trag den Stand beim Start und am Ende ein. Sind beide da, zählt der Roadtrip nach seinem Ende als gefahren — mit der Differenz als Kilometer. Ein leeres Feld heißt: unbekannt.",
+    "intro": "Stand bei Start und Ende. Mit beiden zählt die Differenz als Kilometer.",
     "start": "Kilometerstand beim Start",
     "end": "Kilometerstand am Ende",
     "backwards": "Der Stand am Ende liegt unter dem beim Start.",

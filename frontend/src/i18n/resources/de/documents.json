@@ -89,9 +89,9 @@
   "links": {
     "evidenceFrom": "Beleg aus:",
     "linkTo": "„{{name}}“ verknüpfen mit …",
-    "linkToHint": "Das Dokument wird an den gewählten Einträgen angezeigt und verlässt die Liste der nicht zugeordneten Dokumente. Reisen und Einträge derselben Reise stehen oben.",
+    "linkToHint": "Das Dokument erscheint an den gewählten Einträgen und ist dann zugeordnet.",
     "alsoLink": "„{{name}}“ auch verknüpfen mit …",
-    "alsoLinkHint": "Das Dokument bleibt eine Datei und wird nur zusätzlich an den gewählten Einträgen angezeigt. Reisen und Einträge derselben Reise stehen oben.",
+    "alsoLinkHint": "Das Dokument erscheint zusätzlich an den gewählten Einträgen.",
     "alsoLinkAction": "Auch verknüpfen mit …",
     "alsoLinkActionLabel": "{{name}} auch mit weiteren Einträgen verknüpfen",
     "unlink": "Von diesem Eintrag entfernen",
@@ -135,7 +135,7 @@
     },
     "bulkTitle_one": "1 Dokument verknüpfen",
     "bulkTitle_other": "{{count}} Dokumente verknüpfen",
-    "bulkHint": "Wähle den einen Eintrag, mit dem alle ausgewählten Dokumente verknüpft werden. Suche nach Flugnummer, Ort, Reise oder Datum — gesucht wird in allen Einträgen.",
+    "bulkHint": "Ein Eintrag für alle gewählten Dokumente. Suche nach Flugnummer, Ort, Reise oder Datum.",
     "linkDocsToEntry_one": "Dokument verknüpfen",
     "linkDocsToEntry_other": "{{count}} Dokumente verknüpfen",
     "noMatches": "Kein Eintrag passt zu „{{text}}“."

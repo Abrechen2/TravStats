@@ -133,7 +133,7 @@
     "distanceKm": "Kilometres driven (correction)",
     "odometerOutKm": "Odometer at pick-up",
     "odometerInKm": "Odometer at return",
-    "distanceHint": "Kilometres driven come from the final invoice or the rental agreement, else from the two odometer readings (return minus pick-up). A value under \"correction\" overrides all of them and is shown as a correction by hand.",
+    "distanceHint": "From the invoice or odometer readings. “Correction” wins over both.",
     "driven": "Driven: {{km}} km ({{source}})",
     "drivenUnknown": "Kilometres driven: not known yet",
     "notes": "Notes",
@@ -171,7 +171,7 @@
     "finalAmount": "Final amount on the invoice",
     "finalCurrency": "Currency of the final amount",
     "invoiceNumber": "Invoice number",
-    "invoiceHint": "A final amount you change here is saved as a correction by hand; an amount from an imported invoice otherwise stays as it is.",
+    "invoiceHint": "A changed total counts as a manual correction.",
     "steps": {
       "label": "Rental steps",
       "booking": "Booking",
@@ -186,11 +186,11 @@
     "depositAmount": "Deposit (amount)",
     "depositCurrency": "Deposit currency",
     "depositPaidOn": "Held on",
-    "depositHint": "A deposit is money held, not spent – it never counts as a cost. A currency other than the price's is stored as it is; nothing is converted.",
+    "depositHint": "A deposit is not spending and never counts as cost.",
     "depositBack": "Deposit back",
     "depositReturnedOn": "Returned on",
     "depositReturnedAmount": "Amount returned ({{currency}})",
-    "depositReturnedHint": "Less than was held is a partial refund; the rest stays visible as outstanding. If the refund arrived in another currency, enter the amount in the deposit's currency – TravStats stores no second currency for the deposit."
+    "depositReturnedHint": "Less than paid stays visible as open. Enter it in the deposit currency."
   },
   "detail": {
     "loading": "Loading …",

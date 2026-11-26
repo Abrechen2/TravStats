@@ -44,7 +44,7 @@
     "status": {
       "label": "Status",
       "unlocated": "Nicht gefunden",
-      "unlocatedHint": "Adresse vorhanden, aber kein Punkt auf der Karte — die Suche hat sie nicht gefunden. Erneut speichern versucht es noch einmal.",
+      "unlocatedHint": "Adresse nicht gefunden. Erneut speichern versucht es noch einmal.",
       "noAddress": "Keine Adresse",
       "noAddressHint": "Zu dieser Unterkunft ist keine Strasse hinterlegt.",
       "bare": "Nur ein Name",
@@ -224,7 +224,7 @@
     "markerManual": "eigener Kurs",
     "tooltipNone": "Kein Kurs verfügbar — nicht in Summen enthalten",
     "tooltipManual": "Kurs von dir eingetragen: {{rate}}",
-    "noRateHint": "Für {{currency}} haben wir am {{date}} keinen Kurs. Du kannst einen eintragen — sonst wird der Betrag gespeichert, fließt aber nicht in Summen ein.",
+    "noRateHint": "Kein Kurs für {{currency}} am {{date}}. Trag einen ein, sonst zählt der Betrag nicht in Summen.",
     "manualRateLabel": "Kurs 1 {{currency}} = … {{base}} (optional)",
     "omittedFromTotal": "{{count}} Aufenthalte nicht umgerechnet",
     "omittedFromTotal_one": "{{count}} Aufenthalt nicht umgerechnet",
@@ -280,7 +280,7 @@
     },
     "ratingCategoriesManage": "Kategorien verwalten",
     "ratingCategoriesTitle": "Bewertungskategorien",
-    "ratingCategoriesIntro": "Schalte ein, was du bewerten willst. Schaltest du etwas ab, bleiben bereits vergebene Bewertungen und die Gesamtnote alter Aufenthalte unverändert.",
+    "ratingCategoriesIntro": "Wähle, was du bewertest. Abschalten ändert alte Bewertungen nicht.",
     "ratingCategoriesOwn": "Eigene Kategorien",
     "ratingCategoryName": "Name der neuen Kategorie",
     "ratingCategoryAdd": "Hinzufügen",
@@ -295,7 +295,7 @@
     "ratingCategoriesDone": "Fertig",
     "ratingNoCategories": "Keine Bewertungskategorien eingeschaltet.",
     "ratingRetiredTitle": "Nicht mehr eingeschaltet",
-    "ratingRetiredHint": "Du hast diese Kategorie abgeschaltet, der Aufenthalt trägt aber noch eine Bewertung. Die Bewertung zählt weiter zur Gesamtnote, bis du sie löschst."
+    "ratingRetiredHint": "Kategorie abgeschaltet, Bewertung zählt aber weiter, bis du sie löschst."
   },
   "membership": {
     "title": "Bonusprogramme",
@@ -353,7 +353,7 @@
     },
     "matchedStayAt": "Vorhandener Aufenthalt:",
     "openMatchedStay": "Vorhandenen Aufenthalt in einem neuen Tab öffnen",
-    "createAnywayHint": "Legt einen zweiten Aufenthalt für dieselbe Buchung an. Die Dublettenprüfung zeigt weiterhin auf den vorhandenen; die Buchungsnummer steht danach auf beiden.",
+    "createAnywayHint": "Legt einen zweiten Aufenthalt zur selben Buchung an.",
     "fields": {
       "name": "Name",
       "type": "Typ",
@@ -400,7 +400,7 @@
     "noBookings": "Es wurden keine Buchungsdaten erkannt. Ist es eine Buchungsbestätigung? Sonst trag die Unterkunft von Hand ein.",
     "csv": {
       "title": "CSV-Import",
-      "description": "Unterkünfte und/oder Aufenthalte aus einer CSV-Datei importieren — z. B. ein Google-Maps-Export oder eine selbst gepflegte Tabelle. Einmaliges Migrationswerkzeug, kein laufender Import-Weg.",
+      "description": "Einmaliger Import aus einer CSV, etwa Google Maps oder eigene Tabelle.",
       "uploadLabel": "CSV-Datei wählen"
     },
     "errors": {
@@ -465,7 +465,7 @@
     },
     "maps": {
       "title": "Google-Maps-Export",
-      "description": "Eine gespeicherte Liste aus Google Takeout. Jede Zeile bringt Googles Kennung des Ortes mit — dadurch erkennt ein zweiter Import, was schon da ist. Datum und Preis stehen in so einer Liste nicht.",
+      "description": "Gespeicherte Liste aus Google Takeout. Doppeltes wird erkannt; Datum und Preis fehlen.",
       "uploadLabel": "Takeout-CSV wählen",
       "noRows": "In dieser Datei steht keine Zeile mit einem Namen — ist es wirklich eine gespeicherte Liste aus Takeout?",
       "withoutId": "{{count}} Zeilen bringen keine Ortskennung mit — sie werden übernommen, aber ein zweiter Import erkennt sie nicht wieder."
@@ -1097,11 +1097,11 @@
   },
   "restay": {
     "action": "Wieder hier übernachten",
-    "intro": "Ein neuer Aufenthalt in „{{name}}“. Anreise, Abreise, Zimmer, Buchungsnummer und Preis trägst du neu ein; der frühere Aufenthalt bleibt unverändert."
+    "intro": "Neuer Aufenthalt in „{{name}}“. Der frühere bleibt unverändert."
   },
   "repair": {
     "title": "Standort ergänzen",
-    "intro": "Zu „{{name}}“ fehlt der Punkt auf der Karte. Such die Adresse erneut oder setz den Punkt selbst – du siehst das Ergebnis, bevor du es übernimmst. Beim Übernehmen werden leere Adressfelder aus der neuen Position ergänzt, und ein Länderfeld, das gar kein Land nennt, wird durch das Land der Position ersetzt. Name und alle übrigen Angaben bleiben.",
+    "intro": "Für „{{name}}“ fehlt der Kartenpunkt. Adresse suchen oder Punkt setzen — du siehst es vorher.",
     "queryLabel": "Suchtext",
     "search": "Adresse erneut suchen",
     "searching": "Suche läuft …",

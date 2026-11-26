@@ -215,7 +215,7 @@
     "title": "Flight List",
     "backToMap": "Back to Map",
     "welcome": "Welcome to the Flight Table!",
-    "description": "Here you can see all your flights in a clear table. You can sort, filter and edit or delete flights.",
+    "description": "All flights: sort, filter, edit.",
     "backToDashboard": "Back to Dashboard",
     "loading": "Loading flights...",
     "noFlights": "No flights recorded yet",
@@ -303,7 +303,7 @@
   "refresh": {
     "action": "Update flights",
     "title": "Update flights",
-    "intro": "Asks the flight-data provider about the selected flights and fills in only fields that are still empty on yours: aircraft type, registration and Mode-S code. Nothing that is already there is overwritten.",
+    "intro": "Fills empty fields only (type, registration, Mode S). Nothing is overwritten.",
     "start": "Ask provider",
     "running": "Asking provider … {{done}} of {{total}}",
     "apply": "Fill in {{count}} flights",
@@ -595,7 +595,7 @@
     "loadError": "The recording of this flight could not be loaded.",
     "captionFile": "From a {{format}} file · {{distance}} · {{points}} points",
     "versusGreatCircle": "Recorded {{flown}} · great circle {{greatCircle}} ({{difference}} %)",
-    "uploadIntro": "Upload a recording of this flight — from a GPS logger or as an export from FlightAware or Flightradar24. The map then draws the flight along the recording instead of the great circle.",
+    "uploadIntro": "Upload a GPS track (logger, FlightAware, Flightradar24) — the map follows it.",
     "upload": "Upload file",
     "replace": "Replace",
     "remove": "Remove recording",
@@ -713,7 +713,7 @@
   "bookingPrice": {
     "total": "Booking total: {{amount}}",
     "storedOnBooking": "This price is stored on the booking, not on the individual flights.",
-    "countedOnce": "In every total that includes this booking's flights it counts exactly once, taxes and fees included; prices, taxes and fees that single flights carry on top are then not counted. Where the booking's flights sit on two trips, today the full total appears on each of those trips. A cancelled flight costs nothing.",
+    "countedOnce": "Counts exactly once in totals, taxes and fees included.",
     "zeroIsFree": "0 means: recorded as free. An empty field would mean: unknown.",
     "noTotal": "No total is recorded for this booking. Totals therefore count each flight with its own price plus taxes and fees; a flight without price, taxes and fees counts as unknown, not as 0. A cancelled flight costs nothing.",
     "otherEntries_one": "Besides flights, the booking holds one more entry (train, bus, ferry, cruise or stay); its total covers everything together.",
@@ -744,7 +744,8 @@
       "generic": "The split could not be saved."
     },
     "editOnNamedTrip": "Edit the total on the page of the trip “{{name}}”",
-    "noTrip": "The booking belongs to no trip, so its total cannot be opened from here."
+    "noTrip": "The booking belongs to no trip, so its total cannot be opened from here.",
+    "countedOnceMore": "Prices, taxes and fees on single flights are then not added. Where the booking's flights sit on two trips, the full price appears on each of those trips. A cancelled flight costs nothing."
   },
   "bulk": {
     "start": "Edit several",

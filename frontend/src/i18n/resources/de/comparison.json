@@ -234,7 +234,7 @@
     },
     "makeLink": "Einladungslink erstellen",
     "linkLabel": "Dein Einladungslink",
-    "linkHint": "Gib den Link weiter. Er gilt 72 Stunden und nur einmal. Er wird nur jetzt angezeigt – kopiere ihn, bevor du die Seite verlässt.",
+    "linkHint": "Gilt einmal, 72 Stunden, und erscheint nur jetzt — jetzt kopieren.",
     "pasteLabel": "Einladung von jemand anderem",
     "linkDamaged": "Das ist kein vollständiger Einladungslink oder -code. Kopiere ihn noch einmal komplett.",
     "redeem": "Einladung einlösen",

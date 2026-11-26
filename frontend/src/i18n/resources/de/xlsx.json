@@ -5,7 +5,7 @@
     "running": "Datei wird erstellt …",
     "failed": "Der Export ist fehlgeschlagen.",
     "empty": "Es gibt nichts zu exportieren.",
-    "description": "Die bearbeitbare Excel-Tabelle enthält Reiseeinträge der unterstützten Bereiche, einschließlich Busfahrten – ein Blatt je Bereich, mit ID-Spalte zum Ändern und Wiedereinlesen. Reisen, Buchungen, Ortslisten und Dokumente stehen als Übersicht zum Lesen darin (Dokumente nur als Liste, ohne die Dateien). Eigenständige Notizen, Fotos und Einstellungen sind nicht enthalten. Für eine vollständige Sicherung nutze das Instanz-Backup unter Einstellungen → Server → Sicherungen; bei fehlenden Rechten frage deinen Administrator."
+    "description": "Bearbeitbare Excel-Tabelle, ein Blatt je Bereich. Kein Backup: ohne Fotos und Dateien."
   },
   "sheets": {
     "flights": "Flüge",
@@ -277,7 +277,7 @@
   },
   "import": {
     "title": "Excel-Import",
-    "description": "Eine bearbeitete Export-Datei zurückspielen – auch in ein anderes Konto. Zeilen mit einer ID aus deinem Konto ändern den vorhandenen Eintrag. Zeilen ohne ID oder mit einer ID aus einem anderen Konto werden neu angelegt; was es schon gibt (gleicher Flug am gleichen Tag, gleiche Unterkunft mit gleicher Anreise …), wird wiedererkannt statt verdoppelt. Es wird zuerst nur geprüft — geschrieben wird erst, wenn du bestätigst.",
+    "description": "Bearbeitete Datei zurückspielen. Erst wird geprüft, geschrieben beim Bestätigen.",
     "choose": "Datei wählen",
     "checking": "Datei wird geprüft …",
     "applying": "Wird übernommen …",
@@ -368,7 +368,7 @@
       },
       "merge": {
         "label": "Abgleichen",
-        "hint": "Zeilen mit ID ändern den vorhandenen Eintrag. Zeilen ohne ID werden neu angelegt, soweit das Blatt es zulässt (Flüge, Orte, Besuche, Roadtrips, Stationen, Touren, Tourpunkte). Nichts wird gelöscht."
+        "hint": "Mit ID wird geändert, ohne ID neu angelegt. Nichts wird gelöscht."
       },
       "replace": {
         "label": "Ersetzen",

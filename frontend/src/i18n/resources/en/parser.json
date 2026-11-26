@@ -9,7 +9,7 @@
   },
   "annotate": {
     "title": "Annotate file",
-    "description": "Upload an email, a boarding pass or a screenshot and mark the fields. TravStats derives a template from it.",
+    "description": "Upload an email, boarding pass or screenshot and mark the fields.",
     "emailButton": "Upload email",
     "emailFormats": ".eml, .msg, .txt",
     "boardingPassButton": "Upload boarding pass",
@@ -346,9 +346,9 @@
   "overview": {
     "title": "How TravStats reads a booking",
     "what": "A template tells TravStats how to recognise the booking of one provider and where its date, place and number are.",
-    "whatHelp": "When you import a booking, TravStats tries the sources below in order. The first template that fits reads the document.",
+    "whatHelp": "Sources are tried in order; the first matching template reads it.",
     "whatSubject": "templates",
-    "uploadHelp": "A file you upload here stays with you as a sample. It is only used to derive and check the template. At most the template is shared, never your document.",
+    "uploadHelp": "The file stays with you. At most the template is shared, never the document.",
     "uploadSubject": "uploaded booking",
     "upload": "A booking you upload here stays with you.",
     "order": "Reading goes in this order:",

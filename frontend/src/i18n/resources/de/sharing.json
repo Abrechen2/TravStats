@@ -50,7 +50,7 @@
       "leftRevoked": "{{name}} hat die Zustimmung zum Teilen entzogen. „{{trip}}“ wird nicht mehr abgeglichen; deine Reise bleibt dir.",
       "addRequest": "{{name}} bittet dich, „{{trip}}“ auch mit {{person}} zu teilen.",
       "addRequestFrom": "{{name}} bittet dich, „{{trip}}“ auch mit {{person}} ({{personOrigin}}) zu teilen.",
-      "addRequestHint": "Auf der Reiseseite kannst du sie einer verbundenen Person anbieten oder einen Code für diese Reise erstellen und weitergeben.",
+      "addRequestHint": "Auf der Reiseseite anbieten oder einen Code erstellen.",
       "autoAccepted": "Automatisch angenommen (Einwilligung).",
       "autoAcceptedSetting": "Einwilligung ansehen",
       "linked_one": "Mit deiner eigenen Reise verknüpft: {{count}} Eintrag gehört jetzt zusammen, nichts wurde kopiert.",
@@ -80,7 +80,7 @@
   },
   "settings": {
     "title": "Reisen teilen",
-    "description": "Teile Reisen mit Mitreisenden, die ein Konto auf diesem Server haben. Jede Person bekommt eine eigene Kopie; Sitzplatz, Preis, Bewertungen und Notizen bleiben privat.",
+    "description": "Reisen mit Konten auf diesem Server teilen. Preis, Platz und Notizen bleiben privat.",
     "request": {
       "label": "Benutzername",
       "placeholder": "z. B. anna",
@@ -221,7 +221,7 @@
     "choose": "Konto wählen",
     "link": "Verknüpfen",
     "linked": "{{name}} ist jetzt mit @{{username}} verknüpft.",
-    "requestIntro": "Noch hat niemand deiner Anfrage zugestimmt. Schick {{name}} eine Anfrage über den Benutzernamen; sobald die Person zustimmt, kannst du hier verknüpfen.",
+    "requestIntro": "Noch keine Zustimmung. Schick {{name}} eine Anfrage, danach kannst du verknüpfen.",
     "username": "Benutzername",
     "request": "Anfrage senden",
     "requested": "Anfrage an @{{username}} gesendet."
@@ -457,7 +457,7 @@
         "overLimit_one": "{{count}} Foto über der Grenze von 12",
         "overLimit_other": "{{count}} Fotos über der Grenze von 12"
       },
-      "itineraryHint": "Zeigt Tag für Tag, wo du wann bist – in der Ortszeit jedes Orts, mit dem Eintrag, der gerade läuft. Nie Buchungsnummern, Preise, Dokumente, Vielfliegernummern, Notizen oder Mitreisende. Mit Reiseplan endet der Link spätestens eine Woche nach dem letzten Reisetag.",
+      "itineraryHint": "Zeigt Tag für Tag, wo du bist — nie Preise, Buchungen oder Notizen. Endet nach einer Woche.",
       "itineraryTitle": "Reiseplan für die Familie",
       "tripEndedWeek": "Reiseplan 7 Tage ab heute teilen",
       "tripEndedRecap": "Als Rückblick teilen (ohne Reiseplan)"
@@ -551,10 +551,10 @@
   },
   "remote": {
     "title": "Mitreisende auf anderen Servern",
-    "description": "Teile Reisen mit Menschen, deren Konto auf einem anderen TravStats-Server liegt. Die Verbindung entsteht über einen Einladungscode; den Server der anderen Person muss der Admin deines Servers vorher als vertrauenswürdig hinterlegt haben.",
+    "description": "Reisen mit Konten auf anderen TravStats-Servern teilen, per Einladungscode.",
     "invites": {
       "title": "Einladungscode",
-      "hint": "Erstelle einen Code und gib ihn auf einem zweiten Weg weiter (Nachricht, Telefon). Die Person löst ihn auf ihrem eigenen Server ein. Jeder Code gilt einmal und 72 Stunden.",
+      "hint": "Code auf zweitem Weg weitergeben. Gilt einmal, 72 Stunden.",
       "create": "Code erstellen",
       "codeLabel": "Dein Einladungscode",
       "codeHint": "Nur jetzt sichtbar – kopiere ihn gleich. Gültig bis {{date}}.",
@@ -642,7 +642,7 @@
       "offer": "Reise anbieten",
       "offered": "Angeboten. {{name}} entscheidet auf {{origin}}, ob die Reise übernommen wird.",
       "createCode": "Code für diese Reise erstellen",
-      "codeHint": "Für jemanden, mit dem du noch nicht verbunden bist: Wer den Code auf dem eigenen Server einlöst, bekommt diese Reise angeboten.",
+      "codeHint": "Für noch nicht Verbundene: Wer den Code einlöst, bekommt die Reise angeboten.",
       "state": {
         "invited": "Angeboten",
         "active": "Hat die Reise",
@@ -692,11 +692,11 @@
       },
       "dismiss": "Ausblenden",
       "reconfirm": "Neu bestätigen",
-      "reconfirmHint": "Die Verbindung zu dieser Reise ist ausgesetzt (nach einer Wiederherstellung, einer Sperre oder einem neuen Schlüssel des anderen Servers). Bis du neu bestätigst, wird nichts gesendet oder übernommen.",
+      "reconfirmHint": "Verbindung ausgesetzt. Bis du neu bestätigst, wird nichts gesendet.",
       "reconfirmed": "Neu bestätigt. Änderungen gehen wieder hin und her.",
       "roster": {
         "title": "Ebenfalls auf der Reise",
-        "hint": "Änderungen von neu Hinzugekommenen kommen bei dir erst an, wenn du zustimmst. Danach wird nachgeholt, was sie vorher geändert haben; wo deine Kopie davon abweicht, entscheidest du.",
+        "hint": "Änderungen Neuer kommen erst nach deiner Zustimmung an.",
         "row": "{{name}} auf {{origin}}",
         "relation": {
           "you": "Du",
@@ -720,7 +720,7 @@
       },
       "addRequest": {
         "title": "Jemanden hinzufügen lassen",
-        "hint": "Diese Reise ist auf {{origin}} zu Hause und wird nur dort weiter geteilt. Bitte die Person, mit der du sie teilst, jemanden hinzuzufügen.",
+        "hint": "Diese Reise gehört zu {{origin}}. Bitte die teilende Person, jemanden hinzuzufügen.",
         "name": "Name",
         "origin": "Server (optional)",
         "originHint": "Die Adresse des TravStats-Servers der Person, falls du sie kennst.",
@@ -836,7 +836,7 @@
     },
     "connections": {
       "title": "Verbindungen",
-      "hint": "Die Admins beider Server haben sich verbunden. Mit einer Person auf einem verbundenen Server verbindest du dich einmal – nach der Bestätigung beider teilt jede Seite genau das, was sie einstellt. Schalter gelten nur in deine Richtung und sind zu Beginn alle aus.",
+      "hint": "Einmal verbinden, dann teilt jede Seite, was sie einstellt. Alles ist anfangs aus.",
       "achievements": {
         "view": "Erfolge ansehen",
         "close": "Erfolge schließen",
@@ -930,7 +930,7 @@
   },
   "route": {
     "title": "Route mitteilen",
-    "intro": "Wer diese Reise mit dir teilt, sieht die Linie, die TravTrack auf ihr aufgezeichnet hat — nur die Linie: keine Zeiten, nichts in deinen Privatzonen und nichts im Umkreis von einem Kilometer um dein Zuhause. Was du danach aufzeichnest, kommt erst mit „Neu erstellen“ dazu.",
+    "intro": "Mitreisende sehen nur die Linie — ohne Zeiten, Privatzonen und Umkreis deines Zuhauses.",
     "loading": "Wird geladen …",
     "notShared": "Die Route dieser Reise wird nicht mitgeteilt.",
     "shared": "Die Route wird mitgeteilt ({{count}} Punkte auf der Linie).",
@@ -949,7 +949,7 @@
   },
   "tripShare": {
     "people": "Personen",
-    "peopleHint": "Wähle jemanden aus der Liste. Wer noch nicht dabei ist, lässt sich über das Feld einladen, sofern Teilen über Server hinweg hier eingerichtet ist.",
+    "peopleHint": "Wähle jemanden aus der Liste oder lade über das Feld ein.",
     "linkHint": "Eine öffentliche Seite mit dem, was du auswählst – ohne Konto lesbar.",
     "createLink": "Öffentlichen Link verwalten…",
     "addLocal": "Weiteren Mitreisenden von diesem Server hinzufügen…"
@@ -1011,7 +1011,7 @@
     "remote": {
       "submit": "Verbinden",
       "alreadyConnected": "{{name}} ({{origin}}) ist schon verbunden. Teilen kannst du über „Reisen teilen“ in der Liste.",
-      "hint": "Benutzername und Server, z. B. anna@trav.example.org. Die Verbindung wird dabei angefragt; die Person bestätigt sie bei sich."
+      "hint": "Name und Server, z. B. anna@trav.example.org. Die Person bestätigt."
     },
     "unusedLink": "Unbenutzte Personen löschen ({{count}})",
     "encryptedManage": "Verschlüsselte Übergaben verwalten",
@@ -1067,7 +1067,7 @@
   },
   "link": {
     "open": "Mit vorhandener Kopie verknüpfen",
-    "intro": "Hat {{name}} diese Reise schon selbst eingetragen? Dann verknüpfe die beiden Reisen, statt eine zweite Kopie anzulegen. Es wird nichts neu angelegt.",
+    "intro": "Hat {{name}} die Reise schon? Dann verknüpfen statt kopieren.",
     "loading": "Passende Reisen werden gesucht …",
     "noCandidates": "Bei {{name}} gibt es keine Reise mit gleichem Zeitraum oder Namen.",
     "pickTrip": "Welche Reise von {{name}} ist diese Reise?",

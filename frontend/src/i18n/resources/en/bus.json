@@ -376,7 +376,7 @@
   },
   "import": {
     "title": "Read coach ticket",
-    "hint": "Read a text PDF, email (.eml) or pasted ticket text with a bus template — one you made in the template workshop (Parser → Annotate) or one from the template repository. Review the values before applying them.",
+    "hint": "Read a PDF, email or ticket text with a bus template. Check values before saving.",
     "file": "Ticket file (PDF or EML)",
     "text": "Ticket text",
     "reading": "Reading …",

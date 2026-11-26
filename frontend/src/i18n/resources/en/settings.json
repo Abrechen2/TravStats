@@ -43,7 +43,7 @@
   },
   "about": {
     "buildLabel": "Build",
-    "buildVersionHint": "Version that was baked into the container image at build time. This only differs from the displayed version when a promoted RC is running.",
+    "buildVersionHint": "Version baked into the image. Differs only on a promoted RC.",
     "dataSources": {
       "title": "Data sources & attribution",
       "fullList": "Full list with licenses",
@@ -159,7 +159,7 @@
     "residenceRow": {
       "name": "Home town",
       "sub": "Distances are measured from here",
-      "help": "A move starts a new period, nothing is overwritten. Old trips count against the home of their day. Your current home town is also your home in the Companion app."
+      "help": "A move starts a new period; old trips keep their home."
     },
     "airportsRow": {
       "name": "Home airports",
@@ -340,7 +340,7 @@
     },
     "encryptedGrants": {
       "title": "Encrypted grants",
-      "description": "Full records travel only through the device-encrypted transfer. You choose recipient, scope and categories per grant.",
+      "description": "Full entries only device-encrypted. You choose the scope per share.",
       "grants": {
         "title": "Manage grants",
         "sub": "Who gets what, and for how long."
@@ -422,7 +422,7 @@
   "lifeBook": {
     "title": "Life book",
     "sub": "Your travel log as one single file that stays readable without TravStats for decades.",
-    "help": "One HTML file with all trips, days, maps, photos and evidence of the chosen scope. It needs no internet and no JavaScript. To print or save as PDF: open it in the browser and choose Print (A4, one trip per page).",
+    "help": "One HTML file with all trips, readable offline and printable.",
     "button": "Create life book",
     "scope": "Scope",
     "scopeAll": "All",
@@ -486,7 +486,7 @@
     "title": "What is recorded",
     "costTracking": "Cost Tracking",
     "trackAircraft": "Track tail numbers",
-    "description": "Show or hide features to fit the interface to how you work. A feature you switch off can be switched back on at any time — no data is lost.",
+    "description": "Show or hide features. No data is lost.",
     "liveTracking": "Live tracking"
   },
   "autoSave": {
@@ -500,7 +500,7 @@
   },
   "parser": {
     "title": "Parser Configuration",
-    "description": "Configure how boarding passes and emails are parsed. Auto mode automatically selects the best available parser.",
+    "description": "How boarding passes and emails are read. Auto picks the best parser.",
     "saved": "Parser settings saved successfully!",
     "saveFailed": "Failed to save settings",
     "available": "Available",
@@ -570,7 +570,7 @@
   },
   "apiKeys": {
     "title": "API Keys",
-    "description": "Optional keys for live flight data and extra airport information. If an administrator has stored one, it is used automatically; your own takes precedence. Keys are stored encrypted and never shown again.",
+    "description": "Optional, for live flight data. Your key wins; stored encrypted.",
     "shared": "Shared",
     "own": "Own Key",
     "notConfigured": "Not Configured",
@@ -625,7 +625,7 @@
     },
     "bulkRefresh": {
       "title": "Refresh existing flights",
-      "description": "Backfill missing fields (tail number, aircraft type, Mode-S, codeshare flag, airline ICAO/IATA and actual departure/arrival times) on your existing flights from the last 365 days. Existing values are never overwritten. Requires AeroDataBox — only this provider covers the 365-day window.",
+      "description": "Fills missing fields for the last 365 days, overwrites nothing. Needs AeroDataBox.",
       "allUpToDate": "All flights in the 365-day window are up to date — nothing to do.",
       "demoBlocked": "Disabled on the demo account to avoid burning real API tokens. Available on your prod instance.",
       "button": "Refresh",
@@ -661,7 +661,7 @@
   },
   "routing": {
     "title": "Routing provider",
-    "description": "Determines which provider routes a leg or a bus ride along the road. Without a provider, every leg and every bus ride stays a straight line. A selected provider receives the start and end coordinates to compute the route — they leave this instance to do so.",
+    "description": "Who computes road legs. The service receives start and end. None: straight line.",
     "provider": {
       "none": "No provider",
       "openrouteservice": "OpenRouteService",
@@ -673,16 +673,16 @@
     "saveError": "Routing settings could not be saved",
     "openrouteservice": {
       "label": "OpenRouteService API key",
-      "description": "Free: 2000 routing requests/day. The instance's key: used by every account that has not stored its own under Settings → Services."
+      "description": "Free: 2000 requests/day. Applies to all accounts without their own key."
     },
     "graphhopper": {
       "label": "GraphHopper API key",
-      "description": "Free: 500 routing requests/day. The instance's key: used by every account that has not stored its own under Settings → Services."
+      "description": "Free: 500 requests/day. Applies to all accounts without their own key."
     }
   },
   "routingPersonal": {
     "title": "Routing for tours",
-    "description": "Which provider computes the legs of your tours is set by this instance's administration. If it stored an instance key for OpenRouteService or GraphHopper, your account uses that one and there is nothing to enter here. Otherwise you can store a key of your own – it applies to your account only.",
+    "description": "If the instance has a key, nothing to do. Otherwise your own applies only to you.",
     "loadError": "Your routing keys could not be loaded.",
     "saved": "Routing keys saved.",
     "saveError": "Your routing keys could not be saved.",
@@ -699,7 +699,7 @@
   },
   "import": {
     "title": "Import lists",
-    "description": "Take over a whole collection at once — a one-off, not a running route. Single bookings go straight into the area they belong to.",
+    "description": "Bring in a whole collection once. Single bookings go in their own area.",
     "openHub": "Import",
     "log": {
       "title": "Import log",
@@ -750,17 +750,17 @@
     "tile": {
       "fr24": {
         "title": "From Flightradar24",
-        "description": "Upload your my.flightradar24.com CSV export. Timezone math + airport lookup auto-handled.",
+        "description": "Upload your CSV export from my.flightradar24.com.",
         "uploadLabel": "Choose FR24 CSV"
       },
       "genericCsv": {
         "title": "From any logbook (CSV)",
-        "description": "Upload a flat per-flight CSV — after upload, a mapping wizard opens so you can match each column to a TravStats field.",
+        "description": "Upload a flat flight CSV and map its columns.",
         "uploadLabel": "Choose CSV file"
       },
       "tracker": {
         "title": "From another flight app",
-        "description": "Upload an export from OpenFlights, AirTrail, Jetlog, Flighty, App in the Air (or Flightradar24). The format is recognised from the file; airports, time zones and duplicates are handled as in the FR24 import.",
+        "description": "Upload an export from OpenFlights, Flighty, App in the Air and more.",
         "uploadLabel": "Choose export file",
         "detected": "Recognised as {{format}}.",
         "formats": {
@@ -770,11 +770,12 @@
           "flighty": "Flighty (CSV)",
           "app_in_the_air": "App in the Air (TXT)",
           "fr24": "Flightradar24 (CSV)"
-        }
+        },
+        "descriptionMore": "OpenFlights, AirTrail, Jetlog, Flighty, App in the Air or Flightradar24. The format is detected from the file; airports, time zones and duplicates as in the FR24 import."
       },
       "checkin": {
         "title": "From Träwelling or travelynx",
-        "description": "Upload your export (Träwelling: JSON or CSV, travelynx: the account’s JSON export). Train, metro, tram and bus rides are created as rides; ones you already have stay unchanged and are not entered twice.",
+        "description": "Upload a Träwelling or travelynx export. Duplicates are detected.",
         "uploadLabel": "Choose export file",
         "sourceLabel": "Source",
         "sources": {
@@ -789,11 +790,12 @@
         "failed": "The file could not be read. Is it the export of the selected source? Nothing was changed.",
         "network": "The server cannot be reached. Nothing was changed – please try again.",
         "applyFailed": "Applying failed. Import the file again – what was already applied is recognised.",
-        "rateLimited": "Too many imports in a short time. Please wait a moment and try again."
+        "rateLimited": "Too many imports in a short time. Please wait a moment and try again.",
+        "descriptionMore": "Träwelling: JSON or CSV. travelynx: the account's JSON export. Rail, metro, tram and bus rides become journeys."
       },
       "appImport": {
         "title": "From TripIt, Polarsteps or a flight diary",
-        "description": "Upload your export – TripIt (JSON or iCal), Polarsteps (the ZIP download or trip.json) or JetLovers, FlightMemory, Logmyflight (CSV). Before anything is saved you see what will be created: flights, rides, stays, places. What you already have is recognised and not entered twice; entries that do not fit are listed below with the reason.",
+        "description": "Upload an export from TripIt, Polarsteps, JetLovers and more. Duplicates are detected.",
         "uploadLabel": "Choose export file",
         "sourceLabel": "Source",
         "sources": {
@@ -817,7 +819,8 @@
           "noTrip": "The archive holds no trip.json – is it the Polarsteps data download?",
           "tooLarge": "The trip.json in the archive is too large to import.",
           "invalid": "A trip.json in the archive could not be read."
-        }
+        },
+        "descriptionMore": "TripIt (JSON or iCal), Polarsteps (ZIP download or trip.json), JetLovers, FlightMemory, Logmyflight (CSV). Before saving you see what will be created; what does not fit is listed with a reason."
       }
     },
     "preview": {
@@ -933,7 +936,7 @@
     },
     "timeline": {
       "title": "Google Timeline",
-      "description": "Your Google location Timeline goes into your TravTrack history. Google keeps the Timeline on the device only, so you get the file (Timeline.json) on your phone – according to Google's help: Android “Settings → Location → Location services → Timeline → Export Timeline data”, iPhone “Google Maps → profile picture → Settings → Personal content → Export Timeline data”. Older Google Takeout exports work too.",
+      "description": "Load your Google Timeline (Timeline.json from the phone) into TravTrack.",
       "group": "TravTrack",
       "off": "TravTrack is off on this server, so no Timeline can be imported.",
       "offAdmin": "Switch TravTrack on",
@@ -941,7 +944,8 @@
       "unknown": "Whether TravTrack is available could not be read. Reload the page.",
       "demo": "Import is locked in the demo account.",
       "toTravTrack": "Imports in the TravTrack settings",
-      "fromTravTrack": "Google Timeline: instructions on the Import page"
+      "fromTravTrack": "Google Timeline: instructions on the Import page",
+      "descriptionMore": "Google keeps the timeline on the device only. According to Google's help: Android “Settings → Location → Location services → Timeline → Export Timeline data”, iPhone “Google Maps → profile picture → Settings → Personal content → Export Timeline data”. Older Takeout exports work too."
     }
   },
   "trips": {
@@ -964,7 +968,7 @@
   },
   "calendarFeed": {
     "title": "Calendar subscription",
-    "description": "A secret link any calendar app can subscribe to – Apple Calendar, Google Calendar, Outlook, Thunderbird. It holds your upcoming trips and entries plus those of the last 30 days, and updates itself.",
+    "description": "Secret link for any calendar app. Upcoming trips, updates itself.",
     "createdAt": "Created on {{date}}",
     "lastUsed": "last read on {{date}}",
     "neverUsed": "never read yet",
@@ -1003,7 +1007,7 @@
     "codeLabel": "Pairing code to type in",
     "codeCopy": "Copy",
     "codeCopied": "Copied",
-    "codeHint": "No QR code to hand? Pick \"Connect manually\" in the app and enter this code. It lasts exactly as long as the QR code.",
+    "codeHint": "No QR code? Choose “Connect manually” in the app and enter the code.",
     "countdown": "Expires in {{time}}",
     "expired": "Expired",
     "retry": "Generate new code",
@@ -1208,14 +1212,14 @@
   },
   "railProviders": {
     "title": "Train lookup",
-    "description": "Which timetable services the rail logbook's train lookup may ask. Every lookup sends the train number, station and day to the service — they leave this instance. Both services are free and run by volunteers for non-commercial use.",
+    "description": "Timetable services for train search. They receive train number, station and day.",
     "transitous": "Transitous",
     "loadError": "The setting could not be loaded.",
     "saveError": "The setting could not be saved."
   },
   "railRouting": {
     "label": "Rail router (OpenRailRouting)",
-    "hint": "Address of a self-hosted OpenRailRouting instance. Empty = off. A ride without a Transitous route then gets a line over the rail network when it is saved.",
+    "hint": "Your own OpenRailRouting address. Empty = off.",
     "save": "Save address",
     "saved": "Saved. New and edited rides without a Transitous route are routed over the rail network.",
     "switchedOff": "Saved. The rail router is off.",
@@ -1236,7 +1240,7 @@
       }
     },
     "reroute": {
-      "hint": "Until October 2026 tram and U-Bahn rides were routed like trains over the railway network and may be wrong. This routes every already-routed tram and U-Bahn ride of this instance again; a line its own network does not confirm becomes a straight line.",
+      "hint": "Recomputes tram and metro journeys that used the rail network before.",
       "action": "Route tram and U-Bahn rides again",
       "running": "Routing again …",
       "progress": "Routing again … {{done}} of {{total}}",
@@ -1250,14 +1254,15 @@
   },
   "profileZone": {
     "title": "Your time zone",
-    "body": "TravStats uses your time zone to work out which day today is, whether a trip is planned or already over, and how long until you leave. Your account has none yet — until you confirm one, UTC is used for this. It does not change the times of your trips: those always show the local time of the airport, station or port.",
+    "body": "Until you confirm a time zone, UTC decides “today”. Trip times stay in local time.",
     "proposal": "Suggested by your device",
     "confirm": "Use this zone",
     "later": "Later",
     "setNow": "Set time zone now",
     "utcHint": "Until you confirm a time zone, TravStats counts “today” in UTC.",
     "saveError": "The time zone could not be saved. Please try again.",
-    "followsDevice": "On my phone (Companion app), keep the time zone in step with where I am."
+    "followsDevice": "On my phone (Companion app), keep the time zone in step with where I am.",
+    "bodyMore": "The time zone decides which day today is, whether a trip is planned or over, and how long until you leave. Trip times always show the local time of the airport, station or port."
   },
   "unreachable": {
     "flightProvider": "If {{name}} does not answer, the flight search asks the next service you have set up; if none answers, it names the reason and you enter the flight by hand. Saved flights stay as they are, and automatic updates try again on their next run.",
@@ -1283,7 +1288,7 @@
   },
   "domains": {
     "title": "What you record",
-    "description": "One domain, one row: switch it on and pick its colour right beside it. Domains that are off stay listed here, so you can switch them on.",
+    "description": "Turn areas on or off and pick their colour.",
     "color": "Colour"
   },
   "level": {
@@ -1310,7 +1315,7 @@
   "sectionChips": "Sections on this page",
   "pagePicker": "Page",
   "services": {
-    "description": "What your account connects to other services, by domain — and what the admin has already set up for everyone.",
+    "description": "Your connections to other services, by area.",
     "summary": "{{shared}} active for everyone · {{own}} own",
     "badge": {
       "admin": "Set up by the admin for everyone",
@@ -1876,7 +1881,7 @@
     "trackGap": {
       "name": "Split track after",
       "sub": "A silence with no positions after which a new recording starts",
-      "help": "A recording is only split when the phone reported no position for longer than this. The distance between two positions never splits it. Points already stored stay unchanged.",
+      "help": "A track splits only after this long without a position.",
       "option_one": "{{count}} minute",
       "option_other": "{{count}} minutes",
       "loadError": "I could not load the track pause."
@@ -1884,7 +1889,7 @@
     "source": {
       "name": "Location comes from",
       "sub": "For country days, stays, routes",
-      "help": "Switching moves and deletes nothing. TravTrack stores on this server. Dawarich only works with your own Dawarich connection.",
+      "help": "Switching deletes nothing. TravTrack stores here, Dawarich needs your connection.",
       "options": {
         "none": "None",
         "travtrack": "TravTrack",
@@ -2012,7 +2017,7 @@
       "cities": {
         "name": "Name cities",
         "sub": "Places from 30 minutes",
-        "help": "Sends positions rounded to 1 km to the server's place search. Off removes the cities again. I never look up inside privacy zones.",
+        "help": "Sends positions rounded to 1 km to place search, never from private zones.",
         "loadError": "I couldn't load the setting.",
         "notSource": "Only takes effect once TravTrack is your location source."
       },
@@ -2103,7 +2108,7 @@
       "title": "Fixed places",
       "name": "Fixed places",
       "sub": "Home, work and other places",
-      "help": "Everything inside the radius shows on the map as one stop with the place's name. The single points stay stored. A privacy zone always wins.",
+      "help": "Everything in the radius becomes one stop. Points stay stored, private zones win.",
       "loading": "Loading …",
       "loadError": "I could not load the fixed places.",
       "tooOld": "This server does not know fixed places yet. They appear once it is updated.",
@@ -2358,7 +2363,7 @@
       "keep": "Keep this file outside the server, e.g. in your password manager. Whoever has it can decrypt the credentials in your backups."
     },
     "restore": {
-      "intro": "Paste the recovery key of the server that wrote this backup. The stored credentials then stay readable.",
+      "intro": "Paste the key of the server that wrote the backup, so credentials stay readable.",
       "label": "Recovery key",
       "withKey": "Restore with the key",
       "cancel": "Cancel",

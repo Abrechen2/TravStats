@@ -8,7 +8,7 @@
     "unknown": "Not set",
     "private": "Private",
     "business": "Business",
-    "hint": "Whether this entry was for business or private. This is not the trip's category: a new entry in a trip takes its purpose once from that category (business trip → business; vacation, weekend, family → private); after that, what is set here counts. Not set is never hidden."
+    "hint": "Business or private. Follows the trip category once, then your value counts."
   },
   "editor": {
     "saved": "Purpose saved.",
@@ -16,7 +16,7 @@
   },
   "visibility": {
     "title": "Business and private entries",
-    "intro": "Choose per area what is hidden. Hidden entries count in no list, map or statistic – the app included.",
+    "intro": "Hidden entries count nowhere — not in the app either.",
     "show": "Show all",
     "hideBusiness": "Hide business",
     "hidePrivate": "Hide private",

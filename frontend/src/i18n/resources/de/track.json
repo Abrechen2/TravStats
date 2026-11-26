@@ -65,7 +65,7 @@
   },
   "export": {
     "title": "Verlauf exportieren",
-    "intro": "Lädt deine TravTrack-Positionen dieser Tage herunter, beide eingeschlossen, auf der Uhr deines Profils. Was eine Privatzone verdeckt, ist nicht in der Datei.",
+    "intro": "Lädt die Positionen dieser Tage herunter, ohne Privatzonen.",
     "from": "Vom",
     "to": "Bis",
     "format": "Format",
@@ -80,7 +80,7 @@
   },
   "delete": {
     "title": "Zeitraum löschen",
-    "intro": "Löscht alle Positionen dieser Tage, beide eingeschlossen, auf der Uhr deines Profils. Der Zeitraum bleibt gelöscht: Auch ein Handy, das noch offline war, bringt sie nicht zurück. Flüge und Reisen bleiben stehen.",
+    "intro": "Löscht alle Positionen dieser Tage endgültig. Flüge und Reisen bleiben.",
     "from": "Vom",
     "to": "Bis",
     "counting": "Gespeicherte Positionen werden gezählt …",
@@ -174,8 +174,8 @@
   },
   "imports": {
     "title": "Track-Dateien",
-    "intro": "Eine Track-Datei kommt in deinen TravTrack-Verlauf: GPX, KML oder TCX aus einer Sport-App oder einem Tracker, GeoJSON mit Zeiten, und der Google-Standortverlauf (Takeout „Records.json“, „Semantic Location History“ oder der Timeline-Export vom Gerät). Die Datei wird nur auf diesem Server gelesen. Zeiten ohne Zeitzonen-Angabe werden nicht geraten, und fehlende Genauigkeit bleibt unbekannt. Positionen in einer Privatzone oder in einem gelöschten Zeitraum werden dabei verworfen, und was schon gespeichert ist, kommt nicht doppelt dazu. Ein Import löst keine Vorschläge aus.",
-    "googleHint": "Google Timeline: Google speichert die Zeitachse nur auf dem Gerät; gelesen wird die Datei „Timeline.json“ von dort (laut Google-Hilfe: Android „Einstellungen → Standort → Standortdienste → Zeitachse → Zeitachsendaten exportieren“, iPhone „Google Maps → Profilbild → Einstellungen → Persönliche Inhalte → Zeitachsendaten exportieren“). Privatzonen schneiden Punkte heraus. Der Kalender füllt sich über Stunden, weil jeder Tag einzeln aufbereitet wird. Besuchsvorschläge entstehen nur für die letzten 30 Tage. Die Datei verlässt den Server nicht. Start- und Endpunkte von Aktivitäten, die Google mit einer falschen Zeit versieht, werden nur gespeichert, wenn kein Pfad die Zeit abdeckt, und nie für Linien oder Strecken verwendet.",
+    "intro": "GPX, KML, TCX, GeoJSON oder Google-Verlauf hochladen. Gelesen nur auf diesem Server.",
+    "googleHint": "Google Timeline: „Timeline.json“ vom Handy exportieren. Die Datei bleibt auf dem Server.",
     "choose": "Track-Datei importieren",
     "runningPercent": "{{name}} wird importiert … {{percent}} %",
     "formats": {
@@ -239,11 +239,13 @@
       "fileMismatch": "Das ist nicht die Datei, mit der dieser Import begonnen hat. Wähle zum Fortsetzen dieselbe Datei."
     },
     "resume": "Fortsetzen",
-    "partial": "Der Import wurde unterbrochen: {{summary}}. Mit „Fortsetzen“ und derselben Datei geht er weiter."
+    "partial": "Der Import wurde unterbrochen: {{summary}}. Mit „Fortsetzen“ und derselben Datei geht er weiter.",
+    "googleHintMore": "Google speichert die Zeitachse nur auf dem Gerät. Laut Google-Hilfe: Android „Einstellungen → Standort → Standortdienste → Zeitachse → Zeitachsendaten exportieren“, iPhone „Google Maps → Profilbild → Einstellungen → Persönliche Inhalte → Zeitachsendaten exportieren“. Privatzonen schneiden Punkte heraus; Besuchsvorschläge nur für die letzten 30 Tage.",
+    "introMore": "Auch Google Takeout („Records.json“, „Semantic Location History“). Zeiten ohne Zeitzone werden nicht geraten. Positionen in Privatzonen oder gelöschten Zeiträumen werden verworfen, nichts kommt doppelt. Ein Import löst keine Vorschläge aus."
   },
   "dawarichCopy": {
     "title": "Dawarich-Verlauf übernehmen",
-    "intro": "Kopiert deinen Standortverlauf aus deinem eigenen Dawarich nach TravTrack – den ganzen oder einen Zeitraum. Dawarich wird dabei nur gelesen: Dort wird nichts geändert oder gelöscht, und deine Standortquelle bleibt, wie sie ist. Positionen in einer Privatzone oder in einem gelöschten Zeitraum werden verworfen, und was schon gespeichert ist, kommt nicht doppelt dazu. Die Kopie löst keine Vorschläge aus; löschen lässt sie sich wie ein Import.",
+    "intro": "Kopiert deinen Verlauf aus Dawarich. Dawarich wird nur gelesen, nichts wird doppelt.",
     "connection": {
       "none": "Verbinde zuerst dein eigenes Dawarich (Einstellungen → Dawarich). Erst dann lässt sich der Verlauf übernehmen.",
       "shared": "Auf diesem Server ist nur ein gemeinsames Dawarich eingerichtet. Eine Kopie liest ausschließlich aus deinem eigenen – trage dafür deine eigene Verbindung ein."
@@ -308,7 +310,7 @@
   },
   "sources": {
     "title": "Weitere Quellen",
-    "intro": "OwnTracks (Android, iOS) und Overland (iOS) können Positionen direkt an TravTrack schicken. Jedes Gerät bekommt einen eigenen Schlüssel, der nur Positionen abliefern kann und sonst nichts – er liest nichts und öffnet keine andere Seite.",
+    "intro": "OwnTracks und Overland senden direkt. Jeder Geräteschlüssel kann nur Positionen liefern.",
     "privacy": "Anders als die Companion-App können diese Apps deine Privatzonen nicht kennen: Positionen in einer Privatzone erreichen den Server und werden erst dort verworfen.",
     "kind": "App",
     "kinds": {
@@ -608,7 +610,7 @@
   },
   "stays": {
     "title": "Aufenthalte",
-    "intro": "Aufenthalte, die TravTrack erkannt hat. Bestätigt wird im Posteingang; bestätigte landen als Ort oder Unterkunft im Logbuch.",
+    "intro": "Erkannte Aufenthalte. Bestätigt wird im Posteingang.",
     "loading": "Aufenthalte werden geladen …",
     "empty": "Für diese Auswahl gibt es keine Aufenthalte.",
     "more": "Weitere laden",
@@ -635,7 +637,7 @@
   },
   "importsTab": {
     "title": "Importe",
-    "intro": "Alles, was Positionen in deinen Verlauf bringt: Track-Dateien (GPX, KML, TCX, GeoJSON, Google-Standortverlauf), die Kopie aus Dawarich und OwnTracks/Overland.",
+    "intro": "Alles, was Positionen in deinen Verlauf bringt.",
     "loading": "Wird geladen …"
   },
   "calendar": {
@@ -712,7 +714,7 @@
   },
   "start": {
     "title": "So kommen Daten in TravTrack",
-    "intro": "TravTrack ist eingeschaltet, aber für dein Konto liegt noch nichts vor. Drei Wege bringen deinen Standortverlauf hierher:",
+    "intro": "Noch keine Daten. Drei Wege bringen deinen Verlauf hierher:",
     "companion": {
       "title": "Mit der Companion aufzeichnen",
       "body": "Stell deine Standortquelle auf TravTrack (Einstellungen → Standortverlauf → Standortquelle). Dann zeichnet die Companion deine Wege hierher auf.",
@@ -869,7 +871,7 @@
   "gaps": {
     "title": "Lücken im Logbuch {{year}}",
     "year": "Jahr",
-    "intro": "Welche Tage dein Logbuch erklärt – und welche nicht. Ein Tag zählt, wenn ein Eintrag ihn abdeckt oder TravTrack Positionen hat.",
+    "intro": "Welche Tage dein Logbuch erklärt — und welche nicht.",
     "loading": "Das Jahr wird geladen …",
     "retry": "Erneut versuchen",
     "nothingYet": "Noch ist nichts eingetragen oder aufgezeichnet – es gibt also auch keine Lücken.",
@@ -956,7 +958,7 @@
   },
   "quality": {
     "title": "Tage mit fragwürdigen Spuren",
-    "intro": "An diesen Tagen passen die Quellen nicht zusammen, die Qualität ist niedrig oder es gibt Ausreißer. Gespeicherte Punkte werden dabei nie verändert; jede Entscheidung lässt sich zurücknehmen.",
+    "intro": "Tage mit Widersprüchen oder Ausreißern. Punkte bleiben unverändert, alles umkehrbar.",
     "loading": "Tage werden geladen …",
     "none": "Keine fragwürdigen Tage – alles passt.",
     "total_one": "{{count}} Tag",

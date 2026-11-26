@@ -114,7 +114,7 @@
     },
     "modal": {
       "title": "Airport-Datenbank wird geladen",
-      "description": "Wir laden gerade die Flughafendatenbank für dich. Das kann einige Minuten dauern. Du kannst die Anwendung schon benutzen, während der Import im Hintergrund läuft.",
+      "description": "Die Flughafendaten laden im Hintergrund. Du kannst schon loslegen.",
       "progress": "{{percent}}% abgeschlossen",
       "airportsCount": "{{processed}} / {{total}} Flughäfen",
       "understood": "Verstanden"
@@ -122,7 +122,7 @@
   },
   "freeServices": {
     "title": "Kostenlose Dienste",
-    "description": "Mit einem Klick schaltest du die Dienste ein, die nichts kosten und weder Schlüssel noch Konto brauchen. Alles, was einen Schlüssel braucht, Cloud-KI und Verbindungen wie Immich oder Strava bleibt aus – das stellst du später im Admin-Bereich unter „Externe Dienste“ ein.",
+    "description": "Schaltet alle kostenlosen Dienste ohne Schlüssel ein. Der Rest bleibt aus.",
     "leaves": "Dafür verlassen die genannten Angaben den Server und gehen an diese öffentlichen Dienste. Du kannst jeden Dienst später einzeln ausschalten.",
     "cta": "Kostenlose Dienste einschalten",
     "on": "Kostenlose Dienste werden eingeschaltet ✓ (zum Zurücknehmen erneut klicken)",

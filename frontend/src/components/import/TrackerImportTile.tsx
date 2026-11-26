@@ -102,6 +102,7 @@ export function TrackerImportTile(): JSX.Element {
     <ImportTileShell
       title={t("settings:import.tile.tracker.title")}
       description={t("settings:import.tile.tracker.description")}
+      descriptionMore={t("settings:import.tile.tracker.descriptionMore")}
       picker={
         <ImportFilePicker
           label={t("settings:import.tile.tracker.uploadLabel")}

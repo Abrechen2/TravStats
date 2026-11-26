@@ -1,7 +1,7 @@
 {
   "settings": {
     "title": "Offene Datendienste",
-    "description": "Wetter und Höhen von Open-Meteo, Beschreibungen aus Wikipedia, Hoteldaten aus OpenStreetMap. Dafür gehen Orte und Daten deiner Reisen an diese Dienste – deshalb ist es aus, bis du es einschaltest.",
+    "description": "Wetter, Wikipedia und Hoteldaten. Sendet Orte und Daten deiner Reisen dorthin.",
     "switch": "Offene Datendienste nutzen",
     "switchSub": "Gilt für die ganze Instanz. Kein Konto, kein Schlüssel.",
     "adminOnly": "Nur ein Admin kann das umstellen.",

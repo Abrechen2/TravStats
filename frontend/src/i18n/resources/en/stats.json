@@ -824,7 +824,7 @@
     "seatClassTitle": "Seat Class",
     "positionTitle": "Window / Middle / Aisle",
     "zoneTitle": "Front / Middle / Back",
-    "noDataHint": "Once your flights carry a seat number (such as 14C) or a seat class, window, aisle, rows and classes appear here.",
+    "noDataHint": "Appears once flights carry a seat number or class.",
     "unplaced_one": "{{count}} seat cannot be placed without its cabin layout",
     "unplaced_other": "{{count}} seats cannot be placed without their cabin layout",
     "noSeat_one": "{{count}} flight without a seat number is not included here",
@@ -906,7 +906,7 @@
   "travelAccount": {
     "title": "Where you slept",
     "subtitle": "Every year split night by night. The bar is always one whole year.",
-    "help": "The grey remainder is not accounted for: nights no entry says where you were. That does not mean at home — a missing entry proves nothing, and the more complete your logbook, the smaller the remainder. A night two entries claim counts once: ship before lodging before plane. The current year counts up to last night.",
+    "help": "Grey: nights with no entry — not necessarily at home. Each night counts once.",
     "helpWithRail": "The grey remainder is not accounted for: nights no entry says where you were. That does not mean at home — a missing entry proves nothing, and the more complete your logbook, the smaller the remainder. A night two entries claim counts once: ship before lodging before night train before plane. The current year counts up to last night.",
     "contested": "{{count}} nights were claimed by several entries and counted once",
     "contested_one": "{{count}} night was claimed by several entries and counted once",
@@ -1208,7 +1208,7 @@
   },
   "insights": {
     "title": "Discoveries, returns and transfers",
-    "intro": "“New” means recorded for the first time in your logbook. The reference is everything you have entered since {{firstYear}} – the app knows nothing about travel before that.",
+    "intro": "“New” means: first time in your logbook since {{firstYear}}.",
     "empty": "No flown flights with a date yet. These figures come from flown and back-filled flights with a departure date and airports.",
     "openFlight": "Open flight",
     "coverage": {
@@ -1799,7 +1799,7 @@
   },
   "years": {
     "title": "Years",
-    "help": "The distance in your logbook per year and month, coloured by mode of travel. The recorded distance (TravTrack) sits beside it and is never added: a recording can contain the very train ride you logged.",
+    "help": "Distance per year by travel type. TravTrack is shown beside it, not added.",
     "loadFailed": "The yearly overview could not be loaded.",
     "mapLink": "Map",
     "mapLinkLabel": "Open the map for {{year}}",

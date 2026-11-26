@@ -10,7 +10,7 @@
   "selectOne": "{{name}} auswählen",
   "edit": "Für {{count}} {{noun}} bearbeiten …",
   "title": "{{count}} {{noun}} gemeinsam bearbeiten",
-  "intro": "Was du hier wählst, gilt für alle {{count}} ausgewählten Einträge ({{noun}}). Alles, was auf „nicht ändern“ steht, bleibt, wie es ist.",
+  "intro": "Gilt für alle {{count}} gewählten Einträge ({{noun}}). „Nicht ändern“ bleibt, wie es ist.",
   "confirm": "Für {{count}} {{noun}} übernehmen",
   "tripPick": "Reise auswählen",
   "tripPickPlaceholder": "– bitte wählen –",

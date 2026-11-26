@@ -234,7 +234,7 @@
     },
     "makeLink": "Create an invitation link",
     "linkLabel": "Your invitation link",
-    "linkHint": "Pass the link on. It is valid for 72 hours and only once. It is shown only now – copy it before you leave the page.",
+    "linkHint": "Valid once, for 72 hours, shown only now — copy it now.",
     "pasteLabel": "An invitation from someone else",
     "linkDamaged": "That is not a complete invitation link or code. Copy it again in full.",
     "redeem": "Redeem invitation",

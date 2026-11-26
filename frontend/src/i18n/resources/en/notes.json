@@ -8,7 +8,7 @@
   "loadError": "The notes could not be loaded.",
   "empty": {
     "title": "No notes yet",
-    "description": "Keep a moment that belongs to no trip. Which trip a note fits is worked out later from its date, by itself.",
+    "description": "Capture a moment. The matching trip follows from its date.",
     "action": "Write the first note"
   },
   "card": {
@@ -28,7 +28,7 @@
     "time": "Time",
     "timeHint": "Leave empty when only the day matters.",
     "zone": "Time zone",
-    "zoneHint": "The time zone you are writing the note in. It decides which day the note belongs to – just after midnight in Berlin is still yesterday in London.",
+    "zoneHint": "The time zone decides which day the note belongs to.",
     "zoneHelpLabel": "Why a time zone?",
     "place": "Place",
     "placePlaceholder": "e.g. Bayrischzell",
@@ -45,7 +45,7 @@
     "close": "Close",
     "dateRequired": "Please choose a date.",
     "shareable": "Shareable",
-    "shareableHint": "Unticked, the note stays private. Ticked, the companions of a shared trip on that day see it too, and a public trip link can show it when you choose “Notes” there."
+    "shareableHint": "Unticked: private. Ticked: fellow travellers and a public link may see it."
   },
   "delete": {
     "title": "Delete note?",

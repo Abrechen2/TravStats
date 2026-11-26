@@ -82,7 +82,7 @@
     "status": "Status",
     "wasHere": "✓ War ich schon",
     "onWishlist": "☆ Merkliste",
-    "statusHint": "Neue Orte landen standardmäßig auf der Merkliste und zählen erst mit, wenn du „War ich schon“ wählst oder einen Besuch einträgst.",
+    "statusHint": "Neue Orte stehen auf der Merkliste und zählen erst mit einem Besuch.",
     "notes": "Notiz",
     "created": "Ort angelegt.",
     "updated": "Ort gespeichert.",
@@ -117,7 +117,7 @@
     "dateSuggestionArrival": "Ankunft {{airport}}",
     "dateSuggestionPhotos_one": "{{count}} Foto",
     "dateSuggestionPhotos_other": "{{count}} Fotos",
-    "dateHint": "Datum ist optional — ein Ort, den du sicher kennst, aber nicht datieren kannst, zählt trotzdem. Ein Datum in der Zukunft zählt noch nicht mit.",
+    "dateHint": "Optional. Ohne Datum zählt der Ort trotzdem, ein künftiges Datum noch nicht.",
     "undated": "ohne Datum",
     "notCountedYet": "zählt noch nicht",
     "visitAdded": "Besuch eingetragen.",
@@ -611,7 +611,7 @@
   "import": {
     "csv": {
       "title": "Orte aus einer Tabelle",
-      "description": "Eine CSV-Datei mit Namen und Koordinaten. Ohne Koordinaten landet der Ort in der Vorschau, und du setzt seine Position selbst — so kommt auch ein Google-Takeout-Export herein, den der Geocoder nicht auflöst.",
+      "description": "CSV mit Namen und Koordinaten. Fehlt eine Position, setzt du sie in der Vorschau.",
       "uploadLabel": "CSV-Datei wählen"
     },
     "fields": {
@@ -635,7 +635,7 @@
       "newLabel": "neu",
       "presentLabel": "schon vorhanden",
       "needsInputLabel": "offen",
-      "needsInputHint": "Zeilen ohne Position oder mit einem möglichen Doppel brauchen deine Entscheidung, bevor der Import losgeht. Nichts wird ohne sie geschrieben.",
+      "needsInputHint": "Zeilen ohne Position oder mit Doppel brauchen deine Entscheidung.",
       "commit": "Importieren",
       "commitError": "Der Import ist fehlgeschlagen. Bitte noch einmal versuchen — was schon geschrieben wurde, steht im Import-Logbuch."
     },
@@ -679,8 +679,8 @@
       "stopsSkipped_other": "{{count}} Reisestopps übersprungen — die Reise hat sie an diesem Tag schon"
     },
     "takeout": {
-      "intro_one": "{{count}} Zeile stammt aus einer Google-Maps-Liste. Position, Reise und Besuchstag lassen sich vorschlagen — du entscheidest danach pro Zeile.",
-      "intro_other": "{{count}} Zeilen stammen aus einer Google-Maps-Liste. Position, Reise und Besuchstag lassen sich vorschlagen — du entscheidest danach pro Zeile.",
+      "intro_one": "{{count}} Zeile aus Google Maps. Position, Reise und Tag werden vorgeschlagen.",
+      "intro_other": "{{count}} Zeilen aus Google Maps. Position, Reise und Tag werden vorgeschlagen.",
       "resolve": "Vorschläge holen",
       "running": "Suche läuft … {{done}} von {{total}}",
       "errors": {
@@ -742,7 +742,7 @@
     },
     "document": {
       "title": "Ort aus einem Dokument",
-      "description": "Ein Museumsticket oder eine Führungsbuchung: Text einfügen oder als PDF, .eml, .msg oder .txt wählen. Gelesen wird wie jedes andere Dokument, mit deinen Orts-Templates aus der Parser-Werkstatt; der Ort landet in der Vorschau, und erst du legst ihn an.",
+      "description": "Ticket oder Buchung als Text, PDF oder Mail. Der Ort landet erst in der Vorschau.",
       "textLabel": "Text des Dokuments",
       "placeholder": "Text des Tickets oder der Buchung hier einfügen …",
       "read": "Dokument lesen",
@@ -806,7 +806,7 @@
   "merge": {
     "action": "Dublette zusammenführen",
     "title": "Dublette zusammenführen · {{name}}",
-    "intro": "„{{name}}“ bleibt bestehen. Wähle den doppelten Ort, der darin aufgehen soll – danach entscheidest du für jede Angabe, welche bleibt.",
+    "intro": "„{{name}}“ bleibt. Wähle den doppelten Ort, dann pro Angabe, was bleibt.",
     "pickLabel": "Doppelten Ort wählen",
     "pickPlaceholder": "Name oder Stadt …",
     "pickStep": "den doppelten Ort wählen",
@@ -885,7 +885,7 @@
       "unplacedLodgings_one": "Eine Unterkunft ohne Standort ist nicht wählbar.",
       "unplacedLodgings_other": "{{count}} Unterkünfte ohne Standort sind nicht wählbar.",
       "pointLabel": "Ort suchen oder Punkt setzen",
-      "deviceHint": "Dein Standort wird einmal abgefragt, nur für diese Ansicht – er wird nirgends gespeichert. Ohne Freigabe geht es über Unterkunft oder Punkt genauso.",
+      "deviceHint": "Dein Standort wird einmal abgefragt und nicht gespeichert.",
       "deviceUse": "Standort einmal verwenden",
       "deviceAsking": "Standort wird abgefragt …",
       "device_denied": "Standort nicht freigegeben. Wähle stattdessen eine Unterkunft oder einen Punkt.",
@@ -953,7 +953,7 @@
   },
   "customCategories": {
     "manage": "Eigene Kategorien",
-    "manageHint": "Lege Kategorien an, die der mitgelieferte Vorrat nicht hat (z. B. Schwimmbad). Die Kategorien gelten für alle deine Orte.",
+    "manageHint": "Eigene Kategorien, z. B. Schwimmbad. Gilt für alle deine Orte.",
     "namePlaceholder": "Name, z. B. Schwimmbad",
     "iconLabel": "Symbol",
     "add": "Anlegen",
@@ -990,7 +990,7 @@
     "windowInvalid": "Die Höchstdauer muss mindestens so groß wie die Mindestdauer sein (1 bis 1440 Minuten).",
     "distanceInvalid": "Die Entfernung muss zwischen 10 und 500 Metern liegen.",
     "autoAccept": "Sichere Treffer automatisch übernehmen",
-    "autoAcceptHint": "Nur wenn die Kette eindeutig erkannt ist. Jede automatische Übernahme steht unter „Zuletzt automatisch übernommen“ und lässt sich zurücknehmen.",
+    "autoAcceptHint": "Nur bei eindeutiger Kette. Automatisches lässt sich zurücknehmen.",
     "stop": "Nicht mehr folgen",
     "header": "Intelligente Liste: Kette {{brands}}",
     "headerLabel": "Intelligente Liste",

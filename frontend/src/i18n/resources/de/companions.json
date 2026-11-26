@@ -6,7 +6,7 @@
   },
   "manage": {
     "title": "Mitreisende",
-    "description": "Alle Personen, die du in Flügen, Reisen und Fahrten eingetragen hast. Hier vereinheitlichst du Schreibweisen, führst doppelte Einträge einer Person zusammen und löschst, wen du nicht mehr brauchst.",
+    "description": "Schreibweisen vereinheitlichen, Doppelte zusammenführen, löschen.",
     "loading": "Mitreisende werden geladen …",
     "loadFailed": "Die Mitreisenden konnten nicht geladen werden.",
     "retry": "Erneut versuchen",

@@ -9,7 +9,7 @@
   },
   "annotate": {
     "title": "Datei annotieren",
-    "description": "Lade eine E-Mail, einen Boarding Pass oder einen Screenshot hoch und markiere die Felder. TravStats leitet daraus ein Template ab.",
+    "description": "Mail, Bordkarte oder Screenshot hochladen und Felder markieren.",
     "emailButton": "E-Mail hochladen",
     "emailFormats": ".eml, .msg, .txt",
     "boardingPassButton": "Boarding Pass hochladen",
@@ -346,9 +346,9 @@
   "overview": {
     "title": "So liest TravStats eine Buchung",
     "what": "Eine Vorlage sagt TravStats, woran es die Buchung eines Anbieters erkennt und wo darin Datum, Ort und Nummer stehen.",
-    "whatHelp": "Wenn du eine Buchung einspielst, probiert TravStats die Quellen unten der Reihe nach durch. Die erste Vorlage, die passt, liest das Dokument.",
+    "whatHelp": "Die Quellen werden der Reihe nach probiert; die erste passende Vorlage liest.",
     "whatSubject": "Vorlagen",
-    "uploadHelp": "Eine Datei, die du hier hochlädst, bleibt als Beispiel bei dir. Die Datei dient nur dazu, die Vorlage abzuleiten und zu prüfen. Geteilt wird höchstens die Vorlage, nie dein Dokument.",
+    "uploadHelp": "Die Datei bleibt bei dir. Geteilt wird höchstens die Vorlage, nie das Dokument.",
     "uploadSubject": "hochgeladene Buchung",
     "upload": "Eine hier hochgeladene Buchung bleibt bei dir.",
     "order": "Gelesen wird in dieser Reihenfolge:",

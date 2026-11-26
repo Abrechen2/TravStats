@@ -215,7 +215,7 @@
     "title": "Flugliste",
     "backToMap": "Zurück zur Karte",
     "welcome": "Willkommen zur Flugtabelle!",
-    "description": "Hier siehst du alle deine Flüge in einer übersichtlichen Tabelle. Du kannst sortieren, filtern und Flüge bearbeiten oder löschen.",
+    "description": "Alle Flüge: sortieren, filtern, bearbeiten.",
     "backToDashboard": "Zurück zum Dashboard",
     "loading": "Flüge werden geladen...",
     "noFlights": "Noch keine Flüge erfasst",
@@ -303,7 +303,7 @@
   "refresh": {
     "action": "Flüge aktualisieren",
     "title": "Flüge aktualisieren",
-    "intro": "Fragt für die gewählten Flüge den Flugdaten-Anbieter und ergänzt nur Felder, die bei dir noch leer sind: Flugzeugtyp, Kennzeichen und Mode-S-Code. Nichts Vorhandenes wird überschrieben.",
+    "intro": "Ergänzt nur leere Felder (Typ, Kennzeichen, Mode-S). Nichts wird überschrieben.",
     "start": "Anbieter fragen",
     "running": "Frage Anbieter … {{done}} von {{total}}",
     "apply": "{{count}} Flüge ergänzen",
@@ -595,7 +595,7 @@
     "loadError": "Die Aufzeichnung dieses Flugs konnte nicht geladen werden.",
     "captionFile": "Aus einer {{format}}-Datei · {{distance}} · {{points}} Punkte",
     "versusGreatCircle": "Aufgezeichnet {{flown}} · Großkreis {{greatCircle}} ({{difference}} %)",
-    "uploadIntro": "Eine Aufzeichnung dieses Flugs hochladen – aus einem GPS-Logger oder als Export von FlightAware oder Flightradar24. Die Karte zeichnet den Flug dann entlang der Aufzeichnung statt auf dem Großkreis.",
+    "uploadIntro": "GPS-Aufzeichnung hochladen (Logger, FlightAware, Flightradar24) — die Karte folgt ihr.",
     "upload": "Datei hochladen",
     "replace": "Ersetzen",
     "remove": "Aufzeichnung entfernen",
@@ -713,7 +713,7 @@
   "bookingPrice": {
     "total": "Gesamtpreis der Buchung: {{amount}}",
     "storedOnBooking": "Dieser Preis ist an der Buchung gespeichert, nicht an den einzelnen Flügen.",
-    "countedOnce": "In jeder Summe, die Flüge dieser Buchung enthält, zählt er genau einmal und schließt Steuern und Gebühren ein; Preise, Steuern und Gebühren, die einzelne Flüge zusätzlich tragen, zählen dann nicht mit. Liegen Flüge dieser Buchung auf zwei Reisen, steht der volle Gesamtpreis heute bei jeder dieser Reisen. Ein annullierter Flug kostet nichts.",
+    "countedOnce": "Zählt in Summen genau einmal, inklusive Steuern und Gebühren.",
     "zeroIsFree": "0 bedeutet: als kostenlos erfasst. Ein leeres Feld hieße: unbekannt.",
     "noTotal": "Für diese Buchung ist kein Gesamtpreis erfasst. In Summen zählt deshalb jeder Flug mit seinem eigenen Preis plus Steuern und Gebühren; ein Flug ohne Preis, Steuern und Gebühren zählt als unbekannt, nicht als 0. Ein annullierter Flug kostet nichts.",
     "otherEntries_one": "Zur Buchung gehört außer Flügen noch ein weiterer Eintrag (Bahn, Bus, Fähre, Kreuzfahrt oder Unterkunft); ihr Gesamtpreis gilt für alles zusammen.",
@@ -744,7 +744,8 @@
       "generic": "Die Aufteilung konnte nicht gespeichert werden."
     },
     "editOnNamedTrip": "Gesamtpreis auf der Seite der Reise „{{name}}“ bearbeiten",
-    "noTrip": "Die Buchung hängt an keiner Reise; ihr Gesamtpreis lässt sich daher hier nicht öffnen."
+    "noTrip": "Die Buchung hängt an keiner Reise; ihr Gesamtpreis lässt sich daher hier nicht öffnen.",
+    "countedOnceMore": "Preise, Steuern und Gebühren einzelner Flüge zählen dann nicht zusätzlich. Liegen Flüge der Buchung auf zwei Reisen, steht der volle Preis bei jeder dieser Reisen. Ein annullierter Flug kostet nichts."
   },
   "bulk": {
     "start": "Mehrere bearbeiten",

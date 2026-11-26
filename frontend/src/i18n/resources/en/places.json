@@ -82,7 +82,7 @@
     "status": "Status",
     "wasHere": "✓ I’ve been here",
     "onWishlist": "☆ Wishlist",
-    "statusHint": "New places go on the wishlist by default and only start counting once you pick “I’ve been here” or record a visit.",
+    "statusHint": "New places go on the wishlist and count only with a visit.",
     "notes": "Note",
     "created": "Place added.",
     "updated": "Place saved.",
@@ -117,7 +117,7 @@
     "dateSuggestionArrival": "Arrival {{airport}}",
     "dateSuggestionPhotos_one": "{{count}} photo",
     "dateSuggestionPhotos_other": "{{count}} photos",
-    "dateHint": "The date is optional — a place you know you visited but cannot date still counts. A date in the future does not count yet.",
+    "dateHint": "Optional. A place counts without a date; a future date not yet.",
     "undated": "undated",
     "notCountedYet": "not counted yet",
     "visitAdded": "Visit recorded.",
@@ -611,7 +611,7 @@
   "import": {
     "csv": {
       "title": "Places from a spreadsheet",
-      "description": "A CSV file with names and coordinates. Without coordinates the place lands in the preview and you set its position yourself — which is also how a Google Takeout export the geocoder cannot resolve gets in.",
+      "description": "CSV with names and coordinates. Missing positions are set in the preview.",
       "uploadLabel": "Choose CSV file"
     },
     "fields": {
@@ -635,7 +635,7 @@
       "newLabel": "new",
       "presentLabel": "already here",
       "needsInputLabel": "open",
-      "needsInputHint": "Rows without a position or with a possible duplicate need your decision before the import starts. Nothing is written without it.",
+      "needsInputHint": "Rows without a position or with a duplicate need your decision.",
       "commit": "Import",
       "commitError": "The import failed. Please try again — whatever was already written is in the import log."
     },
@@ -679,8 +679,8 @@
       "stopsSkipped_other": "{{count}} trip stops skipped — the trip already has them on that day"
     },
     "takeout": {
-      "intro_one": "{{count}} row comes from a Google Maps list. Position, trip and visit day can be suggested — you then decide row by row.",
-      "intro_other": "{{count}} rows come from a Google Maps list. Position, trip and visit day can be suggested — you then decide row by row.",
+      "intro_one": "{{count}} row from Google Maps. Position, trip and day are suggested.",
+      "intro_other": "{{count}} rows from Google Maps. Position, trip and day are suggested.",
       "resolve": "Get suggestions",
       "running": "Searching … {{done}} of {{total}}",
       "errors": {
@@ -742,7 +742,7 @@
     },
     "document": {
       "title": "A place from a document",
-      "description": "A museum ticket or a tour booking: paste its text or choose a PDF, .eml, .msg or .txt file. It is read like any other document, with your place templates from the parser workshop; the place lands in the preview, and only you create it.",
+      "description": "Ticket or booking as text, PDF or email. The place lands in the preview first.",
       "textLabel": "Document text",
       "placeholder": "Paste the text of the ticket or booking here …",
       "read": "Read document",
@@ -806,7 +806,7 @@
   "merge": {
     "action": "Merge a duplicate",
     "title": "Merge a duplicate · {{name}}",
-    "intro": "“{{name}}” stays. Choose the duplicate that should be folded into it — then decide, for each detail, which one is kept.",
+    "intro": "“{{name}}” stays. Pick the duplicate, then choose per field what stays.",
     "pickLabel": "Choose the duplicate",
     "pickPlaceholder": "Name or city …",
     "pickStep": "choose the duplicate",
@@ -885,7 +885,7 @@
       "unplacedLodgings_one": "One lodging without a location cannot be chosen.",
       "unplacedLodgings_other": "{{count}} lodgings without a location cannot be chosen.",
       "pointLabel": "Search a place or set a point",
-      "deviceHint": "Your location is asked for once, for this view only — it is stored nowhere. Without permission, a lodging or a point works just as well.",
+      "deviceHint": "Your location is asked once and not stored.",
       "deviceUse": "Use my location once",
       "deviceAsking": "Asking for your location …",
       "device_denied": "Location not permitted. Choose a lodging or a point instead.",
@@ -953,7 +953,7 @@
   },
   "customCategories": {
     "manage": "Own categories",
-    "manageHint": "Create categories the built-in set lacks (e.g. Swimming pool). They apply to all your places.",
+    "manageHint": "Your own categories, e.g. swimming pool. Applies to all your places.",
     "namePlaceholder": "Name, e.g. Swimming pool",
     "iconLabel": "Icon",
     "add": "Add",
@@ -990,7 +990,7 @@
     "windowInvalid": "The maximum stay must be at least the minimum stay (1 to 1440 minutes).",
     "distanceInvalid": "The distance must be between 10 and 500 metres.",
     "autoAccept": "Take confident matches automatically",
-    "autoAcceptHint": "Only when the chain is recognised unambiguously. Every automatic entry is listed under “Recently taken automatically” and can be undone.",
+    "autoAcceptHint": "Only for a clear chain match. Automatic additions can be undone.",
     "stop": "Stop following",
     "header": "Smart list: chain {{brands}}",
     "headerLabel": "Smart list",

@@ -28,7 +28,7 @@
       },
       "time": {
         "title": "Questions about time",
-        "description": "Something is missing here to show a time correctly: the place's time zone, the time of day or the exact day. We don't guess — add it if you know it, or leave it as it is."
+        "description": "Time zone, time or day is missing. We don't guess — add it or leave it."
       },
       "home": {
         "title": "Home",
@@ -105,7 +105,7 @@
       "nightlyLink": "Set up the nightly scan",
       "review": {
         "title": "Visit suggestions from your trips",
-        "description": "Photos taken during a recorded trip at a spot with no visit. Select several and accept or reject them together; place, name and time can be corrected first. Rejected suggestions do not come back.",
+        "description": "Photos on the way with no visit. Accept or reject; rejected ones don't come back.",
         "selectAll": "Select all",
         "selectOne": "Select {{label}}",
         "selected": "{{count}} selected",
@@ -171,7 +171,7 @@
     },
     "tripSuggestions": {
       "title": "Trip suggestions",
-      "description": "Derived from your entries: when you were away and what belongs together. Suggestions only — nothing is created or linked until you accept.",
+      "description": "Suggestions from your entries. Nothing is created until you accept.",
       "nameFallback": "Trip",
       "planned": "planned",
       "capped": "Showing {{shown}} of {{total}} suggestions — answer some and the next ones move up.",
@@ -348,7 +348,7 @@
         "ground": "Only passed through on the ground",
         "notThere": "Not there",
         "emptyTitle": "No open questions from TravTrack",
-        "emptyDescription": "A question appears here once TravTrack sees you on the ground on at least two days in a country your passport does not know yet — or records a journey on a day that matches no entry in your logbook.",
+        "emptyDescription": "Questions appear when TravTrack sees a new country or an unknown journey.",
         "errors": {
           "invalidated": "The location data behind this question was deleted or changed meanwhile. The question no longer applies.",
           "resolved": "This question was answered already.",
@@ -477,7 +477,7 @@
       "stay": "Stay",
       "gpsProposal": "Add a possible stay from GPS data",
       "recheckAll": "Recheck",
-      "recheckHint": "“Recheck” looks through your existing data again for open questions, such as missing details or contradictions, and then reloads the inbox.",
+      "recheckHint": "Searches your existing data again for gaps or contradictions.",
       "refreshHint": "Reloads the list without checking your data again.",
       "shown_one": "Showing 1 item",
       "shown_other": "Showing {{count}} items",
@@ -546,7 +546,7 @@
       },
       "convert": {
         "label": "Convert to a train or bus ride",
-        "hint": "The flight is deleted and filed as a ride on the same trip and booking; this cannot be taken back. Both places need a position and the departure a time — otherwise the flight stays unchanged and you correct it first."
+        "hint": "Becomes a ride, cannot be undone. Needs positions and a departure time."
       }
     },
     "timeUnchanged": "Nothing was changed on the entry. The time stays as it was stored until you fill it in.",
@@ -691,7 +691,7 @@
   "unfiledDocuments": {
     "alreadyThere": "This document is already here.",
     "title": "Documents filed with nothing",
-    "description": "These uploads do not belong to an entry. File them with a flight, cruise, stay, place or trip — otherwise they are deleted, file and all, {{days}} days after they came to belong to nothing.",
+    "description": "Not linked. Assign them, or they are deleted with the file after {{days}} days.",
     "uploaded": "Uploaded on",
     "deletesOn": "Will be deleted on",
     "open": "Open",
@@ -720,7 +720,7 @@
     },
     "create": {
       "title": "\"{{name}}\": create from document",
-      "hint": "Choose what to create. The document is read and pre-fills the form; whatever you save is linked to this document.",
+      "hint": "Pick a type. The form is prefilled from the document and linked to it.",
       "unreadable": "This format cannot be read. PDF files, images and emails can.",
       "noDomains": "No domain is active that something could be created in.",
       "recognised": "recognised",
@@ -766,7 +766,7 @@
   },
   "documentLinkSuggestions": {
     "title": "Documents that cover more",
-    "description": "These documents name bookings of the same trip they are not linked to yet. Tick what they also cover — nothing is linked until you confirm.",
+    "description": "These documents match more bookings. Linked only when you confirm.",
     "scanning": "Checking stored documents … {{done}} of {{total}}",
     "alsoCovers": "“{{name}}” also covers …",
     "accept": "Link",
@@ -810,7 +810,7 @@
   },
   "placeCaptures": {
     "title": "Unnamed places",
-    "description": "You saved these positions with “Place now” in the app. Name them to create the place and visit — or dismiss them.",
+    "description": "Captured with “Place now”. Name it to create a place and visit — or discard.",
     "unnamed": "Unnamed place",
     "accuracy": "± {{meters}} m",
     "name": "Name it",

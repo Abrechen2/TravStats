@@ -1,7 +1,7 @@
 {
   "admin": {
     "title": "Route lines again",
-    "hint": "Routes the legs and coach rides of all accounts through the configured routing service. A line someone drew or recorded is never replaced, and when a request fails the stored line stays. When the service's daily quota is used up, the run stops and carries on by itself the next day.",
+    "hint": "Reroutes all accounts' legs. Your own lines stay; on failure the old one stays.",
     "mode": "Which lines",
     "modeStraight": "Straight lines only",
     "modeAll": "All",
@@ -73,8 +73,8 @@
   },
   "rail": {
     "title": "Re-route rail lines",
-    "hint": "Routes the rail journeys of every account that are only drawn as a straight line: first along the timetable's own trace (Transitous), otherwise through the rail router, on the network that fits the train type. A line you drew or brought over is never replaced, and when a request fails the stored line stays.",
-    "modeAllHint": "\"All\" also routes again the journeys the rail router already routed. Timetable traces and drawn lines stay.",
+    "hint": "Reroutes straight-line rail journeys. Own lines stay; on failure the old one stays.",
+    "modeAllHint": "“All” also reroutes routed journeys. Timetable and drawn lines stay.",
     "start": "Re-route rail lines",
     "readiness_one": "{{count}} rail journey is drawn as a straight line - no rail routing is set up. Enter the address of a rail router above, then they can be routed.",
     "readiness_other": "{{count}} rail journeys are drawn as straight lines - no rail routing is set up. Enter the address of a rail router above, then they can be routed.",

@@ -80,8 +80,8 @@
   "countries": {
     "title": "Countries",
     "listNote": "Ground presence includes confirmed transit stops and travel through a country. Select countries visited to show confirmed visits only.",
-    "dashLegend": "“—” does not mean zero, it means not derivable: a country proved only by a lodging or a port call has no flights and no airports — and without a dated record, no period either.",
-    "groundTimeLegend": "“Time on the ground” has three answers, and two of them are not a value: “unknown” means a flight was here but no second one bounds the stay — that you can fill in. “—” means no flight was here at all; a lodging bounds no departure, so there is nothing to add. “Days”, by contrast, is always counted: 0 means no record names a day.",
+    "dashLegend": "“—” does not mean zero, it means: not derivable.",
+    "groundTimeLegend": "Time on the ground: “unknown” can be filled in, “—” cannot.",
     "country": "Country",
     "evidence": "Evidence",
     "entries": "Entries",
@@ -103,7 +103,9 @@
       "openChain": "The recorded trip breaks off here (a one-way flight or ride, an open jaw, or the first or last trip).",
       "noDestination": "The trip never turns around – which country was the destination cannot be decided.",
       "undated": "The trip has no date and cannot be placed in a chain."
-    }
+    },
+    "dashLegendMore": "A country proved only by a lodging or a port call has no flights and no airports — and without a dated record, no period either.",
+    "groundTimeLegendMore": "“unknown”: a flight was here but no second one bounds the stay. “—”: no flight was here at all. “Days” is always counted: 0 means no record names a day."
   },
   "countingChanged": {
     "text": "Counting changed — {{before}} countries before, {{after}} now.",

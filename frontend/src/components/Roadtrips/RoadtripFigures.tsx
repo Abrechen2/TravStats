@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { distanceFigure } from "../../lib/roadtrip/distanceFigure";
 import { daysAhead, spanDays } from "../../lib/roadtrip/roadtripView";
 import type { RoadtripDetail } from "../../types/roadtrip";
+import Toggletip from "../ui/Toggletip";
 
 interface Figure {
   key: string;
@@ -170,7 +171,12 @@ export default function RoadtripFigures({
           </span>
         )}
         {!n.nightsKnown && <span>{t("roadtrips:detail.approxHint")}</span>}
-        {basisParts && <span>{t("roadtrips:detail.distanceRule", { parts: basisParts })}</span>}
+        {basisParts && (
+          <span>
+            {t("roadtrips:detail.distanceRule", { parts: basisParts })}{" "}
+            <Toggletip content={t("roadtrips:detail.distanceRuleMore")} className="align-middle" />
+          </span>
+        )}
         {!detail.routingAvailable && <span>{t("roadtrips:detail.noRouting")}</span>}
       </div>
     </div>

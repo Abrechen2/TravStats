@@ -43,7 +43,7 @@
   },
   "about": {
     "buildLabel": "Build",
-    "buildVersionHint": "Version, die beim Bauen des Container-Images eingebacken wurde. Weicht von der angezeigten Version nur ab, wenn ein promoteter RC läuft.",
+    "buildVersionHint": "Im Image eingebackene Version. Weicht nur bei einem promoteten RC ab.",
     "dataSources": {
       "title": "Datenquellen & Attribution",
       "fullList": "Vollständige Liste mit Lizenzen",
@@ -159,7 +159,7 @@
     "residenceRow": {
       "name": "Heimatort",
       "sub": "Von hier misst TravStats Entfernungen",
-      "help": "Ein Umzug beginnt einen neuen Zeitraum, nichts wird überschrieben. Alte Reisen zählen gegen den Wohnort ihres Tages. Der aktuelle Heimatort ist auch dein Zuhause in der Companion-App."
+      "help": "Ein Umzug beginnt einen neuen Zeitraum; alte Reisen behalten ihren Wohnort."
     },
     "airportsRow": {
       "name": "Heimatflughäfen",
@@ -340,7 +340,7 @@
     },
     "encryptedGrants": {
       "title": "Verschlüsselte Freigaben",
-      "description": "Vollständige Einträge gehen nur über die geräteverschlüsselte Übertragung. Empfänger, Umfang und Kategorien wählst du je Freigabe.",
+      "description": "Vollständige Einträge nur geräteverschlüsselt. Umfang wählst du je Freigabe.",
       "grants": {
         "title": "Freigaben verwalten",
         "sub": "Wer was bekommt, und wie lange."
@@ -422,7 +422,7 @@
   "lifeBook": {
     "title": "Lebensbuch",
     "sub": "Dein Reisetagebuch als eine einzige Datei, die auch in Jahrzehnten ohne TravStats lesbar bleibt.",
-    "help": "Eine HTML-Datei mit allen Reisen, Tagen, Karten, Fotos und Belegen des gewählten Bereichs. Die Datei braucht kein Internet und kein JavaScript. Zum Drucken oder als PDF: im Browser öffnen und Drucken wählen (A4, eine Reise pro Seite).",
+    "help": "Eine HTML-Datei mit allen Reisen, offline lesbar und druckbar.",
     "button": "Lebensbuch erstellen",
     "scope": "Bereich",
     "scopeAll": "Alles",
@@ -486,7 +486,7 @@
     "title": "Was festgehalten wird",
     "costTracking": "Kostenerfassung",
     "trackAircraft": "Heckkennungen erfassen",
-    "description": "Funktionen ein- und ausblenden, um die Oberfläche an deine Nutzung anzupassen. Abgeschaltete Funktionen lassen sich jederzeit wieder einschalten — es gehen keine Daten verloren.",
+    "description": "Funktionen ein- und ausblenden. Es gehen keine Daten verloren.",
     "liveTracking": "Live-Verfolgung"
   },
   "autoSave": {
@@ -500,7 +500,7 @@
   },
   "parser": {
     "title": "Parser-Konfiguration",
-    "description": "Konfiguriere, wie Bordkarten und E-Mails geparst werden. Der Auto-Modus wählt automatisch den besten verfügbaren Parser aus.",
+    "description": "Wie Bordkarten und E-Mails gelesen werden. Auto wählt den besten Parser.",
     "saved": "Parser-Einstellungen erfolgreich gespeichert!",
     "saveFailed": "Fehler beim Speichern der Einstellungen",
     "available": "Verfügbar",
@@ -570,7 +570,7 @@
   },
   "apiKeys": {
     "title": "API-Schlüssel",
-    "description": "Optionale Schlüssel für Live-Flugdaten und zusätzliche Flughafen-Informationen. Hat der Administrator einen hinterlegt, wird er automatisch benutzt; ein eigener hat Vorrang. Schlüssel werden verschlüsselt gespeichert und nie wieder angezeigt.",
+    "description": "Optional für Live-Flugdaten. Dein Schlüssel geht vor; gespeichert verschlüsselt.",
     "shared": "Geteilt",
     "own": "Eigener Schlüssel",
     "notConfigured": "Nicht konfiguriert",
@@ -625,7 +625,7 @@
     },
     "bulkRefresh": {
       "title": "Bestandsflüge auffrischen",
-      "description": "Holt fehlende Felder (Kennzeichen, Flugzeugtyp, Mode-S, Codeshare, Airline-ICAO/IATA sowie tatsächliche Ab- und Ankunftszeiten) für deine bisherigen Flüge der letzten 365 Tage nach. Bestehende Werte werden nie überschrieben. Benötigt AeroDataBox — nur dieser Provider deckt das 365-Tage-Fenster ab.",
+      "description": "Ergänzt fehlende Felder der letzten 365 Tage, überschreibt nichts. Braucht AeroDataBox.",
       "allUpToDate": "Alle Flüge im 365-Tage-Fenster sind aktuell — nichts zu tun.",
       "demoBlocked": "Im Demo-Account deaktiviert, um keine echten API-Tokens zu verbrauchen. In deiner Prod-Instanz verfügbar.",
       "button": "Auffrischen",
@@ -661,7 +661,7 @@
   },
   "routing": {
     "title": "Routing-Anbieter",
-    "description": "Bestimmt, welcher Anbieter eine Etappe oder eine Busfahrt entlang der Straße berechnet. Ohne Anbieter bleibt jede Etappe und jede Busfahrt eine Luftlinie. Ein ausgewählter Anbieter erhält die Koordinaten von Start und Ziel, um die Strecke zu berechnen — sie verlassen damit diese Instanz.",
+    "description": "Wer Straßenetappen berechnet. Der Dienst erhält Start und Ziel. Ohne: Luftlinie.",
     "provider": {
       "none": "Kein Anbieter",
       "openrouteservice": "OpenRouteService",
@@ -673,16 +673,16 @@
     "saveError": "Routing-Einstellungen konnten nicht gespeichert werden",
     "openrouteservice": {
       "label": "OpenRouteService API-Schlüssel",
-      "description": "Kostenlos: 2000 Routing-Anfragen/Tag. Schlüssel der Instanz: gilt für jedes Konto, das unter Einstellungen → Dienste keinen eigenen hinterlegt hat."
+      "description": "Kostenlos 2000 Anfragen/Tag. Gilt für alle Konten ohne eigenen Schlüssel."
     },
     "graphhopper": {
       "label": "GraphHopper API-Schlüssel",
-      "description": "Kostenlos: 500 Routing-Anfragen/Tag. Schlüssel der Instanz: gilt für jedes Konto, das unter Einstellungen → Dienste keinen eigenen hinterlegt hat."
+      "description": "Kostenlos 500 Anfragen/Tag. Gilt für alle Konten ohne eigenen Schlüssel."
     }
   },
   "routingPersonal": {
     "title": "Routing für Touren",
-    "description": "Welcher Anbieter die Etappen deiner Touren berechnet, legt die Administration dieser Instanz fest. Hat sie für OpenRouteService oder GraphHopper einen Schlüssel der Instanz hinterlegt, nutzt dein Konto ihn mit, und hier ist nichts einzutragen. Sonst kannst du einen eigenen Schlüssel hinterlegen – er gilt nur für dein Konto.",
+    "description": "Hat die Instanz einen Schlüssel, nichts zu tun. Sonst gilt ein eigener nur für dich.",
     "loadError": "Deine Routing-Schlüssel konnten nicht geladen werden.",
     "saved": "Routing-Schlüssel gespeichert.",
     "saveError": "Deine Routing-Schlüssel konnten nicht gespeichert werden.",
@@ -699,7 +699,7 @@
   },
   "import": {
     "title": "Listen importieren",
-    "description": "Eine ganze Sammlung auf einmal übernehmen — einmalig, kein laufender Weg. Einzelne Buchungen legst du direkt im jeweiligen Bereich an.",
+    "description": "Eine ganze Sammlung einmalig übernehmen. Einzelne Buchungen im jeweiligen Bereich.",
     "openHub": "Importieren",
     "log": {
       "title": "Import-Logbuch",
@@ -750,17 +750,17 @@
     "tile": {
       "fr24": {
         "title": "Von Flightradar24",
-        "description": "Lade deinen CSV-Export von my.flightradar24.com hoch. Zeitzonen-Umrechnung und Flughafen-Lookup werden automatisch durchgeführt.",
+        "description": "CSV-Export von my.flightradar24.com hochladen.",
         "uploadLabel": "FR24-CSV auswählen"
       },
       "genericCsv": {
         "title": "Aus beliebigem Logbuch (CSV)",
-        "description": "Lade eine flache Flug-CSV — nach dem Upload öffnet sich ein Mapping-Wizard, mit dem du jede Spalte einem TravStats-Feld zuordnest.",
+        "description": "Flache Flug-CSV hochladen und Spalten zuordnen.",
         "uploadLabel": "CSV-Datei auswählen"
       },
       "tracker": {
         "title": "Aus einer anderen Flug-App",
-        "description": "Export aus OpenFlights, AirTrail, Jetlog, Flighty, App in the Air (oder Flightradar24) hochladen. Das Format wird an der Datei erkannt; Flughäfen, Zeitzonen und Dubletten werden wie beim FR24-Import behandelt.",
+        "description": "Export aus OpenFlights, Flighty, App in the Air u. a. hochladen.",
         "uploadLabel": "Export-Datei wählen",
         "detected": "Erkannt als {{format}}.",
         "formats": {
@@ -770,11 +770,12 @@
           "flighty": "Flighty (CSV)",
           "app_in_the_air": "App in the Air (TXT)",
           "fr24": "Flightradar24 (CSV)"
-        }
+        },
+        "descriptionMore": "OpenFlights, AirTrail, Jetlog, Flighty, App in the Air oder Flightradar24. Das Format wird an der Datei erkannt; Flughäfen, Zeitzonen und Dubletten wie beim FR24-Import."
       },
       "checkin": {
         "title": "Aus Träwelling oder travelynx",
-        "description": "Lade deinen Export hoch (Träwelling: JSON oder CSV, travelynx: JSON-Export des Kontos). Bahn-, U-Bahn-, Straßenbahn- und Busfahrten werden als Fahrten angelegt; schon vorhandene bleiben unverändert und werden nicht doppelt eingetragen.",
+        "description": "Export aus Träwelling oder travelynx hochladen. Doppeltes wird erkannt.",
         "uploadLabel": "Export-Datei wählen",
         "sourceLabel": "Quelle",
         "sources": {
@@ -789,11 +790,12 @@
         "failed": "Die Datei konnte nicht gelesen werden. Ist es der Export der gewählten Quelle? Es wurde nichts geändert.",
         "network": "Der Server ist nicht erreichbar. Es wurde nichts geändert – bitte versuche es erneut.",
         "applyFailed": "Das Übernehmen ist fehlgeschlagen. Importiere die Datei noch einmal – bereits Übernommenes wird erkannt.",
-        "rateLimited": "Zu viele Importe in kurzer Zeit. Bitte warte einen Moment und versuche es erneut."
+        "rateLimited": "Zu viele Importe in kurzer Zeit. Bitte warte einen Moment und versuche es erneut.",
+        "descriptionMore": "Träwelling: JSON oder CSV. travelynx: JSON-Export des Kontos. Bahn-, U-Bahn-, Tram- und Busfahrten werden als Fahrten angelegt."
       },
       "appImport": {
         "title": "Aus TripIt, Polarsteps oder einem Flugtagebuch",
-        "description": "Lade deinen Export hoch – TripIt (JSON oder iCal), Polarsteps (der ZIP-Download oder trip.json) oder JetLovers, FlightMemory, Logmyflight (CSV). Vor dem Speichern siehst du, was angelegt wird: Flüge, Fahrten, Unterkünfte, Orte. Schon Vorhandenes wird erkannt und nicht doppelt eingetragen; Einträge, die nicht passen, stehen mit Grund darunter.",
+        "description": "Export aus TripIt, Polarsteps, JetLovers u. a. hochladen. Doppeltes wird erkannt.",
         "uploadLabel": "Export-Datei wählen",
         "sourceLabel": "Quelle",
         "sources": {
@@ -817,7 +819,8 @@
           "noTrip": "Im Archiv liegt keine trip.json – ist es der Daten-Download von Polarsteps?",
           "tooLarge": "Die trip.json im Archiv ist zu groß für den Import.",
           "invalid": "Eine trip.json im Archiv konnte nicht gelesen werden."
-        }
+        },
+        "descriptionMore": "TripIt (JSON oder iCal), Polarsteps (ZIP-Download oder trip.json), JetLovers, FlightMemory, Logmyflight (CSV). Vor dem Speichern siehst du, was angelegt wird; was nicht passt, steht mit Grund darunter."
       }
     },
     "preview": {
@@ -933,7 +936,7 @@
     },
     "timeline": {
       "title": "Google Zeitachse (Timeline)",
-      "description": "Deine Standort-Zeitachse von Google kommt in den TravTrack-Verlauf. Google speichert die Zeitachse nur noch auf dem Gerät, deshalb holst du die Datei (Timeline.json) auf dem Handy – laut Google-Hilfe: Android „Einstellungen → Standort → Standortdienste → Zeitachse → Zeitachsendaten exportieren“, iPhone „Google Maps → Profilbild → Einstellungen → Persönliche Inhalte → Zeitachsendaten exportieren“. Ältere Exporte aus Google Takeout funktionieren auch.",
+      "description": "Google-Zeitachse (Timeline.json vom Handy) in den TravTrack-Verlauf laden.",
       "group": "TravTrack",
       "off": "TravTrack ist auf diesem Server aus, deshalb kann keine Zeitachse importiert werden.",
       "offAdmin": "TravTrack einschalten",
@@ -941,7 +944,8 @@
       "unknown": "Ob TravTrack verfügbar ist, konnte nicht gelesen werden. Lade die Seite neu.",
       "demo": "Im Demo-Konto ist der Import gesperrt.",
       "toTravTrack": "Importe in den TravTrack-Einstellungen",
-      "fromTravTrack": "Google Zeitachse: Anleitung auf der Import-Seite"
+      "fromTravTrack": "Google Zeitachse: Anleitung auf der Import-Seite",
+      "descriptionMore": "Google speichert die Zeitachse nur noch auf dem Gerät. Laut Google-Hilfe: Android „Einstellungen → Standort → Standortdienste → Zeitachse → Zeitachsendaten exportieren“, iPhone „Google Maps → Profilbild → Einstellungen → Persönliche Inhalte → Zeitachsendaten exportieren“. Ältere Takeout-Exporte gehen auch."
     }
   },
   "trips": {
@@ -964,7 +968,7 @@
   },
   "calendarFeed": {
     "title": "Kalender-Abo",
-    "description": "Ein geheimer Link, den jede Kalender-App abonnieren kann – Apple Kalender, Google Kalender, Outlook, Thunderbird. Er enthält deine kommenden Reisen und Einträge sowie die der letzten 30 Tage und aktualisiert sich von selbst.",
+    "description": "Geheimer Link für jede Kalender-App. Kommende Reisen, aktualisiert sich selbst.",
     "createdAt": "Erstellt am {{date}}",
     "lastUsed": "zuletzt abgerufen am {{date}}",
     "neverUsed": "noch nie abgerufen",
@@ -1003,7 +1007,7 @@
     "codeLabel": "Kopplungs-Code zum Abtippen",
     "codeCopy": "Kopieren",
     "codeCopied": "Kopiert",
-    "codeHint": "Kein QR-Code zur Hand? In der App „Manuell verbinden\" wählen und diesen Code eingeben. Er gilt genauso lange wie der QR-Code.",
+    "codeHint": "Kein QR-Code? In der App „Manuell verbinden“ wählen und den Code eingeben.",
     "countdown": "Läuft ab in {{time}}",
     "expired": "Abgelaufen",
     "retry": "Neuen Code erzeugen",
@@ -1208,14 +1212,14 @@
   },
   "railProviders": {
     "title": "Zugsuche",
-    "description": "Welche Fahrplandienste die Zugsuche im Bahn-Logbuch fragen darf. Jede Suche schickt Zugnummer, Bahnhof und Tag an den Dienst — sie verlassen damit diese Instanz. Beide Dienste sind kostenlos und werden von Freiwilligen für nicht-kommerzielle Nutzung betrieben.",
+    "description": "Fahrplandienste für die Zugsuche. Gesendet werden Zugnummer, Bahnhof und Tag.",
     "transitous": "Transitous",
     "loadError": "Die Einstellung konnte nicht geladen werden.",
     "saveError": "Die Einstellung konnte nicht gespeichert werden."
   },
   "railRouting": {
     "label": "Streckenrouter (OpenRailRouting)",
-    "hint": "Adresse einer selbst betriebenen OpenRailRouting-Instanz. Leer = aus. Eine Fahrt ohne Streckenverlauf von Transitous bekommt damit beim Speichern eine Linie über das Gleisnetz.",
+    "hint": "Eigene OpenRailRouting-Adresse. Leer = aus.",
     "save": "Adresse speichern",
     "saved": "Gespeichert. Neue und geänderte Fahrten ohne Transitous-Verlauf werden über das Gleisnetz geführt.",
     "switchedOff": "Gespeichert. Der Streckenrouter ist aus.",
@@ -1236,7 +1240,7 @@
       }
     },
     "reroute": {
-      "hint": "Bis Oktober 2026 wurden Straßenbahn- und U-Bahn-Fahrten wie Züge über das Eisenbahnnetz berechnet und können falsch liegen. Das berechnet alle schon gerouteten Straßenbahn- und U-Bahn-Fahrten dieser Instanz neu; eine Linie, die ihr eigenes Netz nicht bestätigt, wird zur Luftlinie.",
+      "hint": "Berechnet Tram- und U-Bahn-Fahrten neu, die früher übers Bahnnetz liefen.",
       "action": "Straßenbahn- und U-Bahn-Fahrten neu berechnen",
       "running": "Wird neu berechnet …",
       "progress": "Wird neu berechnet … {{done}} von {{total}}",
@@ -1250,14 +1254,15 @@
   },
   "profileZone": {
     "title": "Deine Zeitzone",
-    "body": "TravStats rechnet mit deiner Zeitzone aus, welcher Tag heute ist, ob eine Reise geplant oder schon vorbei ist und wie lange es noch bis zur Abreise dauert. Für dein Konto ist noch keine hinterlegt – bis du eine bestätigst, gilt dafür UTC. Die Zeiten deiner Reisen ändert das nicht: Die stehen immer in der Ortszeit des Flughafens, Bahnhofs oder Hafens.",
+    "body": "Bis du eine Zeitzone bestätigst, gilt UTC für „heute“. Reisezeiten bleiben in Ortszeit.",
     "proposal": "Vorschlag von deinem Gerät",
     "confirm": "Übernehmen",
     "later": "Später",
     "setNow": "Zeitzone jetzt festlegen",
     "utcHint": "Solange du keine Zeitzone bestätigt hast, rechnet TravStats „heute“ in UTC.",
     "saveError": "Die Zeitzone konnte nicht gespeichert werden. Bitte versuche es noch einmal.",
-    "followsDevice": "Auf meinem Handy (Companion-App) soll sich die Zeitzone automatisch dem Aufenthaltsort anpassen."
+    "followsDevice": "Auf meinem Handy (Companion-App) soll sich die Zeitzone automatisch dem Aufenthaltsort anpassen.",
+    "bodyMore": "Die Zeitzone entscheidet, welcher Tag heute ist, ob eine Reise geplant oder vorbei ist und wie lange es bis zur Abreise dauert. Zeiten deiner Reisen stehen immer in der Ortszeit von Flughafen, Bahnhof oder Hafen."
   },
   "unreachable": {
     "flightProvider": "Antwortet {{name}} nicht, fragt die Flugsuche den nächsten eingerichteten Dienst; antwortet keiner, nennt sie den Grund, und du trägst den Flug von Hand ein. Gespeicherte Flüge bleiben unverändert, automatische Updates versuchen es beim nächsten Durchlauf erneut.",
@@ -1283,7 +1288,7 @@
   },
   "domains": {
     "title": "Was du festhältst",
-    "description": "Ein Bereich, eine Zeile: einschalten und seine Farbe gleich daneben. Ausgeschaltete Bereiche bleiben hier sichtbar, damit du sie einschalten kannst.",
+    "description": "Bereiche ein- oder ausschalten und Farbe wählen.",
     "color": "Farbe"
   },
   "level": {
@@ -1310,7 +1315,7 @@
   "sectionChips": "Abschnitte auf dieser Seite",
   "pagePicker": "Seite",
   "services": {
-    "description": "Was dein Konto mit anderen Diensten verbindet, nach Bereichen geordnet — und was der Admin schon für alle eingerichtet hat.",
+    "description": "Deine Verbindungen zu anderen Diensten, nach Bereichen.",
     "summary": "{{shared}} für alle aktiv · {{own}} eigener",
     "badge": {
       "admin": "Vom Admin für alle",
@@ -1876,7 +1881,7 @@
     "trackGap": {
       "name": "Track trennen ab",
       "sub": "Pause ohne Positionen, ab der eine neue Aufzeichnung beginnt",
-      "help": "Eine Aufzeichnung wird nur getrennt, wenn das Handy länger als diese Zeit keine Position gemeldet hat. Die Entfernung zwischen zwei Positionen trennt nie. Schon gespeicherte Punkte bleiben unverändert.",
+      "help": "Getrennt wird erst nach so langer Funkstille.",
       "option_one": "{{count}} Minute",
       "option_other": "{{count}} Minuten",
       "loadError": "Ich konnte die Track-Pause nicht laden."
@@ -1884,7 +1889,7 @@
     "source": {
       "name": "Standort kommt von",
       "sub": "Für Ländertage, Aufenthalte, Routen",
-      "help": "Umschalten verschiebt und löscht nichts. TravTrack speichert auf diesem Server. Dawarich geht nur mit deiner eigenen Dawarich-Verbindung.",
+      "help": "Umschalten löscht nichts. TravTrack speichert hier, Dawarich braucht deine Verbindung.",
       "options": {
         "none": "Keine",
         "travtrack": "TravTrack",
@@ -2012,7 +2017,7 @@
       "cities": {
         "name": "Städte benennen",
         "sub": "Orte ab 30 Minuten",
-        "help": "Sendet auf 1 km gerundete Positionen an die Ortssuche des Servers. Aus entfernt die Städte wieder. In Schutzzonen suche ich nie.",
+        "help": "Sendet auf 1 km gerundete Positionen an die Ortssuche, nie aus Schutzzonen.",
         "loadError": "Ich konnte die Einstellung nicht laden.",
         "notSource": "Wirkt erst, wenn TravTrack deine Standortquelle ist."
       },
@@ -2103,7 +2108,7 @@
       "title": "Feste Orte",
       "name": "Feste Orte",
       "sub": "Zuhause, Arbeit und andere Orte",
-      "help": "Alles innerhalb des Radius erscheint auf der Karte als ein Stopp mit dem Namen des Orts. Die einzelnen Punkte bleiben gespeichert. Eine Schutzzone geht immer vor.",
+      "help": "Alles im Radius wird ein Stopp. Punkte bleiben gespeichert, Schutzzonen gehen vor.",
       "loading": "Lade …",
       "loadError": "Ich konnte die festen Orte nicht laden.",
       "tooOld": "Dieser Server kennt feste Orte noch nicht. Mit dem nächsten Server-Update tauchen sie hier auf.",
@@ -2358,7 +2363,7 @@
       "keep": "Bewahre diese Datei außerhalb des Servers auf, z. B. in deinem Passwort-Manager. Wer sie hat, kann die Zugangsdaten in deinen Sicherungen entschlüsseln."
     },
     "restore": {
-      "intro": "Füge den Wiederherstellungsschlüssel des Servers ein, der diese Sicherung geschrieben hat. Dann bleiben die gespeicherten Zugangsdaten lesbar.",
+      "intro": "Schlüssel des Servers einfügen, der die Sicherung schrieb. Dann bleiben Zugänge lesbar.",
       "label": "Wiederherstellungsschlüssel",
       "withKey": "Mit Schlüssel zurückspielen",
       "cancel": "Abbrechen",

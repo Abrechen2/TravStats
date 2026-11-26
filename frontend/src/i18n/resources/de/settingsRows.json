@@ -997,7 +997,7 @@
       "retry": "Erneut versuchen",
       "onlyConfigured": "Nur aktive oder eingerichtete Dienste",
       "noneConfigured": "Kein Dienst ist eingerichtet oder aktiv. Schalte den Filter aus, um alle zu sehen.",
-      "intro": "Hier steht, wo TravStats Daten herholt und wohin etwas geht. Oben auf jeder Karte steht, was für dein Konto gilt; als Admin siehst du darunter, was für alle gilt.",
+      "intro": "Woher Daten kommen und wohin etwas geht — oben dein Konto, darunter alle.",
       "groupsLabel": "Dienstgruppen",
       "withdraw": "Zurückziehen",
       "connectedAccounts_one": "{{count}} Konto ist verbunden.",
@@ -1482,11 +1482,11 @@
     "notes": {
       "machine": {
         "t": "Was diese Sicherung ist",
-        "s": "Die vollständige Sicherung des Servers mit allen Konten, für eine Wiederherstellung der ganzen Maschine. Ein einzelnes Konto zieht mit dem Konto-Archiv (ZIP) unter Einstellungen → Daten um."
+        "s": "Ganze Maschine mit allen Konten. Ein Konto allein zieht per Konto-Archiv (Einstellungen → Daten) um."
       },
       "secrets": {
         "t": "Nicht in der Sicherung",
-        "s": "/app/data/secrets (Verschlüsselungs- und Sitzungsschlüssel) separat sichern. Ohne diesen Ordner lassen sich gespeicherte API-Schlüssel und Zugangsdaten nach einer Wiederherstellung auf einem neuen Host nicht mehr entschlüsseln."
+        "s": "/app/data/secrets separat sichern — ohne ihn sind Schlüssel nach einem Umzug nicht mehr lesbar."
       }
     }
   },

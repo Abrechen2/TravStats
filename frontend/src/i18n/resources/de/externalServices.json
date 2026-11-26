@@ -1,6 +1,6 @@
 {
   "title": "Externe Dienste",
-  "intro": "Alles, was TravStats nicht selbst macht: Flugdaten, Karten, Fotos, KI, Sync und Mail. Hier legst du fest, was die Instanz nutzt und was Konten selbst einrichten dürfen. Neue Dienste sind aus, bis du sie einschaltest.",
+  "intro": "Alle fremden Dienste. Neue Dienste sind aus, bis du sie einschaltest.",
   "loading": "Lade Dienste …",
   "noResults": "Kein Dienst passt zu Suche und Filter.",
   "summary": {
@@ -176,7 +176,7 @@
     "withdraw": "Freigabe zurückziehen",
     "admin": {
       "title": "{{name}} freigeben?",
-      "intro": "Wenn der lokale Parser nichts findet, schickt TravStats den Text eines Imports an diesen Anbieter. Erst lesen, dann bestätigen.",
+      "intro": "Findet der lokale Parser nichts, geht der Importtext an diesen Anbieter.",
       "whatKey": "Was rausgeht",
       "whatText": "Text aus E-Mails und PDFs, höchstens 12.000 Zeichen pro Import. Keine Fotos, keine Passwörter, keine anderen Einträge.",
       "whereKey": "Wohin",
@@ -190,7 +190,7 @@
     },
     "account": {
       "title": "Deine Importe an {{name}} schicken?",
-      "intro": "Deine Instanz erlaubt {{name}} als zweite Chance für Buchungen, die der lokale Parser nicht versteht. Ob deine Dokumente dorthin gehen, entscheidest du.",
+      "intro": "{{name}} hilft bei unlesbaren Buchungen. Ob deine Dokumente dorthin gehen, entscheidest du.",
       "goes": "Was rausgeht: der Text der E-Mail oder des PDFs, höchstens 12.000 Zeichen.",
       "stays": "Nicht rausgeht: Fotos, Passwörter, deine anderen Einträge.",
       "when": "Wann: nur beim Import, nur wenn der lokale Parser nichts findet.",
@@ -201,7 +201,7 @@
   },
   "connections": {
     "title": "Was Konten selbst verbinden dürfen",
-    "hint": "Diese Dienste richtet jedes Konto unter Einstellungen › Dienste mit eigenen Zugangsdaten ein. Du legst nur fest, ob das erlaubt ist.",
+    "hint": "Jedes Konto richtet diese selbst ein. Du legst nur fest, ob das erlaubt ist.",
     "usage_one": "{{count}} Konto verbunden",
     "usage_other": "{{count}} Konten verbunden",
     "dawarich": {
@@ -230,7 +230,7 @@
     "link": "Einstellungen → Server → Dienste"
   },
   "account": {
-    "intro": "Deine Verbindungen zu Immich, Dawarich, Strava und deinem Speicher, eigene Schlüssel und deine KI-Freigaben. Was die Instanz für alle bereitstellt, steht unten.",
+    "intro": "Deine Verbindungen, Schlüssel und KI-Freigaben. Instanz-Dienste stehen unten.",
     "sections": {
       "connections": "Meine Verbindungen",
       "ownKeys": "Eigene Schlüssel",
@@ -853,7 +853,7 @@
   },
   "useConsent": {
     "title": "Daten an einen Dienst senden?",
-    "intro": "Für diese Aktion würde TravStats folgende Daten an einen externen Dienst senden. Ohne deine Erlaubnis wird nichts gesendet.",
+    "intro": "Diese Daten würden an einen fremden Dienst gehen. Ohne Erlaubnis nichts.",
     "service": "Dienst",
     "host": "Ziel",
     "provider": "Anbieter",

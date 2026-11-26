@@ -1,6 +1,6 @@
 {
   "title": "External services",
-  "intro": "Everything TravStats does not do itself: flight data, maps, photos, AI, sync and mail. Here you decide what the instance uses and what accounts may set up themselves. New services stay off until you switch them on.",
+  "intro": "All outside services. New services stay off until you turn them on.",
   "loading": "Loading services …",
   "noResults": "No service matches the search and filter.",
   "summary": {
@@ -176,7 +176,7 @@
     "withdraw": "Withdraw approval",
     "admin": {
       "title": "Allow {{name}}?",
-      "intro": "When the local parser finds nothing, TravStats sends the text of an import to this provider. Read first, then confirm.",
+      "intro": "If the local parser finds nothing, the import text goes to this provider.",
       "whatKey": "What leaves",
       "whatText": "Text from e-mails and PDFs, at most 12,000 characters per import. No photos, no passwords, no other entries.",
       "whereKey": "Where to",
@@ -190,7 +190,7 @@
     },
     "account": {
       "title": "Send your imports to {{name}}?",
-      "intro": "Your instance allows {{name}} as a second chance for bookings the local parser does not understand. You decide whether your documents go there.",
+      "intro": "{{name}} helps with unreadable bookings. You decide whether your documents go there.",
       "goes": "What leaves: the text of the e-mail or PDF, at most 12,000 characters.",
       "stays": "What does not leave: photos, passwords, your other entries.",
       "when": "When: only during an import, only when the local parser finds nothing.",
@@ -201,7 +201,7 @@
   },
   "connections": {
     "title": "What accounts may connect themselves",
-    "hint": "Each account sets these services up with its own credentials under Settings › Services. You only decide whether that is allowed.",
+    "hint": "Each account sets these up itself. You only decide whether it is allowed.",
     "usage_one": "{{count}} account connected",
     "usage_other": "{{count}} accounts connected",
     "dawarich": {
@@ -230,7 +230,7 @@
     "link": "Settings → Server → Services"
   },
   "account": {
-    "intro": "Your connections to Immich, Dawarich, Strava and your storage, own keys and your AI approvals. What the instance provides for everyone is below.",
+    "intro": "Your connections, keys and AI consents. Instance services are below.",
     "sections": {
       "connections": "My connections",
       "ownKeys": "Own keys",
@@ -853,7 +853,7 @@
   },
   "useConsent": {
     "title": "Send data to a service?",
-    "intro": "For this action TravStats would send the following data to an external service. Nothing is sent without your permission.",
+    "intro": "This data would go to an outside service. Nothing without your permission.",
     "service": "Service",
     "host": "Target",
     "provider": "Provider",

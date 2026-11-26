@@ -1,6 +1,6 @@
 {
   "title": "Buchungsmails automatisch einlesen",
-  "intro": "Buchungsbestätigungen kommen von selbst als Vorschlag in den Posteingang – entweder aus einem Mail-Ordner, den TravStats liest, oder über eine Weiterleitungsadresse. Ein Eintrag entsteht erst, wenn du ihn bestätigst. Ausgeschaltet, solange du es nicht einschaltest.",
+  "intro": "Buchungsmails werden zu Vorschlägen im Posteingang. Angelegt wird erst beim Bestätigen.",
   "loadError": "Die Einstellungen konnten nicht geladen werden.",
   "saveError": "Das Speichern hat nicht geklappt.",
   "off": {
@@ -10,7 +10,7 @@
   },
   "folder": {
     "title": "Eigener Mail-Ordner (IMAP)",
-    "help": "TravStats liest nur diesen einen Ordner – auch dein Posteingang (INBOX) ist möglich. Nichts wird gelöscht oder verschoben. Verwende ein App-Passwort (Gmail, iCloud, Outlook, GMX).",
+    "help": "Nur dieser Ordner wird gelesen, nichts gelöscht. Nutze ein App-Passwort.",
     "host": "IMAP-Server",
     "port": "Port",
     "security": "Verschlüsselung",
@@ -64,7 +64,7 @@
   },
   "forwarding": {
     "title": "Weiterleitungsadresse",
-    "help": "Leite Buchungsmails an diese Adresse weiter oder richte in deinem Mailprogramm eine automatische Weiterleitung ein. Nur Mails von den unten erlaubten Absendern werden angenommen, und der Mail-Anbieter muss ihre Echtheit bestätigen (DMARC).",
+    "help": "Buchungsmails hierhin weiterleiten. Angenommen nur von erlaubten, geprüften Absendern (DMARC).",
     "unavailable": "Die Administration hat noch keine Weiterleitungsadresse eingerichtet.",
     "none": "Noch keine Adresse erzeugt.",
     "create": "Adresse erzeugen",
@@ -139,20 +139,21 @@
   },
   "admin": {
     "title": "Weiterleitungs-Postfach (Buchungsmails)",
-    "help": "Ein Postfach für die ganze Instanz. Jedes Konto bekommt daraus eine eigene Adresse mit Zusatz (zum Beispiel trips+k7m2q9xwab@beispiel.de). Der Anbieter muss Plus-Adressen unterstützen. TravStats liest das Postfach nur per IMAP. Nimm ein eigenes Postfach nur für TravStats: Es liest jede neue Mail ohne Buchungsfilter, aber erst ab der Einrichtung – ältere Mails bleiben liegen.",
+    "help": "Ein eigenes Postfach mit Plus-Adressen. Gelesen per IMAP, erst ab Einrichtung.",
     "address": "Postfach-Adresse",
     "authservId": "Authserv-ID des Anbieters (optional)",
     "authservHelp": "Wenn gesetzt, gilt nur der Authentication-Results-Header mit dieser Kennung.",
     "plainNote": "Unverschlüsseltes IMAP ist hier für ein Postfach im eigenen Netz erlaubt.",
-    "notSet": "Noch nicht eingerichtet."
+    "notSet": "Noch nicht eingerichtet.",
+    "helpMore": "Jedes Konto bekommt eine eigene Adresse mit Zusatz (z. B. trips+k7m2q9xwab@beispiel.de). Nimm ein Postfach nur für TravStats: Es liest jede neue Mail ohne Buchungsfilter, ältere Mails bleiben liegen."
   },
   "privacy": {
     "title": "Privatsphäre",
-    "intro": "Nur Buchungsmails werden gelesen. TravStats sieht sich von jeder neuen Mail zuerst nur Absender und Betreff an. Passt beides nicht zu einer Buchung, bleibt die Mail unberührt: nicht heruntergeladen, nicht gespeichert, nicht protokolliert, nicht markiert – nur mitgezählt.",
+    "intro": "Nur Buchungsmails werden gelesen. Alle anderen bleiben unberührt und ungespeichert.",
     "prefilter": "Nur Buchungsmails lesen (Absender- und Betreff-Filter)",
     "prefilterOffWarning": "Ausgeschaltet liest TravStats jede neue Mail dieses Ordners. Nur für einen eigenen Buchungsordner sinnvoll, nie für den Posteingang.",
     "keepUnread": "Mails nicht als gelesen markieren",
-    "keepUnreadHelp": "TravStats setzt nur die unsichtbare Markierung $TravStats; „gelesen“ bleibt deine Sache. Kennt der Server keine eigenen Markierungen, merkt sich TravStats die Position im Ordner.",
+    "keepUnreadHelp": "TravStats setzt nur eine unsichtbare Markierung; „gelesen“ bleibt deine Sache.",
     "fetchFrom": "Ab wann abholen",
     "fetchFromHelp": "Gilt für einen neuen Ordner und nach jeder Änderung. Ältere Mails findest du über „Postfach durchsuchen“ im Posteingang.",
     "fetchFromOption": {
@@ -164,7 +165,7 @@
     "counters": "Gelesen: {{processed}} · übersprungen: {{skipped}}",
     "senders": {
       "title": "Buchungsabsender",
-      "help": "Mails von diesen Domains (und ihren Subdomains) gelten als Buchung. Newsletter (Mails mit List-Id) dieser Absender brauchen zusätzlich ein Betreff-Wort. Die Standardliste kommt aus TravStats und den Parser-Vorlagen; einzelne Einträge kannst du ausschalten. Die Absender aus „Weiterleitung“ zählen hier nicht – sonst würde jede Mail von dir selbst gelesen.",
+      "help": "Mails dieser Domains gelten als Buchung. Newsletter brauchen zusätzlich ein Betreff-Wort.",
       "defaults": "Standardliste ({{count}})",
       "custom": "Eigene Domains",
       "none": "Noch keine eigenen Domains.",
@@ -178,7 +179,7 @@
     },
     "keywords": {
       "title": "Betreff-Wörter",
-      "help": "Steht eines dieser Wörter im Betreff, gilt die Mail als Buchung – Groß- und Kleinschreibung egal, ä/ae und ß/ss gleich. Deutsch und Englisch sind immer beide aktiv.",
+      "help": "Ein Wort im Betreff macht die Mail zur Buchung. Groß/klein egal, DE und EN aktiv.",
       "defaults": "Standardwörter",
       "groupDe": "Deutsch",
       "groupEn": "English",
@@ -193,7 +194,7 @@
   },
   "scan": {
     "title": "Postfach durchsuchen",
-    "description": "Sucht im ganzen Ordner nach Buchungsmails, die in TravStats wahrscheinlich fehlen. Gelesen werden nur Absender, Betreff und Datum; eine Mail wird erst heruntergeladen, wenn du sie importierst.",
+    "description": "Sucht im Ordner nach fehlenden Buchungen. Geladen wird erst, was du importierst.",
     "range": "Zeitraum",
     "rangeAll": "Ganzes Postfach",
     "rangeCustom": "Von–bis",

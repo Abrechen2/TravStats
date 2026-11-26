@@ -6,7 +6,7 @@
   },
   "manage": {
     "title": "Travel companions",
-    "description": "Everyone you have entered on flights, trips and rides. Make spellings consistent, merge two entries for the same person and delete the ones you no longer need.",
+    "description": "Unify spellings, merge duplicates, delete.",
     "loading": "Loading travel companions …",
     "loadFailed": "Your travel companions could not be loaded.",
     "retry": "Try again",

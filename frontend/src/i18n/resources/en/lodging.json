@@ -44,7 +44,7 @@
     "status": {
       "label": "Status",
       "unlocated": "Not found",
-      "unlocatedHint": "An address is there but no point on the map — the search did not find it. Saving again retries.",
+      "unlocatedHint": "Address not found. Saving again retries.",
       "noAddress": "No address",
       "noAddressHint": "No street is recorded for this place.",
       "bare": "Name only",
@@ -224,7 +224,7 @@
     "markerManual": "your own rate",
     "tooltipNone": "No rate available — not included in totals",
     "tooltipManual": "Rate you entered: {{rate}}",
-    "noRateHint": "We have no rate for {{currency}} on {{date}}. You can enter one — otherwise the amount is saved but stays out of totals.",
+    "noRateHint": "No rate for {{currency}} on {{date}}. Add one, or the amount stays out of totals.",
     "manualRateLabel": "Rate 1 {{currency}} = … {{base}} (optional)",
     "omittedFromTotal": "{{count}} stays not converted",
     "omittedFromTotal_one": "{{count}} stay not converted",
@@ -280,7 +280,7 @@
     },
     "ratingCategoriesManage": "Manage categories",
     "ratingCategoriesTitle": "Rating categories",
-    "ratingCategoriesIntro": "Switch on what you want to rate. Switching one off leaves ratings already given and the overall of older stays unchanged.",
+    "ratingCategoriesIntro": "Choose what to rate. Turning one off keeps old ratings.",
     "ratingCategoriesOwn": "Own categories",
     "ratingCategoryName": "Name of the new category",
     "ratingCategoryAdd": "Add",
@@ -295,7 +295,7 @@
     "ratingCategoriesDone": "Done",
     "ratingNoCategories": "No rating categories switched on.",
     "ratingRetiredTitle": "No longer switched on",
-    "ratingRetiredHint": "You switched this category off, but the stay still carries a rating. It keeps counting towards the overall until you clear it."
+    "ratingRetiredHint": "Category turned off, but this rating still counts until you delete it."
   },
   "membership": {
     "title": "Loyalty programs",
@@ -353,7 +353,7 @@
     },
     "matchedStayAt": "Existing stay:",
     "openMatchedStay": "Open the existing stay in a new tab",
-    "createAnywayHint": "Creates a second stay for the same booking. The duplicate check keeps pointing at the existing one; the booking reference then appears on both.",
+    "createAnywayHint": "Creates a second stay for the same booking.",
     "fields": {
       "name": "Name",
       "type": "Type",
@@ -400,7 +400,7 @@
     "noBookings": "No booking data was recognised. Is it a booking confirmation? Otherwise, enter the stay by hand.",
     "csv": {
       "title": "CSV import",
-      "description": "Import lodgings and/or stays from a CSV file — e.g. a Google Maps export or a hand-maintained spreadsheet. A one-time migration tool, not the ongoing import path.",
+      "description": "One-off import from a CSV, e.g. Google Maps or your own sheet.",
       "uploadLabel": "Choose CSV file"
     },
     "errors": {
@@ -465,7 +465,7 @@
     },
     "maps": {
       "title": "Google Maps export",
-      "description": "A saved list from Google Takeout. Each row carries Google's id for the place, so a second import recognises what is already here. Such a list holds no dates and no prices.",
+      "description": "A saved list from Google Takeout. Duplicates are detected; no dates or prices.",
       "uploadLabel": "Choose Takeout CSV",
       "noRows": "No row in this file carries a name — is it really a saved list from Takeout?",
       "withoutId": "{{count}} rows carry no place id. They are imported, but a second import will not recognise them."
@@ -1097,11 +1097,11 @@
   },
   "restay": {
     "action": "Stay here again",
-    "intro": "A new stay at “{{name}}”. Enter check-in, check-out, room, booking reference and price afresh; the earlier stay stays as it is."
+    "intro": "A new stay at “{{name}}”. The earlier one stays unchanged."
   },
   "repair": {
     "title": "Add the location",
-    "intro": "“{{name}}” has no point on the map. Search the address again or set the point yourself – you see the result before you take it. Taking it fills empty address fields from the new position, and a country field that names no country is replaced by the position's country. The name and everything else stay.",
+    "intro": "“{{name}}” has no map point. Search the address or set the point — you see it first.",
     "queryLabel": "Search text",
     "search": "Search the address again",
     "searching": "Searching …",
