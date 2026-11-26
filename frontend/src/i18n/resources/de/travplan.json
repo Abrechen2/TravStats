@@ -633,6 +633,10 @@
         "alpine_hut": "Hütte",
         "other": "Unterkunft"
       }
+    },
+    "insert": {
+      "open": "+ Ort zwischen {{from}} und {{to}} einfügen",
+      "title": "Ort zwischen {{from}} und {{to}}"
     }
   },
   "match": {

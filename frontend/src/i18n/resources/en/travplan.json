@@ -633,6 +633,10 @@
         "alpine_hut": "Hut",
         "other": "Lodging"
       }
+    },
+    "insert": {
+      "open": "+ Add a stop between {{from}} and {{to}}",
+      "title": "Stop between {{from}} and {{to}}"
     }
   },
   "match": {

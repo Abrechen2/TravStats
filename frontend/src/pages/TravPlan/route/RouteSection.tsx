@@ -15,6 +15,7 @@ import { entryRecord, type PlanCtx } from "../planContext";
 import { PlanCardHead, PlanStack } from "../planLayout";
 import { FindingCards } from "../sections/FindingCards";
 import { PlacePicker } from "./PlacePicker";
+import { insertStop } from "./insertStop";
 import { StageEditor } from "./StageEditor";
 import { StationEditor } from "./StationEditor";
 import { StageRow, StationCard, TONE } from "./RouteTimeline";
@@ -50,7 +51,8 @@ export function RouteSection({ ctx }: { ctx: PlanCtx }) {
     { plan, state, busy, mutate, setPlan, onError } = ctx,
     [editStation, setEditStation] = useState<string | null>(null),
     [editStage, setEditStage] = useState<string | null>(null),
-    [routing, setRouting] = useState<string | null>(null);
+    [routing, setRouting] = useState<string | null>(null),
+    [inserting, setInserting] = useState<number | null>(null);
   const totals = routeTotals(state),
     today = todayIn(state.timezone ?? "UTC"),
     handed = new Set(state.stationLinks.map((l) => l.stationId));
@@ -68,6 +70,11 @@ export function RouteSection({ ctx }: { ctx: PlanCtx }) {
         collection: "stages",
         value: entryRecord(newStage(last.id, next.id)),
       });
+  }
+  /** Writes in order and stops at the first refusal, which the page already reports. */
+  async function insertAfter(index: number, place: PlanPlace) {
+    setInserting(null);
+    for (const op of insertStop(state, index, place)) if (!(await mutate(op))) return;
   }
   async function recalc(stageId: string) {
     setRouting(stageId);
@@ -201,6 +208,25 @@ export function RouteSection({ ctx }: { ctx: PlanCtx }) {
                     >
                       {t("route.stage.add", { from: s.title, to: next.title })}
                     </Button>
+                  ))}
+                {next &&
+                  (inserting === i ? (
+                    <Card>
+                      <PlanCardHead
+                        title={t("route.insert.title", { from: s.title, to: next.title })}
+                        action={<Button onClick={() => setInserting(null)}>{t("cancel")}</Button>}
+                      />
+                      <PlacePicker
+                        label={t("route.add.search")}
+                        onPick={(p) => void insertAfter(i, p)}
+                      />
+                    </Card>
+                  ) : (
+                    <div>
+                      <Button disabled={busy} onClick={() => setInserting(i)}>
+                        {t("route.insert.open", { from: s.title, to: next.title })}
+                      </Button>
+                    </div>
                   ))}
               </PlanStack>
             );
