@@ -512,11 +512,12 @@ export default function RoadtripDetailPage(): JSX.Element {
 
       <div style={{ marginTop: "var(--ts-space-md)", maxWidth: 320 }}>
         <PurposeEditor
-          key={`purpose-${r.purpose ?? ""}`}
+          key={`purpose-${r.purpose ?? ""}-${r.purposeKey ?? ""}`}
           entryType="tripRoute"
           entryId={r.id}
           purpose={r.purpose}
-          onSaved={(purpose) => setDetail({ ...detail, roadtrip: { ...r, purpose } })}
+          purposeKey={r.purposeKey}
+          onSaved={(stored) => setDetail({ ...detail, roadtrip: { ...r, ...stored } })}
         />
       </div>
 

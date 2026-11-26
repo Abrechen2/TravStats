@@ -24,6 +24,7 @@ import {
 } from "../form";
 import type { MissingStep } from "../form";
 import PurposeSelect, { type PurposeChoice } from "../purpose/PurposeSelect";
+import { usePurposeCatalogue } from "../../store/purposeCatalogueStore";
 import { VisitDateChips } from "./VisitDateChips";
 import {
   NO_TRIP,
@@ -93,7 +94,12 @@ export function VisitDialog({
   const isEdit = visit !== null;
   const today = todayIn(useTodayZone());
 
-  const initial = visitDraft(visit, initialDate);
+  const catalogue = usePurposeCatalogue();
+  const initial = visitDraft(visit, initialDate, (id) => {
+    const c = catalogue.custom.find((x) => x.id === id);
+    // Not loaded yet: the stored detail is taken at its word rather than reset to its kind.
+    return c?.kind ?? (catalogue.loaded ? undefined : (visit?.purpose ?? undefined));
+  });
   const [mode, setMode] = useState<VisitDateMode>(initial.mode);
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);

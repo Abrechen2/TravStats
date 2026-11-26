@@ -1,4 +1,5 @@
 import type { Lodging, LodgingStay } from "./lodging";
+import type { PurposeFields } from "./purpose";
 import type { TripRailJourney } from "./rail";
 import type { LinkedAlbum } from "./immich";
 import type { CabinType, CruiseStop, Port, Ship } from "./cruise";
@@ -29,14 +30,12 @@ export interface Airport {
   isClosed?: boolean;
 }
 
-export interface Flight extends FlightProviderData {
+export interface Flight extends FlightProviderData, PurposeFields {
   id: string;
   /** "Aus der Erinnerung" (docs/superpowers/specs/2026-11-22-remembered-facts.md); absent on older servers. */
   provenance?: "recorded" | "remembered" | null;
   rememberedOn?: string | null;
   rememberedNote?: string | null;
-  /** Private or business; null is unknown, absent on older servers. */
-  purpose?: "private" | "business" | null;
   /** The row's version (the bulk edit's `baseVersions`); absent on rows built client-side. */
   updatedAt?: string;
   userId: string;

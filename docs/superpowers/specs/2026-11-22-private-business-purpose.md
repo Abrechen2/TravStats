@@ -135,3 +135,40 @@ stored `visited` flag.
 **Classification.** `purpose` is excluded from the federation field inventory (the member's own view),
 is part of the account export and ZIP archive (generic columns, together with the setting), and is in
 the OpenAPI schemas. Shared-trip sync never writes `purpose`: the sharing adapters copy facts only.
+
+## Purpose catalogue (rc.47, `feat/purposes-extended`)
+
+Asked for on Discord (vacation, business, ...); the owner wanted more built-in purposes plus the
+user's own. The KIND stays the one handle every filter, count, badge, plugin and the Worktravel data
+read; a detailed purpose sits beside it.
+
+**Storage.** `purpose_key` TEXT NULL beside `purpose` on the nine entry tables, CHECK
+`builtin:<key>` | `custom:<uuid>` and only beside a kind. `custom_purposes` (user, name, optional
+English name, kind, colour, icon, `archived_at`). Catalogue: `shared/purposeCatalogue.ts` (mirrored),
+ten built-ins: Urlaub, Geschäftlich, Familie & Freunde, Kurztrip & Wochenende, Veranstaltung, Messe &
+Konferenz, Ausbildung & Studium, Gesundheit, Umzug, Privat (sonstiges). Legacy `business` reads as
+`builtin:business`, `private` as `builtin:private_other`; no data was rewritten.
+
+**Write rule (Prisma hook, `services/purpose/purposeKeyWrite.ts`).** `purpose` accepts the kind
+alone or a key. A key is split into kind + detail; a kind alone leaves the stored detail as it is,
+and a detail whose kind no longer matches is read as stale (`effectivePurposeKey`), so an old app
+re-sending the same kind keeps "Messe & Konferenz". `null` clears both. A custom key of another
+account is refused (`400 PURPOSE_UNKNOWN`). A trip category now also gives the detail (vacation ->
+Urlaub, weekend -> Kurztrip & Wochenende, family -> Familie & Freunde). Changing a custom purpose's
+kind carries the new kind onto every entry using it.
+
+**Contract delta (additive; minimum server version: the rc.47 that ships it).**
+- Entry rows gain `purposeKey: string | null` beside `purpose` (still `"private" | "business" | null`).
+- `purpose` on create/update and `PUT /purpose/entries/:type/:id` accept `builtin:<key>` and
+  `custom:<uuid>` besides `private`/`business`; the entry endpoint answers `{ purpose, purposeKey }`.
+- `GET /purpose/catalogue` -> `{ builtins: [{ key, kind, icon, color, label: { de, en } }], custom:
+  [{ key, id, name, nameEn, kind, color, icon, archived, usage }] }`.
+- `POST /purpose/custom`, `PATCH /purpose/custom/:id` (incl. `archived`), `DELETE /purpose/custom/:id`
+  (`409 PURPOSE_IN_USE` while used; `404 PURPOSE_NOT_FOUND`).
+- Trip apply/preview take any purpose value and answer `purposeKey` too.
+- `GET /stats/years`: each year gains `byPurpose: [{ key | null, count, km | null }]`.
+- Older apps keep sending `private`/`business` and keep working unchanged.
+
+**Privacy.** A custom purpose is its owner's: share copies start with neither kind nor key (as
+before), `purposeKey` is excluded from the federation field inventory, `customPurposes` is a
+non-travel relation, and the account export and archive carry the names with the records.

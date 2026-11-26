@@ -70,6 +70,8 @@ export interface LodgingStay {
   rememberedNote?: string | null;
   /** Private or business; null is unknown, absent on older servers. */
   purpose?: "private" | "business" | null;
+  /** The detailed purpose beside the kind (`builtin:…` | `custom:…`); null: the kind alone. */
+  purposeKey?: string | null;
   lodgingId: string;
   userId: string;
   tripId: string | null;

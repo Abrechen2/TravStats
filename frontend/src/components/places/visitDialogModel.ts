@@ -2,6 +2,8 @@ import { wallClockInput } from "../../lib/api/timeInput";
 import { splitTimeValue } from "../../lib/tripTimeline";
 import { visitTime } from "../../lib/entityTimes";
 import type { PlaceVisit, VisitInput } from "../../types/place";
+import type { Purpose } from "../../shared/purpose";
+import { effectivePurposeKey } from "../../shared/purposeCatalogue";
 
 /**
  * When the visit was (forgejo#231): the three answers a quick record needs.
@@ -28,8 +30,8 @@ export interface VisitDraft {
   rating: number | null;
   /** "" = file by date (create only), `NO_TRIP`, or a trip id. */
   tripId: string;
-  /** Private or business; "" is not set (a create then leaves the trip to decide). */
-  purpose: "" | "private" | "business";
+  /** A detailed purpose key; "" is not set (a create then leaves the trip to decide). */
+  purpose: string;
 }
 
 /**
@@ -41,7 +43,9 @@ export interface VisitDraft {
 export function visitDraft(
   visit: PlaceVisit | null | undefined,
   /** The gap calendar's day: a new visit opens on it instead of today. */
-  initialDate?: string
+  initialDate?: string,
+  /** The kind of a custom purpose (the catalogue); without it a custom detail reads as its kind. */
+  customKind?: (id: string) => Purpose | undefined
 ): VisitDraft {
   if (!visit && initialDate) {
     return {
@@ -65,7 +69,7 @@ export function visitDraft(
     notes: visit.notes ?? "",
     rating: visit.rating !== null && visit.rating >= 1 && visit.rating <= 5 ? visit.rating : null,
     tripId: visit.tripId ?? NO_TRIP,
-    purpose: visit.purpose === "business" || visit.purpose === "private" ? visit.purpose : "",
+    purpose: effectivePurposeKey(visit.purpose, visit.purposeKey, customKind) ?? "",
   };
 }
 

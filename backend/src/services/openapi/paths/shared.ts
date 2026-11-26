@@ -398,3 +398,12 @@ export const jitterDroppedField = z
       "(forgejo#319). null when not checked: stored before the filter existed, or a " +
       "recording without times, where standing and moving cannot be told apart"
   );
+
+/** The purpose of an entry row: the kind every filter reads and the detail beside it. */
+export const purposeRowFields = {
+  purpose: z.enum(["private", "business"]).nullable(),
+  purposeKey: z
+    .string()
+    .nullable()
+    .describe("`builtin:<key>` | `custom:<uuid>`; null: the kind alone"),
+};

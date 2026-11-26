@@ -16,7 +16,11 @@ export default function ProvenanceDetails({
   onSaved,
 }: {
   entryType: ProvenanceEntryType;
-  entry: Partial<ProvenanceState> & { id: string; purpose?: string | null };
+  entry: Partial<ProvenanceState> & {
+    id: string;
+    purpose?: string | null;
+    purposeKey?: string | null;
+  };
   onSaved?: (state: ProvenanceState) => void;
 }): JSX.Element {
   const { t } = useTranslation(["provenance", "purpose"]);
@@ -52,10 +56,11 @@ export default function ProvenanceDetails({
           </summary>
           <div style={{ marginTop: "var(--ts-space-sm)" }}>
             <PurposeEditor
-              key={`purpose-${entry.purpose ?? ""}`}
+              key={`purpose-${entry.purpose ?? ""}-${entry.purposeKey ?? ""}`}
               entryType={entryType}
               entryId={entry.id}
               purpose={entry.purpose}
+              purposeKey={entry.purposeKey}
             />
           </div>
         </details>

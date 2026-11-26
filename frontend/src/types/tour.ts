@@ -85,6 +85,7 @@ export interface TourRoute {
   kindAssignedAutomatically: boolean;
   /** Private or business; null is unknown (never read as private). */
   purpose?: string | null;
+  purposeKey?: string | null;
   /** Roadtrip taken over from TravTrack: the recorded days it links back to. */
   trackSpan?: { fromDay: string; toDay: string } | null;
   /** Tour only: the local day it happened, "YYYY-MM-DD" (D2). */

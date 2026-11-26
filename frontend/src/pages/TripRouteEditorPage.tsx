@@ -626,11 +626,12 @@ export default function TripRouteEditorPage(): JSX.Element {
             )}
             <RouteTagsEditor route={route} tripId={id} onSaved={setRoute} />
             <PurposeEditor
-              key={`purpose-${route.purpose ?? ""}`}
+              key={`purpose-${route.purpose ?? ""}-${route.purposeKey ?? ""}`}
               entryType="tripRoute"
               entryId={route.id}
               purpose={route.purpose}
-              onSaved={(purpose) => setRoute({ ...route, purpose })}
+              purposeKey={route.purposeKey}
+              onSaved={(stored) => setRoute({ ...route, ...stored })}
             />
             <span>
               {t(`trips:tours.mode.${route.mode}`)} ·{" "}
