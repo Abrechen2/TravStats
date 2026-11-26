@@ -56,3 +56,19 @@ export function roadtripLineHex(
     ? roadtrip.color
     : paletteColorForRoadtrip(roadtrip.id);
 }
+
+/**
+ * The hex a roadtrip is drawn in on ITS OWN page (#412). A colour the user picked for this
+ * roadtrip applies there in every mode — the picker sits right above that map, and a click
+ * that changed nothing on it read as broken. Without a picked colour the page follows the
+ * map mode like every other map.
+ */
+export function roadtripOwnPageHex(
+  mode: RoadtripColorMode,
+  roadtrip: { id: string; color?: string | null },
+  domainHex: string
+): string {
+  return roadtrip.color && HEX.test(roadtrip.color)
+    ? roadtrip.color
+    : roadtripLineHex(mode, roadtrip, domainHex);
+}

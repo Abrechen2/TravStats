@@ -2,6 +2,7 @@ import { z } from "zod";
 import { RouteStore, routeDirectory, routeKey } from "../../routing/routeStore";
 import { haversineKm } from "../../../shared/geo/haversine";
 import logger from "../../../utils/logger";
+import { recordProviderOutcome } from "./providerHealth";
 import { Coord, LegMode, legDistanceKm } from "../tourDistance";
 import {
   isRouteFailure,
@@ -221,11 +222,14 @@ async function computeLegGeometry(
 
   const result = await provider.route({ from, to, mode, vehicle });
   if (result === null) {
+    recordProviderOutcome(provider.id, "provider_error", undefined, provider.healthScope);
     return straightFallback({ from, to, reason: "provider_error" });
   }
   if (isRouteFailure(result)) {
+    recordProviderOutcome(provider.id, result.failure, undefined, provider.healthScope);
     return straightFallback({ from, to, reason: result.failure });
   }
+  recordProviderOutcome(provider.id, null, undefined, provider.healthScope);
 
   const chordKm = haversineKm(from, to);
   if (!isTrustworthy(result, from, to, chordKm, provider.id)) {

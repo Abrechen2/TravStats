@@ -1134,7 +1134,8 @@
     "auto": "Automatisch",
     "own": "Eigene Farbe",
     "automatic": "Automatische Farbe aus der Palette",
-    "saveFailed": "Die Farbe konnte nicht gespeichert werden."
+    "saveFailed": "Die Farbe konnte nicht gespeichert werden.",
+    "usedOn": "Gilt immer auf der Karte dieser Seite. Auf dem Dashboard und der Reisekarte nur im Farbmodus „Je Roadtrip“ (Kartenpanel)."
   },
   "fromTrack": "Aus TravTrack übernommen – Spur ansehen"
 }

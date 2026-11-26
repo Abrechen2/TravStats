@@ -29,6 +29,13 @@ function countCheck(read: (ctx: ReadinessContext) => number | null): CheckImpl {
   };
 }
 
+/** Shown only while the fact holds — a needsAction item that disappears once fixed. */
+const flagCheck = (holds: (ctx: ReadinessContext) => boolean): CheckImpl => ({
+  appliesWhen: holds,
+  evaluate: (ctx) =>
+    holds(ctx) ? { status: "needsAction", checkedAt: null } : { status: "ready", checkedAt: null },
+});
+
 const travtrackRecording = (ctx: ReadinessContext): boolean =>
   ctx.instance.travtrackOffered &&
   ctx.account.locationProvider === "travtrack" &&
@@ -43,6 +50,8 @@ export const PROBLEM_CHECK_IMPLS: Readonly<
       | "admin.railRerouteMissed"
       | "admin.roadRouting"
       | "admin.routingKeyUnused"
+      | "admin.routingProviderDown"
+      | "admin.routingProviderEmpty"
       | "admin.twoFactor"
       | "admin.demoAccount"
       | "user.railStraight"
@@ -77,6 +86,10 @@ export const PROBLEM_CHECK_IMPLS: Readonly<
         ? { status: "needsAction", checkedAt: null }
         : { status: "ready", checkedAt: null },
   },
+  "admin.routingProviderDown": flagCheck(({ problems }) => problems.instance.routingProviderDown),
+  "admin.routingProviderEmpty": flagCheck(
+    ({ problems }) => problems.instance.routingProviderEmptyWithKey
+  ),
   "admin.twoFactor": {
     // The viewer's own account: an admin item is only ever shown to an admin.
     appliesWhen: ({ isAdmin }) => isAdmin,

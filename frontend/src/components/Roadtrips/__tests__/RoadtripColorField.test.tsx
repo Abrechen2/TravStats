@@ -18,6 +18,11 @@ describe("RoadtripColorField (GitHub #408)", () => {
     update.mockReset();
   });
 
+  it("says which maps use the colour, so a pick does not look broken (#412)", () => {
+    render(<RoadtripColorField route={route} onSaved={vi.fn()} />);
+    expect(screen.getByTestId("roadtrip-color-used-on")).toBeInTheDocument();
+  });
+
   it("names each swatch by its colour name, never by a hex code", () => {
     render(<RoadtripColorField route={route} onSaved={vi.fn()} />);
     const swatch = screen.getByTestId(`roadtrip-color-${pick.slice(1)}`);

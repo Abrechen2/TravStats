@@ -1117,7 +1117,9 @@
       "optAuto": "Automatisch (empfohlen)",
       "optCustom": "Eigener Server",
       "optOff": "Aus",
-      "saveFailed": "Ich konnte den Routing-Anbieter nicht speichern."
+      "saveFailed": "Ich konnte den Routing-Anbieter nicht speichern.",
+      "emptyWithKey": "Routing-Anbieter leer, aber Schlüssel für {{provider}} hinterlegt.",
+      "useKeyed": "{{provider}} verwenden"
     }
   },
   "server": {

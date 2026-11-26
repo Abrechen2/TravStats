@@ -137,6 +137,16 @@
       "consequence": "A key for OpenRouteService or GraphHopper is stored, but the routing provider is set to \"Off\" or the chosen provider cannot answer, so every leg stays a straight line.",
       "action": "Choose a routing provider"
     },
+    "adminRoutingProviderDown": {
+      "title": "Routing provider is not answering",
+      "consequence": "The routing provider refused the last requests (key refused or no longer valid) or is down. New legs are therefore drawn as straight lines.",
+      "action": "Check the routing provider"
+    },
+    "adminRoutingProviderEmpty": {
+      "title": "Routing provider empty although a key is stored",
+      "consequence": "The routing provider is set to \"Automatic\", and no provider with a stored key answers right now. Choose the provider whose key you stored.",
+      "action": "Use the provider with a key"
+    },
     "adminTwoFactor": {
       "title": "Admin account without a second factor",
       "consequence": "Whoever guesses your password runs the whole server. A second factor or a passkey stops that.",

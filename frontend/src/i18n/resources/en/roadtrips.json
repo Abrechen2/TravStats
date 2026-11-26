@@ -1134,7 +1134,8 @@
     "auto": "Automatic",
     "own": "Own colour",
     "automatic": "Automatic colour from the palette",
-    "saveFailed": "The colour could not be saved."
+    "saveFailed": "The colour could not be saved.",
+    "usedOn": "Always used on this page's map. On the dashboard and the trip map only in the colour mode \"Per roadtrip\" (map panel)."
   },
   "fromTrack": "Taken over from TravTrack – view the track"
 }

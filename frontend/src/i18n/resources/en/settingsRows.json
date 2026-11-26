@@ -1117,7 +1117,9 @@
       "optAuto": "Automatic (recommended)",
       "optCustom": "Own server",
       "optOff": "Off",
-      "saveFailed": "I could not save the routing provider."
+      "saveFailed": "I could not save the routing provider.",
+      "emptyWithKey": "Routing provider empty, but a key for {{provider}} is stored.",
+      "useKeyed": "Use {{provider}}"
     }
   },
   "server": {

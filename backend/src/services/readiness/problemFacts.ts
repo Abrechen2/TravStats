@@ -14,6 +14,7 @@ import { ReadinessFactError } from "./factError";
 import { isServiceDisabledByAdmin } from "../externalServices/policy";
 import { LEG_MODES, type LegMode } from "../tour/tourDistance";
 import { resolveRouting } from "../tour/routing/resolveProvider";
+import { downProviders, providerDown } from "../tour/routing/providerHealth";
 import { isRoutableMode } from "../tour/routing/types";
 import { derivationProgress } from "../travtrack/derivationProgress";
 import { VISITS_BIT } from "../travtrack/dirtyDays";
@@ -44,6 +45,13 @@ export interface InstanceProblemFacts {
    * off ("Aus") or the selected provider cannot answer for the instance.
    */
   routingKeyWithoutProvider: boolean;
+  /** A routing provider refused this instance lately (providerHealth, #411). */
+  routingProviderDown: boolean;
+  /**
+   * The provider is "Automatisch", an instance key is stored, and no keyed provider
+   * answers for the instance — the state #411 left behind; the choice row offers "X verwenden".
+   */
+  routingProviderEmptyWithKey: boolean;
   demoAccounts: number;
 }
 
@@ -101,6 +109,7 @@ export async function loadInstanceProblemFacts(): Promise<InstanceProblemFacts> 
         railRoutingUrl: true,
         globalOpenrouteserviceApiKey: true,
         globalGraphhopperApiKey: true,
+        routingProvider: true,
       },
     }),
     prisma.user.count({ where: { isDemo: true } }),
@@ -114,7 +123,12 @@ export async function loadInstanceProblemFacts(): Promise<InstanceProblemFacts> 
     resolveRouting(),
   ]);
   const railRouterConfigured = !!admin?.railRoutingUrl && !routingOff;
-  const roadRoutingEffective = instanceRouting.provider !== null;
+  const instanceDown =
+    instanceRouting.provider !== null &&
+    providerDown(instanceRouting.provider.id, undefined, instanceRouting.provider.healthScope) !==
+      null;
+  // A provider that refuses every request draws no road: its legs are chords like no provider's.
+  const roadRoutingEffective = instanceRouting.provider !== null && !instanceDown;
   const [railStraight, railRerouteMissed, legs, bus] = await Promise.all([
     straightRail(),
     straightRail(undefined, "missed"),
@@ -132,6 +146,11 @@ export async function loadInstanceProblemFacts(): Promise<InstanceProblemFacts> 
     roadStraight: legs + bus,
     routingKeyWithoutProvider:
       anyKey && (instanceRouting.mode === "off" || instanceRouting.hint === "selectedUnavailable"),
+    routingProviderDown: downProviders().length > 0,
+    routingProviderEmptyWithKey:
+      (admin?.routingProvider ?? null) === null &&
+      (!!admin?.globalOpenrouteserviceApiKey || !!admin?.globalGraphhopperApiKey) &&
+      (instanceRouting.provider === null || instanceDown),
     demoAccounts,
   };
 }

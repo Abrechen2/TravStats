@@ -1,5 +1,6 @@
 import { api } from "./client";
 import type { TourLegTrackCoverage } from "../../types/trackCoverage";
+import type { RoutingFailing } from "../../types/roadtrip";
 import type { RoadtripVehicle, TourActivity } from "../../shared/tour/roadtrip";
 import type {
   TourRoute,
@@ -166,12 +167,14 @@ export const toursApi = {
     stops: TourStop[];
     legs: TourLeg[];
     routingAvailable: boolean;
+    routingFailing?: RoutingFailing | null;
   }> => {
     const { data } = await api.get<{
       route: TourRoute;
       stops: TourStop[];
       legs: TourLeg[];
       routingAvailable: boolean;
+      routingFailing?: RoutingFailing | null;
     }>(sectionPath(tripId, routeId));
     return data;
   },

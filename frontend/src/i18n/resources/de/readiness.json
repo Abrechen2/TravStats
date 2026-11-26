@@ -137,6 +137,16 @@
       "consequence": "Ein Schlüssel für OpenRouteService oder GraphHopper ist gespeichert, aber der Routing-Anbieter steht auf „Aus“ oder der gewählte Anbieter kann nicht antworten. Darum bleibt jede Etappe eine Luftlinie.",
       "action": "Routing-Anbieter auswählen"
     },
+    "adminRoutingProviderDown": {
+      "title": "Routing-Anbieter antwortet nicht",
+      "consequence": "Der Routing-Anbieter hat die letzten Anfragen abgelehnt (Schlüssel abgelehnt oder nicht mehr gültig) oder ist ausgefallen. Neue Strecken werden darum gerade gezogen.",
+      "action": "Routing-Anbieter prüfen"
+    },
+    "adminRoutingProviderEmpty": {
+      "title": "Routing-Anbieter leer, aber ein Schlüssel ist hinterlegt",
+      "consequence": "Der Routing-Anbieter steht auf „Automatisch“, und kein Anbieter mit hinterlegtem Schlüssel antwortet gerade. Wähle den Anbieter, dessen Schlüssel du hinterlegt hast.",
+      "action": "Anbieter mit Schlüssel verwenden"
+    },
     "adminTwoFactor": {
       "title": "Admin-Konto ohne zweiten Faktor",
       "consequence": "Wer dein Passwort errät, verwaltet den ganzen Server. Ein zweiter Faktor oder ein Passkey verhindert das.",

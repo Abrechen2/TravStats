@@ -90,7 +90,8 @@ function readOrsError(body: unknown): { code: number | null; message: string | n
 
 /** Maps a non-2xx ORS answer to a fallback reason: the status first, then ORS's own code. */
 export function orsFailureReason(status: number, code: number | null): RouteFallbackReason {
-  if (status === 401 || status === 403) return "auth";
+  // 410 Gone: ORS no longer serves this key or plan — the key is refused, not one leg (#411).
+  if (status === 401 || status === 403 || status === 410) return "auth";
   if (status === 429) return "rate_limited";
   if (code !== null && ORS_ERROR_REASON[code]) return ORS_ERROR_REASON[code];
   return "provider_error";

@@ -12,7 +12,7 @@ import { roadtripStationTimesSchema, stayTimesSchema } from "../../../schemas/ti
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent, timeRefused } from "./shared";
+import { errorContent, routingFields, timeRefused } from "./shared";
 import { tourLeg, tourRoute } from "./tours";
 import { createRoadtripSchema, kindSwitchSchema, stationsSchema } from "../../../schemas/roadtrip";
 import {
@@ -210,6 +210,7 @@ const roadtripDetail = z.object({
     })
   ),
   routingAvailable: z.boolean(),
+  routingFailing: routingFields.routingFailing,
   progress: z
     .object({
       phase: z.enum(["past", "current", "planned", "undated"]),

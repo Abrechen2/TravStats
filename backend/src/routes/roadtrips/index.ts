@@ -197,6 +197,8 @@ router.get(
           source: t.tracks[0]?.source ?? null,
         })),
         routingAvailable: routing.configured,
+        // The provider refuses requests right now (#411): the page says so instead of drawing chords silently.
+        routingFailing: routing.failing,
         // Driven against planned, by the statistics' own timeline rule, and
         // what the kilometres were measured on (forgejo#179).
         progress: roadtripProgress(stations, legs, new Date()),

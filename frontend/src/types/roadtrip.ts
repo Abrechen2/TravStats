@@ -133,6 +133,8 @@ export interface RoadtripDetail {
   legs: TourLeg[];
   tours: RoadtripDayTour[];
   routingAvailable: boolean;
+  /** The routing provider refuses requests right now (#411); absent on an older server. */
+  routingFailing?: RoutingFailing | null;
   /**
    * Driven against planned, by the server's timeline rule (forgejo#179).
    * Optional only for an older server; the page then claims nothing driven.
@@ -190,4 +192,10 @@ export interface StationWeather {
   lon: number;
   source: "open-meteo";
   fetchedAt: string;
+}
+
+/** A routing provider that refuses this instance right now (#411). */
+export interface RoutingFailing {
+  providerId: "openrouteservice" | "graphhopper" | "custom";
+  reason: string;
 }
