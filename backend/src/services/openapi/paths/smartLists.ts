@@ -148,3 +148,77 @@ registry.registerPath({
   request: { params: z.object({ placeId: uuid }) },
   responses: { 200: envelope(z.array(suggestion)), 404: notFound },
 });
+
+const memberRow = z.object({
+  entryId: uuid,
+  placeId: uuid,
+  name: z.string(),
+  category: z.string(),
+  country: z.string().nullable(),
+  countryCode: z.string().nullable(),
+  city: z.string().nullable(),
+  visitCount: z.number().int().describe("Past visits (a planned one is not counted)"),
+  firstVisit: z.string().nullable().describe("Local day, YYYY-MM-DD"),
+  lastVisit: z.string().nullable().describe("Local day, YYYY-MM-DD"),
+  addedAt: z.string(),
+  sortIdx: z.number().int(),
+  source: z.enum(["manual", "rule", "import", "plugin"]),
+  distanceKm: z.number().nullable().describe("From the account's home; null without one"),
+  external: z
+    .object({
+      id: z.string(),
+      label: z.string().optional(),
+      fields: z.record(z.string(), z.string()),
+    })
+    .nullable()
+    .describe("A plugin-fed list's reference and its announced columns"),
+  visits: z
+    .array(z.object({ id: uuid, date: z.string().nullable() }))
+    .describe("Past visits, newest first, at most 50"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/place-lists/{id}/members",
+  summary: "One page of a list as a table",
+  description:
+    "Sorted and paged on the server. Every sort ends in name, then entry id; a missing value sorts last in both directions. Takes `?purposeFilter=` like every entry read.",
+  tags,
+  request: {
+    params: z.object({ id: uuid }),
+    query: z.object({
+      sort: z
+        .enum([
+          "lastVisit",
+          "firstVisit",
+          "name",
+          "country",
+          "visitCount",
+          "addedAt",
+          "distance",
+          "custom",
+        ])
+        .optional(),
+      order: z.enum(["asc", "desc"]).optional(),
+      page: z.number().int().min(1).optional(),
+      pageSize: z.number().int().min(1).max(100).optional(),
+      q: z.string().max(100).optional(),
+    }),
+  },
+  responses: {
+    200: envelope(
+      z.object({
+        rows: z.array(memberRow),
+        total: z.number().int(),
+        page: z.number().int(),
+        pageSize: z.number().int(),
+        columns: z.array(
+          z.object({ key: z.string(), label: z.object({ de: z.string(), en: z.string() }) })
+        ),
+        hasHome: z.boolean(),
+      })
+    ),
+    400: badInput,
+    404: notFound,
+  },
+});

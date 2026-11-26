@@ -46,6 +46,7 @@ import {
   MAINTENANCE_SOURCES,
 } from "../../services/plugins/contract";
 import type { Precision } from "../../services/plugins/registry";
+import { setPluginListEnabled, syncPluginList } from "../../services/places/pluginLists";
 
 const router = Router();
 
@@ -78,6 +79,8 @@ const maintenanceLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+const localeOf = (req: AuthRequest): "de" | "en" => (req.query.lang === "en" ? "en" : "de");
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -231,14 +234,45 @@ router.post(
 router.get("/:id/capabilities", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const plugin = await ownPlugin(req.userId!, z.string().uuid().parse(req.params.id));
+    const locale = localeOf(req);
     if (!plugin.enabled || (await egressBlock(PLUGIN_SERVICE_ID)))
-      return res.json({ capabilities: [], maintenance: false, error: null });
+      return res.json({
+        capabilities: [],
+        maintenance: false,
+        error: null,
+        list: await syncPluginList(req.userId!, plugin, null, locale),
+      });
     const probe = await probeHello(plugin);
+    const hello = probe.kind === "ok" ? probe.hello : null;
     res.json({
-      capabilities: probe.kind === "ok" ? (probe.hello.capabilities ?? []) : [],
+      capabilities: hello?.capabilities ?? [],
       maintenance: offersMaintenance(probe),
       error: probe.kind === "failed" ? probe.reason : null,
+      list: await syncPluginList(req.userId!, plugin, hello, locale),
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/** "Orte dieses Plugins als Liste führen": on creates (or keeps) the list, off keeps it as a normal list. */
+router.put("/:id/list", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const plugin = await ownPlugin(req.userId!, z.string().uuid().parse(req.params.id));
+    const { enabled } = z.object({ enabled: z.boolean() }).strict().parse(req.body);
+    const probe =
+      enabled && plugin.enabled && !(await egressBlock(PLUGIN_SERVICE_ID))
+        ? await probeHello(plugin)
+        : null;
+    res.json(
+      await setPluginListEnabled(
+        req.userId!,
+        plugin,
+        enabled,
+        probe?.kind === "ok" ? probe.hello : null,
+        localeOf(req)
+      )
+    );
   } catch (error) {
     next(error);
   }

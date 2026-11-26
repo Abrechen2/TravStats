@@ -11,7 +11,9 @@ import {
   addListEntrySchema,
   reorderListEntriesSchema,
   placeListQuerySchema,
+  listMembersQuerySchema,
 } from "../schemas/placeList";
+import { listMembers } from "../services/places/listMembers";
 import logger from "../utils/logger";
 
 /**
@@ -193,6 +195,21 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     const userId = requireUser(req);
     const list = await findOwned(req.params.id, userId);
     res.json({ success: true, data: present(list, true) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ---------------------------------------------------------------- members (the table)
+
+router.get("/:id/members", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const parsed = listMembersQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    const page = await listMembers(userId, req.params.id, parsed.data);
+    if (!page) throw new AppError("List not found", 404);
+    res.json({ success: true, data: page });
   } catch (error) {
     next(error);
   }

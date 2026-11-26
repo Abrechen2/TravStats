@@ -20,6 +20,7 @@ import {
   PLUGIN_CONTRACT_VERSION,
   pluginHelloSchema,
   pluginResponseSchema,
+  normalizeSuggestion,
   type PluginHello,
   type PluginRequest,
   type PluginSuggestion,
@@ -196,7 +197,7 @@ export async function callPlugin(
   return {
     kind: "ok",
     version: parsed.data.version,
-    suggestions: parsed.data.suggestions,
+    suggestions: parsed.data.suggestions.map(normalizeSuggestion),
     ...(parsed.data.nameRadiusMeters !== undefined
       ? { nameRadiusMeters: parsed.data.nameRadiusMeters }
       : {}),

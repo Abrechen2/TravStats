@@ -4238,10 +4238,17 @@ model PlaceList {
   /// not user-editable; its colour is.
   curatedKey String? @map("curated_key")
 
+  /// Non-null when a suggestion plugin feeds this list: places of its accepted suggestions join
+  /// on their own. Removing the plugin (or switching the list off) keeps the list as a normal one.
+  pluginId      String? @unique @map("plugin_id")
+  /// The extra columns the plugin's hello announced, `[{key, label: {de, en}}]`.
+  pluginColumns Json?   @map("plugin_columns")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plugin     SuggestionPlugin?    @relation(fields: [pluginId], references: [id], onDelete: SetNull)
   entries    PlaceListEntry[]
   brandRules PlaceListBrandRule[]
 
@@ -4259,7 +4266,10 @@ model PlaceListEntry {
   placeId   String  @map("place_id")
   sortIdx   Int     @default(0) @map("sort_idx")
   /// `brandRule` when a smart list's auto-accept added the entry; undo removes only these.
+  /// `plugin` when an accepted plugin suggestion added it.
   createdBy String? @map("created_by")
+  /// A plugin-fed list's row: `{id, label, fields: {<announced column key>: string}}` from the suggestion.
+  externalFields Json? @map("external_fields")
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -8457,11 +8467,14 @@ model SuggestionPlugin {
   /// No call before this: a failure's backoff (15 min doubling to 6 h) or the plugin's Retry-After.
   retryAt         DateTime? @map("retry_at")
   failures        Int       @default(0)
+  /// "Orte dieses Plugins als Liste führen": null = not chosen yet (on when the hello announces `list`).
+  listEnabled     Boolean?  @map("list_enabled")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   user  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   calls SuggestionPluginCall[]
+  list  PlaceList?
 
   @@index([userId])
   @@map("suggestion_plugins")

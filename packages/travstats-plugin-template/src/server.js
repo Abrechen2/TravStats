@@ -16,6 +16,24 @@ const VERSION = 1;
 const MAX_BODY = 64 * 1024;
 const RADIUS_M = 300;
 
+/**
+ * The signed hello. `list` (optional) asks TravStats to keep this plugin's places as a list:
+ * `defaultName` is the list's first name (the user may rename it), `columns` the extra columns,
+ * filled from each suggestion's `externalRef.fields` by key.
+ */
+const HELLO = {
+  name: "Template plugin",
+  version: VERSION,
+  kinds: ["stop"],
+  list: {
+    defaultName: { de: "Orte · Vorlage", en: "Places · template" },
+    columns: [
+      { key: "ref", label: { de: "Nr.", en: "No." } },
+      { key: "group", label: { de: "Gruppe", en: "Group" } },
+    ],
+  },
+};
+
 function meters(a, b) {
   const R = 6371000;
   const rad = (d) => (d * Math.PI) / 180;
@@ -43,7 +61,16 @@ function lookup(places, stop) {
       lon: p.lon,
       ...(p.address ? { address: p.address } : {}),
       ...(p.purpose ? { purpose: p.purpose } : {}),
-      ...(p.id ? { externalRef: String(p.id) } : {}),
+      // The object form fills the list columns the hello announces (see HELLO.list).
+      ...(p.id
+        ? {
+            externalRef: {
+              id: String(p.id),
+              label: p.name,
+              fields: { ref: String(p.id), ...(p.group ? { group: String(p.group) } : {}) },
+            },
+          }
+        : {}),
       ...(p.url ? { url: p.url } : {}),
       confidence: Math.max(0, Math.min(1, 1 - d / (RADIUS_M * 2))),
     }));
@@ -80,8 +107,7 @@ function createServer({ secret, places }) {
         res.end(payload === undefined ? "" : JSON.stringify(payload));
       };
       if (refused) return send(refused, { error: refused === 503 ? "busy" : "unauthorized" });
-      if (req.method === "GET")
-        return send(200, { name: "Template plugin", version: VERSION, kinds: ["stop"] });
+      if (req.method === "GET") return send(200, HELLO);
       if (req.method !== "POST") return send(405, { error: "method" });
       let request;
       try {
@@ -107,4 +133,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { createServer, lookup };
+module.exports = { createServer, lookup, HELLO };

@@ -53,6 +53,13 @@ const failed = {
   content: errorContent,
 };
 
+const pluginListState = z.object({
+  enabled: z.boolean(),
+  announced: z.boolean().describe("The hello announces `list`"),
+  listId: z.string().uuid().nullable(),
+  listName: z.string().nullable(),
+});
+
 registry.registerPath({
   method: "get",
   path: "/settings/suggestion-plugins",
@@ -212,9 +219,11 @@ registry.registerPath({
   method: "get",
   path: "/settings/suggestion-plugins/{id}/capabilities",
   summary: "A plugin's announced capabilities",
-  description: "From its signed hello; `maintenance` is true when location maintenance is offered.",
+  description:
+    "From its signed hello; `maintenance` is true when location maintenance is offered. `list` " +
+    "is the plugin-fed list's state; it is created here on first use when the hello announces one.",
   tags,
-  request: { params: idParam },
+  request: { params: idParam, query: z.object({ lang: z.enum(["de", "en"]).optional() }) },
   responses: {
     200: {
       description: "Capabilities",
@@ -223,9 +232,31 @@ registry.registerPath({
           capabilities: z.array(z.string()),
           maintenance: z.boolean(),
           error: z.string().nullable(),
+          list: pluginListState,
         })
       ),
     },
+    404: { description: "Not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/settings/suggestion-plugins/{id}/list",
+  summary: "Keep this plugin's places as a list",
+  description:
+    "On creates the plugin-fed list (named as the hello's `list.defaultName`, else the " +
+    "registration's name) and fills it with the places of accepted suggestions; off keeps the " +
+    "list as a normal list that no longer grows.",
+  tags,
+  request: {
+    params: idParam,
+    query: z.object({ lang: z.enum(["de", "en"]).optional() }),
+    body: { content: json(z.object({ enabled: z.boolean() })) },
+  },
+  responses: {
+    200: { description: "The list state", content: json(pluginListState) },
+    400: { description: "Invalid input", content: errorContent },
     404: { description: "Not found", content: errorContent },
   },
 });

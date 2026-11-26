@@ -74,6 +74,10 @@ test("a signed stop is answered; refusals are 401", async (t) => {
   const answer = await ok.json();
   assert.strictEqual(answer.version, 1);
   assert.strictEqual(answer.suggestions[0].name, "Marienplatz");
+  assert.deepStrictEqual(answer.suggestions[0].externalRef.fields, {
+    ref: "example-1",
+    group: "Altstadt",
+  });
   assert.ok(answer.suggestions[0].confidence > 0 && answer.suggestions[0].confidence <= 1);
 
   const replayed = await request(port, { path: "/hook", body: stopBody(id), requestId: id });
@@ -105,11 +109,21 @@ test("a signed stop is answered; refusals are 401", async (t) => {
   assert.strictEqual(health.status, 200);
 
   const hello = await request(port, { method: "GET", path: "/hook" });
-  assert.deepStrictEqual(await hello.json(), {
-    name: "Template plugin",
-    version: 1,
-    kinds: ["stop"],
-  });
+  const said = await hello.json();
+  assert.deepStrictEqual(
+    { ...said, list: undefined },
+    {
+      name: "Template plugin",
+      version: 1,
+      kinds: ["stop"],
+      list: undefined,
+    }
+  );
+  assert.deepStrictEqual(
+    said.list.columns.map((c) => c.key),
+    ["ref", "group"],
+    "the hello announces the list columns"
+  );
 });
 
 // rc.45 review: a full cache evicted the oldest id even while it was still inside its window,
