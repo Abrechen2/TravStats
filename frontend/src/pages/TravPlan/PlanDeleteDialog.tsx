@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
-import { Button, Dialog, EmptyState } from "../../components/ui";
+import { EmptyState } from "../../components/ui";
+import ConfirmModal from "../../components/ui/ConfirmModal";
+import InlineError from "../../components/ui/InlineError";
+import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { useTranslation } from "../../hooks/useTranslation";
 import { travplanApi, type PlanDeletePreview } from "../../lib/api/travplan";
-import { PlanActions, PlanNotice } from "./planLayout";
+import { PlanNotice } from "./planLayout";
 
 const REMOVED: (keyof PlanDeletePreview["removes"])[] = [
   "stations",
@@ -61,7 +64,17 @@ export function PlanDeleteDialog({
   }
   const counted = preview ? REMOVED.filter((k) => preview.removes[k] > 0) : [];
   return (
-    <Dialog open onClose={onClose} busy={busy} title={t("deletePlan.title", { name })}>
+    <ConfirmModal
+      isOpen
+      onClose={onClose}
+      onConfirm={() => void remove()}
+      isLoading={busy}
+      confirmDisabled={!preview}
+      title={t("deletePlan.title", { name })}
+      confirmText={t("deletePlan.confirm")}
+      confirmButtonClass={DELETE_BUTTON_CLASS}
+      cancelText={t("cancel")}
+    >
       {!preview && !failed && <EmptyState kind="pending" title={t("loading")} />}
       {failed && <PlanNotice tone="bad">{t("deletePlan.previewFailed")}</PlanNotice>}
       {preview && (
@@ -94,15 +107,7 @@ export function PlanDeleteDialog({
           <p className="t-caption">{t("deletePlan.undoNote")}</p>
         </div>
       )}
-      {error && <PlanNotice tone="bad">{t("deletePlan.failed")}</PlanNotice>}
-      <PlanActions>
-        <Button variant="danger" disabled={!preview || busy} onClick={() => void remove()}>
-          {busy ? t("saving") : t("deletePlan.confirm")}
-        </Button>
-        <Button onClick={onClose} disabled={busy}>
-          {t("cancel")}
-        </Button>
-      </PlanActions>
-    </Dialog>
+      {error && <InlineError>{t("deletePlan.failed")}</InlineError>}
+    </ConfirmModal>
   );
 }

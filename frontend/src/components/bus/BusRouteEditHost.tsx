@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { BusRouteEditor } from "./BusRouteEditor";
 import { busApi } from "../../lib/api/bus";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useBusRouteEditStore } from "../../store/busRouteEditStore";
 import type { BusJourney } from "../../types/bus";
+import InlineError from "../ui/InlineError";
 
 /**
  * The ride editor over the dashboard map (GitHub #409): the bus card's
@@ -41,7 +42,7 @@ export function BusRouteEditHost({ onSaved }: { onSaved: () => void }): JSX.Elem
 
   if (!rideId) return null;
   return (
-    <Modal
+    <Dialog
       open
       onClose={close}
       title={t("bus:drawRoute.editManual")}
@@ -49,9 +50,7 @@ export function BusRouteEditHost({ onSaved }: { onSaved: () => void }): JSX.Elem
       testId="bus-route-edit-host"
     >
       {failed && (
-        <p role="alert" className="text-sm text-(--danger)" data-testid="bus-route-edit-failed">
-          {t("bus:routeEditor.loadFailed")}
-        </p>
+        <InlineError testId="bus-route-edit-failed">{t("bus:routeEditor.loadFailed")}</InlineError>
       )}
       {!ride && !failed && <p className="t-caption">{t("common:loading.default")}</p>}
       {ride && (
@@ -64,6 +63,6 @@ export function BusRouteEditHost({ onSaved }: { onSaved: () => void }): JSX.Elem
           onClose={close}
         />
       )}
-    </Modal>
+    </Dialog>
   );
 }

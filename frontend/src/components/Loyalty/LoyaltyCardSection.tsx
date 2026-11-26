@@ -14,6 +14,7 @@ import MaskedNumber from "./MaskedNumber";
 import TierBadge from "./TierBadge";
 import { ConfirmDialog } from "../ui/settings";
 import { useDialogCopy } from "../Settings/rowCopy";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   domain: CardDomain;
@@ -69,11 +70,7 @@ export default function LoyaltyCardSection({
         title={t(`loyalty:sections.${domain}.title`)}
         description={t(`loyalty:sections.${domain}.description`)}
       />
-      {error !== null && (
-        <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-          {error}
-        </p>
-      )}
+      {error !== null && <InlineError>{error}</InlineError>}
       {cards.length === 0 && editing === null ? (
         <p className="t-caption">{t("loyalty:empty")}</p>
       ) : (

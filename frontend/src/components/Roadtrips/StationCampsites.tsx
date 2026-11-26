@@ -11,6 +11,7 @@ import {
 } from "../../lib/api/openData";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
+import InlineError from "../ui/InlineError";
 
 /** A campsite search around the station; wide enough for a day's drive to cover a valley. */
 export const CAMPSITE_RADIUS_KM = 10;
@@ -86,7 +87,7 @@ export default function StationCampsites({
       </Button>
       {!point && <span className="t-caption">{t("roadtrips:campsites.needPlace")}</span>}
       {lookup.state === "failed" && (
-        <p role="alert" style={{ fontSize: 13, color: "var(--ts-bad)" }}>
+        <InlineError>
           {t(
             lookup.reason === "unavailable"
               ? "roadtrips:campsites.failed"
@@ -94,7 +95,7 @@ export default function StationCampsites({
                 ? "openData:lodging.disabled"
                 : `openData:lodging.upstream.${lookup.reason}`
           )}
-        </p>
+        </InlineError>
       )}
       {lookup.state === "done" && lookup.places.length === 0 && (
         <p className="t-caption">{t("roadtrips:campsites.none", { km: CAMPSITE_RADIUS_KM })}</p>

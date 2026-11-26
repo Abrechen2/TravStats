@@ -1,5 +1,5 @@
-import type { JSX } from "react";
-import Modal from "../Modal";
+import { useEffect, useRef, type JSX, type ReactNode } from "react";
+import Dialog from "./Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 
 interface ConfirmModalProps {
@@ -7,7 +7,18 @@ interface ConfirmModalProps {
   onClose: () => void;
   onConfirm: () => void;
   title: string;
-  message: string;
+  /** A title that is more than text; wins over `title` when given. */
+  titleNode?: ReactNode;
+  /** What is asked, in one or two sentences. Name WHAT and HOW MANY. */
+  message?: string;
+  /** More body under the message: a preview, a form, a typed-word field. */
+  children?: ReactNode;
+  /** Keeps the confirm button off until the question is fully answered. */
+  confirmDisabled?: boolean;
+  /** Focus starts on "Abbrechen", so a stray Enter cannot destroy anything. */
+  focusCancel?: boolean;
+  /** Accessible name of the ×, when "Schließen" would repeat a button. */
+  closeLabel?: string;
   confirmText?: string;
   cancelText?: string;
   confirmButtonClass?: string;
@@ -37,26 +48,37 @@ export default function ConfirmModal({
   onClose,
   onConfirm,
   title,
+  titleNode,
   message,
   confirmText,
   cancelText,
   confirmButtonClass = "btn-primary",
   isLoading = false,
+  children,
+  confirmDisabled = false,
+  focusCancel = false,
+  closeLabel,
 }: ConfirmModalProps): JSX.Element | null {
   const { t } = useTranslation(["training", "common"]);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    // After the shell has given the panel focus.
+    if (isOpen && focusCancel) cancelRef.current?.focus();
+  }, [isOpen, focusCancel]);
 
   return (
-    <Modal
+    <Dialog
       open={isOpen}
       onClose={onClose}
       busy={isLoading}
-      title={title}
+      title={titleNode ?? title}
       maxWidth={512}
       testId="confirm-modal"
-      closeLabel={t("common:buttons.close")}
+      closeLabel={closeLabel ?? t("common:buttons.close")}
       footer={
         <>
           <button
+            ref={cancelRef}
             type="button"
             onClick={onClose}
             disabled={isLoading}
@@ -67,7 +89,7 @@ export default function ConfirmModal({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={isLoading}
+            disabled={isLoading || confirmDisabled}
             className={`inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50 ${confirmButtonClass}`}
           >
             {isLoading
@@ -77,7 +99,8 @@ export default function ConfirmModal({
         </>
       }
     >
-      <p className="text-sm whitespace-pre-line text-(--text-muted)">{message}</p>
-    </Modal>
+      {message && <p className="text-sm whitespace-pre-line text-(--text-muted)">{message}</p>}
+      {children}
+    </Dialog>
   );
 }

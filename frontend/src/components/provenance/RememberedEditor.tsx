@@ -10,6 +10,7 @@ import {
 } from "../../lib/api/provenance";
 import { logger } from "../../lib/logger";
 import { Button } from "../ui";
+import InlineError from "../ui/InlineError";
 
 const NOTE_MAX = 500;
 type Choice = "unknown" | Provenance;
@@ -102,9 +103,7 @@ export default function RememberedEditor({
           </span>
         )}
         {status === "error" && (
-          <span className="t-caption" role="alert" style={{ color: "var(--ts-warn)" }}>
-            {t("provenance:editor.error")}
-          </span>
+          <InlineError tone="warning">{t("provenance:editor.error")}</InlineError>
         )}
       </div>
     </fieldset>

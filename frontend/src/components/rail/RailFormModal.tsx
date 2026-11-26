@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTripPreselection } from "../../hooks/useTripPreselection";
 import { useTranslation } from "../../hooks/useTranslation";
 import { isOutcomeUnknownSaveError, isTransientSaveError } from "../../lib/saveErrorMessage";
@@ -208,7 +208,7 @@ export function RailFormModal({
   const anyDayOnly = hasDayOnlyEnd(draft);
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving.saving}
@@ -314,6 +314,6 @@ export function RailFormModal({
         />
         <RequiredLegend className="mt-3" />
       </div>
-    </Modal>
+    </Dialog>
   );
 }

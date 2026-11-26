@@ -22,6 +22,8 @@ import OverflowMenu, { type OverflowEntry } from "../ui/OverflowMenu";
 import EnlargeButton, { EnlargeCorner } from "./photoViewer/EnlargeButton";
 import { usePhotoViewer } from "./photoViewer/usePhotoViewer";
 import { largeUrl, sourceOf, type ViewerPhoto } from "./photoViewer/viewerPhoto";
+import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   kind: EntryPhotoKind;
@@ -75,7 +77,7 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
       await work();
     } catch (err: unknown) {
       logger.error("EntryPhotos: action failed", err);
-      addToast("error", failure);
+      reportPageError(failure);
     } finally {
       setBusy(false);
     }
@@ -223,11 +225,7 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
           entries={menuEntries}
         />
       </div>
-      {loadFailed && (
-        <p role="alert" className="t-caption" style={{ color: "var(--color-danger)" }}>
-          {t("common:entryPhotos.loadFailed")}
-        </p>
-      )}
+      {loadFailed && <InlineError>{t("common:entryPhotos.loadFailed")}</InlineError>}
       {photos !== null && photos.length === 0 && !loadFailed && (
         <p className="t-caption">{t("common:entryPhotos.none")}</p>
       )}

@@ -50,6 +50,10 @@ vi.mock("../../store/settingsStore", () => ({
     select({ baseCurrency: "EUR", defaults: STABLE_DEFAULTS, features: STABLE_FEATURES }),
 }));
 
+vi.mock("../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  reportPageError: (message: string, tone = "error") => mocks.addToast(tone, message),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: { getState: () => ({ addToast: mocks.addToast }) },
 }));

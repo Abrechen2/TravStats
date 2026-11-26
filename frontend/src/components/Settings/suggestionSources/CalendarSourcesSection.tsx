@@ -16,6 +16,7 @@ import {
 } from "../../../lib/api/calendarSources";
 import CalendarSourceForm from "./CalendarSourceForm";
 import CalendarRulesEditor from "./CalendarRulesEditor";
+import InlineError from "../../ui/InlineError";
 
 const NS = "suggestionSources:calendar";
 
@@ -127,16 +128,8 @@ export default function CalendarSourcesSection(): JSX.Element {
       <SettingRows>
         <SettingItem title={t(`${NS}.title`)} sub={t(`${NS}.sub`)} help={t(`${NS}.help`)}>
           <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-            {list?.blocked && (
-              <p role="alert" className="t-body" style={{ color: "var(--ts-bad)" }}>
-                {t(`${NS}.blocked.${list.blocked}`)}
-              </p>
-            )}
-            {loadError && (
-              <p role="alert" className="t-body" style={{ color: "var(--ts-bad)" }}>
-                {t(loadError)}
-              </p>
-            )}
+            {list?.blocked && <InlineError>{t(`${NS}.blocked.${list.blocked}`)}</InlineError>}
+            {loadError && <InlineError>{t(loadError)}</InlineError>}
             {list?.sources.length === 0 && <p className="t-body">{t(`${NS}.empty`)}</p>}
             {list?.sources.map((source) => {
               const test = tests[source.id];
@@ -232,11 +225,7 @@ export default function CalendarSourcesSection(): JSX.Element {
               label={t(`${NS}.geocode.label`)}
               sub={t(`${NS}.geocode.sub`)}
             />
-            {geocodeError && (
-              <p role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
-                {t(geocodeError)}
-              </p>
-            )}
+            {geocodeError && <InlineError>{t(geocodeError)}</InlineError>}
           </SettingItem>
         )}
         {list && list.sources.length > 0 && (

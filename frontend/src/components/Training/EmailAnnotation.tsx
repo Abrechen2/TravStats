@@ -25,6 +25,7 @@ import {
 } from "./emailAnnotationModel";
 import FlightGroundTruth from "./FlightGroundTruth";
 import type { WorkshopDomain } from "../../shared/annotationLabels";
+import InlineError from "../ui/InlineError";
 
 interface EmailAnnotationProps {
   trainingDataId: string;
@@ -360,11 +361,7 @@ export default function EmailAnnotation({
             {t("training:annotation.marksDropped")}
           </p>
         )}
-        {saveError && (
-          <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
-            {saveError}
-          </p>
-        )}
+        {saveError && <InlineError>{saveError}</InlineError>}
 
         <EmailTextPane
           displayText={displayText}

@@ -13,21 +13,27 @@ import type { JSX } from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import Modal from "../Modal";
+import Dialog from "../Dialog";
 
 afterEach(cleanup);
 
-function open(props: Partial<Parameters<typeof Modal>[0]> = {}) {
+function open(props: Partial<Parameters<typeof Dialog>[0]> = {}) {
   const onClose = vi.fn();
   const utils = render(
-    <Modal open onClose={onClose} title="Wirklich?" footer={<button>Bestätigen</button>} {...props}>
+    <Dialog
+      open
+      onClose={onClose}
+      title="Wirklich?"
+      footer={<button>Bestätigen</button>}
+      {...props}
+    >
       <p>Inhalt</p>
-    </Modal>
+    </Dialog>
   );
   return { onClose, ...utils };
 }
 
-describe("Modal", () => {
+describe("Dialog frame layout", () => {
   it("announces itself as a dialog and takes its name from the title", () => {
     open();
     const dialog = screen.getByRole("dialog");
@@ -74,9 +80,9 @@ describe("Modal", () => {
       return (
         <>
           <button onClick={() => setOpen(true)}>Öffnen</button>
-          <Modal open={isOpen} onClose={() => setOpen(false)} title="Wirklich?">
+          <Dialog open={isOpen} onClose={() => setOpen(false)} title="Wirklich?">
             <p>Inhalt</p>
-          </Modal>
+          </Dialog>
         </>
       );
     }
@@ -97,7 +103,7 @@ describe("Modal", () => {
     render(
       <>
         <button>Draußen</button>
-        <Modal
+        <Dialog
           open
           onClose={onClose}
           title="Wirklich?"
@@ -109,7 +115,7 @@ describe("Modal", () => {
           }
         >
           <input aria-label="Feld" />
-        </Modal>
+        </Dialog>
       </>
     );
     const dialog = screen.getByRole("dialog");
@@ -136,9 +142,9 @@ describe("Modal", () => {
 
   it("renders nothing at all when closed", () => {
     render(
-      <Modal open={false} onClose={vi.fn()} title="Wirklich?">
+      <Dialog open={false} onClose={vi.fn()} title="Wirklich?">
         <p>Inhalt</p>
-      </Modal>
+      </Dialog>
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });

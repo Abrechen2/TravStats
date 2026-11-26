@@ -14,6 +14,7 @@ import {
   type IngestToken,
   type IngestTokenKind,
 } from "../../lib/api/travtrackSources";
+import InlineError from "../ui/InlineError";
 
 const NS = "track:sources";
 
@@ -205,11 +206,7 @@ export default function TravTrackSources({
           ))}
         </ul>
       )}
-      {loadError && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
-          {t(loadError)}
-        </p>
-      )}
+      {loadError && <InlineError>{t(loadError)}</InlineError>}
       {status && (
         <p
           className="t-body"

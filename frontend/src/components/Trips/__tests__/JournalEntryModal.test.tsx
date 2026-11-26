@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { useToastStore } from "../../../store/toastStore";
+import { usePageErrorStore } from "../../../store/pageErrorStore";
 
 import JournalEntryModal from "../JournalEntryModal";
 import { tripsApi } from "../../../lib/api";
@@ -235,7 +235,7 @@ describe("JournalEntryModal", () => {
 describe("JournalEntryModal — time model", () => {
   beforeEach(() => {
     useSettingsStore.setState({ openDataEnabled: true });
-    useToastStore.setState({ toasts: [] });
+    usePageErrorStore.getState().clear();
     vi.mocked(tripsApi.createJournalEntry).mockReset();
   });
 
@@ -273,7 +273,7 @@ describe("JournalEntryModal — time model", () => {
     });
     write();
     await waitFor(() =>
-      expect(useToastStore.getState().toasts.map((toast) => toast.message)).toContain(
+      expect(usePageErrorStore.getState().errors.map((toast) => toast.message)).toContain(
         "common:saveErrors.staleBundle"
       )
     );

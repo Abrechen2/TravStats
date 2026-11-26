@@ -18,6 +18,8 @@ import RemoteTripPeople from "./RemoteTripPeople";
 import ShareTripDialog from "./ShareTripDialog";
 import { nameKey } from "./addTraveller";
 import { shareBlockKey, sharingErrorKey } from "./sharingCopy";
+import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const NS = "sharing:people";
 /** The same-person question shares its words with the one for people on other servers. */
@@ -27,11 +29,7 @@ const COMPANION_NS = "sharing:remote.trip.companion";
 type ForTrip<T> = { tripId: string; value: T } | null;
 type Picked = { kind: "share" | "link"; person: TripPerson };
 
-const alertLine = (text: string): JSX.Element => (
-  <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
-    {text}
-  </p>
-);
+const alertLine = (text: string): JSX.Element => <InlineError tone="warning">{text}</InlineError>;
 
 /**
  * "Reisende" on the trip overview (spec 2026-10-16, D9) — the trip's people
@@ -109,7 +107,7 @@ export default function TripPeopleSection({
       changed();
     } catch (error) {
       logger.error("Failed to leave share group:", error);
-      addToast("error", t(sharingErrorKey(error, "sharing:trip.errors.leaveFailed")));
+      reportPageError(t(sharingErrorKey(error, "sharing:trip.errors.leaveFailed")));
     } finally {
       setBusy(false);
     }
@@ -176,7 +174,7 @@ export default function TripPeopleSection({
       changed();
     } catch (error) {
       logger.error("Failed to answer the same-person question:", error);
-      addToast("error", t(sharingErrorKey(error, `${COMPANION_NS}.failed`)));
+      reportPageError(t(sharingErrorKey(error, `${COMPANION_NS}.failed`)));
     } finally {
       setBusy(false);
     }

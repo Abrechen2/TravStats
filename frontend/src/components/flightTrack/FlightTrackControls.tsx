@@ -6,6 +6,7 @@ import { flightsApi } from "../../lib/api";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { useToastStore } from "../../store/toastStore";
+import InlineError from "../ui/InlineError";
 
 /**
  * The flight track upload's refusals (backend `routes/flights/track.ts`,
@@ -177,11 +178,7 @@ export default function FlightTrackControls({
         )}
         <span className="t-caption">{t("flights:track.formats")}</span>
       </div>
-      {error && (
-        <p role="alert" className="text-sm text-(--danger)">
-          {error}
-        </p>
-      )}
+      {error && <InlineError>{error}</InlineError>}
       {pending && (
         <ConfirmModal
           isOpen

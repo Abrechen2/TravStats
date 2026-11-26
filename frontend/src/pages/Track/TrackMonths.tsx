@@ -19,6 +19,7 @@ import { useSettingsStore } from "../../store/settingsStore";
 import TrackCalendar from "./stats/TrackCalendar";
 import TrackKmChart from "./stats/TrackKmChart";
 import { CountryLabel } from "../../lib/countryFlag";
+import InlineError from "../../components/ui/InlineError";
 
 type State =
   { kind: "loading" } | { kind: "failed"; key: string } | { kind: "loaded"; data: TravTrackMonths };
@@ -123,11 +124,7 @@ export default function TrackMonths(): JSX.Element {
       </div>
 
       {state.kind === "loading" && <p className="t-caption">{t("track:months.loading")}</p>}
-      {state.kind === "failed" && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
-          {t(state.key)}
-        </p>
-      )}
+      {state.kind === "failed" && <InlineError>{t(state.key)}</InlineError>}
       {state.kind === "loaded" &&
         (() => {
           const rows = monthRows(state.data);

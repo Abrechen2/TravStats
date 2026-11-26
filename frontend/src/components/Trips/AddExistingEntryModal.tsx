@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useLocale } from "../../hooks/useLocale";
 import { useTranslation } from "../../hooks/useTranslation";
 import { tripsApi } from "../../lib/api/trips";
@@ -16,6 +16,7 @@ import {
 } from "../../lib/trips/attachableEntries";
 import type { DomainKey } from "../../shared/domains";
 import { formatDayLong } from "../../shared/time/calendar";
+import InlineError from "../ui/InlineError";
 
 /** Rows drawn at once. More than this is a search, not a scroll — and it says so. */
 const VISIBLE_ROWS = 100;
@@ -171,7 +172,7 @@ export default function AddExistingEntryModal({ tripId, domains, onClose }: Prop
   const close = (): void => onClose(attached > 0 || outcomeUnknown);
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={close}
       busy={busyId !== null}
@@ -316,13 +317,13 @@ export default function AddExistingEntryModal({ tripId, domains, onClose }: Prop
                       </button>
                     </div>
                     {failure && (
-                      <p role="alert" className="mt-1 text-xs" style={{ color: "var(--ts-bad)" }}>
+                      <InlineError className="mt-1">
                         {t(
                           failure === "timeout"
                             ? "trips:addExisting.attachTimeout"
                             : `trips:addExisting.failure.${failure}`
                         )}
-                      </p>
+                      </InlineError>
                     )}
                   </li>
                 );
@@ -347,6 +348,6 @@ export default function AddExistingEntryModal({ tripId, domains, onClose }: Prop
           </>
         )}
       </>
-    </Modal>
+    </Dialog>
   );
 }

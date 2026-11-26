@@ -17,6 +17,7 @@ import {
   type Size,
 } from "../../lib/coverCrop";
 import { useDialogChrome } from "../ui/useDialogChrome";
+import InlineError from "../ui/InlineError";
 
 const KEY_PAN_PX = 24;
 const KEY_PAN_BIG_PX = 96;
@@ -279,11 +280,7 @@ export default function CoverCropEditor({
           <p id="cover-crop-hint" className="t-caption" style={{ color: "white" }}>
             {t("cover.crop.hint")}
           </p>
-          {error && (
-            <p role="alert" style={{ color: "var(--ts-bad)" }}>
-              {error}
-            </p>
-          )}
+          {error && <InlineError>{error}</InlineError>}
           <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
             <button
               type="button"

@@ -14,6 +14,7 @@ import type {
 } from "../../types/sharingLink";
 import { Button } from "../ui";
 import { shareFieldLabel } from "./noticeValues";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:link";
 const DECISIONS: readonly LinkDecision[] = ["both", "mine", "theirs"];
@@ -223,11 +224,7 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
           </span>
         </div>
       )}
-      {error && (
-        <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
-          {t(error.key, { origin: error.origin ?? "" })}
-        </p>
-      )}
+      {error && <InlineError>{t(error.key, { origin: error.origin ?? "" })}</InlineError>}
     </div>
   );
 }

@@ -14,13 +14,13 @@ vi.mock("../../lib/logger", () => ({
 import { authApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useAuthStore } from "../authStore";
-import { useToastStore } from "../toastStore";
+import { usePageErrorStore } from "../pageErrorStore";
 
 const ME = { id: "user-a", username: "a", isAdmin: false };
 const logout = vi.mocked(authApi.logout);
 
 beforeEach(() => {
-  useToastStore.setState({ toasts: [] });
+  usePageErrorStore.getState().clear();
   logout.mockReset();
   useAuthStore.getState().setAuth(ME);
 });
@@ -31,21 +31,21 @@ describe("authStore.logout when the server cannot end the session", () => {
     await useAuthStore.getState().logout();
     expect(useAuthStore.getState().user).toBeNull();
     expect(logger.error).toHaveBeenCalled();
-    const toasts = useToastStore.getState().toasts;
+    const toasts = usePageErrorStore.getState().errors;
     expect(toasts).toHaveLength(1);
-    expect(toasts[0].type).toBe("error");
+    expect(toasts[0].tone).toBe("error");
   });
 
   it("shows no notice when the server already dropped the session (401)", async () => {
     logout.mockRejectedValueOnce(Object.assign(new Error("no"), { response: { status: 401 } }));
     await useAuthStore.getState().logout({ keepLocalDrafts: true });
     expect(useAuthStore.getState().user).toBeNull();
-    expect(useToastStore.getState().toasts).toHaveLength(0);
+    expect(usePageErrorStore.getState().errors).toHaveLength(0);
   });
 
   it("shows no notice on a clean logout", async () => {
     logout.mockResolvedValueOnce(undefined as never);
     await useAuthStore.getState().logout();
-    expect(useToastStore.getState().toasts).toHaveLength(0);
+    expect(usePageErrorStore.getState().errors).toHaveLength(0);
   });
 });

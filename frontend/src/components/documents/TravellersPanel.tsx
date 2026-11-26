@@ -11,6 +11,7 @@ import {
   type TravellerEntryType,
 } from "../../lib/api/entryTravellers";
 import { logger } from "../../lib/logger";
+import InlineError from "../ui/InlineError";
 
 /**
  * The people on an entry with their OWN facts (plan D7): seat, class, ticket
@@ -175,11 +176,7 @@ export function TravellersPanel({
           </li>
         ))}
       </ul>
-      {error && (
-        <p className="t-caption" role="alert" style={{ color: "var(--ts-warn)" }}>
-          {error}
-        </p>
-      )}
+      {error && <InlineError tone="warning">{error}</InlineError>}
     </section>
   );
 }

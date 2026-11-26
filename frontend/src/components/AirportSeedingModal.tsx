@@ -1,4 +1,4 @@
-import Modal from "./Modal";
+import Dialog from "./ui/Dialog";
 import { useEffect, useState } from "react";
 import { setupApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
@@ -54,7 +54,7 @@ export default function AirportSeedingModal({
   const progressPercent = Math.round(progress * 100);
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={t("setup:airportSeeding.modal.title")}
@@ -122,6 +122,6 @@ export default function AirportSeedingModal({
           )}
         </div>
       </div>
-    </Modal>
+    </Dialog>
   );
 }

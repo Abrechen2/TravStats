@@ -9,7 +9,7 @@ import type { JSX } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import Modal from "../../Modal";
+import Dialog from "../../ui/Dialog";
 import { useDirtyGuard } from "../useDirtyGuard";
 import { useSaveOnce } from "../useSaveOnce";
 
@@ -36,7 +36,7 @@ function ReopenableForm({
   const { dirty } = useDirtyGuard({ name: initialName }, { name }, { open });
   const { save } = useSaveOnce<string>({ open });
   return (
-    <Modal open={open} onClose={onDone} title="Neue Tour" dirty={dirty}>
+    <Dialog open={open} onClose={onDone} title="Neue Tour" dirty={dirty}>
       <span data-testid="dirty">{String(dirty)}</span>
       <input aria-label="Name" value={name} onChange={(e) => setName(e.target.value)} />
       <button
@@ -50,7 +50,7 @@ function ReopenableForm({
       >
         Speichern
       </button>
-    </Modal>
+    </Dialog>
   );
 }
 

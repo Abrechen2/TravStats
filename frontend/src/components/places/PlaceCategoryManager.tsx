@@ -12,6 +12,7 @@ import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { placeCategoryIcon } from "../../lib/placeCategoryDisplay";
 import { PLACE_CATEGORY_ICON_CHOICES, PLACE_CATEGORY_NAME_MAX } from "../../shared/placeCategories";
 import { useToastStore } from "../../store/toastStore";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   /** Called with the new category's name so a form can select it at once. */
@@ -164,11 +165,7 @@ export default function PlaceCategoryManager({ onCreated, onDeleted }: Props): J
           {t("places:customCategories.add")}
         </button>
       </div>
-      {error && (
-        <p role="alert" className="text-xs" style={{ color: "var(--ts-bad)" }}>
-          {error}
-        </p>
-      )}
+      {error && <InlineError>{error}</InlineError>}
     </div>
   );
 }

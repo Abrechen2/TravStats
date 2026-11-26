@@ -37,6 +37,9 @@ import { useSortPrefs } from "../table/useSortPrefs";
 import type { Trip } from "../../types";
 import { stringParam, useQueryState } from "../../hooks/useQueryState";
 import { useScrollRestoreReady } from "../../lib/navigation/scrollMemory";
+import Banner from "../ui/Banner";
+import Button from "../ui/Button";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const INPUT_CLASS =
   "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] pointer-coarse:min-h-(--ts-size-touch-min)";
@@ -181,7 +184,7 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
       await deleteStay(toDelete.lodgingId, toDelete.id);
     } catch (err: unknown) {
       logger.error("LodgingStaysView: stay delete failed", err);
-      addToast("error", t("lodging:stay.deleteError"));
+      reportPageError(t("lodging:stay.deleteError"));
       setDeleting(false);
       setToDelete(null);
       return;
@@ -320,19 +323,17 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
             </select>
           </FilterField>
           {tripsFailed && (
-            <p
-              role="alert"
-              className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--danger)]"
+            <Banner
+              tone="error"
+              className="mt-1"
+              action={
+                <Button variant="secondary" onClick={() => setTripsToken((n) => n + 1)}>
+                  {t("common:buttons.retry")}
+                </Button>
+              }
             >
               {t("lodging:stayView.filter.tripsFailed")}
-              <button
-                type="button"
-                onClick={() => setTripsToken((n) => n + 1)}
-                className="rounded-md border border-[var(--danger)]/50 px-2 py-1 pointer-coarse:min-h-(--ts-size-touch-min)"
-              >
-                {t("common:buttons.retry")}
-              </button>
-            </p>
+            </Banner>
           )}
         </div>
         {hasActiveFilter && (

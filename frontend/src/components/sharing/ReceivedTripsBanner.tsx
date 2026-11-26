@@ -7,6 +7,7 @@ import { logger } from "../../lib/logger";
 import { useReceivedTripsStore } from "../../store/receivedTripsStore";
 import type { ReceivedTripItem } from "../../types/sharing";
 import { Button } from "../ui";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:receivedBanner";
 /** More than this folds into "und N weitere". */
@@ -75,11 +76,7 @@ export default function ReceivedTripsBanner(): JSX.Element | null {
       {items.length > SHOWN && (
         <span className="t-caption">{t(`${NS}.more`, { count: items.length - SHOWN })}</span>
       )}
-      {failed && (
-        <span role="alert" style={{ color: "var(--ts-warn)" }}>
-          {t(`${NS}.seenFailed`)}
-        </span>
-      )}
+      {failed && <InlineError tone="warning">{t(`${NS}.seenFailed`)}</InlineError>}
       {items.some((i) => i.kind === "shared") && (
         <div>
           <Button onClick={() => void dismiss()}>{t(`${NS}.seen`)}</Button>

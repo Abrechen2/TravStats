@@ -1,5 +1,5 @@
 import { useEffect, useState, type JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { copyToClipboard } from "../../lib/clipboard";
 import { formatLocalDate } from "../../lib/format";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -152,7 +152,7 @@ export default function EvidencePanel({
     : 0;
 
   return (
-    <Modal
+    <Dialog
       open={isOpen}
       onClose={close}
       title={title}
@@ -249,6 +249,6 @@ export default function EvidencePanel({
           ))}
         </ul>
       )}
-    </Modal>
+    </Dialog>
   );
 }

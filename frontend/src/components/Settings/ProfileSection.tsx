@@ -1,4 +1,5 @@
 import DateField from "../ui/DateField";
+import InlineError from "../ui/InlineError";
 import React from "react";
 import { SectionCard } from "./SettingsShared";
 import HelpIcon from "../Help/HelpIcon";
@@ -36,6 +37,7 @@ interface ProfileSectionProps {
     lastName?: string | null;
   };
   uploadingProfilePicture: boolean;
+  avatarError?: string | null;
   removingProfilePicture: boolean;
   onAvatarUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onAvatarDelete: () => void;
@@ -82,6 +84,7 @@ function BirthdateField({
 export default function ProfileSection({
   profile,
   uploadingProfilePicture,
+  avatarError,
   removingProfilePicture,
   onAvatarUpload,
   onAvatarDelete,
@@ -218,6 +221,7 @@ export default function ProfileSection({
                   : t("settings:profile.removeAvatar", { defaultValue: "Remove picture" })}
               </button>
             )}
+            {avatarError && <InlineError>{avatarError}</InlineError>}
           </div>
         )}
       </div>

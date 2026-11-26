@@ -16,6 +16,7 @@ import SecretOnce from "./SecretOnce";
 import PluginMaintenanceDialog from "./PluginMaintenanceDialog";
 import PluginListSwitch from "./PluginListSwitch";
 import type { PluginListState } from "../../../lib/api/suggestionPlugins";
+import InlineError from "../../ui/InlineError";
 
 const NS = "suggestionSources:plugins";
 const MAX_BACKFILL_DAYS = 90;
@@ -235,7 +236,7 @@ export default function PluginCard({
       )}
       {secret && <SecretOnce secret={secret} onDone={() => setSecret(null)} />}
       {maintenance.error && (
-        <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
+        <InlineError>
           {t(`${NS}.maintenance.helloFailed`)}:{" "}
           {t(
             `suggestionSources:${
@@ -244,7 +245,7 @@ export default function PluginCard({
                 : pluginFailureKey(maintenance.error)
             }`
           )}
-        </p>
+        </InlineError>
       )}
       <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
         <Button disabled={disabled || busy} onClick={() => void test()}>

@@ -1,4 +1,4 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -24,7 +24,7 @@ export default function CreateLinkInviteModal({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={creating}
@@ -74,6 +74,6 @@ export default function CreateLinkInviteModal({
           ))}
         </fieldset>
       </form>
-    </Modal>
+    </Dialog>
   );
 }

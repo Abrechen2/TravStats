@@ -8,6 +8,8 @@
   "buttons": {
     "save": "Speichern",
     "cancel": "Abbrechen",
+    "dismiss": "Meldung ausblenden",
+    "undo": "Rückgängig",
     "delete": "Löschen",
     "duplicate": "Duplizieren",
     "edit": "Bearbeiten",

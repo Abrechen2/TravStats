@@ -5,7 +5,7 @@ import DemoLockedNotice from "../Settings/DemoLockedNotice";
 import ConfirmModal from "../ui/ConfirmModal";
 import DetailSection from "../ui/DetailSection";
 import { Icon } from "../ui/Icon";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import OverflowMenu, { type OverflowEntry } from "../ui/OverflowMenu";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -26,6 +26,7 @@ import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { useDisplayFormat, type DisplayFormatter } from "../../lib/format";
 import { formatBytes } from "../../lib/fileSize";
 import { logger } from "../../lib/logger";
+import { toast } from "../../store/toastStore";
 import type { ExtractTarget } from "../../lib/extractValues";
 import { DOCUMENT_FORMAT_ICON, exceededDocumentLimit } from "./documentDisplay";
 import { ExtractValuesDialog } from "./ExtractValuesAction";
@@ -37,6 +38,7 @@ import { useEntryTravellers } from "../../hooks/useEntryTravellers";
 import { isTravellerEntryType } from "../../lib/api/entryTravellers";
 import LinkDocumentDialog from "./LinkDocumentDialog";
 import TripDocumentDialog from "./TripDocumentDialog";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   /** Which record these documents hang off. One of the five the API serves. */
@@ -148,9 +150,11 @@ export default function DocumentsSection({
     doc: TravelDocument;
   } | null>(null);
   /** The last removal from this entry, which "Rückgängig" puts back. */
-  const [undo, setUndo] = useState<{ doc: TravelDocument; removed: RemovedDocumentLink } | null>(
-    null
-  );
+  const undoToastRef = useRef<string | null>(null);
+  const dropUndo = useCallback((): void => {
+    if (undoToastRef.current) toast.dismiss(undoToastRef.current);
+    undoToastRef.current = null;
+  }, []);
   /** The category the next upload is filed under (rental evidence only). */
   const [uploadCategory, setUploadCategory] = useState<RentalDocumentCategory | null>(null);
   /** A remark about the last upload that is not a failure. */
@@ -335,14 +339,18 @@ export default function DocumentsSection({
   const handleUnlink = useCallback(
     async (doc: TravelDocument): Promise<void> => {
       setBusy(true);
-      setUndo(null);
+      dropUndo();
       try {
         const removed = await documentsApi.unlinkFromEntry(doc.id, {
           type: entryType,
           id: entryId,
         });
         setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
-        setUndo({ doc, removed });
+        undoToastRef.current = toast.undoable({
+          label: t("documents:links.unlinked", { name: doc.displayName }),
+          undoLabel: t("documents:links.undo"),
+          onUndo: () => void handleUndoRef.current(doc, removed),
+        });
         setError(null);
         onChanged?.();
       } catch (err: unknown) {
@@ -357,33 +365,35 @@ export default function DocumentsSection({
         setBusy(false);
       }
     },
-    [entryType, entryId, onChanged, reload, t]
+    [entryType, entryId, onChanged, reload, t, dropUndo]
   );
 
-  const handleUndo = useCallback(async (): Promise<void> => {
-    if (!undo) return;
-    setBusy(true);
-    try {
-      await documentsApi.addLinks(undo.doc.id, [
-        {
-          entry: undo.removed.entry,
-          role: undo.removed.role,
-          provenance: undo.removed.provenance,
-          rentalCategory: undo.removed.rentalCategory,
-        },
-      ]);
-      setUndo(null);
-      setError(null);
-      await reload();
-      onChanged?.();
-    } catch (err: unknown) {
-      logger.error({ err, id: undo.doc.id }, "DocumentsSection: undo failed");
-      setUndo(null);
-      setError(t(linkErrorKey(err)));
-    } finally {
-      setBusy(false);
-    }
-  }, [undo, reload, onChanged, t]);
+  const handleUndo = useCallback(
+    async (doc: TravelDocument, removed: RemovedDocumentLink): Promise<void> => {
+      setBusy(true);
+      try {
+        await documentsApi.addLinks(doc.id, [
+          {
+            entry: removed.entry,
+            role: removed.role,
+            provenance: removed.provenance,
+            rentalCategory: removed.rentalCategory,
+          },
+        ]);
+        setError(null);
+        await reload();
+        onChanged?.();
+      } catch (err: unknown) {
+        logger.error({ err, id: doc.id }, "DocumentsSection: undo failed");
+        setError(t(linkErrorKey(err)));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [reload, onChanged, t]
+  );
+  const handleUndoRef = useRef(handleUndo);
+  handleUndoRef.current = handleUndo;
 
   const handleDelete = useCallback(async (): Promise<void> => {
     if (!pendingDelete) return;
@@ -391,7 +401,7 @@ export default function DocumentsSection({
     setBusy(true);
     try {
       await documentsApi.remove(id);
-      setUndo(null);
+      dropUndo();
       setDocuments((prev) => prev.filter((doc) => doc.id !== id));
       setError(null);
       onChanged?.();
@@ -410,7 +420,7 @@ export default function DocumentsSection({
       setPendingDelete(null);
       setBusy(false);
     }
-  }, [pendingDelete, t, onChanged]);
+  }, [pendingDelete, t, onChanged, dropUndo]);
 
   const locked = isSharedDemo || demoRefused;
 
@@ -528,11 +538,7 @@ export default function DocumentsSection({
 
   const body = (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-      {loadFailed && (
-        <p className="t-caption" role="alert" style={{ color: "var(--ts-warn)" }}>
-          {t("documents:loadFailed")}
-        </p>
-      )}
+      {loadFailed && <InlineError tone="warning">{t("documents:loadFailed")}</InlineError>}
 
       {/* Three states, not two. A failed load is neither "here they are" nor
           "there are none": the list is drawn only when there IS one, and the
@@ -572,36 +578,7 @@ export default function DocumentsSection({
           {notice}
         </p>
       )}
-      {undo !== null && (
-        <p
-          className="t-caption flex flex-wrap items-center"
-          role="status"
-          style={{ gap: "var(--ts-space-md)" }}
-          data-testid="documents-undo"
-        >
-          {t("documents:links.unlinked", { name: undo.doc.displayName })}
-          <button
-            type="button"
-            onClick={() => void handleUndo()}
-            disabled={busy}
-            className="text-sm underline pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-2"
-            style={{
-              background: "none",
-              border: "none",
-              padding: 0,
-              cursor: "pointer",
-              color: "var(--ts-text-bright)",
-            }}
-          >
-            {t("documents:links.undo")}
-          </button>
-        </p>
-      )}
-      {error !== null && (
-        <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-          {error}
-        </p>
-      )}
+      {error !== null && <InlineError>{error}</InlineError>}
 
       {locked ? (
         <DemoLockedNotice />
@@ -664,9 +641,7 @@ export default function DocumentsSection({
       )}
 
       {isTravellerEntryType(entryType) && people.failed && (
-        <p className="t-caption" role="alert" style={{ color: "var(--ts-warn)" }}>
-          {t("documents:travellers.loadFailed")}
-        </p>
+        <InlineError tone="warning">{t("documents:travellers.loadFailed")}</InlineError>
       )}
       {isTravellerEntryType(entryType) && (
         <TravellersPanel
@@ -720,7 +695,7 @@ export default function DocumentsSection({
         />
       )}
       {rowDialog?.kind === "category" && (
-        <Modal
+        <Dialog
           open
           onClose={() => setRowDialog(null)}
           maxWidth={360}
@@ -738,7 +713,7 @@ export default function DocumentsSection({
               void handleCategory(doc, next);
             }}
           />
-        </Modal>
+        </Dialog>
       )}
       {rowDialog?.kind === "person" && (
         <DocumentPersonDialog

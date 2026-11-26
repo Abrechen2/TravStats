@@ -17,6 +17,7 @@ import Button from "../../ui/Button";
 import type { InboxAction } from "./FlagQuickEditor";
 import { useToastStore } from "../../../store/toastStore";
 import { W } from "./model";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 const NS = "dataQuality:inbox.photoJourneys";
 
@@ -67,7 +68,7 @@ export default function PhotoProposalCard({
         if (outcome?.kind === "linked" && outcome.linked > 0)
           addToast("success", t(`${NS}.messages.photosLinked`, { count: outcome.linked }));
         else if (outcome?.kind === "failed")
-          addToast("warning", t(`${NS}.messages.photosNotLinked`));
+          reportPageError(t(`${NS}.messages.photosNotLinked`), "warning");
       } catch {
         setNotice(t(`${W}.photoLinkFailed`));
         throw new Error("Photo link failed");

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState, type JSX } from "react";
+import { toast } from "../../../store/toastStore";
+import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
 import { useDisplayFormat } from "../../../lib/format";
-import Modal from "../../Modal";
+import Dialog from "../../ui/Dialog";
 import Button from "../../ui/Button";
 import { Switch } from "../../ui/Field";
 import {
@@ -15,6 +16,7 @@ import {
 import MaintenanceMap from "./MaintenanceMap";
 import { archiveUndoRequest, archiveWriteRequest } from "../../inbox/plugins/archiveConfirm";
 import MaintenanceRowCard, { type Choice } from "./MaintenanceRowCard";
+import InlineError from "../../ui/InlineError";
 
 const NS = "suggestionSources:plugins.maintenance";
 const PAGE_SIZE = 50;
@@ -80,6 +82,20 @@ export default function PluginMaintenanceDialog({
     if (open) void reload();
   }, [open, reload]);
 
+  // The offer ends with the dialog: a failed undo would have no surface to say so.
+  const undoToast = useRef<string | null>(null);
+  useEffect(() => {
+    if (open) return;
+    if (undoToast.current) toast.dismiss(undoToast.current);
+    undoToast.current = null;
+  }, [open]);
+  useEffect(
+    () => () => {
+      if (undoToast.current) toast.dismiss(undoToast.current);
+    },
+    []
+  );
+
   const act = async (work: () => Promise<string>) => {
     setBusy(true);
     setLine(null);
@@ -111,12 +127,22 @@ export default function PluginMaintenanceDialog({
     )
       return;
     await act(async () => {
-      await suggestionPluginsApi.applyLocation(plugin.id, {
+      const applied = await suggestionPluginsApi.applyLocation(plugin.id, {
         rowId: row.rowId,
         lat: choice.lat,
         lon: choice.lon,
         ...(street ? { street } : {}),
         source: choice.source,
+      });
+      if (undoToast.current) toast.dismiss(undoToast.current);
+      undoToast.current = toast.undoable({
+        label: t(`${NS}.applied`, { name: row.name }),
+        undoLabel: t(`${NS}.undo`),
+        onUndo: () =>
+          void act(async () => {
+            await suggestionPluginsApi.undoLocation(plugin.id, applied.undoId);
+            return t(`${NS}.undone`, { name: row.name });
+          }),
       });
       return t(`${NS}.applied`, { name: row.name });
     });
@@ -130,7 +156,7 @@ export default function PluginMaintenanceDialog({
   const current = list?.rows.find((r) => r.rowId === selected) ?? null;
 
   return (
-    <Modal
+    <Dialog
       open={open}
       onClose={onClose}
       title={t(`${NS}.title`, { name: plugin.name })}
@@ -143,9 +169,7 @@ export default function PluginMaintenanceDialog({
         {load.status === "loading" && <p className="t-caption">{t(`${NS}.loading`)}</p>}
         {load.status === "failed" && (
           <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
-            <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-              {t(`suggestionSources:${load.key}`)}
-            </p>
+            <InlineError>{t(`suggestionSources:${load.key}`)}</InlineError>
             <Button onClick={() => void reload()}>{t(`${NS}.reload`)}</Button>
           </div>
         )}
@@ -319,6 +343,6 @@ export default function PluginMaintenanceDialog({
         )}
       </div>
       {confirmDialog}
-    </Modal>
+    </Dialog>
   );
 }

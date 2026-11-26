@@ -11,6 +11,7 @@ import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import type { StoredRoadtripVehicle } from "../../shared/tour/roadtrip";
 import { useDomainVisible } from "../../hooks/useDomainVisible";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   routeId: string;
@@ -78,7 +79,7 @@ export function RoadtripRailConversion({
       }
     } catch (err) {
       logger.error("Failed to convert the roadtrip into rail journeys", err);
-      addToast("error", t("rail:roadtripConversion.error"));
+      reportPageError(t("rail:roadtripConversion.error"));
     } finally {
       setSaving(false);
     }

@@ -15,6 +15,7 @@ import { PanelHeader } from "./TripDetailPanels";
 import RowMenu from "../table/RowMenu";
 import TableScroll from "../ui/TableScroll";
 import { PackageBookingCard } from "../bookings/PackageBookingCard";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   trip: Trip;
@@ -118,7 +119,7 @@ export function TripBookingsPanel({
       onChanged();
     } catch (err) {
       logger.error("Failed to delete booking", err);
-      addToast("error", t("errors:generic"));
+      reportPageError(t("errors:generic"));
     }
   };
 

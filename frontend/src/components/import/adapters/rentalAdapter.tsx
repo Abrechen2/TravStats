@@ -9,6 +9,7 @@ import { RentalImportPreviewModal } from "../../rental/RentalImportPreviewModal"
 import type { DomainImportAdapter, ReviewModalProps } from "../types";
 import type { RentalDeadlineField } from "../../../lib/api/rental";
 import { describeRentalImportSaved } from "../../../lib/rental/rentalImportResult";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 type RentalParse = ParseEmailRentalResult | ParsePdfRentalResult;
 
@@ -60,7 +61,7 @@ export function useRentalImportAdapter(): DomainImportAdapter {
     renderReviewModal: (props) => (
       <RentalReviewSlot
         {...props}
-        onEmpty={(message) => addToast("error", message)}
+        onEmpty={(message) => reportPageError(message)}
         onDone={(filled) => addToast("success", describeRentalImportSaved(filled, t))}
       />
     ),

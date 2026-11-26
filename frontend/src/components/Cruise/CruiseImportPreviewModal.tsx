@@ -25,7 +25,7 @@ import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { cruiseStopToWire } from "./cruiseStopWire";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { deriveCruiseStatus } from "../../shared/statusDerivation";
 import { ShipPicker } from "./ShipPicker";
 import CatalogueCombobox from "../FlightForm/fields/CatalogueCombobox";
@@ -42,6 +42,7 @@ import { CruiseImportFlightGap } from "./CruiseImportFlightGap";
 import { CruiseReimportCompare } from "./CruiseReimportCompare";
 import type { ReimportConflict, ReimportSummary } from "./CruiseReimportCompare";
 import Toggletip from "../ui/Toggletip";
+import { reportPageError } from "../../store/pageErrorStore";
 
 export { deriveTripMeta } from "./cruiseImportEntry";
 
@@ -108,12 +109,12 @@ export function CruiseImportPreviewModal({
 
   const handleSave = async (): Promise<void> => {
     if (entryData.some((e) => e.priceInvalid)) {
-      addToast("error", t("cruise:form.errors.price"));
+      reportPageError(t("cruise:form.errors.price"));
       return;
     }
     const timeError = entryData.find((e) => e.timeError)?.timeError;
     if (timeError) {
-      addToast("error", saveErrorMessage(timeError, t, "cruise:import.saveError"));
+      reportPageError(saveErrorMessage(timeError, t, "cruise:import.saveError"));
       return;
     }
     setSaving(true);
@@ -130,7 +131,7 @@ export function CruiseImportPreviewModal({
       else afterComparison();
     } catch (err: unknown) {
       logger.error("CruiseImportPreviewModal: save failed", err);
-      addToast("error", saveErrorMessage(err, t, "cruise:import.saveError"));
+      reportPageError(saveErrorMessage(err, t, "cruise:import.saveError"));
     } finally {
       setSaving(false);
     }
@@ -156,11 +157,11 @@ export function CruiseImportPreviewModal({
       );
     }
     if (stillMissing > 0) {
-      addToast("warning", t("cruise:flightGap.leftOut", { count: stillMissing }));
+      reportPageError(t("cruise:flightGap.leftOut", { count: stillMissing }), "warning");
     }
     void Promise.resolve(onSaved()).catch((err: unknown) => {
       logger.error("CruiseImportPreviewModal: finishing the import failed", err);
-      addToast("error", saveErrorMessage(err, t, "cruise:import.saveError"));
+      reportPageError(saveErrorMessage(err, t, "cruise:import.saveError"));
     });
   };
 
@@ -192,7 +193,7 @@ export function CruiseImportPreviewModal({
           onDone={({ added, stillMissing }) => finish(added, stillMissing)}
         />
       )}
-      <Modal
+      <Dialog
         open
         onClose={onCancel}
         busy={saving}
@@ -258,7 +259,7 @@ export function CruiseImportPreviewModal({
             )}
           </div>
         )}
-      </Modal>
+      </Dialog>
     </>
   );
 }

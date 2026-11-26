@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { LocationInput } from "../location/LocationInput";
 import type { Lodging } from "../../types/lodging";
 import type { NearbyOrigin } from "./placesNearbyModel";
+import InlineError from "../ui/InlineError";
 
 const COARSE = "pointer-coarse:min-h-(--ts-size-touch-min)";
 
@@ -191,9 +192,7 @@ export function NearbyOriginPicker({
               : t("places:nearby.origin.deviceUse")}
           </button>
           {(device === "denied" || device === "unavailable") && (
-            <p role="alert" style={{ color: "var(--ts-warn)" }}>
-              {t(`places:nearby.origin.device_${device}`)}
-            </p>
+            <InlineError tone="warning">{t(`places:nearby.origin.device_${device}`)}</InlineError>
           )}
         </div>
       )}

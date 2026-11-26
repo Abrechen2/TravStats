@@ -9,7 +9,7 @@ import { clearStopIdentityCache } from "../lib/travtrackStopIdentity";
 import { clearAllStationDrafts } from "../lib/roadtrip/stationDraftStore";
 import { clearBahnHandoff } from "../lib/rail/bahnHandoff";
 import i18n from "../i18n/config";
-import { useToastStore } from "./toastStore";
+import { reportPageError } from "./pageErrorStore";
 
 interface AuthState {
   user: User | null;
@@ -81,7 +81,7 @@ export const useAuthStore = create<AuthState>()(
             // already having dropped it (an expired session), nothing to warn about.
             const status = (error as { response?: { status?: number } })?.response?.status;
             if (status !== 401) {
-              useToastStore.getState().addToast("error", i18n.t("errors:logoutServerFailed"), 8000);
+              reportPageError(i18n.t("errors:logoutServerFailed"));
             }
           } finally {
             // Clear local user state regardless of API result

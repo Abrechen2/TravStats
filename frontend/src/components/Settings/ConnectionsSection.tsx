@@ -25,6 +25,7 @@ import ConnectionSwitchesForm, { theirsSummary } from "./ConnectionSwitchesForm"
 import RemotePersonStats from "./RemotePersonStats";
 import RemotePersonAchievements from "./RemotePersonAchievements";
 import RemotePlanInvitations from "../sharing/RemotePlanInvitations";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:remote.connections";
 
@@ -221,9 +222,7 @@ export default function ConnectionsSection(): JSX.Element | null {
           </SettingItem>
         </SettingRows>
         {failure && !editing && !ending && (
-          <p role="alert" style={{ color: "var(--ts-warn)" }}>
-            {t(failure.key, { origin: failure.origin })}
-          </p>
+          <InlineError tone="warning">{t(failure.key, { origin: failure.origin })}</InlineError>
         )}
         {notice && <p role="status">{notice}</p>}
 
@@ -342,9 +341,7 @@ export default function ConnectionsSection(): JSX.Element | null {
               disabled={busy}
             />
             {failure && (
-              <p role="alert" style={{ color: "var(--ts-warn)" }}>
-                {t(failure.key, { origin: failure.origin })}
-              </p>
+              <InlineError tone="warning">{t(failure.key, { origin: failure.origin })}</InlineError>
             )}
           </div>
         )}

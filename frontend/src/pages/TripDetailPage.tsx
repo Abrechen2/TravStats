@@ -55,6 +55,7 @@ import {
   StopCard,
   dotColor,
 } from "../components/Trips/TimelineEventCards";
+import { reportPageError } from "../store/pageErrorStore";
 
 // Re-exported so the cabin-label tests keep importing it from the page.
 export { cabinLabel } from "../components/Trips/TimelineEventCards";
@@ -122,7 +123,7 @@ export default function TripDetailPage(): JSX.Element {
       setTrip(data);
     } catch (err) {
       logger.warn("Failed to load trip", err);
-      addToast("error", t("trips:toasts.loadError"));
+      reportPageError(t("trips:toasts.loadError"));
       navigate("/trips");
     } finally {
       setLoading(false);
@@ -143,7 +144,7 @@ export default function TripDetailPage(): JSX.Element {
       addToast("success", t("trips:toasts.deleted"));
       navigate("/trips");
     } catch {
-      addToast("error", t("trips:toasts.deleteError"));
+      reportPageError(t("trips:toasts.deleteError"));
       setConfirmDelete(false);
     }
   };
@@ -354,12 +355,12 @@ function TimelineTab({ trip, onChanged, t, language, placeVisits }: TimelineTabP
   useEditDeepLink(EDIT_PARAM.editStop, true, (stopId) => {
     const stop = trip.stops?.find((s) => s.id === stopId);
     if (stop) setEditingStop(stop);
-    else addToast("error", t("trips:detail.stopNotFound"));
+    else reportPageError(t("trips:detail.stopNotFound"));
   });
   useEditDeepLink(EDIT_PARAM.editJournal, true, (entryId) => {
     const entry = trip.journalEntries?.find((j) => j.id === entryId);
     if (entry) setEditingJournal(entry);
-    else addToast("error", t("trips:detail.journalEntryNotFound"));
+    else reportPageError(t("trips:detail.journalEntryNotFound"));
   });
   const events = useMemo<TimelineEvent[]>(
     () => buildTimelineEvents(trip, placeVisits, tripNotes.notes),
@@ -391,7 +392,7 @@ function TimelineTab({ trip, onChanged, t, language, placeVisits }: TimelineTabP
       addToast("success", t("trips:detail.timeline.deletedJournal"));
       onChanged();
     } catch {
-      addToast("error", t("trips:toasts.deleteError"));
+      reportPageError(t("trips:toasts.deleteError"));
     }
   };
 
@@ -403,7 +404,7 @@ function TimelineTab({ trip, onChanged, t, language, placeVisits }: TimelineTabP
       addToast("success", t("trips:detail.timeline.deletedStop"));
       onChanged();
     } catch {
-      addToast("error", t("trips:toasts.deleteError"));
+      reportPageError(t("trips:toasts.deleteError"));
     }
   };
 

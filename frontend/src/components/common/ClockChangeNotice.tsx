@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { classifyWallClock } from "../../shared/time";
 import type { Fold } from "../../lib/api/timeInput";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   /** The typed wall clock, `YYYY-MM-DDTHH:mm`; empty says nothing. */
@@ -31,11 +32,7 @@ export function ClockChangeNotice({ local, zone, fold, onFoldChange }: Props): J
   if (!local || !zone) return null;
   const kind = classifyWallClock(local, zone);
   if (kind === "gap") {
-    return (
-      <p role="alert" className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
-        {t("common:clockChange.gap")}
-      </p>
-    );
+    return <InlineError className="mt-1">{t("common:clockChange.gap")}</InlineError>;
   }
   if (kind !== "repeated") return null;
   return (

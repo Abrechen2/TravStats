@@ -1,4 +1,4 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import CoverCropHost from "./CoverCropHost";
 import { useGapPrefill } from "../../hooks/useGapPrefill";
 import { gapPrefill } from "../../lib/gapCalendar";
@@ -23,6 +23,7 @@ import { TripPlacesError } from "./TripPlacesStatus";
 import Button from "../ui/Button";
 import OverflowMenu from "../ui/OverflowMenu";
 import PageHeader from "../ui/PageHeader";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /** What the list is narrowed to; the SERVER applies it, so a trip past the page cap is found. */
 export interface TripsFilters {
@@ -150,7 +151,7 @@ export default function TripsTab({
       // A merge moves the visits to the surviving trip.
       placeCounts.reload();
     } catch {
-      addToast("error", t("trips:merge.error"));
+      reportPageError(t("trips:merge.error"));
     }
   };
 
@@ -469,7 +470,7 @@ function MergeConfirmModal({
   const [name, setName] = useState(defaultName);
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onCancel}
       title={`${t("trips:merge.title")} (${t("trips:merge.selected", { count })})`}
@@ -519,7 +520,7 @@ function MergeConfirmModal({
           }}
         />
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

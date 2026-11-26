@@ -8,6 +8,7 @@ import { LIST_COLOR_NAMES, LIST_PALETTE_HEX } from "../../lib/listPalette";
 import { paletteColorForRoadtrip } from "../../lib/roadtripColor";
 import { saveErrorKey } from "../../lib/saveErrorMessage";
 import type { TourRoute } from "../../types/tour";
+import InlineError from "../ui/InlineError";
 
 /**
  * A roadtrip's own map colour (GitHub #408). Its own page always draws it in it
@@ -77,11 +78,7 @@ export default function RoadtripColorField({
       <p className="t-caption" style={{ margin: 0 }} data-testid="roadtrip-color-used-on">
         {t("roadtrips:mapColor.usedOn")}
       </p>
-      {errorKey && (
-        <p role="alert" className="text-sm text-(--danger)" data-testid="roadtrip-color-error">
-          {t(errorKey)}
-        </p>
-      )}
+      {errorKey && <InlineError testId="roadtrip-color-error">{t(errorKey)}</InlineError>}
     </div>
   );
 }

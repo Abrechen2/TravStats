@@ -18,6 +18,7 @@ import type { Cruise } from "../../../types/cruise";
 import type { Lodging } from "../../../types/lodging";
 import type { Place } from "../../../types/place";
 import { selectFeedItem, type FeedSelectOutcome } from "./activityFeedSelect";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 /** The list is 320px wide beside the map from 640px up, and covers the map below that. */
 export const ACTIVITY_PANEL_WIDTH = 320;
@@ -76,7 +77,7 @@ export function useActivityFeedSelection(options: Options): {
           t("dashboard:sidebar.focusSwitchedOn", { domain: t(`common:domain.${item.domain}`) })
         );
       } else if (outcome === "notLoaded") {
-        addToast("warning", t("dashboard:sidebar.focusNotLoaded"));
+        reportPageError(t("dashboard:sidebar.focusNotLoaded"), "warning");
       } else if (outcome === "unplaced") {
         addToast("info", t("dashboard:sidebar.focusUnplaced"));
       }
@@ -112,7 +113,7 @@ export function useActivityFeedSelection(options: Options): {
         (err: unknown) => {
           if (click !== latestClick.current) return;
           logger.warn("activity feed row could not be opened", err);
-          addToast("error", t("dashboard:sidebar.focusFailed"));
+          reportPageError(t("dashboard:sidebar.focusFailed"));
         }
       );
     },
@@ -130,7 +131,6 @@ export function useActivityFeedSelection(options: Options): {
       focus,
       colorOf,
       say,
-      addToast,
       t,
     ]
   );

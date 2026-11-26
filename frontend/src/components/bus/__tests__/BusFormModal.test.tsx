@@ -84,7 +84,7 @@ vi.mock("../../../lib/api/bus", () => ({
 }));
 
 import { BusFormModal } from "../BusFormModal";
-import { useToastStore } from "../../../store/toastStore";
+import { usePageErrorStore } from "../../../store/pageErrorStore";
 import type { BusJourney } from "../../../types/bus";
 import { rideFixture } from "./busFixture";
 
@@ -649,7 +649,7 @@ describe("BusFormModal", () => {
       await settle();
     };
 
-    beforeEach(() => useToastStore.getState().clearToasts());
+    beforeEach(() => usePageErrorStore.getState().clear());
 
     it("says once, plainly, that this instance has no routing provider", async () => {
       routingMock.mockResolvedValue({ configured: false, providerId: null });
@@ -672,9 +672,9 @@ describe("BusFormModal", () => {
         fallback: "rate_limited",
       };
       await saveNewRide();
-      const toasts = useToastStore.getState().toasts;
+      const toasts = usePageErrorStore.getState().errors;
       expect(toasts).toHaveLength(1);
-      expect(toasts[0].type).toBe("warning");
+      expect(toasts[0].tone).toBe("warning");
       expect(toasts[0].message).toContain("bus:routing.savedStraight");
     });
 
@@ -685,7 +685,7 @@ describe("BusFormModal", () => {
         fallback: "provider_error",
       };
       await saveNewRide();
-      expect(useToastStore.getState().toasts[0].message).toContain("bus:routing.savedKept");
+      expect(usePageErrorStore.getState().errors[0].message).toContain("bus:routing.savedKept");
     });
 
     it("does not repeat 'no provider' as a toast on every save — the form said it already", async () => {
@@ -695,7 +695,7 @@ describe("BusFormModal", () => {
         fallback: "no_provider",
       };
       await saveNewRide();
-      expect(useToastStore.getState().toasts).toHaveLength(0);
+      expect(usePageErrorStore.getState().errors).toHaveLength(0);
     });
   });
 });

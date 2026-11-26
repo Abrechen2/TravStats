@@ -1,7 +1,7 @@
 import DateField from "../../components/ui/DateField";
 import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTodayZone } from "../../hooks/useTodayZone";
 import { formatDayLong, todayIn } from "../../shared/time";
@@ -35,6 +35,7 @@ import {
   visitPayload,
   type VisitDateMode,
 } from "./visitDialogModel";
+import InlineError from "../ui/InlineError";
 
 const COARSE = "pointer-coarse:min-h-(--ts-size-touch-min)";
 const DATE_ID = "visit-dialog-date";
@@ -222,7 +223,7 @@ export function VisitDialog({
   const partial = stored !== null && photoFailure !== null;
 
   return (
-    <Modal
+    <Dialog
       open
       // Once the visit is stored, every way out is "continue without the
       // photo": the caller must learn of the visit.
@@ -246,13 +247,9 @@ export function VisitDialog({
           </>
         ) : partial && stored !== null && photoFailure !== null ? (
           <>
-            <p
-              role="alert"
-              className="mr-auto self-center text-sm"
-              style={{ color: "var(--ts-warn)" }}
-            >
+            <InlineError tone="warning" className="mr-auto self-center">
               {t("places:visit.savedPhotoFailed", { reason: t(photoFailure) })}
-            </p>
+            </InlineError>
             {/* Only where asking again can help (review M3): a demo account or
                 an unsupported file is refused identically every time. */}
             {isTransientSaveError(photoFailure) && (
@@ -481,7 +478,7 @@ export function VisitDialog({
           }
         />
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

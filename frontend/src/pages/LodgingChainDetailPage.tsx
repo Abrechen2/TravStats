@@ -22,6 +22,7 @@ import { LOYALTY_SETTINGS_PATH } from "./Settings/settingsModel";
 import type { Lodging, LodgingChainDetail } from "../types/lodging";
 import { useDomainColors } from "../hooks/useDomainColors";
 import BackLink from "../components/navigation/BackLink";
+import Banner from "../components/ui/Banner";
 
 /**
  * Chain detail page (collaborator request): click a chain name anywhere it
@@ -109,9 +110,9 @@ export default function LodgingChainDetailPage(): JSX.Element {
           <BackLink to="/lodging" className="ts-back-link text-sm text-[var(--text-muted)]">
             ← {t("lodging:list.title")}
           </BackLink>
-          <div className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]">
+          <Banner tone="error" className="mt-4">
             {t("lodging:chainDetail.notFound")}
-          </div>
+          </Banner>
         </div>
       </AppShell>
     );

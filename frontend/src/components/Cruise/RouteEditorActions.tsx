@@ -1,5 +1,6 @@
 import type { TFn } from "../map/cards/cardChrome";
 import { isDirty, isEndpoint, type RouteEditorState } from "./routeEditorState";
+import InlineError from "../ui/InlineError";
 
 export const BAR_BUTTON =
   "rounded-md border border-border px-2 py-1 text-xs text-(--text-muted) hover:bg-(--bg-surface) disabled:opacity-50";
@@ -52,9 +53,7 @@ export function RouteEditorActions({
         </span>
       )}
       {saveError && (
-        <span className="mr-auto text-sm text-(--danger)">
-          {t("cruise:routeEditor.saveFailed")}
-        </span>
+        <InlineError className="mr-auto">{t("cruise:routeEditor.saveFailed")}</InlineError>
       )}
       {editMode && (
         <div className="flex" role="group" aria-label={t("cruise:routeEditor.tool")}>

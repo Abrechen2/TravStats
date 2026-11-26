@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 import Button from "../ui/Button";
 import { Field } from "../ui/Field";
-import { token } from "../ui/tokens";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import {
@@ -13,6 +12,7 @@ import {
   type DawarichCopyState,
   type DawarichCopyTotals,
 } from "../../lib/api/travtrackDawarichCopy";
+import InlineError from "../ui/InlineError";
 
 const NS = "track:dawarichCopy";
 
@@ -220,16 +220,8 @@ export default function TravTrackDawarichCopy({
           </div>
         )}
 
-      {loadError && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
-          {t(loadError)}
-        </p>
-      )}
-      {refusal && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
-          {t(refusal)}
-        </p>
-      )}
+      {loadError && <InlineError>{t(loadError)}</InlineError>}
+      {refusal && <InlineError>{t(refusal)}</InlineError>}
     </>
   );
 }

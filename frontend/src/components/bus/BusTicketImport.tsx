@@ -5,6 +5,7 @@ import Button from "../ui/Button";
 import { useTranslation } from "../../hooks/useTranslation";
 import { api } from "../../lib/api/client";
 import { busApi, type BusTicketPreview, type BusTicketProposal } from "../../lib/api/bus";
+import InlineError from "../ui/InlineError";
 
 /** The proposal fields the bus form takes, in the order the review lists them. */
 export const BUS_TICKET_FIELDS = [
@@ -127,11 +128,7 @@ export function BusTicketImport({
           {t(busy ? "bus:import.reading" : "bus:import.read")}
         </Button>
         {documentId && <p className="t-caption">{t("bus:import.retained")}</p>}
-        {error && (
-          <p role="alert" className="text-sm text-(--danger)">
-            {t("bus:import.error")}
-          </p>
-        )}
+        {error && <InlineError>{t("bus:import.error")}</InlineError>}
         {preview && !row && (
           <>
             <p role="status">{t(emptyKey(preview.reason))}</p>

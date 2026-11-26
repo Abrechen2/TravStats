@@ -6,6 +6,7 @@ import { useRatingCategories } from "../../hooks/useRatingCategories";
 import { useRatingCategoriesStore } from "../../store/lodgingRatingCategoriesStore";
 import { logger } from "../../lib/logger";
 import { MAX_CUSTOM_CATEGORY_NAME } from "../../shared/ratingCategories";
+import InlineError from "../ui/InlineError";
 
 interface RatingCategoriesManagerProps {
   open: boolean;
@@ -172,11 +173,7 @@ export function RatingCategoriesManager({
           {t("lodging:stayEditor.ratingCategoryAdd")}
         </button>
       </form>
-      {error !== null && (
-        <p role="alert" className="text-xs text-[var(--danger)]">
-          {error}
-        </p>
-      )}
+      {error !== null && <InlineError>{error}</InlineError>}
       <button
         type="button"
         onClick={() => onOpenChange(false)}

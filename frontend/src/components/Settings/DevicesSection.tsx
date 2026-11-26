@@ -27,6 +27,7 @@ import { formatDateTime } from "../../lib/format";
 import { useBlockConfirm } from "./useBlockConfirm";
 import PushStateRow from "./PushStateRow";
 import { useRowCopy } from "./rowCopy";
+import InlineError from "../ui/InlineError";
 
 /** Embedded in the QR so the app can show which server it's pairing with. */
 const SERVER_NAME = "TravStats";
@@ -507,16 +508,13 @@ export default function DevicesSection(): JSX.Element {
                       {t("settings:devices.codeHint")}
                     </p>
                   </div>
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: expired ? "var(--danger)" : "var(--text-secondary)" }}
-                  >
+                  <InlineError>
                     {expired
                       ? t("settings:devices.expired")
                       : t("settings:devices.countdown", {
                           time: formatRemaining(remainingSeconds),
                         })}
-                  </p>
+                  </InlineError>
                   <div className="flex gap-2">
                     {expired && (
                       <button

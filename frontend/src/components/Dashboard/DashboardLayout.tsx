@@ -41,6 +41,8 @@ import type { ImportDocument } from "../import/documentHandoff";
 import type { ParseDomain } from "../../lib/api/parse";
 import { isEntryDomainShown } from "../../config/domainBetaGates";
 import { MAP_CHROME } from "../map/mapChrome";
+import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -111,7 +113,7 @@ export function DashboardLayout({
       pendingDocument.current = null;
       // Filed by id in the create request itself; where the domain's save path cannot carry an
       // id, or no request did, the document stays unfiled and the user is told — never a guess.
-      if (!clearFilingDocument()) addToast("error", t("dashboard:documentNotFiled"));
+      if (!clearFilingDocument()) reportPageError(t("dashboard:documentNotFiled"));
     }
     const pending = pendingMail.current;
     if (!pending) return;
@@ -120,7 +122,7 @@ export function DashboardLayout({
       await mailIntakeApi.fileOriginal(pending.messageId, pending.openedAt);
     } catch (error) {
       logger.error("Failed to file the original mail with the new entry", error);
-      addToast("error", t("dashboard:mailOriginalNotFiled"));
+      reportPageError(t("dashboard:mailOriginalNotFiled"));
     }
   };
   useEffect(() => {
@@ -384,11 +386,7 @@ export function DashboardLayout({
           }}
         >
           {nextUp && <MapNextUpCard entry={nextUp} nowMs={nowMs} />}
-          {upcomingFailed && (
-            <p role="status" className="text-xs text-(--danger)">
-              {t("dashboard:upcomingFailed")}
-            </p>
-          )}
+          {upcomingFailed && <InlineError>{t("dashboard:upcomingFailed")}</InlineError>}
           <LastSeenCard />
         </div>
         {/* On a single-domain view the filter is the ONLY way back — the tab

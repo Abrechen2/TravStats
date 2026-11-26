@@ -53,6 +53,7 @@ import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
 import TablePagination from "../components/table/TablePagination";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
+import { reportPageError } from "../store/pageErrorStore";
 
 type StatusFilter = CruiseStatus | "all";
 type YearFilter = number | "all";
@@ -192,7 +193,7 @@ export default function CruisesPage(): JSX.Element {
       await reload();
     } catch (err: unknown) {
       logger.error("CruisesPage: delete failed", err);
-      addToast("error", t("list.delete.error"));
+      reportPageError(t("list.delete.error"));
     } finally {
       setDeleting(false);
     }

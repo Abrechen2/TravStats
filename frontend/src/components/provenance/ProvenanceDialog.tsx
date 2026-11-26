@@ -2,7 +2,7 @@ import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import type { ProvenanceEntryType, ProvenanceState } from "../../lib/api/provenance";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import RememberedEditor from "./RememberedEditor";
 
 /** The origin editor of one entry in a dialog, opened from the entry's own ⋯. */
@@ -19,7 +19,7 @@ export default function ProvenanceDialog({
 }): JSX.Element {
   const { t } = useTranslation(["provenance"]);
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={t("provenance:editor.legend")}
@@ -37,6 +37,6 @@ export default function ProvenanceDialog({
           onClose();
         }}
       />
-    </Modal>
+    </Dialog>
   );
 }

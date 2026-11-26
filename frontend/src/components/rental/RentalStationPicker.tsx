@@ -8,6 +8,7 @@ import { LocationInput, type LocationSelection } from "../location/LocationInput
 import { FieldError, RequiredMark, fieldErrorProps } from "../form";
 import { EMPTY_RENTAL_STATION, stationFromHit, type RentalStationDraft } from "./rentalFormModel";
 import { CountryLabel } from "../../lib/countryFlag";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   label: string;
@@ -174,9 +175,7 @@ export function RentalStationPicker({
         <p className="t-caption">{t("rental:station.searching")}</p>
       ) : null}
       {search.kind === "error" ? (
-        <p role="alert" className="text-xs text-(--danger)">
-          {t("rental:station.searchError")}
-        </p>
+        <InlineError>{t("rental:station.searchError")}</InlineError>
       ) : null}
       {search.kind === "done" && hits.length === 0 ? (
         <p className="t-caption">{t("rental:station.noHits")}</p>

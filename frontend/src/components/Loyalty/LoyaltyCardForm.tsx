@@ -8,6 +8,7 @@ import type { LoyaltyMembership, LoyaltyMembershipInput } from "../../types/loya
 import AlliancePicker from "./AlliancePicker";
 import ValueChips from "./ValueChips";
 import { coverageField, coverageOf, type CardDomain } from "./cardCoverage";
+import InlineError from "../ui/InlineError";
 
 export type { CardDomain } from "./cardCoverage";
 
@@ -143,11 +144,7 @@ export default function LoyaltyCardForm({
         className="input"
         rows={2}
       />
-      {error !== null && (
-        <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-          {error}
-        </p>
-      )}
+      {error !== null && <InlineError>{error}</InlineError>}
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onCancel} disabled={saving} className="btn-secondary">
           {t("common:buttons.cancel")}

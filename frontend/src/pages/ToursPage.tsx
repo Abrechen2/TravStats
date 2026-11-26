@@ -9,7 +9,6 @@ import { tourIndexApi, type TourSummary } from "../lib/api/tourIndex";
 import { toursApi } from "../lib/api/tours";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { sectionExpenseCount } from "../lib/sectionExpenses";
-import { useToastStore } from "../store/toastStore";
 import KindReviewNotice from "../components/Roadtrips/KindReviewNotice";
 import StravaImportDialog, { useStravaConnected } from "../components/Trips/StravaImportDialog";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
@@ -33,6 +32,7 @@ import {
 import { tourSummaryFigures } from "../lib/tour/tourSummaryFigures";
 import { stringParam, useQuerySearch, useQueryState } from "../hooks/useQueryState";
 import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
+import { reportPageError } from "../store/pageErrorStore";
 
 /**
  * Every tour the reader owns, across every trip and none.
@@ -52,7 +52,6 @@ import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
 export default function ToursPage(): JSX.Element {
   const { t } = useTranslation(["trips", "roadtrips", "common"]);
   const tableHints = useTableHints();
-  const addToast = useToastStore((s) => s.addToast);
 
   const [tours, setTours] = useState<TourSummary[] | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -107,7 +106,7 @@ export default function ToursPage(): JSX.Element {
       // Costs with no trip to take them: asked once more, never deleted unasked.
       const count = sectionExpenseCount(err);
       if (count !== null) setCostsBlock({ tour, count });
-      else addToast("error", t("trips:tours.deleteError"));
+      else reportPageError(t("trips:tours.deleteError"));
     }
   };
 
@@ -117,7 +116,7 @@ export default function ToursPage(): JSX.Element {
     if (!mountedRef.current) return;
     if (result.ok) await load();
     else if (result.canDetachPhotos) setPhotoOptIn(tour);
-    else addToast("error", t(`trips:${result.errorKey}`));
+    else reportPageError(t(`trips:${result.errorKey}`));
   };
 
   const isLoading = tours === null && !loadError;

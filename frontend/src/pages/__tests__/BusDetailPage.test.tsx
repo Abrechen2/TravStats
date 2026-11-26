@@ -103,6 +103,10 @@ vi.mock("../../components/ui/ConfirmModal", () => ({
 const documentCount = vi.hoisted(() => ({ value: 0 as number | null }));
 vi.mock("../../hooks/useDocumentCount", () => ({ useDocumentCount: () => documentCount.value }));
 const addToast = vi.fn();
+vi.mock("../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  reportPageError: (message: string, tone = "error") => addToast(tone, message),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: Record<string, unknown>) => unknown) => selector({ addToast }),
 }));

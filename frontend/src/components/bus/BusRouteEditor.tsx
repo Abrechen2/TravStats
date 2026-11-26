@@ -30,6 +30,7 @@ import { busApi } from "../../lib/api/bus";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { reuseMapsEnabled } from "../../lib/mapReuse";
 import type { BusJourney } from "../../types/bus";
+import InlineError from "../ui/InlineError";
 
 /** The server error codes this editor has copy for; anything else gets the generic sentence. */
 const KNOWN_ERRORS = new Set(["BUS_ROUTE_INVALID", "BUS_ROUTE_NOT_ANCHORED", "VERSION_CONFLICT"]);
@@ -168,11 +169,7 @@ export function BusRouteEditor({ ride, onSaved, onClose }: Props): JSX.Element {
         </MapGL>
       </div>
       <p className="t-caption">{t("bus:routeEditor.hint")}</p>
-      {error && (
-        <p role="alert" className="text-sm text-(--danger)" data-testid="bus-route-editor-error">
-          {error}
-        </p>
-      )}
+      {error && <InlineError testId="bus-route-editor-error">{error}</InlineError>}
       <div className="flex flex-wrap gap-2">
         <button
           type="button"

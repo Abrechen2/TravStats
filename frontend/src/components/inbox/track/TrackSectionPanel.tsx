@@ -15,6 +15,7 @@ import { sectionFacts, type SectionWindow } from "./sectionGeometry";
 import { dayBarFor, formatSpan, formatSpeed, linkDays, zoneOrUtc } from "./sectionFormat";
 import { useSectionTrack } from "./useSectionTrack";
 import WebGLGuard from "../../map/WebGLGuard";
+import InlineError from "../../ui/InlineError";
 
 const SectionMap = lazy(() => import("./SectionMap"));
 
@@ -202,11 +203,7 @@ export default function TrackSectionPanel(props: TrackSectionPanelProps): JSX.El
               {t("track:inbox.loading")}
             </p>
           )}
-          {state.kind === "failed" && (
-            <p className="text-sm text-(--ts-bad)" role="alert">
-              {t(state.key)}
-            </p>
-          )}
+          {state.kind === "failed" && <InlineError>{t(state.key)}</InlineError>}
           {state.kind === "empty" && (
             <p className="t-caption" role="status">
               {t("track:inbox.empty")}

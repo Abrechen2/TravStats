@@ -14,6 +14,7 @@ import {
   type MailImportResult,
 } from "../../lib/api/mailIntake";
 import { Card } from "../ui/Card";
+import InlineError from "../ui/InlineError";
 
 type Range = "all" | "custom";
 
@@ -189,9 +190,9 @@ export default function MailboxScanSection(): JSX.Element | null {
           </span>
           {item.matchHint && <span className="t-caption">{t("mailIntake:scan.likelyHint")}</span>}
           {item.status === "failed" && item.reason && (
-            <span className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
+            <InlineError>
               {t(`mailIntake:scan.reason.${item.reason}`, { defaultValue: item.reason })}
-            </span>
+            </InlineError>
           )}
         </span>
       </label>

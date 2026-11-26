@@ -9,6 +9,7 @@ import { Select } from "../../components/ui/Field";
 import Button from "../../components/ui/Button";
 import { token } from "../../components/ui/tokens";
 import { kindOf, nameOf, sourceLabel } from "./trackDaySources";
+import InlineError from "../../components/ui/InlineError";
 
 interface Props {
   day: TravTrackDay;
@@ -155,11 +156,7 @@ export default function TrackDaySources({ day, onChanged }: Props): JSX.Element 
           })}
         </span>
       )}
-      {error && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
-          {t(error)}
-        </p>
-      )}
+      {error && <InlineError>{t(error)}</InlineError>}
     </section>
   );
 }

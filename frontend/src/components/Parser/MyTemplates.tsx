@@ -5,11 +5,12 @@ import TemplatePreviewPanel from "./TemplatePreviewPanel";
 import CommunityExportPanel, { SHAREABLE_DOMAINS } from "./CommunityExportPanel";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useToastStore } from "../../store/toastStore";
 import { GlobeLoader } from "../GlobeLoader";
 import { useMinLoadingState } from "../../hooks/useMinLoadingState";
 import { formatDate } from "../../lib/format";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import Banner from "../ui/Banner";
+import { reportPageError } from "../../store/pageErrorStore";
 
 export default function MyTemplates(): JSX.Element {
   const { t } = useTranslation(["parser", "common"]);
@@ -23,7 +24,6 @@ export default function MyTemplates(): JSX.Element {
   const [previews, setPreviews] = useState<Record<string, TemplatePreviewResult>>({});
   /** The template whose community export is open (forgejo#309). */
   const [sharing, setSharing] = useState<string | null>(null);
-  const addToast = useToastStore((state) => state.addToast);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -47,7 +47,7 @@ export default function MyTemplates(): JSX.Element {
       setPreviews((prev) => ({ ...prev, [id]: preview }));
     } catch (err: unknown) {
       logger.error({ err }, "MyTemplates: failed to preview");
-      addToast("error", t("parser:preview.failed"));
+      reportPageError(t("parser:preview.failed"));
     } finally {
       setActionLoading(null);
     }
@@ -67,8 +67,7 @@ export default function MyTemplates(): JSX.Element {
         typeof err === "object" && err !== null
           ? (err as { response?: { data?: { code?: string } } }).response?.data?.code
           : undefined;
-      addToast(
-        "error",
+      reportPageError(
         code === "PREVIEW_REQUIRED"
           ? t("parser:preview.requiredFirst")
           : t("parser:myTemplates.setStatusError")
@@ -87,7 +86,7 @@ export default function MyTemplates(): JSX.Element {
       setTemplates((prev) => prev.filter((tmpl) => tmpl.id !== id));
     } catch (err: unknown) {
       logger.error({ err }, "MyTemplates: failed to delete");
-      addToast("error", t("parser:myTemplates.deleteError"));
+      reportPageError(t("parser:myTemplates.deleteError"));
     } finally {
       setActionLoading(null);
     }
@@ -123,8 +122,8 @@ export default function MyTemplates(): JSX.Element {
 
   if (error) {
     return (
-      <div className="text-center py-16 text-(--danger)">
-        <p className="text-lg font-medium">{t(error)}</p>
+      <div className="py-16">
+        <Banner tone="error">{t(error)}</Banner>
       </div>
     );
   }

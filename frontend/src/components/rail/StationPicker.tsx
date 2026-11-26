@@ -9,6 +9,7 @@ import { isPlausibleStation } from "./railImportModel";
 import { StationShortCode } from "./StationShortCode";
 import { RequiredMark } from "../form/requiredFields";
 import { CountryLabel } from "../../lib/countryFlag";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   label: string;
@@ -191,11 +192,7 @@ export function StationPicker({
       {search.kind === "searching" ? (
         <p className="t-caption">{t("rail:station.searching")}</p>
       ) : null}
-      {search.kind === "error" ? (
-        <p role="alert" className="text-xs text-(--danger)">
-          {t("rail:station.searchError")}
-        </p>
-      ) : null}
+      {search.kind === "error" ? <InlineError>{t("rail:station.searchError")}</InlineError> : null}
       {search.kind === "done" && offered.length === 0 ? (
         <p className="t-caption">
           {suggestingForPrinted

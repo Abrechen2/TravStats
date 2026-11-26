@@ -6,6 +6,7 @@ import { useAuthStore } from "./store/authStore";
 import { logger } from "./lib/logger";
 import { useSettingsStore } from "./store/settingsStore";
 import ErrorBoundary from "./components/ErrorBoundary";
+import PageErrorHost from "./components/PageErrorHost";
 import Toast from "./components/Toast";
 import AirportSeedingBanner from "./components/AirportSeedingBanner";
 import AirportSeedingModal from "./components/AirportSeedingModal";
@@ -229,6 +230,7 @@ function AppContent() {
         }
       >
         <Toast />
+        <PageErrorHost />
         <AirportSeedingBanner />
         <SetupIncompleteBanner sessionConfirmed={sessionConfirmed} requiresSetup={requiresSetup} />
         {sessionConfirmed && <ReadinessBanner />}

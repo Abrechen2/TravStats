@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
 import type { ParseLogStats as ParseLogStatsType } from "../../types";
 import { logger } from "../../lib/logger";
+import { reportPageError } from "../../store/pageErrorStore";
 
 export default function ParseLogStats(): JSX.Element {
   const { t } = useTranslation("training");
@@ -32,11 +33,14 @@ export default function ParseLogStats(): JSX.Element {
     try {
       const result = await trainingApi.exportParseLogs();
       if (result?.truncated) {
-        addToast("warning", t("training:parseLogs.exportTruncated", { limit: result.limit ?? "" }));
+        reportPageError(
+          t("training:parseLogs.exportTruncated", { limit: result.limit ?? "" }),
+          "warning"
+        );
       }
     } catch (err) {
       logger.error("Export failed:", err);
-      addToast("error", String(err));
+      reportPageError(String(err));
     }
   };
 
@@ -52,7 +56,7 @@ export default function ParseLogStats(): JSX.Element {
       await loadStats();
     } catch (err) {
       logger.error("Promote failed:", err);
-      addToast("error", String(err));
+      reportPageError(String(err));
     } finally {
       setPromoting(false);
     }

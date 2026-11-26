@@ -15,6 +15,7 @@ import { logger } from "../../../lib/logger";
 import { dateLocaleForLanguage } from "../../../lib/units";
 import EvidenceTrigger from "../EvidenceTrigger";
 import CountingHelp from "../counting/CountingHelp";
+import InlineError from "../../ui/InlineError";
 
 /** How many people the section shows before "Alle anzeigen". */
 const TOP = 8;
@@ -76,11 +77,7 @@ export default function CompanionsTogetherSection(): JSX.Element | null {
           {t(`${NS}.hint`)}
         </span>
       </div>
-      {failed && (
-        <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
-          {t(`${NS}.loadFailed`)}
-        </p>
-      )}
+      {failed && <InlineError tone="warning">{t(`${NS}.loadFailed`)}</InlineError>}
       {data && data.companions.length === 0 && (
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>
           {t(`${NS}.empty`)}

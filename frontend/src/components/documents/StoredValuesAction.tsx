@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { documentsApi, type StoredValuesResult } from "../../lib/api/documents";
 import { logger } from "../../lib/logger";
 import { EXTRACT_FIELDS, type ExtractField, type ExtractTarget } from "../../lib/extractValues";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   documentId: string;
@@ -108,7 +109,7 @@ export function StoredValuesDialog({
     : [];
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       maxWidth={480}
@@ -126,12 +127,12 @@ export function StoredValuesDialog({
         </p>
       )}
       {phase.kind === "failed" && (
-        <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
+        <InlineError>
           {t(phase.key)}{" "}
           <button type="button" className="underline" onClick={() => setAttempt((n) => n + 1)}>
             {t("documents:stored.retry")}
           </button>
-        </p>
+        </InlineError>
       )}
       {result && result.reason !== null && (
         <p className="text-sm">{t(`documents:stored.reason.${result.reason}`)}</p>
@@ -151,6 +152,6 @@ export function StoredValuesDialog({
           {t("documents:stored.parser", { parser: result.parserUsed })}
         </p>
       )}
-    </Modal>
+    </Dialog>
   );
 }

@@ -3,7 +3,7 @@ import type { JSX, ReactNode } from "react";
 import { LocationInput, type LocationSelection } from "../location/LocationInput";
 import type { LocationCoordinates } from "../location/LocationInput";
 import { useTranslation } from "../../hooks/useTranslation";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { logger } from "../../lib/logger";
 import { createPlace, updatePlace } from "../../lib/api/places";
 import { listPlaceLists } from "../../lib/api/placeLists";
@@ -324,7 +324,7 @@ export function PlaceFormModal({
   const listName = (id: string): string => lists.find((l) => l.id === id)?.name ?? id;
 
   return (
-    <Modal
+    <Dialog
       open
       // Once the place is stored, every way out is "continue": the caller must
       // learn of it, or the list behind the dialog would not show the place.
@@ -650,7 +650,7 @@ export function PlaceFormModal({
         />
         <RequiredLegend className="mt-3" />
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

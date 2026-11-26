@@ -2,13 +2,14 @@ import { useState } from "react";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 
-import Modal from "../../Modal";
+import Dialog from "../../ui/Dialog";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { documentsApi, type NewEntryDomain, type TravelDocument } from "../../../lib/api/documents";
 import { logger } from "../../../lib/logger";
 import { NEW_ENTRY_DOMAINS, type DocumentFilingHandoff } from "../documentFilingHandoff";
 import { readDocumentFor } from "./documentReading";
+import InlineError from "../../ui/InlineError";
 
 interface Props {
   document: TravelDocument;
@@ -92,7 +93,7 @@ export default function CreateFromDocumentDialog({ document, onClose }: Props): 
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={busy}
@@ -169,12 +170,8 @@ export default function CreateFromDocumentDialog({ document, onClose }: Props): 
             </div>
           </div>
         )}
-        {error !== null && (
-          <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-            {error}
-          </p>
-        )}
+        {error !== null && <InlineError>{error}</InlineError>}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

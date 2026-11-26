@@ -4,6 +4,7 @@ import type { Aircraft } from "../../../types/catalogue";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
+import { useFormError } from "../../form/useFormError";
 
 /** Admin master data for aircraft types. See AirlinesSection for the shape. */
 export default function AircraftSection(): JSX.Element {
@@ -17,6 +18,7 @@ export default function AircraftSection(): JSX.Element {
   const [newName, setNewName] = useState("");
   const [newIcao, setNewIcao] = useState("");
   const [creating, setCreating] = useState(false);
+  const formError = useFormError();
 
   useEffect(() => {
     let cancelled = false;
@@ -44,10 +46,11 @@ export default function AircraftSection(): JSX.Element {
 
   const createAircraft = async (): Promise<void> => {
     if (!newName.trim()) {
-      addToast("error", t("admin:airlineAircraftMasterData.aircraft.missingFields"));
+      formError.set(t("admin:airlineAircraftMasterData.aircraft.missingFields"));
       return;
     }
     setCreating(true);
+    formError.clear();
     try {
       const created = await aircraftApi.create({
         name: newName.trim(),
@@ -61,7 +64,7 @@ export default function AircraftSection(): JSX.Element {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         t("admin:airlineAircraftMasterData.aircraft.createFailed");
-      addToast("error", msg);
+      formError.set(msg);
     } finally {
       setCreating(false);
     }
@@ -71,6 +74,7 @@ export default function AircraftSection(): JSX.Element {
     <div data-testid="admin-aircraft-section">
       <p className="t-caption mb-4">{t("admin:airlineAircraftMasterData.aircraft.description")}</p>
 
+      {formError.node}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
         <input
           type="text"

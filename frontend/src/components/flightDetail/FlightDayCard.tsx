@@ -7,6 +7,7 @@ import { copyToClipboard } from "../../lib/clipboard";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
 import type { Flight } from "../../types";
+import InlineError from "../ui/InlineError";
 
 /**
  * The touch rule (forgejo#249): a finger gets 44 px, a mouse keeps the
@@ -56,11 +57,7 @@ function CopyButton({ value, label }: { value: string; label: string }): JSX.Ele
       <span aria-live="polite" className="t-caption" style={{ fontWeight: 600 }}>
         {state === "copied" ? t("flights:dayCard.copied") : null}
       </span>
-      {state === "failed" ? (
-        <span role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
-          {t("flights:dayCard.copyFailed")}
-        </span>
-      ) : null}
+      {state === "failed" ? <InlineError>{t("flights:dayCard.copyFailed")}</InlineError> : null}
     </span>
   );
 }

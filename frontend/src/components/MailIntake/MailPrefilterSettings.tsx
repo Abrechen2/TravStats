@@ -6,6 +6,7 @@ import {
   type MailFetchFrom,
   type MailPrefilterDefaults,
 } from "../../lib/api/mailIntake";
+import InlineError from "../ui/InlineError";
 
 /** What the privacy block edits; `keepUnread: null` = the default for the folder (INBOX: on). */
 export interface PrefilterDraft {
@@ -139,11 +140,7 @@ export default function MailPrefilterSettings({
         />
         {t("mailIntake:privacy.prefilter")}
       </label>
-      {!draft.prefilter && (
-        <p role="alert" style={{ color: "var(--ts-bad)" }}>
-          {t("mailIntake:privacy.prefilterOffWarning")}
-        </p>
-      )}
+      {!draft.prefilter && <InlineError>{t("mailIntake:privacy.prefilterOffWarning")}</InlineError>}
 
       <label className="inline-flex items-center gap-2">
         <input
@@ -293,11 +290,7 @@ export default function MailPrefilterSettings({
           {t("mailIntake:privacy.senders.add")}
         </button>
       </div>
-      {domainInvalid && (
-        <p role="alert" style={{ color: "var(--ts-bad)" }}>
-          {t("mailIntake:privacy.senders.invalid")}
-        </p>
-      )}
+      {domainInvalid && <InlineError>{t("mailIntake:privacy.senders.invalid")}</InlineError>}
       <details>
         <summary className="label">
           {t("mailIntake:privacy.senders.defaults", { count: defaults.senderDomains.length })}

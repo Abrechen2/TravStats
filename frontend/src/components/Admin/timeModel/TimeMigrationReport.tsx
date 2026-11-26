@@ -24,6 +24,7 @@ import {
   unchangedLabel,
 } from "./timeModelCopy";
 import { TimeMigrationTables } from "./TimeMigrationTables";
+import InlineError from "../../ui/InlineError";
 
 /**
  * What the time-model backfill did on this instance (ADR 0002, plan Phase 3b)
@@ -98,9 +99,9 @@ export default function TimeMigrationReport({
 
       {load.state === "failed" && (
         <div role="alert" className="flex flex-col gap-1">
-          <p style={{ color: "var(--ts-bad)", fontWeight: 600 }}>
+          <InlineError announce={false}>
             {timeModelErrorCopy(load.error, t, "admin:timeModel.report.errors.loadFailed")}
-          </p>
+          </InlineError>
           <p className="t-caption">{t("admin:timeModel.report.errors.notAVerdict")}</p>
         </div>
       )}
@@ -137,13 +138,13 @@ function ReportBody({ report, users }: { report: Report; users: ReportUser[] }):
   return (
     <div className="flex flex-col gap-5">
       {backfill.state === "failed" ? (
-        <p role="alert" style={{ color: "var(--ts-bad)", fontWeight: 600 }}>
+        <InlineError>
           {t("admin:timeModel.report.status.failed", {
             error: backfill.lastError
               ? backfillErrorLabel(t, backfill.lastError)
               : t("admin:timeModel.report.status.noErrorCode"),
           })}
-        </p>
+        </InlineError>
       ) : (
         <p>
           {t("admin:timeModel.report.status.completed", {

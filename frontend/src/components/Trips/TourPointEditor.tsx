@@ -5,6 +5,7 @@ import { LocationInput } from "../location/LocationInput";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { TourPointInput } from "../../lib/api/tours";
 import HelpIcon from "../Help/HelpIcon";
+import InlineError from "../ui/InlineError";
 
 interface TourPointEditorProps {
   points: TourPointInput[];
@@ -176,11 +177,7 @@ export default function TourPointEditor({
             {t("trips:tours.points.incomplete")}
           </span>
         )}
-        {error && (
-          <span role="alert" className="text-xs" style={{ color: "var(--danger)" }}>
-            {error}
-          </span>
-        )}
+        {error && <InlineError>{error}</InlineError>}
       </div>
     </div>
   );

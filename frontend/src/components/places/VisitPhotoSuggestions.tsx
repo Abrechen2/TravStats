@@ -19,6 +19,7 @@ import type { PlaceVisitPhoto } from "../../types/placeList";
 import { EnlargeCorner } from "../common/photoViewer/EnlargeButton";
 import { usePhotoViewer } from "../common/photoViewer/usePhotoViewer";
 import { largeUrl } from "../common/photoViewer/viewerPhoto";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   visitId: string;
@@ -56,7 +57,7 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
       setPicked(new Set());
     } catch (err: unknown) {
       logger.error("VisitPhotoSuggestions: load failed", err);
-      addToast("error", t("places:photos.suggest.loadFailed"));
+      reportPageError(t("places:photos.suggest.loadFailed"));
     } finally {
       setBusy(false);
     }
@@ -104,7 +105,7 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
       setPicked(new Set());
     } catch (err: unknown) {
       logger.error("VisitPhotoSuggestions: refuse failed", err);
-      addToast("error", t("places:photos.suggest.refuseFailed"));
+      reportPageError(t("places:photos.suggest.refuseFailed"));
     } finally {
       setBusy(false);
     }
@@ -119,7 +120,7 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
       setPicked(new Set());
     } catch (err: unknown) {
       logger.error("VisitPhotoSuggestions: undo refusals failed", err);
-      addToast("error", t("places:photos.suggest.undoFailed"));
+      reportPageError(t("places:photos.suggest.undoFailed"));
     } finally {
       setBusy(false);
     }
@@ -142,7 +143,7 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
       setPicked(new Set());
     } catch (err: unknown) {
       logger.error("VisitPhotoSuggestions: link failed", err);
-      addToast("error", t("places:photos.suggest.linkFailed"));
+      reportPageError(t("places:photos.suggest.linkFailed"));
     } finally {
       setBusy(false);
     }

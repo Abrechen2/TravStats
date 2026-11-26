@@ -1,4 +1,4 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -10,6 +10,7 @@ import { ImportManualFooter, ImportRouteList, ImportRouteRow } from "./ImportRou
 import { isParseableDomain } from "./types";
 import { llmProviderOfResult, readByMessage } from "../../lib/llmProviderCopy";
 import type { DomainImportAdapter, ImportRouteContext } from "./types";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const EmailImportTab = lazy(() => import("./EmailImportTab"));
 
@@ -109,12 +110,9 @@ export default function DomainImportPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const handleError = useCallback(
-    (message: string) => {
-      addToast("error", message);
-    },
-    [addToast]
-  );
+  const handleError = useCallback((message: string) => {
+    reportPageError(message);
+  }, []);
 
   // Which model read the document, when one did — a cloud provider by host,
   // so the user sees where their booking went (beta.17).
@@ -228,7 +226,7 @@ export default function DomainImportPanel({
           place (TripModal), so "empty" left the chooser on top of the form it
           had just opened, and its × closed both (browser acceptance
           2026-09-26). The form is the next step, not a second layer. */}
-      <Modal
+      <Dialog
         open={!showManual}
         onClose={onClose}
         title={adapter.panelTitle}
@@ -273,7 +271,7 @@ export default function DomainImportPanel({
             }}
           />
         </div>
-      </Modal>
+      </Dialog>
 
       {mismatch && (
         <WrongDialogNotice

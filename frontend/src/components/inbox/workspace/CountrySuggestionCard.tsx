@@ -14,6 +14,7 @@ import TrackSectionPanel from "../track/TrackSectionPanel";
 import { countrySectionProps } from "../track/sectionProps";
 import { W } from "./model";
 import { CountryLabel } from "../../../lib/countryFlag";
+import InlineError from "../../ui/InlineError";
 
 const L = `${W}.location`;
 
@@ -109,11 +110,7 @@ export default function CountrySuggestionCard({
 
   return (
     <div className="space-y-3">
-      {error && (
-        <p role="alert" className="text-sm text-(--ts-bad)">
-          {error}
-        </p>
-      )}
+      {error && <InlineError>{error}</InlineError>}
       <h3 className="text-base font-semibold flex items-center gap-2">
         <CountryLabel country={code} compact height={18} />
         {t(`${L}.question`, { country })}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import { isCancel, type AxiosError } from "axios";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { documentsApi } from "../../lib/api/documents";
 import { logger } from "../../lib/logger";
@@ -14,6 +14,7 @@ import {
   type ExtractTarget,
   type ExtractValuesResult,
 } from "../../lib/extractValues";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   documentId: string;
@@ -151,7 +152,7 @@ export function ExtractValuesDialog({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={cancel}
       busy={applying}
@@ -182,11 +183,7 @@ export function ExtractValuesDialog({
           {t("documents:extract.reading")}
         </p>
       )}
-      {phase.kind === "failed" && (
-        <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
-          {phase.message}
-        </p>
-      )}
+      {phase.kind === "failed" && <InlineError>{phase.message}</InlineError>}
       {phase.kind === "result" && offered.length === 0 && (
         <p className="text-sm">
           {phase.result.reason === "noText"
@@ -222,10 +219,8 @@ export function ExtractValuesDialog({
         </ul>
       )}
       {applyFailed && (
-        <p role="alert" className="mt-3 text-sm" style={{ color: "var(--ts-bad)" }}>
-          {t("documents:extract.applyFailed")}
-        </p>
+        <InlineError className="mt-3">{t("documents:extract.applyFailed")}</InlineError>
       )}
-    </Modal>
+    </Dialog>
   );
 }

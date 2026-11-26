@@ -3,6 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { locationProviderErrorKey } from "../../lib/api/locationProvider";
 import { useLocationProviderStore } from "../../store/locationProviderStore";
 import { token } from "../ui/tokens";
+import InlineError from "../ui/InlineError";
 
 /**
  * The offer under a freshly saved Dawarich connection (TravTrack plan S3): a
@@ -69,11 +70,7 @@ export default function DawarichProviderHint({ check }: { check: number }): JSX.
           {t("settings:locationProvider.dawarichHint.use")}
         </button>
       </div>
-      {error && (
-        <p role="alert" className="text-sm" style={{ color: token("bad") }}>
-          {error}
-        </p>
-      )}
+      {error && <InlineError>{error}</InlineError>}
     </div>
   );
 }

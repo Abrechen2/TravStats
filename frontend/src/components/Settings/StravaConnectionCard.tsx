@@ -7,6 +7,7 @@ import { stravaApi, stravaFailureKind, type StravaStatus } from "../../lib/api/s
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import DemoLockedNotice from "./DemoLockedNotice";
 import { token } from "../ui/tokens";
+import InlineError from "../ui/InlineError";
 
 /**
  * Strava (2.7). Three states, each saying what to do next:
@@ -188,11 +189,7 @@ export default function StravaConnectionCard({
             </details>
           )}
 
-          {error && (
-            <p role="alert" className="text-sm" style={{ color: token("bad") }}>
-              {error}
-            </p>
-          )}
+          {error && <InlineError>{error}</InlineError>}
         </div>
       )}
     </SectionCard>

@@ -1,8 +1,9 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useState } from "react";
 import { adminApi } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
 import { copyToClipboard } from "../../lib/clipboard";
+import InlineError from "../ui/InlineError";
 
 interface AdminPasswordResetModalProps {
   userId: string;
@@ -76,7 +77,7 @@ export default function AdminPasswordResetModal({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={`${t("admin:users.resetPasswordModal.title")} — ${username}`}
@@ -104,7 +105,7 @@ export default function AdminPasswordResetModal({
         ))}
       </div>
 
-      {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
+      {error && <InlineError className="mb-4">{error}</InlineError>}
 
       {activeTab === "generate" && (
         <div className="space-y-4">
@@ -217,6 +218,6 @@ export default function AdminPasswordResetModal({
           )}
         </div>
       )}
-    </Modal>
+    </Dialog>
   );
 }

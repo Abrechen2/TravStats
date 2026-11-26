@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { createLodging, updateLodging } from "../../lib/api/lodging";
 import type { Lodging, LodgingChain, LodgingInput, LodgingType } from "../../types/lodging";
 import { logger } from "../../lib/logger";
@@ -301,7 +301,7 @@ export function LodgingFormModal({
   // It also brings the Escape key, which this dialog did not have: measured in
   // the browser on 23.08., right after the lodging list made it reachable.
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving.saving}
@@ -540,6 +540,6 @@ export function LodgingFormModal({
         />
         <RequiredLegend className="mt-3" />
       </div>
-    </Modal>
+    </Dialog>
   );
 }

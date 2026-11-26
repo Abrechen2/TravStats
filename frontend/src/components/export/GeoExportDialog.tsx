@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import GeoExportButtons from "./GeoExportButtons";
 
 /**
@@ -24,8 +24,8 @@ export default function GeoExportDialog({
 }): JSX.Element {
   const { t } = useTranslation("common");
   return (
-    <Modal open={open} onClose={onClose} title={t("common:buttons.export")} maxWidth={360}>
+    <Dialog open={open} onClose={onClose} title={t("common:buttons.export")} maxWidth={360}>
       <GeoExportButtons path={path} params={params} testId={testId} />
-    </Modal>
+    </Dialog>
   );
 }

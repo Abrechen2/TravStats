@@ -14,6 +14,7 @@ import {
   type ChangeHistoryEntry,
 } from "../../lib/api/changeHistory";
 import { formatChangeValue } from "./formatChangeValue";
+import InlineError from "../ui/InlineError";
 
 interface ChangeHistoryListProps {
   entityType: ChangeEntityType;
@@ -166,9 +167,7 @@ export default function ChangeHistoryList({
       {load.state === "loading" && <p className="t-caption">{t("changeHistory:loading")}</p>}
       {load.state === "failed" && (
         <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
-          <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-            {t("changeHistory:loadFailed")}
-          </p>
+          <InlineError>{t("changeHistory:loadFailed")}</InlineError>
           <button
             type="button"
             className="ts-chip"
@@ -179,11 +178,7 @@ export default function ChangeHistoryList({
           </button>
         </div>
       )}
-      {restoreError && (
-        <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-          {restoreError}
-        </p>
-      )}
+      {restoreError && <InlineError>{restoreError}</InlineError>}
       {load.state === "ready" && entries.length === 0 && (
         <p className="t-caption">{t("changeHistory:empty")}</p>
       )}

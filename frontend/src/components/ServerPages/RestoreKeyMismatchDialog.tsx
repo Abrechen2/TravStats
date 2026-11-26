@@ -1,7 +1,7 @@
 import { useEffect, useState, type JSX } from "react";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { useTranslation } from "../../hooks/useTranslation";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import Button from "../ui/Button";
 import { ErrorLine, LinkButton } from "../ui/settings";
 import type { DialogCopy } from "../Settings/rowCopy";
@@ -97,7 +97,7 @@ export default function RestoreKeyMismatchDialog({
   }, []);
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onCancel}
       busy={working}
@@ -196,6 +196,6 @@ export default function RestoreKeyMismatchDialog({
           {copy.after}
         </p>
       </div>
-    </Modal>
+    </Dialog>
   );
 }

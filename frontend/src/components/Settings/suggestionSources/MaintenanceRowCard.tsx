@@ -9,6 +9,7 @@ import type {
   MaintenanceRow,
   MaintenanceSource,
 } from "../../../lib/api/suggestionPlugins";
+import InlineError from "../../ui/InlineError";
 
 const NS = "suggestionSources:plugins.maintenance";
 
@@ -166,11 +167,7 @@ export default function MaintenanceRowCard({
               {t(`${NS}.search`)}
             </Button>
           </div>
-          {search.status === "failed" && (
-            <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-              {t(`${NS}.searchFailed`)}
-            </p>
-          )}
+          {search.status === "failed" && <InlineError>{t(`${NS}.searchFailed`)}</InlineError>}
           {search.status === "done" && search.results.length === 0 && (
             <p className="t-caption">{t(`${NS}.searchEmpty`)}</p>
           )}

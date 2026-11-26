@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import DetailSection from "../ui/DetailSection";
 import { useTranslation } from "../../hooks/useTranslation";
 import { vesselApi, type VesselKind, type VesselStatus } from "../../lib/api/vessel";
+import InlineError from "../ui/InlineError";
 
 /**
  * The ship behind a crossing or a cruise (2026-11-22): which one the server
@@ -55,11 +56,7 @@ export function VesselLiveStatus({
 
   return (
     <DetailSection title={t("ferry:vessel.title")}>
-      {failed && (
-        <p role="alert" className="text-sm text-(--ts-bad)">
-          {t("ferry:vessel.loadFailed")}
-        </p>
-      )}
+      {failed && <InlineError>{t("ferry:vessel.loadFailed")}</InlineError>}
       {status && (
         <div className="space-y-2 text-sm" data-testid="vessel-status">
           {status.mmsi ? (

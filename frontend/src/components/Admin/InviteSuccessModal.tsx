@@ -1,7 +1,8 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { copyToClipboard } from "../../lib/clipboard";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const KNOWN = ["SMTP_CONNECTION", "SMTP_TLS", "SMTP_AUTH", "SMTP_TIMEOUT", "SMTP_UNKNOWN"];
 
@@ -33,12 +34,12 @@ export default function InviteSuccessModal({
       await copyToClipboard(inviteUrl);
       addToast("success", t("admin:invitations.success.copiedToClipboard"));
     } catch {
-      addToast("error", t("admin:invitations.success.copyFailed"));
+      reportPageError(t("admin:invitations.success.copyFailed"));
     }
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={t("admin:invitations.success.title")}
@@ -95,6 +96,6 @@ export default function InviteSuccessModal({
           </button>
         </div>
       </>
-    </Modal>
+    </Dialog>
   );
 }

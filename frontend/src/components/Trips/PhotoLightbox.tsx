@@ -2,9 +2,9 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useCoverCropStore } from "../../store/coverCropStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { immichApi } from "../../lib/api/immich";
-import { useToastStore } from "../../store/toastStore";
 import PhotoViewer from "../common/PhotoViewer";
 import { largeUrl, type ViewerPhoto } from "../common/photoViewer/viewerPhoto";
+import { reportPageError } from "../../store/pageErrorStore";
 
 export interface LightboxItem {
   id: string;
@@ -37,7 +37,6 @@ export default function PhotoLightbox({
   onCoverChanged,
 }: Props): JSX.Element | null {
   const { t } = useTranslation("immich");
-  const addToast = useToastStore((s) => s.addToast);
   const [coverSet, setCoverSet] = useState(false);
   const [settingCover, setSettingCover] = useState(false);
   // Tracks which item is on screen *right now*, independent of any closure
@@ -89,7 +88,7 @@ export default function PhotoLightbox({
         });
       }
     } catch {
-      addToast("error", t("errors.unreachable"));
+      reportPageError(t("errors.unreachable"));
     } finally {
       setSettingCover(false);
     }

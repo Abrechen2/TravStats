@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { railApi } from "../../lib/api/rail";
 import { logger } from "../../lib/logger";
@@ -16,6 +16,7 @@ import {
   targetLabel,
   type ReservationRow,
 } from "./railReservationModel";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   booking: RailImportBooking;
@@ -68,7 +69,7 @@ export function RailReservationReviewModal({ booking, onCancel, onSaved }: Props
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onCancel}
       busy={saving}
@@ -115,7 +116,7 @@ export function RailReservationReviewModal({ booking, onCancel, onSaved }: Props
           />
         ))}
       </ol>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -204,11 +205,7 @@ function ReservationLegRow({
               {t("rail:import.reservation.applied")}
             </span>
           )}
-          {state.kind === "failed" && (
-            <span role="alert" className="t-caption text-(--danger)">
-              {t(state.key)}
-            </span>
-          )}
+          {state.kind === "failed" && <InlineError>{t(state.key)}</InlineError>}
         </span>
       </label>
     </li>

@@ -1,7 +1,7 @@
-import { useEffect, useId, useRef, useState, type JSX, type ReactNode } from "react";
+import { useEffect, useId, useState, type JSX, type ReactNode } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
-import Button from "../Button";
-import Dialog from "../Dialog";
+import ConfirmModal from "../ConfirmModal";
+import { DELETE_BUTTON_CLASS } from "../../../lib/deleteConfirm";
 import { Input } from "../Field";
 
 interface ConfirmDialogProps {
@@ -24,7 +24,9 @@ interface ConfirmDialogProps {
 }
 
 /**
- * B9: the one confirmation for everything dangerous (settings rebuild).
+ * B9: the one confirmation for everything dangerous (settings rebuild) — the
+ * structured body (affects, amount, afterwards, a typed word) on top of
+ * `ConfirmModal`, which owns the frame, the two buttons and the red confirm.
  *
  * Affects · how much · afterwards, then a button that names the amount. The
  * keyboard contract is the design's: the focus trap and Escape come from the
@@ -46,53 +48,29 @@ export default function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps): JSX.Element | null {
   const { t } = useTranslation(["settings"]);
-  const cancelRef = useRef<HTMLButtonElement>(null);
   const [typed, setTyped] = useState("");
   const inputId = useId();
 
   useEffect(() => {
-    if (!open) return;
-    setTyped("");
-    // After the shell has given the panel focus.
-    cancelRef.current?.focus();
+    if (open) setTyped("");
   }, [open]);
 
   const wordOk = !word || typed.trim().toLocaleUpperCase() === word.toLocaleUpperCase();
 
   return (
-    <Dialog
-      open={open}
+    <ConfirmModal
+      isOpen={open}
       onClose={onCancel}
-      title={title}
-      busy={busy}
+      onConfirm={onConfirm}
+      title={typeof title === "string" ? title : ""}
+      titleNode={title}
+      isLoading={busy}
+      confirmDisabled={!wordOk}
+      focusCancel
+      confirmText={confirmLabel}
+      confirmButtonClass={DELETE_BUTTON_CLASS}
+      cancelText={cancelLabel ?? t("settings:blocks.confirm.cancel")}
       closeLabel={t("settings:blocks.confirm.close")}
-      action={
-        <>
-          <button
-            ref={cancelRef}
-            type="button"
-            onClick={onCancel}
-            disabled={busy}
-            className="ts-button"
-            data-variant="secondary"
-            style={{
-              height: "var(--ts-size-button-secondary)",
-              padding: "0 var(--ts-space-xl)",
-              borderRadius: "var(--ts-radius-button)",
-              border: "1px solid var(--ts-border-button)",
-              background: "transparent",
-              color: "var(--ts-text)",
-              fontWeight: 700,
-              fontSize: 16,
-            }}
-          >
-            {cancelLabel ?? t("settings:blocks.confirm.cancel")}
-          </button>
-          <Button variant="danger" onClick={onConfirm} disabled={!wordOk || busy}>
-            {confirmLabel}
-          </Button>
-        </>
-      }
     >
       <dl className="flex flex-col" style={{ gap: "var(--ts-space-md)", margin: 0 }}>
         {(
@@ -131,6 +109,6 @@ export default function ConfirmDialog({
           />
         </div>
       ) : null}
-    </Dialog>
+    </ConfirmModal>
   );
 }

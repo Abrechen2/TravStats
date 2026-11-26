@@ -12,6 +12,7 @@ import { needsName, visitAcceptPlan, type VisitCorrection } from "./reviewItems"
 import type { ReviewFailure } from "./useVisitReview";
 import { visitReasoning } from "./visitReasoning";
 import VisitSuggestionCorrection from "./VisitSuggestionCorrection";
+import InlineError from "../../ui/InlineError";
 
 /**
  * One visit suggestion in the review (forgejo#211, O5): place, when, and the
@@ -129,9 +130,7 @@ export default function VisitSuggestionCard({
         <p className="t-caption mt-3">{t(`${base}.review.nameNeeded`)}</p>
       )}
       {failure && (
-        <p className="mt-3 text-sm" role="alert" style={{ color: "var(--ts-bad)" }}>
-          {t(`${base}.review.failure.${failure.code}`)}
-        </p>
+        <InlineError className="mt-3">{t(`${base}.review.failure.${failure.code}`)}</InlineError>
       )}
 
       {correcting && (

@@ -12,6 +12,7 @@ import { Card } from "../../ui/Card";
 import EmptyState from "../../ui/EmptyState";
 import { GlobeLoader } from "../../GlobeLoader";
 import { flagSubject, W, type Translate } from "./model";
+import InlineError from "../../ui/InlineError";
 
 /** The sources whose answers are kept and can be looked back at. */
 export type HistorySource = "review" | "updates" | "dawarich" | "photos";
@@ -129,9 +130,7 @@ export default function InboxHistory({ source }: { source: HistorySource }) {
                 </Button>
               )}
               {undoFailed === row.key && (
-                <p role="alert" className="t-caption mt-1 text-(--ts-bad)">
-                  {t(`${W}.history.undoFailed`)}
-                </p>
+                <InlineError className="mt-1">{t(`${W}.history.undoFailed`)}</InlineError>
               )}
             </li>
           ))}

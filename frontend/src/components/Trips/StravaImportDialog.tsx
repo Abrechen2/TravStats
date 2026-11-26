@@ -6,6 +6,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { stravaApi, stravaFailureKind, type StravaActivity } from "../../lib/api/strava";
 import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
+import InlineError from "../ui/InlineError";
 
 const DAY_MS = 86_400_000;
 
@@ -105,11 +106,7 @@ export default function StravaImportDialog({
           </li>
         ))}
       </ul>
-      {error && (
-        <p role="alert" className="mt-3 text-sm" style={{ color: "var(--danger)" }}>
-          {error}
-        </p>
-      )}
+      {error && <InlineError className="mt-3">{error}</InlineError>}
     </Dialog>
   );
 }

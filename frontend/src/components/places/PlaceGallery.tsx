@@ -9,6 +9,7 @@ import type { PlaceVisitPhoto } from "../../types/placeList";
 import EnlargeButton, { EnlargeCorner } from "../common/photoViewer/EnlargeButton";
 import { usePhotoViewer } from "../common/photoViewer/usePhotoViewer";
 import { largeUrl, sourceOf } from "../common/photoViewer/viewerPhoto";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   place: Place;
@@ -115,11 +116,7 @@ export function PlaceGallery({ place }: Props): JSX.Element | null {
         </div>
       )}
       {photos.length > 1 && <p className="t-caption">{t("places:gallery.makeCoverHint")}</p>}
-      {coverFailed && (
-        <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
-          {t("places:gallery.coverFailed")}
-        </p>
-      )}
+      {coverFailed && <InlineError>{t("places:gallery.coverFailed")}</InlineError>}
     </section>
   );
 }

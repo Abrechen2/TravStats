@@ -15,6 +15,7 @@ import {
   type DiagnosticsDay,
   type DiagnosticsGap,
 } from "../../lib/api/travtrackDiagnostics";
+import InlineError from "../ui/InlineError";
 
 const NS = "track:settings.diagnostics";
 const HOUR = 3_600_000;
@@ -233,11 +234,7 @@ export default function TravTrackDiagnostics({
         )}
       </div>
 
-      {error && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
-          {error}
-        </p>
-      )}
+      {error && <InlineError>{error}</InlineError>}
 
       {day && !day.hasLog && (
         <p className="t-body" role="status" data-testid="travtrack-diag-nolog">

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import TagInput from "../TagInput";
 import CompanionPicker from "../CompanionPicker";
 import { FormErrorBanner, SaveBlockedHint, useDirtyGuard } from "../form";
@@ -30,6 +30,7 @@ import {
   type TextEditDraft,
 } from "./bulkEditModel";
 import type { BulkRow } from "./useRowSelection";
+import InlineError from "../ui/InlineError";
 
 type ListMode = "keep" | "add" | "replace";
 type TextMode = "keep" | "set" | "clear";
@@ -195,7 +196,7 @@ export default function DomainBulkEditModal({
     names.map((value) => ({ value, label: t(`bulkEdit:mode.${value}`) }));
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={sending}
@@ -296,7 +297,7 @@ export default function DomainBulkEditModal({
                     ))}
                   </select>
                   {tripsFailed ? (
-                    <span role="alert" style={{ color: "var(--danger)" }}>
+                    <InlineError>
                       {t("bulkEdit:tripsFailed")}{" "}
                       <button
                         type="button"
@@ -305,7 +306,7 @@ export default function DomainBulkEditModal({
                       >
                         {t("common:buttons.retry")}
                       </button>
-                    </span>
+                    </InlineError>
                   ) : null}
                 </label>
               ) : null}
@@ -391,7 +392,7 @@ export default function DomainBulkEditModal({
           {requestFailure}
         </div>
       )}
-    </Modal>
+    </Dialog>
   );
 }
 

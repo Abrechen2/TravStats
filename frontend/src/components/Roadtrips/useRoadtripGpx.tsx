@@ -8,6 +8,7 @@ import { logger } from "../../lib/logger";
 import { buildRoadtripGpx, gpxFileName } from "../../lib/roadtrip/gpxExport";
 import type { RoadtripStation } from "../../types/roadtrip";
 import type { OverflowEntry } from "../ui/OverflowMenu";
+import InlineError from "../ui/InlineError";
 
 /**
  * "GPX exportieren" as an entry of the roadtrip's ⋯ (owner, 2026-11-22): the stations and the
@@ -51,10 +52,6 @@ export function useRoadtripGpx({
       disabled: busy,
       onSelect: () => void run(),
     },
-    failure: failed ? (
-      <span role="alert" style={{ fontSize: 13, color: "var(--ts-bad)", alignSelf: "center" }}>
-        {t("roadtrips:gpx.failed")}
-      </span>
-    ) : null,
+    failure: failed ? <InlineError>{t("roadtrips:gpx.failed")}</InlineError> : null,
   };
 }

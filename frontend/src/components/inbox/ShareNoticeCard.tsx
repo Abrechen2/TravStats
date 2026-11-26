@@ -9,6 +9,7 @@ import type { ShareNotice } from "../../types/sharing";
 import ChangeDiffView, { type ChangeEntry } from "../ChangeDiffView";
 import { formatShareValue, shareFieldLabel } from "../sharing/noticeValues";
 import { Button, Card, Pill } from "../ui";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:inbox.notices";
 const INLINE = 3;
@@ -192,11 +193,7 @@ export default function ShareNoticeCard({
             fieldLabel={(f) => shareFieldLabel(f, t)}
           />
         )}
-        {error && (
-          <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
-            {error}
-          </p>
-        )}
+        {error && <InlineError tone="warning">{error}</InlineError>}
         <div className="flex flex-wrap items-center" style={{ gap: 8 }}>
           {conflict && notice.undoneAt === null && onResolve && (
             <>

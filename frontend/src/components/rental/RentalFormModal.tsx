@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { GapDates } from "../../lib/gapCalendar";
 import type { JSX, KeyboardEvent } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import {
   FormErrorBanner,
   RequiredLegend,
@@ -166,7 +166,7 @@ export function RentalFormModal({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving.saving}
@@ -291,6 +291,6 @@ export function RentalFormModal({
         ) : null}
         <RequiredLegend />
       </div>
-    </Modal>
+    </Dialog>
   );
 }

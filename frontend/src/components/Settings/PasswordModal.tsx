@@ -1,4 +1,4 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 
 interface PasswordFormState {
@@ -27,7 +27,7 @@ export default function PasswordModal({
   const { t } = useTranslation(["settings", "common"]);
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={changingPassword}
@@ -107,6 +107,6 @@ export default function PasswordModal({
           />
         </div>
       </div>
-    </Modal>
+    </Dialog>
   );
 }

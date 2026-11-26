@@ -5,6 +5,7 @@ import { rentalApi } from "../../lib/api/rental";
 import { rentalLinksApi, type RentalSuggestions } from "../../lib/api/rentalLinks";
 import { logger } from "../../lib/logger";
 import type { RentalBooking } from "../../types/rental";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   rental: RentalBooking;
@@ -61,11 +62,7 @@ export function RentalSuggestionBanner({
   };
 
   if (failed) {
-    return (
-      <p role="alert" className="t-caption text-(--danger)">
-        {t("rental:suggest.failed")}
-      </p>
-    );
+    return <InlineError>{t("rental:suggest.failed")}</InlineError>;
   }
   if (!suggestions) return null;
   const trips = rental.tripId ? [] : suggestions.trips.filter((x) => !dismissed.includes(x.id));

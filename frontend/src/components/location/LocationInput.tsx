@@ -29,6 +29,7 @@ import { LocationMapModal } from "./LocationMapModal";
 // The module, not the `form` index: that one pulls in `Modal`, which this
 // field is rendered inside of.
 import { RequiredMark } from "../form/requiredFields";
+import InlineError from "../ui/InlineError";
 
 export interface LocationCoordinates {
   lat: number;
@@ -451,15 +452,9 @@ export function LocationInput({
           </div>
         </div>
         {rangeError && (
-          <p
-            id={rangeErrorId}
-            className="mt-2 text-sm"
-            role="alert"
-            data-testid="location-range-error"
-            style={{ color: "rgb(252, 165, 165)" }}
-          >
+          <InlineError id={rangeErrorId} className="mt-2" testId="location-range-error">
             {t(rangeError)}
-          </p>
+          </InlineError>
         )}
       </details>
     </div>

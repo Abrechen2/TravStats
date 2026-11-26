@@ -6,6 +6,7 @@ import { groupOf, modeLabelKey } from "./railImportModes";
 import type { RailStationDraft } from "./RailStationField";
 import type { RailImportStation } from "../../types/rail";
 import { bareTrainName, trainName } from "../../lib/rail/trainName";
+import InlineError from "../ui/InlineError";
 
 export type RowState =
   | { kind: "pending" }
@@ -124,11 +125,7 @@ export function RailImportLegRow({
               {t(state.as === "bus" ? "rail:import.legSavedAsBus" : "rail:import.legSaved")}
             </span>
           )}
-          {state.kind === "failed" && (
-            <span role="alert" className="t-caption text-(--danger)">
-              {t(state.key)}
-            </span>
-          )}
+          {state.kind === "failed" && <InlineError>{t(state.key)}</InlineError>}
         </span>
       </label>
       {row.selected && state.kind !== "saved" && unresolved.length > 0 && (

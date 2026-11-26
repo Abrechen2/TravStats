@@ -6,6 +6,7 @@ import { logger } from "../../lib/logger";
 import { formatRailDuration } from "../../lib/rail/railDuration";
 import { SHORT_TRANSFER_HINT_MINUTES, type RailTransfer } from "../../lib/rail/railTransfer";
 import { dateLocaleForLanguage } from "../../lib/units";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   transfer: RailTransfer;
@@ -147,11 +148,7 @@ function TightMark({ legId, stored }: { legId: string; stored: boolean }): JSX.E
         />
         {t("rail:transfer.markTight")}
       </label>
-      {failed && (
-        <p id={`${id}-error`} role="alert" className="text-xs text-(--danger)">
-          {t("rail:transfer.markFailed")}
-        </p>
-      )}
+      {failed && <InlineError id={`${id}-error`}>{t("rail:transfer.markFailed")}</InlineError>}
     </div>
   );
 }

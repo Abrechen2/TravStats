@@ -9,6 +9,7 @@ import { apiErrorMachineCode } from "../../lib/apiError";
 import { logger } from "../../lib/logger";
 import { UseCancelledError, withUseConsent } from "../../lib/api/serviceUse";
 import { useServiceUseConfirm } from "../ExternalServices/useServiceUseConfirm";
+import InlineError from "../ui/InlineError";
 
 /**
  * "KI fragen" for an ambiguous GPS stay (forgejo#439 phase 2). Shown only
@@ -133,11 +134,7 @@ export default function StayAiHelp({
           {state.phase === "asking" ? text("asking") : text("ask")}
         </button>
       </div>
-      {state.phase === "error" && (
-        <p role="alert" className="t-body" style={{ color: "var(--danger)" }}>
-          {text(`error.${state.reason}`)}
-        </p>
-      )}
+      {state.phase === "error" && <InlineError>{text(`error.${state.reason}`)}</InlineError>}
       {state.phase === "answer" && (
         <div className="grid gap-1" role="status">
           <p className="t-caption">

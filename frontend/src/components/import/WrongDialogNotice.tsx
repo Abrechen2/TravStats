@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { ParseDomain } from "../../lib/api/parse";
 
@@ -20,7 +20,7 @@ interface Props {
 export function WrongDialogNotice({ detected, onDismiss, onOpen }: Props): JSX.Element {
   const { t } = useTranslation(["import", "common"]);
   return (
-    <Modal
+    <Dialog
       open
       onClose={onDismiss}
       title={t("import:wrongDialog.title")}
@@ -43,6 +43,6 @@ export function WrongDialogNotice({ detected, onDismiss, onOpen }: Props): JSX.E
         {t(`import:wrongDialog.${detected}`)}
       </p>
       <p className="mt-2 text-sm text-(--text-muted)">{t("import:wrongDialog.body")}</p>
-    </Modal>
+    </Dialog>
   );
 }

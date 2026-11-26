@@ -14,6 +14,10 @@ import type { CruiseLegTrack, CruiseTrackMeta } from "../../types/cruiseTracks";
 import { JitterNote } from "../tracks/JitterNote";
 import GeoExportButtons from "../export/GeoExportButtons";
 import { geoExportPaths } from "../../lib/api/geoExport";
+import InlineError from "../ui/InlineError";
+import Banner from "../ui/Banner";
+import Button from "../ui/Button";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   cruiseId: string;
@@ -65,8 +69,7 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
       } catch (err) {
         // A broken file and a file without timestamps are DIFFERENT server
         // codes, each with its own DE/EN sentence — never the server's prose.
-        addToast(
-          "error",
+        reportPageError(
           saveErrorMessage(err, t, "cruise:tracks.saveError", CRUISE_TRACK_ERROR_KEYS)
         );
       }
@@ -80,8 +83,7 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
         addToast("success", t("tracks.added"));
       } catch (err) {
         const kind = dawarichFailureKind(err);
-        addToast(
-          "error",
+        reportPageError(
           kind
             ? t(dawarichFailureKey(kind))
             : saveErrorMessage(err, t, "cruise:tracks.saveError", CRUISE_TRACK_ERROR_KEYS)
@@ -148,12 +150,16 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
 
         {state.loading && <p className="t-caption">{t("tracks.loading")}</p>}
         {!state.loading && state.loadError && (
-          <div role="alert" className="text-(--danger)">
-            <p>{t("tracks.loadError")}</p>
-            <button type="button" className="underline" onClick={() => void state.reload()}>
-              {t("common:buttons.retry")}
-            </button>
-          </div>
+          <Banner
+            tone="error"
+            action={
+              <Button variant="secondary" onClick={() => void state.reload()}>
+                {t("common:buttons.retry")}
+              </Button>
+            }
+          >
+            {t("tracks.loadError")}
+          </Banner>
         )}
 
         {!state.loading && !state.loadError && state.overview && (
@@ -210,7 +216,7 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
                           : t("tracks.coversLegs", { count: track.coveredLegs.length })}
                       </span>
                       {track.truncated && (
-                        <span className="t-caption text-(--warning)">{t("tracks.truncated")}</span>
+                        <InlineError tone="warning">{t("tracks.truncated")}</InlineError>
                       )}
                       <JitterNote
                         jitterDropped={track.jitterDropped}
@@ -244,7 +250,7 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
                 await state.remove(track.id);
                 addToast("success", t("tracks.removed"));
               } catch (err) {
-                addToast("error", saveErrorMessage(err, t, "cruise:tracks.removeError"));
+                reportPageError(saveErrorMessage(err, t, "cruise:tracks.removeError"));
               }
             })();
           }}

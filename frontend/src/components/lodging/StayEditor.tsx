@@ -13,7 +13,7 @@ import { useSettingsStore } from "../../store/settingsStore";
 import { currencyForCountry } from "../../shared/countryCurrency";
 import { createStay, updateStay } from "../../lib/api/lodging";
 import { logger } from "../../lib/logger";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import {
   FormErrorBanner,
   RequiredLegend,
@@ -376,7 +376,7 @@ export function StayEditor({
     mode === "create" ? t("lodging:stayEditor.createTitle") : t("lodging:stayEditor.editTitle");
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving.saving}
@@ -585,6 +585,6 @@ export function StayEditor({
         />
         <RequiredLegend className="mt-3" />
       </div>
-    </Modal>
+    </Dialog>
   );
 }

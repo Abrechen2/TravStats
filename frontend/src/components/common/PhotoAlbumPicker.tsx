@@ -10,6 +10,7 @@ import {
   type PhotoAlbum,
 } from "../../lib/api/photoChoices";
 import { logger } from "../../lib/logger";
+import InlineError from "../ui/InlineError";
 
 const PROVIDERS: ChoiceProvider[] = ["immich", "photoprism"];
 
@@ -106,11 +107,7 @@ export function PhotoAlbumPicker({ target, onPick, onCancel, minSize }: Props): 
             {listing.state === "loading" && (
               <p className="t-caption">{t("common:photoChoose.album.loading")}</p>
             )}
-            {listing.state === "failed" && (
-              <p role="alert" className="t-caption" style={{ color: "var(--color-danger)" }}>
-                {listing.message}
-              </p>
-            )}
+            {listing.state === "failed" && <InlineError>{listing.message}</InlineError>}
             {listing.state === "ok" && listing.albums.length === 0 && (
               <p className="t-caption">{t("common:photoChoose.album.none")}</p>
             )}

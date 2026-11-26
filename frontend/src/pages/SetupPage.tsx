@@ -10,6 +10,7 @@ import { enableFreeServices } from "../components/Setup/freeServices";
 import { failureText } from "../components/ExternalServices/serviceText";
 import type { DomainKey } from "../shared/domains";
 import { logger } from "../lib/logger";
+import InlineError from "../components/ui/InlineError";
 
 /** The shared demo account's fixed, published credentials (`seedDemoAccount.ts`). */
 const DEMO_USERNAME = "demo";
@@ -189,11 +190,7 @@ export default function SetupPage(): JSX.Element {
                 {t("setup:demo.title")}
               </h2>
               <p className="text-xs text-(--text-muted) mb-3">{t("setup:demo.description")}</p>
-              {demoError && (
-                <p className="text-xs mb-2" style={{ color: "var(--danger)" }} role="alert">
-                  {demoError}
-                </p>
-              )}
+              {demoError && <InlineError className="mb-2">{demoError}</InlineError>}
               <button
                 type="button"
                 onClick={() => void handleDemoLogin()}
@@ -229,9 +226,9 @@ export default function SetupPage(): JSX.Element {
                 </p>
                 {servicesNotice ? (
                   <>
-                    <p className="text-sm mb-4" style={{ color: "var(--danger)" }} role="alert">
+                    <InlineError className="mb-4">
                       {t("setup:freeServices.partialFailed", { reason: servicesNotice })}
-                    </p>
+                    </InlineError>
                     <button
                       type="button"
                       className="btn-primary w-full py-2 text-sm font-medium"

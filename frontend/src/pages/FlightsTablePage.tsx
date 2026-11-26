@@ -68,6 +68,7 @@ import SelectCheckbox from "../components/flightsTable/bulk/SelectCheckbox";
 import { useFlightSelection } from "../components/flightsTable/bulk/useFlightSelection";
 import Toggletip from "../components/ui/Toggletip";
 import { isDayString } from "../lib/gapCalendar";
+import { reportPageError } from "../store/pageErrorStore";
 
 const STATUS_FILTER_PARAM = oneOfParam<FlightStatusFilter>(["all", ...FLIGHT_STATUSES]);
 const SPECIAL_FILTER_PARAM = oneOfParam<SpecialTypeFilter>([
@@ -236,7 +237,7 @@ export default function FlightsTablePage(): JSX.Element {
       reload();
     } catch (error) {
       logger.error("Failed to delete flight:", error);
-      addToast("error", t("dashboard:errors.deleteFlight"));
+      reportPageError(t("dashboard:errors.deleteFlight"));
       setDeleteConfirmOpen(false);
       setFlightToDelete(null);
     } finally {
@@ -253,7 +254,7 @@ export default function FlightsTablePage(): JSX.Element {
       setEditingFlight(created);
     } catch (error) {
       logger.error("Failed to duplicate flight:", error);
-      addToast("error", t("flights:table.toast.duplicateFailed"));
+      reportPageError(t("flights:table.toast.duplicateFailed"));
     }
   };
 
@@ -265,7 +266,7 @@ export default function FlightsTablePage(): JSX.Element {
       addToast("success", t("flights:table.toast.updated"));
     } catch (error) {
       logger.error("Failed to update flight:", error);
-      addToast("error", t("dashboard:errors.updateFlight"));
+      reportPageError(t("dashboard:errors.updateFlight"));
       throw error;
     }
   };

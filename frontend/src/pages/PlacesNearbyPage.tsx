@@ -31,6 +31,7 @@ import type { PlaceCountState } from "../shared/placeCounting";
 import type { Lodging } from "../types/lodging";
 import type { Place } from "../types/place";
 import BackLink from "../components/navigation/BackLink";
+import InlineError from "../components/ui/InlineError";
 
 const COARSE = "pointer-coarse:min-h-(--ts-size-touch-min)";
 const ALL_STATES: readonly PlaceCountState[] = ["visited", "planned", "excluded"];
@@ -188,9 +189,9 @@ export default function PlacesNearbyPage(): JSX.Element {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.4fr]">
         <div className="flex flex-col gap-5">
           {linkUnusable && (
-            <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
+            <InlineError tone="warning">
               {t("places:nearby.origin.linkedLodgingUnusable")}
-            </p>
+            </InlineError>
           )}
           <NearbyOriginPicker
             mode={mode}

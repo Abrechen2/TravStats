@@ -4,7 +4,7 @@ import { webPrefsApi } from "../lib/api/webPrefs";
 import { logger } from "../lib/logger";
 import { WEB_PREF_SECTIONS } from "../lib/webPrefs/registry";
 import { createWebPrefsSync, type WebPrefsFailure } from "../lib/webPrefs/webPrefsSync";
-import { useToastStore } from "../store/toastStore";
+import { reportPageError } from "../store/pageErrorStore";
 
 /** A refocused tab re-reads the server at most this often. */
 const REFRESH_MIN_INTERVAL_MS = 30_000;
@@ -38,7 +38,7 @@ export function useWebPrefsSync(userId: string | null): void {
       storage: window.localStorage,
       userId,
       onFailure: (kind) => {
-        useToastStore.getState().addToast("warning", i18n.t(FAILURE_COPY[kind]), 8000);
+        reportPageError(i18n.t(FAILURE_COPY[kind]), "warning");
       },
       warn: (message, detail) => logger.warn(message, detail),
     });

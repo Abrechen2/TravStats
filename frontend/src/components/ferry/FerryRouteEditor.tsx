@@ -31,6 +31,7 @@ import { apiErrorMachineCode } from "../../lib/apiError";
 import { logger } from "../../lib/logger";
 import { reuseMapsEnabled } from "../../lib/mapReuse";
 import type { FerryJourney } from "../../types/ferry";
+import InlineError from "../ui/InlineError";
 
 /** The server error codes this editor has copy for; anything else gets the generic sentence. */
 const KNOWN_ERRORS = new Set([
@@ -222,15 +223,11 @@ export function FerryRouteEditor({ ride, onSaved, onClose }: Props): JSX.Element
         </label>
       )}
       {reachFailed && (
-        <p role="alert" className="text-sm text-(--danger)" data-testid="ferry-route-scope-failed">
+        <InlineError testId="ferry-route-scope-failed">
           {t("ferry:routeEditor.scope.failed")}
-        </p>
+        </InlineError>
       )}
-      {error && (
-        <p role="alert" className="text-sm text-(--danger)" data-testid="ferry-route-editor-error">
-          {error}
-        </p>
-      )}
+      {error && <InlineError testId="ferry-route-editor-error">{error}</InlineError>}
       <div className="flex flex-wrap gap-2">
         <button
           type="button"

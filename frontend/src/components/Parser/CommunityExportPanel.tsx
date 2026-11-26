@@ -10,6 +10,7 @@ import {
 } from "../../lib/communityIssue";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
+import InlineError from "../ui/InlineError";
 
 /** The workshop domains whose templates the repository takes (v2 envelopes). */
 export const SHAREABLE_DOMAINS: ReadonlySet<string> = new Set([
@@ -145,11 +146,11 @@ export default function CommunityExportPanel({
         </button>
       )}
       {refusal && (
-        <p role="alert" style={{ color: "var(--danger)" }}>
+        <InlineError>
           {t(refusal)}
           {found.length > 0 &&
             ` ${t("parser:communityExport.found", { what: found.map(kindLabel).join(", ") })}`}
-        </p>
+        </InlineError>
       )}
       {file && issue && (
         <div className="space-y-2" data-testid="community-export-review">
@@ -177,11 +178,11 @@ export default function CommunityExportPanel({
           )}
           <p className="t-caption">{t("parser:communityExport.testCases")}</p>
           {suspicious.length > 0 && (
-            <p role="alert" style={{ color: "var(--danger)" }}>
+            <InlineError>
               {t("parser:communityExport.looksPersonal", {
                 what: suspicious.map((k) => t(`parser:communityExport.suspect.${k}`)).join(", "),
               })}
-            </p>
+            </InlineError>
           )}
           {issue.tooLong && <p className="t-caption">{t("parser:communityExport.tooLong")}</p>}
           <div className="flex flex-wrap gap-2">
@@ -203,9 +204,7 @@ export default function CommunityExportPanel({
           </div>
           {copy === "copied" && <p role="status">{t("parser:communityExport.copied")}</p>}
           {copy === "manual" && (
-            <p role="alert" style={{ color: "var(--warning)" }}>
-              {t("parser:communityExport.copyFailed")}
-            </p>
+            <InlineError tone="warning">{t("parser:communityExport.copyFailed")}</InlineError>
           )}
         </div>
       )}

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
 import { logger } from "../../lib/logger";
-import { useToastStore } from "../../store/toastStore";
 import type {
   AlbumDays,
   ImmichGalleryAsset,
@@ -15,6 +14,7 @@ import PhotoLightbox, { type LightboxItem } from "./PhotoLightbox";
 import AlbumDayPhotos from "./AlbumDayPhotos";
 import GalleryDayStrip, { ALL_DAYS, dayKey } from "./GalleryDayStrip";
 import { useDayPrefetch } from "./useDayPrefetch";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const JOB_POLL_MS = 1500;
 /** Consecutive failed job polls after which polling stops and the failure is shown. */
@@ -85,7 +85,6 @@ interface Props {
  */
 export default function ImmichAlbumSection({ tripId, album, onChanged }: Props): JSX.Element {
   const { t } = useTranslation("immich");
-  const addToast = useToastStore((s) => s.addToast);
 
   const [days, setDays] = useState<AlbumDays | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
@@ -240,7 +239,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       startPolling();
     } catch (error) {
       if (mountedRef.current)
-        addToast("error", t(failureKey(immichFailureKind(error), album.provider)));
+        reportPageError(t(failureKey(immichFailureKind(error), album.provider)));
     }
   };
 
@@ -252,7 +251,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       onChanged();
     } catch (error) {
       if (mountedRef.current)
-        addToast("error", t(failureKey(immichFailureKind(error), album.provider)));
+        reportPageError(t(failureKey(immichFailureKind(error), album.provider)));
     }
   };
 

@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { FerryRouteEditor } from "./FerryRouteEditor";
 import { ferryApi } from "../../lib/api/ferry";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useFerryRouteEditStore } from "../../store/ferryRouteEditStore";
 import type { FerryJourney } from "../../types/ferry";
+import InlineError from "../ui/InlineError";
 
 /**
  * The crossing editor over the dashboard map (GitHub #407): the ferry card's
@@ -42,7 +43,7 @@ export function FerryRouteEditHost({ onSaved }: { onSaved: () => void }): JSX.El
 
   if (!crossingId) return null;
   return (
-    <Modal
+    <Dialog
       open
       onClose={close}
       title={t("ferry:routing.editManual")}
@@ -50,9 +51,9 @@ export function FerryRouteEditHost({ onSaved }: { onSaved: () => void }): JSX.El
       testId="ferry-route-edit-host"
     >
       {failed && (
-        <p role="alert" className="text-sm text-(--danger)" data-testid="ferry-route-edit-failed">
+        <InlineError testId="ferry-route-edit-failed">
           {t("ferry:routeEditor.loadFailed")}
-        </p>
+        </InlineError>
       )}
       {!ride && !failed && <p className="t-caption">{t("common:loading.default")}</p>}
       {ride && (
@@ -65,6 +66,6 @@ export function FerryRouteEditHost({ onSaved }: { onSaved: () => void }): JSX.El
           onClose={close}
         />
       )}
-    </Modal>
+    </Dialog>
   );
 }

@@ -8,6 +8,7 @@ import { useToastStore } from "../../../store/toastStore";
 import { ConfirmDialog } from "../../ui/settings";
 import { useDialogCopy } from "../rowCopy";
 import { companionErrorKey } from "./companionErrorCopy";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 const NS = "companions:manage";
 
@@ -27,7 +28,7 @@ function useConfirm(onDone: () => void) {
       onDone();
     } catch (err) {
       logger.error("Companion delete failed:", err);
-      addToast("error", t(companionErrorKey(err, fallbackKey)));
+      reportPageError(t(companionErrorKey(err, fallbackKey)));
     } finally {
       setBusy(false);
     }

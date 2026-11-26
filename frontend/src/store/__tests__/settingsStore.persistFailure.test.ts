@@ -18,14 +18,14 @@ vi.mock("../../lib/api", () => ({
 
 import { settingsApi } from "../../lib/api";
 import { useSettingsStore } from "../settingsStore";
-import { useToastStore } from "../toastStore";
+import { usePageErrorStore } from "../pageErrorStore";
 
 const update = vi.mocked(settingsApi.update);
 
 describe("settings that persist immediately roll back when the write fails", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useToastStore.setState({ toasts: [] });
+    usePageErrorStore.getState().clear();
     useSettingsStore.setState({
       enabledDomains: ["flight"],
       baseCurrency: "EUR",
@@ -40,7 +40,7 @@ describe("settings that persist immediately roll back when the write fails", () 
     await vi.waitFor(() => expect(update).toHaveBeenCalled());
 
     expect(useSettingsStore.getState().enabledDomains).toEqual(["flight", "cruise"]);
-    expect(useToastStore.getState().toasts).toHaveLength(0);
+    expect(usePageErrorStore.getState().errors).toHaveLength(0);
   });
 
   it("puts the domains back and says so when the write fails", async () => {
@@ -48,9 +48,9 @@ describe("settings that persist immediately roll back when the write fails", () 
     useSettingsStore.getState().setEnabledDomains(["flight", "cruise"]);
 
     await vi.waitFor(() => expect(useSettingsStore.getState().enabledDomains).toEqual(["flight"]));
-    const toasts = useToastStore.getState().toasts;
+    const toasts = usePageErrorStore.getState().errors;
     expect(toasts).toHaveLength(1);
-    expect(toasts[0].type).toBe("error");
+    expect(toasts[0].tone).toBe("error");
   });
 
   it("puts the base currency back when the write fails", async () => {
@@ -58,7 +58,7 @@ describe("settings that persist immediately roll back when the write fails", () 
     useSettingsStore.getState().setBaseCurrency("USD");
 
     await vi.waitFor(() => expect(useSettingsStore.getState().baseCurrency).toBe("EUR"));
-    expect(useToastStore.getState().toasts).toHaveLength(1);
+    expect(usePageErrorStore.getState().errors).toHaveLength(1);
   });
 
   it("puts the trip-autocreate flag back when the write fails", async () => {
@@ -66,7 +66,7 @@ describe("settings that persist immediately roll back when the write fails", () 
     useSettingsStore.getState().setAutoCreateTrips(false);
 
     await vi.waitFor(() => expect(useSettingsStore.getState().autoCreateTrips).toBe(true));
-    expect(useToastStore.getState().toasts).toHaveLength(1);
+    expect(usePageErrorStore.getState().errors).toHaveLength(1);
   });
 
   it("puts the country threshold back when the write fails", async () => {
@@ -74,7 +74,7 @@ describe("settings that persist immediately roll back when the write fails", () 
     useSettingsStore.getState().setCountryThreshold("visited");
 
     await vi.waitFor(() => expect(useSettingsStore.getState().countryThreshold).toBeNull());
-    expect(useToastStore.getState().toasts).toHaveLength(1);
+    expect(usePageErrorStore.getState().errors).toHaveLength(1);
   });
 
   it("rapid on/off/on with the older request failing ends on the last value", async () => {
@@ -97,6 +97,6 @@ describe("settings that persist immediately roll back when the write fails", () 
     await new Promise((r) => setTimeout(r, 20));
     expect(update).toHaveBeenLastCalledWith({ autoCreateTrips: false });
     expect(useSettingsStore.getState().autoCreateTrips).toBe(false);
-    expect(useToastStore.getState().toasts).toHaveLength(0);
+    expect(usePageErrorStore.getState().errors).toHaveLength(0);
   });
 });

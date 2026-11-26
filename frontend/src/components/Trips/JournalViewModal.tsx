@@ -1,5 +1,5 @@
 import { formatDayLabel } from "../../lib/format";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useMemo } from "react";
 import type { TripJournalEntry } from "../../types";
 import JournalBody from "./JournalBody";
@@ -47,7 +47,7 @@ export default function JournalViewModal({
   const meta = [entry.weather, observed, entry.mood].filter(Boolean).join(" · ");
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={
@@ -110,6 +110,6 @@ export default function JournalViewModal({
     >
       <JournalBody body={entry.body} />
       <JournalPhotoRow photos={entry.photos ?? []} size={120} />
-    </Modal>
+    </Dialog>
   );
 }

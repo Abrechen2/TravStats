@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useEscapeClose } from "../../hooks/useEscapeClose";
+import Dialog from "../ui/Dialog";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { logger } from "../../lib/logger";
 import type { LocationSelection } from "../location/LocationInput";
@@ -16,6 +16,7 @@ import type {
   PlaceImportResolution,
   PlaceImportSummary,
 } from "../../types/placeImport";
+import Banner from "../ui/Banner";
 
 export interface PlaceImportPreviewModalProps {
   rows: PreviewRow[];
@@ -108,7 +109,6 @@ export function PlaceImportPreviewModal({
   const { t } = useTranslation(["places", "common"]);
   const coarse = useCoarsePointer();
   const [saving, setSaving] = useState(false);
-  useEscapeClose(true, onCancel, saving);
   const [error, setError] = useState<string | null>(null);
   const [edited, setEdited] = useState<EditableRow[]>(() => rows.map(toEditableRow));
   // Computed once from what the file brought, so the panel's request does not
@@ -203,76 +203,14 @@ export function PlaceImportPreviewModal({
   }, [canCommit, edited, onCommit, t]);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
-      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-[var(--bg-surface)] p-6">
-        <h2 className="mb-1 text-xl font-semibold text-[var(--text-primary)]">
-          {t("places:import.preview.title", { count: rows.length })}
-        </h2>
-        {/* Plain JSX values, not one interpolated string: the global i18n test
-            mock returns the bare key and drops every option, so a single
-            interpolated key could not be asserted. Each label still goes
-            through t(). */}
-        <p data-testid="place-import-counts" className="mb-1 text-sm text-[var(--text-muted)]">
-          {counts.newRows} {t("places:import.preview.newLabel")}
-          {" · "}
-          {counts.alreadyPresent} {t("places:import.preview.presentLabel")}
-          {" · "}
-          {counts.needsInput} {t("places:import.preview.needsInputLabel")}
-        </p>
-        {summary.needsInput > 0 && (
-          <p className="mb-3 text-xs text-amber-300/90">
-            {t("places:import.preview.needsInputHint")}
-          </p>
-        )}
-
-        <ImportReviewBar
-          obviousNew={obvious.take}
-          obviousDuplicates={obvious.skip}
-          openCount={counts.needsInput}
-          onTakeNew={() => applyObvious("new")}
-          onSkipDuplicates={() => applyObvious("duplicate")}
-          disabled={saving}
-        />
-
-        <TakeoutResolvePanel rows={resolvable} listName={listName} onResolved={onResolved} t={t} />
-
-        {error !== null && (
-          <p
-            role="alert"
-            className="mb-3 rounded border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-300"
-          >
-            {error}
-          </p>
-        )}
-
-        <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-[var(--color-border)]">
-          <table className="w-full border-collapse text-sm">
-            <thead className="sticky top-0 bg-[var(--bg-base)] text-xs uppercase tracking-wide text-[var(--text-muted)]">
-              <tr>
-                <th className="p-2 text-left">{t("places:import.fields.name")}</th>
-                <th className="p-2 text-left">{t("places:import.fields.position")}</th>
-                <th className="p-2 text-left">{t("places:import.fields.city")}</th>
-                <th className="p-2 text-left">{t("places:import.fields.visitedAt")}</th>
-                <th className="p-2 text-left">{t("places:import.fields.hints")}</th>
-                <th className="p-2 text-left">{t("places:import.fields.action")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {edited.map((row) => (
-                <PlaceImportPreviewRow
-                  key={row.sourceRowIndex}
-                  row={row}
-                  onChange={updateRow}
-                  onPlace={placeRow}
-                  t={t}
-                  coarse={coarse}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-6 flex items-center justify-end gap-3">
+    <Dialog
+      open
+      onClose={onCancel}
+      busy={saving}
+      maxWidth={1024}
+      title={t("places:import.preview.title", { count: rows.length })}
+      footer={
+        <>
           <button
             type="button"
             onClick={onCancel}
@@ -290,8 +228,69 @@ export function PlaceImportPreviewModal({
           >
             {saving ? t("common:loading.default") : t("places:import.preview.commit")}
           </button>
-        </div>
+        </>
+      }
+    >
+      {/* Plain JSX values, not one interpolated string: the global i18n test
+            mock returns the bare key and drops every option, so a single
+            interpolated key could not be asserted. Each label still goes
+            through t(). */}
+      <p data-testid="place-import-counts" className="mb-1 text-sm text-[var(--text-muted)]">
+        {counts.newRows} {t("places:import.preview.newLabel")}
+        {" · "}
+        {counts.alreadyPresent} {t("places:import.preview.presentLabel")}
+        {" · "}
+        {counts.needsInput} {t("places:import.preview.needsInputLabel")}
+      </p>
+      {summary.needsInput > 0 && (
+        <p className="mb-3 text-xs text-amber-300/90">
+          {t("places:import.preview.needsInputHint")}
+        </p>
+      )}
+
+      <ImportReviewBar
+        obviousNew={obvious.take}
+        obviousDuplicates={obvious.skip}
+        openCount={counts.needsInput}
+        onTakeNew={() => applyObvious("new")}
+        onSkipDuplicates={() => applyObvious("duplicate")}
+        disabled={saving}
+      />
+
+      <TakeoutResolvePanel rows={resolvable} listName={listName} onResolved={onResolved} t={t} />
+
+      {error !== null && (
+        <Banner tone="error" className="mb-3">
+          {error}
+        </Banner>
+      )}
+
+      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-[var(--color-border)]">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 bg-[var(--bg-base)] text-xs uppercase tracking-wide text-[var(--text-muted)]">
+            <tr>
+              <th className="p-2 text-left">{t("places:import.fields.name")}</th>
+              <th className="p-2 text-left">{t("places:import.fields.position")}</th>
+              <th className="p-2 text-left">{t("places:import.fields.city")}</th>
+              <th className="p-2 text-left">{t("places:import.fields.visitedAt")}</th>
+              <th className="p-2 text-left">{t("places:import.fields.hints")}</th>
+              <th className="p-2 text-left">{t("places:import.fields.action")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {edited.map((row) => (
+              <PlaceImportPreviewRow
+                key={row.sourceRowIndex}
+                row={row}
+                onChange={updateRow}
+                onPlace={placeRow}
+                t={t}
+                coarse={coarse}
+              />
+            ))}
+          </tbody>
+        </table>
       </div>
-    </div>
+    </Dialog>
   );
 }

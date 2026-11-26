@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../../../components/ui/Button";
-import { token } from "../../../components/ui/tokens";
 import Dialog from "../../../components/ui/Dialog";
 import TripSelectField from "../../../components/FlightForm/fields/TripSelectField";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -24,6 +23,7 @@ import {
   saveRoadtrip,
   type RoadtripDraft,
 } from "./roadtripDraft";
+import InlineError from "../../../components/ui/InlineError";
 
 type Load =
   | { phase: "loading" }
@@ -156,11 +156,7 @@ export default function RoadtripFromTrackDialog({
           {text("loading")}
         </p>
       )}
-      {load.phase === "error" && (
-        <p role="alert" className="t-body" style={{ color: token("bad") }}>
-          {load.reason}
-        </p>
-      )}
+      {load.phase === "error" && <InlineError>{load.reason}</InlineError>}
       {ready && (
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1">
@@ -229,11 +225,7 @@ export default function RoadtripFromTrackDialog({
             })}
           </ol>
           {emptyName && <p className="t-caption">{text("nameNeeded")}</p>}
-          {saveError && (
-            <p role="alert" className="t-body" style={{ color: token("bad") }}>
-              {saveError}
-            </p>
-          )}
+          {saveError && <InlineError>{saveError}</InlineError>}
         </div>
       )}
     </Dialog>

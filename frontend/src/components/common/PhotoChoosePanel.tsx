@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import OverflowMenu from "../ui/OverflowMenu";
 import PhotoAlbumPicker from "./PhotoAlbumPicker";
 import type { JSX } from "react";
@@ -20,6 +20,8 @@ import { useToastStore } from "../../store/toastStore";
 import { EnlargeCorner } from "./photoViewer/EnlargeButton";
 import { usePhotoViewer } from "./photoViewer/usePhotoViewer";
 import { largeUrl, sourceOf } from "./photoViewer/viewerPhoto";
+import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   target: ChoiceTarget;
@@ -158,12 +160,12 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
         })
       );
       if (result.skipped > 0)
-        addToast("error", t("common:photoChoose.skipped", { count: result.skipped }));
+        reportPageError(t("common:photoChoose.skipped", { count: result.skipped }));
       onSaved();
       await load();
     } catch (err: unknown) {
       logger.error("PhotoChoosePanel: save failed", err);
-      addToast("error", t("common:photoChoose.saveFailed"));
+      reportPageError(t("common:photoChoose.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -216,7 +218,7 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
   );
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={t("common:photoChoose.title")}
@@ -227,11 +229,7 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
       footer={footer}
     >
       <div className="flex w-full flex-col gap-3">
-        {failed && (
-          <p role="alert" className="t-caption" style={{ color: "var(--color-danger)" }}>
-            {t("common:photoChoose.loadFailed")}
-          </p>
-        )}
+        {failed && <InlineError>{t("common:photoChoose.loadFailed")}</InlineError>}
         {pickingAlbum && target.type === "entry" ? (
           <PhotoAlbumPicker
             target={target}
@@ -405,7 +403,7 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
           </>
         )}
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

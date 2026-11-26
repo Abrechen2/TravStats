@@ -9,7 +9,7 @@ import {
   useResilientStyle,
 } from "./basemapFallback";
 import { resolveFlatStyle } from "./basemapStyles";
-import { useToastStore } from "../../store/toastStore";
+import { usePageErrorStore } from "../../store/pageErrorStore";
 import { useBasemapStyle } from "./useBasemapStyle";
 
 const style = (body: unknown, status = 200) =>
@@ -17,7 +17,7 @@ const style = (body: unknown, status = 200) =>
 
 beforeEach(() => {
   resetStyleHealth();
-  useToastStore.getState().clearToasts();
+  usePageErrorStore.getState().clear();
 });
 afterEach(() => {
   delete window.__TRAVSTATS_GEO__;
@@ -29,7 +29,7 @@ describe("basemap fallback", () => {
   it("keeps the vector style when it loads", async () => {
     await probeStyle(resolveFlatStyle("dark") as string, style({ version: 8 }));
     expect(resilientStyle("dark")).toBe(resolveFlatStyle("dark"));
-    expect(useToastStore.getState().toasts).toHaveLength(0);
+    expect(usePageErrorStore.getState().errors).toHaveLength(0);
   });
   it.each([
     ["an unreachable provider", vi.fn(async () => Promise.reject(new TypeError("offline")))],
@@ -41,9 +41,9 @@ describe("basemap fallback", () => {
     await probeStyle(url, fetcher as unknown as typeof fetch);
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(resilientStyle("light")).toBe(rasterFallbackFor("light"));
-    const toasts = useToastStore.getState().toasts;
+    const toasts = usePageErrorStore.getState().errors;
     expect(toasts).toHaveLength(1);
-    expect(toasts[0].type).toBe("warning");
+    expect(toasts[0].tone).toBe("warning");
   });
   it("gives every vector style its own key-free raster fallback", () => {
     for (const id of ["standard", "light", "dark", "voyager"] as const) {
@@ -58,7 +58,7 @@ describe("basemap fallback", () => {
     const url = resolveFlatStyle("dark") as string;
     await probeStyle(url, style({}, 404));
     expect(resilientStyle("dark")).toBe(url);
-    expect(useToastStore.getState().toasts).toHaveLength(1);
+    expect(usePageErrorStore.getState().errors).toHaveLength(1);
   });
   it("re-renders a map that already shows the failed style", async () => {
     const { result } = renderHook(() => useResilientStyle("dark"));

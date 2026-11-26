@@ -13,6 +13,7 @@ import type { LoyaltyMembership } from "../../types/loyalty";
 import { SettingItem, useGuardedNavigate } from "../ui/settings";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useDomainVisible } from "../../hooks/useDomainVisible";
+import InlineError from "../ui/InlineError";
 
 /** The anchor each domain's block answers to inside the settings section. */
 export const loyaltySectionId = (domain: LoyaltyDomain): string => `loyalty-${domain}`;
@@ -111,11 +112,7 @@ export default function LoyaltySection(): JSX.Element {
 
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-xl)" }}>
-      {loadError && (
-        <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-          {t("loyalty:loadError")}
-        </p>
-      )}
+      {loadError && <InlineError>{t("loyalty:loadError")}</InlineError>}
       {offDomains.map((domain) => (
         <SectionCard key={domain}>
           <SectionTitle title={t(`loyalty:sections.${domain}.title`)} />

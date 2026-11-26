@@ -7,6 +7,7 @@ import { logger } from "../../lib/logger";
 import type { ExcludedCountry } from "../../types/passport";
 import { overrideErrorKey } from "./overrideErrors";
 import { CountryLabel } from "../../lib/countryFlag";
+import InlineError from "../ui/InlineError";
 
 /**
  * Countries the user took out of the passport (forgejo#308). They are in no
@@ -83,11 +84,7 @@ export default function ExcludedCountries({
           </li>
         ))}
       </ul>
-      {error && (
-        <p role="alert" className="text-sm mt-3" style={{ color: "var(--ts-bad)" }}>
-          {error}
-        </p>
-      )}
+      {error && <InlineError className="mt-3">{error}</InlineError>}
     </section>
   );
 }

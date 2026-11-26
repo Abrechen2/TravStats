@@ -10,6 +10,10 @@ vi.mock("../../lib/api", () => ({
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
+vi.mock("../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  reportPageError: (message: string, tone = "error") => mocks.addToast(tone, message),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (state: { addToast: typeof mocks.addToast }) => unknown) =>
     selector({ addToast: mocks.addToast }),

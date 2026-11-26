@@ -28,7 +28,7 @@ import {
   isTransientSaveError,
   saveErrorKey,
 } from "../lib/saveErrorMessage";
-import Modal from "./Modal";
+import Dialog from "./ui/Dialog";
 import {
   FormErrorBanner,
   RequiredLegend,
@@ -510,7 +510,7 @@ export default function SpecialFlightModal({
   // no dialog role, no Escape, no focus trap and no focus return — and it is
   // what now asks before a changed form is discarded.
   return (
-    <Modal
+    <Dialog
       open={isOpen}
       onClose={handleClose}
       busy={loading}
@@ -654,6 +654,6 @@ export default function SpecialFlightModal({
           </form>
         )}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

@@ -8,6 +8,7 @@ import {
   calendarSourcesApi,
   type CalendarCollection,
 } from "../../../lib/api/calendarSources";
+import InlineError from "../../ui/InlineError";
 
 const NS = "suggestionSources:calendar.form";
 
@@ -190,11 +191,7 @@ export default function CalendarSourceForm({
           )}
         </>
       )}
-      {error && (
-        <p role="alert" className="t-body" style={{ color: "var(--ts-bad)" }}>
-          {error}
-        </p>
-      )}
+      {error && <InlineError>{error}</InlineError>}
       <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
         <Button type="submit" variant="primary" disabled={!canSave || busy}>
           {t(`${NS}.save`)}

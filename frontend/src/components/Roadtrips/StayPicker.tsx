@@ -14,6 +14,7 @@ import {
   toPickable,
   type PickableStay,
 } from "./stayPickerModel";
+import InlineError from "../ui/InlineError";
 
 export type { PickableStay } from "./stayPickerModel";
 
@@ -184,9 +185,7 @@ export default function StayPicker({
           <span className="text-sm font-semibold">{chosen.name}</span>
         </div>
         {(chosen.lat === null || chosen.lon === null) && (
-          <p className="text-xs" style={{ color: "var(--ts-warn)" }}>
-            {t("roadtrips:stay.noCoords")}
-          </p>
+          <InlineError tone="warning">{t("roadtrips:stay.noCoords")}</InlineError>
         )}
         {stays.length === 0 && (
           <p className="text-xs text-(--text-muted)">{t("roadtrips:stay.noStays")}</p>

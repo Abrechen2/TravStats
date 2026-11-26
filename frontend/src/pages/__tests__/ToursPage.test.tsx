@@ -6,7 +6,7 @@ import ToursPage from "../ToursPage";
 import { tourIndexApi, type TourSummary } from "../../lib/api/tourIndex";
 import { toursApi } from "../../lib/api/tours";
 import { tripsApi } from "../../lib/api/trips";
-import { useToastStore } from "../../store/toastStore";
+import { usePageErrorStore } from "../../store/pageErrorStore";
 import { bareMenuReady, bareMenuTrigger, chooseFromBareMenu } from "../../__tests__/helpers/menu";
 
 vi.mock("../../lib/api/tourIndex", () => ({
@@ -74,6 +74,7 @@ function newTourButton(): HTMLElement {
 
 describe("the tours page", () => {
   beforeEach(() => {
+    usePageErrorStore.getState().clear();
     vi.clearAllMocks();
   });
 
@@ -357,7 +358,9 @@ describe("the tours page — a tour needs a name", () => {
       Object.assign(new Error("conflict"), { isAxiosError: true, response: { status: 409 } })
     );
     const addToast = vi.fn();
-    useToastStore.setState({ addToast } as never);
+    usePageErrorStore.setState({
+      report: (message: string, tone = "error") => addToast(tone, message),
+    } as never);
     renderPage();
 
     await bareMenuReady();
@@ -374,7 +377,9 @@ describe("the tours page — a tour needs a name", () => {
     vi.mocked(tourIndexApi.list).mockResolvedValue([tour()]);
     vi.mocked(toursApi.update).mockRejectedValue(new Error("network"));
     const addToast = vi.fn();
-    useToastStore.setState({ addToast } as never);
+    usePageErrorStore.setState({
+      report: (message: string, tone = "error") => addToast(tone, message),
+    } as never);
     renderPage();
 
     await bareMenuReady();
@@ -429,7 +434,9 @@ describe("the tours page — a tour needs a name", () => {
       )
       .mockResolvedValueOnce({} as never);
     const addToast = vi.fn();
-    useToastStore.setState({ addToast } as never);
+    usePageErrorStore.setState({
+      report: (message: string, tone = "error") => addToast(tone, message),
+    } as never);
     renderPage();
 
     await bareMenuReady();

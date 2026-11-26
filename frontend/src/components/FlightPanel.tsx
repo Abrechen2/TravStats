@@ -20,6 +20,7 @@ import { flightDeparture } from "../lib/entityTimes";
 import { dayOf } from "../shared/time";
 import { logger } from "../lib/logger";
 import ListLoadFailed, { loadFailureLog } from "./table/ListLoadFailed";
+import { reportPageError } from "../store/pageErrorStore";
 
 type PanelTab = "flights" | "trips";
 // `firstDay`: the earliest departure's day AT ITS AIRPORT (ADR 0002) — the
@@ -165,7 +166,7 @@ export function FlightPanel({
       clearSelection();
       void reloadTrips();
     } catch {
-      addToast("error", t("trips:toasts.deleteError"));
+      reportPageError(t("trips:toasts.deleteError"));
       setDeleteTripTarget(null);
     }
   };
@@ -190,7 +191,7 @@ export function FlightPanel({
         showDetails(remaining, "trip-details");
       }
     } catch {
-      addToast("error", t("trips:toasts.flightRemoveError"));
+      reportPageError(t("trips:toasts.flightRemoveError"));
     }
   };
 

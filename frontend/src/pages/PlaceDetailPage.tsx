@@ -41,6 +41,8 @@ import { useDisplayFormat } from "../lib/format";
 import { visitTime as visitTimeOf } from "../lib/entityTimes";
 import type { Place, PlaceVisit } from "../types/place";
 import BackLink from "../components/navigation/BackLink";
+import InlineError from "../components/ui/InlineError";
+import { reportPageError } from "../store/pageErrorStore";
 
 export default function PlaceDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -130,9 +132,9 @@ export default function PlaceDetailPage(): JSX.Element {
       await refresh();
     } catch (err: unknown) {
       logger.error({ err }, "PlaceDetailPage: reload from the visit dialog failed");
-      addToast("error", t("places:detail.loadError"));
+      reportPageError(t("places:detail.loadError"));
     }
-  }, [refresh, addToast, t]);
+  }, [refresh, t]);
 
   const openVisitEditor = useCallback((visit: PlaceVisit): void => {
     setVisitDialog({ visit });
@@ -145,7 +147,7 @@ export default function PlaceDetailPage(): JSX.Element {
   useEditDeepLink(EDIT_PARAM.editVisit, place !== null, (visitId) => {
     const visit = place?.visits?.find((v) => v.id === visitId);
     if (visit) openVisitEditor(visit);
-    else addToast("error", t("places:detail.visitNotFound"));
+    else reportPageError(t("places:detail.visitNotFound"));
   });
 
   // The trip list for the selector above. Loaded once, not per open: the
@@ -249,9 +251,9 @@ export default function PlaceDetailPage(): JSX.Element {
     return (
       <AppShell>
         <div className="py-16 text-center">
-          <p role="alert" style={{ color: "var(--danger)" }}>
+          <InlineError>
             {isLoadError ? t("places:detail.loadError") : t("places:detail.notFound")}
-          </p>
+          </InlineError>
           {isLoadError && (
             <div className="mt-3 flex justify-center">
               <Button onClick={() => void load()}>{t("common:buttons.retry")}</Button>

@@ -10,6 +10,7 @@ import {
 } from "../../lib/api/travtrack";
 import { logger } from "../../lib/logger";
 import { Button, Dialog } from "../ui";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   open: boolean;
@@ -111,11 +112,7 @@ export default function ShareRouteDialog({ open, onClose, tripId }: Props): JSX.
             </div>
           </>
         )}
-        {error && (
-          <p className="t-body" role="alert" style={{ color: "var(--ts-bad)" }}>
-            {t(error)}
-          </p>
-        )}
+        {error && <InlineError>{t(error)}</InlineError>}
       </div>
     </Dialog>
   );

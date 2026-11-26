@@ -1,5 +1,7 @@
 import { useToastStore, type Toast } from "../store/toastStore";
 import { useTranslation } from "../hooks/useTranslation";
+import { Icon } from "./ui/Icon";
+import Button from "./ui/Button";
 
 const ToastItem = ({ toast }: { toast: Toast }) => {
   const removeToast = useToastStore((state) => state.removeToast);
@@ -13,10 +15,10 @@ const ToastItem = ({ toast }: { toast: Toast }) => {
   };
 
   const icons = {
-    success: "✓",
-    error: "✕",
-    warning: "⚠",
-    info: "ℹ",
+    success: <Icon name="check" size={20} />,
+    error: <Icon name="x" size={20} />,
+    warning: <Icon name="triangle-alert" size={20} />,
+    info: <Icon name="info" size={20} />,
   };
 
   return (
@@ -33,21 +35,27 @@ const ToastItem = ({ toast }: { toast: Toast }) => {
       <div className="shrink-0 text-lg">{icons[toast.type]}</div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium wrap-break-word">{toast.message}</p>
+        {toast.undo?.detail && <p className="t-caption">{toast.undo.detail}</p>}
       </div>
+      {toast.undo && (
+        <Button
+          variant="secondary"
+          icon={<Icon name="undo-2" size={16} />}
+          onClick={() => {
+            // `false` keeps the toast: the undo could not run yet.
+            if (toast.undo?.onUndo() !== false) removeToast(toast.id);
+          }}
+        >
+          {toast.undo.label ?? t("buttons.undo")}
+        </Button>
+      )}
       <button
         onClick={() => removeToast(toast.id)}
         className="shrink-0 transition-colors"
         style={{ color: "var(--text-muted)" }}
         aria-label={t("buttons.close")}
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
+        <Icon name="x" size={20} />
       </button>
     </div>
   );

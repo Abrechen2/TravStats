@@ -1,7 +1,7 @@
 import DateField from "../../components/ui/DateField";
 import { useEffect, useMemo, useState } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import Button from "../ui/Button";
 import { Field, Select, TextArea } from "../ui/Field";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -11,6 +11,7 @@ import type { CountryOverrideVerdict, CountryOverrideView } from "../../types/pa
 import { countryName } from "./countryName";
 import { overrideErrorKey } from "./overrideErrors";
 import { CountryLabel } from "../../lib/countryFlag";
+import InlineError from "../ui/InlineError";
 
 /**
  * Add or correct a country by hand (forgejo#308).
@@ -156,7 +157,7 @@ export default function CountryOverrideDialog({
   if (!open) return null;
 
   return (
-    <Modal
+    <Dialog
       open={open}
       onClose={onClose}
       busy={busy !== null}
@@ -186,9 +187,7 @@ export default function CountryOverrideDialog({
             <CountryLabel country={code} />
           </p>
         ) : listFailed ? (
-          <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
-            {t("passport:overrides.loadError")}
-          </p>
+          <InlineError>{t("passport:overrides.loadError")}</InlineError>
         ) : (
           <Field
             label={t("passport:overrides.country")}
@@ -258,12 +257,8 @@ export default function CountryOverrideDialog({
           <DateField id="override-day" value={day} onChange={(e) => setDay(e.target.value)} />
         </Field>
 
-        {error && (
-          <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
-            {error}
-          </p>
-        )}
+        {error && <InlineError>{error}</InlineError>}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

@@ -36,6 +36,7 @@ import { PlaceListAddPanel, type UnassignedPlace } from "../components/places/Pl
 import { useToastStore } from "../store/toastStore";
 import type { Place } from "../types/place";
 import type { PlaceList } from "../types/placeList";
+import InlineError from "../components/ui/InlineError";
 
 // The shared ten from `listColor.palette`. The six that used to stand here
 // included the green and blue the system reserves for `good` and `info`, and a
@@ -343,9 +344,9 @@ export default function PlaceListDetailPage(): JSX.Element {
     return (
       <AppShell>
         <div className="py-16 text-center">
-          <p role="alert" style={{ color: "var(--danger)" }}>
+          <InlineError>
             {isLoadError ? t("places:lists.loadError") : t("places:lists.notFound")}
-          </p>
+          </InlineError>
           <Link
             to="/places/lists"
             className="mt-3 inline-block text-sm underline"

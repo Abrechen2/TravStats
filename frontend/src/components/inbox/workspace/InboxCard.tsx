@@ -20,6 +20,7 @@ import { photoJourneyLabel } from "../photoJourneyLabel";
 import { isCardPhotoJourney } from "../../../types/photoJourney";
 import type { InboxAction } from "./FlagQuickEditor";
 import { useToastStore } from "../../../store/toastStore";
+import InlineError from "../../ui/InlineError";
 
 export default function InboxCard({
   item,
@@ -71,15 +72,11 @@ export default function InboxCard({
   const working = busy || disabled;
   return (
     <div aria-busy={busy}>
-      {error && (
-        <p role="alert" className="mb-3 text-sm text-(--ts-bad)">
-          {error}
-        </p>
-      )}
+      {error && <InlineError className="mb-3">{error}</InlineError>}
       {savedCheckFailed && (
-        <p role="alert" className="mb-3 text-sm text-(--ts-warn)">
+        <InlineError tone="warning" className="mb-3">
           {t(`${W}.savedCheckFailed`)}
-        </p>
+        </InlineError>
       )}
       {disabled && (
         <p role="status" className="mb-3 t-caption">

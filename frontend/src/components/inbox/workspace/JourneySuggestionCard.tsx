@@ -26,6 +26,7 @@ import {
   savePendingLink,
   type PendingLink,
 } from "./journeyPrefill";
+import InlineError from "../../ui/InlineError";
 
 const J = `${W}.journey`;
 
@@ -139,11 +140,7 @@ export default function JourneySuggestionCard({
 
   return (
     <div className="space-y-3">
-      {error && (
-        <p role="alert" className="text-sm text-(--ts-bad)">
-          {error}
-        </p>
-      )}
+      {error && <InlineError>{error}</InlineError>}
       <h3 className="text-base font-semibold">{t(`${J}.question`)}</h3>
       <p className="t-caption">{t(`${J}.source`)}</p>
       <p className="text-sm">{t(`${J}.evidence`, { count: runs.length })}</p>

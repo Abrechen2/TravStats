@@ -11,6 +11,7 @@ import { logger } from "../../../lib/logger";
 import { dayOf } from "../../../shared/time";
 import type { Place } from "../../../types/place";
 import { pillStyle } from "./trackMapStyle";
+import InlineError from "../../../components/ui/InlineError";
 
 /** An own place this close to the stop (and carrying its name) is offered before a new one is made. */
 const NEARBY_KM = 0.15;
@@ -166,9 +167,9 @@ export default function TrackStopToPlaces({
                 </p>
               )}
               {lookupFailed && (
-                <p className="t-caption" role="alert" style={{ color: token("bad") }}>
+                <InlineError>
                   {t("track:stop.toPlaces.searchFailed")} {t(lookupFailed)}
-                </p>
+                </InlineError>
               )}
               <form
                 className="flex flex-wrap items-center gap-2"
@@ -199,11 +200,7 @@ export default function TrackStopToPlaces({
               </button>
             </>
           )}
-          {failure && (
-            <p className="t-caption" role="alert" style={{ color: token("bad") }}>
-              {t(failure)}
-            </p>
-          )}
+          {failure && <InlineError>{t(failure)}</InlineError>}
         </div>
       )}
       {done && (

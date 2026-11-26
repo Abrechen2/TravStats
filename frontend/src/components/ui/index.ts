@@ -18,6 +18,8 @@ export { default as DateField, type DateFieldKind } from "./DateField";
 export { default as DateRangeField, type DateRange } from "./DateRangeField";
 export { default as StatTile, SectionLabel } from "./StatTile";
 export { default as Dialog } from "./Dialog";
+export { default as Banner, type BannerTone } from "./Banner";
+export { default as InlineError } from "./InlineError";
 export { default as Toggletip } from "./Toggletip";
 export { default as InfoLine } from "./InfoLine";
 export { Field, Input, TextArea, Select, Switch } from "./Field";

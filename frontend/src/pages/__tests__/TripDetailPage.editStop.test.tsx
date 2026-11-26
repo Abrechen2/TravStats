@@ -32,6 +32,10 @@ vi.mock("@/lib/api/sharing", () => ({
   },
 }));
 
+vi.mock("../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  reportPageError: (message: string, tone = "error") => toasts.addToast(tone, message),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: (...a: unknown[]) => void }) => unknown) =>
     selector({ addToast: toasts.addToast }),

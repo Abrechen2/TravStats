@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import Button from "../ui/Button";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
@@ -69,7 +69,7 @@ export function VesselAssignDialog({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={busy}
@@ -125,6 +125,6 @@ export function VesselAssignDialog({
           </li>
         ))}
       </ul>
-    </Modal>
+    </Dialog>
   );
 }

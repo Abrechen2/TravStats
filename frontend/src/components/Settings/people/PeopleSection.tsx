@@ -34,6 +34,7 @@ import InvitationCodeDialog from "./InvitationCodeDialog";
 import { PersonMenu, PersonSwitches, type PersonHandlers } from "./PersonControls";
 import { usePeople } from "./usePeople";
 import { comparisonFailureCode } from "../../../lib/api/comparison";
+import InlineError from "../../ui/InlineError";
 
 const NS = "sharing:friends";
 
@@ -350,11 +351,7 @@ export default function PeopleSection(): JSX.Element {
             <Button onClick={() => void state.reload()}>{t(`${NS}.retry`)}</Button>
           </div>
         ))}
-        {problem && (
-          <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
-            {problem}
-          </p>
-        )}
+        {problem && <InlineError tone="warning">{problem}</InlineError>}
 
         {state.requests.length > 0 && (
           <div className="flex flex-col gap-2" data-testid="people-requests">

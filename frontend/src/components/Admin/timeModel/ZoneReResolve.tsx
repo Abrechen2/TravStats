@@ -9,6 +9,7 @@ import { timeMigrationApi } from "../../../lib/api/timeMigration";
 import type { ReResolveApply, ReResolveDryRun } from "../../../types/timeMigration";
 import Button from "../../ui/Button";
 import { columnLabel, formatOffsetDelta, tableLabel, timeModelErrorCopy } from "./timeModelCopy";
+import InlineError from "../../ui/InlineError";
 
 /**
  * Re-running the zone resolver over stored values (ADR 0002, D2).
@@ -108,11 +109,7 @@ export default function ZoneReResolve(): JSX.Element {
         </Button>
       </div>
 
-      {error && (
-        <p role="alert" style={{ color: "var(--ts-bad)", fontWeight: 600 }}>
-          {timeModelErrorCopy(error.err, t, error.fallback)}
-        </p>
-      )}
+      {error && <InlineError>{timeModelErrorCopy(error.err, t, error.fallback)}</InlineError>}
 
       {phase.name === "dryRunning" && <ProgressLine progress={phase.progress} />}
 

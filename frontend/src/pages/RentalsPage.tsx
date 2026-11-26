@@ -57,6 +57,7 @@ import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFail
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { rentalDeleteMessage } from "../lib/rental/rentalDeleteMessage";
+import { reportPageError } from "../store/pageErrorStore";
 
 const RENTAL_STATUSES: readonly RentalStatus[] = [
   "scheduled",
@@ -229,7 +230,7 @@ export default function RentalsPage(): JSX.Element {
       await reload();
     } catch (err: unknown) {
       logger.error("RentalsPage: delete failed", err);
-      addToast("error", t("rental:deleteError"));
+      reportPageError(t("rental:deleteError"));
     } finally {
       setDeleting(false);
     }
