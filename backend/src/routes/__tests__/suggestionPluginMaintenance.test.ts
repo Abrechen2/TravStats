@@ -197,6 +197,33 @@ describe("plugin location maintenance", () => {
     ]);
   });
 
+  it("also sends unnamed stays of 20+ minutes (a hotel without a venue name), never zone, short, old or plugin ones", async () => {
+    const { userId, cookie, id } = await setup();
+    const day = 86_400_000;
+    const at = (ago: number) => new Date(Date.now() - ago);
+    const unnamed = (extra: Record<string, unknown>) => stay(userId, "x", { name: null, ...extra });
+    await unnamed({ lat: 47.0145, lon: 10.2936 }); // 40 min, the Solaria-like case
+    await unnamed({ lat: 47.1, lon: 10.1, endAt: new Date(at(day).getTime() + 10 * 60_000) }); // 10 min
+    await unnamed({
+      lat: 47.2,
+      lon: 10.2,
+      startAt: at(400 * day),
+      endAt: at(400 * day - 3_600_000),
+    }); // too old
+    await unnamed({ lat: 47.3, lon: 10.3, evidence: { createdFrom: "plugin:x" } });
+    await unnamed({ lat: 47.4, lon: 10.4 }); // inside a privacy zone
+    await prisma.travTrackPrivacyZone.create({
+      data: { userId, name: "home", lat: 47.4, lon: 10.4, radiusM: 200 },
+    });
+    const list = await request(app).get(`${root}/${id}/maintenance`).set("Cookie", cookie);
+    expect(list.status).toBe(200);
+    const sent = received.find((r) => r.path === "/hook/maintenance/proposals")!;
+    expect(sent.body.stops).toEqual([
+      expect.objectContaining({ venueName: "", lat: 47.0145, lon: 10.2936 }),
+    ]);
+    expect(list.body.stopsSent).toBe(1);
+  });
+
   it("forwards search and paging to the plugin, so a row beyond the first page is findable (Ragaz)", async () => {
     const { cookie, id } = await setup();
     const res = await request(app)

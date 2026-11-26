@@ -16,6 +16,8 @@ import { AppError } from "../../middleware/errorHandler";
 import type { SuggestionPlugin } from "../../prisma";
 import type { FetchLike } from "../egress/boundedFetch";
 import { travTrackDerivationAllowed } from "../locationEvidence/allowed";
+import { inPrivacyZone } from "../travtrack/classify";
+import { privacyCircleSet } from "../travtrack/privacyCircles";
 import { roundTo } from "./ask";
 import { fetchFailure, headersFor, send, type PluginFailure } from "./client";
 import {
@@ -28,11 +30,22 @@ import { callMaintenance, type MaintenanceAction } from "./maintenanceClient";
 import { targetOf, type Precision } from "./registry";
 
 export const STOP_LOOKBACK_DAYS = 730;
+/** Unnamed stops (no venue name): only real stays, and a shorter look back. */
+export const UNNAMED_LOOKBACK_DAYS = 365;
+export const UNNAMED_MIN_DWELL_MS = 20 * 60_000;
+const NAMED_CAP = MAINTENANCE_MAX_STOPS / 2;
 const DAY_MS = 86_400_000;
 
 export type StopsWithheld = "precision" | "travtrackOff" | null;
 
-/** The account's venue-named TravTrack stops, newest first, deduplicated, as they may leave. */
+/**
+ * The account's TravTrack stops, newest first, deduplicated, as they may leave: the
+ * venue-named ones (a name the plugin can match by words) and, with an empty
+ * `venueName`, the unnamed stays of at least 20 min from the last 365 days outside
+ * the privacy zones (a place the plugin can match only by its position to an
+ * address, e.g. a hotel with a wrong archive position). The plugin uses them for
+ * this answer only and stores none.
+ */
 export async function candidateStops(
   userId: string,
   precision: Precision,
@@ -75,8 +88,9 @@ export async function candidateStops(
       start: r.startAt.toISOString(),
       end: r.endAt.toISOString(),
     });
-    if (stops.length >= MAINTENANCE_MAX_STOPS) break;
+    if (stops.length >= NAMED_CAP) break;
   }
+  stops.push(...(await unnamedStops(userId, precision, now, seen)));
   return { stops, withheld: null };
 }
 
@@ -146,4 +160,46 @@ export async function runMaintenance(
     );
   }
   return outcome.data;
+}
+
+async function unnamedStops(
+  userId: string,
+  precision: Precision,
+  now: number,
+  seen: Set<string>
+): Promise<{ venueName: string; lat: number; lon: number; start: string; end: string }[]> {
+  const rows = await prisma.dawarichStay.findMany({
+    where: {
+      userId,
+      provider: "travtrack",
+      name: null,
+      startAt: { gte: new Date(now - UNNAMED_LOOKBACK_DAYS * DAY_MS) },
+    },
+    select: { lat: true, lon: true, startAt: true, endAt: true, evidence: true },
+    orderBy: [{ startAt: "desc" }, { id: "asc" }],
+    take: MAINTENANCE_MAX_STOPS * 2,
+  });
+  const circles = await privacyCircleSet(userId);
+  const out = [];
+  for (const r of rows) {
+    if (r.endAt.getTime() - r.startAt.getTime() < UNNAMED_MIN_DWELL_MS) continue;
+    const createdFrom = (r.evidence as { createdFrom?: unknown } | null)?.createdFrom;
+    if (typeof createdFrom === "string" && createdFrom.startsWith("plugin:")) continue;
+    // The privacy zone is checked at the exact position, before it is rounded.
+    if (inPrivacyZone({ lat: r.lat, lon: r.lon }, circles(r.startAt.getTime()))) continue;
+    const lat = roundTo(r.lat, precision);
+    const lon = roundTo(r.lon, precision);
+    const key = `|${lat}|${lon}|${r.startAt.toISOString().slice(0, 10)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      venueName: "",
+      lat,
+      lon,
+      start: r.startAt.toISOString(),
+      end: r.endAt.toISOString(),
+    });
+    if (out.length >= MAINTENANCE_MAX_STOPS - NAMED_CAP) break;
+  }
+  return out;
 }

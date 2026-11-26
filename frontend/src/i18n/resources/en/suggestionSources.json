@@ -244,7 +244,7 @@
       "reload": "Reload",
       "empty": "No entries without a location.",
       "showIgnored": "Show ignored",
-      "stopsSent": "{{count}} TravTrack stops with place names were sent along for matching.",
+      "stopsSent": "{{count}} TravTrack stops (named ones and longer unnamed ones) were sent along for matching.",
       "stopsWithheld": {
         "precision": "No stops sent: the plugin is set to 1 km precision.",
         "travtrackOff": "No stops sent: TravTrack is not this account's location source."
