@@ -574,7 +574,8 @@
     "map": {
       "label": "Karte der Route mit {{count}} Stationen",
       "unavailable": "Die Karte braucht WebGL und ist in diesem Browser nicht verfügbar.",
-      "note": "Die Linie verbindet die Stationen in Reihenfolge; die berechnete Straße steht in den Etappen."
+      "note": "Die Linie verbindet die Stationen in Reihenfolge; die berechnete Straße steht in den Etappen.",
+      "marker": "Station {{n}}: {{place}} öffnen"
     },
     "variants": {
       "title": "Varianten",

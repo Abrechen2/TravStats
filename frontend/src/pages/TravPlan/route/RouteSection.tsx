@@ -242,7 +242,12 @@ export function RouteSection({ ctx }: { ctx: PlanCtx }) {
         <div style={{ position: "sticky", top: "var(--ts-space-xl)", alignSelf: "start" }}>
           {probeWebGL2() ? (
             <Suspense fallback={<EmptyState kind="pending" title={t("loading")} />}>
-              <RouteMap stations={state.stations} handedOver={handed} />
+              <RouteMap
+                stations={state.stations}
+                handedOver={handed}
+                selectedId={editStation}
+                onSelect={setEditStation}
+              />
             </Suspense>
           ) : (
             <p className="t-caption">{t("route.map.unavailable")}</p>

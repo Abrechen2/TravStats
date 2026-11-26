@@ -574,7 +574,8 @@
     "map": {
       "label": "Route map with {{count}} stations",
       "unavailable": "The map needs WebGL and is not available in this browser.",
-      "note": "The line joins the stations in order; the calculated road is in the stages."
+      "note": "The line joins the stations in order; the calculated road is in the stages.",
+      "marker": "Open stop {{n}}: {{place}}"
     },
     "variants": {
       "title": "Variants",
