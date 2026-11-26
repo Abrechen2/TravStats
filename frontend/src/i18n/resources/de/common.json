@@ -564,5 +564,27 @@
     },
     "openEntry": "Zum Eintrag",
     "enlarge": "Foto vergrößern"
+  },
+  "yearPicker": {
+    "label": "Jahr",
+    "previous": "Vorheriges Jahr",
+    "next": "Nächstes Jahr",
+    "open": "Jahr wählen",
+    "all": "Alle Jahre",
+    "gridLabel": "Jahre",
+    "count": {
+      "flights_one": "{{count}} Flug",
+      "flights_other": "{{count}} Flüge",
+      "cruises_one": "{{count}} Kreuzfahrt",
+      "cruises_other": "{{count}} Kreuzfahrten",
+      "stays_one": "{{count}} Aufenthalt",
+      "stays_other": "{{count}} Aufenthalte",
+      "events_one": "{{count}} Eintrag",
+      "events_other": "{{count}} Einträge",
+      "rides_one": "{{count}} Fahrt",
+      "rides_other": "{{count}} Fahrten",
+      "rentals_one": "{{count}} Miete",
+      "rentals_other": "{{count}} Mieten"
+    }
   }
 }

@@ -310,6 +310,10 @@ export default function CruisesPage(): JSX.Element {
   /** Counted by the database under every OTHER filter, so picking a line no
    *  longer leaves the line list holding only that line. */
   const availableYears = useMemo(() => (facets?.years ?? []).map((y) => y.value), [facets]);
+  const yearCounts = useMemo(
+    () => new Map((facets?.years ?? []).map((y) => [y.value, y.count])),
+    [facets]
+  );
   const availableLines = useMemo(() => (facets?.lines ?? []).map((l) => l.value), [facets]);
 
   /**
@@ -470,7 +474,12 @@ export default function CruisesPage(): JSX.Element {
             value: yearFilter === "all" ? "all" : String(yearFilter),
             onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
             allLabel: t("filter.allYears"),
-            options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
+            options: availableYears.map((y) => ({
+              value: String(y),
+              label: String(y),
+              count: yearCounts.get(y),
+            })),
+            formatCount: (n): string => t("common:yearPicker.count.cruises", { count: n }),
           }}
           extraActiveCount={extraActiveCount}
           extra={

@@ -1,3 +1,4 @@
+import { chooseYear, openYearGrid } from "../../__tests__/helpers/yearPicker";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -143,9 +144,8 @@ describe("RentalsPage", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "rental:list.filterStatus" }), {
       target: { value: "cancelled" },
     });
-    const year = screen.getByRole("combobox", { name: "rental:list.filterYear" });
-    await waitFor(() => expect(year.querySelectorAll("option")).toHaveLength(3));
-    fireEvent.change(year, { target: { value: "2025" } });
+    await waitFor(() => expect(openYearGrid("rental:list.filterYear")).toHaveLength(3));
+    chooseYear("rental:list.filterYear", 2025);
     fireEvent.click(screen.getByTestId("list-filter-more"));
     fireEvent.change(screen.getByRole("combobox", { name: "rental:list.filterProvider" }), {
       target: { value: "Sixt" },

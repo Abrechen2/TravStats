@@ -380,7 +380,9 @@
     "citiesOff": "Städte nennt die Übersicht erst, wenn du die Städtesuche in den Einstellungen einschaltest.",
     "utc": "Monate nach UTC: Ein Tag zählt zu dem Monat, in den er nach UTC fällt – was um Mitternacht Ortszeit geschieht, kann im Nachbarmonat stehen.",
     "chartTitle": "Strecke am Boden pro Monat ({{unit}})",
-    "chartNote": "Monate ohne Positionen und Monate in Berechnung haben keinen Balken."
+    "chartNote": "Monate ohne Positionen und Monate in Berechnung haben keinen Balken.",
+    "yearsFailed": "Die Jahre mit Aufzeichnung konnten nicht geladen werden.",
+    "year": "Jahr"
   },
   "lastSeen": {
     "label": "Zuletzt gesehen",

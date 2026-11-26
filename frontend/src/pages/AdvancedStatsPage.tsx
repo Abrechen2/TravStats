@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { flightsApi, statsApi } from "../lib/api";
 import type { SummaryStats } from "../lib/api";
@@ -32,7 +32,7 @@ import FlightYearSummaryCards from "../components/Stats/FlightYearSummaryCards";
 import StatsToolbar from "../components/Stats/StatsToolbar";
 import StatsTabStrip from "../components/Stats/StatsTabStrip";
 import { useUrlStatsPeriod } from "../components/Stats/useStatsPeriod";
-import { collectYears } from "../components/Stats/Overview/aggregate";
+import { yearEventTotals } from "../components/Stats/Overview/aggregate";
 import { useDomainStats } from "../lib/stats/domain-stats";
 import StatsOverviewCards from "../components/Stats/StatsOverviewCards";
 import StatsChartsSection from "../components/Stats/StatsChartsSection";
@@ -55,7 +55,7 @@ import RailStatsSection from "../components/Stats/rail/RailStatsSection";
 import RentalStatsSection from "../components/Stats/rental/RentalStatsSection";
 import BusStatsSection from "../components/Stats/bus/BusStatsSection";
 import FerryStatsSection from "../components/Stats/ferry/FerryStatsSection";
-import { mergeYears, useRentalBusYears } from "../lib/stats/useRentalBusYears";
+import { useStatsPeriodYears } from "../lib/stats/useRentalBusYears";
 import RoadtripStatsSection from "../components/Stats/RoadtripStatsSection";
 import { useDomainColors } from "../hooks/useDomainColors";
 import TourStatsSection from "../components/Stats/roadtrip/TourStatsSection";
@@ -173,11 +173,7 @@ export default function AdvancedStatsPage(): JSX.Element {
     flights,
     ready: !loading,
   });
-  const rentalBusYears = useRentalBusYears(); // rental and bus years (forgejo#265)
-  const periodYears = useMemo(
-    () => mergeYears(collectYears(domainStats, {}), rentalBusYears),
-    [domainStats, rentalBusYears]
-  );
+  const periodYears = useStatsPeriodYears(domainStats);
   const period = useUrlStatsPeriod(periodYears, domainStatsLoading);
   const { selectedYear, compareYear, compareEnabled, scope } = period;
   const [yearSummary, setYearSummary] = useState<SummaryStats | null>(null);
@@ -560,6 +556,7 @@ export default function AdvancedStatsPage(): JSX.Element {
         <StatsToolbar
           tab={effectiveFilter}
           years={periodYears}
+          counts={yearEventTotals(domainStats)}
           period={period}
           visibility={sections}
         />

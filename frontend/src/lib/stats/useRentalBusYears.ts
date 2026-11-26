@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { collectYears } from "../../components/Stats/Overview/aggregate";
+import type { DomainStatsMap } from "./domain-stats/types";
 
 import { rentalLinksApi } from "../api/rentalLinks";
 import { busApi } from "../api/bus";
@@ -59,4 +61,13 @@ export function useRentalBusYears(): number[] {
 /** Two ascending year lists as one, without duplicates. */
 export function mergeYears(a: readonly number[], b: readonly number[]): number[] {
   return [...new Set([...a, ...b])].sort((x, y) => x - y);
+}
+
+/** Every year any enabled domain has data for, ascending — rental and bus years included. */
+export function useStatsPeriodYears(domainStats: DomainStatsMap): number[] {
+  const rentalBusYears = useRentalBusYears(); // forgejo#265
+  return useMemo(
+    () => mergeYears(collectYears(domainStats, {}), rentalBusYears),
+    [domainStats, rentalBusYears]
+  );
 }

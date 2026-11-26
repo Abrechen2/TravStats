@@ -1,3 +1,4 @@
+import { openYearGrid } from "../../__tests__/helpers/yearPicker";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { readFileSync } from "fs";
@@ -192,7 +193,7 @@ describe("CruisesPage — server-side paging", () => {
     fireEvent.click(screen.getByTestId("list-filter-more"));
     // 40 AIDA sailings, from a page that carries 50 rows in total.
     expect(screen.getByLabelText("filter.line")).toHaveTextContent("AIDA Cruises");
-    expect(screen.getByLabelText("filter.year")).toHaveTextContent("2024");
+    expect(openYearGrid("filter.year").map((b) => b.textContent?.slice(0, 4))).toContain("2024");
   });
 
   it("draws the summary strip from the server's counts, over the whole filtered set", async () => {

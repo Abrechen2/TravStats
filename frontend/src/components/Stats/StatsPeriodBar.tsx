@@ -1,6 +1,5 @@
-import { useRef } from "react";
 import type { JSX } from "react";
-import { useRevealActive } from "../../lib/ui/revealInRow";
+import YearPicker from "../ui/YearPicker";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { StatsPeriod } from "./useStatsPeriod";
 
@@ -8,6 +7,8 @@ interface Props {
   /** Every year any enabled domain has data for, ascending. */
   years: number[];
   period: StatsPeriod;
+  /** Events per year across the enabled domains; a year without an entry shows no count. */
+  counts?: Readonly<Record<number, number>>;
 }
 
 /**
@@ -23,8 +24,8 @@ interface Props {
  * The year list is the union across domains rather than the flight years: a
  * year with only a cruise in it is still a year somebody travelled.
  */
-export default function StatsPeriodBar({ years, period }: Props): JSX.Element {
-  const { t } = useTranslation(["stats"]);
+export default function StatsPeriodBar({ years, period, counts }: Props): JSX.Element {
+  const { t } = useTranslation(["stats", "common"]);
   const {
     selectedYear,
     setSelectedYear,
@@ -33,35 +34,19 @@ export default function StatsPeriodBar({ years, period }: Props): JSX.Element {
     compareEnabled,
     setCompareEnabled,
   } = period;
-  const yearsRef = useRef<HTMLDivElement | null>(null);
-
-  // The chosen year stays in view in the scrolling row — the row only.
-  useRevealActive(yearsRef, '[aria-pressed="true"]', [selectedYear, years.join(",")]);
+  const compareYears = years.filter((y) => y !== selectedYear);
 
   return (
     // A row of pills on the page, no box around it (round 4).
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
       <span className="t-label-mono sm:hidden">{t("stats:overviewFilter.range")}</span>
-      {/* One row that scrolls sideways on a phone, and wraps where there is
-          room. Wrapping on a phone was the long narrow column of B05. */}
-      <div
-        ref={yearsRef}
-        className="flex min-w-0 items-center gap-2 overflow-x-auto scrollbar-none sm:flex-wrap sm:overflow-visible"
-      >
-        <YearPill
-          label={t("stats:overviewFilter.allYears")}
-          active={selectedYear === null}
-          onClick={(): void => setSelectedYear(null)}
-        />
-        {years.map((y) => (
-          <YearPill
-            key={y}
-            label={String(y)}
-            active={selectedYear === y}
-            onClick={(): void => setSelectedYear(y)}
-          />
-        ))}
-      </div>
+      <YearPicker
+        years={years.map((year) => ({ year, count: counts?.[year] }))}
+        formatCount={(n): string => t("common:yearPicker.count.events", { count: n })}
+        value={selectedYear ?? "all"}
+        onChange={(v): void => setSelectedYear(v === "all" ? null : v)}
+        label={t("stats:overviewFilter.range")}
+      />
 
       <div className="flex items-center gap-2 sm:ml-auto">
         <label
@@ -76,53 +61,17 @@ export default function StatsPeriodBar({ years, period }: Props): JSX.Element {
           />
           {t("stats:overviewFilter.compareWith")}
         </label>
-        <select
-          aria-label={t("stats:overviewFilter.compareWith")}
-          className="rounded-full border px-3 py-1.5 text-sm font-semibold"
-          style={{
-            background: "var(--ts-surface)",
-            borderColor: "var(--ts-border)",
-            color: "var(--ts-text-bright)",
+        <YearPicker
+          years={compareYears.map((year) => ({ year }))}
+          value={compareYear ?? compareYears[0] ?? "all"}
+          onChange={(v) => {
+            if (v !== "all") setCompareYear(v);
           }}
-          value={compareYear ?? ""}
+          allowAll={false}
           disabled={!compareEnabled || selectedYear === null}
-          onChange={(e): void => setCompareYear(Number(e.target.value))}
-        >
-          {years
-            .filter((y) => y !== selectedYear)
-            .map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-        </select>
+          label={t("stats:overviewFilter.compareWith")}
+        />
       </div>
     </div>
-  );
-}
-
-function YearPill({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}): JSX.Element {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className="shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors"
-      style={{
-        background: active ? "var(--ts-accent)" : "transparent",
-        color: active ? "var(--ts-accent-text)" : "var(--ts-text-bright)",
-        borderColor: active ? "var(--ts-accent)" : "var(--ts-border)",
-      }}
-    >
-      {label}
-    </button>
   );
 }

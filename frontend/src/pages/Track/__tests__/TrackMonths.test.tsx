@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { TravTrackMonths } from "../../../lib/api/travtrackMonths";
 
-const api = vi.hoisted(() => ({ months: vi.fn(), cityLookup: vi.fn(), setCityLookup: vi.fn() }));
+const api = vi.hoisted(() => ({
+  months: vi.fn(),
+  years: vi.fn(),
+  cityLookup: vi.fn(),
+  setCityLookup: vi.fn(),
+}));
 vi.mock("../../../lib/api/travtrackMonths", () => ({ travTrackMonthsApi: api }));
 const views = vi.hoisted(() => ({ calendar: vi.fn() }));
 vi.mock("../../../lib/api/travtrackViews", () => ({ travTrackViewsApi: views }));
@@ -60,6 +65,7 @@ const show = () =>
 describe("TrackMonths", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    api.years.mockResolvedValue([]);
     views.calendar.mockResolvedValue({ year: 2026, days: [], pending: [], unavailable: [] });
     api.months.mockResolvedValue(DATA);
   });
@@ -137,18 +143,25 @@ describe("TrackMonths", () => {
     expect(november).not.toHaveTextContent("0");
   });
 
-  it("steps back a year, and not past this one", async () => {
+  it("steps only through the years with TravTrack data, and not past this one", async () => {
+    api.years.mockResolvedValue([2023, 2026]);
     show();
     await screen.findByTestId("track-month-2026-10");
-    // Ask the year stepper, not the whole page: the year calendar below draws a
-    // button per day, and a page-wide getByRole computing 367 accessible names
-    // took 0.75 s here and timed this test out on a loaded CI runner.
-    const stepper = within(screen.getByTestId("track-months-year").parentElement!);
-    expect(stepper.getByRole("button", { name: "track:months.next" })).toBeDisabled();
-    fireEvent.click(stepper.getByRole("button", { name: "track:months.previous" }));
-    expect(api.months).toHaveBeenLastCalledWith(2025);
-    expect(await screen.findByTestId("track-months-year")).toHaveTextContent("2025");
+    const stepper = within(screen.getByTestId("track-months-year"));
+    expect(stepper.getByRole("button", { name: "common:yearPicker.next" })).toBeDisabled();
+    // 2025 and 2024 hold no data: one step back lands on 2023.
+    await waitFor(() =>
+      expect(stepper.getByRole("button", { name: "common:yearPicker.previous" })).toBeEnabled()
+    );
+    fireEvent.click(stepper.getByRole("button", { name: "common:yearPicker.previous" }));
+    expect(api.months).toHaveBeenLastCalledWith(2023);
     await screen.findByTestId("track-month-2026-10");
+  });
+
+  it("says so when the years with data could not be loaded", async () => {
+    api.years.mockRejectedValue(new Error("down"));
+    show();
+    expect(await screen.findByText("track:months.yearsFailed")).toBeInTheDocument();
   });
 
   it("a refusal shows as itself", async () => {

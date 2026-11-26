@@ -66,6 +66,12 @@ vi.mock("../lib/api/purpose", async (importActual) => {
     },
   };
 });
+// Every year picker captions its years from `GET /stats/years/counts`. Same rule: no request
+// escapes, the pickers show plain years. A test about the captions un-mocks this module.
+vi.mock("../lib/stats/useYearCounts", async (importActual) => {
+  const actual = await importActual<typeof import("../lib/stats/useYearCounts")>();
+  return { ...actual, useYearCounts: () => ({ of: () => ({}) }) };
+});
 // Every place glyph asks for the user's own place categories. Same rule as above: a test that
 // draws a place neither reaches the network nor settles a state update outside act(), so the
 // list stays pending and the built-in glyphs show. A test about the categories mocks this module.

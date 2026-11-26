@@ -1,6 +1,8 @@
+import { useYearCounts } from "../../lib/stats/useYearCounts";
+import YearPicker from "../ui/YearPicker";
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
-import { AppShell, Button, Chip, EmptyState, Field, PageHeader, Select } from "../ui";
+import { AppShell, Button, Chip, EmptyState, Field, PageHeader } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -28,6 +30,7 @@ import RequestsSection from "./RequestsSection";
  */
 export default function FriendsPage(): JSX.Element {
   const { t } = useTranslation(["comparison", "common", "achievements"]);
+  const yearCounts = useYearCounts().of();
   const tr = (key: string, options?: Record<string, unknown>): string =>
     String(t(key, options ?? {}));
   const { enabled, isEnabled } = useEnabledDomains();
@@ -207,18 +210,14 @@ export default function FriendsPage(): JSX.Element {
         style={{ gap: "var(--ts-space-lg)", marginBottom: "var(--ts-space-xl)" }}
       >
         <Field label={tr("period.label")} htmlFor="friends-year">
-          <Select
-            id="friends-year"
-            value={year === null ? "all" : String(year)}
-            onChange={(e) => setYear(e.target.value === "all" ? null : Number(e.target.value))}
-          >
-            <option value="all">{tr("period.all")}</option>
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </Select>
+          <YearPicker
+            years={years.map((y) => ({ year: y, count: yearCounts[y] }))}
+            formatCount={(n): string => tr("common:yearPicker.count.events", { count: n })}
+
+            value={year ?? "all"}
+            onChange={(v) => setYear(v === "all" ? null : v)}
+            label={tr("period.label")}
+          />
         </Field>
         <div
           role="group"
