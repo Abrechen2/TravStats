@@ -16,7 +16,8 @@ export interface ViewerPhoto {
 }
 
 /** Proxy routes that take a `size` — the lightbox asks them for the large preview. */
-const SIZED_PROXY = /\/(entry-photos|photo-journeys|immich\/albums|photo-suggestions)\b/;
+const SIZED_PROXY =
+  /\/(entry-photos|photo-journeys|immich\/albums|photo-suggestions|photo-sources)\b/;
 
 /**
  * The large rendition of a thumbnail URL. Library photos stream through a proxy that

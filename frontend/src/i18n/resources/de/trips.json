@@ -1179,5 +1179,57 @@
     "staleShort": "Aufteilung prüfen",
     "membersTitle": "Einträge dieser Buchung"
   },
-  "bookingMenuLabel": "Weitere Aktionen zur Buchung {{name}}"
+  "bookingMenuLabel": "Weitere Aktionen zur Buchung {{name}}",
+  "photoLinks": {
+    "title": "Fotos",
+    "more": "+{{count}} weitere",
+    "showAll": "Alle Fotos ansehen",
+    "empty": "Noch keine Fotos verknüpft.",
+    "loading": "Fotos werden geladen …",
+    "loadFailed": "Die Fotos konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "truncated": "Eine Quelle hat mehr Fotos, als auf einmal gelesen werden; es werden nur die ersten gezeigt.",
+    "sourceFailed": "{{source}} fehlt: {{reason}}",
+    "sourceAlbum": "Album „{{name}}“",
+    "sourcePeriod": "Zeitraum {{from}} – {{until}}",
+    "provider": {
+      "immich": "Immich",
+      "photoprism": "PhotoPrism"
+    },
+    "proposal": "Passendes Album: {{name}}",
+    "proposalCount": "({{count}} Fotos)",
+    "proposalReason": {
+      "folder": "Ordnername passt",
+      "name": "Name passt",
+      "date": "Aufnahmedatum passt"
+    },
+    "link": "Verknüpfen",
+    "notThis": "Nicht dieses",
+    "periodOffer": "Dienstreise ohne Album: Fotos aus {{provider}} vom {{from}} bis {{until}} zeigen?",
+    "linkPeriod": "Zeitraum verknüpfen",
+    "notNow": "Nicht jetzt",
+    "autoLinked": "Der Reisezeitraum wurde automatisch verknüpft (Einstellung „Zeitraum automatisch verknüpfen“).",
+    "sources": "Quellen",
+    "remove": "Entfernen",
+    "removeImported": "Importierte Alben entfernst du in der Galerie.",
+    "actionFailed": "Das hat nicht geklappt: {{reason}}",
+    "refusal": {
+      "notConfigured": "Keine Fotoquelle verbunden.",
+      "notPreferred": "Zeiträume kommen aus PhotoPrism, solange es verbunden ist.",
+      "noDates": "Die Reise hat noch kein Datum.",
+      "importedAlbum": "Importierte Alben entfernst du in der Galerie.",
+      "unknownAlbum": "Dieses Album gibt es in der Fotoquelle nicht mehr.",
+      "unknown": "Unbekannter Fehler."
+    },
+    "proposalFailed": "Vorschläge konnten nicht geladen werden: {{reason}}",
+    "gallery": {
+      "title": "Fotos der Reise",
+      "close": "Schließen",
+      "allDays": "Alle Tage",
+      "undated": "Ohne Datum",
+      "loadMore": "Mehr laden",
+      "alt": "Foto der Reise",
+      "count": "{{count}} Fotos"
+    }
+  }
 }

@@ -33,6 +33,7 @@ import StopModal from "../components/Trips/StopModal";
 import { TripBookingsPanel } from "../components/Trips/TripBookingsPanel";
 import TripMapWithTours from "../components/Trips/TripMapWithTours";
 import TripGallery from "../components/Trips/TripGallery";
+import TripPhotosCard from "../components/Trips/photoLinks/TripPhotosCard";
 import TourSectionList from "../components/Trips/TourSectionList";
 import { useToursVisible } from "../hooks/useToursVisible";
 import { useScrollToHash } from "../hooks/useScrollToHash";
@@ -212,7 +213,10 @@ export default function TripDetailPage(): JSX.Element {
           </div>
         )}
         {tab === "overview" && (
-          <TripOverview trip={shownTrip} t={t} language={i18n.language} places={places} />
+          <>
+            <TripOverview trip={shownTrip} t={t} language={i18n.language} places={places} />
+            <TripPhotosCard tripId={shownTrip.id} />
+          </>
         )}
         {tab === "timeline" && (
           <TimelineTab

@@ -31,6 +31,7 @@ vi.mock("../../Settings/PhotoJourneyNightlyScanCard", () => ({ default: () => nu
 vi.mock("../../Settings/VisitPhotoImmichLink", () => ({ default: () => null }));
 vi.mock("../../Settings/VisitPhotoAutoLink", () => ({ default: () => null }));
 vi.mock("../../Settings/AutoCoverSetting", () => ({ default: () => null }));
+vi.mock("../../Settings/PhotoPeriodAutoSetting", () => ({ default: () => null }));
 vi.mock("../../Settings/DawarichProviderHint", () => ({ default: () => null }));
 
 // The master internet switch (settings v3 S2): on unless a test says it is off.
