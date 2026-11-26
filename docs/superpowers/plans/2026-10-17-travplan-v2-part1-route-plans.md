@@ -428,3 +428,32 @@ Frontend (`frontend/src/`):
 - [ ] **Step 3:** Run repo checks: `DATABASE_URL=… npm run check` (size + drift) → PASS.
 - [ ] **Step 4:** Browser look on the disposable instance (`scripts/travplan-preview.ts` + `vite.travplan.config.ts`): create the Sicily route from the canvas (start Rosenheim 2027-05-08, Genoa port, ferry placeholder, Palermo, Cefalù 3 nights idea, Agrigent 2 spontaneous, Syrakus 3, Taormina 2 pitch, ferry placeholder back, Genoa stop, Rosenheim) and the Lisbon stay plan; screenshot every section at 1366×1024 and 390×844; compare against boards 1–8; fix deviations.
 - [ ] **Step 5: Commit** `docs(travplan): v2 route plans` and push the branch: `git push origin dev/travplan-v2 && git push forgejo --all`.
+
+## Open for the server (TravPlan session, 2026-11-26)
+
+Two hand-over messages to `travstats-coordinator` were held and expired
+undelivered (different permission modes), so the open points live here.
+Branch: `feat/travplan-route-wizard` (web only, stacks on `feat/travplan-dates`).
+
+1. **Routing out of the box.** A fresh instance has no routing provider, so
+   every drive stage is a straight line with no duration. Proposal: a public
+   default provider in the external-services catalogue, classed as public
+   infrastructure and on by default (like the geocoder).
+2. **Schedule for unrouted drives.** `services/travplan/routeSchedule.ts`
+   `arrivalDay()` returns null for a stage without duration that is not
+   overnight, so every later station shows "Tag noch unbekannt" and readiness
+   cannot be met without a router. Proposal: a drive stage without duration
+   arrives the same day, flagged as assumed; ferry/rail/flight unchanged.
+   Changes what `PlanView.schedule` returns.
+3. **Contract: vehicle daily limit.** `PlanVehicle` gets an optional, nullable
+   daily driving limit (minutes or km, coordinator's call), so TravPlan can
+   split a long drive into day stages with overnight stops. Additive.
+4. **Outside TravPlan: quieter packing card.** `pages/TripDetailPage.tsx`
+   renders `TripPackingCard` fully expanded above the tab bar, add form
+   included. Owner: "ein bisschen zu penetrant". Proposal: collapsed to one
+   line ("Packliste · 3/12 gepackt ▸"), add form behind "+ Eintrag"; load and
+   save errors stay visible while collapsed.
+
+Test: on the branch create Rosenheim → Genua (drive) → Palermo (ferry), back
+to start, 8.–29.5.2027, against `travstats-db-dev`; the route tab shows four
+"Wie lange dauert …?" findings and unknown days from station 2 on.
