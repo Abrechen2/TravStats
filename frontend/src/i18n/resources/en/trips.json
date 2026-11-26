@@ -1182,5 +1182,57 @@
     "staleShort": "Check the split",
     "membersTitle": "Entries of this booking"
   },
-  "bookingMenuLabel": "More actions for booking {{name}}"
+  "bookingMenuLabel": "More actions for booking {{name}}",
+  "photoLinks": {
+    "title": "Photos",
+    "more": "+{{count}} more",
+    "showAll": "View all photos",
+    "empty": "No photos linked yet.",
+    "loading": "Loading photos …",
+    "loadFailed": "The photos could not be loaded.",
+    "retry": "Try again",
+    "truncated": "A source holds more photos than one read takes; only the first ones are shown.",
+    "sourceFailed": "{{source}} is missing: {{reason}}",
+    "sourceAlbum": "Album “{{name}}”",
+    "sourcePeriod": "Period {{from}} – {{until}}",
+    "provider": {
+      "immich": "Immich",
+      "photoprism": "PhotoPrism"
+    },
+    "proposal": "Matching album: {{name}}",
+    "proposalCount": "({{count}} photos)",
+    "proposalReason": {
+      "folder": "folder name matches",
+      "name": "name matches",
+      "date": "capture dates match"
+    },
+    "link": "Link",
+    "notThis": "Not this one",
+    "periodOffer": "Business trip without an album: show photos from {{provider}} from {{from}} to {{until}}?",
+    "linkPeriod": "Link the period",
+    "notNow": "Not now",
+    "autoLinked": "The trip's period was linked automatically (setting “Link the period automatically”).",
+    "sources": "Sources",
+    "remove": "Remove",
+    "removeImported": "Imported albums are removed in the gallery.",
+    "actionFailed": "That did not work: {{reason}}",
+    "refusal": {
+      "notConfigured": "No photo source connected.",
+      "notPreferred": "Periods come from PhotoPrism while it is connected.",
+      "noDates": "The trip has no date yet.",
+      "importedAlbum": "Imported albums are removed in the gallery.",
+      "unknownAlbum": "This album no longer exists in the photo source.",
+      "unknown": "Unknown error."
+    },
+    "proposalFailed": "Suggestions could not be loaded: {{reason}}",
+    "gallery": {
+      "title": "Photos of the trip",
+      "close": "Close",
+      "allDays": "All days",
+      "undated": "Undated",
+      "loadMore": "Load more",
+      "alt": "Photo of the trip",
+      "count": "{{count}} photos"
+    }
+  }
 }

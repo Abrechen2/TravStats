@@ -208,6 +208,8 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
     ],
   }),
   trip_immich_albums: child(),
+  trip_photo_periods: child(),
+  trip_photo_proposal_dismissals: child(),
   trip_journal_entries: child(),
   journal_entry_photos: child(),
   trip_packing_lists: child(),

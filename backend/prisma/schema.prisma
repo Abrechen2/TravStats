@@ -1065,7 +1065,11 @@ model UserSettings {
   /// "Titelbilder automatisch wählen" (owner, 2026-11-23): a trip without a cover gets one
   /// from the account's OWN photos when the scorer is sure (coverSuggestions/autoCover.ts).
   /// Default on; off stops every automatic pick for the account.
-  autoCoverEnabled Boolean @default(true) @map("auto_cover_enabled")
+  autoCoverEnabled    Boolean @default(true) @map("auto_cover_enabled")
+  /// "Zeitraum automatisch verknüpfen für Reisen ohne Album" (docs/superpowers/specs/
+  /// 2026-11-26-trip-photo-links.md decision 4): off by default; a trip with no album link
+  /// then gets a period link the first time its photo sources are read.
+  photoPeriodAutoLink Boolean @default(false) @map("photo_period_auto_link")
 
   /// How many photos the automatic linker keeps per visit or entry, 5–10 (owner,
   /// 2026-11-21). The user's own picks count toward it.
@@ -1708,11 +1712,11 @@ model AdminSettings {
 
   // Off-site backup sync via WebDAV — supersedes WEBDAV_* ENV variables.
   // webdavPasswordEncrypted is AES-GCM via encryptApiKey() — never stored plain.
-  webdavSyncEnabled       Boolean @default(false) @map("webdav_sync_enabled")
-  webdavUrl               String? @map("webdav_url")
-  webdavUsername          String? @map("webdav_username")
-  webdavPasswordEncrypted String? @map("webdav_password_encrypted")
-  webdavBackupPath        String  @default("/TravStats/backups/") @map("webdav_backup_path")
+  webdavSyncEnabled       Boolean   @default(false) @map("webdav_sync_enabled")
+  webdavUrl               String?   @map("webdav_url")
+  webdavUsername          String?   @map("webdav_username")
+  webdavPasswordEncrypted String?   @map("webdav_password_encrypted")
+  webdavBackupPath        String    @default("/TravStats/backups/") @map("webdav_backup_path")
   /// When an admin last proved they hold the instance's recovery key (the
   /// encryption key the backups need but do not carry), and the fingerprint of
   /// the key that proof was for (services/backup/recoveryKey.ts). A key change
@@ -2287,32 +2291,34 @@ model Trip {
   rememberedNote String?   @map("remembered_note")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  shareGroup       TripShareGroup?      @relation(fields: [shareGroupId], references: [id], onDelete: SetNull)
-  flights          Flight[]
-  bookings         Booking[]
-  cruises          Cruise[]
-  railJourneys     RailJourney[]
-  busJourneys      BusJourney[]
-  ferryJourneys    FerryJourney[]
-  rentalBookings   RentalBooking[]
-  stops            TripStop[]
-  routes           TripRoute[]
-  expenses         TripExpense[]
-  journalEntries   TripJournalEntry[]
-  photos           TripPhoto[]
-  lodgingStays     LodgingStay[]
-  placeVisits      PlaceVisit[]
-  immichAlbums     TripImmichAlbum[]
-  companionLinks   TripCompanion[]
-  photoJourneys    PhotoJourney[]
-  dawarichStays    DawarichStay[]
-  publicShareLinks PublicShareLink[]
-  tripShareInvites TripShareInvite[]
-  recordingBatches TripRecordingBatch[]
-  packingList      TripPackingList?
-  packingMutations PackingMutation[]
-  mergedFrom       MergedTripRedirect[]
+  user                    User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shareGroup              TripShareGroup?              @relation(fields: [shareGroupId], references: [id], onDelete: SetNull)
+  flights                 Flight[]
+  bookings                Booking[]
+  cruises                 Cruise[]
+  railJourneys            RailJourney[]
+  busJourneys             BusJourney[]
+  ferryJourneys           FerryJourney[]
+  rentalBookings          RentalBooking[]
+  stops                   TripStop[]
+  routes                  TripRoute[]
+  expenses                TripExpense[]
+  journalEntries          TripJournalEntry[]
+  photos                  TripPhoto[]
+  lodgingStays            LodgingStay[]
+  placeVisits             PlaceVisit[]
+  immichAlbums            TripImmichAlbum[]
+  photoPeriods            TripPhotoPeriod[]
+  photoProposalDismissals TripPhotoProposalDismissal[]
+  companionLinks          TripCompanion[]
+  photoJourneys           PhotoJourney[]
+  dawarichStays           DawarichStay[]
+  publicShareLinks        PublicShareLink[]
+  tripShareInvites        TripShareInvite[]
+  recordingBatches        TripRecordingBatch[]
+  packingList             TripPackingList?
+  packingMutations        PackingMutation[]
+  mergedFrom              MergedTripRedirect[]
 
   documents              Document[]
   documentLinks          DocumentLink[]
@@ -2392,6 +2398,42 @@ model TripImmichAlbum {
   @@unique([tripId, provider, immichAlbumId])
   @@index([tripId])
   @@map("trip_immich_albums")
+}
+
+/// A trip-level period link (docs/superpowers/specs/2026-11-26-trip-photo-links.md): the
+/// photos a library holds for the trip's days, read at request time and streamed through
+/// the proxy — zero bytes stored. NULL `fromDay`/`untilDay` follow the trip's own days;
+/// set ones are pinned by the user and stay when the trip moves.
+model TripPhotoPeriod {
+  id        String    @id @default(uuid())
+  tripId    String    @map("trip_id")
+  /// `photoprism` | `immich`.
+  provider  String
+  fromDay   DateTime? @map("from_day") @db.Date
+  untilDay  DateTime? @map("until_day") @db.Date
+  /// Created by the account's auto setting rather than a click.
+  auto      Boolean   @default(false)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, provider])
+  @@map("trip_photo_periods")
+}
+
+/// "Nicht dieses" on an album proposal, or on the period offer (`albumId` = `period`):
+/// remembered so the trip page never offers it again.
+model TripPhotoProposalDismissal {
+  id        String   @id @default(uuid())
+  tripId    String   @map("trip_id")
+  provider  String
+  albumId   String   @map("album_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, provider, albumId])
+  @@map("trip_photo_proposal_dismissals")
 }
 
 model ImmichImportJob {
@@ -4448,24 +4490,24 @@ model Aircraft {
 }
 
 model Companion {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  canonicalName String   @map("canonical_name")
-  displayName   String   @map("display_name")
-  searchName    String   @map("search_name")
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  canonicalName  String   @map("canonical_name")
+  displayName    String   @map("display_name")
+  searchName     String   @map("search_name")
   /// The account on this server this companion IS (trip sharing, S1). Set only
   /// with an accepted `ShareConsent` from that account; SetNull keeps the
   /// companion as a plain name when the account goes away.
-  linkedUserId  String?  @map("linked_user_id")
+  linkedUserId   String?  @map("linked_user_id")
   /// The person on another server this companion IS (one person, one companion, 2026-11-24):
   /// the pairing they are reached through. Set only by the owner's confirmation, never on a
   /// name guess alone; SetNull keeps the companion as a plain name when the pairing goes.
-  linkedRemoteId String? @map("linked_remote_id")
+  linkedRemoteId String?  @map("linked_remote_id")
   /// Pairings (`r:<remoteId>`) and accounts (`u:<userId>`) the owner said this companion is NOT,
   /// so the same-name question is not asked again.
-  notSameAs     String[] @default([]) @map("not_same_as")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  notSameAs      String[] @default([]) @map("not_same_as")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   linkedUser    User?                    @relation("CompanionLinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
@@ -4690,8 +4732,8 @@ model PhotoJourney {
 /// and a later proposal is suppressed while it still overlaps that set by at
 /// least half (`shared/tripSuggestionRules.ts`, `isMaterialChange`).
 model TripSuggestionDecision {
-  id                  String   @id @default(uuid())
-  userId              String   @map("user_id")
+  id                  String    @id @default(uuid())
+  userId              String    @map("user_id")
   /// new_trip | assign | extend | place_visit
   kind                String
   /// The proposal's stable id at the time it was answered.
@@ -4699,16 +4741,16 @@ model TripSuggestionDecision {
   /// accepted | dismissed
   status              String
   /// assign/extend: the trip it targeted. place_visit: the place.
-  targetId            String?  @map("target_id")
-  memberKeys          String[] @map("member_keys")
+  targetId            String?   @map("target_id")
+  memberKeys          String[]  @map("member_keys")
   /// Content keys (`contentKey()`), aligned with `memberKeys` — what still names
   /// a member after its id is gone (deleted and re-imported). Empty on rows
   /// written before the column existed.
-  memberContentKeys   String[] @default([]) @map("member_content_keys")
+  memberContentKeys   String[]  @default([]) @map("member_content_keys")
   /// What accepting created, for the record. No foreign key: the trip may be
   /// deleted later, and the answer stays an answer.
-  createdTripId       String?  @map("created_trip_id")
-  createdPlaceVisitId String?  @map("created_place_visit_id")
+  createdTripId       String?   @map("created_trip_id")
+  createdPlaceVisitId String?   @map("created_place_visit_id")
   /// The days the answered proposal spanned (trip suggestions v2). A dismissal
   /// suppresses every later candidate overlapping these days unless it is more
   /// than double their length. Null on rows older than the column: the span is
@@ -4717,13 +4759,13 @@ model TripSuggestionDecision {
   endDay              DateTime? @map("end_day") @db.Date
   /// The home the proposal was judged against, `lat,lon` to two decimals. Null
   /// where unknown (TravTrack questions carry no coordinate).
-  homeSignature       String?  @map("home_signature")
+  homeSignature       String?   @map("home_signature")
   /// engine | travtrack — which detector asked.
-  source              String   @default("engine")
+  source              String    @default("engine")
   /// The answer was to a re-ask of a span that had grown past double.
-  expanded            Boolean  @default(false)
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  expanded            Boolean   @default(false)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -4967,14 +5009,14 @@ model RailJourney {
   id              String           @id @default(uuid())
   userId          String           @map("user_id")
 
-  operator      String?
+  operator       String?
   /// null = typed by the user (or written before the column existed);
   /// "inferred" = filled by `shared/railOperatorInference.ts`, which a typed
   /// operator always replaces and the backfill never overwrites.
   operatorSource String? @map("operator_source")
   /// "ICE", "TGV", "RJX" — apart from the number because statistics group by it.
-  trainCategory String? @map("train_category")
-  trainNumber   String? @map("train_number")
+  trainCategory  String? @map("train_category")
+  trainNumber    String? @map("train_number")
 
   depStationName String  @map("dep_station_name")
   /// UIC code when known — the catalogue's, when the station was picked there.
@@ -5013,12 +5055,12 @@ model RailJourney {
   /// The line on the map, `[[lon, lat], ...]`, fetched ONCE when the journey is
   /// logged and frozen with it — a timetable changes, the ride that happened
   /// does not. Null = draw the chord between the two stations.
-  geometry       Json?
+  geometry          Json?
   /// straight | transitous | openrailrouting | brouter | manual (| none for a
   /// row that cannot be drawn). `brouter` is the demo account's line, routed
   /// offline once. Kept because a line routed over the TRACKS may not be the
   /// line the train took, and the map has to be able to say which it shows.
-  geometrySource String @default("straight") @map("geometry_source")
+  geometrySource    String    @default("straight") @map("geometry_source")
   /// Why the last bulk re-route left this straight line as it was (no route,
   /// router error), and when. Cleared when a line is drawn. The readiness card
   /// "Bahnstrecken neu routen" counts only rides without one, so it can clear.
@@ -7562,10 +7604,10 @@ model LocationSuggestion {
 /// `version` is raised on every re-mark, `done` holds a bit per projection that
 /// ran on that version (1 country days).
 model TravTrackDirtyDay {
-  userId  String   @map("user_id")
-  day     DateTime @db.Date
-  version BigInt
-  done    Int      @default(0)
+  userId           String    @map("user_id")
+  day              DateTime  @db.Date
+  version          BigInt
+  done             Int       @default(0)
   /// The place-visit scan's own wait for this day after a venue lookup failed (per day, so an
   /// outage holds only the days that need a lookup); cleared when the day is answered.
   visitsRetryAfter DateTime? @map("visits_retry_after") @db.Timestamptz(6)
@@ -7824,54 +7866,54 @@ model ExternalServiceTest {
 /// (mode A); null = the instance mailbox behind the forwarding addresses
 /// (mode B). Off until someone switches it on (`enabled` defaults false).
 model MailIntakeSource {
-  id                String    @id @default(uuid())
-  userId            String?   @map("user_id")
+  id                     String    @id @default(uuid())
+  userId                 String?   @map("user_id")
   /// imap_folder | instance_mailbox
-  kind              String
-  host              String
-  port              Int
+  kind                   String
+  host                   String
+  port                   Int
   /// tls | starttls | none. `none` is accepted for the instance mailbox only.
-  tlsMode           String    @default("tls") @map("tls_mode")
-  username          String
+  tlsMode                String    @default("tls") @map("tls_mode")
+  username               String
   /// The instance mailbox's own address, the base of the plus-addresses
   /// (`trips@example.org` → `trips+token@example.org`); a login name is not
   /// always an address. Null for a personal folder.
-  address           String?
+  address                String?
   /// The authserv-id of the receiving provider ("mx.example.org"). When set,
   /// only an Authentication-Results header carrying it is believed; unset, the
   /// topmost one is (the provider prepends its own).
-  authservId        String?   @map("authserv_id")
+  authservId             String?   @map("authserv_id")
   /// AES-256-GCM like every other stored secret; null after a restore, when
   /// the user has to enter it again (spec §9 decision 4).
-  passwordEncrypted String?   @map("password_encrypted")
-  folder            String    @default("INBOX")
-  enabled           Boolean   @default(false)
-  lastRunAt         DateTime? @map("last_run_at")
-  lastOkAt          DateTime? @map("last_ok_at")
+  passwordEncrypted      String?   @map("password_encrypted")
+  folder                 String    @default("INBOX")
+  enabled                Boolean   @default(false)
+  lastRunAt              DateTime? @map("last_run_at")
+  lastOkAt               DateTime? @map("last_ok_at")
   /// A stable failure kind (`auth_failed`, `folder_missing`, …), never prose.
-  lastError         String?   @map("last_error")
-  lastErrorAt       DateTime? @map("last_error_at")
+  lastError              String?   @map("last_error")
+  lastErrorAt            DateTime? @map("last_error_at")
   /// IMAP UIDVALIDITY of the folder at the last run; a change restarts the scan.
-  uidValidity       String?   @map("uid_validity")
-  lastUid           Int       @default(0) @map("last_uid")
+  uidValidity            String?   @map("uid_validity")
+  lastUid                Int       @default(0) @map("last_uid")
   /// Header-only pre-filter: a mail is downloaded only when its From domain or
   /// subject looks like a booking. Everything else is never opened (personal folders).
-  prefilter         Boolean   @default(true)
+  prefilter              Boolean   @default(true)
   /// Set only the invisible `$TravStats` keyword, never `\Seen`.
-  keepUnread        Boolean   @default(false) @map("keep_unread")
+  keepUnread             Boolean   @default(false) @map("keep_unread")
   /// Where a fresh cursor starts: `now` (UIDNEXT-1) or `days_30|days_90|days_365`.
-  fetchFrom         String    @default("now") @map("fetch_from")
+  fetchFrom              String    @default("now") @map("fetch_from")
   /// Booking-sender domains the user added to the built-in list, and built-in ones removed.
-  senderDomains        String[] @default([]) @map("sender_domains")
-  removedSenderDomains String[] @default([]) @map("removed_sender_domains")
+  senderDomains          String[]  @default([]) @map("sender_domains")
+  removedSenderDomains   String[]  @default([]) @map("removed_sender_domains")
   /// Subject words the user added to the built-in keyword list, and built-in ones switched off.
-  subjectKeywords        String[] @default([]) @map("subject_keywords")
-  removedSubjectKeywords String[] @default([]) @map("removed_subject_keywords")
+  subjectKeywords        String[]  @default([]) @map("subject_keywords")
+  removedSubjectKeywords String[]  @default([]) @map("removed_subject_keywords")
   /// Aggregate counters only: a skipped mail leaves no other trace.
-  skippedCount      Int       @default(0) @map("skipped_count")
-  processedCount    Int       @default(0) @map("processed_count")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  skippedCount           Int       @default(0) @map("skipped_count")
+  processedCount         Int       @default(0) @map("processed_count")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   user       User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages   MailIntakeMessage[]
