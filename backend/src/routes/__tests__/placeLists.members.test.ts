@@ -174,6 +174,14 @@ describe("GET /place-lists/:id/members", () => {
     expect(res.body.data.rows[0].visitCount).toBe(1);
   });
 
+  it("the overview counts follow the purpose filter too", async () => {
+    const res = await request(app)
+      .get("/api/v1/place-lists?purposeFilter=business")
+      .set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.data.find((l: { id: string }) => l.id === listId).placeCount).toBe(1);
+  });
+
   it("refuses a bad sort and someone else's list", async () => {
     expect((await get("sort=nope")).status).toBe(400);
     expect((await get("sort=name", otherCookie)).status).toBe(404);

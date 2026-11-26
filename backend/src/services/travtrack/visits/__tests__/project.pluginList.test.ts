@@ -202,6 +202,45 @@ describe("plugin-fed place lists", () => {
     expect(list.pluginColumns).toEqual([]);
   });
 
+  it("places carrying the plugin's announced reference namespace join, also made outside the accept flow", async () => {
+    const mk = (name: string, externalRef: string | null) =>
+      prisma.place.create({
+        data: { userId, name, lat: AT.lat, lon: AT.lon, category: "other", externalRef },
+      });
+    const own = await mk("Kunde 4711", "proj:4711");
+    const viaAlias = await mk("Kunde 99", null);
+    await prisma.placeExternalRef.create({
+      data: { userId, placeId: viaAlias.id, ref: "proj:99" },
+    });
+    const foreign = await mk("Osm-Ort", "osm:node/1");
+    const lookalike = await mk("Projektor", "projx:1");
+    const hello = pluginHelloSchema.parse({
+      ...HELLO,
+      list: { ...HELLO.list, refNamespace: "proj" },
+    });
+    const { listId } = await syncPluginList(userId, await plugin(), hello, "de");
+    const entries = await prisma.placeListEntry.findMany({ where: { listId: listId! } });
+    const byPlace = new Map(entries.map((e) => [e.placeId, e]));
+    expect([...byPlace.keys()].sort()).toEqual([own.id, viaAlias.id].sort());
+    expect(byPlace.get(own.id)!.externalFields).toMatchObject({ id: "4711" });
+    expect(byPlace.get(viaAlias.id)!.externalFields).toMatchObject({ id: "99" });
+    expect(byPlace.has(foreign.id) || byPlace.has(lookalike.id)).toBe(false);
+
+    // A place made later joins on the next look at the settings card, once.
+    const later = await mk("Kunde 5000", "proj:5000");
+    await syncPluginList(userId, await plugin(), hello, "de");
+    await syncPluginList(userId, await plugin(), hello, "de");
+    const after = await prisma.placeListEntry.findMany({ where: { listId: listId! } });
+    expect(after.map((e) => e.placeId)).toContain(later.id);
+    expect(after).toHaveLength(3);
+
+    // A plugin cannot claim a prefix TravStats writes itself.
+    expect(
+      pluginHelloSchema.safeParse({ ...HELLO, list: { ...HELLO.list, refNamespace: "plugin" } })
+        .success
+    ).toBe(false);
+  });
+
   it("switching off or removing the plugin keeps the list as a normal list", async () => {
     const { listId } = await syncPluginList(userId, await plugin(), HELLO, "de");
     await setPluginListEnabled(userId, await plugin(), false, HELLO, "de");

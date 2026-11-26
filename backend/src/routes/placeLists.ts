@@ -53,6 +53,7 @@ const LIST_SUMMARY_INCLUDE = {
     select: {
       place: {
         select: {
+          id: true,
           visited: true,
           isoCountryCode: true,
           visits: { select: { visitedAt: true } },
@@ -175,10 +176,26 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       for (const c of catalogues) catalogueSizes.set(c.key, c._count.items);
     }
 
+    // The entry scope (a purpose filter, a hidden purpose) narrows top-level Place reads only,
+    // never these nested entries: count what that scope lets through, so the overview agrees
+    // with the table on the list page.
+    const visible = new Set(
+      (
+        await prisma.place.findMany({
+          where: { userId, listEntries: { some: {} } },
+          select: { id: true },
+        })
+      ).map((p) => p.id)
+    );
+    const scoped = rows.map((r) => ({
+      ...r,
+      entries: (r.entries as { place: { id: string } }[]).filter((e) => visible.has(e.place.id)),
+    })) as typeof rows;
+
     const now = new Date();
     res.json({
       success: true,
-      data: rows.map((r) => ({
+      data: scoped.map((r) => ({
         ...present(r, parsed.data.withEntries, now),
         curatedItemCount: r.curatedKey === null ? null : (catalogueSizes.get(r.curatedKey) ?? null),
       })),

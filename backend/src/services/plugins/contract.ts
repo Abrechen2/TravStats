@@ -50,6 +50,18 @@ export const pluginRequestSchema = z
   .openapi("SuggestionPluginRequestV1");
 export type PluginRequest = z.infer<typeof pluginRequestSchema>;
 
+/** Reference prefixes TravStats itself writes; a plugin cannot claim them. */
+export const RESERVED_REF_NAMESPACES: readonly string[] = [
+  "plugin",
+  "osm",
+  "wikidata",
+  "curated",
+  "strava",
+  "cid",
+  "google",
+  "takeout",
+];
+
 /** At most this many extra columns a plugin-fed list shows. */
 export const PLUGIN_LIST_MAX_COLUMNS = 6;
 /** A column key: what `externalRef.fields` is keyed by. */
@@ -161,6 +173,16 @@ export const pluginHelloSchema = z
     list: z
       .object({
         defaultName: bilingual(100),
+        /**
+         * The prefix of the plugin's own place references (`proj` for `proj:4711`). Places that
+         * already carry such a reference join the list too — also those made outside the accept
+         * flow. Without it, only places of accepted suggestions join.
+         */
+        refNamespace: z
+          .string()
+          .regex(/^[a-z][a-z0-9_-]{0,31}$/)
+          .refine((n) => !RESERVED_REF_NAMESPACES.includes(n), { message: "reserved namespace" })
+          .optional(),
         columns: z
           .array(z.object({ key: columnKey, label: bilingual(40) }))
           .max(PLUGIN_LIST_MAX_COLUMNS)

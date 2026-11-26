@@ -64,16 +64,35 @@ export interface PluginListState {
 
 type Locale = "de" | "en";
 
-/** The places of this plugin's accepted suggestions (`plugin:<id>:<ref>`), with their reference. */
-async function acceptedPlaces(
-  db: DbTransaction | typeof prisma,
+/**
+ * The places that belong to the plugin: those its accepted suggestions made (`plugin:<id>:<ref>`)
+ * and, when the hello names a `refNamespace`, those carrying `<namespace>:<ref>` — as their own
+ * reference or as an alias — however they were made. `refId` is the part after the prefix.
+ */
+async function pluginPlaces(
   userId: string,
-  pluginId: string
-): Promise<{ id: string; externalRef: string | null }[]> {
-  return db.place.findMany({
-    where: { userId, externalRef: { startsWith: `plugin:${pluginId}:` } },
-    select: { id: true, externalRef: true },
-  });
+  pluginId: string,
+  namespace: string | null
+): Promise<{ id: string; refId: string }[]> {
+  const prefixes = [`plugin:${pluginId}:`, ...(namespace ? [`${namespace}:`] : [])];
+  const [own, aliases] = await Promise.all([
+    prisma.place.findMany({
+      where: { userId, OR: prefixes.map((p) => ({ externalRef: { startsWith: p } })) },
+      select: { id: true, externalRef: true },
+    }),
+    prisma.placeExternalRef.findMany({
+      where: { userId, OR: prefixes.map((p) => ({ ref: { startsWith: p } })) },
+      select: { placeId: true, ref: true },
+    }),
+  ]);
+  const strip = (ref: string): string => {
+    const p = prefixes.find((x) => ref.startsWith(x));
+    return p ? ref.slice(p.length) : ref;
+  };
+  const out = new Map<string, string>();
+  for (const p of own) if (p.externalRef) out.set(p.id, strip(p.externalRef));
+  for (const a of aliases) if (!out.has(a.placeId)) out.set(a.placeId, strip(a.ref));
+  return [...out].map(([id, refId]) => ({ id, refId }));
 }
 
 /** The fields an accepted finding carried for a place, newest first. */
@@ -112,9 +131,17 @@ async function backfillMembers(
   userId: string,
   pluginId: string,
   listId: string,
-  columns: PluginListColumn[]
+  columns: PluginListColumn[],
+  namespace: string | null
 ) {
-  const places = await acceptedPlaces(prisma, userId, pluginId);
+  const already = new Set(
+    (await prisma.placeListEntry.findMany({ where: { listId }, select: { placeId: true } })).map(
+      (e) => e.placeId
+    )
+  );
+  const places = (await pluginPlaces(userId, pluginId, namespace)).filter(
+    (p) => !already.has(p.id)
+  );
   if (places.length === 0) return;
   const found = await fieldsFromFindings(
     userId,
@@ -122,7 +149,7 @@ async function backfillMembers(
     places.map((p) => p.id)
   );
   for (const place of places) {
-    const refId = place.externalRef?.slice(`plugin:${pluginId}:`.length) ?? "";
+    const refId = place.refId;
     const evidence = found.get(place.id) ?? { externalRef: refId };
     const external = entryExternal(
       { ...evidence, externalRef: evidence.externalRef ?? refId },
@@ -172,7 +199,6 @@ export async function syncPluginList(
       },
       select: { id: true, name: true, pluginColumns: true },
     });
-    await backfillMembers(userId, plugin.id, list.id, columns);
     logger.info({ operation: "pluginList.created", userId, pluginId: plugin.id, listId: list.id });
   } else if (list && hello?.list) {
     if (JSON.stringify(pluginColumnsOf(list.pluginColumns)) !== JSON.stringify(columns))
@@ -181,6 +207,10 @@ export async function syncPluginList(
         data: { pluginColumns: columns as unknown as Prisma.InputJsonValue },
       });
   }
+  // Fill (first time) and top up: places made since, also outside the accept flow, join on the
+  // next look at the settings card. Only missing members are written.
+  if (enabled && list)
+    await backfillMembers(userId, plugin.id, list.id, columns, hello?.list?.refNamespace ?? null);
   return { enabled, announced, listId: list?.id ?? null, listName: list?.name ?? null };
 }
 

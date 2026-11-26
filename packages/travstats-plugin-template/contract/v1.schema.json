@@ -289,6 +289,10 @@
                 "en"
               ]
             },
+            "refNamespace": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+            },
             "columns": {
               "type": "array",
               "items": {

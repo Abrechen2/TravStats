@@ -189,6 +189,10 @@ and a suggestion carries its reference as an object:
 - `columns`: at most 6, keys `^[A-Za-z][A-Za-z0-9_]{0,31}$`, unique, both
   labels required (40 characters). `fields` values are at most 200
   characters; keys not announced are dropped.
+- `refNamespace` (optional, e.g. `"proj"`): places that already carry a
+  reference `proj:<id>` — as their own or as an alias, however they were made —
+  join the list too, and new ones join on the next look at the settings card.
+  Prefixes TravStats writes itself (`plugin`, `osm`, `wikidata`, …) are refused.
 - `externalRef` as a plain string still works and means `{ "id": "…" }`.
 - A plugin that vendors the contract keeps an exact copy of
   `contract/v1.schema.json` from the template.
