@@ -9,7 +9,7 @@ export interface Toast {
   duration?: number; // in milliseconds, default 5000
   /** An undoable toast: what was done, and the button that takes it back. */
   undo?: {
-    onUndo: () => void;
+    onUndo: () => void | false;
     /** Overrides the default "Rückgängig" (e.g. a clearer verb). */
     label?: string;
     /** A second, smaller line: what the undo brings back. */
@@ -20,7 +20,8 @@ export interface Toast {
 export interface UndoableToast {
   /** What was done — "Station Rom entfernt". */
   label: string;
-  onUndo: () => void;
+  /** Return `false` to keep the toast: the undo could not run yet (a save is in flight). */
+  onUndo: () => void | false;
   /** How long the undo is on offer, in milliseconds. Default 8000. */
   ttl?: number;
   undoLabel?: string;

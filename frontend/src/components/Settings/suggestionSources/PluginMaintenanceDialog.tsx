@@ -1,5 +1,5 @@
 import { toast } from "../../../store/toastStore";
-import { useCallback, useEffect, useState, type JSX } from "react";
+import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
 import { useDisplayFormat } from "../../../lib/displayFormat";
@@ -76,6 +76,20 @@ export default function PluginMaintenanceDialog({
     if (open) void reload();
   }, [open, reload]);
 
+  // The offer ends with the dialog: a failed undo would have no surface to say so.
+  const undoToast = useRef<string | null>(null);
+  useEffect(() => {
+    if (open) return;
+    if (undoToast.current) toast.dismiss(undoToast.current);
+    undoToast.current = null;
+  }, [open]);
+  useEffect(
+    () => () => {
+      if (undoToast.current) toast.dismiss(undoToast.current);
+    },
+    []
+  );
+
   const act = async (work: () => Promise<string>) => {
     setBusy(true);
     setLine(null);
@@ -113,7 +127,8 @@ export default function PluginMaintenanceDialog({
         ...(street ? { street } : {}),
         source: choice.source,
       });
-      toast.undoable({
+      if (undoToast.current) toast.dismiss(undoToast.current);
+      undoToast.current = toast.undoable({
         label: t(`${NS}.applied`, { name: row.name }),
         undoLabel: t(`${NS}.undo`),
         onUndo: () =>

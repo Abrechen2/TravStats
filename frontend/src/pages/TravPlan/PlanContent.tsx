@@ -68,8 +68,10 @@ export default function PlanContent({
     [deleting, setDeleting] = useState(false),
     [members, setMembers] = useState(false),
     navigate = useNavigate();
-  useMutationUndoToast(plan?.lastMutationId, (mutationId) => {
-    if (!busy) void mutate({ type: "undo", mutationId });
+  useMutationUndoToast(plan?.lastMutationId, plan !== null, (mutationId) => {
+    // A save in flight: keep the toast, the undo is still on offer.
+    if (busy) return false;
+    void mutate({ type: "undo", mutationId });
   });
   const onError = useCallback((e: unknown) => setError(message(e)), [message, setError]);
   const { collab, reload, markRead } = useCollab(tripId, plan?.revision ?? 0, onError);

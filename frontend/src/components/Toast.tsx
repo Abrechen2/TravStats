@@ -42,8 +42,8 @@ const ToastItem = ({ toast }: { toast: Toast }) => {
           variant="secondary"
           icon={<Icon name="undo-2" size={16} />}
           onClick={() => {
-            removeToast(toast.id);
-            toast.undo?.onUndo();
+            // `false` keeps the toast: the undo could not run yet.
+            if (toast.undo?.onUndo() !== false) removeToast(toast.id);
           }}
         >
           {toast.undo.label ?? t("buttons.undo")}
