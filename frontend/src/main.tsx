@@ -24,9 +24,8 @@ import { installStaleBundleRecovery, stripStaleReloadParam } from "./lib/staleBu
 import { installMapLibreTransformBridge } from "./lib/maplibreTransformBridge";
 
 // Import i18n config - this initializes i18n synchronously with initAsync: false
-import "./i18n/config";
 import { I18nextProvider } from "react-i18next";
-import i18n from "./i18n/config";
+import i18n, { i18nReady } from "./i18n/config";
 
 // Runs before any map mounts: @deck.gl/mapbox reads `map.transform` on every
 // frame and MapLibre 6 no longer has it.
@@ -45,10 +44,14 @@ if (typeof document !== "undefined") {
   document.documentElement.classList.add("dark");
 }
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <I18nextProvider i18n={i18n}>
-      <App />
-    </I18nextProvider>
-  </React.StrictMode>
-);
+// The active language's translations are separate chunks now (i18n/config.ts);
+// rendering before they arrive would paint raw keys.
+void i18nReady.then(() => {
+  ReactDOM.createRoot(document.getElementById("root")!).render(
+    <React.StrictMode>
+      <I18nextProvider i18n={i18n}>
+        <App />
+      </I18nextProvider>
+    </React.StrictMode>
+  );
+});
