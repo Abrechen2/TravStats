@@ -23,7 +23,7 @@ import { apiTokensApi, type ApiToken } from "../../lib/api/tokens";
 import { logger } from "../../lib/logger";
 import { apiErrorCode } from "../../lib/apiError";
 import { isOldToken } from "../../lib/tokenAge";
-import { formatDateTime } from "../../lib/displayFormat";
+import { formatDateTime } from "../../lib/format";
 import { useBlockConfirm } from "./useBlockConfirm";
 import PushStateRow from "./PushStateRow";
 import { useRowCopy } from "./rowCopy";

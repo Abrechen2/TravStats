@@ -18,7 +18,7 @@
 
 import { escapeHtml } from "../../../lib/escapeHtml";
 import { countryName, flagImgHtml } from "../../../lib/countryFlag";
-import { formatDate as formatUserDate } from "../../../lib/displayFormat";
+import { formatDate } from "../../../lib/format";
 import { tokens } from "../../../theme/tokens";
 import type { CardEndpoint } from "./pinnedTypes";
 
@@ -29,11 +29,6 @@ export interface HoverHtmlOptions {
   locale?: string;
   /** Flag height in px. The globe passes 18–19, a flat-map marker 16. */
   flagHeight?: number;
-}
-
-/** In the user's date format (Settings → Display); the locale no longer decides. */
-function formatDate(iso: string): string {
-  return formatUserDate(iso) || iso.slice(0, 10);
 }
 
 function placeLine(

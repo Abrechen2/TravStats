@@ -1,3 +1,5 @@
+import type { InputHTMLAttributes, JSX } from "react";
+import DateField from "../ui/DateField";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Flight } from "./types";
 
@@ -132,8 +134,8 @@ export default function FlightGroundTruth({
                       ))}
                     </select>
                   ) : (
-                    <input
-                      type={field.kind === "date" || field.kind === "time" ? field.kind : "text"}
+                    <FieldControl
+                      kind={field.kind === "date" || field.kind === "time" ? field.kind : null}
                       value={flight[field.key] || ""}
                       onChange={(e) =>
                         onChange(
@@ -155,4 +157,12 @@ export default function FlightGroundTruth({
       </div>
     </div>
   );
+}
+
+/** A date or time field where the template says so, a plain text input otherwise. */
+function FieldControl({
+  kind,
+  ...rest
+}: { kind: "date" | "time" | null } & InputHTMLAttributes<HTMLInputElement>): JSX.Element {
+  return kind ? <DateField kind={kind} {...rest} /> : <input type="text" {...rest} />;
 }

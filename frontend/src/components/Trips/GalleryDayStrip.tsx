@@ -1,3 +1,4 @@
+import { formatDayLabel } from "../../lib/format";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useLocale } from "../../hooks/useLocale";
@@ -18,12 +19,7 @@ interface Props {
 
 /** `YYYY-MM-DD` key read in UTC so the reader's zone cannot move it. */
 export function formatDayChip(day: string, locale: string): string {
-  return new Date(`${day}T00:00:00.000Z`).toLocaleDateString(locale, {
-    timeZone: "UTC",
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
+  return formatDayLabel(day, { weekday: "short", day: "numeric", month: "short" }, locale);
 }
 
 /** A horizontal strip of the trip's days, each with its photo count, plus "Alle". */

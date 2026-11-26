@@ -48,7 +48,7 @@ import { trackSpanPath } from "./Track/roadtrip/trackSpanPath";
 import { useDomainColors } from "../hooks/useDomainColors";
 import { roadtripsApi } from "../lib/api/roadtrips";
 import { toursApi } from "../lib/api/tours";
-import { useDisplayFormat } from "../lib/displayFormat";
+import { useDisplayFormat } from "../lib/format";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { sectionExpenseCount } from "../lib/sectionExpenses";
 import { hexToRgb } from "../lib/domainColor";

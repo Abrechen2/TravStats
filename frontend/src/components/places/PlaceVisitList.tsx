@@ -5,7 +5,7 @@ import Button from "../ui/Button";
 import { statusPillStyle } from "../table/statusPillStyle";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTodayZone } from "../../hooks/useTodayZone";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { now as clockNow } from "../../shared/time";
 import type { PlaceVisit } from "../../types/place";
 import {

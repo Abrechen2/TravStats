@@ -62,23 +62,6 @@ export function formatSpan(w: SectionWindow, zone: string, t: Translate): string
   });
 }
 
-export function formatDuration(ms: number, t: Translate): string {
-  const minutes = Math.max(0, Math.round(ms / 60_000));
-  if (minutes < 60) return t(`${K}.minutes`, { m: minutes });
-  const hours = Math.floor(minutes / 60);
-  if (hours < 48) return t(`${K}.hours`, { h: hours, m: minutes % 60 });
-  return t(`${K}.daysHours`, { d: Math.floor(hours / 24), h: hours % 24 });
-}
-
-export function formatKm(metres: number | null, locale: string, t: Translate): string {
-  if (metres === null) return t(`${K}.none`);
-  const km = metres / 1_000;
-  const digits = km < 10 ? 1 : 0;
-  return t(`${K}.km`, {
-    km: new Intl.NumberFormat(locale, { maximumFractionDigits: digits }).format(km),
-  });
-}
-
 export function formatSpeed(
   avgKmh: number | null,
   maxKmh: number | null,

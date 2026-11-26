@@ -4,7 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
 import { sortFlightsByLegOrder } from "../../lib/flightLegSort";
 import type { Flight } from "../../types";
-import { formatDate, formatTime } from "../../lib/displayFormat";
+import { formatDate, formatTime } from "../../lib/format";
 
 interface TripDetailsSidebarProps {
   flights: Flight[];

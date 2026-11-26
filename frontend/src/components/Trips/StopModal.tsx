@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import Modal from "../Modal";
 import { useEffect, useState } from "react";
 import type { TripStop } from "../../types";
@@ -188,16 +189,17 @@ export default function StopModal({
         <div className="grid grid-cols-2 gap-3">
           <Field label={t("trips:stopModal.startDateLabel")}>
             <div className="flex gap-2">
-              <input
-                type="date"
+              <DateField
+                inline
                 aria-label={t("trips:stopModal.startDateLabel")}
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="w-full rounded-lg px-3 py-2 text-sm"
                 style={inputStyle}
               />
-              <input
-                type="time"
+              <DateField
+                inline
+                kind="time"
                 aria-label={t("trips:stopModal.startTimeLabel")}
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
@@ -208,16 +210,17 @@ export default function StopModal({
           </Field>
           <Field label={t("trips:stopModal.endDateLabel")}>
             <div className="flex gap-2">
-              <input
-                type="date"
+              <DateField
+                inline
                 aria-label={t("trips:stopModal.endDateLabel")}
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="w-full rounded-lg px-3 py-2 text-sm"
                 style={inputStyle}
               />
-              <input
-                type="time"
+              <DateField
+                inline
+                kind="time"
                 aria-label={t("trips:stopModal.endTimeLabel")}
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}

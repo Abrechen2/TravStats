@@ -15,7 +15,7 @@ import TrackOriginNote from "../tracks/TrackOriginNote";
 import TrackSourceError from "../tracks/TrackSourceError";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { NO_ORIGIN_INFO, type TrackOrigin, type TrackOriginInfo } from "../../lib/api/trackOrigin";
-import { formatTimeValueShown } from "../../lib/displayFormat";
+import { formatTimeValueShown } from "../../lib/format";
 import type { TimeValue } from "../../shared/time";
 import WebGLGuard from "../map/WebGLGuard";
 import GeoExportButtons from "../export/GeoExportButtons";

@@ -5,7 +5,7 @@ import type { Cruise, CruiseStopInput } from "../../types";
 import { cruiseApi } from "../../lib/api/cruise";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import { formatLocalClock } from "../../lib/displayFormat";
+import { formatLocalClock } from "../../lib/format";
 import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
 import { FormErrorBanner } from "../form";
 import { stopTitle } from "./CruiseStopSummary";

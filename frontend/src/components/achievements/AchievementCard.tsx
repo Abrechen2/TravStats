@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import type { Achievement } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { isPlanningRule } from "./achievementPlanning";
 
 /**

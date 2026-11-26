@@ -1,3 +1,4 @@
+import { formatKm } from "../../lib/format";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useToursVisible } from "../../hooks/useToursVisible";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
@@ -14,10 +15,6 @@ interface Props {
 }
 
 const DEFAULT_MODE: LegMode = "road";
-
-function formatKm(value: number): string {
-  return value.toLocaleString("de-DE", { maximumFractionDigits: 0 });
-}
 
 /**
  * "Touren" tab: one row per tour route section on this trip, each linking to
@@ -237,7 +234,7 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
                 </span>
                 <span className="flex items-center gap-3 text-(--text-muted)">
                   <span>{t("trips:tours.stopCount", { count: route.stopCount })}</span>
-                  <span>{formatKm(route.distanceKm)} km</span>
+                  <span>{formatKm(route.distanceKm)}</span>
                 </span>
               </Link>
               <button

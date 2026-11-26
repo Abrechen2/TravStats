@@ -29,6 +29,7 @@ import {
   Labelled,
   RentalTimeField,
   TextInput,
+  DateInput,
 } from "./rentalFormFields";
 import {
   withDayOnly,
@@ -423,10 +424,9 @@ export function RentalPickupStep(props: RentalStepProps): JSX.Element {
               />
             )}
           </Labelled>
-          <TextInput
+          <DateInput
             id={rentalFieldId("depositPaidOn")}
             label={t("rental:form.depositPaidOn")}
-            type="date"
             style={DARK_PICKER_STYLE}
             value={draft.depositPaidOn}
             onChange={(v): void => set("depositPaidOn", v)}
@@ -502,10 +502,9 @@ export function RentalReturnStep(props: RentalStepProps): JSX.Element {
       <fieldset className="space-y-3 rounded-md border border-border p-3">
         <legend className="px-1 text-sm font-medium">{t("rental:form.depositBack")}</legend>
         <div className="grid gap-3 sm:grid-cols-2">
-          <TextInput
+          <DateInput
             id={rentalFieldId("depositReturnedOn")}
             label={t("rental:form.depositReturnedOn")}
-            type="date"
             style={DARK_PICKER_STYLE}
             value={draft.depositReturnedOn}
             onChange={(v): void => set("depositReturnedOn", v)}

@@ -5,7 +5,7 @@ import { tripsApi, type MicroTripCandidate } from "../../lib/api/trips";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 
 interface TripCleanupModalProps {
   onClose(): void;

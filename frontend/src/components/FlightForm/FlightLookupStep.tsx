@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { lazy, Suspense, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useFlightEntrySuggestions } from "../../hooks/useFlightEntrySuggestions";
@@ -289,8 +290,8 @@ export default function FlightLookupStep({
             aria-label={t("flights:form.flightNumber")}
             maxLength={10}
           />
-          <input
-            type="date"
+          <DateField
+            inline
             value={searchDate}
             onChange={(e) => setSearchDate(e.target.value)}
             aria-label={t("flights:form.searchDate")}

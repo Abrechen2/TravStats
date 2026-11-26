@@ -5,6 +5,7 @@
  * 800-line hard maximum mandated by CLAUDE.md. Nothing here owns state —
  * every piece is a controlled component driven by the modal.
  */
+import DateField from "../components/ui/DateField";
 import type { Airport } from "../lib/api";
 import AirportAutocomplete from "./AirportAutocomplete";
 import CompanionPicker from "./CompanionPicker";
@@ -430,9 +431,10 @@ export function CommonTimeAndMetaFields({
           <label className="label" htmlFor="special-departure-time">
             {t("specialFlights:field.departureTime")}
           </label>
-          <input
+          <DateField
+            inline
             id="special-departure-time"
-            type="datetime-local"
+            kind="datetime-local"
             className="input"
             style={{ colorScheme: "dark" }}
             {...fieldErrorProps(SPECIAL_IDS.departureTime, errors?.departureTime)}
@@ -445,9 +447,10 @@ export function CommonTimeAndMetaFields({
           <label className="label" htmlFor="special-arrival-time">
             {t("specialFlights:field.arrivalTime")}
           </label>
-          <input
+          <DateField
+            inline
             id="special-arrival-time"
-            type="datetime-local"
+            kind="datetime-local"
             className="input"
             style={{ colorScheme: "dark" }}
             {...fieldErrorProps(SPECIAL_IDS.arrivalTime, errors?.arrivalTime)}

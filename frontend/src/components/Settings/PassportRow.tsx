@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
@@ -68,9 +69,9 @@ function DateControl({
 }): JSX.Element {
   const { id, locked, describedBy } = useSettingItem();
   return (
-    <input
+    <DateField
+      inline
       id={id}
-      type="date"
       className="input"
       style={{ minHeight: "var(--ts-size-touch-min)" }}
       // Keyed by the shown value: a discarded or refused pick snaps back.

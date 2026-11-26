@@ -3,7 +3,7 @@ import { formatNumber } from "../../lib/units";
 import { useTranslation } from "../../hooks/useTranslation";
 import StatCard from "./StatCard";
 import CountingHelp from "./counting/CountingHelp";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 
 interface StatsFunSectionProps {
   funStats: FunStats;

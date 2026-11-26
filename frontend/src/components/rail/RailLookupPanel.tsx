@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -170,8 +171,8 @@ export function RailLookupPanel({
       <div className="mt-2 flex flex-wrap items-end gap-2">
         <label className="text-sm">
           {t("rail:lookup.date")}
-          <input
-            type="date"
+          <DateField
+            inline
             className={`mt-1 ${inputClassName}`}
             style={{ colorScheme: "dark" }}
             value={date}

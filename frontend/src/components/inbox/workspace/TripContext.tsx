@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { tripsApi } from "../../../lib/api/trips";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import type { Trip } from "../../../types";
 import Button from "../../ui/Button";
 import { W } from "./model";

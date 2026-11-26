@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "../hooks/useTranslation";
-import { formatDateTime } from "../lib/displayFormat";
+import { formatDateTime } from "../lib/format";
 
 export interface ChangeEntry {
   field: string;

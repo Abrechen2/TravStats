@@ -5,7 +5,7 @@ import { useToastStore } from "../../store/toastStore";
 import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { formatAmount, dateLocaleForLanguage } from "../../lib/units";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import { deadlineFacts } from "../../lib/deadlines";
 import type { Booking, Trip } from "../../types";
 import AssignFlightsToBookingModal from "./AssignFlightsToBookingModal";

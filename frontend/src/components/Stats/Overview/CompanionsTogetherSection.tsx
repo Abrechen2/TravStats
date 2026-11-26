@@ -1,3 +1,4 @@
+import { formatDayLabel } from "../../../lib/format";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
@@ -231,10 +232,7 @@ function JourneyLink({
 }): JSX.Element | null {
   const { t } = useTranslation(["stats"]);
   if (journey === null) return null;
-  const date = new Date(`${journey.day}T00:00:00Z`).toLocaleDateString(locale, {
-    timeZone: "UTC",
-    dateStyle: "medium",
-  });
+  const date = formatDayLabel(journey.day, { dateStyle: "medium" }, locale);
   const text = `${date} · ${t(`${NS}.journeyKind.${journey.kind}`)}`;
   return (
     <span data-testid={`journey-${journey.kind}-${journey.id}`}>

@@ -1,3 +1,4 @@
+import DateField from "../../../components/ui/DateField";
 import { useState } from "react";
 import type { JSX } from "react";
 
@@ -107,8 +108,8 @@ export default function EditDocumentDialog({ document, onClose, onSaved }: Props
         </label>
         <label className="flex flex-col" style={{ gap: 4 }}>
           <span className="t-caption">{t("dataQuality:unfiledDocuments.edit.issuedOn")}</span>
-          <input
-            type="date"
+          <DateField
+            inline
             value={issuedOn}
             onChange={(e) => setIssuedOn(e.target.value)}
             className={field}

@@ -1,3 +1,4 @@
+import { formatDayLabel } from "../../lib/format";
 import Modal from "../Modal";
 import { useMemo } from "react";
 import type { TripJournalEntry } from "../../types";
@@ -31,12 +32,11 @@ export default function JournalViewModal({
   const dateLabel = useMemo(() => {
     const d = new Date(entry.date);
     if (Number.isNaN(d.getTime())) return "";
-    return d.toLocaleDateString(locale, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      timeZone: "UTC",
-    });
+    return formatDayLabel(
+      d.toISOString(),
+      { year: "numeric", month: "long", day: "numeric" },
+      locale
+    );
   }, [entry.date, locale]);
 
   const heading = entry.title?.trim() || dateLabel || t("trips:journalView.untitled");

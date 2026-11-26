@@ -7,7 +7,8 @@
 import { useState, type JSX } from "react";
 import type { GeoJSONFeature } from "../../../types";
 import { tokens } from "../../../theme/tokens";
-import { LABEL_STYLE, formatDate, type TFn } from "./cardChrome";
+import { LABEL_STYLE, type TFn } from "./cardChrome";
+import { formatDate } from "../../../lib/format";
 
 const ARC_FLIGHTS_COLLAPSED = 2;
 
@@ -17,7 +18,6 @@ const ARC_FLIGHTS_COLLAPSED = 2;
 export function CardFlights({
   flights,
   flightIds,
-  locale,
   t,
 }: {
   flights: readonly GeoJSONFeature[];
@@ -59,7 +59,7 @@ export function CardFlights({
             <span className="font-medium">{f.properties.airline ?? "—"}</span>
             <span className="font-mono opacity-50">{f.properties.flightNumber ?? ""}</span>
             <span className="ml-auto tabular-nums opacity-55">
-              {f.properties.departureTime ? formatDate(f.properties.departureTime, locale) : ""}
+              {f.properties.departureTime ? formatDate(f.properties.departureTime) : ""}
             </span>
           </div>
         ))}

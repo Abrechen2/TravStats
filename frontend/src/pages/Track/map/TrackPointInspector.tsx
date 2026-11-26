@@ -6,7 +6,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useEscapeClose } from "../../../hooks/useEscapeClose";
 import { trackErrorKey } from "../../../lib/api/travtrack";
 import { travTrackViewsApi } from "../../../lib/api/travtrackViews";
-import { formatDate, formatTime } from "../../../lib/displayFormat";
+import { formatDate, formatTime } from "../../../lib/format";
 import { logger } from "../../../lib/logger";
 import { DASH, makeNumber } from "./trackLegFormat";
 import { TRACK_COLOR, type MapPoint } from "./trackMapLayers";

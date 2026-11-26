@@ -2,10 +2,10 @@ import { useMemo } from "react";
 import { useLocale } from "../../hooks/useLocale";
 import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
-import { formatDuration } from "../../lib/formatters";
+import { formatDuration } from "../../lib/format";
 import type { Flight } from "../../types";
 import { isCountableFlight } from "../../shared/flightCounting";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 
 interface RouteDetailsSidebarProps {
   flights: Flight[];

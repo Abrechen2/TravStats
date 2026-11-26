@@ -15,6 +15,7 @@
 // State still lives in `useTimeSliderStore`; this component only drives it,
 // so GlobeView's visibility logic is unchanged.
 
+import { formatDayLabel } from "../../lib/format";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTimeSliderStore } from "../../store/timeSliderStore";
@@ -67,7 +68,7 @@ export function computeYearTicks(minYear: number, maxYear: number, maxTicks = 6)
  * reader's zone, which moved the edge of a month by up to a day (ADR 0002).
  */
 const fmt = (d: Date | null, locale: string): string =>
-  d ? d.toLocaleDateString(locale, { year: "numeric", month: "short", timeZone: "UTC" }) : "—";
+  d ? formatDayLabel(d.toISOString(), { year: "numeric", month: "short" }, locale) : "—";
 
 export const GlobeTimeHistogram = ({
   buckets,

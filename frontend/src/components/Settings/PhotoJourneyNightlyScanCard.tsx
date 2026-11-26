@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type JSX } from "react";
 
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { failureKey, isImmichFailureKind } from "../../lib/api/immich";
 import { photoJourneysApi, type PhotoJourneyNightlySettings } from "../../lib/api/photoJourneys";

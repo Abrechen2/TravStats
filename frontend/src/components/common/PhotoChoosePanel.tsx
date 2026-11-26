@@ -14,6 +14,7 @@ import {
   type PhotoChoice,
   type PhotoChoices,
 } from "../../lib/api/photoChoices";
+import { formatMetres } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 
@@ -40,11 +41,6 @@ export function formatTaken(local: string | null, locale: string): string {
     timeStyle: "short",
     timeZone: "UTC",
   }).format(new Date(Date.UTC(y, mo - 1, d, h, mi)));
-}
-
-function formatDistance(metres: number | null): string {
-  if (metres === null) return "";
-  return metres < 1000 ? `${metres} m` : `${(metres / 1000).toFixed(1)} km`;
 }
 
 /**
@@ -371,7 +367,7 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
                             style={{ color: "var(--text-muted)" }}
                           >
                             {formatTaken(c.takenAtLocal, i18n.language)}
-                            {c.distanceM !== null && ` · ${formatDistance(c.distanceM)}`}
+                            {c.distanceM !== null && ` · ${formatMetres(c.distanceM)}`}
                             {c.chosen &&
                               ` · ${t(c.provenance === "auto" ? "common:photoChoose.auto" : "common:photoChoose.own")}`}
                             {c.refused && ` · ${t("common:photoChoose.removedBefore")}`}

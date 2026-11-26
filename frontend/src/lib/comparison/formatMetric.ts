@@ -1,5 +1,5 @@
 import { formatDistance, formatNumber, type DistanceUnit } from "../units";
-import { formatDuration } from "../formatters";
+import { formatDuration } from "../format";
 import type { MetricUnit } from "../../shared/comparisonMetrics";
 
 export type Translate = (key: string, options?: Record<string, unknown>) => string;

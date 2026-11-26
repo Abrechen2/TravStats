@@ -1,3 +1,4 @@
+import DateRangeField from "../../ui/DateRangeField";
 import { useRef, useState } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { photoJourneysApi } from "../../../lib/api/photoJourneys";
@@ -11,7 +12,7 @@ import PhotoJourneyPreviewStrip from "../PhotoJourneyPreviewStrip";
 import { photoJourneyPlan } from "../photoJourneyPlan";
 import { photoJourneyLabel } from "../photoJourneyLabel";
 import { photoJourneySpan } from "../photoJourneySpan";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import Button from "../../ui/Button";
 import type { InboxAction } from "./FlagQuickEditor";
 import { useToastStore } from "../../../store/toastStore";
@@ -93,27 +94,17 @@ export default function PhotoProposalCard({
               onChange={(e) => setName(e.target.value)}
             />
           </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-sm">
-              {t(`${W}.start`)}
-              <input
-                type="date"
-                className="input mt-1 w-full"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-              />
-            </label>
-            <label className="text-sm">
-              {t(`${W}.end`)}
-              <input
-                type="date"
-                className="input mt-1 w-full"
-                value={end}
-                min={start}
-                onChange={(e) => setEnd(e.target.value)}
-              />
-            </label>
-          </div>
+          <DateRangeField
+            fromLabel={t(`${W}.start`)}
+            toLabel={t(`${W}.end`)}
+            from={start}
+            to={end}
+            quickPicks={[]}
+            onChange={(range) => {
+              setStart(range.from);
+              setEnd(range.to);
+            }}
+          />
         </fieldset>
       )}
       <p className="t-caption">{t(`${NS}.creates.${plan}`)}</p>

@@ -30,7 +30,7 @@ import { OperatorMarkTile } from "../components/table/OperatorMarkTile";
 import Button from "../components/ui/Button";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
-import { formatLocalDate } from "../lib/displayFormat";
+import { formatLocalDate } from "../lib/format";
 import { cruiseEnd, cruiseStart } from "../lib/entityTimes";
 import type { LocalDateValue } from "../shared/time";
 import { formatAmount } from "../lib/units";

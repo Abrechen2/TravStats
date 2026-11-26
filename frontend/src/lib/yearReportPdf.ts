@@ -1,7 +1,7 @@
 import type { Flight } from "../types";
 import { calculateDistance } from "./geo";
 import { getFlightDuration } from "./flightDuration";
-import { formatDate } from "./displayFormat";
+import { formatDate } from "./format";
 import { favoriteConnection } from "./stats/favoriteConnection";
 
 interface YearReportOptions {

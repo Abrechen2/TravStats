@@ -1,7 +1,7 @@
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { minutesText } from "../../lib/flights/minutesText";
-import { formatLocalClock, formatTimeValueShown } from "../../lib/displayFormat";
+import { formatLocalClock, formatTimeValueShown } from "../../lib/format";
 import {
   flightPlanActual,
   type Deviation,

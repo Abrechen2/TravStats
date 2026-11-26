@@ -2,7 +2,7 @@ import type { JSX } from "react";
 
 import { Field, Input } from "../ui/Field";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { formatCurrency } from "../../lib/units";
 import type { ExpenseFx } from "../../types/expense";
 import { parseAmount, type ExpenseDraft } from "./expenseDraft";

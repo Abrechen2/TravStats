@@ -1,3 +1,4 @@
+import { formatDayLabel } from "../../../lib/format";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { todayZoneNow } from "../../../hooks/useTodayZone";
 import { todayIn } from "../../../shared/time";
@@ -141,10 +142,11 @@ export default function HistoricalDateFields({
           <option value="">{t("flights:historicalMonthNone")}</option>
           {Array.from({ length: 12 }, (_, i) => (
             <option key={i + 1} value={String(i + 1)}>
-              {new Date(Date.UTC(2000, i, 1)).toLocaleDateString(i18n.language, {
-                month: "long",
-                timeZone: "UTC",
-              })}
+              {formatDayLabel(
+                `2000-${String(i + 1).padStart(2, "0")}-01`,
+                { month: "long" },
+                i18n.language
+              )}
             </option>
           ))}
         </select>

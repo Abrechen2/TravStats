@@ -549,5 +549,13 @@
     "coral": "Koralle",
     "teal": "Petrol",
     "lime": "Limette"
+  },
+  "dateField": {
+    "from": "Von",
+    "to": "Bis",
+    "quickPicks": "Schnellauswahl",
+    "today": "Heute",
+    "last7": "7 Tage",
+    "thisYear": "Dieses Jahr"
   }
 }

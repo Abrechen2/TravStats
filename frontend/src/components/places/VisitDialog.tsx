@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import Modal from "../Modal";
@@ -338,9 +339,9 @@ export function VisitDialog({
                   </>
                 }
               >
-                <input
+                <DateField
+                  inline
                   id={DATE_ID}
-                  type="date"
                   aria-required="true"
                   className={INPUT}
                   value={date}
@@ -509,9 +510,10 @@ function TimeField({
   const { t } = useTranslation(["places"]);
   return (
     <Labelled id="visit-dialog-time" label={t("places:visit.timeOptional")}>
-      <input
+      <DateField
+        inline
         id="visit-dialog-time"
-        type="time"
+        kind="time"
         className={INPUT}
         value={value}
         onChange={(e) => onChange(e.target.value)}

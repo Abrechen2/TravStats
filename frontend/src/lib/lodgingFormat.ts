@@ -3,7 +3,7 @@ import { storedRatingsOf } from "../shared/ratingDerivation";
 import { classifyStay, type LodgingCountState } from "../shared/lodgingCounting";
 import { isUnconvertedSpend, type LodgingStayFx } from "../shared/lodgingSpendBase";
 import type { LodgingType } from "../types/lodging";
-import { formatDate } from "./displayFormat";
+import { formatDate } from "./format";
 
 const FALLBACK = "—";
 const MS_PER_DAY = 24 * 60 * 60 * 1000;

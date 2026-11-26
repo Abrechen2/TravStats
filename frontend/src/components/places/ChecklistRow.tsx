@@ -4,7 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { FlagImg } from "../../lib/countryFlag";
 import { curatedText } from "../../lib/curatedCopy";
 import type { CuratedProgressItem, VisitSuggestion } from "../../types/placeList";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 
 interface Props {
   item: CuratedProgressItem;

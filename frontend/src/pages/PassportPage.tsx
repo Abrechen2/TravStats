@@ -1,3 +1,4 @@
+import { formatDayLabel } from "../lib/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AppShell from "../components/ui/AppShell";
 
@@ -44,11 +45,7 @@ import type { Passport, PassportContinentGroup, PassportCountry } from "../types
 /** The stamp's month from the visit's own `YYYY-MM-DD`, read in UTC so no reader's zone moves it. */
 const monthStamp = (iso: string | null, locale: string): string => {
   if (!iso) return "—";
-  return new Date(`${iso.slice(0, 10)}T00:00:00.000Z`).toLocaleDateString(locale, {
-    month: "short",
-    year: "2-digit",
-    timeZone: "UTC",
-  });
+  return formatDayLabel(iso, { month: "short", year: "2-digit" }, locale);
 };
 
 export default function PassportPage(): JSX.Element {

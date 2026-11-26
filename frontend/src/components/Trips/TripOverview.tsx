@@ -5,7 +5,7 @@ import type { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import type { Trip } from "../../types";
 import { tripCostTotals } from "../../lib/tripCost";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { railDeparture } from "../../lib/entityTimes";
 import { bareTrainName, trainName } from "../../lib/rail/trainName";
 import { formatCurrency } from "../../lib/units";

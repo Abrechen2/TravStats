@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { placeCapturesApi, type PlaceCapture } from "../../lib/api/placeCaptures";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { usePlaceCategories } from "../../hooks/usePlaceCategories";

@@ -14,7 +14,7 @@ vi.mock("../../../lib/api/lodging", () => ({
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
-vi.mock("../../../lib/displayFormat", () => ({
+vi.mock("../../../lib/format", () => ({
   useDisplayFormat: () => ({ date: (v: string) => v.slice(0, 10) }),
 }));
 

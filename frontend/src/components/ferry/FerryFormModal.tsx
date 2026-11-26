@@ -1,3 +1,4 @@
+import DateField from "../ui/DateField";
 import { parseDecimalInput } from "../../lib/decimalInput";
 import type { GapDates } from "../../lib/gapCalendar";
 import { useEffect, useId, useRef, useState } from "react";
@@ -265,20 +266,20 @@ export function FerryFormModal({
           value={fields[key]}
           onChange={(e) => set(key, e.target.value)}
         />
+      ) : key.endsWith("Local") ? (
+        <DateField
+          className={INPUT}
+          value={fields[key]}
+          required={key === "departureLocal"}
+          kind={fields[key].length === 10 ? "date" : "datetime-local"}
+          onChange={(e) => set(key, e.target.value)}
+        />
       ) : (
         <input
           className={INPUT}
           value={fields[key]}
-          required={key === "departureLocal" || key === "currency"}
-          type={
-            key.endsWith("Local")
-              ? fields[key].length === 10
-                ? "date"
-                : "datetime-local"
-              : key === "passengerCount"
-                ? "number"
-                : "text"
-          }
+          required={key === "currency"}
+          type={key === "passengerCount" ? "number" : "text"}
           inputMode={DECIMALS.includes(key) ? "decimal" : undefined}
           min={key === "passengerCount" ? 1 : undefined}
           step={key === "passengerCount" ? 1 : undefined}

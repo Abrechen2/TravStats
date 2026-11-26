@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import type { InputHTMLAttributes, JSX, ReactNode } from "react";
 import { ClockChangeNotice } from "../common/ClockChangeNotice";
 import { FieldError, RequiredMark, fieldErrorProps } from "../form";
@@ -99,6 +100,33 @@ export function TextInput({
   );
 }
 
+/** `TextInput` for a day: the shared date field, in the same label/error wiring. */
+export function DateInput({
+  id,
+  label,
+  value,
+  onChange,
+  error,
+  required,
+  hint,
+  className,
+  ...rest
+}: Omit<TextInputProps, "type">): JSX.Element {
+  return (
+    <Labelled id={id} label={label} error={error} required={required} hint={hint}>
+      {(wiring) => (
+        <DateField
+          {...rest}
+          {...wiring}
+          className={`${INPUT_CLASS} ${className ?? ""}`.trim()}
+          value={value}
+          onChange={(e): void => onChange(e.target.value)}
+        />
+      )}
+    </Labelled>
+  );
+}
+
 interface TimeFieldProps {
   id: string;
   label: string;
@@ -138,9 +166,10 @@ export function RentalTimeField({
     <div>
       <Labelled id={id} label={label} error={error} required={required}>
         {(wiring) => (
-          <input
+          <DateField
+            inline
             {...wiring}
-            type={dayOnly ? "date" : "datetime-local"}
+            kind={dayOnly ? "date" : "datetime-local"}
             style={DARK_PICKER_STYLE}
             className={INPUT_CLASS}
             value={local}

@@ -549,5 +549,13 @@
     "coral": "Coral",
     "teal": "Teal",
     "lime": "Lime"
+  },
+  "dateField": {
+    "from": "From",
+    "to": "To",
+    "quickPicks": "Quick picks",
+    "today": "Today",
+    "last7": "7 days",
+    "thisYear": "This year"
   }
 }

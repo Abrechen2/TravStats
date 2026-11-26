@@ -2,7 +2,7 @@ import { useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ActionControl, ErrorLine, SettingItem } from "../ui/settings";
 import type { ServiceLastTest, ServiceTestResult } from "../../lib/api/externalServices";
-import { formatDateTime } from "../../lib/displayFormat";
+import { formatDateTime } from "../../lib/format";
 import { isServiceDisabledError, reasonSentence } from "../ExternalServices/serviceText";
 import { logger } from "../../lib/logger";
 import type { RowLock } from "./useLockFor";

@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import { logger } from "../../../lib/logger";
 import { timeMigrationApi } from "../../../lib/api/timeMigration";
 import { useAuthStore } from "../../../store/authStore";

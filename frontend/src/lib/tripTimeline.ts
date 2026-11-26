@@ -1,4 +1,4 @@
-import { formatTimeValueShown } from "./displayFormat";
+import { formatTimeValueShown } from "./format";
 import { calculateDistance } from "./geo";
 import { clockOf, dayOf, type LocalDateValue, type TimeValue } from "../shared/time";
 

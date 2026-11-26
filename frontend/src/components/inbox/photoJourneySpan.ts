@@ -1,4 +1,4 @@
-import type { useDisplayFormat } from "../../lib/displayFormat";
+import type { useDisplayFormat } from "../../lib/format";
 import type { PhotoJourney } from "../../types/photoJourney";
 
 /**

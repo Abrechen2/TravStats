@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useEffect, useState } from "react";
 import AirportAutocomplete from "../AirportAutocomplete";
 import { LocationInput, type LocationSelection } from "../location/LocationInput";
@@ -251,9 +252,9 @@ export default function HomePeriodEditor({
           <label className="label" htmlFor="home-from">
             {t("settings:homeAirport.fromDateField")}
           </label>
-          <input
+          <DateField
+            inline
             id="home-from"
-            type="date"
             className="input"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
@@ -265,9 +266,9 @@ export default function HomePeriodEditor({
             <label className="label" htmlFor="home-to">
               {t("settings:homeAirport.toDateField")}
             </label>
-            <input
+            <DateField
+              inline
               id="home-to"
-              type="date"
               className="input"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}

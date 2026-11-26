@@ -120,7 +120,7 @@ describe("TrackSectionPanel", () => {
       [p(20, 52, 10), p(30, 52.1, 10)],
     ]);
     // ~11.1 km per stretch — the 200+ km step between them is not added.
-    expect(fact("distance")).toBe(`track:inbox.value.km {"km":"22"}`);
+    expect(fact("distance")).toBe("22 km");
     fireEvent.click(screen.getByRole("button", { name: "track:inbox.more" }));
     expect(screen.getByText(`track:inbox.detail.cuts {"count":1}`)).toBeInTheDocument();
   });

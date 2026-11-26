@@ -11,7 +11,7 @@ import { minutesText } from "../lib/flights/minutesText";
 import PeopleList from "../components/ui/PeopleList";
 import FlightRouteHero from "../components/flightsTable/FlightRouteHero";
 import AirlineWordmarkCell from "../components/flightsTable/AirlineWordmarkCell";
-import { formatTimeValueShown } from "../lib/displayFormat";
+import { formatTimeValueShown } from "../lib/format";
 import { flightArrival, flightDeparture } from "../lib/entityTimes";
 import Button from "../components/ui/Button";
 import SpecialTypeBadge from "../components/specialFlights/SpecialTypeBadge";
@@ -39,7 +39,7 @@ import {
 } from "../lib/units";
 import { useSettingsStore } from "../store/settingsStore";
 import { formatBaggageAllowance } from "../lib/baggageAllowance";
-import { formatDurationWithEstimate } from "../lib/formatters";
+import { formatDurationWithEstimate } from "../lib/format";
 import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { useToastStore } from "../store/toastStore";

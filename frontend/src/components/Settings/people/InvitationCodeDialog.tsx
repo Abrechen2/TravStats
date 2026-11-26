@@ -3,7 +3,7 @@ import type { FormEvent, JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
 import { sharingRemoteApi } from "../../../lib/api/sharingRemote";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import { logger } from "../../../lib/logger";
 import type { CreatedRemoteInvite, RemoteInvite } from "../../../types/sharingRemote";
 import { remoteSharingError, type RemoteSharingError } from "../../sharing/remoteSharingCopy";

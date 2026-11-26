@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import type { JSX } from "react";
 import { useId, useMemo } from "react";
 import { Field, Input } from "../ui/Field";
@@ -38,9 +39,8 @@ export function DeadlineFields({ draft, onChange, requireZone = false }: Props):
       <legend className="t-label mb-1">{t("common:deadlines.title")}</legend>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label={t("common:deadlines.form.freeCancellationDate")} htmlFor={`${base}-day`}>
-          <Input
+          <DateField
             id={`${base}-day`}
-            type="date"
             value={draft.cancelDay}
             onChange={(e) => set("cancelDay", e.target.value)}
           />
@@ -51,9 +51,9 @@ export function DeadlineFields({ draft, onChange, requireZone = false }: Props):
           hint={t("common:deadlines.form.freeCancellationTimeHint")}
           error={timeError}
         >
-          <Input
+          <DateField
             id={`${base}-time`}
-            type="time"
+            kind="time"
             value={draft.cancelTime}
             onChange={(e) => set("cancelTime", e.target.value)}
           />
@@ -77,9 +77,8 @@ export function DeadlineFields({ draft, onChange, requireZone = false }: Props):
           </datalist>
         ) : null}
         <Field label={t("common:deadlines.form.paymentDueOn")} htmlFor={`${base}-pay`}>
-          <Input
+          <DateField
             id={`${base}-pay`}
-            type="date"
             value={draft.paymentDueOn}
             onChange={(e) => set("paymentDueOn", e.target.value)}
           />

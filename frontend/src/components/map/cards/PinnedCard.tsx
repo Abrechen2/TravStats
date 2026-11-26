@@ -38,12 +38,9 @@ import {
   SubHeading,
   SURFACE,
   capitalize,
-  formatDate,
-  formatDuration,
-  formatKm,
-  formatKmNumber,
   type TFn,
 } from "./cardChrome";
+import { formatDate, formatDuration, formatKm, formatNumber } from "../../../lib/format";
 import { CardFlights } from "./CardFlights";
 import {
   LodgingBody,
@@ -365,12 +362,15 @@ function AirportBody({
       )}
       <Grid>
         {stats.totalKm > 0 && (
-          <Row label={t("map:globe.pinned.distance")} value={formatKm(stats.totalKm, locale)} />
+          <Row
+            label={t("map:globe.pinned.distance")}
+            value={formatKm(stats.totalKm, { language: locale })}
+          />
         )}
         {stats.longestRoute && (
           <Row
             label={t("map:globe.pinned.longestRoute")}
-            value={`→ ${stats.longestRoute.iata} · ${formatKm(stats.longestRoute.km, locale)}`}
+            value={`→ ${stats.longestRoute.iata} · ${formatKm(stats.longestRoute.km, { language: locale })}`}
           />
         )}
         {stats.topAirline && (
@@ -380,7 +380,7 @@ function AirportBody({
           <Row label={t("map:globe.pinned.topAircraft")} value={stats.topAircraft} />
         )}
         {stats.lastVisitDate && (
-          <Row label={t("map:tooltip.lastVisit")} value={formatDate(stats.lastVisitDate, locale)} />
+          <Row label={t("map:tooltip.lastVisit")} value={formatDate(stats.lastVisitDate)} />
         )}
       </Grid>
     </>
@@ -427,11 +427,11 @@ function PortBody({
         {stats.longestPortCallMinutes !== null && (
           <Row
             label={t("map:globe.pinned.longestPortCall")}
-            value={formatDuration(stats.longestPortCallMinutes, t)}
+            value={formatDuration(stats.longestPortCallMinutes)}
           />
         )}
         {stats.lastCallDate && (
-          <Row label={t("map:tooltip.lastCall")} value={formatDate(stats.lastCallDate, locale)} />
+          <Row label={t("map:tooltip.lastCall")} value={formatDate(stats.lastCallDate)} />
         )}
       </Grid>
     </>
@@ -478,15 +478,12 @@ function ArcBody({
       <Hero color={colorRgb}>
         {t("map:globe.pinned.totalKm", {
           count: data.count,
-          km: formatKmNumber(stats.totalKm, locale),
+          km: formatNumber(Math.round(stats.totalKm), undefined, locale),
         })}
       </Hero>
       <Grid>
         {stats.lastFlightDate && (
-          <Row
-            label={t("map:globe.pinned.lastFlight")}
-            value={formatDate(stats.lastFlightDate, locale)}
-          />
+          <Row label={t("map:globe.pinned.lastFlight")} value={formatDate(stats.lastFlightDate)} />
         )}
         {stats.topAircraft && (
           <Row label={t("map:globe.pinned.topAircraft")} value={stats.topAircraft} />
@@ -550,7 +547,7 @@ function CruiseBody({
 
   const dateRange =
     stats.startDate && stats.endDate
-      ? `${formatDate(stats.startDate, locale)} – ${formatDate(stats.endDate, locale)}`
+      ? `${formatDate(stats.startDate)} – ${formatDate(stats.endDate)}`
       : (stats.startDate ?? stats.endDate ?? "");
 
   return (

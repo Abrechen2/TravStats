@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatTime } from "../../lib/displayFormat";
+import { formatTime } from "../../lib/format";
 import type { TrackCoverageState, TravTrackDay } from "../../lib/api/travtrack";
 import { alpha, token } from "../../components/ui/tokens";
 import { contextLabel } from "./trackContextLabel";

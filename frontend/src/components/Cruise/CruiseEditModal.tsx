@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import Modal from "../Modal";
@@ -414,9 +415,9 @@ export function CruiseEditModal({
                   </>
                 )}
               </span>
-              <input
+              <DateField
+                inline
                 id={START_ID}
-                type="date"
                 className={CRUISE_INPUT_CLASS}
                 style={DARK_PICKER_STYLE}
                 value={draft.startDate}
@@ -427,9 +428,9 @@ export function CruiseEditModal({
             <div className="flex flex-col gap-1">
               <label className={CRUISE_LABEL_CLASS}>
                 {t("field.endDate")}
-                <input
+                <DateField
+                  inline
                   id={END_ID}
-                  type="date"
                   className={CRUISE_INPUT_CLASS}
                   style={DARK_PICKER_STYLE}
                   value={draft.endDate}

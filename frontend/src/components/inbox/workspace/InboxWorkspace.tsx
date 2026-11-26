@@ -2,7 +2,7 @@ import { useTravTrackVisible } from "../../../hooks/useTravTrackVisible";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import { dataQualityFlagsApi } from "../../../lib/api/dataQualityFlags";
 import type { PhotoJourney } from "../../../types/photoJourney";
 import Button from "../../ui/Button";

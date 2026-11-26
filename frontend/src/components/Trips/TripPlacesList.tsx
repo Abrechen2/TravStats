@@ -6,7 +6,7 @@ import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { usePlaceCategories } from "../../hooks/usePlaceCategories";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import type { TripPlaceVisits, TripPlaceVisit } from "../../hooks/useTripPlaceVisits";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { visitTime } from "../../lib/entityTimes";
 import { placeCategoryIcon } from "../../lib/placeCategoryDisplay";
 import { classifyVisit } from "../../shared/placeCounting";

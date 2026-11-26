@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 import type { CruiseStopInput } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatLocalClock, formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalClock, formatLocalDate } from "../../lib/format";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { stopTitle } from "./CruiseStopSummary";
 import { moveStop, removeStop, stopShifts } from "./cruiseStopSequence";

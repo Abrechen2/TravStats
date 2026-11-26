@@ -1,7 +1,7 @@
 import { useEffect, useState, type JSX } from "react";
 import { adminApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDemoAccountStore } from "../../store/demoAccountStore";
 import { useToastStore } from "../../store/toastStore";

@@ -4,7 +4,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useActivityFeed } from "../../../hooks/useActivityFeed";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useDomainColors } from "../../../hooks/useDomainColors";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import type { ActivityFeedDomain, ActivityFeedItem } from "../../../lib/api/activityFeed";
 import { DOMAINS } from "../../../shared/domains";
 import { Icon } from "../../ui/Icon";

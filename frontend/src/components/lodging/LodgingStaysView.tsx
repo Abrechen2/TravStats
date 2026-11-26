@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
@@ -276,8 +277,8 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
     <>
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
         <FilterField label={t("lodging:stayView.filter.from")}>
-          <input
-            type="date"
+          <DateField
+            inline
             value={from}
             max={to || undefined}
             onChange={(e) => setFrom(e.target.value)}
@@ -286,9 +287,9 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
         </FilterField>
         <div>
           <FilterField label={t("lodging:stayView.filter.to")}>
-            <input
+            <DateField
+              inline
               id="stay-view-to"
-              type="date"
               value={to}
               min={from || undefined}
               aria-invalid={windowInvalid || undefined}

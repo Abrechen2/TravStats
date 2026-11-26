@@ -2,7 +2,7 @@ import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { minutesText } from "../../lib/flights/minutesText";
-import { formatTimeValueShown } from "../../lib/displayFormat";
+import { formatTimeValueShown } from "../../lib/format";
 import { flightArrival, flightDeparture } from "../../lib/entityTimes";
 import { flightTransfers, type FlightTransfer } from "../../lib/flights/flightTransfer";
 import type { TimeValue } from "../../shared/time";

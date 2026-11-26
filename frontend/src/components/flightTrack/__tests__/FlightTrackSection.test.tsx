@@ -47,7 +47,7 @@ vi.mock("../FlightTrackMap", () => ({
 }));
 
 import FlightTrackSection from "../FlightTrackSection";
-import { formatTimeValueShown } from "../../../lib/displayFormat";
+import { formatTimeValueShown } from "../../../lib/format";
 
 const MUC = { lat: 48.3538, lon: 11.7861 };
 const ICN = { lat: 37.4602, lon: 126.4407 };

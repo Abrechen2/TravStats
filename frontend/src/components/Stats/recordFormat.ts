@@ -1,4 +1,4 @@
-import { formatDuration } from "../../lib/formatters";
+import { formatDuration } from "../../lib/format";
 import { formatDistance, localeForLanguage, type DistanceUnit } from "../../lib/units";
 import type { TravelRecord } from "../../types/travelRecords";
 

@@ -1,9 +1,11 @@
+import type { InputHTMLAttributes, JSX } from "react";
+import DateField from "../../ui/DateField";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { pendingUpdatesApi } from "../../../lib/api/pendingUpdates";
 import type { PendingUpdate, FlightUpdateData } from "../../../lib/api/types";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import Button from "../../ui/Button";
 import ChangeDiffView from "../../ChangeDiffView";
 import type { InboxAction } from "./FlagQuickEditor";
@@ -141,12 +143,11 @@ export default function FlightUpdateCard({
                   </select>
                 ) : (
                   editable && (
-                    <input
+                    <DraftControl
+                      isTime={isTime}
+                      numeric={originalType === "number"}
                       className="input mt-1 w-full"
                       aria-label={fieldLabel(change.field)}
-                      type={
-                        originalType === "number" ? "number" : isTime ? "datetime-local" : "text"
-                      }
                       step={originalType === "number" ? "any" : isTime ? "1" : undefined}
                       value={
                         isTime && typeof current === "string"
@@ -211,4 +212,14 @@ export default function FlightUpdateCard({
       </div>
     </form>
   );
+}
+
+/** The edit control of one proposed change: a date-time, a number, or text. */
+function DraftControl({
+  isTime,
+  numeric,
+  ...rest
+}: { isTime: boolean; numeric: boolean } & InputHTMLAttributes<HTMLInputElement>): JSX.Element {
+  if (isTime) return <DateField kind="datetime-local" {...rest} />;
+  return <input type={numeric ? "number" : "text"} {...rest} />;
 }

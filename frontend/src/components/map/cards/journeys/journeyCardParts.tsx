@@ -17,7 +17,7 @@ import type { IconName } from "../../../ui/icons/lucide";
 import { OperatorTile } from "../../../table/OperatorTile";
 import { LABEL_STYLE, type TFn } from "../cardChrome";
 import { bareTrainName } from "../../../../lib/rail/trainName";
-import { formatTimeValueShown } from "../../../../lib/displayFormat";
+import { formatTimeValueShown } from "../../../../lib/format";
 import { dayOf } from "../../../../shared/time";
 import type { Rgb } from "../../../../lib/domainColor";
 import type { JourneyDomain, JourneyEnd, MapJourney } from "./journeyTypes";

@@ -1,7 +1,7 @@
 import { useState, type JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import { useSettingsStore } from "../../../store/settingsStore";
 import type { PhotoJourney } from "../../../types/photoJourney";
 import Button from "../../ui/Button";

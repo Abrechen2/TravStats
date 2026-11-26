@@ -8,7 +8,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
 import { GlobeLoader } from "../GlobeLoader";
 import { useMinLoadingState } from "../../hooks/useMinLoadingState";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 
 export default function MyTemplates(): JSX.Element {

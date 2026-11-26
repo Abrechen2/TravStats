@@ -1,3 +1,4 @@
+import DateField from "../../../components/ui/DateField";
 import { useId, useState, type FormEvent } from "react";
 import { Button, Dialog, Field, Input, Select, TextArea } from "../../../components/ui";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -107,9 +108,8 @@ export function StationEditor({
           htmlFor={uid + "-pin"}
           hint={t("route.station.pinnedHint")}
         >
-          <Input
+          <DateField
             id={uid + "-pin"}
-            type="date"
             value={value.pinnedDay ?? ""}
             onChange={(e) => setValue({ ...value, pinnedDay: e.target.value || null })}
           />

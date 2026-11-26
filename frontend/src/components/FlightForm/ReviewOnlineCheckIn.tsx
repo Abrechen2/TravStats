@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import ReviewField, { REVIEW_INPUT } from "./ReviewField";
@@ -19,9 +20,10 @@ export default function ReviewOnlineCheckIn({
   const { t } = useTranslation(["common"]);
   return (
     <ReviewField id={id} label={t("common:deadlines.onlineCheckIn")}>
-      <input
+      <DateField
+        inline
         id={id}
-        type="datetime-local"
+        kind="datetime-local"
         value={value}
         onChange={(e) => onChange(e.target.value.slice(0, 16))}
         className={REVIEW_INPUT}

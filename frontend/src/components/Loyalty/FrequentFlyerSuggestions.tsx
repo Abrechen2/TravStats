@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { listFrequentFlyerSuggestions } from "../../lib/api/loyalty";
 import { logger } from "../../lib/logger";
 import type { FrequentFlyerSuggestion } from "../../types/loyalty";

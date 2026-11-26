@@ -1,6 +1,6 @@
 import { useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import Button from "../../ui/Button";
 import { Input } from "../../ui/Field";
 import { searchPlaces, type PlaceSearchResult } from "../../../lib/api/geo";

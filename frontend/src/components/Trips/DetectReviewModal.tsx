@@ -3,7 +3,7 @@ import { tripsApi } from "../../lib/api";
 import type { ProposedTrip, ProposedTripLeg } from "../../lib/api/trips";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { detectionSourceKey } from "../../lib/tripDetectionSource";
 
 /** The project wrapper narrows i18next's `t` to this signature. */

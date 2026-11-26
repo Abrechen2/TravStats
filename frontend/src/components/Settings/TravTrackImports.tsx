@@ -5,7 +5,7 @@ import { token } from "../ui/tokens";
 import { JumpControl } from "../ui/settings";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
-import { formatDateTime } from "../../lib/displayFormat";
+import { formatDateTime } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import {
   importErrorKey,

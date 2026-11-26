@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { parseDecimalInput } from "../../lib/decimalInput";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
@@ -512,8 +513,8 @@ function CruiseImportEntryEditor({
       {/* Dates + status */}
       <div className="grid grid-cols-3 gap-3">
         <Field label={t("field.depart")} missing={!startDate}>
-          <input
-            type="date"
+          <DateField
+            inline
             value={startDate}
             onChange={(e): void => setStartDate(e.target.value)}
             style={{ colorScheme: "dark" }}
@@ -521,8 +522,8 @@ function CruiseImportEntryEditor({
           />
         </Field>
         <Field label={t("field.arrive")} missing={!endDate}>
-          <input
-            type="date"
+          <DateField
+            inline
             value={endDate}
             onChange={(e): void => setEndDate(e.target.value)}
             style={{ colorScheme: "dark" }}
@@ -730,8 +731,8 @@ function FlightCard({
           />
         </Field>
         <Field label={t("field.flightDate")}>
-          <input
-            type="date"
+          <DateField
+            inline
             value={flight.date}
             onChange={(e): void => onChange({ date: e.target.value })}
             style={{ colorScheme: "dark" }}

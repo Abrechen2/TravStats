@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { API_URL, api } from "../../lib/api/client";
 import { logger } from "../../lib/logger";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { mailIntakeApi, type MailInbox, type MailInboxItem } from "../../lib/api/mailIntake";
 import { Card } from "../ui/Card";
 import { errorText, minuteOf, reasonText } from "../MailIntake/mailIntakeCopy";

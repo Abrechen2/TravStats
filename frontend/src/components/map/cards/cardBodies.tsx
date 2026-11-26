@@ -22,17 +22,8 @@ import type {
   TripCardDatum,
 } from "./pinnedTypes";
 import { getArcStats, latestStayFacts } from "./cardStats";
-import {
-  Actions,
-  Grid,
-  Hero,
-  Place,
-  Row,
-  SubHeading,
-  formatDate,
-  formatKmNumber,
-  type TFn,
-} from "./cardChrome";
+import { Actions, Grid, Hero, Place, Row, SubHeading, type TFn } from "./cardChrome";
+import { formatDate, formatNumber } from "../../../lib/format";
 import { CardFlights } from "./CardFlights";
 import { LocalName } from "../../places/LocalName";
 import { useQuickVisitStore } from "../../../store/quickVisitStore";
@@ -69,7 +60,7 @@ export function TripBody({
       <Hero color={colorRgb}>
         {t("map:globe.pinned.totalKm", {
           count: data.flightIds.length,
-          km: formatKmNumber(stats.totalKm, locale),
+          km: formatNumber(Math.round(stats.totalKm), undefined, locale),
         })}
       </Hero>
       <Grid>
@@ -80,8 +71,8 @@ export function TripBody({
             label={t("map:globe.pinned.dateRange")}
             value={
               stats.firstFlightDate === stats.lastFlightDate
-                ? formatDate(stats.lastFlightDate, locale)
-                : `${formatDate(stats.firstFlightDate, locale)} – ${formatDate(stats.lastFlightDate, locale)}`
+                ? formatDate(stats.lastFlightDate)
+                : `${formatDate(stats.firstFlightDate)} – ${formatDate(stats.lastFlightDate)}`
             }
           />
         )}
@@ -108,7 +99,6 @@ export function TripBody({
 
 export function SpecialFlightBody({
   data,
-  locale,
   t,
   onFlightOpen,
   onFlightEdit,
@@ -125,10 +115,7 @@ export function SpecialFlightBody({
         {data.aircraft && <Row label={t("map:globe.pinned.topAircraft")} value={data.aircraft} />}
         {data.eventLabel && <Row label={t("map:globe.pinned.event")} value={data.eventLabel} />}
         {data.departureTime && (
-          <Row
-            label={t("map:globe.pinned.lastFlight")}
-            value={formatDate(data.departureTime, locale)}
-          />
+          <Row label={t("map:globe.pinned.lastFlight")} value={formatDate(data.departureTime)} />
         )}
       </Grid>
       <Actions
@@ -254,13 +241,10 @@ export function PlaceBody({
       </Hero>
       <Grid>
         {data.focusVisit?.visitedAt && (
-          <Row
-            label={t("map:tooltip.visit")}
-            value={formatDate(data.focusVisit.visitedAt, locale)}
-          />
+          <Row label={t("map:tooltip.visit")} value={formatDate(data.focusVisit.visitedAt)} />
         )}
         {data.lastVisitAt && (
-          <Row label={t("map:tooltip.lastVisit")} value={formatDate(data.lastVisitAt, locale)} />
+          <Row label={t("map:tooltip.lastVisit")} value={formatDate(data.lastVisitAt)} />
         )}
       </Grid>
       <Actions

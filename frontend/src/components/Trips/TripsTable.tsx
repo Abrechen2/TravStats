@@ -2,7 +2,7 @@ import type { JSX } from "react";
 import RememberedMarker from "../provenance/RememberedMarker";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Trip } from "../../types";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import { countryName } from "../../shared/geo/countryCode";
 import { statusPillStyle } from "../table/statusPillStyle";
 import { Table, TableRow, type TableColumn } from "../ui/Table";

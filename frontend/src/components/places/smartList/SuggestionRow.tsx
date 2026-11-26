@@ -6,7 +6,7 @@ import { logger } from "../../../lib/logger";
 import { dawarichStaysApi } from "../../../lib/api/dawarichStays";
 import StopEvidenceBadge from "../../dawarich/StopEvidenceBadge";
 import { stopEvidenceView } from "../../../lib/stopEvidenceView";
-import { formatLocalClock, formatLocalDate } from "../../../lib/displayFormat";
+import { formatLocalClock, formatLocalDate } from "../../../lib/format";
 import type { SmartSuggestion } from "../../../lib/api/smartLists";
 
 const COARSE =

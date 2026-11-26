@@ -1,3 +1,4 @@
+import DateField from "../../../components/ui/DateField";
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useTodayZone } from "../../../hooks/useTodayZone";
@@ -6,7 +7,7 @@ import { logger } from "../../../lib/logger";
 import { travTrackApi, type TravTrackSummary } from "../../../lib/api/travtrack";
 import { todayIn } from "../../../shared/time/clock";
 import TrackExportDialog from "../../../pages/Track/TrackExportDialog";
-import { Field, Input } from "../../ui/Field";
+import { Field } from "../../ui/Field";
 import { SettingRows } from "../../ui/SettingRow";
 import { ActionControl, ErrorLine, SettingItem } from "../../ui/settings";
 import { SectionCard } from "../SettingsShared";
@@ -77,17 +78,15 @@ export default function TravTrackExportSection(): JSX.Element | null {
         >
           <div className="flex flex-wrap items-end" style={{ gap: "var(--ts-space-sm)" }}>
             <Field label={t(`${NS}.from`)} htmlFor="tt-export-from">
-              <Input
+              <DateField
                 id="tt-export-from"
-                type="date"
                 value={effectiveFrom}
                 onChange={(e) => setFrom(e.target.value)}
               />
             </Field>
             <Field label={t(`${NS}.until`)} htmlFor="tt-export-until">
-              <Input
+              <DateField
                 id="tt-export-until"
-                type="date"
                 value={effectiveUntil}
                 onChange={(e) => setUntil(e.target.value)}
               />

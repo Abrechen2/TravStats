@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { FieldError, RequiredMark, SaveBlockedHint, fieldErrorProps } from "../form";
@@ -215,9 +216,10 @@ function DepartureTimeField({
                   the field's name. */}
       <label className="block text-sm">
         {t("rail:form.departureTime")} <RequiredMark />
-        <input
+        <DateField
+          inline
           id={TIME_ID.departureLocal}
-          type={draft.departureDayOnly ? "date" : "datetime-local"}
+          kind={draft.departureDayOnly ? "date" : "datetime-local"}
           className={`mt-1 ${INPUT_CLASS}`}
           style={DARK_PICKER_STYLE}
           aria-required="true"
@@ -272,9 +274,10 @@ function ArrivalTimeField({
     <div>
       <label className="block text-sm">
         {t("rail:form.arrivalTime")}
-        <input
+        <DateField
+          inline
           id={TIME_ID.arrivalLocal}
-          type={draft.arrivalDayOnly ? "date" : "datetime-local"}
+          kind={draft.arrivalDayOnly ? "date" : "datetime-local"}
           className={`mt-1 ${INPUT_CLASS}`}
           style={DARK_PICKER_STYLE}
           value={draft.arrivalLocal}

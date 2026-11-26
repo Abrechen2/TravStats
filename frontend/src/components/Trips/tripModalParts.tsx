@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import type { CSSProperties, ReactNode } from "react";
 import type { Trip, TripCategory } from "../../types";
 import { TRIP_COLORS as PALETTE } from "../../lib/tripColors";
@@ -5,7 +6,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import CompanionPicker from "../CompanionPicker";
 import TagInput from "../TagInput";
 import SuggestionChips from "../common/SuggestionChips";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import type { TripModalForm } from "./tripModalForm";
 
 const CATEGORIES: TripCategory[] = ["vacation", "business", "weekend", "family", "other"];
@@ -154,8 +155,8 @@ function DateFields({ f }: { f: TripModalForm }): JSX.Element {
     <>
       <div className="grid grid-cols-2 gap-3">
         <Field label={t("trips:modal.startDateLabel")}>
-          <input
-            type="date"
+          <DateField
+            inline
             value={f.startDate}
             onChange={(e) => f.setStartDate(e.target.value)}
             className="w-full rounded-lg px-3 py-2 text-sm"
@@ -163,8 +164,8 @@ function DateFields({ f }: { f: TripModalForm }): JSX.Element {
           />
         </Field>
         <Field label={t("trips:modal.endDateLabel")}>
-          <input
-            type="date"
+          <DateField
+            inline
             value={f.endDate}
             onChange={(e) => f.setEndDate(e.target.value)}
             className="w-full rounded-lg px-3 py-2 text-sm"

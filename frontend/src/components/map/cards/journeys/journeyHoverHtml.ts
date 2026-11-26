@@ -6,7 +6,7 @@
 
 import { escapeHtml } from "../../../../lib/escapeHtml";
 import { flagImgHtml } from "../../../../lib/countryFlag";
-import { formatDate as formatUserDate, formatTimeValueShown } from "../../../../lib/displayFormat";
+import { formatDate as formatUserDate, formatTimeValueShown } from "../../../../lib/format";
 import { formatNumber } from "../../../../lib/units";
 import type { Rgb } from "../../../../lib/domainColor";
 import { dayOf, type TimeValue } from "../../../../shared/time";

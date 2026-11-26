@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useTravTrackCapabilities } from "../../../hooks/useTravTrackVisible";
-import { formatDateTime } from "../../../lib/displayFormat";
+import { formatDateTime } from "../../../lib/format";
 import { logger } from "../../../lib/logger";
 import {
   travTrackApi,

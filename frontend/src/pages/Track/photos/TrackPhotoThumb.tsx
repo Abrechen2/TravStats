@@ -7,7 +7,7 @@ import {
   type PhotoWindow,
   type TravTrackPhoto,
 } from "../../../lib/api/travtrackViews";
-import { formatTime } from "../../../lib/displayFormat";
+import { formatTime } from "../../../lib/format";
 
 /**
  * One placed photo's thumbnail, streamed through the server's grant (the
