@@ -93,10 +93,10 @@ describe("FlightReviewModal — date carry-over in the scan result", () => {
     );
     await waitFor(() => expect(document.querySelector("form")).toBeTruthy());
 
-    expect(input(/^Abflugdatum/).value).toBe("2016-01-08");
+    expect(input(/^Abflugdatum/).value).toBe("08.01.2016");
     // T00:00 is the date-only placeholder, not a midnight departure.
     expect(input(/^Abflugzeit/).value).toBe("");
-    expect(input(/^Ankunftsdatum/).value).toBe("2016-01-08");
+    expect(input(/^Ankunftsdatum/).value).toBe("08.01.2016");
     expect(input(/^Ankunftszeit/).value).toBe("");
   });
 
@@ -114,7 +114,7 @@ describe("FlightReviewModal — date carry-over in the scan result", () => {
 
     fireEvent.change(input(/^Abflugdatum/), { target: { value: "2016-01-09" } });
 
-    expect(input(/^Ankunftsdatum/).value).toBe("2016-01-09");
+    expect(input(/^Ankunftsdatum/).value).toBe("09.01.2016");
   });
 
   it("offers the flight form's copy button for an arrival date set apart", async () => {
@@ -128,12 +128,12 @@ describe("FlightReviewModal — date carry-over in the scan result", () => {
       />
     );
     await waitFor(() => expect(document.querySelector("form")).toBeTruthy());
-    expect(input(/^Ankunftsdatum/).value).toBe("2016-01-10");
+    expect(input(/^Ankunftsdatum/).value).toBe("10.01.2016");
 
     fireEvent.click(screen.getByTitle("Abflugdatum übernehmen"));
 
-    expect(input(/^Ankunftsdatum/).value).toBe("2016-01-08");
-    expect(input(/^Ankunftszeit/).value).toBe("09:50");
+    expect(input(/^Ankunftsdatum/).value).toBe("08.01.2016");
+    expect(input(/^Ankunftszeit/).value).toBe("9:50 AM");
   });
 
   it("keeps a genuine 00:00 from a mail import", async () => {
@@ -147,6 +147,6 @@ describe("FlightReviewModal — date carry-over in the scan result", () => {
       />
     );
     await waitFor(() => expect(document.querySelector("form")).toBeTruthy());
-    expect(input(/^Abflugzeit/).value).toBe("00:00");
+    expect(input(/^Abflugzeit/).value).toBe("12:00 AM");
   });
 });

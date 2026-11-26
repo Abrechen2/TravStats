@@ -57,8 +57,8 @@ export default function PassportRow(): JSX.Element {
 }
 
 /**
- * A date written when the field is left, not on every keystroke: a half-typed
- * date reads as "" too, and that is not a request to clear it.
+ * A date written when the field is left, not on every keystroke: a field the
+ * reader has emptied to retype is not a request to clear it.
  */
 function DateControl({
   value,
@@ -68,21 +68,21 @@ function DateControl({
   onCommit: (next: string) => void;
 }): JSX.Element {
   const { id, locked, describedBy } = useSettingItem();
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
   return (
     <DateField
       inline
       id={id}
       className="input"
       style={{ minHeight: "var(--ts-size-touch-min)" }}
-      // Keyed by the shown value: a discarded or refused pick snaps back.
-      key={value}
-      defaultValue={value}
+      value={draft}
       disabled={locked}
       aria-disabled={locked || undefined}
       aria-describedby={describedBy}
-      onBlur={(e) => {
-        if (e.target.value === "" && e.target.validity.badInput) return;
-        if (e.target.value !== value) onCommit(e.target.value);
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        if (draft !== value) onCommit(draft);
       }}
     />
   );

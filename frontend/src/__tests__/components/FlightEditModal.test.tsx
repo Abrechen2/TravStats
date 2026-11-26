@@ -114,8 +114,8 @@ describe("FlightEditModal", () => {
     expect(document.querySelector("#editDepartureTime")).toBeTruthy();
     expect(document.querySelector("#editArrivalDate")).toBeTruthy();
     expect(document.querySelector("#editArrivalTime")).toBeTruthy();
-    expect(document.querySelector('#editDepartureDate[type="date"]')).toBeTruthy();
-    expect(document.querySelector('#editDepartureTime[type="time"]')).toBeTruthy();
+    expect(document.querySelector('#editDepartureDate[data-field-kind="date"]')).toBeTruthy();
+    expect(document.querySelector('#editDepartureTime[data-field-kind="time"]')).toBeTruthy();
   });
 
   it("pre-fills departure date and time from flight data", () => {
@@ -819,7 +819,7 @@ describe("FlightEditModal", () => {
       expect(depDate).toBeTruthy();
       expect(depTime).toBeTruthy();
       expect(document.querySelector("#editHistoricalYear")).toBeFalsy();
-      expect(depDate.value).toBe("1998-07-15");
+      expect(depDate.value).toBe("15.07.1998");
       expect(depTime.value).toBe("");
     });
 

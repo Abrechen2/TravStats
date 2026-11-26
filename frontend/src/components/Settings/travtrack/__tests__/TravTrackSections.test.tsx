@@ -509,8 +509,8 @@ describe("Zeitraum löschen", () => {
     vi.spyOn(travTrackApi, "summary").mockResolvedValue({ ...HELD, pointCount: 3 });
     const del = vi.spyOn(travTrackApi, "deleteDays").mockResolvedValue(3);
     show(<TravTrackDeleteSection />, "/?from=2026-10-02&until=2026-10-02");
-    expect(await screen.findByLabelText("settings:tt.delete.from")).toHaveValue("2026-10-02");
-    expect(screen.getByLabelText("settings:tt.delete.until")).toHaveValue("2026-10-02");
+    expect(await screen.findByLabelText("settings:tt.delete.from")).toHaveValue("02.10.2026");
+    expect(screen.getByLabelText("settings:tt.delete.until")).toHaveValue("02.10.2026");
     const button = await screen.findByRole("button", { name: "settings:tt.delete.do" });
     await waitFor(() => expect(button).toBeEnabled());
     await userEvent.click(button);
@@ -574,7 +574,7 @@ describe("Export", () => {
     const summary = vi.spyOn(travTrackApi, "summary").mockResolvedValue(HELD);
     show(<TravTrackExportSection />);
     expect(await screen.findByTestId("export-count")).toHaveTextContent(/"count":12,"zone":"UTC"/);
-    expect(screen.getByLabelText("settings:tt.export.from")).toHaveValue("2026-10-01");
+    expect(screen.getByLabelText("settings:tt.export.from")).toHaveValue("01.10.2026");
     expect(summary).toHaveBeenCalledWith({ fromDay: "2026-10-01", toDay: "2026-10-03" });
     await userEvent.click(screen.getByRole("button", { name: "settings:tt.export.do" }));
     expect(await screen.findByTestId("export-dialog")).toHaveTextContent("2026-10-01..2026-10-03");
@@ -583,7 +583,7 @@ describe("Export", () => {
   it("presets the span from ?from= and ?until=", async () => {
     vi.spyOn(travTrackApi, "summary").mockResolvedValue(HELD);
     show(<TravTrackExportSection />, "/?from=2026-10-02&until=2026-10-02");
-    expect(await screen.findByLabelText("settings:tt.export.from")).toHaveValue("2026-10-02");
+    expect(await screen.findByLabelText("settings:tt.export.from")).toHaveValue("02.10.2026");
     await userEvent.click(await screen.findByRole("button", { name: "settings:tt.export.do" }));
     expect(await screen.findByTestId("export-dialog")).toHaveTextContent("2026-10-02..2026-10-02");
   });

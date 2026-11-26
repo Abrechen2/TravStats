@@ -1543,12 +1543,7 @@
   },
   "insight": {
     "entries_one": "{{count}} Eintrag",
-    "entries_other": "{{count}} Einträge",
-    "duration": {
-      "minutes": "{{m}} Min.",
-      "hours": "{{h}} Std.",
-      "hoursMinutes": "{{h}} Std. {{m}} Min."
-    }
+    "entries_other": "{{count}} Einträge"
   },
   "domainRecords": {
     "title": "Rekorde über alle Reisearten",

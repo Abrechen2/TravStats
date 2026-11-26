@@ -62,8 +62,14 @@ describe("Dawarich stays remain reviewable suggestions", () => {
   it("never auto-accepts and preserves local midnight in the editor", () => {
     mount();
     expect(dawarichStaysApi.accept).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("trips:dawarichStays.start")).toHaveValue("2026-10-10T23:50");
-    expect(screen.getByLabelText("trips:dawarichStays.end")).toHaveValue("2026-10-11T00:20");
+    expect(screen.getByLabelText("trips:dawarichStays.start")).toHaveAttribute(
+      "data-wire-value",
+      "2026-10-10T23:50"
+    );
+    expect(screen.getByLabelText("trips:dawarichStays.end")).toHaveAttribute(
+      "data-wire-value",
+      "2026-10-11T00:20"
+    );
     expect(screen.getByText("trips:dawarichStays.uncertainty.sourceUnknown")).toBeInTheDocument();
   });
   it("carries the selected place coordinates, corrected times and trip into acceptance", async () => {

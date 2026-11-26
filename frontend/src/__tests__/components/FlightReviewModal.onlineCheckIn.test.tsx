@@ -92,7 +92,10 @@ async function confirmWith(initialData: ParsedBooking) {
 describe("FlightReviewModal — online check-in (forgejo#285)", () => {
   it("shows the parsed opening and sends it as the departure airport's wall clock", async () => {
     const sent = await confirmWith(booking({ onlineCheckInOpensAt: "2027-01-14T10:00" }));
-    expect(screen.getByLabelText(/Online-Check-in ab/)).toHaveValue("2027-01-14T10:00");
+    expect(screen.getByLabelText(/Online-Check-in ab/)).toHaveAttribute(
+      "data-wire-value",
+      "2027-01-14T10:00"
+    );
     expect(sent.onlineCheckInOpensAt).toEqual({ local: "2027-01-14T10:00" });
   });
 

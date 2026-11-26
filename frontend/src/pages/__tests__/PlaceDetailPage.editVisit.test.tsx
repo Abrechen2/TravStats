@@ -111,11 +111,13 @@ describe("PlaceDetailPage — editing a visit", () => {
     renderAt("/places/p1?editVisit=v1");
 
     expect(await screen.findByRole("dialog", { name: "Besuch bearbeiten" })).toBeInTheDocument();
-    expect((document.querySelector('input[type="date"]') as HTMLInputElement).value).toBe(
-      "2024-05-02"
-    );
+    expect(
+      (document.querySelector('input[data-field-kind="date"]') as HTMLInputElement).value
+    ).toBe("02.05.2024");
     // Midnight is "no time" — the very gap the flag asks the user to fill.
-    expect((document.querySelector('input[type="time"]') as HTMLInputElement).value).toBe("");
+    expect(
+      (document.querySelector('input[data-field-kind="time"]') as HTMLInputElement).value
+    ).toBe("");
     expect(screen.getByDisplayValue("Lutherstube")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId("search").textContent).toBe(""));
   });
@@ -125,7 +127,9 @@ describe("PlaceDetailPage — editing a visit", () => {
     renderAt("/places/p1?editVisit=v1");
     await screen.findByRole("dialog", { name: "Besuch bearbeiten" });
 
-    fireEvent.change(document.querySelector('input[type="time"]')!, { target: { value: "14:30" } });
+    fireEvent.change(document.querySelector('input[data-field-kind="time"]')!, {
+      target: { value: "14:30" },
+    });
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>

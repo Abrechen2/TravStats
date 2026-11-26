@@ -105,7 +105,7 @@ describe("NotesPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Neue Notiz" }));
 
     fireEvent.change(screen.getByLabelText("Notiz"), { target: { value: "  Abendrot " } });
-    expect((screen.getByLabelText("Datum") as HTMLInputElement).value).toBe("2026-09-28");
+    expect((screen.getByLabelText("Datum") as HTMLInputElement).value).toBe("28.09.2026");
     expect((screen.getByLabelText("Uhrzeit") as HTMLInputElement).value).toBe("00:30");
     fireEvent.click(screen.getByRole("button", { name: "Notiz speichern" }));
 

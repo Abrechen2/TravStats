@@ -219,7 +219,13 @@ function DraftControl({
   isTime,
   numeric,
   ...rest
-}: { isTime: boolean; numeric: boolean } & InputHTMLAttributes<HTMLInputElement>): JSX.Element {
+}: { isTime: boolean; numeric: boolean } & Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "value" | "onChange" | "min" | "max"
+> & {
+    value: string;
+    onChange: (event: { target: { value: string } }) => void;
+  }): JSX.Element {
   if (isTime) return <DateField kind="datetime-local" {...rest} />;
   return <input type={numeric ? "number" : "text"} {...rest} />;
 }

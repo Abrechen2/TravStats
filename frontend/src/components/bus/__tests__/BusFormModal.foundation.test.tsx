@@ -237,7 +237,10 @@ describe("BusFormModal — shared form blocks", () => {
     const banner = await screen.findByRole("alert");
     expect(banner).toHaveTextContent("common:saveErrors.dbUnavailable");
     await waitFor(() => expect(banner).toHaveFocus());
-    expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-09-20T09:00");
+    expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveAttribute(
+      "data-wire-value",
+      "2026-09-20T09:00"
+    );
     expect(onSaved).not.toHaveBeenCalled();
 
     fireEvent.click(within(banner).getByRole("button", { name: "common:buttons.retry" }));
@@ -255,7 +258,10 @@ describe("BusFormModal — shared form blocks", () => {
     const banner = await screen.findByRole("alert");
     expect(banner).toHaveTextContent("common:saveErrors.outcomeUnknown");
     expect(within(banner).queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
-    expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-09-20T09:00");
+    expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveAttribute(
+      "data-wire-value",
+      "2026-09-20T09:00"
+    );
     fireEvent.click(within(banner).getByRole("button", { name: "common:buttons.reloadList" }));
     expect(onReload).toHaveBeenCalledTimes(1);
     expect(create).toHaveBeenCalledTimes(1);

@@ -305,18 +305,26 @@ export {
 } from "./units";
 
 /**
- * A duration in minutes: "2h 35min" / "45min" / "2h". With `days`, anything of
- * 48 hours or more reads "2d 3h" — a recording of several days is not "51h".
+ * A duration in minutes, as the design writes it: "2 h 05 min", "45 min",
+ * "2 h". With `days`, anything of 48 hours or more reads "3 T 4 h" in German
+ * and "3 d 4 h" in English — a recording of several days is not "51 h". The
+ * language is the app's unless given; only the day letter differs.
  */
-export function formatDuration(minutes: number, options: { days?: boolean } = {}): string {
+export function formatDuration(
+  minutes: number,
+  options: { days?: boolean; language?: string } = {}
+): string {
   if (!Number.isFinite(minutes)) return "—";
   const total = Math.max(0, Math.round(minutes));
   const h = Math.floor(total / 60);
   const m = total % 60;
-  if (options.days && h >= 48) return `${Math.floor(h / 24)}d ${h % 24}h`;
-  if (h === 0) return `${m}min`;
-  if (m === 0) return `${h}h`;
-  return `${h}h ${m}min`;
+  if (options.days && h >= 48) {
+    const dayLetter = appLocale(options.language).startsWith("de") ? "T" : "d";
+    return `${Math.floor(h / 24)} ${dayLetter} ${h % 24} h`;
+  }
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h} h`;
+  return `${h} h ${String(m).padStart(2, "0")} min`;
 }
 
 /**

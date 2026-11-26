@@ -169,7 +169,7 @@ describe("FlightCompleteStep — required marks and folded sections (forgejo#88)
     // date/time pair, which had no marking at all before.
     const required = container.querySelectorAll('input[aria-required="true"]');
     expect(required).toHaveLength(4);
-    expect(Array.from(required).map((input) => input.getAttribute("type"))).toEqual([
+    expect(Array.from(required).map((input) => input.getAttribute("data-field-kind"))).toEqual([
       "date",
       "time",
       "date",

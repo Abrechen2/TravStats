@@ -3,24 +3,28 @@ import { formatDuration, formatKm, formatMetres, formatMoney } from "../format";
 
 describe("formatDuration", () => {
   it("shows only minutes when under 60", () => {
-    expect(formatDuration(45)).toBe("45min");
+    expect(formatDuration(45)).toBe("45 min");
   });
   it("shows only hours when no remainder", () => {
-    expect(formatDuration(120)).toBe("2h");
+    expect(formatDuration(120)).toBe("2 h");
   });
   it("shows hours and minutes", () => {
-    expect(formatDuration(155)).toBe("2h 35min");
+    expect(formatDuration(155)).toBe("2 h 35 min");
+  });
+  it("pads the minutes after hours, as the design writes them", () => {
+    expect(formatDuration(125)).toBe("2 h 05 min");
   });
   it("handles 0", () => {
-    expect(formatDuration(0)).toBe("0min");
+    expect(formatDuration(0)).toBe("0 min");
   });
 });
 
 describe("formatDuration days", () => {
   it("reads 48 hours or more as days and hours when asked", () => {
-    expect(formatDuration(76 * 60, { days: true })).toBe("3d 4h");
-    expect(formatDuration(18 * 60 + 40, { days: true })).toBe("18h 40min");
-    expect(formatDuration(76 * 60)).toBe("76h");
+    expect(formatDuration(76 * 60, { days: true, language: "en" })).toBe("3 d 4 h");
+    expect(formatDuration(76 * 60, { days: true, language: "de" })).toBe("3 T 4 h");
+    expect(formatDuration(18 * 60 + 40, { days: true })).toBe("18 h 40 min");
+    expect(formatDuration(76 * 60)).toBe("76 h");
   });
 });
 

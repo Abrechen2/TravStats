@@ -99,7 +99,7 @@ beforeEach(() => {
 async function waitForHydration(): Promise<void> {
   await waitFor(() => {
     const dateInput = document.querySelector("#editDepartureDate") as HTMLInputElement;
-    expect(dateInput.value).toBe("2026-08-14");
+    expect(dateInput.value).toBe("14.08.2026");
   });
 }
 

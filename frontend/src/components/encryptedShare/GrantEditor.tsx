@@ -221,6 +221,7 @@ export default function GrantEditor({
         {t("expiry")}{" "}
         <DateField
           inline
+          value={scope.expiresAt?.slice(0, 10) ?? ""}
           onChange={(e) =>
             change({
               ...scope,

@@ -38,13 +38,13 @@ describe("PassportRow", () => {
 
   it("shows the stored passport date", async () => {
     render(<PassportRow />);
-    await waitFor(() => expect(passport().value).toBe("2030-05-01"));
+    await waitFor(() => expect(passport().value).toBe("01.05.2030"));
   });
 
   it("saves a changed passport date when the field is left, and shows the server's answer", async () => {
     putFacts.mockResolvedValue({ homePlace: null, passportExpiry: "2031-01-02" });
     render(<PassportRow />);
-    await waitFor(() => expect(passport().value).toBe("2030-05-01"));
+    await waitFor(() => expect(passport().value).toBe("01.05.2030"));
     vi.useFakeTimers();
     fireEvent.change(passport(), { target: { value: "2031-01-02" } });
     fireEvent.blur(passport());
@@ -55,19 +55,19 @@ describe("PassportRow", () => {
   it("a refused passport save says so and keeps the typed day until Verwerfen", async () => {
     putFacts.mockRejectedValue(new Error("500"));
     render(<PassportRow />);
-    await waitFor(() => expect(passport().value).toBe("2030-05-01"));
+    await waitFor(() => expect(passport().value).toBe("01.05.2030"));
     vi.useFakeTimers();
     fireEvent.change(passport(), { target: { value: "2031-01-02" } });
     fireEvent.blur(passport());
     await settle(400);
     expect(screen.getByRole("alert")).toHaveTextContent("settings:blocks.save.failed");
     fireEvent.click(screen.getByRole("button", { name: "settings:blocks.save.discard" }));
-    expect(passport().value).toBe("2030-05-01");
+    expect(passport().value).toBe("01.05.2030");
   });
 
   it("does not clear the stored passport date when the field is left half-typed", async () => {
     render(<PassportRow />);
-    await waitFor(() => expect(passport().value).toBe("2030-05-01"));
+    await waitFor(() => expect(passport().value).toBe("01.05.2030"));
     vi.useFakeTimers();
     Object.defineProperty(passport(), "validity", { value: { badInput: true } });
     passport().value = "";

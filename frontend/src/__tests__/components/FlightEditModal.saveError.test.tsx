@@ -86,7 +86,7 @@ describe("FlightEditModal — a refused save says so in the reader's language", 
     render(<FlightEditModal flight={FLIGHT} isOpen onClose={() => {}} onSave={onSave} />);
     await waitFor(() =>
       expect((document.querySelector("#editDepartureDate") as HTMLInputElement).value).toBe(
-        "2026-08-14"
+        "14.08.2026"
       )
     );
 

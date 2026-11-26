@@ -282,7 +282,6 @@
       "embark": "Embark",
       "debark": "Debark",
       "openCruise": "Open cruise",
-      "durationHours": "{{h}} h {{m}} min",
       "openFlight": "Open flight",
       "details": "Details",
       "event": "Event",

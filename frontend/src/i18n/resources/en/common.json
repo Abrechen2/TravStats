@@ -578,6 +578,24 @@
     "quickPicks": "Quick picks",
     "today": "Today",
     "last7": "7 days",
-    "thisYear": "This year"
+    "thisYear": "This year",
+    "open": "Open calendar",
+    "calendar": "Calendar",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "year": "Year",
+    "time": "time",
+    "invalidDate": "Not a valid date",
+    "invalidTime": "Not a valid time",
+    "placeholder": {
+      "dmy": "DD.MM.YYYY",
+      "mdy": "MM/DD/YYYY",
+      "ymd": "YYYY-MM-DD",
+      "month_dmy": "MM.YYYY",
+      "month_mdy": "MM/YYYY",
+      "month_ymd": "YYYY-MM",
+      "clock24": "HH:MM",
+      "clock12": "h:MM AM"
+    }
   }
 }

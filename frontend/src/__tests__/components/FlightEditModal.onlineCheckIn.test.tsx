@@ -72,8 +72,12 @@ const freeFlight: Flight = {
 };
 
 function checkInInputs(): { day: HTMLInputElement; time: HTMLInputElement } {
-  const day = document.querySelector<HTMLInputElement>('input[type="date"][id$="-day"]')!;
-  const time = document.querySelector<HTMLInputElement>('input[type="time"][id$="-time"]')!;
+  const day = document.querySelector<HTMLInputElement>(
+    'input[data-field-kind="date"][id$="-day"]'
+  )!;
+  const time = document.querySelector<HTMLInputElement>(
+    'input[data-field-kind="time"][id$="-time"]'
+  )!;
   return { day, time };
 }
 

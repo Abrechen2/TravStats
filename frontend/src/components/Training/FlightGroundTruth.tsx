@@ -163,6 +163,12 @@ export default function FlightGroundTruth({
 function FieldControl({
   kind,
   ...rest
-}: { kind: "date" | "time" | null } & InputHTMLAttributes<HTMLInputElement>): JSX.Element {
+}: { kind: "date" | "time" | null } & Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "value" | "onChange" | "min" | "max"
+> & {
+    value: string;
+    onChange: (event: { target: { value: string } }) => void;
+  }): JSX.Element {
   return kind ? <DateField kind={kind} {...rest} /> : <input type="text" {...rest} />;
 }

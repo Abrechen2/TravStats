@@ -6,8 +6,12 @@
 
 import { escapeHtml } from "../../../../lib/escapeHtml";
 import { flagImgHtml } from "../../../../lib/countryFlag";
-import { formatDate as formatUserDate, formatTimeValueShown } from "../../../../lib/format";
-import { formatNumber } from "../../../../lib/units";
+import {
+  formatDate as formatUserDate,
+  formatDuration,
+  formatKm,
+  formatTimeValueShown,
+} from "../../../../lib/format";
 import type { Rgb } from "../../../../lib/domainColor";
 import { dayOf, type TimeValue } from "../../../../shared/time";
 import type { JourneyRouteHover, JourneyRouteProfile, JourneyStopHover } from "./journeyLayerCards";
@@ -104,17 +108,12 @@ export function journeyRouteHoverHtml(d: JourneyRouteHover, opts: JourneyHoverOp
   // One line for the route's length and what it measures, one for time.
   const distance: string[] = [];
   if (p?.distanceKm != null) {
-    distance.push(`${formatNumber(Math.round(p.distanceKm))} km`);
+    distance.push(formatKm(p.distanceKm));
     if (p.distanceSourceKey) distance.push(t(p.distanceSourceKey));
   }
   const facts: string[] = [];
   if (p?.avgDurationMin != null) {
-    facts.push(
-      `Ø ${t("map:globe.pinned.durationHours", {
-        h: Math.floor(p.avgDurationMin / 60),
-        m: p.avgDurationMin % 60,
-      })}`
-    );
+    facts.push(`Ø ${formatDuration(p.avgDurationMin)}`);
   }
   const last = p?.last ? spanDay(p.last.departure, p.last.arrival) : "";
   if (last) facts.push(`${t("map:journey.last")} ${last}`);

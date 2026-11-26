@@ -111,7 +111,10 @@ export function DateInput({
   hint,
   className,
   ...rest
-}: Omit<TextInputProps, "type">): JSX.Element {
+}: Omit<TextInputProps, "type" | "min" | "max" | "step"> & {
+  min?: string;
+  max?: string;
+}): JSX.Element {
   return (
     <Labelled id={id} label={label} error={error} required={required} hint={hint}>
       {(wiring) => (

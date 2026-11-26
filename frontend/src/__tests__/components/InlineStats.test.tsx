@@ -33,7 +33,7 @@ describe("InlineStats", () => {
 
   it("shows duration", () => {
     render(<InlineStats flight={baseFlight} />);
-    expect(screen.getByText(/9h 45m/)).toBeInTheDocument();
+    expect(screen.getByText(/9 h 45 min/)).toBeInTheDocument();
   });
 
   it("shows CO₂ when present", () => {
