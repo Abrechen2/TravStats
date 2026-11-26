@@ -8,8 +8,14 @@
 // It is `position: fixed` and mounted where it is rendered rather than in a
 // portal: the editor is a full-screen dialog, so there is no clipping ancestor
 // to escape, and a portal would put it outside the dialog for a screen reader.
+//
+// Being mounted inside the map wrapper means React bubbles its pointer events
+// into that wrapper's box selection: a click on "Ausgewählte löschen (n)"
+// started a 0-px marquee, which read as a click on empty map and cleared the
+// selection before the command ran, so nothing was deleted (#413). The menu
+// therefore keeps its pointer events to itself.
 
-import { useEffect, useRef, type JSX } from "react";
+import { useEffect, useRef, type JSX, type PointerEvent } from "react";
 
 export interface MapMenuEntry {
   /** `null` renders a separator; everything else is a command. */
@@ -26,6 +32,8 @@ export interface MapContextMenuProps {
   entries: MapMenuEntry[];
   onClose: () => void;
 }
+
+const stopPointer = (e: PointerEvent<HTMLDivElement>): void => e.stopPropagation();
 
 /** Keeps the menu inside the window when the click was near an edge. */
 function clamp(value: number, size: number, limit: number): number {
@@ -81,6 +89,9 @@ export function MapContextMenu({
       data-testid="map-context-menu"
       className="fixed z-[60] min-w-52 rounded-lg border border-border bg-(--bg-surface) p-1 shadow-2xl"
       style={{ left: x, top: y }}
+      onPointerDown={stopPointer}
+      onPointerMove={stopPointer}
+      onPointerUp={stopPointer}
     >
       <div className="px-2.5 pb-1 pt-1.5 text-[10px] uppercase tracking-wider text-(--text-muted)">
         {title}
