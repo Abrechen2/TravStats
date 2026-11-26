@@ -4,6 +4,7 @@ import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import { planLegs, type LegPair } from "../../shared/tour/legPlan";
 import { isUserLine, legDistanceKm, type LegSource } from "./tourDistance";
+import { autoRouteNewLegs } from "./routing/autoRouteLegs";
 
 /** Just enough of the client to open a transaction — keeps this testable. */
 type PrismaLike = { $transaction: <T>(fn: (tx: Tx) => Promise<T>) => Promise<T> };
@@ -172,66 +173,28 @@ export async function resetLegsOfMovedStops(
  *
  * The two sources are treated differently on purpose:
  *
- * - `straight` is derived from the endpoints and nothing else, so it is simply
- *   recomputed.
- * - `drawn` is a line a person drew. It is NOT deleted and NOT replaced by a
+ * - `straight` and `routed` are derived from the endpoints, so they are reset to
+ *   a straight chord and returned for the caller to route again (#410: a routed
+ *   line kept leading to the old position).
+ * - `drawn` (and recorded or track) is a line from the user's own data. It is NOT deleted and NOT replaced by a
  *   straight chord — that would throw away work without asking. Its confidence
  *   drops to `low`, which is the signal the UI already understands, and the
  *   geometry stays for the user to re-anchor.
  */
-export async function refreshLegsForMovedStop(tx: Tx, stopId: string): Promise<void> {
+export async function refreshLegsForMovedStop(tx: Tx, stopId: string): Promise<LegPair[]> {
   const legs = await tx.tripRouteLeg.findMany({
     where: { OR: [{ fromStopId: stopId }, { toStopId: stopId }] },
-    select: { id: true, source: true, fromStopId: true, toStopId: true },
+    select: { routeId: true, fromStopId: true, toStopId: true },
   });
-  if (legs.length === 0) return;
-
+  if (legs.length === 0) return [];
   const stopIds = [...new Set(legs.flatMap((l) => [l.fromStopId, l.toStopId]))];
   const stops = await tx.tripStop.findMany({
     where: { id: { in: stopIds } },
     select: { id: true, lat: true, lon: true },
   });
-  const byId = new Map(stops.map((s) => [s.id, s]));
-
-  for (const leg of legs) {
-    if (leg.source !== "straight") {
-      // Drawn by hand: keep it, but stop calling it trustworthy.
-      // share-exempt: leg bookkeeping inside a roadtrip write; the caller propagates the roadtrip
-      await tx.tripRouteLeg.update({
-        where: { id: leg.id },
-        data: { confidence: "low" },
-      });
-      continue;
-    }
-
-    const from = byId.get(leg.fromStopId);
-    const to = byId.get(leg.toStopId);
-    if (
-      !from ||
-      !to ||
-      from.lat === null ||
-      from.lon === null ||
-      to.lat === null ||
-      to.lon === null
-    ) {
-      // The PATCH route refuses to clear a route member's coordinates, so this
-      // is unreachable through the API; skipping beats writing a wrong number.
-      continue;
-    }
-
-    // share-exempt: leg bookkeeping inside a roadtrip write; the caller propagates the roadtrip
-    await tx.tripRouteLeg.update({
-      where: { id: leg.id },
-      data: {
-        distanceKm: legDistanceKm({
-          source: "straight",
-          from: { lat: from.lat, lon: from.lon },
-          to: { lat: to.lat, lon: to.lon },
-        }),
-        computedAt: new Date(),
-      },
-    });
-  }
+  // A stop sits in one route; its legs all carry that route's id. A routed line is
+  // derived like a straight one and goes the same way (#410: it kept the old route).
+  return resetLegsOfMovedStops(tx, legs[0].routeId, [stopId], stops);
 }
 
 /** The fields `PATCH /trips/:id/stops/:stopId` may write. */
@@ -271,14 +234,17 @@ export async function updateStopAndLegs(
   prismaClient: PrismaLike,
   stopId: string,
   body: StopPatch,
-  existing: { routeId: string | null; lat: number | null; lon: number | null }
+  existing: { routeId: string | null; lat: number | null; lon: number | null },
+  /** Routes the reset legs again after the commit, as a list save does (#410). */
+  userId?: string
 ) {
   const moved =
     existing.routeId !== null &&
     ((body.lat !== undefined && body.lat !== existing.lat) ||
       (body.lon !== undefined && body.lon !== existing.lon));
 
-  return prismaClient.$transaction(async (tx: Tx) => {
+  let reset: LegPair[] = [];
+  const updated = await prismaClient.$transaction(async (tx: Tx) => {
     // share-exempt: stop update helper; routes/trips/tripStops.ts propagates around it
     const updated = await tx.tripStop.update({
       where: { id: stopId },
@@ -297,8 +263,12 @@ export async function updateStopAndLegs(
       },
     });
 
-    if (moved) await refreshLegsForMovedStop(tx, stopId);
+    if (moved) reset = await refreshLegsForMovedStop(tx, stopId);
 
     return updated;
   });
+  if (userId && existing.routeId && reset.length > 0) {
+    await autoRouteNewLegs(userId, existing.routeId, reset);
+  }
+  return updated;
 }

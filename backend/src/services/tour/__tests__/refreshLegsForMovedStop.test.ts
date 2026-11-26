@@ -81,6 +81,36 @@ describe("refreshLegsForMovedStop", () => {
     expect(after.distanceKm).toBeLessThan(1120);
   });
 
+  it("drops the old line of a routed leg after its endpoint moves and hands it back for re-routing (#410)", async () => {
+    const leg = await prisma.tripRouteLeg.create({
+      data: {
+        routeId,
+        fromStopId: stopA,
+        toStopId: stopB,
+        source: "routed",
+        mode: "road",
+        distanceKm: 130,
+        confidence: "high",
+        drivingMinutes: 90,
+        waypoints: [
+          [0, 0],
+          [0.5, 0.3],
+          [1, 0],
+        ],
+      },
+    });
+
+    await prisma.tripStop.update({ where: { id: stopB }, data: { lon: 10 } });
+    const reset = await refreshLegsForMovedStop(prisma, stopB);
+
+    const after = await prisma.tripRouteLeg.findUniqueOrThrow({ where: { id: leg.id } });
+    expect(after.waypoints).toBeNull();
+    expect(after.source).toBe("straight");
+    expect(after.drivingMinutes).toBeNull();
+    expect(after.distanceKm).toBeGreaterThan(1100);
+    expect(reset).toEqual([{ fromStopId: stopA, toStopId: stopB }]);
+  });
+
   it("keeps a drawn line but stops calling it trustworthy", async () => {
     const leg = await prisma.tripRouteLeg.create({
       data: {

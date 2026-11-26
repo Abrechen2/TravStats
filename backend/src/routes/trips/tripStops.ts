@@ -125,7 +125,8 @@ router.patch(
         prisma,
         req.params.stopId,
         { ...rest, ...times },
-        existing
+        existing,
+        userId
       );
       await propagateWrite(prisma, userId, "stop", stop.id, before);
       res.json({ stop: withTripStopTimes(stop) });
