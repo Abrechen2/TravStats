@@ -65,6 +65,7 @@ import { initialLegendOpen, isPhoneViewport } from "./legendInitialState";
 import { SidebarToggle } from "../SidebarToggle";
 import { Icon } from "../../ui/Icon";
 import { useDomainColors } from "../../../hooks/useDomainColors";
+import { useAllTabActivity } from "./allTabActivity";
 import { DomainFilterButton } from "./DomainFilterButton";
 import { DomainFilterEmptyOverlay } from "./DomainFilterEmptyOverlay";
 import { allTabAppearanceDomains, useAllTabDomainVisibility } from "./useAllTabDomainVisibility";
@@ -103,9 +104,7 @@ function dedupeByKey(rows: JSX.Element[]): JSX.Element[] {
   return rows.filter((row) => {
     const key = String(row.key ?? "");
     if (key === "") return true;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+    return seen.has(key) ? false : (seen.add(key), true);
   });
 }
 
@@ -155,17 +154,13 @@ export function AllTab(): JSX.Element {
   }, [legendOpen]);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
 
-  // Global dashboard filter — year populates `time.from/to`, domain
-  // pill row toggles flight/cruise visibility on the Alle tab. The pill
-  // filter is intersected with the user's enabledDomains: a disabled
-  // domain must never surface here. The map-options pills that used to be a
-  // second gate went on 2026-09-28; the domain filter is the only one now.
+  // Global dashboard filter — year populates `time.from/to`. The domain
+  // filter is intersected with the user's enabledDomains: a
+  // disabled domain must never surface here.
   const { isEnabled } = useEnabledDomains();
   const filterTime = useDashboardFilterStore((s) => s.time);
   const placeColorConfig = usePlaceColorStore((st) => st.config);
-  // POI asks `usePlacesVisible`, the one home of the places rule — the user's
-  // domain choice alone since 2026-09-05 (the instance beta flag used to be a
-  // second condition here).
+  // POI asks `usePlacesVisible`, the one home of the places rule.
   const placesAllowed = usePlacesVisible();
 
   // One fetch carries day tours AND roadtrips: it runs while either domain is
@@ -453,6 +448,12 @@ export function AllTab(): JSX.Element {
   // "journey" a few lines up.
   // Rail, bus, ferry and rentals beside the tours, each behind its own gates and filter row.
   const transport = useTransportOverlays(showTours, domainFilter.isVisible, visMode === "globe", t);
+  const activity = useAllTabActivity(
+    transport.activity,
+    visibleLodgings,
+    visiblePlaces,
+    filteredTours.tours
+  );
   const tourDeck = useTourDeckLayers(tourPathData, visMode === "globe", dashboardTours.tours);
   const tourLayers = useMemo<Layer[]>(
     () => [...tourDeck, ...transport.layers],
@@ -772,6 +773,7 @@ export function AllTab(): JSX.Element {
         onCruiseOpen={handleCruiseOpen}
         cruisesOverride={visibleCruises}
         lodgingsOverride={visibleLodgings}
+        activity={activity}
         onLodgingClick={handleLodgingClick}
         hideInfoPill
         filterSlot={

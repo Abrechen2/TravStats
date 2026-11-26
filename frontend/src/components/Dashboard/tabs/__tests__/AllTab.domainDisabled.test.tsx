@@ -6,7 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 // behind the day-tour switch); this suite is not about them, and their
 // requests would trip the network guard.
 vi.mock("../allTabTransportOverlays", () => ({
-  useTransportOverlays: () => ({ layers: [], legendRows: [], status: null }),
+  useTransportOverlays: () => ({ layers: [], legendRows: [], activity: [], status: null }),
 }));
 vi.mock("../../../../hooks/useDashboardTours", () => ({
   useDashboardTours: () => ({

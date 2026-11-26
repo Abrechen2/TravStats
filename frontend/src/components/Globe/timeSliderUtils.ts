@@ -1,5 +1,6 @@
 import type { Cruise } from "../../types/cruise";
 import type { GeoJSONFeature } from "../../types";
+import type { DomainKey } from "../../shared/domains";
 import { effectiveTimedSequence, type EffectiveSequenceEntry } from "../Cruise/cruisePorts";
 
 /**
@@ -77,12 +78,26 @@ export const computeCruiseLegDates = (cruise: Cruise): CruiseLegDates[] => {
   return out;
 };
 
-/** Earliest & latest date across every flight + cruise. Returns null
- * when nothing has any usable date (unusual — would mean a brand-new
- * empty account). */
+/**
+ * Dated entries of one further domain (rail, bus, ferry, rental, lodging, POI …)
+ * for the activity histogram — the dates are ISO instants or date strings, null
+ * where the entry carries none. Flights and cruises keep their own parameters
+ * because the globe also draws and filters them; every other domain only counts.
+ */
+export interface ActivityDates {
+  domain: DomainKey;
+  dates: readonly (string | null | undefined)[];
+}
+
+export const NO_ACTIVITY: readonly ActivityDates[] = [];
+
+/** Earliest & latest date across every flight, cruise and further domain.
+ * Returns null when nothing has any usable date (unusual — would mean a
+ * brand-new empty account). */
 export const computeTimeRange = (
   flights: GeoJSONFeature[],
-  cruises: Cruise[]
+  cruises: Cruise[],
+  activity: readonly ActivityDates[] = []
 ): { min: Date; max: Date } | null => {
   let min = Number.POSITIVE_INFINITY;
   let max = Number.NEGATIVE_INFINITY;
@@ -115,6 +130,16 @@ export const computeTimeRange = (
     }
   }
 
+  for (const a of activity) {
+    for (const raw of a.dates) {
+      const d = safeDate(raw);
+      if (!d) continue;
+      const t = d.getTime();
+      if (t < min) min = t;
+      if (t > max) max = t;
+    }
+  }
+
   if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
   return { min: new Date(min), max: new Date(max) };
 };
@@ -126,6 +151,10 @@ export interface MonthBucket {
   start: Date;
   flights: number;
   cruises: number;
+  /** Entries of every further domain that month; a domain with none is absent. */
+  others: Partial<Record<DomainKey, number>>;
+  /** Months this bar spans (1 unless coarsened); the strip sizes it by this. */
+  months?: number;
 }
 
 /**
@@ -138,7 +167,8 @@ export const computeMonthlyBuckets = (
   flights: GeoJSONFeature[],
   cruises: Cruise[],
   rangeMin: Date,
-  rangeMax: Date
+  rangeMax: Date,
+  activity: readonly ActivityDates[] = []
 ): MonthBucket[] => {
   const key = (d: Date): string => `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
   const fCount = new Map<string, number>();
@@ -152,6 +182,17 @@ export const computeMonthlyBuckets = (
     if (d) cCount.set(key(d), (cCount.get(key(d)) ?? 0) + 1);
   }
 
+  const otherCount = new Map<string, Map<DomainKey, number>>();
+  for (const a of activity) {
+    for (const raw of a.dates) {
+      const d = safeDate(raw);
+      if (!d) continue;
+      const m = otherCount.get(key(d)) ?? new Map<DomainKey, number>();
+      m.set(a.domain, (m.get(a.domain) ?? 0) + 1);
+      otherCount.set(key(d), m);
+    }
+  }
+
   const buckets: MonthBucket[] = [];
   const cur = new Date(Date.UTC(rangeMin.getUTCFullYear(), rangeMin.getUTCMonth(), 1));
   const end = new Date(Date.UTC(rangeMax.getUTCFullYear(), rangeMax.getUTCMonth(), 1));
@@ -163,11 +204,48 @@ export const computeMonthlyBuckets = (
       start: new Date(cur),
       flights: fCount.get(k) ?? 0,
       cruises: cCount.get(k) ?? 0,
+      others: Object.fromEntries(otherCount.get(k) ?? []) as MonthBucket["others"],
     });
     cur.setUTCMonth(cur.getUTCMonth() + 1);
     guard++;
   }
   return buckets;
+};
+
+/** Most bars the strip draws. A month per bar is right for a few years; over a
+ * decade it is hundreds of sub-pixel slivers with 2 px gaps between them, which
+ * reads as a blank strip, not as a timeline. */
+export const MAX_HISTOGRAM_BARS = 72;
+
+/**
+ * Merges consecutive months into equal groups so at most `maxBars` remain. The
+ * groups stay contiguous and equal-width in time (the last may be shorter), so
+ * the strip's linear x-to-date mapping still holds.
+ */
+export const coarsenBuckets = (
+  buckets: readonly MonthBucket[],
+  maxBars: number = MAX_HISTOGRAM_BARS
+): MonthBucket[] => {
+  if (buckets.length <= maxBars) return [...buckets];
+  const per = Math.ceil(buckets.length / maxBars);
+  const out: MonthBucket[] = [];
+  for (let i = 0; i < buckets.length; i += per) {
+    const group = buckets.slice(i, i + per);
+    const others: Partial<Record<DomainKey, number>> = {};
+    for (const b of group) {
+      for (const [k, n] of Object.entries(b.others) as [DomainKey, number][]) {
+        others[k] = (others[k] ?? 0) + n;
+      }
+    }
+    out.push({
+      start: group[0].start,
+      flights: group.reduce((n, b) => n + b.flights, 0),
+      cruises: group.reduce((n, b) => n + b.cruises, 0),
+      others,
+      months: group.reduce((n, b) => n + (b.months ?? 1), 0),
+    });
+  }
+  return out;
 };
 
 /* ---------------------- Live-mode visibility ---------------------- */

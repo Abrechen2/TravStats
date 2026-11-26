@@ -5,6 +5,7 @@ import {
   computeCruiseLegDates,
   computeTimeRange,
   computeMonthlyBuckets,
+  coarsenBuckets,
   flightVisibleFilter,
   flightVisibleLive,
   legProgress,
@@ -372,5 +373,42 @@ describe("computeMonthlyBuckets", () => {
     );
     expect(buckets).toHaveLength(4);
     expect(buckets.every((b) => b.flights === 0 && b.cruises === 0)).toBe(true);
+  });
+});
+
+describe("activity of further domains", () => {
+  it("counts rail, lodging and the like per month beside flights and cruises", () => {
+    const min = new Date("2022-07-01T00:00:00Z");
+    const max = new Date("2022-08-31T00:00:00Z");
+    const buckets = computeMonthlyBuckets([], [], min, max, [
+      { domain: "rail", dates: ["2022-07-04T08:00:00Z", "2022-07-09T08:00:00Z", null] },
+      { domain: "lodging", dates: ["2022-08-02"] },
+    ]);
+    expect(buckets[0].others).toEqual({ rail: 2 });
+    expect(buckets[1].others).toEqual({ lodging: 1 });
+  });
+
+  it("widens the range to a rail ride that is earlier than every flight", () => {
+    const range = computeTimeRange(
+      [flightFeat("2022-07-05T10:00:00Z")],
+      [],
+      [{ domain: "rail", dates: ["2019-03-01T00:00:00Z"] }]
+    );
+    expect(range?.min.toISOString()).toBe("2019-03-01T00:00:00.000Z");
+  });
+
+  it("merges months into at most the bar limit without losing a count", () => {
+    const months = computeMonthlyBuckets(
+      [flightFeat("2005-01-10T00:00:00Z"), flightFeat("2024-12-10T00:00:00Z")],
+      [],
+      new Date("2005-01-01T00:00:00Z"),
+      new Date("2024-12-31T00:00:00Z"),
+      [{ domain: "bus", dates: ["2010-05-05T00:00:00Z"] }]
+    );
+    expect(months).toHaveLength(240);
+    const coarse = coarsenBuckets(months, 72);
+    expect(coarse.length).toBeLessThanOrEqual(72);
+    expect(coarse.reduce((n, b) => n + b.flights, 0)).toBe(2);
+    expect(coarse.reduce((n, b) => n + (b.others.bus ?? 0), 0)).toBe(1);
   });
 });

@@ -15,7 +15,7 @@ const { mapProps } = vi.hoisted(() => ({ mapProps: [] as Record<string, unknown>
 // behind the day-tour switch); this suite is not about them, and their
 // requests would trip the network guard.
 vi.mock("./allTabTransportOverlays", () => ({
-  useTransportOverlays: () => ({ layers: [], legendRows: [], status: null }),
+  useTransportOverlays: () => ({ layers: [], legendRows: [], activity: [], status: null }),
 }));
 vi.mock("../../../hooks/useDashboardTours", () => ({
   // Tours are no longer gated (owner, 2026-09-18), so AllTab asks for them on
