@@ -579,3 +579,51 @@ registry.registerPath({
     400: { description: "Validation failed", content: errorContent },
   },
 });
+
+const roadtripPhoto = z.object({
+  key: z.string(),
+  kind: z.enum(["linked", "window"]).describe("`window`: only fits the days and the route"),
+  source: z.enum(["upload", "immich", "photoprism"]),
+  via: z.enum(["station", "stay", "visit", "upload"]),
+  url: z.string().describe("Streams the picture; ownership-checked by its own route"),
+  caption: z.string().nullable(),
+  takenAt: z.string().nullable(),
+  lat: z.number().nullable(),
+  lon: z.number().nullable(),
+  day: z.string().nullable().describe("The calendar day it is grouped under"),
+  stationId: z.string().uuid().nullable(),
+  stationTitle: z.string().nullable(),
+  tripId: z.string().uuid().nullable(),
+  tripPhotoId: z.string().uuid().nullable(),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/roadtrips/{id}/photos",
+  summary: "Every photo that belongs to the roadtrip",
+  description:
+    "Linked photos (stations, stays, visits) and the trip's unfiled uploads taken inside the " +
+    "roadtrip's days within 10 km of a station. Photos without a position are never offered " +
+    "as window photos. Library candidates come from the per-station suggestion route.",
+  tags: ["Roadtrips"],
+  request: { params: idParams },
+  responses: {
+    200: {
+      description: "The roadtrip's photos",
+      content: {
+        "application/json": {
+          schema: z.object({
+            photos: z.array(roadtripPhoto),
+            span: z.object({ from: z.string(), to: z.string() }).nullable(),
+            stations: z.array(
+              z.object({ id: z.string().uuid(), title: z.string(), day: z.string().nullable() })
+            ),
+            truncated: z.boolean(),
+          }),
+        },
+      },
+    },
+    400: { description: "Invalid id", content: errorContent },
+    404: { description: "Not found, or a tour rather than a roadtrip", content: errorContent },
+  },
+});

@@ -20,6 +20,7 @@ import { toDto, toLegDto, ROUTE_SELECT } from "../trips/tourRoutes";
 import logger from "../../utils/logger";
 import { getCountryResolver } from "../../services/geo/countryFromCoordinates";
 import stationRoutes from "./stations";
+import photoRoutes from "./photos";
 import companionRoutes from "./companion";
 import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
 import { EXPENSE_ORDER, EXPENSE_SELECT, toExpenseDto } from "../../services/expenses/expenseDto";
@@ -212,5 +213,6 @@ router.get(
 );
 
 router.use(stationRoutes);
+router.use(photoRoutes);
 
 export default router;
