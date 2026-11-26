@@ -65,6 +65,7 @@ import { publish } from "./publish";
 import { createFromEnrichment, enrichKnown, type KnownRow } from "./stopFindings";
 import { catchUpPlugins, enrichStop, placeOfEnrichment, withEnrichment } from "./enrich";
 import { catchUpOnly, catchUpWriter } from "./catchUp";
+import { autoAcceptDwellBrands } from "./dwellBrands";
 import type { AskDeps } from "../../plugins/ask";
 
 export const VISIT_DAYS_PER_RUN = 5;
@@ -669,8 +670,10 @@ export async function projectVisitSuggestions(
   if (days.length === 0) {
     // No day owed: the plugins' catch-up still runs. It was reached only behind an owed day, so
     // a quiet account never asked about a stop again once its day had been acknowledged.
-    if ((await permitted(userId)) && !(await catchUpOnly(userId, result, now, deps.plugins)))
+    if (!(await permitted(userId))) return result;
+    if (!(await catchUpOnly(userId, result, now, deps.plugins)))
       return { ...result, status: "failed" };
+    result.autoAccepted += await autoAcceptDwellBrands(userId, now);
     return result;
   }
   if (!(await permitted(userId))) {
@@ -728,7 +731,10 @@ export async function projectVisitSuggestions(
       if (result.interrupted) break;
     }
     // Open findings still waiting for a plugin, or never asked: a few per run.
-    if (!result.interrupted) await catchUpPlugins(ctx, catchUpWriter(userId), now);
+    if (!result.interrupted) {
+      await catchUpPlugins(ctx, catchUpWriter(userId), now);
+      result.autoAccepted += await autoAcceptDwellBrands(userId, now);
+    }
     return result;
   } catch (error) {
     logger.warn({ operation: "travtrack.visits.failed", userId, error: (error as Error).message });

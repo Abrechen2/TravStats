@@ -130,9 +130,13 @@ type EvidenceMatches = {
   auto: boolean;
 }[];
 
-/** The smart-list matches a visit finding carries; empty for any other finding. */
+/**
+ * The smart-list matches a finding carries: a visit finding's (`visit.brandMatches`) or a plain
+ * stay finding's matched through its own place (`brandMatches`, `visits/dwellBrands.ts`).
+ */
 export function matchesOf(evidence: unknown): EvidenceMatches {
-  const list = (evidence as { visit?: { brandMatches?: unknown } } | null)?.visit?.brandMatches;
+  const e = evidence as { visit?: { brandMatches?: unknown }; brandMatches?: unknown } | null;
+  const list = e?.visit?.brandMatches ?? e?.brandMatches;
   return Array.isArray(list) ? (list as EvidenceMatches) : [];
 }
 
@@ -183,11 +187,12 @@ export async function applyBrandMatches(
   }
 }
 
-const matchFilter = (listId: string, extra: Record<string, unknown> = {}) =>
-  ({
-    path: ["visit", "brandMatches"],
-    array_contains: [{ listId, ...extra }],
-  }) as Prisma.JsonFilter;
+/** A finding whose matches (on the visit, or on a plain stay) name the list. */
+const matchFilter = (listId: string, extra: Record<string, unknown> = {}) => ({
+  OR: [["visit", "brandMatches"], ["brandMatches"]].map((path) => ({
+    evidence: { path, array_contains: [{ listId, ...extra }] } as Prisma.JsonFilter,
+  })),
+});
 
 export type SuggestionView = {
   id: string;
@@ -297,7 +302,7 @@ export async function newOutletsForList(userId: string, listId: string) {
       status: "pending",
       provider: "travtrack",
       placeId: null,
-      evidence: matchFilter(listId) as Prisma.JsonFilter,
+      ...matchFilter(listId),
     },
     select: STAY_SELECT,
     orderBy: { startAt: "desc" },
@@ -314,7 +319,7 @@ export async function recentlyAutoAccepted(userId: string, listId: string) {
       userId,
       status: "accepted",
       provider: "travtrack",
-      evidence: matchFilter(listId, { auto: true }) as Prisma.JsonFilter,
+      ...matchFilter(listId, { auto: true }),
     },
     select: STAY_SELECT,
     orderBy: { resolvedAt: "desc" },
