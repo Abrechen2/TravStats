@@ -115,6 +115,8 @@ export default function PlaceListTable({
   const showDistance = data?.hasHome ?? false;
   const reorderable = sort === "custom" && order === "asc" && q === "" && !autoOnly;
   const th = "px-3 py-2 text-left text-xs font-medium";
+  // A column that does not sort reads like one that does, minus the button.
+  const plain = "uppercase tracking-wider";
 
   return (
     <section aria-label={t("places:lists.table.label")} data-testid="place-list-table">
@@ -173,18 +175,18 @@ export default function PlaceListTable({
                 <tr>
                   <th className={th}>{header("name", t("places:lists.table.col.name"))}</th>
                   <th className={th}>{header("country", t("places:lists.table.col.country"))}</th>
-                  <th className={th}>{t("places:lists.table.col.city")}</th>
+                  <th className={`${th} ${plain}`}>{t("places:lists.table.col.city")}</th>
                   <th className={th}>{header("visitCount", t("places:lists.table.col.visits"))}</th>
                   <th className={th}>{header("lastVisit", t("places:lists.table.col.last"))}</th>
                   <th className={th}>{header("firstVisit", t("places:lists.table.col.first"))}</th>
-                  <th className={th}>{t("places:lists.table.col.source")}</th>
+                  <th className={`${th} ${plain}`}>{t("places:lists.table.col.source")}</th>
                   {showDistance && (
                     <th className={th}>
                       {header("distance", t("places:lists.table.col.distance"))}
                     </th>
                   )}
                   {columns.map((c) => (
-                    <th key={c.key} className={th}>
+                    <th key={c.key} className={`${th} ${plain}`}>
                       {c.label[lang]}
                     </th>
                   ))}

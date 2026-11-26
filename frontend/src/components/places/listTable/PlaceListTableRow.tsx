@@ -50,13 +50,13 @@ export default function PlaceListTableRow({
           navigate(to);
         }}
       >
-        <td className={CELL}>
-          <span aria-hidden className="mr-2">
-            {icon}
+        <td className={`${CELL} min-w-40`}>
+          <span className="inline-flex items-start gap-2">
+            <span aria-hidden>{icon}</span>
+            <Link to={to} className="text-sm" style={{ color: "var(--text-primary)" }}>
+              {row.name}
+            </Link>
           </span>
-          <Link to={to} className="text-sm" style={{ color: "var(--text-primary)" }}>
-            {row.name}
-          </Link>
         </td>
         <td className={`${CELL} text-sm`} style={{ color: "var(--text-secondary)" }}>
           <span className="inline-flex items-center gap-1">
