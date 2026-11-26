@@ -3,7 +3,7 @@ import type { Prisma } from "../../prisma";
 import type { DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { StationsInput } from "../../schemas/roadtrip";
-import { recomputeLegs, type StopCoords } from "../tour/legRecompute";
+import { recomputeLegs, resetLegsOfMovedStops, type StopCoords } from "../tour/legRecompute";
 import { autoRouteNewLegs } from "../tour/routing/autoRouteLegs";
 import { STATION_DTO_SELECT } from "./roadtripSummary";
 import { readRouteAndLegs, ROUTE_SELECT } from "../../routes/trips/tourRoutes";
@@ -321,10 +321,19 @@ export async function replaceStationsIn(
   await propagateWrites(tx, userId, "stop", timelineIds, before);
 
   const createdLegs = await recomputeLegs(tx, routeId, mode, ordered);
+  // A kept station whose coordinates changed keeps its leg rows (pairs survive), so their
+  // old line must go too — or the dashboard keeps drawing the route to where the station
+  // used to be (#410). Reset legs are routed again after the commit, like new ones.
+  const stored = new Map(existing.map((s) => [s.id, s] as const));
+  const moved = ordered.flatMap((s) => {
+    const was = stored.get(s.id);
+    return was && (was.lat !== s.lat || was.lon !== s.lon) ? [s.id] : [];
+  });
+  const resetLegs = await resetLegsOfMovedStops(tx, routeId, moved, ordered);
   await propagateWrite(tx, userId, "roadtrip", routeId, roadtripBefore);
 
   return {
-    createdLegs,
+    createdLegs: [...createdLegs, ...resetLegs],
     route: await tx.tripRoute.findUniqueOrThrow({
       where: { id: routeId },
       include: ROUTE_SELECT,

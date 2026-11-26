@@ -3,7 +3,7 @@ import { Prisma } from "../../prisma";
 
 import { AppError } from "../../middleware/errorHandler";
 import { planLegs, type LegPair } from "../../shared/tour/legPlan";
-import { legDistanceKm, type LegSource } from "./tourDistance";
+import { isUserLine, legDistanceKm, type LegSource } from "./tourDistance";
 
 /** Just enough of the client to open a transaction — keeps this testable. */
 type PrismaLike = { $transaction: <T>(fn: (tx: Tx) => Promise<T>) => Promise<T> };
@@ -94,6 +94,68 @@ export async function recomputeLegs(
     await tx.tripRouteLeg.createMany({ data: rows });
   }
   return plan.create;
+}
+
+/**
+ * Stations of a list save that kept their id but moved (#410). `recomputeLegs` keeps their
+ * leg pairs, line included, so a routed line kept leading to where the station used to be —
+ * on the dashboard as well as in the totals. A derived line (straight, routed) is
+ * reset to a straight chord between the stops as they are now and returned, so the caller
+ * routes it again with the new pairs. A line from the user's own data (drawn, recorded, a
+ * recorded track) is never thrown away; it only loses its confidence, as in `refreshLegsForMovedStop`.
+ */
+export async function resetLegsOfMovedStops(
+  tx: Tx,
+  routeId: string,
+  movedStopIds: readonly string[],
+  orderedStops: readonly StopCoords[]
+): Promise<LegPair[]> {
+  if (movedStopIds.length === 0) return [];
+  const legs = await tx.tripRouteLeg.findMany({
+    where: {
+      routeId,
+      OR: [{ fromStopId: { in: [...movedStopIds] } }, { toStopId: { in: [...movedStopIds] } }],
+    },
+    select: { id: true, source: true, fromStopId: true, toStopId: true },
+  });
+  const byId = new Map(orderedStops.map((s) => [s.id, s]));
+  const reset: LegPair[] = [];
+  for (const leg of legs) {
+    if (isUserLine(leg.source) || leg.source === "track") {
+      // share-exempt: leg bookkeeping inside a roadtrip write; the caller propagates the roadtrip
+      await tx.tripRouteLeg.update({ where: { id: leg.id }, data: { confidence: "low" } });
+      continue;
+    }
+    const from = byId.get(leg.fromStopId);
+    const to = byId.get(leg.toStopId);
+    if (
+      !from ||
+      !to ||
+      from.lat === null ||
+      from.lon === null ||
+      to.lat === null ||
+      to.lon === null
+    )
+      continue;
+    // share-exempt: leg bookkeeping inside a roadtrip write; the caller propagates the roadtrip
+    await tx.tripRouteLeg.update({
+      where: { id: leg.id },
+      data: {
+        source: "straight" satisfies LegSource,
+        confidence: "low",
+        waypoints: Prisma.DbNull,
+        drivingMinutes: null,
+        distanceKm: legDistanceKm({
+          source: "straight",
+          from: { lat: from.lat, lon: from.lon },
+          to: { lat: to.lat, lon: to.lon },
+        }),
+        computedAt: new Date(),
+      },
+    });
+    reset.push({ fromStopId: leg.fromStopId, toStopId: leg.toStopId });
+  }
+  return reset;
 }
 
 /**
