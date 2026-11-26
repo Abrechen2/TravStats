@@ -10,6 +10,7 @@ import { entryModeOf, isBroadEntry, tightestWindow } from "./entries";
 import { legFigures } from "./figures";
 import { hasUsableMotion, modeFromSpeed } from "./speedMode";
 import { coverageOf } from "./coverage";
+import { mergeNearStops } from "./mergeStops";
 import { findFoldRuns, targetOf, type FoldContext, type FoldRun, type FoldTarget } from "./fold";
 import { STOP_MS } from "../dayMovement";
 import { RECORDING_GAP_MS } from "../../tripRecording/segments";
@@ -502,5 +503,6 @@ export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; st
   stops.push(...standing, ...bridged);
   legs.sort((a, b) => a.fromMs - b.fromMs);
   stops.sort((a, b) => a.fromMs - b.fromMs);
-  return { legs, stops };
+  const points = read.segments.flat().sort((a, b) => a[0] - b[0]);
+  return mergeNearStops(stops, legs, points);
 }

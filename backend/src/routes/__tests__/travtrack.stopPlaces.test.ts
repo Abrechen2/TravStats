@@ -160,6 +160,128 @@ describe("TravTrack — stop places", () => {
     expect(legs.length).toBeGreaterThan(0);
   });
 
+  it("a building wandered for half an hour between two stops is one stop, as the inbox reads it", async () => {
+    // Prod 25.11.2026: 10:01-10:43 and 11:20-15:42 at one building, the fixes between never
+    // more than 74 m away — drawn as two stops and a leg.
+    await stand(0, 40);
+    // The measured gap, as offsets from the stop: [seconds, metres north, metres east, accuracy].
+    const gap: Array<[number, number, number, number | null]> = [
+      [0, -32, -17, 38],
+      [8, -61, -38, 141],
+      [14, -63, -38, 75],
+      [32, -63, -38, 56],
+      [99, -60, -41, 43],
+      [122, -59, -41, 33],
+      [326, -103, 36, 406],
+      [327, -52, -29, 412],
+      [365, -57, -34, 52],
+      [366, -47, -11, 19],
+      [380, -43, -19, 9],
+      [397, -33, -16, 9],
+      [406, -22, -19, 8],
+      [411, -12, -21, 7],
+      [415, 3, -27, 6],
+      [524, -26, -26, 22],
+      [530, -16, -28, 16],
+      [553, -49, -40, 50],
+      [559, -63, -39, 81],
+      [562, -39, -44, 27],
+      [565, -26, -34, 20],
+      [574, -16, -25, 12],
+      [576, -6, -19, 12],
+      [580, 4, -15, 14],
+      [597, -6, -14, 9],
+      [620, 7, -20, 7],
+      [651, 11, -30, 13],
+      [653, 8, -41, 51],
+      [658, 13, -35, 11],
+      [679, 3, -37, 22],
+      [683, -7, -42, 17],
+      [693, -21, -45, 92],
+      [697, -50, -42, 67],
+      [706, -42, -24, 475],
+      [708, -63, -38, 82],
+      [709, -53, -35, 87],
+      [712, -47, -29, 73],
+      [716, -37, -32, 57],
+      [720, -32, -20, 52],
+      [721, -29, -15, 40],
+      [723, -33, -16, 29],
+      [740, -64, -38, 82],
+      [778, -44, -15, 574],
+      [794, -63, -38, 83],
+      [795, -34, -38, 67],
+      [798, 5, -29, 14],
+      [801, 10, -17, 22],
+      [806, 9, -22, 11],
+      [811, -7, -27, 41],
+      [815, 5, -25, 29],
+      [824, 12, -29, 17],
+      [837, 19, -22, 41],
+      [849, 12, -25, 17],
+      [856, 16, -23, 7],
+      [884, 14, -33, 9],
+      [900, 3, -34, 11],
+      [952, -6, -25, 16],
+      [996, 14, -28, 11],
+      [1026, 7, -39, 12],
+      [1040, -3, -42, 13],
+      [1102, 2, -32, 10],
+      [1205, 14, -31, 11],
+      [1223, 3, -29, 8],
+      [1236, 12, -34, 10],
+      [1260, 2, -31, 10],
+      [1264, -8, -23, 9],
+      [1268, -15, -14, 11],
+      [1277, -19, -23, 13],
+      [1285, -12, -15, 13],
+      [1318, -48, -29, 70],
+      [1320, -58, -35, 82],
+      [1332, -52, -26, 117],
+      [1335, -45, -18, 81],
+      [1335, -43, -15, 67],
+      [1337, -41, -14, 56],
+      [1347, -63, -38, 82],
+      [1350, -50, -29, 117],
+      [1351, -46, -27, 87],
+      [1352, -3, -9, 15],
+      [1366, -11, -18, 10],
+      [1369, -34, -23, 70],
+      [1382, -51, -34, 71],
+      [1389, -63, -38, 81],
+      [1462, -63, -38, 47],
+      [1472, -43, -23, 23],
+      [1473, -32, -20, 20],
+      [1484, -31, -30, 10],
+      [1506, -61, -39, 80],
+      [1584, -64, -38, 56],
+      [1704, -63, -38, 45],
+      [1730, -63, -38, 33],
+      [1909, -17, -9, 30],
+      [1922, -28, -16, 37],
+      [1927, -63, -38, 83],
+      [2016, -63, -38, 55],
+      [2035, -70, -28, 157],
+      [2037, -55, -43, 210],
+      [2075, -174, 126, 632],
+      [2127, -63, -36, 184],
+    ];
+    for (const [sec, north, east, accuracyM] of gap) {
+      await storePoint(userId, {
+        t: T0 + 42 * MIN + sec * 1000,
+        lat: LAT0 + north / M,
+        lon: LON0 + east / (M * Math.cos((LAT0 * Math.PI) / 180)),
+        accuracyM,
+        motion: "unknown",
+      });
+    }
+    await stand(80, 140);
+    const { stops, legs } = (await getDay()).body;
+    expect(legs).toHaveLength(0);
+    expect(stops).toHaveLength(1);
+    expect(stops[0]).toMatchObject({ fromMs: T0 });
+  });
+
   describe("GET /travtrack/stops/place", () => {
     const q = { lat: LAT0, lon: LON0, fromMs: T0, untilMs: T0 + 30 * MIN };
 
@@ -303,6 +425,36 @@ describe("TravTrack — stop places", () => {
       // And the owner can still take it back on the grown stop.
       const grown = { fromMs: stops[0].fromMs, untilMs: stops[0].untilMs };
       expect((await putPlace({ ...grown, place: null })).body.place).toBeNull();
+    });
+
+    it("the owner's name replaces an open finding's venue guess for that stop", async () => {
+      await stand(0, 30);
+      const finding = await prisma.dawarichStay.create({
+        data: {
+          userId,
+          fingerprint: "guess",
+          sourceStartAt: new Date(T0),
+          sourceEndAt: new Date(T0 + 30 * MIN),
+          sourceLat: LAT0,
+          sourceLon: LON0,
+          startAt: new Date(T0),
+          endAt: new Date(T0 + 30 * MIN),
+          lat: LAT0,
+          lon: LON0,
+          zone: "Asia/Seoul",
+          pointCount: 0,
+          evidence: { visit: { brandMatches: [{ listId: "l", auto: true }] } },
+          name: "McDonald's Sonthofen",
+          provider: "travtrack",
+        },
+      });
+      const span = { fromMs: T0, untilMs: T0 + 30 * MIN };
+      expect((await putPlace({ ...span, place: { name: "Aldi Süd" } })).status).toBe(200);
+      const row = await prisma.dawarichStay.findUniqueOrThrow({ where: { id: finding.id } });
+      expect(row.name).toBe("Aldi Süd");
+      expect(row.evidence).toMatchObject({ ownerNamed: true, visit: {} });
+      expect((row.evidence as { visit: object }).visit).not.toHaveProperty("brandMatches");
+      await prisma.dawarichStay.deleteMany({ where: { userId } });
     });
 
     it("404s a span under no stop and stores nothing; 400s an empty name", async () => {
