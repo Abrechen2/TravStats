@@ -36,6 +36,8 @@ import { useRouteTrackActions } from "../components/Trips/useRouteTrackActions";
 import type { Trip, TripStop } from "../types";
 import type { TourGeometry, TourLeg, TourRoute, TourStop } from "../types/tour";
 import WebGLGuard from "../components/map/WebGLGuard";
+import RoutingFailingNotice from "../components/Roadtrips/RoutingFailingNotice";
+import type { RoutingFailing } from "../types/roadtrip";
 
 /**
  * `TripStop` (`types/index.ts`) does not declare `routeId`/`routeOrderIdx` —
@@ -110,6 +112,7 @@ export default function TripRouteEditorPage(): JSX.Element {
   // guessed `true`) so a slow/failed load never briefly offers a control
   // that would just 409.
   const [routingAvailable, setRoutingAvailable] = useState(false);
+  const [routingFailing, setRoutingFailing] = useState<RoutingFailing | null>(null);
   const [routingAllInProgress, setRoutingAllInProgress] = useState(false);
   const [loading, setLoading] = useState(true);
   // `null` = loaded fine so far; a value distinguishes "record is gone"
@@ -147,6 +150,7 @@ export default function TripRouteEditorPage(): JSX.Element {
       setLegs(sectionData.legs);
       setSectionStops(sectionData.stops);
       setRoutingAvailable(sectionData.routingAvailable);
+      setRoutingFailing(sectionData.routingFailing ?? null);
       setGeometry(geometryData);
     } catch (err) {
       if (!mountedRef.current) return;
@@ -697,6 +701,7 @@ export default function TripRouteEditorPage(): JSX.Element {
 
         <section>
           <h2 className="text-lg font-semibold mb-3">{t("trips:tours.legsHeading")}</h2>
+          <RoutingFailingNotice failing={routingFailing} />
           <TourLegList
             legs={legs}
             stopTitleById={stopTitleById}

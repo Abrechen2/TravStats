@@ -1,5 +1,15 @@
 import logger from "../../../utils/logger";
-import { isRoutableMode, RoutableMode, RouteProvider, RouteRequest, RouteResult } from "./types";
+import {
+  isRoutableMode,
+  RoutableMode,
+  RouteFailure,
+  RouteProvider,
+  RouteRequest,
+  RouteResult,
+} from "./types";
+
+/** Statuses that refuse the key itself (410: a key or plan the provider no longer serves). */
+const KEY_REFUSED = new Set([401, 403, 410]);
 
 /**
  * GraphHopper adapter (https://www.graphhopper.com/).
@@ -81,7 +91,7 @@ export function createGraphHopper(apiKey: string, fetchImpl: typeof fetch = fetc
             req.mode === "road" && req.vehicle === "bicycle" ? "bike" : req.mode
           ]
         : req.mode,
-    async route(req: RouteRequest): Promise<RouteResult | null> {
+    async route(req: RouteRequest): Promise<RouteResult | RouteFailure | null> {
       if (!isRoutableMode(req.mode)) {
         return null;
       }
@@ -113,6 +123,10 @@ export function createGraphHopper(apiKey: string, fetchImpl: typeof fetch = fetc
           { provider: "graphhopper", status: response.status },
           "graphhopper returned a non-200 response"
         );
+        // A refused or retired key (401/403/410) is the provider refusing this
+        // instance, not a miss of one leg (#411); providerHealth reads it so.
+        if (KEY_REFUSED.has(response.status)) return { failure: "auth" };
+        if (response.status === 429) return { failure: "rate_limited" };
         return null;
       }
 

@@ -5,6 +5,7 @@ import { isServiceDisabledByAdmin } from "../../externalServices/policy";
 import { createOpenRouteService } from "./openRouteService";
 import { createGraphHopper } from "./graphHopper";
 import { createCustomOsrm } from "./customOsrm";
+import { providerDown, type ProviderDown } from "./providerHealth";
 import { ROUTING_OFF, ROUTING_PROVIDER_IDS, RouteProvider, RoutingProviderId } from "./types";
 
 /** Whose credential serves a routing request — decides who pays and who receives the data. */
@@ -69,9 +70,10 @@ async function candidateFor(
  * to the user's OWN allowed routing key (never to another provider on the
  * instance's account); with neither, nothing answers and `hint` says why.
  *
- * There is NO fallback on a provider's own failure (quota, 401, outage): the
- * choice is made once, here, so a failure is reported with its reason instead
- * of silently moving the request — and its bill and data — to someone else.
+ * An EXPLICIT provider has no fallback on its own failure (quota, 401, outage):
+ * the failure is reported with its reason instead of silently moving the
+ * request — and its bill and data — to someone else. Only "Automatisch" skips
+ * a provider that refused the instance lately for the next configured one.
  */
 export async function resolveRouting(userId?: string): Promise<RoutingResolution> {
   const adminSettings = await prisma.adminSettings.findFirst({
@@ -87,10 +89,22 @@ export async function resolveRouting(userId?: string): Promise<RoutingResolution
   ): RoutingResolution => ({ provider: null, mode, selected, keySource: null, hint });
 
   if (raw === null) {
+    // Only providers with a usable key or URL are candidates at all (never ORS
+    // without a key). One that refused this instance lately (providerHealth:
+    // 401/403/410 or a run of errors) yields to the next configured one — the
+    // admin chose "Automatisch", not that provider (#411). With every candidate
+    // down, the first answers anyway so its refusal is reported, not hidden.
+    let firstDown: Candidate | null = null;
     for (const id of AUTO_ORDER) {
       const c = await candidateFor(id, userId, customUrl, false);
-      if (c) return { provider: c.provider, mode: "auto", selected: null, ...pick(c) };
+      if (!c) continue;
+      if (providerDown(c.provider.id) === null) {
+        return { provider: c.provider, mode: "auto", selected: null, ...pick(c) };
+      }
+      firstDown ??= c;
     }
+    if (firstDown)
+      return { provider: firstDown.provider, mode: "auto", selected: null, ...pick(firstDown) };
     return none("auto", null, "noProvider");
   }
 
@@ -155,19 +169,26 @@ function isRoutingProviderId(value: string): value is RoutingProviderId {
  * throw and must never leak a key or a URL — only whether routing works and
  * which provider answers it.
  */
-export async function describeRoutingAvailability(
-  userId?: string
-): Promise<{ configured: boolean; providerId: RoutingProviderId | null }> {
+export async function describeRoutingAvailability(userId?: string): Promise<{
+  configured: boolean;
+  providerId: RoutingProviderId | null;
+  /** The answering provider refuses requests right now (#411): legs fall back to straight. */
+  failing: Pick<ProviderDown, "providerId" | "reason"> | null;
+}> {
   try {
     const provider = await resolveRouteProvider(userId);
-    return provider
-      ? { configured: true, providerId: provider.id }
-      : { configured: false, providerId: null };
+    if (!provider) return { configured: false, providerId: null, failing: null };
+    const down = providerDown(provider.id);
+    return {
+      configured: true,
+      providerId: provider.id,
+      failing: down ? { providerId: down.providerId, reason: down.reason } : null,
+    };
   } catch (err) {
     logger.error(
       { error: err instanceof Error ? err.message : String(err) },
       "failed to determine tour routing availability; reporting unconfigured"
     );
-    return { configured: false, providerId: null };
+    return { configured: false, providerId: null, failing: null };
   }
 }

@@ -533,6 +533,7 @@ router.get(
         stops,
         legs: legs.map(toLegDto),
         routingAvailable: routing.configured,
+        routingFailing: routing.failing,
       });
     } catch (error) {
       next(error);

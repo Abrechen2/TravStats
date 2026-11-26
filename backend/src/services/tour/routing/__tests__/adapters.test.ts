@@ -297,9 +297,9 @@ describe("createGraphHopper", () => {
     ]);
   });
 
-  it("returns null on a non-200 response", async () => {
+  it("returns null on a non-200 response that does not refuse the key", async () => {
     const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
-      jsonResponse(401, { message: "invalid key" })
+      jsonResponse(500, { message: "boom" })
     );
     const provider = createGraphHopper("test-key", fetchImpl);
 
@@ -307,6 +307,18 @@ describe("createGraphHopper", () => {
 
     expect(result).toBeNull();
   });
+
+  it.each([401, 403, 410])(
+    "reports a %s as a refused key, so the provider counts as down for the run (#411)",
+    async (status) => {
+      const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+        jsonResponse(status, { message: "invalid key" })
+      );
+      const provider = createGraphHopper("test-key", fetchImpl);
+
+      expect(await provider.route(roadRequest())).toEqual({ failure: "auth" });
+    }
+  );
 
   it("returns null on a 200 with a malformed body", async () => {
     const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>

@@ -1,4 +1,6 @@
 import { prisma } from "../../../db";
+import { recordProviderOutcome, resetProviderHealth } from "../../tour/routing/providerHealth";
+import { encryptApiKey } from "../../../utils/encryption";
 import { hashPassword } from "../../../utils/password";
 import { generateApiToken } from "../../../utils/apiTokens";
 import { loadReadinessContext, resetDiskCache } from "../context";
@@ -328,6 +330,31 @@ describe("visible-problem checks", () => {
       expect((await statusOf("admin.routingKeyUnused", "admin"))?.status).toBe("needsAction");
       await prisma.adminSettings.updateMany({ data: { routingProvider: "graphhopper" } });
       expect((await statusOf("admin.routingKeyUnused", "admin"))?.status).toBe("needsAction");
+    });
+  });
+
+  describe("a routing provider that refuses the instance (#411)", () => {
+    afterEach(async () => {
+      resetProviderHealth();
+      await prisma.adminSettings.updateMany({
+        data: { routingProvider: null, globalOpenrouteserviceApiKey: null },
+      });
+    });
+
+    it("says the provider is down, and offers the keyed provider when the choice went empty", async () => {
+      await prisma.adminSettings.updateMany({
+        data: { routingProvider: null, globalOpenrouteserviceApiKey: encryptApiKey("retired") },
+      });
+      expect(await statusOf("admin.routingProviderDown", "admin")).toBeUndefined();
+      expect(await statusOf("admin.routingProviderEmpty", "admin")).toBeUndefined();
+
+      recordProviderOutcome("openrouteservice", "auth");
+      expect((await statusOf("admin.routingProviderDown", "admin"))?.status).toBe("needsAction");
+      expect((await statusOf("admin.routingProviderEmpty", "admin"))?.status).toBe("needsAction");
+
+      recordProviderOutcome("openrouteservice", null);
+      expect(await statusOf("admin.routingProviderDown", "admin")).toBeUndefined();
+      expect(await statusOf("admin.routingProviderEmpty", "admin")).toBeUndefined();
     });
   });
 

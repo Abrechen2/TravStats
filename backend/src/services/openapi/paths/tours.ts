@@ -24,7 +24,7 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { expenseSchema } from "../../../schemas/expense";
-import { errorContent, errorResponse } from "./shared";
+import { errorContent, errorResponse, routingFields } from "./shared";
 import { clientRefResponses } from "./clientRef";
 import {
   createRouteSchema,
@@ -483,9 +483,7 @@ registerSectionPath({
             route: tourRoute,
             stops: z.array(tourStop),
             legs: z.array(tourLeg),
-            routingAvailable: z
-              .boolean()
-              .describe("Whether a routing provider is configured for this instance"),
+            ...routingFields,
           }),
         },
       },

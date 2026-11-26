@@ -234,6 +234,23 @@ describe("Tour routing provider settings (Phase 3)", () => {
       expect(row?.routingProvider).toBeNull();
     });
 
+    it("keeps the provider when a larger save echoes routingProvider: null (#411: the provider went empty unseen)", async () => {
+      await request(app)
+        .put("/api/v1/admin/api-keys")
+        .set("Cookie", adminCookie)
+        .send({ routingProvider: "graphhopper" })
+        .expect(200);
+
+      const res = await request(app)
+        .put("/api/v1/admin/api-keys")
+        .set("Cookie", adminCookie)
+        .send({ globalGraphhopperApiKey: "gh-key-new", routingProvider: null });
+      expect(res.status).toBe(200);
+      expect(res.body.settings.routingProvider).toBe("graphhopper");
+      const row = await prisma.adminSettings.findFirst();
+      expect(row?.routingProvider).toBe("graphhopper");
+    });
+
     it("rejects a routingProvider outside the closed set", async () => {
       const res = await request(app)
         .put("/api/v1/admin/api-keys")

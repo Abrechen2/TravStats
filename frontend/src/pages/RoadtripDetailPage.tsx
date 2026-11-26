@@ -18,6 +18,7 @@ import ConfirmModal from "../components/ui/ConfirmModal";
 import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
 import LegDialog from "../components/Roadtrips/LegDialog";
 import RoadtripFigures from "../components/Roadtrips/RoadtripFigures";
+import RoutingFailingNotice from "../components/Roadtrips/RoutingFailingNotice";
 import RoadtripTourCards from "../components/Roadtrips/RoadtripTourCards";
 import RoadtripCostsSection from "../components/Roadtrips/RoadtripCostsSection";
 import { RoadtripRailConversion } from "../components/rail/RoadtripRailConversion";
@@ -494,6 +495,7 @@ export default function RoadtripDetailPage(): JSX.Element {
       {reroute.panel}
 
       <RoadtripFigures detail={detail} today={today} />
+      <RoutingFailingNotice failing={detail.routingFailing} />
 
       <div style={{ marginTop: "var(--ts-space-md)" }}>
         <RouteTagsEditor
