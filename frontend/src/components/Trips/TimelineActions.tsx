@@ -16,6 +16,7 @@ import { useSettingsStore } from "../../store/settingsStore";
 import OverflowMenu from "../ui/OverflowMenu";
 import { useToastStore } from "../../store/toastStore";
 import type { TripJournalEntry } from "../../types";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const BUTTON =
   "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent) disabled:opacity-50";
@@ -92,8 +93,7 @@ export default function TimelineActions({
       if (filled > 0) onChanged();
     } catch (err) {
       logger.warn("Filling the journal weather failed", err);
-      addToast(
-        "error",
+      reportPageError(
         t(
           err instanceof JobLostError
             ? "openData:weather.outcomeUnknown"

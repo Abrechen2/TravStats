@@ -61,10 +61,10 @@ import { logger } from "../lib/logger";
 import { dayNumber, roadtripPhase, spanDays } from "../lib/roadtrip/roadtripView";
 import { useTodayZone } from "../hooks/useTodayZone";
 import { todayIn } from "../shared/time";
-import { useToastStore } from "../store/toastStore";
 import type { RoadtripDetail, RoadtripStation } from "../types/roadtrip";
 import type { TourGeometry, TourLeg } from "../types/tour";
 import WebGLGuard from "../components/map/WebGLGuard";
+import { reportPageError } from "../store/pageErrorStore";
 
 type LegEdit = {
   leg: TourLeg;
@@ -93,7 +93,6 @@ export default function RoadtripDetailPage(): JSX.Element {
   const { t } = useTranslation(["roadtrips", "common"]);
   const display = useDisplayFormat();
   const navigate = useNavigate();
-  const addToast = useToastStore((s) => s.addToast);
   const roadtripColor = useDomainColors().colorOf("roadtrip");
   const roadtripColorMode = useRoadtripColorStore((s) => s.mode);
   const todayZone = useTodayZone();
@@ -277,7 +276,7 @@ export default function RoadtripDetailPage(): JSX.Element {
       await toursApi.update(undefined, tour.id, { anchorStopId: station.id });
       navigate(`/tours/${tour.id}`);
     } catch {
-      addToast("error", t("roadtrips:startTourError"));
+      reportPageError(t("roadtrips:startTourError"));
     }
   };
 
@@ -289,7 +288,7 @@ export default function RoadtripDetailPage(): JSX.Element {
       // Costs with no trip to take them: asked once more, never deleted unasked.
       const count = sectionExpenseCount(err);
       if (count !== null) setCostsBlock(count);
-      else addToast("error", t("roadtrips:deleteError"));
+      else reportPageError(t("roadtrips:deleteError"));
     }
   };
 

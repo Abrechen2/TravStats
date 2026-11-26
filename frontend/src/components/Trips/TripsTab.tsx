@@ -23,6 +23,7 @@ import { TripPlacesError } from "./TripPlacesStatus";
 import Button from "../ui/Button";
 import OverflowMenu from "../ui/OverflowMenu";
 import PageHeader from "../ui/PageHeader";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /** What the list is narrowed to; the SERVER applies it, so a trip past the page cap is found. */
 export interface TripsFilters {
@@ -150,7 +151,7 @@ export default function TripsTab({
       // A merge moves the visits to the surviving trip.
       placeCounts.reload();
     } catch {
-      addToast("error", t("trips:merge.error"));
+      reportPageError(t("trips:merge.error"));
     }
   };
 

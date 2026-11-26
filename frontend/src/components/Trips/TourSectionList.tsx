@@ -4,11 +4,11 @@ import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { toursApi } from "../../lib/api/tours";
-import { useToastStore } from "../../store/toastStore";
 import ConfirmModal from "../ui/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { SELECTABLE_LEG_MODES, type LegMode, type TourRoute } from "../../types/tour";
 import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   tripId: string;
@@ -40,7 +40,6 @@ export default function TourSectionList(props: Props): JSX.Element | null {
 
 function TourSectionListBody({ tripId }: Props): JSX.Element {
   const { t } = useTranslation();
-  const addToast = useToastStore((s) => s.addToast);
 
   // `null` = not loaded yet (or the last load failed) — distinct from `[]`,
   // which means the load succeeded and genuinely found no sections.
@@ -101,7 +100,7 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
       setNewMode(DEFAULT_MODE);
       setCreating(false);
     } catch {
-      if (mountedRef.current) addToast("error", t("trips:tours.createError"));
+      if (mountedRef.current) reportPageError(t("trips:tours.createError"));
     } finally {
       if (mountedRef.current) setSaving(false);
     }
@@ -116,7 +115,7 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
       // The row stays. A tour that failed to delete must not disappear from
       // the list — an optimistic removal here would read as "deleted" and
       // come back on the next load, which is worse than the error itself.
-      if (mountedRef.current) addToast("error", t("trips:tours.deleteError"));
+      if (mountedRef.current) reportPageError(t("trips:tours.deleteError"));
     }
   };
 

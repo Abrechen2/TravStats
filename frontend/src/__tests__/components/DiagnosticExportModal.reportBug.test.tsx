@@ -30,6 +30,9 @@ vi.mock("../../hooks/useTranslation", () => ({
 }));
 
 const mockAddToast = vi.fn();
+vi.mock("../../store/pageErrorStore", () => ({
+  reportPageError: (message: string, tone = "error") => mockAddToast(tone, message),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: typeof mockAddToast }) => unknown) =>
     selector({ addToast: mockAddToast }),

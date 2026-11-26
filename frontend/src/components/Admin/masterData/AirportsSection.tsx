@@ -5,6 +5,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
 import { countryName } from "../../../shared/geo/countryCode";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 /**
  * Admin master data for airports (#191). Codes are optional on purpose — a
@@ -57,7 +58,7 @@ export default function AirportsSection(): JSX.Element {
 
   const createAirport = async (): Promise<void> => {
     if (!newName.trim() || !newLat.trim() || !newLon.trim()) {
-      addToast("error", t("admin:airlineAircraftMasterData.airport.missingFields"));
+      reportPageError(t("admin:airlineAircraftMasterData.airport.missingFields"));
       return;
     }
     const lat = Number(newLat.replace(",", "."));
@@ -68,7 +69,7 @@ export default function AirportsSection(): JSX.Element {
       Math.abs(lat) > 90 ||
       Math.abs(lon) > 180
     ) {
-      addToast("error", t("admin:airlineAircraftMasterData.airport.invalidCoords"));
+      reportPageError(t("admin:airlineAircraftMasterData.airport.invalidCoords"));
       return;
     }
     setCreating(true);
@@ -95,7 +96,7 @@ export default function AirportsSection(): JSX.Element {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         t("admin:airlineAircraftMasterData.airport.createFailed");
-      addToast("error", msg);
+      reportPageError(msg);
     } finally {
       setCreating(false);
     }

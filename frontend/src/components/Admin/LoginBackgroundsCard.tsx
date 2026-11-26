@@ -7,6 +7,7 @@ import {
   uploadLoginBackgrounds,
 } from "../../lib/api/loginBackgrounds";
 import { useToastStore } from "../../store/toastStore";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /**
  * Pictures for the sign-in page (Alex, 2026-09-21).
@@ -56,12 +57,12 @@ export function LoginBackgroundsCard(): JSX.Element {
       // A partly-good upload says so rather than reporting a clean success:
       // nine of ten pictures landing is a different fact from ten landing.
       if (result.rejected.length > 0) {
-        addToast(
-          "warning",
+        reportPageError(
           t("admin:loginBackgrounds.partial", {
             accepted: result.accepted.length,
             rejected: result.rejected.join(", "),
-          })
+          }),
+          "warning"
         );
       } else {
         addToast(
@@ -70,7 +71,7 @@ export function LoginBackgroundsCard(): JSX.Element {
         );
       }
     } catch {
-      addToast("error", t("admin:loginBackgrounds.uploadFailed"));
+      reportPageError(t("admin:loginBackgrounds.uploadFailed"));
     } finally {
       setBusy(false);
       if (fileInput.current) fileInput.current.value = "";
@@ -82,7 +83,7 @@ export function LoginBackgroundsCard(): JSX.Element {
     try {
       setBackgrounds(await deleteLoginBackground(name));
     } catch {
-      addToast("error", t("admin:loginBackgrounds.removeFailed"));
+      reportPageError(t("admin:loginBackgrounds.removeFailed"));
     } finally {
       setBusy(false);
     }

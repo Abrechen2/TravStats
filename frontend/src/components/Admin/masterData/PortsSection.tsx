@@ -4,6 +4,7 @@ import type { Port } from "../../../types/cruise";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 /** Admin master data for ports. See ShipsSection for the shape. */
 export default function PortsSection(): JSX.Element {
@@ -47,7 +48,7 @@ export default function PortsSection(): JSX.Element {
     const lat = Number.parseFloat(newLat);
     const lon = Number.parseFloat(newLon);
     if (!newName.trim() || Number.isNaN(lat) || Number.isNaN(lon)) {
-      addToast("error", t("admin:cruiseMasterData.port.missingFields"));
+      reportPageError(t("admin:cruiseMasterData.port.missingFields"));
       return;
     }
     setCreating(true);
@@ -72,7 +73,7 @@ export default function PortsSection(): JSX.Element {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         t("admin:cruiseMasterData.port.createFailed");
-      addToast("error", msg);
+      reportPageError(msg);
     } finally {
       setCreating(false);
     }

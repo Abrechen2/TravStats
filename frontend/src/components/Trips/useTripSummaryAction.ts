@@ -5,6 +5,7 @@ import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useHasLlm } from "../../hooks/useHasLlm";
 import type { useTranslation } from "../../hooks/useTranslation";
 import type { Trip } from "../../types";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /** The two languages the server can write; anything else falls back to German. */
 export function summaryLanguageOf(uiLanguage: string): "de" | "en" {
@@ -57,7 +58,7 @@ export function useTripSummaryAction(
             : status === 503
               ? t("trips:summary.unavailable")
               : t("trips:summary.error");
-      addToast("error", message);
+      reportPageError(message);
     } finally {
       setGenerating(false);
     }

@@ -10,6 +10,9 @@ const { get, post, patch, del, addToast } = vi.hoisted(() => ({
   addToast: vi.fn(),
 }));
 vi.mock("../../../../lib/api/client", () => ({ api: { get, post, patch, delete: del } }));
+vi.mock("../../../../store/pageErrorStore", () => ({
+  reportPageError: (message: string, tone = "error") => addToast(tone, message),
+}));
 vi.mock("../../../../store/toastStore", () => ({
   useToastStore: (select: (s: { addToast: typeof addToast }) => unknown) => select({ addToast }),
 }));

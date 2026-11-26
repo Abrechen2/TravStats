@@ -38,6 +38,7 @@ import { stringParam, useQueryState } from "../../hooks/useQueryState";
 import { useScrollRestoreReady } from "../../lib/navigation/scrollMemory";
 import Banner from "../ui/Banner";
 import Button from "../ui/Button";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const INPUT_CLASS =
   "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] pointer-coarse:min-h-(--ts-size-touch-min)";
@@ -182,7 +183,7 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
       await deleteStay(toDelete.lodgingId, toDelete.id);
     } catch (err: unknown) {
       logger.error("LodgingStaysView: stay delete failed", err);
-      addToast("error", t("lodging:stay.deleteError"));
+      reportPageError(t("lodging:stay.deleteError"));
       setDeleting(false);
       setToDelete(null);
       return;

@@ -45,6 +45,7 @@ import type { BusJourney } from "../types/bus";
 import WebGLGuard from "../components/map/WebGLGuard";
 import BackLink from "../components/navigation/BackLink";
 import Banner from "../components/ui/Banner";
+import { reportPageError } from "../store/pageErrorStore";
 
 /**
  * One bus ride (spec 2026-10-07-bus-domain-design §11). Every time is on its
@@ -110,7 +111,7 @@ export default function BusDetailPage(): JSX.Element {
       navigate("/bus");
     } catch (err: unknown) {
       logger.error("BusDetailPage: delete failed", err);
-      addToast("error", t("bus:deleteError"));
+      reportPageError(t("bus:deleteError"));
       setDeleting(false);
       setConfirmingDelete(false);
     }

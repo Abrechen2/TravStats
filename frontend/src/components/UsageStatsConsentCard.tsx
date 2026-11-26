@@ -2,8 +2,8 @@ import { useState } from "react";
 import { usageStatsApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
-import { useToastStore } from "../store/toastStore";
 import UsageStatsLegalNote from "./UsageStatsLegalNote";
+import { reportPageError } from "../store/pageErrorStore";
 
 const DOCS_URL = "https://travstats.de/docs/usage-statistics/";
 
@@ -34,7 +34,6 @@ export default function UsageStatsConsentCard({
   showHeading = true,
 }: UsageStatsConsentCardProps): JSX.Element {
   const { t } = useTranslation(["usageStats"]);
-  const addToast = useToastStore((s) => s.addToast);
   const [busy, setBusy] = useState(false);
 
   const buttonClass = "flex-1 px-4 py-2 rounded-md text-sm font-medium border";
@@ -50,7 +49,7 @@ export default function UsageStatsConsentCard({
         // this card (inside the What's-New modal) as if consent was set.
         // Leave the card mounted so the admin can retry.
         logger.debug("usage-stats consent request failed", error);
-        addToast("error", t("usageStats:consent.saveFailed"));
+        reportPageError(t("usageStats:consent.saveFailed"));
         setBusy(false);
         return;
       }

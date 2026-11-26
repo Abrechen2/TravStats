@@ -47,6 +47,7 @@ import { busDeleteMessage } from "../lib/bus/busDeleteMessage";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { BusJourney, BusStatus } from "../types/bus";
+import { reportPageError } from "../store/pageErrorStore";
 
 const EMPTY_BUS_SUMMARY: BusListSummary = {
   journeys: 0,
@@ -211,7 +212,7 @@ export default function BusPage(): JSX.Element {
       reload();
     } catch (err: unknown) {
       logger.error("BusPage: delete failed", err);
-      addToast("error", t("bus:deleteError"));
+      reportPageError(t("bus:deleteError"));
     } finally {
       setDeleting(false);
     }

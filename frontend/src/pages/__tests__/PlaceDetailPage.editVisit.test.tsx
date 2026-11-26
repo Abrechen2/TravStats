@@ -50,6 +50,9 @@ vi.mock("../../lib/api/places", () => ({
 }));
 
 const toasts = vi.hoisted(() => ({ addToast: vi.fn() }));
+vi.mock("../../store/pageErrorStore", () => ({
+  reportPageError: (message: string, tone = "error") => toasts.addToast(tone, message),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: (...a: unknown[]) => void }) => unknown) =>
     selector({ addToast: toasts.addToast }),

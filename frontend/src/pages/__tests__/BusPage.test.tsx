@@ -11,6 +11,9 @@ vi.mock("../../hooks/useTranslation", async () => {
   return { useTranslation: germanUseTranslationNs };
 });
 const addToast = vi.fn();
+vi.mock("../../store/pageErrorStore", () => ({
+  reportPageError: (message: string, tone = "error") => addToast(tone, message),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: Record<string, unknown>) => unknown) => selector({ addToast }),
 }));

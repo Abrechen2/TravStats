@@ -58,6 +58,7 @@ import { StationShortCode } from "../components/rail/StationShortCode";
 import WebGLGuard from "../components/map/WebGLGuard";
 import BackLink from "../components/navigation/BackLink";
 import Banner from "../components/ui/Banner";
+import { reportPageError } from "../store/pageErrorStore";
 
 type Editing = { mode: "edit" } | { mode: "connection" } | null;
 
@@ -133,7 +134,7 @@ export default function RailDetailPage(): JSX.Element {
       navigate("/rail");
     } catch (err: unknown) {
       logger.error("RailDetailPage: delete failed", err);
-      addToast("error", t("rail:deleteError"));
+      reportPageError(t("rail:deleteError"));
       setDeleting(false);
       setConfirmingDelete(false);
     }

@@ -25,6 +25,9 @@ const { getHomeAirports, saveHomePeriods, nearbyHomeAirports, addToast, moveHome
 vi.mock("../../../lib/api", () => ({
   settingsApi: { getHomeAirports, saveHomePeriods, nearbyHomeAirports, moveHome },
 }));
+vi.mock("../../../store/pageErrorStore", () => ({
+  reportPageError: (message: string, tone = "error") => addToast(tone, message),
+}));
 vi.mock("../../../store/toastStore", () => ({
   useToastStore: (select: (s: { addToast: typeof addToast }) => unknown) => select({ addToast }),
 }));

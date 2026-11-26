@@ -19,6 +19,7 @@ import {
   type BookingEntryOptions,
   type BookingEntrySelection,
 } from "./BookingEntriesPicker";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /**
  * A flight of the booking's trip. GET /trips/:id sends the whole flight row;
@@ -144,7 +145,7 @@ export default function BookingEditModal({
       }
     } catch (err) {
       logger.error("Failed to save booking", err);
-      addToast("error", t("errors:generic"));
+      reportPageError(t("errors:generic"));
       setSaving(false);
       return;
     }
@@ -156,7 +157,7 @@ export default function BookingEditModal({
         await tripsApi.setBookingEntries(stored.id, selection);
       } catch (err) {
         logger.error("Failed to file booking entries", err);
-        addToast("error", t("trips:bookingEdit.entriesFailed"));
+        reportPageError(t("trips:bookingEdit.entriesFailed"));
         setSaving(false);
         onSaved();
         return;

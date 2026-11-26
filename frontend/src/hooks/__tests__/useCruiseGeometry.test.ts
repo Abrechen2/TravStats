@@ -9,6 +9,9 @@ vi.mock("../../lib/api/cruise", () => ({
 }));
 
 const addToast = vi.fn();
+vi.mock("../../store/pageErrorStore", () => ({
+  reportPageError: (message: string, tone = "error") => addToast(tone, message),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: typeof addToast }) => unknown) =>
     selector({ addToast }),

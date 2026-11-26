@@ -4,6 +4,7 @@ import type { Aircraft } from "../../../types/catalogue";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 /** Admin master data for aircraft types. See AirlinesSection for the shape. */
 export default function AircraftSection(): JSX.Element {
@@ -44,7 +45,7 @@ export default function AircraftSection(): JSX.Element {
 
   const createAircraft = async (): Promise<void> => {
     if (!newName.trim()) {
-      addToast("error", t("admin:airlineAircraftMasterData.aircraft.missingFields"));
+      reportPageError(t("admin:airlineAircraftMasterData.aircraft.missingFields"));
       return;
     }
     setCreating(true);
@@ -61,7 +62,7 @@ export default function AircraftSection(): JSX.Element {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         t("admin:airlineAircraftMasterData.aircraft.createFailed");
-      addToast("error", msg);
+      reportPageError(msg);
     } finally {
       setCreating(false);
     }

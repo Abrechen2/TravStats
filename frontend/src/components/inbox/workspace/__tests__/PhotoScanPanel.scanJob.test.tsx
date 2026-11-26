@@ -30,6 +30,9 @@ vi.mock("../../../../lib/api/immich", async (importOriginal) => ({
 
 const addToast = vi.fn();
 const toastState = { addToast: (...args: unknown[]) => addToast(...args) };
+vi.mock("../../../../store/pageErrorStore", () => ({
+  reportPageError: (message: string, tone = "error") => addToast(tone, message),
+}));
 vi.mock("../../../../store/toastStore", () => ({
   useToastStore: (selector: (s: typeof toastState) => unknown) => selector(toastState),
 }));

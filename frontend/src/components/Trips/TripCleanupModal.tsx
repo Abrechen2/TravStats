@@ -6,6 +6,7 @@ import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { formatDate } from "../../lib/displayFormat";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface TripCleanupModalProps {
   onClose(): void;
@@ -68,7 +69,7 @@ export default function TripCleanupModal({
       onClose();
     } catch (err) {
       logger.error("TripCleanupModal: dissolve failed", err);
-      addToast("error", t("trips:cleanup.error"));
+      reportPageError(t("trips:cleanup.error"));
       setBusy(false);
     }
   };

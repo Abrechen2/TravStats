@@ -3,11 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "./useTranslation";
 import { flightsApi } from "../lib/api";
 import { logger } from "../lib/logger";
-import { useToastStore } from "../store/toastStore";
 import { useRecordedFlightPathsStore } from "../store/recordedFlightPathsStore";
 import { withRecordedPaths } from "../components/layers/recordedFlightPaths";
 import type { GeoJSONFeature } from "../types";
 import type { FlightTrackLine } from "../types/flightTrack";
+import { reportPageError } from "../store/pageErrorStore";
 
 /**
  * The map's flights with each recorded flight's track attached (forgejo#312),
@@ -23,7 +23,6 @@ import type { FlightTrackLine } from "../types/flightTrack";
  */
 export function useRecordedFlightPaths(flights: GeoJSONFeature[]): GeoJSONFeature[] {
   const { t } = useTranslation("flights");
-  const addToast = useToastStore((s) => s.addToast);
   const optedIn = useRecordedFlightPathsStore((s) => s.show);
   const enabled = optedIn && flights.length > 0;
   const [lines, setLines] = useState<FlightTrackLine[]>([]);
@@ -40,7 +39,7 @@ export function useRecordedFlightPaths(flights: GeoJSONFeature[]): GeoJSONFeatur
         if (!cancelled) setLines(loaded);
       } catch (err: unknown) {
         logger.warn({ err }, "useRecordedFlightPaths: recorded lines could not be loaded");
-        if (!cancelled) addToast("warning", t("flights:track.linesLoadError"));
+        if (!cancelled) reportPageError(t("flights:track.linesLoadError"), "warning");
       }
     })();
     return () => {

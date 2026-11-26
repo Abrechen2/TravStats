@@ -17,6 +17,7 @@ import { geoExportPaths } from "../../lib/api/geoExport";
 import InlineError from "../ui/InlineError";
 import Banner from "../ui/Banner";
 import Button from "../ui/Button";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   cruiseId: string;
@@ -68,8 +69,7 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
       } catch (err) {
         // A broken file and a file without timestamps are DIFFERENT server
         // codes, each with its own DE/EN sentence — never the server's prose.
-        addToast(
-          "error",
+        reportPageError(
           saveErrorMessage(err, t, "cruise:tracks.saveError", CRUISE_TRACK_ERROR_KEYS)
         );
       }
@@ -83,8 +83,7 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
         addToast("success", t("tracks.added"));
       } catch (err) {
         const kind = dawarichFailureKind(err);
-        addToast(
-          "error",
+        reportPageError(
           kind
             ? t(dawarichFailureKey(kind))
             : saveErrorMessage(err, t, "cruise:tracks.saveError", CRUISE_TRACK_ERROR_KEYS)
@@ -251,7 +250,7 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
                 await state.remove(track.id);
                 addToast("success", t("tracks.removed"));
               } catch (err) {
-                addToast("error", saveErrorMessage(err, t, "cruise:tracks.removeError"));
+                reportPageError(saveErrorMessage(err, t, "cruise:tracks.removeError"));
               }
             })();
           }}

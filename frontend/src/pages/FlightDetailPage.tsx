@@ -59,6 +59,7 @@ import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import { useFlightBooking } from "../components/flightDetail/useFlightBooking";
 import BackLink from "../components/navigation/BackLink";
 import Banner from "../components/ui/Banner";
+import { reportPageError } from "../store/pageErrorStore";
 
 /**
  * Reading a flight without editing it.
@@ -175,7 +176,7 @@ export default function FlightDetailPage(): JSX.Element {
       navigate("/flights");
     } catch (err: unknown) {
       logger.error("FlightDetailPage: delete failed", err);
-      addToast("error", t("dashboard:errors.deleteFlight"));
+      reportPageError(t("dashboard:errors.deleteFlight"));
       setDeleting(false);
       setConfirmingDelete(false);
     }

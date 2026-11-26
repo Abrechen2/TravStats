@@ -4,8 +4,8 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { tourIndexApi, type TourSummary } from "../../lib/api/tourIndex";
 import { roadtripsApi } from "../../lib/api/roadtrips";
-import { useToastStore } from "../../store/toastStore";
 import { useSettingsStore } from "../../store/settingsStore";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /**
  * The rule's decisions, shown once for the owner to correct (design
@@ -26,7 +26,6 @@ export default function KindReviewNotice({
   onChanged: () => void;
 }): JSX.Element | null {
   const { t } = useTranslation(["roadtrips"]);
-  const addToast = useToastStore((s) => s.addToast);
   const [rows, setRows] = useState<TourSummary[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -63,7 +62,7 @@ export default function KindReviewNotice({
         onChanged();
       }
     } catch {
-      addToast("error", t("roadtrips:review.error"));
+      reportPageError(t("roadtrips:review.error"));
     } finally {
       setBusy(null);
     }

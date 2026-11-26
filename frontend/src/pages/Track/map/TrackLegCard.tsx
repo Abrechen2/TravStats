@@ -15,9 +15,9 @@ import {
   type TravTrackLeg,
 } from "../../../lib/api/travtrackLegs";
 import { logger } from "../../../lib/logger";
-import { useToastStore } from "../../../store/toastStore";
 import { legFigures, legModeLabel, makeNumber, spanText } from "./trackLegFormat";
 import { pillStyle } from "./trackMapStyle";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 /**
  * One leg in numbers (spec 2026-11-03-travtrack-legs, W1/W2): its mode and
@@ -71,9 +71,7 @@ export default function TrackLegCard({
       await travTrackLegsApi.setMode({ fromMs: leg.fromMs, untilMs: leg.untilMs }, mode);
     } catch (err: unknown) {
       logger.warn("TravTrack leg mode could not be saved", err);
-      useToastStore
-        .getState()
-        .addToast("error", t("track:legs.modeFailed", { reason: t(trackErrorKey(err)) }), 8000);
+      reportPageError(t("track:legs.modeFailed", { reason: t(trackErrorKey(err)) }));
       // The leg is gone (re-derived after late points): read the day so the stale one goes.
       if (apiErrorMachineCode(err) === "TRAVTRACK_LEG_NOT_FOUND") {
         try {
@@ -89,7 +87,7 @@ export default function TrackLegCard({
       await onChanged();
     } catch (err: unknown) {
       logger.warn("TravTrack day could not be read after a leg correction", err);
-      useToastStore.getState().addToast("warning", t("track:legs.reloadFailed"), 8000);
+      reportPageError(t("track:legs.reloadFailed"), "warning");
     } finally {
       setBusy(false);
     }
@@ -101,9 +99,7 @@ export default function TrackLegCard({
       await travTrackApi.deleteSpan({ fromMs: leg.fromMs, untilMs: leg.untilMs });
     } catch (err: unknown) {
       logger.warn("TravTrack leg points could not be deleted", err);
-      useToastStore
-        .getState()
-        .addToast("error", t("track:legs.deleteFailed", { reason: t(trackErrorKey(err)) }), 8000);
+      reportPageError(t("track:legs.deleteFailed", { reason: t(trackErrorKey(err)) }));
       setBusy(false);
       setConfirmDelete(false);
       return;

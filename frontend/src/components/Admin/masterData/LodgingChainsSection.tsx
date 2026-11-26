@@ -11,6 +11,7 @@ import {
 } from "../../../lib/api/adminLodgingChains";
 import LodgingChainDialogs, { type ChainAction } from "./LodgingChainDialogs";
 import InlineError from "../../ui/InlineError";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 /**
  * Admin › Unterkünfte › Hotelketten (forgejo#321): the chain catalogue every
@@ -71,7 +72,7 @@ export default function LodgingChainsSection(): JSX.Element {
       setNewProgram("");
       await load(query);
     } catch (err) {
-      addToast("error", t(chainErrorKey(err)));
+      reportPageError(t(chainErrorKey(err)));
     } finally {
       setCreating(false);
     }

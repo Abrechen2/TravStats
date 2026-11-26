@@ -19,6 +19,7 @@ import { SettingRows } from "../ui/SettingRow";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useDialogCopy, useRowCopy } from "./rowCopy";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const NS = "sharing:settings";
 
@@ -65,7 +66,7 @@ export default function SharingSection(): JSX.Element {
       await load();
     } catch (error) {
       logger.error("Sharing settings action failed:", error);
-      addToast("error", t(sharingErrorKey(error, fallbackKey)));
+      reportPageError(t(sharingErrorKey(error, fallbackKey)));
     } finally {
       setBusy(false);
     }

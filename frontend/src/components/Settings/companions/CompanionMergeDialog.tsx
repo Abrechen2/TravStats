@@ -15,6 +15,7 @@ import Dialog from "../../ui/Dialog";
 import { Field, Select } from "../../ui/Field";
 import { companionErrorKey } from "./companionErrorCopy";
 import InlineError from "../../ui/InlineError";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 const NS = "companions:manage.merge";
 
@@ -78,7 +79,7 @@ export default function CompanionMergeDialog({
       onDone();
     } catch (err) {
       logger.error("Companion merge failed:", err);
-      addToast("error", t(companionErrorKey(err, "companions:manage.errors.mergeFailed")));
+      reportPageError(t(companionErrorKey(err, "companions:manage.errors.mergeFailed")));
     } finally {
       setBusy(false);
     }

@@ -4,6 +4,7 @@ import type { Airline } from "../../../types/catalogue";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 /**
  * Admin master data for airlines: a searchable list of the seeded catalogue
@@ -51,7 +52,7 @@ export default function AirlinesSection(): JSX.Element {
 
   const createAirline = async (): Promise<void> => {
     if (!newName.trim()) {
-      addToast("error", t("admin:airlineAircraftMasterData.airline.missingFields"));
+      reportPageError(t("admin:airlineAircraftMasterData.airline.missingFields"));
       return;
     }
     setCreating(true);
@@ -74,7 +75,7 @@ export default function AirlinesSection(): JSX.Element {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         t("admin:airlineAircraftMasterData.airline.createFailed");
-      addToast("error", msg);
+      reportPageError(msg);
     } finally {
       setCreating(false);
     }

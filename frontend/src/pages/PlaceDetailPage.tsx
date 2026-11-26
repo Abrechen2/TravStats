@@ -42,6 +42,7 @@ import { visitTime as visitTimeOf } from "../lib/entityTimes";
 import type { Place, PlaceVisit } from "../types/place";
 import BackLink from "../components/navigation/BackLink";
 import InlineError from "../components/ui/InlineError";
+import { reportPageError } from "../store/pageErrorStore";
 
 export default function PlaceDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -131,9 +132,9 @@ export default function PlaceDetailPage(): JSX.Element {
       await refresh();
     } catch (err: unknown) {
       logger.error({ err }, "PlaceDetailPage: reload from the visit dialog failed");
-      addToast("error", t("places:detail.loadError"));
+      reportPageError(t("places:detail.loadError"));
     }
-  }, [refresh, addToast, t]);
+  }, [refresh, t]);
 
   const openVisitEditor = useCallback((visit: PlaceVisit): void => {
     setVisitDialog({ visit });
@@ -146,7 +147,7 @@ export default function PlaceDetailPage(): JSX.Element {
   useEditDeepLink(EDIT_PARAM.editVisit, place !== null, (visitId) => {
     const visit = place?.visits?.find((v) => v.id === visitId);
     if (visit) openVisitEditor(visit);
-    else addToast("error", t("places:detail.visitNotFound"));
+    else reportPageError(t("places:detail.visitNotFound"));
   });
 
   // The trip list for the selector above. Loaded once, not per open: the

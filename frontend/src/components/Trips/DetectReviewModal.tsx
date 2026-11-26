@@ -6,6 +6,7 @@ import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { detectionSourceKey } from "../../lib/tripDetectionSource";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /** The project wrapper narrows i18next's `t` to this signature. */
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
@@ -126,7 +127,7 @@ export default function DetectReviewModal({
       );
       onCommitted();
     } catch {
-      addToast("error", t("trips:detectBanner.error"));
+      reportPageError(t("trips:detectBanner.error"));
     } finally {
       setCommitting(false);
     }

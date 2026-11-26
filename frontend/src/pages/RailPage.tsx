@@ -64,6 +64,7 @@ import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFail
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { railDeleteMessage } from "../lib/rail/railDeleteMessage";
+import { reportPageError } from "../store/pageErrorStore";
 
 const RAIL_STATUSES: readonly RailStatus[] = ["scheduled", "in_progress", "completed", "cancelled"];
 const RAIL_COLUMN_IDS: readonly RailColumnId[] = [
@@ -284,7 +285,7 @@ export default function RailPage(): JSX.Element {
       await reload();
     } catch (err: unknown) {
       logger.error("RailPage: delete failed", err);
-      addToast("error", t("rail:deleteError"));
+      reportPageError(t("rail:deleteError"));
     } finally {
       setDeleting(false);
     }

@@ -19,6 +19,7 @@ import ShareTripDialog from "./ShareTripDialog";
 import { nameKey } from "./addTraveller";
 import { shareBlockKey, sharingErrorKey } from "./sharingCopy";
 import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const NS = "sharing:people";
 /** The same-person question shares its words with the one for people on other servers. */
@@ -106,7 +107,7 @@ export default function TripPeopleSection({
       changed();
     } catch (error) {
       logger.error("Failed to leave share group:", error);
-      addToast("error", t(sharingErrorKey(error, "sharing:trip.errors.leaveFailed")));
+      reportPageError(t(sharingErrorKey(error, "sharing:trip.errors.leaveFailed")));
     } finally {
       setBusy(false);
     }
@@ -173,7 +174,7 @@ export default function TripPeopleSection({
       changed();
     } catch (error) {
       logger.error("Failed to answer the same-person question:", error);
-      addToast("error", t(sharingErrorKey(error, `${COMPANION_NS}.failed`)));
+      reportPageError(t(sharingErrorKey(error, `${COMPANION_NS}.failed`)));
     } finally {
       setBusy(false);
     }

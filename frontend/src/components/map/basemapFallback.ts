@@ -3,8 +3,8 @@ import { useEffect, useSyncExternalStore } from "react";
 import type { StyleSpecification } from "maplibre-gl";
 import { logger } from "../../lib/logger";
 import { usesOwnGeoServer } from "../../lib/ownGeoServer";
-import { useToastStore } from "../../store/toastStore";
 import { buildRasterStyle, resolveFlatStyle, type FlatStyleId } from "./basemapStyles";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /**
  * Every vector basemap comes from one provider (OpenFreeMap by default). When
@@ -27,7 +27,6 @@ const RASTER_FALLBACKS: Partial<Record<FlatStyleId, StyleSpecification>> = {
   dark: carto("dark_all"),
   voyager: carto("rastertiles/voyager"),
 };
-const NOTICE_MS = 10_000;
 
 export function rasterFallbackFor(id: FlatStyleId): StyleSpecification | null {
   return RASTER_FALLBACKS[id] ?? null;
@@ -51,7 +50,7 @@ function announce(): void {
   if (announced) return;
   announced = true;
   const key = usesOwnGeoServer() ? "map:styleFallback.unavailable" : "map:styleFallback.notice";
-  useToastStore.getState().addToast("warning", i18next.t(key), NOTICE_MS);
+  reportPageError(i18next.t(key), "warning");
 }
 
 /** Fetch a style document once; a failure switches its maps to the fallback. */

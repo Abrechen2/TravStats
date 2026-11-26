@@ -10,6 +10,7 @@ import Button from "../ui/Button";
 import { Card } from "../ui/Card";
 
 import { relativeTimeFromNow } from "./relativeTime";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /**
  * "Somebody asked for their password back" — the admin-only block at the top of
@@ -70,7 +71,7 @@ export default function PasswordResetRequestsSection(): JSX.Element | null {
       addToast("success", t("dataQuality:passwordResets.handled"));
     } catch (error) {
       logger.error("Failed to mark the password reset request as handled:", error);
-      addToast("error", t("dataQuality:passwordResets.handleFailed"));
+      reportPageError(t("dataQuality:passwordResets.handleFailed"));
     } finally {
       setBusyIds((prev) => {
         const next = new Set(prev);

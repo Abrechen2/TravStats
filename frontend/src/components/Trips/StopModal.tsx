@@ -2,7 +2,6 @@ import Dialog from "../ui/Dialog";
 import { useEffect, useState } from "react";
 import type { TripStop } from "../../types";
 import { tripsApi } from "../../lib/api";
-import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LocationInput } from "../location/LocationInput";
 import type { LocationCoordinates, LocationSelection } from "../location/LocationInput";
@@ -10,6 +9,7 @@ import { splitTimeValue } from "../../lib/tripTimeline";
 import { tripStopEnd, tripStopStart } from "../../lib/entityTimes";
 import { tripStopTime } from "../../lib/tripStopTime";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface StopModalProps {
   tripId: string;
@@ -34,7 +34,6 @@ export default function StopModal({
   onSaved,
 }: StopModalProps): JSX.Element {
   const { t } = useTranslation(["trips", "location", "common"]);
-  const addToast = useToastStore((s) => s.addToast);
 
   const [title, setTitle] = useState(stop?.title ?? "");
   const [domain, setDomain] = useState<string>(stop?.domain ?? "poi");
@@ -116,7 +115,7 @@ export default function StopModal({
       onSaved();
     } catch (err: unknown) {
       const fallback = stop ? "trips:toasts.updateError" : "trips:toasts.createError";
-      addToast("error", saveErrorMessage(err, t, fallback));
+      reportPageError(saveErrorMessage(err, t, fallback));
     } finally {
       setSaving(false);
     }

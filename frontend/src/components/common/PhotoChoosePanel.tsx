@@ -17,6 +17,7 @@ import {
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   target: ChoiceTarget;
@@ -159,12 +160,12 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
         })
       );
       if (result.skipped > 0)
-        addToast("error", t("common:photoChoose.skipped", { count: result.skipped }));
+        reportPageError(t("common:photoChoose.skipped", { count: result.skipped }));
       onSaved();
       await load();
     } catch (err: unknown) {
       logger.error("PhotoChoosePanel: save failed", err);
-      addToast("error", t("common:photoChoose.saveFailed"));
+      reportPageError(t("common:photoChoose.saveFailed"));
     } finally {
       setSaving(false);
     }

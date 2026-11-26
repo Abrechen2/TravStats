@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import errorToastBaseline from "./uiUnifyB.errorToasts.baseline.json";
 
 /**
  * rc.47 UI unification, package B — dialogs, errors, undo, confirms.
@@ -123,12 +122,10 @@ describe("one error voice", () => {
     expectRatchet(found, RED_ALLOWED);
   });
 
-  it("a toast is for success and undo: error toasts only shrink (baseline)", () => {
-    const found = new Map<string, number>();
-    for (const f of FILES) {
-      const n = count(f.text, /addToast\(\s*["'](error|warning)["']/g);
-      if (n > 0) found.set(f.rel, n);
-    }
-    expectRatchet(found, errorToastBaseline as Record<string, number>);
+  it("a toast is for success and undo: no error or warning toast anywhere", () => {
+    const hits = FILES.filter((f) => /addToast\(\s*["'](error|warning)["']/.test(f.text)).map(
+      (f) => f.rel
+    );
+    expect(hits, "use reportPageError (page failure) or InlineError (field failure)").toEqual([]);
   });
 });

@@ -59,6 +59,7 @@ import TablePagination from "../components/table/TablePagination";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
 import { LoyaltyFilterNotice, useLoyaltyListFilter } from "../components/Loyalty/LoyaltyListFilter";
+import { reportPageError } from "../store/pageErrorStore";
 
 type TypeFilter = LodgingType | "all";
 type YearFilter = number | "all";
@@ -351,7 +352,7 @@ export default function LodgingListPage(): JSX.Element {
       await reloadAll();
     } catch (err: unknown) {
       logger.error("LodgingListPage: delete failed", err);
-      addToast("error", t("lodging:detail.deleteError"));
+      reportPageError(t("lodging:detail.deleteError"));
     } finally {
       setDeleting(false);
     }

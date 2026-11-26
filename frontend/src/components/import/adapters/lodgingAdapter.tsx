@@ -18,6 +18,7 @@ import type {
   LodgingImportSummary,
 } from "../../../types/lodgingImport";
 import type { DomainImportAdapter, ReviewModalProps } from "../types";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 /**
  * The lodging shape of `ParseEmailResult` / `ParsePdfResult`
@@ -84,7 +85,7 @@ export function useLodgingImportAdapter(): DomainImportAdapter {
     renderReviewModal: (props) => (
       <LodgingReviewSlot
         {...props}
-        onEmpty={(message) => addToast("error", message ?? t("lodging:import.noBookings"))}
+        onEmpty={(message) => reportPageError(message ?? t("lodging:import.noBookings"))}
         onCommitResult={presentCommitResult}
       />
     ),

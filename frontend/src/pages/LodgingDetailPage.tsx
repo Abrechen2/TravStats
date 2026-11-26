@@ -50,6 +50,7 @@ import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import WebGLGuard from "../components/map/WebGLGuard";
 import BackLink from "../components/navigation/BackLink";
 import Banner from "../components/ui/Banner";
+import { reportPageError } from "../store/pageErrorStore";
 
 /** What a figure reads as when it cannot be stated. The same dash the spend
  *  card already prints for an unconvertible total. */
@@ -159,7 +160,7 @@ export default function LodgingDetailPage(): JSX.Element {
   useEditDeepLink(EDIT_PARAM.editStay, lodging !== null, (stayId) => {
     const stay = lodging?.stays.find((s) => s.id === stayId);
     if (stay) setEditingStay(stay);
-    else addToast("error", t("lodging:detail.stayNotFound"));
+    else reportPageError(t("lodging:detail.stayNotFound"));
   });
 
   // `?stay=<id>` (from a package's member sheet) marks that stay and scrolls it into view.
@@ -205,7 +206,7 @@ export default function LodgingDetailPage(): JSX.Element {
       setAggregatesStale(false);
     } catch (err: unknown) {
       logger.error("LodgingDetailPage: reload from the stay editor failed", err);
-      addToast("error", t("lodging:detail.loadError"));
+      reportPageError(t("lodging:detail.loadError"));
     }
   };
 
@@ -224,7 +225,7 @@ export default function LodgingDetailPage(): JSX.Element {
       navigate("/lodging");
     } catch (err: unknown) {
       logger.error("LodgingDetailPage: delete failed", err);
-      addToast("error", t("lodging:detail.deleteError"));
+      reportPageError(t("lodging:detail.deleteError"));
       setDeleting(false);
       setConfirmingDelete(false);
     }
@@ -244,7 +245,7 @@ export default function LodgingDetailPage(): JSX.Element {
       await deleteStay(lodging.id, stay.id);
     } catch (err: unknown) {
       logger.error("LodgingDetailPage: stay delete failed", err);
-      addToast("error", t("lodging:stay.deleteError"));
+      reportPageError(t("lodging:stay.deleteError"));
       setDeletingStay(false);
       setConfirmingStayDelete(null);
       return;
@@ -273,7 +274,7 @@ export default function LodgingDetailPage(): JSX.Element {
         prev === null ? prev : { ...prev, stays: prev.stays.filter((s) => s.id !== stay.id) }
       );
       setAggregatesStale(true);
-      addToast("error", t("lodging:stay.refreshFailed"));
+      reportPageError(t("lodging:stay.refreshFailed"));
     }
   };
 

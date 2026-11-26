@@ -41,6 +41,7 @@ import { CruiseImportFlightGap } from "./CruiseImportFlightGap";
 import { CruiseReimportCompare } from "./CruiseReimportCompare";
 import type { ReimportConflict, ReimportSummary } from "./CruiseReimportCompare";
 import Toggletip from "../ui/Toggletip";
+import { reportPageError } from "../../store/pageErrorStore";
 
 export { deriveTripMeta } from "./cruiseImportEntry";
 
@@ -107,12 +108,12 @@ export function CruiseImportPreviewModal({
 
   const handleSave = async (): Promise<void> => {
     if (entryData.some((e) => e.priceInvalid)) {
-      addToast("error", t("cruise:form.errors.price"));
+      reportPageError(t("cruise:form.errors.price"));
       return;
     }
     const timeError = entryData.find((e) => e.timeError)?.timeError;
     if (timeError) {
-      addToast("error", saveErrorMessage(timeError, t, "cruise:import.saveError"));
+      reportPageError(saveErrorMessage(timeError, t, "cruise:import.saveError"));
       return;
     }
     setSaving(true);
@@ -129,7 +130,7 @@ export function CruiseImportPreviewModal({
       else afterComparison();
     } catch (err: unknown) {
       logger.error("CruiseImportPreviewModal: save failed", err);
-      addToast("error", saveErrorMessage(err, t, "cruise:import.saveError"));
+      reportPageError(saveErrorMessage(err, t, "cruise:import.saveError"));
     } finally {
       setSaving(false);
     }
@@ -155,11 +156,11 @@ export function CruiseImportPreviewModal({
       );
     }
     if (stillMissing > 0) {
-      addToast("warning", t("cruise:flightGap.leftOut", { count: stillMissing }));
+      reportPageError(t("cruise:flightGap.leftOut", { count: stillMissing }), "warning");
     }
     void Promise.resolve(onSaved()).catch((err: unknown) => {
       logger.error("CruiseImportPreviewModal: finishing the import failed", err);
-      addToast("error", saveErrorMessage(err, t, "cruise:import.saveError"));
+      reportPageError(saveErrorMessage(err, t, "cruise:import.saveError"));
     });
   };
 

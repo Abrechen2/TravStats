@@ -15,6 +15,7 @@ import { logger } from "../../lib/logger";
 import { todayZoneNow } from "../../hooks/useTodayZone";
 import { todayIn } from "../../shared/time";
 import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /**
  * "Zuhause" — residence plus home airports, by date (owner decision
@@ -131,7 +132,7 @@ export default function HomeAirportSection({
       if (apiErrorCode(err) === "HOME_PERIOD_OVERLAP" && overlap) setPeriods(overlap);
       const text = errorText(err);
       setSaveError(text);
-      addToast("error", text);
+      reportPageError(text);
       return false;
     } finally {
       setSaving(false);
@@ -186,7 +187,7 @@ export default function HomeAirportSection({
       setPeriods(saved.periods);
     } catch (err) {
       logger.error("Failed to delete home period:", err);
-      addToast("error", t("settings:homeAirport.errors.deleteFailed"));
+      reportPageError(t("settings:homeAirport.errors.deleteFailed"));
     } finally {
       setSaving(false);
     }

@@ -11,6 +11,7 @@ import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { useAuthStore } from "../store/authStore";
 import InlineError from "./ui/InlineError";
+import { reportPageError } from "../store/pageErrorStore";
 
 /**
  * "Fehler melden": the diagnostic bundle for a PUBLIC GitHub issue.
@@ -129,7 +130,7 @@ export default function DiagnosticExportModal({
       addToast("success", t("common:diagnostic.copied"));
     } catch (err: unknown) {
       logger.error("Clipboard write failed:", err);
-      addToast("error", t("common:diagnostic.copyFailed"));
+      reportPageError(t("common:diagnostic.copyFailed"));
     }
   };
 
@@ -162,7 +163,7 @@ export default function DiagnosticExportModal({
       logger.error("Version lookup for the bug report failed:", err);
     }
     window.open(issueUrl(version), "_blank", "noopener,noreferrer");
-    addToast("warning", t("common:diagnostic.exportFailedToast"));
+    reportPageError(t("common:diagnostic.exportFailedToast"), "warning");
   };
 
   // Once the bundle is here its own scope decides what the text promises; until

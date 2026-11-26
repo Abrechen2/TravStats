@@ -23,6 +23,9 @@ vi.mock("../../../lib/api/sharing", () => ({
 let demo = false;
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => demo }));
 const addToast = vi.fn();
+vi.mock("../../../store/pageErrorStore", () => ({
+  reportPageError: (message: string, tone = "error") => addToast(tone, message),
+}));
 vi.mock("../../../store/toastStore", () => ({
   useToastStore: (select: (s: { addToast: typeof addToast }) => unknown) => select({ addToast }),
 }));

@@ -10,6 +10,7 @@ import { useToastStore } from "../../../store/toastStore";
 import { Card } from "../../ui/Card";
 import Button from "../../ui/Button";
 import EmptyState from "../../ui/EmptyState";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 const NS = "dataQuality:inbox.photoJourneys";
 const SERVICES_PATH = "/settings/dienstek#immich";
@@ -78,12 +79,11 @@ export default function PhotoScanPanel({
         addToast("info", t(`${NS}.messages.scanOutcomeUnknown`));
         await onScanned();
       } else if (error instanceof JobFailedError && isImmichFailureKind(error.code)) {
-        addToast(
-          "error",
+        reportPageError(
           t(`${NS}.errors.scanFailedImmich`, { reason: t(`immich:${failureKey(error.code)}`) })
         );
       } else {
-        addToast("error", t(`${NS}.errors.scanFailed`));
+        reportPageError(t(`${NS}.errors.scanFailed`));
       }
     } finally {
       setScanning(false);

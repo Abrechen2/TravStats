@@ -11,6 +11,9 @@ vi.mock("../../lib/api", () => ({
   flightsApi: { getTrackLines: (...args: unknown[]) => getTrackLinesMock(...args) },
 }));
 const addToastMock = vi.fn();
+vi.mock("../../store/pageErrorStore", () => ({
+  reportPageError: (message: string, tone = "error") => addToastMock(tone, message),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (select: (s: { addToast: typeof addToastMock }) => unknown) =>
     select({ addToast: addToastMock }),

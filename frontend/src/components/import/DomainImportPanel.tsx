@@ -10,6 +10,7 @@ import { ImportManualFooter, ImportRouteList, ImportRouteRow } from "./ImportRou
 import { isParseableDomain } from "./types";
 import { llmProviderOfResult, readByMessage } from "../../lib/llmProviderCopy";
 import type { DomainImportAdapter, ImportRouteContext } from "./types";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const EmailImportTab = lazy(() => import("./EmailImportTab"));
 
@@ -109,12 +110,9 @@ export default function DomainImportPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const handleError = useCallback(
-    (message: string) => {
-      addToast("error", message);
-    },
-    [addToast]
-  );
+  const handleError = useCallback((message: string) => {
+    reportPageError(message);
+  }, []);
 
   // Which model read the document, when one did — a cloud provider by host,
   // so the user sees where their booking went (beta.17).

@@ -61,6 +61,7 @@ import type { Airport } from "../lib/api";
 import { isTransientSaveError, saveErrorKey } from "../lib/saveErrorMessage";
 import { flightArrival, flightDeparture } from "../lib/entityTimes";
 import { storedFlightFolds, type FlightFolds } from "../lib/flightFolds";
+import { reportPageError } from "../store/pageErrorStore";
 
 interface FlightEditModalProps {
   flight: Flight;
@@ -183,7 +184,7 @@ export default function FlightEditModal({
       arrivalTime: result.arrivalTime,
     }));
     if (!result.tzAware) {
-      addToast("warning", t("flights:form.estimateTzUnknown"));
+      reportPageError(t("flights:form.estimateTzUnknown"), "warning");
     }
   };
 

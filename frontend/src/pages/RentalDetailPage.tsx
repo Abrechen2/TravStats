@@ -46,6 +46,7 @@ import type { RentalBooking } from "../types/rental";
 import WebGLGuard from "../components/map/WebGLGuard";
 import BackLink from "../components/navigation/BackLink";
 import Banner from "../components/ui/Banner";
+import { reportPageError } from "../store/pageErrorStore";
 
 const stationLabel = (name: string, iata: string | null): string =>
   iata ? `${name} (${iata})` : name;
@@ -108,7 +109,7 @@ export default function RentalDetailPage(): JSX.Element {
       navigate("/rentals");
     } catch (err: unknown) {
       logger.error("RentalDetailPage: delete failed", err);
-      addToast("error", t("rental:deleteError"));
+      reportPageError(t("rental:deleteError"));
       setDeleting(false);
       setConfirmingDelete(false);
     }

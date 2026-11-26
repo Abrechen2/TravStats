@@ -20,6 +20,7 @@ import PhotoChoosePanel from "./PhotoChoosePanel";
 import DetailSection from "../ui/DetailSection";
 import OverflowMenu, { type OverflowEntry } from "../ui/OverflowMenu";
 import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   kind: EntryPhotoKind;
@@ -72,7 +73,7 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
       await work();
     } catch (err: unknown) {
       logger.error("EntryPhotos: action failed", err);
-      addToast("error", failure);
+      reportPageError(failure);
     } finally {
       setBusy(false);
     }

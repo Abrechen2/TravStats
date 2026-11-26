@@ -21,6 +21,9 @@ vi.mock("../../../lib/logger", () => ({
 }));
 
 const addToastMock = vi.fn();
+vi.mock("../../../store/pageErrorStore", () => ({
+  reportPageError: (message: string, tone = "error") => addToastMock(tone, message),
+}));
 vi.mock("../../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: (...args: unknown[]) => void }) => unknown) =>
     selector({ addToast: (...args: unknown[]) => addToastMock(...args) }),

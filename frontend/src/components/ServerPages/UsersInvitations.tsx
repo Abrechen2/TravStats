@@ -14,6 +14,7 @@ import Button from "../ui/Button";
 import { ConfirmDialog, ErrorLine, SettingItem } from "../ui/settings";
 import type { Invitation } from "./types";
 import { useAdminAction } from "./useAdminAction";
+import { reportPageError } from "../../store/pageErrorStore";
 
 type Filter = "all" | "active" | "used" | "expired";
 const FILTERS: readonly Filter[] = ["all", "active", "used", "expired"];
@@ -99,7 +100,7 @@ export default function UsersInvitations(): JSX.Element {
       await copyToClipboard(`${window.location.origin}/register?token=${invitation.token}`);
       addToast("success", t("admin:invitations.success.copiedToClipboard"));
     } catch {
-      addToast("error", t("admin:invitations.success.copyFailed"));
+      reportPageError(t("admin:invitations.success.copyFailed"));
     }
   };
   const resend = (invitation: Invitation): Promise<boolean> =>

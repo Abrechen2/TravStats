@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useCoverCropStore } from "../../store/coverCropStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { immichApi } from "../../lib/api/immich";
-import { useToastStore } from "../../store/toastStore";
+import { reportPageError } from "../../store/pageErrorStore";
 
 export interface LightboxItem {
   id: string;
@@ -33,7 +33,6 @@ export default function PhotoLightbox({
   onCoverChanged,
 }: Props): JSX.Element | null {
   const { t } = useTranslation("immich");
-  const addToast = useToastStore((s) => s.addToast);
   const [index, setIndex] = useState(startIndex);
   const [coverSet, setCoverSet] = useState(false);
   const [settingCover, setSettingCover] = useState(false);
@@ -100,7 +99,7 @@ export default function PhotoLightbox({
         });
       }
     } catch {
-      addToast("error", t("errors.unreachable"));
+      reportPageError(t("errors.unreachable"));
     } finally {
       setSettingCover(false);
     }

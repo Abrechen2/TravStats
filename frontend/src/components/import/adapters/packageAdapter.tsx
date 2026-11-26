@@ -16,6 +16,7 @@ import Dialog from "../../ui/Dialog";
 import { PackageImportPreviewModal } from "../../Trips/PackageImportPreviewModal";
 import type { ReviewModalProps } from "../types";
 import Banner from "../../ui/Banner";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 /**
  * The review step of a tour operator's documents (plan 2026-10-09 P3), used
@@ -31,7 +32,7 @@ export function usePackageReviewRenderer(): (props: ReviewModalProps) => JSX.Ele
     return (
       <PackageReviewSlot
         {...props}
-        onEmpty={(message) => addToast("error", message)}
+        onEmpty={(message) => reportPageError(message)}
         onSaved={() => addToast("success", t("import:package.saved"))}
       />
     );

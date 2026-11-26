@@ -3,9 +3,9 @@ import type { JSX, ReactNode } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import { useToastStore } from "../../store/toastStore";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /** The shape every photo endpoint answers with. */
 export interface StripPhoto {
@@ -59,7 +59,6 @@ export function PhotoStrip<T extends StripPhoto>({
   originLabel,
 }: Props<T>): JSX.Element {
   const { t } = useTranslation(["places", "common"]);
-  const addToast = useToastStore((s) => s.addToast);
   const inputRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<T[]>(photos);
   const [busy, setBusy] = useState(false);
@@ -87,7 +86,7 @@ export function PhotoStrip<T extends StripPhoto>({
             ? t("places:photos.unsupportedType")
             : t("places:photos.uploadFailed");
         setUploadError(message);
-        addToast("error", message);
+        reportPageError(message);
       } finally {
         setBusy(false);
         // Clear the input, or picking the same file twice in a row fires no
@@ -95,7 +94,7 @@ export function PhotoStrip<T extends StripPhoto>({
         if (inputRef.current) inputRef.current.value = "";
       }
     },
-    [onUpload, context, addToast, t]
+    [onUpload, context, t]
   );
 
   const handleDelete = useCallback(
@@ -105,10 +104,10 @@ export function PhotoStrip<T extends StripPhoto>({
         setRows((prev) => prev.filter((p) => p.id !== photoId));
       } catch (err: unknown) {
         logger.error({ err, context }, "PhotoStrip: delete failed");
-        addToast("error", t("places:photos.deleteFailed"));
+        reportPageError(t("places:photos.deleteFailed"));
       }
     },
-    [onDelete, context, addToast, t]
+    [onDelete, context, t]
   );
 
   /**
@@ -131,10 +130,10 @@ export function PhotoStrip<T extends StripPhoto>({
         setRows((prev) => prev.map((p) => (p.id === photoId ? saved : p)));
       } catch (err: unknown) {
         logger.error({ err, context }, "PhotoStrip: caption failed");
-        addToast("error", t("places:photos.captionFailed"));
+        reportPageError(t("places:photos.captionFailed"));
       }
     },
-    [onCaption, context, rows, addToast, t]
+    [onCaption, context, rows, t]
   );
 
   const merge = useCallback((photos: T[]): void => {

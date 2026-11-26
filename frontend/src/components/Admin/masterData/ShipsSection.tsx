@@ -4,6 +4,7 @@ import type { Ship } from "../../../types/cruise";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 /**
  * Admin master data for ships. Split out of the former combined cruise
@@ -47,7 +48,7 @@ export default function ShipsSection(): JSX.Element {
 
   const createShip = async (): Promise<void> => {
     if (!newName.trim() || !newLine.trim()) {
-      addToast("error", t("admin:cruiseMasterData.ship.missingFields"));
+      reportPageError(t("admin:cruiseMasterData.ship.missingFields"));
       return;
     }
     setCreating(true);
@@ -71,7 +72,7 @@ export default function ShipsSection(): JSX.Element {
       setNewImo("");
       setNewYear("");
     } catch {
-      addToast("error", t("admin:cruiseMasterData.ship.createFailed"));
+      reportPageError(t("admin:cruiseMasterData.ship.createFailed"));
     } finally {
       setCreating(false);
     }

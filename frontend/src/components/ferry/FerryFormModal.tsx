@@ -10,7 +10,6 @@ import Button from "../ui/Button";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ferryApi, type FerryJourneyInput } from "../../lib/api/ferry";
 import { saveErrorKey } from "../../lib/saveErrorMessage";
-import { useToastStore } from "../../store/toastStore";
 import { tripsApi } from "../../lib/api";
 import { railArrival, railDeparture } from "../../lib/entityTimes";
 import type { FerryJourney } from "../../types/ferry";
@@ -21,6 +20,7 @@ import { BusTerminalChips as TerminalChips } from "../bus/BusTerminalChips";
 import { useEntrySuggestions } from "../../hooks/useEntrySuggestions";
 import { entrySuggestionsApi, NO_FERRY_SUGGESTIONS } from "../../lib/api/entrySuggestions";
 import Banner from "../ui/Banner";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const TEXT = [
   "operator",
@@ -189,7 +189,6 @@ export function FerryFormModal({
     setFields((old) => ({ ...old, [key]: value }));
     setError(null);
   };
-  const addToast = useToastStore((s) => s.addToast);
   const save = async () => {
     if (savingRef.current || importBusy || !complete) return;
     const numbers = readNumbers(fields);
@@ -226,7 +225,7 @@ export function FerryFormModal({
       const { ride: saved, seaRoute } = await ferryApi.saveReported(journey?.id ?? null, input);
       // Saved either way; a sea line that did not come is said, not hidden.
       // No sea way at all ("straight") is an answer, not a failure.
-      if (seaRoute === "failed") addToast("warning", t("ferry:routing.autoFailed"), 9000);
+      if (seaRoute === "failed") reportPageError(t("ferry:routing.autoFailed"), "warning");
       onSaved(saved);
     } catch (err: unknown) {
       setError(t(ferrySaveErrorKey(err, journey === null)));

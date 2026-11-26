@@ -49,6 +49,7 @@ import { ferryDeleteMessage } from "../lib/ferry/ferryDeleteMessage";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { FerryJourney, FerryStatus } from "../types/ferry";
+import { reportPageError } from "../store/pageErrorStore";
 
 const EMPTY_FERRY_SUMMARY: FerryListSummary = {
   journeys: 0,
@@ -216,7 +217,7 @@ export default function FerryPage(): JSX.Element {
       reload();
     } catch (err: unknown) {
       logger.error("FerryPage: delete failed", err);
-      addToast("error", t("ferry:deleteError"));
+      reportPageError(t("ferry:deleteError"));
     } finally {
       setDeleting(false);
     }

@@ -12,6 +12,7 @@ import { GlobeLoader } from "../GlobeLoader";
 import { Button, Card, EmptyState } from "../ui";
 import ShareNoticeCard from "./ShareNoticeCard";
 import ReceivedRemoteOffers from "../sharing/ReceivedRemoteOffers";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const NS = "sharing:inbox";
 
@@ -94,7 +95,7 @@ export default function SharingTab({
       await load();
     } catch (error) {
       logger.error("Failed to answer consent:", error);
-      addToast("error", t(sharingErrorKey(error, `${NS}.errors.answerFailed`)));
+      reportPageError(t(sharingErrorKey(error, `${NS}.errors.answerFailed`)));
       await load();
     } finally {
       setBusy(null);
@@ -108,7 +109,7 @@ export default function SharingTab({
       await load();
     } catch (error) {
       logger.error("Failed to mark notice read:", error);
-      addToast("error", t(sharingErrorKey(error, `${NS}.errors.markReadFailed`)));
+      reportPageError(t(sharingErrorKey(error, `${NS}.errors.markReadFailed`)));
     } finally {
       setBusy(null);
     }
@@ -140,7 +141,7 @@ export default function SharingTab({
               )
             );
       setRowErrors((prev) => ({ ...prev, [notice.id]: message }));
-      addToast("error", message);
+      reportPageError(message);
     } finally {
       setBusy(null);
     }
@@ -167,7 +168,7 @@ export default function SharingTab({
           ? t("sharing:errors.conflictStaleFields", { fields: fields.join(", ") })
           : t(sharingErrorKey(error, `${NS}.errors.resolveFailed`));
       setRowErrors((prev) => ({ ...prev, [notice.id]: message }));
-      addToast("error", message);
+      reportPageError(message);
     } finally {
       setBusy(null);
     }

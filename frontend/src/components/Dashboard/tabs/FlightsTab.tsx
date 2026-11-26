@@ -28,6 +28,7 @@ import { buildStatsMapLayer } from "../modes/buildStatsMapLayer";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 import { SidebarToggle } from "../SidebarToggle";
 import { MapEmptyOverlay } from "./MapEmptyOverlay";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 // Maps the dashboard-level FlightMode to what MapContainer3D's visMode prop expects.
 // "stats-map" is delivered via extraLayers — the map itself renders in "routes" mode.
@@ -209,7 +210,7 @@ export function FlightsTab(): JSX.Element {
         setEditingFlight(created);
       } catch (err: unknown) {
         logger.error("FlightsTab: duplicate failed", err);
-        addToast("error", t("flights:table.toast.duplicateFailed"));
+        reportPageError(t("flights:table.toast.duplicateFailed"));
       }
     },
     [addToast, refreshAll, t]
@@ -225,7 +226,7 @@ export function FlightsTab(): JSX.Element {
         await refreshAll();
       } catch (err: unknown) {
         logger.error("FlightsTab: delete failed", err);
-        addToast("error", t("dashboard:errors.deleteFlight"));
+        reportPageError(t("dashboard:errors.deleteFlight"));
         setFlightToDelete(null);
       } finally {
         setDeleting(false);

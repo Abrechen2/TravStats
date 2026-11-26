@@ -24,6 +24,7 @@ import { useDomainColors } from "../../hooks/useDomainColors";
 import { formatDate } from "../../lib/displayFormat";
 import InlineError from "../ui/InlineError";
 import Banner from "../ui/Banner";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   /** Runs after a successful revert so a surrounding page (list + stats) can refresh too. */
@@ -249,7 +250,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
         await onReverted?.();
       } catch (err: unknown) {
         logger.error("ImportLogSection: revert failed", err);
-        addToast("error", t("lodging:import.batches.revertError"));
+        reportPageError(t("lodging:import.batches.revertError"));
       } finally {
         setReverting(false);
       }
