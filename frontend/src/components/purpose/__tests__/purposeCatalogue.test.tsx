@@ -41,6 +41,7 @@ const withCustom = (entries: CustomPurposeEntry[]): void => {
   usePurposeCatalogueStore.setState({
     catalogue: { ...state.catalogue, custom: entries },
     loaded: true,
+    failed: false,
   });
 };
 
@@ -143,6 +144,14 @@ describe("Reisezwecke settings", () => {
         expect.objectContaining({ name: "Ehrenamt", kind: "private" })
       )
     );
+  });
+});
+
+describe("Reisezwecke when the catalogue could not be loaded", () => {
+  it("says so with a retry instead of showing an empty list", () => {
+    usePurposeCatalogueStore.setState({ failed: true });
+    render(<PurposeCatalogueSection />);
+    expect(screen.getByRole("alert")).toHaveTextContent("purpose:custom.loadError");
   });
 });
 

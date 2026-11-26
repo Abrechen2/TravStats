@@ -127,12 +127,15 @@ export async function updateCustomPurpose(
     archived?: boolean;
   }
 ): Promise<CustomPurposeView | undefined> {
-  const existing = await prisma.customPurpose.findFirst({ where: { id, userId } });
-  if (!existing) return undefined;
   const key = `${CUSTOM_PREFIX}${id}`;
   const { archived, ...fields } = input;
   const row = await runUnfiltered(() =>
     prisma.$transaction(async (tx) => {
+      // Read and lock inside the transaction: two concurrent re-kinds must not both compare
+      // against the same old kind and skip the propagation.
+      await tx.$queryRaw`SELECT id FROM custom_purposes WHERE id = ${id} FOR UPDATE`;
+      const existing = await tx.customPurpose.findFirst({ where: { id, userId } });
+      if (!existing) return null;
       const updated = await tx.customPurpose.update({
         where: { id },
         data: {
@@ -155,6 +158,7 @@ export async function updateCustomPurpose(
       return updated;
     })
   );
+  if (!row) return undefined;
   return view(row, await countPurposeUsage(userId, key));
 }
 
@@ -165,9 +169,18 @@ export async function deleteCustomPurpose(
   userId: string,
   id: string
 ): Promise<"deleted" | "in-use" | "not-found"> {
-  const existing = await prisma.customPurpose.findFirst({ where: { id, userId } });
-  if (!existing) return "not-found";
-  if ((await countPurposeUsage(userId, `${CUSTOM_PREFIX}${id}`)) > 0) return "in-use";
-  await prisma.customPurpose.delete({ where: { id } });
-  return "deleted";
+  return runUnfiltered(() =>
+    prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM custom_purposes WHERE id = ${id} FOR UPDATE`;
+      const existing = await tx.customPurpose.findFirst({ where: { id, userId } });
+      if (!existing) return "not-found" as const;
+      const key = `${CUSTOM_PREFIX}${id}`;
+      const counts = await Promise.all(
+        DELEGATES.map((n) => delegate(tx, n).count({ where: { userId, purposeKey: key } }))
+      );
+      if (counts.some((c) => c > 0)) return "in-use" as const;
+      await tx.customPurpose.delete({ where: { id } });
+      return "deleted" as const;
+    })
+  );
 }

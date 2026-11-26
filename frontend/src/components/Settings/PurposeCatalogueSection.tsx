@@ -34,6 +34,7 @@ export default function PurposeCatalogueSection(): JSX.Element {
   const isDemo = useIsDemoAccount();
   const catalogue = usePurposeCatalogue();
   const refresh = usePurposeCatalogueStore((s) => s.refresh);
+  const loadFailed = usePurposeCatalogueStore((s) => s.failed);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [editing, setEditing] = useState<{ id: string; draft: Draft } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -264,6 +265,14 @@ export default function PurposeCatalogueSection(): JSX.Element {
             {t("purpose:custom.add")}
           </button>
         </div>
+      )}
+      {loadFailed && (
+        <p role="alert" className="t-caption">
+          {t("purpose:custom.loadError")}{" "}
+          <button type="button" className={`underline ${COARSE}`} onClick={() => void refresh()}>
+            {t("common:buttons.retry")}
+          </button>
+        </p>
       )}
       {error && (
         <p role="alert" className="t-caption">

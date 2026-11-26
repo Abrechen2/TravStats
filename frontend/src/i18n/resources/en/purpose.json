@@ -84,7 +84,8 @@
     "usage_one": "{{count}} entry",
     "usage_other": "{{count}} entries",
     "inUse": "This purpose is still in use and can only be archived.",
-    "error": "The purpose could not be saved. Please try again."
+    "error": "The purpose could not be saved. Please try again.",
+    "loadError": "Your own purposes could not be loaded."
   },
   "stats": {
     "title": "By purpose",

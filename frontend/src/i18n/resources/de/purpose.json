@@ -84,7 +84,8 @@
     "usage_one": "{{count}} Eintrag",
     "usage_other": "{{count}} Einträge",
     "inUse": "Dieser Zweck wird noch verwendet und kann nur archiviert werden.",
-    "error": "Der Zweck konnte nicht gespeichert werden. Bitte versuche es noch einmal."
+    "error": "Der Zweck konnte nicht gespeichert werden. Bitte versuche es noch einmal.",
+    "loadError": "Deine eigenen Zwecke konnten nicht geladen werden."
   },
   "stats": {
     "title": "Nach Zweck",
