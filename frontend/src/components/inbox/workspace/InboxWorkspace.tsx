@@ -27,6 +27,8 @@ import InboxHistory, { HISTORY_SOURCES, type HistorySource } from "./InboxHistor
 import SourcePanel from "./SourcePanel";
 import TripContext from "./TripContext";
 import WorkspaceToolbar from "./WorkspaceToolbar";
+import OriginChips from "./OriginChips";
+import { hasOrigin, originChips } from "./originFilter";
 import "./workspace.css";
 
 export const INBOX_SOURCES: readonly InboxSource[] = [
@@ -111,7 +113,17 @@ export default function InboxWorkspace({
     [items]
   );
   const visitReview = useVisitReview(visitJourneys, data.reload);
-  const visible = filterInbox(items, query, source, deferred, showDeferred);
+  // The source filter (owner 2026-11-26), in `?origin=`; a chip that no longer exists shows all.
+  const narrowed = items.filter(
+    (item) =>
+      (source === "all" || item.source === source) && deferred.has(item.key) === showDeferred
+  );
+  const chips = originChips(narrowed, t);
+  const requestedOrigin = params.get("origin");
+  const origin = chips.some((c) => c.key === requestedOrigin) ? requestedOrigin : null;
+  const visible = filterInbox(items, query, source, deferred, showDeferred).filter((item) =>
+    hasOrigin(item, origin, t)
+  );
   const visibleKeys = new Set(visible.map((item) => item.key));
   const visibleVisits = visitJourneys.filter((j) => visibleKeys.has(`photos:${j.id}`));
   const selected =
@@ -240,6 +252,14 @@ export default function InboxWorkspace({
             onRecheck={() => void recheck()}
           />
         </div>
+      )}
+      {!nothingAtAll && (
+        <OriginChips
+          chips={chips}
+          total={narrowed.length}
+          value={origin}
+          onChange={(next) => setParam("origin", next)}
+        />
       )}
       {data.failed.length > 0 && (
         <div role="alert" className="rounded-lg border border-(--ts-warn) p-4 text-sm">

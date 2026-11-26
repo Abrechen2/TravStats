@@ -500,7 +500,15 @@
           "covered": "Already recorded"
         }
       },
-      "moreAnswers": "More answers to this question"
+      "moreAnswers": "More answers to this question",
+      "origin": {
+        "label": "Source",
+        "all": "All",
+        "info": "Shows only suggestions from this source. Nothing is changed.",
+        "photos": "Photos",
+        "travtrack": "TravTrack",
+        "calendar": "Calendar"
+      }
     }
   },
   "flag": {

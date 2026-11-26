@@ -500,7 +500,15 @@
           "covered": "Bereits erfasst"
         }
       },
-      "moreAnswers": "Weitere Entscheidungen zu dieser Frage"
+      "moreAnswers": "Weitere Entscheidungen zu dieser Frage",
+      "origin": {
+        "label": "Herkunft",
+        "all": "Alle",
+        "info": "Zeigt nur Vorschläge aus dieser Quelle. Es wird nichts geändert.",
+        "photos": "Fotos",
+        "travtrack": "TravTrack",
+        "calendar": "Kalender"
+      }
     }
   },
   "flag": {
