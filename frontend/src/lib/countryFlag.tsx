@@ -96,13 +96,13 @@ export function CountryLabel({
   className?: string;
 }): JSX.Element | null {
   const { i18n } = useTranslation();
-  const [broken, setBroken] = useState(false);
+  const [brokenCc, setBrokenCc] = useState<string | null>(null);
   const raw = (country ?? "").trim();
   if (!raw) return null;
   const cc = resolveCountryCode(raw);
   const name = (cc && countryName(cc, i18n.language)) || raw;
   const marker =
-    cc && !broken ? (
+    cc && brokenCc !== cc ? (
       <img
         src={flagUrl(cc)}
         alt=""
@@ -110,7 +110,7 @@ export function CountryLabel({
         loading="lazy"
         width={Math.round(height * FLAG_ASPECT)}
         height={height}
-        onError={() => setBroken(true)}
+        onError={() => setBrokenCc(cc)}
         style={{ borderRadius: 2, display: "inline-block", objectFit: "cover", flex: "none" }}
       />
     ) : (
@@ -121,7 +121,10 @@ export function CountryLabel({
         <Icon name="globe" size={height <= 14 ? 14 : 16} />
       </span>
     );
-  if (compact) {
+  // A flag we cannot show is not a name: keep the text beside the marker so
+  // touch users and anyone without hover still read which country it is.
+  const flagShown = Boolean(cc) && brokenCc !== cc;
+  if (compact && flagShown) {
     return (
       <span
         role="img"

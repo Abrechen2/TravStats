@@ -162,7 +162,11 @@ describe("CountryLabel", () => {
     fireEvent.error(container.querySelector("img") as HTMLImageElement);
     expect(container.querySelector("img")).toBeNull();
     expect(screen.getByTestId("country-fallback-marker")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /Germany|Deutschland/ })).toBeInTheDocument();
+    expect(screen.getByText(/Germany|Deutschland/)).toBeInTheDocument();
+  });
+  it("compact with an unresolvable value keeps the text visible, not only a tooltip", () => {
+    render(<CountryLabel country="Atlantis" compact />);
+    expect(screen.getByText("Atlantis")).toBeInTheDocument();
   });
   it("renders nothing for an empty value", () => {
     const { container } = render(<CountryLabel country="  " />);
