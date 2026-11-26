@@ -3,6 +3,7 @@ import { Prisma } from "../../../prisma";
 import { AppError } from "../../../middleware/errorHandler";
 import { payloadHash } from "../../sync/clientRef";
 import { judgeEvent, type RejectReason } from "./judge";
+import { DIAGNOSTICS_MAX_EVENTS_PER_ACCOUNT } from "../../../schemas/travtrackDiagnostics";
 
 /**
  * Takes one diagnostics upload from a paired phone (spec
@@ -116,17 +117,56 @@ export async function deleteDiagnostics(userId: string): Promise<number> {
   return events.count;
 }
 
-/** The retention sweep: events by their instant, receipts by arrival. */
+/** Rows one prune statement removes: short statements, no 60k-row delete in one go. */
+export const PRUNE_BATCH = 5_000;
+
+async function deleteInBatches(run: () => Promise<number>): Promise<number> {
+  let total = 0;
+  for (;;) {
+    const n = await run();
+    total += n;
+    if (n < PRUNE_BATCH) return total;
+  }
+}
+
+/**
+ * The retention sweep: events by their instant, receipts by arrival, then
+ * every account's events beyond `maxPerAccount`, oldest first. In batches of
+ * `PRUNE_BATCH` (perf audit 2026-11, item 8: the single ~60k-row deleteMany
+ * was one long statement and one large WAL burst).
+ */
 export async function pruneDiagnostics(
   retentionDays: number,
-  nowMs: number = Date.now()
-): Promise<{ events: number; uploads: number }> {
+  nowMs: number = Date.now(),
+  maxPerAccount: number = DIAGNOSTICS_MAX_EVENTS_PER_ACCOUNT
+): Promise<{ events: number; uploads: number; overCap: number }> {
   const horizon = new Date(nowMs - retentionDays * 86_400_000);
-  const events = await prisma.travTrackDiagnosticEvent.deleteMany({
-    where: { t: { lt: horizon } },
-  });
-  const uploads = await prisma.travTrackDiagnosticUpload.deleteMany({
-    where: { createdAt: { lt: horizon } },
-  });
-  return { events: events.count, uploads: uploads.count };
+  const events = await deleteInBatches(
+    () => prisma.$executeRaw`
+      DELETE FROM travtrack_diagnostic_events WHERE id IN (
+        SELECT id FROM travtrack_diagnostic_events WHERE t < ${horizon} LIMIT ${PRUNE_BATCH})`
+  );
+  const uploads = await deleteInBatches(
+    () => prisma.$executeRaw`
+      DELETE FROM travtrack_diagnostic_uploads WHERE id IN (
+        SELECT id FROM travtrack_diagnostic_uploads WHERE created_at < ${horizon} LIMIT ${PRUNE_BATCH})`
+  );
+  let overCap = 0;
+  const heavy = await prisma.$queryRaw<{ user_id: string; n: bigint }[]>`
+    SELECT user_id, count(*) AS n FROM travtrack_diagnostic_events
+     GROUP BY user_id HAVING count(*) > ${maxPerAccount}`;
+  for (const { user_id: userId, n } of heavy) {
+    let excess = Number(n) - maxPerAccount;
+    while (excess > 0) {
+      const take = Math.min(excess, PRUNE_BATCH);
+      const removed = await prisma.$executeRaw`
+        DELETE FROM travtrack_diagnostic_events WHERE id IN (
+          SELECT id FROM travtrack_diagnostic_events WHERE user_id = ${userId}
+           ORDER BY t ASC LIMIT ${take})`;
+      if (removed === 0) break;
+      overCap += removed;
+      excess -= removed;
+    }
+  }
+  return { events, uploads, overCap };
 }
