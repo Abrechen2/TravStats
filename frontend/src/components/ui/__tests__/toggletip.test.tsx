@@ -9,7 +9,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import Toggletip from "../Toggletip";
 import HelpIcon from "../../Help/HelpIcon";
-import Modal from "../../Modal";
+import Dialog from "../Dialog";
 import { placeToggletip } from "../toggletipPosition";
 
 const originalMatchMedia = window.matchMedia;
@@ -133,9 +133,9 @@ describe("Toggletip", () => {
   it("inside a form dialog, Escape closes the help and not the form", async () => {
     const onClose = vi.fn();
     render(
-      <Modal open onClose={onClose} title="Flug">
+      <Dialog open onClose={onClose} title="Flug">
         <HelpIcon content="Hilfe" />
-      </Modal>
+      </Dialog>
     );
     await userEvent.click(helpButton());
     await userEvent.keyboard("{Escape}");

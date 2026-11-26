@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import SuggestionChips from "../common/SuggestionChips";
 import {
   FieldError,
@@ -278,7 +278,7 @@ export function BusFormModal({
   const blocked = saving.saving || saving.saved !== null || !ready || importBusy;
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving.saving}
@@ -552,6 +552,6 @@ export function BusFormModal({
         />
         <RequiredLegend className="mt-3" />
       </div>
-    </Modal>
+    </Dialog>
   );
 }

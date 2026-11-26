@@ -57,6 +57,7 @@ import type { RailJourney, RailJourneyDetail } from "../types/rail";
 import { StationShortCode } from "../components/rail/StationShortCode";
 import WebGLGuard from "../components/map/WebGLGuard";
 import BackLink from "../components/navigation/BackLink";
+import Banner from "../components/ui/Banner";
 
 type Editing = { mode: "edit" } | { mode: "connection" } | null;
 
@@ -164,12 +165,9 @@ export default function RailDetailPage(): JSX.Element {
         <BackLink to="/rail" className="ts-back-link text-sm text-(--text-muted)">
           ← {t("rail:title")}
         </BackLink>
-        <div
-          role="alert"
-          className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)"
-        >
+        <Banner tone="error" className="mt-4">
           {isLoadError ? t("rail:detail.loadError") : t("rail:detail.notFound")}
-        </div>
+        </Banner>
         {isLoadError && (
           <div className="mt-3">
             <Button onClick={() => setReloadKey((k) => k + 1)}>{t("common:buttons.retry")}</Button>

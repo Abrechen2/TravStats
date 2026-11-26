@@ -23,6 +23,7 @@ import { FormErrorBanner } from "../components/form";
 import { saveErrorKey } from "../lib/saveErrorMessage";
 import type { CuratedProgress, CuratedProgressItem, VisitSuggestion } from "../types/placeList";
 import { useDomainColors } from "../hooks/useDomainColors";
+import InlineError from "../components/ui/InlineError";
 
 type RowFilter = "all" | "open" | "ticked" | "suggested";
 
@@ -296,9 +297,9 @@ export default function CuratedChecklistPage(): JSX.Element {
     return (
       <AppShell>
         <div className="py-16 text-center">
-          <p role="alert" style={{ color: "var(--danger)" }}>
+          <InlineError>
             {isLoadError ? t("places:lists.loadError") : t("places:checklist.notFound")}
-          </p>
+          </InlineError>
           <Link
             to="/places/lists"
             className="mt-3 inline-block text-sm underline"

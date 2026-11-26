@@ -7,6 +7,7 @@ import { resolvePlaceImport } from "../../lib/api/placeImport";
 import { JobLostError } from "../../lib/api/jobs";
 import { summarizeResolution, type ResolutionSummary } from "../../lib/placeImportTakeout";
 import type { PlaceImportCandidate, PlaceImportResolution } from "../../types/placeImport";
+import InlineError from "../ui/InlineError";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -97,9 +98,7 @@ export function TakeoutResolvePanel({ rows, listName, onResolved, t }: Props): J
         </div>
       )}
       {failure && (
-        <p role="alert" className="mt-2 text-(--danger)">
-          {t(`places:import.takeout.errors.${failure}`)}
-        </p>
+        <InlineError className="mt-2">{t(`places:import.takeout.errors.${failure}`)}</InlineError>
       )}
       {result && <ResolutionSummaryView {...result} t={t} />}
     </div>

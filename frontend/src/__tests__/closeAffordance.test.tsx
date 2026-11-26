@@ -4,7 +4,7 @@ import { join, relative } from "node:path";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import Modal from "../components/Modal";
+import Modal from "../components/ui/Dialog";
 import Dialog from "../components/ui/Dialog";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import { useEscapeClose } from "../hooks/useEscapeClose";

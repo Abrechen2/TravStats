@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { rentalApi, type RentalDeadlineField } from "../../lib/api/rental";
 import { apiErrorMachineCode } from "../../lib/apiError";
@@ -15,6 +15,7 @@ import {
   rentalSaveError,
   type RentalStationDraft,
 } from "./rentalFormModel";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   candidate: RentalImportCandidate;
@@ -193,7 +194,7 @@ export function RentalImportPreviewModal({ candidate, onCancel, onSaved }: Props
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onCancel}
       busy={saving}
@@ -240,9 +241,9 @@ export function RentalImportPreviewModal({ candidate, onCancel, onSaved }: Props
           ) : null}
         </p>
         {declined ? (
-          <p role="alert" className="text-(--danger)">
+          <InlineError>
             {t("rental:import.unknownBooking", { number: candidate.confirmationNumber ?? "–" })}
-          </p>
+          </InlineError>
         ) : null}
         {candidate.action === "update" ? (
           <p className="t-caption">{t("rental:import.updateNote")}</p>
@@ -311,16 +312,12 @@ export function RentalImportPreviewModal({ candidate, onCancel, onSaved }: Props
           </p>
         ) : null}
         {kmConflict ? (
-          <p role="alert" className="text-(--danger)">
+          <InlineError>
             {t("rental:import.kmConflict", { km: candidate.invoice?.distanceKm ?? "–" })}
-          </p>
+          </InlineError>
         ) : null}
-        {error ? (
-          <p role="alert" className="text-(--danger)">
-            {error}
-          </p>
-        ) : null}
+        {error ? <InlineError>{error}</InlineError> : null}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

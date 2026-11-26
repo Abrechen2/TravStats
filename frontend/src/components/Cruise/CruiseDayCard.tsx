@@ -8,6 +8,7 @@ import type { EffectiveTimelineEntry } from "./cruisePorts";
 import { documentsOfDay, portStay } from "./cruiseDayCardModel";
 import type { CruiseDocumentsState } from "./useCruiseDocuments";
 import ChangeHistoryMenuButton from "../changeHistory/ChangeHistoryMenuButton";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   entry: EffectiveTimelineEntry;
@@ -131,12 +132,12 @@ export function CruiseDayCard({
             <span className="text-(--text-muted)">{t("dayCard.documentsLoading")}</span>
           )}
           {documents.status === "failed" && (
-            <span role="alert" className="text-(--danger)">
+            <InlineError>
               {t("dayCard.documentsFailed")}{" "}
               <button type="button" onClick={onRetryDocuments} className={LINK_CLASS}>
                 {t("common:buttons.retry")}
               </button>
-            </span>
+            </InlineError>
           )}
           {documents.status === "ready" &&
             (ofDay.length > 0 ? (

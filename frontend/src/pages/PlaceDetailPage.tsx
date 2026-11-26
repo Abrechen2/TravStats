@@ -41,6 +41,7 @@ import { useDisplayFormat } from "../lib/displayFormat";
 import { visitTime as visitTimeOf } from "../lib/entityTimes";
 import type { Place, PlaceVisit } from "../types/place";
 import BackLink from "../components/navigation/BackLink";
+import InlineError from "../components/ui/InlineError";
 
 export default function PlaceDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -249,9 +250,9 @@ export default function PlaceDetailPage(): JSX.Element {
     return (
       <AppShell>
         <div className="py-16 text-center">
-          <p role="alert" style={{ color: "var(--danger)" }}>
+          <InlineError>
             {isLoadError ? t("places:detail.loadError") : t("places:detail.notFound")}
-          </p>
+          </InlineError>
           {isLoadError && (
             <div className="mt-3 flex justify-center">
               <Button onClick={() => void load()}>{t("common:buttons.retry")}</Button>

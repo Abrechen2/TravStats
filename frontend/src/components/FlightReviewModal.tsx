@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef, useId } from "react";
-import Modal from "./Modal";
+import Dialog from "./ui/Dialog";
 import {
   FormErrorBanner,
   RequiredLegend,
@@ -408,7 +408,7 @@ export default function FlightReviewModal({
   // flight form, it is the dialog ON TOP, so Escape closes the review and
   // leaves the form underneath open.
   return (
-    <Modal
+    <Dialog
       open={isOpen}
       onClose={onClose}
       busy={loading}
@@ -781,7 +781,7 @@ export default function FlightReviewModal({
           <RequiredLegend />
         </form>
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

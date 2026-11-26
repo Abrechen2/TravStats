@@ -11,6 +11,7 @@ import {
   type LogFileInfo,
   type LogReadResponse,
 } from "../../shared/logContract";
+import InlineError from "../ui/InlineError";
 
 /**
  * A read-only view of one log file: filter by level, category and text, page
@@ -268,11 +269,7 @@ export default function LogViewer({
         )}
       </div>
 
-      {error && (
-        <p role="alert" className="text-sm mb-3" style={{ color: "var(--danger)" }}>
-          {error}
-        </p>
-      )}
+      {error && <InlineError className="mb-3">{error}</InlineError>}
       {loading && (
         <p className="text-sm text-(--text-muted)">{t("admin:logging.viewer.loading")}</p>
       )}

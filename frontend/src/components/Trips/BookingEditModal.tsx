@@ -1,5 +1,5 @@
 import { parseDecimalInput } from "../../lib/decimalInput";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
@@ -178,7 +178,7 @@ export default function BookingEditModal({
   );
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving}
@@ -289,6 +289,6 @@ export default function BookingEditModal({
           bookingId={booking?.id ?? null}
         />
       </div>
-    </Modal>
+    </Dialog>
   );
 }

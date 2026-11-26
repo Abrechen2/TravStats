@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
-import { token } from "../../../components/ui/tokens";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useEscapeClose } from "../../../hooks/useEscapeClose";
@@ -15,6 +14,7 @@ import TrackStopCoverage from "./TrackStopCoverage";
 import TrackStopPlace from "./TrackStopPlace";
 import { durationText, spanText } from "./trackLegFormat";
 import { pillStyle } from "./trackMapStyle";
+import InlineError from "../../../components/ui/InlineError";
 
 /**
  * One stop (a dwell between legs) opened from its marker: its time span and
@@ -118,11 +118,7 @@ export default function TrackStopCard({
           {t("track:stop.noStay")}
         </p>
       )}
-      {failure && (
-        <p className="t-caption" role="alert" style={{ color: token("bad") }}>
-          {t(failure)}
-        </p>
-      )}
+      {failure && <InlineError>{t(failure)}</InlineError>}
       <div className="flex flex-wrap items-center gap-2">
         {stay && status === "pending" && (
           <>

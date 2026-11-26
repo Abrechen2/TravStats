@@ -30,7 +30,7 @@ import {
   useDirtyGuard,
   useFormFailure,
 } from "./form";
-import Modal from "./Modal";
+import Dialog from "./ui/Dialog";
 import RouteFields from "./FlightForm/fields/RouteFields";
 import HistoricalDateFields from "./FlightForm/fields/HistoricalDateFields";
 import CatalogueCombobox, {
@@ -349,7 +349,7 @@ export default function FlightEditModal({
   // focus return. The actions sit in its footer (as in the create form), tied
   // to the form by `form=`, so "Abbrechen" goes through the discard question.
   return (
-    <Modal
+    <Dialog
       open={isOpen}
       // Once the flight is stored, every way out (×, Escape, scrim) must let
       // the caller show the edit — not only the footer buttons (re-review N1).
@@ -787,6 +787,6 @@ export default function FlightEditModal({
           <RequiredLegend />
         </form>
       </div>
-    </Modal>
+    </Dialog>
   );
 }

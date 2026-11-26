@@ -6,6 +6,7 @@ import { logger } from "../../lib/logger";
 import { cloudBackupFailureKey } from "../../lib/backupFailure";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   /** Ids already in the backup list; their share copy cannot be fetched again. */
@@ -89,9 +90,7 @@ export default function CloudBackupList({ presentIds, onDownloaded }: Props): JS
         {loading ? t("admin:backup.cloudList.loading") : t("admin:backup.cloudList.load")}
       </button>
       {loadFailed && (
-        <p role="alert" className="mt-2 text-sm text-(--danger)">
-          {t("admin:backup.cloudList.loadFailed")}
-        </p>
+        <InlineError className="mt-2">{t("admin:backup.cloudList.loadFailed")}</InlineError>
       )}
       {remote && remote.length === 0 && (
         <p className="mt-2 text-sm text-(--text-muted)">{t("admin:backup.cloudList.empty")}</p>

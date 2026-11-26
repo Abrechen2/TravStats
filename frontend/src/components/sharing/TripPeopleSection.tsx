@@ -18,6 +18,7 @@ import RemoteTripPeople from "./RemoteTripPeople";
 import ShareTripDialog from "./ShareTripDialog";
 import { nameKey } from "./addTraveller";
 import { shareBlockKey, sharingErrorKey } from "./sharingCopy";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:people";
 /** The same-person question shares its words with the one for people on other servers. */
@@ -27,11 +28,7 @@ const COMPANION_NS = "sharing:remote.trip.companion";
 type ForTrip<T> = { tripId: string; value: T } | null;
 type Picked = { kind: "share" | "link"; person: TripPerson };
 
-const alertLine = (text: string): JSX.Element => (
-  <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
-    {text}
-  </p>
-);
+const alertLine = (text: string): JSX.Element => <InlineError tone="warning">{text}</InlineError>;
 
 /**
  * "Reisende" on the trip overview (spec 2026-10-16, D9) — the trip's people

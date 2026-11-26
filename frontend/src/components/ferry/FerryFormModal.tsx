@@ -2,7 +2,7 @@ import { parseDecimalInput } from "../../lib/decimalInput";
 import type { GapDates } from "../../lib/gapCalendar";
 import { useEffect, useId, useRef, useState } from "react";
 import { FerryTicketImport } from "./FerryTicketImport";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import CompanionPicker from "../CompanionPicker";
 import TagInput from "../TagInput";
 import RequiredLegend from "../form/RequiredLegend";
@@ -20,6 +20,7 @@ import SuggestionChips from "../common/SuggestionChips";
 import { BusTerminalChips as TerminalChips } from "../bus/BusTerminalChips";
 import { useEntrySuggestions } from "../../hooks/useEntrySuggestions";
 import { entrySuggestionsApi, NO_FERRY_SUGGESTIONS } from "../../lib/api/entrySuggestions";
+import Banner from "../ui/Banner";
 
 const TEXT = [
   "operator",
@@ -288,7 +289,7 @@ export function FerryFormModal({
     </label>
   );
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={t(journey ? "ferry:edit" : "ferry:add")}
@@ -347,14 +348,7 @@ export function FerryFormModal({
             {t("ferry:import.checkPorts")}
           </p>
         )}
-        {error && (
-          <p
-            role="alert"
-            className="rounded-md border border-(--danger)/50 bg-(--danger)/10 p-3 text-sm text-(--danger)"
-          >
-            {error}
-          </p>
-        )}
+        {error && <Banner tone="error">{error}</Banner>}
         <fieldset className="space-y-4">
           <legend className="t-label-mono mb-3">{t("ferry:sections.route")}</legend>
           {suggestionsFailed && (
@@ -500,6 +494,6 @@ export function FerryFormModal({
         </fieldset>
         <RequiredLegend />
       </form>
-    </Modal>
+    </Dialog>
   );
 }

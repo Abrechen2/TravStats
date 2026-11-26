@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
-import { token } from "../../../components/ui/tokens";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { trackErrorKey } from "../../../lib/api/travtrack";
@@ -14,6 +13,7 @@ import { loadStopIdentity } from "../../../lib/travtrackStopIdentity";
 import TrackStopPlaceSearch from "./TrackStopPlaceSearch";
 import TrackStopToPlaces from "./TrackStopToPlaces";
 import { pillStyle } from "./trackMapStyle";
+import InlineError from "../../../components/ui/InlineError";
 
 /**
  * The name of a stop (spec 2026-11-03-travtrack-legs, "As built — stop
@@ -184,12 +184,12 @@ export default function TrackStopPlace({
     );
   } else if (lookup.state === "failed") {
     body = (
-      <p className="t-caption" role="alert" style={{ color: token("bad") }}>
+      <InlineError>
         {t("track:stop.place.failed")}{" "}
         <button type="button" className="underline" onClick={ask} style={{ minHeight: height }}>
           {t("track:stop.place.retry")}
         </button>
-      </p>
+      </InlineError>
     );
   } else if (!identity) {
     body = (
@@ -303,11 +303,7 @@ export default function TrackStopPlace({
           height={height}
         />
       )}
-      {failure && (
-        <p className="t-caption" role="alert" style={{ color: token("bad") }}>
-          {t(failure)}
-        </p>
-      )}
+      {failure && <InlineError>{t(failure)}</InlineError>}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import type { PlanItem } from "../../lib/api/travplan";
 import { logger } from "../../lib/logger";
 import { Button, Field, Select } from "../../components/ui";
 import { PlanActions } from "./planLayout";
+import InlineError from "../../components/ui/InlineError";
 const collections: Record<string, string> = {
   flight: "flights",
   hotel: "lodgingStays",
@@ -63,12 +64,7 @@ export function ActualRecordPicker({
     };
   }, [tripId, item.kind]);
   if (!collections[item.kind]) return null;
-  if (failed)
-    return (
-      <p role="alert" className="text-sm text-(--danger)">
-        {t("linkActualFailed")}
-      </p>
-    );
+  if (failed) return <InlineError>{t("linkActualFailed")}</InlineError>;
   if (!rows.length) return null;
   return (
     <PlanActions>

@@ -61,7 +61,6 @@
   "tailwindPalette": [
     "components/AchievementPopup.tsx",
     "components/Admin/AdminPasswordResetModal.tsx",
-    "components/Admin/CreateEmailInviteModal.tsx",
     "components/AirportSeedingBanner.tsx",
     "components/BoardingPassScanner.tsx",
     "components/ChangeDiffView.tsx",
@@ -94,22 +93,11 @@
     "components/lodging/StayEditorFooter.tsx",
     "components/places/PlaceImportPreviewModal.tsx",
     "pages/AircraftPage.tsx",
-    "pages/ForceChangePasswordPage.tsx",
-    "pages/LoginPage.tsx",
     "pages/ResetPasswordPage.tsx",
-    "pages/SetupPage.tsx",
-    "pages/TwoFactorChallengePage.tsx"
+    "pages/SetupPage.tsx"
   ],
   "darkVariants": [],
-  "overlays": [
-    "components/BoardingPassScanner.tsx",
-    "components/Trips/DetectReviewModal.tsx",
-    "components/Trips/TripModal.tsx",
-    "components/import/ColumnMappingWizard.tsx",
-    "components/import/PreviewModal.tsx",
-    "components/places/PlaceImportPreviewModal.tsx",
-    "pages/LoginPage.tsx"
-  ],
+  "overlays": [],
   "overlaysNotDialogs": {
     "components/AchievementPopup.tsx": "A celebration, not a request. It interrupts without being asked, so the dialog contract is wrong for it: a focus trap would take the keyboard away from whatever the reader was doing, and Escape-to-dismiss implies a decision there is none. Named as not-a-dialog in Modal.tsx since 2026-08-23.",
     "components/Cruise/CruiseRouteMap.tsx": "The map's own full-screen edit mode, and it MUST stay in place: rendering the map a second time inside a modal is unmount + mount, maplibre throws its WebGL context away, and the fresh deck.gl layer meets a dead one — every layer dies with 'deck.gl: assertion failed'. Measured on 2026-08-26; it reached the RC server.",

@@ -15,6 +15,7 @@ import {
   type RailShareLinkPrefill,
   type RailShareLinkRequestFailure,
 } from "./railShareLinkModel";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   /** Absent outside the import dialog — then the fallbacks are named, not offered as buttons. */
@@ -120,7 +121,9 @@ export function RailShareLinkRoute({ context }: Props): JSX.Element {
       </form>
       {failure && (
         <div role="alert" className="flex flex-col gap-2" data-testid="rail-share-link-failed">
-          <p className="text-sm text-(--warning)">{t(shareLinkReasonKey(failure.reason))}</p>
+          <InlineError announce={false} tone="warning">
+            {t(shareLinkReasonKey(failure.reason))}
+          </InlineError>
           {facts && (
             <p className="t-caption" data-testid="rail-share-link-facts">
               {t("rail:shareLink.factsKept", {

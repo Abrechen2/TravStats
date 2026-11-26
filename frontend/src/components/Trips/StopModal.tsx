@@ -1,4 +1,4 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useEffect, useState } from "react";
 import type { TripStop } from "../../types";
 import { tripsApi } from "../../lib/api";
@@ -129,7 +129,7 @@ export default function StopModal({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving}
@@ -257,7 +257,7 @@ export default function StopModal({
           />
         </Field>
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

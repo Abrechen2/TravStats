@@ -1,3 +1,5 @@
+import Toast from "../../components/Toast";
+import { useToastStore } from "../../store/toastStore";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -80,6 +82,8 @@ const networkError = (): Error =>
   Object.assign(new Error("Network Error"), { isAxiosError: true, response: undefined });
 
 function renderPage(url = "/roadtrips/rt"): void {
+  useToastStore.getState().clearToasts();
+  render(<Toast />);
   render(
     <MemoryRouter initialEntries={[url]}>
       <Routes>

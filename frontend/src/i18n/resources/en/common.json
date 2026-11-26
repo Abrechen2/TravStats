@@ -8,6 +8,7 @@
   "buttons": {
     "save": "Save",
     "cancel": "Cancel",
+    "undo": "Undo",
     "delete": "Delete",
     "duplicate": "Duplicate",
     "edit": "Edit",

@@ -1,4 +1,4 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -228,7 +228,7 @@ export default function DomainImportPanel({
           place (TripModal), so "empty" left the chooser on top of the form it
           had just opened, and its × closed both (browser acceptance
           2026-09-26). The form is the next step, not a second layer. */}
-      <Modal
+      <Dialog
         open={!showManual}
         onClose={onClose}
         title={adapter.panelTitle}
@@ -273,7 +273,7 @@ export default function DomainImportPanel({
             }}
           />
         </div>
-      </Modal>
+      </Dialog>
 
       {mismatch && (
         <WrongDialogNotice

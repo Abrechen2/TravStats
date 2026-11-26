@@ -8,6 +8,7 @@ import { useToastStore } from "../../store/toastStore";
 import ConfirmModal from "../ui/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { SELECTABLE_LEG_MODES, type LegMode, type TourRoute } from "../../types/tour";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   tripId: string;
@@ -178,9 +179,9 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
             {t("trips:tours.save")}
           </button>
           {showNameMissing && (
-            <p id="tour-name-error" role="alert" className="basis-full text-xs text-(--danger)">
+            <InlineError id="tour-name-error" className="basis-full">
               {t("trips:tours.nameRequired")}
-            </p>
+            </InlineError>
           )}
         </div>
       )}

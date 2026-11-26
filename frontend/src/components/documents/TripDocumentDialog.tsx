@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
   documentsApi,
@@ -11,6 +11,7 @@ import {
 } from "../../lib/api/documents";
 import { logger } from "../../lib/logger";
 import { linkErrorKey } from "./documentLinkUi";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   entry: DocumentEntryRef;
@@ -79,7 +80,7 @@ export default function TripDocumentDialog({ entry, onClose, onLinked }: Props):
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={busy}
@@ -108,11 +109,7 @@ export default function TripDocumentDialog({ entry, onClose, onLinked }: Props):
       }
     >
       <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-        {loadFailed && (
-          <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-            {t("documents:links.errors.candidatesFailed")}
-          </p>
-        )}
+        {loadFailed && <InlineError>{t("documents:links.errors.candidatesFailed")}</InlineError>}
         {documents && documents.length === 0 && !loadFailed && (
           <p className="t-caption">{t("documents:links.noTripDocuments")}</p>
         )}
@@ -141,12 +138,8 @@ export default function TripDocumentDialog({ entry, onClose, onLinked }: Props):
             </li>
           ))}
         </ul>
-        {error !== null && (
-          <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-            {error}
-          </p>
-        )}
+        {error !== null && <InlineError>{error}</InlineError>}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

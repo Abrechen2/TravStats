@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { tripsApi } from "../../lib/api/trips";
 import type { TourSummary } from "../../lib/api/tourIndex";
 import type { Trip } from "../../types";
 import { moveTourToTrip } from "./tourTripMove";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   tour: TourSummary;
@@ -62,7 +63,7 @@ export default function TourTripDialog({ tour, onClose, onMoved }: Props): JSX.E
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving}
@@ -92,7 +93,7 @@ export default function TourTripDialog({ tour, onClose, onMoved }: Props): JSX.E
     >
       {loadError ? (
         <div role="alert" className="text-sm">
-          <p style={{ color: "var(--danger)" }}>{t("trips:tours.move.loadError")}</p>
+          <InlineError announce={false}>{t("trips:tours.move.loadError")}</InlineError>
           <button type="button" className="mt-2 underline" onClick={() => setAttempt((n) => n + 1)}>
             {t("common:buttons.retry")}
           </button>
@@ -118,11 +119,7 @@ export default function TourTripDialog({ tour, onClose, onMoved }: Props): JSX.E
           ))}
         </select>
       )}
-      {error && (
-        <p role="alert" className="mt-3 text-sm" style={{ color: "var(--danger)" }}>
-          {error}
-        </p>
-      )}
+      {error && <InlineError className="mt-3">{error}</InlineError>}
       {offerPhotos && (
         <button
           type="button"
@@ -133,6 +130,6 @@ export default function TourTripDialog({ tour, onClose, onMoved }: Props): JSX.E
           {t("trips:tours.move.detachPhotosConfirm")}
         </button>
       )}
-    </Modal>
+    </Dialog>
   );
 }

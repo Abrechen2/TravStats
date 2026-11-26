@@ -1,5 +1,5 @@
 import OverflowMenu from "../ui/OverflowMenu";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 /**
  * Personal Access Token (PAT) management UI.
  *
@@ -382,7 +382,7 @@ export default function ApiTokensSection(): JSX.Element {
       </SettingRows>
 
       {/* Just-created dialog — plaintext shown ONCE */}
-      <Modal
+      <Dialog
         open={justCreated !== null}
         onClose={dismissJustCreated}
         title={t("settings:apiTokens.justCreatedTitle")}
@@ -435,7 +435,7 @@ export default function ApiTokensSection(): JSX.Element {
             </button>
           </div>
         </div>
-      </Modal>
+      </Dialog>
       {confirmDialog}
     </SectionCard>
   );

@@ -1,9 +1,9 @@
 import { useState, type JSX } from "react";
-import { token } from "../../../components/ui/tokens";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { TravTrackDay } from "../../../lib/api/travtrack";
 import { travTrackCleanupApi } from "../../../lib/api/travtrackCleanup";
 import { logger } from "../../../lib/logger";
+import InlineError from "../../../components/ui/InlineError";
 
 /**
  * A day's cleanup (rc46 extras C): the smoothing switch for this day and for
@@ -97,11 +97,7 @@ export default function TrackDayCleanup({
           </button>
         </p>
       ))}
-      {error && (
-        <p role="alert" className="t-caption" style={{ color: token("bad") }}>
-          {t(error)}
-        </p>
-      )}
+      {error && <InlineError>{t(error)}</InlineError>}
     </div>
   );
 }

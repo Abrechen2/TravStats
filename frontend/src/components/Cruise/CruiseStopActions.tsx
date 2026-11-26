@@ -101,7 +101,11 @@ export function CruiseStopActions({
       <div
         role="group"
         aria-labelledby={idFor("remove-title")}
-        className="mb-3 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-2 text-xs"
+        className="mb-3 rounded-md border p-2 text-xs"
+        style={{
+          borderColor: "color-mix(in srgb, var(--ts-bad) 50%, transparent)",
+          background: "color-mix(in srgb, var(--ts-bad) 10%, transparent)",
+        }}
       >
         <p id={idFor("remove-title")} className="font-medium text-(--text-primary)">
           {t("stops.removeConfirm.title", { title: stopTitle(stop, t), day: stop.dayNumber })}

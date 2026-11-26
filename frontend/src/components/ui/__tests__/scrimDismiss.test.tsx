@@ -2,7 +2,6 @@ import type { JSX } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
-import Modal from "../../Modal";
 import Dialog from "../Dialog";
 
 /**
@@ -17,9 +16,9 @@ function shells(onClose: () => void): Array<[string, JSX.Element]> {
   return [
     [
       "Modal",
-      <Modal key="m" open onClose={onClose} title="Titel" testId="scrim">
+      <Dialog key="m" open onClose={onClose} title="Titel" testId="scrim">
         <input aria-label="Feld" defaultValue="markiere mich" />
-      </Modal>,
+      </Dialog>,
     ],
     [
       "Dialog",

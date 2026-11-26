@@ -8,6 +8,7 @@ import { apiErrorMachineCode } from "../../lib/apiError";
 import { flightsApi, type EnrichmentCandidate } from "../../lib/api/flights";
 import { logger } from "../../lib/logger";
 import { token } from "../ui/tokens";
+import InlineError from "../ui/InlineError";
 
 const KNOWN_CODES = [
   "ENRICH_DISABLED",
@@ -76,12 +77,12 @@ export default function EnrichmentCandidatesPanel(): JSX.Element | null {
     <div className="flex flex-col gap-2">
       <span className="label">{t("settings:historicalEnrichment.candidates.title")}</span>
       {loadFailed ? (
-        <p role="alert" className="text-sm" style={{ color: token("bad") }}>
+        <InlineError>
           {t("settings:historicalEnrichment.candidates.loadFailed")}{" "}
           <button type="button" className="underline" onClick={() => void load()}>
             {t("settings:historicalEnrichment.candidates.retry")}
           </button>
-        </p>
+        </InlineError>
       ) : candidates === null ? null : candidates.length === 0 ? (
         <p className="t-caption">{t("settings:historicalEnrichment.candidates.none")}</p>
       ) : (

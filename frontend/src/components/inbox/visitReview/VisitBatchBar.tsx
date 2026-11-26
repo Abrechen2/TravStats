@@ -6,6 +6,7 @@ import Button from "../../ui/Button";
 
 import { needsName } from "./reviewItems";
 import type { VisitReviewState } from "./useVisitReview";
+import InlineError from "../../ui/InlineError";
 
 /**
  * Answering several visit suggestions at once (forgejo#211, O5): stops inside
@@ -40,11 +41,7 @@ export default function VisitBatchBar({
   return (
     <section aria-label={t(`${base}.title`)} className="space-y-3">
       <p className="t-caption">{t(`${base}.description`)}</p>
-      {review.requestFailed && (
-        <p role="alert" className="text-sm text-(--ts-bad)">
-          {t(`${base}.requestFailed`)}
-        </p>
-      )}
+      {review.requestFailed && <InlineError>{t(`${base}.requestFailed`)}</InlineError>}
       {review.failures.length > 0 && (
         <div role="alert" className="text-sm text-(--ts-bad)">
           <p className="font-semibold">

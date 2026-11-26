@@ -14,6 +14,7 @@ import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
 import { todayZoneNow } from "../../hooks/useTodayZone";
 import { todayIn } from "../../shared/time";
+import InlineError from "../ui/InlineError";
 
 /**
  * "Zuhause" — residence plus home airports, by date (owner decision
@@ -240,12 +241,7 @@ export default function HomeAirportSection({
 
   const body = (): JSX.Element => {
     if (loading) return <p className="t-caption">{t("common:loading.default")}</p>;
-    if (loadFailed)
-      return (
-        <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
-          {t("settings:homeAirport.loadError")}
-        </p>
-      );
+    if (loadFailed) return <InlineError>{t("settings:homeAirport.loadError")}</InlineError>;
     if (view === "airports")
       return (
         <SettingItem

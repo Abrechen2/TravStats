@@ -26,7 +26,7 @@ vi.mock("../../../lib/api", () => ({
 }));
 vi.mock("../../../hooks/useTagSuggestions", () => ({ useTagSuggestions: () => [] }));
 vi.mock("../../../hooks/useTranslation", () => ({ useTranslation: () => ({ t: mocks.t }) }));
-vi.mock("../../Modal", () => ({
+vi.mock("../../ui/Dialog", () => ({
   default: ({
     children,
     footer,

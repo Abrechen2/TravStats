@@ -6,6 +6,7 @@ import AppShell from "../components/ui/AppShell";
 import { useTranslation } from "../hooks/useTranslation";
 import { stravaApi, stravaFailureKind } from "../lib/api/strava";
 import { useToastStore } from "../store/toastStore";
+import InlineError from "../components/ui/InlineError";
 
 /**
  * Where Strava sends the browser back after the consent page.
@@ -52,7 +53,7 @@ export default function StravaCallbackPage(): JSX.Element {
       <div className="py-16 text-center text-sm">
         {error ? (
           <>
-            <p style={{ color: "var(--danger)" }}>{error}</p>
+            <InlineError>{error}</InlineError>
             <Link to="/settings/dienstek#strava" className="mt-4 inline-block underline">
               {t("roadtrips:strava.backToSettings")}
             </Link>

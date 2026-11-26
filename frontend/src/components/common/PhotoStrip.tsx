@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import { apiErrorMachineCode } from "../../lib/apiError";
+import InlineError from "../ui/InlineError";
 
 /** The shape every photo endpoint answers with. */
 export interface StripPhoto {
@@ -252,11 +253,7 @@ export function PhotoStrip<T extends StripPhoto>({
           />
         </label>
       </div>
-      {uploadError && (
-        <p role="alert" className="mt-1 text-xs" style={{ color: "var(--color-danger)" }}>
-          {uploadError}
-        </p>
-      )}
+      {uploadError && <InlineError className="mt-1">{uploadError}</InlineError>}
       {footer?.(merge, drop)}
     </>
   );

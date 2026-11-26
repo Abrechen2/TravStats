@@ -1,4 +1,4 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { tripsApi, type MicroTripCandidate } from "../../lib/api/trips";
@@ -81,7 +81,7 @@ export default function TripCleanupModal({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={busy}
@@ -161,6 +161,6 @@ export default function TripCleanupModal({
           </div>
         </>
       )}
-    </Modal>
+    </Dialog>
   );
 }

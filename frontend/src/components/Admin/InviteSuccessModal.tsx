@@ -1,4 +1,4 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { copyToClipboard } from "../../lib/clipboard";
@@ -38,7 +38,7 @@ export default function InviteSuccessModal({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={t("admin:invitations.success.title")}
@@ -95,6 +95,6 @@ export default function InviteSuccessModal({
           </button>
         </div>
       </>
-    </Modal>
+    </Dialog>
   );
 }

@@ -1,4 +1,4 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import CoverCropHost from "./CoverCropHost";
 import { useGapPrefill } from "../../hooks/useGapPrefill";
 import { gapPrefill } from "../../lib/gapCalendar";
@@ -469,7 +469,7 @@ function MergeConfirmModal({
   const [name, setName] = useState(defaultName);
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onCancel}
       title={`${t("trips:merge.title")} (${t("trips:merge.selected", { count })})`}
@@ -519,7 +519,7 @@ function MergeConfirmModal({
           }}
         />
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

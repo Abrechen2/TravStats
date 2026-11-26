@@ -1,4 +1,4 @@
-import Modal from "./Modal";
+import Dialog from "./ui/Dialog";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useTranslation } from "../hooks/useTranslation";
@@ -10,6 +10,7 @@ import type { DiagnosticBundle } from "../shared/logContract";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { useAuthStore } from "../store/authStore";
+import InlineError from "./ui/InlineError";
 
 /**
  * "Fehler melden": the diagnostic bundle for a PUBLIC GitHub issue.
@@ -178,7 +179,7 @@ export default function DiagnosticExportModal({
       : [];
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={t("common:diagnostic.title")}
@@ -269,9 +270,7 @@ export default function DiagnosticExportModal({
         )}
 
         {state.status === "failed" && (
-          <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
-            {t("common:diagnostic.exportFailed", { reason: reasonText })}
-          </p>
+          <InlineError>{t("common:diagnostic.exportFailed", { reason: reasonText })}</InlineError>
         )}
 
         {failedSections.map(({ name, code }) => (
@@ -301,6 +300,6 @@ export default function DiagnosticExportModal({
           </>
         )}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

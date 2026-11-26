@@ -10,6 +10,7 @@ import { formatDate, formatTime } from "../../../lib/displayFormat";
 import { logger } from "../../../lib/logger";
 import { DASH, makeNumber } from "./trackLegFormat";
 import { TRACK_COLOR, type MapPoint } from "./trackMapLayers";
+import InlineError from "../../../components/ui/InlineError";
 
 const buttonStyle = {
   minHeight: 40,
@@ -121,11 +122,7 @@ export default function TrackPointInspector({
           </div>
         </dl>
       )}
-      {failure && (
-        <span className="t-caption" role="alert" style={{ color: token("bad") }}>
-          {t(failure)}
-        </span>
-      )}
+      {failure && <InlineError>{t(failure)}</InlineError>}
       <div className="flex flex-wrap gap-2">
         {pointId && (
           <button

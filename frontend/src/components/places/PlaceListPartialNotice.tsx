@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import InlineError from "../ui/InlineError";
 
 const COARSE = "pointer-coarse:min-h-(--ts-size-touch-min)";
 
@@ -26,9 +27,9 @@ export function PlaceListPartialNotice({
   const { t } = useTranslation(["places", "common"]);
   return (
     <>
-      <p role="alert" className="mr-auto self-center text-sm" style={{ color: "var(--ts-warn)" }}>
+      <InlineError tone="warning" className="mr-auto self-center">
         {t("places:form.listPartial", { lists: names.join(", "), count: names.length })}
-      </p>
+      </InlineError>
       <button
         type="button"
         onClick={onRetry}

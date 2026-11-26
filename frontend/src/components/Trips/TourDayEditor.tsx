@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { toursApi } from "../../lib/api/tours";
 import { logger } from "../../lib/logger";
 import type { TourRoute } from "../../types/tour";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   route: TourRoute;
@@ -66,11 +67,7 @@ export default function TourDayEditor({ route, tripId, onSaved }: Props): JSX.El
           void save({ startTime: e.target.value || null });
         }}
       />
-      {failed && (
-        <span role="alert" className="text-xs" style={{ color: "var(--danger)" }}>
-          {t("trips:tours.day.saveError")}
-        </span>
-      )}
+      {failed && <InlineError>{t("trips:tours.day.saveError")}</InlineError>}
     </span>
   );
 }

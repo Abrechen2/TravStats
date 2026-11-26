@@ -4,7 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import type { RecoveryKeyStatus } from "../../lib/api/recoveryKey";
 import { logger } from "../../lib/logger";
 import { useAuthStore } from "../../store/authStore";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import Button from "../ui/Button";
 import RecoveryKeyFlow from "./RecoveryKeyFlow";
 
@@ -40,7 +40,7 @@ export default function RecoveryKeyDialog({
   };
 
   return (
-    <Modal
+    <Dialog
       open={open}
       onClose={blocking ? noop : (onClose ?? noop)}
       showClose={!blocking}
@@ -56,6 +56,6 @@ export default function RecoveryKeyDialog({
       }
     >
       <RecoveryKeyFlow onConfirmed={onConfirmed} />
-    </Modal>
+    </Dialog>
   );
 }

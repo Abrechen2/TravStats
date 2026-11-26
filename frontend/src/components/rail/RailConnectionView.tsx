@@ -11,6 +11,7 @@ import { trainLabel } from "./trainLabel";
 import { bareTrainName } from "../../lib/rail/trainName";
 import { useRailLegDocuments, type LegDocuments } from "./useRailLegDocuments";
 import { dateLocaleForLanguage } from "../../lib/units";
+import InlineError from "../ui/InlineError";
 
 /** What the view reads of a leg — a booking leg of the detail read, or a full row. */
 export type RailCompactLeg = RailTransferLeg &
@@ -156,12 +157,12 @@ function LegDocumentsLine({
   }
   if (documents.state === "failed") {
     return (
-      <p className="text-xs text-(--danger)" role="alert" data-testid={testId}>
+      <InlineError testId={testId}>
         {t("rail:connectionView.documentsFailed")}{" "}
         <button type="button" className={`underline ${TOUCH_LINK}`} onClick={onRetry}>
           {t("common:buttons.retry")}
         </button>
-      </p>
+      </InlineError>
     );
   }
   if (documents.documents.length === 0) {

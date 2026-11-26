@@ -13,6 +13,7 @@ import {
 } from "../../../lib/api/smartLists";
 import { BrandRuleDialog } from "./BrandRuleDialog";
 import { SuggestionRow } from "./SuggestionRow";
+import InlineError from "../../ui/InlineError";
 
 const COARSE =
   "pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)";
@@ -82,9 +83,7 @@ export default function SmartListPanel({
   return (
     <>
       {loaded && failed && (
-        <p role="alert" className="mb-4 text-sm" style={{ color: "var(--danger)" }}>
-          {t("places:smartList.loadFailed")}
-        </p>
+        <InlineError className="mb-4">{t("places:smartList.loadFailed")}</InlineError>
       )}
       {rule && (
         <section className="mb-6" aria-label={t("places:smartList.headerLabel")}>
@@ -133,11 +132,7 @@ export default function SmartListPanel({
               <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
                 {t("places:smartList.recentAuto")}
               </h2>
-              {undoError && (
-                <p role="alert" className="mb-2 text-sm" style={{ color: "var(--danger)" }}>
-                  {t(undoError)}
-                </p>
-              )}
+              {undoError && <InlineError className="mb-2">{t(undoError)}</InlineError>}
               <ul className="grid gap-2" style={{ listStyle: "none", padding: 0 }}>
                 {auto.map((row) => (
                   <li

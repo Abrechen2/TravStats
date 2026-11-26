@@ -6,6 +6,7 @@ import { documentIdFromUrl, type ExtractTarget } from "../lib/extractValues";
 import { ExtractValuesAction } from "./documents/ExtractValuesAction";
 import { useConfirmDialog } from "../hooks/useConfirmDialog";
 import { canonicalPrivateFileUrl } from "../lib/privateFileUrl";
+import InlineError from "./ui/InlineError";
 
 interface ReceiptUploadProps {
   currentReceiptUrl?: string | null;
@@ -193,7 +194,7 @@ export default function ReceiptUpload({
         </div>
       )}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <InlineError>{error}</InlineError>}
       {confirmDialog}
     </div>
   );

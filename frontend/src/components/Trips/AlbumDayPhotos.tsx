@@ -7,6 +7,7 @@ import { groupByDay } from "../../lib/galleryGrouping";
 import type { ImmichGalleryAsset, PhotoSourceKind } from "../../types/immich";
 import LazyThumb from "./LazyThumb";
 import { formatDayChip } from "./GalleryDayStrip";
+import InlineError from "../ui/InlineError";
 
 /** Photos per request. A tile row is 3-5 across, so this is a dozen or so rows. */
 export const DAY_PAGE_SIZE = 60;
@@ -168,7 +169,7 @@ export default function AlbumDayPhotos({
 
       {failure && (
         <div role="alert" className="mt-2 rounded-sm border border-(--color-border) p-3 text-sm">
-          <p className="text-(--danger)">{t(failure)}</p>
+          <InlineError announce={false}>{t(failure)}</InlineError>
           {failure !== "errors.notFound" && (
             <button
               type="button"

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import {
   isOutcomeUnknownSaveError,
   isTransientSaveError,
@@ -276,7 +276,7 @@ export function CruiseEditModal({
   // In the shared frame: header and buttons stay put, the body scrolls,
   // Escape closes it, and a changed form asks first (forgejo#248).
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving.saving}
@@ -513,6 +513,6 @@ export function CruiseEditModal({
         />
         {required && <RequiredLegend className="mt-3" />}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

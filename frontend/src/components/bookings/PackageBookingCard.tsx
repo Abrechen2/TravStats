@@ -14,6 +14,9 @@ import type {
   BookingPackageAnswer,
   BookingPackageItem,
 } from "../../types/bookingPackage";
+import InlineError from "../ui/InlineError";
+import Banner from "../ui/Banner";
+import Button from "../ui/Button";
 
 /** The split refusals the server names, each to its own sentence (forgejo#430). */
 const SPLIT_ERROR_KEYS: Readonly<Record<string, string>> = {
@@ -126,12 +129,16 @@ export function PackageBookingCard({ bookingId, highlight, controller }: Props):
 
   if (loadFailed) {
     return (
-      <div role="alert" className="text-sm" style={{ color: "var(--color-error)" }}>
-        {t("trips:bookingPackage.loadFailed")}{" "}
-        <button type="button" style={{ color: "var(--accent)" }} onClick={() => void load()}>
-          {t("common:buttons.retry")}
-        </button>
-      </div>
+      <Banner
+        tone="error"
+        action={
+          <Button variant="secondary" onClick={() => void load()}>
+            {t("common:buttons.retry")}
+          </Button>
+        }
+      >
+        {t("trips:bookingPackage.loadFailed")}
+      </Banner>
     );
   }
   if (!answer) return <p className="text-sm">{t("trips:bookingPackage.loading")}</p>;
@@ -300,11 +307,7 @@ export function PackageBookingCard({ bookingId, highlight, controller }: Props):
                   })}
             </p>
           )}
-          {failure && (
-            <p role="alert" className="text-xs" style={{ color: "var(--color-error)" }}>
-              {t(failure)}
-            </p>
-          )}
+          {failure && <InlineError>{t(failure)}</InlineError>}
           {canSplit && (
             <div className="flex flex-wrap gap-3">
               {draft ? (

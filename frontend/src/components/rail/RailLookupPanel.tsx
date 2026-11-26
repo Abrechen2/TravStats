@@ -21,6 +21,7 @@ import {
   type RailLookupKeptField,
 } from "./railFormModel";
 import type { RailStationDraft } from "./RailStationField";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   draft: RailFormDraft;
@@ -191,9 +192,7 @@ export function RailLookupPanel({
       {isPast ? <p className="t-caption mt-1">{t("rail:lookup.pastDay")}</p> : null}
 
       {state.kind === "error" ? (
-        <p role="alert" className="mt-2 text-sm text-(--danger)">
-          {t("rail:lookup.error")}
-        </p>
+        <InlineError className="mt-2">{t("rail:lookup.error")}</InlineError>
       ) : null}
       {state.kind === "answered" && !match ? <NoMatch answer={state.answer} t={t} /> : null}
 

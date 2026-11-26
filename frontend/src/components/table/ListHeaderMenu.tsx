@@ -3,7 +3,7 @@ import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import GeoExportDialog from "../export/GeoExportDialog";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import OverflowMenu from "../ui/OverflowMenu";
 import type { OverflowEntry } from "../ui/OverflowMenu";
 import { ColumnChecklist } from "./ColumnPicker";
@@ -61,7 +61,7 @@ export default function ListHeaderMenu({
       testId="list-header-menu"
     >
       {columns && prefs && (
-        <Modal
+        <Dialog
           open={picking}
           onClose={() => setPicking(false)}
           title={t("common:table.columns")}
@@ -70,7 +70,7 @@ export default function ListHeaderMenu({
           <div data-testid="column-picker">
             <ColumnChecklist columns={columns} prefs={prefs} />
           </div>
-        </Modal>
+        </Dialog>
       )}
       {geoExport && (
         <GeoExportDialog

@@ -24,7 +24,7 @@ import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { cruiseStopToWire } from "./cruiseStopWire";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { deriveCruiseStatus } from "../../shared/statusDerivation";
 import { ShipPicker } from "./ShipPicker";
 import CatalogueCombobox from "../FlightForm/fields/CatalogueCombobox";
@@ -191,7 +191,7 @@ export function CruiseImportPreviewModal({
           onDone={({ added, stillMissing }) => finish(added, stillMissing)}
         />
       )}
-      <Modal
+      <Dialog
         open
         onClose={onCancel}
         busy={saving}
@@ -257,7 +257,7 @@ export function CruiseImportPreviewModal({
             )}
           </div>
         )}
-      </Modal>
+      </Dialog>
     </>
   );
 }

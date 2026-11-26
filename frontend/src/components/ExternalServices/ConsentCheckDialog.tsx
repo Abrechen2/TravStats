@@ -2,6 +2,7 @@ import { useId, useState, type JSX, type ReactNode } from "react";
 import Button from "../ui/Button";
 import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
+import InlineError from "../ui/InlineError";
 
 interface ConsentCheckDialogProps {
   title: string;
@@ -67,11 +68,7 @@ export default function ConsentCheckDialog({
           />
           <span>{checkboxLabel}</span>
         </label>
-        {error ? (
-          <p role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
-            {error}
-          </p>
-        ) : null}
+        {error ? <InlineError>{error}</InlineError> : null}
       </div>
     </Dialog>
   );

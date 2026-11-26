@@ -6,6 +6,7 @@ import { listPlaces } from "../../lib/api/places";
 import { logger } from "../../lib/logger";
 import { greatCircleKm } from "../../shared/flightDuration";
 import type { Place } from "../../types/place";
+import InlineError from "../ui/InlineError";
 
 const SHOWN = 8;
 const ROW =
@@ -64,11 +65,7 @@ export default function PassPlacePicker({
   }, [places, query, near]);
 
   if (failed) {
-    return (
-      <p role="alert" className="text-xs" style={{ color: "var(--ts-bad)" }}>
-        {t("roadtrips:place.loadError")}
-      </p>
-    );
+    return <InlineError>{t("roadtrips:place.loadError")}</InlineError>;
   }
   if (!places) return <p className="t-caption">{t("roadtrips:place.loading")}</p>;
   if (places.length === 0) return <p className="t-caption">{t("roadtrips:place.none")}</p>;

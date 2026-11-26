@@ -10,6 +10,7 @@ import { remoteSharingError, type RemoteSharingError } from "../../sharing/remot
 import Button from "../../ui/Button";
 import Dialog from "../../ui/Dialog";
 import { Field, Input } from "../../ui/Field";
+import InlineError from "../../ui/InlineError";
 
 const NS = "sharing:remote";
 
@@ -157,9 +158,7 @@ export default function InvitationCodeDialog({
           </Button>
         </form>
         {failure && (
-          <p role="alert" style={{ color: "var(--ts-warn)" }}>
-            {t(failure.key, { origin: failure.origin })}
-          </p>
+          <InlineError tone="warning">{t(failure.key, { origin: failure.origin })}</InlineError>
         )}
         {notice && <p role="status">{notice}</p>}
       </div>

@@ -18,6 +18,7 @@ import { Card } from "../ui/Card";
 import { todayIn } from "../../shared/time";
 import { useTodayZone } from "../../hooks/useTodayZone";
 import { isTripFinished } from "./tripFinished";
+import InlineError from "../ui/InlineError";
 
 type Notice = "stale" | "staleReloadFailed" | "saveFailed" | null;
 
@@ -202,7 +203,7 @@ export default function TripPackingCard({
           </p>
         )}
         {notice && (
-          <p role="alert" className="t-caption" style={{ color: "var(--danger)" }}>
+          <InlineError>
             {t(`trips:packing.notice.${notice}`)}
             {notice === "saveFailed" && unanswered.current && (
               <button
@@ -215,7 +216,7 @@ export default function TripPackingCard({
                 {t("trips:packing.retry")}
               </button>
             )}
-          </p>
+          </InlineError>
         )}
         {list && (
           <>

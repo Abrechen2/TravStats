@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDate } from "../../lib/displayFormat";
 import { localeForLanguage } from "../../lib/units";
@@ -85,7 +85,7 @@ export default function AchievementDetailModal({
   const evidenceKey = isMystery ? null : evidenceKeyForRule(achievement.requirementType);
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={
@@ -208,6 +208,6 @@ export default function AchievementDetailModal({
             </p>
           ))}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

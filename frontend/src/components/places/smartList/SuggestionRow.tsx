@@ -8,6 +8,7 @@ import StopEvidenceBadge from "../../dawarich/StopEvidenceBadge";
 import { stopEvidenceView } from "../../../lib/stopEvidenceView";
 import { formatLocalClock, formatLocalDate } from "../../../lib/displayFormat";
 import type { SmartSuggestion } from "../../../lib/api/smartLists";
+import InlineError from "../../ui/InlineError";
 
 const COARSE =
   "pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)";
@@ -108,11 +109,7 @@ export function SuggestionRow({
           })}
         </p>
       )}
-      {error && (
-        <p role="alert" className="mt-2 text-sm" style={{ color: "var(--danger)" }}>
-          {t(error)}
-        </p>
-      )}
+      {error && <InlineError className="mt-2">{t(error)}</InlineError>}
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"

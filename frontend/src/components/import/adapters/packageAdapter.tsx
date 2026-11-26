@@ -12,9 +12,10 @@ import {
 } from "../../../lib/api/parse";
 import { parseApi } from "../../../lib/api/parse";
 import { logger } from "../../../lib/logger";
-import Modal from "../../Modal";
+import Dialog from "../../ui/Dialog";
 import { PackageImportPreviewModal } from "../../Trips/PackageImportPreviewModal";
 import type { ReviewModalProps } from "../types";
+import Banner from "../../ui/Banner";
 
 /**
  * The review step of a tour operator's documents (plan 2026-10-09 P3), used
@@ -86,7 +87,7 @@ function ModelOffer({
   const code = last?.fallbackCode;
   const failureKey = MODEL_FAILURE_KEYS.find((k) => k === code);
   return (
-    <Modal
+    <Dialog
       open
       onClose={onCancel}
       busy={busy}
@@ -106,7 +107,7 @@ function ModelOffer({
     >
       <p className="text-sm">{t("import:package.model.offer")}</p>
       {(failureKey || requestFailed) && (
-        <div role="alert" className="mt-3 text-sm font-medium text-(--danger)">
+        <Banner tone="error" className="mt-3">
           <p>
             {requestFailed
               ? t("import:package.model.failed.request")
@@ -123,9 +124,9 @@ function ModelOffer({
               })}
             </p>
           )}
-        </div>
+        </Banner>
       )}
-    </Modal>
+    </Dialog>
   );
 }
 

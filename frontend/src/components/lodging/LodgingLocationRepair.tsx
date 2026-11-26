@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from "react";
 import type { JSX } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { LocationMapModal } from "../location/LocationMapModal";
 import { LocationMiniMap } from "../location/LocationMiniMap";
 import type { LocationCoordinates, LocationSelection } from "../location/LocationInput";
@@ -18,6 +18,8 @@ import { updateLodging } from "../../lib/api/lodging";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Lodging } from "../../types/lodging";
+import Banner from "../ui/Banner";
+import Button from "../ui/Button";
 
 /** What the user has chosen to take - the pin and a line that says where it is. */
 interface Candidate extends LocationCoordinates {
@@ -137,7 +139,7 @@ export function LodgingLocationRepair({
 
   return (
     <>
-      <Modal
+      <Dialog
         open
         onClose={onClose}
         busy={saving.saving}
@@ -222,19 +224,16 @@ export function LodgingLocationRepair({
             </div>
 
             {search.status === "failed" && (
-              <p
-                role="alert"
-                className="flex flex-wrap items-center gap-2 text-sm text-[var(--danger)]"
+              <Banner
+                tone="error"
+                action={
+                  <Button variant="secondary" onClick={() => void runSearch()}>
+                    {t("common:buttons.retry")}
+                  </Button>
+                }
               >
                 {t("lodging:repair.searchFailed")}
-                <button
-                  type="button"
-                  onClick={() => void runSearch()}
-                  className="rounded-md border border-[var(--danger)]/50 px-2 py-1 text-xs pointer-coarse:min-h-(--ts-size-touch-min)"
-                >
-                  {t("common:buttons.retry")}
-                </button>
-              </p>
+              </Banner>
             )}
             {search.status === "done" && search.results.length === 0 && (
               <p role="status" className="text-sm text-[var(--text-muted)]">
@@ -319,7 +318,7 @@ export function LodgingLocationRepair({
             retryDisabled={saving.saving}
           />
         </div>
-      </Modal>
+      </Dialog>
 
       <LocationMapModal
         open={mapOpen}

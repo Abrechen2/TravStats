@@ -43,6 +43,7 @@ import { dateLocaleForLanguage } from "../lib/units";
 import { usePriceFxReadout } from "../hooks/usePriceFxReadout";
 import WebGLGuard from "../components/map/WebGLGuard";
 import BackLink from "../components/navigation/BackLink";
+import InlineError from "../components/ui/InlineError";
 export default function FerryDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -228,11 +229,7 @@ export default function FerryDetailPage() {
           onSaved={() => setReload((k) => k + 1)}
         />
       </div>
-      {error && (
-        <p role="alert" className="mb-4 text-sm text-(--danger)">
-          {t("ferry:error")}
-        </p>
-      )}
+      {error && <InlineError className="mb-4">{t("ferry:error")}</InlineError>}
       {(ride.geometrySource === "straight" ||
         ride.geometrySource === "sea_route" ||
         ride.geometrySource === "manual" ||

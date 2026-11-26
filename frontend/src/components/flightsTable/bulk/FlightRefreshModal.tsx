@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
-import Modal from "../../Modal";
+import Dialog from "../../ui/Dialog";
 import { useBulkLookup } from "../../../hooks/useBulkLookup";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { flightsApi } from "../../../lib/api/flights";
@@ -86,7 +86,7 @@ export default function FlightRefreshModal({
   const asked = lookup.outcomes.size > 0;
   const muted = { color: "var(--text-muted)" };
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={lookup.running || applying}
@@ -191,6 +191,6 @@ export default function FlightRefreshModal({
           })}
         </ul>
       )}
-    </Modal>
+    </Dialog>
   );
 }

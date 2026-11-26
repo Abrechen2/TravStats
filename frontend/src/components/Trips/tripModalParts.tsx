@@ -7,6 +7,7 @@ import TagInput from "../TagInput";
 import SuggestionChips from "../common/SuggestionChips";
 import { formatDate } from "../../lib/displayFormat";
 import type { TripModalForm } from "./tripModalForm";
+import InlineError from "../ui/InlineError";
 
 const CATEGORIES: TripCategory[] = ["vacation", "business", "weekend", "family", "other"];
 
@@ -119,9 +120,9 @@ function NameCategoryFields({ f }: { f: TripModalForm }): JSX.Element {
           aria-describedby={f.showNameMissing ? "trip-name-error" : undefined}
         />
         {f.showNameMissing && (
-          <p id="trip-name-error" role="alert" className="mt-1 text-[11px] text-(--danger)">
+          <InlineError id="trip-name-error" className="mt-1">
             {t("trips:modal.nameRequired")}
-          </p>
+          </InlineError>
         )}
       </Field>
 
@@ -172,9 +173,7 @@ function DateFields({ f }: { f: TripModalForm }): JSX.Element {
             aria-invalid={f.datesOutOfOrder}
           />
           {f.datesOutOfOrder && (
-            <p className="text-[11px] mt-1" style={{ color: "var(--color-danger)" }}>
-              {t("trips:modal.endBeforeStart")}
-            </p>
+            <InlineError className="mt-1">{t("trips:modal.endBeforeStart")}</InlineError>
           )}
         </Field>
       </div>

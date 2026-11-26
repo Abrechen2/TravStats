@@ -1,4 +1,4 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { Table, TableRow, type TableColumn } from "../ui/Table";
@@ -22,6 +22,8 @@ import type { ImportBatchSummary, ImportBatchItems } from "../../lib/api/importB
 import { DOMAINS } from "../../shared/domains";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { formatDate } from "../../lib/displayFormat";
+import InlineError from "../ui/InlineError";
+import Banner from "../ui/Banner";
 
 interface Props {
   /** Runs after a successful revert so a surrounding page (list + stats) can refresh too. */
@@ -372,9 +374,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
             {t("settings:import.log.items.loading")}
           </p>
         ) : itemsError[batchId] ? (
-          <p role="alert" className="text-xs text-[var(--danger)]">
-            {t("settings:import.log.items.error")}
-          </p>
+          <InlineError>{t("settings:import.log.items.error")}</InlineError>
         ) : (loaded?.items.length ?? 0) === 0 ? (
           <p className="text-xs" style={{ color: "var(--text-muted)" }}>
             {t("settings:import.log.items.empty")}
@@ -430,12 +430,9 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
           {t("lodging:import.batches.loading")}
         </p>
       ) : loadError ? (
-        <div
-          role="alert"
-          className="mt-2 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-3 py-2 text-sm text-[var(--danger)]"
-        >
+        <Banner tone="error" className="mt-2">
           {t("lodging:import.batches.loadError")}
-        </div>
+        </Banner>
       ) : batches.length === 0 ? (
         <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
           {t("lodging:import.batches.empty")}
@@ -471,7 +468,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
         </>
       )}
 
-      <Modal
+      <Dialog
         open={confirmingBatch !== undefined && confirmingBatch !== null}
         onClose={() => setConfirmingId(null)}
         busy={reverting}
@@ -507,7 +504,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
               count: revertCount(confirmingBatch),
             })}
         </p>
-      </Modal>
+      </Dialog>
     </div>
   );
 }

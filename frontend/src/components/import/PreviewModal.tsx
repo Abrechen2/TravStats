@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useEscapeClose } from "../../hooks/useEscapeClose";
+import Dialog from "../ui/Dialog";
 import { hasHardError, type PreviewFlag, type PreviewRowEnriched } from "../../lib/api/import";
 import { useBulkLookup } from "../../hooks/useBulkLookup";
 import type { LookupOutcome, LookupRow } from "../../lib/flightLookupBatch";
 import { lookupOutcomeText } from "../../lib/lookupOutcomeText";
+import InlineError from "../ui/InlineError";
 
 export interface PreviewCommitResult {
   committed: number;
@@ -126,7 +127,6 @@ export function PreviewModal({
 
   const acceptedRows = rows.filter((r) => checked.get(r.sourceRowIndex));
   const isSubmitting = submitState.phase === "submitting";
-  useEscapeClose(true, onClose, isSubmitting);
 
   const submit = async (): Promise<void> => {
     setSubmitState({ phase: "submitting" });
@@ -147,136 +147,109 @@ export function PreviewModal({
     }
   };
 
-  return (
-    <div
-      className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="preview-modal-title"
-    >
-      <div
-        className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-lg shadow-xl"
-        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <header
-          className="flex items-center justify-between border-b px-6 py-4"
-          style={{ borderColor: "var(--color-border)" }}
-        >
-          <div>
-            <h2
-              id="preview-modal-title"
-              className="text-lg font-semibold"
-              style={{ color: "var(--text-primary)" }}
-            >
-              {submitState.phase === "success"
-                ? t("settings:import.preview.success.title")
-                : t("settings:import.preview.title")}
-            </h2>
-            {submitState.phase !== "success" && (
-              <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
-                {t("settings:import.preview.summary", {
-                  ok: summary.ok,
-                  duplicates: summary.duplicates,
-                  problems: summary.problems,
-                })}
-                {summary.unresolvable > 0 &&
-                  ` · ${t("settings:import.preview.unresolvable", { count: summary.unresolvable })}`}
-              </p>
-            )}
-          </div>
+  const footer =
+    submitState.phase === "success" ? undefined : (
+      <>
+        {submitState.phase === "error" && (
+          <InlineError className="mr-auto">{submitState.message}</InlineError>
+        )}
+        {lookupRows.length > 0 && (
           <button
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="text-2xl leading-none disabled:opacity-50"
-            style={{ color: "var(--text-muted)" }}
-            aria-label={t("settings:import.preview.success.close")}
+            type="button"
+            onClick={() => void lookup.run(lookupRows)}
+            disabled={isSubmitting || lookup.running}
+            className="btn-secondary mr-auto px-3 py-1.5 text-sm disabled:opacity-50"
+            style={{ background: "var(--bg-elevated)" }}
           >
-            ×
+            {lookup.running && lookup.progress
+              ? t("settings:import.preview.lookup.running", {
+                  done: lookup.progress.done,
+                  total: lookup.progress.total,
+                })
+              : t("settings:import.preview.lookup.action", { count: lookupRows.length })}
           </button>
-        </header>
-
-        {notice && submitState.phase !== "success" && (
-          <p
-            role="status"
-            className="mx-6 mt-4 whitespace-pre-line rounded-md p-3 text-sm"
-            style={{
-              background: "color-mix(in srgb, var(--ts-warn) 12%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--ts-warn) 45%, transparent)",
-              color: "var(--ts-text-bright)",
-            }}
-          >
-            {notice}
-          </p>
         )}
+        <button
+          onClick={onClose}
+          disabled={isSubmitting}
+          className="btn-secondary px-3 py-1.5 text-sm disabled:opacity-50"
+          style={{ background: "var(--bg-elevated)" }}
+        >
+          {t("settings:import.preview.cancel")}
+        </button>
+        <button
+          onClick={() => void submit()}
+          disabled={acceptedRows.length === 0 || isSubmitting}
+          className="btn-primary px-4 py-1.5 text-sm disabled:opacity-50"
+        >
+          {isSubmitting
+            ? t("settings:import.preview.submitting")
+            : t("settings:import.preview.commit", { count: acceptedRows.length })}
+        </button>
+      </>
+    );
 
-        {submitState.phase === "success" ? (
-          <SuccessView
-            committed={submitState.committed}
-            skipped={submitState.skipped}
-            alreadyPresent={submitState.alreadyPresent}
-            failedChunks={submitState.failedChunks}
-            flightsListHref={flightsListHref}
-            onClose={onClose}
-            t={t}
-          />
-        ) : (
-          <RowsView
-            rows={rows}
-            checked={checked}
-            toggle={toggle}
-            isSubmitting={isSubmitting}
-            lookup={lookup.outcomes}
-            t={t}
-          />
-        )}
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      busy={isSubmitting}
+      maxWidth={1024}
+      closeLabel={t("settings:import.preview.success.close")}
+      title={
+        submitState.phase === "success"
+          ? t("settings:import.preview.success.title")
+          : t("settings:import.preview.title")
+      }
+      footer={footer}
+    >
+      {submitState.phase !== "success" && (
+        <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
+          {t("settings:import.preview.summary", {
+            ok: summary.ok,
+            duplicates: summary.duplicates,
+            problems: summary.problems,
+          })}
+          {summary.unresolvable > 0 &&
+            ` · ${t("settings:import.preview.unresolvable", { count: summary.unresolvable })}`}
+        </p>
+      )}
 
-        {submitState.phase !== "success" && (
-          <footer
-            className="flex flex-wrap items-center justify-end gap-2 border-t px-6 py-4"
-            style={{ borderColor: "var(--color-border)" }}
-          >
-            {submitState.phase === "error" && (
-              <p className="mr-auto text-sm" style={{ color: "rgb(252, 165, 165)" }}>
-                {submitState.message}
-              </p>
-            )}
-            {lookupRows.length > 0 && (
-              <button
-                type="button"
-                onClick={() => void lookup.run(lookupRows)}
-                disabled={isSubmitting || lookup.running}
-                className="btn-secondary mr-auto px-3 py-1.5 text-sm disabled:opacity-50"
-                style={{ background: "var(--bg-elevated)" }}
-              >
-                {lookup.running && lookup.progress
-                  ? t("settings:import.preview.lookup.running", {
-                      done: lookup.progress.done,
-                      total: lookup.progress.total,
-                    })
-                  : t("settings:import.preview.lookup.action", { count: lookupRows.length })}
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="btn-secondary px-3 py-1.5 text-sm disabled:opacity-50"
-              style={{ background: "var(--bg-elevated)" }}
-            >
-              {t("settings:import.preview.cancel")}
-            </button>
-            <button
-              onClick={() => void submit()}
-              disabled={acceptedRows.length === 0 || isSubmitting}
-              className="btn-primary px-4 py-1.5 text-sm disabled:opacity-50"
-            >
-              {isSubmitting
-                ? t("settings:import.preview.submitting")
-                : t("settings:import.preview.commit", { count: acceptedRows.length })}
-            </button>
-          </footer>
-        )}
-      </div>
-    </div>
+      {notice && submitState.phase !== "success" && (
+        <p
+          role="status"
+          className="mb-3 whitespace-pre-line rounded-md p-3 text-sm"
+          style={{
+            background: "color-mix(in srgb, var(--ts-warn) 12%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--ts-warn) 45%, transparent)",
+            color: "var(--ts-text-bright)",
+          }}
+        >
+          {notice}
+        </p>
+      )}
+
+      {submitState.phase === "success" ? (
+        <SuccessView
+          committed={submitState.committed}
+          skipped={submitState.skipped}
+          alreadyPresent={submitState.alreadyPresent}
+          failedChunks={submitState.failedChunks}
+          flightsListHref={flightsListHref}
+          onClose={onClose}
+          t={t}
+        />
+      ) : (
+        <RowsView
+          rows={rows}
+          checked={checked}
+          toggle={toggle}
+          isSubmitting={isSubmitting}
+          lookup={lookup.outcomes}
+          t={t}
+        />
+      )}
+    </Dialog>
   );
 }
 
@@ -451,9 +424,9 @@ function SuccessView({
           </p>
         )}
         {failedChunks > 0 && (
-          <p className="mt-2 text-sm" style={{ color: "rgb(252, 165, 165)" }}>
+          <InlineError className="mt-2">
             {t("settings:import.preview.success.failed", { count: failedChunks })}
-          </p>
+          </InlineError>
         )}
       </div>
       <footer

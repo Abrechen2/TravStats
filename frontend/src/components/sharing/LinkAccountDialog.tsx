@@ -8,6 +8,7 @@ import { useToastStore } from "../../store/toastStore";
 import type { SharePerson } from "../../types/sharing";
 import { Button, Dialog, Field, Input, Select } from "../ui";
 import { sharingErrorKey } from "./sharingCopy";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:linkDialog";
 
@@ -134,11 +135,7 @@ function LinkAccountForm({
             </Field>
           </>
         )}
-        {error && (
-          <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
-            {error}
-          </p>
-        )}
+        {error && <InlineError>{error}</InlineError>}
       </div>
     </Dialog>
   );

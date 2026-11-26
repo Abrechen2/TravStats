@@ -7,7 +7,7 @@ import { useTravTrackVisible } from "../../hooks/useTravTrackVisible";
 import type { TravTrackLastSeen } from "../../lib/api/travtrack";
 import { localDay } from "../../shared/time";
 import { relativeTimeFromNow } from "../inbox/relativeTime";
-import { token } from "../ui/tokens";
+import InlineError from "../ui/InlineError";
 
 /**
  * „Zuletzt gesehen" (TravTrack plan L2): how long ago the own history last
@@ -73,11 +73,7 @@ export function LastSeenCard(): JSX.Element | null {
           </span>
         )}
       </div>
-      {state.kind === "failed" && (
-        <span role="alert" style={{ fontSize: 12, color: token("bad") }}>
-          {t(state.key)}
-        </span>
-      )}
+      {state.kind === "failed" && <InlineError>{t(state.key)}</InlineError>}
       {state.kind === "loaded" && !seen && (
         <span style={{ fontSize: 12, color: "var(--ts-muted)" }}>{t("track:lastSeen.none")}</span>
       )}
@@ -122,16 +118,7 @@ export function LastSeenLine(): JSX.Element | null {
   const { t, state, describe } = useLastSeenText(true);
   if (state.kind === "idle" || state.kind === "loading") return null;
   if (state.kind === "failed") {
-    return (
-      <p
-        className="t-caption"
-        role="alert"
-        data-testid="track-last-seen"
-        style={{ color: token("bad") }}
-      >
-        {t(state.key)}
-      </p>
-    );
+    return <InlineError testId="track-last-seen">{t(state.key)}</InlineError>;
   }
   const text = state.lastSeen ? describe(state.lastSeen) : null;
   return (

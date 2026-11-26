@@ -4,6 +4,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { formatDayLong } from "../../../shared/time/calendar";
 import type { DayResult } from "./trackRange";
 import type { RangeReadState } from "./useRangeRead";
+import InlineError from "../../../components/ui/InlineError";
 
 type Failed = Extract<DayResult, { kind: "failed" }>;
 type Loaded = Extract<DayResult, { kind: "loaded" }>;
@@ -82,14 +83,14 @@ export default function TrackMapNotices({
       )}
       {range?.kind === "failed" && (
         <div role="alert" className="flex flex-col gap-1" data-testid="track-range-failed">
-          <p className="t-body" style={{ color: token("bad") }}>
+          <InlineError announce={false}>
             {parts.length > 0
               ? t("track:map.rangePartFailed", {
                   percent: Math.round(range.progress * 100),
                   reason: t(range.key),
                 })
               : t(range.key)}
-          </p>
+          </InlineError>
           {/* A span the server refuses as too long stays refused: no retry to offer. */}
           {range.key !== "track:errors.rangeTooLong" && (
             <button type="button" className="self-start underline" onClick={onResume}>

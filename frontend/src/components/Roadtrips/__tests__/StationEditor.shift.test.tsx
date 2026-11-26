@@ -1,3 +1,5 @@
+import Toast from "../../../components/Toast";
+import { useToastStore } from "../../../store/toastStore";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -86,6 +88,8 @@ const STATIONS: RoadtripStation[] = [
 ];
 
 function renderEditor(): void {
+  useToastStore.getState().clearToasts();
+  render(<Toast />);
   render(
     <MemoryRouter>
       <StationEditor

@@ -19,6 +19,7 @@ import { useToastStore } from "../../store/toastStore";
 import PhotoChoosePanel from "./PhotoChoosePanel";
 import DetailSection from "../ui/DetailSection";
 import OverflowMenu, { type OverflowEntry } from "../ui/OverflowMenu";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   kind: EntryPhotoKind;
@@ -211,11 +212,7 @@ export function EntryPhotos({ kind, entryId, heading = true }: Props): JSX.Eleme
           entries={menuEntries}
         />
       </div>
-      {loadFailed && (
-        <p role="alert" className="t-caption" style={{ color: "var(--color-danger)" }}>
-          {t("common:entryPhotos.loadFailed")}
-        </p>
-      )}
+      {loadFailed && <InlineError>{t("common:entryPhotos.loadFailed")}</InlineError>}
       {photos !== null && photos.length === 0 && !loadFailed && (
         <p className="t-caption">{t("common:entryPhotos.none")}</p>
       )}

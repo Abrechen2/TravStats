@@ -18,6 +18,7 @@ import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useToursVisible } from "../../hooks/useToursVisible";
 import { useGlobalSearch } from "./useGlobalSearch";
 import { clearRecentSearches, readRecentSearches, rememberSearch } from "./recentSearches";
+import InlineError from "../ui/InlineError";
 
 interface Group {
   domain: SearchDomain;
@@ -284,9 +285,9 @@ export default function GlobalSearch(): JSX.Element {
 
           {!tooShort && state.status === "error" && (
             <div role="alert" className="px-3 py-2">
-              <p style={{ color: "var(--ts-warn)" }}>
+              <InlineError announce={false} tone="warning">
                 {t(`dashboard:search.error.${state.reason}`)}
-              </p>
+              </InlineError>
               {(state.reason === "network" ||
                 state.reason === "server" ||
                 state.reason === "rateLimit") && (
@@ -305,13 +306,13 @@ export default function GlobalSearch(): JSX.Element {
           {!tooShort && state.status === "ready" && (
             <>
               {state.result.failed.length > 0 && (
-                <p role="alert" className="px-3 py-2" style={{ color: "var(--ts-warn)" }}>
+                <InlineError tone="warning" className="px-3 py-2">
                   {t("dashboard:search.partial", {
                     domains: state.result.failed
                       .map((d) => t(`dashboard:search.group.${d}`))
                       .join(", "),
                   })}
-                </p>
+                </InlineError>
               )}
               {flat.length === 0 && state.result.failed.length === 0 && (
                 <div className="px-3 py-2" role="status">

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
-import Modal from "./Modal";
+import Dialog from "./ui/Dialog";
 import { useTranslation } from "../hooks/useTranslation";
 import { useIsDemoAccount } from "../hooks/useIsDemoAccount";
 import { settingsApi } from "../lib/api";
@@ -10,6 +10,7 @@ import { deviceZone } from "../shared/time";
 import { useAuthStore } from "../store/authStore";
 import { useProfileZoneStore } from "../store/profileZoneStore";
 import { useSettingsStore } from "../store/settingsStore";
+import InlineError from "./ui/InlineError";
 
 /**
  * Asks a user without a profile zone for one — once, at login (owner
@@ -116,7 +117,7 @@ export default function ProfileZonePrompt({
   }
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={later}
       busy={saving}
@@ -168,11 +169,7 @@ export default function ProfileZonePrompt({
         />
         <span>{t("settings:profileZone.followsDevice")}</span>
       </label>
-      {error && (
-        <p role="alert" className="mt-3 text-sm" style={{ color: "var(--danger)" }}>
-          {error}
-        </p>
-      )}
-    </Modal>
+      {error && <InlineError className="mt-3">{error}</InlineError>}
+    </Dialog>
   );
 }

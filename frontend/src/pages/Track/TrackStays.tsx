@@ -15,6 +15,7 @@ import { formatDate, formatTime } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
 import { todayIn } from "../../shared/time/clock";
 import { pillStyle, panelStyle } from "./map/trackMapStyle";
+import InlineError from "../../components/ui/InlineError";
 
 const STATES: TravTrackStayState[] = ["pending", "accepted", "rejected"];
 const PAGE = 50;
@@ -145,7 +146,7 @@ export default function TrackStays(): JSX.Element {
       </form>
 
       {state.kind === "failed" && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
+        <InlineError>
           {t(state.key)}{" "}
           <button
             type="button"
@@ -154,7 +155,7 @@ export default function TrackStays(): JSX.Element {
           >
             {t("track:map.retry")}
           </button>
-        </p>
+        </InlineError>
       )}
       {state.kind === "loaded" && state.stays.length === 0 && (
         <p className="t-body" data-testid="track-stays-empty">

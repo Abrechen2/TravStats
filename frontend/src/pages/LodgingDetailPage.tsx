@@ -49,6 +49,7 @@ import type { Lodging, LodgingMembership, LodgingStay } from "../types/lodging";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import WebGLGuard from "../components/map/WebGLGuard";
 import BackLink from "../components/navigation/BackLink";
+import Banner from "../components/ui/Banner";
 
 /** What a figure reads as when it cannot be stated. The same dash the spend
  *  card already prints for an unconvertible total. */
@@ -292,12 +293,9 @@ export default function LodgingDetailPage(): JSX.Element {
           <BackLink to={backTo} className="ts-back-link text-sm text-[var(--text-muted)]">
             ← {backLabel}
           </BackLink>
-          <div
-            role="alert"
-            className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]"
-          >
+          <Banner tone="error" className="mt-4">
             {isLoadError ? t("lodging:detail.loadError") : t("lodging:detail.notFound")}
-          </div>
+          </Banner>
           {isLoadError && (
             <div className="mt-3">
               <Button onClick={() => setReloadKey((k) => k + 1)}>

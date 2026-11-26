@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import Button from "../ui/Button";
 
 import { useTranslation } from "../../hooks/useTranslation";
@@ -116,7 +116,7 @@ export function DocumentPersonDialog({
     onPick(value === "" ? null : value);
   };
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       maxWidth={360}
@@ -135,6 +135,6 @@ export function DocumentPersonDialog({
         value={value}
         onChange={setValue}
       />
-    </Modal>
+    </Dialog>
   );
 }

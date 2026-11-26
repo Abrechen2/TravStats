@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
   documentsApi,
@@ -12,6 +12,7 @@ import {
 } from "../../lib/api/documents";
 import { logger } from "../../lib/logger";
 import { linkErrorKey } from "./documentLinkUi";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   document: TravelDocument;
@@ -176,7 +177,7 @@ export default function LinkDocumentDialog({
     );
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={busy}
@@ -231,11 +232,7 @@ export default function LinkDocumentDialog({
           className="rounded-md px-3 py-2 text-sm pointer-coarse:min-h-(--ts-size-touch-min)"
           style={{ border: "1px solid var(--ts-border)", background: "transparent" }}
         />
-        {loadFailed && (
-          <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-            {t("documents:links.errors.candidatesFailed")}
-          </p>
-        )}
+        {loadFailed && <InlineError>{t("documents:links.errors.candidatesFailed")}</InlineError>}
         {candidates && tripEntries.length + otherEntries.length === 0 && !loadFailed && (
           <p className="t-caption">
             {t(searchText ? "documents:links.noMatches" : "documents:links.noCandidates", {
@@ -245,12 +242,8 @@ export default function LinkDocumentDialog({
         )}
         {group(t("documents:links.fromTrip"), tripEntries)}
         {group(t("documents:links.otherEntries"), otherEntries)}
-        {error !== null && (
-          <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-            {error}
-          </p>
-        )}
+        {error !== null && <InlineError>{error}</InlineError>}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

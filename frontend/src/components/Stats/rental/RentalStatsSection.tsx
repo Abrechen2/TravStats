@@ -18,6 +18,7 @@ import StatCard from "../StatCard";
 import PeriodComparisonStrip from "../PeriodComparisonStrip";
 import CountingHelp from "../counting/CountingHelp";
 import RentalStatsDetails, { type RentalEvidence } from "./RentalStatsDetails";
+import InlineError from "../../ui/InlineError";
 
 const ALL_VISIBLE: SectionVisibility = {
   isVisible: () => true,
@@ -99,11 +100,7 @@ export default function RentalStatsSection({
   }, [year, compareYear]);
 
   if (failed) {
-    return (
-      <p role="alert" className="text-(--danger)">
-        {t("rental:stats.loadError")}
-      </p>
-    );
+    return <InlineError>{t("rental:stats.loadError")}</InlineError>;
   }
   if (!stats) return <p className="t-caption">{t("rental:detail.loading")}</p>;
 

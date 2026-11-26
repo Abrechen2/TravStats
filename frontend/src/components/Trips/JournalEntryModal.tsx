@@ -2,7 +2,7 @@ import { dayInput } from "../../lib/api/timeInput";
 import { useTodayZone } from "../../hooks/useTodayZone";
 import { todayIn } from "../../shared/time";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useEffect, useState } from "react";
 import type { TripJournalEntry } from "../../types";
 import { tripsApi } from "../../lib/api";
@@ -112,7 +112,7 @@ export default function JournalEntryModal({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving}
@@ -207,7 +207,7 @@ export default function JournalEntryModal({
           <JournalPhotoPicker tripId={tripId} value={photoIds} onChange={setPhotoIds} />
         </Field>
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

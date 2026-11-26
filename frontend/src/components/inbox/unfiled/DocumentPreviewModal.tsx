@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
-import Modal from "../../Modal";
+import Dialog from "../../ui/Dialog";
 import { useTranslation } from "../../../hooks/useTranslation";
 import {
   documentDownloadUrl,
   documentFileUrl,
   type TravelDocument,
 } from "../../../lib/api/documents";
+import InlineError from "../../ui/InlineError";
 
 interface Props {
   document: TravelDocument;
@@ -43,9 +44,7 @@ export default function DocumentPreviewModal({ document, onClose }: Props): JSX.
   let body: JSX.Element;
   if (document.format === "image") {
     body = imageFailed ? (
-      <p role="alert" style={{ color: "var(--ts-bad)" }}>
-        {t("dataQuality:unfiledDocuments.preview.imageFailed")}
-      </p>
+      <InlineError>{t("dataQuality:unfiledDocuments.preview.imageFailed")}</InlineError>
     ) : (
       <img
         src={src}
@@ -57,11 +56,7 @@ export default function DocumentPreviewModal({ document, onClose }: Props): JSX.
   } else if (document.format === "pkpass") {
     body = <p className="t-caption">{t("dataQuality:unfiledDocuments.preview.noPreview")}</p>;
   } else if (frameBlocked) {
-    body = (
-      <p role="alert" style={{ color: "var(--ts-bad)" }}>
-        {t("dataQuality:unfiledDocuments.preview.frameBlocked")}
-      </p>
-    );
+    body = <InlineError>{t("dataQuality:unfiledDocuments.preview.frameBlocked")}</InlineError>;
   } else {
     body = (
       <iframe
@@ -73,7 +68,7 @@ export default function DocumentPreviewModal({ document, onClose }: Props): JSX.
   }
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={document.displayName}
@@ -109,6 +104,6 @@ export default function DocumentPreviewModal({ document, onClose }: Props): JSX.
         </p>
       )}
       {body}
-    </Modal>
+    </Dialog>
   );
 }

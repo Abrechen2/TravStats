@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { listChains, createChain } from "../../lib/api/lodging";
 import { logger } from "../../lib/logger";
 import type { LodgingChain } from "../../types/lodging";
+import InlineError from "../ui/InlineError";
 
 interface ChainPickerProps {
   value: LodgingChain | null;
@@ -150,7 +151,7 @@ export function ChainPicker({ value, onChange }: ChainPickerProps): JSX.Element 
           <p className="text-xs text-[var(--text-muted)]">
             {t("lodging:chainPicker.confirmAdd", { name: trimmedQuery })}
           </p>
-          {error !== null && <p className="text-xs text-[var(--danger)]">{error}</p>}
+          {error !== null && <InlineError>{error}</InlineError>}
           <div className="flex justify-end gap-2">
             <button
               type="button"

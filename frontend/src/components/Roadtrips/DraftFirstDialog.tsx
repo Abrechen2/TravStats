@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import Button from "../ui/Button";
 import { useTranslation } from "../../hooks/useTranslation";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
@@ -22,7 +22,7 @@ export default function DraftFirstDialog({
 }): JSX.Element {
   const { t } = useTranslation(["roadtrips", "common"]);
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       maxWidth={520}
@@ -47,6 +47,6 @@ export default function DraftFirstDialog({
       }
     >
       <p className="text-sm">{t("roadtrips:draft.firstMessage")}</p>
-    </Modal>
+    </Dialog>
   );
 }

@@ -10,6 +10,7 @@ import Button from "../ui/Button";
 import LinkExistingPanel from "./LinkExistingPanel";
 import { sharingLinkApi } from "../../lib/api/sharingLink";
 import { remoteSharingError, type RemoteSharingError } from "./remoteSharingCopy";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:remote.offers";
 const COUNT_ORDER: readonly (keyof OfferCounts)[] = [
@@ -106,11 +107,7 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
   return (
     <div className="mb-6">
       <h3 className="t-label-mono mb-2">{t(`${NS}.title`)}</h3>
-      {loadFailed && (
-        <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
-          {t(`${NS}.errors.loadFailed`)}
-        </p>
-      )}
+      {loadFailed && <InlineError tone="warning">{t(`${NS}.errors.loadFailed`)}</InlineError>}
       {offers && offers.length > 0 && (
         <ul className="flex flex-col gap-3 text-sm">
           {offers.map((offer) => (
@@ -167,9 +164,9 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
         </ul>
       )}
       {failure && (
-        <p role="alert" className="mt-2 text-sm" style={{ color: "var(--ts-warn)" }}>
+        <InlineError tone="warning" className="mt-2">
           {t(failure.key, { origin: failure.origin })}
-        </p>
+        </InlineError>
       )}
       {accepted && (
         <p role="status" className="mt-2 text-sm">
@@ -178,9 +175,9 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
         </p>
       )}
       {accepted?.settleFailed && (
-        <p role="alert" className="mt-2 text-sm" style={{ color: "var(--ts-warn)" }}>
+        <InlineError tone="warning" className="mt-2">
           {t(`${NS}.settleFailed`)}
-        </p>
+        </InlineError>
       )}
       {declined && (
         <p role="status" className="mt-2 text-sm">

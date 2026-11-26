@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { serviceUseApi, type UseConsentRow } from "../../lib/api/serviceUse";
 import { logger } from "../../lib/logger";
 import { formatDayLong } from "../../shared/time/calendar";
+import InlineError from "../ui/InlineError";
 
 /**
  * Einstellungen › Dienste: the services this account allowed for good
@@ -53,11 +54,7 @@ export default function UseConsentList(): JSX.Element {
       <h2 id="use-consent-title" className="t-card-title">
         {t("externalServices:useConsent.listTitle")}
       </h2>
-      {error && (
-        <p role="alert" className="t-body" style={{ color: "var(--danger)" }}>
-          {t(`externalServices:useConsent.${error}`)}
-        </p>
-      )}
+      {error && <InlineError>{t(`externalServices:useConsent.${error}`)}</InlineError>}
       {note && (
         <p role="status" className="t-caption">
           {t(`externalServices:useConsent.${note}`)}

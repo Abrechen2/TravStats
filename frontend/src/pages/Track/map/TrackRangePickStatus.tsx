@@ -1,6 +1,6 @@
-import { token } from "../../../components/ui/tokens";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { RangePickState } from "./useRangePick";
+import InlineError from "../../../components/ui/InlineError";
 
 /** What a click on a long span is doing: reading the day, failed (and why), or hit no leg. */
 export default function TrackRangePickStatus({
@@ -17,14 +17,9 @@ export default function TrackRangePickStatus({
     );
   if (state.kind === "failed")
     return (
-      <p
-        className="t-body"
-        role="alert"
-        data-testid="track-pick-failed"
-        style={{ color: token("bad") }}
-      >
+      <InlineError testId="track-pick-failed">
         {t("track:legs.pickFailed", { reason: t(state.key) })}
-      </p>
+      </InlineError>
     );
   if (state.kind === "none")
     return (

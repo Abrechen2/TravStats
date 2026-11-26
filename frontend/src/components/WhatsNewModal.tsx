@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Modal from "./Modal";
+import Dialog from "./ui/Dialog";
 import { useTranslation } from "../hooks/useTranslation";
 import { Abrechen2Credit } from "./Brand/Abrechen2Credit";
 import type { WhatsNewDeveloperNote, WhatsNewEntry } from "../content/whatsNew";
@@ -41,7 +41,7 @@ export default function WhatsNewModal({
   const showingNote = page === "note" && note !== undefined;
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={t("whatsNew:title", { version: entry.version })}
@@ -60,7 +60,7 @@ export default function WhatsNewModal({
       }
     >
       {showingNote ? <DeveloperNote note={note} /> : <Highlights entry={entry} />}
-    </Modal>
+    </Dialog>
   );
 }
 

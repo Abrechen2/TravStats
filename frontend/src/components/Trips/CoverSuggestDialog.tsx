@@ -12,8 +12,9 @@ import {
 import { failureKey } from "../../lib/api/immich";
 import { logger } from "../../lib/logger";
 import { token } from "../ui/tokens";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useCoverCropStore } from "../../store/coverCropStore";
+import InlineError from "../ui/InlineError";
 
 const PROVIDER_NAME = { immich: "Immich", photoprism: "PhotoPrism" } as const;
 
@@ -80,7 +81,7 @@ export default function CoverSuggestDialog({
     : [];
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={choosing !== null}
@@ -103,9 +104,7 @@ export default function CoverSuggestDialog({
       )}
       {failed && (
         <div role="alert" className="mt-3 flex flex-col gap-2">
-          <p className="font-medium" style={{ color: token("bad") }}>
-            {t("immich:cover.loadFailed")}
-          </p>
+          <InlineError announce={false}>{t("immich:cover.loadFailed")}</InlineError>
           <button type="button" className="btn-secondary self-start" onClick={() => void load()}>
             {t("immich:cover.retry")}
           </button>
@@ -177,12 +176,8 @@ export default function CoverSuggestDialog({
         </ol>
       )}
 
-      {chooseFailed && (
-        <p role="alert" className="mt-3 font-medium" style={{ color: token("bad") }}>
-          {t("immich:cover.chooseFailed")}
-        </p>
-      )}
-    </Modal>
+      {chooseFailed && <InlineError className="mt-3">{t("immich:cover.chooseFailed")}</InlineError>}
+    </Dialog>
   );
 }
 

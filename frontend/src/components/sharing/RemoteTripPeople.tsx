@@ -23,6 +23,7 @@ import RemoteCompanionLink from "./RemoteCompanionLink";
 import RemotePersonField from "./RemotePersonField";
 import RemoteTripRoster from "./RemoteTripRoster";
 import { remoteSharingError, type RemoteSharingError } from "./remoteSharingCopy";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:remote.trip";
 
@@ -248,11 +249,7 @@ export default function RemoteTripPeople({
   const body = (
     <div className="flex flex-col text-sm" style={{ gap: "var(--ts-space-md)" }}>
       {!standalone && !bare && <h3 className="t-label-mono">{t(`${NS}.title`)}</h3>}
-      {loadFailed && (
-        <p role="alert" style={{ color: "var(--ts-warn)" }}>
-          {t(`${NS}.errors.loadFailed`)}
-        </p>
-      )}
+      {loadFailed && <InlineError tone="warning">{t(`${NS}.errors.loadFailed`)}</InlineError>}
       {current?.homeOrigin && (
         <p className="t-caption">{t(`${NS}.fromServer`, { origin: current.homeOrigin })}</p>
       )}
@@ -345,9 +342,7 @@ export default function RemoteTripPeople({
         </>
       )}
       {failure && (
-        <p role="alert" style={{ color: "var(--ts-warn)" }}>
-          {t(failure.key, { origin: failure.origin })}
-        </p>
+        <InlineError tone="warning">{t(failure.key, { origin: failure.origin })}</InlineError>
       )}
       {notice && <p role="status">{notice}</p>}
     </div>

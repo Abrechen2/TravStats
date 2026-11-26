@@ -14,6 +14,9 @@ import type { CruiseLegTrack, CruiseTrackMeta } from "../../types/cruiseTracks";
 import { JitterNote } from "../tracks/JitterNote";
 import GeoExportButtons from "../export/GeoExportButtons";
 import { geoExportPaths } from "../../lib/api/geoExport";
+import InlineError from "../ui/InlineError";
+import Banner from "../ui/Banner";
+import Button from "../ui/Button";
 
 interface Props {
   cruiseId: string;
@@ -148,12 +151,16 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
 
         {state.loading && <p className="t-caption">{t("tracks.loading")}</p>}
         {!state.loading && state.loadError && (
-          <div role="alert" className="text-(--danger)">
-            <p>{t("tracks.loadError")}</p>
-            <button type="button" className="underline" onClick={() => void state.reload()}>
-              {t("common:buttons.retry")}
-            </button>
-          </div>
+          <Banner
+            tone="error"
+            action={
+              <Button variant="secondary" onClick={() => void state.reload()}>
+                {t("common:buttons.retry")}
+              </Button>
+            }
+          >
+            {t("tracks.loadError")}
+          </Banner>
         )}
 
         {!state.loading && !state.loadError && state.overview && (
@@ -210,7 +217,7 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
                           : t("tracks.coversLegs", { count: track.coveredLegs.length })}
                       </span>
                       {track.truncated && (
-                        <span className="t-caption text-(--warning)">{t("tracks.truncated")}</span>
+                        <InlineError tone="warning">{t("tracks.truncated")}</InlineError>
                       )}
                       <JitterNote
                         jitterDropped={track.jitterDropped}

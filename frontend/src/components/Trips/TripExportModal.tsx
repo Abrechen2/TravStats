@@ -1,10 +1,11 @@
 import { useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { downloadBlob } from "../../lib/export";
 import { tripExchangeApi, type TripExportOptions } from "../../lib/api/tripExchange";
+import InlineError from "../ui/InlineError";
 
 /**
  * "Reise exportieren" (spec 2026-10-09 S3): the trip as a `.travstats` file.
@@ -54,7 +55,7 @@ export function TripExportModal({ tripId, onClose }: TripExportModalProps): JSX.
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={busy}
@@ -99,12 +100,8 @@ export function TripExportModal({ tripId, onClose }: TripExportModalProps): JSX.
           </label>
         ))}
       </div>
-      {error && (
-        <p role="alert" className="mt-3 font-medium text-(--danger)">
-          {error}
-        </p>
-      )}
+      {error && <InlineError className="mt-3">{error}</InlineError>}
       {done && !error && <p className="mt-3 text-sm">{t("trips:export.done")}</p>}
-    </Modal>
+    </Dialog>
   );
 }

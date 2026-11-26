@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { LocationInput } from "../location/LocationInput";
 import type { LocationCoordinates, LocationSelection } from "../location/LocationInput";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   value: Port | null;
@@ -272,7 +273,7 @@ export function PortPicker({
           })}
         </ul>
       )}
-      {searchError && <p className="mt-1 text-xs text-(--danger)">{t("picker.searchError")}</p>}
+      {searchError && <InlineError className="mt-1">{t("picker.searchError")}</InlineError>}
       {!searchError && geocodeFailure !== null && (
         <p role="status" className="mt-1 text-xs text-(--warning)">
           {t(
@@ -286,7 +287,7 @@ export function PortPicker({
           form: a failed geocoder-candidate save (handleSelectGeocoded) sets
           this too, and until 2026-08-02 it had no render site on that path,
           so the failure was invisible. */}
-      {error !== null && !showAdd && <p className="mt-1 text-xs text-(--danger)">{error}</p>}
+      {error !== null && !showAdd && <InlineError className="mt-1">{error}</InlineError>}
       {query.length >= 2 &&
         query !== value?.name &&
         !exactMatch &&
@@ -344,7 +345,7 @@ export function PortPicker({
               </button>
             )}
           </div>
-          {error !== null && <p className="text-xs text-(--danger)">{error}</p>}
+          {error !== null && <InlineError>{error}</InlineError>}
           <div className="flex justify-end gap-2">
             <button
               type="button"

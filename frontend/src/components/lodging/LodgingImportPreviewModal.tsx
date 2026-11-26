@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import type {
   LodgingImportCommitRow,
   LodgingImportPreviewRow,
@@ -18,6 +18,7 @@ import { PreviewRowLine } from "./LodgingImportPreviewRow";
 import ImportReviewBar from "../import/ImportReviewBar";
 import { lodgingObvious } from "../import/obviousRows";
 import { canCreate, isMatched, liveFlags, rowBlockers } from "./lodgingImportRowState";
+import Banner from "../ui/Banner";
 
 // Re-exported because the suite imports them from here, and because this
 // is the surface everything else in the app already knows.
@@ -280,7 +281,7 @@ export function LodgingImportPreviewModal({
   // Escape, and the preview was out of keyboard reach. As a `Modal` it is a
   // named modal dialog, portalled after the chooser, and takes all three.
   return (
-    <Modal
+    <Dialog
       open
       onClose={onCancel}
       busy={saving}
@@ -379,12 +380,9 @@ export function LodgingImportPreviewModal({
       )}
 
       {error !== null && (
-        <p
-          role="alert"
-          className="mb-3 rounded border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-300"
-        >
+        <Banner tone="error" className="mb-3">
           {error}
-        </p>
+        </Banner>
       )}
 
       <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-[var(--color-border)]">
@@ -418,6 +416,6 @@ export function LodgingImportPreviewModal({
           </tbody>
         </table>
       </div>
-    </Modal>
+    </Dialog>
   );
 }

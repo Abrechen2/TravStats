@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
-import Modal from "../../Modal";
+import Dialog from "../../ui/Dialog";
 import { useTranslation } from "../../../hooks/useTranslation";
 import {
   DOCUMENT_KINDS,
@@ -11,6 +11,7 @@ import {
   type TravelDocument,
 } from "../../../lib/api/documents";
 import { logger } from "../../../lib/logger";
+import InlineError from "../../ui/InlineError";
 
 interface Props {
   document: TravelDocument;
@@ -65,7 +66,7 @@ export default function EditDocumentDialog({ document, onClose, onSaved }: Props
   const fieldStyle = { border: "1px solid var(--ts-border)", background: "transparent" } as const;
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={busy}
@@ -142,12 +143,8 @@ export default function EditDocumentDialog({ document, onClose, onSaved }: Props
             style={fieldStyle}
           />
         </label>
-        {error !== null && (
-          <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-            {error}
-          </p>
-        )}
+        {error !== null && <InlineError>{error}</InlineError>}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

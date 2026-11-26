@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
-import Modal from "../../Modal";
+import Dialog from "../../ui/Dialog";
 import { HISTORY_SENTINEL_KEY, navigateAfterSave, openDirtyDialogCount } from "../unsavedChanges";
 
 const onSentinel = (): boolean =>
@@ -30,9 +30,9 @@ afterEach(async () => {
 
 function DirtyModal({ dirty, onClose }: { dirty: boolean; onClose: () => void }): JSX.Element {
   return (
-    <Modal open onClose={onClose} title="Formular" dirty={dirty}>
+    <Dialog open onClose={onClose} title="Formular" dirty={dirty}>
       <p>Inhalt</p>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -94,12 +94,12 @@ describe("the history sentinel", () => {
           <button type="button" onClick={() => setSecond(false)}>
             close-second
           </button>
-          <Modal open={first} onClose={() => setFirst(false)} title="Eins" dirty>
+          <Dialog open={first} onClose={() => setFirst(false)} title="Eins" dirty>
             <p>1</p>
-          </Modal>
-          <Modal open={second} onClose={() => setSecond(false)} title="Zwei" dirty>
+          </Dialog>
+          <Dialog open={second} onClose={() => setSecond(false)} title="Zwei" dirty>
             <p>2</p>
-          </Modal>
+          </Dialog>
         </>
       );
     }
@@ -145,9 +145,9 @@ describe("the history sentinel — fix round 2", () => {
   it("does not ask while a save is running, but stays armed", async () => {
     const onClose = vi.fn();
     render(
-      <Modal open onClose={onClose} title="Formular" dirty busy>
+      <Dialog open onClose={onClose} title="Formular" dirty busy>
         <p>Inhalt</p>
-      </Modal>
+      </Dialog>
     );
     act(() => window.history.back());
     await waitFor(() => expect(onSentinel()).toBe(true));
@@ -165,12 +165,12 @@ describe("the history sentinel — fix round 2", () => {
     function Stack({ lowerDirty }: { lowerDirty: boolean }): JSX.Element {
       return (
         <>
-          <Modal open onClose={lowerClose} title="Unten" dirty={lowerDirty}>
+          <Dialog open onClose={lowerClose} title="Unten" dirty={lowerDirty}>
             <p>unten</p>
-          </Modal>
-          <Modal open onClose={upperClose} title="Oben" dirty>
+          </Dialog>
+          <Dialog open onClose={upperClose} title="Oben" dirty>
             <p>oben</p>
-          </Modal>
+          </Dialog>
         </>
       );
     }
@@ -190,7 +190,7 @@ describe("navigateAfterSave — a save that moves on to another page", () => {
     const navigate = useNavigate();
     const [dirty, setDirty] = useState(true);
     return (
-      <Modal open onClose={vi.fn()} title="Formular" dirty={dirty}>
+      <Dialog open onClose={vi.fn()} title="Formular" dirty={dirty}>
         <button
           type="button"
           onClick={() => {
@@ -200,7 +200,7 @@ describe("navigateAfterSave — a save that moves on to another page", () => {
         >
           save
         </button>
-      </Modal>
+      </Dialog>
     );
   }
 

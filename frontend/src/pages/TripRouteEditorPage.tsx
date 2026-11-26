@@ -36,6 +36,7 @@ import { useRouteTrackActions } from "../components/Trips/useRouteTrackActions";
 import type { Trip, TripStop } from "../types";
 import type { TourGeometry, TourLeg, TourRoute, TourStop } from "../types/tour";
 import WebGLGuard from "../components/map/WebGLGuard";
+import InlineError from "../components/ui/InlineError";
 
 /**
  * `TripStop` (`types/index.ts`) does not declare `routeId`/`routeOrderIdx` —
@@ -563,9 +564,9 @@ export default function TripRouteEditorPage(): JSX.Element {
     return (
       <AppShell>
         <div className="py-16 text-center">
-          <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
+          <InlineError>
             {failure === "notFound" ? t("trips:tours.notFound") : t("trips:tours.loadError")}
-          </p>
+          </InlineError>
           {failure === "loadError" && (
             <button type="button" className="mt-3 underline text-sm" onClick={() => void load()}>
               {t("common:buttons.retry")}

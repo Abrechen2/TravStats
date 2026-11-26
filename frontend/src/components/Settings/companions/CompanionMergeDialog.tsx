@@ -14,6 +14,7 @@ import Button from "../../ui/Button";
 import Dialog from "../../ui/Dialog";
 import { Field, Select } from "../../ui/Field";
 import { companionErrorKey } from "./companionErrorCopy";
+import InlineError from "../../ui/InlineError";
 
 const NS = "companions:manage.merge";
 
@@ -113,11 +114,7 @@ export default function CompanionMergeDialog({
           </Select>
         </Field>
         {target && !preview && !previewError && <p className="t-caption">{t(`${NS}.loading`)}</p>}
-        {previewError && (
-          <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
-            {previewError}
-          </p>
-        )}
+        {previewError && <InlineError tone="warning">{previewError}</InlineError>}
         {preview && <PreviewText preview={preview} />}
       </div>
     </Dialog>
@@ -149,11 +146,7 @@ function PreviewText({ preview }: { preview: CompanionMergePreview }): JSX.Eleme
         : null;
 
   if (preview.link === "conflict") {
-    return (
-      <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
-        {t(`${NS}.link.conflict`, names)}
-      </p>
-    );
+    return <InlineError tone="warning">{t(`${NS}.link.conflict`, names)}</InlineError>;
   }
   return (
     <div className="flex flex-col gap-2 text-sm" data-testid="companion-merge-preview">

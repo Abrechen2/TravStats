@@ -8,6 +8,7 @@
   "buttons": {
     "save": "Speichern",
     "cancel": "Abbrechen",
+    "undo": "Rückgängig",
     "delete": "Löschen",
     "duplicate": "Duplizieren",
     "edit": "Bearbeiten",

@@ -12,6 +12,7 @@ import LinkExistingPanel from "./LinkExistingPanel";
 import { sharingLinkApi } from "../../lib/api/sharingLink";
 import { AddTravellerError, addAndLinkTraveller } from "./addTraveller";
 import { shareBlockKey, sharingErrorKey } from "./sharingCopy";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:shareDialog";
 
@@ -218,11 +219,7 @@ function ShareTripForm({
             ))}
           </div>
         )}
-        {error && (
-          <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
-            {error}
-          </p>
-        )}
+        {error && <InlineError>{error}</InlineError>}
       </div>
     </Dialog>
   );

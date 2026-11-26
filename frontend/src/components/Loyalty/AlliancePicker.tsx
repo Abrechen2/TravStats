@@ -5,6 +5,7 @@ import { airlinesApi } from "../../lib/api/catalogue";
 import { ALLIANCE_IDS } from "../../types/loyalty";
 import type { AllianceId, AllianceMembers } from "../../types/loyalty";
 import { logger } from "../../lib/logger";
+import InlineError from "../ui/InlineError";
 
 /**
  * The most codes one card may carry — the server's `airlineCodes` limit in
@@ -50,11 +51,7 @@ export default function AlliancePicker({ values, onChange }: Props): JSX.Element
 
   if (state.kind === "loading") return null;
   if (state.kind === "failed") {
-    return (
-      <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-        {t("loyalty:alliances.loadError")}
-      </p>
-    );
+    return <InlineError>{t("loyalty:alliances.loadError")}</InlineError>;
   }
 
   const add = (id: AllianceId): void => {
@@ -91,9 +88,7 @@ export default function AlliancePicker({ values, onChange }: Props): JSX.Element
         })}
       </div>
       {tooMany && (
-        <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-          {t("loyalty:alliances.tooMany", { max: MAX_AIRLINE_CODES })}
-        </p>
+        <InlineError>{t("loyalty:alliances.tooMany", { max: MAX_AIRLINE_CODES })}</InlineError>
       )}
     </div>
   );

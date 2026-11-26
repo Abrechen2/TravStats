@@ -16,6 +16,7 @@ import {
   type TravTrackImportOutcome,
   type TravTrackImportReport,
 } from "../../lib/api/travtrackImports";
+import InlineError from "../ui/InlineError";
 
 const NS = "track:imports";
 
@@ -282,11 +283,7 @@ export default function TravTrackImports({
           ))}
         </ul>
       )}
-      {loadError && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
-          {t(loadError)}
-        </p>
-      )}
+      {loadError && <InlineError>{t(loadError)}</InlineError>}
       {status && (
         <p
           className="t-body"

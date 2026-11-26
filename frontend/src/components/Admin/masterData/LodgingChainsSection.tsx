@@ -4,13 +4,13 @@ import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
 import { Field, Input } from "../../ui/Field";
 import Button from "../../ui/Button";
-import { token } from "../../ui/tokens";
 import {
   adminLodgingChainsApi,
   chainErrorKey,
   type CatalogueChain,
 } from "../../../lib/api/adminLodgingChains";
 import LodgingChainDialogs, { type ChainAction } from "./LodgingChainDialogs";
+import InlineError from "../../ui/InlineError";
 
 /**
  * Admin › Unterkünfte › Hotelketten (forgejo#321): the chain catalogue every
@@ -114,9 +114,7 @@ export default function LodgingChainsSection(): JSX.Element {
       </p>
 
       {loadFailed ? (
-        <p role="alert" className="text-sm" style={{ color: token("bad") }}>
-          {t("admin:lodgingChains.loadError")}
-        </p>
+        <InlineError>{t("admin:lodgingChains.loadError")}</InlineError>
       ) : loading && chains.length === 0 ? (
         <p className="t-caption">{t("common:loading.default")}</p>
       ) : chains.length === 0 ? (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import type { Cruise, CruiseStopInput } from "../../types";
 import { cruiseApi } from "../../lib/api/cruise";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -193,7 +193,7 @@ export function CruiseReimportCompare({
   const ready = loaded.status === "ready" ? loaded : null;
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={() => advance("kept")}
       busy={saving}
@@ -272,6 +272,6 @@ export function CruiseReimportCompare({
           />
         </>
       )}
-    </Modal>
+    </Dialog>
   );
 }

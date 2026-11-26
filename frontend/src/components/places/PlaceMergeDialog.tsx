@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { usePlaceRelationsResult } from "../../hooks/usePlaceRelations";
 import { listPlaces, mergePlace } from "../../lib/api/places";
@@ -141,7 +141,7 @@ export function PlaceMergeDialog({ place, onClose, onMerged }: Props): JSX.Eleme
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving.saving}
@@ -298,6 +298,6 @@ export function PlaceMergeDialog({ place, onClose, onMerged }: Props): JSX.Eleme
           retryDisabled={saving.saving}
         />
       </div>
-    </Modal>
+    </Dialog>
   );
 }

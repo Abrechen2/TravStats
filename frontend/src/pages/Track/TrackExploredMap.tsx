@@ -14,6 +14,7 @@ import {
   type ExploredCell,
 } from "../../lib/api/travtrack";
 import { reuseMapsEnabled } from "../../lib/mapReuse";
+import InlineError from "../../components/ui/InlineError";
 
 /** The server's one resolution (plan L1): every cell is a zoom-14 tile. */
 const ZOOM = 14;
@@ -222,11 +223,7 @@ export default function TrackExploredMap(): JSX.Element {
           {t("track:explored.preparing")}
         </p>
       )}
-      {status.kind === "failed" && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
-          {t(status.key)}
-        </p>
-      )}
+      {status.kind === "failed" && <InlineError>{t(status.key)}</InlineError>}
       <p className="t-caption">{t("track:explored.legend")}</p>
       <p className="t-caption">{t("track:explored.zones")}</p>
     </div>

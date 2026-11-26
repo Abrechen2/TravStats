@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import Button from "../ui/Button";
-import Modal from "../Modal";
-import { token } from "../ui/tokens";
+import Dialog from "../ui/Dialog";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
+import InlineError from "../ui/InlineError";
 
 export interface GapPick<T = unknown> {
   id: string;
@@ -66,7 +66,7 @@ export default function GapEntityPicker<T>({
   }, [debounced, attempt]);
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={title}
@@ -89,9 +89,7 @@ export default function GapEntityPicker<T>({
         {state.kind === "loading" && <p className="t-caption">{t("track:gaps.picker.loading")}</p>}
         {state.kind === "failed" && (
           <div role="alert" className="flex flex-col gap-2">
-            <p className="t-body" style={{ color: token("bad") }}>
-              {t("track:gaps.picker.failed")}
-            </p>
+            <InlineError announce={false}>{t("track:gaps.picker.failed")}</InlineError>
             <Button variant="secondary" onClick={() => setAttempt((n) => n + 1)}>
               {t("track:gaps.retry")}
             </Button>
@@ -123,6 +121,6 @@ export default function GapEntityPicker<T>({
           {createLabel}
         </Button>
       </div>
-    </Modal>
+    </Dialog>
   );
 }

@@ -316,9 +316,7 @@ describe("LodgingStaysView", () => {
     // The list itself is unaffected.
     expect(await screen.findByTestId("stay-view-row-s-june")).toBeInTheDocument();
 
-    const alert = screen
-      .getByText("lodging:stayView.filter.tripsFailed")
-      .closest("p") as HTMLElement;
+    const alert = screen.getByRole("alert");
     await userEvent.click(within(alert).getByRole("button", { name: "common:buttons.retry" }));
     await waitFor(() =>
       expect(screen.queryByText("lodging:stayView.filter.tripsFailed")).toBeNull()

@@ -1,12 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { authApi, passkeyApi, setupApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
-import { useScrimDismiss } from "../components/ui/useScrimDismiss";
+import Dialog from "../components/ui/Dialog";
 import { LoginBackdrop } from "../components/LoginBackdrop";
 
 /**
@@ -22,7 +22,7 @@ import { PasswordInput } from "../components/Auth/PasswordInput";
 import { Icon } from "../components/ui/Icon";
 import { loginFailure, type LoginFailureCopy } from "../lib/loginFailure";
 import { logger } from "../lib/logger";
-import { useEscapeClose } from "../hooks/useEscapeClose";
+import InlineError from "../components/ui/InlineError";
 
 export default function LoginPage(): JSX.Element {
   const { t } = useTranslation(["auth", "common"]);
@@ -202,9 +202,6 @@ export default function LoginPage(): JSX.Element {
     setForgotSuccess(false);
     setForgotError("");
   };
-  const forgotPanelRef = useRef<HTMLDivElement>(null);
-  const forgotScrim = useScrimDismiss(forgotPanelRef, handleCloseForgotModal);
-  useEscapeClose(showForgotModal, handleCloseForgotModal, forgotLoading);
 
   // Round 4 ("Anmelden"): the brand and what TravStats is on the left, the
   // form on the right. The public counts the export draws there (entries,
@@ -358,11 +355,7 @@ export default function LoginPage(): JSX.Element {
                 />
               </div>
 
-              {error && (
-                <p className="text-center text-sm" style={{ color: "var(--ts-bad)" }} role="alert">
-                  {error}
-                </p>
-              )}
+              {error && <InlineError className="text-center">{error}</InlineError>}
 
               <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
                 {loading ? t("login.submitting") : t("login.submit")}
@@ -405,108 +398,76 @@ export default function LoginPage(): JSX.Element {
       </motion.main>
 
       {/* Forgot Password Modal */}
-      <AnimatePresence>
-        {showForgotModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: "rgba(0,0,0,0.7)" }}
-            {...forgotScrim}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="forgot-modal-title"
+      <Dialog
+        open={showForgotModal}
+        onClose={handleCloseForgotModal}
+        busy={forgotLoading}
+        maxWidth={384}
+        title={t("login.forgotPasswordModal.title")}
+        footer={
+          <button
+            type="button"
+            onClick={handleCloseForgotModal}
+            className="btn-secondary w-full py-2 text-sm"
           >
-            <motion.div
-              ref={forgotPanelRef}
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-2xl p-6"
-              style={{
-                background: "var(--bg-surface)",
-                border: "1px solid var(--color-border)",
-              }}
-            >
-              <h2
-                id="forgot-modal-title"
-                className="text-lg font-semibold mb-4"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {t("login.forgotPasswordModal.title")}
-              </h2>
-
-              {forgotSuccess ? (
-                /* Two sentences, one of them false on the other instance —
+            {t("login.forgotPasswordModal.close")}
+          </button>
+        }
+      >
+        {forgotSuccess ? (
+          /* Two sentences, one of them false on the other instance —
                    which is why the branch is here and not in the route. The
                    copy is chosen by what the instance CAN do, never by whether
                    the account exists: the request answers 200 either way, and
                    a message that differed would be the enumeration oracle the
                    route spends its whole length avoiding (forgejo#88). */
-                <div className="text-sm space-y-2 mb-4" style={{ color: "var(--ts-good)" }}>
-                  <p>
-                    {smtpEnabled === false
-                      ? t("login.forgotPasswordModal.noSmtpNotified")
-                      : t("login.forgotPasswordModal.success")}
-                  </p>
-                </div>
-              ) : (
-                <form onSubmit={handleForgotSubmit} className="space-y-4">
-                  {/* The form is offered WITHOUT mail delivery too, since
+          <div className="text-sm space-y-2 mb-4" style={{ color: "var(--ts-good)" }}>
+            <p>
+              {smtpEnabled === false
+                ? t("login.forgotPasswordModal.noSmtpNotified")
+                : t("login.forgotPasswordModal.success")}
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleForgotSubmit} className="space-y-4">
+            {/* The form is offered WITHOUT mail delivery too, since
                       2026-09-19: the request reaches an administrator in the
                       inbox instead of a mailbox. Before that this branch
                       rendered a dead sentence and no input at all, and the
                       administrator was never told anyone had asked. */}
-                  {smtpEnabled === false && (
-                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                      {t("login.forgotPasswordModal.noSmtp")}
-                    </p>
-                  )}
-                  <div>
-                    <label
-                      htmlFor="forgotUsername"
-                      className="block text-sm font-medium mb-1.5"
-                      style={{ color: "var(--text-secondary)" }}
-                    >
-                      {t("login.forgotPasswordModal.usernameLabel")}
-                    </label>
-                    <input
-                      id="forgotUsername"
-                      type="text"
-                      value={forgotUsername}
-                      onChange={(e) => setForgotUsername(e.target.value)}
-                      className="input w-full"
-                      placeholder={t("login.forgotPasswordModal.usernamePlaceholder")}
-                      required
-                      autoFocus
-                    />
-                  </div>
-                  {forgotError && <p className="text-sm text-red-400">{forgotError}</p>}
-                  <button
-                    type="submit"
-                    disabled={forgotLoading}
-                    className="btn-primary w-full py-2"
-                  >
-                    {forgotLoading
-                      ? t("login.forgotPasswordModal.submitting")
-                      : t("login.forgotPasswordModal.submit")}
-                  </button>
-                </form>
-              )}
-
-              <button
-                type="button"
-                onClick={handleCloseForgotModal}
-                className="btn-secondary w-full mt-4 py-2 text-sm"
+            {smtpEnabled === false && (
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                {t("login.forgotPasswordModal.noSmtp")}
+              </p>
+            )}
+            <div>
+              <label
+                htmlFor="forgotUsername"
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "var(--text-secondary)" }}
               >
-                {t("login.forgotPasswordModal.close")}
-              </button>
-            </motion.div>
-          </motion.div>
+                {t("login.forgotPasswordModal.usernameLabel")}
+              </label>
+              <input
+                id="forgotUsername"
+                type="text"
+                value={forgotUsername}
+                onChange={(e) => setForgotUsername(e.target.value)}
+                className="input w-full"
+                placeholder={t("login.forgotPasswordModal.usernamePlaceholder")}
+                required
+                autoFocus
+              />
+            </div>
+            {forgotError && <InlineError>{forgotError}</InlineError>}
+            <button type="submit" disabled={forgotLoading} className="btn-primary w-full py-2">
+              {forgotLoading
+                ? t("login.forgotPasswordModal.submitting")
+                : t("login.forgotPasswordModal.submit")}
+            </button>
+          </form>
         )}
-      </AnimatePresence>
+      </Dialog>
     </div>
   );
 }

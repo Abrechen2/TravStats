@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useEscapeClose } from "../../hooks/useEscapeClose";
+import Dialog from "../ui/Dialog";
+import InlineError from "../ui/InlineError";
 
 export interface MappingFieldSpec<F extends string> {
   key: F;
@@ -210,124 +211,90 @@ export function ColumnMappingWizard<F extends string>({
   const mappingKey = JSON.stringify(mapping);
   const repeatsRejectedAttempt = submitError != null && rejectedMapping === mappingKey;
 
-  useEscapeClose(true, onCancel);
-
   const canSubmit =
     missingRequired.length === 0 && collisions.size === 0 && !repeatsRejectedAttempt;
 
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="mapping-wizard-title"
-      className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 p-4"
-    >
-      <div
-        className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg shadow-xl"
-        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <header
-          className="flex items-center justify-between border-b px-6 py-4"
-          style={{ borderColor: "var(--color-border)" }}
-        >
-          <h3
-            id="mapping-wizard-title"
-            className="text-lg font-semibold"
-            style={{ color: "var(--text-primary)" }}
-          >
-            {t("settings:import.preview.wizard.title")}
-          </h3>
-          <button
-            onClick={onCancel}
-            className="text-2xl leading-none"
-            style={{ color: "var(--text-muted)" }}
-            aria-label={t("common:buttons.close")}
-          >
-            ×
-          </button>
-        </header>
-
-        <div className="flex-1 overflow-auto px-6 py-4">
-          <FieldSection
-            heading={t("settings:import.preview.wizard.requiredSection")}
-            fields={requiredFields}
-            mapping={mapping}
-            autoFilled={autoFilled}
-            collisions={collisions}
-            csvHeaders={csvHeaders}
-            csvSamples={csvSamples}
-            setField={setField}
-            t={t}
-            required
-          />
-          <FieldSection
-            heading={t("settings:import.preview.wizard.optionalSection")}
-            fields={optionalFields}
-            mapping={mapping}
-            autoFilled={autoFilled}
-            collisions={collisions}
-            csvHeaders={csvHeaders}
-            csvSamples={csvSamples}
-            setField={setField}
-            t={t}
-          />
-        </div>
-
-        <footer
-          className="flex flex-col gap-3 border-t px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
-          style={{ borderColor: "var(--color-border)" }}
-        >
-          <p className="text-sm" aria-live="polite">
-            {submitError ? (
-              <span data-testid="wizard-submit-error" style={{ color: "rgb(252, 165, 165)" }}>
-                {submitError}
-              </span>
-            ) : missingRequired.length > 0 ? (
-              <span style={{ color: "rgb(252, 165, 165)" }}>
-                {t("settings:import.preview.wizard.missingFields", {
-                  fields: missingRequired.map((f) => f.label).join(", "),
+  const footer = (
+    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm" aria-live="polite">
+        {submitError ? (
+          <InlineError testId="wizard-submit-error">{submitError}</InlineError>
+        ) : missingRequired.length > 0 ? (
+          <InlineError>
+            {t("settings:import.preview.wizard.missingFields", {
+              fields: missingRequired.map((f) => f.label).join(", "),
+            })}
+          </InlineError>
+        ) : collisions.size > 0 ? (
+          <InlineError>{t("settings:import.preview.wizard.duplicateMappingHint")}</InlineError>
+        ) : (
+          <span style={{ color: "rgb(134, 239, 172)" }}>
+            {t("settings:import.preview.wizard.allMapped")}
+            {skippedOptionalCount > 0 && (
+              <>
+                {" · "}
+                {t("settings:import.preview.wizard.optionalSkipped", {
+                  count: skippedOptionalCount,
                 })}
-              </span>
-            ) : collisions.size > 0 ? (
-              <span style={{ color: "rgb(252, 165, 165)" }}>
-                {t("settings:import.preview.wizard.duplicateMappingHint")}
-              </span>
-            ) : (
-              <span style={{ color: "rgb(134, 239, 172)" }}>
-                {t("settings:import.preview.wizard.allMapped")}
-                {skippedOptionalCount > 0 && (
-                  <>
-                    {" · "}
-                    {t("settings:import.preview.wizard.optionalSkipped", {
-                      count: skippedOptionalCount,
-                    })}
-                  </>
-                )}
-              </span>
+              </>
             )}
-          </p>
-          <div className="flex flex-wrap gap-2 sm:justify-end">
-            <button
-              onClick={onCancel}
-              className="btn-secondary px-3 py-1.5 text-sm"
-              style={{ background: "var(--bg-elevated)" }}
-            >
-              {t("settings:import.preview.wizard.cancel")}
-            </button>
-            <button
-              disabled={!canSubmit}
-              onClick={() => {
-                setRejectedMapping(mappingKey);
-                onSubmit(mapping);
-              }}
-              className="btn-primary px-4 py-1.5 text-sm disabled:opacity-50"
-            >
-              {t("settings:import.preview.wizard.continue")}
-            </button>
-          </div>
-        </footer>
+          </span>
+        )}
+      </p>
+      <div className="flex flex-wrap gap-2 sm:justify-end">
+        <button
+          onClick={onCancel}
+          className="btn-secondary px-3 py-1.5 text-sm"
+          style={{ background: "var(--bg-elevated)" }}
+        >
+          {t("settings:import.preview.wizard.cancel")}
+        </button>
+        <button
+          disabled={!canSubmit}
+          onClick={() => {
+            setRejectedMapping(mappingKey);
+            onSubmit(mapping);
+          }}
+          className="btn-primary px-4 py-1.5 text-sm disabled:opacity-50"
+        >
+          {t("settings:import.preview.wizard.continue")}
+        </button>
       </div>
     </div>
+  );
+
+  return (
+    <Dialog
+      open
+      onClose={onCancel}
+      maxWidth={768}
+      title={t("settings:import.preview.wizard.title")}
+      footer={footer}
+    >
+      <FieldSection
+        heading={t("settings:import.preview.wizard.requiredSection")}
+        fields={requiredFields}
+        mapping={mapping}
+        autoFilled={autoFilled}
+        collisions={collisions}
+        csvHeaders={csvHeaders}
+        csvSamples={csvSamples}
+        setField={setField}
+        t={t}
+        required
+      />
+      <FieldSection
+        heading={t("settings:import.preview.wizard.optionalSection")}
+        fields={optionalFields}
+        mapping={mapping}
+        autoFilled={autoFilled}
+        collisions={collisions}
+        csvHeaders={csvHeaders}
+        csvSamples={csvSamples}
+        setField={setField}
+        t={t}
+      />
+    </Dialog>
   );
 }
 
@@ -438,9 +405,9 @@ function FieldSection<F extends string>({
                   </p>
                 )}
                 {collides && (
-                  <p className="mt-1 text-xs" style={{ color: "rgb(252, 165, 165)" }}>
+                  <InlineError className="mt-1">
                     {t("settings:import.preview.wizard.duplicateMapping")}
-                  </p>
+                  </InlineError>
                 )}
               </div>
             </div>

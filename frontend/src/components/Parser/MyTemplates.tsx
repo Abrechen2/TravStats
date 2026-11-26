@@ -10,6 +10,7 @@ import { GlobeLoader } from "../GlobeLoader";
 import { useMinLoadingState } from "../../hooks/useMinLoadingState";
 import { formatDate } from "../../lib/displayFormat";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import Banner from "../ui/Banner";
 
 export default function MyTemplates(): JSX.Element {
   const { t } = useTranslation(["parser", "common"]);
@@ -123,8 +124,8 @@ export default function MyTemplates(): JSX.Element {
 
   if (error) {
     return (
-      <div className="text-center py-16 text-(--danger)">
-        <p className="text-lg font-medium">{t(error)}</p>
+      <div className="py-16">
+        <Banner tone="error">{t(error)}</Banner>
       </div>
     );
   }

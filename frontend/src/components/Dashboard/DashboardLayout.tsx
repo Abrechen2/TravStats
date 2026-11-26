@@ -41,6 +41,7 @@ import type { ImportDocument } from "../import/documentHandoff";
 import type { ParseDomain } from "../../lib/api/parse";
 import { isEntryDomainShown } from "../../config/domainBetaGates";
 import { MAP_CHROME } from "../map/mapChrome";
+import InlineError from "../ui/InlineError";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -384,11 +385,7 @@ export function DashboardLayout({
           }}
         >
           {nextUp && <MapNextUpCard entry={nextUp} nowMs={nowMs} />}
-          {upcomingFailed && (
-            <p role="status" className="text-xs text-(--danger)">
-              {t("dashboard:upcomingFailed")}
-            </p>
-          )}
+          {upcomingFailed && <InlineError>{t("dashboard:upcomingFailed")}</InlineError>}
           <LastSeenCard />
         </div>
         {/* On a single-domain view the filter is the ONLY way back — the tab

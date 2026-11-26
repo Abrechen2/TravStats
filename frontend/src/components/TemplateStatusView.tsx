@@ -5,6 +5,7 @@ import { logger } from "../lib/logger";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import TemplateSyncNotice from "./TemplateSyncNotice";
+import InlineError from "./ui/InlineError";
 
 export default function TemplateStatusView(): JSX.Element {
   const { t } = useTranslation(["parser"]);
@@ -89,9 +90,7 @@ export default function TemplateStatusView(): JSX.Element {
         </div>
       </div>
       {failure && (
-        <p role="alert" className="text-sm" style={{ color: "var(--warning)" }}>
-          {t(`parser:communityTemplates.status.${failure}`)}
-        </p>
+        <InlineError tone="warning">{t(`parser:communityTemplates.status.${failure}`)}</InlineError>
       )}
       {v2 && <TemplateSyncNotice v2={v2} />}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

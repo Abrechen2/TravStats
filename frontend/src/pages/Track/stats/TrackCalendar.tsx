@@ -13,6 +13,7 @@ import { todayIn } from "../../../shared/time/clock";
 import { useSettingsStore } from "../../../store/settingsStore";
 import { TRACK_COLOR } from "../map/trackMapLayers";
 import { calendarMonths, KM_STEPS, kmStep, type CalendarCell } from "./calendarCells";
+import InlineError from "../../../components/ui/InlineError";
 
 type State =
   | { kind: "loading" }
@@ -82,11 +83,7 @@ export default function TrackCalendar({ year }: { year: number }): JSX.Element {
       <h2 className="t-card-title">{t("track:calendar.title", { year })}</h2>
       <p className="t-caption">{t("track:calendar.intro")}</p>
       {state.kind === "loading" && <p className="t-caption">{t("track:calendar.loading")}</p>}
-      {state.kind === "failed" && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
-          {t(state.key)}
-        </p>
-      )}
+      {state.kind === "failed" && <InlineError>{t(state.key)}</InlineError>}
       {state.kind === "loaded" && (
         <div className="flex flex-col gap-1" style={{ overflowX: "auto" }}>
           {calendarMonths(state.data, today).map((m) => (

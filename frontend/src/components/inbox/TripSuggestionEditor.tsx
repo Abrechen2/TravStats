@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { TripSuggestion, TripSuggestionEdits } from "../../types/tripSuggestion";
 import Button from "../ui/Button";
+import InlineError from "../ui/InlineError";
 
 const NS = "dataQuality:inbox.tripSuggestions";
 
@@ -144,16 +145,8 @@ export default function TripSuggestionEditor({
         </fieldset>
       )}
 
-      {invalidSpan && (
-        <p role="alert" className="t-caption" style={{ color: "var(--ts-warn)" }}>
-          {t(`${NS}.errors.endBeforeStart`)}
-        </p>
-      )}
-      {nothingKept && (
-        <p role="alert" className="t-caption" style={{ color: "var(--ts-warn)" }}>
-          {t(`${NS}.errors.noMembers`)}
-        </p>
-      )}
+      {invalidSpan && <InlineError tone="warning">{t(`${NS}.errors.endBeforeStart`)}</InlineError>}
+      {nothingKept && <InlineError tone="warning">{t(`${NS}.errors.noMembers`)}</InlineError>}
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" variant="primary" disabled={busy || invalidSpan || nothingKept}>

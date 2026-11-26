@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
-import Dialog from "../../components/ui/Dialog";
-import Button from "../../components/ui/Button";
+import ConfirmModal from "../../components/ui/ConfirmModal";
+import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { Field, Input } from "../../components/ui/Field";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { trackErrorKey, travTrackApi } from "../../lib/api/travtrack";
-import { token } from "../../components/ui/tokens";
+import InlineError from "../../components/ui/InlineError";
 
 interface Props {
   open: boolean;
@@ -82,24 +82,19 @@ export default function TrackDeleteDialog({
   };
 
   return (
-    <Dialog
-      open={open}
+    <ConfirmModal
+      isOpen={open}
       onClose={onClose}
+      onConfirm={() => void remove()}
+      isLoading={busy}
+      confirmDisabled={!valid || preview.kind !== "count"}
       title={t("track:delete.title")}
-      busy={busy}
-      dismissLabel={t("common:buttons.cancel")}
-      action={
-        <Button
-          variant="danger"
-          disabled={!valid || busy || preview.kind !== "count"}
-          onClick={() => void remove()}
-        >
-          {t("track:delete.do")}
-        </Button>
-      }
+      message={t("track:delete.intro")}
+      confirmText={t("track:delete.do")}
+      confirmButtonClass={DELETE_BUTTON_CLASS}
+      cancelText={t("common:buttons.cancel")}
     >
-      <div className="flex flex-col gap-3">
-        <p className="t-caption">{t("track:delete.intro")}</p>
+      <div className="mt-3 flex flex-col gap-3">
         <div className="flex flex-wrap gap-3">
           <Field label={t("track:delete.from")} htmlFor="track-delete-from">
             <Input
@@ -127,12 +122,8 @@ export default function TrackDeleteDialog({
                 ? t("track:delete.previewNone")
                 : t("track:delete.preview", { count: preview.count })}
         </p>
-        {error && (
-          <p className="t-body" role="alert" style={{ color: token("bad") }}>
-            {t(error)}
-          </p>
-        )}
+        {error && <InlineError>{t(error)}</InlineError>}
       </div>
-    </Dialog>
+    </ConfirmModal>
   );
 }

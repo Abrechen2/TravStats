@@ -51,6 +51,7 @@ import { VesselLiveStatus } from "../components/vessel/VesselLiveStatus";
 import { VesselAssignDialog } from "../components/vessel/VesselAssignDialog";
 import Toggletip from "../components/ui/Toggletip";
 import BackLink from "../components/navigation/BackLink";
+import Banner from "../components/ui/Banner";
 
 /** A cruise day at its port, in the user's format — never moved by the reader's zone. */
 const fmtDate = (day: LocalDateValue | null): string => (day ? formatLocalDate(day.date) : "—");
@@ -180,12 +181,9 @@ export default function CruiseDetailPage(): JSX.Element {
           <BackLink to="/cruises" className="ts-back-link text-sm text-(--text-muted)">
             ← {t("list.title")}
           </BackLink>
-          <div
-            role="alert"
-            className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)"
-          >
+          <Banner tone="error" className="mt-4">
             {isLoadError ? t("detail.loadError") : t("detail.notFound")}
-          </div>
+          </Banner>
           {isLoadError && (
             <div className="mt-3">
               <Button onClick={() => setReloadKey((k) => k + 1)}>

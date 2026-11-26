@@ -24,6 +24,7 @@ import { appLocale } from "../../lib/units";
 import { daysBetween, formatDayLong } from "../../shared/time/calendar";
 import { todayIn } from "../../shared/time/clock";
 import { TRACK_COLOR } from "../../pages/Track/map/trackMapLayers";
+import InlineError from "../ui/InlineError";
 
 type State =
   { kind: "loading" } | { kind: "failed"; key: string } | { kind: "loaded"; data: GapCalendar };
@@ -159,9 +160,7 @@ export default function GapCalendar({ withTrack }: { withTrack: boolean }): JSX.
       {state.kind === "loading" && <p className="t-caption">{t("track:gaps.loading")}</p>}
       {state.kind === "failed" && (
         <div role="alert" className="flex flex-col gap-2">
-          <p className="t-body" style={{ color: token("bad") }}>
-            {t(state.key)}
-          </p>
+          <InlineError announce={false}>{t(state.key)}</InlineError>
           <Button variant="secondary" onClick={() => setReload((n) => n + 1)}>
             {t("track:gaps.retry")}
           </Button>
