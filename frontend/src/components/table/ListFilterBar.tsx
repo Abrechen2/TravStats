@@ -1,3 +1,4 @@
+import YearPicker from "../ui/YearPicker";
 import { useEffect, useRef, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -28,7 +29,9 @@ export interface SelectFilterConfig {
   onChange: (value: string) => void;
   /** The "no restriction" entry, always first. */
   allLabel: string;
-  options: ReadonlyArray<{ value: string; label: string }>;
+  options: ReadonlyArray<{ value: string; label: string; count?: number }>;
+  /** Caption under a year in the year grid, e.g. "12 Flüge"; only used by the year filter. */
+  formatCount?: (count: number) => string;
 }
 
 interface Props {
@@ -66,6 +69,20 @@ function FilterSelect({ config }: { config: SelectFilterConfig }): JSX.Element {
         </option>
       ))}
     </select>
+  );
+}
+
+/** The year filter: the shared year pill over the same string-valued config. */
+function YearFilter({ config }: { config: SelectFilterConfig }): JSX.Element {
+  const years = config.options.map((o) => ({ year: Number.parseInt(o.value, 10), count: o.count }));
+  return (
+    <YearPicker
+      years={years.filter((y) => Number.isFinite(y.year))}
+      value={config.value === "all" ? "all" : Number.parseInt(config.value, 10)}
+      onChange={(v): void => config.onChange(v === "all" ? "all" : String(v))}
+      label={config.label}
+      formatCount={config.formatCount}
+    />
   );
 }
 
@@ -130,7 +147,7 @@ export default function ListFilterBar({
           <div className="flex w-full min-w-0 items-center gap-2 md:contents">
             <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scrollbar-none md:contents">
               {status && <FilterSelect config={status} />}
-              {year && <FilterSelect config={year} />}
+              {year && <YearFilter config={year} />}
             </div>
             {/* Outside the scrolling part: an overflow container clips the
                 panel this button opens. */}

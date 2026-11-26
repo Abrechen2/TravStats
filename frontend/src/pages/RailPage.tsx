@@ -1,3 +1,4 @@
+import { useYearCounts } from "../lib/stats/useYearCounts";
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
 import { LinkedMonthChip, useLinkedMonth } from "../components/Stats/LinkedMonth";
 import { useGapPrefill } from "../hooks/useGapPrefill";
@@ -151,6 +152,7 @@ async function loadPage(
  */
 export default function RailPage(): JSX.Element {
   const { t } = useTranslation(["rail", "common"]);
+  const yearCounts = useYearCounts().of("rail");
   const tableHints = useTableHints();
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
@@ -400,7 +402,12 @@ export default function RailPage(): JSX.Element {
             value: yearFilter === "all" ? "all" : String(yearFilter),
             onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
             allLabel: t("rail:list.allYears"),
-            options: years.map((y) => ({ value: String(y), label: String(y) })),
+            options: years.map((y) => ({
+              value: String(y),
+              label: String(y),
+              count: yearCounts[y],
+            })),
+            formatCount: (n): string => t("common:yearPicker.count.rides", { count: n }),
           }}
           hasActiveFilter={hasActiveFilter}
           onReset={resetFilters}

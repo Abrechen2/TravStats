@@ -1,3 +1,4 @@
+import { yearTrigger } from "../../../__tests__/helpers/yearPicker";
 import { render as rtlRender, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import userEvent from "@testing-library/user-event";
@@ -239,7 +240,7 @@ describe("ConsentDialog", () => {
         initialScope={{ groups: ["trips"], domains: ["flight"], year: 1999 }}
       />
     );
-    expect(screen.getByRole("combobox")).toHaveValue("1999");
+    expect(yearTrigger("consent.period")).toHaveTextContent("1999");
     await screen.findByText("metric.flights");
   });
 

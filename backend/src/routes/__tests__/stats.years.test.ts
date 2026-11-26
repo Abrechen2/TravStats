@@ -4,7 +4,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
-import { yearStatsSchema } from "../../schemas/statsYears";
+import { yearCountsSchema, yearStatsSchema } from "../../schemas/statsYears";
 
 /**
  * GET /stats/years: distance per year and month across the domains. The pure rules are tested
@@ -123,6 +123,27 @@ describe("GET /stats/years", () => {
     // 40 km at 19:30 on 31 Dec on the New York clock: December 2024, not January 2025.
     expect(y24.months[11].byDomain.rail).toBe(40);
     expect(res.body.years.map((y: { year: number }) => y.year)).toEqual([2024, 2021]);
+  });
+
+  it("counts per year and domain under the same rules as the cards, owner-scoped", async () => {
+    const res = await request(app)
+      .get("/api/v1/stats/years/counts")
+      .set("Cookie", cookieOf(userId));
+    expect(res.status).toBe(200);
+    expect(yearCountsSchema.safeParse(res.body).success).toBe(true);
+    // 2024: the flight, plus the four rail rides (the New York ride on 31 Dec is 2024 on its own clock).
+    expect(res.body.years).toEqual([
+      { year: 2024, total: 5, byDomain: { flight: 1, rail: 4 } },
+      { year: 2021, total: 1, byDomain: { rail: 1 } }, // measured nothing, still an entry
+    ]);
+    // The same years as the cards, and the bus ride of the switched-off domain is in neither.
+    const cards = (await get(userId)).body.years.map((y: { year: number }) => y.year);
+    expect(res.body.years.map((y: { year: number }) => y.year)).toEqual(cards);
+    const empty = await request(app)
+      .get("/api/v1/stats/years/counts")
+      .set("Cookie", cookieOf(emptyId));
+    expect(empty.body).toEqual({ years: [] });
+    expect((await request(app).get("/api/v1/stats/years/counts")).status).toBe(401);
   });
 
   it("onlyRecorded=true drops entries typed in from memory", async () => {

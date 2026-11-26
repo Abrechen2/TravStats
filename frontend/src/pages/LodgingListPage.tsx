@@ -365,6 +365,10 @@ export default function LodgingListPage(): JSX.Element {
    * visible while no year is selected.
    */
   const availableYears = useMemo(() => (facets?.years ?? []).map((y) => y.year), [facets]);
+  const yearCounts = useMemo(
+    () => new Map((facets?.years ?? []).map((y) => [y.year, y.count])),
+    [facets]
+  );
 
   /**
    * One option per COUNTRY, not per spelling.
@@ -587,7 +591,12 @@ export default function LodgingListPage(): JSX.Element {
                 value: yearFilter === "all" ? "all" : String(yearFilter),
                 onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
                 allLabel: t("lodging:filter.allYears"),
-                options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
+                options: availableYears.map((y) => ({
+                  value: String(y),
+                  label: String(y),
+                  count: yearCounts.get(y),
+                })),
+                formatCount: (n): string => t("common:yearPicker.count.stays", { count: n }),
               }}
               extraActiveCount={extraActiveCount}
               extra={

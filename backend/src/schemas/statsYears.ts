@@ -32,3 +32,20 @@ export const yearStatsSchema = z.object({
     })
   ),
 });
+
+/**
+ * `GET /stats/years/counts`: how many entries each year holds, per domain, under the same
+ * counting rules as `/stats/years` (the entries it measures distance over). The caption under a
+ * year in the year picker; a year with no countable entry is absent, never zero.
+ */
+export const yearCountsSchema = z.object({
+  years: z.array(
+    z.object({
+      year: z.number().int(),
+      total: z.number().int(),
+      byDomain: z.record(z.string(), z.number().int()).openapi({
+        description: "Entries by domain key; only domains with at least one entry that year.",
+      }),
+    })
+  ),
+});

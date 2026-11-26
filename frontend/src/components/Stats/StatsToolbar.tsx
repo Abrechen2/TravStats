@@ -12,6 +12,7 @@ interface Props {
   /** The tab being drawn — the menu lists that tab's blocks. */
   tab: DomainKey | "all";
   years: number[];
+  counts?: Readonly<Record<number, number>>;
   period: StatsPeriod;
   visibility: SectionVisibility;
 }
@@ -24,7 +25,13 @@ interface Props {
  * when there is no year to choose — an account with nothing recorded — and the
  * menu stays, because hiding blocks is a preference, not a function of data.
  */
-export default function StatsToolbar({ tab, years, period, visibility }: Props): JSX.Element {
+export default function StatsToolbar({
+  tab,
+  years,
+  counts,
+  period,
+  visibility,
+}: Props): JSX.Element {
   // The menu labels are the headings each tab draws, which live in the domain
   // namespaces as well as `stats`.
   const { t } = useTranslation(["stats", "cruise", "lodging", "places", "rail", "common"]);
@@ -37,7 +44,7 @@ export default function StatsToolbar({ tab, years, period, visibility }: Props):
     <div className="pt-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-start">
       {years.length > 0 && (
         <div className="min-w-0 flex-1">
-          <StatsPeriodBar years={years} period={period} />
+          <StatsPeriodBar years={years} period={period} counts={counts} />
         </div>
       )}
       <div className="self-end sm:ml-auto flex items-center gap-3">

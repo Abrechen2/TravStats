@@ -1,3 +1,4 @@
+import { chooseYear, openYearGrid, yearTrigger } from "../../__tests__/helpers/yearPicker";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -99,12 +100,12 @@ describe("WrappedPage", () => {
     getWrappedMock.mockResolvedValue(wrapped());
     renderAtRoute();
 
-    await waitFor(() => expect(screen.getByLabelText("stats:wrapped.yearLabel")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("group", { name: "stats:wrapped.yearLabel" })).toBeTruthy()
+    );
     getWrappedMock.mockResolvedValue(wrapped({ year: 2022, flights: 7 }));
 
-    fireEvent.change(screen.getByLabelText("stats:wrapped.yearLabel"), {
-      target: { value: "2022" },
-    });
+    chooseYear("stats:wrapped.yearLabel", 2022);
 
     await waitFor(() => expect(getWrappedMock).toHaveBeenLastCalledWith(2022));
     await waitFor(() => expect(screen.getByText("7")).toBeTruthy());
@@ -114,8 +115,10 @@ describe("WrappedPage", () => {
     getWrappedMock.mockResolvedValue(wrapped());
     renderAtRoute();
 
-    await waitFor(() => expect(screen.getByLabelText("stats:wrapped.yearLabel")).toBeTruthy());
-    const options = screen.getAllByRole("option").map((o) => o.textContent);
+    await waitFor(() =>
+      expect(screen.getByRole("group", { name: "stats:wrapped.yearLabel" })).toBeTruthy()
+    );
+    const options = openYearGrid("stats:wrapped.yearLabel").map((o) => o.textContent);
     expect(options).toEqual(["2024", "2023", "2022"]);
   });
 
@@ -190,18 +193,18 @@ describe("WrappedPage", () => {
   it("keeps the reader's year when the switch fails, and names the year that failed", async () => {
     getWrappedMock.mockResolvedValue(wrapped());
     renderAtRoute();
-    await waitFor(() => expect(screen.getByLabelText("stats:wrapped.yearLabel")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("group", { name: "stats:wrapped.yearLabel" })).toBeTruthy()
+    );
 
     getWrappedMock.mockRejectedValueOnce(new Error("network"));
-    fireEvent.change(screen.getByLabelText("stats:wrapped.yearLabel"), {
-      target: { value: "2022" },
-    });
+    chooseYear("stats:wrapped.yearLabel", 2022);
 
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     // The picker used to be driven by the last PAYLOAD's year, so a failed
     // switch snapped it back to 2024 — the reader watched their own choice
     // undone by an error, with nothing left to retry from.
-    expect(screen.getByLabelText("stats:wrapped.yearLabel")).toHaveValue("2022");
+    expect(yearTrigger("stats:wrapped.yearLabel")).toHaveTextContent("2022");
     // And the message says which year that was; "could not be loaded" beside a
     // year picker leaves the reader guessing.
     expect(screen.getByText("stats:wrapped.loadErrorYear")).toBeTruthy();
@@ -211,7 +214,6 @@ describe("WrappedPage", () => {
     getWrappedMock.mockResolvedValue(wrapped());
     renderAtRoute();
     await waitFor(() => expect(screen.getByText("42")).toBeTruthy());
-    const picker = screen.getByLabelText("stats:wrapped.yearLabel");
 
     // 2022 is asked for first and will answer LAST.
     let settleSlow: (value: Wrapped) => void = () => undefined;
@@ -220,10 +222,10 @@ describe("WrappedPage", () => {
         settleSlow = resolve;
       })
     );
-    fireEvent.change(picker, { target: { value: "2022" } });
+    chooseYear("stats:wrapped.yearLabel", 2022);
 
     getWrappedMock.mockResolvedValueOnce(wrapped({ year: 2023, flights: 7 }));
-    fireEvent.change(picker, { target: { value: "2023" } });
+    chooseYear("stats:wrapped.yearLabel", 2023);
     await waitFor(() => expect(screen.getByText("7")).toBeTruthy());
 
     await act(async () => {
@@ -235,7 +237,7 @@ describe("WrappedPage", () => {
     // disagree, and no way for the reader to tell.
     expect(screen.queryByText("99")).toBeNull();
     expect(screen.getByText("7")).toBeTruthy();
-    expect(picker).toHaveValue("2023");
+    expect(yearTrigger("stats:wrapped.yearLabel")).toHaveTextContent("2023");
   });
 
   it("tells 'no story yet' apart from 'could not load'", async () => {

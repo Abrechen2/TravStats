@@ -378,7 +378,9 @@
     "citiesOff": "The overview names cities only once you switch on the city lookup in the settings.",
     "utc": "Months in UTC: a day counts in the month it falls in by UTC – what happens around local midnight may appear in the neighbouring month.",
     "chartTitle": "Distance on the ground per month ({{unit}})",
-    "chartNote": "Months without positions and months being computed have no bar."
+    "chartNote": "Months without positions and months being computed have no bar.",
+    "yearsFailed": "The years with recorded data could not be loaded.",
+    "year": "Year"
   },
   "lastSeen": {
     "label": "Last seen",

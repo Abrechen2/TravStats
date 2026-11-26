@@ -550,6 +550,28 @@
     "teal": "Teal",
     "lime": "Lime"
   },
+  "yearPicker": {
+    "label": "Year",
+    "previous": "Previous year",
+    "next": "Next year",
+    "open": "Choose year",
+    "all": "All years",
+    "gridLabel": "Years",
+    "count": {
+      "flights_one": "{{count}} flight",
+      "flights_other": "{{count}} flights",
+      "cruises_one": "{{count}} cruise",
+      "cruises_other": "{{count}} cruises",
+      "stays_one": "{{count}} stay",
+      "stays_other": "{{count}} stays",
+      "events_one": "{{count}} entry",
+      "events_other": "{{count}} entries",
+      "rides_one": "{{count}} ride",
+      "rides_other": "{{count}} rides",
+      "rentals_one": "{{count}} rental",
+      "rentals_other": "{{count}} rentals"
+    }
+  },
   "dateField": {
     "from": "From",
     "to": "To",

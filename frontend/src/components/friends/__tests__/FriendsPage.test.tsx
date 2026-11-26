@@ -1,3 +1,4 @@
+import { openYearGrid } from "../../../__tests__/helpers/yearPicker";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -175,9 +176,9 @@ describe("FriendsPage", () => {
     vi.mocked(comparisonApi.compare).mockResolvedValue(answer([rowOf(ben, 400)]));
     mount();
     await screen.findByTestId("cell-flightKm-self");
-    const select = screen.getByLabelText("period.label");
-    const year = (select as HTMLSelectElement).options[1].value;
-    fireEvent.change(select, { target: { value: year } });
+    const cells = openYearGrid("period.label");
+    const year = cells[1].textContent as string;
+    fireEvent.click(cells[1]);
     await waitFor(() =>
       expect(comparisonApi.compare).toHaveBeenLastCalledWith([ben.key], Number(year))
     );

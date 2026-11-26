@@ -18,20 +18,14 @@
 // it now belongs to the "Domänen · x/y" filter on the map, which is the one
 // place that answers "what is on the map".
 
+import { useYearCounts } from "../../lib/stats/useYearCounts";
+import YearPicker from "../ui/YearPicker";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDashboardRoute } from "../../hooks/useDashboardRoute";
 import { useDashboardFilterStore } from "../../store/dashboardFilterStore";
 import { TAB_MODE_REGISTRY, type DashboardMode } from "../../types/dashboard";
-import {
-  SectionLabel,
-  SegControl,
-  ACCENT,
-  HAIRLINE,
-  BORDER,
-  TEXT,
-  PANEL_OPTION_STYLE,
-} from "./controlPanelKit";
+import { SectionLabel, SegControl, ACCENT, HAIRLINE } from "./controlPanelKit";
 import { todayZoneNow } from "../../hooks/useTodayZone";
 import { todayIn } from "../../shared/time";
 
@@ -64,6 +58,7 @@ function Section({
 
 export function MapChromeSections(): JSX.Element {
   const { t } = useTranslation(["dashboard", "common"]);
+  const yearCounts = useYearCounts().of();
   const { tab, mode, setMode } = useDashboardRoute();
 
   const year = useDashboardFilterStore((s) => s.year);
@@ -95,33 +90,18 @@ export function MapChromeSections(): JSX.Element {
       <Section>
         <SectionLabel>{t("dashboard:filter.title")}</SectionLabel>
         <div className="flex flex-col gap-2">
-          <label className="flex flex-col gap-1">
-            <span style={{ color: "rgba(241,245,249,0.55)" }} className="text-[10px]">
-              {t("dashboard:filter.year")}
-            </span>
-            <select
-              value={year ?? ""}
-              onChange={(e) => setYear(e.target.value === "" ? null : Number(e.target.value))}
-              className="cursor-pointer rounded-md px-2 py-1.5 text-[11px]"
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: `1px solid ${BORDER}`,
-                color: TEXT,
-                colorScheme: "dark",
-              }}
-            >
-              {/* Options MUST be styled explicitly — the popup ignores the
-                  select's colours on Windows and was white-on-white (#196). */}
-              <option value="" style={PANEL_OPTION_STYLE}>
-                {t("dashboard:filter.allYears")}
-              </option>
-              {yearOptions.map((y) => (
-                <option key={y} value={y} style={PANEL_OPTION_STYLE}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </label>
+          <span className="text-[10px]" style={{ color: "rgba(241,245,249,0.55)" }}>
+            {t("dashboard:filter.year")}
+          </span>
+          <YearPicker
+            years={yearOptions.map((y) => ({ year: y, count: yearCounts[y] }))}
+            formatCount={(n): string => t("common:yearPicker.count.events", { count: n })}
+
+            value={year ?? "all"}
+            onChange={(v): void => setYear(v === "all" ? null : v)}
+            label={t("dashboard:filter.year")}
+            tone="dark"
+          />
 
           {/* The domain pills that used to sit here are gone (owner,
                 2026-09-28). Domain visibility has ONE owner now: the

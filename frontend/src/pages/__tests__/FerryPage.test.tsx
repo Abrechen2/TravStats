@@ -1,3 +1,4 @@
+import { chooseYear, yearTrigger } from "../../__tests__/helpers/yearPicker";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -178,8 +179,8 @@ describe("FerryPage", () => {
     expect(navigate).not.toHaveBeenCalled();
     fireEvent.click(row);
     expect(navigate).toHaveBeenCalledWith("/ferry/r1");
-    const option = await screen.findByRole("option", { name: "2025" });
-    fireEvent.change(option.parentElement!, { target: { value: "2025" } });
+    await waitFor(() => expect(yearTrigger("Jahr")).toBeTruthy());
+    chooseYear("Jahr", 2025);
     await waitFor(() =>
       expect(list).toHaveBeenCalledWith(expect.objectContaining({ year: 2025, offset: 0 }))
     );

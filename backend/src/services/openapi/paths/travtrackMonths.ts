@@ -62,6 +62,24 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/travtrack/years",
+  summary: "Years with privacy-safe TravTrack data",
+  description:
+    "Ascending calendar years (profile zone) in which the account has at least one fix outside " +
+    "its privacy zones. Own account only; empty when the account's location source is not " +
+    "TravTrack.",
+  tags: ["TravTrack"],
+  responses: {
+    200: {
+      description: "The years",
+      content: { "application/json": { schema: z.object({ years: z.array(z.number().int()) }) } },
+    },
+    403: forbidden,
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/travtrack/city-lookup",
   summary: "Whether the monthly values name cities",
   tags: ["TravTrack"],

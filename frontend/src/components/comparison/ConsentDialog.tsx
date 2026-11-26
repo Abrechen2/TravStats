@@ -1,5 +1,6 @@
+import YearPicker from "../ui/YearPicker";
 import { useEffect, useState } from "react";
-import { Button, Chip, Dialog, Field, Select } from "../ui";
+import { Button, Chip, Dialog, Field } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -203,25 +204,19 @@ export default function ConsentDialog({
           ))}
         </div>
         <Field label={tr("consent.period")} htmlFor="consent-period">
-          <Select
-            id="consent-period"
-            value={scope.year === null ? "all" : String(scope.year)}
-            onChange={(e) =>
+          <YearPicker
+            years={years.map((y) => ({ year: y }))}
+            value={scope.year ?? "all"}
+            onChange={(v) =>
               setScope((s) => ({
                 ...s,
-                year: e.target.value === "all" ? null : Number(e.target.value),
+                year: v === "all" ? null : v,
                 // Yearly totals belong to the lifetime view; a one-year consent cannot carry them.
-                years: e.target.value === "all" ? s.years : undefined,
+                years: v === "all" ? s.years : undefined,
               }))
             }
-          >
-            <option value="all">{tr("consent.allYears")}</option>
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {tr("consent.onlyYear", { year: y })}
-              </option>
-            ))}
-          </Select>
+            label={tr("consent.period")}
+          />
         </Field>
         {scope.year === null && (
           <label className="flex items-start" style={gap("sm")} data-testid="consent-years">
