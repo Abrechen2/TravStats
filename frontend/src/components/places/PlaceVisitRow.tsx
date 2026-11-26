@@ -64,7 +64,11 @@ export function PlaceVisitRow({
         : t("places:visitList.plannedInDays", { count: daysAhead });
 
   return (
-    <li id={`visit-${visit.id}`} className="rounded-md" data-testid={`visit-row-${visit.id}`}>
+    <li
+      id={`visit-${visit.id}`}
+      className="rounded-md scroll-mt-20 data-[highlighted=true]:outline data-[highlighted=true]:outline-2 data-[highlighted=true]:outline-(--accent)"
+      data-testid={`visit-row-${visit.id}`}
+    >
       <div className="flex items-start gap-1">
         <button
           type="button"
