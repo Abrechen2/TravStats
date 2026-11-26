@@ -392,7 +392,7 @@ export async function scanCandidates(
       }
       // Claim pending fragments before inserting the parent. A concurrent review
       // either resolves first (and prevents replacement) or receives a conflict.
-      const claimed = [...supersededFindingIds, ...mergedFindingIds];
+      const claimed = [...new Set([...supersededFindingIds, ...mergedFindingIds])];
       if (claimed.length) {
         const superseded = await tx.dawarichStay.updateMany({
           where: { userId, id: { in: claimed }, status: "pending" },
