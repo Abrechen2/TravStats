@@ -13,6 +13,7 @@ import {
   type SuggestionPlugin,
 } from "../../../lib/api/suggestionPlugins";
 import MaintenanceMap from "./MaintenanceMap";
+import { archiveUndoRequest, archiveWriteRequest } from "../../inbox/plugins/archiveConfirm";
 import MaintenanceRowCard, { type Choice } from "./MaintenanceRowCard";
 
 const NS = "suggestionSources:plugins.maintenance";
@@ -23,9 +24,6 @@ type Load =
   | { status: "failed"; key: string }
   | { status: "done"; list: MaintenanceList };
 type Line = { ok: boolean; text: string };
-
-/** Up to six decimals, as the plugin writes them: the confirmation shows exactly that. */
-const coord = (x: number) => x.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
 
 /**
  * "Standorte pflegen" (owner 2026-11-24): the plugin's rows without a usable
@@ -42,7 +40,7 @@ export default function PluginMaintenanceDialog({
   open: boolean;
   onClose: () => void;
 }): JSX.Element | null {
-  const { t, i18n } = useTranslation(["suggestionSources", "location"]);
+  const { t, i18n } = useTranslation(["suggestionSources", "location", "dataQuality"]);
   const fmt = useDisplayFormat();
   const { confirm, confirmDialog } = useConfirmDialog();
   const [load, setLoad] = useState<Load>({ status: "loading" });
@@ -98,17 +96,18 @@ export default function PluginMaintenanceDialog({
   const take = async (row: MaintenanceRow, choice: Choice) => {
     // The street is written only into an empty field: say which it is.
     const street = !row.street && choice.street ? choice.street : undefined;
-    const message = [
-      t(`${NS}.confirm.intro`, { plugin: plugin.name, name: row.name }),
-      t(`${NS}.confirm.coords`, { lat: coord(choice.lat), lon: coord(choice.lon) }),
-      street
-        ? t(`${NS}.confirm.street`, { street })
-        : t(`${NS}.confirm.streetKept`, { street: row.street || "—" }),
-      t(`${NS}.confirm.source`, { source: choice.label }),
-      t(`${NS}.confirm.undo`),
-    ].join("\n");
+    // The same confirmation as the inbox (owner 2026-11-26): exactly what goes into the archive.
     if (
-      !(await confirm({ title: t(`${NS}.confirm.title`), message, confirmText: t(`${NS}.take`) }))
+      !(await confirm(
+        archiveWriteRequest(t, {
+          plugin: plugin.name,
+          name: row.name,
+          lat: choice.lat,
+          lon: choice.lon,
+          values: street ? { street } : {},
+          before: row,
+        })
+      ))
     )
       return;
     await act(async () => {
@@ -301,12 +300,14 @@ export default function PluginMaintenanceDialog({
                     </span>
                     <Button
                       disabled={busy}
-                      onClick={() =>
-                        void act(async () => {
+                      onClick={async () => {
+                        // Undo writes to the archive too: confirmed per item like the write.
+                        if (!(await confirm(archiveUndoRequest(t, plugin.name, a.name)))) return;
+                        await act(async () => {
                           await suggestionPluginsApi.undoLocation(plugin.id, a.undoId);
                           return t(`${NS}.undone`, { name: a.name });
-                        })
-                      }
+                        });
+                      }}
                     >
                       {t(`${NS}.undo`)}
                     </Button>

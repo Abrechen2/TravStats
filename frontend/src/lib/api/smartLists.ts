@@ -90,3 +90,42 @@ export async function listPlaceSuggestions(placeId: string): Promise<SmartSugges
   return (await api.get<Envelope<SmartSuggestion[]>>(`${base}/place/${placeId}/suggestions`)).data
     .data;
 }
+
+/** Pending visit confirmations of this list at places the owner already has. */
+export async function listPendingConfirmations(
+  listId: string
+): Promise<{ rows: SmartSuggestion[]; total: number }> {
+  const { data } = await api.get<Envelope<SmartSuggestion[]> & { meta?: { total?: number } }>(
+    `${base}/${listId}/pending`
+  );
+  return { rows: data.data, total: data.meta?.total ?? data.data.length };
+}
+/** `{ listId: count }` of pending matches per smart list; a list with none is absent. */
+export async function listPendingCounts(): Promise<Record<string, number>> {
+  return (await api.get<Envelope<Record<string, number>>>(`${base}/pending-counts`)).data.data;
+}
+
+export type AutoUndoOutcome =
+  | { visitId: string; outcome: "removed" }
+  | { visitId: string; outcome: "kept"; reason: "notFound" | "notAutomatic" | "ownerAdded" };
+
+export async function undoAutomaticVisits(visitIds: string[]): Promise<AutoUndoOutcome[]> {
+  return (
+    await api.post<Envelope<{ results: AutoUndoOutcome[] }>>(`${base}/auto-visits/undo`, {
+      visitIds,
+    })
+  ).data.data.results;
+}
+
+/** Who wrote a visit or list entry without the owner's hand (mirror of `autoVisitUndo.ts`). */
+const AUTO_CREATED_BY = ["brandRule", "import", "auto", "plugin"];
+const AUTO_WRITTEN_VIA = ["brandRule", "plugin"];
+export function isAutomatic(row: {
+  createdBy?: string | null;
+  writtenVia?: string | null;
+}): boolean {
+  return (
+    (!!row.createdBy && AUTO_CREATED_BY.includes(row.createdBy)) ||
+    (!!row.writtenVia && AUTO_WRITTEN_VIA.includes(row.writtenVia))
+  );
+}

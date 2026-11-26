@@ -29,6 +29,7 @@ import { placeCategoryIcon } from "../lib/placeCategoryDisplay";
 import { usePlaceCategories } from "../hooks/usePlaceCategories";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import SmartListPanel from "../components/places/smartList/SmartListPanel";
+import { isAutomatic } from "../lib/api/smartLists";
 import OverflowMenu from "../components/ui/OverflowMenu";
 import { PlaceListAddPanel, type UnassignedPlace } from "../components/places/PlaceListAddPanel";
 import { useToastStore } from "../store/toastStore";
@@ -121,6 +122,10 @@ export default function PlaceListDetailPage(): JSX.Element {
   }, [list?.curatedKey, navigate]);
 
   const entries = useMemo(() => list?.entries ?? [], [list]);
+  // "Automatisch eingetragen" (owner 2026-11-26): only what a chain or an import added.
+  const [autoOnly, setAutoOnly] = useState(false);
+  const autoEntries = useMemo(() => entries.filter(isAutomatic), [entries]);
+  const shownEntries = autoOnly && autoEntries.length > 0 ? autoEntries : entries;
   const memberIds = useMemo(() => new Set(entries.map((e) => e.placeId)), [entries]);
 
   /**
@@ -562,13 +567,29 @@ export default function PlaceListDetailPage(): JSX.Element {
           }
         />
 
+        {autoEntries.length > 0 && (
+          <button
+            type="button"
+            aria-pressed={autoOnly}
+            onClick={() => setAutoOnly((v) => !v)}
+            className="mb-2 rounded-full px-3 py-1 text-sm"
+            style={{
+              border: `1px solid ${autoOnly ? "var(--ts-accent)" : "var(--color-border)"}`,
+              color: autoOnly ? "var(--ts-accent)" : "var(--text-muted)",
+            }}
+            title={t("places:autoFilter.info")}
+          >
+            {t("places:autoFilter.label")} ({autoEntries.length})
+          </button>
+        )}
         {entries.length === 0 ? (
           <p className="py-10 text-center text-sm" style={{ color: "var(--text-muted)" }}>
             {t("places:lists.listEmpty")}
           </p>
         ) : (
           <ul style={{ listStyle: "none", padding: 0 }} className="grid gap-2">
-            {entries.map((entry, index) => {
+            {shownEntries.map((entry) => {
+              const index = entries.indexOf(entry);
               const p = entry.place;
               return (
                 <li

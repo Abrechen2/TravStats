@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { germanUseTranslation } from "../../../../__tests__/helpers/germanT";
 import InboxWorkspace from "../InboxWorkspace";
 import { dataQualityFlagsApi } from "../../../../lib/api/dataQualityFlags";
@@ -237,5 +237,43 @@ describe("Inbox workspace", () => {
       "aria-checked",
       "true"
     );
+  });
+
+  it("filters by source chip, with a count per chip, and keeps the choice in the URL", async () => {
+    vi.mocked(photoJourneysApi.list).mockResolvedValue([photo]);
+    let search = "";
+    function Probe() {
+      search = useLocation().search;
+      return null;
+    }
+    render(
+      <MemoryRouter initialEntries={["/pending-updates"]}>
+        <InboxWorkspace photosVisible />
+        <Probe />
+      </MemoryRouter>
+    );
+    await ready();
+    const chips = screen.getByTestId("inbox-origin-chips");
+    expect(within(chips).getByRole("button", { name: "Alle 3" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    await userEvent.click(within(chips).getByRole("button", { name: "Fotos 1" }));
+    expect(search).toContain("origin=photos");
+    // The trip-date question has no such source: only the photo card is left.
+    expect(screen.queryByRole("button", { name: "Reisezeitraum speichern und prüfen" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Reise mit diesen Angaben anlegen" })
+    ).toBeInTheDocument();
+  });
+
+  it("opens with the source filter a link carries", async () => {
+    vi.mocked(photoJourneysApi.list).mockResolvedValue([photo]);
+    mount("/pending-updates?origin=photos", true);
+    await screen.findByRole("button", { name: "Reise mit diesen Angaben anlegen" });
+    expect(
+      within(screen.getByTestId("inbox-origin-chips")).getByRole("button", { name: "Fotos 1" })
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("button", { name: "Reisezeitraum speichern und prüfen" })).toBeNull();
   });
 });

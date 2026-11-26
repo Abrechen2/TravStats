@@ -23,6 +23,24 @@ const ANSWER_ERRORS: Record<string, string> = {
   DAWARICH_INVALID_INTERVAL: "places:smartList.answerErrors.interval",
 };
 
+/** Confirm one suggestion as it stands: the visit at its place, on its own wall-clock times. */
+export async function acceptSuggestion(suggestion: SmartSuggestion): Promise<void> {
+  await dawarichStaysApi.accept(suggestion.id, {
+    name: suggestion.name ?? "",
+    placeId: suggestion.placeId,
+    tripId: null,
+    lat: suggestion.lat,
+    lon: suggestion.lon,
+    startAt: { local: suggestion.startLocal },
+    endAt: { local: suggestion.endLocal },
+  });
+}
+
+/** The locale key of a refused answer. */
+export function answerErrorKey(err: unknown): string {
+  return ANSWER_ERRORS[apiErrorMachineCode(err) ?? ""] ?? "places:smartList.answerErrors.failed";
+}
+
 /**
  * One "were you here?" suggestion, the SAME row the stay inbox lists: answering it here answers it
  * there (both call the stays API for this id). `intro` is the question; the reason — source, date,
@@ -48,16 +66,7 @@ export function SuggestionRow({
     setBusy(true);
     setError(null);
     try {
-      if (confirm)
-        await dawarichStaysApi.accept(suggestion.id, {
-          name: suggestion.name ?? "",
-          placeId: suggestion.placeId,
-          tripId: null,
-          lat: suggestion.lat,
-          lon: suggestion.lon,
-          startAt: { local: suggestion.startLocal },
-          endAt: { local: suggestion.endLocal },
-        });
+      if (confirm) await acceptSuggestion(suggestion);
       else await dawarichStaysApi.reject(suggestion.id);
       onAnswered();
     } catch (err: unknown) {

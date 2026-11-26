@@ -29,6 +29,10 @@ export interface PlaceVisit {
   rating: number | null;
   createdAt: string;
   updatedAt: string;
+  /** Who wrote the row without the owner's hand (`brandRule`, `import`, …); absent on older servers. */
+  createdBy?: string | null;
+  /** web | companion | import | suggestion | api; absent on older servers. */
+  writtenVia?: string | null;
   /**
    * Photo proof. Present on the DETAIL response only — the list endpoint omits
    * it deliberately, because a gallery per row is a page of joins nobody asked

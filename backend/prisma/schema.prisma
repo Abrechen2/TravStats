@@ -148,6 +148,7 @@ model User {
   calendarRules                   CalendarRule[]
   customPurposes                  CustomPurpose[]
   suggestionPlugins               SuggestionPlugin[]
+  pluginMaintenanceCaches         PluginMaintenanceCache[]
   analyticsEvents                 AnalyticsEvent[]
   createdInvitations              Invitation[]                 @relation("CreatedInvitations")
   usedInvitations                 Invitation[]                 @relation("UsedInvitations")
@@ -8503,11 +8504,40 @@ model SuggestionPlugin {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  user  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  calls SuggestionPluginCall[]
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calls            SuggestionPluginCall[]
+  maintenanceCache PluginMaintenanceCache?
 
   @@index([userId])
   @@map("suggestion_plugins")
+}
+
+/// The inbox's copy of a plugin's maintenance proposals and notices (owner 2026-11-26): the
+/// Plugins tab and its badge read this row instead of asking every plugin on each visit. A paced
+/// poll refreshes it every 6 h and soon after new stops (`dueAt`); "Jetzt aktualisieren" asks live.
+model PluginMaintenanceCache {
+  pluginId      String    @id @map("plugin_id")
+  userId        String    @map("user_id")
+  /// The plugin's notices are prose in this language: the one the account last read them in.
+  locale        String    @default("de")
+  /// The proposals answer (`rows`, `notices`, `noticeCount`, `totalRows`, `applied`); null until
+  /// the first answer, kept when a later refresh fails.
+  data          Json?
+  stopsSent     Int       @default(0) @map("stops_sent")
+  stopsWithheld String?   @map("stops_withheld")
+  refreshedAt   DateTime? @map("refreshed_at")
+  /// Refresh at or after this, ahead of the 6 h pace (set when new stops arrive).
+  dueAt         DateTime? @map("due_at")
+  /// The last refresh's failure reason (`unsupported`, `timeout`, …); null after a success.
+  failure       String?
+  failedAt      DateTime? @map("failed_at")
+
+  plugin SuggestionPlugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([dueAt])
+  @@map("plugin_maintenance_caches")
 }
 
 /// One call to a plugin: what the hourly/daily limits count, and — for an answer

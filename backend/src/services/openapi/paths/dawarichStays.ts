@@ -20,6 +20,11 @@ const failure = {
   description: "Invalid input, inaccessible finding, absent connection, or concurrent operation",
   content: errorContent,
 };
+const staySource = z.object({
+  kind: z.enum(["smartList", "plugin", "calendar", "travtrack", "dawarich"]),
+  id: z.string().nullable(),
+  name: z.string().nullable(),
+});
 const stay = z.object({
   times: z.object({
     startAt: timeValueSchema.nullable(),
@@ -35,6 +40,13 @@ const stay = z.object({
     .literal(true)
     .optional()
     .describe("Only on a TravTrack finding made before the account's last source switch"),
+  source: staySource.optional().describe("The most specific source of the finding"),
+  sources: z
+    .array(staySource)
+    .optional()
+    .describe(
+      "Every source of the finding, most specific first: smart lists, plugins, calendar, provider"
+    ),
 });
 const response = (schema: z.ZodTypeAny) => ({
   description: "Account-scoped result",
@@ -52,6 +64,12 @@ registry.registerPath({
       status: z.enum(["pending", "accepted", "rejected", "covered", "invalidated"]).optional(),
       from: z.string().optional().describe("ISO instant: only stays ending at or after it"),
       to: z.string().optional().describe("ISO instant: only stays starting at or before it"),
+      source: z
+        .string()
+        .optional()
+        .describe(
+          "Only findings with this source: `smartList:<id>`, `plugin:<id>`, `plugin`, `calendar`, `travtrack` or `dawarich`. Up to 200 matches among the 2000 newest rows; `meta.truncated` says when cut"
+        ),
     }),
   },
   responses: { 200: response(z.array(stay)) },
@@ -351,5 +369,56 @@ registry.registerPath({
     },
     502: failure,
     504: failure,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/inbox/bulk",
+  tags: ["Inbox"],
+  summary: "Answer several inbox items at once",
+  description:
+    "Each item goes through its kind's own accept or reject and is answered on its own. `accept` takes only what needs no input (a flight update as proposed, a stay finding that names its place); the rest is `skipped` with `needsInput` and stays. Plugin archive proposals are never part of a bulk answer. Rate-limited (10 a minute).",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            action: z.enum(["accept", "reject"]),
+            items: z
+              .array(
+                z.object({
+                  kind: z.enum(["review", "trips", "updates", "photos", "dawarich", "location"]),
+                  id: z.string(),
+                })
+              )
+              .min(1)
+              .max(200),
+          }),
+        },
+      },
+      required: true,
+    },
+  },
+  responses: {
+    200: response(
+      z.object({
+        results: z.array(
+          z.object({
+            kind: z.string(),
+            id: z.string(),
+            outcome: z.enum(["done", "skipped", "failed"]),
+            reason: z.string().optional(),
+            undoable: z.literal(true).optional(),
+          })
+        ),
+        summary: z.object({
+          done: z.number().int(),
+          skipped: z.number().int(),
+          failed: z.number().int(),
+        }),
+      })
+    ),
+    400: failure,
   },
 });

@@ -500,7 +500,48 @@
           "covered": "Bereits erfasst"
         }
       },
-      "moreAnswers": "Weitere Entscheidungen zu dieser Frage"
+      "moreAnswers": "Weitere Entscheidungen zu dieser Frage",
+      "origin": {
+        "label": "Herkunft",
+        "all": "Alle",
+        "info": "Zeigt nur Vorschläge aus dieser Quelle. Es wird nichts geändert.",
+        "photos": "Fotos",
+        "travtrack": "TravTrack",
+        "calendar": "Kalender"
+      },
+      "bulk": {
+        "accept": "Alle annehmen",
+        "reject": "Alle verwerfen",
+        "acceptTitle": "Alle annehmen?",
+        "rejectTitle": "Alle verwerfen?",
+        "summary": "{{count}} Vorschläge: {{kinds}}",
+        "acceptNote": "Angenommen wird nur, was ohne Eingabe geht. Der Rest bleibt als „braucht Eingabe“.",
+        "rejectNote": "Alle werden abgelehnt und verschwinden aus dem Posteingang.",
+        "result": "{{done}} erledigt · {{skipped}} braucht Eingabe · {{failed}} fehlgeschlagen",
+        "failed": "Die Sammelantwort hat nicht geklappt. Bitte später erneut versuchen.",
+        "undo": "Rückgängig ({{count}})",
+        "undone": "Zurückgenommen.",
+        "undoFailed": "{{count}} konnten nicht zurückgenommen werden.",
+        "reasons": {
+          "needsInput": "braucht Eingabe",
+          "SUGGESTION_NOT_FOUND": "nicht mehr vorhanden",
+          "NOT_FOUND": "nicht mehr vorhanden",
+          "STAY_SUGGESTIONS_DISABLED": "Aufenthaltsvorschläge sind ausgeschaltet",
+          "TRIP_SUGGESTIONS_DISABLED": "Reisevorschläge sind ausgeschaltet",
+          "failed": "fehlgeschlagen"
+        }
+      },
+      "period": {
+        "label": "Zeitraum",
+        "from": "Von",
+        "to": "Bis",
+        "clear": "Zeitraum löschen"
+      }
+    },
+    "tabs": {
+      "documents": "Dokumente",
+      "plugins": "Plugins",
+      "documentsLink": "{{count}} Dokumente warten auf Zuordnung"
     }
   },
   "flag": {
@@ -828,5 +869,59 @@
       "alreadyResolved": "Diese Position wurde schon benannt oder verworfen. Die Liste wurde neu geladen.",
       "notFound": "Diese Position gibt es nicht mehr. Die Liste wurde neu geladen."
     }
+  },
+  "pluginInbox": {
+    "intro": "Vorschläge und Nachrichten deiner Plugins.",
+    "info": "Ins Projektarchiv wird erst geschrieben, wenn du einen Vorschlag einzeln bestätigst. Du kannst ihn vorher bearbeiten und danach zurücknehmen.",
+    "reload": "Neu laden",
+    "loading": "Plugins werden gefragt …",
+    "noPlugins": "Kein Plugin mit Standortpflege eingerichtet.",
+    "empty": "Nichts zu tun.",
+    "more": "{{plugin}}: {{count}} weitere unter Einstellungen → Plugins.",
+    "filterLabel": "Plugin",
+    "all": "Alle",
+    "sortLabel": "Sortieren",
+    "sort": {
+      "severity": "Schwere",
+      "date": "Datum",
+      "stop": "Mit Stopp-Vorschlag"
+    },
+    "severity": {
+      "error": "Fehlt",
+      "warning": "Prüfen",
+      "info": "Hinweis"
+    },
+    "hasStop": "Stopp-Vorschlag",
+    "edit": "Bearbeiten",
+    "ignore": "Ignorieren",
+    "openRow": "Zeile öffnen",
+    "mapHint": "Klick in die Karte setzt die Position.",
+    "position": "Position: {{lat}}, {{lon}}",
+    "noPosition": "Noch keine Position gewählt.",
+    "street": "Straße",
+    "postcode": "PLZ",
+    "town": "Ort",
+    "take": "Übernehmen …",
+    "undo": "Zurücknehmen",
+    "applied": "{{name}} ins Projektarchiv geschrieben.",
+    "undone": "{{name}} zurückgenommen.",
+    "appliedTitle": "Übernommen",
+    "confirm": {
+      "title": "Ins Projektarchiv schreiben?",
+      "writes": "Wird ins Projektarchiv geschrieben ({{plugin}}, {{name}}):",
+      "coords": "Koordinaten: {{lat}}, {{lon}}",
+      "field": "{{label}}: {{value}}",
+      "kept": "{{label}} bleibt: {{value}}",
+      "undo": "Lässt sich danach zurücknehmen.",
+      "button": "Bestätigen"
+    },
+    "undoConfirm": {
+      "title": "Im Projektarchiv zurücknehmen?",
+      "message": "Die vorherigen Werte von {{name}} werden wieder ins Projektarchiv ({{plugin}}) geschrieben."
+    },
+    "refreshNow": "Jetzt aktualisieren",
+    "refreshedAt": "Stand: {{at}}",
+    "notYet": "Noch nicht abgefragt.",
+    "olderShown": "(älterer Stand)"
   }
 }

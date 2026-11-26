@@ -387,3 +387,50 @@ registry.registerPath({
     409: noMaintenance,
   },
 });
+
+const maintenanceInbox = z.object({
+  blocked: z.string().nullable(),
+  plugins: z.array(
+    z.object({
+      plugin: pluginViewSchema,
+      data: z
+        .record(z.string(), z.unknown())
+        .nullable()
+        .describe(
+          "The plugin's last proposals answer (rows, notices, applied); null until one came"
+        ),
+      stopsSent: z.number().int(),
+      stopsWithheld: z.string().nullable(),
+      refreshedAt: z.string().nullable(),
+      failure: z.string().nullable().describe("Why the last refresh failed; the data is older"),
+    })
+  ),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/settings/suggestion-plugins/maintenance/inbox",
+  summary: "The inbox's cached maintenance proposals and notices of every plugin",
+  description:
+    "No live call: a paced poll refreshes each registration every 6 h and soon after new stops, and every apply/undo/ignore refreshes its plugin. A plugin without maintenance is left out.",
+  tags,
+  responses: { 200: { description: "Cached copies", content: json(maintenanceInbox) } },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/settings/suggestion-plugins/maintenance/refresh",
+  summary: "Ask every enabled plugin live and answer the fresh copy",
+  description: "Rate-limited (6 an hour). 409 SERVICE_DISABLED while the plugin service is off.",
+  tags,
+  request: {
+    body: {
+      content: json(z.object({ locale: z.enum(["de", "en"]).optional() })),
+      required: false,
+    },
+  },
+  responses: {
+    200: { description: "Fresh copies", content: json(maintenanceInbox) },
+    409: noMaintenance,
+  },
+});

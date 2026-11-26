@@ -8,20 +8,26 @@ import type { MaintenanceProposal } from "../../../lib/api/suggestionPlugins";
 const COLOUR = { stop: "var(--ts-accent)", geocoder: "var(--ts-good)" };
 
 /**
- * One archive row on a small read-only map: where the archive puts it today
- * (grey, if anywhere) and each proposal as a numbered pin. Nothing here can be
- * moved — a position is only taken through "Übernehmen" and its confirmation.
+ * One archive row on a small map: where the archive puts it today (grey, if
+ * anywhere) and each proposal as a numbered pin. With `onPick` a click picks a
+ * position; it is still written only through "Übernehmen" and its confirmation.
  */
 export default function MaintenanceMap({
   current,
   proposals,
   ariaLabel,
   attributionLabel,
+  picked,
+  onPick,
 }: {
   current: { lat: number; lon: number } | null;
   proposals: MaintenanceProposal[];
   ariaLabel: string;
   attributionLabel: string;
+  /** The position chosen so far (inbox editor); drawn as a pin. */
+  picked?: { lat: number; lon: number } | null;
+  /** With it, a click on the map picks a position — still written only after the confirmation. */
+  onPick?: (at: { lat: number; lon: number }) => void;
 }): JSX.Element {
   const mapStyle = useBasemapStyle();
   const mapRef = useRef<MapRef | null>(null);
@@ -66,7 +72,16 @@ export default function MaintenanceMap({
         mapStyle={mapStyle}
         style={{ position: "absolute", inset: 0 }}
         attributionControl={false}
+        onClick={onPick ? (e) => onPick({ lat: e.lngLat.lat, lon: e.lngLat.lng }) : undefined}
+        cursor={onPick ? "crosshair" : undefined}
       >
+        {picked && (
+          <Marker longitude={picked.lon} latitude={picked.lat} anchor="bottom">
+            <div aria-hidden style={{ fontSize: 24, lineHeight: 1 }}>
+              📍
+            </div>
+          </Marker>
+        )}
         {current && (
           <Marker longitude={current.lon} latitude={current.lat} anchor="center">
             <div

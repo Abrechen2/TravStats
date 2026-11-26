@@ -114,9 +114,11 @@ afterEach(() => {
   Object.values(api).forEach((f) => f.mockReset());
 });
 
-/** The confirm dialog's button: the last control with that name. */
-const lastTake = () => {
-  const all = screen.getAllByRole("button", { name: "suggestionSources:plugins.maintenance.take" });
+/** The archive confirmation's button (the same dialog as the inbox's, owner 2026-11-26). */
+const lastTake = async () => {
+  const all = await screen.findAllByRole("button", {
+    name: "dataQuality:pluginInbox.confirm.button",
+  });
   return all[all.length - 1];
 };
 
@@ -164,11 +166,13 @@ describe("plugin location maintenance", () => {
     await userEvent.click(
       within(row).getAllByText("suggestionSources:plugins.maintenance.take")[1]
     );
-    const dialog = await screen.findByText(/plugins\.maintenance\.confirm\.coords/);
+    const dialog = await screen.findByText(/pluginInbox\.confirm\.coords/);
     expect(dialog.textContent).toContain('"lat":"47.51195","lon":"10.27112"');
-    expect(dialog.textContent).toContain('confirm.street{"street":"Gewerbestr. 5"}');
+    expect(dialog.textContent).toContain(
+      'confirm.field{"label":"dataQuality:pluginInbox.street","value":"Gewerbestr. 5"}'
+    );
     expect(api.applyLocation).not.toHaveBeenCalled();
-    await userEvent.click(lastTake());
+    await userEvent.click(await lastTake());
     await waitFor(() =>
       expect(api.applyLocation).toHaveBeenCalledWith("p1", {
         rowId: "7",
@@ -189,7 +193,7 @@ describe("plugin location maintenance", () => {
     await userEvent.click(
       within(row).getAllByText("suggestionSources:plugins.maintenance.take")[0]
     );
-    await userEvent.click(lastTake());
+    await userEvent.click(await lastTake());
     expect(
       await screen.findByText("suggestionSources:plugins.failure.reason.readOnly")
     ).toBeTruthy();
@@ -210,7 +214,23 @@ describe("plugin location maintenance", () => {
     render(<PluginMaintenanceDialog plugin={PLUGIN} open onClose={() => {}} />);
     const applied = await screen.findByTestId("maintenance-applied");
     await userEvent.click(within(applied).getByText("suggestionSources:plugins.maintenance.undo"));
+    // Undo writes to the archive too: nothing until its own per-item confirmation.
+    expect(await screen.findByText(/pluginInbox\.undoConfirm\.message/)).toBeTruthy();
+    expect(api.undoLocation).not.toHaveBeenCalled();
+    const buttons = screen.getAllByRole("button", { name: "dataQuality:pluginInbox.undo" });
+    await userEvent.click(buttons[buttons.length - 1]);
     await waitFor(() => expect(api.undoLocation).toHaveBeenCalledWith("p1", "u-1"));
+  });
+
+  it("a cancelled undo confirmation writes nothing to the archive", async () => {
+    render(<PluginMaintenanceDialog plugin={PLUGIN} open onClose={() => {}} />);
+    const applied = await screen.findByTestId("maintenance-applied");
+    await userEvent.click(within(applied).getByText("suggestionSources:plugins.maintenance.undo"));
+    await screen.findByText(/pluginInbox\.undoConfirm\.message/);
+    const cancels = screen.getAllByRole("button", { name: /cancel|Abbrechen/i });
+    await userEvent.click(cancels[cancels.length - 1]);
+    await waitFor(() => expect(screen.queryByText(/pluginInbox\.undoConfirm\.message/)).toBeNull());
+    expect(api.undoLocation).not.toHaveBeenCalled();
   });
   it("searches the plugin's whole list and pages through it, so a row past the first page is findable", async () => {
     api.maintenance.mockResolvedValue({ ...LIST, totalRows: 120, offset: 0 });

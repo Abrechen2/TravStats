@@ -124,6 +124,21 @@ export interface MaintenanceList {
   stopsWithheld: "precision" | "travtrackOff" | null;
 }
 
+/** One plugin's cached maintenance answer as the inbox reads it (no live call). */
+export interface MaintenanceInboxEntry {
+  plugin: SuggestionPlugin;
+  data: Pick<MaintenanceList, "rows" | "notices" | "noticeCount" | "totalRows" | "applied"> | null;
+  stopsSent: number;
+  stopsWithheld: string | null;
+  refreshedAt: string | null;
+  /** Why the last refresh failed; `data` is then the older answer. */
+  failure: string | null;
+}
+export interface MaintenanceInbox {
+  blocked: string | null;
+  plugins: MaintenanceInboxEntry[];
+}
+
 export interface PluginTestResult {
   ok: true;
   outcome: "ok" | "empty";
@@ -284,6 +299,20 @@ export const suggestionPluginsApi = {
       `${base}/undo`,
       { undoId, token: ticket.token },
       { timeout: 30_000 }
+    );
+    return data;
+  },
+  /** The inbox's cached proposals and notices of every plugin; asks no plugin. */
+  async maintenanceInbox(): Promise<MaintenanceInbox> {
+    const { data } = await api.get("/settings/suggestion-plugins/maintenance/inbox");
+    return data;
+  },
+  /** "Jetzt aktualisieren": every plugin asked live (rate-limited on the server). */
+  async refreshMaintenanceInbox(locale: "de" | "en"): Promise<MaintenanceInbox> {
+    const { data } = await api.post(
+      "/settings/suggestion-plugins/maintenance/refresh",
+      { locale },
+      { timeout: 120_000 }
     );
     return data;
   },

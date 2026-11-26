@@ -27,6 +27,7 @@ export type SchedulerJob =
   | "dataQualitySweep"
   | "dawarichCountryDaySweep"
   | "documentSweep"
+  | "pluginMaintenance"
   | "flightUpdate"
   | "historicalEnrichment"
   | "logRetention"
