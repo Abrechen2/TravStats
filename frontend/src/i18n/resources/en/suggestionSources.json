@@ -219,6 +219,7 @@
         "server": "The plugin reported a server error.",
         "privateTarget": "This address is on the local network. Only the admin account may use it.",
         "readOnly": "The plugin's archive does not allow writing (token without write permission).",
+        "confirmationRequired": "The change was not confirmed and was therefore not written.",
         "changed": "The entry was changed in the archive since; undo is no longer possible.",
         "notFound": "The plugin does not know this entry (any more).",
         "notReady": "The plugin is still loading its archive. Please try again shortly.",
@@ -255,7 +256,8 @@
       "issue": {
         "noCoordinates": "no coordinates",
         "noStreet": "no street",
-        "lowPrecision": "town centre only"
+        "lowPrecision": "town centre only",
+        "coordsMismatch": "coordinates differ from the address"
       },
       "source": {
         "stop": "TravTrack stop",
@@ -269,13 +271,14 @@
       "distance": "{{meters}} m from the current location",
       "evidence": {
         "stop": "Stop “{{venue}}” on {{at}} · shared word: {{tokens}}",
-        "geocoder": "Geocoder hit: {{label}}"
+        "geocoder": "Geocoder hit: {{label}}",
+        "stopHere": "Your stop on {{at}}, {{duration}} · {{meters}} m from the address"
       },
       "take": "Apply",
       "otherAddress": "Other address",
       "ignore": "Ignore",
       "unignore": "Show again",
-      "searchLabel": "Search address",
+      "searchLabel": "Search entries",
       "search": "Search",
       "searchFailed": "The address search is not reachable right now.",
       "searchEmpty": "Nothing found.",
@@ -294,7 +297,14 @@
       "unignored": "“{{name}}” is shown again.",
       "appliedTitle": "Applied",
       "appliedLine": "{{name}}: {{lat}}, {{lon}} ({{at}})",
-      "undo": "Undo"
+      "undo": "Undo",
+      "searchPlaceholder": "Name, town, postcode or number",
+      "searchButton": "Search",
+      "searchClear": "Clear search",
+      "noMatch": "No entry matches the search.",
+      "range": "{{from}}–{{to}} of {{total}}",
+      "prev": "Previous",
+      "next": "Next"
     }
   }
 }

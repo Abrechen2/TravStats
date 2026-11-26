@@ -9,6 +9,9 @@ import { registry } from "../registry";
 import { errorContent } from "./shared";
 import {
   maintenanceApplyRequestSchema,
+  maintenanceConfirmRequestSchema,
+  maintenanceConfirmResponseSchema,
+  maintenanceNoticeSchema,
   maintenanceApplyResponseSchema,
   maintenanceIgnoreRequestSchema,
   maintenanceIgnoreResponseSchema,
@@ -30,6 +33,9 @@ registry.register("SuggestionPluginHelloV1", pluginHelloSchema);
 // The optional maintenance capability: what TravStats sends and expects back.
 registry.register("PluginMaintenanceProposalsRequestV1", maintenanceProposalsRequestSchema);
 registry.register("PluginMaintenanceProposalsResponseV1", maintenanceProposalsResponseSchema);
+registry.register("PluginMaintenanceNoticeV1", maintenanceNoticeSchema);
+registry.register("PluginMaintenanceConfirmRequestV1", maintenanceConfirmRequestSchema);
+registry.register("PluginMaintenanceConfirmResponseV1", maintenanceConfirmResponseSchema);
 registry.register("PluginMaintenanceApplyRequestV1", maintenanceApplyRequestSchema);
 registry.register("PluginMaintenanceApplyResponseV1", maintenanceApplyResponseSchema);
 registry.register("PluginMaintenanceUndoRequestV1", maintenanceUndoRequestSchema);
@@ -191,7 +197,7 @@ registry.registerPath({
 const maintenanceFailed = {
   description:
     "The plugin refused or failed: `error` is readOnly (its data source refuses writes), " +
-    "changed (undo: the row was edited since), notFound, notReady, auth (signature refused), " +
+    "changed (undo: the row was edited since), confirmationRequired (no valid ticket), notFound, notReady, auth (signature refused), " +
     "timeout, unreachable, rateLimited, protocol, server or privateTarget; `code` is PLUGIN_FAILED.",
   content: errorContent,
 };
@@ -233,7 +239,15 @@ registry.registerPath({
     "(rounded to the plugin's precision, none at 1 km) for the plugin to match by name; the " +
     "plugin adds geocoder candidates. `stopsWithheld` says why no stops were sent.",
   tags,
-  request: { params: idParam, query: z.object({ locale: z.enum(["de", "en"]).optional() }) },
+  request: {
+    params: idParam,
+    query: z.object({
+      locale: z.enum(["de", "en"]).optional(),
+      q: z.string().max(100).optional(),
+      offset: z.coerce.number().int().min(0).optional(),
+      limit: z.coerce.number().int().min(1).max(300).optional(),
+    }),
+  },
   responses: {
     200: {
       description: "Proposals",
@@ -250,12 +264,73 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/settings/suggestion-plugins/{id}/maintenance/notices",
+  summary: "The plugin's notices (uncertain cases) without the row list",
+  description:
+    "Owner of the plugin only. The plugin does not push: callers poll this paced (e.g. every 6 h " +
+    "and after new stops). `notices` is most severe first; `noticeCount` and `totalRows` are the " +
+    "full counts.",
+  tags,
+  request: { params: idParam, query: z.object({ locale: z.enum(["de", "en"]).optional() }) },
+  responses: {
+    200: {
+      description: "Notices",
+      content: json(
+        z.object({
+          notices: z.array(maintenanceNoticeSchema),
+          noticeCount: z.number().int(),
+          totalRows: z.number().int(),
+          stopsSent: z.number().int(),
+          stopsWithheld: z.enum(["precision", "travtrackOff"]).nullable(),
+        })
+      ),
+    },
+    400: maintenanceFailed,
+    409: noMaintenance,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/settings/suggestion-plugins/{id}/maintenance/confirm",
+  summary: "A single-use ticket for one archive write",
+  description:
+    "Called when the user confirms in the dialog; nothing is written. The ticket is bound to the " +
+    "exact values (apply: rowId, lat, lon, street, postcode, town; undo: undoId), valid 10 minutes " +
+    "and spent by its first use. Without it `apply`/`undo` fail with `confirmationRequired`.",
+  tags,
+  request: {
+    params: idParam,
+    body: {
+      content: json(
+        z.object({
+          kind: z.enum(["apply", "undo"]),
+          rowId: z.string().optional(),
+          lat: z.number().optional(),
+          lon: z.number().optional(),
+          street: z.string().optional(),
+          postcode: z.string().optional(),
+          town: z.string().optional(),
+          undoId: z.string().optional(),
+        })
+      ),
+    },
+  },
+  responses: {
+    200: { description: "Ticket", content: json(maintenanceConfirmResponseSchema) },
+    400: maintenanceFailed,
+    409: noMaintenance,
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/settings/suggestion-plugins/{id}/maintenance/apply",
   summary: "Write one confirmed position into the plugin's data",
   description:
-    "The plugin writes the coordinates, and the street only when the row has none, and keeps the " +
-    "values before for undo.",
+    "Needs the `token` of a `confirm` for exactly these values. The plugin writes the coordinates " +
+    "and the street, postcode and town as the user edited them, and keeps the values before for undo.",
   tags,
   request: {
     params: idParam,
@@ -266,7 +341,10 @@ registry.registerPath({
           lat: z.number(),
           lon: z.number(),
           street: z.string().optional(),
+          postcode: z.string().optional(),
+          town: z.string().optional(),
           source: z.enum(MAINTENANCE_SOURCES),
+          token: z.string(),
         })
       ),
     },
@@ -283,7 +361,10 @@ registry.registerPath({
   path: "/settings/suggestion-plugins/{id}/maintenance/undo",
   summary: "Undo an applied position",
   tags,
-  request: { params: idParam, body: { content: json(z.object({ undoId: z.string() })) } },
+  request: {
+    params: idParam,
+    body: { content: json(z.object({ undoId: z.string(), token: z.string() })) },
+  },
   responses: {
     200: { description: "Restored", content: json(maintenanceUndoResponseSchema) },
     400: maintenanceFailed,

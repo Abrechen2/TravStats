@@ -325,6 +325,19 @@
             "$ref": "#/$defs/PluginMaintenanceStopV1"
           },
           "maxItems": 2000
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300
         }
       },
       "required": [
@@ -378,6 +391,11 @@
               "maxLength": 200
             },
             "stopStart": {
+              "type": "string",
+              "nullable": true,
+              "maxLength": 40
+            },
+            "stopEnd": {
               "type": "string",
               "nullable": true,
               "maxLength": 40
@@ -480,10 +498,11 @@
             "enum": [
               "noCoordinates",
               "noStreet",
-              "lowPrecision"
+              "lowPrecision",
+              "coordsMismatch"
             ]
           },
-          "maxItems": 3
+          "maxItems": 4
         },
         "ignored": {
           "type": "boolean"
@@ -501,6 +520,146 @@
         "name",
         "issues",
         "proposals"
+      ]
+    },
+    "PluginMaintenanceNoticeV1": {
+      "type": "object",
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "enum": [
+            "readOnly",
+            "geocoderOff",
+            "coordsMismatch",
+            "ambiguousGeocoder",
+            "severalStops"
+          ]
+        },
+        "rowId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "distanceMeters": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "at": {
+          "type": "string",
+          "maxLength": 40
+        }
+      },
+      "required": [
+        "severity",
+        "code",
+        "message"
+      ]
+    },
+    "PluginMaintenanceConfirmRequestV1": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "enum": [
+            1
+          ]
+        },
+        "requestId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "apply",
+            "undo"
+          ]
+        },
+        "rowId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "street": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "postcode": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "town": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "undoId": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "version",
+        "requestId",
+        "kind"
+      ]
+    },
+    "PluginMaintenanceConfirmResponseV1": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "token": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "expiresAt": {
+          "type": "string",
+          "maxLength": 40
+        }
+      },
+      "required": [
+        "version",
+        "token",
+        "expiresAt"
       ]
     },
     "PluginMaintenanceAppliedV1": {
@@ -541,6 +700,16 @@
               "type": "string",
               "nullable": true,
               "maxLength": 200
+            },
+            "PLZ": {
+              "type": "string",
+              "nullable": true,
+              "maxLength": 32
+            },
+            "Ort": {
+              "type": "string",
+              "nullable": true,
+              "maxLength": 200
             }
           }
         },
@@ -556,6 +725,16 @@
               "nullable": true
             },
             "Strasse": {
+              "type": "string",
+              "nullable": true,
+              "maxLength": 200
+            },
+            "PLZ": {
+              "type": "string",
+              "nullable": true,
+              "maxLength": 32
+            },
+            "Ort": {
               "type": "string",
               "nullable": true,
               "maxLength": 200
@@ -598,6 +777,10 @@
           "type": "integer",
           "minimum": 0
         },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
         "applied": {
           "type": "array",
           "items": {
@@ -606,6 +789,17 @@
           "maxItems": 200
         },
         "pendingSearches": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "notices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PluginMaintenanceNoticeV1"
+          },
+          "maxItems": 100
+        },
+        "noticeCount": {
           "type": "integer",
           "minimum": 0
         },
@@ -650,6 +844,14 @@
           "type": "string",
           "maxLength": 200
         },
+        "postcode": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "town": {
+          "type": "string",
+          "maxLength": 200
+        },
         "source": {
           "type": "string",
           "enum": [
@@ -657,6 +859,10 @@
             "geocoder",
             "manual"
           ]
+        },
+        "token": {
+          "type": "string",
+          "maxLength": 200
         }
       },
       "required": [
@@ -665,7 +871,8 @@
         "rowId",
         "lat",
         "lon",
-        "source"
+        "source",
+        "token"
       ]
     },
     "PluginMaintenanceApplyResponseV1": {
@@ -706,6 +913,16 @@
               "type": "string",
               "nullable": true,
               "maxLength": 200
+            },
+            "PLZ": {
+              "type": "string",
+              "nullable": true,
+              "maxLength": 32
+            },
+            "Ort": {
+              "type": "string",
+              "nullable": true,
+              "maxLength": 200
             }
           }
         }
@@ -733,12 +950,17 @@
         "undoId": {
           "type": "string",
           "maxLength": 64
+        },
+        "token": {
+          "type": "string",
+          "maxLength": 200
         }
       },
       "required": [
         "version",
         "requestId",
-        "undoId"
+        "undoId",
+        "token"
       ]
     },
     "PluginMaintenanceUndoResponseV1": {
@@ -776,6 +998,16 @@
               "nullable": true
             },
             "Strasse": {
+              "type": "string",
+              "nullable": true,
+              "maxLength": 200
+            },
+            "PLZ": {
+              "type": "string",
+              "nullable": true,
+              "maxLength": 32
+            },
+            "Ort": {
               "type": "string",
               "nullable": true,
               "maxLength": 200

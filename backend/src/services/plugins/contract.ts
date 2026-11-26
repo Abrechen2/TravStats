@@ -120,6 +120,7 @@ export type PluginHello = z.infer<typeof pluginHelloSchema>;
 export const PLUGIN_CAPABILITY_MAINTENANCE = "maintenance";
 export const MAINTENANCE_MAX_STOPS = 2000;
 export const MAINTENANCE_MAX_ROWS = 300;
+export const MAINTENANCE_MAX_QUERY = 100;
 
 export const maintenanceStopSchema = z
   .object({
@@ -138,6 +139,11 @@ export const maintenanceProposalsRequestSchema = z
     locale: z.enum(["de", "en"]),
     /** Candidate stops (TravTrack, venue-named) the plugin may match; used for this answer only. */
     stops: z.array(maintenanceStopSchema).max(MAINTENANCE_MAX_STOPS),
+    /** Additive: rows whose name, town, postcode, street or number contain every word. */
+    query: z.string().max(MAINTENANCE_MAX_QUERY).optional(),
+    /** Additive: paging over the plugin's sorted list. */
+    offset: z.number().int().min(0).optional(),
+    limit: z.number().int().min(1).max(300).optional(),
   })
   .openapi("PluginMaintenanceProposalsRequestV1");
 
@@ -155,6 +161,7 @@ export const maintenanceProposalSchema = z
       .object({
         venueName: text(200).optional(),
         stopStart: z.string().max(40).nullable().optional(),
+        stopEnd: z.string().max(40).nullable().optional(),
         query: text(300).optional(),
         label: text(200).optional(),
         precision: text(16).optional(),
@@ -174,6 +181,8 @@ const writtenSchema = z.object({
   Latitude: z.number().nullable().optional(),
   Longitude: z.number().nullable().optional(),
   Strasse: z.string().max(200).nullable().optional(),
+  PLZ: z.string().max(32).nullable().optional(),
+  Ort: z.string().max(200).nullable().optional(),
 });
 
 export const maintenanceRowSchema = z
@@ -186,7 +195,7 @@ export const maintenanceRowSchema = z
     town: text(200).nullable().optional(),
     lat: z.number().min(-90).max(90).nullable().optional(),
     lon: z.number().min(-180).max(180).nullable().optional(),
-    issues: z.array(z.enum(["noCoordinates", "noStreet", "lowPrecision"])).max(3),
+    issues: z.array(z.enum(["noCoordinates", "noStreet", "lowPrecision", "coordsMismatch"])).max(4),
     ignored: z.boolean().optional(),
     proposals: z.array(maintenanceProposalSchema).max(10),
   })
@@ -204,14 +213,38 @@ export const maintenanceAppliedSchema = z
   })
   .openapi("PluginMaintenanceAppliedV1");
 
+/** What the plugin does not decide for the user: shown to them as plugin messages (owner 2026-11-26). */
+export const maintenanceNoticeSchema = z
+  .object({
+    severity: z.enum(["info", "warning", "error"]),
+    code: z.enum([
+      "readOnly",
+      "geocoderOff",
+      "coordsMismatch",
+      "ambiguousGeocoder",
+      "severalStops",
+    ]),
+    rowId: rowId.optional(),
+    name: text(200).optional(),
+    message: text(300),
+    count: z.number().int().min(0).optional(),
+    distanceMeters: z.number().int().min(0).optional(),
+    at: z.string().max(40).optional(),
+  })
+  .openapi("PluginMaintenanceNoticeV1");
+
 export const maintenanceProposalsResponseSchema = z
   .object({
     version: z.number().int().min(1),
     rows: z.array(maintenanceRowSchema).max(MAINTENANCE_MAX_ROWS),
     totalRows: z.number().int().min(0).optional(),
+    offset: z.number().int().min(0).optional(),
     applied: z.array(maintenanceAppliedSchema).max(200).optional(),
     /** Geocoder searches still running in the plugin; asking again later shows more. */
     pendingSearches: z.number().int().min(0).optional(),
+    /** Uncertain cases, most severe first; independent of search and paging. */
+    notices: z.array(maintenanceNoticeSchema).max(100).optional(),
+    noticeCount: z.number().int().min(0).optional(),
     geocoder: z.boolean().optional(),
   })
   .openapi("PluginMaintenanceProposalsResponseV1");
@@ -226,11 +259,35 @@ export const maintenanceApplyRequestSchema = z
     rowId: z.string().min(1).max(64),
     lat: z.number().min(-90).max(90),
     lon: z.number().min(-180).max(180),
-    /** Written only when the row's own street is empty. */
+    /** The values the user confirmed (editable before confirming); exactly these are written. */
     street: text(200).optional(),
+    postcode: text(200).optional(),
+    town: text(200).optional(),
     source: z.enum(MAINTENANCE_SOURCES),
+    /** From `maintenance/confirm`: single use, bound to exactly these values. */
+    token: text(200),
   })
   .openapi("PluginMaintenanceApplyRequestV1");
+
+/** A ticket for one write, asked for when the user confirms in the dialog. Writes nothing. */
+export const maintenanceConfirmRequestSchema = z
+  .object({
+    version: z.literal(PLUGIN_CONTRACT_VERSION),
+    requestId: z.string().uuid(),
+    kind: z.enum(["apply", "undo"]),
+    rowId: z.string().min(1).max(64).optional(),
+    lat: z.number().min(-90).max(90).optional(),
+    lon: z.number().min(-180).max(180).optional(),
+    street: text(200).optional(),
+    postcode: text(200).optional(),
+    town: text(200).optional(),
+    undoId: text(64).optional(),
+  })
+  .openapi("PluginMaintenanceConfirmRequestV1");
+
+export const maintenanceConfirmResponseSchema = z
+  .object({ version: z.number().int().min(1), token: text(200), expiresAt: z.string().max(40) })
+  .openapi("PluginMaintenanceConfirmResponseV1");
 
 export const maintenanceApplyResponseSchema = z
   .object({ version: z.number().int().min(1), undoId: text(64), rowId, written: writtenSchema })
@@ -241,6 +298,7 @@ export const maintenanceUndoRequestSchema = z
     version: z.literal(PLUGIN_CONTRACT_VERSION),
     requestId: z.string().uuid(),
     undoId: text(64),
+    token: text(200),
   })
   .openapi("PluginMaintenanceUndoRequestV1");
 
