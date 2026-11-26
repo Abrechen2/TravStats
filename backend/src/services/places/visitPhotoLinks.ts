@@ -5,6 +5,9 @@ import { getCachedAlbumAssets } from "../immich/immichAssetCache";
 import { getImmichConnection } from "../immich/immichResolver";
 import { ImmichError, type ImmichAsset, type ImmichErrorKind } from "../immich/types";
 import type { SourcedAsset } from "../photoLinking/matcher";
+import { createPhotoSource } from "../photoSource";
+import { getPhotoSourceConnection } from "../photoSource/connection";
+import type { PhotoSourceAsset } from "../photoSource/types";
 import { haversineKm } from "../../shared/geo/haversine";
 import { VISIT_STOP_OPTIONS } from "../photoJourneys/visitStops";
 
@@ -23,7 +26,13 @@ import { VISIT_STOP_OPTIONS } from "../photoJourneys/visitStops";
 export type AttachOutcome =
   | { kind: "notConfigured" }
   | { kind: "failed"; reason: ImmichErrorKind }
-  | { kind: "linked"; linked: number; skipped: number };
+  | {
+      kind: "linked";
+      linked: number;
+      skipped: number;
+      /** A library that failed while another one linked (#414: Immich and PhotoPrism). */
+      failedSources?: Array<{ provider: "immich" | "photoprism"; reason: ImmichErrorKind }>;
+    };
 
 /** A journey's first and last photo bound the search; a minute either side absorbs rounding. */
 const JOURNEY_SEARCH_PAD_MS = 60_000;
@@ -119,10 +128,42 @@ export async function attachJourneyPhotosToVisit(
     where: { id: visitId, userId },
     select: { id: true, placeId: true },
   });
-  if (!journey || !visit || journey.previewAssetIds.length === 0) {
+  const isStop = journey?.kind === "visit";
+  if (!journey || !visit || (!isStop && journey.previewAssetIds.length === 0)) {
     return { kind: "linked", linked: 0, skipped: 0 };
   }
 
+  const immich = await attachFromImmich(userId, journeyId, journey, visitId, isStop);
+  // A photo stop is every library's photographs of that spot, PhotoPrism's too (#414).
+  const outcome = isStop
+    ? combine(immich, await attachFromPhotoprism(userId, journeyId, journey, visitId))
+    : immich;
+  if (outcome.kind === "linked" && outcome.linked > 0) {
+    await coverPlaceIfBare(visit.placeId, visitId);
+  }
+  return outcome;
+}
+
+type JourneySpan = {
+  previewAssetIds: string[];
+  startDate: Date;
+  endDate: Date;
+  lat: number;
+  lon: number;
+};
+
+const spanOf = (journey: JourneySpan): { takenAfter: Date; takenBefore: Date } => ({
+  takenAfter: new Date(journey.startDate.getTime() - JOURNEY_SEARCH_PAD_MS),
+  takenBefore: new Date(journey.endDate.getTime() + JOURNEY_SEARCH_PAD_MS),
+});
+
+async function attachFromImmich(
+  userId: string,
+  journeyId: string,
+  journey: JourneySpan,
+  visitId: string,
+  isStop: boolean
+): Promise<AttachOutcome> {
   const connection = await getImmichConnection(userId);
   if (connection === null) return { kind: "notConfigured" };
   const client = createImmichClient(connection);
@@ -130,10 +171,7 @@ export async function attachJourneyPhotosToVisit(
   let library: ImmichAsset[];
   try {
     library = await getCachedAlbumAssets(userId, `journey:${journeyId}`, async () => {
-      const page = await client.searchAssetsByDate({
-        takenAfter: new Date(journey.startDate.getTime() - JOURNEY_SEARCH_PAD_MS),
-        takenBefore: new Date(journey.endDate.getTime() + JOURNEY_SEARCH_PAD_MS),
-      });
+      const page = await client.searchAssetsByDate(spanOf(journey));
       return page.assets;
     });
   } catch (error) {
@@ -153,21 +191,74 @@ export async function attachJourneyPhotosToVisit(
   // with three (#414). Its cluster is every located photo of the span within the stop's
   // radius — the scan's own rule — and accepting the stop is the user's explicit choice
   // for all of them, so the automatic 5–10 cap does not apply here.
-  const cluster =
-    journey.kind === "visit"
-      ? library.filter((asset) => inStopRadius(asset, journey) && !proven.includes(asset))
-      : [];
+  const cluster = isStop
+    ? library.filter((asset) => inStopRadius(asset, journey) && !proven.includes(asset))
+    : [];
   const linked = await linkImmichAssetsToVisit(visitId, [...proven, ...sortByTime(cluster)]);
-  if (linked > 0) await coverPlaceIfBare(visit.placeId, visitId);
   return { kind: "linked", linked, skipped: journey.previewAssetIds.length - proven.length };
 }
 
-function inStopRadius(asset: ImmichAsset, stop: { lat: number; lon: number }): boolean {
+/** The stop's photographs in PhotoPrism: same span, same radius, linked as `photoprism` rows. */
+async function attachFromPhotoprism(
+  userId: string,
+  journeyId: string,
+  journey: JourneySpan,
+  visitId: string
+): Promise<AttachOutcome> {
+  const connection = await getPhotoSourceConnection("photoprism", userId);
+  if (connection === null) return { kind: "notConfigured" };
+  let assets: PhotoSourceAsset[];
+  try {
+    const page = await createPhotoSource("photoprism", connection).searchAssetsByTime(
+      spanOf(journey)
+    );
+    assets = page.assets;
+  } catch (error) {
+    if (!(error instanceof ImmichError)) throw error;
+    logger.warn({
+      message: "journey_photo_attach_failed",
+      context: { journeyId, provider: "photoprism", kind: error.kind },
+    });
+    return { kind: "failed", reason: error.kind };
+  }
+  const cluster = sortByTime(assets.filter((asset) => inStopRadius(asset, journey)));
+  const linked = await linkAssetsToVisit(
+    visitId,
+    cluster.map((asset) => ({ provider: "photoprism" as const, asset })),
+    "manual"
+  );
+  return { kind: "linked", linked, skipped: 0 };
+}
+
+/**
+ * One outcome for two libraries. Photos linked from either make it `linked`;
+ * a library that failed meanwhile is named in `failedSources`, never dropped.
+ */
+function combine(immich: AttachOutcome, photoprism: AttachOutcome): AttachOutcome {
+  const linked = (o: AttachOutcome): number => (o.kind === "linked" ? o.linked : 0);
+  const failed = [
+    ...(immich.kind === "failed" ? [{ provider: "immich" as const, reason: immich.reason }] : []),
+    ...(photoprism.kind === "failed"
+      ? [{ provider: "photoprism" as const, reason: photoprism.reason }]
+      : []),
+  ];
+  if (immich.kind !== "linked" && photoprism.kind !== "linked") {
+    return failed[0] ? { kind: "failed", reason: failed[0].reason } : { kind: "notConfigured" };
+  }
+  return {
+    kind: "linked",
+    linked: linked(immich) + linked(photoprism),
+    skipped: immich.kind === "linked" ? immich.skipped : 0,
+    ...(failed.length > 0 ? { failedSources: failed } : {}),
+  };
+}
+
+function inStopRadius(asset: PhotoSourceAsset, stop: { lat: number; lon: number }): boolean {
   if (asset.lat === null || asset.lon === null) return false;
   return haversineKm(stop, { lat: asset.lat, lon: asset.lon }) * 1000 <= VISIT_STOP_OPTIONS.radiusM;
 }
 
-function sortByTime(assets: ImmichAsset[]): ImmichAsset[] {
+function sortByTime<T extends PhotoSourceAsset>(assets: T[]): T[] {
   return [...assets].sort((a, b) => (a.fileCreatedAt ?? "").localeCompare(b.fileCreatedAt ?? ""));
 }
 

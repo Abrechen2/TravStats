@@ -9,6 +9,16 @@ jest.mock("../../services/immich/immichResolver", () => ({
   getImmichConnection: (userId: string) => getImmichConnection(userId),
 }));
 
+const getPhotoprismConnection = jest.fn<(userId: string) => Promise<unknown>>();
+jest.mock("../../services/photoprism/photoprismResolver", () => ({
+  getPhotoprismConnection: (userId: string) => getPhotoprismConnection(userId),
+}));
+const photoprismSearch = jest.fn<(range: unknown) => Promise<unknown>>();
+jest.mock("../../services/photoSource/photoprismSource", () => ({
+  ...jest.requireActual<object>("../../services/photoSource/photoprismSource"),
+  createPhotoprismPhotoSource: () => ({ kind: "photoprism", searchAssetsByTime: photoprismSearch }),
+}));
+
 import request from "supertest";
 
 import app from "../../index";
@@ -107,6 +117,9 @@ describe("visit findings (forgejo#211)", () => {
     getImmichConnection.mockReset();
     getImmichConnection.mockResolvedValue(CONNECTION);
     searchAssetsByDate.mockResolvedValue({ assets: PALACE_STOP, truncated: false });
+    getPhotoprismConnection.mockReset();
+    getPhotoprismConnection.mockResolvedValue(null);
+    photoprismSearch.mockReset();
   });
 
   const scan = () => scanPhotoJourneys(userId, { ...WINDOW, geocoder: photon });
@@ -265,6 +278,26 @@ describe("visit findings (forgejo#211)", () => {
         where: { id: res.body.data.created.placeId },
       });
       expect(place.coverPhotoId).toBe(photos[0].id);
+    });
+
+    it("links the stop's PhotoPrism photos too, not only Immich's (#414)", async () => {
+      await scan();
+      const [row] = await pending();
+      getPhotoprismConnection.mockResolvedValue({ baseUrl: "http://pp.test", apiKey: "p" });
+      const ppNear = asset("pp-near", "2026-05-01T05:20:00.000Z", PALACE);
+      const ppFar = asset("pp-far", "2026-05-01T05:21:00.000Z", {
+        lat: PALACE.lat + 0.05,
+        lon: PALACE.lon,
+      });
+      photoprismSearch.mockResolvedValue({ assets: [ppNear, ppFar], truncated: false });
+
+      const res = await accept(row.id);
+      expect(res.status).toBe(200);
+      expect(res.body.data.photos).toEqual({ kind: "linked", linked: 6, skipped: 0 });
+      const pp = await prisma.placeVisitPhoto.findMany({
+        where: { placeVisitId: res.body.data.created.placeVisitId, provider: "photoprism" },
+      });
+      expect(pp.map((p) => p.immichAssetId)).toEqual(["pp-near"]);
     });
 
     it("creates the place and the visit in the trip, and links them to the row", async () => {
