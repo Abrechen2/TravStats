@@ -219,6 +219,7 @@
         "server": "Das Plugin hat einen Serverfehler gemeldet.",
         "privateTarget": "Diese Adresse liegt im lokalen Netz. Nur das Admin-Konto darf sie verwenden.",
         "readOnly": "Das Archiv des Plugins lässt kein Schreiben zu (Token ohne Schreibrecht).",
+        "confirmationRequired": "Die Änderung wurde nicht bestätigt und deshalb nicht geschrieben.",
         "changed": "Der Eintrag wurde seitdem im Archiv geändert; Rückgängig ist nicht mehr möglich.",
         "notFound": "Diesen Eintrag kennt das Plugin nicht (mehr).",
         "notReady": "Das Plugin lädt sein Archiv noch. Bitte gleich noch einmal.",
@@ -243,7 +244,7 @@
       "reload": "Neu laden",
       "empty": "Keine Einträge ohne Standort.",
       "showIgnored": "Ignorierte zeigen",
-      "stopsSent": "{{count}} TravTrack-Stopps mit Ortsnamen wurden zum Abgleich mitgeschickt.",
+      "stopsSent": "{{count}} TravTrack-Stopps (benannte und längere unbenannte) wurden zum Abgleich mitgeschickt.",
       "stopsWithheld": {
         "precision": "Keine Stopps mitgeschickt: Das Plugin ist auf 1 km Genauigkeit gestellt.",
         "travtrackOff": "Keine Stopps mitgeschickt: TravTrack ist nicht die Standortquelle dieses Kontos."
@@ -255,7 +256,8 @@
       "issue": {
         "noCoordinates": "keine Koordinaten",
         "noStreet": "keine Straße",
-        "lowPrecision": "nur Ortsmitte"
+        "lowPrecision": "nur Ortsmitte",
+        "coordsMismatch": "Koordinaten weichen von der Adresse ab"
       },
       "source": {
         "stop": "TravTrack-Stopp",
@@ -269,13 +271,14 @@
       "distance": "{{meters}} m vom bisherigen Standort",
       "evidence": {
         "stop": "Stopp „{{venue}}“ am {{at}} · gemeinsames Wort: {{tokens}}",
-        "geocoder": "Geocoder-Treffer: {{label}}"
+        "geocoder": "Geocoder-Treffer: {{label}}",
+        "stopHere": "Dein Halt am {{at}}, {{duration}} · {{meters}} m von der Adresse"
       },
       "take": "Übernehmen",
       "otherAddress": "Andere Adresse",
       "ignore": "Ignorieren",
       "unignore": "Wieder anzeigen",
-      "searchLabel": "Adresse suchen",
+      "searchLabel": "Einträge durchsuchen",
       "search": "Suchen",
       "searchFailed": "Die Adresssuche ist gerade nicht erreichbar.",
       "searchEmpty": "Nichts gefunden.",
@@ -294,7 +297,14 @@
       "unignored": "„{{name}}“ wird wieder angezeigt.",
       "appliedTitle": "Übernommen",
       "appliedLine": "{{name}}: {{lat}}, {{lon}} ({{at}})",
-      "undo": "Rückgängig"
+      "undo": "Rückgängig",
+      "searchPlaceholder": "Name, Ort, PLZ oder Nummer",
+      "searchButton": "Suchen",
+      "searchClear": "Suche zurücksetzen",
+      "noMatch": "Kein Eintrag passt zur Suche.",
+      "range": "{{from}}–{{to}} von {{total}}",
+      "prev": "Zurück",
+      "next": "Weiter"
     }
   }
 }

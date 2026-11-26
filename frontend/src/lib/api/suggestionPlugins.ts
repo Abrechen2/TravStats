@@ -37,7 +37,7 @@ export interface PluginSuggestionView {
 }
 
 /** Location maintenance (optional plugin capability `maintenance`, owner 2026-11-24). */
-export type MaintenanceIssue = "noCoordinates" | "noStreet" | "lowPrecision";
+export type MaintenanceIssue = "noCoordinates" | "noStreet" | "lowPrecision" | "coordsMismatch";
 export type MaintenanceSource = "stop" | "geocoder" | "manual";
 
 export interface MaintenanceProposal {
@@ -50,6 +50,7 @@ export interface MaintenanceProposal {
   evidence?: {
     venueName?: string;
     stopStart?: string | null;
+    stopEnd?: string | null;
     query?: string;
     label?: string;
     matchedTokens?: string[];
@@ -77,6 +78,8 @@ export interface MaintenanceWritten {
   Latitude?: number | null;
   Longitude?: number | null;
   Strasse?: string | null;
+  PLZ?: string | null;
+  Ort?: string | null;
 }
 
 export interface MaintenanceApplied {
@@ -89,9 +92,31 @@ export interface MaintenanceApplied {
   appliedAt: string;
 }
 
+export interface MaintenanceNotice {
+  severity: "info" | "warning" | "error";
+  code: "readOnly" | "geocoderOff" | "coordsMismatch" | "ambiguousGeocoder" | "severalStops";
+  rowId?: string | number;
+  name?: string;
+  message: string;
+  count?: number;
+  distanceMeters?: number;
+  at?: string;
+}
+
+export interface MaintenanceNotices {
+  notices: MaintenanceNotice[];
+  noticeCount: number;
+  totalRows: number;
+  stopsSent: number;
+  stopsWithheld: "precision" | "travtrackOff" | null;
+}
+
 export interface MaintenanceList {
+  notices?: MaintenanceNotice[];
+  noticeCount?: number;
   rows: MaintenanceRow[];
   totalRows?: number;
+  offset?: number;
   applied?: MaintenanceApplied[];
   pendingSearches?: number;
   geocoder?: boolean;
@@ -117,6 +142,7 @@ const FAILURES: readonly string[] = [
   "server",
   "privateTarget",
   "readOnly",
+  "confirmationRequired",
   "changed",
   "notFound",
   "notReady",
@@ -194,19 +220,52 @@ export const suggestionPluginsApi = {
     const { data } = await api.get(`/settings/suggestion-plugins/${id}/capabilities`);
     return data;
   },
-  async maintenance(id: string, locale: "de" | "en"): Promise<MaintenanceList> {
+  async maintenance(
+    id: string,
+    locale: "de" | "en",
+    page: { q?: string; offset?: number; limit?: number } = {}
+  ): Promise<MaintenanceList> {
     // The plugin may take a while to list its rows (and TravStats sends the stops).
     const { data } = await api.get(`/settings/suggestion-plugins/${id}/maintenance`, {
-      params: { locale },
+      params: { locale, ...(page.q ? { q: page.q } : {}), offset: page.offset, limit: page.limit },
       timeout: 30_000,
     });
     return data;
   },
+  /**
+   * Writes the values the user confirmed. Call it only from the confirm dialog's
+   * "confirm": it asks the plugin for a single-use ticket bound to exactly these
+   * values, then writes with it. There is no other path to a write.
+   */
   async applyLocation(
     id: string,
-    input: { rowId: string; lat: number; lon: number; street?: string; source: MaintenanceSource }
+    input: {
+      rowId: string;
+      lat: number;
+      lon: number;
+      street?: string;
+      postcode?: string;
+      town?: string;
+      source: MaintenanceSource;
+    }
   ): Promise<{ undoId: string; rowId: string; written: MaintenanceWritten }> {
-    const { data } = await api.post(`/settings/suggestion-plugins/${id}/maintenance/apply`, input, {
+    const { source: _source, ...values } = input;
+    const base = `/settings/suggestion-plugins/${id}/maintenance`;
+    const { data: ticket } = await api.post(
+      `${base}/confirm`,
+      { kind: "apply", ...values },
+      { timeout: 30_000 }
+    );
+    const { data } = await api.post(
+      `${base}/apply`,
+      { ...input, token: ticket.token },
+      { timeout: 30_000 }
+    );
+    return data;
+  },
+  async notices(id: string, locale: "de" | "en"): Promise<MaintenanceNotices> {
+    const { data } = await api.get(`/settings/suggestion-plugins/${id}/maintenance/notices`, {
+      params: { locale },
       timeout: 30_000,
     });
     return data;
@@ -215,9 +274,15 @@ export const suggestionPluginsApi = {
     id: string,
     undoId: string
   ): Promise<{ undoId: string; rowId: string; restored: MaintenanceWritten }> {
+    const base = `/settings/suggestion-plugins/${id}/maintenance`;
+    const { data: ticket } = await api.post(
+      `${base}/confirm`,
+      { kind: "undo", undoId },
+      { timeout: 30_000 }
+    );
     const { data } = await api.post(
-      `/settings/suggestion-plugins/${id}/maintenance/undo`,
-      { undoId },
+      `${base}/undo`,
+      { undoId, token: ticket.token },
       { timeout: 30_000 }
     );
     return data;

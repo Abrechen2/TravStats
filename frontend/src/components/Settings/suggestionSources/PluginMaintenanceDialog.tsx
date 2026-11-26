@@ -16,6 +16,7 @@ import MaintenanceMap from "./MaintenanceMap";
 import MaintenanceRowCard, { type Choice } from "./MaintenanceRowCard";
 
 const NS = "suggestionSources:plugins.maintenance";
+const PAGE_SIZE = 50;
 
 type Load =
   | { status: "loading" }
@@ -48,6 +49,9 @@ export default function PluginMaintenanceDialog({
   const [selected, setSelected] = useState<string | null>(null);
   const [showIgnored, setShowIgnored] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [search, setSearch] = useState("");
+  const [offset, setOffset] = useState(0);
   const [line, setLine] = useState<Line | null>(null);
   const locale = i18n.language?.startsWith("en") ? "en" : "de";
 
@@ -60,7 +64,11 @@ export default function PluginMaintenanceDialog({
   const reload = useCallback(async () => {
     setLoad({ status: "loading" });
     try {
-      const list = await suggestionPluginsApi.maintenance(plugin.id, locale);
+      const list = await suggestionPluginsApi.maintenance(plugin.id, locale, {
+        q: search,
+        offset,
+        limit: PAGE_SIZE,
+      });
       setLoad({ status: "done", list });
       setSelected((s) => s ?? list.rows.find((r) => !r.ignored)?.rowId ?? null);
     } catch (e) {
@@ -68,7 +76,7 @@ export default function PluginMaintenanceDialog({
       console.warn("plugin maintenance list failed", key);
       setLoad({ status: "failed", key });
     }
-  }, [plugin.id, locale]);
+  }, [plugin.id, locale, search, offset]);
 
   useEffect(() => {
     if (open) void reload();
@@ -118,6 +126,8 @@ export default function PluginMaintenanceDialog({
   if (!open) return null;
   const list = load.status === "done" ? load.list : null;
   const rows = list ? list.rows.filter((r) => showIgnored || !r.ignored) : [];
+  const total = list?.totalRows ?? list?.rows.length ?? 0;
+  const pageStart = list?.offset ?? offset;
   const current = list?.rows.find((r) => r.rowId === selected) ?? null;
 
   return (
@@ -170,6 +180,67 @@ export default function PluginMaintenanceDialog({
                 {t(`${NS}.reload`)}
               </Button>
             </div>
+            <form
+              className="flex flex-wrap items-center"
+              style={{ gap: "var(--ts-space-sm)" }}
+              role="search"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setOffset(0);
+                setSearch(draft.trim());
+              }}
+            >
+              <input
+                type="search"
+                className="ts-input"
+                value={draft}
+                maxLength={100}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={t(`${NS}.searchPlaceholder`)}
+                aria-label={t(`${NS}.searchLabel`)}
+              />
+              <Button type="submit" disabled={busy}>
+                {t(`${NS}.searchButton`)}
+              </Button>
+              {search && (
+                <Button
+                  disabled={busy}
+                  onClick={() => {
+                    setDraft("");
+                    setSearch("");
+                    setOffset(0);
+                  }}
+                >
+                  {t(`${NS}.searchClear`)}
+                </Button>
+              )}
+            </form>
+            {total > 0 && (
+              <div
+                className="flex flex-wrap items-center t-caption"
+                style={{ gap: "var(--ts-space-sm)" }}
+              >
+                <span data-testid="maintenance-range">
+                  {t(`${NS}.range`, {
+                    from: pageStart + 1,
+                    to: pageStart + list.rows.length,
+                    total,
+                  })}
+                </span>
+                <Button
+                  disabled={busy || pageStart === 0}
+                  onClick={() => setOffset(Math.max(0, pageStart - PAGE_SIZE))}
+                >
+                  {t(`${NS}.prev`)}
+                </Button>
+                <Button
+                  disabled={busy || pageStart + list.rows.length >= total}
+                  onClick={() => setOffset(pageStart + PAGE_SIZE)}
+                >
+                  {t(`${NS}.next`)}
+                </Button>
+              </div>
+            )}
             {current && (
               <MaintenanceMap
                 current={
@@ -182,7 +253,9 @@ export default function PluginMaintenanceDialog({
                 attributionLabel={t("location:attribution")}
               />
             )}
-            {rows.length === 0 && <p className="t-caption">{t(`${NS}.empty`)}</p>}
+            {rows.length === 0 && (
+              <p className="t-caption">{t(search ? `${NS}.noMatch` : `${NS}.empty`)}</p>
+            )}
             <ul
               className="grid"
               style={{
