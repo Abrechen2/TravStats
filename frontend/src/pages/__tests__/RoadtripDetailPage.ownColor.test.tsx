@@ -82,7 +82,8 @@ describe("RoadtripDetailPage map colour (#412)", () => {
       </MemoryRouter>
     );
     await waitFor(() => expect(drawn.some((g) => g.length > 0)).toBe(true));
-    const last = drawn.filter((g) => g.length > 0).at(-1)!;
+    const nonEmpty = drawn.filter((g) => g.length > 0);
+    const last = nonEmpty[nonEmpty.length - 1];
     expect(last[0].rgb).toEqual([0x8f, 0xa3, 0xb8]);
   });
 });
