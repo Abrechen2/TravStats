@@ -1,3 +1,4 @@
+import Chip from "../../ui/Chip";
 import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -88,15 +89,11 @@ export default function SmartListPanel({
       )}
       {rule && (
         <section className="mb-6" aria-label={t("places:smartList.headerLabel")}>
-          <p
-            className="inline-block rounded-full px-3 py-1 text-sm"
-            style={{ border: "1px solid var(--color-border)", color: "var(--text-primary)" }}
-            data-testid="smart-list-badge"
-          >
+          <Chip testId="smart-list-badge">
             {t("places:smartList.header", {
               brands: rule.brands.map((b) => b.brandName).join(", "),
             })}
-          </p>
+          </Chip>
           <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
             {t("places:smartList.headerRule", {
               min: rule.minDwellMinutes,

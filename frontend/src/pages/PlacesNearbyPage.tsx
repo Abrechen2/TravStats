@@ -1,3 +1,6 @@
+import Chip from "../components/ui/Chip";
+import type { ReactNode } from "react";
+import { Icon } from "../components/ui/Icon";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -40,9 +43,9 @@ const ALL_STATES: readonly PlaceCountState[] = ["visited", "planned", "excluded"
  * filled tick for "been there", a clock for "planned", a hollow star for
  * "saved, not yet". The tint only repeats what the word already says.
  */
-const STATE_MARK: Record<PlaceCountState, { glyph: string; color: string }> = {
-  visited: { glyph: "✓", color: "var(--ts-good, var(--success))" },
-  planned: { glyph: "◷", color: "var(--ts-warn)" },
+const STATE_MARK: Record<PlaceCountState, { glyph: ReactNode; color: string }> = {
+  visited: { glyph: <Icon name="check" size={14} />, color: "var(--ts-good, var(--success))" },
+  planned: { glyph: <Icon name="clock" size={14} />, color: "var(--ts-warn)" },
   excluded: { glyph: "☆", color: "var(--text-muted)" },
 };
 
@@ -253,24 +256,18 @@ export default function PlacesNearbyPage(): JSX.Element {
               <legend className="t-caption mb-1">{t("places:nearby.filter.states")}</legend>
               <div className="flex flex-wrap gap-2">
                 {ALL_STATES.map((s) => (
-                  <button
+                  <Chip
                     key={s}
-                    type="button"
-                    aria-pressed={states.has(s)}
+                    active={states.has(s)}
+                    color={states.has(s) ? STATE_MARK[s].color : undefined}
+                    icon={undefined}
                     onClick={() => toggleState(s)}
-                    className={`rounded-full px-3 py-1.5 text-sm ${COARSE}`}
-                    style={{
-                      border: states.has(s)
-                        ? `1px solid ${STATE_MARK[s].color}`
-                        : "1px dashed var(--color-border)",
-                      color: states.has(s) ? "var(--text-primary)" : "var(--text-muted)",
-                    }}
                   >
-                    <span aria-hidden style={{ color: STATE_MARK[s].color }}>
+                    <span aria-hidden style={{ color: STATE_MARK[s].color, display: "flex" }}>
                       {STATE_MARK[s].glyph}
-                    </span>{" "}
+                    </span>
                     {t(`places:nearby.state.${s}`)}
-                  </button>
+                  </Chip>
                 ))}
               </div>
             </fieldset>

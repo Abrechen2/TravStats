@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { token } from "./tokens";
 
@@ -32,7 +32,7 @@ export function RouteNotice({
   body,
   action,
 }: {
-  glyph: string;
+  glyph: ReactNode;
   title: string;
   body: string;
   /** The one way forward. Omitted when there is nothing useful to offer. */

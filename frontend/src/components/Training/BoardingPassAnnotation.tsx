@@ -556,7 +556,8 @@ export default function BoardingPassAnnotation({
             }}
           >
             <p className="text-sm" style={{ color: "var(--accent)" }}>
-              🔍 OCR läuft... Text wird extrahiert...
+              <Icon name="search" size={14} className="mr-1 inline" /> OCR läuft... Text wird
+              extrahiert...
             </p>
           </div>
         )}

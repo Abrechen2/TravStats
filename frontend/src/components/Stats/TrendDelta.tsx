@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import type { JSX } from "react";
 
 interface TrendDeltaProps {
@@ -24,25 +25,16 @@ export default function TrendDelta({
   const pct = Math.round(((current - previous) / previous) * 100);
   const sign = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
   const arrow = sign === "up" ? "↑" : sign === "down" ? "↓" : "→";
-  const bg =
-    sign === "up"
-      ? "rgba(63, 185, 80, 0.18)"
-      : sign === "down"
-        ? "rgba(248, 81, 73, 0.18)"
-        : "var(--bg-elevated)";
   const fg =
     sign === "up" ? "var(--success)" : sign === "down" ? "var(--danger)" : "var(--text-muted)";
 
   return (
-    <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold font-mono"
-      style={{ background: bg, color: fg }}
-    >
+    <Chip mono size="sm" color={fg}>
       {arrow} {pct > 0 ? "+" : ""}
       {pct}%
       {compareLabel && (
         <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>{compareLabel}</span>
       )}
-    </span>
+    </Chip>
   );
 }

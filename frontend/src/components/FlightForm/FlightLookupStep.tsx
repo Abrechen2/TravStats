@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { lazy, Suspense, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useFlightEntrySuggestions } from "../../hooks/useFlightEntrySuggestions";
@@ -235,7 +236,7 @@ export default function FlightLookupStep({
           most comes first, typing it out is the footer. */}
       <ImportRouteRow
         primary
-        icon="✉️"
+        icon={<Icon name="mail" size={18} />}
         title={t("flights:form.email.title")}
         description={t("flights:form.email.bestOptionDescription")}
       >
@@ -267,7 +268,7 @@ export default function FlightLookupStep({
           desk exactly as a photo does on the phone. The old label promised a
           camera the code never asks for. */}
       <ImportRouteRow
-        icon="🎫"
+        icon={<Icon name="ticket" size={18} />}
         title={t("flights:form.boardingPass.title")}
         description={t("flights:form.boardingPass.description")}
         actionLabel={t("flights:form.boardingPass.scan")}
@@ -275,7 +276,7 @@ export default function FlightLookupStep({
       />
 
       <ImportRouteRow
-        icon="🔎"
+        icon={<Icon name="search" size={18} />}
         title={t("flights:form.flightNumber")}
         description={t("flights:form.lookupHint")}
       >
@@ -328,7 +329,7 @@ export default function FlightLookupStep({
 
       {onPickSpecialFlight && (
         <ImportRouteRow
-          icon="✨"
+          icon={<Icon name="sparkles" size={18} />}
           title={t("specialFlights:chooser.title")}
           description={t("specialFlights:chooser.description")}
           actionLabel={t("specialFlights:chooser.cta")}

@@ -1,3 +1,5 @@
+import Chip from "../ui/Chip";
+import { Icon } from "../ui/Icon";
 import { useEffect, useState } from "react";
 import { parserTemplatesApi, type UserTemplateItem } from "../../lib/api";
 import type { TemplatePreviewResult } from "../../lib/api/types";
@@ -104,12 +106,9 @@ export default function MyTemplates(): JSX.Element {
     };
     const s = styles[status];
     return (
-      <span
-        className="text-xs px-2 py-0.5 rounded-full font-medium"
-        style={{ background: s.bg, color: s.fg }}
-      >
+      <Chip size="sm" color={s.fg}>
         {t(`parser:myTemplates.status.${status}`)}
-      </span>
+      </Chip>
     );
   };
 
@@ -132,7 +131,9 @@ export default function MyTemplates(): JSX.Element {
   if (templates.length === 0) {
     return (
       <div className="text-center py-16 text-(--text-muted)">
-        <div className="text-4xl mb-4">🧩</div>
+        <div className="mb-4 flex justify-center">
+          <Icon name="puzzle" size={24} />
+        </div>
         <p className="text-lg font-medium">{t("parser:myTemplates.empty")}</p>
         <p className="text-sm mt-1">{t("parser:myTemplates.emptyHint")}</p>
       </div>

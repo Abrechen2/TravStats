@@ -30,6 +30,16 @@ interface ChipProps {
    */
   dashed?: boolean;
   /**
+   * The meaning of a read-only chip, for a status the reader should not have
+   * to decode from a colour alone (the words stay). A tone is a token, so it
+   * follows the theme; `color` is for a colour the data itself owns.
+   */
+  tone?: "neutral" | "accent" | "good" | "warn" | "bad" | "info";
+  /** Capitals and tracking, for a short status stamp ("BETA"). */
+  uppercase?: boolean;
+  /** Mono digits, for a count or a delta. */
+  mono?: boolean;
+  /**
    * A colour that belongs to the data (a trip's, a domain's): tints the chip
    * with it instead of the accent. A CSS colour or a token reference.
    */
@@ -37,6 +47,9 @@ interface ChipProps {
   /** `sm` for a chip inside a row of text, `md` for a filter row. */
   size?: "sm" | "md";
   disabled?: boolean;
+  tabIndex?: number;
+  /** A chip that sits beside a text field keeps the field focused: preventDefault here. */
+  onMouseDown?: (event: React.MouseEvent) => void;
   testId?: string;
   className?: string;
 }
@@ -66,16 +79,28 @@ export default function Chip({
   icon,
   dashed = false,
   color,
+  tone,
+  uppercase = false,
+  mono = false,
   size = "md",
   disabled = false,
+  tabIndex,
+  onMouseDown,
   testId,
   className,
 }: ChipProps): JSX.Element {
   const coarse = useCoarsePointer();
   const interactive = onClick !== undefined;
   const small = size === "sm";
-  const tint = color ?? "var(--ts-accent)";
-  const filled = active && color === undefined;
+  const toneColor =
+    tone === undefined || tone === "neutral"
+      ? undefined
+      : tone === "accent"
+        ? "var(--ts-accent)"
+        : `var(--ts-${tone})`;
+  const tinted = color ?? toneColor;
+  const tint = tinted ?? "var(--ts-accent)";
+  const filled = active && tinted === undefined;
 
   const frame: CSSProperties = {
     display: "inline-flex",
@@ -90,7 +115,7 @@ export default function Chip({
     borderRadius: "var(--ts-radius-chip)",
     background: filled
       ? "var(--ts-accent)"
-      : color !== undefined
+      : tinted !== undefined
         ? `color-mix(in srgb, ${tint} ${active ? 28 : 16}%, transparent)`
         : "transparent",
     color: filled
@@ -99,11 +124,13 @@ export default function Chip({
         ? "var(--ts-text)"
         : "var(--ts-text)",
     border: `1px ${dashed ? "dashed" : "solid"} ${
-      filled || color !== undefined ? tint : "var(--ts-border-button)"
+      filled || tinted !== undefined ? tint : "var(--ts-border-button)"
     }`,
-    fontFamily: "var(--ts-font-ui)",
     fontSize: small ? 12 : 13,
     fontWeight: 600,
+    textTransform: uppercase ? "uppercase" : undefined,
+    letterSpacing: uppercase ? "0.04em" : undefined,
+    fontFamily: mono ? "var(--ts-font-mono)" : "var(--ts-font-ui)",
     whiteSpace: "nowrap",
     opacity: disabled ? 0.5 : 1,
     transition: "background var(--ts-motion-fast) var(--ts-ease-standard)",
@@ -169,9 +196,11 @@ export default function Chip({
         title={title}
         aria-label={ariaLabel}
         disabled={disabled}
+        tabIndex={tabIndex}
+        onMouseDown={onMouseDown}
         data-testid={testId}
         aria-pressed={dashed ? undefined : active}
-        className={`ts-chip pointer-coarse:min-h-(--ts-size-touch-min)${className ? ` ${className}` : ""}`}
+        className={`ts-chip pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)${className ? ` ${className}` : ""}`}
         style={frame}
       >
         {body}
@@ -180,3 +209,10 @@ export default function Chip({
     </span>
   );
 }
+
+/**
+ * For a trigger that must itself be the button (a Toggletip's), where a chip
+ * cannot be nested: the same look, as a class.
+ */
+export const CHIP_TRIGGER_CLASS =
+  "inline-flex items-center gap-1 whitespace-nowrap rounded-(--ts-radius-chip) border border-(--ts-border-button) bg-(--ts-tile) px-2 py-0.5 text-xs font-semibold text-(--ts-muted)";

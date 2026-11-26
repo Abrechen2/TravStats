@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import { Icon } from "../ui/Icon";
 import { useCallback, useMemo, useState } from "react";
 import { tripsApi } from "../../lib/api";
@@ -225,14 +226,10 @@ export default function DetectReviewModal({
                       className="flex items-center gap-2 mt-1 text-[11px] flex-wrap"
                       style={{ color: "var(--text-muted)" }}
                     >
-                      <span
-                        className="px-1.5 py-0.5 rounded-full font-semibold"
-                        style={{ background: heur.bg, color: heur.color }}
-                        data-testid="detect-source-chip"
-                      >
+                      <Chip testId="detect-source-chip" size="sm" color={heur.color}>
                         {t(`trips:detectBanner.sources.${detectionSourceKey(p.source)}`)}
                         {p.pnr && ` · ${p.pnr}`}
-                      </span>
+                      </Chip>
                       <span>
                         {t("trips:detectReview.flightCount", { count: p.flightIds.length })}
                       </span>
@@ -302,12 +299,17 @@ export default function DetectReviewModal({
             disabled={selectedCount === 0 || committing}
             className="px-4 py-2 rounded-lg text-sm font-medium bg-(--accent) text-(--bg-base) disabled:opacity-50"
           >
-            {committing
-              ? t("common:loading.default")
-              : `✓ ${t("trips:detectReview.commit", {
+            {committing ? (
+              t("common:loading.default")
+            ) : (
+              <>
+                <Icon name="check" size={14} />{" "}
+                {t("trips:detectReview.commit", {
                   count: selectedCount,
                   defaultValue: "{{count}} Reisen erstellen",
-                })}`}
+                })}
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -340,7 +342,7 @@ function Toggle({ checked, onClick, indeterminate }: ToggleProps): JSX.Element {
       role="checkbox"
       aria-checked={indeterminate ? "mixed" : checked}
     >
-      {checked && "✓"}
+      {checked && <Icon name="check" size={14} />}
       {!checked && indeterminate && (
         <span className="block w-2 h-0.5" style={{ background: "#000" }} />
       )}
@@ -425,12 +427,9 @@ function LegList({ id, legs, t, day }: LegListProps): JSX.Element {
             <span className="truncate">
               {leg.depIata ?? "—"} → {leg.arrIata ?? "—"}
             </span>
-            <span
-              className="ml-auto px-1.5 py-0.5 rounded-full uppercase tracking-wide font-semibold shrink-0"
-              style={{ background: chip.bg, color: chip.color }}
-            >
+            <Chip uppercase size="sm" color={chip.color} className="ml-auto shrink-0">
               {statusLabel}
-            </span>
+            </Chip>
           </li>
         );
       })}

@@ -1,3 +1,5 @@
+import Chip from "../ui/Chip";
+import { Icon } from "../ui/Icon";
 import { parseDecimalInput } from "../../lib/decimalInput";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
@@ -476,14 +478,14 @@ function CruiseImportEntryEditor({
           <label htmlFor={shipInputId}>{t("field.ship")}</label>
           {ship ? (
             <span className="rounded-sm bg-emerald-500/15 px-1.5 py-0.5 text-[10px] normal-case text-emerald-300">
-              ✓ {t("import.shipMatched")}
+              <Icon name="check" size={14} /> {t("import.shipMatched")}
             </span>
           ) : overrideName ? (
             <Toggletip
               content={t("import.shipUnmatchedHint")}
               triggerClassName="rounded-sm bg-amber-500/15 px-1.5 py-0.5 text-[10px] normal-case text-amber-300"
             >
-              ⚠ {t("import.shipUnmatched")}
+              <Icon name="triangle-alert" size={14} /> {t("import.shipUnmatched")}
             </Toggletip>
           ) : (
             <span className="rounded-sm bg-red-500/15 px-1.5 py-0.5 text-[10px] normal-case text-red-300">
@@ -535,12 +537,9 @@ function CruiseImportEntryEditor({
             user-controlled, via the checkbox below. Mirrors CruiseEditModal. */}
         <Field label={t("field.status")}>
           <div>
-            <span
-              className="inline-block rounded-full px-2 py-1 text-xs font-semibold"
-              style={cruiseStatusPillStyle(shownStatus)}
-            >
+            <Chip size="sm" color={cruiseStatusPillStyle(shownStatus).color as string}>
               {t(`status.${shownStatus}`, { defaultValue: shownStatus })}
-            </span>
+            </Chip>
           </div>
           <label className="mt-2 flex items-center gap-2 text-sm">
             <input
@@ -671,7 +670,7 @@ function CruiseImportEntryEditor({
       {flights.length > 0 && (
         <div className="rounded-md border border-border p-3">
           <div className="mb-2 flex items-center gap-2 text-sm font-medium text-(--text-primary)">
-            ✈ {t("import.flightsTitle")}
+            <Icon name="plane" size={16} /> {t("import.flightsTitle")}
             <span className="rounded-sm bg-(--accent-soft) px-1.5 py-0.5 text-[10px] text-(--accent)">
               {t("import.flightTentative")}
             </span>

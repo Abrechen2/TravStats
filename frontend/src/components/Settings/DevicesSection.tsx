@@ -9,6 +9,7 @@
  * agent/script tokens shown on the API Tokens page.
  */
 
+import { Icon, type IconName } from "../ui/Icon";
 import OverflowMenu from "../ui/OverflowMenu";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
@@ -32,13 +33,13 @@ import { useRowCopy } from "./rowCopy";
 const SERVER_NAME = "TravStats";
 const POLL_INTERVAL_MS = 2000;
 
-function platformIcon(platform: string | null): string {
+function platformIcon(platform: string | null): IconName {
   const p = (platform ?? "").toLowerCase();
   if (p.includes("ios") || p.includes("apple") || p.includes("iphone") || p.includes("ipad")) {
-    return "🍎";
+    return "apple";
   }
-  if (p.includes("android")) return "🤖";
-  return "📱";
+  if (p.includes("android")) return "bot";
+  return "smartphone";
 }
 
 /**
@@ -308,7 +309,7 @@ export default function DevicesSection(): JSX.Element {
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <span className="text-xl" aria-hidden>
-                        {platformIcon(dev.platform)}
+                        <Icon name={platformIcon(dev.platform)} size={18} />
                       </span>
                       <div className="flex-1 min-w-0">
                         <div

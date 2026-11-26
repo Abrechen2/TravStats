@@ -8,17 +8,9 @@ import TagInput from "../TagInput";
 import SuggestionChips from "../common/SuggestionChips";
 import { formatDate } from "../../lib/displayFormat";
 import type { TripModalForm } from "./tripModalForm";
-import type { IconName } from "../ui/Icon";
+import { Icon, type IconName } from "../ui/Icon";
 
 const CATEGORIES: TripCategory[] = ["vacation", "business", "weekend", "family", "other"];
-
-const CATEGORY_ICON: Record<TripCategory, string> = {
-  vacation: "🏖",
-  business: "💼",
-  weekend: "🎒",
-  family: "👨‍👩‍👧",
-  other: "🗺",
-};
 
 export type ModalTab = "general" | "people" | "appearance" | "notes";
 
@@ -93,7 +85,7 @@ function CoverPreview({ url, accent, title, onClick }: CoverPreviewProps): JSX.E
           className="absolute inset-0 flex items-center justify-center text-3xl opacity-40"
           aria-hidden
         >
-          🌍
+          <Icon name="globe" size={24} />
         </div>
       )}
       <div
@@ -140,7 +132,7 @@ function NameCategoryFields({ f }: { f: TripModalForm }): JSX.Element {
           <option value="">—</option>
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
-              {CATEGORY_ICON[c]} {t(`trips:category.${c}`)}
+              {t(`trips:category.${c}`)}
             </option>
           ))}
         </select>

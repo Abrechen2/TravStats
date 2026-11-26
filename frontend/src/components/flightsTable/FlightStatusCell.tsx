@@ -1,3 +1,4 @@
+import { CHIP_TRIGGER_CLASS } from "../ui/Chip";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { statusPillStyle, STATUS_PILL_CLASS } from "../table/statusPillStyle";
@@ -47,7 +48,7 @@ export default function FlightStatusCell({ flight }: { flight: Flight }): JSX.El
         <Toggletip
           data-testid={`flight-duplicate-${flight.id}`}
           content={t("flights:status.duplicatedHint")}
-          triggerClassName="gap-1 whitespace-nowrap rounded-full bg-(--bg-elevated) px-2 py-0.5 text-xs text-(--text-muted)"
+          triggerClassName={CHIP_TRIGGER_CLASS}
         >
           <span aria-hidden>⧉</span>
           {t("flights:status.duplicated")}

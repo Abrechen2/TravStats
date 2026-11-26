@@ -250,9 +250,9 @@ describe("FlightEditModal", () => {
     render(
       <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
-    const pill = document.body.querySelector(".rounded-full") as HTMLElement;
+    const pill = document.body.querySelector(".ts-chip-static") as HTMLElement;
     expect(pill).toBeTruthy();
-    expect(pill.style.color).toBe("rgb(251, 191, 36)");
+    expect(pill.style.border).toMatch(/251, 191, 36/);
   });
 
   it("renders the duplicated pill in amber, not red", () => {
@@ -260,9 +260,9 @@ describe("FlightEditModal", () => {
     render(
       <FlightEditModal flight={duplicatedFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
-    const pill = document.body.querySelector(".rounded-full") as HTMLElement;
+    const pill = document.body.querySelector(".ts-chip-static") as HTMLElement;
     expect(pill).toBeTruthy();
-    expect(pill.style.color).toBe("rgb(251, 191, 36)");
+    expect(pill.style.border).toMatch(/251, 191, 36/);
   });
 
   it('checking the cancelled checkbox submits status "cancelled"', async () => {

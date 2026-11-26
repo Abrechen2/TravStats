@@ -1,3 +1,4 @@
+import Chip from "../components/ui/Chip";
 import { useEffect, useMemo, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { achievementsApi } from "../lib/api";
@@ -75,24 +76,9 @@ function Pill({
   children: ReactNode;
 }): JSX.Element {
   return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold"
-      style={{
-        background: active ? "var(--ts-accent)" : "transparent",
-        color: active ? "var(--ts-accent-text)" : "var(--ts-text-bright)",
-        border: `1px solid ${active ? "var(--ts-accent)" : "var(--ts-border)"}`,
-      }}
-    >
+    <Chip active={active} onClick={onClick} meta={count !== undefined ? String(count) : undefined}>
       {children}
-      {count !== undefined && (
-        <span className="text-xs" style={{ fontFamily: "var(--ts-font-mono)", opacity: 0.75 }}>
-          {count}
-        </span>
-      )}
-    </button>
+    </Chip>
   );
 }
 

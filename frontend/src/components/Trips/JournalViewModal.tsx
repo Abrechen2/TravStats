@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import Modal from "../Modal";
 import { useMemo } from "react";
 import type { TripJournalEntry } from "../../types";
@@ -52,8 +53,8 @@ export default function JournalViewModal({
       onClose={onClose}
       title={
         <span className="flex items-start gap-2">
-          <span aria-hidden className="mt-0.5 text-lg leading-none">
-            📝
+          <span aria-hidden className="mt-0.5 flex">
+            <Icon name="notebook-pen" size={18} />
           </span>
           <span className="min-w-0">
             <span className="block wrap-break-word">{heading}</span>

@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import ProvenanceDetails from "../provenance/ProvenanceDetails";
 import PurposeChip from "../../components/purpose/PurposeChip";
 import RememberedMarker from "../provenance/RememberedMarker";
@@ -24,8 +25,6 @@ interface Props {
   /** A photo or document of this visit changed — the page re-reads the place. */
   onChanged: () => void;
 }
-
-const CHIP = "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs";
 
 /**
  * One visit: a summary that is itself the toggle, the two actions beside it,
@@ -111,22 +110,15 @@ export function PlaceVisitRow({
           {hasMeta && (
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
               {hasTrip && (
-                <span
-                  className={`${CHIP} font-semibold`}
-                  style={{ background: "rgba(240,169,71,0.13)", color: "var(--accent)" }}
-                >
-                  🧳 {t("places:visitList.trip", { name: tripName })}
-                </span>
+                <Chip size="sm" tone="accent" icon="luggage">
+                  {t("places:visitList.trip", { name: tripName })}
+                </Chip>
               )}
               {photoCount > 0 && (
-                <span className={CHIP} style={{ border: "1px solid var(--ts-border)" }}>
-                  {t("places:visitList.photos", { count: photoCount })}
-                </span>
+                <Chip size="sm">{t("places:visitList.photos", { count: photoCount })}</Chip>
               )}
               {documentCount > 0 && (
-                <span className={CHIP} style={{ border: "1px solid var(--ts-border)" }}>
-                  {t("places:visitList.documents", { count: documentCount })}
-                </span>
+                <Chip size="sm">{t("places:visitList.documents", { count: documentCount })}</Chip>
               )}
               {rating !== null && (
                 <span className="whitespace-nowrap text-[13px] tracking-[1px]">

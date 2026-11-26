@@ -246,7 +246,9 @@
       "ferries": "Fähren",
       "date": "Datum",
       "route": "Strecke",
-      "open": "öffnen"
+      "open": "öffnen",
+      "cruiseLine": "Reederei",
+      "cruiseFallback": "Kreuzfahrt"
     },
     "timeline": {
       "addEntry": "+ Eintrag hinzufügen",

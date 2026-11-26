@@ -145,7 +145,7 @@ function CompanionRow({
       scope={{ period: "allTime" }}
       renderedValue={value}
       label={`${row.name}: ${text}`}
-      className="rounded-full px-3 text-sm underline decoration-dotted underline-offset-2"
+      className="rounded-(--ts-radius-chip) px-3 text-sm underline decoration-dotted underline-offset-2"
       style={{
         width: "auto",
         minHeight: coarse ? 44 : 28,

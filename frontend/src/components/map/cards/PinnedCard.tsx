@@ -207,7 +207,7 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
           {pinned.data.departure.country ? (
             <FlagImg country={pinned.data.departure.country} height={18} />
           ) : (
-            <span>✈</span>
+            <Icon name="plane" size={16} />
           )}
           <span>{pinned.data.departure.iata ?? "?"}</span>
           <span className="opacity-50">↔</span>
@@ -221,7 +221,7 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
           {pinned.data.country ? (
             <FlagImg country={pinned.data.country} height={22} />
           ) : (
-            <span>✈</span>
+            <Icon name="plane" size={16} />
           )}
           <span>{pinned.data.iata}</span>
           <IcaoPill icao={pinned.data.icao} />
@@ -233,17 +233,21 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
           {pinned.data.country ? (
             <FlagImg country={pinned.data.country} height={20} />
           ) : (
-            <span>⚓</span>
+            <Icon name="anchor" size={16} />
           )}
           <span>{pinned.data.name}</span>
         </div>
       );
     case "cruise":
-      return <div className="text-[13px] font-semibold">🚢 {pinned.data.cruiseLabel}</div>;
+      return (
+        <div className="flex items-center gap-1.5 text-[13px] font-semibold">
+          <Icon name="ship" size={16} /> {pinned.data.cruiseLabel}
+        </div>
+      );
     case "trip":
       return (
         <div className="flex items-center gap-2 text-[14px] font-semibold">
-          <span>✈</span>
+          <Icon name="plane" size={16} />
           <span>
             {pinned.data.flightIds.length}{" "}
             {t("map:globe.flight", { count: pinned.data.flightIds.length })}
@@ -260,7 +264,7 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
           {resolveCountryCode(pinned.data.country) ? (
             <FlagImg country={resolveCountryCode(pinned.data.country)} height={20} />
           ) : (
-            <span>🏨</span>
+            <Icon name="bed" size={16} />
           )}
           <span>{pinned.data.name}</span>
         </div>
@@ -271,7 +275,7 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
           {resolveCountryCode(pinned.data.country) ? (
             <FlagImg country={resolveCountryCode(pinned.data.country)} height={20} />
           ) : (
-            <span>📍</span>
+            <Icon name="map-pin" size={16} />
           )}
           <span>{pinned.data.name}</span>
         </div>

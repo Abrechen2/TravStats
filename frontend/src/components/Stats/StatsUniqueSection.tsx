@@ -11,7 +11,7 @@ interface StatsUniqueSectionProps {
 }
 
 export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionProps): JSX.Element {
-  const { t } = useTranslation(["stats"]);
+  const { t } = useTranslation(["stats", "common"]);
   /**
    * All-time, like every measure registered for this surface — the section is
    * built from the full countable set and carries no year filter of its own.
@@ -246,7 +246,9 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
                 renderedValue: null,
               }}
               title={t("stats:unique.seasonalExplorer")}
-              value={uniqueStats.seasonalExplorer ? "✓" : "✗"}
+              value={
+                uniqueStats.seasonalExplorer ? t("common:buttons.yes") : t("common:buttons.no")
+              }
               description={t("stats:unique.seasonalExplorerDesc", {
                 count: uniqueStats.seasonsCount || 0,
               })}

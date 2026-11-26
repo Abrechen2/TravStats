@@ -73,7 +73,7 @@ export default function DetectTripsBanner({ onChange }: Props): JSX.Element | nu
           className="hidden sm:flex w-9 h-9 rounded-lg items-center justify-center text-base shrink-0"
           style={{ background: "var(--accent-soft, rgba(240,169,71,0.1))", color: "var(--accent)" }}
         >
-          ✨
+          <Icon name="sparkles" size={18} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm" style={{ color: "var(--text-primary)" }}>

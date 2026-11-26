@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLastSeen } from "../../hooks/useLastSeen";
@@ -103,7 +104,7 @@ export function LastSeenCard(): JSX.Element | null {
           }}
         >
           <span aria-hidden style={{ opacity: 0.8, flexShrink: 0 }}>
-            📍
+            <Icon name="map-pin" size={14} />
           </span>
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {text.device}

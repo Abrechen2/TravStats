@@ -447,12 +447,9 @@ export function CruiseEditModal({
                 set a value the backend would immediately overwrite. Only
                 "cancelled" stays user-controlled, via the checkbox below. */}
           <div className="mt-3">
-            <span
-              className="inline-block rounded-full px-2 py-1 text-xs font-semibold"
-              style={cruiseStatusPillStyle(draft.status)}
-            >
+            <Chip size="sm" color={cruiseStatusPillStyle(draft.status).color as string}>
               {t(`status.${draft.status}`, { defaultValue: draft.status })}
-            </span>
+            </Chip>
           </div>
           <label className="mt-2 flex items-center gap-2 text-sm pointer-coarse:min-h-(--ts-size-touch-min)">
             <input

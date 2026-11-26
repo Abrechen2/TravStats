@@ -1,4 +1,6 @@
 ﻿import { useState, useEffect, useRef, useId } from "react";
+import Chip from "./ui/Chip";
+import { Icon } from "./ui/Icon";
 import Modal from "./Modal";
 import {
   FormErrorBanner,
@@ -27,7 +29,6 @@ import { useSuggestions } from "../hooks/useSuggestions";
 import { useRecentCurrencies } from "../hooks/useRecentCurrencies";
 import {
   formatDateTimeLocal,
-  getConfidenceColor,
   getFieldBorderClass,
   isInferred,
   mapSeatClass,
@@ -53,6 +54,10 @@ interface FlightReviewModalProps {
     html?: string;
   };
 }
+
+/** 70 and up reads as sure, 40 and up as doubtful, below as unsure. */
+const confidenceTone = (confidence: number): "good" | "warn" | "bad" =>
+  confidence >= 70 ? "good" : confidence >= 40 ? "warn" : "bad";
 
 export default function FlightReviewModal({
   isOpen,
@@ -458,15 +463,13 @@ export default function FlightReviewModal({
         {(initialData.parserTemplate || initialData.parserConfidence !== undefined) && (
           <div data-testid="parser-info-row" className="flex items-center gap-2 mb-3 flex-wrap">
             <span className="text-xs text-(--text-muted) flex items-center gap-1">
-              <span aria-hidden="true">🤖</span>
+              <Icon name="bot" size={14} />
               <span>{initialData.parserTemplate ?? t("flights:review.unknownParser")}</span>
             </span>
             {initialData.parserConfidence !== undefined && (
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full font-medium ${getConfidenceColor(initialData.parserConfidence)}`}
-              >
+              <Chip size="sm" tone={confidenceTone(initialData.parserConfidence)}>
                 {initialData.parserConfidence}% {t("flights:review.confidenceLabel")}
-              </span>
+              </Chip>
             )}
             {originalData?.text && (
               <button

@@ -534,10 +534,11 @@ export function PlaceFormModal({
               {lists.map((list) => {
                 const on = selectedLists.includes(list.id);
                 return (
-                  <button
+                  <Chip
                     key={list.id}
-                    type="button"
-                    aria-pressed={on}
+                    size="sm"
+                    active={on}
+                    color={list.color}
                     onClick={() =>
                       setSelectedLists((prev) =>
                         prev.includes(list.id)
@@ -545,16 +546,10 @@ export function PlaceFormModal({
                           : [...prev, list.id]
                       )
                     }
-                    className={`rounded-full border px-3 py-1 text-xs ${COARSE}`}
-                    style={{
-                      borderColor: on ? list.color : "var(--color-border)",
-                      background: on ? `${list.color}22` : "transparent",
-                      color: on ? list.color : "var(--text-secondary)",
-                    }}
                   >
                     {list.icon ? `${list.icon} ` : ""}
                     {list.name}
-                  </button>
+                  </Chip>
                 );
               })}
             </ChipGroup>

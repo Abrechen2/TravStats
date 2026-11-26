@@ -421,7 +421,7 @@ export function FlightsTab(): JSX.Element {
       )}
       {loaded && !loadError && structuredTotal === 0 && flights.length === 0 && (
         <MapEmptyOverlay
-          emoji="✈️"
+          icon="plane"
           title={t("dashboard:flightTab.emptyTitle")}
           body={t("dashboard:flightTab.emptyBody")}
           ctaLabel={t("dashboard:flightTab.emptyCta")}

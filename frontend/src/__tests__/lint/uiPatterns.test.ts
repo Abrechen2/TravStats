@@ -50,6 +50,35 @@ const ILLUSTRATION_SVG = new Set([
   "components/Modal.tsx",
 ]);
 
+/**
+ * Raw `<table>`s that may stay, each with the reason. A table is a list when a
+ * reader would want to re-order it; these are reports (the order is the
+ * content), previews before a write, a chronological log, or an admin
+ * diagnostic. A list belongs on `ui/Table` with `useSort`.
+ */
+const RAW_TABLE_REASON: Record<string, string> = {
+  "components/Stats/AircraftRankingCard.tsx": "ranking: the order is the ranking",
+  "components/Stats/insights/CruisePortsBlock.tsx": "ranking: the order is the ranking",
+  "components/Stats/insights/CruiseDayPatternBlock.tsx": "report: a fixed distribution",
+  "components/Stats/insights/FlightDiscoveryTable.tsx": "report: discovery order is the point",
+  "components/Stats/insights/FlightTransfersBlock.tsx": "ranking: the order is the ranking",
+  "components/Stats/lodging/LodgingLoyaltySection.tsx": "report: a fixed summary",
+  "components/Settings/RemotePersonStats.tsx": "report: a fixed summary",
+  "components/encryptedShare/TravelComparison.tsx": "report: two columns side by side",
+  "pages/Track/TrackMonths.tsx": "report: months run in calendar order",
+  "components/Training/ParseLogStats.tsx": "report: a fixed summary",
+  "components/Admin/timeModel/ZoneReResolve.tsx": "admin diagnostic output",
+  "components/Admin/timeModel/TimeMigrationTables.tsx": "admin diagnostic output",
+  "components/Roadtrips/ShiftDaysDialog.tsx": "preview before a write: the file's order",
+  "components/import/PreviewModal.tsx": "preview before a write: the file's order",
+  "components/lodging/LodgingImportPreviewModal.tsx": "preview before a write: the file's order",
+  "components/places/PlaceImportPreviewModal.tsx": "preview before a write: the file's order",
+  "components/changeHistory/ChangeHistoryList.tsx": "chronological log",
+  // Lists, but each row expands into a full-width record (colSpan), which the grid Table cannot draw.
+  "components/Passport/CountryTable.tsx": "rows expand into the evidence record (colSpan)",
+  "components/Trips/TripBookingsPanel.tsx": "rows expand into an edit form (colSpan)",
+};
+
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
@@ -66,7 +95,7 @@ function walk(dir: string, out: string[] = []): string[] {
 const CODE_LINE = (line: string): boolean => !/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(line);
 // Pictographs used as an icon. ★ ☆ stay out: a rating glyph is read as a
 // rating (the number is always printed beside it), not as decoration.
-const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{2604}\u{2606}-\u{27BF}\u{2B50}]/u;
+const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{2604}\u{2607}-\u{27BF}\u{2B50}]/u;
 
 type Pattern = {
   name: string;
@@ -102,7 +131,12 @@ const PATTERNS: Pattern[] = [
     name: "emoji used as an icon (use <Icon>)",
     home: /^components\/ui\//,
     hit: (l) => EMOJI.test(l),
-    skip: (rel) => /emojiPicker|EmojiPicker|pages\/DesignPage/.test(rel),
+    skip: (rel) =>
+      // The picker is a list of emoji; the journal's hints name the emoji a note takes; the
+      // certificate is printed artwork (SVG text), not interface.
+      /emojiPicker|EmojiPicker|pages\/DesignPage|Trips\/JournalEntryModal|FlightCertificate/.test(
+        rel
+      ),
   },
   {
     name: "sort arrow glyph (use ui/SortButton)",
@@ -113,6 +147,7 @@ const PATTERNS: Pattern[] = [
     name: "raw table (use ui/Table, or sort it with useSort)",
     home: /^components\/ui\//,
     hit: (l) => /<table\b/.test(l),
+    skip: (rel) => rel in RAW_TABLE_REASON,
   },
 ];
 
@@ -136,7 +171,7 @@ function readBaseline(): Record<string, Record<string, number>> {
 
 describe("one shared component per UI pattern", () => {
   const found = scan();
-  const baseline = readBaseline();
+  let baseline = readBaseline();
 
   if (process.env.UI_PATTERNS_UPDATE === "1") {
     const next: Record<string, Record<string, number>> = {};
@@ -151,6 +186,7 @@ describe("one shared component per UI pattern", () => {
       }
     }
     writeFileSync(BASELINE_PATH, JSON.stringify(next, null, 2) + "\n");
+    baseline = readBaseline();
   }
 
   for (const pattern of PATTERNS) {

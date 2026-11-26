@@ -1,6 +1,8 @@
+import { LogisticsTable } from "../components/Trips/LogisticsTable";
+import { Icon } from "../components/ui/Icon";
 import { useVisibleTrip } from "../hooks/useVisibleTrip";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { tripsApi } from "../lib/api";
 import { formatLocalDate, formatTimeValueShown } from "../lib/displayFormat";
 import { cruiseStart, flightDeparture, tripStart } from "../lib/entityTimes";
@@ -36,7 +38,7 @@ import TripGallery from "../components/Trips/TripGallery";
 import TourSectionList from "../components/Trips/TourSectionList";
 import { useToursVisible } from "../hooks/useToursVisible";
 import { useScrollToHash } from "../hooks/useScrollToHash";
-import { PanelHeader, Placeholder } from "../components/Trips/TripDetailPanels";
+import { Placeholder } from "../components/Trips/TripDetailPanels";
 import { TripGroundLists, groundRideCount } from "../components/Trips/TripGroundLists";
 import { RentalBand, TransitCard, useRentalBands } from "../components/Trips/timelineTransit";
 import { useTripPlaceVisits, type TripPlaceVisit } from "../hooks/useTripPlaceVisits";
@@ -197,7 +199,8 @@ export default function TripDetailPage(): JSX.Element {
               color: "var(--text-muted)",
             }}
           >
-            ⚓ {t("trips:detail.hiddenCruises", { count: hiddenCruiseCount })}
+            <Icon name="anchor" size={14} className="mr-1 inline" />{" "}
+            {t("trips:detail.hiddenCruises", { count: hiddenCruiseCount })}
           </div>
         )}
         {hiddenLodgingCount > 0 && (
@@ -209,7 +212,8 @@ export default function TripDetailPage(): JSX.Element {
               color: "var(--text-muted)",
             }}
           >
-            🏨 {t("trips:detail.hiddenLodging", { count: hiddenLodgingCount })}
+            <Icon name="bed" size={14} className="mr-1 inline" />{" "}
+            {t("trips:detail.hiddenLodging", { count: hiddenLodgingCount })}
           </div>
         )}
         {tab === "overview" && (
@@ -595,91 +599,36 @@ function LogisticsTab({
         <Placeholder text={t("trips:detail.noLogistics")} />
       )}
       {flights.length > 0 && (
-        <div
-          className="rounded-xl"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-        >
-          <PanelHeader>
-            {t("trips:detail.logistics.flights")} ({flights.length})
-          </PanelHeader>
-          <table className="w-full text-sm">
-            <thead>
-              <tr
-                className="text-xs uppercase tracking-wide"
-                style={{ color: "var(--text-muted)" }}
-              >
-                <th className="text-left px-4 py-2">Datum</th>
-                <th className="text-left px-4 py-2">Route</th>
-                <th className="text-right px-4 py-2">↗</th>
-              </tr>
-            </thead>
-            <tbody>
-              {flights.map((f) => (
-                <tr key={f.id} style={{ borderTop: "1px solid var(--color-border)" }}>
-                  <td
-                    className="px-4 py-2.5 whitespace-nowrap"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    {formatFlightDay(f)}
-                  </td>
-                  <td className="px-4 py-2.5 font-mono">
-                    {f.depIata ?? "???"} → {f.arrIata ?? "???"}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    <Link to="/flights" className="text-xs" style={{ color: "var(--accent)" }}>
-                      öffnen
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <LogisticsTable
+          title={t("trips:detail.logistics.flights")}
+          tableKey="trip-logistics-flights"
+          whatLabel={t("trips:detail.logistics.route")}
+          monoWhat
+          rows={flights.map((f) => ({
+            id: String(f.id),
+            sortWhen: flightDeparture(f)?.utc ?? null,
+            when: formatFlightDay(f),
+            sortWhat: `${f.depIata ?? ""} ${f.arrIata ?? ""}`.trim(),
+            what: `${f.depIata ?? "???"} → ${f.arrIata ?? "???"}`,
+            to: "/flights",
+          }))}
+        />
       )}
 
       {cruises.length > 0 && (
-        <div
-          className="rounded-xl"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-        >
-          <PanelHeader>
-            {t("trips:detail.logistics.cruises")} ({cruises.length})
-          </PanelHeader>
-          <table className="w-full text-sm">
-            <thead>
-              <tr
-                className="text-xs uppercase tracking-wide"
-                style={{ color: "var(--text-muted)" }}
-              >
-                <th className="text-left px-4 py-2">Datum</th>
-                <th className="text-left px-4 py-2">Reederei</th>
-                <th className="text-right px-4 py-2">↗</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cruises.map((c) => (
-                <tr key={c.id} style={{ borderTop: "1px solid var(--color-border)" }}>
-                  <td
-                    className="px-4 py-2.5 whitespace-nowrap"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    {formatCruiseDay(c)}
-                  </td>
-                  <td className="px-4 py-2.5">{c.cruiseLine ?? "Kreuzfahrt"}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    <Link
-                      to={`/cruises/${c.id}`}
-                      className="text-xs"
-                      style={{ color: "var(--accent)" }}
-                    >
-                      öffnen
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <LogisticsTable
+          title={t("trips:detail.logistics.cruises")}
+          tableKey="trip-logistics-cruises"
+          whatLabel={t("trips:detail.logistics.cruiseLine")}
+          rows={cruises.map((c) => ({
+            id: String(c.id),
+            sortWhen: cruiseStart(c)?.date ?? null,
+            when: formatCruiseDay(c),
+            sortWhat: c.cruiseLine ?? "",
+            what: c.cruiseLine ?? t("trips:detail.logistics.cruiseFallback"),
+            to: `/cruises/${c.id}`,
+          }))}
+        />
       )}
 
       <TripGroundLists trip={trip} />

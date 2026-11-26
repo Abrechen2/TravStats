@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import type { JSX } from "react";
 import type { useTranslation } from "../../hooks/useTranslation";
 import type { Trip } from "../../types";
@@ -30,7 +31,7 @@ export function TripSummaryPanel({
         className="text-[10px] uppercase tracking-wide flex items-center gap-1.5 mb-2"
         style={{ color: "var(--text-muted)" }}
       >
-        <span aria-hidden>✨</span>
+        <Icon name="sparkles" size={14} />
         {t("trips:summary.title")}
       </div>
       <div className="text-sm whitespace-pre-wrap leading-relaxed">{trip.summary}</div>

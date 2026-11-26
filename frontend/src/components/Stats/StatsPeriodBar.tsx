@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import { useRef } from "react";
 import type { JSX } from "react";
 import { useRevealActive } from "../../lib/ui/revealInRow";
@@ -78,7 +79,7 @@ export default function StatsPeriodBar({ years, period }: Props): JSX.Element {
         </label>
         <select
           aria-label={t("stats:overviewFilter.compareWith")}
-          className="rounded-full border px-3 py-1.5 text-sm font-semibold"
+          className="rounded-(--ts-radius-chip) border px-3 py-1.5 text-sm font-semibold"
           style={{
             background: "var(--ts-surface)",
             borderColor: "var(--ts-border)",
@@ -111,18 +112,8 @@ function YearPill({
   onClick: () => void;
 }): JSX.Element {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className="shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors"
-      style={{
-        background: active ? "var(--ts-accent)" : "transparent",
-        color: active ? "var(--ts-accent-text)" : "var(--ts-text-bright)",
-        borderColor: active ? "var(--ts-accent)" : "var(--ts-border)",
-      }}
-    >
+    <Chip onClick={onClick} active={active} className="shrink-0">
       {label}
-    </button>
+    </Chip>
   );
 }

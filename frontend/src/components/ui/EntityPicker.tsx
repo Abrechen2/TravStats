@@ -12,6 +12,8 @@ export interface EntityOption {
   detail?: ReactNode;
   /** Before the name: a flag, an airline logo, a domain icon. */
   mark?: ReactNode;
+  /** Hover text of the row (a closed airport says so). */
+  title?: string;
 }
 
 export type EntityPickerStatus = "ready" | "loading" | "failed";
@@ -38,6 +40,34 @@ interface EntityPickerProps<T extends EntityOption> {
   emptyTestId?: string;
   /** Under the list: "Create it", the way out of a list that is missing the thing. */
   footer?: ReactNode;
+  /** Between the box and the result list (a "near you" section that is not a search result). */
+  beforeList?: ReactNode;
+  /** A heading above the result list. */
+  listTitle?: string;
+  /**
+   * The list floats under the box instead of sitting in the flow, for a
+   * picker inside a form row. Pressing a row never takes focus from the box.
+   */
+  popover?: boolean;
+  /** Popover only: whether the list is showing. Defaults to "there is text". */
+  open?: boolean;
+  /**
+   * Free text is a valid answer (a companion's name that is not in the list).
+   * No row is highlighted until an arrow key moves there, so Enter submits
+   * what was typed, and `onSubmitText` receives it.
+   */
+  onSubmitText?: (text: string) => void;
+  /** Only the box's accessible name; no visible label above it. */
+  hideLabel?: boolean;
+  /** Said under the list when `showEmpty` is false and nothing matched (never both). */
+  showEmpty?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  /** Id, `aria-describedby`, `disabled`, `title`, `required` … for the box itself. */
+  inputProps?: Omit<
+    import("./SearchInput").SearchInputProps,
+    "value" | "onChange" | "label" | "variant" | "inputRef"
+  >;
 }
 
 /**
@@ -66,51 +96,74 @@ export function EntityPicker<T extends EntityOption>({
   searchTestId,
   emptyTestId,
   footer,
+  beforeList,
+  listTitle,
+  popover = false,
+  open,
+  onSubmitText,
+  hideLabel = false,
+  showEmpty = true,
+  onFocus,
+  onBlur,
+  inputProps,
 }: EntityPickerProps<T>): JSX.Element {
   const { t } = useTranslation(["common"]);
   const listId = useId();
-  const [active, setActive] = useState(0);
+  const freeText = onSubmitText !== undefined;
+  const [active, setActive] = useState(freeText ? -1 : 0);
   const last = options.length - 1;
-  const current = Math.min(active, Math.max(last, 0));
+  const current = active < 0 ? -1 : Math.min(active, Math.max(last, 0));
+  const hasBody = status !== "ready" || options.length > 0 || showEmpty;
+  const showing = hasBody && (popover ? (open ?? query.trim().length > 0) : true);
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key === "Enter" && freeText && current < 0) {
+      event.preventDefault();
+      onSubmitText(query);
+      return;
+    }
     if (status !== "ready" || options.length === 0) return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setActive(Math.min(current + 1, last));
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
-      setActive(Math.max(current - 1, 0));
+      setActive(Math.max(current - 1, freeText ? -1 : 0));
     } else if (event.key === "Enter") {
       event.preventDefault();
-      onPick(options[current]);
+      if (current >= 0) onPick(options[current]);
     }
   };
 
-  return (
-    <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
-      <label className="t-caption flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
-        {label}
-        <SearchInput
-          label={label}
-          value={query}
-          onChange={(next) => {
-            setActive(0);
-            onQueryChange(next);
-          }}
-          debounceMs={debounceMs}
-          placeholder={placeholder}
-          testId={searchTestId}
-          onKeyDown={onKeyDown}
-          role="combobox"
-          aria-expanded={status === "ready" && options.length > 0}
-          aria-controls={listId}
-          aria-autocomplete="list"
-          aria-activedescendant={
-            status === "ready" && options.length > 0 ? `${listId}-${current}` : undefined
-          }
-        />
-      </label>
+  const input = (
+    <SearchInput
+      {...inputProps}
+      label={label}
+      value={query}
+      onChange={(next) => {
+        setActive(freeText ? -1 : 0);
+        onQueryChange(next);
+      }}
+      debounceMs={debounceMs}
+      placeholder={placeholder}
+      testId={searchTestId}
+      onKeyDown={onKeyDown}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      role="combobox"
+      aria-expanded={showing && status === "ready" && options.length > 0}
+      aria-controls={listId}
+      aria-autocomplete="list"
+      aria-activedescendant={
+        showing && status === "ready" && current >= 0 && options.length > 0
+          ? `${listId}-${current}`
+          : undefined
+      }
+    />
+  );
+
+  const body = showing ? (
+    <>
       {status === "loading" ? (
         <p className="t-caption" role="status">
           {loadingText ?? t("common:ui.picker.loading")}
@@ -130,9 +183,14 @@ export function EntityPicker<T extends EntityOption>({
           ) : null}
         </div>
       ) : null}
-      {status === "ready" && options.length === 0 ? (
+      {status === "ready" && options.length === 0 && showEmpty ? (
         <p className="t-body" data-testid={emptyTestId}>
           {emptyText ?? t("common:ui.picker.none")}
+        </p>
+      ) : null}
+      {status === "ready" && options.length > 0 && listTitle ? (
+        <p className="t-caption" style={{ fontWeight: 600 }}>
+          {listTitle}
         </p>
       ) : null}
       {status === "ready" && options.length > 0 ? (
@@ -153,9 +211,11 @@ export function EntityPicker<T extends EntityOption>({
               <button
                 type="button"
                 tabIndex={-1}
+                title={option.title}
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={() => onPick(option)}
                 onMouseEnter={() => setActive(index)}
-                className="t-body flex w-full items-center"
+                className="t-body flex w-full items-center pointer-coarse:min-h-(--ts-size-touch-min)"
                 style={{
                   minHeight: "var(--ts-size-touch-min)",
                   gap: "var(--ts-space-md)",
@@ -170,13 +230,58 @@ export function EntityPicker<T extends EntityOption>({
                 ) : null}
                 <span className="min-w-0 flex-1">
                   {option.label}
-                  {option.detail ? <span className="t-caption"> · {option.detail}</span> : null}
+                  {option.detail ? (
+                    <>
+                      <span aria-hidden className="t-caption">
+                        {" · "}
+                      </span>
+                      <span className="t-caption">{option.detail}</span>
+                    </>
+                  ) : null}
                 </span>
               </button>
             </li>
           ))}
         </ul>
       ) : null}
+    </>
+  ) : null;
+
+  return (
+    <div
+      className={popover ? "relative flex flex-col" : "flex flex-col"}
+      style={{ gap: "var(--ts-space-sm)" }}
+    >
+      {hideLabel ? (
+        input
+      ) : (
+        <label className="t-caption flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
+          {label}
+          {input}
+        </label>
+      )}
+      {beforeList}
+      {popover ? (
+        body ? (
+          <div
+            className="absolute left-0 right-0 z-10 flex max-h-60 flex-col overflow-auto"
+            style={{
+              top: "100%",
+              marginTop: 4,
+              padding: "var(--ts-space-sm)",
+              gap: "var(--ts-space-sm)",
+              background: "var(--ts-surface)",
+              border: "1px solid var(--ts-border)",
+              borderRadius: "var(--ts-radius-card)",
+              boxShadow: "var(--ts-shadow-paper-card)",
+            }}
+          >
+            {body}
+          </div>
+        ) : null
+      ) : (
+        body
+      )}
       {footer}
     </div>
   );

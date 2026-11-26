@@ -29,27 +29,47 @@ vi.mock("../../components/ui/AppShell", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 vi.mock("../../components/table/LogbookTabs", () => ({ default: () => null }));
-vi.mock("../../components/ui/Table", () => ({
-  // Keeps the HEADER, because the sort lives there.
-  Table: ({
-    columns,
-    children,
-  }: {
-    columns: Array<{ key: string; label: React.ReactNode }>;
-    children: React.ReactNode;
-  }) => (
-    <table>
-      <thead>
-        <tr>
-          {columns.map((c) => (
-            <th key={c.key}>{c.label}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>{children}</tbody>
-    </table>
-  ),
-}));
+vi.mock("../../components/ui/Table", async () => {
+  const { SortButton } = await import("../../components/ui/SortButton");
+  return {
+    // Keeps the HEADER, because the sort lives there.
+    Table: ({
+      columns,
+      children,
+    }: {
+      columns: Array<{
+        key: string;
+        label: React.ReactNode;
+        sort?: { active: boolean; order: "asc" | "desc"; onSort: () => void; ariaLabel: string };
+      }>;
+      children: React.ReactNode;
+    }) => (
+      <table>
+        <thead>
+          <tr>
+            {columns.map((c) => (
+              <th key={c.key}>
+                {c.sort ? (
+                  <SortButton
+                    active={c.sort.active}
+                    order={c.sort.order}
+                    onSort={c.sort.onSort}
+                    ariaLabel={c.sort.ariaLabel}
+                  >
+                    {c.label}
+                  </SortButton>
+                ) : (
+                  c.label
+                )}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+    ),
+  };
+});
 vi.mock("../../components/Cruise/CruiseRow", () => ({
   CruiseRow: ({ cruise }: { cruise: { id: string } }) => <tr data-testid={`row-${cruise.id}`} />,
   CRUISE_COLUMN_LAYOUT: new Proxy({}, { get: () => ({}) }),

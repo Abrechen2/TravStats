@@ -124,6 +124,8 @@ export function SearchInput({
       {text.length > 0 && !rest.disabled && !rest.readOnly ? (
         <button
           type="button"
+          // Keeps focus in the box: a blur here would run the owner's on-blur commit.
+          onMouseDown={(event) => event.preventDefault()}
           onClick={clear}
           aria-label={t("common:ui.clearSearch")}
           className="flex shrink-0 items-center justify-center"

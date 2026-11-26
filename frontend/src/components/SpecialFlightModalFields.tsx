@@ -5,6 +5,9 @@
  * 800-line hard maximum mandated by CLAUDE.md. Nothing here owns state —
  * every piece is a controlled component driven by the modal.
  */
+import Chip from "./ui/Chip";
+import { Icon } from "./ui/Icon";
+import { type IconName } from "./ui/Icon";
 import type { Airport } from "../lib/api";
 import AirportAutocomplete from "./AirportAutocomplete";
 import CompanionPicker from "./CompanionPicker";
@@ -47,10 +50,10 @@ export type SpecialFieldErrors = Partial<Record<keyof typeof SPECIAL_IDS, string
 
 export function TypePicker({ onPick }: TypePickerProps): JSX.Element {
   const { t } = useTranslation(["specialFlights"]);
-  const chips: Array<{ kind: SpecialKind; icon: string }> = [
-    { kind: "sightseeing", icon: "🏛️" },
-    { kind: "event", icon: "🌑" },
-    { kind: "zerog", icon: "🌀" },
+  const chips: Array<{ kind: SpecialKind; icon: IconName }> = [
+    { kind: "sightseeing", icon: "landmark" },
+    { kind: "event", icon: "moon" },
+    { kind: "zerog", icon: "orbit" },
   ];
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -66,9 +69,7 @@ export function TypePicker({ onPick }: TypePickerProps): JSX.Element {
             color: "var(--text-primary)",
           }}
         >
-          <span className="text-4xl" aria-hidden>
-            {icon}
-          </span>
+          <Icon name={icon} size={24} />
           <span className="font-semibold">{t(`specialFlights:type.${kind}`)}</span>
           <span className="text-xs" style={{ color: "var(--text-muted)" }}>
             {t(`specialFlights:typeDescription.${kind}`)}
@@ -156,11 +157,11 @@ export function EventFields({
   onEventLabelChange,
 }: EventFieldsProps): JSX.Element {
   const { t } = useTranslation(["specialFlights"]);
-  const subtypeOptions: Array<{ key: EventSubtype; icon: string }> = [
-    { key: "eclipse", icon: "🌑" },
-    { key: "rocket_launch", icon: "🚀" },
-    { key: "aurora", icon: "🌌" },
-    { key: "other", icon: "✨" },
+  const subtypeOptions: Array<{ key: EventSubtype; icon: IconName }> = [
+    { key: "eclipse", icon: "moon" },
+    { key: "rocket_launch", icon: "rocket" },
+    { key: "aurora", icon: "sparkles" },
+    { key: "other", icon: "sparkles" },
   ];
   const placeholderKey: EventSubtype = subtype === "other" ? "eclipse" : subtype;
 
@@ -172,24 +173,9 @@ export function EventFields({
           {subtypeOptions.map(({ key, icon }) => {
             const active = subtype === key;
             return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => onSubtypeChange(key)}
-                // The choice is said, not only coloured (forgejo#249).
-                aria-pressed={active}
-                className="px-3 py-1.5 rounded-full border text-sm transition-colors pointer-coarse:min-h-(--ts-size-touch-min)"
-                style={{
-                  borderColor: active ? "var(--accent)" : "var(--color-border)",
-                  background: active ? "rgba(255,193,7,0.12)" : "transparent",
-                  color: active ? "var(--accent)" : "var(--text-primary)",
-                }}
-              >
-                <span aria-hidden className="mr-1">
-                  {icon}
-                </span>
+              <Chip key={key} icon={icon} active={active} onClick={() => onSubtypeChange(key)}>
                 {t(`specialFlights:subtype.${key}`)}
-              </button>
+              </Chip>
             );
           })}
         </div>

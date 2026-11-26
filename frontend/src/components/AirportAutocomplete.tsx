@@ -6,6 +6,8 @@ import { useTranslation } from "../hooks/useTranslation";
 import { RequiredMark } from "./FlightForm/requiredFields";
 import { FieldError, fieldErrorProps } from "./form";
 import { countryName } from "../shared/geo/countryCode";
+import Chip from "./ui/Chip";
+import { EntityPicker } from "./ui/EntityPicker";
 
 interface AirportAutocompleteProps {
   value?: Airport | null;
@@ -41,6 +43,13 @@ export function airportInputLabel(airport: Pick<Airport, "iata" | "icao" | "name
   const code = airport.iata || airport.icao;
   if (!airport.name) return code ?? "";
   return code ? `${code} — ${airport.name}` : airport.name;
+}
+
+/** "City, Country" — the server sends an ISO 3166-1 alpha-2 code, never a name. */
+function airportPlace(airport: Airport, language: string): string {
+  const country = countryName(airport.country, language) || airport.country;
+  if (airport.city && country) return `${airport.city}, ${country}`;
+  return airport.city || country || "";
 }
 
 export default function AirportAutocomplete({
@@ -184,8 +193,7 @@ export default function AirportAutocomplete({
     setIsOpen(false);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newQuery = e.target.value;
+  const handleQueryChange = (newQuery: string) => {
     setQuery(newQuery);
 
     // Clear the selection once the text stops matching what we put there.
@@ -209,126 +217,72 @@ export default function AirportAutocomplete({
           {label} {required && <RequiredMark />}
         </label>
       )}
-      <input
-        id={id}
-        {...(id ? fieldErrorProps(id, error) : {})}
-        type="text"
-        value={query}
-        onChange={handleInputChange}
-        onFocus={() => !isSeeding && query.length >= 2 && setIsOpen(true)}
+      <EntityPicker
+        popover
+        hideLabel
+        label={label || defaultPlaceholder}
         placeholder={isSeeding ? t("flights:airportAutocomplete.seeding") : defaultPlaceholder}
-        className="input"
-        required={required}
-        autoComplete="off"
-        disabled={isSeeding}
-        title={isSeeding ? t("flights:airportAutocomplete.seedingTitle") : undefined}
+        query={query}
+        onQueryChange={(next) => handleQueryChange(next)}
+        open={isOpen && !isSeeding}
+        status={loading ? "loading" : "ready"}
+        loadingText={
+          /^[A-Z]{3,4}$/i.test(query.trim())
+            ? t("flights:airportAutocomplete.searchingWorldwide")
+            : t("flights:airportAutocomplete.searching")
+        }
+        showEmpty={query.length >= 2 && query !== selectedLabel}
+        emptyText={
+          lookupReason
+            ? t(`errors:airportLookupUnavailable.${lookupReason}`, {
+                code: query.trim().toUpperCase(),
+              })
+            : /^[A-Z]{3,4}$/i.test(query.trim())
+              ? t("flights:airportAutocomplete.notFound", { code: query.toUpperCase() })
+              : t("flights:airportAutocomplete.noResults")
+        }
+        options={results.map((airport) => ({
+          id: String(airport.id),
+          title: airport.isClosed ? t("flights:airportAutocomplete.closedTooltip") : undefined,
+          label: (
+            <>
+              {airport.iata && (
+                <span className="font-semibold" style={{ color: "var(--accent)" }}>
+                  {airport.iata}
+                </span>
+              )}
+              {airport.iata && airport.icao && (
+                <span className="mx-1" style={{ color: "var(--text-muted)" }}>
+                  /
+                </span>
+              )}
+              {airport.icao && <span style={{ color: "var(--text-muted)" }}>{airport.icao}</span>}
+              <span className="ml-2">{airport.name}</span>
+              {airport.isClosed && (
+                <Chip size="sm" tone="bad" className="ml-2">
+                  {t("flights:airportAutocomplete.closedBadge")}
+                </Chip>
+              )}
+            </>
+          ),
+          detail: airportPlace(airport, i18n.language),
+        }))}
+        onPick={(option) => {
+          const airport = results.find((a) => String(a.id) === option.id);
+          if (airport) handleSelect(airport);
+        }}
+        onFocus={() => !isSeeding && query.length >= 2 && setIsOpen(true)}
+        inputProps={{
+          id,
+          ...(id ? fieldErrorProps(id, error) : {}),
+          required,
+          autoComplete: "off",
+          disabled: isSeeding,
+          title: isSeeding ? t("flights:airportAutocomplete.seedingTitle") : undefined,
+        }}
       />
 
       {id ? <FieldError id={id} error={error} /> : null}
-
-      {/* Dropdown */}
-      {isOpen && (
-        <div
-          className="absolute z-10 w-full mt-1 rounded-lg shadow-lg max-h-60 overflow-auto"
-          style={{ background: "var(--bg-elevated)", border: "1px solid var(--color-border)" }}
-        >
-          {loading && (
-            <div className="px-4 py-3 text-sm" style={{ color: "var(--text-muted)" }}>
-              {/^[A-Z]{3,4}$/i.test(query.trim())
-                ? t("flights:airportAutocomplete.searchingWorldwide")
-                : t("flights:airportAutocomplete.searching")}
-            </div>
-          )}
-
-          {/* Never say "not found" about the airport that is currently chosen.
-              The effect above already skips searching for a selection's own
-              label, but focusing the field opens the dropdown directly without
-              going through it — so the guard has to sit here too, or Forgejo
-              #10 comes back the moment someone clicks into a filled field. */}
-          {!loading && results.length === 0 && query.length >= 2 && query !== selectedLabel && (
-            <div className="px-4 py-3 text-sm" style={{ color: "var(--text-muted)" }}>
-              {lookupReason
-                ? t(`errors:airportLookupUnavailable.${lookupReason}`, {
-                    code: query.trim().toUpperCase(),
-                  })
-                : /^[A-Z]{3,4}$/i.test(query.trim())
-                  ? t("flights:airportAutocomplete.notFound", { code: query.toUpperCase() })
-                  : t("flights:airportAutocomplete.noResults")}
-            </div>
-          )}
-
-          {!loading &&
-            results.map((airport) => (
-              <button
-                key={airport.id}
-                type="button"
-                // Prevents the browser's default mousedown action (shifting
-                // focus to this button), which would otherwise blur the
-                // text input a beat BEFORE this button's own click fires
-                // handleSelect — an observable, if usually harmless, focus
-                // flicker away from the field the user is editing for every
-                // single mouse pick. Keeping focus on the input means the
-                // click completes with no intervening blur at all — for a
-                // mouse pick specifically; keyboard selection (Tab focuses
-                // this button directly, no mousedown involved) and the
-                // click-outside-close handler are untouched by this.
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => handleSelect(airport)}
-                className="w-full px-4 py-2 text-left border-b last:border-0"
-                style={{ borderColor: "var(--color-border)" }}
-                title={
-                  airport.isClosed ? t("flights:airportAutocomplete.closedTooltip") : undefined
-                }
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium">
-                      {airport.iata && (
-                        <span className="font-semibold" style={{ color: "var(--accent)" }}>
-                          {airport.iata}
-                        </span>
-                      )}
-                      {airport.iata && airport.icao && (
-                        <span className="mx-1" style={{ color: "var(--text-muted)" }}>
-                          /
-                        </span>
-                      )}
-                      {airport.icao && (
-                        <span className="" style={{ color: "var(--text-muted)" }}>
-                          {airport.icao}
-                        </span>
-                      )}
-                      <span className="ml-2">{airport.name}</span>
-                      {airport.isClosed && (
-                        <span
-                          className="ml-2 px-1.5 py-0.5 text-xs rounded-sm"
-                          style={{
-                            background: "rgba(220, 38, 38, 0.15)",
-                            color: "var(--text-muted)",
-                            border: "1px solid rgba(220, 38, 38, 0.35)",
-                          }}
-                        >
-                          {t("flights:airportAutocomplete.closedBadge")}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-                      {(() => {
-                        // The server sends an ISO 3166-1 alpha-2 code, never a
-                        // name — a country name belongs to the reader's
-                        // language.
-                        const country =
-                          countryName(airport.country, i18n.language) || airport.country;
-                        if (airport.city && country) return `${airport.city}, ${country}`;
-                        return airport.city || country;
-                      })()}
-                    </div>
-                  </div>
-                </div>
-              </button>
-            ))}
-        </div>
-      )}
     </div>
   );
 }

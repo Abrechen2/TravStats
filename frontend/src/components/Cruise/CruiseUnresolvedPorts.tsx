@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useEffect, useId, useState } from "react";
 import type { JSX } from "react";
 import type { Cruise, Port } from "../../types";
@@ -155,7 +156,7 @@ function UnresolvedRow({
   return (
     <li className="rounded-md border border-(--warning)/40 bg-(--warning)/5 p-3">
       <p className="text-sm font-medium text-(--text-primary)">
-        <span aria-hidden="true">🔶 </span>
+        <Icon name="diamond" size={14} className="mr-1 inline" />
         {group.name}
       </p>
       <p className="t-caption">

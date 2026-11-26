@@ -182,7 +182,7 @@ export default function BoardingPassScanner({
                 />
                 <div className="space-y-3">
                   <div className="text-5xl" aria-hidden="true">
-                    🎫
+                    <Icon name="ticket" size={24} />
                   </div>
                   <p className="text-lg font-medium text-white">
                     {t("flights:scanner.uploadTitle")}

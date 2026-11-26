@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import { useState } from "react";
 import type { JSX } from "react";
 import Modal from "../Modal";
@@ -161,10 +162,8 @@ export function RentalImportPreviewModal({ candidate, onCancel, onSaved }: Props
         ) : null}
         {resolution?.status === "ambiguous"
           ? resolution.candidates.map((c) => (
-              <button
+              <Chip
                 key={c.airportId}
-                type="button"
-                className="mr-2 rounded-full border border-border px-3 py-1 text-xs"
                 onClick={() =>
                   onChange({
                     ...value,
@@ -175,9 +174,11 @@ export function RentalImportPreviewModal({ candidate, onCancel, onSaved }: Props
                     lon: 0,
                   })
                 }
+                size="sm"
+                className="mr-2"
               >
                 {c.name} ({c.iata})
-              </button>
+              </Chip>
             ))
           : null}
         <RentalStationPicker

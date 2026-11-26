@@ -1,3 +1,4 @@
+import { Icon, type IconName } from "../ui/Icon";
 import { deadlineSummary } from "../../lib/deadlines";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -18,15 +19,15 @@ import { usePlaceCategories } from "../../hooks/usePlaceCategories";
 import { placeSubtitle } from "../../lib/placeNames";
 import { classifyVisit } from "../../shared/placeCounting";
 
-const STOP_DOMAIN_ICON: Record<string, string> = {
-  poi: "📍",
-  hotel: "🏨",
-  train: "🚄",
-  road: "🚗",
-  ferry: "⛴",
-  hike: "🥾",
-  bike: "🚴",
-  other: "📌",
+const STOP_DOMAIN_ICON: Record<string, IconName> = {
+  poi: "map-pin",
+  hotel: "bed",
+  train: "train-front",
+  road: "car",
+  ferry: "ship",
+  hike: "mountain",
+  bike: "bike",
+  other: "pin",
 };
 
 export function dotColor(ev: TimelineEvent): string {
@@ -68,7 +69,7 @@ export function EventCard({
   dateLabel,
   actions,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   bg: string;
   iconColor: string;
   title: string;
@@ -169,7 +170,7 @@ export function FlightCard({
   return (
     <ExpandableEventCard
       mark={<AirlineWordmarkCell flight={f} size={36} />}
-      icon="✈"
+      icon={<Icon name="plane" size={18} />}
       bg="var(--domain-flight-soft)"
       iconColor="var(--domain-flight, var(--accent))"
       title={ev.title}
@@ -211,7 +212,7 @@ export function CruiseCard({
   return (
     <ExpandableEventCard
       mark={<OperatorMarkTile name={c.cruiseLine} domain="cruise" size={36} />}
-      icon="⚓"
+      icon={<Icon name="anchor" size={18} />}
       bg="var(--domain-cruise-soft)"
       iconColor="var(--domain-cruise)"
       title={ev.title}
@@ -306,12 +307,12 @@ export function LodgingCheckCard({
   return (
     <Link to={`/lodging/${stay.lodgingId}`} className="block">
       <EventCard
-        icon="🏨"
+        icon={<Icon name="bed" size={18} />}
         bg="var(--domain-lodging-soft)"
         iconColor="var(--domain-lodging)"
         title={title}
         subtitle={
-          showHint ? `${subtitle} · ⚠︎ ${t("trips:detail.timeline.lodgingFarFromTrip")}` : subtitle
+          showHint ? `${subtitle} · ${t("trips:detail.timeline.lodgingFarFromTrip")}` : subtitle
         }
         date={ev.date}
         dateLabel={formatTimelineDate(ev.when)}
@@ -331,7 +332,7 @@ export function StopCard({
   onDelete: () => void;
 }): JSX.Element {
   const s = ev.stop;
-  const icon = STOP_DOMAIN_ICON[s.domain ?? "other"] ?? "📍";
+  const icon = <Icon name={STOP_DOMAIN_ICON[s.domain ?? "other"] ?? "map-pin"} size={18} />;
   const subtitle =
     s.lat != null && s.lon != null
       ? `${s.lat.toFixed(3)}, ${s.lon.toFixed(3)}`

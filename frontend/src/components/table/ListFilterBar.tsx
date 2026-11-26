@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import { Icon } from "../ui/Icon";
 import { SearchInput } from "../ui/SearchInput";
 import { useEffect, useRef, useState } from "react";
@@ -150,13 +151,9 @@ export default function ListFilterBar({
                   <Icon name="filter" size={16} />
                   <span>{t("common:filters.more")}</span>
                   {extraActiveCount > 0 && (
-                    <span
-                      data-testid="list-filter-badge"
-                      className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs"
-                      style={{ background: "var(--accent)", color: "var(--bg-base)" }}
-                    >
+                    <Chip testId="list-filter-badge" tone="accent" size="sm">
                       {extraActiveCount}
-                    </span>
+                    </Chip>
                   )}
                 </button>
 

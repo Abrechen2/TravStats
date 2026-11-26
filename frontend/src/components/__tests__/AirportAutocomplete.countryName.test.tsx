@@ -51,7 +51,7 @@ describe("AirportAutocomplete — country name in the dropdown", () => {
       await vi.advanceTimersByTimeAsync(0);
     });
 
-    const input = screen.getByRole("textbox");
+    const input = screen.getByRole("combobox");
     input.focus();
     fireEvent.change(input, { target: { value: "frank" } });
     await act(async () => {

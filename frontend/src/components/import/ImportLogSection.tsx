@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import Modal from "../Modal";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX, ReactNode } from "react";
@@ -312,14 +313,14 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
         // Which area this run landed in. Never left implicit: an unlabelled
         // log reads as if it covered everything.
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          <Chip size="sm" uppercase>
             <span
               aria-hidden="true"
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ background: colorOf(batch.domain) }}
+              className="h-1.5 w-1.5"
+              style={{ background: colorOf(batch.domain), borderRadius: "50%" }}
             />
             {t(`common:${DOMAINS[batch.domain].i18nKey}`)}
-          </span>
+          </Chip>
         );
       case "source":
         return (

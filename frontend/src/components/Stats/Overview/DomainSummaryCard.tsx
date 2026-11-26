@@ -3,6 +3,7 @@
 //   - hasData=false: dashed-border placeholder ("noch keine Daten").
 //   - hasData=true: header (icon + label + count + delta) over the
 //     domain summary's headline KPIs / top-items / badges.
+import Chip from "../../ui/Chip";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { withYear } from "../../../lib/stats/periodUrl";
@@ -203,19 +204,11 @@ export default function DomainSummaryCard({
           <div style={{ color: "var(--text-muted)" }}>{t(`stats:${topItems.titleKey}`)}</div>
           <div className="flex gap-1.5 flex-wrap mt-1">
             {topItems.items.slice(0, 5).map((item) => (
-              <span
-                key={item.label}
-                className="px-2 py-0.5 rounded-full text-xs"
-                style={{
-                  background: "var(--bg-elevated)",
-                  border: "1px solid var(--color-border)",
-                  color: "var(--text-primary)",
-                }}
-              >
+              <Chip key={item.label} size="sm">
                 {topItems.labelKeyPrefix && !item.plain
                   ? t(`${topItems.labelKeyPrefix}.${item.label}`, { defaultValue: item.label })
                   : item.label}
-              </span>
+              </Chip>
             ))}
           </div>
         </div>

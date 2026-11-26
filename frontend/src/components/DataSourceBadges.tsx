@@ -90,7 +90,7 @@ export default function DataSourceBadges({ flight }: DataSourceBadgesProps): JSX
         <Toggletip
           key={index}
           content={badge.tooltip}
-          triggerClassName={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}
+          triggerClassName={`inline-flex items-center gap-1 px-2 py-1 rounded-(--ts-radius-chip) text-xs font-medium ${badge.color}`}
         >
           <Icon name={badge.icon} size={14} /> {badge.label}
         </Toggletip>

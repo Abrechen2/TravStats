@@ -18,7 +18,7 @@ export function RecordedFlightPathsToggle(): JSX.Element | null {
       <Toggle
         checked={show}
         onChange={setShow}
-        icon="〰️"
+        icon="activity"
         label={t("map:globe.panel.recordedFlightPaths")}
       />
       <div className="px-2 text-[10px] leading-snug" style={{ color: MUTED_TEXT }}>

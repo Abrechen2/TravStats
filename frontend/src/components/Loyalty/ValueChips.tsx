@@ -1,4 +1,4 @@
-import { Icon } from "../ui/Icon";
+import Chip from "../ui/Chip";
 import { useId, useState } from "react";
 import type { JSX, KeyboardEvent } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -62,20 +62,14 @@ export default function ValueChips({
       {values.length > 0 && (
         <ul className="mb-1 flex flex-wrap gap-1">
           {values.map((value) => (
-            <li
-              key={value}
-              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
-              style={{ background: "var(--ts-tile)", color: "var(--ts-text)" }}
-            >
-              {value}
-              <button
-                type="button"
-                aria-label={t("loyalty:field.removeValue", { value })}
-                onClick={() => onChange(values.filter((v) => v !== value))}
-                style={{ color: "var(--ts-muted)" }}
+            <li key={value}>
+              <Chip
+                size="sm"
+                onRemove={() => onChange(values.filter((v) => v !== value))}
+                removeLabel={t("loyalty:field.removeValue", { value })}
               >
-                <Icon name="x" size={16} />
-              </button>
+                {value}
+              </Chip>
             </li>
           ))}
         </ul>

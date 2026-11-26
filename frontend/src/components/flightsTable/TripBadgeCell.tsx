@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import type { Trip } from "../../types";
@@ -11,17 +12,14 @@ export default function TripBadgeCell({ trip }: { trip: Trip | undefined }): JSX
     return <span style={{ color: "var(--text-muted)", opacity: 0.3 }}>—</span>;
   }
   return (
-    <Link
-      to={`/trips/${trip.id}`}
-      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border transition-all hover:brightness-110"
-      style={{
-        background: `${trip.color}18`,
-        borderColor: `${trip.color}44`,
-        color: trip.color,
-      }}
-    >
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: trip.color }} />
-      {trip.name}
+    <Link to={`/trips/${trip.id}`} className="inline-flex">
+      <Chip size="sm" color={trip.color}>
+        <span
+          className="w-1.5 h-1.5 shrink-0"
+          style={{ background: trip.color, borderRadius: "50%" }}
+        />
+        {trip.name}
+      </Chip>
     </Link>
   );
 }

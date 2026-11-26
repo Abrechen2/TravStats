@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import { SearchInput } from "../ui/SearchInput";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -196,23 +197,18 @@ export default function GlobalSearch(): JSX.Element {
             {chipDomains.map((domain) => {
               const on = only.includes(domain);
               return (
-                <button
+                <Chip
                   key={domain}
-                  type="button"
+                  size="sm"
                   tabIndex={-1}
-                  aria-pressed={on}
-                  data-testid={`search-chip-${domain}`}
+                  active={on}
+                  color={colorFor(domain)}
+                  testId={`search-chip-${domain}`}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => toggleChip(domain)}
-                  className="rounded-full px-2 py-0.5 text-xs pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-3"
-                  style={{
-                    background: on ? colorFor(domain) : "transparent",
-                    color: on ? "var(--ts-bg)" : "var(--ts-muted)",
-                    border: `1px solid ${on ? colorFor(domain) : "var(--ts-border)"}`,
-                  }}
                 >
                   {t(`dashboard:search.group.${domain}`)}
-                </button>
+                </Chip>
               );
             })}
           </div>

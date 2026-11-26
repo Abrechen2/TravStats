@@ -18,7 +18,7 @@ import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 
 export interface ExpandableEventCardProps {
-  icon: string;
+  icon: ReactNode;
   bg: string;
   iconColor: string;
   /**

@@ -39,7 +39,7 @@ export function isParseableDomain(
 export interface ImportRoute {
   id: string;
   /** Emoji marker. Decorative — the title carries the meaning. */
-  icon: string;
+  icon: ReactNode;
   title: string;
   description: string;
   /** Highlighted route — at most one per adapter. */

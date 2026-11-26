@@ -1,3 +1,4 @@
+import Chip from "./ui/Chip";
 import { useState } from "react";
 import Modal from "./Modal";
 import { useTranslation } from "../hooks/useTranslation";
@@ -82,16 +83,9 @@ function Highlights({ entry }: { entry: WhatsNewEntry }): JSX.Element {
               <span className="font-medium block" style={{ color: "var(--text-primary)" }}>
                 {t(`whatsNew:${item.titleKey}`)}
                 {item.beta && (
-                  <span
-                    className="ml-2 align-middle inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                    style={{
-                      color: "var(--accent)",
-                      background: "var(--accent-soft)",
-                      border: "1px solid var(--accent-glow)",
-                    }}
-                  >
+                  <Chip tone="accent" uppercase size="sm" className="ml-2 align-middle">
                     {t("whatsNew:betaBadge")}
-                  </span>
+                  </Chip>
                 )}
               </span>
               <span className="text-sm block" style={{ color: "var(--text-muted)" }}>

@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import Modal from "../Modal";
 /**
  * LocationMapModal — the ONE map way to pick a point (owner decision
@@ -354,7 +355,7 @@ export function LocationMapModal({
                     }
                   >
                     <span className="truncate text-[var(--text-primary)]">
-                      {selected ? "✓ " : ""}
+                      {selected ? <Icon name="check" size={14} /> : null}
                       {poi.name}
                       <LocalName value={poi.localName} testId={`map-modal-poi-${i}-local`} />
                     </span>

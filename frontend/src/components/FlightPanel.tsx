@@ -1,3 +1,4 @@
+import Chip from "./ui/Chip";
 import { Icon } from "./ui/Icon";
 import ConfirmModal from "./ui/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
@@ -264,22 +265,16 @@ export function FlightPanel({
                 {tab === "flights" ? (
                   <>
                     {t("dashboard:allFlights")}
-                    <span
-                      className="px-1.5 py-0.5 text-xs rounded-full"
-                      style={{ background: "var(--accent)", color: "white" }}
-                    >
+                    <Chip tone="accent" size="sm">
                       {totalCount}
-                    </span>
+                    </Chip>
                   </>
                 ) : (
                   <>
                     {t("dashboard:trips.label")}
-                    <span
-                      className="px-1.5 py-0.5 text-xs rounded-full"
-                      style={{ background: "var(--accent)", color: "white" }}
-                    >
+                    <Chip tone="accent" size="sm">
                       {trips.length}
-                    </span>
+                    </Chip>
                   </>
                 )}
               </h2>

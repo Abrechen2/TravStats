@@ -246,7 +246,9 @@
       "ferries": "Ferries",
       "date": "Date",
       "route": "Route",
-      "open": "open"
+      "open": "open",
+      "cruiseLine": "Cruise line",
+      "cruiseFallback": "Cruise"
     },
     "timeline": {
       "addEntry": "+ Add entry",

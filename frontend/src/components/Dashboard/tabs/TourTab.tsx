@@ -364,7 +364,7 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
 
       {isEmpty && (
         <MapEmptyOverlay
-          emoji={isRoadtrip ? "🚐" : "🥾"}
+          icon={isRoadtrip ? "caravan" : "route"}
           title={
             isRoadtrip ? t("roadtrips:dashboard.emptyTitle") : t("dashboard:tourTab.emptyTitle")
           }

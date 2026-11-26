@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import type { JSX } from "react";
 import RememberedMarker from "../provenance/RememberedMarker";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -69,7 +70,7 @@ export default function TripsTable({
             <span>
               {selection ? (
                 <span aria-hidden="true" data-testid={`trip-row-pick-${trip.id}`}>
-                  {selection.has(trip.id) ? "☑ " : "☐ "}
+                  <Icon name={selection.has(trip.id) ? "square-check" : "square"} size={16} />
                 </span>
               ) : null}
               {trip.icon ? <span aria-hidden="true">{trip.icon} </span> : null}

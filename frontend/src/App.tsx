@@ -1,3 +1,4 @@
+import { Icon } from "./components/ui/Icon";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence, MotionConfig } from "framer-motion";
 import NavigationMemory from "./components/navigation/NavigationMemory";
@@ -210,7 +211,9 @@ function AppContent() {
               style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
             >
               <div className="text-center">
-                <div className="text-6xl mb-4">💥</div>
+                <div className="mb-4 flex justify-center">
+                  <Icon name="circle-alert" size={24} />
+                </div>
                 <h1 className="t-screen-title mb-2">{t("errorBoundary.title")}</h1>
                 <p className="mb-6" style={{ color: "var(--text-muted)" }}>
                   {t("errorBoundary.message")}

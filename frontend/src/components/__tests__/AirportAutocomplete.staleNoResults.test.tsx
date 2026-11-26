@@ -62,7 +62,7 @@ describe("AirportAutocomplete — no stale not-found", () => {
       <AirportAutocomplete value={null} onChange={onChange} label="Nach" />
     );
 
-    const input = screen.getByRole("textbox");
+    const input = screen.getByRole("combobox");
     input.focus();
     // SIX letters on purpose: a 3-4 letter query looks like an airport CODE and
     // takes the notFound branch instead, which is a different message.
@@ -78,7 +78,7 @@ describe("AirportAutocomplete — no stale not-found", () => {
     rerender(<AirportAutocomplete value={JFK} onChange={onChange} label="Nach" />);
     await vi.advanceTimersByTimeAsync(400);
 
-    expect(screen.getByRole("textbox")).toHaveValue(airportInputLabel(JFK));
+    expect(screen.getByRole("combobox")).toHaveValue(airportInputLabel(JFK));
     expect(screen.queryByText("flights:airportAutocomplete.noResults")).toBeNull();
     expect(screen.queryByText(/notFound/)).toBeNull();
   });
@@ -89,7 +89,7 @@ describe("AirportAutocomplete — no stale not-found", () => {
     render(<AirportAutocomplete value={JFK} onChange={vi.fn()} label="Nach" />);
     await vi.advanceTimersByTimeAsync(400);
 
-    fireEvent.focus(screen.getByRole("textbox"));
+    fireEvent.focus(screen.getByRole("combobox"));
     await vi.advanceTimersByTimeAsync(400);
 
     expect(screen.queryByText("flights:airportAutocomplete.noResults")).toBeNull();
@@ -99,7 +99,7 @@ describe("AirportAutocomplete — no stale not-found", () => {
     // The guard must not silence the message for a query that really found
     // nothing, or it fixes the contradiction by removing the useful half.
     render(<AirportAutocomplete value={null} onChange={vi.fn()} label="Nach" />);
-    const input = screen.getByRole("textbox");
+    const input = screen.getByRole("combobox");
     input.focus();
     fireEvent.change(input, { target: { value: "qqqqqq" } });
 

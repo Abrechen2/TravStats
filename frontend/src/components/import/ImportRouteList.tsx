@@ -15,7 +15,7 @@ import type { ImportRoute, ImportRouteContext } from "./types";
  */
 
 interface ImportRouteRowProps {
-  icon: string;
+  icon: ReactNode;
   title: string;
   description: string;
   primary?: boolean;

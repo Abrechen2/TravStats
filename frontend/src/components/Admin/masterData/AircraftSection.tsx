@@ -1,3 +1,4 @@
+import Chip from "../../ui/Chip";
 import { SearchInput } from "../../ui/SearchInput";
 import { useEffect, useState } from "react";
 import { aircraftApi } from "../../../lib/api/catalogue";
@@ -126,16 +127,9 @@ export default function AircraftSection(): JSX.Element {
               </div>
               <div className="flex items-center gap-2 text-xs">
                 {ac.isUserAdded && (
-                  <span
-                    className="px-2 py-0.5 rounded-full"
-                    style={{
-                      background: "var(--bg-elevated)",
-                      color: "var(--accent)",
-                      border: "1px solid var(--accent)",
-                    }}
-                  >
+                  <Chip tone="accent" size="sm">
                     {t("admin:airlineAircraftMasterData.userAdded")}
-                  </span>
+                  </Chip>
                 )}
                 {ac.icao && <span className="text-(--text-muted) font-mono">{ac.icao}</span>}
               </div>

@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import Modal from "../Modal";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -52,7 +53,8 @@ export default function InviteSuccessModal({
       <>
         {emailSent === true && recipientEmail && (
           <p className="mb-4 text-sm" style={{ color: "#16a34a" }}>
-            ✉ {t("admin:invitations.success.emailSent")}{" "}
+            <Icon name="mail" size={14} className="mr-1 inline" />{" "}
+            {t("admin:invitations.success.emailSent")}{" "}
             <span className="font-medium">{recipientEmail}</span>
           </p>
         )}
@@ -91,7 +93,8 @@ export default function InviteSuccessModal({
             {inviteUrl}
           </div>
           <button type="button" onClick={copyLink} className="btn-secondary mt-2 text-sm">
-            📋 {t("admin:invitations.success.copyLink")}
+            <Icon name="copy" size={14} className="mr-1 inline" />{" "}
+            {t("admin:invitations.success.copyLink")}
           </button>
         </div>
       </>
