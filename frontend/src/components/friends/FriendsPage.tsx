@@ -1,3 +1,4 @@
+import { useYearCounts } from "../../lib/stats/useYearCounts";
 import YearPicker from "../ui/YearPicker";
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
@@ -29,6 +30,7 @@ import RequestsSection from "./RequestsSection";
  */
 export default function FriendsPage(): JSX.Element {
   const { t } = useTranslation(["comparison", "common", "achievements"]);
+  const yearCounts = useYearCounts().of();
   const tr = (key: string, options?: Record<string, unknown>): string =>
     String(t(key, options ?? {}));
   const { enabled, isEnabled } = useEnabledDomains();
@@ -209,7 +211,9 @@ export default function FriendsPage(): JSX.Element {
       >
         <Field label={tr("period.label")} htmlFor="friends-year">
           <YearPicker
-            years={years.map((y) => ({ year: y }))}
+            years={years.map((y) => ({ year: y, count: yearCounts[y] }))}
+            formatCount={(n): string => tr("common:yearPicker.count.events", { count: n })}
+
             value={year ?? "all"}
             onChange={(v) => setYear(v === "all" ? null : v)}
             label={tr("period.label")}

@@ -18,6 +18,7 @@
 // it now belongs to the "Domänen · x/y" filter on the map, which is the one
 // place that answers "what is on the map".
 
+import { useYearCounts } from "../../lib/stats/useYearCounts";
 import YearPicker from "../ui/YearPicker";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -57,6 +58,7 @@ function Section({
 
 export function MapChromeSections(): JSX.Element {
   const { t } = useTranslation(["dashboard", "common"]);
+  const yearCounts = useYearCounts().of();
   const { tab, mode, setMode } = useDashboardRoute();
 
   const year = useDashboardFilterStore((s) => s.year);
@@ -92,7 +94,9 @@ export function MapChromeSections(): JSX.Element {
             {t("dashboard:filter.year")}
           </span>
           <YearPicker
-            years={yearOptions.map((y) => ({ year: y }))}
+            years={yearOptions.map((y) => ({ year: y, count: yearCounts[y] }))}
+            formatCount={(n): string => t("common:yearPicker.count.events", { count: n })}
+
             value={year ?? "all"}
             onChange={(v): void => setYear(v === "all" ? null : v)}
             label={t("dashboard:filter.year")}

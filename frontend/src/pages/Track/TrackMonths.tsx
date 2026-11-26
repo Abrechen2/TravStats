@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
-import Button from "../../components/ui/Button";
+import YearPicker from "../../components/ui/YearPicker";
 import TableScroll from "../../components/ui/TableScroll";
 import { token } from "../../components/ui/tokens";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -50,6 +50,26 @@ export default function TrackMonths(): JSX.Element {
   const thisYear = Number(todayIn(useTodayZone()).slice(0, 4));
   const [year, setYear] = useState(thisYear);
   const [state, setState] = useState<State>({ kind: "loading" });
+  // The years with TravTrack data bound the stepper; the current year stays reachable as the default.
+  const [dataYears, setDataYears] = useState<number[]>([]);
+  const [yearsFailed, setYearsFailed] = useState(false);
+  const yearList = [...new Set([...dataYears, thisYear, year])].sort((a, b) => a - b);
+
+  useEffect(() => {
+    let live = true;
+    travTrackMonthsApi
+      .years()
+      .then((years) => {
+        if (live) setDataYears(years);
+      })
+      .catch((err: unknown) => {
+        logger.warn("TravTrack years could not be loaded", err);
+        if (live) setYearsFailed(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -85,13 +105,22 @@ export default function TrackMonths(): JSX.Element {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={() => setYear((y) => y - 1)}>{t("track:months.previous")}</Button>
-        <span className="t-card-title" data-testid="track-months-year">
-          {year}
+        <span data-testid="track-months-year">
+          <YearPicker
+            years={yearList.map((y) => ({ year: y }))}
+            value={year}
+            onChange={(v) => {
+              if (v !== "all") setYear(v);
+            }}
+            allowAll={false}
+            label={t("track:months.year")}
+          />
         </span>
-        <Button disabled={year >= thisYear} onClick={() => setYear((y) => y + 1)}>
-          {t("track:months.next")}
-        </Button>
+        {yearsFailed && (
+          <span className="t-caption" role="alert">
+            {t("track:months.yearsFailed")}
+          </span>
+        )}
       </div>
 
       {state.kind === "loading" && <p className="t-caption">{t("track:months.loading")}</p>}

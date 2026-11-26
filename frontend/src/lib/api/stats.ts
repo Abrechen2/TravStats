@@ -150,6 +150,16 @@ export const statsApi = {
     return data;
   },
 
+  /** Entries per year and domain — the captions of the year picker. */
+  getYearCounts: async (): Promise<{
+    years: { year: number; total: number; byDomain: Record<string, number> }[];
+  }> => {
+    const { data } = await api.get<{
+      years: { year: number; total: number; byDomain: Record<string, number> }[];
+    }>("/stats/years/counts");
+    return data;
+  },
+
   /** Carbon per mode of travel, lifetime (forgejo#395). */
   getCo2: async (): Promise<Co2Stats> => {
     const { data } = await api.get<Co2Stats>("/stats/co2");

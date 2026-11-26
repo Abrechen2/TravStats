@@ -565,7 +565,11 @@
       "stays_one": "{{count}} Aufenthalt",
       "stays_other": "{{count}} Aufenthalte",
       "events_one": "{{count}} Eintrag",
-      "events_other": "{{count}} Einträge"
+      "events_other": "{{count}} Einträge",
+      "rides_one": "{{count}} Fahrt",
+      "rides_other": "{{count}} Fahrten",
+      "rentals_one": "{{count}} Miete",
+      "rentals_other": "{{count}} Mieten"
     }
   }
 }

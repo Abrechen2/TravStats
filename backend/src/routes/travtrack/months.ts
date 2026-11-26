@@ -3,6 +3,7 @@ import { Router, type NextFunction, type Response } from "express";
 import { authenticate, requireWriteScope, type AuthRequest } from "../../middleware/auth";
 import { rejectDemo } from "../../middleware/demoGuard";
 import { travTrackCityLookupSchema, travTrackMonthsQuerySchema } from "../../schemas/travtrack";
+import { travTrackYears } from "../../services/travtrack/everyday/view";
 import {
   setTravTrackCityLookup,
   travTrackCityLookup,
@@ -33,6 +34,15 @@ router.get(
   route(async (req, res) => {
     const { year } = travTrackMonthsQuerySchema.parse(req.query);
     res.json(await travTrackMonths(req.userId!, year));
+  })
+);
+
+router.get(
+  "/travtrack/years",
+  authenticate,
+  travTrackTier("on"),
+  route(async (req, res) => {
+    res.json({ years: await travTrackYears(req.userId!) });
   })
 );
 

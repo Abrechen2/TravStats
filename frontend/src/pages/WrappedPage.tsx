@@ -1,3 +1,4 @@
+import { useYearCounts } from "../lib/stats/useYearCounts";
 import YearPicker from "../components/ui/YearPicker";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -55,6 +56,7 @@ import WrappedChapterCards, {
 
 export default function WrappedPage(): JSX.Element {
   const { t, i18n } = useTranslation(["stats", "common"]);
+  const yearCounts = useYearCounts().of();
   const { isEnabled } = useEnabledDomains();
   const distanceUnit = useSettingsStore((s) => s.units.distanceUnit);
 
@@ -127,7 +129,12 @@ export default function WrappedPage(): JSX.Element {
       // Only years the server says have something in them — the picker
       // can therefore never lead to an empty story by accident.
       <YearPicker
-        years={wrapped.availableYears.map((option) => ({ year: option }))}
+        years={wrapped.availableYears.map((option) => ({
+          year: option,
+          count: yearCounts[option],
+        }))}
+        formatCount={(n): string => t("common:yearPicker.count.events", { count: n })}
+
         value={shownYear ?? wrapped.year}
         onChange={(v) => {
           if (v !== "all") setYear(v);

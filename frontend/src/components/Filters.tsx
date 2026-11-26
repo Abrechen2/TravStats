@@ -1,3 +1,4 @@
+import { useYearCounts } from "../lib/stats/useYearCounts";
 import YearPicker from "./ui/YearPicker";
 import { useState, useEffect, useRef } from "react";
 import { flightsApi } from "../lib/api";
@@ -26,6 +27,7 @@ export default function Filters({
   showMapOnlyFilters = true,
 }: FiltersProps): JSX.Element {
   const { t } = useTranslation(["map", "common", "flights"]);
+  const yearCounts = useYearCounts().of();
 
   const MONTHS = [
     { value: 1, label: t("stats:months.jan") },
@@ -302,7 +304,9 @@ export default function Filters({
                 />
               </h4>
               <YearPicker
-                years={availableYears.map((year) => ({ year }))}
+                years={availableYears.map((year) => ({ year, count: yearCounts[year] }))}
+                formatCount={(n): string => t("common:yearPicker.count.events", { count: n })}
+
                 value={yearFilter ?? "all"}
                 onChange={(v) => setYearFilter(v === "all" ? null : v)}
                 label={t("map:filters.timePeriod")}
