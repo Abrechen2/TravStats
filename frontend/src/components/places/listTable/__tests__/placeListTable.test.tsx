@@ -24,6 +24,7 @@ vi.mock("../../../../lib/api/smartLists", async (orig) => ({
   clearListRule: (...a: unknown[]) => clearListRule(...a),
   listNewOutlets: vi.fn(async () => []),
   listAutoAccepted: vi.fn(async () => []),
+  listPendingConfirmations: vi.fn(async () => []),
 }));
 const setList = vi.fn();
 vi.mock("../../../../lib/api/suggestionPlugins", async (orig) => ({

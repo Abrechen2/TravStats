@@ -50,6 +50,12 @@ export interface StayScanState {
   pointCount: number;
   createdCount: number;
 }
+export interface StaySource {
+  kind: "smartList" | "plugin" | "calendar" | "travtrack" | "dawarich";
+  id: string | null;
+  name: string | null;
+}
+
 export interface DawarichStay {
   times?: Record<
     "startAt" | "endAt" | "sourceStartAt" | "sourceEndAt" | "detectedAt" | "resolvedAt",
@@ -60,6 +66,9 @@ export interface DawarichStay {
   status: "pending" | "accepting" | "accepted" | "rejected" | "covered" | "invalidated";
   /** Only on a TravTrack finding made before the account's last source switch. */
   beforeSourceSwitch?: true;
+  /** Where the finding came from, most specific first (2026-11-26); absent on older servers. */
+  source?: StaySource;
+  sources?: StaySource[];
   name: string | null;
   startAt: string;
   endAt: string;

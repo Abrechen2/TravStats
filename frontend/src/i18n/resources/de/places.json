@@ -1071,6 +1071,30 @@
     },
     "autoDistance": "Automatisch bis (m)",
     "autoDistanceInvalid": "Die automatische Entfernung muss mindestens 10 m und höchstens so groß wie die Vorschlags-Entfernung sein.",
-    "editRule": "Regel bearbeiten"
+    "editRule": "Regel bearbeiten",
+    "pending": {
+      "title": "Ausstehende Bestätigungen ({{count}})",
+      "info": "Besuche, die diese Liste in deinen Orten erkannt hat. Bestätigen trägt den Besuch ein.",
+      "all": "Alle bestätigen",
+      "allTitle": "Alle bestätigen?",
+      "allMessage": "{{count}} Besuche werden eingetragen."
+    },
+    "pendingBadge": "{{count}} offen",
+    "undoAll": "Alle zurücknehmen",
+    "undoAllTitle": "Alle zurücknehmen?",
+    "undoAllMessage": "{{count}} automatische Einträge werden zurückgenommen. Was du ergänzt hast, bleibt.",
+    "undoAllFailed": "{{count}} Einträge konnten nicht zurückgenommen werden."
+  },
+  "autoFilter": {
+    "label": "Automatisch eingetragen",
+    "info": "Von einer Kette, einem Import oder einem Plugin eingetragen, nicht von dir.",
+    "all": "Alle",
+    "undoAll": "Alle zurücknehmen",
+    "undoTitle": "Automatische Besuche zurücknehmen?",
+    "undoMessage": "{{count}} Besuche werden gelöscht. Besuche mit Notiz, Bewertung, Foto oder Beleg bleiben.",
+    "result": "{{removed}} zurückgenommen, {{kept}} behalten.",
+    "failed": "Das Zurücknehmen hat nicht geklappt. Bitte später erneut versuchen.",
+    "none": "Keine automatisch eingetragenen Besuche.",
+    "badge": "automatisch"
   }
 }

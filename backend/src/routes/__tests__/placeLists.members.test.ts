@@ -174,6 +174,10 @@ describe("GET /place-lists/:id/members", () => {
     expect(res.body.data.rows[0].visitCount).toBe(1);
   });
 
+  it("'automatisch eingetragen' keeps only entries a rule, import or plugin added", async () => {
+    expect(names(await get("auto=true&sort=name&order=asc"))).toEqual(["Rom Trevi"]);
+  });
+
   it("the overview counts follow the purpose filter too", async () => {
     const res = await request(app)
       .get("/api/v1/place-lists?purposeFilter=business")

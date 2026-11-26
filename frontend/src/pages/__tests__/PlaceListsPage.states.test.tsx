@@ -17,6 +17,10 @@ vi.mock("../../lib/api/placeLists", () => ({
   subscribeChecklist: (...a: unknown[]) => subscribeChecklist(...a),
   createPlaceList: vi.fn(),
 }));
+const listPendingCounts = vi.fn();
+vi.mock("../../lib/api/smartLists", () => ({
+  listPendingCounts: (...a: unknown[]) => listPendingCounts(...a),
+}));
 vi.mock("../../hooks/useTranslation", async () => {
   const { germanUseTranslationNs } = await import("../../__tests__/helpers/germanT");
   return { useTranslation: germanUseTranslationNs };
@@ -56,6 +60,26 @@ describe("PlaceListsPage — states", () => {
     vi.clearAllMocks();
     listPlaceLists.mockResolvedValue([]);
     listCuratedChecklists.mockResolvedValue([CHECKLIST]);
+    listPendingCounts.mockResolvedValue({});
+  });
+
+  it("a smart list's card carries its pending count, a list without one carries none", async () => {
+    const list = (id: string, name: string) => ({
+      id,
+      name,
+      color: "#f00",
+      icon: null,
+      curatedKey: null,
+      placeCount: 1,
+      visitedCount: 0,
+      countryCount: 0,
+    });
+    listPlaceLists.mockResolvedValue([list("l1", "Maccis"), list("l2", "Museen")]);
+    listPendingCounts.mockResolvedValue({ l1: 3 });
+    await renderPage();
+    const badges = await screen.findAllByTestId("list-pending-badge");
+    expect(badges).toHaveLength(1);
+    expect(badges[0]).toHaveTextContent("3 offen");
   });
 
   it("tells a failed load apart and reads again on retry", async () => {

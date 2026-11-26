@@ -149,6 +149,58 @@ registry.registerPath({
   responses: { 200: envelope(z.array(suggestion)), 404: notFound },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/place-lists/smart/{listId}/pending",
+  summary: "Pending visit confirmations of this list at places you already have",
+  description:
+    "Up to 100, newest first, the same rows the stay inbox lists (answer them through `POST /dawarich-stays/{id}/accept` or `/reject`). A match at a venue that is not yet a place is a new outlet (`/suggestions`). Empty while stay suggestions are switched off.",
+  tags,
+  request: { params: z.object({ listId: uuid }) },
+  responses: { 200: envelope(z.array(suggestion)), 404: notFound },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/place-lists/smart/pending-counts",
+  summary: "Pending confirmations per smart list",
+  description:
+    "`{ listId: count }` of matches waiting for an answer (new outlets and visits together). A list with none is absent.",
+  tags,
+  responses: { 200: envelope(z.record(z.string(), z.number().int())) },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/place-lists/smart/auto-visits/undo",
+  summary: "Undo automatic visits in bulk",
+  description:
+    "Visits written by automation (`created_by` brandRule, import, auto or plugin). A smart-list visit is taken back through the list's own undo; any other is deleted only while it carries no note, rating, photo, document or expense. Each visit is answered on its own.",
+  tags,
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: z.object({ visitIds: z.array(uuid).min(1).max(200) }) },
+      },
+      required: true,
+    },
+  },
+  responses: {
+    200: envelope(
+      z.object({
+        results: z.array(
+          z.object({
+            visitId: uuid,
+            outcome: z.enum(["removed", "kept"]),
+            reason: z.enum(["notFound", "notAutomatic", "ownerAdded"]).optional(),
+          })
+        ),
+      })
+    ),
+    400: badInput,
+  },
+});
+
 const memberRow = z.object({
   entryId: uuid,
   placeId: uuid,
@@ -203,6 +255,10 @@ registry.registerPath({
       page: z.number().int().min(1).optional(),
       pageSize: z.number().int().min(1).max(100).optional(),
       q: z.string().max(100).optional(),
+      auto: z
+        .enum(["true", "false"])
+        .optional()
+        .describe("Only entries a rule, import or plugin added"),
     }),
   },
   responses: {

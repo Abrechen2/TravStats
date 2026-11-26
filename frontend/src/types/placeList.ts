@@ -30,6 +30,8 @@ export interface PlaceListEntry {
   placeId: string;
   sortIdx: number;
   createdAt: string;
+  /** `brandRule` / `import` when automation added the entry; absent on older servers. */
+  createdBy?: string | null;
   place: PlaceListPlace;
 }
 

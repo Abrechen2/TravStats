@@ -15,7 +15,9 @@
  * `PhotoJourney` are different things that share a page, not a table.
  *
  * Shared trips keep their own tab: consent requests and notices are not
- * questions about the user's records.
+ * questions about the user's records. Unfiled documents (`?tab=documents`) and
+ * the plugins' maintenance proposals and notices (`?tab=plugins`) have their own
+ * tabs too (owner 2026-11-26); the overview only links to waiting documents.
  *
  * The route stays `/pending-updates`, and every `?tab=` an old link carries
  * still lands: a kind (`review`, `trips`, `updates`, `photos`, `dawarich`)
@@ -23,7 +25,7 @@
  */
 
 import { useCallback, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import PageHeader from "../components/ui/PageHeader";
 import { useTranslation } from "../hooks/useTranslation";
@@ -37,14 +39,16 @@ import ProvenanceNoticesSection from "../components/inbox/ProvenanceNoticesSecti
 import MailIntakeSection from "../components/inbox/MailIntakeSection";
 import MailboxScanSection from "../components/inbox/MailboxScanSection";
 import { usePhotoJourneysVisible } from "../components/inbox/usePhotoJourneysVisible";
+import PluginsTab from "../components/inbox/plugins/PluginsTab";
 
-type PageTab = "inbox" | "sharing";
+type PageTab = "inbox" | "sharing" | "documents" | "plugins";
+const PAGE_TABS: readonly PageTab[] = ["inbox", "sharing", "documents", "plugins"];
 
 export default function PendingUpdatesPage(): JSX.Element {
   const { t } = useTranslation(["dataQuality", "sharing"]);
   const [searchParams, setSearchParams] = useSearchParams();
   const photoJourneysVisible = usePhotoJourneysVisible();
-  const tab: PageTab = searchParams.get("tab") === "sharing" ? "sharing" : "inbox";
+  const tab: PageTab = PAGE_TABS.find((k) => k === searchParams.get("tab")) ?? "inbox";
 
   // Both labels carry a count only once it is measured; `null` is "not yet",
   // never a zero. The sharing tab stays mounted so its count is measured too.
@@ -52,6 +56,10 @@ export default function PendingUpdatesPage(): JSX.Element {
   const reportInbox = useCallback((count: InboxCount | null) => setInboxCount(count), []);
   const [sharingOpen, setSharingOpen] = useState<number | null>(null);
   const reportSharing = useCallback((n: number) => setSharingOpen(n), []);
+  const [documentsWaiting, setDocumentsWaiting] = useState<number | null>(null);
+  const reportDocuments = useCallback((n: number | null) => setDocumentsWaiting(n), []);
+  const [pluginsOpen, setPluginsOpen] = useState<number | null>(null);
+  const reportPlugins = useCallback((n: number | null) => setPluginsOpen(n), []);
 
   const tabs: { key: PageTab; label: string; count: string | null }[] = [
     {
@@ -63,6 +71,16 @@ export default function PendingUpdatesPage(): JSX.Element {
       key: "sharing",
       label: t("sharing:inbox.title"),
       count: sharingOpen === null ? null : String(sharingOpen),
+    },
+    {
+      key: "documents",
+      label: t("dataQuality:inbox.tabs.documents"),
+      count: documentsWaiting ? String(documentsWaiting) : null,
+    },
+    {
+      key: "plugins",
+      label: t("dataQuality:inbox.tabs.plugins"),
+      count: pluginsOpen ? String(pluginsOpen) : null,
     },
   ];
 
@@ -115,7 +133,13 @@ export default function PendingUpdatesPage(): JSX.Element {
           <PasswordResetRequestsSection />
           <MailIntakeSection />
           <MailboxScanSection />
-          <UnfiledDocumentsSection />
+          {documentsWaiting !== null && documentsWaiting > 0 && (
+            <p className="t-caption mb-4" data-testid="inbox-documents-link">
+              <Link to="?tab=documents" replace>
+                {t("dataQuality:inbox.tabs.documentsLink", { count: documentsWaiting })}
+              </Link>
+            </p>
+          )}
           <DocumentLinkSuggestionsSection />
           <ProvenanceNoticesSection />
           <PlaceCapturesSection />
@@ -127,6 +151,13 @@ export default function PendingUpdatesPage(): JSX.Element {
         </div>
         <div hidden={tab !== "sharing"}>
           <SharingTab onCount={reportSharing} />
+        </div>
+        {/* Mounted while hidden, like sharing, so the tab label carries its count. */}
+        <div hidden={tab !== "documents"}>
+          <UnfiledDocumentsSection onCount={reportDocuments} />
+        </div>
+        <div hidden={tab !== "plugins"}>
+          <PluginsTab onCount={reportPlugins} />
         </div>
       </div>
     </AppShell>

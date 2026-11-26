@@ -30,6 +30,7 @@ const SELECT_KEYS: ListSortKey[] = [
 export default function PlaceListTable({
   listId,
   refreshKey,
+  autoOnly = false,
   iconOf,
   onRemove,
   onMove,
@@ -37,6 +38,8 @@ export default function PlaceListTable({
   listId: string;
   /** A new value when the membership changed elsewhere on the page (the page's list object). */
   refreshKey: unknown;
+  /** "Automatisch eingetragen" (the page's chip). */
+  autoOnly?: boolean;
   iconOf: (category: string) => string;
   onRemove: (placeId: string) => void;
   /** Moves an entry one step in the list's own order. */
@@ -54,7 +57,7 @@ export default function PlaceListTable({
   const pager = useServerPagination(
     data?.total ?? 0,
     `place-list:${listId}`,
-    `${sort}:${order}:${q}`,
+    `${sort}:${order}:${q}:${autoOnly}`,
     "page"
   );
   const pageSize = Math.min(pager.pageSize, SERVER_MAX_PAGE_SIZE);
@@ -67,7 +70,16 @@ export default function PlaceListTable({
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setData(await getListMembers(listId, { sort, order, page: pager.page, pageSize, q }));
+      setData(
+        await getListMembers(listId, {
+          sort,
+          order,
+          page: pager.page,
+          pageSize,
+          q,
+          ...(autoOnly ? { auto: true } : {}),
+        })
+      );
       setFailed(false);
     } catch (err: unknown) {
       logger.error({ err }, "PlaceListTable: members not loaded");
@@ -75,7 +87,7 @@ export default function PlaceListTable({
     } finally {
       setLoading(false);
     }
-  }, [listId, sort, order, pager.page, pageSize, q]);
+  }, [listId, sort, order, pager.page, pageSize, q, autoOnly]);
 
   useEffect(() => {
     void load();
@@ -101,7 +113,7 @@ export default function PlaceListTable({
   const rows = data?.rows ?? [];
   const columns = data?.columns ?? [];
   const showDistance = data?.hasHome ?? false;
-  const reorderable = sort === "custom" && order === "asc" && q === "";
+  const reorderable = sort === "custom" && order === "asc" && q === "" && !autoOnly;
   const th = "px-3 py-2 text-left text-xs font-medium";
 
   return (

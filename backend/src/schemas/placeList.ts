@@ -102,6 +102,11 @@ export const listMembersQuerySchema = z.object({
   page: z.coerce.number().int().min(1).max(10_000).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(50),
   q: z.string().trim().max(100).optional(),
+  /** "Automatisch eingetragen": only entries a rule, an import or a plugin added. */
+  auto: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
 });
 
 export type CreatePlaceListInput = z.infer<typeof createPlaceListSchema>;

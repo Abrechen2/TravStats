@@ -1071,6 +1071,30 @@
     },
     "autoDistance": "Take automatically within (m)",
     "autoDistanceInvalid": "The automatic distance must be at least 10 m and no larger than the suggestion distance.",
-    "editRule": "Edit rule"
+    "editRule": "Edit rule",
+    "pending": {
+      "title": "Pending confirmations ({{count}})",
+      "info": "Visits this list found at your places. Confirming adds the visit.",
+      "all": "Confirm all",
+      "allTitle": "Confirm all?",
+      "allMessage": "{{count}} visits will be added."
+    },
+    "pendingBadge": "{{count}} pending",
+    "undoAll": "Undo all",
+    "undoAllTitle": "Undo all?",
+    "undoAllMessage": "{{count}} automatic entries will be undone. What you added stays.",
+    "undoAllFailed": "{{count}} entries could not be undone."
+  },
+  "autoFilter": {
+    "label": "Added automatically",
+    "info": "Added by a chain, an import or a plugin, not by you.",
+    "all": "All",
+    "undoAll": "Undo all",
+    "undoTitle": "Undo automatic visits?",
+    "undoMessage": "{{count}} visits will be deleted. Visits with a note, rating, photo or document stay.",
+    "result": "{{removed}} undone, {{kept}} kept.",
+    "failed": "Undo did not work. Please try again later.",
+    "none": "No visits added automatically.",
+    "badge": "automatic"
   }
 }

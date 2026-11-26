@@ -40,10 +40,17 @@ export async function getPlaceList(id: string): Promise<PlaceList> {
 /** One page of a list as a table, sorted and paged on the server. */
 export async function getListMembers(
   id: string,
-  query: { sort: ListSortKey; order: "asc" | "desc"; page: number; pageSize: number; q?: string }
+  query: {
+    sort: ListSortKey;
+    order: "asc" | "desc";
+    page: number;
+    pageSize: number;
+    q?: string;
+    auto?: boolean;
+  }
 ): Promise<ListMembersPage> {
   const res = await api.get<Envelope<ListMembersPage>>(`/place-lists/${id}/members`, {
-    params: { ...query, q: query.q?.trim() || undefined },
+    params: { ...query, q: query.q?.trim() || undefined, auto: query.auto ? "true" : undefined },
   });
   return res.data.data;
 }

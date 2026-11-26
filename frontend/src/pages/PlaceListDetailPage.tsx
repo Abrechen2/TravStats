@@ -30,6 +30,7 @@ import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import SmartListPanel from "../components/places/smartList/SmartListPanel";
 import PurposeSegment from "../components/purpose/PurposeSegment";
 import PlaceListTable from "../components/places/listTable/PlaceListTable";
+import { isAutomatic } from "../lib/api/smartLists";
 import OverflowMenu from "../components/ui/OverflowMenu";
 import { PlaceListAddPanel, type UnassignedPlace } from "../components/places/PlaceListAddPanel";
 import { useToastStore } from "../store/toastStore";
@@ -123,6 +124,9 @@ export default function PlaceListDetailPage(): JSX.Element {
   }, [list?.curatedKey, navigate]);
 
   const entries = useMemo(() => list?.entries ?? [], [list]);
+  // "Automatisch eingetragen" (owner 2026-11-26): only what a chain or an import added.
+  const [autoOnly, setAutoOnly] = useState(false);
+  const autoEntries = useMemo(() => entries.filter(isAutomatic), [entries]);
   const memberIds = useMemo(() => new Set(entries.map((e) => e.placeId)), [entries]);
 
   /**
@@ -569,9 +573,25 @@ export default function PlaceListDetailPage(): JSX.Element {
           }
         />
 
+        {autoEntries.length > 0 && (
+          <button
+            type="button"
+            aria-pressed={autoOnly}
+            onClick={() => setAutoOnly((v) => !v)}
+            className="mb-2 rounded-full px-3 py-1 text-sm"
+            style={{
+              border: `1px solid ${autoOnly ? "var(--ts-accent)" : "var(--color-border)"}`,
+              color: autoOnly ? "var(--ts-accent)" : "var(--text-muted)",
+            }}
+            title={t("places:autoFilter.info")}
+          >
+            {t("places:autoFilter.label")} ({autoEntries.length})
+          </button>
+        )}
         <PlaceListTable
           listId={list.id}
           refreshKey={list}
+          autoOnly={autoOnly && autoEntries.length > 0}
           iconOf={(category) => placeCategoryIcon(category, customs)}
           onRemove={(placeId) => void handleRemove(placeId)}
           onMove={handleMove}

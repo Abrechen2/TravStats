@@ -40,7 +40,12 @@ type LoadState = "loading" | "ok" | "failed";
  * link; the bytes come from the file route as a plain URL, because the JWT is an
  * HttpOnly cookie that a navigation carries.
  */
-export default function UnfiledDocumentsSection(): JSX.Element {
+export default function UnfiledDocumentsSection({
+  onCount,
+}: {
+  /** Waiting documents once measured; null while unknown or when the read failed. */
+  onCount?: (count: number | null) => void;
+} = {}): JSX.Element {
   const { t } = useTranslation(["dataQuality", "common", "documents"]);
   const [unfiled, setUnfiled] = useState<UnfiledDocuments>({ ttlDays: 0, documents: [] });
   const [state, setState] = useState<LoadState>("loading");
@@ -77,6 +82,9 @@ export default function UnfiledDocumentsSection(): JSX.Element {
   const { upload, busy: uploading, errors: uploadErrors, repeats } = useDocumentUpload(load);
 
   const documents = unfiled.documents;
+  useEffect(() => {
+    onCount?.(state === "ok" ? documents.length : null);
+  }, [onCount, state, documents.length]);
   const chosen = documents.filter((d) => selected.has(d.id));
 
   const toggle = (id: string): void =>

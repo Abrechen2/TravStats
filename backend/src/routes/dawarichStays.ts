@@ -31,6 +31,12 @@ import {
   nextStayScanAt,
 } from "../services/dawarich/stays/availability";
 import { staySuggestionsEnabled } from "../services/settings/suggestionSwitches";
+import {
+  matchesSource,
+  sourceNames,
+  SOURCE_FILTER,
+  staySourcesOf,
+} from "../services/dawarich/stays/staySource";
 
 const router = Router();
 /** A model request per click; 20 a minute is a person working through the inbox. */
@@ -224,10 +230,12 @@ router.post("/visits/scan", rejectDemo, scanLimiter, async (req: AuthRequest, re
 });
 /** Rows the inbox list answers with; `meta.truncated` says when it was cut. */
 const STAY_LIST_CAP = 200;
+/** Rows read to find up to `STAY_LIST_CAP` matches of a source filter. */
+const STAY_SOURCE_SCAN_CAP = 2000;
 router.get("/", async (req: AuthRequest, res, next) => {
   try {
     const userId = user(req);
-    const { status, from, to } = z
+    const { status, from, to, source } = z
       .object({
         // `invalidated`: a TravTrack finding whose history went before it was
         // accepted (E4). A Dawarich account never has one.
@@ -238,6 +246,8 @@ router.get("/", async (req: AuthRequest, res, next) => {
         // 2026-10-23): a stay is in it when the two overlap.
         from: z.coerce.date().optional(),
         to: z.coerce.date().optional(),
+        // A source filter (owner 2026-11-26): `smartList:<id>`, `plugin:<id>`, `calendar`, …
+        source: z.string().regex(SOURCE_FILTER).optional(),
       })
       .parse(req.query);
     // Switched off (forgejo#306): no pending suggestions are offered, and none
@@ -261,7 +271,8 @@ router.get("/", async (req: AuthRequest, res, next) => {
         ...(from ? { endAt: { gte: from } } : {}),
       },
       orderBy: [{ startAt: "desc" }, { id: "asc" }],
-      take: STAY_LIST_CAP + 1,
+      // With a source filter the cap applies to the matches, not to the rows read before it.
+      take: (source ? STAY_SOURCE_SCAN_CAP : STAY_LIST_CAP) + 1,
       include: { visit: { select: { id: true, placeId: true } } },
     });
     // A TravTrack finding made under an earlier source choice says so (E4);
@@ -272,12 +283,22 @@ router.get("/", async (req: AuthRequest, res, next) => {
         select: { locationProviderRev: true },
       })
     )?.locationProviderRev;
-    const truncated = rows.length > STAY_LIST_CAP;
+    const names = await sourceNames(userId);
+    const matching = rows
+      .slice(0, source ? STAY_SOURCE_SCAN_CAP : STAY_LIST_CAP)
+      .map((row) => ({ row, sources: staySourcesOf(row, names) }))
+      .filter(({ sources }) => !source || matchesSource(sources, source));
+    const truncated =
+      matching.length > STAY_LIST_CAP ||
+      rows.length > (source ? STAY_SOURCE_SCAN_CAP : STAY_LIST_CAP);
+    const sourced = matching.slice(0, STAY_LIST_CAP);
     res.json({
       success: true,
       meta: { truncated },
-      data: rows.slice(0, STAY_LIST_CAP).map((row) => ({
+      data: sourced.map(({ row, sources }) => ({
         ...withStayTimes(row),
+        source: sources[0],
+        sources,
         ...(row.provider === "travtrack" && rev !== undefined && row.providerRev < rev
           ? { beforeSourceSwitch: true as const }
           : {}),

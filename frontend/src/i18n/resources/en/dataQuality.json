@@ -500,7 +500,20 @@
           "covered": "Already recorded"
         }
       },
-      "moreAnswers": "More answers to this question"
+      "moreAnswers": "More answers to this question",
+      "origin": {
+        "label": "Source",
+        "all": "All",
+        "info": "Shows only suggestions from this source. Nothing is changed.",
+        "photos": "Photos",
+        "travtrack": "TravTrack",
+        "calendar": "Calendar"
+      }
+    },
+    "tabs": {
+      "documents": "Documents",
+      "plugins": "Plugins",
+      "documentsLink": "{{count}} documents waiting to be filed"
     }
   },
   "flag": {
@@ -827,6 +840,56 @@
       "generic": "That did not work. Please try again.",
       "alreadyResolved": "This position was already named or dismissed. The list has been reloaded.",
       "notFound": "This position no longer exists. The list has been reloaded."
+    }
+  },
+  "pluginInbox": {
+    "intro": "Proposals and messages from your plugins.",
+    "info": "Nothing is written to the project archive until you confirm a proposal on its own. You can edit it first and undo it afterwards.",
+    "reload": "Reload",
+    "loading": "Asking the plugins …",
+    "noPlugins": "No plugin with location maintenance is set up.",
+    "empty": "Nothing to do.",
+    "more": "{{plugin}}: {{count}} more under Settings → Plugins.",
+    "filterLabel": "Plugin",
+    "all": "All",
+    "sortLabel": "Sort",
+    "sort": {
+      "severity": "Severity",
+      "date": "Date",
+      "stop": "With stop proposal"
+    },
+    "severity": {
+      "error": "Missing",
+      "warning": "Check",
+      "info": "Note"
+    },
+    "hasStop": "Stop proposal",
+    "edit": "Edit",
+    "ignore": "Ignore",
+    "openRow": "Open row",
+    "mapHint": "Click the map to set the position.",
+    "position": "Position: {{lat}}, {{lon}}",
+    "noPosition": "No position chosen yet.",
+    "street": "Street",
+    "postcode": "Postcode",
+    "town": "Town",
+    "take": "Apply …",
+    "undo": "Undo",
+    "applied": "{{name}} written to the project archive.",
+    "undone": "{{name}} undone.",
+    "appliedTitle": "Applied",
+    "confirm": {
+      "title": "Write to the project archive?",
+      "writes": "Will be written to the project archive ({{plugin}}, {{name}}):",
+      "coords": "Coordinates: {{lat}}, {{lon}}",
+      "field": "{{label}}: {{value}}",
+      "kept": "{{label}} stays: {{value}}",
+      "undo": "Can be undone afterwards.",
+      "button": "Confirm"
+    },
+    "undoConfirm": {
+      "title": "Undo in the project archive?",
+      "message": "The previous values of {{name}} are written back to the project archive ({{plugin}})."
     }
   }
 }

@@ -13,6 +13,7 @@
  * counts only those visits.
  */
 import { prisma } from "../../db";
+import { AUTO_CREATED_BY } from "./autoVisitUndo";
 import { LIST_SORT_KEYS } from "../../schemas/placeList";
 import { classifyVisit } from "../../shared/placeCounting";
 import { haversineKm } from "../../shared/geo/haversine";
@@ -63,6 +64,7 @@ export interface ListMembersQuery {
   page: number;
   pageSize: number;
   q?: string;
+  auto?: boolean;
 }
 
 const dayOf = (d: Date | null): string | null => (d ? d.toISOString().slice(0, 10) : null);
@@ -71,7 +73,7 @@ function sourceOf(
   entryCreatedBy: string | null,
   place: { createdBy: string | null; dataSource: string | null }
 ): ListMemberSource {
-  if (entryCreatedBy === "brandRule") return "rule";
+  if (entryCreatedBy === "brandRule" || entryCreatedBy === "auto") return "rule";
   if (entryCreatedBy === PLUGIN_ENTRY_CREATED_BY) return "plugin";
   if (entryCreatedBy === "import" || place.createdBy === "import" || place.dataSource === "import")
     return "import";
@@ -143,7 +145,12 @@ export async function listMembers(
   const places = await prisma.place.findMany({
     where: {
       userId,
-      listEntries: { some: { listId } },
+      listEntries: {
+        some: {
+          listId,
+          ...(query.auto ? { createdBy: { in: [...AUTO_CREATED_BY] } } : {}),
+        },
+      },
       ...(q
         ? {
             OR: [
