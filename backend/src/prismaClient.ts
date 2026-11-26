@@ -10,11 +10,18 @@
  */
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type Prisma } from "./prisma";
+import { poolTimeoutConfig, type SessionTimeouts } from "./services/db/sessionTimeouts";
 
 export interface PrismaClientOptions {
   /** Defaults to `process.env.DATABASE_URL`. */
   url?: string;
   log?: Prisma.PrismaClientOptions["log"];
+  /**
+   * Per-session statement and idle-in-transaction timeouts. Only the app's
+   * singleton passes them; seeds, backfills and the drift check keep the
+   * server default, since they run long statements on purpose.
+   */
+  sessionTimeouts?: SessionTimeouts;
 }
 
 /**
@@ -30,9 +37,12 @@ export interface PrismaClientOptions {
 export function createPrismaClient(options: PrismaClientOptions = {}): PrismaClient {
   const connectionString = options.url ?? process.env.DATABASE_URL ?? "";
   const limit = /[?&]connection_limit=(\d+)/.exec(connectionString);
-  const adapter = new PrismaPg(
-    limit ? { connectionString, max: Number(limit[1]) } : { connectionString }
-  );
+  const timeouts = options.sessionTimeouts ? poolTimeoutConfig(options.sessionTimeouts) : {};
+  const adapter = new PrismaPg({
+    connectionString,
+    ...(limit ? { max: Number(limit[1]) } : {}),
+    ...timeouts,
+  });
   return options.log
     ? new PrismaClient({ adapter, log: options.log })
     : new PrismaClient({ adapter });

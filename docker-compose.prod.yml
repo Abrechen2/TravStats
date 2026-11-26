@@ -61,6 +61,21 @@ services:
         SCRIPT
         chmod 755 /docker-entrypoint-initdb.d/20-app-role.sh
         exec docker-entrypoint.sh postgres
+        # Sizing for the box (docs/ops/postgres-tuning.md). Postgres' defaults
+        # assume a tiny machine with spinning disks. For a 4 GiB box shared
+        # with the app, replace the line above with (one line, or end each
+        # line with a backslash):
+        #   exec docker-entrypoint.sh postgres
+        #     -c shared_buffers=512MB -c effective_cache_size=2GB
+        #     -c work_mem=16MB -c maintenance_work_mem=256MB -c jit=off
+        #     -c effective_io_concurrency=64 -c wal_compression=on
+        #     -c max_wal_size=2GB -c checkpoint_completion_target=0.9
+        # SSD/NVMe only, after the benchmark in the runbook:
+        #     -c random_page_cost=1.1
+        # Slow-query visibility (Admin → Laufzeit), then once
+        # `CREATE EXTENSION pg_stat_statements;` as the superuser:
+        #     -c shared_preload_libraries=pg_stat_statements
+        #     -c track_io_timing=on -c log_min_duration_statement=500ms
     environment:
       POSTGRES_DB: flights
       POSTGRES_USER: postgres
@@ -183,6 +198,13 @@ services:
       # own backup first and unset it again afterwards. See README → Upgrades.
       # SKIP_PRE_MIGRATION_BACKUP: "true"
       DOCKER: "true"
+
+      # The Node heap is sized from this container's memory limit at boot
+      # (55 %, 512..4096 MB; logged as "Node heap: …"). Pin it if needed:
+      # NODE_MAX_OLD_SPACE_MB: "1536"
+      # Per-connection Postgres timeouts (milliseconds, 0 = off):
+      # DB_STATEMENT_TIMEOUT_MS: "30000"
+      # DB_IDLE_IN_TRANSACTION_TIMEOUT_MS: "300000"
     volumes:
       - travstats-app-data:/app/data
     depends_on:

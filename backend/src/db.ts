@@ -16,6 +16,7 @@ import {
 } from "./services/purpose/placeVisited";
 import { inheritPurposeOnCreate } from "./services/purpose/tripInheritance";
 import { createPrismaClient } from "./prismaClient";
+import { sessionTimeoutsFromEnv } from "./services/db/sessionTimeouts";
 import {
   captureWrite,
   configureChangeLedger,
@@ -31,6 +32,7 @@ import { toLoggable } from "./utils/logging/toLoggable";
 import { getLoggingRuntimeFlags } from "./utils/logging/runtimeFlags";
 
 const basePrisma = createPrismaClient({
+  sessionTimeouts: sessionTimeoutsFromEnv(),
   log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
 });
 // The change ledger reads its snapshots and writes its rows on the unextended
