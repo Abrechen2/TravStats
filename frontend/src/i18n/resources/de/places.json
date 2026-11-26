@@ -1044,7 +1044,8 @@
     "undoAll": "Alle zurücknehmen",
     "undoAllTitle": "Alle zurücknehmen?",
     "undoAllMessage": "{{count}} automatische Einträge werden zurückgenommen. Was du ergänzt hast, bleibt.",
-    "undoAllFailed": "{{count}} Einträge konnten nicht zurückgenommen werden."
+    "undoAllFailed": "{{count}} Einträge konnten nicht zurückgenommen werden.",
+    "pendingCountsFailed": "Offene Bestätigungen konnten nicht gezählt werden."
   },
   "autoFilter": {
     "label": "Automatisch eingetragen",

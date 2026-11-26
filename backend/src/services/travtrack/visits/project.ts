@@ -59,6 +59,7 @@ import {
 import { stopTimes, visitEvidence, visitStopsOf } from "./stops";
 import { matchBrandRules, type BrandRuleInput } from "./brandMatch";
 import { BRAND_RULE, loadBrandRules } from "../../places/brandRules";
+import { markMaintenanceDue } from "../../plugins/maintenanceCache";
 import { acceptStay } from "../../dawarich/stays/review";
 import { loadCalendarContext, type CalendarContext, type CalendarMatchDeps } from "./calendarMatch";
 import { publish } from "./publish";
@@ -726,6 +727,8 @@ export async function projectVisitSuggestions(
         const generation = await historyGeneration(prisma, userId);
         return (await writeEvidence(ctx, generation, id, evidence)) === "created";
       });
+    // New stops are what maintenance proposals are made of: the inbox's copy refreshes soon.
+    if (ctx.plugins && result.created > 0) await markMaintenanceDue(userId, now);
     return result;
   } catch (error) {
     logger.warn({ operation: "travtrack.visits.failed", userId, error: (error as Error).message });

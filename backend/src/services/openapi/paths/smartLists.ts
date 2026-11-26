@@ -157,7 +157,21 @@ registry.registerPath({
     "Up to 100, newest first, the same rows the stay inbox lists (answer them through `POST /dawarich-stays/{id}/accept` or `/reject`). A match at a venue that is not yet a place is a new outlet (`/suggestions`). Empty while stay suggestions are switched off.",
   tags,
   request: { params: z.object({ listId: uuid }) },
-  responses: { 200: envelope(z.array(suggestion)), 404: notFound },
+  responses: {
+    200: {
+      description: "The newest 100; `meta.total` counts all",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            meta: z.object({ total: z.number().int() }),
+            data: z.array(suggestion),
+          }),
+        },
+      },
+    },
+    404: notFound,
+  },
 });
 
 registry.registerPath({

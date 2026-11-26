@@ -92,8 +92,13 @@ export async function listPlaceSuggestions(placeId: string): Promise<SmartSugges
 }
 
 /** Pending visit confirmations of this list at places the owner already has. */
-export async function listPendingConfirmations(listId: string): Promise<SmartSuggestion[]> {
-  return (await api.get<Envelope<SmartSuggestion[]>>(`${base}/${listId}/pending`)).data.data;
+export async function listPendingConfirmations(
+  listId: string
+): Promise<{ rows: SmartSuggestion[]; total: number }> {
+  const { data } = await api.get<Envelope<SmartSuggestion[]> & { meta?: { total?: number } }>(
+    `${base}/${listId}/pending`
+  );
+  return { rows: data.data, total: data.meta?.total ?? data.data.length };
 }
 /** `{ listId: count }` of pending matches per smart list; a list with none is absent. */
 export async function listPendingCounts(): Promise<Record<string, number>> {

@@ -15,8 +15,7 @@ import {
 const NS = "dataQuality:pluginInbox";
 const MS = "suggestionSources:plugins.maintenance";
 
-/** Up to six decimals, as the plugin writes them: the confirmation shows exactly that. */
-export const coord = (x: number) => x.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
+import { archiveUndoRequest, archiveWriteRequest, coord } from "./archiveConfirm";
 
 type Line = { ok: boolean; text: string };
 
@@ -68,23 +67,16 @@ export default function PluginRowEditor({
       postcode: changed(postcode, row.postcode),
       town: changed(town, row.town),
     };
-    const field = (label: string, next: string | undefined, before: string | null | undefined) =>
-      next
-        ? t(`${NS}.confirm.field`, { label, value: next })
-        : t(`${NS}.confirm.kept`, { label, value: before || "—" });
-    const message = [
-      t(`${NS}.confirm.writes`, { plugin: plugin.name, name: row.name }),
-      t(`${NS}.confirm.coords`, { lat: coord(at.lat), lon: coord(at.lon) }),
-      field(t(`${NS}.street`), values.street, row.street),
-      field(t(`${NS}.postcode`), values.postcode, row.postcode),
-      field(t(`${NS}.town`), values.town, row.town),
-      t(`${NS}.confirm.undo`),
-    ].join("\n");
-    const ok = await confirm({
-      title: t(`${NS}.confirm.title`),
-      message,
-      confirmText: t(`${NS}.confirm.button`),
-    });
+    const ok = await confirm(
+      archiveWriteRequest(t, {
+        plugin: plugin.name,
+        name: row.name,
+        lat: at.lat,
+        lon: at.lon,
+        values,
+        before: row,
+      })
+    );
     if (!ok) return;
     setBusy(true);
     setLine(null);
@@ -110,11 +102,7 @@ export default function PluginRowEditor({
   const undo = async () => {
     if (!undoId) return;
     // Undo writes to the archive too: it is confirmed like the write itself.
-    const ok = await confirm({
-      title: t(`${NS}.undoConfirm.title`),
-      message: t(`${NS}.undoConfirm.message`, { plugin: plugin.name, name: row.name }),
-      confirmText: t(`${NS}.undo`),
-    });
+    const ok = await confirm(archiveUndoRequest(t, plugin.name, row.name));
     if (!ok) return;
     setBusy(true);
     try {

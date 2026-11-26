@@ -38,6 +38,7 @@ export default function SmartListPanel({
   const [loaded, setLoaded] = useState(false);
   const [outlets, setOutlets] = useState<SmartSuggestion[]>([]);
   const [pending, setPending] = useState<SmartSuggestion[]>([]);
+  const [pendingTotal, setPendingTotal] = useState(0);
   const { confirm, confirmDialog } = useConfirmDialog();
   const [auto, setAuto] = useState<SmartSuggestion[]>([]);
   const [failed, setFailed] = useState(false);
@@ -55,11 +56,13 @@ export default function SmartListPanel({
           listNewOutlets(listId),
           listAutoAccepted(listId),
         ]);
-        setPending(p);
+        setPending(p.rows);
+        setPendingTotal(p.total);
         setOutlets(o);
         setAuto(a);
       } else {
         setPending([]);
+        setPendingTotal(0);
         setOutlets([]);
         setAuto([]);
       }
@@ -148,6 +151,7 @@ export default function SmartListPanel({
 
           <PendingConfirmations
             rows={pending}
+            total={pendingTotal}
             onAnswered={() => {
               void load();
               onChanged();

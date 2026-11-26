@@ -7,6 +7,7 @@
  */
 import { prisma } from "../../db";
 import { recheckAchievements } from "../../utils/achievements";
+import { runUnfiltered } from "../provenance/recordedOnly";
 import { BRAND_RULE, matchesOf, undoAutoAccepted } from "./brandRules";
 
 /** A write and its bookkeeping land within this of each other; a later update is an edit. */
@@ -64,7 +65,18 @@ async function undoOne(userId: string, visitId: string): Promise<AutoUndoOutcome
     visit.rating !== null ||
     Object.values(visit._count).some((n) => n > 0);
   if (added) return { visitId, outcome: "kept", reason: "ownerAdded" };
-  await prisma.placeVisit.delete({ where: { id: visit.id } });
+  await prisma.$transaction(async (tx) => {
+    await tx.placeVisit.delete({ where: { id: visit.id } });
+    // The last visit gone, the place is no longer "visited" (every visit counts, a hidden one too).
+    const left = await runUnfiltered(
+      async () => await tx.placeVisit.count({ where: { placeId: visit.placeId } })
+    );
+    if (left === 0)
+      await tx.place.updateMany({
+        where: { id: visit.placeId, userId, visited: true },
+        data: { visited: false },
+      });
+  });
   return { visitId, outcome: "removed" };
 }
 

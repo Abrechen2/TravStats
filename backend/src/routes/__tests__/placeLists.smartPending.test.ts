@@ -100,6 +100,7 @@ describe("Smart lists: pending confirmations, inbox sources, automatic visits", 
     expect(res.status).toBe(200);
     expect(res.body.data.map((r: { id: string }) => r.id)).toEqual([mine.id]);
     expect(res.body.data[0].lists).toEqual([{ listId: listA, listName: "Maccis" }]);
+    expect(res.body.meta).toEqual({ total: 1 });
   });
 
   it("an accepted suggestion leaves the pending section", async () => {
@@ -189,6 +190,17 @@ describe("Smart lists: pending confirmations, inbox sources, automatic visits", 
       ]);
       const left = await prisma.placeVisit.findMany({ where: { placeId }, select: { id: true } });
       expect(left.map((v) => v.id).sort()).toEqual([own.id, noted.id].sort());
+    });
+
+    it("the last imported visit undone, the place is no longer visited; with another left it stays", async () => {
+      await prisma.place.update({ where: { id: placeId }, data: { visited: true } });
+      const first = await visit("import");
+      const second = await visit(null);
+      await undo([first.id]);
+      expect((await prisma.place.findUnique({ where: { id: placeId } }))?.visited).toBe(true);
+      await prisma.placeVisit.update({ where: { id: second.id }, data: { createdBy: "import" } });
+      await undo([second.id]);
+      expect((await prisma.place.findUnique({ where: { id: placeId } }))?.visited).toBe(false);
     });
 
     it("keeps an automatic visit the owner edited since (date, trip, place)", async () => {

@@ -35,6 +35,7 @@ export default function PlaceListsPage(): JSX.Element {
 
   const [lists, setLists] = useState<PlaceList[]>([]);
   const [pendingCounts, setPendingCounts] = useState<Record<string, number>>({});
+  const [countsFailed, setCountsFailed] = useState(false);
   const [curated, setCurated] = useState<CuratedListSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -62,12 +63,16 @@ export default function PlaceListsPage(): JSX.Element {
   useEffect(() => {
     if (access !== "allowed") return;
     void load();
-    // The badge is a pointer, not the record: without it the list still opens with its section.
-    listPendingCounts()
-      .then(setPendingCounts)
-      .catch((err: unknown) => {
+    // The badge is a pointer, not the record: a failed read is said, the lists still open.
+    void (async () => {
+      try {
+        setPendingCounts(await listPendingCounts());
+        setCountsFailed(false);
+      } catch (err: unknown) {
         logger.warn({ err }, "PlaceListsPage: pending counts could not be read");
-      });
+        setCountsFailed(true);
+      }
+    })();
   }, [access, load]);
 
   // A subscribed checklist is shown under checklists, with its progress — so it
@@ -168,6 +173,16 @@ export default function PlaceListsPage(): JSX.Element {
               >
                 {t("places:lists.ownSection")}
               </h2>
+              {countsFailed && (
+                <p
+                  role="alert"
+                  className="mb-3 text-xs"
+                  style={{ color: "var(--ts-warn)" }}
+                  data-testid="list-pending-failed"
+                >
+                  {t("places:smartList.pendingCountsFailed")}
+                </p>
+              )}
               {ownLists.length === 0 ? (
                 // forgejo#250: the empty section names its next step.
                 <div className="flex flex-wrap items-center gap-3">

@@ -63,6 +63,17 @@ describe("PlaceListsPage — states", () => {
     listPendingCounts.mockResolvedValue({});
   });
 
+  it("says so when the pending counts could not be read, and still lists", async () => {
+    listPendingCounts.mockRejectedValue(new Error("offline"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await renderPage();
+    expect(await screen.findByTestId("list-pending-failed")).toHaveTextContent(
+      "Offene Bestätigungen konnten nicht gezählt werden."
+    );
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it("a smart list's card carries its pending count, a list without one carries none", async () => {
     const list = (id: string, name: string) => ({
       id,

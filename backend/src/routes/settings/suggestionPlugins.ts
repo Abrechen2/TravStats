@@ -46,6 +46,11 @@ import {
   MAINTENANCE_SOURCES,
 } from "../../services/plugins/contract";
 import type { Precision } from "../../services/plugins/registry";
+import {
+  readMaintenanceInbox,
+  refreshAccountCaches,
+  refreshMaintenanceCache,
+} from "../../services/plugins/maintenanceCache";
 
 const router = Router();
 
@@ -80,6 +85,43 @@ const maintenanceLimiter = rateLimit({
 });
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+/** "Jetzt aktualisieren" asks every plugin live: a few times an hour per account. */
+const refreshLimiter = rateLimit({
+  windowMs: 60 * 60_000,
+  max: patAwareMax(6),
+  keyGenerator: userOrIpKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const localeOf = (v: unknown): "de" | "en" => (v === "en" ? "en" : "de");
+
+/** The inbox's Plugins tab: the cached proposals and notices of every plugin (no live call). */
+router.get("/maintenance/inbox", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    res.json(await readMaintenanceInbox(req.userId!));
+  } catch (error) {
+    next(error);
+  }
+});
+
+/** "Jetzt aktualisieren": ask every enabled plugin live, then answer the fresh copy. */
+router.post(
+  "/maintenance/refresh",
+  refreshLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { locale } = z
+        .object({ locale: z.enum(["de", "en"]).optional() })
+        .strict()
+        .parse(req.body ?? {});
+      await refreshAccountCaches(req.userId!, localeOf(locale));
+      res.json(await readMaintenanceInbox(req.userId!));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -354,7 +396,10 @@ router.post(
         .strict()
         .parse(req.body);
       const plugin = await maintainedPlugin(req);
-      res.json(await runMaintenance(plugin, "apply", body));
+      const answer = await runMaintenance(plugin, "apply", body);
+      // The inbox's copy follows the write at once (it never throws; a failure is stored).
+      await refreshMaintenanceCache(plugin);
+      res.json(answer);
     } catch (error) {
       next(error);
     }
@@ -371,7 +416,10 @@ router.post(
         .strict()
         .parse(req.body);
       const plugin = await maintainedPlugin(req);
-      res.json(await runMaintenance(plugin, "undo", body));
+      const answer = await runMaintenance(plugin, "undo", body);
+      // The inbox's copy follows the write at once (it never throws; a failure is stored).
+      await refreshMaintenanceCache(plugin);
+      res.json(answer);
     } catch (error) {
       next(error);
     }
@@ -385,7 +433,10 @@ router.post(
     try {
       const body = z.object({ rowId: rowIdSchema, ignored: z.boolean() }).strict().parse(req.body);
       const plugin = await maintainedPlugin(req);
-      res.json(await runMaintenance(plugin, "ignore", body));
+      const answer = await runMaintenance(plugin, "ignore", body);
+      // The inbox's copy follows the write at once (it never throws; a failure is stored).
+      await refreshMaintenanceCache(plugin);
+      res.json(answer);
     } catch (error) {
       next(error);
     }

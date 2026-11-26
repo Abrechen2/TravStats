@@ -1044,7 +1044,8 @@
     "undoAll": "Undo all",
     "undoAllTitle": "Undo all?",
     "undoAllMessage": "{{count}} automatic entries will be undone. What you added stays.",
-    "undoAllFailed": "{{count}} entries could not be undone."
+    "undoAllFailed": "{{count}} entries could not be undone.",
+    "pendingCountsFailed": "Pending confirmations could not be counted."
   },
   "autoFilter": {
     "label": "Added automatically",

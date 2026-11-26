@@ -1,101 +1,109 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  pluginFailureKey,
   pluginRequestFailureKey,
   suggestionPluginsApi,
   type MaintenanceApplied,
+  type MaintenanceInbox,
   type SuggestionPlugin,
 } from "../../../lib/api/suggestionPlugins";
 import { entriesOf, type PluginEntry } from "./pluginInboxModel";
 
-/** Rows read per plugin for the inbox; the settings dialog pages through the rest. */
-export const INBOX_PAGE = 50;
-
 export interface PluginInbox {
   loaded: boolean;
-  /** Plugins (or the plugin list itself, `plugin: null`) that did not answer, with the i18n key. */
+  /** Plugins whose last refresh failed (their older answer is still listed), or the read itself. */
   failed: { plugin: SuggestionPlugin | null; key: string }[];
   plugins: SuggestionPlugin[];
   entries: PluginEntry[];
   applied: { plugin: SuggestionPlugin; item: MaintenanceApplied }[];
-  /** Rows beyond the first page, per plugin id. */
+  /** Rows beyond the cached first page, per plugin id. */
   more: Record<string, number>;
+  /** The oldest copy's time; null when a plugin was never asked yet. */
+  refreshedAt: string | null;
+  refreshing: boolean;
+  /** Re-read the cached copy (after a write the server refreshed it). */
   reload: () => Promise<void>;
+  /** "Jetzt aktualisieren": ask every plugin live. */
+  refresh: () => Promise<void>;
 }
 
-/**
- * Reads every enabled plugin that offers maintenance: its rows with proposals, its notices and the
- * writes that can still be undone. One plugin that fails is named and never hides the others.
- */
-export function usePluginInbox(locale: "de" | "en", active: boolean): PluginInbox {
-  const [state, setState] = useState<Omit<PluginInbox, "reload">>({
-    loaded: false,
+type State = Omit<PluginInbox, "reload" | "refresh">;
+const EMPTY: State = {
+  loaded: false,
+  failed: [],
+  plugins: [],
+  entries: [],
+  applied: [],
+  more: {},
+  refreshedAt: null,
+  refreshing: false,
+};
+
+function stateOf(inbox: MaintenanceInbox): State {
+  const next: State = {
+    ...EMPTY,
+    loaded: true,
     failed: [],
     plugins: [],
     entries: [],
     applied: [],
     more: {},
-  });
+  };
+  let oldest: string | null | undefined;
+  for (const e of inbox.plugins) {
+    next.plugins.push(e.plugin);
+    if (e.failure) next.failed.push({ plugin: e.plugin, key: pluginFailureKey(e.failure) });
+    if (oldest !== null)
+      oldest = !e.refreshedAt ? null : !oldest || e.refreshedAt < oldest ? e.refreshedAt : oldest;
+    if (!e.data) continue;
+    next.entries.push(...entriesOf(e.plugin, e.data.rows ?? [], e.data.notices ?? []));
+    next.applied.push(...(e.data.applied ?? []).map((item) => ({ plugin: e.plugin, item })));
+    const total = e.data.totalRows ?? e.data.rows?.length ?? 0;
+    if (total > (e.data.rows?.length ?? 0)) next.more[e.plugin.id] = total - e.data.rows.length;
+  }
+  next.refreshedAt = oldest ?? null;
+  return next;
+}
 
-  const reload = useCallback(async () => {
-    let plugins: SuggestionPlugin[];
+/** A refused or failed request as its i18n key; a 429 is the rate limit, whatever the body says. */
+function requestKey(e: unknown): string {
+  const status = (e as { response?: { status?: number } })?.response?.status;
+  return status === 429 ? "plugins.failure.reason.rateLimited" : pluginRequestFailureKey(e);
+}
+
+/**
+ * The Plugins tab's data: the server's cached copy of every plugin's maintenance answer (a paced
+ * poll keeps it fresh), so opening the inbox asks no plugin. A failed refresh is named next to the
+ * older answer it left; "Jetzt aktualisieren" asks live.
+ */
+export function usePluginInbox(locale: "de" | "en"): PluginInbox {
+  const [state, setState] = useState<State>(EMPTY);
+
+  const run = useCallback(async (read: () => Promise<MaintenanceInbox>) => {
+    setState((s) => ({ ...s, refreshing: true }));
     try {
-      const listed = await suggestionPluginsApi.list();
-      plugins = listed.blocked ? [] : listed.plugins.filter((p) => p.enabled);
+      setState(stateOf(await read()));
     } catch (e) {
-      const key = pluginRequestFailureKey(e);
-      console.warn("plugin inbox: the plugin list failed", key);
-      setState({
+      const key = requestKey(e);
+      console.warn("plugin inbox: the read failed", key);
+      setState((s) => ({
+        ...s,
         loaded: true,
-        failed: [{ plugin: null, key }],
-        plugins: [],
-        entries: [],
-        applied: [],
-        more: {},
-      });
-      return;
+        refreshing: false,
+        failed: [{ plugin: null, key }, ...s.failed.filter((f) => f.plugin !== null)],
+      }));
     }
-    const results = await Promise.all(
-      plugins.map(async (plugin) => {
-        try {
-          const caps = await suggestionPluginsApi.capabilities(plugin.id);
-          if (!caps.maintenance) return { kind: "skip" as const, plugin };
-          const list = await suggestionPluginsApi.maintenance(plugin.id, locale, {
-            limit: INBOX_PAGE,
-          });
-          return { kind: "ok" as const, plugin, list };
-        } catch (e) {
-          const key = pluginRequestFailureKey(e);
-          console.warn("plugin inbox: a plugin did not answer", plugin.id, key);
-          return { kind: "failed" as const, plugin, key };
-        }
-      })
-    );
-    const next: Omit<PluginInbox, "reload"> = {
-      loaded: true,
-      failed: [],
-      plugins: [],
-      entries: [],
-      applied: [],
-      more: {},
-    };
-    for (const r of results) {
-      if (r.kind === "skip") continue;
-      next.plugins.push(r.plugin);
-      if (r.kind === "failed") {
-        next.failed.push({ plugin: r.plugin, key: r.key });
-        continue;
-      }
-      next.entries.push(...entriesOf(r.plugin, r.list.rows, r.list.notices ?? []));
-      next.applied.push(...(r.list.applied ?? []).map((item) => ({ plugin: r.plugin, item })));
-      const total = r.list.totalRows ?? r.list.rows.length;
-      if (total > r.list.rows.length) next.more[r.plugin.id] = total - r.list.rows.length;
-    }
-    setState(next);
-  }, [locale]);
+  }, []);
+
+  const reload = useCallback(() => run(() => suggestionPluginsApi.maintenanceInbox()), [run]);
+  const refresh = useCallback(
+    () => run(() => suggestionPluginsApi.refreshMaintenanceInbox(locale)),
+    [run, locale]
+  );
 
   useEffect(() => {
-    if (active) void reload();
-  }, [active, reload]);
+    void reload();
+  }, [reload]);
 
-  return { ...state, reload };
+  return { ...state, reload, refresh };
 }

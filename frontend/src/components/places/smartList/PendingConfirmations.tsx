@@ -14,9 +14,12 @@ import { SuggestionRow, acceptSuggestion, answerErrorKey } from "./SuggestionRow
  */
 export default function PendingConfirmations({
   rows,
+  total,
   onAnswered,
 }: {
   rows: SmartSuggestion[];
+  /** Every pending confirmation; `rows` holds the newest of them. */
+  total: number;
   onAnswered: () => void;
 }): JSX.Element | null {
   const { t } = useTranslation(["places", "common"]);
@@ -28,6 +31,7 @@ export default function PendingConfirmations({
     const ok = await confirm({
       title: t("places:smartList.pending.allTitle"),
       message: t("places:smartList.pending.allMessage", { count: rows.length }),
+      // "Alle" confirms the rows shown; with more pending, the rest come with the next read.
       confirmText: t("places:smartList.pending.all"),
     });
     if (!ok) return;
@@ -51,7 +55,7 @@ export default function PendingConfirmations({
     <div className="mt-4" data-testid="smart-list-pending">
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-          {t("places:smartList.pending.title", { count: rows.length })}
+          {t("places:smartList.pending.title", { count: Math.max(total, rows.length) })}
         </h2>
         <Toggletip content={t("places:smartList.pending.info")} />
         {rows.length > 1 && (

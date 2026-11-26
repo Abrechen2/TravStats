@@ -890,6 +890,10 @@
     "undoConfirm": {
       "title": "Im Projektarchiv zurücknehmen?",
       "message": "Die vorherigen Werte von {{name}} werden wieder ins Projektarchiv ({{plugin}}) geschrieben."
-    }
+    },
+    "refreshNow": "Jetzt aktualisieren",
+    "refreshedAt": "Stand: {{at}}",
+    "notYet": "Noch nicht abgefragt.",
+    "olderShown": "(älterer Stand)"
   }
 }

@@ -184,7 +184,9 @@ router.get("/:listId/pending", async (req: AuthRequest, res, next) => {
   try {
     const userId = requireUser(req);
     const listId = id.parse(req.params.listId);
-    res.json({ success: true, data: await pendingForList(userId, listId) });
+    const { rows, total } = await pendingForList(userId, listId);
+    // `meta.total`: every pending confirmation, where `data` holds the newest 100.
+    res.json({ success: true, meta: { total }, data: rows });
   } catch (error) {
     next(error);
   }

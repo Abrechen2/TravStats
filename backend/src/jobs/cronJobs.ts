@@ -140,6 +140,14 @@ export const CRON_JOBS: CronJob[] = [
     start: async () => (await import("./rerouteResumeScheduler")).startRerouteResumeScheduler(),
     stop: async () => (await import("./rerouteResumeScheduler")).stopRerouteResumeScheduler(),
   },
+  // Plugins' maintenance proposals for the inbox, every 15 min (6 h pace, sooner after new stops).
+  {
+    name: "plugin_maintenance_poll",
+    start: async () =>
+      (await import("./pluginMaintenanceScheduler")).startPluginMaintenanceScheduler(),
+    stop: async () =>
+      (await import("./pluginMaintenanceScheduler")).stopPluginMaintenanceScheduler(),
+  },
   // Kept originals (forgejo#116), hourly at :25.
   {
     name: "document_sweep",

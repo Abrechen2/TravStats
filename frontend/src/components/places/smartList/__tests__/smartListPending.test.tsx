@@ -73,16 +73,21 @@ describe("SmartListPanel: pending confirmations", () => {
   });
 
   it("shows this list's pending suggestions with a count, read for this list only", async () => {
-    listPendingConfirmations.mockResolvedValue([row("a", "McD Hbf"), row("b", "McD Ost")]);
+    listPendingConfirmations.mockResolvedValue({
+      rows: [row("a", "McD Hbf"), row("b", "McD Ost")],
+      total: 140,
+    });
     panel();
     const section = await screen.findByTestId("smart-list-pending");
-    expect(within(section).getByText("Ausstehende Bestätigungen (2)")).toBeInTheDocument();
+    expect(within(section).getByText("Ausstehende Bestätigungen (140)")).toBeInTheDocument();
     expect(within(section).getByText("McD Hbf")).toBeInTheDocument();
     expect(listPendingConfirmations).toHaveBeenCalledWith("l1");
   });
 
   it("an accepted suggestion moves to the visits: the section re-reads and the list is told", async () => {
-    listPendingConfirmations.mockResolvedValueOnce([row("a", "McD Hbf")]).mockResolvedValueOnce([]);
+    listPendingConfirmations
+      .mockResolvedValueOnce({ rows: [row("a", "McD Hbf")], total: 1 })
+      .mockResolvedValueOnce({ rows: [], total: 0 });
     accept.mockResolvedValue(undefined);
     const changed = vi.fn();
     panel(changed);
@@ -93,7 +98,10 @@ describe("SmartListPanel: pending confirmations", () => {
   });
 
   it("'Alle bestätigen' asks first and names a refused one", async () => {
-    listPendingConfirmations.mockResolvedValue([row("a", "McD Hbf"), row("b", "McD Ost")]);
+    listPendingConfirmations.mockResolvedValue({
+      rows: [row("a", "McD Hbf"), row("b", "McD Ost")],
+      total: 2,
+    });
     accept
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce({ response: { status: 409, data: { code: "TRAVTRACK_DISABLED" } } });

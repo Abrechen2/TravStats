@@ -12,6 +12,8 @@ const api = vi.hoisted(() => ({
   list: vi.fn(),
   capabilities: vi.fn(),
   maintenance: vi.fn(),
+  maintenanceInbox: vi.fn(),
+  refreshMaintenanceInbox: vi.fn(),
   applyLocation: vi.fn(),
   undoLocation: vi.fn(),
   ignoreRow: vi.fn(),
@@ -86,6 +88,20 @@ const LIST: MaintenanceList = {
   stopsWithheld: null,
 };
 
+const INBOX = (over: { failure?: string | null; data?: MaintenanceList | null } = {}) => ({
+  blocked: null,
+  plugins: [
+    {
+      plugin,
+      data: over.data === undefined ? LIST : over.data,
+      stopsSent: 1,
+      stopsWithheld: null,
+      refreshedAt: "2026-11-26T06:00:00Z",
+      failure: over.failure ?? null,
+    },
+  ],
+});
+
 const mount = (onCount = vi.fn()) => {
   render(<PluginsTab onCount={onCount} />);
   return onCount;
@@ -94,13 +110,7 @@ const mount = (onCount = vi.fn()) => {
 describe("PluginsTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    api.list.mockResolvedValue({ plugins: [plugin], blocked: null });
-    api.capabilities.mockResolvedValue({
-      capabilities: ["maintenance"],
-      maintenance: true,
-      error: null,
-    });
-    api.maintenance.mockResolvedValue(LIST);
+    api.maintenanceInbox.mockResolvedValue(INBOX());
     api.applyLocation.mockResolvedValue({ undoId: "u1", rowId: "r1", written: {} });
     api.undoLocation.mockResolvedValue({ undoId: "u1", rowId: "r1", restored: {} });
   });
@@ -174,10 +184,31 @@ describe("PluginsTab", () => {
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
 
-  it("names a plugin that did not answer", async () => {
-    api.maintenance.mockRejectedValue({ response: { data: { error: "timeout" } } });
+  it("opening the tab asks no plugin: it reads the server's copy", async () => {
+    mount();
+    await screen.findAllByTestId("plugin-entry");
+    expect(api.maintenanceInbox).toHaveBeenCalledTimes(1);
+    expect(api.maintenance).not.toHaveBeenCalled();
+    expect(api.capabilities).not.toHaveBeenCalled();
+    expect(api.refreshMaintenanceInbox).not.toHaveBeenCalled();
+  });
+
+  it("'Jetzt aktualisieren' asks live and says when it was refused by the rate limit", async () => {
+    api.refreshMaintenanceInbox.mockRejectedValueOnce({ response: { status: 429, data: {} } });
+    mount();
+    await screen.findAllByTestId("plugin-entry");
+    await userEvent.click(screen.getByRole("button", { name: "Jetzt aktualisieren" }));
+    await waitFor(() => expect(api.refreshMaintenanceInbox).toHaveBeenCalledWith("de"));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    // The older copy stays on screen.
+    expect(screen.getAllByTestId("plugin-entry").length).toBeGreaterThan(0);
+  });
+
+  it("names a plugin whose last refresh failed, next to its older answer", async () => {
+    api.maintenanceInbox.mockResolvedValue(INBOX({ failure: "timeout" }));
     mount();
     expect(await screen.findByRole("alert")).toHaveTextContent("Projekte:");
+    expect(screen.getAllByTestId("plugin-entry")).toHaveLength(2);
   });
 
   it("a notice shows its reason and opens its row", async () => {

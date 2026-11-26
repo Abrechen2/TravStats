@@ -7,7 +7,8 @@ import Toggletip from "../../ui/Toggletip";
 import { pluginRequestFailureKey, suggestionPluginsApi } from "../../../lib/api/suggestionPlugins";
 import { sortEntries, type PluginEntry, type PluginSort, type Severity } from "./pluginInboxModel";
 import { usePluginInbox } from "./usePluginInbox";
-import PluginRowEditor, { coord } from "./PluginRowEditor";
+import PluginRowEditor from "./PluginRowEditor";
+import { archiveUndoRequest, coord } from "./archiveConfirm";
 
 const NS = "dataQuality:pluginInbox";
 const MS = "suggestionSources:plugins.maintenance";
@@ -32,7 +33,7 @@ export default function PluginsTab({
   const fmt = useDisplayFormat();
   const { confirm, confirmDialog } = useConfirmDialog();
   const locale = i18n.language?.startsWith("en") ? "en" : "de";
-  const inbox = usePluginInbox(locale, true);
+  const inbox = usePluginInbox(locale);
   const [sort, setSort] = useState<PluginSort>("severity");
   const [pluginId, setPluginId] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -83,15 +84,23 @@ export default function PluginsTab({
       <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
         <p className="t-caption m-0">{t(`${NS}.intro`)}</p>
         <Toggletip content={t(`${NS}.info`)} />
-        <Button disabled={!inbox.loaded} onClick={() => void inbox.reload()}>
-          {t(`${NS}.reload`)}
+        <Button disabled={inbox.refreshing} onClick={() => void inbox.refresh()}>
+          {t(`${NS}.refreshNow`)}
         </Button>
+        {inbox.loaded && (
+          <span className="t-caption" data-testid="plugin-refreshed-at">
+            {inbox.refreshedAt
+              ? t(`${NS}.refreshedAt`, { at: fmt.dateTime(inbox.refreshedAt) })
+              : t(`${NS}.notYet`)}
+          </span>
+        )}
       </div>
 
       {inbox.failed.map((f, i) => (
         <p key={i} role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
           {f.plugin ? `${f.plugin.name}: ` : ""}
           {t(`suggestionSources:${f.key}`)}
+          {f.plugin ? ` ${t(`${NS}.olderShown`)}` : ""}
         </p>
       ))}
       {line && (
@@ -245,14 +254,7 @@ export default function PluginsTab({
               </span>
               <Button
                 onClick={async () => {
-                  const ok = await confirm({
-                    title: t(`${NS}.undoConfirm.title`),
-                    message: t(`${NS}.undoConfirm.message`, {
-                      plugin: plugin.name,
-                      name: item.name,
-                    }),
-                    confirmText: t(`${NS}.undo`),
-                  });
+                  const ok = await confirm(archiveUndoRequest(t, plugin.name, item.name));
                   if (!ok) return;
                   setLine(null);
                   try {

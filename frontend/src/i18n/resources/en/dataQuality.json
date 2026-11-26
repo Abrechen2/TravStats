@@ -890,6 +890,10 @@
     "undoConfirm": {
       "title": "Undo in the project archive?",
       "message": "The previous values of {{name}} are written back to the project archive ({{plugin}})."
-    }
+    },
+    "refreshNow": "Refresh now",
+    "refreshedAt": "As of {{at}}",
+    "notYet": "Not asked yet.",
+    "olderShown": "(older state)"
   }
 }

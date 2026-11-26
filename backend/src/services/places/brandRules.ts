@@ -337,20 +337,24 @@ const PENDING = { in: ["pending", "accepting"] };
  */
 export async function pendingForList(userId: string, listId: string) {
   await ownList(userId, listId);
-  if (!(await staySuggestionsEnabled(userId))) return [];
-  const rows = await prisma.dawarichStay.findMany({
-    where: {
-      userId,
-      status: PENDING,
-      provider: "travtrack",
-      placeId: { not: null },
-      evidence: matchFilter(listId) as Prisma.JsonFilter,
-    },
-    select: STAY_SELECT,
-    orderBy: [{ startAt: "desc" }, { id: "asc" }],
-    take: PENDING_LIMIT,
-  });
-  return named(userId, rows.map(viewOf));
+  if (!(await staySuggestionsEnabled(userId))) return { rows: [], total: 0 };
+  const where = {
+    userId,
+    status: PENDING,
+    provider: "travtrack",
+    placeId: { not: null },
+    evidence: matchFilter(listId) as Prisma.JsonFilter,
+  };
+  const [rows, total] = await Promise.all([
+    prisma.dawarichStay.findMany({
+      where,
+      select: STAY_SELECT,
+      orderBy: [{ startAt: "desc" }, { id: "asc" }],
+      take: PENDING_LIMIT,
+    }),
+    prisma.dawarichStay.count({ where }),
+  ]);
+  return { rows: await named(userId, rows.map(viewOf)), total };
 }
 
 /** Upper bound of pending matches read for the overview's badges. */
