@@ -30,6 +30,10 @@ Measured on prod (2026-11-26): 4 of 214 trips carry photos. Example: the three M
 | P2 | album proposals (name/date/folder) | one-line hint on the trip with link/dismiss | — |
 | P3 | business trips: period link offer + optional global auto setting | settings switch | show linked photos (later hand-over) |
 
-## Open for the owner
+## Owner decision (2026-11-26)
+
+The second PhotoPrism (unraid-2) is NOT connected: only the owner's own Cardinal sources (PhotoPrism + Immich). Decision 2 (photo_connections) is therefore deferred; P1 uses the existing single Immich and PhotoPrism connections.
+
+## Was open for the owner
 
 - Connect the second PhotoPrism (unraid-2, his mother's library) to his account: a credential is needed (Infisical `travstats/prod /ops`: `PHOTOPRISM_UNRAID2_URL`, `PHOTOPRISM_UNRAID2_TOKEN`, created as CHANGE_ME once he agrees).
