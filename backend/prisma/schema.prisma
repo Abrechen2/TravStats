@@ -8241,10 +8241,28 @@ model AccountArchiveImport {
   counts              Json
   importedAt          DateTime @default(now()) @map("imported_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rows AccountArchiveImportRow[]
 
   @@index([userId])
   @@map("account_archive_imports")
+}
+
+/// One row a running account-archive restore wrote: its table and primary key
+/// (`json_build_array` of the key columns, as text), recorded in the same
+/// statement as the insert. Undoing a failed or crashed restore deletes exactly
+/// these rows and nothing written meanwhile; a finished restore drops its
+/// entries. Gone with its import marker.
+model AccountArchiveImportRow {
+  id        BigInt @id @default(autoincrement())
+  archiveId String @map("archive_id")
+  tableName String @map("table_name")
+  rowKey    String @map("row_key")
+
+  import AccountArchiveImport @relation(fields: [archiveId], references: [archiveId], onDelete: Cascade)
+
+  @@index([archiveId, tableName])
+  @@map("account_archive_import_rows")
 }
 
 /// "Your recollection and your record disagree" — a notice in the Posteingang that a remembered

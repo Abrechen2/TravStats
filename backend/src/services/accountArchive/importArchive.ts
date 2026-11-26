@@ -15,12 +15,13 @@ import {
 import {
   applyDeferred,
   insertTable,
+  rowKeyExpr,
   resolveCatalogue,
   type DeferredUpdate,
   type KeyMaps,
 } from "./importRows";
 import { readContents, verifyChecksums, type ArchiveContents } from "./importValidate";
-import { buildPlan, selectionWhere, type ArchivePlan } from "./plan";
+import { buildPlan, type ArchivePlan } from "./plan";
 import { Remapper } from "./remap";
 import { removeFiles, writeFiles, type WrittenFile } from "./importFiles";
 import { USER_SETTINGS_SECRETS } from "./tablePolicy";
@@ -47,9 +48,10 @@ import logger from "../../utils/logger";
  * batch commits on its own, the restore pauses after each in proportion to
  * what it cost (`paceAfter`), and it holds the import write slot so it never
  * writes at the same time as a file import. "All or nothing" is kept by
- * compensation instead: the account was empty when the restore began
- * (`nonEmptyTables`), so undoing it deletes the account's rows in every table
- * the archive writes and puts back the rows it replaced. The archive id is
+ * compensation instead: every inserted row's key is recorded under the
+ * archive id in the same statement (`account_archive_import_rows`), and an
+ * undo deletes exactly those rows and puts back the rows it replaced, so
+ * whatever the account gained meanwhile survives. The archive id is
  * recorded first with `inProgress`, so a restore interrupted by a crash is
  * undone and run again by the next attempt instead of being reported done.
  */
@@ -75,6 +77,8 @@ const FINISH_TX_TIMEOUT_MS = 60_000;
 const restoresRunning = new Set<string>();
 /** Undoing a restore deletes everything it wrote, 870k TravTrack points on the largest account. */
 const LONG_UNDO_TX_TIMEOUT_MS = 30 * 60_000;
+/** Row-record entries a finished restore removes per statement. */
+const ROW_RECORD_BATCH = 10_000;
 /** account.json holds a handful of profile fields. */
 export const PROFILE_MAX_BYTES = 64 * 1024;
 
@@ -181,7 +185,12 @@ export async function importAccountArchive(
         context: { archiveId: manifest.archiveId, userId: targetUserId },
       });
       const kept = (earlier.counts as { replaced?: Record<string, unknown[]> }).replaced;
-      await undoImport(client, plan, targetUserId, kept ? new Map(Object.entries(kept)) : null);
+      await undoImport(
+        client,
+        plan,
+        manifest.archiveId,
+        kept ? new Map(Object.entries(kept)) : null
+      );
       await client.accountArchiveImport.delete({ where: { archiveId: manifest.archiveId } });
     } else if (earlier) {
       if (earlier.userId !== targetUserId) {
@@ -268,7 +277,7 @@ export async function importAccountArchive(
           failAfterRows: options.failAfterRows,
         });
       } catch (err) {
-        await undoImport(client, plan, targetUserId, snapshot).catch((undoErr: unknown) => {
+        await undoImport(client, plan, manifest.archiveId, snapshot).catch((undoErr: unknown) => {
           logger.error({
             operation: "account_archive_import_undo_failed",
             message: "A failed restore could not be undone; the next attempt will retry the undo",
@@ -282,6 +291,7 @@ export async function importAccountArchive(
       } finally {
         restoresRunning.delete(manifest.archiveId);
       }
+      await dropRowRecord(client, manifest.archiveId);
     } finally {
       slot.release();
     }
@@ -359,7 +369,16 @@ async function restoreRows(
   const keyMaps: KeyMaps = await resolveCatalogue(db, reader, plan, contents.catalogueTables);
   const deferred: DeferredUpdate[] = [];
   const skipped = new Set<string>();
-  const ctx = { plan, remap, keyMaps, deferred, verdicts, skipped, report: outcome };
+  const ctx = {
+    plan,
+    remap,
+    keyMaps,
+    deferred,
+    verdicts,
+    skipped,
+    report: outcome,
+    runId: input.archiveId,
+  };
   const counts: Record<string, number> = {};
   let keptSecrets: Record<string, unknown> | null = null;
   let inserted = 0;
@@ -431,18 +450,24 @@ async function snapshotReplaced(
 }
 
 /**
- * Undoes a restore: the account was empty when it began, so its rows in every
- * table the archive writes are the restore's. Late and cycle columns are
- * cleared first, then the tables are emptied children first, then the replaced
- * rows are put back. One transaction, with the restore's raised statement
- * timeout: the delete runs through everything the restore wrote.
+ * Undoes a restore: deletes exactly the rows it recorded under its archive id
+ * (`account_archive_import_rows`, written in the same statement as each
+ * insert), never a row the account gained meanwhile. Late and cycle columns
+ * of those rows are cleared first, then the tables are emptied children
+ * first, then the account's replaced rows are put back (unless the account
+ * already has a new one). One transaction, with the restore's raised
+ * statement timeout. A child row someone added under a restored parent goes
+ * with that parent through its foreign key's cascade.
  */
 async function undoImport(
   client: PrismaClient,
   plan: ArchivePlan,
-  userId: string,
+  archiveId: string,
   snapshot: Map<string, unknown[]> | null
 ): Promise<void> {
+  const mine = (p: ArchivePlan["tables"][number]) =>
+    `EXISTS (SELECT 1 FROM account_archive_import_rows r WHERE r.archive_id = $1 ` +
+    `AND r.table_name = '${p.table.name.split("'").join("''")}' AND r.row_key = ${rowKeyExpr(p.table, "t0")})`;
   await client.$transaction(
     async (tx) => {
       const db = tx as unknown as Db;
@@ -454,26 +479,38 @@ async function undoImport(
         if (late.length === 0) continue;
         const set = late.map((c) => `${quoteIdent(c)} = NULL`).join(", ");
         await db.$executeRawUnsafe(
-          `UPDATE ${quoteIdent(p.table.name)} t0 SET ${set} WHERE ${selectionWhere(plan, p.table.name)}`,
-          userId
+          `UPDATE ${quoteIdent(p.table.name)} t0 SET ${set} WHERE ${mine(p)}`,
+          archiveId
         );
       }
       for (const p of [...plan.tables].reverse()) {
         await db.$executeRawUnsafe(
-          `DELETE FROM ${quoteIdent(p.table.name)} t0 WHERE ${selectionWhere(plan, p.table.name)}`,
-          userId
+          `DELETE FROM ${quoteIdent(p.table.name)} t0 WHERE ${mine(p)}`,
+          archiveId
         );
       }
       for (const [table, rows] of snapshot ?? []) {
         if (rows.length === 0) continue;
         await db.$executeRawUnsafe(
-          `INSERT INTO ${quoteIdent(table)} SELECT * FROM json_populate_recordset(NULL::${quoteIdent(table)}, $1::json)`,
+          `INSERT INTO ${quoteIdent(table)} SELECT * FROM json_populate_recordset(NULL::${quoteIdent(table)}, $1::json) ON CONFLICT DO NOTHING`,
           JSON.stringify(rows)
         );
       }
     },
     { timeout: LONG_UNDO_TX_TIMEOUT_MS }
   );
+}
+
+/** A finished restore's row record, removed in short batches. */
+async function dropRowRecord(client: PrismaClient, archiveId: string): Promise<void> {
+  for (;;) {
+    const n = await client.$executeRawUnsafe(
+      `DELETE FROM account_archive_import_rows WHERE id IN (
+         SELECT id FROM account_archive_import_rows WHERE archive_id = $1 LIMIT ${ROW_RECORD_BATCH})`,
+      archiveId
+    );
+    if (n < ROW_RECORD_BATCH) return;
+  }
 }
 
 /**

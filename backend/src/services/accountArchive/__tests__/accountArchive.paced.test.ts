@@ -30,7 +30,7 @@ import {
 
 jest.setTimeout(120_000);
 
-const USERS = ["az-paced-1", "az-paced-2", "az-paced-3", "az-paced-4", "az-paced-5"];
+const USERS = ["az-paced-1", "az-paced-2", "az-paced-3", "az-paced-4", "az-paced-5", "az-paced-6"];
 let work: string;
 let root: string;
 let zipPath: string;
@@ -125,7 +125,7 @@ describe("the paced account-archive restore", () => {
   });
 
   it("undoes a restore a crash interrupted, then runs it again", async () => {
-    // What a crash half-way leaves: the marker in progress and some rows.
+    // What a crash half-way leaves: the marker in progress and the rows it recorded.
     await db.query(
       `INSERT INTO account_archive_imports (id, archive_id, user_id, source_server_version, format_version, counts)
        VALUES ('az-paced-marker', $1, $2, 'x', 1, '{"inProgress": true}')`,
@@ -135,6 +135,11 @@ describe("the paced account-archive restore", () => {
       `INSERT INTO flights (id, user_id, dep_lat, dep_lon, arr_lat, arr_lon) VALUES ('az-paced-stray', $1, 1, 2, 3, 4)`,
       [USERS[2]]
     );
+    await db.query(
+      `INSERT INTO account_archive_import_rows (archive_id, table_name, row_key)
+       VALUES ($1, 'flights', json_build_array('az-paced-stray'::text)::text)`,
+      [archiveId]
+    );
     const result = await importAccountArchive(zipPath, USERS[2], undefined, {
       uploadsRoot: root,
       sleep: noSleep,
@@ -143,6 +148,33 @@ describe("the paced account-archive restore", () => {
     expect(await counts(USERS[2])).toEqual(await counts(U));
     const { rows } = await db.query(`SELECT 1 FROM flights WHERE id = 'az-paced-stray'`);
     expect(rows).toEqual([]);
+    const left = await db.query(
+      `SELECT count(*)::int AS n FROM account_archive_import_rows WHERE archive_id = $1`,
+      [archiveId]
+    );
+    expect(left.rows[0].n).toBe(0);
+  });
+
+  it("an undo deletes only the restore's rows: a row the user wrote meanwhile survives", async () => {
+    let wrote = false;
+    await expect(
+      importAccountArchive(zipPath, USERS[5], undefined, {
+        uploadsRoot: root,
+        failAfterRows: 60,
+        sleep: async () => {
+          if (wrote) return;
+          wrote = true;
+          await db.query(
+            `INSERT INTO flights (id, user_id, dep_lat, dep_lon, arr_lat, arr_lon) VALUES ('az-paced-during', $1, 1, 2, 3, 4)`,
+            [USERS[5]]
+          );
+        },
+      })
+    ).rejects.toThrow("injected failure");
+    expect(wrote).toBe(true);
+    expect(await counts(USERS[5])).toEqual({ flights: 1 });
+    const { rows } = await db.query(`SELECT id FROM flights WHERE user_id = $1`, [USERS[5]]);
+    expect(rows).toEqual([{ id: "az-paced-during" }]);
   });
 
   it("refuses an account that gained data while waiting, and deletes none of it", async () => {
