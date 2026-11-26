@@ -31,6 +31,12 @@ import {
   nextStayScanAt,
 } from "../services/dawarich/stays/availability";
 import { staySuggestionsEnabled } from "../services/settings/suggestionSwitches";
+import {
+  matchesSource,
+  sourceNames,
+  SOURCE_FILTER,
+  staySourcesOf,
+} from "../services/dawarich/stays/staySource";
 
 const router = Router();
 /** A model request per click; 20 a minute is a person working through the inbox. */
@@ -227,7 +233,7 @@ const STAY_LIST_CAP = 200;
 router.get("/", async (req: AuthRequest, res, next) => {
   try {
     const userId = user(req);
-    const { status, from, to } = z
+    const { status, from, to, source } = z
       .object({
         // `invalidated`: a TravTrack finding whose history went before it was
         // accepted (E4). A Dawarich account never has one.
@@ -238,6 +244,8 @@ router.get("/", async (req: AuthRequest, res, next) => {
         // 2026-10-23): a stay is in it when the two overlap.
         from: z.coerce.date().optional(),
         to: z.coerce.date().optional(),
+        // A source filter (owner 2026-11-26): `smartList:<id>`, `plugin:<id>`, `calendar`, …
+        source: z.string().regex(SOURCE_FILTER).optional(),
       })
       .parse(req.query);
     // Switched off (forgejo#306): no pending suggestions are offered, and none
@@ -273,15 +281,24 @@ router.get("/", async (req: AuthRequest, res, next) => {
       })
     )?.locationProviderRev;
     const truncated = rows.length > STAY_LIST_CAP;
+    const names = await sourceNames(userId);
+    const sourced = rows.slice(0, STAY_LIST_CAP).map((row) => ({
+      row,
+      sources: staySourcesOf(row, names),
+    }));
     res.json({
       success: true,
       meta: { truncated },
-      data: rows.slice(0, STAY_LIST_CAP).map((row) => ({
-        ...withStayTimes(row),
-        ...(row.provider === "travtrack" && rev !== undefined && row.providerRev < rev
-          ? { beforeSourceSwitch: true as const }
-          : {}),
-      })),
+      data: sourced
+        .filter(({ sources }) => !source || matchesSource(sources, source))
+        .map(({ row, sources }) => ({
+          ...withStayTimes(row),
+          source: sources[0],
+          sources,
+          ...(row.provider === "travtrack" && rev !== undefined && row.providerRev < rev
+            ? { beforeSourceSwitch: true as const }
+            : {}),
+        })),
     });
   } catch (e) {
     next(e);

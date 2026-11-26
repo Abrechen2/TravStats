@@ -20,6 +20,11 @@ const failure = {
   description: "Invalid input, inaccessible finding, absent connection, or concurrent operation",
   content: errorContent,
 };
+const staySource = z.object({
+  kind: z.enum(["smartList", "plugin", "calendar", "travtrack", "dawarich"]),
+  id: z.string().nullable(),
+  name: z.string().nullable(),
+});
 const stay = z.object({
   times: z.object({
     startAt: timeValueSchema.nullable(),
@@ -35,6 +40,13 @@ const stay = z.object({
     .literal(true)
     .optional()
     .describe("Only on a TravTrack finding made before the account's last source switch"),
+  source: staySource.optional().describe("The most specific source of the finding"),
+  sources: z
+    .array(staySource)
+    .optional()
+    .describe(
+      "Every source of the finding, most specific first: smart lists, plugins, calendar, provider"
+    ),
 });
 const response = (schema: z.ZodTypeAny) => ({
   description: "Account-scoped result",
@@ -52,6 +64,12 @@ registry.registerPath({
       status: z.enum(["pending", "accepted", "rejected", "covered", "invalidated"]).optional(),
       from: z.string().optional().describe("ISO instant: only stays ending at or after it"),
       to: z.string().optional().describe("ISO instant: only stays starting at or before it"),
+      source: z
+        .string()
+        .optional()
+        .describe(
+          "Only findings with this source: `smartList:<id>`, `plugin:<id>`, `plugin`, `calendar`, `travtrack` or `dawarich`. Applied to the 200 rows read"
+        ),
     }),
   },
   responses: { 200: response(z.array(stay)) },

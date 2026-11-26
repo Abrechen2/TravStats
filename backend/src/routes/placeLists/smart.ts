@@ -10,11 +10,14 @@ import {
   clearListRule,
   getListRule,
   newOutletsForList,
+  pendingCounts,
+  pendingForList,
   recentlyAutoAccepted,
   setListRule,
   suggestionsForPlace,
   undoAutoAccepted,
 } from "../../services/places/brandRules";
+import { undoAutomaticVisits } from "../../services/places/autoVisitUndo";
 
 /**
  * Smart lists (spec 2026-11-22-brand-lists.md): a place list that follows a chain.
@@ -116,6 +119,28 @@ router.post("/auto/:stayId/undo", rejectDemo, async (req: AuthRequest, res, next
   }
 });
 
+router.get("/pending-counts", async (req: AuthRequest, res, next) => {
+  try {
+    res.json({ success: true, data: await pendingCounts(requireUser(req)) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/** Most visits one bulk undo takes; the page sends what it shows. */
+const UNDO_BATCH_MAX = 200;
+const undoVisitsBody = z.object({ visitIds: z.array(id).min(1).max(UNDO_BATCH_MAX) }).strict();
+
+router.post("/auto-visits/undo", rejectDemo, async (req: AuthRequest, res, next) => {
+  try {
+    const { visitIds } = undoVisitsBody.parse(req.body);
+    const results = await undoAutomaticVisits(requireUser(req), visitIds);
+    res.json({ success: true, data: { results } });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/:listId/rule", async (req: AuthRequest, res, next) => {
   try {
     const rule = await getListRule(requireUser(req), id.parse(req.params.listId));
@@ -150,6 +175,16 @@ router.get("/:listId/suggestions", async (req: AuthRequest, res, next) => {
     const userId = requireUser(req);
     const listId = id.parse(req.params.listId);
     res.json({ success: true, data: await newOutletsForList(userId, listId) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/:listId/pending", async (req: AuthRequest, res, next) => {
+  try {
+    const userId = requireUser(req);
+    const listId = id.parse(req.params.listId);
+    res.json({ success: true, data: await pendingForList(userId, listId) });
   } catch (error) {
     next(error);
   }
