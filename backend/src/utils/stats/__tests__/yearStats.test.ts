@@ -83,4 +83,22 @@ describe("buildYearStats — months the projection still owes", () => {
     expect(y2025.months[2].recordedPending).toBe(true);
     expect(y2025.months[0].recordedPending).toBe(false);
   });
+
+  it("breaks a year down by purpose: counts and km, unknown kept apart, never read as private", () => {
+    const out = buildYearStats({
+      entries: [
+        { domain: "flight", month: "2024-03", km: 1000, purposeKey: "builtin:trade_fair" },
+        { domain: "rail", month: "2024-04", km: 200.04, purposeKey: "builtin:trade_fair" },
+        { domain: "bus", month: "2024-05", km: null, purposeKey: "builtin:vacation" },
+        { domain: "flight", month: "2024-06", km: 300, purposeKey: null },
+      ],
+      recordedMonths: null,
+      recordedPoints: null,
+    });
+    expect(out.years[0].byPurpose).toEqual([
+      { key: "builtin:trade_fair", count: 2, km: 1200 },
+      { key: "builtin:vacation", count: 1, km: null },
+      { key: null, count: 1, km: 300 },
+    ]);
+  });
 });

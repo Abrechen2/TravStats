@@ -264,7 +264,11 @@ describe("purpose: private or business", () => {
         .post(`/api/v1/purpose/trips/${trip.id}/apply`)
         .set("Cookie", cookie)
         .send({});
-      expect(res.body.data).toEqual({ purpose: "business", changed: expect.any(Number) });
+      expect(res.body.data).toEqual({
+        purpose: "business",
+        purposeKey: "builtin:business",
+        changed: expect.any(Number),
+      });
       for (const f of [a, b]) {
         expect((await prisma.flight.findUniqueOrThrow({ where: { id: f.id } })).purpose).toBe(
           "business"
@@ -287,7 +291,11 @@ describe("purpose: private or business", () => {
         .get(`/api/v1/purpose/trips/${trip.id}/apply`)
         .set("Cookie", cookie);
       expect(res.status).toBe(200);
-      expect(res.body.data).toEqual({ purpose: "business", wouldChange: 2 });
+      expect(res.body.data).toEqual({
+        purpose: "business",
+        purposeKey: "builtin:business",
+        wouldChange: 2,
+      });
       expect((await prisma.flight.findUniqueOrThrow({ where: { id: a.id } })).purpose).toBe(
         "private"
       );

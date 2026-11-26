@@ -334,4 +334,7 @@ export const NON_TRAVEL_RELATIONS = [
   "calendarSources",
   "calendarRules",
   "suggestionPlugins",
+  // The user's own travel purposes (spec 2026-11-22-private-business-purpose.md): private to the
+  // owner; a shared entry carries neither the key nor the name.
+  "customPurposes",
 ] as const;

@@ -5,12 +5,29 @@
 
 import { z } from "zod";
 
-import { PURPOSE_ENTRY_TYPES } from "../../../schemas/purpose";
+import {
+  PURPOSE_ENTRY_TYPES,
+  customPurposeCreateSchema,
+  customPurposeUpdateSchema,
+} from "../../../schemas/purpose";
 import { PURPOSES, PURPOSE_DOMAINS } from "../../../shared/purpose";
 import { registry } from "../registry";
 import { errorContent } from "./shared";
 
 const tags = ["Purpose"];
+
+/** What a client writes: the legacy kind, accepted forever, or a detailed key. */
+const purposeIn = z
+  .string()
+  .describe(
+    "`private` | `business` (the kind alone; older clients) or a detailed key " +
+      "`builtin:<key>` | `custom:<uuid>` (see GET /purpose/catalogue)"
+  );
+const purposeKind = z.enum(PURPOSES).nullable().describe("The kind every filter and count reads");
+const purposeKey = z
+  .string()
+  .nullable()
+  .describe("The detailed key beside the kind; null: the kind alone (its default purpose)");
 const ok = <T extends z.ZodTypeAny>(data: T) =>
   ({
     content: { "application/json": { schema: z.object({ success: z.literal(true), data }) } },
@@ -36,14 +53,14 @@ registry.registerPath({
     params: z.object({ entryType: z.enum(PURPOSE_ENTRY_TYPES), id: z.string().uuid() }),
     body: {
       content: {
-        "application/json": { schema: z.object({ purpose: z.enum(PURPOSES).nullable() }) },
+        "application/json": { schema: z.object({ purpose: purposeIn.nullable() }) },
       },
     },
   },
   responses: {
     200: {
-      description: "The stored purpose",
-      ...ok(z.object({ purpose: z.enum(PURPOSES).nullable() })),
+      description: "The stored kind and detailed key",
+      ...ok(z.object({ purpose: purposeKind, purposeKey })),
     },
     404: { description: "`ENTRY_NOT_FOUND`", content: errorContent },
   },
@@ -92,12 +109,12 @@ registry.registerPath({
   tags,
   request: {
     params: z.object({ tripId: z.string().uuid() }),
-    query: z.object({ purpose: z.enum(PURPOSES).optional() }),
+    query: z.object({ purpose: purposeIn.optional() }),
   },
   responses: {
     200: {
       description: "The purpose that would be written and how many entries it would change",
-      ...ok(z.object({ purpose: z.enum(PURPOSES).nullable(), wouldChange: z.number() })),
+      ...ok(z.object({ purpose: purposeKind, purposeKey, wouldChange: z.number() })),
     },
     404: { description: "`TRIP_NOT_FOUND`", content: errorContent },
   },
@@ -115,14 +132,14 @@ registry.registerPath({
     params: z.object({ tripId: z.string().uuid() }),
     body: {
       content: {
-        "application/json": { schema: z.object({ purpose: z.enum(PURPOSES).optional() }) },
+        "application/json": { schema: z.object({ purpose: purposeIn.optional() }) },
       },
     },
   },
   responses: {
     200: {
       description: "The purpose written and how many entries changed",
-      ...ok(z.object({ purpose: z.enum(PURPOSES).nullable(), changed: z.number() })),
+      ...ok(z.object({ purpose: purposeKind, purposeKey, changed: z.number() })),
     },
     404: { description: "`TRIP_NOT_FOUND`", content: errorContent },
   },
@@ -135,5 +152,84 @@ registry.registerPath({
   tags,
   responses: {
     200: { description: "How many entries were filled", ...ok(z.object({ changed: z.number() })) },
+  },
+});
+
+const customPurpose = z.object({
+  key: z.string().describe("`custom:<id>`"),
+  id: z.string().uuid(),
+  name: z.string(),
+  nameEn: z.string().nullable(),
+  kind: z.enum(PURPOSES),
+  color: z.string(),
+  icon: z.string(),
+  archived: z.boolean(),
+  usage: z.number().describe("Entries using it; deleting is only possible at 0"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/purpose/catalogue",
+  summary: "The built-in purposes and the account's own",
+  description:
+    "Every purpose maps to a kind (private | business), which the hiding setting, the counts and " +
+    "the plugins read. Custom purposes are the caller's only and never travel with a share.",
+  tags,
+  responses: {
+    200: {
+      description: "Built-ins with both labels, then the custom ones",
+      ...ok(
+        z.object({
+          builtins: z.array(
+            z.object({
+              key: z.string().describe("`builtin:<key>`"),
+              kind: z.enum(PURPOSES),
+              icon: z.string(),
+              color: z.string(),
+              label: z.object({ de: z.string(), en: z.string() }),
+            })
+          ),
+          custom: z.array(customPurpose),
+        })
+      ),
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/purpose/custom",
+  summary: "Create a custom purpose",
+  tags,
+  request: { body: { content: { "application/json": { schema: customPurposeCreateSchema } } } },
+  responses: { 201: { description: "The new purpose", ...ok(customPurpose) } },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/purpose/custom/{id}",
+  summary: "Rename, recolour, re-kind or archive a custom purpose",
+  description: "A changed kind is carried onto every entry using the purpose.",
+  tags,
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: { content: { "application/json": { schema: customPurposeUpdateSchema } } },
+  },
+  responses: {
+    200: { description: "The updated purpose", ...ok(customPurpose) },
+    404: { description: "`PURPOSE_NOT_FOUND`", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/purpose/custom/{id}",
+  summary: "Delete an unused custom purpose",
+  tags,
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: { description: "Deleted", ...ok(z.object({ deleted: z.literal(true) })) },
+    404: { description: "`PURPOSE_NOT_FOUND`", content: errorContent },
+    409: { description: "`PURPOSE_IN_USE`: archive it instead", content: errorContent },
   },
 });

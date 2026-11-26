@@ -29,6 +29,17 @@ export const yearStatsSchema = z.object({
       recordedKm: z.number().nullable(),
       recordedPending: z.boolean(),
       months: z.array(yearMonth).length(12).openapi({ description: "January first." }),
+      byPurpose: z
+        .array(
+          z.object({
+            key: z.string().nullable().openapi({
+              description: "`builtin:<key>` | `custom:<uuid>`; null: entries without a purpose",
+            }),
+            count: z.number().int(),
+            km: z.number().nullable(),
+          })
+        )
+        .openapi({ description: "Entries and km per purpose (Nach Zweck), most entries first." }),
     })
   ),
 });

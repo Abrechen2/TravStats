@@ -125,6 +125,7 @@ export function toDto(route: {
   tourDate: Date | null;
   tourStartMinute: number | null;
   purpose: string | null;
+  purposeKey?: string | null;
   /** Roadtrip taken over from TravTrack: the recorded span it links back to (rc46 extras A). */
   trackFromDay?: Date | null;
   trackToDay?: Date | null;
@@ -149,6 +150,7 @@ export function toDto(route: {
     anchorStopId: route.anchorStopId,
     kindAssignedAutomatically: route.kindAssignedAutomatically,
     purpose: route.purpose,
+    purposeKey: route.purposeKey ?? null,
     ...tourDayDto(route),
     trackSpan:
       route.trackFromDay && route.trackToDay

@@ -58,6 +58,7 @@ const tourSummary = registry.register(
         .enum(["private", "business"])
         .nullable()
         .describe("Private or business; null is unknown"),
+      purposeKey: z.string().nullable().describe("The detailed purpose beside the kind"),
       notes: z.string().nullable(),
       anchorStopId: z
         .string()
@@ -121,6 +122,7 @@ const tourSummary = registry.register(
         vehicle: null,
         kindAssignedAutomatically: false,
         purpose: null,
+        purposeKey: null,
         notes: null,
         anchorStopId: null,
         anchorStopTitle: null,

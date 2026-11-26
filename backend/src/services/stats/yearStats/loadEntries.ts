@@ -14,6 +14,8 @@ import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "../departureClock";
 import { loadVisibleDomainSet, type VisibleDomains } from "../../domainVisibility";
 import type { DomainKey } from "../../../shared/domains";
 import type { DistanceEntry } from "../../../utils/stats/yearStats";
+import type { Purpose } from "../../../shared/purpose";
+import { effectivePurposeKey } from "../../../shared/purposeCatalogue";
 
 /**
  * Every distance-bearing entry of the domains the user sees, as `{domain, month, km}` — one
@@ -32,6 +34,18 @@ const sum = (rows: readonly { distanceKm: number }[]): number | null =>
 
 type Loader = (userId: string, now: Date) => Promise<DistanceEntry[]>;
 
+const PURPOSE_SELECT = { purpose: true, purposeKey: true } as const;
+
+/**
+ * The stored kind and detail, carried until `loadDistanceEntries` knows the custom kinds and turns
+ * them into one effective key.
+ */
+type RawPurpose = { purpose: string | null; purposeKey: string | null };
+type WithRaw = DistanceEntry & { raw?: RawPurpose };
+const purposeOf = (r: RawPurpose): { raw: RawPurpose } => ({
+  raw: { purpose: r.purpose, purposeKey: r.purposeKey },
+});
+
 const loadFlights: Loader = async (userId) => {
   const rows = await withDepartureClock(
     await prisma.flight.findMany({
@@ -45,6 +59,7 @@ const loadFlights: Loader = async (userId) => {
         arrLat: true,
         arrLon: true,
         departureTime: true,
+        ...PURPOSE_SELECT,
       },
     })
   );
@@ -58,6 +73,7 @@ const loadFlights: Loader = async (userId) => {
         domain: "flight" as const,
         month: `${at.year}-${String(at.month + 1).padStart(2, "0")}`,
         km: km > 0 ? km : null,
+        ...purposeOf(f),
         ref: {
           id: f.id,
           label: [f.flightNumber, `${f.depIata ?? "?"} → ${f.arrIata ?? "?"}`]
@@ -81,6 +97,7 @@ const loadCruises: Loader = async (userId) => {
       ship: { select: { name: true } },
       startDate: true,
       legs: { select: { distanceKm: true } },
+      ...PURPOSE_SELECT,
     },
   });
   return rows.flatMap((c) =>
@@ -90,6 +107,7 @@ const loadCruises: Loader = async (userId) => {
             domain: "cruise" as const,
             month: c.startDate.toISOString().slice(0, 7),
             km: sum(c.legs),
+            ...purposeOf(c),
             ref: {
               id: c.id,
               // The cruise list's own label rule (`cruiseStatsData.ts`).
@@ -110,12 +128,15 @@ function ride(domain: DomainKey) {
     departureTime: Date;
     depTimezone: string | null;
     distanceKm: number | null;
+    purpose: string | null;
+    purposeKey: string | null;
   }): DistanceEntry => {
     const day = localDay(r.departureTime, r.depTimezone ?? "UTC");
     return {
       domain,
       month: monthOf(day),
       km: r.distanceKm,
+      ...purposeOf(r),
       ref: { id: r.id, label: `${r.depStationName} → ${r.arrStationName}`, day },
     };
   };
@@ -128,6 +149,8 @@ const rideSelect = {
   departureTime: true,
   depTimezone: true,
   distanceKm: true,
+  purpose: true,
+  purposeKey: true,
 } as const;
 
 const loadRail: Loader = async (userId) =>
@@ -168,6 +191,7 @@ const loadRentals: Loader = async (userId) =>
         distanceSource: true,
         odometerOutKm: true,
         odometerInKm: true,
+        ...PURPOSE_SELECT,
       },
     })
   ).map((r) => {
@@ -176,6 +200,7 @@ const loadRentals: Loader = async (userId) =>
       domain: "rental" as const,
       month: monthOf(day),
       km: rentalDrivenKm(r)?.km ?? null,
+      ...purposeOf(r),
       ref: { id: r.id, label: `${r.provider} · ${r.pickupStationName}`, day },
     };
   });
@@ -186,6 +211,7 @@ const loadRoadtrips: Loader = async (userId, now) => {
     select: {
       id: true,
       name: true,
+      ...PURPOSE_SELECT,
       legs: { select: { distanceKm: true } },
       stops: {
         where: { viaPoint: false },
@@ -205,6 +231,7 @@ const loadRoadtrips: Loader = async (userId, now) => {
         domain: "roadtrip" as const,
         month: starts[0].toISOString().slice(0, 7),
         km: route.legs.length > 0 ? travelledKm(route.legs) : null,
+        ...purposeOf(route),
         ref: { id: route.id, label: route.name, day: starts[0].toISOString().slice(0, 10) },
       },
     ];
@@ -219,6 +246,7 @@ const loadTours: Loader = async (userId, now) => {
       id: true,
       name: true,
       tourDate: true,
+      ...PURPOSE_SELECT,
       legs: { select: { distanceKm: true } },
       tracks: { select: { distanceKm: true } },
     },
@@ -234,6 +262,7 @@ const loadTours: Loader = async (userId, now) => {
         domain: "tour" as const,
         month: monthOf(day),
         km,
+        ...purposeOf(route),
         ref: { id: route.id, label: route.name, day },
       },
     ];
@@ -257,8 +286,19 @@ export async function loadDistanceEntries(
   visible?: VisibleDomains
 ): Promise<DistanceEntry[]> {
   const shown = visible ?? (await loadVisibleDomainSet(userId));
-  const parts = await Promise.all(
-    LOADERS.filter(([domain]) => shown.has(domain)).map(([, load]) => load(userId, now))
-  );
-  return parts.flat();
+  const [parts, customs] = await Promise.all([
+    Promise.all(
+      LOADERS.filter(([domain]) => shown.has(domain)).map(([, load]) => load(userId, now))
+    ),
+    prisma.customPurpose.findMany({ where: { userId }, select: { id: true, kind: true } }),
+  ]);
+  const kinds = new Map(customs.map((c) => [c.id, c.kind as Purpose]));
+  return parts.flat().map((e: WithRaw) => {
+    if (!e.raw) return e;
+    const { raw, ...entry } = e;
+    return {
+      ...entry,
+      purposeKey: effectivePurposeKey(raw.purpose, raw.purposeKey, (id) => kinds.get(id)),
+    };
+  });
 }

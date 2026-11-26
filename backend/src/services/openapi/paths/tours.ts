@@ -91,6 +91,7 @@ const tourRoute = registry.register(
         .nullable()
         .describe("Tour only: the roadtrip station the day tour set out from"),
       purpose: z.enum(["private", "business"]).nullable(),
+      purposeKey: z.string().nullable(),
       kindAssignedAutomatically: z
         .boolean()
         .describe(
