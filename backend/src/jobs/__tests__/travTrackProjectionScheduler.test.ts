@@ -329,4 +329,18 @@ describe("runTravTrackProjections", () => {
     await runTravTrackProjections({ countryAt, visits });
     expect(visits).toHaveBeenCalledWith(userId, { maxDays: 5 });
   });
+
+  it("a backlog of owed days does not starve the place-visit step: its days are held back first", async () => {
+    // A history import: far more owed days than one tick projects (prod, 24.-26.11.2026, where
+    // the three projections spent the whole budget and no stop was asked about for two days).
+    const backlog = Array.from({ length: 30 }, (_, i) =>
+      new Date(Date.parse("2026-06-01T00:00:00Z") + i * 86_400_000).toISOString().slice(0, 10)
+    );
+    for (const day of backlog)
+      await storePoint(userId, { t: Date.parse(`${day}T10:00:00Z`), lat: 38.72, lon: -9.14 });
+    await prisma.$transaction((tx) => markTravTrackDaysDirty(tx, userId, backlog));
+    const visits = jest.fn(async () => ({ days: 5 }) as never);
+    await runTravTrackProjections({ countryAt, maxDays: 12, visits });
+    expect(visits).toHaveBeenCalledWith(userId, { maxDays: 5 });
+  });
 });

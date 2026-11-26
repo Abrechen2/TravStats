@@ -185,7 +185,13 @@ async function runAccount(
     const exploredOwed = (await pendingDirtyDays(userId, EXPLORED_BIT, 1)).length > 0;
     const monthsOwed = (await pendingDirtyDays(userId, MONTHS_BIT, 1)).length > 0;
     const sharers = 1 + Number(exploredOwed) + Number(monthsOwed);
-    const countryBudget = Math.ceil(maxDays / sharers);
+    // The place-visit step's days are held back first: it reads today's stops newest first, and
+    // a history import (thousands of owed country days) spent the whole budget on the three
+    // projections below every tick, so no stop was asked about for days (prod, 24.-26.11.2026).
+    // A tiny budget (a test, the last account of a tick) is left to the projections as before.
+    const visitReserve = maxDays > VISIT_DAYS_PER_RUN * 2 ? VISIT_DAYS_PER_RUN : 0;
+    const shared = maxDays - visitReserve;
+    const countryBudget = Math.ceil(shared / sharers);
     // The days this run will project, read before it acknowledges them: the inferred silences
     // touching them are recomputed after it.
     const owed = await pendingDirtyDays(userId, COUNTRY_DAYS_BIT, countryBudget);
@@ -216,7 +222,7 @@ async function runAccount(
     if (projected.status !== "done") return { failed: false, questions: 0, days };
     // The explored map's cells (L1): the same days on its own bit, from what
     // is left of the budget — a day either projection works counts once each.
-    const exploredBudget = monthsOwed ? Math.ceil((maxDays - days) / 2) : maxDays - days;
+    const exploredBudget = monthsOwed ? Math.ceil((shared - days) / 2) : shared - days;
     const explored =
       exploredBudget > 0
         ? await projectExploredCells(userId, { maxDays: exploredBudget, pace: options.pace })
@@ -227,7 +233,7 @@ async function runAccount(
     }
     // The monthly values (L3) after both, so a month reads its days' country
     // rows as just projected; no month starts once the budget is spent.
-    const monthsBudget = maxDays - days - explored.projected - explored.rerun;
+    const monthsBudget = shared - days - explored.projected - explored.rerun;
     const months =
       monthsBudget > 0
         ? await projectMonths(userId, {
@@ -248,7 +254,8 @@ async function runAccount(
     // failure: an outage of the venue lookup must never hold the country days or
     // the map back, so it is not a failure of the account's run.
     let visitDays = 0;
-    const visitsBudget = Math.min(VISIT_DAYS_PER_RUN, maxDays - spent);
+    // At least its reserve: a month costs every day it owed, so the months may overrun theirs.
+    const visitsBudget = Math.min(VISIT_DAYS_PER_RUN, Math.max(visitReserve, maxDays - spent));
     if (visitsBudget > 0) {
       try {
         const visits = await (options.visits ?? scheduledVisitSuggestions)(userId, {

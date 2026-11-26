@@ -217,31 +217,97 @@ export async function placeOfEnrichment(
 
 /** Open findings still waiting for a plugin's answer, a few per run. */
 export const CATCH_UP_PER_RUN = 10;
+/**
+ * How far back the catch-up looks for open findings no plugin has answered. A stop is
+ * "missed" when no run asked about it at all — the projection was starved by a backlog,
+ * or the finding came from the stay scan before this projection reached the stop.
+ */
+export const MISSED_LOOKBACK_DAYS = 14;
+const DAY_MS = 86_400_000;
 
+type CatchUpRow = {
+  id: string;
+  evidence: unknown;
+  source_start_at: Date;
+  source_end_at: Date;
+  source_lat: number;
+  source_lon: number;
+  zone: string;
+  name: string | null;
+  place_id: string | null;
+};
+
+/** The name the finding or the owner gave the stop: what lets a plugin match by name. */
+async function stopName(
+  userId: string,
+  r: CatchUpRow
+): Promise<Pick<StopForPlugins, "venue" | "nearestPlace">> {
+  if (r.name) {
+    return r.place_id
+      ? { nearestPlace: { name: r.name, distanceMeters: 0 } }
+      : { venue: { name: r.name } };
+  }
+  const from = r.source_start_at.getTime();
+  const until = r.source_end_at.getTime();
+  const named = await prisma.travTrackStopPlace.findMany({
+    where: { userId, fromMs: { lt: BigInt(until) }, untilMs: { gt: BigInt(from) } },
+    select: { name: true, fromMs: true, untilMs: true },
+    orderBy: { updatedAt: "desc" },
+    take: 5,
+  });
+  const span = Math.max(1, until - from);
+  const hit = named.find(
+    (p) => (Math.min(until, Number(p.untilMs)) - Math.max(from, Number(p.fromMs))) / span > 0.5
+  );
+  return hit ? { venue: { name: hit.name } } : {};
+}
+
+/**
+ * Open findings a plugin still owes (`pluginsPending`) first, then the ones no enabled plugin
+ * ever answered within `MISSED_LOOKBACK_DAYS`, newest first, at most `CATCH_UP_PER_RUN` asks a
+ * run. Each ask still goes through every bound of `askPlugin` (once per stop, the hourly and
+ * daily limits, the backoff), so a run every quarter hour stays inside the plugin's allowance.
+ */
 export async function catchUpPlugins(
   ctx: EnrichContext,
-  write: (id: string, evidence: Record<string, unknown>) => Promise<boolean>
+  write: (id: string, evidence: Record<string, unknown>) => Promise<boolean>,
+  now: Date = new Date()
 ): Promise<void> {
   if (!ctx.plugins) return;
-  const rows = await prisma.$queryRaw<
-    {
-      id: string;
-      evidence: unknown;
-      source_start_at: Date;
-      source_end_at: Date;
-      source_lat: number;
-      source_lon: number;
-      zone: string;
-    }[]
-  >`
-    SELECT id, evidence, source_start_at, source_end_at, source_lat, source_lon, zone
+  const owed = await prisma.$queryRaw<CatchUpRow[]>`
+    SELECT id, evidence, source_start_at, source_end_at, source_lat, source_lon, zone, name, place_id
       FROM dawarich_stays
      WHERE user_id = ${ctx.userId} AND status = 'pending' AND provider = 'travtrack'
        AND jsonb_typeof(evidence->'pluginsPending') = 'array'
        AND jsonb_array_length(evidence->'pluginsPending') > 0
      ORDER BY source_start_at DESC
      LIMIT ${CATCH_UP_PER_RUN}`;
-  for (const r of rows) {
+  const left = CATCH_UP_PER_RUN - owed.length;
+  const since = new Date(now.getTime() - MISSED_LOOKBACK_DAYS * DAY_MS);
+  // Answered = an `ok`/`empty` call of an enabled plugin over the finding's time, not forgotten
+  // ("Neu fragen"). Fewer answering plugins than enabled ones: someone was never asked.
+  const missed =
+    left > 0
+      ? await prisma.$queryRaw<CatchUpRow[]>`
+    SELECT s.id, s.evidence, s.source_start_at, s.source_end_at, s.source_lat, s.source_lon,
+           s.zone, s.name, s.place_id
+      FROM dawarich_stays s
+     WHERE s.user_id = ${ctx.userId} AND s.status = 'pending' AND s.provider = 'travtrack'
+       AND s.source_start_at >= ${since}
+       AND COALESCE(jsonb_typeof(s.evidence->'pluginsPending') <> 'array'
+                    OR jsonb_array_length(s.evidence->'pluginsPending') = 0, true)
+       AND (SELECT count(DISTINCT c.plugin_id)
+              FROM suggestion_plugin_calls c
+              JOIN suggestion_plugins p ON p.id = c.plugin_id AND p.enabled
+             WHERE c.user_id = s.user_id AND c.outcome IN ('ok', 'empty')
+               AND c.invalidated_at IS NULL
+               AND c.stop_start_at <= s.source_end_at AND c.stop_end_at >= s.source_start_at)
+           < (SELECT count(*) FROM suggestion_plugins p
+               WHERE p.user_id = s.user_id AND p.enabled)
+     ORDER BY s.source_start_at DESC
+     LIMIT ${left}`
+      : [];
+  for (const r of [...owed, ...missed]) {
     const asked = await askPlugins(
       ctx.userId,
       {
@@ -250,6 +316,7 @@ export async function catchUpPlugins(
         lat: r.source_lat,
         lon: r.source_lon,
         zone: r.zone,
+        ...(await stopName(ctx.userId, r)),
       },
       ctx.pluginDeps
     );
@@ -257,6 +324,8 @@ export async function catchUpPlugins(
       ctx.result.plugins[k] = (ctx.result.plugins[k] ?? 0) + n;
     if (!asked.asked) return;
     const merged = withPlugins(r.evidence as Record<string, unknown>, asked.answers, asked.owedIds);
+    // Nothing new (every plugin had answered already): no write, no publish.
+    if (JSON.stringify(merged) === JSON.stringify(r.evidence)) continue;
     if (!(await write(r.id, merged)))
       logger.info({ operation: "plugins.catchUpSkipped", userId: ctx.userId, findingId: r.id });
   }
