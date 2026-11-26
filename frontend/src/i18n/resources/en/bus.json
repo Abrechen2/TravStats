@@ -385,7 +385,7 @@
     "error": "Could not read the ticket. You can still enter the ride by hand.",
     "noText": "No readable text found. For a scanned ticket, paste its text or enter the ride by hand.",
     "noTemplate": "No bus template knows this ticket yet. Teach one in the template workshop (Parser → Annotate) with this ticket, or enter the ride by hand.",
-    "nothingRead": "A bus template recognised the ticket but read no complete ride from it. Check the template in the workshop, or enter the ride by hand.",
+    "nothingRead": "Template matched but no complete ride read. Check the template or enter it by hand.",
     "readByWorkshop": "Read with your own workshop template.",
     "readByRepository": "Read with a template from the template repository.",
     "ride": "Choose ride",

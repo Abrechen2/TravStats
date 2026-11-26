@@ -128,6 +128,6 @@
     "on": "Free services will be turned on ✓ (click again to undo)",
     "partialFailed": "The account is created, but not every service could be turned on: {{reason}} You can turn them on under Admin › External services.",
     "continue": "Continue",
-    "alreadyOn": "Even without this switch, rail timetables (Transitous, db-rest) and operator logos from Wikimedia are already on; the geocoder and exchange rates always run. The switch only adds the services listed above."
+    "alreadyOn": "Timetables, logos, geocoder and rates already run. The switch adds only the list above."
   }
 }

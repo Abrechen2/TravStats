@@ -107,7 +107,7 @@
     "dayNoPoints": "An diesem Tag ist nichts gespeichert – es gibt keine Quelle zu wählen."
   },
   "settings": {
-    "tripsNoResidence": "Reisen erkennt TravTrack erst, wenn dein Wohnort bestätigt ist: Gemessen wird der Abstand zu deinem Zuhause. Bestätige ihn unter Einstellungen → Zuhause.",
+    "tripsNoResidence": "Reisen erkennt TravTrack erst mit bestätigtem Zuhause (Einstellungen → Zuhause).",
     "diagnostics": {
       "day": "Tag",
       "device": "Gerät",
@@ -139,7 +139,7 @@
         "upload": "Upload: {{status}}",
         "network": "kein Netz",
         "permission": "Standortzugriff: {{status}}",
-        "autoPause": "iOS durfte die Aufzeichnung automatisch anhalten (Auto-Pause) – das ist hier die wahrscheinlichste Ursache, die App erfährt davon aber nichts",
+        "autoPause": "Wohl iOS-Auto-Pause — davon erfährt die App nichts",
         "stopPlan": "Die App hat die Aufzeichnung selbst beendet (Plan, {{where}}). Urteile: Flug {{flight}}, Reise {{trip}}, Alltag {{everyday}}. Standortzugriff erlaubt: {{allowed}}, Alltag-Schalter: {{enabled}}, Alltag läuft: {{armed}}, Serverentscheidung: {{decision}}.",
         "stopOther": "Die Aufzeichnung wurde beendet von: {{reason}}",
         "stopForeground": "App im Vordergrund",
@@ -248,7 +248,7 @@
     "intro": "Kopiert deinen Verlauf aus Dawarich. Dawarich wird nur gelesen, nichts wird doppelt.",
     "connection": {
       "none": "Verbinde zuerst dein eigenes Dawarich (Einstellungen → Dawarich). Erst dann lässt sich der Verlauf übernehmen.",
-      "shared": "Auf diesem Server ist nur ein gemeinsames Dawarich eingerichtet. Eine Kopie liest ausschließlich aus deinem eigenen – trage dafür deine eigene Verbindung ein."
+      "shared": "Nur ein gemeinsames Dawarich eingerichtet. Für eine Kopie deine eigene Verbindung eintragen."
     },
     "whole": "Ganzer Verlauf (bis gestern)",
     "span": "Zeitraum",
@@ -322,7 +322,7 @@
     "create": "Schlüssel erstellen",
     "shownOnce": "Der Schlüssel wird nur jetzt angezeigt. Trage ihn in der App ein; danach ist er hier nicht mehr zu sehen.",
     "owntracks": {
-      "howTo": "In OwnTracks: Einstellungen → Verbindung → Modus „HTTP“. URL eintragen, Authentifizierung einschalten, als Benutzer einen beliebigen Namen und als Passwort den Schlüssel.",
+      "howTo": "OwnTracks: Modus „HTTP“, URL eintragen, Authentifizierung an, Schlüssel als Passwort.",
       "url": "URL",
       "password": "Passwort"
     },
@@ -376,7 +376,7 @@
     "citiesNone": "Keine Stadt",
     "pending": "Wird gerade neu berechnet – die Werte können sich noch ändern.",
     "pendingMonth": "wird berechnet",
-    "legend": "Kilometer am Boden zählen nur die sichtbare Linie: nichts in der Luft, nichts schneller als 500 km/h, nichts, was eine Privatzone verbirgt. Monate ohne Positionen fehlen.",
+    "legend": "Nur die sichtbare Linie am Boden zählt. Monate ohne Positionen fehlen.",
     "citiesOff": "Städte nennt die Übersicht erst, wenn du die Städtesuche in den Einstellungen einschaltest.",
     "utc": "Monate nach UTC: Ein Tag zählt zu dem Monat, in den er nach UTC fällt – was um Mitternacht Ortszeit geschieht, kann im Nachbarmonat stehen.",
     "chartTitle": "Strecke am Boden pro Monat ({{unit}})",
@@ -463,7 +463,7 @@
       "splitHours_one": "{{count}} Stunde",
       "splitHours_other": "{{count}} Stunden",
       "notRemembered": "Konnte diese Wahl nicht merken – sie gilt nur, bis du die Seite verlässt.",
-      "alwaysCut": "Private Zonen, gelöschte Zeiträume, Pausen und Flugmodus-Lücken trennen immer, egal was hier steht. Hier lässt sich nur weiter trennen, nie verbinden.",
+      "alwaysCut": "Privatzonen, Löschungen und Lücken trennen immer. Hier nur weiter trennen.",
       "scale": {
         "title": "Tempo-Skala",
         "default": "Standard",
@@ -541,13 +541,13 @@
     "rangeSimplified": "Für diesen Zeitraum ist die Linie vereinfacht; die Strecke ist deshalb etwas kürzer als gemessen.",
     "rangeOmitted_one": "{{count}} kurzes Stück passte nicht mehr in die Ansicht und fehlt.",
     "rangeOmitted_other": "{{count}} kurze Stücke passten nicht mehr in die Ansicht und fehlen.",
-    "rangeNoTimeline": "Für Monat, Jahr und Zeitraum zeigt die Karte die Linie allein. Tagesablauf, Aufenthalte und Logbuch-Einträge stehen in der Tages- und 7-Tage-Ansicht.",
+    "rangeNoTimeline": "Ab Monat nur die Linie. Tagesablauf in der Tages- und 7-Tage-Ansicht.",
     "countries": {
       "loading": "Länder werden geladen …",
       "none": "In den berührten Monaten ist kein Land ermittelt.",
       "list_one": "{{count}} Land: {{names}}",
       "list_other": "{{count}} Länder: {{names}}",
-      "note": "Eingefärbt sind die Länder der Monatswerte aller Monate, die der Zeitraum berührt (Monate nach UTC) – bei einem einzelnen Tag also die seines Monats.",
+      "note": "Länder aller Monate, die der Zeitraum berührt (nach UTC).",
       "pending": "Einige dieser Monate werden gerade neu berechnet; die Länder können sich noch ändern.",
       "shapesFailed": "Die Ländergrenzen konnten nicht geladen werden."
     },
@@ -717,7 +717,7 @@
     "intro": "Noch keine Daten. Drei Wege bringen deinen Verlauf hierher:",
     "companion": {
       "title": "Mit der Companion aufzeichnen",
-      "body": "Stell deine Standortquelle auf TravTrack (Einstellungen → Standortverlauf → Standortquelle). Dann zeichnet die Companion deine Wege hierher auf.",
+      "body": "Standortquelle auf TravTrack stellen, dann zeichnet die Companion deine Wege auf.",
       "done": "TravTrack ist deine Standortquelle. Sobald die Companion aufzeichnet, erscheinen deine Wege hier.",
       "action": "Standortquelle einstellen"
     },
@@ -982,7 +982,7 @@
     "calendar": "Kalender: {{title}}",
     "venue": "Ort aus Kartendaten",
     "whyLabel": "Warum?",
-    "scale": "So wird gezählt: Vorschlagsquelle bis {{nearPluginM}} m 2 Punkte, bis {{farPluginM}} m 1 (einer weniger, wenn sie sich selbst unsicher ist); Kalendertermin 2 (passt er nur zum Tag, 1); Ort aus Kartendaten bis {{nearVenueM}} m 2, bis {{closeVenueM}} m 1; ab {{longDwellMin}} min Aufenthalt 1 dazu. Ab {{highPoints}} Punkten hoch, ab {{mediumPoints}} mittel, sonst niedrig.",
+    "scale": "Punkte aus Quelle, Termin, Kartenort und Dauer. Ab {{highPoints}} hoch, ab {{mediumPoints}} mittel.",
     "level": {
       "high": "Sicherheit hoch",
       "medium": "Sicherheit mittel",
@@ -994,7 +994,8 @@
       "calendar": "Kalendertermin passt",
       "plugin": "{{plugin}}: {{name}}, {{m}} m",
       "pluginNoDistance": "{{plugin}}: {{name}}"
-    }
+    },
+    "scaleMore": "So wird gezählt: Vorschlagsquelle bis {{nearPluginM}} m 2 Punkte, bis {{farPluginM}} m 1 (einer weniger, wenn sie sich selbst unsicher ist); Kalendertermin 2 (passt er nur zum Tag, 1); Ort aus Kartendaten bis {{nearVenueM}} m 2, bis {{closeVenueM}} m 1; ab {{longDwellMin}} min Aufenthalt 1 dazu. Ab {{highPoints}} Punkten hoch, ab {{mediumPoints}} mittel, sonst niedrig."
   },
   "roadtrip": {
     "open": "Als Roadtrip übernehmen",

@@ -86,8 +86,8 @@
       "documentsAfter_other": "{{count}} Dokumente werden danach dir zugeordnet."
     },
     "deleteUnused": {
-      "body_one": "{{count}} Person steht in keinem Eintrag, hat nichts bezahlt und ist mit keinem Konto verknüpft. Löschen entfernt diesen Namen endgültig aus deiner Liste.",
-      "body_other": "{{count}} Personen stehen in keinem Eintrag, haben nichts bezahlt und sind mit keinem Konto verknüpft. Löschen entfernt diese Namen endgültig aus deiner Liste.",
+      "body_one": "{{count}} Person ohne Eintrag, Zahlung oder Konto. Löschen entfernt den Namen endgültig.",
+      "body_other": "{{count}} Personen ohne Eintrag, Zahlung oder Konto. Löschen entfernt die Namen endgültig.",
       "done_one": "{{count}} Person gelöscht.",
       "done_other": "{{count}} Personen gelöscht."
     },
@@ -120,7 +120,7 @@
     "nights": "Gemeinsame Nächte",
     "countries": "Gemeinsame Länder",
     "days": "Gemeinsame Tage",
-    "rule": "Gezählt wird, was stattgefunden hat: Eine Unterkunft zählt erst nach dem Check-out, geplante Reisen sind markiert und zählen nicht. Was sich nicht ermitteln lässt, steht als „unbekannt“, nicht als 0.",
+    "rule": "Gezählt wird, was stattfand. Geplantes zählt nicht, Unbekanntes steht als „unbekannt“.",
     "timeline": "Gemeinsam unterwegs",
     "emptyTimeline": "Mit dieser Person gibt es noch keinen gemeinsamen Eintrag.",
     "undated": "ohne Datum",

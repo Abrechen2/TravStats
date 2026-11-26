@@ -83,7 +83,7 @@
       "price": "The price is saved together with the currency. You can filter by prices later and display statistics.",
       "tags": "Add tags to categorize and filter flights later (e.g. 'business', 'international').",
       "tagsExpanded": "Enter or a comma turns the text into a tag; your earlier tags are suggested as you type. You can filter by tags later and group statistics by tags. Examples: 'business', 'vacation', 'lufthansa', 'long-haul'.",
-      "flightNumber": "Enter the flight number (e.g. LH400). Automatic search works for today's flights. For past or future flights an Aviationstack Basic+ key is required — otherwise please enter the flight manually.",
+      "flightNumber": "Flight number, e.g. LH400. Automatic for today only; otherwise Aviationstack Basic+ or by hand.",
       "flightNumberExpanded": "The flight lookup cascades through multiple APIs:\n• Aviationstack (with Basic+ key: past and future flights)\n• AirLabs (today's flights)\n• OpenSky (today's flights, credentials required)\n\nIf no provider covers the selected date, you'll need to enter the flight manually. Even with a key configured, the API may simply not have data for some flights."
     },
     "steps": {
@@ -106,7 +106,7 @@
       "textPlaceholder": "Paste email content here...",
       "regexWarning": {
         "title": "Automatic import is still limited",
-        "body": "Without a local LLM (Ollama), a rule-based importer is used. It currently supports only a few airlines and can't yet handle emails with multiple flights. We're actively working on improvements.\n\nRecommendation: configure an Ollama endpoint (e.g. gemma3:12b) under Settings → Server → Reading bookings, or enter flights manually."
+        "body": "Without a language model only templates read — few airlines, no multi-flight emails."
       }
     },
     "simplified": {
@@ -153,8 +153,8 @@
     },
     "tagsHint": "Enter or a comma adds a tag; your earlier tags are suggested.",
     "loadingScanner": "Loading scanner...",
-    "surfaceRailOff_one": "{{count}} train or bus segment of the booking was not imported: the Rail area is switched off. Switch it on in the settings and read the booking again.",
-    "surfaceRailOff_other": "{{count}} train or bus segments of the booking were not imported: the Rail area is switched off. Switch it on in the settings and read the booking again.",
+    "surfaceRailOff_one": "{{count}} rail or bus leg skipped: rail is off. Turn it on and import again.",
+    "surfaceRailOff_other": "{{count}} rail or bus legs skipped: rail is off. Turn it on and import again.",
     "noFlightsInEmail": "No flights found in the email.",
     "noFlightsInText": "No flights found in the pasted text.",
     "departureAirportCode": "Departure airport (IATA)",
@@ -178,7 +178,7 @@
       "booking": "Booking, trip & notes",
       "filledIn": "filled in"
     },
-    "llmUnreachable": "No flight was recognised in the email – and the AI parser could not be reached. Please try again later or enter the flight manually.",
+    "llmUnreachable": "No flight found, the AI was unreachable. Try again later or enter it by hand.",
     "missing": {
       "departureAirport": "departure airport",
       "arrivalAirport": "arrival airport",
@@ -297,7 +297,7 @@
     "batchImportedWithSkips": "{{created}} imported, {{skipped}} skipped — already on file",
     "batchAllDuplicates_one": "Nothing imported — that flight was already on file",
     "batchAllDuplicates_other": "Nothing imported — all {{count}} flights were already on file",
-    "cancellationNotice": "This text contains a cancellation notice. Do not import this candidate as a new flown booking. Check the existing flight’s status instead.",
+    "cancellationNotice": "This is a cancellation. Don't save it as a new flight; check the existing one.",
     "unconfirmedTimeNotice": "Times were not confirmed by the source text. In particular, 00:00 may only be a placeholder for a date without a time. Check and enter the actual times before importing."
   },
   "refresh": {
@@ -715,12 +715,12 @@
     "storedOnBooking": "This price is stored on the booking, not on the individual flights.",
     "countedOnce": "Counts exactly once in totals, taxes and fees included.",
     "zeroIsFree": "0 means: recorded as free. An empty field would mean: unknown.",
-    "noTotal": "No total is recorded for this booking. Totals therefore count each flight with its own price plus taxes and fees; a flight without price, taxes and fees counts as unknown, not as 0. A cancelled flight costs nothing.",
-    "otherEntries_one": "Besides flights, the booking holds one more entry (train, bus, ferry, cruise or stay); its total covers everything together.",
-    "otherEntries_other": "Besides flights, the booking holds {{count}} more entries (train, bus, ferry, cruise or stay); its total covers everything together.",
+    "noTotal": "No total: sums use each flight on its own; without price, taxes and fees: unknown.",
+    "otherEntries_one": "The booking has one more entry; the total covers everything.",
+    "otherEntries_other": "The booking has {{count}} more entries; the total covers all of them.",
     "editOnTrip": "Edit the total on the trip's page",
     "splitTitle": "Split across the flights (optional)",
-    "splitDisplayOnly": "For reading only: totals still count the booking total once, never the shares on top. The shares add up to the total to the cent.",
+    "splitDisplayOnly": "Display only: sums count the total once, never the shares.",
     "splitEqual": "Split equally",
     "splitDistance": "Split by distance",
     "splitRemove": "Remove split",

@@ -10,7 +10,7 @@
   },
   "banner": {
     "title": "Best experience without paying",
-    "summary": "{{active}} of {{total}} recommended services are set up. All of them are free or come with a free credit that is enough for a private logbook.",
+    "summary": "{{active}} of {{total}} recommended services set up. All free or with free credit.",
     "show": "Show recommended"
   },
   "search": {
@@ -520,7 +520,7 @@
       "dataOut": "Stays between TravStats and your PhotoPrism.",
       "quotaLine": "your own server",
       "adminPurpose": "The instance's connection to a PhotoPrism; accounts connect their own",
-      "setup": "How to connect PhotoPrism: in PhotoPrism open Settings → Account → Apps and Devices, create an app password and give it the scope “albums photos files config” (or “*”). Without “config” TravStats cannot load thumbnails. TravStats only needs read access."
+      "setup": "Create a PhotoPrism app password with “albums photos files config”. Read access only."
     },
     "strava": {
       "name": "Strava",
@@ -671,7 +671,7 @@
       "why": "Fetches booking confirmations over IMAP from a mail folder or through the instance's forwarding address, so nobody has to paste them by hand.",
       "cost": "Free.",
       "quota": "–",
-      "dataOut": "Nothing leaves the server except the login to your own mail server. If a cloud AI provider is allowed, it reads the mails too.",
+      "dataOut": "Only the login to your mail server. With cloud AI allowed, it reads the mails too.",
       "getKeyUrl": "https://travstats.de/docs/",
       "getKeyLabel": "Guide",
       "quotaLine": "–"
@@ -786,7 +786,7 @@
       "purpose": "A language model suggests which place an unclear stop was",
       "why": "For a stay with several possible places an account can \"Ask the AI\": the model ranks the candidates and gives a reason. Only what the person clicks is written.",
       "cost": "Depends on the model: a local Ollama costs nothing, a cloud model its own price.",
-      "dataOut": "The candidate names, the distance, the dwell, names of own places nearby and the day – no coordinates, no track. With a cloud model they leave the home network. Every account confirms the target before its first request."
+      "dataOut": "Candidate names, distance, duration and day — no coordinates. Cloud models only after you confirm."
     },
     "mapMatching": {
       "name": "Snap to roads (map matching)",

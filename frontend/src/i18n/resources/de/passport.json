@@ -24,13 +24,13 @@
   },
   "tiers": {
     "slept": "Übernachtet",
-    "sleptExplained": "Ein tatsächlicher Unterkunftsaufenthalt oder eine bestätigte Übernachtung außerhalb reiner Transitorte. Ein Datumswechsel allein reicht nicht.",
+    "sleptExplained": "Ein Aufenthalt oder eine bestätigte Nacht außerhalb reiner Transitorte.",
     "visited": "Besucht",
-    "visitedExplained": "Ein bestätigter Ortsbesuch, ein Landgang, dein Wohnland oder ein Reiseziel mit Hin- und Rückreise – per Flug, Bahn, Bus oder Fähre, auch gemischt. Standortpunkte und die Dauer eines Umstiegs reichen nicht.",
+    "visitedExplained": "Ortsbesuch, Landgang, Wohnland oder Ziel mit Hin- und Rückreise.",
     "connection": "Flug-Endpunkt / Umstieg",
-    "connectionExplained": "Der Flug belegt Bodenkontakt. Ein Besuch außerhalb des Flughafens ist noch nicht belegt. Bestätigte Ortsbesuche oder Unterkünfte können ihn ergänzen.",
+    "connectionExplained": "Der Flug belegt Bodenkontakt, noch keinen Besuch.",
     "transited": "Bodenkontakt",
-    "transitedExplained": "Ein belegter Zwischenstopp oder eine Durchfahrt, etwa ein Umsteigebahnhof oder eine Raststätte. Zählt als Bodenkontakt; ein tatsächlicher Besuch braucht einen weiteren Beleg."
+    "transitedExplained": "Belegter Zwischenstopp oder Durchfahrt. Zählt als Bodenkontakt, nicht als Besuch."
   },
   "kinds": {
     "flight": "Flug",
@@ -50,14 +50,14 @@
     "notApplicableEntries": "Entfällt: kein Flug belegt dieses Land — nicht null Einreisen, sondern keine, die zu zählen wären.",
     "notApplicableAirports": "Entfällt: hier wurde kein Flughafen benutzt.",
     "unknownPeriod": "Unbekannt: kein Beleg trägt ein Datum.",
-    "daysPresentExplained": "Verschiedene Kalendertage, an denen dich ein Beleg in diesem Land verortet. Gezählt, nicht geschätzt — und die Zahl entscheidet die Stufe nicht.",
-    "noDatedDays": "Null gezählte Tage: kein Beleg nennt einen Tag. Das ist kein fehlender Wert, sondern das Ergebnis der Zählung — der Hinweis „ohne Datum“ in dieser Zeile sagt, woran es liegt."
+    "daysPresentExplained": "Kalendertage, an denen dich ein Beleg hier verortet. Entscheidet die Stufe nicht.",
+    "noDatedDays": "0 Tage: kein Beleg nennt einen Tag (siehe „ohne Datum“)."
   },
   "ground": {
     "unknown": "unbekannt",
-    "measuredExplained": "Gemessen: der längste Aufenthalt am Boden zwischen einer Landung und dem nächsten Abflug in diesem Land. Roh angezeigt, nicht in Klassen einsortiert — und er entscheidet die Stufe nicht.",
-    "unknownExplained": "Unbekannt: ein Flug hat dieses Land berührt, aber kein Uhrenpaar begrenzt einen Aufenthalt — etwa ein Hinflug ohne Rückflug oder eine Buchung, die nur ein Datum trägt. Trag den fehlenden Flug nach, dann steht hier eine Zeit.",
-    "notApplicableExplained": "Entfällt: kein Flug hat dieses Land berührt. Eine Unterkunft, ein Hafentag oder ein Ort begrenzt keinen Abflug — hier ist nichts nachzutragen und nichts zu messen."
+    "measuredExplained": "Längste Zeit am Boden zwischen Landung und nächstem Abflug. Entscheidet die Stufe nicht.",
+    "unknownExplained": "Unbekannt: ein Flug war hier, aber kein zweiter begrenzt den Aufenthalt. Fehlenden Flug nachtragen.",
+    "notApplicableExplained": "Entfällt: kein Flug hat dieses Land berührt."
   },
   "provenance": {
     "intro": "Diese Belege haben das Land in den Pass gebracht. Jeder führt zum Datensatz — dort kannst du ihn ändern.",
@@ -65,7 +65,7 @@
     "truncated": "Nur die neuesten Belege werden gezeigt.",
     "none": "Kein einzelner Datensatz abrufbar. Das Land steht trotzdem zu Recht in der Liste — nur lässt sich hier kein einzelner Beleg öffnen.",
     "trackLabel": "Standortverlauf — {{days}} Tage, {{points}} Messpunkte",
-    "trackNote": "Diese Dawarich-Standorte belegen keinen Bodenkontakt. Sie können von Überflügen oder ungenauen Positionen stammen und erhöhen weder Länderzahlen noch Aufenthaltstage. Ein bestätigter Ortsbesuch oder Reiseeintrag wird unabhängig davon gezählt."
+    "trackNote": "Diese Dawarich-Punkte belegen keinen Bodenkontakt und zählen nicht mit."
   },
   "continents": {
     "title": "Kontinente",
@@ -119,7 +119,7 @@
     "observation": "Dawarich · Standorttage: {{days}} · Punkte: {{points}}",
     "observationTravTrack": "TravTrack · Standorttage: {{days}} · Punkte: {{points}}"
   },
-  "countingRule": "Bodenkontakt umfasst Umstiege und Durchfahrten. Besuche brauchen einen belegten Aufenthalt außerhalb reiner Transitorte oder eine nachvollziehbare Hin-/Rückflugkette. Nächte und Standortpunkte allein beweisen keinen Besuch.",
+  "countingRule": "Bodenkontakt zählt Umstiege mit. Ein Besuch braucht einen belegten Aufenthalt.",
   "overrides": {
     "add": "Land von Hand eintragen",
     "addTitle": "Land von Hand eintragen",

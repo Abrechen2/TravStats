@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({
@@ -34,8 +34,10 @@ describe("StopEvidenceBadge", () => {
     expect(scale).toHaveTextContent("track:evidence.scale");
     expect(scale).toHaveTextContent('"highPoints":4');
     expect(scale).toHaveTextContent('"mediumPoints":2');
-    expect(scale).toHaveTextContent('"nearVenueM":50');
-    expect(scale).toHaveTextContent('"farPluginM":1000');
+    // The distance thresholds sit behind the line's ⓘ (copy diet, 2026-11-26).
+    fireEvent.click(within(scale).getByRole("button"));
+    expect(screen.getByText(/track:evidence.scaleMore/)).toHaveTextContent('"nearVenueM":50');
+    expect(screen.getByText(/track:evidence.scaleMore/)).toHaveTextContent('"farPluginM":1000');
   });
 
   it("a stop named only by the venue lookup says so", () => {

@@ -58,7 +58,7 @@
     "tagline": "Self-hosted travel logbook",
     "licenseTitle": "License",
     "licenseSub": "GNU Affero General Public License v3.0 (AGPL-3.0) · © 2025 Dennis Wittke",
-    "licenseBody": "Free software: you may redistribute and modify it under the terms of the AGPL. If you run it as a web service, you must make the complete source code available under AGPL-3.0.",
+    "licenseBody": "Free software under AGPL-3.0. Running it as a service means publishing the source.",
     "sourceCode": "Source code",
     "supportTitle": "Support",
     "supportSub": "A star on GitHub or a donation helps keep it going.",
@@ -119,7 +119,7 @@
     "primaryBadge": "Default",
     "unconfirmedBadge": "Not confirmed",
     "unconfirmedTitle": "Please confirm where you live",
-    "unconfirmedBody": "So far TravStats only knows your home airport and measures distances from there. Confirm where you live and pick further home airports – until then every statistic stays exactly as it was.",
+    "unconfirmedBody": "So far only your home airport counts. Confirm home and airports; until then nothing changes.",
     "confirm": "Confirm",
     "edit": "Edit",
     "newHomeHeading": "New home",
@@ -194,7 +194,7 @@
     }
   },
   "domainColors": {
-    "lowContrast": "A very dark colour barely separates from the background. It is used exactly as picked — affected marks get a hairline outline so they stay findable."
+    "lowContrast": "Very dark colour: markers get a thin outline so they stay visible."
   },
   "units": {
     "title": "Units",
@@ -393,7 +393,7 @@
       "not_owned": "not your account",
       "not_found": "not found on the server"
     },
-    "partial": "Not matched: {{skipped}} entries skipped, {{unmatched}} references (e.g. ports, stations) with no match on this server, {{refused}} files refused.",
+    "partial": "Not taken over: {{skipped}} entries, {{unmatched}} references without a match, {{refused}} files.",
     "notEmpty": "This account already holds entries. Create a new account and import the archive there.",
     "statusFailed": "Could not check whether this account is empty. Reload the page.",
     "moves": "Moves with it: every entry of every domain, photos, documents, receipts, the TravTrack history and the settings.",
@@ -435,7 +435,7 @@
     "building": "Building the life book",
     "done": "{{trips}} trips, {{entries}} entries, {{photos}} photos, downloaded",
     "photosSkipped": "Note: {{count}} photos could not be read and are missing from the book.",
-    "note": "It holds trips with a day list, a route map (without a map background), a selection of photos (at most 24 per trip, downscaled) and the kind of evidence attached. Entries with an unknown date appear as \"Date unknown\", never on a guessed day.",
+    "note": "Trips with day list, map and up to 24 photos. Unknown dates show as “date unknown”.",
     "failed": {
       "LIFE_BOOK_EMPTY": "There are no entries in this scope.",
       "LIFE_BOOK_TOO_LARGE": "The book would be too large for this server. Choose a single year or a single trip.",
@@ -631,8 +631,8 @@
       "button": "Refresh",
       "running": "Running...",
       "confirmTitle": "Confirm AeroDataBox calls",
-      "confirmBody": "This will use up to {{count}} AeroDataBox calls in this run. A single click processes at most 25 flights — click again to drain the remainder.",
-      "confirmHistoricalNote": "Only AeroDataBox can serve the 365-day window. Other configured APIs (AirLabs, Aviationstack, OpenSky) are not used for this operation.",
+      "confirmBody": "Up to {{count}} AeroDataBox calls, at most 25 flights per click.",
+      "confirmHistoricalNote": "Only AeroDataBox reaches back 365 days; other APIs are not used here.",
       "confirmQuotaWarn": "Remaining quota is below this batch — you will hit zero before completion.",
       "confirmRun": "Refresh now",
       "summaryTitle": "Last run",
@@ -644,8 +644,8 @@
       "summaryRetryHint": "{{count}} more flights remain — click \"Refresh\" again to process the next batch.",
       "previewFailed": "The preview could not be loaded. Please try again later.",
       "runFailed": "The refresh failed. Please try again later.",
-      "needsKey_one": "{{count}} flight could be refreshed — an AeroDataBox key is missing for that. Only AeroDataBox reaches back 365 days. Add a key above.",
-      "needsKey_other": "{{count}} flights could be refreshed — an AeroDataBox key is missing for that. Only AeroDataBox reaches back 365 days. Add a key above.",
+      "needsKey_one": "{{count}} flight could be refreshed — add an AeroDataBox key above.",
+      "needsKey_other": "{{count}} flights could be refreshed — add an AeroDataBox key above.",
       "pending_one": "{{count}} flight can be refreshed.",
       "pending_other": "{{count}} flights can be refreshed."
     },
@@ -978,7 +978,7 @@
     "urlLabel": "Your calendar link",
     "keepSecret": "Anyone who has the link sees your trips – do not share it. If it gets into the wrong hands, create a new one.",
     "unreachable": "Google Calendar cannot reach this address — set a public address under Settings → Server → General.",
-    "notRecoverable": "This link comes from an older version and can no longer be shown. It keeps working; if you need it again, create a new one.",
+    "notRecoverable": "Old link, can no longer be shown. It still works; otherwise create a new one.",
     "copy": "Copy link",
     "copied": "Copied.",
     "copyFailed": "Copying did not work – select the link in the field and copy it by hand.",
@@ -1015,7 +1015,7 @@
     "done": "Done",
     "claimed": "✅ {{name}} connected",
     "unnamedDevice": "Device",
-    "noPublicUrl": "No public URL is configured. Set a public address under Settings → Server → General so the app can reach the server.",
+    "noPublicUrl": "No public URL. Set one under Server → General so the app can reach the server.",
     "existingTitle": "Connected devices",
     "empty": "No devices connected yet.",
     "lastUsed": "Last used: {{when}}",
@@ -1244,7 +1244,7 @@
       "action": "Route tram and U-Bahn rides again",
       "running": "Routing again …",
       "progress": "Routing again … {{done}} of {{total}}",
-      "done": "Done: {{routed}} routed again, {{straight}} reset to a straight line, {{kept}} kept unchanged, {{skipped}} skipped (of {{total}}).",
+      "done": "Done: {{routed}} rerouted, {{straight}} straight, {{kept}} kept, {{skipped}} skipped (of {{total}}).",
       "stopped": "Stopped because the rail router no longer answers – {{remaining}} rides are still open. Start it again later.",
       "notConfigured": "Save an address first – without a rail router there is nothing to route again.",
       "alreadyRunning": "Another administrator is running this pass right now. Please wait until it has finished.",
@@ -1375,7 +1375,7 @@
     "action": "Go to Travel types"
   },
   "webdavSync": {
-    "whatIsUploaded": "What is uploaded is your account's complete export as a compressed JSON file — the same data as the admin export \"All data\", without credentials. Photos and documents themselves are not included.",
+    "whatIsUploaded": "Your account export without credentials. Photos and documents are not included.",
     "setup": "Set up",
     "hide": "Hide",
     "url": "WebDAV address",
@@ -1897,7 +1897,7 @@
       },
       "loadError": "I couldn't load the location source.",
       "status": {
-        "notConfigured": "Dawarich is chosen as the source, but your own connection is missing or no longer works. Until you enter it again, I read nothing from Dawarich.",
+        "notConfigured": "Dawarich chosen, but your connection is missing. Nothing is read until then.",
         "unavailable": "TravTrack is chosen as the source, but it isn't available on this server right now. Until it is, I record and read nothing through it."
       },
       "errors": {
@@ -2179,7 +2179,7 @@
     },
     "zones": {
       "title": "Privacy zones",
-      "difference": "Nothing is stored or drawn inside a privacy zone, unlike fixed places, which only summarise. A privacy zone always wins."
+      "difference": "Nothing is stored in private zones; they always win over fixed places."
     },
     "quality": {
       "title": "Days with questionable tracks"
@@ -2360,7 +2360,7 @@
       "fingerprint": "Fingerprint",
       "restore": "To restore: install TravStats again, restore the backup and paste this key when the restore asks for it.",
       "restoreManual": "Alternatively set the 64 characters without spaces as ENCRYPTION_KEY, or write them to /app/data/secrets/encryption.key, before you restore.",
-      "keep": "Keep this file outside the server, e.g. in your password manager. Whoever has it can decrypt the credentials in your backups."
+      "keep": "Keep it off the server. Whoever has it can decrypt your backups."
     },
     "restore": {
       "intro": "Paste the key of the server that wrote the backup, so credentials stay readable.",

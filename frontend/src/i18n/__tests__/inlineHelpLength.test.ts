@@ -16,7 +16,11 @@ import { describe, expect, it } from "vitest";
  * - inline help — a key ending in `description`, `hint`, `help`, `intro` (or
  *   `…Description`, `…Hint`, `…Help`, `…Intro`), plus the settings rows' `s`
  *   sub-line — may hold {@link INLINE_LIMIT} characters in either locale;
- * - its detail slot, a key ending in `More`, is what the ⓘ toggletip shows
+ * - legends, notes, empty states and consequences (`…note`, `…legend`,
+ *   `…body`, `…sub`, `…Explained`, `…effect`, `…empty`, `…question`, …) may
+ *   hold {@link STATE_LIMIT}, since they carry interpolated values;
+ * - its detail slot, a key ending in `More`, and the settings rows' ⓘ text
+ *   `h`, is what the ⓘ toggletip shows
  *   (`InfoLine`, `SettingRow.more`, `SectionTitle.descriptionMore`) and may
  *   hold {@link MORE_LIMIT}.
  *
@@ -26,15 +30,24 @@ import { describe, expect, it } from "vitest";
  */
 
 export const INLINE_LIMIT = 120;
+/** State lines and legends carry interpolated values, so they get a little more room. */
+export const STATE_LIMIT = 140;
 export const MORE_LIMIT = 400;
+/** Release notes are read on demand in their own dialog; they are not inline help. */
+const EXEMPT_NAMESPACES = new Set(["whatsNew"]);
 
 const PLURAL = "(_(zero|one|two|few|many|other))?$";
 const INLINE_KEY = new RegExp(
   `(^|[a-z])(description|hint|help|intro|Description|Hint|Help|Intro)${PLURAL}`
 );
 const MORE_KEY = new RegExp(`More${PLURAL}`);
-/** The settings rows' catalogue names its one-line sub-label `s`. */
+/** Legends, notes, empty states, consequences: the patterns the second pass (2026-11-26) found. */
+const STATE_KEY = new RegExp(
+  `(^|[a-z])(note|Note|legend|Legend|body|Body|sub|Sub|explainer|Explainer|Explained|effect|Effect|empty|Empty|question|Question|summary|Summary|what|rule|Rule|safePath|cta|desc|scale)${PLURAL}`
+);
+/** The settings rows' catalogue names its one-line sub-label `s` and its ⓘ text `h`. */
 const SETTINGS_ROWS_SUB = new RegExp(`^s${PLURAL}`);
+const SETTINGS_ROWS_HELP = new RegExp(`^h${PLURAL}`);
 
 export interface BaselineEntry {
   length: number;
@@ -50,9 +63,12 @@ export interface LongString {
 
 /** The limit a key falls under, or null when it is not help copy. */
 export function limitFor(namespace: string, key: string): number | null {
+  if (EXEMPT_NAMESPACES.has(namespace)) return null;
   if (MORE_KEY.test(key)) return MORE_LIMIT;
   if (INLINE_KEY.test(key)) return INLINE_LIMIT;
   if (namespace === "settingsRows" && SETTINGS_ROWS_SUB.test(key)) return INLINE_LIMIT;
+  if (namespace === "settingsRows" && SETTINGS_ROWS_HELP.test(key)) return MORE_LIMIT;
+  if (STATE_KEY.test(key)) return STATE_LIMIT;
   return null;
 }
 
@@ -131,6 +147,10 @@ describe("inline help length", () => {
       expect(limitFor("errors", "message")).toBeNull();
       expect(limitFor("admin", "s")).toBeNull();
       expect(limitFor("stats", "exclusions")).toBeNull();
+      expect(limitFor("passport", "groundTimeLegend")).toBe(STATE_LIMIT);
+      expect(limitFor("dataQuality", "body")).toBe(STATE_LIMIT);
+      expect(limitFor("settingsRows", "h")).toBe(MORE_LIMIT);
+      expect(limitFor("whatsNew", "body")).toBeNull();
     });
 
     it("fails a long intro paragraph that is not in the baseline", () => {

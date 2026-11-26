@@ -346,7 +346,7 @@
     "costPerKmSample_one": "aus {{count}} Miete mit Preis und Kilometern, je Währung",
     "costPerKmSample_other": "aus {{count}} Mieten mit Preis und Kilometern, je Währung",
     "bookedVsFinal": "Gebucht und abgerechnet",
-    "bookedVsFinalNone": "Noch keine Miete mit gebuchtem Preis und abgerechnetem Endbetrag in derselben Währung. Der Vergleich erscheint, sobald eine Rechnung eingelesen oder der Endbetrag eingetragen ist.",
+    "bookedVsFinalNone": "Erscheint, sobald eine Miete gebuchten und abgerechneten Preis in einer Währung hat.",
     "bookedVsFinalRow_one": "{{count}} Miete: gebucht {{booked}}, abgerechnet {{final}}",
     "bookedVsFinalRow_other": "{{count}} Mieten: gebucht {{booked}}, abgerechnet {{final}}",
     "bookedVsFinalOtherCurrency_one": "{{count}} Miete wurde in einer anderen Währung abgerechnet als gebucht und bleibt außerhalb des Vergleichs.",
@@ -519,9 +519,9 @@
     "adopt": "Übernehmen",
     "fees": {
       "title": "Einzelposten der Rechnung",
-      "none": "Die Rechnung nennt keine Einzelposten, die TravStats lesen kann; die Differenz kann Gebühren, Zusatztage oder Preisänderungen enthalten. Der gebuchte Preis bleibt in jedem Fall erhalten.",
+      "none": "Keine lesbaren Einzelposten. Der gebuchte Preis bleibt erhalten.",
       "total": "Gelesene Posten zusammen: {{total}}. Die Posten sind im Endbetrag enthalten und werden nicht noch einmal gezählt.",
-      "totalBesideDifference": "Gelesene Posten zusammen: {{total}}, bei einer Differenz zur Buchung von {{difference}}. Die Posten sind im Endbetrag enthalten und werden nicht noch einmal gezählt.",
+      "totalBesideDifference": "Posten zusammen: {{total}}, Differenz zur Buchung: {{difference}}. Nichts zählt doppelt.",
       "mixedCurrencies": "Die Posten stehen in mehreren Währungen; eine Summe wird nicht gebildet und nichts umgerechnet.",
       "recorded": "Schon bei der Miete vermerkt.",
       "adoptLine": "Posten „{{label}}“ übernehmen"

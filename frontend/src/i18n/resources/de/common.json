@@ -63,14 +63,14 @@
     "error": "Diagnose-Export fehlgeschlagen",
     "includes": {
       "versions": "App- und Build-Version, Node-Version, Betriebssystem und Architektur",
-      "settings": "Instanz-Einstellungen als Schalter, Zahlen und feste Auswahlwerte – und nur, ob eine Integration eingerichtet ist, nie ihre Adresse oder ihr Schlüssel",
+      "settings": "Instanz-Schalter und Zahlen — ob eine Integration da ist, nie Adresse oder Schlüssel",
       "counts": "Anzahlen: Konten je aktiviertem Bereich, Einträge je Tabelle, Stand der Datenbank-Migrationen",
-      "events": "Log-Ereignisse der letzten 24 Stunden (Fehler: 7 Tage) als Zeitpunkt, Level, Kategorie, Ereignisschlüssel, Fehlercode und -klasse und Code-Stelle (Dateiname:Zeile)",
+      "events": "Log-Ereignisse der letzten 24 Stunden (Fehler: 7 Tage): Zeit, Level, Code, Dateiname:Zeile",
       "userVersions": "App- und Build-Version",
-      "userCounts": "Anzahlen deiner eigenen Einträge (Flüge je Status, Reisen, Unterkünfte, Kreuzfahrten, Orte, Touren, Bahnfahrten, Dokumente) und welche Bereiche du aktiviert hast",
-      "userEvents": "Nur die Log-Ereignisse, die durch dein Konto ausgelöst wurden (Zeitpunkt, Level, Kategorie, Ereignisschlüssel, Fehlercode und -klasse, Code-Stelle) – keine Server-Einstellungen, keine Datenbank- oder Rechner-Angaben"
+      "userCounts": "Anzahlen deiner Einträge je Bereich und welche Bereiche aktiv sind",
+      "userEvents": "Nur Log-Ereignisse deines Kontos (Zeit, Level, Code, Code-Stelle) — keine Server-Angaben"
     },
-    "excludes": "Nicht enthalten: Log-Texte, Namen, Benutzernamen, E-Mail-Adressen, Buchungscodes, Flüge und Orte, URLs mit Query-Strings, IP-Adressen, Rechnername, Verzeichnispfade und alle Werte aus Anfragen.",
+    "excludes": "Nicht enthalten: Texte, Namen, E-Mails, Buchungen, Orte, URLs, IP-Adressen, Pfade, Anfragewerte.",
     "previewLabel": "Vorschau – genau diese Datei wird heruntergeladen:",
     "failedSection": "Abschnitt „{{section}}“ konnte nicht erfasst werden (Code {{code}}) und ist im Paket als fehlgeschlagen markiert.",
     "exportFailed": "Das Diagnose-Paket konnte nicht erzeugt werden: {{reason}}. „Fehler melden“ öffnet das GitHub-Issue trotzdem – dann ohne Anhang.",
@@ -222,7 +222,7 @@
   "settings": {
     "modules": {
       "title": "Bereiche",
-      "desc": "Aktivierte Bereiche erscheinen in Navigation, Dashboard, Karte, Achievements und Statistiken. Deaktivierte Bereiche verstecken sich komplett — deine Daten bleiben erhalten.",
+      "desc": "Ausgeschaltete Bereiche verschwinden überall. Deine Daten bleiben erhalten.",
       "comingSoon": "bald",
       "sub": {
         "flight": "Navigation, Statistik, Karte",

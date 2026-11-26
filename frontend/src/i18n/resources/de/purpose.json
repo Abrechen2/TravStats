@@ -44,7 +44,7 @@
     "confirmAction": "Übertragen",
     "nothing": "Alle Einträge dieser Reise haben diesen Zweck schon.",
     "rowTitle": "Zweck der Einträge",
-    "rowCategory": "Die Kategorie dieser Reise ist „{{category}}“. Neue Einträge übernehmen daraus einmal ihren Zweck (geschäftlich oder privat); danach hat jeder Eintrag seinen eigenen.",
+    "rowCategory": "Kategorie „{{category}}“: neue Einträge übernehmen einmal ihren Zweck.",
     "rowNoCategory": "Diese Reise hat keine Kategorie, aus der ein Zweck folgt."
   }
 }

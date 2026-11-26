@@ -28,7 +28,7 @@
     },
     "privacy": {
       "title": "Was gespeichert wird",
-      "sub": "Nur ein Termin, der zu einem Stopp passt, mit Titel, Zeit und Ort im Vorschlag. Nach Annehmen oder Ablehnen bleiben davon nur Zeit und Kalender. Adresse und Passwort des Kalenders werden verschlüsselt gespeichert und nie wieder angezeigt."
+      "sub": "Nur passende Termine kommen in Vorschläge; danach bleiben Zeit und Kalender. Zugang verschlüsselt."
     },
     "form": {
       "kind": "Art des Kalenders",
@@ -200,7 +200,7 @@
     },
     "sent": {
       "title": "Was gesendet wird",
-      "sub": "Beginn und Ende eines Stopps, seine auf die gewählte Genauigkeit gerundeten Koordinaten und die Zeitzone; dazu, was TravStats selbst schon kennt: der nächste eigene Ort, der gefundene Ort und (bei genau und 100 m) die Adresse.",
+      "sub": "Beginn, Ende, gerundete Koordinaten und Zeitzone eines Stopps, dazu bekannte Orte.",
       "help": "Nie gesendet: Konto, Name, E-Mail oder Verlauf. Jede Anfrage ist signiert."
     },
     "removeConfirm": {

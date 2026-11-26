@@ -44,7 +44,7 @@
     "confirmAction": "Apply",
     "nothing": "Every entry of this trip already has this purpose.",
     "rowTitle": "Purpose of the entries",
-    "rowCategory": "This trip's category is “{{category}}”. New entries take their purpose (business or private) from it once; after that each entry has its own.",
+    "rowCategory": "Category “{{category}}”: new entries take their purpose from it once.",
     "rowNoCategory": "This trip has no category a purpose follows from."
   }
 }

@@ -4,8 +4,7 @@
     "filename": "travstats-export",
     "running": "Building the file …",
     "failed": "The export failed.",
-    "empty": "There is nothing to export.",
-    "description": "Editable Excel sheet, one tab per area. Not a backup: no photos or files."
+    "empty": "There is nothing to export."
   },
   "sheets": {
     "flights": "Flights",
@@ -385,7 +384,7 @@
     "backupRunning": "A backup is already running. Please wait until it has finished, then start the import again – nothing was changed.",
     "importTooManyRows": "The file has more than {{max}} entries. Split it into smaller files and import them one by one – nothing was changed.",
     "emptySheetNote": "An empty sheet deletes nothing. To empty a domain, remove its rows one by one.",
-    "transferNote": "The spreadsheet carries entries, not photos, documents or receipts. Trips are not a sheet of their own: an entry is linked to the trip of the same name in the target account, otherwise it stays without a trip. Moving a whole installation, photos and documents included, to another server is what the backup is for; it cannot move a single account into another account.",
+    "transferNote": "Entries only, no photos or documents. Use the backup to move a server.",
     "rowsToggle": "Rows in detail",
     "rowLine": "Row {{row}}: {{label}}",
     "actions": {

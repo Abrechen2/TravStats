@@ -63,14 +63,14 @@
     "error": "Diagnostic export failed",
     "includes": {
       "versions": "App and build version, Node version, operating system and architecture",
-      "settings": "Instance settings as switches, numbers and fixed choices – and only whether an integration is set up, never its address or key",
+      "settings": "Instance switches and numbers — whether an integration exists, never its address or key",
       "counts": "Counts: accounts per enabled domain, entries per table, database migration status",
-      "events": "Log events of the last 24 hours (errors: 7 days) as time, level, category, event key, error code and class, and code location (file name:line)",
+      "events": "Log events of the last 24 hours (errors: 7 days): time, level, code, file:line",
       "userVersions": "App and build version",
-      "userCounts": "Counts of your own entries (flights by status, trips, stays, cruises, places, tours, rail journeys, documents) and which areas you have switched on",
-      "userEvents": "Only the log events caused by your account (time, level, category, event key, error code and class, code location) – no server settings, no database or machine details"
+      "userCounts": "Counts of your entries per area and which areas are on",
+      "userEvents": "Only your account's log events (time, level, code, location) — no server details"
     },
-    "excludes": "Not included: log text, names, usernames, email addresses, booking codes, flights and places, URLs with query strings, IP addresses, host name, directory paths, and any value from a request.",
+    "excludes": "Not included: texts, names, emails, bookings, places, URLs, IP addresses, paths, request values.",
     "previewLabel": "Preview – exactly this file is downloaded:",
     "failedSection": "Section “{{section}}” could not be collected (code {{code}}) and is marked as failed in the bundle.",
     "exportFailed": "The diagnostic bundle could not be created: {{reason}}. “Report bug” still opens the GitHub issue – without an attachment.",
@@ -222,7 +222,7 @@
   "settings": {
     "modules": {
       "title": "Modules",
-      "desc": "Enabled modules show up in navigation, dashboards, map, achievements and stats. Disabled modules are hidden — your data is preserved.",
+      "desc": "Turned-off areas disappear everywhere. Your data stays.",
       "comingSoon": "soon",
       "sub": {
         "flight": "Navigation, statistics, map",

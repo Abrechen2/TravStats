@@ -142,7 +142,7 @@
           },
           "travPlan": {
             "name": "TravPlan (alpha)",
-            "what": "The planning mode for a trip still ahead: day plan, ideas, booking import, transfers, packing list, budget and the handover to the travel log. Alpha experiment: may still change fundamentally."
+            "what": "Plan trips: day plan, ideas, budget, packing list. Alpha — may still change a lot."
           },
           "encryptedShare": {
             "name": "Encrypted sharing",
@@ -150,7 +150,7 @@
           },
           "federatedTripSharing": {
             "name": "Trip sharing across servers",
-            "what": "Connect with companions on other TravStats servers by invitation code, under Settings → Trips; it has its own switch under server connections as well. Shared trips travel signed to the companion's server. With the switch off, this server does not answer other servers for it at all."
+            "what": "Share trips with accounts on other servers, signed. Off: no answer to other servers."
           }
         }
       },
@@ -369,7 +369,7 @@
       "info": "Info (Default)",
       "debug": "Debug (Verbose)",
       "trace": "Trace (Very Verbose)",
-      "pinned": "Pinned to “{{level}}” by the LOG_LEVEL environment variable. The setting here is saved but takes effect only once LOG_LEVEL is removed.",
+      "pinned": "LOG_LEVEL fixes “{{level}}”. This setting applies only without LOG_LEVEL.",
       "effective": "In effect: {{level}}"
     },
     "retention": {
@@ -723,10 +723,10 @@
         "converted_other": "{{count}} entries were converted; the new values are in columns of their own.",
         "alreadyFilled_one": "{{count}} entry already had the new values (newly created or from the demo) and was left unchanged.",
         "alreadyFilled_other": "{{count}} entries already had the new values (newly created or from the demo) and were left unchanged.",
-        "answered_one": "{{count}} entry the migration left open has been answered since – a zone or time added, the question confirmed, or the entry deleted.",
-        "answered_other": "{{count}} entries the migration left open have been answered since – a zone or time added, the question confirmed, or the entry deleted.",
-        "open_one": "{{count}} entry was not fully migrated – nothing was guessed. Every open value is a question in its owner's inbox.",
-        "open_other": "{{count}} entries were not fully migrated – nothing was guessed. Every open value is a question in its owner's inbox.",
+        "answered_one": "{{count}} open entry has since been answered.",
+        "answered_other": "{{count}} open entries have since been answered.",
+        "open_one": "{{count}} entry open — nothing guessed, the question is in the inbox.",
+        "open_other": "{{count}} entries open — nothing guessed, each question is in the inbox.",
         "flags": "Questions in the inbox: {{open}} open · {{resolved}} reported corrected · {{dismissed}} confirmed as correct",
         "legacyUntouched": "The original columns were not changed. Every conversion is logged and can be undone."
       },
@@ -810,7 +810,7 @@
     "origin": "Public address of this server",
     "originHint": "https, no port or path — the way other servers reach it.",
     "tripSharing": "Share trips with other servers",
-    "tripSharingSub": "People on trusted servers can share trips with accounts on this server. The facts of a shared trip travel signed over TLS to the companion's server; private fields never do. Takes effect only with a key and beta features switched on.",
+    "tripSharingSub": "Trusted servers may share trips, signed, never private details. Needs beta features.",
     "fingerprint": "Fingerprint — give it to the other server's admin through a second channel (e.g. a phone call):",
     "verifiedAt": "verified on {{date}}",
     "unverified": "not verified yet",
@@ -845,7 +845,7 @@
       },
       "fingerprint": "Fingerprint – compare it with the other server's admin over a second channel:",
       "askedBy": "Asked by:",
-      "tripSharingNote": "Approving lets people on both servers compare their numbers. Requests to share trips become possible once the switch \"Share trips with other servers\" is on.",
+      "tripSharingNote": "Allows comparisons. Trip sharing only with “Share trips with other servers” on.",
       "approve": "Approve",
       "decline": "Decline",
       "waitingForOther": "waiting for the other server's admin",
@@ -863,7 +863,7 @@
     "importedTitle": "From the connection file",
     "importedStatus": "Not checked yet",
     "importedCompare": "Compare the server address and the full fingerprint with the other admin over an independent channel, e.g. by phone.",
-    "importedReplaces": "You already pinned this server with a different key. Pinning this one replaces it – so check it with the other admin again. Previous fingerprint: {{fingerprint}}",
+    "importedReplaces": "Replaces the previous key — verify with the admin. Previous: {{fingerprint}}",
     "importedAlreadyStored": "This server is already pinned with exactly this key. There is nothing to do.",
     "manualEntry": "Enter manually",
     "error": {
@@ -923,7 +923,7 @@
       "ping": "Send ping",
       "addPeer": "Add a server",
       "usersTitle": "Then: how users share",
-      "users": "On a trip, under \"Share\", create an invitation code; it is valid for 72 hours and works once. The other person redeems it on their own server under Settings → Share trips."
+      "users": "Create a code on a trip under “Share” (once, 72 hours)."
     },
     "qrHintMore": "The code holds no secret and does not expire. It is valid only for the stored key and address: after a change, the other admin must scan again."
   },
@@ -1013,7 +1013,7 @@
     "links": "Lodgings: {{lodgings}} · Loyalty cards: {{memberships}}",
     "edit": "Edit",
     "editTitle": "Edit {{name}}",
-    "renameNote": "Linked to this chain: lodgings {{lodgings}}, loyalty cards {{memberships}}. They stay linked and show the new name afterwards.",
+    "renameNote": "Linked: {{lodgings}} stays, {{memberships}} cards — they then show the new name.",
     "merge": "Merge",
     "mergeTitle": "Merge {{name}}",
     "mergeTarget": "Merge into",
@@ -1022,7 +1022,7 @@
     "mergeSearching": "Searching …",
     "mergeSearchError": "The chains could not be searched. Please try again.",
     "mergeMore": "Showing {{shown}} of {{total}} chains — narrow the search to find the others.",
-    "mergeExplain": "All lodgings ({{lodgings}}) and loyalty cards ({{memberships}}) of \"{{source}}\" are linked to \"{{target}}\", across all accounts. \"{{source}}\" is removed afterwards. No link is lost.",
+    "mergeExplain": "{{lodgings}} stays and {{memberships}} cards of “{{source}}” move to “{{target}}”; nothing is lost.",
     "mergeConfirm": "Merge",
     "merged": "Merged into {{name}}.",
     "delete": "Delete",

@@ -85,8 +85,8 @@
     "spendOriginal": "Original",
     "spendBase": "In Basiswährung",
     "spendPerNight": "Ø Gesamtkosten pro Nacht",
-    "spendPerNightCalc_one": "{{total}} ÷ {{count}} Nacht = {{result}} – alle Kosten der gezählten Aufenthalte (Zimmer, Extras, Gebühren, Abgaben) je Nacht, wie gebucht, nicht pro Person.",
-    "spendPerNightCalc_other": "{{total}} ÷ {{count}} Nächte = {{result}} – alle Kosten der gezählten Aufenthalte (Zimmer, Extras, Gebühren, Abgaben) je Nacht, wie gebucht, nicht pro Person.",
+    "spendPerNightCalc_one": "{{total}} ÷ {{count}} Nacht = {{result}} — alle Kosten je Nacht, nicht pro Person.",
+    "spendPerNightCalc_other": "{{total}} ÷ {{count}} Nächte = {{result}} — alle Kosten je Nacht, nicht pro Person.",
     "noLocation": "Kein Standort hinterlegt",
     "setLocationNow": "Standort jetzt suchen",
     "deleteConfirmTitle": "Unterkunft löschen?",
@@ -219,7 +219,7 @@
     "source": "EZB",
     "sourceMarket": "Marktkurs",
     "tooltip": "Umgerechnet zum EZB-Referenzkurs des Check-in-Tages",
-    "tooltipMarket": "Umgerechnet zu einem Marktkurs des Check-in-Tages — kein amtlicher EZB-Kurs, sondern ein freier Datensatz für Währungen, die die EZB nicht veröffentlicht.",
+    "tooltipMarket": "Marktkurs vom Check-in-Tag, kein amtlicher EZB-Kurs.",
     "markerNone": "kein Kurs",
     "markerManual": "eigener Kurs",
     "tooltipNone": "Kein Kurs verfügbar — nicht in Summen enthalten",
@@ -229,7 +229,7 @@
     "omittedFromTotal": "{{count}} Aufenthalte nicht umgerechnet",
     "omittedFromTotal_one": "{{count}} Aufenthalt nicht umgerechnet",
     "omittedFromTotal_other": "{{count}} Aufenthalte nicht umgerechnet",
-    "baseCurrencyExplainer": "Zur Wahl stehen die 30 Währungen mit amtlichen EZB-Kursen, weil in diese Währung alles umgerechnet wird — zurück bis 1999. Erfassen kannst du in jeder Währung. Aufenthalte in einer Währung ohne Kurs werden gespeichert und angezeigt, zählen aber nicht in diese Summe."
+    "baseCurrencyExplainer": "Nur die 30 EZB-Währungen, weil alles in sie umgerechnet wird. Erfassen geht in jeder."
   },
   "chainPicker": {
     "placeholder": "Kette suchen …",
@@ -307,7 +307,7 @@
     "duplicateError": "Dieses Programm ist bereits hinterlegt",
     "deleteError": "Bonusprogramm konnte nicht gelöscht werden",
     "extendExisting": "„{{name}}“ stattdessen um diese Kette erweitern",
-    "leavesThisChain": "Diese Kette ist nicht mehr angehakt: nach dem Speichern erscheint das Programm auf dieser Kettenseite nicht mehr. Es bleibt erhalten und ist weiterhin unter Einstellungen → Bonusprogramme erreichbar."
+    "leavesThisChain": "Nicht mehr angehakt: verschwindet hier, bleibt unter Bonusprogramme erhalten."
   },
   "chainDetail": {
     "loading": "Kette wird geladen …",
@@ -331,7 +331,7 @@
       "title": "Vorschau ({{count}} Zeilen)",
       "title_one": "Vorschau ({{count}} Zeile)",
       "title_other": "Vorschau ({{count}} Zeilen)",
-      "unmappedRatings": "Diese Spalten gehören zu Bewertungskategorien, die es in deinem Konto nicht gibt, und werden nicht importiert: {{columns}}. Lege die Kategorie unter Einstellungen an und importiere erneut.",
+      "unmappedRatings": "Nicht importiert, Kategorie fehlt: {{columns}}. Kategorie anlegen und neu importieren.",
       "commit": "Auswahl importieren",
       "commitError": "Import konnte nicht übernommen werden",
       "chooseCurrency": "— Währung —",
@@ -1086,7 +1086,7 @@
     "title": "Diese Tage überschneiden sich mit anderen Aufenthalten",
     "titleDuplicate": "In diesem Haus gibt es für diese Tage schon einen Aufenthalt – vielleicht ist das ein Duplikat.",
     "sameHouse": "dieses Haus",
-    "rule": "Abreise und Anreise am selben Tag zählen nicht als Überschneidung. Zwei Zimmer oder zwei Häuser in derselben Nacht sind erlaubt – du bestätigst es nur.",
+    "rule": "Abreise und Anreise am selben Tag überschneiden sich nicht. Zwei Zimmer in einer Nacht: bestätigen.",
     "proceed": "Absichtlich so speichern",
     "changeDates": "Termine ändern",
     "unchecked": "Überschneidungen konnten nicht geprüft werden.",
@@ -1132,8 +1132,8 @@
   },
   "locationCheck": {
     "title": "Ort prüfen",
-    "name_only": "Von „{{name}}“ ist nur der Name bekannt. Ein Name allein ist kein Ort – es gibt ihn oft in mehreren Ländern –, darum wurde keine Position gesetzt. Ergänze Ort oder Land oder setz den Punkt selbst.",
-    "contradicted": "Die Ortssuche fand nur Treffer in einem anderen Land oder Ort als dem, den die Unterkunft angibt. Keiner davon wurde übernommen. Prüfe die Angaben oder setz den Punkt selbst.",
+    "name_only": "Für „{{name}}“ nur der Name, kein Ort. Ort oder Land ergänzen oder den Punkt setzen.",
+    "contradicted": "Treffer nur in einem anderen Land oder Ort; nichts übernommen. Angaben prüfen oder Punkt setzen.",
     "provider_unavailable": "Die Ortssuche war nicht erreichbar, es wurde nichts gefunden. Das wird später erneut versucht – oder setz den Punkt selbst.",
     "no_result": "Die Ortssuche hat nichts gefunden. Ergänze die Adresse oder setz den Punkt selbst.",
     "pin_country_mismatch": "Der Punkt auf der Karte liegt in einem anderen Land als dem eingetragenen. Welche Angabe stimmt, entscheidest du – es wurde nichts geändert.",

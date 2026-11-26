@@ -4,7 +4,7 @@
     "description": "Who wants to share trips with you, and what happened in shared trips.",
     "requests": {
       "title": "Requests",
-      "body": "{{name}} (@{{username}}) would like to share trips with you. If you agree, {{name}} can copy trips into your account — each one as your own trip.",
+      "body": "{{name}} (@{{username}}) wants to share trips as copies into your account.",
       "accept": "Agree",
       "decline": "Decline"
     },
@@ -21,7 +21,7 @@
       "deleted": "{{name}} deleted {{type}} “{{entry}}”. Your copy stays — it is your call.",
       "movedOut": "{{name}} took {{type}} “{{entry}}” out of the shared trip. Your copy stays — it is your call.",
       "joined": "{{name}} added {{type}} “{{entry}}” to the shared trip. Your own entry is now linked to it.",
-      "joinedMoved": "{{name}} added {{type}} “{{entry}}” to the shared trip. Your own entry from “{{from}}” is now linked to this trip and was moved here.",
+      "joinedMoved": "{{name}} added {{type}} “{{entry}}”. Your entry from “{{from}}” is now here.",
       "joinedMovedOnShare": "{{name}} shared the trip with you. Your own entry “{{entry}}” from “{{from}}” is now linked to it and was moved here.",
       "unknownEntry": "an entry",
       "undo": "Undo",
@@ -188,20 +188,20 @@
     "title": "Share trip with {{name}}",
     "titlePick": "Share trip",
     "person": "With whom",
-    "copied": "{{name}} gets their own copy of this trip: flights, stays, cruises, train, bus and ferry rides, rentals and stops with their times, places and status. When one of you changes something later, it reaches everyone and can be undone in the inbox.",
+    "copied": "{{name}} gets their own copy. Later changes reach everyone.",
     "private": "Staying private: seat, cabin and room, your price, booking references, ratings, notes, photos, journal and documents.",
     "final": "This cannot be taken back: {{name}} keeps the copy even if one of you leaves the shared trip.",
     "confirm": "Share trip",
     "done": "Trip shared with {{name}}.",
-    "nobody": "Right now you can't share this trip with anyone. Link travellers to their account — that works once they have accepted your request.",
+    "nobody": "No one to share with yet. Link travellers once they have agreed.",
     "add": {
-      "title": "These accounts have agreed to share with you but are not travellers on this trip yet. Add a person and link them — then you can share the trip with them.",
+      "title": "These accounts agreed but are not among the travellers. Add and link them.",
       "action": "Add as traveller and link",
       "actionLabel": "Add {{name}} as a traveller and link their account",
       "addFailed": "{{name}} could not be added as a traveller. Nothing was changed.",
       "linkFailed": "{{name}} is now a traveller, but linking their account did not work. Please try again.",
       "reloadFailed": "{{name}} is added and linked, but the list could not be reloaded. Close the dialog and open it again.",
-      "nameTaken": "The name “{{name}}” already belongs to a traveller linked to another account. Rename that traveller on the trip — then you can add {{name}}."
+      "nameTaken": "“{{name}}” is already linked to another account. Rename them among the travellers first."
     },
     "blockedTitle": "Not possible right now",
     "blocked": {
@@ -446,7 +446,7 @@
       "copied": "Link copied.",
       "copyFailed": "Copying failed – select the link and copy it by hand.",
       "endsAt": "Ends on {{date}}",
-      "disabled": "Public links are disabled. An administrator can enable them under Settings → Server → Features (“Allow public links”).",
+      "disabled": "Public links are off. An admin enables them under Server → Features.",
       "statusFailed": "Could not check whether public links are allowed.",
       "photosOmitted": {
         "lead": "Not in the link:",
@@ -675,7 +675,7 @@
         "delivered": "All changes have reached {{name}}.",
         "pending": "Changes are on their way to {{name}}.",
         "retrying": "Changes are not reaching {{name}} right now – {{origin}} has not answered since {{date}}. Retrying.",
-        "retryingLocal": "Changes are not reaching {{name}} right now – an error on your server since {{date}}. Retrying; if it stays like this, ask your admin.",
+        "retryingLocal": "Changes don't reach {{name}}, error since {{date}}. Still retrying; otherwise ask your admin.",
         "retryingRemote": "Changes are not reaching {{name}} right now – {{origin}} has reported an error taking them over since {{date}}. Retrying.",
         "unreachable": "Changes are not reaching {{name}} – their server has been unreachable since {{date}}.",
         "rejected": "{{name}}'s server could not accept a change to “{{entry}}” ({{why}}).",
@@ -687,7 +687,7 @@
           "too-large": "too large to send",
           "other": "refused"
         },
-        "retryingHeld": "Changes are not reaching {{name}} right now – on {{origin}} the trip has been waiting for {{name}} to confirm it again since {{date}}. Retrying.",
+        "retryingHeld": "Changes don't reach {{name}}: {{origin}} awaits confirmation since {{date}}.",
         "unsupported": "{{origin}} needs an update to catch up on missed changes. New changes still reach {{name}}."
       },
       "dismiss": "Dismiss",
@@ -742,8 +742,8 @@
         "submit": "Offer trip",
         "working": "Checking …",
         "invalid": "Enter it as username@server, e.g. anna@trav.example.org.",
-        "serverNotConnected": "{{origin}} is not admitted on this instance yet. Your admin does that under Settings → Server → Server connections – or you create an invitation code.",
-        "requested": "Request sent to {{name}} on {{origin}}. Once they agree they appear in the list above and you can offer them the trip.",
+        "serverNotConnected": "{{origin}} is not admitted. Your admin can change that, or you create a code.",
+        "requested": "Request to {{name}} on {{origin}} sent. The person appears above once they agree.",
         "waiting": "The request to {{name}} on {{origin}} is still open. They have to confirm it first.",
         "failed": "The person on the other server could not be reached."
       },
@@ -847,7 +847,7 @@
       },
       "findable": {
         "label": "Findable by connected servers",
-        "sub": "Off: nobody on a connected server can send you a connection request. On: you can be asked by username – you decide on every request yourself, and nothing is shared until you confirm."
+        "sub": "On: people can request you by name; nothing is shared until you agree."
       },
       "request": {
         "title": "Request a connection",
@@ -856,7 +856,7 @@
         "username": "Username",
         "switchesHint": "This is what you give the person once they confirm. You can change it later.",
         "submit": "Request",
-        "sent": "The request to @{{username}} on {{origin}} is on its way. Neither side tells you whether the person exists or is findable – once they confirm, they appear here as connected."
+        "sent": "Request to @{{username}} on {{origin}} sent. It appears here once confirmed."
       },
       "waiting": {
         "title": "Waiting for your answer",
@@ -958,7 +958,7 @@
     "title": "People",
     "intro": "Everyone you travel or share with, in one list. Each switch applies to exactly that person.",
     "loading": "Loading people …",
-    "empty": "Nobody in the list yet. Companions appear here once you write them into an entry; people with their own account you can connect below.",
+    "empty": "No one yet. Fellow travellers appear once you add them.",
     "retry": "Try again",
     "loadFailed": {
       "companions": "I couldn't load the travel companions.",

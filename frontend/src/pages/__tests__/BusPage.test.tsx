@@ -239,7 +239,7 @@ describe("BusPage", () => {
     const row = await screen.findByTestId("bus-row-r1");
     chooseMenuEntry(menuTriggerIn(row), "Löschen");
     expect(screen.getByTestId("confirm-message")).toHaveTextContent(
-      "Dazu 2 Dokumente: Diese werden nur von diesem Eintrag gelöst"
+      "Dazu 2 Dokumente: werden nur gelöst"
     );
   });
 
@@ -282,7 +282,7 @@ describe("BusPage", () => {
       expect(message).toContain(
         "Die Busfahrt Seoul Express Bus Terminal → Sokcho Express Bus Terminal wirklich löschen?"
       );
-      expect(message).toContain("Dazu 1 Dokument: Es wird nur von diesem Eintrag gelöst");
+      expect(message).toContain("Dazu 1 Dokument: wird nur gelöst");
       expect(message).toContain("Erhalten bleiben: Reise „Korea 2026“, 2 Mitreisende");
     });
 

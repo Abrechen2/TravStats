@@ -290,8 +290,8 @@
         "km": "Tourkilometer",
         "ascent": "Aufstieg aus Aufzeichnungen",
         "ascentValue": "{{m}} Hm",
-        "row_one": "{{count}} Tour · {{km}} km ({{kmTours}} mit Strecke) · {{ascent}} Hm ({{ascentTours}} gemessen) · {{duration}} in Bewegung ({{movingTours}} aufgezeichnet)",
-        "row_other": "{{count}} Touren · {{km}} km ({{kmTours}} mit Strecke) · {{ascent}} Hm ({{ascentTours}} gemessen) · {{duration}} in Bewegung ({{movingTours}} aufgezeichnet)",
+        "row_one": "{{count}} Tour · {{km}} km ({{kmTours}}) · {{ascent}} Hm ({{ascentTours}}) · {{duration}} ({{movingTours}})",
+        "row_other": "{{count}} Touren · {{km}} km ({{kmTours}}) · {{ascent}} Hm ({{ascentTours}}) · {{duration}} ({{movingTours}})",
         "empty": "Erscheint, sobald eine Tagestour aufgezeichnet ist oder ihr Datum vorbei ist.",
         "help": {
           "unit": "Eine abgeschlossene Tagestour – Wanderung, Radtour, geführter Ausflug und jede andere Aktivität.",
@@ -870,7 +870,7 @@
       },
       "recorded": "{{rate}} · {{source}} vom {{day}} · ≈ {{amount}}",
       "none": "Kein Kurs erfasst — die Kosten zählen nur in ihrer eigenen Währung. Beim Speichern wird der Tageskurs für das Datum gesucht.",
-      "noneUndated": "Kein Kurs: ohne Datum gibt es keinen Tageskurs. Die Kosten zählen dann nur in ihrer eigenen Währung — außer du trägst einen Kurs von Hand ein.",
+      "noneUndated": "Kein Kurs ohne Datum: zählt nur in eigener Währung, außer du trägst einen ein.",
       "relookupHint": "Änderst du Betrag, Währung oder Datum, wird beim Speichern ein neuer Tageskurs gesucht.",
       "enterManual": "Kurs von Hand eingeben",
       "remove": "Kurs entfernen",
@@ -920,7 +920,7 @@
     "discardMessage": "Die auf diesem Gerät gesicherte Fassung der Stationen wird gelöscht – eine andere Kopie davon gibt es nicht.",
     "discardConfirm": "Verwerfen",
     "firstTitle": "Erst die gesicherten Änderungen?",
-    "firstMessage": "Auf diesem Gerät liegen Änderungen an den Stationen, die den Server nie erreicht haben. Stell sie wieder her, oder verwirf sie bewusst, bevor du neu bearbeitest – sonst würden sie beim ersten Tippen überschrieben.",
+    "firstMessage": "Ungespeicherte Änderungen auf diesem Gerät. Wiederherstellen oder verwerfen, sonst gehen sie verloren.",
     "discardAndEdit": "Verwerfen und bearbeiten"
   },
   "conflict": {

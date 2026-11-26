@@ -107,7 +107,7 @@
     "dayNoPoints": "Nothing is stored on this day – there is no source to choose."
   },
   "settings": {
-    "tripsNoResidence": "TravTrack recognises trips only once your home is confirmed: it measures the distance from where you live. Confirm it under Settings → Home.",
+    "tripsNoResidence": "TravTrack detects trips only with a confirmed home (Settings → Home).",
     "diagnostics": {
       "day": "Day",
       "device": "Device",
@@ -139,7 +139,7 @@
         "upload": "upload: {{status}}",
         "network": "no network",
         "permission": "location access: {{status}}",
-        "autoPause": "iOS was allowed to pause recording automatically (auto-pause) – the likeliest cause here, but the app is not told when it happens",
+        "autoPause": "Likely iOS auto-pause — the app is not told",
         "stopPlan": "The app ended the recording itself (plan, {{where}}). Verdicts: flight {{flight}}, trip {{trip}}, everyday {{everyday}}. Location access allowed: {{allowed}}, everyday switch: {{enabled}}, everyday running: {{armed}}, server decision: {{decision}}.",
         "stopOther": "The recording was ended by: {{reason}}",
         "stopForeground": "app in the foreground",
@@ -248,7 +248,7 @@
     "intro": "Copies your history from Dawarich. Dawarich is only read, nothing is duplicated.",
     "connection": {
       "none": "Connect your own Dawarich first (Settings → Dawarich). Only then can the history be copied.",
-      "shared": "This server only has a shared Dawarich set up. A copy reads from your own only – enter your own connection for it."
+      "shared": "Only a shared Dawarich is set up. Add your own connection to copy."
     },
     "whole": "Whole history (up to yesterday)",
     "span": "Span of days",
@@ -322,7 +322,7 @@
     "create": "Create key",
     "shownOnce": "The key is shown only now. Enter it in the app; afterwards it cannot be seen here again.",
     "owntracks": {
-      "howTo": "In OwnTracks: Settings → Connection → mode \"HTTP\". Enter the URL, switch authentication on, use any name as the user and the key as the password.",
+      "howTo": "OwnTracks: mode “HTTP”, enter the URL, auth on, key as password.",
       "url": "URL",
       "password": "Password"
     },
@@ -376,7 +376,7 @@
     "citiesNone": "No city",
     "pending": "Being recomputed right now – the values may still change.",
     "pendingMonth": "being computed",
-    "legend": "Kilometres on the ground count only the visible line: nothing in the air, nothing faster than 500 km/h, nothing a privacy zone hides. Months without positions are left out.",
+    "legend": "Only the visible ground line counts. Months without positions are missing.",
     "citiesOff": "The overview names cities only once you switch on the city lookup in the settings.",
     "utc": "Months in UTC: a day counts in the month it falls in by UTC – what happens around local midnight may appear in the neighbouring month.",
     "chartTitle": "Distance on the ground per month ({{unit}})",
@@ -463,7 +463,7 @@
       "splitHours_one": "{{count}} hour",
       "splitHours_other": "{{count}} hours",
       "notRemembered": "Couldn't remember this choice – it only holds until you leave the page.",
-      "alwaysCut": "Private zones, deleted spans, pauses and flight-mode gaps always split, whatever is set here. This can only split further, never join.",
+      "alwaysCut": "Private zones, deletions and gaps always split. Here you can only split more.",
       "scale": {
         "title": "Speed scale",
         "default": "Standard",
@@ -541,13 +541,13 @@
     "rangeSimplified": "For this range the line is simplified, so the distance is a little shorter than measured.",
     "rangeOmitted_one": "{{count}} short piece no longer fitted into the view and is missing.",
     "rangeOmitted_other": "{{count}} short pieces no longer fitted into the view and are missing.",
-    "rangeNoTimeline": "For month, year and range the map shows the line alone. The day's timeline, stays and logbook entries are in the day and 7-day views.",
+    "rangeNoTimeline": "From month up, the line only. Daily details in the day and 7-day views.",
     "countries": {
       "loading": "Loading countries …",
       "none": "No country was determined in the months touched.",
       "list_one": "{{count}} country: {{names}}",
       "list_other": "{{count}} countries: {{names}}",
-      "note": "Coloured are the countries of the monthly values of every month the range touches (months in UTC) – for a single day, those of its month.",
+      "note": "Countries of every month the range touches (by UTC).",
       "pending": "Some of these months are being recomputed; the countries may still change.",
       "shapesFailed": "The country borders could not be loaded."
     },
@@ -717,7 +717,7 @@
     "intro": "No data yet. Three ways bring your history here:",
     "companion": {
       "title": "Record with the Companion",
-      "body": "Set your location source to TravTrack (Settings → Location history → Location source). The Companion then records your ways here.",
+      "body": "Set the location source to TravTrack, then the Companion records your routes.",
       "done": "TravTrack is your location source. As soon as the Companion records, your ways appear here.",
       "action": "Set the location source"
     },
@@ -982,7 +982,7 @@
     "calendar": "Calendar: {{title}}",
     "venue": "Place from map data",
     "whyLabel": "Why?",
-    "scale": "How it is counted: suggestion source within {{nearPluginM}} m 2 points, within {{farPluginM}} m 1 (one less when it doubts its own answer); calendar event 2 (1 when it only fits the day); place from map data within {{nearVenueM}} m 2, within {{closeVenueM}} m 1; a stay of {{longDwellMin}} min or more adds 1. {{highPoints}} points or more is high, {{mediumPoints}} or more medium, otherwise low.",
+    "scale": "Points from source, event, map place and duration. {{highPoints}}+ high, {{mediumPoints}}+ medium.",
     "level": {
       "high": "Confidence high",
       "medium": "Confidence medium",
@@ -994,7 +994,8 @@
       "calendar": "calendar event fits",
       "plugin": "{{plugin}}: {{name}}, {{m}} m",
       "pluginNoDistance": "{{plugin}}: {{name}}"
-    }
+    },
+    "scaleMore": "How it is counted: suggestion source within {{nearPluginM}} m 2 points, within {{farPluginM}} m 1 (one less when it doubts its own answer); calendar event 2 (1 when it only fits the day); place from map data within {{nearVenueM}} m 2, within {{closeVenueM}} m 1; a stay of {{longDwellMin}} min or more adds 1. {{highPoints}} points or more is high, {{mediumPoints}} or more medium, otherwise low."
   },
   "roadtrip": {
     "open": "Take over as a roadtrip",

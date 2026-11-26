@@ -75,7 +75,7 @@
   "cruiseTab": {
     "loading": "Loading cruises …",
     "emptyTitle": "No cruises yet",
-    "emptyBody": "Add your first cruise via “+ Add cruise” or import a booking email or PDF on the cruises page.",
+    "emptyBody": "Add your first cruise or import a booking.",
     "emptyCta": "Go to cruises page"
   },
   "tourTab": {
@@ -516,5 +516,5 @@
     }
   },
   "mailOriginalNotFiled": "The entry was created, but the original mail could not be filed with it. It stays in the inbox.",
-  "documentNotFiled": "The entry was created, but the document could not be filed with it. It stays under \"Documents filed with nothing\" in the inbox."
+  "documentNotFiled": "Entry created, but the document was not attached. It is under “Unfiled documents”."
 }

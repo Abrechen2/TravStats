@@ -17,8 +17,8 @@
   "removeLabel": "{{name}} überall löschen",
   "deleteTitle": "Dokument überall löschen?",
   "deleteMessage": "„{{name}}“ wird dauerhaft gelöscht, mit der Datei und an jedem Eintrag, mit dem es verknüpft ist. Die Einträge selbst bleiben bestehen.",
-  "deleteCascadeNote_one": "Dazu 1 Dokument: Es wird nur von diesem Eintrag gelöst und bleibt erhalten. Hängt es an keinem anderen Eintrag, wird es nach der Karenzzeit gelöscht.",
-  "deleteCascadeNote_other": "Dazu {{count}} Dokumente: Diese werden nur von diesem Eintrag gelöst und bleiben erhalten. Hängt eines an keinem anderen Eintrag, wird es nach der Karenzzeit gelöscht.",
+  "deleteCascadeNote_one": "Dazu 1 Dokument: wird nur gelöst. Hängt es nirgends sonst, wird es nach einer Frist gelöscht.",
+  "deleteCascadeNote_other": "Dazu {{count}} Dokumente: werden nur gelöst. Was nirgends sonst hängt, wird nach einer Frist gelöscht.",
   "format": {
     "image": "Bild",
     "pdf": "PDF",

@@ -8,11 +8,11 @@
     "unsupportedFormat": "Supported formats: {{formats}}",
     "regexWarning": {
       "title": "No LLM parser available",
-      "body": "No LLM (Ollama, OpenAI, Claude) is configured. The regex fallback only recognises the most common booking formats; manual corrections will be needed more often."
+      "body": "No language model set up. Templates know common formats only; check the values."
     },
     "llmDisabled": {
       "title": "AI parser switched off",
-      "body": "The administrator has switched the AI model off. Bookings are read with the built-in templates only; anything no template knows you fill in by hand."
+      "body": "AI model turned off. Templates only; you add the rest by hand."
     },
     "pasteFirst": "Paste the text of the e-mail first.",
     "provider": {
@@ -21,11 +21,11 @@
     },
     "cloudNotConsented": {
       "title": "AI parser awaiting consent",
-      "body": "The configured AI provider is outside the network, and the administrator has not agreed to sending bookings there. Bookings are read with the built-in templates only."
+      "body": "The admin has not consented to the cloud AI. Only built-in templates read bookings."
     },
     "providerIncomplete": {
       "title": "AI provider not fully set up",
-      "body": "The OpenAI-compatible provider is missing its base URL or model. Until the administrator completes it, bookings are read with the built-in templates only."
+      "body": "Base URL or model is missing. Until then only built-in templates read bookings."
     }
   },
   "pdf": {

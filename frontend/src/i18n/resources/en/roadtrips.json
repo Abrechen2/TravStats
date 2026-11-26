@@ -290,8 +290,8 @@
         "km": "Tour kilometres",
         "ascent": "Climb from recordings",
         "ascentValue": "{{m}} m climbed",
-        "row_one": "{{count}} tour · {{km}} km ({{kmTours}} with a distance) · {{ascent}} m climbed ({{ascentTours}} measured) · {{duration}} moving ({{movingTours}} recorded)",
-        "row_other": "{{count}} tours · {{km}} km ({{kmTours}} with a distance) · {{ascent}} m climbed ({{ascentTours}} measured) · {{duration}} moving ({{movingTours}} recorded)",
+        "row_one": "{{count}} tour · {{km}} km ({{kmTours}}) · {{ascent}} m up ({{ascentTours}}) · {{duration}} ({{movingTours}})",
+        "row_other": "{{count}} tours · {{km}} km ({{kmTours}}) · {{ascent}} m up ({{ascentTours}}) · {{duration}} ({{movingTours}})",
         "empty": "Appears once a day tour is recorded or its day has passed.",
         "help": {
           "unit": "One completed day tour — hike, bike ride, guided excursion and any other activity.",
@@ -870,7 +870,7 @@
       },
       "recorded": "{{rate}} · {{source}} of {{day}} · ≈ {{amount}}",
       "none": "No rate recorded — the cost counts in its own currency only. Saving looks up the daily rate for the date.",
-      "noneUndated": "No rate: without a date there is no daily rate. The cost then counts in its own currency only — unless you enter a rate by hand.",
+      "noneUndated": "No rate without a date: counts only in its own currency unless you add one.",
       "relookupHint": "If you change the amount, currency or date, saving looks up a new daily rate.",
       "enterManual": "Enter a rate by hand",
       "remove": "Remove the rate",
@@ -920,7 +920,7 @@
     "discardMessage": "The version of the stations kept on this device is deleted. It is not stored anywhere else.",
     "discardConfirm": "Discard",
     "firstTitle": "The kept changes first?",
-    "firstMessage": "This device holds station changes that never reached the server. Restore them, or discard them on purpose before editing afresh — otherwise the first keystroke would overwrite them.",
+    "firstMessage": "Unsaved changes on this device. Restore or discard them, or they will be lost.",
     "discardAndEdit": "Discard and edit"
   },
   "conflict": {

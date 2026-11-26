@@ -86,8 +86,8 @@
       "documentsAfter_other": "{{count}} documents will be assigned to you afterwards."
     },
     "deleteUnused": {
-      "body_one": "{{count}} person is on no entry, paid nothing and is linked to no account. Deleting removes this name from your list for good.",
-      "body_other": "{{count}} people are on no entry, paid nothing and are linked to no account. Deleting removes these names from your list for good.",
+      "body_one": "{{count}} person with no entry, payment or account. Deleting removes the name for good.",
+      "body_other": "{{count}} people with no entry, payment or account. Deleting removes the names for good.",
       "done_one": "{{count}} person deleted.",
       "done_other": "{{count}} people deleted."
     },
@@ -120,7 +120,7 @@
     "nights": "Nights together",
     "countries": "Countries together",
     "days": "Days together",
-    "rule": "Only what has happened is counted: a stay counts once its check-out is past, planned trips are marked and do not count. What cannot be determined reads \"unknown\", not 0.",
+    "rule": "Only what happened counts. Planned trips don't, unknown shows as “unknown”.",
     "timeline": "Travelled together",
     "emptyTimeline": "No shared entry with this person yet.",
     "undated": "undated",

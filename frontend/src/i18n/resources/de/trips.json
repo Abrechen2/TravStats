@@ -492,7 +492,7 @@
   },
   "summary": {
     "title": "KI-Zusammenfassung",
-    "cta": "Lass die KI eine kurze, persönliche Zusammenfassung dieser Reise schreiben — aus Flügen, Kreuzfahrten, Aufenthalten, Orten, Stopps und Tagebuch, in deiner Sprache.",
+    "cta": "Die KI schreibt eine kurze, persönliche Zusammenfassung dieser Reise.",
     "generateButton": "Zusammenfassung erstellen",
     "regenerate": "Neu generieren",
     "generating": "Schreibt … das kann ein paar Minuten dauern",
@@ -895,7 +895,7 @@
     },
     "evidenceInvalidated": "Nicht übernommen: Der Standortverlauf zu diesem Vorschlag wurde inzwischen gelöscht oder hat sich geändert.",
     "suggestionGone": "Diesen Vorschlag gibt es nicht mehr – der Standortverlauf dazu wurde inzwischen gelöscht.",
-    "evidenceUnverifiable": "Die Belege für diesen Vorschlag lassen sich gerade nicht prüfen, weil die Kartendaten dazu fehlen. Der Vorschlag bleibt erhalten; versuche es nach der nächsten Auswertung erneut.",
+    "evidenceUnverifiable": "Belege gerade nicht prüfbar, Kartendaten fehlen. Der Vorschlag bleibt.",
     "travTrackDisabled": "TravTrack ist auf diesem Server gerade ausgeschaltet. Der Vorschlag bleibt erhalten und kann später übernommen oder jetzt verworfen werden.",
     "acceptInProgress": "Dieser Vorschlag wird gerade an anderer Stelle übernommen. Bitte versuche es gleich noch einmal.",
     "historyChanged": "Der Standortverlauf hat sich während der Übernahme mehrfach geändert. Der Vorschlag bleibt erhalten; bitte versuche es gleich noch einmal.",

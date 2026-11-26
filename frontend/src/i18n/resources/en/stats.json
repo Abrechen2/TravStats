@@ -907,7 +907,7 @@
     "title": "Where you slept",
     "subtitle": "Every year split night by night. The bar is always one whole year.",
     "help": "Grey: nights with no entry — not necessarily at home. Each night counts once.",
-    "helpWithRail": "The grey remainder is not accounted for: nights no entry says where you were. That does not mean at home — a missing entry proves nothing, and the more complete your logbook, the smaller the remainder. A night two entries claim counts once: ship before lodging before night train before plane. The current year counts up to last night.",
+    "helpWithRail": "Grey: nights with no entry — not necessarily at home. Each night counts once.",
     "contested": "{{count}} nights were claimed by several entries and counted once",
     "contested_one": "{{count}} night was claimed by several entries and counted once",
     "contested_other": "{{count}} nights were claimed by several entries and counted once",
@@ -938,8 +938,8 @@
     },
     "journalEntries": "Journal entries",
     "noMoods": "No mood recorded yet",
-    "helpWithBus": "The grey remainder is not accounted for: nights no entry says where you were. That does not mean at home — a missing entry proves nothing, and the more complete your logbook, the smaller the remainder. A night two entries claim counts once: ship before lodging before night bus before plane. The current year counts up to last night.",
-    "helpWithRailAndBus": "The grey remainder is not accounted for: nights no entry says where you were. That does not mean at home — a missing entry proves nothing, and the more complete your logbook, the smaller the remainder. A night two entries claim counts once: ship before lodging before night train before night bus before plane. The current year counts up to last night.",
+    "helpWithBus": "Grey: nights with no entry — not necessarily at home. Each night counts once.",
+    "helpWithRailAndBus": "Grey: nights with no entry — not necessarily at home. Each night counts once.",
     "busNights": "Night bus",
     "counting": {
       "nights": {
@@ -1037,7 +1037,7 @@
     "yearLabel": "Year",
     "loadError": "Your year could not be loaded.",
     "loadErrorYear": "{{year}} could not be loaded.",
-    "nothingYet": "Nothing to look back on yet. Once a flight, a ride, a stay, a place visit or a rental is recorded, a review appears here.",
+    "nothingYet": "Nothing to look back on yet. Your first entry starts it.",
     "emptyYear": "Nothing is recorded in {{year}}.",
     "rankTop": "Your biggest flying year so far.",
     "rankSecond": "Only {{year}} had more flights.",
@@ -1271,7 +1271,7 @@
     },
     "transfers": {
       "title": "Transfer times",
-      "empty": "No transfer time can be measured yet. It appears once flights are linked into one booking and the landing and the onward departure are recorded to the minute.",
+      "empty": "Not measurable yet: needs linked flights with exact times.",
       "measured": "Measured transfers",
       "measuredCount": "{{transfers}} measured transfers",
       "shortest": "Shortest",
@@ -1282,7 +1282,7 @@
       "departing": "Onward flight",
       "airportChange": "change of airport {{from}} → {{to}}",
       "coverage": "{{measured}} of {{gaps}} gaps in {{bookings}} bookings measured.",
-      "coverageDetail": "Not measured: {{unknownTime}} without minute-precise times, {{unknownOrder}} with an unclear order, {{notFlown}} not both flown, {{conflict}} leaving before the landing, {{separate}} separate journeys (a return or over 24 hours)."
+      "coverageDetail": "Not measured: {{unknownTime}} no time, {{unknownOrder}} unclear, {{notFlown}} not flown, {{conflict}} conflict, {{separate}} separate."
     },
     "help": {
       "discovery": {
@@ -1490,7 +1490,7 @@
         "summary": "{{calls}} documented excursions at {{ports}} ports on {{cruises}} cruises",
         "cruiseRow": "{{documented}} of {{calls}} calls with an excursion ({{notes}} notes, {{tours}} tours)",
         "noneDocumented": "no excursions documented",
-        "empty": "No excursion documented yet. An excursion counts when a call has an excursion note, or when you recorded a tour that day starting at most {{km}} km from the port.",
+        "empty": "No excursion yet: needs an excursion note or a tour within {{km}} km of port.",
         "emptyNotesOnly": "No excursion documented yet. An excursion counts when a call has an excursion note.",
         "unspecified": "No activity",
         "ascent": "{{m}} m climbed",
@@ -1769,7 +1769,7 @@
     "subtitle": "Estimated from published emission factors and the distance. Each mode stands on its own; the total names its parts.",
     "total": "Together {{total}}:",
     "coverage": "{{measured}} of {{records}} entries with a known distance",
-    "cruiseNote": "Lower bound: there is no published factor for cruise ships, so the ferry average is applied over the voyage distance, without hotel operations.",
+    "cruiseNote": "Lower bound: computed with the ferry average, without hotel operations.",
     "saved": "Saved versus flying",
     "savedDescription_one": "Estimate from {{count}} trip that could have been a flight",
     "savedDescription_other": "Estimate from {{count}} trips that could have been flights",

@@ -128,6 +128,6 @@
     "on": "Kostenlose Dienste werden eingeschaltet ✓ (zum Zurücknehmen erneut klicken)",
     "partialFailed": "Das Konto ist angelegt, aber nicht alle Dienste ließen sich einschalten: {{reason}} Du kannst sie unter Admin › Externe Dienste einschalten.",
     "continue": "Weiter",
-    "alreadyOn": "Schon ohne diesen Schalter an sind Bahn-Fahrpläne (Transitous, db-rest) und Betreiber-Logos aus Wikimedia eingeschaltet; Geocoder und Wechselkurse laufen immer. Der Schalter ergänzt nur die Liste oben."
+    "alreadyOn": "Fahrpläne, Logos, Geocoder und Kurse laufen schon. Der Schalter ergänzt nur die Liste oben."
   }
 }

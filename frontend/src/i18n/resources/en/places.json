@@ -101,7 +101,7 @@
     "countryVisit": "Visit beyond a transit stop",
     "countryTransit": "Transit / airport / rest area only",
     "countryVisitHint": "A transit stop counts as ground presence, even overnight. The place name does not determine this.",
-    "countryTransitByCategory": "A service area or fuel station always counts as ground presence, never as a visit of the country. If you really visited something there, change the category.",
+    "countryTransitByCategory": "Rest stops and fuel stations count as ground contact only. Otherwise change the category.",
     "tags": "Tags"
   },
   "detail": {
@@ -700,7 +700,7 @@
         "no_trip": "You have no trip to this country — no trip is assigned.",
         "several_trips": "You have several trips to this country — which one it was is your call; none is assigned."
       },
-      "noKey": "This instance has no Google Places key configured (Settings → Integrations). Positions therefore come only from the name search inside the list's country.",
+      "noKey": "No Google Places key: positions come only from name search in the list's country.",
       "googleFailed": "Google lookup failed:",
       "unplacedBecause": "Without position because:",
       "positionReasons": {
@@ -862,8 +862,8 @@
       "refKept": "Its source reference is kept as a second reference — a later import still finds it."
     },
     "curated": {
-      "twoLists": "“{{kept}}” and “{{other}}” are entries of two checklists ({{lists}}). Merged, one tick would be lost — so both stay.",
-      "sameList": "“{{kept}}” and “{{other}}” are two different entries of the checklist {{list}}. Merged, one tick would be lost — so both stay."
+      "twoLists": "“{{kept}}” and “{{other}}” are in two checklists ({{lists}}). Merging would lose a tick.",
+      "sameList": "“{{kept}}” and “{{other}}” are two entries in {{list}}. Merging would lose a tick."
     }
   },
   "nearby": {

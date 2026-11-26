@@ -4,7 +4,7 @@
     "description": "Wer mit dir Reisen teilen möchte, und was in geteilten Reisen passiert ist.",
     "requests": {
       "title": "Anfragen",
-      "body": "{{name}} (@{{username}}) möchte Reisen mit dir teilen. Wenn du zustimmst, kann {{name}} Reisen in dein Konto kopieren — jede als deine eigene Reise.",
+      "body": "{{name}} (@{{username}}) möchte Reisen als Kopien in dein Konto teilen.",
       "accept": "Zustimmen",
       "decline": "Ablehnen"
     },
@@ -21,7 +21,7 @@
       "deleted": "{{name}} hat {{type}} „{{entry}}“ gelöscht. Deine Kopie bleibt — entscheide selbst.",
       "movedOut": "{{name}} hat {{type}} „{{entry}}“ aus der geteilten Reise genommen. Deine Kopie bleibt — entscheide selbst.",
       "joined": "{{name}} hat {{type}} „{{entry}}“ zur geteilten Reise hinzugefügt. Dein eigener Eintrag ist jetzt damit verbunden.",
-      "joinedMoved": "{{name}} hat {{type}} „{{entry}}“ zur geteilten Reise hinzugefügt. Dein eigener Eintrag aus „{{from}}“ ist jetzt mit dieser Reise verbunden und dorthin verschoben.",
+      "joinedMoved": "{{name}} hat {{type}} „{{entry}}“ hinzugefügt. Dein Eintrag aus „{{from}}“ ist jetzt hier.",
       "joinedMovedOnShare": "{{name}} hat die Reise mit dir geteilt. Dein eigener Eintrag „{{entry}}“ aus „{{from}}“ ist jetzt damit verbunden und hierher verschoben.",
       "unknownEntry": "einen Eintrag",
       "undo": "Rückgängig",
@@ -188,20 +188,20 @@
     "title": "Reise mit {{name}} teilen",
     "titlePick": "Reise teilen",
     "person": "Mit wem",
-    "copied": "{{name}} bekommt eine eigene Kopie dieser Reise: Flüge, Unterkünfte, Kreuzfahrten, Bahn-, Bus- und Fährfahrten, Mietwagen und Stopps mit Zeiten, Orten und Status. Ändert einer von euch später etwas daran, kommt es bei allen an und lässt sich im Posteingang rückgängig machen.",
+    "copied": "{{name}} bekommt eine eigene Kopie. Spätere Änderungen kommen bei allen an.",
     "private": "Privat bleiben: Sitzplatz, Kabine und Zimmer, dein Preis, Buchungsnummern, Bewertungen, Notizen, Fotos, Tagebuch und Dokumente.",
     "final": "Das lässt sich nicht zurücknehmen: {{name}} behält die Kopie, auch wenn einer von euch die geteilte Reise verlässt.",
     "confirm": "Reise teilen",
     "done": "Reise mit {{name}} geteilt.",
-    "nobody": "Gerade kannst du diese Reise mit niemandem teilen. Verknüpfe Reisende mit ihrem Konto — das geht, sobald die Person deiner Anfrage zugestimmt hat.",
+    "nobody": "Noch niemand zum Teilen. Verknüpfe Reisende, sobald sie zugestimmt haben.",
     "add": {
-      "title": "Diese Konten haben dem Teilen mit dir zugestimmt, stehen aber noch nicht bei den Reisenden dieser Reise. Trag eine Person ein und verknüpfe sie — danach kannst du die Reise mit ihr teilen.",
+      "title": "Diese Konten haben zugestimmt, fehlen aber bei den Reisenden. Eintragen und verknüpfen.",
       "action": "Als Reisende:n eintragen und verknüpfen",
       "actionLabel": "{{name}} als Reisende:n eintragen und mit dem Konto verknüpfen",
       "addFailed": "{{name}} konnte nicht bei den Reisenden eingetragen werden. Es wurde nichts geändert.",
       "linkFailed": "{{name}} steht jetzt bei den Reisenden, die Verknüpfung mit dem Konto hat aber nicht geklappt. Versuch es noch einmal.",
       "reloadFailed": "{{name}} ist eingetragen und verknüpft, die Liste konnte aber nicht neu geladen werden. Schließ den Dialog und öffne ihn erneut.",
-      "nameTaken": "Der Name „{{name}}“ gehört schon zu einer reisenden Person, die mit einem anderen Konto verknüpft ist. Benenne sie bei den Reisenden der Reise um — dann kannst du {{name}} eintragen."
+      "nameTaken": "„{{name}}“ ist schon mit einem anderen Konto verknüpft. Erst bei den Reisenden umbenennen."
     },
     "blockedTitle": "Gerade nicht möglich",
     "blocked": {
@@ -446,7 +446,7 @@
       "copied": "Link kopiert.",
       "copyFailed": "Kopieren ging nicht – markiere den Link und kopiere ihn von Hand.",
       "endsAt": "Endet am {{date}}",
-      "disabled": "Öffentliche Links sind ausgeschaltet. Ein Administrator kann sie unter Einstellungen → Server → Funktionen („Öffentliche Links erlauben“) freischalten.",
+      "disabled": "Öffentliche Links sind aus. Ein Admin schaltet sie unter Server → Funktionen frei.",
       "statusFailed": "Konnte nicht prüfen, ob öffentliche Links erlaubt sind.",
       "photosOmitted": {
         "lead": "Nicht im Link:",
@@ -675,7 +675,7 @@
         "delivered": "Alle Änderungen sind bei {{name}} angekommen.",
         "pending": "Änderungen sind auf dem Weg zu {{name}}.",
         "retrying": "Änderungen kommen bei {{name}} gerade nicht an – {{origin}} antwortet seit {{date}} nicht. Es wird weiter versucht.",
-        "retryingLocal": "Änderungen kommen bei {{name}} gerade nicht an – auf deinem Server ist seit {{date}} ein Fehler aufgetreten. Es wird weiter versucht; wenn das so bleibt, frag deinen Admin.",
+        "retryingLocal": "Änderungen erreichen {{name}} nicht, Fehler seit {{date}}. Wird weiter versucht; sonst Admin fragen.",
         "retryingRemote": "Änderungen kommen bei {{name}} gerade nicht an – {{origin}} meldet seit {{date}} einen Fehler beim Übernehmen. Es wird weiter versucht.",
         "unreachable": "Änderungen kommen bei {{name}} nicht an – der Server ist seit {{date}} nicht erreichbar.",
         "rejected": "Der Server von {{name}} konnte eine Änderung an „{{entry}}“ nicht annehmen ({{why}}).",
@@ -687,7 +687,7 @@
           "too-large": "zu groß für die Übertragung",
           "other": "abgelehnt"
         },
-        "retryingHeld": "Änderungen kommen bei {{name}} gerade nicht an – auf {{origin}} wartet die Reise seit {{date}} auf eine neue Bestätigung von {{name}}. Es wird weiter versucht.",
+        "retryingHeld": "Änderungen erreichen {{name}} nicht: {{origin}} wartet seit {{date}} auf Bestätigung.",
         "unsupported": "{{origin}} braucht ein Update, um verpasste Änderungen nachzuholen. Neue Änderungen gehen weiter an {{name}}."
       },
       "dismiss": "Ausblenden",
@@ -742,8 +742,8 @@
         "submit": "Reise anbieten",
         "working": "Wird geprüft …",
         "invalid": "Bitte als benutzer@server eingeben, z. B. anna@trav.example.org.",
-        "serverNotConnected": "{{origin}} ist für diese Instanz noch nicht zugelassen. Das macht dein Admin unter Einstellungen → Server → Server-Verbindungen – oder du erstellst einen Einladungscode.",
-        "requested": "Anfrage an {{name}} auf {{origin}} gesendet. Sobald die Person zugestimmt hat, erscheint sie oben in der Liste und du kannst ihr die Reise anbieten.",
+        "serverNotConnected": "{{origin}} ist nicht zugelassen. Dein Admin kann das ändern, oder du erstellst einen Code.",
+        "requested": "Anfrage an {{name}} auf {{origin}} gesendet. Nach Zustimmung erscheint die Person oben.",
         "waiting": "Die Anfrage an {{name}} auf {{origin}} ist noch offen. Die Person muss sie erst bestätigen.",
         "failed": "Die Person auf dem anderen Server konnte nicht erreicht werden."
       },
@@ -847,7 +847,7 @@
       },
       "findable": {
         "label": "Für verbundene Server auffindbar",
-        "sub": "Aus: Niemand auf einem verbundenen Server kann dir eine Verbindungsanfrage schicken. An: Man kann dich über deinen Benutzernamen anfragen – du entscheidest bei jeder Anfrage selbst, und es wird erst etwas geteilt, wenn du bestätigt hast."
+        "sub": "An: man kann dich über den Namen anfragen; geteilt wird erst nach deiner Zustimmung."
       },
       "request": {
         "title": "Verbindung anfragen",
@@ -856,7 +856,7 @@
         "username": "Benutzername",
         "switchesHint": "Das gibst du der Person, sobald sie bestätigt. Du kannst es später ändern.",
         "submit": "Anfragen",
-        "sent": "Die Anfrage an @{{username}} auf {{origin}} ist unterwegs. Ob die Person existiert oder auffindbar ist, verrät dir keine Seite – sobald sie bestätigt, erscheint sie hier als verbunden."
+        "sent": "Anfrage an @{{username}} auf {{origin}} gesendet. Nach Bestätigung erscheint sie hier."
       },
       "waiting": {
         "title": "Wartet auf deine Antwort",
@@ -958,7 +958,7 @@
     "title": "Personen",
     "intro": "Alle, mit denen du reist oder teilst, in einer Liste. Jeder Schalter gilt für genau diese Person.",
     "loading": "Personen werden geladen …",
-    "empty": "Noch niemand in der Liste. Mitreisende tauchen hier auf, sobald du sie in einen Eintrag schreibst; Personen mit eigenem Konto kannst du unten verbinden.",
+    "empty": "Noch niemand. Mitreisende erscheinen, sobald du sie einträgst.",
     "retry": "Erneut versuchen",
     "loadFailed": {
       "companions": "Ich konnte die Mitreisenden nicht laden.",

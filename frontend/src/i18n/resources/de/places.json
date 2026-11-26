@@ -101,7 +101,7 @@
     "countryVisit": "Besuch außerhalb eines reinen Zwischenstopps",
     "countryTransit": "Nur Transit / Flughafen / Raststätte",
     "countryVisitHint": "Ein reiner Zwischenstopp zählt als Bodenkontakt, auch mit Übernachtung. Der Name des Ortes entscheidet nicht.",
-    "countryTransitByCategory": "Eine Raststätte oder Tankstelle zählt immer als Bodenkontakt, nie als Besuch des Landes. Wer dort wirklich etwas besucht hat, ändert die Kategorie.",
+    "countryTransitByCategory": "Raststätten und Tankstellen zählen nur als Bodenkontakt. Sonst Kategorie ändern.",
     "tags": "Tags"
   },
   "detail": {
@@ -700,7 +700,7 @@
         "no_trip": "Du hast keine Reise in dieses Land — es wird keine Reise zugeordnet.",
         "several_trips": "Du hast mehrere Reisen in dieses Land — welche es war, entscheidest du; es wird keine zugeordnet."
       },
-      "noKey": "Für diese Instanz ist kein Google-Places-Schlüssel eingerichtet (Einstellungen → Integrationen). Positionen kommen deshalb nur aus der Namenssuche im Land der Liste.",
+      "noKey": "Kein Google-Places-Schlüssel: Positionen nur über die Namenssuche im Land der Liste.",
       "googleFailed": "Google-Abfrage fehlgeschlagen:",
       "unplacedBecause": "Ohne Position, weil:",
       "positionReasons": {
@@ -862,8 +862,8 @@
       "refKept": "Seine Kennung aus der Quelle bleibt als Zweitverweis erhalten – ein späterer Import findet ihn wieder."
     },
     "curated": {
-      "twoLists": "„{{kept}}“ und „{{other}}“ sind Einträge zweier Checklisten ({{lists}}). Zusammengeführt ginge ein Haken verloren – deshalb bleiben beide bestehen.",
-      "sameList": "„{{kept}}“ und „{{other}}“ sind zwei verschiedene Einträge der Checkliste {{list}}. Zusammengeführt ginge ein Haken verloren – deshalb bleiben beide bestehen."
+      "twoLists": "„{{kept}}“ und „{{other}}“ stehen in zwei Checklisten ({{lists}}). Zusammenführen würde einen Haken löschen.",
+      "sameList": "„{{kept}}“ und „{{other}}“ sind zwei Einträge in {{list}}. Zusammenführen würde einen Haken löschen."
     }
   },
   "nearby": {

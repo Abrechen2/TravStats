@@ -410,7 +410,7 @@
       "proposals_other": "{{count}} KI-Vorschläge"
     },
     "stays": "Das bleibt",
-    "staysBody": "Die Reise selbst und alles, was schon im Logbuch steht: Flüge, Unterkünfte, Fähren, Stationen und Fotos. Ein Plan ist kein Reisenachweis, deshalb nimmt sein Löschen nichts davon weg.",
+    "staysBody": "Die Reise und alles im Logbuch bleiben — ein Plan ist kein Reisenachweis.",
     "staysStations": "{{count}} Station(en) wurden bereits ins Logbuch übernommen und bleiben dort.",
     "shell": "Die Reise besteht dann nur noch aus dem Namen und den Daten. Du kannst sie bei Bedarf separat löschen.",
     "undoNote": "Das Löschen lässt sich nicht rückgängig machen.",
@@ -621,8 +621,8 @@
   "assignToDay": "Auf {{day}} legen",
   "members": {
     "title": "Gemeinsam planen",
-    "introOwner": "Lade Personen von diesem Server ein, die mit dir planen. Die Eingeladenen dürfen alles ändern außer den Plan löschen, Mitglieder verwalten und die KI-Einstellung ändern. Ins Reisebuch übernimmt nur du.",
-    "introMember": "Du planst mit. Du darfst alles ändern außer den Plan löschen, Mitglieder verwalten und die KI-Einstellung ändern. Dein Gepäck und deine Notiz sieht nur du.",
+    "introOwner": "Lade Mitplanende ein. Erlaubt ist alles außer löschen, Mitglieder und KI verwalten.",
+    "introMember": "Du planst mit — alles außer löschen, Mitglieder und KI. Gepäck und Notiz sind privat.",
     "owner": "Besitzer:in",
     "status": {
       "invited": "Eingeladen",
@@ -712,7 +712,7 @@
     "invite": {
       "title": "Mitplaner auf einem anderen Server",
       "intro": "Verbundene Person einladen. Beide brauchen „Pläne teilen“ in der Verbindung.",
-      "none": "Keine Verbindung mit eingeschalteten Plänen. Verbinde dich unter Einstellungen → Teilen → Verbindungen mit der Person und schalte „Pläne teilen“ ein.",
+      "none": "Keine Verbindung mit „Pläne teilen“. Unter Teilen → Verbindungen einschalten.",
       "send": "{{name}} einladen",
       "already": "Eingeladen",
       "sent": "Einladung an {{name}} verschickt.",

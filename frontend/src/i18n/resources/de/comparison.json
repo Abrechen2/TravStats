@@ -339,7 +339,7 @@
       "theyShareNothing": "{{name}} gibt dir noch nichts frei.",
       "scope": "Umfang des Vergleichs ändern",
       "removeTitle": "{{name}} als Freund entfernen?",
-      "removeBody": "Danach gibt es keine neuen Reisen oder Pläne mehr zwischen euch und keinen Vergleich. Bereits übernommene Reisen und Pläne, in denen ihr beide seid, bleiben.",
+      "removeBody": "Danach kein Teilen und kein Vergleich mehr. Bereits übernommene gemeinsame Reisen bleiben.",
       "removeConfirm": "Freund entfernen"
     },
     "trips": {
@@ -401,16 +401,16 @@
     "title": "Wie gezählt?",
     "where": "Die Regel steht in {{home}}.",
     "flight": "Ein Flug zählt, sobald er stattgefunden hat – geplante und stornierte nicht. Die Strecke ist die Luftlinie zwischen den Flughäfen.",
-    "flightTime": "Flugzeit ist die Zeit von Start bis Landung der gezählten Flüge. Fehlt bei einem Flug die Zeit, bleibt er außen vor, die Summe gilt dann als „mindestens“.",
+    "flightTime": "Start bis Landung. Flüge ohne Zeit fehlen, die Summe heißt dann „mindestens“.",
     "cruise": "Eine Kreuzfahrt zählt nach der Rückkehr. Häfen zählen einmal je Hafen, Seetage nicht; die Strecke folgt der Seeroute.",
     "rail": "Eine Fahrt zählt, wenn sie vorbei ist. Fahrten ohne bekannte Strecke fehlen in den Kilometern – die Summe ist dann „mindestens“.",
     "bus": "Eine Fahrt zählt, wenn sie vorbei ist. Fahrten ohne bekannte Strecke fehlen in den Kilometern.",
     "rental": "Ein Mietwagen zählt nach der Rückgabe; Miettage sind die Tage zwischen Abholung und Rückgabe.",
     "ferry": "Eine Überfahrt zählt, sobald sie stattgefunden hat; sie gehört zum Jahr ihres Ankunftszeitpunkts.",
     "tour": "Eine Tour zählt, wenn sie stattgefunden hat. Wurde ihre Aufzeichnung gekürzt, ist die Strecke ein Mindestwert.",
-    "lodging": "Ein Aufenthalt zählt erst, wenn der Check-out vorbei ist – ein vorgemerktes Haus ist kein Besuch. Nächte sind die Nächte zwischen An- und Abreise.",
+    "lodging": "Ein Aufenthalt zählt nach dem Check-out. Nächte zwischen An- und Abreise.",
     "place": "Ein Ort zählt, wenn er als besucht markiert ist; ein Wunschort mit künftigem Termin zählt nicht. Besuche zählt nur, was schon passiert ist.",
-    "daysAway": "Jeder Kalendertag, an dem du irgendwo unterwegs warst, zählt einmal – auch bei Überschneidungen. Gilt nur, wenn alle deine Bereiche geteilt werden.",
+    "daysAway": "Jeder Tag unterwegs zählt einmal. Nur wenn alle Bereiche geteilt werden.",
     "countries": "Länder aus allen deinen Reisen und Orten, jedes einmal. Nur als Gesamtwert über alle Zeit und alle Bereiche.",
     "curated": "Von den Zielen einer Standardliste zählt, was du als besucht abgehakt hast. Geteilt wird nur die Anzahl, nie welche Orte."
   },

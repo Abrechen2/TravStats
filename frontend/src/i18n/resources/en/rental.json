@@ -346,7 +346,7 @@
     "costPerKmSample_one": "from {{count}} rental with a price and km, per currency",
     "costPerKmSample_other": "from {{count}} rentals with a price and km, per currency",
     "bookedVsFinal": "Booked and billed",
-    "bookedVsFinalNone": "No rental yet with a booked price and a billed amount in the same currency. The comparison appears once an invoice is read or the final amount is entered.",
+    "bookedVsFinalNone": "Appears once a rental has a booked and a final price in one currency.",
     "bookedVsFinalRow_one": "{{count}} rental: booked {{booked}}, billed {{final}}",
     "bookedVsFinalRow_other": "{{count}} rentals: booked {{booked}}, billed {{final}}",
     "bookedVsFinalOtherCurrency_one": "{{count}} rental was billed in another currency than booked and stays out of the comparison.",
@@ -519,9 +519,9 @@
     "adopt": "Take over",
     "fees": {
       "title": "Single items on the invoice",
-      "none": "The invoice lists no single items TravStats can read; the difference may contain fees, extra days or price changes. The booked price is kept either way.",
+      "none": "No readable line items. The booked price stays.",
       "total": "Items read add up to {{total}}. They are part of the final amount and are not counted again.",
-      "totalBesideDifference": "Items read add up to {{total}}, against a difference to the booking of {{difference}}. They are part of the final amount and are not counted again.",
+      "totalBesideDifference": "Items together: {{total}}, difference to booking: {{difference}}. Nothing counts twice.",
       "mixedCurrencies": "The items are in more than one currency; no total is formed and nothing is converted.",
       "recorded": "Already recorded on the rental.",
       "adoptLine": "Take over item “{{label}}”"

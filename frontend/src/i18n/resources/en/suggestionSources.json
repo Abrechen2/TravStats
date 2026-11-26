@@ -28,7 +28,7 @@
     },
     "privacy": {
       "title": "What is stored",
-      "sub": "Only an appointment that fits a stop, with title, time and place, inside the suggestion. Once accepted or rejected only its time and calendar remain. The calendar's address and password are stored encrypted and never shown again."
+      "sub": "Only matching events enter suggestions; then only time and calendar stay. Access encrypted."
     },
     "form": {
       "kind": "Kind of calendar",
@@ -200,7 +200,7 @@
     },
     "sent": {
       "title": "What is sent",
-      "sub": "A stop's start and end, its coordinates rounded to the chosen precision and its time zone; plus what TravStats already knows: the nearest own place, the place found and (at exact and 100 m) the address.",
+      "sub": "A stop's start, end, rounded coordinates and time zone, plus known places.",
       "help": "Never sent: account, name, email or history. Every request is signed."
     },
     "removeConfirm": {

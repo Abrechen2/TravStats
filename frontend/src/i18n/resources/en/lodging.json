@@ -85,8 +85,8 @@
     "spendOriginal": "Original",
     "spendBase": "In base currency",
     "spendPerNight": "Avg. total per night",
-    "spendPerNightCalc_one": "{{total}} ÷ {{count}} night = {{result}} — every cost of the counted stays (room, extras, fees, taxes) per night, as booked, not per person.",
-    "spendPerNightCalc_other": "{{total}} ÷ {{count}} nights = {{result}} — every cost of the counted stays (room, extras, fees, taxes) per night, as booked, not per person.",
+    "spendPerNightCalc_one": "{{total}} ÷ {{count}} night = {{result}} — all costs per night, not per person.",
+    "spendPerNightCalc_other": "{{total}} ÷ {{count}} nights = {{result}} — all costs per night, not per person.",
     "noLocation": "No location on file",
     "setLocationNow": "Find location now",
     "deleteConfirmTitle": "Delete lodging?",
@@ -219,7 +219,7 @@
     "source": "ECB",
     "sourceMarket": "market rate",
     "tooltip": "Converted at the ECB reference rate for the check-in day",
-    "tooltipMarket": "Converted at a market rate for the check-in day — not an official ECB rate, but a free dataset for currencies the ECB does not publish.",
+    "tooltipMarket": "Market rate of the check-in day, not an official ECB rate.",
     "markerNone": "no rate",
     "markerManual": "your own rate",
     "tooltipNone": "No rate available — not included in totals",
@@ -229,7 +229,7 @@
     "omittedFromTotal": "{{count}} stays not converted",
     "omittedFromTotal_one": "{{count}} stay not converted",
     "omittedFromTotal_other": "{{count}} stays not converted",
-    "baseCurrencyExplainer": "The choice is the 30 currencies with official ECB rates, because everything is converted INTO this one — back to 1999. You can record in any currency. Stays in a currency with no rate are stored and shown, but do not count towards this total."
+    "baseCurrencyExplainer": "Only the 30 ECB currencies, since everything converts into them. Record in any currency."
   },
   "chainPicker": {
     "placeholder": "Search chain …",
@@ -307,7 +307,7 @@
     "duplicateError": "This program is already on file",
     "deleteError": "Could not delete loyalty program",
     "extendExisting": "Extend \"{{name}}\" to cover this chain instead",
-    "leavesThisChain": "This chain is no longer ticked: after saving, the programme will not appear on this chain page any more. It is kept and stays reachable under Settings → Loyalty programmes."
+    "leavesThisChain": "Unticked: disappears here, stays under loyalty programmes."
   },
   "chainDetail": {
     "loading": "Loading chain …",
@@ -331,7 +331,7 @@
       "title": "Preview ({{count}} rows)",
       "title_one": "Preview ({{count}} row)",
       "title_other": "Preview ({{count}} rows)",
-      "unmappedRatings": "These columns belong to rating categories your account does not have and are not imported: {{columns}}. Add the category in Settings and import again.",
+      "unmappedRatings": "Not imported, category missing: {{columns}}. Add the category and import again.",
       "commit": "Import selection",
       "commitError": "Could not commit the import",
       "chooseCurrency": "— currency —",
@@ -1086,7 +1086,7 @@
     "title": "These days overlap other stays",
     "titleDuplicate": "This lodging already has a stay for these days – this may be a duplicate.",
     "sameHouse": "this lodging",
-    "rule": "A check-out and a check-in on the same day do not count as an overlap. Two rooms or two lodgings on the same night are allowed – you only confirm it.",
+    "rule": "Check-out and check-in on one day don't overlap. Two rooms in one night: just confirm.",
     "proceed": "Save as it is, on purpose",
     "changeDates": "Change the dates",
     "unchecked": "Overlaps could not be checked.",
@@ -1132,8 +1132,8 @@
   },
   "locationCheck": {
     "title": "Check the place",
-    "name_only": "All that is known about “{{name}}” is its name. A name alone is not a place – it often exists in several countries – so no position was set. Add a town or country, or set the point yourself.",
-    "contradicted": "The place search only found hits in a different country or town than the one this stay states. None of them was taken. Check the details or set the point yourself.",
+    "name_only": "Only the name for “{{name}}”, no place. Add place or country, or set the point.",
+    "contradicted": "Matches only in another country or place; none taken. Check details or set the point.",
     "provider_unavailable": "The place search could not be reached, so nothing was found. It will be tried again later – or set the point yourself.",
     "no_result": "The place search found nothing. Add the address or set the point yourself.",
     "pin_country_mismatch": "The point on the map lies in a different country than the one entered. You decide which is right – nothing was changed.",

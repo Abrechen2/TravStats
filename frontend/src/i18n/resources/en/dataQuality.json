@@ -61,7 +61,7 @@
       "creates": {
         "trip": "Accepting creates a trip covering these dates.",
         "placeVisit": "Accepting records a visit to this place on the first day.",
-        "stayAnswerOnly": "Accepting only marks the question answered. A stay needs a lodging this finding does not name — you create that yourself.",
+        "stayAnswerOnly": "Only marks the question answered. You add the stay yourself.",
         "placeMissingAnswerOnly": "Accepting only marks the question answered. The place this finding named no longer exists — nothing is created."
       },
       "actions": {
@@ -124,7 +124,7 @@
           "nearest": "nearest logged visit: {{name}}, {{distance}}",
           "noNearest": "no logged visit in this trip"
         },
-        "alreadyVisited": "Since the scan, “{{name}}” was logged right next to it on the same day. Accepting would record the stop twice — reject it, or pick that place under “Correct”.",
+        "alreadyVisited": "“{{name}}” was added nearby the same day. Reject, or pick it under “Correct”.",
         "correction": {
           "place": "Place",
           "placeNew": "Suggested is a new place at this spot. Or pick one of your places:",
@@ -152,7 +152,7 @@
         "creates": {
           "newPlace": "Accepting creates the place and records a visit in the trip — at the time of the first photo unless you correct it.",
           "ownPlace": "Accepting records a visit to your own place right next to it in the trip — the place already exists.",
-          "chosenPlace": "Accepting records the visit at “{{name}}”; no new place is created. If it already has a visit that day, the suggestion is linked to it."
+          "chosenPlace": "Adds the visit to “{{name}}”; an existing visit that day is linked."
         }
       }
     },
@@ -341,9 +341,9 @@
         "cardTitle": "Country from your location history",
         "question": "Were you in {{country}}?",
         "source": "from TravTrack",
-        "evidence": "TravTrack saw you on the ground in this country on {{days}} days ({{points}} positions), from {{first}} to {{last}}. Your passport does not know the country yet.",
+        "evidence": "TravTrack saw you here on {{days}} days ({{points}} points), {{first}}–{{last}}. New to your passport.",
         "partial": "On at least one of these days not every position was read.",
-        "effect": "“Visited” and “Only passed through on the ground” save your own verdict on this country in the passport. “Not there” changes nothing, and these days are not asked again.",
+        "effect": "Your answer goes into the passport. “Not there”: these days are not asked again.",
         "visited": "Visited",
         "ground": "Only passed through on the ground",
         "notThere": "Not there",
@@ -390,7 +390,7 @@
         },
         "closed": "No entry needed",
         "invalidated": "The location data no longer shows this journey.",
-        "effect": "Entering opens the matching form with times and positions; nothing is saved until you save it. “No entry needed” changes nothing, and this day is not asked again.",
+        "effect": "“Add” opens the form. “No entry needed”: this day is not asked again.",
         "roadtripName": "Roadtrip on {{day}}",
         "stationStart": "Start of the journey",
         "stationEnd": "End of the journey",
@@ -419,8 +419,8 @@
         "evidenceDays_other": "The period spans {{count}} days.",
         "countries": "Countries: {{list}}",
         "partial": "Not every position in this period was read.",
-        "effect": "“Create as trip” creates a trip over exactly these days; no entries are assigned. “Not a trip” changes nothing, and this period is not asked again.",
-        "effectExtend": "Only widens the trip's dates; its name, entries and everything else stay as they are. “Don't extend” changes nothing, and this period is not asked again.",
+        "effect": "Creates a trip for these days. “No trip”: not asked again.",
+        "effectExtend": "Extends the period only. “Don't extend”: not asked again.",
         "name": "Trip name",
         "create": "Create as trip",
         "notTrip": "Not a trip",
@@ -583,7 +583,7 @@
     },
     "time_zone_unresolved": {
       "title": "Time zone unknown",
-      "question": "No time zone could be found for this time, so the migration did not convert it. Where was this? Fill in the place – then the time of day is right too."
+      "question": "No time zone found, the time was left as is. Where was it? With the place, the time is right."
     },
     "time_precision_unknown": {
       "title": "Time of day unknown",
@@ -596,7 +596,7 @@
     "home_residence_unconfirmed": {
       "title": "Confirm residence",
       "question": "Confirm where you live and pick further home airports?",
-      "body": "So far TravStats only knows your home airport ({{airports}}) and measures distances from there. Confirm where you live and pick up to three airports you fly from.",
+      "body": "So far only your home airport ({{airports}}) counts. Confirm where you live and up to three airports.",
       "unchanged": "Until you confirm, every statistic stays exactly as it was.",
       "action": "Set up your home"
     },
@@ -606,7 +606,7 @@
       "thisSource": "This entry: {{source}}",
       "copiesTitle": "Looks like:",
       "copyMeta": "({{source}}, added on {{date}})",
-      "safePath": "If so: open the extra copy, delete it there, then tap “I have corrected it”. If these are two real entries, tap “This is correct as it is”.",
+      "safePath": "Duplicate? Delete the copy, then “I fixed it”. Two real entries: “That's right”.",
       "fields": {
         "flightNumber": "flight number",
         "trainNumber": "train number",
@@ -660,7 +660,7 @@
     },
     "trip_entries_outside": {
       "title": "Entries outside the trip",
-      "question": "These entries belong to the trip ({{span}}) but fall outside its days. Are the trip dates right — or does the entry belong to another trip?",
+      "question": "These entries fall outside the trip ({{span}}). Wrong trip dates or another trip?",
       "safePath": "Adjust the trip dates or move the entry to another trip."
     },
     "ferry_match": {
@@ -671,7 +671,7 @@
     },
     "surface_segment": {
       "title": "Flight that is a train or bus ride",
-      "question": "{{flight}} ({{route}}) is not a flight according to the booking data but {{mode}}. As a flight it counts in flight kilometres, flight CO₂ and the airports in your passport.",
+      "question": "{{flight}} ({{route}}) is {{mode}} per the booking, not a flight — yet counts as one.",
       "mode": {
         "rail": "a train ride",
         "bus": "a bus ride"
@@ -755,7 +755,7 @@
     },
     "empty": {
       "title": "No unassigned documents",
-      "body": "Documents that belong to no entry end up here — an upload you want to assign later, or a file from the Companion app. Unassigned documents are deleted automatically after a grace period.",
+      "body": "Documents without an entry land here; they are deleted after a while.",
       "drop": "Drop files here or choose \"Add document\"."
     },
     "errors": {

@@ -339,7 +339,7 @@
       "theyShareNothing": "{{name}} does not share anything with you yet.",
       "scope": "Change the comparison scope",
       "removeTitle": "Remove {{name}} as a friend?",
-      "removeBody": "After that there are no new trips or plans between you and no comparison. Trips already copied and plans you are both in stay.",
+      "removeBody": "No more sharing or comparing afterwards. Shared trips already taken over stay.",
       "removeConfirm": "Remove friend"
     },
     "trips": {
@@ -401,16 +401,16 @@
     "title": "How is this counted?",
     "where": "The rule lives in {{home}}.",
     "flight": "A flight counts once it has taken place – planned and cancelled ones do not. Distance is the great-circle line between the airports.",
-    "flightTime": "Flight time runs from take-off to landing of the counted flights. A flight with no time is left out and the total reads \"at least\".",
+    "flightTime": "Take-off to landing. Flights without times are left out; the sum then reads “at least”.",
     "cruise": "A cruise counts after its return. Ports count once per port, sea days not; distance follows the sea route.",
     "rail": "A journey counts once it is over. Journeys with no known distance are missing from the kilometres, so the total reads \"at least\".",
     "bus": "A ride counts once it is over. Rides with no known distance are missing from the kilometres.",
     "rental": "A rental counts after the return; rental days are the days between pick-up and return.",
     "ferry": "A crossing counts once it has taken place and belongs to the year it arrived in.",
     "tour": "A tour counts once it has happened. If its recording was truncated, the distance is a minimum.",
-    "lodging": "A stay counts only after check-out – a house you have merely booked is not a visit. Nights are the nights between arrival and departure.",
+    "lodging": "A stay counts after check-out. Nights between arrival and departure.",
     "place": "A place counts when it is marked as visited; a wishlist place with a future date does not. Visits count only what has already happened.",
-    "daysAway": "Every calendar day you were away somewhere counts once, even when trips overlap. Only available when all your domains are shared.",
+    "daysAway": "Each day away counts once. Only when all areas are shared.",
     "countries": "Countries from all your trips and places, each once. A lifetime total across all domains only.",
     "curated": "Of a standard list's targets, what you ticked as visited counts. Only the number is shared, never which places."
   },

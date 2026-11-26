@@ -7,22 +7,24 @@ behind an info button.
 ## Numbers
 
 Measured on the DE locale (`frontend/src/i18n/resources/de`), forgejo/main
-9a0f9936d against `feat/ui-copy-diet`:
+9a0f9936d against `feat/ui-copy-diet`, two passes on the same day:
 
 | | before | after |
 |---|---:|---:|
 | Help keys (`*description/*hint/*help/*intro`, settings `s`) over 120 characters | 248 | 0 |
 | Characters in those 248 strings | 49 354 | 18 214 |
-| All DE strings over 140 characters | 1 140 | 954 |
-| DE locale, all characters | 942 143 | 912 338 |
-| Visible text on Settings → Daten (iPad, body text) | 15 689 | 13 422 |
+| Second pass: 172 legends, notes and state messages, characters | 31 410 | 14 502 |
+| All DE strings over 140 characters | 1 140 | 769 |
+| DE locale, all characters | 942 143 | 894 048 |
+| Visible text on Settings → Daten (iPad, body text, first pass) | 15 689 | 13 422 |
 
-Decisions over the 1 195 inventoried strings: 239 shortened, 15 moved behind an
-ⓘ (short line plus a `…More` key), 0 deleted, 941 kept — 514 statistics
-answers already behind "Wie gezählt", 180 warnings/errors/consents that stay
-visible, 39 release notes, 20 already behind an ⓘ, 16 inside the exported
-spreadsheet, and 172 longer state messages and legends left for a later pass
-("keep (review later)").
+Decisions over the 1 195 inventoried strings: 425 shortened, 16 moved behind an
+ⓘ (short line plus a `…More` key), 1 deleted (`xlsx:export.description`, never
+rendered), 753 kept — 514 statistics answers already behind "Wie gezählt",
+163 warnings/errors/consents that stay visible, 39 release notes, 19 already
+behind an ⓘ, 16 inside the exported spreadsheet, 2 diagnostic readouts.
+Shortened warnings and confirmations keep their consequence (what is deleted,
+what is sent, what cannot be undone).
 
 ## Why the text grew
 
@@ -51,8 +53,10 @@ spreadsheet, and 172 longer state messages and legends left for a later pass
 - Warnings, confirmations and error reasons stay visible (owner rule "Fehler
   immer sichtbar"): shorten them, never hide them.
 - The guard: `frontend/src/i18n/__tests__/inlineHelpLength.test.ts` — help
-  keys ≤ 120 characters, `…More` ≤ 400, exceptions only through
-  `inlineHelpLength.baseline.json` with a reason (empty today).
+  keys ≤ 120 characters; legends, notes, bodies, empty states and other state
+  lines ≤ 140; `…More` and settings-row `h` ≤ 400. Exceptions only through
+  `inlineHelpLength.baseline.json` with a reason (today: the usage-statistics
+  consent text, which must stay complete).
 
 ## Inventory
 
@@ -91,7 +95,7 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Bahn | rail:stats.help.longest.time | 205 | 205 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:stats.help.journeys.source | 201 | 201 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:stats.help.km.unit | 197 | 197 | keep (already behind „Wie gezählt“) |
-| Bahn | rail:bahnHandoff.reason.empty | 193 | 193 | keep (warning/error/consent stays visible) |
+| Bahn | rail:bahnHandoff.reason.empty | 193 | 84 | shorten |
 | Bahn | rail:stats.help.transfers.time | 189 | 189 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:stats.help.punctuality.source | 188 | 188 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:stats.help.newConnections.source | 187 | 187 | keep (already behind „Wie gezählt“) |
@@ -99,7 +103,7 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Bahn | rail:stats.help.transfers.unit | 180 | 180 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:stats.help.favourites.source | 179 | 179 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:stats.help.km.source | 177 | 177 | keep (already behind „Wie gezählt“) |
-| Bahn | rail:lookup.pastDay | 176 | 176 | keep (review later) |
+| Bahn | rail:lookup.pastDay | 176 | 90 | shorten |
 | Bahn | rail:stats.help.delays.coverage | 174 | 174 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:form.distanceHint | 173 | 52 | shorten |
 | Bahn | rail:stats.help.journeys.coverage | 172 | 172 | keep (already behind „Wie gezählt“) |
@@ -107,29 +111,29 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Bahn | rail:lookup.none.unavailable | 169 | 169 | keep (warning/error/consent stays visible) |
 | Bahn | rail:stats.help.journeys.exclusions | 169 | 169 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:stats.help.km.coverage | 168 | 168 | keep (already behind „Wie gezählt“) |
-| Bahn | rail:import.empty.noItinerary | 168 | 168 | keep (review later) |
+| Bahn | rail:import.empty.noItinerary | 168 | 89 | shorten |
 | Bahn | rail:stats.help.newConnections.unit | 163 | 163 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:stats.help.highSpeed.unit | 163 | 163 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:stats.help.transfers.source | 160 | 160 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:stats.help.rides.unit | 158 | 158 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:import.panelHint | 158 | 63 | shorten |
 | Bahn | rail:stats.help.favourites.exclusions | 156 | 156 | keep (already behind „Wie gezählt“) |
-| Bahn | rail:import.booking.appliesToAll | 156 | 156 | keep (review later) |
+| Bahn | rail:import.booking.appliesToAll | 156 | 91 | shorten |
 | Bahn | rail:stats.help.delays.unit | 153 | 153 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:bahnHandoff.reason.noVbid | 153 | 153 | keep (warning/error/consent stays visible) |
-| Bahn | rail:import.possibleDuplicate | 152 | 152 | keep (review later) |
-| Bahn | rail:lookup.changeNeeded | 151 | 151 | keep (review later) |
+| Bahn | rail:import.possibleDuplicate | 152 | 96 | shorten |
+| Bahn | rail:lookup.changeNeeded | 151 | 97 | shorten |
 | Bahn | rail:import.reservation.intro | 151 | 81 | shorten |
 | Bahn | rail:stats.help.rankings.unit | 150 | 150 | keep (already behind „Wie gezählt“) |
-| Bahn | rail:import.mode.asLocalTransit | 150 | 150 | keep (review later) |
-| Bahn | rail:import.empty.llmUnreachable | 149 | 149 | keep (review later) |
+| Bahn | rail:import.mode.asLocalTransit | 150 | 77 | shorten |
+| Bahn | rail:import.empty.llmUnreachable | 149 | 102 | shorten |
 | Bahn | rail:stats.help.nights.time | 147 | 147 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:stats.help.countries.exclusions | 144 | 144 | keep (already behind „Wie gezählt“) |
-| Bahn | rail:import.positionFromBahnConflict | 144 | 144 | keep (review later) |
+| Bahn | rail:import.positionFromBahnConflict | 144 | 99 | shorten |
 | Bahn | rail:shareLink.description | 144 | 78 | shorten |
 | Bahn | rail:stats.help.crossBorder.exclusions | 143 | 143 | keep (already behind „Wie gezählt“) |
 | Bahn | rail:stats.help.operatorsCount.unit | 143 | 143 | keep (already behind „Wie gezählt“) |
-| Bahn | rail:import.mode.busDisabled | 143 | 143 | keep (review later) |
+| Bahn | rail:import.mode.busDisabled | 143 | 92 | shorten |
 | Bahn | rail:form.errors.nonexistentTime | 142 | 142 | keep (warning/error/consent stays visible) |
 | bulkEdit | bulkEdit:outcomeUnknown | 143 | 143 | keep (warning/error/consent stays visible) |
 | bulkEdit | bulkEdit:intro | 134 | 89 | shorten |
@@ -158,7 +162,7 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Bus | bus:stats.help.transfers.time | 161 | 161 | keep (already behind „Wie gezählt“) |
 | Bus | bus:import.noTemplate | 158 | 158 | keep (warning/error/consent stays visible) |
 | Bus | bus:stats.help.rides.source | 156 | 156 | keep (already behind „Wie gezählt“) |
-| Bus | bus:import.nothingRead | 155 | 155 | keep (review later) |
+| Bus | bus:import.nothingRead | 155 | 95 | shorten |
 | Bus | bus:stats.help.rides.unit | 153 | 153 | keep (already behind „Wie gezählt“) |
 | Bus | bus:stats.help.terminals.source | 150 | 150 | keep (already behind „Wie gezählt“) |
 | Bus | bus:stats.help.rankings.unit | 149 | 149 | keep (already behind „Wie gezählt“) |
@@ -168,34 +172,34 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Bus | bus:stats.help.newDestinations.exclusions | 142 | 142 | keep (already behind „Wie gezählt“) |
 | common | common:photoChoose.hint | 314 | 89 | shorten |
 | common | common:saveErrors.timezoneUnresolved | 234 | 234 | keep (warning/error/consent stays visible) |
-| common | common:diagnostic.includes.userEvents | 215 | 215 | keep (review later) |
+| common | common:diagnostic.includes.userEvents | 215 | 88 | shorten |
 | common | common:staleBundle.message | 195 | 195 | keep (warning/error/consent stays visible) |
-| common | common:diagnostic.excludes | 193 | 193 | keep (review later) |
+| common | common:diagnostic.excludes | 193 | 96 | shorten |
 | common | common:saveErrors.timezoneUnavailable | 190 | 190 | keep (warning/error/consent stays visible) |
-| common | common:settings.modules.desc | 172 | 172 | keep (review later) |
-| common | common:diagnostic.includes.events | 163 | 163 | keep (review later) |
-| common | common:diagnostic.includes.userCounts | 161 | 161 | keep (review later) |
+| common | common:settings.modules.desc | 172 | 75 | shorten |
+| common | common:diagnostic.includes.events | 163 | 90 | shorten |
+| common | common:diagnostic.includes.userCounts | 161 | 66 | shorten |
 | common | common:saveErrors.staleBundle | 157 | 157 | keep (warning/error/consent stays visible) |
-| common | common:diagnostic.includes.settings | 150 | 150 | keep (review later) |
+| common | common:diagnostic.includes.settings | 150 | 84 | shorten |
 | common | common:entryPhotos.removeAllConfirmMessage | 141 | 141 | keep (warning/error/consent stays visible) |
 | common | common:diagnostic.reportBugHint | 129 | 72 | shorten |
 | common | common:photoChoose.album.hint | 126 | 60 | shorten |
 | common | common:diagnostic.description | 125 | 59 | shorten |
-| companions | companions:person.rule | 199 | 199 | keep (review later) |
+| companions | companions:person.rule | 199 | 86 | shorten |
 | companions | companions:manage.description | 197 | 65 | shorten |
-| companions | companions:manage.deleteUnused.body_other | 159 | 159 | keep (warning/error/consent stays visible) |
-| companions | companions:manage.deleteUnused.body_one | 154 | 154 | keep (warning/error/consent stays visible) |
-| comparison | comparison:friend.settings.removeBody | 157 | 157 | keep (review later) |
-| comparison | comparison:counting.flightTime | 154 | 154 | keep (review later) |
-| comparison | comparison:counting.daysAway | 147 | 147 | keep (review later) |
-| comparison | comparison:counting.lodging | 146 | 146 | keep (review later) |
+| companions | companions:manage.deleteUnused.body_other | 159 | 90 | shorten |
+| companions | companions:manage.deleteUnused.body_one | 154 | 88 | shorten |
+| comparison | comparison:friend.settings.removeBody | 157 | 90 | shorten |
+| comparison | comparison:counting.flightTime | 154 | 77 | shorten |
+| comparison | comparison:counting.daysAway | 147 | 72 | shorten |
+| comparison | comparison:counting.lodging | 146 | 73 | shorten |
 | comparison | comparison:error.FEDERATION_ADMISSION_KEY_MISMATCH | 143 | 143 | keep (warning/error/consent stays visible) |
 | comparison | comparison:friends.linkHint | 127 | 66 | shorten |
 | dashboard | dashboard:lodgingTab.currencyBreakdown.hint | 173 | 74 | shorten |
-| dashboard | dashboard:cruiseTab.emptyBody | 142 | 142 | keep (review later) |
-| dashboard | dashboard:documentNotFiled | 141 | 141 | keep (review later) |
-| Dienste | externalServices:services.photoprism.setup | 277 | 277 | keep (review later) |
-| Dienste | externalServices:services.aiSuggestionHelp.dataOut | 234 | 234 | keep (review later) |
+| dashboard | dashboard:cruiseTab.emptyBody | 142 | 58 | shorten |
+| dashboard | dashboard:documentNotFiled | 141 | 94 | shorten |
+| Dienste | externalServices:services.photoprism.setup | 277 | 95 | shorten |
+| Dienste | externalServices:services.aiSuggestionHelp.dataOut | 234 | 100 | shorten |
 | Dienste | externalServices:services.mapMatching.why | 231 | 231 | keep (warning/error/consent stays visible) |
 | Dienste | externalServices:intro | 216 | 69 | shorten |
 | Dienste | externalServices:services.geocoder.alwaysOnWhy | 191 | 191 | keep (warning/error/consent stays visible) |
@@ -204,17 +208,17 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Dienste | externalServices:services.calendar.why | 167 | 167 | keep (warning/error/consent stays visible) |
 | Dienste | externalServices:account.intro | 160 | 77 | shorten |
 | Dienste | externalServices:services.mailIntake.why | 156 | 156 | keep (warning/error/consent stays visible) |
-| Dienste | externalServices:banner.summary | 153 | 153 | keep (review later) |
+| Dienste | externalServices:banner.summary | 153 | 100 | shorten |
 | Dienste | externalServices:consent.account.intro | 152 | 91 | shorten |
 | Dienste | externalServices:services.suggestionPlugins.why | 148 | 148 | keep (warning/error/consent stays visible) |
-| Dienste | externalServices:services.mailIntake.dataOut | 145 | 145 | keep (review later) |
+| Dienste | externalServices:services.mailIntake.dataOut | 145 | 87 | shorten |
 | Dienste | externalServices:connections.hint | 132 | 76 | shorten |
 | Dienste | externalServices:consent.admin.intro | 127 | 72 | shorten |
 | Dienste | externalServices:useConsent.intro | 123 | 72 | shorten |
-| documents | documents:deleteCascadeNote_other | 167 | 167 | keep (warning/error/consent stays visible) |
+| documents | documents:deleteCascadeNote_other | 167 | 102 | shorten |
 | documents | documents:links.linkToHint | 160 | 74 | shorten |
 | documents | documents:links.bulkHint | 158 | 87 | shorten |
-| documents | documents:deleteCascadeNote_one | 149 | 149 | keep (warning/error/consent stays visible) |
+| documents | documents:deleteCascadeNote_one | 149 | 93 | shorten |
 | documents | documents:links.alsoLinkHint | 141 | 61 | shorten |
 | Einstellungen | settings:import.timeline.description | 453 | 74 | move behind ⓘ |
 | Einstellungen | settings:profileZone.body | 352 | 87 | move behind ⓘ |
@@ -226,7 +230,7 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Einstellungen | settings:railRouting.reroute.hint | 281 | 73 | shorten |
 | Einstellungen | settings:railRouting.test.modeProfiles.missing | 278 | 278 | keep (warning/error/consent stays visible) |
 | Einstellungen | settings:recoveryKey.show.why | 270 | 270 | keep (warning/error/consent stays visible) |
-| Einstellungen | settings:lifeBook.note | 265 | 265 | keep (review later) |
+| Einstellungen | settings:lifeBook.note | 265 | 96 | shorten |
 | Einstellungen | settings:unreachable.flightProvider | 263 | 263 | keep (warning/error/consent stays visible) |
 | Einstellungen | settings:railProviders.description | 260 | 77 | shorten |
 | Einstellungen | settings:unreachable.aerodatabox | 252 | 252 | keep (warning/error/consent stays visible) |
@@ -240,34 +244,34 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Einstellungen | settings:import.tile.tracker.description | 209 | 64 | move behind ⓘ |
 | Einstellungen | settings:unreachable.dawarich | 207 | 207 | keep (warning/error/consent stays visible) |
 | Einstellungen | settings:location.trackGap.help | 201 | 45 | shorten |
-| Einstellungen | settings:webdavSync.whatIsUploaded | 199 | 199 | keep (review later) |
-| Einstellungen | settings:homeAirport.unconfirmedBody | 198 | 198 | keep (warning/error/consent stays visible) |
-| Einstellungen | settings:domainColors.lowContrast | 190 | 190 | keep (review later) |
+| Einstellungen | settings:webdavSync.whatIsUploaded | 199 | 71 | shorten |
+| Einstellungen | settings:homeAirport.unconfirmedBody | 198 | 102 | shorten |
+| Einstellungen | settings:domainColors.lowContrast | 190 | 87 | shorten |
 | Einstellungen | settings:homeAirport.residenceRow.help | 183 | 75 | shorten |
-| Einstellungen | settings:about.licenseBody | 182 | 182 | keep (review later) |
-| Einstellungen | settings:apiKeys.bulkRefresh.confirmBody | 178 | 178 | keep (warning/error/consent stays visible) |
+| Einstellungen | settings:about.licenseBody | 182 | 93 | shorten |
+| Einstellungen | settings:apiKeys.bulkRefresh.confirmBody | 178 | 67 | shorten |
 | Einstellungen | settings:features.description | 177 | 62 | shorten |
 | Einstellungen | settings:railRouting.hint | 176 | 43 | shorten |
 | Einstellungen | settings:import.parserErrors.commitPartial | 171 | 171 | keep (warning/error/consent stays visible) |
 | Einstellungen | settings:unreachable.routing | 169 | 169 | keep (warning/error/consent stays visible) |
 | Einstellungen | settings:errors.webPrefsRetrying | 165 | 165 | keep (warning/error/consent stays visible) |
-| Einstellungen | settings:accountArchive.partial | 162 | 162 | keep (review later) |
+| Einstellungen | settings:accountArchive.partial | 162 | 97 | shorten |
 | Einstellungen | settings:tt.places.help | 162 | 82 | shorten |
-| Einstellungen | settings:devices.noPublicUrl | 160 | 160 | keep (review later) |
+| Einstellungen | settings:devices.noPublicUrl | 160 | 93 | shorten |
 | Einstellungen | settings:unreachable.openData | 158 | 158 | keep (warning/error/consent stays visible) |
 | Einstellungen | settings:unreachable.photoprism | 156 | 156 | keep (warning/error/consent stays visible) |
 | Einstellungen | settings:unreachable.immich | 156 | 156 | keep (warning/error/consent stays visible) |
-| Einstellungen | settings:apiKeys.bulkRefresh.needsKey_other | 155 | 155 | keep (review later) |
+| Einstellungen | settings:apiKeys.bulkRefresh.needsKey_other | 155 | 95 | shorten |
 | Einstellungen | settings:unreachable.rail | 155 | 155 | keep (warning/error/consent stays visible) |
-| Einstellungen | settings:apiKeys.bulkRefresh.needsKey_one | 153 | 153 | keep (review later) |
+| Einstellungen | settings:apiKeys.bulkRefresh.needsKey_one | 153 | 93 | shorten |
 | Einstellungen | settings:errors.webPrefsTooLarge | 152 | 152 | keep (warning/error/consent stays visible) |
-| Einstellungen | settings:apiKeys.bulkRefresh.confirmHistoricalNote | 152 | 152 | keep (warning/error/consent stays visible) |
-| Einstellungen | settings:railRouting.reroute.done | 152 | 152 | keep (review later) |
-| Einstellungen | settings:recoveryKey.file.keep | 152 | 152 | keep (review later) |
-| Einstellungen | settings:tt.zones.difference | 151 | 151 | keep (review later) |
-| Einstellungen | settings:calendarFeed.notRecoverable | 149 | 149 | keep (review later) |
+| Einstellungen | settings:apiKeys.bulkRefresh.confirmHistoricalNote | 152 | 78 | shorten |
+| Einstellungen | settings:railRouting.reroute.done | 152 | 108 | shorten |
+| Einstellungen | settings:recoveryKey.file.keep | 152 | 86 | shorten |
+| Einstellungen | settings:tt.zones.difference | 151 | 81 | shorten |
+| Einstellungen | settings:calendarFeed.notRecoverable | 149 | 85 | shorten |
 | Einstellungen | settings:domains.description | 148 | 48 | shorten |
-| Einstellungen | settings:location.source.status.notConfigured | 148 | 148 | keep (review later) |
+| Einstellungen | settings:location.source.status.notConfigured | 148 | 77 | shorten |
 | Einstellungen | settings:routing.openrouteservice.description | 147 | 73 | shorten |
 | Einstellungen | settings:routing.graphhopper.description | 146 | 72 | shorten |
 | Einstellungen | settings:recoveryKey.file.restoreManual | 144 | 144 | keep (warning/error/consent stays visible) |
@@ -283,7 +287,7 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Einstellungen | settings:devices.codeHint | 125 | 74 | shorten |
 | Einstellungen | settings:parser.description | 124 | 72 | shorten |
 | Einstellungen | settings:services.description | 123 | 55 | shorten |
-| Einstellungen (Zeilen) | settingsRows:server.internet.h | 402 | 402 | keep (already behind ⓘ) |
+| Einstellungen (Zeilen) | settingsRows:server.internet.h | 402 | 282 | shorten |
 | Einstellungen (Zeilen) | settingsRows:backups.notes.secrets.s | 227 | 95 | shorten |
 | Einstellungen (Zeilen) | settingsRows:dialogs.restorekey.after | 223 | 223 | keep (warning/error/consent stays visible) |
 | Einstellungen (Zeilen) | settingsRows:backups.restoreFailure.recoveryKeyEnvPinned | 202 | 202 | keep (warning/error/consent stays visible) |
@@ -294,8 +298,8 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Einstellungen (Zeilen) | settingsRows:server.updcheck.h | 164 | 164 | keep (already behind ⓘ) |
 | Einstellungen (Zeilen) | settingsRows:server.beta.h | 163 | 163 | keep (already behind ⓘ) |
 | Einstellungen (Zeilen) | settingsRows:services.ui.intro | 162 | 73 | shorten |
-| Einstellungen (Zeilen) | settingsRows:maintenance.tzLegacy.when | 158 | 158 | keep (review later) |
-| Einstellungen (Zeilen) | settingsRows:services.routing.pickS | 157 | 157 | keep (review later) |
+| Einstellungen (Zeilen) | settingsRows:maintenance.tzLegacy.when | 158 | 80 | shorten |
+| Einstellungen (Zeilen) | settingsRows:services.routing.pickS | 157 | 75 | shorten |
 | Einstellungen (Zeilen) | settingsRows:services.tpl.pause.h | 154 | 154 | keep (already behind ⓘ) |
 | Einstellungen (Zeilen) | settingsRows:server.fxcdn.h | 152 | 152 | keep (already behind ⓘ) |
 | Einstellungen (Zeilen) | settingsRows:backups.restoreFailure.keySwapUnresolved | 149 | 149 | keep (warning/error/consent stays visible) |
@@ -318,29 +322,29 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Fehler | errors:airportLookupUnavailable.unknown | 149 | 149 | keep (warning/error/consent stays visible) |
 | Fehler | errors:airportLookupUnavailable.http_error | 148 | 148 | keep (warning/error/consent stays visible) |
 | Flüge | flights:form.help.flightNumberExpanded | 375 | 375 | keep (already behind ⓘ) |
-| Flüge | flights:form.email.regexWarning.body | 354 | 354 | keep (warning/error/consent stays visible) |
+| Flüge | flights:form.email.regexWarning.body | 354 | 88 | shorten |
 | Flüge | flights:bookingPrice.countedOnce | 342 | 61 | move behind ⓘ |
-| Flüge | flights:bookingPrice.noTotal | 247 | 247 | keep (review later) |
+| Flüge | flights:bookingPrice.noTotal | 247 | 96 | shorten |
 | Flüge | flights:form.help.tagsExpanded | 240 | 240 | keep (already behind ⓘ) |
-| Flüge | flights:form.help.flightNumber | 201 | 201 | keep (review later) |
+| Flüge | flights:form.help.flightNumber | 201 | 93 | shorten |
 | Flüge | flights:track.uploadIntro | 198 | 86 | shorten |
 | Flüge | flights:review.unconfirmedTimeNotice | 191 | 191 | keep (warning/error/consent stays visible) |
 | Flüge | flights:refresh.intro | 185 | 79 | shorten |
-| Flüge | flights:form.surfaceRailOff_other | 174 | 174 | keep (review later) |
-| Flüge | flights:form.surfaceRailOff_one | 172 | 172 | keep (review later) |
-| Flüge | flights:review.cancellationNotice | 157 | 157 | keep (review later) |
+| Flüge | flights:form.surfaceRailOff_other | 174 | 93 | shorten |
+| Flüge | flights:form.surfaceRailOff_one | 172 | 92 | shorten |
+| Flüge | flights:review.cancellationNotice | 157 | 90 | shorten |
 | Flüge | flights:track.errors.csvColumns | 153 | 153 | keep (warning/error/consent stays visible) |
-| Flüge | flights:bookingPrice.otherEntries_other | 153 | 153 | keep (review later) |
-| Flüge | flights:bookingPrice.otherEntries_one | 146 | 146 | keep (review later) |
-| Flüge | flights:form.llmUnreachable | 144 | 144 | keep (review later) |
+| Flüge | flights:bookingPrice.otherEntries_other | 153 | 79 | shorten |
+| Flüge | flights:bookingPrice.otherEntries_one | 146 | 72 | shorten |
+| Flüge | flights:form.llmUnreachable | 144 | 96 | shorten |
 | Flüge | flights:bulk.outcomeUnknown | 143 | 143 | keep (warning/error/consent stays visible) |
-| Flüge | flights:bookingPrice.splitDisplayOnly | 142 | 142 | keep (review later) |
+| Flüge | flights:bookingPrice.splitDisplayOnly | 142 | 67 | shorten |
 | Flüge | flights:table.description | 129 | 43 | shorten |
 | Fotos | immich:visitPhotosAuto.hint | 263 | 78 | shorten |
 | Fotos | immich:visitPhotosAuto.capHint | 253 | 78 | shorten |
-| Fotos | immich:apiKeyScopes | 212 | 212 | keep (review later) |
+| Fotos | immich:apiKeyScopes | 212 | 82 | shorten |
 | Fotos | immich:cover.intro | 210 | 82 | shorten |
-| Fotos | immich:nightlyScan.what | 189 | 189 | keep (review later) |
+| Fotos | immich:nightlyScan.what | 189 | 102 | shorten |
 | Fotos | immich:cover.crop.hint | 179 | 74 | shorten |
 | Fotos | immich:nightlyScan.privacyHelpMore | 170 | 170 | keep (already behind ⓘ) |
 | Fotos | immich:autoCover.hint | 168 | 71 | shorten |
@@ -348,17 +352,17 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Fotos | immich:nightlyScan.privacyHelp | 154 | 71 | move behind ⓘ |
 | Fotos | immich:errors.keyRequired | 153 | 153 | keep (warning/error/consent stays visible) |
 | import | import:package.model.offer | 247 | 247 | keep (warning/error/consent stays visible) |
-| import | import:email.cloudNotConsented.body | 195 | 195 | keep (warning/error/consent stays visible) |
+| import | import:email.cloudNotConsented.body | 195 | 90 | shorten |
 | import | import:trip.document.description | 165 | 80 | shorten |
-| import | import:email.regexWarning.body | 159 | 159 | keep (warning/error/consent stays visible) |
-| import | import:email.providerIncomplete.body | 159 | 159 | keep (review later) |
-| import | import:email.llmDisabled.body | 154 | 154 | keep (review later) |
+| import | import:email.regexWarning.body | 159 | 87 | shorten |
+| import | import:email.providerIncomplete.body | 159 | 74 | shorten |
+| import | import:email.llmDisabled.body | 154 | 73 | shorten |
 | import | import:package.model.intro | 132 | 78 | shorten |
 | Kreuzfahrt | cruise:stats.money.noTotalNote | 392 | 61 | move behind ⓘ |
 | Kreuzfahrt | cruise:reimport.intro | 295 | 91 | shorten |
 | Kreuzfahrt | cruise:stats.help.mostPorts.coverage | 273 | 273 | keep (already behind „Wie gezählt“) |
-| Kreuzfahrt | cruise:unresolved.incomplete_other | 265 | 265 | keep (review later) |
-| Kreuzfahrt | cruise:unresolved.incomplete_one | 260 | 260 | keep (review later) |
+| Kreuzfahrt | cruise:unresolved.incomplete_other | 265 | 107 | shorten |
+| Kreuzfahrt | cruise:unresolved.incomplete_one | 260 | 106 | shorten |
 | Kreuzfahrt | cruise:tracks.intro | 259 | 82 | shorten |
 | Kreuzfahrt | cruise:tracks.removeConfirmMessage | 205 | 205 | keep (warning/error/consent stays visible) |
 | Kreuzfahrt | cruise:stats.help.baseTotal.coverage | 193 | 193 | keep (already behind „Wie gezählt“) |
@@ -373,7 +377,7 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Kreuzfahrt | cruise:stats.help.cabinsCompanions.source | 163 | 163 | keep (already behind „Wie gezählt“) |
 | Kreuzfahrt | cruise:stats.help.baseTotal.source | 162 | 162 | keep (already behind „Wie gezählt“) |
 | Kreuzfahrt | cruise:picker.shipSearchError | 157 | 157 | keep (warning/error/consent stays visible) |
-| Kreuzfahrt | cruise:picker.geocodeRateLimited | 155 | 155 | keep (review later) |
+| Kreuzfahrt | cruise:picker.geocodeRateLimited | 155 | 85 | shorten |
 | Kreuzfahrt | cruise:stats.help.season.unit | 152 | 152 | keep (already behind „Wie gezählt“) |
 | Kreuzfahrt | cruise:flightGap.hint | 151 | 66 | shorten |
 | Kreuzfahrt | cruise:stats.help.longestShortest.unit | 147 | 147 | keep (already behind „Wie gezählt“) |
@@ -415,14 +419,14 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Mietwagen | rental:stats.help.costPerDay.exclusions | 190 | 190 | keep (already behind „Wie gezählt“) |
 | Mietwagen | rental:stats.help.days.time | 186 | 186 | keep (already behind „Wie gezählt“) |
 | Mietwagen | rental:stats.help.records.coverage | 186 | 186 | keep (already behind „Wie gezählt“) |
-| Mietwagen | rental:invoiceReview.fees.none | 186 | 186 | keep (review later) |
-| Mietwagen | rental:stats.bookedVsFinalNone | 179 | 179 | keep (review later) |
+| Mietwagen | rental:invoiceReview.fees.none | 186 | 64 | shorten |
+| Mietwagen | rental:stats.bookedVsFinalNone | 179 | 84 | shorten |
 | Mietwagen | rental:stats.help.bookedVsFinal.unit | 175 | 175 | keep (already behind „Wie gezählt“) |
 | Mietwagen | rental:stats.help.byYear.time | 174 | 174 | keep (already behind „Wie gezählt“) |
 | Mietwagen | rental:stats.help.promisedVsDriven.coverage | 168 | 168 | keep (already behind „Wie gezählt“) |
 | Mietwagen | rental:stats.help.costPerKm.exclusions | 167 | 167 | keep (already behind „Wie gezählt“) |
 | Mietwagen | rental:stats.help.bookedVsFinal.coverage | 166 | 166 | keep (already behind „Wie gezählt“) |
-| Mietwagen | rental:invoiceReview.fees.totalBesideDifference | 165 | 165 | keep (review later) |
+| Mietwagen | rental:invoiceReview.fees.totalBesideDifference | 165 | 88 | shorten |
 | Mietwagen | rental:form.depositHint | 160 | 54 | shorten |
 | Mietwagen | rental:stats.help.costPerKm.coverage | 160 | 160 | keep (already behind „Wie gezählt“) |
 | Mietwagen | rental:stats.help.costPerKm.unit | 146 | 146 | keep (already behind „Wie gezählt“) |
@@ -475,13 +479,13 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Orte | places:stats.insights.discoveries.help.coverage | 238 | 238 | keep (already behind „Wie gezählt“) |
 | Orte | places:import.csv.description | 207 | 81 | shorten |
 | Orte | places:import.document.fallback.noTemplate | 173 | 173 | keep (warning/error/consent stays visible) |
-| Orte | places:import.takeout.noKey | 165 | 165 | keep (review later) |
+| Orte | places:import.takeout.noKey | 165 | 84 | shorten |
 | Orte | places:stats.insights.jump.help.coverage | 162 | 162 | keep (already behind „Wie gezählt“) |
 | Orte | places:stats.help.busiestMonth.coverage | 158 | 158 | keep (already behind „Wie gezählt“) |
-| Orte | places:merge.curated.sameList | 158 | 158 | keep (review later) |
+| Orte | places:merge.curated.sameList | 158 | 100 | shorten |
 | Orte | places:nearby.origin.deviceHint | 148 | 58 | shorten |
-| Orte | places:form.countryTransitByCategory | 147 | 147 | keep (review later) |
-| Orte | places:merge.curated.twoLists | 147 | 147 | keep (review later) |
+| Orte | places:form.countryTransitByCategory | 147 | 80 | shorten |
+| Orte | places:merge.curated.twoLists | 147 | 108 | shorten |
 | Orte | places:import.takeout.intro_other | 144 | 79 | shorten |
 | Orte | places:smartList.autoAcceptHint | 143 | 65 | shorten |
 | Orte | places:detail.dateHint | 142 | 76 | shorten |
@@ -491,86 +495,86 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Orte | places:merge.intro | 133 | 72 | shorten |
 | Orte | places:form.statusHint | 129 | 68 | shorten |
 | Orte | places:customCategories.manageHint | 121 | 62 | shorten |
-| Parser | parser:workshop.domainHints.package | 265 | 265 | keep (review later) |
-| Parser | parser:workshop.domainHints.ferry | 258 | 258 | keep (review later) |
-| Parser | parser:workshop.domainHints.rail | 255 | 255 | keep (review later) |
+| Parser | parser:workshop.domainHints.package | 265 | 74 | shorten |
+| Parser | parser:workshop.domainHints.ferry | 258 | 66 | shorten |
+| Parser | parser:workshop.domainHints.rail | 255 | 82 | shorten |
 | Parser | parser:communityExport.refused.TEMPLATE_EXPORT_SOURCE_MISSING | 248 | 248 | keep (warning/error/consent stays visible) |
-| Parser | parser:workshop.domainHints.bus | 247 | 247 | keep (review later) |
+| Parser | parser:workshop.domainHints.bus | 247 | 76 | shorten |
 | Parser | parser:communityExport.refused.TEMPLATE_EXPORT_PERSONAL_DATA | 220 | 220 | keep (warning/error/consent stays visible) |
 | Parser | parser:derivation.cannot.railNeedsLegRow | 218 | 218 | keep (warning/error/consent stays visible) |
 | Parser | parser:derivation.cannot.cruiseNeedsStopRow | 211 | 211 | keep (warning/error/consent stays visible) |
 | Parser | parser:derivation.cannot.rentalEndsAmbiguous | 206 | 206 | keep (warning/error/consent stays visible) |
-| Parser | parser:workshop.domainHints.rental | 203 | 203 | keep (review later) |
+| Parser | parser:workshop.domainHints.rental | 203 | 75 | shorten |
 | Parser | parser:derivation.cannot.cruiseStopRowTooFarApart | 194 | 194 | keep (warning/error/consent stays visible) |
 | Parser | parser:derivation.cannot.rideNeedsRow | 187 | 187 | keep (warning/error/consent stays visible) |
 | Parser | parser:overview.uploadHelp | 182 | 79 | shorten |
-| Parser | parser:workshop.domainHints.cruise | 180 | 180 | keep (review later) |
+| Parser | parser:workshop.domainHints.cruise | 180 | 63 | shorten |
 | Parser | parser:derivation.cannot.cruiseStopRowNotUnderstood | 178 | 178 | keep (warning/error/consent stays visible) |
 | Parser | parser:derivation.cannot.railNeedsDate | 175 | 175 | keep (warning/error/consent stays visible) |
 | Parser | parser:derivation.cannot.lodgingDateNotUnderstood | 172 | 172 | keep (warning/error/consent stays visible) |
 | Parser | parser:derivation.cannot.lodgingNeedsNameAndDates | 171 | 171 | keep (warning/error/consent stays visible) |
-| Parser | parser:workshop.domainHints.place | 168 | 168 | keep (review later) |
+| Parser | parser:workshop.domainHints.place | 168 | 60 | shorten |
 | Parser | parser:derivation.cannot.rentalNeedsBookingFields | 160 | 160 | keep (warning/error/consent stays visible) |
 | Parser | parser:annotate.uploadErrors.TRAINING_IMAGE_NO_TEXT | 150 | 150 | keep (warning/error/consent stays visible) |
 | Parser | parser:derivation.cannot.railRowNotUnderstood | 147 | 147 | keep (warning/error/consent stays visible) |
 | Parser | parser:derivation.cannot.dateNotUnderstood | 144 | 144 | keep (warning/error/consent stays visible) |
 | Parser | parser:derivation.cannot.noDistinguishingMarker | 143 | 143 | keep (warning/error/consent stays visible) |
-| Parser | parser:communityTemplates.sync.indexUnreachable | 141 | 141 | keep (review later) |
+| Parser | parser:communityTemplates.sync.indexUnreachable | 141 | 94 | shorten |
 | Parser | parser:overview.whatHelp | 141 | 77 | shorten |
 | Parser | parser:annotate.description | 130 | 63 | shorten |
 | Pass | passport:countries.groundTimeLegend | 356 | 60 | move behind ⓘ |
 | Pass | passport:unconfirmed.explanationLocation | 260 | 260 | keep (warning/error/consent stays visible) |
-| Pass | passport:provenance.trackNote | 242 | 242 | keep (review later) |
+| Pass | passport:provenance.trackNote | 242 | 71 | shorten |
 | Pass | passport:unconfirmed.explanation | 242 | 242 | keep (warning/error/consent stays visible) |
-| Pass | passport:ground.unknownExplained | 224 | 224 | keep (warning/error/consent stays visible) |
-| Pass | passport:countingRule | 223 | 223 | keep (review later) |
-| Pass | passport:tiers.visitedExplained | 205 | 205 | keep (review later) |
+| Pass | passport:ground.unknownExplained | 224 | 99 | shorten |
+| Pass | passport:countingRule | 223 | 78 | shorten |
+| Pass | passport:tiers.visitedExplained | 205 | 64 | shorten |
 | Pass | passport:countries.dashLegend | 200 | 47 | move behind ⓘ |
-| Pass | passport:ground.measuredExplained | 186 | 186 | keep (review later) |
-| Pass | passport:tiers.transitedExplained | 174 | 174 | keep (review later) |
-| Pass | passport:value.noDatedDays | 174 | 174 | keep (review later) |
-| Pass | passport:ground.notApplicableExplained | 163 | 163 | keep (review later) |
-| Pass | passport:tiers.connectionExplained | 149 | 149 | keep (review later) |
-| Pass | passport:value.daysPresentExplained | 144 | 144 | keep (review later) |
-| Pass | passport:tiers.sleptExplained | 142 | 142 | keep (review later) |
+| Pass | passport:ground.measuredExplained | 186 | 88 | shorten |
+| Pass | passport:tiers.transitedExplained | 174 | 81 | shorten |
+| Pass | passport:value.noDatedDays | 174 | 56 | shorten |
+| Pass | passport:ground.notApplicableExplained | 163 | 44 | shorten |
+| Pass | passport:tiers.connectionExplained | 149 | 49 | shorten |
+| Pass | passport:value.daysPresentExplained | 144 | 81 | shorten |
+| Pass | passport:tiers.sleptExplained | 142 | 71 | shorten |
 | pendingUpdates | pendingUpdates:empty.description | 145 | 32 | shorten |
 | Posteingang | dataQuality:flag.actions.convert.hint | 244 | 72 | shorten |
 | Posteingang | dataQuality:inbox.photoJourneys.review.description | 239 | 86 | shorten |
 | Posteingang | dataQuality:inbox.workspace.location.emptyDescription | 230 | 82 | shorten |
 | Posteingang | dataQuality:unfiledDocuments.description | 220 | 85 | shorten |
-| Posteingang | dataQuality:unfiledDocuments.empty.body | 220 | 220 | keep (review later) |
-| Posteingang | dataQuality:inbox.workspace.journey.effect | 191 | 191 | keep (review later) |
-| Posteingang | dataQuality:inbox.workspace.location.effect | 185 | 185 | keep (review later) |
-| Posteingang | dataQuality:inbox.workspace.tripAway.effect | 177 | 177 | keep (review later) |
-| Posteingang | dataQuality:inbox.workspace.tripAway.effectExtend | 177 | 177 | keep (review later) |
-| Posteingang | dataQuality:kinds.home_residence_unconfirmed.body | 177 | 177 | keep (warning/error/consent stays visible) |
+| Posteingang | dataQuality:unfiledDocuments.empty.body | 220 | 73 | shorten |
+| Posteingang | dataQuality:inbox.workspace.journey.effect | 191 | 90 | shorten |
+| Posteingang | dataQuality:inbox.workspace.location.effect | 185 | 89 | shorten |
+| Posteingang | dataQuality:inbox.workspace.tripAway.effect | 177 | 74 | shorten |
+| Posteingang | dataQuality:inbox.workspace.tripAway.effectExtend | 177 | 71 | shorten |
+| Posteingang | dataQuality:kinds.home_residence_unconfirmed.body | 177 | 105 | shorten |
 | Posteingang | dataQuality:inbox.review.time.description | 176 | 79 | shorten |
-| Posteingang | dataQuality:inbox.photoJourneys.review.alreadyVisited | 174 | 174 | keep (review later) |
+| Posteingang | dataQuality:inbox.photoJourneys.review.alreadyVisited | 174 | 93 | shorten |
 | Posteingang | dataQuality:documentLinkSuggestions.description | 171 | 82 | shorten |
 | Posteingang | dataQuality:inbox.workspace.journey.errors.entryMismatch | 166 | 166 | keep (warning/error/consent stays visible) |
-| Posteingang | dataQuality:inbox.workspace.location.evidence | 163 | 163 | keep (review later) |
-| Posteingang | dataQuality:kinds.time_zone_unresolved.question | 163 | 163 | keep (review later) |
+| Posteingang | dataQuality:inbox.workspace.location.evidence | 163 | 95 | shorten |
+| Posteingang | dataQuality:kinds.time_zone_unresolved.question | 163 | 96 | shorten |
 | Posteingang | dataQuality:inbox.workspace.recheckHint | 162 | 72 | shorten |
 | Posteingang | dataQuality:inbox.tripSuggestions.home.missing | 160 | 160 | keep (warning/error/consent stays visible) |
-| Posteingang | dataQuality:kinds.surface_segment.question | 159 | 159 | keep (review later) |
-| Posteingang | dataQuality:inbox.photoJourneys.review.creates.chosenPlace | 155 | 155 | keep (review later) |
-| Posteingang | dataQuality:kinds.trip_entries_outside.question | 151 | 151 | keep (review later) |
+| Posteingang | dataQuality:kinds.surface_segment.question | 159 | 82 | shorten |
+| Posteingang | dataQuality:inbox.photoJourneys.review.creates.chosenPlace | 155 | 81 | shorten |
+| Posteingang | dataQuality:kinds.trip_entries_outside.question | 151 | 94 | shorten |
 | Posteingang | dataQuality:inbox.tripSuggestions.description | 148 | 68 | shorten |
 | Posteingang | dataQuality:unfiledDocuments.create.hint | 147 | 78 | shorten |
-| Posteingang | dataQuality:kinds.duplicate_candidate.safePath | 146 | 146 | keep (review later) |
-| Posteingang | dataQuality:inbox.photoJourneys.creates.stayAnswerOnly | 144 | 144 | keep (review later) |
+| Posteingang | dataQuality:kinds.duplicate_candidate.safePath | 146 | 92 | shorten |
+| Posteingang | dataQuality:inbox.photoJourneys.creates.stayAnswerOnly | 144 | 71 | shorten |
 | Posteingang | dataQuality:inbox.workspace.location.errors.historyChanged | 143 | 143 | keep (warning/error/consent stays visible) |
 | Posteingang | dataQuality:inbox.photoJourneys.review.requestFailed | 141 | 141 | keep (warning/error/consent stays visible) |
 | Posteingang | dataQuality:inbox.tripSuggestions.errors.stale | 141 | 141 | keep (warning/error/consent stays visible) |
 | Posteingang | dataQuality:placeCaptures.description | 138 | 78 | shorten |
 | provenance | provenance:notices.description | 149 | 74 | shorten |
 | purpose | purpose:field.hint | 310 | 81 | shorten |
-| purpose | purpose:trip.rowCategory | 166 | 166 | keep (review later) |
+| purpose | purpose:trip.rowCategory | 166 | 70 | shorten |
 | purpose | purpose:visibility.intro | 129 | 54 | shorten |
-| pushRelay | pushRelay:explanation.stores | 267 | 267 | keep (review later) |
-| pushRelay | pushRelay:explanation.receives | 245 | 245 | keep (review later) |
-| pushRelay | pushRelay:explanation.operator | 191 | 191 | keep (review later) |
-| pushRelay | pushRelay:defaultOff | 158 | 158 | keep (review later) |
+| pushRelay | pushRelay:explanation.stores | 267 | 89 | shorten |
+| pushRelay | pushRelay:explanation.receives | 245 | 102 | shorten |
+| pushRelay | pushRelay:explanation.operator | 191 | 97 | shorten |
+| pushRelay | pushRelay:defaultOff | 158 | 75 | shorten |
 | readiness | readiness:checks.adminKeySwapInterrupted.consequence | 462 | 462 | keep (warning/error/consent stays visible) |
 | readiness | readiness:checks.adminRailRerouteMissed.consequence | 238 | 238 | keep (warning/error/consent stays visible) |
 | readiness | readiness:checks.userTravtrackDerivation.consequence | 213 | 213 | keep (warning/error/consent stays visible) |
@@ -592,9 +596,9 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Reisen | trips:cleanup.intro | 186 | 77 | shorten |
 | Reisen | trips:bookingPackage.stale | 181 | 181 | keep (warning/error/consent stays visible) |
 | Reisen | trips:tours.deleteConfirm.message_other | 179 | 179 | keep (warning/error/consent stays visible) |
-| Reisen | trips:dawarichStays.evidenceUnverifiable | 178 | 178 | keep (review later) |
+| Reisen | trips:dawarichStays.evidenceUnverifiable | 178 | 70 | shorten |
 | Reisen | trips:tours.deleteConfirm.message_one | 177 | 177 | keep (warning/error/consent stays visible) |
-| Reisen | trips:summary.cta | 163 | 163 | keep (review later) |
+| Reisen | trips:summary.cta | 163 | 69 | shorten |
 | Reisen | trips:packing.notice.staleReloadFailed | 157 | 157 | keep (warning/error/consent stays visible) |
 | Reisen | trips:tours.tracks.truncatedReason | 154 | 154 | keep (warning/error/consent stays visible) |
 | Reisen | trips:dawarichStays.uncertainty.sourceUnknown | 151 | 151 | keep (warning/error/consent stays visible) |
@@ -608,7 +612,7 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Roadtrips | roadtrips:trackArchive.importDescription | 280 | 87 | shorten |
 | Roadtrips | roadtrips:stats.tours.activities.help.exclusions | 264 | 264 | keep (already behind „Wie gezählt“) |
 | Roadtrips | roadtrips:trackArchive.exportDescription | 237 | 49 | shorten |
-| Roadtrips | roadtrips:draft.firstMessage | 213 | 213 | keep (review later) |
+| Roadtrips | roadtrips:draft.firstMessage | 213 | 102 | shorten |
 | Roadtrips | roadtrips:stats.insights.pace.help.coverage | 206 | 206 | keep (already behind „Wie gezählt“) |
 | Roadtrips | roadtrips:stats.tours.links.help.coverage | 204 | 204 | keep (already behind „Wie gezählt“) |
 | Roadtrips | roadtrips:conflict.intro.live | 203 | 203 | keep (warning/error/consent stays visible) |
@@ -628,8 +632,8 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Roadtrips | roadtrips:startFrom.afterFailed | 167 | 167 | keep (warning/error/consent stays visible) |
 | Roadtrips | roadtrips:conflict.readFailed | 158 | 158 | keep (warning/error/consent stays visible) |
 | Roadtrips | roadtrips:editor.hint | 157 | 75 | shorten |
-| Roadtrips | roadtrips:stats.tours.activities.row_other | 156 | 156 | keep (review later) |
-| Roadtrips | roadtrips:stats.tours.activities.row_one | 154 | 154 | keep (review later) |
+| Roadtrips | roadtrips:stats.tours.activities.row_other | 156 | 109 | shorten |
+| Roadtrips | roadtrips:stats.tours.activities.row_one | 154 | 107 | shorten |
 | Roadtrips | roadtrips:review.intro | 150 | 63 | shorten |
 | Roadtrips | roadtrips:costs.deleteConfirm.message | 150 | 150 | keep (warning/error/consent stays visible) |
 | Roadtrips | roadtrips:stats.insights.nightStyle.help.unit | 148 | 148 | keep (already behind „Wie gezählt“) |
@@ -642,19 +646,19 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Roadtrips | roadtrips:stats.insights.progress.help.coverage | 144 | 144 | keep (already behind „Wie gezählt“) |
 | Roadtrips | roadtrips:stats.help.nights.unit | 144 | 144 | keep (already behind „Wie gezählt“) |
 | Roadtrips | roadtrips:editor.mapAdd.failed | 144 | 144 | keep (warning/error/consent stays visible) |
-| Roadtrips | roadtrips:costs.fx.noneUndated | 142 | 142 | keep (review later) |
+| Roadtrips | roadtrips:costs.fx.noneUndated | 142 | 78 | shorten |
 | routing | routing:admin.hint | 321 | 83 | shorten |
 | routing | routing:rail.hint | 315 | 85 | shorten |
-| routing | routing:rail.readiness_other | 152 | 152 | keep (review later) |
-| routing | routing:rail.readiness_one | 150 | 150 | keep (review later) |
+| routing | routing:rail.readiness_other | 152 | 90 | shorten |
+| routing | routing:rail.readiness_one | 150 | 88 | shorten |
 | routing | routing:rail.modeAllHint | 123 | 79 | shorten |
 | Server/Admin | admin:operatorLogos.description | 444 | 82 | shorten |
 | Server/Admin | admin:federation.qrHint | 383 | 88 | move behind ⓘ |
 | Server/Admin | admin:fxCdn.description | 341 | 80 | shorten |
-| Server/Admin | admin:templateRepo.description | 338 | 52 | shorten |
+| Server/Admin | admin:templateRepo.description | 338 | 90 | shorten |
 | Server/Admin | admin:parserSettings.provider.description | 336 | 74 | shorten |
 | Server/Admin | admin:federation.rotateConfirm.message | 322 | 322 | keep (warning/error/consent stays visible) |
-| Server/Admin | admin:instance.fields.betaFeatures.features.federatedTripSharing.what | 309 | 309 | keep (review later) |
+| Server/Admin | admin:instance.fields.betaFeatures.features.federatedTripSharing.what | 309 | 92 | shorten |
 | Server/Admin | admin:parserSettings.provider.chain.hint | 307 | 87 | shorten |
 | Server/Admin | admin:parserSettings.provider.slots.custom.consent.warning | 297 | 297 | keep (warning/error/consent stays visible) |
 | Server/Admin | admin:parserSettings.order.hint | 288 | 81 | shorten |
@@ -662,46 +666,46 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Server/Admin | admin:parserSettings.provider.slots.openai.consent.warning | 276 | 276 | keep (warning/error/consent stays visible) |
 | Server/Admin | admin:parserSettings.provider.slots.google.consent.warning | 276 | 276 | keep (warning/error/consent stays visible) |
 | Server/Admin | admin:timeModel.reResolve.description | 275 | 94 | shorten |
-| Server/Admin | admin:aeroapi.description | 267 | 82 | shorten |
-| Server/Admin | admin:federation.tripSharingSub | 253 | 253 | keep (review later) |
+| Server/Admin | admin:aeroapi.description | 267 | 87 | shorten |
+| Server/Admin | admin:federation.tripSharingSub | 253 | 94 | shorten |
 | Server/Admin | admin:travTrack.description | 248 | 77 | shorten |
 | Server/Admin | admin:instance.fields.countryThreshold.help | 240 | 60 | shorten |
-| Server/Admin | admin:parserSettings.ollama.description | 235 | 85 | shorten |
+| Server/Admin | admin:parserSettings.ollama.description | 235 | 82 | shorten |
 | Server/Admin | admin:airlineAircraftMasterData.airport.description | 232 | 106 | shorten |
 | Server/Admin | admin:instance.passkeys.rpId.help | 225 | 73 | shorten |
 | Server/Admin | admin:instance.fields.publicUrl.help | 223 | 72 | shorten |
 | Server/Admin | admin:federation.error.COMPARISON_PEER_KEY_INVALID | 217 | 217 | keep (warning/error/consent stays visible) |
 | Server/Admin | admin:backup.description | 215 | 84 | shorten |
 | Server/Admin | admin:lodgingChains.deleteInUse | 215 | 215 | keep (warning/error/consent stays visible) |
-| Server/Admin | admin:federation.importedReplaces | 213 | 213 | keep (review later) |
+| Server/Admin | admin:federation.importedReplaces | 213 | 80 | shorten |
 | Server/Admin | admin:backup.failure.BACKUP_TOOL_MISSING | 212 | 212 | keep (warning/error/consent stays visible) |
-| Server/Admin | admin:instance.fields.betaFeatures.features.travPlan.what | 206 | 206 | keep (review later) |
+| Server/Admin | admin:instance.fields.betaFeatures.features.travPlan.what | 206 | 88 | shorten |
 | Server/Admin | admin:importMode.description | 204 | 82 | shorten |
 | Server/Admin | admin:federation.description | 203 | 100 | shorten |
-| Server/Admin | admin:lodgingChains.mergeExplain | 203 | 203 | keep (review later) |
-| Server/Admin | admin:federation.checklist.users | 189 | 189 | keep (review later) |
+| Server/Admin | admin:lodgingChains.mergeExplain | 203 | 113 | shorten |
+| Server/Admin | admin:federation.checklist.users | 189 | 72 | shorten |
 | Server/Admin | admin:instance.passkeys.origins.help | 188 | 60 | shorten |
 | Server/Admin | admin:parserSettings.llmSwitch.hint | 188 | 88 | shorten |
-| Server/Admin | admin:federation.admissions.tripSharingNote | 180 | 180 | keep (review later) |
+| Server/Admin | admin:federation.admissions.tripSharingNote | 180 | 96 | shorten |
 | Server/Admin | admin:travPlan.description | 176 | 52 | shorten |
 | Server/Admin | admin:federation.error.COMPARISON_CONNECTION_FILE_ORIGIN | 165 | 165 | keep (warning/error/consent stays visible) |
 | Server/Admin | admin:timeModel.reResolve.confirm.message_other | 162 | 162 | keep (warning/error/consent stays visible) |
 | Server/Admin | admin:timeModel.errors.outcomeUnknown | 159 | 159 | keep (warning/error/consent stays visible) |
 | Server/Admin | admin:airlineAircraftMasterData.aircraft.description | 157 | 75 | shorten |
-| Server/Admin | admin:timeModel.report.statement.answered_other | 155 | 155 | keep (review later) |
+| Server/Admin | admin:timeModel.report.statement.answered_other | 155 | 51 | shorten |
 | Server/Admin | admin:users.description | 154 | 72 | shorten |
 | Server/Admin | admin:timeModel.errors.unreadable | 154 | 154 | keep (warning/error/consent stays visible) |
-| Server/Admin | admin:timeModel.report.statement.answered_one | 153 | 153 | keep (review later) |
+| Server/Admin | admin:timeModel.report.statement.answered_one | 153 | 50 | shorten |
 | Server/Admin | admin:airlineAircraftMasterData.airline.description | 152 | 70 | shorten |
 | Server/Admin | admin:federation.checklist.identity.invalidOrigin | 152 | 152 | keep (warning/error/consent stays visible) |
-| Server/Admin | admin:lodgingChains.renameNote | 152 | 152 | keep (review later) |
+| Server/Admin | admin:lodgingChains.renameNote | 152 | 89 | shorten |
 | Server/Admin | admin:cruiseMasterData.ship.description | 151 | 69 | shorten |
-| Server/Admin | admin:logging.level.pinned | 151 | 151 | keep (review later) |
+| Server/Admin | admin:logging.level.pinned | 151 | 77 | shorten |
 | Server/Admin | admin:timeModel.reResolve.confirm.message_one | 151 | 151 | keep (warning/error/consent stays visible) |
 | Server/Admin | admin:instance.fields.betaFeatures.help | 150 | 77 | shorten |
 | Server/Admin | admin:backup.cloudList.description | 146 | 64 | shorten |
-| Server/Admin | admin:timeModel.report.statement.open_other | 145 | 145 | keep (review later) |
-| Server/Admin | admin:timeModel.report.statement.open_one | 143 | 143 | keep (review later) |
+| Server/Admin | admin:timeModel.report.statement.open_other | 145 | 75 | shorten |
+| Server/Admin | admin:timeModel.report.statement.open_one | 143 | 73 | shorten |
 | Server/Admin | admin:federation.error.FEDERATION_ADMISSION_KEY_MISMATCH | 143 | 143 | keep (warning/error/consent stays visible) |
 | Server/Admin | admin:federation.error.COMPARISON_PEER_UNREACHABLE | 142 | 142 | keep (warning/error/consent stays visible) |
 | Server/Admin | admin:templateRepo.syncFailed_other | 142 | 142 | keep (warning/error/consent stays visible) |
@@ -716,7 +720,7 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Server/Admin | admin:federation.checklist.peersHint | 125 | 61 | shorten |
 | Server/Admin | admin:parserSettings.description | 123 | 84 | shorten |
 | setup | setup:freeServices.description | 270 | 74 | shorten |
-| setup | setup:freeServices.alreadyOn | 201 | 201 | keep (review later) |
+| setup | setup:freeServices.alreadyOn | 201 | 91 | shorten |
 | setup | setup:airportSeeding.modal.description | 162 | 66 | shorten |
 | Statistik | stats:insights.help.cruisePorts.unit | 490 | 490 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:insights.help.cruiseDays.unit | 489 | 489 | keep (already behind „Wie gezählt“) |
@@ -725,11 +729,11 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Statistik | stats:insights.help.cruiseDays.exclusions | 424 | 424 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:insights.help.cruiseExcursions.unit | 404 | 404 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:insights.help.cruiseExcursions.source | 380 | 380 | keep (already behind „Wie gezählt“) |
-| Statistik | stats:travelAccount.helpWithRailAndBus | 372 | 372 | keep (review later) |
+| Statistik | stats:travelAccount.helpWithRailAndBus | 372 | 77 | shorten |
 | Statistik | stats:crossDomain.help.unit | 365 | 365 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:insights.help.cruiseReunion.time | 363 | 363 | keep (already behind „Wie gezählt“) |
-| Statistik | stats:travelAccount.helpWithRail | 359 | 359 | keep (review later) |
-| Statistik | stats:travelAccount.helpWithBus | 359 | 359 | keep (review later) |
+| Statistik | stats:travelAccount.helpWithRail | 359 | 77 | shorten |
+| Statistik | stats:travelAccount.helpWithBus | 359 | 77 | shorten |
 | Statistik | stats:cruiseSection.help.flags.unit | 351 | 351 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:travelAccount.help | 346 | 77 | shorten |
 | Statistik | stats:domainRecords.help.unit | 345 | 345 | keep (already behind „Wie gezählt“) |
@@ -759,7 +763,7 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Statistik | stats:insights.help.cruiseExcursions.coverage | 255 | 255 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:overviewKpis.help.experiences.exclusions | 254 | 254 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:insights.help.cruiseStays.unit | 245 | 245 | keep (already behind „Wie gezählt“) |
-| Statistik | stats:insights.transfers.coverageDetail | 237 | 237 | keep (review later) |
+| Statistik | stats:insights.transfers.coverageDetail | 237 | 142 | shorten |
 | Statistik | stats:insights.help.cruiseExcursions.exclusions | 237 | 237 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:overviewKpis.help.experiences.unit | 231 | 231 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:insights.help.cruiseEvents.coverage | 231 | 231 | keep (already behind „Wie gezählt“) |
@@ -808,7 +812,7 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Statistik | stats:insights.help.cruiseExcursions.time | 182 | 182 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:insights.help.cruisePorts.coverage | 181 | 181 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:companionsTogether.help.days.time | 180 | 180 | keep (already behind „Wie gezählt“) |
-| Statistik | stats:insights.cruise.excursions.empty | 179 | 179 | keep (review later) |
+| Statistik | stats:insights.cruise.excursions.empty | 179 | 85 | shorten |
 | Statistik | stats:help.totalFlightTimeExpanded | 178 | 178 | keep (already behind ⓘ) |
 | Statistik | stats:insights.help.reunions.coverage | 178 | 178 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:insights.help.cruiseDays.time | 177 | 177 | keep (already behind „Wie gezählt“) |
@@ -833,14 +837,14 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Statistik | stats:wrapped.help.ferry.exclusions | 157 | 157 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:carbon.help.perMode.exclusions | 156 | 156 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:cruiseSection.help.flags.exclusions | 155 | 155 | keep (already behind „Wie gezählt“) |
-| Statistik | stats:insights.transfers.empty | 154 | 154 | keep (review later) |
+| Statistik | stats:insights.transfers.empty | 154 | 71 | shorten |
 | Statistik | stats:wrapped.help.bus.exclusions | 153 | 153 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:insights.intro | 153 | 58 | shorten |
 | Statistik | stats:insights.cruise.money.coverage | 153 | 153 | keep (already behind „Wie gezählt“) |
-| Statistik | stats:carbon.cruiseNote | 151 | 151 | keep (review later) |
+| Statistik | stats:carbon.cruiseNote | 151 | 67 | shorten |
 | Statistik | stats:cruiseSection.help.countries.coverage | 150 | 150 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:insights.help.cruiseItineraries.source | 150 | 150 | keep (already behind „Wie gezählt“) |
-| Statistik | stats:wrapped.nothingYet | 148 | 148 | keep (review later) |
+| Statistik | stats:wrapped.nothingYet | 148 | 71 | shorten |
 | Statistik | stats:wrapped.help.places.exclusions | 148 | 148 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:yearFilter.help.unit | 147 | 147 | keep (already behind „Wie gezählt“) |
 | Statistik | stats:help.totalDistanceExpanded | 147 | 147 | keep (already behind ⓘ) |
@@ -1034,9 +1038,9 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Statistik (Flüge) | flightStatsHelp:unique.midnight.coverage | 142 | 142 | keep (already behind „Wie gezählt“) |
 | Statistik (Flüge) | flightStatsHelp:airports.newThisYear.source | 141 | 141 | keep (already behind „Wie gezählt“) |
 | suggestionSources | suggestionSources:plugins.help | 262 | 76 | shorten |
-| suggestionSources | suggestionSources:calendar.privacy.sub | 238 | 238 | keep (warning/error/consent stays visible) |
+| suggestionSources | suggestionSources:calendar.privacy.sub | 238 | 98 | shorten |
 | suggestionSources | suggestionSources:calendar.geocode.help | 232 | 79 | shorten |
-| suggestionSources | suggestionSources:plugins.sent.sub | 226 | 226 | keep (review later) |
+| suggestionSources | suggestionSources:plugins.sent.sub | 226 | 82 | shorten |
 | suggestionSources | suggestionSources:calendar.help | 224 | 88 | shorten |
 | suggestionSources | suggestionSources:plugins.maintenance.intro | 162 | 86 | shorten |
 | suggestionSources | suggestionSources:calendar.failure.kind.auth | 150 | 150 | keep (warning/error/consent stays visible) |
@@ -1049,11 +1053,11 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Tabellen-Export | xlsx:hints.ferry | 613 | 613 | keep (inside the exported file) |
 | Tabellen-Export | xlsx:hints.roadtripStations | 593 | 593 | keep (inside the exported file) |
 | Tabellen-Export | xlsx:hints.bus | 569 | 569 | keep (inside the exported file) |
-| Tabellen-Export | xlsx:export.description | 521 | 86 | shorten |
+| Tabellen-Export | xlsx:export.description | 521 | 0 | delete |
 | Tabellen-Export | xlsx:hints.tourPoints | 425 | 425 | keep (inside the exported file) |
 | Tabellen-Export | xlsx:import.description | 422 | 80 | shorten |
 | Tabellen-Export | xlsx:hints.rental | 377 | 377 | keep (inside the exported file) |
-| Tabellen-Export | xlsx:import.transferNote | 375 | 375 | keep (review later) |
+| Tabellen-Export | xlsx:import.transferNote | 375 | 82 | shorten |
 | Tabellen-Export | xlsx:hints.roadtrips | 365 | 365 | keep (inside the exported file) |
 | Tabellen-Export | xlsx:hints.lodgingStays | 268 | 268 | keep (inside the exported file) |
 | Tabellen-Export | xlsx:import.replaceWarning | 258 | 258 | keep (warning/error/consent stays visible) |
@@ -1064,39 +1068,39 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Tabellen-Export | xlsx:hints.cruises | 169 | 169 | keep (inside the exported file) |
 | Tabellen-Export | xlsx:hints.lodging | 162 | 162 | keep (inside the exported file) |
 | Tabellen-Export | xlsx:hints.bookings | 155 | 155 | keep (inside the exported file) |
-| Teilen | sharing:shareDialog.copied | 275 | 275 | keep (review later) |
+| Teilen | sharing:shareDialog.copied | 275 | 75 | shorten |
 | Teilen | sharing:route.intro | 271 | 87 | shorten |
 | Teilen | sharing:links.dialog.itineraryHint | 263 | 91 | shorten |
 | Teilen | sharing:remote.connections.hint | 262 | 82 | shorten |
 | Teilen | sharing:remote.description | 237 | 75 | shorten |
-| Teilen | sharing:remote.connections.findable.sub | 237 | 237 | keep (review later) |
+| Teilen | sharing:remote.connections.findable.sub | 237 | 84 | shorten |
 | Teilen | sharing:links.errors.tripEnded | 214 | 214 | keep (warning/error/consent stays visible) |
 | Teilen | sharing:remote.trip.reconfirmHint | 199 | 67 | shorten |
-| Teilen | sharing:shareDialog.add.title | 188 | 188 | keep (review later) |
-| Teilen | sharing:remote.connections.request.sent | 184 | 184 | keep (review later) |
-| Teilen | sharing:shareDialog.add.nameTaken | 182 | 182 | keep (review later) |
+| Teilen | sharing:shareDialog.add.title | 188 | 87 | shorten |
+| Teilen | sharing:remote.connections.request.sent | 184 | 86 | shorten |
+| Teilen | sharing:shareDialog.add.nameTaken | 182 | 90 | shorten |
 | Teilen | sharing:remote.trip.roster.hint | 180 | 55 | shorten |
 | Teilen | sharing:remote.errors.personUnknown | 176 | 176 | keep (warning/error/consent stays visible) |
-| Teilen | sharing:remote.trip.delivery.retryingLocal | 172 | 172 | keep (review later) |
+| Teilen | sharing:remote.trip.delivery.retryingLocal | 172 | 100 | shorten |
 | Teilen | sharing:remote.invites.hint | 171 | 58 | shorten |
-| Teilen | sharing:remote.trip.person.serverNotConnected | 169 | 169 | keep (review later) |
+| Teilen | sharing:remote.trip.person.serverNotConnected | 169 | 90 | shorten |
 | Teilen | sharing:remote.connections.waiting.reconfirm | 169 | 169 | keep (warning/error/consent stays visible) |
 | Teilen | sharing:settings.description | 166 | 84 | shorten |
-| Teilen | sharing:inbox.notices.joinedMoved | 163 | 163 | keep (review later) |
+| Teilen | sharing:inbox.notices.joinedMoved | 163 | 90 | shorten |
 | Teilen | sharing:remote.people.withdrawConfirm | 162 | 162 | keep (warning/error/consent stays visible) |
-| Teilen | sharing:remote.trip.delivery.retryingHeld | 159 | 159 | keep (review later) |
+| Teilen | sharing:remote.trip.delivery.retryingHeld | 159 | 85 | shorten |
 | Teilen | sharing:shareDialog.blocked.consentWithdrawn | 153 | 153 | keep (warning/error/consent stays visible) |
-| Teilen | sharing:friends.empty | 152 | 152 | keep (review later) |
+| Teilen | sharing:friends.empty | 152 | 62 | shorten |
 | Teilen | sharing:linkDialog.requestIntro | 151 | 81 | shorten |
-| Teilen | sharing:links.dialog.disabled | 151 | 151 | keep (review later) |
-| Teilen | sharing:inbox.requests.body | 148 | 148 | keep (review later) |
-| Teilen | sharing:remote.trip.person.requested | 148 | 148 | keep (review later) |
+| Teilen | sharing:links.dialog.disabled | 151 | 82 | shorten |
+| Teilen | sharing:inbox.requests.body | 148 | 71 | shorten |
+| Teilen | sharing:remote.trip.person.requested | 148 | 87 | shorten |
 | Teilen | sharing:link.intro | 148 | 61 | shorten |
 | Teilen | sharing:errors.groupConsentRequired | 147 | 147 | keep (warning/error/consent stays visible) |
 | Teilen | sharing:errors.notHomeLocal | 147 | 147 | keep (warning/error/consent stays visible) |
 | Teilen | sharing:shareDialog.blocked.consentMissing | 147 | 147 | keep (warning/error/consent stays visible) |
 | Teilen | sharing:links.dialog.warning | 147 | 147 | keep (warning/error/consent stays visible) |
-| Teilen | sharing:shareDialog.nobody | 146 | 146 | keep (review later) |
+| Teilen | sharing:shareDialog.nobody | 146 | 73 | shorten |
 | Teilen | sharing:tripShare.peopleHint | 146 | 57 | shorten |
 | Teilen | sharing:remote.errors.leaderboardUnavailable | 145 | 145 | keep (warning/error/consent stays visible) |
 | Teilen | sharing:remote.trip.addRequest.hint | 137 | 83 | shorten |
@@ -1110,11 +1114,11 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | TravPlan | travplan:remote.exportHint | 231 | 73 | shorten |
 | TravPlan | travplan:create.bookingsIntro | 221 | 77 | shorten |
 | TravPlan | travplan:route.handover.intro | 209 | 75 | shorten |
-| TravPlan | travplan:members.introOwner | 201 | 201 | keep (review later) |
-| TravPlan | travplan:deletePlan.staysBody | 182 | 182 | keep (warning/error/consent stays visible) |
+| TravPlan | travplan:members.introOwner | 201 | 83 | shorten |
+| TravPlan | travplan:deletePlan.staysBody | 182 | 73 | shorten |
 | TravPlan | travplan:planDocs.intro | 163 | 53 | shorten |
-| TravPlan | travplan:members.introMember | 155 | 155 | keep (review later) |
-| TravPlan | travplan:remote.invite.none | 149 | 149 | keep (review later) |
+| TravPlan | travplan:members.introMember | 155 | 85 | shorten |
+| TravPlan | travplan:remote.invite.none | 149 | 77 | shorten |
 | TravPlan | travplan:errors.PLAN_USER_DISABLED | 146 | 146 | keep (warning/error/consent stays visible) |
 | TravPlan | travplan:aiConsent | 145 | 145 | keep (warning/error/consent stays visible) |
 | TravPlan | travplan:configHelp | 136 | 79 | shorten |
@@ -1122,26 +1126,26 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | TravTrack | track:imports.googleHint | 728 | 88 | move behind ⓘ |
 | TravTrack | track:imports.intro | 574 | 84 | move behind ⓘ |
 | TravTrack | track:dawarichCopy.intro | 443 | 84 | shorten |
-| TravTrack | track:evidence.scale | 371 | 371 | keep (review later) |
-| TravTrack | track:settings.diagnostics.evidence.stopPlan | 252 | 252 | keep (review later) |
+| TravTrack | track:evidence.scale | 371 | 99 | move behind ⓘ |
+| TravTrack | track:settings.diagnostics.evidence.stopPlan | 252 | 252 | keep (diagnostic readout) |
 | TravTrack | track:sources.intro | 236 | 88 | shorten |
 | TravTrack | track:delete.intro | 211 | 71 | shorten |
 | TravTrack | track:quality.intro | 190 | 84 | shorten |
-| TravTrack | track:settings.diagnostics.cause.lostAfterUpload | 177 | 177 | keep (warning/error/consent stays visible) |
-| TravTrack | track:sources.owntracks.howTo | 170 | 170 | keep (review later) |
-| TravTrack | track:months.legend | 170 | 170 | keep (review later) |
+| TravTrack | track:settings.diagnostics.cause.lostAfterUpload | 177 | 177 | keep (diagnostic readout) |
+| TravTrack | track:sources.owntracks.howTo | 170 | 85 | shorten |
+| TravTrack | track:months.legend | 170 | 70 | shorten |
 | TravTrack | track:sources.privacy | 162 | 162 | keep (warning/error/consent stays visible) |
 | TravTrack | track:imports.errors.unreadable | 158 | 158 | keep (warning/error/consent stays visible) |
 | TravTrack | track:imports.errors.tooManyPoints | 158 | 158 | keep (warning/error/consent stays visible) |
-| TravTrack | track:dawarichCopy.connection.shared | 158 | 158 | keep (review later) |
+| TravTrack | track:dawarichCopy.connection.shared | 158 | 92 | shorten |
 | TravTrack | track:importsTab.intro | 158 | 47 | shorten |
 | TravTrack | track:export.intro | 157 | 59 | shorten |
-| TravTrack | track:settings.tripsNoResidence | 153 | 153 | keep (review later) |
-| TravTrack | track:map.route.alwaysCut | 150 | 150 | keep (review later) |
-| TravTrack | track:map.rangeNoTimeline | 149 | 149 | keep (review later) |
-| TravTrack | track:map.countries.note | 149 | 149 | keep (review later) |
-| TravTrack | track:start.companion.body | 144 | 144 | keep (review later) |
-| TravTrack | track:settings.diagnostics.evidence.autoPause | 141 | 141 | keep (review later) |
+| TravTrack | track:settings.tripsNoResidence | 153 | 80 | shorten |
+| TravTrack | track:map.route.alwaysCut | 150 | 74 | shorten |
+| TravTrack | track:map.rangeNoTimeline | 149 | 69 | shorten |
+| TravTrack | track:map.countries.note | 149 | 57 | shorten |
+| TravTrack | track:start.companion.body | 144 | 81 | shorten |
+| TravTrack | track:settings.diagnostics.evidence.autoPause | 141 | 50 | shorten |
 | TravTrack | track:gaps.intro | 127 | 52 | shorten |
 | TravTrack | track:stays.intro | 124 | 52 | shorten |
 | TravTrack | track:start.intro | 121 | 59 | shorten |
@@ -1153,7 +1157,7 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Unterkünfte | lodging:stats.help.priceRankings.source | 308 | 308 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.avgPerNight.source | 301 | 301 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.awardValue.exclusions | 272 | 272 | keep (already behind „Wie gezählt“) |
-| Unterkünfte | lodging:fx.baseCurrencyExplainer | 266 | 266 | keep (review later) |
+| Unterkünfte | lodging:fx.baseCurrencyExplainer | 266 | 85 | shorten |
 | Unterkünfte | lodging:stats.help.nightsAway.exclusions | 241 | 241 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.centre.unit | 228 | 228 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.medianPerNight.source | 227 | 227 | keep (already behind „Wie gezählt“) |
@@ -1186,16 +1190,16 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Unterkünfte | lodging:stats.help.programmeYears.exclusions | 204 | 204 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.awardValue.coverage | 203 | 203 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.awayShare.exclusions | 202 | 202 | keep (already behind „Wie gezählt“) |
-| Unterkünfte | lodging:membership.leavesThisChain | 199 | 199 | keep (review later) |
+| Unterkünfte | lodging:membership.leavesThisChain | 199 | 77 | shorten |
 | Unterkünfte | lodging:stats.help.priceRankings.time | 197 | 197 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.concentration.exclusions | 196 | 196 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.awayShare.unit | 196 | 196 | keep (already behind „Wie gezählt“) |
-| Unterkünfte | lodging:locationCheck.name_only | 196 | 196 | keep (review later) |
+| Unterkünfte | lodging:locationCheck.name_only | 196 | 84 | shorten |
 | Unterkünfte | lodging:import.maps.description | 195 | 86 | shorten |
 | Unterkünfte | lodging:stats.help.programmeYears.time | 192 | 192 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.bestValue.exclusions | 190 | 190 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:import.csv.description | 189 | 70 | shorten |
-| Unterkünfte | lodging:import.preview.unmappedRatings | 188 | 188 | keep (review later) |
+| Unterkünfte | lodging:import.preview.unmappedRatings | 188 | 86 | shorten |
 | Unterkünfte | lodging:stats.help.centre.coverage | 188 | 188 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.priceRankings.unit | 187 | 187 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.programmeYears.source | 186 | 186 | keep (already behind „Wie gezählt“) |
@@ -1209,20 +1213,20 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Unterkünfte | lodging:stats.help.ratingRankings.unit | 177 | 177 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.longestStreak.exclusions | 177 | 177 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.nightsAway.coverage | 175 | 175 | keep (already behind „Wie gezählt“) |
-| Unterkünfte | lodging:locationCheck.contradicted | 174 | 174 | keep (review later) |
+| Unterkünfte | lodging:locationCheck.contradicted | 174 | 96 | shorten |
 | Unterkünfte | lodging:stats.help.ratingRankings.coverage | 172 | 172 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.programmeYears.unit | 164 | 164 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.northSouth.exclusions | 163 | 163 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.centre.exclusions | 163 | 163 | keep (already behind „Wie gezählt“) |
-| Unterkünfte | lodging:detail.spendPerNightCalc_other | 158 | 158 | keep (review later) |
+| Unterkünfte | lodging:detail.spendPerNightCalc_other | 158 | 83 | shorten |
 | Unterkünfte | lodging:stats.help.longestStay.source | 158 | 158 | keep (already behind „Wie gezählt“) |
-| Unterkünfte | lodging:detail.spendPerNightCalc_one | 157 | 157 | keep (review later) |
+| Unterkünfte | lodging:detail.spendPerNightCalc_one | 157 | 82 | shorten |
 | Unterkünfte | lodging:stats.insights.tripBases.help.exclusions | 157 | 157 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.awardValue.unit | 157 | 157 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:import.createAnywayHint | 156 | 52 | shorten |
 | Unterkünfte | lodging:stats.insights.week.help.time | 155 | 155 | keep (already behind „Wie gezählt“) |
-| Unterkünfte | lodging:fx.tooltipMarket | 154 | 154 | keep (review later) |
-| Unterkünfte | lodging:conflict.rule | 151 | 151 | keep (warning/error/consent stays visible) |
+| Unterkünfte | lodging:fx.tooltipMarket | 154 | 52 | shorten |
+| Unterkünfte | lodging:conflict.rule | 151 | 99 | shorten |
 | Unterkünfte | lodging:stats.help.perfectStays.exclusions | 150 | 150 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:stats.help.concentration.unit | 149 | 149 | keep (already behind „Wie gezählt“) |
 | Unterkünfte | lodging:restay.intro | 148 | 63 | shorten |
@@ -1245,14 +1249,14 @@ Every DE string over 140 characters at 9a0f9936d, plus every help key over
 | Verschlüsselt teilen | encryptedShare:circleConsent | 245 | 245 | keep (warning/error/consent stays visible) |
 | Verschlüsselt teilen | encryptedShare:e2e.groupHelp | 243 | 62 | shorten |
 | Verschlüsselt teilen | encryptedShare:e2e.verifyHelp | 220 | 95 | shorten |
-| Verschlüsselt teilen | encryptedShare:e2e.freshness | 220 | 220 | keep (review later) |
+| Verschlüsselt teilen | encryptedShare:e2e.freshness | 220 | 91 | shorten |
 | Verschlüsselt teilen | encryptedShare:circleHelp | 208 | 88 | shorten |
 | Verschlüsselt teilen | encryptedShare:e2e.matrixHelp | 203 | 65 | shorten |
 | Verschlüsselt teilen | encryptedShare:e2e.sharingHelp | 198 | 73 | shorten |
-| Verschlüsselt teilen | encryptedShare:supported | 194 | 194 | keep (review later) |
+| Verschlüsselt teilen | encryptedShare:supported | 194 | 91 | shorten |
 | Verschlüsselt teilen | encryptedShare:verifyHelp | 168 | 85 | shorten |
 | Verschlüsselt teilen | encryptedShare:e2e.backupHelp | 161 | 62 | shorten |
 | Verschlüsselt teilen | encryptedShare:e2e.qrHelp | 145 | 53 | shorten |
 | Verschlüsselt teilen | encryptedShare:e2e.mapHelp | 144 | 44 | shorten |
-| Verschlüsselt teilen | encryptedShare:rosterDisclosure | 143 | 143 | keep (review later) |
+| Verschlüsselt teilen | encryptedShare:rosterDisclosure | 143 | 76 | shorten |
 | Verschlüsselt teilen | encryptedShare:e2e.restoreHelp | 136 | 88 | shorten |

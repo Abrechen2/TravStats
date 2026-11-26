@@ -58,7 +58,7 @@
     "tagline": "Selbst gehostetes Reise-Logbuch",
     "licenseTitle": "Lizenz",
     "licenseSub": "GNU Affero General Public License v3.0 (AGPL-3.0) · © 2025 Dennis Wittke",
-    "licenseBody": "Freie Software: Du darfst sie unter den Bedingungen der AGPL weitergeben und verändern. Wer sie als Webdienst betreibt, muss den vollständigen Quellcode unter AGPL-3.0 bereitstellen.",
+    "licenseBody": "Freie Software unter AGPL-3.0. Wer sie als Dienst betreibt, muss den Quellcode bereitstellen.",
     "sourceCode": "Quellcode",
     "supportTitle": "Unterstützen",
     "supportSub": "Ein Stern auf GitHub oder eine Spende hilft beim Weiterbauen.",
@@ -119,7 +119,7 @@
     "primaryBadge": "Standard",
     "unconfirmedBadge": "Nicht bestätigt",
     "unconfirmedTitle": "Bitte bestätige deinen Wohnort",
-    "unconfirmedBody": "Bisher kennt TravStats nur deinen Heimatflughafen und rechnet Abstände von dort aus. Bestätige deinen Wohnort und wähle weitere Heimatflughäfen – bis dahin bleiben alle Statistiken genau wie bisher.",
+    "unconfirmedBody": "Bisher zählt nur dein Heimatflughafen. Bestätige Wohnort und Flughäfen; bis dahin bleibt alles gleich.",
     "confirm": "Bestätigen",
     "edit": "Bearbeiten",
     "newHomeHeading": "Neues Zuhause",
@@ -194,7 +194,7 @@
     }
   },
   "domainColors": {
-    "lowContrast": "Eine sehr dunkle Farbe hebt sich kaum vom Hintergrund ab. Geändert wird an deiner Wahl trotzdem nichts — betroffene Markierungen bekommen nur einen feinen Rand, damit sie auffindbar bleiben."
+    "lowContrast": "Sehr dunkle Farbe: Markierungen bekommen einen feinen Rand, damit sie sichtbar bleiben."
   },
   "units": {
     "title": "Einheiten",
@@ -393,7 +393,7 @@
       "not_owned": "nicht dein Konto",
       "not_found": "auf dem Server nicht gefunden"
     },
-    "partial": "Nicht zugeordnet: {{skipped}} Einträge übersprungen, {{unmatched}} Verweise (z. B. Häfen, Bahnhöfe) ohne Treffer auf diesem Server, {{refused}} Dateien abgelehnt.",
+    "partial": "Nicht übernommen: {{skipped}} Einträge, {{unmatched}} Verweise ohne Treffer, {{refused}} Dateien.",
     "notEmpty": "Dieses Konto enthält schon Einträge. Lege ein neues Konto an und spiele das Archiv dort ein.",
     "statusFailed": "Konnte nicht prüfen, ob dieses Konto leer ist. Lade die Seite neu.",
     "moves": "Kommt mit: alle Einträge aller Bereiche, Fotos, Dokumente, Belege, der TravTrack-Verlauf und die Einstellungen.",
@@ -435,7 +435,7 @@
     "building": "Lebensbuch wird erstellt",
     "done": "{{trips}} Reisen, {{entries}} Einträge, {{photos}} Fotos, heruntergeladen",
     "photosSkipped": "Achtung: {{count}} Fotos konnten nicht gelesen werden und fehlen im Buch.",
-    "note": "Enthalten sind Reisen mit Tagesliste, Streckenkarte (ohne Kartenhintergrund), eine Auswahl der Fotos (höchstens 24 je Reise, verkleinert) und die Art der hinterlegten Belege. Einträge mit unbekanntem Datum stehen als „Datum unbekannt“, nie an einem geschätzten Tag.",
+    "note": "Reisen mit Tagesliste, Karte und bis zu 24 Fotos. Unbekannte Daten stehen als „Datum unbekannt“.",
     "failed": {
       "LIFE_BOOK_EMPTY": "In diesem Bereich gibt es keine Einträge.",
       "LIFE_BOOK_TOO_LARGE": "Das Buch wird für diesen Server zu groß. Wähle ein einzelnes Jahr oder eine einzelne Reise.",
@@ -631,8 +631,8 @@
       "button": "Auffrischen",
       "running": "Läuft...",
       "confirmTitle": "AeroDataBox-Aufrufe bestätigen",
-      "confirmBody": "Dies verbraucht bis zu {{count}} AeroDataBox-Aufrufe in diesem Durchlauf. Pro Klick werden maximal 25 Flüge bearbeitet, danach kannst du erneut klicken, um den Rest abzuarbeiten.",
-      "confirmHistoricalNote": "Nur AeroDataBox kann das 365-Tage-Fenster bedienen. Andere konfigurierte APIs (AirLabs, Aviationstack, OpenSky) werden für diesen Vorgang nicht genutzt.",
+      "confirmBody": "Bis zu {{count}} AeroDataBox-Aufrufe, höchstens 25 Flüge pro Klick.",
+      "confirmHistoricalNote": "Nur AeroDataBox reicht 365 Tage zurück; andere APIs werden hier nicht genutzt.",
       "confirmQuotaWarn": "Verbleibende Quota reicht nicht für diesen Durchlauf — wirst vorzeitig auf 0 fallen.",
       "confirmRun": "Jetzt auffrischen",
       "summaryTitle": "Letzter Lauf",
@@ -644,8 +644,8 @@
       "summaryRetryHint": "{{count}} weitere Flüge stehen noch aus — auf „Auffrischen\" klicken, um den nächsten Stapel zu verarbeiten.",
       "previewFailed": "Die Vorschau konnte nicht geladen werden. Bitte versuche es später erneut.",
       "runFailed": "Die Auffrischung ist fehlgeschlagen. Bitte versuche es später erneut.",
-      "needsKey_one": "{{count}} Flug könnte aufgefrischt werden — dafür fehlt ein AeroDataBox-Schlüssel. Nur AeroDataBox reicht 365 Tage zurück. Trag oben einen Schlüssel ein.",
-      "needsKey_other": "{{count}} Flüge könnten aufgefrischt werden — dafür fehlt ein AeroDataBox-Schlüssel. Nur AeroDataBox reicht 365 Tage zurück. Trag oben einen Schlüssel ein.",
+      "needsKey_one": "{{count}} Flug könnte aufgefrischt werden — dafür oben einen AeroDataBox-Schlüssel eintragen.",
+      "needsKey_other": "{{count}} Flüge könnten aufgefrischt werden — dafür oben einen AeroDataBox-Schlüssel eintragen.",
       "pending_one": "{{count}} Flug kann aufgefrischt werden.",
       "pending_other": "{{count}} Flüge können aufgefrischt werden."
     },
@@ -978,7 +978,7 @@
     "urlLabel": "Dein Kalender-Link",
     "keepSecret": "Wer den Link kennt, sieht deine Reisen – teile ihn nicht. Gerät er in falsche Hände, erzeuge einen neuen.",
     "unreachable": "Google Kalender kann diese Adresse nicht erreichen – trage unter Einstellungen → Server → Allgemein eine öffentliche Adresse ein.",
-    "notRecoverable": "Dieser Link stammt aus einer älteren Version und lässt sich nicht mehr anzeigen. Er funktioniert weiter; brauchst du ihn erneut, erzeuge einen neuen.",
+    "notRecoverable": "Alter Link, nicht mehr anzeigbar. Er funktioniert weiter; sonst einen neuen erzeugen.",
     "copy": "Link kopieren",
     "copied": "Kopiert.",
     "copyFailed": "Kopieren ging nicht – markiere den Link im Feld und kopiere ihn von Hand.",
@@ -1015,7 +1015,7 @@
     "done": "Fertig",
     "claimed": "✅ {{name}} verbunden",
     "unnamedDevice": "Gerät",
-    "noPublicUrl": "Es ist keine öffentliche URL konfiguriert. Lege unter Einstellungen → Server → Allgemein eine öffentliche Adresse fest, damit die App den Server erreichen kann.",
+    "noPublicUrl": "Keine öffentliche URL. Unter Server → Allgemein eintragen, damit die App den Server erreicht.",
     "existingTitle": "Verbundene Geräte",
     "empty": "Noch keine Geräte verbunden.",
     "lastUsed": "Zuletzt: {{when}}",
@@ -1244,7 +1244,7 @@
       "action": "Straßenbahn- und U-Bahn-Fahrten neu berechnen",
       "running": "Wird neu berechnet …",
       "progress": "Wird neu berechnet … {{done}} von {{total}}",
-      "done": "Fertig: {{routed}} neu berechnet, {{straight}} auf die Luftlinie zurückgesetzt, {{kept}} unverändert behalten, {{skipped}} übersprungen (von {{total}}).",
+      "done": "Fertig: {{routed}} neu, {{straight}} Luftlinie, {{kept}} behalten, {{skipped}} übersprungen (von {{total}}).",
       "stopped": "Abgebrochen, weil der Streckenrouter nicht mehr antwortet – {{remaining}} Fahrten sind noch offen. Später erneut starten.",
       "notConfigured": "Erst eine Adresse speichern – ohne Streckenrouter gibt es nichts neu zu berechnen.",
       "alreadyRunning": "Eine andere Administratorin oder ein anderer Administrator lässt die Neuberechnung gerade laufen. Bitte warten, bis sie fertig ist.",
@@ -1375,7 +1375,7 @@
     "action": "Zu Reisearten"
   },
   "webdavSync": {
-    "whatIsUploaded": "Hochgeladen wird der vollständige Export deines Kontos als gepackte JSON-Datei — dieselben Daten wie der Admin-Export „Alle Daten“, ohne Zugangsdaten. Fotos und Dokumente selbst sind nicht enthalten.",
+    "whatIsUploaded": "Der Export deines Kontos ohne Zugangsdaten. Fotos und Dokumente fehlen.",
     "setup": "Einrichten",
     "hide": "Ausblenden",
     "url": "WebDAV-Adresse",
@@ -1897,7 +1897,7 @@
       },
       "loadError": "Ich konnte die Standortquelle nicht laden.",
       "status": {
-        "notConfigured": "Dawarich ist als Quelle gewählt, aber deine eigene Verbindung fehlt oder geht nicht mehr. Bis du sie wieder einträgst, lese ich nichts aus Dawarich.",
+        "notConfigured": "Dawarich gewählt, aber deine Verbindung fehlt. Bis dahin wird nichts gelesen.",
         "unavailable": "TravTrack ist als Quelle gewählt, auf diesem Server aber gerade nicht verfügbar. Bis dahin zeichne und lese ich darüber nichts."
       },
       "errors": {
@@ -2179,7 +2179,7 @@
     },
     "zones": {
       "title": "Schutzzonen",
-      "difference": "In einer Schutzzone wird nichts gespeichert und nichts gezeichnet, anders als bei festen Orten, die nur zusammenfassen. Eine Schutzzone geht immer vor."
+      "difference": "In Schutzzonen wird nichts gespeichert; Schutzzonen gehen festen Orten immer vor."
     },
     "quality": {
       "title": "Tage mit fragwürdigen Spuren"
@@ -2360,7 +2360,7 @@
       "fingerprint": "Fingerabdruck",
       "restore": "Wiederherstellen: TravStats neu installieren, die Sicherung zurückspielen und diesen Schlüssel einfügen, wenn das Zurückspielen danach fragt.",
       "restoreManual": "Alternativ die 64 Zeichen ohne Leerzeichen als ENCRYPTION_KEY setzen oder in /app/data/secrets/encryption.key schreiben, bevor du zurückspielst.",
-      "keep": "Bewahre diese Datei außerhalb des Servers auf, z. B. in deinem Passwort-Manager. Wer sie hat, kann die Zugangsdaten in deinen Sicherungen entschlüsseln."
+      "keep": "Außerhalb des Servers aufbewahren. Wer die Datei hat, entschlüsselt deine Sicherungen."
     },
     "restore": {
       "intro": "Schlüssel des Servers einfügen, der die Sicherung schrieb. Dann bleiben Zugänge lesbar.",

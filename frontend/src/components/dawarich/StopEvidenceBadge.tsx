@@ -6,6 +6,7 @@ import {
   type StopEvidenceView,
 } from "../../lib/stopEvidenceView";
 import { token } from "../ui/tokens";
+import InfoLine from "../ui/InfoLine";
 
 const LEVELS = ["low", "medium", "high"] as const;
 
@@ -101,8 +102,13 @@ export default function StopEvidenceBadge({
         </p>
       )}
       {confidence && (
-        <p className="t-caption" data-testid="stop-evidence-scale">
-          {t("track:evidence.scale", {
+        <InfoLine
+          data-testid="stop-evidence-scale"
+          text={t("track:evidence.scale", {
+            highPoints: EVIDENCE_THRESHOLDS.highPoints,
+            mediumPoints: EVIDENCE_THRESHOLDS.mediumPoints,
+          })}
+          more={t("track:evidence.scaleMore", {
             nearPluginM: EVIDENCE_THRESHOLDS.nearPluginM,
             farPluginM: EVIDENCE_THRESHOLDS.farPluginM,
             nearVenueM: EVIDENCE_THRESHOLDS.nearVenueM,
@@ -111,7 +117,7 @@ export default function StopEvidenceBadge({
             highPoints: EVIDENCE_THRESHOLDS.highPoints,
             mediumPoints: EVIDENCE_THRESHOLDS.mediumPoints,
           })}
-        </p>
+        />
       )}
     </div>
   );

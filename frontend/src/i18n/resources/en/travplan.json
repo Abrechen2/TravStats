@@ -410,7 +410,7 @@
       "proposals_other": "{{count}} AI proposals"
     },
     "stays": "This stays",
-    "staysBody": "The trip itself and everything already in the logbook: flights, stays, ferries, stations and photos. A plan is not travel evidence, so deleting one removes none of it.",
+    "staysBody": "The trip and everything in the logbook stay — a plan is not a travel record.",
     "staysStations": "{{count}} station(s) were already taken into the logbook and stay there.",
     "shell": "The trip is then only a name and dates. You can delete it separately if you wish.",
     "undoNote": "Deleting cannot be undone.",
@@ -621,8 +621,8 @@
   "assignToDay": "Put on {{day}}",
   "members": {
     "title": "Plan together",
-    "introOwner": "Invite people from this server to plan with you. They may change everything except deleting the plan, managing members and changing the AI setting. Only you confirm into the logbook.",
-    "introMember": "You plan along. You may change everything except deleting the plan, managing members and changing the AI setting. Only you see your packing and your note.",
+    "introOwner": "Invite co-planners. They may do anything but delete, manage members or AI.",
+    "introMember": "You co-plan — everything but delete, members and AI. Packing and note are private.",
     "owner": "Owner",
     "status": {
       "invited": "Invited",
@@ -712,7 +712,7 @@
     "invite": {
       "title": "Co-planner on another server",
       "intro": "Invite a connected person. Both need “Share plans” on in the connection.",
-      "none": "No connection with plans switched on. Connect with the person under Settings → Sharing → Connections and switch on “Share plans”.",
+      "none": "No connection with “Share plans”. Turn it on under Sharing → Connections.",
       "send": "Invite {{name}}",
       "already": "Invited",
       "sent": "Invitation sent to {{name}}.",
