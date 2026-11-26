@@ -153,6 +153,8 @@ export interface MonthBucket {
   cruises: number;
   /** Entries of every further domain that month; a domain with none is absent. */
   others: Partial<Record<DomainKey, number>>;
+  /** Months this bar spans (1 unless coarsened); the strip sizes it by this. */
+  months?: number;
 }
 
 /**
@@ -240,6 +242,7 @@ export const coarsenBuckets = (
       flights: group.reduce((n, b) => n + b.flights, 0),
       cruises: group.reduce((n, b) => n + b.cruises, 0),
       others,
+      months: group.reduce((n, b) => n + (b.months ?? 1), 0),
     });
   }
   return out;

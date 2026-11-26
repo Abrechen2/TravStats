@@ -58,4 +58,16 @@ describe("GlobeTimeHistogram bars", () => {
     expect(bars).toBeGreaterThan(10);
     expect(bars).toBeLessThanOrEqual(MAX_HISTOGRAM_BARS);
   });
+
+  it("sizes a coarsened bar by the months it covers, so the strip still maps to dates", () => {
+    // 73 months merge two by two; the last bar holds a single month.
+    const { container } = render(
+      <GlobeTimeHistogram buckets={months(73, {})} visibleFlights={73} visibleCruises={0} />
+    );
+    const grows = [...container.querySelectorAll<HTMLElement>('[data-domain="flight"]')].map((e) =>
+      Number(e.parentElement?.style.flexGrow)
+    );
+    expect(grows[0]).toBe(2);
+    expect(grows[grows.length - 1]).toBe(1);
+  });
 });

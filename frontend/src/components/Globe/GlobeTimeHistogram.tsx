@@ -254,8 +254,26 @@ export const GlobeTimeHistogram = ({
 
   // Which bar the live cursor is over — highlighted while playing/scrubbing.
   const liveFrac = mode === "live" && currentDate ? fracOfDate(currentDate) : null;
+  // A coarsened bar spans several months, so a bar's place on the strip is its
+  // share of the months, not its index.
+  const monthsOf = (b: MonthBucket): number => b.months ?? 1;
+  const allMonths = buckets.reduce((n, b) => n + monthsOf(b), 0);
+  let monthsBefore = 0;
+  const spans = buckets.map((b) => {
+    const span: [number, number] = [
+      monthsBefore / allMonths,
+      (monthsBefore + monthsOf(b)) / allMonths,
+    ];
+    monthsBefore += monthsOf(b);
+    return span;
+  });
   const playBar =
-    liveFrac === null ? -1 : Math.min(buckets.length - 1, Math.floor(liveFrac * buckets.length));
+    liveFrac === null
+      ? -1
+      : Math.max(
+          0,
+          spans.findIndex(([, end]) => liveFrac < end)
+        );
 
   const activeDrag = dragRange
     ? [Math.min(dragRange[0], dragRange[1]), Math.max(dragRange[0], dragRange[1])]
@@ -357,7 +375,7 @@ export const GlobeTimeHistogram = ({
           {buckets.map((b, i) => {
             const total = totalOf(b);
             const h = total === 0 ? 3 : 6 + (total / maxTotal) * 94;
-            const [bf0, bf1] = [i / buckets.length, (i + 1) / buckets.length];
+            const [bf0, bf1] = spans[i];
             const outside = inFilter && (bf1 <= filterLo || bf0 >= filterHi);
             const isPlay = i === playBar;
             return (
@@ -366,6 +384,7 @@ export const GlobeTimeHistogram = ({
                 className="flex min-w-0 flex-1 flex-col-reverse overflow-hidden rounded-t-[2px]"
                 style={{
                   height: `${h}%`,
+                  flexGrow: monthsOf(b),
                   opacity: outside ? 0.28 : 0.9,
                   boxShadow: isPlay ? `0 0 8px rgba(${AMBER},0.6)` : undefined,
                 }}
