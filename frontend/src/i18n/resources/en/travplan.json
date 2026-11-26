@@ -642,6 +642,12 @@
     "insert": {
       "open": "+ Add a stop between {{from}} and {{to}}",
       "title": "Stop between {{from}} and {{to}}"
+    },
+    "nights": {
+      "less": "One night less in {{place}}",
+      "more": "One night more in {{place}}",
+      "fixed": "One more night in {{place}} pushes everything after it a day later. Fixed are: {{fixed}}.",
+      "anyway": "Add the night anyway"
     }
   },
   "match": {

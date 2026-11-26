@@ -5,6 +5,7 @@ import { entryRecord, type PlanCtx } from "../planContext";
 import { newEntry } from "../editorModel";
 import { PlanCheck } from "../PlanParts";
 import { StageEditor } from "../route/StageEditor";
+import { NightStepper } from "../route/NightStepper";
 import { planDay, planRange } from "../format";
 import { PlanLink, PlanNotice } from "../planLayout";
 import { formatMinutes, nightTone, stageTone } from "../route/routeModel";
@@ -136,6 +137,16 @@ function DayCard({
             <span style={{ color: "var(--ts-warn)" }}>{t("days.nightUnknown")}</span>
           )}
         </p>
+      )}
+      {route && !last && row.night && (
+        <div style={{ marginTop: "var(--ts-space-sm)" }}>
+          <NightStepper
+            state={ctx.state}
+            station={row.night}
+            busy={ctx.busy}
+            onWrite={(op) => void ctx.mutate(op)}
+          />
+        </div>
       )}
       <div
         className="flex flex-wrap items-center"

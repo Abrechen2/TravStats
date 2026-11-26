@@ -642,6 +642,12 @@
     "insert": {
       "open": "+ Ort zwischen {{from}} und {{to}} einfügen",
       "title": "Ort zwischen {{from}} und {{to}}"
+    },
+    "nights": {
+      "less": "Eine Nacht weniger in {{place}}",
+      "more": "Eine Nacht mehr in {{place}}",
+      "fixed": "Eine Nacht mehr in {{place}} schiebt alles danach einen Tag später. Fest steht aber: {{fixed}}.",
+      "anyway": "Trotzdem eine Nacht mehr"
     }
   },
   "match": {

@@ -181,6 +181,7 @@ export function RouteSection({ ctx }: { ctx: PlanCtx }) {
                   onRemove={() => void mutate({ type: "remove", collection: "stations", id: s.id })}
                   onHandover={() => void mutate({ type: "station_handover", stationId: s.id })}
                   onWithdraw={() => void mutate({ type: "station_withdraw", stationId: s.id })}
+                  onWrite={(op) => void mutate(op)}
                 />
                 {next &&
                   (between ? (
