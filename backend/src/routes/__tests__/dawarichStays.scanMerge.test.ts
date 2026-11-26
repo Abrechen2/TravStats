@@ -162,3 +162,44 @@ describe("fragments of one stay", () => {
     expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(2);
   });
 });
+
+describe("a rescan keeps a visit finding's venue", () => {
+  it("grows a stay.stop finding without dropping its `visit` evidence", async () => {
+    const early = stop(SEOUL, "2026-10-10T03:00:00Z", 30);
+    await scan(early);
+    const first = await prisma.dawarichStay.findFirstOrThrow({ where: { userId } });
+    const visit = { venue: { name: "Bürohaus", source: "osm" }, durationMs: 1_800_000 };
+    await prisma.dawarichStay.update({
+      where: { id: first.id },
+      data: { evidence: { ...(first.evidence as object), visit } },
+    });
+    await scan([...early, ...stop(SEOUL, "2026-10-10T03:40:00Z", 60)]);
+    const [row] = await prisma.dawarichStay.findMany({ where: { userId } });
+    expect(row.sourceEndAt.toISOString()).toBe("2026-10-10T04:40:00.000Z");
+    expect(row.evidence).toMatchObject({ visit });
+  });
+});
+
+describe("a stay beside the owner's own places", () => {
+  const north = (m: number) => ({ lat: SEOUL.lat + m / 111_195, lon: SEOUL.lon });
+  const place = (name: string, at: { lat: number; lon: number }) =>
+    prisma.place.create({ data: { userId, name, ...at } });
+
+  it("is named after the nearest one within the stay radius, even with a second close by", async () => {
+    await place("McDonald's Hepberg", north(140));
+    await place("Tankstelle", north(145));
+    await scan(stop(SEOUL, "2026-10-10T03:00:00Z", 30));
+    const [row] = await prisma.dawarichStay.findMany({ where: { userId } });
+    expect(row.name).toBe("McDonald's Hepberg");
+  });
+
+  it("names a nameless open finding the next rescan reaches", async () => {
+    const early = stop(SEOUL, "2026-10-10T03:00:00Z", 30);
+    await scan(early);
+    expect((await prisma.dawarichStay.findFirstOrThrow({ where: { userId } })).name).toBeNull();
+    await place("Gasthof Post", north(12));
+    await scan(early);
+    const [row] = await prisma.dawarichStay.findMany({ where: { userId } });
+    expect(row.name).toBe("Gasthof Post");
+  });
+});

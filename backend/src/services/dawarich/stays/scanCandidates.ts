@@ -33,6 +33,7 @@ import { suppressionReason, type loadSuppression } from "./suppression";
 import { coverageFor, type loadCoverage } from "./coverage";
 import type { StaySourceKind } from "./availability";
 import { carriedEvidence, carriedName } from "./carryEvidence";
+import { applyOwnerName, ownerStopName } from "../../travtrack/stopPlaces/ownerName";
 import {
   evidenceKeyOf,
   findingEvidence,
@@ -145,6 +146,68 @@ function mergedPendingRows<
     : null;
 }
 
+/** How far an own place may lie from a stay and still name it (the stay radius). */
+export const NAMING_RADIUS_M = RADIUS_METERS;
+
+/**
+ * The own place nearest to the stay within `NAMING_RADIUS_M`; ties broken by id, so every
+ * scan picks the same one. Before, a stay was named only by the ONE place within 100 m, and
+ * the McDonald's 140 m away or a Gasthof with a second pin beside it left it nameless.
+ */
+export function nearestPlace<P extends { id: string; lat: number; lon: number }>(
+  places: readonly P[],
+  at: { lat: number; lon: number }
+): (P & { distance: number }) | null {
+  let best: (P & { distance: number }) | null = null;
+  for (const p of places) {
+    const distance = meters(p, at);
+    if (distance > NAMING_RADIUS_M) continue;
+    if (!best || distance < best.distance || (distance === best.distance && p.id < best.id))
+      best = { ...p, distance };
+  }
+  return best;
+}
+
+/**
+ * Open findings of this source a rescan reaches: one the owner named in the day view takes that
+ * name (and loses any brand or venue guess); a nameless one is named after the nearest own place.
+ */
+async function nameKnown(
+  userId: string,
+  known: readonly {
+    id: string;
+    status: string;
+    provider: string;
+    name: string | null;
+    sourceLat: number;
+    sourceLon: number;
+    sourceStartAt: Date;
+    sourceEndAt: Date;
+    evidence: unknown;
+  }[],
+  source: StaySourceKind,
+  places: readonly { id: string; name: string; lat: number; lon: number }[]
+): Promise<void> {
+  for (const row of known) {
+    if (row.status !== "pending" || row.provider !== source) continue;
+    const evidence = row.evidence as { market?: unknown; ownerNamed?: unknown } | null;
+    if (evidence?.market || evidence?.ownerNamed) continue;
+    const span = { fromMs: row.sourceStartAt.getTime(), untilMs: row.sourceEndAt.getTime() };
+    const owner = source === "travtrack" ? await ownerStopName(userId, span) : null;
+    if (owner) {
+      await applyOwnerName(userId, span, owner.name);
+      continue;
+    }
+    if (row.name) continue;
+    const place = nearestPlace(places, { lat: row.sourceLat, lon: row.sourceLon });
+    if (!place) continue;
+    await prisma.dawarichStay.updateMany({
+      where: { id: row.id, userId, status: "pending", name: null },
+      data: { name: place.name, placeId: place.id },
+    });
+  }
+}
+
 export async function scanCandidates(
   ctx: ScanContext,
   candidates: readonly (StayCandidate | MarketFinding)[]
@@ -238,7 +301,10 @@ export async function scanCandidates(
     const growing = !market && known.length ? grownPendingRow(known, c, source) : null;
     // Several open fragments of one stay that this candidate now reads as one: replaced by it.
     const merging = !market && !growing ? mergedPendingRows(known, c, source) : null;
-    if (known.length && !growing && !merging) continue;
+    if (known.length && !growing && !merging) {
+      if (!market) await nameKnown(userId, known, source, places);
+      continue;
+    }
     const extending = growing !== null || merging !== null;
     const supersededFindingIds = fragments.filter((r) => r.status === "pending").map((r) => r.id);
     const mergedFindingIds = merging?.map((r) => r.id) ?? [];
@@ -299,14 +365,13 @@ export async function scanCandidates(
       .map((p) => ({ ...p, distance: meters(p, c) }))
       .filter((p) => p.distance <= 100)
       .sort((a, b) => a.distance - b.distance);
-    // Several nearby POIs can be different venues in the same building.
+    // Several nearby POIs can be different venues in the same building: the nearest is named,
+    // and the finding says it is ambiguous.
     const place = market
       ? market.placeId
         ? places.find((p) => p.id === market.placeId)
         : undefined
-      : nearby.length === 1
-        ? nearby[0]
-        : undefined;
+      : (nearestPlace(places, c) ?? undefined);
     const matchingVisit = place
       ? await prisma.placeVisit.findFirst({
           where: {
@@ -349,6 +414,11 @@ export async function scanCandidates(
       ...(mergedFindingIds.length ? { mergedFindingIds } : {}),
     };
     const carried = place || market ? {} : carriedName(replaced);
+    // The owner's own name for the stop wins over a market, a nearby place or a carried guess.
+    const owner = ctx.travtrack
+      ? await ownerStopName(userId, { fromMs: c.startAt.getTime(), untilMs: c.endAt.getTime() })
+      : null;
+    if (owner) Object.assign(evidence, { ownerNamed: true });
     const row = {
       sourceStartAt: c.startAt,
       sourceEndAt: c.endAt,
@@ -361,8 +431,8 @@ export async function scanCandidates(
       zone,
       pointCount: c.pointCount,
       evidence,
-      placeId: place?.id ?? carried.placeId,
-      name: market?.name ?? place?.name ?? carried.name,
+      placeId: owner ? null : (place?.id ?? carried.placeId),
+      name: owner?.name ?? market?.name ?? place?.name ?? carried.name,
       tripId: market ? market.tripId : (trip?.id ?? null),
       provider: source,
       providerRev: ctx.rev,

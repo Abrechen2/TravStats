@@ -485,7 +485,8 @@ describe("Dawarich optional features and consent lifecycle", () => {
     await scan();
     expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(1);
   });
-  it("requires manual place selection when multiple venues are close", async () => {
+  it("names the nearest of several close venues and says it is ambiguous", async () => {
+    // Coordinator, 26.11.2026: a nameless finding beside known places was the worse answer.
     await prisma.place.createMany({
       data: [
         { userId, name: "Museum", lat: 37.57, lon: 126.97 },
@@ -493,8 +494,7 @@ describe("Dawarich optional features and consent lifecycle", () => {
       ],
     });
     const row = await scan();
-    expect(row.placeId).toBeNull();
-    expect(row.name).toBeNull();
+    expect(row.name).toBe("Museum");
     expect(row.evidence).toMatchObject({
       uncertainties: expect.arrayContaining(["placeAmbiguous"]),
     });
