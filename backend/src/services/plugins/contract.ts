@@ -50,6 +50,44 @@ export const pluginRequestSchema = z
   .openapi("SuggestionPluginRequestV1");
 export type PluginRequest = z.infer<typeof pluginRequestSchema>;
 
+/** Reference prefixes TravStats itself writes; a plugin cannot claim them. */
+export const RESERVED_REF_NAMESPACES: readonly string[] = [
+  "plugin",
+  "osm",
+  "wikidata",
+  "curated",
+  "strava",
+  "cid",
+  "google",
+  "takeout",
+];
+
+/** At most this many extra columns a plugin-fed list shows. */
+export const PLUGIN_LIST_MAX_COLUMNS = 6;
+/** A column key: what `externalRef.fields` is keyed by. */
+const columnKey = z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,31}$/);
+const bilingual = (max: number) =>
+  z.object({ de: z.string().trim().min(1).max(max), en: z.string().trim().min(1).max(max) });
+
+/**
+ * Additive within v1: the plugin's own reference for a candidate, as an object. `id` is what
+ * the plain-string form carried; `fields` fills the columns the hello announced (`list.columns`),
+ * keys outside them are dropped by TravStats.
+ */
+export const pluginExternalRefSchema = z
+  .object({
+    id: z.string().trim().min(1).max(200),
+    label: text(200).optional(),
+    fields: z
+      .record(columnKey, text(200))
+      .refine((f) => Object.keys(f).length <= PLUGIN_LIST_MAX_COLUMNS, {
+        message: `at most ${PLUGIN_LIST_MAX_COLUMNS} fields`,
+      })
+      .optional(),
+  })
+  .openapi("SuggestionPluginExternalRefV1");
+export type PluginExternalRef = z.infer<typeof pluginExternalRefSchema>;
+
 export const pluginSuggestionSchema = z
   .object({
     name: z.string().trim().min(1).max(200),
@@ -58,7 +96,8 @@ export const pluginSuggestionSchema = z
     lon: z.number().min(-180).max(180).optional(),
     purpose: z.enum(["private", "business"]).optional(),
     note: text(500).optional(),
-    externalRef: text(200).optional(),
+    /** A plain id, or (additive within v1) an object with a label and column fields. */
+    externalRef: z.union([text(200), pluginExternalRefSchema]).optional(),
     /** Rendered as a plain link, never fetched by TravStats. */
     url: z
       .string()
@@ -79,7 +118,32 @@ export const pluginSuggestionSchema = z
     lowPrecision: z.boolean().optional(),
   })
   .openapi("SuggestionPluginSuggestionV1");
-export type PluginSuggestion = z.infer<typeof pluginSuggestionSchema>;
+export type PluginSuggestionWire = z.infer<typeof pluginSuggestionSchema>;
+
+/**
+ * A suggestion as TravStats keeps it: `externalRef` is always the plain id (what a finding's
+ * evidence and an accepted place's `plugin:<pluginId>:<id>` reference compare), the object
+ * form's label and fields ride beside it.
+ */
+export type PluginSuggestion = Omit<PluginSuggestionWire, "externalRef"> & {
+  externalRef?: string;
+  externalLabel?: string;
+  externalFields?: Record<string, string>;
+};
+
+export function normalizeSuggestion(s: PluginSuggestionWire): PluginSuggestion {
+  const { externalRef, ...rest } = s;
+  if (externalRef === undefined || typeof externalRef === "string")
+    return externalRef === undefined ? rest : { ...rest, externalRef };
+  return {
+    ...rest,
+    externalRef: externalRef.id,
+    ...(externalRef.label ? { externalLabel: externalRef.label } : {}),
+    ...(externalRef.fields && Object.keys(externalRef.fields).length > 0
+      ? { externalFields: externalRef.fields }
+      : {}),
+  };
+}
 
 export const pluginResponseSchema = z
   .object({
@@ -102,6 +166,32 @@ export const pluginHelloSchema = z
     kinds: z.array(text(32)).max(10),
     /** Additive within v1: optional features, e.g. `maintenance` (location maintenance). */
     capabilities: z.array(text(32)).max(10).optional(),
+    /**
+     * Additive within v1: the plugin offers its places as a list. TravStats keeps one list per
+     * registration (name editable), and shows `columns` filled from `externalRef.fields`.
+     */
+    list: z
+      .object({
+        defaultName: bilingual(100),
+        /**
+         * The prefix of the plugin's own place references (`proj` for `proj:4711`). Places that
+         * already carry such a reference join the list too — also those made outside the accept
+         * flow. Without it, only places of accepted suggestions join.
+         */
+        refNamespace: z
+          .string()
+          .regex(/^[a-z][a-z0-9_-]{0,31}$/)
+          .refine((n) => !RESERVED_REF_NAMESPACES.includes(n), { message: "reserved namespace" })
+          .optional(),
+        columns: z
+          .array(z.object({ key: columnKey, label: bilingual(40) }))
+          .max(PLUGIN_LIST_MAX_COLUMNS)
+          .refine((c) => new Set(c.map((x) => x.key)).size === c.length, {
+            message: "column keys must be unique",
+          })
+          .default([]),
+      })
+      .optional(),
   })
   .openapi("SuggestionPluginHelloV1");
 export type PluginHello = z.infer<typeof pluginHelloSchema>;

@@ -13,6 +13,7 @@ export const CONTRACT_COMPONENTS = [
   "SuggestionPluginStopV1",
   "SuggestionPluginResponseV1",
   "SuggestionPluginSuggestionV1",
+  "SuggestionPluginExternalRefV1",
   "SuggestionPluginHelloV1",
   "PluginMaintenanceStopV1",
   "PluginMaintenanceProposalsRequestV1",

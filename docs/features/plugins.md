@@ -158,6 +158,45 @@ template (`test/replay.test.js`) both test against these.
 - The body is capped at **64 KB**; strings are length-capped (name 200, address
   300, note 500 characters).
 
+## A list of the plugin's places (optional)
+
+A plugin may ask TravStats to keep its places as a list. The signed hello
+(`GET <url>`) announces it:
+
+```json
+{
+  "name": "My plugin", "version": 1, "kinds": ["stop"],
+  "list": {
+    "defaultName": { "de": "Kunden", "en": "Customers" },
+    "columns": [{ "key": "no", "label": { "de": "Nr.", "en": "No." } }]
+  }
+}
+```
+
+and a suggestion carries its reference as an object:
+
+```json
+"externalRef": { "id": "4711", "label": "Hall 3", "fields": { "no": "4711" } }
+```
+
+- TravStats keeps **one list per registration**, named `defaultName` in the
+  user's language; the user may rename it. Its members are the places of the
+  plugin's **accepted** suggestions — never an unaccepted one — and the list
+  does not accept visits on its own.
+- The settings card has the switch "Orte dieses Plugins als Liste führen":
+  on by default when the hello announces `list`, off otherwise. Off, or
+  removing the plugin, keeps the list as a normal list that no longer grows.
+- `columns`: at most 6, keys `^[A-Za-z][A-Za-z0-9_]{0,31}$`, unique, both
+  labels required (40 characters). `fields` values are at most 200
+  characters; keys not announced are dropped.
+- `refNamespace` (optional, e.g. `"proj"`): places that already carry a
+  reference `proj:<id>` — as their own or as an alias, however they were made —
+  join the list too, and new ones join on the next look at the settings card.
+  Prefixes TravStats writes itself (`plugin`, `osm`, `wikidata`, …) are refused.
+- `externalRef` as a plain string still works and means `{ "id": "…" }`.
+- A plugin that vendors the contract keeps an exact copy of
+  `contract/v1.schema.json` from the template.
+
 ## Errors, limits and `Retry-After`
 
 What TravStats does with each answer, and what the settings page shows as the

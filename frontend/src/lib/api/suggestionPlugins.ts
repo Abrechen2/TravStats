@@ -188,6 +188,15 @@ export function pluginRequestFailureKey(error: unknown): string {
   return pluginFailureKey(data?.error, data?.code);
 }
 
+/** The plugin-fed place list of one registration. */
+export interface PluginListState {
+  enabled: boolean;
+  /** The plugin's hello announces a list. */
+  announced: boolean;
+  listId: string | null;
+  listName: string | null;
+}
+
 export const suggestionPluginsApi = {
   async list(): Promise<{
     plugins: SuggestionPlugin[];
@@ -230,9 +239,26 @@ export const suggestionPluginsApi = {
     return data.jobId;
   },
   async capabilities(
-    id: string
-  ): Promise<{ capabilities: string[]; maintenance: boolean; error: string | null }> {
-    const { data } = await api.get(`/settings/suggestion-plugins/${id}/capabilities`);
+    id: string,
+    lang: "de" | "en" = "de"
+  ): Promise<{
+    capabilities: string[];
+    maintenance: boolean;
+    error: string | null;
+    list?: PluginListState;
+  }> {
+    const { data } = await api.get(`/settings/suggestion-plugins/${id}/capabilities`, {
+      params: { lang },
+    });
+    return data;
+  },
+  /** "Orte dieses Plugins als Liste führen". */
+  async setList(id: string, enabled: boolean, lang: "de" | "en" = "de"): Promise<PluginListState> {
+    const { data } = await api.put(
+      `/settings/suggestion-plugins/${id}/list`,
+      { enabled },
+      { params: { lang } }
+    );
     return data;
   },
   async maintenance(

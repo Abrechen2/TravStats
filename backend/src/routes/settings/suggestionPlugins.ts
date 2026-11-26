@@ -51,6 +51,7 @@ import {
   refreshAccountCaches,
   refreshMaintenanceCache,
 } from "../../services/plugins/maintenanceCache";
+import { setPluginListEnabled, syncPluginList } from "../../services/places/pluginLists";
 
 const router = Router();
 
@@ -84,6 +85,8 @@ const maintenanceLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const localeOf = (req: AuthRequest): "de" | "en" => (req.query.lang === "en" ? "en" : "de");
+
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 /** "Jetzt aktualisieren" asks every plugin live: a few times an hour per account. */
@@ -94,7 +97,7 @@ const refreshLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-const localeOf = (v: unknown): "de" | "en" => (v === "en" ? "en" : "de");
+const localeValue = (v: unknown): "de" | "en" => (v === "en" ? "en" : "de");
 
 /** The inbox's Plugins tab: the cached proposals and notices of every plugin (no live call). */
 router.get("/maintenance/inbox", async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -115,7 +118,7 @@ router.post(
         .object({ locale: z.enum(["de", "en"]).optional() })
         .strict()
         .parse(req.body ?? {});
-      await refreshAccountCaches(req.userId!, localeOf(locale));
+      await refreshAccountCaches(req.userId!, localeValue(locale));
       res.json(await readMaintenanceInbox(req.userId!));
     } catch (error) {
       next(error);
@@ -273,14 +276,45 @@ router.post(
 router.get("/:id/capabilities", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const plugin = await ownPlugin(req.userId!, z.string().uuid().parse(req.params.id));
+    const locale = localeOf(req);
     if (!plugin.enabled || (await egressBlock(PLUGIN_SERVICE_ID)))
-      return res.json({ capabilities: [], maintenance: false, error: null });
+      return res.json({
+        capabilities: [],
+        maintenance: false,
+        error: null,
+        list: await syncPluginList(req.userId!, plugin, null, locale),
+      });
     const probe = await probeHello(plugin);
+    const hello = probe.kind === "ok" ? probe.hello : null;
     res.json({
-      capabilities: probe.kind === "ok" ? (probe.hello.capabilities ?? []) : [],
+      capabilities: hello?.capabilities ?? [],
       maintenance: offersMaintenance(probe),
       error: probe.kind === "failed" ? probe.reason : null,
+      list: await syncPluginList(req.userId!, plugin, hello, locale),
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/** "Orte dieses Plugins als Liste führen": on creates (or keeps) the list, off keeps it as a normal list. */
+router.put("/:id/list", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const plugin = await ownPlugin(req.userId!, z.string().uuid().parse(req.params.id));
+    const { enabled } = z.object({ enabled: z.boolean() }).strict().parse(req.body);
+    const probe =
+      enabled && plugin.enabled && !(await egressBlock(PLUGIN_SERVICE_ID))
+        ? await probeHello(plugin)
+        : null;
+    res.json(
+      await setPluginListEnabled(
+        req.userId!,
+        plugin,
+        enabled,
+        probe?.kind === "ok" ? probe.hello : null,
+        localeOf(req)
+      )
+    );
   } catch (error) {
     next(error);
   }

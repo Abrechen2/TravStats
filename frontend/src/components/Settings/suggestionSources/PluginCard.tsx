@@ -13,6 +13,8 @@ import {
 } from "../../../lib/api/suggestionPlugins";
 import SecretOnce from "./SecretOnce";
 import PluginMaintenanceDialog from "./PluginMaintenanceDialog";
+import PluginListSwitch from "./PluginListSwitch";
+import type { PluginListState } from "../../../lib/api/suggestionPlugins";
 
 const NS = "suggestionSources:plugins";
 const MAX_BACKFILL_DAYS = 90;
@@ -42,7 +44,7 @@ export default function PluginCard({
   onChanged: () => void;
   onRemove: () => void;
 }): JSX.Element {
-  const { t } = useTranslation(["suggestionSources"]);
+  const { t, i18n } = useTranslation(["suggestionSources"]);
   const fmt = useDisplayFormat();
   const [line, setLine] = useState<Line | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
@@ -55,6 +57,7 @@ export default function PluginCard({
     error: null,
   });
   const [maintaining, setMaintaining] = useState(false);
+  const [listState, setListState] = useState<PluginListState | null>(null);
 
   useEffect(() => {
     if (!plugin.enabled || disabled) {
@@ -63,8 +66,12 @@ export default function PluginCard({
     }
     let live = true;
     suggestionPluginsApi
-      .capabilities(plugin.id)
-      .then((c) => live && setMaintenance({ offered: c.maintenance, error: c.error }))
+      .capabilities(plugin.id, i18n?.language?.startsWith("en") ? "en" : "de")
+      .then((c) => {
+        if (!live) return;
+        setMaintenance({ offered: c.maintenance, error: c.error });
+        setListState(c.list ?? null);
+      })
       .catch((e: unknown) => {
         // Visible below the card: a capability we could not read is not "none".
         const key = pluginRequestFailureKey(e);
@@ -74,6 +81,8 @@ export default function PluginCard({
     return () => {
       live = false;
     };
+    // The language only names a list made on first use; a switch of language asks nothing again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
   }, [plugin.id, plugin.enabled, plugin.url, disabled]);
 
   const run = async (work: () => Promise<Line | void>) => {
@@ -205,6 +214,14 @@ export default function PluginCard({
           onChange={(on) => void update({ backfillAllowed: on })}
           label={t(`${NS}.backfillAllowed`)}
         />
+        {listState && (
+          <PluginListSwitch
+            pluginId={plugin.id}
+            state={listState}
+            disabled={disabled || busy}
+            onChange={setListState}
+          />
+        )}
       </div>
       {line && (
         <p

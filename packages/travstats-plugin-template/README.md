@@ -14,6 +14,11 @@ places; replace `lookup` in `src/server.js` with your own source.
   answered stop, and the refusals (wrong secret, stale timestamp, replayed
   request id).
 
+- **List (optional):** a hello with `list: {defaultName, columns}` makes
+  TravStats keep one place list per registration; accepted suggestions join it,
+  and `externalRef: {id, label, fields}` fills the announced columns. A plugin
+  that keeps its own copy of the contract must vendor this exact file.
+
 A plugin only ever answers. It never writes into TravStats, and it should not
 keep the coordinates it is asked about longer than it needs them.
 

@@ -26,10 +26,16 @@ export default function SmartListPanel({
   ruleOpen,
   onRuleClose,
   onChanged,
+  onRuleLoaded,
+  onEditRule,
 }: {
   listId: string;
   ruleOpen: boolean;
   onRuleClose: () => void;
+  /** Whether the list has a rule, so the page's ⋯ can say "Regel bearbeiten". */
+  onRuleLoaded?: (hasRule: boolean) => void;
+  /** The pencil on the rule header. */
+  onEditRule?: () => void;
   /** The list's membership changed (a suggestion confirmed, an automatic entry undone). */
   onChanged: () => void;
 }): JSX.Element | null {
@@ -50,6 +56,7 @@ export default function SmartListPanel({
     try {
       const next = await getListRule(listId);
       setRule(next);
+      onRuleLoaded?.(next !== null);
       if (next) {
         const [p, o, a] = await Promise.all([
           listPendingConfirmations(listId),
@@ -73,6 +80,7 @@ export default function SmartListPanel({
     } finally {
       setLoaded(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onRuleLoaded is a report, not an input
   }, [listId]);
 
   useEffect(() => {
@@ -139,6 +147,19 @@ export default function SmartListPanel({
               brands: rule.brands.map((b) => b.brandName).join(", "),
             })}
           </p>
+          {onEditRule && (
+            <button
+              type="button"
+              onClick={onEditRule}
+              aria-label={t("places:smartList.editRule")}
+              title={t("places:smartList.editRule")}
+              className={`ml-2 rounded px-2 text-sm ${COARSE}`}
+              style={{ color: "var(--text-secondary)" }}
+              data-testid="smart-list-edit"
+            >
+              ✎
+            </button>
+          )}
           <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
             {t("places:smartList.headerRule", {
               min: rule.minDwellMinutes,
@@ -256,6 +277,7 @@ export default function SmartListPanel({
           onClose={onRuleClose}
           onSaved={(next) => {
             setRule(next);
+            onRuleLoaded?.(next !== null);
             onRuleClose();
             void load();
           }}

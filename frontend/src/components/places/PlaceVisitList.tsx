@@ -16,6 +16,7 @@ import {
   type VisitGroup,
 } from "./placeVisitListModel";
 import { PlaceVisitRow } from "./PlaceVisitRow";
+import { useScrollToVisit } from "../../hooks/useScrollToVisit";
 import Toggletip from "../ui/Toggletip";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import { logger } from "../../lib/logger";
@@ -72,6 +73,7 @@ export function PlaceVisitList({
   const [undoing, setUndoing] = useState(false);
   const { confirm, confirmDialog } = useConfirmDialog();
   const automatic = useMemo(() => visits.filter(isAutomatic), [visits]);
+  useScrollToVisit(visits.length);
   const shown = autoOnly && automatic.length > 0 ? automatic : visits;
 
   const model = useMemo(

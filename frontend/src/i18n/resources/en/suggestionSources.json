@@ -305,6 +305,12 @@
       "range": "{{from}}–{{to}} of {{total}}",
       "prev": "Previous",
       "next": "Next"
+    },
+    "list": {
+      "label": "Keep this plugin's places as a list",
+      "generic": "The plugin announces no list: standard columns only.",
+      "open": "Open list “{{name}}”",
+      "failed": "List not switched"
     }
   }
 }

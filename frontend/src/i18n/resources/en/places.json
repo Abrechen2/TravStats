@@ -199,7 +199,45 @@
     "dismissUnassigned": "Hide",
     "createTitle": "New list",
     "createFirst": "Create your first list",
-    "alreadyInList": "“{{name}}” is already in this list."
+    "alreadyInList": "“{{name}}” is already in this list.",
+    "table": {
+      "label": "Places in the list",
+      "search": "Search",
+      "sortLabel": "Sort",
+      "sortBy": "Sort by {{col}}",
+      "loadFailed": "Places not loaded.",
+      "noMatch": "Nothing found.",
+      "visitsToggle_one": "Show {{count}} visit to {{name}}",
+      "visitsToggle_other": "Show {{count}} visits to {{name}}",
+      "moreVisits_one": "+{{count}} more",
+      "moreVisits_other": "+{{count}} more",
+      "col": {
+        "name": "Name",
+        "country": "Country",
+        "city": "Town",
+        "visits": "Visits",
+        "last": "Last visit",
+        "first": "First visit",
+        "source": "Source",
+        "distance": "Distance",
+        "actions": "Actions"
+      },
+      "sort": {
+        "lastVisit": "Last visit",
+        "name": "Name",
+        "country": "Country",
+        "visitCount": "Visit count",
+        "firstVisit": "First visit",
+        "addedAt": "Date added",
+        "custom": "Own order"
+      },
+      "source": {
+        "manual": "Manual",
+        "rule": "Rule",
+        "import": "Import",
+        "plugin": "Plugin"
+      }
+    }
   },
   "checklist": {
     "notFound": "There is no such checklist.",
@@ -991,7 +1029,7 @@
     "distanceInvalid": "The distance must be between 10 and 500 metres.",
     "autoAccept": "Take confident matches automatically",
     "autoAcceptHint": "Only for a clear chain match. Automatic additions can be undone.",
-    "stop": "Stop following",
+    "stop": "Remove rule",
     "header": "Smart list: chain {{brands}}",
     "headerLabel": "Smart list",
     "headerRule": "{{min}} to {{max}} min. stay, suggest within {{distance}} m, automatic within {{autoDistance}} m, take automatically: {{auto}}",
@@ -1033,6 +1071,7 @@
     },
     "autoDistance": "Take automatically within (m)",
     "autoDistanceInvalid": "The automatic distance must be at least 10 m and no larger than the suggestion distance.",
+    "editRule": "Edit rule",
     "pending": {
       "title": "Pending confirmations ({{count}})",
       "info": "Visits this list found at your places. Confirming adds the visit.",

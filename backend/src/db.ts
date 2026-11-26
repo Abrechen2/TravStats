@@ -15,7 +15,7 @@ import {
   type VisitFact,
 } from "./services/purpose/placeVisited";
 import { inheritPurposeOnCreate } from "./services/purpose/tripInheritance";
-import { resolvePurposeKeysOnWrite } from "./services/purpose/purposeKeyWrite";
+import { resolvePurposeKeysOnWrite, writtenCustomKey } from "./services/purpose/purposeKeyWrite";
 import { createPrismaClient } from "./prismaClient";
 import { sessionTimeoutsFromEnv } from "./services/db/sessionTimeouts";
 import { slowQueries } from "./services/runtime/slowLog";
@@ -217,8 +217,21 @@ const queried = basePrisma.$extends({
       // (services/purpose/purposeKeyWrite.ts); a custom key of another account is refused.
       const keyed = await resolvePurposeKeysOnWrite(model, operation, inherited, {
         customOf: async (id) => {
-          const reader = openTransaction.getStore() ?? basePrisma;
-          return await reader.customPurpose.findFirst({
+          const tx = openTransaction.getStore();
+          if (tx) {
+            // Inside a transaction the purpose's row is held until the write commits, so a
+            // concurrent delete or re-kind (which takes it FOR UPDATE) waits and then sees it.
+            const rows = await (
+              tx as unknown as {
+                $queryRaw: (
+                  q: TemplateStringsArray,
+                  ...v: unknown[]
+                ) => Promise<{ user_id: string; kind: string }[]>;
+              }
+            ).$queryRaw`SELECT user_id, kind FROM custom_purposes WHERE id = ${id} FOR SHARE`;
+            return rows[0] ? { userId: rows[0].user_id, kind: rows[0].kind } : null;
+          }
+          return await basePrisma.customPurpose.findFirst({
             where: { id },
             select: { userId: true, kind: true },
           });
@@ -323,6 +336,20 @@ const queried = basePrisma.$extends({
         // Always, whatever the query-logging flag says: rate-limited per model
         // and operation (services/runtime/slowLog.ts, perf audit item 4).
         slowQueries.note(model ? `${model}.${operation}` : operation, Date.now() - startTime);
+        // A custom purpose written outside a transaction was read without its row held: settle a
+        // delete or re-kind that ran in between (services/purpose/customPurposes.ts).
+        const customKey = !READ_OPERATIONS.has(operation)
+          ? writtenCustomKey(operation, args)
+          : null;
+        if (
+          customKey &&
+          !openTransaction.getStore() &&
+          (params as { __internalParams?: { transaction?: unknown } }).__internalParams
+            ?.transaction == null
+        ) {
+          const { reconcileCustomPurposeKey } = await import("./services/purpose/customPurposes");
+          await reconcileCustomPurposeKey(customKey);
+        }
         if (!READ_OPERATIONS.has(operation)) {
           for (const observer of [
             ...(writeObserver ? [writeObserver] : []),
