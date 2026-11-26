@@ -8,6 +8,7 @@ import { TONE } from "../route/RouteTimeline";
 import { assignIdeaToDay } from "../ideaAssignment";
 import { buildDayPlan, foldQuietDays, type DayLeg, type DaySpan } from "./dayPlan";
 import { IdeaPicker, unplannedIdeas } from "./IdeaPicker";
+import { ItemLine } from "./ItemLine";
 
 function LegLine({ leg, ctx }: { leg: DayLeg; ctx: PlanCtx }) {
   const { t } = useTranslation("travplan"),
@@ -58,11 +59,14 @@ function DayCard({ span, last, ctx }: { span: DaySpan; last: boolean; ctx: PlanC
           <LegLine key={leg.stage.id} leg={leg} ctx={ctx} />
         ))}
         {row.items.map((i) => (
-          <li key={i.id} className="t-body">
-            {i.time ? <span className="t-caption">{i.time} </span> : null}
-            {i.title}
-            {i.place ? <span className="t-caption"> · {i.place}</span> : null}
-          </li>
+          <ItemLine
+            key={i.id}
+            item={i}
+            state={ctx.state}
+            days={ctx.days}
+            busy={ctx.busy}
+            onWrite={(op) => void ctx.mutate(op)}
+          />
         ))}
         {row.bookings.map((b) => (
           <li key={b.id} className="t-body">

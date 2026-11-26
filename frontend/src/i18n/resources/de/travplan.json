@@ -792,6 +792,9 @@
     "pickDay": "An welchem Tag?",
     "pickIdea": "Idee einplanen",
     "pickIdeaPrompt_one": "+ Idee einplanen ({{count}} offen)",
-    "pickIdeaPrompt_other": "+ Idee einplanen ({{count}} offen)"
+    "pickIdeaPrompt_other": "+ Idee einplanen ({{count}} offen)",
+    "moveItem": "Tag für {{title}}",
+    "unplanItem": "{{title}} zurück zu den Ideen",
+    "unplan": "Zurück zu den Ideen"
   }
 }

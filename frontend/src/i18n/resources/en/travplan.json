@@ -792,6 +792,9 @@
     "pickDay": "Which day?",
     "pickIdea": "Plan an idea",
     "pickIdeaPrompt_one": "+ Plan an idea ({{count}} open)",
-    "pickIdeaPrompt_other": "+ Plan an idea ({{count}} open)"
+    "pickIdeaPrompt_other": "+ Plan an idea ({{count}} open)",
+    "moveItem": "Day for {{title}}",
+    "unplanItem": "Put {{title}} back among the ideas",
+    "unplan": "Back to ideas"
   }
 }
