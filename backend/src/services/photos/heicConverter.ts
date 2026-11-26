@@ -57,6 +57,13 @@ const JPEG_QUALITY = 0.9;
 const CONVERSION_TIMEOUT_MS = 60_000;
 /** How long an idle worker (and its WebAssembly heap) is kept around. */
 const IDLE_TERMINATE_MS = 30_000;
+/**
+ * The worker's own heap ceiling (perf audit 2026-11, item 2). Without it a
+ * worker thread inherits the main process's limit, so one oversized photo
+ * could grow the converter into the whole box. 768 MB is the life-book
+ * downscaler's figure; a decoded 48 MP frame is about 190 MB of RGBA.
+ */
+export const HEIC_WORKER_RESOURCE_LIMITS = { maxOldGenerationSizeMb: 768 } as const;
 
 /**
  * The worker's whole program. Plain CommonJS evaluated in the worker, so it
@@ -131,7 +138,10 @@ function failActive(error: Error): void {
 
 function ensureWorker(): Worker {
   if (worker) return worker;
-  const w = new Worker(workerSource(), { eval: true });
+  const w = new Worker(workerSource(), {
+    eval: true,
+    resourceLimits: { ...HEIC_WORKER_RESOURCE_LIMITS },
+  });
   // Never keeps the process alive on its own — a test run or a shutdown must
   // not wait for an idle converter.
   w.unref();
