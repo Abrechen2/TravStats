@@ -459,6 +459,7 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   travtrack_explored_cells: excluded(DERIVED),
   travtrack_imports: excluded(BOOKKEEPING),
   travtrack_month_values: excluded(DERIVED),
+  travtrack_year_summaries: excluded(DERIVED),
   travtrack_uploads: excluded(BOOKKEEPING),
   travtrack_zone_cells: excluded(DERIVED),
 
