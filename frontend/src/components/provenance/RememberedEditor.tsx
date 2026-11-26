@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useState } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
@@ -77,7 +78,7 @@ export default function RememberedEditor({
           <p className="t-caption">{t("provenance:editor.hint")}</p>
           <label className="flex flex-col text-sm" style={{ gap: 4 }}>
             {t("provenance:editor.rememberedOn")}
-            <input type="date" value={on} onChange={(e) => setOn(e.target.value)} />
+            <DateField value={on} onChange={(e) => setOn(e.target.value)} />
           </label>
           <label className="flex flex-col text-sm" style={{ gap: 4 }}>
             {t("provenance:editor.note")}

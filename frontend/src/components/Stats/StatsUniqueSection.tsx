@@ -3,7 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import StatCard from "./StatCard";
 import CountingHelp from "./counting/CountingHelp";
 import DualFigureCard from "./DualFigureCard";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { formatLatitude } from "../../lib/hemisphere";
 
 interface StatsUniqueSectionProps {

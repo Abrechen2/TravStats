@@ -167,7 +167,10 @@ describe("RailFormModal — shared form blocks", () => {
     const banner = await screen.findByRole("alert");
     expect(banner).toHaveTextContent("common:saveErrors.dbUnavailable");
     await waitFor(() => expect(banner).toHaveFocus());
-    expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-07-01T08:15");
+    expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveAttribute(
+      "data-wire-value",
+      "2026-07-01T08:15"
+    );
 
     fireEvent.click(within(banner).getByRole("button", { name: "common:buttons.retry" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));

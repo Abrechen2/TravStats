@@ -14,6 +14,8 @@ export { default as IconButton } from "./IconButton";
 export { Card, Tile, HeroCard, SparseCard } from "./Card";
 export { default as Pill, StatusPill, DomainPill } from "./Pill";
 export { default as Chip } from "./Chip";
+export { default as DateField, type DateFieldKind } from "./DateField";
+export { default as DateRangeField, type DateRange } from "./DateRangeField";
 export { default as StatTile, SectionLabel } from "./StatTile";
 export { default as Dialog } from "./Dialog";
 export { default as Toggletip } from "./Toggletip";

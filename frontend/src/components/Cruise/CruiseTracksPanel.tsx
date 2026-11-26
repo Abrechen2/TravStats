@@ -8,7 +8,7 @@ import { dawarichFailureKey, dawarichFailureKind } from "../../lib/api/dawarich"
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { TRACK_ERROR_KEYS } from "../../lib/trackErrorKeys";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { useToastStore } from "../../store/toastStore";
 import type { CruiseLegTrack, CruiseTrackMeta } from "../../types/cruiseTracks";
 import { JitterNote } from "../tracks/JitterNote";

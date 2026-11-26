@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { logger } from "../../../lib/logger";
-import { formatLocalClock, formatLocalDate } from "../../../lib/displayFormat";
+import { formatLocalClock, formatLocalDate } from "../../../lib/format";
 import {
   getListRule,
   listAutoAccepted,

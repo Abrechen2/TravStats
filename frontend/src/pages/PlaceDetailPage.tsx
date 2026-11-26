@@ -37,7 +37,7 @@ import type { Trip } from "../types";
 import { useToastStore } from "../store/toastStore";
 import { placeCategoryIcon, placeCategoryLabel } from "../lib/placeCategoryDisplay";
 import { usePlaceCategories } from "../hooks/usePlaceCategories";
-import { useDisplayFormat } from "../lib/displayFormat";
+import { useDisplayFormat } from "../lib/format";
 import { visitTime as visitTimeOf } from "../lib/entityTimes";
 import type { Place, PlaceVisit } from "../types/place";
 import BackLink from "../components/navigation/BackLink";

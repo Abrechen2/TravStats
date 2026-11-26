@@ -8,7 +8,7 @@ import {
   type CalendarFeedStatus,
   type IssuedCalendarFeed,
 } from "../../lib/api/calendarFeed";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { saveErrorKey } from "../../lib/saveErrorMessage";
 import Button from "../ui/Button";

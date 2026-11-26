@@ -9,7 +9,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { settingsApi, type HomePeriod } from "../../lib/api";
 import { apiErrorCode } from "../../lib/apiError";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
 import { todayZoneNow } from "../../hooks/useTodayZone";

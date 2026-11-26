@@ -4,7 +4,7 @@ import type { CSSProperties, JSX } from "react";
 import IconButton from "../ui/IconButton";
 import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { roadtripsApi } from "../../lib/api/roadtrips";
 import { reversePlaces } from "../../lib/api/geo";
 import { editorNights } from "../../lib/roadtrip/editorNights";

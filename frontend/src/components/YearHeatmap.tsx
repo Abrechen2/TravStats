@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { Flight } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
 import { resolveAirlineDisplay } from "../lib/airlineUtils";
-import { formatLocalDate } from "../lib/displayFormat";
+import { formatLocalDate } from "../lib/format";
 import { flightDeparture } from "../lib/entityTimes";
 import { todayZoneNow } from "../hooks/useTodayZone";
 import {

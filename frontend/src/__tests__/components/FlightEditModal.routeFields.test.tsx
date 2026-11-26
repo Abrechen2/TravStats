@@ -176,7 +176,7 @@ async function waitForHydration(): Promise<void> {
   await waitFor(() => {
     const dateInput = document.querySelector("#editDepartureDate") as HTMLInputElement;
     const timeInput = document.querySelector("#editDepartureTime") as HTMLInputElement;
-    expect(dateInput.value).toBe("2026-08-14");
+    expect(dateInput.value).toBe("14.08.2026");
     expect(timeInput.value).toBe("21:35");
   });
 
@@ -223,7 +223,7 @@ describe("FlightEditModal route editing (Task 4)", () => {
     await waitFor(() => {
       const dateInput = document.querySelector("#editDepartureDate") as HTMLInputElement;
       const timeInput = document.querySelector("#editDepartureTime") as HTMLInputElement;
-      expect(dateInput.value).toBe("2026-08-14");
+      expect(dateInput.value).toBe("14.08.2026");
       expect(timeInput.value).toBe("13:35");
     });
 
@@ -268,7 +268,7 @@ describe("FlightEditModal route editing (Task 4)", () => {
     // selection hasn't resolved yet.
     const dateInput = document.querySelector("#editDepartureDate") as HTMLInputElement;
     const timeInput = document.querySelector("#editDepartureTime") as HTMLInputElement;
-    expect(dateInput.value).toBe("2026-08-14");
+    expect(dateInput.value).toBe("14.08.2026");
     expect(timeInput.value).toBe("21:35");
 
     await userEvent.click(await findNamed("button", /speichern|save/i));

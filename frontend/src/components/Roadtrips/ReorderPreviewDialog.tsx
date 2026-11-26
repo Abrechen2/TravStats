@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import Button from "../ui/Button";
 import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { dayKey } from "../../lib/roadtrip/roadtripView";
 import {
   isProtectedSource,

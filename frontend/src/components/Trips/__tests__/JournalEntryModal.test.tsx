@@ -134,7 +134,7 @@ describe("JournalEntryModal", () => {
   // after the trip landed outside it.
   describe("the day a new entry starts on", () => {
     const dateField = (): HTMLInputElement =>
-      document.querySelector('input[type="date"]') as HTMLInputElement;
+      document.querySelector('input[data-field-kind="date"]') as HTMLInputElement;
     const open = (trip: Parameters<typeof JournalEntryModal>[0]["trip"]): void => {
       render(
         <JournalEntryModal
@@ -149,7 +149,7 @@ describe("JournalEntryModal", () => {
 
     it("is the trip's first day when today is outside the trip and nothing is written", () => {
       open({ startDate: "2024-07-14T00:00:00.000Z", endDate: "2024-07-20T00:00:00.000Z" });
-      expect(dateField().value).toBe("2024-07-14");
+      expect(dateField().value).toBe("07/14/2024");
     });
 
     it("is the day after the last entry when today is outside the trip", () => {
@@ -161,13 +161,13 @@ describe("JournalEntryModal", () => {
           { date: "2024-07-15T00:00:00.000Z" },
         ],
       });
-      expect(dateField().value).toBe("2024-07-16");
+      expect(dateField().value).toBe("07/16/2024");
     });
 
     it("is today while the trip is on", () => {
       const today = todayIn("UTC");
       open({ startDate: `${today}T00:00:00.000Z`, endDate: `${today}T00:00:00.000Z` });
-      expect(dateField().value).toBe(today);
+      expect(dateField()).toHaveAttribute("data-wire-value", today);
     });
   });
 
@@ -202,16 +202,16 @@ describe("JournalEntryModal", () => {
       );
     };
     const dateField = (): HTMLInputElement =>
-      document.querySelector('input[type="date"]') as HTMLInputElement;
+      document.querySelector('input[data-field-kind="date"]') as HTMLInputElement;
 
     it("defaults to the 25th for a user in Berlin", () => {
       openAt("Europe/Berlin");
-      expect(dateField().value).toBe("2026-09-25");
+      expect(dateField().value).toBe("09/25/2026");
     });
 
     it("defaults to the 24th for a user in New York", () => {
       openAt("America/New_York");
-      expect(dateField().value).toBe("2026-09-24");
+      expect(dateField().value).toBe("09/24/2026");
     });
 
     it("answers in UTC until the profile zone is confirmed", () => {
@@ -226,7 +226,7 @@ describe("JournalEntryModal", () => {
           onSaved={vi.fn()}
         />
       );
-      expect(dateField().value).toBe("2026-09-24");
+      expect(dateField().value).toBe("09/24/2026");
     });
   });
 });

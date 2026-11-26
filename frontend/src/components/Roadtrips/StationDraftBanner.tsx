@@ -5,7 +5,7 @@ import Button from "../ui/Button";
 import ConfirmModal from "../ui/ConfirmModal";
 import { useTranslation } from "../../hooks/useTranslation";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import type { StoredStationDraft } from "../../lib/roadtrip/stationDraftStore";
 
 /**

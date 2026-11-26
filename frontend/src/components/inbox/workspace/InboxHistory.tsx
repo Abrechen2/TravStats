@@ -5,7 +5,7 @@ import { dawarichStaysApi } from "../../../lib/api/dawarichStays";
 import { pendingUpdatesApi } from "../../../lib/api/pendingUpdates";
 import { photoJourneysApi } from "../../../lib/api/photoJourneys";
 import type { SuggestionCoveredBy } from "../../../types/photoJourney";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import { logger } from "../../../lib/logger";
 import Button from "../../ui/Button";
 import { Card } from "../../ui/Card";

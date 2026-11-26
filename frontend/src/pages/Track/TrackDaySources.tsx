@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatTime } from "../../lib/displayFormat";
+import { formatTime } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { trackErrorKey, type TravTrackDay } from "../../lib/api/travtrack";
 import { daySourcesApi, type DaySourceChoice } from "../../lib/api/travtrackDaySources";

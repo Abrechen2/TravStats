@@ -1,7 +1,7 @@
 import { useEffect, useState, type JSX } from "react";
 import Modal from "../Modal";
 import { copyToClipboard } from "../../lib/clipboard";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
 import type { EvidenceScope, UnattributedReason } from "../../shared/evidence";

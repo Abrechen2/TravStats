@@ -32,7 +32,7 @@ import {
 import ConfirmModal from "../components/ui/ConfirmModal";
 import { useToastStore } from "../store/toastStore";
 import { getFlightDuration } from "../lib/flightDuration";
-import { formatDurationWithEstimate } from "../lib/formatters";
+import { formatDurationWithEstimate } from "../lib/format";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import { priceCellState } from "../lib/flightPriceCell";

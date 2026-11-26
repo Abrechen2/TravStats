@@ -1543,12 +1543,7 @@
   },
   "insight": {
     "entries_one": "{{count}} entry",
-    "entries_other": "{{count}} entries",
-    "duration": {
-      "minutes": "{{m}} min",
-      "hours": "{{h}} h",
-      "hoursMinutes": "{{h}} h {{m}} min"
-    }
+    "entries_other": "{{count}} entries"
   },
   "domainRecords": {
     "title": "Records across all kinds of travel",

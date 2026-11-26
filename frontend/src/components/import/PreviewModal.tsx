@@ -1,3 +1,4 @@
+import { formatDate } from "../../lib/format";
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEscapeClose } from "../../hooks/useEscapeClose";
@@ -57,10 +58,6 @@ type WarningFlag = (typeof WARNING_FLAGS)[number];
 
 function isWarningFlag(f: PreviewFlag): f is WarningFlag {
   return (WARNING_FLAGS as readonly PreviewFlag[]).includes(f);
-}
-
-function formatDate(isoString: string): string {
-  return isoString.slice(0, 10);
 }
 
 export function PreviewModal({

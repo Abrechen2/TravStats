@@ -17,7 +17,7 @@ import { passkeyApi, type Passkey, type PasskeyUnavailableReason } from "../../l
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { secondFactorField } from "../../lib/secondFactorInput";
 import { logger } from "../../lib/logger";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import Button from "../ui/Button";
 import { Input } from "../ui/Field";
 import { ActionControl, SettingItem } from "../ui/settings";

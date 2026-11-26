@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import { displayParts, type LocalDateValue, type TimeValue } from "../shared/time";
 import { useSettingsStore, type DisplaySettings } from "../store/settingsStore";
+import { appLocale, convertDistance, formatAmount, type DistanceUnit } from "./units";
 import { todayZoneNow } from "../hooks/useTodayZone";
 
 /**
@@ -284,3 +285,138 @@ export const formatTimeValueShown = (
   value: TimeValue,
   options?: Omit<FormatOptions, "timeZone"> & { dateOnly?: boolean }
 ): string => formatTimeValueWith(currentDisplayFormat(), value, options);
+
+// ─── Duration, distance, money, day labels ────────────────────────────────
+//
+// rc.47: one home for the formatters that used to be copied per file (seven
+// `formatDate`, six `formatKm`, five `formatDuration`, three `formatDistance`,
+// a `formatMoney`, plus bare `toLocale*String` calls). A source scan
+// (`__tests__/lint/noLocalFormatters.test.ts`) refuses a new local copy. The
+// number/currency primitives stay in `units.ts` and are re-exported here, so a
+// caller needs only this module.
+
+export {
+  formatAmount,
+  formatCurrency,
+  formatDistance,
+  formatHours,
+  formatNumber,
+  formatShortDistance,
+} from "./units";
+
+/**
+ * A duration in minutes, as the design writes it: "2 h 05 min", "45 min",
+ * "2 h". With `days`, anything of 48 hours or more reads "3 T 4 h" in German
+ * and "3 d 4 h" in English — a recording of several days is not "51 h". The
+ * language is the app's unless given; only the day letter differs.
+ */
+export function formatDuration(
+  minutes: number,
+  options: { days?: boolean; language?: string } = {}
+): string {
+  if (!Number.isFinite(minutes)) return "—";
+  const total = Math.max(0, Math.round(minutes));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (options.days && h >= 48) {
+    const dayLetter = appLocale(options.language).startsWith("de") ? "T" : "d";
+    return `${Math.floor(h / 24)} ${dayLetter} ${h % 24} h`;
+  }
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h} h`;
+  return `${h} h ${String(m).padStart(2, "0")} min`;
+}
+
+/**
+ * Same as `formatDuration` but prefixes a `~` when the value is an
+ * estimate (e.g. great-circle-based for DATE_ONLY rows). Returns the
+ * fallback marker `"—"` when minutes is null.
+ */
+export function formatDurationWithEstimate(
+  minutes: number | null | undefined,
+  estimated: boolean
+): string {
+  if (minutes == null) return "—";
+  const base = formatDuration(minutes);
+  return estimated ? `~${base}` : base;
+}
+
+const UNIT_SUFFIX: Record<DistanceUnit, string> = {
+  kilometers: "km",
+  miles: "mi",
+  nautical_miles: "nm",
+};
+
+export interface FormatKmOptions {
+  /** Default: the unit chosen in Settings → Display. */
+  unit?: DistanceUnit;
+  /** Default: the language the app is speaking. */
+  language?: string;
+  /** Digits after the separator; default 0 (whole units). */
+  fractionDigits?: number;
+}
+
+/**
+ * A distance given in KILOMETRES, shown in the reader's unit and language:
+ * "3.931 km" for a German reader, "2,442 mi" for an English one on miles. The
+ * source value is always km; the unit setting decides what is shown. `null`
+ * (distance unknown) is "—", never "0".
+ */
+export function formatKm(km: number | null | undefined, options: FormatKmOptions = {}): string {
+  if (km == null || Number.isNaN(km)) return "—";
+  const unit = options.unit ?? currentDistanceUnit();
+  const digits = options.fractionDigits ?? 0;
+  const value = convertDistance(km, unit).toLocaleString(appLocale(options.language), {
+    maximumFractionDigits: digits,
+  });
+  return `${value} ${UNIT_SUFFIX[unit]}`;
+}
+
+/**
+ * A short distance given in METRES, in the reader's unit: "350 m" below a
+ * kilometre on the metric setting, otherwise one decimal ("1.4 km", "0.9 mi").
+ */
+export function formatMetres(
+  metres: number | null | undefined,
+  options: Omit<FormatKmOptions, "fractionDigits"> = {}
+): string {
+  if (metres == null || Number.isNaN(metres)) return "";
+  const unit = options.unit ?? currentDistanceUnit();
+  if (unit === "kilometers" && metres < 1000) {
+    return `${Math.round(metres).toLocaleString(appLocale(options.language))} m`;
+  }
+  return formatKm(metres / 1000, { ...options, unit, fractionDigits: 1 });
+}
+
+function currentDistanceUnit(): DistanceUnit {
+  return useSettingsStore.getState?.().units?.distanceUnit ?? "kilometers";
+}
+
+/**
+ * An amount in a currency, "—" when the amount is unknown. A missing currency
+ * gives a bare number (`formatAmount`), never a guessed euro.
+ */
+export function formatMoney(
+  amount: number | null | undefined,
+  currency: string | null | undefined,
+  options?: { compact?: boolean; language?: string }
+): string {
+  if (amount == null || Number.isNaN(amount)) return "—";
+  return formatAmount(amount, currency, options);
+}
+
+/**
+ * A calendar DAY (`YYYY-MM-DD`, or an ISO string cut to its first ten
+ * characters) as prose in the UI language: "Mai 2024", "3. Mai". For labels
+ * that are not a date format anybody picked (see the header). The day is
+ * read as UTC so the browser's zone cannot move it.
+ */
+export function formatDayLabel(
+  day: string,
+  options: Intl.DateTimeFormatOptions,
+  language?: string
+): string {
+  const date = new Date(`${day.slice(0, 10)}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(appLocale(language), { ...options, timeZone: "UTC" });
+}

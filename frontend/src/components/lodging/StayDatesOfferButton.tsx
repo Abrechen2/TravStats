@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import type { StayDatesOffer } from "../../hooks/useStayDatesFromTrip";
 
 /**

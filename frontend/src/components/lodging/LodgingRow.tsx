@@ -10,7 +10,7 @@ import { lodgingLifecycleStatus } from "./lodgingLifecycle";
 import { hasOtherBaseCurrencySpend, LodgingSpendCell } from "./LodgingSpendCell";
 import { lodgingTypeIcon } from "../../lib/lodgingFormat";
 import { FlagImg, resolveCountryCode } from "../../lib/countryFlag";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { latestStayDayOf } from "../../lib/lodgingLatestStay";
 import RowMenu from "../table/RowMenu";
 import { TableRow, type TableColumn } from "../ui/Table";

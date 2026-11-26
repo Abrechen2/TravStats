@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { parseDecimalInput } from "../../lib/decimalInput";
 import Modal from "../Modal";
 import { useState } from "react";
@@ -233,9 +234,9 @@ export default function BookingEditModal({
         )}
         {label(
           "bookedOn",
-          <input
+          <DateField
+            inline
             className="input"
-            type="date"
             value={bookedOn}
             onChange={(e) => setBookedOn(e.target.value)}
           />,

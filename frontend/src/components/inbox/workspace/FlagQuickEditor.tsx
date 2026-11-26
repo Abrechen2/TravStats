@@ -1,3 +1,4 @@
+import DateField from "../../../components/ui/DateField";
 import { useState } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { flightsApi } from "../../../lib/api/flights";
@@ -45,9 +46,9 @@ function TripDates({
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-sm">
           {t(`${W}.start`)}
-          <input
+          <DateField
+            inline
             required
-            type="date"
             className="input mt-1 w-full"
             value={start}
             onChange={(e) => setStart(e.target.value)}
@@ -55,9 +56,9 @@ function TripDates({
         </label>
         <label className="text-sm">
           {t(`${W}.end`)}
-          <input
+          <DateField
+            inline
             required
-            type="date"
             className="input mt-1 w-full"
             value={end}
             min={start}

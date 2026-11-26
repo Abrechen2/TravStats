@@ -1,3 +1,4 @@
+import { formatKm } from "../lib/format";
 import PurposeEditor from "../components/purpose/PurposeEditor";
 import RouteTagsEditor from "../components/Roadtrips/RouteTagsEditor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -51,10 +52,6 @@ import type { RoutingFailing } from "../types/roadtrip";
 interface StopWithRoute extends TripStop {
   routeId: string | null;
   routeOrderIdx: number | null;
-}
-
-function formatKm(value: number): string {
-  return value.toLocaleString("de-DE", { maximumFractionDigits: 0 });
 }
 
 /**
@@ -644,8 +641,7 @@ export default function TripRouteEditorPage(): JSX.Element {
                 route.kind === "tour" && tracks.length > 0
                   ? tracks.reduce((sum, tr) => sum + tr.distanceKm, 0)
                   : route.distanceKm
-              )}{" "}
-              km
+              )}
             </span>
           </p>
           <RouteEditorReportLine entry={reports.header} />

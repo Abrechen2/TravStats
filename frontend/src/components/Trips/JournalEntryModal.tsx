@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { dayInput } from "../../lib/api/timeInput";
 import { useTodayZone } from "../../hooks/useTodayZone";
 import { todayIn } from "../../shared/time";
@@ -142,8 +143,8 @@ export default function JournalEntryModal({
     >
       <div className="space-y-4">
         <Field label={t("trips:journalModal.dateLabel")}>
-          <input
-            type="date"
+          <DateField
+            inline
             value={date}
             onChange={(e) => setDate(e.target.value)}
             className="w-full rounded-lg px-3 py-2 text-sm"

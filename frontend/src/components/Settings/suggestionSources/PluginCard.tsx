@@ -1,8 +1,9 @@
+import DateField from "../../../components/ui/DateField";
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import Button from "../../ui/Button";
-import { Field, Input, Select, Switch } from "../../ui/Field";
+import { Field, Select, Switch } from "../../ui/Field";
 import { waitForJob, JobFailedError } from "../../../lib/api/jobs";
 import {
   pluginFailureKey,
@@ -278,9 +279,8 @@ export default function PluginCard({
       {plugin.backfillAllowed && (
         <div className="flex flex-wrap items-end" style={{ gap: "var(--ts-space-sm)" }}>
           <Field label={t(`${NS}.backfill.from`)} htmlFor={`plugin-from-${plugin.id}`}>
-            <Input
+            <DateField
               id={`plugin-from-${plugin.id}`}
-              type="date"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
             />
@@ -290,9 +290,8 @@ export default function PluginCard({
             htmlFor={`plugin-to-${plugin.id}`}
             error={from && to && !rangeOk ? t(`${NS}.backfill.range`) : undefined}
           >
-            <Input
+            <DateField
               id={`plugin-to-${plugin.id}`}
-              type="date"
               value={to}
               onChange={(e) => setTo(e.target.value)}
             />

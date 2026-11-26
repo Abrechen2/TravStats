@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { passportOverridesApi } from "../../lib/api/passportOverrides";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import type { ExcludedCountry } from "../../types/passport";
 import { overrideErrorKey } from "./overrideErrors";

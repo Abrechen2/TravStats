@@ -2,7 +2,7 @@ import type { JSX } from "react";
 
 import Modal from "../Modal";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { localeForLanguage } from "../../lib/units";
 import EvidenceTrigger from "../Stats/EvidenceTrigger";
 import { evidenceKeyForRule } from "./achievementEvidenceKey";

@@ -10,7 +10,7 @@ import type {
   CountryOverrideView,
   CountryTimelineEntry,
 } from "../../types/passport";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 
 /**
  * The records that put one country in the passport — named AND opened.

@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { formatDate, formatTime } from "../../../lib/displayFormat";
+import { formatDate, formatTime } from "../../../lib/format";
 import { REPLAY_RATES, type ReplayRate } from "./trackReplay";
 import type { Replay } from "./useReplay";
 import { pillStyle, panelStyle } from "./trackMapStyle";

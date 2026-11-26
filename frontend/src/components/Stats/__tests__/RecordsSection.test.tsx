@@ -134,8 +134,8 @@ describe("RecordsSection", () => {
     expect(screen.getByText("10,000 stats:distance.kilometers")).toBeTruthy();
     expect(screen.getByText("55 stats:distance.kilometers")).toBeTruthy();
     // Minutes become hours and minutes; the payload never says "12h 5min".
-    expect(screen.getByText("12h 5min")).toBeTruthy();
-    expect(screen.getByText("3h 5min")).toBeTruthy();
+    expect(screen.getByText("12 h 05 min")).toBeTruthy();
+    expect(screen.getByText("3 h 05 min")).toBeTruthy();
     // A latitude arrives unrounded and is shown to one decimal — the server
     // refuses to make that choice, so this side has to.
     expect(screen.getByText("70° stats:records.units.north")).toBeTruthy();
@@ -168,7 +168,7 @@ describe("RecordsSection", () => {
     // Both ends known — and the codes stay reachable in the tooltip, because
     // the names are what a reader recognises and the codes are what they
     // search for.
-    const named = await screen.findByText("Munich → Singapore Changi · 12h");
+    const named = await screen.findByText("Munich → Singapore Changi · 12 h");
     expect(named.getAttribute("title")).toBe("MUC → SIN");
 
     // One end known, one not: the unknown end falls back to its code by
@@ -194,7 +194,7 @@ describe("RecordsSection", () => {
 
     // `durationMinutes` is served on this record and was read by nobody: "how
     // far" and "how long" are the two halves of what makes a leg the longest.
-    await waitFor(() => expect(screen.getByText(/· 12h$/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/· 12 h$/)).toBeTruthy());
   });
 
   it("leaves the duration off a record the server sent none for", async () => {

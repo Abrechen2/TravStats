@@ -1,7 +1,7 @@
 import { deadlineSummary } from "../../lib/deadlines";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { formatLocalClock } from "../../lib/displayFormat";
+import { formatLocalClock } from "../../lib/format";
 import { cruiseStopArrival, cruiseStopDeparture } from "../../lib/entityTimes";
 import { clockOf, type TimeValue } from "../../shared/time";
 import { formatAmount } from "../../lib/units";

@@ -409,7 +409,10 @@ describe("RailFormModal", () => {
     expect(create.mock.calls[0][0]).not.toHaveProperty("connectsFrom");
     // The dialog now holds the next leg, from the previous arrival.
     expect(await screen.findByTestId("rail-connection-banner")).toBeInTheDocument();
-    expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-09-26T07:10");
+    expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveAttribute(
+      "data-wire-value",
+      "2026-09-26T07:10"
+    );
 
     for (const b of allNamed("button", "rail:station.useGeocoder")) {
       fireEvent.click(b);
@@ -574,8 +577,8 @@ describe("RailFormModal", () => {
       await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
 
       const departure = screen.getByLabelText(DEPARTURE_TIME);
-      expect(departure).toHaveAttribute("type", "date");
-      expect(departure).toHaveValue("2026-09-21");
+      expect(departure).toHaveAttribute("data-field-kind", "date");
+      expect(departure).toHaveValue("21.09.2026");
       const [depDayOnly, arrDayOnly] = dayOnlyBoxes();
       expect(depDayOnly).toBeChecked();
       expect(arrDayOnly).not.toBeChecked();
@@ -637,8 +640,8 @@ describe("RailFormModal", () => {
       });
       fireEvent.click(dayOnlyBoxes()[1]);
       const arrival = screen.getByLabelText("rail:form.arrivalTime");
-      expect(arrival).toHaveAttribute("type", "date");
-      expect(arrival).toHaveValue("2026-09-22");
+      expect(arrival).toHaveAttribute("data-field-kind", "date");
+      expect(arrival).toHaveValue("22.09.2026");
 
       fireEvent.click(saveButton());
       await waitFor(() => expect(update).toHaveBeenCalled());
@@ -655,12 +658,12 @@ describe("RailFormModal", () => {
 
       fireEvent.click(toggle);
       const departure = screen.getByLabelText(DEPARTURE_TIME);
-      expect(departure).toHaveAttribute("type", "datetime-local");
-      expect(departure).toHaveValue("2026-09-21T00:00");
+      expect(departure).toHaveAttribute("data-field-kind", "datetime-local");
+      expect(departure).toHaveAttribute("data-wire-value", "2026-09-21T00:00");
 
       fireEvent.change(departure, { target: { value: "2026-09-21T08:15" } });
       fireEvent.click(toggle);
-      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-09-21");
+      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("21.09.2026");
     });
   });
 
@@ -697,10 +700,10 @@ describe("RailFormModal", () => {
     const [depDayOnly, arrDayOnly] = dayOnlyBoxes();
     expect(depDayOnly).toBeChecked();
     expect(arrDayOnly).not.toBeChecked();
-    expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveAttribute("type", "date");
+    expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveAttribute("data-field-kind", "date");
     const arrival = screen.getByLabelText("rail:form.arrivalTime");
-    expect(arrival).toHaveAttribute("type", "datetime-local");
-    expect(arrival).toHaveValue("2026-09-21T11:20");
+    expect(arrival).toHaveAttribute("data-field-kind", "datetime-local");
+    expect(arrival).toHaveAttribute("data-wire-value", "2026-09-21T11:20");
 
     fireEvent.click(saveButton());
     await waitFor(() => expect(update).toHaveBeenCalled());
@@ -816,7 +819,10 @@ describe("RailFormModal", () => {
       fireEvent.click(box);
       fireEvent.click(box);
       // The clock comes back as midnight, which is not the repeated hour.
-      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-10-25T00:00");
+      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveAttribute(
+        "data-wire-value",
+        "2026-10-25T00:00"
+      );
       fireEvent.click(saveButton());
 
       await waitFor(() => expect(update).toHaveBeenCalled());

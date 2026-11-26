@@ -9,7 +9,7 @@ import { roadtripsApi } from "../../../lib/api/roadtrips";
 import { toursApi } from "../../../lib/api/tours";
 import { trackErrorKey } from "../../../lib/api/travtrack";
 import { travTrackRoadtripApi, type RoadtripSpan } from "../../../lib/api/travtrackRoadtrip";
-import { formatLocalDate } from "../../../lib/displayFormat";
+import { formatLocalDate } from "../../../lib/format";
 import { logger } from "../../../lib/logger";
 import { localDay, toLocal } from "../../../shared/time/zone";
 import { durationText, makeNumber } from "../map/trackLegFormat";

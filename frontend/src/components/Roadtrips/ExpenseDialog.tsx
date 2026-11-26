@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useRef, useState } from "react";
 import type { JSX } from "react";
 
@@ -22,7 +23,7 @@ import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useTodayZone } from "../../hooks/useTodayZone";
 import { expensesApi } from "../../lib/api/expenses";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { formatCurrency } from "../../lib/units";
 import { EXPENSE_KINDS, type ExpenseKind } from "../../shared/expenses";
@@ -330,9 +331,8 @@ export default function ExpenseDialog({
           htmlFor="expense-date"
           hint={t("roadtrips:costs.dialog.dateHint")}
         >
-          <Input
+          <DateField
             id="expense-date"
-            type="date"
             value={draft.date}
             onChange={(e) => set("date", e.target.value)}
           />

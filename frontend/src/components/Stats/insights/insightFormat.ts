@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useDisplayFormat } from "../../../lib/displayFormat";
-import { formatDuration } from "../../../lib/formatters";
+import { useDisplayFormat } from "../../../lib/format";
+import { formatDuration } from "../../../lib/format";
 import { localeForLanguage } from "../../../lib/units";
 
 export interface InsightFormat {

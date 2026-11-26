@@ -1,3 +1,4 @@
+import { formatKm, formatNumber } from "../../lib/format";
 import type { JSX, ReactNode } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
@@ -33,10 +34,6 @@ interface Props {
   actions?: ReactNode;
 }
 
-function formatKm(value: number): string {
-  return value.toLocaleString("de-DE", { maximumFractionDigits: 0 });
-}
-
 /** One tour as a table row — the shape rail, bus and ferry rows have. */
 export function TourTableRow({ tour, columns, onOpen, actions }: Props): JSX.Element {
   const { t } = useTranslation(["trips", "roadtrips"]);
@@ -56,8 +53,8 @@ export function TourTableRow({ tour, columns, onOpen, actions }: Props): JSX.Ele
     ),
     // A tour with no trip says so, rather than showing a blank where every other row has a name.
     trip: <span className="text-(--text-muted)">{tour.tripName ?? t("trips:tours.noTrip")}</span>,
-    distance: `${formatKm(tour.distanceKm)} km`,
-    ascent: tour.ascentM !== null ? `↑ ${formatKm(tour.ascentM)} m` : "—",
+    distance: formatKm(tour.distanceKm),
+    ascent: tour.ascentM !== null ? `↑ ${formatNumber(tour.ascentM)} m` : "—",
     // The row opens the tour; a click on an action must not also reach it.
     // Keys too: Enter/Space on an action would bubble to the row's own handler and open the tour.
     actions: (

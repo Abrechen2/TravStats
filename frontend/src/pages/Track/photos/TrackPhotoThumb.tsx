@@ -7,7 +7,7 @@ import {
   type PhotoWindow,
   type TravTrackPhoto,
 } from "../../../lib/api/travtrackViews";
-import { formatTime } from "../../../lib/displayFormat";
+import { formatTime } from "../../../lib/format";
 import EnlargeButton from "../../../components/common/photoViewer/EnlargeButton";
 import { usePhotoViewer } from "../../../components/common/photoViewer/usePhotoViewer";
 import { sourceOf } from "../../../components/common/photoViewer/viewerPhoto";

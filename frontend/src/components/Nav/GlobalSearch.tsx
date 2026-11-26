@@ -10,7 +10,7 @@ import {
   type SearchDomain,
   type SearchHit,
 } from "../../lib/api/search";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { TOUR_COLOR, type DomainKey } from "../../shared/domains";
 import { Icon } from "../ui/Icon";
 import { useAuthStore } from "../../store/authStore";

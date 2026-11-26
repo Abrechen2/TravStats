@@ -11,17 +11,8 @@ import { FlagImg } from "../../../../lib/countryFlag";
 import { tokens } from "../../../../theme/tokens";
 import { useFerryRouteEditStore } from "../../../../store/ferryRouteEditStore";
 import { useBusRouteEditStore } from "../../../../store/busRouteEditStore";
-import {
-  Actions,
-  Grid,
-  Hero,
-  Row,
-  SubHeading,
-  formatDate,
-  formatDuration,
-  formatKm,
-  type TFn,
-} from "../cardChrome";
+import { Actions, Grid, Hero, Row, SubHeading, type TFn } from "../cardChrome";
+import { formatDate, formatDuration, formatKm } from "../../../../lib/format";
 import type { MapPinned } from "../pinnedTypes";
 import type {
   JourneyRouteCardDatum,
@@ -143,7 +134,9 @@ function DistanceRow({
 }: { stats: JourneyRouteStats } & BodyProps): JSX.Element | null {
   if (stats.travelled === 0) return null;
   const known =
-    stats.measuredCount > 0 ? formatKm(stats.knownKm, locale) : t("map:journey.distanceNone");
+    stats.measuredCount > 0
+      ? formatKm(stats.knownKm, { language: locale })
+      : t("map:journey.distanceNone");
   const unknown =
     stats.unknownCount > 0 ? t("map:journey.distanceUnknown", { count: stats.unknownCount }) : null;
   // What the figure measures — "Luftlinie", "Seeweg (Schätzung)" — as the
@@ -204,10 +197,7 @@ function LatestRows({
         <Row label={t("map:journey.fact.rentalDays")} value={String(j.facts.rentalDays)} />
       )}
       {latest.upcoming && j.facts.durationMin != null && (
-        <Row
-          label={t("map:journey.fact.duration")}
-          value={formatDuration(j.facts.durationMin, t)}
-        />
+        <Row label={t("map:journey.fact.duration")} value={formatDuration(j.facts.durationMin)} />
       )}
     </>
   );
@@ -371,9 +361,9 @@ export function TourBody({ data, locale, t }: { data: TourCardDatum } & BodyProp
   const navigate = useNavigate();
   const when =
     data.startDate && data.endDate && data.endDate !== data.startDate
-      ? `${formatDate(data.startDate, locale)} – ${formatDate(data.endDate, locale)}`
+      ? `${formatDate(data.startDate)} – ${formatDate(data.endDate)}`
       : data.startDate
-        ? formatDate(data.startDate, locale)
+        ? formatDate(data.startDate)
         : null;
   const path = data.kind === "roadtrip" ? `/roadtrips/${data.id}` : `/tours/${data.id}`;
   return (
@@ -384,7 +374,7 @@ export function TourBody({ data, locale, t }: { data: TourCardDatum } & BodyProp
       </SubHeading>
       <Hero color={rgbCss(data.color)}>
         {data.distanceKm !== null
-          ? formatKm(data.distanceKm, locale)
+          ? formatKm(data.distanceKm, { language: locale })
           : t("map:journey.distanceNone")}
       </Hero>
       <Grid>
@@ -411,16 +401,12 @@ export function TourBody({ data, locale, t }: { data: TourCardDatum } & BodyProp
 
 // ─── Trip stop ────────────────────────────────────────────────────
 
-export function TripStopBody({
-  data,
-  locale,
-  t,
-}: { data: TripStopCardDatum } & BodyProps): JSX.Element {
+export function TripStopBody({ data, t }: { data: TripStopCardDatum } & BodyProps): JSX.Element {
   const when =
     data.startDate && data.endDate && data.endDate !== data.startDate
-      ? `${formatDate(data.startDate, locale)} – ${formatDate(data.endDate, locale)}`
+      ? `${formatDate(data.startDate)} – ${formatDate(data.endDate)}`
       : data.startDate
-        ? formatDate(data.startDate, locale)
+        ? formatDate(data.startDate)
         : null;
   return (
     <Grid>

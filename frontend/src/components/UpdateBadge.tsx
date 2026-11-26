@@ -6,7 +6,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { useEscapeClose } from "../hooks/useEscapeClose";
 import { logger } from "../lib/logger";
-import { formatDate as formatUserDate } from "../lib/displayFormat";
+import { formatDate } from "../lib/format";
 
 const POLL_INTERVAL_MS = 30 * 60 * 1000;
 const DISMISS_KEY = "travstats.updateBadge.dismissedVersion";
@@ -35,13 +35,8 @@ function truncateNotes(notes: string): string {
   return (lastBreak > NOTES_PREVIEW_LIMIT / 2 ? cut.slice(0, lastBreak) : cut) + "…";
 }
 
-function formatDate(iso: string | null, _locale: string): string {
-  if (!iso) return "";
-  return formatUserDate(iso) || iso;
-}
-
 export default function UpdateBadge(): JSX.Element | null {
-  const { t, i18n } = useTranslation("common");
+  const { t } = useTranslation("common");
   const [info, setInfo] = useState<VersionInfo | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [dismissedVersion, setDismissedVersion] = useState<string | null>(readDismissedVersion);
@@ -139,7 +134,7 @@ export default function UpdateBadge(): JSX.Element | null {
                 {info.publishedAt && (
                   <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
                     {t("update.publishedAt", {
-                      date: formatDate(info.publishedAt, i18n.language),
+                      date: info.publishedAt ? formatDate(info.publishedAt) : "",
                     })}
                   </div>
                 )}

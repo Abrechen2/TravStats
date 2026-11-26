@@ -10,7 +10,7 @@ import { dataQualityFlagsApi } from "../../lib/api/dataQualityFlags";
 vi.mock("../../lib/api/dataQualityFlags", () => ({
   dataQualityFlagsApi: { resolve: vi.fn(), dismiss: vi.fn(), run: vi.fn() },
 }));
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { chooseMenuEntry } from "../helpers/menu";
 
 /**

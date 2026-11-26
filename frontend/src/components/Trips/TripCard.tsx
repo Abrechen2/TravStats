@@ -6,7 +6,7 @@ import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { tripEntryCounts, tripEntryTotal } from "../../lib/tripEntryCount";
 import { useTranslation } from "../../hooks/useTranslation";
 import { tripCostTotals } from "../../lib/tripCost";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatKm, formatLocalDate } from "../../lib/format";
 import { flightArrival, flightDeparture, tripEnd, tripStart } from "../../lib/entityTimes";
 import { dayOf } from "../../shared/time";
 import { statusPillStyle } from "../table/statusPillStyle";
@@ -198,7 +198,7 @@ export default function TripCard({ trip, onOpen, placeCount = 0 }: TripCardProps
         )}
         <p className="t-caption flex flex-wrap gap-x-3" style={mono}>
           <span>
-            <span style={figure}>{distanceKm > 0 ? formatDistance(distanceKm) : "—"}</span> km
+            <span style={figure}>{distanceKm > 0 ? formatKm(distanceKm) : "—"}</span>
           </span>
           <span style={figure}>
             {/* A visible floor, not only a tooltip: the web is drawn for iPads,
@@ -276,9 +276,4 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
-}
-
-function formatDistance(km: number): string {
-  if (km >= 1000) return `${(km / 1000).toFixed(1)}k`;
-  return String(km);
 }

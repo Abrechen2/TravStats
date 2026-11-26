@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import { adminApi } from "../../lib/api";
 import { formatBytes } from "../../lib/fileSize";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import {
   LOG_LEVELS,

@@ -1,8 +1,9 @@
+import DateField from "../../components/ui/DateField";
 import { useCallback, useEffect, useState, type JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { JobLostError, jobErrorCode, waitForJob } from "../../lib/api/jobs";
 import { errorText, scanFailureReason } from "../MailIntake/mailIntakeCopy";
 import {
@@ -245,9 +246,9 @@ export default function MailboxScanSection(): JSX.Element | null {
           <>
             <label>
               <span className="label">{t("mailIntake:scan.since")}</span>
-              <input
+              <DateField
+                inline
                 className="input"
-                type="date"
                 value={since}
                 disabled={busy}
                 onChange={(e) => setSince(e.target.value)}
@@ -255,9 +256,9 @@ export default function MailboxScanSection(): JSX.Element | null {
             </label>
             <label>
               <span className="label">{t("mailIntake:scan.before")}</span>
-              <input
+              <DateField
+                inline
                 className="input"
-                type="date"
                 value={until}
                 disabled={busy}
                 onChange={(e) => setUntil(e.target.value)}

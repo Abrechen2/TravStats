@@ -1,8 +1,9 @@
+import DateField from "../../components/ui/DateField";
 import { useEffect, useMemo, useState } from "react";
 
 import Modal from "../Modal";
 import Button from "../ui/Button";
-import { Field, Input, Select, TextArea } from "../ui/Field";
+import { Field, Select, TextArea } from "../ui/Field";
 import { useTranslation } from "../../hooks/useTranslation";
 import { passportOverridesApi } from "../../lib/api/passportOverrides";
 import { logger } from "../../lib/logger";
@@ -254,12 +255,7 @@ export default function CountryOverrideDialog({
           htmlFor="override-day"
           hint={t("passport:overrides.dayHint")}
         >
-          <Input
-            id="override-day"
-            type="date"
-            value={day}
-            onChange={(e) => setDay(e.target.value)}
-          />
+          <DateField id="override-day" value={day} onChange={(e) => setDay(e.target.value)} />
         </Field>
 
         {error && (

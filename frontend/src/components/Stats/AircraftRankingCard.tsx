@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { useTranslation } from "../../hooks/useTranslation";
 import CountingHelp from "./counting/CountingHelp";
 import type { AircraftRankingResponse } from "../../types/aircraft";

@@ -1,8 +1,8 @@
+import DateRangeField from "../../components/ui/DateRangeField";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import Dialog from "../../components/ui/Dialog";
 import Button from "../../components/ui/Button";
-import { Field, Input } from "../../components/ui/Field";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { trackErrorKey, travTrackApi } from "../../lib/api/travtrack";
@@ -100,24 +100,16 @@ export default function TrackDeleteDialog({
     >
       <div className="flex flex-col gap-3">
         <p className="t-caption">{t("track:delete.intro")}</p>
-        <div className="flex flex-wrap gap-3">
-          <Field label={t("track:delete.from")} htmlFor="track-delete-from">
-            <Input
-              id="track-delete-from"
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-          </Field>
-          <Field label={t("track:delete.to")} htmlFor="track-delete-to">
-            <Input
-              id="track-delete-to"
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-            />
-          </Field>
-        </div>
+        <DateRangeField
+          fromLabel={t("track:delete.from")}
+          toLabel={t("track:delete.to")}
+          from={from}
+          to={to}
+          onChange={(range) => {
+            setFrom(range.from);
+            setTo(range.to);
+          }}
+        />
         <p className="t-body" role="status" data-testid="track-delete-preview">
           {preview.kind === "counting"
             ? t("track:delete.counting")

@@ -97,7 +97,7 @@ describe("CruiseEditModal — entry suggestions", () => {
       await userEvent.click(add);
       await userEvent.click(add);
 
-      await waitFor(() => expect(stopDates()).toEqual(["2026-07-01", "2026-07-02"]));
+      await waitFor(() => expect(stopDates()).toEqual(["01.07.2026", "02.07.2026"]));
 
       const payload = await savedPayload();
       expect(payload.stops?.map((s) => s.date)).toEqual(["2026-07-01", "2026-07-02"]);
@@ -118,7 +118,7 @@ describe("CruiseEditModal — entry suggestions", () => {
 
       fireEvent.change(start, { target: { value: "2026-08-01" } });
 
-      await waitFor(() => expect(stopDates()).toEqual(["2026-08-01", "2026-07-05"]));
+      await waitFor(() => expect(stopDates()).toEqual(["01.08.2026", "2026-07-05"]));
     });
 
     it("fills an undated stop of an existing cruise without touching a dated one", async () => {
@@ -143,7 +143,7 @@ describe("CruiseEditModal — entry suggestions", () => {
       } as unknown as Cruise;
       render(<CruiseEditModal mode="edit" cruise={cruise} onClose={vi.fn()} onSaved={vi.fn()} />);
 
-      await waitFor(() => expect(stopDates()).toEqual(["2026-01-01", "2026-01-09"]));
+      await waitFor(() => expect(stopDates()).toEqual(["01.01.2026", "09.01.2026"]));
     });
   });
 
@@ -162,7 +162,7 @@ describe("CruiseEditModal — entry suggestions", () => {
       await userEvent.click(add);
       await userEvent.click(add);
 
-      await waitFor(() => expect(endInput().value).toBe("2026-07-03"));
+      await waitFor(() => expect(endInput().value).toBe("03.07.2026"));
     });
 
     it("stops following once the user edits it", async () => {
@@ -173,7 +173,7 @@ describe("CruiseEditModal — entry suggestions", () => {
       const add = screen.getByText(/stops\.add/, { selector: "button" });
       await userEvent.click(add);
       await userEvent.click(add);
-      await waitFor(() => expect(endInput().value).toBe("2026-07-02"));
+      await waitFor(() => expect(endInput().value).toBe("02.07.2026"));
 
       fireEvent.change(endInput(), { target: { value: "2026-07-10" } });
       await userEvent.click(add);
@@ -195,8 +195,8 @@ describe("CruiseEditModal — entry suggestions", () => {
       } as unknown as Cruise;
       render(<CruiseEditModal mode="edit" cruise={cruise} onClose={vi.fn()} onSaved={vi.fn()} />);
 
-      await waitFor(() => expect(stopDates()).toEqual(["2026-01-08"]));
-      expect(endInput().value).toBe("2026-01-20");
+      await waitFor(() => expect(stopDates()).toEqual(["08.01.2026"]));
+      expect(endInput().value).toBe("20.01.2026");
     });
   });
 

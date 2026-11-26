@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useState } from "react";
 import type { CSSProperties, JSX } from "react";
 
@@ -6,7 +7,7 @@ import { Field, Input, Select } from "../ui/Field";
 import { RequiredLegend, RequiredMark } from "../form";
 import { LocationInput } from "../location/LocationInput";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { endsBeforeStart, nextMorning } from "../../lib/roadtrip/roadtripView";
 import type { StationState } from "../../shared/tour/roadtrip";
 import StationMarker from "./StationMarker";
@@ -327,9 +328,8 @@ export default function StationEditCard({
             label={kind === "pass" ? t("roadtrips:editor.date") : t("roadtrips:editor.arrival")}
             htmlFor={`${idBase}-start`}
           >
-            <Input
+            <DateField
               id={`${idBase}-start`}
-              type="date"
               value={arrival}
               onChange={(e) => onChange({ startDate: e.target.value || null })}
             />
@@ -342,9 +342,8 @@ export default function StationEditCard({
               // holds the save and says why here, at the field (forgejo#246).
               error={backwards ? t("roadtrips:editor.errors.endBeforeStart") : undefined}
             >
-              <Input
+              <DateField
                 id={`${idBase}-end`}
-                type="date"
                 value={departure}
                 min={arrival || undefined}
                 invalid={backwards || (arrival !== "" && departure === "")}

@@ -5,7 +5,7 @@ import { resolveAirlineDisplay, resolveAirlineIata } from "../lib/airlineUtils";
 import AirlineLogo from "./AirlineLogo";
 import SpecialTypeBadge from "./specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "./specialFlights/specialTypeMeta";
-import { formatLocalClock } from "../lib/displayFormat";
+import { formatLocalClock } from "../lib/format";
 import { flightDeparture } from "../lib/entityTimes";
 import { todayZoneNow } from "../hooks/useTodayZone";
 import {

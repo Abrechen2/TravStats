@@ -6,7 +6,7 @@ import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
 import CountingHelp from "../counting/CountingHelp";
 import type { CountingEntry } from "../counting/countingEntry";
-import { formatDate as formatUserDate } from "../../../lib/displayFormat";
+import { formatDate } from "../../../lib/format";
 import { formatLatitude } from "../../../lib/hemisphere";
 
 interface Props {
@@ -16,8 +16,6 @@ interface Props {
   /** The period the tab shows — the population each card's evidence lists. */
   scope: EvidenceScopeParams;
 }
-
-const formatDate = (iso: string | Date, _locale: string): string => formatUserDate(iso);
 
 /**
  * The figures that are fun rather than useful — the places counterpart to the
@@ -29,12 +27,7 @@ const formatDate = (iso: string | Date, _locale: string): string => formatUserDa
  * computed is not rendered, rather than rendered with an em dash — an absent
  * card reads as "not yet", a dashed one reads as "broken".
  */
-export default function PoiFunSection({
-  detail,
-  accent,
-  locale,
-  scope,
-}: Props): JSX.Element | null {
+export default function PoiFunSection({ detail, accent, scope }: Props): JSX.Element | null {
   const { t } = useTranslation(["places", "common"]);
 
   const favourite = detail.mostVisited[0];
@@ -52,7 +45,7 @@ export default function PoiFunSection({
         valueSize="sm"
         title={t("places:stats.fun.firstVisit")}
         value={detail.firstVisit.name}
-        description={formatDate(detail.firstVisit.at, locale)}
+        description={formatDate(detail.firstVisit.at)}
         // A name is on the card, not a number: nothing to recompute against.
         evidence={{ kind: "metric", key: "placeFirstVisit", scope, renderedValue: null }}
       />

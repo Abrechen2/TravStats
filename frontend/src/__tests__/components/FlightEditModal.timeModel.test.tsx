@@ -127,7 +127,7 @@ describe("FlightEditModal — time model", () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(<FlightEditModal flight={flight} isOpen onClose={vi.fn()} onSave={onSave} />);
     await lookupsDone();
-    const time = document.querySelector('input[type="time"]') as HTMLInputElement;
+    const time = document.querySelector('input[data-field-kind="time"]') as HTMLInputElement;
     fireEvent.change(time, { target: { value: "07:15" } });
     fireEvent.click(screen.getByText("Änderungen speichern"));
     expect(await screen.findByText(/keine Zeitzone bekannt/)).toBeInTheDocument();

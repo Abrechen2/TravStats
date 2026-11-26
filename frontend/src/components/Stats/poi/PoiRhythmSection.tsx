@@ -1,3 +1,4 @@
+import { formatDayLabel } from "../../../lib/format";
 import type { JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -126,12 +127,11 @@ export default function PoiRhythmSection({
           description={
             detail.busiestDay
               ? t("places:stats.rhythm.busiestDayDesc", {
-                  date: new Date(`${detail.busiestDay.date}T00:00:00Z`).toLocaleDateString(locale, {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    timeZone: "UTC",
-                  }),
+                  date: formatDayLabel(
+                    detail.busiestDay.date,
+                    { year: "numeric", month: "long", day: "numeric" },
+                    locale
+                  ),
                 })
               : t("places:stats.noVisitsYet")
           }

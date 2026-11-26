@@ -1,3 +1,4 @@
+import DateField from "../../../components/ui/DateField";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { RequiredMark } from "../requiredFields";
 import CopyActionButton from "../CopyActionButton";
@@ -260,9 +261,9 @@ export default function TimesFields({
               />
             )}
           </div>
-          <input
+          <DateField
+            inline
             id={depDateId}
-            type="date"
             className="input"
             aria-required={markRequired || undefined}
             {...fieldErrorProps(depDateId, errors?.depDate)}
@@ -285,9 +286,10 @@ export default function TimesFields({
               />
             )}
           </div>
-          <input
+          <DateField
+            inline
             id={depTimeId}
-            type="time"
+            kind="time"
             className="input"
             aria-required={markRequired || undefined}
             {...fieldErrorProps(depTimeId, errors?.depTime)}
@@ -332,9 +334,9 @@ export default function TimesFields({
               onClick={handleCopyDepartureDate}
             />
           </div>
-          <input
+          <DateField
+            inline
             id={arrDateId}
-            type="date"
             className="input"
             aria-required={markRequired || undefined}
             {...fieldErrorProps(arrDateId, errors?.arrDate)}
@@ -376,9 +378,10 @@ export default function TimesFields({
               />
             )}
           </div>
-          <input
+          <DateField
+            inline
             id={arrTimeId}
-            type="time"
+            kind="time"
             className="input"
             aria-required={markRequired || undefined}
             {...fieldErrorProps(arrTimeId, errors?.arrTime)}
@@ -425,9 +428,9 @@ export default function TimesFields({
               <label className="label" htmlFor={actualDepDateId}>
                 {t("flights:actualTimes.actualDepartureDate")}
               </label>
-              <input
+              <DateField
+                inline
                 id={actualDepDateId}
-                type="date"
                 className="input"
                 {...fieldErrorProps(actualDepDateId, errors?.actualDepDate)}
                 value={actualValue.actualDepDate}
@@ -439,9 +442,10 @@ export default function TimesFields({
               <label className="label" htmlFor={actualDepTimeId}>
                 {t("flights:actualTimes.actualDepartureTime")}
               </label>
-              <input
+              <DateField
+                inline
                 id={actualDepTimeId}
-                type="time"
+                kind="time"
                 className="input"
                 {...fieldErrorProps(actualDepTimeId, errors?.actualDepTime)}
                 value={actualValue.actualDepTime}
@@ -453,9 +457,9 @@ export default function TimesFields({
               <label className="label" htmlFor={actualArrDateId}>
                 {t("flights:actualTimes.actualArrivalDate")}
               </label>
-              <input
+              <DateField
+                inline
                 id={actualArrDateId}
-                type="date"
                 className="input"
                 {...fieldErrorProps(actualArrDateId, errors?.actualArrDate)}
                 value={actualValue.actualArrDate}
@@ -467,9 +471,10 @@ export default function TimesFields({
               <label className="label" htmlFor={actualArrTimeId}>
                 {t("flights:actualTimes.actualArrivalTime")}
               </label>
-              <input
+              <DateField
+                inline
                 id={actualArrTimeId}
-                type="time"
+                kind="time"
                 className="input"
                 {...fieldErrorProps(actualArrTimeId, errors?.actualArrTime)}
                 value={actualValue.actualArrTime}

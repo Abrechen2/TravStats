@@ -21,7 +21,7 @@ import {
 import type { ImportBatchSummary, ImportBatchItems } from "../../lib/api/importBatches";
 import { DOMAINS } from "../../shared/domains";
 import { useDomainColors } from "../../hooks/useDomainColors";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 
 interface Props {
   /** Runs after a successful revert so a surrounding page (list + stats) can refresh too. */

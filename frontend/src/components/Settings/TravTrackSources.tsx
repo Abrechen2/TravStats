@@ -5,7 +5,7 @@ import { Field, Input, Select } from "../ui/Field";
 import { token } from "../ui/tokens";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
-import { formatDateTime } from "../../lib/displayFormat";
+import { formatDateTime } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import {
   sourcesErrorKey,

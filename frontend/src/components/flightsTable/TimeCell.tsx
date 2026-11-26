@@ -8,7 +8,7 @@ import {
   flightDeparture,
 } from "../../lib/entityTimes";
 import { clockOf, readsAsUtc, type TimeValue } from "../../shared/time";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import Toggletip from "../ui/Toggletip";
 
 type DelayState = "late" | "early" | "onTime";

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { formatDateTimeWith, formatDateWith, formatTimeWith } from "../displayFormat";
+import { formatDateTimeWith, formatDateWith, formatTimeWith } from "../format";
 
 /**
  * The user's date and time format, as a truth table. Before this module the
@@ -9,7 +9,7 @@ import { formatDateTimeWith, formatDateWith, formatTimeWith } from "../displayFo
  */
 const AT = "2026-10-02T12:05:00Z";
 
-describe("displayFormat", () => {
+describe("format", () => {
   it.each([
     ["DD.MM.YYYY", "02.10.2026"],
     ["MM/DD/YYYY", "10/02/2026"],

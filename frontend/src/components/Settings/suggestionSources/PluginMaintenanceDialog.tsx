@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import Modal from "../../Modal";
 import Button from "../../ui/Button";
 import { Switch } from "../../ui/Field";

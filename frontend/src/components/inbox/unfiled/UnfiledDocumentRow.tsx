@@ -3,7 +3,7 @@ import { useEffect, useRef, type JSX } from "react";
 import OverflowMenu, { type OverflowEntry } from "../../ui/OverflowMenu";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { UnfiledDocument } from "../../../lib/api/documents";
-import { formatDate } from "../../../lib/displayFormat";
+import { formatDate } from "../../../lib/format";
 import { formatBytes } from "../../../lib/fileSize";
 
 interface Props {

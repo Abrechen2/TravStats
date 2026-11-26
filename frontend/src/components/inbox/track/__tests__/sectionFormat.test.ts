@@ -1,13 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  dayBarFor,
-  formatDuration,
-  formatKm,
-  formatSpan,
-  formatSpeed,
-  linkDays,
-  zoneOrUtc,
-} from "../sectionFormat";
+import { dayBarFor, formatSpan, formatSpeed, linkDays, zoneOrUtc } from "../sectionFormat";
 
 /** The section in words, on the question's own clock — never the browser's. */
 
@@ -77,19 +69,8 @@ describe("sectionFormat", () => {
     expect(zoneOrUtc("Europe/Berlin")).toBe("Europe/Berlin");
   });
 
-  it("durations in minutes, hours, then days", () => {
-    expect(formatDuration(45 * 60_000, t)).toBe(`track:inbox.value.minutes {"m":45}`);
-    expect(formatDuration(18 * 3_600_000 + 40 * 60_000, t)).toBe(
-      `track:inbox.value.hours {"h":18,"m":40}`
-    );
-    expect(formatDuration(76 * 3_600_000, t)).toBe(`track:inbox.value.daysHours {"d":3,"h":4}`);
-  });
-
-  it("abstains: no distance and no speed read —", () => {
-    expect(formatKm(null, "de", t)).toBe("track:inbox.value.none");
+  it("abstains: no speed reads —", () => {
     expect(formatSpeed(null, null, "de", t)).toBe("track:inbox.value.none");
-    expect(formatKm(12_340, "de", t)).toBe(`track:inbox.value.km {"km":"12"}`);
-    expect(formatKm(1_234, "de", t)).toBe(`track:inbox.value.km {"km":"1,2"}`);
   });
 
   it("the day bar marks a same-day window and stays away from a multi-day one", () => {

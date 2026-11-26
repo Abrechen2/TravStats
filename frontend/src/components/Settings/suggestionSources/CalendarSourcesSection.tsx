@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import { useIsDemoAccount } from "../../../hooks/useIsDemoAccount";
 import Button from "../../ui/Button";
 import { Switch } from "../../ui/Field";

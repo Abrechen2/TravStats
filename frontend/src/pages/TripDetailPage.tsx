@@ -2,7 +2,7 @@ import { useVisibleTrip } from "../hooks/useVisibleTrip";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { tripsApi } from "../lib/api";
-import { formatLocalDate, formatTimeValueShown } from "../lib/displayFormat";
+import { formatLocalDate, formatTimeValueShown } from "../lib/format";
 import { cruiseStart, flightDeparture, tripStart } from "../lib/entityTimes";
 import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";

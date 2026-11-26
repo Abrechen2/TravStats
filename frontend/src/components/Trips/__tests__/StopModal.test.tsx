@@ -281,7 +281,7 @@ describe("StopModal", () => {
 
     expect(
       (screen.getByLabelText("trips:stopModal.startDateLabel") as HTMLInputElement).value
-    ).toBe("2026-05-01");
+    ).toBe("01.05.2026");
     expect(
       (screen.getByLabelText("trips:stopModal.startTimeLabel") as HTMLInputElement).value
     ).toBe("09:15");

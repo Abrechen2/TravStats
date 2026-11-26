@@ -5,7 +5,7 @@ import { InlineStats } from "./InlineStats";
 import { useFlightSelectionStore } from "../../store/flightSelectionStore";
 import SpecialTypeBadge from "../specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "../specialFlights/specialTypeMeta";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { useTranslation } from "../../hooks/useTranslation";
 

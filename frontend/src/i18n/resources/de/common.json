@@ -586,5 +586,31 @@
       "rentals_one": "{{count}} Miete",
       "rentals_other": "{{count}} Mieten"
     }
+  },
+  "dateField": {
+    "from": "Von",
+    "to": "Bis",
+    "quickPicks": "Schnellauswahl",
+    "today": "Heute",
+    "last7": "7 Tage",
+    "thisYear": "Dieses Jahr",
+    "open": "Kalender öffnen",
+    "calendar": "Kalender",
+    "prevMonth": "Voriger Monat",
+    "nextMonth": "Nächster Monat",
+    "year": "Jahr",
+    "time": "Uhrzeit",
+    "invalidDate": "Kein gültiges Datum",
+    "invalidTime": "Keine gültige Uhrzeit",
+    "placeholder": {
+      "dmy": "TT.MM.JJJJ",
+      "mdy": "MM/TT/JJJJ",
+      "ymd": "JJJJ-MM-TT",
+      "month_dmy": "MM.JJJJ",
+      "month_mdy": "MM/JJJJ",
+      "month_ymd": "JJJJ-MM",
+      "clock24": "HH:MM",
+      "clock12": "h:MM AM"
+    }
   }
 }

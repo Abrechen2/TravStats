@@ -13,8 +13,8 @@ vi.mock("../../../hooks/useTranslation", () => ({
     i18n: undefined,
   }),
 }));
-vi.mock("../../../lib/displayFormat", async (importActual) => ({
-  ...(await importActual<typeof import("../../../lib/displayFormat")>()),
+vi.mock("../../../lib/format", async (importActual) => ({
+  ...(await importActual<typeof import("../../../lib/format")>()),
   useDisplayFormat: () => ({ dateTime: (iso: string) => `at(${iso})` }),
 }));
 

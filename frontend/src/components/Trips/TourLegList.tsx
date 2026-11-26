@@ -1,3 +1,4 @@
+import { formatKm } from "../../lib/format";
 import { useTranslation } from "../../hooks/useTranslation";
 import { isRoutableLegMode, type LegSource, type TourLeg } from "../../types/tour";
 
@@ -63,10 +64,6 @@ interface Props {
   /** Disables the "route the whole section" button while a batch request
    *  is in flight, and swaps its label to a busy state. */
   routingAllInProgress?: boolean;
-}
-
-function formatKm(value: number): string {
-  return value.toLocaleString("de-DE", { maximumFractionDigits: 0 });
 }
 
 /**
@@ -173,7 +170,7 @@ export default function TourLegList({
               <span className="rounded-sm bg-(--bg-surface) px-1.5 py-0.5 text-xs">
                 {t(`trips:tours.mode.${leg.mode}`)}
               </span>
-              <span className="text-(--text-muted)">{formatKm(leg.distanceKm)} km</span>
+              <span className="text-(--text-muted)">{formatKm(leg.distanceKm)}</span>
               <select
                 value={leg.source}
                 disabled={enabledCount < 2}

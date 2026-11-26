@@ -4,7 +4,7 @@ import {
   formatLocalClockWith,
   formatLocalDateWith,
   formatTimeValueWith,
-} from "../displayFormat";
+} from "../format";
 import { useProfileZoneStore } from "../../store/profileZoneStore";
 import { useSettingsStore } from "../../store/settingsStore";
 import { yourTimeText } from "../yourTime";

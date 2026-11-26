@@ -109,7 +109,7 @@ vi.mock("react-i18next", () => ({
 vi.mock("../store/settingsStore", async () => {
   const actual = await vi.importActual("../store/settingsStore");
   // One date and clock format for the whole suite, so an assertion on a date
-  // does not depend on the machine's locale (lib/displayFormat.ts).
+  // does not depend on the machine's locale (lib/format.ts).
   const defaultState = {
     display: { language: "en", dateFormat: "DD.MM.YYYY", timeFormat: "24h" },
     units: { currency: "EUR", distanceUnit: "kilometers" },

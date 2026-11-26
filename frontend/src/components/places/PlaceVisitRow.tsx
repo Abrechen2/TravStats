@@ -7,7 +7,7 @@ import DocumentsSection from "../documents/DocumentsSection";
 import { RowActionButton, RowActions } from "../table/RowActionButton";
 import { statusPillStyle } from "../table/statusPillStyle";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import type { PlaceVisit } from "../../types/place";
 import type { VisitEntry } from "./placeVisitListModel";
 import { VisitExpenses } from "./VisitExpenses";

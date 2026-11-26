@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import type { CruiseStopInput } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatLocalClock, formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalClock, formatLocalDate } from "../../lib/format";
 
 /** The port's wall clock of a stop time (`YYYY-MM-DDTHH:mm…`), or null. */
 function clock(value: string | null | undefined): string | null {

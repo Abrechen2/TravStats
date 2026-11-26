@@ -1,7 +1,8 @@
+import DateField from "../../components/ui/DateField";
 import type { JSX } from "react";
 import { Fragment } from "react";
 import type { LodgingCurrency } from "../../types/lodging";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import {
   INPUT,
   currencyOptionGroups,
@@ -61,8 +62,8 @@ export function PreviewRowLine({ row, onChange, t, language }: PreviewRowLinePro
     skipped ? (
       <ReadOnly testId={testId} value={dayText(row.stay?.[field])} />
     ) : (
-      <input
-        type="date"
+      <DateField
+        inline
         data-testid={testId}
         value={row.stay?.[field] ?? ""}
         onChange={(e): void =>

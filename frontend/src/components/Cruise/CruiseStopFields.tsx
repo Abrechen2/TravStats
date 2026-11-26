@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import type { JSX } from "react";
 import type { CruiseStopInput, Port } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -63,9 +64,9 @@ export function CruiseStopFields({
     <div className="flex flex-col gap-2">
       <label className={LABEL_CLASS}>
         {t("stops.date")}
-        <input
+        <DateField
+          inline
           id={`${idBase}-date`}
-          type="date"
           value={stop.date?.slice(0, 10) ?? ""}
           onChange={(e): void =>
             onPatch({ date: fromDateInput(e.target.value), dateSource: "user" })
@@ -135,9 +136,10 @@ export function CruiseStopFields({
             <div>
               <label className={LABEL_CLASS}>
                 {t("stops.arrival")}
-                <input
+                <DateField
+                  inline
                   id={`${idBase}-arrival`}
-                  type="datetime-local"
+                  kind="datetime-local"
                   value={stop.arrivalTime?.slice(0, 16) ?? ""}
                   onChange={(e): void =>
                     onPatch({
@@ -158,9 +160,10 @@ export function CruiseStopFields({
             <div>
               <label className={LABEL_CLASS}>
                 {t("stops.departure")}
-                <input
+                <DateField
+                  inline
                   id={`${idBase}-departure`}
-                  type="datetime-local"
+                  kind="datetime-local"
                   value={stop.departureTime?.slice(0, 16) ?? ""}
                   onChange={(e): void =>
                     onPatch({
@@ -185,9 +188,10 @@ export function CruiseStopFields({
           <div className="flex flex-col gap-1">
             <label className={LABEL_CLASS}>
               {t("stops.allAboard")}
-              <input
+              <DateField
+                inline
                 id={`${idBase}-all-aboard`}
-                type="time"
+                kind="time"
                 value={stop.allAboardTime ?? ""}
                 onChange={(e): void => onPatch({ allAboardTime: e.target.value || null })}
                 aria-describedby={`${idBase}-all-aboard-hint`}

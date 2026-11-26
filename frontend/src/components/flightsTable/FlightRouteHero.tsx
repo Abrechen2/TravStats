@@ -2,7 +2,7 @@ import type { JSX } from "react";
 import type { Flight } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { getFlightDuration } from "../../lib/flightDuration";
-import { formatDurationWithEstimate } from "../../lib/formatters";
+import { formatDurationWithEstimate } from "../../lib/format";
 import { Icon } from "../ui/Icon";
 import YourTimeHint from "../time/YourTimeHint";
 import {
@@ -11,7 +11,7 @@ import {
   flightArrival,
   flightDeparture,
 } from "../../lib/entityTimes";
-import { formatLocalClock } from "../../lib/displayFormat";
+import { formatLocalClock } from "../../lib/format";
 import { clockOf, readsAsUtc, type TimeValue } from "../../shared/time";
 
 /** HH:MM on the airport's clock — the server's `local` — "UTC" where it has no zone. */

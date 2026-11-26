@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import type { JSX } from "react";
 import { ClockChangeNotice } from "../common/ClockChangeNotice";
 import { FieldError, RequiredMark, fieldErrorProps } from "../form";
@@ -66,9 +67,10 @@ export function BusTimeField({
             <RequiredMark />
           </>
         )}
-        <input
+        <DateField
+          inline
           id={id}
-          type={dayOnly ? "date" : "datetime-local"}
+          kind={dayOnly ? "date" : "datetime-local"}
           className={`mt-1 ${inputClassName}`}
           style={DARK_PICKER_STYLE}
           {...(required ? { "aria-required": true } : {})}

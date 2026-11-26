@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import EntryPhotos from "../common/EntryPhotos";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatLocalClock, formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalClock, formatLocalDate } from "../../lib/format";
 import { documentFileUrl } from "../../lib/api/documents";
 import type { EffectiveTimelineEntry } from "./cruisePorts";
 import { documentsOfDay, portStay } from "./cruiseDayCardModel";

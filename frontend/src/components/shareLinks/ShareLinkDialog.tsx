@@ -3,7 +3,7 @@ import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { shareLinksApi } from "../../lib/api/shareLinks";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import {

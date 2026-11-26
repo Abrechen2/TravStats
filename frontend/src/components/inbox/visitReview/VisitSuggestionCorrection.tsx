@@ -1,3 +1,4 @@
+import DateField from "../../../components/ui/DateField";
 import { useId, type JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -86,9 +87,9 @@ export default function VisitSuggestionCorrection({
 
       {journey.startLocal ? (
         <Field label={t(key("time"))} htmlFor={id("time")} hint={t(key("timeHint"))}>
-          <Input
+          <DateField
             id={id("time")}
-            type="datetime-local"
+            kind="datetime-local"
             value={local}
             onChange={(event) => onChange({ ...correction, local: event.target.value })}
           />

@@ -4,7 +4,7 @@ import Modal from "../Modal";
 import { tripsApi } from "../../lib/api/trips";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import { FormErrorBanner } from "../form";
 import { storeFlights } from "./cruiseImportFlights";
 import type { FlightGapItem } from "./cruiseImportFlights";

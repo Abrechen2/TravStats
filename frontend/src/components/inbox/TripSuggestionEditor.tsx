@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useState } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
@@ -95,8 +96,8 @@ export default function TripSuggestionEditor({
       {isVisit ? (
         <label className="flex flex-col gap-1 text-sm">
           <span className="t-caption">{t(`${NS}.edit.visitDay`)}</span>
-          <input
-            type="date"
+          <DateField
+            inline
             value={visitDay}
             onChange={(e) => setVisitDay(e.target.value)}
             className="rounded-md border px-3 py-2"
@@ -107,8 +108,8 @@ export default function TripSuggestionEditor({
         <div className="flex flex-wrap gap-3">
           <label className="flex flex-col gap-1 text-sm">
             <span className="t-caption">{t(`${NS}.edit.start`)}</span>
-            <input
-              type="date"
+            <DateField
+              inline
               value={startDay}
               onChange={(e) => setStartDay(e.target.value)}
               className="rounded-md border px-3 py-2"
@@ -117,8 +118,8 @@ export default function TripSuggestionEditor({
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="t-caption">{t(`${NS}.edit.end`)}</span>
-            <input
-              type="date"
+            <DateField
+              inline
               value={endDay}
               onChange={(e) => setEndDay(e.target.value)}
               className="rounded-md border px-3 py-2"

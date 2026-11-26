@@ -8,7 +8,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import { countUniquePorts, countUnresolvedPorts } from "./cruisePorts";
 import { formatAmount } from "../../lib/units";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { cruiseEnd, cruiseStart } from "../../lib/entityTimes";
 import { TableRow, type TableColumn } from "../ui/Table";
 import Toggletip from "../ui/Toggletip";

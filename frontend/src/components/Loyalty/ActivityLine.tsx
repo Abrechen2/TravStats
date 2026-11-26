@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import type { LoyaltyDomain } from "../../shared/domains";
 import type { MembershipActivity } from "../../types/loyalty";
 import { loyaltyListLink } from "./LoyaltyListFilter";

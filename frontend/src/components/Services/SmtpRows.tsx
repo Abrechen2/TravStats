@@ -3,7 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi } from "../../lib/api";
 import { ActionControl, ConfirmDialog, ErrorLine, SettingItem, StatusValue } from "../ui/settings";
 import type { AdminService } from "../../lib/api/externalServices";
-import { formatDateTime } from "../../lib/displayFormat";
+import { formatDateTime } from "../../lib/format";
 import { useExpertRows } from "../Settings/frame/useExpertRows";
 import FieldsGroup from "./FieldsGroup";
 import { useServices } from "./servicesContext";

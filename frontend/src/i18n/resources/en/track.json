@@ -687,10 +687,6 @@
       "days": "{{fromDay}} {{from}} – {{untilDay}} {{until}}",
       "wholeDay": "{{day}}, whole day",
       "wholeDays": "{{fromDay}} – {{untilDay}}",
-      "minutes": "{{m}} min",
-      "hours": "{{h}} h {{m}} min",
-      "daysHours": "{{d}} d {{h}} h",
-      "km": "{{km}} km",
       "speed": "avg {{avg}}, max {{max}} km/h",
       "speedAvg": "avg {{avg}} km/h"
     },

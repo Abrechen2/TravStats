@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatDateTime } from "../../lib/displayFormat";
+import { formatDateTime } from "../../lib/format";
 import { dateLocaleForLanguage } from "../../lib/units";
 import type { ShareNotice } from "../../types/sharing";
 import ChangeDiffView, { type ChangeEntry } from "../ChangeDiffView";

@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { shareLinksApi } from "../../lib/api/shareLinks";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import type { ShareLink, ShareLinkList } from "../../types/shareLinks";

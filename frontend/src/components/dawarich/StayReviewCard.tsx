@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { dawarichStaysApi, type DawarichStay, type StayChoices } from "../../lib/api/dawarichStays";
@@ -356,9 +357,10 @@ export default function StayReviewCard({
           <p className="t-caption">{text("localTime")}</p>
           <label>
             {text("start")}
-            <input
+            <DateField
+              inline
               className="input"
-              type="datetime-local"
+              kind="datetime-local"
               required
               value={start}
               disabled={busy}
@@ -367,9 +369,10 @@ export default function StayReviewCard({
           </label>
           <label>
             {text("end")}
-            <input
+            <DateField
+              inline
               className="input"
-              type="datetime-local"
+              kind="datetime-local"
               required
               value={end}
               disabled={busy}

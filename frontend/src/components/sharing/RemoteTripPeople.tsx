@@ -4,7 +4,7 @@ import type { JSX } from "react";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useTranslation } from "../../hooks/useTranslation";
 import { sharingRemoteApi } from "../../lib/api/sharingRemote";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { useTripSharingStore } from "../../store/tripSharingStore";
 import type {

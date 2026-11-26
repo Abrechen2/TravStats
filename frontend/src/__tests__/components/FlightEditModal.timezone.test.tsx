@@ -116,7 +116,7 @@ const FLIGHT: Flight = {
 // actual safety assertion below (the fromZonedTime round-trip against
 // payload.departureLocal/depTimezone) is completely unchanged and is what
 // actually catches a lost pairing.
-const HYDRATED_DEPARTURE_DATE = "2026-08-14";
+const HYDRATED_DEPARTURE_DATE = "14.08.2026";
 const HYDRATED_DEPARTURE_TIME = "21:35";
 
 beforeEach(() => {

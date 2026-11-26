@@ -4,7 +4,7 @@ import type { JSX } from "react";
 import Modal from "../Modal";
 import Button from "../ui/Button";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import type { EditorStation } from "../../lib/roadtrip/editorStation";
 import {
   fieldValue,

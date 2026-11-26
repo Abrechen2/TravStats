@@ -46,7 +46,9 @@ function mount(target: PendingUpdate) {
 describe("FlightUpdateCard payload", () => {
   it("sends a minute-precision time as a full ISO instant and keeps the rest of the proposal", async () => {
     const { container } = mount(cancelled);
-    const time = container.querySelector<HTMLInputElement>('input[type="datetime-local"]');
+    const time = container.querySelector<HTMLInputElement>(
+      'input[data-field-kind="datetime-local"]'
+    );
     expect(time).not.toBeNull();
     // A datetime-local input omits ":00" seconds from its value.
     fireEvent.change(time!, { target: { value: "2026-09-17T18:20" } });

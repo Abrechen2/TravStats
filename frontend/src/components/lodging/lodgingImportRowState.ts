@@ -1,4 +1,4 @@
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import { isRealCalendarDay } from "../../lib/importers/lodgingCsv";
 import { formatStayPeriod } from "../../lib/lodgingDateDisplay";
 import { LODGING_IMPORT_LIMITS } from "../../shared/lodgingImportLimits";

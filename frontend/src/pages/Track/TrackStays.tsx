@@ -1,3 +1,4 @@
+import DateRangeField from "../../components/ui/DateRangeField";
 import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
@@ -11,7 +12,7 @@ import {
   type TravTrackStay,
   type TravTrackStayState,
 } from "../../lib/api/travtrackViews";
-import { formatDate, formatTime } from "../../lib/displayFormat";
+import { formatDate, formatTime } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { todayIn } from "../../shared/time/clock";
 import { pillStyle, panelStyle } from "./map/trackMapStyle";
@@ -110,26 +111,14 @@ export default function TrackStays(): JSX.Element {
             </button>
           ))}
         </fieldset>
-        <label className="flex flex-col gap-1 t-caption">
-          {t("track:stays.filter.from")}
-          <input
-            type="date"
-            value={draft.fromDay}
-            max={today}
-            onChange={(e) => setDraft((d) => ({ ...d, fromDay: e.target.value }))}
-            style={pillStyle(false)}
-          />
-        </label>
-        <label className="flex flex-col gap-1 t-caption">
-          {t("track:stays.filter.to")}
-          <input
-            type="date"
-            value={draft.toDay}
-            max={today}
-            onChange={(e) => setDraft((d) => ({ ...d, toDay: e.target.value }))}
-            style={pillStyle(false)}
-          />
-        </label>
+        <DateRangeField
+          fromLabel={t("track:stays.filter.from")}
+          toLabel={t("track:stays.filter.to")}
+          from={draft.fromDay}
+          to={draft.toDay}
+          max={today}
+          onChange={(range) => setDraft((d) => ({ ...d, fromDay: range.from, toDay: range.to }))}
+        />
         <Button type="submit" disabled={!canApply}>
           {t("track:stays.filter.apply")}
         </Button>

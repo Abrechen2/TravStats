@@ -2,7 +2,7 @@ import { useEffect, useState, type JSX } from "react";
 import { adminApi, type ImportModeState } from "../../lib/api";
 import { travplanApi } from "../../lib/api/travplan";
 import { travTrackApi } from "../../lib/api/travtrack";
-import { formatDateTime } from "../../lib/displayFormat";
+import { formatDateTime } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useTranslation } from "../../hooks/useTranslation";

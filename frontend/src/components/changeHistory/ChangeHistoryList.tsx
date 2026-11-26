@@ -4,7 +4,7 @@ import { usePurposeCatalogue } from "../../store/purposeCatalogueStore";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";

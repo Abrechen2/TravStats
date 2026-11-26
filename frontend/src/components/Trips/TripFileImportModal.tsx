@@ -4,7 +4,7 @@ import Modal from "../Modal";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { apiErrorMachineCode } from "../../lib/apiError";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import {
   tripExchangeApi,
   type TripFileCommitResult,

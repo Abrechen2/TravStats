@@ -6,11 +6,11 @@ import { statsApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import type { AircraftProfileResponse } from "../types";
-import { formatDate as formatUserDate } from "../lib/displayFormat";
+import { formatDate } from "../lib/format";
 import BackLink from "../components/navigation/BackLink";
 
-function formatDate(iso: string | null, _locale: string): string {
-  return iso ? formatUserDate(iso) || "—" : "—";
+function dateOrDash(iso: string | null): string {
+  return (iso && formatDate(iso)) || "—";
 }
 
 export default function AircraftPage(): JSX.Element {
@@ -77,7 +77,7 @@ export default function AircraftPage(): JSX.Element {
                 />
                 <Stat
                   label={t("aircraft:stats.firstSeen")}
-                  value={formatDate(profile.firstFlightDate, i18n.language)}
+                  value={dateOrDash(profile.firstFlightDate)}
                 />
               </div>
             </div>
@@ -97,9 +97,7 @@ export default function AircraftPage(): JSX.Element {
                   <tbody>
                     {profile.flights.map((flight) => (
                       <tr key={flight.id} className="border-b border-(--color-border)">
-                        <td className="py-2 pr-4">
-                          {formatDate(flight.departureTime, i18n.language)}
-                        </td>
+                        <td className="py-2 pr-4">{dateOrDash(flight.departureTime)}</td>
                         <td className="py-2 pr-4 font-mono">{flight.flightNumber || "—"}</td>
                         <td className="py-2 pr-4">
                           {flight.depIata || "?"} → {flight.arrIata || "?"}

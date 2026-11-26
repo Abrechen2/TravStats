@@ -1,3 +1,4 @@
+import DateField from "../ui/DateField";
 import React from "react";
 import { SectionCard } from "./SettingsShared";
 import HelpIcon from "../Help/HelpIcon";
@@ -49,7 +50,7 @@ interface ProfileDraft extends Record<string, unknown> {
 
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function DateField({
+function BirthdateField({
   value,
   onChange,
 }: {
@@ -58,9 +59,9 @@ function DateField({
 }): JSX.Element {
   const { id, locked, describedBy, changed } = useSettingItem();
   return (
-    <input
+    <DateField
+      inline
       id={id}
-      type="date"
       className="input"
       value={value}
       disabled={locked}
@@ -286,7 +287,7 @@ export default function ProfileSection({
             locked={locked}
             changed={group.isChanged("birthdate")}
             control={
-              <DateField
+              <BirthdateField
                 value={group.draft.birthdate}
                 onChange={(birthdate) => group.edit({ birthdate })}
               />

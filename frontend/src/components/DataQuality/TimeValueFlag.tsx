@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useTranslation } from "../../hooks/useTranslation";
-import { type DisplayFormatter, useDisplayFormat } from "../../lib/displayFormat";
+import { type DisplayFormatter, useDisplayFormat } from "../../lib/format";
 import type { DomainKey } from "../../shared/domains";
 import { useSettingsStore } from "../../store/settingsStore";
 import type { DataQualityFlag } from "../../types/dataQuality";

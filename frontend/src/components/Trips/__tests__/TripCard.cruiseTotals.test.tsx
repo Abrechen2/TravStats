@@ -79,8 +79,8 @@ describe("TripCard totals on a cruise-only trip", () => {
 
   it("counts the cruise distance towards the trip kilometres", () => {
     renderCard(cruiseOnlyTrip);
-    // formatDistance renders >= 1000 km as "3.4k"
-    expect(screen.getByText("3.4k")).toBeInTheDocument();
+    // formatKm: whole kilometres in the reader's grouping
+    expect(screen.getByText(/^3[.,]400 km$/)).toBeInTheDocument();
   });
 
   it("adds cruise kilometres to flight kilometres on a mixed trip", () => {
@@ -94,9 +94,9 @@ describe("TripCard totals on a cruise-only trip", () => {
     } as unknown as Trip;
 
     renderCard(mixed);
-    // 3400 + ~733 = ~4.1k, and no longer the cruise figure alone.
-    expect(screen.queryByText("3.4k")).not.toBeInTheDocument();
-    expect(screen.getByText("4.1k")).toBeInTheDocument();
+    // 3400 + ~733 = ~4,133 km, and no longer the cruise figure alone.
+    expect(screen.queryByText(/^3[.,]400 km$/)).not.toBeInTheDocument();
+    expect(screen.getByText(/^4[.,]1\d\d km$/)).toBeInTheDocument();
   });
 
   it("still shows a dash when a cruise has neither price nor computed legs", () => {

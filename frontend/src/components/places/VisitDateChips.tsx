@@ -3,7 +3,7 @@ import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { getVisitDateSuggestions } from "../../lib/api/places";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import type { VisitDateSuggestion } from "../../types/place";
 

@@ -1,4 +1,4 @@
-import { formatTime } from "../../../lib/displayFormat";
+import { formatTime } from "../../../lib/format";
 import type { TravTrackLeg } from "../../../lib/api/travtrackLegs";
 import { localDay } from "../../../shared/time";
 

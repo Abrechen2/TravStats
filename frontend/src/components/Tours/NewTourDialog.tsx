@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useState } from "react";
 import type { JSX } from "react";
 
@@ -182,17 +183,16 @@ export default function NewTourDialog({
               </Select>
             </Field>
             <Field label={t("trips:tours.day.date")} htmlFor="tour-new-date">
-              <Input
+              <DateField
                 id="tour-new-date"
-                type="date"
                 value={draft.date}
                 onChange={(e) => set("date", e.target.value)}
               />
             </Field>
             <Field label={t("trips:tours.day.startTime")} htmlFor="tour-new-start">
-              <Input
+              <DateField
                 id="tour-new-start"
-                type="time"
+                kind="time"
                 value={draft.startTime}
                 disabled={!draft.date}
                 onChange={(e) => set("startTime", e.target.value)}

@@ -4,7 +4,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { DEFAULT_CHECK_IN_TIME, DEFAULT_CHECK_OUT_TIME } from "../lodging/stayEditorDraft";
 import { createLodging, createStay, deleteLodging, listLodgings } from "../../lib/api/lodging";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import type { Lodging, LodgingType } from "../../types/lodging";
 import {
