@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
-import { formatLocalDate } from "../../../lib/displayFormat";
+import { formatLocalDate } from "../../../lib/format";
 import { logger } from "../../../lib/logger";
 import { tripPhotoSourcesApi, type LinkedPhoto } from "../../../lib/api/tripPhotoSources";
 import EnlargeButton from "../../common/photoViewer/EnlargeButton";

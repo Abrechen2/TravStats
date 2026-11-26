@@ -1,6 +1,6 @@
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
 import Button from "../../ui/Button";
 import Toggletip from "../../ui/Toggletip";

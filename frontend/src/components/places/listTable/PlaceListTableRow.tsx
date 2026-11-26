@@ -2,7 +2,7 @@ import { Fragment, type JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { FlagImg } from "../../../lib/countryFlag";
-import { formatLocalDate } from "../../../lib/displayFormat";
+import { formatLocalDate } from "../../../lib/format";
 import type { ListMemberRow, ListMembersPage } from "../../../types/placeList";
 
 const COARSE =

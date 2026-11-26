@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, useInRouterContext } from "react-router-dom";
 
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { useZoomPan } from "./photoViewer/useZoomPan";
 import type { ViewerPhoto } from "./photoViewer/viewerPhoto";
 

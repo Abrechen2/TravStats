@@ -8,7 +8,7 @@ import {
 } from "../../lib/api/entryPhotos";
 import { roadtripsApi } from "../../lib/api/roadtrips";
 import { logger } from "../../lib/logger";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import type { RoadtripPhoto, RoadtripPhotos } from "../../types/roadtrip";
 import EnlargeButton from "../common/photoViewer/EnlargeButton";
 import { usePhotoViewer } from "../common/photoViewer/usePhotoViewer";

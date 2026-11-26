@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
-import { formatLocalDate } from "../../../lib/displayFormat";
+import { formatLocalDate } from "../../../lib/format";
 import { failureKey } from "../../../lib/api/immich";
 import { logger } from "../../../lib/logger";
 import {
