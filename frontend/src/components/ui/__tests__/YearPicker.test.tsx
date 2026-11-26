@@ -109,6 +109,18 @@ describe("YearPicker", () => {
     expect(screen.queryByText("9 Reisen")).toBeNull();
   });
 
+  it("swallows Escape so an enclosing dialog stays open, and returns focus to the pill", () => {
+    const outer = vi.fn();
+    document.addEventListener("keydown", outer);
+    render(<Harness initial={2024} />);
+    fireEvent.click(trigger());
+    fireEvent.keyDown(document.activeElement as Element, { key: "Escape" });
+    document.removeEventListener("keydown", outer);
+    expect(outer).not.toHaveBeenCalled();
+    expect(screen.queryByText("9 Reisen")).toBeNull();
+    expect(document.activeElement).toBe(trigger());
+  });
+
   it("moves focus with the arrow keys inside the grid", () => {
     render(<Harness initial={2026} />);
     fireEvent.click(trigger());

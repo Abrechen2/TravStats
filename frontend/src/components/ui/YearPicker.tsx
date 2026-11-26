@@ -28,6 +28,7 @@ interface Props {
 }
 
 const GRID_COLUMNS = 5;
+const GRID_WIDTH_PX = 340;
 
 /**
  * The one year control of the app: a compact pill "‹ 2026 ›".
@@ -53,6 +54,8 @@ export default function YearPicker({
   const phone = useIsPhoneViewport();
   const [open, setOpen] = useState<boolean>(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
   const cellRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const gridId = useId();
 
@@ -72,16 +75,21 @@ export default function YearPicker({
     const onDown = (e: MouseEvent | TouchEvent): void => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) close();
     };
+    // Capture phase, and stopped: inside a dialog the same Escape would
+    // otherwise also close the dialog and drop what the reader had entered.
     const onKey = (e: globalThis.KeyboardEvent): void => {
-      if (e.key === "Escape") close();
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      close();
+      triggerRef.current?.focus();
     };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("touchstart", onDown);
-    document.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("touchstart", onDown);
-      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
     };
   }, [open, close]);
 
@@ -100,6 +108,20 @@ export default function YearPicker({
   const choose = (v: YearValue): void => {
     onChange(v);
     close();
+    triggerRef.current?.focus();
+  };
+
+  // Fixed, measured from the pill: a list filter row scrolls sideways on a
+  // narrow screen, and an absolutely placed popover inside it is clipped.
+  const toggle = (): void => {
+    if (!open && rootRef.current) {
+      const rect = rootRef.current.getBoundingClientRect();
+      setAnchor({
+        top: rect.bottom + 8,
+        left: Math.max(8, Math.min(rect.left, window.innerWidth - GRID_WIDTH_PX - 8)),
+      });
+    }
+    setOpen((o) => !o);
   };
 
   const onGridKey = (e: KeyboardEvent<HTMLDivElement>): void => {
@@ -141,12 +163,14 @@ export default function YearPicker({
       className={
         phone
           ? "fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border p-4"
-          : "absolute left-0 top-full z-50 mt-2 rounded-xl border p-3 shadow-lg"
+          : "fixed z-50 rounded-xl border p-3 shadow-lg"
       }
       style={{
         background: "var(--ts-surface)",
         borderColor: "var(--ts-border)",
-        minWidth: phone ? undefined : 320,
+        minWidth: phone ? undefined : GRID_WIDTH_PX - 20,
+        top: phone ? undefined : anchor?.top,
+        left: phone ? undefined : anchor?.left,
         maxHeight: phone ? "70vh" : undefined,
         overflowY: "auto",
       }}
@@ -214,12 +238,13 @@ export default function YearPicker({
         </button>
         <button
           type="button"
+          ref={triggerRef}
           disabled={disabled}
           aria-haspopup="true"
           aria-expanded={open}
           aria-controls={open ? gridId : undefined}
           aria-label={`${t("common:yearPicker.open")}: ${text}`}
-          onClick={(): void => setOpen((o) => !o)}
+          onClick={toggle}
           className="px-3 text-sm font-semibold tabular-nums"
           style={{ minHeight: size, color: "var(--ts-text-bright)" }}
         >
