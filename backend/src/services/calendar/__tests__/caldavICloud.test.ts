@@ -159,7 +159,9 @@ describe("iCloud CalDAV answers", () => {
       { fetch: fetchImpl }
     );
     expect(parsed.events).toHaveLength(1);
-    expect(parsed.failedCollections).toEqual([{ name: "broken", code: "CALENDAR_PARSE" }]);
+    expect(parsed.failedCollections).toEqual([
+      { name: "broken", href: col("broken").href, code: "CALENDAR_PARSE" },
+    ]);
   });
 
   it("fails the source when every collection fails", async () => {

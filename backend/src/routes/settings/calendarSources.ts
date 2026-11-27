@@ -170,7 +170,10 @@ router.post(
           to: new Date(window.untilMs).toISOString(),
           skippedRules: parsed.skippedRules,
           skippedEvents: parsed.skippedEvents ?? 0,
-          failedCollections: parsed.failedCollections ?? [],
+          failedCollections: (parsed.failedCollections ?? []).map(({ name, code }) => ({
+            name,
+            code,
+          })),
         });
       } catch (error) {
         throw failure(error);

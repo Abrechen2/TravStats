@@ -57,7 +57,15 @@ export const calendarSourceViewSchema = z.object({
   caldavUsername: z.string().nullable(),
   /** Whether the secret part (ICS address, CalDAV password) is stored. */
   credentialSet: z.boolean(),
-  collections: z.array(z.object({ href: z.string(), name: z.string() })),
+  collections: z.array(
+    z.object({
+      href: z.string(),
+      name: z.string(),
+      /** Set when the last read skipped this collection (`lastStatus: "partial"`). */
+      failedCode: z.string().optional(),
+    })
+  ),
+  /** `ok`, `partial` (some collections skipped, see `collections[].failedCode`), or a failure kind. */
   lastStatus: z.string().nullable(),
   lastErrorCode: z.string().nullable(),
   lastCheckedAt: z.string().nullable(),

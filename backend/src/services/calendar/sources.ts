@@ -114,6 +114,12 @@ const collectionsOf = (v: unknown): CaldavCollection[] =>
       )
     : [];
 
+/** The failure a partial read marked on the i-th stored collection, if any. */
+function failedCodeOf(v: unknown, i: number): string | null {
+  const entry = Array.isArray(v) ? (v[i] as { failedCode?: unknown } | undefined) : undefined;
+  return typeof entry?.failedCode === "string" ? entry.failedCode : null;
+}
+
 export function viewOf(row: CalendarSource): CalendarSourceView {
   return {
     id: row.id,
@@ -126,7 +132,10 @@ export function viewOf(row: CalendarSource): CalendarSourceView {
     credentialSet: Boolean(
       row.kind === "caldav" ? row.caldavPasswordEncrypted : row.icsUrlEncrypted
     ),
-    collections: collectionsOf(row.caldavCollections),
+    collections: collectionsOf(row.caldavCollections).map((c, i) => {
+      const failedCode = failedCodeOf(row.caldavCollections, i);
+      return failedCode ? { ...c, failedCode } : c;
+    }),
     lastStatus: row.lastStatus,
     lastErrorCode: row.lastErrorCode,
     lastCheckedAt: row.lastCheckedAt?.toISOString() ?? null,
@@ -306,7 +315,7 @@ export async function readCaldav(
       if (!collectionLocal(failure)) throw failure;
       // One collection's answer that does not parse costs that collection, not the source.
       firstFailure ??= failure;
-      failedCollections.push({ name: c.name, code: failure.code ?? failure.kind });
+      failedCollections.push({ name: c.name, href: c.href, code: failure.code ?? failure.kind });
       logger.warn(
         { collection: c.name, kind: failure.kind, code: failure.code },
         "calendar collection skipped"
@@ -372,7 +381,10 @@ export async function readSourceWindow(
       normaliseOrFail(url, policy);
       result = await readIcs(url, window, profileZone, policy, deps);
     }
-    await record(row.id, "ok", null);
+    const failed = result.failedCollections ?? [];
+    // A read that skipped a collection is not "ok": the card names what was left out.
+    await record(row.id, failed.length > 0 ? "partial" : "ok", null);
+    if (row.kind === "caldav") await markFailedCollections(row.id, failed);
     return result;
   } catch (error) {
     const failure = toCalendarError(error);
@@ -396,6 +408,25 @@ function normaliseOrFail(url: string, policy: TargetPolicy): void {
       throw new CalendarError("invalidUrl", "CALENDAR_HTTPS_REQUIRED");
     throw new CalendarError("invalidUrl");
   }
+}
+
+/**
+ * Marks each stored collection with the failure of the last read (`failedCode`), clearing the rest.
+ * One statement on the stored value, so a collection list the user saved meanwhile is kept.
+ */
+async function markFailedCollections(
+  id: string,
+  failed: readonly FailedCollection[]
+): Promise<void> {
+  const byHref = Object.fromEntries(failed.flatMap((f) => (f.href ? [[f.href, f.code]] : [])));
+  await prisma.$executeRaw`
+    UPDATE calendar_sources SET caldav_collections = COALESCE((
+      SELECT jsonb_agg(CASE WHEN ${JSON.stringify(byHref)}::jsonb ? (e->>'href')
+        THEN e || jsonb_build_object('failedCode', ${JSON.stringify(byHref)}::jsonb->>(e->>'href'))
+        ELSE e - 'failedCode' END ORDER BY ord)
+      FROM jsonb_array_elements(caldav_collections) WITH ORDINALITY AS t(e, ord)
+    ), '[]'::jsonb)
+    WHERE id = ${id}`;
 }
 
 async function record(id: string, status: string, code: string | null): Promise<void> {

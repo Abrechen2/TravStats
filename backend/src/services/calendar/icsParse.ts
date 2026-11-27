@@ -68,6 +68,8 @@ export interface ParsedWindow {
 export interface FailedCollection {
   name: string;
   code: string;
+  /** Server side only: which stored collection to mark; never sent to the browser. */
+  href?: string;
 }
 
 /** Failures that end the whole read: a budget or deadline, never one broken object. */

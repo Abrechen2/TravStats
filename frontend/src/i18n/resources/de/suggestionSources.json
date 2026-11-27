@@ -14,6 +14,7 @@
     "icsLine": "ICS-Abo · {{host}}",
     "caldavLine_one": "CalDAV · {{user}} · {{count}} Kalender",
     "caldavLine_other": "CalDAV · {{user}} · {{count}} Kalender",
+    "partial": "Zuletzt nur teilweise gelesen.",
     "lastFailed": "Letzter Versuch fehlgeschlagen",
     "blocked": {
       "internet_off": "Der Internetzugang des Servers ist ausgeschaltet. Kein Kalender wird gelesen.",
@@ -249,7 +250,7 @@
       "filter": {
         "label": "Einträge filtern",
         "all": "Alle",
-        "stop": "Mit Vorschlag aus meinen Stopps",
+        "withStops": "Mit Vorschlag aus meinen Stopps",
         "noLocation": "Alle Einträge ohne Standort"
       },
       "showIgnored": "Ignorierte zeigen",

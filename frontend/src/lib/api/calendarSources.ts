@@ -7,6 +7,8 @@ export type CalendarFailureKind =
 export interface CalendarCollection {
   href: string;
   name: string;
+  /** Set when the last read skipped this calendar (`lastStatus: "partial"`). */
+  failedCode?: string;
 }
 
 export interface CalendarSource {
