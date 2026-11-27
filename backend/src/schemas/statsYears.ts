@@ -53,9 +53,13 @@ export const yearCountsSchema = z.object({
   years: z.array(
     z.object({
       year: z.number().int(),
-      total: z.number().int(),
+      total: z.number().int().openapi({
+        description:
+          "Entries the year cards measure; stays (lodging) and place visits (poi) are counted in byDomain only.",
+      }),
       byDomain: z.record(z.string(), z.number().int()).openapi({
-        description: "Entries by domain key; only domains with at least one entry that year.",
+        description:
+          "Entries by domain key; only domains with at least one entry that year. `lodging`: stays that are over, by check-in year; `poi`: visits that happened.",
       }),
     })
   ),
