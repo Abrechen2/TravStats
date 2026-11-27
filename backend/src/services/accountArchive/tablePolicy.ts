@@ -357,7 +357,13 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   public_share_links: { kind: "info", where: "t0.user_id = $1", omit: ["token_hash"] },
   share_consents: { kind: "info", where: "t0.requester_id = $1 OR t0.target_id = $1" },
   share_notices: { kind: "info", where: "t0.user_id = $1" },
-  trip_link_proposals: { kind: "info", where: "t0.proposer_id = $1 OR t0.recipient_id = $1" },
+  // `linked_trip_id` is the recipient's trip, which the proposal flow never shows the proposer;
+  // an info row is never imported, so dropping it for both sides costs a restore nothing.
+  trip_link_proposals: {
+    kind: "info",
+    where: "t0.proposer_id = $1 OR t0.recipient_id = $1",
+    omit: ["linked_trip_id"],
+  },
   trip_share_groups: { kind: "info", where: "t0.created_by_id = $1" },
   remote_share_accounts: { kind: "info", where: "t0.user_id = $1", omit: ["claimed_code_hash"] },
 
