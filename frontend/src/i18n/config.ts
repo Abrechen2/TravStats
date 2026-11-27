@@ -158,6 +158,15 @@ export const i18nReady: Promise<void> = Promise.all(
     console.warn("[i18n] Loading the translations failed", error);
   });
 
+// A switch resolves only once the new language is in. Without that, the store's
+// language sync (App.tsx) flipped to "de" while its files were still in flight, and the
+// nav rendered the English fallback ("Journeys") until they arrived.
+const switchLanguage = i18n.changeLanguage.bind(i18n);
+i18n.changeLanguage = async (lng?: string, callback?: Parameters<typeof switchLanguage>[1]) => {
+  if (lng) await loadLanguage(lng);
+  return switchLanguage(lng, callback);
+};
+
 // Every switch, whoever asks for it (the settings store sync in App.tsx and
 // useTranslation, the display setting): the new language's files follow, and
 // react-i18next re-renders on "added" (bindI18nStore).
@@ -169,7 +178,6 @@ i18n.on("languageChanged", (lng) => {
 
 // Function to change language and update settings store
 export const changeLanguage = async (lng: Language): Promise<void> => {
-  await loadLanguage(lng);
   await i18n.changeLanguage(lng);
   const settingsStore = useSettingsStore.getState();
   settingsStore.setDisplay({ language: lng });

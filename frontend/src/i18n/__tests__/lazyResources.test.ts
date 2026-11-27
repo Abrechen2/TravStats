@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import { join } from "path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import i18n, { i18nReady, loadLanguage } from "../config";
 
@@ -30,5 +30,15 @@ describe("the translation files load per language", () => {
   it("loads a language once, however often it is asked for", async () => {
     expect(loadLanguage("de")).toBe(loadLanguage("de"));
     await loadLanguage("de");
+  });
+});
+
+describe("a language switch waits for its files", () => {
+  it("does not render the English fallback while the German files are still loading (nav showed 'Journeys')", async () => {
+    vi.resetModules();
+    const fresh = await import("../config");
+    await fresh.default.changeLanguage("de");
+    expect(fresh.default.hasResourceBundle("de", "common")).toBe(true);
+    expect(fresh.default.language).toBe("de");
   });
 });
