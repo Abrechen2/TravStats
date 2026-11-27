@@ -10,19 +10,48 @@ echo "[entrypoint] Starting TravStats..."
 # Order: NODE_MAX_OLD_SPACE_MB > an existing --max-old-space-size in
 # NODE_OPTIONS > the cgroup limit (v2 memory.max, v1 limit_in_bytes) > half of
 # MemTotal when no limit is set (capped). The heap is 55 % of that, 512..4096 MB.
-# CGROUP_ROOT and MEMINFO_FILE exist for the test only.
+#
+# Docker inside an LXC container (prod, rc.47) sees memory.max = "max" and the
+# HOST's MemTotal (32 GB), so a 4 GiB CT got the 4096 MB maximum. The limit is
+# therefore the smallest of: every readable memory.max from this process's
+# cgroup (/proc/self/cgroup) up to the root, and the MemTotal of every readable
+# meminfo — /proc/meminfo and HOST_MEMINFO_FILE (default /host/proc/meminfo).
+# Inside LXC, lxcfs serves the CT's own size as MemTotal; docker's private /proc
+# hides it, so bind the CT's file in: `- /proc/meminfo:/host/proc/meminfo:ro`.
+# CGROUP_ROOT, PROC_SELF_CGROUP and MEMINFO_FILE exist for the test only.
 HEAP_CGROUP_ROOT="${CGROUP_ROOT:-/sys/fs/cgroup}"
+HEAP_SELF_CGROUP="${PROC_SELF_CGROUP:-/proc/self/cgroup}"
 HEAP_MEMINFO="${MEMINFO_FILE:-/proc/meminfo}"
+HEAP_HOST_MEMINFO="${HOST_MEMINFO_FILE:-/host/proc/meminfo}"
 HEAP_UNLIMITED_SHARE=50
 HEAP_UNLIMITED_CAP_MB=8192
 HEAP_SHARE=55
 HEAP_MIN_MB=512
 HEAP_MAX_MB=4096
-heap_mem_total_mb=$(awk '/^MemTotal:/ { printf "%d", $2 / 1024 }' "$HEAP_MEMINFO" 2>/dev/null || true)
+# The smaller of two numbers, either of which may be empty.
+heap_min() {
+    if [ -z "$1" ]; then echo "$2"; elif [ -z "$2" ] || [ "$1" -le "$2" ]; then echo "$1"; else echo "$2"; fi
+}
+heap_mem_total_mb=""
+for heap_file in "$HEAP_MEMINFO" "$HEAP_HOST_MEMINFO"; do
+    [ -r "$heap_file" ] || continue
+    heap_one=$(awk '/^MemTotal:/ { printf "%d", $2 / 1024 }' "$heap_file" 2>/dev/null || true)
+    case "$heap_one" in ''|*[!0-9]*|0) continue ;; esac
+    heap_mem_total_mb=$(heap_min "$heap_mem_total_mb" "$heap_one")
+done
+# cgroup v2: this process's own cgroup and every ancestor that is visible.
 heap_limit_bytes=""
-if [ -r "$HEAP_CGROUP_ROOT/memory.max" ]; then
-    heap_limit_bytes=$(cat "$HEAP_CGROUP_ROOT/memory.max" 2>/dev/null || true)
-elif [ -r "$HEAP_CGROUP_ROOT/memory/memory.limit_in_bytes" ]; then
+heap_cg_path=$(sed -n 's/^0:://p' "$HEAP_SELF_CGROUP" 2>/dev/null | head -n 1 || true)
+while :; do
+    heap_file="$HEAP_CGROUP_ROOT${heap_cg_path%/}/memory.max"
+    if [ -r "$heap_file" ]; then
+        heap_one=$(cat "$heap_file" 2>/dev/null || true)
+        case "$heap_one" in ''|*[!0-9]*) ;; *) heap_limit_bytes=$(heap_min "$heap_limit_bytes" "$heap_one") ;; esac
+    fi
+    case "$heap_cg_path" in ''|/) break ;; esac
+    heap_cg_path=${heap_cg_path%/*}
+done
+if [ -z "$heap_limit_bytes" ] && [ ! -r "$HEAP_CGROUP_ROOT/memory.max" ] && [ -r "$HEAP_CGROUP_ROOT/memory/memory.limit_in_bytes" ]; then
     heap_limit_bytes=$(cat "$HEAP_CGROUP_ROOT/memory/memory.limit_in_bytes" 2>/dev/null || true)
 fi
 heap_limit_mb=""
