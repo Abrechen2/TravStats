@@ -22,6 +22,7 @@ import { StageEditor } from "./StageEditor";
 import { StationEditor } from "./StationEditor";
 import { StageRow, StationCard, TONE } from "./RouteTimeline";
 import { VariantsPanel } from "./VariantsPanel";
+import { DriveSplits, VehicleLimits } from "./DriveLimits";
 import {
   canHandOver,
   formatMinutes,
@@ -266,6 +267,8 @@ export function RouteSection({ ctx }: { ctx: PlanCtx }) {
           {state.stations.length > 0 && <p className="t-caption">{t("route.map.note")}</p>}
         </div>
       </div>
+      <DriveSplits plan={plan} busy={busy} mutate={mutate} />
+      <VehicleLimits key={plan.revision} plan={plan} busy={busy} mutate={mutate} />
       <VariantsPanel plan={plan} busy={busy} mutate={mutate} />
       {station && (
         <StationEditor
