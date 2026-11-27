@@ -6,6 +6,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.47.** Seven new migrations, all additive: the purpose catalogue and custom purposes, the plugins' announcements, trip photo links, plugin-fed place lists, stored yearly TravTrack summaries, a cache for plugin proposals and the row log that lets a failed archive restore undo only its own rows. Nothing is deleted. The container now sizes Node's memory from its limit (override with `NODE_MAX_OLD_SPACE_MB`), and database sessions get a 30 s statement and a 5 min idle-transaction timeout (both configurable). `docs/ops/postgres-tuning.md` lists Postgres settings per machine size.
+
+### Fixed
+
+- **A large import or restore no longer slows the server for everyone.** Restores run in short batches with pauses, and the nightly jobs take turns instead of running at once.
+- **Suggestion plugins are asked again for every new stop.** The history import had used up the time budget, so new stops went unasked since 24 November; missed stops are caught up.
+- **Stops at one place are no longer split into pieces,** and a name you gave a stop always wins over a guessed chain or venue.
+- **The dashboard timeline shows every domain** with readable bars again.
+- **The routing provider is never cleared by an unrelated save,** a provider that refuses its key is skipped, and a run where every leg fell back to straight lines says so.
+- **Roadtrips:** a hand-edited route shows on the dashboard, and the chosen colour is used on the roadtrip's own map.
+- **Cruise route editor:** "Ausgewählte löschen" deletes the selection.
+- **Accepting a photo stop links all its photos,** from Immich and PhotoPrism.
+- **Errors are always visible:** inside an open dialog they show in the dialog, at a field they show at the field, everything else as a banner with "Erneut versuchen".
+
+### Added
+
+- **Travel purposes:** Urlaub, Geschäftlich, Familie & Freunde, Kurztrip, Veranstaltung, Messe & Konferenz, Ausbildung, Gesundheit, Umzug and your own, with filters in every list.
+- **Place lists as a table** with sortable columns, visits, a purpose switch, editable chain rules, pending confirmations and lists fed by a suggestion plugin.
+- **Inbox:** tabs for documents and plugins, a filter by source, and accept or dismiss everything for one trip or period.
+- **Plugins** can propose archive locations; nothing is written to an external archive without a confirmation per entry, and every proposal can be edited first.
+- **Photos on trips:** link an album or simply the trip's period (PhotoPrism first), with album proposals on the trip page and a gallery that opens any photo full screen; roadtrips get their own photo tab.
+- **TravPlan:** a route wizard, a daily driving limit with suggested overnight stops, an assumed same-day arrival when a drive has no duration, and a public router used only after you allow it.
+- **Admin runtime view:** event loop, memory, database and the slowest queries.
+- **One look everywhere:** a date field with calendar, one number and duration format, one year picker, one search field, sortable tables, one tab and chip style, one icon set, flags next to country names, and much shorter help texts with ⓘ for details.
+
 **Upgrading to 2.8.0-rc.46.** Nine new migrations, all additive: linked companions, recovery-key confirmation, a note on documents, the private-inbox mail intake, the resumable track import, per-day track sources (with an index built concurrently, so writes are not blocked), the covered-suggestion state and the track-cleanup tables. Nothing is deleted. **Admins of an instance with a WebDAV or cloud backup target must confirm the recovery key once after the update**: the page is blocked until they do, while backups keep running.
 
 ### Fixed
