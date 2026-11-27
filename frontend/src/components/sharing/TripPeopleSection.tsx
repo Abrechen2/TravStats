@@ -242,12 +242,12 @@ export default function TripPeopleSection({
   const personRows: PersonRow[] = view.people
     .filter((p) => !(p.remoteLinked && p.account === null))
     .map((p) => ({
-    key: p.key,
-    name: p.name,
-    meta: meta(p),
-    badges: badges(p),
-    action: action(p),
-  }));
+      key: p.key,
+      name: p.name,
+      meta: meta(p),
+      badges: badges(p),
+      action: action(p),
+    }));
   const rows = [...personRows, ...uncoveredNameRows(companionNames, view.people)];
 
   return (

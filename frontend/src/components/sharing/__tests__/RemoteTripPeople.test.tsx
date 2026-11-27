@@ -128,6 +128,11 @@ describe("RemoteTripPeople", () => {
       /sharing:remote.trip.delivery.pending .*"Ben"/,
     ],
     [
+      "paused because 'Reisen teilen' is off (UAT 2026-11-27)",
+      { delivery: { state: "paused", stateSince: null, reason: null, field: null, label: null } },
+      /sharing:remote.trip.delivery.paused .*"Ben"/,
+    ],
+    [
       "retried since when, naming the server that does not answer",
       {
         delivery: {

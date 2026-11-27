@@ -1,12 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import {
-  betterSide,
-  groupConflicts,
-  groupOf,
-  pairIsAutomatic,
-  settlePlan,
-} from "../linkResolve";
+import { betterSide, groupConflicts, groupOf, pairIsAutomatic, settlePlan } from "../linkResolve";
 
 /**
  * UAT 2026-11-27 (B1): "Meine übernehmen" pushed the father's STRAIGHT ferry lines over the owner's
@@ -20,7 +14,13 @@ const drawn = {
   distanceKm: 61,
 };
 const straight = {
-  geometry: { type: "LineString", coordinates: [[0, 0], [1, 1]] },
+  geometry: {
+    type: "LineString",
+    coordinates: [
+      [0, 0],
+      [1, 1],
+    ],
+  },
   geometrySource: "straight",
   manualScope: null,
   distanceKm: 55,
@@ -43,7 +43,13 @@ describe("the link's quality rule (UAT 2026-11-27, B1)", () => {
   it("ranks drawn over routed over straight over none", () => {
     const g = groupOf("ferry", "geometry");
     const routed = {
-      geometry: { coordinates: [[0, 0], [0.5, 0.4], [1, 1]] },
+      geometry: {
+        coordinates: [
+          [0, 0],
+          [0.5, 0.4],
+          [1, 1],
+        ],
+      },
       geometrySource: "sea_route",
     };
     expect(betterSide(g, drawn, routed)).toBe("here");
@@ -79,10 +85,17 @@ describe("the link's quality rule (UAT 2026-11-27, B1)", () => {
   });
 
   it("a per-field choice in the dry run is taken as given (M2)", () => {
-    const plan = settlePlan("ferry", ["operator", ...GEOMETRY], { ...straight, operator: "A" }, {
-      ...drawn,
-      operator: "B",
-    }, "both", { operator: "theirs" });
+    const plan = settlePlan(
+      "ferry",
+      ["operator", ...GEOMETRY],
+      { ...straight, operator: "A" },
+      {
+        ...drawn,
+        operator: "B",
+      },
+      "both",
+      { operator: "theirs" }
+    );
     expect(plan).toEqual({ mine: [], theirs: ["operator"] });
   });
 

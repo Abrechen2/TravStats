@@ -673,7 +673,7 @@
         "addRequestFailed": "Die Anfrage konnte nicht gesendet werden."
       },
       "delivery": {
-        "paused": "Pausiert: „Reisen teilen“ ist für {{name}} aus. Änderungen warten hier und gehen weiter, sobald du es wieder einschaltest.",
+        "paused": "Pausiert: „Reisen teilen“ ist zwischen dir und {{name}} aus. Änderungen warten hier und gehen weiter, sobald es wieder an ist.",
         "delivered": "Alle Änderungen sind bei {{name}} angekommen.",
         "pending": "Änderungen sind auf dem Weg zu {{name}}.",
         "retrying": "Änderungen kommen bei {{name}} gerade nicht an – {{origin}} antwortet seit {{date}} nicht. Es wird weiter versucht.",

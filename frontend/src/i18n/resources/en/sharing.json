@@ -673,7 +673,7 @@
         "addRequestFailed": "The request could not be sent."
       },
       "delivery": {
-        "paused": "Paused: “Share trips” is off for {{name}}. Changes wait here and go out once you turn it back on.",
+        "paused": "Paused: “Share trips” is off between you and {{name}}. Changes wait here and go out once it is on again.",
         "delivered": "All changes have reached {{name}}.",
         "pending": "Changes are on their way to {{name}}.",
         "retrying": "Changes are not reaching {{name}} right now – {{origin}} has not answered since {{date}}. Retrying.",

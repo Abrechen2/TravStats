@@ -96,9 +96,7 @@ describe("linking settles by quality (UAT 2026-11-27)", () => {
       .send({ userId: owner.id, targetTripId: ownerTrip.trip.id })
       .expect(200);
     const ferry = res.body.data.matched.find((m: { entity: string }) => m.entity === "ferry");
-    const byField = Object.fromEntries(
-      ferry.conflicts.map((c: { field: string }) => [c.field, c])
-    );
+    const byField = Object.fromEntries(ferry.conflicts.map((c: { field: string }) => [c.field, c]));
     expect(byField.geometry).toMatchObject({
       here: { kind: "line", quality: "straight", points: 2 },
       there: { kind: "line", quality: "drawn", points: 184 },
