@@ -261,7 +261,7 @@ describe("scheduleRoute", () => {
     expect(s.conflicts).toEqual([]);
   });
 
-  it("a stage without a duration leaves its arrival and the days after it unknown", () => {
+  it("a drive without a duration arrives the day it left, flagged assumed", () => {
     const a = station("A", { nights: 1 }),
       b = station("B", { nights: 1 }),
       c = station("C", { nights: 1, pinnedDay: "2027-05-15" });
@@ -269,6 +269,37 @@ describe("scheduleRoute", () => {
       route(
         [a, b, c],
         [stage(a, b, { durationMinutes: null }), stage(b, c, { durationMinutes: 60 })]
+      )
+    );
+    expect(s.stages[0]).toMatchObject({ departDay: "2027-05-09", arriveDay: "2027-05-09", assumed: true });
+    expect(s.stations[1]).toMatchObject({ arriveDay: "2027-05-09", assumed: true });
+    // The pinned station is an anchor again, so nothing after it is a guess.
+    expect(s.stations[2].assumed).toBeUndefined();
+    expect(s.stages[1].assumed).toBeUndefined();
+  });
+
+  it("a ferry, rail or flight without a duration still leaves its arrival unknown", () => {
+    for (const mode of ["ferry", "rail", "flight"] as const) {
+      const a = station("A", { nights: 1 }),
+        b = station("B", { nights: 1 });
+      const s = scheduleRoute(route([a, b], [stage(a, b, { mode, durationMinutes: null })]));
+      expect(s.stages[0]).toMatchObject({ arriveDay: null });
+      expect(s.stages[0].assumed).toBeUndefined();
+      expect(s.stations[1]).toMatchObject({ arriveDay: null });
+    }
+  });
+
+  it("a stage without a duration leaves its arrival and the days after it unknown", () => {
+    const a = station("A", { nights: 1 }),
+      b = station("B", { nights: 1 }),
+      c = station("C", { nights: 1, pinnedDay: "2027-05-15" });
+    const s = scheduleRoute(
+      route(
+        [a, b, c],
+        [
+          stage(a, b, { mode: "ferry", durationMinutes: null }),
+          stage(b, c, { durationMinutes: 60 }),
+        ]
       )
     );
     expect(s.stages[0]).toMatchObject({ departDay: "2027-05-09", arriveDay: null });

@@ -1,5 +1,6 @@
 import { daysBetween, fromDbDate, toDbDate } from "../../shared/time/localDate";
-import { arrivalUndetermined, routeLegs, scheduleRoute } from "./routeSchedule";
+import { arrivalAssumed, arrivalUndetermined, routeLegs, scheduleRoute } from "./routeSchedule";
+import { suggestDriveSplits } from "./routeSplit";
 import { machineInstant } from "../../shared/time/instant";
 import type { PlanBooking, PlanFinding, PlanStage, PlanState, PlanStation } from "./types";
 
@@ -150,6 +151,28 @@ export function routeFindings(state: PlanState, today: string): PlanFinding[] {
         [stage.id, stage.mode],
         "attention"
       );
+
+  // A drive without a duration is planned as a same-day arrival; say so, but as a
+  // hint that never blocks readiness.
+  for (const stage of routeLegs(state.stations, state.stages))
+    if (stage && arrivalAssumed(stage, state.bookings))
+      add(
+        "durationAssumed:" + stage.id,
+        "durationAssumed",
+        { from: title(stage.fromStationId), to: title(stage.toStationId) },
+        [stage.id, stage.mode]
+      );
+
+  for (const split of suggestDriveSplits(state)) {
+    const stage = state.stages.find((g) => g.id === split.stageId);
+    if (!stage) continue;
+    add(
+      "driveSplit:" + stage.id,
+      "driveSplit",
+      { from: title(stage.fromStationId), to: title(stage.toStationId), days: split.days },
+      [stage.id, split.days]
+    );
+  }
 
   for (const conflict of schedule.conflicts) {
     const stage = state.stages.find((g) => g.id === conflict.anchorId);
