@@ -2,7 +2,9 @@
  * The receiving side of the wire (spec 2026-10-20 §4): a parsed wire entry becomes a `SharedRow`
  * in this server's terms, ready for `copyInto` — the one copy path, own-entry join included.
  *
- * - Natural keys are resolved against THIS server's catalogue: a port by UN/LOCODE, a ship by
+ * - Natural keys are resolved against THIS server's catalogue: a port by UN/LOCODE (a catalogue
+ *   port without one — Esna, Edfu, Kom Ombo — by its name, country and a position within
+ *   `PORT_POSITION_MATCH_KM`, the same seeded row on both servers), a ship by
  *   IMO, a rail station by source id then UIC code, an airport by ICAO then IATA, a lodging chain
  *   by name among catalogue chains. A miss is never a guess: an unmatched port call becomes the
  *   cruise stop's third state (`unresolvedPortName`, CLAUDE.md cruise invariant), an unmatched
@@ -14,6 +16,7 @@
  *   `DERIVE[entity]` (run by `copyInto`) decides it on this server's clock.
  */
 import type { DbTransaction } from "../../../../db";
+import { haversineKm } from "../../../../shared/geo/haversine";
 import type { SharedRow } from "../../adapters";
 import type { EntryRef } from "../../adapters/stop";
 import { SHARE_TYPES, type ShareEntity } from "../../shareTypes";
@@ -74,16 +77,22 @@ async function resolver(c: DbTransaction, entries: readonly WireEntry[]): Promis
   const stations = f.flatMap((x) => [x.depStation, x.arrStation]) as (StationRef | null)[];
   const airports = f.flatMap((x) => [x.pickupAirport, x.returnAirport]) as (AirportRef | null)[];
   const unlocodes = keysOf(portRefs.map((p) => p?.unlocode));
+  const uncodedNames = keysOf(portRefs.map((p) => (p && !p.unlocode ? p.name : null)));
   const imos = keysOf(f.map((x) => (x.ship as ShipRef | null)?.imo));
   const sourceIds = keysOf(stations.map((s) => s?.sourceId));
   const uics = keysOf(stations.map((s) => s?.uic));
   const icaos = keysOf(airports.map((a) => a?.icao));
   const iatas = keysOf(airports.map((a) => a?.iata));
   const chainNames = keysOf(f.map((x) => (x.lodging as Facts | undefined)?.chain as string | null));
-  const [ports, ships, bySource, byUic, byIcao, byIata, chains] = await Promise.all([
+  const [ports, uncodedPorts, ships, bySource, byUic, byIcao, byIata, chains] = await Promise.all([
     c.port.findMany({
       where: { unlocode: { in: unlocodes } },
       select: { id: true, unlocode: true },
+    }),
+    c.port.findMany({
+      where: { name: { in: uncodedNames }, unlocode: null, isUserAdded: false },
+      select: { id: true, name: true, country: true, lat: true, lon: true },
+      orderBy: { id: "asc" },
     }),
     c.ship.findMany({ where: { imo: { in: imos } }, select: { id: true, imo: true } }),
     c.railStation.findMany({
@@ -129,12 +138,35 @@ async function resolver(c: DbTransaction, entries: readonly WireEntry[]): Promis
   const get = (map: Map<string, number>, key: string | null | undefined) =>
     key ? (map.get(key) ?? null) : null;
   return {
-    port: (ref) => get(portIds, ref?.unlocode),
+    port: (ref) =>
+      ref?.unlocode ? get(portIds, ref.unlocode) : ref ? uncodedPort(uncodedPorts, ref) : null,
     ship: (ref) => get(shipIds, ref?.imo),
     station: (ref) => get(sourceIdIds, ref?.sourceId) ?? get(uicIds, ref?.uic),
     airport: (ref) => get(icaoIds, ref?.icao) ?? get(iataIds, ref?.iata),
     chain: (name) => get(chainIds, name),
   };
+}
+
+/**
+ * How far apart the same catalogue port may sit on two servers. The catalogue is seeded from one
+ * file, so the rows agree to the digit; the tolerance only absorbs rounding, and two different
+ * ports of one name (there are several "Victoria") are hundreds of kilometres apart.
+ */
+const PORT_POSITION_MATCH_KM = 1;
+
+/** A catalogue port without a UN/LOCODE: same name, same country, same place — else no match. */
+function uncodedPort(
+  rows: readonly { id: number; name: string; country: string | null; lat: number; lon: number }[],
+  ref: PortRef
+): number | null {
+  const hit = rows.find(
+    (r) =>
+      r.name === ref.name &&
+      r.country === ref.country &&
+      haversineKm({ lat: r.lat, lon: r.lon }, { lat: ref.lat, lon: ref.lon }) <=
+        PORT_POSITION_MATCH_KM
+  );
+  return hit?.id ?? null;
 }
 
 function without(f: Facts, keys: readonly string[]): Facts {

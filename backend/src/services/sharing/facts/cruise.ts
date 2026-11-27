@@ -88,8 +88,30 @@ export function cruiseLegFacts(row: Pick<CruiseLeg, CruiseLegFactField>) {
 export interface CruiseLegRouteFact {
   fromPortId: number;
   toPortId: number;
-  /** `[[lon, lat], ...]`, 2..64 points, first and last at the leg's ports. */
+  /** `[[lon, lat], ...]`, 2..64 points (`thinWaypoints`), first and last at the leg's ports. */
   waypoints: unknown;
+}
+
+/**
+ * The most points a line carries as a fact: the wire refuses more (`CRUISE_LEG_ROUTE_SHAPE`), and
+ * the editor stores no more. Rows written before that guard hold up to 123 (measured on the
+ * owner's Yangtze cruise, UAT 2026-11-27), and ONE such line made the receiver drop the whole
+ * message as malformed — the trip could be neither shared nor linked.
+ */
+export const MAX_ROUTE_FACT_POINTS = 64;
+
+/**
+ * A line of more than `MAX_ROUTE_FACT_POINTS` points, thinned to that many by even spacing; the
+ * first and last point stay, so the line still starts and ends at its ports. Deterministic: two
+ * servers holding the same long line produce the same fact and compare equal.
+ */
+export function thinWaypoints(waypoints: unknown): unknown {
+  if (!Array.isArray(waypoints) || waypoints.length <= MAX_ROUTE_FACT_POINTS) return waypoints;
+  const last = waypoints.length - 1;
+  return Array.from(
+    { length: MAX_ROUTE_FACT_POINTS },
+    (_, i) => waypoints[Math.round((i * last) / (MAX_ROUTE_FACT_POINTS - 1))]
+  );
 }
 
 /** The lines of a cruise as facts; a line whose ends are not catalogue ports is left out. */
@@ -115,7 +137,7 @@ export function cruiseLegRouteFacts(
         r.toKind === "port" &&
         Number.isInteger(fromPortId) &&
         Number.isInteger(toPortId)
-        ? [{ fromPortId, toPortId, waypoints: r.waypoints }]
+        ? [{ fromPortId, toPortId, waypoints: thinWaypoints(r.waypoints) }]
         : [];
     })
     .sort((a, b) => order(a) - order(b) || a.fromPortId - b.fromPortId || a.toPortId - b.toPortId);
