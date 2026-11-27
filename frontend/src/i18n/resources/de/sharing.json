@@ -1000,7 +1000,8 @@
       "remoteNoRename": "Personen auf anderen Servern verwaltet ihr Server.",
       "withdrawIncoming": "Teilen von dieser Person zurückziehen",
       "bulkLink": "Alle passenden Reisen verknüpfen",
-      "bulkOffer": "Gemeinsame Reisen anbieten"
+      "bulkOffer": "Gemeinsame Reisen anbieten",
+      "bulkPropose": "Gemeinsame Reisen vorschlagen"
     },
     "requests": {
       "title": "Anfragen an dich",
@@ -1219,6 +1220,38 @@
         "loadFailed": "Die Reisen konnten nicht geladen werden.",
         "offerFailed": "Das Anbieten hat nicht geklappt."
       }
+    },
+    "propose": {
+      "title": "Gemeinsame Reisen an {{name}} vorschlagen",
+      "intro": "Deine Reisen, bei denen {{name}} dabei war. {{name}} verknüpft sie dann selbst.",
+      "none": "Keine Reise, bei der {{name}} als Mitreisende(r) eingetragen ist.",
+      "done": "vorgeschlagen",
+      "failed": "nicht geklappt: {{why}}",
+      "progress": "Schlage Reise {{done}} von {{total}} vor …",
+      "run": "{{count}} Reisen vorschlagen",
+      "status": {
+        "pending": "vorgeschlagen, wartet",
+        "linked": "verknüpft",
+        "declined": "abgelehnt"
+      },
+      "errors": {
+        "loadFailed": "Die Reisen konnten nicht geladen werden.",
+        "proposeFailed": "Das Vorschlagen hat nicht geklappt."
+      }
+    }
+  },
+  "proposals": {
+    "title": "Vorgeschlagene Verknüpfungen",
+    "row": "{{name}} meint, du hast „{{trip}}“ auch eingetragen.",
+    "link": "Mit meiner Reise verknüpfen",
+    "decline": "Ablehnen",
+    "linked": "„{{trip}}“ ist verknüpft.",
+    "propose": "Hat die Reise schon – Verknüpfung vorschlagen",
+    "proposed": "Vorschlag an {{name}} gesendet. {{name}} entscheidet selbst.",
+    "errors": {
+      "loadFailed": "Die Vorschläge konnten nicht geladen werden.",
+      "declineFailed": "Das Ablehnen hat nicht geklappt.",
+      "proposeFailed": "Der Vorschlag konnte nicht gesendet werden."
     }
   }
 }

@@ -228,56 +228,85 @@ export async function linkTrip(
   return prisma.$transaction(
     async (tx) => {
       const trip = await agreedSides(tx, userId, tripId, otherId);
-      const { target, plan } = await planFor(tx, trip, userId, otherId, targetTripId);
-      const joining = target.shareGroupId === null;
-      let groupId = trip.shareGroupId;
-      if (
-        groupId &&
-        joining &&
-        (await missingGroupConsent(tx, groupId, userId, otherId)).length > 0
-      )
-        throw new AppError(
-          "Not every member of this trip has agreed to sharing with this account",
-          403,
-          "SHARE_GROUP_CONSENT_REQUIRED"
-        );
-      if (!groupId) {
-        groupId = (await tx.tripShareGroup.create({ data: { createdById: userId } })).id;
-        await tx.trip.update({ where: { id: trip.id }, data: { shareGroupId: groupId } });
-      }
-      if (joining)
-        await tx.trip.update({ where: { id: target.id }, data: { shareGroupId: groupId } });
-      const result = await applyPlan(tx, userId, otherId, groupId, plan, decision, choices);
-      await restatusTrips([trip.id, target.id], tx);
-      if (joining) {
-        await queueRoster(tx, groupId);
-        // No companion is put on the other account's EXISTING trip: it is theirs, and a
-        // companion they took off must not come back because someone linked a copy (rc46
-        // UAT, "Robin Wittke" reappeared). The trip's people section asks them instead.
-      }
-      if (joining || result.linked > 0) {
-        await tx.shareNotice.create({
-          data: {
-            userId: otherId,
-            groupId,
-            actorId: userId,
-            kind: "shared",
-            entityType: "trip",
-            entityKey: target.id,
-            after: {
-              tripName: trip.name,
-              tripCreated: false,
-              created: { ...emptyCounts() },
-              linked: { matched: result.linked + result.alreadyLinked, decision },
-              autoAccepted: true,
-            },
-          },
-        });
-      }
-      return { groupId, ...result };
+      return linkInTx(tx, trip, userId, otherId, targetTripId, decision, choices);
     },
     { timeout: LINK_TX_TIMEOUT_MS }
   );
+}
+
+/** The caller's own trip, nothing else checked: for a path that authorised the pair itself. */
+export async function ownTripForLink(c: DbTransaction, userId: string, tripId: string) {
+  const trip = await c.trip.findFirst({ where: { id: tripId, userId } });
+  if (!trip) throw tripNotFound();
+  return trip;
+}
+
+/** The dry run for a pair a caller is already authorised to compare (a proposal to them). */
+export async function previewInTx(
+  tx: DbTransaction,
+  trip: Trip,
+  userId: string,
+  otherId: string,
+  targetTripId: string
+): Promise<LinkPreview> {
+  const { target, here, there, plan } = await planFor(tx, trip, userId, otherId, targetTripId);
+  return describePlan(plan, tripView(trip), tripView(target), here, there);
+}
+
+export const LINK_TIMEOUT_MS = LINK_TX_TIMEOUT_MS;
+
+/** The link for a pair a caller is already authorised to link; see the file comment. */
+export async function linkInTx(
+  tx: DbTransaction,
+  trip: Trip,
+  userId: string,
+  otherId: string,
+  targetTripId: string,
+  decision: LinkDecision,
+  choices?: LinkChoices
+): Promise<LinkResult> {
+  const { target, plan } = await planFor(tx, trip, userId, otherId, targetTripId);
+  const joining = target.shareGroupId === null;
+  let groupId = trip.shareGroupId;
+  if (groupId && joining && (await missingGroupConsent(tx, groupId, userId, otherId)).length > 0)
+    throw new AppError(
+      "Not every member of this trip has agreed to sharing with this account",
+      403,
+      "SHARE_GROUP_CONSENT_REQUIRED"
+    );
+  if (!groupId) {
+    groupId = (await tx.tripShareGroup.create({ data: { createdById: userId } })).id;
+    await tx.trip.update({ where: { id: trip.id }, data: { shareGroupId: groupId } });
+  }
+  if (joining) await tx.trip.update({ where: { id: target.id }, data: { shareGroupId: groupId } });
+  const result = await applyPlan(tx, userId, otherId, groupId, plan, decision, choices);
+  await restatusTrips([trip.id, target.id], tx);
+  if (joining) {
+    await queueRoster(tx, groupId);
+    // No companion is put on the other account's EXISTING trip: it is theirs, and a
+    // companion they took off must not come back because someone linked a copy (rc46
+    // UAT, "Robin Wittke" reappeared). The trip's people section asks them instead.
+  }
+  if (joining || result.linked > 0) {
+    await tx.shareNotice.create({
+      data: {
+        userId: otherId,
+        groupId,
+        actorId: userId,
+        kind: "shared",
+        entityType: "trip",
+        entityKey: target.id,
+        after: {
+          tripName: trip.name,
+          tripCreated: false,
+          created: { ...emptyCounts() },
+          linked: { matched: result.linked + result.alreadyLinked, decision },
+          autoAccepted: true,
+        },
+      },
+    });
+  }
+  return { groupId, ...result };
 }
 
 /** Key every unlinked pair, then settle the facts by the decision. */

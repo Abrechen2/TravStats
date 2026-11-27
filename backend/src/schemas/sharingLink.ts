@@ -152,3 +152,26 @@ export const bulkPairsSchema = z.union([
 ]);
 
 export const bulkOfferCandidatesSchema = z.array(tripView.extend({ offered: z.boolean() }));
+
+/** Local link proposals (Codex P1, 2026-11-27): A proposes, B decides in B's own inbox. */
+export const proposeBodySchema = z.object({ userId: id }).strict();
+export const proposalIdSchema = z.string().uuid();
+export const proposalPreviewBodySchema = z.object({ tripId: id }).strict();
+export const proposalLinkBodySchema = z.object({ tripId: id, decision, choices }).strict();
+export const proposableQuerySchema = z.object({ userId: id }).strict();
+
+const proposalStatus = z.enum(["pending", "linked", "declined"]);
+const person = z.strictObject({ id: z.string(), displayName: z.string() });
+export const sentProposalSchema = z.strictObject({
+  id: z.string(),
+  tripId: z.string(),
+  recipient: person,
+  status: proposalStatus,
+});
+export const sentProposalsSchema = z.array(sentProposalSchema);
+export const receivedProposalsSchema = z.array(
+  z.strictObject({ id: z.string(), from: person, trip: tripView, createdAt: z.string() })
+);
+export const proposableTripsSchema = z.array(
+  tripView.extend({ status: proposalStatus.nullable() })
+);

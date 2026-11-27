@@ -1,17 +1,15 @@
 import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
-import { sharingLinkApi } from "../../lib/api/sharingLink";
 import type { PersonEntry } from "../Settings/people/buildPeople";
 import { Dialog } from "../ui";
-import BulkLinkPanel from "./BulkLinkPanel";
 import BulkOfferPanel from "./BulkOfferPanel";
-import { sharingErrorKey } from "./sharingCopy";
+import BulkProposePanel from "./BulkProposePanel";
 
 /**
- * The bulk link from a person's row (UAT 2026-11-27): an account on this server links every
- * matching trip pair at once; a person on another server gets the trips they travelled on
- * offered at once, and links them in their own inbox.
+ * The bulk step from a person's row (UAT 2026-11-27, Codex P1): the caller's trips the person
+ * travelled on are proposed (an account here) or offered (a person on another server) at once;
+ * the person links the matching ones in their own inbox.
  */
 export default function BulkLinkDialog({
   person,
@@ -28,22 +26,14 @@ export default function BulkLinkDialog({
     <Dialog
       open
       onClose={onClose}
-      title={t(account.kind === "local" ? "sharing:bulk.title" : "sharing:bulk.offer.title", {
-        name: person.name,
-      })}
-    >
-      {account.kind === "local" && (
-        <BulkLinkPanel
-          otherName={person.name}
-          loadPairs={() => sharingLinkApi.bulkPairs(account.userId)}
-          preview={(pair) => sharingLinkApi.preview(pair.id, account.userId, pair.other.id)}
-          link={(pair, decision, choices) =>
-            sharingLinkApi.link(pair.id, account.userId, pair.other.id, decision, choices)
-          }
-          undo={(pair) => sharingLinkApi.leave(pair.id)}
-          failure={(err, fallback) => ({ key: sharingErrorKey(err, fallback) })}
-        />
+      title={t(
+        account.kind === "local" ? "sharing:bulk.propose.title" : "sharing:bulk.offer.title",
+        {
+          name: person.name,
+        }
       )}
+    >
+      {account.kind === "local" && <BulkProposePanel userId={account.userId} name={person.name} />}
       {account.kind === "remote" && remoteId && (
         <BulkOfferPanel remoteId={remoteId} name={person.name} />
       )}

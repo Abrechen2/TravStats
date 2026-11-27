@@ -190,6 +190,8 @@ model User {
   /// this account, consents asked and given, groups started, notices.
   linkedAsCompanion               Companion[]                  @relation("CompanionLinkedUser")
   shareConsentsAsked              ShareConsent[]               @relation("ShareConsentRequester")
+  linkProposalsMade               TripLinkProposal[]           @relation("TripLinkProposalProposer")
+  linkProposalsReceived           TripLinkProposal[]           @relation("TripLinkProposalRecipient")
   localConnectionsLow             LocalConnection[]            @relation("LocalConnectionLow")
   localConnectionsHigh            LocalConnection[]            @relation("LocalConnectionHigh")
   shareConsentsGiven              ShareConsent[]               @relation("ShareConsentTarget")
@@ -2293,6 +2295,7 @@ model Trip {
 
   user                    User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
   shareGroup              TripShareGroup?              @relation(fields: [shareGroupId], references: [id], onDelete: SetNull)
+  linkProposals           TripLinkProposal[]
   flights                 Flight[]
   bookings                Booking[]
   cruises                 Cruise[]
@@ -5706,6 +5709,32 @@ model SyncState {
 /// ordered pair — a new request after a decline or withdrawal reopens it.
 /// Each side of the pair is exactly one of a local user or a `RemoteShareAccount`, and at least
 /// one side is local (spec 2026-10-20 F3) — CHECK share_consents_party_check.
+/// A proposal to link an existing copy on one server (Codex P1, 2026-11-27): A says "I hold this
+/// trip and believe you have a copy". Nothing of B's trips is shown to A; B matches, previews and
+/// decides in B's own inbox, as an offer from another server is answered. `pending` until B links
+/// (`linked`, with B's trip) or declines (`declined`); A learns only that status.
+model TripLinkProposal {
+  id           String    @id @default(uuid())
+  proposerId   String    @map("proposer_id")
+  recipientId  String    @map("recipient_id")
+  /// The proposer's trip.
+  tripId       String    @map("trip_id")
+  /// pending | linked | declined
+  status       String    @default("pending")
+  /// The recipient's trip it was linked with; never shown to the proposer before the link.
+  linkedTripId String?   @map("linked_trip_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  decidedAt    DateTime? @map("decided_at")
+
+  proposer  User @relation("TripLinkProposalProposer", fields: [proposerId], references: [id], onDelete: Cascade)
+  recipient User @relation("TripLinkProposalRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  trip      Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, recipientId])
+  @@index([recipientId, status])
+  @@map("trip_link_proposals")
+}
+
 model ShareConsent {
   id                String    @id @default(uuid())
   requesterId       String?   @map("requester_id")

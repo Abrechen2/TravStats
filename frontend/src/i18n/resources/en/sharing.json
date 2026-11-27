@@ -1000,7 +1000,8 @@
       "remoteNoRename": "People on other servers are managed by their server.",
       "withdrawIncoming": "Withdraw sharing from this person",
       "bulkLink": "Link all matching trips",
-      "bulkOffer": "Offer shared trips"
+      "bulkOffer": "Offer shared trips",
+      "bulkPropose": "Propose shared trips"
     },
     "requests": {
       "title": "Requests to you",
@@ -1219,6 +1220,38 @@
         "loadFailed": "The trips could not be loaded.",
         "offerFailed": "Offering did not work."
       }
+    },
+    "propose": {
+      "title": "Propose shared trips to {{name}}",
+      "intro": "Your trips {{name}} was on. {{name}} then links them themselves.",
+      "none": "No trip with {{name}} as a travel companion.",
+      "done": "proposed",
+      "failed": "did not work: {{why}}",
+      "progress": "Proposing trip {{done}} of {{total}} …",
+      "run": "Propose {{count}} trips",
+      "status": {
+        "pending": "proposed, waiting",
+        "linked": "linked",
+        "declined": "declined"
+      },
+      "errors": {
+        "loadFailed": "The trips could not be loaded.",
+        "proposeFailed": "Proposing did not work."
+      }
+    }
+  },
+  "proposals": {
+    "title": "Proposed links",
+    "row": "{{name}} thinks you have recorded “{{trip}}” too.",
+    "link": "Link with my trip",
+    "decline": "Decline",
+    "linked": "“{{trip}}” is linked.",
+    "propose": "Has this trip already – propose a link",
+    "proposed": "Proposal sent to {{name}}. {{name}} decides.",
+    "errors": {
+      "loadFailed": "The proposals could not be loaded.",
+      "declineFailed": "Declining did not work.",
+      "proposeFailed": "The proposal could not be sent."
     }
   }
 }

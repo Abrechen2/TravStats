@@ -3,6 +3,7 @@ import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { sharingApi } from "../../lib/api/sharing";
+import { sharingLinkApi } from "../../lib/api/sharingLink";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import type { SharePerson, TripPerson } from "../../types/sharing";
@@ -70,6 +71,22 @@ function ShareTripForm({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const proposeLink = async (): Promise<void> => {
+    if (!person?.account) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await sharingLinkApi.propose(tripId, person.account.id);
+      addToast("success", t("sharing:proposals.proposed", { name: person.name }));
+      onClose();
+    } catch (err) {
+      logger.error("Proposing a link failed:", err);
+      setError(t(sharingErrorKey(err, "sharing:proposals.errors.proposeFailed")));
+    } finally {
+      setBusy(false);
+    }
+  };
   // forgejo#440: link the person's own copy of this trip instead of copying it again.
   const person = eligible.find((p) => p.key === key) ?? null;
   // A preselected person who cannot be shared with is explained and the user
@@ -160,8 +177,15 @@ function ShareTripForm({
                 </Select>
               </Field>
             )}
-            {/* No "link an existing copy" here (Codex P1, 2026-11-27): it showed the caller the
-                other account's trips before that account decided anything. */}
+            {/* "Has a copy already": a proposal only (Codex P1, 2026-11-27) — the person picks
+                and links their own trip in their inbox; nothing of theirs is read from here. */}
+            {person?.account && (
+              <span>
+                <Button disabled={busy} onClick={() => void proposeLink()}>
+                  {t("sharing:proposals.propose")}
+                </Button>
+              </span>
+            )}
             {person && (
               <>
                 <p className="text-sm">{t(`${NS}.copied`, { name: person.name })}</p>

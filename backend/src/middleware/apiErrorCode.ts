@@ -555,6 +555,8 @@ export type ApiErrorCode =
   | "SHARE_TRIP_IN_OTHER_GROUP"
   /** Codex P1: another account's trips are linked only on that account's own decision. */
   | "SHARE_LINK_PROPOSAL_REQUIRED"
+  /** No open link proposal to the caller under that id (404). */
+  | "SHARE_LINK_PROPOSAL_NOT_FOUND"
   /** No companion of this caller under that id (404). */
   | "COMPANION_NOT_FOUND"
   /** Another of the caller's companions is already linked to that account (409). */

@@ -132,3 +132,24 @@ export type BulkPairs = { access: "full"; pairs: BulkPair[] } | AwaitingConsent;
 export interface BulkOfferCandidate extends LinkTripView {
   offered: boolean;
 }
+
+/** Local link proposals (Codex P1, 2026-11-27). */
+export type LinkProposalStatus = "pending" | "linked" | "declined";
+
+export interface SentLinkProposal {
+  id: string;
+  tripId: string;
+  recipient: { id: string; displayName: string };
+  status: LinkProposalStatus;
+}
+
+export interface ReceivedLinkProposal {
+  id: string;
+  from: { id: string; displayName: string };
+  trip: LinkTripView;
+  createdAt: string;
+}
+
+export interface ProposableTrip extends LinkTripView {
+  status: LinkProposalStatus | null;
+}

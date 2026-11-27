@@ -12,6 +12,7 @@ import { GlobeLoader } from "../GlobeLoader";
 import { Button, Card, EmptyState } from "../ui";
 import ShareNoticeCard from "./ShareNoticeCard";
 import ReceivedRemoteOffers from "../sharing/ReceivedRemoteOffers";
+import ReceivedLinkProposals from "../sharing/ReceivedLinkProposals";
 import { reportPageError } from "../../store/pageErrorStore";
 
 const NS = "sharing:inbox";
@@ -40,11 +41,13 @@ export default function SharingTab({
   const [remoteOn, setRemoteOn] = useState(false);
   const [localCount, setLocalCount] = useState(0);
   const [offerCount, setOfferCount] = useState(0);
+  // Local link proposals count like offers (Codex P1, 2026-11-27).
+  const [proposalCount, setProposalCount] = useState(0);
 
   const loaded = requests !== null;
   useEffect(() => {
-    if (loaded) onCount?.(localCount + offerCount);
-  }, [onCount, loaded, localCount, offerCount]);
+    if (loaded) onCount?.(localCount + offerCount + proposalCount);
+  }, [onCount, loaded, localCount, offerCount, proposalCount]);
 
   useEffect(() => {
     let cancelled = false;
@@ -174,7 +177,12 @@ export default function SharingTab({
     }
   };
 
-  const offers = remoteOn ? <ReceivedRemoteOffers onCount={setOfferCount} /> : null;
+  const offers = (
+    <>
+      <ReceivedLinkProposals onCount={setProposalCount} />
+      {remoteOn && <ReceivedRemoteOffers onCount={setOfferCount} />}
+    </>
+  );
   if (loadFailed) {
     return (
       <EmptyState
@@ -196,7 +204,7 @@ export default function SharingTab({
     return (
       <>
         {offers}
-        {offerCount === 0 && (
+        {offerCount === 0 && proposalCount === 0 && (
           <EmptyState
             kind="nothing"
             title={t(`${NS}.empty.title`)}

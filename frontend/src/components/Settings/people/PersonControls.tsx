@@ -161,13 +161,17 @@ export function PersonMenu({
           },
         ]
       : []),
-    // Across servers only: on one server the bulk link would show the caller the other account's
-    // trips (Codex P1). The person links the offers in their own inbox.
-    ...(connection?.state === "active" && connection.theirs.tripOffers
+    // Propose (here) or offer (another server) the trips the person was on; they link them in
+    // their own inbox — never the caller looking into their trips (Codex P1).
+    ...(account?.kind === "local" ||
+    (connection?.state === "active" && connection.theirs.tripOffers)
       ? [
           {
             key: "bulkLink",
-            label: t(`${NS}.actions.bulkOffer`),
+            label:
+              account?.kind === "local"
+                ? t(`${NS}.actions.bulkPropose`)
+                : t(`${NS}.actions.bulkOffer`),
             onSelect: () => handlers.bulkLink(person),
           },
         ]

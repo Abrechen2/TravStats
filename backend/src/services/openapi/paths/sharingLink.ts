@@ -13,6 +13,14 @@ import {
   bulkOfferQuerySchema,
   bulkPairsSchema,
   linkBodySchema,
+  proposableQuerySchema,
+  proposableTripsSchema,
+  proposalLinkBodySchema,
+  proposalPreviewBodySchema,
+  proposeBodySchema,
+  receivedProposalsSchema,
+  sentProposalSchema,
+  sentProposalsSchema,
   linkCandidatesQuerySchema,
   linkCandidatesSchema,
   linkPreviewBodySchema,
@@ -163,3 +171,86 @@ registry.registerPath({
     ...remoteRefusals,
   },
 });
+
+const proposalParams = z.object({ id: z.string().uuid() });
+const proposalRefusals = {
+  403: err("`SHARE_CONSENT_REQUIRED`: the other account does not let the caller offer trips"),
+  404: err("`SHARE_LINK_PROPOSAL_NOT_FOUND`, `TRIP_NOT_FOUND` or `SHARE_USER_NOT_FOUND`"),
+  409: err("`SHARE_TRIP_IN_OTHER_GROUP`, `SHARE_GROUP_CONSENT_REQUIRED`, `SHARE_REMOTE_NOT_HOME`"),
+};
+const proposalPath = (
+  method: "get" | "post",
+  path: string,
+  summary: string,
+  schema: z.ZodTypeAny,
+  request: Record<string, unknown> = {}
+) =>
+  registry.registerPath({
+    method,
+    path,
+    summary,
+    tags,
+    request,
+    responses: { 200: ok(summary, schema), ...proposalRefusals },
+  });
+
+proposalPath(
+  "post",
+  "/sharing/trips/{tripId}/link-proposal",
+  "Propose to another account on this server that it holds a copy of this trip",
+  sentProposalSchema,
+  { params: tripParams, body: json(proposeBodySchema) }
+);
+proposalPath(
+  "get",
+  "/sharing/link-proposals/sent",
+  "The caller's proposals and their status only",
+  sentProposalsSchema
+);
+proposalPath(
+  "get",
+  "/sharing/link-proposals/received",
+  "Trips proposed to the caller",
+  receivedProposalsSchema
+);
+proposalPath(
+  "get",
+  "/sharing/link-proposals/proposable",
+  "The caller's own trips the other account travelled on, with any proposal's status",
+  proposableTripsSchema,
+  { query: proposableQuerySchema }
+);
+proposalPath(
+  "get",
+  "/sharing/link-proposals/bulk",
+  "Every open proposal paired with one of the caller's trips",
+  bulkPairsSchema
+);
+proposalPath(
+  "get",
+  "/sharing/link-proposals/{id}/candidates",
+  "The caller's own trips that may be the proposed one",
+  linkCandidatesSchema,
+  { params: proposalParams }
+);
+proposalPath(
+  "post",
+  "/sharing/link-proposals/{id}/preview",
+  "Dry run of linking a proposed trip with one of the caller's; writes nothing",
+  linkPreviewSchema,
+  { params: proposalParams, body: json(proposalPreviewBodySchema) }
+);
+proposalPath(
+  "post",
+  "/sharing/link-proposals/{id}/link",
+  "Link a proposed trip with one of the caller's, settling differences by the caller's choices",
+  linkResultSchema,
+  { params: proposalParams, body: json(proposalLinkBodySchema) }
+);
+proposalPath(
+  "post",
+  "/sharing/link-proposals/{id}/decline",
+  "Decline a proposal; the proposer sees 'declined'",
+  z.object({ declined: z.literal(true) }),
+  { params: proposalParams }
+);

@@ -47,6 +47,10 @@ const remote = vi.hoisted(() => ({
   listOffers: vi.fn(async () => [] as unknown[]),
 }));
 vi.mock("../../../lib/api/sharingRemote", () => ({ sharingRemoteApi: remote }));
+// Local link proposals load beside the offers; none here (Codex P1, 2026-11-27).
+vi.mock("../../../lib/api/sharingLink", () => ({
+  sharingLinkApi: { receivedProposals: vi.fn().mockResolvedValue([]) },
+}));
 
 // The real globe paints a canvas jsdom cannot; keep its status semantics.
 vi.mock("../../GlobeLoader", () => ({
