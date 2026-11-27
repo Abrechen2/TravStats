@@ -53,7 +53,7 @@ export default function DocumentPreviewModal({ document, onClose }: Props): JSX.
         style={{ maxWidth: "100%", maxHeight: "70vh", margin: "0 auto", display: "block" }}
       />
     );
-  } else if (document.format === "pkpass") {
+  } else if (document.format === "pkpass" || document.format === "gpx") {
     body = <p className="t-caption">{t("dataQuality:unfiledDocuments.preview.noPreview")}</p>;
   } else if (frameBlocked) {
     body = <InlineError>{t("dataQuality:unfiledDocuments.preview.frameBlocked")}</InlineError>;

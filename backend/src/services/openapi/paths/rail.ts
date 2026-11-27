@@ -36,7 +36,7 @@ const railSource = z
       .string()
       .nullable()
       .describe("invoice | booking | boardingPass | ticket | other; null when unstated"),
-    format: z.string().describe("The file: image | pdf | eml | emailText | pkpass"),
+    format: z.string().describe("The file: image | pdf | eml | emailText | pkpass | gpx"),
     name: z.string().nullable().describe("The file name the user handed over, sanitised"),
     issuedOn: z.string().nullable().describe("The date printed on the document, YYYY-MM-DD"),
     parsed: z

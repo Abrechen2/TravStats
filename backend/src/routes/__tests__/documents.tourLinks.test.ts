@@ -159,4 +159,32 @@ describe("documents on a roadtrip / tour (GitHub #415)", () => {
       (await prisma.document.findUniqueOrThrow({ where: { id: doc.id } })).unlinkedAt
     ).toBeNull();
   });
+
+  it("keeps a GPX export on a roadtrip and hands it back as a download, byte for byte", async () => {
+    const gpx = Buffer.from('<?xml version="1.0"?><gpx version="1.1"><trk><trkseg/></trk></gpx>');
+    const up = await request(app)
+      .post("/api/v1/documents")
+      .set("Cookie", ownerCookie)
+      .field("entryType", "tour")
+      .field("entryId", tourId)
+      .attach("file", gpx, { filename: "ride.gpx", contentType: "application/octet-stream" });
+    expect(up.status).toBe(201);
+    expect(up.body.data.format).toBe("gpx");
+    const file = await get(`/documents/${up.body.data.id}/file`)
+      .buffer(true)
+      .parse((res, done) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (c: Buffer) => chunks.push(c));
+        res.on("end", () => done(null, Buffer.concat(chunks)));
+      });
+    expect(file.status).toBe(200);
+    expect(file.headers["content-type"]).toContain("application/gpx+xml");
+    expect(file.headers["content-disposition"]).toContain("attachment");
+    expect(Buffer.from(file.body).equals(gpx)).toBe(true);
+    const evil = await request(app)
+      .post("/api/v1/documents")
+      .set("Cookie", ownerCookie)
+      .attach("file", Buffer.from('<!DOCTYPE gpx [<!ENTITY a "b">]><gpx/>'), { filename: "x.gpx" });
+    expect(evil.status).toBe(415);
+  });
 });

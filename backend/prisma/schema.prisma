@@ -4829,7 +4829,7 @@ model Document {
   /// not be read, and every row kept before the column existed. Never 0.
   pageCount    Int?    @map("page_count")
 
-  /// The FILE: image | pdf | eml | emailText | pkpass.
+  /// The FILE: image | pdf | eml | emailText | pkpass | gpx.
   format        String
   /// What the document IS: invoice | booking | boardingPass | ticket | other.
   /// The parser's guess or the user's statement; null until one of them says.

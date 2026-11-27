@@ -243,7 +243,7 @@ router.get(
 );
 
 /** Formats a browser should hand to the user rather than render in the app's origin. */
-const DOWNLOAD_ONLY = new Set(["eml", "pkpass"]);
+const DOWNLOAD_ONLY = new Set(["eml", "pkpass", "gpx"]);
 
 router.get(
   "/documents/:id/file",

@@ -17,7 +17,7 @@ import type { ExtractValuesRequest, ExtractValuesResult } from "../extractValues
  * `{success, data}` family (ADR 0001), so every read here unwraps `.data.data`.
  */
 
-export const DOCUMENT_FORMATS = ["image", "pdf", "eml", "emailText", "pkpass"] as const;
+export const DOCUMENT_FORMATS = ["image", "pdf", "eml", "emailText", "pkpass", "gpx"] as const;
 export type DocumentFormat = (typeof DOCUMENT_FORMATS)[number];
 
 export const DOCUMENT_KINDS = ["invoice", "booking", "boardingPass", "ticket", "other"] as const;

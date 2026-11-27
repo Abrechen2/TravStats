@@ -24,7 +24,8 @@
     "pdf": "PDF",
     "eml": "E-Mail",
     "emailText": "E-Mail-Text",
-    "pkpass": "Wallet-Pass"
+    "pkpass": "Wallet-Pass",
+    "gpx": "GPX-Track"
   },
   "kind": {
     "invoice": "Rechnung",

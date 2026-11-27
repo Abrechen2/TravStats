@@ -77,8 +77,41 @@ describe("size limits", () => {
       eml: 2 * MB,
       emailText: 2 * MB,
       pkpass: 5 * MB,
+      gpx: 10 * MB,
     });
     expect(exceededLimit("eml", 2 * MB)).toBeNull();
     expect(exceededLimit("eml", 2 * MB + 1)).toBe(2 * MB);
+  });
+});
+
+describe("GPX tracks (GitHub #415)", () => {
+  const gpx = (head = '<?xml version="1.0"?>\n') =>
+    Buffer.from(`${head}<gpx version="1.1" creator="ride"><trk><trkseg/></trk></gpx>`);
+
+  it("accepts a file whose root is <gpx, whatever its name or declared type", () => {
+    expect(detectDocumentFormat(gpx(), "ride.gpx", "application/octet-stream")).toEqual({
+      format: "gpx",
+      mimetype: "application/gpx+xml",
+      extension: ".gpx",
+    });
+    expect(detectDocumentFormat(gpx("\uFEFF<!-- x -->\n"), undefined, undefined)?.format).toBe(
+      "gpx"
+    );
+  });
+
+  it("refuses a DTD or an entity, other XML, and a .gpx name on foreign content", () => {
+    expect(
+      detectDocumentFormat(gpx('<!DOCTYPE gpx [<!ENTITY a "b">]>\n'), "r.gpx", undefined)
+    ).toBeNull();
+    expect(
+      detectDocumentFormat(Buffer.from("<svg xmlns='x'/>"), "r.gpx", "application/gpx+xml")
+    ).toBeNull();
+    expect(detectDocumentFormat(Buffer.from("not xml at all"), "r.gpx", undefined)).toBeNull();
+  });
+
+  it("has its own size cap", () => {
+    const MB = 1024 * 1024;
+    expect(exceededLimit("gpx", 10 * MB)).toBeNull();
+    expect(exceededLimit("gpx", 10 * MB + 1)).toBe(10 * MB);
   });
 });

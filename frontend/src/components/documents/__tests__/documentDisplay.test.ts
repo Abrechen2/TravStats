@@ -13,6 +13,7 @@ const LIMITS = {
   eml: 2 * 1024 * 1024,
   emailText: 2 * 1024 * 1024,
   pkpass: 5 * 1024 * 1024,
+  gpx: 10 * 1024 * 1024,
 };
 
 function file(name: string, type: string, size = 1): File {
@@ -41,6 +42,12 @@ describe("guessDocumentFormat", () => {
     expect(guessDocumentFormat(file("mail.eml", ""))).toBe("eml");
     expect(guessDocumentFormat(file("pass.pkpass", ""))).toBe("pkpass");
     expect(guessDocumentFormat(file("mail.txt", "text/plain"))).toBe("emailText");
+  });
+
+  it("recognises a GPX track by its type or its extension, and gives it the route icon", () => {
+    expect(guessDocumentFormat(file("ride.gpx", "application/gpx+xml"))).toBe("gpx");
+    expect(guessDocumentFormat(file("ride.gpx", ""))).toBe("gpx");
+    expect(DOCUMENT_FORMAT_ICON.gpx).toBe("route");
   });
 
   it("abstains rather than guessing, so the server decides", () => {
