@@ -246,6 +246,12 @@
       "loading": "Loading entries …",
       "reload": "Reload",
       "empty": "No entries without a location.",
+      "filter": {
+        "label": "Filter entries",
+        "all": "All",
+        "stop": "With a proposal from my stops",
+        "noLocation": "All entries without a location"
+      },
       "showIgnored": "Show ignored",
       "stopsSent": "{{count}} TravTrack stops (named ones and longer unnamed ones) were sent along for matching.",
       "stopsWithheld": {

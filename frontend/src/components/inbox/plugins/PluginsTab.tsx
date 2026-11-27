@@ -179,6 +179,16 @@ export default function PluginsTab({
                 <p className="t-caption mt-1">
                   {entry.row.issues.map((i) => t(`${MS}.issue.${i}`)).join(" · ")}
                 </p>
+                {entry.notices.map((n, i) => (
+                  <p
+                    key={`${n.code}:${i}`}
+                    className="t-caption mt-1"
+                    style={{ color: TONE[n.severity] }}
+                    data-testid="plugin-entry-notice"
+                  >
+                    {n.message}
+                  </p>
+                ))}
                 {open === entry.key ? (
                   <div className="mt-2">
                     <PluginRowEditor

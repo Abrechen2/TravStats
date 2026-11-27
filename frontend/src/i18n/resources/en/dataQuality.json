@@ -872,8 +872,8 @@
     }
   },
   "pluginInbox": {
-    "intro": "Proposals and messages from your plugins.",
-    "info": "Nothing is written to the project archive until you confirm a proposal on its own. You can edit it first and undo it afterwards.",
+    "intro": "Proposals from your own stops and errors from your plugins.",
+    "info": "Nothing is written to the project archive until you confirm a proposal on its own. You can edit it first and undo it afterwards. Imprecise entries without a stop are under Settings → plugin → “Maintain locations”.",
     "reload": "Reload",
     "loading": "Asking the plugins …",
     "noPlugins": "No plugin with location maintenance is set up.",

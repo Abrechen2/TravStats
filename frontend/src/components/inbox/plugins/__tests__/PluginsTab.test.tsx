@@ -115,9 +115,41 @@ describe("PluginsTab", () => {
     api.undoLocation.mockResolvedValue({ undoId: "u1", rowId: "r1", restored: {} });
   });
 
-  it("reports proposals and notices as the tab's count", async () => {
+  it("counts one item per archive row: a notice about the row folds into it", async () => {
+    const onCount = mount();
+    await waitFor(() => expect(onCount).toHaveBeenLastCalledWith(1));
+    expect(screen.getAllByTestId("plugin-entry")).toHaveLength(1);
+  });
+
+  it("badge counts only actionable items: geocoder-only rows and warning notices stay out", async () => {
+    const data: MaintenanceList = {
+      ...LIST,
+      rows: [
+        ...LIST.rows,
+        ...Array.from({ length: 5 }, (_, i) => ({
+          rowId: `g${i}`,
+          name: `Ungenau ${i}`,
+          issues: ["noStreet" as const, "lowPrecision" as const],
+          proposals: [{ source: "geocoder" as const, lat: 1, lon: 1, confidence: "low" as const }],
+        })),
+      ],
+      notices: [
+        ...LIST.notices!,
+        {
+          severity: "warning",
+          code: "ambiguousGeocoder",
+          rowId: "g1",
+          message: "Mehrdeutig",
+        },
+        { severity: "error", code: "readOnly", message: "Archiv ist schreibgeschützt" },
+      ],
+    };
+    api.maintenanceInbox.mockResolvedValue(INBOX({ data }));
     const onCount = mount();
     await waitFor(() => expect(onCount).toHaveBeenLastCalledWith(2));
+    expect(screen.queryByText("Ungenau 1")).toBeNull();
+    expect(screen.queryByText("Mehrdeutig")).toBeNull();
+    expect(screen.getByText("Archiv ist schreibgeschützt")).toBeInTheDocument();
   });
 
   it("writes nothing without the confirmation, and cancelling writes nothing", async () => {
@@ -208,25 +240,29 @@ describe("PluginsTab", () => {
     api.maintenanceInbox.mockResolvedValue(INBOX({ failure: "timeout" }));
     mount();
     expect(await screen.findByRole("alert")).toHaveTextContent("Projekte:");
-    expect(screen.getAllByTestId("plugin-entry")).toHaveLength(2);
+    expect(screen.getAllByTestId("plugin-entry")).toHaveLength(1);
   });
 
-  it("a notice shows its reason and opens its row", async () => {
+  it("a notice about a listed row shows its reason inside that row's item", async () => {
     mount();
-    expect(await screen.findByText("Koordinaten liegen 4 km von der Adresse")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Zeile öffnen" }));
+    const notice = await screen.findByTestId("plugin-entry-notice");
+    expect(notice).toHaveTextContent("Koordinaten liegen 4 km von der Adresse");
+    const card = notice.closest("[data-testid='plugin-entry']") as HTMLElement;
+    expect(within(card).getByText("Baustelle Nord")).toBeInTheDocument();
+    await userEvent.click(within(card).getByRole("button", { name: "Bearbeiten" }));
     expect(screen.getByLabelText("Straße")).toBeInTheDocument();
   });
 });
 
 describe("plugin entry sorting", () => {
   const rows: MaintenanceList["rows"] = [
+    // In the inbox through its error notice alone, without a stop proposal.
     { rowId: "a", name: "A", issues: ["noStreet"], proposals: [] },
     {
       rowId: "b",
       name: "B",
       issues: ["noCoordinates"],
-      proposals: [],
+      proposals: [{ source: "stop", lat: 1, lon: 1, confidence: "low" }],
     },
     {
       rowId: "c",
@@ -243,13 +279,79 @@ describe("plugin entry sorting", () => {
       ],
     },
   ];
-  const entries = entriesOf(plugin, rows, []);
+  const entries = entriesOf(plugin, rows, [
+    { severity: "error", code: "readOnly", rowId: "a", message: "ro" },
+  ]);
   const names = (by: "severity" | "date" | "stop") =>
     sortEntries(entries, by).map((e) => (e.kind === "row" ? e.row.name : ""));
 
-  it("by severity puts a missing position first", () => expect(names("severity")[0]).toBe("B"));
+  it("by severity puts the errors first and the merely imprecise row last", () =>
+    expect(names("severity")).toEqual(["A", "B", "C"]));
   it("by date puts the newest stop first", () => expect(names("date")[0]).toBe("C"));
-  it("by stop proposal puts rows with one first", () => expect(names("stop")[0]).toBe("C"));
+  it("by stop proposal puts the row without one last", () =>
+    expect(names("stop").at(-1)).toBe("A"));
   it("an ignored row is no entry", () =>
-    expect(entriesOf(plugin, [{ ...rows[0], ignored: true }], [])).toHaveLength(0));
+    expect(entriesOf(plugin, [{ ...rows[2], ignored: true }], [])).toHaveLength(0));
+});
+
+describe("which plugin entries reach the inbox", () => {
+  const geocoderOnly = {
+    rowId: "x",
+    name: "X",
+    issues: ["lowPrecision" as const],
+    proposals: [{ source: "geocoder" as const, lat: 1, lon: 1, confidence: "low" as const }],
+  };
+  const withStop = {
+    rowId: "y",
+    name: "Y",
+    issues: ["noStreet" as const],
+    proposals: [
+      { source: "geocoder" as const, lat: 1, lon: 1, confidence: "low" as const },
+      { source: "stop" as const, lat: 1.001, lon: 1, confidence: "high" as const },
+    ],
+  };
+
+  it("an imprecise row without stop evidence is not in the inbox", () =>
+    expect(entriesOf(plugin, [geocoderOnly], [])).toHaveLength(0));
+
+  it("a row with a stop proposal appears once, carrying its geocoder proposal and notices", () => {
+    const entries = entriesOf(
+      plugin,
+      [withStop],
+      [
+        { severity: "warning", code: "coordsMismatch", rowId: "y", message: "a" },
+        { severity: "warning", code: "ambiguousGeocoder", rowId: "y", message: "b" },
+      ]
+    );
+    expect(entries).toHaveLength(1);
+    const [only] = entries;
+    expect(only.kind === "row" && only.row.proposals).toHaveLength(2);
+    expect(only.kind === "row" && only.notices.map((n) => n.code)).toEqual([
+      "coordsMismatch",
+      "ambiguousGeocoder",
+    ]);
+  });
+
+  it("an error notice about an imprecise row makes that row one item, with the notice folded in", () => {
+    const entries = entriesOf(
+      plugin,
+      [geocoderOnly],
+      [{ severity: "error", code: "readOnly", rowId: "x", message: "ro" }]
+    );
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ kind: "row", severity: "error" });
+  });
+
+  it("an error notice twice for the same row off the page is one item; a warning one is none", () => {
+    const entries = entriesOf(
+      plugin,
+      [],
+      [
+        { severity: "error", code: "readOnly", rowId: 7, message: "ro" },
+        { severity: "error", code: "readOnly", rowId: "7", message: "ro" },
+        { severity: "warning", code: "coordsMismatch", rowId: 8, message: "w" },
+      ]
+    );
+    expect(entries.map((e) => e.key)).toEqual(["p1:notice:readOnly:7"]);
+  });
 });

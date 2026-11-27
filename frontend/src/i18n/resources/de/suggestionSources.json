@@ -246,6 +246,12 @@
       "loading": "Einträge werden geladen …",
       "reload": "Neu laden",
       "empty": "Keine Einträge ohne Standort.",
+      "filter": {
+        "label": "Einträge filtern",
+        "all": "Alle",
+        "stop": "Mit Vorschlag aus meinen Stopps",
+        "noLocation": "Alle Einträge ohne Standort"
+      },
       "showIgnored": "Ignorierte zeigen",
       "stopsSent": "{{count}} TravTrack-Stopps (benannte und längere unbenannte) wurden zum Abgleich mitgeschickt.",
       "stopsWithheld": {
