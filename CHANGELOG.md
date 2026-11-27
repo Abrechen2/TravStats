@@ -6,6 +6,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.48.** Two new migrations, both additive: documents can be linked to a roadtrip, and trip link proposals between two accounts on one server get a table of their own. Nothing is deleted. Optional for LXC hosts: bind `/proc/meminfo:/host/proc/meminfo:ro` so the container sizes Node's memory from the real limit; `NODE_MAX_OLD_SPACE_MB` still wins.
+
+### Security
+
+- **Linking an existing trip is the receiver's decision.** Permission to send trip offers no longer lets the sender see, preview or link the receiver's own unshared trips. Matching, preview and the decision happen in the receiver's inbox; the sender learns only pending, linked or declined. Neither the account archive nor the admin export carries the other side's trip id.
+- **Bulk offers share the rate limit of single offers** and send only trips the bulk list offered.
+
+### Fixed
+
+- **iCloud calendars load.** An empty calendar and long event descriptions stopped the whole source; now a calendar that fails is skipped and named, and the source shows "teilweise".
+- **The Plugins tab in the inbox lists what needs you:** rows with a proposal from your own stops, each row once, plus real errors. Rows that are merely imprecise stay in "Standorte pflegen", whose filters now ask the plugin itself and reach the whole archive, not only its first 50 rows.
+- **Linking keeps the better value.** A drawn line is never replaced by a straight one, a time never by a date only, a filled field never by an empty one, in both directions.
+- **Shared cruises with long routes, Nile ports without a UN/LOCODE and flights without a number** now link and share.
+- **"Reisen teilen" off pauses a link on both sides;** changes wait in order instead of being sent or lost.
+- **A trip exported as `.travstats` keeps** its ferry and cruise lines, cruise legs, gate and terminal.
+- **A restored archive keeps its files** when the final clean-up fails, and deleting a large TravTrack history no longer builds an unbounded list.
+- **Errors at the field:** a rejected value is shown at its field in 22 forms, in DE or EN, with the cursor on the first one.
+- The share offer banner shows above the dashboard globe, a linked companion appears once, and a person reads as "name · server".
+
+### Added
+
+- **"Alle passenden Reisen verknüpfen"** links every matching pair at once and lists the rest for review, with a summary, progress, a visible pause when the limit is reached, a result per trip and undo. The sender gets "Gemeinsame Reisen anbieten".
+- **A readable link preview** with local times, line descriptions ("gezeichnet, 184 Punkte"), a choice per field, and derived values marked "wird neu berechnet".
+- **Documents on roadtrips** (#415), including GPX files from ride apps.
+- **Year filter on the places list** and visit counts per year for places and stays.
+
 **Upgrading to 2.8.0-rc.47.** Seven new migrations, all additive: the purpose catalogue and custom purposes, the plugins' announcements, trip photo links, plugin-fed place lists, stored yearly TravTrack summaries, a cache for plugin proposals and the row log that lets a failed archive restore undo only its own rows. Nothing is deleted. The container now sizes Node's memory from its limit (override with `NODE_MAX_OLD_SPACE_MB`), and database sessions get a 30 s statement and a 5 min idle-transaction timeout (both configurable). `docs/ops/postgres-tuning.md` lists Postgres settings per machine size.
 
 ### Fixed
