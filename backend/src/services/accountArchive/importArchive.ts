@@ -100,6 +100,8 @@ export interface ImportOptions {
   sleep?: Sleep;
   /** Test seam: the instance's write slot. */
   slot?: FairSlot;
+  /** Test seam: the row-record cleanup after a committed restore fails. */
+  failRowRecordCleanup?: boolean;
 }
 
 /** The tables in which the account already has rows that an import would collide with. */
@@ -158,6 +160,10 @@ export async function importAccountArchive(
   const client = options.client ?? (prisma as unknown as PrismaClient);
   const reader = await ArchiveReader.open(file);
   const written: WrittenFile[] = [];
+  // Once the restore has committed, its rows point at the written files: from then on no
+  // failure may remove them, or the account keeps rows whose files are gone and a retry
+  // answers alreadyImported.
+  let committed = false;
   try {
     const plan = buildPlan(await readCatalog(client as unknown as Db));
     const contents = await readContents(reader, plan, options.maxBytes ?? archiveMaxBytes());
@@ -200,6 +206,8 @@ export async function importAccountArchive(
           "ACCOUNT_ARCHIVE_ALREADY_IMPORTED"
         );
       }
+      // A completed restore whose row record was not removed (a failed cleanup) is tidied now.
+      await cleanRowRecord(client, manifest.archiveId);
       const counts = earlier.counts as Partial<Omit<ImportResult, "archiveId" | "alreadyImported">>;
       return {
         archiveId: manifest.archiveId,
@@ -291,7 +299,8 @@ export async function importAccountArchive(
       } finally {
         restoresRunning.delete(manifest.archiveId);
       }
-      await dropRowRecord(client, manifest.archiveId);
+      committed = true;
+      await cleanRowRecord(client, manifest.archiveId, options.failRowRecordCleanup);
     } finally {
       slot.release();
     }
@@ -306,7 +315,7 @@ export async function importAccountArchive(
       refusedFiles: refused,
     };
   } catch (err) {
-    await removeFiles(written);
+    if (!committed) await removeFiles(written);
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       throw new AppError(
         "This archive is being imported already",
@@ -499,6 +508,29 @@ async function undoImport(
     },
     { timeout: LONG_UNDO_TX_TIMEOUT_MS }
   );
+}
+
+/**
+ * The row record of a COMMITTED restore is only bookkeeping: a failure to remove it is logged
+ * and left for the next import of the same archive, never thrown into the restore it follows.
+ */
+async function cleanRowRecord(
+  client: PrismaClient,
+  archiveId: string,
+  failForTest = false
+): Promise<void> {
+  try {
+    if (failForTest) throw new Error("injected row-record cleanup failure");
+    await dropRowRecord(client, archiveId);
+  } catch (err) {
+    logger.warn({
+      operation: "account_archive_row_record_cleanup_failed",
+      message:
+        "The restore is complete; its row record is removed on the next import of this archive",
+      context: { archiveId },
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 }
 
 /** A finished restore's row record, removed in short batches. */
