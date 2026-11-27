@@ -21,6 +21,8 @@ export interface FlightSubmitFailure {
   /** The input the server named (`field` of its answer), or null. */
   field: string | null;
   variant: FlightSubmitVariant;
+  /** The refusal itself, so a validation body can be shown at its fields. */
+  error: unknown;
 }
 
 interface Deps {
@@ -143,6 +145,7 @@ export function useFlightSubmit(deps: Deps): {
         key,
         field: apiErrorMachineCode(err) ? fieldOf(err) : null,
         variant,
+        error: err,
       });
     } finally {
       inFlight.current = false;

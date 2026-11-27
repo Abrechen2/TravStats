@@ -117,6 +117,8 @@ export const placeQuerySchema = z.object({
     .transform((v) => v === "true")
     .optional(),
   tripId: z.string().uuid().optional(),
+  /** Only places with a visit that happened in this year (shared/placeCounting). */
+  year: z.coerce.number().int().min(1900).max(2200).optional(),
   sortBy: z
     .enum(["name", "city", "category", "visitCount", "lastVisit", "createdAt"])
     .default("name"),

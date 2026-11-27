@@ -127,4 +127,59 @@ describe("one error voice", () => {
     );
     expect(hits, "use reportPageError (page failure) or InlineError (field failure)").toEqual([]);
   });
+
+  /**
+   * rc.48: a server 400 `VALIDATION_FAILED` names its fields (`details[].field`). A form's failed
+   * save passes the error on (`failure.fail(key, err)`), so the message lands at the field
+   * (`FieldErrorsHost`) and the banner is left for what no field answers. Before: 23 `fail(…)`
+   * sites across 20 forms read the code only and printed one generic banner above the form.
+   */
+  function failCalls(text: string): string[] {
+    const calls: string[] = [];
+    for (const m of text.matchAll(/\bfailure\.fail\(/g)) {
+      let depth = 0;
+      const start = (m.index ?? 0) + m[0].length - 1;
+      for (let i = start; i < text.length; i += 1) {
+        if (text[i] === "(") depth += 1;
+        if (text[i] === ")" && (depth -= 1) === 0) {
+          calls.push(text.slice(start + 1, i));
+          break;
+        }
+      }
+    }
+    return calls;
+  }
+  /** Top-level argument count of a call's argument text. */
+  function argCount(args: string): number {
+    let depth = 0;
+    let n = 1;
+    for (const ch of args) {
+      if ("([{".includes(ch)) depth += 1;
+      else if (")]}".includes(ch)) depth -= 1;
+      else if (ch === "," && depth === 0) n += 1;
+    }
+    return args.trim().endsWith(",") ? n - 1 : n;
+  }
+
+  /** Keys that name a refusal of the server (not a rule the form checks itself). */
+  const SERVER_REFUSAL = /saveErrorKey|expenseFailureKey|refused\.key/;
+  it("a failed save hands the error on, so a validation refusal is not rendered as a banner", () => {
+    const hits: string[] = [];
+    for (const f of FILES) {
+      for (const args of failCalls(f.text)) {
+        if (SERVER_REFUSAL.test(args) && argCount(args) < 2)
+          hits.push(`${f.rel}: fail(${args.trim()})`);
+      }
+    }
+    expect(hits, "pass the error as the second argument: failure.fail(key, err)").toEqual([]);
+  });
+
+  it("a form with a failure banner also mounts FieldErrorsHost, and shows the banner via bannerKey", () => {
+    const forms = FILES.filter(
+      (f) => /\buseFormFailure\(/.test(f.text) && f.text.includes("<FormErrorBanner")
+    );
+    expect(forms.length).toBeGreaterThan(15);
+    const missing = forms.filter((f) => !f.text.includes("<FieldErrorsHost")).map((f) => f.rel);
+    expect(missing, "mount <FieldErrorsHost failure={failure} /> beside the banner").toEqual([]);
+  });
 });

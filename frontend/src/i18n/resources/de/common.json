@@ -153,6 +153,10 @@
     "unknown": "Unbekannt",
     "notAvailable": "k.A."
   },
+  "fieldErrors": {
+    "required": "Dieses Feld fehlt.",
+    "invalid": "Dieser Wert ist ungültig."
+  },
   "saveErrors": {
     "validation": "Einige Angaben sind ungültig. Bitte prüfe die markierten Felder und versuche es erneut.",
     "duplicate": "Ein Eintrag mit diesen Angaben existiert bereits.",
@@ -584,6 +588,8 @@
       "events_other": "{{count}} Einträge",
       "rides_one": "{{count}} Fahrt",
       "rides_other": "{{count}} Fahrten",
+      "visits_one": "{{count}} Besuch",
+      "visits_other": "{{count}} Besuche",
       "rentals_one": "{{count}} Miete",
       "rentals_other": "{{count}} Mieten"
     }

@@ -17,6 +17,7 @@ import {
 import type { Trip } from "../../types";
 import type { PlaceVisit } from "../../types/place";
 import {
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredMark,
   SaveBlockedHint,
@@ -206,7 +207,8 @@ export function VisitDialog({
           isEdit ? "places:detail.visitUpdateFailed" : "places:detail.visitFailed",
           {},
           { create: !isEdit }
-        )
+        ),
+        outcome.error
       );
     }
   };
@@ -454,8 +456,10 @@ export function VisitDialog({
             people: a date is optional, and a future one does not count. */}
         <p className="t-caption">{t("places:detail.dateHint")}</p>
 
+        <FieldErrorsHost failure={failure} />
+
         <FormErrorBanner
-          message={failure.failureKey !== null ? t(failure.failureKey) : null}
+          message={failure.bannerKey !== null ? t(failure.bannerKey) : null}
           onRetry={
             failure.failureKey !== null && isTransientSaveError(failure.failureKey)
               ? () => void handleSave()

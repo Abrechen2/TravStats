@@ -4,6 +4,7 @@ import Dialog from "../ui/Dialog";
 import SuggestionChips from "../common/SuggestionChips";
 import {
   FieldError,
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredLegend,
   SaveBlockedHint,
@@ -230,7 +231,8 @@ export function BusFormModal({
   /** A refusal naming a plain field, at that field (forgejo#246). */
   const fieldError = (field: BusFormErrorField): string | null =>
     shown?.field === field ? errorText : null;
-  const bannerText = shown !== null && shown.field === null ? errorText : null;
+  const bannerText =
+    shown !== null && shown.field === null && failure.bannerKey !== null ? errorText : null;
 
   const submit = async (): Promise<void> => {
     if (!ready) return;
@@ -268,7 +270,7 @@ export function BusFormModal({
       logger.error("BusFormModal: save failed", outcome.error);
       const refused = saveErrorFrom(outcome.error, { create: !journey });
       setRefusal(refused);
-      failure.fail(refused.key);
+      failure.fail(refused.key, outcome.error);
     } else if (outcome.status === "savedButAfterFailed") {
       logger.error("BusFormModal: onSaved failed after the ride was saved", outcome.error);
     }
@@ -534,6 +536,8 @@ export function BusFormModal({
           pickTrip={pickTrip}
           errorFor={fieldError}
         />
+
+        <FieldErrorsHost failure={failure} />
 
         <FormErrorBanner
           message={bannerText}

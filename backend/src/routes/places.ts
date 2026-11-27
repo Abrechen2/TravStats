@@ -13,7 +13,12 @@ import { resolveCountryCode } from "../shared/geo/countryCode";
 import { completeAddressFromCoordinates } from "../services/geo/nominatim";
 import { getContinent } from "../utils/continents";
 import { recheckAchievements } from "../utils/achievements";
-import { classifyVisit, isEffectivelyVisited, visitPromotesPlace } from "../shared/placeCounting";
+import {
+  classifyVisit,
+  isEffectivelyVisited,
+  visitCountsForYear,
+  visitPromotesPlace,
+} from "../shared/placeCounting";
 import { deletePlacePhotoFile } from "../middleware/upload";
 import logger from "../utils/logger";
 import { toPhotoDto, VISIT_PHOTO_INCLUDE } from "./places/visitPhotoDto";
@@ -257,7 +262,8 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const userId = requireUser(req);
     const parsed = placeQuerySchema.safeParse(req.query);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
-    const { q, category, country, visited, tripId, sortBy, sortOrder, limit, offset } = parsed.data;
+    const { q, category, country, visited, tripId, year, sortBy, sortOrder, limit, offset } =
+      parsed.data;
 
     const where: Prisma.PlaceWhereInput = { userId };
     if (category) where.category = category;
@@ -281,18 +287,22 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     // `routes/lodging.ts`: fetch the filtered set, decorate, sort, and ONLY
     // THEN slice — sort-then-paginate, never the other way around.
     const now = new Date();
-    if (sortBy === "visitCount" || sortBy === "lastVisit") {
+    // A year filter cannot be a column predicate either — a visit's year is read on the place's own
+    // calendar — so it takes the same fetch, filter, sort, then slice path.
+    if (year !== undefined || sortBy === "visitCount" || sortBy === "lastVisit") {
       const all = await prisma.place.findMany({
         where,
         include: PLACE_INCLUDE,
-        // A stable base order so ties do not shuffle between requests.
-        orderBy: { name: "asc" },
+        // A plain column keeps its database order (`orderByFor` falls back to name for the derived
+        // keys), so ties do not shuffle between requests.
+        orderBy: orderByFor(sortBy, sortOrder),
       });
-      const sorted = sortDecorated(
-        all.map((r) => decorate(r, now)),
-        sortBy,
-        sortOrder
-      );
+      const inYear =
+        year === undefined
+          ? all
+          : all.filter((r) => r.visits.some((v) => visitCountsForYear(v, year, now)));
+      const decorated = inYear.map((r) => decorate(r, now));
+      const sorted = sortDecorated(decorated, sortBy, sortOrder);
       res.json({
         success: true,
         data: sorted.slice(offset, offset + limit),

@@ -13,6 +13,7 @@ import {
 } from "../../lib/saveErrorMessage";
 import type { PlaceList } from "../../types/placeList";
 import {
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredLegend,
   RequiredMark,
@@ -88,7 +89,10 @@ export function PlaceListCreateDialog({
     if (outcome.status === "failed") {
       logger.error({ err: outcome.error }, "PlaceListCreateDialog: create failed");
       // Always a create: a lost answer may have stored the list.
-      failure.fail(saveErrorKey(outcome.error, "places:lists.createFailed", {}, { create: true }));
+      failure.fail(
+        saveErrorKey(outcome.error, "places:lists.createFailed", {}, { create: true }),
+        outcome.error
+      );
     }
   };
 
@@ -198,8 +202,9 @@ export function PlaceListCreateDialog({
           labelMode={labelMode}
           onLabelModeChange={setLabelMode}
         />
+        <FieldErrorsHost failure={failure} />
         <FormErrorBanner
-          message={failure.failureKey !== null ? t(failure.failureKey) : null}
+          message={failure.bannerKey !== null ? t(failure.bannerKey) : null}
           onRetry={
             failure.failureKey !== null && isTransientSaveError(failure.failureKey)
               ? () => void handleSave()

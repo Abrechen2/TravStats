@@ -4,7 +4,13 @@ import { useNavigate } from "react-router-dom";
 
 import Button from "../ui/Button";
 import Dialog from "../ui/Dialog";
-import { FormErrorBanner, navigateAfterSave, useDirtyGuard, useFormFailure } from "../form";
+import {
+  FieldErrorsHost,
+  FormErrorBanner,
+  navigateAfterSave,
+  useDirtyGuard,
+  useFormFailure,
+} from "../form";
 import { useTranslation } from "../../hooks/useTranslation";
 import { UseCancelledError, withUseConsent } from "../../lib/api/serviceUse";
 import { useServiceUseConfirm } from "../ExternalServices/useServiceUseConfirm";
@@ -138,7 +144,7 @@ export default function LegDialog({
         return;
       }
       logger.warn("Saving a roadtrip leg failed", err);
-      failure.fail(saveErrorKey(err, "roadtrips:legDialog.error"));
+      failure.fail(saveErrorKey(err, "roadtrips:legDialog.error"), err);
     } finally {
       setSaving(false);
     }
@@ -312,8 +318,9 @@ export default function LegDialog({
           <p className="t-caption">
             {t("roadtrips:legDialog.distance", { km: nf.format(leg.distanceKm) })}
           </p>
+          <FieldErrorsHost failure={failure} />
           <FormErrorBanner
-            message={failure.failureKey ? t(failure.failureKey) : null}
+            message={failure.bannerKey ? t(failure.bannerKey) : null}
             onRetry={
               failure.failureKey && isTransientSaveError(failure.failureKey)
                 ? () => void apply()

@@ -5,6 +5,7 @@ import { useTripPreselection } from "../../hooks/useTripPreselection";
 import { useTranslation } from "../../hooks/useTranslation";
 import { isOutcomeUnknownSaveError, isTransientSaveError } from "../../lib/saveErrorMessage";
 import {
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredLegend,
   useDirtyGuard,
@@ -202,7 +203,8 @@ export function RailFormModal({
     shown?.field === field ? errorText : null;
   const depError = fieldError("departureLocal");
   const arrError = fieldError("arrivalLocal");
-  const bannerText = shown !== null && shown.field === null ? errorText : null;
+  const bannerText =
+    shown !== null && shown.field === null && failure.bannerKey !== null ? errorText : null;
 
   const blocked = saving.saving || saving.saved !== null || !ready;
   const anyDayOnly = hasDayOnlyEnd(draft);
@@ -298,6 +300,7 @@ export function RailFormModal({
         {!(isStationComplete(draft.departure) && isStationComplete(draft.arrival)) && (
           <p className="mb-3 text-sm text-(--text-muted)">{t("rail:form.stationMissing")}</p>
         )}
+        <FieldErrorsHost failure={failure} />
         <FormErrorBanner
           message={bannerText}
           onRetry={

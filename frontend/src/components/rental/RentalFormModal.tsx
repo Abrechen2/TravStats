@@ -3,6 +3,7 @@ import type { GapDates } from "../../lib/gapCalendar";
 import Dialog from "../ui/Dialog";
 import type { JSX } from "react";
 import {
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredLegend,
   useDirtyGuard,
@@ -144,7 +145,7 @@ export function RentalFormModal({
       setStep(FIELD_STEP[refused.field]);
       failure.focusFirstProblem();
     } else {
-      failure.fail(refused.key);
+      failure.fail(refused.key, outcome.error);
     }
   };
 
@@ -204,8 +205,9 @@ export function RentalFormModal({
       }
     >
       <div ref={failure.rootRef} className="space-y-4">
+        <FieldErrorsHost failure={failure} />
         <FormErrorBanner
-          message={failure.failureKey ? t(failure.failureKey) : null}
+          message={failure.bannerKey ? t(failure.bannerKey) : null}
           onRetry={
             failure.failureKey && isTransientSaveError(failure.failureKey)
               ? (): void => void submit()

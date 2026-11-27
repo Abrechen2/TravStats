@@ -83,7 +83,7 @@ describe("useFlightSubmit", () => {
     const onSubmit = vi.fn().mockRejectedValueOnce(dbDown).mockResolvedValueOnce(undefined);
     const { hook, deps } = setup(onSubmit);
     await act(() => hook.result.current.handleSubmitAndReturn(event));
-    expect(hook.result.current.failure).toEqual({
+    expect(hook.result.current.failure).toMatchObject({
       key: "common:saveErrors.dbUnavailable",
       field: null,
       variant: "saveAndReturn",

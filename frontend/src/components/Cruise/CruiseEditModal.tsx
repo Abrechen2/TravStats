@@ -29,6 +29,7 @@ import { suggestCruiseRouteName } from "./cruiseRouteName";
 import { stopKeyAt } from "./cruiseStopKeys";
 import {
   FieldError,
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredLegend,
   RequiredMark,
@@ -267,7 +268,8 @@ export function CruiseEditModal({
           "cruise:form.saveError",
           {},
           { create: mode === "create" || !cruise }
-        )
+        ),
+        outcome.error
       );
     }
   };
@@ -497,8 +499,10 @@ export function CruiseEditModal({
         <CruiseCostsSection fields={draft} set={set} errors={fieldErrors} />
         <CruiseMetaSection fields={draft} set={set} trips={trips} onPickTrip={pickTrip} />
 
+        <FieldErrorsHost failure={failure} />
+
         <FormErrorBanner
-          message={failure.failureKey !== null ? t(failure.failureKey) : null}
+          message={failure.bannerKey !== null ? t(failure.bannerKey) : null}
           onRetry={
             failure.failureKey !== null && isTransientSaveError(failure.failureKey)
               ? (): void => void handleSave()

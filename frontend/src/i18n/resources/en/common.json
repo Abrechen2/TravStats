@@ -153,6 +153,10 @@
     "unknown": "Unknown",
     "notAvailable": "N/A"
   },
+  "fieldErrors": {
+    "required": "This field is required.",
+    "invalid": "This value is not valid."
+  },
   "saveErrors": {
     "validation": "Some details are not valid. Please check the fields and try again.",
     "duplicate": "An entry with these details already exists.",
@@ -584,6 +588,8 @@
       "events_other": "{{count}} entries",
       "rides_one": "{{count}} ride",
       "rides_other": "{{count}} rides",
+      "visits_one": "{{count}} visit",
+      "visits_other": "{{count}} visits",
       "rentals_one": "{{count}} rental",
       "rentals_other": "{{count}} rentals"
     }

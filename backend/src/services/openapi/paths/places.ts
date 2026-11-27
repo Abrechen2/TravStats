@@ -26,7 +26,12 @@ import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { clientRefBodySchema } from "../../../schemas/clientRef";
 import { clientRefResponses } from "./clientRef";
-import { createPlaceSchema, createVisitSchema, updatePlaceSchema } from "../../../schemas/place";
+import {
+  createPlaceSchema,
+  createVisitSchema,
+  placeQuerySchema,
+  updatePlaceSchema,
+} from "../../../schemas/place";
 import { errorContent, timeRefused } from "./shared";
 import { photoFileQuerySchema } from "../../../schemas/photoVariant";
 import {
@@ -199,7 +204,11 @@ registry.registerPath({
   method: "get",
   path: "/places",
   summary: "List places",
+  description:
+    "`year` keeps the places with a visit that happened in that year (the place's own calendar; " +
+    "an undated or future visit claims no year).",
   tags: placesTag,
+  request: { query: placeQuerySchema },
   responses: {
     200: { description: "Places", content: { "application/json": { schema: z.array(place) } } },
   },

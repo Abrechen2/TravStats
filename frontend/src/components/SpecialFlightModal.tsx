@@ -30,6 +30,7 @@ import {
 } from "../lib/saveErrorMessage";
 import Dialog from "./ui/Dialog";
 import {
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredLegend,
   SaveBlockedHint,
@@ -492,7 +493,8 @@ export default function SpecialFlightModal({
         apiErrorMachineCode(err) && typeof data?.field === "string" ? data.field : null
       );
       failure.fail(
-        saveErrorKey(err, "specialFlights:error.saveFailed", {}, { create: !isEditMode })
+        saveErrorKey(err, "specialFlights:error.saveFailed", {}, { create: !isEditMode }),
+        err
       );
       return;
     } finally {
@@ -554,8 +556,9 @@ export default function SpecialFlightModal({
       )}
     >
       <div ref={failure.rootRef} className="space-y-4">
+        <FieldErrorsHost failure={failure} />
         <FormErrorBanner
-          message={failure.failureKey && !serverInput ? t(failure.failureKey) : null}
+          message={failure.bannerKey && !serverInput ? t(failure.bannerKey) : null}
           onRetry={
             failure.failureKey && isTransientSaveError(failure.failureKey)
               ? () => void handleSubmit()

@@ -20,7 +20,14 @@ import FlightSelectStep from "./FlightForm/FlightSelectStep";
 import FlightCompleteStep from "./FlightForm/FlightCompleteStep";
 import { useFlightForm, type FlightSubmitOptions } from "./FlightForm/useFlightForm";
 import { focusFirstMissingRequired } from "./FlightForm/requiredFields";
-import { FormErrorBanner, SaveBlockedHint, focusFirstError, useDirtyGuard } from "./form";
+import {
+  FieldErrorsHost,
+  FormErrorBanner,
+  SaveBlockedHint,
+  focusFirstError,
+  useDirtyGuard,
+} from "./form";
+import { routeValidation, type RoutedFieldError } from "../lib/validationFieldErrors";
 import { isOutcomeUnknownSaveError, isTransientSaveError } from "../lib/saveErrorMessage";
 import {
   SERVER_TIME_FIELDS,
@@ -54,6 +61,8 @@ interface SimplifiedFlightFormProps {
   /** A `YYYY-MM-DD` the form opens on instead of today (the gap calendar). */
   initialDate?: string;
 }
+
+const NO_SERVER_FIELDS = { fields: [] as RoutedFieldError[], hidesBanner: false };
 
 export default function SimplifiedFlightFormV2({
   onSubmit,
@@ -122,8 +131,18 @@ export default function SimplifiedFlightFormV2({
     ...(attempted ? actualPairErrors(form, t) : {}),
     ...(failureCurrent && serverTimeField ? { [serverTimeField]: t(failure.key) } : {}),
   };
+  // A refused body names its fields: shown at them, and the banner only when one is left over.
+  const [serverFields, setServerFields] = useState<{
+    fields: RoutedFieldError[];
+    hidesBanner: boolean;
+  }>({ fields: [], hidesBanner: false });
+  useEffect(() => {
+    const { routed, unmatched } = routeValidation(rootRef.current, failure?.error);
+    setServerFields({ fields: routed, hidesBanner: routed.length > 0 && unmatched === 0 });
+  }, [failure]);
+  const shownServerFields = failureCurrent ? serverFields : NO_SERVER_FIELDS;
   const bannerMessage = failure
-    ? failureCurrent && !serverTimeField
+    ? failureCurrent && !serverTimeField && !shownServerFields.hidesBanner
       ? form.error
       : null
     : form.error || null;
@@ -284,6 +303,7 @@ export default function SimplifiedFlightFormV2({
 
           {/* Announced and focusable (forgejo#246); "Erneut versuchen" where
             trying again is the likely cure — it repeats the save that failed. */}
+          <FieldErrorsHost failure={{ fieldErrors: shownServerFields.fields, rootRef }} />
           <FormErrorBanner
             message={bannerMessage}
             onRetry={

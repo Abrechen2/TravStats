@@ -3,6 +3,7 @@ import Dialog from "./ui/Dialog";
 import Chip from "./ui/Chip";
 import { Icon } from "./ui/Icon";
 import {
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredLegend,
   SaveBlockedHint,
@@ -387,7 +388,7 @@ export default function FlightReviewModal({
               : null;
         setServerField(field);
         // Confirming here creates the flight: a lost answer offers no blind retry.
-        failure.fail(saveErrorKey(err, "errors:saveFailed", {}, { create: true }));
+        failure.fail(saveErrorKey(err, "errors:saveFailed", {}, { create: true }), err);
       }
     } finally {
       inFlight.current = false;
@@ -502,8 +503,9 @@ export default function FlightReviewModal({
           className={`space-y-4 ${FLIGHT_FORM_TOUCH}`}
         >
           {duplicate && <ReviewDuplicateNotice existing={duplicate} onCancel={onClose} />}
+          <FieldErrorsHost failure={failure} />
           <FormErrorBanner
-            message={failure.failureKey && !fieldFailure ? t(failure.failureKey) : null}
+            message={failure.bannerKey && !fieldFailure ? t(failure.bannerKey) : null}
             onRetry={
               failure.failureKey && isTransientSaveError(failure.failureKey)
                 ? () => void handleSubmit()
