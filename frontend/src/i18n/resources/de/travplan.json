@@ -648,6 +648,22 @@
       },
       "full": "Diese Nacht hat schon 10 Kandidaten. Entferne einen, um einen Vorschlag zu übernehmen."
     },
+    "limits": {
+      "title": "Tageslimit beim Fahren",
+      "hint": "Eine längere Fahrt wird in Tagesetappen mit Übernachtungsvorschlägen geteilt. Leer lassen heißt: kein Limit.",
+      "hours": "Höchstens Stunden pro Tag",
+      "km": "Höchstens Kilometer pro Tag",
+      "invalid": "Bitte eine Zahl im erlaubten Bereich eingeben (0,5–24 Stunden, 20–3000 km).",
+      "save": "Limit speichern"
+    },
+    "split": {
+      "title": "{{from}} → {{to}} in {{days}} Tagesetappen",
+      "approximate": "Der Vorschlag liegt auf der Luftlinie, nicht auf der Straße. Nach dem Übernehmen kannst du den Ort anpassen.",
+      "stop": "Übernachtung {{n}}: nach etwa {{km}} km, bei {{lat}}, {{lon}}",
+      "stopName": "Übernachtung zwischen {{from}} und {{to}}",
+      "confirm": "Stopp übernehmen",
+      "dismiss": "Verwerfen"
+    },
     "insert": {
       "open": "+ Ort zwischen {{from}} und {{to}} einfügen",
       "title": "Ort zwischen {{from}} und {{to}}"

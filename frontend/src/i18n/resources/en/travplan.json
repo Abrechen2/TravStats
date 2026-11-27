@@ -648,6 +648,22 @@
       },
       "full": "This night already has 10 candidates. Remove one to take a suggestion."
     },
+    "limits": {
+      "title": "Daily driving limit",
+      "hint": "A longer drive is split into daily stages with suggested overnight stops. Leave empty for no limit.",
+      "hours": "Hours per day at most",
+      "km": "Kilometres per day at most",
+      "invalid": "Enter a number in the allowed range (0.5–24 hours, 20–3000 km).",
+      "save": "Save limit"
+    },
+    "split": {
+      "title": "{{from}} → {{to}} in {{days}} daily stages",
+      "approximate": "The suggestion lies on the straight line, not on the road. After adding it you can adjust the place.",
+      "stop": "Overnight {{n}}: after about {{km}} km, at {{lat}}, {{lon}}",
+      "stopName": "Overnight between {{from}} and {{to}}",
+      "confirm": "Add stop",
+      "dismiss": "Dismiss"
+    },
     "insert": {
       "open": "+ Add a stop between {{from}} and {{to}}",
       "title": "Stop between {{from}} and {{to}}"
