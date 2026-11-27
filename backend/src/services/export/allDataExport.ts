@@ -149,6 +149,21 @@ export const USER_EXPORT_SELECT = {
   shareConsentsGiven: true,
   shareGroupsCreated: true,
   shareNotices: true,
+  // Local link proposals (feat/share-bulk-link): what the account offered and what it was
+  // offered. A made proposal leaves out `linkedTripId` — the other account's trip, which the
+  // proposal flow never shows the proposer.
+  linkProposalsMade: {
+    select: {
+      id: true,
+      proposerId: true,
+      recipientId: true,
+      tripId: true,
+      status: true,
+      createdAt: true,
+      decidedAt: true,
+    },
+  },
+  linkProposalsReceived: true,
   // Public share links (forgejo#281): what is shared, with what, until when —
   // never the token hash. The token itself is stored nowhere.
   publicShareLinks: {

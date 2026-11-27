@@ -587,6 +587,12 @@ describe("GET /api/v1/admin/export/all-data", () => {
     expect(relations.filter((r) => !covered.has(r))).toEqual([]);
   });
 
+  it("never puts the recipient's linked trip into the proposer's export", () => {
+    // The proposal flow never shows the proposer which of the other account's trips it was
+    // linked with; the export must not either (security review of integrate/rc48).
+    expect(USER_EXPORT_SELECT.linkProposalsMade.select).not.toHaveProperty("linkedTripId");
+  });
+
   it("carries a flight's companions, a user-added port and the measured country-days", async () => {
     const userId = createdUserIds[0];
     const companion = await prisma.companion.findFirstOrThrow({ where: { userId } });

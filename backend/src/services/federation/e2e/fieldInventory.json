@@ -372,7 +372,7 @@
     "costs": "",
     "personal": "note",
     "photos": "",
-    "documents": "id originalName mimetype sizeBytes sha256 pageCount format kind issuedOn source parsedDomain parsedPayload flightId cruiseId lodgingStayId tripId placeVisitId railJourneyId rentalBookingId busJourneyId ferryJourneyId tripExpenseId rentalCategory createdAt linkedAt unlinkedAt",
+    "documents": "id originalName mimetype sizeBytes sha256 pageCount format kind issuedOn source parsedDomain parsedPayload flightId cruiseId lodgingStayId tripId placeVisitId railJourneyId rentalBookingId busJourneyId ferryJourneyId tripExpenseId tripRouteId rentalCategory createdAt linkedAt unlinkedAt",
     "excluded": "userId storedName parsedAt"
   },
   "Note": {

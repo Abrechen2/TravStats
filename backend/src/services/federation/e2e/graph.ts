@@ -241,6 +241,9 @@ export const NON_TRAVEL_RELATIONS = [
   "entryPhotoDirty",
   "importBatches",
   "linkedAsCompanion",
+  // Local link proposals (feat/share-bulk-link): sharing bookkeeping between two accounts.
+  "linkProposalsMade",
+  "linkProposalsReceived",
   "shareConsentsAsked",
   "shareConsentsGiven",
   // Federated trip sharing (spec 2026-10-20 F-S4b): pairings and single-use codes.
