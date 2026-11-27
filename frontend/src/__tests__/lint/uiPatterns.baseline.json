@@ -1,1 +1,15 @@
-{}
+{
+  "emoji in a data catalogue (store an IconName, render <Icon>)": {
+    "components/lodging/lodgingCompleteness.ts": 4,
+    "components/map/cards/hoverCardHtml.ts": 2,
+    "components/specialFlights/specialTypeMeta.ts": 8,
+    "hooks/usePlaneAnimation.ts": 1,
+    "lib/comparison/badges.ts": 6,
+    "lib/flightSourceInfo.ts": 11,
+    "lib/lodgingFormat.ts": 5,
+    "lib/stats/domain-stats/cruiseStatsAdapter.ts": 8,
+    "lib/timeEstimation.ts": 5,
+    "shared/domains.ts": 10,
+    "shared/placeCategories.ts": 29
+  }
+}

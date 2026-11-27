@@ -6,7 +6,7 @@ import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { useDisplayFormat } from "../../../lib/format";
 import type { ActivityFeedDomain, ActivityFeedItem } from "../../../lib/api/activityFeed";
-import { DOMAINS } from "../../../shared/domains";
+import { DOMAIN_ICON } from "../../ui/domainIcons";
 import { Icon } from "../../ui/Icon";
 import Toggletip from "../../ui/Toggletip";
 import { MAP_CHROME } from "../../map/mapChrome";
@@ -188,7 +188,7 @@ export function ActivityFeedPanel({
                 role="img"
                 style={{ color: colorOf(item.domain) }}
               >
-                {DOMAINS[item.domain].icon}
+                <Icon name={DOMAIN_ICON[item.domain]} size={16} />
               </span>
               <strong style={{ flex: 1, minWidth: 0 }}>{item.title}</strong>
               {item.planned && (

@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { describePurpose, entryPurposeKey, purposeGlyph } from "../../lib/purposeDisplay";
+import { describePurpose, entryPurposeKey } from "../../lib/purposeDisplay";
+import { PurposeGlyph } from "./PurposeGlyph";
 import { usePurposeCatalogue } from "../../store/purposeCatalogueStore";
 import { DEFAULT_KEY_OF_KIND } from "../../shared/purposeCatalogue";
 
@@ -34,7 +35,13 @@ export default function PurposeChip({
         whiteSpace: "nowrap",
       }}
     >
-      {shown ? `${purposeGlyph(shown.icon)} ${shown.label}` : t("purpose:chip.label")}
+      {shown ? (
+        <>
+          <PurposeGlyph icon={shown.icon} /> {shown.label}
+        </>
+      ) : (
+        t("purpose:chip.label")
+      )}
     </span>
   );
 }

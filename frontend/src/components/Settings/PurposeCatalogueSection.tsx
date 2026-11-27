@@ -4,7 +4,7 @@ import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { purposeApi, type CustomPurposeEntry } from "../../lib/api/purpose";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { logger } from "../../lib/logger";
-import { purposeGlyph } from "../../lib/purposeDisplay";
+import { PurposeGlyph } from "../purpose/PurposeGlyph";
 import { usePurposeCatalogue, usePurposeCatalogueStore } from "../../store/purposeCatalogueStore";
 import { PURPOSES, type Purpose } from "../../shared/purpose";
 import { PURPOSE_ICONS, BUILTIN_PREFIX } from "../../shared/purposeCatalogue";
@@ -127,7 +127,7 @@ export default function PurposeCatalogueSection(): JSX.Element {
         >
           {PURPOSE_ICONS.map((icon) => (
             <option key={icon} value={icon}>
-              {purposeGlyph(icon)}
+              {t(`purpose:custom.iconName.${icon}`)}
             </option>
           ))}
         </select>
@@ -170,7 +170,9 @@ export default function PurposeCatalogueSection(): JSX.Element {
         data-testid={`custom-purpose-${c.id}`}
         className="flex flex-wrap items-center gap-2"
       >
-        <span style={{ color: c.color }}>{purposeGlyph(c.icon)}</span>
+        <span style={{ color: c.color }}>
+          <PurposeGlyph icon={c.icon} />
+        </span>
         <span className="font-semibold">{c.name}</span>
         {c.nameEn && <span className="t-caption">({c.nameEn})</span>}
         <span className="t-caption">{t(`purpose:kind.${c.kind}`)}</span>
@@ -244,7 +246,7 @@ export default function PurposeCatalogueSection(): JSX.Element {
                     padding: "0 var(--ts-space-sm)",
                   }}
                 >
-                  {purposeGlyph(b.icon)}{" "}
+                  <PurposeGlyph icon={b.icon} />{" "}
                   {t(`purpose:builtin.${b.key.slice(BUILTIN_PREFIX.length)}`)}
                 </li>
               ))}

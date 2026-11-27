@@ -3,7 +3,7 @@ import { useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { purposeApi } from "../../lib/api/purpose";
 import { logger } from "../../lib/logger";
-import { describePurpose, purposeGlyph } from "../../lib/purposeDisplay";
+import { describePurpose } from "../../lib/purposeDisplay";
 import {
   PURPOSE_FILTER_PARAM,
   PURPOSE_FILTER_UNKNOWN,
@@ -125,7 +125,7 @@ export default function PurposeFilterControl({
               const d = describePurpose(t, catalogue, key, lang);
               return d ? (
                 <option key={key} value={key}>
-                  {`${purposeGlyph(d.icon)} ${d.label}${count(key)}`}
+                  {`${d.label}${count(key)}`}
                 </option>
               ) : null;
             })}

@@ -85,7 +85,25 @@
     "usage_other": "{{count}} entries",
     "inUse": "This purpose is still in use and can only be archived.",
     "error": "The purpose could not be saved. Please try again.",
-    "loadError": "Your own purposes could not be loaded."
+    "loadError": "Your own purposes could not be loaded.",
+    "iconName": {
+      "beach": "Beach",
+      "briefcase": "Briefcase",
+      "people": "People",
+      "backpack": "Backpack",
+      "ticket": "Ticket",
+      "podium": "Microphone",
+      "school": "Graduation cap",
+      "health": "Stethoscope",
+      "box": "Package",
+      "home": "House",
+      "star": "Star",
+      "heart": "Heart",
+      "sport": "Dumbbell",
+      "camera": "Camera",
+      "music": "Music",
+      "food": "Cutlery"
+    }
   },
   "stats": {
     "title": "By purpose",

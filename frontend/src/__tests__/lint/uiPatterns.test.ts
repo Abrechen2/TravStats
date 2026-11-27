@@ -87,7 +87,7 @@ function walk(dir: string, out: string[] = []): string[] {
     if (statSync(full).isDirectory()) {
       if (name === "__tests__" || name === "generated") continue;
       walk(full, out);
-    } else if (/\.tsx$/.test(name) && !/\.test\.tsx$/.test(name)) {
+    } else if (/\.tsx?$/.test(name) && !/\.test\.tsx?$|\.d\.ts$/.test(name)) {
       out.push(full);
     }
   }
@@ -105,6 +105,8 @@ type Pattern = {
   home: RegExp;
   hit: (line: string) => boolean;
   skip?: (rel: string) => boolean;
+  /** Which source files are scanned: components (`.tsx`, the default) or data modules (`.ts`). */
+  files?: "tsx" | "ts";
 };
 
 const PATTERNS: Pattern[] = [
@@ -141,6 +143,20 @@ const PATTERNS: Pattern[] = [
       ),
   },
   {
+    // A catalogue (purposes, domains, categories) that stores an emoji is rendered as an icon by
+    // whatever reads it -- so the emoji is the bug, whichever file draws it. Map names to <Icon>.
+    name: "emoji in a data catalogue (store an IconName, render <Icon>)",
+    home: /^components\/ui\//,
+    files: "ts",
+    hit: (l) => EMOJI.test(l),
+    skip: (rel) => /^content\/whatsNew/.test(rel),
+  },
+  {
+    name: "domain emoji drawn as an icon (use DOMAIN_ICON + <Icon>)",
+    home: /^components\/ui\//,
+    hit: (l) => /DOMAINS\[[^\]]*\]\.icon\b/.test(l),
+  },
+  {
     name: "sort arrow glyph (use ui/SortButton)",
     home: /^components\/ui\//,
     hit: (l) => /[▲▼]/.test(l),
@@ -160,6 +176,7 @@ function scan(): Record<string, Record<string, number>> {
     const lines = readFileSync(file, "utf8").split("\n");
     for (const pattern of PATTERNS) {
       if (pattern.home.test(rel) || pattern.skip?.(rel)) continue;
+      if ((pattern.files ?? "tsx") !== (rel.endsWith(".tsx") ? "tsx" : "ts")) continue;
       const count = lines.filter((l) => CODE_LINE(l) && pattern.hit(l)).length;
       if (count > 0) (result[pattern.name] ??= {})[rel] = count;
     }

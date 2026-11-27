@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { describePurpose, purposeGlyph } from "../../../lib/purposeDisplay";
+import { describePurpose } from "../../../lib/purposeDisplay";
+import { PurposeGlyph } from "../../purpose/PurposeGlyph";
 import { formatDistance } from "../../../lib/units";
 import { usePurposeCatalogue } from "../../../store/purposeCatalogueStore";
 import { useSettingsStore } from "../../../store/settingsStore";
@@ -31,9 +32,13 @@ export default function YearPurposeBreakdown({
       <ul className="space-y-0.5">
         {rows.map((r) => {
           const shown = r.key ? describePurpose(t, catalogue, r.key, lang) : null;
-          const label = shown
-            ? `${purposeGlyph(shown.icon)} ${shown.label}`
-            : t("purpose:stats.unknown");
+          const label = shown ? (
+            <>
+              <PurposeGlyph icon={shown.icon} /> {shown.label}
+            </>
+          ) : (
+            t("purpose:stats.unknown")
+          );
           return (
             <li key={r.key ?? "unknown"} className="flex items-baseline justify-between gap-3">
               <span>{label}</span>

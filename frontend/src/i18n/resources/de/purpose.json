@@ -85,7 +85,25 @@
     "usage_other": "{{count}} Einträge",
     "inUse": "Dieser Zweck wird noch verwendet und kann nur archiviert werden.",
     "error": "Der Zweck konnte nicht gespeichert werden. Bitte versuche es noch einmal.",
-    "loadError": "Deine eigenen Zwecke konnten nicht geladen werden."
+    "loadError": "Deine eigenen Zwecke konnten nicht geladen werden.",
+    "iconName": {
+      "beach": "Strand",
+      "briefcase": "Aktentasche",
+      "people": "Personen",
+      "backpack": "Rucksack",
+      "ticket": "Ticket",
+      "podium": "Mikrofon",
+      "school": "Abschlusshut",
+      "health": "Stethoskop",
+      "box": "Paket",
+      "home": "Haus",
+      "star": "Stern",
+      "heart": "Herz",
+      "sport": "Hantel",
+      "camera": "Kamera",
+      "music": "Musik",
+      "food": "Besteck"
+    }
   },
   "stats": {
     "title": "Nach Zweck",

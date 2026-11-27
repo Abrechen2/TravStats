@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { PurposeCatalogue } from "../../lib/api/purpose";
-import { describePurpose, entryPurposeKey, purposeGlyph } from "../../lib/purposeDisplay";
+import { describePurpose, entryPurposeKey } from "../../lib/purposeDisplay";
 import { usePurposeCatalogue } from "../../store/purposeCatalogueStore";
 import { PURPOSES } from "../../shared/purpose";
 
@@ -67,7 +67,7 @@ export default function PurposeSelect({
               .filter((o) => o.kind === kind)
               .map((o) => (
                 <option key={o.key} value={o.key}>
-                  {`${purposeGlyph(o.icon)} ${o.label}${o.archived ? ` (${t("purpose:custom.archivedTag")})` : ""}`}
+                  {`${o.label}${o.archived ? ` (${t("purpose:custom.archivedTag")})` : ""}`}
                 </option>
               ))}
           </optgroup>

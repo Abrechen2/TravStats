@@ -1,5 +1,6 @@
 import type { PurposeCatalogue } from "./api/purpose";
 import type { Purpose } from "../shared/purpose";
+import type { IconName } from "../components/ui/Icon";
 import {
   BUILTIN_PREFIX,
   CUSTOM_PREFIX,
@@ -9,28 +10,29 @@ import {
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
-/** How each purpose icon is drawn (the app's icons are emoji, as the trip categories). */
-export const PURPOSE_ICON_GLYPH: Record<PurposeIcon, string> = {
-  beach: "🏖",
-  briefcase: "💼",
-  people: "👨‍👩‍👧",
-  backpack: "🎒",
-  ticket: "🎟",
-  podium: "🎤",
-  school: "🎓",
-  health: "🩺",
-  box: "📦",
-  home: "🏠",
-  star: "⭐",
-  heart: "❤",
-  sport: "⚽",
-  camera: "📷",
-  music: "🎵",
-  food: "🍽",
+/** The line icon each stored purpose icon key is drawn as (`<PurposeGlyph>`). */
+export const PURPOSE_ICON_NAME: Record<PurposeIcon, IconName> = {
+  beach: "umbrella",
+  briefcase: "briefcase",
+  people: "users",
+  backpack: "backpack",
+  ticket: "ticket",
+  podium: "mic",
+  school: "graduation-cap",
+  health: "stethoscope",
+  box: "package",
+  home: "house",
+  star: "star",
+  heart: "heart",
+  sport: "dumbbell",
+  camera: "camera",
+  music: "music",
+  food: "utensils",
 };
 
-export const purposeGlyph = (icon: string | undefined): string =>
-  (icon && PURPOSE_ICON_GLYPH[icon as PurposeIcon]) || "•";
+/** The icon for a stored key; a key this build does not know gets a plain dot. */
+export const purposeIconName = (icon: string | undefined): IconName =>
+  (icon && PURPOSE_ICON_NAME[icon as PurposeIcon]) || "tag";
 
 export interface PurposeDisplay {
   key: string;

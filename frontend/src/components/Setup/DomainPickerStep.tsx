@@ -1,5 +1,6 @@
 import Chip from "../ui/Chip";
 import { Icon } from "../ui/Icon";
+import { DOMAIN_ICON } from "../ui/domainIcons";
 import { JSX, KeyboardEvent } from "react";
 import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
@@ -76,7 +77,7 @@ export default function DomainPickerStep({ value, onChange }: DomainPickerStepPr
                 style={{ backgroundColor: `${colorOf(d.key)}22` }}
                 aria-hidden
               >
-                {d.icon}
+                <Icon name={DOMAIN_ICON[d.key]} size={20} />
               </div>
               <div className="flex-1 min-w-0">
                 <div
