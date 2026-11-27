@@ -3,7 +3,11 @@ import { prisma } from "../../../../db";
 import { hashPassword } from "../../../../utils/password";
 import { updatePolicy } from "../../../externalServices/policy";
 import { revokeUseConsent } from "../../../externalServices/useConsent";
-import { resolveRouteChoice, resolveRouteProvider } from "../resolveProvider";
+import {
+  describeRoutingAvailability,
+  resolveRouteChoice,
+  resolveRouteProvider,
+} from "../resolveProvider";
 
 /**
  * The public router is the last resort when NO provider is configured, and it is
@@ -58,6 +62,16 @@ describe("resolveRouteChoice (public routing fallback)", () => {
     });
     expect(await resolveRouteProvider(user.id)).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("offers the public fallback to callers that can ask, without calling it configured, while the confirmation is pending", async () => {
+    expect(await describeRoutingAvailability(user.id)).toMatchObject({
+      configured: false,
+      providerId: null,
+      publicFallback: true,
+    });
+    await prisma.adminSettings.updateMany({ data: { routingProvider: "off" } });
+    expect(await describeRoutingAvailability(user.id)).toMatchObject({ configured: false });
   });
 
   it("'once' serves that request only; the next one asks again", async () => {

@@ -78,7 +78,13 @@ describe("resolveRouteProvider / describeRoutingAvailability", () => {
 
     it("describeRoutingAvailability reports configured: false, providerId: null", async () => {
       const availability = await describeRoutingAvailability(user.id);
-      expect(availability).toEqual({ configured: false, providerId: null, failing: null });
+      // Nothing is set up; the only offer is the public router, which asks the account first.
+      expect(availability).toEqual({
+        configured: false,
+        providerId: null,
+        failing: null,
+        publicFallback: true,
+      });
     });
   });
 

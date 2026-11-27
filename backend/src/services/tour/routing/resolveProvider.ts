@@ -233,9 +233,15 @@ export async function describeRoutingAvailability(userId?: string): Promise<{
   providerId: RoutingProviderId | null;
   /** The answering provider refuses requests right now (#411): legs fall back to straight. */
   failing: Pick<ProviderDown, "providerId" | "reason"> | null;
+  /** No provider is configured, but the public router may be used once the account confirms it. */
+  publicFallback?: true;
 }> {
   try {
-    const provider = await resolveRouteProvider(userId);
+    const choice = await resolveRouteChoice(userId);
+    // `configured` stays false (nothing is set up); a caller with a way to ask offers the buttons anyway.
+    if (choice.kind === "confirm")
+      return { configured: false, providerId: null, failing: null, publicFallback: true };
+    const provider = choice.kind === "provider" ? choice.provider : null;
     if (!provider) return { configured: false, providerId: null, failing: null };
     const down = providerDown(provider.id, undefined, provider.healthScope);
     return {

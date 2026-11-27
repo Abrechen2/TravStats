@@ -48,9 +48,12 @@ describe("public routing fallback", () => {
   });
 
   it("asks the FOSSGIS car instance with a User-Agent that names no person, for a road leg only", async () => {
-    const calls: Array<{ url: string; headers: Record<string, string> }> = [];
-    const fetchImpl = (async (url: string, init?: { headers?: Record<string, string> }) => {
-      calls.push({ url, headers: init?.headers ?? {} });
+    const calls: Array<{ url: string; headers: Record<string, string>; signal?: AbortSignal }> = [];
+    const fetchImpl = (async (
+      url: string,
+      init?: { headers?: Record<string, string>; signal?: AbortSignal }
+    ) => {
+      calls.push({ url, headers: init?.headers ?? {}, signal: init?.signal });
       return { ok: true, status: 200, json: async () => okBody };
     }) as unknown as typeof fetch;
     const provider = createPublicRouting(fetchImpl, createRateLimiter(0));
@@ -59,6 +62,8 @@ describe("public routing fallback", () => {
     expect(calls[0].url.startsWith(PUBLIC_ROUTING_BASE + "/route/v1/car/")).toBe(true);
     expect(calls[0].headers["User-Agent"]).toBe(PUBLIC_ROUTING_USER_AGENT);
     expect(PUBLIC_ROUTING_USER_AGENT).not.toMatch(/@|\.de|dennis/i);
+    // The adapter's timeout started before the queue; the request carries a fresh one.
+    expect(calls[0].signal).toBeInstanceOf(AbortSignal);
     // The instance is the car profile: a foot or bike leg is not sent at all.
     expect(await provider.route({ ...req, mode: "foot" })).toBeNull();
     expect(await provider.route({ ...req, vehicle: "bicycle" })).toBeNull();

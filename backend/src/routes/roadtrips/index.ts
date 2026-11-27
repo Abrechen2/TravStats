@@ -197,7 +197,7 @@ router.get(
           startedAt: t.tracks[0]?.startedAt ?? null,
           source: t.tracks[0]?.source ?? null,
         })),
-        routingAvailable: routing.configured,
+        routingAvailable: routing.configured || routing.publicFallback === true,
         // The provider refuses requests right now (#411): the page says so instead of drawing chords silently.
         routingFailing: routing.failing,
         // Driven against planned, by the statistics' own timeline rule, and

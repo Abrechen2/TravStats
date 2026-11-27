@@ -18,6 +18,7 @@ export const PUBLIC_ROUTING_HOST = "routing.openstreetmap.de";
 export const PUBLIC_ROUTING_USER_AGENT = "TravStats-self-hosted";
 /** One request per 1.1 s for the whole instance, conservatively under FOSSGIS's fair use. */
 export const PUBLIC_ROUTING_MIN_INTERVAL_MS = 1100;
+const PUBLIC_ROUTING_TIMEOUT_MS = 8_000;
 
 type Sleep = (ms: number) => Promise<void>;
 type Clock = () => number;
@@ -55,6 +56,8 @@ export function createPublicRouting(
     limit(() =>
       fetchImpl(input, {
         ...init,
+        // The adapter's own timeout started before the queue; this one starts when the request does.
+        signal: AbortSignal.timeout(PUBLIC_ROUTING_TIMEOUT_MS),
         headers: {
           ...(init?.headers as Record<string, string>),
           "User-Agent": PUBLIC_ROUTING_USER_AGENT,
