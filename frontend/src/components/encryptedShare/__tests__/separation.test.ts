@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, it, expect } from "vitest";
-import i18n from "../../../i18n/config";
+import i18n, { i18nReady } from "../../../i18n/config";
 
 const SRC = path.join(__dirname, "..", "..", "..");
 
@@ -15,7 +15,10 @@ function sources(dir: string): string[] {
 }
 
 describe("the encrypted share stands apart from the leaderboard", () => {
-  it("speaks its own namespace in both languages", () => {
+  it("speaks its own namespace in both languages", async () => {
+    // Translations load per language since perf/rc47; under a full run the bundles are
+    // still arriving when the test starts, so wait for them instead of racing.
+    await i18nReady;
     expect(i18n.hasResourceBundle("de", "encryptedShare")).toBe(true);
     expect(i18n.hasResourceBundle("en", "encryptedShare")).toBe(true);
   });
