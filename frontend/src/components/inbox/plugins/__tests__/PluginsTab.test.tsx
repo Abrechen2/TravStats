@@ -289,7 +289,7 @@ describe("plugin entry sorting", () => {
     expect(names("severity")).toEqual(["A", "B", "C"]));
   it("by date puts the newest stop first", () => expect(names("date")[0]).toBe("C"));
   it("by stop proposal puts the row without one last", () =>
-    expect(names("stop").at(-1)).toBe("A"));
+    expect(names("stop").slice(-1)).toEqual(["A"]));
   it("an ignored row is no entry", () =>
     expect(entriesOf(plugin, [{ ...rows[2], ignored: true }], [])).toHaveLength(0));
 });
