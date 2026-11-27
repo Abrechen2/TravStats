@@ -31,6 +31,7 @@ const routePair = vi.hoisted(() => vi.fn());
 vi.mock("../../../lib/api/ferry", () => ({ ferryApi: { setManualRoute, routePair } }));
 
 import { FerryRouteEditor, editorStartLine } from "../FerryRouteEditor";
+import { RIDE_EDITOR_HANDLES, rideEditorBounds } from "../../map/routeEditorFraming";
 
 const ride = ferryFixture({ geometry: null, geometrySource: "straight" });
 const clickSegment = (index: number, coordinate: [number, number]) => {
@@ -46,6 +47,21 @@ describe("FerryRouteEditor", () => {
     setManualRoute.mockReset();
     routePair.mockReset();
     routePair.mockResolvedValue({ count: 3, from: "Galtby", to: "Långnäs", hasPairLine: false });
+  });
+
+  it("a short crossing keeps few handles and is framed at its own size, so the line stays visible", () => {
+    // A 6 km harbour crossing with a 200-point sea line (rc46 UAT on the bus editor: only circles).
+    const sea: Array<[number, number]> = Array.from({ length: 200 }, (_, i) => {
+      const t = i / 199;
+      return [10.0 + 0.06 * t + 0.003 * Math.sin(t * 30), 53.5 + 0.02 * t];
+    });
+    const line = editorStartLine({ ...ride, geometry: sea, geometrySource: "sea_route" });
+    expect(line.length).toBeLessThanOrEqual(RIDE_EDITOR_HANDLES);
+    const [[w, s], [e, n]] = rideEditorBounds(line);
+    expect(e - w).toBeLessThan(0.1);
+    expect(n - s).toBeLessThan(0.1);
+    expect(w).toBeLessThan(10.0);
+    expect(e).toBeGreaterThan(10.06);
   });
 
   it("starts from the chord between the terminals", () => {

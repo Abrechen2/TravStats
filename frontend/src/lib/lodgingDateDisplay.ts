@@ -1,7 +1,8 @@
+import { formatDayLabel } from "./format";
 import { resolveStayTiming, type LodgingDatePrecision } from "../shared/lodgingTiming";
 import type { LodgingStay } from "../types/lodging";
 import type { StayTimes } from "../types/times";
-import { formatLocalDate } from "./displayFormat";
+import { formatLocalDate } from "./format";
 import { stayCheckIn, stayCheckOut } from "./entityTimes";
 
 /**
@@ -103,11 +104,7 @@ export function formatStayPeriod(
     case "MONTH": {
       const anchor = timing.anchor!;
       return {
-        label: anchor.toLocaleDateString(locale, {
-          month: "long",
-          year: "numeric",
-          timeZone: "UTC",
-        }),
+        label: formatDayLabel(anchor.toISOString(), { month: "long", year: "numeric" }, locale),
         precision: "MONTH",
       };
     }

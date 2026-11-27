@@ -21,6 +21,7 @@ import {
   useSettingWrite,
   type ChoiceOption,
 } from "../../ui/settings";
+import InlineError from "../../ui/InlineError";
 
 /** Where an account's own Dawarich connection is edited (Dienste). */
 export const DAWARICH_CONNECTION_PATH = "/settings/dienstek?service=dawarich";
@@ -162,9 +163,9 @@ export default function LocationSourceSection({
             />
           ) : null}
           {state && state.status !== "ok" ? (
-            <p role="alert" className="t-caption" style={{ color: "var(--ts-warn)", margin: 0 }}>
+            <InlineError tone="warning">
               {t(`settings:location.source.status.${state.status}`)}
-            </p>
+            </InlineError>
           ) : null}
           {refusal ? <ErrorLine>{t(refusal)}</ErrorLine> : null}
         </SettingItem>

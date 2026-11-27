@@ -1,3 +1,4 @@
+import Chip from "../components/ui/Chip";
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { PackageBookingCard } from "../components/bookings/PackageBookingCard";
 import { usePackageSplit } from "../components/bookings/usePackageSplit";
@@ -19,6 +20,7 @@ import { EntryPhotosSection } from "../components/common/EntryPhotos";
 import { BusFormModal } from "../components/bus/BusFormModal";
 import { BusNoRoutingNote } from "../components/bus/BusNoRoutingNote";
 import { BusRouteMap } from "../components/bus/BusRouteMap";
+import { BusRouteEditor } from "../components/bus/BusRouteEditor";
 import RouteMenu from "../components/detail/RouteMenu";
 import { geoExportPaths } from "../lib/api/geoExport";
 import { co2Kpis } from "../lib/co2Kpis";
@@ -43,6 +45,8 @@ import { useToastStore } from "../store/toastStore";
 import type { BusJourney } from "../types/bus";
 import WebGLGuard from "../components/map/WebGLGuard";
 import BackLink from "../components/navigation/BackLink";
+import Banner from "../components/ui/Banner";
+import { reportPageError } from "../store/pageErrorStore";
 
 /**
  * One bus ride (spec 2026-10-07-bus-domain-design §11). Every time is on its
@@ -70,6 +74,7 @@ export default function BusDetailPage(): JSX.Element {
   /** What the last "route again" said, kept on the page: a failure must not vanish with a toast. */
   const [routeMessage, setRouteMessage] = useState<string | null>(null);
   const routing = useBusRouting();
+  const [drawing, setDrawing] = useState(false);
   const documentCount = useDocumentCount(
     confirmingDelete && ride ? { type: "busJourney", id: ride.id } : null
   );
@@ -107,9 +112,45 @@ export default function BusDetailPage(): JSX.Element {
       navigate("/bus");
     } catch (err: unknown) {
       logger.error("BusDetailPage: delete failed", err);
-      addToast("error", t("bus:deleteError"));
+      reportPageError(t("bus:deleteError"));
       setDeleting(false);
       setConfirmingDelete(false);
+    }
+  };
+
+  /** Keep the straight line, or drop the hand-drawn one; either answer stays on the page. */
+  const changeManualLine = async (kind: "keepStraight" | "clear"): Promise<void> => {
+    if (!ride || routingAgain) return;
+    setRoutingAgain(true);
+    setRouteMessage(null);
+    try {
+      if (kind === "keepStraight") {
+        setRide(await busApi.keepStraight(ride.id, ride.updatedAt));
+        setRouteMessage(t("bus:drawRoute.keptStraight"));
+      } else {
+        const result = await busApi.clearManualRoute(ride.id, ride.updatedAt);
+        setRide(result.data);
+        setRouteMessage(
+          t(
+            result.meta.busRoute === "routed"
+              ? "bus:drawRoute.clearedRouted"
+              : "bus:drawRoute.cleared"
+          )
+        );
+      }
+    } catch (err: unknown) {
+      logger.error("BusDetailPage: changing the line failed", err);
+      setRouteMessage(
+        t(
+          apiErrorMachineCode(err) === "VERSION_CONFLICT"
+            ? "bus:routeEditor.errors.VERSION_CONFLICT"
+            : kind === "clear"
+              ? "bus:drawRoute.clearFailed"
+              : "bus:drawRoute.keepFailed"
+        )
+      );
+    } finally {
+      setRoutingAgain(false);
     }
   };
 
@@ -171,12 +212,9 @@ export default function BusDetailPage(): JSX.Element {
         <BackLink to="/bus" className="ts-back-link text-sm text-(--text-muted)">
           ← {t("bus:title")}
         </BackLink>
-        <div
-          role="alert"
-          className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)"
-        >
+        <Banner tone="error" className="mt-4">
           {isLoadError ? t("bus:detail.loadError") : t("bus:detail.notFound")}
-        </div>
+        </Banner>
         {isLoadError && (
           <div className="mt-3">
             <Button onClick={() => setReloadKey((k) => k + 1)}>{t("common:buttons.retry")}</Button>
@@ -345,32 +383,90 @@ export default function BusDetailPage(): JSX.Element {
 
           <DetailSection title={t("bus:detail.route")}>
             <WebGLGuard>
-              <BusRouteMap ride={ride} />
+              {drawing ? (
+                <BusRouteEditor
+                  ride={ride}
+                  onSaved={(saved) => {
+                    setDrawing(false);
+                    setRouteMessage(null);
+                    setRide(saved);
+                  }}
+                  onClose={() => setDrawing(false)}
+                />
+              ) : (
+                <BusRouteMap ride={ride} />
+              )}
             </WebGLGuard>
-            <div className="mt-2">
-              <RouteMenu
-                label={t("bus:routing.menuLabel")}
-                testId="bus-route-menu"
-                entries={
-                  ride.geometrySource === "straight" && routing?.configured !== false
-                    ? [
-                        {
-                          key: "reroute",
-                          testId: "bus-route-again-button",
-                          label: routingAgain ? t("bus:routing.againBusy") : t("bus:routing.again"),
-                          disabled: routingAgain || routing === null,
-                          onSelect: () => void handleRouteAgain(),
-                        },
-                      ]
-                    : []
-                }
-                geoExport={
-                  ride.geometry
-                    ? { path: geoExportPaths.bus(ride.id), testId: "bus-line-export" }
-                    : undefined
-                }
-              />
-            </div>
+            {!drawing && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Button onClick={() => setDrawing(true)} data-testid="bus-route-draw">
+                  {t(
+                    ride.geometrySource === "manual"
+                      ? "bus:drawRoute.editManual"
+                      : "bus:drawRoute.edit"
+                  )}
+                </Button>
+                <RouteMenu
+                  label={t("bus:routing.menuLabel")}
+                  testId="bus-route-menu"
+                  entries={[
+                    ...(ride.geometrySource === "straight" && routing?.configured !== false
+                      ? [
+                          {
+                            key: "reroute",
+                            testId: "bus-route-again-button",
+                            label: routingAgain
+                              ? t("bus:routing.againBusy")
+                              : t("bus:routing.again"),
+                            disabled: routingAgain || routing === null,
+                            onSelect: () => void handleRouteAgain(),
+                          },
+                        ]
+                      : []),
+                    ...(ride.geometrySource !== "straight" && ride.geometrySource !== "manual"
+                      ? [
+                          {
+                            key: "keepStraight",
+                            testId: "bus-route-keep-straight",
+                            label: t("bus:drawRoute.keepStraight"),
+                            disabled: routingAgain,
+                            confirm: {
+                              title: t("bus:drawRoute.keepStraightConfirm.title"),
+                              message: t("bus:drawRoute.keepStraightConfirm.message"),
+                              confirmText: t("bus:drawRoute.keepStraight"),
+                            },
+                            onSelect: () => void changeManualLine("keepStraight"),
+                          },
+                        ]
+                      : []),
+                    ...(ride.geometrySource === "manual"
+                      ? [
+                          {
+                            key: "clear",
+                            testId: "bus-route-clear",
+                            label: t(
+                              routingAgain ? "bus:drawRoute.clearing" : "bus:drawRoute.clear"
+                            ),
+                            danger: true,
+                            disabled: routingAgain,
+                            confirm: {
+                              title: t("bus:drawRoute.clearConfirm.title"),
+                              message: t("bus:drawRoute.clearConfirm.message"),
+                              confirmText: t("bus:drawRoute.clear"),
+                            },
+                            onSelect: () => void changeManualLine("clear"),
+                          },
+                        ]
+                      : []),
+                  ]}
+                  geoExport={
+                    ride.geometry
+                      ? { path: geoExportPaths.bus(ride.id), testId: "bus-line-export" }
+                      : undefined
+                  }
+                />
+              </div>
+            )}
           </DetailSection>
 
           {ride.companions.length > 0 && (
@@ -389,13 +485,9 @@ export default function BusDetailPage(): JSX.Element {
               {ride.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {ride.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border px-2.5 py-0.5 text-xs"
-                      style={{ borderColor: "var(--ts-border)", color: "var(--ts-muted)" }}
-                    >
+                    <Chip key={tag} size="sm">
                       #{tag}
-                    </span>
+                    </Chip>
                   ))}
                 </div>
               )}

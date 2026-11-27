@@ -26,6 +26,7 @@ jest.mock("../middleware/auth", () => ({
   authenticate: (_req: unknown, _res: unknown, next: () => void) => next(),
   requireAdmin: (_req: unknown, _res: unknown, next: () => void) => next(),
   requireWriteScope: (_req: unknown, _res: unknown, next: () => void) => next(),
+  requireBrowserSession: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 jest.mock("../middleware/rateLimit", () => ({
   adminExportLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
@@ -33,6 +34,7 @@ jest.mock("../middleware/rateLimit", () => ({
   generalLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
   settingsLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
   statsLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
+  recoveryKeyLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 jest.mock("../services/loggingConfig", () => ({
   getLoggingConfig: jest.fn(),

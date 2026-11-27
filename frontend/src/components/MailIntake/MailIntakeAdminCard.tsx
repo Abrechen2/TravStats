@@ -91,7 +91,11 @@ export default function MailIntakeAdminCard(): JSX.Element | null {
 
   return (
     <SectionCard>
-      <SectionTitle title={t("mailIntake:admin.title")} description={t("mailIntake:admin.help")} />
+      <SectionTitle
+        title={t("mailIntake:admin.title")}
+        description={t("mailIntake:admin.help")}
+        descriptionMore={t("mailIntake:admin.helpMore")}
+      />
       <div
         className="grid gap-3"
         style={{ gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))" }}

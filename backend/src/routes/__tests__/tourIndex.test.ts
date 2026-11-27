@@ -121,6 +121,16 @@ describe("Tour dashboard index", () => {
       expect(ids).not.toContain(otherRouteId);
     });
 
+    it("carries each section's own colour, null when it has none (GitHub #408)", async () => {
+      await prisma.tripRoute.update({ where: { id: routeAId }, data: { color: "#ef4444" } });
+      const res = await request(app).get("/api/v1/tours").set("Cookie", cookie);
+      const byId = new Map(
+        (res.body.tours as Array<{ id: string; color: string | null }>).map((t) => [t.id, t.color])
+      );
+      expect(byId.get(routeAId)).toBe("#ef4444");
+      expect(byId.get(routeBId)).toBeNull();
+    });
+
     it("carries no geometry — the key must be ABSENT, not empty", async () => {
       const res = await request(app).get("/api/v1/tours").set("Cookie", cookie);
 

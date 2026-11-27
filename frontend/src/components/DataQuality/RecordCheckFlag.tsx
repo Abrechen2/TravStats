@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import type { DataQualityFlag, RelatedRecord } from "../../types/dataQuality";
 
 import Side from "./FlagSide";

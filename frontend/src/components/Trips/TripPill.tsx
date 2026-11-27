@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -30,18 +31,14 @@ export default function TripPill({ trip }: Props): JSX.Element {
   const label = trip.name.trim() || t("dashboard:trips.unnamed");
 
   return (
-    <Link
-      to={`/trips/${trip.id}`}
-      onClick={(e) => e.stopPropagation()}
-      className="inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium transition-all hover:brightness-110"
-      style={{
-        background: `${trip.color}18`,
-        borderColor: `${trip.color}44`,
-        color: trip.color,
-      }}
-    >
-      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: trip.color }} />
-      {label}
+    <Link to={`/trips/${trip.id}`} onClick={(e) => e.stopPropagation()} className="inline-flex">
+      <Chip size="sm" color={trip.color}>
+        <span
+          className="h-1.5 w-1.5 shrink-0"
+          style={{ background: trip.color, borderRadius: "50%" }}
+        />
+        {label}
+      </Chip>
     </Link>
   );
 }

@@ -1,3 +1,4 @@
+import { useYearCounts } from "../lib/stats/useYearCounts";
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
 import { LinkedMonthChip, useLinkedMonth } from "../components/Stats/LinkedMonth";
 import { useGapPrefill } from "../hooks/useGapPrefill";
@@ -64,6 +65,7 @@ import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFail
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { railDeleteMessage } from "../lib/rail/railDeleteMessage";
+import { reportPageError } from "../store/pageErrorStore";
 
 const RAIL_STATUSES: readonly RailStatus[] = ["scheduled", "in_progress", "completed", "cancelled"];
 const RAIL_COLUMN_IDS: readonly RailColumnId[] = [
@@ -151,6 +153,7 @@ async function loadPage(
  */
 export default function RailPage(): JSX.Element {
   const { t } = useTranslation(["rail", "common"]);
+  const yearCounts = useYearCounts().of("rail");
   const tableHints = useTableHints();
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
@@ -284,7 +287,7 @@ export default function RailPage(): JSX.Element {
       await reload();
     } catch (err: unknown) {
       logger.error("RailPage: delete failed", err);
-      addToast("error", t("rail:deleteError"));
+      reportPageError(t("rail:deleteError"));
     } finally {
       setDeleting(false);
     }
@@ -400,7 +403,12 @@ export default function RailPage(): JSX.Element {
             value: yearFilter === "all" ? "all" : String(yearFilter),
             onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
             allLabel: t("rail:list.allYears"),
-            options: years.map((y) => ({ value: String(y), label: String(y) })),
+            options: years.map((y) => ({
+              value: String(y),
+              label: String(y),
+              count: yearCounts[y],
+            })),
+            formatCount: (n): string => t("common:yearPicker.count.rides", { count: n }),
           }}
           hasActiveFilter={hasActiveFilter}
           onReset={resetFilters}

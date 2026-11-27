@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 
@@ -5,7 +6,7 @@ import Button from "../ui/Button";
 import { statusPillStyle } from "../table/statusPillStyle";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTodayZone } from "../../hooks/useTodayZone";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { now as clockNow } from "../../shared/time";
 import type { PlaceVisit } from "../../types/place";
 import {
@@ -16,6 +17,11 @@ import {
   type VisitGroup,
 } from "./placeVisitListModel";
 import { PlaceVisitRow } from "./PlaceVisitRow";
+import { useScrollToVisit } from "../../hooks/useScrollToVisit";
+import Toggletip from "../ui/Toggletip";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import { logger } from "../../lib/logger";
+import { isAutomatic, undoAutomaticVisits } from "../../lib/api/smartLists";
 
 interface Props {
   visits: readonly PlaceVisit[];
@@ -62,11 +68,45 @@ export function PlaceVisitList({
   const [filter, setFilter] = useState<VisitFilter>("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const [pastLimit, setPastLimit] = useState(PAST_PAGE_SIZE);
+  // "Automatisch eingetragen" (owner 2026-11-26): review what automation wrote, undo it in bulk.
+  const [autoOnly, setAutoOnly] = useState(false);
+  const [undoLine, setUndoLine] = useState<{ ok: boolean; text: string } | null>(null);
+  const [undoing, setUndoing] = useState(false);
+  const { confirm, confirmDialog } = useConfirmDialog();
+  const automatic = useMemo(() => visits.filter(isAutomatic), [visits]);
+  useScrollToVisit(visits.length);
+  const shown = autoOnly && automatic.length > 0 ? automatic : visits;
 
   const model = useMemo(
-    () => buildVisitList(visits, { now: clockNow(), fallbackZone, filter, pastLimit }),
-    [visits, fallbackZone, filter, pastLimit]
+    () => buildVisitList(shown, { now: clockNow(), fallbackZone, filter, pastLimit }),
+    [shown, fallbackZone, filter, pastLimit]
   );
+
+  const undoAll = async (): Promise<void> => {
+    const ok = await confirm({
+      title: t("places:autoFilter.undoTitle"),
+      message: t("places:autoFilter.undoMessage", { count: automatic.length }),
+      confirmText: t("places:autoFilter.undoAll"),
+      destructive: true,
+    });
+    if (!ok) return;
+    setUndoing(true);
+    setUndoLine(null);
+    try {
+      const results = await undoAutomaticVisits(automatic.map((v) => v.id));
+      const removed = results.filter((r) => r.outcome === "removed").length;
+      setUndoLine({
+        ok: true,
+        text: t("places:autoFilter.result", { removed, kept: results.length - removed }),
+      });
+      onVisitChanged();
+    } catch (err: unknown) {
+      logger.error({ err }, "PlaceVisitList: bulk undo failed");
+      setUndoLine({ ok: false, text: t("places:autoFilter.failed") });
+    } finally {
+      setUndoing(false);
+    }
+  };
 
   const dayText = (e: VisitEntry | null): string | null => (e?.day ? fmt.localDate(e.day) : null);
 
@@ -111,32 +151,50 @@ export function PlaceVisitList({
               className="flex flex-wrap gap-1.5"
             >
               {FILTERS.map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  aria-pressed={filter === f}
-                  onClick={() => setFilter(f)}
-                  className="rounded-full px-3.5 text-sm"
-                  style={{
-                    minHeight: "var(--ts-size-touch-min)",
-                    border: `1px solid ${filter === f ? "var(--ts-accent)" : "var(--ts-border-button)"}`,
-                    background:
-                      filter === f
-                        ? "color-mix(in srgb, var(--ts-accent) 14%, transparent)"
-                        : "transparent",
-                    color: filter === f ? "var(--ts-accent)" : "var(--ts-muted)",
-                  }}
-                >
+                <Chip key={f} active={filter === f} onClick={() => setFilter(f)}>
                   {filterLabel(f)}
-                </button>
+                </Chip>
               ))}
             </div>
+          )}
+          {automatic.length > 0 && (
+            <span className="flex items-center gap-1">
+              <button
+                type="button"
+                aria-pressed={autoOnly}
+                onClick={() => setAutoOnly((v) => !v)}
+                className="rounded-full px-3.5 text-sm"
+                style={{
+                  minHeight: "var(--ts-size-touch-min)",
+                  border: `1px solid ${autoOnly ? "var(--ts-accent)" : "var(--ts-border-button)"}`,
+                  color: autoOnly ? "var(--ts-accent)" : "var(--ts-muted)",
+                }}
+              >
+                {t("places:autoFilter.label")} ({automatic.length})
+              </button>
+              <Toggletip content={t("places:autoFilter.info")} />
+            </span>
+          )}
+          {autoOnly && automatic.length > 0 && (
+            <Button disabled={undoing} onClick={() => void undoAll()}>
+              {t("places:autoFilter.undoAll")}
+            </Button>
           )}
           <Button variant="primary" onClick={onAdd}>
             + {t("places:detail.addVisit")}
           </Button>
         </div>
       </div>
+      {undoLine && (
+        <p
+          className="t-caption m-0"
+          role={undoLine.ok ? "status" : "alert"}
+          style={{ color: undoLine.ok ? "var(--ts-good)" : "var(--ts-bad)" }}
+        >
+          {undoLine.text}
+        </p>
+      )}
+      {confirmDialog}
 
       {model.counts.total > 0 && (
         <p className="t-caption m-0" data-testid="visit-summary">

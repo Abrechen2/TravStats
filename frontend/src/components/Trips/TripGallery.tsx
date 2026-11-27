@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useRef, useState } from "react";
 import type { LinkedAlbum } from "../../types/immich";
 import type { TripPhoto } from "../../types";
@@ -9,6 +10,7 @@ import ImmichAlbumPicker from "./ImmichAlbumPicker";
 import ImmichAlbumSection from "./ImmichAlbumSection";
 import JourneyPhotosSection from "./JourneyPhotosSection";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface TripGalleryProps {
   tripId: string;
@@ -56,6 +58,7 @@ export default function TripGallery({
     id: p.id,
     previewUrl: p.url,
     caption: p.caption,
+    takenAt: p.takenAt ?? null,
     source: { kind: "photo" },
   }));
 
@@ -65,7 +68,7 @@ export default function TripGallery({
     if (files.length === 0) return;
     const tooLarge = files.filter((f) => f.size > TRIP_PHOTO_MAX_BYTES);
     for (const file of tooLarge) {
-      addToast("error", t("trips:gallery.tooLarge", { name: file.name, maxMb: TRIP_PHOTO_MAX_MB }));
+      reportPageError(t("trips:gallery.tooLarge", { name: file.name, maxMb: TRIP_PHOTO_MAX_MB }));
     }
     const accepted = files.filter((f) => f.size <= TRIP_PHOTO_MAX_BYTES);
     if (accepted.length === 0) return;
@@ -82,8 +85,7 @@ export default function TripGallery({
       onChange();
     } catch (error: unknown) {
       const status = (error as { response?: { status?: number } }).response?.status;
-      addToast(
-        "error",
+      reportPageError(
         status === 413
           ? t("trips:gallery.tooLargeServer", { maxMb: TRIP_PHOTO_MAX_MB })
           : t("trips:gallery.uploadError")
@@ -100,7 +102,7 @@ export default function TripGallery({
       await tripsApi.deletePhoto(tripId, photo.id);
       onChange();
     } catch {
-      addToast("error", t("trips:gallery.deleteError"));
+      reportPageError(t("trips:gallery.deleteError"));
     }
   };
 
@@ -243,7 +245,7 @@ function PhotoTile({ photo, onClick, onDelete }: PhotoTileProps): JSX.Element {
         }}
         aria-label={t("common:buttons.delete")}
       >
-        ✕
+        <Icon name="x" size={16} />
       </button>
       {photo.caption && (
         <div

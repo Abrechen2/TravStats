@@ -22,6 +22,13 @@ vi.mock("../../../lib/api/sharing", () => ({
   },
 }));
 
+// Trips offered from other servers: off unless a test turns them on.
+const remote = vi.hoisted(() => ({
+  status: vi.fn(async () => ({ available: false })),
+  listOffers: vi.fn(async () => [] as unknown[]),
+}));
+vi.mock("../../../lib/api/sharingRemote", () => ({ sharingRemoteApi: remote }));
+
 // The real globe paints a canvas jsdom cannot; keep its status semantics.
 vi.mock("../../GlobeLoader", () => ({
   GlobeLoader: ({ label }: { label?: string }) => <div role="status" aria-label={label} />,
@@ -29,6 +36,10 @@ vi.mock("../../GlobeLoader", () => ({
 
 const addToast = vi.fn();
 const toastState = { addToast: (...args: unknown[]) => addToast(...args) };
+vi.mock("../../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  reportPageError: (message: string, tone = "error") => addToast(tone, message),
+}));
 vi.mock("../../../store/toastStore", () => ({
   useToastStore: (selector: (s: typeof toastState) => unknown) => selector(toastState),
 }));
@@ -94,6 +105,24 @@ describe("SharingTab", () => {
       "href",
       expect.stringContaining("/trips/trip-of-reader")
     );
+  });
+
+  it("lists trips offered from other servers in the inbox and counts them (2026-11-24)", async () => {
+    remote.status.mockResolvedValueOnce({ available: true });
+    remote.listOffers.mockResolvedValue([
+      {
+        id: "o1",
+        from: { displayName: "Ben", username: "ben", origin: "https://b.example" },
+        trip: { name: "Island", startDay: null, endDay: null },
+        roster: [],
+        counts: {},
+        offeredAt: "2026-11-24T10:00:00.000Z",
+      },
+    ]);
+    const onCount = renderTab();
+    expect(await screen.findByText(/sharing:remote.offers.row/)).toBeTruthy();
+    await waitFor(() => expect(onCount).toHaveBeenLastCalledWith(3));
+    remote.listOffers.mockResolvedValue([]);
   });
 
   it("accepts a request and reloads", async () => {

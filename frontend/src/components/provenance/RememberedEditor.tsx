@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useState } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
@@ -9,6 +10,7 @@ import {
 } from "../../lib/api/provenance";
 import { logger } from "../../lib/logger";
 import { Button } from "../ui";
+import InlineError from "../ui/InlineError";
 
 const NOTE_MAX = 500;
 type Choice = "unknown" | Provenance;
@@ -77,7 +79,7 @@ export default function RememberedEditor({
           <p className="t-caption">{t("provenance:editor.hint")}</p>
           <label className="flex flex-col text-sm" style={{ gap: 4 }}>
             {t("provenance:editor.rememberedOn")}
-            <input type="date" value={on} onChange={(e) => setOn(e.target.value)} />
+            <DateField value={on} onChange={(e) => setOn(e.target.value)} />
           </label>
           <label className="flex flex-col text-sm" style={{ gap: 4 }}>
             {t("provenance:editor.note")}
@@ -101,9 +103,7 @@ export default function RememberedEditor({
           </span>
         )}
         {status === "error" && (
-          <span className="t-caption" role="alert" style={{ color: "var(--ts-warn)" }}>
-            {t("provenance:editor.error")}
-          </span>
+          <InlineError tone="warning">{t("provenance:editor.error")}</InlineError>
         )}
       </div>
     </fieldset>

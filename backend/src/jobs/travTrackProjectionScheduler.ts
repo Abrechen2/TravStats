@@ -42,6 +42,8 @@ import {
   VISIT_DAYS_PER_RUN,
 } from "../services/travtrack/visits/project";
 import { buildPendingZoneRasters } from "../services/travtrack/explored/zoneCells";
+import { adaptivePacer, type Pace } from "../services/travtrack/imports/importPacing";
+import { projectDaySources, SOURCE_DAYS_PER_RUN } from "../services/travtrack/bestSource/store";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
@@ -65,6 +67,11 @@ export type ProjectionRunOptions = {
   maxDays?: number;
   /** Shared by the tick's accounts: cells sent to the geocoder at most (L3). */
   cityBudget?: { left: number };
+  /**
+   * The pause after each projected day or month: the cron passes `adaptivePacer()`, so a
+   * backlog of thousands of days (a large import) never runs back to back against the web.
+   */
+  pace?: Pace;
 };
 
 /**
@@ -178,13 +185,20 @@ async function runAccount(
     const exploredOwed = (await pendingDirtyDays(userId, EXPLORED_BIT, 1)).length > 0;
     const monthsOwed = (await pendingDirtyDays(userId, MONTHS_BIT, 1)).length > 0;
     const sharers = 1 + Number(exploredOwed) + Number(monthsOwed);
-    const countryBudget = Math.ceil(maxDays / sharers);
+    // The place-visit step's days are held back first: it reads today's stops newest first, and
+    // a history import (thousands of owed country days) spent the whole budget on the three
+    // projections below every tick, so no stop was asked about for days (prod, 24.-26.11.2026).
+    // A tiny budget (a test, the last account of a tick) is left to the projections as before.
+    const visitReserve = maxDays > VISIT_DAYS_PER_RUN * 2 ? VISIT_DAYS_PER_RUN : 0;
+    const shared = maxDays - visitReserve;
+    const countryBudget = Math.ceil(shared / sharers);
     // The days this run will project, read before it acknowledges them: the inferred silences
     // touching them are recomputed after it.
     const owed = await pendingDirtyDays(userId, COUNTRY_DAYS_BIT, countryBudget);
     const projected = await projectTravTrackCountryDays(userId, {
       countryAt,
       maxDays: countryBudget,
+      pace: options.pace,
     });
     const days = projected.projected + projected.rerun;
     // Silences spent at a known place: a new upload may have closed one, so every run of an
@@ -208,10 +222,10 @@ async function runAccount(
     if (projected.status !== "done") return { failed: false, questions: 0, days };
     // The explored map's cells (L1): the same days on its own bit, from what
     // is left of the budget — a day either projection works counts once each.
-    const exploredBudget = monthsOwed ? Math.ceil((maxDays - days) / 2) : maxDays - days;
+    const exploredBudget = monthsOwed ? Math.ceil((shared - days) / 2) : shared - days;
     const explored =
       exploredBudget > 0
-        ? await projectExploredCells(userId, { maxDays: exploredBudget })
+        ? await projectExploredCells(userId, { maxDays: exploredBudget, pace: options.pace })
         : { status: "done" as const, projected: 0, rerun: 0 };
     if (explored.status === "failed") {
       await recordFailure(userId, now);
@@ -219,13 +233,14 @@ async function runAccount(
     }
     // The monthly values (L3) after both, so a month reads its days' country
     // rows as just projected; no month starts once the budget is spent.
-    const monthsBudget = maxDays - days - explored.projected - explored.rerun;
+    const monthsBudget = shared - days - explored.projected - explored.rerun;
     const months =
       monthsBudget > 0
         ? await projectMonths(userId, {
             countryAt,
             cityBudget: options.cityBudget,
             maxDays: monthsBudget,
+            pace: options.pace,
           })
         : { status: "done" as const, spentDays: 0 };
     // A month costs every day it owed, acknowledged or not.
@@ -239,7 +254,8 @@ async function runAccount(
     // failure: an outage of the venue lookup must never hold the country days or
     // the map back, so it is not a failure of the account's run.
     let visitDays = 0;
-    const visitsBudget = Math.min(VISIT_DAYS_PER_RUN, maxDays - spent);
+    // At least its reserve: a month costs every day it owed, so the months may overrun theirs.
+    const visitsBudget = Math.min(VISIT_DAYS_PER_RUN, Math.max(visitReserve, maxDays - spent));
     if (visitsBudget > 0) {
       try {
         const visits = await (options.visits ?? scheduledVisitSuggestions)(userId, {
@@ -256,6 +272,12 @@ async function runAccount(
         });
       }
     }
+    // Best source per day (bestSource/), from what the tick left: a day whose resolved stream
+    // changed is handed back to every projection above for the next tick.
+    const sourced = await projectDaySources(userId, {
+      maxDays: Math.min(SOURCE_DAYS_PER_RUN, maxDays - spent - visitDays),
+      pace: options.pace,
+    });
     if (projected.projected > 0) {
       await prisma.travTrackDerivationState.update({
         where: { userId },
@@ -283,7 +305,7 @@ async function runAccount(
       where: { userId },
       data: { failureCount: 0, retryAfter: null },
     });
-    return { failed: false, questions, days: spent + visitDays };
+    return { failed: false, questions, days: spent + visitDays + sourced.days };
   } catch (error) {
     logger.warn({
       operation: "travtrack_projections_account_failed",
@@ -348,7 +370,7 @@ export function startTravTrackProjectionScheduler(): void {
     () => {
       if (running) return;
       running = true;
-      void runTravTrackProjections()
+      void runTravTrackProjections({ pace: adaptivePacer() })
         .then((result) => {
           if (result.accounts > 0)
             logger.info({ operation: "travtrack_projections_done", ...result });

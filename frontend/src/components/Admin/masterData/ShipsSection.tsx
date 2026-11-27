@@ -1,9 +1,12 @@
+import Chip from "../../ui/Chip";
+import { SearchInput } from "../../ui/SearchInput";
 import { useEffect, useState } from "react";
 import { shipsApi } from "../../../lib/api/cruise";
 import type { Ship } from "../../../types/cruise";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
+import { useFormError } from "../../form/useFormError";
 
 /**
  * Admin master data for ships. Split out of the former combined cruise
@@ -23,6 +26,7 @@ export default function ShipsSection(): JSX.Element {
   const [newImo, setNewImo] = useState("");
   const [newYear, setNewYear] = useState("");
   const [creating, setCreating] = useState(false);
+  const formError = useFormError();
 
   useEffect(() => {
     let cancelled = false;
@@ -47,10 +51,11 @@ export default function ShipsSection(): JSX.Element {
 
   const createShip = async (): Promise<void> => {
     if (!newName.trim() || !newLine.trim()) {
-      addToast("error", t("admin:cruiseMasterData.ship.missingFields"));
+      formError.set(t("admin:cruiseMasterData.ship.missingFields"));
       return;
     }
     setCreating(true);
+    formError.clear();
     try {
       const { ship: created, existing } = await shipsApi.create({
         name: newName.trim(),
@@ -71,7 +76,7 @@ export default function ShipsSection(): JSX.Element {
       setNewImo("");
       setNewYear("");
     } catch {
-      addToast("error", t("admin:cruiseMasterData.ship.createFailed"));
+      formError.set(t("admin:cruiseMasterData.ship.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -81,6 +86,7 @@ export default function ShipsSection(): JSX.Element {
     <div data-testid="admin-ships-section">
       <p className="t-caption mb-4">{t("admin:cruiseMasterData.ship.description")}</p>
 
+      {formError.node}
       {/* Add form */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-4">
         <input
@@ -124,12 +130,11 @@ export default function ShipsSection(): JSX.Element {
       </div>
 
       {/* Search + list */}
-      <input
-        type="search"
-        className="input mb-3"
-        placeholder={t("admin:cruiseMasterData.ship.searchPlaceholder")}
+      <SearchInput
+        label={t("admin:cruiseMasterData.ship.searchPlaceholder")}
         value={query}
-        onChange={(e): void => setQuery(e.target.value)}
+        onChange={setQuery}
+        placeholder={t("admin:cruiseMasterData.ship.searchPlaceholder")}
       />
 
       {loading ? (
@@ -150,16 +155,9 @@ export default function ShipsSection(): JSX.Element {
               </div>
               <div className="flex items-center gap-2 text-xs">
                 {s.isUserAdded && (
-                  <span
-                    className="px-2 py-0.5 rounded-full"
-                    style={{
-                      background: "var(--bg-elevated)",
-                      color: "var(--accent)",
-                      border: "1px solid var(--accent)",
-                    }}
-                  >
+                  <Chip tone="accent" size="sm">
                     {t("admin:cruiseMasterData.userAdded")}
-                  </span>
+                  </Chip>
                 )}
                 {s.imo && <span className="text-(--text-muted) font-mono">IMO {s.imo}</span>}
               </div>

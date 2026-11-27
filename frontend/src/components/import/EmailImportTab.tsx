@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { JSX } from "react";
 import { parseApi } from "../../lib/api";
@@ -272,7 +273,9 @@ export default function EmailImportTab({
               }
             }}
           />
-          <div className="text-3xl mb-2">📧</div>
+          <div className="mb-2 flex justify-center">
+            <Icon name="mail" size={24} />
+          </div>
           <p className="font-medium text-slate-200">{t("import:email.dropZone")}</p>
           <p className="text-sm text-slate-400 mt-1">{acceptedExtensions.join(", ")}</p>
         </div>

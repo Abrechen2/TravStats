@@ -73,6 +73,11 @@ export const railTransitMode = codec(
     .transform((v) => v ?? "rail")
 );
 /** A status word. Advisory only: the receiver re-derives it (`receivedStatus`). */
+/**
+ * A ferry's `manualScope`. Optional on the way in: a peer on an older version
+ * sends no such key, and its line then arrives as before (NULL = the crossing's own).
+ */
+export const ferryManualScope = codec(z.enum(["pair", "journey"]).nullable().optional());
 export const status = codec(z.string().min(1).max(40));
 /** Free JSON a fact column holds (a flight's `specialData`); the message budget bounds it. */
 export const json = codec(z.json().nullable());

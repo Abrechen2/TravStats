@@ -53,9 +53,9 @@ import { tourDayFields } from "./roadtrip";
  * rejected at the boundary instead of being stored and rendered as a lie.
  */
 
-export const ACCEPTED_LEG_SOURCES = ["straight", "drawn", "routed", "track"] as const;
+export const ACCEPTED_LEG_SOURCES = ["straight", "drawn", "routed", "track", "recorded"] as const;
 
-const MANUAL_LEG_SOURCES = ["straight", "drawn"] as const;
+const MANUAL_LEG_SOURCES = ["straight", "drawn", "recorded"] as const;
 
 /**
  * `TripRouteTrack.source` vocabulary (Phase 3b): `gpx` (task 4 — the upload
@@ -204,6 +204,12 @@ const manualLegShape = z.object({
   source: manualLegSource,
   mode: z.enum(LEG_MODES).optional(),
   waypoints: z.array(coordinate).min(2).max(256).optional(),
+  /**
+   * A drawn leg's RECORDED length (TravTrack "Als Roadtrip übernehmen"): the
+   * waypoints are a simplified copy of a recording, so their own length cuts
+   * every corner. Taken only within the plausible band `recordedLegKm` checks.
+   */
+  distanceKm: z.number().min(0).max(100_000).optional(),
   drivingMinutes: z.number().int().min(0).max(100_000).nullable().optional(),
   /**
    * Kept for existing clients: since forgejo#140 a leg has no toll column.
@@ -259,10 +265,15 @@ export const legOverrideSchema = z
       return undefined;
     },
   })
-  .refine((v) => v.source !== "drawn" || (v.waypoints !== undefined && v.waypoints.length >= 2), {
-    message: "A drawn leg needs at least two waypoints",
-    path: ["waypoints"],
-  })
+  .refine(
+    (v) =>
+      (v.source !== "drawn" && v.source !== "recorded") ||
+      (v.waypoints !== undefined && v.waypoints.length >= 2),
+    {
+      message: "A drawn leg needs at least two waypoints",
+      path: ["waypoints"],
+    }
+  )
   .refine((v) => v.source !== "straight" || v.waypoints === undefined, {
     message: "A straight leg has no waypoints",
     path: ["waypoints"],

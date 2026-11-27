@@ -212,7 +212,7 @@ export function CruisesTab(): JSX.Element {
       )}
       {!loading && !loadError && cruises.length === 0 && (
         <MapEmptyOverlay
-          emoji="⚓"
+          icon="anchor"
           title={t("dashboard:cruiseTab.emptyTitle")}
           body={t("dashboard:cruiseTab.emptyBody")}
           ctaLabel={t("dashboard:cruiseTab.emptyCta")}

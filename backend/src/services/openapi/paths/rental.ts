@@ -16,6 +16,7 @@ import { deadlineDayColumns } from "./deadlineColumns";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { errorContent, timeRefused } from "./shared";
 import { documentIdsBodySchema } from "../../../schemas/document";
+import { clientRefBodySchema } from "../../../schemas/clientRef";
 import {
   createRentalSchema,
   updateRentalSchema,
@@ -475,7 +476,10 @@ registry.registerPath({
     body: {
       content: {
         "application/json": {
-          schema: rentalImportSchema.openapi("RentalImportInput").and(documentIdsBodySchema),
+          schema: rentalImportSchema
+            .openapi("RentalImportInput")
+            .and(documentIdsBodySchema)
+            .and(clientRefBodySchema),
         },
       },
     },

@@ -17,8 +17,8 @@
   "removeLabel": "{{name}} überall löschen",
   "deleteTitle": "Dokument überall löschen?",
   "deleteMessage": "„{{name}}“ wird dauerhaft gelöscht, mit der Datei und an jedem Eintrag, mit dem es verknüpft ist. Die Einträge selbst bleiben bestehen.",
-  "deleteCascadeNote_one": "Dazu 1 Dokument: Es wird nur von diesem Eintrag gelöst und bleibt erhalten. Hängt es an keinem anderen Eintrag, wird es nach der Karenzzeit gelöscht.",
-  "deleteCascadeNote_other": "Dazu {{count}} Dokumente: Diese werden nur von diesem Eintrag gelöst und bleiben erhalten. Hängt eines an keinem anderen Eintrag, wird es nach der Karenzzeit gelöscht.",
+  "deleteCascadeNote_one": "Dazu 1 Dokument: wird nur gelöst. Hängt es nirgends sonst, wird es nach einer Frist gelöscht.",
+  "deleteCascadeNote_other": "Dazu {{count}} Dokumente: werden nur gelöst. Was nirgends sonst hängt, wird nach einer Frist gelöscht.",
   "format": {
     "image": "Bild",
     "pdf": "PDF",
@@ -88,8 +88,10 @@
   },
   "links": {
     "evidenceFrom": "Beleg aus:",
+    "linkTo": "„{{name}}“ verknüpfen mit …",
+    "linkToHint": "Das Dokument erscheint an den gewählten Einträgen und ist dann zugeordnet.",
     "alsoLink": "„{{name}}“ auch verknüpfen mit …",
-    "alsoLinkHint": "Das Dokument bleibt eine Datei und wird nur zusätzlich an den gewählten Einträgen angezeigt. Reisen und Einträge derselben Reise stehen oben.",
+    "alsoLinkHint": "Das Dokument erscheint zusätzlich an den gewählten Einträgen.",
     "alsoLinkAction": "Auch verknüpfen mit …",
     "alsoLinkActionLabel": "{{name}} auch mit weiteren Einträgen verknüpfen",
     "unlink": "Von diesem Eintrag entfernen",
@@ -128,8 +130,15 @@
       "linkGone": "Die Verknüpfung besteht nicht mehr. Die Liste wurde neu geladen.",
       "candidatesFailed": "Die Einträge konnten nicht geladen werden.",
       "demo": "Im Demo-Konto kann nichts verknüpft werden.",
-      "impactFailed": "Die betroffenen Einträge konnten nicht geladen werden. Gelöscht wird trotzdem überall."
-    }
+      "impactFailed": "Die betroffenen Einträge konnten nicht geladen werden. Gelöscht wird trotzdem überall.",
+      "someFailed": "Für {{count}} Dokument(e) ist die Verknüpfung fehlgeschlagen ({{names}}): {{reason}}"
+    },
+    "bulkTitle_one": "1 Dokument verknüpfen",
+    "bulkTitle_other": "{{count}} Dokumente verknüpfen",
+    "bulkHint": "Ein Eintrag für alle gewählten Dokumente. Suche nach Flugnummer, Ort, Reise oder Datum.",
+    "linkDocsToEntry_one": "Dokument verknüpfen",
+    "linkDocsToEntry_other": "{{count}} Dokumente verknüpfen",
+    "noMatches": "Kein Eintrag passt zu „{{text}}“."
   },
   "person": {
     "forLabel": "für",

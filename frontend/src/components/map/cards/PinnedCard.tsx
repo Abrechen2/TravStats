@@ -12,6 +12,7 @@
 // Purely the inner content: no positioning, no occlusion, no anchor logic.
 // Each renderer mounts it wherever its own projection says the anchor is.
 
+import { Icon } from "../../ui/Icon";
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import {
@@ -38,12 +39,9 @@ import {
   SubHeading,
   SURFACE,
   capitalize,
-  formatDate,
-  formatDuration,
-  formatKm,
-  formatKmNumber,
   type TFn,
 } from "./cardChrome";
+import { formatDate, formatDuration, formatKm, formatNumber } from "../../../lib/format";
 import { CardFlights } from "./CardFlights";
 import {
   LodgingBody,
@@ -54,6 +52,7 @@ import {
 } from "./cardBodies";
 import { JourneyBody, JourneyHeading, isJourneyPinned } from "./journeys/journeyBodies";
 import { OperatorRow } from "./journeys/journeyCardParts";
+import { CountryLabel } from "../../../lib/countryFlag";
 
 interface PinnedCardProps {
   pinned: MapPinned;
@@ -136,7 +135,7 @@ export function PinnedCard({
           className="cursor-pointer rounded-sm px-1 text-[11px] leading-none opacity-70 hover:opacity-100 pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)"
           style={{ background: "rgba(255,255,255,0.08)" }}
         >
-          ✕
+          <Icon name="x" size={16} />
         </button>
       </div>
 
@@ -206,7 +205,7 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
           {pinned.data.departure.country ? (
             <FlagImg country={pinned.data.departure.country} height={18} />
           ) : (
-            <span>✈</span>
+            <Icon name="plane" size={16} />
           )}
           <span>{pinned.data.departure.iata ?? "?"}</span>
           <span className="opacity-50">↔</span>
@@ -220,7 +219,7 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
           {pinned.data.country ? (
             <FlagImg country={pinned.data.country} height={22} />
           ) : (
-            <span>✈</span>
+            <Icon name="plane" size={16} />
           )}
           <span>{pinned.data.iata}</span>
           <IcaoPill icao={pinned.data.icao} />
@@ -232,17 +231,21 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
           {pinned.data.country ? (
             <FlagImg country={pinned.data.country} height={20} />
           ) : (
-            <span>⚓</span>
+            <Icon name="anchor" size={16} />
           )}
           <span>{pinned.data.name}</span>
         </div>
       );
     case "cruise":
-      return <div className="text-[13px] font-semibold">🚢 {pinned.data.cruiseLabel}</div>;
+      return (
+        <div className="flex items-center gap-1.5 text-[13px] font-semibold">
+          <Icon name="ship" size={16} /> {pinned.data.cruiseLabel}
+        </div>
+      );
     case "trip":
       return (
         <div className="flex items-center gap-2 text-[14px] font-semibold">
-          <span>✈</span>
+          <Icon name="plane" size={16} />
           <span>
             {pinned.data.flightIds.length}{" "}
             {t("map:globe.flight", { count: pinned.data.flightIds.length })}
@@ -259,7 +262,7 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
           {resolveCountryCode(pinned.data.country) ? (
             <FlagImg country={resolveCountryCode(pinned.data.country)} height={20} />
           ) : (
-            <span>🏨</span>
+            <Icon name="bed" size={16} />
           )}
           <span>{pinned.data.name}</span>
         </div>
@@ -270,7 +273,7 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
           {resolveCountryCode(pinned.data.country) ? (
             <FlagImg country={resolveCountryCode(pinned.data.country)} height={20} />
           ) : (
-            <span>📍</span>
+            <Icon name="map-pin" size={16} />
           )}
           <span>{pinned.data.name}</span>
         </div>
@@ -365,12 +368,15 @@ function AirportBody({
       )}
       <Grid>
         {stats.totalKm > 0 && (
-          <Row label={t("map:globe.pinned.distance")} value={formatKm(stats.totalKm, locale)} />
+          <Row
+            label={t("map:globe.pinned.distance")}
+            value={formatKm(stats.totalKm, { language: locale })}
+          />
         )}
         {stats.longestRoute && (
           <Row
             label={t("map:globe.pinned.longestRoute")}
-            value={`→ ${stats.longestRoute.iata} · ${formatKm(stats.longestRoute.km, locale)}`}
+            value={`→ ${stats.longestRoute.iata} · ${formatKm(stats.longestRoute.km, { language: locale })}`}
           />
         )}
         {stats.topAirline && (
@@ -380,7 +386,7 @@ function AirportBody({
           <Row label={t("map:globe.pinned.topAircraft")} value={stats.topAircraft} />
         )}
         {stats.lastVisitDate && (
-          <Row label={t("map:tooltip.lastVisit")} value={formatDate(stats.lastVisitDate, locale)} />
+          <Row label={t("map:tooltip.lastVisit")} value={formatDate(stats.lastVisitDate)} />
         )}
       </Grid>
     </>
@@ -427,11 +433,11 @@ function PortBody({
         {stats.longestPortCallMinutes !== null && (
           <Row
             label={t("map:globe.pinned.longestPortCall")}
-            value={formatDuration(stats.longestPortCallMinutes, t)}
+            value={formatDuration(stats.longestPortCallMinutes)}
           />
         )}
         {stats.lastCallDate && (
-          <Row label={t("map:tooltip.lastCall")} value={formatDate(stats.lastCallDate, locale)} />
+          <Row label={t("map:tooltip.lastCall")} value={formatDate(stats.lastCallDate)} />
         )}
       </Grid>
     </>
@@ -462,15 +468,19 @@ function ArcBody({
     <>
       <div className="mb-2.5 space-y-1.5">
         {[data.departure, data.arrival].map((ep, i) => {
-          const place = [ep.city, countryName(ep.country, locale)]
-            .filter((s): s is string => !!s)
-            .join(", ");
+          const hasPlace = !!ep.city || !!countryName(ep.country, locale);
           return (
             <div key={i} className="text-[11px]">
               <div className="text-[12px] font-medium" style={{ color: tokens.color.text }}>
                 {ep.iata ?? "?"} · {ep.name ?? ""}
               </div>
-              {place && <div style={{ color: tokens.color.faint }}>{place}</div>}
+              {hasPlace && (
+                <div style={{ color: tokens.color.faint }}>
+                  {ep.city}
+                  {ep.city && ep.country ? ", " : null}
+                  {ep.country ? <CountryLabel country={ep.country} height={11} /> : null}
+                </div>
+              )}
             </div>
           );
         })}
@@ -478,15 +488,12 @@ function ArcBody({
       <Hero color={colorRgb}>
         {t("map:globe.pinned.totalKm", {
           count: data.count,
-          km: formatKmNumber(stats.totalKm, locale),
+          km: formatNumber(Math.round(stats.totalKm), undefined, locale),
         })}
       </Hero>
       <Grid>
         {stats.lastFlightDate && (
-          <Row
-            label={t("map:globe.pinned.lastFlight")}
-            value={formatDate(stats.lastFlightDate, locale)}
-          />
+          <Row label={t("map:globe.pinned.lastFlight")} value={formatDate(stats.lastFlightDate)} />
         )}
         {stats.topAircraft && (
           <Row label={t("map:globe.pinned.topAircraft")} value={stats.topAircraft} />
@@ -550,7 +557,7 @@ function CruiseBody({
 
   const dateRange =
     stats.startDate && stats.endDate
-      ? `${formatDate(stats.startDate, locale)} – ${formatDate(stats.endDate, locale)}`
+      ? `${formatDate(stats.startDate)} – ${formatDate(stats.endDate)}`
       : (stats.startDate ?? stats.endDate ?? "");
 
   return (

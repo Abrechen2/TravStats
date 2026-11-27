@@ -84,7 +84,7 @@ vi.mock("../../../lib/api/bus", () => ({
 }));
 
 import { BusFormModal } from "../BusFormModal";
-import { useToastStore } from "../../../store/toastStore";
+import { usePageErrorStore } from "../../../store/pageErrorStore";
 import type { BusJourney } from "../../../types/bus";
 import { rideFixture } from "./busFixture";
 
@@ -418,15 +418,18 @@ describe("BusFormModal", () => {
       });
 
       fireEvent.click(screen.getByLabelText(DEP_BOX));
-      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveAttribute("type", "date");
-      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-09-20");
+      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveAttribute("data-field-kind", "date");
+      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("20.09.2026");
       // The other end is untouched.
       expect(screen.getByLabelText("bus:form.arrivalTime")).toHaveAttribute(
-        "type",
+        "data-field-kind",
         "datetime-local"
       );
       fireEvent.click(screen.getByLabelText(ARR_BOX));
-      expect(screen.getByLabelText("bus:form.arrivalTime")).toHaveAttribute("type", "date");
+      expect(screen.getByLabelText("bus:form.arrivalTime")).toHaveAttribute(
+        "data-field-kind",
+        "date"
+      );
 
       fireEvent.click(saveButton());
       await waitFor(() => expect(create).toHaveBeenCalled());
@@ -475,7 +478,7 @@ describe("BusFormModal", () => {
       await renderModal(ride);
       expect(screen.getByLabelText(DEP_BOX)).toBeChecked();
       expect(screen.getByLabelText(ARR_BOX)).not.toBeChecked();
-      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-09-20");
+      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("20.09.2026");
     });
 
     it("opens a mixed ride with only the arrival box ticked and saves one day and one clock", async () => {
@@ -495,7 +498,10 @@ describe("BusFormModal", () => {
       await renderModal(ride);
       expect(screen.getByLabelText(DEP_BOX)).not.toBeChecked();
       expect(screen.getByLabelText(ARR_BOX)).toBeChecked();
-      expect(screen.getByLabelText("bus:form.arrivalTime")).toHaveAttribute("type", "date");
+      expect(screen.getByLabelText("bus:form.arrivalTime")).toHaveAttribute(
+        "data-field-kind",
+        "date"
+      );
 
       fireEvent.click(saveButton());
       await waitFor(() => expect(update).toHaveBeenCalled());
@@ -606,7 +612,10 @@ describe("BusFormModal", () => {
       fireEvent.click(screen.getByLabelText(box));
       fireEvent.click(screen.getByLabelText(box));
       // The clock comes back as midnight, which is not the repeated hour.
-      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-10-25T00:00");
+      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveAttribute(
+        "data-wire-value",
+        "2026-10-25T00:00"
+      );
       fireEvent.click(saveButton());
       await waitFor(() => expect(update).toHaveBeenCalled());
       expect(update).toHaveBeenCalledWith("r1", expect.objectContaining({ departureFold: null }));
@@ -640,7 +649,7 @@ describe("BusFormModal", () => {
       await settle();
     };
 
-    beforeEach(() => useToastStore.getState().clearToasts());
+    beforeEach(() => usePageErrorStore.getState().clear());
 
     it("says once, plainly, that this instance has no routing provider", async () => {
       routingMock.mockResolvedValue({ configured: false, providerId: null });
@@ -663,9 +672,9 @@ describe("BusFormModal", () => {
         fallback: "rate_limited",
       };
       await saveNewRide();
-      const toasts = useToastStore.getState().toasts;
+      const toasts = usePageErrorStore.getState().errors;
       expect(toasts).toHaveLength(1);
-      expect(toasts[0].type).toBe("warning");
+      expect(toasts[0].tone).toBe("warning");
       expect(toasts[0].message).toContain("bus:routing.savedStraight");
     });
 
@@ -676,7 +685,7 @@ describe("BusFormModal", () => {
         fallback: "provider_error",
       };
       await saveNewRide();
-      expect(useToastStore.getState().toasts[0].message).toContain("bus:routing.savedKept");
+      expect(usePageErrorStore.getState().errors[0].message).toContain("bus:routing.savedKept");
     });
 
     it("does not repeat 'no provider' as a toast on every save — the form said it already", async () => {
@@ -686,7 +695,7 @@ describe("BusFormModal", () => {
         fallback: "no_provider",
       };
       await saveNewRide();
-      expect(useToastStore.getState().toasts).toHaveLength(0);
+      expect(usePageErrorStore.getState().errors).toHaveLength(0);
     });
   });
 });

@@ -1,3 +1,5 @@
+import Chip from "../../ui/Chip";
+import { SearchInput } from "../../ui/SearchInput";
 import { useEffect, useState } from "react";
 import { airportsApi } from "../../../lib/api/airports";
 import type { Airport } from "../../../lib/api";
@@ -5,6 +7,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
 import { countryName } from "../../../shared/geo/countryCode";
+import { useFormError } from "../../form/useFormError";
 
 /**
  * Admin master data for airports (#191). Codes are optional on purpose — a
@@ -27,6 +30,7 @@ export default function AirportsSection(): JSX.Element {
   const [newLat, setNewLat] = useState("");
   const [newLon, setNewLon] = useState("");
   const [creating, setCreating] = useState(false);
+  const formError = useFormError();
 
   useEffect(() => {
     // The airport search endpoint needs at least two characters — unlike the
@@ -57,7 +61,7 @@ export default function AirportsSection(): JSX.Element {
 
   const createAirport = async (): Promise<void> => {
     if (!newName.trim() || !newLat.trim() || !newLon.trim()) {
-      addToast("error", t("admin:airlineAircraftMasterData.airport.missingFields"));
+      formError.set(t("admin:airlineAircraftMasterData.airport.missingFields"));
       return;
     }
     const lat = Number(newLat.replace(",", "."));
@@ -68,10 +72,11 @@ export default function AirportsSection(): JSX.Element {
       Math.abs(lat) > 90 ||
       Math.abs(lon) > 180
     ) {
-      addToast("error", t("admin:airlineAircraftMasterData.airport.invalidCoords"));
+      formError.set(t("admin:airlineAircraftMasterData.airport.invalidCoords"));
       return;
     }
     setCreating(true);
+    formError.clear();
     try {
       const created = await airportsApi.create({
         name: newName.trim(),
@@ -95,7 +100,7 @@ export default function AirportsSection(): JSX.Element {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         t("admin:airlineAircraftMasterData.airport.createFailed");
-      addToast("error", msg);
+      formError.set(msg);
     } finally {
       setCreating(false);
     }
@@ -105,6 +110,7 @@ export default function AirportsSection(): JSX.Element {
     <div data-testid="admin-airports-section">
       <p className="t-caption mb-4">{t("admin:airlineAircraftMasterData.airport.description")}</p>
 
+      {formError.node}
       {/* Add form */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
         <input
@@ -174,12 +180,11 @@ export default function AirportsSection(): JSX.Element {
       </div>
 
       {/* Search + list */}
-      <input
-        type="search"
-        className="input mb-3"
-        placeholder={t("admin:airlineAircraftMasterData.airport.searchPlaceholder")}
+      <SearchInput
+        label={t("admin:airlineAircraftMasterData.airport.searchPlaceholder")}
         value={query}
-        onChange={(e): void => setQuery(e.target.value)}
+        onChange={setQuery}
+        placeholder={t("admin:airlineAircraftMasterData.airport.searchPlaceholder")}
       />
 
       {loading ? (
@@ -214,16 +219,9 @@ export default function AirportsSection(): JSX.Element {
               </div>
               <div className="flex items-center gap-2 text-xs">
                 {a.isUserAdded && (
-                  <span
-                    className="px-2 py-0.5 rounded-full"
-                    style={{
-                      background: "var(--bg-elevated)",
-                      color: "var(--accent)",
-                      border: "1px solid var(--accent)",
-                    }}
-                  >
+                  <Chip tone="accent" size="sm">
                     {t("admin:airlineAircraftMasterData.userAdded")}
-                  </span>
+                  </Chip>
                 )}
                 {a.iata && <span className="text-(--text-muted) font-mono">{a.iata}</span>}
                 {a.icao && <span className="text-(--text-muted) font-mono">{a.icao}</span>}

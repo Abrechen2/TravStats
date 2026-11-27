@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useEffect, useState } from "react";
 import AirportAutocomplete from "../AirportAutocomplete";
 import { LocationInput, type LocationSelection } from "../location/LocationInput";
@@ -11,6 +12,7 @@ import {
   type NearbyHomeAirport,
 } from "../../lib/api";
 import { logger } from "../../lib/logger";
+import InlineError from "../ui/InlineError";
 
 /**
  * One home period, edited: residence, one to three home airports (one of them
@@ -202,9 +204,7 @@ export default function HomePeriodEditor({
           <p className="t-caption">{t("settings:homeAirport.nearbyLoading")}</p>
         )}
         {nearby.status === "error" && (
-          <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-            {t("settings:homeAirport.nearbyError")}
-          </p>
+          <InlineError>{t("settings:homeAirport.nearbyError")}</InlineError>
         )}
         {nearby.status === "done" && nearby.airports.length === 0 && (
           <p className="t-caption">{t("settings:homeAirport.nearbyNone")}</p>
@@ -251,9 +251,9 @@ export default function HomePeriodEditor({
           <label className="label" htmlFor="home-from">
             {t("settings:homeAirport.fromDateField")}
           </label>
-          <input
+          <DateField
+            inline
             id="home-from"
-            type="date"
             className="input"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
@@ -265,9 +265,9 @@ export default function HomePeriodEditor({
             <label className="label" htmlFor="home-to">
               {t("settings:homeAirport.toDateField")}
             </label>
-            <input
+            <DateField
+              inline
               id="home-to"
-              type="date"
               className="input"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
@@ -277,11 +277,7 @@ export default function HomePeriodEditor({
       </div>
       {isNew && <p className="t-caption">{t("settings:homeAirport.fromDateHint")}</p>}
 
-      {error && (
-        <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
-          {error}
-        </p>
-      )}
+      {error && <InlineError>{error}</InlineError>}
 
       <div className="flex gap-2">
         <button type="button" className="btn-primary" onClick={submit} disabled={saving}>

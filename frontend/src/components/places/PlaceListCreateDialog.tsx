@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { createPlaceList } from "../../lib/api/placeLists";
 import { LIST_PALETTE_HEX } from "../../lib/listPalette";
@@ -93,7 +93,7 @@ export function PlaceListCreateDialog({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving.saving}
@@ -214,6 +214,6 @@ export function PlaceListCreateDialog({
         />
         <RequiredLegend />
       </div>
-    </Modal>
+    </Dialog>
   );
 }

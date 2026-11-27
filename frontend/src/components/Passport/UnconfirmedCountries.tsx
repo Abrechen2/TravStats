@@ -1,6 +1,7 @@
+import { formatDayLabel } from "../../lib/format";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Passport } from "../../types/passport";
-import { countryName } from "./countryName";
+import { CountryLabel } from "../../lib/countryFlag";
 
 /** Raw observations stay visible without being presented as visits. */
 export default function UnconfirmedCountries({
@@ -15,12 +16,7 @@ export default function UnconfirmedCountries({
   // Dawarich alone reads exactly as before TravTrack (plan E6); any TravTrack row names both.
   const onlyDawarich = countries.every((country) => country.source === "dawarich");
   const date = (day: string): string =>
-    new Date(`${day}T00:00:00Z`).toLocaleDateString(locale, {
-      timeZone: "UTC",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
+    formatDayLabel(day, { day: "numeric", month: "short", year: "numeric" }, locale);
   return (
     <section
       aria-labelledby="unconfirmed-countries-heading"
@@ -44,7 +40,9 @@ export default function UnconfirmedCountries({
       <ul className="space-y-3">
         {countries.map((country) => (
           <li key={`${country.code}-${country.source}`} className="text-sm">
-            <span className="font-medium">{countryName(country.code, locale)}</span>
+            <span className="font-medium">
+              <CountryLabel country={country.code} />
+            </span>
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
               {t(
                 country.source === "travtrack"

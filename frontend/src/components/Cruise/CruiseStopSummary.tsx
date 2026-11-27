@@ -1,7 +1,8 @@
+import { Icon } from "../ui/Icon";
 import type { JSX } from "react";
 import type { CruiseStopInput } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatLocalClock, formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalClock, formatLocalDate } from "../../lib/format";
 
 /** The port's wall clock of a stop time (`YYYY-MM-DDTHH:mm…`), or null. */
 function clock(value: string | null | undefined): string | null {
@@ -53,7 +54,7 @@ export function CruiseStopSummary({
               : "text-(--text-primary)"
         }`}
       >
-        {unresolved && <span aria-hidden="true">🔶 </span>}
+        {unresolved && <Icon name="diamond" size={14} className="mr-1 inline" />}
         {stopTitle(stop, t)}
         {unresolved && <span className="sr-only"> ({t("stops.unresolved")})</span>}
       </span>

@@ -51,14 +51,17 @@ describe("AirportAutocomplete — country name in the dropdown", () => {
       await vi.advanceTimersByTimeAsync(0);
     });
 
-    const input = screen.getByRole("textbox");
+    const input = screen.getByRole("combobox");
     input.focus();
     fireEvent.change(input, { target: { value: "frank" } });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(400);
     });
 
-    await waitFor(() => expect(screen.getByText("Frankfurt, Deutschland")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Deutschland")).toBeInTheDocument());
+    expect(screen.getByText("Deutschland").closest("div")?.textContent).toBe(
+      "Frankfurt, Deutschland"
+    );
     expect(screen.queryByText("Frankfurt, DE")).not.toBeInTheDocument();
   });
 });

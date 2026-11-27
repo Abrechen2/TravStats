@@ -8,7 +8,8 @@ import type { TourInsights } from "../../../types/statsInsights";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import EvidenceNumber from "../EvidenceNumber";
 import InsightTile from "../insight/InsightTile";
-import { formatDuration, totalFor } from "../insight/insightFold";
+import { formatDuration } from "../../../lib/format";
+import { totalFor } from "../insight/insightFold";
 import { countingSource } from "../counting/countingEntry";
 
 /**
@@ -87,7 +88,7 @@ function TourStatsBody({ year, accent }: Props): JSX.Element | null {
       ? t("roadtrips:stats.tours.noActivity")
       : t(`roadtrips:activity.${key}`, { defaultValue: key });
   // Minutes-accurate (review I1): a 25-minute walk is "25 Min.", never "0 h".
-  const duration = (seconds: number): string => formatDuration(seconds, t, nf);
+  const duration = (seconds: number): string => formatDuration(seconds / 60);
   const country = (code: string): string => regions?.of(code) ?? code;
 
   const count = totalFor(data.totals, "tourCompletedCount", year);

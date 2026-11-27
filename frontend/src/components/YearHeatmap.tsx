@@ -1,8 +1,9 @@
+import YearPicker from "./ui/YearPicker";
 import { useState } from "react";
 import type { Flight } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
 import { resolveAirlineDisplay } from "../lib/airlineUtils";
-import { formatLocalDate } from "../lib/displayFormat";
+import { formatLocalDate } from "../lib/format";
 import { flightDeparture } from "../lib/entityTimes";
 import { todayZoneNow } from "../hooks/useTodayZone";
 import {
@@ -114,17 +115,15 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold text-(--text-primary)">{t("stats:heatmap.title")}</h3>
         {availableYears.length > 1 && (
-          <select
+          <YearPicker
+            years={availableYears.map((year) => ({ year }))}
             value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="px-3 py-1 bg-(--bg-muted) text-(--text-primary) rounded-sm border border-border"
-          >
-            {availableYears.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => {
+              if (v !== "all") setSelectedYear(v);
+            }}
+            allowAll={false}
+            label={t("stats:heatmap.title")}
+          />
         )}
       </div>
 

@@ -1,10 +1,14 @@
+import Chip from "../ui/Chip";
+import { Icon } from "../ui/Icon";
 import { useCallback, useMemo, useState } from "react";
 import { tripsApi } from "../../lib/api";
+import Dialog from "../ui/Dialog";
 import type { ProposedTrip, ProposedTripLeg } from "../../lib/api/trips";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { detectionSourceKey } from "../../lib/tripDetectionSource";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /** The project wrapper narrows i18next's `t` to this signature. */
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
@@ -125,174 +129,21 @@ export default function DetectReviewModal({
       );
       onCommitted();
     } catch {
-      addToast("error", t("trips:detectBanner.error"));
+      reportPageError(t("trips:detectBanner.error"));
     } finally {
       setCommitting(false);
     }
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.7)" }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-      }}
-    >
-      <div
-        className="w-full max-w-3xl rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col"
-        role="dialog"
-        aria-modal="true"
-        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <div
-          className="flex items-center justify-between p-5"
-          style={{ borderBottom: "1px solid var(--color-border)" }}
-        >
-          <div>
-            <h2 className="text-lg font-display font-semibold">
-              {t("trips:detectReview.title", { defaultValue: "Reisen erkennen" })}
-            </h2>
-            <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-              {t("trips:detectReview.subtitle", {
-                count: proposals.length,
-                defaultValue: "{{count}} Vorschläge — wähle, was zu Reisen werden soll.",
-              })}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-lg flex items-center justify-center"
-            style={{ color: "var(--text-muted)" }}
-            aria-label={t("common:accessibility.close")}
-          >
-            ✕
-          </button>
-        </div>
-
-        <div
-          className="px-5 py-3 flex items-center gap-3"
-          style={{ borderBottom: "1px solid var(--color-border)" }}
-        >
-          <Toggle
-            checked={allSelected}
-            onClick={toggleAll}
-            indeterminate={!allSelected && selectedCount > 0}
-          />
-          <strong className="text-sm">
-            {t("trips:detectReview.selectAll", { defaultValue: "Alle auswählen" })}
-          </strong>
-          <span className="text-xs ml-auto" style={{ color: "var(--text-muted)" }}>
-            {t("trips:detectReview.summary", {
-              trips: selectedCount,
-              flights: totalFlights,
-              defaultValue: "{{trips}} ausgewählt · {{flights}} Flüge werden zugeordnet",
-            })}
-          </span>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-5 space-y-3">
-          {proposals.map((p, i) => {
-            const s = state[i];
-            const heur = HEURISTIC_COLOR[p.source];
-            const key = proposalKey(p);
-            const isOpen = expanded.has(key);
-            const hasLegs = p.legs.length > 0;
-            const panelId = `detect-legs-${i}`;
-            return (
-              <div
-                key={`${p.source}-${i}`}
-                className="rounded-xl p-3 transition-opacity"
-                style={{
-                  background: "var(--bg-elevated)",
-                  border: "1px solid var(--color-border)",
-                  opacity: s.selected ? 1 : 0.45,
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <Toggle checked={s.selected} onClick={() => togglePart(i)} />
-                  <RoutePreview proposal={p} />
-                  <div className="flex-1 min-w-0">
-                    <input
-                      value={s.name}
-                      onChange={(e) => renamePart(i, e.target.value)}
-                      className="w-full bg-transparent border-0 text-sm font-semibold focus:bg-(--bg-base) focus:px-2 focus:py-1 focus:rounded-sm"
-                      style={{ color: "var(--text-primary)" }}
-                    />
-                    <div
-                      className="flex items-center gap-2 mt-1 text-[11px] flex-wrap"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      <span
-                        className="px-1.5 py-0.5 rounded-full font-semibold"
-                        style={{ background: heur.bg, color: heur.color }}
-                        data-testid="detect-source-chip"
-                      >
-                        {t(`trips:detectBanner.sources.${detectionSourceKey(p.source)}`)}
-                        {p.pnr && ` · ${p.pnr}`}
-                      </span>
-                      <span>
-                        {t("trips:detectReview.flightCount", { count: p.flightIds.length })}
-                      </span>
-                      <span>
-                        · {p.origin} → {p.destination}
-                      </span>
-                      {p.span?.from && p.span?.to && (
-                        <span>
-                          · {day(p.span.from)} – {day(p.span.to)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {hasLegs && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        // Keep expansion independent from selection: the
-                        // chevron lives in the same row as the checkbox,
-                        // so stop the click before it can bubble anywhere.
-                        e.stopPropagation();
-                        toggleExpanded(key);
-                      }}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors hover:bg-(--bg-base)"
-                      style={{ color: "var(--text-muted)" }}
-                      aria-expanded={isOpen}
-                      aria-controls={panelId}
-                      aria-label={
-                        isOpen
-                          ? t("trips:detectReview.collapseLegs", {
-                              defaultValue: "Flüge ausblenden",
-                            })
-                          : t("trips:detectReview.expandLegs", { defaultValue: "Flüge anzeigen" })
-                      }
-                    >
-                      <svg
-                        viewBox="0 0 16 16"
-                        className="w-4 h-4 transition-transform"
-                        style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.75"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M4 6l4 4 4-4" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-                {hasLegs && isOpen && <LegList id={panelId} legs={p.legs} t={t} day={day} />}
-              </div>
-            );
-          })}
-        </div>
-
-        <div
-          className="flex items-center justify-between p-4 gap-3"
-          style={{ borderTop: "1px solid var(--color-border)" }}
-        >
+    <Dialog
+      open
+      onClose={onClose}
+      busy={committing}
+      maxWidth={768}
+      title={t("trips:detectReview.title", { defaultValue: "Reisen erkennen" })}
+      footer={
+        <div className="flex w-full items-center justify-between gap-3">
           <button
             type="button"
             onClick={onClose}
@@ -308,16 +159,134 @@ export default function DetectReviewModal({
             disabled={selectedCount === 0 || committing}
             className="px-4 py-2 rounded-lg text-sm font-medium bg-(--accent) text-(--bg-base) disabled:opacity-50"
           >
-            {committing
-              ? t("common:loading.default")
-              : `✓ ${t("trips:detectReview.commit", {
+            {committing ? (
+              t("common:loading.default")
+            ) : (
+              <>
+                <Icon name="check" size={14} />{" "}
+                {t("trips:detectReview.commit", {
                   count: selectedCount,
                   defaultValue: "{{count}} Reisen erstellen",
-                })}`}
+                })}
+              </>
+            )}
           </button>
         </div>
+      }
+    >
+      <p className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>
+        {t("trips:detectReview.subtitle", {
+          count: proposals.length,
+          defaultValue: "{{count}} Vorschläge — wähle, was zu Reisen werden soll.",
+        })}
+      </p>
+      <div
+        className="pb-3 flex items-center gap-3"
+        style={{ borderBottom: "1px solid var(--color-border)" }}
+      >
+        <Toggle
+          checked={allSelected}
+          onClick={toggleAll}
+          indeterminate={!allSelected && selectedCount > 0}
+        />
+        <strong className="text-sm">
+          {t("trips:detectReview.selectAll", { defaultValue: "Alle auswählen" })}
+        </strong>
+        <span className="text-xs ml-auto" style={{ color: "var(--text-muted)" }}>
+          {t("trips:detectReview.summary", {
+            trips: selectedCount,
+            flights: totalFlights,
+            defaultValue: "{{trips}} ausgewählt · {{flights}} Flüge werden zugeordnet",
+          })}
+        </span>
       </div>
-    </div>
+
+      <div className="space-y-3 pt-3">
+        {proposals.map((p, i) => {
+          const s = state[i];
+          const heur = HEURISTIC_COLOR[p.source];
+          const key = proposalKey(p);
+          const isOpen = expanded.has(key);
+          const hasLegs = p.legs.length > 0;
+          const panelId = `detect-legs-${i}`;
+          return (
+            <div
+              key={`${p.source}-${i}`}
+              className="rounded-xl p-3 transition-opacity"
+              style={{
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--color-border)",
+                opacity: s.selected ? 1 : 0.45,
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <Toggle checked={s.selected} onClick={() => togglePart(i)} />
+                <RoutePreview proposal={p} />
+                <div className="flex-1 min-w-0">
+                  <input
+                    value={s.name}
+                    onChange={(e) => renamePart(i, e.target.value)}
+                    className="w-full bg-transparent border-0 text-sm font-semibold focus:bg-(--bg-base) focus:px-2 focus:py-1 focus:rounded-sm"
+                    style={{ color: "var(--text-primary)" }}
+                  />
+                  <div
+                    className="flex items-center gap-2 mt-1 text-[11px] flex-wrap"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    <Chip testId="detect-source-chip" size="sm" color={heur.color}>
+                      {t(`trips:detectBanner.sources.${detectionSourceKey(p.source)}`)}
+                      {p.pnr && ` · ${p.pnr}`}
+                    </Chip>
+                    <span>
+                      {t("trips:detectReview.flightCount", { count: p.flightIds.length })}
+                    </span>
+                    <span>
+                      · {p.origin} → {p.destination}
+                    </span>
+                    {p.span?.from && p.span?.to && (
+                      <span>
+                        · {day(p.span.from)} – {day(p.span.to)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {hasLegs && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      // Keep expansion independent from selection: the
+                      // chevron lives in the same row as the checkbox,
+                      // so stop the click before it can bubble anywhere.
+                      e.stopPropagation();
+                      toggleExpanded(key);
+                    }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors hover:bg-(--bg-base)"
+                    style={{ color: "var(--text-muted)" }}
+                    aria-expanded={isOpen}
+                    aria-controls={panelId}
+                    aria-label={
+                      isOpen
+                        ? t("trips:detectReview.collapseLegs", {
+                            defaultValue: "Flüge ausblenden",
+                          })
+                        : t("trips:detectReview.expandLegs", { defaultValue: "Flüge anzeigen" })
+                    }
+                  >
+                    <Icon
+                      name="chevron-down"
+                      size={16}
+                      className="transition-transform"
+                      style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                    />
+                  </button>
+                )}
+              </div>
+              {hasLegs && isOpen && <LegList id={panelId} legs={p.legs} t={t} day={day} />}
+            </div>
+          );
+        })}
+      </div>
+    </Dialog>
   );
 }
 
@@ -346,7 +315,7 @@ function Toggle({ checked, onClick, indeterminate }: ToggleProps): JSX.Element {
       role="checkbox"
       aria-checked={indeterminate ? "mixed" : checked}
     >
-      {checked && "✓"}
+      {checked && <Icon name="check" size={14} />}
       {!checked && indeterminate && (
         <span className="block w-2 h-0.5" style={{ background: "#000" }} />
       )}
@@ -431,12 +400,9 @@ function LegList({ id, legs, t, day }: LegListProps): JSX.Element {
             <span className="truncate">
               {leg.depIata ?? "—"} → {leg.arrIata ?? "—"}
             </span>
-            <span
-              className="ml-auto px-1.5 py-0.5 rounded-full uppercase tracking-wide font-semibold shrink-0"
-              style={{ background: chip.bg, color: chip.color }}
-            >
+            <Chip uppercase size="sm" color={chip.color} className="ml-auto shrink-0">
               {statusLabel}
-            </span>
+            </Chip>
           </li>
         );
       })}

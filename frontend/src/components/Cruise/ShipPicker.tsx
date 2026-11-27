@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { shipsApi } from "../../lib/api";
 import type { Ship } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   value: Ship | null;
@@ -135,11 +136,7 @@ export function ShipPicker({ value, onChange, label, id }: Props): JSX.Element {
           ))}
         </ul>
       )}
-      {searchError && (
-        <p role="alert" className="mt-1 text-xs text-(--danger)">
-          {t("picker.shipSearchError")}
-        </p>
-      )}
+      {searchError && <InlineError className="mt-1">{t("picker.shipSearchError")}</InlineError>}
       {notice !== null && (
         <p role="status" className="mt-1 text-xs text-(--text-muted)">
           {notice}
@@ -179,7 +176,7 @@ export function ShipPicker({ value, onChange, label, id }: Props): JSX.Element {
             />
             {t("picker.riverShip")}
           </label>
-          {error !== null && <p className="text-xs text-(--danger)">{error}</p>}
+          {error !== null && <InlineError>{error}</InlineError>}
           <div className="flex justify-end gap-2">
             <button
               type="button"

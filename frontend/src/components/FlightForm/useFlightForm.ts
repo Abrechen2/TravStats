@@ -18,6 +18,7 @@ import { useFlightFormEffects, type FlightFormRefs } from "./useFlightFormEffect
 import { useFlightLookupHandlers } from "./useFlightLookupHandlers";
 import { useFlightReviewConfirm } from "./useFlightReviewConfirm";
 import { prepareNextLegForm, prepareReturnLegForm } from "./flightFormReturn";
+import { reportPageError } from "../../store/pageErrorStore";
 
 export function useFlightForm(
   // Returning the created Flight makes the post-create trip assignment
@@ -143,7 +144,7 @@ export function useFlightForm(
       await tripsApi.assignFlights(tripId, { flightIds: [created.id], action: "add" });
     } catch (err) {
       logger.warn("Failed to assign the new flight to the selected trip:", err);
-      useToastStore.getState().addToast("error", t("flights:edit.tripAssignFailed"));
+      reportPageError(t("flights:edit.tripAssignFailed"));
     }
   };
 

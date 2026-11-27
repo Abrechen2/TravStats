@@ -4,7 +4,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { coverSuggestionsApi } from "../../lib/api/coverSuggestions";
 import { logger } from "../../lib/logger";
-import { token } from "../ui/tokens";
+import InlineError from "../ui/InlineError";
 
 type Failure = "load" | "save" | "remove";
 
@@ -90,11 +90,7 @@ export default function AutoCoverSetting(): JSX.Element {
           {t("autoCover.removed", { count: removed })}
         </p>
       )}
-      {failed && (
-        <p role="alert" className="text-sm" style={{ color: token("bad") }}>
-          {t(`autoCover.${failed}Failed`)}
-        </p>
-      )}
+      {failed && <InlineError>{t(`autoCover.${failed}Failed`)}</InlineError>}
     </div>
   );
 }

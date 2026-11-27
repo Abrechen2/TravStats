@@ -4,7 +4,8 @@
 
 import type { JSX } from "react";
 import { formatAmount } from "../../../../lib/units";
-import { Row, formatDuration, type TFn } from "../cardChrome";
+import { Row, type TFn } from "../cardChrome";
+import { formatDuration } from "../../../../lib/format";
 import type { CurrencyFigure, JourneyRouteFigures } from "./journeyRouteFigures";
 import type { MapJourney } from "./journeyTypes";
 import { journeyDay, journeySpanDay } from "./journeyCardParts";
@@ -58,7 +59,7 @@ function DurationRows({
     const j = byId.get(id);
     // The day it left is enough to find it; the span would wrap the row.
     const day = j ? journeyDay(j) : "";
-    return [formatDuration(minutes, t), day].filter(Boolean).join(" · ");
+    return [formatDuration(minutes), day].filter(Boolean).join(" · ");
   };
   return (
     <>
@@ -66,8 +67,8 @@ function DurationRows({
         label={t(d.measured === 1 ? "map:journey.fact.duration" : "map:journey.avgDuration")}
         value={
           d.measured === 1
-            ? formatDuration(d.averageMin, t)
-            : `${formatDuration(d.averageMin, t)} (${sample(d.measured, domain, t)})`
+            ? formatDuration(d.averageMin)
+            : `${formatDuration(d.averageMin)} (${sample(d.measured, domain, t)})`
         }
       />
       {d.fastest && d.slowest && d.fastest.minutes !== d.slowest.minutes && (

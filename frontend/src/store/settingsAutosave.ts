@@ -3,7 +3,7 @@ import { logger } from "../lib/logger";
 import i18n from "../i18n/config";
 import { useRemoteSettingsStatus } from "./remoteSettingsStatus";
 import { useSettingsStore } from "./settingsStore";
-import { useToastStore } from "./toastStore";
+import { reportPageError } from "./pageErrorStore";
 
 export type AutoSaveState = "idle" | "pending" | "saving" | "saved" | "failed";
 
@@ -62,7 +62,7 @@ function reasonOf(error: unknown): string {
 /** Report a failure on the page when one is showing, else as a toast. */
 function fail(reason: string): void {
   set("failed", reason);
-  if (observers === 0) useToastStore.getState().addToast("error", reason);
+  if (observers === 0) reportPageError(reason);
 }
 
 async function run(keepalive = false): Promise<void> {

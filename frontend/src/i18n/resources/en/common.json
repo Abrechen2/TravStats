@@ -8,6 +8,8 @@
   "buttons": {
     "save": "Save",
     "cancel": "Cancel",
+    "dismiss": "Dismiss",
+    "undo": "Undo",
     "delete": "Delete",
     "duplicate": "Duplicate",
     "edit": "Edit",
@@ -37,7 +39,6 @@
     "no": "No",
     "later": "Later",
     "details": "Details",
-    "dismiss": "Dismiss",
     "retry": "Try again",
     "reloadList": "Reload list",
     "showLess": "Show less",
@@ -52,9 +53,9 @@
   "diagnostic": {
     "reportBug": "Report a bug",
     "reportBugOpened": "Bundle downloaded — drag the .json file into the report in the new tab",
-    "reportBugHint": "Opens GitHub with a pre-filled issue and downloads the diagnostic bundle to attach (it's usually too large to paste)",
+    "reportBugHint": "Opens GitHub with a bug template and downloads the diagnostic bundle to attach.",
     "title": "Diagnostic export for a GitHub issue",
-    "description": "Builds a diagnostic bundle you can attach to a GitHub issue. It is made only from fixed, structured fields:",
+    "description": "Diagnostic bundle for a GitHub issue, built only from fixed fields:",
     "generating": "Generating diagnostic bundle...",
     "copy": "Copy to clipboard",
     "copied": "Bundle copied – paste it into the GitHub issue",
@@ -63,14 +64,14 @@
     "error": "Diagnostic export failed",
     "includes": {
       "versions": "App and build version, Node version, operating system and architecture",
-      "settings": "Instance settings as switches, numbers and fixed choices – and only whether an integration is set up, never its address or key",
+      "settings": "Instance switches and numbers — whether an integration exists, never its address or key",
       "counts": "Counts: accounts per enabled domain, entries per table, database migration status",
-      "events": "Log events of the last 24 hours (errors: 7 days) as time, level, category, event key, error code and class, and code location (file name:line)",
+      "events": "Log events of the last 24 hours (errors: 7 days): time, level, code, file:line",
       "userVersions": "App and build version",
-      "userCounts": "Counts of your own entries (flights by status, trips, stays, cruises, places, tours, rail journeys, documents) and which areas you have switched on",
-      "userEvents": "Only the log events caused by your account (time, level, category, event key, error code and class, code location) – no server settings, no database or machine details"
+      "userCounts": "Counts of your entries per area and which areas are on",
+      "userEvents": "Only your account's log events (time, level, code, location) — no server details"
     },
-    "excludes": "Not included: log text, names, usernames, email addresses, booking codes, flights and places, URLs with query strings, IP addresses, host name, directory paths, and any value from a request.",
+    "excludes": "Not included: texts, names, emails, bookings, places, URLs, IP addresses, paths, request values.",
     "previewLabel": "Preview – exactly this file is downloaded:",
     "failedSection": "Section “{{section}}” could not be collected (code {{code}}) and is marked as failed in the bundle.",
     "exportFailed": "The diagnostic bundle could not be created: {{reason}}. “Report bug” still opens the GitHub issue – without an attachment.",
@@ -222,7 +223,7 @@
   "settings": {
     "modules": {
       "title": "Modules",
-      "desc": "Enabled modules show up in navigation, dashboards, map, achievements and stats. Disabled modules are hidden — your data is preserved.",
+      "desc": "Turned-off areas disappear everywhere. Your data stays.",
       "comingSoon": "soon",
       "sub": {
         "flight": "Navigation, statistics, map",
@@ -493,7 +494,7 @@
     "title": "Choose photos",
     "loading": "Loading photos …",
     "loadFailed": "The photos could not be loaded.",
-    "hint": "At most {{cap}} photos are linked automatically. Choose your own here: a tick is your choice and stays through every re-run. Swapping an automatic photo for another remembers nothing as refused; unticking one without a replacement keeps it from coming back.",
+    "hint": "At most {{cap}} photos automatically. Your ticks stay; unticked ones don't come back.",
     "none": "No matching photos found.",
     "tile": "Photo from {{time}}, {{state}}",
     "chosen": "chosen",
@@ -519,7 +520,7 @@
       "open": "Choose from album",
       "title": "Choose an album",
       "back": "Back",
-      "hint": "The album's photos only appear for you to choose from; the album itself is not linked. You decide which photos stay.",
+      "hint": "Album photos for picking only; the album is not linked.",
       "filter": "Search albums",
       "noSource": "No photo source connected.",
       "loading": "Loading albums …",
@@ -537,5 +538,91 @@
     "short": "Demo account active",
     "hint": "A demo account is still active. Go to Maintenance to delete it."
   },
-  "operatorInferred": "Inferred from train category, number and stations – not entered"
+  "operatorInferred": "Inferred from train category, number and stations – not entered",
+  "listColor": {
+    "slate": "Slate",
+    "sand": "Sand",
+    "rose": "Rose",
+    "violet": "Violet",
+    "sky": "Sky blue",
+    "mint": "Mint",
+    "amberSoft": "Amber",
+    "coral": "Coral",
+    "teal": "Teal",
+    "lime": "Lime"
+  },
+  "photoViewer": {
+    "title": "Photo viewer",
+    "alt": "Photo",
+    "previous": "Previous photo",
+    "next": "Next photo",
+    "close": "Close",
+    "loadFailed": "The photo could not be loaded. The source is unreachable or the photo was removed.",
+    "source": {
+      "upload": "own upload",
+      "immich": "Immich",
+      "photoprism": "PhotoPrism"
+    },
+    "openEntry": "Go to entry",
+    "enlarge": "Enlarge photo"
+  },
+  "yearPicker": {
+    "label": "Year",
+    "previous": "Previous year",
+    "next": "Next year",
+    "open": "Choose year",
+    "all": "All years",
+    "gridLabel": "Years",
+    "count": {
+      "flights_one": "{{count}} flight",
+      "flights_other": "{{count}} flights",
+      "cruises_one": "{{count}} cruise",
+      "cruises_other": "{{count}} cruises",
+      "stays_one": "{{count}} stay",
+      "stays_other": "{{count}} stays",
+      "events_one": "{{count}} entry",
+      "events_other": "{{count}} entries",
+      "rides_one": "{{count}} ride",
+      "rides_other": "{{count}} rides",
+      "rentals_one": "{{count}} rental",
+      "rentals_other": "{{count}} rentals"
+    }
+  },
+  "dateField": {
+    "from": "From",
+    "to": "To",
+    "quickPicks": "Quick picks",
+    "today": "Today",
+    "last7": "7 days",
+    "thisYear": "This year",
+    "open": "Open calendar",
+    "calendar": "Calendar",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "year": "Year",
+    "time": "time",
+    "invalidDate": "Not a valid date",
+    "invalidTime": "Not a valid time",
+    "placeholder": {
+      "dmy": "DD.MM.YYYY",
+      "mdy": "MM/DD/YYYY",
+      "ymd": "YYYY-MM-DD",
+      "month_dmy": "MM.YYYY",
+      "month_mdy": "MM/YYYY",
+      "month_ymd": "YYYY-MM",
+      "clock24": "HH:MM",
+      "clock12": "h:MM AM"
+    }
+  },
+  "ui": {
+    "clearSearch": "Clear search",
+    "sortBy": "Sort by {{column}}",
+    "picker": {
+      "loading": "Searching …",
+      "failed": "The search failed.",
+      "retry": "Try again",
+      "none": "No matches.",
+      "results": "Results"
+    }
+  }
 }

@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { dawarichStaysApi, type DawarichStay, type StayChoices } from "../../lib/api/dawarichStays";
@@ -8,6 +9,8 @@ import { Card } from "../ui/Card";
 import StayIdentityPanel from "./StayIdentityPanel";
 import TrackSectionPanel from "../inbox/track/TrackSectionPanel";
 import { staySectionProps } from "../inbox/track/sectionProps";
+import StopEvidenceBadge from "./StopEvidenceBadge";
+import { stopEvidenceView } from "../../lib/stopEvidenceView";
 import StayCalendarEvidence from "./StayCalendarEvidence";
 import StayPluginCandidates from "./StayPluginCandidates";
 import type { StayPluginEvidence } from "../../lib/api/dawarichStays";
@@ -196,12 +199,15 @@ export default function StayReviewCard({
           {m.strength === "name" && ` · ${t("places:smartList.weaker")}`}
         </p>
       ))}
+      {travtrack && <StopEvidenceBadge view={stopEvidenceView(row.evidence)} />}
       {row.evidence.calendar && (
         <StayCalendarEvidence evidence={row.evidence.calendar} zone={row.evidence.zone} />
       )}
       {travtrack &&
       open &&
-      (row.evidence.plugins?.length || row.evidence.pluginsPending?.length) ? (
+      (row.evidence.plugins?.length ||
+        row.evidence.pluginsPending?.length ||
+        row.evidence.pluginsAsked?.length) ? (
         <StayPluginCandidates
           stayId={row.id}
           plugins={row.evidence.plugins ?? []}
@@ -351,9 +357,10 @@ export default function StayReviewCard({
           <p className="t-caption">{text("localTime")}</p>
           <label>
             {text("start")}
-            <input
+            <DateField
+              inline
               className="input"
-              type="datetime-local"
+              kind="datetime-local"
               required
               value={start}
               disabled={busy}
@@ -362,9 +369,10 @@ export default function StayReviewCard({
           </label>
           <label>
             {text("end")}
-            <input
+            <DateField
+              inline
               className="input"
-              type="datetime-local"
+              kind="datetime-local"
               required
               value={end}
               disabled={busy}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
-import Button from "../../components/ui/Button";
+import YearPicker from "../../components/ui/YearPicker";
 import TableScroll from "../../components/ui/TableScroll";
 import { token } from "../../components/ui/tokens";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -15,10 +15,11 @@ import {
 import { logger } from "../../lib/logger";
 import { appLocale, formatDistance, formatShortDistance } from "../../lib/units";
 import { todayIn } from "../../shared/time/clock";
-import { countryName } from "../../shared/geo/countryCode";
 import { useSettingsStore } from "../../store/settingsStore";
 import TrackCalendar from "./stats/TrackCalendar";
 import TrackKmChart from "./stats/TrackKmChart";
+import { CountryLabel } from "../../lib/countryFlag";
+import InlineError from "../../components/ui/InlineError";
 
 type State =
   { kind: "loading" } | { kind: "failed"; key: string } | { kind: "loaded"; data: TravTrackMonths };
@@ -50,6 +51,26 @@ export default function TrackMonths(): JSX.Element {
   const thisYear = Number(todayIn(useTodayZone()).slice(0, 4));
   const [year, setYear] = useState(thisYear);
   const [state, setState] = useState<State>({ kind: "loading" });
+  // The years with TravTrack data bound the stepper; the current year stays reachable as the default.
+  const [dataYears, setDataYears] = useState<number[]>([]);
+  const [yearsFailed, setYearsFailed] = useState(false);
+  const yearList = [...new Set([...dataYears, thisYear, year])].sort((a, b) => a - b);
+
+  useEffect(() => {
+    let live = true;
+    travTrackMonthsApi
+      .years()
+      .then((years) => {
+        if (live) setDataYears(years);
+      })
+      .catch((err: unknown) => {
+        logger.warn("TravTrack years could not be loaded", err);
+        if (live) setYearsFailed(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -78,28 +99,32 @@ export default function TrackMonths(): JSX.Element {
     value < 10
       ? formatShortDistance(value, units.distanceUnit, t, lang)
       : formatDistance(value, units.distanceUnit, t, lang);
-  const country = (code: string) => countryName(code, lang) || code;
   const head = "px-2 py-1 text-left font-medium";
   const cell = "px-2 py-1 align-top";
 
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={() => setYear((y) => y - 1)}>{t("track:months.previous")}</Button>
-        <span className="t-card-title" data-testid="track-months-year">
-          {year}
+        <span data-testid="track-months-year">
+          <YearPicker
+            years={yearList.map((y) => ({ year: y }))}
+            value={year}
+            onChange={(v) => {
+              if (v !== "all") setYear(v);
+            }}
+            allowAll={false}
+            label={t("track:months.year")}
+          />
         </span>
-        <Button disabled={year >= thisYear} onClick={() => setYear((y) => y + 1)}>
-          {t("track:months.next")}
-        </Button>
+        {yearsFailed && (
+          <span className="t-caption" role="alert">
+            {t("track:months.yearsFailed")}
+          </span>
+        )}
       </div>
 
       {state.kind === "loading" && <p className="t-caption">{t("track:months.loading")}</p>}
-      {state.kind === "failed" && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
-          {t(state.key)}
-        </p>
-      )}
+      {state.kind === "failed" && <InlineError>{t(state.key)}</InlineError>}
       {state.kind === "loaded" &&
         (() => {
           const rows = monthRows(state.data);
@@ -147,7 +172,7 @@ export default function TrackMonths(): JSX.Element {
                         {row.values === null ? (
                           <td className={cell} colSpan={4} />
                         ) : (
-                          <MonthCells values={row.values} km={km} country={country} cell={cell} />
+                          <MonthCells values={row.values} km={km} cell={cell} />
                         )}
                       </tr>
                     ))}
@@ -172,12 +197,10 @@ export default function TrackMonths(): JSX.Element {
 function MonthCells({
   values,
   km,
-  country,
   cell,
 }: {
   values: TravTrackMonth;
   km: (value: number) => string;
-  country: (code: string) => string;
   cell: string;
 }): JSX.Element {
   const { t } = useTranslation(["track"]);
@@ -193,9 +216,15 @@ function MonthCells({
         )}
       </td>
       <td className={cell}>
-        {values.countries.length === 0
-          ? t("track:months.noCountries")
-          : values.countries.map(country).join(", ")}
+        {values.countries.length === 0 ? (
+          t("track:months.noCountries")
+        ) : (
+          <span className="inline-flex flex-wrap gap-1.5">
+            {values.countries.map((code) => (
+              <CountryLabel key={code} country={code} compact height={16} />
+            ))}
+          </span>
+        )}
       </td>
       <td className={cell} data-testid="track-month-cities">
         {values.cities === null ? (

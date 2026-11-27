@@ -122,9 +122,49 @@ async function stillSendable(id: string): Promise<boolean> {
   return !!fresh && !fresh.parkedAt && !isHeld(fresh.member) && (await stillReceives(fresh));
 }
 
-function messageOf(row: Row, seq: number): GroupMessage {
+/**
+ * Facts a peer reads only when its ping names their feature: `legRoutes` (hand-drawn cruise lines,
+ * 2026-11-24) and a ferry's `manualScope` (rc.46). A server from before them has strict shapes
+ * that would refuse the whole message over the key, so it gets the message without it — a ferry's
+ * line then arrives as that crossing's own, as it did before.
+ */
+const GATED_FACTS: ReadonlyArray<{ key: string; feature: TripShareFeature }> = [
+  { key: "legRoutes", feature: "leg-routes" },
+  { key: "manualScope", feature: "ferry-manual-scope" },
+];
+
+/**
+ * The payload without the fact `key`: every such key goes, and a change list loses the change
+ * of that field; null when nothing is left to say.
+ */
+export function withoutFact(payload: unknown, key: string): unknown {
+  const strip = (value: unknown): unknown => {
+    if (Array.isArray(value))
+      return value
+        .filter((v) => !(v && typeof v === "object" && (v as { field?: unknown }).field === key))
+        .map(strip);
+    if (value && typeof value === "object")
+      return Object.fromEntries(
+        Object.entries(value)
+          .filter(([k]) => k !== key)
+          .map(([k, v]) => [k, strip(v)])
+      );
+    return value;
+  };
+  const stripped = strip(payload) as Record<string, unknown>;
+  const changes = stripped.changes;
+  return Array.isArray(changes) && changes.length === 0 ? null : stripped;
+}
+
+/** The payload without hand-drawn cruise lines, for a peer from before them. */
+export const withoutLegRoutes = (payload: unknown): unknown => withoutFact(payload, "legRoutes");
+
+const mentionsFact = (payload: unknown, key: string): boolean =>
+  JSON.stringify(payload ?? null).includes(`"${key}"`);
+
+function messageOf(row: Row, seq: number, payload: unknown = row.payload): GroupMessage {
   return {
-    ...(row.payload as Record<string, unknown>),
+    ...(payload as Record<string, unknown>),
     kind: row.kind,
     messageId: row.id,
     sentAt: new Date().toISOString(),
@@ -280,11 +320,32 @@ async function deliverStream(
         continue;
       }
     }
+    // A gated fact goes only to a server that reads it; an older one gets the rest.
+    let payload: unknown = row.payload;
+    let unreachable = false;
+    for (const gated of GATED_FACTS) {
+      if (payload === null || !mentionsFact(payload, gated.key)) continue;
+      try {
+        if (!(await peerSupports(peerOrigin, gated.feature)))
+          payload = withoutFact(payload, gated.key);
+      } catch (error) {
+        await failed(row, kindOf(error), now);
+        run.failed++;
+        unreachable = true;
+        break;
+      }
+    }
+    if (unreachable) return;
+    if (payload === null) {
+      await prisma.tripShareOutbox.delete({ where: { id: row.id } });
+      run.dropped++;
+      continue;
+    }
     try {
       await sendOnStream(
         groupId,
         peerOrigin,
-        (seq) => messageOf(row, seq),
+        (seq) => messageOf(row, seq, payload),
         transport,
         (tx, ack) => delivered(tx, row, ack, now),
         () => stillSendable(row.id)

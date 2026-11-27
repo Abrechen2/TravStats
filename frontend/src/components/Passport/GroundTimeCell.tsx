@@ -1,5 +1,5 @@
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatDuration } from "../../lib/formatters";
+import { formatDuration } from "../../lib/format";
 import type { CountryGroundTime } from "../../types/passport";
 import Toggletip from "../ui/Toggletip";
 

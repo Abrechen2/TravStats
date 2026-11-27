@@ -1,5 +1,6 @@
 import { Prisma } from "../../prisma";
 import { entryFilterActive } from "./recordedOnly";
+import { purposeFilterSql } from "../purpose/purposeFilter";
 
 /**
  * "Nur belegte" for the few reads written in raw SQL (the lodging list and its facets). The Prisma
@@ -12,8 +13,9 @@ import { entryFilterActive } from "./recordedOnly";
  * is on, and not of a purpose the user hides for lodging; `TRUE` outside a scope.
  */
 export function recordedStaySql(alias: string): Prisma.Sql {
-  const { recorded, hidden } = entryFilterActive();
+  const { recorded, hidden, filter } = entryFilterActive();
   const parts: Prisma.Sql[] = [];
+  if (filter) parts.push(purposeFilterSql(alias, filter));
   if (recorded)
     parts.push(Prisma.sql`${Prisma.raw(alias)}.provenance IS DISTINCT FROM 'remembered'`);
   const purposes = hidden.LodgingStay;
@@ -31,7 +33,10 @@ export function recordedStaySql(alias: string): Prisma.Sql {
  * and drops out, like the Prisma side's parent rule.
  */
 export function recordedJoinedStaySql(alias: string): Prisma.Sql {
-  const { recorded, hidden } = entryFilterActive();
+  const { recorded, hidden, filter } = entryFilterActive();
+  // Filtered to one purpose, a house stays only through a stay of it (no stay-less rows).
+  if (filter)
+    return Prisma.sql`(${Prisma.raw(alias)}.id IS NOT NULL AND ${recordedStaySql(alias)})`;
   return recorded || (hidden.LodgingStay?.length ?? 0) > 0
     ? Prisma.sql`(${Prisma.raw(alias)}.id IS NULL OR ${recordedStaySql(alias)})`
     : Prisma.sql`TRUE`;

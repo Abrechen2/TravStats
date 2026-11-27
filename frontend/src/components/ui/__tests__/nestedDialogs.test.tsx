@@ -2,7 +2,7 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import Modal from "../../Modal";
+import Dialog from "../Dialog";
 
 /**
  * Two dialogs at once, which is where the shared chrome went wrong.
@@ -29,14 +29,14 @@ import Modal from "../../Modal";
 function TwoDialogs({ onOuterClose }: { onOuterClose: () => void }): JSX.Element {
   const [innerOpen, setInnerOpen] = useState(false);
   return (
-    <Modal open onClose={onOuterClose} title="Formular">
+    <Dialog open onClose={onOuterClose} title="Formular">
       <button type="button" onClick={() => setInnerOpen(true)}>
         Karte öffnen
       </button>
-      <Modal open={innerOpen} onClose={() => setInnerOpen(false)} title="Karte">
+      <Dialog open={innerOpen} onClose={() => setInnerOpen(false)} title="Karte">
         <p>Punkt wählen</p>
-      </Modal>
-    </Modal>
+      </Dialog>
+    </Dialog>
   );
 }
 
@@ -45,14 +45,14 @@ function SiblingDialogs({ onOuterClose }: { onOuterClose: () => void }): JSX.Ele
   const [innerOpen, setInnerOpen] = useState(false);
   return (
     <>
-      <Modal open onClose={onOuterClose} title="Panel">
+      <Dialog open onClose={onOuterClose} title="Panel">
         <button type="button" onClick={() => setInnerOpen(true)}>
           Von Hand
         </button>
-      </Modal>
-      <Modal open={innerOpen} onClose={() => setInnerOpen(false)} title="Formular">
+      </Dialog>
+      <Dialog open={innerOpen} onClose={() => setInnerOpen(false)} title="Formular">
         <p>Eingabe</p>
-      </Modal>
+      </Dialog>
     </>
   );
 }

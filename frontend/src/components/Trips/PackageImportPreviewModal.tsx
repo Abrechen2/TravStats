@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { apiErrorMachineCode } from "../../lib/apiError";
@@ -12,6 +12,7 @@ import {
   type PackageProposal,
 } from "../../lib/api/tripPackage";
 import { ProposalBody } from "./PackageProposalSections";
+import InlineError from "../ui/InlineError";
 
 /**
  * The review of a package tour (plan 2026-10-09 P3): what the server will
@@ -136,7 +137,7 @@ export function PackageImportPreviewModal({
     );
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onCancel}
       busy={committing}
@@ -181,11 +182,7 @@ export function PackageImportPreviewModal({
           )}
         </div>
       )}
-      {error && (
-        <p role="alert" className="mt-3 font-medium text-(--danger)">
-          {error}
-        </p>
-      )}
+      {error && <InlineError className="mt-3">{error}</InlineError>}
       {loading && !proposal && (
         <p className="mt-3 text-sm text-(--text-muted)">{t("import:package.loading")}</p>
       )}
@@ -198,6 +195,6 @@ export function PackageImportPreviewModal({
           onPickAirport={pickAirport}
         />
       )}
-    </Modal>
+    </Dialog>
   );
 }

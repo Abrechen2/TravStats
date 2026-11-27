@@ -7,7 +7,10 @@ import { sharingRemoteApi } from "../../lib/api/sharingRemote";
 import { logger } from "../../lib/logger";
 import type { OfferCounts, ReceivedOffer } from "../../types/sharingRemote";
 import Button from "../ui/Button";
+import LinkExistingPanel from "./LinkExistingPanel";
+import { sharingLinkApi } from "../../lib/api/sharingLink";
 import { remoteSharingError, type RemoteSharingError } from "./remoteSharingCopy";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:remote.offers";
 const COUNT_ORDER: readonly (keyof OfferCounts)[] = [
@@ -32,26 +35,37 @@ const COUNT_ORDER: readonly (keyof OfferCounts)[] = [
 interface Props {
   /** Changed by the caller when an offer may have arrived (a redeemed trip-page code). */
   refresh?: number;
+  /** The number of offers waiting, after every load (the inbox tab counts them). */
+  onCount?: (count: number) => void;
 }
 
-export default function ReceivedRemoteOffers({ refresh = 0 }: Props): JSX.Element | null {
+export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): JSX.Element | null {
   const { t } = useTranslation(["sharing"]);
   const [offers, setOffers] = useState<ReceivedOffer[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<RemoteSharingError | null>(null);
-  const [accepted, setAccepted] = useState<{ name: string; tripId: string } | null>(null);
+  const [accepted, setAccepted] = useState<{
+    name: string;
+    tripId: string;
+    linked?: boolean;
+    settleFailed?: boolean;
+  } | null>(null);
   const [declined, setDeclined] = useState(false);
+  // forgejo#440: the offer whose trip the person links with one of their own instead.
+  const [linkingId, setLinkingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      setOffers(await sharingRemoteApi.listOffers());
+      const list = await sharingRemoteApi.listOffers();
+      setOffers(list);
       setLoadFailed(false);
+      onCount?.(list.length);
     } catch (error) {
       logger.error("Failed to load trips offered from other servers:", error);
       setLoadFailed(true);
     }
-  }, []);
+  }, [onCount]);
 
   useEffect(() => {
     void load();
@@ -93,11 +107,7 @@ export default function ReceivedRemoteOffers({ refresh = 0 }: Props): JSX.Elemen
   return (
     <div className="mb-6">
       <h3 className="t-label-mono mb-2">{t(`${NS}.title`)}</h3>
-      {loadFailed && (
-        <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
-          {t(`${NS}.errors.loadFailed`)}
-        </p>
-      )}
+      {loadFailed && <InlineError tone="warning">{t(`${NS}.errors.loadFailed`)}</InlineError>}
       {offers && offers.length > 0 && (
         <ul className="flex flex-col gap-3 text-sm">
           {offers.map((offer) => (
@@ -123,21 +133,51 @@ export default function ReceivedRemoteOffers({ refresh = 0 }: Props): JSX.Elemen
                 <Button disabled={busy} onClick={() => void answer(offer, false)}>
                   {t(`${NS}.decline`)}
                 </Button>
+                <Button
+                  disabled={busy}
+                  onClick={() => setLinkingId(linkingId === offer.id ? null : offer.id)}
+                >
+                  {t(`${NS}.link`)}
+                </Button>
               </span>
+              {linkingId === offer.id && (
+                <LinkExistingPanel
+                  otherName={`${offer.from.displayName} (${offer.from.origin})`}
+                  loadCandidates={() => sharingLinkApi.offerCandidates(offer.id)}
+                  preview={(tripId) => sharingLinkApi.offerPreview(offer.id, tripId)}
+                  link={(tripId, decision) => sharingLinkApi.offerLink(offer.id, tripId, decision)}
+                  failure={(err, fallback) => remoteSharingError(err, fallback)}
+                  onLinked={(result, tripId) => {
+                    setLinkingId(null);
+                    setAccepted({
+                      name: offer.trip.name,
+                      tripId,
+                      linked: true,
+                      settleFailed: result.settleFailed,
+                    });
+                    void load();
+                  }}
+                />
+              )}
             </li>
           ))}
         </ul>
       )}
       {failure && (
-        <p role="alert" className="mt-2 text-sm" style={{ color: "var(--ts-warn)" }}>
+        <InlineError tone="warning" className="mt-2">
           {t(failure.key, { origin: failure.origin })}
-        </p>
+        </InlineError>
       )}
       {accepted && (
         <p role="status" className="mt-2 text-sm">
-          {t(`${NS}.accepted`, { trip: accepted.name })}{" "}
+          {t(accepted.linked ? `${NS}.linked` : `${NS}.accepted`, { trip: accepted.name })}{" "}
           <Link to={`/trips/${accepted.tripId}`}>{t(`${NS}.open`)}</Link>
         </p>
+      )}
+      {accepted?.settleFailed && (
+        <InlineError tone="warning" className="mt-2">
+          {t(`${NS}.settleFailed`)}
+        </InlineError>
       )}
       {declined && (
         <p role="status" className="mt-2 text-sm">

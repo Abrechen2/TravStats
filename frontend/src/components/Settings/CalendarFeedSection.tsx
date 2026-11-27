@@ -8,7 +8,7 @@ import {
   type CalendarFeedStatus,
   type IssuedCalendarFeed,
 } from "../../lib/api/calendarFeed";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { saveErrorKey } from "../../lib/saveErrorMessage";
 import Button from "../ui/Button";
@@ -23,6 +23,7 @@ import {
 import { useAuthStore } from "../../store/authStore";
 import { useDependency, useDialogCopy, useRowCopy } from "./rowCopy";
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import InlineError from "../ui/InlineError";
 
 const NS = "settings:calendarFeed";
 
@@ -143,12 +144,12 @@ export default function CalendarFeedSection(): JSX.Element {
       <SectionTitle title={t("settingsRows:trips.sections.calendarFeed")} />
       <SettingRows>
         {loadFailed && (
-          <p role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
+          <InlineError>
             {t(`${NS}.loadFailed`)}{" "}
             <button type="button" className="btn-secondary" onClick={() => void load()}>
               {t(`${NS}.retry`)}
             </button>
-          </p>
+          </InlineError>
         )}
 
         {status && !status.enabled && <p className="t-caption">{t(`${NS}.unavailable`)}</p>}

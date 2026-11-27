@@ -1,3 +1,5 @@
+import { daySourceExtras, ensureDayResolved, type DaySourceExtras } from "./bestSource/dayExtras";
+import { dayCleanup, type DayCleanup } from "./cleanup/dayCleanup";
 import { profileZoneOf } from "../../shared/time/profileZone";
 import type { StoredPoint } from "../tripRecording/segments";
 import { dayContext, type DayContextEntry } from "./dayContext";
@@ -93,6 +95,11 @@ export type TravTrackDay = {
   homeSuggestion: HomeSuggestion | null;
   legs: Leg[];
   stops: Stop[];
+  /**
+   * The optional cleanup (rc46 extras C): the smoothing state, the smoothed stretches for drawing
+   * (labelled, never replacing `segments`) and the road-matched stretches with their undo ids.
+   */
+  cleanup: DayCleanup;
   pointCount: number;
   /** More points than one day answer carries; the rest is not shown. */
   truncated: boolean;
@@ -101,8 +108,8 @@ export type TravTrackDay = {
    * left out as implausible (coarse, null island). Counts only, never a position. Together with
    * `pointCount` they tell "nothing recorded" from "recorded but not drawn".
    */
-  omitted: { privacyZone: number; implausible: number };
-};
+  omitted: { privacyZone: number; implausible: number; sourceExcluded: number };
+} & DaySourceExtras;
 
 const RANK: Record<CoverageState, number> = {
   noData: 0,
@@ -187,6 +194,7 @@ export async function travTrackDay(
     fromMs: midnightOf(date, zone).getTime(),
     untilMs: midnightOf(dayAfter(date), zone).getTime(),
   };
+  await ensureDayResolved(userId, date);
   const { raw, read, legs, stops } = await deriveDay(
     userId,
     window,
@@ -200,7 +208,10 @@ export async function travTrackDay(
     explainingEntries(dayContextEntries)
   );
   const stationary = await explainStationary(userId, window, date, withEntries);
+  const extras = await daySourceExtras(userId, date, read);
+  const cleanup = await dayCleanup(userId, window, read, extras.sources);
   return {
+    ...extras,
     date,
     zone,
     segments: read.segments,
@@ -213,6 +224,7 @@ export async function travTrackDay(
     homeSuggestion: stationary.homeSuggestion,
     legs,
     stops,
+    cleanup,
     pointCount: vertices(read),
     truncated: raw.next !== null,
     omitted: {
@@ -222,6 +234,7 @@ export async function travTrackDay(
       implausible: options.includeImplausible
         ? 0
         : raw.segments.reduce((n, s) => n + s.filter(badVertexIn(s)).length, 0),
+      sourceExcluded: raw.sourceExcluded ?? 0,
     },
   };
 }

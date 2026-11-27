@@ -1,3 +1,4 @@
+import UseConsentList from "../ExternalServices/UseConsentList";
 import { useEffect, useState, type JSX } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -174,6 +175,7 @@ export default function ServicesPage({
   return (
     <ServicesProvider isAdmin={isAdmin}>
       <Cards isAdmin={isAdmin} side={side} />
+      {side !== "server" && <UseConsentList />}
     </ServicesProvider>
   );
 }

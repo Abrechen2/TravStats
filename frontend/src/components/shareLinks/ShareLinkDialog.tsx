@@ -3,7 +3,7 @@ import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { shareLinksApi } from "../../lib/api/shareLinks";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import {
@@ -15,11 +15,12 @@ import {
   type PhotoOmissions,
   type ShareLinkPreviewResult,
 } from "../../types/shareLinks";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import Button from "../ui/Button";
 import { Field, Input, Select } from "../ui/Field";
 import { EXPIRY_CHOICES, shareLinkErrorKey, type ExpiryChoice } from "./shareLinkCopy";
 import ShareLinkPreview from "./ShareLinkPreview";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:links";
 
@@ -194,7 +195,7 @@ export default function ShareLinkDialog({
   );
 
   return (
-    <Modal
+    <Dialog
       open={open}
       onClose={close}
       title={t(`${NS}.dialog.title`)}
@@ -205,11 +206,7 @@ export default function ShareLinkDialog({
           <div className="flex w-full flex-col gap-2">
             {/* In the footer, not under the preview: a long itinerary pushed the
                 reason out of sight and the dialog seemed to do nothing (M2). */}
-            {error && (
-              <p role="alert" style={{ color: "var(--ts-bad)" }}>
-                {error}
-              </p>
-            )}
+            {error && <InlineError>{error}</InlineError>}
             <div className="flex flex-wrap justify-end gap-2">
               {tripEnded && (
                 <>
@@ -239,11 +236,7 @@ export default function ShareLinkDialog({
     >
       <div className="flex flex-col gap-4">
         {status === "disabled" && <p role="status">{t(`${NS}.dialog.disabled`)}</p>}
-        {status === "failed" && (
-          <p role="alert" style={{ color: "var(--ts-bad)" }}>
-            {t(`${NS}.dialog.statusFailed`)}
-          </p>
-        )}
+        {status === "failed" && <InlineError>{t(`${NS}.dialog.statusFailed`)}</InlineError>}
         {status === "enabled" && created && (
           <>
             <p role="status">{t(`${NS}.dialog.created`)}</p>
@@ -258,11 +251,7 @@ export default function ShareLinkDialog({
             <div className="flex items-center gap-3">
               <Button onClick={() => void copy()}>{t(`${NS}.dialog.copy`)}</Button>
               {copied === "yes" && <span role="status">{t(`${NS}.dialog.copied`)}</span>}
-              {copied === "failed" && (
-                <span role="alert" style={{ color: "var(--ts-bad)" }}>
-                  {t(`${NS}.dialog.copyFailed`)}
-                </span>
-              )}
+              {copied === "failed" && <InlineError>{t(`${NS}.dialog.copyFailed`)}</InlineError>}
             </div>
             <p className="t-caption">
               {t(`${NS}.dialog.endsAt`, { date: format.dateTime(created.effectiveExpiresAt) })}
@@ -304,9 +293,7 @@ export default function ShareLinkDialog({
               <h3 className="font-semibold">{t(`${NS}.dialog.preview`)}</h3>
               {fields.length === 0 && <p className="t-caption">{t(`${NS}.dialog.previewEmpty`)}</p>}
               {fields.length > 0 && previewFailed && (
-                <p role="alert" style={{ color: "var(--ts-bad)" }}>
-                  {t(`${NS}.dialog.previewFailed`)}
-                </p>
+                <InlineError>{t(`${NS}.dialog.previewFailed`)}</InlineError>
               )}
               {fields.length > 0 && !previewFailed && !preview && (
                 <p className="t-caption">{t(`${NS}.dialog.previewLoading`)}</p>
@@ -319,7 +306,7 @@ export default function ShareLinkDialog({
           </>
         )}
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

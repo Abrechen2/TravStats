@@ -1,8 +1,10 @@
+import DateField from "../../components/ui/DateField";
 import { useState } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import type { TripSuggestion, TripSuggestionEdits } from "../../types/tripSuggestion";
 import Button from "../ui/Button";
+import InlineError from "../ui/InlineError";
 
 const NS = "dataQuality:inbox.tripSuggestions";
 
@@ -95,8 +97,8 @@ export default function TripSuggestionEditor({
       {isVisit ? (
         <label className="flex flex-col gap-1 text-sm">
           <span className="t-caption">{t(`${NS}.edit.visitDay`)}</span>
-          <input
-            type="date"
+          <DateField
+            inline
             value={visitDay}
             onChange={(e) => setVisitDay(e.target.value)}
             className="rounded-md border px-3 py-2"
@@ -107,8 +109,8 @@ export default function TripSuggestionEditor({
         <div className="flex flex-wrap gap-3">
           <label className="flex flex-col gap-1 text-sm">
             <span className="t-caption">{t(`${NS}.edit.start`)}</span>
-            <input
-              type="date"
+            <DateField
+              inline
               value={startDay}
               onChange={(e) => setStartDay(e.target.value)}
               className="rounded-md border px-3 py-2"
@@ -117,8 +119,8 @@ export default function TripSuggestionEditor({
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="t-caption">{t(`${NS}.edit.end`)}</span>
-            <input
-              type="date"
+            <DateField
+              inline
               value={endDay}
               onChange={(e) => setEndDay(e.target.value)}
               className="rounded-md border px-3 py-2"
@@ -144,16 +146,8 @@ export default function TripSuggestionEditor({
         </fieldset>
       )}
 
-      {invalidSpan && (
-        <p role="alert" className="t-caption" style={{ color: "var(--ts-warn)" }}>
-          {t(`${NS}.errors.endBeforeStart`)}
-        </p>
-      )}
-      {nothingKept && (
-        <p role="alert" className="t-caption" style={{ color: "var(--ts-warn)" }}>
-          {t(`${NS}.errors.noMembers`)}
-        </p>
-      )}
+      {invalidSpan && <InlineError tone="warning">{t(`${NS}.errors.endBeforeStart`)}</InlineError>}
+      {nothingKept && <InlineError tone="warning">{t(`${NS}.errors.noMembers`)}</InlineError>}
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" variant="primary" disabled={busy || invalidSpan || nothingKept}>

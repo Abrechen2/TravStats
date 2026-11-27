@@ -32,6 +32,7 @@ import * as claimModule from "../claim";
 import * as invitesModule from "../invites";
 import * as offersModule from "../offers";
 import * as offerInboxModule from "../offerInbox";
+import * as offerLinkModule from "../offerLink";
 import * as entriesModule from "../entries";
 import * as tripRemoteSharingModule from "../tripRemoteSharing";
 import * as outboxModule from "../outbox";
@@ -46,6 +47,8 @@ import * as shareTripModule from "../../shareTrip";
 import * as propagateModule from "../../propagate";
 import * as undoModule from "../../undo";
 import * as noticesModule from "../../notices";
+import * as remoteCompanionModule from "../../remoteCompanion";
+import * as receivedTripsModule from "../../receivedTrips";
 import * as adaptersModule from "../../adapters";
 import * as securityModule from "../../../federation/security";
 import * as transportModule from "../transport";
@@ -82,6 +85,7 @@ export interface Server {
   invites: typeof invitesModule;
   offers: typeof offersModule;
   offerInbox: typeof offerInboxModule;
+  offerLink: typeof offerLinkModule;
   entries: typeof entriesModule;
   tripRemoteSharing: typeof tripRemoteSharingModule;
   outbox: typeof outboxModule;
@@ -96,6 +100,8 @@ export interface Server {
   propagate: typeof propagateModule;
   undo: typeof undoModule;
   notices: typeof noticesModule;
+  remoteCompanion: typeof remoteCompanionModule;
+  receivedTrips: typeof receivedTripsModule;
   adapters: typeof adaptersModule;
   security: typeof securityModule;
   transport: typeof transportModule;
@@ -141,6 +147,7 @@ const serverA = (): Server => ({
   invites: invitesModule,
   offers: offersModule,
   offerInbox: offerInboxModule,
+  offerLink: offerLinkModule,
   entries: entriesModule,
   tripRemoteSharing: tripRemoteSharingModule,
   outbox: outboxModule,
@@ -155,6 +162,8 @@ const serverA = (): Server => ({
   propagate: propagateModule,
   undo: undoModule,
   notices: noticesModule,
+  remoteCompanion: remoteCompanionModule,
+  receivedTrips: receivedTripsModule,
   adapters: adaptersModule,
   security: securityModule,
   transport: transportModule,
@@ -194,6 +203,7 @@ function isolatedServer(origin: string, databaseUrl: string): Server {
         invites: require("../invites"),
         offers: require("../offers"),
         offerInbox: require("../offerInbox"),
+        offerLink: require("../offerLink"),
         entries: require("../entries"),
         tripRemoteSharing: require("../tripRemoteSharing"),
         outbox: require("../outbox"),
@@ -208,6 +218,8 @@ function isolatedServer(origin: string, databaseUrl: string): Server {
         propagate: require("../../propagate"),
         undo: require("../../undo"),
         notices: require("../../notices"),
+        remoteCompanion: require("../../remoteCompanion"),
+        receivedTrips: require("../../receivedTrips"),
         adapters: require("../../adapters"),
         security: require("../../../federation/security"),
         transport: require("../transport"),

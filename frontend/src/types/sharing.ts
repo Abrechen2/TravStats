@@ -73,6 +73,11 @@ export interface TripPerson {
   /** Members only: an accepted consent in either direction lets changes through. */
   receivesChanges: boolean | null;
   shareBlockedBy: ShareBlock | null;
+  /**
+   * A member who is none of the reader's companions: the reader's unlinked companions whose
+   * name may be theirs ("Ist das <Name>?"). Optional: an older server sends none.
+   */
+  nameMatches?: { id: string; name: string; onTrip: boolean }[];
 }
 
 export interface TripSharing {
@@ -166,6 +171,10 @@ export interface ShareNoticeAfter {
   /** `add-request`: whom the member on the other server asks the reader to add, and why. */
   person?: { displayName: string; origin?: string };
   note?: string;
+  /** `shared`: taken without a question because the reader's consent said yes beforehand. */
+  autoAccepted?: boolean;
+  /** `shared` by linking an existing copy (forgejo#440): how many entries were joined, nothing copied. */
+  linked?: { matched: number; decision: string | null };
 }
 
 /** A person on another server, as their server names them: shown as „Ben (andere.instanz.tld)". */
@@ -192,4 +201,22 @@ export interface ShareNotice {
   remoteActor: RemoteActor | null;
   /** `updated`: every changed fact, old and new; `conflict`: the reader's value, then theirs. */
   changes: ShareNoticeChange[];
+}
+
+/** A trip shared with the reader, not looked at yet (`GET /sharing/received-trips`). */
+export interface ReceivedTripItem {
+  kind: "shared" | "offer";
+  /** The notice (`shared`) or the offer (`offer`). */
+  id: string;
+  /** The reader's own trip; null for an offer not answered yet. */
+  tripId: string | null;
+  tripName: string;
+  from: { displayName: string; origin: string | null };
+  /** Taken without a question because the reader's consent said yes beforehand. */
+  autoAccepted: boolean;
+}
+
+export interface ReceivedTrips {
+  items: ReceivedTripItem[];
+  count: number;
 }

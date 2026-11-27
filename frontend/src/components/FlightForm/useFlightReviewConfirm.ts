@@ -6,6 +6,7 @@ import type { Flight, FlightInput, UserAchievement } from "../../types";
 import type { FlightFormRefs } from "./useFlightFormEffects";
 import type { FlightFormState } from "./useFlightFormState";
 import type { useTranslation } from "../../hooks/useTranslation";
+import { reportPageError } from "../../store/pageErrorStore";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -51,7 +52,7 @@ export function useFlightReviewConfirm({ s, refs, t, onSubmit, onCancel, onBatch
       const errorObj = err as { response?: { data?: { error?: string }; status?: number } };
       const msg = errorObj.response?.data?.error ?? t("errors:saveFailed");
       // Show as toast since the form may already be closing
-      useToastStore.getState().addToast("error", msg);
+      reportPageError(msg);
       s.setError(msg);
     } finally {
       s.setLoading(false);

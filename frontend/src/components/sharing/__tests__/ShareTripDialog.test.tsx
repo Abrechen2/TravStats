@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import ShareTripDialog from "../ShareTripDialog";
 import { sharingApi } from "../../../lib/api/sharing";
+import { sharingLinkApi } from "../../../lib/api/sharingLink";
 import type { ShareBlock, TripPerson } from "../../../types/sharing";
 import de from "../../../i18n/resources/de/sharing.json";
 import en from "../../../i18n/resources/en/sharing.json";
@@ -14,6 +15,9 @@ import en from "../../../i18n/resources/en/sharing.json";
  * private, with ONE confirm — never a checkbox (spec 2026-10-16, D9).
  */
 vi.mock("../../../lib/api/sharing", () => ({ sharingApi: { shareTrip: vi.fn() } }));
+vi.mock("../../../lib/api/sharingLink", () => ({
+  sharingLinkApi: { candidates: vi.fn(), preview: vi.fn(), link: vi.fn() },
+}));
 const addToast = vi.fn();
 vi.mock("../../../store/toastStore", () => ({
   useToastStore: (sel: (s: { addToast: typeof addToast }) => unknown) => sel({ addToast }),
@@ -51,6 +55,17 @@ const BLOCKS: ShareBlock[] = [
 
 describe("ShareTripDialog", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("linking a copy while the other side has not accepted says so, not another person's block", async () => {
+    vi.mocked(sharingLinkApi.candidates).mockResolvedValue({ access: "awaitingConsent" } as never);
+    render(
+      <ShareTripDialog open onClose={vi.fn()} tripId="t1" people={[ben, ilse]} onShared={vi.fn()} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "sharing:link.open" }));
+    expect(await screen.findByText("sharing:link.awaitingConsent")).toBeTruthy();
+    expect(screen.queryByText(/sharing:shareDialog\.blocked\.notLinked/)).toBeNull();
+    expect(screen.queryByText("sharing:shareDialog.blockedTitle")).toBeNull();
+  });
 
   it("says what is copied, what stays private and that it is final, then shares on confirm", async () => {
     api.shareTrip.mockResolvedValue({ groupId: "g", tripCreated: true, created: {} as never });

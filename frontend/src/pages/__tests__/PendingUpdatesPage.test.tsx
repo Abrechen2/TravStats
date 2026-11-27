@@ -39,6 +39,10 @@ vi.mock("@/lib/api/sharing", () => ({
     inboxCount: vi.fn().mockResolvedValue(0),
   },
 }));
+// SharingTab asks whether cross-server sharing is on (fix/shared-trip-companions).
+vi.mock("../../lib/api/sharingRemote", () => ({
+  sharingRemoteApi: { status: vi.fn().mockResolvedValue({ available: false }) },
+}));
 vi.mock("../../components/inbox/usePhotoJourneysVisible", () => ({
   usePhotoJourneysVisible: () => visible.value,
 }));
@@ -50,9 +54,28 @@ vi.mock("../../components/NavigationBar", () => ({
 vi.mock("../../components/inbox/MailIntakeSection", () => ({
   default: () => null,
 }));
-vi.mock("../../components/inbox/UnfiledDocumentsSection", () => ({
-  default: () => <div data-testid="unfiled-documents-stub" />,
+vi.mock("../../components/inbox/MailboxScanSection", () => ({
+  default: () => null,
 }));
+const waiting = vi.hoisted(() => ({ documents: 0, plugins: 0 }));
+vi.mock("../../components/inbox/UnfiledDocumentsSection", async () => {
+  const { useEffect } = await import("react");
+  return {
+    default: function UnfiledStub({ onCount }: { onCount?: (n: number | null) => void }) {
+      useEffect(() => onCount?.(waiting.documents), [onCount]);
+      return <div data-testid="unfiled-documents-stub" />;
+    },
+  };
+});
+vi.mock("../../components/inbox/plugins/PluginsTab", async () => {
+  const { useEffect } = await import("react");
+  return {
+    default: function PluginsStub({ onCount }: { onCount?: (n: number | null) => void }) {
+      useEffect(() => onCount?.(waiting.plugins), [onCount]);
+      return <div data-testid="plugins-tab-stub" />;
+    },
+  };
+});
 // Place captures load their own list on mount; they have their own tests.
 vi.mock("../../components/inbox/PlaceCapturesSection", () => ({
   default: () => <div data-testid="place-captures-stub" />,
@@ -112,6 +135,8 @@ describe("PendingUpdatesPage — one inbox", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     visible.value = true;
+    waiting.documents = 0;
+    waiting.plugins = 0;
     vi.mocked(dataQualityFlagsApi.getAll).mockResolvedValue({ flags: [flag], count: 1 });
     vi.mocked(tripSuggestionsApi.list).mockResolvedValue({
       suggestions: [suggestion],
@@ -124,9 +149,9 @@ describe("PendingUpdatesPage — one inbox", () => {
     vi.mocked(tripsApi.getAll).mockResolvedValue([]);
   });
 
-  it("has two tabs, the inbox open by default, and one card per item", async () => {
+  it("has its tabs, the inbox open by default, and one card per item", async () => {
     renderPage();
-    expect(screen.getAllByRole("tab")).toHaveLength(2);
+    expect(screen.getAllByRole("tab")).toHaveLength(4);
     expect(screen.getByRole("tab", { name: INBOX_TAB })).toHaveAttribute("aria-selected", "true");
     await screen.findByText(`${W}.shown`);
     // The trip proposal has exactly one accept, the question one resolve.
@@ -191,5 +216,53 @@ describe("PendingUpdatesPage — one inbox", () => {
     await userEvent.click(screen.getByRole("tab", { name: INBOX_TAB }));
     await waitFor(() => expect(dataQualityFlagsApi.getAll).toHaveBeenCalled());
     expect(screen.getByRole("tab", { name: INBOX_TAB })).toHaveAttribute("aria-selected", "true");
+  });
+
+  describe("documents and plugins have their own tabs (owner 2026-11-26)", () => {
+    const DOCS_TAB = /inbox\.tabs\.documents/;
+    const PLUGINS_TAB = /inbox\.tabs\.plugins/;
+
+    it("the overview holds no document section, only a one-line link while documents wait", async () => {
+      waiting.documents = 3;
+      renderPage();
+      await screen.findByText(`${W}.shown`);
+      // The section lives in the documents tab's panel, hidden on the overview.
+      expect(screen.getByTestId("unfiled-documents-stub").closest("[hidden]")).not.toBeNull();
+      expect(screen.getByTestId("inbox-documents-link")).toHaveTextContent(
+        "dataQuality:inbox.tabs.documentsLink"
+      );
+    });
+
+    it("no link when nothing waits", async () => {
+      renderPage();
+      await screen.findByText(`${W}.shown`);
+      expect(screen.queryByTestId("inbox-documents-link")).toBeNull();
+    });
+
+    it("carries the waiting documents and plugin items as tab badges", async () => {
+      waiting.documents = 3;
+      waiting.plugins = 5;
+      renderPage();
+      await waitFor(() =>
+        expect(
+          within(screen.getByRole("tab", { name: DOCS_TAB })).getByText("3")
+        ).toBeInTheDocument()
+      );
+      expect(
+        within(screen.getByRole("tab", { name: PLUGINS_TAB })).getByText("5")
+      ).toBeInTheDocument();
+    });
+
+    it("deep-links ?tab=documents and ?tab=plugins", async () => {
+      renderPage("/pending-updates?tab=documents");
+      expect(screen.getByRole("tab", { name: DOCS_TAB })).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByTestId("unfiled-documents-stub").closest("[hidden]")).toBeNull();
+      await userEvent.click(screen.getByRole("tab", { name: PLUGINS_TAB }));
+      expect(screen.getByRole("tab", { name: PLUGINS_TAB })).toHaveAttribute(
+        "aria-selected",
+        "true"
+      );
+      expect(screen.getByTestId("plugins-tab-stub").closest("[hidden]")).toBeNull();
+    });
   });
 });

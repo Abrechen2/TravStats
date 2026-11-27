@@ -9,6 +9,7 @@
  * agent/script tokens shown on the API Tokens page.
  */
 
+import { Icon, type IconName } from "../ui/Icon";
 import OverflowMenu from "../ui/OverflowMenu";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
@@ -23,22 +24,23 @@ import { apiTokensApi, type ApiToken } from "../../lib/api/tokens";
 import { logger } from "../../lib/logger";
 import { apiErrorCode } from "../../lib/apiError";
 import { isOldToken } from "../../lib/tokenAge";
-import { formatDateTime } from "../../lib/displayFormat";
+import { formatDateTime } from "../../lib/format";
 import { useBlockConfirm } from "./useBlockConfirm";
 import PushStateRow from "./PushStateRow";
 import { useRowCopy } from "./rowCopy";
+import InlineError from "../ui/InlineError";
 
 /** Embedded in the QR so the app can show which server it's pairing with. */
 const SERVER_NAME = "TravStats";
 const POLL_INTERVAL_MS = 2000;
 
-function platformIcon(platform: string | null): string {
+function platformIcon(platform: string | null): IconName {
   const p = (platform ?? "").toLowerCase();
   if (p.includes("ios") || p.includes("apple") || p.includes("iphone") || p.includes("ipad")) {
-    return "🍎";
+    return "apple";
   }
-  if (p.includes("android")) return "🤖";
-  return "📱";
+  if (p.includes("android")) return "bot";
+  return "smartphone";
 }
 
 /**
@@ -308,7 +310,7 @@ export default function DevicesSection(): JSX.Element {
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <span className="text-xl" aria-hidden>
-                        {platformIcon(dev.platform)}
+                        <Icon name={platformIcon(dev.platform)} size={18} />
                       </span>
                       <div className="flex-1 min-w-0">
                         <div
@@ -507,16 +509,13 @@ export default function DevicesSection(): JSX.Element {
                       {t("settings:devices.codeHint")}
                     </p>
                   </div>
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: expired ? "var(--danger)" : "var(--text-secondary)" }}
-                  >
+                  <InlineError>
                     {expired
                       ? t("settings:devices.expired")
                       : t("settings:devices.countdown", {
                           time: formatRemaining(remainingSeconds),
                         })}
-                  </p>
+                  </InlineError>
                   <div className="flex gap-2">
                     {expired && (
                       <button

@@ -7,7 +7,7 @@ import ExpenseDialog from "./ExpenseDialog";
 import { expensesApi } from "../../lib/api/expenses";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { formatCurrency } from "../../lib/units";
 import { useSettingsStore } from "../../store/settingsStore";
 import type {

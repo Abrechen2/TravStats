@@ -1,4 +1,5 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
+import { Icon } from "../ui/Icon";
 /**
  * LocationMapModal — the ONE map way to pick a point (owner decision
  * 2026-08-21: the modal replaces the old inline mini-map).
@@ -221,7 +222,7 @@ export function LocationMapModal({
       : null;
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={t("location:mapModal.title")}
@@ -354,7 +355,7 @@ export function LocationMapModal({
                     }
                   >
                     <span className="truncate text-[var(--text-primary)]">
-                      {selected ? "✓ " : ""}
+                      {selected ? <Icon name="check" size={14} /> : null}
                       {poi.name}
                       <LocalName value={poi.localName} testId={`map-modal-poi-${i}-local`} />
                     </span>
@@ -368,7 +369,7 @@ export function LocationMapModal({
           </ul>
         </div>
       )}
-    </Modal>
+    </Dialog>
   );
 }
 

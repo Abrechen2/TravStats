@@ -3,6 +3,8 @@ import type {
   CuratedListSummary,
   CuratedProgress,
   CuratedSuggestions,
+  ListMembersPage,
+  ListSortKey,
   PlaceList,
   PlaceListInput,
 } from "../../types/placeList";
@@ -32,6 +34,24 @@ export async function listPlaceLists(withEntries = false): Promise<PlaceList[]> 
 
 export async function getPlaceList(id: string): Promise<PlaceList> {
   const res = await api.get<Envelope<PlaceList>>(`/place-lists/${id}`);
+  return res.data.data;
+}
+
+/** One page of a list as a table, sorted and paged on the server. */
+export async function getListMembers(
+  id: string,
+  query: {
+    sort: ListSortKey;
+    order: "asc" | "desc";
+    page: number;
+    pageSize: number;
+    q?: string;
+    auto?: boolean;
+  }
+): Promise<ListMembersPage> {
+  const res = await api.get<Envelope<ListMembersPage>>(`/place-lists/${id}/members`, {
+    params: { ...query, q: query.q?.trim() || undefined, auto: query.auto ? "true" : undefined },
+  });
   return res.data.data;
 }
 

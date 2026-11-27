@@ -1,10 +1,10 @@
 import { useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { tripsApi } from "../../lib/api/trips";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import { FormErrorBanner } from "../form";
 import { storeFlights } from "./cruiseImportFlights";
 import type { FlightGapItem } from "./cruiseImportFlights";
@@ -80,7 +80,7 @@ export function CruiseImportFlightGap({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={() => onDone({ added, stillMissing: left.length })}
       busy={busy}
@@ -122,6 +122,6 @@ export function CruiseImportFlightGap({
       </ul>
       <p className="text-xs text-(--text-muted)">{t("flightGap.hint")}</p>
       <FormErrorBanner message={retried ? t("flightGap.retryFailed") : null} />
-    </Modal>
+    </Dialog>
   );
 }

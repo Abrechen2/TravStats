@@ -10,6 +10,7 @@ import { reserveScan, scanStays } from "../services/dawarich/stays/scan";
 import { requireConsentSource, staySourceStatus } from "../services/dawarich/stays/scanSource";
 import { acceptStay, rejectStay } from "../services/dawarich/stays/review";
 import { resolveCoveredStays } from "../services/dawarich/stays/coverage";
+import { undoCovered } from "../services/suggestions/reconcile";
 import { stayReviewSchema } from "../schemas/dawarichStays";
 import { withStayTimes, withScanTimes } from "../services/dawarich/stays/times";
 import { publicMarketCoverage } from "../services/dawarich/stays/publicCoverage";
@@ -18,6 +19,10 @@ import { assertTravTrackDerivationAllowed } from "../services/locationEvidence/a
 import { rescanVisitDays, visitLookupStatus } from "../services/travtrack/visits/project";
 import { stayIdentityFor } from "../services/dawarich/stays/identity";
 import { stayPlaceTypeFor } from "../services/dawarich/stays/placeType";
+import { aiHelpAvailability, askStayAiHelp } from "../services/suggestionHelp/askStay";
+import { aiHelpErrorOf } from "../services/suggestionHelp/httpError";
+import { sendConfirmationRequired } from "../services/externalServices/useConsent";
+import { useConfirmationSchema } from "../schemas/externalServices";
 
 import {
   placesEnabled,
@@ -26,8 +31,22 @@ import {
   nextStayScanAt,
 } from "../services/dawarich/stays/availability";
 import { staySuggestionsEnabled } from "../services/settings/suggestionSwitches";
+import {
+  matchesSource,
+  sourceNames,
+  SOURCE_FILTER,
+  staySourcesOf,
+} from "../services/dawarich/stays/staySource";
 
 const router = Router();
+/** A model request per click; 20 a minute is a person working through the inbox. */
+const aiHelpLimiter = rateLimit({
+  windowMs: 60_000,
+  max: patAwareMax(20),
+  keyGenerator: userOrIpKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 router.use(authenticate, requireWriteScope);
 const user = (req: AuthRequest) => {
   if (!req.userId) throw new AppError("Not authenticated", 401);
@@ -211,10 +230,12 @@ router.post("/visits/scan", rejectDemo, scanLimiter, async (req: AuthRequest, re
 });
 /** Rows the inbox list answers with; `meta.truncated` says when it was cut. */
 const STAY_LIST_CAP = 200;
+/** Rows read to find up to `STAY_LIST_CAP` matches of a source filter. */
+const STAY_SOURCE_SCAN_CAP = 2000;
 router.get("/", async (req: AuthRequest, res, next) => {
   try {
     const userId = user(req);
-    const { status, from, to } = z
+    const { status, from, to, source } = z
       .object({
         // `invalidated`: a TravTrack finding whose history went before it was
         // accepted (E4). A Dawarich account never has one.
@@ -225,6 +246,8 @@ router.get("/", async (req: AuthRequest, res, next) => {
         // 2026-10-23): a stay is in it when the two overlap.
         from: z.coerce.date().optional(),
         to: z.coerce.date().optional(),
+        // A source filter (owner 2026-11-26): `smartList:<id>`, `plugin:<id>`, `calendar`, …
+        source: z.string().regex(SOURCE_FILTER).optional(),
       })
       .parse(req.query);
     // Switched off (forgejo#306): no pending suggestions are offered, and none
@@ -248,7 +271,8 @@ router.get("/", async (req: AuthRequest, res, next) => {
         ...(from ? { endAt: { gte: from } } : {}),
       },
       orderBy: [{ startAt: "desc" }, { id: "asc" }],
-      take: STAY_LIST_CAP + 1,
+      // With a source filter the cap applies to the matches, not to the rows read before it.
+      take: (source ? STAY_SOURCE_SCAN_CAP : STAY_LIST_CAP) + 1,
       include: { visit: { select: { id: true, placeId: true } } },
     });
     // A TravTrack finding made under an earlier source choice says so (E4);
@@ -259,12 +283,22 @@ router.get("/", async (req: AuthRequest, res, next) => {
         select: { locationProviderRev: true },
       })
     )?.locationProviderRev;
-    const truncated = rows.length > STAY_LIST_CAP;
+    const names = await sourceNames(userId);
+    const matching = rows
+      .slice(0, source ? STAY_SOURCE_SCAN_CAP : STAY_LIST_CAP)
+      .map((row) => ({ row, sources: staySourcesOf(row, names) }))
+      .filter(({ sources }) => !source || matchesSource(sources, source));
+    const truncated =
+      matching.length > STAY_LIST_CAP ||
+      rows.length > (source ? STAY_SOURCE_SCAN_CAP : STAY_LIST_CAP);
+    const sourced = matching.slice(0, STAY_LIST_CAP);
     res.json({
       success: true,
       meta: { truncated },
-      data: rows.slice(0, STAY_LIST_CAP).map((row) => ({
+      data: sourced.map(({ row, sources }) => ({
         ...withStayTimes(row),
+        source: sources[0],
+        sources,
         ...(row.provider === "travtrack" && rev !== undefined && row.providerRev < rev
           ? { beforeSourceSwitch: true as const }
           : {}),
@@ -339,6 +373,34 @@ router.get("/:id/place-type", identityLimiter, async (req: AuthRequest, res, nex
     next(e);
   }
 });
+/**
+ * "KI fragen" (forgejo#439 phase 2): whether the button may show, and the ask.
+ * The answer is advice for the card — nothing here writes. A first use (or a
+ * changed target) answers 409 CONFIRMATION_REQUIRED with what WOULD be sent.
+ */
+router.get("/ai-help/availability", async (req: AuthRequest, res, next) => {
+  try {
+    res.json({ success: true, data: await aiHelpAvailability(user(req)) });
+  } catch (e) {
+    next(e);
+  }
+});
+router.post("/:id/ai-help", rejectDemo, aiHelpLimiter, async (req: AuthRequest, res, next) => {
+  try {
+    const userId = user(req);
+    const id = z.string().uuid().parse(req.params.id);
+    const body = z
+      .object({ confirmation: useConfirmationSchema.optional() })
+      .strict()
+      .parse(req.body ?? {});
+    await requireStaySuggestionsEnabled(userId);
+    const outcome = await askStayAiHelp(userId, id, body.confirmation);
+    if (outcome.kind === "confirm") return sendConfirmationRequired(res, outcome.disclosure);
+    res.json({ success: true, data: { answer: outcome.answer, provider: outcome.provider } });
+  } catch (e) {
+    next(aiHelpErrorOf(e));
+  }
+});
 router.post("/:id/accept", rejectDemo, async (req: AuthRequest, res, next) => {
   try {
     const id = z.string().uuid().parse(req.params.id);
@@ -358,6 +420,21 @@ router.post("/:id/reject", rejectDemo, async (req: AuthRequest, res, next) => {
       .parse(req.body ?? {});
     await requireStaySuggestionsEnabled(user(req));
     await rejectStay(user(req), z.string().uuid().parse(req.params.id));
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+});
+// Take a `covered` back (forgejo#439): the finding is a question again, and
+// the "already recorded" rule never closes it a second time.
+router.post("/:id/reopen", rejectDemo, async (req: AuthRequest, res, next) => {
+  try {
+    z.object({})
+      .strict()
+      .parse(req.body ?? {});
+    const id = z.string().uuid().parse(req.params.id);
+    if (!(await undoCovered(user(req), "stay", id)))
+      throw new AppError("Covered stay not found", 404, "STAY_NOT_COVERED");
     res.json({ success: true });
   } catch (e) {
     next(e);

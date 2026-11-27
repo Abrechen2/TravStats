@@ -1,3 +1,4 @@
+import { formatDayLabel } from "../../../lib/format";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
@@ -14,6 +15,7 @@ import { logger } from "../../../lib/logger";
 import { dateLocaleForLanguage } from "../../../lib/units";
 import EvidenceTrigger from "../EvidenceTrigger";
 import CountingHelp from "../counting/CountingHelp";
+import InlineError from "../../ui/InlineError";
 
 /** How many people the section shows before "Alle anzeigen". */
 const TOP = 8;
@@ -75,11 +77,7 @@ export default function CompanionsTogetherSection(): JSX.Element | null {
           {t(`${NS}.hint`)}
         </span>
       </div>
-      {failed && (
-        <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
-          {t(`${NS}.loadFailed`)}
-        </p>
-      )}
+      {failed && <InlineError tone="warning">{t(`${NS}.loadFailed`)}</InlineError>}
       {data && data.companions.length === 0 && (
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>
           {t(`${NS}.empty`)}
@@ -145,7 +143,7 @@ function CompanionRow({
       scope={{ period: "allTime" }}
       renderedValue={value}
       label={`${row.name}: ${text}`}
-      className="rounded-full px-3 text-sm underline decoration-dotted underline-offset-2"
+      className="rounded-(--ts-radius-chip) px-3 text-sm underline decoration-dotted underline-offset-2"
       style={{
         width: "auto",
         minHeight: coarse ? 44 : 28,
@@ -231,10 +229,7 @@ function JourneyLink({
 }): JSX.Element | null {
   const { t } = useTranslation(["stats"]);
   if (journey === null) return null;
-  const date = new Date(`${journey.day}T00:00:00Z`).toLocaleDateString(locale, {
-    timeZone: "UTC",
-    dateStyle: "medium",
-  });
+  const date = formatDayLabel(journey.day, { dateStyle: "medium" }, locale);
   const text = `${date} · ${t(`${NS}.journeyKind.${journey.kind}`)}`;
   return (
     <span data-testid={`journey-${journey.kind}-${journey.id}`}>

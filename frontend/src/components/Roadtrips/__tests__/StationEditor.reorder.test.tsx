@@ -1,3 +1,5 @@
+import Toast from "../../../components/Toast";
+import { useToastStore } from "../../../store/toastStore";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 
@@ -61,6 +63,8 @@ const leg = (a: number, b: number, source: TourLeg["source"]): TourLeg => ({
 const LEGS = [leg(1, 2, "track"), leg(2, 3, "routed")];
 
 function renderEditor(): void {
+  useToastStore.getState().clearToasts();
+  render(<Toast />);
   render(
     <StationEditor
       routeId="rt"

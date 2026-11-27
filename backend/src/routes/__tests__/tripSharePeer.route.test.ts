@@ -176,6 +176,9 @@ describe("ping", () => {
         "connections",
         "plans",
         "achievements",
+        "leg-routes",
+        "offer-preview",
+        "ferry-manual-scope",
       ],
     });
   });

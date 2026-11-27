@@ -339,4 +339,33 @@ describe("POST /api/v1/rentals/import", () => {
     const res = await post(invoice({ distanceKm: null, odometerOutKm: null, odometerInKm: null }));
     expect(res.body.data.distanceKm).toBeNull();
   });
+
+  describe("clientRef (forgejo#303)", () => {
+    const keyless = () => confirmation({ confirmationNumber: undefined });
+
+    it("a retry with the same clientRef answers the first booking and creates nothing", async () => {
+      const first = await post({ ...keyless(), clientRef: "mcp-test-rental-1" });
+      expect(first.status).toBe(201);
+      const again = await post({ ...keyless(), clientRef: "mcp-test-rental-1" });
+      expect(again.status).toBe(200);
+      expect(again.body.data.id).toBe(first.body.data.id);
+      expect(await prisma.rentalBooking.count({ where: { userId } })).toBe(1);
+    });
+
+    it("without a clientRef a booking that carries no confirmation number is created again (the control)", async () => {
+      await post(keyless());
+      await post(keyless());
+      expect(await prisma.rentalBooking.count({ where: { userId } })).toBe(2);
+    });
+
+    it("refuses the same clientRef on a different body", async () => {
+      await post({ ...keyless(), clientRef: "mcp-test-rental-2" });
+      const other = await post({
+        ...confirmation({ confirmationNumber: undefined, price: 999 }),
+        clientRef: "mcp-test-rental-2",
+      });
+      expect(other.status).toBe(409);
+      expect(await prisma.rentalBooking.count({ where: { userId } })).toBe(1);
+    });
+  });
 });

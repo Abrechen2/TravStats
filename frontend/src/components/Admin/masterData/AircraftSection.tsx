@@ -1,9 +1,12 @@
+import Chip from "../../ui/Chip";
+import { SearchInput } from "../../ui/SearchInput";
 import { useEffect, useState } from "react";
 import { aircraftApi } from "../../../lib/api/catalogue";
 import type { Aircraft } from "../../../types/catalogue";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
+import { useFormError } from "../../form/useFormError";
 
 /** Admin master data for aircraft types. See AirlinesSection for the shape. */
 export default function AircraftSection(): JSX.Element {
@@ -17,6 +20,7 @@ export default function AircraftSection(): JSX.Element {
   const [newName, setNewName] = useState("");
   const [newIcao, setNewIcao] = useState("");
   const [creating, setCreating] = useState(false);
+  const formError = useFormError();
 
   useEffect(() => {
     let cancelled = false;
@@ -44,10 +48,11 @@ export default function AircraftSection(): JSX.Element {
 
   const createAircraft = async (): Promise<void> => {
     if (!newName.trim()) {
-      addToast("error", t("admin:airlineAircraftMasterData.aircraft.missingFields"));
+      formError.set(t("admin:airlineAircraftMasterData.aircraft.missingFields"));
       return;
     }
     setCreating(true);
+    formError.clear();
     try {
       const created = await aircraftApi.create({
         name: newName.trim(),
@@ -61,7 +66,7 @@ export default function AircraftSection(): JSX.Element {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         t("admin:airlineAircraftMasterData.aircraft.createFailed");
-      addToast("error", msg);
+      formError.set(msg);
     } finally {
       setCreating(false);
     }
@@ -71,6 +76,7 @@ export default function AircraftSection(): JSX.Element {
     <div data-testid="admin-aircraft-section">
       <p className="t-caption mb-4">{t("admin:airlineAircraftMasterData.aircraft.description")}</p>
 
+      {formError.node}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
         <input
           type="text"
@@ -100,12 +106,11 @@ export default function AircraftSection(): JSX.Element {
         </button>
       </div>
 
-      <input
-        type="search"
-        className="input mb-3"
-        placeholder={t("admin:airlineAircraftMasterData.aircraft.searchPlaceholder")}
+      <SearchInput
+        label={t("admin:airlineAircraftMasterData.aircraft.searchPlaceholder")}
         value={query}
-        onChange={(e): void => setQuery(e.target.value)}
+        onChange={setQuery}
+        placeholder={t("admin:airlineAircraftMasterData.aircraft.searchPlaceholder")}
       />
 
       {loading ? (
@@ -126,16 +131,9 @@ export default function AircraftSection(): JSX.Element {
               </div>
               <div className="flex items-center gap-2 text-xs">
                 {ac.isUserAdded && (
-                  <span
-                    className="px-2 py-0.5 rounded-full"
-                    style={{
-                      background: "var(--bg-elevated)",
-                      color: "var(--accent)",
-                      border: "1px solid var(--accent)",
-                    }}
-                  >
+                  <Chip tone="accent" size="sm">
                     {t("admin:airlineAircraftMasterData.userAdded")}
-                  </span>
+                  </Chip>
                 )}
                 {ac.icao && <span className="text-(--text-muted) font-mono">{ac.icao}</span>}
               </div>

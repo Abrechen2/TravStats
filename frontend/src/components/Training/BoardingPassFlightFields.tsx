@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import type { Dispatch, SetStateAction } from "react";
 import type { Flight } from "./types";
 
@@ -100,8 +101,8 @@ export function BoardingPassFlightFields({
                 <label className="block text-xs font-medium text-(--text-primary) mb-1">
                   Departure Date
                 </label>
-                <input
-                  type="date"
+                <DateField
+                  inline
                   value={flight.departureDate || ""}
                   onChange={(e) => {
                     const updatedFlights = [...flights];
@@ -118,8 +119,9 @@ export function BoardingPassFlightFields({
                 <label className="block text-xs font-medium text-(--text-primary) mb-1">
                   Departure Time
                 </label>
-                <input
-                  type="time"
+                <DateField
+                  inline
+                  kind="time"
                   value={flight.departureTime || ""}
                   onChange={(e) => {
                     const updatedFlights = [...flights];
@@ -136,8 +138,8 @@ export function BoardingPassFlightFields({
                 <label className="block text-xs font-medium text-(--text-primary) mb-1">
                   Arrival Date
                 </label>
-                <input
-                  type="date"
+                <DateField
+                  inline
                   value={flight.arrivalDate || ""}
                   onChange={(e) => {
                     const updatedFlights = [...flights];
@@ -154,8 +156,9 @@ export function BoardingPassFlightFields({
                 <label className="block text-xs font-medium text-(--text-primary) mb-1">
                   Arrival Time
                 </label>
-                <input
-                  type="time"
+                <DateField
+                  inline
+                  kind="time"
                   value={flight.arrivalTime || ""}
                   onChange={(e) => {
                     const updatedFlights = [...flights];

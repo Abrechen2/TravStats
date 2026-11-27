@@ -1,7 +1,8 @@
+import { SearchInput } from "../ui/SearchInput";
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { flightsApi } from "../../lib/api/flights";
 import { tripsApi } from "../../lib/api/trips";
@@ -10,6 +11,7 @@ import { attachFailureReason, type AttachFailure } from "../../lib/trips/attacha
 import { flightDeparture } from "../../lib/entityTimes";
 import { dayOf } from "../../shared/time";
 import type { Booking, Flight } from "../../types";
+import InlineError from "../ui/InlineError";
 
 /** Rows drawn at once; more than this is a search, and the dialog says so. */
 const VISIBLE_ROWS = 100;
@@ -108,7 +110,7 @@ export default function AssignFlightsToBookingModal({ booking, onClose }: Props)
 
   const muted = { color: "var(--ts-muted)" };
   return (
-    <Modal
+    <Dialog
       open
       onClose={() => onClose(failure === "timeout")}
       busy={busy}
@@ -147,23 +149,20 @@ export default function AssignFlightsToBookingModal({ booking, onClose }: Props)
           </p>
         )}
         {load.status === "failed" && (
-          <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
+          <InlineError>
             {t("trips:bookingAssign.loadFailed")} {t(`trips:addExisting.failure.${load.reason}`)}{" "}
             <button type="button" className="underline" onClick={() => setAttempt((n) => n + 1)}>
               {t("trips:addExisting.retry")}
             </button>
-          </p>
+          </InlineError>
         )}
         {load.status === "ready" && (
           <>
-            <input
-              type="search"
+            <SearchInput
+              label={t("trips:bookingAssign.searchLabel")}
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              aria-label={t("trips:bookingAssign.searchLabel")}
+              onChange={setQuery}
               placeholder={t("trips:bookingAssign.searchPlaceholder")}
-              className="mb-3 w-full rounded-md border px-3 py-1.5 text-sm"
-              style={{ borderColor: "var(--color-border)", background: "var(--bg-elevated)" }}
             />
             {visible.length === 0 ? (
               <p className="text-sm" style={muted}>
@@ -204,15 +203,15 @@ export default function AssignFlightsToBookingModal({ booking, onClose }: Props)
           </>
         )}
         {failure && (
-          <p role="alert" className="mt-3 text-sm" style={{ color: "var(--ts-bad)" }}>
+          <InlineError className="mt-3">
             {t(
               failure === "timeout"
                 ? "trips:bookingAssign.timeout"
                 : `trips:addExisting.failure.${failure}`
             )}
-          </p>
+          </InlineError>
         )}
       </>
-    </Modal>
+    </Dialog>
   );
 }

@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
@@ -47,12 +48,9 @@ export default function BetaFeatureList(): JSX.Element {
             <span className="font-medium" style={{ color: "var(--text-primary)" }}>
               {t(`admin:instance.fields.betaFeatures.features.${key}.name`)}
             </span>
-            <span
-              className="ml-1.5 rounded-full px-1.5 py-0.5"
-              style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-            >
+            <Chip size="sm" className="ml-1.5">
               {t(`admin:instance.fields.betaFeatures.reason.${BETA_FEATURES[key].reason}`)}
-            </span>
+            </Chip>
             <span className="block">
               {t(`admin:instance.fields.betaFeatures.features.${key}.what`)}
             </span>

@@ -89,13 +89,14 @@ async function staysIn(userId: string, window: Span): Promise<StayCandidate[]> {
       startAt: { lt: new Date(window.untilMs) },
       endAt: { gt: new Date(window.fromMs) },
     },
-    select: { id: true, status: true, startAt: true, endAt: true },
+    select: { id: true, status: true, startAt: true, endAt: true, evidence: true },
   });
   return rows.map((r) => ({
     id: r.id,
     status: r.status,
     fromMs: r.startAt.getTime(),
     untilMs: r.endAt.getTime(),
+    evidence: r.evidence,
   }));
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { Button, Card, EmptyState, StatusPill } from "../../../components/ui";
 import { travplanApi, type PlanActual, type PlanStationStatus } from "../../../lib/api/travplan";
-import { formatLocalDate } from "../../../lib/displayFormat";
+import { formatLocalDate } from "../../../lib/format";
 import { PlanActions, PlanCardHead, PlanGrow, PlanNotice, PlanRow, PlanStack } from "../planLayout";
 import type { PlanCtx } from "../planContext";
 import { PlanActualSketch } from "./PlanActualSketch";

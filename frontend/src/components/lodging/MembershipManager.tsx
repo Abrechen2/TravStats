@@ -18,6 +18,7 @@ import {
   tierSuggestions,
   type CatalogueChain,
 } from "./membershipSuggestions";
+import InlineError from "../ui/InlineError";
 
 interface MembershipManagerProps {
   /**
@@ -367,11 +368,7 @@ export function MembershipManager({
         {!hideTitle && addButton}
       </div>
 
-      {loadError !== null && (
-        <p className="t-caption" style={{ color: "var(--ts-bad)" }}>
-          {loadError}
-        </p>
-      )}
+      {loadError !== null && <InlineError>{loadError}</InlineError>}
 
       {loading ? (
         <p className="t-caption">{t("common:buttons.loading")}</p>
@@ -487,13 +484,7 @@ export function MembershipManager({
             </p>
           )}
           {formError !== null && (
-            <p
-              data-testid="membership-form-error"
-              className="t-caption"
-              style={{ color: "var(--ts-bad)" }}
-            >
-              {formError}
-            </p>
+            <InlineError testId="membership-form-error">{formError}</InlineError>
           )}
           {clash && scopeChain && (
             <button

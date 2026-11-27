@@ -7,6 +7,7 @@ import type { ActivityFeedItem } from "../../../../lib/api/activityFeed";
 import { useFlightSelectionStore } from "../../../../store/flightSelectionStore";
 import { useMapFocusStore } from "../../../../store/mapFocusStore";
 import { useToastStore } from "../../../../store/toastStore";
+import { usePageErrorStore } from "../../../../store/pageErrorStore";
 
 const wrapper = ({ children }: { children: ReactNode }) => <MemoryRouter>{children}</MemoryRouter>;
 
@@ -30,6 +31,7 @@ describe("useActivityFeedSelection", () => {
   beforeEach(() => {
     useFlightSelectionStore.getState().clearSelection();
     useToastStore.setState({ toasts: [] });
+    usePageErrorStore.getState().clear();
   });
 
   it("a row click writes the map's own selection and asks the camera for the route's bounds", async () => {
@@ -85,7 +87,7 @@ describe("useActivityFeedSelection", () => {
       { wrapper }
     );
     act(() => result.current.onSelect(flightRow));
-    await waitFor(() => expect(useToastStore.getState().toasts).toHaveLength(1));
-    expect(useToastStore.getState().toasts[0].message).toMatch(/focusNotLoaded/);
+    await waitFor(() => expect(usePageErrorStore.getState().errors).toHaveLength(1));
+    expect(usePageErrorStore.getState().errors[0].message).toMatch(/focusNotLoaded/);
   });
 });

@@ -1,6 +1,8 @@
+import DateField from "../../components/ui/DateField";
+import Chip from "../ui/Chip";
 import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTodayZone } from "../../hooks/useTodayZone";
 import { formatDayLong, todayIn } from "../../shared/time";
@@ -24,6 +26,7 @@ import {
 } from "../form";
 import type { MissingStep } from "../form";
 import PurposeSelect, { type PurposeChoice } from "../purpose/PurposeSelect";
+import { usePurposeCatalogue } from "../../store/purposeCatalogueStore";
 import { VisitDateChips } from "./VisitDateChips";
 import {
   NO_TRIP,
@@ -33,6 +36,7 @@ import {
   visitPayload,
   type VisitDateMode,
 } from "./visitDialogModel";
+import InlineError from "../ui/InlineError";
 
 const COARSE = "pointer-coarse:min-h-(--ts-size-touch-min)";
 const DATE_ID = "visit-dialog-date";
@@ -93,7 +97,12 @@ export function VisitDialog({
   const isEdit = visit !== null;
   const today = todayIn(useTodayZone());
 
-  const initial = visitDraft(visit, initialDate);
+  const catalogue = usePurposeCatalogue();
+  const initial = visitDraft(visit, initialDate, (id) => {
+    const c = catalogue.custom.find((x) => x.id === id);
+    // Not loaded yet: the stored detail is taken at its word rather than reset to its kind.
+    return c?.kind ?? (catalogue.loaded ? undefined : (visit?.purpose ?? undefined));
+  });
   const [mode, setMode] = useState<VisitDateMode>(initial.mode);
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
@@ -215,7 +224,7 @@ export function VisitDialog({
   const partial = stored !== null && photoFailure !== null;
 
   return (
-    <Modal
+    <Dialog
       open
       // Once the visit is stored, every way out is "continue without the
       // photo": the caller must learn of the visit.
@@ -239,13 +248,9 @@ export function VisitDialog({
           </>
         ) : partial && stored !== null && photoFailure !== null ? (
           <>
-            <p
-              role="alert"
-              className="mr-auto self-center text-sm"
-              style={{ color: "var(--ts-warn)" }}
-            >
+            <InlineError tone="warning" className="mr-auto self-center">
               {t("places:visit.savedPhotoFailed", { reason: t(photoFailure) })}
-            </p>
+            </InlineError>
             {/* Only where asking again can help (review M3): a demo account or
                 an unsupported file is refused identically every time. */}
             {isTransientSaveError(photoFailure) && (
@@ -300,21 +305,11 @@ export function VisitDialog({
           <legend className="t-caption mb-1">{t("places:visit.when")}</legend>
           <div className="flex flex-wrap gap-2">
             {MODES.map((m) => (
-              <button
+              <Chip
                 key={m}
-                type="button"
-                aria-pressed={mode === m}
+                color="var(--domain-poi)"
+                active={mode === m}
                 onClick={() => setMode(m)}
-                className={`rounded-full px-4 py-2 text-sm ${COARSE}`}
-                style={
-                  mode === m
-                    ? {
-                        border: "1px solid var(--domain-poi)",
-                        color: "var(--domain-poi)",
-                        background: "var(--domain-poi-soft)",
-                      }
-                    : { border: "1px solid var(--color-border)", color: "var(--text-muted)" }
-                }
               >
                 {t(`places:visit.mode.${m}`)}
                 {/* The day in words, not ISO: the default writes a date, so it
@@ -322,7 +317,7 @@ export function VisitDialog({
                 {m === "today" && mode === "today"
                   ? ` · ${formatDayLong(today, i18n.language, { day: "numeric", month: "short" })}`
                   : ""}
-              </button>
+              </Chip>
             ))}
           </div>
         </fieldset>
@@ -338,9 +333,9 @@ export function VisitDialog({
                   </>
                 }
               >
-                <input
+                <DateField
+                  inline
                   id={DATE_ID}
-                  type="date"
                   aria-required="true"
                   className={INPUT}
                   value={date}
@@ -474,7 +469,7 @@ export function VisitDialog({
           }
         />
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -509,9 +504,10 @@ function TimeField({
   const { t } = useTranslation(["places"]);
   return (
     <Labelled id="visit-dialog-time" label={t("places:visit.timeOptional")}>
-      <input
+      <DateField
+        inline
         id="visit-dialog-time"
-        type="time"
+        kind="time"
         className={INPUT}
         value={value}
         onChange={(e) => onChange(e.target.value)}

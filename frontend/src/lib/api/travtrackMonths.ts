@@ -30,6 +30,9 @@ export type TravTrackMonths = {
 export const travTrackMonthsApi = {
   months: async (year: number): Promise<TravTrackMonths> =>
     (await api.get<TravTrackMonths>("/travtrack/months", { params: { year: String(year) } })).data,
+  /** Calendar years with privacy-safe TravTrack data, ascending. */
+  years: async (): Promise<number[]> =>
+    (await api.get<{ years: number[] }>("/travtrack/years")).data.years,
   cityLookup: async (): Promise<boolean> =>
     (await api.get<{ enabled: boolean }>("/travtrack/city-lookup")).data.enabled,
   setCityLookup: async (enabled: boolean): Promise<boolean> =>

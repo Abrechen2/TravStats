@@ -113,7 +113,10 @@ describe("a stay row's server-side fields", () => {
     const rows = res.body.data as Array<Record<string, unknown>>;
     expect(rows).toHaveLength(2);
     for (const row of rows) {
-      expect(Object.keys(row).sort()).toEqual([...PRE_E1_COLUMNS, "times", "visit"].sort());
+      // `source`/`sources` (2026-11-26) are additive, derived from the public evidence.
+      expect(Object.keys(row).sort()).toEqual(
+        [...PRE_E1_COLUMNS, "times", "visit", "source", "sources"].sort()
+      );
       expect(JSON.stringify(row)).not.toContain("pointDigests");
     }
     const dawarich = rows.find((r) => (r.evidence as { pointIds?: unknown }).pointIds);

@@ -62,9 +62,9 @@ describe("TripModal", () => {
   // (deriveTripStatus in shared/statusDerivation.ts) — a manual select let the
   // UI set a value the backend would immediately overwrite on the next sweep.
   it("has no status select — trips derive their status from dates (#status-from-dates)", () => {
-    const { container } = render(<TripModal trip={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+    render(<TripModal trip={null} onClose={vi.fn()} onSaved={vi.fn()} />);
     // Only the category select remains; the status select is gone.
-    expect(container.querySelectorAll("select").length).toBe(1);
+    expect(document.querySelectorAll("select").length).toBe(1);
     expect(screen.queryByText("trips:modal.statusLabel")).not.toBeInTheDocument();
   });
 

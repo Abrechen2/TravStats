@@ -144,7 +144,7 @@ export async function createFromEnrichment(
 
 /** Writes merged evidence onto a pending finding under the publish rules; false when it was not. */
 export async function writeEvidence(
-  ctx: FindingRunContext,
+  ctx: Pick<FindingRunContext, "userId">,
   generation: bigint,
   id: string,
   evidence: Record<string, unknown>
@@ -158,6 +158,20 @@ export async function writeEvidence(
   });
 }
 
+const overlapMs = (row: KnownRow, stop: Stop) =>
+  Math.min(row.sourceEndAt.getTime(), stop.untilMs) -
+  Math.max(row.sourceStartAt.getTime(), stop.fromMs);
+
+/** The open TravTrack finding that shares the most time with the stop, or null. */
+export function openFindingOf(near: readonly KnownRow[], stop: Stop): KnownRow | null {
+  return near
+    .filter((r) => r.status === "pending" && r.provider === "travtrack")
+    .reduce<KnownRow | null>(
+      (best, r) => (best === null || overlapMs(r, stop) > overlapMs(best, stop) ? r : best),
+      null
+    );
+}
+
 /**
  * A stop that already has its pending visit finding: the calendar and the plugins may still add
  * their evidence (made while a source was down, or before the source was added).
@@ -168,16 +182,11 @@ export async function enrichKnown(
   stop: Stop,
   generation: bigint
 ): Promise<{ open: boolean; go: boolean }> {
-  const row = near.length === 1 ? near[0] : null;
-  const visit = (row?.evidence as { visit?: unknown } | null)?.visit;
-  if (
-    (!ctx.calendar && !ctx.plugins) ||
-    !row ||
-    row.status !== "pending" ||
-    row.provider !== "travtrack" ||
-    !visit
-  )
-    return { open: false, go: true };
+  // Any open TravTrack finding of the stop, the stay detector's plain one included: asking only
+  // findings this projection made (`evidence.visit`) left every stop the 6-hourly stay scan had
+  // reached first unasked by the plugins (prod, 24.-26.11.2026: no call after the first day).
+  const row = openFindingOf(near, stop);
+  if ((!ctx.calendar && !ctx.plugins) || !row) return { open: false, go: true };
   const r = await prisma.dawarichStay.findUnique({
     where: { id: row.id },
     select: { lat: true, lon: true, placeId: true, name: true, zone: true },

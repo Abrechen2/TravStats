@@ -9,11 +9,13 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { settingsApi, type HomePeriod } from "../../lib/api";
 import { apiErrorCode } from "../../lib/apiError";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
 import { todayZoneNow } from "../../hooks/useTodayZone";
 import { todayIn } from "../../shared/time";
+import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /**
  * "Zuhause" — residence plus home airports, by date (owner decision
@@ -130,7 +132,7 @@ export default function HomeAirportSection({
       if (apiErrorCode(err) === "HOME_PERIOD_OVERLAP" && overlap) setPeriods(overlap);
       const text = errorText(err);
       setSaveError(text);
-      addToast("error", text);
+      reportPageError(text);
       return false;
     } finally {
       setSaving(false);
@@ -185,7 +187,7 @@ export default function HomeAirportSection({
       setPeriods(saved.periods);
     } catch (err) {
       logger.error("Failed to delete home period:", err);
-      addToast("error", t("settings:homeAirport.errors.deleteFailed"));
+      reportPageError(t("settings:homeAirport.errors.deleteFailed"));
     } finally {
       setSaving(false);
     }
@@ -240,12 +242,7 @@ export default function HomeAirportSection({
 
   const body = (): JSX.Element => {
     if (loading) return <p className="t-caption">{t("common:loading.default")}</p>;
-    if (loadFailed)
-      return (
-        <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
-          {t("settings:homeAirport.loadError")}
-        </p>
-      );
+    if (loadFailed) return <InlineError>{t("settings:homeAirport.loadError")}</InlineError>;
     if (view === "airports")
       return (
         <SettingItem

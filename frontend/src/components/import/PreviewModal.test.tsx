@@ -81,7 +81,7 @@ describe("PreviewModal", () => {
     const cb = screen.getByRole("checkbox");
     expect(cb).toBeChecked();
     expect(cb).not.toBeDisabled();
-    expect(screen.getByText("2024-09-12")).toBeInTheDocument();
+    expect(screen.getByText("12.09.2024")).toBeInTheDocument();
     expect(screen.getByText("flights:status.flown")).toBeInTheDocument();
   });
 

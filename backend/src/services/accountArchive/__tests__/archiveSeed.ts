@@ -582,6 +582,25 @@ async function seedTravTrack(client: Client): Promise<void> {
     entry_kind: "flight",
     entry_id: "az-flight-0001",
   });
+  // The owner's choice for one day: a source picked by hand and the outliers kept.
+  await insert(client, "travtrack_day_sources", {
+    user_id: U,
+    day: "2026-05-01",
+    zone: "UTC",
+    from_at: new Date(Date.UTC(2026, 4, 1)).toISOString(),
+    until_at: new Date(Date.UTC(2026, 4, 2)).toISOString(),
+    segments: JSON.stringify([]),
+    scores: JSON.stringify([]),
+    outlier_ids: JSON.stringify(["az-pt-0007"]),
+    outlier_count: 1,
+    breaks: JSON.stringify([]),
+    bridges: JSON.stringify([]),
+    best_score: 0.8,
+    override_source: "device",
+    outlier_decision: "keep",
+    derived_at: NOW,
+    updated_at: NOW,
+  });
   await insert(client, "travtrack_privacy_zones", {
     id: "az-zone-0001",
     user_id: U,

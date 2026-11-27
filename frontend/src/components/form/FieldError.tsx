@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { fieldErrorId } from "./fieldErrorProps";
+import InlineError from "../ui/InlineError";
 
 /**
  * The message under a field, at the field (forgejo#246). Pair it with
@@ -18,9 +19,5 @@ export default function FieldError({
   error: string | null | undefined;
 }): JSX.Element | null {
   if (!error) return null;
-  return (
-    <p id={fieldErrorId(id)} role="alert" className="text-xs text-[var(--danger)]">
-      {error}
-    </p>
-  );
+  return <InlineError id={fieldErrorId(id)}>{error}</InlineError>;
 }

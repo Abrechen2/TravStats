@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import logger from "../utils/logger";
 import { createBackup, cleanupOldBackups } from "./backupService";
 import { schedulerZone, setAdminBackupZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "./jobs/heavySlot";
 
 const VALID_INTERVALS = ["daily", "weekly", "monthly"] as const;
 type BackupInterval = (typeof VALID_INTERVALS)[number];
@@ -135,7 +136,7 @@ export async function startScheduler(): Promise<void> {
   scheduledJob = cron.schedule(
     cronPattern,
     async () => {
-      await checkAndRunBackup();
+      await runHeavyJob("backup", () => checkAndRunBackup());
     },
     { timezone: schedulerZone("backup") }
   );

@@ -1,3 +1,4 @@
+import { Icon } from "../../../components/ui/Icon";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
@@ -65,7 +66,7 @@ export default function TrackReplayDock({
         }}
         style={{ ...floatingStyle, ...pillStyle(false, coarse ? 44 : 40), width: coarse ? 44 : 40 }}
       >
-        ✕
+        <Icon name="x" size={16} />
       </button>
     </div>
   );

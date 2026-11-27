@@ -1,3 +1,4 @@
+import DateField from "../../../components/ui/DateField";
 import { useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { parseCoordinateInput } from "../../../lib/coordinateParse";
@@ -173,17 +174,17 @@ export default function PlaceEditor({
           ) : null}
           <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
             <Field label={t(`${NS}.editor.from`)} htmlFor="tt-place-from">
-              <Input
+              <DateField
                 id="tt-place-from"
-                type="time"
+                kind="time"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
               />
             </Field>
             <Field label={t(`${NS}.editor.until`)} htmlFor="tt-place-until">
-              <Input
+              <DateField
                 id="tt-place-until"
-                type="time"
+                kind="time"
                 value={until}
                 onChange={(e) => setUntil(e.target.value)}
               />

@@ -67,6 +67,7 @@ import { DAWARICH_PROVIDER_WHERE } from "../services/locationProvider/kinds";
 import type { DawarichConnection } from "../services/dawarich/errors";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "../services/jobs/heavySlot";
 
 /** 04:40 UTC — see the table above. */
 const CRON_EXPRESSION = "40 4 * * *";
@@ -276,7 +277,7 @@ export function startDawarichCountryDaySweepScheduler(): void {
     CRON_EXPRESSION,
     async () => {
       try {
-        await runDawarichCountryDaySweep();
+        await runHeavyJob("dawarichCountryDaySweep", () => runDawarichCountryDaySweep());
       } catch (error) {
         // `runDawarichCountryDaySweep` already survives a single account; reaching
         // here means the eligibility query or the boundary load failed, neither of

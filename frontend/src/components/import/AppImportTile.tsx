@@ -166,6 +166,7 @@ export function AppImportTile({ onImported }: { onImported?: () => void }): JSX.
     <ImportTileShell
       title={t("settings:import.tile.appImport.title")}
       description={t("settings:import.tile.appImport.description")}
+      descriptionMore={t("settings:import.tile.appImport.descriptionMore")}
       picker={
         <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex items-center gap-2">

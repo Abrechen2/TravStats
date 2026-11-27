@@ -7,7 +7,7 @@
  * the payload carries a number, a unit and the raw parts of the detail, never
  * a sentence and never a separator. A German comma in a JSON body would fix
  * the decimal separator for every reader the endpoint ever has, so the screen
- * formats — `Intl` through `lib/units.ts`, dates through `lib/displayFormat.ts`.
+ * formats — `Intl` through `lib/units.ts`, dates through `lib/format.ts`.
  *
  * A record the data cannot support is ABSENT from the array rather than
  * present with a zero. The section therefore draws a short list for a young

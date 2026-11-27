@@ -6,6 +6,7 @@ import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
 import type { Lodging } from "../../types/lodging";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /** The codes the server writes to `lodgings.location_check`; anything else is ignored. */
 const SHOWN_CODES = [
@@ -48,7 +49,7 @@ export function LodgingLocationCheckNotice({
       onReviewed(updated);
     } catch (err) {
       logger.error("LodgingLocationCheckNotice: could not mark the position as checked", err);
-      addToast("error", t("lodging:locationCheck.confirmFailed"));
+      reportPageError(t("lodging:locationCheck.confirmFailed"));
     } finally {
       setSaving(false);
     }

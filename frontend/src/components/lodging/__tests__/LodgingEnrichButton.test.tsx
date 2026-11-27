@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import LodgingEnrichButton from "../LodgingEnrichButton";
 import { openDataApi, type LodgingEnrichmentPreview } from "../../../lib/api/openData";
 import { useSettingsStore } from "../../../store/settingsStore";
+import { usePageErrorStore } from "../../../store/pageErrorStore";
 import { useToastStore } from "../../../store/toastStore";
 
 vi.unmock("../../../store/settingsStore");
@@ -62,6 +63,9 @@ describe("LodgingEnrichButton", () => {
     vi.mocked(openDataApi.enrichLodging).mockReset();
     vi.mocked(openDataApi.previewLodgingEnrichment).mockReset();
     useToastStore.setState({ addToast });
+    usePageErrorStore.setState({
+      report: (message, tone = "error") => addToast(tone, message),
+    });
   });
 
   it("is not there without the open data switch", () => {
@@ -86,6 +90,9 @@ describe("LodgingEnrichButton — the preview before anything is written", () =>
     vi.mocked(openDataApi.enrichLodging).mockReset();
     vi.mocked(openDataApi.previewLodgingEnrichment).mockReset();
     useToastStore.setState({ addToast });
+    usePageErrorStore.setState({
+      report: (message, tone = "error") => addToast(tone, message),
+    });
     useSettingsStore.setState({ betaFeaturesEnabled: true, openDataEnabled: true });
   });
 
@@ -189,6 +196,9 @@ describe("LodgingEnrichButton — when nothing comes back", () => {
     addToast.mockReset();
     vi.mocked(openDataApi.previewLodgingEnrichment).mockReset();
     useToastStore.setState({ addToast });
+    usePageErrorStore.setState({
+      report: (message, tone = "error") => addToast(tone, message),
+    });
     useSettingsStore.setState({ betaFeaturesEnabled: true, openDataEnabled: true });
   });
 

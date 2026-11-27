@@ -25,6 +25,7 @@ import { formatRailSpan } from "../lib/railTime";
 import type { RailConnectionDetail } from "../types/rail";
 import { dateLocaleForLanguage } from "../lib/units";
 import BackLink from "../components/navigation/BackLink";
+import Banner from "../components/ui/Banner";
 
 /**
  * A whole train ride (forgejo#187): the page between the logbook and a single
@@ -79,12 +80,9 @@ export default function RailConnectionPage(): JSX.Element {
         <BackLink to="/rail" className="ts-back-link text-sm text-(--text-muted)">
           ← {t("rail:title")}
         </BackLink>
-        <div
-          role="alert"
-          className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)"
-        >
+        <Banner tone="error" className="mt-4">
           {isLoadError ? t("rail:connection.loadError") : t("rail:connection.notFound")}
-        </div>
+        </Banner>
         {isLoadError && (
           <div className="mt-3">
             <Button onClick={() => setReloadKey((k) => k + 1)}>{t("common:buttons.retry")}</Button>

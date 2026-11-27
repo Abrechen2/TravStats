@@ -24,7 +24,7 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { expenseSchema } from "../../../schemas/expense";
-import { errorContent, errorResponse } from "./shared";
+import { errorContent, errorResponse, purposeRowFields, routingFields } from "./shared";
 import { clientRefResponses } from "./clientRef";
 import {
   createRouteSchema,
@@ -90,7 +90,7 @@ const tourRoute = registry.register(
         .uuid()
         .nullable()
         .describe("Tour only: the roadtrip station the day tour set out from"),
-      purpose: z.enum(["private", "business"]).nullable(),
+      ...purposeRowFields,
       kindAssignedAutomatically: z
         .boolean()
         .describe(
@@ -483,9 +483,7 @@ registerSectionPath({
             route: tourRoute,
             stops: z.array(tourStop),
             legs: z.array(tourLeg),
-            routingAvailable: z
-              .boolean()
-              .describe("Whether a routing provider is configured for this instance"),
+            ...routingFields,
           }),
         },
       },

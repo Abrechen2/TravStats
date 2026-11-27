@@ -4,6 +4,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { logger } from "../../../lib/logger";
 import { listPlaceSuggestions, type SmartSuggestion } from "../../../lib/api/smartLists";
 import { SuggestionRow } from "./SuggestionRow";
+import InlineError from "../../ui/InlineError";
 
 /**
  * "Were you here on …?" on the place's own page: the unanswered TravTrack stops at this place.
@@ -36,12 +37,7 @@ export default function PlaceVisitSuggestions({
     void load();
   }, [load]);
 
-  if (failed)
-    return (
-      <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
-        {t("places:smartList.loadFailed")}
-      </p>
-    );
+  if (failed) return <InlineError>{t("places:smartList.loadFailed")}</InlineError>;
   if (rows.length === 0) return null;
   return (
     <section aria-label={t("places:smartList.placeSectionTitle")}>

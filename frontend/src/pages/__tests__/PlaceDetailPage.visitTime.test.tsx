@@ -71,8 +71,12 @@ async function typeVisit(date: string, time: string): Promise<void> {
   await user.click(await findNamed("button", /Besuch/));
   // The dialog opens on "Heute"; a typed day is "Anderes Datum" (forgejo#231).
   await user.click(getNamed("button", "Anderes Datum"));
-  fireEvent.change(document.querySelector('input[type="date"]')!, { target: { value: date } });
-  fireEvent.change(document.querySelector('input[type="time"]')!, { target: { value: time } });
+  fireEvent.change(document.querySelector('input[data-field-kind="date"]')!, {
+    target: { value: date },
+  });
+  fireEvent.change(document.querySelector('input[data-field-kind="time"]')!, {
+    target: { value: time },
+  });
   await user.click(getNamed("button", "Speichern"));
 }
 

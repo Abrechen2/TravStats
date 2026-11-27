@@ -398,3 +398,26 @@ export const jitterDroppedField = z
       "(forgejo#319). null when not checked: stored before the filter existed, or a " +
       "recording without times, where standing and moving cannot be told apart"
   );
+
+/** What a section read says about routing (tours and roadtrips alike). */
+export const routingFields = {
+  routingAvailable: z
+    .boolean()
+    .describe("Whether a routing provider is configured for this instance"),
+  routingFailing: z
+    .object({
+      providerId: z.enum(["openrouteservice", "graphhopper", "custom"]),
+      reason: z.string(),
+    })
+    .nullable()
+    .describe("The routing provider refuses requests right now (#411); null while it answers"),
+};
+
+/** The purpose of an entry row: the kind every filter reads and the detail beside it. */
+export const purposeRowFields = {
+  purpose: z.enum(["private", "business"]).nullable(),
+  purposeKey: z
+    .string()
+    .nullable()
+    .describe("`builtin:<key>` | `custom:<uuid>`; null: the kind alone"),
+};

@@ -1,4 +1,6 @@
 import { prisma } from "../../db";
+import { Prisma } from "../../prisma";
+import logger from "../../utils/logger";
 
 /**
  * The year in review's TravTrack figures, kept until their inputs change
@@ -22,22 +24,88 @@ import { prisma } from "../../db";
 
 type FingerprintRow = { fp: string };
 
-/** Everything the TravTrack figures of an account are computed from, as one string. */
-export async function travTrackFingerprint(userId: string, zone: string): Promise<string> {
-  const rows = await prisma.$queryRaw<FingerprintRow[]>`
-    SELECT concat_ws('|',
+/** The account-wide inputs every figure depends on; `points` adds the newest point's number. */
+function accountInputs(userId: string, points: boolean): Prisma.Sql {
+  return Prisma.sql`
       (SELECT location_provider || ':' || location_provider_rev FROM user_settings WHERE user_id = ${userId}),
       (SELECT enabled::text FROM travtrack_config WHERE id = 'default'),
       (SELECT history_generation::text FROM travtrack_derivation_state WHERE user_id = ${userId}),
-      (SELECT max(seq)::text FROM travtrack_points WHERE user_id = ${userId}),
+      ${points ? Prisma.sql`(SELECT max(seq)::text FROM travtrack_points WHERE user_id = ${userId})` : Prisma.sql`''`},
       (SELECT count(*) || ':' || coalesce(max(created_at)::text, '') FROM travtrack_gaps WHERE user_id = ${userId}),
       (SELECT count(*) || ':' || coalesce(max(created_at)::text, '') FROM travtrack_deleted_ranges WHERE user_id = ${userId}),
       (SELECT count(*) || ':' || coalesce(max(created_at)::text, '') FROM travtrack_deleted_points WHERE user_id = ${userId}),
       (SELECT count(*) || ':' || coalesce(max(updated_at)::text, '') FROM travtrack_privacy_zones WHERE user_id = ${userId}),
       (SELECT count(*) || ':' || coalesce(max(created_at)::text, '') FROM travtrack_zone_tombstones WHERE user_id = ${userId}),
-      (SELECT count(*) || ':' || coalesce(max(updated_at)::text, '') FROM flights WHERE user_id = ${userId})
-    ) AS fp`;
+      (SELECT count(*) || ':' || coalesce(max(updated_at)::text, '') FROM flights WHERE user_id = ${userId})`;
+}
+
+/** Everything the TravTrack figures of an account are computed from, as one string. */
+export async function travTrackFingerprint(userId: string, zone: string): Promise<string> {
+  const rows = await prisma.$queryRaw<FingerprintRow[]>`
+    SELECT concat_ws('|', ${accountInputs(userId, true)}) AS fp`;
   return `${zone}|${rows[0]?.fp ?? ""}`;
+}
+
+const DAY_MS = 86_400_000;
+const utcDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+/**
+ * The inputs of ONE year's figures (perf audit 2026-11, item 9). `max(seq)`
+ * moved with every Companion upload and invalidated every year; instead the
+ * year's own UTC days are read from `travtrack_dirty_days`, whose `version`
+ * rises whenever a point of that day is stored or removed. One day either side
+ * of the window covers the edge context a projection reads. One small index
+ * read; the account-wide inputs stay as they were.
+ */
+export async function travTrackYearFingerprint(
+  userId: string,
+  zone: string,
+  window: { fromMs: number; untilMs: number }
+): Promise<string> {
+  const fromDay = utcDay(window.fromMs - DAY_MS);
+  const untilDay = utcDay(window.untilMs + DAY_MS);
+  const rows = await prisma.$queryRaw<FingerprintRow[]>`
+    SELECT concat_ws('|', ${accountInputs(userId, false)},
+      (SELECT count(*) || ':' || coalesce(sum(version), 0)::text FROM travtrack_dirty_days
+        WHERE user_id = ${userId} AND day BETWEEN ${fromDay}::date AND ${untilDay}::date)
+    ) AS fp`;
+  return `${zone}|${window.fromMs}|${rows[0]?.fp ?? ""}`;
+}
+
+/**
+ * One year's figures from `travtrack_year_summaries` when its fingerprint
+ * still matches, else computed and stored. Survives a deploy, unlike the
+ * in-memory map below. A failed store is logged and the computed value served:
+ * the row is a cache, the next request tries again.
+ */
+export async function persistedYearFigures<T>(
+  userId: string,
+  year: number,
+  fingerprint: string,
+  compute: () => Promise<T>
+): Promise<T> {
+  const row = await prisma.travTrackYearSummary.findUnique({
+    where: { userId_year: { userId, year } },
+    select: { fingerprint: true, value: true },
+  });
+  if (row && row.fingerprint === fingerprint) return (row.value as { v: T }).v;
+  const value = await cachedTravTrackPart(userId, `year:${year}`, fingerprint, compute);
+  const stored = { v: value } as unknown as Prisma.InputJsonValue;
+  try {
+    await prisma.travTrackYearSummary.upsert({
+      where: { userId_year: { userId, year } },
+      create: { userId, year, fingerprint, value: stored },
+      update: { fingerprint, value: stored, computedAt: new Date() },
+    });
+  } catch (error) {
+    logger.warn({
+      operation: "travtrack_year_summary_store_failed",
+      message: "The year's TravTrack figures could not be stored; they are recomputed next time",
+      context: { userId, year },
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+  return value;
 }
 
 /** Entries kept at most; the oldest goes first. A figure is small, the bound is defensive. */

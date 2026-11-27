@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { apiErrorMachineCode } from "../../lib/apiError";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import {
   tripExchangeApi,
   type TripFileCommitResult,
   type TripFileProposal,
 } from "../../lib/api/tripExchange";
 import { ActionBadge, Section } from "./PackageProposalSections";
+import InlineError from "../ui/InlineError";
 
 /**
  * The review of a `.travstats` file (spec 2026-10-09 S3), built like the
@@ -95,7 +96,7 @@ export function TripFileImportModal({
     proposal.documents.create + proposal.photos.create + proposal.journal.create === 0;
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onCancel}
       busy={committing}
@@ -118,11 +119,7 @@ export function TripFileImportModal({
         </>
       }
     >
-      {error && (
-        <p role="alert" className="font-medium text-(--danger)">
-          {error}
-        </p>
-      )}
+      {error && <InlineError>{error}</InlineError>}
       {loading && !proposal && (
         <p className="mt-3 text-sm text-(--text-muted)">{t("import:tripFile.loading")}</p>
       )}
@@ -130,7 +127,7 @@ export function TripFileImportModal({
       {proposal && (
         <ProposalView proposal={proposal} tripName={tripName} onTripName={setTripName} />
       )}
-    </Modal>
+    </Dialog>
   );
 }
 

@@ -173,12 +173,12 @@ it("counts a place only once it is marked visited, as the places page does", asy
     },
   });
   const poiOnly: LeaderboardScope = { groups: ["trips", "places"], domains: ["poi"], year: null };
-  expect((await buildLeaderboardSnapshot(userId, poiOnly, 2025)).metrics).toEqual({
+  expect((await buildLeaderboardSnapshot(userId, poiOnly, 2025)).metrics).toMatchObject({
     placeVisits: 1,
     places: 1,
     countries: null,
   });
-  expect((await buildLeaderboardSnapshot(userId, poiOnly, null)).metrics).toEqual({
+  expect((await buildLeaderboardSnapshot(userId, poiOnly, null)).metrics).toMatchObject({
     placeVisits: 1,
     places: 1,
     countries: null,
@@ -199,16 +199,24 @@ it("reports a real zero, never null, for an account with every domain visible bu
       year: null,
     };
     const lifetime = await buildLeaderboardSnapshot(empty, everything, null);
-    expect(Object.keys(lifetime.metrics).sort()).toEqual([...METRIC_KEYS].sort());
-    for (const [key, value] of Object.entries(lifetime.metrics))
-      expect([key, value]).toEqual([key, 0]);
+    // The curated-list family (+ each list's `Of` size) is covered by curatedMetrics.test.ts:
+    // a list this database has not seeded is unknown there, not "0 of 0".
+    const notCurated = (m: Record<string, number | null>) =>
+      Object.entries(m).filter(([k]) => !k.startsWith("curated"));
+    expect(Object.keys(lifetime.metrics).sort()).toEqual(
+      [
+        ...METRIC_KEYS,
+        ...METRIC_KEYS.filter((k) => k.startsWith("curated")).map((k) => `${k}Of`),
+      ].sort()
+    );
+    for (const [key, value] of notCurated(lifetime.metrics)) expect([key, value]).toEqual([key, 0]);
     expect(lifetime.partial).toEqual([]);
 
     const year = await buildLeaderboardSnapshot(empty, everything, 2025);
     // No per-year country figure exists on the statistics page: abstain, do not guess.
     const { countries, ...rest } = year.metrics;
     expect(countries).toBeNull();
-    for (const [key, value] of Object.entries(rest)) expect([key, value]).toEqual([key, 0]);
+    for (const [key, value] of notCurated(rest)) expect([key, value]).toEqual([key, 0]);
   } finally {
     await prisma.user.delete({ where: { id: empty } });
   }

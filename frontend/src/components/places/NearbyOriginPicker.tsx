@@ -1,9 +1,11 @@
+import Chip from "../ui/Chip";
 import { useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LocationInput } from "../location/LocationInput";
 import type { Lodging } from "../../types/lodging";
 import type { NearbyOrigin } from "./placesNearbyModel";
+import InlineError from "../ui/InlineError";
 
 const COARSE = "pointer-coarse:min-h-(--ts-size-touch-min)";
 
@@ -83,24 +85,14 @@ export function NearbyOriginPicker({
       </h2>
       <div className="flex flex-wrap gap-2">
         {modes.map((m) => (
-          <button
+          <Chip
             key={m}
-            type="button"
-            aria-pressed={mode === m}
+            color="var(--domain-poi)"
+            active={mode === m}
             onClick={() => onModeChange(m)}
-            className={`rounded-full px-4 py-2 text-sm ${COARSE}`}
-            style={
-              mode === m
-                ? {
-                    border: "1px solid var(--domain-poi)",
-                    color: "var(--domain-poi)",
-                    background: "var(--domain-poi-soft)",
-                  }
-                : { border: "1px solid var(--color-border)", color: "var(--text-muted)" }
-            }
           >
             {t(`places:nearby.origin.mode.${m}`)}
-          </button>
+          </Chip>
         ))}
       </div>
 
@@ -191,9 +183,7 @@ export function NearbyOriginPicker({
               : t("places:nearby.origin.deviceUse")}
           </button>
           {(device === "denied" || device === "unavailable") && (
-            <p role="alert" style={{ color: "var(--ts-warn)" }}>
-              {t(`places:nearby.origin.device_${device}`)}
-            </p>
+            <InlineError tone="warning">{t(`places:nearby.origin.device_${device}`)}</InlineError>
           )}
         </div>
       )}

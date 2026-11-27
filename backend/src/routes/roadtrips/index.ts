@@ -1,3 +1,4 @@
+import { toDbDate } from "../../shared/time/localDate";
 import { Router, Response, NextFunction } from "express";
 
 import { prisma } from "../../db";
@@ -19,6 +20,7 @@ import { toDto, toLegDto, ROUTE_SELECT } from "../trips/tourRoutes";
 import logger from "../../utils/logger";
 import { getCountryResolver } from "../../services/geo/countryFromCoordinates";
 import stationRoutes from "./stations";
+import photoRoutes from "./photos";
 import companionRoutes from "./companion";
 import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
 import { EXPENSE_ORDER, EXPENSE_SELECT, toExpenseDto } from "../../services/expenses/expenseDto";
@@ -76,7 +78,7 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const { tripId, ...body } = createRoadtripSchema.parse(req.body);
+      const { tripId, trackSpan, ...body } = createRoadtripSchema.parse(req.body);
       assertTourOdometerOrder(null, body);
       if (tripId != null) await resolveTrip(userId, tripId);
 
@@ -102,6 +104,8 @@ router.post(
           // Undefined: the trip's category decides (services/purpose/tripInheritance.ts).
           purpose: body.purpose,
           orderIdx: last ? last.orderIdx + 1 : 0,
+          trackFromDay: trackSpan ? toDbDate(trackSpan.fromDay) : null,
+          trackToDay: trackSpan ? toDbDate(trackSpan.toDay) : null,
         },
         include: ROUTE_SELECT,
       });
@@ -194,6 +198,8 @@ router.get(
           source: t.tracks[0]?.source ?? null,
         })),
         routingAvailable: routing.configured,
+        // The provider refuses requests right now (#411): the page says so instead of drawing chords silently.
+        routingFailing: routing.failing,
         // Driven against planned, by the statistics' own timeline rule, and
         // what the kilometres were measured on (forgejo#179).
         progress: roadtripProgress(stations, legs, new Date()),
@@ -209,5 +215,6 @@ router.get(
 );
 
 router.use(stationRoutes);
+router.use(photoRoutes);
 
 export default router;

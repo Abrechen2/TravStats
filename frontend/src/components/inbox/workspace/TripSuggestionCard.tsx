@@ -13,6 +13,8 @@ import TrackSectionPanel from "../track/TrackSectionPanel";
 import { tripSectionProps } from "../track/sectionProps";
 import { Field, Input } from "../../ui/Field";
 import { W } from "./model";
+import { CountryLabel } from "../../../lib/countryFlag";
+import InlineError from "../../ui/InlineError";
 
 const T = `${W}.tripAway`;
 
@@ -119,11 +121,7 @@ export default function TripSuggestionCard({
 
   return (
     <div className="space-y-3">
-      {error && (
-        <p role="alert" className="text-sm text-(--ts-bad)">
-          {error}
-        </p>
-      )}
+      {error && <InlineError>{error}</InlineError>}
       <h3 className="text-base font-semibold">
         {extending
           ? t(`${T}.questionExtend`, { first, last, name: tripName })
@@ -137,7 +135,14 @@ export default function TripSuggestionCard({
           : t(`${T}.evidence`, { count: trip.days, km: trip.km })}
       </p>
       {countries.length > 0 && (
-        <p className="text-sm">{t(`${T}.countries`, { list: countries.join(", ") })}</p>
+        <p className="text-sm flex flex-wrap items-center gap-2">
+          <span className="inline-flex gap-1.5">
+            {(trip.countries ?? []).map((c) => (
+              <CountryLabel key={c} country={c} compact />
+            ))}
+          </span>
+          {t(`${T}.countries`, { list: countries.join(", ") })}
+        </p>
       )}
       {suggestion.coverage === "truncated" && <p className="t-caption">{t(`${T}.partial`)}</p>}
       <TrackSectionPanel {...tripSectionProps(suggestion, tripName)} />

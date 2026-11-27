@@ -1,3 +1,4 @@
+import type { UseConfirmation } from "./serviceUse";
 import type { TimeValue } from "../../shared/time/wire";
 import { api } from "./client";
 import { API_TIMEOUTS } from "../../config/constants";
@@ -49,6 +50,12 @@ export interface StayScanState {
   pointCount: number;
   createdCount: number;
 }
+export interface StaySource {
+  kind: "smartList" | "plugin" | "calendar" | "travtrack" | "dawarich";
+  id: string | null;
+  name: string | null;
+}
+
 export interface DawarichStay {
   times?: Record<
     "startAt" | "endAt" | "sourceStartAt" | "sourceEndAt" | "detectedAt" | "resolvedAt",
@@ -59,6 +66,9 @@ export interface DawarichStay {
   status: "pending" | "accepting" | "accepted" | "rejected" | "covered" | "invalidated";
   /** Only on a TravTrack finding made before the account's last source switch. */
   beforeSourceSwitch?: true;
+  /** Where the finding came from, most specific first (2026-11-26); absent on older servers. */
+  source?: StaySource;
+  sources?: StaySource[];
   name: string | null;
   startAt: string;
   endAt: string;
@@ -90,12 +100,13 @@ export interface DawarichStay {
     matchingVisitId?: string | null;
     /** Set when the finding was resolved because a recorded visit or hotel stay already holds it. */
     coveredBy?: {
-      kind: "visit" | "lodging";
+      kind: "visit" | "lodging" | "flight";
       id: string;
       placeId?: string;
       lodgingId?: string;
       name: string;
       distanceM: number;
+      day?: string;
     };
     zone: string;
     /** Dawarich only: a TravTrack finding names its points by server-side digests. */
@@ -142,6 +153,8 @@ export interface DawarichStay {
     plugins?: StayPluginEvidence[];
     /** Plugins that have not answered yet; the scan asks them again. */
     pluginsPending?: string[];
+    /** Plugins that answered about this stop, "nothing here" included. */
+    pluginsAsked?: string[];
   };
 }
 export interface StayPluginEvidence {
@@ -158,6 +171,9 @@ export interface StayPluginEvidence {
   confidence: number;
   distanceM?: number | null;
   receivedAt?: string;
+  /** The plugin's reason: `name` = matched by a distinctive word, further away. */
+  reason?: "distance" | "name";
+  matchedToken?: string;
 }
 export interface StayCalendarEvidence {
   sourceId: string;
@@ -303,7 +319,27 @@ export const dawarichStaysApi = {
   placeType: async (id: string): Promise<StayPlaceTypeResult> =>
     (await api.get(`${base}/${id}/place-type`, { timeout: API_TIMEOUTS.STAY_PLACE_TYPE })).data
       .data,
+  /** Take a `covered` back (forgejo#439): pending again, never auto-closed again. */
+  reopen: async (id: string): Promise<void> => {
+    await api.post(`${base}/${id}/reopen`, {});
+  },
   reject: async (id: string): Promise<void> => {
     await api.post(`${base}/${id}/reject`, {});
   },
+  /** Whether "KI fragen" may show (forgejo#439 phase 2). */
+  aiHelpAvailability: async (): Promise<{ available: boolean; reason: string | null }> =>
+    (await api.get(`${base}/ai-help/availability`)).data.data,
+  /** Advice only; a first use answers 409 CONFIRMATION_REQUIRED (`withUseConsent`). */
+  aiHelp: async (id: string, confirmation?: UseConfirmation): Promise<StayAiHelpResult> =>
+    (
+      await api.post(`${base}/${id}/ai-help`, confirmation ? { confirmation } : {}, {
+        timeout: API_TIMEOUTS.STAY_AI_HELP,
+      })
+    ).data.data,
 };
+
+/** `POST /dawarich-stays/:id/ai-help`: a ranked choice with reasons, and who answered. */
+export interface StayAiHelpResult {
+  answer: { ranking: Array<{ name: string; reason: string }> };
+  provider: { kind: string; model: string; host: string; location: "cloud" | "lan" };
+}

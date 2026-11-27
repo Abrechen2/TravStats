@@ -1,3 +1,6 @@
+import DateRangeField from "../../../components/ui/DateRangeField";
+import DateField from "../../../components/ui/DateField";
+import { Icon } from "../../../components/ui/Icon";
 import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { Link } from "react-router-dom";
@@ -72,22 +75,17 @@ function CustomPicker({
         if (valid) onSpan(customSpan(from, to, today));
       }}
     >
-      <input
-        type="date"
-        aria-label={t("track:map.range.from")}
-        value={from}
+      <DateRangeField
+        fromLabel={t("track:map.range.from")}
+        toLabel={t("track:map.range.to")}
+        from={from}
+        to={to}
         max={today}
-        onChange={(e) => setFrom(e.target.value)}
-        style={dateStyle}
-      />
-      <span aria-hidden>–</span>
-      <input
-        type="date"
-        aria-label={t("track:map.range.to")}
-        value={to}
-        max={today}
-        onChange={(e) => setTo(e.target.value)}
-        style={dateStyle}
+        quickPicks={[]}
+        onChange={(range) => {
+          setFrom(range.from);
+          setTo(range.to);
+        }}
       />
       <button type="submit" disabled={!valid} style={pillStyle(true)}>
         {t("track:map.range.apply")}
@@ -165,8 +163,8 @@ export default function TrackRangeBar({
         >
           ›
         </button>
-        <input
-          type="date"
+        <DateField
+          inline
           aria-label={t("track:day.label")}
           value={span.toDay}
           max={today}
@@ -221,7 +219,7 @@ export default function TrackRangeBar({
             fontSize: 18,
           }}
         >
-          <span aria-hidden>⚙</span>
+          <Icon name="settings" size={16} />
         </Link>
       </div>
     </div>

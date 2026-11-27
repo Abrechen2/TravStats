@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { shareLinksApi } from "../../lib/api/shareLinks";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import type { ShareLink, ShareLinkList } from "../../types/shareLinks";
@@ -14,6 +14,7 @@ import { SettingRows } from "../ui/SettingRow";
 import { SettingItem, StatusValue } from "../ui/settings";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useRowCopy } from "./rowCopy";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const NS = "sharing:links.section";
 
@@ -54,7 +55,7 @@ export default function ShareLinksSection({ isAdmin }: { isAdmin: boolean }): JS
       await load();
     } catch (error) {
       logger.error("Revoking a share link failed:", error);
-      addToast("error", t(shareLinkErrorKey(error, "sharing:links.errors.revokeFailed")));
+      reportPageError(t(shareLinkErrorKey(error, "sharing:links.errors.revokeFailed")));
     } finally {
       setBusy(false);
     }

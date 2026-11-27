@@ -14,6 +14,7 @@ import {
 } from "../../../lib/api/suggestionPlugins";
 import PluginCard from "./PluginCard";
 import SecretOnce from "./SecretOnce";
+import InlineError from "../../ui/InlineError";
 
 const NS = "suggestionSources:plugins";
 const MAX_PLUGINS = 5;
@@ -85,16 +86,8 @@ export default function PluginsSection(): JSX.Element {
       <SettingRows>
         <SettingItem title={t(`${NS}.title`)} sub={t(`${NS}.sub`)} help={t(`${NS}.help`)}>
           <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-            {blocked && (
-              <p role="alert" className="t-body" style={{ color: "var(--ts-bad)" }}>
-                {t(`${NS}.blocked.${blocked}`)}
-              </p>
-            )}
-            {error && (
-              <p role="alert" className="t-body" style={{ color: "var(--ts-bad)" }}>
-                {t(error)}
-              </p>
-            )}
+            {blocked && <InlineError>{t(`${NS}.blocked.${blocked}`)}</InlineError>}
+            {error && <InlineError>{t(error)}</InlineError>}
             {secret && <SecretOnce secret={secret} onDone={() => setSecret(null)} />}
             {plugins?.length === 0 && <p className="t-body">{t(`${NS}.empty`)}</p>}
             {plugins?.map((p) => (

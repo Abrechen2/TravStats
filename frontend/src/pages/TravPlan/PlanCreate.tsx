@@ -1,3 +1,5 @@
+import DateRangeField from "../../components/ui/DateRangeField";
+import { Icon } from "../../components/ui/Icon";
 import { useId, useState } from "react";
 import { Button, Chip, Dialog, Field, Input, Select } from "../../components/ui";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -290,23 +292,19 @@ export function PlanCreate({
             </label>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "var(--ts-space-lg)" }}>
-            <Field label={t("fields.startDay")} htmlFor={uid + "-from"}>
-              <Input
-                id={uid + "-from"}
-                type="date"
-                value={startDay}
-                onChange={(e) => setStartDay(e.target.value)}
+            <div className="sm:col-span-2">
+              <DateRangeField
+                fromLabel={t("fields.startDay")}
+                toLabel={t("fields.endDay")}
+                from={startDay}
+                to={endDay}
+                quickPicks={[]}
+                onChange={(range) => {
+                  setStartDay(range.from);
+                  setEndDay(range.to);
+                }}
               />
-            </Field>
-            <Field label={t("fields.endDay")} htmlFor={uid + "-to"}>
-              <Input
-                id={uid + "-to"}
-                type="date"
-                value={endDay}
-                min={startDay || undefined}
-                onChange={(e) => setEndDay(e.target.value)}
-              />
-            </Field>
+            </div>
             <Field label={t("fields.travelers")} htmlFor={uid + "-n"}>
               <Input
                 id={uid + "-n"}
@@ -447,7 +445,7 @@ export function PlanCreate({
                   aria-label={t("delete")}
                   onClick={() => setHeld(held.filter((_, j) => j !== i))}
                 >
-                  ×
+                  <Icon name="x" size={16} />
                 </Button>
               </div>
             </div>

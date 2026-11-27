@@ -4,6 +4,7 @@ import { backupZone } from "../shared/time/schedulerZone";
 import { zoneSelfCheckResult } from "../shared/time/zoneOf";
 import { syncSchemaCheckResult } from "../services/sync/schemaCheck";
 import { appVersion } from "../utils/version";
+import { healthChecks } from "../services/runtime/runtimeStats";
 
 /**
  * Health check — mounted at both `/health` (legacy, used by the Dockerfile
@@ -26,8 +27,15 @@ import { appVersion } from "../utils/version";
  * (shared/time/schedulerZone.ts). Every other job runs in
  * UTC. Shown here because a backup that moved by an hour is otherwise only
  * noticed when somebody looks at the timestamps.
+ *
+ * `checks.database` is a cached `SELECT 1` (at most one per 10 s however often
+ * the probe runs) and `checks.eventLoop` the last minute's p99 delay against
+ * 500 ms (perf audit 2026-11, item 4). Both are words only: the figures, the
+ * pool and the slow queries are on the admin-only `/api/v1/admin/runtime`.
+ * A failed database or a slow loop is `degraded`, still a 200, for the same
+ * reason as above: a restart would not fix either.
  */
-export function healthHandler(req: Request, res: Response): void {
+export async function healthHandler(req: Request, res: Response): Promise<void> {
   // `query` is always set by Express; the optional chain keeps a direct handler call
   // (the health tests pass a bare object) answering the same fields as before.
   const probeCandidate = req.query?.[PROBE_QUERY_PARAM];
@@ -35,11 +43,17 @@ export function healthHandler(req: Request, res: Response): void {
   const timezoneLookup = timezone === null ? "pending" : timezone.ok ? "ok" : "failed";
   const sync = syncSchemaCheckResult();
   const syncTriggers = sync === null ? "pending" : sync.ok ? "ok" : "failed";
+  const { database, eventLoop } = await healthChecks();
+  const degraded =
+    timezoneLookup === "failed" ||
+    syncTriggers === "failed" ||
+    database === "failed" ||
+    eventLoop === "slow";
   res.json({
-    status: timezoneLookup === "failed" || syncTriggers === "failed" ? "degraded" : "ok",
+    status: degraded ? "degraded" : "ok",
     timestamp: new Date().toISOString(),
     version: appVersion,
-    checks: { timezoneLookup, syncTriggers },
+    checks: { timezoneLookup, syncTriggers, database, eventLoop },
     scheduler: { backupZone: backupZone().zone },
     // Only when the caller holds a one-time nonce this process issued (the public-URL
     // reachability check, readiness spec §12): proof that THIS instance answered, which a

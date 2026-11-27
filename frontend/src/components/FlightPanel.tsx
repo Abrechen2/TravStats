@@ -1,3 +1,5 @@
+import Chip from "./ui/Chip";
+import { Icon } from "./ui/Icon";
 import ConfirmModal from "./ui/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { useMemo, useState, useEffect } from "react";
@@ -20,6 +22,7 @@ import { flightDeparture } from "../lib/entityTimes";
 import { dayOf } from "../shared/time";
 import { logger } from "../lib/logger";
 import ListLoadFailed, { loadFailureLog } from "./table/ListLoadFailed";
+import { reportPageError } from "../store/pageErrorStore";
 
 type PanelTab = "flights" | "trips";
 // `firstDay`: the earliest departure's day AT ITS AIRPORT (ADR 0002) — the
@@ -165,7 +168,7 @@ export function FlightPanel({
       clearSelection();
       void reloadTrips();
     } catch {
-      addToast("error", t("trips:toasts.deleteError"));
+      reportPageError(t("trips:toasts.deleteError"));
       setDeleteTripTarget(null);
     }
   };
@@ -190,7 +193,7 @@ export function FlightPanel({
         showDetails(remaining, "trip-details");
       }
     } catch {
-      addToast("error", t("trips:toasts.flightRemoveError"));
+      reportPageError(t("trips:toasts.flightRemoveError"));
     }
   };
 
@@ -263,22 +266,16 @@ export function FlightPanel({
                 {tab === "flights" ? (
                   <>
                     {t("dashboard:allFlights")}
-                    <span
-                      className="px-1.5 py-0.5 text-xs rounded-full"
-                      style={{ background: "var(--accent)", color: "white" }}
-                    >
+                    <Chip tone="accent" size="sm">
                       {totalCount}
-                    </span>
+                    </Chip>
                   </>
                 ) : (
                   <>
                     {t("dashboard:trips.label")}
-                    <span
-                      className="px-1.5 py-0.5 text-xs rounded-full"
-                      style={{ background: "var(--accent)", color: "white" }}
-                    >
+                    <Chip tone="accent" size="sm">
                       {trips.length}
-                    </span>
+                    </Chip>
                   </>
                 )}
               </h2>
@@ -289,7 +286,7 @@ export function FlightPanel({
                 className="text-sm transition-colors"
                 style={{ color: "var(--text-muted)" }}
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </div>
 

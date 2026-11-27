@@ -148,7 +148,7 @@ describe("CruiseEditModal — the shared form blocks", () => {
     const onClose = vi.fn();
     render(<CruiseEditModal mode="edit" cruise={existing} onClose={onClose} onSaved={vi.fn()} />);
     await waitFor(() =>
-      expect((screen.getByLabelText("field.endDate") as HTMLInputElement).value).toBe("2026-01-03")
+      expect((screen.getByLabelText("field.endDate") as HTMLInputElement).value).toBe("03.01.2026")
     );
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledTimes(1);

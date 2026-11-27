@@ -1,23 +1,21 @@
+import { formatKm } from "../../lib/format";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useToursVisible } from "../../hooks/useToursVisible";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { toursApi } from "../../lib/api/tours";
-import { useToastStore } from "../../store/toastStore";
 import ConfirmModal from "../ui/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { SELECTABLE_LEG_MODES, type LegMode, type TourRoute } from "../../types/tour";
+import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   tripId: string;
 }
 
 const DEFAULT_MODE: LegMode = "road";
-
-function formatKm(value: number): string {
-  return value.toLocaleString("de-DE", { maximumFractionDigits: 0 });
-}
 
 /**
  * "Touren" tab: one row per tour route section on this trip, each linking to
@@ -39,12 +37,12 @@ export default function TourSectionList(props: Props): JSX.Element | null {
 
 function TourSectionListBody({ tripId }: Props): JSX.Element {
   const { t } = useTranslation();
-  const addToast = useToastStore((s) => s.addToast);
 
   // `null` = not loaded yet (or the last load failed) — distinct from `[]`,
   // which means the load succeeded and genuinely found no sections.
   const [routes, setRoutes] = useState<TourRoute[] | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newMode, setNewMode] = useState<LegMode>(DEFAULT_MODE);
@@ -85,6 +83,7 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
     setSaveTried(true);
     if (!name) return;
     setSaving(true);
+    setCreateError(null);
     try {
       const route = await toursApi.create(tripId, { name, mode: newMode });
       if (!mountedRef.current) return;
@@ -100,7 +99,7 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
       setNewMode(DEFAULT_MODE);
       setCreating(false);
     } catch {
-      if (mountedRef.current) addToast("error", t("trips:tours.createError"));
+      if (mountedRef.current) setCreateError(t("trips:tours.createError"));
     } finally {
       if (mountedRef.current) setSaving(false);
     }
@@ -115,7 +114,7 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
       // The row stays. A tour that failed to delete must not disappear from
       // the list — an optimistic removal here would read as "deleted" and
       // come back on the next load, which is worse than the error itself.
-      if (mountedRef.current) addToast("error", t("trips:tours.deleteError"));
+      if (mountedRef.current) reportPageError(t("trips:tours.deleteError"));
     }
   };
 
@@ -177,10 +176,11 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
           >
             {t("trips:tours.save")}
           </button>
+          {createError && <InlineError className="basis-full">{createError}</InlineError>}
           {showNameMissing && (
-            <p id="tour-name-error" role="alert" className="basis-full text-xs text-(--danger)">
+            <InlineError id="tour-name-error" className="basis-full">
               {t("trips:tours.nameRequired")}
-            </p>
+            </InlineError>
           )}
         </div>
       )}
@@ -237,7 +237,7 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
                 </span>
                 <span className="flex items-center gap-3 text-(--text-muted)">
                   <span>{t("trips:tours.stopCount", { count: route.stopCount })}</span>
-                  <span>{formatKm(route.distanceKm)} km</span>
+                  <span>{formatKm(route.distanceKm)}</span>
                 </span>
               </Link>
               <button

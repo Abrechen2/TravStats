@@ -16,6 +16,10 @@ import {
 import { PhotoChoosePanel } from "../common/PhotoChoosePanel";
 import { useToastStore } from "../../store/toastStore";
 import type { PlaceVisitPhoto } from "../../types/placeList";
+import { EnlargeCorner } from "../common/photoViewer/EnlargeButton";
+import { usePhotoViewer } from "../common/photoViewer/usePhotoViewer";
+import { largeUrl } from "../common/photoViewer/viewerPhoto";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   visitId: string;
@@ -53,7 +57,7 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
       setPicked(new Set());
     } catch (err: unknown) {
       logger.error("VisitPhotoSuggestions: load failed", err);
-      addToast("error", t("places:photos.suggest.loadFailed"));
+      reportPageError(t("places:photos.suggest.loadFailed"));
     } finally {
       setBusy(false);
     }
@@ -101,7 +105,7 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
       setPicked(new Set());
     } catch (err: unknown) {
       logger.error("VisitPhotoSuggestions: refuse failed", err);
-      addToast("error", t("places:photos.suggest.refuseFailed"));
+      reportPageError(t("places:photos.suggest.refuseFailed"));
     } finally {
       setBusy(false);
     }
@@ -116,7 +120,7 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
       setPicked(new Set());
     } catch (err: unknown) {
       logger.error("VisitPhotoSuggestions: undo refusals failed", err);
-      addToast("error", t("places:photos.suggest.undoFailed"));
+      reportPageError(t("places:photos.suggest.undoFailed"));
     } finally {
       setBusy(false);
     }
@@ -139,7 +143,7 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
       setPicked(new Set());
     } catch (err: unknown) {
       logger.error("VisitPhotoSuggestions: link failed", err);
-      addToast("error", t("places:photos.suggest.linkFailed"));
+      reportPageError(t("places:photos.suggest.linkFailed"));
     } finally {
       setBusy(false);
     }
@@ -265,31 +269,36 @@ interface TileProps {
 function SuggestionTile({ url, alt, distance, picked, onToggle }: TileProps): JSX.Element {
   // The distance used to be a `title` — hover only, so an iPad never showed
   // it (forgejo#249). It is visible text now, and part of the button's name.
+  const viewer = usePhotoViewer();
   return (
-    <button
-      type="button"
-      aria-pressed={picked}
-      onClick={onToggle}
-      className="flex flex-col items-center"
-      style={{
-        padding: 0,
-        borderRadius: 6,
-        border: picked ? "2px solid var(--accent)" : "1px solid var(--color-border)",
-        opacity: picked ? 1 : 0.75,
-        cursor: "pointer",
-      }}
-    >
-      <img
-        src={url}
-        alt={alt}
-        width={56}
-        height={56}
-        loading="lazy"
-        style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 5, display: "block" }}
-      />
-      <span className="text-[10px] leading-4" style={{ color: "var(--text-muted)" }}>
-        {distance}
-      </span>
-    </button>
+    <span className="relative inline-block">
+      {viewer.viewer}
+      <button
+        type="button"
+        aria-pressed={picked}
+        onClick={onToggle}
+        className="flex flex-col items-center"
+        style={{
+          padding: 0,
+          borderRadius: 6,
+          border: picked ? "2px solid var(--accent)" : "1px solid var(--color-border)",
+          opacity: picked ? 1 : 0.75,
+          cursor: "pointer",
+        }}
+      >
+        <img
+          src={url}
+          alt={alt}
+          width={56}
+          height={56}
+          loading="lazy"
+          style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 5, display: "block" }}
+        />
+        <span className="text-[10px] leading-4" style={{ color: "var(--text-muted)" }}>
+          {distance}
+        </span>
+      </button>
+      <EnlargeCorner onOpen={() => viewer.open([{ id: url, url: largeUrl(url) }], 0)} />
+    </span>
   );
 }

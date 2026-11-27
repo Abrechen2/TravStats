@@ -2,7 +2,7 @@
   "calendar": {
     "title": "Calendar",
     "sub": "Appointments as evidence for your stops",
-    "help": "TravStats only reads the days the scan is looking at (at most 30 days back). An appointment that fits a stop in time and place becomes evidence in the suggestion. No other appointment is stored.",
+    "help": "Reads only the days being checked. Matching events become evidence, the rest is not stored.",
     "empty": "No calendar connected yet.",
     "add": "Add calendar",
     "remove": "Remove",
@@ -28,7 +28,7 @@
     },
     "privacy": {
       "title": "What is stored",
-      "sub": "Only an appointment that fits a stop, with title, time and place, inside the suggestion. Once accepted or rejected only its time and calendar remain. The calendar's address and password are stored encrypted and never shown again."
+      "sub": "Only matching events enter suggestions; then only time and calendar stay. Access encrypted."
     },
     "form": {
       "kind": "Kind of calendar",
@@ -37,11 +37,12 @@
       "label": "Name",
       "labelHint": "e.g. Work or Private. Rules can refer to this calendar.",
       "icsUrl": "Secret address (ICS)",
-      "icsHint": "The subscription address from iCloud, Google or Outlook. It is the key to the calendar and is stored encrypted.",
+      "icsHint": "Subscription address from iCloud, Google or Outlook. Stored encrypted.",
       "server": "Server address",
       "serverHint": "e.g. https://caldav.example.com/",
       "username": "User",
       "password": "App password",
+      "appPasswordHint": "iCloud/Google: use an app-specific password.",
       "passwordHint": "Stored encrypted and never shown again.",
       "discover": "Find calendars",
       "collections": "Which calendars are read",
@@ -53,7 +54,7 @@
       "kind": {
         "notConfigured": "The calendar is not fully set up.",
         "unreachable": "The calendar server cannot be reached.",
-        "auth": "Access refused. Check the address, user or password.",
+        "auth": "Access refused. Check the address, user or password. iCloud and Google require an app-specific password, not your normal account password.",
         "notFound": "There is no calendar at this address.",
         "protocol": "The server did not send a readable calendar answer.",
         "invalidUrl": "This address is not valid."
@@ -82,7 +83,7 @@
       "title": "Appointment places",
       "label": "Look calendar places up for matching",
       "sub": "Off: appointments match only through own places, the place found at the stop, or a rule's place.",
-      "help": "On: the place of an appointment a rule selects is looked up with the server's geocoder to match it to a stop. Only for stops outside your privacy zones. The text is neither stored nor logged.",
+      "help": "Looks up event places outside your private zones. Nothing is stored.",
       "error": "The setting could not be saved. Please try again."
     }
   },
@@ -111,14 +112,15 @@
       "pending": "A plugin has not answered yet; it will be asked again.",
       "reask": "Ask again",
       "reasked": "The plugins will be asked again on the next scan.",
-      "reaskError": "That did not work. Please try again."
+      "reaskError": "That did not work. Please try again.",
+      "nameMatch": "Name matches ({{token}}), {{meters}} m"
     },
     "suggestedBy": "Suggested by {{name}}"
   },
   "rules": {
     "title": "Rules",
     "sub": "What a matching appointment suggests as purpose and name",
-    "help": "Top to bottom, the first matching rule applies. Without a rule an appointment suggests its title as name and no purpose.",
+    "help": "The first matching rule wins. No rule: title becomes the name.",
     "empty": "No rules.",
     "kind": {
       "calendar": "Whole calendar",
@@ -149,7 +151,7 @@
   "plugins": {
     "title": "External suggestion sources",
     "sub": "Own services that answer stops with places",
-    "help": "A plugin is an HTTPS service you run yourself or trust. TravStats asks it, signed, about a stop; its answer appears as a suggestion in the inbox. A plugin never writes into TravStats itself. Guide: docs/features/plugins.md.",
+    "help": "An HTTPS service you trust. It only suggests, never writes.",
     "empty": "No plugin added yet.",
     "add": "Add plugin",
     "remove": "Remove",
@@ -198,8 +200,8 @@
     },
     "sent": {
       "title": "What is sent",
-      "sub": "A stop's start and end, its coordinates rounded to the chosen precision and its time zone; plus what TravStats already knows: the nearest own place, the place found and (at exact and 100 m) the address.",
-      "help": "Never sent: your account, name or e-mail, the location history, other stops or entries. Every request is signed with the secret."
+      "sub": "A stop's start, end, rounded coordinates and time zone, plus known places.",
+      "help": "Never sent: account, name, email or history. Every request is signed."
     },
     "removeConfirm": {
       "title": "Remove plugin “{{name}}”?",
@@ -215,7 +217,13 @@
         "rateLimited": "The plugin or the hourly limit allows no request right now.",
         "protocol": "The plugin's answer does not fit the contract (version 1).",
         "server": "The plugin reported a server error.",
-        "privateTarget": "This address is on the local network. Only the admin account may use it."
+        "privateTarget": "This address is on the local network. Only the admin account may use it.",
+        "readOnly": "The plugin's archive does not allow writing (token without write permission).",
+        "confirmationRequired": "The change was not confirmed and was therefore not written.",
+        "changed": "The entry was changed in the archive since; undo is no longer possible.",
+        "notFound": "The plugin does not know this entry (any more).",
+        "notReady": "The plugin is still loading its archive. Please try again shortly.",
+        "unsupported": "This plugin does not offer location maintenance."
       },
       "code": {
         "PRIVATE_TARGET": "This address is on the local network. Only the admin account may use it.",
@@ -223,8 +231,86 @@
         "PLUGIN_LIMIT": "At most 5 plugins are possible.",
         "PLUGIN_BACKFILL_REFUSED": "Asking about past days is not allowed for this plugin, or the range is longer than 90 days.",
         "PLUGIN_BACKFILL_RUNNING": "A request for this plugin is already running.",
-        "SERVICE_DISABLED": "Plugins are switched off on this server."
+        "SERVICE_DISABLED": "Plugins are switched off on this server.",
+        "PLUGIN_NO_MAINTENANCE": "This plugin does not offer location maintenance."
       }
+    },
+    "maintenance": {
+      "open": "Maintain locations",
+      "helloFailed": "Plugin query failed",
+      "title": "Maintain locations – {{name}}",
+      "intro": "Plugin entries without a location, with suggestions. Written only when you confirm.",
+      "loading": "Loading entries …",
+      "reload": "Reload",
+      "empty": "No entries without a location.",
+      "showIgnored": "Show ignored",
+      "stopsSent": "{{count}} TravTrack stops (named ones and longer unnamed ones) were sent along for matching.",
+      "stopsWithheld": {
+        "precision": "No stops sent: the plugin is set to 1 km precision.",
+        "travtrackOff": "No stops sent: TravTrack is not this account's location source."
+      },
+      "pendingSearches": "The geocoder is still searching for {{count}} entries – reload later.",
+      "mapLabel": "Map with proposals for {{name}}",
+      "noAddress": "No address in the archive",
+      "noProposals": "No proposal yet.",
+      "issue": {
+        "noCoordinates": "no coordinates",
+        "noStreet": "no street",
+        "lowPrecision": "town centre only",
+        "coordsMismatch": "coordinates differ from the address"
+      },
+      "source": {
+        "stop": "TravTrack stop",
+        "geocoder": "Geocoder"
+      },
+      "confidence": {
+        "high": "certain",
+        "medium": "likely",
+        "low": "uncertain"
+      },
+      "distance": "{{meters}} m from the current location",
+      "evidence": {
+        "stop": "Stop “{{venue}}” on {{at}} · shared word: {{tokens}}",
+        "geocoder": "Geocoder hit: {{label}}",
+        "stopHere": "Your stop on {{at}}, {{duration}} · {{meters}} m from the address"
+      },
+      "take": "Apply",
+      "otherAddress": "Other address",
+      "ignore": "Ignore",
+      "unignore": "Show again",
+      "searchLabel": "Search entries",
+      "search": "Search",
+      "searchFailed": "The address search is not reachable right now.",
+      "searchEmpty": "Nothing found.",
+      "confirm": {
+        "title": "Write to the archive?",
+        "intro": "The plugin “{{plugin}}” writes for “{{name}}” into its archive:",
+        "coords": "• Latitude {{lat}}, longitude {{lon}}",
+        "street": "• Street: {{street}} (the field is empty so far)",
+        "streetKept": "• Street stays unchanged ({{street}})",
+        "source": "Source: {{source}}",
+        "undo": "The plugin keeps the previous values; “Undo” restores them."
+      },
+      "applied": "“{{name}}” was written to the archive.",
+      "undone": "“{{name}}” was reset.",
+      "ignored": "“{{name}}” is ignored.",
+      "unignored": "“{{name}}” is shown again.",
+      "appliedTitle": "Applied",
+      "appliedLine": "{{name}}: {{lat}}, {{lon}} ({{at}})",
+      "undo": "Undo",
+      "searchPlaceholder": "Name, town, postcode or number",
+      "searchButton": "Search",
+      "searchClear": "Clear search",
+      "noMatch": "No entry matches the search.",
+      "range": "{{from}}–{{to}} of {{total}}",
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "list": {
+      "label": "Keep this plugin's places as a list",
+      "generic": "The plugin announces no list: standard columns only.",
+      "open": "Open list “{{name}}”",
+      "failed": "List not switched"
     }
   }
 }

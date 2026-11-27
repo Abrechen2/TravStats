@@ -24,14 +24,31 @@ vi.mock("../../lib/api", async (importOriginal) => {
 });
 
 // Mock the auth store so we have a predictable logged-in user; `isAdmin` is
-// switched per test.
+// switched per test. The mock honours a selector and hands out the SAME state
+// object while nothing changed: GlobalSearch selects `s.user?.id`, and a mock
+// that ignored the selector returned a fresh object as the "id" on every render,
+// so its `[userId]` effect set state on every render and the suite ran out of
+// heap (rc.45/rc.46, even alone).
 const authState = vi.hoisted(() => ({ isAdmin: false }));
-vi.mock("../../store/authStore", () => ({
-  useAuthStore: () => ({
-    user: { id: "u1", username: "tester", email: "t@t.de", isAdmin: authState.isAdmin },
-    logout: vi.fn().mockResolvedValue(undefined),
-  }),
-}));
+vi.mock("../../store/authStore", () => {
+  const logout = vi.fn().mockResolvedValue(undefined);
+  let cached: { isAdmin: boolean; state: unknown } | null = null;
+  const stateFor = (isAdmin: boolean) => {
+    if (cached?.isAdmin !== isAdmin) {
+      cached = {
+        isAdmin,
+        state: { user: { id: "u1", username: "tester", email: "t@t.de", isAdmin }, logout },
+      };
+    }
+    return cached.state;
+  };
+  return {
+    useAuthStore: (selector?: (s: unknown) => unknown) => {
+      const state = stateFor(authState.isAdmin);
+      return selector ? selector(state) : state;
+    },
+  };
+});
 
 // DiagnosticExportModal does a lot of work we don't need here.
 vi.mock("../../components/DiagnosticExportModal", () => ({

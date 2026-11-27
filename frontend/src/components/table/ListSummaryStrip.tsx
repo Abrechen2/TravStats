@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import type { JSX } from "react";
 import type { PurposeDomain } from "../../shared/purpose";
 import PurposeHiddenHint from "../purpose/PurposeHiddenHint";
@@ -102,17 +103,9 @@ export default function ListSummaryStrip({
           </span>
         ))}
         {filtered && (
-          <span
-            data-testid="list-summary-filtered"
-            className="rounded-full border px-2 py-0.5 text-[11px]"
-            style={{
-              borderColor: "var(--ts-border)",
-              color: "var(--ts-muted)",
-              fontFamily: "var(--ts-font-ui)",
-            }}
-          >
+          <Chip testId="list-summary-filtered" size="sm">
             {filteredLabel}
-          </span>
+          </Chip>
         )}
       </p>
       {purposeDomain && (

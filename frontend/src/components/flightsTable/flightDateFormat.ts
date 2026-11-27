@@ -1,4 +1,4 @@
-import { formatTimeValueShown } from "../../lib/displayFormat";
+import { formatTimeValueShown } from "../../lib/format";
 import type { TimeValue } from "../../shared/time";
 
 /**

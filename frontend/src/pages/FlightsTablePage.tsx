@@ -10,7 +10,6 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { flightsApi, tripsApi } from "../lib/api";
 import ListHeaderMenu from "../components/table/ListHeaderMenu";
-import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
@@ -32,7 +31,7 @@ import {
 import ConfirmModal from "../components/ui/ConfirmModal";
 import { useToastStore } from "../store/toastStore";
 import { getFlightDuration } from "../lib/flightDuration";
-import { formatDurationWithEstimate } from "../lib/formatters";
+import { formatDurationWithEstimate } from "../lib/format";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import { priceCellState } from "../lib/flightPriceCell";
@@ -68,6 +67,7 @@ import SelectCheckbox from "../components/flightsTable/bulk/SelectCheckbox";
 import { useFlightSelection } from "../components/flightsTable/bulk/useFlightSelection";
 import Toggletip from "../components/ui/Toggletip";
 import { isDayString } from "../lib/gapCalendar";
+import { reportPageError } from "../store/pageErrorStore";
 
 const STATUS_FILTER_PARAM = oneOfParam<FlightStatusFilter>(["all", ...FLIGHT_STATUSES]);
 const SPECIAL_FILTER_PARAM = oneOfParam<SpecialTypeFilter>([
@@ -236,7 +236,7 @@ export default function FlightsTablePage(): JSX.Element {
       reload();
     } catch (error) {
       logger.error("Failed to delete flight:", error);
-      addToast("error", t("dashboard:errors.deleteFlight"));
+      reportPageError(t("dashboard:errors.deleteFlight"));
       setDeleteConfirmOpen(false);
       setFlightToDelete(null);
     } finally {
@@ -253,7 +253,7 @@ export default function FlightsTablePage(): JSX.Element {
       setEditingFlight(created);
     } catch (error) {
       logger.error("Failed to duplicate flight:", error);
-      addToast("error", t("flights:table.toast.duplicateFailed"));
+      reportPageError(t("flights:table.toast.duplicateFailed"));
     }
   };
 
@@ -265,7 +265,7 @@ export default function FlightsTablePage(): JSX.Element {
       addToast("success", t("flights:table.toast.updated"));
     } catch (error) {
       logger.error("Failed to update flight:", error);
-      addToast("error", t("dashboard:errors.updateFlight"));
+      reportPageError(t("dashboard:errors.updateFlight"));
       throw error;
     }
   };
@@ -329,20 +329,16 @@ export default function FlightsTablePage(): JSX.Element {
           align: layout.align,
           mono: layout.mono,
           onNarrow: layout.onNarrow,
-          label:
-            sortKey === undefined ? (
-              label
-            ) : (
-              <SortableHeader
-                column={sortKey}
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={handleSort}
-                ariaLabel={t("flights:table.sortBy", { col: label })}
-              >
-                {label}
-              </SortableHeader>
-            ),
+          label,
+          sort:
+            sortKey === undefined
+              ? undefined
+              : {
+                  active: sortBy === sortKey,
+                  order: sortOrder,
+                  onSort: (): void => handleSort(sortKey),
+                  ariaLabel: t("flights:table.sortBy", { col: label }),
+                },
         };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- handleSort reads sortBy/sortOrder, which are listed, and a stable store setter
@@ -441,6 +437,10 @@ export default function FlightsTablePage(): JSX.Element {
   /** Counted by the database under every OTHER filter, so picking a carrier
    *  no longer leaves the carrier list holding only that carrier. */
   const availableYears = useMemo(() => (facets?.years ?? []).map((y) => y.value), [facets]);
+  const yearCounts = useMemo(
+    () => Object.fromEntries((facets?.years ?? []).map((y) => [y.value, y.count])),
+    [facets]
+  );
   const availableAirlines = useMemo(
     () => (facets?.airlines ?? []).map((a) => ({ name: a.value, count: a.count })),
     [facets]
@@ -580,6 +580,7 @@ export default function FlightsTablePage(): JSX.Element {
           yearFilter={yearFilter}
           onYearChange={setYearFilter}
           availableYears={availableYears}
+          yearCounts={yearCounts}
           monthFilter={monthFilter}
           onMonthChange={setMonthFilter}
           airlineFilter={airlineFilter}

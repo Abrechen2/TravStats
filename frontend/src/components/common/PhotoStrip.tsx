@@ -1,16 +1,23 @@
+import { Icon } from "../ui/Icon";
 import { useCallback, useRef, useState } from "react";
 import type { JSX, ReactNode } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import { useToastStore } from "../../store/toastStore";
 import { apiErrorMachineCode } from "../../lib/apiError";
+import EnlargeButton from "./photoViewer/EnlargeButton";
+import { usePhotoViewer } from "./photoViewer/usePhotoViewer";
+import { largeUrl, sourceOf } from "./photoViewer/viewerPhoto";
+import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /** The shape every photo endpoint answers with. */
 export interface StripPhoto {
   id: string;
   url: string;
   caption: string | null;
+  /** `immich` | `photoprism` for a linked library photo; absent for an upload. */
+  provider?: string | null;
 }
 
 interface Props<T extends StripPhoto> {
@@ -58,9 +65,9 @@ export function PhotoStrip<T extends StripPhoto>({
   originLabel,
 }: Props<T>): JSX.Element {
   const { t } = useTranslation(["places", "common"]);
-  const addToast = useToastStore((s) => s.addToast);
   const inputRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<T[]>(photos);
+  const viewer = usePhotoViewer();
   const [busy, setBusy] = useState(false);
   /**
    * Why the last upload was refused, shown beside the button. A toast alone
@@ -86,7 +93,7 @@ export function PhotoStrip<T extends StripPhoto>({
             ? t("places:photos.unsupportedType")
             : t("places:photos.uploadFailed");
         setUploadError(message);
-        addToast("error", message);
+        reportPageError(message);
       } finally {
         setBusy(false);
         // Clear the input, or picking the same file twice in a row fires no
@@ -94,7 +101,7 @@ export function PhotoStrip<T extends StripPhoto>({
         if (inputRef.current) inputRef.current.value = "";
       }
     },
-    [onUpload, context, addToast, t]
+    [onUpload, context, t]
   );
 
   const handleDelete = useCallback(
@@ -104,10 +111,10 @@ export function PhotoStrip<T extends StripPhoto>({
         setRows((prev) => prev.filter((p) => p.id !== photoId));
       } catch (err: unknown) {
         logger.error({ err, context }, "PhotoStrip: delete failed");
-        addToast("error", t("places:photos.deleteFailed"));
+        reportPageError(t("places:photos.deleteFailed"));
       }
     },
-    [onDelete, context, addToast, t]
+    [onDelete, context, t]
   );
 
   /**
@@ -130,10 +137,10 @@ export function PhotoStrip<T extends StripPhoto>({
         setRows((prev) => prev.map((p) => (p.id === photoId ? saved : p)));
       } catch (err: unknown) {
         logger.error({ err, context }, "PhotoStrip: caption failed");
-        addToast("error", t("places:photos.captionFailed"));
+        reportPageError(t("places:photos.captionFailed"));
       }
     },
-    [onCaption, context, rows, addToast, t]
+    [onCaption, context, rows, t]
   );
 
   const merge = useCallback((photos: T[]): void => {
@@ -146,6 +153,7 @@ export function PhotoStrip<T extends StripPhoto>({
 
   return (
     <>
+      {viewer.viewer}
       <div className="mt-2 flex flex-wrap items-end gap-2">
         {rows.map((photo) => (
           <span
@@ -153,20 +161,34 @@ export function PhotoStrip<T extends StripPhoto>({
             style={{ display: "inline-flex", flexDirection: "column", gap: 2, width: 64 }}
           >
             <span style={{ position: "relative", display: "inline-block" }}>
-              <img
-                src={photo.url}
-                alt={photo.caption ?? t("places:photos.alt")}
-                width={64}
-                height={64}
-                style={{
-                  width: 64,
-                  height: 64,
-                  objectFit: "cover",
-                  borderRadius: 6,
-                  border: "1px solid var(--color-border)",
-                  display: "block",
-                }}
-              />
+              <EnlargeButton
+                onOpen={() =>
+                  viewer.open(
+                    rows.map((p) => ({
+                      id: p.id,
+                      url: largeUrl(p.url),
+                      caption: p.caption,
+                      source: sourceOf(p.provider),
+                    })),
+                    rows.findIndex((p) => p.id === photo.id)
+                  )
+                }
+              >
+                <img
+                  src={photo.url}
+                  alt={photo.caption ?? t("places:photos.alt")}
+                  width={64}
+                  height={64}
+                  style={{
+                    width: 64,
+                    height: 64,
+                    objectFit: "cover",
+                    borderRadius: 6,
+                    border: "1px solid var(--color-border)",
+                    display: "block",
+                  }}
+                />
+              </EnlargeButton>
               <button
                 type="button"
                 onClick={() => void handleDelete(photo.id)}
@@ -186,7 +208,7 @@ export function PhotoStrip<T extends StripPhoto>({
                   cursor: "pointer",
                 }}
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </span>
 
@@ -252,11 +274,7 @@ export function PhotoStrip<T extends StripPhoto>({
           />
         </label>
       </div>
-      {uploadError && (
-        <p role="alert" className="mt-1 text-xs" style={{ color: "var(--color-danger)" }}>
-          {uploadError}
-        </p>
-      )}
+      {uploadError && <InlineError className="mt-1">{uploadError}</InlineError>}
       {footer?.(merge, drop)}
     </>
   );

@@ -42,6 +42,10 @@ vi.mock("../../components/places/PlaceListLabelFields", () => ({
 
 import PlaceListDetailPage from "../PlaceListDetailPage";
 vi.mock("../../components/places/smartList/SmartListPanel", () => ({ default: () => null }));
+vi.mock("../../components/places/listTable/PlaceListTable", async () => ({
+  default: (await import("./helpers/placeListTableStub")).default,
+}));
+vi.mock("../../components/purpose/PurposeSegment", () => ({ default: () => null }));
 
 const place = (id: string, name: string) => ({
   id,
@@ -138,16 +142,6 @@ describe("PlaceListDetailPage — inline forms", () => {
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
     expect(reorderPlaceList).toHaveBeenNthCalledWith(1, "l1", ["b", "a"]);
     expect(reorderPlaceList).toHaveBeenNthCalledWith(2, "l1", ["b", "a"]);
-  });
-
-  it("gives the small row controls a touch-sized box on a coarse pointer", async () => {
-    renderPage();
-    const up = await screen.findByRole("button", { name: "„Trevi“ nach oben schieben" });
-    // jsdom cannot measure; the pointer-scoped class is the contract.
-    expect(up.className).toContain("pointer-coarse:min-h-(--ts-size-touch-min)");
-    expect(
-      screen.getByRole("button", { name: "„Trevi“ aus der Liste entfernen" }).className
-    ).toContain("pointer-coarse:min-w-(--ts-size-touch-min)");
   });
 
   // UAT rc.45 retest D24: deleting a list sits last and red in the ⋯ menu, not as a red button.

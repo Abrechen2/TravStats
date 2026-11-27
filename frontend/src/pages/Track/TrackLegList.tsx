@@ -11,10 +11,12 @@ import {
 } from "../../lib/api/travtrackLegs";
 import { logger } from "../../lib/logger";
 import TrackStopCoverage from "./map/TrackStopCoverage";
+import StopEvidenceBadge from "../../components/dawarich/StopEvidenceBadge";
 import TrackStopPlace from "./map/TrackStopPlace";
 import { durationText, legModeLabel, makeNumber, spanText } from "./map/trackLegFormat";
 import type { TrackSelection } from "./map/trackLegs";
 import { TRACK_COLOR } from "./map/trackMapLayers";
+import InlineError from "../../components/ui/InlineError";
 
 /**
  * The day's journeys between its dwells (spec 2026-11-03-travtrack-legs, W1):
@@ -134,6 +136,7 @@ export default function TrackLegList({
                 <div style={{ padding: "0 8px 4px" }}>
                   <TrackStopCoverage stop={row.stop} zone={zone} />
                   <TrackStopPlace stop={row.stop} onChanged={onStopPlaceChanged} />
+                  <StopEvidenceBadge view={row.stop.evidence ?? null} />
                 </div>
               </li>
             );
@@ -163,11 +166,7 @@ export default function TrackLegList({
           );
         })}
       </ol>
-      {restoreFailure && (
-        <p className="t-caption" role="alert" style={{ color: token("bad") }}>
-          {t(restoreFailure)}
-        </p>
-      )}
+      {restoreFailure && <InlineError>{t(restoreFailure)}</InlineError>}
     </section>
   );
 }

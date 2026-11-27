@@ -4,7 +4,7 @@ import { token } from "../../../components/ui/tokens";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { FlightSample, TravTrackPhoto } from "../../../lib/api/travtrackViews";
-import { formatDate, formatTime } from "../../../lib/displayFormat";
+import { formatDate, formatTime } from "../../../lib/format";
 import { TRACK_COLOR } from "../map/trackMapLayers";
 import { altitudeAt, flightLevel, profileFrame, profilePaths, xAt, yAt } from "./altitudeProfile";
 import {

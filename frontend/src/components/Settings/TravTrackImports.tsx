@@ -2,21 +2,29 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, JSX } from "react";
 import Button from "../ui/Button";
 import { token } from "../ui/tokens";
+import { JumpControl } from "../ui/settings";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
-import { formatDateTime } from "../../lib/displayFormat";
+import { formatDateTime } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import {
   importErrorKey,
+  RESUMABLE_IMPORT_STATUSES,
   storedImportErrorKey,
   travTrackImportsApi,
   type TravTrackImport,
+  type TravTrackImportOutcome,
   type TravTrackImportReport,
 } from "../../lib/api/travtrackImports";
+import InfoLine from "../ui/InfoLine";
+import InlineError from "../ui/InlineError";
 
 const NS = "track:imports";
 
 type Status = { tone: "ok" | "bad"; text: string } | null;
+
+/** While an import runs, the list (with the row's growing report) is read again this often. */
+const LIST_REFRESH_MS = 5_000;
 
 /**
  * GPX files into TravTrack (TravTrack plan E8), inside the TravTrack settings
@@ -31,6 +39,8 @@ export default function TravTrackImports({
   canDelete,
   version = 0,
   onChanged,
+  bare = false,
+  jump,
 }: {
   canImport: boolean;
   canDelete: boolean;
@@ -38,10 +48,18 @@ export default function TravTrackImports({
   version?: number;
   /** The stored positions changed: the card reloads its summary. */
   onChanged: () => void;
+  /** Embedded under another heading (the Import page's Timeline tile): no title or intro of its own. */
+  bare?: boolean;
+  /** A pointer to the other place this import lives (Settings ↔ Import page). */
+  jump?: { label: string; onJump: () => void };
 }): JSX.Element {
   const { t } = useTranslation(["track"]);
   const { confirmDelete, confirmDialog } = useConfirmDialog();
   const input = useRef<HTMLInputElement>(null);
+  const resumeInput = useRef<HTMLInputElement>(null);
+  /** The stopped import the next picked file resumes. */
+  const resumeOf = useRef<TravTrackImport | null>(null);
+  const lastRefresh = useRef(0);
   const [imports, setImports] = useState<TravTrackImport[]>([]);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<Status>(null);
@@ -63,7 +81,10 @@ export default function TravTrackImports({
 
   const describe = (r: TravTrackImportReport) =>
     [
-      t(`${NS}.report.stored`, { count: r.stored }),
+      // Nothing new stored is said as such, not as "0 gespeichert" next to progress.
+      r.stored === 0 || r.noNewPoints
+        ? t(`${NS}.report.noNew`)
+        : t(`${NS}.report.stored`, { count: r.stored }),
       r.duplicate > 0 && t(`${NS}.report.duplicate`, { count: r.duplicate }),
       r.dropped.privacy_zone > 0 && t(`${NS}.report.zone`, { count: r.dropped.privacy_zone }),
       r.dropped.deleted_range > 0 && t(`${NS}.report.deleted`, { count: r.dropped.deleted_range }),
@@ -74,20 +95,34 @@ export default function TravTrackImports({
       .filter(Boolean)
       .join(" · ");
 
-  const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
+  const outcomeText = (outcome: TravTrackImportOutcome) => {
+    if (outcome.status === "cancelled") return t(`${NS}.cancelled`);
+    if (outcome.status === "partial") {
+      return t(`${NS}.partial`, { summary: describe(outcome.report) });
+    }
+    return describe(outcome.report);
+  };
+
+  const onFile = async (e: ChangeEvent<HTMLInputElement>, resuming: TravTrackImport | null) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     setBusy(true);
     setStatus({ tone: "ok", text: t(`${NS}.running`, { name: file.name }) });
+    const onProgress = (percent: number) => {
+      setStatus({ tone: "ok", text: t(`${NS}.runningPercent`, { name: file.name, percent }) });
+      // The row's report grows with every stored batch: read, stored, duplicates.
+      const now = performance.now();
+      if (now - lastRefresh.current >= LIST_REFRESH_MS) {
+        lastRefresh.current = now;
+        void load();
+      }
+    };
     try {
-      const outcome = await travTrackImportsApi.importGpx(file, (percent) =>
-        setStatus({ tone: "ok", text: t(`${NS}.runningPercent`, { name: file.name, percent }) })
-      );
-      setStatus({
-        tone: "ok",
-        text: outcome.status === "cancelled" ? t(`${NS}.cancelled`) : describe(outcome.report),
-      });
+      const outcome = resuming
+        ? await travTrackImportsApi.resume(resuming.id, file, onProgress)
+        : await travTrackImportsApi.importGpx(file, onProgress);
+      setStatus({ tone: outcome.status === "partial" ? "bad" : "ok", text: outcomeText(outcome) });
     } catch (err) {
       logger.warn("TravTrack imports: import failed", err);
       setStatus({ tone: "bad", text: t(importErrorKey(err)) });
@@ -118,9 +153,29 @@ export default function TravTrackImports({
     }
   };
 
+  const canResume = (row: TravTrackImport) =>
+    canImport && row.kind === "gpx" && RESUMABLE_IMPORT_STATUSES.includes(row.status);
+
+  const startResume = (row: TravTrackImport) => {
+    resumeOf.current = row;
+    resumeInput.current?.click();
+  };
+
   const rowText = (row: TravTrackImport) => {
-    if (row.status === "failed") return t(storedImportErrorKey(row.report?.error));
-    if (row.status === "running") return t(`${NS}.status.running`);
+    // What was stored so far stays readable on a stopped or running import.
+    const sofar = row.report && row.report.read > 0 ? describe(row.report) : null;
+    if (row.status === "failed") {
+      return [t(storedImportErrorKey(row.report?.error)), sofar && row.report!.stored > 0 && sofar]
+        .filter(Boolean)
+        .join(" · ");
+    }
+    if (row.status === "running") {
+      const state = row.report?.queued ? `${NS}.status.queued` : `${NS}.status.running`;
+      return [t(state), sofar].filter(Boolean).join(" · ");
+    }
+    if (row.status === "partial") {
+      return [t(`${NS}.status.partial`), sofar].filter(Boolean).join(" · ");
+    }
     if (row.status === "interrupted") {
       return t(row.kind === "dawarich" ? `${NS}.status.paused` : `${NS}.status.interrupted`);
     }
@@ -146,11 +201,16 @@ export default function TravTrackImports({
 
   return (
     <>
-      <h3 className="t-card-title" style={{ marginTop: "var(--ts-space-lg)" }}>
-        {t(`${NS}.title`)}
-      </h3>
-      <p className="t-caption">{t(`${NS}.intro`)}</p>
-      <p className="t-caption">{t(`${NS}.googleHint`)}</p>
+      {bare ? null : (
+        <>
+          <h3 className="t-card-title" style={{ marginTop: "var(--ts-space-lg)" }}>
+            {t(`${NS}.title`)}
+          </h3>
+          <InfoLine text={t(`${NS}.intro`)} more={t(`${NS}.introMore`)} />
+          <InfoLine text={t(`${NS}.googleHint`)} more={t(`${NS}.googleHintMore`)} />
+        </>
+      )}
+      {jump ? <JumpControl label={jump.label} onJump={jump.onJump} /> : null}
       {canImport && (
         <div>
           {/* The button is the control; the hidden input only opens the picker. A second,
@@ -164,7 +224,22 @@ export default function TravTrackImports({
             accept=".gpx,.json,.geojson,.kml,.tcx,application/gpx+xml,application/json,application/geo+json,application/vnd.google-earth.kml+xml"
             className="sr-only"
             disabled={busy}
-            onChange={(e) => void onFile(e)}
+            onChange={(e) => void onFile(e, null)}
+          />
+          <input
+            ref={resumeInput}
+            id="travtrack-gpx-resume-file"
+            type="file"
+            aria-hidden="true"
+            tabIndex={-1}
+            accept=".gpx,.json,.geojson,.kml,.tcx,application/gpx+xml,application/json,application/geo+json,application/vnd.google-earth.kml+xml"
+            className="sr-only"
+            disabled={busy}
+            onChange={(e) => {
+              const row = resumeOf.current;
+              resumeOf.current = null;
+              void onFile(e, row);
+            }}
           />
           <Button disabled={busy} onClick={() => input.current?.click()}>
             {t(`${NS}.choose`)}
@@ -193,20 +268,23 @@ export default function TravTrackImports({
                   </span>
                 )}
               </span>
-              {canDelete && row.status !== "cancelled" && (
-                <Button disabled={busy} onClick={() => void remove(row)}>
-                  {t(`${NS}.delete`)}
-                </Button>
-              )}
+              <span className="flex" style={{ gap: "var(--ts-space-sm)" }}>
+                {canResume(row) && (
+                  <Button disabled={busy} onClick={() => startResume(row)}>
+                    {t(`${NS}.resume`)}
+                  </Button>
+                )}
+                {canDelete && row.status !== "cancelled" && (
+                  <Button disabled={busy} onClick={() => void remove(row)}>
+                    {t(`${NS}.delete`)}
+                  </Button>
+                )}
+              </span>
             </li>
           ))}
         </ul>
       )}
-      {loadError && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
-          {t(loadError)}
-        </p>
-      )}
+      {loadError && <InlineError>{t(loadError)}</InlineError>}
       {status && (
         <p
           className="t-body"

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { pendingUpdatesApi } from "../lib/api";
@@ -9,9 +9,11 @@ import { provenanceApi } from "../lib/api/provenance";
 import { useSuggestionSwitchesStore } from "../store/suggestionSwitchesStore";
 import { sharingApi } from "../lib/api/sharing";
 import { useTranslation } from "../hooks/useTranslation";
+import { useVisiblePolling } from "../hooks/useVisiblePolling";
 import { logger } from "../lib/logger";
 import DiagnosticExportModal from "./DiagnosticExportModal";
 import UpdateBadge from "./UpdateBadge";
+import { useReceivedTripsStore } from "../store/receivedTripsStore";
 import NavDropdown from "./Nav/NavDropdown";
 import MoreMenu from "./Nav/MoreMenu";
 import UserMenu from "./Nav/UserMenu";
@@ -56,9 +58,21 @@ function PrimaryLink({
       }}
     >
       {node.label}
+      {node.dot && (
+        <span
+          aria-hidden="true"
+          data-testid={`nav-dot-${node.id}`}
+          className="ml-1 inline-block h-2 w-2 rounded-full"
+          style={{ background: "var(--ts-warn)" }}
+        />
+      )}
     </Link>
   );
 }
+
+/** The inbox counters, while the tab is visible; doubling after a failed round. */
+const INBOX_POLL_MS = 30_000;
+const INBOX_POLL_MAX_MS = 5 * 60_000;
 
 /**
  * The app header, round 4 (decision E1).
@@ -99,53 +113,57 @@ export default function NavigationBar(): JSX.Element {
   const [provenanceCount, setProvenanceCount] = useState(0);
   const [sharingCount, setSharingCount] = useState(0);
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
+  const loadReceivedTrips = useReceivedTripsStore((s) => s.load);
+  const tripsWaiting = useReceivedTripsStore((s) => s.items.length > 0);
   // Switched off (forgejo#306), the kind is not counted at all. A dependency of
   // the effect below, so a flip re-counts at once instead of at the next poll.
   const tripSuggestionsOn = useSuggestionSwitchesStore((s) => s.trips);
 
-  useEffect(() => {
-    if (user) {
-      // Counted separately and awaited separately: one endpoint failing must
-      // not zero the other half of the badge.
-      const loadInboxCounts = async () => {
-        try {
-          const data = await pendingUpdatesApi.getAll({ status: "pending" });
-          setPendingUpdatesCount(data.count || 0);
-        } catch {
-          logger.warn("Failed to load pending updates count");
-        }
-        try {
-          const data = await dataQualityFlagsApi.getAll({ status: "open" });
-          setOpenFlagCount(data.count || 0);
-        } catch {
-          logger.warn("Failed to load data-quality flag count");
-        }
-        try {
-          setTripSuggestionCount(tripSuggestionsOn ? await tripSuggestionsApi.count() : 0);
-        } catch {
-          logger.warn("Failed to load trip suggestion count");
-        }
-        try {
-          setDocumentLinkCount(await documentLinkSuggestionsApi.count());
-        } catch {
-          logger.warn("Failed to load document link suggestion count");
-        }
-        try {
-          setProvenanceCount(await provenanceApi.count());
-        } catch {
-          logger.warn("Failed to load memory/record notice count");
-        }
-        try {
-          setSharingCount(await sharingApi.inboxCount());
-        } catch {
-          logger.warn("Failed to load sharing inbox count");
-        }
-      };
-      loadInboxCounts();
-      const interval = setInterval(loadInboxCounts, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [user, tripSuggestionsOn]);
+  // Counted separately and awaited separately: one endpoint failing must not
+  // zero the other half of the badge. A round counts as failed only when every
+  // counter failed; then the poll backs off (useVisiblePolling). Hidden tabs
+  // do not poll at all (perf audit 2026-11, item 11).
+  const loadInboxCounts = async (): Promise<boolean> => {
+    const attempt = async (load: () => Promise<void>, what: string): Promise<boolean> => {
+      try {
+        await load();
+        return true;
+      } catch {
+        logger.warn(`Failed to load ${what}`);
+        return false;
+      }
+    };
+    const results = [
+      await attempt(async () => {
+        const data = await pendingUpdatesApi.getAll({ status: "pending" });
+        setPendingUpdatesCount(data.count || 0);
+      }, "pending updates count"),
+      await attempt(async () => {
+        const data = await dataQualityFlagsApi.getAll({ status: "open" });
+        setOpenFlagCount(data.count || 0);
+      }, "data-quality flag count"),
+      await attempt(async () => {
+        setTripSuggestionCount(tripSuggestionsOn ? await tripSuggestionsApi.count() : 0);
+      }, "trip suggestion count"),
+      await attempt(async () => {
+        setDocumentLinkCount(await documentLinkSuggestionsApi.count());
+      }, "document link suggestion count"),
+      await attempt(async () => {
+        setProvenanceCount(await provenanceApi.count());
+      }, "memory/record notice count"),
+      await attempt(async () => {
+        setSharingCount(await sharingApi.inboxCount());
+      }, "sharing inbox count"),
+    ];
+    // Logs its own failure; the dot and the dashboard banner read it.
+    await loadReceivedTrips();
+    return results.some(Boolean);
+  };
+  useVisiblePolling(
+    loadInboxCounts,
+    { intervalMs: INBOX_POLL_MS, maxIntervalMs: INBOX_POLL_MAX_MS, enabled: Boolean(user) },
+    [user, tripSuggestionsOn, loadReceivedTrips]
+  );
 
   const handleLogout = async (): Promise<void> => {
     await logout();
@@ -165,7 +183,9 @@ export default function NavigationBar(): JSX.Element {
   // "Mehr" — the way back to the rest is the Stats word in the logo.
   const areaItems: NavLeaf[] | null =
     area === "track" ? trackMenu(t) : area === "plan" ? planMenu(t, isAdmin) : null;
-  const row: NavNode[] = areaItems ?? primary;
+  const row: NavNode[] = (areaItems ?? primary).map((node) =>
+    node.kind === "leaf" && node.id === "trips" && tripsWaiting ? { ...node, dot: true } : node
+  );
   const areaTitle = area === "track" ? t("track:title") : t("travplan:title");
   const inboxActive = isPathActive("/pending-updates", location.pathname);
   const inboxLabel =

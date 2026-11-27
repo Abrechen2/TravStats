@@ -36,6 +36,7 @@ export interface RoadtripSummary extends RoadtripNights {
   kindAssignedAutomatically: boolean;
   /** Private or business; null is unknown (never read as private). */
   purpose?: string | null;
+  purposeKey?: string | null;
   startDate: string | null;
   endDate: string | null;
   distanceKm: number;
@@ -107,7 +108,7 @@ export interface RoadtripDayTour {
 }
 
 /** What a leg's kilometres were measured on. */
-export type RoadtripDistanceSource = "straight" | "drawn" | "routed" | "track";
+export type RoadtripDistanceSource = "straight" | "drawn" | "routed" | "track" | "recorded";
 
 /**
  * Road kilometres by where each stretch stands — `recorded` = driven (its
@@ -133,6 +134,8 @@ export interface RoadtripDetail {
   legs: TourLeg[];
   tours: RoadtripDayTour[];
   routingAvailable: boolean;
+  /** The routing provider refuses requests right now (#411); absent on an older server. */
+  routingFailing?: RoutingFailing | null;
   /**
    * Driven against planned, by the server's timeline rule (forgejo#179).
    * Optional only for an older server; the page then claims nothing driven.
@@ -174,6 +177,8 @@ export interface CreateRoadtripInput {
   tripId?: string | null;
   startOdometerKm?: number;
   tags?: string[];
+  /** "Als Roadtrip übernehmen": the TravTrack days it was taken from. */
+  trackSpan?: { fromDay: string; toDay: string } | null;
 }
 
 /** A station's measured weather (`GET /roadtrips/:id/stations/:stationId/weather`). */
@@ -188,4 +193,36 @@ export interface StationWeather {
   lon: number;
   source: "open-meteo";
   fetchedAt: string;
+}
+
+/** A routing provider that refuses this instance right now (#411). */
+export interface RoutingFailing {
+  providerId: "openrouteservice" | "graphhopper" | "custom";
+  reason: string;
+}
+
+/** One photo of the roadtrip's "Fotos" tab (`GET /roadtrips/:id/photos`). */
+export interface RoadtripPhoto {
+  key: string;
+  /** `window`: only fits the roadtrip's days and route; not linked to anything yet. */
+  kind: "linked" | "window";
+  source: "upload" | "immich" | "photoprism";
+  via: "station" | "stay" | "visit" | "upload";
+  url: string;
+  caption: string | null;
+  takenAt: string | null;
+  lat: number | null;
+  lon: number | null;
+  day: string | null;
+  stationId: string | null;
+  stationTitle: string | null;
+  tripId: string | null;
+  tripPhotoId: string | null;
+}
+
+export interface RoadtripPhotos {
+  photos: RoadtripPhoto[];
+  span: { from: string; to: string } | null;
+  stations: Array<{ id: string; title: string; day: string | null }>;
+  truncated: boolean;
 }

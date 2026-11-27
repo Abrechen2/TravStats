@@ -29,6 +29,7 @@ import {
   unfiledDocumentDtoSchema,
   unfiledDocumentsResponseSchema,
   updateDocumentSchema,
+  linkCandidatesQuerySchema,
 } from "../../../schemas/document";
 import {
   travellerFactsBodySchema,
@@ -376,9 +377,10 @@ registry.registerPath({
   summary: "Entries the document may still be linked to",
   description:
     "The account's own entries it is not linked to yet — those sharing a trip with one of its " +
-    "links first — capped per type; a picker filters the rest by text.",
+    "links first. Without `q` capped per type (the most recent); with `q` the database searches the account's entries by the text of their label fields " +
+    "(every term must match; a year, month or date term matches the entry's date), so an older entry is found.",
   tags,
-  request: { params: idParams },
+  request: { params: idParams, query: linkCandidatesQuerySchema },
   responses: {
     200: { description: "Candidates", content: json(envelope(linkCandidatesSchema)) },
     404: { description: "Not your document (`DOCUMENT_NOT_FOUND`)", content: errorContent },

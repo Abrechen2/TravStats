@@ -1,9 +1,10 @@
+import { useYearCounts } from "../lib/stats/useYearCounts";
+import YearPicker from "../components/ui/YearPicker";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import AppShell from "../components/ui/AppShell";
 import PageHeader from "../components/ui/PageHeader";
 import ShareLinkButton from "../components/shareLinks/ShareLinkButton";
-import { Select } from "../components/ui/Field";
 import StatCard from "../components/Stats/StatCard";
 import StatsSectionsLoadError from "../components/Stats/StatsSectionsLoadError";
 import EvidencePanel from "../components/evidence/EvidencePanel";
@@ -55,6 +56,7 @@ import WrappedChapterCards, {
 
 export default function WrappedPage(): JSX.Element {
   const { t, i18n } = useTranslation(["stats", "common"]);
+  const yearCounts = useYearCounts().of();
   const { isEnabled } = useEnabledDomains();
   const distanceUnit = useSettingsStore((s) => s.units.distanceUnit);
 
@@ -124,22 +126,22 @@ export default function WrappedPage(): JSX.Element {
 
   const yearPicker =
     wrapped !== null && wrapped.availableYears.length > 1 ? (
-      <label className="flex items-center gap-2 text-sm">
-        <span style={{ color: "var(--text-muted)" }}>{t("stats:wrapped.yearLabel")}</span>
-        <Select
-          value={String(shownYear ?? wrapped.year)}
-          aria-label={t("stats:wrapped.yearLabel")}
-          onChange={(event): void => setYear(Number(event.target.value))}
-        >
-          {/* Only years the server says have something in them — the picker
-              can therefore never lead to an empty story by accident. */}
-          {[...wrapped.availableYears].reverse().map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </Select>
-      </label>
+      // Only years the server says have something in them — the picker
+      // can therefore never lead to an empty story by accident.
+      <YearPicker
+        years={wrapped.availableYears.map((option) => ({
+          year: option,
+          count: yearCounts[option],
+        }))}
+        formatCount={(n): string => t("common:yearPicker.count.events", { count: n })}
+
+        value={shownYear ?? wrapped.year}
+        onChange={(v) => {
+          if (v !== "all") setYear(v);
+        }}
+        allowAll={false}
+        label={t("stats:wrapped.yearLabel")}
+      />
     ) : null;
 
   // The rank is about flying; with flights switched off it has nothing to say.

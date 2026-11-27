@@ -42,8 +42,8 @@ const clientOf = (points: DawarichPoint[]): DawarichClient => ({
 const seoulStop = () => stop(SEOUL, "2026-10-10T14:50:00Z", 30);
 /** ~60 m north of the stop. */
 const NEAR = { lat: SEOUL.lat + 0.00054, lon: SEOUL.lon };
-/** ~400 m north. */
-const FAR = { lat: SEOUL.lat + 0.0036, lon: SEOUL.lon };
+/** ~500 m north — beyond the shared venue radius (400 m, forgejo#439). */
+const FAR = { lat: SEOUL.lat + 0.0045, lon: SEOUL.lon };
 
 let userId: string;
 let cookie: string;
@@ -124,18 +124,28 @@ describe("Dawarich stays already recorded by a visit or a hotel stay", () => {
     expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(0);
   });
 
-  it("compares the visit's real instant, not its wall clock read as UTC", async () => {
-    // A visit at 14:52 Seoul wall time — the stay's UTC digits, nine hours
-    // before it. A naive compare on `visitedAt` would call this the same stop.
+  it("reads the visit's day on its own clock, not its wall clock read as UTC", async () => {
+    // 2026-10-09 23:30 UTC is 08:30 on the 10th in Seoul — a visit the morning
+    // of the stop's local day (forgejo#439: a visit that day covers). A naive
+    // read of the UTC digits would put it on the 9th and keep the stop.
     await visitAt(NEAR, {
-      visitedAt: "2026-10-10T14:52:00Z",
-      visitedAtUtc: "2026-10-10T05:52:00Z",
+      visitedAt: "2026-10-10T08:30:00Z",
+      visitedAtUtc: "2026-10-09T23:30:00Z",
+      visitedPrecision: "minute",
+    });
+    expect(await scan()).toMatchObject({ created: 0, covered: 1 });
+  });
+
+  it("keeps a stop whose only visit nearby was the day before", async () => {
+    await visitAt(NEAR, {
+      visitedAt: "2026-10-09T12:00:00Z",
+      visitedAtUtc: "2026-10-09T03:00:00Z",
       visitedPrecision: "minute",
     });
     expect(await scan()).toMatchObject({ created: 1, covered: 0 });
   });
 
-  it("keeps a stop whose nearby visit is 400 m away", async () => {
+  it("keeps a stop whose nearby visit is 500 m away", async () => {
     await visitAt(FAR, {
       visitedAt: "2026-10-10T23:52:00Z",
       visitedAtUtc: "2026-10-10T14:52:00Z",

@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { z } from "zod";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { boardingPassParseLimiter } from "../middleware/rateLimit";
 import { validateBoardingPassImageBase64 } from "../utils/fileValidation";
 import { getTesseractParser } from "../services/parsers/vision/tesseractParser";
@@ -71,6 +71,7 @@ const parseImageSchema = z
 router.post(
   "/parse-image",
   authenticate,
+  requireWriteScope,
   // Deliberately the SAME bucket as the boarding-pass scanner rather than a
   // second one of its own: both spend a Tesseract worker per request, and what
   // needs limiting is OCR work per user, not per URL. Two independent buckets

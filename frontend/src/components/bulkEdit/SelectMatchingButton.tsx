@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { BULK_SELECT_MAX } from "../../lib/collectPages";
+import InlineError from "../ui/InlineError";
 
 const BAR_BUTTON =
   "rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--bg-surface)] disabled:opacity-50 pointer-coarse:min-h-(--ts-size-touch-min)";
@@ -70,11 +71,7 @@ export default function SelectMatchingButton<Row>({
       >
         {t("bulkEdit:selectMatching", { count: matching.total })}
       </button>
-      {failed && (
-        <span role="alert" className="text-xs text-[var(--danger)]">
-          {t("bulkEdit:selectMatchingFailed")}
-        </span>
-      )}
+      {failed && <InlineError>{t("bulkEdit:selectMatchingFailed")}</InlineError>}
     </>
   );
 }

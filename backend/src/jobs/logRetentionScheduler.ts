@@ -19,6 +19,7 @@ import { enforceLogRetention } from "../services/logRetention";
 import { pruneRouteStores } from "../services/routing/routeStore";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "../services/jobs/heavySlot";
 
 const CRON_EXPRESSION = "45 3 * * *";
 
@@ -41,7 +42,7 @@ export function startLogRetentionScheduler(): void {
   schedulerTask = cron.schedule(
     CRON_EXPRESSION,
     () => {
-      void runLogRetention();
+      void runHeavyJob("logRetention", () => runLogRetention());
     },
     { timezone: schedulerZone("logRetention") }
   );

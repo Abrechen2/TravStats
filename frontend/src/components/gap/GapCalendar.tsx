@@ -1,3 +1,4 @@
+import YearPicker from "../ui/YearPicker";
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -24,6 +25,7 @@ import { appLocale } from "../../lib/units";
 import { daysBetween, formatDayLong } from "../../shared/time/calendar";
 import { todayIn } from "../../shared/time/clock";
 import { TRACK_COLOR } from "../../pages/Track/map/trackMapLayers";
+import InlineError from "../ui/InlineError";
 
 type State =
   { kind: "loading" } | { kind: "failed"; key: string } | { kind: "loaded"; data: GapCalendar };
@@ -131,24 +133,17 @@ export default function GapCalendar({ withTrack }: { withTrack: boolean }): JSX.
     <section className="flex flex-col gap-3" data-testid="gap-calendar">
       <header className="flex flex-wrap items-center gap-3">
         <h2 className="t-card-title">{t("track:gaps.title", { year })}</h2>
-        <label className="flex items-center gap-2 t-caption">
-          {t("track:gaps.year")}
-          <select
+        <span data-testid="gaps-year">
+          <YearPicker
+            years={[...new Set([...years, year])].map((y) => ({ year: y }))}
             value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            data-testid="gaps-year"
-            className="t-body"
-            style={{ minHeight: 44 }}
-          >
-            {[...new Set([...years, year])]
-              .sort((a, b) => b - a)
-              .map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-          </select>
-        </label>
+            onChange={(v) => {
+              if (v !== "all") setYear(v);
+            }}
+            allowAll={false}
+            label={t("track:gaps.year")}
+          />
+        </span>
       </header>
       <p className="t-caption">{t("track:gaps.intro")}</p>
       {!withTrack && (
@@ -159,9 +154,7 @@ export default function GapCalendar({ withTrack }: { withTrack: boolean }): JSX.
       {state.kind === "loading" && <p className="t-caption">{t("track:gaps.loading")}</p>}
       {state.kind === "failed" && (
         <div role="alert" className="flex flex-col gap-2">
-          <p className="t-body" style={{ color: token("bad") }}>
-            {t(state.key)}
-          </p>
+          <InlineError announce={false}>{t(state.key)}</InlineError>
           <Button variant="secondary" onClick={() => setReload((n) => n + 1)}>
             {t("track:gaps.retry")}
           </Button>

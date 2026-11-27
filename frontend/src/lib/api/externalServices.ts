@@ -1,3 +1,4 @@
+import { announceRecoveryKeyStatusChange } from "./recoveryKey";
 import { api } from "./client";
 
 /**
@@ -194,6 +195,8 @@ export const externalServicesApi = {
   },
   async adminUpdate(id: string, body: AdminServiceUpdate): Promise<void> {
     await api.put(`${admin}/${encodeURIComponent(id)}`, body);
+    // A WebDAV target can make the recovery-key confirmation due (RecoveryKeyGate).
+    if (id === "webdav") announceRecoveryKeyStatusChange();
   },
   async adminSetConnection(id: ConnectionId, allowed: boolean): Promise<void> {
     await api.put(`${admin}/connections/${id}`, { allowed });

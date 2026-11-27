@@ -80,7 +80,8 @@ app.use(
         fontSrc: ["'self'", "data:"], // Fonts from same origin and data URIs
         objectSrc: ["'none'"], // Disallow plugins
         mediaSrc: ["'self'"],
-        frameSrc: ["'none'"], // Disallow iframes
+        // Same-origin frames only: the inbox previews a kept PDF in one (frame-ancestors stays 'self').
+        frameSrc: ["'self'"],
         upgradeInsecureRequests: process.env.NODE_ENV === "production" ? [] : null, // Upgrade HTTP to HTTPS in production
       },
     },
@@ -358,6 +359,9 @@ if (process.env.NODE_ENV !== "test") {
       .catch((error: unknown) =>
         logger.warn({ operation: "server_start_country_index_warm_error", error })
       );
+
+    // A dead process's half-done key swap and import files (services/crashLeftovers.ts).
+    await (await import("./services/crashLeftovers")).reportCrashLeftovers();
 
     // The instance's upgrade history for the readiness page (never throws).
     void import("./services/readiness/state").then(({ recordRunningVersion }) =>

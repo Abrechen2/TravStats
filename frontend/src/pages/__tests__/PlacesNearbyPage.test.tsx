@@ -131,9 +131,9 @@ describe("PlacesNearbyPage", () => {
       "Lutherhaus",
       "Bachhaus",
     ]);
-    expect(items[0]).toHaveTextContent("✓ Besucht");
-    expect(items[1]).toHaveTextContent("☆ Gemerkt");
-    expect(items[2]).toHaveTextContent("◷ Geplant");
+    expect(items[0]).toHaveTextContent("Besucht");
+    expect(items[1]).toHaveTextContent("Gemerkt");
+    expect(items[2]).toHaveTextContent("Geplant");
     expect(items[0]).toHaveTextContent("111 m");
     expect(screen.getByText("3 Orte bis 5 km um Hotel am Markt")).toBeInTheDocument();
     // A lodging is a shareable start.

@@ -1,4 +1,3 @@
-import { appLocale } from "../../lib/units";
 import type { TravelDocument } from "../../lib/api/documents";
 import type {
   PlanCollection,
@@ -53,6 +52,4 @@ export function calendarDays(start: string | null, end: string | null): string[]
 
 export const entryRecord = (row: object) => row as unknown as Record<string, unknown>;
 
-export function formatMoney(n: number | null, currency: string): string {
-  return n === null ? "—" : n.toLocaleString(appLocale(), { style: "currency", currency });
-}
+export { formatMoney } from "../../lib/format";

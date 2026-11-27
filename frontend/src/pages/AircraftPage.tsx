@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatNumber } from "../lib/units";
 import { useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
@@ -6,11 +6,15 @@ import { statsApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import type { AircraftProfileResponse } from "../types";
-import { formatDate as formatUserDate } from "../lib/displayFormat";
+import { formatDate } from "../lib/format";
 import BackLink from "../components/navigation/BackLink";
+import { Table, TableRow, type TableColumn } from "../components/ui/Table";
+import { useSort } from "../hooks/useSort";
 
-function formatDate(iso: string | null, _locale: string): string {
-  return iso ? formatUserDate(iso) || "—" : "—";
+type FlightSortKey = "date" | "flightNumber" | "route" | "distance";
+
+function dateOrDash(iso: string | null): string {
+  return (iso && formatDate(iso)) || "—";
 }
 
 export default function AircraftPage(): JSX.Element {
@@ -19,6 +23,27 @@ export default function AircraftPage(): JSX.Element {
   const [profile, setProfile] = useState<AircraftProfileResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  const flights = profile?.flights;
+  const accessors = useMemo(
+    () => ({
+      date: (f: AircraftProfileResponse["flights"][number]) => f.departureTime,
+      flightNumber: (f: AircraftProfileResponse["flights"][number]) => f.flightNumber,
+      route: (f: AircraftProfileResponse["flights"][number]) =>
+        f.depIata && f.arrIata ? `${f.depIata} ${f.arrIata}` : null,
+      distance: (f: AircraftProfileResponse["flights"][number]) => f.distanceKm,
+    }),
+    []
+  );
+  const sort = useSort<AircraftProfileResponse["flights"][number], FlightSortKey>({
+    tableKey: "aircraft-flights",
+    rows: flights ?? [],
+    accessors,
+    defaultBy: "date",
+    defaultOrder: "desc",
+    descendingFirst: ["date", "distance"],
+    locale: i18n.language,
+  });
 
   useEffect(() => {
     if (!registration) return;
@@ -77,41 +102,14 @@ export default function AircraftPage(): JSX.Element {
                 />
                 <Stat
                   label={t("aircraft:stats.firstSeen")}
-                  value={formatDate(profile.firstFlightDate, i18n.language)}
+                  value={dateOrDash(profile.firstFlightDate)}
                 />
               </div>
             </div>
 
             <div className="bg-(--bg-elevated) rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-semibold mb-4">{t("aircraft:flights.title")}</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-(--text-muted) border-b border-(--color-border)">
-                      <th className="py-2 pr-4">{t("aircraft:flights.date")}</th>
-                      <th className="py-2 pr-4">{t("aircraft:flights.flightNumber")}</th>
-                      <th className="py-2 pr-4">{t("aircraft:flights.route")}</th>
-                      <th className="py-2 pr-4 text-right">{t("aircraft:flights.distance")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {profile.flights.map((flight) => (
-                      <tr key={flight.id} className="border-b border-(--color-border)">
-                        <td className="py-2 pr-4">
-                          {formatDate(flight.departureTime, i18n.language)}
-                        </td>
-                        <td className="py-2 pr-4 font-mono">{flight.flightNumber || "—"}</td>
-                        <td className="py-2 pr-4">
-                          {flight.depIata || "?"} → {flight.arrIata || "?"}
-                        </td>
-                        <td className="py-2 pr-4 text-right">
-                          {formatNumber(Math.round(flight.distanceKm), undefined, i18n.language)} km
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <FlightsTable flights={sort.rows} sort={sort} />
             </div>
           </>
         )}
@@ -126,5 +124,60 @@ function Stat({ label, value }: { label: string; value: string }): JSX.Element {
       <div className="text-xs uppercase tracking-wider text-gray-500">{label}</div>
       <div className="text-2xl font-semibold mt-1">{value}</div>
     </div>
+  );
+}
+
+function FlightsTable({
+  flights,
+  sort,
+}: {
+  flights: AircraftProfileResponse["flights"];
+  sort: ReturnType<typeof useSort<AircraftProfileResponse["flights"][number], FlightSortKey>>;
+}): JSX.Element {
+  const { t, i18n } = useTranslation(["aircraft", "common"]);
+  const column = (key: FlightSortKey, label: string): Pick<TableColumn, "label" | "sort"> => ({
+    label,
+    sort: sort.columnSort(key, t("common:ui.sortBy", { column: label })),
+  });
+  const columns: TableColumn[] = [
+    { key: "date", min: 110, onNarrow: "subtitle", ...column("date", t("aircraft:flights.date")) },
+    {
+      key: "flightNumber",
+      min: 110,
+      mono: true,
+      onNarrow: "title",
+      ...column("flightNumber", t("aircraft:flights.flightNumber")),
+    },
+    {
+      key: "route",
+      min: 130,
+      grow: 1,
+      onNarrow: "subtitle",
+      ...column("route", t("aircraft:flights.route")),
+    },
+    {
+      key: "distance",
+      min: 100,
+      align: "end",
+      onNarrow: "trailing",
+      ...column("distance", t("aircraft:flights.distance")),
+    },
+  ];
+  return (
+    <Table columns={columns} label={t("aircraft:flights.title")}>
+      {flights.map((flight) => (
+        <TableRow
+          key={flight.id}
+          columns={columns}
+          dense
+          cells={[
+            dateOrDash(flight.departureTime),
+            flight.flightNumber || "—",
+            `${flight.depIata || "?"} → ${flight.arrIata || "?"}`,
+            `${formatNumber(Math.round(flight.distanceKm), undefined, i18n.language)} km`,
+          ]}
+        />
+      ))}
+    </Table>
   );
 }

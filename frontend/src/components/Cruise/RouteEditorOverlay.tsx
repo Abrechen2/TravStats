@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { Marker } from "react-map-gl/maplibre";
 import type { JSX } from "react";
 import type { LonLat, RouteEditorState } from "./routeEditorState";
@@ -146,7 +147,7 @@ export function RouteEditorOverlay({
                       : " pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100")
                   }
                 >
-                  ✕
+                  <Icon name="x" size={16} />
                 </button>
               )}
             </div>

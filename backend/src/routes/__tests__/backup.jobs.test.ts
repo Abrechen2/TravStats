@@ -123,6 +123,80 @@ describe("backup and restore answer with a job, and the job carries the real out
     });
   });
 
+  it("two restores sent at the same moment: exactly one starts, the other is refused", async () => {
+    const send = (cookie: string) =>
+      request(app)
+        .post(`/api/v1/backup/${backupId}/restore`)
+        .set("Cookie", cookie)
+        .send({ scope: "full", createBackupBefore: false });
+    // Hold the first request inside the route's archive lookup until the second
+    // has reached it too — both are then past the early running-job check, the
+    // window a check-then-await-then-start route leaves open.
+    const service = jest.requireMock("../../services/backupService") as {
+      getBackup: (id: string) => Promise<unknown>;
+    };
+    const realGetBackup = service.getBackup;
+    let arrived = 0;
+    let bothArrived!: () => void;
+    const gate = new Promise<void>((resolve) => (bothArrived = resolve));
+    const spy = jest.spyOn(service, "getBackup").mockImplementation(async (id: string) => {
+      arrived += 1;
+      if (arrived === 2) bothArrived();
+      await gate;
+      return realGetBackup(id);
+    });
+    // Two admins, so the per-account restore limiter is not what refuses one.
+    const [a, b] = await Promise.all([send(adminCookie), send(otherCookie)]).finally(() =>
+      spy.mockRestore()
+    );
+    expect([a.status, b.status].sort()).toEqual([202, 409]);
+    releaseRestore!();
+    await settleAllJobs();
+    // Give the hourly restore budget back to the tests below.
+    const { backupRestoreLimiter } = await import("../../middleware/rateLimit");
+    await backupRestoreLimiter.resetKey(`user:${adminId}`);
+    await backupRestoreLimiter.resetKey(`user:${otherAdminId}`);
+  });
+
+  it("a restore that starts while a backup writes its row wins; the backup is refused and leaves no row", async () => {
+    // Hold the backup inside its row transaction — past its own running-job check — until the
+    // restore has started: the window a check-then-await-then-start route leaves open.
+    const realTransaction = prisma.$transaction.bind(prisma) as (...a: unknown[]) => unknown;
+    let entered!: () => void;
+    const inTransaction = new Promise<void>((resolve) => (entered = resolve));
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const spy = jest.spyOn(prisma, "$transaction").mockImplementation((async (
+      ...args: unknown[]
+    ) => {
+      const opts = args[1] as { isolationLevel?: string } | undefined;
+      if (opts?.isolationLevel === "Serializable") {
+        entered();
+        await held;
+      }
+      return realTransaction(...args);
+    }) as never);
+    try {
+      const backup = request(app).post("/api/v1/backup").set("Cookie", adminCookie).send({});
+      const backupDone = backup.then((r) => r);
+      await inTransaction;
+      const restore = await request(app)
+        .post(`/api/v1/backup/${backupId}/restore`)
+        .set("Cookie", otherCookie)
+        .send({ scope: "full", createBackupBefore: false });
+      expect(restore.status).toBe(202);
+      release();
+      expect((await backupDone).status).toBe(409);
+      expect(await prisma.backup.count({ where: { status: "running" } })).toBe(0);
+    } finally {
+      spy.mockRestore();
+      releaseRestore?.();
+      await settleAllJobs();
+      const { backupRestoreLimiter } = await import("../../middleware/rateLimit");
+      await backupRestoreLimiter.resetKey(`user:${otherAdminId}`);
+    }
+  });
+
   it("a restore the preflight refuses fails its job with the refusal's code and status", async () => {
     const started = await request(app)
       .post(`/api/v1/backup/${backupId}/restore`)

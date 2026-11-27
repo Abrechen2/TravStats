@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import type { JSX, RefObject } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { getFlightColorClass, type Flight } from "./types";
@@ -318,7 +319,7 @@ export function TagEditor({
                 className="text-blue-600 hover:text-blue-800"
                 aria-label={`Tag ${tag} entfernen`}
               >
-                ×
+                <Icon name="x" size={16} />
               </button>
             </span>
           ))}

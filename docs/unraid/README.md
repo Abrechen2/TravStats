@@ -49,6 +49,20 @@ If you prefer to install PostGIS manually instead, use image
 Plain `postgres:15` does **not** work — TravStats migrations require the
 PostGIS spatial extension.
 
+**Sizing PostGIS.** Unraid sets no memory limit, and Postgres' defaults assume
+a tiny machine. Put the settings into the PostGIS container's
+**Post Arguments** (advanced view), for example on a box with plenty of RAM:
+
+```
+-c shared_buffers=1GB -c effective_cache_size=4GB -c work_mem=16MB -c maintenance_work_mem=512MB -c jit=off -c wal_compression=on -c max_wal_size=4GB -c shared_preload_libraries=pg_stat_statements -c track_io_timing=on
+```
+
+Values per box size, the SSD-only `random_page_cost` and how to switch on
+the slow-query list (`pg_stat_statements`) are in
+[docs/ops/postgres-tuning.md](../ops/postgres-tuning.md). TravStats itself
+sizes its Node heap from the RAM it sees (logged at boot as `Node heap: …`);
+set `NODE_MAX_OLD_SPACE_MB` to pin it.
+
 ### 2. (Optional) Install Ollama
 
 1. **Apps** tab → **Ollama**

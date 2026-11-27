@@ -13,7 +13,7 @@ import { isCountableFlight } from "../../../shared/flightCounting";
 import { resolveStayTiming } from "../../../shared/lodgingTiming";
 import { classifyStay } from "../../../shared/lodgingCounting";
 import { formatAmount } from "../../../lib/units";
-import { formatDate as formatUserDate } from "../../../lib/displayFormat";
+import { formatDate as formatUserDate } from "../../../lib/format";
 import type { LodgingCardStay } from "./pinnedTypes";
 import { mapStatusClass } from "../../../lib/mapPresence";
 import { cruisePortCalls } from "../../../lib/cruisePortCalls";

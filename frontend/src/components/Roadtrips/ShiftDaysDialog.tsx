@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import Button from "../ui/Button";
 import IconButton from "../ui/IconButton";
 import { Icon } from "../ui/Icon";
@@ -13,7 +13,7 @@ import type { MissingStep } from "../form";
 import { useTranslation } from "../../hooks/useTranslation";
 import { roadtripsApi } from "../../lib/api/roadtrips";
 import { tripsApi } from "../../lib/api/trips";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { stayCheckIn, stayCheckOut } from "../../lib/entityTimes";
 import { logger } from "../../lib/logger";
 import { dayKey } from "../../lib/roadtrip/roadtripView";
@@ -225,7 +225,7 @@ export default function ShiftDaysDialog({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       maxWidth={640}
@@ -321,6 +321,6 @@ export default function ShiftDaysDialog({
           </section>
         )}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

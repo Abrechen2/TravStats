@@ -158,6 +158,94 @@ template (`test/replay.test.js`) both test against these.
 - The body is capped at **64 KB**; strings are length-capped (name 200, address
   300, note 500 characters).
 
+## A list of the plugin's places (optional)
+
+A plugin may ask TravStats to keep its places as a list. The signed hello
+(`GET <url>`) announces it:
+
+```json
+{
+  "name": "My plugin", "version": 1, "kinds": ["stop"],
+  "list": {
+    "defaultName": { "de": "Kunden", "en": "Customers" },
+    "columns": [{ "key": "no", "label": { "de": "Nr.", "en": "No." } }]
+  }
+}
+```
+
+and a suggestion carries its reference as an object:
+
+```json
+"externalRef": { "id": "4711", "label": "Hall 3", "fields": { "no": "4711" } }
+```
+
+- TravStats keeps **one list per registration**, named `defaultName` in the
+  user's language; the user may rename it. Its members are the places of the
+  plugin's **accepted** suggestions — never an unaccepted one — and the list
+  does not accept visits on its own.
+- The settings card has the switch "Orte dieses Plugins als Liste führen":
+  on by default when the hello announces `list`, off otherwise. Off, or
+  removing the plugin, keeps the list as a normal list that no longer grows.
+- `columns`: at most 6, keys `^[A-Za-z][A-Za-z0-9_]{0,31}$`, unique, both
+  labels required (40 characters). `fields` values are at most 200
+  characters; keys not announced are dropped.
+- `refNamespace` (optional, e.g. `"proj"`): places that already carry a
+  reference `proj:<id>` — as their own or as an alias, however they were made —
+  join the list too, and new ones join on the next look at the settings card.
+  Prefixes TravStats writes itself (`plugin`, `osm`, `wikidata`, …) are refused.
+- `externalRef` as a plain string still works and means `{ "id": "…" }`.
+- A plugin that vendors the contract keeps an exact copy of
+  `contract/v1.schema.json` from the template.
+
+## Name matches
+
+A suggestion may say why it was made: `reason` is `distance` or `name`, with
+optional `distanceMeters`, `matchedToken` and `lowPrecision`. A `name` suggestion
+matched a distinctive word of the stop's venue name further away than the
+plugin's distance radius; the inbox reads "Name passt (MSA), 780 m". The response
+may carry `nameRadiusMeters`: a `name` suggestion is then accepted up to that
+radius, capped at 2 km. Distance suggestions, and name suggestions without a
+radius, keep the 1 km rule above. All of these are additive and ignored when
+unknown.
+
+## Location maintenance (optional capability)
+
+A hello with `capabilities: ["maintenance"]` offers location maintenance of the
+plugin's OWN data. Settings: TravTrack → Erkennung & Vorschläge → Externe
+Vorschlagsquellen → the plugin → "Standorte pflegen"; the same rows are in the
+inbox tab "Plugins". All calls are signed like a stop call and go to
+`<plugin url>/maintenance/<action>` (the URL read as a directory); the components
+are `PluginMaintenance*V1` in the exported contract.
+
+| Call | Body | Answer |
+|---|---|---|
+| `POST maintenance/proposals` | `{version, requestId, locale, stops[]}` (≤ 2000), optional search and paging | rows with `issues` (`noCoordinates`, `noStreet`, `lowPrecision`), `proposals` with `confidence` and `evidence`, `applied`, `notices` |
+| `POST maintenance/confirm` | `{kind: apply\|undo, …the values about to be written}` | `{token, expiresAt}`; writes nothing |
+| `POST maintenance/apply` | `{rowId, lat, lon, street?, postcode?, town?, source, token}` | `{undoId, rowId, written}` |
+| `POST maintenance/undo` | `{undoId, token}` | `{undoId, rowId, restored}` |
+| `POST maintenance/ignore` | `{rowId, ignored}` | `{rowId, ignored}` |
+
+- **One confirmation per write.** The user confirms each row in a dialog that names
+  what will be written; TravStats then asks `confirm` for a single-use ticket bound
+  to exactly those values and sends it with `apply` or `undo`. A plugin MUST refuse
+  a write without a valid ticket.
+- **Who sends the stops.** TravStats sends, with each proposals request, the
+  account's venue-named TravTrack findings of the last two years, deduped and
+  rounded to the plugin's precision; unnamed stays of 20+ minutes outside privacy
+  zones are sent too. At `1km` none are sent, and none when TravTrack is not the
+  account's source. The plugin uses them for that answer only and keeps no history.
+- **Writes.** Only on `apply`: the coordinates, and the street only when the row's
+  own street is empty. The plugin keeps the previous values in a local undo log;
+  `undo` restores them and answers `409 {"error":"changed"}` when the row was
+  edited since. A source that refuses writes answers `409 {"error":"readOnly"}`; an
+  unknown row or undo `404 {"error":"notFound"}`.
+- **Routes** (owner of the registration only; an admin does not reach another
+  account's plugin): `GET /settings/suggestion-plugins/:id/capabilities`,
+  `GET …/:id/maintenance`, `POST …/:id/maintenance/{confirm,apply,undo,ignore}`. A
+  failure is `400 PLUGIN_FAILED` with the reason in `error`; a missing capability
+  is `409 PLUGIN_NO_MAINTENANCE`. Timeout 15 s, body cap 1 MB. The inbox reads a
+  cached copy and polls the notices without the row list.
+
 ## Errors, limits and `Retry-After`
 
 What TravStats does with each answer, and what the settings page shows as the

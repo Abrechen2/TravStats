@@ -208,6 +208,8 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
     ],
   }),
   trip_immich_albums: child(),
+  trip_photo_periods: child(),
+  trip_photo_proposal_dismissals: child(),
   trip_journal_entries: child(),
   journal_entry_photos: child(),
   trip_packing_lists: child(),
@@ -228,6 +230,8 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
     ],
   }),
   place_categories: owner(),
+  // Entries name one as `custom:<id>` in `purpose_key`; the text remap rewrites the id.
+  custom_purposes: owner(),
   place_external_refs: owner(),
   place_captures: owner(),
   place_lists: owner(),
@@ -304,7 +308,17 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   travtrack_stop_dismissals: owner(),
   travtrack_fixed_places: owner(),
   travtrack_place_settings: owner(),
+  // rc46 extras C: the smoothing choices and road-matched stretches the owner made.
+  travtrack_cleanups: owner(),
   travtrack_zone_tombstones: owner(),
+  // Best source per day: only the days the owner decided by hand (a chosen source, an
+  // outlier decision) travel; the rest is re-derived from the restored points. The
+  // derived columns ride along and are refreshed by the next derivation, which keeps
+  // the choice (`bestSource/store.ts`).
+  travtrack_day_sources: owner({
+    extraWhere: (a) =>
+      `(${a}."override_source" IS NOT NULL OR ${a}."outlier_decision" IS NOT NULL)`,
+  }),
   reroute_runs: excluded(
     "Bulk re-routing progress of this server (forgejo#436): the cursor and counts describe a pass over this server's rows"
   ),
@@ -410,6 +424,7 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
 
   // Derived or bookkeeping.
   account_archive_imports: excluded("this server's record of archives it imported"),
+  account_archive_import_rows: excluded("rows a running restore wrote, kept only to undo it"),
   analytics_events: excluded("anonymous usage telemetry"),
   aeroapi_track_attempts: excluded(BOOKKEEPING),
   client_write_refs: excluded(BOOKKEEPING),
@@ -426,6 +441,9 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   immich_import_jobs: excluded(BOOKKEEPING),
   location_suggestions: excluded(DERIVED),
   mail_intake_messages: excluded(BOOKKEEPING),
+  // A mailbox scan and its found mails hang off a mail_intake_sources row, which does not travel.
+  mail_intake_scans: excluded(BOOKKEEPING),
+  mail_intake_candidates: excluded(BOOKKEEPING),
   mail_intake_senders: excluded("mailbox configuration of this server's intake address"),
   packing_mutations: excluded(BOOKKEEPING),
   parse_training_logs: excluded("parser training log, operational"),
@@ -446,6 +464,7 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   travtrack_explored_cells: excluded(DERIVED),
   travtrack_imports: excluded(BOOKKEEPING),
   travtrack_month_values: excluded(DERIVED),
+  travtrack_year_summaries: excluded(DERIVED),
   travtrack_uploads: excluded(BOOKKEEPING),
   travtrack_zone_cells: excluded(DERIVED),
 

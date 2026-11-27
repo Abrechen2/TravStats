@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { authApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
+import InlineError from "../components/ui/InlineError";
 
 interface LocationState {
   requiresChange?: boolean;
@@ -126,7 +127,7 @@ export default function ForceChangePasswordPage(): JSX.Element {
               />
             </div>
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <InlineError>{error}</InlineError>}
 
             <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
               {loading

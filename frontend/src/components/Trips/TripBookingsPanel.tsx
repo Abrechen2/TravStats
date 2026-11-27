@@ -5,7 +5,7 @@ import { useToastStore } from "../../store/toastStore";
 import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { formatAmount, dateLocaleForLanguage } from "../../lib/units";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import { deadlineFacts } from "../../lib/deadlines";
 import type { Booking, Trip } from "../../types";
 import AssignFlightsToBookingModal from "./AssignFlightsToBookingModal";
@@ -15,6 +15,7 @@ import { PanelHeader } from "./TripDetailPanels";
 import RowMenu from "../table/RowMenu";
 import TableScroll from "../ui/TableScroll";
 import { PackageBookingCard } from "../bookings/PackageBookingCard";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   trip: Trip;
@@ -118,7 +119,7 @@ export function TripBookingsPanel({
       onChanged();
     } catch (err) {
       logger.error("Failed to delete booking", err);
-      addToast("error", t("errors:generic"));
+      reportPageError(t("errors:generic"));
     }
   };
 

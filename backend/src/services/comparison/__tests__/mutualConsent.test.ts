@@ -101,12 +101,12 @@ describe("serving an aggregate under the mutual rule", () => {
     const channel = randomUUID();
     jest.mocked(exchange).mockImplementation(async (_origin, body) => {
       if ((body as { action: string }).action === "ping")
-        return { ready: true, leaderboard: [1, 2] };
+        return { ready: true, leaderboard: [1, 2, 3] };
       return { accepted: true, channel, username: "anna", displayName: "Anna" };
     });
     await prisma.comparisonPeer.update({
       where: { origin: PEER },
-      data: { leaderboardVersions: [1, 2] },
+      data: { leaderboardVersions: [1, 2, 3] },
     });
     // B's own consent is stored accepted by the claim ...
     await claimInvite(userId, `${PEER}#${"a".repeat(64)}`, SCOPE);
@@ -138,12 +138,12 @@ describe("pullRemote protocol choice", () => {
   it("pullRemote tells a v2 peer whether the local user shares with it", async () => {
     await prisma.comparisonPeer.update({
       where: { origin: PEER },
-      data: { leaderboardVersions: [1, 2] },
+      data: { leaderboardVersions: [1, 2, 3] },
     });
     const sharing = await remoteFor({ status: "accepted" });
     jest.mocked(exchange).mockResolvedValueOnce({ status: "notShared" });
     await pullRemote(sharing, null);
-    expect(sent()).toMatchObject({ viewerShares: true, accept: [1, 2] });
+    expect(sent()).toMatchObject({ viewerShares: true, accept: [1, 2, 3] });
     const asking = await remoteFor({ status: "pending" });
     jest.mocked(exchange).mockResolvedValueOnce({ status: "notShared" });
     await pullRemote(asking, null);

@@ -11,6 +11,7 @@ import { formatTimeValue } from "../../../shared/time/wire";
 import TrackOriginNote from "../../tracks/TrackOriginNote";
 import TrackSourceError from "../../tracks/TrackSourceError";
 import { originInfoOf, type TrackOrigin } from "../../../lib/api/trackOrigin";
+import InlineError from "../../ui/InlineError";
 
 const CONTROL =
   "rounded-sm border border-(--color-border) px-3 py-1.5 text-xs hover:bg-(--bg-surface) disabled:opacity-40";
@@ -190,11 +191,7 @@ export default function TripRecordingPanel({
           .join(" · ")}
       </p>
       <JitterNote jitterDropped={summary.jitterDropped} variant="line" />
-      {error && (
-        <p role="alert" className="text-sm text-(--danger)">
-          {error}
-        </p>
-      )}
+      {error && <InlineError>{error}</InlineError>}
       <ConfirmModal
         isOpen={confirming}
         onClose={() => setConfirming(false)}

@@ -5,7 +5,7 @@ import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { legOverrideSchema } from "../../schemas/tour";
-import { legDistanceKm } from "../../services/tour/tourDistance";
+import { isUserLine, legDistanceKm, recordedLegKm } from "../../services/tour/tourDistance";
 import { adoptSegment, ANCHOR_TOLERANCE_KM } from "../../services/tour/tracks/adoptTrack";
 import { haversineKm } from "../../shared/geo/haversine";
 import logger from "../../utils/logger";
@@ -219,7 +219,7 @@ router.put(
               mode: body.mode ?? leg.mode,
               // A line the user drew is the best information available; a chord
               // is a placeholder.
-              confidence: body.source === "drawn" ? "high" : "low",
+              confidence: isUserLine(body.source) ? "high" : "low",
               waypoints:
                 waypoints === null
                   ? Prisma.DbNull
@@ -232,12 +232,17 @@ router.put(
               // reliable discriminator.
               drivingMinutes:
                 "drivingMinutes" in body ? (body.drivingMinutes ?? null) : leg.drivingMinutes,
-              distanceKm: legDistanceKm({
-                source: body.source,
-                from: fromCoord,
-                to: toCoord,
-                waypoints,
-              }),
+              distanceKm: ((): number => {
+                const lineKm = legDistanceKm({
+                  source: body.source,
+                  from: fromCoord,
+                  to: toCoord,
+                  waypoints,
+                });
+                return isUserLine(body.source) && "distanceKm" in body
+                  ? recordedLegKm(lineKm, body.distanceKm)
+                  : lineKm;
+              })(),
             },
           });
           // `tollCost` / `currency` live on the leg's toll EXPENSE since
@@ -255,7 +260,7 @@ router.put(
               )
             : undefined;
           // A linked crossing is the same sea lane: it follows a line drawn here.
-          if (body.source === "drawn" && waypoints)
+          if (isUserLine(body.source) && waypoints)
             await adoptDrawnLegLineOnFerry(tx, userId, leg.id, waypoints);
           await propagateWrite(tx, userId, "roadtrip", routeId, roadtripBefore);
           return { updated: updatedLeg, toll: legToll };

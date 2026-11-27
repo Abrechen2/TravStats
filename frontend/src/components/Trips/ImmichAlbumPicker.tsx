@@ -1,4 +1,4 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
@@ -10,6 +10,7 @@ import type {
   PhotoSourceAlbumKind,
   PhotoSourceKind,
 } from "../../types/immich";
+import InlineError from "../ui/InlineError";
 
 const SOURCES: readonly PhotoSourceKind[] = ["immich", "photoprism"];
 /** Group order in the list: what a person curated first, derived collections after. */
@@ -291,7 +292,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={linking}
@@ -354,11 +355,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
             {active === "photoprism" ? t("albums.badgePhotoprism") : t("albums.badgeImmich")}
           </p>
         )}
-        {failure && (
-          <p className="text-sm" style={{ color: "var(--ts-bad)" }}>
-            {t(failure)}
-          </p>
-        )}
+        {failure && <InlineError>{t(failure)}</InlineError>}
         {!loading && !failure && albums.length === 0 && (
           <p className="text-sm" style={{ color: "var(--ts-muted)" }}>
             {t(active === "photoprism" ? "albums.emptyPhotoprism" : "albums.empty")}
@@ -412,6 +409,6 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
           <ul className="space-y-2">{filteredAlbums.map(renderAlbum)}</ul>
         )}
       </>
-    </Modal>
+    </Dialog>
   );
 }

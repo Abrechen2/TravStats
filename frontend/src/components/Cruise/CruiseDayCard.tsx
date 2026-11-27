@@ -1,13 +1,15 @@
+import Chip from "../ui/Chip";
 import { useEffect, useRef } from "react";
 import EntryPhotos from "../common/EntryPhotos";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatLocalClock, formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalClock, formatLocalDate } from "../../lib/format";
 import { documentFileUrl } from "../../lib/api/documents";
 import type { EffectiveTimelineEntry } from "./cruisePorts";
 import { documentsOfDay, portStay } from "./cruiseDayCardModel";
 import type { CruiseDocumentsState } from "./useCruiseDocuments";
 import ChangeHistoryMenuButton from "../changeHistory/ChangeHistoryMenuButton";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   entry: EffectiveTimelineEntry;
@@ -85,9 +87,9 @@ export function CruiseDayCard({
         {stop ? `${t("detail.day")} ${stop.dayNumber}` : null}
         {entry.date ? <span>· {formatLocalDate(entry.date)}</span> : null}
         {isToday && (
-          <span className="rounded-full bg-(--ts-domain-cruise) px-2 py-0.5 text-xs text-(--bg-base)">
+          <Chip size="sm" active color="var(--ts-domain-cruise)">
             {t("dayCard.today")}
-          </span>
+          </Chip>
         )}
       </h3>
       <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm">
@@ -131,12 +133,12 @@ export function CruiseDayCard({
             <span className="text-(--text-muted)">{t("dayCard.documentsLoading")}</span>
           )}
           {documents.status === "failed" && (
-            <span role="alert" className="text-(--danger)">
+            <InlineError>
               {t("dayCard.documentsFailed")}{" "}
               <button type="button" onClick={onRetryDocuments} className={LINK_CLASS}>
                 {t("common:buttons.retry")}
               </button>
-            </span>
+            </InlineError>
           )}
           {documents.status === "ready" &&
             (ofDay.length > 0 ? (

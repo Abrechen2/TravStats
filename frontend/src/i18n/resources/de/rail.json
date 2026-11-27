@@ -78,7 +78,7 @@
     "dayOnly": "Nur das Datum ist bekannt",
     "delayNeedsClock": "Eine Verspätung braucht die Uhrzeiten der Fahrt.",
     "distance": "Entfernung in km",
-    "distanceHint": "Leer lassen: TravStats misst entlang des gespeicherten Streckenverlaufs (Transitous oder OpenRailRouting), sonst die Luftlinie. Eintragen, wenn das Ticket die Strecke nennt.",
+    "distanceHint": "Leer: entlang der Strecke gemessen, sonst Luftlinie.",
     "seat": "Platz",
     "class": "Klasse",
     "coach": "Wagen",
@@ -136,7 +136,7 @@
     "run": "Nachschlagen",
     "searching": "Sucht im Fahrplan …",
     "needs": "Dafür braucht es eine Zugnummer und einen Abfahrtsbahnhof.",
-    "pastDay": "Für vergangene Tage finden die offenen Fahrplandienste meist nichts, denn sie kennen nur den aktuellen Fahrplan, einige Wochen zurück. Trag die Fahrt dann einfach von Hand ein.",
+    "pastDay": "Für vergangene Tage finden Fahrplandienste meist nichts. Trag die Fahrt dann von Hand ein.",
     "error": "Die Suche ist fehlgeschlagen. Du kannst die Fahrt von Hand eintragen.",
     "none": {
       "disabled": "Für diesen Bahnhof ist hier kein Fahrplandienst eingeschaltet.",
@@ -166,7 +166,7 @@
     "unlink": "Verknüpfung lösen",
     "credit": "Fahrplandaten und Streckenverläufe:",
     "switchedOff": "Die Zugsuche ist auf dieser Instanz abgeschaltet. Trag die Fahrt von Hand ein.",
-    "changeNeeded": "Dein Ziel {{station}} liegt nicht an der Strecke dieses Zugs. Du steigst in {{stop}} um — die Weiterfahrt legst du nach dem Speichern als Anschluss an.",
+    "changeNeeded": "{{station}} liegt nicht an dieser Strecke. Umstieg in {{stop}}; den Anschluss legst du danach an.",
     "applyWithChange": "Bis zum Umstieg übernehmen"
   },
   "detail": {
@@ -481,7 +481,7 @@
   },
   "import": {
     "panelTitle": "Zugfahrt hinzufügen",
-    "panelHint": "Hast du eine Buchungsbestätigung oder ein Ticket? Zieh die Mail (.eml, .msg) oder das PDF hierher — die Fahrten werden gelesen und du bestätigst jede einzeln.",
+    "panelHint": "Mail oder PDF hierher ziehen. Du bestätigst jede Fahrt einzeln.",
     "title": "Gelesene Zugfahrten prüfen",
     "save_one": "{{count}} Fahrt speichern",
     "save_other": "{{count}} Fahrten speichern",
@@ -495,15 +495,15 @@
     },
     "noTrain": "keine Zugnummer auf dem Ticket",
     "duplicate": "Schon im Fahrtenbuch (gleiche Buchung, gleiche Abfahrt) — nicht angehakt.",
-    "possibleDuplicate": "Vielleicht schon im Fahrtenbuch: eine Fahrt zur gleichen Minute ab dieser Haltestelle zum gleichen Ziel, aber ohne Linie zum Vergleichen — bitte prüfen.",
+    "possibleDuplicate": "Vielleicht schon im Fahrtenbuch: gleiche Minute, gleiche Strecke, aber ohne Linie. Bitte prüfen.",
     "legSaved": "Gespeichert.",
     "unresolved": "„{{name}}“ ist im Bahnhofsverzeichnis nicht eindeutig. Wähl den Bahnhof aus:",
     "pickStations": "Wähl für jede angehakte Fahrt beide Bahnhöfe — ohne Bahnhof ist die Uhrzeit keiner Zeitzone zuzuordnen.",
     "saved_one": "{{count}} Zugfahrt aus dem Ticket gespeichert.",
     "saved_other": "{{count}} Zugfahrten aus dem Ticket gespeichert.",
     "empty": {
-      "noItinerary": "Diese Bahn-Mail nennt die Buchung {{reference}}, aber keinen Fahrtverlauf. Der steht im angehängten Ticket-PDF — lade das PDF hoch oder die Mail mit Anhang (.eml/.msg).",
-      "llmUnreachable": "In diesem Dokument wurde keine Zugfahrt erkannt: Keine Vorlage kennt das Layout, und der KI-Parser ist nicht erreichbar. Trag die Fahrt von Hand ein.",
+      "noItinerary": "Die Mail nennt Buchung {{reference}}, aber keinen Fahrtverlauf. Lade das Ticket-PDF hoch.",
+      "llmUnreachable": "Keine Zugfahrt erkannt: keine Vorlage passt und die KI ist nicht erreichbar. Bitte von Hand eintragen.",
       "llmFailed": "Der KI-Parser hat auf dieses Dokument keine verwertbare Antwort gegeben. Trag die Fahrt von Hand ein.",
       "demoNoLlm": "Keine Vorlage kennt dieses Ticket, und im Demo-Konto steht der KI-Parser nicht zur Verfügung.",
       "llmDisabled": "Keine Vorlage kennt dieses Ticket, und der KI-Parser ist vom Administrator abgeschaltet.",
@@ -515,7 +515,7 @@
     },
     "reservation": {
       "title": "Sitzplatzreservierung übernehmen",
-      "intro": "Das ist eine Reservierung, keine Fahrkarte. Es wird keine neue Fahrt angelegt — Wagen und Platz kommen zu den Fahrten, die schon im Fahrtenbuch stehen.",
+      "intro": "Eine Reservierung, keine Fahrkarte: Wagen und Platz kommen an bestehende Fahrten.",
       "forJourney": "Reservierung für bestehende Fahrt",
       "subSection": "Teilstrecke der Fahrt: {{from}} → {{to}}",
       "seat": "Wagen {{coach}}, Platz {{seat}}",
@@ -540,7 +540,7 @@
       }
     },
     "booking": {
-      "appliesToAll": "Diese Buchungsangaben gelten für alle Fahrten unten. Der Gesamtpreis wird nur bei der ersten gespeicherten Fahrt eingetragen, damit er nicht mehrfach zählt.",
+      "appliesToAll": "Gilt für alle Fahrten unten. Der Gesamtpreis kommt nur an die erste, damit er einmal zählt.",
       "incomplete": "Nicht alle Buchungsangaben wurden im Dokument erkannt. Ergänze sie hier oder lass sie leer — es wird nichts erfunden.",
       "notRecognised": "Nicht im Dokument erkannt",
       "shareLinkNote": "Teilen-Links der Bahn enthalten keine Buchungsangaben. Ergänze sie hier, wenn du willst — sonst bleiben sie leer.",
@@ -562,13 +562,13 @@
         "replacement": "Ersatzbus (SEV)",
         "coach": "Fernbus"
       },
-      "asLocalTransit": "Angehakt wird der Abschnitt als Bahnfahrt dieser Art gespeichert — er erscheint in der Liste und auf der Reise, zählt aber nicht in der Bahnstatistik.",
+      "asLocalTransit": "Angehakt: als Nahverkehrsfahrt gespeichert, zählt nicht in der Bahnstatistik.",
       "asBus": "Angehakt wird der Abschnitt als Busfahrt gespeichert.",
-      "busDisabled": "Busfahrten sind in deinem Konto ausgeschaltet — dieser Abschnitt wird übersprungen. Du kannst den Bereich Bus in den Einstellungen einschalten.",
+      "busDisabled": "Bus ist ausgeschaltet, dieser Abschnitt wird übersprungen. Einschalten in den Einstellungen.",
       "ferryNotHere": "Eine Fähre lässt sich hier nicht übernehmen — der Abschnitt wird übersprungen."
     },
     "positionFromBahn": "„{{name}}“: Position von bahn.de — der Halt steht nicht im Bahnhofsverzeichnis.",
-    "positionFromBahnConflict": "„{{name}}“: Position von bahn.de — der Eintrag mit dieser Haltnummer im Bahnhofsverzeichnis liegt {{km}} km entfernt und wurde nicht übernommen.",
+    "positionFromBahnConflict": "„{{name}}“: Position von bahn.de; das Verzeichnis liegt {{km}} km daneben und wurde nicht genommen.",
     "legSavedAsBus": "Als Busfahrt gespeichert.",
     "remember": {
       "mixed": "Wähl für alle Abschnitte dieser Art dasselbe, um es als Standard zu merken.",
@@ -622,7 +622,7 @@
   },
   "shareLink": {
     "title": "DB-Teilen-Link",
-    "description": "Du hast eine Verbindung aus bahn.de oder dem DB Navigator geteilt? Füg den Link ein — die Fahrten werden gelesen und du bestätigst jede einzeln.",
+    "description": "Link aus bahn.de oder DB Navigator einfügen. Du bestätigst jede Fahrt einzeln.",
     "caveat": "Die Bahn lässt das Auslesen geteilter Links von außen meist nicht zu. Klappt es nicht, nimm das Ticket-PDF oder die Buchungsmail.",
     "label": "Teilen-Link der Bahn",
     "read": "Link lesen",
@@ -664,13 +664,13 @@
   },
   "bookmarklet": {
     "title": "Verbindung von bahn.de übernehmen",
-    "description": "Die Bahn lässt TravStats geteilte Verbindungen nicht selbst abrufen. Dieses Lesezeichen holt die Verbindung auf bahn.de in deinem Browser und übergibt sie an TravStats — du prüfst jede Fahrt, bevor etwas gespeichert wird.",
+    "description": "Holt eine geteilte bahn.de-Verbindung in deinem Browser. Du prüfst vor dem Speichern.",
     "linkLabel": "In TravStats übernehmen",
     "dragHint": "Hier anklicken tut nichts — zieh den Link in die Lesezeichenleiste deines Browsers.",
     "step1": "Zieh „In TravStats übernehmen“ in die Lesezeichenleiste.",
     "step2": "Öffne den geteilten Link der Bahn (bahn.de/buchung/start?vbid=…) im Browser.",
     "step3": "Klick dort auf das Lesezeichen — TravStats öffnet sich mit der Verbindung zur Prüfung.",
-    "touchHint": "Auf iPad oder Telefon lässt sich nichts ziehen: Lege für irgendeine Seite ein Lesezeichen an, bearbeite es und ersetze die Adresse durch den kopierten Code. Öffne dann den geteilten Link in Safari oder Chrome und wähle das Lesezeichen.",
+    "touchHint": "iPad/Telefon: Lesezeichen anlegen, Adresse durch den Code ersetzen, dann beim Link wählen.",
     "copy": "Code kopieren",
     "copied": "Kopiert.",
     "copyFailed": "Kopieren ging nicht — markier den Code unten und kopier ihn von Hand.",
@@ -686,7 +686,7 @@
     "toRail": "Zur Bahn-Übersicht",
     "toSetup": "Lesezeichen einrichten",
     "reason": {
-      "empty": "Hier ist keine Verbindung angekommen. Diese Seite öffnet das Lesezeichen „In TravStats übernehmen“ von bahn.de aus — eine bereits übernommene Verbindung lässt sich nicht ein zweites Mal öffnen.",
+      "empty": "Keine Verbindung angekommen. Öffne sie per Lesezeichen von bahn.de; jede nur einmal.",
       "damaged": "Die übergebenen Daten sind beschädigt oder stammen nicht vom Lesezeichen. Es wurde nichts übernommen.",
       "tooLarge": "Die Verbindung ist zu groß für die Übergabe. Nimm das Ticket-PDF oder die Buchungsmail.",
       "notBahn": "Das Lesezeichen wurde nicht auf bahn.de geklickt. Öffne zuerst den geteilten Link der Bahn und klick dann das Lesezeichen.",

@@ -1,3 +1,4 @@
+import { formatDayLabel } from "../lib/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AppShell from "../components/ui/AppShell";
 
@@ -17,6 +18,7 @@ import { useAuthStore } from "../store/authStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { logger } from "../lib/logger";
 import type { Passport, PassportContinentGroup, PassportCountry } from "../types/passport";
+import { ContinentMark } from "../components/common/ContinentMark";
 
 /**
  * The passport.
@@ -44,11 +46,7 @@ import type { Passport, PassportContinentGroup, PassportCountry } from "../types
 /** The stamp's month from the visit's own `YYYY-MM-DD`, read in UTC so no reader's zone moves it. */
 const monthStamp = (iso: string | null, locale: string): string => {
   if (!iso) return "—";
-  return new Date(`${iso.slice(0, 10)}T00:00:00.000Z`).toLocaleDateString(locale, {
-    month: "short",
-    year: "2-digit",
-    timeZone: "UTC",
-  });
+  return formatDayLabel(iso, { month: "short", year: "2-digit" }, locale);
 };
 
 export default function PassportPage(): JSX.Element {
@@ -404,7 +402,7 @@ export default function PassportPage(): JSX.Element {
                       {quotaByGroup.map((row) => (
                         <li key={row.key} className="flex items-center gap-3">
                           <span className="w-40 shrink-0 text-sm">
-                            {t(`passport:continents.${row.key}`)}
+                            <ContinentMark>{t(`passport:continents.${row.key}`)}</ContinentMark>
                           </span>
                           <span
                             className="flex-1 h-2 rounded-full overflow-hidden"
@@ -435,16 +433,11 @@ export default function PassportPage(): JSX.Element {
                   {/* ── the full table, which is what a desktop adds ──────
                       Every country with any evidence, including the ones the
                       headline does not count: those are greyed, never dropped. */}
-                  <CountryTable
-                    countries={passport.countries}
-                    locale={locale}
-                    onCorrect={correct}
-                  />
+                  <CountryTable countries={passport.countries} onCorrect={correct} />
                 </>
               )}
               <ExcludedCountries
                 countries={passport.excludedCountries ?? []}
-                locale={locale}
                 onChanged={reloadPassport}
               />
               <UnconfirmedCountries

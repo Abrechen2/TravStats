@@ -4,7 +4,7 @@ import type { CSSProperties, JSX } from "react";
 import IconButton from "../ui/IconButton";
 import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { roadtripsApi } from "../../lib/api/roadtrips";
 import { reversePlaces } from "../../lib/api/geo";
 import { editorNights } from "../../lib/roadtrip/editorNights";
@@ -32,7 +32,7 @@ import { FormErrorBanner } from "../form";
 import { Switch } from "../ui/Field";
 import { isRoundTrip } from "../../lib/roadtrip/roundTrip";
 import { isTransientSaveError } from "../../lib/saveErrorMessage";
-import UndoBar from "./UndoBar";
+import { toast } from "../../store/toastStore";
 import StationEditCard from "./StationEditCard";
 import LegModeChips from "./LegModeChips";
 import Toggletip from "../ui/Toggletip";
@@ -49,6 +49,7 @@ import {
   type SavedStations,
   type StationDraftSink,
 } from "./useStationAutosave";
+import InlineError from "../ui/InlineError";
 
 const DASHED: CSSProperties = {
   // 44 px: these are tapped on an iPad more than anywhere (forgejo#249).
@@ -192,11 +193,27 @@ export default function StationEditor({
   const [mergeFailed, setMergeFailed] = useState(false);
   const [openKey, setOpenKey] = useState<string | null>(null);
   /** The one step "Rückgängig" takes back — a removal or a reorder (forgejo#242). */
-  const [undoable, setUndoable] = useState<{
-    label: string;
-    restores?: string;
-    restore: () => void;
-  } | null>(null);
+  const undoToastRef = useRef<string | null>(null);
+  const setUndoable = (u: { label: string; restores?: string; restore: () => void }): void => {
+    // One step at a time: a newer change replaces the offer of the older one.
+    if (undoToastRef.current) toast.dismiss(undoToastRef.current);
+    undoToastRef.current = toast.undoable({
+      label: u.label,
+      detail: u.restores,
+      undoLabel: t("roadtrips:editor.undo"),
+      ttl: HOLD_MS,
+      onUndo: () => {
+        u.restore();
+        releaseHold();
+      },
+    });
+  };
+  useEffect(
+    () => () => {
+      if (undoToastRef.current) toast.dismiss(undoToastRef.current);
+    },
+    []
+  );
   const [reorder, setReorder] = useState<{
     from: number;
     to: number;
@@ -312,13 +329,6 @@ export default function StationEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one run per click (nonce); handledPick also keeps a StrictMode re-run from adding twice
   }, [mapPick?.nonce]);
 
-  // The undo window is the hold's: when it closes, the held change goes out.
-  useEffect(() => {
-    if (!undoable) return;
-    const timer = setTimeout(() => setUndoable(null), HOLD_MS);
-    return () => clearTimeout(timer);
-  }, [undoable]);
-
   const update = (key: string, patch: Partial<EditorStation>): void => {
     setPickProblem(null);
     change((prev) => prev.map((s) => (s.key === key ? { ...s, ...patch, seed: false } : s)));
@@ -426,13 +436,6 @@ export default function StationEditor({
     });
   };
 
-  const undo = (): void => {
-    if (!undoable) return;
-    undoable.restore();
-    releaseHold();
-    setUndoable(null);
-  };
-
   const legBetween = (a: EditorStation, b: EditorStation): TourLeg | undefined =>
     a.id && b.id ? legs.find((l) => l.fromStopId === a.id && l.toStopId === b.id) : undefined;
 
@@ -511,9 +514,7 @@ export default function StationEditor({
       )}
 
       {pickProblem && (
-        <p role="alert" style={{ fontSize: 13, color: "var(--ts-warn)" }}>
-          {t(`roadtrips:editor.mapAdd.${pickProblem}`)}
-        </p>
+        <InlineError tone="warning">{t(`roadtrips:editor.mapAdd.${pickProblem}`)}</InlineError>
       )}
 
       {drafts.map((s, index) => {
@@ -691,11 +692,7 @@ export default function StationEditor({
         </div>
       )}
 
-      {mergeFailed && (
-        <p role="alert" style={{ fontSize: 13, color: "var(--ts-bad)" }}>
-          {t("roadtrips:conflict.readFailed")}
-        </p>
-      )}
+      {mergeFailed && <InlineError>{t("roadtrips:conflict.readFailed")}</InlineError>}
 
       {pendingMerge && (
         <StationConflictDialog
@@ -731,8 +728,6 @@ export default function StationEditor({
           onApply={(shifted, rows, days) => applyShift(shiftFrom, shifted, rows, days)}
         />
       )}
-
-      {undoable && <UndoBar label={undoable.label} restores={undoable.restores} onUndo={undo} />}
     </div>
   );
 }

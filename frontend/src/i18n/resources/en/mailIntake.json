@@ -1,6 +1,6 @@
 {
   "title": "Read booking mails automatically",
-  "intro": "Booking confirmations arrive in the inbox as proposals by themselves – either from a mail folder TravStats reads, or through a forwarding address. An entry exists only once you confirm it. Off until you switch it on.",
+  "intro": "Booking mails become suggestions in your inbox. Nothing is created until you confirm.",
   "loadError": "The settings could not be loaded.",
   "saveError": "Saving did not work.",
   "off": {
@@ -10,7 +10,7 @@
   },
   "folder": {
     "title": "Your own mail folder (IMAP)",
-    "help": "TravStats reads only this one folder, for example \"TravStats\". A filter, or you, put bookings there. Read mails are flagged as read and get the keyword $TravStats; nothing is deleted or moved. Use an app password (Gmail, iCloud, Outlook, GMX).",
+    "help": "Only this folder is read, nothing deleted. Use an app password.",
     "host": "IMAP server",
     "port": "Port",
     "security": "Encryption",
@@ -64,7 +64,7 @@
   },
   "forwarding": {
     "title": "Forwarding address",
-    "help": "Forward booking mails to this address, or set up an automatic forwarding rule in your mail program. Only mail from the senders you allow below is accepted, and your mail provider must confirm it is genuine (DMARC).",
+    "help": "Forward booking mails here. Accepted only from allowed, verified senders (DMARC).",
     "unavailable": "The administrator has not set up a forwarding address yet.",
     "none": "No address created yet.",
     "create": "Create address",
@@ -139,11 +139,100 @@
   },
   "admin": {
     "title": "Forwarding mailbox (booking mails)",
-    "help": "One mailbox for the whole instance. Each account gets its own plus address from it (for example trips+k7m2q9xwab@example.org). The provider must support plus addresses. TravStats only reads the mailbox over IMAP.",
+    "help": "A dedicated mailbox with plus addresses. Read via IMAP, from setup onwards.",
     "address": "Mailbox address",
     "authservId": "Provider's authserv-id (optional)",
     "authservHelp": "When set, only the Authentication-Results header carrying this id is believed.",
     "plainNote": "Unencrypted IMAP is allowed here for a mailbox on your own network.",
-    "notSet": "Not set up yet."
+    "notSet": "Not set up yet.",
+    "helpMore": "Each account gets its own address with a suffix (e.g. trips+k7m2q9xwab@example.com). Use a mailbox just for TravStats: it reads every new mail without a booking filter; older mails stay untouched."
+  },
+  "privacy": {
+    "title": "Privacy",
+    "intro": "Only booking mails are read. All others stay untouched and unstored.",
+    "prefilter": "Read booking mails only (sender and subject filter)",
+    "prefilterOffWarning": "Switched off, TravStats reads every new mail in this folder. Only sensible for a dedicated booking folder, never for your inbox.",
+    "keepUnread": "Do not mark mails as read",
+    "keepUnreadHelp": "TravStats sets only an invisible flag; “read” stays your call.",
+    "fetchFrom": "Fetch from",
+    "fetchFromHelp": "Applies to a new folder and after every change. Older mails can be found with \"Search mailbox\" in the inbox.",
+    "fetchFromOption": {
+      "now": "Only new mail from now on",
+      "days_30": "The last 30 days",
+      "days_90": "The last 90 days",
+      "days_365": "The last 365 days"
+    },
+    "counters": "Read: {{processed}} · skipped: {{skipped}}",
+    "senders": {
+      "title": "Booking senders",
+      "help": "Mails from these domains count as bookings. Newsletters also need a subject word.",
+      "defaults": "Default list ({{count}})",
+      "custom": "Your domains",
+      "none": "No domains of your own yet.",
+      "placeholder": "e.g. my-travel-agency.com",
+      "add": "Add domain",
+      "invalid": "That is not a domain like example.com.",
+      "remove": "Remove",
+      "switchOff": "Switch off",
+      "switchOn": "Switch on",
+      "off": "off"
+    },
+    "keywords": {
+      "title": "Subject words",
+      "help": "One word in the subject marks a booking. Case does not matter, DE and EN active.",
+      "defaults": "Default words",
+      "groupDe": "Deutsch",
+      "groupEn": "English",
+      "custom": "Your words",
+      "none": "No words of your own yet.",
+      "placeholder": "e.g. travel documents, rental agreement, your agency's name",
+      "add": "Add word",
+      "remove": "Remove",
+      "switchOff": "Switch off",
+      "switchOn": "Switch on"
+    }
+  },
+  "scan": {
+    "title": "Search mailbox",
+    "description": "Searches the folder for missing bookings. Only what you import is downloaded.",
+    "range": "Period",
+    "rangeAll": "Whole mailbox",
+    "rangeCustom": "From–to",
+    "since": "From",
+    "before": "To (inclusive)",
+    "start": "Search mailbox",
+    "resume": "Resume",
+    "cancel": "Cancel",
+    "progress": "{{scanned}} of {{total}} mails checked",
+    "summary": "{{scanned}} mails checked · {{candidates}} probably missing · {{matched}} already recorded · {{skipped}} skipped",
+    "status": {
+      "running": "Running …",
+      "done": "Done.",
+      "cancelled": "Cancelled – you can resume later.",
+      "interrupted": "Interrupted (server restart) – you can resume.",
+      "failed": "Failed."
+    },
+    "missingTitle": "Probably missing ({{count}})",
+    "likelyTitle": "Probably already recorded ({{count}})",
+    "likelyHint": "There is an entry of this brand around the same time.",
+    "empty": "No missing booking mails found.",
+    "import": "Import",
+    "ignore": "Ignore",
+    "importSelected": "Import selection ({{count}})",
+    "ignoreSelected": "Ignore selection ({{count}})",
+    "selectAll": "Select all",
+    "ignoredCount": "{{count}} ignored",
+    "importResult": "{{imported}} imported, {{proposed}} proposals in the inbox, {{failed}} failed.",
+    "reason": {
+      "mail_gone": "The mail is no longer at this place in the mailbox.",
+      "mail_too_large": "The mail is too large."
+    },
+    "error": "That did not work: {{reason}}",
+    "errors": {
+      "MAIL_SCAN_RUNNING": "A search is already running.",
+      "MAIL_CANDIDATE_NOT_FOUND": "This mail is no longer in the list.",
+      "lost": "The server forgot the job (restart). Reload the page and resume.",
+      "unknown": "Unknown error."
+    }
   }
 }

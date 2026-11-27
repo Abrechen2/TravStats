@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -58,7 +59,7 @@ export function JournalCard({
      note in ExpandableEventCard. */
   return (
     <ExpandableEventCard
-      icon="📝"
+      icon={<Icon name="notebook-pen" size={18} />}
       bg="rgba(96,165,250,0.15)"
       /* The same blue the timeline's own dot uses for a diary entry
          (`dotColor` in TripDetailPage). Read from the token layer rather

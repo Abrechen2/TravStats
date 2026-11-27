@@ -11,7 +11,15 @@ import { polylineDistanceKm } from "../cruiseDistance/polylineDistance";
 export const LEG_MODES = ["road", "ferry", "rail", "foot", "bike"] as const;
 export type LegMode = (typeof LEG_MODES)[number];
 
-export const LEG_SOURCES = ["straight", "drawn", "routed", "track"] as const;
+/**
+ * `recorded`: a line taken from the owner's own recording (TravTrack "Als
+ * Roadtrip übernehmen", rc46). Behaves exactly like `drawn` — the user's own
+ * geometry, never replaced by a re-route — and is only labelled apart.
+ */
+export const LEG_SOURCES = ["straight", "drawn", "routed", "track", "recorded"] as const;
+
+/** A line the user owns (drew or recorded): kept by every re-route. */
+export const isUserLine = (source: string): boolean => source === "drawn" || source === "recorded";
 export type LegSource = (typeof LEG_SOURCES)[number];
 
 /**
@@ -61,6 +69,23 @@ export function legDistanceKm(input: LegDistanceInput): number {
   // that snapped back to its start. That is a missing route, not a short
   // one, so it falls back to the chord exactly like a too-short line.
   return measured > 0 ? measured : chord;
+}
+
+/** A recorded length may exceed its simplified line by at most this factor. */
+export const MAX_RECORDED_RATIO = 3;
+/** Simplification never lengthens a line; a little rounding is allowed below it. */
+const MIN_RECORDED_RATIO = 0.98;
+
+/**
+ * The length of a drawn leg that came from a recording: the recorded km when
+ * it is plausible for that line (never shorter than the simplified line, at
+ * most `MAX_RECORDED_RATIO` times it), otherwise the line's own length.
+ */
+export function recordedLegKm(lineKm: number, recordedKm: number | undefined): number {
+  if (recordedKm === undefined || !Number.isFinite(recordedKm)) return lineKm;
+  if (recordedKm < lineKm * MIN_RECORDED_RATIO || recordedKm > lineKm * MAX_RECORDED_RATIO)
+    return lineKm;
+  return recordedKm;
 }
 
 export function drivenKm(legs: readonly { mode: string; distanceKm: number }[]): number {

@@ -3,15 +3,18 @@ import type { JSX } from "react";
 import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatDateTime } from "../../lib/displayFormat";
+import { formatDateTime } from "../../lib/format";
 import { dateLocaleForLanguage } from "../../lib/units";
 import type { ShareNotice } from "../../types/sharing";
 import ChangeDiffView, { type ChangeEntry } from "../ChangeDiffView";
 import { formatShareValue, shareFieldLabel } from "../sharing/noticeValues";
 import { Button, Card, Pill } from "../ui";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:inbox.notices";
 const INLINE = 3;
+/** Where the consent that took a trip without a question is given (CompanionsSection's address). */
+const SHARING_SETTINGS_PATH = "/settings/freunde#accounts";
 const KIND_COLOR: Record<ShareNotice["kind"], string> = {
   shared: "var(--ts-info)",
   created: "var(--ts-good)",
@@ -132,6 +135,17 @@ export default function ShareNoticeCard({
         <p className="text-sm" style={{ fontWeight: unread ? 600 : 400 }}>
           {text}
         </p>
+        {notice.kind === "shared" && after.linked && (
+          <p className="t-caption" data-testid="share-linked">
+            {t(`${NS}.linked`, { count: after.linked.matched })}
+          </p>
+        )}
+        {notice.kind === "shared" && after.autoAccepted && (
+          <p className="t-caption" data-testid="share-auto-accepted">
+            {t(`${NS}.autoAccepted`)}{" "}
+            <Link to={SHARING_SETTINGS_PATH}>{t(`${NS}.autoAcceptedSetting`)}</Link>
+          </p>
+        )}
         {notice.kind === "add-request" && (
           <>
             {after.note && (
@@ -179,11 +193,7 @@ export default function ShareNoticeCard({
             fieldLabel={(f) => shareFieldLabel(f, t)}
           />
         )}
-        {error && (
-          <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
-            {error}
-          </p>
-        )}
+        {error && <InlineError tone="warning">{error}</InlineError>}
         <div className="flex flex-wrap items-center" style={{ gap: 8 }}>
           {conflict && notice.undoneAt === null && onResolve && (
             <>

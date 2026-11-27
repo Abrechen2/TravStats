@@ -1,7 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import type { ItineraryItem } from "../../../types/shareLinks";
 import { itineraryLine } from "../ShareLinkItineraryPreview";
 

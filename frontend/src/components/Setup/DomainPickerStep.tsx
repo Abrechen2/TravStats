@@ -1,3 +1,5 @@
+import Chip from "../ui/Chip";
+import { Icon } from "../ui/Icon";
 import { JSX, KeyboardEvent } from "react";
 import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
@@ -82,18 +84,7 @@ export default function DomainPickerStep({ value, onChange }: DomainPickerStepPr
                   style={{ color: "var(--text-primary)" }}
                 >
                   <span>{t(d.i18nKey)}</span>
-                  {locked && (
-                    <span
-                      className="text-xs px-2 py-0.5 rounded-full"
-                      style={{
-                        background: "var(--bg-elevated)",
-                        color: "var(--text-muted)",
-                        border: "1px solid var(--color-border)",
-                      }}
-                    >
-                      {t("setup.domains.soon")}
-                    </span>
-                  )}
+                  {locked && <Chip size="sm">{t("setup.domains.soon")}</Chip>}
                 </div>
                 <div className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
                   {t(`${d.i18nKey}_desc`)}
@@ -108,7 +99,7 @@ export default function DomainPickerStep({ value, onChange }: DomainPickerStepPr
                 }}
                 aria-hidden
               >
-                {selected ? "✓" : ""}
+                {selected ? <Icon name="check" size={14} /> : null}
               </div>
             </li>
           );

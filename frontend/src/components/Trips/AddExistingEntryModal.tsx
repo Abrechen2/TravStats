@@ -1,7 +1,8 @@
+import { SearchInput } from "../ui/SearchInput";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useLocale } from "../../hooks/useLocale";
 import { useTranslation } from "../../hooks/useTranslation";
 import { tripsApi } from "../../lib/api/trips";
@@ -16,6 +17,8 @@ import {
 } from "../../lib/trips/attachableEntries";
 import type { DomainKey } from "../../shared/domains";
 import { formatDayLong } from "../../shared/time/calendar";
+import InlineError from "../ui/InlineError";
+import { Tabs } from "../ui/Tabs";
 
 /** Rows drawn at once. More than this is a search, not a scroll — and it says so. */
 const VISIBLE_ROWS = 100;
@@ -171,7 +174,7 @@ export default function AddExistingEntryModal({ tripId, domains, onClose }: Prop
   const close = (): void => onClose(attached > 0 || outcomeUnknown);
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={close}
       busy={busyId !== null}
@@ -196,31 +199,17 @@ export default function AddExistingEntryModal({ tripId, domains, onClose }: Prop
       }
     >
       <>
-        <div
-          className="mb-3 flex flex-wrap gap-2"
-          role="tablist"
-          aria-label={t("trips:addExisting.domainLabel")}
-        >
-          {domains.map((key) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={key === domain}
-              className="rounded px-2 py-1 text-xs"
-              style={
-                key === domain
-                  ? { background: "var(--accent)", color: "var(--ts-bg)" }
-                  : { border: "1px solid var(--ts-border)" }
-              }
-              onClick={() => {
-                setDomain(key);
-                setQuery("");
-              }}
-            >
-              {t(`common:domain.${key}`)}
-            </button>
-          ))}
+        <div className="mb-3">
+          <Tabs
+            label={t("trips:addExisting.domainLabel")}
+            variant="pill"
+            value={domain}
+            onChange={(key) => {
+              setDomain(key);
+              setQuery("");
+            }}
+            tabs={domains.map((key) => ({ value: key, label: t(`common:domain.${key}`) }))}
+          />
         </div>
 
         {load.status === "loading" && (
@@ -247,14 +236,11 @@ export default function AddExistingEntryModal({ tripId, domains, onClose }: Prop
         {load.status === "ready" && (
           <>
             {elsewhere.length > 0 && (
-              <input
-                type="search"
-                aria-label={t("trips:addExisting.searchLabel")}
-                placeholder={t("trips:addExisting.searchPlaceholder")}
+              <SearchInput
+                label={t("trips:addExisting.searchLabel")}
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="mb-3 w-full rounded-sm px-2 py-1.5 text-sm"
-                style={{ border: "1px solid var(--ts-border)", background: "var(--ts-surface2)" }}
+                onChange={setQuery}
+                placeholder={t("trips:addExisting.searchPlaceholder")}
               />
             )}
 
@@ -316,13 +302,13 @@ export default function AddExistingEntryModal({ tripId, domains, onClose }: Prop
                       </button>
                     </div>
                     {failure && (
-                      <p role="alert" className="mt-1 text-xs" style={{ color: "var(--ts-bad)" }}>
+                      <InlineError className="mt-1">
                         {t(
                           failure === "timeout"
                             ? "trips:addExisting.attachTimeout"
                             : `trips:addExisting.failure.${failure}`
                         )}
-                      </p>
+                      </InlineError>
                     )}
                   </li>
                 );
@@ -347,6 +333,6 @@ export default function AddExistingEntryModal({ tripId, domains, onClose }: Prop
           </>
         )}
       </>
-    </Modal>
+    </Dialog>
   );
 }

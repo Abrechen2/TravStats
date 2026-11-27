@@ -1,3 +1,4 @@
+import { Icon, type IconName } from "../../ui/Icon";
 import type { JSX } from "react";
 
 /**
@@ -25,7 +26,7 @@ import type { JSX } from "react";
 export const MAP_EMPTY_OVERLAY_TOP = 56;
 
 interface MapEmptyOverlayProps {
-  emoji: string;
+  icon: IconName;
   title: string;
   body: string;
   ctaLabel: string;
@@ -35,7 +36,7 @@ interface MapEmptyOverlayProps {
 }
 
 export function MapEmptyOverlay({
-  emoji,
+  icon,
   title,
   body,
   ctaLabel,
@@ -71,7 +72,7 @@ export function MapEmptyOverlay({
         }}
       >
         <div style={{ fontSize: 40, marginBottom: 12 }} aria-hidden>
-          {emoji}
+          <Icon name={icon} size={24} />
         </div>
         <h2 style={{ margin: "0 0 8px", color: "var(--text-primary)", fontSize: 18 }}>{title}</h2>
         <p style={{ margin: "0 0 20px", color: "var(--text-muted)", fontSize: 14 }}>{body}</p>

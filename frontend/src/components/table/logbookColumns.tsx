@@ -1,5 +1,4 @@
 import type { TableColumn } from "../ui/Table";
-import { SortableHeader } from "./SortableHeader";
 
 type ColumnLayout = Pick<TableColumn, "min" | "grow" | "priority" | "mono" | "onNarrow"> & {
   align?: "end";
@@ -44,20 +43,16 @@ export function logbookColumns<Id extends string, Sort extends string>({
       return {
         key: id,
         ...layout[id],
-        label:
-          sortKey === undefined ? (
-            text
-          ) : (
-            <SortableHeader
-              column={sortKey}
-              sortBy={sortBy}
-              sortOrder={sortOrder}
-              onSort={onSort}
-              ariaLabel={sortAriaLabel(text)}
-            >
-              {text}
-            </SortableHeader>
-          ),
+        label: text,
+        sort:
+          sortKey === undefined
+            ? undefined
+            : {
+                active: sortBy === sortKey,
+                order: sortOrder,
+                onSort: (): void => onSort(sortKey),
+                ariaLabel: sortAriaLabel(text),
+              },
       };
     });
 }

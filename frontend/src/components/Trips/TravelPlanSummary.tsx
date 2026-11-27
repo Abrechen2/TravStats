@@ -8,6 +8,7 @@ import { apiErrorMachineCode } from "../../lib/apiError";
 import Button from "../ui/Button";
 import { Card } from "../ui/Card";
 import { StatusPill } from "../ui/Pill";
+import InlineError from "../ui/InlineError";
 
 /**
  * The trip page's way into its plan. Behind the same gate as the navigation
@@ -63,11 +64,7 @@ export function TravelPlanSummary({
         <section className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
           <h2 className="t-card-title">{t("title")}</h2>
           <p className="t-body">{t("planThis.body")}</p>
-          {failure && (
-            <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-              {failure}
-            </p>
-          )}
+          {failure && <InlineError>{failure}</InlineError>}
           <div>
             <Button
               variant="primary"

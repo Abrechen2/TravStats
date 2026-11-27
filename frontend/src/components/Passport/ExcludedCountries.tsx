@@ -2,11 +2,12 @@ import { useState } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { passportOverridesApi } from "../../lib/api/passportOverrides";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import type { ExcludedCountry } from "../../types/passport";
-import { countryName } from "./countryName";
 import { overrideErrorKey } from "./overrideErrors";
+import { CountryLabel } from "../../lib/countryFlag";
+import InlineError from "../ui/InlineError";
 
 /**
  * Countries the user took out of the passport (forgejo#308). They are in no
@@ -15,11 +16,9 @@ import { overrideErrorKey } from "./overrideErrors";
  */
 export default function ExcludedCountries({
   countries,
-  locale,
   onChanged,
 }: {
   countries: ExcludedCountry[];
-  locale: string;
   onChanged: () => Promise<void>;
 }): JSX.Element | null {
   const { t } = useTranslation(["passport"]);
@@ -64,7 +63,9 @@ export default function ExcludedCountries({
           <li key={country.code} className="flex flex-wrap items-start justify-between gap-2">
             <div className="text-sm">
               <span className="font-mono text-xs mr-2 opacity-70">{country.code}</span>
-              <span className="font-medium">{countryName(country.code, locale)}</span>
+              <span className="font-medium">
+                <CountryLabel country={country.code} />
+              </span>
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                 {t("passport:overrides.provenanceNote", { note: country.note })}
                 {country.day &&
@@ -83,11 +84,7 @@ export default function ExcludedCountries({
           </li>
         ))}
       </ul>
-      {error && (
-        <p role="alert" className="text-sm mt-3" style={{ color: "var(--ts-bad)" }}>
-          {error}
-        </p>
-      )}
+      {error && <InlineError className="mt-3">{error}</InlineError>}
     </section>
   );
 }

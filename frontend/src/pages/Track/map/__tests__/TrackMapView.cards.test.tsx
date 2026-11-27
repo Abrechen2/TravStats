@@ -130,11 +130,13 @@ describe("TrackMapView cards", () => {
     renderAt("/track/2026-10-25");
     await screen.findByTestId("map-stub");
     fireEvent.click(screen.getByRole("button", { name: "pick" }));
-    const slot = screen.getByTestId("track-detail");
-    expect(within(slot).getByTestId("track-point-inspector")).toBeInTheDocument();
+    // Await the settled renders: under a loaded full run a late update landed after the
+    // synchronous assertions and tripped the act guard.
+    const slot = await screen.findByTestId("track-detail");
+    expect(await within(slot).findByTestId("track-point-inspector")).toBeInTheDocument();
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     fireEvent.click(within(slot).getByText("track:map.point.close"));
-    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(await screen.findByRole("tablist")).toBeInTheDocument();
   });
 
   it("the replay is folded to 'Tag abspielen' and opens on demand", async () => {

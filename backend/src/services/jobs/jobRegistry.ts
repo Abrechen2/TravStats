@@ -54,7 +54,9 @@ export type JobKind =
   | "lifeBook.export"
   | "demo.recreate"
   | "plugins.backfill"
-  | "stats.wrapped";
+  | "stats.wrapped"
+  | "mailIntake.scan"
+  | "mailIntake.import";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 
@@ -187,6 +189,26 @@ export function startJob<T>(
       job.finishedAt = new Date().toISOString();
     });
   return toView(job);
+}
+
+/**
+ * Start `work` unless a job of one of `conflicts` is running — check and start
+ * in one synchronous step, so two requests can never both pass the check: a
+ * route that checks, awaits something (a database read) and then starts lets
+ * the second request through the same gap. Null when a conflicting job runs.
+ *
+ * The registry is the lock because it is the only state a restore cannot
+ * overwrite: a row or an advisory lock lives in the database the restore
+ * replaces, and the process is one Node process.
+ */
+export function startExclusiveJob<T>(
+  kind: JobKind,
+  conflicts: readonly JobKind[],
+  ownerId: string,
+  work: (reportProgress: ReportProgress) => Promise<T>
+): JobView | null {
+  if (findRunningJob(conflicts)) return null;
+  return startJob(kind, ownerId, work);
 }
 
 /** The job, when it exists and belongs to `ownerId`; null otherwise — a

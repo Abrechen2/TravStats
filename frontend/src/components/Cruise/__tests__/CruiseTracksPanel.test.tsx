@@ -36,6 +36,10 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 
+vi.mock("../../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  reportPageError: (message: string, tone = "error") => addToast(tone, message),
+}));
 vi.mock("../../../store/toastStore", () => ({
   useToastStore: (sel: (s: { addToast: typeof addToast }) => unknown) => sel({ addToast }),
 }));

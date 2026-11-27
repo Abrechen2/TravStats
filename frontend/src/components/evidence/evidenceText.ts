@@ -1,6 +1,6 @@
 import type { Currency } from "../../lib/units";
 import { formatCurrency } from "../../lib/units";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import type { EvidenceEntry, EvidenceMeasure } from "../../shared/evidence";
 
 /**
@@ -125,7 +125,7 @@ export function formatEvidenceDate(date: EvidenceEntry["date"], language: string
   const locale = language === "de" ? "de-DE" : "en-GB";
   switch (date.precision) {
     case "day":
-      // The user's own date-format preference (`lib/displayFormat.ts`).
+      // The user's own date-format preference (`lib/format.ts`).
       return formatLocalDate(date.value);
     case "month":
       return new Intl.DateTimeFormat(locale, {

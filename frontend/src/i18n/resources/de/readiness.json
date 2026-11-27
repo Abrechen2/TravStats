@@ -59,6 +59,15 @@
       "title": "Kopie außer Haus",
       "consequence": "Eine Sicherung auf demselben Gerät übersteht dessen Verlust nicht."
     },
+    "adminRecoveryKey": {
+      "title": "Wiederherstellungsschlüssel nicht gesichert",
+      "consequence": "Deine Sicherungen enthalten API-Schlüssel, Tokens und das SMTP-Passwort nur verschlüsselt. Ohne den Wiederherstellungsschlüssel dieses Servers sind sie nach einem Serververlust unlesbar.",
+      "action": "Schlüssel sichern"
+    },
+    "adminKeySwapInterrupted": {
+      "title": "Schlüsseltausch beim Zurückspielen abgebrochen",
+      "consequence": "Ein Zurückspielen mit Wiederherstellungsschlüssel wurde unterbrochen, während der Server den Schlüssel tauschte. Gespeicherte Zugangsdaten passen eventuell nicht mehr zum Schlüssel. Ich habe nichts automatisch geändert: Im Server-Log (restore_key_swap_interrupted) steht, welche Schlüsseldatei die vorherige ist. Ist das Zurückspielen nicht fertig geworden, kopiere sie über encryption.key; danach lösche encryption.key.restore-pending und starte den Server neu."
+    },
     "adminProviderKeys": {
       "title": "Schlüssel der Datendienste",
       "consequence": "Ohne gültigen Schlüssel liefern Flugsuche und Live-Daten nichts, ohne dass es auffällt."
@@ -128,6 +137,16 @@
       "consequence": "Ein Schlüssel für OpenRouteService oder GraphHopper ist gespeichert, aber der Routing-Anbieter steht auf „Aus“ oder der gewählte Anbieter kann nicht antworten. Darum bleibt jede Etappe eine Luftlinie.",
       "action": "Routing-Anbieter auswählen"
     },
+    "adminRoutingProviderDown": {
+      "title": "Routing-Anbieter antwortet nicht",
+      "consequence": "Der Routing-Anbieter hat die letzten Anfragen abgelehnt (Schlüssel abgelehnt oder nicht mehr gültig) oder ist ausgefallen. Neue Strecken werden darum gerade gezogen.",
+      "action": "Routing-Anbieter prüfen"
+    },
+    "adminRoutingProviderEmpty": {
+      "title": "Routing-Anbieter leer, aber ein Schlüssel ist hinterlegt",
+      "consequence": "Der Routing-Anbieter steht auf „Automatisch“, und kein Anbieter mit hinterlegtem Schlüssel antwortet gerade. Wähle den Anbieter, dessen Schlüssel du hinterlegt hast.",
+      "action": "Anbieter mit Schlüssel verwenden"
+    },
     "adminTwoFactor": {
       "title": "Admin-Konto ohne zweiten Faktor",
       "consequence": "Wer dein Passwort errät, verwaltet den ganzen Server. Ein zweiter Faktor oder ein Passkey verhindert das.",
@@ -170,6 +189,13 @@
       "title_other": "Verlauf wird aufbereitet – noch {{count}} Tage",
       "consequence": "Nach einem Import rechnet TravStats jeden aufgezeichneten Tag nach: Länder, Monate und erkundete Gebiete. Bis das fertig ist, fehlen diese Tage in Kalender und Statistik. Das läuft von selbst, du musst nichts tun.",
       "action": "Fortschritt ansehen"
+    },
+    "userTravtrackQuestionableDays": {
+      "title": "Fragwürdige Spuren",
+      "title_one": "Fragwürdige Spuren – {{count}} Tag",
+      "title_other": "Fragwürdige Spuren – {{count}} Tage",
+      "consequence": "An diesen Tagen passen die Quellen nicht zusammen, die Qualität ist niedrig oder es gibt Ausreißer. TravStats wählt automatisch die beste Quelle; prüfe die Tage und entscheide selbst, wenn die Wahl nicht stimmt.",
+      "action": "Tage prüfen"
     },
     "userFlightsNoTimes": {
       "title": "Flüge ohne Uhrzeit",
@@ -240,6 +266,13 @@
       "title_other": "{{count}} Einträge mit falscher Zeitzone",
       "consequence": "Die gespeicherte Zeitzone eines Aufenthalts oder Besuchs gehört nicht zu seinem Ort. Uhrzeiten werden darum verschoben angezeigt. Ein Admin kann unter Wartung › Zeitmodell die Zonen erneut bestimmen.",
       "action": "Zonen erneut bestimmen"
+    },
+    "userCompanionDuplicates": {
+      "title": "Doppelt aufgeführte Mitreisende",
+      "title_one": "{{count}} Person auf einer geteilten Reise doppelt",
+      "title_other": "{{count}} Personen auf geteilten Reisen doppelt",
+      "consequence": "Ein von Hand eingetragener Mitreisender und dieselbe Person, mit der die Reise geteilt ist, stehen nebeneinander. Verknüpfe sie im Teilen-Dialog der Reise, dann steht die Person einmal da.",
+      "action": "Mitreisenden verknüpfen"
     }
   },
   "notes": {

@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import { useRef, useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useClickOutside } from "../../hooks/useClickOutside";
@@ -86,12 +87,9 @@ export default function NavDropdown(props: NavDropdownProps | ExternalDropdownPr
         {label}
         <Icon name="chevron-down" size={14} />
         {typeof badge === "number" && badge > 0 && (
-          <span
-            className="absolute -top-1 -right-1 text-xs font-bold rounded-full h-4 min-w-4 px-0.5 flex items-center justify-center"
-            style={{ background: "var(--danger)", color: "#fff" }}
-          >
+          <Chip tone="bad" size="sm" className="absolute -top-1 -right-1">
             {badgeText(badge)}
-          </span>
+          </Chip>
         )}
       </button>
 
@@ -126,12 +124,9 @@ export default function NavDropdown(props: NavDropdownProps | ExternalDropdownPr
                   >
                     <span className="flex items-center gap-1.5">{child.label}</span>
                     {(child.badge ?? 0) > 0 && (
-                      <span
-                        className="text-xs font-bold rounded-full h-4 min-w-4 px-0.5 flex items-center justify-center"
-                        style={{ background: "var(--danger)", color: "#fff" }}
-                      >
+                      <Chip tone="bad" size="sm">
                         {badgeText(child.badge ?? 0)}
-                      </span>
+                      </Chip>
                     )}
                   </Link>
                 );

@@ -3,6 +3,7 @@ import { overlapShare } from "../../locationEvidence/journeys/entryWindows";
 import type { LegSpan } from "../legs/setMode";
 import type { Stop } from "../legs/types";
 import { resolveStays, stopNotFound } from "./resolve";
+import { applyOwnerName } from "./ownerName";
 
 /**
  * `PUT /travtrack/stops/place` (spec "As built — stop places"): store the name
@@ -38,7 +39,9 @@ export async function setStopPlace(
         (r) =>
           (Number(r.fromMs) === span.fromMs && Number(r.untilMs) === span.untilMs) ||
           (stay !== null &&
-            overlapShare(stay, { fromMs: Number(r.fromMs), untilMs: Number(r.untilMs) }) > 0.5)
+            // Either way round: the day view also names a stop that outgrew its stored span.
+            (overlapShare(stay, { fromMs: Number(r.fromMs), untilMs: Number(r.untilMs) }) > 0.5 ||
+              overlapShare({ fromMs: Number(r.fromMs), untilMs: Number(r.untilMs) }, stay) > 0.5))
       )
       .map((r) => r.id);
     await prisma.travTrackStopPlace.deleteMany({ where: { userId, id: { in: drop } } });
@@ -51,6 +54,8 @@ export async function setStopPlace(
       create: { userId, fromMs, untilMs, ...data },
       update: data,
     });
+    // The owner's name wins over every guess an open finding of the stop still offers.
+    await applyOwnerName(userId, stay, place.name);
   }
   const { part } = await resolveStays(userId, span);
   if (part === null) throw stopNotFound();

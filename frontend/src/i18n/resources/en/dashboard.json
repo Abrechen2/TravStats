@@ -75,7 +75,7 @@
   "cruiseTab": {
     "loading": "Loading cruises …",
     "emptyTitle": "No cruises yet",
-    "emptyBody": "Add your first cruise via “+ Add cruise” or import a booking email or PDF on the cruises page.",
+    "emptyBody": "Add your first cruise or import a booking.",
     "emptyCta": "Go to cruises page"
   },
   "tourTab": {
@@ -124,7 +124,7 @@
       "title": "Spend by currency",
       "baseLabel": "In base currency",
       "empty": "No spend recorded yet",
-      "hint": "Each amount is shown in its own original currency and is not summed — the converted total above can therefore differ from a simple sum.",
+      "hint": "Amounts in their own currency, not added. The total above is converted.",
       "otherBaseLabel": "Older base currencies (saved before a switch, not counted here)"
     }
   },
@@ -515,5 +515,6 @@
       "trip": "Trips"
     }
   },
-  "mailOriginalNotFiled": "The entry was created, but the original mail could not be filed with it. It stays in the inbox."
+  "mailOriginalNotFiled": "The entry was created, but the original mail could not be filed with it. It stays in the inbox.",
+  "documentNotFiled": "Entry created, but the document was not attached. It is under “Unfiled documents”."
 }

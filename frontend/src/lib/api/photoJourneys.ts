@@ -197,6 +197,11 @@ export const photoJourneysApi = {
     await api.patch(`/photo-journeys/${id}`, { status: "dismissed" });
   },
 
+  /** Take a `covered` back (forgejo#439): pending again, never auto-closed again. */
+  reopen: async (id: string): Promise<void> => {
+    await api.post(`/photo-journeys/${id}/reopen`, {});
+  },
+
   /**
    * Answer several findings in one request. The server answers each item on
    * its own and reports every outcome, so a 200 may still carry failures —

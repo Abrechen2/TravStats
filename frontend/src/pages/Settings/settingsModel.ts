@@ -36,6 +36,7 @@ export type SettingsSectionId =
   | "ttRecording"
   | "ttPlaces"
   | "ttZones"
+  | "ttQuality"
   | "ttDetect"
   | "ttCalendar"
   | "ttPlugins"
@@ -90,6 +91,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDef[] = [
   section("ttRecording"),
   section("ttPlaces", "standard", { when: "travTrackHeld" }),
   section("ttZones", "standard", { when: "travTrackHeld" }),
+  section("ttQuality", "standard", { when: "travTrackHeld" }),
   section("ttDetect"),
   section("ttCalendar"),
   section("ttPlugins"),

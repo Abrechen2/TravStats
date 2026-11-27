@@ -2,7 +2,7 @@
   "calendar": {
     "title": "Kalender",
     "sub": "Termine als Beleg für deine Stopps",
-    "help": "TravStats liest nur die Tage, die der Suchlauf gerade prüft (höchstens 30 Tage zurück). Ein Termin, der zeitlich und örtlich zu einem Stopp passt, landet als Beleg im Vorschlag. Alle anderen Termine werden nicht gespeichert.",
+    "help": "Liest nur die geprüften Tage. Passende Termine werden Beleg, der Rest nicht gespeichert.",
     "empty": "Noch kein Kalender verbunden.",
     "add": "Kalender hinzufügen",
     "remove": "Entfernen",
@@ -28,7 +28,7 @@
     },
     "privacy": {
       "title": "Was gespeichert wird",
-      "sub": "Nur ein Termin, der zu einem Stopp passt, mit Titel, Zeit und Ort im Vorschlag. Nach Annehmen oder Ablehnen bleiben davon nur Zeit und Kalender. Adresse und Passwort des Kalenders werden verschlüsselt gespeichert und nie wieder angezeigt."
+      "sub": "Nur passende Termine kommen in Vorschläge; danach bleiben Zeit und Kalender. Zugang verschlüsselt."
     },
     "form": {
       "kind": "Art des Kalenders",
@@ -37,11 +37,12 @@
       "label": "Name",
       "labelHint": "z. B. Arbeit oder Privat. Regeln können sich auf diesen Kalender beziehen.",
       "icsUrl": "Geheime Adresse (ICS)",
-      "icsHint": "Die Abo-Adresse aus iCloud, Google oder Outlook. Diese Adresse ist der Schlüssel zum Kalender und wird verschlüsselt gespeichert.",
+      "icsHint": "Abo-Adresse aus iCloud, Google oder Outlook. Wird verschlüsselt gespeichert.",
       "server": "Server-Adresse",
       "serverHint": "z. B. https://caldav.example.com/",
       "username": "Benutzer",
       "password": "App-Passwort",
+      "appPasswordHint": "iCloud/Google: App-spezifisches Passwort verwenden.",
       "passwordHint": "Wird verschlüsselt gespeichert und nie wieder angezeigt.",
       "discover": "Kalender suchen",
       "collections": "Welche Kalender gelesen werden",
@@ -53,7 +54,7 @@
       "kind": {
         "notConfigured": "Der Kalender ist nicht vollständig eingerichtet.",
         "unreachable": "Der Kalender-Server ist nicht erreichbar.",
-        "auth": "Zugang abgelehnt. Adresse, Benutzer oder Passwort prüfen.",
+        "auth": "Zugang abgelehnt. Adresse, Benutzer oder Passwort prüfen. iCloud und Google verlangen ein App-spezifisches Passwort, nicht das normale Konto-Passwort.",
         "notFound": "Unter dieser Adresse gibt es keinen Kalender.",
         "protocol": "Der Server hat keine lesbare Kalender-Antwort geschickt.",
         "invalidUrl": "Diese Adresse ist ungültig."
@@ -82,7 +83,7 @@
       "title": "Orte von Terminen",
       "label": "Kalenderorte zur Zuordnung nachschlagen",
       "sub": "Aus: Termine passen nur über eigene Orte, den gefundenen Ort beim Stopp oder den Ort einer Regel.",
-      "help": "An: der Ort eines Termins, den eine Regel auswählt, wird beim Geodienst des Servers nachgeschlagen, um ihn einem Stopp zuzuordnen. Nur für Stopps außerhalb deiner Privatzonen. Der Text wird nicht gespeichert und nicht protokolliert.",
+      "help": "Schlägt Terminorte nach, außerhalb deiner Privatzonen. Nichts wird gespeichert.",
       "error": "Die Einstellung konnte nicht gespeichert werden. Bitte versuche es noch einmal."
     }
   },
@@ -111,14 +112,15 @@
       "pending": "Ein Plugin hat noch nicht geantwortet; es wird erneut gefragt.",
       "reask": "Neu fragen",
       "reasked": "Die Plugins werden beim nächsten Suchlauf erneut gefragt.",
-      "reaskError": "Das ging nicht. Bitte versuche es noch einmal."
+      "reaskError": "Das ging nicht. Bitte versuche es noch einmal.",
+      "nameMatch": "Name passt ({{token}}), {{meters}} m"
     },
     "suggestedBy": "Vorgeschlagen von {{name}}"
   },
   "rules": {
     "title": "Regeln",
     "sub": "Was ein passender Termin als Zweck und Name vorschlägt",
-    "help": "Von oben nach unten, die erste passende Regel gilt. Ohne Regel schlägt ein Termin seinen Titel als Namen vor und keinen Zweck.",
+    "help": "Die erste passende Regel gilt. Ohne Regel: Titel als Name.",
     "empty": "Keine Regeln.",
     "kind": {
       "calendar": "Ganzer Kalender",
@@ -149,7 +151,7 @@
   "plugins": {
     "title": "Externe Vorschlagsquellen",
     "sub": "Eigene Dienste, die Stopps mit Orten beantworten",
-    "help": "Ein Plugin ist ein HTTPS-Dienst, den du selbst betreibst oder dem du vertraust. TravStats fragt ihn signiert nach einem Stopp; seine Antwort erscheint als Vorschlag im Posteingang. Ein Plugin schreibt nie selbst in TravStats. Anleitung: docs/features/plugins.md.",
+    "help": "Ein HTTPS-Dienst deines Vertrauens. Er schlägt nur vor, schreibt nie selbst.",
     "empty": "Noch kein Plugin eingetragen.",
     "add": "Plugin hinzufügen",
     "remove": "Entfernen",
@@ -198,8 +200,8 @@
     },
     "sent": {
       "title": "Was gesendet wird",
-      "sub": "Beginn und Ende eines Stopps, seine auf die gewählte Genauigkeit gerundeten Koordinaten und die Zeitzone; dazu, was TravStats selbst schon kennt: der nächste eigene Ort, der gefundene Ort und (bei genau und 100 m) die Adresse.",
-      "help": "Nie gesendet: dein Konto, Name oder E-Mail, der Standortverlauf, andere Stopps oder Einträge. Jede Anfrage ist mit dem Geheimnis signiert."
+      "sub": "Beginn, Ende, gerundete Koordinaten und Zeitzone eines Stopps, dazu bekannte Orte.",
+      "help": "Nie gesendet: Konto, Name, E-Mail oder Verlauf. Jede Anfrage ist signiert."
     },
     "removeConfirm": {
       "title": "Plugin „{{name}}“ entfernen?",
@@ -215,7 +217,13 @@
         "rateLimited": "Das Plugin oder die Grenze pro Stunde lässt gerade keine Anfrage zu.",
         "protocol": "Die Antwort des Plugins passt nicht zum Vertrag (Version 1).",
         "server": "Das Plugin hat einen Serverfehler gemeldet.",
-        "privateTarget": "Diese Adresse liegt im lokalen Netz. Nur das Admin-Konto darf sie verwenden."
+        "privateTarget": "Diese Adresse liegt im lokalen Netz. Nur das Admin-Konto darf sie verwenden.",
+        "readOnly": "Das Archiv des Plugins lässt kein Schreiben zu (Token ohne Schreibrecht).",
+        "confirmationRequired": "Die Änderung wurde nicht bestätigt und deshalb nicht geschrieben.",
+        "changed": "Der Eintrag wurde seitdem im Archiv geändert; Rückgängig ist nicht mehr möglich.",
+        "notFound": "Diesen Eintrag kennt das Plugin nicht (mehr).",
+        "notReady": "Das Plugin lädt sein Archiv noch. Bitte gleich noch einmal.",
+        "unsupported": "Dieses Plugin bietet keine Standortpflege an."
       },
       "code": {
         "PRIVATE_TARGET": "Diese Adresse liegt im lokalen Netz. Nur das Admin-Konto darf sie verwenden.",
@@ -223,8 +231,86 @@
         "PLUGIN_LIMIT": "Es sind höchstens 5 Plugins möglich.",
         "PLUGIN_BACKFILL_REFUSED": "Abfragen vergangener Tage ist für dieses Plugin nicht erlaubt, oder der Zeitraum ist länger als 90 Tage.",
         "PLUGIN_BACKFILL_RUNNING": "Für dieses Plugin läuft schon eine Abfrage.",
-        "SERVICE_DISABLED": "Plugins sind auf diesem Server ausgeschaltet."
+        "SERVICE_DISABLED": "Plugins sind auf diesem Server ausgeschaltet.",
+        "PLUGIN_NO_MAINTENANCE": "Dieses Plugin bietet keine Standortpflege an."
       }
+    },
+    "maintenance": {
+      "open": "Standorte pflegen",
+      "helloFailed": "Plugin-Abfrage fehlgeschlagen",
+      "title": "Standorte pflegen – {{name}}",
+      "intro": "Plugin-Einträge ohne Standort, mit Vorschlägen. Geschrieben wird erst beim Bestätigen.",
+      "loading": "Einträge werden geladen …",
+      "reload": "Neu laden",
+      "empty": "Keine Einträge ohne Standort.",
+      "showIgnored": "Ignorierte zeigen",
+      "stopsSent": "{{count}} TravTrack-Stopps (benannte und längere unbenannte) wurden zum Abgleich mitgeschickt.",
+      "stopsWithheld": {
+        "precision": "Keine Stopps mitgeschickt: Das Plugin ist auf 1 km Genauigkeit gestellt.",
+        "travtrackOff": "Keine Stopps mitgeschickt: TravTrack ist nicht die Standortquelle dieses Kontos."
+      },
+      "pendingSearches": "Der Geocoder sucht noch für {{count}} Einträge – später neu laden.",
+      "mapLabel": "Karte mit Vorschlägen für {{name}}",
+      "noAddress": "Keine Adresse im Archiv",
+      "noProposals": "Noch kein Vorschlag.",
+      "issue": {
+        "noCoordinates": "keine Koordinaten",
+        "noStreet": "keine Straße",
+        "lowPrecision": "nur Ortsmitte",
+        "coordsMismatch": "Koordinaten weichen von der Adresse ab"
+      },
+      "source": {
+        "stop": "TravTrack-Stopp",
+        "geocoder": "Geocoder"
+      },
+      "confidence": {
+        "high": "sicher",
+        "medium": "wahrscheinlich",
+        "low": "unsicher"
+      },
+      "distance": "{{meters}} m vom bisherigen Standort",
+      "evidence": {
+        "stop": "Stopp „{{venue}}“ am {{at}} · gemeinsames Wort: {{tokens}}",
+        "geocoder": "Geocoder-Treffer: {{label}}",
+        "stopHere": "Dein Halt am {{at}}, {{duration}} · {{meters}} m von der Adresse"
+      },
+      "take": "Übernehmen",
+      "otherAddress": "Andere Adresse",
+      "ignore": "Ignorieren",
+      "unignore": "Wieder anzeigen",
+      "searchLabel": "Einträge durchsuchen",
+      "search": "Suchen",
+      "searchFailed": "Die Adresssuche ist gerade nicht erreichbar.",
+      "searchEmpty": "Nichts gefunden.",
+      "confirm": {
+        "title": "In das Archiv schreiben?",
+        "intro": "Das Plugin „{{plugin}}“ schreibt für „{{name}}“ in sein Archiv:",
+        "coords": "• Breite {{lat}}, Länge {{lon}}",
+        "street": "• Straße: {{street}} (das Feld ist bisher leer)",
+        "streetKept": "• Straße bleibt unverändert ({{street}})",
+        "source": "Quelle: {{source}}",
+        "undo": "Die bisherigen Werte merkt sich das Plugin; „Rückgängig“ stellt sie wieder her."
+      },
+      "applied": "„{{name}}“ wurde ins Archiv geschrieben.",
+      "undone": "„{{name}}“ wurde zurückgesetzt.",
+      "ignored": "„{{name}}“ wird ignoriert.",
+      "unignored": "„{{name}}“ wird wieder angezeigt.",
+      "appliedTitle": "Übernommen",
+      "appliedLine": "{{name}}: {{lat}}, {{lon}} ({{at}})",
+      "undo": "Rückgängig",
+      "searchPlaceholder": "Name, Ort, PLZ oder Nummer",
+      "searchButton": "Suchen",
+      "searchClear": "Suche zurücksetzen",
+      "noMatch": "Kein Eintrag passt zur Suche.",
+      "range": "{{from}}–{{to}} von {{total}}",
+      "prev": "Zurück",
+      "next": "Weiter"
+    },
+    "list": {
+      "label": "Orte dieses Plugins als Liste führen",
+      "generic": "Das Plugin meldet keine Liste: nur Standardspalten.",
+      "open": "Liste „{{name}}“ öffnen",
+      "failed": "Liste nicht umgeschaltet"
     }
   }
 }

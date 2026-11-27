@@ -1,7 +1,7 @@
 import { settingsApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import i18n from "../i18n/config";
-import { useToastStore } from "./toastStore";
+import { reportPageError } from "./pageErrorStore";
 
 /**
  * A switch the user may flip several times before the server answers once
@@ -43,7 +43,7 @@ export function serializedSetting<T>(options: {
           logger.warn(`Failed to save ${what}`, error);
           if (queued) return; // a newer flip is on its way; it decides
           apply(confirmed);
-          useToastStore.getState().addToast("error", i18n.t("settings:errors.saveFailed"));
+          reportPageError(i18n.t("settings:errors.saveFailed"));
         }
       )
       .finally(() => {

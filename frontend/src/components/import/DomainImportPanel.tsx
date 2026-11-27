@@ -1,4 +1,5 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
+import { Icon } from "../ui/Icon";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -10,6 +11,7 @@ import { ImportManualFooter, ImportRouteList, ImportRouteRow } from "./ImportRou
 import { isParseableDomain } from "./types";
 import { llmProviderOfResult, readByMessage } from "../../lib/llmProviderCopy";
 import type { DomainImportAdapter, ImportRouteContext } from "./types";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const EmailImportTab = lazy(() => import("./EmailImportTab"));
 
@@ -33,6 +35,15 @@ interface DomainImportPanelProps {
    * (the gap calendar's "Eintrag anlegen"). The adapter narrows `prefill`.
    */
   initialManual?: { prefill: unknown } | null;
+  /**
+   * A document already read elsewhere (the inbox's "Neu anlegen aus Dokument"):
+   * the review opens on this reading at once, and the file is not read again.
+   */
+  initialReading?: {
+    reading: { kind: "pdf"; result: ParsePdfResult } | { kind: "email"; result: ParseEmailResult };
+    fileName: string | null;
+    document: ImportDocument;
+  } | null;
 }
 
 interface Mismatch {
@@ -72,6 +83,7 @@ export default function DomainImportPanel({
   onOpenOtherImport,
   openableDomains = [],
   initialManual = null,
+  initialReading = null,
 }: DomainImportPanelProps): JSX.Element | null {
   const { t } = useTranslation(["import", "common"]);
   const addToast = useToastStore((s) => s.addToast);
@@ -89,17 +101,19 @@ export default function DomainImportPanel({
       setManualPrefill(initialManual?.prefill);
       setShowManual(initialManual !== null);
       setMismatch(null);
+      if (initialReading) {
+        const { reading, fileName, document } = initialReading;
+        if (reading.kind === "pdf") handlePdfResult(reading.result, fileName, document);
+        else handleEmailResult(reading.result, fileName, document);
+      }
     }
     // Read when the panel opens: a later change of the request must not reopen a form.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const handleError = useCallback(
-    (message: string) => {
-      addToast("error", message);
-    },
-    [addToast]
-  );
+  const handleError = useCallback((message: string) => {
+    reportPageError(message);
+  }, []);
 
   // Which model read the document, when one did — a cloud provider by host,
   // so the user sees where their booking went (beta.17).
@@ -213,7 +227,7 @@ export default function DomainImportPanel({
           place (TripModal), so "empty" left the chooser on top of the form it
           had just opened, and its × closed both (browser acceptance
           2026-09-26). The form is the next step, not a second layer. */}
-      <Modal
+      <Dialog
         open={!showManual}
         onClose={onClose}
         title={adapter.panelTitle}
@@ -226,7 +240,7 @@ export default function DomainImportPanel({
             <div ref={documentRouteRef}>
               <ImportRouteRow
                 primary
-                icon="✉️"
+                icon={<Icon name="mail" size={18} />}
                 title={adapter.documentRoute?.title ?? t("import:route.document.title")}
                 description={
                   adapter.documentRoute?.description ?? t("import:route.document.description")
@@ -258,7 +272,7 @@ export default function DomainImportPanel({
             }}
           />
         </div>
-      </Modal>
+      </Dialog>
 
       {mismatch && (
         <WrongDialogNotice

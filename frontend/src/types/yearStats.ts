@@ -19,6 +19,15 @@ export interface YearCardData {
   recordedPending?: boolean;
   /** Twelve, January first. */
   months: YearMonth[];
+  /** Entries and km per purpose, most entries first (older servers: absent). */
+  byPurpose?: PurposeShare[];
+}
+
+export interface PurposeShare {
+  /** `builtin:<key>` | `custom:<uuid>`; null: entries without a purpose. */
+  key: string | null;
+  count: number;
+  km: number | null;
 }
 
 export interface YearStats {

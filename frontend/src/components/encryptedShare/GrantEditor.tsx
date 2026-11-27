@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { sourceData, type SourceData } from "../../lib/encryptedShare/transport";
 import { downloadBlob } from "./DevicePanel";
 import { comparisonFieldLabel } from "./fieldLabel";
@@ -218,8 +219,9 @@ export default function GrantEditor({
       </fieldset>
       <label className="block">
         {t("expiry")}{" "}
-        <input
-          type="date"
+        <DateField
+          inline
+          value={scope.expiresAt?.slice(0, 10) ?? ""}
           onChange={(e) =>
             change({
               ...scope,

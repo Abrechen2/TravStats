@@ -15,7 +15,7 @@ import type { RouteKind, StoredRoadtripVehicle, TourActivity } from "../shared/t
  * later phase adds a value to the server's allow-list, not a migration of
  * this union. See `backend/src/schemas/tour.ts`'s `PHASE_1_SOURCES` note.
  */
-export const LEG_SOURCES = ["straight", "drawn", "routed", "track"] as const;
+export const LEG_SOURCES = ["straight", "drawn", "routed", "track", "recorded"] as const;
 export type LegSource = (typeof LEG_SOURCES)[number];
 
 export const LEG_MODES = ["road", "ferry", "rail", "foot", "bike"] as const;
@@ -85,6 +85,9 @@ export interface TourRoute {
   kindAssignedAutomatically: boolean;
   /** Private or business; null is unknown (never read as private). */
   purpose?: string | null;
+  purposeKey?: string | null;
+  /** Roadtrip taken over from TravTrack: the recorded days it links back to. */
+  trackSpan?: { fromDay: string; toDay: string } | null;
   /** Tour only: the local day it happened, "YYYY-MM-DD" (D2). */
   date?: string | null;
   /** Tour only: when on that day it started, local "HH:MM". */

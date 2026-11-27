@@ -18,6 +18,17 @@ const legsApi = vi.hoisted(() => ({
 }));
 const staysApi = vi.hoisted(() => ({ reject: vi.fn() }));
 // The photo layer is on by default: no photo source is connected in these tests.
+// The leg card asks whether road matching is offered (rc46 extras C2): no router here.
+vi.mock("../../../../lib/api/travtrackCleanup", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../lib/api/travtrackCleanup")>();
+  return {
+    ...actual,
+    travTrackCleanupApi: {
+      ...actual.travTrackCleanupApi,
+      availability: vi.fn(async () => ({ available: false, reason: "serviceOff" })),
+    },
+  };
+});
 vi.mock("../../../../lib/api/travtrackViews", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../../../lib/api/travtrackViews")>();
   return {

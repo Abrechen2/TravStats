@@ -303,6 +303,23 @@ export const SERVICES: readonly ServiceDef[] = [
     ],
   }),
 
+  // Map matching of sparse TravTrack road stretches (rc46 extras C2) through a
+  // router the admin runs — Valhalla or GraphHopper, usually on the LAN. Off by
+  // default and nothing is preconfigured: the stretch's own points leave the
+  // server (privacy zones cut out first), and each account confirms each target.
+  svc({
+    id: "mapMatching",
+    category: "mapsRoutes",
+    level: "instance",
+    credential: "url",
+    enabled: { kind: "adminColumns", columns: ["mapMatchingEnabled"] },
+    fields: [
+      admin("url", "url", "mapMatchingUrl", true),
+      admin("engine", "select", "mapMatchingEngine", false, ["valhalla", "graphhopper"]),
+    ],
+    requiredFields: ["url"],
+  }),
+
   // ---- photos & location ----------------------------------------------------
   svc({
     id: "immich",
@@ -475,6 +492,19 @@ export const SERVICES: readonly ServiceDef[] = [
     ],
     requiredFields: ["baseUrl", "model"],
     tester: "llmCloud",
+  }),
+  // "KI fragen" for an ambiguous inbox suggestion (forgejo#439 phase 2). A use of
+  // whichever model the chain above resolves to, not a provider of its own — so
+  // no `ai` kind. Off by default: candidate names, a distance, a dwell and a day
+  // leave the server, and for a cloud model they leave the LAN. Each account
+  // also confirms each target before its first request (`useConsent.ts`).
+  svc({
+    id: "aiSuggestionHelp",
+    category: "ai",
+    level: "instance",
+    credential: "none",
+    keyless: true,
+    enabled: { kind: "adminColumns", columns: ["aiSuggestionHelpEnabled"] },
   }),
 
   // ---- open data & logos ---------------------------------------------------------

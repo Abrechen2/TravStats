@@ -14,6 +14,7 @@ import {
   type StartPoint,
 } from "../../lib/roadtrip/startSources";
 import type { Lodging } from "../../types/lodging";
+import InlineError from "../ui/InlineError";
 
 export type StartMode = "empty" | "lodging" | "gpx" | "link";
 const MODES: StartMode[] = ["empty", "lodging", "gpx", "link"];
@@ -81,11 +82,7 @@ export default function RoadtripStartSource({
 }
 
 function Problem({ children }: { children: string }): JSX.Element {
-  return (
-    <p role="alert" style={{ fontSize: 13, color: "var(--ts-bad)" }}>
-      {children}
-    </p>
-  );
+  return <InlineError>{children}</InlineError>;
 }
 
 function LodgingSource({ onPoints }: { onPoints: (p: StartPoint[]) => void }): JSX.Element {

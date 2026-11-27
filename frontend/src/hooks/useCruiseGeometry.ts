@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { CRUISE_GEOMETRY } from "../config/constants";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { logger } from "../lib/logger";
-import { useToastStore } from "../store/toastStore";
 import type { Cruise } from "../types";
 import { useTranslation } from "./useTranslation";
+import { reportPageError } from "../store/pageErrorStore";
 
 function chunks<T>(items: readonly T[], size: number): T[][] {
   const out: T[][] = [];
@@ -34,7 +34,6 @@ export function useCruiseGeometry(
   );
   const cruiseGeometryRef = useRef<Map<string, CruiseRouteFeatureCollection>>(cruiseGeometry);
   const { t } = useTranslation("cruise");
-  const addToast = useToastStore((s) => s.addToast);
   useEffect(() => {
     cruiseGeometryRef.current = cruiseGeometry;
   }, [cruiseGeometry]);
@@ -69,7 +68,7 @@ export function useCruiseGeometry(
           failed += ids.length;
         }
       }
-      if (failed > 0) addToast("warning", t("map.geometryFailed", { count: failed }));
+      if (failed > 0) reportPageError(t("map.geometryFailed", { count: failed }), "warning");
     };
     void run();
     return (): void => {

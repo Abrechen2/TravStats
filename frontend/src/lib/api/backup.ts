@@ -97,6 +97,18 @@ export const backupApi = {
        * the stored credentials in the archive will not decrypt here.
        */
       acceptEncryptionKeyChange?: boolean;
+      /**
+       * The recovery key of the instance that wrote the archive, pasted after
+       * `RESTORE_ENCRYPTION_KEY_MISMATCH`. The server checks it against the
+       * archive and installs it before the restore, so the credentials stay readable.
+       */
+      recoveryKey?: string;
+      /** The fresh re-authentication a restore with `recoveryKey` needs. */
+      password?: string;
+      code?: string;
+      recoveryCode?: string;
+      /** Or a passkey assertion instead of the password (the reveal step's other way). */
+      passkeyResponse?: Record<string, unknown>;
     }
   ): Promise<{ jobId: string }> => {
     // A job, like `create`: the preflight refusals (RESTORE_*) arrive as the

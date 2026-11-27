@@ -1,3 +1,4 @@
+import { Icon } from "../../ui/Icon";
 import type { JSX } from "react";
 import { useEffect } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -11,6 +12,7 @@ import { emptyParseMessageKey } from "../../rail/railImportModel";
 import { RailShareLinkRoute } from "../../rail/RailShareLinkRoute";
 import { isRailShareLinkPrefill } from "../../rail/railShareLinkModel";
 import type { DomainImportAdapter, ReviewModalProps } from "../types";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 type RailParse = ParseEmailRailResult | ParsePdfRailResult;
 
@@ -46,7 +48,7 @@ export function useRailImportAdapter(): DomainImportAdapter {
     routes: [
       {
         id: "railShareLink",
-        icon: "🔗",
+        icon: <Icon name="link" size={18} />,
         title: t("rail:shareLink.title"),
         description: t("rail:shareLink.description"),
         render: (context) => <RailShareLinkRoute context={context} />,
@@ -71,7 +73,7 @@ export function useRailImportAdapter(): DomainImportAdapter {
     renderReviewModal: (props) => (
       <RailReviewSlot
         {...props}
-        onEmpty={(message) => addToast("error", message)}
+        onEmpty={(message) => reportPageError(message)}
         onDone={(count) => addToast("success", t("rail:import.saved", { count }))}
         onReservationDone={(count) =>
           addToast("success", t("rail:import.reservation.done", { count }))

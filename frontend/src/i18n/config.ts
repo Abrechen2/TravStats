@@ -1,121 +1,6 @@
-import enComparison from "./resources/en/comparison.json";
-import deComparison from "./resources/de/comparison.json";
-import enEncryptedShare from "./resources/en/encryptedShare.json";
-import deEncryptedShare from "./resources/de/encryptedShare.json";
-import enFerry from "./resources/en/ferry.json";
-import deFerry from "./resources/de/ferry.json";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { useSettingsStore } from "../store/settingsStore";
-
-// Import translation files
-import enCommon from "./resources/en/common.json";
-import enDashboard from "./resources/en/dashboard.json";
-import enSettings from "./resources/en/settings.json";
-import enFlights from "./resources/en/flights.json";
-import enBulkEdit from "./resources/en/bulkEdit.json";
-import enAuth from "./resources/en/auth.json";
-import enAdmin from "./resources/en/admin.json";
-import enTraining from "./resources/en/training.json";
-import enErrors from "./resources/en/errors.json";
-import enAchievements from "./resources/en/achievements.json";
-import enStats from "./resources/en/stats.json";
-import enFlightStatsHelp from "./resources/en/flightStatsHelp.json";
-import enSetup from "./resources/en/setup.json";
-import enMap from "./resources/en/map.json";
-import enPendingUpdates from "./resources/en/pendingUpdates.json";
-import enParser from "./resources/en/parser.json";
-import enTrips from "./resources/en/trips.json";
-import enCruise from "./resources/en/cruise.json";
-import enRail from "./resources/en/rail.json";
-import enBus from "./resources/en/bus.json";
-import enChangeHistory from "./resources/en/changeHistory.json";
-import enRental from "./resources/en/rental.json";
-import enImport from "./resources/en/import.json";
-import enAircraft from "./resources/en/aircraft.json";
-import enPassport from "./resources/en/passport.json";
-import enSpecialFlights from "./resources/en/specialFlights.json";
-import enImmich from "./resources/en/immich.json";
-import enWhatsNew from "./resources/en/whatsNew.json";
-import enReadiness from "./resources/en/readiness.json";
-import enUsageStats from "./resources/en/usageStats.json";
-import enPushRelay from "./resources/en/pushRelay.json";
-import enProvenance from "./resources/en/provenance.json";
-import enPurpose from "./resources/en/purpose.json";
-import enSettingsRows from "./resources/en/settingsRows.json";
-import enLodging from "./resources/en/lodging.json";
-import enLocation from "./resources/en/location.json";
-import enTrack from "./resources/en/track.json";
-import enCompanions from "./resources/en/companions.json";
-import enPlaces from "./resources/en/places.json";
-import enXlsx from "./resources/en/xlsx.json";
-import enDataQuality from "./resources/en/dataQuality.json";
-import enSharing from "./resources/en/sharing.json";
-import enEvidence from "./resources/en/evidence.json";
-import enDocuments from "./resources/en/documents.json";
-import enMailIntake from "./resources/en/mailIntake.json";
-import enRoadtrips from "./resources/en/roadtrips.json";
-import enRouting from "./resources/en/routing.json";
-import enOpenData from "./resources/en/openData.json";
-import enExternalServices from "./resources/en/externalServices.json";
-import enSuggestionSources from "./resources/en/suggestionSources.json";
-import enLoyalty from "./resources/en/loyalty.json";
-import enTravplan from "./resources/en/travplan.json";
-import deTravplan from "./resources/de/travplan.json";
-import enNotes from "./resources/en/notes.json";
-
-import deCommon from "./resources/de/common.json";
-import deDashboard from "./resources/de/dashboard.json";
-import deSettings from "./resources/de/settings.json";
-import deFlights from "./resources/de/flights.json";
-import deBulkEdit from "./resources/de/bulkEdit.json";
-import deAuth from "./resources/de/auth.json";
-import deAdmin from "./resources/de/admin.json";
-import deTraining from "./resources/de/training.json";
-import deErrors from "./resources/de/errors.json";
-import deAchievements from "./resources/de/achievements.json";
-import deStats from "./resources/de/stats.json";
-import deFlightStatsHelp from "./resources/de/flightStatsHelp.json";
-import deSetup from "./resources/de/setup.json";
-import deMap from "./resources/de/map.json";
-import dePendingUpdates from "./resources/de/pendingUpdates.json";
-import deParser from "./resources/de/parser.json";
-import deTrips from "./resources/de/trips.json";
-import deCruise from "./resources/de/cruise.json";
-import deRail from "./resources/de/rail.json";
-import deBus from "./resources/de/bus.json";
-import deChangeHistory from "./resources/de/changeHistory.json";
-import deRental from "./resources/de/rental.json";
-import deImport from "./resources/de/import.json";
-import deAircraft from "./resources/de/aircraft.json";
-import dePassport from "./resources/de/passport.json";
-import deSpecialFlights from "./resources/de/specialFlights.json";
-import deImmich from "./resources/de/immich.json";
-import deWhatsNew from "./resources/de/whatsNew.json";
-import deReadiness from "./resources/de/readiness.json";
-import deUsageStats from "./resources/de/usageStats.json";
-import dePushRelay from "./resources/de/pushRelay.json";
-import deProvenance from "./resources/de/provenance.json";
-import dePurpose from "./resources/de/purpose.json";
-import deSettingsRows from "./resources/de/settingsRows.json";
-import deLodging from "./resources/de/lodging.json";
-import deLocation from "./resources/de/location.json";
-import deTrack from "./resources/de/track.json";
-import deCompanions from "./resources/de/companions.json";
-import dePlaces from "./resources/de/places.json";
-import deXlsx from "./resources/de/xlsx.json";
-import deDataQuality from "./resources/de/dataQuality.json";
-import deSharing from "./resources/de/sharing.json";
-import deEvidence from "./resources/de/evidence.json";
-import deDocuments from "./resources/de/documents.json";
-import deMailIntake from "./resources/de/mailIntake.json";
-import deRoadtrips from "./resources/de/roadtrips.json";
-import deRouting from "./resources/de/routing.json";
-import deOpenData from "./resources/de/openData.json";
-import deExternalServices from "./resources/de/externalServices.json";
-import deSuggestionSources from "./resources/de/suggestionSources.json";
-import deLoyalty from "./resources/de/loyalty.json";
-import deNotes from "./resources/de/notes.json";
 
 // Get initial language: stored preference → browser language → fallback "en"
 const getInitialLanguage = (): string => {
@@ -138,131 +23,50 @@ const getInitialLanguage = (): string => {
   return "en";
 };
 
-const resources = {
-  en: {
-    common: enCommon,
-    dashboard: enDashboard,
-    settings: enSettings,
-    flights: enFlights,
-    bulkEdit: enBulkEdit,
-    auth: enAuth,
-    admin: enAdmin,
-    training: enTraining,
-    errors: enErrors,
-    achievements: enAchievements,
-    stats: enStats,
-    flightStatsHelp: enFlightStatsHelp,
-    setup: enSetup,
-    map: enMap,
-    pendingUpdates: enPendingUpdates,
-    parser: enParser,
-    trips: enTrips,
-    cruise: enCruise,
-    rail: enRail,
-    bus: enBus,
-    changeHistory: enChangeHistory,
-    ferry: enFerry,
-    rental: enRental,
-    import: enImport,
-    aircraft: enAircraft,
-    passport: enPassport,
-    specialFlights: enSpecialFlights,
-    immich: enImmich,
-    whatsNew: enWhatsNew,
-    readiness: enReadiness,
-    usageStats: enUsageStats,
-    pushRelay: enPushRelay,
-    provenance: enProvenance,
-    purpose: enPurpose,
-    settingsRows: enSettingsRows,
-    lodging: enLodging,
-    location: enLocation,
-    track: enTrack,
-    companions: enCompanions,
-    places: enPlaces,
-    xlsx: enXlsx,
-    dataQuality: enDataQuality,
-    sharing: enSharing,
-    evidence: enEvidence,
-    documents: enDocuments,
-    mailIntake: enMailIntake,
-    roadtrips: enRoadtrips,
-    routing: enRouting,
-    openData: enOpenData,
-    externalServices: enExternalServices,
-    suggestionSources: enSuggestionSources,
-    loyalty: enLoyalty,
-    notes: enNotes,
-    comparison: enComparison,
-    encryptedShare: enEncryptedShare,
-    travplan: enTravplan,
-  },
-  de: {
-    common: deCommon,
-    dashboard: deDashboard,
-    settings: deSettings,
-    flights: deFlights,
-    bulkEdit: deBulkEdit,
-    auth: deAuth,
-    admin: deAdmin,
-    training: deTraining,
-    errors: deErrors,
-    achievements: deAchievements,
-    stats: deStats,
-    flightStatsHelp: deFlightStatsHelp,
-    setup: deSetup,
-    map: deMap,
-    pendingUpdates: dePendingUpdates,
-    parser: deParser,
-    trips: deTrips,
-    cruise: deCruise,
-    rail: deRail,
-    bus: deBus,
-    changeHistory: deChangeHistory,
-    ferry: deFerry,
-    rental: deRental,
-    import: deImport,
-    aircraft: deAircraft,
-    passport: dePassport,
-    specialFlights: deSpecialFlights,
-    immich: deImmich,
-    whatsNew: deWhatsNew,
-    readiness: deReadiness,
-    usageStats: deUsageStats,
-    pushRelay: dePushRelay,
-    provenance: deProvenance,
-    purpose: dePurpose,
-    settingsRows: deSettingsRows,
-    lodging: deLodging,
-    location: deLocation,
-    track: deTrack,
-    companions: deCompanions,
-    places: dePlaces,
-    xlsx: deXlsx,
-    dataQuality: deDataQuality,
-    sharing: deSharing,
-    evidence: deEvidence,
-    documents: deDocuments,
-    mailIntake: deMailIntake,
-    roadtrips: deRoadtrips,
-    routing: deRouting,
-    openData: deOpenData,
-    externalServices: deExternalServices,
-    suggestionSources: deSuggestionSources,
-    loyalty: deLoyalty,
-    notes: deNotes,
-    comparison: deComparison,
-    encryptedShare: deEncryptedShare,
-    travplan: deTravplan,
-  },
-};
+/**
+ * The translation files load per language, not in the entry chunk (perf
+ * audit 2026-11, item 10): all 56 namespaces of both languages were imported
+ * statically, 3.1 MB of JSON in a 2.97 MB / 907 KB gzip entry chunk that every
+ * cold start parsed. Each file is now its own chunk; the active language is
+ * awaited before the app renders (`i18nReady`, main.tsx), the other one loads
+ * when the user switches (`changeLanguage`). Namespaces are not split further
+ * per route: with `useSuspense: false` a namespace that arrives after its view
+ * rendered would flash its raw keys.
+ */
+const LANGUAGES = ["en", "de"] as const;
+type Language = (typeof LANGUAGES)[number];
+const loaders = import.meta.glob<{ default: Record<string, unknown> }>("./resources/*/*.json");
+const loadedLanguages = new Map<string, Promise<void>>();
+
+/** Adds every namespace of `lng` to i18next; once per language, shared by concurrent callers. */
+export function loadLanguage(lng: string): Promise<void> {
+  const known = loadedLanguages.get(lng);
+  if (known) return known;
+  const prefix = `./resources/${lng}/`;
+  const run = Promise.all(
+    Object.entries(loaders)
+      .filter(([file]) => file.startsWith(prefix))
+      .map(async ([file, load]) => {
+        const ns = file.slice(prefix.length).replace(/\.json$/, "");
+        const mod = await load();
+        i18n.addResourceBundle(lng, ns, mod.default, true, true);
+      })
+  ).then(() => undefined);
+  // A failed chunk is not remembered: the next call tries again.
+  run.catch(() => loadedLanguages.delete(lng));
+  loadedLanguages.set(lng, run);
+  return run;
+}
 
 // Initialize i18n synchronously with initAsync: false (named initImmediate
 // before i18next 24; the alias was dropped in 26)
 // This ensures resources are available immediately
+const initialLanguage = getInitialLanguage();
+
 i18n.use(initReactI18next).init({
-  resources,
-  lng: getInitialLanguage(),
+  resources: {},
+  partialBundledLanguages: true,
+  lng: initialLanguage,
   fallbackLng: "en",
   defaultNS: "common",
   ns: [
@@ -340,8 +144,32 @@ i18n.use(initReactI18next).init({
   nsSeparator: ":",
 });
 
+/**
+ * Resolves when the active language's translations are in. Tests (Vitest) get
+ * both languages, since several compare them. A failed load is logged and the
+ * app renders anyway: keys on screen beat a blank page, and the stale-bundle
+ * recovery reloads on a missing chunk.
+ */
+export const i18nReady: Promise<void> = Promise.all(
+  (import.meta.env.MODE === "test" ? [...LANGUAGES] : [initialLanguage]).map(loadLanguage)
+)
+  .then(() => undefined)
+  .catch((error: unknown) => {
+    console.warn("[i18n] Loading the translations failed", error);
+  });
+
+// Every switch, whoever asks for it (the settings store sync in App.tsx and
+// useTranslation, the display setting): the new language's files follow, and
+// react-i18next re-renders on "added" (bindI18nStore).
+i18n.on("languageChanged", (lng) => {
+  loadLanguage(lng).catch((error: unknown) => {
+    console.warn(`[i18n] Loading the ${lng} translations failed`, error);
+  });
+});
+
 // Function to change language and update settings store
-export const changeLanguage = async (lng: "en" | "de"): Promise<void> => {
+export const changeLanguage = async (lng: Language): Promise<void> => {
+  await loadLanguage(lng);
   await i18n.changeLanguage(lng);
   const settingsStore = useSettingsStore.getState();
   settingsStore.setDisplay({ language: lng });

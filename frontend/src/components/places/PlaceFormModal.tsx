@@ -1,9 +1,10 @@
+import Chip from "../ui/Chip";
 import { useCallback, useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { LocationInput, type LocationSelection } from "../location/LocationInput";
 import type { LocationCoordinates } from "../location/LocationInput";
 import { useTranslation } from "../../hooks/useTranslation";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { logger } from "../../lib/logger";
 import { createPlace, updatePlace } from "../../lib/api/places";
 import { listPlaceLists } from "../../lib/api/placeLists";
@@ -324,7 +325,7 @@ export function PlaceFormModal({
   const listName = (id: string): string => lists.find((l) => l.id === id)?.name ?? id;
 
   return (
-    <Modal
+    <Dialog
       open
       // Once the place is stored, every way out is "continue": the caller must
       // learn of it, or the list behind the dialog would not show the place.
@@ -533,10 +534,11 @@ export function PlaceFormModal({
               {lists.map((list) => {
                 const on = selectedLists.includes(list.id);
                 return (
-                  <button
+                  <Chip
                     key={list.id}
-                    type="button"
-                    aria-pressed={on}
+                    size="sm"
+                    active={on}
+                    color={list.color}
                     onClick={() =>
                       setSelectedLists((prev) =>
                         prev.includes(list.id)
@@ -544,16 +546,10 @@ export function PlaceFormModal({
                           : [...prev, list.id]
                       )
                     }
-                    className={`rounded-full border px-3 py-1 text-xs ${COARSE}`}
-                    style={{
-                      borderColor: on ? list.color : "var(--color-border)",
-                      background: on ? `${list.color}22` : "transparent",
-                      color: on ? list.color : "var(--text-secondary)",
-                    }}
                   >
                     {list.icon ? `${list.icon} ` : ""}
                     {list.name}
-                  </button>
+                  </Chip>
                 );
               })}
             </ChipGroup>
@@ -583,24 +579,14 @@ export function PlaceFormModal({
           </label>
           <ChipGroup label={t("places:form.status")} hintId="place-form-status-hint">
             {([true, false] as const).map((v) => (
-              <button
+              <Chip
                 key={String(v)}
-                type="button"
-                aria-pressed={visited === v}
+                color="var(--domain-poi)"
+                active={visited === v}
                 onClick={() => setVisited(v)}
-                className={`rounded-full px-4 py-2 text-sm ${COARSE}`}
-                style={
-                  visited === v
-                    ? {
-                        border: "1px solid var(--domain-poi)",
-                        color: "var(--domain-poi)",
-                        background: "var(--domain-poi-soft)",
-                      }
-                    : { border: "1px solid var(--color-border)", color: "var(--text-muted)" }
-                }
               >
                 {v ? t("places:form.wasHere") : t("places:form.onWishlist")}
-              </button>
+              </Chip>
             ))}
           </ChipGroup>
           {/* The default is the wishlist, and saying so beats letting the user
@@ -650,7 +636,7 @@ export function PlaceFormModal({
         />
         <RequiredLegend className="mt-3" />
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

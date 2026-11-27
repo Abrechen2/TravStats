@@ -30,18 +30,30 @@ const getMock = vi.fn();
 const removeMock = vi.fn();
 const routingMock = vi.fn();
 const routeAgainMock = vi.fn();
+const keepStraightMock = vi.fn();
+const clearManualMock = vi.fn();
 vi.mock("../../lib/api/bus", () => ({
   busApi: {
     get: (...a: unknown[]) => getMock(...a),
     remove: (...a: unknown[]) => removeMock(...a),
     routing: () => routingMock(),
     routeAgain: (...a: unknown[]) => routeAgainMock(...a),
+    keepStraight: (...a: unknown[]) => keepStraightMock(...a),
+    clearManualRoute: (...a: unknown[]) => clearManualMock(...a),
   },
 }));
 // Its own suite covers it; here it would only reach for the network.
 vi.mock("../../components/documents/DocumentsSection", () => ({
   default: ({ entry }: { entry: { type: string; id: string } }) => (
     <div data-testid="documents-stub">{`${entry.type}:${entry.id}`}</div>
+  ),
+}));
+vi.mock("../../components/bus/BusRouteEditor", () => ({
+  BusRouteEditor: ({ onSaved, ride }: { onSaved: (r: unknown) => void; ride: BusJourney }) => (
+    <button
+      data-testid="bus-editor-stub"
+      onClick={() => onSaved({ ...ride, geometrySource: "manual" })}
+    />
   ),
 }));
 vi.mock("../../components/bus/BusRouteMap", () => ({
@@ -91,6 +103,10 @@ vi.mock("../../components/ui/ConfirmModal", () => ({
 const documentCount = vi.hoisted(() => ({ value: 0 as number | null }));
 vi.mock("../../hooks/useDocumentCount", () => ({ useDocumentCount: () => documentCount.value }));
 const addToast = vi.fn();
+vi.mock("../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  reportPageError: (message: string, tone = "error") => addToast(tone, message),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: Record<string, unknown>) => unknown) => selector({ addToast }),
 }));
@@ -121,6 +137,13 @@ async function renderPage(loaded: BusJourney | Error, url = "/bus/r1"): Promise<
   });
 }
 
+/** An entry with a confirmation: choose it, then confirm in the dialog that follows. */
+function chooseConfirmed(trigger: HTMLElement, entry: string): void {
+  chooseMenuEntry(trigger, entry);
+  // The mocked confirm dialog above has one button.
+  fireEvent.click(screen.getByRole("button", { name: "confirm-delete" }));
+}
+
 const notFound = (): Error =>
   Object.assign(new Error("gone"), { isAxiosError: true, response: { status: 404 } });
 
@@ -131,6 +154,8 @@ describe("BusDetailPage", () => {
     routingMock.mockReset();
     routingMock.mockResolvedValue({ configured: true, providerId: "graphhopper" });
     routeAgainMock.mockReset();
+    keepStraightMock.mockReset();
+    clearManualMock.mockReset();
     addToast.mockReset();
     navigate.mockReset();
     documentCount.value = 0;
@@ -236,6 +261,70 @@ describe("BusDetailPage", () => {
         "Ohne Routing-Dienst bleibt es bei der Luftlinie."
       );
       expect(screen.queryByRole("button", { name: "Über die Straße berechnen" })).toBeNull();
+    });
+  });
+
+  describe("hand-drawn line (GitHub #409)", () => {
+    const road = (): BusJourney => ({
+      ...rideFixture(),
+      geometrySource: "road",
+      geometry: [
+        [127.0046, 37.5048],
+        [127.5, 37.9],
+        [128.5918, 38.1911],
+      ],
+    });
+
+    it("opens the editor from the route section and shows the saved manual line", async () => {
+      await renderPage(road());
+      fireEvent.click(await screen.findByTestId("bus-route-draw"));
+      fireEvent.click(await screen.findByTestId("bus-editor-stub"));
+      expect(await screen.findByTestId("bus-route-draw")).toHaveTextContent("Linie bearbeiten");
+    });
+
+    it("keeps a road ride straight and says so", async () => {
+      keepStraightMock.mockResolvedValue({ ...road(), geometrySource: "manual", geometry: null });
+      await renderPage(road());
+      chooseConfirmed(await screen.findByTestId("bus-route-menu"), "Bei der Luftlinie lassen");
+      expect(await screen.findByTestId("bus-route-message")).toHaveTextContent(
+        "Die Fahrt bleibt bei der Luftlinie."
+      );
+      expect(keepStraightMock).toHaveBeenCalledWith("r1", expect.anything());
+    });
+
+    it("words a failed keep-straight instead of failing silently", async () => {
+      keepStraightMock.mockRejectedValue(new Error("Network Error"));
+      await renderPage(road());
+      chooseConfirmed(await screen.findByTestId("bus-route-menu"), "Bei der Luftlinie lassen");
+      expect(await screen.findByTestId("bus-route-message")).toHaveTextContent(
+        "Das Beibehalten der Luftlinie ist nicht angekommen"
+      );
+    });
+
+    it("removes a manual line and reports that the road was routed again", async () => {
+      clearManualMock.mockResolvedValue({ data: road(), meta: { busRoute: "routed" } });
+      await renderPage({ ...road(), geometrySource: "manual" });
+      chooseConfirmed(
+        await screen.findByTestId("bus-route-menu"),
+        "Handgezeichnete Linie entfernen"
+      );
+      expect(await screen.findByTestId("bus-route-message")).toHaveTextContent(
+        "die Straße wurde neu berechnet"
+      );
+    });
+
+    it("words a failed removal, and a version conflict by its own sentence", async () => {
+      clearManualMock.mockRejectedValue({
+        response: { data: { error: "x", code: "VERSION_CONFLICT" } },
+      });
+      await renderPage({ ...road(), geometrySource: "manual" });
+      chooseConfirmed(
+        await screen.findByTestId("bus-route-menu"),
+        "Handgezeichnete Linie entfernen"
+      );
+      expect(await screen.findByTestId("bus-route-message")).toHaveTextContent(
+        "Die Fahrt wurde zwischenzeitlich geändert"
+      );
     });
   });
 

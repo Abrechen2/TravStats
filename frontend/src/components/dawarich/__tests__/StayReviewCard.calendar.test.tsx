@@ -154,3 +154,20 @@ describe("a finding with a plugin suggestion", () => {
     );
   });
 });
+
+describe("a finding a plugin answered with nothing", () => {
+  it("still offers 'Neu fragen', and asking again calls the plugin route", async () => {
+    const { suggestionPluginsApi } = await import("../../../lib/api/suggestionPlugins");
+    const empty = {
+      ...row,
+      evidence: { ...row.evidence, pluginsAsked: ["11111111-1111-4111-8111-111111111111"] },
+    } as unknown as DawarichStay;
+    render(
+      <MemoryRouter>
+        <StayReviewCard row={empty} choices={{ places: [], trips: [] }} onDone={vi.fn()} />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByText("suggestionSources:inbox.plugins.reask"));
+    await waitFor(() => expect(suggestionPluginsApi.reask).toHaveBeenCalledWith("finding"));
+  });
+});

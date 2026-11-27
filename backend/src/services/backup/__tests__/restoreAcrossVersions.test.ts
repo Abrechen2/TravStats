@@ -202,9 +202,9 @@ describe("sync schema check", () => {
     await prisma.$disconnect();
   });
 
-  function health(): Record<string, unknown> {
+  async function health(): Promise<Record<string, unknown>> {
     let body: Record<string, unknown> = {};
-    healthHandler(
+    await healthHandler(
       {} as never,
       { json: (value: Record<string, unknown>) => (body = value) } as never
     );
@@ -214,7 +214,7 @@ describe("sync schema check", () => {
   it("finds every trigger on a migrated database and reports the check as ok", async () => {
     expect(await missingSyncTriggers()).toEqual([]);
     expect(await runSyncSchemaCheck()).toEqual({ ok: true });
-    expect(health()).toMatchObject({ checks: { syncTriggers: "ok" } });
+    expect(await health()).toMatchObject({ checks: { syncTriggers: "ok" } });
   });
 
   it("names a missing trigger and turns /health degraded", async () => {
@@ -225,7 +225,10 @@ describe("sync schema check", () => {
         ok: false,
         missing: ["flights:AA_sync_change"],
       });
-      expect(health()).toMatchObject({ status: "degraded", checks: { syncTriggers: "failed" } });
+      expect(await health()).toMatchObject({
+        status: "degraded",
+        checks: { syncTriggers: "failed" },
+      });
     } finally {
       await prisma.$executeRawUnsafe(
         `CREATE TRIGGER "AA_sync_change" AFTER INSERT OR UPDATE OR DELETE ON "flights"

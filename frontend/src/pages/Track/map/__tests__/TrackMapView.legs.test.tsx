@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { TravTrackDay } from "../../../../lib/api/travtrack";
 import type { TravTrackLeg, TravTrackStop } from "../../../../lib/api/travtrackLegs";
 import { setClockForTests } from "../../../../shared/time/clock";
-import { useToastStore } from "../../../../store/toastStore";
+import { usePageErrorStore } from "../../../../store/pageErrorStore";
 
 const api = vi.hoisted(() => ({
   day: vi.fn(),
@@ -19,6 +19,17 @@ const legsApi = vi.hoisted(() => ({
 }));
 const staysApi = vi.hoisted(() => ({ reject: vi.fn() }));
 // The photo layer is on by default: no photo source is connected in these tests.
+// The leg card asks whether road matching is offered (rc46 extras C2): no router here.
+vi.mock("../../../../lib/api/travtrackCleanup", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../lib/api/travtrackCleanup")>();
+  return {
+    ...actual,
+    travTrackCleanupApi: {
+      ...actual.travTrackCleanupApi,
+      availability: vi.fn(async () => ({ available: false, reason: "serviceOff" })),
+    },
+  };
+});
 vi.mock("../../../../lib/api/travtrackViews", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../../../lib/api/travtrackViews")>();
   return {
@@ -168,7 +179,7 @@ describe("TrackMapView legs", () => {
     legsApi.stopIdentity.mockReturnValue(new Promise(() => {}));
     clearStopIdentityCache();
     window.localStorage.clear();
-    useToastStore.setState({ toasts: [] });
+    usePageErrorStore.getState().clear();
     mapProps.last = null;
   });
   afterEach(() => setClockForTests(null));
@@ -296,9 +307,9 @@ describe("TrackMapView legs", () => {
     await screen.findByTestId("map-stub");
     fireEvent.click(screen.getByTestId("track-leg-row"));
     fireEvent.click(screen.getByRole("button", { name: "track:legs.mode.bus" }));
-    await waitFor(() => expect(useToastStore.getState().toasts).toHaveLength(1));
-    const toast = useToastStore.getState().toasts[0];
-    expect(toast.type).toBe("error");
+    await waitFor(() => expect(usePageErrorStore.getState().errors).toHaveLength(1));
+    const toast = usePageErrorStore.getState().errors[0];
+    expect(toast.tone).toBe("error");
     expect(toast.message).toContain("track:legs.modeFailed");
     expect(toast.message).toContain("track:errors.generic");
     expect(screen.getByTestId("track-leg-mode")).toHaveTextContent("track:legs.mode.car");
@@ -319,7 +330,7 @@ describe("TrackMapView legs", () => {
     api.day.mockImplementation(async () => dayWith([], [stop()]));
     fireEvent.click(screen.getByRole("button", { name: "track:legs.mode.bus" }));
     await waitFor(() => expect(screen.queryByTestId("track-leg-card")).not.toBeInTheDocument());
-    expect(useToastStore.getState().toasts[0].message).toContain("track:errors.legGone");
+    expect(usePageErrorStore.getState().errors[0].message).toContain("track:errors.legGone");
   });
 
   it("the stop card shows span and stay status; an open stay is reviewed or declined from it", async () => {

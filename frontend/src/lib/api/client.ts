@@ -2,6 +2,7 @@ import axios, { type AxiosError } from "axios";
 
 import { API_TIMEOUTS } from "../../config/constants";
 import { wantsRecordedOnly } from "../stats/recordedOnly";
+import { purposeFilterFor } from "../purposeFilter";
 import { attachGatewayRetry } from "./gatewayRetry";
 
 export const API_URL = import.meta.env?.VITE_API_URL || "";
@@ -31,6 +32,11 @@ export const parserApi = axios.create({
 api.interceptors.request.use((config) => {
   if (wantsRecordedOnly(config.method, config.url)) {
     config.params = { ...(config.params as object | undefined), onlyRecorded: "true" };
+  }
+  // "Nach Zweck filtern": the page's purpose filter rides on its entry reads (lib/purposeFilter.ts).
+  const purposeFilter = purposeFilterFor(config.method, config.url);
+  if (purposeFilter) {
+    config.params = { ...(config.params as object | undefined), purposeFilter };
   }
   return config;
 });

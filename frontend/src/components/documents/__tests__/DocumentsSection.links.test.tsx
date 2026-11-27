@@ -1,3 +1,4 @@
+import Toast from "../../Toast";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
@@ -104,12 +105,13 @@ describe("DocumentsSection — links (D2)", () => {
     const removed = { role: "covers", provenance: "user", rentalCategory: null, entry: FLIGHT };
     api.unlinkFromEntry.mockResolvedValue(removed);
     api.addLinks.mockResolvedValue([]);
+    render(<Toast />);
     render(<DocumentsSection entry={FLIGHT} />);
     fireEvent.click(await screen.findByRole("button", { name: "documents:rowMenuLabel" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "documents:links.unlink" }));
     await waitFor(() => expect(api.unlinkFromEntry).toHaveBeenCalledWith("d1", FLIGHT));
     expect(api.remove).not.toHaveBeenCalled();
-    expect(await screen.findByTestId("documents-undo")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "documents:links.undo" })).toBeInTheDocument();
     expect(screen.queryByText("Rundreise.pdf")).toBeNull();
 
     api.listForEntry.mockResolvedValue([doc()]);

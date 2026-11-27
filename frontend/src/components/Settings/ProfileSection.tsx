@@ -1,3 +1,5 @@
+import DateField from "../ui/DateField";
+import InlineError from "../ui/InlineError";
 import React from "react";
 import { SectionCard } from "./SettingsShared";
 import HelpIcon from "../Help/HelpIcon";
@@ -35,6 +37,7 @@ interface ProfileSectionProps {
     lastName?: string | null;
   };
   uploadingProfilePicture: boolean;
+  avatarError?: string | null;
   removingProfilePicture: boolean;
   onAvatarUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onAvatarDelete: () => void;
@@ -49,7 +52,7 @@ interface ProfileDraft extends Record<string, unknown> {
 
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function DateField({
+function BirthdateField({
   value,
   onChange,
 }: {
@@ -58,9 +61,9 @@ function DateField({
 }): JSX.Element {
   const { id, locked, describedBy, changed } = useSettingItem();
   return (
-    <input
+    <DateField
+      inline
       id={id}
-      type="date"
       className="input"
       value={value}
       disabled={locked}
@@ -81,6 +84,7 @@ function DateField({
 export default function ProfileSection({
   profile,
   uploadingProfilePicture,
+  avatarError,
   removingProfilePicture,
   onAvatarUpload,
   onAvatarDelete,
@@ -217,6 +221,7 @@ export default function ProfileSection({
                   : t("settings:profile.removeAvatar", { defaultValue: "Remove picture" })}
               </button>
             )}
+            {avatarError && <InlineError>{avatarError}</InlineError>}
           </div>
         )}
       </div>
@@ -286,7 +291,7 @@ export default function ProfileSection({
             locked={locked}
             changed={group.isChanged("birthdate")}
             control={
-              <DateField
+              <BirthdateField
                 value={group.draft.birthdate}
                 onChange={(birthdate) => group.edit({ birthdate })}
               />

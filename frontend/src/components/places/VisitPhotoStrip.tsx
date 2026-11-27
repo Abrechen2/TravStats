@@ -10,9 +10,9 @@ import {
   updateVisitPhoto,
   uploadVisitPhotos,
 } from "../../lib/api/places";
-import { useToastStore } from "../../store/toastStore";
 import { VisitPhotoSuggestions } from "./VisitPhotoSuggestions";
 import type { PlaceVisitPhoto } from "../../types/placeList";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   visitId: string;
@@ -36,7 +36,6 @@ interface Props {
  */
 export function VisitPhotoStrip({ visitId, photos, onChanged }: Props): JSX.Element {
   const { t } = useTranslation("places");
-  const addToast = useToastStore((s) => s.addToast);
   const [removedAuto, setRemovedAuto] = useState(false);
   const autoIds = removedAuto ? [] : photos.filter((p) => p.provenance === "auto").map((p) => p.id);
   const sourceName = (p: PlaceVisitPhoto): string =>
@@ -49,7 +48,7 @@ export function VisitPhotoStrip({ visitId, photos, onChanged }: Props): JSX.Elem
       onChanged?.();
     } catch (err: unknown) {
       logger.error("VisitPhotoStrip: removing auto links failed", err);
-      addToast("error", t("photos.auto.removeFailed"));
+      reportPageError(t("photos.auto.removeFailed"));
     }
   };
   // Each operation reports the change only once it went through: a refused

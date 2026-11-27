@@ -7,10 +7,12 @@ import type { ReadinessApiErrorCode } from "./readinessErrorCodes";
 import type { CompanionAppApiErrorCode } from "./companionAppErrorCodes";
 import type { ConnectionFileApiErrorCode } from "./connectionFileErrorCodes";
 import type { AdminStepUpApiErrorCode } from "./adminStepUpErrorCodes";
+import type { RecoveryKeyApiErrorCode } from "./recoveryKeyErrorCodes";
 import type { AccountArchiveApiErrorCode } from "./accountArchiveErrorCodes";
 import type { LifeBookApiErrorCode } from "./lifeBookErrorCodes";
 import type { LocationProviderApiErrorCode } from "./locationProviderErrorCodes";
 import type { SuggestionSourceApiErrorCode } from "./suggestionSourceErrorCodes";
+import type { ServiceUseApiErrorCode } from "./serviceUseErrorCodes";
 
 /**
  * Every machine-readable cause an `/api` error body may carry in `code`.
@@ -142,6 +144,9 @@ export type ApiErrorCode =
   /** A `visit` finding was accepted after it had been answered — dismissed, or
    *  accepted by a request that won the race. Nothing is written. */
   | "VISIT_ALREADY_ANSWERED"
+  /** "Take back" a covered suggestion (forgejo#439) that is not covered — or not the caller's. */
+  | "PHOTO_JOURNEY_NOT_COVERED"
+  | "STAY_NOT_COVERED"
   /** A training annotation whose offsets do not cut their own value out of
    *  the text being saved. The two used to be allowed to disagree, which
    *  corrupted every derivation built on it in silence. */
@@ -217,6 +222,8 @@ export type ApiErrorCode =
   | "FERRY_ROUTE_INVALID"
   /** A hand-drawn crossing line does not start and end at the crossing's terminals. */
   | "FERRY_ROUTE_NOT_ANCHORED"
+  | "BUS_ROUTE_INVALID"
+  | "BUS_ROUTE_NOT_ANCHORED"
   /** A vessel search or pick failed validation; `field` names it (`q` or `mmsi`). */
   | "VESSEL_INVALID_INPUT"
   /** A picked vessel is not one the server offered for this journey or search. */
@@ -303,6 +310,12 @@ export type ApiErrorCode =
   /** A request body failed its schema. Sent on every ZodError answer, so a
    *  form shows its own sentence instead of zod's JSON issue dump. */
   | "VALIDATION_FAILED"
+  /** A purpose key names no built-in purpose and no custom purpose of the entry's owner. */
+  | "PURPOSE_UNKNOWN"
+  /** A custom purpose that entries still use cannot be deleted, only archived. */
+  | "PURPOSE_IN_USE"
+  /** No custom purpose with that id belongs to the caller. */
+  | "PURPOSE_NOT_FOUND"
   /** Time-zone re-resolution (ADR 0002 D2): `apply` named a dry run that
    *  does not exist or expired — run the dry run again. */
   | "DRY_RUN_NOT_FOUND"
@@ -393,6 +406,7 @@ export type ApiErrorCode =
   | CompanionAppApiErrorCode // packing lists and personal settings (companionAppErrorCodes.ts)
   | LocationProviderApiErrorCode // choosing the location provider (locationProviderErrorCodes.ts)
   | SuggestionSourceApiErrorCode // calendar sources and suggestion plugins (suggestionSourceErrorCodes.ts)
+  | ServiceUseApiErrorCode // confirmed outbound uses: AI help, map matching (serviceUseErrorCodes.ts)
   /** Observed takeoff/landing (forgejo#194): a time in the future (400). */
   | "OBSERVED_TIME_IN_FUTURE"
   /** Observed takeoff/landing: more than 12 h from the schedule (422). */
@@ -537,10 +551,16 @@ export type ApiErrorCode =
    *  the caller (403). */
   | "SHARE_CONSENT_REQUIRED"
   | "SHARE_GROUP_CONSENT_REQUIRED"
+  /** Linking an existing copy (forgejo#440): the other account's trip is in another share group (409). */
+  | "SHARE_TRIP_IN_OTHER_GROUP"
   /** No companion of this caller under that id (404). */
   | "COMPANION_NOT_FOUND"
   /** Another of the caller's companions is already linked to that account (409). */
   | "SHARE_COMPANION_ALREADY_LINKED"
+  /** No pairing of this caller with a person on another server under that id (404). */
+  | "SHARE_REMOTE_PERSON_NOT_FOUND"
+  /** No account of this server that shares a trip group with the caller under that id (404). */
+  | "SHARE_MEMBER_NOT_FOUND"
   /** Sharing with a companion that is not linked to an account (409). */
   | "SHARE_COMPANION_NOT_LINKED"
   /** Leaving a group with a trip that is in none (409). */
@@ -629,6 +649,7 @@ export type ApiErrorCode =
   | "COMPARISON_PEER_UNREACHABLE"
   | "COMPARISON_PEER_OUTDATED" // the other server predates the leaderboard protocol
   | "COMPARISON_PEER_KEY_INVALID"
+  | RecoveryKeyApiErrorCode // the instance recovery key: reveal, confirm, restore
   | AdminStepUpApiErrorCode // a Companion's admin step-up on the federation pin calls
   | AccountArchiveApiErrorCode // the account archive export and import (forgejo#433)
   | LifeBookApiErrorCode // the life book export

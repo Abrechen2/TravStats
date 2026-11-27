@@ -90,7 +90,8 @@
     "general": "Allgemein",
     "people": "Reisende & Tags",
     "appearance": "Erscheinungsbild",
-    "notes": "Notizen"
+    "notes": "Notizen",
+    "label": "Bereiche der Reise"
   },
   "badge": {
     "noTrip": "—"
@@ -108,7 +109,7 @@
   "cleanup": {
     "button": "🧹 Aufräumen",
     "title": "Mikro-Reisen auflösen",
-    "intro": "Diese Reisen bestehen nur aus einer einzelnen Buchung (max. 2 Flüge) und enthalten sonst keine Inhalte. Beim Auflösen wird nur der Reise-Container entfernt — alle Flüge bleiben erhalten.",
+    "intro": "Reisen mit nur einer Buchung. Auflösen entfernt nur die Reise, Flüge bleiben.",
     "empty": "Keine Mikro-Reisen gefunden — alles aufgeräumt.",
     "flightCount_one": "{{count}} Flug",
     "flightCount_other": "{{count}} Flüge",
@@ -127,7 +128,7 @@
     "selected_other": "{{count}} Reisen ausgewählt",
     "title": "Reisen zusammenführen",
     "nameLabel": "Name der zusammengeführten Reise",
-    "intro": "Alle Flüge, Kreuzfahrten, Stopps, Tagebuch-Einträge und Fotos wandern in eine Reise. Die übrigen Reise-Container werden entfernt.",
+    "intro": "Alles wandert in eine Reise; die übrigen Reisen werden entfernt.",
     "confirm": "Zusammenführen",
     "done": "Reisen zusammengeführt",
     "error": "Zusammenführen fehlgeschlagen"
@@ -180,7 +181,8 @@
       "map": "Karte",
       "gallery": "Galerie",
       "logistics": "Logistik",
-      "tours": "Touren"
+      "tours": "Touren",
+      "label": "Reiseansichten"
     },
     "tabPlaceholder": {
       "gallery": "Galerie kommt in der nächsten Iteration — sobald Foto-Upload und Speicher-Backend stehen.",
@@ -202,6 +204,8 @@
           "ferry": "Fähren",
           "rental": "Mietwagen",
           "tours": "Touren",
+          "roadtrips": "Roadtrips",
+          "toursAndRoadtrips": "Touren & Roadtrips",
           "lodging": "Unterkünfte",
           "stops": "Stationen",
           "places": "Orte",
@@ -242,7 +246,9 @@
       "ferries": "Fähren",
       "date": "Datum",
       "route": "Strecke",
-      "open": "öffnen"
+      "open": "öffnen",
+      "cruiseLine": "Reederei",
+      "cruiseFallback": "Kreuzfahrt"
     },
     "timeline": {
       "addEntry": "+ Eintrag hinzufügen",
@@ -490,7 +496,7 @@
   },
   "summary": {
     "title": "KI-Zusammenfassung",
-    "cta": "Lass die KI eine kurze, persönliche Zusammenfassung dieser Reise schreiben — aus Flügen, Kreuzfahrten, Aufenthalten, Orten, Stopps und Tagebuch, in deiner Sprache.",
+    "cta": "Die KI schreibt eine kurze, persönliche Zusammenfassung dieser Reise.",
     "generateButton": "Zusammenfassung erstellen",
     "regenerate": "Neu generieren",
     "generating": "Schreibt … das kann ein paar Minuten dauern",
@@ -560,12 +566,16 @@
       "straight": "Luftlinie",
       "drawn": "gezogen",
       "routed": "berechnet",
-      "track": "aus der Spur"
+      "track": "aus der Spur",
+      "recorded": "aus Aufzeichnung"
     },
     "routing": {
       "routeAll": "Ganze Tour berechnen",
       "routingAll": "Wird berechnet …",
       "unavailableReason": "Kein Routing-Anbieter eingerichtet",
+      "providerFailing": "Routing-Anbieter antwortet nicht: {{provider}} — Strecken wurden gerade gezogen. Prüfe den Schlüssel oder wähle in den Einstellungen einen anderen Anbieter.",
+      "providerFailingAction": "Routing-Anbieter w\u00e4hlen",
+      "providerCustom": "eigener Routing-Server",
       "notConfigured": "Für diese Instanz ist kein Routing-Anbieter eingerichtet",
       "error": "Die Etappe konnte nicht berechnet werden",
       "allError": "Die Tour konnte nicht berechnet werden",
@@ -765,7 +775,8 @@
     "countries_other": "{{count}} Länder",
     "travellers": "Reisende",
     "travellersMore_other": "{{count}} weitere Reisende anzeigen",
-    "travellersMore_one": "{{count}} weitere Reisende anzeigen"
+    "travellersMore_one": "{{count}} weitere Reisende anzeigen",
+    "travellerShared": "geteilt"
   },
   "overview": {
     "daysAway": "Tage unterwegs",
@@ -798,7 +809,7 @@
   "export": {
     "button": "Reise exportieren",
     "title": "Reise exportieren",
-    "intro": "Lädt die Reise mit allen Einträgen als .travstats-Datei herunter. Eine andere TravStats-Instanz kann sie unter „Reise hinzufügen“ einlesen.",
+    "intro": "Lädt die Reise als .travstats-Datei für eine andere TravStats-Instanz herunter.",
     "leavesServer": "Die Datei verlässt den Server: Wer sie bekommt, kann alles darin lesen. Wähle nur, was mit soll.",
     "options": {
       "documents": "Dokumente mitgeben",
@@ -819,12 +830,12 @@
   },
   "dawarichStays": {
     "title": "Dawarich-Aufenthalte",
-    "description": "Aus deinen eigenen Dawarich-Positionsdaten werden alle sechs Stunden mögliche Aufenthalte der letzten sieben Tage erkannt. Es entstehen nur Vorschläge: Ein Besuch wird erst nach deiner Bestätigung eingetragen. Dies aktiviert weder den Immich-Scan noch die Ländererkennung.",
+    "description": "Erkennt Aufenthalte aus Dawarich als Vorschläge. Eingetragen wird erst beim Bestätigen.",
     "travtrack": {
-      "description": "Aus deinem TravTrack-Verlauf werden alle sechs Stunden mögliche Aufenthalte der letzten sieben Tage erkannt. Es entstehen nur Vorschläge: Ein Besuch wird erst nach deiner Bestätigung eingetragen. Dies aktiviert weder den Immich-Scan noch die Ländererkennung."
+      "description": "Erkennt Aufenthalte aus TravTrack als Vorschläge. Eingetragen wird erst beim Bestätigen."
     },
     "areas": {
-      "description": "Märkte, Einkaufszentren, Parks, Zoos, Freizeitparks und Museen werden als ganzes Gelände vorgeschlagen statt als einzelne Aufenthalte – das läuft mit der Aufenthaltserkennung mit. Dafür werden ungefähre Regionen (etwa 5-km-Raster) bei OpenStreetMap/Overpass abgefragt; deine Positionsfolgen, Zeiten und Punkt-IDs werden nicht übertragen. Besuche werden erst nach deiner Bestätigung eingetragen."
+      "description": "Parks, Märkte, Museen als ganzes Gelände. Fragt OpenStreetMap nur grob an."
     },
     "markets": {
       "coverage": "Geprüfte Regionen: {{tiles}} von {{total}}",
@@ -891,13 +902,14 @@
     },
     "evidenceInvalidated": "Nicht übernommen: Der Standortverlauf zu diesem Vorschlag wurde inzwischen gelöscht oder hat sich geändert.",
     "suggestionGone": "Diesen Vorschlag gibt es nicht mehr – der Standortverlauf dazu wurde inzwischen gelöscht.",
-    "evidenceUnverifiable": "Die Belege für diesen Vorschlag lassen sich gerade nicht prüfen, weil die Kartendaten dazu fehlen. Der Vorschlag bleibt erhalten; versuche es nach der nächsten Auswertung erneut.",
+    "evidenceUnverifiable": "Belege gerade nicht prüfbar, Kartendaten fehlen. Der Vorschlag bleibt.",
     "travTrackDisabled": "TravTrack ist auf diesem Server gerade ausgeschaltet. Der Vorschlag bleibt erhalten und kann später übernommen oder jetzt verworfen werden.",
     "acceptInProgress": "Dieser Vorschlag wird gerade an anderer Stelle übernommen. Bitte versuche es gleich noch einmal.",
     "historyChanged": "Der Standortverlauf hat sich während der Übernahme mehrfach geändert. Der Vorschlag bleibt erhalten; bitte versuche es gleich noch einmal.",
     "coveredBy": {
       "visit": "Bereits erfasst als Besuch: {{name}}",
-      "lodging": "Bereits erfasst als Unterkunft: {{name}}"
+      "lodging": "Bereits erfasst als Unterkunft: {{name}}",
+      "flight": "Bereits erfasst als Flug: {{name}}"
     },
     "uncertainty": {
       "staleMapData": "Die verwendeten Ortsflächen sind älter.",
@@ -1023,6 +1035,29 @@
           "workplace": "Arbeitsort",
           "other": "Sonstiger Ort"
         }
+      }
+    },
+    "aiHelp": {
+      "ask": "KI fragen",
+      "asking": "KI wird gefragt …",
+      "ranking": "Vorschlag der KI",
+      "use": "Übernehmen",
+      "advice": "Vorschlag von {{provider}} ({{host}}, {{where}}) – nur ein Rat, gespeichert wird erst, was du übernimmst und sicherst.",
+      "where": {
+        "cloud": "Cloud",
+        "lan": "im Heimnetz"
+      },
+      "error": {
+        "serviceOff": "Die KI-Hilfe ist auf diesem Server ausgeschaltet.",
+        "internetOff": "Der Server darf gerade keine externen Dienste erreichen.",
+        "noProvider": "Es ist kein KI-Modell eingerichtet, das dieses Konto nutzen darf.",
+        "notAmbiguous": "Für diesen Aufenthalt gibt es nur einen Kandidaten – nichts zu entscheiden.",
+        "providerConsent": "Du hast diesem KI-Anbieter noch nicht zugestimmt (Einstellungen › Dienste).",
+        "providerOff": "Das KI-Modell ist vom Administrator abgeschaltet.",
+        "timeout": "Die KI hat nicht rechtzeitig geantwortet.",
+        "unreachable": "Die KI war nicht erreichbar.",
+        "providerError": "Die KI hat mit einem Fehler geantwortet.",
+        "badAnswer": "Die KI hat keine brauchbare Antwort gegeben."
       }
     }
   },
@@ -1151,5 +1186,57 @@
     "staleShort": "Aufteilung prüfen",
     "membersTitle": "Einträge dieser Buchung"
   },
-  "bookingMenuLabel": "Weitere Aktionen zur Buchung {{name}}"
+  "bookingMenuLabel": "Weitere Aktionen zur Buchung {{name}}",
+  "photoLinks": {
+    "title": "Fotos",
+    "more": "+{{count}} weitere",
+    "showAll": "Alle Fotos ansehen",
+    "empty": "Noch keine Fotos verknüpft.",
+    "loading": "Fotos werden geladen …",
+    "loadFailed": "Die Fotos konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "truncated": "Eine Quelle hat mehr Fotos, als auf einmal gelesen werden; es werden nur die ersten gezeigt.",
+    "sourceFailed": "{{source}} fehlt: {{reason}}",
+    "sourceAlbum": "Album „{{name}}“",
+    "sourcePeriod": "Zeitraum {{from}} – {{until}}",
+    "provider": {
+      "immich": "Immich",
+      "photoprism": "PhotoPrism"
+    },
+    "proposal": "Passendes Album: {{name}}",
+    "proposalCount": "({{count}} Fotos)",
+    "proposalReason": {
+      "folder": "Ordnername passt",
+      "name": "Name passt",
+      "date": "Aufnahmedatum passt"
+    },
+    "link": "Verknüpfen",
+    "notThis": "Nicht dieses",
+    "periodOffer": "Dienstreise ohne Album: Fotos aus {{provider}} vom {{from}} bis {{until}} zeigen?",
+    "linkPeriod": "Zeitraum verknüpfen",
+    "notNow": "Nicht jetzt",
+    "autoLinked": "Der Reisezeitraum wurde automatisch verknüpft (Einstellung „Zeitraum automatisch verknüpfen“).",
+    "sources": "Quellen",
+    "remove": "Entfernen",
+    "removeImported": "Importierte Alben entfernst du in der Galerie.",
+    "actionFailed": "Das hat nicht geklappt: {{reason}}",
+    "refusal": {
+      "notConfigured": "Keine Fotoquelle verbunden.",
+      "notPreferred": "Zeiträume kommen aus PhotoPrism, solange es verbunden ist.",
+      "noDates": "Die Reise hat noch kein Datum.",
+      "importedAlbum": "Importierte Alben entfernst du in der Galerie.",
+      "unknownAlbum": "Dieses Album gibt es in der Fotoquelle nicht mehr.",
+      "unknown": "Unbekannter Fehler."
+    },
+    "proposalFailed": "Vorschläge konnten nicht geladen werden: {{reason}}",
+    "gallery": {
+      "title": "Fotos der Reise",
+      "close": "Schließen",
+      "allDays": "Alle Tage",
+      "undated": "Ohne Datum",
+      "loadMore": "Mehr laden",
+      "alt": "Foto der Reise",
+      "count": "{{count}} Fotos"
+    }
+  }
 }

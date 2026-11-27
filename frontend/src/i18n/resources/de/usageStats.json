@@ -5,7 +5,7 @@
     "accept": "Ja, Daten senden",
     "decline": "Nein, danke",
     "whatIsSent": "Was genau wird gesendet?",
-    "revokeHint": "Du kannst das jederzeit im Admin-Bereich wieder abschalten. Beim Abschalten werden die gespeicherten Daten dieser Installation gelöscht.",
+    "revokeHint": "Jederzeit abschaltbar; dabei werden die gespeicherten Daten gelöscht.",
     "saveFailed": "Deine Auswahl konnte nicht gespeichert werden. Bitte versuche es erneut."
   },
   "legal": {

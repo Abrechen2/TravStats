@@ -1,3 +1,4 @@
+import { fromDbDate } from "../../shared/time/localDate";
 import { Router, Response, NextFunction } from "express";
 import { Prisma } from "../../prisma";
 
@@ -124,6 +125,10 @@ export function toDto(route: {
   tourDate: Date | null;
   tourStartMinute: number | null;
   purpose: string | null;
+  purposeKey?: string | null;
+  /** Roadtrip taken over from TravTrack: the recorded span it links back to (rc46 extras A). */
+  trackFromDay?: Date | null;
+  trackToDay?: Date | null;
   legs: LegRow[];
   _count: { stops: number };
 }): Record<string, unknown> {
@@ -145,7 +150,12 @@ export function toDto(route: {
     anchorStopId: route.anchorStopId,
     kindAssignedAutomatically: route.kindAssignedAutomatically,
     purpose: route.purpose,
+    purposeKey: route.purposeKey ?? null,
     ...tourDayDto(route),
+    trackSpan:
+      route.trackFromDay && route.trackToDay
+        ? { fromDay: fromDbDate(route.trackFromDay), toDay: fromDbDate(route.trackToDay) }
+        : null,
     stopCount: route._count.stops,
     legCount: route.legs.length,
     distanceKm: travelledKm(route.legs),
@@ -525,6 +535,7 @@ router.get(
         stops,
         legs: legs.map(toLegDto),
         routingAvailable: routing.configured,
+        routingFailing: routing.failing,
       });
     } catch (error) {
       next(error);

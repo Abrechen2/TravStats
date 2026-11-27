@@ -24,6 +24,7 @@ import logger from "../utils/logger";
 import { prisma } from "../db";
 import { completeMissingPlaceAddresses } from "../services/places/addressBackfill";
 import { schedulerZone } from "../shared/time/schedulerZone";
+import { runHeavyJob } from "../services/jobs/heavySlot";
 
 /** 03:20 UTC — after the airline-logo sweep at 03:00, so the two do not
  *  contend for the same outbound budget. */
@@ -87,7 +88,7 @@ export function startPlaceAddressBackfillScheduler(): void {
     CRON_EXPRESSION,
     async () => {
       try {
-        await runPlaceAddressBackfill();
+        await runHeavyJob("placeAddressBackfill", () => runPlaceAddressBackfill());
       } catch (error) {
         logger.warn(
           { operation: "place_address_backfill_error", error },

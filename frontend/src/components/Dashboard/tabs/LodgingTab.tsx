@@ -207,7 +207,7 @@ export function LodgingTab(): JSX.Element {
       )}
       {!loading && !loadError && lodgings.length === 0 && (
         <MapEmptyOverlay
-          emoji="🏨"
+          icon="bed"
           title={t("dashboard:lodgingTab.emptyTitle")}
           body={t("dashboard:lodgingTab.emptyBody")}
           ctaLabel={t("dashboard:lodgingTab.emptyCta")}

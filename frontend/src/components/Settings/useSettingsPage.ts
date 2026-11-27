@@ -16,6 +16,7 @@ import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
 import { SettingWriteError } from "../ui/settings";
 import { useTranslation } from "../../hooks/useTranslation";
+import { reportPageError } from "../../store/pageErrorStore";
 
 export type { AutoSaveState };
 
@@ -76,6 +77,8 @@ export function useSettingsPage() {
 
   // Profile
   const [uploadingProfilePicture, setUploadingProfilePicture] = useState(false);
+  /** A failed picture upload/removal: said at the picture, not at the page top. */
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [removingProfilePicture, setRemovingProfilePicture] = useState(false);
 
   // Password modal
@@ -221,12 +224,13 @@ export function useSettingsPage() {
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    setAvatarError(null);
     if (!file.type.startsWith("image/")) {
-      addToast("error", t("settings:profile.invalidFileType"));
+      setAvatarError(t("settings:profile.invalidFileType"));
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      addToast("error", t("settings:profile.fileTooLarge"));
+      setAvatarError(t("settings:profile.fileTooLarge"));
       return;
     }
     setUploadingProfilePicture(true);
@@ -241,7 +245,7 @@ export function useSettingsPage() {
       // the previous avatar in place and surface the error instead.
       logger.error("Failed to upload profile picture:", error);
       const axiosError = error as { response?: { data?: { error?: string } } };
-      addToast("error", axiosError.response?.data?.error || t("settings:profile.uploadError"));
+      setAvatarError(axiosError.response?.data?.error || t("settings:profile.uploadError"));
     } finally {
       setUploadingProfilePicture(false);
       if (event.target) event.target.value = "";
@@ -249,6 +253,7 @@ export function useSettingsPage() {
   };
 
   const handleAvatarDelete = async () => {
+    setAvatarError(null);
     setRemovingProfilePicture(true);
     try {
       await settingsApi.deleteProfilePicture();
@@ -259,7 +264,7 @@ export function useSettingsPage() {
     } catch (error: unknown) {
       logger.error("Failed to remove profile picture:", error);
       const axiosError = error as { response?: { data?: { error?: string } } };
-      addToast("error", axiosError.response?.data?.error || t("settings:profile.removeError"));
+      setAvatarError(axiosError.response?.data?.error || t("settings:profile.removeError"));
     } finally {
       setRemovingProfilePicture(false);
     }
@@ -370,8 +375,7 @@ export function useSettingsPage() {
     } catch (error: unknown) {
       logger.error("Failed to save API keys:", error);
       const axiosError = error as { response?: { data?: { error?: string } } };
-      addToast(
-        "error",
+      reportPageError(
         axiosError.response?.data?.error ||
           t("settings:apiKeys.saveFailed") ||
           "Failed to save API keys"
@@ -409,6 +413,7 @@ export function useSettingsPage() {
     hasParserAccess,
     // Profile
     uploadingProfilePicture,
+    avatarError,
     removingProfilePicture,
     handleAvatarUpload,
     handleAvatarDelete,

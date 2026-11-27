@@ -10,6 +10,7 @@ import { buildStationLabelLayers } from "../../layers/stationLabelsLayer";
 import { useMapLabelsModeStore } from "../../../store/mapLabelsModeStore";
 import { useMapCardSelectionStore } from "../../../store/mapCardSelectionStore";
 import type { DomainKey } from "../../../shared/domains";
+import type { ActivityDates } from "../../Globe/timeSliderUtils";
 
 type Translate = (key: string) => string;
 
@@ -17,6 +18,8 @@ export interface TransportOverlays {
   /** Rail, bus, ferry and rental lines, in drawing order. */
   layers: Layer[];
   legendRows: JSX.Element[];
+  /** Dated rides of the four domains, for the globe's activity histogram. */
+  activity: ActivityDates[];
   /** What could not be loaded, said over the map (beta.22 UAT); null when all loaded. */
   status: JSX.Element | null;
 }
@@ -80,8 +83,18 @@ export function useTransportOverlays(
     () => [...rail.layers, ...bus.layers, ...ferry.layers, ...rental.layers, ...stationLabels],
     [rail.layers, bus.layers, ferry.layers, rental.layers, stationLabels]
   );
+  const activity = useMemo<ActivityDates[]>(
+    () => [
+      { domain: "rail", dates: rail.dates },
+      { domain: "bus", dates: bus.dates },
+      { domain: "ferry", dates: ferry.dates },
+      { domain: "rental", dates: rental.dates },
+    ],
+    [rail.dates, bus.dates, ferry.dates, rental.dates]
+  );
   return {
     layers,
+    activity,
     legendRows: [...rail.legendRows, ...bus.legendRows, ...ferry.legendRows, ...rental.legendRows],
     status:
       rental.status || bus.status || ferry.status

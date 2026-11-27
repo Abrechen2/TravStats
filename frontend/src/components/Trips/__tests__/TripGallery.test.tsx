@@ -108,8 +108,8 @@ describe("TripGallery — uploaded-photos section visibility (#179)", () => {
 describe("TripGallery — a photo over the size limit (forgejo#88 acceptance)", () => {
   it("names the file and the limit and sends nothing, instead of 'Upload fehlgeschlagen'", async () => {
     const { tripsApi } = await import("../../../lib/api");
-    const { useToastStore } = await import("../../../store/toastStore");
-    const addToast = vi.spyOn(useToastStore.getState(), "addToast");
+    const { usePageErrorStore } = await import("../../../store/pageErrorStore");
+    const addToast = vi.spyOn(usePageErrorStore.getState(), "report");
     const { container } = render(
       <TripGallery tripId="trip-1" photos={[]} immichAlbums={[]} onChange={vi.fn()} />
     );
@@ -118,7 +118,7 @@ describe("TripGallery — a photo over the size limit (forgejo#88 acceptance)", 
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [big] } });
 
-    await waitFor(() => expect(addToast).toHaveBeenCalledWith("error", "trips:gallery.tooLarge"));
+    await waitFor(() => expect(addToast).toHaveBeenCalledWith("trips:gallery.tooLarge", "error"));
     expect(tripsApi.uploadPhotos).not.toHaveBeenCalled();
   });
 });

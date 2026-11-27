@@ -1,3 +1,6 @@
+import DateField from "../../components/ui/DateField";
+import Chip from "../ui/Chip";
+import { Icon } from "../ui/Icon";
 import { parseDecimalInput } from "../../lib/decimalInput";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
@@ -24,7 +27,7 @@ import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { cruiseStopToWire } from "./cruiseStopWire";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { deriveCruiseStatus } from "../../shared/statusDerivation";
 import { ShipPicker } from "./ShipPicker";
 import CatalogueCombobox from "../FlightForm/fields/CatalogueCombobox";
@@ -41,6 +44,7 @@ import { CruiseImportFlightGap } from "./CruiseImportFlightGap";
 import { CruiseReimportCompare } from "./CruiseReimportCompare";
 import type { ReimportConflict, ReimportSummary } from "./CruiseReimportCompare";
 import Toggletip from "../ui/Toggletip";
+import { reportPageError } from "../../store/pageErrorStore";
 
 export { deriveTripMeta } from "./cruiseImportEntry";
 
@@ -107,12 +111,12 @@ export function CruiseImportPreviewModal({
 
   const handleSave = async (): Promise<void> => {
     if (entryData.some((e) => e.priceInvalid)) {
-      addToast("error", t("cruise:form.errors.price"));
+      reportPageError(t("cruise:form.errors.price"));
       return;
     }
     const timeError = entryData.find((e) => e.timeError)?.timeError;
     if (timeError) {
-      addToast("error", saveErrorMessage(timeError, t, "cruise:import.saveError"));
+      reportPageError(saveErrorMessage(timeError, t, "cruise:import.saveError"));
       return;
     }
     setSaving(true);
@@ -129,7 +133,7 @@ export function CruiseImportPreviewModal({
       else afterComparison();
     } catch (err: unknown) {
       logger.error("CruiseImportPreviewModal: save failed", err);
-      addToast("error", saveErrorMessage(err, t, "cruise:import.saveError"));
+      reportPageError(saveErrorMessage(err, t, "cruise:import.saveError"));
     } finally {
       setSaving(false);
     }
@@ -155,11 +159,11 @@ export function CruiseImportPreviewModal({
       );
     }
     if (stillMissing > 0) {
-      addToast("warning", t("cruise:flightGap.leftOut", { count: stillMissing }));
+      reportPageError(t("cruise:flightGap.leftOut", { count: stillMissing }), "warning");
     }
     void Promise.resolve(onSaved()).catch((err: unknown) => {
       logger.error("CruiseImportPreviewModal: finishing the import failed", err);
-      addToast("error", saveErrorMessage(err, t, "cruise:import.saveError"));
+      reportPageError(saveErrorMessage(err, t, "cruise:import.saveError"));
     });
   };
 
@@ -191,7 +195,7 @@ export function CruiseImportPreviewModal({
           onDone={({ added, stillMissing }) => finish(added, stillMissing)}
         />
       )}
-      <Modal
+      <Dialog
         open
         onClose={onCancel}
         busy={saving}
@@ -257,7 +261,7 @@ export function CruiseImportPreviewModal({
             )}
           </div>
         )}
-      </Modal>
+      </Dialog>
     </>
   );
 }
@@ -476,14 +480,14 @@ function CruiseImportEntryEditor({
           <label htmlFor={shipInputId}>{t("field.ship")}</label>
           {ship ? (
             <span className="rounded-sm bg-emerald-500/15 px-1.5 py-0.5 text-[10px] normal-case text-emerald-300">
-              ✓ {t("import.shipMatched")}
+              <Icon name="check" size={14} /> {t("import.shipMatched")}
             </span>
           ) : overrideName ? (
             <Toggletip
               content={t("import.shipUnmatchedHint")}
               triggerClassName="rounded-sm bg-amber-500/15 px-1.5 py-0.5 text-[10px] normal-case text-amber-300"
             >
-              ⚠ {t("import.shipUnmatched")}
+              <Icon name="triangle-alert" size={14} /> {t("import.shipUnmatched")}
             </Toggletip>
           ) : (
             <span className="rounded-sm bg-red-500/15 px-1.5 py-0.5 text-[10px] normal-case text-red-300">
@@ -512,8 +516,8 @@ function CruiseImportEntryEditor({
       {/* Dates + status */}
       <div className="grid grid-cols-3 gap-3">
         <Field label={t("field.depart")} missing={!startDate}>
-          <input
-            type="date"
+          <DateField
+            inline
             value={startDate}
             onChange={(e): void => setStartDate(e.target.value)}
             style={{ colorScheme: "dark" }}
@@ -521,8 +525,8 @@ function CruiseImportEntryEditor({
           />
         </Field>
         <Field label={t("field.arrive")} missing={!endDate}>
-          <input
-            type="date"
+          <DateField
+            inline
             value={endDate}
             onChange={(e): void => setEndDate(e.target.value)}
             style={{ colorScheme: "dark" }}
@@ -535,12 +539,9 @@ function CruiseImportEntryEditor({
             user-controlled, via the checkbox below. Mirrors CruiseEditModal. */}
         <Field label={t("field.status")}>
           <div>
-            <span
-              className="inline-block rounded-full px-2 py-1 text-xs font-semibold"
-              style={cruiseStatusPillStyle(shownStatus)}
-            >
+            <Chip size="sm" color={cruiseStatusPillStyle(shownStatus).color as string}>
               {t(`status.${shownStatus}`, { defaultValue: shownStatus })}
-            </span>
+            </Chip>
           </div>
           <label className="mt-2 flex items-center gap-2 text-sm">
             <input
@@ -671,7 +672,7 @@ function CruiseImportEntryEditor({
       {flights.length > 0 && (
         <div className="rounded-md border border-border p-3">
           <div className="mb-2 flex items-center gap-2 text-sm font-medium text-(--text-primary)">
-            ✈ {t("import.flightsTitle")}
+            <Icon name="plane" size={16} /> {t("import.flightsTitle")}
             <span className="rounded-sm bg-(--accent-soft) px-1.5 py-0.5 text-[10px] text-(--accent)">
               {t("import.flightTentative")}
             </span>
@@ -730,8 +731,8 @@ function FlightCard({
           />
         </Field>
         <Field label={t("field.flightDate")}>
-          <input
-            type="date"
+          <DateField
+            inline
             value={flight.date}
             onChange={(e): void => onChange({ date: e.target.value })}
             style={{ colorScheme: "dark" }}

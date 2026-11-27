@@ -1,4 +1,6 @@
-import Modal from "../Modal";
+import { formatDayLabel } from "../../lib/format";
+import Dialog from "../ui/Dialog";
+import { Icon } from "../ui/Icon";
 import { useMemo } from "react";
 import type { TripJournalEntry } from "../../types";
 import JournalBody from "./JournalBody";
@@ -31,12 +33,11 @@ export default function JournalViewModal({
   const dateLabel = useMemo(() => {
     const d = new Date(entry.date);
     if (Number.isNaN(d.getTime())) return "";
-    return d.toLocaleDateString(locale, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      timeZone: "UTC",
-    });
+    return formatDayLabel(
+      d.toISOString(),
+      { year: "numeric", month: "long", day: "numeric" },
+      locale
+    );
   }, [entry.date, locale]);
 
   const heading = entry.title?.trim() || dateLabel || t("trips:journalView.untitled");
@@ -47,13 +48,13 @@ export default function JournalViewModal({
   const meta = [entry.weather, observed, entry.mood].filter(Boolean).join(" · ");
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={
         <span className="flex items-start gap-2">
-          <span aria-hidden className="mt-0.5 text-lg leading-none">
-            📝
+          <span aria-hidden className="mt-0.5 flex">
+            <Icon name="notebook-pen" size={18} />
           </span>
           <span className="min-w-0">
             <span className="block wrap-break-word">{heading}</span>
@@ -110,6 +111,6 @@ export default function JournalViewModal({
     >
       <JournalBody body={entry.body} />
       <JournalPhotoRow photos={entry.photos ?? []} size={120} />
-    </Modal>
+    </Dialog>
   );
 }

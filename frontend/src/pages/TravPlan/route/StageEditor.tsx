@@ -1,3 +1,4 @@
+import DateField from "../../../components/ui/DateField";
 import { useId, useState, type FormEvent } from "react";
 import { Button, Dialog, Field, Input, Select, TextArea } from "../../../components/ui";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -66,17 +67,16 @@ export function StageEditor({
             htmlFor={uid + "-day"}
             hint={t("route.stage.departHint")}
           >
-            <Input
+            <DateField
               id={uid + "-day"}
-              type="date"
               value={value.departDay ?? ""}
               onChange={(e) => setValue({ ...value, departDay: e.target.value || null })}
             />
           </Field>
           <Field label={t("route.stage.departTime")} htmlFor={uid + "-time"}>
-            <Input
+            <DateField
               id={uid + "-time"}
-              type="time"
+              kind="time"
               value={value.departTime ?? ""}
               onChange={(e) => setValue({ ...value, departTime: e.target.value || null })}
             />

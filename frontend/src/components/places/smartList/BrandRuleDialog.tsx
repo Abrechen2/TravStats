@@ -1,6 +1,7 @@
+import Chip from "../../ui/Chip";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
-import Modal from "../../Modal";
+import Dialog from "../../ui/Dialog";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { apiErrorMachineCode } from "../../../lib/apiError";
 import { logger } from "../../../lib/logger";
@@ -13,6 +14,7 @@ import {
   type ListRule,
   type RuleBrand,
 } from "../../../lib/api/smartLists";
+import InlineError from "../../ui/InlineError";
 
 const COARSE = "pointer-coarse:min-h-(--ts-size-touch-min)";
 const SEARCH_DELAY_MS = 350;
@@ -157,7 +159,7 @@ export function BrandRuleDialog({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={busy}
@@ -224,11 +226,7 @@ export function BrandRuleDialog({
               {t("places:smartList.search.searching")}
             </p>
           )}
-          {searchError && (
-            <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
-              {t(searchError)}
-            </p>
-          )}
+          {searchError && <InlineError>{t(searchError)}</InlineError>}
           {!searching && !searchError && query.trim().length >= 2 && hits.length === 0 && (
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
               {t("places:smartList.search.none")}
@@ -271,23 +269,15 @@ export function BrandRuleDialog({
           ) : (
             <ul className="flex flex-wrap gap-2" style={{ listStyle: "none", padding: 0 }}>
               {brands.map((b) => (
-                <li
-                  key={b.brandWikidataId}
-                  className="flex items-center gap-1 rounded-full px-3 py-1 text-sm"
-                  style={{ border: "1px solid var(--color-border)", color: "var(--text-primary)" }}
-                >
-                  {b.brandName}
-                  <button
-                    type="button"
-                    aria-label={t("places:smartList.removeBrand", { name: b.brandName })}
-                    onClick={() =>
+                <li key={b.brandWikidataId}>
+                  <Chip
+                    onRemove={() =>
                       setBrands((all) => all.filter((x) => x.brandWikidataId !== b.brandWikidataId))
                     }
-                    className={`px-1 ${COARSE}`}
-                    style={{ color: "var(--text-muted)" }}
+                    removeLabel={t("places:smartList.removeBrand", { name: b.brandName })}
                   >
-                    ×
-                  </button>
+                    {b.brandName}
+                  </Chip>
                 </li>
               ))}
             </ul>
@@ -347,20 +337,10 @@ export function BrandRuleDialog({
             />
           </label>
         </fieldset>
-        {!windowOk && (
-          <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
-            {t("places:smartList.windowInvalid")}
-          </p>
-        )}
-        {!distOk && (
-          <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
-            {t("places:smartList.distanceInvalid")}
-          </p>
-        )}
+        {!windowOk && <InlineError>{t("places:smartList.windowInvalid")}</InlineError>}
+        {!distOk && <InlineError>{t("places:smartList.distanceInvalid")}</InlineError>}
         {distOk && !autoDistOk && (
-          <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
-            {t("places:smartList.autoDistanceInvalid")}
-          </p>
+          <InlineError>{t("places:smartList.autoDistanceInvalid")}</InlineError>
         )}
 
         <label className="flex items-start gap-2 text-sm" style={{ color: "var(--text-primary)" }}>
@@ -379,12 +359,8 @@ export function BrandRuleDialog({
           </span>
         </label>
 
-        {saveError && (
-          <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
-            {t(saveError)}
-          </p>
-        )}
+        {saveError && <InlineError>{t(saveError)}</InlineError>}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

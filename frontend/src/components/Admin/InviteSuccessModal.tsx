@@ -1,7 +1,9 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
+import { Icon } from "../ui/Icon";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { copyToClipboard } from "../../lib/clipboard";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const KNOWN = ["SMTP_CONNECTION", "SMTP_TLS", "SMTP_AUTH", "SMTP_TIMEOUT", "SMTP_UNKNOWN"];
 
@@ -33,12 +35,12 @@ export default function InviteSuccessModal({
       await copyToClipboard(inviteUrl);
       addToast("success", t("admin:invitations.success.copiedToClipboard"));
     } catch {
-      addToast("error", t("admin:invitations.success.copyFailed"));
+      reportPageError(t("admin:invitations.success.copyFailed"));
     }
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={t("admin:invitations.success.title")}
@@ -52,7 +54,8 @@ export default function InviteSuccessModal({
       <>
         {emailSent === true && recipientEmail && (
           <p className="mb-4 text-sm" style={{ color: "#16a34a" }}>
-            ✉ {t("admin:invitations.success.emailSent")}{" "}
+            <Icon name="mail" size={14} className="mr-1 inline" />{" "}
+            {t("admin:invitations.success.emailSent")}{" "}
             <span className="font-medium">{recipientEmail}</span>
           </p>
         )}
@@ -91,10 +94,11 @@ export default function InviteSuccessModal({
             {inviteUrl}
           </div>
           <button type="button" onClick={copyLink} className="btn-secondary mt-2 text-sm">
-            📋 {t("admin:invitations.success.copyLink")}
+            <Icon name="copy" size={14} className="mr-1 inline" />{" "}
+            {t("admin:invitations.success.copyLink")}
           </button>
         </div>
       </>
-    </Modal>
+    </Dialog>
   );
 }

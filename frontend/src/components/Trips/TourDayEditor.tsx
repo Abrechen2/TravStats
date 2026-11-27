@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
@@ -5,6 +6,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { toursApi } from "../../lib/api/tours";
 import { logger } from "../../lib/logger";
 import type { TourRoute } from "../../types/tour";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   route: TourRoute;
@@ -45,8 +47,8 @@ export default function TourDayEditor({ route, tripId, onSaved }: Props): JSX.El
   const inputClass = "rounded-sm border border-(--color-border) bg-transparent px-2 py-0.5 text-sm";
   return (
     <span className="flex flex-wrap items-center gap-2">
-      <input
-        type="date"
+      <DateField
+        inline
         value={date}
         aria-label={t("trips:tours.day.date")}
         className={inputClass}
@@ -55,8 +57,9 @@ export default function TourDayEditor({ route, tripId, onSaved }: Props): JSX.El
           void save(e.target.value ? { date: e.target.value } : { date: null });
         }}
       />
-      <input
-        type="time"
+      <DateField
+        inline
+        kind="time"
         value={time}
         disabled={!date}
         aria-label={t("trips:tours.day.startTime")}
@@ -66,11 +69,7 @@ export default function TourDayEditor({ route, tripId, onSaved }: Props): JSX.El
           void save({ startTime: e.target.value || null });
         }}
       />
-      {failed && (
-        <span role="alert" className="text-xs" style={{ color: "var(--danger)" }}>
-          {t("trips:tours.day.saveError")}
-        </span>
-      )}
+      {failed && <InlineError>{t("trips:tours.day.saveError")}</InlineError>}
     </span>
   );
 }

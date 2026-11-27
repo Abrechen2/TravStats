@@ -1,6 +1,7 @@
 import type {
   InputHTMLAttributes,
   ReactNode,
+  Ref,
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from "react";
@@ -87,6 +88,7 @@ function describedByError(
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   invalid?: boolean;
+  ref?: Ref<HTMLInputElement>;
 }
 
 export function Input({ invalid = false, style, ...rest }: InputProps): JSX.Element {

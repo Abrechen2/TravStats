@@ -1,3 +1,4 @@
+import DateField from "../../../components/ui/DateField";
 import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { logger } from "../../../lib/logger";
@@ -8,7 +9,7 @@ import {
   type DawarichCopyState,
   type DawarichCopyTotals,
 } from "../../../lib/api/travtrackDawarichCopy";
-import { Field, Input } from "../../ui/Field";
+import { Field } from "../../ui/Field";
 import {
   ActionControl,
   ChoiceControl,
@@ -207,17 +208,15 @@ export default function DawarichCopyRow({
           {span === "span" ? (
             <>
               <Field label={t(`${NS}.from`)} htmlFor="travtrack-dawarich-from">
-                <Input
+                <DateField
                   id="travtrack-dawarich-from"
-                  type="date"
                   value={fromDay}
                   onChange={(e) => setFromDay(e.target.value)}
                 />
               </Field>
               <Field label={t(`${NS}.until`)} htmlFor="travtrack-dawarich-until">
-                <Input
+                <DateField
                   id="travtrack-dawarich-until"
-                  type="date"
                   value={untilDay}
                   onChange={(e) => setUntilDay(e.target.value)}
                 />

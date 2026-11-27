@@ -25,7 +25,7 @@ const transportArgs = vi.hoisted(() => [] as unknown[][]);
 vi.mock("../allTabTransportOverlays", () => ({
   useTransportOverlays: (...args: unknown[]) => {
     transportArgs.push(args);
-    return { layers: [], legendRows: [], status: null };
+    return { layers: [], legendRows: [], activity: [], status: null };
   },
 }));
 

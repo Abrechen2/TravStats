@@ -12,6 +12,16 @@ type Choice = "auto" | "openrouteservice" | "graphhopper" | "custom" | "off";
 /** `?match=` value that names this row (the readiness item admin.routingKeyUnused links here). */
 export const ROUTING_PROVIDER_MATCH = "routingProvider";
 
+interface KeyedProvider {
+  id: "openrouteservice" | "graphhopper";
+  name: string;
+  column: "globalOpenrouteserviceApiKey" | "globalGraphhopperApiKey";
+}
+const KEYED: readonly KeyedProvider[] = [
+  { id: "graphhopper", name: "GraphHopper", column: "globalGraphhopperApiKey" },
+  { id: "openrouteservice", name: "OpenRouteService", column: "globalOpenrouteserviceApiKey" },
+];
+
 const toChoice = (stored: string | null): Choice => (stored === null ? "auto" : (stored as Choice));
 
 /**
@@ -23,6 +33,7 @@ export default function RoutingProviderRow(): JSX.Element | null {
   const { t } = useTranslation(["settingsRows"]);
   const { account } = useServices();
   const [value, setValue] = useState<Choice | null>(null);
+  const [keyed, setKeyed] = useState<KeyedProvider[]>([]);
   const [error, setError] = useState(false);
   const anchor = useRef<HTMLDivElement>(null);
   const named =
@@ -40,7 +51,9 @@ export default function RoutingProviderRow(): JSX.Element | null {
     adminApi
       .getGlobalApiKeys()
       .then((k) => {
-        if (live) setValue(toChoice(k.routingProvider));
+        if (!live) return;
+        setValue(toChoice(k.routingProvider));
+        setKeyed(KEYED.filter((p) => !!k[p.column]));
       })
       .catch(() => {
         if (live) setError(true);
@@ -87,6 +100,20 @@ export default function RoutingProviderRow(): JSX.Element | null {
           )
         }
       >
+        {value === "auto" && keyed.length > 0 ? (
+          // The restore path (#411): the provider went empty while an instance key is
+          // stored — one click puts the keyed provider back.
+          <div className="t-caption" data-testid="routing-use-keyed" style={{ margin: 0 }}>
+            {keyed.map((p) => (
+              <p key={p.id} style={{ margin: 0 }}>
+                {t("settingsRows:services.routing.emptyWithKey", { provider: p.name })}{" "}
+                <button type="button" className="underline" onClick={() => void choose(p.id)}>
+                  {t("settingsRows:services.routing.useKeyed", { provider: p.name })}
+                </button>
+              </p>
+            ))}
+          </div>
+        ) : null}
         {error ? <ErrorLine>{t("settingsRows:services.routing.saveFailed")}</ErrorLine> : null}
         {routing ? (
           <p className="t-caption" style={{ margin: 0 }} data-testid="routing-admin-effective">

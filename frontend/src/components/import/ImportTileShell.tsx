@@ -5,6 +5,8 @@ import { SettingRow } from "../ui/SettingRow";
 interface ImportTileShellProps {
   title: string;
   description: string;
+  /** The detail behind an ⓘ: formats, where to find the export. */
+  descriptionMore?: string;
   /** The styled file-picker (label/input pair). */
   picker: ReactNode;
   /** Inline error block (red). Caller decides when to show. */
@@ -27,6 +29,7 @@ interface ImportTileShellProps {
 export function ImportTileShell({
   title,
   description,
+  descriptionMore,
   picker,
   errorBlock,
   statusBlock,
@@ -34,7 +37,7 @@ export function ImportTileShell({
 }: ImportTileShellProps): JSX.Element {
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
-      <SettingRow title={title} sub={description} control={picker} />
+      <SettingRow title={title} sub={description} more={descriptionMore} control={picker} />
       {errorBlock}
       {statusBlock}
       {children}

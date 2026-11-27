@@ -1,6 +1,6 @@
 {
   "title": "Externe Dienste",
-  "intro": "Alles, was TravStats nicht selbst macht: Flugdaten, Karten, Fotos, KI, Sync und Mail. Hier legst du fest, was die Instanz nutzt und was Konten selbst einrichten dürfen. Neue Dienste sind aus, bis du sie einschaltest.",
+  "intro": "Alle fremden Dienste. Neue Dienste sind aus, bis du sie einschaltest.",
   "loading": "Lade Dienste …",
   "noResults": "Kein Dienst passt zu Suche und Filter.",
   "summary": {
@@ -10,7 +10,7 @@
   },
   "banner": {
     "title": "Bestes Erlebnis, ohne zu bezahlen",
-    "summary": "{{active}} von {{total}} empfohlenen Diensten sind eingerichtet. Alle sind kostenlos oder haben ein Gratis-Guthaben, das für ein privates Logbuch reicht.",
+    "summary": "{{active}} von {{total}} empfohlenen Diensten eingerichtet. Alle kostenlos oder mit Gratis-Guthaben.",
     "show": "Empfohlene zeigen"
   },
   "search": {
@@ -176,7 +176,7 @@
     "withdraw": "Freigabe zurückziehen",
     "admin": {
       "title": "{{name}} freigeben?",
-      "intro": "Wenn der lokale Parser nichts findet, schickt TravStats den Text eines Imports an diesen Anbieter. Erst lesen, dann bestätigen.",
+      "intro": "Findet der lokale Parser nichts, geht der Importtext an diesen Anbieter.",
       "whatKey": "Was rausgeht",
       "whatText": "Text aus E-Mails und PDFs, höchstens 12.000 Zeichen pro Import. Keine Fotos, keine Passwörter, keine anderen Einträge.",
       "whereKey": "Wohin",
@@ -190,7 +190,7 @@
     },
     "account": {
       "title": "Deine Importe an {{name}} schicken?",
-      "intro": "Deine Instanz erlaubt {{name}} als zweite Chance für Buchungen, die der lokale Parser nicht versteht. Ob deine Dokumente dorthin gehen, entscheidest du.",
+      "intro": "{{name}} hilft bei unlesbaren Buchungen. Ob deine Dokumente dorthin gehen, entscheidest du.",
       "goes": "Was rausgeht: der Text der E-Mail oder des PDFs, höchstens 12.000 Zeichen.",
       "stays": "Nicht rausgeht: Fotos, Passwörter, deine anderen Einträge.",
       "when": "Wann: nur beim Import, nur wenn der lokale Parser nichts findet.",
@@ -201,7 +201,7 @@
   },
   "connections": {
     "title": "Was Konten selbst verbinden dürfen",
-    "hint": "Diese Dienste richtet jedes Konto unter Einstellungen › Dienste mit eigenen Zugangsdaten ein. Du legst nur fest, ob das erlaubt ist.",
+    "hint": "Jedes Konto richtet diese selbst ein. Du legst nur fest, ob das erlaubt ist.",
     "usage_one": "{{count}} Konto verbunden",
     "usage_other": "{{count}} Konten verbunden",
     "dawarich": {
@@ -227,10 +227,10 @@
   },
   "pointer": {
     "text": "Alle externen Dienste – Schalter, Schlüssel und Tests – findest du gesammelt unter",
-    "link": "Externe Dienste"
+    "link": "Einstellungen → Server → Dienste"
   },
   "account": {
-    "intro": "Deine Verbindungen zu Immich, Dawarich, Strava und deinem Speicher, eigene Schlüssel und deine KI-Freigaben. Was die Instanz für alle bereitstellt, steht unten.",
+    "intro": "Deine Verbindungen, Schlüssel und KI-Freigaben. Instanz-Dienste stehen unten.",
     "sections": {
       "connections": "Meine Verbindungen",
       "ownKeys": "Eigene Schlüssel",
@@ -337,6 +337,10 @@
       "primaryUrl": "Adresse der eigenen Kursquelle",
       "fallbackSource": "Zweite Kursquelle",
       "fallbackUrl": "Adresse der zweiten Kursquelle"
+    },
+    "mapMatching": {
+      "url": "Router-Adresse",
+      "engine": "Router-Art"
     }
   },
   "services": {
@@ -516,7 +520,7 @@
       "dataOut": "Bleibt zwischen TravStats und deinem PhotoPrism.",
       "quotaLine": "eigener Server",
       "adminPurpose": "Instanz-Verbindung zu einem PhotoPrism; Konten verbinden ihr eigenes",
-      "setup": "So verbindest du PhotoPrism: Lege in PhotoPrism unter Einstellungen → Konto → Apps und Geräte ein App-Passwort an und gib ihm die Berechtigungen „albums photos files config“ (oder „*“). Ohne „config“ kann TravStats keine Vorschaubilder laden. TravStats braucht nur Lesezugriff."
+      "setup": "In PhotoPrism ein App-Passwort mit „albums photos files config“ anlegen. Nur Lesezugriff nötig."
     },
     "strava": {
       "name": "Strava",
@@ -667,7 +671,7 @@
       "why": "Holt Buchungsbestätigungen per IMAP aus einem Mail-Ordner oder über die Weiterleitungsadresse der Instanz, damit sie nicht von Hand eingefügt werden müssen.",
       "cost": "Kostenlos.",
       "quota": "–",
-      "dataOut": "Nichts verlässt den Server außer der Anmeldung am eigenen Mail-Server. Ist ein KI-Anbieter in der Cloud freigegeben, liest dieser auch die Mails.",
+      "dataOut": "Nur die Anmeldung am Mail-Server. Mit freigegebener Cloud-KI liest diese die Mails mit.",
       "getKeyUrl": "https://travstats.de/docs/",
       "getKeyLabel": "Anleitung",
       "quotaLine": "–"
@@ -776,6 +780,21 @@
       "quota": "60 Anfragen pro Stunde und Plugin.",
       "dataOut": "Zeit und gerundete Koordinaten eines Stopps, nie Konto, Name, E-Mail oder Standortverlauf.",
       "adminPurpose": "Konten tragen ihre eigenen Plugins ein; ausgeschaltet fragt kein Konto mehr"
+    },
+    "aiSuggestionHelp": {
+      "name": "KI-Hilfe für unklare Vorschläge",
+      "purpose": "Ein Sprachmodell schlägt vor, welcher Ort ein unklarer Halt war",
+      "why": "Bei einem Aufenthalt mit mehreren möglichen Orten kann das Konto „KI fragen“: das Modell ordnet die Kandidaten und nennt einen Grund. Geschrieben wird nur, was die Person anklickt.",
+      "cost": "Hängt vom Modell ab: ein lokales Ollama kostet nichts, ein Cloud-Modell nach dessen Tarif.",
+      "dataOut": "Kandidatennamen, Entfernung, Dauer und Tag — keine Koordinaten. Cloud-Modelle erst nach Bestätigung."
+    },
+    "mapMatching": {
+      "name": "An Straßen anpassen (Map Matching)",
+      "purpose": "Legt dünne oder verrauschte Autostrecken aus TravTrack auf die Straße",
+      "why": "Schickt die Punkte eines einzelnen Abschnitts an einen Router, den du selbst betreibst (Valhalla oder GraphHopper), und zeichnet das Ergebnis beschriftet über die Spur. Die Rohpunkte bleiben unverändert; rückgängig mit einem Klick.",
+      "cost": "Kostenlos, selbst gehostet. Kein Dienst ist voreingestellt.",
+      "dataOut": "Nur die Punkte des gewählten Abschnitts, Privatsphäre-Zonen vorher herausgeschnitten. Jedes Konto bestätigt das Ziel vor der ersten Anfrage.",
+      "adminPurpose": "Adresse deines Valhalla- oder GraphHopper-Servers (LAN erlaubt)"
     }
   },
   "alwaysOn": {
@@ -802,10 +821,16 @@
         "allratestoday": "AllRatesToday",
         "custom": "Eigene Adresse"
       }
+    },
+    "mapMatching": {
+      "engine": {
+        "valhalla": "Valhalla (trace_attributes)",
+        "graphhopper": "GraphHopper (/match)"
+      }
     }
   },
   "legacy": {
-    "title": "Verwaltet unter Externe Dienste",
+    "title": "Verwaltet unter Einstellungen → Server → Dienste",
     "body": "Schalter, Zugangsdaten und Tests von {{name}} liegen jetzt an einer Stelle: in der Liste der externen Dienste.",
     "statusLabel": "Status",
     "status": {
@@ -825,5 +850,46 @@
         "linkUrl": "https://allratestoday.com"
       }
     }
+  },
+  "useConsent": {
+    "title": "Daten an einen Dienst senden?",
+    "intro": "Diese Daten würden an einen fremden Dienst gehen. Ohne Erlaubnis nichts.",
+    "service": "Dienst",
+    "host": "Ziel",
+    "provider": "Anbieter",
+    "location": "Standort",
+    "fields": "Gesendete Felder",
+    "points": "Anzahl Positionen",
+    "zones": "Privatsphäre-Zonen",
+    "zonesApplied": "vorher herausgeschnitten",
+    "zonesNone": "keine Zone eingerichtet",
+    "locations": {
+      "cloud": "Cloud – verlässt dein Heimnetz",
+      "lan": "Lokal im Heimnetz (LAN)"
+    },
+    "services": {
+      "aiSuggestionHelp": "KI-Hilfe für unklare Vorschläge",
+      "mapMatching": "An Straßen anpassen"
+    },
+    "fieldNames": {
+      "candidates": "Kandidatennamen",
+      "distanceM": "Entfernung",
+      "dwellMin": "Aufenthaltsdauer",
+      "nearbyPlaces": "Namen naher Orte",
+      "localDay": "Tag",
+      "points": "Positionen mit Zeit",
+      "costing": "Fahrzeugart"
+    },
+    "cloudNote": "Der Anbieter verarbeitet die Daten nach seinen eigenen Bedingungen.",
+    "once": "Einmal erlauben",
+    "always": "Immer erlauben für diesen Dienst",
+    "cancel": "Abbrechen",
+    "listTitle": "Erlaubte Datenweitergaben",
+    "listEmpty": "Kein Dienst hat eine dauerhafte Erlaubnis.",
+    "listSince": "erlaubt seit {{date}} für {{target}}",
+    "revoke": "Widerrufen",
+    "revoked": "Erlaubnis widerrufen – beim nächsten Mal wird wieder gefragt.",
+    "revokeFailed": "Die Erlaubnis konnte nicht widerrufen werden.",
+    "loadFailed": "Die Erlaubnisse konnten nicht geladen werden."
   }
 }

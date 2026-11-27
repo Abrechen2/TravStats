@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import SuggestionChips from "../common/SuggestionChips";
 import {
   FieldError,
@@ -22,7 +22,6 @@ import { tripsApi } from "../../lib/api";
 import { parseDecimalInput } from "../../lib/decimalInput";
 import { logger } from "../../lib/logger";
 import { saveGeometryNotice } from "../../lib/bus/busRoutingWords";
-import { useToastStore } from "../../store/toastStore";
 import { isOutcomeUnknownSaveError, isTransientSaveError } from "../../lib/saveErrorMessage";
 import type { Trip } from "../../types";
 import {
@@ -55,6 +54,7 @@ import {
   type BusFormErrorField,
   type BusSaveError,
 } from "./busFormModel";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   /** The ride to edit; null for a new one. */
@@ -124,7 +124,6 @@ export function BusFormModal({
     badArrivalCoordinate: arrBad,
   });
   const saving = useSaveOnce<BusJourney>({ afterSaveFailedKey });
-  const addToast = useToastStore((s) => s.addToast);
   // Unknown (null) says nothing: only a measured "no provider" is worth a sentence.
   const routing = useBusRouting();
   const failure = useFormFailure(JSON.stringify(draft));
@@ -260,7 +259,7 @@ export function BusFormModal({
       },
       async (saved) => {
         const notice = saveGeometryNotice(report);
-        if (notice) addToast("warning", t(notice.key, { reason: t(notice.reasonKey) }), 9000);
+        if (notice) reportPageError(t(notice.key, { reason: t(notice.reasonKey) }), "warning");
         markSaved();
         await onSaved(saved);
       }
@@ -278,7 +277,7 @@ export function BusFormModal({
   const blocked = saving.saving || saving.saved !== null || !ready || importBusy;
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving.saving}
@@ -552,6 +551,6 @@ export function BusFormModal({
         />
         <RequiredLegend className="mt-3" />
       </div>
-    </Modal>
+    </Dialog>
   );
 }

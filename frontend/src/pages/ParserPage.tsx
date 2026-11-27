@@ -16,10 +16,11 @@ import MyTemplates from "../components/Parser/MyTemplates";
 import DomainPicker from "../components/Parser/DomainPicker";
 import type { WorkshopDomain } from "../shared/annotationLabels";
 import type { TemplateDerivation } from "../lib/api/types";
-import { useToastStore } from "../store/toastStore";
 import { useTranslation } from "../hooks/useTranslation";
 import Toggletip from "../components/ui/Toggletip";
 import { workshopDocumentOf } from "../components/Parser/WorkshopJumpLink";
+import { reportPageError } from "../store/pageErrorStore";
+import { Tabs } from "../components/ui/Tabs";
 
 /** The codes a refused screenshot answers with (forgejo#309), each worded in DE/EN. */
 const SCREENSHOT_UPLOAD_ERRORS: ReadonlySet<string> = new Set([
@@ -47,7 +48,6 @@ function uploadTypeOf(file: File): TrainingUploadType {
 export default function ParserPage(): JSX.Element {
   const { t } = useTranslation(["parser", "common"]);
   const user = useAuthStore((s) => s.user);
-  const addToast = useToastStore((state) => state.addToast);
   const [activeTab, setActiveTab] = useState<Tab>("annotate");
   const [uploadedFile, setUploadedFile] = useState<{
     id: string;
@@ -72,8 +72,7 @@ export default function ParserPage(): JSX.Element {
       // A screenshot the OCR could not read says so in the reader's language;
       // the server's English sentence never reaches the screen.
       const code = apiErrorMachineCode(error);
-      addToast(
-        "error",
+      reportPageError(
         code && SCREENSHOT_UPLOAD_ERRORS.has(code)
           ? t(`parser:annotate.uploadErrors.${code}`)
           : t("parser:annotate.uploadError")
@@ -138,31 +137,13 @@ export default function ParserPage(): JSX.Element {
       <ParserOverview onCreate={() => setActiveTab("annotate")} />
       <div>
         {/* Tabs */}
-        <div
-          role="tablist"
-          className="mb-3 flex overflow-x-auto scrollbar-none"
-          style={{ borderBottom: "1px solid var(--ts-border)" }}
-        >
-          {tabs.map((tab) => {
-            const active = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setActiveTab(tab.id)}
-                className="shrink-0 whitespace-nowrap px-4 py-3 text-sm"
-                style={{
-                  fontWeight: active ? 700 : 500,
-                  color: active ? "var(--ts-text-bright)" : "var(--ts-muted)",
-                  boxShadow: `inset 0 -2px 0 ${active ? "var(--ts-accent)" : "transparent"}`,
-                }}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
+        <div className="mb-3">
+          <Tabs
+            label={t("parser:tabs.label")}
+            value={activeTab}
+            onChange={setActiveTab}
+            tabs={tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
+          />
         </div>
         <p className="t-caption mb-6" data-testid="parser-tab-hint">
           {t(`parser:tabHints.${TAB_HINT_KEY[activeTab]}`)}

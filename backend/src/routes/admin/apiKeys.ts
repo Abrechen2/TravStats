@@ -13,6 +13,16 @@ import {
   mountKeyTestRoutes,
 } from "../../services/apiKeyTestRoutes";
 import { routingSettingsSchema } from "../../schemas/tour";
+import { resetProviderHealth } from "../../services/tour/routing/providerHealth";
+
+/** A body made of these alone is an explicit routing choice (RoutingProviderRow). */
+const ROUTING_KEYS: ReadonlySet<string> = new Set(["routingProvider", "routingCustomUrl"]);
+const ROUTING_UPDATE_FIELDS = [
+  "routingProvider",
+  "routingCustomUrl",
+  "globalOpenrouteserviceApiKey",
+  "globalGraphhopperApiKey",
+] as const;
 import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 
 interface GlobalApiKeysUpdateData {
@@ -211,6 +221,7 @@ router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
     const payload = globalApiKeysSchema.parse(req.body);
 
     let adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
+    const before = adminSettings;
 
     const updateData: GlobalApiKeysUpdateData = {};
 
@@ -314,7 +325,22 @@ router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
       updateData.allowUserFlightApiKeys = payload.allowUserFlightApiKeys;
     }
     if (payload.routingProvider !== undefined) {
-      updateData.routingProvider = payload.routingProvider;
+      // Clearing the provider ("Automatisch") is a choice of its own: the
+      // routing select sends `{routingProvider: null}` and nothing else. A null
+      // riding along in a larger body is a form or script echoing a stale or
+      // empty read, and it silently emptied an instance's provider (#411) —
+      // it is ignored and logged, never applied.
+      const explicitClear = Object.keys(req.body ?? {}).every((k) => ROUTING_KEYS.has(k));
+      if (payload.routingProvider !== null || explicitClear) {
+        updateData.routingProvider = payload.routingProvider;
+      } else {
+        logger.warn({
+          operation: "admin_routing_provider_clear_ignored",
+          message:
+            "PUT /admin/api-keys carried routingProvider: null among other fields; the provider was kept",
+          context: { userId: req.userId, fields: Object.keys(req.body ?? {}) },
+        });
+      }
     }
     if (payload.routingCustomUrl !== undefined) {
       updateData.routingCustomUrl = payload.routingCustomUrl;
@@ -326,6 +352,17 @@ router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
       where: { id: await ensureAdminSettingsRow() },
       data: updateData,
     });
+    const providerBefore = before?.routingProvider ?? null;
+    if ("routingProvider" in updateData && providerBefore !== adminSettings.routingProvider) {
+      // Every change of the instance's provider leaves a trace (#411: one went missing unseen).
+      logger.info({
+        operation: "admin_routing_provider_changed",
+        message: "Routing provider changed",
+        context: { userId: req.userId, from: providerBefore, to: adminSettings.routingProvider },
+      });
+    }
+    // A changed key or provider deserves a fresh try, not the old refusal.
+    if (ROUTING_UPDATE_FIELDS.some((f) => f in updateData)) resetProviderHealth();
 
     res.json({
       message: "Global API keys updated successfully",

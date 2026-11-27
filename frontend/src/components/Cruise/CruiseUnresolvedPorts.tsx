@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useEffect, useId, useState } from "react";
 import type { JSX } from "react";
 import type { Cruise, Port } from "../../types";
@@ -11,6 +12,7 @@ import { cruiseStopToWire } from "./cruiseStopWire";
 import { PortPicker } from "./PortPicker";
 import { resolveStops, unresolvedGroups } from "./cruiseUnresolved";
 import type { UnresolvedGroup } from "./cruiseUnresolved";
+import InlineError from "../ui/InlineError";
 
 const BUTTON_CLASS =
   "rounded-md border border-border px-3 py-1.5 text-sm text-(--text-primary) hover:bg-(--bg-elevated) disabled:opacity-50 pointer-coarse:min-h-(--ts-size-touch-min)";
@@ -155,7 +157,7 @@ function UnresolvedRow({
   return (
     <li className="rounded-md border border-(--warning)/40 bg-(--warning)/5 p-3">
       <p className="text-sm font-medium text-(--text-primary)">
-        <span aria-hidden="true">🔶 </span>
+        <Icon name="diamond" size={14} className="mr-1 inline" />
         {group.name}
       </p>
       <p className="t-caption">
@@ -168,7 +170,7 @@ function UnresolvedRow({
           <p className="t-caption">{t("unresolved.searching")}</p>
         )}
         {candidates.status === "failed" && (
-          <p role="alert" className="text-xs text-(--danger)">
+          <InlineError>
             {t("unresolved.searchFailed")}{" "}
             <button
               type="button"
@@ -177,7 +179,7 @@ function UnresolvedRow({
             >
               {t("common:buttons.retry")}
             </button>
-          </p>
+          </InlineError>
         )}
         {candidates.status === "ready" && candidates.ports.length === 0 && (
           <p className="t-caption">{t("unresolved.noCandidates")}</p>
@@ -221,9 +223,9 @@ function UnresolvedRow({
       </div>
 
       {failure && (
-        <p id={`${idBase}-error`} role="alert" className="mt-2 text-xs text-(--danger)">
+        <InlineError id={`${idBase}-error`} className="mt-2">
           {t(failure)}
-        </p>
+        </InlineError>
       )}
       <div className="mt-2">
         <button

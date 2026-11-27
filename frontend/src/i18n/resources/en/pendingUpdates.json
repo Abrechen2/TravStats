@@ -5,7 +5,7 @@
   "rejectedAt": "Rejected at:",
   "empty": {
     "title": "No Pending Updates",
-    "description": "There are currently no pending flight updates. Updates will appear here when automatic updates are enabled and new data is available."
+    "description": "No pending flight updates."
   },
   "status": {
     "pending": "Pending",

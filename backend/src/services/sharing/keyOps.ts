@@ -178,6 +178,24 @@ export async function keyedIdsOnTrip(
   return rows.map((r) => r.id);
 }
 
+/**
+ * Every shareable row of one type on the owner's trip, keyed or not, oldest id first — what
+ * linking an existing copy compares (`linkExisting.ts`).
+ */
+export async function shareableIdsOnTrip(
+  c: DbTransaction,
+  entity: ShareEntity,
+  ownerId: string,
+  tripId: string
+): Promise<string[]> {
+  const rows = await keyedDelegate(c, entity).findMany({
+    where: { ...ownedOnTrip(entity, ownerId, tripId), ...onlyShareable(entity) },
+    select: { id: true, shareKey: true },
+    orderBy: { id: "asc" },
+  });
+  return rows.map((r) => r.id);
+}
+
 /** Which of `keys` the recipient already holds: key → row id (on their trip, for stops). */
 export async function heldKeys(
   c: DbTransaction,

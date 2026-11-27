@@ -14,7 +14,19 @@
  * a person answers.
  */
 
-export type PhotoJourneyStatus = "pending" | "accepted" | "dismissed";
+/** `covered`: closed because the logbook already holds it (forgejo#439), with undo. */
+export type PhotoJourneyStatus = "pending" | "accepted" | "dismissed" | "covered";
+
+/** The entry that already holds a finding — the server's shared matcher (forgejo#439). */
+export interface SuggestionCoveredBy {
+  kind: "visit" | "lodging" | "flight";
+  id: string;
+  placeId?: string;
+  lodgingId?: string;
+  name: string;
+  distanceM: number;
+  day?: string;
+}
 
 /**
  * What the burst is taken for — one burst, one reading, ranked by how much it
@@ -72,6 +84,8 @@ export interface PhotoJourney {
   tripName?: string | null;
   /** `visit`: what the lookup found at the stop; all null when nothing there had a name. */
   suggestedName?: string | null;
+  /** The server's display name: the own place's, else `suggestedName`, else city/country. */
+  label?: string | null;
   suggestedLocalName?: string | null;
   suggestedRef?: string | null;
   photoCount: number;
@@ -118,5 +132,11 @@ export interface PhotoJourney {
   createdPlaceVisitId: string | null;
   createdLodgingStayId: string | null;
   resolvedAt: string | null;
+  /** How it closed without an answer: `covered` names the entry; `coverUndone` after an undo. */
+  resolution?: {
+    resolution?: "covered";
+    coveredBy?: SuggestionCoveredBy;
+    coverUndone?: unknown;
+  } | null;
   createdAt: string;
 }

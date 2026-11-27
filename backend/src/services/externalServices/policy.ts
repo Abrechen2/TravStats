@@ -22,21 +22,29 @@ export function parsePolicy(raw: unknown): ExternalServicePolicy {
   };
 }
 
-export function parsePrefs(raw: unknown): ExternalServicePrefs {
-  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+/** A map of consents, each bound to a destination; anything else proves consent to none. */
+function boundConsents(raw: unknown): Record<string, { at: string; destination: string }> {
   const consent: Record<string, { at: string; destination: string }> = {};
-  if (o.aiConsent && typeof o.aiConsent === "object") {
-    for (const [k, v] of Object.entries(o.aiConsent as Record<string, unknown>)) {
-      // A bare date (the shape before consent was bound to its destination)
-      // names no endpoint, so it proves consent to none: invalid.
-      if (!v || typeof v !== "object") continue;
-      const { at, destination } = v as Record<string, unknown>;
-      if (typeof at === "string" && typeof destination === "string" && destination) {
-        consent[k] = { at, destination };
-      }
+  if (!raw || typeof raw !== "object") return consent;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    // A bare date (the shape before consent was bound to its destination)
+    // names no endpoint, so it proves consent to none: invalid.
+    if (!v || typeof v !== "object") continue;
+    const { at, destination } = v as Record<string, unknown>;
+    if (typeof at === "string" && typeof destination === "string" && destination) {
+      consent[k] = { at, destination };
     }
   }
-  return { disabled: strings(o.disabled), aiConsent: consent };
+  return consent;
+}
+
+export function parsePrefs(raw: unknown): ExternalServicePrefs {
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  return {
+    disabled: strings(o.disabled),
+    aiConsent: boundConsents(o.aiConsent),
+    useConsent: boundConsents(o.useConsent),
+  };
 }
 
 export async function loadPolicy(): Promise<ExternalServicePolicy> {

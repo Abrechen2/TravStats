@@ -1,18 +1,12 @@
 import { calculateDistance } from "../../lib/geo";
 import { getFlightDuration } from "../../lib/flightDuration";
-import { formatDistance } from "../../lib/units";
+import { formatDistance, formatDuration } from "../../lib/format";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Flight } from "../../types";
 
 interface InlineStatsProps {
   flight: Flight;
-}
-
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  return `${h}h ${m}m`;
 }
 
 export function InlineStats({ flight }: InlineStatsProps): JSX.Element {

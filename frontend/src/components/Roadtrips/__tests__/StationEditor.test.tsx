@@ -1,3 +1,5 @@
+import Toast from "../../../components/Toast";
+import { useToastStore } from "../../../store/toastStore";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
@@ -75,6 +77,8 @@ function echoServer(): void {
 }
 
 function renderEditor(start: "plain" | "new" = "plain"): void {
+  useToastStore.getState().clearToasts();
+  render(<Toast />);
   render(
     <StationEditor
       routeId="rt"

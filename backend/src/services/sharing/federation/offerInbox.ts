@@ -35,9 +35,11 @@ import { encodeShape } from "./wire/codec";
 import { acceptOfferedRoster, storeRoster } from "./roster";
 import { reacceptAfterRestore } from "./lifecycle";
 import { requireAdmitted } from "./peerCheck";
+import { placeSharerCompanion } from "../remoteCompanion";
+import { notifyTripShared } from "../../notifications/dispatcher";
 
 /** What is kept of an offer until it is answered: the wire form, read again on accept. */
-const storedOfferSchema = z.object({
+export const storedOfferSchema = z.object({
   trip: z.record(z.string(), z.unknown()),
   roster: z.array(rosterEntrySchema),
   counts: offerCountsSchema,
@@ -52,7 +54,7 @@ export async function applyOffer(
   tx: DbTransaction,
   origin: string,
   offer: TripOffer
-): Promise<void> {
+): Promise<{ userId: string; offerId: string; from: string } | null> {
   const remote = await tx.remoteShareAccount.findFirst({
     where: { origin, channel: offer.from, localChannel: offer.to },
   });
@@ -82,7 +84,7 @@ export async function applyOffer(
     where: { groupId_remoteId: { groupId: group.id, remoteId: remote.id } },
   });
   // Already accepted: the trip is theirs; a repeated offer changes nothing.
-  if (existing?.state === "active") return;
+  if (existing?.state === "active") return null;
   const member = await tx.tripShareRemoteMember.upsert({
     where: { groupId_remoteId: { groupId: group.id, remoteId: remote.id } },
     create: { groupId: group.id, remoteId: remote.id, offer: stored },
@@ -90,10 +92,28 @@ export async function applyOffer(
   });
   // Who is on the trip, by their refs (F-S4e): the names a relayed change is read by.
   await storeRoster(tx, group.id, member.id, { ...offer, members: offer.roster });
+  // A repeat of an offer already waiting is no news for the phone.
+  return existing?.state === "invited"
+    ? null
+    : { userId: remote.userId, offerId: member.id, from: remote.displayName };
 }
 
 export const serveOffer = (origin: string, offer: TripOffer): Promise<TripShareAck> =>
-  serveOnce(origin, offer, (tx) => applyOffer(tx, origin, offer));
+  serveOnce(origin, offer, async (tx) => {
+    const told = await applyOffer(tx, origin, offer);
+    if (!told) return;
+    const tripName = typeof offer.trip.name === "string" ? offer.trip.name : "";
+    // Told once the offer is stored: the push names a row that exists (2026-11-24).
+    return {
+      after: () =>
+        void notifyTripShared(told.userId, {
+          state: "pending",
+          id: told.offerId,
+          tripName,
+          from: told.from,
+        }),
+    };
+  });
 
 export interface ReceivedOfferView {
   id: string;
@@ -153,7 +173,22 @@ export async function countReceivedOffers(userId: string): Promise<number> {
   return prisma.tripShareRemoteMember.count({ where: OPEN(userId) });
 }
 
-async function openOffer(userId: string, id: string) {
+/** The open offers as the dashboard banner names them; none while trip federation is off. */
+export async function pendingOfferSummaries(userId: string): Promise<ReceivedOfferView[]> {
+  if (!(await tripFederationAvailability()).available) return [];
+  const rows = await prisma.tripShareRemoteMember.findMany({
+    where: OPEN(userId),
+    select: {
+      id: true,
+      offer: true,
+      remote: { select: { displayName: true, username: true, origin: true } },
+    },
+    orderBy: { stateSince: "desc" },
+  });
+  return rows.map(offerView);
+}
+
+export async function openOffer(userId: string, id: string) {
   const row = await prisma.tripShareRemoteMember.findFirst({
     where: { id, ...OPEN(userId) },
     include: { remote: true, group: true },
@@ -163,9 +198,9 @@ async function openOffer(userId: string, id: string) {
   return row;
 }
 
-type OpenOffer = Awaited<ReturnType<typeof openOffer>>;
+export type OpenOffer = Awaited<ReturnType<typeof openOffer>>;
 
-const answerTo = (row: OpenOffer, answer: "accept" | "decline") =>
+export const answerTo = (row: OpenOffer, answer: "accept" | "decline") =>
   sendOnStream(
     row.groupId,
     row.remote.origin,
@@ -268,6 +303,11 @@ export async function acceptOffer(userId: string, id: string): Promise<{ tripId:
       userId,
       storedOfferSchema.parse(row.offer).roster.map((r) => r.ref)
     );
+    // One person, one companion (2026-11-24): the trip names who shared it.
+    const sharerCompanion = await placeSharerCompanion(tx, userId, trip.id, {
+      id: row.remoteId,
+      displayName: row.remote.displayName,
+    });
     // The trip arrived (F-S4d): told like a local share, naming who it came from and where.
     await tx.shareNotice.create({
       data: {
@@ -281,6 +321,7 @@ export async function acceptOffer(userId: string, id: string): Promise<{ tripId:
           tripName: trip.name,
           tripCreated: true,
           remoteActor: { displayName: row.remote.displayName, origin: row.remote.origin },
+          sharerCompanion,
         },
       },
     });

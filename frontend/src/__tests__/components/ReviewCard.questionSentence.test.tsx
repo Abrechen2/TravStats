@@ -78,14 +78,14 @@ function show(flag: DataQualityFlag): void {
 describe("inbox — each question says what kind of question it is", () => {
   it("does not call a missing zone a contradiction", () => {
     show(timeQuestion);
-    expect(screen.getByText(/fehlt uns etwas, um eine Zeit richtig anzuzeigen/)).toBeTruthy();
+    expect(screen.getByText(/Zeitzone, Uhrzeit oder Tag fehlt/)).toBeTruthy();
     expect(screen.queryByText(/widersprechen sich zwei Angaben/)).toBeNull();
   });
 
   it("keeps the contradiction sentence for contradictions", () => {
     show(contradiction);
     expect(screen.getByText(/widersprechen sich zwei Angaben/)).toBeTruthy();
-    expect(screen.queryByText(/fehlt uns etwas/)).toBeNull();
+    expect(screen.queryByText(/Zeitzone, Uhrzeit oder Tag fehlt/)).toBeNull();
   });
 
   it("gives the record checks (forgejo#282) their own sentence, not the contradiction one", () => {

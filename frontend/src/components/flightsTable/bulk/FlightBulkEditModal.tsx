@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { JSX } from "react";
-import Modal from "../../Modal";
+import Dialog from "../../ui/Dialog";
 import TagInput from "../../TagInput";
 import CompanionPicker from "../../CompanionPicker";
 import { FormErrorBanner, SaveBlockedHint, useDirtyGuard } from "../../form";
@@ -191,7 +191,7 @@ export default function FlightBulkEditModal({
   const secondary = "btn-secondary";
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={sending}
@@ -331,6 +331,6 @@ export default function FlightBulkEditModal({
           {requestFailure}
         </div>
       )}
-    </Modal>
+    </Dialog>
   );
 }

@@ -15,11 +15,16 @@ import {
   type VisitFact,
 } from "./services/purpose/placeVisited";
 import { inheritPurposeOnCreate } from "./services/purpose/tripInheritance";
+import { resolvePurposeKeysOnWrite, writtenCustomKey } from "./services/purpose/purposeKeyWrite";
 import { createPrismaClient } from "./prismaClient";
+import { sessionTimeoutsFromEnv } from "./services/db/sessionTimeouts";
+import { slowQueries } from "./services/runtime/slowLog";
 import {
   captureWrite,
   configureChangeLedger,
+  captureMcpCreate,
   isCapturedWrite,
+  isMcpCreate,
   isLedgerInternal,
   runLedgerTransaction,
   runNestedLedgerTransaction,
@@ -29,6 +34,8 @@ import { toLoggable } from "./utils/logging/toLoggable";
 import { getLoggingRuntimeFlags } from "./utils/logging/runtimeFlags";
 
 const basePrisma = createPrismaClient({
+  sessionTimeouts: sessionTimeoutsFromEnv(),
+  observePool: true,
   log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
 });
 // The change ledger reads its snapshots and writes its rows on the unextended
@@ -147,6 +154,22 @@ export function expectingUniqueConflict<T>(model: string, run: () => Promise<T>)
 }
 
 /**
+ * A bounded wait the caller is about to retry is not a fault either: a
+ * TravTrack import batch sets `lock_timeout` and tries again later when the
+ * account's lock is busy (`imports/fileImport.ts`). Inside this scope a lock or
+ * statement timeout is logged at debug — the caller logs one warning per retry
+ * and leaves the scope for its last try, whose failure stays at error level.
+ */
+const expectedBusyWait = new AsyncLocalStorage<true>();
+
+export function expectingBusyWait<T>(run: () => Promise<T>): Promise<T> {
+  return expectedBusyWait.run(true, async () => await run());
+}
+
+/** Postgres's own words for a wait that gave up: lock timeout (55P03), statement timeout (57014). */
+const BUSY_WAIT = /\b55P03\b|\b57014\b|lock timeout|statement timeout/i;
+
+/**
  * Query logging, as a client extension.
  *
  * This was `prisma.$use(...)` until Prisma 7 removed client middleware
@@ -190,10 +213,46 @@ const queried = basePrisma.$extends({
         );
         return trip?.category ?? null;
       });
+      // A detailed purpose (`builtin:<key>`, `custom:<uuid>`) becomes kind + key
+      // (services/purpose/purposeKeyWrite.ts); a custom key of another account is refused.
+      const keyed = await resolvePurposeKeysOnWrite(model, operation, inherited, {
+        customOf: async (id) => {
+          const tx = openTransaction.getStore();
+          if (tx) {
+            // Inside a transaction the purpose's row is held until the write commits, so a
+            // concurrent delete or re-kind (which takes it FOR UPDATE) waits and then sees it.
+            const rows = await (
+              tx as unknown as {
+                $queryRaw: (
+                  q: TemplateStringsArray,
+                  ...v: unknown[]
+                ) => Promise<{ user_id: string; kind: string }[]>;
+              }
+            ).$queryRaw`SELECT user_id, kind FROM custom_purposes WHERE id = ${id} FOR SHARE`;
+            return rows[0] ? { userId: rows[0].user_id, kind: rows[0].kind } : null;
+          }
+          return await basePrisma.customPurpose.findFirst({
+            where: { id },
+            select: { userId: true, kind: true },
+          });
+        },
+        ownersOf: async (m, where) => {
+          const reader = (openTransaction.getStore() ?? basePrisma) as unknown as Record<
+            string,
+            { findMany(a: unknown): Promise<{ userId: string }[]> }
+          >;
+          const delegate = reader[m.charAt(0).toLowerCase() + m.slice(1)];
+          const rows = await runUnfiltered(
+            async () =>
+              await delegate.findMany({ where, select: { userId: true }, distinct: ["userId"] })
+          );
+          return rows.map((r) => r.userId);
+        },
+      });
       const scoped = applyRecordedOnly(
         model,
         operation,
-        inherited,
+        keyed,
         placeVisitHiddenActive() ? (await import("./shared/time/clock")).now() : undefined
       );
       // A place that is "visited" only through a hidden business visit stops counting as visited.
@@ -247,7 +306,14 @@ const queried = basePrisma.$extends({
               (params as { __internalParams?: { transaction?: unknown } }).__internalParams
                 ?.transaction != null
             )
-          : await query(args);
+          : isMcpCreate(model, operation)
+            ? await captureMcpCreate(
+                model as string,
+                () => query(args),
+                (params as { __internalParams?: { transaction?: unknown } }).__internalParams
+                  ?.transaction != null
+              )
+            : await query(args);
         const topLevel =
           hiddenVisitPurposes.length > 0
             ? await demoteHiddenOnlyVisited(
@@ -267,6 +333,23 @@ const queried = basePrisma.$extends({
               (await import("./shared/time/clock")).now()
             )
           : topLevel;
+        // Always, whatever the query-logging flag says: rate-limited per model
+        // and operation (services/runtime/slowLog.ts, perf audit item 4).
+        slowQueries.note(model ? `${model}.${operation}` : operation, Date.now() - startTime);
+        // A custom purpose written outside a transaction was read without its row held: settle a
+        // delete or re-kind that ran in between (services/purpose/customPurposes.ts).
+        const customKey = !READ_OPERATIONS.has(operation)
+          ? writtenCustomKey(operation, args)
+          : null;
+        if (
+          customKey &&
+          !openTransaction.getStore() &&
+          (params as { __internalParams?: { transaction?: unknown } }).__internalParams
+            ?.transaction == null
+        ) {
+          const { reconcileCustomPurposeKey } = await import("./services/purpose/customPurposes");
+          await reconcileCustomPurposeKey(customKey);
+        }
         if (!READ_OPERATIONS.has(operation)) {
           for (const observer of [
             ...(writeObserver ? [writeObserver] : []),
@@ -301,6 +384,8 @@ const queried = basePrisma.$extends({
         }
         return result;
       } catch (error) {
+        // A statement cancelled by the timeout is the slowest query of all.
+        slowQueries.note(model ? `${model}.${operation}` : operation, Date.now() - startTime);
         logQuerySafely(
           () =>
             logQueryFailure(
@@ -349,6 +434,12 @@ type TripReader = {
         provenance: string | null;
       }>
     >;
+  };
+  customPurpose: {
+    findFirst(args: {
+      where: { id: string };
+      select: { userId: true; kind: true };
+    }): Promise<{ userId: string; kind: string } | null>;
   };
 };
 const openTransaction = new AsyncLocalStorage<TripReader>();
@@ -405,6 +496,16 @@ function logQueryFailure(
       operation: "database_expected_conflict",
       message: `${model}.${operation} - unique conflict, handled by the caller`,
       error: { code },
+    });
+    return;
+  }
+
+  if (expectedBusyWait.getStore() && BUSY_WAIT.test(originalMessage)) {
+    dbLogger.debug({
+      ...entry,
+      operation: "database_expected_busy_wait",
+      message: `${model}.${operation} - gave up waiting, retried by the caller`,
+      error: { code: typeof code === "string" ? code : undefined },
     });
     return;
   }

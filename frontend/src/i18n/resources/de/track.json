@@ -65,7 +65,7 @@
   },
   "export": {
     "title": "Verlauf exportieren",
-    "intro": "Lädt deine TravTrack-Positionen dieser Tage herunter, beide eingeschlossen, auf der Uhr deines Profils. Was eine Privatzone verdeckt, ist nicht in der Datei.",
+    "intro": "Lädt die Positionen dieser Tage herunter, ohne Privatzonen.",
     "from": "Vom",
     "to": "Bis",
     "format": "Format",
@@ -80,7 +80,7 @@
   },
   "delete": {
     "title": "Zeitraum löschen",
-    "intro": "Löscht alle Positionen dieser Tage, beide eingeschlossen, auf der Uhr deines Profils. Der Zeitraum bleibt gelöscht: Auch ein Handy, das noch offline war, bringt sie nicht zurück. Flüge und Reisen bleiben stehen.",
+    "intro": "Löscht alle Positionen dieser Tage endgültig. Flüge und Reisen bleiben.",
     "from": "Vom",
     "to": "Bis",
     "counting": "Gespeicherte Positionen werden gezählt …",
@@ -102,10 +102,12 @@
     "legInvalid": "Diese Etappe lässt sich so nicht ändern.",
     "legGone": "Diese Etappe gibt es nicht mehr – die Ansicht wird neu berechnet.",
     "stopInvalid": "Dieser Stopp lässt sich so nicht benennen.",
-    "stopGone": "Diesen Stopp gibt es nicht mehr – die Ansicht wird neu berechnet."
+    "stopGone": "Diesen Stopp gibt es nicht mehr – die Ansicht wird neu berechnet.",
+    "sourceNotOnDay": "Diese Quelle hat an dem Tag keine Punkte. Lade die Seite neu und wähle erneut.",
+    "dayNoPoints": "An diesem Tag ist nichts gespeichert – es gibt keine Quelle zu wählen."
   },
   "settings": {
-    "tripsNoResidence": "Reisen erkennt TravTrack erst, wenn dein Wohnort bestätigt ist: Gemessen wird der Abstand zu deinem Zuhause. Bestätige ihn unter Einstellungen → Zuhause.",
+    "tripsNoResidence": "Reisen erkennt TravTrack erst mit bestätigtem Zuhause (Einstellungen → Zuhause).",
     "diagnostics": {
       "day": "Tag",
       "device": "Gerät",
@@ -137,7 +139,7 @@
         "upload": "Upload: {{status}}",
         "network": "kein Netz",
         "permission": "Standortzugriff: {{status}}",
-        "autoPause": "iOS durfte die Aufzeichnung automatisch anhalten (Auto-Pause) – das ist hier die wahrscheinlichste Ursache, die App erfährt davon aber nichts",
+        "autoPause": "Wohl iOS-Auto-Pause — davon erfährt die App nichts",
         "stopPlan": "Die App hat die Aufzeichnung selbst beendet (Plan, {{where}}). Urteile: Flug {{flight}}, Reise {{trip}}, Alltag {{everyday}}. Standortzugriff erlaubt: {{allowed}}, Alltag-Schalter: {{enabled}}, Alltag läuft: {{armed}}, Serverentscheidung: {{decision}}.",
         "stopOther": "Die Aufzeichnung wurde beendet von: {{reason}}",
         "stopForeground": "App im Vordergrund",
@@ -172,8 +174,8 @@
   },
   "imports": {
     "title": "Track-Dateien",
-    "intro": "Eine Track-Datei kommt in deinen TravTrack-Verlauf: GPX, KML oder TCX aus einer Sport-App oder einem Tracker, GeoJSON mit Zeiten, und der Google-Standortverlauf (Takeout „Records.json“, „Semantic Location History“ oder der Timeline-Export vom Gerät). Die Datei wird nur auf diesem Server gelesen. Zeiten ohne Zeitzonen-Angabe werden nicht geraten, und fehlende Genauigkeit bleibt unbekannt. Positionen in einer Privatzone oder in einem gelöschten Zeitraum werden dabei verworfen, und was schon gespeichert ist, kommt nicht doppelt dazu. Ein Import löst keine Vorschläge aus.",
-    "googleHint": "Google Timeline: Nur die Datei „Timeline.json“ vom Gerät (Google Maps → Einstellungen → Standort → Zeitachse exportieren) wird gelesen. Privatzonen schneiden Punkte heraus. Der Kalender füllt sich über Stunden, weil jeder Tag einzeln aufbereitet wird. Besuchsvorschläge entstehen nur für die letzten 30 Tage. Die Datei verlässt den Server nicht. Start- und Endpunkte von Aktivitäten, die Google mit einer falschen Zeit versieht, werden nur gespeichert, wenn kein Pfad die Zeit abdeckt, und nie für Linien oder Strecken verwendet.",
+    "intro": "GPX, KML, TCX, GeoJSON oder Google-Verlauf hochladen. Gelesen nur auf diesem Server.",
+    "googleHint": "Google Timeline: „Timeline.json“ vom Handy exportieren. Die Datei bleibt auf dem Server.",
     "choose": "Track-Datei importieren",
     "runningPercent": "{{name}} wird importiert … {{percent}} %",
     "formats": {
@@ -203,16 +205,19 @@
       "withoutTime_one": "{{count}} ohne Zeit übersprungen",
       "withoutTime_other": "{{count}} ohne Zeit übersprungen",
       "left_one": "davon noch {{count}} vorhanden",
-      "left_other": "davon noch {{count}} vorhanden"
+      "left_other": "davon noch {{count}} vorhanden",
+      "noNew": "keine neuen Punkte"
     },
     "points_one": "{{count}} Position",
     "points_other": "{{count}} Positionen",
     "span": "{{from}} – {{to}}",
     "status": {
       "running": "läuft",
-      "interrupted": "abgebrochen (Server neu gestartet) – importiere die Datei erneut",
+      "interrupted": "abgebrochen (Server neu gestartet) – mit „Fortsetzen“ dieselbe Datei wählen",
       "cancelled": "gelöscht",
-      "paused": "angehalten – unter „Dawarich-Verlauf übernehmen“ fortsetzen"
+      "paused": "angehalten – unter „Dawarich-Verlauf übernehmen“ fortsetzen",
+      "partial": "unterbrochen – mit „Fortsetzen“ dieselbe Datei wählen, dann geht es an der Stelle weiter",
+      "queued": "wartet, bis andere Importe an der Reihe waren"
     },
     "delete": "Import löschen",
     "deleteConfirm_one": "Den Import „{{name}}“ und seine {{count}} Position löschen? Positionen aus anderen Quellen bleiben.",
@@ -229,15 +234,21 @@
       "notFound": "Diesen Import gibt es nicht mehr.",
       "rateLimited": "Zu viele Importe in kurzer Zeit. Versuche es in einer Viertelstunde noch einmal.",
       "lost": "Ob der Import fertig wurde, ist nicht bekannt – der Server hat neu gestartet. Sieh in der Liste nach.",
-      "tooManyPoints": "Die Datei enthält zu viele Positionen – ein Import nimmt höchstens 200.000 aus GPX und 2 Millionen aus den übrigen Formaten. Teile sie auf, etwa nach Monaten."
-    }
+      "tooManyPoints": "Die Datei enthält zu viele Positionen – ein Import nimmt höchstens 200.000 aus GPX und 2 Millionen aus den übrigen Formaten. Teile sie auf, etwa nach Monaten.",
+      "notResumable": "Dieser Import lässt sich nicht fortsetzen.",
+      "fileMismatch": "Das ist nicht die Datei, mit der dieser Import begonnen hat. Wähle zum Fortsetzen dieselbe Datei."
+    },
+    "resume": "Fortsetzen",
+    "partial": "Der Import wurde unterbrochen: {{summary}}. Mit „Fortsetzen“ und derselben Datei geht er weiter.",
+    "googleHintMore": "Google speichert die Zeitachse nur auf dem Gerät. Laut Google-Hilfe: Android „Einstellungen → Standort → Standortdienste → Zeitachse → Zeitachsendaten exportieren“, iPhone „Google Maps → Profilbild → Einstellungen → Persönliche Inhalte → Zeitachsendaten exportieren“. Privatzonen schneiden Punkte heraus; Besuchsvorschläge nur für die letzten 30 Tage.",
+    "introMore": "Auch Google Takeout („Records.json“, „Semantic Location History“). Zeiten ohne Zeitzone werden nicht geraten. Positionen in Privatzonen oder gelöschten Zeiträumen werden verworfen, nichts kommt doppelt. Ein Import löst keine Vorschläge aus."
   },
   "dawarichCopy": {
     "title": "Dawarich-Verlauf übernehmen",
-    "intro": "Kopiert deinen Standortverlauf aus deinem eigenen Dawarich nach TravTrack – den ganzen oder einen Zeitraum. Dawarich wird dabei nur gelesen: Dort wird nichts geändert oder gelöscht, und deine Standortquelle bleibt, wie sie ist. Positionen in einer Privatzone oder in einem gelöschten Zeitraum werden verworfen, und was schon gespeichert ist, kommt nicht doppelt dazu. Die Kopie löst keine Vorschläge aus; löschen lässt sie sich wie ein Import.",
+    "intro": "Kopiert deinen Verlauf aus Dawarich. Dawarich wird nur gelesen, nichts wird doppelt.",
     "connection": {
       "none": "Verbinde zuerst dein eigenes Dawarich (Einstellungen → Dawarich). Erst dann lässt sich der Verlauf übernehmen.",
-      "shared": "Auf diesem Server ist nur ein gemeinsames Dawarich eingerichtet. Eine Kopie liest ausschließlich aus deinem eigenen – trage dafür deine eigene Verbindung ein."
+      "shared": "Nur ein gemeinsames Dawarich eingerichtet. Für eine Kopie deine eigene Verbindung eintragen."
     },
     "whole": "Ganzer Verlauf (bis gestern)",
     "span": "Zeitraum",
@@ -299,7 +310,7 @@
   },
   "sources": {
     "title": "Weitere Quellen",
-    "intro": "OwnTracks (Android, iOS) und Overland (iOS) können Positionen direkt an TravTrack schicken. Jedes Gerät bekommt einen eigenen Schlüssel, der nur Positionen abliefern kann und sonst nichts – er liest nichts und öffnet keine andere Seite.",
+    "intro": "OwnTracks und Overland senden direkt. Jeder Geräteschlüssel kann nur Positionen liefern.",
     "privacy": "Anders als die Companion-App können diese Apps deine Privatzonen nicht kennen: Positionen in einer Privatzone erreichen den Server und werden erst dort verworfen.",
     "kind": "App",
     "kinds": {
@@ -311,7 +322,7 @@
     "create": "Schlüssel erstellen",
     "shownOnce": "Der Schlüssel wird nur jetzt angezeigt. Trage ihn in der App ein; danach ist er hier nicht mehr zu sehen.",
     "owntracks": {
-      "howTo": "In OwnTracks: Einstellungen → Verbindung → Modus „HTTP“. URL eintragen, Authentifizierung einschalten, als Benutzer einen beliebigen Namen und als Passwort den Schlüssel.",
+      "howTo": "OwnTracks: Modus „HTTP“, URL eintragen, Authentifizierung an, Schlüssel als Passwort.",
       "url": "URL",
       "password": "Passwort"
     },
@@ -365,11 +376,13 @@
     "citiesNone": "Keine Stadt",
     "pending": "Wird gerade neu berechnet – die Werte können sich noch ändern.",
     "pendingMonth": "wird berechnet",
-    "legend": "Kilometer am Boden zählen nur die sichtbare Linie: nichts in der Luft, nichts schneller als 500 km/h, nichts, was eine Privatzone verbirgt. Monate ohne Positionen fehlen.",
+    "legend": "Nur die sichtbare Linie am Boden zählt. Monate ohne Positionen fehlen.",
     "citiesOff": "Städte nennt die Übersicht erst, wenn du die Städtesuche in den Einstellungen einschaltest.",
     "utc": "Monate nach UTC: Ein Tag zählt zu dem Monat, in den er nach UTC fällt – was um Mitternacht Ortszeit geschieht, kann im Nachbarmonat stehen.",
     "chartTitle": "Strecke am Boden pro Monat ({{unit}})",
-    "chartNote": "Monate ohne Positionen und Monate in Berechnung haben keinen Balken."
+    "chartNote": "Monate ohne Positionen und Monate in Berechnung haben keinen Balken.",
+    "yearsFailed": "Die Jahre mit Aufzeichnung konnten nicht geladen werden.",
+    "year": "Jahr"
   },
   "lastSeen": {
     "label": "Zuletzt gesehen",
@@ -452,7 +465,7 @@
       "splitHours_one": "{{count}} Stunde",
       "splitHours_other": "{{count}} Stunden",
       "notRemembered": "Konnte diese Wahl nicht merken – sie gilt nur, bis du die Seite verlässt.",
-      "alwaysCut": "Private Zonen, gelöschte Zeiträume, Pausen und Flugmodus-Lücken trennen immer, egal was hier steht. Hier lässt sich nur weiter trennen, nie verbinden.",
+      "alwaysCut": "Privatzonen, Löschungen und Lücken trennen immer. Hier nur weiter trennen.",
       "scale": {
         "title": "Tempo-Skala",
         "default": "Standard",
@@ -464,7 +477,12 @@
       "accuracy": "Punkte nach Genauigkeit",
       "accuracyAll": "Alle Punkte",
       "accuracyMax": "Nur besser als {{m}} m",
-      "accuracyHint": "Gilt für Punkte und Heatmap, nicht für die Linie. Punkte ohne gemeldete Genauigkeit bleiben sichtbar."
+      "accuracyHint": "Gilt für Punkte und Heatmap, nicht für die Linie. Punkte ohne gemeldete Genauigkeit bleiben sichtbar.",
+      "mode": "Verkehrsmittel",
+      "modeLong": "Die Farbe nach Verkehrsmittel gibt es für einen Tag oder eine Woche. Monat, Jahr und Zeitraum zeichnen einfarbig.",
+      "modeNone": "Keine Etappen im Zeitraum.",
+      "modeColor": "Farbe für {{mode}}",
+      "modeReset": "Standardfarben"
     },
     "replay": {
       "play": "Wiedergabe starten",
@@ -525,13 +543,13 @@
     "rangeSimplified": "Für diesen Zeitraum ist die Linie vereinfacht; die Strecke ist deshalb etwas kürzer als gemessen.",
     "rangeOmitted_one": "{{count}} kurzes Stück passte nicht mehr in die Ansicht und fehlt.",
     "rangeOmitted_other": "{{count}} kurze Stücke passten nicht mehr in die Ansicht und fehlen.",
-    "rangeNoTimeline": "Für Monat, Jahr und Zeitraum zeigt die Karte die Linie allein. Tagesablauf, Aufenthalte und Logbuch-Einträge stehen in der Tages- und 7-Tage-Ansicht.",
+    "rangeNoTimeline": "Ab Monat nur die Linie. Tagesablauf in der Tages- und 7-Tage-Ansicht.",
     "countries": {
       "loading": "Länder werden geladen …",
       "none": "In den berührten Monaten ist kein Land ermittelt.",
       "list_one": "{{count}} Land: {{names}}",
       "list_other": "{{count}} Länder: {{names}}",
-      "note": "Eingefärbt sind die Länder der Monatswerte aller Monate, die der Zeitraum berührt (Monate nach UTC) – bei einem einzelnen Tag also die seines Monats.",
+      "note": "Länder aller Monate, die der Zeitraum berührt (nach UTC).",
       "pending": "Einige dieser Monate werden gerade neu berechnet; die Länder können sich noch ändern.",
       "shapesFailed": "Die Ländergrenzen konnten nicht geladen werden."
     },
@@ -594,7 +612,7 @@
   },
   "stays": {
     "title": "Aufenthalte",
-    "intro": "Aufenthalte, die TravTrack erkannt hat. Bestätigt wird im Posteingang; bestätigte landen als Ort oder Unterkunft im Logbuch.",
+    "intro": "Erkannte Aufenthalte. Bestätigt wird im Posteingang.",
     "loading": "Aufenthalte werden geladen …",
     "empty": "Für diese Auswahl gibt es keine Aufenthalte.",
     "more": "Weitere laden",
@@ -621,7 +639,7 @@
   },
   "importsTab": {
     "title": "Importe",
-    "intro": "Alles, was Positionen in deinen Verlauf bringt: Track-Dateien (GPX, KML, TCX, GeoJSON, Google-Standortverlauf), die Kopie aus Dawarich und OwnTracks/Overland.",
+    "intro": "Alles, was Positionen in deinen Verlauf bringt.",
     "loading": "Wird geladen …"
   },
   "calendar": {
@@ -669,10 +687,6 @@
       "days": "{{fromDay}} {{from}} – {{untilDay}} {{until}}",
       "wholeDay": "{{day}}, ganzer Tag",
       "wholeDays": "{{fromDay}} – {{untilDay}}",
-      "minutes": "{{m}} min",
-      "hours": "{{h}} h {{m}} min",
-      "daysHours": "{{d}} T {{h}} h",
-      "km": "{{km}} km",
       "speed": "Ø {{avg}}, max {{max}} km/h",
       "speedAvg": "Ø {{avg}} km/h"
     },
@@ -698,10 +712,10 @@
   },
   "start": {
     "title": "So kommen Daten in TravTrack",
-    "intro": "TravTrack ist eingeschaltet, aber für dein Konto liegt noch nichts vor. Drei Wege bringen deinen Standortverlauf hierher:",
+    "intro": "Noch keine Daten. Drei Wege bringen deinen Verlauf hierher:",
     "companion": {
       "title": "Mit der Companion aufzeichnen",
-      "body": "Stell deine Standortquelle auf TravTrack (Einstellungen → Standortverlauf → Standortquelle). Dann zeichnet die Companion deine Wege hierher auf.",
+      "body": "Standortquelle auf TravTrack stellen, dann zeichnet die Companion deine Wege auf.",
       "done": "TravTrack ist deine Standortquelle. Sobald die Companion aufzeichnet, erscheinen deine Wege hier.",
       "action": "Standortquelle einstellen"
     },
@@ -753,11 +767,22 @@
       "avgSpeed": "Ø Tempo",
       "maxSpeed": "Höchstes Tempo",
       "ascent": "Aufstieg",
-      "descent": "Abstieg"
+      "descent": "Abstieg",
+      "points": "Punkte"
     },
     "replay": "Diese Etappe abspielen",
     "showPoints": "Punkte zeigen",
-    "hidePoints": "Punkte ausblenden"
+    "hidePoints": "Punkte ausblenden",
+    "pickLoading": "Etappe wird geladen …",
+    "pickFailed": "Die Etappe konnte nicht geladen werden. {{reason}}",
+    "pickNone": "An dieser Stelle gibt es keine Etappe (ein Halt oder eine Lücke).",
+    "openDay": "Tag öffnen",
+    "delete": "Punkte löschen",
+    "deleteConfirm": "{{n}} Punkte dieser Etappe endgültig löschen?",
+    "deleteYes": "Ja, löschen",
+    "deleteNo": "Abbrechen",
+    "deleted": "Die Punkte der Etappe wurden gelöscht.",
+    "deleteFailed": "Die Punkte wurden nicht gelöscht. {{reason}}"
   },
   "stop": {
     "title": "Stopp",
@@ -844,7 +869,7 @@
   "gaps": {
     "title": "Lücken im Logbuch {{year}}",
     "year": "Jahr",
-    "intro": "Welche Tage dein Logbuch erklärt – und welche nicht. Ein Tag zählt, wenn ein Eintrag ihn abdeckt oder TravTrack Positionen hat.",
+    "intro": "Welche Tage dein Logbuch erklärt — und welche nicht.",
     "loading": "Das Jahr wird geladen …",
     "retry": "Erneut versuchen",
     "nothingYet": "Noch ist nichts eingetragen oder aufgezeichnet – es gibt also auch keine Lücken.",
@@ -900,5 +925,140 @@
     "openTrack": "Zum Track",
     "pageTitle": "Lücken im Logbuch",
     "menu": "Lücken"
+  },
+  "daySources": {
+    "title": "Quelle des Tages",
+    "kind": {
+      "phone": "Telefon",
+      "dawarich": "Dawarich",
+      "import": "Import",
+      "other": "Andere Quelle"
+    },
+    "used": "Verwendet: {{source}}",
+    "usedChosen": "Von dir gewählt: {{source}}",
+    "segment": "{{source}} ab {{from}}",
+    "none": "keine Quelle",
+    "notScored": "Die Quellen dieses Tages werden noch bewertet; bis dahin sind alle Punkte gezeichnet.",
+    "choose": "Quelle",
+    "auto": "Automatisch (beste Quelle)",
+    "option": "{{source}} – Qualität {{score}} %, {{count}} Punkte",
+    "outliers_one": "{{count}} Ausreißer nicht gezeichnet und nicht gezählt",
+    "outliers_other": "{{count}} Ausreißer nicht gezeichnet und nicht gezählt",
+    "outliersKept_one": "{{count}} Ausreißer wird auf deinen Wunsch gezeichnet",
+    "outliersKept_other": "{{count}} Ausreißer werden auf deinen Wunsch gezeichnet",
+    "outliersShow": "Trotzdem zeigen",
+    "outliersHide": "Wieder ausblenden",
+    "estimated_one": "{{count}} Lücke gestrichelt – geschätzt, nicht gezählt",
+    "estimated_other": "{{count}} Lücken gestrichelt – geschätzt, nicht gezählt",
+    "bridged_one": "{{count}} Sprung als Eintrag aus dem Logbuch gezeichnet",
+    "bridged_other": "{{count}} Sprünge als Einträge aus dem Logbuch gezeichnet",
+    "clockOffset": "{{source}} läuft um {{minutes}} Minuten versetzt – vermutlich eine falsche Zeitzone im Export. Nichts wurde verschoben."
+  },
+  "quality": {
+    "title": "Tage mit fragwürdigen Spuren",
+    "intro": "Tage mit Widersprüchen oder Ausreißern. Punkte bleiben unverändert, alles umkehrbar.",
+    "loading": "Tage werden geladen …",
+    "none": "Keine fragwürdigen Tage – alles passt.",
+    "total_one": "{{count}} Tag",
+    "total_other": "{{count}} Tage",
+    "reason": {
+      "lowScore": "niedrige Qualität",
+      "mixed": "mehrere Quellen",
+      "outliers": "Ausreißer"
+    },
+    "score": "Qualität {{score}} %",
+    "open": "Tag ansehen",
+    "chooseSource": "Quelle wählen",
+    "discardOutliers": "Ausreißer verwerfen",
+    "deleteRange": "Zeitraum löschen …",
+    "more": "Weitere Tage laden",
+    "saved": "Gespeichert.",
+    "previewDays_one": "Betroffen: {{count}} Tag",
+    "previewDays_other": "Betroffen: {{count}} Tage"
+  },
+  "evidence": {
+    "calendar": "Kalender: {{title}}",
+    "venue": "Ort aus Kartendaten",
+    "whyLabel": "Warum?",
+    "scale": "Punkte aus Quelle, Termin, Kartenort und Dauer. Ab {{highPoints}} hoch, ab {{mediumPoints}} mittel.",
+    "level": {
+      "high": "Sicherheit hoch",
+      "medium": "Sicherheit mittel",
+      "low": "Sicherheit niedrig"
+    },
+    "why": {
+      "venue": "{{m}} m vom Ort",
+      "dwell": "{{min}} min Aufenthalt",
+      "calendar": "Kalendertermin passt",
+      "plugin": "{{plugin}}: {{name}}, {{m}} m",
+      "pluginNoDistance": "{{plugin}}: {{name}}"
+    },
+    "scaleMore": "So wird gezählt: Vorschlagsquelle bis {{nearPluginM}} m 2 Punkte, bis {{farPluginM}} m 1 (einer weniger, wenn sie sich selbst unsicher ist); Kalendertermin 2 (passt er nur zum Tag, 1); Ort aus Kartendaten bis {{nearVenueM}} m 2, bis {{closeVenueM}} m 1; ab {{longDwellMin}} min Aufenthalt 1 dazu. Ab {{highPoints}} Punkten hoch, ab {{mediumPoints}} mittel, sonst niedrig."
+  },
+  "roadtrip": {
+    "open": "Als Roadtrip übernehmen",
+    "title": "Als Roadtrip übernehmen",
+    "loading": "Stationen werden aus der Spur gelesen …",
+    "name": "Name des Roadtrips",
+    "defaultName": "Roadtrip ab {{day}}",
+    "stations": "Stationen",
+    "stationName": "Name der Station {{n}}",
+    "stopName": "Halt {{n}}",
+    "stay": "{{from}}–{{until}} · {{dwell}}",
+    "departs": "ab {{at}}",
+    "arrives": "an {{at}}",
+    "linkedPlace": "mit deinem Ort verknüpft",
+    "drop": "Entfernen",
+    "nameNeeded": "Jede Station braucht einen Namen.",
+    "distance": "{{km}} km",
+    "estimated": "davon {{km}} km geschätzt (Aufzeichnungslücke, gestrichelt)",
+    "sketch": "Strecke aus der Spur, Lücken gestrichelt",
+    "save": "Roadtrip anlegen",
+    "saving": "Wird angelegt …",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "preview": {
+      "tooLong": "Höchstens 14 Tage auf einmal – wähle einen kürzeren Zeitraum.",
+      "noPoints": "In diesem Zeitraum gibt es keine aufgezeichneten Punkte.",
+      "truncated": "Dieser Zeitraum hat zu viele Punkte – wähle einen kürzeren.",
+      "tooFewStations": "Daraus ergibt sich nur eine Station – es gibt keine Strecke zu übernehmen."
+    },
+    "saveFailed": {
+      "create": "Der Roadtrip konnte nicht angelegt werden. Es wurde nichts gespeichert.",
+      "stations": "Die Stationen konnten nicht gespeichert werden. Der Roadtrip wurde wieder entfernt.",
+      "line": "Die Strecke konnte nicht gespeichert werden. Der Roadtrip wurde wieder entfernt."
+    },
+    "saveFailedKept": {
+      "create": "Der Roadtrip konnte nicht angelegt werden.",
+      "stations": "Die Stationen konnten nicht gespeichert werden, und der halb angelegte Roadtrip ließ sich nicht entfernen – lösche ihn unter Roadtrips.",
+      "line": "Die Strecke konnte nicht gespeichert werden, und der halb angelegte Roadtrip ließ sich nicht entfernen – lösche ihn unter Roadtrips."
+    }
+  },
+  "cleanup": {
+    "smoothDay": "Diesen Tag glätten (nur Anzeige)",
+    "smoothAll": "Dünne Spuren an allen Tagen glätten",
+    "smoothHint": "Nur Quellen mit niedriger Qualität werden geglättet; die gespeicherten Punkte bleiben unverändert.",
+    "smoothedLabel": "geglättet",
+    "matchedLabel": "an Straßen angepasst",
+    "matchedLine": "An Straßen angepasst über {{provider}}",
+    "undo": "Rückgängig",
+    "match": "An Straßen anpassen",
+    "matching": "Wird angepasst …",
+    "matched": "Abschnitt an Straßen angepasst.",
+    "error": {
+      "serviceOff": "Das Anpassen an Straßen ist auf diesem Server ausgeschaltet.",
+      "notConfigured": "Es ist kein Router eingerichtet.",
+      "internetOff": "Der Server darf gerade keine externen Dienste erreichen.",
+      "privateTarget": "Die Router-Adresse ist nicht erlaubt.",
+      "invalidUrl": "Die Router-Adresse ist ungültig.",
+      "timeout": "Der Router hat nicht rechtzeitig geantwortet.",
+      "unreachable": "Der Router war nicht erreichbar.",
+      "badResponse": "Der Router hat keine brauchbare Antwort gegeben.",
+      "tooLarge": "Der Abschnitt hat zu viele Punkte.",
+      "tooFewPoints": "Der Abschnitt hat zu wenige Punkte außerhalb deiner Schutzzonen.",
+      "lowConfidence": "Der Router war sich zu unsicher – der Abschnitt bleibt wie aufgezeichnet.",
+      "saveFailed": "Die Einstellung konnte nicht gespeichert werden.",
+      "undoFailed": "Das Rückgängigmachen ist fehlgeschlagen."
+    }
   }
 }

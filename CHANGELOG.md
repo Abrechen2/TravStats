@@ -6,6 +6,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.46.** Nine new migrations, all additive: linked companions, recovery-key confirmation, a note on documents, the private-inbox mail intake, the resumable track import, per-day track sources (with an index built concurrently, so writes are not blocked), the covered-suggestion state and the track-cleanup tables. Nothing is deleted. **Admins of an instance with a WebDAV or cloud backup target must confirm the recovery key once after the update**: the page is blocked until they do, while backups keep running.
+
+### Fixed
+
+- **A large track import no longer stalls the server.** Points are written in small batches with a pause after each one, an interrupted import shows "teilweise" with "Fortsetzen", and several accounts take turns.
+- **Suggestions close themselves when an entry already covers them**, with the covering entry named and an undo; a place that exists but has no visit is pre-selected.
+- **Shared trips show each person once.** A companion can be linked to the account it stands for, a matching name asks "Ist das …?" instead of guessing, and linking never adds people to a trip by itself.
+- **A trip shared with you is announced** in the inbox, by a dashboard banner and a dot on "Reisen", also when it was accepted automatically.
+- **Hand-drawn cruise routes travel with a shared trip** and follow later edits; a recipient's own line is kept and flagged.
+- **iCloud calendars connect.** The calendar server on a second iCloud host is accepted, and a refused login names the app-specific password.
+- **"Neu anlegen aus Dokument" says why** when nothing could be read, and offers an empty form with the document attached.
+- **A read-only API key can no longer use the server's AI parser.**
+
+### Added
+
+- **Recovery key.** Admins see the backup encryption key once after re-authentication, copy or download it and confirm its last four characters; a restore onto another server can take the key and makes every stored credential readable again.
+- **Unassigned documents in the inbox can be opened, edited, linked to one or more entries, turned into a new entry, uploaded by drag and drop and deleted.**
+- **Mail intake for a private mailbox.** Only booking mails are opened: the sender and subject are read first, against German and English default words plus your own words and senders. Private mails are never downloaded or marked, nothing is marked as read, and only new mails are fetched unless you choose 30, 90 or 365 days. "Postfach durchsuchen" lists booking mails that are probably missing.
+- **TravTrack, best source per day.** Each day is scored per source; dense phone tracking beats a sparse Google import, a day can switch source at a clear hand-off, teleports that match no logged trip are left out, long gaps are drawn as estimated, and "Tage mit fragwürdigen Spuren" lists what needs a look.
+- **TravTrack map.** Every section is clickable in every view, with times, distance, speed, mode, replay, "Tag öffnen" and delete; colours by transport mode with a legend; each stop shows where its name came from (plugin, calendar or map data) and how sure the suggestion is.
+- **Roadtrip from a recording**, with stations from your stops and the driven line, and per-roadtrip colours on the map.
+- **Hand-drawn bus lines** like ferries, kept on re-route.
+- **Optional track cleanup:** light smoothing for display, and matching to roads through your own router. "KI fragen" for an unclear stay. Every external service is named before anything is sent, with "Einmal erlauben", "Immer" and "Abbrechen".
+- **Link an existing copy of a shared trip** instead of creating a second one, with a comparison per entry after the other side has agreed.
+- **Friends comparison** with a head-to-head chart, podium, fun figures, badges, progress on the curated place lists, and yearly figures when both sides share them.
+- **Google Timeline import on the Import page**, with the export path for Android and iPhone.
+- **Suggestion plugins can maintain archive locations:** missing coordinates are proposed from your stops and written to the archive only after you confirm, with undo; name matches reach further than distance matches.
+- **The MCP package writes**: read a booking, add it with the original attached, upload a document, add a flight or a visit, answer inbox items and reroute legs, each only after an explicit confirmation.
+
 **Upgrading to 2.8.0-rc.45.** Fourteen new migrations, all additive: a marker for a removed demo account, TravTrack rebuild and visit-retry state, shared ferry routes per port pair, rail operator source and reroute misses, change-history retention, calendar sources and rules, automatic covers, the merged trip-suggestion decisions and suggestion plugins. Answered TravTrack trip questions are copied into the shared decision table. Nothing is deleted. Instances with no road-routing provider chosen now route automatically with a stored key; pick a provider or "Aus" under Dienste to change that.
 
 ### Fixed

@@ -50,13 +50,13 @@ describe("PhotoLightbox", () => {
     const user = userEvent.setup();
     renderBox(0);
 
-    await user.click(screen.getByRole("button", { name: "gallery.next" }));
+    await user.click(screen.getByRole("button", { name: "common:photoViewer.next" }));
     expect(screen.getByTestId("lightbox-image")).toHaveAttribute("src", "/a1.jpg");
 
-    await user.click(screen.getByRole("button", { name: "gallery.next" }));
+    await user.click(screen.getByRole("button", { name: "common:photoViewer.next" }));
     expect(screen.getByTestId("lightbox-image")).toHaveAttribute("src", "/p1.jpg");
 
-    await user.click(screen.getByRole("button", { name: "gallery.previous" }));
+    await user.click(screen.getByRole("button", { name: "common:photoViewer.previous" }));
     expect(screen.getByTestId("lightbox-image")).toHaveAttribute("src", "/a1.jpg");
   });
 
@@ -147,7 +147,7 @@ describe("PhotoLightbox", () => {
 
     await user.click(screen.getByRole("button", { name: "gallery.setAsCover" }));
     // Still pending — navigate to the next item before the request resolves.
-    await user.click(screen.getByRole("button", { name: "gallery.next" }));
+    await user.click(screen.getByRole("button", { name: "common:photoViewer.next" }));
     expect(screen.getByTestId("lightbox-image")).toHaveAttribute("src", "/a1.jpg");
 
     resolveCover({ coverImageUrl: "/cover-photo" });

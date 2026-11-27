@@ -6,7 +6,8 @@ import { generateToken } from "../../utils/jwt";
 import { utcMidnight } from "../../services/countryDays/store";
 import { MONTHS_BIT, markTravTrackDaysDirty } from "../../services/travtrack/dirtyDays";
 import { travTrackSwitches } from "../../services/travtrack/__tests__/switches";
-import { makeUser, wipeTravTrack } from "../../services/travtrack/__tests__/fixtures";
+import { setLocationProvider } from "../../services/locationProvider/provider";
+import { makeUser, storePoint, wipeTravTrack } from "../../services/travtrack/__tests__/fixtures";
 
 /**
  * `GET /travtrack/months?year=YYYY` and the city-lookup switch (TravTrack plan
@@ -164,5 +165,25 @@ describe("TravTrack — monthly values", () => {
         expect((await put(body)).status).toBe(400);
       }
     });
+  });
+
+  it("GET /travtrack/years lists the years with data, own account only, ascending", async () => {
+    await setLocationProvider(userId, "travtrack");
+    await setLocationProvider(otherId, "travtrack");
+    await storePoint(userId, { t: Date.parse("2025-06-01T10:00:00Z"), lat: 37.5, lon: 127 });
+    await storePoint(userId, { t: Date.parse("2023-02-01T10:00:00Z"), lat: 37.5, lon: 127 });
+    await storePoint(otherId, { t: Date.parse("2019-02-01T10:00:00Z"), lat: 37.5, lon: 127 });
+
+    const res = await request(app).get("/api/v1/travtrack/years").set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ years: [2023, 2025] });
+  });
+
+  it("GET /travtrack/years is empty when TravTrack is not the account's location source", async () => {
+    await storePoint(userId, { t: Date.parse("2025-06-01T10:00:00Z"), lat: 37.5, lon: 127 });
+    await setLocationProvider(userId, "none");
+    const res = await request(app).get("/api/v1/travtrack/years").set("Cookie", cookie);
+    expect(res.body).toEqual({ years: [] });
   });
 });

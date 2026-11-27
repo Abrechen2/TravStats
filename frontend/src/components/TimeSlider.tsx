@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "../hooks/useTranslation";
-import { formatDate } from "../lib/displayFormat";
+import { formatDate } from "../lib/format";
 
 const FRAME_MS = 1000 / 60;
 /** ~30 Hz: a commit rebuilds the trips layers. A frame slightly under 33 ms still commits. */

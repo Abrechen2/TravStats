@@ -6,6 +6,7 @@ import { sharingConnectionsApi } from "../../lib/api/sharingConnections";
 import { logger } from "../../lib/logger";
 import type { Connection, RemoteAchievements } from "../../types/sharingRemote";
 import { remoteSharingError, type RemoteSharingError } from "../sharing/remoteSharingCopy";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:remote.connections.achievements";
 
@@ -41,9 +42,9 @@ export default function RemotePersonAchievements({
 
   if (failure)
     return (
-      <p role="alert" style={{ color: "var(--ts-warn)" }} data-testid="remote-achievements-error">
+      <InlineError tone="warning" testId="remote-achievements-error">
         {t(failure.key, { origin: failure.origin })}
-      </p>
+      </InlineError>
     );
   if (!data) return <p className="t-caption">{t(`${NS}.loading`)}</p>;
   const { summary, earned } = data;

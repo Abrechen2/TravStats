@@ -5,7 +5,7 @@
   "baseUrlPlaceholder": "https://immich.example.com",
   "apiKey": "API key",
   "apiKeyPlaceholder": "Create one in Immich under Account → API Keys",
-  "apiKeyScopes": "Required permissions: album.read, asset.read, asset.view, asset.download, user.read. album.read alone is not enough — an album's pictures sit behind the asset permissions. Read-only; TravStats needs nothing beyond that.",
+  "apiKeyScopes": "Scopes: album.read, asset.read, asset.view, asset.download, user.read. Read only.",
   "apiKeyStored": "A key is stored",
   "clearKey": "Remove key",
   "save": "Save",
@@ -121,9 +121,9 @@
     "title": "Nightly photo scan",
     "subtitle": "Finds trips, stays and visits in your Immich library that are not in the logbook yet.",
     "switch": "Scan for photo journeys every night",
-    "what": "Reads the photos of the last {{days}} days every night, next run: {{next}}. Findings appear as suggestions in the inbox under “Photo journeys” — nothing is recorded until you accept it.",
+    "what": "Reads the last {{days}} days of photos each night (next: {{next}}). Finds are suggestions only.",
     "privacy": "Pictures never leave Immich; only the positions of findings go to the place-name service.",
-    "privacyHelp": "To name a finding, the server asks the place-name service (Nominatim, Photon) what is at that position — at most 40 or 20 requests per run.",
+    "privacyHelp": "To name a place, the server asks Nominatim or Photon about the position.",
     "privacyHelpMore": "The scan runs on your server with your own Immich connection. A scan of the whole library can be started any time in the inbox with “Scan photos”.",
     "notConnected": "No Immich connection — the nightly scan skips this account until one is set up above.",
     "loading": "Loading …",
@@ -153,7 +153,7 @@
   },
   "autoCover": {
     "title": "Choose cover photos automatically",
-    "hint": "Trips without a cover get one from your own photos – only when one photo is clearly better than the rest. A cover you chose yourself is never replaced.",
+    "hint": "Trips without a cover get one. A cover you chose is never replaced.",
     "count_one": "{{count}} cover was chosen automatically.",
     "count_other": "{{count}} covers were chosen automatically.",
     "remove": "Remove automatic covers",
@@ -168,7 +168,7 @@
   },
   "visitPhotosAuto": {
     "title": "Link photos to place visits automatically",
-    "hint": "Links photos from Immich and PhotoPrism taken near the place on the day of the visit (links only, no copies). Photos without a capture time or position, and photos inside privacy zones, are never linked. Photos you remove do not come back.",
+    "hint": "Links photos taken nearby on the visit day. No copies, never from private zones.",
     "loadFailed": "The state of automatic linking could not be loaded.",
     "saveFailed": "The setting could not be saved.",
     "source": {
@@ -186,7 +186,7 @@
     "lost": "The state is unknown: the server forgot the job (restart?). Photos already linked stay linked.",
     "jobFailed": "Automatic linking failed.",
     "cap": "Photos per visit or entry (5–10)",
-    "capHint": "The most photos the server links on its own, spread over the time span without near-duplicates. Your own choices count too. A lower value trims automatic links that already exist; your own picks and removed photos are left alone.",
+    "capHint": "Maximum automatic photos. Lowering it trims automatic ones, your picks stay.",
     "capSaveFailed": "The value could not be saved.",
     "trim": "Trim existing automatic photos to this value",
     "trimRunning": "Trimming … {{done}} of {{total}}",
@@ -198,7 +198,7 @@
     "prompt": "Suggest a cover",
     "unavailable": "Cover no longer available – choose a new one",
     "title": "Suggest a cover",
-    "intro": "We look through this trip's photos for one that shows where you are – and, if possible, you. Only when one photo clearly leads do we set it on our own (a switch in the photo sources).",
+    "intro": "We look for a photo that shows where you were. Set automatically only with a clear winner.",
     "loading": "Looking at the photos …",
     "loadFailed": "The suggestions could not be loaded.",
     "retry": "Try again",
@@ -238,7 +238,7 @@
       },
       "stageLabel": "Photo with frame",
       "photoAlt": "Cover photo in the frame",
-      "hint": "Drag to move; mouse wheel, two-finger pinch or the slider to zoom. Keyboard: arrow keys move, + and − zoom, Escape cancels. The photo itself is never changed.",
+      "hint": "Drag to move, scroll or slider to zoom. The photo itself stays unchanged.",
       "zoom": "Zoom",
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out",
@@ -252,7 +252,7 @@
   },
   "selfPerson": {
     "title": "That's me",
-    "hint": "Pick which recognised person you are in {{name}}. Cover suggestions prefer trip photos with you. Only the choice is stored, no face data.",
+    "hint": "Who are you in {{name}}? Only the choice is stored, no face data.",
     "label": "Person in {{name}}",
     "none": "Not set",
     "load": "Load people",
@@ -261,5 +261,11 @@
     "loadFailed": "The people could not be loaded: {{reason}}",
     "saved": "Saved.",
     "saveFailed": "The choice could not be saved."
+  },
+  "periodAuto": {
+    "title": "Link the period automatically for trips without an album",
+    "hint": "Shows the photos of its period on every trip without an album (from PhotoPrism, else Immich). Only references are stored, no copies.",
+    "loadFailed": "The setting could not be loaded.",
+    "saveFailed": "The setting could not be saved."
   }
 }

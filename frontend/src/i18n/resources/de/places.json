@@ -82,7 +82,7 @@
     "status": "Status",
     "wasHere": "✓ War ich schon",
     "onWishlist": "☆ Merkliste",
-    "statusHint": "Neue Orte landen standardmäßig auf der Merkliste und zählen erst mit, wenn du „War ich schon“ wählst oder einen Besuch einträgst.",
+    "statusHint": "Neue Orte stehen auf der Merkliste und zählen erst mit einem Besuch.",
     "notes": "Notiz",
     "created": "Ort angelegt.",
     "updated": "Ort gespeichert.",
@@ -101,7 +101,7 @@
     "countryVisit": "Besuch außerhalb eines reinen Zwischenstopps",
     "countryTransit": "Nur Transit / Flughafen / Raststätte",
     "countryVisitHint": "Ein reiner Zwischenstopp zählt als Bodenkontakt, auch mit Übernachtung. Der Name des Ortes entscheidet nicht.",
-    "countryTransitByCategory": "Eine Raststätte oder Tankstelle zählt immer als Bodenkontakt, nie als Besuch des Landes. Wer dort wirklich etwas besucht hat, ändert die Kategorie.",
+    "countryTransitByCategory": "Raststätten und Tankstellen zählen nur als Bodenkontakt. Sonst Kategorie ändern.",
     "tags": "Tags"
   },
   "detail": {
@@ -117,7 +117,7 @@
     "dateSuggestionArrival": "Ankunft {{airport}}",
     "dateSuggestionPhotos_one": "{{count}} Foto",
     "dateSuggestionPhotos_other": "{{count}} Fotos",
-    "dateHint": "Datum ist optional — ein Ort, den du sicher kennst, aber nicht datieren kannst, zählt trotzdem. Ein Datum in der Zukunft zählt noch nicht mit.",
+    "dateHint": "Optional. Ohne Datum zählt der Ort trotzdem, ein künftiges Datum noch nicht.",
     "undated": "ohne Datum",
     "notCountedYet": "zählt noch nicht",
     "visitAdded": "Besuch eingetragen.",
@@ -199,7 +199,45 @@
     "dismissUnassigned": "Ausblenden",
     "createTitle": "Neue Liste",
     "createFirst": "Erste Liste anlegen",
-    "alreadyInList": "„{{name}}“ steht schon in dieser Liste."
+    "alreadyInList": "„{{name}}“ steht schon in dieser Liste.",
+    "table": {
+      "label": "Orte der Liste",
+      "search": "Suchen",
+      "sortLabel": "Sortieren",
+      "sortBy": "Nach {{col}} sortieren",
+      "loadFailed": "Orte nicht geladen.",
+      "noMatch": "Nichts gefunden.",
+      "visitsToggle_one": "{{count}} Besuch von {{name}} zeigen",
+      "visitsToggle_other": "{{count}} Besuche von {{name}} zeigen",
+      "moreVisits_one": "+{{count}} weiterer",
+      "moreVisits_other": "+{{count}} weitere",
+      "col": {
+        "name": "Name",
+        "country": "Land",
+        "city": "Ort",
+        "visits": "Besuche",
+        "last": "Letzter Besuch",
+        "first": "Erster Besuch",
+        "source": "Herkunft",
+        "distance": "Entfernung",
+        "actions": "Aktionen"
+      },
+      "sort": {
+        "lastVisit": "Letzter Besuch",
+        "name": "Name",
+        "country": "Land",
+        "visitCount": "Anzahl Besuche",
+        "firstVisit": "Erster Besuch",
+        "addedAt": "Hinzugefügt",
+        "custom": "Eigene Reihenfolge"
+      },
+      "source": {
+        "manual": "Manuell",
+        "rule": "Regel",
+        "import": "Import",
+        "plugin": "Plugin"
+      }
+    }
   },
   "checklist": {
     "notFound": "Diese Checkliste gibt es nicht.",
@@ -611,7 +649,7 @@
   "import": {
     "csv": {
       "title": "Orte aus einer Tabelle",
-      "description": "Eine CSV-Datei mit Namen und Koordinaten. Ohne Koordinaten landet der Ort in der Vorschau, und du setzt seine Position selbst — so kommt auch ein Google-Takeout-Export herein, den der Geocoder nicht auflöst.",
+      "description": "CSV mit Namen und Koordinaten. Fehlt eine Position, setzt du sie in der Vorschau.",
       "uploadLabel": "CSV-Datei wählen"
     },
     "fields": {
@@ -635,7 +673,7 @@
       "newLabel": "neu",
       "presentLabel": "schon vorhanden",
       "needsInputLabel": "offen",
-      "needsInputHint": "Zeilen ohne Position oder mit einem möglichen Doppel brauchen deine Entscheidung, bevor der Import losgeht. Nichts wird ohne sie geschrieben.",
+      "needsInputHint": "Zeilen ohne Position oder mit Doppel brauchen deine Entscheidung.",
       "commit": "Importieren",
       "commitError": "Der Import ist fehlgeschlagen. Bitte noch einmal versuchen — was schon geschrieben wurde, steht im Import-Logbuch."
     },
@@ -679,8 +717,8 @@
       "stopsSkipped_other": "{{count}} Reisestopps übersprungen — die Reise hat sie an diesem Tag schon"
     },
     "takeout": {
-      "intro_one": "{{count}} Zeile stammt aus einer Google-Maps-Liste. Position, Reise und Besuchstag lassen sich vorschlagen — du entscheidest danach pro Zeile.",
-      "intro_other": "{{count}} Zeilen stammen aus einer Google-Maps-Liste. Position, Reise und Besuchstag lassen sich vorschlagen — du entscheidest danach pro Zeile.",
+      "intro_one": "{{count}} Zeile aus Google Maps. Position, Reise und Tag werden vorgeschlagen.",
+      "intro_other": "{{count}} Zeilen aus Google Maps. Position, Reise und Tag werden vorgeschlagen.",
       "resolve": "Vorschläge holen",
       "running": "Suche läuft … {{done}} von {{total}}",
       "errors": {
@@ -700,7 +738,7 @@
         "no_trip": "Du hast keine Reise in dieses Land — es wird keine Reise zugeordnet.",
         "several_trips": "Du hast mehrere Reisen in dieses Land — welche es war, entscheidest du; es wird keine zugeordnet."
       },
-      "noKey": "Für diese Instanz ist kein Google-Places-Schlüssel eingerichtet (Einstellungen → Integrationen). Positionen kommen deshalb nur aus der Namenssuche im Land der Liste.",
+      "noKey": "Kein Google-Places-Schlüssel: Positionen nur über die Namenssuche im Land der Liste.",
       "googleFailed": "Google-Abfrage fehlgeschlagen:",
       "unplacedBecause": "Ohne Position, weil:",
       "positionReasons": {
@@ -742,7 +780,7 @@
     },
     "document": {
       "title": "Ort aus einem Dokument",
-      "description": "Ein Museumsticket oder eine Führungsbuchung: Text einfügen oder als PDF, .eml, .msg oder .txt wählen. Gelesen wird wie jedes andere Dokument, mit deinen Orts-Templates aus der Parser-Werkstatt; der Ort landet in der Vorschau, und erst du legst ihn an.",
+      "description": "Ticket oder Buchung als Text, PDF oder Mail. Der Ort landet erst in der Vorschau.",
       "textLabel": "Text des Dokuments",
       "placeholder": "Text des Tickets oder der Buchung hier einfügen …",
       "read": "Dokument lesen",
@@ -806,7 +844,7 @@
   "merge": {
     "action": "Dublette zusammenführen",
     "title": "Dublette zusammenführen · {{name}}",
-    "intro": "„{{name}}“ bleibt bestehen. Wähle den doppelten Ort, der darin aufgehen soll – danach entscheidest du für jede Angabe, welche bleibt.",
+    "intro": "„{{name}}“ bleibt. Wähle den doppelten Ort, dann pro Angabe, was bleibt.",
     "pickLabel": "Doppelten Ort wählen",
     "pickPlaceholder": "Name oder Stadt …",
     "pickStep": "den doppelten Ort wählen",
@@ -862,8 +900,8 @@
       "refKept": "Seine Kennung aus der Quelle bleibt als Zweitverweis erhalten – ein späterer Import findet ihn wieder."
     },
     "curated": {
-      "twoLists": "„{{kept}}“ und „{{other}}“ sind Einträge zweier Checklisten ({{lists}}). Zusammengeführt ginge ein Haken verloren – deshalb bleiben beide bestehen.",
-      "sameList": "„{{kept}}“ und „{{other}}“ sind zwei verschiedene Einträge der Checkliste {{list}}. Zusammengeführt ginge ein Haken verloren – deshalb bleiben beide bestehen."
+      "twoLists": "„{{kept}}“ und „{{other}}“ stehen in zwei Checklisten ({{lists}}). Zusammenführen würde einen Haken löschen.",
+      "sameList": "„{{kept}}“ und „{{other}}“ sind zwei Einträge in {{list}}. Zusammenführen würde einen Haken löschen."
     }
   },
   "nearby": {
@@ -885,7 +923,7 @@
       "unplacedLodgings_one": "Eine Unterkunft ohne Standort ist nicht wählbar.",
       "unplacedLodgings_other": "{{count}} Unterkünfte ohne Standort sind nicht wählbar.",
       "pointLabel": "Ort suchen oder Punkt setzen",
-      "deviceHint": "Dein Standort wird einmal abgefragt, nur für diese Ansicht – er wird nirgends gespeichert. Ohne Freigabe geht es über Unterkunft oder Punkt genauso.",
+      "deviceHint": "Dein Standort wird einmal abgefragt und nicht gespeichert.",
       "deviceUse": "Standort einmal verwenden",
       "deviceAsking": "Standort wird abgefragt …",
       "device_denied": "Standort nicht freigegeben. Wähle stattdessen eine Unterkunft oder einen Punkt.",
@@ -953,7 +991,7 @@
   },
   "customCategories": {
     "manage": "Eigene Kategorien",
-    "manageHint": "Lege Kategorien an, die der mitgelieferte Vorrat nicht hat (z. B. Schwimmbad). Die Kategorien gelten für alle deine Orte.",
+    "manageHint": "Eigene Kategorien, z. B. Schwimmbad. Gilt für alle deine Orte.",
     "namePlaceholder": "Name, z. B. Schwimmbad",
     "iconLabel": "Symbol",
     "add": "Anlegen",
@@ -990,8 +1028,8 @@
     "windowInvalid": "Die Höchstdauer muss mindestens so groß wie die Mindestdauer sein (1 bis 1440 Minuten).",
     "distanceInvalid": "Die Entfernung muss zwischen 10 und 500 Metern liegen.",
     "autoAccept": "Sichere Treffer automatisch übernehmen",
-    "autoAcceptHint": "Nur wenn die Kette eindeutig erkannt ist. Jede automatische Übernahme steht unter „Zuletzt automatisch übernommen“ und lässt sich zurücknehmen.",
-    "stop": "Nicht mehr folgen",
+    "autoAcceptHint": "Nur bei eindeutiger Kette. Automatisches lässt sich zurücknehmen.",
+    "stop": "Regel entfernen",
     "header": "Intelligente Liste: Kette {{brands}}",
     "headerLabel": "Intelligente Liste",
     "headerRule": "{{min}} bis {{max}} Min. Aufenthalt, Vorschlag bis {{distance}} m, automatisch bis {{autoDistance}} m, automatisch übernehmen: {{auto}}",
@@ -1032,6 +1070,32 @@
       "failed": "Die Regel konnte nicht gespeichert werden. Bitte später erneut versuchen."
     },
     "autoDistance": "Automatisch bis (m)",
-    "autoDistanceInvalid": "Die automatische Entfernung muss mindestens 10 m und höchstens so groß wie die Vorschlags-Entfernung sein."
+    "autoDistanceInvalid": "Die automatische Entfernung muss mindestens 10 m und höchstens so groß wie die Vorschlags-Entfernung sein.",
+    "editRule": "Regel bearbeiten",
+    "pending": {
+      "title": "Ausstehende Bestätigungen ({{count}})",
+      "info": "Besuche, die diese Liste in deinen Orten erkannt hat. Bestätigen trägt den Besuch ein.",
+      "all": "Alle bestätigen",
+      "allTitle": "Alle bestätigen?",
+      "allMessage": "{{count}} Besuche werden eingetragen."
+    },
+    "pendingBadge": "{{count}} offen",
+    "undoAll": "Alle zurücknehmen",
+    "undoAllTitle": "Alle zurücknehmen?",
+    "undoAllMessage": "{{count}} automatische Einträge werden zurückgenommen. Was du ergänzt hast, bleibt.",
+    "undoAllFailed": "{{count}} Einträge konnten nicht zurückgenommen werden.",
+    "pendingCountsFailed": "Offene Bestätigungen konnten nicht gezählt werden."
+  },
+  "autoFilter": {
+    "label": "Automatisch eingetragen",
+    "info": "Von einer Kette, einem Import oder einem Plugin eingetragen, nicht von dir.",
+    "all": "Alle",
+    "undoAll": "Alle zurücknehmen",
+    "undoTitle": "Automatische Besuche zurücknehmen?",
+    "undoMessage": "{{count}} Besuche werden gelöscht. Besuche mit Notiz, Bewertung, Foto oder Beleg bleiben.",
+    "result": "{{removed}} zurückgenommen, {{kept}} behalten.",
+    "failed": "Das Zurücknehmen hat nicht geklappt. Bitte später erneut versuchen.",
+    "none": "Keine automatisch eingetragenen Besuche.",
+    "badge": "automatisch"
   }
 }

@@ -12,6 +12,7 @@ import { Router, Response, NextFunction } from "express";
 import { authenticate, AuthRequest } from "../../middleware/auth";
 import { statsEtag } from "../../middleware/statsEtag";
 import { loadYearStats } from "../../services/stats/yearStats/loadYearStats";
+import { loadYearCounts } from "../../services/stats/yearStats/loadYearCounts";
 
 const router = Router();
 router.use(authenticate);
@@ -20,6 +21,14 @@ router.use(statsEtag);
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     res.json(await loadYearStats(req.userId!));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/counts", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    res.json(await loadYearCounts(req.userId!));
   } catch (error) {
     next(error);
   }

@@ -1,3 +1,4 @@
+import { openYearGrid } from "../../__tests__/helpers/yearPicker";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { readFileSync } from "fs";
@@ -36,28 +37,48 @@ vi.mock("../../components/ui/AppShell", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 vi.mock("../../components/table/LogbookTabs", () => ({ default: () => null }));
-vi.mock("../../components/ui/Table", () => ({
-  // Keeps the HEADER, because the sort lives there: the real primitive needs
-  // a layout the test environment has no width for.
-  Table: ({
-    columns,
-    children,
-  }: {
-    columns: Array<{ key: string; label: React.ReactNode }>;
-    children: React.ReactNode;
-  }) => (
-    <table>
-      <thead>
-        <tr>
-          {columns.map((c) => (
-            <th key={c.key}>{c.label}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>{children}</tbody>
-    </table>
-  ),
-}));
+vi.mock("../../components/ui/Table", async () => {
+  const { SortButton } = await import("../../components/ui/SortButton");
+  return {
+    // Keeps the HEADER, because the sort lives there: the real primitive needs
+    // a layout the test environment has no width for.
+    Table: ({
+      columns,
+      children,
+    }: {
+      columns: Array<{
+        key: string;
+        label: React.ReactNode;
+        sort?: { active: boolean; order: "asc" | "desc"; onSort: () => void; ariaLabel: string };
+      }>;
+      children: React.ReactNode;
+    }) => (
+      <table>
+        <thead>
+          <tr>
+            {columns.map((c) => (
+              <th key={c.key}>
+                {c.sort ? (
+                  <SortButton
+                    active={c.sort.active}
+                    order={c.sort.order}
+                    onSort={c.sort.onSort}
+                    ariaLabel={c.sort.ariaLabel}
+                  >
+                    {c.label}
+                  </SortButton>
+                ) : (
+                  c.label
+                )}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+    ),
+  };
+});
 vi.mock("../../components/flightsTable/FlightRow", () => ({
   FlightRow: ({ flight }: { flight: { id: string } }) => <tr data-testid={`row-${flight.id}`} />,
   FLIGHT_COLUMN_LAYOUT: new Proxy({}, { get: () => ({}) }),
@@ -234,7 +255,9 @@ describe("FlightsTablePage — server-side paging", () => {
     const airlineSelect = screen.getByLabelText("flights:table.airline");
     expect(airlineSelect).toHaveTextContent("Lufthansa (120)");
     // 120 Lufthansa flights, from a page that carries 50 rows in total.
-    expect(screen.getByLabelText("flights:filter.year")).toHaveTextContent("2024");
+    expect(openYearGrid("flights:filter.year").map((b) => b.textContent?.slice(0, 4))).toContain(
+      "2024"
+    );
   });
 
   it("counts the filtered set from `total`, not from the page", async () => {

@@ -1,8 +1,8 @@
+import { SearchInput } from "../../../components/ui/SearchInput";
 import { useId, useMemo, useState, type JSX, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
 import { useGuardedNavigate } from "../../../components/ui/settings/leaveGuard";
 
-import { Input } from "../../../components/ui/Field";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useBetaFeatures } from "../../../hooks/useBetaFeatures";
@@ -60,13 +60,12 @@ export function AreaSearch({ isAdmin }: { isAdmin: boolean }): JSX.Element {
 
   return (
     <div role="search" className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
-      <Input
-        type="search"
+      <SearchInput
         value={query}
-        onChange={(event) => setQuery(event.target.value)}
+        onChange={setQuery}
         onKeyDown={onKeyDown}
         placeholder={t("settings:search.placeholder")}
-        aria-label={t("settings:search.label")}
+        label={t("settings:search.label")}
         aria-controls={searching ? listId : undefined}
       />
       {searching && (

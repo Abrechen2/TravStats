@@ -1,6 +1,9 @@
 import RoadtripVehicleSelect from "../components/Roadtrips/RoadtripVehicleSelect";
 import PurposeEditor from "../components/purpose/PurposeEditor";
 import RouteTagsEditor from "../components/Roadtrips/RouteTagsEditor";
+import RoadtripColorField from "../components/Roadtrips/RoadtripColorField";
+import { roadtripOwnPageHex } from "../lib/roadtripColor";
+import { useRoadtripColorStore } from "../store/roadtripColorStore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -15,8 +18,10 @@ import ConfirmModal from "../components/ui/ConfirmModal";
 import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
 import LegDialog from "../components/Roadtrips/LegDialog";
 import RoadtripFigures from "../components/Roadtrips/RoadtripFigures";
+import RoutingFailingNotice from "../components/Roadtrips/RoutingFailingNotice";
 import RoadtripTourCards from "../components/Roadtrips/RoadtripTourCards";
 import RoadtripCostsSection from "../components/Roadtrips/RoadtripCostsSection";
+import RoadtripPhotosSection from "../components/Roadtrips/RoadtripPhotosSection";
 import { RoadtripRailConversion } from "../components/rail/RoadtripRailConversion";
 import StationEditor, {
   type EditorSaveState,
@@ -41,10 +46,11 @@ import { sameStationList } from "../lib/roadtrip/stationMerge";
 import { roadtripDeleteMessage } from "../lib/roadtrip/roadtripDeleteMessage";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
+import { trackSpanPath } from "./Track/roadtrip/trackSpanPath";
 import { useDomainColors } from "../hooks/useDomainColors";
 import { roadtripsApi } from "../lib/api/roadtrips";
 import { toursApi } from "../lib/api/tours";
-import { useDisplayFormat } from "../lib/displayFormat";
+import { useDisplayFormat } from "../lib/format";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { sectionExpenseCount } from "../lib/sectionExpenses";
 import { hexToRgb } from "../lib/domainColor";
@@ -57,10 +63,10 @@ import { logger } from "../lib/logger";
 import { dayNumber, roadtripPhase, spanDays } from "../lib/roadtrip/roadtripView";
 import { useTodayZone } from "../hooks/useTodayZone";
 import { todayIn } from "../shared/time";
-import { useToastStore } from "../store/toastStore";
 import type { RoadtripDetail, RoadtripStation } from "../types/roadtrip";
 import type { TourGeometry, TourLeg } from "../types/tour";
 import WebGLGuard from "../components/map/WebGLGuard";
+import { reportPageError } from "../store/pageErrorStore";
 
 type LegEdit = {
   leg: TourLeg;
@@ -89,8 +95,8 @@ export default function RoadtripDetailPage(): JSX.Element {
   const { t } = useTranslation(["roadtrips", "common"]);
   const display = useDisplayFormat();
   const navigate = useNavigate();
-  const addToast = useToastStore((s) => s.addToast);
   const roadtripColor = useDomainColors().colorOf("roadtrip");
+  const roadtripColorMode = useRoadtripColorStore((s) => s.mode);
   const todayZone = useTodayZone();
   const today = useMemo(() => todayIn(todayZone), [todayZone]);
 
@@ -238,9 +244,17 @@ export default function RoadtripDetailPage(): JSX.Element {
   const mapGeometries = useMemo(
     () =>
       geometry && detail
-        ? [{ routeId: id, name: detail.roadtrip.name, geometry, rgb: hexToRgb(roadtripColor) }]
+        ? [
+            {
+              routeId: id,
+              name: detail.roadtrip.name,
+              geometry,
+              rgb: hexToRgb(roadtripOwnPageHex(roadtripColorMode, detail.roadtrip, roadtripColor)),
+              isRoadtrip: true,
+            },
+          ]
         : [],
-    [geometry, detail, id, roadtripColor]
+    [geometry, detail, id, roadtripColor, roadtripColorMode]
   );
   const weather = useRoadtripWeather(id, detail?.stations ?? NO_STATIONS, today);
   const selected = detail?.stations.find((s) => s.id === selectedId) ?? null;
@@ -264,7 +278,7 @@ export default function RoadtripDetailPage(): JSX.Element {
       await toursApi.update(undefined, tour.id, { anchorStopId: station.id });
       navigate(`/tours/${tour.id}`);
     } catch {
-      addToast("error", t("roadtrips:startTourError"));
+      reportPageError(t("roadtrips:startTourError"));
     }
   };
 
@@ -276,7 +290,7 @@ export default function RoadtripDetailPage(): JSX.Element {
       // Costs with no trip to take them: asked once more, never deleted unasked.
       const count = sectionExpenseCount(err);
       if (count !== null) setCostsBlock(count);
-      else addToast("error", t("roadtrips:deleteError"));
+      else reportPageError(t("roadtrips:deleteError"));
     }
   };
 
@@ -465,6 +479,14 @@ export default function RoadtripDetailPage(): JSX.Element {
                 </Link>
               </>
             )}
+            {r.trackSpan && (
+              <>
+                {" · "}
+                <Link to={trackSpanPath(r.trackSpan)} data-testid="roadtrip-track-link">
+                  {t("roadtrips:fromTrack")}
+                </Link>
+              </>
+            )}
           </span>
         }
         actions={actions}
@@ -473,6 +495,7 @@ export default function RoadtripDetailPage(): JSX.Element {
       {reroute.panel}
 
       <RoadtripFigures detail={detail} today={today} />
+      <RoutingFailingNotice failing={detail.routingFailing} />
 
       <div style={{ marginTop: "var(--ts-space-md)" }}>
         <RouteTagsEditor
@@ -482,13 +505,21 @@ export default function RoadtripDetailPage(): JSX.Element {
         />
       </div>
 
+      <div style={{ marginTop: "var(--ts-space-md)" }}>
+        <RoadtripColorField
+          route={r}
+          onSaved={(route) => setDetail({ ...detail, roadtrip: route })}
+        />
+      </div>
+
       <div style={{ marginTop: "var(--ts-space-md)", maxWidth: 320 }}>
         <PurposeEditor
-          key={`purpose-${r.purpose ?? ""}`}
+          key={`purpose-${r.purpose ?? ""}-${r.purposeKey ?? ""}`}
           entryType="tripRoute"
           entryId={r.id}
           purpose={r.purpose}
-          onSaved={(purpose) => setDetail({ ...detail, roadtrip: { ...r, purpose } })}
+          purposeKey={r.purposeKey}
+          onSaved={(stored) => setDetail({ ...detail, roadtrip: { ...r, ...stored } })}
         />
       </div>
 
@@ -653,6 +684,8 @@ export default function RoadtripDetailPage(): JSX.Element {
         costs={detail.costs}
         onChanged={() => void load()}
       />
+
+      <RoadtripPhotosSection roadtripId={id} />
 
       {legEdit && (
         <LegDialog

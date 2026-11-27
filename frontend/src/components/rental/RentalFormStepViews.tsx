@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import type { JSX } from "react";
 import CurrencySelect from "../common/CurrencySelect";
 import CompanionPicker from "../CompanionPicker";
@@ -29,6 +30,7 @@ import {
   Labelled,
   RentalTimeField,
   TextInput,
+  DateInput,
 } from "./rentalFormFields";
 import {
   withDayOnly,
@@ -54,8 +56,6 @@ export interface RentalStepProps {
 const PAYMENT_TIMINGS: RentalPaymentTiming[] = ["prepaid", "pay_at_counter", "package"];
 const FUEL_POLICIES: RentalFuelPolicy[] = ["full_to_full", "prepaid_tank", "full_to_empty"];
 const PROVIDER_LIST_ID = "rental-provider-suggestions";
-const CHIP_CLASS =
-  "rounded-full border px-3 py-1 text-xs pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-4";
 
 function useSetter(update: RentalStepProps["update"]) {
   return <K extends keyof RentalDraft>(key: K, value: RentalDraft[K]): void =>
@@ -305,19 +305,13 @@ export function RentalBookingStep(props: RentalStepProps): JSX.Element {
         <legend className="text-sm">{t("rental:form.inclusions")}</legend>
         <div className="flex flex-wrap gap-2">
           {RENTAL_INCLUSIONS.map((code) => (
-            <button
+            <Chip
               key={code}
-              type="button"
-              aria-pressed={draft.inclusions.includes(code)}
+              active={draft.inclusions.includes(code)}
               onClick={(): void => toggleInclusion(code)}
-              className={`${CHIP_CLASS} ${
-                draft.inclusions.includes(code)
-                  ? "border-(--accent) text-(--accent)"
-                  : "border-border"
-              }`}
             >
               {t(`rental:inclusion.${code}`)}
-            </button>
+            </Chip>
           ))}
         </div>
       </fieldset>
@@ -423,10 +417,9 @@ export function RentalPickupStep(props: RentalStepProps): JSX.Element {
               />
             )}
           </Labelled>
-          <TextInput
+          <DateInput
             id={rentalFieldId("depositPaidOn")}
             label={t("rental:form.depositPaidOn")}
-            type="date"
             style={DARK_PICKER_STYLE}
             value={draft.depositPaidOn}
             onChange={(v): void => set("depositPaidOn", v)}
@@ -502,10 +495,9 @@ export function RentalReturnStep(props: RentalStepProps): JSX.Element {
       <fieldset className="space-y-3 rounded-md border border-border p-3">
         <legend className="px-1 text-sm font-medium">{t("rental:form.depositBack")}</legend>
         <div className="grid gap-3 sm:grid-cols-2">
-          <TextInput
+          <DateInput
             id={rentalFieldId("depositReturnedOn")}
             label={t("rental:form.depositReturnedOn")}
-            type="date"
             style={DARK_PICKER_STYLE}
             value={draft.depositReturnedOn}
             onChange={(v): void => set("depositReturnedOn", v)}

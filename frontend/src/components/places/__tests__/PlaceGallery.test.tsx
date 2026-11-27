@@ -30,6 +30,12 @@ const leadSrc = (): string | null =>
  * choice, or the first of the most recent visit — and every visit's photos
  * are one gallery.
  */
+// The thumbnails' own buttons make the cover; each also has a corner "enlarge" button.
+const coverButtons = (): HTMLElement[] =>
+  screen
+    .getAllByRole("button")
+    .filter((b) => (b.getAttribute("aria-label") ?? "").includes("places:gallery.makeCover"));
+
 describe("PlaceGallery", () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -49,9 +55,12 @@ describe("PlaceGallery", () => {
       />
     );
     expect(leadSrc()).toBe("/p/new");
-    expect(
-      screen.getAllByRole("button").map((b) => b.querySelector("img")?.getAttribute("src"))
-    ).toEqual(["/p/new", "/p/new2", "/p/old", "/p/u"]);
+    expect(coverButtons().map((b) => b.querySelector("img")?.getAttribute("src"))).toEqual([
+      "/p/new",
+      "/p/new2",
+      "/p/old",
+      "/p/u",
+    ]);
   });
 
   it("leads with the chosen cover, and saves a new choice", async () => {
@@ -59,7 +68,7 @@ describe("PlaceGallery", () => {
     render(<PlaceGallery place={place([visit("2024-05-01", ["a", "b"])], "b")} />);
     expect(leadSrc()).toBe("/p/b");
 
-    await userEvent.click(screen.getAllByRole("button")[0]);
+    await userEvent.click(coverButtons()[0]);
     expect(setPlaceCover).toHaveBeenCalledWith("place-1", "a");
     expect(leadSrc()).toBe("/p/a");
   });
@@ -68,7 +77,7 @@ describe("PlaceGallery", () => {
     setPlaceCover.mockRejectedValue(new Error("offline"));
     render(<PlaceGallery place={place([visit("2024-05-01", ["a", "b"])], "b")} />);
 
-    await userEvent.click(screen.getAllByRole("button")[0]);
+    await userEvent.click(coverButtons()[0]);
     await waitFor(() => expect(leadSrc()).toBe("/p/b"));
     // Said under the gallery and kept there (forgejo#246) — it was a toast.
     expect(screen.getByRole("alert")).toHaveTextContent("places:gallery.coverFailed");
@@ -78,7 +87,7 @@ describe("PlaceGallery", () => {
   it("says what a tap on a thumbnail does without a hover", () => {
     render(<PlaceGallery place={place([visit("2024-05-01", ["a", "b"])], "b")} />);
     expect(screen.getByText("places:gallery.makeCoverHint")).toBeInTheDocument();
-    for (const button of screen.getAllByRole("button")) {
+    for (const button of coverButtons()) {
       expect(button).not.toHaveAttribute("title");
       expect(button.getAttribute("aria-label")).toContain("places:gallery.makeCover");
     }

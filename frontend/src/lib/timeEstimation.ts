@@ -263,7 +263,7 @@ function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
 
-function formatDate(y: number, m: number, d: number): string {
+function isoDay(y: number, m: number, d: number): string {
   return `${y}-${pad2(m)}-${pad2(d)}`;
 }
 
@@ -355,7 +355,7 @@ export function estimateArrivalFromDeparture(params: EstimateArrivalParams): Est
   const [dy, dm, dd] = departureDate.split("-").map(Number);
   const arrDate = new Date(Date.UTC(dy, dm - 1, dd));
   arrDate.setUTCDate(arrDate.getUTCDate() + dayOffset);
-  const arrivalDate = formatDate(
+  const arrivalDate = isoDay(
     arrDate.getUTCFullYear(),
     arrDate.getUTCMonth() + 1,
     arrDate.getUTCDate()

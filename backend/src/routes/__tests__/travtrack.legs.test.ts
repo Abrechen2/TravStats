@@ -108,6 +108,7 @@ describe("TravTrack — legs, stops and the mode correction", () => {
     await switches.set({ beta: true, config: true });
     await wipeTravTrack([userId, otherId]);
     await prisma.railJourney.deleteMany({ where: { userId } });
+    await prisma.dawarichStay.deleteMany({ where: { userId } });
     await prisma.userSettings.deleteMany({ where: { userId } });
     await prisma.userSettings.create({
       data: { userId, data: { display: { timezone: "Asia/Seoul" } } },
@@ -173,6 +174,48 @@ describe("TravTrack — legs, stops and the mode correction", () => {
       expect(seg[r.from][0]).toBe(l.fromMs);
       expect(seg[r.to][0]).toBe(l.untilMs);
     }
+  });
+
+  it("a stop whose stay finding holds a plugin answer carries it as evidence; one without carries none", async () => {
+    await trainEntry();
+    await store(day().fixes);
+    const stay = (evidence: object, fingerprint: string) => ({
+      userId,
+      fingerprint,
+      sourceStartAt: new Date(T0 + 40 * MIN),
+      sourceEndAt: new Date(T0 + 70 * MIN),
+      sourceLat: LAT0,
+      sourceLon: LON0,
+      startAt: new Date(T0 + 40 * MIN),
+      endAt: new Date(T0 + 70 * MIN),
+      lat: LAT0,
+      lon: LON0,
+      zone: "UTC",
+      pointCount: 3,
+      evidence,
+      name: "Stop",
+      provider: "travtrack",
+      providerRev: 0,
+      algorithmVersion: 1,
+    });
+    const row = await prisma.dawarichStay.create({
+      data: stay(
+        {
+          visit: { distanceM: 40, durationMs: 30 * MIN, venue: { name: "Lidl" } },
+          plugins: [{ pluginName: "Projektarchiv", name: "MSA Küche", note: null, distanceM: 90 }],
+        },
+        "with-plugin"
+      ),
+    });
+    const withPlugin = (await getDay()).body.stops[0];
+    expect(withPlugin.stayRef.id).toBe(row.id);
+    expect(withPlugin.evidence.source).toMatchObject({
+      kind: "plugin",
+      pluginName: "Projektarchiv",
+    });
+    expect(withPlugin.evidence.confidence.level).toBe("high");
+    await prisma.dawarichStay.update({ where: { id: row.id }, data: { evidence: {} } });
+    expect((await getDay()).body.stops[0].evidence).toBeUndefined();
   });
 
   it("a figure that cannot be derived is null, never 0", async () => {

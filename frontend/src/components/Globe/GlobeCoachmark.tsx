@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { useCallback, useState, type JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
@@ -67,10 +68,18 @@ export function GlobeCoachmark({ hasContent }: GlobeCoachmarkProps): JSX.Element
       >
         <div className="mb-2 text-base font-semibold">{t("map:globe.coachmark.title")}</div>
         <ul className="mb-4 space-y-1.5 text-[12px] opacity-90">
-          <li>🖱️ {t("map:globe.coachmark.pan")}</li>
-          <li>🔍 {t("map:globe.coachmark.zoom")}</li>
-          <li>📍 {t("map:globe.coachmark.click")}</li>
-          <li>🌍 {t("map:globe.coachmark.autoRotate")}</li>
+          <li className="flex items-center gap-2">
+            <Icon name="mouse-pointer-2" size={14} /> {t("map:globe.coachmark.pan")}
+          </li>
+          <li className="flex items-center gap-2">
+            <Icon name="search" size={14} /> {t("map:globe.coachmark.zoom")}
+          </li>
+          <li className="flex items-center gap-2">
+            <Icon name="map-pin" size={14} /> {t("map:globe.coachmark.click")}
+          </li>
+          <li className="flex items-center gap-2">
+            <Icon name="globe" size={14} /> {t("map:globe.coachmark.autoRotate")}
+          </li>
         </ul>
         <button
           type="button"

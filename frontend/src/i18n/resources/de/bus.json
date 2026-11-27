@@ -376,7 +376,7 @@
   },
   "import": {
     "title": "Busticket einlesen",
-    "hint": "Liest ein Text-PDF, eine E-Mail (.eml) oder eingefügten Tickettext mit einer Bus-Vorlage — einer, die du in der Vorlagen-Werkstatt (Parser → Annotieren) angelernt hast, oder einer aus dem Vorlagen-Repository. Prüfe die Werte, bevor du sie übernimmst.",
+    "hint": "PDF, E-Mail oder Tickettext per Bus-Vorlage einlesen. Werte vor dem Übernehmen prüfen.",
     "file": "Ticketdatei (PDF oder EML)",
     "text": "Tickettext",
     "reading": "Wird gelesen …",
@@ -385,7 +385,7 @@
     "error": "Das Ticket konnte nicht gelesen werden. Du kannst die Fahrt trotzdem von Hand eintragen.",
     "noText": "Kein lesbarer Text gefunden. Bei einem gescannten Ticket füge den Text ein oder trage die Fahrt von Hand ein.",
     "noTemplate": "Noch keine Bus-Vorlage kennt dieses Ticket. Lerne mit diesem Ticket eine in der Vorlagen-Werkstatt an (Parser → Annotieren) oder trage die Fahrt von Hand ein.",
-    "nothingRead": "Eine Bus-Vorlage hat das Ticket erkannt, aber keine vollständige Fahrt darin gelesen. Prüfe die Vorlage in der Werkstatt oder trage die Fahrt von Hand ein.",
+    "nothingRead": "Vorlage erkannt, aber keine vollständige Fahrt gelesen. Vorlage prüfen oder von Hand eintragen.",
     "readByWorkshop": "Mit deiner eigenen Werkstatt-Vorlage gelesen.",
     "readByRepository": "Mit einer Vorlage aus dem Vorlagen-Repository gelesen.",
     "ride": "Fahrt wählen",
@@ -403,5 +403,45 @@
       "price": "Preis",
       "currency": "Währung"
     }
+  },
+  "routeEditor": {
+    "hint": "Klicke auf die Linie, um einen Punkt einzufügen. Ziehe einen Punkt, um ihn zu verschieben.",
+    "save": "Speichern",
+    "saving": "Wird gespeichert …",
+    "cancel": "Abbrechen",
+    "undo": "Rückgängig",
+    "redo": "Wiederholen",
+    "removePoint": "Punkt entfernen",
+    "point": "Punkt {{index}}",
+    "terminal": "Haltestelle {{index}}",
+    "discardConfirm": "Ungespeicherte Änderungen an der Linie verwerfen?",
+    "failed": "Die Linie konnte nicht gespeichert werden. Bitte erneut versuchen.",
+    "loadFailed": "Die Fahrt konnte nicht geladen werden. Bitte erneut versuchen.",
+    "errors": {
+      "BUS_ROUTE_INVALID": "Die Linie ist ungültig: mindestens ein Punkt zwischen den Haltestellen, höchstens 64 Punkte, und nicht unsinnig länger als die Fahrt.",
+      "BUS_ROUTE_NOT_ANCHORED": "Die Linie muss an der Abfahrts- beginnen und an der Ankunftshaltestelle enden.",
+      "VERSION_CONFLICT": "Die Fahrt wurde zwischenzeitlich geändert. Seite neu laden und erneut zeichnen."
+    }
+  },
+  "drawRoute": {
+    "edit": "Linie von Hand zeichnen",
+    "editManual": "Linie bearbeiten",
+    "keepStraight": "Bei der Luftlinie lassen",
+    "keepStraightConfirm": {
+      "title": "Bei der Luftlinie lassen?",
+      "message": "Die Fahrt wird als gerade Linie gezeichnet und nicht mehr neu über die Straße berechnet."
+    },
+    "keptStraight": "Die Fahrt bleibt bei der Luftlinie.",
+    "keepFailed": "Das Beibehalten der Luftlinie ist nicht angekommen. Bitte erneut versuchen.",
+    "clear": "Handgezeichnete Linie entfernen",
+    "clearing": "Wird entfernt …",
+    "clearConfirm": {
+      "title": "Handlinie entfernen?",
+      "message": "Die von Hand festgelegte Linie wird verworfen und die Straße neu berechnet."
+    },
+    "cleared": "Handgezeichnete Linie entfernt.",
+    "clearedRouted": "Handgezeichnete Linie entfernt, die Straße wurde neu berechnet.",
+    "clearFailed": "Die Linie konnte nicht entfernt werden. Bitte erneut versuchen.",
+    "menuLabel": "Weitere Aktionen zur Linie"
   }
 }

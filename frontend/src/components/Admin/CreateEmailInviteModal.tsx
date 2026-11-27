@@ -1,7 +1,8 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useState } from "react";
 import { z } from "zod";
 import { useTranslation } from "../../hooks/useTranslation";
+import InlineError from "../ui/InlineError";
 
 type ExpiresInDays = 1 | 7 | 30;
 
@@ -38,7 +39,7 @@ export default function CreateEmailInviteModal({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={creating}
@@ -83,7 +84,7 @@ export default function CreateEmailInviteModal({
             placeholder={t("admin:invitations.createEmailModal.emailPlaceholder")}
             autoFocus
           />
-          {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+          {error && <InlineError className="mt-1">{error}</InlineError>}
         </div>
 
         <fieldset>
@@ -102,6 +103,6 @@ export default function CreateEmailInviteModal({
           ))}
         </fieldset>
       </form>
-    </Modal>
+    </Dialog>
   );
 }

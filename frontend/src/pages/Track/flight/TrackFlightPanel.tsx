@@ -12,6 +12,7 @@ import { useTrackPhotos } from "../photos/useTrackPhotos";
 import TrackAltitudeProfile from "./TrackAltitudeProfile";
 import { flightLevel } from "./altitudeProfile";
 import { useFlightPanel } from "./useFlightPanel";
+import InlineError from "../../../components/ui/InlineError";
 
 export interface SelectedFlight {
   id: string;
@@ -131,11 +132,7 @@ export default function TrackFlightPanel({
         </button>
       </div>
       {state.kind === "loading" && <p className="t-caption">{t("track:flight.loading")}</p>}
-      {state.kind === "failed" && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
-          {t(state.key)}
-        </p>
-      )}
+      {state.kind === "failed" && <InlineError>{t(state.key)}</InlineError>}
       {panel && (
         <>
           <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="track-flight-figures">
@@ -193,6 +190,7 @@ export default function TrackFlightPanel({
                   photo={p}
                   window={photos.window}
                   zone={zone}
+                  all={list}
                 />
               ))}
               {picked && (

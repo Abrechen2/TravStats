@@ -1,18 +1,24 @@
+import Chip from "../../ui/Chip";
+import { Icon } from "../../ui/Icon";
 import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { logger } from "../../../lib/logger";
-import { formatLocalClock, formatLocalDate } from "../../../lib/displayFormat";
+import { formatLocalClock, formatLocalDate } from "../../../lib/format";
 import {
   getListRule,
   listAutoAccepted,
   listNewOutlets,
+  listPendingConfirmations,
   undoAutoAccepted,
   type ListRule,
   type SmartSuggestion,
 } from "../../../lib/api/smartLists";
 import { BrandRuleDialog } from "./BrandRuleDialog";
 import { SuggestionRow } from "./SuggestionRow";
+import PendingConfirmations from "./PendingConfirmations";
+import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
+import InlineError from "../../ui/InlineError";
 
 const COARSE =
   "pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)";
@@ -23,10 +29,16 @@ export default function SmartListPanel({
   ruleOpen,
   onRuleClose,
   onChanged,
+  onRuleLoaded,
+  onEditRule,
 }: {
   listId: string;
   ruleOpen: boolean;
   onRuleClose: () => void;
+  /** Whether the list has a rule, so the page's ⋯ can say "Regel bearbeiten". */
+  onRuleLoaded?: (hasRule: boolean) => void;
+  /** The pencil on the rule header. */
+  onEditRule?: () => void;
   /** The list's membership changed (a suggestion confirmed, an automatic entry undone). */
   onChanged: () => void;
 }): JSX.Element | null {
@@ -34,20 +46,33 @@ export default function SmartListPanel({
   const [rule, setRule] = useState<ListRule | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [outlets, setOutlets] = useState<SmartSuggestion[]>([]);
+  const [pending, setPending] = useState<SmartSuggestion[]>([]);
+  const [pendingTotal, setPendingTotal] = useState(0);
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [auto, setAuto] = useState<SmartSuggestion[]>([]);
   const [failed, setFailed] = useState(false);
   const [undoError, setUndoError] = useState<string | null>(null);
+  const [undoFailedCount, setUndoFailedCount] = useState(0);
   const [undoing, setUndoing] = useState<string | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     try {
       const next = await getListRule(listId);
       setRule(next);
+      onRuleLoaded?.(next !== null);
       if (next) {
-        const [o, a] = await Promise.all([listNewOutlets(listId), listAutoAccepted(listId)]);
+        const [p, o, a] = await Promise.all([
+          listPendingConfirmations(listId),
+          listNewOutlets(listId),
+          listAutoAccepted(listId),
+        ]);
+        setPending(p.rows);
+        setPendingTotal(p.total);
         setOutlets(o);
         setAuto(a);
       } else {
+        setPending([]);
+        setPendingTotal(0);
         setOutlets([]);
         setAuto([]);
       }
@@ -58,6 +83,7 @@ export default function SmartListPanel({
     } finally {
       setLoaded(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onRuleLoaded is a report, not an input
   }, [listId]);
 
   useEffect(() => {
@@ -79,24 +105,58 @@ export default function SmartListPanel({
     }
   };
 
+  /** Take back every automatic entry the feed shows, after one confirmation; failures are named. */
+  const undoAll = async (): Promise<void> => {
+    const ok = await confirm({
+      title: t("places:smartList.undoAllTitle"),
+      message: t("places:smartList.undoAllMessage", { count: auto.length }),
+      confirmText: t("places:smartList.undoAll"),
+      destructive: true,
+    });
+    if (!ok) return;
+    setUndoing("all");
+    setUndoError(null);
+    let failed = 0;
+    for (const row of auto) {
+      try {
+        await undoAutoAccepted(row.id);
+      } catch (err: unknown) {
+        logger.error({ err }, "SmartListPanel: one undo failed");
+        failed += 1;
+      }
+    }
+    setUndoFailedCount(failed);
+    if (failed > 0) setUndoError("places:smartList.undoAllFailed");
+    setUndoing(null);
+    await load();
+    onChanged();
+  };
+
   return (
     <>
       {loaded && failed && (
-        <p role="alert" className="mb-4 text-sm" style={{ color: "var(--danger)" }}>
-          {t("places:smartList.loadFailed")}
-        </p>
+        <InlineError className="mb-4">{t("places:smartList.loadFailed")}</InlineError>
       )}
       {rule && (
         <section className="mb-6" aria-label={t("places:smartList.headerLabel")}>
-          <p
-            className="inline-block rounded-full px-3 py-1 text-sm"
-            style={{ border: "1px solid var(--color-border)", color: "var(--text-primary)" }}
-            data-testid="smart-list-badge"
-          >
+          <Chip testId="smart-list-badge">
             {t("places:smartList.header", {
               brands: rule.brands.map((b) => b.brandName).join(", "),
             })}
-          </p>
+          </Chip>
+          {onEditRule && (
+            <button
+              type="button"
+              onClick={onEditRule}
+              aria-label={t("places:smartList.editRule")}
+              title={t("places:smartList.editRule")}
+              className={`ml-2 rounded px-2 text-sm ${COARSE}`}
+              style={{ color: "var(--text-secondary)" }}
+              data-testid="smart-list-edit"
+            >
+              <Icon name="pencil" size={16} />
+            </button>
+          )}
           <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
             {t("places:smartList.headerRule", {
               min: rule.minDwellMinutes,
@@ -106,6 +166,15 @@ export default function SmartListPanel({
               auto: rule.autoAccept ? t("places:smartList.autoOn") : t("places:smartList.autoOff"),
             })}
           </p>
+
+          <PendingConfirmations
+            rows={pending}
+            total={pendingTotal}
+            onAnswered={() => {
+              void load();
+              onChanged();
+            }}
+          />
 
           {outlets.length > 0 && (
             <div className="mt-4">
@@ -130,13 +199,27 @@ export default function SmartListPanel({
 
           {auto.length > 0 && (
             <div className="mt-4">
-              <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                {t("places:smartList.recentAuto")}
-              </h2>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  {t("places:smartList.recentAuto")}
+                </h2>
+                {auto.length > 1 && (
+                  <button
+                    type="button"
+                    disabled={undoing !== null}
+                    onClick={() => void undoAll()}
+                    className="ml-auto rounded-lg px-3 py-1 text-sm disabled:opacity-50"
+                    style={{
+                      border: "1px solid var(--color-border)",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    {t("places:smartList.undoAll")}
+                  </button>
+                )}
+              </div>
               {undoError && (
-                <p role="alert" className="mb-2 text-sm" style={{ color: "var(--danger)" }}>
-                  {t(undoError)}
-                </p>
+                <InlineError className="mb-2">{t(undoError, { count: undoFailedCount })}</InlineError>
               )}
               <ul className="grid gap-2" style={{ listStyle: "none", padding: 0 }}>
                 {auto.map((row) => (
@@ -181,6 +264,7 @@ export default function SmartListPanel({
           )}
         </section>
       )}
+      {confirmDialog}
       {ruleOpen && (
         <BrandRuleDialog
           listId={listId}
@@ -188,6 +272,7 @@ export default function SmartListPanel({
           onClose={onRuleClose}
           onSaved={(next) => {
             setRule(next);
+            onRuleLoaded?.(next !== null);
             onRuleClose();
             void load();
           }}

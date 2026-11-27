@@ -16,6 +16,7 @@ import {
 import { remoteSharingError, type RemoteSharingError } from "../sharing/remoteSharingCopy";
 import Button from "../ui/Button";
 import { Field, Input, Select } from "../ui/Field";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:remote.connected.stats";
 
@@ -97,9 +98,7 @@ export default function RemotePersonStats({
         </Button>
       </div>
       {failure && (
-        <p role="alert" style={{ color: "var(--ts-warn)" }}>
-          {t(failure.key, { origin: failure.origin })}
-        </p>
+        <InlineError tone="warning">{t(failure.key, { origin: failure.origin })}</InlineError>
       )}
       {overview && (
         <>

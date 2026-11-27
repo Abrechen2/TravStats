@@ -6,6 +6,7 @@ import { openDataApi, openDataUpstreamFailure, type NearbyLodging } from "../../
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
 import { lodgingTypeForKind } from "./lodgingFromOsm";
+import InlineError from "../ui/InlineError";
 
 /** A pin from a search hit is the house or next to it; half a kilometre holds its neighbours too. */
 const NEARBY_RADIUS_KM = 0.5;
@@ -79,13 +80,13 @@ export function LodgingOsmNearby({ lat, lon, onPick }: LodgingOsmNearbyProps): J
           : t("openData:lodging.nearby.search")}
       </button>
       {lookup.state === "failed" && (
-        <p className="text-xs text-[var(--danger)]">
+        <InlineError>
           {t(
             lookup.reason === "unavailable"
               ? "openData:lodging.nearby.failed"
               : `openData:lodging.upstream.${lookup.reason}`
           )}
-        </p>
+        </InlineError>
       )}
       {lookup.state === "done" && lookup.places.length === 0 && (
         <p className="text-xs text-[var(--text-muted)]">{t("openData:lodging.nearby.none")}</p>

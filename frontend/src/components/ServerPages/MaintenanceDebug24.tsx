@@ -1,6 +1,6 @@
 import { useEffect, useState, type JSX } from "react";
 import { adminApi } from "../../lib/api";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import type { LoggingConfigResponse } from "../../shared/logContract";
 import { useTranslation } from "../../hooks/useTranslation";

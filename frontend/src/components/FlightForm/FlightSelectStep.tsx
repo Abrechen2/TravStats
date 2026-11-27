@@ -1,7 +1,7 @@
 import { useTranslation } from "../../hooks/useTranslation";
 import { resolveAirlineDisplay, resolveAirlineIata } from "../../lib/airlineUtils";
 import AirlineLogo from "../AirlineLogo";
-import { formatDateTime } from "../../lib/displayFormat";
+import { formatDateTime } from "../../lib/format";
 
 interface FlightLookupResult {
   flightNumber: string;

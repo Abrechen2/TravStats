@@ -1,8 +1,9 @@
+import DateRangeField from "../../components/ui/DateRangeField";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import Dialog from "../../components/ui/Dialog";
 import Button from "../../components/ui/Button";
-import { Field, Input, Select } from "../../components/ui/Field";
+import { Field, Select } from "../../components/ui/Field";
 import { useTranslation } from "../../hooks/useTranslation";
 import { downloadBlob } from "../../lib/export";
 import { logger } from "../../lib/logger";
@@ -118,30 +119,17 @@ export default function TrackExportDialog({ open, onClose, fromDay, toDay }: Pro
     >
       <div className="flex flex-col gap-3">
         <p className="t-caption">{t("track:export.intro")}</p>
-        <div className="flex flex-wrap gap-3">
-          <Field label={t("track:export.from")} htmlFor="track-export-from">
-            <Input
-              id="track-export-from"
-              type="date"
-              value={from}
-              onChange={(e) => {
-                setFrom(e.target.value);
-                restart();
-              }}
-            />
-          </Field>
-          <Field label={t("track:export.to")} htmlFor="track-export-to">
-            <Input
-              id="track-export-to"
-              type="date"
-              value={to}
-              onChange={(e) => {
-                setTo(e.target.value);
-                restart();
-              }}
-            />
-          </Field>
-        </div>
+        <DateRangeField
+          fromLabel={t("track:export.from")}
+          toLabel={t("track:export.to")}
+          from={from}
+          to={to}
+          onChange={(range) => {
+            setFrom(range.from);
+            setTo(range.to);
+            restart();
+          }}
+        />
         <Field label={t("track:export.format")} htmlFor="track-export-format">
           <Select
             id="track-export-format"

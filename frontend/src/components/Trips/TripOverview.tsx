@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import type { JSX, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { differenceInCalendarDays } from "date-fns";
@@ -5,7 +6,7 @@ import type { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import type { Trip } from "../../types";
 import { tripCostTotals } from "../../lib/tripCost";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { railDeparture } from "../../lib/entityTimes";
 import { bareTrainName, trainName } from "../../lib/rail/trainName";
 import { formatCurrency } from "../../lib/units";
@@ -484,13 +485,9 @@ export default function TripOverview({
         <DetailSection title={t("trips:detail.tags")}>
           <div className="flex flex-wrap gap-1.5">
             {trip.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full border px-2.5 py-0.5 text-xs"
-                style={{ borderColor: "var(--ts-border)", color: "var(--ts-muted)" }}
-              >
+              <Chip key={tag} size="sm">
                 #{tag}
-              </span>
+              </Chip>
             ))}
           </div>
         </DetailSection>

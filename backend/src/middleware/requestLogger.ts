@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { httpLogger, generateRequestId } from "../utils/logger";
 import { getLoggingRuntimeFlags } from "../utils/logging/runtimeFlags";
 import { requestPathForLog } from "../utils/logging/requestPath";
+import { SLOW_REQUEST_MS, slowRequests } from "../services/runtime/slowLog";
 
 /**
  * Request Logger Middleware
@@ -24,6 +25,21 @@ export interface AuthRequest extends Request {
   requestId?: string;
 }
 
+const CLIENT_HEADER_MAX = 64;
+
+/**
+ * A client-chosen header as a log value: printable ASCII only (no control characters that could
+ * forge a log line), cut at 64 characters. Absent or empty stays absent.
+ */
+export function headerForLog(value: string | undefined): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const clean = value
+    .replace(/[^\x20-\x7e]/g, "?")
+    .trim()
+    .slice(0, CLIENT_HEADER_MAX);
+  return clean || undefined;
+}
+
 /**
  * Request logger middleware
  * Attaches correlation ID and logs HTTP traffic when enabled
@@ -40,9 +56,20 @@ export function requestLoggerMiddleware(req: AuthRequest, res: Response, next: N
   // admin UI takes effect on the next request. It used to sit behind a
   // five-minute cache of its own that no save invalidated.
   res.on("finish", () => {
+    const duration = Date.now() - startTime;
+    // A slow request is logged whatever the flag says (perf audit item 4),
+    // keyed by the route pattern so ids do not make every line a new key.
+    if (duration >= SLOW_REQUEST_MS) {
+      slowRequests.note(`${req.method} ${req.baseUrl}${req.route?.path ?? ""}`, duration, {
+        method: req.method,
+        path: requestPathForLog(req),
+        status: res.statusCode,
+        userId: req.userId,
+        requestId: req.requestId,
+      });
+    }
     if (!getLoggingRuntimeFlags().httpRequests) return;
 
-    const duration = Date.now() - startTime;
     const memoryDelta = process.memoryUsage().heapUsed - startMemory;
     // The full path (a router only sees its own tail) and never the query
     // string, which carries search terms, names and booking references.
@@ -58,6 +85,9 @@ export function requestLoggerMiddleware(req: AuthRequest, res: Response, next: N
         statusClass: getStatusClass(res.statusCode),
         ip: req.ip,
         userAgent: req.get("user-agent"),
+        // travstats-mcp names itself and the tool, so a write can be traced to the assistant's call.
+        clientName: headerForLog(req.get("x-travstats-client")),
+        clientTool: headerForLog(req.get("x-travstats-tool")),
         // `authenticate` sets `req.userId`; `req.user` is never populated, which left every
         // request line without an owner (and out of a user's own diagnostic package).
         userId: req.userId ?? req.user?.id,

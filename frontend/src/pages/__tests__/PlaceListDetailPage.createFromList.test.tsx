@@ -69,6 +69,10 @@ vi.mock("../../components/places/PlaceFormModal", () => ({
 import PlaceListDetailPage from "../PlaceListDetailPage";
 import { allNamed, findNamed, getNamed, queryNamed } from "../../__tests__/helpers/namedElement";
 vi.mock("../../components/places/smartList/SmartListPanel", () => ({ default: () => null }));
+vi.mock("../../components/places/listTable/PlaceListTable", async () => ({
+  default: (await import("./helpers/placeListTableStub")).default,
+}));
+vi.mock("../../components/purpose/PurposeSegment", () => ({ default: () => null }));
 
 const CREATED = { id: "new", name: "Bocca della Verità", category: "landmark", city: null };
 

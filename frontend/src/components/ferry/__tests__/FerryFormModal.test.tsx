@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FerryFormModal } from "../FerryFormModal";
 import type { FerryJourney } from "../../../types/ferry";
-import { useToastStore } from "../../../store/toastStore";
+import { usePageErrorStore } from "../../../store/pageErrorStore";
 const mocks = vi.hoisted(() => ({
   save: vi.fn(),
   trips: vi.fn(),
@@ -26,7 +26,7 @@ vi.mock("../../../lib/api", () => ({
 }));
 vi.mock("../../../hooks/useTagSuggestions", () => ({ useTagSuggestions: () => [] }));
 vi.mock("../../../hooks/useTranslation", () => ({ useTranslation: () => ({ t: mocks.t }) }));
-vi.mock("../../Modal", () => ({
+vi.mock("../../ui/Dialog", () => ({
   default: ({
     children,
     footer,
@@ -84,7 +84,7 @@ beforeEach(() => {
     cabinTypes: [],
     terminals: [],
   });
-  useToastStore.setState({ toasts: [] });
+  usePageErrorStore.getState().clear();
 });
 describe("Ferry editor", () => {
   it("does not send an unchanged sea estimate back as a typed distance", async () => {
@@ -267,7 +267,7 @@ describe("Ferry editor", () => {
     fireEvent.change(screen.getByLabelText("ferry:notes"), { target: { value: "x" } });
     fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(ride));
-    expect(useToastStore.getState().toasts.map((x) => [x.type, x.message])).toEqual([
+    expect(usePageErrorStore.getState().errors.map((x) => [x.tone, x.message])).toEqual([
       ["warning", "ferry:routing.autoFailed"],
     ]);
   });
@@ -280,7 +280,7 @@ describe("Ferry editor", () => {
     fireEvent.change(screen.getByLabelText("ferry:notes"), { target: { value: "x" } });
     fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
-    expect(useToastStore.getState().toasts).toEqual([]);
+    expect(usePageErrorStore.getState().errors).toEqual([]);
   });
 });
 

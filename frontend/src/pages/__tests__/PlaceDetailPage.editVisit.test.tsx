@@ -50,6 +50,10 @@ vi.mock("../../lib/api/places", () => ({
 }));
 
 const toasts = vi.hoisted(() => ({ addToast: vi.fn() }));
+vi.mock("../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  reportPageError: (message: string, tone = "error") => toasts.addToast(tone, message),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: (...a: unknown[]) => void }) => unknown) =>
     selector({ addToast: toasts.addToast }),
@@ -111,11 +115,13 @@ describe("PlaceDetailPage — editing a visit", () => {
     renderAt("/places/p1?editVisit=v1");
 
     expect(await screen.findByRole("dialog", { name: "Besuch bearbeiten" })).toBeInTheDocument();
-    expect((document.querySelector('input[type="date"]') as HTMLInputElement).value).toBe(
-      "2024-05-02"
-    );
+    expect(
+      (document.querySelector('input[data-field-kind="date"]') as HTMLInputElement).value
+    ).toBe("02.05.2024");
     // Midnight is "no time" — the very gap the flag asks the user to fill.
-    expect((document.querySelector('input[type="time"]') as HTMLInputElement).value).toBe("");
+    expect(
+      (document.querySelector('input[data-field-kind="time"]') as HTMLInputElement).value
+    ).toBe("");
     expect(screen.getByDisplayValue("Lutherstube")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId("search").textContent).toBe(""));
   });
@@ -125,7 +131,9 @@ describe("PlaceDetailPage — editing a visit", () => {
     renderAt("/places/p1?editVisit=v1");
     await screen.findByRole("dialog", { name: "Besuch bearbeiten" });
 
-    fireEvent.change(document.querySelector('input[type="time"]')!, { target: { value: "14:30" } });
+    fireEvent.change(document.querySelector('input[data-field-kind="time"]')!, {
+      target: { value: "14:30" },
+    });
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>

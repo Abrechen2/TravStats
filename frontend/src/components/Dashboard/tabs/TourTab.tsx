@@ -1,3 +1,5 @@
+import { Icon } from "../../ui/Icon";
+import { useRoadtripColorStore } from "../../../store/roadtripColorStore";
 import { effectiveRoutes, useMapRoutesStore } from "../../../store/mapRoutesStore";
 import { useMemo, useState } from "react";
 import { formatNumber } from "../../../lib/units";
@@ -110,6 +112,7 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
   const roadtripStations = useRoadtripStations(isRoadtrip);
   const lodgingHex = colorOf("lodging");
   const roadtripHex = colorOf("roadtrip");
+  const roadtripColorMode = useRoadtripColorStore((st) => st.mode);
   // Widths and the station size come from the map panel (forgejo#198).
   const tourDeck = useTourDeckLayers(tourPathData, visMode === "globe", dashboardTours.tours);
   const { roadtripStationSize } = useOverlayAppearance();
@@ -154,7 +157,7 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
     dashboardTours,
     t,
     legendRow,
-    { color: colorOf("roadtrip"), label: t("roadtrips:kind.roadtrip") },
+    { color: colorOf("roadtrip"), label: t("roadtrips:kind.roadtrip"), mode: roadtripColorMode },
     routesVisible
   );
 
@@ -241,7 +244,7 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
                 fontSize: 18,
               }}
             >
-              ×
+              <Icon name="x" size={16} />
             </button>
           </div>
 
@@ -361,7 +364,7 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
 
       {isEmpty && (
         <MapEmptyOverlay
-          emoji={isRoadtrip ? "🚐" : "🥾"}
+          icon={isRoadtrip ? "caravan" : "route"}
           title={
             isRoadtrip ? t("roadtrips:dashboard.emptyTitle") : t("dashboard:tourTab.emptyTitle")
           }

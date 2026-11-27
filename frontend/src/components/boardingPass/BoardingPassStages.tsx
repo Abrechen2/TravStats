@@ -1,3 +1,4 @@
+import { Icon, type IconName } from "../ui/Icon";
 import type { CSSProperties } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { BoardingPassStage } from "../../lib/api/types";
@@ -20,11 +21,11 @@ const TONE: Record<BoardingPassStage["status"], CSSProperties> = {
   },
 };
 
-const MARK: Record<BoardingPassStage["status"], string> = {
-  ok: "✓",
-  partial: "!",
-  failed: "✕",
-  skipped: "–",
+const MARK: Record<BoardingPassStage["status"], IconName> = {
+  ok: "check",
+  partial: "circle-alert",
+  failed: "x",
+  skipped: "minus",
 };
 
 /**
@@ -50,7 +51,7 @@ export default function BoardingPassStages({
           data-status={stage.status}
         >
           <span aria-hidden="true" className="font-bold w-4 text-center">
-            {MARK[stage.status]}
+            <Icon name={MARK[stage.status]} size={14} />
           </span>
           <div className="flex-1 min-w-0">
             <p className="font-medium">{t(`flights:scanner.stage.${stage.stage}`)}</p>

@@ -1,8 +1,9 @@
-import { useState, type JSX } from "react";
+import DateField from "../../../components/ui/DateField";
+import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import Button from "../../ui/Button";
-import { Field, Input, Select, Switch } from "../../ui/Field";
+import { Field, Select, Switch } from "../../ui/Field";
 import { waitForJob, JobFailedError } from "../../../lib/api/jobs";
 import {
   pluginFailureKey,
@@ -12,6 +13,10 @@ import {
   type SuggestionPlugin,
 } from "../../../lib/api/suggestionPlugins";
 import SecretOnce from "./SecretOnce";
+import PluginMaintenanceDialog from "./PluginMaintenanceDialog";
+import PluginListSwitch from "./PluginListSwitch";
+import type { PluginListState } from "../../../lib/api/suggestionPlugins";
+import InlineError from "../../ui/InlineError";
 
 const NS = "suggestionSources:plugins";
 const MAX_BACKFILL_DAYS = 90;
@@ -41,13 +46,46 @@ export default function PluginCard({
   onChanged: () => void;
   onRemove: () => void;
 }): JSX.Element {
-  const { t } = useTranslation(["suggestionSources"]);
+  const { t, i18n } = useTranslation(["suggestionSources"]);
   const fmt = useDisplayFormat();
   const [line, setLine] = useState<Line | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  // "Standorte pflegen" only for a plugin whose hello announces `maintenance`.
+  const [maintenance, setMaintenance] = useState<{ offered: boolean; error: string | null }>({
+    offered: false,
+    error: null,
+  });
+  const [maintaining, setMaintaining] = useState(false);
+  const [listState, setListState] = useState<PluginListState | null>(null);
+
+  useEffect(() => {
+    if (!plugin.enabled || disabled) {
+      setMaintenance({ offered: false, error: null });
+      return;
+    }
+    let live = true;
+    suggestionPluginsApi
+      .capabilities(plugin.id, i18n?.language?.startsWith("en") ? "en" : "de")
+      .then((c) => {
+        if (!live) return;
+        setMaintenance({ offered: c.maintenance, error: c.error });
+        setListState(c.list ?? null);
+      })
+      .catch((e: unknown) => {
+        // Visible below the card: a capability we could not read is not "none".
+        const key = pluginRequestFailureKey(e);
+        console.warn("plugin capabilities failed", key);
+        if (live) setMaintenance({ offered: false, error: key });
+      });
+    return () => {
+      live = false;
+    };
+    // The language only names a list made on first use; a switch of language asks nothing again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
+  }, [plugin.id, plugin.enabled, plugin.url, disabled]);
 
   const run = async (work: () => Promise<Line | void>) => {
     setBusy(true);
@@ -178,6 +216,14 @@ export default function PluginCard({
           onChange={(on) => void update({ backfillAllowed: on })}
           label={t(`${NS}.backfillAllowed`)}
         />
+        {listState && (
+          <PluginListSwitch
+            pluginId={plugin.id}
+            state={listState}
+            disabled={disabled || busy}
+            onChange={setListState}
+          />
+        )}
       </div>
       {line && (
         <p
@@ -189,6 +235,18 @@ export default function PluginCard({
         </p>
       )}
       {secret && <SecretOnce secret={secret} onDone={() => setSecret(null)} />}
+      {maintenance.error && (
+        <InlineError>
+          {t(`${NS}.maintenance.helloFailed`)}:{" "}
+          {t(
+            `suggestionSources:${
+              maintenance.error.startsWith("plugins.")
+                ? maintenance.error
+                : pluginFailureKey(maintenance.error)
+            }`
+          )}
+        </InlineError>
+      )}
       <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
         <Button disabled={disabled || busy} onClick={() => void test()}>
           {t(`${NS}.test.button`)}
@@ -203,16 +261,27 @@ export default function PluginCard({
         >
           {t(`${NS}.rotate`)}
         </Button>
+        {maintenance.offered && (
+          <Button disabled={disabled || busy} onClick={() => setMaintaining(true)}>
+            {t(`${NS}.maintenance.open`)}
+          </Button>
+        )}
         <Button disabled={disabled || busy} onClick={onRemove}>
           {t(`${NS}.remove`)}
         </Button>
       </div>
+      {maintaining && (
+        <PluginMaintenanceDialog
+          plugin={plugin}
+          open={maintaining}
+          onClose={() => setMaintaining(false)}
+        />
+      )}
       {plugin.backfillAllowed && (
         <div className="flex flex-wrap items-end" style={{ gap: "var(--ts-space-sm)" }}>
           <Field label={t(`${NS}.backfill.from`)} htmlFor={`plugin-from-${plugin.id}`}>
-            <Input
+            <DateField
               id={`plugin-from-${plugin.id}`}
-              type="date"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
             />
@@ -222,9 +291,8 @@ export default function PluginCard({
             htmlFor={`plugin-to-${plugin.id}`}
             error={from && to && !rangeOk ? t(`${NS}.backfill.range`) : undefined}
           >
-            <Input
+            <DateField
               id={`plugin-to-${plugin.id}`}
-              type="date"
               value={to}
               onChange={(e) => setTo(e.target.value)}
             />

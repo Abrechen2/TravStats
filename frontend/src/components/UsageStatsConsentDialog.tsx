@@ -1,4 +1,4 @@
-import Modal from "./Modal";
+import Dialog from "./ui/Dialog";
 import UsageStatsConsentCard from "./UsageStatsConsentCard";
 import { useTranslation } from "../hooks/useTranslation";
 
@@ -35,7 +35,7 @@ export default function UsageStatsConsentDialog({
   if (!isOpen) return null;
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={t("usageStats:consent.title")}
@@ -45,6 +45,6 @@ export default function UsageStatsConsentDialog({
     >
       {/* The dialog's accessible name already says this — see `showHeading`. */}
       <UsageStatsConsentCard showHeading={false} onDecided={onClose} />
-    </Modal>
+    </Dialog>
   );
 }

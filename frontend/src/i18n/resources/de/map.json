@@ -139,7 +139,7 @@
         },
         "perCruise": {
           "label": "Pro Reise",
-          "hint": "Jede Reise bekommt eine eigene Farbe. In der Ansicht „Alle“ teilen sich diese Farben die Karte mit den Flugfarben und können mit ihnen konkurrieren."
+          "hint": "Jede Reise eine eigene Farbe. In „Alle“ können sie mit Flugfarben verwechselt werden."
         },
         "solid": {
           "label": "Einfarbig",
@@ -215,6 +215,16 @@
           "label": "Symbol",
           "hint": "Überall das Listensymbol. Listen ohne Symbol behalten den Namen."
         }
+      },
+      "roadtripColorMode": {
+        "single": {
+          "label": "Einfarbig",
+          "hint": "Alle Roadtrips in der Roadtrip-Farbe aus den Einstellungen."
+        },
+        "perRoadtrip": {
+          "label": "Je Roadtrip",
+          "hint": "Jeder Roadtrip in einer eigenen Farbe – der am Roadtrip gespeicherten, sonst einer festen aus der Palette."
+        }
       }
     },
     "timesFlown": "{{count}}× geflogen",
@@ -272,7 +282,6 @@
       "embark": "Start",
       "debark": "Ende",
       "openCruise": "Kreuzfahrt öffnen",
-      "durationHours": "{{h}} h {{m}} min",
       "openFlight": "Flug öffnen",
       "details": "Details",
       "event": "Ereignis",

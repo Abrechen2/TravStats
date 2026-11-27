@@ -10,7 +10,7 @@ import RecordCheckFlag from "./RecordCheckFlag";
 import Side from "./FlagSide";
 import { isRecordCheckKind } from "./recordFlagLinks";
 import HomeResidenceFlag from "./HomeResidenceFlag";
-import { formatDate as formatUserDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 
 /**
  * The two values a flag holds against each other — both shown, neither marked
@@ -49,10 +49,6 @@ export function RecordLink({ record }: { record: FlaggedRecord }): JSX.Element {
 }
 
 /** A date as stored, in the app's language. Never reformatted into a guess. */
-function formatDate(iso: string, _locale: string): string {
-  return formatUserDate(iso) || iso;
-}
-
 /** A country as `code — Localised Name`, falling back to the bare code. */
 function countryLabel(code: string | null, locale: string): string {
   if (!code) return "—";
@@ -138,11 +134,11 @@ export default function FlagContradiction({ flag }: { flag: DataQualityFlag }): 
           <div key={stay.stayId} className="flex flex-wrap gap-3">
             <Side
               label={t("dataQuality:kinds.stay_dates_reversed.checkIn")}
-              value={formatDate(stay.checkIn, locale)}
+              value={formatDate(stay.checkIn)}
             />
             <Side
               label={t("dataQuality:kinds.stay_dates_reversed.checkOut")}
-              value={formatDate(stay.checkOut, locale)}
+              value={formatDate(stay.checkOut)}
             />
           </div>
         ))}

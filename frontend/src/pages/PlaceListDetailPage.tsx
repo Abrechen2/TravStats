@@ -10,7 +10,6 @@ import AppShell from "../components/ui/AppShell";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
-import { FlagImg } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { listPlaces } from "../lib/api/places";
@@ -29,11 +28,15 @@ import { placeCategoryIcon } from "../lib/placeCategoryDisplay";
 import { usePlaceCategories } from "../hooks/usePlaceCategories";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import SmartListPanel from "../components/places/smartList/SmartListPanel";
+import PurposeSegment from "../components/purpose/PurposeSegment";
+import PlaceListTable from "../components/places/listTable/PlaceListTable";
+import { isAutomatic } from "../lib/api/smartLists";
 import OverflowMenu from "../components/ui/OverflowMenu";
 import { PlaceListAddPanel, type UnassignedPlace } from "../components/places/PlaceListAddPanel";
 import { useToastStore } from "../store/toastStore";
 import type { Place } from "../types/place";
 import type { PlaceList } from "../types/placeList";
+import InlineError from "../components/ui/InlineError";
 
 // The shared ten from `listColor.palette`. The six that used to stand here
 // included the green and blue the system reserves for `good` and `info`, and a
@@ -71,6 +74,7 @@ export default function PlaceListDetailPage(): JSX.Element {
   const [renaming, setRenaming] = useState(false);
   /** The smart-list rule dialog (list ⋯ → "Kette verknüpfen"). */
   const [ruleOpen, setRuleOpen] = useState(false);
+  const [hasRule, setHasRule] = useState(false);
   const [draftName, setDraftName] = useState("");
   /** Why the rename was refused — said at the field, not in a toast (forgejo#246). */
   const [renameError, setRenameError] = useState<string | null>(null);
@@ -121,6 +125,9 @@ export default function PlaceListDetailPage(): JSX.Element {
   }, [list?.curatedKey, navigate]);
 
   const entries = useMemo(() => list?.entries ?? [], [list]);
+  // "Automatisch eingetragen" (owner 2026-11-26): only what a chain or an import added.
+  const [autoOnly, setAutoOnly] = useState(false);
+  const autoEntries = useMemo(() => entries.filter(isAutomatic), [entries]);
   const memberIds = useMemo(() => new Set(entries.map((e) => e.placeId)), [entries]);
 
   /**
@@ -216,13 +223,14 @@ export default function PlaceListDetailPage(): JSX.Element {
    * place ids and rewrites the positions from it, so a half-applied swap cannot
    * happen — and a retry sends the very order that was refused.
    */
+  /** One step in the list's own order ("Eigene Reihenfolge"). */
   const handleMove = useCallback(
-    async (index: number, delta: number): Promise<void> => {
+    async (placeId: string, delta: -1 | 1): Promise<void> => {
       if (!list) return;
-      const target = index + delta;
-      if (target < 0 || target >= entries.length) return;
-
       const ids = entries.map((e) => e.placeId);
+      const index = ids.indexOf(placeId);
+      const target = index + delta;
+      if (index < 0 || target < 0 || target >= ids.length) return;
       [ids[index], ids[target]] = [ids[target], ids[index]];
       await runChange(() => reorderPlaceList(list.id, ids), "places:lists.reorderFailed");
     },
@@ -336,9 +344,9 @@ export default function PlaceListDetailPage(): JSX.Element {
     return (
       <AppShell>
         <div className="py-16 text-center">
-          <p role="alert" style={{ color: "var(--danger)" }}>
+          <InlineError>
             {isLoadError ? t("places:lists.loadError") : t("places:lists.notFound")}
-          </p>
+          </InlineError>
           <Link
             to="/places/lists"
             className="mt-3 inline-block text-sm underline"
@@ -461,8 +469,8 @@ export default function PlaceListDetailPage(): JSX.Element {
               entries={[
                 {
                   key: "smart-rule",
-                  label: t("places:smartList.menuEntry"),
-                  hint: t("places:smartList.menuHint"),
+                  label: hasRule ? t("places:smartList.editRule") : t("places:smartList.menuEntry"),
+                  hint: hasRule ? undefined : t("places:smartList.menuHint"),
                   onSelect: () => setRuleOpen(true),
                 },
                 // Destructive actions live last in the ⋯ menu, in red, behind the page's own
@@ -478,11 +486,15 @@ export default function PlaceListDetailPage(): JSX.Element {
           </div>
         </div>
 
+        <PurposeSegment />
+
         <SmartListPanel
           listId={list.id}
           ruleOpen={ruleOpen}
           onRuleClose={() => setRuleOpen(false)}
           onChanged={() => void load()}
+          onRuleLoaded={setHasRule}
+          onEditRule={() => setRuleOpen(true)}
         />
 
         {/* A refused change, kept until the next one succeeds (forgejo#246). */}
@@ -562,88 +574,29 @@ export default function PlaceListDetailPage(): JSX.Element {
           }
         />
 
-        {entries.length === 0 ? (
-          <p className="py-10 text-center text-sm" style={{ color: "var(--text-muted)" }}>
-            {t("places:lists.listEmpty")}
-          </p>
-        ) : (
-          <ul style={{ listStyle: "none", padding: 0 }} className="grid gap-2">
-            {entries.map((entry, index) => {
-              const p = entry.place;
-              return (
-                <li
-                  key={entry.id}
-                  className="flex items-center gap-3 rounded-xl px-4 py-3"
-                  style={{
-                    background: "var(--bg-surface)",
-                    border: "1px solid var(--color-border)",
-                  }}
-                >
-                  <span aria-hidden>{placeCategoryIcon(p.category, customs)}</span>
-                  <Link
-                    to={`/places/${p.id}`}
-                    className="min-w-0 flex-1 truncate text-sm"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {p.name}
-                  </Link>
-                  <span
-                    className="hidden items-center gap-1 text-xs sm:flex"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    {[p.city, p.country].filter(Boolean).join(", ")}
-                    {p.country && <FlagImg country={p.country} />}
-                  </span>
-                  <span
-                    className="rounded px-2 py-0.5 text-xs"
-                    style={
-                      p.visited
-                        ? {
-                            color: "var(--success)",
-                            background: "rgba(63,185,80,0.08)",
-                            border: "1px solid rgba(63,185,80,0.35)",
-                          }
-                        : { color: "var(--text-muted)", border: "1px dashed var(--color-border)" }
-                    }
-                  >
-                    {p.visited ? t("places:list.status.visited") : t("places:list.status.wishlist")}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => void handleMove(index, -1)}
-                    disabled={index === 0}
-                    aria-label={t("places:lists.moveUp", { name: p.name })}
-                    title={t("places:lists.moveUp", { name: p.name })}
-                    className={`px-1 text-sm disabled:opacity-30 ${COARSE_BOX}`}
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleMove(index, 1)}
-                    disabled={index === entries.length - 1}
-                    aria-label={t("places:lists.moveDown", { name: p.name })}
-                    title={t("places:lists.moveDown", { name: p.name })}
-                    className={`px-1 text-sm disabled:opacity-30 ${COARSE_BOX}`}
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleRemove(p.id)}
-                    aria-label={t("places:lists.removeFromList", { name: p.name })}
-                    className={`text-sm ${COARSE_BOX}`}
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    ✕
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+        {autoEntries.length > 0 && (
+          <button
+            type="button"
+            aria-pressed={autoOnly}
+            onClick={() => setAutoOnly((v) => !v)}
+            className="mb-2 rounded-full px-3 py-1 text-sm"
+            style={{
+              border: `1px solid ${autoOnly ? "var(--ts-accent)" : "var(--color-border)"}`,
+              color: autoOnly ? "var(--ts-accent)" : "var(--text-muted)",
+            }}
+            title={t("places:autoFilter.info")}
+          >
+            {t("places:autoFilter.label")} ({autoEntries.length})
+          </button>
         )}
+        <PlaceListTable
+          listId={list.id}
+          refreshKey={list}
+          autoOnly={autoOnly && autoEntries.length > 0}
+          iconOf={(category) => placeCategoryIcon(category, customs)}
+          onRemove={(placeId) => void handleRemove(placeId)}
+          onMove={handleMove}
+        />
 
         {creatingName !== null && (
           <PlaceFormModal

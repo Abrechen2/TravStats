@@ -19,6 +19,7 @@ vi.mock("../../../lib/api/sharing", () => ({
     shareTrip: vi.fn(),
     leaveGroup: vi.fn(),
     linkCompanion: vi.fn(),
+    markNotSameLocal: vi.fn(),
     requestConsent: vi.fn(),
   },
 }));
@@ -134,6 +135,38 @@ describe("TripPeopleSection", () => {
     await screen.findByText("Erik");
     expect(screen.getByText("sharing:people.badges.member")).toBeTruthy();
     expect(screen.queryByText("sharing:people.badges.consentPending")).toBeNull();
+  });
+
+  it("asks 'Ist das <Name>?' for a local member with a same-name companion, as for remote people", async () => {
+    const asking: TripSharing = {
+      ...view,
+      people: [
+        row({
+          key: "u:u-carl",
+          companionId: null,
+          name: "Carl",
+          account: account("carl"),
+          member: true,
+          receivesChanges: true,
+          shareBlockedBy: "alreadyMember",
+          nameMatches: [{ id: "comp-carl", name: "Carl", onTrip: true }],
+        }),
+      ],
+    };
+    api.tripSharing.mockResolvedValue(asking);
+    api.linkCompanion.mockResolvedValue({} as never);
+    api.markNotSameLocal.mockResolvedValue(undefined);
+    renderSection();
+    const question = await screen.findByTestId("local-companion-question");
+    expect(question).toHaveTextContent("sharing:remote.trip.companion.question");
+    await userEvent.click(
+      screen.getByRole("button", { name: "sharing:remote.trip.companion.yes" })
+    );
+    await waitFor(() => expect(api.linkCompanion).toHaveBeenCalledWith("comp-carl", "u-carl"));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "sharing:remote.trip.companion.no" })
+    );
+    await waitFor(() => expect(api.markNotSameLocal).toHaveBeenCalledWith("comp-carl", "u-carl"));
   });
 
   it("opens the share dialog for a row instead of sharing on click", async () => {

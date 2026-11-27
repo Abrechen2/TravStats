@@ -1,3 +1,4 @@
+import { formatKm } from "../../lib/format";
 import { useTranslation } from "../../hooks/useTranslation";
 import { isRoutableLegMode, type LegSource, type TourLeg } from "../../types/tour";
 
@@ -65,10 +66,6 @@ interface Props {
   routingAllInProgress?: boolean;
 }
 
-function formatKm(value: number): string {
-  return value.toLocaleString("de-DE", { maximumFractionDigits: 0 });
-}
-
 /**
  * Which sources this leg's `<select>` may offer, and whether each is
  * actually usable right now.
@@ -105,6 +102,8 @@ function buildOptions(
   const hasLine = leg.waypoints !== null && leg.waypoints.length >= 2;
   const options: LegSourceOption[] = [{ source: "straight", disabled: false }];
   if (hasLine) {
+    // A line taken from a recording is offered as itself while it is the leg's line.
+    if (leg.source === "recorded") options.push({ source: "recorded", disabled: false });
     options.push({ source: "drawn", disabled: false });
   }
   if (isRoutableLegMode(leg.mode)) {
@@ -171,7 +170,7 @@ export default function TourLegList({
               <span className="rounded-sm bg-(--bg-surface) px-1.5 py-0.5 text-xs">
                 {t(`trips:tours.mode.${leg.mode}`)}
               </span>
-              <span className="text-(--text-muted)">{formatKm(leg.distanceKm)} km</span>
+              <span className="text-(--text-muted)">{formatKm(leg.distanceKm)}</span>
               <select
                 value={leg.source}
                 disabled={enabledCount < 2}

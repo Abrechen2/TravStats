@@ -1,3 +1,4 @@
+import Chip from "../components/ui/Chip";
 import { legOperator } from "../lib/rail/primaryOperator";
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import { PackageBookingCard } from "../components/bookings/PackageBookingCard";
@@ -57,6 +58,8 @@ import type { RailJourney, RailJourneyDetail } from "../types/rail";
 import { StationShortCode } from "../components/rail/StationShortCode";
 import WebGLGuard from "../components/map/WebGLGuard";
 import BackLink from "../components/navigation/BackLink";
+import Banner from "../components/ui/Banner";
+import { reportPageError } from "../store/pageErrorStore";
 
 type Editing = { mode: "edit" } | { mode: "connection" } | null;
 
@@ -132,7 +135,7 @@ export default function RailDetailPage(): JSX.Element {
       navigate("/rail");
     } catch (err: unknown) {
       logger.error("RailDetailPage: delete failed", err);
-      addToast("error", t("rail:deleteError"));
+      reportPageError(t("rail:deleteError"));
       setDeleting(false);
       setConfirmingDelete(false);
     }
@@ -164,12 +167,9 @@ export default function RailDetailPage(): JSX.Element {
         <BackLink to="/rail" className="ts-back-link text-sm text-(--text-muted)">
           ← {t("rail:title")}
         </BackLink>
-        <div
-          role="alert"
-          className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)"
-        >
+        <Banner tone="error" className="mt-4">
           {isLoadError ? t("rail:detail.loadError") : t("rail:detail.notFound")}
-        </div>
+        </Banner>
         {isLoadError && (
           <div className="mt-3">
             <Button onClick={() => setReloadKey((k) => k + 1)}>{t("common:buttons.retry")}</Button>
@@ -454,13 +454,9 @@ export default function RailDetailPage(): JSX.Element {
               {journey.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {journey.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border px-2.5 py-0.5 text-xs"
-                      style={{ borderColor: "var(--ts-border)", color: "var(--ts-muted)" }}
-                    >
+                    <Chip key={tag} size="sm">
                       #{tag}
-                    </span>
+                    </Chip>
                   ))}
                 </div>
               )}

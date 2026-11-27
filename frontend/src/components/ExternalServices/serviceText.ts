@@ -1,4 +1,4 @@
-import { formatDateTime } from "../../lib/displayFormat";
+import { formatDateTime } from "../../lib/format";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import type { ServiceLastTest, ServiceField } from "../../lib/api/externalServices";
 import { EXTERNAL_SERVICE_ERROR_CODES } from "../../lib/api/externalServices";

@@ -1,8 +1,9 @@
+import { Icon } from "../ui/Icon";
 import type { JSX } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { localeForLanguage } from "../../lib/units";
 import EvidenceTrigger from "../Stats/EvidenceTrigger";
 import { evidenceKeyForRule } from "./achievementEvidenceKey";
@@ -85,13 +86,13 @@ export default function AchievementDetailModal({
   const evidenceKey = isMystery ? null : evidenceKeyForRule(achievement.requirementType);
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={
         <span className="flex items-center gap-3">
           <span className="text-3xl" aria-hidden="true">
-            {isMystery ? "❔" : achievement.icon}
+            {isMystery ? <Icon name="circle-help" size={24} /> : achievement.icon}
           </span>
           <span>{name}</span>
         </span>
@@ -208,6 +209,6 @@ export default function AchievementDetailModal({
             </p>
           ))}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

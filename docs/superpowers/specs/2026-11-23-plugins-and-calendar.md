@@ -199,6 +199,61 @@ already derived for that stop (address from reverse geocoding, only at `exact` a
   `server` (5xx), `privateTarget`. Shown per plugin in settings ("letzter Fehler")
   and in the scan job result; the day stays owed for that plugin only.
 
+Additive since 2026-11-24 (optional, ignored when unknown): `reason`
+(`distance` | `name`), `distanceMeters`, `matchedToken`, `lowPrecision`. A
+`name` suggestion matched a distinctive word of the stop's venue name further
+away than the plugin's distance radius; the inbox reads it as "Name passt (MSA),
+780 m". The hello may carry `capabilities` (e.g. `["maintenance"]`). The
+response may carry `nameRadiusMeters`, the radius the plugin searched names in:
+a `name` suggestion is then accepted up to that radius, capped at 2 km. Distance
+suggestions, and name suggestions without an announced radius, keep the 1 km
+drop rule above.
+
+### Maintenance (optional capability, owner 2026-11-24)
+
+A plugin that announces `capabilities: ["maintenance"]` in its hello offers
+location maintenance of ITS data; TravStats shows it under Einstellungen →
+TravTrack → Erkennung & Vorschläge → Externe Vorschlagsquellen → the plugin →
+"Standorte pflegen" (EN "Maintain locations"). A plugin without it keeps
+working; the button is not drawn. All calls are signed exactly like a stop call
+and go to `<plugin url>/maintenance/<action>` (the URL read as a directory).
+Components `PluginMaintenance*V1` in the OpenAPI document and the exported
+contract.
+
+| Call | Body | Answer |
+|---|---|---|
+| `POST maintenance/proposals` | `{version, requestId, locale, stops: [{venueName, lat, lon, start?, end?}]}` (≤ 2000) | `{version, rows: [{rowId, name, street?, postcode?, town?, lat?, lon?, issues: [noCoordinates\|noStreet\|lowPrecision], ignored?, proposals: [{source: stop\|geocoder, lat, lon, address?, street?, confidence: high\|medium\|low, evidence}]}], applied: [{undoId, rowId, name, written, previous?, source, appliedAt}], pendingSearches?}` |
+| `POST maintenance/apply` | `{version, requestId, rowId, lat, lon, street?, source: stop\|geocoder\|manual}` | `{version, undoId, rowId, written}` |
+| `POST maintenance/undo` | `{version, requestId, undoId}` | `{version, undoId, rowId, restored}` |
+| `POST maintenance/ignore` | `{version, requestId, rowId, ignored}` | `{version, rowId, ignored}` |
+
+- **Who sends the stops, and why TravStats.** Proposals from TravTrack come from
+  stops TravStats sends with each proposals request: the account's venue-named
+  TravTrack findings of the last two years (not those a plugin named), deduped,
+  rounded to the plugin's precision — and none at 1 km, where a venue name would
+  undo the rounding (`stopsWithheld: precision`), or when TravTrack is not the
+  account's source (`travtrackOff`). The plugin uses them for that answer only
+  and stores no location history; the alternative (the plugin keeping the stops
+  it was once asked about) would have built a second location archive outside
+  TravStats.
+- **Writes.** The plugin writes only on `apply`: the coordinates, and the street
+  only when the row's own street is empty. It keeps the previous values in a
+  local undo log; `undo` restores them and answers `409 {"error":"changed"}`
+  when the row was edited since. A data source that refuses writes answers
+  `409 {"error":"readOnly"}`; an unknown row/undo `404 {"error":"notFound"}`.
+- **TravStats routes** (owner of the registration only — `ownPlugin`; an admin
+  does not reach another account's plugin, because the proposals carry that
+  account's stops): `GET /settings/suggestion-plugins/:id/capabilities`,
+  `GET …/:id/maintenance`, `POST …/:id/maintenance/{apply,undo,ignore}`. A
+  failure is `400 PLUGIN_FAILED` with the reason in `error` (readOnly, changed,
+  notFound, notReady, auth = signature refused, unreachable, timeout, …); a
+  missing capability is `409 PLUGIN_NO_MAINTENANCE`. Timeout 15 s, body cap 1 MB.
+- **UI.** The rows with their proposals on a mini map; "Übernehmen" opens a
+  confirmation that names exactly what will be written (coordinates, street or
+  "street stays"); "Andere Adresse" searches through TravStats' own place search
+  (`source: manual`); "Ignorieren"; "Rückgängig" on applied ones. Every failure
+  is shown in DE/EN.
+
 ### Where suggestions land
 
 - Merged into the same `dawarich_stays` finding of that stop as

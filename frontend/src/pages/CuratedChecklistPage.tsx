@@ -1,3 +1,4 @@
+import Chip from "../components/ui/Chip";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -23,6 +24,7 @@ import { FormErrorBanner } from "../components/form";
 import { saveErrorKey } from "../lib/saveErrorMessage";
 import type { CuratedProgress, CuratedProgressItem, VisitSuggestion } from "../types/placeList";
 import { useDomainColors } from "../hooks/useDomainColors";
+import InlineError from "../components/ui/InlineError";
 
 type RowFilter = "all" | "open" | "ticked" | "suggested";
 
@@ -296,9 +298,9 @@ export default function CuratedChecklistPage(): JSX.Element {
     return (
       <AppShell>
         <div className="py-16 text-center">
-          <p role="alert" style={{ color: "var(--danger)" }}>
+          <InlineError>
             {isLoadError ? t("places:lists.loadError") : t("places:checklist.notFound")}
-          </p>
+          </InlineError>
           <Link
             to="/places/lists"
             className="mt-3 inline-block text-sm underline"
@@ -491,21 +493,15 @@ export default function CuratedChecklistPage(): JSX.Element {
             <option value="continent">{t("places:checklist.sortContinent")}</option>
           </select>
           {FILTERS.map((f) => (
-            <button
+            <Chip
               key={f.id}
-              type="button"
+              active={rowFilter === f.id}
               onClick={() => setRowFilter(f.id)}
               disabled={f.id === "suggested" && suggestions.length === 0}
-              className="rounded-full px-3 py-1.5 text-xs disabled:opacity-40"
-              style={{
-                border: "1px solid var(--color-border)",
-                background: rowFilter === f.id ? "var(--bg-elevated)" : "transparent",
-                color: rowFilter === f.id ? "var(--accent)" : "var(--text-muted)",
-                fontWeight: rowFilter === f.id ? 600 : 400,
-              }}
+              size="sm"
             >
               {f.label} · {f.count}
-            </button>
+            </Chip>
           ))}
         </div>
 

@@ -1,5 +1,5 @@
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import type { RoadtripSummary } from "../../types/roadtrip";
 
 /** "18.09. – 28.09.2026", or the undated word. */

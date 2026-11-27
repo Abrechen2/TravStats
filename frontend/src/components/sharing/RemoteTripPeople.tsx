@@ -4,7 +4,7 @@ import type { JSX } from "react";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useTranslation } from "../../hooks/useTranslation";
 import { sharingRemoteApi } from "../../lib/api/sharingRemote";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { useTripSharingStore } from "../../store/tripSharingStore";
 import type {
@@ -19,9 +19,11 @@ import { Button, Pill } from "../ui";
 import DetailSection from "../ui/DetailSection";
 import { Field, Input } from "../ui/Field";
 import RemoteAddRequest from "./RemoteAddRequest";
+import RemoteCompanionLink from "./RemoteCompanionLink";
 import RemotePersonField from "./RemotePersonField";
 import RemoteTripRoster from "./RemoteTripRoster";
 import { remoteSharingError, type RemoteSharingError } from "./remoteSharingCopy";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:remote.trip";
 
@@ -247,11 +249,7 @@ export default function RemoteTripPeople({
   const body = (
     <div className="flex flex-col text-sm" style={{ gap: "var(--ts-space-md)" }}>
       {!standalone && !bare && <h3 className="t-label-mono">{t(`${NS}.title`)}</h3>}
-      {loadFailed && (
-        <p role="alert" style={{ color: "var(--ts-warn)" }}>
-          {t(`${NS}.errors.loadFailed`)}
-        </p>
-      )}
+      {loadFailed && <InlineError tone="warning">{t(`${NS}.errors.loadFailed`)}</InlineError>}
       {current?.homeOrigin && (
         <p className="t-caption">{t(`${NS}.fromServer`, { origin: current.homeOrigin })}</p>
       )}
@@ -270,6 +268,7 @@ export default function RemoteTripPeople({
                   {line}
                 </span>
               ))}
+              <RemoteCompanionLink tripId={tripId} member={m} busy={busy} run={run} />
               {m.delivery.state === "rejected" && (
                 <span>
                   <Button disabled={busy} onClick={() => dismiss(m)}>
@@ -343,9 +342,7 @@ export default function RemoteTripPeople({
         </>
       )}
       {failure && (
-        <p role="alert" style={{ color: "var(--ts-warn)" }}>
-          {t(failure.key, { origin: failure.origin })}
-        </p>
+        <InlineError tone="warning">{t(failure.key, { origin: failure.origin })}</InlineError>
       )}
       {notice && <p role="status">{notice}</p>}
     </div>

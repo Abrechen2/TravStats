@@ -62,7 +62,7 @@ const emptyDetail = (code: string): CountryDetail => ({
 const renderTable = (countries: PassportCountry[]): void => {
   render(
     <MemoryRouter>
-      <CountryTable countries={countries} locale="de-DE" />
+      <CountryTable countries={countries} />
     </MemoryRouter>
   );
 };
@@ -77,7 +77,6 @@ describe("CountryTable — a country that does not count is greyed, not hidden",
     render(
       <MemoryRouter>
         <CountryTable
-          locale="en"
           countries={[
             country({ code: "DE", visited: true, counted: true }),
             country({ code: "QA", visited: false, counted: false, tier: "connection" }),
@@ -233,7 +232,7 @@ describe("CountryTable — ground time has three states, and they read different
 
     // 25 h — the country §3.4b measured on the far side of the gap. Shown raw,
     // because fixed classes would leave the middle bins empty and hide the gap.
-    expect(screen.getByTestId("ground-measured")).toHaveTextContent("25h");
+    expect(screen.getByTestId("ground-measured")).toHaveTextContent("25 h");
     expect(screen.queryByTestId("ground-unknown")).not.toBeInTheDocument();
     expect(screen.queryByTestId("ground-notApplicable")).not.toBeInTheDocument();
   });
@@ -279,7 +278,7 @@ describe("CountryTable — ground time has three states, and they read different
     renderTable([country({ code: "QA", groundTime: { state: "measured", minutes: 0 } })]);
 
     const cell = screen.getByTestId("ground-measured");
-    expect(cell).toHaveTextContent("0min");
+    expect(cell).toHaveTextContent("0 min");
     expect(cell).not.toHaveTextContent("passport:value.dash");
     expect(screen.queryByTestId("ground-unknown")).not.toBeInTheDocument();
   });

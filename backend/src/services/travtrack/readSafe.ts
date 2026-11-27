@@ -9,6 +9,8 @@ import { trackGapMsFor } from "../tripRecording/trackGap";
 import { privacySafeDevices, privacySafeStretches } from "../tripRecording/privacySafe";
 import type { ZoneCircle } from "./classify";
 import { privacyCirclesFor } from "./privacyCircles";
+import { keepsRow } from "./bestSource/resolveDay";
+import { readResolutionsIn } from "./bestSource/store";
 
 /**
  * A span of the account's TravTrack history as it may leave the server
@@ -92,6 +94,11 @@ export type SafeSpan = {
   removedAtMs?: number[];
   /** How many stored fixes the read found, before the privacy cut; absent on a hand-built span. */
   storedCount?: number;
+  /**
+   * Fixes the best-source resolution left out (`bestSource/`): another source was used at
+   * their instant, or they were an unsupported jump. Not drawn, not counted; still stored.
+   */
+  sourceExcluded?: number;
   /** The first instant not read, or null when the span was read whole. */
   next: Date | null;
   /** The last point read, where a continuation picks up; null when read whole. */
@@ -123,7 +130,7 @@ export async function readSafeTravTrack(
     fromAt: { lt: new Date(window.untilMs) },
     toAt: { gt: new Date(window.fromMs) },
   };
-  const [rows, deletedRows, gapRows, circles, tombstones] = await Promise.all([
+  const [rows, deletedRows, gapRows, circles, tombstones, resolutions] = await Promise.all([
     prisma.travTrackPoint.findMany({
       where: { userId, t: range, ...afterWhere },
       orderBy: [{ t: "asc" }, { seq: "asc" }],
@@ -149,6 +156,8 @@ export async function readSafeTravTrack(
       },
       select: { tS: true },
     }),
+    // ONE resolved stream (best source per day): lines, stops, km and months all read it here.
+    readResolutionsIn(userId, window),
   ]);
   const read = rows.slice(0, cap);
   const next = rows.length > cap ? rows[cap].t : null;
@@ -162,17 +171,22 @@ export async function readSafeTravTrack(
     reason: g.reason,
   }));
 
+  const resolved = resolutions.length ? read.filter((r) => keepsRow(resolutions, r)) : read;
   const rowByPoint = new WeakMap<StoredPoint, SafePointRow>();
   const byDevice = new Map<string | null, StoredPoint[]>();
-  for (const row of read) {
+  for (const row of resolved) {
     const point: StoredPoint = [row.t.getTime(), row.lat, row.lon, row.accuracyM];
     rowByPoint.set(point, row);
     const list = byDevice.get(row.deviceId) ?? [];
     list.push(point);
     byDevice.set(row.deviceId, list);
   }
-  // A deleted span breaks every device's line; a reported pause breaks its own.
-  const deletedBreaks = deleted.map((d): [number, number] => [d.fromMs, d.untilMs]);
+  // A deleted span breaks every device's line; a reported pause breaks its own; so does a jump
+  // the resolution judged (an unsupported one, or one a logged entry draws instead).
+  const deletedBreaks = [
+    ...deleted.map((d): [number, number] => [d.fromMs, d.untilMs]),
+    ...resolutions.flatMap((r) => [...r.breaks, ...r.bridges]),
+  ];
   const devices: DevicePoints[] = [...byDevice.entries()].map(([deviceId, points]) => ({
     deviceId,
     points,
@@ -203,7 +217,8 @@ export async function readSafeTravTrack(
     rowOf: (p) => rowByPoint.get(p),
     circles,
     removedAtMs,
-    storedCount: read.length,
+    storedCount: resolved.length,
+    sourceExcluded: read.length - resolved.length,
     deleted,
     paused,
     next,

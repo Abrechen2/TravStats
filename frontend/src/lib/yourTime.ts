@@ -1,4 +1,4 @@
-import { formatLocalClock, formatLocalDate } from "./displayFormat";
+import { formatLocalClock, formatLocalDate } from "./format";
 import { viewerReading, type TimeValue } from "../shared/time";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;

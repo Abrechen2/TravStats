@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import Button from "../ui/Button";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import type { EditorStation } from "../../lib/roadtrip/editorStation";
 import {
   fieldValue,
@@ -97,7 +97,7 @@ export default function StationConflictDialog({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={t("roadtrips:conflict.title")}
@@ -170,6 +170,6 @@ export default function StationConflictDialog({
           );
         })}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

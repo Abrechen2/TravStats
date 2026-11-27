@@ -1,10 +1,11 @@
+import { EntityPicker } from "../ui/EntityPicker";
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { DEFAULT_CHECK_IN_TIME, DEFAULT_CHECK_OUT_TIME } from "../lodging/stayEditorDraft";
 import { createLodging, createStay, deleteLodging, listLodgings } from "../../lib/api/lodging";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import type { Lodging, LodgingType } from "../../types/lodging";
 import {
@@ -14,6 +15,7 @@ import {
   toPickable,
   type PickableStay,
 } from "./stayPickerModel";
+import InlineError from "../ui/InlineError";
 
 export type { PickableStay } from "./stayPickerModel";
 
@@ -184,9 +186,7 @@ export default function StayPicker({
           <span className="text-sm font-semibold">{chosen.name}</span>
         </div>
         {(chosen.lat === null || chosen.lon === null) && (
-          <p className="text-xs" style={{ color: "var(--ts-warn)" }}>
-            {t("roadtrips:stay.noCoords")}
-          </p>
+          <InlineError tone="warning">{t("roadtrips:stay.noCoords")}</InlineError>
         )}
         {stays.length === 0 && (
           <p className="text-xs text-(--text-muted)">{t("roadtrips:stay.noStays")}</p>
@@ -225,51 +225,38 @@ export default function StayPicker({
 
   return (
     <div className="space-y-2 rounded-md border border-(--color-border) p-2">
-      {/* A visible label, not only a placeholder that vanishes on typing (#249). */}
-      <label className={LABEL}>
-        {t("roadtrips:stay.search")}
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("roadtrips:stay.search")}
-          className={`w-full ${FIELD}`}
-        />
-      </label>
-      {lodgings === null && <p className="text-xs text-(--text-muted)">…</p>}
-      {nearby.length > 0 && (
-        <>
-          <p className="text-xs font-semibold">{t("roadtrips:stay.nearbyTitle")}</p>
-          <ul className="max-h-40 space-y-1 overflow-y-auto">
-            {nearby.map((s) => stayRow(s, describe(s)))}
-          </ul>
-        </>
-      )}
-      {lodgings !== null && found.length === 0 && (
-        <p className="text-xs text-(--text-muted)">
-          {query ? t("roadtrips:stay.noMatch") : t("roadtrips:stay.noneNearby")}
-        </p>
-      )}
-      {found.length > 0 && (
-        <>
-          <p className="text-xs font-semibold">{t("roadtrips:stay.lodgingsTitle")}</p>
-          <ul className="max-h-40 space-y-1 overflow-y-auto">
-            {found.map((l) => (
-              <li key={l.id}>
-                <button type="button" onClick={() => setChosen(l)} className={ROW}>
-                  {l.name}
-                  {l.city && <span className="ml-2 text-xs text-(--text-muted)">{l.city}</span>}
-                  {l.stays.length === 0 && (
-                    <span className="ml-2 text-xs text-(--text-muted)">
-                      {t("roadtrips:stay.lodgingNoStay")}
-                    </span>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+      <EntityPicker
+        label={t("roadtrips:stay.search")}
+        placeholder={t("roadtrips:stay.search")}
+        query={query}
+        onQueryChange={setQuery}
+        status={lodgings === null ? "loading" : "ready"}
+        loadingText="…"
+        beforeList={
+          nearby.length > 0 ? (
+            <>
+              <p className="text-xs font-semibold">{t("roadtrips:stay.nearbyTitle")}</p>
+              <ul className="max-h-40 space-y-1 overflow-y-auto">
+                {nearby.map((s) => stayRow(s, describe(s)))}
+              </ul>
+            </>
+          ) : null
+        }
+        listTitle={t("roadtrips:stay.lodgingsTitle")}
+        emptyText={query ? t("roadtrips:stay.noMatch") : t("roadtrips:stay.noneNearby")}
+        options={found.map((l) => ({
+          id: String(l.id),
+          label: l.name,
+          detail:
+            [l.city, l.stays.length === 0 ? t("roadtrips:stay.lodgingNoStay") : null]
+              .filter(Boolean)
+              .join(" · ") || undefined,
+        }))}
+        onPick={(option) => {
+          const lodging = found.find((l) => String(l.id) === option.id);
+          if (lodging) setChosen(lodging);
+        }}
+      />
       {!creating ? (
         <button
           type="button"

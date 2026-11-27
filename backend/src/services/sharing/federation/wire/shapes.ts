@@ -200,6 +200,35 @@ export const CRUISE_LEG_SHAPE = {
   computedAt: C.instant,
 } as const satisfies Shape<Replace<CruiseLegFactField, typeof CRUISE_LEG_REFS>>;
 
+/** A hand-drawn line between two ports (2026-11-24): `[lon, lat]` pairs, as the editor stores them. */
+export const CRUISE_LEG_ROUTE_SHAPE = {
+  fromPort: port,
+  toPort: port,
+  waypoints: C.readOnly(
+    z
+      .array(z.tuple([lon, lat]))
+      .min(2)
+      .max(64)
+  ),
+} as const;
+
+/**
+ * The lines are newer than the wire (2026-11-24): a sender from before omits them, and the
+ * receiver reads that as "not said" (null), never as "no lines". A receiver from before never
+ * sees them — the outbox strips them for a peer that does not name `leg-routes`.
+ */
+const legRoutes: C.Codec = {
+  wire: z
+    .array(C.strictShape(CRUISE_LEG_ROUTE_SHAPE))
+    .max(400)
+    .nullish()
+    .transform((v) => v ?? null),
+  encode: (v) =>
+    Array.isArray(v)
+      ? v.map((r) => C.encodeShape(CRUISE_LEG_ROUTE_SHAPE, r as Record<string, unknown>))
+      : null,
+};
+
 export const CRUISE_SHAPE = {
   ship: C.readOnly(shipRef.nullable()),
   shipNameOverride: C.optText(200),
@@ -216,8 +245,9 @@ export const CRUISE_SHAPE = {
   status: C.status,
   stops: C.list(C.object(CRUISE_STOP_SHAPE), 400),
   legs: C.list(C.object(CRUISE_LEG_SHAPE), 400),
+  legRoutes,
 } as const satisfies Shape<
-  Replace<CruiseFactField, (typeof CATALOGUE_REFS)["cruise"]> | "stops" | "legs"
+  Replace<CruiseFactField, (typeof CATALOGUE_REFS)["cruise"]> | "stops" | "legs" | "legRoutes"
 >;
 
 const station = C.readOnly(stationRef.nullable());
@@ -296,6 +326,7 @@ export const FERRY_SHAPE = {
   operator: C.optText(200),
   vesselName: C.optText(200),
   ...TERMINALS,
+  manualScope: C.ferryManualScope,
 } as const satisfies Shape<FerryFactField>;
 
 const airport = C.readOnly(airportRef.nullable());

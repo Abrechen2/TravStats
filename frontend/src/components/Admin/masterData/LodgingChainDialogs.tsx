@@ -1,3 +1,4 @@
+import { SearchInput } from "../../ui/SearchInput";
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
@@ -11,6 +12,7 @@ import {
   chainErrorKey,
   type CatalogueChain,
 } from "../../../lib/api/adminLodgingChains";
+import InlineError from "../../ui/InlineError";
 
 export type ChainAction = { kind: "edit" | "merge" | "delete"; chain: CatalogueChain };
 
@@ -72,11 +74,7 @@ function useRunner(onDone: () => void): {
 }
 
 function ErrorLine({ error }: { error: string | null }): JSX.Element | null {
-  return error ? (
-    <p role="alert" className="text-sm" style={{ color: token("bad") }}>
-      {error}
-    </p>
-  ) : null;
+  return error ? <InlineError>{error}</InlineError> : null;
 }
 
 function EditDialog({ chain, onClose, onDone }: DialogProps): JSX.Element {
@@ -210,12 +208,11 @@ function MergeDialog({ chain, onClose, onDone }: DialogProps): JSX.Element {
       }
     >
       <div className="flex flex-col" style={{ gap: 12 }}>
-        <Input
-          type="search"
-          aria-label={t("admin:lodgingChains.mergeSearch")}
+        <SearchInput
+          label={t("admin:lodgingChains.mergeSearch")}
           placeholder={t("admin:lodgingChains.mergeSearch")}
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={setQuery}
         />
         <Field label={t("admin:lodgingChains.mergeTarget")} htmlFor="chain-merge-target">
           <Select
@@ -235,9 +232,7 @@ function MergeDialog({ chain, onClose, onDone }: DialogProps): JSX.Element {
           </Select>
         </Field>
         {loadFailed ? (
-          <p role="alert" className="text-sm" style={{ color: token("bad") }}>
-            {t("admin:lodgingChains.mergeSearchError")}
-          </p>
+          <InlineError>{t("admin:lodgingChains.mergeSearchError")}</InlineError>
         ) : !found ? (
           <p role="status" className="text-sm" style={{ color: token("muted") }}>
             {t("admin:lodgingChains.mergeSearching")}

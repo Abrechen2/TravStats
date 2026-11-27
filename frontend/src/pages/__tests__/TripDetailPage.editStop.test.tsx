@@ -16,6 +16,7 @@ const toasts = vi.hoisted(() => ({ addToast: vi.fn() }));
 // Shared trips (2026-10-09): the trip overview, the settings and the inbox
 // read the sharing API on mount; answered empty so no request escapes.
 vi.mock("../../components/Trips/TripPackingCard", () => ({ default: () => null }));
+vi.mock("../../components/Trips/photoLinks/TripPhotosCard", () => ({ default: () => null }));
 vi.mock("@/lib/api/sharing", () => ({
   sharingApi: {
     tripSharing: vi.fn().mockResolvedValue({
@@ -31,6 +32,10 @@ vi.mock("@/lib/api/sharing", () => ({
   },
 }));
 
+vi.mock("../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  reportPageError: (message: string, tone = "error") => toasts.addToast(tone, message),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: (...a: unknown[]) => void }) => unknown) =>
     selector({ addToast: toasts.addToast }),

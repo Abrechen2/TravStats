@@ -46,8 +46,8 @@ describe("remembered editor", () => {
     render(<RememberedEditor entryType="trip" entryId="t-1" initial={null} onSaved={onSaved} />);
     const user = userEvent.setup();
     await user.click(screen.getAllByRole("radio")[2]);
-    await user.type(screen.getByRole("textbox"), "Sommer 1998");
-    await user.click(screen.getByRole("button"));
+    await user.type(screen.getByLabelText("provenance:editor.note"), "Sommer 1998");
+    await user.click(screen.getAllByRole("button").slice(-1)[0]);
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(provenanceApi.set).toHaveBeenCalledWith("trip", "t-1", {
       provenance: "remembered",
@@ -60,7 +60,7 @@ describe("remembered editor", () => {
     vi.mocked(provenanceApi.set).mockRejectedValue(new Error("boom"));
     const onSaved = vi.fn();
     render(<RememberedEditor entryType="flight" entryId="f-1" initial={null} onSaved={onSaved} />);
-    await userEvent.setup().click(screen.getByRole("button"));
+    await userEvent.setup().click(screen.getAllByRole("button").slice(-1)[0]);
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(onSaved).not.toHaveBeenCalled();
   });
@@ -97,7 +97,7 @@ describe("provenance notices in the inbox", () => {
     render(<ProvenanceNoticesSection />);
     expect(await screen.findByText("provenance:notices.title")).toBeTruthy();
     expect(screen.getByText("provenance:notices.outsideRememberedSpan")).toBeTruthy();
-    await userEvent.setup().click(screen.getByRole("button"));
+    await userEvent.setup().click(screen.getAllByRole("button").slice(-1)[0]);
     await waitFor(() => expect(screen.queryByText("provenance:notices.title")).toBeNull());
     expect(provenanceApi.dismiss).toHaveBeenCalledWith("n-1");
   });
@@ -120,7 +120,7 @@ describe("provenance details on a detail page", () => {
     render(<ProvenanceDetails entryType="lodgingStay" entry={{ id: "s-1" }} onSaved={onSaved} />);
     const user = userEvent.setup();
     await user.click(screen.getAllByRole("radio", { hidden: true })[2]);
-    await user.click(screen.getByRole("button", { hidden: true }));
+    await user.click(screen.getAllByRole("button", { hidden: true }).slice(-1)[0]);
     await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
     expect(provenanceApi.set).toHaveBeenCalledWith("lodgingStay", "s-1", expect.any(Object));
   });

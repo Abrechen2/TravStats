@@ -78,7 +78,7 @@
     "dayOnly": "Only the date is known",
     "delayNeedsClock": "A delay needs the ride's times.",
     "distance": "Distance in km",
-    "distanceHint": "Leave empty: TravStats measures along the stored route (Transitous or OpenRailRouting), otherwise the straight line. Fill it in when the ticket names the distance.",
+    "distanceHint": "Empty: measured along the route, otherwise straight line.",
     "seat": "Seat",
     "class": "Class",
     "coach": "Coach",
@@ -136,7 +136,7 @@
     "run": "Look up",
     "searching": "Searching the timetable …",
     "needs": "This needs a train number and a departure station.",
-    "pastDay": "For past days the open timetable services rarely find anything: they only know the current timetable, a few weeks back. Just enter the journey by hand then.",
+    "pastDay": "For past days timetable services usually find nothing. Enter the journey by hand.",
     "error": "The lookup failed. You can enter the journey by hand.",
     "none": {
       "disabled": "No timetable service is switched on here for this station.",
@@ -166,7 +166,7 @@
     "unlink": "Unlink",
     "credit": "Timetable data and lines:",
     "switchedOff": "The train lookup is switched off on this instance. Enter the journey by hand.",
-    "changeNeeded": "Your destination {{station}} is not on this train's route. You change at {{stop}} — add the rest as a connection after saving.",
+    "changeNeeded": "{{station}} is not on this route. Change at {{stop}}; add the connection after saving.",
     "applyWithChange": "Take over up to the change"
   },
   "detail": {
@@ -481,7 +481,7 @@
   },
   "import": {
     "panelTitle": "Add a train ride",
-    "panelHint": "Got a booking confirmation or a ticket? Drop the mail (.eml, .msg) or the PDF here — the rides are read and you confirm each one.",
+    "panelHint": "Drop the email or PDF here. You confirm each journey.",
     "title": "Review the rides read",
     "save_one": "Save {{count}} ride",
     "save_other": "Save {{count}} rides",
@@ -495,15 +495,15 @@
     },
     "noTrain": "no train number on the ticket",
     "duplicate": "Already in your logbook (same booking, same departure) — not ticked.",
-    "possibleDuplicate": "Possibly in your logbook already: a ride leaving this stop in the same minute for the same destination, but with no line to compare — please check.",
+    "possibleDuplicate": "Maybe already logged: same minute, same route, but no line to compare. Please check.",
     "legSaved": "Saved.",
     "unresolved": "“{{name}}” is not unambiguous in the station catalogue. Pick the station:",
     "pickStations": "Pick both stations for every ticked ride — without a station the time cannot be placed in a time zone.",
     "saved_one": "{{count}} train ride saved from the ticket.",
     "saved_other": "{{count}} train rides saved from the ticket.",
     "empty": {
-      "noItinerary": "This rail mail names booking {{reference}} but no itinerary. It is in the attached ticket PDF — upload the PDF, or the mail with its attachment (.eml/.msg).",
-      "llmUnreachable": "No train ride was recognised in this document: no template knows the layout, and the AI parser is not reachable. Enter the ride by hand.",
+      "noItinerary": "The email names booking {{reference}} but no itinerary. Upload the ticket PDF.",
+      "llmUnreachable": "No journey found: no template fits and the AI is unreachable. Please enter it by hand.",
       "llmFailed": "The AI parser gave no usable answer for this document. Enter the ride by hand.",
       "demoNoLlm": "No template knows this ticket, and the AI parser is not available to the demo account.",
       "llmDisabled": "No template knows this ticket, and the administrator has switched the AI parser off.",
@@ -515,7 +515,7 @@
     },
     "reservation": {
       "title": "Apply a seat reservation",
-      "intro": "This is a reservation, not a ticket. No new journey is created — the coach and seat go onto journeys already in your logbook.",
+      "intro": "A reservation, not a ticket: coach and seat go to existing journeys.",
       "forJourney": "Reservation for an existing journey",
       "subSection": "Part of the journey: {{from}} → {{to}}",
       "seat": "Coach {{coach}}, seat {{seat}}",
@@ -540,7 +540,7 @@
       }
     },
     "booking": {
-      "appliesToAll": "These booking details apply to every ride below. The total is recorded on the first ride saved only, so it is not counted twice.",
+      "appliesToAll": "Applies to all journeys below. The total goes on the first only, so it counts once.",
       "incomplete": "Not every booking detail was recognised in the document. Fill it in here or leave it empty — nothing is made up.",
       "notRecognised": "Not recognised in the document",
       "shareLinkNote": "Deutsche Bahn share links carry no booking details. Add them here if you like — otherwise they stay empty.",
@@ -562,13 +562,13 @@
         "replacement": "Replacement bus",
         "coach": "Long-distance coach"
       },
-      "asLocalTransit": "Ticked, this leg is saved as a rail journey of this kind — it shows in the list and on the trip but does not count in the rail statistics.",
+      "asLocalTransit": "Ticked: saved as local transit, not counted in rail statistics.",
       "asBus": "Ticked, this leg is saved as a bus ride.",
-      "busDisabled": "Bus rides are switched off for your account — this leg is skipped. You can switch the bus area on in the settings.",
+      "busDisabled": "Bus is turned off, this section is skipped. Turn it on in settings.",
       "ferryNotHere": "A ferry cannot be taken over here — this leg is skipped."
     },
     "positionFromBahn": "“{{name}}”: Position from bahn.de — the stop is not in the station catalogue.",
-    "positionFromBahnConflict": "“{{name}}”: Position from bahn.de — the catalogue entry with this stop number lies {{km}} km away and was not used.",
+    "positionFromBahnConflict": "“{{name}}”: position from bahn.de; the directory entry is {{km}} km off and was not used.",
     "legSavedAsBus": "Saved as a bus ride.",
     "remember": {
       "mixed": "Choose the same for every leg of this kind to remember it as the default.",
@@ -622,7 +622,7 @@
   },
   "shareLink": {
     "title": "DB share link",
-    "description": "Shared a connection from bahn.de or the DB Navigator? Paste the link — the rides are read and you confirm each one.",
+    "description": "Paste a bahn.de or DB Navigator link. You confirm each journey.",
     "caveat": "Deutsche Bahn usually does not let shared links be read from outside. If it fails, use the ticket PDF or the booking mail.",
     "label": "Deutsche Bahn share link",
     "read": "Read link",
@@ -664,13 +664,13 @@
   },
   "bookmarklet": {
     "title": "Take a connection over from bahn.de",
-    "description": "Deutsche Bahn does not let TravStats fetch shared connections itself. This bookmark fetches the connection on bahn.de, in your browser, and hands it to TravStats — you check each ride before anything is saved.",
+    "description": "Fetches a shared bahn.de journey in your browser. You check before saving.",
     "linkLabel": "Add to TravStats",
     "dragHint": "Clicking it here does nothing — drag the link into your browser's bookmarks bar.",
     "step1": "Drag “Add to TravStats” into the bookmarks bar.",
     "step2": "Open Deutsche Bahn's share link (bahn.de/buchung/start?vbid=…) in the browser.",
     "step3": "Click the bookmark there — TravStats opens with the connection to check.",
-    "touchHint": "On an iPad or a phone nothing can be dragged: bookmark any page, edit the bookmark and replace its address with the copied code. Then open the share link in Safari or Chrome and choose the bookmark.",
+    "touchHint": "iPad/phone: create a bookmark, replace its address with the code, then use it on the link.",
     "copy": "Copy code",
     "copied": "Copied.",
     "copyFailed": "Copying did not work — select the code below and copy it by hand.",
@@ -686,7 +686,7 @@
     "toRail": "To the rail overview",
     "toSetup": "Set up the bookmark",
     "reason": {
-      "empty": "No connection arrived here. This page is opened by the “Add to TravStats” bookmark on bahn.de — a connection already taken over cannot be opened a second time.",
+      "empty": "No journey arrived. Open it with the bookmark from bahn.de; each works only once.",
       "damaged": "The data handed over is damaged or did not come from the bookmark. Nothing was taken over.",
       "tooLarge": "The connection is too large to hand over. Use the ticket PDF or the booking mail.",
       "notBahn": "The bookmark was not clicked on bahn.de. Open Deutsche Bahn's share link first, then click the bookmark.",

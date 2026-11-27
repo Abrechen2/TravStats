@@ -1,3 +1,4 @@
+import { cleanupOnPointsRemoved } from "./cleanup/onRemoved";
 import { prisma, type DbTransaction } from "../../db";
 import { Prisma } from "../../prisma";
 import { bumpHistoryGeneration } from "../locationEvidence/generation";
@@ -68,6 +69,8 @@ const handlers: PointsRemovedHandler[] = [
   invalidateOnHistoryDeleted,
   narrowOnPointsRemoved,
   projectionsOnPointsRemoved,
+  // Road-matched stretches go with the points they were matched from (rc46 extras C2).
+  cleanupOnPointsRemoved,
 ];
 
 /** Registers a further handler; returns its removal. */

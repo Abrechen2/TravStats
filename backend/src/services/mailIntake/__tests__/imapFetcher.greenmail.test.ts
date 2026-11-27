@@ -126,7 +126,7 @@ suite("IMAP fetcher against GreenMail", () => {
       expect(fetched && "raw" in fetched && fetched.raw.toString("utf8")).toContain(
         "Message-ID: <one@x>"
       );
-      expect(await session.markProcessed(1)).toBe(true);
+      expect(await session.markProcessed(1, { keepUnread: false })).toBe(true);
     });
 
     const client = admin();
@@ -138,6 +138,46 @@ suite("IMAP fetcher against GreenMail", () => {
       const flagged = rows.find((r) => r.uid === 1)!;
       expect([...flagged.flags!]).toEqual(expect.arrayContaining(["\\Seen", PROCESSED_KEYWORD]));
       expect([...rows.find((r) => r.uid === 2)!.flags!]).not.toContain(PROCESSED_KEYWORD);
+    } finally {
+      lock.release();
+      await client.logout();
+    }
+  });
+
+  it("private INBOX: headers and the download never set \\Seen; keepUnread sets only $TravStats", async () => {
+    await append(
+      buildMail({
+        messageId: "<p@x>",
+        from: "tante@family.example",
+        subject: "Privat",
+        listId: "<l.x>",
+      })
+    );
+    await append(buildMail({ messageId: "<b@x>", from: "noreply@lufthansa.com" }));
+
+    await imapFetcher.withFolder(connection(), async (session) => {
+      expect(session.supportsKeywords).toBe(true);
+      expect(session.uidNext).toBe(3);
+      expect(await session.searchUids({ since: null, before: null })).toEqual([1, 2]);
+      const headers = await session.fetchHeaders([1, 2]);
+      expect(headers.find((h) => h.uid === 1)).toMatchObject({
+        from: "tante@family.example",
+        subject: "Privat",
+        messageId: "<p@x>",
+        hasListId: true,
+      });
+      expect(headers.find((h) => h.uid === 2)?.hasListId).toBe(false);
+      await session.fetchSource(2, 1024 * 1024);
+      expect(await session.markProcessed(2, { keepUnread: true })).toBe(true);
+    });
+
+    const client = admin();
+    await client.connect();
+    const lock = await client.getMailboxLock(folder);
+    try {
+      const rows = await client.fetchAll("1:*", { uid: true, flags: true });
+      expect([...rows.find((r) => r.uid === 1)!.flags!]).toEqual([]);
+      expect([...rows.find((r) => r.uid === 2)!.flags!]).toEqual([PROCESSED_KEYWORD]);
     } finally {
       lock.release();
       await client.logout();
@@ -166,6 +206,10 @@ suite("IMAP fetcher against GreenMail", () => {
   });
 
   it("end to end: a forwarded mail from an allowed sender becomes a proposal and is flagged", async () => {
+    // A new mailbox starts "ab jetzt": an old mail is left alone, the forward after it is read.
+    await append(buildMail({ messageId: "<old@x>" }));
+    const source = await mkSource();
+    expect(await runSource(source.id)).toMatchObject({ ran: true, seen: 0 });
     await append(
       buildMail({
         deliveredTo: `trips+${token}@example.org`,
@@ -174,13 +218,12 @@ suite("IMAP fetcher against GreenMail", () => {
         authResults: "mx.example.org; dmarc=pass header.from=gmail.example",
       })
     );
-    const source = await mkSource();
     expect(await runSource(source.id)).toMatchObject({ ran: true, seen: 1, proposed: 1 });
     expect(await runSource(source.id)).toMatchObject({ ran: true, seen: 0 });
     const [row] = await prisma.mailIntakeMessage.findMany();
     expect(row).toMatchObject({ status: "proposed", userId });
     const stored = await prisma.mailIntakeSource.findUniqueOrThrow({ where: { id: source.id } });
-    expect(stored).toMatchObject({ lastError: null, lastUid: 1 });
+    expect(stored).toMatchObject({ lastError: null, lastUid: 2 });
   });
 
   it("IDLE reports new mail within seconds and stops when told to", async () => {

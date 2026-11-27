@@ -1,4 +1,6 @@
+import { Icon } from "./ui/Icon";
 import { useState, useRef } from "react";
+import Dialog from "./ui/Dialog";
 import { parseApi } from "../lib/api";
 import type { BoardingPassStage } from "../lib/api/types";
 import { useTranslation } from "../hooks/useTranslation";
@@ -12,6 +14,7 @@ import { stagesOfError } from "./boardingPass/stageCopy";
 
 import type { ScanResultData } from "./BoardingPassScanner.types";
 import { parseFailureMessage } from "../lib/parseErrorCopy";
+import Banner from "./ui/Banner";
 
 // Re-export so existing call-sites (`import { ScanResultData } from ".../BoardingPassScanner"`)
 // continue to compile without churn.
@@ -144,130 +147,109 @@ export default function BoardingPassScanner({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-(--bg-surface) rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-(--bg-surface) border-b border-border px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">{t("flights:scanner.title")}</h2>
-          <button
-            onClick={onClose}
-            disabled={scanning}
-            className="p-2 text-(--text-muted) hover:bg-(--bg-elevated) rounded-lg transition-colors"
-            aria-label={t("common:buttons.close")}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
+    <Dialog
+      open
+      onClose={onClose}
+      busy={scanning}
+      maxWidth={672}
+      title={t("flights:scanner.title")}
+    >
+      <div className="space-y-6">
+        {error && <Banner tone="error">{error}</Banner>}
+
+        {!scanning && !preview && (
+          <div>
+            <div
+              className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors border-border hover:border-(--text-muted) bg-(--bg-elevated)"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileSelect}
+                data-testid="boarding-pass-file"
               />
-            </svg>
-          </button>
-        </div>
-
-        <div className="p-6 space-y-6">
-          {error && (
-            <div role="alert" className="p-4 bg-red-900/20 border-red-800 border rounded-lg">
-              <p className="text-red-200">{error}</p>
-            </div>
-          )}
-
-          {!scanning && !preview && (
-            <div>
-              <div
-                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors border-border hover:border-(--text-muted) bg-(--bg-elevated)"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  data-testid="boarding-pass-file"
-                />
-                <div className="space-y-3">
-                  <div className="text-5xl" aria-hidden="true">
-                    🎫
-                  </div>
-                  <p className="text-lg font-medium text-white">
-                    {t("flights:scanner.uploadTitle")}
-                  </p>
-                  <p className="text-sm mt-1 text-(--text-muted)">
-                    {t("flights:scanner.clickToSelect")}
-                  </p>
-                  <p className="text-xs text-(--text-muted)">
-                    {t("flights:scanner.supportedFormats")}
-                  </p>
+              <div className="space-y-3">
+                <div className="text-5xl" aria-hidden="true">
+                  <Icon name="ticket" size={24} />
                 </div>
-              </div>
-              <div className="mt-4 p-4 bg-blue-900/20 border-blue-800 border rounded-lg">
-                <h3 className="text-sm font-semibold text-blue-200 mb-2">
-                  {t("flights:scanner.info.title")}
-                </h3>
-                <ol className="text-sm text-blue-300 space-y-1 list-decimal list-inside">
-                  <li>{t("flights:scanner.info.step1")}</li>
-                  <li>{t("flights:scanner.info.step2")}</li>
-                  <li>{t("flights:scanner.info.step3")}</li>
-                  <li>{t("flights:scanner.info.step4")}</li>
-                </ol>
+                <p className="text-lg font-medium text-white">{t("flights:scanner.uploadTitle")}</p>
+                <p className="text-sm mt-1 text-(--text-muted)">
+                  {t("flights:scanner.clickToSelect")}
+                </p>
+                <p className="text-xs text-(--text-muted)">
+                  {t("flights:scanner.supportedFormats")}
+                </p>
               </div>
             </div>
-          )}
-
-          {preview && (
-            <div className="space-y-4">
-              <div className="border-2 border-dashed border-border rounded-lg p-2">
-                <img
-                  src={preview}
-                  alt={t("flights:scanner.previewAlt")}
-                  className="max-w-full max-h-64 mx-auto object-contain rounded-sm"
-                />
-              </div>
-
-              <ul className="space-y-2">
-                {steps.map((step) => (
-                  <li
-                    key={step.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border ${STEP_TONE[step.status]}`}
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium">{t(`flights:scanner.steps.${step.id}`)}</p>
-                      {step.detail && <p className="text-sm opacity-90">{step.detail}</p>}
-                    </div>
-                    {step.status === "loading" && (
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-
-              {stages.length > 0 && <BoardingPassStages stages={stages} />}
-
-              <div className="flex flex-wrap justify-end gap-2">
-                {flights === null && deviceFlight && !scanning && (
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => onScanSuccess([deviceFlight])}
-                  >
-                    {t("flights:scanner.useDeviceBarcode")}
-                  </button>
-                )}
-                {flights && (
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => onScanSuccess(flights)}
-                  >
-                    {t("flights:scanner.review", { count: flights.length })}
-                  </button>
-                )}
-              </div>
+            <div className="mt-4 p-4 bg-blue-900/20 border-blue-800 border rounded-lg">
+              <h3 className="text-sm font-semibold text-blue-200 mb-2">
+                {t("flights:scanner.info.title")}
+              </h3>
+              <ol className="text-sm text-blue-300 space-y-1 list-decimal list-inside">
+                <li>{t("flights:scanner.info.step1")}</li>
+                <li>{t("flights:scanner.info.step2")}</li>
+                <li>{t("flights:scanner.info.step3")}</li>
+                <li>{t("flights:scanner.info.step4")}</li>
+              </ol>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {preview && (
+          <div className="space-y-4">
+            <div className="border-2 border-dashed border-border rounded-lg p-2">
+              <img
+                src={preview}
+                alt={t("flights:scanner.previewAlt")}
+                className="max-w-full max-h-64 mx-auto object-contain rounded-sm"
+              />
+            </div>
+
+            <ul className="space-y-2">
+              {steps.map((step) => (
+                <li
+                  key={step.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border ${STEP_TONE[step.status]}`}
+                >
+                  <div className="flex-1">
+                    <p className="font-medium">{t(`flights:scanner.steps.${step.id}`)}</p>
+                    {step.detail && <p className="text-sm opacity-90">{step.detail}</p>}
+                  </div>
+                  {step.status === "loading" && (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                  )}
+                </li>
+              ))}
+            </ul>
+
+            {stages.length > 0 && <BoardingPassStages stages={stages} />}
+
+            <div className="flex flex-wrap justify-end gap-2">
+              {flights === null && deviceFlight && !scanning && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => onScanSuccess([deviceFlight])}
+                >
+                  {t("flights:scanner.useDeviceBarcode")}
+                </button>
+              )}
+              {flights && (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => onScanSuccess(flights)}
+                >
+                  {t("flights:scanner.review", { count: flights.length })}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </Dialog>
   );
 }

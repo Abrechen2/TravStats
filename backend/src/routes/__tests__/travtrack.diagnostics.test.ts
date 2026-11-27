@@ -12,7 +12,7 @@ import { wipeTravTrack } from "../../services/travtrack/__tests__/fixtures";
  * The TravTrack diagnostics log (spec 2026-10-29-travtrack-diagnostics): only
  * a paired phone sends, a retry is answered from the receipt, an event with a
  * position is refused alone, the day is read per device against that device's
- * own points, and the log is gone after delete and after 14 days.
+ * own points, and the log is gone after delete and after 7 days.
  */
 
 const PREFIX = "travtrack-diag-";
@@ -218,9 +218,28 @@ describe("TravTrack — /travtrack/diagnostics", () => {
 
   it("prunes what is older than the retention", async () => {
     await post({ uploadId: "u4", events: [{ t: iso(at(8)), kind: "note", data: { code: "a" } }] });
-    expect(await pruneDiagnostics(14)).toMatchObject({ events: 0 });
+    expect(await pruneDiagnostics(7)).toMatchObject({ events: 0 });
     const pruned = await pruneDiagnostics(0, Date.now() + MIN);
     expect(pruned.events).toBeGreaterThanOrEqual(1);
     expect(await prisma.travTrackDiagnosticEvent.count({ where: { userId } })).toBe(0);
+  });
+
+  it("keeps at most the per-account cap, removing the oldest first (perf audit item 8)", async () => {
+    await post({
+      uploadId: "u5",
+      events: [1, 2, 3, 4, 5].map((h) => ({
+        t: iso(at(h)),
+        kind: "note",
+        data: { code: `c${h}` },
+      })),
+    });
+    const pruned = await pruneDiagnostics(7, Date.now(), 2);
+    expect(pruned.overCap).toBeGreaterThanOrEqual(3);
+    const left = await prisma.travTrackDiagnosticEvent.findMany({
+      where: { userId },
+      orderBy: { t: "asc" },
+      select: { t: true },
+    });
+    expect(left.map((e) => e.t.toISOString())).toEqual([iso(at(4)), iso(at(5))]);
   });
 });

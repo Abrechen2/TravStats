@@ -5,6 +5,9 @@ import type { RegistryPage } from "../types";
 export const TT_DATEN_PAGE: RegistryPage = {
   ...{"id":"tt-daten","area":"track","de":"Daten & Quellen","en":"Data & sources","level":"standard","audience":"all","demoLocked":false},
   sections: [
+      {"id":"tt-daten-qualitaet","de":"Tage mit fragwürdigen Spuren","en":"Days with questionable tracks","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
+        {"id":"ttquality","mount":"ttQuality","kind":"list","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Tage mit fragwürdigen Spuren","en":"Days with questionable tracks","terms":{"de":"Mehrere Quellen, niedrige Qualität oder Ausreißer Quelle wählen, Ausreißer verwerfen oder einen Zeitraum löschen. Gespeicherte Punkte bleiben unverändert.","en":"Several sources, low quality or outliers Choose a source, discard outliers or delete a period. Stored points stay unchanged."}},
+      ]},
       {"id":"tt-daten-quellen","de":"Quellen","en":"Sources","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
         {"id":"dawcopy","mount":"ttSources","kind":"action","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Aus Dawarich übernehmen","en":"Copy from Dawarich","terms":{"de":"Ganz oder ein Zeitraum Braucht deine eigene Dawarich-Verbindung. Lässt sich anhalten und fortsetzen.","en":"All or a period Needs your own Dawarich connection. Can be paused and resumed."}},
         {"id":"dawimp","mount":"ttSources","kind":"status","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Letzte Übernahme","en":"Last copy","terms":{"de":"","en":""}},

@@ -196,7 +196,7 @@
     "createPortError": "Could not create the port",
     "via_geocoder": "Map search (OpenStreetMap)",
     "searchError": "Port search failed - please try again",
-    "geocodeRateLimited": "The online port search (OpenStreetMap) is busy and did not answer. Search again in a minute, or add the port by hand.",
+    "geocodeRateLimited": "Port search is busy. Try again in a minute or add the port yourself.",
     "geocodeUnavailable": "The online port search (OpenStreetMap) cannot be reached right now. Search again later, or add the port by hand.",
     "shipSearchError": "Ship search failed – please try again. While the search is not answering, better not add a new ship: it may already be in the catalogue.",
     "shipAlreadyExists": "\"{{name}}\" is already in the catalogue and was selected – no second ship was created.",
@@ -269,7 +269,7 @@
       "startDate": "departure date",
       "stopPort": "port for day {{day}} (or “At sea”)"
     },
-    "identityHint": "One of these is required: ship, line, route name or departure port – otherwise the cruise cannot be recognised.",
+    "identityHint": "Required: ship, line, route name or departure port.",
     "errors": {
       "endBeforeStart": "The arrival date is before the departure date.",
       "deck": "A deck is a whole number from 1 to 30.",
@@ -310,7 +310,7 @@
     "shipUnmatchedHint": "Stored as free text. You can link the ship in the editor.",
     "stopsLabel": "Stops",
     "unmatchedTitle": "Unmatched ports",
-    "unmatchedHint": "These ports weren't found in the catalog and were marked as unresolved — they stay ports (not sea days). Pick the matching port below, or resolve them later in the editor.",
+    "unmatchedHint": "These ports are not in the catalogue. Pick the right one below or resolve them later.",
     "alreadyImported": "{{count}} booking(s) had already been read in."
   },
   "stats": {
@@ -345,7 +345,8 @@
       "baseTotalNone": "None of these cruises has a rate to {{currency}} recorded — hence no total rather than a zero.",
       "baseTotalExcluded_one": "{{count}} cruise in a foreign currency without a rate is not included",
       "baseTotalExcluded_other": "{{count}} cruises in a foreign currency without a rate are not included",
-      "noTotalNote": "The rows above stay in their own currency: a cruise stores a price and a currency, and simply adding amounts in different currencies would produce a figure nobody ever paid. The total below brings everything into the base currency instead — amounts already in it unchanged, all others at the recorded rate — and names what it had to leave out."
+      "noTotalNote": "Amounts stay in their own currency; the total below converts them.",
+      "noTotalNoteMore": "Simply adding different currencies would give a figure nobody paid. The total converts everything into the base currency at the recorded rate and names what it had to leave out."
     },
     "fun": {
       "title": "Curiosities",
@@ -439,7 +440,7 @@
   },
   "tracks": {
     "title": "Recorded tracks",
-    "intro": "A GPS recording replaces a leg's computed sea route when it reaches both ports in sailing order (within 10 km, e.g. at anchor) and at most a quarter of the way is missing. Missing stretches are bridged with a straight line and counted.",
+    "intro": "A GPS track replaces the computed route when it reaches both ports.",
     "upload": "Upload track (GPX, TCX, FIT)",
     "uploading": "Uploading …",
     "pullVoyage": "Load whole voyage from Dawarich",
@@ -516,8 +517,8 @@
   "unresolved": {
     "title_one": "One unresolved port",
     "title_other": "{{count}} unresolved ports",
-    "incomplete_one": "Until it is matched to a catalogue entry it counts as a port call but not as a port – the port count reads {{matched}} (+{{count}} unresolved). The country count and the map leave it out, and the sea miles of the legs to and from it are missing.",
-    "incomplete_other": "Until they are matched to catalogue entries they count as port calls but not as ports – the port count reads {{matched}} (+{{count}} unresolved). The country count and the map leave them out, and the sea miles of the legs to and from them are missing.",
+    "incomplete_one": "Unresolved: counts as a call, not a port ({{matched}} +{{count}}). Map, countries and miles are missing.",
+    "incomplete_other": "Unresolved: count as calls, not ports ({{matched}} +{{count}}). Map, countries and miles are missing.",
     "days_one": "Day {{days}}",
     "days_other": "Days {{days}}",
     "candidates": "Matches in the port catalogue",
@@ -536,7 +537,7 @@
     "titleLoading": "Comparing with the saved itinerary",
     "loading": "Loading the saved itinerary …",
     "loadFailed": "The saved itinerary could not be loaded.",
-    "intro": "Tick what to take from the new plan. Your excursion notes, all-aboard times and entered dates stay – only when a day gets another port do the old port's times go. A day missing from the new plan is only removed if you tick it.",
+    "intro": "Tick what to take over. Notes stay, unless a day gets a different port.",
     "added": "New in the plan: day {{day}} · {{title}}",
     "removed": "No longer in the plan: day {{day}} · {{title}}",
     "port": "Day {{day}}: {{from}} → {{to}}",
@@ -585,7 +586,7 @@
       "missing": "missing from the logbook",
       "unchecked": "could not be checked"
     },
-    "hint": "“Add missing flights” looks in the logbook first (flight number and departure day) and adds only what is not there – a flight is never created twice.",
+    "hint": "Only creates flights not yet in your logbook — never twice.",
     "retry_one": "Add missing flight",
     "retry_other": "Add {{count}} missing flights",
     "retryFailed": "Not all flights could be added. You can try again.",

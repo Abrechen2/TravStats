@@ -48,6 +48,11 @@ export const documentIdsBodySchema = z.object({
     .describe("Kept documents (POST /documents) to file with the new entry"),
 });
 
+/** `GET /documents/:id/link-candidates?q=` — a text search over the whole account's entries. */
+export const linkCandidatesQuerySchema = z.object({
+  q: z.string().trim().max(100).optional(),
+});
+
 export const entryRefSchema = z.object({ type: z.enum(ENTRY_TYPES), id: uuid });
 
 /** Multipart text fields arrive as strings; an empty one means "not sent". */
@@ -76,6 +81,19 @@ export const documentUploadFieldsSchema = documentUploadFieldsObject.refine(
 
 export const updateDocumentSchema = z
   .object({
+    displayName: z
+      .string()
+      .trim()
+      .min(1)
+      .max(200)
+      .optional()
+      .describe("The name shown on screen (stored as the original name; the bytes keep theirs)"),
+    note: z
+      .string()
+      .max(2000)
+      .nullable()
+      .optional()
+      .describe("The owner's remark; null or blank clears it"),
     kind: z.enum(DOCUMENT_KINDS).nullable().optional(),
     issuedOn: documentDateSchema.nullable().optional(),
     entry: entryRefSchema.nullable().optional(),
@@ -120,6 +138,7 @@ export const documentDtoSchema = z.object({
         "non-PDF, a PDF whose page tree could not be read, and documents kept before 2.7. Never 0."
     ),
   originalName: z.string().nullable(),
+  note: z.string().nullable().optional().describe("The owner's own remark; null = none"),
   displayName: z.string(),
   issuedOn: z.string().nullable(),
   rentalCategory: z

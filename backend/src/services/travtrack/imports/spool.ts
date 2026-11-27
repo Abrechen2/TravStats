@@ -19,14 +19,21 @@ import { sniffFormat, XML_IMPORT_MAX_BYTES } from "./trackFormat";
  *
  * The directory is the system's temp directory, not `uploads/`: these files
  * live for the length of one import, belong in no backup, and a leftover of a
- * crash is swept (older than a day) the first time the directory is used.
+ * crash is swept at start (`sweepSpoolAtStart`: what processes that are gone
+ * left — no import survives a restart, a resume needs the file again).
  *
  * The upload is judged WHILE it streams in: the first bytes name the format,
  * and a file that is not JSON is aborted with 413 the moment it passes the XML
  * cap, instead of after 200 MB have been taken.
  */
 
-export const SPOOL_DIR = path.join(os.tmpdir(), "travstats-travtrack-imports");
+export const SPOOL_ROOT = path.join(os.tmpdir(), "travstats-travtrack-imports");
+/**
+ * This process's own directory under the root, named `<pid>-<random>`. The
+ * root is shared — two dev servers, or a second container on one host's temp
+ * directory — so a start may only remove what a process that is gone left.
+ */
+export const SPOOL_DIR = path.join(SPOOL_ROOT, `${process.pid}-${randomUUID().slice(0, 8)}`);
 const STALE_MS = 24 * 3600_000;
 const HEAD_BYTES = 4096;
 let swept = false;
@@ -36,9 +43,11 @@ function ensureDir(): void {
   if (swept) return;
   swept = true;
   try {
-    for (const name of fs.readdirSync(SPOOL_DIR)) {
-      const file = path.join(SPOOL_DIR, name);
-      if (Date.now() - fs.statSync(file).mtimeMs > STALE_MS) fs.rmSync(file, { force: true });
+    // Files directly under the root are the layout before per-process directories.
+    for (const name of fs.readdirSync(SPOOL_ROOT)) {
+      const file = path.join(SPOOL_ROOT, name);
+      const stat = fs.statSync(file);
+      if (stat.isFile() && Date.now() - stat.mtimeMs > STALE_MS) fs.rmSync(file, { force: true });
     }
   } catch (err) {
     logger.warn({
@@ -46,6 +55,55 @@ function ensureDir(): void {
       error: err instanceof Error ? err.message : String(err),
     });
   }
+}
+
+/** Whether a process of that id runs (EPERM: it does, under another user). */
+function pidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+/**
+ * At start: remove what imports of processes that are gone left — their
+ * uploads and points files (`pointSpool.ts`), each up to a whole track file in
+ * size. A directory whose process is gone goes; so does one named with this
+ * process's own id that is not its own (an earlier run in a container, where
+ * the server is pid 1 every time). A living process's directory is left
+ * alone. Files directly under the root (the earlier layout) go when they are
+ * older than this process. Returns how many entries went.
+ */
+export function sweepSpoolAtStart(
+  startedAtMs: number = Date.now() - process.uptime() * 1000
+): number {
+  let removed = 0;
+  try {
+    if (!fs.existsSync(SPOOL_ROOT)) return 0;
+    for (const name of fs.readdirSync(SPOOL_ROOT)) {
+      const entry = path.join(SPOOL_ROOT, name);
+      if (entry === SPOOL_DIR) continue;
+      const stat = fs.statSync(entry);
+      if (stat.isDirectory()) {
+        const pid = Number(/^(\d+)-/.exec(name)?.[1] ?? NaN);
+        if (!Number.isInteger(pid) || (pid !== process.pid && pidAlive(pid))) continue;
+        fs.rmSync(entry, { recursive: true, force: true });
+        removed++;
+      } else if (stat.mtimeMs < startedAtMs) {
+        fs.rmSync(entry, { force: true });
+        removed++;
+      }
+    }
+    if (removed > 0) logger.info({ operation: "travtrack.import.spool_start_sweep", removed });
+  } catch (err) {
+    logger.warn({
+      operation: "travtrack.import.spool_sweep_failed",
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+  return removed;
 }
 
 export function newSpoolPath(): string {

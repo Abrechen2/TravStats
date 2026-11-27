@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import type { JSX } from "react";
 
 import SuggestionChips from "../common/SuggestionChips";
@@ -119,15 +120,11 @@ export function StayEditorBoardSection({
         })}
       </div>
       {suggestedBoard !== null && board === "none" && (
-        <button
-          type="button"
-          onClick={(): void => onBoardChange(suggestedBoard)}
-          className="mt-2 block rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent)"
-        >
+        <Chip dashed size="sm" className="mt-2" onClick={(): void => onBoardChange(suggestedBoard)}>
           {t("lodging:stayEditor.boardSuggestion", {
             board: t(`lodging:board.${suggestedBoard}`),
           })}
-        </button>
+        </Chip>
       )}
     </StayEditorSection>
   );

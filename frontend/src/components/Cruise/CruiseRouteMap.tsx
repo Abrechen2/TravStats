@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { SharedMapOverlays } from "../map/SharedMapOverlays";
 import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -43,6 +44,7 @@ import {
 } from "./routeEditorState";
 import { reuseMapsEnabled } from "../../lib/mapReuse";
 import WebGLGuard from "../map/WebGLGuard";
+import InlineError from "../ui/InlineError";
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,
@@ -731,13 +733,9 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
         {editedLegKeys.size > 0 && (
           <span className="text-xs text-(--text-muted)">{t("cruise:routeEditor.editedBadge")}</span>
         )}
-        {saveError && !editMode && (
-          <span className="text-sm text-(--danger)">{t("cruise:routeEditor.saveFailed")}</span>
-        )}
+        {saveError && !editMode && <InlineError>{t("cruise:routeEditor.saveFailed")}</InlineError>}
         {geometryFailed && !geometry && (
-          <span role="alert" className="text-sm text-(--danger)">
-            {t("cruise:routeEditor.geometryFailed")}
-          </span>
+          <InlineError>{t("cruise:routeEditor.geometryFailed")}</InlineError>
         )}
       </div>
 
@@ -783,7 +781,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
                 onClick={onCancel}
                 aria-label={t("cruise:routeEditor.cancel")}
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </div>
           )}

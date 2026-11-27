@@ -8,8 +8,8 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { countryName } from "../../../lib/countryFlag";
-import { formatDate as formatUserDate } from "../../../lib/displayFormat";
 import { rgb, tokens } from "../../../theme/tokens";
+import { CountryLabel } from "../../../lib/countryFlag";
 
 export type TFn = ReturnType<typeof useTranslation>["t"];
 
@@ -103,11 +103,12 @@ export function Place({
   country?: string | null;
   locale: string;
 }): JSX.Element | null {
-  const parts = [city, countryName(country, locale)].filter((s): s is string => !!s);
-  if (parts.length === 0) return null;
+  if (!city && !countryName(country, locale)) return null;
   return (
     <div className="mb-2 text-[11px]" style={{ color: tokens.color.faint }}>
-      {parts.join(", ")}
+      {city}
+      {city && country ? ", " : null}
+      {country ? <CountryLabel country={country} height={11} /> : null}
     </div>
   );
 }
@@ -161,35 +162,7 @@ export function Actions({
 
 // ─── Formatters ───────────────────────────────────────────────────
 
-export function formatKm(km: number, locale: string): string {
-  return `${formatKmNumber(km, locale)} km`;
-}
-
-/**
- * The thousands separator follows the READER.
- *
- * It was `de-DE`, from when this helper belonged to the globe card alone and
- * the globe was a German-first surface. It governs the flat map's card too
- * now, where `MapTooltip` used the reader's locale — and to an English reader
- * "3.931 km" is not 3931 but 3.9.
- */
-export function formatKmNumber(km: number, locale: string): string {
-  if (km < 1000) return Math.round(km).toString();
-  return Math.round(km).toLocaleString(locale);
-}
-
 export function capitalize(s: string): string {
   if (!s) return s;
   return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-/** In the user's date format (Settings → Display); the locale no longer decides. */
-export function formatDate(iso: string, _locale: string): string {
-  return formatUserDate(iso) || iso.slice(0, 10);
-}
-
-export function formatDuration(minutes: number, t: TFn): string {
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes - h * 60);
-  return t("map:globe.pinned.durationHours", { h, m });
 }

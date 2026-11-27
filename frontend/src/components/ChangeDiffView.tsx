@@ -4,9 +4,10 @@
  * Visual representation of changes between original and proposed data
  */
 
+import { Icon } from "./ui/Icon";
 import { useState } from "react";
 import { useTranslation } from "../hooks/useTranslation";
-import { formatDateTime } from "../lib/displayFormat";
+import { formatDateTime } from "../lib/format";
 
 export interface ChangeEntry {
   field: string;
@@ -90,21 +91,11 @@ export default function ChangeDiffView({
                   {getChangeIcon(change.type)}
                   <span className="font-medium text-(--text-primary)">{label(change.field)}</span>
                 </div>
-                <svg
-                  className={`w-4 h-4 text-(--text-muted) transition-transform ${
-                    isExpanded ? "transform rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                <Icon
+                  name="chevron-down"
+                  size={16}
+                  className={`text-(--text-muted) transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                />
               </button>
               {isExpanded && (
                 <div className="mt-3 space-y-2 pt-3 border-t border-border">

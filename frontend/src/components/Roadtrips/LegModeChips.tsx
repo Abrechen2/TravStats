@@ -7,6 +7,7 @@ import { logger } from "../../lib/logger";
 import { isProtectedSource } from "../../lib/roadtrip/reorderImpact";
 import { saveErrorKey } from "../../lib/saveErrorMessage";
 import type { LegMode, TourLeg } from "../../types/tour";
+import InlineError from "../ui/InlineError";
 
 const MODES = ["road", "ferry"] as const satisfies readonly LegMode[];
 
@@ -112,11 +113,7 @@ export default function LegModeChips({
       {protectedLine && (
         <span className="t-caption">{t("roadtrips:editor.legMode.protected")}</span>
       )}
-      {notice && (
-        <span role="alert" className="t-caption" style={{ color: "var(--ts-warn)" }}>
-          {notice}
-        </span>
-      )}
+      {notice && <InlineError tone="warning">{notice}</InlineError>}
     </div>
   );
 }

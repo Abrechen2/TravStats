@@ -30,6 +30,10 @@ vi.mock("../../hooks/useTranslation", () => ({
 }));
 
 const mockAddToast = vi.fn();
+vi.mock("../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  reportPageError: (message: string, tone = "error") => mockAddToast(tone, message),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: typeof mockAddToast }) => unknown) =>
     selector({ addToast: mockAddToast }),
@@ -148,7 +152,7 @@ describe("DiagnosticExportModal — Report Bug", () => {
     await screen.findByRole("textbox");
 
     expect(screen.queryByText(/Alle persönlichen Daten wurden entfernt/)).toBeNull();
-    expect(screen.getByText(/Nicht enthalten: Log-Texte, Namen/)).toBeInTheDocument();
+    expect(screen.getByText(/Nicht enthalten: Texte, Namen/)).toBeInTheDocument();
     expect(screen.getByText(/Dateiname:Zeile/)).toBeInTheDocument();
   });
 

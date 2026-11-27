@@ -1,3 +1,4 @@
+import type { StopEvidenceView } from "./stopEvidence";
 /**
  * The leg model of a TravTrack day (spec 2026-11-03-travtrack-legs, §1/§2).
  * The wire shapes are the contract the Companion built against: change them
@@ -47,6 +48,8 @@ export type Stop = {
   untilMs: number;
   anchor: { lat: number; lon: number };
   stayRef: { id: string; status: string } | null;
+  /** Where the suggestion came from and how sure it is; absent when the stay holds no evidence (additive). */
+  evidence?: StopEvidenceView;
   /** The name the owner accepted for this stop (spec "As built — stop places"); null until then. */
   place: StopPlace | null;
   /** Set when the stop is a run of fixes folded into a fixed place or a lodging; null otherwise. */
@@ -112,4 +115,11 @@ export type LegOverride = {
 };
 
 /** A stay suggestion a stop may point at. */
-export type StayCandidate = { id: string; status: string; fromMs: number; untilMs: number };
+export type StayCandidate = {
+  id: string;
+  status: string;
+  fromMs: number;
+  untilMs: number;
+  /** The stay finding's evidence JSON; read only by `stopEvidenceView`. */
+  evidence?: unknown;
+};

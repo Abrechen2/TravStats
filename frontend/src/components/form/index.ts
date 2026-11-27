@@ -16,7 +16,7 @@ export { focusFirstError } from "./focusFirstError";
 export { useSaveOnce } from "./useSaveOnce";
 export { useFormFailure } from "./useFormFailure";
 /** The "Änderungen verwerfen?" dialog, for a form that asks outside Modal/Dialog. */
-export { DiscardQuestion } from "../Modal";
+export { DiscardQuestion } from "../ui/DiscardQuestion";
 export type { SaveOutcome } from "./useSaveOnce";
 /**
  * The help affordance for a field (forgejo#249): a real button, so it opens on

@@ -12,15 +12,15 @@ import type { JSX } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import Modal from "../../Modal";
+import Dialog from "../../ui/Dialog";
 
 afterEach(cleanup);
 
 function DirtyModal({ onClose }: { onClose: () => void }): JSX.Element {
   return (
-    <Modal open onClose={onClose} title="Formular" dirty>
+    <Dialog open onClose={onClose} title="Formular" dirty>
       <p>Inhalt</p>
-    </Modal>
+    </Dialog>
   );
 }
 

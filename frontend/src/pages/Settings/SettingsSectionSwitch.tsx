@@ -1,6 +1,7 @@
 import TravTrackRecordingSection from "../../components/Settings/travtrack/TravTrackRecordingSection";
 import TravTrackPlacesSection from "../../components/Settings/travtrack/TravTrackPlacesSection";
 import TravTrackZonesSection from "../../components/Settings/travtrack/TravTrackZonesSection";
+import TravTrackQualitySection from "../../components/Settings/travtrack/TravTrackQualitySection";
 import TravTrackDetectSection from "../../components/Settings/travtrack/TravTrackDetectSection";
 import CalendarSourcesSection from "../../components/Settings/suggestionSources/CalendarSourcesSection";
 import PluginsSection from "../../components/Settings/suggestionSources/PluginsSection";
@@ -68,6 +69,7 @@ export default function SettingsSectionSwitch({
             profile={page.profile}
             uploadingProfilePicture={page.uploadingProfilePicture}
             removingProfilePicture={page.removingProfilePicture}
+            avatarError={page.avatarError}
             onAvatarUpload={page.handleAvatarUpload}
             onAvatarDelete={page.handleAvatarDelete}
           />
@@ -130,6 +132,8 @@ export default function SettingsSectionSwitch({
       return <TravTrackPlacesSection />;
     case "ttZones":
       return <TravTrackZonesSection />;
+    case "ttQuality":
+      return <TravTrackQualitySection />;
     case "ttDetect":
       return <TravTrackDetectSection />;
     case "ttCalendar":

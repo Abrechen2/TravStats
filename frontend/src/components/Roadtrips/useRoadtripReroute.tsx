@@ -5,6 +5,7 @@ import { roadtripRerouteApi } from "../../lib/api/rerouteRuns";
 import RerouteRunStatus from "../Routing/RerouteRunStatus";
 import { useRerouteRun } from "../Routing/useRerouteRun";
 import type { OverflowEntry } from "../ui/OverflowMenu";
+import InlineError from "../ui/InlineError";
 
 /**
  * "Alle Etappen neu routen" in the roadtrip's ⋯ (forgejo#436): the account's own
@@ -45,9 +46,7 @@ export function useRoadtripReroute(
       error || run ? (
         <div style={{ marginTop: "var(--ts-space-sm)" }} data-testid="roadtrip-reroute">
           {error && error !== "loadFailed" && (
-            <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-              {t(`routing:roadtrip.${error}`)}
-            </p>
+            <InlineError>{t(`routing:roadtrip.${error}`)}</InlineError>
           )}
           {run && (
             <RerouteRunStatus

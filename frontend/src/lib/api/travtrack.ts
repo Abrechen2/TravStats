@@ -1,6 +1,8 @@
+import { drawnDay, type TravTrackDayCleanup } from "./travtrackCleanup";
 import { api } from "./client";
 import { apiErrorMachineCode } from "../apiError";
 import type { TravTrackLeg, TravTrackPointDetail, TravTrackStop } from "./travtrackLegs";
+import type { BridgeLine, DaySourceSummary, EstimatedGap } from "./travtrackDaySources";
 
 /**
  * TravTrack, the own location history (TravTrack plan, phase 2): what it does
@@ -142,7 +144,17 @@ export interface TravTrackDay {
    * Why the day may draw fewer points than were stored: counts of fixes the privacy cut hid and
    * fixes left out as implausible; absent on an older server (then the reason is unknown).
    */
-  omitted?: { privacyZone: number; implausible: number };
+  omitted?: { privacyZone: number; implausible: number; sourceExcluded?: number };
+  /** Which source the day is drawn from (best source per day); absent on an older server. */
+  sources?: DaySourceSummary;
+  /** Long silences drawn dashed as estimated, never counted; absent on an older server. */
+  estimated?: EstimatedGap[];
+  /** Jumps and gaps a logged entry explains, drawn with its line; absent on an older server. */
+  bridgeLines?: BridgeLine[];
+  /** The optional cleanup (smoothing, road matches); absent on an older server. */
+  cleanup?: TravTrackDayCleanup;
+  /** Set by `drawnDay` while `segments` holds the smoothed stretches ("geglättet"). */
+  smoothedShown?: true;
 }
 
 export type TravTrackExportFormat = "gpx" | "json";
@@ -241,15 +253,29 @@ export const travTrackApi = {
   deleteDays: async (span: DaySpan): Promise<number> =>
     (await api.delete<{ deleted: number }>("/travtrack/points", { params: span })).data.deleted,
   /** The last position, or null while the history holds none. */
+  /** Every point of one stretch (`[fromMs, untilMs]`, the end included); the count deleted. */
+  deleteSpan: async (span: { fromMs: number; untilMs: number }): Promise<number> =>
+    (
+      await api.delete<{ deleted: number }>("/travtrack/points", {
+        params: {
+          from: new Date(span.fromMs).toISOString(),
+          to: new Date(span.untilMs + 1).toISOString(),
+        },
+      })
+    ).data.deleted,
+
   lastSeen: async (): Promise<TravTrackLastSeen | null> =>
     (await api.get<{ lastSeen: TravTrackLastSeen | null }>("/travtrack/last-seen")).data.lastSeen,
   /** `includeImplausible` also draws the coarse fixes normally left out; the privacy cut still holds. */
   day: async (date: string, includeImplausible = false): Promise<TravTrackDay> =>
-    (
-      await api.get<TravTrackDay>("/travtrack/day", {
-        params: includeImplausible ? { date, includeImplausible: 1 } : { date },
-      })
-    ).data,
+    // As drawn: the smoothed stretches in place of the raw ones while smoothing is on.
+    drawnDay(
+      (
+        await api.get<TravTrackDay>("/travtrack/day", {
+          params: includeImplausible ? { date, includeImplausible: 1 } : { date },
+        })
+      ).data
+    ),
   /** The explored zoom-14 tiles in a box (plan L1); zones drawn as explored ground. */
   explored: async (box: ExploredBox): Promise<ExploredCell[]> =>
     (
@@ -388,6 +414,10 @@ export function trackErrorKey(err: unknown): string {
       return "track:explored.preparing";
     case "LOCATION_ZONE_LIMIT":
       return "track:errors.zoneLimit";
+    case "TRAVTRACK_SOURCE_NOT_ON_DAY":
+      return "track:errors.sourceNotOnDay";
+    case "TRAVTRACK_DAY_NO_POINTS":
+      return "track:errors.dayNoPoints";
     default:
       return (err as { response?: unknown } | null)?.response
         ? "track:errors.generic"

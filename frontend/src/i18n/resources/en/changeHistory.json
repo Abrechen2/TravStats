@@ -17,6 +17,7 @@
   "omitted": "too large to keep",
   "emptyValue": "empty",
   "deleted": "Deleted",
+  "created": "Created",
   "restoreOf": "Restore",
   "columns": {
     "when": "When",
@@ -70,7 +71,8 @@
     "operator": "Operator",
     "trainNumber": "Train number",
     "delayMinutes": "Delay (min)",
-    "purpose": "Purpose"
+    "purpose": "Purpose",
+    "purposeKey": "Purpose (detail)"
   },
   "menu": "Change history",
   "window_one": "History of the last month",

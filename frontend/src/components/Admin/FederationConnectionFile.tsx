@@ -10,6 +10,7 @@ import { downloadBlob } from "../../lib/export";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { Button } from "../ui";
+import InfoLine from "../ui/InfoLine";
 
 const NS = "federation";
 const errorKeyOf = (error: unknown) => `${NS}.error.${federationErrorCode(error) ?? "generic"}`;
@@ -134,7 +135,7 @@ export function ConnectionQr(props: {
           />
         </div>
       )}
-      <p className="t-caption">{t(`${NS}.qrHint`)}</p>
+      <InfoLine text={t(`${NS}.qrHint`)} more={t(`${NS}.qrHintMore`)} />
     </div>
   );
 }

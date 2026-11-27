@@ -1,6 +1,6 @@
 {
   "title": "External services",
-  "intro": "Everything TravStats does not do itself: flight data, maps, photos, AI, sync and mail. Here you decide what the instance uses and what accounts may set up themselves. New services stay off until you switch them on.",
+  "intro": "All outside services. New services stay off until you turn them on.",
   "loading": "Loading services …",
   "noResults": "No service matches the search and filter.",
   "summary": {
@@ -10,7 +10,7 @@
   },
   "banner": {
     "title": "Best experience without paying",
-    "summary": "{{active}} of {{total}} recommended services are set up. All of them are free or come with a free credit that is enough for a private logbook.",
+    "summary": "{{active}} of {{total}} recommended services set up. All free or with free credit.",
     "show": "Show recommended"
   },
   "search": {
@@ -176,7 +176,7 @@
     "withdraw": "Withdraw approval",
     "admin": {
       "title": "Allow {{name}}?",
-      "intro": "When the local parser finds nothing, TravStats sends the text of an import to this provider. Read first, then confirm.",
+      "intro": "If the local parser finds nothing, the import text goes to this provider.",
       "whatKey": "What leaves",
       "whatText": "Text from e-mails and PDFs, at most 12,000 characters per import. No photos, no passwords, no other entries.",
       "whereKey": "Where to",
@@ -190,7 +190,7 @@
     },
     "account": {
       "title": "Send your imports to {{name}}?",
-      "intro": "Your instance allows {{name}} as a second chance for bookings the local parser does not understand. You decide whether your documents go there.",
+      "intro": "{{name}} helps with unreadable bookings. You decide whether your documents go there.",
       "goes": "What leaves: the text of the e-mail or PDF, at most 12,000 characters.",
       "stays": "What does not leave: photos, passwords, your other entries.",
       "when": "When: only during an import, only when the local parser finds nothing.",
@@ -201,7 +201,7 @@
   },
   "connections": {
     "title": "What accounts may connect themselves",
-    "hint": "Each account sets these services up with its own credentials under Settings › Services. You only decide whether that is allowed.",
+    "hint": "Each account sets these up itself. You only decide whether it is allowed.",
     "usage_one": "{{count}} account connected",
     "usage_other": "{{count}} accounts connected",
     "dawarich": {
@@ -227,10 +227,10 @@
   },
   "pointer": {
     "text": "All external services – switches, keys and tests – are collected under",
-    "link": "External services"
+    "link": "Settings → Server → Services"
   },
   "account": {
-    "intro": "Your connections to Immich, Dawarich, Strava and your storage, own keys and your AI approvals. What the instance provides for everyone is below.",
+    "intro": "Your connections, keys and AI consents. Instance services are below.",
     "sections": {
       "connections": "My connections",
       "ownKeys": "Own keys",
@@ -337,6 +337,10 @@
       "primaryUrl": "Address of the custom rate source",
       "fallbackSource": "Second rate source",
       "fallbackUrl": "Address of the second rate source"
+    },
+    "mapMatching": {
+      "url": "Router address",
+      "engine": "Router type"
     }
   },
   "services": {
@@ -516,7 +520,7 @@
       "dataOut": "Stays between TravStats and your PhotoPrism.",
       "quotaLine": "your own server",
       "adminPurpose": "The instance's connection to a PhotoPrism; accounts connect their own",
-      "setup": "How to connect PhotoPrism: in PhotoPrism open Settings → Account → Apps and Devices, create an app password and give it the scope “albums photos files config” (or “*”). Without “config” TravStats cannot load thumbnails. TravStats only needs read access."
+      "setup": "Create a PhotoPrism app password with “albums photos files config”. Read access only."
     },
     "strava": {
       "name": "Strava",
@@ -667,7 +671,7 @@
       "why": "Fetches booking confirmations over IMAP from a mail folder or through the instance's forwarding address, so nobody has to paste them by hand.",
       "cost": "Free.",
       "quota": "–",
-      "dataOut": "Nothing leaves the server except the login to your own mail server. If a cloud AI provider is allowed, it reads the mails too.",
+      "dataOut": "Only the login to your mail server. With cloud AI allowed, it reads the mails too.",
       "getKeyUrl": "https://travstats.de/docs/",
       "getKeyLabel": "Guide",
       "quotaLine": "–"
@@ -776,6 +780,21 @@
       "quota": "60 requests an hour per plugin.",
       "dataOut": "A stop's time and rounded coordinates, never the account, name, e-mail or location history.",
       "adminPurpose": "Accounts add their own plugins; switched off, no account asks any more"
+    },
+    "aiSuggestionHelp": {
+      "name": "AI help for unclear suggestions",
+      "purpose": "A language model suggests which place an unclear stop was",
+      "why": "For a stay with several possible places an account can \"Ask the AI\": the model ranks the candidates and gives a reason. Only what the person clicks is written.",
+      "cost": "Depends on the model: a local Ollama costs nothing, a cloud model its own price.",
+      "dataOut": "Candidate names, distance, duration and day — no coordinates. Cloud models only after you confirm."
+    },
+    "mapMatching": {
+      "name": "Snap to roads (map matching)",
+      "purpose": "Lays sparse or noisy TravTrack car stretches onto the road",
+      "why": "Sends the points of one stretch to a router you run yourself (Valhalla or GraphHopper) and draws the result, labelled, over the track. The raw points stay unchanged; undo is one click.",
+      "cost": "Free, self-hosted. No service is preconfigured.",
+      "dataOut": "Only the points of the chosen stretch, privacy zones cut out first. Every account confirms the target before its first request.",
+      "adminPurpose": "Address of your Valhalla or GraphHopper server (LAN allowed)"
     }
   },
   "alwaysOn": {
@@ -802,10 +821,16 @@
         "allratestoday": "AllRatesToday",
         "custom": "Custom address"
       }
+    },
+    "mapMatching": {
+      "engine": {
+        "valhalla": "Valhalla (trace_attributes)",
+        "graphhopper": "GraphHopper (/match)"
+      }
     }
   },
   "legacy": {
-    "title": "Managed under External services",
+    "title": "Managed under Settings → Server → Services",
     "body": "Switch, credentials and tests for {{name}} now live in one place: the list of external services.",
     "statusLabel": "Status",
     "status": {
@@ -825,5 +850,46 @@
         "linkUrl": "https://allratestoday.com"
       }
     }
+  },
+  "useConsent": {
+    "title": "Send data to a service?",
+    "intro": "This data would go to an outside service. Nothing without your permission.",
+    "service": "Service",
+    "host": "Target",
+    "provider": "Provider",
+    "location": "Location",
+    "fields": "Fields sent",
+    "points": "Number of positions",
+    "zones": "Privacy zones",
+    "zonesApplied": "cut out first",
+    "zonesNone": "no zone set up",
+    "locations": {
+      "cloud": "Cloud – leaves your home network",
+      "lan": "Local in your home network (LAN)"
+    },
+    "services": {
+      "aiSuggestionHelp": "AI help for unclear suggestions",
+      "mapMatching": "Snap to roads"
+    },
+    "fieldNames": {
+      "candidates": "Candidate names",
+      "distanceM": "Distance",
+      "dwellMin": "Dwell",
+      "nearbyPlaces": "Names of nearby places",
+      "localDay": "Day",
+      "points": "Positions with time",
+      "costing": "Vehicle type"
+    },
+    "cloudNote": "The provider processes the data under its own terms.",
+    "once": "Allow once",
+    "always": "Always allow for this service",
+    "cancel": "Cancel",
+    "listTitle": "Allowed data sharing",
+    "listEmpty": "No service has a standing permission.",
+    "listSince": "allowed since {{date}} for {{target}}",
+    "revoke": "Revoke",
+    "revoked": "Permission revoked – you will be asked again next time.",
+    "revokeFailed": "The permission could not be revoked.",
+    "loadFailed": "The permissions could not be loaded."
   }
 }

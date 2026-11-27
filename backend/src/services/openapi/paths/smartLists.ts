@@ -148,3 +148,147 @@ registry.registerPath({
   request: { params: z.object({ placeId: uuid }) },
   responses: { 200: envelope(z.array(suggestion)), 404: notFound },
 });
+
+registry.registerPath({
+  method: "get",
+  path: "/place-lists/smart/{listId}/pending",
+  summary: "Pending visit confirmations of this list at places you already have",
+  description:
+    "Up to 100, newest first, the same rows the stay inbox lists (answer them through `POST /dawarich-stays/{id}/accept` or `/reject`). A match at a venue that is not yet a place is a new outlet (`/suggestions`). Empty while stay suggestions are switched off.",
+  tags,
+  request: { params: z.object({ listId: uuid }) },
+  responses: {
+    200: {
+      description: "The newest 100; `meta.total` counts all",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            meta: z.object({ total: z.number().int() }),
+            data: z.array(suggestion),
+          }),
+        },
+      },
+    },
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/place-lists/smart/pending-counts",
+  summary: "Pending confirmations per smart list",
+  description:
+    "`{ listId: count }` of matches waiting for an answer (new outlets and visits together). A list with none is absent.",
+  tags,
+  responses: { 200: envelope(z.record(z.string(), z.number().int())) },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/place-lists/smart/auto-visits/undo",
+  summary: "Undo automatic visits in bulk",
+  description:
+    "Visits written by automation (`created_by` brandRule, import, auto or plugin). A smart-list visit is taken back through the list's own undo; any other is deleted only while it carries no note, rating, photo, document or expense. Each visit is answered on its own.",
+  tags,
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: z.object({ visitIds: z.array(uuid).min(1).max(200) }) },
+      },
+      required: true,
+    },
+  },
+  responses: {
+    200: envelope(
+      z.object({
+        results: z.array(
+          z.object({
+            visitId: uuid,
+            outcome: z.enum(["removed", "kept"]),
+            reason: z.enum(["notFound", "notAutomatic", "ownerAdded"]).optional(),
+          })
+        ),
+      })
+    ),
+    400: badInput,
+  },
+});
+
+const memberRow = z.object({
+  entryId: uuid,
+  placeId: uuid,
+  name: z.string(),
+  category: z.string(),
+  country: z.string().nullable(),
+  countryCode: z.string().nullable(),
+  city: z.string().nullable(),
+  visitCount: z.number().int().describe("Past visits (a planned one is not counted)"),
+  firstVisit: z.string().nullable().describe("Local day, YYYY-MM-DD"),
+  lastVisit: z.string().nullable().describe("Local day, YYYY-MM-DD"),
+  addedAt: z.string(),
+  sortIdx: z.number().int(),
+  source: z.enum(["manual", "rule", "import", "plugin"]),
+  distanceKm: z.number().nullable().describe("From the account's home; null without one"),
+  external: z
+    .object({
+      id: z.string(),
+      label: z.string().optional(),
+      fields: z.record(z.string(), z.string()),
+    })
+    .nullable()
+    .describe("A plugin-fed list's reference and its announced columns"),
+  visits: z
+    .array(z.object({ id: uuid, date: z.string().nullable() }))
+    .describe("Past visits, newest first, at most 50"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/place-lists/{id}/members",
+  summary: "One page of a list as a table",
+  description:
+    "Sorted and paged on the server. Every sort ends in name, then entry id; a missing value sorts last in both directions. Takes `?purposeFilter=` like every entry read.",
+  tags,
+  request: {
+    params: z.object({ id: uuid }),
+    query: z.object({
+      sort: z
+        .enum([
+          "lastVisit",
+          "firstVisit",
+          "name",
+          "country",
+          "visitCount",
+          "addedAt",
+          "distance",
+          "custom",
+        ])
+        .optional(),
+      order: z.enum(["asc", "desc"]).optional(),
+      page: z.number().int().min(1).optional(),
+      pageSize: z.number().int().min(1).max(100).optional(),
+      q: z.string().max(100).optional(),
+      auto: z
+        .enum(["true", "false"])
+        .optional()
+        .describe("Only entries a rule, import or plugin added"),
+    }),
+  },
+  responses: {
+    200: envelope(
+      z.object({
+        rows: z.array(memberRow),
+        total: z.number().int(),
+        page: z.number().int(),
+        pageSize: z.number().int(),
+        columns: z.array(
+          z.object({ key: z.string(), label: z.object({ de: z.string(), en: z.string() }) })
+        ),
+        hasHome: z.boolean(),
+      })
+    ),
+    400: badInput,
+    404: notFound,
+  },
+});

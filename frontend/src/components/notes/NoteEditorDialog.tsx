@@ -1,6 +1,7 @@
+import DateField from "../../components/ui/DateField";
 import { useId, useMemo, useRef, useState, type JSX } from "react";
 
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { FormErrorBanner } from "../form";
 import { Button, Field, Input, Select, TextArea, Toggletip } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -137,7 +138,7 @@ export default function NoteEditorDialog({
   const shownPhoto = !dropPhoto && !photoFile && current?.photo ? current.photo : null;
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving}
@@ -180,9 +181,8 @@ export default function NoteEditorDialog({
             htmlFor={`${id}-date`}
             error={problems.date && t(problems.date)}
           >
-            <Input
+            <DateField
               id={`${id}-date`}
-              type="date"
               value={draft.date}
               onChange={(e) => set({ date: e.target.value })}
             />
@@ -192,9 +192,9 @@ export default function NoteEditorDialog({
             htmlFor={`${id}-time`}
             hint={t("notes:editor.timeHint")}
           >
-            <Input
+            <DateField
               id={`${id}-time`}
-              type="time"
+              kind="time"
               value={draft.time}
               onChange={(e) => set({ time: e.target.value })}
             />
@@ -309,6 +309,6 @@ export default function NoteEditorDialog({
           </div>
         </Field>
       </div>
-    </Modal>
+    </Dialog>
   );
 }

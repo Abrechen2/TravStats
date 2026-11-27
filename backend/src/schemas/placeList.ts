@@ -84,6 +84,31 @@ export const placeListQuerySchema = z.object({
     .transform((v) => v === "true"),
 });
 
+export const LIST_SORT_KEYS = [
+  "lastVisit",
+  "firstVisit",
+  "name",
+  "country",
+  "visitCount",
+  "addedAt",
+  "distance",
+  "custom",
+] as const;
+
+/** One page of a list as a table (`GET /place-lists/:id/members`). */
+export const listMembersQuerySchema = z.object({
+  sort: z.enum(LIST_SORT_KEYS).default("lastVisit"),
+  order: z.enum(["asc", "desc"]).default("desc"),
+  page: z.coerce.number().int().min(1).max(10_000).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(50),
+  q: z.string().trim().max(100).optional(),
+  /** "Automatisch eingetragen": only entries a rule, an import or a plugin added. */
+  auto: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
+});
+
 export type CreatePlaceListInput = z.infer<typeof createPlaceListSchema>;
 export type UpdatePlaceListInput = z.infer<typeof updatePlaceListSchema>;
 export type AddListEntryInput = z.infer<typeof addListEntrySchema>;

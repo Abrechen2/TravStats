@@ -12,6 +12,7 @@ import {
   type BookingField,
   type RailBookingDraft,
 } from "./railImportBookingDraft";
+import InlineError from "../ui/InlineError";
 
 /**
  * The source the server names for a bahn.de share link. A share link is a
@@ -78,9 +79,9 @@ export function RailImportBookingFields({
         </p>
       )}
       {unread.length > 0 && (
-        <p className="text-sm text-(--warning)" data-testid="rail-import-incomplete">
+        <InlineError tone="warning" testId="rail-import-incomplete">
           {t("rail:import.booking.incomplete")}
-        </p>
+        </InlineError>
       )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field
@@ -162,14 +163,9 @@ export function RailImportBookingFields({
         )}
       </div>
       {problems.map((p) => (
-        <p
-          key={p}
-          role="alert"
-          className="text-sm text-(--danger)"
-          data-testid={`rail-import-problem-${p}`}
-        >
+        <InlineError key={p} testId={`rail-import-problem-${p}`}>
           {t(`rail:import.booking.problem.${p}`)}
-        </p>
+        </InlineError>
       ))}
     </section>
   );

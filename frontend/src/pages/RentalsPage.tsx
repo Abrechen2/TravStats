@@ -1,3 +1,4 @@
+import { useYearCounts } from "../lib/stats/useYearCounts";
 import { useRowSelection } from "../components/bulkEdit/useRowSelection";
 import { LinkedMonthChip, useLinkedMonth } from "../components/Stats/LinkedMonth";
 import { useGapPrefill } from "../hooks/useGapPrefill";
@@ -56,6 +57,7 @@ import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFail
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { rentalDeleteMessage } from "../lib/rental/rentalDeleteMessage";
+import { reportPageError } from "../store/pageErrorStore";
 
 const RENTAL_STATUSES: readonly RentalStatus[] = [
   "scheduled",
@@ -96,6 +98,7 @@ interface Options {
  */
 export default function RentalsPage(): JSX.Element {
   const { t } = useTranslation(["rental", "common"]);
+  const yearCounts = useYearCounts().of("rental");
   const tableHints = useTableHints();
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
@@ -227,7 +230,7 @@ export default function RentalsPage(): JSX.Element {
       await reload();
     } catch (err: unknown) {
       logger.error("RentalsPage: delete failed", err);
-      addToast("error", t("rental:deleteError"));
+      reportPageError(t("rental:deleteError"));
     } finally {
       setDeleting(false);
     }
@@ -320,7 +323,12 @@ export default function RentalsPage(): JSX.Element {
             value: yearFilter === "all" ? "all" : String(yearFilter),
             onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
             allLabel: t("rental:list.allYears"),
-            options: options.years.map((y) => ({ value: String(y), label: String(y) })),
+            options: options.years.map((y) => ({
+              value: String(y),
+              label: String(y),
+              count: yearCounts[y],
+            })),
+            formatCount: (n): string => t("common:yearPicker.count.rentals", { count: n }),
           }}
           extraActiveCount={extraActiveCount}
           extra={

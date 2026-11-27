@@ -48,6 +48,8 @@ export interface RentalBooking {
   rememberedNote?: string | null;
   /** Private or business; null is unknown, absent on older servers. */
   purpose?: "private" | "business" | null;
+  /** The detailed purpose beside the kind (`builtin:…` | `custom:…`); null: the kind alone. */
+  purposeKey?: string | null;
   /** The package booking it was sold on (forgejo#430); optional — an older server sends none. */
   bookingId?: string | null;
   /** Estimated CO2 (forgejo#395); null where the ride has no known distance. */

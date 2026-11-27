@@ -196,7 +196,7 @@
     "createPortError": "Hafen konnte nicht angelegt werden",
     "via_geocoder": "Kartensuche (OpenStreetMap)",
     "searchError": "Hafensuche fehlgeschlagen - bitte erneut versuchen",
-    "geocodeRateLimited": "Die Online-Hafensuche (OpenStreetMap) ist gerade ausgelastet und hat nicht geantwortet. Bitte in einer Minute erneut suchen oder den Hafen manuell anlegen.",
+    "geocodeRateLimited": "Die Hafensuche ist ausgelastet. In einer Minute erneut suchen oder den Hafen anlegen.",
     "geocodeUnavailable": "Die Online-Hafensuche (OpenStreetMap) ist gerade nicht erreichbar. Bitte später erneut suchen oder den Hafen manuell anlegen.",
     "shipSearchError": "Schiffssuche fehlgeschlagen – bitte erneut versuchen. Solange die Suche nicht antwortet, lieber kein neues Schiff anlegen: es könnte schon im Katalog stehen.",
     "shipAlreadyExists": "„{{name}}“ steht bereits im Katalog und wurde ausgewählt – es wurde kein zweites Schiff angelegt.",
@@ -269,7 +269,7 @@
       "startDate": "Abfahrtsdatum",
       "stopPort": "Hafen für Tag {{day}} (oder „Auf See“)"
     },
-    "identityHint": "Pflicht ist eins davon: Schiff, Reederei, Routenname oder Abfahrtshafen – sonst lässt sich die Kreuzfahrt nicht wiedererkennen.",
+    "identityHint": "Pflicht: Schiff, Reederei, Routenname oder Abfahrtshafen.",
     "errors": {
       "endBeforeStart": "Das Ankunftsdatum liegt vor dem Abfahrtsdatum.",
       "deck": "Das Deck ist eine ganze Zahl von 1 bis 30.",
@@ -310,7 +310,7 @@
     "shipUnmatchedHint": "Wird als freier Text gespeichert. Du kannst das Schiff im Editor verknüpfen.",
     "stopsLabel": "Stopps",
     "unmatchedTitle": "Häfen ohne Treffer",
-    "unmatchedHint": "Diese Häfen wurden im Katalog nicht gefunden und als „nicht aufgelöst\" markiert – sie bleiben Häfen (keine Seetage). Wähle unten den passenden Hafen, oder löse sie später im Editor auf.",
+    "unmatchedHint": "Diese Häfen fehlen im Katalog. Wähle unten den passenden oder löse sie später.",
     "alreadyImported": "{{count}} Buchung(en) waren schon eingelesen."
   },
   "stats": {
@@ -345,7 +345,8 @@
       "baseTotalNone": "Zu keiner dieser Kreuzfahrten ist ein Kurs nach {{currency}} gespeichert — deshalb keine Summe statt einer Null.",
       "baseTotalExcluded_one": "{{count}} Kreuzfahrt in Fremdwährung ohne Kurs nicht enthalten",
       "baseTotalExcluded_other": "{{count}} Kreuzfahrten in Fremdwährung ohne Kurs nicht enthalten",
-      "noTotalNote": "Die Zeilen oben bleiben in ihrer eigenen Währung: eine Kreuzfahrt speichert Preis und Währung, und Beträge verschiedener Währungen einfach zu addieren ergäbe eine Zahl, die niemand je bezahlt hat. Die Summe darunter rechnet stattdessen alles in die Basiswährung um — Beträge, die schon darin stehen, unverändert, alle anderen über den gespeicherten Kurs — und nennt, was sie auslassen musste."
+      "noTotalNote": "Beträge bleiben in ihrer Währung; die Summe unten rechnet um.",
+      "noTotalNoteMore": "Beträge verschiedener Währungen einfach zu addieren ergäbe eine Zahl, die niemand bezahlt hat. Die Summe rechnet alles über den gespeicherten Kurs in die Basiswährung um und nennt, was sie auslassen musste."
     },
     "fun": {
       "title": "Kurioses",
@@ -439,7 +440,7 @@
   },
   "tracks": {
     "title": "Aufgezeichnete Spuren",
-    "intro": "Eine GPS-Aufzeichnung ersetzt die berechnete Seeroute einer Etappe, wenn sie beide Häfen in Fahrtrichtung erreicht (bis 10 km Abstand, etwa auf Reede) und höchstens ein Viertel der Strecke fehlt. Fehlende Stücke werden per Luftlinie überbrückt und mitgezählt.",
+    "intro": "Eine GPS-Aufzeichnung ersetzt die berechnete Route, wenn sie beide Häfen erreicht.",
     "upload": "Spur hochladen (GPX, TCX, FIT)",
     "uploading": "Wird hochgeladen …",
     "pullVoyage": "Ganze Reise aus Dawarich laden",
@@ -516,8 +517,8 @@
   "unresolved": {
     "title_one": "Ein ungeklärter Hafen",
     "title_other": "{{count}} ungeklärte Häfen",
-    "incomplete_one": "Bis er einem Katalogeintrag zugeordnet ist, zählt er als Hafenanlauf, aber nicht als Hafen – die Hafenzahl steht bei {{matched}} (+{{count}} ungeklärt). Die Länderzählung und die Karte lassen ihn aus, und die Seemeilen der Abschnitte zu ihm und von ihm fehlen.",
-    "incomplete_other": "Bis sie Katalogeinträgen zugeordnet sind, zählen sie als Hafenanläufe, aber nicht als Häfen – die Hafenzahl steht bei {{matched}} (+{{count}} ungeklärt). Die Länderzählung und die Karte lassen sie aus, und die Seemeilen der Abschnitte zu ihnen und von ihnen fehlen.",
+    "incomplete_one": "Ungeklärt: zählt als Anlauf, nicht als Hafen ({{matched}} +{{count}}). Karte, Länder und Seemeilen fehlen.",
+    "incomplete_other": "Ungeklärt: zählen als Anlauf, nicht als Hafen ({{matched}} +{{count}}). Karte, Länder und Seemeilen fehlen.",
     "days_one": "Tag {{days}}",
     "days_other": "Tage {{days}}",
     "candidates": "Treffer im Hafenkatalog",
@@ -536,7 +537,7 @@
     "titleLoading": "Gespeicherten Reiseplan vergleichen",
     "loading": "Der gespeicherte Reiseplan wird geladen …",
     "loadFailed": "Der gespeicherte Reiseplan konnte nicht geladen werden.",
-    "intro": "Kreuze an, was aus dem neuen Plan übernommen wird. Deine Ausflugsnotizen, Alle-an-Bord-Zeiten und eingetragenen Daten bleiben erhalten – nur wenn ein Tag einen anderen Hafen bekommt, entfallen die Zeiten des alten Hafens. Ein Tag, der im neuen Plan fehlt, wird nur entfernt, wenn du es ankreuzt.",
+    "intro": "Kreuze an, was übernommen wird. Notizen bleiben, außer ein Tag bekommt einen anderen Hafen.",
     "added": "Neu im Plan: Tag {{day}} · {{title}}",
     "removed": "Nicht mehr im Plan: Tag {{day}} · {{title}}",
     "port": "Tag {{day}}: {{from}} → {{to}}",
@@ -585,7 +586,7 @@
       "missing": "fehlt im Logbuch",
       "unchecked": "konnte nicht geprüft werden"
     },
-    "hint": "„Fehlende Flüge anlegen“ sieht zuerst im Logbuch nach (Flugnummer und Abflugtag) und legt nur an, was dort nicht steht – ein Flug entsteht nie doppelt.",
+    "hint": "Legt nur Flüge an, die noch nicht im Logbuch stehen — nie doppelt.",
     "retry_one": "Fehlenden Flug anlegen",
     "retry_other": "{{count}} fehlende Flüge anlegen",
     "retryFailed": "Nicht alle Flüge konnten angelegt werden. Du kannst es noch einmal versuchen.",

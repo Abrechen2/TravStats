@@ -193,7 +193,7 @@ describe("LodgingStaysView", () => {
     const { container } = renderView();
     await screen.findByTestId("stay-view-row-s-june");
 
-    const dates = container.querySelectorAll<HTMLInputElement>('input[type="date"]');
+    const dates = container.querySelectorAll<HTMLInputElement>('input[data-field-kind="date"]');
     fireEvent.change(dates[0], { target: { value: "2025-06-01" } });
     fireEvent.change(dates[1], { target: { value: "2025-06-30" } });
     // By name: the rows (and their page-size picker) stay on screen while the
@@ -241,7 +241,7 @@ describe("LodgingStaysView", () => {
     await screen.findByTestId("stay-view-row-s-june");
     const callsBefore = listStayPageMock.mock.calls.length;
 
-    const dates = container.querySelectorAll<HTMLInputElement>('input[type="date"]');
+    const dates = container.querySelectorAll<HTMLInputElement>('input[data-field-kind="date"]');
     fireEvent.change(dates[0], { target: { value: "2025-06-30" } });
     fireEvent.change(dates[1], { target: { value: "2025-06-01" } });
 
@@ -272,7 +272,7 @@ describe("LodgingStaysView", () => {
     await userEvent.click(await screen.findByRole("button", { name: "lodging:add.title" }));
     expect(onAddHouse).toHaveBeenCalledTimes(1);
 
-    const dates = container.querySelectorAll<HTMLInputElement>('input[type="date"]');
+    const dates = container.querySelectorAll<HTMLInputElement>('input[data-field-kind="date"]');
     fireEvent.change(dates[0], { target: { value: "2020-01-01" } });
     expect(await screen.findByText("common:filters.noMatch")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "lodging:add.title" })).toBeNull();
@@ -316,9 +316,7 @@ describe("LodgingStaysView", () => {
     // The list itself is unaffected.
     expect(await screen.findByTestId("stay-view-row-s-june")).toBeInTheDocument();
 
-    const alert = screen
-      .getByText("lodging:stayView.filter.tripsFailed")
-      .closest("p") as HTMLElement;
+    const alert = screen.getByRole("alert");
     await userEvent.click(within(alert).getByRole("button", { name: "common:buttons.retry" }));
     await waitFor(() =>
       expect(screen.queryByText("lodging:stayView.filter.tripsFailed")).toBeNull()

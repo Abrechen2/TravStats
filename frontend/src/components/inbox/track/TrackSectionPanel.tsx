@@ -10,18 +10,12 @@ import { logger } from "../../../lib/logger";
 import { shapeCode } from "../../../pages/Track/countries/visitedCountries";
 import { customSpan, spanPath } from "../../../pages/Track/map/trackSpan";
 import { todayIn } from "../../../shared/time/clock";
+import { formatDuration, formatKm } from "../../../lib/format";
 import { sectionFacts, type SectionWindow } from "./sectionGeometry";
-import {
-  dayBarFor,
-  formatDuration,
-  formatKm,
-  formatSpan,
-  formatSpeed,
-  linkDays,
-  zoneOrUtc,
-} from "./sectionFormat";
+import { dayBarFor, formatSpan, formatSpeed, linkDays, zoneOrUtc } from "./sectionFormat";
 import { useSectionTrack } from "./useSectionTrack";
 import WebGLGuard from "../../map/WebGLGuard";
+import InlineError from "../../ui/InlineError";
 
 const SectionMap = lazy(() => import("./SectionMap"));
 
@@ -105,9 +99,18 @@ export default function TrackSectionPanel(props: TrackSectionPanelProps): JSX.El
     { label: t("track:inbox.fact.span"), value: formatSpan(props.window, zone, t) },
     {
       label: t("track:inbox.fact.duration"),
-      value: formatDuration(props.window.untilMs - props.window.fromMs, t),
+      value: formatDuration((props.window.untilMs - props.window.fromMs) / 60_000, { days: true }),
     },
-    { label: t("track:inbox.fact.distance"), value: formatKm(facts?.distanceM ?? null, locale, t) },
+    {
+      label: t("track:inbox.fact.distance"),
+      value:
+        facts?.distanceM == null
+          ? t("track:inbox.value.none")
+          : formatKm(facts.distanceM / 1000, {
+              language: locale,
+              fractionDigits: facts.distanceM < 10_000 ? 1 : 0,
+            }),
+    },
     {
       label: t("track:inbox.fact.speed"),
       value: formatSpeed(facts?.avgKmh ?? null, facts?.maxKmh ?? null, locale, t),
@@ -200,11 +203,7 @@ export default function TrackSectionPanel(props: TrackSectionPanelProps): JSX.El
               {t("track:inbox.loading")}
             </p>
           )}
-          {state.kind === "failed" && (
-            <p className="text-sm text-(--ts-bad)" role="alert">
-              {t(state.key)}
-            </p>
-          )}
+          {state.kind === "failed" && <InlineError>{t(state.key)}</InlineError>}
           {state.kind === "empty" && (
             <p className="t-caption" role="status">
               {t("track:inbox.empty")}

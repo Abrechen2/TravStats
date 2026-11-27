@@ -16,7 +16,6 @@ import {
 } from "../components/Cruise/CruiseRow";
 import { Table, type TableColumn } from "../components/ui/Table";
 import ListHeaderMenu from "../components/table/ListHeaderMenu";
-import { SortableHeader } from "../components/table/SortableHeader";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
@@ -53,6 +52,7 @@ import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
 import TablePagination from "../components/table/TablePagination";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
+import { reportPageError } from "../store/pageErrorStore";
 
 type StatusFilter = CruiseStatus | "all";
 type YearFilter = number | "all";
@@ -192,7 +192,7 @@ export default function CruisesPage(): JSX.Element {
       await reload();
     } catch (err: unknown) {
       logger.error("CruisesPage: delete failed", err);
-      addToast("error", t("list.delete.error"));
+      reportPageError(t("list.delete.error"));
     } finally {
       setDeleting(false);
     }
@@ -310,6 +310,10 @@ export default function CruisesPage(): JSX.Element {
   /** Counted by the database under every OTHER filter, so picking a line no
    *  longer leaves the line list holding only that line. */
   const availableYears = useMemo(() => (facets?.years ?? []).map((y) => y.value), [facets]);
+  const yearCounts = useMemo(
+    () => new Map((facets?.years ?? []).map((y) => [y.value, y.count])),
+    [facets]
+  );
   const availableLines = useMemo(() => (facets?.lines ?? []).map((l) => l.value), [facets]);
 
   /**
@@ -332,20 +336,16 @@ export default function CruisesPage(): JSX.Element {
           align: layout.align,
           mono: layout.mono,
           onNarrow: layout.onNarrow,
-          label:
-            sortKey === undefined ? (
-              label
-            ) : (
-              <SortableHeader
-                column={sortKey}
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={handleSort}
-                ariaLabel={t("list.sortBy", { col: label })}
-              >
-                {label}
-              </SortableHeader>
-            ),
+          label,
+          sort:
+            sortKey === undefined
+              ? undefined
+              : {
+                  active: sortBy === sortKey,
+                  order: sortOrder,
+                  onSort: (): void => handleSort(sortKey),
+                  ariaLabel: t("list.sortBy", { col: label }),
+                },
         };
       }),
     [columnPrefs, t, sortBy, sortOrder, handleSort]
@@ -470,7 +470,12 @@ export default function CruisesPage(): JSX.Element {
             value: yearFilter === "all" ? "all" : String(yearFilter),
             onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
             allLabel: t("filter.allYears"),
-            options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
+            options: availableYears.map((y) => ({
+              value: String(y),
+              label: String(y),
+              count: yearCounts.get(y),
+            })),
+            formatCount: (n): string => t("common:yearPicker.count.cruises", { count: n }),
           }}
           extraActiveCount={extraActiveCount}
           extra={

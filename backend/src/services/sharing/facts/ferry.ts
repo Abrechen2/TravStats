@@ -4,7 +4,8 @@ import { jsonForWrite, pickFacts } from "./pick";
 /**
  * A ferry crossing's facts (rework 2026-10-16; bus's and rail's rule): operator
  * and vessel, both terminals with address, position, country and zone, the
- * times as stored (real instants, ADR 0002), the frozen sea line, what actually
+ * times as stored (real instants, ADR 0002), the frozen sea line and whether a
+ * hand-drawn one is the pair's or this crossing's own (`manualScope`), what actually
  * happened, status and delay. Private: fare class, seat, cabin type, booking
  * and ticket references, price and FX snapshot, notes, tags, companions, the
  * vehicle on board (type, registration, size, passengers), the vessel MMSI the
@@ -34,6 +35,8 @@ export const FERRY_FACT_FIELDS = [
   "distanceSource",
   "geometry",
   "geometrySource",
+  // Without it a pair line arrived as the copy's own (NULL reads as `journey`).
+  "manualScope",
   "actualDepartureTime",
   "actualArrivalTime",
   "status",

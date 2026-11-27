@@ -18,6 +18,8 @@ export interface PlaceVisit {
   rememberedNote?: string | null;
   /** Private or business; null is unknown, absent on older servers. */
   purpose?: "private" | "business" | null;
+  /** The detailed purpose beside the kind (`builtin:…` | `custom:…`); null: the kind alone. */
+  purposeKey?: string | null;
   placeId: string;
   tripId: string | null;
   /** ISO string, or null for a visit the user cannot date — which still counts. */
@@ -27,6 +29,10 @@ export interface PlaceVisit {
   rating: number | null;
   createdAt: string;
   updatedAt: string;
+  /** Who wrote the row without the owner's hand (`brandRule`, `import`, …); absent on older servers. */
+  createdBy?: string | null;
+  /** web | companion | import | suggestion | api; absent on older servers. */
+  writtenVia?: string | null;
   /**
    * Photo proof. Present on the DETAIL response only — the list endpoint omits
    * it deliberately, because a gallery per row is a page of joins nobody asked
@@ -120,8 +126,11 @@ export interface VisitInput {
   orderIdx?: number;
   notes?: string | null;
   rating?: number | null;
-  /** Omitted: unchanged on an edit, the trip decides on a create. */
-  purpose?: "private" | "business" | null;
+  /**
+   * Omitted: unchanged on an edit, the trip decides on a create. The kind alone or a detailed key
+   * (`builtin:…` | `custom:…`), which the server splits into kind + detail.
+   */
+  purpose?: string | null;
 }
 
 export type PlaceSortKey = "name" | "city" | "category" | "visitCount" | "lastVisit" | "createdAt";

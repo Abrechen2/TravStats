@@ -15,14 +15,23 @@
 // State still lives in `useTimeSliderStore`; this component only drives it,
 // so GlobeView's visibility logic is unchanged.
 
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { Icon } from "../ui/Icon";
+import { formatDayLabel } from "../../lib/format";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTimeSliderStore } from "../../store/timeSliderStore";
-import type { MonthBucket } from "./timeSliderUtils";
+import { useDomainColors } from "../../hooks/useDomainColors";
+import { AVAILABLE_DOMAINS, type DomainKey } from "../../shared/domains";
+import { coarsenBuckets, type MonthBucket } from "./timeSliderUtils";
 import { MAP_CHROME } from "../map/mapChrome";
 
 const AMBER = "240,169,71";
-const CRUISE = "111,160,214";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 // Bar-row height in each state. The row animates between the two so the
@@ -35,6 +44,18 @@ interface Props {
   visibleFlights: number;
   visibleCruises: number;
   disabled?: boolean;
+}
+
+/** A bucket's entries per domain, in the order the stack draws them (bottom first). */
+export function bucketSegments(b: MonthBucket): { domain: DomainKey; count: number }[] {
+  const counts: Partial<Record<DomainKey, number>> = {
+    ...b.others,
+    flight: b.flights,
+    cruise: b.cruises,
+  };
+  return AVAILABLE_DOMAINS.map((domain) => ({ domain, count: counts[domain] ?? 0 })).filter(
+    (s) => s.count > 0
+  );
 }
 
 // "Nice" step sizes for a year axis, in ascending order — pick the smallest
@@ -67,15 +88,17 @@ export function computeYearTicks(minYear: number, maxYear: number, maxTicks = 6)
  * reader's zone, which moved the edge of a month by up to a day (ADR 0002).
  */
 const fmt = (d: Date | null, locale: string): string =>
-  d ? d.toLocaleDateString(locale, { year: "numeric", month: "short", timeZone: "UTC" }) : "—";
+  d ? formatDayLabel(d.toISOString(), { year: "numeric", month: "short" }, locale) : "—";
 
 export const GlobeTimeHistogram = ({
-  buckets,
+  buckets: monthly,
   visibleFlights,
   visibleCruises,
   disabled = false,
 }: Props): JSX.Element => {
   const { t, i18n } = useTranslation(["map"]);
+  const { colorOf } = useDomainColors();
+  const buckets = useMemo(() => coarsenBuckets(monthly), [monthly]);
   const locale = i18n.language || "de";
 
   const mode = useTimeSliderStore((s) => s.mode);
@@ -224,15 +247,35 @@ export const GlobeTimeHistogram = ({
 
   const expanded = hovered || isPlaying || dragRange !== null || scrubbing;
 
-  const maxTotal = Math.max(1, ...buckets.map((b) => b.flights + b.cruises));
+  const totalOf = (b: MonthBucket): number =>
+    b.flights + b.cruises + Object.values(b.others).reduce((n, c) => n + (c ?? 0), 0);
+  const maxTotal = Math.max(1, ...buckets.map(totalOf));
   const inFilter = mode === "filter" && filterStart !== null && filterEnd !== null;
   const filterLo = inFilter ? fracOfDate(filterStart) : 0;
   const filterHi = inFilter ? fracOfDate(filterEnd) : 1;
 
   // Which bar the live cursor is over — highlighted while playing/scrubbing.
   const liveFrac = mode === "live" && currentDate ? fracOfDate(currentDate) : null;
+  // A coarsened bar spans several months, so a bar's place on the strip is its
+  // share of the months, not its index.
+  const monthsOf = (b: MonthBucket): number => b.months ?? 1;
+  const allMonths = buckets.reduce((n, b) => n + monthsOf(b), 0);
+  let monthsBefore = 0;
+  const spans = buckets.map((b) => {
+    const span: [number, number] = [
+      monthsBefore / allMonths,
+      (monthsBefore + monthsOf(b)) / allMonths,
+    ];
+    monthsBefore += monthsOf(b);
+    return span;
+  });
   const playBar =
-    liveFrac === null ? -1 : Math.min(buckets.length - 1, Math.floor(liveFrac * buckets.length));
+    liveFrac === null
+      ? -1
+      : Math.max(
+          0,
+          spans.findIndex(([, end]) => liveFrac < end)
+        );
 
   const activeDrag = dragRange
     ? [Math.min(dragRange[0], dragRange[1]), Math.max(dragRange[0], dragRange[1])]
@@ -283,7 +326,7 @@ export const GlobeTimeHistogram = ({
             aria-label={t(`map:globe.timeSlider.${isPlaying ? "pause" : "play"}`)}
             title={t(`map:globe.timeSlider.${isPlaying ? "pause" : "play"}`)}
           >
-            {isPlaying ? "❚❚" : "▶"}
+            <Icon name={isPlaying ? "pause" : "play"} size={18} />
           </button>
         </div>
       )}
@@ -296,7 +339,7 @@ export const GlobeTimeHistogram = ({
               className="flex items-center gap-1.5 text-[11px] font-semibold"
               style={{ color: "rgba(241,245,249,0.62)" }}
             >
-              📊 {t("map:globe.timeSlider.title")}
+              <Icon name="bar-chart-3" size={14} /> {t("map:globe.timeSlider.title")}
             </span>
             <span className="flex items-center gap-2 text-[12px] font-semibold tabular-nums">
               <span>{readout}</span>
@@ -312,7 +355,7 @@ export const GlobeTimeHistogram = ({
                   style={{ color: "rgba(241,245,249,0.6)", background: "rgba(255,255,255,0.06)" }}
                   title={t("map:globe.timeSlider.reset")}
                 >
-                  ✕
+                  <Icon name="x" size={16} />
                 </button>
               )}
             </span>
@@ -332,24 +375,32 @@ export const GlobeTimeHistogram = ({
           }}
         >
           {buckets.map((b, i) => {
-            const total = b.flights + b.cruises;
+            const total = totalOf(b);
             const h = total === 0 ? 3 : 6 + (total / maxTotal) * 94;
-            const [bf0, bf1] = [i / buckets.length, (i + 1) / buckets.length];
+            const [bf0, bf1] = spans[i];
             const outside = inFilter && (bf1 <= filterLo || bf0 >= filterHi);
             const isPlay = i === playBar;
-            const fShare = total ? (b.flights / total) * 100 : 0;
             return (
               <div
                 key={i}
                 className="flex min-w-0 flex-1 flex-col-reverse overflow-hidden rounded-t-[2px]"
                 style={{
                   height: `${h}%`,
+                  flexGrow: monthsOf(b),
                   opacity: outside ? 0.28 : 0.9,
                   boxShadow: isPlay ? `0 0 8px rgba(${AMBER},0.6)` : undefined,
                 }}
               >
-                <div style={{ height: `${fShare}%`, background: `rgb(${AMBER})` }} />
-                <div style={{ height: `${100 - fShare}%`, background: `rgb(${CRUISE})` }} />
+                {bucketSegments(b).map((seg) => (
+                  <div
+                    key={seg.domain}
+                    data-domain={seg.domain}
+                    style={{
+                      height: `${(seg.count / total) * 100}%`,
+                      background: colorOf(seg.domain),
+                    }}
+                  />
+                ))}
               </div>
             );
           })}

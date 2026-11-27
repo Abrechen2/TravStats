@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { placeCapturesApi, type PlaceCapture } from "../../lib/api/placeCaptures";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { usePlaceCategories } from "../../hooks/usePlaceCategories";
@@ -12,6 +12,7 @@ import PassPlacePicker from "../Roadtrips/PassPlacePicker";
 import Button from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Field, Input, Select } from "../ui/Field";
+import InlineError from "../ui/InlineError";
 
 const NS = "dataQuality:placeCaptures";
 /** Codes that mean the row is no longer open: the list is stale, so it is reloaded. */
@@ -99,9 +100,7 @@ export default function PlaceCapturesSection(): JSX.Element | null {
   if (loadFailed) {
     return (
       <Card style={{ marginBottom: "var(--ts-space-xl)" }}>
-        <p role="alert" style={{ color: "var(--ts-bad)" }}>
-          {t(`${NS}.loadError`)}
-        </p>
+        <InlineError>{t(`${NS}.loadError`)}</InlineError>
         <Button onClick={() => void load()}>{t("common:buttons.retry")}</Button>
       </Card>
     );

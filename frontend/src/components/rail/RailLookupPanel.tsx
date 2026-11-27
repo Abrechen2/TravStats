@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -21,6 +22,7 @@ import {
   type RailLookupKeptField,
 } from "./railFormModel";
 import type { RailStationDraft } from "./RailStationField";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   draft: RailFormDraft;
@@ -170,8 +172,8 @@ export function RailLookupPanel({
       <div className="mt-2 flex flex-wrap items-end gap-2">
         <label className="text-sm">
           {t("rail:lookup.date")}
-          <input
-            type="date"
+          <DateField
+            inline
             className={`mt-1 ${inputClassName}`}
             style={{ colorScheme: "dark" }}
             value={date}
@@ -191,9 +193,7 @@ export function RailLookupPanel({
       {isPast ? <p className="t-caption mt-1">{t("rail:lookup.pastDay")}</p> : null}
 
       {state.kind === "error" ? (
-        <p role="alert" className="mt-2 text-sm text-(--danger)">
-          {t("rail:lookup.error")}
-        </p>
+        <InlineError className="mt-2">{t("rail:lookup.error")}</InlineError>
       ) : null}
       {state.kind === "answered" && !match ? <NoMatch answer={state.answer} t={t} /> : null}
 

@@ -131,7 +131,7 @@
   "review": {
     "title_one": "Ein Eintrag wurde beim Update auf 2.7 automatisch eingeordnet",
     "title_other": "{{count}} Einträge wurden beim Update auf 2.7 automatisch eingeordnet",
-    "intro": "Touren und Roadtrips sind jetzt getrennt. Mehrtägige Straßen-, Fähr- und Bahnabschnitte sind Roadtrips geworden, alles andere Tagestouren. Stimmt das?",
+    "intro": "Mehrtägiges ist jetzt Roadtrip, der Rest Tagestour. Stimmt das?",
     "isNow": {
       "tour": "jetzt Tagestour",
       "roadtrip": "jetzt Roadtrip"
@@ -183,7 +183,8 @@
         "track": "Aufzeichnung",
         "routed": "Route",
         "drawn": "gezeichnet",
-        "straight": "Luftlinie"
+        "straight": "Luftlinie",
+        "recorded": "Aufzeichnung (TravTrack)"
       },
       "mode": {
         "rail": "Bahn",
@@ -289,8 +290,8 @@
         "km": "Tourkilometer",
         "ascent": "Aufstieg aus Aufzeichnungen",
         "ascentValue": "{{m}} Hm",
-        "row_one": "{{count}} Tour · {{km}} km ({{kmTours}} mit Strecke) · {{ascent}} Hm ({{ascentTours}} gemessen) · {{duration}} in Bewegung ({{movingTours}} aufgezeichnet)",
-        "row_other": "{{count}} Touren · {{km}} km ({{kmTours}} mit Strecke) · {{ascent}} Hm ({{ascentTours}} gemessen) · {{duration}} in Bewegung ({{movingTours}} aufgezeichnet)",
+        "row_one": "{{count}} Tour · {{km}} km ({{kmTours}}) · {{ascent}} Hm ({{ascentTours}}) · {{duration}} ({{movingTours}})",
+        "row_other": "{{count}} Touren · {{km}} km ({{kmTours}}) · {{ascent}} Hm ({{ascentTours}}) · {{duration}} ({{movingTours}})",
         "empty": "Erscheint, sobald eine Tagestour aufgezeichnet ist oder ihr Datum vorbei ist.",
         "help": {
           "unit": "Eine abgeschlossene Tagestour – Wanderung, Radtour, geführter Ausflug und jede andere Aktivität.",
@@ -446,7 +447,7 @@
     "connected": "Verbunden (Athlet {{athlete}})",
     "askAdmin": "Strava ist auf dieser Instanz nicht eingerichtet. Eine Person mit Admin-Rechten muss dafür eine eigene Strava-App hinterlegen.",
     "adminTitle": "Strava-App dieser Instanz (Admin)",
-    "adminHelp": "Leg unter strava.com/settings/api eine eigene App an und trag als „Authorization Callback Domain“ {{domain}} ein. Seit Juni 2026 braucht der API-Zugang ein Strava-Abo.",
+    "adminHelp": "Eigene App unter strava.com/settings/api, Callback-Domain {{domain}}. Braucht ein Strava-Abo.",
     "clientId": "Client ID",
     "clientSecret": "Client Secret",
     "secretStored": "gespeichert — leer lassen, um es zu behalten",
@@ -473,7 +474,7 @@
       "rateLimited": "Das Strava-Anfragelimit ist erreicht. In einer Viertelstunde noch einmal versuchen."
     }
   },
-  "komootHint": "Komoot: Tour in Komoot als GPX exportieren und hier hochladen — eine direkte Anbindung gibt es nicht, Komoot hat keine öffentliche Schnittstelle.",
+  "komootHint": "Komoot: Tour als GPX exportieren und hier hochladen.",
   "phase": {
     "planned": "Geplant",
     "underway": "Unterwegs · Tag {{day}} von {{total}}",
@@ -553,9 +554,10 @@
       "track": "GPS-Spur",
       "routed": "Route",
       "drawn": "gezeichnet",
-      "straight": "Luftlinie"
+      "straight": "Luftlinie",
+      "recorded": "aus Aufzeichnung"
     },
-    "distanceRule": "Strecke gemessen: {{parts}}. Luftlinie ist die gerade Verbindung der Stationen, Route der Straßenweg des Routing-Anbieters, GPS-Spur eine aufgezeichnete Fahrt. Als gefahren zählt eine Etappe, sobald ihre Zielstation vor heute erreicht ist; „Gefahren“ steht erst, wenn eine GPS-Spur jeden Kilometer belegt oder beide Kilometerstände eingetragen sind; dann gilt deren Differenz.",
+    "distanceRule": "Strecke gemessen: {{parts}}.",
     "figDays": "Tage",
     "figDaysAhead_one": "davon einer noch vor dir",
     "figDaysAhead_other": "davon {{count}} noch vor dir",
@@ -585,7 +587,8 @@
       "healthkit": "Apple Health",
       "healthconnect": "Health Connect",
       "ais": "AIS"
-    }
+    },
+    "distanceRuleMore": "Luftlinie ist die gerade Verbindung der Stationen, Route der Straßenweg des Routing-Anbieters, GPS-Spur eine aufgezeichnete Fahrt. Eine Etappe zählt als gefahren, sobald ihr Ziel vor heute erreicht ist. „Gefahren“ steht erst, wenn eine GPS-Spur jeden Kilometer belegt oder beide Kilometerstände eingetragen sind."
   },
   "timeline": {
     "day": "Tag {{n}}",
@@ -604,13 +607,14 @@
       "routed": "entlang der Straße",
       "straight": "gerade Linie",
       "drawn": "selbst gezeichnet",
-      "track": "aus der Aufzeichnung"
+      "track": "aus der Aufzeichnung",
+      "recorded": "aus Aufzeichnung"
     },
     "legEdit": "Etappe bearbeiten",
     "duration": "{{h}} h {{m}}"
   },
   "editor": {
-    "hint": "Station antippen, um sie zu bearbeiten. Etappe antippen für Fähre oder Linienführung. Jede Änderung wird sofort gespeichert und lässt sich rückgängig machen.",
+    "hint": "Station oder Etappe antippen zum Bearbeiten. Alles wird sofort gespeichert.",
     "status": {
       "pending": "Wird gleich auf dem Server gespeichert",
       "saving": "Wird auf dem Server gespeichert …",
@@ -747,12 +751,12 @@
     "downloadOne": "Als GPX",
     "downloadFailed": "Die Aufzeichnung konnte nicht heruntergeladen werden.",
     "exportTitle": "Aufzeichnungen als GPX",
-    "exportDescription": "Jede Aufzeichnung deiner Touren und Roadtrips als eigene GPX-Datei, zusammen in einem ZIP. Andere Programme lesen die Strecke; TravStats liest beim Einspielen auch Distanz, Höhenmeter und Bewegungszeit so zurück, wie sie gemessen wurden.",
+    "exportDescription": "Alle Aufzeichnungen als GPX-Dateien in einem ZIP.",
     "exportButton": "ZIP herunterladen",
     "exportRunning": "Wird gepackt …",
     "exportFailed": "Das ZIP konnte nicht erstellt werden.",
     "importTitle": "GPX oder ZIP einlesen",
-    "importDescription": "GPX-, TCX- oder FIT-Dateien oder ein ZIP davon. Eine Datei aus TravStats kommt an ihre Tour zurück (oder legt sie an); jede andere wird eine eigene Tagestour. Eine Aufzeichnung, die schon da ist, wird nicht doppelt angelegt. Roadtrips kommen aus der Tabelle – lies sie zuerst ein.",
+    "importDescription": "GPX, TCX, FIT oder ZIP. Doppeltes wird erkannt. Roadtrips zuerst aus der Tabelle laden.",
     "choose": "Dateien wählen",
     "checking": "Wird geprüft …",
     "preview": "Vorschau – noch nichts gespeichert:",
@@ -866,7 +870,7 @@
       },
       "recorded": "{{rate}} · {{source}} vom {{day}} · ≈ {{amount}}",
       "none": "Kein Kurs erfasst — die Kosten zählen nur in ihrer eigenen Währung. Beim Speichern wird der Tageskurs für das Datum gesucht.",
-      "noneUndated": "Kein Kurs: ohne Datum gibt es keinen Tageskurs. Die Kosten zählen dann nur in ihrer eigenen Währung — außer du trägst einen Kurs von Hand ein.",
+      "noneUndated": "Kein Kurs ohne Datum: zählt nur in eigener Währung, außer du trägst einen ein.",
       "relookupHint": "Änderst du Betrag, Währung oder Datum, wird beim Speichern ein neuer Tageskurs gesucht.",
       "enterManual": "Kurs von Hand eingeben",
       "remove": "Kurs entfernen",
@@ -916,7 +920,7 @@
     "discardMessage": "Die auf diesem Gerät gesicherte Fassung der Stationen wird gelöscht – eine andere Kopie davon gibt es nicht.",
     "discardConfirm": "Verwerfen",
     "firstTitle": "Erst die gesicherten Änderungen?",
-    "firstMessage": "Auf diesem Gerät liegen Änderungen an den Stationen, die den Server nie erreicht haben. Stell sie wieder her, oder verwirf sie bewusst, bevor du neu bearbeitest – sonst würden sie beim ersten Tippen überschrieben.",
+    "firstMessage": "Ungespeicherte Änderungen auf diesem Gerät. Wiederherstellen oder verwerfen, sonst gehen sie verloren.",
     "discardAndEdit": "Verwerfen und bearbeiten"
   },
   "conflict": {
@@ -966,7 +970,8 @@
       "track": "aus der Aufzeichnung",
       "drawn": "von Hand korrigiert",
       "routed": "entlang der Straße",
-      "straight": "gerade Linie"
+      "straight": "gerade Linie",
+      "recorded": "aus Aufzeichnung"
     },
     "lossTrack": "Die Linie aus der Aufzeichnung geht für diese Etappe verloren. Die Aufzeichnung selbst bleibt unter „Strecke & Aufzeichnungen“ erhalten.",
     "lossDrawn": "Die von Hand gezeichnete Linie dieser Etappe geht verloren.",
@@ -980,7 +985,7 @@
     "open": "Ab hier verschieben …",
     "openHint": "Diese und alle folgenden Stationen um Tage verschieben – mit Vorschau.",
     "title": "Ab „{{name}}“ verschieben",
-    "intro": "Diese Station und alle danach rücken um dieselbe Zahl von Tagen. Verknüpfte Unterkünfte behalten ihre Buchungsdaten – sie stehen unten zum Prüfen.",
+    "intro": "Diese und alle folgenden Stationen rücken mit. Unterkünfte unten prüfen.",
     "days": "Um wie viele Tage?",
     "daysHint": "Eine positive Zahl verschiebt nach hinten (später), eine negative nach vorne (früher).",
     "daysInvalid": "Bitte eine ganze Zahl eingeben, z. B. 2 oder -1.",
@@ -1028,7 +1033,8 @@
       "track": "{{km}} km aus der Aufzeichnung",
       "routed": "{{km}} km entlang der Straße",
       "drawn": "{{km}} km von Hand gezeichnet",
-      "straight": "{{km}} km Luftlinie"
+      "straight": "{{km}} km Luftlinie",
+      "recorded": "{{km}} km aus Aufzeichnung"
     },
     "ferry": "davon {{km}} km mit der Fähre",
     "driving": "Fahrzeit {{h}} h {{m}} (berechnet)",
@@ -1040,7 +1046,7 @@
   },
   "odometerDialog": {
     "title": "Kilometerstand",
-    "intro": "Trag den Stand beim Start und am Ende ein. Sind beide da, zählt der Roadtrip nach seinem Ende als gefahren — mit der Differenz als Kilometer. Ein leeres Feld heißt: unbekannt.",
+    "intro": "Stand bei Start und Ende. Mit beiden zählt die Differenz als Kilometer.",
     "start": "Kilometerstand beim Start",
     "end": "Kilometerstand am Ende",
     "backwards": "Der Stand am Ende liegt unter dem beim Start.",
@@ -1123,5 +1129,33 @@
     "noLocation": "Ohne Ort oder Datum gibt es kein Wetter.",
     "hint": "Gemessenes Wetter des Ankunftstags (Open-Meteo). Heute und kommende Tage lassen sich erst nachträglich laden."
   },
-  "vehicleChangeError": "Das Fahrzeug konnte nicht geändert werden."
+  "vehicleChangeError": "Das Fahrzeug konnte nicht geändert werden.",
+  "mapColor": {
+    "label": "Farbe auf der Karte",
+    "auto": "Automatisch",
+    "own": "Eigene Farbe",
+    "automatic": "Automatische Farbe aus der Palette",
+    "saveFailed": "Die Farbe konnte nicht gespeichert werden.",
+    "usedOn": "Gilt immer auf der Karte dieser Seite. Auf dem Dashboard und der Reisekarte nur im Farbmodus „Je Roadtrip“ (Kartenpanel)."
+  },
+  "fromTrack": "Aus TravTrack übernommen – Spur ansehen",
+  "photos": {
+    "title": "Fotos",
+    "alt": "Foto der Reise",
+    "legend": "{{linked}} verknüpft (durchgezogener Rahmen), {{fits}} passen nur zu Tag und Strecke (gestrichelt).",
+    "linked": "verknüpft",
+    "fits": "passt zu Tag und Strecke",
+    "linkTo": "An {{station}} verknüpfen",
+    "days": "Tage",
+    "noDays": "Noch keine Fotos und keine datierten Stationen.",
+    "noneOnDay": "Für diesen Tag gibt es keine Fotos.",
+    "toRoadtrip": "Zum Roadtrip",
+    "loadFailed": "Die Fotos dieses Roadtrips konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "linkFailed": "Das Foto konnte nicht verknüpft werden. Es bleibt unverändert.",
+    "truncated": "Es gibt mehr verknüpfte Fotos, als hier angezeigt werden.",
+    "searchLibrary": "In der Bibliothek suchen (Immich / PhotoPrism)",
+    "libraryProblem": "Die Foto-Bibliothek ist nicht vollständig erreichbar; die Liste kann unvollständig sein.",
+    "libraryNone": "In der Bibliothek passt für diesen Tag nichts weiter."
+  }
 }

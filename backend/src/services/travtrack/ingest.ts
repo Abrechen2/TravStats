@@ -204,6 +204,20 @@ function judgeAll(
   return out;
 }
 
+/** The fresh points the INSERT skipped become duplicates, and no link names their unstored id. */
+function reconcileSkipped(judged: Judgement, inserted: readonly { id: string }[]): void {
+  const kept = new Set(inserted.map((r) => r.id));
+  const skipped = new Map(
+    judged.fresh.filter((p) => !kept.has(p.pointId)).map((p) => [p.index, p.pointId])
+  );
+  const skippedIds = new Set(skipped.values());
+  judged.fresh = judged.fresh.filter((p) => kept.has(p.pointId));
+  judged.attach = judged.attach.filter((a) => !skippedIds.has(a.pointId));
+  judged.outcomes = judged.outcomes.map((o) =>
+    o.outcome === "stored" && skipped.has(o.index) ? { ...o, outcome: "duplicate" as const } : o
+  );
+}
+
 /** Resolves every named entry and adds the links; returns how many were added and refused. */
 async function linkAll(tx: Tx, userId: string, attach: Judgement["attach"]) {
   const named = attach.flatMap((a) => a.entries);
@@ -252,6 +266,13 @@ async function ingestIn(
   hash: string | null
 ): Promise<{ result: IngestResult; replayed: boolean }> {
   const { userId, origin, deviceId, uploadId } = input;
+  if (input.lockTimeoutMs !== undefined) {
+    // A bounded wait for the account's lock: a batch behind a long derivation
+    // gives up and is retried later instead of holding its transaction open.
+    const ms = Math.max(1, Math.floor(input.lockTimeoutMs));
+    await tx.$executeRawUnsafe(`SET LOCAL lock_timeout = '${ms}ms'`);
+    await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = '${ms * 2}ms'`);
+  }
   await takeTravTrackLock(tx, userId);
   // The caller's own condition, under the lock: an import that was deleted
   // meanwhile throws here and this batch stores nothing.
@@ -288,7 +309,12 @@ async function ingestIn(
   });
 
   if (judged.fresh.length > 0) {
-    await tx.travTrackPoint.createMany({
+    // One multi-row INSERT … ON CONFLICT DO NOTHING: a row the judgement did
+    // not see (another writer's, a constraint it cannot read) is a duplicate,
+    // never an aborted batch.
+    const inserted = await tx.travTrackPoint.createManyAndReturn({
+      skipDuplicates: true,
+      select: { id: true },
       data: judged.fresh.map((p) => ({
         id: p.pointId,
         userId,
@@ -307,6 +333,7 @@ async function ingestIn(
         purpose: p.purpose,
       })),
     });
+    if (inserted.length < judged.fresh.length) reconcileSkipped(judged, inserted);
   }
   // The projections (country days, E6) re-derive the days that gained a
   // point, and the neighbours that read it as context — in this transaction,
@@ -350,6 +377,7 @@ async function ingestIn(
       where: { userId, createdAt: { lt: new Date(Date.now() - RECEIPT_DAYS * 86_400_000) } },
     });
   }
+  if (input.afterIn) await input.afterIn(tx, result);
   return { result, replayed: false };
 }
 
@@ -370,6 +398,12 @@ export type IngestInput = {
   outer?: DbTransaction;
   /** Runs first, under the lock; a throw aborts the upload and stores nothing. */
   fence?: (tx: DbTransaction) => Promise<void>;
+  /** Runs last, in the same transaction: a caller's checkpoint commits with the points. */
+  afterIn?: (tx: DbTransaction, result: IngestResult) => Promise<void>;
+  /** The own transaction's timeout (default 60 s). */
+  timeoutMs?: number;
+  /** Bounds the wait for the account's lock and each statement (2×); unset waits as long as the timeout. */
+  lockTimeoutMs?: number;
 };
 
 /**
@@ -386,7 +420,9 @@ export async function ingestPoints(
   const gaps = parseGaps(rawGaps);
   const hash = input.uploadId === null ? null : payloadHash(input.points, rawGaps);
   if (input.outer) return ingestIn(input.outer, input, gaps, hash);
-  return prisma.$transaction((tx) => ingestIn(tx, input, gaps, hash), { timeout: 60_000 });
+  return prisma.$transaction((tx) => ingestIn(tx, input, gaps, hash), {
+    timeout: input.timeoutMs ?? 60_000,
+  });
 }
 
 /** The Companion's upload: its device is its origin, its uploadId its receipt. */

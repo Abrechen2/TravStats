@@ -3,23 +3,33 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { dataQualityFlagsApi } from "../../../lib/api/dataQualityFlags";
 import { dawarichStaysApi } from "../../../lib/api/dawarichStays";
 import { pendingUpdatesApi } from "../../../lib/api/pendingUpdates";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { photoJourneysApi } from "../../../lib/api/photoJourneys";
+import type { SuggestionCoveredBy } from "../../../types/photoJourney";
+import { useDisplayFormat } from "../../../lib/format";
 import { logger } from "../../../lib/logger";
 import Button from "../../ui/Button";
 import { Card } from "../../ui/Card";
 import EmptyState from "../../ui/EmptyState";
 import { GlobeLoader } from "../../GlobeLoader";
 import { flagSubject, W, type Translate } from "./model";
+import InlineError from "../../ui/InlineError";
 
 /** The sources whose answers are kept and can be looked back at. */
-export type HistorySource = "review" | "updates" | "dawarich";
-export const HISTORY_SOURCES: readonly HistorySource[] = ["review", "updates", "dawarich"];
+export type HistorySource = "review" | "updates" | "dawarich" | "photos";
+export const HISTORY_SOURCES: readonly HistorySource[] = [
+  "review",
+  "updates",
+  "dawarich",
+  "photos",
+];
 
 interface Row {
   key: string;
   title: string;
   status: string;
   when: string | null;
+  /** A `covered` row (forgejo#439) can be taken back: it is a question again. */
+  reopen?: () => Promise<void>;
 }
 interface History {
   rows: Row[];
@@ -30,14 +40,16 @@ interface History {
 /**
  * What has already been answered, for one kind of item. The open inbox shows
  * questions; this is where a user looks back — above all at a "Das stimmt so",
- * the one answer that is never asked again. Read-only by design: nothing here
- * re-opens or changes a record.
+ * the one answer that is never asked again. Read-only by design, with one
+ * exception: a suggestion the server closed as `covered` (forgejo#439) was
+ * never the user's answer, so it can be taken back here.
  */
 export default function InboxHistory({ source }: { source: HistorySource }) {
   const { t, i18n } = useTranslation(["dataQuality", "pendingUpdates", "trips"]);
   const format = useDisplayFormat();
   const [history, setHistory] = useState<History | null>(null);
   const [failed, setFailed] = useState(false);
+  const [undoFailed, setUndoFailed] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setFailed(false);
@@ -100,6 +112,26 @@ export default function InboxHistory({ source }: { source: HistorySource }) {
                 {row.status}
                 {row.when ? ` · ${format.dateTime(row.when)}` : ""}
               </span>
+              {row.reopen && (
+                <Button
+                  className="mt-2"
+                  onClick={async () => {
+                    setUndoFailed(null);
+                    try {
+                      await row.reopen!();
+                      await load();
+                    } catch (error) {
+                      logger.warn("Failed to take a covered suggestion back:", error);
+                      setUndoFailed(row.key);
+                    }
+                  }}
+                >
+                  {t(`${W}.history.undoCovered`)}
+                </Button>
+              )}
+              {undoFailed === row.key && (
+                <InlineError className="mt-1">{t(`${W}.history.undoFailed`)}</InlineError>
+              )}
             </li>
           ))}
         </ul>
@@ -153,6 +185,26 @@ async function loadHistory(
       })),
     };
   }
+  if (source === "photos") {
+    const [accepted, dismissed, covered] = await Promise.all([
+      photoJourneysApi.list("accepted"),
+      photoJourneysApi.list("dismissed"),
+      photoJourneysApi.list("covered"),
+    ]);
+    return {
+      totals: null,
+      rows: [...covered, ...accepted, ...dismissed].map((j) => {
+        const coveredBy = j.status === "covered" ? j.resolution?.coveredBy : undefined;
+        return {
+          key: j.id,
+          title: j.label ?? j.suggestedName ?? t(`${W}.history.unnamedPhotoStop`),
+          status: coveredBy ? coveredText(coveredBy, t) : t(`${W}.history.photoStatus.${j.status}`),
+          when: j.resolvedAt ?? j.startDate,
+          reopen: coveredBy ? () => photoJourneysApi.reopen(j.id) : undefined,
+        };
+      }),
+    };
+  }
   const [accepted, rejected, covered, invalidated] = await Promise.all([
     dawarichStaysApi.list("accepted"),
     dawarichStaysApi.list("rejected"),
@@ -167,11 +219,18 @@ async function loadHistory(
       title: stay.name ?? t("trips:dawarichStays.unnamed"),
       // A covered finding says what already holds it, not just that it left.
       status: stay.evidence.coveredBy
-        ? t(`trips:dawarichStays.coveredBy.${stay.evidence.coveredBy.kind}`, {
-            name: stay.evidence.coveredBy.name,
-          })
+        ? coveredText(stay.evidence.coveredBy, t)
         : t(`trips:dawarichStays.status.${stay.status}`),
       when: stay.resolvedAt ?? stay.startAt,
+      reopen:
+        stay.status === "covered" && stay.evidence.coveredBy
+          ? () => dawarichStaysApi.reopen(stay.id)
+          : undefined,
     })),
   };
+}
+
+/** "Already recorded as a visit: Rathaus" — the entry that holds a covered suggestion. */
+function coveredText(coveredBy: SuggestionCoveredBy, t: Translate): string {
+  return t(`trips:dawarichStays.coveredBy.${coveredBy.kind}`, { name: coveredBy.name });
 }

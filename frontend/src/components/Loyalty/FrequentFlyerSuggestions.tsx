@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { listFrequentFlyerSuggestions } from "../../lib/api/loyalty";
 import { logger } from "../../lib/logger";
 import type { FrequentFlyerSuggestion } from "../../types/loyalty";
 import type { CardPrefill } from "./LoyaltyCardForm";
 import { maskNumber } from "./MaskedNumber";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   /** Opens the card form prefilled; nothing is saved until the user confirms there. */
@@ -63,11 +64,7 @@ export default function FrequentFlyerSuggestions({ onAdopt, reloadSignal }: Prop
         >
           {t("loyalty:suggestions.open")}
         </button>
-        {error && (
-          <p className="t-caption mt-1" role="alert" style={{ color: "var(--ts-bad)" }}>
-            {t("loyalty:suggestions.loadError")}
-          </p>
-        )}
+        {error && <InlineError className="mt-1">{t("loyalty:suggestions.loadError")}</InlineError>}
       </div>
     );
   }

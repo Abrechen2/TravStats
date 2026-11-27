@@ -51,11 +51,14 @@ interface TourSummaryRow {
   tripId: string | null;
   name: string;
   mode: string;
+  /** The section's own colour; a roadtrip's line takes it in the per-roadtrip colour mode. */
+  color: string | null;
   kind: string;
   activity: string | null;
   vehicle: string | null;
   kindAssignedAutomatically: boolean;
   purpose: string | null;
+  purposeKey: string | null;
   notes: string | null;
   tags: string[];
   tourDate: Date | null;
@@ -86,11 +89,13 @@ const TOUR_SUMMARY_SELECT = {
   tripId: true,
   name: true,
   mode: true,
+  color: true,
   kind: true,
   activity: true,
   vehicle: true,
   kindAssignedAutomatically: true,
   purpose: true,
+  purposeKey: true,
   notes: true,
   tags: true,
   tourDate: true,
@@ -163,11 +168,13 @@ function toTourSummary(route: TourSummaryRow): Record<string, unknown> {
     tripName: route.trip?.name ?? null,
     name: route.name,
     mode: route.mode,
+    color: route.color,
     kind: route.kind,
     activity: route.activity,
     vehicle: route.vehicle,
     kindAssignedAutomatically: route.kindAssignedAutomatically,
     purpose: route.purpose,
+    purposeKey: route.purposeKey,
     notes: route.notes,
     tags: route.tags,
     // The spreadsheet writes the anchor as "Station [id]"; the title saves it

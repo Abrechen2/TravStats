@@ -1,7 +1,8 @@
 import { useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { purposeApi, type PurposeEntryType } from "../../lib/api/purpose";
+import { purposeApi, type PurposeEntryType, type StoredPurpose } from "../../lib/api/purpose";
 import { logger } from "../../lib/logger";
+import { usePurposeCatalogue } from "../../store/purposeCatalogueStore";
 import PurposeSelect, { PURPOSE_UNSET, toChoice, type PurposeChoice } from "./PurposeSelect";
 
 /**
@@ -12,22 +13,29 @@ export default function PurposeEditor({
   entryType,
   entryId,
   purpose,
+  purposeKey,
   onSaved,
 }: {
   entryType: PurposeEntryType;
   entryId: string;
   purpose: string | null | undefined;
-  onSaved?: (purpose: string | null) => void;
+  purposeKey?: string | null;
+  onSaved?: (stored: StoredPurpose) => void;
 }): JSX.Element {
   const { t } = useTranslation(["purpose"]);
-  const [stored, setStored] = useState<PurposeChoice>(toChoice(purpose));
+  const catalogue = usePurposeCatalogue();
+  const [stored, setStored] = useState<StoredPurpose | null>(null);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const current = stored ?? {
+    purpose: (purpose ?? null) as StoredPurpose["purpose"],
+    purposeKey: purposeKey ?? null,
+  };
 
   const choose = async (next: PurposeChoice): Promise<void> => {
     setStatus("idle");
     try {
       const saved = await purposeApi.set(entryType, entryId, next === PURPOSE_UNSET ? null : next);
-      setStored(toChoice(saved));
+      setStored(saved);
       setStatus("saved");
       onSaved?.(saved);
     } catch (error) {
@@ -38,7 +46,11 @@ export default function PurposeEditor({
 
   return (
     <div>
-      <PurposeSelect id={`purpose-${entryId}`} value={stored} onChange={(v) => void choose(v)} />
+      <PurposeSelect
+        id={`purpose-${entryId}`}
+        value={toChoice(catalogue, current)}
+        onChange={(v) => void choose(v)}
+      />
       <p className="t-caption">{t("purpose:field.hint")}</p>
       {status !== "idle" && (
         <p role={status === "error" ? "alert" : "status"} className="t-caption">

@@ -1,6 +1,5 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useToastStore } from "../../../store/toastStore";
 import type {
   ParseEmailCruiseResult,
   ParseEmailResult,
@@ -11,6 +10,7 @@ import type {
 import { CruiseEditModal } from "../../Cruise/CruiseEditModal";
 import { CruiseImportPreviewModal } from "../../Cruise/CruiseImportPreviewModal";
 import type { DomainImportAdapter, ReviewModalProps } from "../types";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 function extractCruises(r: ParseEmailResult | ParsePdfResult): ParsedCruiseEntry[] | null {
   if ("domain" in r && r.domain === "cruise") {
@@ -26,7 +26,6 @@ function extractCruises(r: ParseEmailResult | ParsePdfResult): ParsedCruiseEntry
  */
 export function useCruiseImportAdapter(): DomainImportAdapter {
   const { t } = useTranslation(["cruise", "import"]);
-  const addToast = useToastStore((s) => s.addToast);
 
   return {
     domain: "cruise",
@@ -45,7 +44,7 @@ export function useCruiseImportAdapter(): DomainImportAdapter {
     renderReviewModal: (props) => (
       <CruiseReviewSlot
         {...props}
-        onEmpty={(reason) => addToast("error", reason ?? t("cruise:import.noCruises"))}
+        onEmpty={(reason) => reportPageError(reason ?? t("cruise:import.noCruises"))}
       />
     ),
   };

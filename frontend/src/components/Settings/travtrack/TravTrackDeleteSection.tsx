@@ -1,15 +1,17 @@
+import DateField from "../../../components/ui/DateField";
 import { useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../../hooks/useIsDemoAccount";
 import { useTravTrackCapabilities } from "../../../hooks/useTravTrackVisible";
 import { trackErrorKey, travTrackApi } from "../../../lib/api/travtrack";
-import { Field, Input } from "../../ui/Field";
+import { Field } from "../../ui/Field";
 import { SettingRows } from "../../ui/SettingRow";
 import { ActionControl, ErrorLine, SettingItem } from "../../ui/settings";
 import { SectionCard } from "../SettingsShared";
 import { useBlockConfirm } from "../useBlockConfirm";
 import { RowFailure, useRowAction } from "../location/useRowAction";
 import { useSpanCount, useSpanPreset } from "./useSpan";
+import TravTrackDeleteBreakdown from "./TravTrackDeleteBreakdown";
 
 const NS = "settings:tt.delete";
 
@@ -76,17 +78,15 @@ export default function TravTrackDeleteSection(): JSX.Element | null {
         >
           <div className="flex flex-wrap items-end" style={{ gap: "var(--ts-space-sm)" }}>
             <Field label={t(`${NS}.from`)} htmlFor="tt-delete-from">
-              <Input
+              <DateField
                 id="tt-delete-from"
-                type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
               />
             </Field>
             <Field label={t(`${NS}.until`)} htmlFor="tt-delete-until">
-              <Input
+              <DateField
                 id="tt-delete-until"
-                type="date"
                 value={until}
                 onChange={(e) => setUntil(e.target.value)}
               />
@@ -103,6 +103,9 @@ export default function TravTrackDeleteSection(): JSX.Element | null {
             </p>
           ) : count.kind === "failed" ? (
             <ErrorLine>{t(count.key)}</ErrorLine>
+          ) : null}
+          {count.kind === "count" && count.count > 0 ? (
+            <TravTrackDeleteBreakdown from={from} until={until} version={version} />
           ) : null}
           <RowFailure error={del.error} onRetry={del.retry} />
           {note ? (

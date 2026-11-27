@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
+import { describePurpose } from "../../lib/purposeDisplay";
+import { usePurposeCatalogue } from "../../store/purposeCatalogueStore";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
@@ -12,6 +14,7 @@ import {
   type ChangeHistoryEntry,
 } from "../../lib/api/changeHistory";
 import { formatChangeValue } from "./formatChangeValue";
+import InlineError from "../ui/InlineError";
 
 interface ChangeHistoryListProps {
   entityType: ChangeEntityType;
@@ -37,7 +40,8 @@ export default function ChangeHistoryList({
   entityId,
   onRestored,
 }: ChangeHistoryListProps): JSX.Element {
-  const { t } = useTranslation(["changeHistory", "purpose", "flights"]);
+  const { t, i18n } = useTranslation(["changeHistory", "purpose", "flights"]);
+  const purposeCatalogue = usePurposeCatalogue();
   const format = useDisplayFormat();
   const coarse = useCoarsePointer();
   const addToast = useToastStore((s) => s.addToast);
@@ -95,6 +99,10 @@ export default function ChangeHistoryList({
   // A coded value in words, as the entry's own page writes it: "business" read
   // as an English word in the German history (UAT rc.45).
   const codedValueLabel = (entity: string, field: string | null, stored: string): string | null => {
+    // A detailed purpose by its name (a built-in translated, a custom one as the user named it).
+    if (field === "purposeKey") {
+      return describePurpose(t, purposeCatalogue, stored, i18n.language ?? "de")?.label ?? null;
+    }
     const prefix =
       field === "purpose"
         ? "purpose:field"
@@ -140,9 +148,12 @@ export default function ChangeHistoryList({
 
   const who = (entry: ChangeHistoryEntry): string => {
     const source = t(`changeHistory:source.${entry.source}`);
-    return entry.actor && entry.source !== "system"
-      ? `${source} · ${t(`changeHistory:actor.${entry.actor}`)}`
-      : source;
+    const base =
+      entry.actor && entry.source !== "system"
+        ? `${source} · ${t(`changeHistory:actor.${entry.actor}`)}`
+        : source;
+    // A write by the MCP package names the key that made it ("via MCP / <label>").
+    return entry.reason?.startsWith("via MCP") ? `${base} · ${entry.reason}` : base;
   };
 
   const cell = { padding: "var(--ts-space-sm) var(--ts-space-md)", verticalAlign: "top" as const };
@@ -156,9 +167,7 @@ export default function ChangeHistoryList({
       {load.state === "loading" && <p className="t-caption">{t("changeHistory:loading")}</p>}
       {load.state === "failed" && (
         <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
-          <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-            {t("changeHistory:loadFailed")}
-          </p>
+          <InlineError>{t("changeHistory:loadFailed")}</InlineError>
           <button
             type="button"
             className="ts-chip"
@@ -169,11 +178,7 @@ export default function ChangeHistoryList({
           </button>
         </div>
       )}
-      {restoreError && (
-        <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
-          {restoreError}
-        </p>
-      )}
+      {restoreError && <InlineError>{restoreError}</InlineError>}
       {load.state === "ready" && entries.length === 0 && (
         <p className="t-caption">{t("changeHistory:empty")}</p>
       )}
@@ -208,7 +213,9 @@ export default function ChangeHistoryList({
                   <td style={cell}>
                     {entry.operation === "delete"
                       ? t("changeHistory:deleted")
-                      : fieldLabel(entry.field)}
+                      : entry.operation === "create"
+                        ? t("changeHistory:created")
+                        : fieldLabel(entry.field)}
                   </td>
                   <td style={{ ...cell, wordBreak: "break-word" }}>
                     {entry.operation === "update" && (
@@ -244,7 +251,7 @@ export default function ChangeHistoryList({
                       <span className="t-caption">
                         {t(
                           // The purpose is not in any edit dialog: say where it is (retest).
-                          entry.field === "purpose"
+                          entry.field === "purpose" || entry.field === "purposeKey"
                             ? "changeHistory:notRestorablePurpose"
                             : "changeHistory:notRestorable"
                         )}

@@ -1,7 +1,7 @@
 import { useEffect, useState, type JSX } from "react";
 import { adminApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDemoAccountStore } from "../../store/demoAccountStore";
 import { useToastStore } from "../../store/toastStore";
@@ -18,6 +18,7 @@ import {
 } from "../ui/settings";
 import type { AdminUser, SystemInfoData } from "./types";
 import MaintenanceAirportEnrich from "./MaintenanceAirportEnrich";
+import MaintenanceRuntime from "./MaintenanceRuntime";
 import { CATALOGUE_KINDS, useCatalogueReseed } from "./useCatalogueReseed";
 
 /**
@@ -167,6 +168,7 @@ export default function MaintenanceSystem(): JSX.Element {
           </StatusValue>
         }
       />
+      <MaintenanceRuntime />
       <SettingItem
         title={full.title}
         sub={full.sub}

@@ -10,6 +10,8 @@ import {
   type TestAccount,
 } from "../../../routes/__tests__/sharingFixtures";
 import { tripPeople } from "../tripPeople";
+import { markNotSameLocal } from "../remoteCompanion";
+import { linkCompanion } from "../companionLink";
 
 /**
  * One row per person on a trip (spec 2026-10-16, D9): every companion of the
@@ -95,6 +97,69 @@ describe("tripPeople", () => {
       companionId: null,
       member: true,
       receivesChanges: false,
+    });
+  });
+
+  it("asks 'Ist das <Name>?' about a local member with a same-name companion, until told apart", async () => {
+    // Ben may link to Anna (she lets him), and keeps an unlinked companion of her name.
+    await prisma.shareConsent.create({
+      data: { requesterId: ben.id, targetId: anna.id, status: "accepted", decidedAt: new Date() },
+    });
+    const own = await prisma.companion.create({
+      data: {
+        userId: ben.id,
+        canonicalName: "anna-people",
+        displayName: "Anna-People",
+        searchName: "anna-people",
+      },
+    });
+    const { memberTrip } = await sharedPair(anna, ben);
+    const annaRow = async () =>
+      (await tripPeople(ben.id, memberTrip)).people.find((p) => p.account?.id === anna.id)!;
+    // Before: the row came without a question — a remote member got one, a local one never.
+    expect(await annaRow()).toMatchObject({
+      key: `u:${anna.id}`,
+      companionId: null,
+      nameMatches: [{ id: own.id, name: "Anna-People" }],
+    });
+    await markNotSameLocal(ben.id, own.id, anna.id);
+    expect((await annaRow()).nameMatches).toEqual([]);
+    // Only for an account the caller shares a group with: no probing other ids.
+    await expect(markNotSameLocal(ben.id, own.id, carl.id)).rejects.toMatchObject({
+      code: "SHARE_MEMBER_NOT_FOUND",
+    });
+  });
+
+  it("asks 'Ist das <Name>?' on a plain local share too, where only the sharer consented, and lets the recipient link", async () => {
+    // Anna shares with Ben (her request, his yes). Ben gave no consent of his own toward Anna,
+    // and keeps an unlinked companion of her name: the question used to be skipped (rc46 UAT).
+    const own = await prisma.companion.create({
+      data: {
+        userId: ben.id,
+        canonicalName: "anna-people",
+        displayName: "Anna-People",
+        searchName: "anna-people",
+      },
+    });
+    const { memberTrip } = await sharedPair(anna, ben);
+    expect(
+      await prisma.shareConsent.count({ where: { requesterId: ben.id, targetId: anna.id } })
+    ).toBe(0);
+    const annaRow = (await tripPeople(ben.id, memberTrip)).people.find(
+      (p) => p.account?.id === anna.id
+    )!;
+    expect(annaRow.nameMatches).toEqual([
+      expect.objectContaining({ id: own.id, name: "Anna-People" }),
+    ]);
+    // "Ja": the link goes through, as the question promised.
+    const linked = await linkCompanion(ben.id, own.id, anna.id);
+    expect(linked.linkedUser?.id).toBe(anna.id);
+    // A stranger Ben shares nothing with stays refused.
+    const other = await prisma.companion.create({
+      data: { userId: ben.id, canonicalName: "x", displayName: "X", searchName: "x" },
+    });
+    await expect(linkCompanion(ben.id, other.id, carl.id)).rejects.toMatchObject({
+      statusCode: 403,
     });
   });
 

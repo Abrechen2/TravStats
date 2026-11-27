@@ -207,11 +207,11 @@ describe("BookingPrice", () => {
   it("states the cost rule as the server applies it (review M1)", async () => {
     const de = (await import("../../../i18n/resources/de/flights.json")).default.bookingPrice;
     const en = (await import("../../../i18n/resources/en/flights.json")).default.bookingPrice;
-    expect(de.countedOnce).toMatch(/annullierter Flug kostet nichts/);
-    expect(de.countedOnce).toMatch(/zwei Reisen.*bei jeder dieser Reisen/);
+    expect(de.countedOnceMore).toMatch(/annullierter Flug kostet nichts/);
+    expect(de.countedOnceMore).toMatch(/zwei Reisen.*bei jeder dieser Reisen/);
     expect(de.noTotal).toMatch(/ohne Preis, Steuern und Gebühren/);
-    expect(en.countedOnce).toMatch(/cancelled flight costs nothing/);
-    expect(en.countedOnce).toMatch(/two trips.*each of those trips/);
+    expect(en.countedOnceMore).toMatch(/cancelled flight costs nothing/);
+    expect(en.countedOnceMore).toMatch(/two trips.*each of those trips/);
     expect(en.noTotal).toMatch(/without price, taxes and fees/);
   });
 });

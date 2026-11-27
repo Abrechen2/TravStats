@@ -91,8 +91,8 @@ describe("TripsTab — the gap calendar's days", () => {
       </MemoryRouter>
     );
     // The trip form's dates are the gap's; the import chooser never shows.
-    const start = (await screen.findByDisplayValue("2024-03-04")) as HTMLInputElement;
+    const start = (await screen.findByDisplayValue("03/04/2024")) as HTMLInputElement;
     expect(start).toBeInTheDocument();
-    expect(screen.getByDisplayValue("2024-03-07")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("03/07/2024")).toBeInTheDocument();
   });
 });

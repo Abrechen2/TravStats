@@ -20,8 +20,21 @@ import { countConnectionRequests } from "../services/sharing/federation/connecti
 import { countPlanInvites } from "../services/sharing/federation/plans/memberServe";
 import { inboxCount, listNotices, markNoticeRead } from "../services/sharing/notices";
 import { leaveGroup, shareTrip, tripSharingView } from "../services/sharing/shareTrip";
+import { linkCandidates, linkTrip, previewLink } from "../services/sharing/linkExisting";
+import {
+  linkBodySchema,
+  linkCandidatesQuerySchema,
+  linkPreviewBodySchema,
+} from "../schemas/sharingLink";
 import { deleteOwnCopy, undoNotice } from "../services/sharing/undo";
 import { resolveConflict } from "../services/sharing/federation/conflicts";
+import {
+  linkRemoteCompanion,
+  markNotSameLocal,
+  markNotSameRemote,
+  tripCompanionDuplicates,
+} from "../services/sharing/remoteCompanion";
+import { receivedTrips, markReceivedTripsSeen } from "../services/sharing/receivedTrips";
 
 /**
  * `/api/v1/sharing` — shared trips, phases S1 and S2 (design
@@ -45,6 +58,10 @@ export const consentRequestSchema = z
   .strict();
 export const companionLinkSchema = z.object({ userId: idSchema }).strict();
 export const shareTripSchema = z.object({ companionId: idSchema }).strict();
+/** One person, one companion (2026-11-24): a companion linked to — or told apart from — a pairing. */
+export const companionRemoteSchema = z.object({ remoteId: idSchema }).strict();
+/** "Not the same person": a person on another server, or a member of this one. */
+export const companionNotSameSchema = z.union([companionRemoteSchema, companionLinkSchema]);
 /** F-S4d: a conflict is answered with the other side's value or one's own. */
 export const resolveConflictSchema = z.object({ choice: z.enum(["mine", "theirs"]) }).strict();
 
@@ -123,6 +140,53 @@ router.delete(
   })
 );
 
+router.put(
+  "/companions/:id/remote-link",
+  handle(async (req, res) => {
+    const id = idSchema.parse(req.params.id);
+    const { remoteId } = companionRemoteSchema.parse(req.body ?? {});
+    res.json({ success: true, data: await linkRemoteCompanion(req.userId!, id, remoteId) });
+  })
+);
+
+router.post(
+  "/companions/:id/not-same",
+  handle(async (req, res) => {
+    const id = idSchema.parse(req.params.id);
+    const body = companionNotSameSchema.parse(req.body ?? {});
+    if ("remoteId" in body) await markNotSameRemote(req.userId!, id, body.remoteId);
+    else await markNotSameLocal(req.userId!, id, body.userId);
+    res.json({ success: true, data: { ok: true } });
+  })
+);
+
+router.get(
+  "/trips/:tripId/companion-duplicates",
+  handle(async (req, res) => {
+    const tripId = idSchema.parse(req.params.tripId);
+    res.json({
+      success: true,
+      data: { duplicates: await tripCompanionDuplicates(req.userId!, tripId) },
+    });
+  })
+);
+
+/** Trips shared with the caller they have not looked at yet: the dashboard banner and the nav dot. */
+router.get(
+  "/received-trips",
+  handle(async (req, res) => {
+    res.json({ success: true, data: await receivedTrips(req.userId!) });
+  })
+);
+
+router.post(
+  "/received-trips/seen",
+  handle(async (req, res) => {
+    await markReceivedTripsSeen(req.userId!);
+    res.json({ success: true, data: { ok: true } });
+  })
+);
+
 router.get(
   "/trips/:tripId",
   handle(async (req, res) => {
@@ -137,6 +201,40 @@ router.post(
     const tripId = idSchema.parse(req.params.tripId);
     const { companionId } = shareTripSchema.parse(req.body ?? {});
     res.json({ success: true, data: await shareTrip(req.userId!, tripId, companionId) });
+  })
+);
+
+/** Linking an existing copy (forgejo#440): candidates, the dry run, the link. */
+router.get(
+  "/trips/:tripId/link-candidates",
+  handle(async (req, res) => {
+    const tripId = idSchema.parse(req.params.tripId);
+    const { userId } = linkCandidatesQuerySchema.parse(req.query ?? {});
+    res.json({ success: true, data: await linkCandidates(req.userId!, tripId, userId) });
+  })
+);
+
+router.post(
+  "/trips/:tripId/link-preview",
+  handle(async (req, res) => {
+    const tripId = idSchema.parse(req.params.tripId);
+    const body = linkPreviewBodySchema.parse(req.body ?? {});
+    res.json({
+      success: true,
+      data: await previewLink(req.userId!, tripId, body.userId, body.targetTripId),
+    });
+  })
+);
+
+router.post(
+  "/trips/:tripId/link",
+  handle(async (req, res) => {
+    const tripId = idSchema.parse(req.params.tripId);
+    const body = linkBodySchema.parse(req.body ?? {});
+    res.json({
+      success: true,
+      data: await linkTrip(req.userId!, tripId, body.userId, body.targetTripId, body.decision),
+    });
   })
 );
 

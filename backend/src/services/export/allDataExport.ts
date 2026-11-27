@@ -112,6 +112,9 @@ export const USER_EXPORT_SELECT = {
   // rating names them by id (`custom:<id>`), so the labels travel with the records.
   placeCategories: true,
   lodgingRatingCategories: true,
+  // The user's own travel purposes: an entry names one by `purposeKey` (`custom:<id>`) beside its
+  // kind, so the names travel with the records. Built-in keys are labelled by the catalogue.
+  customPurposes: true,
   // The other OSM/Google references a place answers to after a merge
   // (forgejo#232): without them a re-import of the export's source would
   // bring the merged duplicate back.
@@ -267,6 +270,9 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   mailIntakeSources: "mailbox connections carrying an encrypted password; re-entered after restore",
   mailIntakeSenders:
     "the allowed-sender list of the forwarding address, mailbox configuration rather than travel records",
+  mailIntakeScans: "progress of a mailbox scan, bound to a mailbox connection that is not exported",
+  mailIntakeCandidates:
+    "mails a mailbox scan found for review, transient intake state of a connection that is not exported",
   mailIntakeMessages:
     "the pickup queue of fetched mails; each original is exported as its Document, the proposal itself is transient",
   externalServiceTests:
@@ -332,6 +338,10 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
     "projection of the TravTrack history: the explored map's cells, re-derived",
   travTrackZoneCells: "projection of the privacy zones: the explored map's zone raster, rebuilt",
   travTrackMonthValues: "projection of the TravTrack history: monthly values, re-derived",
+  travTrackCleanups:
+    "TravTrack cleanup choices (smoothing on/off) and road-matched stretches: drawing aids over the raw points, which the `travtrack` section carries in full; not exported on their own yet",
+  travTrackDaySources:
+    "TravTrack history (beta): the owner's per-day source and outlier choices in the `travtrack` section (`daySourceChoices`), accountExport.ts; the rest of the row is re-derived",
   travTrackImports: "import job bookkeeping: status and per-run reports of a file import",
   travTrackIngestTokens: "credential material",
   travTrackDiagnosticEvents:

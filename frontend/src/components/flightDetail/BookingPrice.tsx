@@ -12,6 +12,7 @@ import type { FlightBookingAnswer } from "../../types/flightBooking";
 import { DAY_CARD_TOUCH } from "./FlightDayCard";
 import { PackageBookingCard } from "../bookings/PackageBookingCard";
 import type { PackageSplitController } from "../bookings/usePackageSplit";
+import InfoLine from "../ui/InfoLine";
 
 /** The split refusals the server names, each to its own sentence. */
 const SPLIT_ERROR_KEYS: Readonly<Record<string, string>> = {
@@ -196,7 +197,11 @@ export default function BookingPrice({
             })}
           </p>
           <p>{t("flights:bookingPrice.storedOnBooking")}</p>
-          <p>{t("flights:bookingPrice.countedOnce")}</p>
+          <InfoLine
+            className=""
+            text={t("flights:bookingPrice.countedOnce")}
+            more={t("flights:bookingPrice.countedOnceMore")}
+          />
           {booking.price === 0 ? <p>{t("flights:bookingPrice.zeroIsFree")}</p> : null}
         </>
       ) : (

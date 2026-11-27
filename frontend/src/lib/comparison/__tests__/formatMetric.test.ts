@@ -13,7 +13,7 @@ describe("formatMetricValue", () => {
   });
   it("prints flight time as a duration and counts in the reader's language", () => {
     const ctx = { distanceUnit: "kilometers" as const, t, language: "de" };
-    expect(formatMetricValue(125, "minutes", ctx)).toBe("2h 5min");
+    expect(formatMetricValue(125, "minutes", ctx)).toBe("2 h 05 min");
     expect(formatMetricValue(12345, "count", ctx)).toBe("12.345");
     expect(formatMetricValue(3, "nights", ctx)).toBe(
       'comparison:unit.nights:{"count":3,"value":"3"}'

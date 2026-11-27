@@ -1,11 +1,10 @@
 import type { JSX } from "react";
-import { Link } from "react-router-dom";
+import { LogisticsTable } from "./LogisticsTable";
 import { useTranslation } from "../../hooks/useTranslation";
 import { railDeparture } from "../../lib/entityTimes";
 import { formatStationTime } from "../../lib/railTime";
 import type { Trip } from "../../types";
 import { dateLocaleForLanguage } from "../../lib/units";
-import { PanelHeader } from "./TripDetailPanels";
 
 /** How many train, bus and ferry rides a trip holds — what the logistics tab calls "empty" by. */
 export function groundRideCount(
@@ -41,54 +40,26 @@ function GroundPanel({
   basePath: string;
   testId: string;
 }): JSX.Element {
-  const { t, i18n } = useTranslation(["trips"]);
+  const { t, i18n } = useTranslation(["trips", "common"]);
   const locale = dateLocaleForLanguage(i18n.language);
   return (
-    <div
-      className="rounded-xl"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-      data-testid={testId}
-    >
-      <PanelHeader>
-        {title} ({rides.length})
-      </PanelHeader>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-xs uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-            <th className="text-left px-4 py-2">{t("trips:detail.logistics.date")}</th>
-            <th className="text-left px-4 py-2">{t("trips:detail.logistics.route")}</th>
-            <th className="text-right px-4 py-2">↗</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rides.map((r) => {
-            const departure = railDeparture(r);
-            return (
-              <tr key={r.id} style={{ borderTop: "1px solid var(--color-border)" }}>
-                <td
-                  className="px-4 py-2.5 whitespace-nowrap"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {departure ? formatStationTime(departure, locale) : "—"}
-                </td>
-                <td className="px-4 py-2.5">
-                  {r.depStationName} → {r.arrStationName}
-                </td>
-                <td className="px-4 py-2.5 text-right">
-                  <Link
-                    to={`${basePath}/${r.id}`}
-                    className="text-xs"
-                    style={{ color: "var(--accent)" }}
-                  >
-                    {t("trips:detail.logistics.open")}
-                  </Link>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <LogisticsTable
+      title={title}
+      tableKey={`trip-ground-${testId}`}
+      testId={testId}
+      whatLabel={t("trips:detail.logistics.route")}
+      rows={rides.map((r) => {
+        const departure = railDeparture(r);
+        return {
+          id: r.id,
+          sortWhen: departure?.utc ?? null,
+          when: departure ? formatStationTime(departure, locale) : "—",
+          sortWhat: `${r.depStationName} ${r.arrStationName}`,
+          what: `${r.depStationName} → ${r.arrStationName}`,
+          to: `${basePath}/${r.id}`,
+        };
+      })}
+    />
   );
 }
 

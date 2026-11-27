@@ -29,6 +29,9 @@ import { loadAnsweredIndex } from "./answeredMatch";
 import { journeyFingerprint } from "./fingerprint";
 import { travelWindows } from "./windows";
 import { scanVisitFindings } from "./visitScan";
+import { coverContextForPhotos, photoCoverTarget } from "./coverAtScan";
+import { judgeCover } from "../suggestions/covered";
+import { reconcilePhotoSuggestions } from "../suggestions/reconcile";
 import type { PlaceNameGeocoder } from "../places/placeNameBackfill";
 
 /**
@@ -179,6 +182,9 @@ export async function scanPhotoJourneys(
   );
 
   const findings = readFindings(uncovered, flights, places, stays);
+  // The shared "already recorded" rule (forgejo#439) decides at creation too,
+  // so a covered finding is never offered in the first place.
+  const cover = await coverContextForPhotos(userId, photos);
 
   let created = 0;
   let updated = 0;
@@ -213,6 +219,13 @@ export async function scanPhotoJourneys(
     // A new fingerprint for an answered burst (earlier photos, a median across
     // a rounding edge) is still the same question.
     if (existing === null && answered.covers({ ...cluster, position: located })) {
+      continue;
+    }
+    if (
+      existing === null &&
+      finding.kind === "place" &&
+      judgeCover(photoCoverTarget(cluster, located, null), cover).covered
+    ) {
       continue;
     }
 
@@ -269,9 +282,17 @@ export async function scanPhotoJourneys(
       places,
       lodgings: stays.map((stay) => stay.lodging),
       flights,
+      cover,
     },
     geocoder
   );
+
+  // Rows written by an earlier scan that the logbook has caught up with since.
+  // Logged, not thrown: the findings are stored, and the next inbox read retries.
+  const reconciled = await reconcilePhotoSuggestions(userId).catch((error: unknown) => {
+    logger.warn({ message: "photo_journey_reconcile_failed", context: { userId, error } });
+    return null;
+  });
 
   logger.info({
     message: "photo_journey_scan_complete",
@@ -286,6 +307,7 @@ export async function scanPhotoJourneys(
       visitLookups: visits.lookups,
       created: created + visits.created,
       updated: updated + visits.updated,
+      reconciled,
       truncated,
     },
   });

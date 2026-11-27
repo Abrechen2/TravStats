@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat, type DisplayFormatter } from "../../lib/displayFormat";
+import { useDisplayFormat, type DisplayFormatter } from "../../lib/format";
 import type { LocalDateValue, TimeValue } from "../../shared/time";
 import type { ItineraryItem, ItineraryShareView } from "../../types/shareLinks";
 

@@ -1,3 +1,4 @@
+import { yearTrigger } from "../../../__tests__/helpers/yearPicker";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
@@ -35,6 +36,6 @@ describe("MapChromeSections: no domain pills", () => {
 
   it("still renders the year filter the panel kept", () => {
     render(<MapChromeSections />);
-    expect(screen.getByText("dashboard:filter.allYears")).toBeInTheDocument();
+    expect(yearTrigger("dashboard:filter.year")).toHaveTextContent("common:yearPicker.all");
   });
 });

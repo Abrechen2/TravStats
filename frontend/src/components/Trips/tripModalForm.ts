@@ -10,6 +10,7 @@ import { tripEntrySpan } from "../../lib/tripEntrySpan";
 import { dayInput } from "../../lib/api/timeInput";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import type { ModalTab } from "./tripModalParts";
+import { reportPageError } from "../../store/pageErrorStore";
 
 // Convert ISO date string ↔ <input type="date"> "YYYY-MM-DD" form. Local
 // timezone is fine here — trip dates are calendar dates, not instants.
@@ -246,7 +247,7 @@ export function useTripModalForm(
             .getState()
             .open({ tripId: savedTrip.id, coverImageUrl: uploaded, initialCrop: null });
         } catch {
-          addToast("error", t("trips:gallery.uploadError"));
+          reportPageError(t("trips:gallery.uploadError"));
         } finally {
           setUploadingCover(false);
         }
@@ -256,7 +257,7 @@ export function useTripModalForm(
       onSaved();
     } catch (err: unknown) {
       const fallback = trip ? "trips:toasts.updateError" : "trips:toasts.createError";
-      addToast("error", saveErrorMessage(err, t, fallback));
+      reportPageError(saveErrorMessage(err, t, fallback));
     } finally {
       setSaving(false);
     }

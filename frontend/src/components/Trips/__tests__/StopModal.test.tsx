@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import StopModal from "../StopModal";
 import { tripsApi } from "../../../lib/api";
 import type { TripStop } from "../../../types";
-import { useToastStore } from "../../../store/toastStore";
+import { usePageErrorStore } from "../../../store/pageErrorStore";
 import type { LocationCoordinates, LocationSelection } from "../../location/LocationInput";
 
 vi.mock("../../../lib/api", () => ({
@@ -64,7 +64,7 @@ const baseStop: TripStop = {
 describe("StopModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useToastStore.setState({ toasts: [] });
+    usePageErrorStore.getState().clear();
   });
 
   it("creates a stop with the entered title and no coords (coords stay optional)", async () => {
@@ -226,7 +226,7 @@ describe("StopModal", () => {
     expect(vi.mocked(tripsApi.createStop).mock.calls[0][1]).toMatchObject({
       startDate: { local: "2026-05-01T14:30" },
     });
-    expect(useToastStore.getState().toasts.map((toast) => toast.message)).not.toContain(
+    expect(usePageErrorStore.getState().errors.map((toast) => toast.message)).not.toContain(
       "common:saveErrors.timezoneUnresolved"
     );
   });
@@ -242,7 +242,7 @@ describe("StopModal", () => {
     });
     await userEvent.click(screen.getByText("trips:stopModal.save"));
     await waitFor(() =>
-      expect(useToastStore.getState().toasts.map((toast) => toast.message)).toContain(
+      expect(usePageErrorStore.getState().errors.map((toast) => toast.message)).toContain(
         "common:saveErrors.staleBundle"
       )
     );
@@ -281,7 +281,7 @@ describe("StopModal", () => {
 
     expect(
       (screen.getByLabelText("trips:stopModal.startDateLabel") as HTMLInputElement).value
-    ).toBe("2026-05-01");
+    ).toBe("01.05.2026");
     expect(
       (screen.getByLabelText("trips:stopModal.startTimeLabel") as HTMLInputElement).value
     ).toBe("09:15");

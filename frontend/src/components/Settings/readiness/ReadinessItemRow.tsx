@@ -14,6 +14,7 @@ import Pill from "../../ui/Pill";
 import { ErrorLine } from "../../ui/settings";
 import { token } from "../../ui/tokens";
 import { readinessKey, TONE_COLOR, type ReadinessGroupId } from "./readinessModel";
+import InlineError from "../../ui/InlineError";
 
 /** Where an admin re-resolves stored zones (Wartung › Zeitmodell). */
 const ZONE_FIX_ADDRESS = "/settings/wartung#timeModel";
@@ -206,11 +207,7 @@ function EntryList({
     );
   }
   if (load.state === "error") {
-    return (
-      <p role="alert" style={{ color: "var(--ts-bad)" }}>
-        {t("readiness:entries.error")}
-      </p>
-    );
+    return <InlineError>{t("readiness:entries.error")}</InlineError>;
   }
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>

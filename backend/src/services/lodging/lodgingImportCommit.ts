@@ -77,6 +77,8 @@ export interface CommitResult {
   createdStays: number;
   /** Stays already stored that a changed booking moved (forgejo#122). */
   updatedStays: number;
+  /** One per stay this run created, so a caller can hang a document on it (forgejo#303). */
+  createdStayRefs: Array<{ sourceRowIndex: number; stayId: string; lodgingId: string }>;
   /** Rows whose stored stay had EMPTY deadlines the mail filled (forgejo#285). */
   filledDeadlines: Array<{ sourceRowIndex: number; fields: DeadlineField[] }>;
   skipped: number;
@@ -270,7 +272,7 @@ async function createStay(
   fields: StayCandidateFields,
   fxOutcome: FxSnapshotOutcome,
   sourceRowIndex: number
-): Promise<void> {
+): Promise<string> {
   const checkIn = toDate(fields.checkIn);
 
   // An amount whose unit the sheet never carried is not a price. Writing it
@@ -348,6 +350,7 @@ async function createStay(
   // this is a no-op until the import learns to file into one — written now so
   // that change cannot forget it (the write-path guard reads the whole file).
   await propagateWrite(prisma, userId, "lodgingStay", created.id);
+  return created.id;
 }
 
 /**
@@ -461,6 +464,7 @@ export async function commitLodgingImport(
   let createdLodgings = 0;
   let createdStays = 0;
   let updatedStays = 0;
+  const createdStayRefs: CommitResult["createdStayRefs"] = [];
   const filledDeadlines: CommitResult["filledDeadlines"] = [];
   let skipped = 0;
   const failed: {
@@ -592,7 +596,15 @@ export async function commitLodgingImport(
         try {
           const fxOutcome = fxOutcomeForStay(row.stay, fxOutcomes, baseCurrency);
           const stayFields = await stayFieldsForCreate(userId, row, row.stay);
-          await createStay(userId, batch.id, lodgingId, stayFields, fxOutcome, row.sourceRowIndex);
+          const stayId = await createStay(
+            userId,
+            batch.id,
+            lodgingId,
+            stayFields,
+            fxOutcome,
+            row.sourceRowIndex
+          );
+          createdStayRefs.push({ sourceRowIndex: row.sourceRowIndex, stayId, lodgingId });
           createdStays++;
         } catch (err) {
           if (!isUniqueViolation(err)) throw err;
@@ -644,6 +656,7 @@ export async function commitLodgingImport(
     createdLodgings,
     createdStays,
     updatedStays,
+    createdStayRefs,
     filledDeadlines,
     skipped,
     failed,

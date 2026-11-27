@@ -1,3 +1,4 @@
+import { Icon } from "./ui/Icon";
 import { useEffect, useState } from "react";
 import { setupApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
@@ -101,43 +102,12 @@ export default function AirportSeedingBanner({
           <div className="shrink-0 mt-0.5">
             {status.status === "running" ? (
               <div className="animate-spin text-(--accent)">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
+                <Icon name="refresh-cw" size={20} />
               </div>
             ) : status.status === "failed" ? (
-              <svg
-                className="w-5 h-5 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <Icon name="circle-alert" size={20} style={{ color: "var(--ts-bad)" }} />
             ) : (
-              <svg
-                className="w-5 h-5 text-(--accent)"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <Icon name="info" size={20} style={{ color: "var(--ts-accent)" }} />
             )}
           </div>
 

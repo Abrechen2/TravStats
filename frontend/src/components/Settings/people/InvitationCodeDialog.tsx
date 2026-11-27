@@ -3,13 +3,14 @@ import type { FormEvent, JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
 import { sharingRemoteApi } from "../../../lib/api/sharingRemote";
-import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useDisplayFormat } from "../../../lib/format";
 import { logger } from "../../../lib/logger";
 import type { CreatedRemoteInvite, RemoteInvite } from "../../../types/sharingRemote";
 import { remoteSharingError, type RemoteSharingError } from "../../sharing/remoteSharingCopy";
 import Button from "../../ui/Button";
 import Dialog from "../../ui/Dialog";
 import { Field, Input } from "../../ui/Field";
+import InlineError from "../../ui/InlineError";
 
 const NS = "sharing:remote";
 
@@ -157,9 +158,7 @@ export default function InvitationCodeDialog({
           </Button>
         </form>
         {failure && (
-          <p role="alert" style={{ color: "var(--ts-warn)" }}>
-            {t(failure.key, { origin: failure.origin })}
-          </p>
+          <InlineError tone="warning">{t(failure.key, { origin: failure.origin })}</InlineError>
         )}
         {notice && <p role="status">{notice}</p>}
       </div>

@@ -182,7 +182,7 @@
   },
   "enabled": "TravPlan auf diesem Server aktivieren",
   "config": "TravPlan-Einstellungen",
-  "configHelp": "Der Planer bleibt mit TravStats verbunden. Neue Hinweise erscheinen in der Oberfläche; es werden keine neuen Pushmeldungen eingerichtet.",
+  "configHelp": "Der Planer bleibt verbunden. Hinweise erscheinen hier, ohne neue Pushmeldungen.",
   "aiLimit": "KI-Anfragen je Nutzer und UTC-Tag",
   "weatherLimit": "Wetterabrufe je Nutzer und UTC-Tag",
   "disabled": "TravPlan ist auf diesem Server noch nicht aktiviert.",
@@ -306,7 +306,7 @@
   "knownTotal": "Bisher bekannte Kosten",
   "unknownValue": "Noch unbekannt",
   "actual": {
-    "intro": "Hier steht dein Plan neben dem, was deine Aufzeichnung und deine Unterkünfte über die Reise sagen. Der Plan wird dabei nicht verändert.",
+    "intro": "Dein Plan neben dem, was Aufzeichnung und Unterkünfte sagen. Der Plan bleibt.",
     "noRoute": "Dieser Plan hat keine Route mit Stationen",
     "noRouteHint": "Plan und Wirklichkeit lassen sich nur für eine Route mit Stationen vergleichen.",
     "failed": "Ich konnte den Vergleich gerade nicht laden",
@@ -376,7 +376,7 @@
     "weather": "Das Wetter wird für {{place}} abgerufen.",
     "next": "Weiter",
     "back1": "Zurück",
-    "bookingsIntro": "Was steht schon fest, was fehlt noch? Für Offenes legst du einen Platzhalter an (z. B. die Fähre, geschätzt 180 €). Echte Buchungen importierst du danach im Bereich Buchungen – ein passender Platzhalter wird dann ersetzt.",
+    "bookingsIntro": "Für Offenes einen Platzhalter anlegen; eine echte Buchung ersetzt ihn später.",
     "addPlaceholder": "Platzhalter hinzufügen",
     "estimate": "Schätzung",
     "finish": "Plan anlegen",
@@ -428,7 +428,7 @@
       "proposals_other": "{{count}} KI-Vorschläge"
     },
     "stays": "Das bleibt",
-    "staysBody": "Die Reise selbst und alles, was schon im Logbuch steht: Flüge, Unterkünfte, Fähren, Stationen und Fotos. Ein Plan ist kein Reisenachweis, deshalb nimmt sein Löschen nichts davon weg.",
+    "staysBody": "Die Reise und alles im Logbuch bleiben — ein Plan ist kein Reisenachweis.",
     "staysStations": "{{count}} Station(en) wurden bereits ins Logbuch übernommen und bleiben dort.",
     "shell": "Die Reise besteht dann nur noch aus dem Namen und den Daten. Du kannst sie bei Bedarf separat löschen.",
     "undoNote": "Das Löschen lässt sich nicht rückgängig machen.",
@@ -603,7 +603,7 @@
     },
     "handover": {
       "title": "Stationen ins Logbuch übernehmen",
-      "intro": "Ist eine Station erreicht, schreibt der Plan sie ins Logbuch: den Halt auf dem Roadtrip, die gebuchte Nacht als Aufenthalt und die Fähre, mit der du angekommen bist. Offene Platzhalter werden nie zu Einträgen.",
+      "intro": "Erreichte Stationen landen im Logbuch. Platzhalter werden nie zu Einträgen.",
       "noStations": "Der Plan hat noch keine Stationen.",
       "confirm": "Ins Logbuch übernehmen",
       "withdraw": "Zurücknehmen",
@@ -680,8 +680,8 @@
   "assignToDay": "Auf {{day}} legen",
   "members": {
     "title": "Gemeinsam planen",
-    "introOwner": "Lade Personen von diesem Server ein, die mit dir planen. Die Eingeladenen dürfen alles ändern außer den Plan löschen, Mitglieder verwalten und die KI-Einstellung ändern. Ins Reisebuch übernimmt nur du.",
-    "introMember": "Du planst mit. Du darfst alles ändern außer den Plan löschen, Mitglieder verwalten und die KI-Einstellung ändern. Dein Gepäck und deine Notiz sieht nur du.",
+    "introOwner": "Lade Mitplanende ein. Erlaubt ist alles außer löschen, Mitglieder und KI verwalten.",
+    "introMember": "Du planst mit — alles außer löschen, Mitglieder und KI. Gepäck und Notiz sind privat.",
     "owner": "Besitzer:in",
     "status": {
       "invited": "Eingeladen",
@@ -742,7 +742,7 @@
   },
   "planDocs": {
     "title": "Dokumente zum Plan",
-    "intro": "Hier liegen die Dokumente der Buchungen und was Mitplanende für den Plan hochgeladen haben. Weitere Dokumente der Reise sehen nur die Besitzerin oder der Besitzer.",
+    "intro": "Dokumente der Buchungen und Uploads der Mitplanenden.",
     "none": "Noch keine Dokumente.",
     "uploadedBy": "hochgeladen von {{name}}",
     "onBooking": "an einer Buchung",
@@ -760,7 +760,7 @@
     "listFailed": "Die Pläne von anderen Servern konnten nicht geladen werden.",
     "leave": "Plan verlassen",
     "export": "Reise als Datei sichern",
-    "exportHint": "Die .travstats-Datei enthält die Route und die bestätigten Einträge dieser Reise, ohne Notizen, Preise, Fotos und Dokumente der Besitzerin oder des Besitzers des Plans. Du kannst sie auf deinem eigenen TravStats-Server importieren.",
+    "exportHint": "Route und bestätigte Einträge, ohne Notizen, Preise, Fotos und Dokumente.",
     "exportFailed": "Die Datei konnte nicht erstellt werden. Bitte erneut versuchen.",
     "unreachableTitle": "Der Server dieses Plans antwortet nicht",
     "ended": {
@@ -770,8 +770,8 @@
     },
     "invite": {
       "title": "Mitplaner auf einem anderen Server",
-      "intro": "Lade eine Person ein, mit der du verbunden bist. Beide Seiten müssen in der Verbindung „Pläne teilen“ eingeschaltet haben (Einstellungen → Teilen → Verbindungen). Die Person arbeitet über ihren eigenen Server im Plan; dieser Server sieht den Plan dabei mit.",
-      "none": "Keine Verbindung mit eingeschalteten Plänen. Verbinde dich unter Einstellungen → Teilen → Verbindungen mit der Person und schalte „Pläne teilen“ ein.",
+      "intro": "Verbundene Person einladen. Beide brauchen „Pläne teilen“ in der Verbindung.",
+      "none": "Keine Verbindung mit „Pläne teilen“. Unter Teilen → Verbindungen einschalten.",
       "send": "{{name}} einladen",
       "already": "Eingeladen",
       "sent": "Einladung an {{name}} verschickt.",

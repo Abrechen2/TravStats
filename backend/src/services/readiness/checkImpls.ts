@@ -103,6 +103,14 @@ export const CHECK_IMPLS: CheckImpls = {
     appliesWhen: always,
     evaluate: ({ instance }) => (instance.offsiteConfigured ? ready() : needsAction()),
   },
+  "admin.recoveryKey": {
+    appliesWhen: ({ instance }) => instance.offsiteConfigured,
+    evaluate: ({ instance }) => (instance.recoveryKeyConfirmed ? ready() : needsAction()),
+  },
+  "admin.keySwapInterrupted": {
+    appliesWhen: ({ instance }) => instance.keySwapInterrupted,
+    evaluate: () => needsAction(),
+  },
   "admin.providerKeys": {
     // Only providers the admin has tried are judged; an untouched one is not a fault.
     appliesWhen: ({ instance }) => instance.providerTests.size > 0,

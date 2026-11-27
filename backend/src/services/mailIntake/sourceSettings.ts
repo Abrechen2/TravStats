@@ -19,6 +19,8 @@ import { imapFetcher, type MailFetcher } from "./mailFetcher";
 import { guardedConnection, reportedKind } from "./runSource";
 import { resolvePublicHost } from "./hostPolicy";
 import { stopWatcher } from "./idleWatchers";
+import { FETCH_FROM_OPTIONS, type FetchFrom } from "./constants";
+import { defaultKeywords, defaultSenderDomains, normalizeDomain } from "./prefilter";
 
 type SourceRow = NonNullable<Awaited<ReturnType<typeof prisma.mailIntakeSource.findUnique>>>;
 
@@ -36,6 +38,15 @@ export interface SourceView {
   lastOkAt: string | null;
   lastError: SourceErrorKind | null;
   lastErrorAt: string | null;
+  prefilter: boolean;
+  keepUnread: boolean;
+  fetchFrom: FetchFrom;
+  senderDomains: string[];
+  removedSenderDomains: string[];
+  subjectKeywords: string[];
+  removedSubjectKeywords: string[];
+  skippedCount: number;
+  processedCount: number;
 }
 
 const iso = (date: Date | null): string | null => (date ? date.toISOString() : null);
@@ -61,6 +72,33 @@ export function viewOf(source: SourceRow): SourceView {
     lastOkAt: iso(source.lastOkAt),
     lastError: asKind(source.lastError),
     lastErrorAt: iso(source.lastErrorAt),
+    prefilter: source.prefilter,
+    keepUnread: source.keepUnread,
+    fetchFrom: (FETCH_FROM_OPTIONS as readonly string[]).includes(source.fetchFrom)
+      ? (source.fetchFrom as FetchFrom)
+      : "now",
+    senderDomains: source.senderDomains,
+    removedSenderDomains: source.removedSenderDomains,
+    subjectKeywords: source.subjectKeywords,
+    removedSubjectKeywords: source.removedSubjectKeywords,
+    skippedCount: source.skippedCount,
+    processedCount: source.processedCount,
+  };
+}
+
+/** The built-in pre-filter lists the settings show read-only (each default can be switched off). */
+export function prefilterDefaults() {
+  const keywords = defaultKeywords();
+  return {
+    senderDomains: defaultSenderDomains().map(({ domain, brand, kind }) => ({
+      domain,
+      brand,
+      kind,
+    })),
+    keywords: {
+      de: keywords.filter((k) => k.lang === "de").map((k) => k.word),
+      en: keywords.filter((k) => k.lang === "en").map((k) => k.word),
+    },
   };
 }
 
@@ -97,6 +135,7 @@ export async function buildStatus(userId: string) {
     address: available && token ? addressFor(instance?.address, token) : null,
     forwardingAvailable: available,
     senders: senders.map((s) => ({ id: s.id, address: s.address })),
+    prefilterDefaults: prefilterDefaults(),
   };
 }
 
@@ -110,7 +149,16 @@ interface SourceInput {
   password?: string;
   folder: string;
   enabled?: boolean;
+  prefilter?: boolean;
+  keepUnread?: boolean;
+  fetchFrom?: FetchFrom;
+  senderDomains?: string[];
+  removedSenderDomains?: string[];
+  subjectKeywords?: string[];
+  removedSubjectKeywords?: string[];
 }
+
+const uniq = (values: string[]): string[] => [...new Set(values)];
 
 /** Creates or updates the personal (`userId`) or the instance (`null`) source. */
 export async function saveSource(userId: string | null, input: SourceInput): Promise<SourceView> {
@@ -141,6 +189,13 @@ export async function saveSource(userId: string | null, input: SourceInput): Pro
       existing.username !== input.username ||
       existing.folder !== input.folder);
   const enabled = (input.enabled ?? existing?.enabled ?? false) && !!passwordEncrypted;
+  const fetchFrom = input.fetchFrom ?? (existing?.fetchFrom as FetchFrom | undefined) ?? "now";
+  // A new starting point is a new scan: the cursor is positioned again on the next run.
+  const restartScan = moved || (!!existing && existing.fetchFrom !== fetchFrom);
+  // A private INBOX keeps its mails unread unless the user says otherwise.
+  const keepUnread =
+    input.keepUnread ??
+    (existing && !moved ? existing.keepUnread : !!userId && input.folder.toUpperCase() === "INBOX");
   const data = {
     host: input.host,
     port: input.port,
@@ -156,7 +211,22 @@ export async function saveSource(userId: string | null, input: SourceInput): Pro
     folder: input.folder,
     passwordEncrypted,
     enabled,
-    ...(moved ? { uidValidity: null, lastUid: 0 } : {}),
+    fetchFrom,
+    keepUnread,
+    ...(input.prefilter !== undefined ? { prefilter: input.prefilter } : {}),
+    ...(input.senderDomains
+      ? { senderDomains: uniq(input.senderDomains.map(normalizeDomain)) }
+      : {}),
+    ...(input.removedSenderDomains
+      ? { removedSenderDomains: uniq(input.removedSenderDomains.map(normalizeDomain)) }
+      : {}),
+    ...(input.subjectKeywords
+      ? { subjectKeywords: uniq(input.subjectKeywords.map((w) => w.trim())) }
+      : {}),
+    ...(input.removedSubjectKeywords
+      ? { removedSubjectKeywords: uniq(input.removedSubjectKeywords.map((w) => w.trim())) }
+      : {}),
+    ...(restartScan ? { uidValidity: null, lastUid: 0 } : {}),
   };
   const saved = existing
     ? await prisma.mailIntakeSource.update({ where: { id: existing.id }, data })

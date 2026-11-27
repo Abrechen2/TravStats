@@ -30,6 +30,113 @@ export interface PluginSuggestionView {
   externalRef?: string;
   url?: string;
   confidence: number;
+  /** Additive: `name` = a distinctive word of the venue matched further away. */
+  reason?: "distance" | "name";
+  distanceMeters?: number;
+  matchedToken?: string;
+}
+
+/** Location maintenance (optional plugin capability `maintenance`, owner 2026-11-24). */
+export type MaintenanceIssue = "noCoordinates" | "noStreet" | "lowPrecision" | "coordsMismatch";
+export type MaintenanceSource = "stop" | "geocoder" | "manual";
+
+export interface MaintenanceProposal {
+  source: "stop" | "geocoder";
+  lat: number;
+  lon: number;
+  address?: string;
+  street?: string;
+  confidence: "high" | "medium" | "low";
+  evidence?: {
+    venueName?: string;
+    stopStart?: string | null;
+    stopEnd?: string | null;
+    query?: string;
+    label?: string;
+    matchedTokens?: string[];
+    distanceMeters?: number;
+    agreesWithGeocoder?: boolean;
+    agreesWithStop?: boolean;
+  };
+}
+
+export interface MaintenanceRow {
+  rowId: string;
+  projNr?: string | null;
+  name: string;
+  street?: string | null;
+  postcode?: string | null;
+  town?: string | null;
+  lat?: number | null;
+  lon?: number | null;
+  issues: MaintenanceIssue[];
+  ignored?: boolean;
+  proposals: MaintenanceProposal[];
+}
+
+export interface MaintenanceWritten {
+  Latitude?: number | null;
+  Longitude?: number | null;
+  Strasse?: string | null;
+  PLZ?: string | null;
+  Ort?: string | null;
+}
+
+export interface MaintenanceApplied {
+  undoId: string;
+  rowId: string;
+  name: string;
+  written: MaintenanceWritten;
+  previous?: MaintenanceWritten;
+  source: string;
+  appliedAt: string;
+}
+
+export interface MaintenanceNotice {
+  severity: "info" | "warning" | "error";
+  code: "readOnly" | "geocoderOff" | "coordsMismatch" | "ambiguousGeocoder" | "severalStops";
+  rowId?: string | number;
+  name?: string;
+  message: string;
+  count?: number;
+  distanceMeters?: number;
+  at?: string;
+}
+
+export interface MaintenanceNotices {
+  notices: MaintenanceNotice[];
+  noticeCount: number;
+  totalRows: number;
+  stopsSent: number;
+  stopsWithheld: "precision" | "travtrackOff" | null;
+}
+
+export interface MaintenanceList {
+  notices?: MaintenanceNotice[];
+  noticeCount?: number;
+  rows: MaintenanceRow[];
+  totalRows?: number;
+  offset?: number;
+  applied?: MaintenanceApplied[];
+  pendingSearches?: number;
+  geocoder?: boolean;
+  stopsSent: number;
+  stopsWithheld: "precision" | "travtrackOff" | null;
+}
+
+/** One plugin's cached maintenance answer as the inbox reads it (no live call). */
+export interface MaintenanceInboxEntry {
+  plugin: SuggestionPlugin;
+  data: Pick<MaintenanceList, "rows" | "notices" | "noticeCount" | "totalRows" | "applied"> | null;
+  stopsSent: number;
+  stopsWithheld: string | null;
+  refreshedAt: string | null;
+  /** Why the last refresh failed; `data` is then the older answer. */
+  failure: string | null;
+}
+export interface MaintenanceInbox {
+  blocked: string | null;
+  plugins: MaintenanceInboxEntry[];
 }
 
 export interface PluginTestResult {
@@ -49,6 +156,12 @@ const FAILURES: readonly string[] = [
   "protocol",
   "server",
   "privateTarget",
+  "readOnly",
+  "confirmationRequired",
+  "changed",
+  "notFound",
+  "notReady",
+  "unsupported",
 ];
 const CODES: readonly string[] = [
   "PRIVATE_TARGET",
@@ -57,6 +170,7 @@ const CODES: readonly string[] = [
   "PLUGIN_BACKFILL_REFUSED",
   "PLUGIN_BACKFILL_RUNNING",
   "SERVICE_DISABLED",
+  "PLUGIN_NO_MAINTENANCE",
 ];
 
 /** The i18n key (namespace `suggestionSources`) of a stored outcome or a failed request. */
@@ -72,6 +186,15 @@ export function pluginRequestFailureKey(error: unknown): string {
   const data = (error as { response?: { data?: { error?: unknown; code?: unknown } } })?.response
     ?.data;
   return pluginFailureKey(data?.error, data?.code);
+}
+
+/** The plugin-fed place list of one registration. */
+export interface PluginListState {
+  enabled: boolean;
+  /** The plugin's hello announces a list. */
+  announced: boolean;
+  listId: string | null;
+  listName: string | null;
 }
 
 export const suggestionPluginsApi = {
@@ -114,6 +237,113 @@ export const suggestionPluginsApi = {
   async backfill(id: string, from: string, to: string): Promise<string> {
     const { data } = await api.post(`/settings/suggestion-plugins/${id}/backfill`, { from, to });
     return data.jobId;
+  },
+  async capabilities(
+    id: string,
+    lang: "de" | "en" = "de"
+  ): Promise<{
+    capabilities: string[];
+    maintenance: boolean;
+    error: string | null;
+    list?: PluginListState;
+  }> {
+    const { data } = await api.get(`/settings/suggestion-plugins/${id}/capabilities`, {
+      params: { lang },
+    });
+    return data;
+  },
+  /** "Orte dieses Plugins als Liste führen". */
+  async setList(id: string, enabled: boolean, lang: "de" | "en" = "de"): Promise<PluginListState> {
+    const { data } = await api.put(
+      `/settings/suggestion-plugins/${id}/list`,
+      { enabled },
+      { params: { lang } }
+    );
+    return data;
+  },
+  async maintenance(
+    id: string,
+    locale: "de" | "en",
+    page: { q?: string; offset?: number; limit?: number } = {}
+  ): Promise<MaintenanceList> {
+    // The plugin may take a while to list its rows (and TravStats sends the stops).
+    const { data } = await api.get(`/settings/suggestion-plugins/${id}/maintenance`, {
+      params: { locale, ...(page.q ? { q: page.q } : {}), offset: page.offset, limit: page.limit },
+      timeout: 30_000,
+    });
+    return data;
+  },
+  /**
+   * Writes the values the user confirmed. Call it only from the confirm dialog's
+   * "confirm": it asks the plugin for a single-use ticket bound to exactly these
+   * values, then writes with it. There is no other path to a write.
+   */
+  async applyLocation(
+    id: string,
+    input: {
+      rowId: string;
+      lat: number;
+      lon: number;
+      street?: string;
+      postcode?: string;
+      town?: string;
+      source: MaintenanceSource;
+    }
+  ): Promise<{ undoId: string; rowId: string; written: MaintenanceWritten }> {
+    const { source: _source, ...values } = input;
+    const base = `/settings/suggestion-plugins/${id}/maintenance`;
+    const { data: ticket } = await api.post(
+      `${base}/confirm`,
+      { kind: "apply", ...values },
+      { timeout: 30_000 }
+    );
+    const { data } = await api.post(
+      `${base}/apply`,
+      { ...input, token: ticket.token },
+      { timeout: 30_000 }
+    );
+    return data;
+  },
+  async notices(id: string, locale: "de" | "en"): Promise<MaintenanceNotices> {
+    const { data } = await api.get(`/settings/suggestion-plugins/${id}/maintenance/notices`, {
+      params: { locale },
+      timeout: 30_000,
+    });
+    return data;
+  },
+  async undoLocation(
+    id: string,
+    undoId: string
+  ): Promise<{ undoId: string; rowId: string; restored: MaintenanceWritten }> {
+    const base = `/settings/suggestion-plugins/${id}/maintenance`;
+    const { data: ticket } = await api.post(
+      `${base}/confirm`,
+      { kind: "undo", undoId },
+      { timeout: 30_000 }
+    );
+    const { data } = await api.post(
+      `${base}/undo`,
+      { undoId, token: ticket.token },
+      { timeout: 30_000 }
+    );
+    return data;
+  },
+  /** The inbox's cached proposals and notices of every plugin; asks no plugin. */
+  async maintenanceInbox(): Promise<MaintenanceInbox> {
+    const { data } = await api.get("/settings/suggestion-plugins/maintenance/inbox");
+    return data;
+  },
+  /** "Jetzt aktualisieren": every plugin asked live (rate-limited on the server). */
+  async refreshMaintenanceInbox(locale: "de" | "en"): Promise<MaintenanceInbox> {
+    const { data } = await api.post(
+      "/settings/suggestion-plugins/maintenance/refresh",
+      { locale },
+      { timeout: 120_000 }
+    );
+    return data;
+  },
+  async ignoreRow(id: string, rowId: string, ignored: boolean): Promise<void> {
+    await api.post(`/settings/suggestion-plugins/${id}/maintenance/ignore`, { rowId, ignored });
   },
   async reask(stayId: string): Promise<number> {
     const { data } = await api.post("/settings/suggestion-plugins/reask", { stayId });

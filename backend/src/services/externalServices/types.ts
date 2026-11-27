@@ -115,6 +115,12 @@ export interface ExternalServicePrefs {
   disabled: string[];
   /** Per provider: when consent was given and the endpoint it was given for. */
   aiConsent: Record<string, { at: string; destination: string }>;
+  /**
+   * "Immer erlauben für diesen Dienst" (owner, 2026-11-25): per service, when it
+   * was given and the target (`provider@host`) it was given for. A changed
+   * target asks again (`useConsent.ts`).
+   */
+  useConsent: Record<string, { at: string; destination: string }>;
 }
 
 export interface LastTest {

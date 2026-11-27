@@ -1,5 +1,5 @@
 import type { V2TemplateStatus } from "../lib/api";
-import { useDisplayFormat } from "../lib/displayFormat";
+import { useDisplayFormat } from "../lib/format";
 import { useTranslation } from "../hooks/useTranslation";
 
 /**

@@ -25,10 +25,17 @@ const { getHomeAirports, saveHomePeriods, nearbyHomeAirports, addToast, moveHome
 vi.mock("../../../lib/api", () => ({
   settingsApi: { getHomeAirports, saveHomePeriods, nearbyHomeAirports, moveHome },
 }));
+vi.mock("../../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  reportPageError: (message: string, tone = "error") => addToast(tone, message),
+}));
 vi.mock("../../../store/toastStore", () => ({
   useToastStore: (select: (s: { addToast: typeof addToast }) => unknown) => select({ addToast }),
 }));
-vi.mock("../../../hooks/useTodayZone", () => ({ todayZoneNow: () => "Europe/Berlin" }));
+vi.mock("../../../hooks/useTodayZone", () => ({
+  todayZoneNow: () => "Europe/Berlin",
+  useTodayZone: () => "Europe/Berlin",
+}));
 // The place search and the airport search are their own components with their
 // own tests; here each is a button that hands over what a pick would.
 vi.mock("../../location/LocationInput", () => ({

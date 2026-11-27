@@ -10,6 +10,7 @@ import {
   resolveRouting,
   describeRoutingAvailability,
 } from "../resolveProvider";
+import { recordProviderOutcome, resetProviderHealth } from "../providerHealth";
 
 /**
  * Task 4 (Phase 3 tour routing providers): resolves which routing provider,
@@ -77,7 +78,46 @@ describe("resolveRouteProvider / describeRoutingAvailability", () => {
 
     it("describeRoutingAvailability reports configured: false, providerId: null", async () => {
       const availability = await describeRoutingAvailability(user.id);
-      expect(availability).toEqual({ configured: false, providerId: null });
+      expect(availability).toEqual({ configured: false, providerId: null, failing: null });
+    });
+  });
+
+  describe("Automatisch with a provider that refuses the instance (#411)", () => {
+    afterEach(() => resetProviderHealth());
+
+    it("skips an ORS that answered 410/401 for the GraphHopper whose key is set, and says ORS is failing only while it answers", async () => {
+      const settingsId = (await prisma.adminSettings.findFirst())!.id;
+      await prisma.adminSettings.update({
+        where: { id: settingsId },
+        data: {
+          routingProvider: null,
+          globalOpenrouteserviceApiKey: encryptApiKey("a-retired-ors-key"),
+          globalGraphhopperApiKey: encryptApiKey("a-working-gh-key"),
+        },
+      });
+      expect((await resolveRouteProvider(user.id))?.id).toBe("openrouteservice");
+
+      recordProviderOutcome("openrouteservice", "auth");
+      expect((await resolveRouteProvider(user.id))?.id).toBe("graphhopper");
+      expect((await describeRoutingAvailability(user.id)).failing).toBeNull();
+
+      // Both refuse: the first answers so its refusal is reported, not hidden.
+      recordProviderOutcome("graphhopper", "auth");
+      const both = await describeRoutingAvailability(user.id);
+      expect(both).toEqual({
+        configured: true,
+        providerId: "openrouteservice",
+        failing: { providerId: "openrouteservice", reason: "auth" },
+      });
+    });
+
+    it("never picks ORS without a key", async () => {
+      const settingsId = (await prisma.adminSettings.findFirst())!.id;
+      await prisma.adminSettings.update({
+        where: { id: settingsId },
+        data: { routingProvider: null, globalGraphhopperApiKey: encryptApiKey("gh") },
+      });
+      expect((await resolveRouteProvider(user.id))?.id).toBe("graphhopper");
     });
   });
 
@@ -97,7 +137,11 @@ describe("resolveRouteProvider / describeRoutingAvailability", () => {
       expect(resolved?.id).toBe("openrouteservice");
 
       const availability = await describeRoutingAvailability(user.id);
-      expect(availability).toEqual({ configured: true, providerId: "openrouteservice" });
+      expect(availability).toEqual({
+        configured: true,
+        providerId: "openrouteservice",
+        failing: null,
+      });
     });
 
     it("with NO key anywhere, reads as unconfigured — the case that matters", async () => {
@@ -111,7 +155,7 @@ describe("resolveRouteProvider / describeRoutingAvailability", () => {
       expect(resolved).toBeNull();
 
       const availability = await describeRoutingAvailability(user.id);
-      expect(availability).toEqual({ configured: false, providerId: null });
+      expect(availability).toEqual({ configured: false, providerId: null, failing: null });
     });
   });
 
@@ -135,7 +179,7 @@ describe("resolveRouteProvider / describeRoutingAvailability", () => {
       expect(getApiKeySpy).not.toHaveBeenCalled();
 
       const availability = await describeRoutingAvailability(user.id);
-      expect(availability).toEqual({ configured: true, providerId: "custom" });
+      expect(availability).toEqual({ configured: true, providerId: "custom", failing: null });
       expect(getApiKeySpy).not.toHaveBeenCalled();
     });
 
@@ -152,7 +196,7 @@ describe("resolveRouteProvider / describeRoutingAvailability", () => {
       await expect(resolveRouteProvider(user.id)).resolves.toBeNull();
 
       const availability = await describeRoutingAvailability(user.id);
-      expect(availability).toEqual({ configured: false, providerId: null });
+      expect(availability).toEqual({ configured: false, providerId: null, failing: null });
     });
 
     it("with no URL at all, returns null rather than throwing", async () => {
@@ -179,7 +223,7 @@ describe("resolveRouteProvider / describeRoutingAvailability", () => {
       await expect(resolveRouteProvider(user.id)).resolves.toBeNull();
 
       const availability = await describeRoutingAvailability(user.id);
-      expect(availability).toEqual({ configured: false, providerId: null });
+      expect(availability).toEqual({ configured: false, providerId: null, failing: null });
     });
   });
 

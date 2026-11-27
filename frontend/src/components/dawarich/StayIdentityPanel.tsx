@@ -5,6 +5,7 @@ import { dawarichStaysApi, type StayIdentity } from "../../lib/api/dawarichStays
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { logger } from "../../lib/logger";
 import StayPlaceTypeLine from "./StayPlaceTypeLine";
+import StayAiHelp from "./StayAiHelp";
 
 // MapLibre is heavy; the inbox should not pay for it before a stay card shows.
 const LocationMiniMap = lazy(() => import("../location/LocationMiniMap"));
@@ -108,6 +109,9 @@ export default function StayIdentityPanel({
       )}
       {load.phase === "done" && load.identity.placeTypeAvailable && (
         <StayPlaceTypeLine stayId={stayId} />
+      )}
+      {load.phase === "done" && onPickName && (
+        <StayAiHelp stayId={stayId} identity={load.identity} onPickName={onPickName} />
       )}
     </div>
   );

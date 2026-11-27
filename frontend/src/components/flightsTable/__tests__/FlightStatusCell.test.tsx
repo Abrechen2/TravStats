@@ -68,7 +68,7 @@ describe("FlightStatusCell", () => {
   it("keeps the tag neutral — a duplicate is not an alarm", () => {
     render(<FlightStatusCell flight={makeFlight({ status: "duplicated" })} />);
     const cls = screen.getByTestId("flight-duplicate-f1").className;
-    expect(cls).toContain("text-(--text-muted)");
+    expect(cls).toContain("text-(--ts-muted)");
     expect(cls).not.toMatch(/danger|red/);
   });
 

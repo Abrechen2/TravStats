@@ -4,11 +4,16 @@ import { countableFlightWhere } from "../../shared/flightCounting";
 import { calculateDistance } from "../../utils/geo";
 import { localWallClockOf } from "../../utils/timezone";
 import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "./departureClock";
-import { travTrackYears, travTrackYearStats } from "../travtrack/everyday/view";
+import { travTrackYears, travTrackYearStats, yearWindow } from "../travtrack/everyday/view";
 import { buildWrapped, type Wrapped } from "./wrapped";
 import { chapterYears } from "./wrappedChapters";
 import { loadWrappedDomains, loadWrappedPassport } from "./wrappedDomains";
-import { cachedTravTrackPart, travTrackFingerprint } from "./wrappedTravTrackCache";
+import {
+  cachedTravTrackPart,
+  persistedYearFigures,
+  travTrackFingerprint,
+  travTrackYearFingerprint,
+} from "./wrappedTravTrackCache";
 import { profileZoneOf } from "../../shared/time/profileZone";
 
 /** Years the logbook already names, so TravTrack's scan skips them (a miss only costs a scan). */
@@ -121,7 +126,14 @@ export async function loadWrapped(
   );
   lap("travTrackYearsAndBuild");
   if (!wrapped || !opts.withTravTrack) return wrapped;
-  const travTrack = await cachedTravTrackPart(userId, `year:${wrapped.year}`, fingerprint, () =>
+  // Keyed on the year's own inputs and kept in the database (perf audit item 9):
+  // an upload touching today leaves last year's figures standing.
+  const yearFingerprint = await travTrackYearFingerprint(
+    userId,
+    (await profileZoneOf(userId)).zone,
+    await yearWindow(userId, wrapped.year)
+  );
+  const travTrack = await persistedYearFigures(userId, wrapped.year, yearFingerprint, () =>
     travTrackYearStats(userId, wrapped.year)
   );
   lap("travTrackYear");

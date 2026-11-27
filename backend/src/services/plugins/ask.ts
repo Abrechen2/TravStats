@@ -9,7 +9,8 @@
  *    is honoured;
  *  - coordinates rounded to the plugin's precision before they leave; never the
  *    account's id, name or e-mail, never track points or other entries;
- *  - a suggestion more than 1 km from the stop is dropped and logged.
+ *  - a suggestion more than 1 km from the stop is dropped and logged — a name
+ *    match (`reason: "name"`) up to the radius the plugin announced, at most 2 km.
  *
  * A plugin that failed, or that a limit holds back, leaves the stop owed for
  * that plugin only (`owed`); the others' answers stand.
@@ -20,6 +21,7 @@ import logger from "../../utils/logger";
 import { haversineKm } from "../../shared/geo/haversine";
 import { egressBlock } from "../externalServices/egress";
 import { callPlugin, type PluginOutcome } from "./client";
+import { noteAnnounced } from "./announced";
 import { targetOf, PLUGIN_SERVICE_ID, type Precision } from "./registry";
 import type { FetchLike } from "../egress/boundedFetch";
 import type { PluginSuggestion } from "./contract";
@@ -30,6 +32,24 @@ export const RETRY_BASE_MS = 15 * 60_000;
 export const RETRY_MAX_MS = 6 * 60 * 60_000;
 export const SAME_STOP_M = 300;
 export const MAX_SUGGESTION_DISTANCE_M = 1000;
+/** The furthest a name match may lie, whatever radius the plugin announced. */
+export const MAX_NAME_MATCH_DISTANCE_M = 2000;
+
+/**
+ * How far from the stop `suggestion` may lie. A distance match keeps the 1 km
+ * limit; a name match ("MSA", 1.4 km) is allowed out to the radius the plugin
+ * said it searched names in, capped at 2 km — before, every name match between
+ * 1 and 2 km was dropped as "too far" and never reached the inbox.
+ */
+export function maxSuggestionDistanceM(
+  suggestion: Pick<PluginSuggestion, "reason">,
+  nameRadiusMeters: number | undefined
+): number {
+  if (suggestion.reason !== "name" || nameRadiusMeters === undefined) {
+    return MAX_SUGGESTION_DISTANCE_M;
+  }
+  return Math.min(MAX_NAME_MATCH_DISTANCE_M, Math.max(MAX_SUGGESTION_DISTANCE_M, nameRadiusMeters));
+}
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 
@@ -65,6 +85,8 @@ export interface AskResult {
   /** Plugins that failed or were held back: the stop is owed for them. */
   owed: number;
   owedIds: string[];
+  /** Plugins that gave an answer this time, "nothing here" included. */
+  answeredIds: string[];
   /** False when nothing could be asked at all (switched off): what was owed stays owed. */
   asked: boolean;
   /** By outcome, for the job result: ok, empty, known, held, and each failure reason. */
@@ -140,7 +162,7 @@ async function record(
   now: number
 ): Promise<void> {
   const kind = outcome.kind === "failed" ? outcome.reason : outcome.kind;
-  await prisma.suggestionPluginCall.create({
+  const call = await prisma.suggestionPluginCall.create({
     data: {
       pluginId: plugin.id,
       userId: plugin.userId,
@@ -178,6 +200,12 @@ async function record(
         ...(outcome.version !== null ? { lastVersion: outcome.version } : {}),
       },
     });
+    await noteAnnounced(
+      plugin,
+      { v: outcome.version, nr: outcome.nameRadiusMeters ?? null },
+      now,
+      call.id
+    );
   }
 }
 
@@ -224,7 +252,14 @@ export async function askPlugins(
   stop: StopForPlugins,
   deps: AskDeps = {}
 ): Promise<AskResult> {
-  const result: AskResult = { answers: [], owed: 0, owedIds: [], asked: true, outcomes: {} };
+  const result: AskResult = {
+    answers: [],
+    owed: 0,
+    owedIds: [],
+    answeredIds: [],
+    asked: true,
+    outcomes: {},
+  };
   const count = (k: string) => (result.outcomes[k] = (result.outcomes[k] ?? 0) + 1);
   const plugins = await prisma.suggestionPlugin.findMany({ where: { userId, enabled: true } });
   if (plugins.length === 0) return result;
@@ -254,6 +289,7 @@ export async function askPlugins(
       continue;
     }
     count(outcome.kind);
+    result.answeredIds.push(plugin.id);
     if (outcome.kind !== "ok") continue;
     for (const suggestion of outcome.suggestions) {
       const distanceM =
@@ -261,7 +297,10 @@ export async function askPlugins(
           ? meters({ lat: suggestion.lat, lon: suggestion.lon }, stop)
           : null;
       // A plugin cannot move a stop across town.
-      if (distanceM !== null && distanceM > MAX_SUGGESTION_DISTANCE_M) {
+      if (
+        distanceM !== null &&
+        distanceM > maxSuggestionDistanceM(suggestion, outcome.nameRadiusMeters)
+      ) {
         logger.warn({
           operation: "plugins.suggestionTooFar",
           userId,

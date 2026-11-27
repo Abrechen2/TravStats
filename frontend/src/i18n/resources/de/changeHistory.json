@@ -17,6 +17,7 @@
   "omitted": "zu groß zum Aufbewahren",
   "emptyValue": "leer",
   "deleted": "Gelöscht",
+  "created": "Angelegt",
   "restoreOf": "Wiederherstellung",
   "columns": {
     "when": "Wann",
@@ -70,7 +71,8 @@
     "operator": "Betreiber",
     "trainNumber": "Zugnummer",
     "delayMinutes": "Verspätung (min)",
-    "purpose": "Zweck"
+    "purpose": "Zweck",
+    "purposeKey": "Zweck (genau)"
   },
   "menu": "Änderungsverlauf",
   "window_one": "Verlauf des letzten Monats",

@@ -23,7 +23,7 @@ import { RouteSection } from "./route/RouteSection";
 import { DayPlanSection } from "./days/DayPlanSection";
 import { PlanDeleteDialog } from "./PlanDeleteDialog";
 import { PlanMenu } from "./PlanMenu";
-import { UndoToast } from "./UndoToast";
+import { useMutationUndoToast } from "./useMutationUndoToast";
 import { useCollab } from "./useCollab";
 import { PlanMembersDialog } from "./PlanMembersDialog";
 import { MemberNoteCard, MemberNotices } from "./MemberPanels";
@@ -75,6 +75,11 @@ export default function PlanContent({
     [deleting, setDeleting] = useState(false),
     [members, setMembers] = useState(false),
     navigate = useNavigate();
+  useMutationUndoToast(plan?.lastMutationId, plan !== null, (mutationId) => {
+    // A save in flight: keep the toast, the undo is still on offer.
+    if (busy) return false;
+    void mutate({ type: "undo", mutationId });
+  });
   const onError = useCallback((e: unknown) => setError(message(e)), [message, setError]);
   const { collab, reload, markRead } = useCollab(tripId, plan?.revision ?? 0, onError);
   useEffect(() => {
@@ -253,11 +258,6 @@ export default function PlanContent({
           ))}
       </nav>
       {error && <PlanNotice tone="bad">{error}</PlanNotice>}
-      <UndoToast
-        mutationId={plan.lastMutationId}
-        busy={busy}
-        onUndo={(mutationId) => void mutate({ type: "undo", mutationId })}
-      />
       {plan.memberShares?.some((m) => !m.ok) && (
         <PlanNotice tone="bad">
           {t("members.shareFailed", {

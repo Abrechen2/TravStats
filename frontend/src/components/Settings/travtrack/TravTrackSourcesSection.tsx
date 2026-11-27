@@ -63,6 +63,10 @@ export default function TravTrackSourcesSection(): JSX.Element | null {
             canImport={caps.enabled && !isDemo}
             canDelete={!isDemo}
             version={importsVersion}
+            jump={{
+              label: t("settings:import.timeline.fromTravTrack"),
+              onJump: () => navigate("/settings/daten"),
+            }}
             onChanged={() => setImportsVersion((v) => v + 1)}
           />
         </SettingItem>

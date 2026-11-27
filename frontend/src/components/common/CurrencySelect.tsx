@@ -1,3 +1,4 @@
+import { SearchInput } from "../ui/SearchInput";
 import { useMemo, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ECB_CURRENCIES, ISO_4217 } from "../../shared/currencies";
@@ -72,14 +73,12 @@ export default function CurrencySelect({
 
   return (
     <div className={className}>
-      <input
-        type="search"
+      <SearchInput
+        label={t("common:currencySelect.search")}
         value={query}
-        onChange={(e): void => setQuery(e.target.value)}
+        onChange={setQuery}
         placeholder={t("common:currencySelect.search")}
-        aria-label={t("common:currencySelect.search")}
         disabled={disabled}
-        className="mb-1 w-full rounded border border-[var(--border)] bg-[var(--bg-input)] px-2 py-1 text-xs text-[var(--text-primary)] pointer-coarse:min-h-(--ts-size-touch-min)"
       />
       <select
         id={id}

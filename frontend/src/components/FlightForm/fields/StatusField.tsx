@@ -1,3 +1,4 @@
+import Chip from "../../ui/Chip";
 import { useTranslation } from "../../../hooks/useTranslation";
 
 interface StatusFieldProps {
@@ -40,12 +41,9 @@ export default function StatusField({
     <div>
       <label className={`label ${labelClassName}`.trim()}>{t("flights:form.status")}</label>
       <div>
-        <span
-          className="px-2 py-1 text-xs font-semibold rounded-full inline-block"
-          style={pillStyle(status)}
-        >
+        <Chip size="sm" color={pillStyle(status).color as string}>
           {t(`flights:status.${status}`, { defaultValue: status })}
-        </span>
+        </Chip>
       </div>
       <label className="flex items-center gap-2 text-sm mt-2">
         <input

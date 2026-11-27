@@ -824,7 +824,7 @@
     "seatClassTitle": "Seat Class",
     "positionTitle": "Window / Middle / Aisle",
     "zoneTitle": "Front / Middle / Back",
-    "noDataHint": "Once your flights carry a seat number (such as 14C) or a seat class, window, aisle, rows and classes appear here.",
+    "noDataHint": "Appears once flights carry a seat number or class.",
     "unplaced_one": "{{count}} seat cannot be placed without its cabin layout",
     "unplaced_other": "{{count}} seats cannot be placed without their cabin layout",
     "noSeat_one": "{{count}} flight without a seat number is not included here",
@@ -906,8 +906,8 @@
   "travelAccount": {
     "title": "Where you slept",
     "subtitle": "Every year split night by night. The bar is always one whole year.",
-    "help": "The grey remainder is not accounted for: nights no entry says where you were. That does not mean at home — a missing entry proves nothing, and the more complete your logbook, the smaller the remainder. A night two entries claim counts once: ship before lodging before plane. The current year counts up to last night.",
-    "helpWithRail": "The grey remainder is not accounted for: nights no entry says where you were. That does not mean at home — a missing entry proves nothing, and the more complete your logbook, the smaller the remainder. A night two entries claim counts once: ship before lodging before night train before plane. The current year counts up to last night.",
+    "help": "Grey: nights with no entry — not necessarily at home. Each night counts once.",
+    "helpWithRail": "Grey: nights with no entry — not necessarily at home. Each night counts once.",
     "contested": "{{count}} nights were claimed by several entries and counted once",
     "contested_one": "{{count}} night was claimed by several entries and counted once",
     "contested_other": "{{count}} nights were claimed by several entries and counted once",
@@ -938,8 +938,8 @@
     },
     "journalEntries": "Journal entries",
     "noMoods": "No mood recorded yet",
-    "helpWithBus": "The grey remainder is not accounted for: nights no entry says where you were. That does not mean at home — a missing entry proves nothing, and the more complete your logbook, the smaller the remainder. A night two entries claim counts once: ship before lodging before night bus before plane. The current year counts up to last night.",
-    "helpWithRailAndBus": "The grey remainder is not accounted for: nights no entry says where you were. That does not mean at home — a missing entry proves nothing, and the more complete your logbook, the smaller the remainder. A night two entries claim counts once: ship before lodging before night train before night bus before plane. The current year counts up to last night.",
+    "helpWithBus": "Grey: nights with no entry — not necessarily at home. Each night counts once.",
+    "helpWithRailAndBus": "Grey: nights with no entry — not necessarily at home. Each night counts once.",
     "busNights": "Night bus",
     "counting": {
       "nights": {
@@ -1037,7 +1037,7 @@
     "yearLabel": "Year",
     "loadError": "Your year could not be loaded.",
     "loadErrorYear": "{{year}} could not be loaded.",
-    "nothingYet": "Nothing to look back on yet. Once a flight, a ride, a stay, a place visit or a rental is recorded, a review appears here.",
+    "nothingYet": "Nothing to look back on yet. Your first entry starts it.",
     "emptyYear": "Nothing is recorded in {{year}}.",
     "rankTop": "Your biggest flying year so far.",
     "rankSecond": "Only {{year}} had more flights.",
@@ -1208,7 +1208,7 @@
   },
   "insights": {
     "title": "Discoveries, returns and transfers",
-    "intro": "“New” means recorded for the first time in your logbook. The reference is everything you have entered since {{firstYear}} – the app knows nothing about travel before that.",
+    "intro": "“New” means: first time in your logbook since {{firstYear}}.",
     "empty": "No flown flights with a date yet. These figures come from flown and back-filled flights with a departure date and airports.",
     "openFlight": "Open flight",
     "coverage": {
@@ -1271,7 +1271,7 @@
     },
     "transfers": {
       "title": "Transfer times",
-      "empty": "No transfer time can be measured yet. It appears once flights are linked into one booking and the landing and the onward departure are recorded to the minute.",
+      "empty": "Not measurable yet: needs linked flights with exact times.",
       "measured": "Measured transfers",
       "measuredCount": "{{transfers}} measured transfers",
       "shortest": "Shortest",
@@ -1282,7 +1282,7 @@
       "departing": "Onward flight",
       "airportChange": "change of airport {{from}} → {{to}}",
       "coverage": "{{measured}} of {{gaps}} gaps in {{bookings}} bookings measured.",
-      "coverageDetail": "Not measured: {{unknownTime}} without minute-precise times, {{unknownOrder}} with an unclear order, {{notFlown}} not both flown, {{conflict}} leaving before the landing, {{separate}} separate journeys (a return or over 24 hours)."
+      "coverageDetail": "Not measured: {{unknownTime}} no time, {{unknownOrder}} unclear, {{notFlown}} not flown, {{conflict}} conflict, {{separate}} separate."
     },
     "help": {
       "discovery": {
@@ -1490,7 +1490,7 @@
         "summary": "{{calls}} documented excursions at {{ports}} ports on {{cruises}} cruises",
         "cruiseRow": "{{documented}} of {{calls}} calls with an excursion ({{notes}} notes, {{tours}} tours)",
         "noneDocumented": "no excursions documented",
-        "empty": "No excursion documented yet. An excursion counts when a call has an excursion note, or when you recorded a tour that day starting at most {{km}} km from the port.",
+        "empty": "No excursion yet: needs an excursion note or a tour within {{km}} km of port.",
         "emptyNotesOnly": "No excursion documented yet. An excursion counts when a call has an excursion note.",
         "unspecified": "No activity",
         "ascent": "{{m}} m climbed",
@@ -1543,12 +1543,7 @@
   },
   "insight": {
     "entries_one": "{{count}} entry",
-    "entries_other": "{{count}} entries",
-    "duration": {
-      "minutes": "{{m}} min",
-      "hours": "{{h}} h",
-      "hoursMinutes": "{{h}} h {{m}} min"
-    }
+    "entries_other": "{{count}} entries"
   },
   "domainRecords": {
     "title": "Records across all kinds of travel",
@@ -1769,7 +1764,7 @@
     "subtitle": "Estimated from published emission factors and the distance. Each mode stands on its own; the total names its parts.",
     "total": "Together {{total}}:",
     "coverage": "{{measured}} of {{records}} entries with a known distance",
-    "cruiseNote": "Lower bound: there is no published factor for cruise ships, so the ferry average is applied over the voyage distance, without hotel operations.",
+    "cruiseNote": "Lower bound: computed with the ferry average, without hotel operations.",
     "saved": "Saved versus flying",
     "savedDescription_one": "Estimate from {{count}} trip that could have been a flight",
     "savedDescription_other": "Estimate from {{count}} trips that could have been flights",
@@ -1799,7 +1794,7 @@
   },
   "years": {
     "title": "Years",
-    "help": "The distance in your logbook per year and month, coloured by mode of travel. The recorded distance (TravTrack) sits beside it and is never added: a recording can contain the very train ride you logged.",
+    "help": "Distance per year by travel type. TravTrack is shown beside it, not added.",
     "loadFailed": "The yearly overview could not be loaded.",
     "mapLink": "Map",
     "mapLinkLabel": "Open the map for {{year}}",

@@ -439,7 +439,7 @@ describe("map panel rows (switch semantics, touch size)", () => {
 
   it("Toggle is a role=switch with aria-checked, not a bare button", () => {
     const onChange = vi.fn();
-    render(<Toggle checked={false} onChange={onChange} icon="✈" label="Flüge" />);
+    render(<Toggle checked={false} onChange={onChange} icon="plane" label="Flüge" />);
     const sw = screen.getByRole("switch", { name: "Flüge" });
     expect(sw).toHaveAttribute("aria-checked", "false");
     expect(screen.queryByRole("button")).not.toBeInTheDocument();

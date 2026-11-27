@@ -12,6 +12,7 @@ import type { PhotoJourney } from "../../../types/photoJourney";
 import { photoJourneyLabel } from "../photoJourneyLabel";
 
 import { buildReviewItems, type VisitCorrection } from "./reviewItems";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 /** One item the last answer could not carry out, named so the reader can find it. */
 export interface ReviewFailure {
@@ -119,7 +120,7 @@ export function useVisitReview(
           (r) => r.outcome === "accepted" && r.photos?.kind === "failed"
         );
         if (photosDown) {
-          addToast("warning", t("dataQuality:inbox.photoJourneys.messages.photosNotLinked"));
+          reportPageError(t("dataQuality:inbox.photoJourneys.messages.photosNotLinked"), "warning");
         }
       } catch (error) {
         logger.error("Answering photo suggestions failed:", error);

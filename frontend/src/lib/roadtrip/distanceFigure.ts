@@ -2,7 +2,7 @@ import { odometerDistanceKm } from "../../shared/rentalCounting";
 import type { RoadtripProgress } from "../../types/roadtrip";
 
 /** The order the measurement sources are named in: the most reliable first. */
-export const DISTANCE_SOURCES = ["track", "routed", "drawn", "straight"] as const;
+export const DISTANCE_SOURCES = ["track", "recorded", "routed", "drawn", "straight"] as const;
 
 export interface DistanceFigure {
   /**

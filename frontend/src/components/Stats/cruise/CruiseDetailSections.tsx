@@ -1,3 +1,4 @@
+import { formatDayLabel } from "../../../lib/format";
 import type { JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -10,6 +11,7 @@ import EvidenceNumber from "../EvidenceNumber";
 import CountingHelp from "../counting/CountingHelp";
 import type { CountingEntry } from "../counting/countingEntry";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
+import InfoLine from "../../ui/InfoLine";
 
 interface Props {
   detail: CruiseStatsDetail;
@@ -89,13 +91,7 @@ const shipName = (cruise: {
 // A cruise day is a calendar day at UTC midnight (`YYYY-MM-DD…`); read in UTC
 // so no reader's zone moves it into the month before (ADR 0002).
 const shortDate = (iso: string | null, locale: string): string =>
-  iso
-    ? new Date(`${iso.slice(0, 10)}T00:00:00.000Z`).toLocaleDateString(locale, {
-        year: "numeric",
-        month: "short",
-        timeZone: "UTC",
-      })
-    : "—";
+  iso ? formatDayLabel(iso, { year: "numeric", month: "short" }, locale) : "—";
 
 /**
  * When the cruises happened — the block the cruise tab never had.
@@ -362,9 +358,12 @@ export function CruiseMoneySection({
         </p>
       )}
       {detail.spendByCurrency.length > 1 && (
-        <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
-          {t("cruise:stats.money.noTotalNote")}
-        </p>
+        <InfoLine
+          className="mt-1 text-xs"
+          style={{ color: "var(--text-muted)" }}
+          text={t("cruise:stats.money.noTotalNote")}
+          more={t("cruise:stats.money.noTotalNoteMore")}
+        />
       )}
 
       <CountingHelp

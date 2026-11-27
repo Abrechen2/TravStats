@@ -1,3 +1,4 @@
+import DateField from "../../components/ui/DateField";
 import type { JSX, ReactNode } from "react";
 import { Field } from "../ui/Field";
 import { RequiredMark } from "../form";
@@ -135,11 +136,11 @@ export function StayEditorDatesSection({
             htmlFor={ids.checkIn}
             error={errors.checkIn}
           >
-            <input
+            <DateField
               id={ids.checkIn}
               aria-required="true"
-              type={
-                datePrecision === "MONTH" ? "month" : datePrecision === "YEAR" ? "number" : "date"
+              kind={
+                datePrecision === "MONTH" ? "month" : datePrecision === "YEAR" ? "year" : "date"
               }
               className={inputClassName}
               style={DARK_PICKER_STYLE}
@@ -159,10 +160,9 @@ export function StayEditorDatesSection({
               htmlFor={ids.checkOut}
               error={errors.checkOut}
             >
-              <input
+              <DateField
                 id={ids.checkOut}
                 aria-required="true"
-                type="date"
                 className={inputClassName}
                 style={DARK_PICKER_STYLE}
                 value={checkOut}
@@ -184,9 +184,9 @@ export function StayEditorDatesSection({
             htmlFor={`${fid}-checkInTime`}
             hint={t("lodging:field.checkInTimeHint")}
           >
-            <input
+            <DateField
               id={`${fid}-checkInTime`}
-              type="time"
+              kind="time"
               className={inputClassName}
               style={DARK_PICKER_STYLE}
               value={checkInTime}
@@ -198,9 +198,9 @@ export function StayEditorDatesSection({
             htmlFor={`${fid}-checkOutTime`}
             hint={t("lodging:field.checkOutTimeHint")}
           >
-            <input
+            <DateField
               id={`${fid}-checkOutTime`}
-              type="time"
+              kind="time"
               className={inputClassName}
               style={DARK_PICKER_STYLE}
               value={checkOutTime}

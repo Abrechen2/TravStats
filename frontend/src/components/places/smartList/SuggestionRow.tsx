@@ -4,8 +4,11 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { apiErrorMachineCode } from "../../../lib/apiError";
 import { logger } from "../../../lib/logger";
 import { dawarichStaysApi } from "../../../lib/api/dawarichStays";
-import { formatLocalClock, formatLocalDate } from "../../../lib/displayFormat";
+import StopEvidenceBadge from "../../dawarich/StopEvidenceBadge";
+import { stopEvidenceView } from "../../../lib/stopEvidenceView";
+import { formatLocalClock, formatLocalDate } from "../../../lib/format";
 import type { SmartSuggestion } from "../../../lib/api/smartLists";
+import InlineError from "../../ui/InlineError";
 
 const COARSE =
   "pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)";
@@ -20,6 +23,24 @@ const ANSWER_ERRORS: Record<string, string> = {
   TRAVTRACK_DISABLED: "places:smartList.answerErrors.disabled",
   DAWARICH_INVALID_INTERVAL: "places:smartList.answerErrors.interval",
 };
+
+/** Confirm one suggestion as it stands: the visit at its place, on its own wall-clock times. */
+export async function acceptSuggestion(suggestion: SmartSuggestion): Promise<void> {
+  await dawarichStaysApi.accept(suggestion.id, {
+    name: suggestion.name ?? "",
+    placeId: suggestion.placeId,
+    tripId: null,
+    lat: suggestion.lat,
+    lon: suggestion.lon,
+    startAt: { local: suggestion.startLocal },
+    endAt: { local: suggestion.endLocal },
+  });
+}
+
+/** The locale key of a refused answer. */
+export function answerErrorKey(err: unknown): string {
+  return ANSWER_ERRORS[apiErrorMachineCode(err) ?? ""] ?? "places:smartList.answerErrors.failed";
+}
 
 /**
  * One "were you here?" suggestion, the SAME row the stay inbox lists: answering it here answers it
@@ -46,16 +67,7 @@ export function SuggestionRow({
     setBusy(true);
     setError(null);
     try {
-      if (confirm)
-        await dawarichStaysApi.accept(suggestion.id, {
-          name: suggestion.name ?? "",
-          placeId: suggestion.placeId,
-          tripId: null,
-          lat: suggestion.lat,
-          lon: suggestion.lon,
-          startAt: { local: suggestion.startLocal },
-          endAt: { local: suggestion.endLocal },
-        });
+      if (confirm) await acceptSuggestion(suggestion);
       else await dawarichStaysApi.reject(suggestion.id);
       onAnswered();
     } catch (err: unknown) {
@@ -89,6 +101,16 @@ export function SuggestionRow({
         })}
         {suggestion.strength === "name" && ` · ${t("places:smartList.weaker")}`}
       </p>
+      <StopEvidenceBadge
+        view={stopEvidenceView({
+          visit: {
+            distanceM: suggestion.distanceM,
+            durationMs: suggestion.durationMinutes * 60_000,
+            // The venue lookup named this suggestion; its name is shown above, not here.
+            venue: { name: suggestion.name ?? "–" },
+          },
+        })}
+      />
       {suggestion.lists.length > 0 && (
         <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
           {t("places:smartList.fitsList", {
@@ -96,11 +118,7 @@ export function SuggestionRow({
           })}
         </p>
       )}
-      {error && (
-        <p role="alert" className="mt-2 text-sm" style={{ color: "var(--danger)" }}>
-          {t(error)}
-        </p>
-      )}
+      {error && <InlineError className="mt-2">{t(error)}</InlineError>}
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"

@@ -8,7 +8,8 @@
     "unknown": "Nicht festgelegt",
     "private": "Privat",
     "business": "Geschäftlich",
-    "hint": "Ob dieser Eintrag geschäftlich oder privat war. Das ist nicht die Kategorie der Reise: Ein neuer Eintrag in einer Reise übernimmt den Zweck nur einmal aus deren Kategorie (Geschäftsreise → geschäftlich; Urlaub, Wochenende, Familie → privat), danach gilt, was hier steht. Nicht festgelegt wird nie ausgeblendet."
+    "hint": "Geschäftlich oder privat. Folgt einmal der Reisekategorie, danach gilt dein Wert.",
+    "loading": "Zweck wird geladen …"
   },
   "editor": {
     "saved": "Zweck gespeichert.",
@@ -16,7 +17,7 @@
   },
   "visibility": {
     "title": "Geschäftliche und private Einträge",
-    "intro": "Pro Bereich festlegen, was ausgeblendet wird. Ausgeblendetes zählt in keiner Liste, Karte oder Statistik – auch nicht in der App.",
+    "intro": "Ausgeblendetes zählt nirgends — auch nicht in der App.",
     "show": "Alle zeigen",
     "hideBusiness": "Geschäftliche ausblenden",
     "hidePrivate": "Private ausblenden",
@@ -34,7 +35,7 @@
   },
   "trip": {
     "apply": "Zweck auf alle Einträge übertragen",
-    "applyHelp": "Setzt den Zweck der Reise-Kategorie bei allen Einträgen dieser Reise.",
+    "applyHelp": "Setzt den gewählten Zweck, sonst den aus der Reise-Kategorie, bei allen Einträgen dieser Reise.",
     "done_one": "{{count}} Eintrag aktualisiert.",
     "done_other": "{{count}} Einträge aktualisiert.",
     "none": "Die Kategorie dieser Reise sagt nichts über den Zweck aus.",
@@ -44,7 +45,62 @@
     "confirmAction": "Übertragen",
     "nothing": "Alle Einträge dieser Reise haben diesen Zweck schon.",
     "rowTitle": "Zweck der Einträge",
-    "rowCategory": "Die Kategorie dieser Reise ist „{{category}}“. Neue Einträge übernehmen daraus einmal ihren Zweck (geschäftlich oder privat); danach hat jeder Eintrag seinen eigenen.",
-    "rowNoCategory": "Diese Reise hat keine Kategorie, aus der ein Zweck folgt."
+    "rowCategory": "Kategorie „{{category}}“: neue Einträge übernehmen einmal ihren Zweck.",
+    "rowNoCategory": "Diese Reise hat keine Kategorie, aus der ein Zweck folgt.",
+    "fromCategory": "Aus der Reise-Kategorie"
+  },
+  "kind": {
+    "private": "Privat",
+    "business": "Geschäftlich"
+  },
+  "builtin": {
+    "vacation": "Urlaub",
+    "business": "Geschäftlich",
+    "family_friends": "Familie & Freunde",
+    "short_break": "Kurztrip & Wochenende",
+    "event": "Veranstaltung",
+    "trade_fair": "Messe & Konferenz",
+    "education": "Ausbildung & Studium",
+    "health": "Gesundheit",
+    "relocation": "Umzug",
+    "private_other": "Privat (sonstiges)"
+  },
+  "custom": {
+    "title": "Reisezwecke",
+    "intro": "Jeder Zweck gehört zu „privat“ oder „geschäftlich“. Danach richten sich das Ausblenden, die Zählungen und die Vorschläge. Eigene Zwecke siehst nur du; wer eine Reise mit dir teilt, sieht sie nicht.",
+    "own": "Eigene Zwecke",
+    "none": "Noch keine eigenen Zwecke.",
+    "name": "Name",
+    "nameEn": "Englischer Name (optional)",
+    "kind": "Art",
+    "icon": "Symbol",
+    "color": "Farbe",
+    "add": "Zweck hinzufügen",
+    "edit": "Bearbeiten",
+    "archive": "Archivieren",
+    "unarchive": "Wieder anbieten",
+    "delete": "Löschen",
+    "archivedTag": "archiviert",
+    "usage_one": "{{count}} Eintrag",
+    "usage_other": "{{count}} Einträge",
+    "inUse": "Dieser Zweck wird noch verwendet und kann nur archiviert werden.",
+    "error": "Der Zweck konnte nicht gespeichert werden. Bitte versuche es noch einmal.",
+    "loadError": "Deine eigenen Zwecke konnten nicht geladen werden."
+  },
+  "stats": {
+    "title": "Nach Zweck",
+    "unknown": "Nicht festgelegt",
+    "entries_one": "{{count}} Eintrag",
+    "entries_other": "{{count}} Einträge"
+  },
+  "filter": {
+    "label": "Zweck",
+    "all": "Alle Zwecke",
+    "allOfKind": {
+      "private": "Alle privaten",
+      "business": "Alle geschäftlichen"
+    },
+    "countsFailed": "Die Anzahlen konnten nicht geladen werden.",
+    "segmentAll": "Alle"
   }
 }

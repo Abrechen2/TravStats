@@ -20,6 +20,11 @@ const failure = {
   description: "Invalid input, inaccessible finding, absent connection, or concurrent operation",
   content: errorContent,
 };
+const staySource = z.object({
+  kind: z.enum(["smartList", "plugin", "calendar", "travtrack", "dawarich"]),
+  id: z.string().nullable(),
+  name: z.string().nullable(),
+});
 const stay = z.object({
   times: z.object({
     startAt: timeValueSchema.nullable(),
@@ -35,6 +40,13 @@ const stay = z.object({
     .literal(true)
     .optional()
     .describe("Only on a TravTrack finding made before the account's last source switch"),
+  source: staySource.optional().describe("The most specific source of the finding"),
+  sources: z
+    .array(staySource)
+    .optional()
+    .describe(
+      "Every source of the finding, most specific first: smart lists, plugins, calendar, provider"
+    ),
 });
 const response = (schema: z.ZodTypeAny) => ({
   description: "Account-scoped result",
@@ -46,12 +58,18 @@ registry.registerPath({
   tags,
   summary: "Own location-history suggestions and retained decisions",
   description:
-    "Conservative stationary clusters; not proof of GPS measurement or overnight accommodation. Original evidence and corrected times remain separate. Up to 200 most recent rows per status. `covered` lists findings resolved because a recorded place visit or lodging stay already holds them (within 250 m, a visit clock within 2 h or on the same local day); `evidence.coveredBy` names that record. Reading `pending` resolves newly covered findings first. With the account's `staySuggestions.enabled` setting off, `pending` answers an empty list, nothing is resolved, and accept/reject/scan are refused with `STAY_SUGGESTIONS_DISABLED` (409); stored rows are kept.",
+    "Conservative stationary clusters; not proof of GPS measurement or overnight accommodation. Original evidence and corrected times remain separate. Up to 200 most recent rows per status. `covered` lists findings resolved because the logbook already holds them (forgejo#439, the rule photo findings share): a place visit within venue reach (400 m, 150 m for a restaurant, shop or service area) on the stay's local day (±1 when overnight), a lodging stay within 250 m over that day, or a flight from or to an airport within 1 km that day — on the stay's trip or on none; `evidence.coveredBy` names that record, and `POST /dawarich-stays/{id}/reopen` takes it back. Reading `pending` re-judges first: newly covered findings close, a covered one whose record is gone opens again. With the account's `staySuggestions.enabled` setting off, `pending` answers an empty list, nothing is resolved, and accept/reject/scan are refused with `STAY_SUGGESTIONS_DISABLED` (409); stored rows are kept.",
   request: {
     query: z.object({
       status: z.enum(["pending", "accepted", "rejected", "covered", "invalidated"]).optional(),
       from: z.string().optional().describe("ISO instant: only stays ending at or after it"),
       to: z.string().optional().describe("ISO instant: only stays starting at or before it"),
+      source: z
+        .string()
+        .optional()
+        .describe(
+          "Only findings with this source: `smartList:<id>`, `plugin:<id>`, `plugin`, `calendar`, `travtrack` or `dawarich`. Up to 200 matches among the 2000 newest rows; `meta.truncated` says when cut"
+        ),
     }),
   },
   responses: { 200: response(z.array(stay)) },
@@ -252,5 +270,155 @@ registry.registerPath({
     },
     404: failure,
     409: failure,
+  },
+});
+registry.registerPath({
+  method: "post",
+  path: "/dawarich-stays/{id}/reopen",
+  tags,
+  summary: "Take a covered finding back",
+  description:
+    'Undo for `covered` (forgejo#439): pending again, and the "already recorded" rule never closes it a second time (`evidence.coverUndone`). 404 `STAY_NOT_COVERED` when no covered finding of the caller has that id.',
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "Pending again",
+      content: { "application/json": { schema: z.object({ success: z.literal(true) }) } },
+    },
+    404: failure,
+  },
+});
+
+// ---- "KI fragen" (forgejo#439 phase 2) -----------------------------------------
+const disclosure = z
+  .object({
+    serviceId: z.enum(["aiSuggestionHelp", "mapMatching"]),
+    host: z.string(),
+    provider: z.string(),
+    location: z.enum(["cloud", "lan"]),
+    fields: z.array(z.string()),
+    pointCount: z.number().int(),
+    privacyZonesApplied: z.boolean().nullable(),
+  })
+  .describe("What the request WOULD send; nothing was sent");
+registry.registerPath({
+  method: "get",
+  path: "/dawarich-stays/ai-help/availability",
+  tags,
+  summary: "Whether the 'KI fragen' button may show",
+  description:
+    "Available only while the admin switched the catalogue entry `aiSuggestionHelp` on (off by default), the internet switch is on and a model is usable for the account (a local Ollama counts). `reason` names the first gate that refuses.",
+  responses: {
+    200: response(
+      z.object({
+        available: z.boolean(),
+        reason: z
+          .enum(["serviceOff", "internetOff", "noProvider"])
+          .nullable()
+          .describe("Null while available"),
+      })
+    ),
+  },
+});
+registry.registerPath({
+  method: "post",
+  path: "/dawarich-stays/{id}/ai-help",
+  tags,
+  summary: "Ask the model which candidate an ambiguous stay was (advice only)",
+  description:
+    "Sends the candidate names, the distance to the nearest candidate, the dwell, names of the account's places within 1 km and the local day — never a coordinate or a point. Answers a ranked choice with a reason; nothing is written. Without a confirmation for the current target (`provider@host`) the answer is 409 `CONFIRMATION_REQUIRED` with `disclosure`, and nothing is sent; `mode: always` stores the confirmation for that target. Failures answer `AI_HELP_FAILED` with `reason`: 409 for setup (`serviceOff`, `internetOff`, `noProvider`, `notAmbiguous`, `providerConsent`, `providerOff`), 502 for `unreachable`, `providerError`, `badAnswer`, 504 for `timeout`.",
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            confirmation: z
+              .object({ mode: z.enum(["once", "always"]), target: z.string() })
+              .optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: response(
+      z.object({
+        answer: z.object({
+          ranking: z.array(z.object({ name: z.string(), reason: z.string() })),
+        }),
+        provider: z.object({
+          kind: z.string(),
+          model: z.string(),
+          host: z.string(),
+          location: z.enum(["cloud", "lan"]),
+        }),
+      })
+    ),
+    409: {
+      description: "Confirmation required (with `disclosure`) or a setup refusal",
+      content: {
+        "application/json": {
+          schema: z.object({
+            error: z.string(),
+            code: z.string(),
+            disclosure: disclosure.optional(),
+          }),
+        },
+      },
+    },
+    502: failure,
+    504: failure,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/inbox/bulk",
+  tags: ["Inbox"],
+  summary: "Answer several inbox items at once",
+  description:
+    "Each item goes through its kind's own accept or reject and is answered on its own. `accept` takes only what needs no input (a flight update as proposed, a stay finding that names its place); the rest is `skipped` with `needsInput` and stays. Plugin archive proposals are never part of a bulk answer. Rate-limited (10 a minute).",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            action: z.enum(["accept", "reject"]),
+            items: z
+              .array(
+                z.object({
+                  kind: z.enum(["review", "trips", "updates", "photos", "dawarich", "location"]),
+                  id: z.string(),
+                })
+              )
+              .min(1)
+              .max(200),
+          }),
+        },
+      },
+      required: true,
+    },
+  },
+  responses: {
+    200: response(
+      z.object({
+        results: z.array(
+          z.object({
+            kind: z.string(),
+            id: z.string(),
+            outcome: z.enum(["done", "skipped", "failed"]),
+            reason: z.string().optional(),
+            undoable: z.literal(true).optional(),
+          })
+        ),
+        summary: z.object({
+          done: z.number().int(),
+          skipped: z.number().int(),
+          failed: z.number().int(),
+        }),
+      })
+    ),
+    400: failure,
   },
 });

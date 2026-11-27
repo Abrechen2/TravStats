@@ -14,9 +14,11 @@ import { ReadinessFactError } from "./factError";
 import { isServiceDisabledByAdmin } from "../externalServices/policy";
 import { LEG_MODES, type LegMode } from "../tour/tourDistance";
 import { resolveRouting } from "../tour/routing/resolveProvider";
+import { downProviders, providerDown } from "../tour/routing/providerHealth";
 import { isRoutableMode } from "../tour/routing/types";
 import { derivationProgress } from "../travtrack/derivationProgress";
 import { VISITS_BIT } from "../travtrack/dirtyDays";
+import { questionableDayCount } from "../travtrack/bestSource/choices";
 import { PROBLEM_RULES, type ProblemRuleId } from "./problemEntries";
 
 /** Legs a routing provider would draw: the reroute run's own rule (`rerouteItems.ts`). */
@@ -43,6 +45,13 @@ export interface InstanceProblemFacts {
    * off ("Aus") or the selected provider cannot answer for the instance.
    */
   routingKeyWithoutProvider: boolean;
+  /** A routing provider refused this instance lately (providerHealth, #411). */
+  routingProviderDown: boolean;
+  /**
+   * The provider is "Automatisch", an instance key is stored, and no keyed provider
+   * answers for the instance — the state #411 left behind; the choice row offers "X verwenden".
+   */
+  routingProviderEmptyWithKey: boolean;
   demoAccounts: number;
 }
 
@@ -57,6 +66,8 @@ export interface AccountProblemFacts {
   visitBacklogDays: number;
   /** Recorded days whose country/month/explored figures are still being derived (after an import). */
   derivationPendingDays: number;
+  /** Days whose track sources are questionable (`travtrack/bestSource/choices.ts`). */
+  questionableTrackDays: number;
   /** The "falsch getrackt" counts, by check id (`problemEntries.ts`). */
   entries: Readonly<Record<ProblemRuleId, number>>;
 }
@@ -98,6 +109,7 @@ export async function loadInstanceProblemFacts(): Promise<InstanceProblemFacts> 
         railRoutingUrl: true,
         globalOpenrouteserviceApiKey: true,
         globalGraphhopperApiKey: true,
+        routingProvider: true,
       },
     }),
     prisma.user.count({ where: { isDemo: true } }),
@@ -111,7 +123,12 @@ export async function loadInstanceProblemFacts(): Promise<InstanceProblemFacts> 
     resolveRouting(),
   ]);
   const railRouterConfigured = !!admin?.railRoutingUrl && !routingOff;
-  const roadRoutingEffective = instanceRouting.provider !== null;
+  const instanceDown =
+    instanceRouting.provider !== null &&
+    providerDown(instanceRouting.provider.id, undefined, instanceRouting.provider.healthScope) !==
+      null;
+  // A provider that refuses every request draws no road: its legs are chords like no provider's.
+  const roadRoutingEffective = instanceRouting.provider !== null && !instanceDown;
   const [railStraight, railRerouteMissed, legs, bus] = await Promise.all([
     straightRail(),
     straightRail(undefined, "missed"),
@@ -129,6 +146,11 @@ export async function loadInstanceProblemFacts(): Promise<InstanceProblemFacts> 
     roadStraight: legs + bus,
     routingKeyWithoutProvider:
       anyKey && (instanceRouting.mode === "off" || instanceRouting.hint === "selectedUnavailable"),
+    routingProviderDown: downProviders().length > 0,
+    routingProviderEmptyWithKey:
+      (admin?.routingProvider ?? null) === null &&
+      (!!admin?.globalOpenrouteserviceApiKey || !!admin?.globalGraphhopperApiKey) &&
+      (instanceRouting.provider === null || instanceDown),
     demoAccounts,
   };
 }
@@ -176,7 +198,7 @@ export async function loadAccountProblemFacts(
   now: Date
 ): Promise<AccountProblemFacts> {
   const roadWorks = instance.roadRoutingEffective || (await roadRoutingWorks(userId));
-  const [user, passkey, rail, legs, bus, point, backlog, entryCounts, derivation] =
+  const [user, passkey, rail, legs, bus, point, backlog, entryCounts, derivation, questionable] =
     await Promise.all([
       prisma.user.findUnique({ where: { id: userId }, select: { twoFactorEnabledAt: true } }),
       prisma.webAuthnCredential.findFirst({ where: { userId }, select: { id: true } }),
@@ -191,6 +213,7 @@ export async function loadAccountProblemFacts(
       visitBacklog(userId, now),
       entryCountsOf(userId),
       derivationProgress(userId),
+      questionableDayCount(userId),
     ]);
   return {
     hasSecondFactor: user?.twoFactorEnabledAt != null || passkey !== null,
@@ -199,6 +222,7 @@ export async function loadAccountProblemFacts(
     lastPointAt: point?.t ?? null,
     visitBacklogDays: backlog,
     derivationPendingDays: derivation.pendingDays,
+    questionableTrackDays: questionable,
     entries: entryCounts,
   };
 }

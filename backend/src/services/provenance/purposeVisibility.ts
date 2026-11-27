@@ -3,7 +3,11 @@ import { createHash } from "crypto";
 import { prisma } from "../../db";
 import { purposeVisibilitySchema } from "../../schemas/purpose";
 import { PURPOSE_DOMAINS, type PurposeVisibility } from "../../shared/purpose";
+import { withOwnerPurposes } from "../purpose/purposeFilter";
 import {
+  completeScopeFilter,
+  scopeFilterWantsOwner,
+  runUnfiltered,
   entryFilterActive,
   purposeDomainOfModel,
   PURPOSE_ROUTE_KIND_DOMAIN,
@@ -84,6 +88,12 @@ export async function openPurposeVisibility(
       ? await loadPurposeVisibilitySetting(userId)
       : parseStoredVisibility(stored);
   setScopeHidden(modelsFromSetting(setting));
+  if (scopeFilterWantsOwner()) {
+    const customs = await runUnfiltered(() =>
+      prisma.customPurpose.findMany({ where: { userId }, select: { id: true, kind: true } })
+    );
+    completeScopeFilter((f) => withOwnerPurposes(f, customs));
+  }
   return purposeVisibilityRevision(setting);
 }
 

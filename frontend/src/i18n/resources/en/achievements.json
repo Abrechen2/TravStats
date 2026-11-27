@@ -14,7 +14,7 @@
   },
   "hiddenBadge": "Hidden",
   "hiddenDescription": "Hidden achievement — complete it to reveal the details.",
-  "hiddenHint": "{{count}} hidden achievement(s) waiting in this category — unusual timings, rare routes or specific seat choices could unlock them.",
+  "hiddenHint": "Hidden achievements in this category: {{count}} — keep travelling to find them.",
   "tiers": {
     "bronze": "Bronze",
     "silver": "Silver",

@@ -12,6 +12,15 @@ const remoteBeta = vi.hoisted(() => ({ value: true as boolean }));
 const listPlans = vi.fn();
 const planConfig = vi.fn();
 const capabilities = vi.fn();
+// The recovery-key gate / row asks its status on mount (RecoveryKeyGate, RecoveryKeyRow).
+vi.mock("../../lib/api/recoveryKey", async (original) => ({
+  ...(await original<typeof import("../../lib/api/recoveryKey")>()),
+  recoveryKeyApi: {
+    status: () => Promise.resolve({ required: false, confirmed: true, confirmedAt: null }),
+    reveal: () => Promise.reject(new Error("not in this test")),
+    confirm: () => Promise.reject(new Error("not in this test")),
+  },
+}));
 vi.mock("../../lib/api/remotePlans", async (original) => ({
   ...(await original<typeof import("../../lib/api/remotePlans")>()),
   remotePlansApi: { list: vi.fn().mockResolvedValue([]) },

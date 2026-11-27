@@ -1,18 +1,19 @@
+import DateField from "../../components/ui/DateField";
 import { dayInput } from "../../lib/api/timeInput";
 import { useTodayZone } from "../../hooks/useTodayZone";
 import { todayIn } from "../../shared/time";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useEffect, useState } from "react";
 import type { TripJournalEntry } from "../../types";
 import { tripsApi } from "../../lib/api";
-import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import JournalWeatherFetch from "./JournalWeatherFetch";
 import SuggestionChips from "../common/SuggestionChips";
 import { useJournalMoods } from "../../hooks/useJournalMoods";
 import JournalPhotoPicker from "./JournalPhotoPicker";
 import { defaultJournalDate, type JournalDaySource } from "../../lib/journalDefaultDate";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface JournalEntryModalProps {
   tripId: string;
@@ -46,7 +47,6 @@ export default function JournalEntryModal({
   onSaved,
 }: JournalEntryModalProps): JSX.Element {
   const { t } = useTranslation(["trips", "common"]);
-  const addToast = useToastStore((s) => s.addToast);
 
   // "Today" in the profile zone (Q1), never the browser's.
   const today = todayIn(useTodayZone());
@@ -99,7 +99,7 @@ export default function JournalEntryModal({
       onSaved();
     } catch (err: unknown) {
       const fallback = entry ? "trips:toasts.updateError" : "trips:toasts.createError";
-      addToast("error", saveErrorMessage(err, t, fallback));
+      reportPageError(saveErrorMessage(err, t, fallback));
     } finally {
       setSaving(false);
     }
@@ -112,7 +112,7 @@ export default function JournalEntryModal({
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving}
@@ -142,8 +142,8 @@ export default function JournalEntryModal({
     >
       <div className="space-y-4">
         <Field label={t("trips:journalModal.dateLabel")}>
-          <input
-            type="date"
+          <DateField
+            inline
             value={date}
             onChange={(e) => setDate(e.target.value)}
             className="w-full rounded-lg px-3 py-2 text-sm"
@@ -207,7 +207,7 @@ export default function JournalEntryModal({
           <JournalPhotoPicker tripId={tripId} value={photoIds} onChange={setPhotoIds} />
         </Field>
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

@@ -2,7 +2,11 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { prisma } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
-import { deriveInstanceSecret, deriveSecretFrom } from "../../../utils/encryptionKey";
+import {
+  deriveInstanceSecret,
+  deriveSecretFrom,
+  encryptionKeyGeneration,
+} from "../../../utils/encryptionKey";
 
 /**
  * Per-device ingest tokens for OwnTracks and Overland (TravTrack plan E9,
@@ -57,12 +61,16 @@ export function ingestTokenDigestsWith(instanceKeyHex: string, token: string): D
   };
 }
 
-let keys: { lookup: Buffer; verify: Buffer } | null = null;
+let keys: { lookup: Buffer; verify: Buffer; generation: number } | null = null;
 function instanceKeys() {
-  keys ??= {
-    lookup: deriveInstanceSecret(LOOKUP_LABEL),
-    verify: deriveInstanceSecret(VERIFY_LABEL),
-  };
+  // Rebuilt after a restore installed another instance key (recovery key).
+  if (!keys || keys.generation !== encryptionKeyGeneration()) {
+    keys = {
+      lookup: deriveInstanceSecret(LOOKUP_LABEL),
+      verify: deriveInstanceSecret(VERIFY_LABEL),
+      generation: encryptionKeyGeneration(),
+    };
+  }
   return keys;
 }
 

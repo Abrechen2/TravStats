@@ -13,6 +13,8 @@ import type { RentalBooking, RentalInvoiceReading } from "../../types/rental";
 import { CHECK_ROW } from "./rentalFormFields";
 import { invoiceFeeRows } from "../../lib/rental/rentalInvoiceFees";
 import { RentalInvoiceFeeReview } from "./RentalInvoiceFeeLines";
+import Banner from "../ui/Banner";
+import Button from "../ui/Button";
 
 export type InvoiceAdoption = Record<RentalInvoicePart, boolean>;
 
@@ -89,16 +91,16 @@ export function RentalInvoiceReview({
   return (
     <div className="space-y-3" data-testid="rental-invoice-review">
       {failed ? (
-        <div role="alert" className="flex flex-wrap items-center gap-2 text-(--danger)">
-          <span>{t("rental:invoiceReview.loadFailed")}</span>
-          <button
-            type="button"
-            onClick={(): void => setAttempt((n) => n + 1)}
-            className="rounded-md border border-(--danger)/50 px-3 py-1 pointer-coarse:min-h-(--ts-size-touch-min)"
-          >
-            {t("common:buttons.retry")}
-          </button>
-        </div>
+        <Banner
+          tone="error"
+          action={
+            <Button variant="secondary" onClick={(): void => setAttempt((n) => n + 1)}>
+              {t("common:buttons.retry")}
+            </Button>
+          }
+        >
+          {t("rental:invoiceReview.loadFailed")}
+        </Banner>
       ) : null}
       {rental ? (
         <dl className="grid grid-cols-3 gap-2" data-testid="rental-invoice-amounts">

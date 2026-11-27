@@ -1,3 +1,4 @@
+import { announceRecoveryKeyStatusChange } from "./recoveryKey";
 import { api } from "./client";
 import type { DomainKey } from "../../shared/domains";
 import type {
@@ -780,6 +781,8 @@ export const adminApi = {
         backupPath: string;
       };
     }>("/admin/webdav-settings", patch);
+    // A WebDAV target can make the recovery-key confirmation due (RecoveryKeyGate).
+    announceRecoveryKeyStatusChange();
     return data;
   },
 

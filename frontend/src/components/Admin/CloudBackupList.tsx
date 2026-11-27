@@ -6,6 +6,8 @@ import { logger } from "../../lib/logger";
 import { cloudBackupFailureKey } from "../../lib/backupFailure";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
+import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   /** Ids already in the backup list; their share copy cannot be fetched again. */
@@ -46,7 +48,7 @@ export default function CloudBackupList({ presentIds, onDownloaded }: Props): JS
       logger.error("Failed to list backups on the WebDAV share:", error);
       setRemote(null);
       setLoadFailed(true);
-      addToast("error", t(cloudBackupFailureKey(error, "admin:backup.cloudList.loadFailed")));
+      reportPageError(t(cloudBackupFailureKey(error, "admin:backup.cloudList.loadFailed")));
     } finally {
       setLoading(false);
     }
@@ -66,8 +68,7 @@ export default function CloudBackupList({ presentIds, onDownloaded }: Props): JS
       onDownloaded();
     } catch (error) {
       logger.error("Failed to download backup from the WebDAV share:", error);
-      addToast(
-        "error",
+      reportPageError(
         error instanceof JobLostError
           ? t("admin:backup.toasts.outcomeUnknown")
           : t(cloudBackupFailureKey(error, "admin:backup.toasts.downloadFailed"))
@@ -89,9 +90,7 @@ export default function CloudBackupList({ presentIds, onDownloaded }: Props): JS
         {loading ? t("admin:backup.cloudList.loading") : t("admin:backup.cloudList.load")}
       </button>
       {loadFailed && (
-        <p role="alert" className="mt-2 text-sm text-(--danger)">
-          {t("admin:backup.cloudList.loadFailed")}
-        </p>
+        <InlineError className="mt-2">{t("admin:backup.cloudList.loadFailed")}</InlineError>
       )}
       {remote && remote.length === 0 && (
         <p className="mt-2 text-sm text-(--text-muted)">{t("admin:backup.cloudList.empty")}</p>

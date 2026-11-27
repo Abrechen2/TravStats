@@ -8,6 +8,7 @@ import { saveErrorKey } from "../../lib/saveErrorMessage";
 import type { TourRoute } from "../../types/tour";
 import TagChips from "../common/TagChips";
 import TagInput from "../TagInput";
+import InlineError from "../ui/InlineError";
 
 /**
  * A roadtrip's or tour's tags (forgejo#405): chips while reading, a tag input
@@ -71,11 +72,7 @@ export default function RouteTagsEditor({
         value={draft}
         onChange={setDraft}
       />
-      {errorKey !== null && (
-        <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
-          {t(errorKey)}
-        </p>
-      )}
+      {errorKey !== null && <InlineError>{t(errorKey)}</InlineError>}
       <div className="flex gap-2">
         <button
           type="button"

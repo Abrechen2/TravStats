@@ -9,8 +9,18 @@ import { z } from "./zod";
 
 export const DIAGNOSTICS_MAX_BODY_BYTES = 256 * 1024;
 export const DIAGNOSTICS_MAX_EVENTS = 2000;
-/** How long the server keeps a log, and the oldest event it takes. */
-export const DIAGNOSTICS_RETENTION_DAYS = 14;
+/**
+ * How long the server keeps a log, and the oldest event it takes. 7 days since
+ * the perf audit 2026-11 (item 8): at 14 one phone's log held 849k rows /
+ * 352 MB, as large as the whole point history.
+ */
+export const DIAGNOSTICS_RETENTION_DAYS = 7;
+/**
+ * The most events one account keeps, whatever their age; the nightly sweep
+ * removes the oldest beyond it. About 3.5 days of the busiest phone measured
+ * (60k events a day), so a runaway logger cannot outgrow the points table.
+ */
+export const DIAGNOSTICS_MAX_EVENTS_PER_ACCOUNT = 200_000;
 
 const identifier = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9 _.,:()/+-]{0,79}$/);
 

@@ -1,3 +1,4 @@
+import { Icon, type IconName } from "../ui/Icon";
 import type { JSX, MouseEvent, ReactNode } from "react";
 
 /**
@@ -14,42 +15,15 @@ import type { JSX, MouseEvent, ReactNode } from "react";
 
 export type RowActionIcon = "edit" | "duplicate" | "delete" | "checkIn" | "link" | "unlink";
 
-const PATHS: Record<RowActionIcon, ReactNode> = {
-  edit: <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />,
-  duplicate: (
-    <>
-      <rect x="9" y="9" width="13" height="13" rx="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-    </>
-  ),
+const ICON_OF: Record<RowActionIcon, IconName> = {
+  edit: "pencil",
+  duplicate: "copy",
   // A pin with a tick: "I was here" — record a visit (places, forgejo#231).
-  checkIn: (
-    <>
-      <path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12Z" />
-      <path d="m9 10 2 2 4-4" />
-    </>
-  ),
+  checkIn: "map-pin-check",
   // A chain: assign to / detach from a trip (tours list).
-  link: (
-    <>
-      <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
-      <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
-    </>
-  ),
-  unlink: (
-    <>
-      <path d="m18.8 11.2 1.7-1.7a5 5 0 0 0-7-7l-1.7 1.7" />
-      <path d="m5.2 12.8-1.7 1.7a5 5 0 0 0 7 7l1.7-1.7" />
-      <path d="m3 3 18 18" />
-    </>
-  ),
-  delete: (
-    <>
-      <path d="M3 6h18" />
-      <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
-      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-    </>
-  ),
+  link: "link",
+  unlink: "unlink",
+  delete: "trash-2",
 };
 
 /** Hover colour per action: blue for edit, neutral for duplicate, red for delete. */
@@ -108,18 +82,7 @@ export function RowActionButton({
       aria-label={label}
       title={label}
     >
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        {PATHS[icon]}
-      </svg>
+      <Icon name={ICON_OF[icon]} size={16} />
     </button>
   );
 }

@@ -41,6 +41,7 @@ import upcomingRoutes from "./upcoming";
 import activityRoutes from "./activity";
 import searchRoutes from "./search";
 import dawarichStayRoutes from "./dawarichStays";
+import inboxBulkRoutes from "./inboxBulk";
 import locationSuggestionRoutes from "./locationSuggestions";
 import gapCalendarRoutes from "./gapCalendar";
 import locationCapabilitiesRoutes from "./locationCapabilities";
@@ -97,6 +98,7 @@ import tripExchangeRoutes from "./trips/tripExchange";
 import tripEntrySuggestionRoutes from "./trips/entrySuggestions";
 import tripStopRoutes from "./trips/tripStops";
 import tripPhotoRoutes from "./trips/tripPhotos";
+import tripPhotoSourceRoutes from "./trips/tripPhotoSources";
 import tourRouteRoutes from "./trips/tourRoutes";
 import tourLegRoutes from "./trips/tourLegs";
 import tourRoutingRoutes from "./trips/tourRouting";
@@ -211,6 +213,7 @@ import geoExportRoutes from "./geoExport";
 import syncRoutes from "./sync";
 import syncPreconditionRoutes from "./syncPreconditions";
 import dataQualityAfterCreateRoutes from "./dataQualityAfterCreate";
+import suggestionsAfterWriteRoutes from "./suggestionsAfterWrite";
 
 export interface ApiMount {
   /** Mount path, always absolute and always under /api/v1. */
@@ -256,6 +259,7 @@ export const apiMounts: ApiMount[] = [
   // Public and unauthenticated, like the spec: the About section reads it before login.
   { id: "version", base: "/api/v1", router: versionRoutes },
   { id: "dawarichStays", base: "/api/v1/dawarich-stays", router: dawarichStayRoutes },
+  { id: "inboxBulk", base: "/api/v1/inbox", router: inboxBulkRoutes },
   // What location history asks the user: country (E6) and journey (E7) questions.
   {
     id: "locationSuggestions",
@@ -287,6 +291,9 @@ export const apiMounts: ApiMount[] = [
   // created (spec 2026-10-25 C3). Answers nothing — it listens for the
   // create's response — so it sits before the routers it watches.
   { id: "dataQualityAfterCreate", base: "/api/v1", router: dataQualityAfterCreateRoutes },
+  // Re-judges the pending place suggestions after a visit, stay, flight or
+  // trip write (forgejo#439). Listens only, like the line above.
+  { id: "suggestionsAfterWrite", base: "/api/v1", router: suggestionsAfterWriteRoutes },
   // The incremental change feed, forgejo#141. Its only path is `/sync/...`.
   { id: "sync", base: "/api/v1", router: syncRoutes },
   // Kept originals (forgejo#116). At /api/v1 because the per-entry lists span
@@ -448,6 +455,7 @@ export const apiMounts: ApiMount[] = [
   // meets these routes in exactly the order it did when they lived in trips.ts.
   { id: "tripStops", base: "/api/v1", router: tripStopRoutes },
   { id: "tripPhotos", base: "/api/v1", router: tripPhotoRoutes },
+  { id: "tripPhotoSources", base: "/api/v1", router: tripPhotoSourceRoutes },
   // The Companion's trip recording (forgejo#316): private, never shared.
   { id: "tripRecording", base: "/api/v1", router: tripRecordingRoutes },
   // Tour route sections — same-prefix satellite router, same pattern as

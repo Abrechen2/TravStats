@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { flightsApi, statsApi } from "../lib/api";
 import type { SummaryStats } from "../lib/api";
@@ -32,7 +32,7 @@ import FlightYearSummaryCards from "../components/Stats/FlightYearSummaryCards";
 import StatsToolbar from "../components/Stats/StatsToolbar";
 import StatsTabStrip from "../components/Stats/StatsTabStrip";
 import { useUrlStatsPeriod } from "../components/Stats/useStatsPeriod";
-import { collectYears } from "../components/Stats/Overview/aggregate";
+import { yearEventTotals } from "../components/Stats/Overview/aggregate";
 import { useDomainStats } from "../lib/stats/domain-stats";
 import StatsOverviewCards from "../components/Stats/StatsOverviewCards";
 import StatsChartsSection from "../components/Stats/StatsChartsSection";
@@ -55,7 +55,7 @@ import RailStatsSection from "../components/Stats/rail/RailStatsSection";
 import RentalStatsSection from "../components/Stats/rental/RentalStatsSection";
 import BusStatsSection from "../components/Stats/bus/BusStatsSection";
 import FerryStatsSection from "../components/Stats/ferry/FerryStatsSection";
-import { mergeYears, useRentalBusYears } from "../lib/stats/useRentalBusYears";
+import { useStatsPeriodYears } from "../lib/stats/useRentalBusYears";
 import RoadtripStatsSection from "../components/Stats/RoadtripStatsSection";
 import { useDomainColors } from "../hooks/useDomainColors";
 import TourStatsSection from "../components/Stats/roadtrip/TourStatsSection";
@@ -67,7 +67,6 @@ import { achievementsApi } from "../lib/api/achievements";
 import type { AchievementSummary } from "../types";
 import { generateYearReportPdf } from "../lib/yearReportPdf";
 import { favoriteConnection } from "../lib/stats/favoriteConnection";
-import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { GlobeLoader } from "../components/GlobeLoader";
 import { useMinLoadingState } from "../hooks/useMinLoadingState";
@@ -78,6 +77,7 @@ import { parseStatsTab, resolveStatsTab, visibleStatsTabs } from "./statsTabAcce
 import type { DomainKey } from "../shared/domains";
 import { flightDeparture } from "../lib/entityTimes";
 import { dayOf, weekdayOf } from "../shared/time";
+import { reportPageError } from "../store/pageErrorStore";
 
 /** A flight's day AT ITS DEPARTURE AIRPORT (ADR 0002) — weekday, month and year are read from it. */
 function departureDay(flight: Flight): string | null {
@@ -90,7 +90,6 @@ export default function AdvancedStatsPage(): JSX.Element {
   const units = useSettingsStore((s) => s.units);
   const features = useSettingsStore((s) => s.features);
   const { user } = useAuthStore();
-  const addToast = useToastStore((state) => state.addToast);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
   const showLoader = useMinLoadingState(loading, 2000);
@@ -173,11 +172,7 @@ export default function AdvancedStatsPage(): JSX.Element {
     flights,
     ready: !loading,
   });
-  const rentalBusYears = useRentalBusYears(); // rental and bus years (forgejo#265)
-  const periodYears = useMemo(
-    () => mergeYears(collectYears(domainStats, {}), rentalBusYears),
-    [domainStats, rentalBusYears]
-  );
+  const periodYears = useStatsPeriodYears(domainStats);
   const period = useUrlStatsPeriod(periodYears, domainStatsLoading);
   const { selectedYear, compareYear, compareEnabled, scope } = period;
   const [yearSummary, setYearSummary] = useState<SummaryStats | null>(null);
@@ -504,7 +499,7 @@ export default function AdvancedStatsPage(): JSX.Element {
 
   const handleYearReport = async (): Promise<void> => {
     if (!selectedYear) {
-      addToast("warning", t("stats:yearReport.noYear"));
+      reportPageError(t("stats:yearReport.noYear"), "warning");
       return;
     }
     setGeneratingPdf(true);
@@ -560,6 +555,7 @@ export default function AdvancedStatsPage(): JSX.Element {
         <StatsToolbar
           tab={effectiveFilter}
           years={periodYears}
+          counts={yearEventTotals(domainStats)}
           period={period}
           visibility={sections}
         />

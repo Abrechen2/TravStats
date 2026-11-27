@@ -23,7 +23,13 @@ vi.mock("../../../lib/api/sharingRemote", () => ({
   sharingRemoteApi: { listOffers: vi.fn(), acceptOffer: vi.fn(), declineOffer: vi.fn() },
 }));
 
+vi.mock("../../../lib/api/sharingLink", () => ({
+  sharingLinkApi: { offerCandidates: vi.fn(), offerPreview: vi.fn(), offerLink: vi.fn() },
+}));
+import { sharingLinkApi } from "../../../lib/api/sharingLink";
+
 const api = vi.mocked(sharingRemoteApi);
+const linkApi = vi.mocked(sharingLinkApi);
 const FAR = "https://far.example.org";
 const OFFER: ReceivedOffer = {
   id: "o1",
@@ -113,5 +119,47 @@ describe("ReceivedRemoteOffers", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/sharing:remote.errors.unreachable .*far.example.org/);
     expect(screen.getByRole("button", { name: "sharing:remote.offers.accept" })).toBeEnabled();
+  });
+
+  it("a link whose settle failed after the other server accepted shows the warning", async () => {
+    linkApi.offerCandidates.mockResolvedValue({
+      access: "full",
+      candidates: [
+        {
+          id: "t2",
+          name: "Portugal",
+          startDay: "2030-06-01",
+          endDay: "2030-06-10",
+          reason: "period",
+        },
+      ],
+    });
+    linkApi.offerPreview.mockResolvedValue({
+      access: "full",
+      here: { id: "t2", name: "Portugal", startDay: "2030-06-01", endDay: "2030-06-10" },
+      there: { id: "o1", name: "Portugal 2030", startDay: "2030-06-01", endDay: "2030-06-10" },
+      counts: { matched: 1, onlyHere: 0, onlyThere: 0, conflicting: 1 },
+      byType: [{ entity: "flight", here: 1, there: 1, matched: 1, differing: 1 }],
+      matched: [],
+      onlyHere: [],
+      onlyThere: [],
+    });
+    linkApi.offerLink.mockResolvedValue({
+      groupId: "g1",
+      linked: 1,
+      alreadyLinked: 0,
+      skipped: 0,
+      settled: 0,
+      onlyHere: 0,
+      onlyThere: 0,
+      settleFailed: true,
+    });
+    const user = userEvent.setup();
+    draw();
+    await user.click(await screen.findByRole("button", { name: "sharing:remote.offers.link" }));
+    await user.click(await screen.findByRole("button", { name: "sharing:link.compare" }));
+    await user.click(await screen.findByRole("button", { name: "sharing:link.confirm" }));
+    await waitFor(() => expect(linkApi.offerLink).toHaveBeenCalledWith("o1", "t2", "both"));
+    expect(await screen.findByText("sharing:remote.offers.settleFailed")).toBeInTheDocument();
   });
 });

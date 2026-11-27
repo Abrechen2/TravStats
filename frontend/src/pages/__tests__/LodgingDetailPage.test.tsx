@@ -126,6 +126,7 @@ vi.unmock("../../store/settingsStore");
 import LodgingDetailPage from "../LodgingDetailPage";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useToastStore } from "../../store/toastStore";
+import { usePageErrorStore } from "../../store/pageErrorStore";
 
 const baseStay: LodgingStay = {
   id: "stay-1",
@@ -242,6 +243,7 @@ describe("LodgingDetailPage", () => {
     listMembershipsMock.mockResolvedValue([]);
     tripsGetAllMock.mockResolvedValue([]);
     useToastStore.setState({ toasts: [] });
+    usePageErrorStore.getState().clear();
     useSettingsStore.setState({
       baseCurrency: "EUR",
       units: { distanceUnit: "kilometers" },
@@ -803,7 +805,9 @@ describe("LodgingDetailPage", () => {
 
     const toasts = useToastStore.getState().toasts;
     expect(toasts.some((toast) => toast.type === "success")).toBe(true);
-    expect(toasts.some((toast) => toast.message === "lodging:stay.refreshFailed")).toBe(true);
+    expect(
+      usePageErrorStore.getState().errors.some((e) => e.message === "lodging:stay.refreshFailed")
+    ).toBe(true);
   });
 
   it("keeps the row when the delete fails, and says so", async () => {
@@ -826,7 +830,7 @@ describe("LodgingDetailPage", () => {
     // look like a successful one.
     expect(screen.getByTestId("stay-card-stay-1")).toBeInTheDocument();
     expect(getLodgingMock).toHaveBeenCalledTimes(1);
-    expect(useToastStore.getState().toasts.some((toast) => toast.type === "error")).toBe(true);
+    expect(usePageErrorStore.getState().errors.some((e) => e.tone === "error")).toBe(true);
   });
 
   /**
@@ -1072,6 +1076,7 @@ describe("LodgingDetailPage — ?editStay from the inbox", () => {
     tripsGetAllMock.mockResolvedValue([]);
     listForEntryMock.mockResolvedValue([]);
     useToastStore.setState({ toasts: [] });
+    usePageErrorStore.getState().clear();
   });
 
   function renderAt(entry: string): void {
@@ -1098,7 +1103,7 @@ describe("LodgingDetailPage — ?editStay from the inbox", () => {
     renderAt("/lodging/lodging-1?editStay=gone");
 
     await waitFor(() =>
-      expect(useToastStore.getState().toasts.map((toast) => toast.message)).toContain(
+      expect(usePageErrorStore.getState().errors.map((e) => e.message)).toContain(
         "lodging:detail.stayNotFound"
       )
     );

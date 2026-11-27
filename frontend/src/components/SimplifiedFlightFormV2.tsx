@@ -12,7 +12,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "../hooks/useTranslation";
-import Modal from "./Modal";
+import Dialog from "./ui/Dialog";
 
 import FlightReviewModal from "./FlightReviewModal";
 import FlightLookupStep from "./FlightForm/FlightLookupStep";
@@ -211,7 +211,7 @@ export default function SimplifiedFlightFormV2({
           90vh fold with no close control above it. Modal gives the role, the
           focus trap, Escape for the TOP dialog only, a close button in the
           header and a footer that stays in view while the body scrolls. */}
-      <Modal
+      <Dialog
         open
         onClose={onCancel}
         busy={form.loading}
@@ -442,7 +442,7 @@ export default function SimplifiedFlightFormV2({
             )}
           </form>
         </div>
-      </Modal>
+      </Dialog>
 
       {/* Flight Review Modal (for Email & Boarding Pass) */}
       {form.showFlightReview && form.parsedFlights.length > 0 && (
@@ -465,7 +465,7 @@ export default function SimplifiedFlightFormV2({
       {/* Duplicate Flight Dialog — the same frame, so Escape closes this
           question and not the form underneath it. */}
       {form.duplicateFlight && (
-        <Modal
+        <Dialog
           open
           onClose={() => form.setDuplicateFlight(null)}
           title={t("flights:form.duplicate.title")}
@@ -504,7 +504,7 @@ export default function SimplifiedFlightFormV2({
             })}
           </p>
           <p className="t-caption">{t("flights:form.duplicate.mergeHint")}</p>
-        </Modal>
+        </Dialog>
       )}
     </>
   );

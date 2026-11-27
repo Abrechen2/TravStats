@@ -28,7 +28,7 @@
       },
       "time": {
         "title": "Questions about time",
-        "description": "Something is missing here to show a time correctly: the place's time zone, the time of day or the exact day. We don't guess — add it if you know it, or leave it as it is."
+        "description": "Time zone, time or day is missing. We don't guess — add it or leave it."
       },
       "home": {
         "title": "Home",
@@ -61,7 +61,7 @@
       "creates": {
         "trip": "Accepting creates a trip covering these dates.",
         "placeVisit": "Accepting records a visit to this place on the first day.",
-        "stayAnswerOnly": "Accepting only marks the question answered. A stay needs a lodging this finding does not name — you create that yourself.",
+        "stayAnswerOnly": "Only marks the question answered. You add the stay yourself.",
         "placeMissingAnswerOnly": "Accepting only marks the question answered. The place this finding named no longer exists — nothing is created."
       },
       "actions": {
@@ -105,7 +105,7 @@
       "nightlyLink": "Set up the nightly scan",
       "review": {
         "title": "Visit suggestions from your trips",
-        "description": "Photos taken during a recorded trip at a spot with no visit. Select several and accept or reject them together; place, name and time can be corrected first. Rejected suggestions do not come back.",
+        "description": "Photos on the way with no visit. Accept or reject; rejected ones don't come back.",
         "selectAll": "Select all",
         "selectOne": "Select {{label}}",
         "selected": "{{count}} selected",
@@ -124,7 +124,7 @@
           "nearest": "nearest logged visit: {{name}}, {{distance}}",
           "noNearest": "no logged visit in this trip"
         },
-        "alreadyVisited": "Since the scan, “{{name}}” was logged right next to it on the same day. Accepting would record the stop twice — reject it, or pick that place under “Correct”.",
+        "alreadyVisited": "“{{name}}” was added nearby the same day. Reject, or pick it under “Correct”.",
         "correction": {
           "place": "Place",
           "placeNew": "Suggested is a new place at this spot. Or pick one of your places:",
@@ -152,7 +152,7 @@
         "creates": {
           "newPlace": "Accepting creates the place and records a visit in the trip — at the time of the first photo unless you correct it.",
           "ownPlace": "Accepting records a visit to your own place right next to it in the trip — the place already exists.",
-          "chosenPlace": "Accepting records the visit at “{{name}}”; no new place is created. If it already has a visit that day, the suggestion is linked to it."
+          "chosenPlace": "Adds the visit to “{{name}}”; an existing visit that day is linked."
         }
       }
     },
@@ -171,7 +171,7 @@
     },
     "tripSuggestions": {
       "title": "Trip suggestions",
-      "description": "Derived from your entries: when you were away and what belongs together. Suggestions only — nothing is created or linked until you accept.",
+      "description": "Suggestions from your entries. Nothing is created until you accept.",
       "nameFallback": "Trip",
       "planned": "planned",
       "capped": "Showing {{shown}} of {{total}} suggestions — answer some and the next ones move up.",
@@ -341,14 +341,14 @@
         "cardTitle": "Country from your location history",
         "question": "Were you in {{country}}?",
         "source": "from TravTrack",
-        "evidence": "TravTrack saw you on the ground in this country on {{days}} days ({{points}} positions), from {{first}} to {{last}}. Your passport does not know the country yet.",
+        "evidence": "TravTrack saw you here on {{days}} days ({{points}} points), {{first}}–{{last}}. New to your passport.",
         "partial": "On at least one of these days not every position was read.",
-        "effect": "“Visited” and “Only passed through on the ground” save your own verdict on this country in the passport. “Not there” changes nothing, and these days are not asked again.",
+        "effect": "Your answer goes into the passport. “Not there”: these days are not asked again.",
         "visited": "Visited",
         "ground": "Only passed through on the ground",
         "notThere": "Not there",
         "emptyTitle": "No open questions from TravTrack",
-        "emptyDescription": "A question appears here once TravTrack sees you on the ground on at least two days in a country your passport does not know yet — or records a journey on a day that matches no entry in your logbook.",
+        "emptyDescription": "Questions appear when TravTrack sees a new country or an unknown journey.",
         "errors": {
           "invalidated": "The location data behind this question was deleted or changed meanwhile. The question no longer applies.",
           "resolved": "This question was answered already.",
@@ -390,7 +390,7 @@
         },
         "closed": "No entry needed",
         "invalidated": "The location data no longer shows this journey.",
-        "effect": "Entering opens the matching form with times and positions; nothing is saved until you save it. “No entry needed” changes nothing, and this day is not asked again.",
+        "effect": "“Add” opens the form. “No entry needed”: this day is not asked again.",
         "roadtripName": "Roadtrip on {{day}}",
         "stationStart": "Start of the journey",
         "stationEnd": "End of the journey",
@@ -419,8 +419,8 @@
         "evidenceDays_other": "The period spans {{count}} days.",
         "countries": "Countries: {{list}}",
         "partial": "Not every position in this period was read.",
-        "effect": "“Create as trip” creates a trip over exactly these days; no entries are assigned. “Not a trip” changes nothing, and this period is not asked again.",
-        "effectExtend": "Only widens the trip's dates; its name, entries and everything else stay as they are. “Don't extend” changes nothing, and this period is not asked again.",
+        "effect": "Creates a trip for these days. “No trip”: not asked again.",
+        "effectExtend": "Extends the period only. “Don't extend”: not asked again.",
         "name": "Trip name",
         "create": "Create as trip",
         "notTrip": "Not a trip",
@@ -477,7 +477,7 @@
       "stay": "Stay",
       "gpsProposal": "Add a possible stay from GPS data",
       "recheckAll": "Recheck",
-      "recheckHint": "“Recheck” looks through your existing data again for open questions, such as missing details or contradictions, and then reloads the inbox.",
+      "recheckHint": "Searches your existing data again for gaps or contradictions.",
       "refreshHint": "Reloads the list without checking your data again.",
       "shown_one": "Showing 1 item",
       "shown_other": "Showing {{count}} items",
@@ -490,10 +490,60 @@
         "hide": "Hide answered",
         "title": "Already answered",
         "empty": "You haven't answered anything here yet.",
-        "failed": "The answered items could not be loaded."
+        "failed": "The answered items could not be loaded.",
+        "undoCovered": "Not recorded after all",
+        "undoFailed": "Could not be taken back.",
+        "unnamedPhotoStop": "Photo stop",
+        "photoStatus": {
+          "accepted": "Accepted",
+          "dismissed": "Dismissed",
+          "covered": "Already recorded"
+        }
       },
-      "moreAnswers": "More answers to this question"
-    }
+      "moreAnswers": "More answers to this question",
+      "origin": {
+        "label": "Source",
+        "all": "All",
+        "info": "Shows only suggestions from this source. Nothing is changed.",
+        "photos": "Photos",
+        "travtrack": "TravTrack",
+        "calendar": "Calendar"
+      },
+      "bulk": {
+        "accept": "Accept all",
+        "reject": "Discard all",
+        "acceptTitle": "Accept all?",
+        "rejectTitle": "Discard all?",
+        "summary": "{{count}} suggestions: {{kinds}}",
+        "acceptNote": "Only what needs no input is accepted. The rest stays as \"needs input\".",
+        "rejectNote": "All are rejected and leave the inbox.",
+        "result": "{{done}} done · {{skipped}} need input · {{failed}} failed",
+        "failed": "The bulk answer did not work. Please try again later.",
+        "undo": "Undo ({{count}})",
+        "undone": "Undone.",
+        "undoFailed": "{{count}} could not be undone.",
+        "reasons": {
+          "needsInput": "needs input",
+          "SUGGESTION_NOT_FOUND": "no longer there",
+          "NOT_FOUND": "no longer there",
+          "STAY_SUGGESTIONS_DISABLED": "stay suggestions are switched off",
+          "TRIP_SUGGESTIONS_DISABLED": "trip suggestions are switched off",
+          "failed": "failed"
+        }
+      },
+      "period": {
+        "label": "Period",
+        "from": "From",
+        "to": "To",
+        "clear": "Clear period"
+      }
+    },
+    "tabs": {
+      "documents": "Documents",
+      "plugins": "Plugins",
+      "documentsLink": "{{count}} documents waiting to be filed"
+    },
+    "tabsLabel": "Inbox and sharing"
   },
   "flag": {
     "unnamedRecord": "Record without a name",
@@ -538,7 +588,7 @@
       },
       "convert": {
         "label": "Convert to a train or bus ride",
-        "hint": "The flight is deleted and filed as a ride on the same trip and booking; this cannot be taken back. Both places need a position and the departure a time — otherwise the flight stays unchanged and you correct it first."
+        "hint": "Becomes a ride, cannot be undone. Needs positions and a departure time."
       }
     },
     "timeUnchanged": "Nothing was changed on the entry. The time stays as it was stored until you fill it in.",
@@ -575,7 +625,7 @@
     },
     "time_zone_unresolved": {
       "title": "Time zone unknown",
-      "question": "No time zone could be found for this time, so the migration did not convert it. Where was this? Fill in the place – then the time of day is right too."
+      "question": "No time zone found, the time was left as is. Where was it? With the place, the time is right."
     },
     "time_precision_unknown": {
       "title": "Time of day unknown",
@@ -588,7 +638,7 @@
     "home_residence_unconfirmed": {
       "title": "Confirm residence",
       "question": "Confirm where you live and pick further home airports?",
-      "body": "So far TravStats only knows your home airport ({{airports}}) and measures distances from there. Confirm where you live and pick up to three airports you fly from.",
+      "body": "So far only your home airport ({{airports}}) counts. Confirm where you live and up to three airports.",
       "unchanged": "Until you confirm, every statistic stays exactly as it was.",
       "action": "Set up your home"
     },
@@ -598,7 +648,7 @@
       "thisSource": "This entry: {{source}}",
       "copiesTitle": "Looks like:",
       "copyMeta": "({{source}}, added on {{date}})",
-      "safePath": "If so: open the extra copy, delete it there, then tap “I have corrected it”. If these are two real entries, tap “This is correct as it is”.",
+      "safePath": "Duplicate? Delete the copy, then “I fixed it”. Two real entries: “That's right”.",
       "fields": {
         "flightNumber": "flight number",
         "trainNumber": "train number",
@@ -652,7 +702,7 @@
     },
     "trip_entries_outside": {
       "title": "Entries outside the trip",
-      "question": "These entries belong to the trip ({{span}}) but fall outside its days. Are the trip dates right — or does the entry belong to another trip?",
+      "question": "These entries fall outside the trip ({{span}}). Wrong trip dates or another trip?",
       "safePath": "Adjust the trip dates or move the entry to another trip."
     },
     "ferry_match": {
@@ -663,7 +713,7 @@
     },
     "surface_segment": {
       "title": "Flight that is a train or bus ride",
-      "question": "{{flight}} ({{route}}) is not a flight according to the booking data but {{mode}}. As a flight it counts in flight kilometres, flight CO₂ and the airports in your passport.",
+      "question": "{{flight}} ({{route}}) is {{mode}} per the booking, not a flight — yet counts as one.",
       "mode": {
         "rail": "a train ride",
         "bus": "a bus ride"
@@ -681,15 +731,84 @@
     "handleFailed": "The request could not be marked as handled."
   },
   "unfiledDocuments": {
+    "alreadyThere": "This document is already here.",
     "title": "Documents filed with nothing",
-    "description": "These uploads do not belong to an entry. File them with a flight, cruise, stay, place or trip — otherwise they are deleted, file and all, {{days}} days after they came to belong to nothing.",
+    "description": "Not linked. Assign them, or they are deleted with the file after {{days}} days.",
     "uploaded": "Uploaded on",
     "deletesOn": "Will be deleted on",
-    "open": "Open"
+    "open": "Open",
+    "select": "Select {{name}}",
+    "previewLabel": "View {{name}}",
+    "preview": {
+      "download": "Download",
+      "noPreview": "This format cannot be shown in the browser. Download the file to open it.",
+      "imageFailed": "The image could not be loaded. Try \"Download\".",
+      "frameBlocked": "The document cannot be shown embedded here. Open it in a new tab or download it."
+    },
+    "actions": {
+      "link": "Link",
+      "linkLabel": "Link {{name}} to entries",
+      "edit": "Edit",
+      "create": "Create from document …",
+      "delete": "Delete"
+    },
+    "edit": {
+      "title": "Edit document",
+      "name": "Title",
+      "issuedOn": "Date on the document",
+      "kind": "Type",
+      "kindNone": "Not specified",
+      "note": "Note"
+    },
+    "create": {
+      "title": "\"{{name}}\": create from document",
+      "hint": "Pick a type. The form is prefilled from the document and linked to it.",
+      "unreadable": "This format cannot be read. PDF files, images and emails can.",
+      "noDomains": "No domain is active that something could be created in.",
+      "recognised": "recognised",
+      "fetchFailed": "The document could not be loaded. Nothing was created.",
+      "reading": "Reading the document …",
+      "nothingFound": "Nothing was recognised in the document:",
+      "createEmpty": "Create empty with document",
+      "createEmptyHint": "The empty form opens; whatever you save is linked to this document.",
+      "domains": {
+        "flight": "Flight",
+        "cruise": "Cruise",
+        "lodging": "Stay",
+        "rail": "Rail journey",
+        "rental": "Rental car"
+      }
+    },
+    "delete": {
+      "title": "Delete document?",
+      "message": "\"{{name}}\" will be deleted permanently, file included.",
+      "bulkTitle_one": "Delete 1 document?",
+      "bulkTitle_other": "Delete {{count}} documents?",
+      "bulkMessage_one": "The selected document will be deleted permanently, file included.",
+      "bulkMessage_other": "The {{count}} selected documents will be deleted permanently, files included."
+    },
+    "bulk": {
+      "label": "Selection",
+      "selected_one": "1 document selected",
+      "selected_other": "{{count}} documents selected",
+      "link": "Link to one entry",
+      "clear": "Clear selection",
+      "delete": "Delete"
+    },
+    "empty": {
+      "title": "No unassigned documents",
+      "body": "Documents without an entry land here; they are deleted after a while.",
+      "drop": "Drop files here or choose \"Add document\"."
+    },
+    "errors": {
+      "loadFailed": "The unassigned documents could not be loaded.",
+      "saveFailed": "The change could not be saved.",
+      "demo": "Nothing can be changed here in the demo account."
+    }
   },
   "documentLinkSuggestions": {
     "title": "Documents that cover more",
-    "description": "These documents name bookings of the same trip they are not linked to yet. Tick what they also cover — nothing is linked until you confirm.",
+    "description": "These documents match more bookings. Linked only when you confirm.",
     "scanning": "Checking stored documents … {{done}} of {{total}}",
     "alsoCovers": "“{{name}}” also covers …",
     "accept": "Link",
@@ -733,7 +852,7 @@
   },
   "placeCaptures": {
     "title": "Unnamed places",
-    "description": "You saved these positions with “Place now” in the app. Name them to create the place and visit — or dismiss them.",
+    "description": "Captured with “Place now”. Name it to create a place and visit — or discard.",
     "unnamed": "Unnamed place",
     "accuracy": "± {{meters}} m",
     "name": "Name it",
@@ -751,5 +870,59 @@
       "alreadyResolved": "This position was already named or dismissed. The list has been reloaded.",
       "notFound": "This position no longer exists. The list has been reloaded."
     }
+  },
+  "pluginInbox": {
+    "intro": "Proposals and messages from your plugins.",
+    "info": "Nothing is written to the project archive until you confirm a proposal on its own. You can edit it first and undo it afterwards.",
+    "reload": "Reload",
+    "loading": "Asking the plugins …",
+    "noPlugins": "No plugin with location maintenance is set up.",
+    "empty": "Nothing to do.",
+    "more": "{{plugin}}: {{count}} more under Settings → Plugins.",
+    "filterLabel": "Plugin",
+    "all": "All",
+    "sortLabel": "Sort",
+    "sort": {
+      "severity": "Severity",
+      "date": "Date",
+      "stop": "With stop proposal"
+    },
+    "severity": {
+      "error": "Missing",
+      "warning": "Check",
+      "info": "Note"
+    },
+    "hasStop": "Stop proposal",
+    "edit": "Edit",
+    "ignore": "Ignore",
+    "openRow": "Open row",
+    "mapHint": "Click the map to set the position.",
+    "position": "Position: {{lat}}, {{lon}}",
+    "noPosition": "No position chosen yet.",
+    "street": "Street",
+    "postcode": "Postcode",
+    "town": "Town",
+    "take": "Apply …",
+    "undo": "Undo",
+    "applied": "{{name}} written to the project archive.",
+    "undone": "{{name}} undone.",
+    "appliedTitle": "Applied",
+    "confirm": {
+      "title": "Write to the project archive?",
+      "writes": "Will be written to the project archive ({{plugin}}, {{name}}):",
+      "coords": "Coordinates: {{lat}}, {{lon}}",
+      "field": "{{label}}: {{value}}",
+      "kept": "{{label}} stays: {{value}}",
+      "undo": "Can be undone afterwards.",
+      "button": "Confirm"
+    },
+    "undoConfirm": {
+      "title": "Undo in the project archive?",
+      "message": "The previous values of {{name}} are written back to the project archive ({{plugin}})."
+    },
+    "refreshNow": "Refresh now",
+    "refreshedAt": "As of {{at}}",
+    "notYet": "Not asked yet.",
+    "olderShown": "(older state)"
   }
 }

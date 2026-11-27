@@ -1,3 +1,5 @@
+import Chip from "../../ui/Chip";
+import { type IconName } from "../../ui/Icon";
 import type { JSX } from "react";
 
 /**
@@ -125,36 +127,20 @@ export function TagCloud({ title, items }: { title: string; items: string[] }): 
       </h3>
       <div className="flex flex-wrap gap-2">
         {items.map((label) => (
-          <span
-            key={label}
-            className="px-2 py-0.5 rounded-full text-xs"
-            style={{
-              background: "var(--bg-elevated)",
-              color: "var(--text-primary)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
+          <Chip key={label} size="sm">
             {label}
-          </span>
+          </Chip>
         ))}
       </div>
     </div>
   );
 }
 
-export function Flag({ label, emoji }: { label: string; emoji: string }): JSX.Element {
+export function Flag({ label, icon }: { label: string; icon: IconName }): JSX.Element {
   return (
-    <span
-      className="inline-flex items-center gap-1 px-2 py-1 rounded-md"
-      style={{
-        background: "var(--bg-elevated)",
-        color: "var(--text-primary)",
-        border: "1px solid var(--color-border)",
-      }}
-    >
-      <span aria-hidden>{emoji}</span>
+    <Chip size="sm" icon={icon}>
       {label}
-    </span>
+    </Chip>
   );
 }
 

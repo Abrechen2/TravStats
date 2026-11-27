@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
-import { token } from "../../../components/ui/tokens";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useEscapeClose } from "../../../hooks/useEscapeClose";
@@ -10,10 +9,12 @@ import { dawarichStaysApi } from "../../../lib/api/dawarichStays";
 import { travTrackLegsApi, type TravTrackStop } from "../../../lib/api/travtrackLegs";
 import { logger } from "../../../lib/logger";
 import { stayInboxHref, stayStatusColor } from "../TrackStays";
+import StopEvidenceBadge from "../../../components/dawarich/StopEvidenceBadge";
 import TrackStopCoverage from "./TrackStopCoverage";
 import TrackStopPlace from "./TrackStopPlace";
 import { durationText, spanText } from "./trackLegFormat";
 import { pillStyle } from "./trackMapStyle";
+import InlineError from "../../../components/ui/InlineError";
 
 /**
  * One stop (a dwell between legs) opened from its marker: its time span and
@@ -103,6 +104,7 @@ export default function TrackStopCard({
       </p>
       <TrackStopCoverage stop={stop} zone={zone} />
       <TrackStopPlace stop={stop} zone={zone} onChanged={() => void onChanged()} />
+      <StopEvidenceBadge view={stop.evidence ?? null} />
       {stay ? (
         <p
           className="t-caption"
@@ -116,11 +118,7 @@ export default function TrackStopCard({
           {t("track:stop.noStay")}
         </p>
       )}
-      {failure && (
-        <p className="t-caption" role="alert" style={{ color: token("bad") }}>
-          {t(failure)}
-        </p>
-      )}
+      {failure && <InlineError>{t(failure)}</InlineError>}
       <div className="flex flex-wrap items-center gap-2">
         {stay && status === "pending" && (
           <>

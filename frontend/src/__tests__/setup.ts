@@ -52,13 +52,25 @@ vi.mock("../lib/api/readiness", async (importActual) => {
 });
 // Every list's totals ask how many entries the purpose setting hides (UAT rc.45). Same rule:
 // the call stays pending, so the hint shows nothing and no request escapes. A test about the
-// hint mocks this module with its own data.
+// hint mocks this module with its own data. Every purpose chip and picker asks for the account's
+// purpose catalogue: also pending, so the built-ins show and nothing escapes.
 vi.mock("../lib/api/purpose", async (importActual) => {
   const actual = await importActual<typeof import("../lib/api/purpose")>();
   return {
     ...actual,
-    purposeApi: { ...actual.purposeApi, hidden: () => new Promise<never>(() => {}) },
+    purposeApi: {
+      ...actual.purposeApi,
+      hidden: () => new Promise<never>(() => {}),
+      catalogue: () => new Promise<never>(() => {}),
+      usage: () => new Promise<never>(() => {}),
+    },
   };
+});
+// Every year picker captions its years from `GET /stats/years/counts`. Same rule: no request
+// escapes, the pickers show plain years. A test about the captions un-mocks this module.
+vi.mock("../lib/stats/useYearCounts", async (importActual) => {
+  const actual = await importActual<typeof import("../lib/stats/useYearCounts")>();
+  return { ...actual, useYearCounts: () => ({ of: () => ({}) }) };
 });
 // Every place glyph asks for the user's own place categories. Same rule as above: a test that
 // draws a place neither reaches the network nor settles a state update outside act(), so the
@@ -97,7 +109,7 @@ vi.mock("react-i18next", () => ({
 vi.mock("../store/settingsStore", async () => {
   const actual = await vi.importActual("../store/settingsStore");
   // One date and clock format for the whole suite, so an assertion on a date
-  // does not depend on the machine's locale (lib/displayFormat.ts).
+  // does not depend on the machine's locale (lib/format.ts).
   const defaultState = {
     display: { language: "en", dateFormat: "DD.MM.YYYY", timeFormat: "24h" },
     units: { currency: "EUR", distanceUnit: "kilometers" },

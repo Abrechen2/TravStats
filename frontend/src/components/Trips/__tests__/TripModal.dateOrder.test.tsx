@@ -44,7 +44,7 @@ const trip: Trip = {
 } as unknown as Trip;
 
 function dateInputs(): HTMLInputElement[] {
-  return Array.from(document.querySelectorAll<HTMLInputElement>('input[type="date"]'));
+  return Array.from(document.querySelectorAll<HTMLInputElement>('input[data-field-kind="date"]'));
 }
 
 function saveButton(): HTMLButtonElement {

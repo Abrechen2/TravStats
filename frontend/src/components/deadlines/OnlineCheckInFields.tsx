@@ -1,6 +1,7 @@
+import DateField from "../../components/ui/DateField";
 import type { JSX } from "react";
 import { useId } from "react";
-import { Field, Input } from "../ui/Field";
+import { Field } from "../ui/Field";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { TimeValue } from "../../shared/time";
 
@@ -48,9 +49,8 @@ export function OnlineCheckInFields({ draft, onChange }: Props): JSX.Element {
   return (
     <div className="grid grid-cols-2 gap-4">
       <Field label={t("common:deadlines.form.onlineCheckInDate")} htmlFor={`${base}-day`}>
-        <Input
+        <DateField
           id={`${base}-day`}
-          type="date"
           value={draft.day}
           onChange={(e) => onChange({ ...draft, day: e.target.value })}
         />
@@ -60,9 +60,9 @@ export function OnlineCheckInFields({ draft, onChange }: Props): JSX.Element {
         htmlFor={`${base}-time`}
         error={error}
       >
-        <Input
+        <DateField
           id={`${base}-time`}
-          type="time"
+          kind="time"
           value={draft.time}
           onChange={(e) => onChange({ ...draft, time: e.target.value })}
         />

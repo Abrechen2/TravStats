@@ -695,6 +695,14 @@
       "vesselData": {
         "n": "Wikidata",
         "p": "Schiffs-MMSI und -IMO"
+      },
+      "aiSuggestionHelp": {
+        "n": "KI-Hilfe für unklare Vorschläge",
+        "p": "„KI fragen“ bei Aufenthalten mit mehreren möglichen Orten"
+      },
+      "mapMatching": {
+        "n": "An Straßen anpassen",
+        "p": "Dünne TravTrack-Strecken über deinen eigenen Router auf die Straße legen"
       }
     },
     "rows": {
@@ -989,7 +997,7 @@
       "retry": "Erneut versuchen",
       "onlyConfigured": "Nur aktive oder eingerichtete Dienste",
       "noneConfigured": "Kein Dienst ist eingerichtet oder aktiv. Schalte den Filter aus, um alle zu sehen.",
-      "intro": "Hier steht, wo TravStats Daten herholt und wohin etwas geht. Oben auf jeder Karte steht, was für dein Konto gilt; als Admin siehst du darunter, was für alle gilt.",
+      "intro": "Woher Daten kommen und wohin etwas geht — oben dein Konto, darunter alle.",
       "groupsLabel": "Dienstgruppen",
       "withdraw": "Zurückziehen",
       "connectedAccounts_one": "{{count}} Konto ist verbunden.",
@@ -1105,11 +1113,13 @@
       "instanceEmptyOwn": "Kein Instanzschlüssel – dein persönlicher Schlüssel gilt nur für dich",
       "off": "Routing ist ausgeschaltet.",
       "pickT": "Routing-Anbieter",
-      "pickS": "Welcher Dienst Strecken auf der Straße berechnet. Automatisch nimmt für jedes Konto den ersten eingerichteten: OpenRouteService, GraphHopper, eigener Server.",
+      "pickS": "Wer Straßenstrecken berechnet. Automatisch: der erste eingerichtete Dienst.",
       "optAuto": "Automatisch (empfohlen)",
       "optCustom": "Eigener Server",
       "optOff": "Aus",
-      "saveFailed": "Ich konnte den Routing-Anbieter nicht speichern."
+      "saveFailed": "Ich konnte den Routing-Anbieter nicht speichern.",
+      "emptyWithKey": "Routing-Anbieter leer, aber Schlüssel für {{provider}} hinterlegt.",
+      "useKeyed": "{{provider}} verwenden"
     }
   },
   "server": {
@@ -1254,7 +1264,7 @@
     "internet": {
       "t": "Server darf externe Dienste abfragen",
       "s": "Wechselkurse, Bahnfahrpläne, Logos, Offene Kartendaten und die Suche nach Updates. Aus = Betrieb ohne Internet",
-      "h": "Aus schaltet ab: Wechselkurse der EZB, die Bahn-Fahrpläne (Transitous, db-rest), Betreiber-Logos aus Wikidata, offene Kartendaten (Wetter, Wikipedia, Overpass, Wetter in Plänen) und die Suche nach neuen Versionen. Die einzelnen Schalter darunter (Experte) behalten ihren Wert und gelten wieder, sobald du das hier einschaltest. Dienste mit eigenem Schlüssel (Flugdaten, KI, Fotos) sind nicht betroffen."
+      "h": "Aus schaltet ab: EZB-Kurse, Bahn-Fahrpläne (Transitous, db-rest), Betreiber-Logos, offene Kartendaten (Wetter, Wikipedia, Overpass) und die Versionssuche. Die einzelnen Schalter darunter behalten ihren Wert. Dienste mit eigenem Schlüssel (Flugdaten, KI, Fotos) sind nicht betroffen."
     },
     "fxcdn": {
       "t": "Ersatzquelle für Wechselkurse",
@@ -1447,7 +1457,16 @@
       "unversioned": "Ich kann den Datenbankstand dieses Archivs keiner Version zuordnen. Ich habe nichts verändert.",
       "busy": "Gerade läuft eine Sicherung oder ein Zurückspielen. Versuch es danach noch einmal.",
       "rateLimited": "Ich spiele nur wenige Sicherungen pro Stunde zurück. Versuch es später noch einmal.",
-      "failed": "Ich konnte die Sicherung nicht zurückspielen."
+      "failed": "Ich konnte die Sicherung nicht zurückspielen.",
+      "recoveryKeyInvalid": "Das ist kein Wiederherstellungsschlüssel: Er hat 64 Zeichen aus 0–9 und A–F (Leerzeichen sind egal). Ich habe nichts zurückgespielt.",
+      "recoveryKeyWrong": "Dieser Schlüssel hat die Sicherung nicht geschrieben. Ich habe nichts zurückgespielt.",
+      "recoveryKeyEnvPinned": "Der Schlüssel dieses Servers steht in der Umgebungsvariable ENCRYPTION_KEY. Trag dort den Wiederherstellungsschlüssel ein, starte neu und spiel die Sicherung dann zurück. Ich habe nichts zurückgespielt.",
+      "recoveryKeyWriteFailed": "Ich konnte den Schlüssel nicht in den Ordner für Geheimnisse schreiben. Ich habe nichts zurückgespielt.",
+      "recoveryKeyReauth": "Das Passwort fehlt oder stimmt nicht. Ich habe nichts zurückgespielt.",
+      "recoveryKeySecondFactor": "Gib den richtigen Code aus deiner Authenticator-App ein. Ich habe nichts zurückgespielt.",
+      "recoveryKeyPasskey": "Der Passkey wurde nicht bestätigt. Bestätige mit dem Passwort oder versuch es noch einmal. Ich habe nichts zurückgespielt.",
+      "recoveryKeyPasskeyTooNew": "Dieser Passkey ist noch keine 24 Stunden alt. Bestätige mit dem Passwort. Ich habe nichts zurückgespielt.",
+      "keySwapUnresolved": "Ein früheres Zurückspielen wurde beim Schlüsseltausch unterbrochen. Kläre das zuerst (siehe „Einrichtung & Zustand“). Ich habe nichts zurückgespielt."
     },
     "retry": "Erneut versuchen",
     "baknow": {
@@ -1465,11 +1484,11 @@
     "notes": {
       "machine": {
         "t": "Was diese Sicherung ist",
-        "s": "Die vollständige Sicherung des Servers mit allen Konten, für eine Wiederherstellung der ganzen Maschine. Ein einzelnes Konto zieht mit dem Konto-Archiv (ZIP) unter Einstellungen → Daten um."
+        "s": "Ganze Maschine mit allen Konten. Ein Konto allein zieht per Konto-Archiv (Einstellungen → Daten) um."
       },
       "secrets": {
         "t": "Nicht in der Sicherung",
-        "s": "/app/data/secrets (Verschlüsselungs- und Sitzungsschlüssel) separat sichern. Ohne diesen Ordner lassen sich gespeicherte API-Schlüssel und Zugangsdaten nach einer Wiederherstellung auf einem neuen Host nicht mehr entschlüsseln."
+        "s": "/app/data/secrets separat sichern — ohne ihn sind Schlüssel nach einem Umzug nicht mehr lesbar."
       }
     }
   },
@@ -1571,7 +1590,7 @@
     "systemLoadFailed": "Ich konnte die Systemdaten nicht laden.",
     "tzLegacy": {
       "summary": "Zeitzonen (für Altdaten)",
-      "when": "Nur nötig, wenn alte Importe oder Einträge aus der Zeit vor dem Zeitmodell falsche Zonen tragen: hier lassen sich die Zonen erneut bestimmen (erst Probelauf)."
+      "when": "Nur bei falschen Zonen aus alten Importen: Zonen neu bestimmen (erst Probelauf)."
     },
     "usersLoadFailed": "Ich konnte die Konten für den Bericht nicht laden.",
     "groups": {
@@ -1596,6 +1615,52 @@
       "off": "Ausschalten",
       "running": "Läuft bis {{until}} · noch {{hours}} h {{minutes}} min",
       "failed": "Ich konnte das ausführliche Protokoll nicht umschalten."
+    },
+    "runtime": {
+      "title": "Laufzeit",
+      "refresh": "Aktualisieren",
+      "loadFailed": "Ich konnte die Laufzeitdaten nicht laden.",
+      "loop": {
+        "title": "Event-Loop",
+        "sub": "Verzögerung der letzten Minute. Über 500 ms (p99) wartet jede Anfrage spürbar.",
+        "value": "p50 {{p50}} ms · p99 {{p99}} ms · max {{max}} ms",
+        "slow": "Langsam: p99 {{p99}} ms · max {{max}} ms"
+      },
+      "memory": {
+        "title": "Speicher",
+        "value": "Heap {{heap}} / {{limit}} MB · RSS {{rss}} MB"
+      },
+      "database": {
+        "title": "Datenbank",
+        "value": "{{latency}} ms · Verbindungen {{total}}/{{max}} ({{idle}} frei, {{waiting}} wartend)",
+        "valueNoPool": "{{latency}} ms",
+        "failed": "Die Datenbank antwortet nicht."
+      },
+      "statements": {
+        "title": "Langsamste Abfragen",
+        "sub": "Aus pg_stat_statements, nach mittlerer Dauer.",
+        "none": "Noch keine Abfragen erfasst.",
+        "row": "Ø {{mean}} ms · max {{max}} ms · {{calls}}×",
+        "notInstalled": "Nicht aktiviert. pg_stat_statements in die shared_preload_libraries der Datenbank eintragen, neu starten und einmal CREATE EXTENSION pg_stat_statements ausführen (docs/ops/postgres-tuning.md).",
+        "notLoaded": "Nicht aktiviert: Die Erweiterung ist angelegt, fehlt aber in shared_preload_libraries. Eintragen und die Datenbank neu starten (docs/ops/postgres-tuning.md).",
+        "error": "Ich konnte pg_stat_statements nicht lesen."
+      },
+      "jobs": {
+        "title": "Hintergrundjobs",
+        "idle": "Kein schwerer Job läuft",
+        "running": "Läuft: {{name}}",
+        "waiting": "{{count}} wartend",
+        "importRunning": "Import schreibt ({{count}} wartend)"
+      },
+      "slowRequests": {
+        "title": "Langsame Anfragen",
+        "sub": "Über 1 s, seit dem letzten Neustart."
+      },
+      "slowQueries": {
+        "title": "Langsame Datenbankzugriffe",
+        "sub": "Über 500 ms, seit dem letzten Neustart."
+      },
+      "slowNone": "Keine seit dem Start."
     }
   },
   "lodging": {

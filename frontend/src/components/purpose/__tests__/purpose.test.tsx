@@ -30,12 +30,12 @@ describe("PurposeEditor", () => {
   it("says out loud when the save fails", async () => {
     vi.mocked(purposeApi.set).mockRejectedValue(new Error("boom"));
     render(<PurposeEditor entryType="flight" entryId="f1" purpose={null} />);
-    await userEvent.selectOptions(screen.getByRole("combobox"), "business");
+    await userEvent.selectOptions(screen.getByRole("combobox"), "builtin:business");
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
 
   it("sends null for 'not set'", async () => {
-    vi.mocked(purposeApi.set).mockResolvedValue(null);
+    vi.mocked(purposeApi.set).mockResolvedValue({ purpose: null, purposeKey: null });
     render(<PurposeEditor entryType="placeVisit" entryId="v1" purpose="business" />);
     await userEvent.selectOptions(screen.getByRole("combobox"), "");
     await waitFor(() => expect(purposeApi.set).toHaveBeenCalledWith("placeVisit", "v1", null));
@@ -69,8 +69,16 @@ describe("visit form payload", () => {
 // UAT rc.45: one click overwrote every entry's purpose without asking.
 describe("TripPurposeAction", () => {
   it("asks first with the count, writes only after the confirmation, then says how many", async () => {
-    vi.mocked(purposeApi.previewTrip).mockResolvedValue({ purpose: "business", wouldChange: 4 });
-    vi.mocked(purposeApi.applyToTrip).mockResolvedValue({ purpose: "business", changed: 4 });
+    vi.mocked(purposeApi.previewTrip).mockResolvedValue({
+      purpose: "business",
+      purposeKey: null,
+      wouldChange: 4,
+    });
+    vi.mocked(purposeApi.applyToTrip).mockResolvedValue({
+      purpose: "business",
+      purposeKey: null,
+      changed: 4,
+    });
     const onApplied = vi.fn();
     render(<TripPurposeAction tripId="t1" onApplied={onApplied} />);
     await userEvent.click(screen.getByRole("button", { name: "purpose:trip.apply" }));
@@ -94,7 +102,11 @@ describe("TripPurposeAction", () => {
   });
 
   it("says so and asks nothing when no entry would change", async () => {
-    vi.mocked(purposeApi.previewTrip).mockResolvedValue({ purpose: "business", wouldChange: 0 });
+    vi.mocked(purposeApi.previewTrip).mockResolvedValue({
+      purpose: "business",
+      purposeKey: null,
+      wouldChange: 0,
+    });
     render(<TripPurposeAction tripId="t1" />);
     await userEvent.click(screen.getByRole("button", { name: "purpose:trip.apply" }));
     expect(await screen.findByText("purpose:trip.nothing")).toBeInTheDocument();

@@ -82,7 +82,7 @@
     "status": "Status",
     "wasHere": "✓ I’ve been here",
     "onWishlist": "☆ Wishlist",
-    "statusHint": "New places go on the wishlist by default and only start counting once you pick “I’ve been here” or record a visit.",
+    "statusHint": "New places go on the wishlist and count only with a visit.",
     "notes": "Note",
     "created": "Place added.",
     "updated": "Place saved.",
@@ -101,7 +101,7 @@
     "countryVisit": "Visit beyond a transit stop",
     "countryTransit": "Transit / airport / rest area only",
     "countryVisitHint": "A transit stop counts as ground presence, even overnight. The place name does not determine this.",
-    "countryTransitByCategory": "A service area or fuel station always counts as ground presence, never as a visit of the country. If you really visited something there, change the category.",
+    "countryTransitByCategory": "Rest stops and fuel stations count as ground contact only. Otherwise change the category.",
     "tags": "Tags"
   },
   "detail": {
@@ -117,7 +117,7 @@
     "dateSuggestionArrival": "Arrival {{airport}}",
     "dateSuggestionPhotos_one": "{{count}} photo",
     "dateSuggestionPhotos_other": "{{count}} photos",
-    "dateHint": "The date is optional — a place you know you visited but cannot date still counts. A date in the future does not count yet.",
+    "dateHint": "Optional. A place counts without a date; a future date not yet.",
     "undated": "undated",
     "notCountedYet": "not counted yet",
     "visitAdded": "Visit recorded.",
@@ -199,7 +199,45 @@
     "dismissUnassigned": "Hide",
     "createTitle": "New list",
     "createFirst": "Create your first list",
-    "alreadyInList": "“{{name}}” is already in this list."
+    "alreadyInList": "“{{name}}” is already in this list.",
+    "table": {
+      "label": "Places in the list",
+      "search": "Search",
+      "sortLabel": "Sort",
+      "sortBy": "Sort by {{col}}",
+      "loadFailed": "Places not loaded.",
+      "noMatch": "Nothing found.",
+      "visitsToggle_one": "Show {{count}} visit to {{name}}",
+      "visitsToggle_other": "Show {{count}} visits to {{name}}",
+      "moreVisits_one": "+{{count}} more",
+      "moreVisits_other": "+{{count}} more",
+      "col": {
+        "name": "Name",
+        "country": "Country",
+        "city": "Town",
+        "visits": "Visits",
+        "last": "Last visit",
+        "first": "First visit",
+        "source": "Source",
+        "distance": "Distance",
+        "actions": "Actions"
+      },
+      "sort": {
+        "lastVisit": "Last visit",
+        "name": "Name",
+        "country": "Country",
+        "visitCount": "Visit count",
+        "firstVisit": "First visit",
+        "addedAt": "Date added",
+        "custom": "Own order"
+      },
+      "source": {
+        "manual": "Manual",
+        "rule": "Rule",
+        "import": "Import",
+        "plugin": "Plugin"
+      }
+    }
   },
   "checklist": {
     "notFound": "There is no such checklist.",
@@ -611,7 +649,7 @@
   "import": {
     "csv": {
       "title": "Places from a spreadsheet",
-      "description": "A CSV file with names and coordinates. Without coordinates the place lands in the preview and you set its position yourself — which is also how a Google Takeout export the geocoder cannot resolve gets in.",
+      "description": "CSV with names and coordinates. Missing positions are set in the preview.",
       "uploadLabel": "Choose CSV file"
     },
     "fields": {
@@ -635,7 +673,7 @@
       "newLabel": "new",
       "presentLabel": "already here",
       "needsInputLabel": "open",
-      "needsInputHint": "Rows without a position or with a possible duplicate need your decision before the import starts. Nothing is written without it.",
+      "needsInputHint": "Rows without a position or with a duplicate need your decision.",
       "commit": "Import",
       "commitError": "The import failed. Please try again — whatever was already written is in the import log."
     },
@@ -679,8 +717,8 @@
       "stopsSkipped_other": "{{count}} trip stops skipped — the trip already has them on that day"
     },
     "takeout": {
-      "intro_one": "{{count}} row comes from a Google Maps list. Position, trip and visit day can be suggested — you then decide row by row.",
-      "intro_other": "{{count}} rows come from a Google Maps list. Position, trip and visit day can be suggested — you then decide row by row.",
+      "intro_one": "{{count}} row from Google Maps. Position, trip and day are suggested.",
+      "intro_other": "{{count}} rows from Google Maps. Position, trip and day are suggested.",
       "resolve": "Get suggestions",
       "running": "Searching … {{done}} of {{total}}",
       "errors": {
@@ -700,7 +738,7 @@
         "no_trip": "You have no trip to this country — no trip is assigned.",
         "several_trips": "You have several trips to this country — which one it was is your call; none is assigned."
       },
-      "noKey": "This instance has no Google Places key configured (Settings → Integrations). Positions therefore come only from the name search inside the list's country.",
+      "noKey": "No Google Places key: positions come only from name search in the list's country.",
       "googleFailed": "Google lookup failed:",
       "unplacedBecause": "Without position because:",
       "positionReasons": {
@@ -742,7 +780,7 @@
     },
     "document": {
       "title": "A place from a document",
-      "description": "A museum ticket or a tour booking: paste its text or choose a PDF, .eml, .msg or .txt file. It is read like any other document, with your place templates from the parser workshop; the place lands in the preview, and only you create it.",
+      "description": "Ticket or booking as text, PDF or email. The place lands in the preview first.",
       "textLabel": "Document text",
       "placeholder": "Paste the text of the ticket or booking here …",
       "read": "Read document",
@@ -806,7 +844,7 @@
   "merge": {
     "action": "Merge a duplicate",
     "title": "Merge a duplicate · {{name}}",
-    "intro": "“{{name}}” stays. Choose the duplicate that should be folded into it — then decide, for each detail, which one is kept.",
+    "intro": "“{{name}}” stays. Pick the duplicate, then choose per field what stays.",
     "pickLabel": "Choose the duplicate",
     "pickPlaceholder": "Name or city …",
     "pickStep": "choose the duplicate",
@@ -862,8 +900,8 @@
       "refKept": "Its source reference is kept as a second reference — a later import still finds it."
     },
     "curated": {
-      "twoLists": "“{{kept}}” and “{{other}}” are entries of two checklists ({{lists}}). Merged, one tick would be lost — so both stay.",
-      "sameList": "“{{kept}}” and “{{other}}” are two different entries of the checklist {{list}}. Merged, one tick would be lost — so both stay."
+      "twoLists": "“{{kept}}” and “{{other}}” are in two checklists ({{lists}}). Merging would lose a tick.",
+      "sameList": "“{{kept}}” and “{{other}}” are two entries in {{list}}. Merging would lose a tick."
     }
   },
   "nearby": {
@@ -885,7 +923,7 @@
       "unplacedLodgings_one": "One lodging without a location cannot be chosen.",
       "unplacedLodgings_other": "{{count}} lodgings without a location cannot be chosen.",
       "pointLabel": "Search a place or set a point",
-      "deviceHint": "Your location is asked for once, for this view only — it is stored nowhere. Without permission, a lodging or a point works just as well.",
+      "deviceHint": "Your location is asked once and not stored.",
       "deviceUse": "Use my location once",
       "deviceAsking": "Asking for your location …",
       "device_denied": "Location not permitted. Choose a lodging or a point instead.",
@@ -953,7 +991,7 @@
   },
   "customCategories": {
     "manage": "Own categories",
-    "manageHint": "Create categories the built-in set lacks (e.g. Swimming pool). They apply to all your places.",
+    "manageHint": "Your own categories, e.g. swimming pool. Applies to all your places.",
     "namePlaceholder": "Name, e.g. Swimming pool",
     "iconLabel": "Icon",
     "add": "Add",
@@ -990,8 +1028,8 @@
     "windowInvalid": "The maximum stay must be at least the minimum stay (1 to 1440 minutes).",
     "distanceInvalid": "The distance must be between 10 and 500 metres.",
     "autoAccept": "Take confident matches automatically",
-    "autoAcceptHint": "Only when the chain is recognised unambiguously. Every automatic entry is listed under “Recently taken automatically” and can be undone.",
-    "stop": "Stop following",
+    "autoAcceptHint": "Only for a clear chain match. Automatic additions can be undone.",
+    "stop": "Remove rule",
     "header": "Smart list: chain {{brands}}",
     "headerLabel": "Smart list",
     "headerRule": "{{min}} to {{max}} min. stay, suggest within {{distance}} m, automatic within {{autoDistance}} m, take automatically: {{auto}}",
@@ -1032,6 +1070,32 @@
       "failed": "The rule could not be saved. Please try again later."
     },
     "autoDistance": "Take automatically within (m)",
-    "autoDistanceInvalid": "The automatic distance must be at least 10 m and no larger than the suggestion distance."
+    "autoDistanceInvalid": "The automatic distance must be at least 10 m and no larger than the suggestion distance.",
+    "editRule": "Edit rule",
+    "pending": {
+      "title": "Pending confirmations ({{count}})",
+      "info": "Visits this list found at your places. Confirming adds the visit.",
+      "all": "Confirm all",
+      "allTitle": "Confirm all?",
+      "allMessage": "{{count}} visits will be added."
+    },
+    "pendingBadge": "{{count}} pending",
+    "undoAll": "Undo all",
+    "undoAllTitle": "Undo all?",
+    "undoAllMessage": "{{count}} automatic entries will be undone. What you added stays.",
+    "undoAllFailed": "{{count}} entries could not be undone.",
+    "pendingCountsFailed": "Pending confirmations could not be counted."
+  },
+  "autoFilter": {
+    "label": "Added automatically",
+    "info": "Added by a chain, an import or a plugin, not by you.",
+    "all": "All",
+    "undoAll": "Undo all",
+    "undoTitle": "Undo automatic visits?",
+    "undoMessage": "{{count}} visits will be deleted. Visits with a note, rating, photo or document stay.",
+    "result": "{{removed}} undone, {{kept}} kept.",
+    "failed": "Undo did not work. Please try again later.",
+    "none": "No visits added automatically.",
+    "badge": "automatic"
   }
 }

@@ -1,9 +1,12 @@
+import Chip from "../../ui/Chip";
+import { SearchInput } from "../../ui/SearchInput";
 import { useEffect, useState } from "react";
 import { portsApi } from "../../../lib/api/cruise";
 import type { Port } from "../../../types/cruise";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
+import { useFormError } from "../../form/useFormError";
 
 /** Admin master data for ports. See ShipsSection for the shape. */
 export default function PortsSection(): JSX.Element {
@@ -21,6 +24,7 @@ export default function PortsSection(): JSX.Element {
   const [newLon, setNewLon] = useState("");
   const [newUnlocode, setNewUnlocode] = useState("");
   const [creating, setCreating] = useState(false);
+  const formError = useFormError();
 
   useEffect(() => {
     let cancelled = false;
@@ -47,10 +51,11 @@ export default function PortsSection(): JSX.Element {
     const lat = Number.parseFloat(newLat);
     const lon = Number.parseFloat(newLon);
     if (!newName.trim() || Number.isNaN(lat) || Number.isNaN(lon)) {
-      addToast("error", t("admin:cruiseMasterData.port.missingFields"));
+      formError.set(t("admin:cruiseMasterData.port.missingFields"));
       return;
     }
     setCreating(true);
+    formError.clear();
     try {
       const created = await portsApi.create({
         name: newName.trim(),
@@ -72,7 +77,7 @@ export default function PortsSection(): JSX.Element {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         t("admin:cruiseMasterData.port.createFailed");
-      addToast("error", msg);
+      formError.set(msg);
     } finally {
       setCreating(false);
     }
@@ -82,6 +87,7 @@ export default function PortsSection(): JSX.Element {
     <div data-testid="admin-ports-section">
       <p className="t-caption mb-4">{t("admin:cruiseMasterData.port.description")}</p>
 
+      {formError.node}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
         <input
           type="text"
@@ -143,12 +149,11 @@ export default function PortsSection(): JSX.Element {
         </button>
       </div>
 
-      <input
-        type="search"
-        className="input mb-3"
-        placeholder={t("admin:cruiseMasterData.port.searchPlaceholder")}
+      <SearchInput
+        label={t("admin:cruiseMasterData.port.searchPlaceholder")}
         value={query}
-        onChange={(e): void => setQuery(e.target.value)}
+        onChange={setQuery}
+        placeholder={t("admin:cruiseMasterData.port.searchPlaceholder")}
       />
 
       {loading ? (
@@ -169,16 +174,9 @@ export default function PortsSection(): JSX.Element {
               </div>
               <div className="flex items-center gap-2 text-xs">
                 {p.isUserAdded && (
-                  <span
-                    className="px-2 py-0.5 rounded-full"
-                    style={{
-                      background: "var(--bg-elevated)",
-                      color: "var(--accent)",
-                      border: "1px solid var(--accent)",
-                    }}
-                  >
+                  <Chip tone="accent" size="sm">
                     {t("admin:cruiseMasterData.userAdded")}
-                  </span>
+                  </Chip>
                 )}
                 {p.unlocode && <span className="text-(--text-muted) font-mono">{p.unlocode}</span>}
               </div>

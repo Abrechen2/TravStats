@@ -2464,8 +2464,7 @@
               "items": [],
               "btn": ["Ort hinzufügen", "Add place"],
               "m": "ttPlaces",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             },
             {
               "id": "unterkunft",
@@ -2482,8 +2481,7 @@
               ],
               "v": false,
               "m": "ttPlaces",
-              "x": 1,
-              "beta": "travTrack"
+              "x": 1
             }
           ]
         },
@@ -2512,8 +2510,7 @@
                 "A new zone deletes points already inside; you see how many first. Removing brings nothing back."
               ],
               "m": "ttZones",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             }
           ]
         }
@@ -2759,6 +2756,30 @@
       "en": "Data & sources",
       "s": [
         {
+          "id": "tt-daten-qualitaet",
+          "de": "Tage mit fragwürdigen Spuren",
+          "en": "Days with questionable tracks",
+          "rows": [
+            {
+              "id": "ttquality",
+              "t": "list",
+              "inv": "Best source per day: questionable days",
+              "de": [
+                "Tage mit fragwürdigen Spuren",
+                "Mehrere Quellen, niedrige Qualität oder Ausreißer",
+                "Quelle wählen, Ausreißer verwerfen oder einen Zeitraum löschen. Gespeicherte Punkte bleiben unverändert."
+              ],
+              "en": [
+                "Days with questionable tracks",
+                "Several sources, low quality or outliers",
+                "Choose a source, discard outliers or delete a period. Stored points stay unchanged."
+              ],
+              "m": "ttQuality",
+              "x": 0
+            }
+          ]
+        },
+        {
           "id": "tt-daten-quellen",
           "de": "Quellen",
           "en": "Sources",
@@ -2780,8 +2801,7 @@
                 "Needs your own Dawarich connection. Can be paused and resumed."
               ],
               "m": "ttSources",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             },
             {
               "id": "dawimp",
@@ -2792,8 +2812,7 @@
               "de": ["Letzte Übernahme", "", ""],
               "en": ["Last copy", "", ""],
               "m": "ttSources",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             },
             {
               "id": "gpxtrack",
@@ -2812,8 +2831,7 @@
                 "Earlier imports can be removed one by one."
               ],
               "m": "ttSources",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             },
             {
               "id": "ttimp",
@@ -2823,8 +2841,7 @@
               "de": ["Bisherige Importe", "", ""],
               "en": ["Earlier imports", "", ""],
               "m": "ttSources",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             },
             {
               "id": "apps",
@@ -2843,8 +2860,7 @@
                 "OwnTracks and Overland",
                 "These apps don't know your privacy zones; the server drops points inside. You see the key only once."
               ],
-              "m": "ttSources",
-              "beta": "travTrack"
+              "m": "ttSources"
             },
             {
               "id": "dawconn",
@@ -2852,8 +2868,7 @@
               "de": ["Dawarich-Verbindung in Dienste", "", ""],
               "en": ["Dawarich connection in Services", "", ""],
               "m": "ttSources",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             }
           ]
         },
@@ -2879,8 +2894,7 @@
               ],
               "res": ["Fertig · Herunterladen", "Ready · Download"],
               "m": "ttExport",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             }
           ]
         },
@@ -2905,8 +2919,7 @@
                 "Deleted days stay deleted, even if a phone sends them later. Logbook entries stay untouched."
               ],
               "m": "ttDelete",
-              "x": 0,
-              "beta": "travTrack"
+              "x": 0
             }
           ]
         },
@@ -2931,8 +2944,7 @@
                 "Why points are missing",
                 "Needs the diagnostics log in the Companion app."
               ],
-              "m": "ttDiag",
-              "beta": "travTrack"
+              "m": "ttDiag"
             }
           ],
           "x": 1
@@ -4373,6 +4385,21 @@
           "ad": 1
         },
         {
+          "id": "mapMatching",
+          "cat": "karte",
+          "svc": {
+            "n": ["An Straßen anpassen", "Snap to roads"],
+            "de": "Eigener Valhalla- oder GraphHopper-Router",
+            "en": "Your own Valhalla or GraphHopper router",
+            "st": ["Aus", "Off"],
+            "tone": "muted"
+          },
+          "use": ["on", "instKey"],
+          "rows": [],
+          "ov": { "on": { "v": false } },
+          "ad": 1
+        },
+        {
           "id": "logos",
           "cat": "karte",
           "svc": {
@@ -4484,6 +4511,21 @@
           ],
           "ad": 1,
           "x": 1
+        },
+        {
+          "id": "aiSuggestionHelp",
+          "cat": "ki",
+          "svc": {
+            "n": ["KI-Hilfe für unklare Vorschläge", "AI help for unclear suggestions"],
+            "de": "„KI fragen“ bei mehrdeutigen Aufenthalten",
+            "en": "\"Ask the AI\" for ambiguous stays",
+            "st": ["Aus", "Off"],
+            "tone": "muted"
+          },
+          "use": ["on"],
+          "rows": [],
+          "ov": { "on": { "v": false } },
+          "ad": 1
         },
         {
           "id": "openData",

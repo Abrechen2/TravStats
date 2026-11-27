@@ -332,4 +332,79 @@ describe("/api/v1/lodging-import", () => {
       where: { userId: otherUserId, name: "Other User Revert Hotel" },
     });
   });
+
+  describe("stay ids and the original document (forgejo#303)", () => {
+    const row = (name: string) => ({
+      sourceRowIndex: 0,
+      action: "create",
+      lodging: { name, city: "Graz", lat: 47.07, lon: 15.44 },
+      stay: { checkIn: "2026-10-01", checkOut: "2026-10-02" },
+    });
+    const upload = async (text: string): Promise<string> => {
+      const res = await request(app)
+        .post("/api/v1/documents")
+        .set("Cookie", auth())
+        .attach("file", Buffer.from(text), { filename: "booking.txt", contentType: "text/plain" });
+      expect(res.status).toBeLessThan(300);
+      return res.body.data.id as string;
+    };
+
+    it("answers the id of every stay it created, and files the document with the first", async () => {
+      const documentId = await upload("Stay confirmation, Graz Hotel A");
+      const res = await request(app)
+        .post("/api/v1/lodging-import/commit")
+        .set("Cookie", auth())
+        .send({
+          source: "csv",
+          fileName: null,
+          rows: [row("Graz Hotel A")],
+          documentIds: [documentId],
+        });
+      expect(res.status).toBe(201);
+      const [ref] = res.body.data.createdStayRefs;
+      expect(ref).toMatchObject({ sourceRowIndex: 0 });
+      expect(
+        await prisma.lodgingStay.findFirst({ where: { id: ref.stayId, userId } })
+      ).not.toBeNull();
+      expect(res.body.data.documentFiled).toBe(true);
+      const link = await prisma.documentLink.findMany({ where: { documentId } });
+      expect(link).toHaveLength(1);
+    });
+
+    it("says the document stayed unfiled when no stay was created", async () => {
+      const documentId = await upload("Nothing to file, Graz Hotel B");
+      const res = await request(app)
+        .post("/api/v1/lodging-import/commit")
+        .set("Cookie", auth())
+        .send({
+          source: "csv",
+          fileName: null,
+          rows: [
+            { sourceRowIndex: 0, action: "skip", lodging: { name: "Graz Hotel B" }, stay: null },
+          ],
+          documentIds: [documentId],
+        });
+      expect(res.status).toBe(201);
+      expect(res.body.data).toMatchObject({
+        createdStayRefs: [],
+        documentFiled: false,
+        documentNotFiledReason: "no_stay_created",
+      });
+    });
+
+    it("refuses an unknown document id before writing any stay", async () => {
+      const before = await prisma.lodgingStay.count({ where: { userId } });
+      const res = await request(app)
+        .post("/api/v1/lodging-import/commit")
+        .set("Cookie", auth())
+        .send({
+          source: "csv",
+          fileName: null,
+          rows: [row("Graz Hotel C")],
+          documentIds: ["99999999-9999-4999-8999-999999999999"],
+        });
+      expect(res.status).toBeGreaterThanOrEqual(400);
+      expect(await prisma.lodgingStay.count({ where: { userId } })).toBe(before);
+    });
+  });
 });

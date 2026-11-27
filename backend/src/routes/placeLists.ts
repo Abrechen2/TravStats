@@ -11,7 +11,9 @@ import {
   addListEntrySchema,
   reorderListEntriesSchema,
   placeListQuerySchema,
+  listMembersQuerySchema,
 } from "../schemas/placeList";
+import { listMembers } from "../services/places/listMembers";
 import logger from "../utils/logger";
 
 /**
@@ -51,6 +53,7 @@ const LIST_SUMMARY_INCLUDE = {
     select: {
       place: {
         select: {
+          id: true,
           visited: true,
           isoCountryCode: true,
           visits: { select: { visitedAt: true } },
@@ -173,10 +176,26 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       for (const c of catalogues) catalogueSizes.set(c.key, c._count.items);
     }
 
+    // The entry scope (a purpose filter, a hidden purpose) narrows top-level Place reads only,
+    // never these nested entries: count what that scope lets through, so the overview agrees
+    // with the table on the list page.
+    const visible = new Set(
+      (
+        await prisma.place.findMany({
+          where: { userId, listEntries: { some: {} } },
+          select: { id: true },
+        })
+      ).map((p) => p.id)
+    );
+    const scoped = rows.map((r) => ({
+      ...r,
+      entries: (r.entries as { place: { id: string } }[]).filter((e) => visible.has(e.place.id)),
+    })) as typeof rows;
+
     const now = new Date();
     res.json({
       success: true,
-      data: rows.map((r) => ({
+      data: scoped.map((r) => ({
         ...present(r, parsed.data.withEntries, now),
         curatedItemCount: r.curatedKey === null ? null : (catalogueSizes.get(r.curatedKey) ?? null),
       })),
@@ -193,6 +212,21 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     const userId = requireUser(req);
     const list = await findOwned(req.params.id, userId);
     res.json({ success: true, data: present(list, true) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ---------------------------------------------------------------- members (the table)
+
+router.get("/:id/members", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const parsed = listMembersQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    const page = await listMembers(userId, req.params.id, parsed.data);
+    if (!page) throw new AppError("List not found", 404);
+    res.json({ success: true, data: page });
   } catch (error) {
     next(error);
   }

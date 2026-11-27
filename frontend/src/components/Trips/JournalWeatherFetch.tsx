@@ -12,8 +12,8 @@ import {
 import { logger } from "../../lib/logger";
 import { formatObservedWeather } from "../../lib/observedWeather";
 import { useSettingsStore } from "../../store/settingsStore";
-import { useToastStore } from "../../store/toastStore";
 import type { ObservedWeather, TripJournalEntry } from "../../types";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const BUTTON =
   "px-2 py-0.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent) disabled:opacity-50";
@@ -59,7 +59,6 @@ export default function JournalWeatherFetch({
   onPick: (value: string) => void;
 }): JSX.Element | null {
   const { t, i18n } = useTranslation(["openData", "trips"]);
-  const addToast = useToastStore((s) => s.addToast);
   const openData = useSettingsStore((s) => s.openDataEnabled) === true;
   const [observed, setObserved] = useState<ObservedWeather | null>(entry?.observedWeather ?? null);
   /** What the last lookup came to, when it brought no weather. */
@@ -90,8 +89,7 @@ export default function JournalWeatherFetch({
       setMissing(weatherOutcome === "observed" ? null : weatherOutcome);
     } catch (err) {
       logger.warn("Fetching one journal entry's weather failed", err);
-      addToast(
-        "error",
+      reportPageError(
         isOpenDataDisabled(err) ? t("openData:weather.disabled") : t("openData:weather.failed")
       );
     } finally {

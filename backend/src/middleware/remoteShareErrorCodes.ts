@@ -29,6 +29,13 @@ export type RemoteShareApiErrorCode =
   | "SHARE_REMOTE_REFUSED"
   | "SHARE_REMOTE_CONFLICT_STALE"
   /**
+   * Linking an offer with an existing trip (forgejo#440): no such own trip; the trip is already in
+   * a share group; the offered entries do not fit one preview.
+   */
+  | "SHARE_REMOTE_TRIP_NOT_FOUND"
+  | "SHARE_REMOTE_LINK_TRIP_SHARED"
+  | "SHARE_REMOTE_LINK_TOO_LARGE"
+  /**
    * The lifecycle (F-S4e): nothing of the caller's on that trip waits for a confirmation; the
    * caller is not (or no longer) a member through any pairing; the trip's home is this server, so
    * it is offered from here, not asked for; no such person on the trip's roster.

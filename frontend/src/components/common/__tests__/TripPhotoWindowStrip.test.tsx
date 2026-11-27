@@ -24,7 +24,10 @@ describe("TripPhotoWindowStrip", () => {
       "/api/v1/trips/t1/photos/p2/file",
     ]);
     expect(getTripPhotoWindow).toHaveBeenCalledWith("flights", "f-1");
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    // The only controls are "enlarge" — nothing edits, uploads or deletes.
+    for (const b of screen.getAllByRole("button")) {
+      expect(b.getAttribute("aria-label")).toBe("common:photoViewer.enlarge");
+    }
   });
 
   it("draws nothing when no photo falls into the window", async () => {

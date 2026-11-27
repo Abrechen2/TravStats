@@ -11,7 +11,7 @@ import { minutesText } from "../lib/flights/minutesText";
 import PeopleList from "../components/ui/PeopleList";
 import FlightRouteHero from "../components/flightsTable/FlightRouteHero";
 import AirlineWordmarkCell from "../components/flightsTable/AirlineWordmarkCell";
-import { formatTimeValueShown } from "../lib/displayFormat";
+import { formatTimeValueShown } from "../lib/format";
 import { flightArrival, flightDeparture } from "../lib/entityTimes";
 import Button from "../components/ui/Button";
 import SpecialTypeBadge from "../components/specialFlights/SpecialTypeBadge";
@@ -39,7 +39,7 @@ import {
 } from "../lib/units";
 import { useSettingsStore } from "../store/settingsStore";
 import { formatBaggageAllowance } from "../lib/baggageAllowance";
-import { formatDurationWithEstimate } from "../lib/formatters";
+import { formatDurationWithEstimate } from "../lib/format";
 import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { useToastStore } from "../store/toastStore";
@@ -58,6 +58,8 @@ import RememberedMarker from "../components/provenance/RememberedMarker";
 import ProvenanceDetails from "../components/provenance/ProvenanceDetails";
 import { useFlightBooking } from "../components/flightDetail/useFlightBooking";
 import BackLink from "../components/navigation/BackLink";
+import Banner from "../components/ui/Banner";
+import { reportPageError } from "../store/pageErrorStore";
 
 /**
  * Reading a flight without editing it.
@@ -174,7 +176,7 @@ export default function FlightDetailPage(): JSX.Element {
       navigate("/flights");
     } catch (err: unknown) {
       logger.error("FlightDetailPage: delete failed", err);
-      addToast("error", t("dashboard:errors.deleteFlight"));
+      reportPageError(t("dashboard:errors.deleteFlight"));
       setDeleting(false);
       setConfirmingDelete(false);
     }
@@ -199,12 +201,9 @@ export default function FlightDetailPage(): JSX.Element {
           <BackLink to="/flights" className="ts-back-link text-sm text-[var(--text-muted)]">
             ← {t("flights:table.title")}
           </BackLink>
-          <div
-            role="alert"
-            className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]"
-          >
+          <Banner tone="error" className="mt-4">
             {isLoadError ? t("flights:detail.loadError") : t("flights:detail.notFound")}
-          </div>
+          </Banner>
           {isLoadError && (
             <div className="mt-3">
               <Button onClick={() => setReloadKey((k) => k + 1)}>

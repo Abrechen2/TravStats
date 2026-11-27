@@ -1,3 +1,4 @@
+import { Icon } from "./ui/Icon";
 import { useState } from "react";
 import type { Flight } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
@@ -5,7 +6,7 @@ import { resolveAirlineDisplay, resolveAirlineIata } from "../lib/airlineUtils";
 import AirlineLogo from "./AirlineLogo";
 import SpecialTypeBadge from "./specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "./specialFlights/specialTypeMeta";
-import { formatLocalClock } from "../lib/displayFormat";
+import { formatLocalClock } from "../lib/format";
 import { flightDeparture } from "../lib/entityTimes";
 import { todayZoneNow } from "../hooks/useTodayZone";
 import {
@@ -205,9 +206,10 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
             </h4>
             <button
               onClick={() => setSelectedDay(null)}
+              aria-label={t("common:buttons.close")}
               className="text-(--text-muted) hover:text-(--text-primary)"
             >
-              ✕
+              <Icon name="x" size={16} />
             </button>
           </div>
           <div className="space-y-2">

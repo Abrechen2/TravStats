@@ -48,6 +48,46 @@ export const stopSchema = z.object({
     .object({ id: z.string(), status: z.string() })
     .nullable()
     .describe("A TravTrack stay question this dwell belongs to, if any"),
+  evidence: z
+    .object({
+      source: z
+        .discriminatedUnion("kind", [
+          z.object({
+            kind: z.literal("plugin"),
+            pluginName: z.string(),
+            name: z.string(),
+            note: z.string().nullable(),
+          }),
+          z.object({ kind: z.literal("calendar"), title: z.string() }),
+          z.object({ kind: z.literal("venue") }),
+        ])
+        .describe(
+          "What named the stop: a suggestion plugin, a calendar event, else the venue lookup"
+        ),
+      confidence: z
+        .object({
+          level: z.enum(["high", "medium", "low"]),
+          reasons: z.array(
+            z.discriminatedUnion("code", [
+              z.object({ code: z.literal("venue"), distanceM: z.number() }),
+              z.object({ code: z.literal("dwell"), minutes: z.number() }),
+              z.object({ code: z.literal("calendar"), title: z.string() }),
+              z.object({
+                code: z.literal("plugin"),
+                pluginName: z.string(),
+                name: z.string(),
+                distanceM: z.number().nullable(),
+              }),
+            ])
+          ),
+        })
+        .nullable()
+        .describe("Null when the evidence holds nothing measurable: no level is invented"),
+    })
+    .optional()
+    .describe(
+      "Where the stop's suggestion came from and how sure the pipeline is (additive; absent when the stay holds no evidence)"
+    ),
   place: z
     .object({
       name: z.string(),

@@ -33,6 +33,25 @@ import {
 import { askPlugin, SAME_STOP_M } from "../../services/plugins/ask";
 import { helloPlugin } from "../../services/plugins/client";
 import { assertBackfillRange, prepareBackfill, runBackfill } from "../../services/plugins/backfill";
+import {
+  assertMaintenanceCapable,
+  candidateStops,
+  offersMaintenance,
+  probeHello,
+  runMaintenance,
+} from "../../services/plugins/maintenance";
+import {
+  MAINTENANCE_MAX_QUERY,
+  MAINTENANCE_MAX_ROWS,
+  MAINTENANCE_SOURCES,
+} from "../../services/plugins/contract";
+import type { Precision } from "../../services/plugins/registry";
+import {
+  readMaintenanceInbox,
+  refreshAccountCaches,
+  refreshMaintenanceCache,
+} from "../../services/plugins/maintenanceCache";
+import { setPluginListEnabled, syncPluginList } from "../../services/places/pluginLists";
 
 const router = Router();
 
@@ -57,7 +76,55 @@ export const TEST_STOP = {
   zone: "Europe/Berlin",
 };
 
+/** Maintenance writes reach an outside server and change its data: bounded per account. */
+const maintenanceLimiter = rateLimit({
+  windowMs: 10 * 60_000,
+  max: patAwareMax(120),
+  keyGenerator: userOrIpKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const localeOf = (req: AuthRequest): "de" | "en" => (req.query.lang === "en" ? "en" : "de");
+
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+/** "Jetzt aktualisieren" asks every plugin live: a few times an hour per account. */
+const refreshLimiter = rateLimit({
+  windowMs: 60 * 60_000,
+  max: patAwareMax(6),
+  keyGenerator: userOrIpKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const localeValue = (v: unknown): "de" | "en" => (v === "en" ? "en" : "de");
+
+/** The inbox's Plugins tab: the cached proposals and notices of every plugin (no live call). */
+router.get("/maintenance/inbox", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    res.json(await readMaintenanceInbox(req.userId!));
+  } catch (error) {
+    next(error);
+  }
+});
+
+/** "Jetzt aktualisieren": ask every enabled plugin live, then answer the fresh copy. */
+router.post(
+  "/maintenance/refresh",
+  refreshLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { locale } = z
+        .object({ locale: z.enum(["de", "en"]).optional() })
+        .strict()
+        .parse(req.body ?? {});
+      await refreshAccountCaches(req.userId!, localeValue(locale));
+      res.json(await readMaintenanceInbox(req.userId!));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -196,6 +263,214 @@ router.post(
         runBackfill(userId, id, from, to, progress)
       );
       res.status(202).json({ jobId: job.id });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * The plugin's announced capabilities (its signed hello); `[]` when it has no
+ * hello. `error` names a failed hello (auth = signature refused, unreachable, …).
+ */
+router.get("/:id/capabilities", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const plugin = await ownPlugin(req.userId!, z.string().uuid().parse(req.params.id));
+    const locale = localeOf(req);
+    if (!plugin.enabled || (await egressBlock(PLUGIN_SERVICE_ID)))
+      return res.json({
+        capabilities: [],
+        maintenance: false,
+        error: null,
+        list: await syncPluginList(req.userId!, plugin, null, locale),
+      });
+    const probe = await probeHello(plugin);
+    const hello = probe.kind === "ok" ? probe.hello : null;
+    res.json({
+      capabilities: hello?.capabilities ?? [],
+      maintenance: offersMaintenance(probe),
+      error: probe.kind === "failed" ? probe.reason : null,
+      list: await syncPluginList(req.userId!, plugin, hello, locale),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/** "Orte dieses Plugins als Liste führen": on creates (or keeps) the list, off keeps it as a normal list. */
+router.put("/:id/list", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const plugin = await ownPlugin(req.userId!, z.string().uuid().parse(req.params.id));
+    const { enabled } = z.object({ enabled: z.boolean() }).strict().parse(req.body);
+    const probe =
+      enabled && plugin.enabled && !(await egressBlock(PLUGIN_SERVICE_ID))
+        ? await probeHello(plugin)
+        : null;
+    res.json(
+      await setPluginListEnabled(
+        req.userId!,
+        plugin,
+        enabled,
+        probe?.kind === "ok" ? probe.hello : null,
+        localeOf(req)
+      )
+    );
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Location maintenance (spec "Maintenance"). Owner of the registration only:
+ * `ownPlugin` finds a plugin of THIS account, and the candidate stops sent with
+ * the proposals request are this account's own.
+ */
+async function maintainedPlugin(req: AuthRequest) {
+  const plugin = await ownPlugin(req.userId!, z.string().uuid().parse(req.params.id));
+  const block = await egressBlock(PLUGIN_SERVICE_ID);
+  if (block) throw new AppError(block, 409, "SERVICE_DISABLED");
+  await assertMaintenanceCapable(plugin);
+  return plugin;
+}
+
+const rowIdSchema = z.string().min(1).max(64);
+
+/** What the user confirmed; the plugin writes exactly these (coordinates, and the text fields given). */
+const applyValues = {
+  rowId: rowIdSchema,
+  lat: z.number().min(-90).max(90),
+  lon: z.number().min(-180).max(180),
+  street: z.string().trim().min(1).max(200).optional(),
+  postcode: z.string().trim().min(1).max(32).optional(),
+  town: z.string().trim().min(1).max(200).optional(),
+};
+
+/** Search and paging of the maintenance list; the plugin does both (its list is longer than one page). */
+const maintenanceListQuery = z
+  .object({
+    q: z.string().trim().max(MAINTENANCE_MAX_QUERY).optional(),
+    offset: z.coerce.number().int().min(0).optional(),
+    limit: z.coerce.number().int().min(1).max(MAINTENANCE_MAX_ROWS).optional(),
+  })
+  .transform(({ q, ...rest }) => ({ ...rest, ...(q ? { query: q } : {}) }));
+
+router.get(
+  "/:id/maintenance",
+  // The list reloads after every apply/undo/ignore: the probe limit (20 per
+  // 10 min) would lock a user out halfway through an archive.
+  maintenanceLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const plugin = await maintainedPlugin(req);
+      const { stops, withheld } = await candidateStops(req.userId!, plugin.precision as Precision);
+      const locale = req.query.locale === "en" ? "en" : "de";
+      const paging = maintenanceListQuery.parse(req.query);
+      const data = await runMaintenance(plugin, "proposals", { locale, stops, ...paging });
+      res.json({ ...data, stopsSent: stops.length, stopsWithheld: withheld });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
+  "/:id/maintenance/notices",
+  maintenanceLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const plugin = await maintainedPlugin(req);
+      const { stops, withheld } = await candidateStops(req.userId!, plugin.precision as Precision);
+      const locale = req.query.locale === "en" ? "en" : "de";
+      // limit 1: only the counts and the notices are wanted, not the row list.
+      const data = await runMaintenance(plugin, "proposals", { locale, stops, limit: 1 });
+      res.json({
+        notices: data.notices ?? [],
+        noticeCount: data.noticeCount ?? 0,
+        totalRows: data.totalRows ?? 0,
+        stopsSent: stops.length,
+        stopsWithheld: withheld,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/** Called when the user confirms in the dialog: a single-use ticket for exactly the values shown. */
+router.post(
+  "/:id/maintenance/confirm",
+  maintenanceLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const body = z
+        .discriminatedUnion("kind", [
+          z.object({ kind: z.literal("undo"), undoId: z.string().min(1).max(64) }).strict(),
+          z.object({ kind: z.literal("apply"), ...applyValues }).strict(),
+        ])
+        .parse(req.body);
+      const plugin = await maintainedPlugin(req);
+      res.json(await runMaintenance(plugin, "confirm", body));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/:id/maintenance/apply",
+  maintenanceLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const body = z
+        .object({
+          ...applyValues,
+          source: z.enum(MAINTENANCE_SOURCES),
+          token: z.string().min(1).max(200),
+        })
+        .strict()
+        .parse(req.body);
+      const plugin = await maintainedPlugin(req);
+      const answer = await runMaintenance(plugin, "apply", body);
+      // The inbox's copy follows the write at once (it never throws; a failure is stored).
+      await refreshMaintenanceCache(plugin);
+      res.json(answer);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/:id/maintenance/undo",
+  maintenanceLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const body = z
+        .object({ undoId: z.string().min(1).max(64), token: z.string().min(1).max(200) })
+        .strict()
+        .parse(req.body);
+      const plugin = await maintainedPlugin(req);
+      const answer = await runMaintenance(plugin, "undo", body);
+      // The inbox's copy follows the write at once (it never throws; a failure is stored).
+      await refreshMaintenanceCache(plugin);
+      res.json(answer);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/:id/maintenance/ignore",
+  maintenanceLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const body = z.object({ rowId: rowIdSchema, ignored: z.boolean() }).strict().parse(req.body);
+      const plugin = await maintainedPlugin(req);
+      const answer = await runMaintenance(plugin, "ignore", body);
+      // The inbox's copy follows the write at once (it never throws; a failure is stored).
+      await refreshMaintenanceCache(plugin);
+      res.json(answer);
     } catch (error) {
       next(error);
     }

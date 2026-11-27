@@ -90,7 +90,8 @@
     "general": "General",
     "people": "Travellers & Tags",
     "appearance": "Appearance",
-    "notes": "Notes"
+    "notes": "Notes",
+    "label": "Trip sections"
   },
   "badge": {
     "noTrip": "—"
@@ -108,7 +109,7 @@
   "cleanup": {
     "button": "🧹 Clean up",
     "title": "Dissolve micro-journeys",
-    "intro": "These journeys consist of a single booking (max. 2 flights) and contain nothing else. Dissolving removes only the journey container — all flights are kept.",
+    "intro": "Trips with a single booking. Dissolving removes the trip only, flights stay.",
     "empty": "No micro-journeys found — all tidy.",
     "flightCount_one": "{{count}} flight",
     "flightCount_other": "{{count}} flights",
@@ -127,7 +128,7 @@
     "selected_other": "{{count}} journeys selected",
     "title": "Merge journeys",
     "nameLabel": "Name of the merged journey",
-    "intro": "All flights, cruises, stops, journal entries and photos move into one journey. The remaining journey containers are removed.",
+    "intro": "Everything moves into one trip; the other trips are removed.",
     "confirm": "Merge",
     "done": "Journeys merged",
     "error": "Merge failed"
@@ -180,7 +181,8 @@
       "map": "Map",
       "gallery": "Gallery",
       "logistics": "Logistics",
-      "tours": "Tours"
+      "tours": "Tours",
+      "label": "Trip views"
     },
     "tabPlaceholder": {
       "gallery": "Gallery comes in the next iteration once photo upload + storage are in place.",
@@ -202,6 +204,8 @@
           "ferry": "Ferries",
           "rental": "Rental cars",
           "tours": "Tours",
+          "roadtrips": "Roadtrips",
+          "toursAndRoadtrips": "Tours & roadtrips",
           "lodging": "Stays",
           "stops": "Stops",
           "places": "Places",
@@ -242,7 +246,9 @@
       "ferries": "Ferries",
       "date": "Date",
       "route": "Route",
-      "open": "open"
+      "open": "open",
+      "cruiseLine": "Cruise line",
+      "cruiseFallback": "Cruise"
     },
     "timeline": {
       "addEntry": "+ Add entry",
@@ -490,7 +496,7 @@
   },
   "summary": {
     "title": "AI summary",
-    "cta": "Have the AI write a short, personal recap of this trip — from flights, cruises, stays, places, stops and journal, in your language.",
+    "cta": "Let the AI write a short, personal summary of this trip.",
     "generateButton": "Generate summary",
     "regenerate": "Regenerate",
     "generating": "Writing… this can take a few minutes",
@@ -560,12 +566,16 @@
       "straight": "Straight line",
       "drawn": "Drawn",
       "routed": "Routed",
-      "track": "From track"
+      "track": "From track",
+      "recorded": "From recording"
     },
     "routing": {
       "routeAll": "Route the whole tour",
       "routingAll": "Routing …",
       "unavailableReason": "No routing provider configured",
+      "providerFailing": "Routing provider is not answering: {{provider}} — legs were drawn as straight lines. Check the key or choose another provider in Settings.",
+      "providerFailingAction": "Choose routing provider",
+      "providerCustom": "own routing server",
       "notConfigured": "No routing provider is configured for this instance",
       "error": "The leg could not be routed",
       "allError": "The tour could not be routed",
@@ -765,7 +775,8 @@
     "countries_other": "{{count}} countries",
     "travellers": "Travellers",
     "travellersMore_other": "Show {{count}} more travellers",
-    "travellersMore_one": "Show {{count}} more travellers"
+    "travellersMore_one": "Show {{count}} more travellers",
+    "travellerShared": "shared"
   },
   "overview": {
     "daysAway": "Days away",
@@ -798,7 +809,7 @@
   "export": {
     "button": "Export trip",
     "title": "Export trip",
-    "intro": "Downloads the trip with all its entries as a .travstats file. Another TravStats instance can read it under “Add trip”.",
+    "intro": "Downloads the trip as a .travstats file for another TravStats instance.",
     "leavesServer": "The file leaves the server: whoever gets it can read everything in it. Choose only what should go along.",
     "options": {
       "documents": "Include documents",
@@ -819,12 +830,12 @@
   },
   "dawarichStays": {
     "title": "Dawarich stays",
-    "description": "Every six hours, your own Dawarich location history is checked for possible stays in the last seven days. These are suggestions only: a visit is recorded after your confirmation. This does not enable Immich scanning or country detection.",
+    "description": "Detects stays from Dawarich as suggestions. Added only when you confirm.",
     "travtrack": {
-      "description": "Every six hours, your TravTrack history is checked for possible stays in the last seven days. These are suggestions only: a visit is recorded after your confirmation. This does not enable Immich scanning or country detection."
+      "description": "Detects stays from TravTrack as suggestions. Added only when you confirm."
     },
     "areas": {
-      "description": "Markets, shopping malls, parks, zoos, theme parks and museums are suggested as whole venues rather than as single stays – this runs along with stay detection. It queries approximate regions (roughly 5 km grid cells) from OpenStreetMap/Overpass; your location sequences, times and point IDs are not sent. Visits are only recorded after your confirmation."
+      "description": "Parks, markets, museums as one area. Asks OpenStreetMap only roughly."
     },
     "markets": {
       "coverage": "Regions checked: {{tiles}} of {{total}}",
@@ -891,13 +902,14 @@
     },
     "evidenceInvalidated": "Not accepted: the location history behind this suggestion has since been deleted or has changed.",
     "suggestionGone": "This suggestion no longer exists — the location history behind it has since been deleted.",
-    "evidenceUnverifiable": "The evidence for this suggestion cannot be checked right now because its map data is missing. The suggestion is kept; please try again after the next scan.",
+    "evidenceUnverifiable": "Evidence can't be checked now, map data is missing. The suggestion stays.",
     "travTrackDisabled": "TravTrack is currently switched off on this server. The suggestion is kept and can be accepted later or dismissed now.",
     "acceptInProgress": "This suggestion is being accepted elsewhere right now. Please try again in a moment.",
     "historyChanged": "The location history changed several times while this was being accepted. The suggestion is kept; please try again in a moment.",
     "coveredBy": {
       "visit": "Already recorded as a visit: {{name}}",
-      "lodging": "Already recorded as a stay: {{name}}"
+      "lodging": "Already recorded as a stay: {{name}}",
+      "flight": "Already recorded as a flight: {{name}}"
     },
     "uncertainty": {
       "staleMapData": "Some venue boundaries are older.",
@@ -1023,6 +1035,29 @@
           "workplace": "Workplace",
           "other": "Other place"
         }
+      }
+    },
+    "aiHelp": {
+      "ask": "Ask the AI",
+      "asking": "Asking the AI …",
+      "ranking": "The AI's suggestion",
+      "use": "Use",
+      "advice": "Suggestion from {{provider}} ({{host}}, {{where}}) – advice only; nothing is saved until you use a name and save.",
+      "where": {
+        "cloud": "cloud",
+        "lan": "home network"
+      },
+      "error": {
+        "serviceOff": "The AI help is switched off on this server.",
+        "internetOff": "The server may not reach external services right now.",
+        "noProvider": "No AI model is set up that this account may use.",
+        "notAmbiguous": "This stay has only one candidate – nothing to decide.",
+        "providerConsent": "You have not agreed to this AI provider yet (Settings › Services).",
+        "providerOff": "The AI model is switched off by the administrator.",
+        "timeout": "The AI did not answer in time.",
+        "unreachable": "The AI could not be reached.",
+        "providerError": "The AI answered with an error.",
+        "badAnswer": "The AI gave no usable answer."
       }
     }
   },
@@ -1151,5 +1186,57 @@
     "staleShort": "Check the split",
     "membersTitle": "Entries of this booking"
   },
-  "bookingMenuLabel": "More actions for booking {{name}}"
+  "bookingMenuLabel": "More actions for booking {{name}}",
+  "photoLinks": {
+    "title": "Photos",
+    "more": "+{{count}} more",
+    "showAll": "View all photos",
+    "empty": "No photos linked yet.",
+    "loading": "Loading photos …",
+    "loadFailed": "The photos could not be loaded.",
+    "retry": "Try again",
+    "truncated": "A source holds more photos than one read takes; only the first ones are shown.",
+    "sourceFailed": "{{source}} is missing: {{reason}}",
+    "sourceAlbum": "Album “{{name}}”",
+    "sourcePeriod": "Period {{from}} – {{until}}",
+    "provider": {
+      "immich": "Immich",
+      "photoprism": "PhotoPrism"
+    },
+    "proposal": "Matching album: {{name}}",
+    "proposalCount": "({{count}} photos)",
+    "proposalReason": {
+      "folder": "folder name matches",
+      "name": "name matches",
+      "date": "capture dates match"
+    },
+    "link": "Link",
+    "notThis": "Not this one",
+    "periodOffer": "Business trip without an album: show photos from {{provider}} from {{from}} to {{until}}?",
+    "linkPeriod": "Link the period",
+    "notNow": "Not now",
+    "autoLinked": "The trip's period was linked automatically (setting “Link the period automatically”).",
+    "sources": "Sources",
+    "remove": "Remove",
+    "removeImported": "Imported albums are removed in the gallery.",
+    "actionFailed": "That did not work: {{reason}}",
+    "refusal": {
+      "notConfigured": "No photo source connected.",
+      "notPreferred": "Periods come from PhotoPrism while it is connected.",
+      "noDates": "The trip has no date yet.",
+      "importedAlbum": "Imported albums are removed in the gallery.",
+      "unknownAlbum": "This album no longer exists in the photo source.",
+      "unknown": "Unknown error."
+    },
+    "proposalFailed": "Suggestions could not be loaded: {{reason}}",
+    "gallery": {
+      "title": "Photos of the trip",
+      "close": "Close",
+      "allDays": "All days",
+      "undated": "Undated",
+      "loadMore": "Load more",
+      "alt": "Photo of the trip",
+      "count": "{{count}} photos"
+    }
+  }
 }

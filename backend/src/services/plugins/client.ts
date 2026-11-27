@@ -20,6 +20,8 @@ import {
   PLUGIN_CONTRACT_VERSION,
   pluginHelloSchema,
   pluginResponseSchema,
+  normalizeSuggestion,
+  type PluginHello,
   type PluginRequest,
   type PluginSuggestion,
 } from "./contract";
@@ -40,8 +42,15 @@ export const PLUGIN_FAILURES = [
 export type PluginFailure = (typeof PLUGIN_FAILURES)[number];
 
 export type PluginOutcome =
-  | { kind: "ok"; version: number; suggestions: PluginSuggestion[]; latencyMs: number }
-  | { kind: "empty"; version: number | null; latencyMs: number }
+  | {
+      kind: "ok";
+      version: number;
+      suggestions: PluginSuggestion[];
+      /** The radius the plugin announced for its name matches, if it did. */
+      nameRadiusMeters?: number;
+      latencyMs: number;
+    }
+  | { kind: "empty"; version: number | null; nameRadiusMeters?: number; latencyMs: number }
   | {
       kind: "failed";
       reason: PluginFailure;
@@ -72,7 +81,7 @@ export function retryAfterMs(header: string | null, now = Date.now()): number | 
   return Number.isFinite(at) ? Math.max(now, at) : null;
 }
 
-function headersFor(
+export function headersFor(
   target: PluginTarget,
   method: "GET" | "POST",
   body: string,
@@ -100,12 +109,13 @@ function headersFor(
   };
 }
 
-async function send(
+export async function send(
   target: PluginTarget,
   method: "GET" | "POST",
   body: string,
   headers: Record<string, string>,
-  fetchImpl?: FetchLike
+  fetchImpl?: FetchLike,
+  limits: { timeoutMs?: number; maxBytes?: number } = {}
 ) {
   return boundedFetch(
     target.url,
@@ -114,16 +124,16 @@ async function send(
       headers,
       body: method === "POST" ? body : undefined,
       policy: target.policy,
-      timeoutMs: PLUGIN_TIMEOUT_MS,
+      timeoutMs: limits.timeoutMs ?? PLUGIN_TIMEOUT_MS,
       connectTimeoutMs: PLUGIN_CONNECT_TIMEOUT_MS,
-      maxBytes: PLUGIN_MAX_BYTES,
+      maxBytes: limits.maxBytes ?? PLUGIN_MAX_BYTES,
       httpsOnly: !plainHttpAllowed(target.url, target.policy),
     },
     fetchImpl
   );
 }
 
-function fetchFailure(error: unknown, started: number): PluginOutcome {
+export function fetchFailure(error: unknown, started: number): PluginOutcome {
   if (!(error instanceof BoundedFetchError)) throw error;
   switch (error.reason) {
     case "privateTarget":
@@ -183,11 +193,21 @@ export async function callPlugin(
   if (!parsed.success || parsed.data.version !== PLUGIN_CONTRACT_VERSION)
     return failed("protocol", started);
   if (parsed.data.suggestions.length === 0)
-    return { kind: "empty", version: parsed.data.version, latencyMs };
+    return {
+      kind: "empty",
+      version: parsed.data.version,
+      ...(parsed.data.nameRadiusMeters !== undefined
+        ? { nameRadiusMeters: parsed.data.nameRadiusMeters }
+        : {}),
+      latencyMs,
+    };
   return {
     kind: "ok",
     version: parsed.data.version,
-    suggestions: parsed.data.suggestions,
+    suggestions: parsed.data.suggestions.map(normalizeSuggestion),
+    ...(parsed.data.nameRadiusMeters !== undefined
+      ? { nameRadiusMeters: parsed.data.nameRadiusMeters }
+      : {}),
     latencyMs,
   };
 }
@@ -196,7 +216,7 @@ export async function callPlugin(
 export async function helloPlugin(
   target: PluginTarget,
   fetchImpl?: FetchLike
-): Promise<{ name: string; version: number; kinds: string[] } | null> {
+): Promise<PluginHello | null> {
   const { headers } = headersFor(target, "GET", "");
   try {
     const res = await send(target, "GET", "", headers, fetchImpl);

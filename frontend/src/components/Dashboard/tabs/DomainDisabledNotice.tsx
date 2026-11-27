@@ -1,20 +1,9 @@
+import { DOMAIN_ICON as LINE_ICON } from "../../ui/domainIcons";
+import { Icon } from "../../ui/Icon";
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { RouteNotice } from "../../ui/RouteNotice";
 import type { DomainKey } from "../../../shared/domains";
-
-const TAB_ICON: Record<DomainKey, string> = {
-  flight: "✈",
-  cruise: "⚓",
-  poi: "📍",
-  lodging: "🏨",
-  roadtrip: "🚐",
-  rail: "🚆",
-  rental: "🚗",
-  bus: "🚌",
-  ferry: "⛴",
-  tour: "🥾",
-};
 
 /**
  * Shown when the reader opens a dashboard tab — or, since forgejo#88 finding 6,
@@ -34,7 +23,7 @@ export function DomainDisabledNotice({ domain }: { domain: DomainKey }): JSX.Ele
 
   return (
     <RouteNotice
-      glyph={TAB_ICON[domain]}
+      glyph={<Icon name={LINE_ICON[domain]} size={24} />}
       title={t("dashboard:tabDisabled.title")}
       body={t("dashboard:tabDisabled.body", { domain: t(`dashboard:tabStrip.tabs.${domain}`) })}
       action={{

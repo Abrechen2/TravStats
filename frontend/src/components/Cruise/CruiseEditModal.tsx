@@ -1,6 +1,8 @@
+import DateField from "../../components/ui/DateField";
+import Chip from "../ui/Chip";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import {
   isOutcomeUnknownSaveError,
   isTransientSaveError,
@@ -276,7 +278,7 @@ export function CruiseEditModal({
   // In the shared frame: header and buttons stay put, the body scrolls,
   // Escape closes it, and a changed form asks first (forgejo#248).
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       busy={saving.saving}
@@ -395,13 +397,14 @@ export function CruiseEditModal({
           {/* Offered, never written on its own: a route name is the user's
               wording, and the ports only say what it could be. */}
           {routeNameSuggestion && (
-            <button
-              type="button"
+            <Chip
+              dashed
+              size="sm"
+              className="mt-1"
               onClick={(): void => set("routeName", routeNameSuggestion)}
-              className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent) pointer-coarse:min-h-(--ts-size-touch-min)"
             >
               {t("form.routeNameSuggestion", { name: routeNameSuggestion })}
-            </button>
+            </Chip>
           )}
           <div className="mt-3 grid grid-cols-2 gap-3">
             <label className={CRUISE_LABEL_CLASS}>
@@ -414,9 +417,9 @@ export function CruiseEditModal({
                   </>
                 )}
               </span>
-              <input
+              <DateField
+                inline
                 id={START_ID}
-                type="date"
                 className={CRUISE_INPUT_CLASS}
                 style={DARK_PICKER_STYLE}
                 value={draft.startDate}
@@ -427,9 +430,9 @@ export function CruiseEditModal({
             <div className="flex flex-col gap-1">
               <label className={CRUISE_LABEL_CLASS}>
                 {t("field.endDate")}
-                <input
+                <DateField
+                  inline
                   id={END_ID}
-                  type="date"
                   className={CRUISE_INPUT_CLASS}
                   style={DARK_PICKER_STYLE}
                   value={draft.endDate}
@@ -445,12 +448,9 @@ export function CruiseEditModal({
                 set a value the backend would immediately overwrite. Only
                 "cancelled" stays user-controlled, via the checkbox below. */}
           <div className="mt-3">
-            <span
-              className="inline-block rounded-full px-2 py-1 text-xs font-semibold"
-              style={cruiseStatusPillStyle(draft.status)}
-            >
+            <Chip size="sm" color={cruiseStatusPillStyle(draft.status).color as string}>
               {t(`status.${draft.status}`, { defaultValue: draft.status })}
-            </span>
+            </Chip>
           </div>
           <label className="mt-2 flex items-center gap-2 text-sm pointer-coarse:min-h-(--ts-size-touch-min)">
             <input
@@ -513,6 +513,6 @@ export function CruiseEditModal({
         />
         {required && <RequiredLegend className="mt-3" />}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

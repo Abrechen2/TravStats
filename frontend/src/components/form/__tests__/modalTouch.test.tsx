@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import Modal from "../../Modal";
+import Dialog from "../../ui/Dialog";
 
 const originalMatchMedia = window.matchMedia;
 
@@ -25,7 +25,7 @@ afterEach(() => {
 
 function renderModal(): void {
   render(
-    <Modal
+    <Dialog
       open
       onClose={vi.fn()}
       title="Formular"
@@ -33,7 +33,7 @@ function renderModal(): void {
       footer={<button>OK</button>}
     >
       <p>Inhalt</p>
-    </Modal>
+    </Dialog>
   );
 }
 

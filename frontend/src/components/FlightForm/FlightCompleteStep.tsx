@@ -12,7 +12,6 @@ import CatalogueCombobox, { searchAirlineOptions } from "./fields/CatalogueCombo
 import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
 import type { Airport } from "../../lib/api";
-import { useToastStore } from "../../store/toastStore";
 import { estimateArrivalFromDeparture } from "../../lib/timeEstimation";
 import { type CostFieldsValue } from "./fields/CostFields";
 import StatusField from "./fields/StatusField";
@@ -28,6 +27,7 @@ import SuggestionChips from "../common/SuggestionChips";
 import { useFlightEntrySuggestions } from "../../hooks/useFlightEntrySuggestions";
 import { useSuggestedPrefill } from "../../hooks/useSuggestedPrefill";
 import type { FlightFolds } from "../../lib/flightFolds";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -231,7 +231,6 @@ export default function FlightCompleteStep({
   timeErrors,
 }: FlightCompleteStepProps): JSX.Element {
   const { t } = useTranslation(["flights", "common"]);
-  const addToast = useToastStore((s) => s.addToast);
   const features = useSettingsStore((s) => s.features);
 
   const suggestions = useFlightEntrySuggestions({
@@ -336,7 +335,7 @@ export default function FlightCompleteStep({
     setArrivalDate(result.arrivalDate);
     setArrivalTime(result.arrivalTime);
     if (!result.tzAware) {
-      addToast("warning", t("flights:form.estimateTzUnknown"));
+      reportPageError(t("flights:form.estimateTzUnknown"), "warning");
     }
   };
 

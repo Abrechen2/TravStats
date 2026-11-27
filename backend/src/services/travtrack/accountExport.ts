@@ -83,6 +83,7 @@ export async function buildTravTrackDataExport(
     stopDismissals,
     fixedPlaces,
     placeSettings,
+    daySourceChoices,
   ] = await Promise.all([
     prisma.travTrackPrivacyZone.findMany({
       where,
@@ -173,6 +174,24 @@ export async function buildTravTrackDataExport(
         lodgingRadiusM: true,
       },
     }),
+    // The owner's per-day choices (best source per day): a source picked by hand and the
+    // outlier decision. Only these travel; the rest of the row is re-derived from the points.
+    prisma.travTrackDaySource
+      .findMany({
+        where: {
+          userId,
+          OR: [{ overrideSource: { not: null } }, { outlierDecision: { not: null } }],
+        },
+        orderBy: { day: "asc" },
+        select: {
+          day: true,
+          zone: true,
+          overrideSource: true,
+          outlierDecision: true,
+          updatedAt: true,
+        },
+      })
+      .then((rows) => rows.map((r) => ({ ...r, day: r.day.toISOString().slice(0, 10) }))),
   ]);
   return {
     points,
@@ -186,6 +205,7 @@ export async function buildTravTrackDataExport(
     stopDismissals,
     fixedPlaces,
     placeSettings,
+    daySourceChoices,
   };
 }
 

@@ -12,7 +12,6 @@ import type { JSX } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import Modal from "../../Modal";
 import Dialog from "../../ui/Dialog";
 import { useDirtyGuard } from "../useDirtyGuard";
 import { openDirtyDialogCount } from "../unsavedChanges";
@@ -28,7 +27,7 @@ function renderFrame(
   const onClose = vi.fn();
   if (frame === "Modal") {
     render(
-      <Modal
+      <Dialog
         open
         onClose={onClose}
         title="Formular"
@@ -41,11 +40,18 @@ function renderFrame(
         {...props}
       >
         <p>Inhalt</p>
-      </Modal>
+      </Dialog>
     );
   } else {
     render(
-      <Dialog open onClose={onClose} title="Formular" dismissLabel="Abbrechen" {...props}>
+      <Dialog
+        open
+        onClose={onClose}
+        title="Formular"
+        dismissLabel="Abbrechen"
+        closeLabel="Schließen"
+        {...props}
+      >
         <p>Inhalt</p>
       </Dialog>
     );
@@ -100,9 +106,9 @@ describe.each<Frame>(["Modal", "Dialog"])("%s with unsaved input", (frame) => {
     const onClose = vi.fn();
     if (frame === "Modal") {
       render(
-        <Modal open onClose={onClose} title="Formular" dirty>
+        <Dialog open onClose={onClose} title="Formular" dirty>
           <input aria-label="Name" />
-        </Modal>
+        </Dialog>
       );
     } else {
       render(
@@ -161,9 +167,9 @@ describe("beforeunload", () => {
         <button type="button" onClick={() => setOpen(false)}>
           unmount-dialog
         </button>
-        <Modal open={open} onClose={() => setOpen(false)} title="Formular" dirty={dirty}>
+        <Dialog open={open} onClose={() => setOpen(false)} title="Formular" dirty={dirty}>
           <p>Inhalt</p>
-        </Modal>
+        </Dialog>
       </>
     );
   }

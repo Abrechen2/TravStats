@@ -1,4 +1,13 @@
 import { prisma, type DbTransaction } from "../../../db";
+import { joinPluginList } from "../../places/pluginLists";
+
+/** One plugin's answer as a finding's evidence keeps it (`travtrack/visits/enrich.ts`). */
+interface PluginEvidence {
+  pluginId?: string;
+  externalRef?: string;
+  externalLabel?: string;
+  externalFields?: Record<string, string>;
+}
 import { Prisma, type DawarichStay } from "../../../prisma";
 import { AppError } from "../../../middleware/errorHandler";
 import { resolveTimeField } from "../../../shared/time/resolveInput";
@@ -111,13 +120,16 @@ export async function applyStayAcceptance(
       ? evidence.market!.identity!.slice(9)
       : null;
   // A plugin suggestion the finding really carries (never a reference the client made up).
+  const pluginEvidence =
+    input.pluginRef && Array.isArray((row.evidence as { plugins?: unknown } | null)?.plugins)
+      ? ((row.evidence as unknown as { plugins: PluginEvidence[] }).plugins.find(
+          (p) =>
+            p.pluginId === input.pluginRef!.pluginId &&
+            p.externalRef === input.pluginRef!.externalRef
+        ) ?? null)
+      : null;
   const pluginRef =
-    input.pluginRef &&
-    Array.isArray((row.evidence as { plugins?: unknown } | null)?.plugins) &&
-    (row.evidence as { plugins: { pluginId?: string; externalRef?: string }[] }).plugins.some(
-      (p) =>
-        p.pluginId === input.pluginRef!.pluginId && p.externalRef === input.pluginRef!.externalRef
-    )
+    pluginEvidence && input.pluginRef
       ? `plugin:${input.pluginRef.pluginId}:${input.pluginRef.externalRef}`
       : null;
   let place = input.placeId
@@ -177,6 +189,9 @@ export async function applyStayAcceptance(
     });
     createdPlaceId = place.id;
   }
+  // The plugin's own list, when it keeps one, gains the place (owner 2026-11-26).
+  if (pluginEvidence && input.pluginRef)
+    await joinPluginList(tx, userId, input.pluginRef.pluginId, place.id, pluginEvidence);
   const dayStart = new Date(start.visitedAt!.toISOString().slice(0, 10) + "T00:00:00Z");
   const dayEnd = new Date(dayStart.getTime() + 86_400_000);
   // A minute-precise visit is reused only inside this interval. A day-only

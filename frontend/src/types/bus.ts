@@ -70,6 +70,8 @@ export interface BusJourney {
   rememberedNote?: string | null;
   /** Private or business; null is unknown, absent on older servers. */
   purpose?: "private" | "business" | null;
+  /** The detailed purpose beside the kind (`builtin:…` | `custom:…`); null: the kind alone. */
+  purposeKey?: string | null;
   id: string;
   userId: string;
   /** Estimated CO2 (forgejo#395); null where the ride has no known distance. */

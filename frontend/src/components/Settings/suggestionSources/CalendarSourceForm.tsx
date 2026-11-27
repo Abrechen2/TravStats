@@ -8,6 +8,7 @@ import {
   calendarSourcesApi,
   type CalendarCollection,
 } from "../../../lib/api/calendarSources";
+import InlineError from "../../ui/InlineError";
 
 const NS = "suggestionSources:calendar.form";
 
@@ -142,7 +143,11 @@ export default function CalendarSourceForm({
               onChange={(e) => setUsername(e.target.value)}
             />
           </Field>
-          <Field label={t(`${NS}.password`)} htmlFor="cal-dav-pw" hint={t(`${NS}.passwordHint`)}>
+          <Field
+            label={t(`${NS}.password`)}
+            htmlFor="cal-dav-pw"
+            hint={`${t(`${NS}.appPasswordHint`)} ${t(`${NS}.passwordHint`)}`}
+          >
             <Input
               id="cal-dav-pw"
               type="password"
@@ -186,11 +191,7 @@ export default function CalendarSourceForm({
           )}
         </>
       )}
-      {error && (
-        <p role="alert" className="t-body" style={{ color: "var(--ts-bad)" }}>
-          {error}
-        </p>
-      )}
+      {error && <InlineError>{error}</InlineError>}
       <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
         <Button type="submit" variant="primary" disabled={!canSave || busy}>
           {t(`${NS}.save`)}

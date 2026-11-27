@@ -45,6 +45,8 @@ import { useToastStore } from "../store/toastStore";
 import type { RentalBooking } from "../types/rental";
 import WebGLGuard from "../components/map/WebGLGuard";
 import BackLink from "../components/navigation/BackLink";
+import Banner from "../components/ui/Banner";
+import { reportPageError } from "../store/pageErrorStore";
 
 const stationLabel = (name: string, iata: string | null): string =>
   iata ? `${name} (${iata})` : name;
@@ -107,7 +109,7 @@ export default function RentalDetailPage(): JSX.Element {
       navigate("/rentals");
     } catch (err: unknown) {
       logger.error("RentalDetailPage: delete failed", err);
-      addToast("error", t("rental:deleteError"));
+      reportPageError(t("rental:deleteError"));
       setDeleting(false);
       setConfirmingDelete(false);
     }
@@ -127,12 +129,9 @@ export default function RentalDetailPage(): JSX.Element {
         <BackLink to="/rentals" className="ts-back-link text-sm text-(--text-muted)">
           ← {t("rental:title")}
         </BackLink>
-        <div
-          role="alert"
-          className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)"
-        >
+        <Banner tone="error" className="mt-4">
           {isLoadError ? t("rental:detail.loadError") : t("rental:detail.notFound")}
-        </div>
+        </Banner>
         {isLoadError && (
           <div className="mt-3">
             <Button onClick={() => setReloadKey((k) => k + 1)}>{t("common:buttons.retry")}</Button>

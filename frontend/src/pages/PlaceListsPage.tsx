@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import PurposeSegment from "../components/purpose/PurposeSegment";
 import AppShell from "../components/ui/AppShell";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
@@ -12,6 +13,7 @@ import { FormErrorBanner, navigateAfterSave } from "../components/form";
 import { saveErrorKey } from "../lib/saveErrorMessage";
 import { listCuratedChecklists, listPlaceLists, subscribeChecklist } from "../lib/api/placeLists";
 import { DOMAINS } from "../shared/domains";
+import { listPendingCounts } from "../lib/api/smartLists";
 import type { CuratedListSummary, PlaceList } from "../types/placeList";
 
 /**
@@ -33,6 +35,8 @@ export default function PlaceListsPage(): JSX.Element {
   const access = usePlacesAccess();
 
   const [lists, setLists] = useState<PlaceList[]>([]);
+  const [pendingCounts, setPendingCounts] = useState<Record<string, number>>({});
+  const [countsFailed, setCountsFailed] = useState(false);
   const [curated, setCurated] = useState<CuratedListSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -60,6 +64,16 @@ export default function PlaceListsPage(): JSX.Element {
   useEffect(() => {
     if (access !== "allowed") return;
     void load();
+    // The badge is a pointer, not the record: a failed read is said, the lists still open.
+    void (async () => {
+      try {
+        setPendingCounts(await listPendingCounts());
+        setCountsFailed(false);
+      } catch (err: unknown) {
+        logger.warn({ err }, "PlaceListsPage: pending counts could not be read");
+        setCountsFailed(true);
+      }
+    })();
   }, [access, load]);
 
   // A subscribed checklist is shown under checklists, with its progress — so it
@@ -122,6 +136,8 @@ export default function PlaceListsPage(): JSX.Element {
           </button>
         </div>
 
+        <PurposeSegment />
+
         {creating && (
           <PlaceListCreateDialog
             onClose={() => setCreating(false)}
@@ -160,6 +176,16 @@ export default function PlaceListsPage(): JSX.Element {
               >
                 {t("places:lists.ownSection")}
               </h2>
+              {countsFailed && (
+                <p
+                  role="alert"
+                  className="mb-3 text-xs"
+                  style={{ color: "var(--ts-warn)" }}
+                  data-testid="list-pending-failed"
+                >
+                  {t("places:smartList.pendingCountsFailed")}
+                </p>
+              )}
               {ownLists.length === 0 ? (
                 // forgejo#250: the empty section names its next step.
                 <div className="flex flex-wrap items-center gap-3">
@@ -204,6 +230,20 @@ export default function PlaceListsPage(): JSX.Element {
                           />
                           {list.icon && <span aria-hidden>{list.icon}</span>}
                           <span className="font-medium">{list.name}</span>
+                          {(pendingCounts[list.id] ?? 0) > 0 && (
+                            <span
+                              className="ml-auto rounded-full px-2 py-0.5 text-xs"
+                              style={{
+                                background: "var(--ts-accent)",
+                                color: "var(--ts-on-accent, #fff)",
+                              }}
+                              data-testid="list-pending-badge"
+                            >
+                              {t("places:smartList.pendingBadge", {
+                                count: pendingCounts[list.id],
+                              })}
+                            </span>
+                          )}
                         </span>
                         <span className="mt-2 block text-xs" style={{ color: "var(--text-muted)" }}>
                           {t("places:lists.counts", {

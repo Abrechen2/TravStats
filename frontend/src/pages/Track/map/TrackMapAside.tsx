@@ -1,3 +1,5 @@
+import TrackDayCleanup from "../cleanup/TrackDayCleanup";
+import TrackSpanRoadtrip from "../cleanup/TrackSpanRoadtrip";
 import { useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import type { JSX, ReactNode } from "react";
@@ -11,9 +13,9 @@ import TrackTimeline from "../TrackTimeline";
 import type { SelectedFlight } from "../flight/TrackFlightPanel";
 import TrackFloatingCard from "./TrackFloatingCard";
 import type { TrackSelection } from "./trackLegs";
-import { pillStyle } from "./trackMapStyle";
 import type { DayResult } from "./trackRange";
 import type { TrackSpan } from "./trackSpan";
+import { Tabs } from "../../../components/ui/Tabs";
 
 type Loaded = Extract<DayResult, { kind: "loaded" }>;
 type Tab = "legs" | "log";
@@ -123,25 +125,14 @@ export default function TrackMapAside({
   const hasLegs = loaded.some((r) => (r.day.legs?.length ?? 0) + (r.day.stops?.length ?? 0) > 0);
   const list = (
     <>
-      <div
-        role="tablist"
-        aria-label={t("track:map.dayCard.tabs")}
-        className="flex gap-1"
-        style={{ flexShrink: 0 }}
-      >
-        {TABS.map((id) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            onClick={() => setTab(id)}
-            style={pillStyle(tab === id, coarse ? 44 : 36)}
-          >
-            {t(`track:map.dayCard.${id}`)}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        label={t("track:map.dayCard.tabs")}
+        variant="pill"
+        value={tab}
+        onChange={setTab}
+        tabs={TABS.map((id) => ({ value: id, label: t(`track:map.dayCard.${id}`) }))}
+      />
+      <TrackSpanRoadtrip span={span} />
       {long && (
         <p className="t-caption" data-testid="track-range-days-note">
           {t("track:map.rangeNoTimeline")}
@@ -168,6 +159,9 @@ export default function TrackMapAside({
           {multi && <h2 className="t-card-title">{formatDayLong(r.date, i18n.language)}</h2>}
           {multi && (
             <TrackCoverageBar coverage={r.day.coverage} zone={r.day.zone} context={r.day.context} />
+          )}
+          {tab === "legs" && (
+            <TrackDayCleanup day={r.day} onChanged={() => onStopPlaceChanged?.(r.date)} />
           )}
           {tab === "legs" ? (
             (r.day.legs?.length ?? 0) + (r.day.stops?.length ?? 0) > 0 && (
@@ -205,7 +199,7 @@ export default function TrackMapAside({
             data-testid="track-detail"
             style={{
               flexShrink: 0,
-              maxHeight: "45%",
+              maxHeight: "65%",
               padding: "0 14px 12px",
               borderBottom: `1px solid ${token("border")}`,
             }}

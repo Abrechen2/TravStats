@@ -9,7 +9,8 @@
 // rate-limited, which would break public/shared pages and long lists. Airports carry the ISO code; ports derive
 // it from the UN/LOCODE prefix (DEHAM → DE).
 
-import type { JSX } from "react";
+import { useState, type JSX } from "react";
+import { Icon } from "../components/ui/Icon";
 import { useTranslation } from "../hooks/useTranslation";
 
 const FLAG_ASPECT = 4 / 3;
@@ -73,4 +74,76 @@ export function flagImgHtml(country?: string | null, height = 13): string {
   if (!cc) return "";
   const w = Math.round(height * FLAG_ASPECT);
   return `<img src="${flagUrl(cc)}" alt="" aria-hidden="true" width="${w}" height="${height}" style="border-radius:2px;vertical-align:-2px;display:inline-block" />`;
+}
+
+/**
+ * A country as flag + name, or — where space is tight (chips, month cells) —
+ * the flag alone with the name as tooltip AND accessible name.
+ *
+ * An unknown or legacy code (a free-text value that resolves to nothing, or a
+ * code with no flag file) never renders a broken image: a neutral globe marker
+ * stands in and the text is kept, so the value is never lost.
+ */
+export function CountryLabel({
+  country,
+  compact = false,
+  height = 14,
+  className,
+}: {
+  country?: string | null;
+  compact?: boolean;
+  height?: number;
+  className?: string;
+}): JSX.Element | null {
+  const { i18n } = useTranslation();
+  const [brokenCc, setBrokenCc] = useState<string | null>(null);
+  const raw = (country ?? "").trim();
+  if (!raw) return null;
+  const cc = resolveCountryCode(raw);
+  const name = (cc && countryName(cc, i18n.language)) || raw;
+  const marker =
+    cc && brokenCc !== cc ? (
+      <img
+        src={flagUrl(cc)}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        width={Math.round(height * FLAG_ASPECT)}
+        height={height}
+        onError={() => setBrokenCc(cc)}
+        style={{ borderRadius: 2, display: "inline-block", objectFit: "cover", flex: "none" }}
+      />
+    ) : (
+      <span
+        data-testid="country-fallback-marker"
+        style={{ display: "inline-flex", color: "var(--text-muted)" }}
+      >
+        <Icon name="globe" size={height <= 14 ? 14 : 16} />
+      </span>
+    );
+  // A flag we cannot show is not a name: keep the text beside the marker so
+  // touch users and anyone without hover still read which country it is.
+  const flagShown = Boolean(cc) && brokenCc !== cc;
+  if (compact && flagShown) {
+    return (
+      <span
+        role="img"
+        aria-label={name}
+        title={name}
+        className={className}
+        style={{ display: "inline-flex", alignItems: "center", verticalAlign: "middle" }}
+      >
+        {marker}
+      </span>
+    );
+  }
+  return (
+    <span
+      className={className}
+      style={{ display: "inline-flex", alignItems: "center", gap: 6, verticalAlign: "middle" }}
+    >
+      {marker}
+      <span>{name}</span>
+    </span>
+  );
 }

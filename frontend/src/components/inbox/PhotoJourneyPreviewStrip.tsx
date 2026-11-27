@@ -3,6 +3,9 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { photoJourneyPreviewUrl } from "../../lib/api/photoJourneys";
 import type { PhotoJourney } from "../../types/photoJourney";
+import EnlargeButton from "../common/photoViewer/EnlargeButton";
+import { usePhotoViewer } from "../common/photoViewer/usePhotoViewer";
+import { largeUrl } from "../common/photoViewer/viewerPhoto";
 
 /**
  * How many thumbnails a row may draw.
@@ -30,20 +33,35 @@ export default function PhotoJourneyPreviewStrip({
 }): JSX.Element | null {
   const { t } = useTranslation(["dataQuality"]);
   const indexes = journey.previewAssetIds.slice(0, MAX_PREVIEW_THUMBS).map((_, index) => index);
+  const viewer = usePhotoViewer();
   if (indexes.length === 0) return null;
   return (
     <div className="mt-3 flex gap-2">
+      {viewer.viewer}
       {indexes.map((index) => (
-        <img
+        <EnlargeButton
           key={index}
-          src={photoJourneyPreviewUrl(journey.id, index)}
-          alt={t("dataQuality:inbox.photoJourneys.thumbAlt", { position: index + 1 })}
-          loading="lazy"
-          width={72}
-          height={72}
-          className="rounded-[var(--ts-radius-tile)] object-cover"
-          style={{ width: 72, height: 72, background: "var(--ts-surface2)" }}
-        />
+          onOpen={() =>
+            viewer.open(
+              indexes.map((i) => ({
+                id: `${journey.id}-${i}`,
+                url: largeUrl(photoJourneyPreviewUrl(journey.id, i)),
+                source: "immich" as const,
+              })),
+              index
+            )
+          }
+        >
+          <img
+            src={photoJourneyPreviewUrl(journey.id, index)}
+            alt={t("dataQuality:inbox.photoJourneys.thumbAlt", { position: index + 1 })}
+            loading="lazy"
+            width={72}
+            height={72}
+            className="rounded-[var(--ts-radius-tile)] object-cover"
+            style={{ width: 72, height: 72, background: "var(--ts-surface2)" }}
+          />
+        </EnlargeButton>
       ))}
     </div>
   );

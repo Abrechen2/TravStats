@@ -16,8 +16,8 @@ const EMPTY_ACTUAL = {
 describe("TimesFields", () => {
   it("renders four separate controls, not two combined ones", () => {
     render(<TimesFields value={VALUE} onChange={() => {}} />);
-    expect(screen.getAllByLabelText(/datum|date/i)).toHaveLength(2);
-    expect(screen.getAllByLabelText(/uhrzeit|time/i)).toHaveLength(2);
+    expect(screen.getAllByLabelText(/datum|date/i, { selector: "input" })).toHaveLength(2);
+    expect(screen.getAllByLabelText(/uhrzeit|time/i, { selector: "input" })).toHaveLength(2);
   });
 
   it("copies the departure date to arrival without touching the arrival time", async () => {
@@ -102,8 +102,8 @@ describe("TimesFields", () => {
       expect(screen.queryByTestId("timesFieldsDelay")).not.toBeInTheDocument();
       // Guard against a regression that silently renders actual fields even
       // without a change handler — still only 2+2 scheduled controls.
-      expect(screen.getAllByLabelText(/datum|date/i)).toHaveLength(2);
-      expect(screen.getAllByLabelText(/uhrzeit|time/i)).toHaveLength(2);
+      expect(screen.getAllByLabelText(/datum|date/i, { selector: "input" })).toHaveLength(2);
+      expect(screen.getAllByLabelText(/uhrzeit|time/i, { selector: "input" })).toHaveLength(2);
     });
 
     it("renders four actual date/time inputs when actualValue and onActualChange are supplied", () => {
@@ -117,7 +117,7 @@ describe("TimesFields", () => {
       );
       // 2 scheduled + 2 actual date labels ("date" never collides with the
       // "actualTimes" namespace prefix the mocked t() echoes back).
-      expect(screen.getAllByLabelText(/datum|date/i)).toHaveLength(4);
+      expect(screen.getAllByLabelText(/datum|date/i, { selector: "input" })).toHaveLength(4);
       // The mocked t() returns the raw i18n key, and "flights:actualTimes."
       // itself contains the substring "Times" — a loose /time/i regex would
       // also match the two ACTUAL DATE labels via their namespace prefix, not

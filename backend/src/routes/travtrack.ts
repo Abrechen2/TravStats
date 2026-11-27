@@ -17,6 +17,7 @@ import {
 import { setTravTrackConfig, travTrackConfig } from "../services/travtrack/config";
 import { travTrackTier } from "./travtrack/gate";
 import dayRoutes from "./travtrack/day";
+import daySourceRoutes from "./travtrack/daySources";
 import diagnosticsRoutes from "./travtrack/diagnostics";
 import exploredRoutes from "./travtrack/explored";
 import exportRoutes from "./travtrack/export";
@@ -32,6 +33,8 @@ import stopPlaceRoutes from "./travtrack/stopPlaces";
 import shareSnapshotRoutes from "./travtrack/shareSnapshot";
 import viewRoutes from "./travtrack/views";
 import zoneRoutes from "./travtrack/zones";
+import cleanupRoutes from "./travtrack/cleanup";
+import roadtripPreviewRoutes from "./travtrack/roadtripPreview";
 
 /**
  * TravTrack, the own location history (TravTrack plan, phase 2): the router
@@ -114,8 +117,11 @@ router.patch(
 
 router.use(pointRoutes);
 router.use(zoneRoutes);
+router.use(cleanupRoutes);
+router.use(roadtripPreviewRoutes);
 router.use(placeRoutes);
 router.use(dayRoutes);
+router.use(daySourceRoutes);
 router.use(legRoutes);
 router.use(stopPlaceRoutes);
 router.use(exportRoutes);

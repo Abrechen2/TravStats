@@ -10,6 +10,7 @@ import type { SharePerson, TripPerson } from "../../types/sharing";
 import ShareLinkDialog from "../shareLinks/ShareLinkDialog";
 import ShareTripDialog from "./ShareTripDialog";
 import ShareRouteDialog from "./ShareRouteDialog";
+import { reportPageError } from "../../store/pageErrorStore";
 
 export const SHARE_ITEMS = ["companions", "link", "route"] as const;
 export type ShareItem = (typeof SHARE_ITEMS)[number];
@@ -50,7 +51,7 @@ export function useTripShareDialogs(
       } catch (error) {
         if (cancelled) return;
         logger.error("Failed to load trip sharing:", error);
-        addToast("error", t("sharing:trip.errors.loadFailed"));
+        reportPageError(t("sharing:trip.errors.loadFailed"));
         setDialog(null);
       }
     })();

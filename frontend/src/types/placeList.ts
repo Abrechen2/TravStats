@@ -30,6 +30,8 @@ export interface PlaceListEntry {
   placeId: string;
   sortIdx: number;
   createdAt: string;
+  /** `brandRule` / `import` when automation added the entry; absent on older servers. */
+  createdBy?: string | null;
   place: PlaceListPlace;
 }
 
@@ -196,4 +198,48 @@ export interface PlaceVisitPhoto {
   /** `auto`: linked by the server's matcher, not picked by the user. */
   provenance?: "manual" | "auto";
   createdAt: string;
+}
+
+/** `GET /place-lists/:id/members`: how a place got into the list. */
+export type ListMemberSource = "manual" | "rule" | "import" | "plugin";
+
+export const LIST_SORT_KEYS = [
+  "lastVisit",
+  "firstVisit",
+  "name",
+  "country",
+  "visitCount",
+  "addedAt",
+  "distance",
+  "custom",
+] as const;
+export type ListSortKey = (typeof LIST_SORT_KEYS)[number];
+
+export interface ListMemberRow {
+  entryId: string;
+  placeId: string;
+  name: string;
+  category: string;
+  country: string | null;
+  countryCode: string | null;
+  city: string | null;
+  visitCount: number;
+  /** Local day, `YYYY-MM-DD`. */
+  firstVisit: string | null;
+  lastVisit: string | null;
+  addedAt: string;
+  sortIdx: number;
+  source: ListMemberSource;
+  distanceKm: number | null;
+  external: { id: string; label?: string; fields: Record<string, string> } | null;
+  visits: { id: string; date: string | null }[];
+}
+
+export interface ListMembersPage {
+  rows: ListMemberRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  columns: { key: string; label: { de: string; en: string } }[];
+  hasHome: boolean;
 }

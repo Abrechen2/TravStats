@@ -14,6 +14,7 @@ import {
 import { setPhotoCap, trimPhotoLinks, type TrimResult } from "../../lib/api/photoChoices";
 import { logger } from "../../lib/logger";
 import { token } from "../ui/tokens";
+import InlineError from "../ui/InlineError";
 
 const SOURCES = ["immich", "photoprism"] as const;
 
@@ -184,12 +185,12 @@ export default function VisitPhotoAutoLink(): JSX.Element | null {
         </div>
       )}
       {(lastRun?.truncatedVisits ?? 0) > 0 && (
-        <p role="alert" className="text-sm" style={{ color: token("bad") }}>
+        <InlineError>
           {t("visitPhotosAuto.truncatedVisits", { count: lastRun?.truncatedVisits ?? 0 })}
-        </p>
+        </InlineError>
       )}
       {failed && (
-        <p role="alert" className="text-sm" style={{ color: token("bad") }}>
+        <InlineError>
           {t(
             {
               load: "visitPhotosAuto.loadFailed",
@@ -199,7 +200,7 @@ export default function VisitPhotoAutoLink(): JSX.Element | null {
               cap: "visitPhotosAuto.capSaveFailed",
             }[failed]
           )}
-        </p>
+        </InlineError>
       )}
     </div>
   );

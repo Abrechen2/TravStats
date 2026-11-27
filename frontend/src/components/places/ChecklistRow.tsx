@@ -1,10 +1,11 @@
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
+import { Icon } from "../ui/Icon";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { FlagImg } from "../../lib/countryFlag";
 import { curatedText } from "../../lib/curatedCopy";
 import type { CuratedProgressItem, VisitSuggestion } from "../../types/placeList";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 
 interface Props {
   item: CuratedProgressItem;
@@ -15,7 +16,7 @@ interface Props {
   busy: boolean;
   /** The country or continent this row was sorted into, or null when the list
    *  is in its own catalog order. Shown so the ordering is visible. */
-  groupLabel?: string | null;
+  groupLabel?: ReactNode;
   onToggle: (item: CuratedProgressItem, visitedAt?: string | null) => void;
 }
 
@@ -100,7 +101,7 @@ export function ChecklistRow({
           lineHeight: "22px",
         }}
       >
-        {item.ticked ? "✓" : ""}
+        {item.ticked ? <Icon name="check" size={14} /> : null}
       </button>
 
       <div className="min-w-0 flex-1">

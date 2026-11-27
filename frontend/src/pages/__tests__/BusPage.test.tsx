@@ -1,3 +1,4 @@
+import { openYearGrid } from "../../__tests__/helpers/yearPicker";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -11,6 +12,10 @@ vi.mock("../../hooks/useTranslation", async () => {
   return { useTranslation: germanUseTranslationNs };
 });
 const addToast = vi.fn();
+vi.mock("../../store/pageErrorStore", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  reportPageError: (message: string, tone = "error") => addToast(tone, message),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: Record<string, unknown>) => unknown) => selector({ addToast }),
 }));
@@ -190,9 +195,8 @@ describe("BusPage", () => {
     list.mockResolvedValue(page(rideFixture(), second));
     renderPage();
     await screen.findByTestId("bus-row-r1");
-    const yearSelect = await screen.findByRole("option", { name: "2025" });
-    const options = within(yearSelect.parentElement as HTMLElement).getAllByRole("option");
-    expect(options.map((o) => o.textContent)).toEqual(["Alle Jahre", "2026", "2025"]);
+    const cells = openYearGrid("Jahr");
+    expect(cells.map((o) => o.textContent)).toEqual(["Alle Jahre", "2026", "2025"]);
   });
 
   it("names the add button in the empty state", async () => {
@@ -239,7 +243,7 @@ describe("BusPage", () => {
     const row = await screen.findByTestId("bus-row-r1");
     chooseMenuEntry(menuTriggerIn(row), "Löschen");
     expect(screen.getByTestId("confirm-message")).toHaveTextContent(
-      "Dazu 2 Dokumente: Diese werden nur von diesem Eintrag gelöst"
+      "Dazu 2 Dokumente: werden nur gelöst"
     );
   });
 
@@ -282,7 +286,7 @@ describe("BusPage", () => {
       expect(message).toContain(
         "Die Busfahrt Seoul Express Bus Terminal → Sokcho Express Bus Terminal wirklich löschen?"
       );
-      expect(message).toContain("Dazu 1 Dokument: Es wird nur von diesem Eintrag gelöst");
+      expect(message).toContain("Dazu 1 Dokument: wird nur gelöst");
       expect(message).toContain("Erhalten bleiben: Reise „Korea 2026“, 2 Mitreisende");
     });
 

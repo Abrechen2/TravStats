@@ -1,3 +1,4 @@
+import { CHIP_TRIGGER_CLASS } from "../ui/Chip";
 import { useId } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -38,8 +39,7 @@ export function LodgingStatusTag({
   // help button beside the tag shows it to everyone else.
   const hint = t(`lodging:list.status.${issue}Hint`);
 
-  const className =
-    "inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-(--bg-elevated) px-2 py-0.5 text-xs text-(--text-muted)";
+  const className = CHIP_TRIGGER_CLASS;
   const label = t(`lodging:list.status.${issue}`);
   const missingPin = lodging.lat === null || lodging.lon === null;
 

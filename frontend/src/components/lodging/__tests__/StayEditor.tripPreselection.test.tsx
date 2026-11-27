@@ -132,8 +132,8 @@ describe("StayEditor — trip preselection by check-in", () => {
     await tripsLoaded();
     fireEvent.change(tripSelect(), { target: { value: "trip-autumn" } });
 
-    expect(screen.getByLabelText(/^lodging:field\.checkIn\b/)).toHaveValue("2026-10-03");
-    expect(screen.getByLabelText(/^lodging:field\.checkOut\b/)).toHaveValue("2026-10-05");
+    expect(screen.getByLabelText(/^lodging:field\.checkIn\b/)).toHaveValue("03.10.2026");
+    expect(screen.getByLabelText(/^lodging:field\.checkOut\b/)).toHaveValue("05.10.2026");
   });
 
   it("with the check-in typed, only offers the trip's last day as check-out", async () => {
@@ -146,7 +146,7 @@ describe("StayEditor — trip preselection by check-in", () => {
     expect(screen.getByLabelText(/^lodging:field\.checkOut\b/)).toHaveValue("");
 
     fireEvent.click(screen.getByTestId("stay-trip-dates-offer"));
-    expect(screen.getByLabelText(/^lodging:field\.checkOut\b/)).toHaveValue("2026-07-14");
+    expect(screen.getByLabelText(/^lodging:field\.checkOut\b/)).toHaveValue("14.07.2026");
     expect(screen.queryByTestId("stay-trip-dates-offer")).not.toBeInTheDocument();
   });
 });

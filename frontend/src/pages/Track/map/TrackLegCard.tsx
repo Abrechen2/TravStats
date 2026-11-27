@@ -1,3 +1,4 @@
+import TrackLegTools from "../cleanup/TrackLegTools";
 import { useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
@@ -6,7 +7,7 @@ import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useEscapeClose } from "../../../hooks/useEscapeClose";
 import { apiErrorMachineCode } from "../../../lib/apiError";
-import { trackErrorKey } from "../../../lib/api/travtrack";
+import { trackErrorKey, travTrackApi } from "../../../lib/api/travtrack";
 import {
   PICKABLE_MODES,
   travTrackLegsApi,
@@ -14,9 +15,9 @@ import {
   type TravTrackLeg,
 } from "../../../lib/api/travtrackLegs";
 import { logger } from "../../../lib/logger";
-import { useToastStore } from "../../../store/toastStore";
 import { legFigures, legModeLabel, makeNumber, spanText } from "./trackLegFormat";
 import { pillStyle } from "./trackMapStyle";
+import { reportPageError } from "../../../store/pageErrorStore";
 
 /**
  * One leg in numbers (spec 2026-11-03-travtrack-legs, W1/W2): its mode and
@@ -34,6 +35,9 @@ export default function TrackLegCard({
   onReplay,
   pointsShown,
   onTogglePoints,
+  onOpenDay = null,
+  onDeleted = null,
+  modeColor = null,
 }: {
   leg: TravTrackLeg;
   zone: string;
@@ -47,11 +51,18 @@ export default function TrackLegCard({
   /** Whether the leg's vertices are drawn as markers. */
   pointsShown: boolean;
   onTogglePoints: () => void;
+  /** The range view's „Tag öffnen"; null on a day, where the day is already open. */
+  onOpenDay?: (() => void) | null;
+  /** After the leg's points are deleted; null hides the delete action. */
+  onDeleted?: (() => void) | null;
+  /** The mode's colour on the map (colour by transport mode); null draws no swatch. */
+  modeColor?: string | null;
 }): JSX.Element {
   useEscapeClose(true, onClose);
   const { t, i18n } = useTranslation(["track"]);
   const coarse = useCoarsePointer();
   const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const number = makeNumber(i18n.language);
 
   const choose = async (mode: PickableMode | null) => {
@@ -60,9 +71,7 @@ export default function TrackLegCard({
       await travTrackLegsApi.setMode({ fromMs: leg.fromMs, untilMs: leg.untilMs }, mode);
     } catch (err: unknown) {
       logger.warn("TravTrack leg mode could not be saved", err);
-      useToastStore
-        .getState()
-        .addToast("error", t("track:legs.modeFailed", { reason: t(trackErrorKey(err)) }), 8000);
+      reportPageError(t("track:legs.modeFailed", { reason: t(trackErrorKey(err)) }));
       // The leg is gone (re-derived after late points): read the day so the stale one goes.
       if (apiErrorMachineCode(err) === "TRAVTRACK_LEG_NOT_FOUND") {
         try {
@@ -78,12 +87,28 @@ export default function TrackLegCard({
       await onChanged();
     } catch (err: unknown) {
       logger.warn("TravTrack day could not be read after a leg correction", err);
-      useToastStore.getState().addToast("warning", t("track:legs.reloadFailed"), 8000);
+      reportPageError(t("track:legs.reloadFailed"), "warning");
     } finally {
       setBusy(false);
     }
   };
 
+  const removePoints = async () => {
+    setBusy(true);
+    try {
+      await travTrackApi.deleteSpan({ fromMs: leg.fromMs, untilMs: leg.untilMs });
+    } catch (err: unknown) {
+      logger.warn("TravTrack leg points could not be deleted", err);
+      reportPageError(t("track:legs.deleteFailed", { reason: t(trackErrorKey(err)) }));
+      setBusy(false);
+      setConfirmDelete(false);
+      return;
+    }
+    setBusy(false);
+    onDeleted?.();
+  };
+
+  const vertices = leg.ranges.reduce((n, r) => n + (r.to - r.from + 1), 0);
   const manual = leg.modeSource === "manual";
   return (
     <div
@@ -95,6 +120,20 @@ export default function TrackLegCard({
     >
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="t-card-title" data-testid="track-leg-mode">
+          {modeColor && (
+            <span
+              aria-hidden
+              data-testid="track-leg-swatch"
+              style={{
+                display: "inline-block",
+                width: 10,
+                height: 10,
+                borderRadius: 999,
+                marginRight: 6,
+                background: modeColor,
+              }}
+            />
+          )}
           {legModeLabel(leg, t)}
         </h3>
         <span className="t-caption tabular-nums">{spanText(leg.fromMs, leg.untilMs, zone, t)}</span>
@@ -121,6 +160,15 @@ export default function TrackLegCard({
             </dd>
           </div>
         ))}
+        <div
+          data-figure="points"
+          style={{ background: token("surface2"), borderRadius: 10, padding: 8 }}
+        >
+          <dt className="t-caption">{t("track:legs.figure.points")}</dt>
+          <dd className="tabular-nums" style={{ fontWeight: 700 }}>
+            {number(vertices, 0)}
+          </dd>
+        </div>
       </dl>
       <div role="group" aria-label={t("track:legs.modeGroup")} className="flex flex-wrap gap-2">
         {PICKABLE_MODES.map((mode) => (
@@ -167,7 +215,53 @@ export default function TrackLegCard({
         >
           {t(pointsShown ? "track:legs.hidePoints" : "track:legs.showPoints")}
         </button>
+        {onOpenDay && (
+          <button
+            type="button"
+            data-testid="track-leg-open-day"
+            onClick={onOpenDay}
+            style={pillStyle(false, coarse ? 44 : 36)}
+          >
+            {t("track:legs.openDay")}
+          </button>
+        )}
+        {onDeleted && !confirmDelete && (
+          <button
+            type="button"
+            data-testid="track-leg-delete"
+            disabled={busy}
+            onClick={() => setConfirmDelete(true)}
+            style={pillStyle(false, coarse ? 44 : 36)}
+          >
+            {t("track:legs.delete")}
+          </button>
+        )}
       </div>
+      {confirmDelete && (
+        <div role="alertdialog" aria-label={t("track:legs.delete")} data-testid="track-leg-confirm">
+          <p className="t-body">{t("track:legs.deleteConfirm", { n: number(vertices, 0) })}</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              data-testid="track-leg-delete-yes"
+              disabled={busy}
+              onClick={() => void removePoints()}
+              style={pillStyle(true, coarse ? 44 : 36)}
+            >
+              {t("track:legs.deleteYes")}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setConfirmDelete(false)}
+              style={pillStyle(false, coarse ? 44 : 36)}
+            >
+              {t("track:legs.deleteNo")}
+            </button>
+          </div>
+        </div>
+      )}
+      <TrackLegTools leg={leg} zone={zone} onChanged={onChanged} />
       <button
         type="button"
         className="underline"

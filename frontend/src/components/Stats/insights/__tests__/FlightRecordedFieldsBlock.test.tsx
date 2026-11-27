@@ -33,7 +33,9 @@ describe("FlightRecordedFieldsBlock", () => {
     expect(screen.getByTestId("recorded-airborne").textContent).toContain('"flights":"1","of":"4"');
     expect(screen.getByTestId("recorded-codeshare").textContent).toContain('"known":"3","of":"4"');
     expect(screen.getByTestId("recorded-codeshare").textContent).toContain("TAP (2)");
-    expect(screen.getByTestId("recorded-overflown").textContent).toContain("France, Germany");
+    const overflown = screen.getByTestId("recorded-overflown").textContent;
+    expect(overflown).toContain("Frankreich");
+    expect(overflown).toContain("Deutschland");
   });
 
   it("draws nothing for a field no flight carries, and nothing at all when none does", () => {

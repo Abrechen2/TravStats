@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { JSX } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { railApi } from "../../lib/api/rail";
 import { busApi } from "../../lib/api/bus";
@@ -28,6 +28,7 @@ import {
   draftProblems,
   type RailBookingDraft,
 } from "./railImportBookingDraft";
+import InlineError from "../ui/InlineError";
 
 interface Props {
   booking: RailImportBooking;
@@ -144,7 +145,7 @@ export function RailImportPreviewModal({ booking, onCancel, onSaved }: Props): J
   };
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onCancel}
       busy={saving}
@@ -203,10 +204,10 @@ export function RailImportPreviewModal({ booking, onCancel, onSaved }: Props): J
       </ol>
       <RailImportRemember rows={rows} busEnabled={busEnabled} disabled={saving} t={t} />
       {blocked && (
-        <p role="alert" className="mt-3 text-sm text-(--danger)" data-testid="rail-import-blocked">
+        <InlineError testId="rail-import-blocked" className="mt-3">
           {t("rail:import.pickStations")}
-        </p>
+        </InlineError>
       )}
-    </Modal>
+    </Dialog>
   );
 }

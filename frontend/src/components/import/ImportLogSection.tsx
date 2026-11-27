@@ -1,10 +1,10 @@
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
+import Chip from "../ui/Chip";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { Table, TableRow, type TableColumn } from "../ui/Table";
 import { useTableHints } from "../ui/useTableHints";
 import { ColumnPicker } from "../table/ColumnPicker";
-import { SortableHeader } from "../table/SortableHeader";
 import TablePagination from "../table/TablePagination";
 import { RowActionButton, RowActions } from "../table/RowActionButton";
 import { useColumnPrefs } from "../table/useColumnPrefs";
@@ -21,7 +21,10 @@ import {
 import type { ImportBatchSummary, ImportBatchItems } from "../../lib/api/importBatches";
 import { DOMAINS } from "../../shared/domains";
 import { useDomainColors } from "../../hooks/useDomainColors";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
+import InlineError from "../ui/InlineError";
+import Banner from "../ui/Banner";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   /** Runs after a successful revert so a surrounding page (list + stats) can refresh too. */
@@ -247,7 +250,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
         await onReverted?.();
       } catch (err: unknown) {
         logger.error("ImportLogSection: revert failed", err);
-        addToast("error", t("lodging:import.batches.revertError"));
+        reportPageError(t("lodging:import.batches.revertError"));
       } finally {
         setReverting(false);
       }
@@ -284,19 +287,15 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
         return {
           key: id,
           ...layout,
-          label: SORTABLE.includes(id) ? (
-            <SortableHeader
-              column={id}
-              sortBy={sortBy}
-              sortOrder={sortOrder}
-              onSort={handleSort}
-              ariaLabel={t("settings:import.log.sortBy", { col: label })}
-            >
-              {label}
-            </SortableHeader>
-          ) : (
-            label
-          ),
+          label,
+          sort: SORTABLE.includes(id)
+            ? {
+                active: sortBy === id,
+                order: sortOrder,
+                onSort: (): void => handleSort(id),
+                ariaLabel: t("settings:import.log.sortBy", { col: label }),
+              }
+            : undefined,
         };
       }),
     [columnPrefs, t, sortBy, sortOrder, handleSort]
@@ -317,14 +316,14 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
         // Which area this run landed in. Never left implicit: an unlabelled
         // log reads as if it covered everything.
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          <Chip size="sm" uppercase>
             <span
               aria-hidden="true"
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ background: colorOf(batch.domain) }}
+              className="h-1.5 w-1.5"
+              style={{ background: colorOf(batch.domain), borderRadius: "50%" }}
             />
             {t(`common:${DOMAINS[batch.domain].i18nKey}`)}
-          </span>
+          </Chip>
         );
       case "source":
         return (
@@ -372,9 +371,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
             {t("settings:import.log.items.loading")}
           </p>
         ) : itemsError[batchId] ? (
-          <p role="alert" className="text-xs text-[var(--danger)]">
-            {t("settings:import.log.items.error")}
-          </p>
+          <InlineError>{t("settings:import.log.items.error")}</InlineError>
         ) : (loaded?.items.length ?? 0) === 0 ? (
           <p className="text-xs" style={{ color: "var(--text-muted)" }}>
             {t("settings:import.log.items.empty")}
@@ -430,12 +427,9 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
           {t("lodging:import.batches.loading")}
         </p>
       ) : loadError ? (
-        <div
-          role="alert"
-          className="mt-2 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-3 py-2 text-sm text-[var(--danger)]"
-        >
+        <Banner tone="error" className="mt-2">
           {t("lodging:import.batches.loadError")}
-        </div>
+        </Banner>
       ) : batches.length === 0 ? (
         <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
           {t("lodging:import.batches.empty")}
@@ -471,7 +465,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
         </>
       )}
 
-      <Modal
+      <Dialog
         open={confirmingBatch !== undefined && confirmingBatch !== null}
         onClose={() => setConfirmingId(null)}
         busy={reverting}
@@ -507,7 +501,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
               count: revertCount(confirmingBatch),
             })}
         </p>
-      </Modal>
+      </Dialog>
     </div>
   );
 }

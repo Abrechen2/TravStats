@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type JSX } from "react";
 
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { failureKey, isImmichFailureKind } from "../../lib/api/immich";
 import { photoJourneysApi, type PhotoJourneyNightlySettings } from "../../lib/api/photoJourneys";
@@ -13,6 +13,7 @@ import { token } from "../ui/tokens";
 
 import DemoLockedNotice from "./DemoLockedNotice";
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import InlineError from "../ui/InlineError";
 
 /**
  * The account's opt-in to the nightly photo scan (forgejo#94, point 1 — the
@@ -74,9 +75,7 @@ export default function PhotoJourneyNightlyScanCard(): JSX.Element {
       />
       {loadFailed ? (
         <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
-          <p role="alert" className="text-sm" style={{ color: token("bad") }}>
-            {t("immich:nightlyScan.loadFailed")}
-          </p>
+          <InlineError>{t("immich:nightlyScan.loadFailed")}</InlineError>
           <Button onClick={() => void load()}>{t("immich:nightlyScan.retry")}</Button>
         </div>
       ) : !settings ? (
@@ -152,9 +151,7 @@ function NightlyScanBody({
           A manual scan reports its own outcome where it is started. */}
       <p className="t-caption">{t(k("manualNote"))}</p>
       {saveFailed && (
-        <p role="alert" className="text-sm" style={{ color: token("bad") }}>
-          {t(k(settings.nightlyScan ? "saveFailedOn" : "saveFailedOff"))}
-        </p>
+        <InlineError>{t(k(settings.nightlyScan ? "saveFailedOn" : "saveFailedOff"))}</InlineError>
       )}
     </>
   );

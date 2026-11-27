@@ -10,6 +10,7 @@ import {
 } from "../../lib/api/externalServices";
 import { accountStatus, adminStatus } from "./serviceStatus";
 import { serviceName } from "./serviceText";
+import InlineError from "../ui/InlineError";
 
 type Scope = "admin" | "account";
 
@@ -99,9 +100,7 @@ export default function LegacyServiceSummary({
       <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
         <span className="t-caption">{t("externalServices:legacy.statusLabel")}</span>
         {failed ? (
-          <span role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
-            {t("externalServices:legacy.loadFailed")}
-          </span>
+          <InlineError>{t("externalServices:legacy.loadFailed")}</InlineError>
         ) : summary && summary !== "unknown" ? (
           <Pill color={token(COLOR[summary])}>
             {t(`externalServices:legacy.status.${summary}`)}

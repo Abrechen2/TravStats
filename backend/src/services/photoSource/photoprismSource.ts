@@ -370,6 +370,8 @@ export function createPhotoprismPhotoSource(
             typeof raw.PhotoCount === "number" && raw.PhotoCount > 0 ? raw.PhotoCount : null,
           thumbnailAssetId: HASH.test(cover) ? cover : null,
           kind,
+          // PhotoPrism answers 0 or -1 for "no year"; only a plausible one is a year.
+          year: typeof raw.Year === "number" && raw.Year > 1900 ? raw.Year : null,
         });
       }
       if (data.length < ALBUM_PAGE_SIZE) return found;

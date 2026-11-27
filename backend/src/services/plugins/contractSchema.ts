@@ -13,7 +13,23 @@ export const CONTRACT_COMPONENTS = [
   "SuggestionPluginStopV1",
   "SuggestionPluginResponseV1",
   "SuggestionPluginSuggestionV1",
+  "SuggestionPluginExternalRefV1",
   "SuggestionPluginHelloV1",
+  "PluginMaintenanceStopV1",
+  "PluginMaintenanceProposalsRequestV1",
+  "PluginMaintenanceProposalV1",
+  "PluginMaintenanceRowV1",
+  "PluginMaintenanceNoticeV1",
+  "PluginMaintenanceConfirmRequestV1",
+  "PluginMaintenanceConfirmResponseV1",
+  "PluginMaintenanceAppliedV1",
+  "PluginMaintenanceProposalsResponseV1",
+  "PluginMaintenanceApplyRequestV1",
+  "PluginMaintenanceApplyResponseV1",
+  "PluginMaintenanceUndoRequestV1",
+  "PluginMaintenanceUndoResponseV1",
+  "PluginMaintenanceIgnoreRequestV1",
+  "PluginMaintenanceIgnoreResponseV1",
 ] as const;
 
 const rewriteRefs = (node: unknown): unknown => {
@@ -43,12 +59,20 @@ export function pluginContractSchema(): Record<string, unknown> {
     description:
       "Exported from the TravStats server's OpenAPI document (scripts/export-plugin-contract.ts). " +
       "Do not edit by hand. Request: what TravStats POSTs; response: what the plugin answers; " +
-      "hello: the optional signed GET.",
+      "hello: the optional signed GET; maintenance*: the optional location-maintenance capability.",
     $defs: defs,
     properties: {
       request: { $ref: "#/$defs/SuggestionPluginRequestV1" },
       response: { $ref: "#/$defs/SuggestionPluginResponseV1" },
       hello: { $ref: "#/$defs/SuggestionPluginHelloV1" },
+      maintenanceProposalsRequest: { $ref: "#/$defs/PluginMaintenanceProposalsRequestV1" },
+      maintenanceProposalsResponse: { $ref: "#/$defs/PluginMaintenanceProposalsResponseV1" },
+      maintenanceApplyRequest: { $ref: "#/$defs/PluginMaintenanceApplyRequestV1" },
+      maintenanceApplyResponse: { $ref: "#/$defs/PluginMaintenanceApplyResponseV1" },
+      maintenanceUndoRequest: { $ref: "#/$defs/PluginMaintenanceUndoRequestV1" },
+      maintenanceUndoResponse: { $ref: "#/$defs/PluginMaintenanceUndoResponseV1" },
+      maintenanceIgnoreRequest: { $ref: "#/$defs/PluginMaintenanceIgnoreRequestV1" },
+      maintenanceIgnoreResponse: { $ref: "#/$defs/PluginMaintenanceIgnoreResponseV1" },
     },
   };
 }

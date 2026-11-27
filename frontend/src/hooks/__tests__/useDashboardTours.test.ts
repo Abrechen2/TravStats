@@ -18,6 +18,9 @@ vi.mock("../../lib/logger", () => ({
 }));
 
 import { useDashboardTours } from "../useDashboardTours";
+import { useRoadtripColorStore } from "../../store/roadtripColorStore";
+import { hexToRgb } from "../../lib/domainColor";
+import { roadtripLineHex } from "../../lib/roadtripColor";
 
 const TOUR_A = {
   id: "tour-a",
@@ -142,5 +145,43 @@ describe("useDashboardTours", () => {
 
     await waitFor(() => expect(result.current.tours).toEqual([TOUR_A]));
     expect(mocks.list).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("useDashboardTours: roadtrip colour mode (GitHub #408)", () => {
+  const rtA = { ...TOUR_A, id: "rt-a", kind: "roadtrip", color: "#ef4444" };
+  const rtB = { ...TOUR_A, id: "rt-b", kind: "roadtrip", color: null };
+
+  const colours = async () => {
+    mocks.list.mockResolvedValue([rtA, rtB, TOUR_B]);
+    mocks.geometryBatch.mockResolvedValue(
+      new Map([
+        ["rt-a", geometryFor("rt-a")],
+        ["rt-b", geometryFor("rt-b")],
+        ["tour-b", geometryFor("tour-b")],
+      ])
+    );
+    const { result } = renderHook(() => useDashboardTours(true));
+    await waitFor(() => expect(result.current.geometries).toHaveLength(3));
+    return Object.fromEntries(result.current.geometries.map((g) => [g.routeId, g.rgb]));
+  };
+
+  it("single mode: every roadtrip shares one colour, a day tour keeps the tour hue", async () => {
+    useRoadtripColorStore.setState({ mode: "single" });
+    const rgb = await colours();
+    expect(rgb["rt-a"]).toEqual(rgb["rt-b"]);
+    expect(rgb["tour-b"]).toBeUndefined();
+  });
+
+  it("per-roadtrip mode: each roadtrip gets its own colour, a saved one winning", async () => {
+    useRoadtripColorStore.setState({ mode: "perRoadtrip" });
+    const rgb = await colours();
+    expect(rgb["rt-a"]).toEqual(hexToRgb("#ef4444"));
+    expect(rgb["rt-b"]).toEqual(
+      hexToRgb(roadtripLineHex("perRoadtrip", { id: "rt-b" }, "#000000"))
+    );
+    expect(rgb["rt-a"]).not.toEqual(rgb["rt-b"]);
+    expect(rgb["tour-b"]).toBeUndefined();
+    useRoadtripColorStore.setState({ mode: "single" });
   });
 });

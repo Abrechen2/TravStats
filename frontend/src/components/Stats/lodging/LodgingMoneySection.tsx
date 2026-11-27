@@ -1,13 +1,14 @@
+import type { ReactNode } from "react";
 import type { JSX } from "react";
 import { useBaseMoney } from "../../../hooks/useBaseMoney";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { countryName } from "../../../lib/countryFlag";
 import type { LodgingPriceGroup, LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
 import EvidenceNumber from "../EvidenceNumber";
 import CountingHelp from "../counting/CountingHelp";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RankedBarList, { type RankedRow } from "./RankedBarList";
+import { CountryLabel } from "../../../lib/countryFlag";
 
 const LODGING_ACCENT = "var(--domain-lodging, #d4778f)";
 const LIST_LIMIT = 6;
@@ -36,13 +37,12 @@ interface Props {
  * over ninety unless the screen says otherwise.
  */
 export default function LodgingMoneySection({ stats, evidenceScope }: Props): JSX.Element {
-  const { t, i18n } = useTranslation(["lodging", "stats"]);
+  const { t } = useTranslation(["lodging", "stats"]);
   const baseMoney = useBaseMoney();
   const { price } = stats;
-  const locale = i18n.language.startsWith("en") ? "en" : "de";
 
   const money = (value: number): string => baseMoney(value);
-  const priceRows = (groups: LodgingPriceGroup[], label: (key: string) => string): RankedRow[] =>
+  const priceRows = (groups: LodgingPriceGroup[], label: (key: string) => ReactNode): RankedRow[] =>
     groups.map((g) => ({
       key: g.key,
       label: label(g.key),
@@ -215,7 +215,9 @@ export default function LodgingMoneySection({ stats, evidenceScope }: Props): JS
         <RankedBarList
           title={t("lodging:stats.money.byCountry")}
           accent={LODGING_ACCENT}
-          rows={priceRows(price.byCountry, (k) => countryName(k, locale) || k)}
+          rows={priceRows(price.byCountry, (k) => (
+            <CountryLabel country={k} />
+          ))}
           emptyLabel={t("lodging:stats.money.noPrices")}
           limit={LIST_LIMIT}
           moreLabel={(hidden) => t("lodging:stats.more", { count: hidden })}

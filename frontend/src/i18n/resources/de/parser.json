@@ -5,11 +5,12 @@
     "annotate": "Vorlage anlegen",
     "myTemplates": "Meine Vorlagen",
     "communityTemplates": "Community-Vorlagen",
-    "parseLogs": "Parse-Logs"
+    "parseLogs": "Parse-Logs",
+    "label": "Bereiche der Vorlagen"
   },
   "annotate": {
     "title": "Datei annotieren",
-    "description": "Lade eine E-Mail, einen Boarding Pass oder einen Screenshot hoch und markiere die Felder. TravStats leitet daraus ein Template ab.",
+    "description": "Mail, Bordkarte oder Screenshot hochladen und Felder markieren.",
     "emailButton": "E-Mail hochladen",
     "emailFormats": ".eml, .msg, .txt",
     "boardingPassButton": "Boarding Pass hochladen",
@@ -55,7 +56,7 @@
       "syncFailed": "Die Aktualisierung ist fehlgeschlagen. Es gelten weiter die zuletzt geladenen Templates."
     },
     "sync": {
-      "indexUnreachable": "Das Template-Verzeichnis war beim letzten Abgleich ({{date}}) nicht erreichbar. Es gelten weiter die zuletzt geladenen Templates ({{count}}).",
+      "indexUnreachable": "Verzeichnis am {{date}} nicht erreichbar. Es gelten die {{count}} zuletzt geladenen Templates.",
       "indexUnreachableNoDate": "Das Template-Verzeichnis war beim letzten Abgleich nicht erreichbar. Es gelten weiter die zuletzt geladenen Templates ({{count}}).",
       "rejectedTitle": "Beim letzten Abgleich ({{date}}) konnten {{count}} Templates nicht geladen werden:",
       "rejectedTitleNoDate": "Beim letzten Abgleich konnten {{count}} Templates nicht geladen werden:",
@@ -250,13 +251,13 @@
     "derivedBanner": "Template abgeleitet. Prüfe es unter „Meine Templates“ mit der Vorschau, bevor du es aktivierst.",
     "dismiss": "Ausblenden",
     "domainHints": {
-      "cruise": "Markiere die Kopfdaten (Schiff, Buchungsnummer, Preis …) und dazu EINE Zeile des Reiseverlaufs: ihr Datum und ihren Hafen. Aus dieser Zeile liest das Template die ganze Hafenliste.",
-      "place": "Markiere mindestens den Namen des Ortes, dazu nach Wunsch Adresse, Kategorie und Besuchsdatum. Gelesene Orte landen in der Import-Vorschau unter Einstellungen → Import.",
-      "package": "Markiere Buchungsnummer und Ausstellungsdatum, nach Wunsch Reisename, Daten und Preis — dazu EINE Flugzeile (Flugnummer, Datum, Abflug und Ziel) und/oder EINE Hotelzeile (Hotel, An- und Abreise). Aus jeder markierten Zeile wird die Regel für alle Zeilen dieser Art.",
-      "rail": "Markiere nach Wunsch Auftragsnummer, Klasse und Preis — dazu EINEN Fahrtabschnitt: Abfahrtsbahnhof, Abfahrtszeit, Ankunftsbahnhof, nach Wunsch Ankunftszeit und Zug. Den Reisetag markierst du dort, wo er steht: in der Zeile oder in der Überschrift darüber.",
-      "rental": "Markiere den Vermieter, die Reservierungsnummer und für Abholung und Rückgabe jeweils Station und Datum — die Uhrzeit, wenn sie dasteht. Ohne Uhrzeit bleibt das Ende ein Tag, es wird keine Zeit erfunden.",
-      "bus": "Markiere nach Wunsch Buchungsnummer und Preis — dazu EINE Fahrt: Abfahrtshaltestelle, Abfahrtszeit, Ankunftshaltestelle und optional Ankunftszeit und Linie. Den Reisetag markierst du dort, wo er steht: in der Zeile oder in der Überschrift darüber.",
-      "ferry": "Markiere nach Wunsch Buchungsnummer und Preis — dazu EINE Überfahrt: Abfahrtshafen, Abfahrtszeit, Ankunftshafen und optional Ankunftszeit. Den Tag in der Zeile oder in der Überschrift darüber; das Schiff in der Zeile oder einmal dort, wo das Ticket es nennt."
+      "cruise": "Kopfdaten und EINE Zeile des Reiseverlaufs mit Datum und Hafen.",
+      "place": "Mindestens den Namen, optional Adresse, Kategorie und Datum.",
+      "package": "Buchungsnummer, Datum, dazu EINE Flug- und/oder EINE Hotelzeile markieren.",
+      "rail": "Optional Auftrag, Klasse, Preis, dazu EINEN Abschnitt: Bahnhöfe, Zeiten, Reisetag.",
+      "rental": "Vermieter, Reservierung und je Station und Datum für Abholung und Rückgabe.",
+      "bus": "Optional Buchung und Preis, dazu EINE Fahrt: Haltestellen, Zeiten, Reisetag.",
+      "ferry": "Optional Buchung und Preis, dazu EINE Überfahrt: Häfen und Zeiten."
     }
   },
   "derivation": {
@@ -346,9 +347,9 @@
   "overview": {
     "title": "So liest TravStats eine Buchung",
     "what": "Eine Vorlage sagt TravStats, woran es die Buchung eines Anbieters erkennt und wo darin Datum, Ort und Nummer stehen.",
-    "whatHelp": "Wenn du eine Buchung einspielst, probiert TravStats die Quellen unten der Reihe nach durch. Die erste Vorlage, die passt, liest das Dokument.",
+    "whatHelp": "Die Quellen werden der Reihe nach probiert; die erste passende Vorlage liest.",
     "whatSubject": "Vorlagen",
-    "uploadHelp": "Eine Datei, die du hier hochlädst, bleibt als Beispiel bei dir. Die Datei dient nur dazu, die Vorlage abzuleiten und zu prüfen. Geteilt wird höchstens die Vorlage, nie dein Dokument.",
+    "uploadHelp": "Die Datei bleibt bei dir. Geteilt wird höchstens die Vorlage, nie das Dokument.",
     "uploadSubject": "hochgeladene Buchung",
     "upload": "Eine hier hochgeladene Buchung bleibt bei dir.",
     "order": "Gelesen wird in dieser Reihenfolge:",

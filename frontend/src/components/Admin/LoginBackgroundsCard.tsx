@@ -7,6 +7,7 @@ import {
   uploadLoginBackgrounds,
 } from "../../lib/api/loginBackgrounds";
 import { useToastStore } from "../../store/toastStore";
+import { useFormError } from "../form/useFormError";
 
 /**
  * Pictures for the sign-in page (Alex, 2026-09-21).
@@ -29,6 +30,7 @@ export function LoginBackgroundsCard(): JSX.Element {
   const fileInput = useRef<HTMLInputElement>(null);
   const [backgrounds, setBackgrounds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const formError = useFormError();
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -50,18 +52,19 @@ export function LoginBackgroundsCard(): JSX.Element {
   const handleFiles = async (files: FileList | null): Promise<void> => {
     if (!files || files.length === 0) return;
     setBusy(true);
+    formError.clear();
     try {
       const result = await uploadLoginBackgrounds([...files]);
       setBackgrounds(result.backgrounds);
       // A partly-good upload says so rather than reporting a clean success:
       // nine of ten pictures landing is a different fact from ten landing.
       if (result.rejected.length > 0) {
-        addToast(
-          "warning",
+        formError.set(
           t("admin:loginBackgrounds.partial", {
             accepted: result.accepted.length,
             rejected: result.rejected.join(", "),
-          })
+          }),
+          "warning"
         );
       } else {
         addToast(
@@ -70,7 +73,7 @@ export function LoginBackgroundsCard(): JSX.Element {
         );
       }
     } catch {
-      addToast("error", t("admin:loginBackgrounds.uploadFailed"));
+      formError.set(t("admin:loginBackgrounds.uploadFailed"));
     } finally {
       setBusy(false);
       if (fileInput.current) fileInput.current.value = "";
@@ -82,7 +85,7 @@ export function LoginBackgroundsCard(): JSX.Element {
     try {
       setBackgrounds(await deleteLoginBackground(name));
     } catch {
-      addToast("error", t("admin:loginBackgrounds.removeFailed"));
+      formError.set(t("admin:loginBackgrounds.removeFailed"));
     } finally {
       setBusy(false);
     }
@@ -95,6 +98,7 @@ export function LoginBackgroundsCard(): JSX.Element {
       <p className="mt-2 text-sm" style={{ color: "var(--warning)" }}>
         {t("admin:loginBackgrounds.publicWarning")}
       </p>
+      {formError.node}
       <p className="mt-2 text-xs text-(--text-muted)">{t("admin:loginBackgrounds.hint")}</p>
 
       {loaded && backgrounds.length > 0 && (

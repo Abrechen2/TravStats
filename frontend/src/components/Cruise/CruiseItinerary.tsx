@@ -3,7 +3,7 @@ import type { Cruise } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { buildEffectiveTimeline } from "./cruisePorts";
 import { cruiseStopArrival, cruiseStopDeparture } from "../../lib/entityTimes";
-import { formatLocalClock } from "../../lib/displayFormat";
+import { formatLocalClock } from "../../lib/format";
 import { clockOf, type TimeValue } from "../../shared/time";
 
 /**

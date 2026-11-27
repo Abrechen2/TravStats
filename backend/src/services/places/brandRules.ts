@@ -20,6 +20,7 @@ import { classifyVisit } from "../../shared/placeCounting";
 import { now as clockNow } from "../../shared/time/clock";
 import { runUnfiltered } from "../provenance/recordedOnly";
 import type { BrandRuleInput } from "../travtrack/visits/brandMatch";
+import { staySuggestionsEnabled } from "../settings/suggestionSwitches";
 
 export const BRAND_RULE = "brandRule";
 export const AUTO_FEED_LIMIT = 20;
@@ -130,9 +131,13 @@ type EvidenceMatches = {
   auto: boolean;
 }[];
 
-/** The smart-list matches a visit finding carries; empty for any other finding. */
+/**
+ * The smart-list matches a finding carries: a visit finding's (`visit.brandMatches`) or a plain
+ * stay finding's matched through its own place (`brandMatches`, `visits/dwellBrands.ts`).
+ */
 export function matchesOf(evidence: unknown): EvidenceMatches {
-  const list = (evidence as { visit?: { brandMatches?: unknown } } | null)?.visit?.brandMatches;
+  const e = evidence as { visit?: { brandMatches?: unknown }; brandMatches?: unknown } | null;
+  const list = e?.visit?.brandMatches ?? e?.brandMatches;
   return Array.isArray(list) ? (list as EvidenceMatches) : [];
 }
 
@@ -183,11 +188,12 @@ export async function applyBrandMatches(
   }
 }
 
-const matchFilter = (listId: string, extra: Record<string, unknown> = {}) =>
-  ({
-    path: ["visit", "brandMatches"],
-    array_contains: [{ listId, ...extra }],
-  }) as Prisma.JsonFilter;
+/** A finding whose matches (on the visit, or on a plain stay) name the list. */
+const matchFilter = (listId: string, extra: Record<string, unknown> = {}) => ({
+  OR: [["visit", "brandMatches"], ["brandMatches"]].map((path) => ({
+    evidence: { path, array_contains: [{ listId, ...extra }] } as Prisma.JsonFilter,
+  })),
+});
 
 export type SuggestionView = {
   id: string;
@@ -297,7 +303,7 @@ export async function newOutletsForList(userId: string, listId: string) {
       status: "pending",
       provider: "travtrack",
       placeId: null,
-      evidence: matchFilter(listId) as Prisma.JsonFilter,
+      ...matchFilter(listId),
     },
     select: STAY_SELECT,
     orderBy: { startAt: "desc" },
@@ -314,13 +320,79 @@ export async function recentlyAutoAccepted(userId: string, listId: string) {
       userId,
       status: "accepted",
       provider: "travtrack",
-      evidence: matchFilter(listId, { auto: true }) as Prisma.JsonFilter,
+      ...matchFilter(listId, { auto: true }),
     },
     select: STAY_SELECT,
     orderBy: { resolvedAt: "desc" },
     take: AUTO_FEED_LIMIT,
   });
   return named(userId, rows.map(viewOf));
+}
+
+/** Most pending confirmations a list's section shows; the count beside it is exact. */
+export const PENDING_LIMIT = 100;
+/** A question is pending while it waits or while a crashed accept still claims it (as the inbox). */
+const PENDING = { in: ["pending", "accepting"] };
+
+/**
+ * Pending visit confirmations this list's rule produced at places the owner already has (owner
+ * 2026-11-26: "show 'ausstehende Bestätigung' above the list itself"). A match at a venue that is
+ * no place yet is a new outlet and stays in that section. With stay suggestions switched off
+ * there is no question to show, as in the inbox.
+ */
+export async function pendingForList(userId: string, listId: string) {
+  await ownList(userId, listId);
+  if (!(await staySuggestionsEnabled(userId))) return { rows: [], total: 0 };
+  const where = {
+    userId,
+    status: PENDING,
+    provider: "travtrack",
+    placeId: { not: null },
+    evidence: matchFilter(listId) as Prisma.JsonFilter,
+  };
+  const [rows, total] = await Promise.all([
+    prisma.dawarichStay.findMany({
+      where,
+      select: STAY_SELECT,
+      orderBy: [{ startAt: "desc" }, { id: "asc" }],
+      take: PENDING_LIMIT,
+    }),
+    prisma.dawarichStay.count({ where }),
+  ]);
+  return { rows: await named(userId, rows.map(viewOf)), total };
+}
+
+/** Upper bound of pending matches read for the overview's badges. */
+const COUNT_SCAN_CAP = 5000;
+
+/**
+ * Per smart list, how many of its matches wait for an answer (new outlets and visits at known
+ * places together): the badge on the lists overview. Lists without a pending match are absent.
+ */
+export async function pendingCounts(userId: string): Promise<Record<string, number>> {
+  if (!(await staySuggestionsEnabled(userId))) return {};
+  const rows = await prisma.dawarichStay.findMany({
+    where: {
+      userId,
+      status: PENDING,
+      provider: "travtrack",
+      evidence: { path: ["visit", "brandMatches"], not: Prisma.AnyNull },
+    },
+    select: { evidence: true },
+    take: COUNT_SCAN_CAP,
+  });
+  const lists = new Set(
+    (await prisma.placeListBrandRule.findMany({ where: { userId }, select: { listId: true } })).map(
+      (r) => r.listId
+    )
+  );
+  const out: Record<string, number> = {};
+  for (const row of rows) {
+    for (const listId of new Set(matchesOf(row.evidence).map((m) => m.listId))) {
+      if (lists.has(listId)) out[listId] = (out[listId] ?? 0) + 1;
+    }
+  }
+  return out;
 }
 
 export type UndoResult = {

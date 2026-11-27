@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import type { JSX, ReactNode } from "react";
 import PurposeChip from "../../components/purpose/PurposeChip";
 import RememberedMarker from "../provenance/RememberedMarker";
@@ -79,12 +80,9 @@ export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX
         driven.source === "user" ? ` (${t("rental:distance.user")})` : ""
       }`
     ) : rental.status === "completed" ? (
-      <span
-        className="rounded-full border border-dashed border-border px-2 text-xs"
-        data-testid="rental-km-open"
-      >
+      <Chip dashed size="sm" testId="rental-km-open">
         {t("rental:list.kmOpen")}
-      </span>
+      </Chip>
     ) : (
       "—"
     );

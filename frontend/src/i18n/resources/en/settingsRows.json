@@ -695,6 +695,14 @@
       "vesselData": {
         "n": "Wikidata",
         "p": "Ship MMSI and IMO"
+      },
+      "aiSuggestionHelp": {
+        "n": "AI help for unclear suggestions",
+        "p": "\"Ask the AI\" for stays with several possible places"
+      },
+      "mapMatching": {
+        "n": "Snap to roads",
+        "p": "Lay sparse TravTrack stretches onto the road through your own router"
       }
     },
     "rows": {
@@ -989,7 +997,7 @@
       "retry": "Try again",
       "onlyConfigured": "Only active or set-up services",
       "noneConfigured": "No service is set up or active. Turn the filter off to see them all.",
-      "intro": "This is where TravStats gets data from and where something goes. The top of each card says what applies to your account; as an admin you see below it what applies to everyone.",
+      "intro": "Where data comes from and goes to — your account on top, everyone below.",
       "groupsLabel": "Service groups",
       "withdraw": "Withdraw",
       "connectedAccounts_one": "{{count}} account is connected.",
@@ -1105,11 +1113,13 @@
       "instanceEmptyOwn": "No instance key – your personal key applies only to you",
       "off": "Routing is switched off.",
       "pickT": "Routing provider",
-      "pickS": "Which service calculates road routes. Automatic uses the first one set up for each account: OpenRouteService, GraphHopper, own server.",
+      "pickS": "Who computes road routes. Automatic: the first service set up.",
       "optAuto": "Automatic (recommended)",
       "optCustom": "Own server",
       "optOff": "Off",
-      "saveFailed": "I could not save the routing provider."
+      "saveFailed": "I could not save the routing provider.",
+      "emptyWithKey": "Routing provider empty, but a key for {{provider}} is stored.",
+      "useKeyed": "Use {{provider}}"
     }
   },
   "server": {
@@ -1254,7 +1264,7 @@
     "internet": {
       "t": "Server may ask external services",
       "s": "Exchange rates, rail timetables, logos, open map data and the update check. Off = run without internet",
-      "h": "Off switches off: ECB exchange rates, rail timetables (Transitous, db-rest), operator logos from Wikidata, open map data (weather, Wikipedia, Overpass, weather in plans) and the check for new versions. The single switches below (expert) keep their value and apply again as soon as you switch this on. Services with their own key (flight data, AI, photos) are not affected."
+      "h": "Off switches off: ECB rates, rail timetables (Transitous, db-rest), operator logos, open map data (weather, Wikipedia, Overpass) and the version check. The single switches below keep their value. Services with their own key (flight data, AI, photos) are not affected."
     },
     "fxcdn": {
       "t": "Exchange-rate fallback",
@@ -1447,7 +1457,16 @@
       "unversioned": "I can't match this archive's database state to a version. I changed nothing.",
       "busy": "A backup or restore is running right now. Try again afterwards.",
       "rateLimited": "I restore only a few backups an hour. Try again later.",
-      "failed": "I couldn't restore the backup."
+      "failed": "I couldn't restore the backup.",
+      "recoveryKeyInvalid": "That is not a recovery key: it has 64 characters from 0–9 and A–F (spaces do not matter). Nothing was restored.",
+      "recoveryKeyWrong": "This key did not write the backup. Nothing was restored.",
+      "recoveryKeyEnvPinned": "This server's key is set by the ENCRYPTION_KEY environment variable. Put the recovery key there, restart, and then restore the backup. Nothing was restored.",
+      "recoveryKeyWriteFailed": "The key could not be written to the secrets folder. Nothing was restored.",
+      "recoveryKeyReauth": "The password is missing or not right. Nothing was restored.",
+      "recoveryKeySecondFactor": "Enter the right code from your authenticator app. Nothing was restored.",
+      "recoveryKeyPasskey": "The passkey was not confirmed. Confirm with your password or try again. Nothing was restored.",
+      "recoveryKeyPasskeyTooNew": "This passkey is less than a day old. Confirm with your password. Nothing was restored.",
+      "keySwapUnresolved": "An earlier restore was interrupted while replacing the key. Resolve that first (see “Setup & status”). Nothing was restored."
     },
     "retry": "Try again",
     "baknow": {
@@ -1465,11 +1484,11 @@
     "notes": {
       "machine": {
         "t": "What this backup is",
-        "s": "The full backup of the server with every account, for restoring the whole machine. A single account moves with the account archive (ZIP) under Settings → Data."
+        "s": "The whole machine with all accounts. One account moves via the account archive (Settings → Data)."
       },
       "secrets": {
         "t": "Not in the backup",
-        "s": "Back up /app/data/secrets (encryption and session keys) separately. Without that folder, stored API keys and credentials cannot be decrypted after a restore on a new host."
+        "s": "Back up /app/data/secrets separately — without it, keys cannot be decrypted on a new host."
       }
     }
   },
@@ -1571,7 +1590,7 @@
     "systemLoadFailed": "I couldn't load the system data.",
     "tzLegacy": {
       "summary": "Time zones (for legacy data)",
-      "when": "Only needed when old imports or entries from before the time model carry wrong zones: here the zones can be determined again (dry run first)."
+      "when": "Only for wrong zones from old imports: re-resolve zones (dry run first)."
     },
     "usersLoadFailed": "I couldn't load the accounts for the report.",
     "groups": {
@@ -1596,6 +1615,52 @@
       "off": "Switch off",
       "running": "Runs until {{until}} · {{hours}} h {{minutes}} min left",
       "failed": "I couldn't switch the verbose log."
+    },
+    "runtime": {
+      "title": "Runtime",
+      "refresh": "Refresh",
+      "loadFailed": "I couldn't load the runtime data.",
+      "loop": {
+        "title": "Event loop",
+        "sub": "Delay over the last minute. Above 500 ms (p99) every request waits noticeably.",
+        "value": "p50 {{p50}} ms · p99 {{p99}} ms · max {{max}} ms",
+        "slow": "Slow: p99 {{p99}} ms · max {{max}} ms"
+      },
+      "memory": {
+        "title": "Memory",
+        "value": "Heap {{heap}} / {{limit}} MB · RSS {{rss}} MB"
+      },
+      "database": {
+        "title": "Database",
+        "value": "{{latency}} ms · connections {{total}}/{{max}} ({{idle}} idle, {{waiting}} waiting)",
+        "valueNoPool": "{{latency}} ms",
+        "failed": "The database does not answer."
+      },
+      "statements": {
+        "title": "Slowest queries",
+        "sub": "From pg_stat_statements, by mean time.",
+        "none": "No queries recorded yet.",
+        "row": "avg {{mean}} ms · max {{max}} ms · {{calls}}×",
+        "notInstalled": "Not enabled. Add pg_stat_statements to the database's shared_preload_libraries, restart it and run CREATE EXTENSION pg_stat_statements once (docs/ops/postgres-tuning.md).",
+        "notLoaded": "Not enabled: the extension exists but is missing from shared_preload_libraries. Add it and restart the database (docs/ops/postgres-tuning.md).",
+        "error": "I couldn't read pg_stat_statements."
+      },
+      "jobs": {
+        "title": "Background jobs",
+        "idle": "No heavy job running",
+        "running": "Running: {{name}}",
+        "waiting": "{{count}} waiting",
+        "importRunning": "Import writing ({{count}} waiting)"
+      },
+      "slowRequests": {
+        "title": "Slow requests",
+        "sub": "Over 1 s, since the last restart."
+      },
+      "slowQueries": {
+        "title": "Slow database calls",
+        "sub": "Over 500 ms, since the last restart."
+      },
+      "slowNone": "None since the start."
     }
   },
   "lodging": {

@@ -114,8 +114,8 @@ describe("FlightEditModal", () => {
     expect(document.querySelector("#editDepartureTime")).toBeTruthy();
     expect(document.querySelector("#editArrivalDate")).toBeTruthy();
     expect(document.querySelector("#editArrivalTime")).toBeTruthy();
-    expect(document.querySelector('#editDepartureDate[type="date"]')).toBeTruthy();
-    expect(document.querySelector('#editDepartureTime[type="time"]')).toBeTruthy();
+    expect(document.querySelector('#editDepartureDate[data-field-kind="date"]')).toBeTruthy();
+    expect(document.querySelector('#editDepartureTime[data-field-kind="time"]')).toBeTruthy();
   });
 
   it("pre-fills departure date and time from flight data", () => {
@@ -250,9 +250,9 @@ describe("FlightEditModal", () => {
     render(
       <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
-    const pill = document.body.querySelector(".rounded-full") as HTMLElement;
+    const pill = document.body.querySelector(".ts-chip-static") as HTMLElement;
     expect(pill).toBeTruthy();
-    expect(pill.style.color).toBe("rgb(251, 191, 36)");
+    expect(pill.style.border).toMatch(/251, 191, 36/);
   });
 
   it("renders the duplicated pill in amber, not red", () => {
@@ -260,9 +260,9 @@ describe("FlightEditModal", () => {
     render(
       <FlightEditModal flight={duplicatedFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
-    const pill = document.body.querySelector(".rounded-full") as HTMLElement;
+    const pill = document.body.querySelector(".ts-chip-static") as HTMLElement;
     expect(pill).toBeTruthy();
-    expect(pill.style.color).toBe("rgb(251, 191, 36)");
+    expect(pill.style.border).toMatch(/251, 191, 36/);
   });
 
   it('checking the cancelled checkbox submits status "cancelled"', async () => {
@@ -819,7 +819,7 @@ describe("FlightEditModal", () => {
       expect(depDate).toBeTruthy();
       expect(depTime).toBeTruthy();
       expect(document.querySelector("#editHistoricalYear")).toBeFalsy();
-      expect(depDate.value).toBe("1998-07-15");
+      expect(depDate.value).toBe("15.07.1998");
       expect(depTime.value).toBe("");
     });
 

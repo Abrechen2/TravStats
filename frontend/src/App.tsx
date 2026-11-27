@@ -1,3 +1,4 @@
+import { Icon } from "./components/ui/Icon";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence, MotionConfig } from "framer-motion";
 import NavigationMemory from "./components/navigation/NavigationMemory";
@@ -6,6 +7,7 @@ import { useAuthStore } from "./store/authStore";
 import { logger } from "./lib/logger";
 import { useSettingsStore } from "./store/settingsStore";
 import ErrorBoundary from "./components/ErrorBoundary";
+import PageErrorHost from "./components/PageErrorHost";
 import Toast from "./components/Toast";
 import AirportSeedingBanner from "./components/AirportSeedingBanner";
 import AirportSeedingModal from "./components/AirportSeedingModal";
@@ -29,8 +31,10 @@ import WhatsNewModal from "./components/WhatsNewModal";
 import ProfileZonePrompt from "./components/ProfileZonePrompt";
 import DemoBetaNotice from "./components/DemoBetaNotice";
 import SetupIncompleteBanner from "./components/SetupIncompleteBanner";
+import RecoveryKeyGate from "./components/RecoveryKey/RecoveryKeyGate";
 import UsageStatsConsentDialog from "./components/UsageStatsConsentDialog";
 import RecordedOnlyBoundary from "./components/provenance/RecordedOnlyBoundary";
+import { usePurposeFilterSync } from "./lib/purposeFilter";
 
 const ComparisonPage = lazy(() => import("./pages/ComparisonPage"));
 
@@ -96,6 +100,7 @@ function AppContent() {
   const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
   const language = useSettingsStore((s) => s.display.language);
   const location = useLocation();
+  const purposeFilter = usePurposeFilterSync(location);
   const { t } = useTranslation("common");
   // A persisted user is only a CLAIM until the server confirms the cookie.
   // Nothing authenticated may be fetched or rendered before it does — hence
@@ -209,7 +214,9 @@ function AppContent() {
               style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
             >
               <div className="text-center">
-                <div className="text-6xl mb-4">💥</div>
+                <div className="mb-4 flex justify-center">
+                  <Icon name="circle-alert" size={24} />
+                </div>
                 <h1 className="t-screen-title mb-2">{t("errorBoundary.title")}</h1>
                 <p className="mb-6" style={{ color: "var(--text-muted)" }}>
                   {t("errorBoundary.message")}
@@ -226,9 +233,11 @@ function AppContent() {
         }
       >
         <Toast />
+        <PageErrorHost />
         <AirportSeedingBanner />
         <SetupIncompleteBanner sessionConfirmed={sessionConfirmed} requiresSetup={requiresSetup} />
         {sessionConfirmed && <ReadinessBanner />}
+        <RecoveryKeyGate sessionConfirmed={sessionConfirmed} />
         <AirportSeedingModal isOpen={showSeedingModal} onClose={handleCloseSeedingModal} />
         <WhatsNewModal isOpen={shouldShow} entry={entry} onClose={() => void dismiss()} />
         <UsageStatsConsentDialog isOpen={consentStep.shouldShow} onClose={consentStep.close} />
@@ -253,7 +262,7 @@ function AppContent() {
         />
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
-            <Routes location={location} key={location.pathname}>
+            <Routes location={location} key={`${location.pathname}|${purposeFilter ?? ""}`}>
               {/* One lazy page for both: it picks the friends page or the encrypted share. */}
               {["/freunde", "/encrypted-share"].map((path) => (
                 <Route key={path} path={path} element={<ComparisonPage />} />

@@ -16,6 +16,7 @@ import loggingRouter from "./logging";
 import parserSettingsRouter from "./parserSettings";
 import smtpRouter from "./smtp";
 import backupSettingsRouter from "./backupSettings";
+import recoveryKeyRouter from "./recoveryKey";
 import instanceSettingsRouter from "./instanceSettings";
 import rerouteRunsRouter from "./rerouteRuns";
 import immichAdminRouter from "./immich";
@@ -31,6 +32,7 @@ import templateRepoRouter from "./templateRepo";
 import lodgingChainsAdminRouter from "./lodgingChains";
 import externalServicesAdminRouter from "./externalServices";
 import publicUrlCheckRouter from "./publicUrlCheck";
+import runtimeRouter from "./runtime";
 
 const router = Router();
 
@@ -70,6 +72,7 @@ router.use("/logging", loggingRouter);
 router.use("/", parserSettingsRouter);
 router.use("/smtp", smtpRouter);
 router.use("/", backupSettingsRouter);
+router.use("/", recoveryKeyRouter);
 router.use("/", instanceSettingsRouter);
 router.use("/", rerouteRunsRouter);
 router.use("/immich", immichAdminRouter);
@@ -85,5 +88,6 @@ router.use("/", templateRepoRouter);
 router.use("/", lodgingChainsAdminRouter);
 router.use("/external-services", externalServicesAdminRouter);
 router.use("/public-url", publicUrlCheckRouter);
+router.use("/", runtimeRouter);
 
 export default router;

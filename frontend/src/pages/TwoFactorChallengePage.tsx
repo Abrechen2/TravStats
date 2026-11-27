@@ -6,6 +6,7 @@ import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
 import { loginFailure, type LoginFailureCopy } from "../lib/loginFailure";
+import InlineError from "../components/ui/InlineError";
 
 /**
  * Second step of a login. The challenge itself is an HttpOnly cookie set by
@@ -122,7 +123,7 @@ export default function TwoFactorChallengePage(): JSX.Element {
               />
             </div>
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <InlineError>{error}</InlineError>}
 
             <button type="submit" className="btn-primary w-full" disabled={loading}>
               {loading ? t("auth:twoFactor.verifying") : t("auth:twoFactor.submit")}

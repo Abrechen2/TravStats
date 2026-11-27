@@ -3,7 +3,7 @@ import type { FormEvent, JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { sharingRemoteApi } from "../../lib/api/sharingRemote";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import type {
   CreatedRemoteInvite,
@@ -19,6 +19,7 @@ import { ConfirmDialog, SettingItem } from "../ui/settings";
 import { SettingRows } from "../ui/SettingRow";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useDependency, useDialogCopy, useRowCopy } from "./rowCopy";
+import InlineError from "../ui/InlineError";
 
 const NS = "sharing:remote";
 
@@ -226,9 +227,9 @@ export default function RemoteSharingSection(): JSX.Element | null {
           </form>
 
           {failure && (
-            <p role="alert" className="mb-4 text-sm" style={{ color: "var(--ts-warn)" }}>
+            <InlineError tone="warning" className="mb-4">
               {t(failure.key, { origin: failure.origin })}
-            </p>
+            </InlineError>
           )}
           {notice && (
             <p role="status" className="mb-4 text-sm">

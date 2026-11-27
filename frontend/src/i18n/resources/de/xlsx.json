@@ -4,8 +4,7 @@
     "filename": "travstats-export",
     "running": "Datei wird erstellt …",
     "failed": "Der Export ist fehlgeschlagen.",
-    "empty": "Es gibt nichts zu exportieren.",
-    "description": "Die bearbeitbare Excel-Tabelle enthält Reiseeinträge der unterstützten Bereiche, einschließlich Busfahrten – ein Blatt je Bereich, mit ID-Spalte zum Ändern und Wiedereinlesen. Reisen, Buchungen, Ortslisten und Dokumente stehen als Übersicht zum Lesen darin (Dokumente nur als Liste, ohne die Dateien). Eigenständige Notizen, Fotos und Einstellungen sind nicht enthalten. Für eine vollständige Sicherung nutze das Instanz-Backup unter Einstellungen → Server → Sicherungen; bei fehlenden Rechten frage deinen Administrator."
+    "empty": "Es gibt nichts zu exportieren."
   },
   "sheets": {
     "flights": "Flüge",
@@ -277,7 +276,7 @@
   },
   "import": {
     "title": "Excel-Import",
-    "description": "Eine bearbeitete Export-Datei zurückspielen – auch in ein anderes Konto. Zeilen mit einer ID aus deinem Konto ändern den vorhandenen Eintrag. Zeilen ohne ID oder mit einer ID aus einem anderen Konto werden neu angelegt; was es schon gibt (gleicher Flug am gleichen Tag, gleiche Unterkunft mit gleicher Anreise …), wird wiedererkannt statt verdoppelt. Es wird zuerst nur geprüft — geschrieben wird erst, wenn du bestätigst.",
+    "description": "Bearbeitete Datei zurückspielen. Erst wird geprüft, geschrieben beim Bestätigen.",
     "choose": "Datei wählen",
     "checking": "Datei wird geprüft …",
     "applying": "Wird übernommen …",
@@ -368,7 +367,7 @@
       },
       "merge": {
         "label": "Abgleichen",
-        "hint": "Zeilen mit ID ändern den vorhandenen Eintrag. Zeilen ohne ID werden neu angelegt, soweit das Blatt es zulässt (Flüge, Orte, Besuche, Roadtrips, Stationen, Touren, Tourpunkte). Nichts wird gelöscht."
+        "hint": "Mit ID wird geändert, ohne ID neu angelegt. Nichts wird gelöscht."
       },
       "replace": {
         "label": "Ersetzen",
@@ -385,7 +384,7 @@
     "backupRunning": "Gerade läuft schon ein Backup. Bitte warte, bis es fertig ist, und starte den Import dann noch einmal – es wurde nichts geändert.",
     "importTooManyRows": "Die Datei hat mehr als {{max}} Einträge. Teile sie in kleinere Dateien auf und importiere sie einzeln – es wurde nichts geändert.",
     "emptySheetNote": "Ein leeres Blatt löscht nichts. Zum Leeren müssen die Zeilen einzeln entfernt werden.",
-    "transferNote": "Die Tabelle überträgt Einträge, keine Fotos, Dokumente oder Belege. Reisen sind kein eigenes Blatt: ein Eintrag wird mit der gleichnamigen Reise im Zielkonto verknüpft, sonst bleibt er ohne Reise. Eine ganze Installation samt Fotos und Dokumenten auf einen anderen Server umziehen – dafür ist das Backup da; ein einzelnes Konto in ein anderes Konto verschieben kann es nicht.",
+    "transferNote": "Nur Einträge, keine Fotos oder Dokumente. Für einen Serverumzug ist das Backup da.",
     "rowsToggle": "Zeilen im Einzelnen",
     "rowLine": "Zeile {{row}}: {{label}}",
     "actions": {

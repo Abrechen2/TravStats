@@ -22,7 +22,7 @@ import {
   type LonLat,
   type RouteEditorState,
 } from "../Cruise/routeEditorState";
-import { railBounds } from "../rail/RailRouteMap";
+import { RIDE_EDITOR_HANDLES, rideEditorBounds } from "../map/routeEditorFraming";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -31,6 +31,7 @@ import { apiErrorMachineCode } from "../../lib/apiError";
 import { logger } from "../../lib/logger";
 import { reuseMapsEnabled } from "../../lib/mapReuse";
 import type { FerryJourney } from "../../types/ferry";
+import InlineError from "../ui/InlineError";
 
 /** The server error codes this editor has copy for; anything else gets the generic sentence. */
 const KNOWN_ERRORS = new Set([
@@ -54,7 +55,10 @@ export function editorStartLine(ride: FerryJourney): LonLat[] {
     stored &&
     stored.length >= 3
   )
-    return simplifyForEditing(stored.map(([lon, lat]) => [lon, lat] as LonLat));
+    return simplifyForEditing(
+      stored.map(([lon, lat]) => [lon, lat] as LonLat),
+      RIDE_EDITOR_HANDLES
+    );
   return ends;
 }
 
@@ -168,7 +172,7 @@ export function FerryRouteEditor({ ride, onSaved, onClose }: Props): JSX.Element
         <MapGL
           reuseMaps={reuseMapsEnabled()}
           initialViewState={{
-            bounds: railBounds(state.original.map(([lon, lat]) => [lon, lat])),
+            bounds: rideEditorBounds(state.original),
             fitBoundsOptions: { padding: 40 },
           }}
           mapStyle={mapStyle}
@@ -219,15 +223,11 @@ export function FerryRouteEditor({ ride, onSaved, onClose }: Props): JSX.Element
         </label>
       )}
       {reachFailed && (
-        <p role="alert" className="text-sm text-(--danger)" data-testid="ferry-route-scope-failed">
+        <InlineError testId="ferry-route-scope-failed">
           {t("ferry:routeEditor.scope.failed")}
-        </p>
+        </InlineError>
       )}
-      {error && (
-        <p role="alert" className="text-sm text-(--danger)" data-testid="ferry-route-editor-error">
-          {error}
-        </p>
-      )}
+      {error && <InlineError testId="ferry-route-editor-error">{error}</InlineError>}
       <div className="flex flex-wrap gap-2">
         <button
           type="button"

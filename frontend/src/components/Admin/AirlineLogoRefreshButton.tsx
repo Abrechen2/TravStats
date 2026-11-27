@@ -3,6 +3,7 @@ import axios from "axios";
 import { api } from "../../lib/api/client";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
+import InlineError from "../ui/InlineError";
 
 const POLL_INTERVAL_MS = 2000;
 
@@ -108,11 +109,7 @@ export default function AirlineLogoRefreshButton(): JSX.Element {
           {t("airlineLogos.result", { refreshed, checked })}
         </p>
       )}
-      {state === "error" && (
-        <p className="text-sm mt-1" style={{ color: "var(--danger)" }}>
-          {t("airlineLogos.failed")}
-        </p>
-      )}
+      {state === "error" && <InlineError className="mt-1">{t("airlineLogos.failed")}</InlineError>}
     </div>
   );
 }

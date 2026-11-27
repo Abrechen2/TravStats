@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { Table, TableRow, type TableColumn } from "../components/ui/Table";
+import { useSort } from "../hooks/useSort";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import type { JSX } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
@@ -22,6 +24,7 @@ import { LOYALTY_SETTINGS_PATH } from "./Settings/settingsModel";
 import type { Lodging, LodgingChainDetail } from "../types/lodging";
 import { useDomainColors } from "../hooks/useDomainColors";
 import BackLink from "../components/navigation/BackLink";
+import Banner from "../components/ui/Banner";
 
 /**
  * Chain detail page (collaborator request): click a chain name anywhere it
@@ -109,9 +112,9 @@ export default function LodgingChainDetailPage(): JSX.Element {
           <BackLink to="/lodging" className="ts-back-link text-sm text-[var(--text-muted)]">
             ← {t("lodging:list.title")}
           </BackLink>
-          <div className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]">
+          <Banner tone="error" className="mt-4">
             {t("lodging:chainDetail.notFound")}
-          </div>
+          </Banner>
         </div>
       </AppShell>
     );
@@ -214,61 +217,18 @@ export default function LodgingChainDetailPage(): JSX.Element {
           {t("lodging:chainDetail.hotelsTitle")}
         </h2>
         {lodgings.length > 0 ? (
-          <div className="overflow-x-auto rounded-md border border-[var(--color-border)]">
-            <table className="w-full text-sm min-w-[520px]">
-              <thead className="bg-[var(--bg-surface)] text-[var(--text-muted)]">
-                <tr>
-                  <th className="px-3 py-2 text-left">{t("lodging:list.columns.name")}</th>
-                  <th className="px-3 py-2 text-left">{t("lodging:list.columns.location")}</th>
-                  <th className="px-3 py-2 text-right">{t("lodging:list.columns.stays")}</th>
-                  <th className="px-3 py-2 text-right">{t("lodging:list.columns.nights")}</th>
-                  <th className="px-3 py-2 text-left">{t("lodging:list.columns.rating")}</th>
-                  <th className="px-3 py-2 text-right">{t("lodging:list.columns.spend")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lodgings.map((l) => (
-                  <tr
-                    key={l.id}
-                    onClick={() =>
-                      // Carry where the click came from, so the hotel's own
-                      // page can offer the way back here instead of dropping
-                      // the reader into the full list (Alex, 2026-08-29).
-                      navigate(`/lodging/${l.id}`, {
-                        state: { fromChain: { id: chain.id, name: chain.name } },
-                      })
-                    }
-                    className="cursor-pointer border-t border-[var(--color-border)] hover:bg-[var(--bg-surface)]"
-                  >
-                    <td className="px-3 py-2">
-                      <span aria-hidden className="mr-2">
-                        {lodgingTypeIcon(l.type)}
-                      </span>
-                      <span className="font-medium text-[var(--text-primary)]">{l.name}</span>
-                    </td>
-                    <td className="px-3 py-2 text-[var(--text-muted)]">
-                      {l.city || l.country ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <span>{l.city || l.country}</span>
-                          <FlagImg country={resolveCountryCode(l.country)} height={12} />
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-right">{l.stayCount}</td>
-                    <td className="px-3 py-2 text-right">{l.nights}</td>
-                    <td className="px-3 py-2">
-                      <StarRating value={l.overallRating} />
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <ChainHotelSpendCell lodging={l} baseCurrency={baseCurrency} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ChainHotelsTable
+            lodgings={lodgings}
+            baseCurrency={baseCurrency}
+            onOpen={(l) =>
+              // Carry where the click came from, so the hotel's own
+              // page can offer the way back here instead of dropping
+              // the reader into the full list (Alex, 2026-08-29).
+              navigate(`/lodging/${l.id}`, {
+                state: { fromChain: { id: chain.id, name: chain.name } },
+              })
+            }
+          />
         ) : (
           <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-4 py-8 text-center text-[var(--text-muted)]">
             {t("lodging:chainDetail.hotelsEmpty")}
@@ -364,5 +324,115 @@ function ChainHotelSpendCell({
       </div>
       {planned}
     </>
+  );
+}
+
+type HotelSortKey = "name" | "location" | "stays" | "nights" | "rating";
+
+function ChainHotelsTable({
+  lodgings,
+  baseCurrency,
+  onOpen,
+}: {
+  lodgings: readonly Lodging[];
+  baseCurrency: string;
+  onOpen: (lodging: Lodging) => void;
+}): JSX.Element {
+  const { t, i18n } = useTranslation(["lodging", "common"]);
+  const accessors = useMemo(
+    () => ({
+      name: (l: Lodging) => l.name,
+      location: (l: Lodging) => l.city || l.country || null,
+      stays: (l: Lodging) => l.stayCount,
+      nights: (l: Lodging) => l.nights,
+      rating: (l: Lodging) => l.overallRating,
+    }),
+    []
+  );
+  const sort = useSort<Lodging, HotelSortKey>({
+    tableKey: "lodging-chain-hotels",
+    rows: lodgings,
+    accessors,
+    defaultBy: "name",
+    descendingFirst: ["stays", "nights", "rating"],
+    locale: i18n.language,
+  });
+  const column = (key: HotelSortKey, label: string): Pick<TableColumn, "label" | "sort"> => ({
+    label,
+    sort: sort.columnSort(key, t("common:ui.sortBy", { column: label })),
+  });
+  const columns: TableColumn[] = [
+    {
+      key: "name",
+      min: 160,
+      grow: 2,
+      onNarrow: "title",
+      ...column("name", t("lodging:list.columns.name")),
+    },
+    {
+      key: "location",
+      min: 120,
+      grow: 1,
+      onNarrow: "subtitle",
+      ...column("location", t("lodging:list.columns.location")),
+    },
+    {
+      key: "stays",
+      min: 70,
+      align: "end",
+      mono: true,
+      priority: 2,
+      ...column("stays", t("lodging:list.columns.stays")),
+    },
+    {
+      key: "nights",
+      min: 70,
+      align: "end",
+      mono: true,
+      priority: 2,
+      ...column("nights", t("lodging:list.columns.nights")),
+    },
+    { key: "rating", min: 100, priority: 3, ...column("rating", t("lodging:list.columns.rating")) },
+    {
+      key: "spend",
+      min: 100,
+      align: "end",
+      onNarrow: "trailing",
+      label: t("lodging:list.columns.spend"),
+    },
+  ];
+  return (
+    <Table
+      columns={columns}
+      label={t("lodging:chainDetail.hotelsTitle", { defaultValue: "Hotels" })}
+    >
+      {sort.rows.map((l) => (
+        <TableRow
+          key={l.id}
+          columns={columns}
+          onClick={() => onOpen(l)}
+          cells={[
+            <>
+              <span aria-hidden className="mr-2">
+                {lodgingTypeIcon(l.type)}
+              </span>
+              <span className="font-medium text-[var(--text-primary)]">{l.name}</span>
+            </>,
+            l.city || l.country ? (
+              <span className="inline-flex items-center gap-1.5 text-[var(--text-muted)]">
+                <span>{l.city || l.country}</span>
+                <FlagImg country={resolveCountryCode(l.country)} height={12} />
+              </span>
+            ) : (
+              "—"
+            ),
+            l.stayCount,
+            l.nights,
+            <StarRating key="r" value={l.overallRating} />,
+            <ChainHotelSpendCell key="s" lodging={l} baseCurrency={baseCurrency} />,
+          ]}
+        />
+      ))}
+    </Table>
   );
 }

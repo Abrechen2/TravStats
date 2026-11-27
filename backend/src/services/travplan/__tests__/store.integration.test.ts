@@ -55,6 +55,9 @@ beforeAll(async () => {
   });
 });
 afterAll(async () => {
+  // Every user this suite made: left behind, they fill the instance up to MAX_USERS
+  // and another suite's registration answers 409 (settings.suggestionSwitches).
+  await prisma.user.deleteMany({ where: { username: { startsWith: "plan-test-" } } });
   await prisma.$disconnect();
 });
 async function create() {

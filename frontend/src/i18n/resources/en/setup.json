@@ -114,7 +114,7 @@
     },
     "modal": {
       "title": "Airport Database is Loading",
-      "description": "We are currently loading the airport database for you. This may take a few minutes. You can already use the application while the import runs in the background.",
+      "description": "Airport data loads in the background. You can start already.",
       "progress": "{{percent}}% complete",
       "airportsCount": "{{processed}} / {{total}} airports",
       "understood": "Got it"
@@ -122,12 +122,12 @@
   },
   "freeServices": {
     "title": "Free services",
-    "description": "One click turns on the services that cost nothing and need neither a key nor an account. Anything that needs a key, cloud AI and connections such as Immich or Strava stay off – you set those later under Admin › External services.",
+    "description": "Turns on all free services that need no key. The rest stays off.",
     "leaves": "In return, the data listed leaves the server and goes to these public services. You can switch each one off again later.",
     "cta": "Turn on free services",
     "on": "Free services will be turned on ✓ (click again to undo)",
     "partialFailed": "The account is created, but not every service could be turned on: {{reason}} You can turn them on under Admin › External services.",
     "continue": "Continue",
-    "alreadyOn": "Even without this switch, rail timetables (Transitous, db-rest) and operator logos from Wikimedia are already on; the geocoder and exchange rates always run. The switch only adds the services listed above."
+    "alreadyOn": "Timetables, logos, geocoder and rates already run. The switch adds only the list above."
   }
 }

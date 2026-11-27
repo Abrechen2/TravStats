@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { expect, vi } from "vitest";
 
-import Modal from "../../components/Modal";
+import Modal from "../../components/ui/Dialog";
 
 /**
  * forgejo#166: an import preview opens while the "add" chooser — a `Modal` —

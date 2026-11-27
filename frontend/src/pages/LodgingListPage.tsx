@@ -20,7 +20,6 @@ import {
 } from "../components/lodging/LodgingRow";
 import { Table, type TableColumn } from "../components/ui/Table";
 import ListHeaderMenu from "../components/table/ListHeaderMenu";
-import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
@@ -59,6 +58,7 @@ import TablePagination from "../components/table/TablePagination";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
 import { LoyaltyFilterNotice, useLoyaltyListFilter } from "../components/Loyalty/LoyaltyListFilter";
+import { reportPageError } from "../store/pageErrorStore";
 
 type TypeFilter = LodgingType | "all";
 type YearFilter = number | "all";
@@ -227,20 +227,16 @@ export default function LodgingListPage(): JSX.Element {
           align: layout.align,
           mono: layout.mono,
           onNarrow: layout.onNarrow,
-          label:
-            sortKey === undefined ? (
-              label
-            ) : (
-              <SortableHeader
-                column={sortKey}
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={handleSort}
-                ariaLabel={t("lodging:list.sortBy", { col: label })}
-              >
-                {label}
-              </SortableHeader>
-            ),
+          label,
+          sort:
+            sortKey === undefined
+              ? undefined
+              : {
+                  active: sortBy === sortKey,
+                  order: sortOrder,
+                  onSort: (): void => handleSort(sortKey),
+                  ariaLabel: t("lodging:list.sortBy", { col: label }),
+                },
         };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- handleSort reads sortBy/sortOrder, which are listed, and a stable store setter
@@ -351,7 +347,7 @@ export default function LodgingListPage(): JSX.Element {
       await reloadAll();
     } catch (err: unknown) {
       logger.error("LodgingListPage: delete failed", err);
-      addToast("error", t("lodging:detail.deleteError"));
+      reportPageError(t("lodging:detail.deleteError"));
     } finally {
       setDeleting(false);
     }
@@ -365,6 +361,10 @@ export default function LodgingListPage(): JSX.Element {
    * visible while no year is selected.
    */
   const availableYears = useMemo(() => (facets?.years ?? []).map((y) => y.year), [facets]);
+  const yearCounts = useMemo(
+    () => new Map((facets?.years ?? []).map((y) => [y.year, y.count])),
+    [facets]
+  );
 
   /**
    * One option per COUNTRY, not per spelling.
@@ -587,7 +587,12 @@ export default function LodgingListPage(): JSX.Element {
                 value: yearFilter === "all" ? "all" : String(yearFilter),
                 onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
                 allLabel: t("lodging:filter.allYears"),
-                options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
+                options: availableYears.map((y) => ({
+                  value: String(y),
+                  label: String(y),
+                  count: yearCounts.get(y),
+                })),
+                formatCount: (n): string => t("common:yearPicker.count.stays", { count: n }),
               }}
               extraActiveCount={extraActiveCount}
               extra={

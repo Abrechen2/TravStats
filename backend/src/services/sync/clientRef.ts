@@ -58,6 +58,7 @@ export type ClientRefKind =
   | "placeVisit"
   | "lodging"
   | "lodgingStay"
+  | "rentalBooking"
   | "flight";
 
 export const CLIENT_REF_RETENTION_DAYS = SYNC_RETENTION_DAYS;

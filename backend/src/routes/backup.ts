@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from "express";
-import { authenticate, requireAdmin, AuthRequest } from "../middleware/auth";
+import { authenticate, requireAdmin, requireBrowserSession, AuthRequest } from "../middleware/auth";
 import { asBackupJobError } from "../services/backup/backupFailure";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
@@ -27,9 +27,18 @@ import {
   importBackupFromCloud,
 } from "../services/backup/cloudBackupImport";
 import { serializeBigInt } from "../utils/serializeBigInt";
-import { backupRestoreLimiter } from "../middleware/rateLimit";
+import { backupRestoreLimiter, recoveryKeyLimiter } from "../middleware/rateLimit";
+import { requirePasswordReauth } from "../services/account/reauthPassword";
+import { verifyReauthAssertion } from "../services/webauthn/reauth";
 import { BACKUP_BASE_DIR } from "../services/backup/backupConfig";
-import { findRunningJob, startJob, type JobKind } from "../services/jobs/jobRegistry";
+import { normalizeRecoveryKey } from "../services/backup/recoveryKey";
+import { invalidRecoveryKey } from "../services/backup/restoreRecoveryKey";
+import {
+  findRunningJob,
+  startExclusiveJob,
+  startJob,
+  type JobKind,
+} from "../services/jobs/jobRegistry";
 
 /** A backup and a restore must never overlap, whichever of the two started first. */
 const BACKUP_JOB_KINDS: readonly JobKind[] = ["backup.create", "backup.restore"];
@@ -69,7 +78,40 @@ const restoreBackupSchema = z.object({
    * told the stored credentials will be unreadable and said yes anyway.
    */
   acceptEncryptionKeyChange: z.boolean().optional().default(false),
+  /**
+   * The recovery key of the instance that wrote the archive, pasted after a
+   * `RESTORE_ENCRYPTION_KEY_MISMATCH`. Checked against the archive inside the
+   * job and installed before the dump replays. A plain bounded string here so
+   * a Zod issue can never carry the value; the format is checked below.
+   */
+  recoveryKey: z.string().max(256).optional(),
+  /**
+   * A restore with `recoveryKey` REPLACES the instance's encryption key, so it
+   * carries the same fresh re-authentication as reading the key does: the
+   * password (+ `code` / `recoveryCode` with two-factor on) or a passkey
+   * assertion. Ignored without `recoveryKey`.
+   */
+  password: z.string().max(1024).optional(),
+  code: z.string().max(32).optional(),
+  recoveryCode: z.string().max(64).optional(),
+  passkeyResponse: z.record(z.string(), z.unknown()).optional(),
 });
+
+/** The recovery-key gate, only for a restore that carries a key: browser session + limiter. */
+function recoveryKeyRestoreGate(req: AuthRequest, res: Response, next: NextFunction): void {
+  const body = req.body as { recoveryKey?: unknown } | undefined;
+  if (body?.recoveryKey === undefined) {
+    next();
+    return;
+  }
+  requireBrowserSession(req, res, (blocked?: unknown) => {
+    if (blocked) {
+      next(blocked);
+      return;
+    }
+    recoveryKeyLimiter(req, res, next);
+  });
+}
 
 // ─── Literal routes (must be defined before parametric /:id routes) ──────────
 
@@ -159,7 +201,9 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     // instance, and the browser gives up after ten seconds — it used to report
     // "failed" over a backup that went on to complete. The row is written, so
     // the work runs as a job and the answer is its handle (202).
-    const job = startJob("backup.create", req.userId!, () =>
+    // Checked and registered in one step: a restore that started while the row was
+    // being written (the awaits above) would otherwise run alongside this backup.
+    const job = startExclusiveJob("backup.create", BACKUP_JOB_KINDS, req.userId!, () =>
       createBackup({
         type: body.type,
         retentionDays: body.retentionDays,
@@ -176,6 +220,12 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
         }
       )
     );
+
+    if (!job) {
+      // The row this request wrote describes a backup that will never run.
+      await prisma.backup.delete({ where: { id: precomputedId } });
+      throw new AppError("A backup operation is already running", 409);
+    }
 
     res.status(202).json({
       success: true,
@@ -342,10 +392,26 @@ router.get("/:id/download", async (req: AuthRequest, res: Response, next: NextFu
 router.post(
   "/:id/restore",
   backupRestoreLimiter,
+  recoveryKeyRestoreGate,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
       const body = restoreBackupSchema.parse(req.body);
+      if (body.recoveryKey !== undefined) {
+        if (normalizeRecoveryKey(body.recoveryKey) === null) throw invalidRecoveryKey();
+        // Replacing the encryption key is as sensitive as reading it.
+        if (body.passkeyResponse) {
+          await verifyReauthAssertion(req.userId!, body.passkeyResponse);
+        } else if (body.password) {
+          await requirePasswordReauth(req.userId!, body);
+        } else {
+          throw new AppError(
+            "Confirm with your password or a passkey",
+            400,
+            "RECOVERY_KEY_REAUTH_REQUIRED"
+          );
+        }
+      }
 
       // Check if there's already a running backup or restore
       const allBackups = await listBackups();
@@ -381,18 +447,24 @@ router.post(
       // refusals (RESTORE_ARCHIVE_*, RESTORE_ENCRYPTION_KEY_MISMATCH) arrive
       // as the job's error code, before anything was written, exactly as they
       // did as a response.
-      const job = startJob("backup.restore", req.userId!, async () => {
+      // The check above answers early; this is the one that holds — checked
+      // and registered in one step, after the awaits a second request could
+      // have slipped through.
+      const job = startExclusiveJob("backup.restore", BACKUP_JOB_KINDS, req.userId!, async () => {
         try {
           await restoreBackup(id, {
             scope: body.scope,
             createBackupBefore: body.createBackupBefore,
             acceptEncryptionKeyChange: body.acceptEncryptionKeyChange,
+            recoveryKey: body.recoveryKey,
+            requestedBy: req.userId,
           });
         } catch (err) {
           throw asBackupJobError(err, "RESTORE_FAILED");
         }
         return { backupId: id, scope: body.scope };
       });
+      if (!job) throw new AppError("A backup operation is already running", 409);
 
       res.status(202).json({ success: true, data: { jobId: job.id } });
     } catch (error) {

@@ -60,7 +60,7 @@ export interface LedgerRow {
   changeSetId: string;
   entityType: string;
   entityId: string;
-  operation: "update" | "delete";
+  operation: "update" | "delete" | "create";
   field: string | null;
   oldValue: string | null;
   newValue: string | null;
@@ -646,4 +646,50 @@ export async function captureWrite<T>(
     return captureInScope(p, scope, run);
   }
   return captureStandalone(p, run);
+}
+
+/**
+ * A create made through travstats-mcp is the one create the ledger records: "via MCP / <token
+ * label>" would otherwise show only on later edits. Ordinary creates stay unrecorded (an entry's
+ * own `createdAt` is its birth); this is a row per MCP create, no field rows.
+ */
+export function isMcpCreate(model: string | undefined, operation: string): boolean {
+  return (
+    enabled &&
+    operation === "create" &&
+    isTrackedModel(model) &&
+    resolveChangeContext()?.reason?.startsWith("via MCP") === true
+  );
+}
+
+export async function captureMcpCreate<T>(
+  model: string,
+  run: () => Promise<T>,
+  inTransaction = false
+): Promise<T> {
+  const result = await run();
+  const ctx = resolveChangeContext();
+  if (!ctx || !base || !isTrackedModel(model) || !result || typeof result !== "object")
+    return result;
+  try {
+    const meta = modelMeta(model);
+    const row = result as Row;
+    const userId = ownerOf(meta, row) ?? ctx.actorUserId;
+    if (!userId || row.id === undefined) return result;
+    const ledgerRow: LedgerRow = {
+      ...common(ctx, model, userId, row, meta),
+      changeSetId: randomUUID(),
+      operation: "create",
+      field: null,
+      oldValue: null,
+      newValue: null,
+      omitted: false,
+    };
+    const scope = inTransaction ? txScope.getStore() : undefined;
+    if (scope) scope.pending.push(ledgerRow);
+    else await insertRows(base, [ledgerRow]);
+  } catch (error) {
+    logLedgerError("change_ledger_create_failed", model, "create", error);
+  }
+  return result;
 }

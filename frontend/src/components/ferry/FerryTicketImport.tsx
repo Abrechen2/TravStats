@@ -4,6 +4,7 @@ import Button from "../ui/Button";
 import { useTranslation } from "../../hooks/useTranslation";
 import { api } from "../../lib/api/client";
 import { ferryApi } from "../../lib/api/ferry";
+import InlineError from "../ui/InlineError";
 
 export type FerryTicketProposal = Record<string, { value: string; evidence: string }>;
 export interface FerryTicketPreview {
@@ -111,11 +112,7 @@ export function FerryTicketImport({
           {t(busy ? "ferry:import.reading" : "ferry:import.read")}
         </Button>
         {documentId && <p className="t-caption">{t("ferry:import.retained")}</p>}
-        {error && (
-          <p role="alert" className="text-sm text-(--danger)">
-            {t("ferry:import.error")}
-          </p>
-        )}
+        {error && <InlineError>{t("ferry:import.error")}</InlineError>}
         {preview && (
           <>
             {preview.provider && (

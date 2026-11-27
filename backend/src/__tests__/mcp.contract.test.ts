@@ -1,6 +1,9 @@
 import "../services/openapi/paths";
 import { buildOpenApiDocument } from "../services/openapi/registry";
-import { TOOLS } from "../../../packages/travstats-mcp/src/core/tools";
+import { TOOLS as READ_TOOLS } from "../../../packages/travstats-mcp/src/core/tools";
+import { WRITE_TOOLS } from "../../../packages/travstats-mcp/src/core/writeTools";
+
+const TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 /**
  * travstats-mcp wraps the REST API, so a route or a field that disappears from the generated
@@ -51,8 +54,19 @@ function paramNames(op: Json): string[] {
 }
 
 describe("travstats-mcp tools stay inside the REST contract", () => {
-  it("declares nine read tools with unique names", () => {
-    expect(TOOLS.map((t) => t.name).sort()).toEqual([
+  it("declares nine read and nine write tools with unique names", () => {
+    expect(WRITE_TOOLS.map((t) => t.name).sort()).toEqual([
+      "add_entry_from_draft",
+      "add_flight",
+      "add_place_visit",
+      "parse_boarding_pass",
+      "parse_booking",
+      "parse_flight_text",
+      "reroute_trip_legs",
+      "resolve_inbox_item",
+      "upload_document",
+    ]);
+    expect(READ_TOOLS.map((t) => t.name).sort()).toEqual([
       "get_readiness",
       "get_routing_run",
       "get_stats",
@@ -81,8 +95,25 @@ describe("travstats-mcp tools stay inside the REST contract", () => {
           expect(missing).toEqual([]);
         });
 
+        it("takes every request body property the tool sends", () => {
+          const schema = op?.requestBody?.content?.["application/json"]?.schema;
+          if (!w.body?.length) return;
+          expect(schema).toBeDefined();
+          const missing = w.body.filter((f) => !hasField(schema, f));
+          expect(missing).toEqual([]);
+        });
+
+        it("is a write operation only where the tool says it writes", () => {
+          if (w.method === "POST") expect(tool.write).toBe(true);
+        });
+
         it("answers with every field the tool reads", () => {
-          const schema = op?.responses?.["200"]?.content?.["application/json"]?.schema;
+          const ok = ["200", "201", "202"].find(
+            (c) => op?.responses?.[c]?.content?.["application/json"]
+          );
+          const schema = ok
+            ? op?.responses?.[ok]?.content?.["application/json"]?.schema
+            : undefined;
           if (!w.fields?.length) return; // the spec has no response schema for this route
           expect(schema).toBeDefined();
           const missing = w.fields.filter((f) => !hasField(schema, f));
@@ -91,6 +122,12 @@ describe("travstats-mcp tools stay inside the REST contract", () => {
       });
     }
   }
+
+  it("fails on drift: a body property that is not in the spec is reported missing", () => {
+    const schema = spec.paths["/flights"].post.requestBody.content["application/json"].schema;
+    expect(hasField(schema, "documentIds")).toBe(true);
+    expect(hasField(schema, "noSuchProperty")).toBe(false);
+  });
 
   it("fails on drift: a field that is not in the spec is reported missing", () => {
     const schema = spec.paths["/search"].get.responses["200"].content["application/json"].schema;

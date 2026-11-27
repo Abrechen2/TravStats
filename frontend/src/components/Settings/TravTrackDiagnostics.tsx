@@ -1,11 +1,12 @@
+import DateField from "../../components/ui/DateField";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import Button from "../ui/Button";
-import { Field, Input, Select } from "../ui/Field";
+import { Field, Select } from "../ui/Field";
 import { alpha, token } from "../ui/tokens";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useBlockConfirm } from "./useBlockConfirm";
-import { formatTime } from "../../lib/displayFormat";
+import { formatTime } from "../../lib/format";
 import { downloadBlob } from "../../lib/export";
 import { logger } from "../../lib/logger";
 import { trackErrorKey } from "../../lib/api/travtrack";
@@ -14,6 +15,7 @@ import {
   type DiagnosticsDay,
   type DiagnosticsGap,
 } from "../../lib/api/travtrackDiagnostics";
+import InlineError from "../ui/InlineError";
 
 const NS = "track:settings.diagnostics";
 const HOUR = 3_600_000;
@@ -193,9 +195,8 @@ export default function TravTrackDiagnostics({
     >
       <div className="flex flex-wrap items-end" style={{ gap: "var(--ts-space-sm)" }}>
         <Field label={t(`${NS}.day`)} htmlFor="travtrack-diag-day">
-          <Input
+          <DateField
             id="travtrack-diag-day"
-            type="date"
             value={date}
             max={today}
             onChange={(e) => {
@@ -233,11 +234,7 @@ export default function TravTrackDiagnostics({
         )}
       </div>
 
-      {error && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
-          {error}
-        </p>
-      )}
+      {error && <InlineError>{error}</InlineError>}
 
       {day && !day.hasLog && (
         <p className="t-body" role="status" data-testid="travtrack-diag-nolog">

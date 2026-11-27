@@ -14,6 +14,7 @@ import {
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useToastStore } from "../../store/toastStore";
+import { reportPageError } from "../../store/pageErrorStore";
 
 /**
  * "Complete from OpenStreetMap" (2026-09-24; out of beta 2026-10-26, after an
@@ -57,9 +58,9 @@ export function useLodgingEnrich(
     if (isUpstreamReason(reason)) {
       // Overpass could not be asked. Saying "OpenStreetMap does not know
       // this house" here — as it used to — was a claim nobody had checked.
-      addToast("error", t(`openData:lodging.upstream.${reason}`));
+      reportPageError(t(`openData:lodging.upstream.${reason}`));
     } else if (reason === "matchChanged") {
-      addToast("error", t("openData:lodging.matchChanged"));
+      reportPageError(t("openData:lodging.matchChanged"));
     } else {
       addToast(
         "info",
@@ -75,12 +76,11 @@ export function useLodgingEnrich(
   const sayFailure = (err: unknown, what: string): void => {
     logger.warn(what, err);
     if (isOpenDataDisabled(err)) {
-      addToast("error", t("openData:lodging.disabled"));
+      reportPageError(t("openData:lodging.disabled"));
       return;
     }
     const upstream = openDataUpstreamFailure(err);
-    addToast(
-      "error",
+    reportPageError(
       t(
         upstream === null
           ? "openData:lodging.failed"

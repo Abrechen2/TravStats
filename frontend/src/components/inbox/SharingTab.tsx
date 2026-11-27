@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { sharingApi } from "../../lib/api/sharing";
+import { sharingRemoteApi } from "../../lib/api/sharingRemote";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import type { ShareConsent, ShareNotice } from "../../types/sharing";
@@ -10,6 +11,8 @@ import { sharingErrorKey, staleUndoFields } from "../sharing/sharingCopy";
 import { GlobeLoader } from "../GlobeLoader";
 import { Button, Card, EmptyState } from "../ui";
 import ShareNoticeCard from "./ShareNoticeCard";
+import ReceivedRemoteOffers from "../sharing/ReceivedRemoteOffers";
+import { reportPageError } from "../../store/pageErrorStore";
 
 const NS = "sharing:inbox";
 
@@ -32,6 +35,31 @@ export default function SharingTab({
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+  // Trips offered from other servers wait here too (2026-11-24): the badge counted them while
+  // the inbox did not show them, and a received trip went unnoticed.
+  const [remoteOn, setRemoteOn] = useState(false);
+  const [localCount, setLocalCount] = useState(0);
+  const [offerCount, setOfferCount] = useState(0);
+
+  const loaded = requests !== null;
+  useEffect(() => {
+    if (loaded) onCount?.(localCount + offerCount);
+  }, [onCount, loaded, localCount, offerCount]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const status = await sharingRemoteApi.status();
+        if (!cancelled) setRemoteOn(status.available);
+      } catch (error) {
+        logger.warn("Failed to read whether trips can come from other servers:", error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -43,12 +71,12 @@ export default function SharingTab({
       setRequests(pending);
       setNotices(list);
       setLoadFailed(false);
-      onCount?.(pending.length + list.filter((n) => n.readAt === null).length);
+      setLocalCount(pending.length + list.filter((n) => n.readAt === null).length);
     } catch (error) {
       logger.error("Failed to load sharing inbox:", error);
       setLoadFailed(true);
     }
-  }, [onCount]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -67,7 +95,7 @@ export default function SharingTab({
       await load();
     } catch (error) {
       logger.error("Failed to answer consent:", error);
-      addToast("error", t(sharingErrorKey(error, `${NS}.errors.answerFailed`)));
+      reportPageError(t(sharingErrorKey(error, `${NS}.errors.answerFailed`)));
       await load();
     } finally {
       setBusy(null);
@@ -81,7 +109,7 @@ export default function SharingTab({
       await load();
     } catch (error) {
       logger.error("Failed to mark notice read:", error);
-      addToast("error", t(sharingErrorKey(error, `${NS}.errors.markReadFailed`)));
+      reportPageError(t(sharingErrorKey(error, `${NS}.errors.markReadFailed`)));
     } finally {
       setBusy(null);
     }
@@ -113,7 +141,7 @@ export default function SharingTab({
               )
             );
       setRowErrors((prev) => ({ ...prev, [notice.id]: message }));
-      addToast("error", message);
+      reportPageError(message);
     } finally {
       setBusy(null);
     }
@@ -140,12 +168,13 @@ export default function SharingTab({
           ? t("sharing:errors.conflictStaleFields", { fields: fields.join(", ") })
           : t(sharingErrorKey(error, `${NS}.errors.resolveFailed`));
       setRowErrors((prev) => ({ ...prev, [notice.id]: message }));
-      addToast("error", message);
+      reportPageError(message);
     } finally {
       setBusy(null);
     }
   };
 
+  const offers = remoteOn ? <ReceivedRemoteOffers onCount={setOfferCount} /> : null;
   if (loadFailed) {
     return (
       <EmptyState
@@ -165,17 +194,23 @@ export default function SharingTab({
   }
   if (requests.length === 0 && notices.length === 0) {
     return (
-      <EmptyState
-        kind="nothing"
-        title={t(`${NS}.empty.title`)}
-        description={t(`${NS}.empty.description`)}
-      />
+      <>
+        {offers}
+        {offerCount === 0 && (
+          <EmptyState
+            kind="nothing"
+            title={t(`${NS}.empty.title`)}
+            description={t(`${NS}.empty.description`)}
+          />
+        )}
+      </>
     );
   }
 
   return (
     <div className="space-y-6">
       <p className="t-caption">{t(`${NS}.description`)}</p>
+      {offers}
       {requests.length > 0 && (
         <section aria-label={t(`${NS}.requests.title`)} className="space-y-3">
           <h2 className="t-label-mono">{t(`${NS}.requests.title`)}</h2>

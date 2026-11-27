@@ -1,3 +1,4 @@
+import Chip from "../ui/Chip";
 import { useState } from "react";
 import type { Flight } from "../../types";
 import { QuickActions } from "./QuickActions";
@@ -5,7 +6,7 @@ import { InlineStats } from "./InlineStats";
 import { useFlightSelectionStore } from "../../store/flightSelectionStore";
 import SpecialTypeBadge from "../specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "../specialFlights/specialTypeMeta";
-import { formatDate } from "../../lib/displayFormat";
+import { formatDate } from "../../lib/format";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -86,36 +87,24 @@ export function FlightEntry({
                 {flight.arrIata ?? flight.arrIcao ?? "?"}
               </span>
               {flight.status === "scheduled" && (
-                <span
-                  className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider"
-                  style={{ background: "rgba(100,200,220,0.2)", color: "rgb(100,200,220)" }}
-                >
+                <Chip uppercase size="sm" tone="info">
                   {t("flights:status.scheduled")}
-                </span>
+                </Chip>
               )}
               {flight.status === "cancelled" && (
-                <span
-                  className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider"
-                  style={{ background: "rgba(239,68,68,0.2)", color: "rgb(239,68,68)" }}
-                >
+                <Chip uppercase size="sm" tone="bad">
                   {t("flights:status.cancelled")}
-                </span>
+                </Chip>
               )}
               {flight.status === "historical" && (
-                <span
-                  className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider"
-                  style={{ background: "rgba(150,150,150,0.2)", color: "rgb(160,160,160)" }}
-                >
+                <Chip uppercase size="sm">
                   {t("flights:status.historical")}
-                </span>
+                </Chip>
               )}
               {flight.status === "duplicated" && (
-                <span
-                  className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider"
-                  style={{ background: "rgba(251,191,36,0.2)", color: "rgb(251,191,36)" }}
-                >
+                <Chip uppercase size="sm" tone="warn">
                   {t("flights:status.duplicated")}
-                </span>
+                </Chip>
               )}
               {flight.specialType && <SpecialTypeBadge type={flight.specialType as SpecialType} />}
             </div>

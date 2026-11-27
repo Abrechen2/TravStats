@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Modal from "../Modal";
+import Dialog from "../ui/Dialog";
 import OverflowMenu from "../ui/OverflowMenu";
 import PhotoAlbumPicker from "./PhotoAlbumPicker";
 import type { JSX } from "react";
@@ -14,8 +14,14 @@ import {
   type PhotoChoice,
   type PhotoChoices,
 } from "../../lib/api/photoChoices";
+import { formatMetres } from "../../lib/format";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
+import { EnlargeCorner } from "./photoViewer/EnlargeButton";
+import { usePhotoViewer } from "./photoViewer/usePhotoViewer";
+import { largeUrl, sourceOf } from "./photoViewer/viewerPhoto";
+import InlineError from "../ui/InlineError";
+import { reportPageError } from "../../store/pageErrorStore";
 
 interface Props {
   target: ChoiceTarget;
@@ -40,11 +46,6 @@ export function formatTaken(local: string | null, locale: string): string {
     timeStyle: "short",
     timeZone: "UTC",
   }).format(new Date(Date.UTC(y, mo - 1, d, h, mi)));
-}
-
-function formatDistance(metres: number | null): string {
-  if (metres === null) return "";
-  return metres < 1000 ? `${metres} m` : `${(metres / 1000).toFixed(1)} km`;
 }
 
 /**
@@ -86,6 +87,7 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
   const coarse = useCoarsePointer();
   const addToast = useToastStore((s) => s.addToast);
   const [data, setData] = useState<PhotoChoices | null>(null);
+  const viewer = usePhotoViewer();
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
   // Keys the user touched: an automatic link only becomes their own pick when they
   // tick it again, so opening and saving the panel changes nothing.
@@ -158,12 +160,12 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
         })
       );
       if (result.skipped > 0)
-        addToast("error", t("common:photoChoose.skipped", { count: result.skipped }));
+        reportPageError(t("common:photoChoose.skipped", { count: result.skipped }));
       onSaved();
       await load();
     } catch (err: unknown) {
       logger.error("PhotoChoosePanel: save failed", err);
-      addToast("error", t("common:photoChoose.saveFailed"));
+      reportPageError(t("common:photoChoose.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -216,7 +218,7 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
   );
 
   return (
-    <Modal
+    <Dialog
       open
       onClose={onClose}
       title={t("common:photoChoose.title")}
@@ -227,11 +229,7 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
       footer={footer}
     >
       <div className="flex w-full flex-col gap-3">
-        {failed && (
-          <p role="alert" className="t-caption" style={{ color: "var(--color-danger)" }}>
-            {t("common:photoChoose.loadFailed")}
-          </p>
-        )}
+        {failed && <InlineError>{t("common:photoChoose.loadFailed")}</InlineError>}
         {pickingAlbum && target.type === "entry" ? (
           <PhotoAlbumPicker
             target={target}
@@ -329,57 +327,72 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
                 ) : data.choices.length === 0 ? (
                   <p className="t-caption">{t("common:photoChoose.none")}</p>
                 ) : (
-                  <ul
-                    className="grid w-full gap-3"
-                    style={{ gridTemplateColumns: "repeat(auto-fill, minmax(112px, 1fr))" }}
-                  >
-                    {data.choices.map((c) => {
-                      const on = ticked.has(keyOf(c));
-                      return (
-                        <li key={keyOf(c)} className="flex flex-col gap-1">
-                          <button
-                            type="button"
-                            aria-pressed={on}
-                            aria-label={t("common:photoChoose.tile", {
-                              state: on
-                                ? t("common:photoChoose.chosen")
-                                : t("common:photoChoose.notChosen"),
-                              time: formatTaken(c.takenAtLocal, i18n.language),
-                            })}
-                            onClick={() => toggle(c)}
-                            style={{
-                              padding: 0,
-                              minWidth: minSize,
-                              minHeight: minSize,
-                              borderRadius: 6,
-                              overflow: "hidden",
-                              border: on
-                                ? "3px solid var(--accent)"
-                                : "1px solid var(--color-border)",
-                              opacity: on ? 1 : 0.8,
-                            }}
-                          >
-                            <img
-                              src={c.url}
-                              alt=""
-                              loading="lazy"
-                              style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover" }}
+                  <>
+                    {viewer.viewer}
+                    <ul
+                      className="grid w-full gap-3"
+                      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(112px, 1fr))" }}
+                    >
+                      {data.choices.map((c) => {
+                        const on = ticked.has(keyOf(c));
+                        return (
+                          <li key={keyOf(c)} className="relative flex flex-col gap-1">
+                            <button
+                              type="button"
+                              aria-pressed={on}
+                              aria-label={t("common:photoChoose.tile", {
+                                state: on
+                                  ? t("common:photoChoose.chosen")
+                                  : t("common:photoChoose.notChosen"),
+                                time: formatTaken(c.takenAtLocal, i18n.language),
+                              })}
+                              onClick={() => toggle(c)}
+                              style={{
+                                padding: 0,
+                                minWidth: minSize,
+                                minHeight: minSize,
+                                borderRadius: 6,
+                                overflow: "hidden",
+                                border: on
+                                  ? "3px solid var(--accent)"
+                                  : "1px solid var(--color-border)",
+                                opacity: on ? 1 : 0.8,
+                              }}
+                            >
+                              <img
+                                src={c.url}
+                                alt=""
+                                loading="lazy"
+                                style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover" }}
+                              />
+                            </button>
+                            <EnlargeCorner
+                              onOpen={() =>
+                                viewer.open(
+                                  data.choices.map((x) => ({
+                                    id: keyOf(x),
+                                    url: largeUrl(x.url),
+                                    source: sourceOf(x.provider),
+                                  })),
+                                  data.choices.indexOf(c)
+                                )
+                              }
                             />
-                          </button>
-                          <span
-                            className="text-[10px] leading-4"
-                            style={{ color: "var(--text-muted)" }}
-                          >
-                            {formatTaken(c.takenAtLocal, i18n.language)}
-                            {c.distanceM !== null && ` · ${formatDistance(c.distanceM)}`}
-                            {c.chosen &&
-                              ` · ${t(c.provenance === "auto" ? "common:photoChoose.auto" : "common:photoChoose.own")}`}
-                            {c.refused && ` · ${t("common:photoChoose.removedBefore")}`}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                            <span
+                              className="text-[10px] leading-4"
+                              style={{ color: "var(--text-muted)" }}
+                            >
+                              {formatTaken(c.takenAtLocal, i18n.language)}
+                              {c.distanceM !== null && ` · ${formatMetres(c.distanceM)}`}
+                              {c.chosen &&
+                                ` · ${t(c.provenance === "auto" ? "common:photoChoose.auto" : "common:photoChoose.own")}`}
+                              {c.refused && ` · ${t("common:photoChoose.removedBefore")}`}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
                 )}
                 {sourceDown && <p className="t-caption">{t("common:entryPhotos.sourceDown")}</p>}
                 {truncated && (
@@ -390,7 +403,7 @@ export function PhotoChoosePanel({ target, onSaved, onClose }: Props): JSX.Eleme
           </>
         )}
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

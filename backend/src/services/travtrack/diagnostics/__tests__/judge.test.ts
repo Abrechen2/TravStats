@@ -49,9 +49,9 @@ describe("judgeEvent", () => {
     }
   );
 
-  it("refuses an instant without a zone, older than 14 days or in the future", () => {
+  it("refuses an instant without a zone, older than 7 days or in the future", () => {
     expect(judgeEvent({ t: "2026-10-29T11:00:00", kind: "fixes" }, NOW)).toBe("time");
-    expect(judgeEvent({ t: "2026-10-14T11:00:00Z", kind: "fixes" }, NOW)).toBe("time");
+    expect(judgeEvent({ t: "2026-10-21T11:00:00Z", kind: "fixes" }, NOW)).toBe("time");
     expect(judgeEvent({ t: "2026-10-29T12:30:00Z", kind: "fixes" }, NOW)).toBe("time");
   });
 

@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import CoverImage from "./CoverImage";
 import AutoCoverNote from "./AutoCoverNote";
 import CoverCropHost from "./CoverCropHost";
@@ -8,7 +9,7 @@ import { Link } from "react-router-dom";
 import BackLink from "../navigation/BackLink";
 import type { useTranslation } from "../../hooks/useTranslation";
 import type { Trip } from "../../types";
-import { formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/format";
 import { tripEnd, tripStart } from "../../lib/entityTimes";
 import type { TripPlaceVisit } from "../../hooks/useTripPlaceVisits";
 import { buildTimelineEvents } from "../../lib/tripTimelineEvents";
@@ -146,7 +147,8 @@ export default function TripHead({
                   }}
                   data-testid="trip-head-inconsistencies"
                 >
-                  ⚠︎ {t("trips:detail.plausibility.count", { count: inconsistencies })}
+                  <Icon name="triangle-alert" size={14} className="mr-1 inline" />{" "}
+                  {t("trips:detail.plausibility.count", { count: inconsistencies })}
                 </Link>
               )}
               {placeCount > 0 && (
