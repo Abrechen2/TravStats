@@ -8,6 +8,7 @@
  * written only when the file has it; otherwise the column keeps its default.
  */
 import { ensureOwnCategoriesByName, mergeRatings, ratingColumns } from "../../lodging/stayRatings";
+import { loadUncodedPorts, uncodedPort, type UncodedPortRow } from "../../ports/uncodedPort";
 import { isBuiltInCategory } from "../../../shared/ratingCategories";
 import { prisma } from "../../../db";
 import type { Prisma } from "../../../prisma";
@@ -72,6 +73,8 @@ export const IMPORT_SOURCE = "import";
 export interface ResolvedContext {
   /** unlocode → port id */
   ports: Map<string, number>;
+  /** Catalogue ports without a UN/LOCODE, found by name, country and place (sharing UAT 2). */
+  uncodedPorts?: UncodedPortRow[];
   /** IMO → ship id */
   ships: Map<string, number>;
   /** rail station source id → station id */
@@ -117,11 +120,13 @@ export async function resolveContext(userId: string, file: TripFile): Promise<Re
         .filter((s): s is string => !!s)
     ),
   ];
-  const [ports, ships, stations, airports] = await Promise.all([
+  const uncodedNames = portRefs.flatMap((p) => (p && !p.unlocode ? [p.name] : []));
+  const [ports, uncodedPorts, ships, stations, airports] = await Promise.all([
     prisma.port.findMany({
       where: { unlocode: { in: unlocodes } },
       select: { id: true, unlocode: true },
     }),
+    loadUncodedPorts(prisma, uncodedNames),
     prisma.ship.findMany({ where: { imo: { in: imos } }, select: { id: true, imo: true } }),
     prisma.railStation.findMany({
       where: { sourceId: { in: sourceIds } },
@@ -214,6 +219,7 @@ export async function resolveContext(userId: string, file: TripFile): Promise<Re
   return {
     ownRatingKeys,
     ports: new Map(ports.flatMap((p) => (p.unlocode ? [[p.unlocode, p.id] as const] : []))),
+    uncodedPorts,
     ships: new Map(ships.flatMap((s) => (s.imo ? [[s.imo, s.id] as const] : []))),
     stations: new Map(stations.flatMap((s) => (s.sourceId ? [[s.sourceId, s.id] as const] : []))),
     airports: new Map(airports.flatMap((a) => (a.iata ? [[a.iata, a.id] as const] : []))),
@@ -400,7 +406,11 @@ export function stayRow(
 }
 
 const portId = (ctx: ResolvedContext, port: TripFilePortRef | null): number | null =>
-  port?.unlocode ? (ctx.ports.get(port.unlocode) ?? null) : null;
+  !port
+    ? null
+    : port.unlocode
+      ? (ctx.ports.get(port.unlocode) ?? null)
+      : uncodedPort(ctx.uncodedPorts ?? [], port);
 
 export function cruiseRow(
   userId: string,

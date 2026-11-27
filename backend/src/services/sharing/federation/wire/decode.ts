@@ -16,7 +16,7 @@
  *   `DERIVE[entity]` (run by `copyInto`) decides it on this server's clock.
  */
 import type { DbTransaction } from "../../../../db";
-import { haversineKm } from "../../../../shared/geo/haversine";
+import { uncodedPort } from "../../../ports/uncodedPort";
 import type { SharedRow } from "../../adapters";
 import type { EntryRef } from "../../adapters/stop";
 import { SHARE_TYPES, type ShareEntity } from "../../shareTypes";
@@ -145,29 +145,6 @@ async function resolver(c: DbTransaction, entries: readonly WireEntry[]): Promis
     airport: (ref) => get(icaoIds, ref?.icao) ?? get(iataIds, ref?.iata),
     chain: (name) => get(chainIds, name),
   };
-}
-
-/**
- * How far apart the same catalogue port may sit on two servers. The catalogue is seeded from one
- * file, so the rows agree to the digit; the tolerance only absorbs rounding, and two different
- * ports of one name (there are several "Victoria") are hundreds of kilometres apart.
- */
-const PORT_POSITION_MATCH_KM = 1;
-
-/** A catalogue port without a UN/LOCODE: the ONE port of that name, country and place — else none. */
-function uncodedPort(
-  rows: readonly { id: number; name: string; country: string | null; lat: number; lon: number }[],
-  ref: PortRef
-): number | null {
-  const hits = rows.filter(
-    (r) =>
-      r.name === ref.name &&
-      r.country === ref.country &&
-      haversineKm({ lat: r.lat, lon: r.lon }, { lat: ref.lat, lon: ref.lon }) <=
-        PORT_POSITION_MATCH_KM
-  );
-  // Two candidates are a guess between them: left unresolved, the name is kept.
-  return hits.length === 1 ? hits[0].id : null;
 }
 
 function without(f: Facts, keys: readonly string[]): Facts {

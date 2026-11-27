@@ -2,12 +2,14 @@
  * The version-6 half of the reader (UAT 2026-11-27, `formatExtras.ts`): what an import used to
  * drop is written onto the entries this import created — a flight's gate, terminal and flown
  * distance, a ferry's line, a cruise's legs and drawn lines. An entry the account already held
- * (skipped or attached) keeps its own values. Ports are matched by UN/LOCODE, as the cruise's port
- * calls are; a leg between ports this catalogue lacks is left out rather than guessed.
+ * (skipped or attached) keeps its own values. Ports are matched as the cruise's port calls are (by
+ * UN/LOCODE, else by name, country and place); a leg between ports this catalogue lacks is left out
+ * rather than guessed.
  */
 import type { DbTransaction } from "../../../db";
+import { loadUncodedPorts, uncodedPort } from "../../ports/uncodedPort";
 import type { Prisma } from "../../../prisma";
-import type { TripFile } from "./format";
+import type { TripFile, TripFilePortRef } from "./format";
 import type { StopSourceDomain } from "./formatExtras";
 import type { TripFileProposal } from "./types";
 
@@ -64,26 +66,27 @@ export async function applyExtras(tx: DbTransaction, file: TripFile, created: Cr
       },
     });
   }
-  const codes = [
-    ...new Set(
-      file.cruises.flatMap((c) =>
-        [...(c.legs ?? []), ...(c.legRoutes ?? [])].flatMap((l) =>
-          [l.from.unlocode, l.to.unlocode].filter((u): u is string => !!u)
-        )
-      )
-    ),
-  ];
-  if (codes.length === 0) return;
-  const ports = new Map(
-    (
-      await tx.port.findMany({
-        where: { unlocode: { in: codes } },
-        select: { id: true, unlocode: true },
-      })
-    ).map((p) => [p.unlocode as string, p.id])
+  const refs = file.cruises.flatMap((c) =>
+    [...(c.legs ?? []), ...(c.legRoutes ?? [])].flatMap((l) => [l.from, l.to])
   );
-  const portOf = (p: { unlocode: string | null }) =>
-    p.unlocode ? (ports.get(p.unlocode) ?? null) : null;
+  if (refs.length === 0) return;
+  const codes = [...new Set(refs.flatMap((p) => (p.unlocode ? [p.unlocode] : [])))];
+  const [coded, uncoded] = await Promise.all([
+    codes.length === 0
+      ? []
+      : tx.port.findMany({
+          where: { unlocode: { in: codes } },
+          select: { id: true, unlocode: true },
+        }),
+    loadUncodedPorts(
+      tx,
+      refs.flatMap((p) => (p.unlocode ? [] : [p.name]))
+    ),
+  ]);
+  const ports = new Map(coded.map((p) => [p.unlocode as string, p.id]));
+  // A port without a UN/LOCODE is found by name, country and place, as the stops are (UAT 2).
+  const portOf = (p: TripFilePortRef) =>
+    p.unlocode ? (ports.get(p.unlocode) ?? null) : uncodedPort(uncoded, p);
   for (const c of file.cruises) {
     const cruiseId = created("cruise", c.key);
     if (!cruiseId) continue;
