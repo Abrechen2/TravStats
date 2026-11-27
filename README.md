@@ -49,7 +49,7 @@ all with documents, costs and photos. Entries can be marked private or business
 (built-in or your own purposes) and filtered by it. Import from boarding passes
 (QR / PDF417 / OCR), e-mails (`.eml`, `.msg`), PDFs, spreadsheets, a mailbox
 folder or a forwarding address — always as a proposal you confirm.
-Statistics, 270+ achievements, a passport page, a year review and 2D/3D maps.
+Statistics, 360+ achievements, a passport page, a year review and 2D/3D maps.
 
 **TravTrack** *(opt-in location history)* — record from the Companion, OwnTracks
 or Overland, or import GPX / KML / GeoJSON / TCX, a Google Timeline export or a
@@ -99,11 +99,11 @@ stays the record. See the
   </tr>
   <tr>
     <td width="50%"><img src="docs/images/stats.png" alt="Cross-domain statistics: lifetime totals, countries, active days and a stacked activity-per-year chart" /></td>
-    <td width="50%"><img src="docs/images/achievements.png" alt="Achievements gallery with 143 unlockables across flights, cruises and cross-domain" /></td>
+    <td width="50%"><img src="docs/images/achievements.png" alt="Achievements gallery with 360+ unlockables across flights, cruises and cross-domain" /></td>
   </tr>
   <tr>
     <td align="center"><sub>Cross-domain stats with year and all-time views</sub></td>
-    <td align="center"><sub>270+ achievements, bronze to diamond</sub></td>
+    <td align="center"><sub>360+ achievements, bronze to diamond</sub></td>
   </tr>
 </table>
 
