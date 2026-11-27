@@ -19,7 +19,7 @@ Re-PATCH after editing (never print the PAT or the JWT):
     body = open("docs/release/dockerhub-description.md").read().split("-->\n", 1)[1].strip()
     req = urllib.request.Request(
         "https://hub.docker.com/v2/repositories/abrechen2/travstats/",
-        data=json.dumps({"full_description": body, "description": "Self-hosted travel logbook: flights, cruises, stays, rail, bus, ferries and places. No cloud, no telemetry."}).encode(),
+        data=json.dumps({"full_description": body, "description": "Self-hosted travel logbook: flights, cruises, stays, rail, bus, ferries. No cloud, no telemetry."}).encode(),
         headers={"Authorization": "JWT " + sys.argv[1], "Content-Type": "application/json"},
         method="PATCH")
     print(urllib.request.urlopen(req).status)
