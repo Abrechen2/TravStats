@@ -348,7 +348,7 @@ export async function pendingForList(userId: string, listId: string) {
     status: PENDING,
     provider: "travtrack",
     placeId: { not: null },
-    evidence: matchFilter(listId) as Prisma.JsonFilter,
+    ...matchFilter(listId),
   };
   const [rows, total] = await Promise.all([
     prisma.dawarichStay.findMany({
