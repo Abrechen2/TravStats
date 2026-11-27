@@ -42,6 +42,7 @@ import { tripFederationAvailability } from "./availability";
 import { recordConflict } from "./conflicts";
 import { LOCAL_ERROR, kindOf } from "./peerCheck";
 import { isHeld } from "./peerMember";
+import { SENT_WHILE_PAUSED, isSharePaused } from "./sharePause";
 import { peerSupports } from "./peerFeatures";
 import { PeerRefusal } from "../../federation/refusal";
 import { NotReady, StreamRejected, sendOnStream, type Received } from "./streams";
@@ -84,7 +85,7 @@ export const backoffAfter = (attempts: number): number =>
   BACKOFF_MS[Math.min(Math.max(attempts, 1), BACKOFF_MS.length) - 1];
 
 const OUTBOX_INCLUDE = {
-  group: { select: { federatedRef: true } },
+  group: { select: { federatedRef: true, homeOrigin: true } },
   member: { include: { remote: true } },
 } as const;
 type Row = Prisma.TripShareOutboxGetPayload<{ include: typeof OUTBOX_INCLUDE }>;
@@ -101,6 +102,10 @@ const streamMembers = (groupId: string, peerOrigin: string) => ({
   groupId,
   remote: { origin: peerOrigin },
 });
+
+/** "Reisen teilen" off for the person: the row waits, in order, and is not dropped. */
+const pausedRow = (row: Row): boolean =>
+  !SENT_WHILE_PAUSED.has(row.kind) && isSharePaused(row.member.remote);
 
 async function stillReceives(row: Row): Promise<boolean> {
   // The end of a membership is told after it ended (F-S4e): no consent or state is left to ask.
@@ -119,7 +124,13 @@ async function stillReceives(row: Row): Promise<boolean> {
 /** Right before it leaves: the row is still there, not parked, not held, and still permitted. */
 async function stillSendable(id: string): Promise<boolean> {
   const fresh = await prisma.tripShareOutbox.findUnique({ where: { id }, include: OUTBOX_INCLUDE });
-  return !!fresh && !fresh.parkedAt && !isHeld(fresh.member) && (await stillReceives(fresh));
+  return (
+    !!fresh &&
+    !fresh.parkedAt &&
+    !isHeld(fresh.member) &&
+    !pausedRow(fresh) &&
+    (await stillReceives(fresh))
+  );
 }
 
 /**
@@ -295,7 +306,7 @@ async function deliverStream(
     if (!row || row.nextAttemptAt > now) return;
     // Held here (a restore, a blocked server, a re-pinned key — O9): the stream waits for its
     // person's confirmation, without an attempt; nothing is sent while it is held.
-    if (isHeld(row.member)) return;
+    if (isHeld(row.member) || pausedRow(row)) return;
     if (!row.group.federatedRef || !(await stillReceives(row))) {
       await prisma.tripShareOutbox.delete({ where: { id: row.id } });
       run.dropped++;

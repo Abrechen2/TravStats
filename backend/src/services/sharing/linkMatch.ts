@@ -11,6 +11,8 @@ import { sameFlight, type FlightIdentity } from "./ownFlightMatch";
  * on the other. Identity, by type:
  *
  * - flight: flight number + route + local departure day (`sameFlight`, as the copy path joins);
+ *   a flight with no number on either side (a sightseeing or charter round) by route + the same
+ *   departure instant (`sameNumberlessFlight`);
  * - stay: the same house (`isSameHouse`, name AND place) and the same check-in and check-out day;
  * - rail, bus: departure and arrival station names + local departure day;
  * - ferry: local departure day + both ports by name, or both within `FERRY_PORT_KM`;
@@ -23,8 +25,9 @@ import { sameFlight, type FlightIdentity } from "./ownFlightMatch";
  * Nothing here reads the database.
  */
 
-export type LinkDecision = "mine" | "theirs" | "both";
-export const LINK_DECISIONS: readonly LinkDecision[] = ["mine", "theirs", "both"];
+/** `best`: the better value wins each difference, a tie keeps both (`linkResolve.ts`). */
+export type LinkDecision = "mine" | "theirs" | "both" | "best";
+export const LINK_DECISIONS: readonly LinkDecision[] = ["mine", "theirs", "both", "best"];
 
 export interface LinkRow {
   entity: ShareEntity;
@@ -143,6 +146,27 @@ function sameCruise(a: FactRecord, b: FactRecord): boolean {
   return ship && sameDay(first(a), first(b));
 }
 
+/**
+ * Two flights neither of which has a number (helicopter rounds, charters, gliders: 11 on the
+ * owner's account) are the same flight on the same route at the same instant. A day is not
+ * enough here: two rounds from one airfield on one day are common, and nothing else tells them
+ * apart.
+ */
+function sameNumberlessFlight(a: FactRecord, b: FactRecord): boolean {
+  const f = a as unknown as FlightIdentity;
+  const g = b as unknown as FlightIdentity;
+  if (f.flightNumber?.trim() || g.flightNumber?.trim()) return false;
+  const code = (iata: string | null, icao: string | null) =>
+    (iata ?? icao)?.trim().toUpperCase() || null;
+  const dep = code(f.depIata, f.depIcao);
+  const arr = code(f.arrIata, f.arrIcao);
+  if (!dep || !arr || dep !== code(g.depIata, g.depIcao) || arr !== code(g.arrIata, g.arrIcao))
+    return false;
+  const t = asDate(a.departureTime);
+  const u = asDate(b.departureTime);
+  return t !== null && u !== null && t.getTime() === u.getTime();
+}
+
 /** A stop without a date (a place on the timeline) matches on domain and title alone. */
 function sameStop(a: FactRecord, b: FactRecord): boolean {
   return (
@@ -153,7 +177,9 @@ function sameStop(a: FactRecord, b: FactRecord): boolean {
 }
 
 const SAME: Record<ShareEntity, (a: FactRecord, b: FactRecord) => boolean> = {
-  flight: (a, b) => sameFlight(a as unknown as FlightIdentity, b as unknown as FlightIdentity),
+  flight: (a, b) =>
+    sameFlight(a as unknown as FlightIdentity, b as unknown as FlightIdentity) ||
+    sameNumberlessFlight(a, b),
   lodgingStay: sameStay,
   cruise: sameCruise,
   rail: stationRoute,

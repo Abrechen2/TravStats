@@ -206,7 +206,7 @@ export default function DashboardPage(): JSX.Element {
       countsLoaded={countsLoaded}
       onDataChanged={() => setRefreshToken((n) => n + 1)}
     >
-      <ReceivedTripsBanner />
+      <ReceivedTripsBanner overMap />
       <FerryRouteEditHost onSaved={() => setRefreshToken((n) => n + 1)} />
       <BusRouteEditHost onSaved={() => setRefreshToken((n) => n + 1)} />
       {tab === "all" && <AllTab key={refreshToken} />}

@@ -4,8 +4,10 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import type {
+  FieldChoice,
   LinkCandidate,
   LinkCandidates,
+  LinkChoices,
   LinkDecision,
   LinkEntryView,
   LinkPreview,
@@ -13,11 +15,13 @@ import type {
   LinkResult,
 } from "../../types/sharingLink";
 import { Button } from "../ui";
-import { shareFieldLabel } from "./noticeValues";
 import InlineError from "../ui/InlineError";
+import { defaultFieldChoice, formatLinkValue, linkFieldLabel } from "./linkValues";
+import { dateLocaleForLanguage } from "../../lib/units";
 
 const NS = "sharing:link";
 const DECISIONS: readonly LinkDecision[] = ["both", "mine", "theirs"];
+const FIELD_CHOICES: readonly FieldChoice[] = ["mine", "theirs", "both"];
 
 /** The sentence and, for a refusal across servers, the server it names. */
 export interface LinkFailure {
@@ -30,7 +34,7 @@ interface Props {
   otherName: string;
   loadCandidates: () => Promise<LinkCandidates>;
   preview: (tripId: string) => Promise<LinkPreviewAnswer>;
-  link: (tripId: string, decision: LinkDecision) => Promise<LinkResult>;
+  link: (tripId: string, decision: LinkDecision, choices: LinkChoices) => Promise<LinkResult>;
   failure: (err: unknown, fallbackKey: string) => LinkFailure;
   onLinked: (result: LinkResult, tripId: string) => void;
 }
@@ -46,13 +50,16 @@ const dayOf = (iso: string | null): string => (iso ? iso.slice(0, 10) : "—");
  */
 export default function LinkExistingPanel(props: Props): JSX.Element {
   const { otherName, loadCandidates, preview, link, failure, onLinked } = props;
-  const { t } = useTranslation(["sharing"]);
+  const { t, i18n } = useTranslation(["sharing"]);
+  const locale = dateLocaleForLanguage(i18n?.language);
   const [candidates, setCandidates] = useState<LinkCandidate[] | null>(null);
   // The other side has not accepted sharing yet: nothing of theirs is shown (forgejo#440 review).
   const [awaiting, setAwaiting] = useState(false);
   const [tripId, setTripId] = useState("");
   const [dryRun, setDryRun] = useState<LinkPreview | null>(null);
   const [decision, setDecision] = useState<LinkDecision>("both");
+  // Per pair and field: what the person picked over the trip-level default (M2).
+  const [choices, setChoices] = useState<LinkChoices>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<LinkFailure | null>(null);
 
@@ -100,10 +107,18 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
     run(async () => {
       const answer = await preview(tripId);
       if (answer.access === "awaitingConsent") setAwaiting(true);
-      else setDryRun(answer);
+      else {
+        setDryRun(answer);
+        setChoices({});
+      }
     }, `${NS}.errors.previewFailed`);
   const confirm = () =>
-    run(async () => onLinked(await link(tripId, decision), tripId), `${NS}.errors.linkFailed`);
+    run(
+      async () => onLinked(await link(tripId, decision, choices), tripId),
+      `${NS}.errors.linkFailed`
+    );
+  const choose = (ref: string, field: string, choice: FieldChoice) =>
+    setChoices((prev) => ({ ...prev, [ref]: { ...prev[ref], [field]: choice } }));
 
   const typeName = (e: string) => t(`${NS}.types.${e}`);
   const entries = (title: string, list: LinkEntryView[]) =>
@@ -181,21 +196,85 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
               ))}
             </ul>
           )}
-          {dryRun.matched.some((m) => m.conflicts.length > 0) && (
-            <div>
+          {dryRun.matched.some((m) => m.conflicts.length > 0 || m.recomputed.length > 0) && (
+            <div data-testid="link-conflicts">
               <p className="t-caption">{t(`${NS}.conflictsTitle`)}</p>
-              <ul className="text-sm">
-                {dryRun.matched
-                  .filter((m) => m.conflicts.length > 0)
-                  .flatMap((m, i) =>
-                    m.conflicts.map((c) => (
-                      <li key={`${i}-${c.field}`}>
-                        {m.label} · {shareFieldLabel(c.field, t)}:{" "}
-                        {t(`${NS}.conflict`, { here: c.here, there: c.there, name: otherName })}
-                      </li>
-                    ))
-                  )}
-              </ul>
+              {dryRun.matched
+                .filter((m) => m.conflicts.length > 0 || m.recomputed.length > 0)
+                .map((m) => (
+                  <div
+                    key={m.ref}
+                    className="text-sm"
+                    style={{ marginBottom: "var(--ts-space-xs)" }}
+                  >
+                    <p className="font-medium">
+                      {typeName(m.entity)}: {m.label}
+                    </p>
+                    {m.conflicts.length > 0 && (
+                      <table className="text-sm w-full">
+                        <thead>
+                          <tr>
+                            <th className="text-left font-normal t-caption">
+                              {t(`${NS}.table.field`)}
+                            </th>
+                            <th className="text-left font-normal t-caption">
+                              {t(`${NS}.table.mine`)}
+                            </th>
+                            <th className="text-left font-normal t-caption">
+                              {t(`${NS}.table.theirs`, { name: otherName })}
+                            </th>
+                            <th className="text-left font-normal t-caption">
+                              {t(`${NS}.table.take`)}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {m.conflicts.map((c) => {
+                            const picked =
+                              choices[m.ref]?.[c.field] ?? defaultFieldChoice(decision, c);
+                            const label = linkFieldLabel(c.field, t);
+                            return (
+                              <tr key={c.field} data-testid={`link-field-${m.ref}-${c.field}`}>
+                                <td>{label}</td>
+                                <td>
+                                  {formatLinkValue(c.display.here, locale, t)}
+                                  {c.better === "here" && ` · ${t(`${NS}.better`)}`}
+                                </td>
+                                <td>
+                                  {formatLinkValue(c.display.there, locale, t)}
+                                  {c.better === "there" && ` · ${t(`${NS}.better`)}`}
+                                </td>
+                                <td>
+                                  <select
+                                    aria-label={t(`${NS}.table.takeFor`, { field: label })}
+                                    value={picked}
+                                    disabled={busy}
+                                    onChange={(e) =>
+                                      choose(m.ref, c.field, e.target.value as FieldChoice)
+                                    }
+                                  >
+                                    {FIELD_CHOICES.map((choice) => (
+                                      <option key={choice} value={choice}>
+                                        {t(`${NS}.fieldChoice.${choice}`, { name: otherName })}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                    {m.recomputed.length > 0 && (
+                      <p className="t-caption">
+                        {t(`${NS}.recomputed`, {
+                          fields: m.recomputed.map((f) => linkFieldLabel(f, t)).join(", "),
+                        })}
+                      </p>
+                    )}
+                  </div>
+                ))}
             </div>
           )}
           {entries(t(`${NS}.onlyHereTitle`), dryRun.onlyHere)}
@@ -203,6 +282,7 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
           <p className="t-caption">{t(`${NS}.nothingCreated`)}</p>
           <fieldset className="flex flex-col text-sm" style={{ gap: "var(--ts-space-xs)" }}>
             <legend className="t-caption">{t(`${NS}.decisionTitle`)}</legend>
+            <p className="t-caption">{t(`${NS}.decisionRule`)}</p>
             {DECISIONS.map((d) => (
               <label key={d} className="flex items-center gap-2">
                 <input

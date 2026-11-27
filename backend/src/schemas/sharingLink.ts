@@ -7,14 +7,30 @@ import { SHARE_ENTITIES } from "../services/sharing/shareTypes";
 import { z } from "./zod";
 
 const id = z.string().min(1).max(100);
-const decision = z.enum(["mine", "theirs", "both"]);
+/** `best`: the bulk link's — the better value wins each difference, a tie keeps both. */
+const decision = z.enum(["mine", "theirs", "both", "best"]);
+const fieldChoice = z.enum(["mine", "theirs", "both"]);
+
+/** Per pair (`<entity>:<entry id>` from the dry run), per group: the person's own choice. */
+const MAX_CHOICE_PAIRS = 2000;
+const MAX_CHOICE_GROUPS = 80;
+const choices = z
+  .record(z.string().min(1).max(160), z.record(z.string().min(1).max(80), fieldChoice))
+  .refine((r) => Object.keys(r).length <= MAX_CHOICE_PAIRS, "Too many pairs")
+  .refine(
+    (r) => Object.values(r).every((g) => Object.keys(g).length <= MAX_CHOICE_GROUPS),
+    "Too many fields"
+  )
+  .optional();
 
 export const linkCandidatesQuerySchema = z.object({ userId: id }).strict();
 export const linkPreviewBodySchema = z.object({ userId: id, targetTripId: id }).strict();
-export const linkBodySchema = z.object({ userId: id, targetTripId: id, decision }).strict();
+export const linkBodySchema = z
+  .object({ userId: id, targetTripId: id, decision, choices })
+  .strict();
 
 export const offerLinkPreviewBodySchema = z.object({ tripId: id }).strict();
-export const offerLinkBodySchema = z.object({ tripId: id, decision }).strict();
+export const offerLinkBodySchema = z.object({ tripId: id, decision, choices }).strict();
 
 const day = z.string().nullable();
 const tripView = z.strictObject({ id: z.string(), name: z.string(), startDay: day, endDay: day });
@@ -32,6 +48,31 @@ export const linkCandidatesSchema = z.union([
   awaitingConsent,
 ]);
 
+/** A differing value: a display value (times in the place's zone, ADR 0002) or a line. */
+const linkValue = z.union([
+  z.object({
+    kind: z.literal("line"),
+    quality: z.enum(["drawn", "routed", "straight", "none"]),
+    points: z.number().int(),
+    lines: z.number().int().optional(),
+  }),
+  z
+    .object({
+      kind: z.enum([
+        "time",
+        "day",
+        "wallClock",
+        "text",
+        "number",
+        "boolean",
+        "list",
+        "empty",
+        "other",
+      ]),
+    })
+    .passthrough(),
+]);
+
 const linkPreviewFull = z.strictObject({
   access: z.literal("full"),
   here: tripView,
@@ -41,7 +82,9 @@ const linkPreviewFull = z.strictObject({
     onlyHere: z.number().int(),
     onlyThere: z.number().int(),
     conflicting: z.number().int(),
+    needsReview: z.number().int(),
   }),
+  automatic: z.boolean(),
   byType: z.array(
     z.strictObject({
       entity,
@@ -53,10 +96,20 @@ const linkPreviewFull = z.strictObject({
   ),
   matched: z.array(
     entry.extend({
+      ref: z.string(),
       linked: z.boolean(),
       conflicts: z.array(
-        z.strictObject({ field: z.string(), here: z.string(), there: z.string() })
+        z.strictObject({
+          field: z.string(),
+          here: z.string(),
+          there: z.string(),
+          display: z.strictObject({ here: linkValue, there: linkValue }),
+          better: z.enum(["here", "there"]).nullable(),
+          real: z.boolean(),
+        })
       ),
+      recomputed: z.array(z.string()),
+      automatic: z.boolean(),
     })
   ),
   onlyHere: z.array(entry),
@@ -75,3 +128,50 @@ export const linkResultSchema = z.strictObject({
   onlyThere: z.number().int(),
   settleFailed: z.boolean(),
 });
+
+/** The bulk link (UAT 2026-11-27): the pairs, and the trips to offer across servers. */
+export const bulkLocalQuerySchema = z.object({ userId: id }).strict();
+export const bulkOfferQuerySchema = z.object({ remoteId: z.string().uuid() }).strict();
+export const bulkOfferBodySchema = z
+  .object({ tripId: z.string().uuid(), remoteId: z.string().uuid() })
+  .strict();
+
+const bulkPair = z.strictObject({
+  id: z.string(),
+  trip: tripView.nullable(),
+  other: tripView,
+  reason: z.enum(["period", "name", "overlap"]).nullable(),
+  linked: z.boolean(),
+  ambiguous: z.boolean(),
+  from: z.strictObject({ displayName: z.string(), origin: z.string() }).optional(),
+});
+
+export const bulkPairsSchema = z.union([
+  z.strictObject({ access: z.literal("full"), pairs: z.array(bulkPair) }),
+  awaitingConsent,
+]);
+
+export const bulkOfferCandidatesSchema = z.array(tripView.extend({ offered: z.boolean() }));
+
+/** Local link proposals (Codex P1, 2026-11-27): A proposes, B decides in B's own inbox. */
+export const proposeBodySchema = z.object({ userId: id }).strict();
+export const proposalIdSchema = z.string().uuid();
+export const proposalPreviewBodySchema = z.object({ tripId: id }).strict();
+export const proposalLinkBodySchema = z.object({ tripId: id, decision, choices }).strict();
+export const proposableQuerySchema = z.object({ userId: id }).strict();
+
+const proposalStatus = z.enum(["pending", "linked", "declined"]);
+const person = z.strictObject({ id: z.string(), displayName: z.string() });
+export const sentProposalSchema = z.strictObject({
+  id: z.string(),
+  tripId: z.string(),
+  recipient: person,
+  status: proposalStatus,
+});
+export const sentProposalsSchema = z.array(sentProposalSchema);
+export const receivedProposalsSchema = z.array(
+  z.strictObject({ id: z.string(), from: person, trip: tripView, createdAt: z.string() })
+);
+export const proposableTripsSchema = z.array(
+  tripView.extend({ status: proposalStatus.nullable() })
+);

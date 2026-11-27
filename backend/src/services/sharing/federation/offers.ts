@@ -12,7 +12,8 @@ import { prisma } from "../../../db";
 import { acceptedParties } from "../members";
 import type { OfferAnswer, TripShareAck } from "../../../schemas/tripSharePeer";
 import { requireTripFederation } from "./access";
-import { mayOfferTo } from "./connections/switches";
+import { mayOfferTo, mineOf } from "./connections/switches";
+import { updateConnectionSwitches } from "./connections/actions";
 import { kickDelivery } from "./deliveryKick";
 import { queueEntries } from "./entries";
 import { queueRoster } from "./roster";
@@ -88,7 +89,13 @@ export async function offerTrip(
   const local = await requireTripFederation(userId);
   const trip = await ownTripFor(prisma, userId, tripId);
   await requireHome(prisma, userId, trip.shareGroupId);
-  const remote = await consentingPairing(userId, remoteId);
+  let remote = await consentingPairing(userId, remoteId);
+  // Offering a trip IS sharing trips with that person: the offerer's own "Reisen teilen" goes on
+  // (announced like any switch), or the link would be paused from the start (`sharePause.ts`).
+  if (!remote.shareTripOffers) {
+    await updateConnectionSwitches(userId, remote.id, { ...mineOf(remote), tripOffers: true });
+    remote = await consentingPairing(userId, remoteId);
+  }
   if (trip.shareGroupId) {
     const member = await prisma.tripShareRemoteMember.findUnique({
       where: { groupId_remoteId: { groupId: trip.shareGroupId, remoteId } },

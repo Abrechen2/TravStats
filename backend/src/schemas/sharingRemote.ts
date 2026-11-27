@@ -160,7 +160,7 @@ export const remoteMemberSchema = z.strictObject({
   stateSince: instant,
   delivery: z
     .strictObject({
-      state: z.enum(["delivered", "pending", "retrying", "unreachable", "rejected"]),
+      state: z.enum(["delivered", "pending", "retrying", "unreachable", "rejected", "paused"]),
       stateSince: instant
         .nullable()
         .describe("`retrying`/`unreachable`: failing since; `rejected`: when it was refused"),

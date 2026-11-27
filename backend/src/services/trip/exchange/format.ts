@@ -26,21 +26,23 @@ import { LINK_PROVENANCES, LINK_ROLES } from "../../documents/documentLinks";
 import { RAIL_TRANSIT_MODES } from "../../../shared/railCounting";
 import { MAX_DOCUMENT_LINKS } from "./documentLinkLimits";
 import { lat, lon, portRef, requiredZone, shipRef, zone, type PortRef } from "./publicHalf";
+import * as X from "./formatExtras";
 
 export const TRIP_FILE_FORMAT = "travstats-trip";
 /**
  * What this build READS: 1 (no `bus`, no `ferry`), 2 (no `ferry`), 3 (no
- * `roadtrips`), 4 (one owner per document) and 5 (a document may carry several
- * `links`).
+ * `roadtrips`), 4 (one owner per document), 5 (a document may carry several
+ * `links`) and 6 (lines, gate/terminal, wrapping stops: `formatExtras.ts`).
  */
-export const TRIP_FILE_SUPPORTED_VERSIONS = [1, 2, 3, 4, 5] as const;
+export const TRIP_FILE_SUPPORTED_VERSIONS = [1, 2, 3, 4, 5, 6] as const;
 
 export function tripFileVersionFor(file: {
   bus?: readonly unknown[];
   ferry?: readonly unknown[];
   roadtrips?: readonly unknown[];
   documents?: readonly { links?: readonly unknown[] }[];
-}): 1 | 2 | 3 | 4 | 5 {
+}): 1 | 2 | 3 | 4 | 5 | 6 {
+  if (X.carriesExtras(file as Parameters<typeof X.carriesExtras>[0])) return 6;
   // Only a document that carries `links` (several, or one with a rental category) needs version 5; every
   // other archive stays readable by the older servers that import it.
   if (file.documents?.some((d) => (d.links?.length ?? 0) > 0)) return 5;
@@ -50,21 +52,7 @@ export function tripFileVersionFor(file: {
 }
 export const TRIP_FILE_EXTENSION = ".travstats";
 
-/** Hard limits on what a reader unpacks — a few KB of ZIP must not become gigabytes. */
-export const TRIP_FILE_LIMITS = {
-  /** The upload itself. */
-  maxUploadBytes: 100 * 1024 * 1024,
-  /** Everything unpacked together, as actually inflated (not as declared). */
-  maxTotalBytes: 300 * 1024 * 1024,
-  maxEntries: 2000,
-  maxManifestBytes: 64 * 1024,
-  maxTripJsonBytes: 10 * 1024 * 1024,
-  maxDocumentBytes: 25 * 1024 * 1024,
-  maxPhotoBytes: 15 * 1024 * 1024,
-} as const;
-
-/** The only names a file entry may carry inside `documents/` and `photos/`. */
-export const ENTRY_FILE_NAME = /^[A-Za-z0-9_-]{1,64}\.[a-z0-9]{1,8}$/;
+export { ENTRY_FILE_NAME, TRIP_FILE_LIMITS } from "./formatLimits";
 
 const str = (max: number) => z.string().max(max);
 const optStr = (max: number) => str(max).nullable();
@@ -97,7 +85,14 @@ export const manifestHeadSchema = z.object({
 
 export const manifestSchema = manifestHeadSchema
   .extend({
-    formatVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+    formatVersion: z.union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+      z.literal(5),
+      z.literal(6),
+    ]),
     appVersion: str(200),
     exportedAt: z.iso.datetime({ offset: true }),
     options: exportOptionsSchema,
@@ -183,6 +178,7 @@ const flightSchema = z
     arrPrecision: optStr(200),
     status: str(200),
     specialType: optStr(200),
+    ...X.FLIGHT_EXTRAS,
     private: flightPrivate.optional(),
   })
   .strict();
@@ -301,6 +297,7 @@ const cruiseSchema = z
     endZone: zone,
     status: str(200),
     stops: z.array(cruiseStopSchema).max(200),
+    ...X.CRUISE_EXTRAS,
     private: cruisePrivate.optional(),
   })
   .strict();
@@ -434,6 +431,7 @@ const ferrySchema = z
     distanceKm: z.number().min(0).max(50_000).nullable(),
     distanceSource: optStr(200),
     status: str(200),
+    ...X.FERRY_EXTRAS,
     private: ferryPrivate.optional(),
   })
   .strict();
@@ -546,6 +544,7 @@ const stopSchema = z
     overnight: z.boolean(),
     placeKey: key.nullable(),
     stayKey: key.nullable(),
+    ...X.STOP_EXTRAS,
     private: z
       .object({ notes: optStr(10_000) })
       .strict()

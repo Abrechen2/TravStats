@@ -1,7 +1,17 @@
 import type { DbTransaction } from "../../db";
 import { ADAPTERS } from "./adapters";
 import { shareableIdsOnTrip } from "./keyOps";
-import { labelOf, whenOf, type LinkPlan, type LinkRow } from "./linkMatch";
+import type { FactRecord } from "./factValues";
+import { labelOf, whenOf, type LinkPair, type LinkPlan, type LinkRow } from "./linkMatch";
+import {
+  groupConflicts,
+  lineView,
+  pairIsAutomatic,
+  type FactGroup,
+  type LineView,
+} from "./linkResolve";
+import { pairRef } from "./linkSettle";
+import { display, type DisplayValue } from "./noticeChanges";
 import { SHARE_ENTITIES, type ShareEntity } from "./shareTypes";
 
 /**
@@ -31,15 +41,32 @@ export interface LinkEntryView {
   when: string | null;
 }
 
+/** A differing value as the dry run shows it: a display value, or a line by its quality. */
+export type LinkValue = DisplayValue | ({ kind: "line" } & LineView);
+
 export interface LinkConflictView {
+  /** The group: a fact's name, or the name of the facts decided together (`geometry`, `checkIn`). */
   field: string;
+  /** The group's first fact as one short line — the shape installed clients read; unchanged. */
   here: string;
   there: string;
+  /** Additive (UAT 2026-11-27): the same values formatted for display, a line by its quality. */
+  display: { here: LinkValue; there: LinkValue };
+  /** The side whose value is better (filled, drawn, more precise); null when equal. */
+  better: "here" | "there" | null;
+  /** Both hold a value of the same quality: the person decides, the rule cannot. */
+  real: boolean;
 }
 
 export interface LinkMatchView extends LinkEntryView {
+  /** How the link names this pair in `choices`. */
+  ref: string;
   linked: boolean;
   conflicts: LinkConflictView[];
+  /** Differing facts the server computes again (distance, CO₂) or the transfer cannot carry. */
+  recomputed: string[];
+  /** No difference needs the person. */
+  automatic: boolean;
 }
 
 export interface LinkTypeCount {
@@ -54,7 +81,16 @@ export interface LinkTypeCount {
 export interface LinkPreview {
   here: LinkTripView;
   there: LinkTripView;
-  counts: { matched: number; onlyHere: number; onlyThere: number; conflicting: number };
+  counts: {
+    matched: number;
+    onlyHere: number;
+    onlyThere: number;
+    conflicting: number;
+    /** Pairs with a difference only the person can settle. */
+    needsReview: number;
+  };
+  /** The trip can be linked by the quality rule alone (the bulk link takes it). */
+  automatic: boolean;
   byType: LinkTypeCount[];
   matched: LinkMatchView[];
   onlyHere: LinkEntryView[];
@@ -63,11 +99,90 @@ export interface LinkPreview {
 
 const VALUE_CHARS = 80;
 
-/** A fact value as one short line for the dry run. */
+/** A fact value as one short line — the dry run's original string form, kept for old clients. */
 export function shortValue(v: unknown): string {
   if (v === null || v === undefined) return "—";
   const text = v instanceof Date ? v.toISOString() : typeof v === "string" ? v : JSON.stringify(v);
   return text.length > VALUE_CHARS ? `${text.slice(0, VALUE_CHARS - 1)}…` : text;
+}
+
+/** A house as one line: its name and place. */
+function houseText(v: unknown): DisplayValue {
+  const h = (v ?? {}) as { name?: unknown; city?: unknown };
+  const parts = [h.name, h.city].filter((p): p is string => typeof p === "string" && p !== "");
+  return parts.length > 0 ? { kind: "text", value: parts.join(", ") } : { kind: "empty" };
+}
+
+const TIME_ZONE_OF: Record<string, string> = {
+  departureTime: "depTimezone",
+  arrivalTime: "arrTimezone",
+  pickupTime: "pickupTimezone",
+  returnTime: "returnTimezone",
+  actualPickupTime: "pickupTimezone",
+  actualReturnTime: "returnTimezone",
+  checkInAt: "stayZone",
+  checkOutAt: "stayZone",
+  checkInDate: "stayZone",
+  checkOutDate: "stayZone",
+  startUtc: "stopZone",
+  endUtc: "stopZone",
+};
+
+/** The zone a time fact is read in: the row's own, else the zone fact beside it. */
+function zonesFor(facts: FactRecord, rowZones: Record<string, string | null>) {
+  const out: Record<string, string | null> = { ...rowZones };
+  for (const [field, zoneField] of Object.entries(TIME_ZONE_OF)) {
+    const z = facts[zoneField];
+    if (out[field] == null && typeof z === "string" && z !== "") out[field] = z;
+  }
+  return out;
+}
+
+/** One side of a differing group, formatted in the place's zone (ADR 0002). */
+function groupValue(
+  group: FactGroup,
+  facts: FactRecord,
+  zones: Record<string, string | null>
+): LinkValue {
+  if (group.kind === "line") return { kind: "line", ...lineView(group, facts) };
+  const z = zonesFor(facts, zones);
+  if (group.id === "checkIn" || group.id === "checkOut") {
+    const [at, date] = group.fields;
+    const field = facts[at as string] ? (at as string) : (date as string);
+    return display(field, facts[field], z, facts);
+  }
+  const field = group.fields[0] as string;
+  if (field === "lodging") return houseText(facts.lodging);
+  return display(field, facts[field], z, facts);
+}
+
+function matchView(p: LinkPair): LinkMatchView {
+  const { groups, recomputed, uncarried } = groupConflicts(
+    p.entity,
+    p.conflicts,
+    p.here.facts,
+    p.there.facts
+  );
+  // A row decoded from the wire carries no zones; the same entry is at the same place.
+  const zones = { ...p.there.zones, ...p.here.zones };
+  return {
+    ...entryView({ entity: p.entity, row: p.here }),
+    ref: pairRef(p),
+    linked: p.linked,
+    conflicts: groups.map((g) => ({
+      field: g.group.id,
+      here: shortValue(p.here.facts[g.group.fields[0] as string]),
+      there: shortValue(p.there.facts[g.group.fields[0] as string]),
+      display: {
+        here: groupValue(g.group, p.here.facts, zones),
+        there: groupValue(g.group, p.there.facts, zones),
+      },
+      better: g.better,
+      real: g.real,
+    })),
+    recomputed: [...recomputed, ...uncarried],
+    automatic: pairIsAutomatic(p.entity, p.conflicts, p.here.facts, p.there.facts),
+  };
 }
 
 const dayOf = (d: Date | null): string | null => (d ? d.toISOString().slice(0, 10) : null);
@@ -96,15 +211,8 @@ export function describePlan(
 ): LinkPreview {
   const count = (rows: readonly LinkRow[], e: ShareEntity) =>
     rows.filter((r) => r.entity === e && !r.row.excluded).length;
-  const matched = plan.pairs.map((p) => ({
-    ...entryView({ entity: p.entity, row: p.here }),
-    linked: p.linked,
-    conflicts: p.conflicts.map((field) => ({
-      field,
-      here: shortValue(p.here.facts[field]),
-      there: shortValue(p.there.facts[field]),
-    })),
-  }));
+  const matched = plan.pairs.map(matchView);
+  const needsReview = matched.filter((m) => !m.automatic).length;
   return {
     here,
     there,
@@ -112,8 +220,11 @@ export function describePlan(
       matched: plan.pairs.length,
       onlyHere: plan.onlyHere.length,
       onlyThere: plan.onlyThere.length,
-      conflicting: plan.pairs.filter((p) => p.conflicts.length > 0).length,
+      conflicting: matched.filter((m) => m.conflicts.length > 0).length,
+      needsReview,
     },
+    // Nothing matched is nothing to link by rule: the person looks at it.
+    automatic: matched.length > 0 && needsReview === 0,
     byType: SHARE_ENTITIES.map((entity) => {
       const pairs = plan.pairs.filter((p) => p.entity === entity);
       return {
@@ -121,7 +232,8 @@ export function describePlan(
         here: count(hereRows, entity),
         there: count(thereRows, entity),
         matched: pairs.length,
-        differing: pairs.filter((p) => p.conflicts.length > 0).length,
+        differing: matched.filter((m) => m.ref.startsWith(`${entity}:`) && m.conflicts.length > 0)
+          .length,
       };
     }).filter((t) => t.here > 0 || t.there > 0),
     matched,

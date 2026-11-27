@@ -1,14 +1,12 @@
 import { randomUUID } from "crypto";
 
 import { prisma, type DbTransaction } from "../../db";
+import type { Trip } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
-import { mayOfferTripTo } from "../friends/authz";
 import { restatusTrips } from "../trip/restatusTrips";
 import { ADAPTERS } from "./adapters";
 import { consentRequired } from "./consent";
-import { DERIVE } from "./deriveCopy";
 import { recordEntryAuthor } from "./federation/entryAuthors";
-import { requireHome } from "./federation/offerBuild";
 import { queueRoster } from "./federation/roster";
 import { findByUserKey } from "./keyOps";
 import { planLink, type LinkDecision, type LinkPair, type LinkPlan } from "./linkMatch";
@@ -20,8 +18,8 @@ import {
   type LinkCandidate,
   type LinkPreview,
 } from "./linkPreview";
+import { settlePair, type LinkChoices } from "./linkSettle";
 import { missingGroupConsent } from "./members";
-import { propagateWrite, shareSnapshot } from "./propagate";
 import { SHARE_TYPES, emptyCounts } from "./shareTypes";
 
 /**
@@ -35,8 +33,10 @@ import { SHARE_TYPES, emptyCounts } from "./shareTypes";
  * The dry run (`previewLink`) writes nothing; the link (`linkTrip`) applies the caller's decision
  * on the facts the pairs disagree in: `mine` (the caller's values reach the other copy, with an
  * undoable notice there), `theirs` (the other side's values are written onto the caller's entry and
- * spread to any further member) or `both` (each keeps their own). A repeat links only what is not
- * linked yet; leaving the group (`leaveGroup`, `detach.ts`) undoes it.
+ * spread to any further member), `both` (each keeps their own) or `best` (the bulk link's: the
+ * better value wins). No decision lets a worse value overwrite a better one, and the dry run's
+ * per-field choices override it (`linkResolve.ts`, UAT 2026-11-27). A repeat links only what is
+ * not linked yet; leaving the group (`leaveGroup`, `detach.ts`) undoes it.
  */
 
 const LINK_TX_TIMEOUT_MS = 60_000;
@@ -63,16 +63,35 @@ export interface LinkResult {
 }
 
 /**
- * Nothing of the other account is read before they agreed to sharing (`mayOfferTripTo`, the rule
- * a share asks): no candidate, no count, no comparison. Any number derived from their trips —
- * even "a copy may exist" — would let the caller probe their itinerary by editing their own trip.
- * Until then the dry-run endpoints answer `{ access: "awaitingConsent" }` and nothing else.
+ * Before the other account agreed: `{ access: "awaitingConsent" }` and nothing else (kept for the
+ * shape of the answer; across servers it still means exactly that).
  */
 export const AWAITING_CONSENT = { access: "awaitingConsent" } as const;
 export type AwaitingConsent = typeof AWAITING_CONSENT;
 
-/** The caller's trip and the other account; `null` while the other account has not agreed. */
-async function sides(c: DbTransaction, userId: string, tripId: string, otherId: string) {
+/**
+ * Codex P1 (2026-11-27): a consent that lets A OFFER trips to B let A list B's unshared trips,
+ * read their entries and overwrite them with `mine`. An offer consent authorises incoming offers
+ * only. The rule: nothing of B's existing trips is shown to A, and nothing is linked, without B's
+ * own decision per trip — the matching runs for B, on B's side, on a trip A proposed. Across
+ * servers that is what the offer inbox does (`federation/offerLink.ts`). On one server the
+ * proposal needs a record of its own (a schema change, not yet decided), so until it exists the
+ * local link answers this refusal for every other account, before anything of theirs is read.
+ */
+export const localLinkNeedsProposal = () =>
+  new AppError(
+    "Linking another account's trip needs that account's own decision per trip",
+    403,
+    "SHARE_LINK_PROPOSAL_REQUIRED"
+  );
+
+/** The caller's trip; refused for every other account until local proposals exist (above). */
+async function sides(
+  c: DbTransaction,
+  userId: string,
+  tripId: string,
+  otherId: string
+): Promise<Trip | null> {
   const trip = await c.trip.findFirst({ where: { id: tripId, userId } });
   if (!trip) throw tripNotFound();
   const other = await c.user.findFirst({
@@ -80,10 +99,7 @@ async function sides(c: DbTransaction, userId: string, tripId: string, otherId: 
     select: { id: true },
   });
   if (!other) throw new AppError("No such user on this server", 404, "SHARE_USER_NOT_FOUND");
-  if (!(await mayOfferTripTo(c, userId, otherId))) return null;
-  // A trip that came from another server is linked on from its home, as it is shared from there.
-  await requireHome(c, userId, trip.shareGroupId);
-  return trip;
+  throw localLinkNeedsProposal();
 }
 
 /** `sides`, for the link itself: refused while the other account has not agreed. */
@@ -200,95 +216,97 @@ async function keyPair(
   return true;
 }
 
-/**
- * Settle the facts a linked pair disagrees in. Both write paths go through propagation, so any
- * further member of the group (here or on another server) ends up with the same values, and the
- * account whose entry changed gets an `updated` notice it can undo.
- */
-async function settle(
-  tx: DbTransaction,
-  userId: string,
-  groupId: string,
-  pair: LinkPair,
-  decision: LinkDecision
-): Promise<boolean> {
-  if (decision === "both" || pair.conflicts.length === 0) return false;
-  const { entity, here, there, conflicts } = pair;
-  if (decision === "mine") {
-    // As if the caller had just changed these facts from the other side's values to their own.
-    const theirs = Object.fromEntries(conflicts.map((k) => [k, there.facts[k]]));
-    const before = { ...here, entity, groupId, facts: { ...here.facts, ...theirs } };
-    await propagateWrite(tx, userId, entity, here.id, before);
-    return true;
-  }
-  const snapshot = await shareSnapshot(tx, entity, here.id);
-  await ADAPTERS[entity].apply(tx, here, there.facts, conflicts, here.facts);
-  await DERIVE[entity](tx, here.id, userId);
-  await propagateWrite(tx, userId, entity, here.id, snapshot);
-  return true;
-}
-
 /** Link the caller's trip with the other account's copy of it; see the file comment. */
 export async function linkTrip(
   userId: string,
   tripId: string,
   otherId: string,
   targetTripId: string,
-  decision: LinkDecision
+  decision: LinkDecision,
+  choices?: LinkChoices
 ): Promise<LinkResult> {
   return prisma.$transaction(
     async (tx) => {
       const trip = await agreedSides(tx, userId, tripId, otherId);
-      const { target, plan } = await planFor(tx, trip, userId, otherId, targetTripId);
-      const joining = target.shareGroupId === null;
-      let groupId = trip.shareGroupId;
-      if (
-        groupId &&
-        joining &&
-        (await missingGroupConsent(tx, groupId, userId, otherId)).length > 0
-      )
-        throw new AppError(
-          "Not every member of this trip has agreed to sharing with this account",
-          403,
-          "SHARE_GROUP_CONSENT_REQUIRED"
-        );
-      if (!groupId) {
-        groupId = (await tx.tripShareGroup.create({ data: { createdById: userId } })).id;
-        await tx.trip.update({ where: { id: trip.id }, data: { shareGroupId: groupId } });
-      }
-      if (joining)
-        await tx.trip.update({ where: { id: target.id }, data: { shareGroupId: groupId } });
-      const result = await applyPlan(tx, userId, otherId, groupId, plan, decision);
-      await restatusTrips([trip.id, target.id], tx);
-      if (joining) {
-        await queueRoster(tx, groupId);
-        // No companion is put on the other account's EXISTING trip: it is theirs, and a
-        // companion they took off must not come back because someone linked a copy (rc46
-        // UAT, "Robin Wittke" reappeared). The trip's people section asks them instead.
-      }
-      if (joining || result.linked > 0) {
-        await tx.shareNotice.create({
-          data: {
-            userId: otherId,
-            groupId,
-            actorId: userId,
-            kind: "shared",
-            entityType: "trip",
-            entityKey: target.id,
-            after: {
-              tripName: trip.name,
-              tripCreated: false,
-              created: { ...emptyCounts() },
-              linked: { matched: result.linked + result.alreadyLinked, decision },
-              autoAccepted: true,
-            },
-          },
-        });
-      }
-      return { groupId, ...result };
+      return linkInTx(tx, trip, userId, otherId, targetTripId, decision, choices);
     },
     { timeout: LINK_TX_TIMEOUT_MS }
   );
+}
+
+/** The caller's own trip, nothing else checked: for a path that authorised the pair itself. */
+export async function ownTripForLink(c: DbTransaction, userId: string, tripId: string) {
+  const trip = await c.trip.findFirst({ where: { id: tripId, userId } });
+  if (!trip) throw tripNotFound();
+  return trip;
+}
+
+/** The dry run for a pair a caller is already authorised to compare (a proposal to them). */
+export async function previewInTx(
+  tx: DbTransaction,
+  trip: Trip,
+  userId: string,
+  otherId: string,
+  targetTripId: string
+): Promise<LinkPreview> {
+  const { target, here, there, plan } = await planFor(tx, trip, userId, otherId, targetTripId);
+  return describePlan(plan, tripView(trip), tripView(target), here, there);
+}
+
+export const LINK_TIMEOUT_MS = LINK_TX_TIMEOUT_MS;
+
+/** The link for a pair a caller is already authorised to link; see the file comment. */
+export async function linkInTx(
+  tx: DbTransaction,
+  trip: Trip,
+  userId: string,
+  otherId: string,
+  targetTripId: string,
+  decision: LinkDecision,
+  choices?: LinkChoices
+): Promise<LinkResult> {
+  const { target, plan } = await planFor(tx, trip, userId, otherId, targetTripId);
+  const joining = target.shareGroupId === null;
+  let groupId = trip.shareGroupId;
+  if (groupId && joining && (await missingGroupConsent(tx, groupId, userId, otherId)).length > 0)
+    throw new AppError(
+      "Not every member of this trip has agreed to sharing with this account",
+      403,
+      "SHARE_GROUP_CONSENT_REQUIRED"
+    );
+  if (!groupId) {
+    groupId = (await tx.tripShareGroup.create({ data: { createdById: userId } })).id;
+    await tx.trip.update({ where: { id: trip.id }, data: { shareGroupId: groupId } });
+  }
+  if (joining) await tx.trip.update({ where: { id: target.id }, data: { shareGroupId: groupId } });
+  const result = await applyPlan(tx, userId, otherId, groupId, plan, decision, choices);
+  await restatusTrips([trip.id, target.id], tx);
+  if (joining) {
+    await queueRoster(tx, groupId);
+    // No companion is put on the other account's EXISTING trip: it is theirs, and a
+    // companion they took off must not come back because someone linked a copy (rc46
+    // UAT, "Robin Wittke" reappeared). The trip's people section asks them instead.
+  }
+  if (joining || result.linked > 0) {
+    await tx.shareNotice.create({
+      data: {
+        userId: otherId,
+        groupId,
+        actorId: userId,
+        kind: "shared",
+        entityType: "trip",
+        entityKey: target.id,
+        after: {
+          tripName: trip.name,
+          tripCreated: false,
+          created: { ...emptyCounts() },
+          linked: { matched: result.linked + result.alreadyLinked, decision },
+          autoAccepted: true,
+        },
+      },
+    });
+  }
+  return { groupId, ...result };
 }
 
 /** Key every unlinked pair, then settle the facts by the decision. */
@@ -298,7 +316,8 @@ async function applyPlan(
   otherId: string,
   groupId: string,
   plan: LinkPlan,
-  decision: LinkDecision
+  decision: LinkDecision,
+  choices: LinkChoices | undefined
 ): Promise<Omit<LinkResult, "groupId">> {
   const result = {
     settleFailed: false,
@@ -321,6 +340,7 @@ async function applyPlan(
   }
   // Stops last (registry order), so a stop's wrapped entry is keyed on both sides first.
   for (const pair of keyed)
-    if (await settle(tx, userId, groupId, pair, decision)) result.settled += 1;
+    if (await settlePair(tx, userId, groupId, pair, decision, choices, { spreadTheirs: true }))
+      result.settled += 1;
   return result;
 }

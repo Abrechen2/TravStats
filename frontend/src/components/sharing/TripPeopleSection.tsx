@@ -237,13 +237,17 @@ export default function TripPeopleSection({
     }
     return undefined;
   };
-  const personRows: PersonRow[] = view.people.map((p) => ({
-    key: p.key,
-    name: p.name,
-    meta: meta(p),
-    badges: badges(p),
-    action: action(p),
-  }));
+  // A companion who is a person on another server is listed once, by RemoteTripPeople below
+  // (UAT 2026-11-27: the same person appeared twice). The name stays covered either way.
+  const personRows: PersonRow[] = view.people
+    .filter((p) => !(p.remoteLinked && p.account === null))
+    .map((p) => ({
+      key: p.key,
+      name: p.name,
+      meta: meta(p),
+      badges: badges(p),
+      action: action(p),
+    }));
   const rows = [...personRows, ...uncoveredNameRows(companionNames, view.people)];
 
   return (

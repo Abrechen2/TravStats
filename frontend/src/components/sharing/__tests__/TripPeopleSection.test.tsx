@@ -178,6 +178,25 @@ describe("TripPeopleSection", () => {
     expect(screen.getByText("sharing:shareDialog.final")).toBeTruthy();
   });
 
+  it("lists a companion who is a person on another server once, not also as a local row (UAT 2026-11-27)", async () => {
+    api.tripSharing.mockResolvedValue({
+      ...view,
+      people: [
+        row({ key: "c:ilse", companionId: "ilse", name: "Ilse" }),
+        row({ key: "c:papa", companionId: "papa", name: "Papa", remoteLinked: true }),
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <TripPeopleSection tripId="t1" companionNames={["Ilse", "Papa"]} />
+      </MemoryRouter>
+    );
+    await screen.findByRole("button", { name: "sharing:people.leave" });
+    // Only Ilse's local row offers to link an account; Papa is not a second local row.
+    expect(screen.getAllByRole("button", { name: /sharing:people.actions.link/ })).toHaveLength(1);
+    expect(screen.queryAllByText("Papa")).toHaveLength(0);
+  });
+
   it("keeps the names when the trip's companions carry no person rows", async () => {
     // A trip whose companions are legacy names without companion entries has
     // names but no `people`; the section must not turn into an empty heading.

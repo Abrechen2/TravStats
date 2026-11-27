@@ -14,6 +14,7 @@ import { AppError } from "../../../middleware/errorHandler";
 import { getTripPhotoDir } from "../../../middleware/upload";
 import type { ExportOptions, TripFile, TripFilePortRef } from "./format";
 import { collectDocuments } from "./collectDocuments";
+import { addExtras } from "./collectExtras";
 import { extensionOf, isoDay } from "./collectShared";
 import { CRUISE_STOP_ORDER_BY } from "../../../shared/cruise/stopOrder";
 
@@ -607,6 +608,21 @@ export async function collectTrip(
       ...(priv ? { private: { notes: s.notes } } : {}),
     };
   });
+  await addExtras(
+    trip,
+    file,
+    {
+      flight: flightKey,
+      lodging: stayKey,
+      cruise: cruiseKey,
+      rail: railKey,
+      bus: busKey,
+      ferry: ferryKey,
+      rental: rentalKey,
+      stop: stopKey,
+    },
+    priv
+  );
   file.roadtrips = collectRoadtrips(trip, priv, {
     roadtrip: keyer("ro"),
     station: keyer("rs"),

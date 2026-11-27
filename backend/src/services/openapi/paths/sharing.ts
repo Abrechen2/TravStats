@@ -235,6 +235,9 @@ registry.registerPath({
                 .describe(
                   "A member who is none of the caller's companions: the caller's unlinked companions of the same name, for the question \"Ist das <Name>?\""
                 ),
+              remoteLinked: z
+                .boolean()
+                .describe("A companion linked to a person on another server, listed there instead"),
             })
           )
           .describe("Every companion of the trip, then every group member who is none of them"),

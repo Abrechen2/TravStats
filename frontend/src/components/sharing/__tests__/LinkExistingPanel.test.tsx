@@ -15,15 +15,71 @@ const dryRun: LinkPreview = {
   access: "full",
   here: { id: "t1", name: "Portugal 2030", startDay: "2030-06-01", endDay: "2030-06-10" },
   there: { id: "t2", name: "Portugal", startDay: "2030-06-01", endDay: "2030-06-10" },
-  counts: { matched: 2, onlyHere: 0, onlyThere: 1, conflicting: 1 },
+  counts: { matched: 2, onlyHere: 0, onlyThere: 1, conflicting: 1, needsReview: 1 },
+  automatic: false,
   byType: [{ entity: "lodgingStay", here: 1, there: 2, matched: 1, differing: 0 }],
   matched: [
     {
       entity: "flight",
       label: "TP571 FRA → LIS",
       when: "2030-06-01T08:00:00.000Z",
+      ref: "flight:f1",
       linked: false,
-      conflicts: [{ field: "departureTime", here: "08:00", there: "08:30" }],
+      conflicts: [
+        {
+          field: "departureTime",
+          here: "2030-06-01T08:00:00.000Z",
+          there: "2030-06-01T08:30:00.000Z",
+          display: {
+            here: {
+              kind: "time",
+              value: {
+                utc: "2030-06-01T08:00:00.000Z",
+                local: "2030-06-01T10:00:00",
+                zone: "Europe/Berlin",
+                offset: "+02:00",
+                precision: "minute",
+              },
+            },
+            there: {
+              kind: "time",
+              value: {
+                utc: "2030-06-01T08:30:00.000Z",
+                local: "2030-06-01T10:30:00",
+                zone: "Europe/Berlin",
+                offset: "+02:00",
+                precision: "minute",
+              },
+            },
+          },
+          better: null,
+          real: true,
+        },
+      ],
+      recomputed: [],
+      automatic: false,
+    },
+    {
+      entity: "ferry",
+      label: "Kiel → Oslo",
+      when: "2030-06-03T12:00:00.000Z",
+      ref: "ferry:r1",
+      linked: false,
+      conflicts: [
+        {
+          field: "geometry",
+          here: "[[0,0],[1,1]]",
+          there: "[[0,0],…]",
+          display: {
+            here: { kind: "line", quality: "straight", points: 2 },
+            there: { kind: "line", quality: "drawn", points: 184 },
+          },
+          better: "there",
+          real: false,
+        },
+      ],
+      recomputed: ["distanceKm"],
+      automatic: true,
     },
   ],
   onlyHere: [],
@@ -55,7 +111,7 @@ describe("LinkExistingPanel — link an existing copy (forgejo#440)", () => {
 
     fireEvent.click(screen.getByLabelText("sharing:link.decision.theirs"));
     fireEvent.click(screen.getByRole("button", { name: "sharing:link.confirm" }));
-    await waitFor(() => expect(props.link).toHaveBeenCalledWith("t2", "theirs"));
+    await waitFor(() => expect(props.link).toHaveBeenCalledWith("t2", "theirs", {}));
     expect(props.onLinked).toHaveBeenCalledWith({ linked: 2 }, "t2");
   });
 
@@ -68,6 +124,37 @@ describe("LinkExistingPanel — link an existing copy (forgejo#440)", () => {
   it("no matching trip on the other side says so", async () => {
     setup({ loadCandidates: vi.fn().mockResolvedValue({ access: "full", candidates: [] }) });
     expect(await screen.findByText("sharing:link.noCandidates")).toBeInTheDocument();
+  });
+});
+
+describe("LinkExistingPanel — a readable dry run with per-field choices (UAT 2026-11-27)", () => {
+  it("shows times on the place's clock, a line by its quality, no raw JSON, derived fields apart (M3)", async () => {
+    setup();
+    fireEvent.click(await screen.findByRole("button", { name: "sharing:link.compare" }));
+    const row = await screen.findByTestId("link-field-flight:f1-departureTime");
+    expect(row.textContent).toContain("10:00");
+    expect(row.textContent).not.toContain("2030-06-01T08:00:00.000Z");
+    const line = screen.getByTestId("link-field-ferry:r1-geometry");
+    expect(line.textContent).toContain("sharing:link.line.single");
+    expect(line.textContent).not.toContain("coordinates");
+    expect(screen.getByText(/sharing:link.recomputed/)).toBeInTheDocument();
+  });
+
+  it("the trip-level default applies the quality rule, and a per-field choice is sent (M2, B1)", async () => {
+    const props = setup();
+    fireEvent.click(await screen.findByRole("button", { name: "sharing:link.compare" }));
+    fireEvent.click(await screen.findByLabelText("sharing:link.decision.mine"));
+    const selects = screen.getAllByRole("combobox");
+    // "Mine" for the departure (a tie), but the better drawn line stays "theirs".
+    expect((selects[0] as HTMLSelectElement).value).toBe("mine");
+    expect((selects[1] as HTMLSelectElement).value).toBe("theirs");
+    fireEvent.change(selects[0] as HTMLSelectElement, { target: { value: "both" } });
+    fireEvent.click(screen.getByRole("button", { name: "sharing:link.confirm" }));
+    await waitFor(() =>
+      expect(props.link).toHaveBeenCalledWith("t2", "mine", {
+        "flight:f1": { departureTime: "both" },
+      })
+    );
   });
 });
 

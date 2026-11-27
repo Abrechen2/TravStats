@@ -958,7 +958,8 @@
       },
       "fedorigin": {
         "t": "This server's address",
-        "s": "https, no port or path"
+        "s": "https, no port or path",
+        "sLan": "http or https, port allowed, no path"
       },
       "fedkey": {
         "t": "Server key",

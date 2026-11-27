@@ -8,6 +8,7 @@ import { logger } from "../../lib/logger";
 import type { OfferCounts, ReceivedOffer } from "../../types/sharingRemote";
 import Button from "../ui/Button";
 import LinkExistingPanel from "./LinkExistingPanel";
+import BulkLinkPanel from "./BulkLinkPanel";
 import { sharingLinkApi } from "../../lib/api/sharingLink";
 import { remoteSharingError, type RemoteSharingError } from "./remoteSharingCopy";
 import InlineError from "../ui/InlineError";
@@ -54,6 +55,8 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
   const [declined, setDeclined] = useState(false);
   // forgejo#440: the offer whose trip the person links with one of their own instead.
   const [linkingId, setLinkingId] = useState<string | null>(null);
+  // UAT 2026-11-27: every offer at once, paired with the person's own trips.
+  const [bulk, setBulk] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -108,6 +111,27 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
     <div className="mb-6">
       <h3 className="t-label-mono mb-2">{t(`${NS}.title`)}</h3>
       {loadFailed && <InlineError tone="warning">{t(`${NS}.errors.loadFailed`)}</InlineError>}
+      {offers && offers.length > 1 && (
+        <span className="flex mb-2">
+          <Button disabled={busy} onClick={() => setBulk(!bulk)}>
+            {t("sharing:bulk.open")}
+          </Button>
+        </span>
+      )}
+      {bulk && (
+        <div className="mb-3" data-testid="bulk-link-inbox">
+          <BulkLinkPanel
+            otherName={t("sharing:bulk.senders")}
+            loadPairs={() => sharingLinkApi.remoteBulkPairs()}
+            preview={(pair) => sharingLinkApi.offerPreview(pair.id, pair.trip!.id)}
+            link={(pair, decision, choices) =>
+              sharingLinkApi.offerLink(pair.id, pair.trip!.id, decision, choices)
+            }
+            undo={(pair) => sharingLinkApi.leave(pair.trip!.id)}
+            failure={(err, fallback) => remoteSharingError(err, fallback)}
+          />
+        </div>
+      )}
       {offers && offers.length > 0 && (
         <ul className="flex flex-col gap-3 text-sm">
           {offers.map((offer) => (
@@ -145,7 +169,9 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
                   otherName={`${offer.from.displayName} (${offer.from.origin})`}
                   loadCandidates={() => sharingLinkApi.offerCandidates(offer.id)}
                   preview={(tripId) => sharingLinkApi.offerPreview(offer.id, tripId)}
-                  link={(tripId, decision) => sharingLinkApi.offerLink(offer.id, tripId, decision)}
+                  link={(tripId, decision, choices) =>
+                    sharingLinkApi.offerLink(offer.id, tripId, decision, choices)
+                  }
                   failure={(err, fallback) => remoteSharingError(err, fallback)}
                   onLinked={(result, tripId) => {
                     setLinkingId(null);

@@ -61,6 +61,11 @@ export interface FederationState {
   hasKey: boolean;
   /** The admin's trip-sharing switch; effective only with an identity and the beta switch on. */
   tripSharingEnabled: boolean;
+  /**
+   * `FEDERATION_PRIVATE_PEERS` is set: http and an explicit port are valid addresses here, so the
+   * address hint must not say "https, ohne Port" (UAT 2026-11-27).
+   */
+  privatePeers: boolean;
   peers: Array<{
     origin: string;
     fingerprint: string;

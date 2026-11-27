@@ -64,4 +64,6 @@ export type RemoteShareApiErrorCode =
   | "SHARE_REMOTE_CONNECTION_EXISTS"
   | "SHARE_REMOTE_CONNECTION_STATE"
   | "SHARE_REMOTE_CONNECTION_REQUIRED"
-  | "SHARE_REMOTE_SERVER_NOT_CONNECTED";
+  | "SHARE_REMOTE_SERVER_NOT_CONNECTED"
+  /** A bulk offer named a trip the bulk list would not offer to that person. */
+  | "SHARE_REMOTE_BULK_NOT_CANDIDATE";

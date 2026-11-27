@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { authenticate, requireWriteScope, type AuthRequest } from "../middleware/auth";
 import { rejectDemoWrites } from "../middleware/demoGuard";
-import { shareConsentRequestLimiter } from "../middleware/sharingRateLimit";
+import { shareConsentRequestLimiter, shareLinkLimiter } from "../middleware/sharingRateLimit";
 import {
   linkCompanion,
   listLinkableCompanions,
@@ -21,7 +21,25 @@ import { countPlanInvites } from "../services/sharing/federation/plans/memberSer
 import { inboxCount, listNotices, markNoticeRead } from "../services/sharing/notices";
 import { leaveGroup, shareTrip, tripSharingView } from "../services/sharing/shareTrip";
 import { linkCandidates, linkTrip, previewLink } from "../services/sharing/linkExisting";
+import { localBulkPairs } from "../services/sharing/bulkLink";
 import {
+  declineProposal,
+  linkProposal,
+  previewProposal,
+  proposableTrips,
+  proposalBulkPairs,
+  proposalCandidates,
+  proposeLink,
+  receivedProposals,
+  sentProposals,
+} from "../services/sharing/linkProposals";
+import {
+  bulkLocalQuerySchema,
+  proposableQuerySchema,
+  proposalIdSchema,
+  proposalLinkBodySchema,
+  proposalPreviewBodySchema,
+  proposeBodySchema,
   linkBodySchema,
   linkCandidatesQuerySchema,
   linkPreviewBodySchema,
@@ -216,6 +234,7 @@ router.get(
 
 router.post(
   "/trips/:tripId/link-preview",
+  shareLinkLimiter,
   handle(async (req, res) => {
     const tripId = idSchema.parse(req.params.tripId);
     const body = linkPreviewBodySchema.parse(req.body ?? {});
@@ -228,13 +247,113 @@ router.post(
 
 router.post(
   "/trips/:tripId/link",
+  shareLinkLimiter,
   handle(async (req, res) => {
     const tripId = idSchema.parse(req.params.tripId);
     const body = linkBodySchema.parse(req.body ?? {});
     res.json({
       success: true,
-      data: await linkTrip(req.userId!, tripId, body.userId, body.targetTripId, body.decision),
+      data: await linkTrip(
+        req.userId!,
+        tripId,
+        body.userId,
+        body.targetTripId,
+        body.decision,
+        body.choices
+      ),
     });
+  })
+);
+
+/** "Alle passenden Reisen verknüpfen": every trip pair with another account (UAT 2026-11-27). */
+router.get(
+  "/link-bulk",
+  handle(async (req, res) => {
+    const { userId } = bulkLocalQuerySchema.parse(req.query ?? {});
+    res.json({ success: true, data: await localBulkPairs(req.userId!, userId) });
+  })
+);
+
+/**
+ * Local link proposals (Codex P1, 2026-11-27): A proposes one of A's trips; B lists candidates
+ * among B's own trips, previews and links (or declines) in B's inbox; A sees only the status.
+ */
+router.post(
+  "/trips/:tripId/link-proposal",
+  shareLinkLimiter,
+  handle(async (req, res) => {
+    const tripId = idSchema.parse(req.params.tripId);
+    const { userId } = proposeBodySchema.parse(req.body ?? {});
+    res.json({ success: true, data: await proposeLink(req.userId!, tripId, userId) });
+  })
+);
+
+router.get(
+  "/link-proposals/sent",
+  handle(async (req, res) => {
+    res.json({ success: true, data: await sentProposals(req.userId!) });
+  })
+);
+
+router.get(
+  "/link-proposals/received",
+  handle(async (req, res) => {
+    res.json({ success: true, data: await receivedProposals(req.userId!) });
+  })
+);
+
+router.get(
+  "/link-proposals/proposable",
+  handle(async (req, res) => {
+    const { userId } = proposableQuerySchema.parse(req.query ?? {});
+    res.json({ success: true, data: await proposableTrips(req.userId!, userId) });
+  })
+);
+
+router.get(
+  "/link-proposals/bulk",
+  handle(async (req, res) => {
+    res.json({ success: true, data: await proposalBulkPairs(req.userId!) });
+  })
+);
+
+router.get(
+  "/link-proposals/:id/candidates",
+  handle(async (req, res) => {
+    const id = proposalIdSchema.parse(req.params.id);
+    res.json({ success: true, data: await proposalCandidates(req.userId!, id) });
+  })
+);
+
+router.post(
+  "/link-proposals/:id/preview",
+  shareLinkLimiter,
+  handle(async (req, res) => {
+    const id = proposalIdSchema.parse(req.params.id);
+    const { tripId } = proposalPreviewBodySchema.parse(req.body ?? {});
+    res.json({ success: true, data: await previewProposal(req.userId!, id, tripId) });
+  })
+);
+
+router.post(
+  "/link-proposals/:id/link",
+  shareLinkLimiter,
+  handle(async (req, res) => {
+    const id = proposalIdSchema.parse(req.params.id);
+    const body = proposalLinkBodySchema.parse(req.body ?? {});
+    res.json({
+      success: true,
+      data: await linkProposal(req.userId!, id, body.tripId, body.decision, body.choices),
+    });
+  })
+);
+
+router.post(
+  "/link-proposals/:id/decline",
+  handle(async (req, res) => {
+    const id = proposalIdSchema.parse(req.params.id);
+    await declineProposal(req.userId!, id);
+    res.json({ success: true, data: { declined: true } });
   })
 );
 

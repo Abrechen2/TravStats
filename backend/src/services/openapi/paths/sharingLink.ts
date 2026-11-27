@@ -7,7 +7,20 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { errorContent } from "./shared";
 import {
+  bulkLocalQuerySchema,
+  bulkOfferBodySchema,
+  bulkOfferCandidatesSchema,
+  bulkOfferQuerySchema,
+  bulkPairsSchema,
   linkBodySchema,
+  proposableQuerySchema,
+  proposableTripsSchema,
+  proposalLinkBodySchema,
+  proposalPreviewBodySchema,
+  proposeBodySchema,
+  receivedProposalsSchema,
+  sentProposalSchema,
+  sentProposalsSchema,
   linkCandidatesQuerySchema,
   linkCandidatesSchema,
   linkPreviewBodySchema,
@@ -27,7 +40,9 @@ const json = (schema: z.ZodTypeAny) => ({ content: { "application/json": { schem
 const tripParams = z.object({ tripId: z.string() });
 const offerParams = z.object({ id: z.string().uuid() });
 const localRefusals = {
-  403: err("`SHARE_CONSENT_REQUIRED` or `SHARE_GROUP_CONSENT_REQUIRED`"),
+  403: err(
+    "`SHARE_LINK_PROPOSAL_REQUIRED`: another account's trips are never read or linked from here without that account's own decision per trip (until local proposals exist, always)"
+  ),
   404: err("`TRIP_NOT_FOUND` (either trip) or `SHARE_USER_NOT_FOUND`"),
   409: err(
     "`SHARE_TRIP_IN_OTHER_GROUP` (the other trip is shared elsewhere), `SHARE_REMOTE_NOT_HOME` (the trip came from another server)"
@@ -105,3 +120,137 @@ registry.registerPath({
   request: { params: offerParams, body: json(offerLinkBodySchema) },
   responses: { 200: ok("What was linked", linkResultSchema), ...remoteRefusals },
 });
+
+registry.registerPath({
+  method: "get",
+  path: "/sharing/link-bulk",
+  summary: "Every trip of the caller that is the same as one of another account's",
+  description:
+    "The bulk link's list: one trip to one trip (same period, then name, then overlap), pairs already in one group as `linked`, two equally good matches as `ambiguous`. Nothing is compared or written; each pair is compared and linked through `link-preview` and `link`.",
+  tags,
+  request: { query: bulkLocalQuerySchema },
+  responses: { 200: ok("The trip pairs", bulkPairsSchema), ...localRefusals },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/sharing/remote/link-bulk",
+  summary: "Every open offer from another server paired with one of the caller's trips",
+  description:
+    "Offers whose sender has an accepted consent only; an offer with no trip of the caller to match comes with `trip: null`.",
+  tags,
+  responses: { 200: ok("The offer pairs", bulkPairsSchema), ...remoteRefusals },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/sharing/remote/link-bulk/offers",
+  summary: "The caller's trips the person on another server travelled on, not shared with them yet",
+  tags,
+  request: { query: bulkOfferQuerySchema },
+  responses: { 200: ok("Trips to offer", bulkOfferCandidatesSchema), ...remoteRefusals },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/sharing/remote/link-bulk/offers",
+  summary: "Offer one trip to a connected person on another server, as one step of a bulk run",
+  description:
+    "The same offer as `/sharing/remote/trips/{tripId}/offers`, under the bulk link's rate limit.",
+  tags,
+  request: { body: json(bulkOfferBodySchema) },
+  responses: {
+    201: {
+      description: "The offer",
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.literal(true), data: z.object({}).passthrough() }),
+        },
+      },
+    },
+    ...remoteRefusals,
+  },
+});
+
+const proposalParams = z.object({ id: z.string().uuid() });
+const proposalRefusals = {
+  403: err("`SHARE_CONSENT_REQUIRED`: the other account does not let the caller offer trips"),
+  404: err("`SHARE_LINK_PROPOSAL_NOT_FOUND`, `TRIP_NOT_FOUND` or `SHARE_USER_NOT_FOUND`"),
+  409: err("`SHARE_TRIP_IN_OTHER_GROUP`, `SHARE_GROUP_CONSENT_REQUIRED`, `SHARE_REMOTE_NOT_HOME`"),
+};
+const proposalPath = (
+  method: "get" | "post",
+  path: string,
+  summary: string,
+  schema: z.ZodTypeAny,
+  request: Record<string, unknown> = {}
+) =>
+  registry.registerPath({
+    method,
+    path,
+    summary,
+    tags,
+    request,
+    responses: { 200: ok(summary, schema), ...proposalRefusals },
+  });
+
+proposalPath(
+  "post",
+  "/sharing/trips/{tripId}/link-proposal",
+  "Propose to another account on this server that it holds a copy of this trip",
+  sentProposalSchema,
+  { params: tripParams, body: json(proposeBodySchema) }
+);
+proposalPath(
+  "get",
+  "/sharing/link-proposals/sent",
+  "The caller's proposals and their status only",
+  sentProposalsSchema
+);
+proposalPath(
+  "get",
+  "/sharing/link-proposals/received",
+  "Trips proposed to the caller",
+  receivedProposalsSchema
+);
+proposalPath(
+  "get",
+  "/sharing/link-proposals/proposable",
+  "The caller's own trips the other account travelled on, with any proposal's status",
+  proposableTripsSchema,
+  { query: proposableQuerySchema }
+);
+proposalPath(
+  "get",
+  "/sharing/link-proposals/bulk",
+  "Every open proposal paired with one of the caller's trips",
+  bulkPairsSchema
+);
+proposalPath(
+  "get",
+  "/sharing/link-proposals/{id}/candidates",
+  "The caller's own trips that may be the proposed one",
+  linkCandidatesSchema,
+  { params: proposalParams }
+);
+proposalPath(
+  "post",
+  "/sharing/link-proposals/{id}/preview",
+  "Dry run of linking a proposed trip with one of the caller's; writes nothing",
+  linkPreviewSchema,
+  { params: proposalParams, body: json(proposalPreviewBodySchema) }
+);
+proposalPath(
+  "post",
+  "/sharing/link-proposals/{id}/link",
+  "Link a proposed trip with one of the caller's, settling differences by the caller's choices",
+  linkResultSchema,
+  { params: proposalParams, body: json(proposalLinkBodySchema) }
+);
+proposalPath(
+  "post",
+  "/sharing/link-proposals/{id}/decline",
+  "Decline a proposal; the proposer sees 'declined'",
+  z.object({ declined: z.literal(true) }),
+  { params: proposalParams }
+);

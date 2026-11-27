@@ -42,6 +42,11 @@ export interface TripPerson {
    * the caller may link to them (`mayLinkCompanionTo`); empty otherwise and on every other row.
    */
   nameMatches: NameMatch[];
+  /**
+   * A companion linked to a person on another server: the trip page lists them once, in the
+   * section for other servers (UAT 2026-11-27: the person appeared twice in the share dialog).
+   */
+  remoteLinked: boolean;
 }
 
 export async function tripPeople(
@@ -92,7 +97,8 @@ export async function tripPeople(
     key: string,
     companionId: string | null,
     name: string,
-    account: SharePerson | null
+    account: SharePerson | null,
+    remoteLinked = false
   ): Promise<TripPerson> => {
     const member = account !== null && memberIds.includes(account.id);
     const consent = account ? (consentOf.get(account.id) ?? "none") : "none";
@@ -113,6 +119,7 @@ export async function tripPeople(
       receivesChanges: member && account ? receiving.has(account.id) : null,
       shareBlockedBy,
       nameMatches: [],
+      remoteLinked,
     };
   };
 
@@ -120,7 +127,13 @@ export async function tripPeople(
   for (const link of links) {
     const c = link.companion;
     people.push(
-      await rowFor(`c:${c.id}`, c.id, c.displayName, c.linkedUser ? toPerson(c.linkedUser) : null)
+      await rowFor(
+        `c:${c.id}`,
+        c.id,
+        c.displayName,
+        c.linkedUser ? toPerson(c.linkedUser) : null,
+        c.linkedRemoteId !== null
+      )
     );
   }
   const shown = new Set(people.flatMap((p) => (p.account ? [p.account.id] : [])));

@@ -88,8 +88,31 @@ export function cruiseLegFacts(row: Pick<CruiseLeg, CruiseLegFactField>) {
 export interface CruiseLegRouteFact {
   fromPortId: number;
   toPortId: number;
-  /** `[[lon, lat], ...]`, 2..64 points, first and last at the leg's ports. */
+  /** `[[lon, lat], ...]`, first and last at the leg's ports; the wire carries 64 (`thinWaypoints`). */
   waypoints: unknown;
+}
+
+/**
+ * The most points a line carries on the wire: the receiver refuses more (`CRUISE_LEG_ROUTE_SHAPE`),
+ * and the editor stores no more. Only the wire is thinned (`wire/encode.ts`); a line stays whole on
+ * this server and in a copy on it. Rows written before that guard hold up to 123 (measured on the
+ * owner's Yangtze cruise, UAT 2026-11-27), and ONE such line made the receiver drop the whole
+ * message as malformed — the trip could be neither shared nor linked.
+ */
+export const MAX_ROUTE_FACT_POINTS = 64;
+
+/**
+ * A line of more than `MAX_ROUTE_FACT_POINTS` points, thinned to that many by even spacing; the
+ * first and last point stay, so the line still starts and ends at its ports. Deterministic: the
+ * same line always thins to the same points.
+ */
+export function thinWaypoints(waypoints: unknown): unknown {
+  if (!Array.isArray(waypoints) || waypoints.length <= MAX_ROUTE_FACT_POINTS) return waypoints;
+  const last = waypoints.length - 1;
+  return Array.from(
+    { length: MAX_ROUTE_FACT_POINTS },
+    (_, i) => waypoints[Math.round((i * last) / (MAX_ROUTE_FACT_POINTS - 1))]
+  );
 }
 
 /** The lines of a cruise as facts; a line whose ends are not catalogue ports is left out. */

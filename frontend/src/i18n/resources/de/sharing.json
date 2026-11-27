@@ -626,6 +626,7 @@
       "connectionExists": "Mit dieser Person gibt es schon eine Verbindung oder eine offene Anfrage.",
       "connectionState": "Das geht bei dieser Verbindung gerade nicht – sie hat sich inzwischen geändert. Lade die Seite neu.",
       "connectionRequired": "Dafür braucht ihr eine bestätigte Verbindung – und die Person muss es erlaubt haben.",
+      "bulkNotCandidate": "Diese Reise steht nicht in der Liste für diese Person.",
       "requestFailed": "Die Anfrage konnte nicht gesendet werden.",
       "confirmFailed": "Die Bestätigung konnte nicht gesendet werden. Es hat sich nichts geändert.",
       "switchesFailed": "Die Einstellungen konnten nicht gespeichert werden.",
@@ -672,6 +673,7 @@
         "addRequestFailed": "Die Anfrage konnte nicht gesendet werden."
       },
       "delivery": {
+        "paused": "Pausiert: „Reisen teilen“ ist zwischen dir und {{name}} aus. Änderungen warten hier und gehen weiter, sobald es wieder an ist.",
         "delivered": "Alle Änderungen sind bei {{name}} angekommen.",
         "pending": "Änderungen sind auf dem Weg zu {{name}}.",
         "retrying": "Änderungen kommen bei {{name}} gerade nicht an – {{origin}} antwortet seit {{date}} nicht. Es wird weiter versucht.",
@@ -972,7 +974,7 @@
     },
     "account": {
       "local": "@{{username}}",
-      "remote": "{{username}}@{{origin}}",
+      "remote": "{{username}} · {{host}}",
       "none": "kein Konto"
     },
     "demo": "Im Demo-Konto lässt sich hier nichts ändern.",
@@ -996,13 +998,16 @@
       "viewAchievements": "Erfolge ansehen",
       "closeAchievements": "Erfolge schließen",
       "remoteNoRename": "Personen auf anderen Servern verwaltet ihr Server.",
-      "withdrawIncoming": "Teilen von dieser Person zurückziehen"
+      "withdrawIncoming": "Teilen von dieser Person zurückziehen",
+      "bulkLink": "Alle passenden Reisen verknüpfen",
+      "bulkOffer": "Gemeinsame Reisen anbieten",
+      "bulkPropose": "Gemeinsame Reisen vorschlagen"
     },
     "requests": {
       "title": "Anfragen an dich",
       "share": "{{name}} (@{{username}}) möchte Reisen mit dir teilen.",
-      "connection": "{{name}} ({{username}}@{{origin}}) möchte sich mit dir verbinden.",
-      "reconfirm": "Die Verbindung zu {{name}} ({{username}}@{{origin}}) muss neu bestätigt werden.",
+      "connection": "{{name}} ({{username}} · {{host}}) möchte sich mit dir verbinden.",
+      "reconfirm": "Die Verbindung zu {{name}} ({{username}} · {{host}}) muss neu bestätigt werden.",
       "comparison": "{{name}} möchte deine Summen in der Rangliste sehen.",
       "accept": "Annehmen",
       "decline": "Ablehnen",
@@ -1109,6 +1114,144 @@
       "previewFailed": "Der Vergleich ist fehlgeschlagen.",
       "linkFailed": "Die Reisen konnten nicht verknüpft werden."
     },
-    "awaitingConsent": "Die andere Seite muss das Teilen erst annehmen; danach siehst du den Vergleich."
+    "awaitingConsent": "Die andere Seite muss das Teilen erst annehmen; danach siehst du den Vergleich.",
+    "line": {
+      "drawn": "gezeichnet",
+      "routed": "berechnet",
+      "straight": "gerade",
+      "none": "keine Linie",
+      "single": "Linie: {{quality}} ({{points}} Punkte)",
+      "lines": "Linien: {{quality}} ({{count}} Abschnitte, {{points}} Punkte)"
+    },
+    "fieldGroups": {
+      "geometry": "Linie",
+      "actualRoute": "Geflogene Strecke",
+      "legRoutes": "Seewege",
+      "routeLegs": "Strecke",
+      "tracks": "Aufzeichnung",
+      "checkIn": "Anreise",
+      "checkOut": "Abreise",
+      "lodging": "Unterkunft",
+      "startUtc": "Beginn",
+      "endUtc": "Ende",
+      "departureTime": "Abfahrt",
+      "arrivalTime": "Ankunft",
+      "pickupTime": "Abholung",
+      "returnTime": "Rückgabe",
+      "actualPickupTime": "Tatsächliche Abholung",
+      "actualReturnTime": "Tatsächliche Rückgabe",
+      "distanceKm": "Entfernung",
+      "distanceSource": "Herkunft der Entfernung",
+      "routeDistance": "Entfernung",
+      "overflownCountries": "Überflogene Länder",
+      "co2Kg": "CO₂",
+      "nights": "Nächte",
+      "delayMinutes": "Verspätung",
+      "stations": "Stationen",
+      "stops": "Häfen",
+      "legs": "Abschnitte"
+    },
+    "table": {
+      "field": "Angabe",
+      "mine": "Bei dir",
+      "theirs": "Bei {{name}}",
+      "take": "Übernehmen",
+      "takeFor": "Was soll für „{{field}}“ gelten?"
+    },
+    "fieldChoice": {
+      "mine": "Meine",
+      "theirs": "Die von {{name}}",
+      "both": "Jeder behält seine"
+    },
+    "better": "genauer",
+    "recomputed": "Wird neu berechnet: {{fields}}",
+    "decisionRule": "Eine leere, gerade oder ungenauere Angabe überschreibt nie eine ausgefüllte, gezeichnete oder genauere – egal, welche Seite du wählst."
+  },
+  "bulk": {
+    "open": "Ansehen",
+    "title": "Alle passenden Reisen mit {{name}} verknüpfen",
+    "senders": "der anderen Seite",
+    "intro": "Alle Reisen, die du und {{name}} beide habt. Was zusammenpasst, verknüpfe ich; nichts wird doppelt angelegt.",
+    "loading": "Reisen werden gesucht …",
+    "awaitingConsent": "{{name}} muss das Teilen erst annehmen. Danach siehst du hier die Reisen.",
+    "none": "Ich habe keine Reise gefunden, die du und {{name}} beide habt.",
+    "comparing": "Vergleiche Reise {{done}} von {{total}} …",
+    "linking": "Verknüpfe Reise {{done}} von {{total}} …",
+    "paused": "Pause, weiter in {{minutes}} min",
+    "stop": "Anhalten",
+    "summary": "{{auto}} Reisen werden verknüpft, {{review}} brauchen deine Entscheidung.",
+    "autoTitle": "Diese {{count}} Reisen passen zusammen",
+    "run": "{{count}} Reisen verknüpfen",
+    "reviewTitle": "Hier entscheidest du selbst",
+    "review": {
+      "conflict": "beide Seiten haben verschiedene Angaben",
+      "ambiguous": "passt zu mehr als einer Reise",
+      "noTrip": "keine passende eigene Reise",
+      "nothingMatched": "kein Eintrag passt zusammen",
+      "outdated": "Gegenseite muss TravStats aktualisieren – du kannst die Reise unten einzeln annehmen"
+    },
+    "resultsTitle": "Ergebnis",
+    "pairName": "{{mine}} ↔ {{theirs}} ({{from}})",
+    "state": {
+      "linked": "schon verknüpft",
+      "done": "verknüpft ({{count}} Einträge)",
+      "skipped": "übersprungen: {{why}}",
+      "failed": "nicht geklappt: {{why}}",
+      "undone": "Verknüpfung aufgehoben"
+    },
+    "skippedNothing": "nichts zu verknüpfen",
+    "undo": "Rückgängig",
+    "errors": {
+      "loadFailed": "Die Reisen konnten nicht geladen werden.",
+      "compareFailed": "Der Vergleich hat nicht geklappt.",
+      "linkFailed": "Das Verknüpfen hat nicht geklappt.",
+      "undoFailed": "Das Aufheben hat nicht geklappt."
+    },
+    "offer": {
+      "title": "Gemeinsame Reisen an {{name}} anbieten",
+      "intro": "Das sind deine Reisen, bei denen {{name}} dabei war. Biete sie an; {{name}} verknüpft sie dann mit den eigenen Reisen.",
+      "none": "Keine Reise, bei der {{name}} als Mitreisende(r) eingetragen ist und die noch nicht geteilt ist.",
+      "waiting": "angeboten, wartet auf Antwort",
+      "done": "angeboten",
+      "failed": "nicht geklappt: {{why}}",
+      "progress": "Biete Reise {{done}} von {{total}} an …",
+      "run": "{{count}} Reisen anbieten",
+      "errors": {
+        "loadFailed": "Die Reisen konnten nicht geladen werden.",
+        "offerFailed": "Das Anbieten hat nicht geklappt."
+      }
+    },
+    "propose": {
+      "title": "Gemeinsame Reisen an {{name}} vorschlagen",
+      "intro": "Deine Reisen, bei denen {{name}} dabei war. {{name}} verknüpft sie dann selbst.",
+      "none": "Keine Reise, bei der {{name}} als Mitreisende(r) eingetragen ist.",
+      "done": "vorgeschlagen",
+      "failed": "nicht geklappt: {{why}}",
+      "progress": "Schlage Reise {{done}} von {{total}} vor …",
+      "run": "{{count}} Reisen vorschlagen",
+      "status": {
+        "pending": "vorgeschlagen, wartet",
+        "linked": "verknüpft",
+        "declined": "abgelehnt"
+      },
+      "errors": {
+        "loadFailed": "Die Reisen konnten nicht geladen werden.",
+        "proposeFailed": "Das Vorschlagen hat nicht geklappt."
+      }
+    }
+  },
+  "proposals": {
+    "title": "Vorgeschlagene Verknüpfungen",
+    "row": "{{name}} meint, du hast „{{trip}}“ auch eingetragen.",
+    "link": "Mit meiner Reise verknüpfen",
+    "decline": "Ablehnen",
+    "linked": "„{{trip}}“ ist verknüpft.",
+    "propose": "Hat die Reise schon – Verknüpfung vorschlagen",
+    "proposed": "Vorschlag an {{name}} gesendet. {{name}} entscheidet selbst.",
+    "errors": {
+      "loadFailed": "Die Vorschläge konnten nicht geladen werden.",
+      "declineFailed": "Das Ablehnen hat nicht geklappt.",
+      "proposeFailed": "Der Vorschlag konnte nicht gesendet werden."
+    }
   }
 }

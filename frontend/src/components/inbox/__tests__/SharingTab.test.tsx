@@ -28,6 +28,10 @@ const remote = vi.hoisted(() => ({
   listOffers: vi.fn(async () => [] as unknown[]),
 }));
 vi.mock("../../../lib/api/sharingRemote", () => ({ sharingRemoteApi: remote }));
+// Local link proposals load beside the offers; none here (Codex P1, 2026-11-27).
+vi.mock("../../../lib/api/sharingLink", () => ({
+  sharingLinkApi: { receivedProposals: vi.fn().mockResolvedValue([]) },
+}));
 
 // The real globe paints a canvas jsdom cannot; keep its status semantics.
 vi.mock("../../GlobeLoader", () => ({
@@ -100,7 +104,7 @@ describe("SharingTab", () => {
     const onCount = renderTab();
     expect(await screen.findAllByTestId("share-request")).toHaveLength(1);
     expect(screen.getAllByTestId("share-notice")).toHaveLength(2);
-    expect(onCount).toHaveBeenLastCalledWith(2);
+    await waitFor(() => expect(onCount).toHaveBeenLastCalledWith(2));
     expect(screen.getAllByRole("link", { name: "sharing:inbox.notices.open" })[0]).toHaveProperty(
       "href",
       expect.stringContaining("/trips/trip-of-reader")

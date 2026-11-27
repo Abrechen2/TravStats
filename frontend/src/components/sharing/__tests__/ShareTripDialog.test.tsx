@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import ShareTripDialog from "../ShareTripDialog";
@@ -16,7 +16,7 @@ import en from "../../../i18n/resources/en/sharing.json";
  */
 vi.mock("../../../lib/api/sharing", () => ({ sharingApi: { shareTrip: vi.fn() } }));
 vi.mock("../../../lib/api/sharingLink", () => ({
-  sharingLinkApi: { candidates: vi.fn(), preview: vi.fn(), link: vi.fn() },
+  sharingLinkApi: { candidates: vi.fn(), preview: vi.fn(), link: vi.fn(), propose: vi.fn() },
 }));
 const addToast = vi.fn();
 vi.mock("../../../store/toastStore", () => ({
@@ -56,15 +56,35 @@ const BLOCKS: ShareBlock[] = [
 describe("ShareTripDialog", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("linking a copy while the other side has not accepted says so, not another person's block", async () => {
-    vi.mocked(sharingLinkApi.candidates).mockResolvedValue({ access: "awaitingConsent" } as never);
+  it("offers no way to look into the other account's trips (Codex P1, 2026-11-27)", () => {
     render(
       <ShareTripDialog open onClose={vi.fn()} tripId="t1" people={[ben, ilse]} onShared={vi.fn()} />
     );
-    fireEvent.click(screen.getByRole("button", { name: "sharing:link.open" }));
-    expect(await screen.findByText("sharing:link.awaitingConsent")).toBeTruthy();
-    expect(screen.queryByText(/sharing:shareDialog\.blocked\.notLinked/)).toBeNull();
-    expect(screen.queryByText("sharing:shareDialog.blockedTitle")).toBeNull();
+    expect(screen.queryByRole("button", { name: "sharing:link.open" })).toBeNull();
+    expect(sharingLinkApi.candidates).not.toHaveBeenCalled();
+  });
+
+  it("proposes a link instead: the other account decides in their own inbox (Codex P1)", async () => {
+    vi.mocked(sharingLinkApi.propose).mockResolvedValue({
+      id: "p1",
+      tripId: "t1",
+      recipient: { id: "u-ben", displayName: "Ben" },
+      status: "pending",
+    });
+    const onClose = vi.fn();
+    render(
+      <ShareTripDialog
+        open
+        onClose={onClose}
+        tripId="t1"
+        people={[ben, ilse]}
+        preselectedKey="c:c-ben"
+        onShared={vi.fn()}
+      />
+    );
+    await userEvent.click(screen.getByRole("button", { name: "sharing:proposals.propose" }));
+    await waitFor(() => expect(sharingLinkApi.propose).toHaveBeenCalledWith("t1", "u-ben"));
+    expect(onClose).toHaveBeenCalled();
   });
 
   it("says what is copied, what stays private and that it is final, then shares on confirm", async () => {

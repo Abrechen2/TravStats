@@ -2,7 +2,14 @@
  * Linking an existing copy of a trip (forgejo#440) — the shapes of
  * `/sharing/trips/:tripId/link*` and `/sharing/remote/offers/:id/link*`.
  */
-export type LinkDecision = "mine" | "theirs" | "both";
+import type { ShareDisplayValue } from "./sharing";
+
+/** `best`: the bulk link's — the better value wins each difference, a tie keeps both. */
+export type LinkDecision = "mine" | "theirs" | "both" | "best";
+/** One differing field's own choice in the dry run. */
+export type FieldChoice = "mine" | "theirs" | "both";
+/** Per pair (`ref`), per field group: the person's own choices. */
+export type LinkChoices = Record<string, Record<string, FieldChoice>>;
 
 export type LinkEntity =
   | "flight"
@@ -40,16 +47,48 @@ export interface LinkEntryView {
   when: string | null;
 }
 
+export type LineQuality = "drawn" | "routed" | "straight" | "none";
+
+/** A differing value: a display value (times in the place's zone) or a line by its quality. */
+export type LinkValue =
+  ShareDisplayValue | { kind: "line"; quality: LineQuality; points: number; lines?: number };
+
+export interface LinkConflictView {
+  /** A fact, or the group decided together (`geometry`, `departureTime`, `checkIn`). */
+  field: string;
+  /** The original short string form (kept for installed clients). */
+  here: string;
+  there: string;
+  /** The same values for display: times in the place's zone, a line by its quality. */
+  display: { here: LinkValue; there: LinkValue };
+  /** The side whose value is better; null when equal in quality. */
+  better: "here" | "there" | null;
+  /** Equal quality, different values: only the person can decide. */
+  real: boolean;
+}
+
 export interface LinkMatchView extends LinkEntryView {
+  ref: string;
   linked: boolean;
-  conflicts: { field: string; here: string; there: string }[];
+  conflicts: LinkConflictView[];
+  /** Differing facts the server computes again or the transfer cannot carry. */
+  recomputed: string[];
+  automatic: boolean;
 }
 
 export interface LinkPreview {
   access: "full";
   here: LinkTripView;
   there: LinkTripView;
-  counts: { matched: number; onlyHere: number; onlyThere: number; conflicting: number };
+  counts: {
+    matched: number;
+    onlyHere: number;
+    onlyThere: number;
+    conflicting: number;
+    needsReview: number;
+  };
+  /** The quality rule settles every difference: the bulk link takes it. */
+  automatic: boolean;
   byType: {
     entity: LinkEntity;
     here: number;
@@ -75,3 +114,42 @@ export interface LinkResult {
 }
 
 export type LinkPreviewAnswer = LinkPreview | AwaitingConsent;
+
+/** The bulk link's list (UAT 2026-11-27). */
+export interface BulkPair {
+  /** Local: the caller's trip; across servers: the offer id. */
+  id: string;
+  trip: LinkTripView | null;
+  other: LinkTripView;
+  reason: LinkCandidate["reason"] | null;
+  linked: boolean;
+  ambiguous: boolean;
+  from?: { displayName: string; origin: string };
+}
+
+export type BulkPairs = { access: "full"; pairs: BulkPair[] } | AwaitingConsent;
+
+export interface BulkOfferCandidate extends LinkTripView {
+  offered: boolean;
+}
+
+/** Local link proposals (Codex P1, 2026-11-27). */
+export type LinkProposalStatus = "pending" | "linked" | "declined";
+
+export interface SentLinkProposal {
+  id: string;
+  tripId: string;
+  recipient: { id: string; displayName: string };
+  status: LinkProposalStatus;
+}
+
+export interface ReceivedLinkProposal {
+  id: string;
+  from: { id: string; displayName: string };
+  trip: LinkTripView;
+  createdAt: string;
+}
+
+export interface ProposableTrip extends LinkTripView {
+  status: LinkProposalStatus | null;
+}

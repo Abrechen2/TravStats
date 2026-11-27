@@ -138,7 +138,8 @@ describe("ReceivedRemoteOffers", () => {
       access: "full",
       here: { id: "t2", name: "Portugal", startDay: "2030-06-01", endDay: "2030-06-10" },
       there: { id: "o1", name: "Portugal 2030", startDay: "2030-06-01", endDay: "2030-06-10" },
-      counts: { matched: 1, onlyHere: 0, onlyThere: 0, conflicting: 1 },
+      counts: { matched: 1, onlyHere: 0, onlyThere: 0, conflicting: 1, needsReview: 1 },
+      automatic: false,
       byType: [{ entity: "flight", here: 1, there: 1, matched: 1, differing: 1 }],
       matched: [],
       onlyHere: [],
@@ -159,7 +160,7 @@ describe("ReceivedRemoteOffers", () => {
     await user.click(await screen.findByRole("button", { name: "sharing:remote.offers.link" }));
     await user.click(await screen.findByRole("button", { name: "sharing:link.compare" }));
     await user.click(await screen.findByRole("button", { name: "sharing:link.confirm" }));
-    await waitFor(() => expect(linkApi.offerLink).toHaveBeenCalledWith("o1", "t2", "both"));
+    await waitFor(() => expect(linkApi.offerLink).toHaveBeenCalledWith("o1", "t2", "both", {}));
     expect(await screen.findByText("sharing:remote.offers.settleFailed")).toBeInTheDocument();
   });
 });
