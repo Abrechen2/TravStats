@@ -71,6 +71,7 @@ const RAW_TABLE_REASON: Record<string, string> = {
   "components/Admin/timeModel/TimeMigrationTables.tsx": "admin diagnostic output",
   "components/Roadtrips/ShiftDaysDialog.tsx": "preview before a write: the file's order",
   "components/import/PreviewModal.tsx": "preview before a write: the file's order",
+  "components/sharing/LinkExistingPanel.tsx": "preview before a write: one row per conflicting field",
   "components/lodging/LodgingImportPreviewModal.tsx": "preview before a write: the file's order",
   "components/places/PlaceImportPreviewModal.tsx": "preview before a write: the file's order",
   "components/changeHistory/ChangeHistoryList.tsx": "chronological log",

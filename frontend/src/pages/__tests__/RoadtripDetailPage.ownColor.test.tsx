@@ -9,6 +9,8 @@ import type { RoadtripDetail } from "../../types/roadtrip";
 
 const drawn: Array<Array<{ rgb?: [number, number, number] }>> = [];
 vi.mock("../../components/NavigationBar", () => ({ default: () => <div /> }));
+// Photos and documents load on their own (DocumentsSection.tour.test.tsx); not this page's subject.
+vi.mock("../../components/Roadtrips/RoadtripAttachments", () => ({ default: () => null }));
 vi.mock("../../components/Trips/TripMap", () => ({
   default: ({ tourGeometries }: { tourGeometries: Array<{ rgb?: [number, number, number] }> }) => {
     drawn.push(tourGeometries);

@@ -16,6 +16,8 @@ import type { RoadtripDetail, RoadtripStation, StationInput } from "../../types/
  * localStorage and the placeholder-overwrites-draft defect could not show.
  */
 vi.mock("../../components/NavigationBar", () => ({ default: () => <div /> }));
+// Photos and documents load on their own (DocumentsSection.tour.test.tsx); not this page's subject.
+vi.mock("../../components/Roadtrips/RoadtripAttachments", () => ({ default: () => null }));
 vi.mock("../../components/Trips/TripMap", () => ({ default: () => <div data-testid="map" /> }));
 vi.mock("../../components/location/LocationInput", () => ({ LocationInput: () => <div /> }));
 vi.mock("../../lib/api/lodging", () => ({

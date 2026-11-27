@@ -43,6 +43,10 @@ vi.mock("@/lib/api/sharing", () => ({
 vi.mock("../../lib/api/sharingRemote", () => ({
   sharingRemoteApi: { status: vi.fn().mockResolvedValue({ available: false }) },
 }));
+// ...and loads local link proposals beside the offers; none here (feat/share-bulk-link).
+vi.mock("../../lib/api/sharingLink", () => ({
+  sharingLinkApi: { receivedProposals: vi.fn().mockResolvedValue([]) },
+}));
 vi.mock("../../components/inbox/usePhotoJourneysVisible", () => ({
   usePhotoJourneysVisible: () => visible.value,
 }));

@@ -8,6 +8,8 @@ import { toursApi } from "../../lib/api/tours";
 import type { RoadtripDetail } from "../../types/roadtrip";
 
 vi.mock("../../components/NavigationBar", () => ({ default: () => <div /> }));
+// Photos and documents load on their own (DocumentsSection.tour.test.tsx); not this page's subject.
+vi.mock("../../components/Roadtrips/RoadtripAttachments", () => ({ default: () => null }));
 vi.mock("../../components/Trips/TripMap", () => ({
   default: ({ fill }: { fill?: boolean }) => <div data-testid="map" data-fill={String(!!fill)} />,
 }));
