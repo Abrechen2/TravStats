@@ -59,7 +59,7 @@ describe("AirportAutocomplete — country name in the dropdown", () => {
     });
 
     await waitFor(() => expect(screen.getByText("Deutschland")).toBeInTheDocument());
-    expect(screen.getByText("Deutschland").closest("div")?.textContent).toBe(
+    expect(screen.getByText("Deutschland").closest(".t-caption")?.textContent).toBe(
       "Frankfurt, Deutschland"
     );
     expect(screen.queryByText("Frankfurt, DE")).not.toBeInTheDocument();

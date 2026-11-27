@@ -131,7 +131,7 @@ describe("TourStatsSection (forgejo#264)", () => {
     renderAt(null);
     const rows = await screen.findByTestId("tour-activities-rows");
     expect(rows.textContent).toContain("Wanderung");
-    expect(rows.textContent).toContain("1.100 Hm (1 gemessen)");
+    expect(rows.textContent).toContain("1.100 Hm (1)");
     expect(rows.textContent).toContain("Geführter Ausflug");
   });
 
@@ -161,8 +161,8 @@ describe("TourStatsSection (forgejo#264)", () => {
     });
     renderAt(null);
     const rows = await screen.findByTestId("tour-activities-rows");
-    expect(rows.textContent).toContain("25 min in Bewegung");
-    expect(rows.textContent).toContain("3 h 30 min in Bewegung");
+    expect(rows.textContent).toContain("25 min (1)");
+    expect(rows.textContent).toContain("3 h 30 min (1)");
     const moving = screen.getByTestId("tour-moving");
     expect(moving.textContent).toContain("1 h 30 min in Bewegung");
     expect(moving.textContent).toContain("25 min Pause");

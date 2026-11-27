@@ -170,7 +170,7 @@ describe("time-migration report — what the admin reads", () => {
         "3 Einträge hatten die neuen Werte schon (neu angelegt oder aus der Demo) und blieben unverändert."
       )
     ).toBeInTheDocument();
-    expect(screen.getByText(/^5 Einträge wurden nicht vollständig umgestellt/)).toBeInTheDocument();
+    expect(screen.getByText(/^5 Einträge offen/)).toBeInTheDocument();
     expect(
       screen.getByText(
         "Fragen im Posteingang: 5 offen · 2 als korrigiert gemeldet · 1 als richtig bestätigt"
@@ -193,9 +193,7 @@ describe("time-migration report — what the admin reads", () => {
     // `open` is what still waits; without `answered` an admin cannot tell a
     // question the user settled from one the backfill never asked.
     expect(
-      await screen.findByText(
-        "7 Einträge, die die Umstellung offen ließ, sind seither beantwortet – Zeitzone oder Uhrzeit ergänzt, die Frage bestätigt oder der Eintrag gelöscht."
-      )
+      await screen.findByText("7 offene Einträge sind seither beantwortet.")
     ).toBeInTheDocument();
     const byTable = screen.getByRole("table", { name: "Nach Tabelle" });
     expect(

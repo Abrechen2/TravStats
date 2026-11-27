@@ -39,7 +39,7 @@ describe("ReviewCard — the home question", () => {
     expect(
       screen.getByText("Wohnort bestätigen und weitere Heimatflughäfen wählen?")
     ).toBeInTheDocument();
-    expect(screen.getByText(/nur deinen Heimatflughafen \(MUC, CGN\)/)).toBeInTheDocument();
+    expect(screen.getByText(/nur dein Heimatflughafen \(MUC, CGN\)/)).toBeInTheDocument();
     expect(
       screen.getByText("Bis du bestätigst, rechnen alle Statistiken genau wie bisher.")
     ).toBeInTheDocument();
