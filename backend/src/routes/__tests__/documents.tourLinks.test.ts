@@ -141,4 +141,22 @@ describe("documents on a roadtrip / tour (GitHub #415)", () => {
     expect(after.tripRouteId).toBeNull();
     expect(after.unlinkedAt).not.toBeNull();
   });
+
+  it("hands a removed roadtrip's documents to its trip instead of dropping them", async () => {
+    const trip = await prisma.trip.create({ data: { userId: ownerId, name: "Alps" } });
+    const route = await prisma.tripRoute.create({
+      data: { userId: ownerId, tripId: trip.id, name: "Day", mode: "road" },
+    });
+    const doc = await keep("handover");
+    await post(`/documents/${doc.id}/links`, {
+      links: [{ entry: { type: "tour", id: route.id } }],
+    });
+    const gone = await del(`/tours/${route.id}`);
+    expect(gone.status).toBeLessThan(300);
+    const onTrip = await get(`/trips/${trip.id}/documents`);
+    expect(onTrip.body.data.map((d: { id: string }) => d.id)).toContain(doc.id);
+    expect(
+      (await prisma.document.findUniqueOrThrow({ where: { id: doc.id } })).unlinkedAt
+    ).toBeNull();
+  });
 });

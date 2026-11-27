@@ -4859,7 +4859,7 @@ model Document {
   ferryJourneyId  String? @map("ferry_journey_id")
   /// An expense's receipt (forgejo#150).
   tripExpenseId   String? @map("trip_expense_id")
-  /// A roadtrip / tour section (TripRoute) itself (forgejo, GitHub #415): ride screenshot, GPX.
+  /// A roadtrip / tour section (TripRoute) itself (forgejo, GitHub #415): ride screenshot.
   tripRouteId     String? @map("trip_route_id")
   /// What a rental's evidence shows (forgejo#239): pickup | return | damage |
   /// fuel | odometer. Only while filed with a rental; null = uncategorised —

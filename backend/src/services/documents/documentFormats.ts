@@ -47,7 +47,7 @@ export const ENTRY_TYPES = [
   "ferryJourney",
   /** An expense's receipt (forgejo#150). */
   "tripExpense",
-  /** A roadtrip or tour section itself — its ride screenshot or GPX (GitHub #415). */
+  /** A roadtrip or tour section itself — its ride screenshot (GitHub #415). */
   "tour",
 ] as const;
 export type EntryType = (typeof ENTRY_TYPES)[number];
