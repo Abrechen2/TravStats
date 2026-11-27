@@ -25,6 +25,17 @@ export const SPAN_JOIN_MS = 30 * 60_000;
 /** The most removed points whose keys are listed. */
 export const KEY_CAP = 50_000;
 
+/**
+ * The removed points' keys as one JSON array, or null past `cap`. The aggregate is fed at most
+ * `cap + 1` rows: `CASE WHEN count(*) <= cap THEN json_agg(…)` over the whole set still built
+ * the full aggregate for a removal of millions of points before discarding it.
+ * Reads the CTE `m` of the caller.
+ */
+export function removedKeysSql(cap: number): Prisma.Sql {
+  return Prisma.sql`(SELECT CASE WHEN count(*) <= ${cap} THEN json_agg(json_build_array(t_s, lat, lon)) END
+         FROM (SELECT t_s, lat, lon FROM m LIMIT ${cap + 1}) capped)`;
+}
+
 export type RemovedHistory = {
   spans: Array<[number, number]>;
   days: string[];
@@ -72,8 +83,7 @@ export async function collectRemoved(
          SELECT to_char(min(t), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS f,
                 to_char(max(t), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS u
            FROM grouped GROUP BY grp) s) AS spans,
-      (SELECT CASE WHEN count(*) <= ${KEY_CAP} THEN json_agg(json_build_array(t_s, lat, lon)) END
-         FROM m) AS keys`;
+      ${removedKeysSql(KEY_CAP)} AS keys`;
   if (!row || row.n === 0n) return NOTHING_REMOVED;
   return {
     spans: (row.spans ?? []).map((s) => [Date.parse(s.f), Date.parse(s.u)]),
