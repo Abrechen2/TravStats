@@ -7,6 +7,11 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { errorContent } from "./shared";
 import {
+  bulkLocalQuerySchema,
+  bulkOfferBodySchema,
+  bulkOfferCandidatesSchema,
+  bulkOfferQuerySchema,
+  bulkPairsSchema,
   linkBodySchema,
   linkCandidatesQuerySchema,
   linkCandidatesSchema,
@@ -104,4 +109,55 @@ registry.registerPath({
   tags,
   request: { params: offerParams, body: json(offerLinkBodySchema) },
   responses: { 200: ok("What was linked", linkResultSchema), ...remoteRefusals },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/sharing/link-bulk",
+  summary: "Every trip of the caller that is the same as one of another account's",
+  description:
+    "The bulk link's list: one trip to one trip (same period, then name, then overlap), pairs already in one group as `linked`, two equally good matches as `ambiguous`. Nothing is compared or written; each pair is compared and linked through `link-preview` and `link`.",
+  tags,
+  request: { query: bulkLocalQuerySchema },
+  responses: { 200: ok("The trip pairs", bulkPairsSchema), ...localRefusals },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/sharing/remote/link-bulk",
+  summary: "Every open offer from another server paired with one of the caller's trips",
+  description:
+    "Offers whose sender has an accepted consent only; an offer with no trip of the caller to match comes with `trip: null`.",
+  tags,
+  responses: { 200: ok("The offer pairs", bulkPairsSchema), ...remoteRefusals },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/sharing/remote/link-bulk/offers",
+  summary: "The caller's trips the person on another server travelled on, not shared with them yet",
+  tags,
+  request: { query: bulkOfferQuerySchema },
+  responses: { 200: ok("Trips to offer", bulkOfferCandidatesSchema), ...remoteRefusals },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/sharing/remote/link-bulk/offers",
+  summary: "Offer one trip to a connected person on another server, as one step of a bulk run",
+  description:
+    "The same offer as `/sharing/remote/trips/{tripId}/offers`, under the bulk link's rate limit.",
+  tags,
+  request: { body: json(bulkOfferBodySchema) },
+  responses: {
+    201: {
+      description: "The offer",
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.literal(true), data: z.object({}).passthrough() }),
+        },
+      },
+    },
+    ...remoteRefusals,
+  },
 });

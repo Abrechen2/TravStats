@@ -3,7 +3,14 @@ import {
   offerLinkCandidates,
   previewOfferLink,
 } from "../services/sharing/federation/offerLink";
-import { offerLinkBodySchema, offerLinkPreviewBodySchema } from "../schemas/sharingLink";
+import {
+  bulkOfferBodySchema,
+  bulkOfferQuerySchema,
+  offerLinkBodySchema,
+  offerLinkPreviewBodySchema,
+} from "../schemas/sharingLink";
+import { remoteBulkOfferCandidates, remoteBulkPairs } from "../services/sharing/bulkLink";
+import { offerTrip } from "../services/sharing/federation/offers";
 import { Router, type NextFunction, type Response } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import type { Request } from "express";
@@ -305,6 +312,34 @@ router.post(
   handle(async (req, res) => {
     const id = remoteOfferIdSchema.parse(req.params.id);
     res.json({ success: true, data: await acceptOffer(req.userId!, id) });
+  })
+);
+
+/**
+ * The bulk link across servers (UAT 2026-11-27): every open offer paired with a trip of the
+ * caller's, and on the sending side the trips the person travelled on, offered one per call.
+ */
+router.get(
+  "/link-bulk",
+  handle(async (req, res) => {
+    res.json({ success: true, data: await remoteBulkPairs(req.userId!) });
+  })
+);
+
+router.get(
+  "/link-bulk/offers",
+  handle(async (req, res) => {
+    const { remoteId } = bulkOfferQuerySchema.parse(req.query ?? {});
+    res.json({ success: true, data: await remoteBulkOfferCandidates(req.userId!, remoteId) });
+  })
+);
+
+router.post(
+  "/link-bulk/offers",
+  remoteShareLinkLimiter,
+  handle(async (req, res) => {
+    const { tripId, remoteId } = bulkOfferBodySchema.parse(req.body ?? {});
+    res.status(201).json({ success: true, data: await offerTrip(req.userId!, tripId, remoteId) });
   })
 );
 

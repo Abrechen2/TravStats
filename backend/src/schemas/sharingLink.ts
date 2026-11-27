@@ -127,3 +127,27 @@ export const linkResultSchema = z.strictObject({
   onlyThere: z.number().int(),
   settleFailed: z.boolean(),
 });
+
+/** The bulk link (UAT 2026-11-27): the pairs, and the trips to offer across servers. */
+export const bulkLocalQuerySchema = z.object({ userId: id }).strict();
+export const bulkOfferQuerySchema = z.object({ remoteId: z.string().uuid() }).strict();
+export const bulkOfferBodySchema = z
+  .object({ tripId: z.string().uuid(), remoteId: z.string().uuid() })
+  .strict();
+
+const bulkPair = z.strictObject({
+  id: z.string(),
+  trip: tripView.nullable(),
+  other: tripView,
+  reason: z.enum(["period", "name", "overlap"]).nullable(),
+  linked: z.boolean(),
+  ambiguous: z.boolean(),
+  from: z.strictObject({ displayName: z.string(), origin: z.string() }).optional(),
+});
+
+export const bulkPairsSchema = z.union([
+  z.strictObject({ access: z.literal("full"), pairs: z.array(bulkPair) }),
+  awaitingConsent,
+]);
+
+export const bulkOfferCandidatesSchema = z.array(tripView.extend({ offered: z.boolean() }));

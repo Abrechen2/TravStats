@@ -151,7 +151,7 @@ const asDay = (v: unknown): Date | null => {
 };
 
 /** The offered trip as the dry run names it (the offer's id stands in for a trip id). */
-function offeredTrip(row: OpenOffer): LinkTripView {
+export function offeredTrip(row: OpenOffer): LinkTripView {
   const trip = storedOfferSchema.parse(row.offer).trip;
   return tripView({
     id: row.id,

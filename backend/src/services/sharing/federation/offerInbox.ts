@@ -188,6 +188,15 @@ export async function pendingOfferSummaries(userId: string): Promise<ReceivedOff
   return rows.map(offerView);
 }
 
+/** Every open offer of the caller, with what `openOffer` holds per row — the bulk link's list. */
+export async function listOpenOffers(userId: string) {
+  return prisma.tripShareRemoteMember.findMany({
+    where: OPEN(userId),
+    include: { remote: true, group: true },
+    orderBy: { stateSince: "desc" },
+  });
+}
+
 export async function openOffer(userId: string, id: string) {
   const row = await prisma.tripShareRemoteMember.findFirst({
     where: { id, ...OPEN(userId) },

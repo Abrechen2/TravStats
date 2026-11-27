@@ -21,7 +21,9 @@ import { countPlanInvites } from "../services/sharing/federation/plans/memberSer
 import { inboxCount, listNotices, markNoticeRead } from "../services/sharing/notices";
 import { leaveGroup, shareTrip, tripSharingView } from "../services/sharing/shareTrip";
 import { linkCandidates, linkTrip, previewLink } from "../services/sharing/linkExisting";
+import { localBulkPairs } from "../services/sharing/bulkLink";
 import {
+  bulkLocalQuerySchema,
   linkBodySchema,
   linkCandidatesQuerySchema,
   linkPreviewBodySchema,
@@ -244,6 +246,15 @@ router.post(
         body.choices
       ),
     });
+  })
+);
+
+/** "Alle passenden Reisen verknüpfen": every trip pair with another account (UAT 2026-11-27). */
+router.get(
+  "/link-bulk",
+  handle(async (req, res) => {
+    const { userId } = bulkLocalQuerySchema.parse(req.query ?? {});
+    res.json({ success: true, data: await localBulkPairs(req.userId!, userId) });
   })
 );
 
