@@ -122,6 +122,7 @@ describe("TravTrack gate", () => {
       "get /travtrack/points/delete-preview": "held",
       "get /travtrack/explored": "on",
       "get /travtrack/months": "on",
+      "get /travtrack/years": "on",
       "get /travtrack/city-lookup": "on",
       "put /travtrack/city-lookup": "on",
       "put /travtrack/legs/mode": "on",
