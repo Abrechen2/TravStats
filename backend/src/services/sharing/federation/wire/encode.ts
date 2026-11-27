@@ -14,6 +14,7 @@ import {
   type ShareEntity,
 } from "../../shareTypes";
 import type { EntryRef } from "../../adapters/stop";
+import { thinWaypoints } from "../../facts/cruise";
 import type { PortRef, ShipRef } from "../../../trip/exchange/publicHalf";
 import logger from "../../../../utils/logger";
 import { encodeShape } from "./codec";
@@ -146,12 +147,15 @@ function withRefs(entity: ShareEntity, f: Facts, cat: Catalogue): Facts {
           const toPort = lookup(cat.ports, l.toPortId);
           return fromPort && toPort ? [{ ...l, fromPort, toPort }] : [];
         }),
-        // The same for a hand-drawn line (2026-11-24); null stays null ("not said").
+        // The same for a hand-drawn line (2026-11-24); null stays null ("not said"). A line
+        // longer than the wire allows is thinned, or the receiver drops the whole message.
         legRoutes: Array.isArray(f.legRoutes)
           ? (f.legRoutes as Facts[]).flatMap((l) => {
               const fromPort = lookup(cat.ports, l.fromPortId);
               const toPort = lookup(cat.ports, l.toPortId);
-              return fromPort && toPort ? [{ waypoints: l.waypoints, fromPort, toPort }] : [];
+              return fromPort && toPort
+                ? [{ waypoints: thinWaypoints(l.waypoints), fromPort, toPort }]
+                : [];
             })
           : null,
       };

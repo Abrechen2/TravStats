@@ -154,19 +154,20 @@ async function resolver(c: DbTransaction, entries: readonly WireEntry[]): Promis
  */
 const PORT_POSITION_MATCH_KM = 1;
 
-/** A catalogue port without a UN/LOCODE: same name, same country, same place — else no match. */
+/** A catalogue port without a UN/LOCODE: the ONE port of that name, country and place — else none. */
 function uncodedPort(
   rows: readonly { id: number; name: string; country: string | null; lat: number; lon: number }[],
   ref: PortRef
 ): number | null {
-  const hit = rows.find(
+  const hits = rows.filter(
     (r) =>
       r.name === ref.name &&
       r.country === ref.country &&
       haversineKm({ lat: r.lat, lon: r.lon }, { lat: ref.lat, lon: ref.lon }) <=
         PORT_POSITION_MATCH_KM
   );
-  return hit?.id ?? null;
+  // Two candidates are a guess between them: left unresolved, the name is kept.
+  return hits.length === 1 ? hits[0].id : null;
 }
 
 function without(f: Facts, keys: readonly string[]): Facts {

@@ -53,13 +53,25 @@ function longLine(count: number): number[][] {
   });
 }
 
-async function sharedCruise(opts: { withCodes: boolean; line: number[][] }) {
+async function sharedCruise(opts: { withCodes: boolean; line: number[][]; twinOnB?: boolean }) {
   const anna = await user(a, "Anna");
   const ben = await user(b, "Ben");
   const remote = await pairAcross(a, anna, b, ben);
   const tag = randomUUID().slice(0, 4).toUpperCase();
   const pa = await ports(a, tag, opts.withCodes);
   const pb = await ports(b, tag, opts.withCodes);
+  if (opts.twinOnB) {
+    const twin = await b.prisma.port.create({
+      data: {
+        name: pb.from.name,
+        unlocode: null,
+        lat: pb.from.lat,
+        lon: pb.from.lon,
+        country: "Egypt",
+      },
+    });
+    made.set(b, [...(made.get(b) ?? []), twin.id]);
+  }
   const trip = await a.prisma.trip.create({ data: { userId: anna, name: "Nil 2022" } });
   const cruise = await a.prisma.cruise.create({
     data: {
@@ -134,5 +146,13 @@ it("catalogue ports without a UN/LOCODE resolve on the receiver by name, country
   ]);
   expect(t.lines.map((l) => [l.fromRef, l.toRef, l.waypoints])).toEqual([
     [String(t.pb.from.id), String(t.pb.to.id), line],
+  ]);
+});
+
+it("two catalogue ports of one name at one place on the receiver are not guessed between", async () => {
+  const t = await sharedCruise({ withCodes: false, line: longLine(5), twinOnB: true });
+  expect(t.benCruise.stops.map((s) => [s.portId, s.unresolvedPortName])).toEqual([
+    [null, t.pb.from.name],
+    [t.pb.to.id, null],
   ]);
 });

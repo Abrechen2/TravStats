@@ -88,13 +88,14 @@ export function cruiseLegFacts(row: Pick<CruiseLeg, CruiseLegFactField>) {
 export interface CruiseLegRouteFact {
   fromPortId: number;
   toPortId: number;
-  /** `[[lon, lat], ...]`, 2..64 points (`thinWaypoints`), first and last at the leg's ports. */
+  /** `[[lon, lat], ...]`, first and last at the leg's ports; the wire carries 64 (`thinWaypoints`). */
   waypoints: unknown;
 }
 
 /**
- * The most points a line carries as a fact: the wire refuses more (`CRUISE_LEG_ROUTE_SHAPE`), and
- * the editor stores no more. Rows written before that guard hold up to 123 (measured on the
+ * The most points a line carries on the wire: the receiver refuses more (`CRUISE_LEG_ROUTE_SHAPE`),
+ * and the editor stores no more. Only the wire is thinned (`wire/encode.ts`); a line stays whole on
+ * this server and in a copy on it. Rows written before that guard hold up to 123 (measured on the
  * owner's Yangtze cruise, UAT 2026-11-27), and ONE such line made the receiver drop the whole
  * message as malformed — the trip could be neither shared nor linked.
  */
@@ -102,8 +103,8 @@ export const MAX_ROUTE_FACT_POINTS = 64;
 
 /**
  * A line of more than `MAX_ROUTE_FACT_POINTS` points, thinned to that many by even spacing; the
- * first and last point stay, so the line still starts and ends at its ports. Deterministic: two
- * servers holding the same long line produce the same fact and compare equal.
+ * first and last point stay, so the line still starts and ends at its ports. Deterministic: the
+ * same line always thins to the same points.
  */
 export function thinWaypoints(waypoints: unknown): unknown {
   if (!Array.isArray(waypoints) || waypoints.length <= MAX_ROUTE_FACT_POINTS) return waypoints;
@@ -137,7 +138,7 @@ export function cruiseLegRouteFacts(
         r.toKind === "port" &&
         Number.isInteger(fromPortId) &&
         Number.isInteger(toPortId)
-        ? [{ fromPortId, toPortId, waypoints: thinWaypoints(r.waypoints) }]
+        ? [{ fromPortId, toPortId, waypoints: r.waypoints }]
         : [];
     })
     .sort((a, b) => order(a) - order(b) || a.fromPortId - b.fromPortId || a.toPortId - b.toPortId);
