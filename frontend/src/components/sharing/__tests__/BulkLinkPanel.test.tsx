@@ -128,3 +128,24 @@ describe("BulkLinkPanel (UAT 2026-11-27)", () => {
     expect(screen.queryByTestId("bulk-summary")).toBeNull();
   });
 });
+
+describe("BulkLinkPanel under React Strict Mode", () => {
+  it("still compares after the effect ran twice (Copilot review)", async () => {
+    const { StrictMode } = await import("react");
+    const previewFn = vi.fn().mockResolvedValue(preview(true));
+    render(
+      <StrictMode>
+        <BulkLinkPanel
+          otherName="Papa"
+          loadPairs={vi.fn().mockResolvedValue({ access: "full", pairs: [pair("a")] })}
+          preview={previewFn}
+          link={vi.fn()}
+          undo={vi.fn()}
+          failure={(_e, key) => ({ key })}
+        />
+      </StrictMode>
+    );
+    expect(await screen.findByTestId("bulk-summary")).toBeInTheDocument();
+    expect(previewFn).toHaveBeenCalled();
+  });
+});

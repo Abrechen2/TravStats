@@ -114,6 +114,8 @@ export default function BulkLinkPanel(props: Props): JSX.Element {
 
   useEffect(() => {
     let live = true;
+    // A remount (React Strict Mode runs effects twice) must not inherit the cleanup's stop.
+    stop.current = false;
     loadPairs()
       .then((answer) => {
         if (!live) return;
