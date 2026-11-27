@@ -79,6 +79,23 @@ describe("RouteSection", () => {
     expect(screen.getByText(/40 km/)).toBeInTheDocument();
   });
 
+  it("shows a day that only rests on an assumed drive muted, with the explanation", () => {
+    const plan = routePlan();
+    plan.schedule = {
+      ...plan.schedule!,
+      stations: plan.schedule!.stations.map((s) =>
+        s.stationId === "b" ? { ...s, assumed: true } : s
+      ),
+    };
+    render(<RouteSection ctx={ctx(plan)} />);
+    const assumed = screen.getAllByTestId("assumed-day");
+    expect(assumed).toHaveLength(1);
+    expect(within(assumed[0]).getByRole("img")).toHaveAttribute(
+      "title",
+      "route.station.dayAssumed"
+    );
+  });
+
   it("offers the handover only for a station that has been reached, and sends the operation", async () => {
     const plan = routePlan();
     // a: 2026-05-01 - reached once 'today' is later; the clock is far past it. b/c: also in the past.

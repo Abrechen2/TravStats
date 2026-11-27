@@ -42,6 +42,8 @@ export const ROUTE_FINDINGS = [
   "dayTripOutside",
   "stageMissing",
   "durationMissing",
+  "durationAssumed",
+  "driveSplit",
 ] as const;
 const LEGEND: RouteTone[] = ["booked", "placeholder", "spontaneous", "own"];
 
