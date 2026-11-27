@@ -47,6 +47,7 @@ import {
 import type { EntityKind, TripFile } from "./format";
 import { buildTripFileProposal, journalIdentity } from "./proposal";
 import { writeRoadtrips } from "./commitRoadtrips";
+import { applyExtras, createdIds, STOP_SOURCE_KIND } from "./commitExtras";
 import { knownPhotoHashes, photoHash } from "./photoIdentity";
 import type { TripArchive } from "./readArchive";
 import type { TripFileChoices, TripFileEntryProposal, TripFileProposal } from "./types";
@@ -341,6 +342,7 @@ async function writeAll(
     );
   }
 
+  await applyExtras(tx, file, createdIds(proposal, ids));
   for (const entry of proposal.entries.filter((e) => e.kind === "stop")) {
     if (entry.action !== "create") {
       if (entry.id) ids.stop.set(entry.key, entry.id);
@@ -364,6 +366,7 @@ async function writeAll(
         overnight: s.overnight,
         placeId: s.placeKey ? (ids.place.get(s.placeKey) ?? null) : null,
         lodgingStayId: s.stayKey ? (ids.stay.get(s.stayKey) ?? null) : null,
+        ...wrapped(s, ids),
         ...(s.private ? { notes: s.private.notes } : {}),
       },
       select: { id: true },
@@ -408,6 +411,14 @@ async function writeAll(
     await propagateWrites(tx, userId, entity, [...ids[kind].values()]);
   }
   return ids;
+}
+
+/** A stop that wraps an entry (format 6): its domain and the entry this import wrote. */
+function wrapped(s: TripFile["stops"][number], ids: IdMaps) {
+  const domain = s.domain as keyof typeof STOP_SOURCE_KIND | null | undefined;
+  if (!domain || !(domain in STOP_SOURCE_KIND) || !s.sourceKey) return {};
+  const sourceId = ids[STOP_SOURCE_KIND[domain]].get(s.sourceKey);
+  return sourceId ? { domain, sourceId } : {};
 }
 
 /** Imported into a shared trip: copied to its members — registry order, stops last. */
