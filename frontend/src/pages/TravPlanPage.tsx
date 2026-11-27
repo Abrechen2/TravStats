@@ -1,7 +1,7 @@
 import { useParams, useLocation } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import { PlanList, PlanAdmin } from "./TravPlan/PlanList";
-import PlanContent, { PLAN_SECTIONS } from "./TravPlan/PlanContent";
+import PlanContent, { DEFAULT_SECTION, PLAN_SECTIONS } from "./TravPlan/PlanContent";
 import RemotePlanScreen from "./TravPlan/RemotePlanScreen";
 
 /**
@@ -11,7 +11,7 @@ import RemotePlanScreen from "./TravPlan/RemotePlanScreen";
  * of its own.
  */
 export default function TravPlanPage() {
-  const { tripId, connectionId, section = "overview" } = useParams(),
+  const { tripId, connectionId, section = DEFAULT_SECTION } = useParams(),
     location = useLocation();
   return (
     <AppShell>
@@ -23,7 +23,7 @@ export default function TravPlanPage() {
         <PlanContent
           key={tripId}
           tripId={tripId}
-          section={PLAN_SECTIONS.includes(section) ? section : "overview"}
+          section={PLAN_SECTIONS.includes(section) ? section : DEFAULT_SECTION}
         />
       ) : (
         <PlanList />

@@ -162,6 +162,41 @@ describe("RouteSection", () => {
     });
   });
 
+  it("puts a stop between two stations, not after the last one, and stops at a refusal", async () => {
+    const mutate = vi
+      .fn()
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValue(true);
+    const place = {
+      name: "Bergen",
+      lat: 60.4,
+      lon: 5.3,
+      country: "NO",
+      zone: "Europe/Oslo",
+      ref: null,
+    };
+    mocks.places.mockResolvedValue({
+      places: [{ source: "port", visits: null, place }],
+      unavailable: [],
+    });
+    render(<RouteSection ctx={ctx(routePlan(), { mutate })} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "route.insert.open:Kiel,Gothenburg" })
+    );
+    const searches = screen.getAllByRole("textbox", { name: "route.add.search" });
+    await userEvent.type(searches[0], "bergen");
+    await userEvent.click(await screen.findByRole("button", { name: /Bergen/ }, { timeout: 2000 }));
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(2));
+    const [first, second] = mutate.mock.calls.map((c) => c[0]);
+    expect(first).toMatchObject({
+      type: "upsert",
+      collection: "stations",
+      value: { title: "Bergen" },
+    });
+    expect(second).toEqual({ type: "move_station", id: first.value.id, toIndex: 1 });
+  });
+
   it("starts an empty route with a start place, not an empty page", () => {
     const plan = routePlan();
     plan.state = { ...plan.state, stations: [], stages: [] };

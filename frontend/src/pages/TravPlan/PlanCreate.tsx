@@ -4,13 +4,30 @@ import { useId, useState } from "react";
 import { Button, Chip, Dialog, Field, Input, Select } from "../../components/ui";
 import { useTranslation } from "../../hooks/useTranslation";
 import { currencyForCountry } from "../../shared/countryCurrency";
-import { travplanApi, type PlanKind, type PlanPlace, type PlanView } from "../../lib/api/travplan";
+import { daysBetween, supportedZones } from "../../shared/time";
+import {
+  travplanApi,
+  type PlanKind,
+  type PlanPlace,
+  type PlanVehicle,
+  type PlanView,
+} from "../../lib/api/travplan";
 import { newPlanId } from "../../lib/travplanId";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { PlanActions, PlanNotice } from "./planLayout";
 import { PlacePicker } from "./route/PlacePicker";
-import { newStage, newStation } from "./route/routeModel";
 import { entryRecord } from "./planContext";
+import { RouteLegs } from "./create/RouteLegs";
+import {
+  buildRoute,
+  draftLegs,
+  goalNights,
+  legTitle,
+  MAX_STATION_NIGHTS,
+  nightsProblem,
+  needsBooking,
+  type DraftStop,
+} from "./create/routeDraft";
 
 type Shape = "stay" | "route";
 interface Held {
@@ -20,6 +37,22 @@ interface Held {
 }
 const HELD_KINDS: Held["kind"][] = ["ferry", "rail", "flight", "hotel", "rental"];
 const PACES = ["relaxed", "balanced", "busy"] as const;
+const VEHICLES: PlanVehicle["kind"][] = [
+  "motorhome",
+  "campervan",
+  "caravan",
+  "car",
+  "motorcycle",
+  "bicycle",
+  "other",
+];
+/** Stages whose figures the server works out right after creation. */
+const MEASURED = new Set(["drive", "ferry"]);
+
+const parseAmount = (raw: string) => {
+  const n = raw.trim() === "" ? null : Number(raw);
+  return n !== null && Number.isFinite(n) ? n : null;
+};
 
 const label = (p: PlanPlace | null) =>
   p ? [p.name, p.country, p.zone].filter(Boolean).join(" · ") : "";
@@ -29,6 +62,15 @@ const label = (p: PlanPlace | null) =>
  * booked. A destination is PICKED, so time zone, currency and weather location arrive with it and
  * are shown, editable, instead of being typed into three blank fields afterwards.
  */
+/** ISO 4217 shape; the server refuses anything else and the dialog said only "did not work". */
+const CURRENCY_CODE = /^[A-Z]{3}$/;
+
+/** The runtime's zone list, plus the picked zone should an older runtime not list it. */
+function zoneOptions(current: string): string[] {
+  const all = supportedZones();
+  return current && !all.includes(current) ? [current, ...all] : all;
+}
+
 export function PlanCreate({
   onClose,
   onCreated,
@@ -42,7 +84,10 @@ export function PlanCreate({
     [shape, setShape] = useState<Shape>("stay"),
     [name, setName] = useState(""),
     [start, setStart] = useState<PlanPlace | null>(null),
-    [goal, setGoal] = useState<PlanPlace | null>(null),
+    [stops, setStops] = useState<DraftStop[]>([]),
+    [vehicle, setVehicle] = useState<PlanVehicle["kind"] | "">(""),
+    [legEstimates, setLegEstimates] = useState<Record<number, string>>({}),
+    [nameTouched, setNameTouched] = useState(false),
     [back, setBack] = useState(false),
     [startDay, setStartDay] = useState(""),
     [endDay, setEndDay] = useState(""),
@@ -54,21 +99,33 @@ export function PlanCreate({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [made, setMade] = useState<PlanView | null>(null);
+  const goal = stops[stops.length - 1]?.place ?? null;
   const main = shape === "route" ? goal : start;
-  const take = (place: PlanPlace, set: (p: PlanPlace) => void, primary: boolean) => {
-    set(place);
-    if (!primary) return;
+  const draft = shape === "route" && start && stops.length ? { start, stops, back } : null;
+  const legs = draft ? draftLegs(draft) : [];
+  /** The goal decides zone, currency and the name, until the traveller types a name. */
+  const primary = (place: PlanPlace) => {
     setZone(place.zone ?? "");
     setCurrency(currencyForCountry(place.country) ?? "EUR");
-    if (!name) setName(place.name);
+    if (!nameTouched) setName(place.name);
   };
+  const changeStops = (next: DraftStop[]) => {
+    setStops(next);
+    setLegEstimates({});
+    const last = next[next.length - 1]?.place;
+    if (last && last !== goal) primary(last);
+  };
+  const nightsIssue =
+    draft && startDay && endDay ? nightsProblem(draft, daysBetween(startDay, endDay)) : null;
   const ready =
+    !nightsIssue &&
     !!main &&
-    (shape === "stay" || !!start) &&
+    (shape === "stay" || !!draft) &&
     !!startDay &&
     !!endDay &&
     endDay >= startDay &&
-    !!name.trim();
+    !!name.trim() &&
+    (currency === "" || CURRENCY_CODE.test(currency));
   const message = (cause: unknown) => {
     const code = apiErrorMachineCode(cause);
     return t("errors." + (code ?? "unknown"), { defaultValue: t("errors.unknown") });
@@ -85,8 +142,8 @@ export function PlanCreate({
           startDay,
           endDay,
           timezone: (zone || null) as string | null,
-          latitude: (shape === "route" && start ? start : main).lat,
-          longitude: (shape === "route" && start ? start : main).lon,
+          latitude: (draft ? draft.start : main).lat,
+          longitude: (draft ? draft.start : main).lon,
           travelers,
           pace,
           currency: currency || "EUR",
@@ -96,20 +153,42 @@ export function PlanCreate({
       const write = async (operation: Parameters<typeof travplanApi.write>[1]) => {
         plan = await travplanApi.write(plan!, operation);
       };
-      if (shape === "route" && start) {
-        const stops = [start, main, ...(back ? [start] : [])].map((p) => newStation(p, 0));
-        await write({ type: "route_settings", shape: "route" });
-        for (const s of stops)
+      if (draft) {
+        const estimates = Object.fromEntries(
+          Object.entries(legEstimates).map(([k, v]) => [k, parseAmount(v)])
+        );
+        const built = buildRoute(draft, {
+          nights: daysBetween(startDay, endDay),
+          currency: currency || "EUR",
+          estimates,
+        });
+        await write({
+          type: "route_settings",
+          shape: "route",
+          vehicle: vehicle
+            ? {
+                kind: vehicle,
+                lengthM: null,
+                consumptionPer100: null,
+                fuelPrice: null,
+                fuelCurrency: null,
+              }
+            : null,
+        });
+        // Bookings before stages: a stage may only name a booking that exists.
+        for (const s of built.stations)
           await write({ type: "upsert", collection: "stations", value: entryRecord(s) });
-        for (let i = 1; i < stops.length; i++)
-          await write({
-            type: "upsert",
-            collection: "stages",
-            value: entryRecord(newStage(stops[i - 1].id, stops[i].id)),
-          });
+        for (const b of built.bookings)
+          await write({ type: "upsert", collection: "bookings", value: entryRecord(b) });
+        for (const g of built.stages)
+          await write({ type: "upsert", collection: "stages", value: entryRecord(g) });
+        // Distances and drive times straight away, so the plan does not open on "how long?".
+        // A router that cannot answer records its reason on the stage; only a failed request throws.
+        for (const g of built.stages)
+          if (MEASURED.has(g.mode)) plan = await travplanApi.routeStage(plan!, g.id);
       }
       for (const h of held) {
-        const amount = h.estimate.trim() === "" ? null : Number(h.estimate);
+        const amount = parseAmount(h.estimate);
         await write({
           type: "upsert",
           collection: "bookings",
@@ -131,10 +210,7 @@ export function PlanCreate({
             source: "manual",
             details: {},
             placeholder: true,
-            estimate:
-              amount !== null && Number.isFinite(amount)
-                ? { amount, currency: currency || "EUR" }
-                : null,
+            estimate: amount !== null ? { amount, currency: currency || "EUR" } : null,
             stageId: null,
           },
         });
@@ -163,24 +239,47 @@ export function PlanCreate({
               {t("create.shapeRoute")}
             </Chip>
           </div>
-          {shape === "route" && (
-            <Field label={t("create.start")} htmlFor={uid + "-start"} hint={label(start)}>
+          {shape === "route" ? (
+            <RouteLegs
+              uid={uid}
+              start={start}
+              stops={stops}
+              onStart={setStart}
+              onAdd={(p) => changeStops([...stops, { place: p, mode: "drive" }])}
+              onStops={changeStops}
+              goalNights={
+                draft && startDay && endDay
+                  ? goalNights(draft, daysBetween(startDay, endDay))
+                  : null
+              }
+            />
+          ) : (
+            <Field label={t("create.destination")} htmlFor={uid + "-dest"} hint={label(start)}>
               <PlacePicker
-                label={t("create.startSearch")}
-                onPick={(p) => take(p, setStart, false)}
+                label={t("create.destinationSearch")}
+                onPick={(p) => {
+                  setStart(p);
+                  primary(p);
+                }}
               />
             </Field>
           )}
-          <Field
-            label={t(shape === "route" ? "create.goal" : "create.destination")}
-            htmlFor={uid + "-dest"}
-            hint={label(shape === "route" ? goal : start)}
-          >
-            <PlacePicker
-              label={t("create.destinationSearch")}
-              onPick={(p) => (shape === "route" ? take(p, setGoal, true) : take(p, setStart, true))}
-            />
-          </Field>
+          {shape === "route" && (
+            <Field label={t("create.vehicle")} htmlFor={uid + "-vehicle"}>
+              <Select
+                id={uid + "-vehicle"}
+                value={vehicle}
+                onChange={(e) => setVehicle(e.target.value as typeof vehicle)}
+              >
+                <option value="">{t("create.vehicleNone")}</option>
+                {VEHICLES.map((v) => (
+                  <option key={v} value={v}>
+                    {t("vehicle." + v)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
           {shape === "route" && (
             <label className="t-body flex items-center" style={{ gap: "var(--ts-space-md)" }}>
               <input
@@ -233,7 +332,14 @@ export function PlanCreate({
           {main && (
             <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "var(--ts-space-lg)" }}>
               <Field label={t("fields.timezone")} htmlFor={uid + "-zone"} hint={t("create.taken")}>
-                <Input id={uid + "-zone"} value={zone} onChange={(e) => setZone(e.target.value)} />
+                <Select id={uid + "-zone"} value={zone} onChange={(e) => setZone(e.target.value)}>
+                  <option value="">{t("create.zoneUnknown")}</option>
+                  {zoneOptions(zone).map((z) => (
+                    <option key={z} value={z}>
+                      {z}
+                    </option>
+                  ))}
+                </Select>
               </Field>
               <Field label={t("fields.currency")} htmlFor={uid + "-cur"}>
                 <Input
@@ -244,7 +350,7 @@ export function PlanCreate({
                 />
               </Field>
               <p className="t-caption sm:col-span-2">
-                {t("create.weather", { place: (shape === "route" && start ? start : main).name })}
+                {t("create.weather", { place: (draft ? draft.start : main).name })}
               </p>
             </div>
           )}
@@ -253,9 +359,17 @@ export function PlanCreate({
               id={uid + "-name"}
               value={name}
               maxLength={120}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                setNameTouched(true);
+              }}
             />
           </Field>
+          {nightsIssue && (
+            <PlanNotice tone="bad">
+              {t("create.nights." + nightsIssue, { max: MAX_STATION_NIGHTS })}
+            </PlanNotice>
+          )}
           <PlanActions>
             <Button variant="primary" disabled={!ready} onClick={() => setStep(2)}>
               {t("create.next")}
@@ -266,6 +380,25 @@ export function PlanCreate({
       ) : (
         <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
           <p className="t-body">{t("create.bookingsIntro")}</p>
+          {legs.map((leg, i) =>
+            needsBooking(leg.mode) ? (
+              <Field
+                key={"leg" + i}
+                label={`${t("route.mode." + leg.mode)}: ${legTitle(leg)}`}
+                htmlFor={`${uid}-leg${i}`}
+                hint={t("create.legPlaceholder")}
+              >
+                <Input
+                  id={`${uid}-leg${i}`}
+                  placeholder={t("create.estimate")}
+                  type="number"
+                  min={0}
+                  value={legEstimates[i] ?? ""}
+                  onChange={(e) => setLegEstimates({ ...legEstimates, [i]: e.target.value })}
+                />
+              </Field>
+            ) : null
+          )}
           {held.map((h, i) => (
             <div
               key={i}

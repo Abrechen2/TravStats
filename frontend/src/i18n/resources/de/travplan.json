@@ -30,7 +30,8 @@
     "budget": "Budget & Aufgaben",
     "handover": "Reisebereit",
     "actual": "Plan & Wirklichkeit",
-    "route": "Route"
+    "route": "Route",
+    "days": "Tagesplan"
   },
   "fields": {
     "name": "Reisename",
@@ -380,7 +381,24 @@
     "estimate": "Schätzung",
     "finish": "Plan anlegen",
     "openPlan": "Plan öffnen",
-    "partial": "Der Plan ist angelegt, aber nicht alles konnte übernommen werden: {{reason}}"
+    "partial": "Der Plan ist angelegt, aber nicht alles konnte übernommen werden: {{reason}}",
+    "zoneUnknown": "Zeitzone noch offen",
+    "legMode": "Wie geht es nach {{place}}?",
+    "removeStop": "{{place}} entfernen",
+    "addStop": "Nächster Halt oder Ziel",
+    "stopHint": "Fährhafen, Zwischenstopp oder Ziel. Der letzte Halt ist das Ziel; bei jedem Halt wählst du, wie du hinkommst.",
+    "vehicle": "Unterwegs mit",
+    "vehicleNone": "Ohne eigenes Fahrzeug",
+    "legPlaceholder": "Wird als Platzhalter an dieser Etappe angelegt. Die echte Buchung ersetzt ihn später.",
+    "overnight": "über Nacht",
+    "stopNights": "Nächte in {{place}}",
+    "goalNights_one": "{{count}} Nacht",
+    "goalNights_other": "{{count}} Nächte",
+    "nightsLabel": "Nächte",
+    "nights": {
+      "tooMany": "Zwischenhalte und Nächte an Bord brauchen mehr Nächte, als die Reise hat. Kürze einen Halt oder verlängere die Reise.",
+      "goalTooLong": "Ein Halt kann höchstens {{max}} Nächte haben. Verteile die Nächte auf mehrere Halte."
+    }
   },
   "deletePlan": {
     "open": "Plan löschen",
@@ -560,7 +578,8 @@
     "map": {
       "label": "Karte der Route mit {{count}} Stationen",
       "unavailable": "Die Karte braucht WebGL und ist in diesem Browser nicht verfügbar.",
-      "note": "Die Linie verbindet die Stationen in Reihenfolge; die berechnete Straße steht in den Etappen."
+      "note": "Die Linie verbindet die Stationen in Reihenfolge; die berechnete Straße steht in den Etappen.",
+      "marker": "Station {{n}}: {{place}} öffnen"
     },
     "variants": {
       "title": "Varianten",
@@ -595,6 +614,46 @@
       "records_other": "{{count}} Einträge vom Plan geschrieben. Zurücknehmen löscht nur, was du seither nicht verändert hast.",
       "placeholders_one": "{{count}} Platzhalter bleibt im Plan und wird nicht übernommen.",
       "placeholders_other": "{{count}} Platzhalter bleiben im Plan und werden nicht übernommen."
+    },
+    "suggest": {
+      "search": "Übernachtung im Umkreis von {{km}} km suchen",
+      "searching": "Suche …",
+      "list": "Übernachtungsvorschläge",
+      "none": "OpenStreetMap kennt im Umkreis von {{km}} km nichts zum Übernachten.",
+      "distance": "{{km}} km entfernt",
+      "take": "{{name}} als Idee übernehmen",
+      "takeShort": "Übernehmen",
+      "more": "Weitere zeigen",
+      "source": "Aus OpenStreetMap. Preise und freie Plätze prüfst du beim Platz selbst.",
+      "failed": {
+        "timeout": "OpenStreetMap hat nicht rechtzeitig geantwortet. Versuch es gleich noch einmal.",
+        "rateLimited": "OpenStreetMap bremst gerade Anfragen. Versuch es in einer Minute noch einmal.",
+        "unavailable": "OpenStreetMap ist gerade nicht erreichbar.",
+        "disabled": "Die offenen Datendienste sind auf diesem Server ausgeschaltet. Ein Admin schaltet sie in den Einstellungen ein."
+      },
+      "kind": {
+        "camp_site": "Campingplatz",
+        "caravan_site": "Wohnmobil-Stellplatz",
+        "hotel": "Hotel",
+        "guest_house": "Pension",
+        "hostel": "Hostel",
+        "motel": "Motel",
+        "apartment": "Ferienwohnung",
+        "chalet": "Ferienhaus",
+        "alpine_hut": "Hütte",
+        "other": "Unterkunft"
+      },
+      "full": "Diese Nacht hat schon 10 Kandidaten. Entferne einen, um einen Vorschlag zu übernehmen."
+    },
+    "insert": {
+      "open": "+ Ort zwischen {{from}} und {{to}} einfügen",
+      "title": "Ort zwischen {{from}} und {{to}}"
+    },
+    "nights": {
+      "less": "Eine Nacht weniger in {{place}}",
+      "more": "Eine Nacht mehr in {{place}}",
+      "fixed": "Eine Nacht mehr in {{place}} schiebt alles danach einen Tag später. Fest steht aber: {{fixed}}.",
+      "anyway": "Trotzdem eine Nacht mehr"
     }
   },
   "match": {
@@ -724,6 +783,51 @@
         "PLAN_MEMBER_LIMIT": "Es sind schon so viele Mitplaner dabei, wie ein Plan haben darf.",
         "unknown": "Die Einladung konnte nicht verschickt werden."
       }
+    }
+  },
+  "budgetRow": {
+    "estimated": "Geschätzt {{amount}}",
+    "priceOpen": "Preis offen"
+  },
+  "vehicle": {
+    "motorhome": "Wohnmobil",
+    "campervan": "Campervan",
+    "caravan": "Auto mit Wohnwagen",
+    "car": "Auto",
+    "motorcycle": "Motorrad",
+    "bicycle": "Fahrrad",
+    "other": "Anderes Fahrzeug"
+  },
+  "days": {
+    "number": "Tag {{n}}",
+    "night": "Übernachtung: {{place}}",
+    "nightUnknown": "Übernachtung noch offen – der Tag ist noch nicht berechnet.",
+    "empty": "Noch nichts geplant.",
+    "task": "Erledigen: {{title}}",
+    "notMeasured": "Strecke noch nicht berechnet",
+    "noDates": "Noch keine Reisedaten",
+    "noDatesHint": "Trag Beginn und Ende der Reise ein, dann steht hier jeder Tag.",
+    "undated": "Noch ohne Tag: {{places}}. Davor fehlt eine Fahrzeit.",
+    "toRoute": "Zur Route",
+    "numbers": "Tag {{from}}–{{to}}",
+    "pickDay": "An welchem Tag?",
+    "pickIdea": "Idee einplanen",
+    "pickIdeaPrompt_one": "+ Idee einplanen ({{count}} offen)",
+    "pickIdeaPrompt_other": "+ Idee einplanen ({{count}} offen)",
+    "moveItem": "Tag für {{title}}",
+    "unplanItem": "{{title}} zurück zu den Ideen",
+    "unplan": "Zurück zu den Ideen",
+    "editLeg": "Etappe {{from}} → {{to}} bearbeiten",
+    "addEntry": "+ Eintrag",
+    "setDates": "Reisedaten setzen",
+    "quickStop": "Kurzen Halt einplanen",
+    "quickStopPrompt": "+ Kurzer Halt",
+    "stop": {
+      "shopping": "Einkaufen",
+      "fuel": "Tanken",
+      "meal": "Essen",
+      "break": "Pause",
+      "service": "Ver- und Entsorgung"
     }
   }
 }

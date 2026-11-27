@@ -3,12 +3,10 @@ import { Card, HeroCard, Pill, StatTile, StatusPill } from "../../../components/
 import { daysBetween, todayIn } from "../../../shared/time";
 import { PlanCardHead, PlanGrid, PlanGrow, PlanLink, PlanRow, PlanStack } from "../planLayout";
 import { PlanMetrics } from "../PlanParts";
-import { shortDay } from "../route/RouteTimeline";
 import { FindingCards } from "./FindingCards";
 import type { PlanCtx } from "../planContext";
-
-const NIGHT_CODES = ["nightGap", "nightUndecided", "hotelDates"];
-const TRANSPORT_CODES = ["stageUndecided", "stageMissing", "transferOpen", "durationMissing"];
+import { planDay, planRange } from "../format";
+import { planReadiness } from "../readiness";
 
 /** A countdown that never claims more than the dates say. */
 function countdown(start: string | null, end: string | null, today: string) {
@@ -29,21 +27,8 @@ export function OverviewSection({ ctx }: { ctx: PlanCtx }) {
     { plan, state, prefix } = ctx,
     today = todayIn(state.timezone ?? "UTC"),
     count = countdown(state.startDay, state.endDay, today),
-    codes = new Set(plan.findings.map((f) => f.code)),
     openTasks = state.tasks.filter((x) => !x.done).length,
-    packedAll = state.packing.length > 0 && state.packing.every((p) => p.packed),
-    planned = state.shape === "route" ? state.stations.length > 0 : state.items.length > 0,
-    readiness: { key: string; ok: boolean; to: string }[] = [
-      { key: "planned", ok: planned, to: "workspace" },
-      { key: "nights", ok: planned && !NIGHT_CODES.some((c) => codes.has(c)), to: "workspace" },
-      {
-        key: "transport",
-        ok: planned && !TRANSPORT_CODES.some((c) => codes.has(c)),
-        to: "transfer",
-      },
-      { key: "tasks", ok: state.tasks.length > 0 && openTasks === 0, to: "packing" },
-      { key: "packing", ok: packedAll, to: "packing" },
-    ],
+    readiness = planReadiness(plan),
     forecastDay = state.forecast?.days.find((d) => d.max !== null || d.min !== null);
   return (
     <>
@@ -57,8 +42,7 @@ export function OverviewSection({ ctx }: { ctx: PlanCtx }) {
           <h2 className="t-card-title">{state.destination || plan.name}</h2>
           <p className="t-body">
             {t("overview.countdown." + count.key, { count: count.count })}
-            {state.startDay &&
-              ` · ${shortDay(state.startDay)}${state.endDay ? " – " + shortDay(state.endDay) : ""}`}
+            {state.startDay && ` · ${planRange(state.startDay, state.endDay)}`}
           </p>
           <div>
             <PlanLink variant="primary" to={prefix + "/workspace"}>
@@ -104,7 +88,7 @@ export function OverviewSection({ ctx }: { ctx: PlanCtx }) {
             <PlanCardHead title={t("overview.weather")} />
             <p className="t-body">
               {forecastDay
-                ? `${shortDay(forecastDay.day)} · ${forecastDay.min ?? "–"}° / ${forecastDay.max ?? "–"}°`
+                ? `${planDay(forecastDay.day)} · ${forecastDay.min ?? "–"}° / ${forecastDay.max ?? "–"}°`
                 : t("weatherUnknown")}
             </p>
             <PlanLink to={prefix + "/packing"}>{t("overview.weatherMore")}</PlanLink>

@@ -4,8 +4,8 @@ import type { PlanView, PlanOperation, PlanItem, PlanState } from "../../lib/api
 import { ActualRecordPicker } from "./ActualRecordPicker";
 import { todayIn } from "../../shared/time";
 import { RouteHandoverCard } from "./route/RouteHandoverCard";
-import { shortDay } from "./route/RouteTimeline";
 import { PlanActions, PlanCardHead, PlanGrow, PlanLink, PlanRow, PlanStack } from "./planLayout";
+import { planDay } from "./format";
 
 const CONFIRMABLE_KINDS = ["activity", "free", "transfer", "flight", "hotel"];
 
@@ -60,7 +60,7 @@ export function PlanHandover({
             <PlanGrow>
               <h3 className="t-card-title">{i.title}</h3>
               <p className="t-body">
-                {shortDay(i.day)} · {t("options." + i.kind)}
+                {planDay(i.day)} · {t("options." + i.kind)}
               </p>
             </PlanGrow>
             {confirmable(state, i, today) && (

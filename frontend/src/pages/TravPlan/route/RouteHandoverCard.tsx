@@ -3,8 +3,8 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { todayIn } from "../../../shared/time";
 import type { PlanOperation, PlanView } from "../../../lib/api/travplan";
 import { PlanCardHead, PlanGrow, PlanNotice, PlanRow } from "../planLayout";
-import { shortDay } from "./RouteTimeline";
 import { canHandOver, linkOf, stationDays, wroteRecords } from "./routeModel";
+import { planDay } from "../format";
 
 /**
  * Handover of a route plan to the logbook (spec §5.9), station by station: once a station is
@@ -39,7 +39,7 @@ export function RouteHandoverCard({
           <PlanRow key={s.id}>
             <PlanGrow>
               <h3 className="t-card-title">{s.title}</h3>
-              <p className="t-caption">{shortDay(arrive) ?? t("route.station.dayUnknown")}</p>
+              <p className="t-caption">{planDay(arrive) ?? t("route.station.dayUnknown")}</p>
               {link && link.created.length > 0 && (
                 <p className="t-caption">
                   {t("route.handover.records", { count: link.created.length })}

@@ -29,6 +29,8 @@ export interface PlanCtx {
   setWeatherBusy: (busy: boolean) => void;
   suggestions: string[];
   setSuggestions: (suggestions: string[]) => void;
+  /** Opens the trip's own settings (name, dates, zone); absent where a section is drawn alone. */
+  editTrip?: () => void;
   /** Everyone on the plan the caller may see; just the caller until the roster has loaded. */
   members: PlanMember[];
 }

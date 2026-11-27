@@ -16,6 +16,7 @@ import {
   PlanRow,
   PlanStack,
 } from "./planLayout";
+import { planDay } from "./format";
 
 const MAX_REQUEST_CHARS = 1000;
 
@@ -135,7 +136,7 @@ export default function PlanAI({
                           <PlanGrow>
                             <strong className="t-body">{item?.title || c.id}</strong>
                             <p className="t-body">
-                              {after ? c.day : item?.day} · {after ? c.time : item?.time}
+                              {planDay(after ? c.day : item?.day)} · {after ? c.time : item?.time}
                             </p>
                             {after && <p className="t-caption">{c.reason}</p>}
                           </PlanGrow>

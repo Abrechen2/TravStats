@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
-import { appLocale } from "../../../lib/units";
-import { formatDayLong } from "../../../shared/time";
 import { Button, Card, Pill } from "../../../components/ui";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type {
+  PlanOperation,
   PlanStage,
   PlanState,
   PlanStation,
@@ -20,6 +19,8 @@ import {
   wroteRecords,
   type RouteTone,
 } from "./routeModel";
+import { planDay } from "../format";
+import { NightStepper } from "./NightStepper";
 
 /** Booked is solid, a placeholder dashed in the accent, spontaneous dashed and neutral, own driving good. */
 export const TONE: Record<RouteTone, { color: string; dashed: boolean }> = {
@@ -30,11 +31,6 @@ export const TONE: Record<RouteTone, { color: string; dashed: boolean }> = {
   undecided: { color: "var(--ts-warn)", dashed: true },
   idea: { color: "var(--ts-info)", dashed: true },
 };
-
-export const shortDay = (day: string | null) =>
-  day
-    ? formatDayLong(day, appLocale(), { weekday: "short", day: "numeric", month: "short" })
-    : null;
 
 function TonePill({ tone }: { tone: RouteTone }) {
   const { t } = useTranslation("travplan");
@@ -68,6 +64,7 @@ export function StationCard({
   onRemove,
   onHandover,
   onWithdraw,
+  onWrite,
 }: {
   state: PlanState;
   station: PlanStation;
@@ -81,6 +78,7 @@ export function StationCard({
   onRemove: () => void;
   onHandover: () => void;
   onWithdraw: () => void;
+  onWrite: (op: PlanOperation) => void;
 }) {
   const { t } = useTranslation("travplan"),
     tone = nightTone(station, state.bookings),
@@ -88,8 +86,8 @@ export function StationCard({
     link = linkOf(state, station.id),
     trips = dayTripsOf(state, station.id),
     weather = state.stationWeather.find((w) => w.stationId === station.id);
-  const arrive = shortDay(when?.arriveDay ?? null),
-    depart = shortDay(when?.departDay ?? null);
+  const arrive = planDay(when?.arriveDay ?? null),
+    depart = planDay(when?.departDay ?? null);
   const candidates = station.night.kind === "idea" ? station.night.candidates : [];
   return (
     <Card
@@ -112,13 +110,11 @@ export function StationCard({
           </p>
         </PlanGrow>
         <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
-          <Pill color="var(--ts-muted)">
-            {t("route.station.nightsCount", { count: station.nights })}
-          </Pill>
           <TonePill tone={tone} />
           {link && <Pill color="var(--ts-good)">{t("route.handover.inLogbook")}</Pill>}
         </div>
       </div>
+      <NightStepper state={state} station={station} busy={busy} onWrite={onWrite} />
       <p className="t-body">{t("route.night." + station.night.kind)}</p>
       {candidates.length > 0 && (
         <ul className="t-body" style={{ paddingLeft: "var(--ts-space-xl)", listStyle: "disc" }}>

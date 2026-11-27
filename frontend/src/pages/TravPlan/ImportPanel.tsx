@@ -16,6 +16,7 @@ import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { Button, Card, Field, Input, Select, TextArea } from "../../components/ui";
 import { PlanActions, PlanCardHead, PlanGrow, PlanRow } from "./planLayout";
 import { PlanCheck } from "./PlanParts";
+import { planDay } from "./format";
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_PASTE_CHARS = 200000;
@@ -219,7 +220,7 @@ export default function ImportPanel({
                 <PlanGrow>
                   <h3 className="t-card-title">{b.title}</h3>
                   <p className="t-caption">
-                    {b.day || t("review.unknown")} · {b.reference || t("review.unknown")}
+                    {planDay(b.day) ?? t("review.unknown")} · {b.reference || t("review.unknown")}
                   </p>
                 </PlanGrow>
                 <Button disabled={busy} onClick={() => void pick(i, b)}>

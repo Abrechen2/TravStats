@@ -5,6 +5,7 @@ import { PlanActions, PlanCardHead, PlanGrid, PlanGrow, PlanRow, PlanStack } fro
 import ImportPanel from "../ImportPanel";
 import { BookingPlanToggle } from "../BookingPlanToggle";
 import type { PlanCtx } from "../planContext";
+import { planRange } from "../format";
 
 export function ImportSection({ ctx }: { ctx: PlanCtx }) {
   const { t } = useTranslation("travplan"),
@@ -45,7 +46,7 @@ export function ImportSection({ ctx }: { ctx: PlanCtx }) {
                 <PlanGrow>
                   <h3 className="t-card-title">{b.title}</h3>
                   <p className="t-body">
-                    {b.day} – {b.endDay} · {b.time}
+                    {[planRange(b.day, b.endDay), b.time].filter(Boolean).join(" · ")}
                   </p>
                   <p className="t-caption">
                     {b.amount === null ? t("review.unknown") : b.amount + " " + b.currency} ·{" "}

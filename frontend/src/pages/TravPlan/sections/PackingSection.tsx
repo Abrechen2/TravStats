@@ -8,6 +8,7 @@ import WeatherLocation from "../WeatherLocation";
 import { newEntry } from "../editorModel";
 import { entryRecord, type PlanCtx } from "../planContext";
 import { BringsSelect } from "../MemberPanels";
+import { planDay } from "../format";
 
 function PackingList({ ctx }: { ctx: PlanCtx }) {
   const { t } = useTranslation("travplan"),
@@ -130,7 +131,7 @@ function Forecast({ ctx }: { ctx: PlanCtx }) {
             )
             .map((d) => (
               <PlanRow key={d.day}>
-                <span className="t-body">{d.day}</span>
+                <span className="t-body">{planDay(d.day)}</span>
                 <span className="t-body">
                   {d.min ?? "—"}° – {d.max ?? "—"}°
                 </span>

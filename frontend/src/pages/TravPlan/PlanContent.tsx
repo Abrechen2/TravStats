@@ -20,7 +20,7 @@ import { BudgetSection } from "./sections/BudgetSection";
 import { PlanActualPanel } from "./sections/PlanActualPanel";
 import PlanAI from "./PlanAI";
 import { RouteSection } from "./route/RouteSection";
-import { shortDay } from "./route/RouteTimeline";
+import { DayPlanSection } from "./days/DayPlanSection";
 import { PlanDeleteDialog } from "./PlanDeleteDialog";
 import { PlanMenu } from "./PlanMenu";
 import { useMutationUndoToast } from "./useMutationUndoToast";
@@ -29,8 +29,10 @@ import { PlanMembersDialog } from "./PlanMembersDialog";
 import { MemberNoteCard, MemberNotices } from "./MemberPanels";
 import { PlanHandover } from "./PlanHandover";
 import { PlanDocumentsPanel } from "./PlanDocumentsPanel";
+import { planRange } from "./format";
 
 export const PLAN_SECTIONS = [
+  "days",
   "overview",
   "workspace",
   "import",
@@ -42,8 +44,13 @@ export const PLAN_SECTIONS = [
   "actual",
 ];
 
-/** The strip shows five places; the rest are reached from the overview, the header or a finding. */
-const STRIP_SECTIONS = ["overview", "workspace", "import", "packing", "budget"];
+/**
+ * The strip shows six places, the day plan first: a trip is lived day by day, so that is where a
+ * plan opens. The rest are reached from the overview, the header or a finding.
+ */
+const STRIP_SECTIONS = ["days", "overview", "workspace", "import", "packing", "budget"];
+/** Where a plan opens when the address names no section. */
+export const DEFAULT_SECTION = "days";
 /** What a member from another server is not offered: the parsers and the owner's logbook acts. */
 const REMOTE_HIDDEN = ["import", "ai", "handover", "actual"];
 
@@ -156,7 +163,14 @@ export default function PlanContent({
     );
     return mutate({ type: "settings", name: String(name), values: values as Partial<PlanState> });
   }
+  const editTrip = () =>
+    setEditor({
+      title: t("editTrip"),
+      fields: settingFields,
+      value: { name: plan.name, ...state },
+    });
   const ctx: PlanCtx = {
+    editTrip,
     plan,
     state,
     busy,
@@ -183,10 +197,7 @@ export default function PlanContent({
       <SectionLabel>{t("tagline")}</SectionLabel>
       <PageHeader
         title={plan.name}
-        meta={[
-          state.destination,
-          [shortDay(state.startDay), shortDay(state.endDay)].filter(Boolean).join(" – "),
-        ]
+        meta={[state.destination, planRange(state.startDay, state.endDay)]
           .filter(Boolean)
           .join(" · ")}
         actions={
@@ -197,12 +208,7 @@ export default function PlanContent({
                 {
                   key: "edit",
                   label: t("editTrip"),
-                  onSelect: () =>
-                    setEditor({
-                      title: t("editTrip"),
-                      fields: settingFields,
-                      value: { name: plan.name, ...state },
-                    }),
+                  onSelect: editTrip,
                 },
                 {
                   key: "refresh",
@@ -263,6 +269,7 @@ export default function PlanContent({
         </PlanNotice>
       )}
       <MemberNotices collab={collab} onRead={() => void markRead()} />
+      {section === "days" && <DayPlanSection ctx={ctx} />}
       {section === "overview" && <OverviewSection ctx={ctx} />}
       {section === "overview" && <PlanDocumentsPanel tripId={tripId} revision={plan.revision} />}
       {section === "overview" && (
