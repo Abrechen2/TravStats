@@ -153,6 +153,10 @@
     "unknown": "Unknown",
     "notAvailable": "N/A"
   },
+  "fieldErrors": {
+    "required": "This field is required.",
+    "invalid": "This value is not valid."
+  },
   "saveErrors": {
     "validation": "Some details are not valid. Please check the fields and try again.",
     "duplicate": "An entry with these details already exists.",

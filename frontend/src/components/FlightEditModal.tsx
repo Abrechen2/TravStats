@@ -24,6 +24,7 @@ import { SERVER_TIME_FIELDS } from "./FlightForm/createFormState";
 import { FLIGHT_FORM_TOUCH } from "./FlightForm/formTouch";
 import { focusFirstMissingRequired } from "./FlightForm/requiredFields";
 import {
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredLegend,
   SaveBlockedHint,
@@ -334,7 +335,7 @@ export default function FlightEditModal({
         setServerField(
           apiErrorMachineCode(err) && typeof data?.field === "string" ? data.field : null
         );
-        failure.fail(saveErrorKey(err, "errors:updateFailed"));
+        failure.fail(saveErrorKey(err, "errors:updateFailed"), err);
         return;
       }
       // Busy until the trip move settled too: a second click in between sent
@@ -427,8 +428,9 @@ export default function FlightEditModal({
         >
           {/* Announced and focusable (forgejo#246); a time the server refused is
             shown at that time instead. */}
+          <FieldErrorsHost failure={failure} />
           <FormErrorBanner
-            message={failure.failureKey && !serverTimeField ? t(failure.failureKey) : null}
+            message={failure.bannerKey && !serverTimeField ? t(failure.bannerKey) : null}
             onRetry={
               failure.failureKey && isTransientSaveError(failure.failureKey)
                 ? () => void handleSubmit()

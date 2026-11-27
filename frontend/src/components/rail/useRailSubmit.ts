@@ -97,7 +97,7 @@ export function useRailSubmit({
       logger.error("RailFormModal: save failed", outcome.error);
       const refused = saveErrorFrom(outcome.error, { create: !journey });
       setRefusal(refused);
-      failure.fail(refused.key);
+      failure.fail(refused.key, outcome.error);
       return;
     }
     if (thenConnect && outcome.status === "saved") continueAfter(outcome.value);

@@ -20,6 +20,7 @@ import {
 } from "../../lib/saveErrorMessage";
 import {
   FieldError,
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredLegend,
   RequiredMark,
@@ -289,7 +290,8 @@ export function LodgingFormModal({
       failure.fail(
         // A create has no idempotency key: after a lost answer a blind retry
         // could file the lodging twice, so that failure offers no retry.
-        saveErrorKey(outcome.error, "lodging:form.saveError", {}, { create: mode === "create" })
+        saveErrorKey(outcome.error, "lodging:form.saveError", {}, { create: mode === "create" }),
+        outcome.error
       );
     }
   };
@@ -524,8 +526,10 @@ export function LodgingFormModal({
           </label>
         </div>
 
+        <FieldErrorsHost failure={failure} />
+
         <FormErrorBanner
-          message={failure.failureKey !== null ? t(failure.failureKey) : null}
+          message={failure.bannerKey !== null ? t(failure.bannerKey) : null}
           onRetry={
             failure.failureKey !== null && isTransientSaveError(failure.failureKey)
               ? () => void handleSave()

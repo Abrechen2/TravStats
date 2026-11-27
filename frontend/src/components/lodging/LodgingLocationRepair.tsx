@@ -6,6 +6,7 @@ import { LocationMapModal } from "../location/LocationMapModal";
 import { LocationMiniMap } from "../location/LocationMiniMap";
 import type { LocationCoordinates, LocationSelection } from "../location/LocationInput";
 import {
+  FieldErrorsHost,
   FormErrorBanner,
   SaveBlockedHint,
   useDirtyGuard,
@@ -130,7 +131,7 @@ export function LodgingLocationRepair({
     );
     if (outcome.status === "failed") {
       logger.error("LodgingLocationRepair: save failed", outcome.error);
-      failure.fail(saveErrorKey(outcome.error, "lodging:repair.saveError"));
+      failure.fail(saveErrorKey(outcome.error, "lodging:repair.saveError"), outcome.error);
     }
   };
 
@@ -308,8 +309,10 @@ export function LodgingLocationRepair({
             </section>
           )}
 
+          <FieldErrorsHost failure={failure} />
+
           <FormErrorBanner
-            message={failure.failureKey !== null ? t(failure.failureKey) : null}
+            message={failure.bannerKey !== null ? t(failure.bannerKey) : null}
             onRetry={
               failure.failureKey !== null && isTransientSaveError(failure.failureKey)
                 ? () => void handleSave()

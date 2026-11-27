@@ -30,6 +30,7 @@ import PlaceCategoryManager from "./PlaceCategoryManager";
 import type { Place } from "../../types/place";
 import TagInput from "../TagInput";
 import {
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredLegend,
   RequiredMark,
@@ -304,7 +305,10 @@ export function PlaceFormModal({
     );
     if (outcome.status === "failed") {
       logger.error({ err: outcome.error }, "PlaceFormModal: save failed");
-      failure.fail(saveErrorKey(outcome.error, "places:form.saveFailed", {}, { create: !isEdit }));
+      failure.fail(
+        saveErrorKey(outcome.error, "places:form.saveFailed", {}, { create: !isEdit }),
+        outcome.error
+      );
     }
   };
 
@@ -619,8 +623,10 @@ export function PlaceFormModal({
           </Field>
         </div>
 
+        <FieldErrorsHost failure={failure} />
+
         <FormErrorBanner
-          message={failure.failureKey !== null ? t(failure.failureKey) : null}
+          message={failure.bannerKey !== null ? t(failure.bannerKey) : null}
           onRetry={
             failure.failureKey !== null && isTransientSaveError(failure.failureKey)
               ? () => void handleSave()

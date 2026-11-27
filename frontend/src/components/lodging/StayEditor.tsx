@@ -15,6 +15,7 @@ import { createStay, updateStay } from "../../lib/api/lodging";
 import { logger } from "../../lib/logger";
 import Dialog from "../ui/Dialog";
 import {
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredLegend,
   useDirtyGuard,
@@ -367,7 +368,8 @@ export function StayEditor({
           "lodging:stayEditor.saveError",
           {},
           { create: mode === "create" || !stay }
-        )
+        ),
+        outcome.error
       );
     }
   };
@@ -569,8 +571,9 @@ export function StayEditor({
             onRetry={() => void submit()}
           />
         )}
+        <FieldErrorsHost failure={failure} />
         <FormErrorBanner
-          message={failure.failureKey !== null ? t(failure.failureKey) : null}
+          message={failure.bannerKey !== null ? t(failure.bannerKey) : null}
           onRetry={
             failure.failureKey !== null && isTransientSaveError(failure.failureKey)
               ? () => void submit()

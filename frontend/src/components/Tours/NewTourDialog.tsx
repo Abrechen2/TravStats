@@ -6,6 +6,7 @@ import Button from "../ui/Button";
 import Dialog from "../ui/Dialog";
 import { Field, Input, Select } from "../ui/Field";
 import {
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredLegend,
   RequiredMark,
@@ -97,7 +98,10 @@ export default function NewTourDialog({
     );
     if (outcome.status === "failed") {
       logger.warn("Creating a tour failed", outcome.error);
-      failure.fail(saveErrorKey(outcome.error, "trips:tours.createError", {}, { create: true }));
+      failure.fail(
+        saveErrorKey(outcome.error, "trips:tours.createError", {}, { create: true }),
+        outcome.error
+      );
     }
   };
 
@@ -200,8 +204,9 @@ export default function NewTourDialog({
             </Field>
           </div>
           <RequiredLegend />
+          <FieldErrorsHost failure={failure} />
           <FormErrorBanner
-            message={failureKey ? t(failureKey) : null}
+            message={failure.bannerKey ? t(failure.bannerKey) : null}
             onRetry={
               failureKey && isTransientSaveError(failureKey) ? () => void submit() : undefined
             }

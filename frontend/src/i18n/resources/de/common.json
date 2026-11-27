@@ -153,6 +153,10 @@
     "unknown": "Unbekannt",
     "notAvailable": "k.A."
   },
+  "fieldErrors": {
+    "required": "Dieses Feld fehlt.",
+    "invalid": "Dieser Wert ist ungültig."
+  },
   "saveErrors": {
     "validation": "Einige Angaben sind ungültig. Bitte prüfe die markierten Felder und versuche es erneut.",
     "duplicate": "Ein Eintrag mit diesen Angaben existiert bereits.",

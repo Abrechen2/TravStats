@@ -13,6 +13,7 @@ import {} from "../../lib/placeCategoryDisplay";
 import { usePlaceCategories } from "../../hooks/usePlaceCategories";
 import type { Place } from "../../types/place";
 import {
+  FieldErrorsHost,
   FormErrorBanner,
   SaveBlockedHint,
   useDirtyGuard,
@@ -137,7 +138,10 @@ export function PlaceMergeDialog({ place, onClose, onMerged }: Props): JSX.Eleme
     );
     if (outcome.status === "failed") {
       logger.error({ err: outcome.error }, "PlaceMergeDialog: merge refused");
-      failure.fail(saveErrorKey(outcome.error, "places:merge.failed", MERGE_ERROR_KEYS));
+      failure.fail(
+        saveErrorKey(outcome.error, "places:merge.failed", MERGE_ERROR_KEYS),
+        outcome.error
+      );
     }
   };
 
@@ -291,8 +295,10 @@ export function PlaceMergeDialog({ place, onClose, onMerged }: Props): JSX.Eleme
           </>
         )}
 
+        <FieldErrorsHost failure={failure} />
+
         <FormErrorBanner
-          message={failure.failureKey !== null ? t(failure.failureKey) : null}
+          message={failure.bannerKey !== null ? t(failure.bannerKey) : null}
           onRetry={
             failure.failureKey !== null && isTransientSaveError(failure.failureKey)
               ? () => void handleMerge()

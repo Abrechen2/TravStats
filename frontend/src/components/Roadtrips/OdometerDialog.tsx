@@ -4,7 +4,7 @@ import type { JSX } from "react";
 import Button from "../ui/Button";
 import Dialog from "../ui/Dialog";
 import { Field, Input } from "../ui/Field";
-import { FormErrorBanner, useFormFailure } from "../form";
+import { FieldErrorsHost, FormErrorBanner, useFormFailure } from "../form";
 import { useTranslation } from "../../hooks/useTranslation";
 import { toursApi } from "../../lib/api/tours";
 import { logger } from "../../lib/logger";
@@ -60,7 +60,7 @@ export default function OdometerDialog({
       onSaved();
     } catch (err: unknown) {
       logger.warn("Saving a roadtrip's odometer readings failed", err);
-      failure.fail(saveErrorKey(err, "roadtrips:odometerDialog.error"));
+      failure.fail(saveErrorKey(err, "roadtrips:odometerDialog.error"), err);
     } finally {
       setSaving(false);
     }
@@ -127,8 +127,9 @@ export default function OdometerDialog({
             </Field>
           </div>
           <p className="t-caption">{t("roadtrips:newDialog.odometerHint")}</p>
+          <FieldErrorsHost failure={failure} />
           <FormErrorBanner
-            message={failure.failureKey ? t(failure.failureKey) : null}
+            message={failure.bannerKey ? t(failure.bannerKey) : null}
             onRetry={
               failure.failureKey && isTransientSaveError(failure.failureKey)
                 ? () => void submit()

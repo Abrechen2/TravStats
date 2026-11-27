@@ -12,6 +12,7 @@ export type { MissingStep } from "./SaveBlockedHint";
 export { fieldErrorProps, fieldErrorId } from "./fieldErrorProps";
 export { default as FieldError } from "./FieldError";
 export { default as FormErrorBanner } from "./FormErrorBanner";
+export { default as FieldErrorsHost } from "./FieldErrorsHost";
 export { focusFirstError } from "./focusFirstError";
 export { useSaveOnce } from "./useSaveOnce";
 export { useFormFailure } from "./useFormFailure";

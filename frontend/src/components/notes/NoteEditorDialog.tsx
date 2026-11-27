@@ -2,7 +2,8 @@ import DateField from "../../components/ui/DateField";
 import { useId, useMemo, useRef, useState, type JSX } from "react";
 
 import Dialog from "../ui/Dialog";
-import { FormErrorBanner } from "../form";
+import { FieldErrorsHost, FormErrorBanner } from "../form";
+import { routeValidation, type RoutedFieldError } from "../../lib/validationFieldErrors";
 import { Button, Field, Input, Select, TextArea, Toggletip } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTodayZone } from "../../hooks/useTodayZone";
@@ -60,6 +61,9 @@ export default function NoteEditorDialog({
   const [dropPhoto, setDropPhoto] = useState(false);
   const [problems, setProblems] = useState<DraftProblems>({});
   const [failure, setFailure] = useState<string | null>(null);
+  // A refused body names its fields: shown at them, the banner only for what no field answers.
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [serverFields, setServerFields] = useState<RoutedFieldError[]>([]);
   const [saving, setSaving] = useState(false);
 
   const zones = useMemo(() => {
@@ -68,7 +72,10 @@ export default function NoteEditorDialog({
   }, [draft.zone]);
 
   const dirty = !sameDraft(draft, initial) || photoFile !== null || dropPhoto;
-  const set = (patch: Partial<NoteDraft>): void => setDraft((d) => ({ ...d, ...patch }));
+  const set = (patch: Partial<NoteDraft>): void => {
+    setServerFields([]);
+    setDraft((d) => ({ ...d, ...patch }));
+  };
 
   const choosePhoto = (file: File | undefined): void => {
     if (!file) return;
@@ -113,9 +120,13 @@ export default function NoteEditorDialog({
       saved = current ? await notesApi.update(current.id, input) : await notesApi.create(input);
     } catch (err: unknown) {
       logger.error({ err }, "NoteEditorDialog: save failed");
-      setFailure(
-        t(saveErrorKey(err, "notes:errors.saveFailed", NOTE_CODE_KEYS, { create: !current }))
-      );
+      const { routed, unmatched } = routeValidation(rootRef.current, err);
+      setServerFields(routed);
+      if (routed.length === 0 || unmatched > 0) {
+        setFailure(
+          t(saveErrorKey(err, "notes:errors.saveFailed", NOTE_CODE_KEYS, { create: !current }))
+        );
+      }
       setSaving(false);
       return;
     }
@@ -156,7 +167,8 @@ export default function NoteEditorDialog({
         </div>
       )}
     >
-      <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
+      <div ref={rootRef} className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
+        <FieldErrorsHost failure={{ fieldErrors: serverFields, rootRef }} />
         <FormErrorBanner message={failure} />
 
         <Field

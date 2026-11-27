@@ -77,7 +77,10 @@ describe("GET /places?year=", () => {
 
   it("lists only places visited in that year, filed on the place's calendar", async () => {
     expect(await names("year=2023")).toEqual({ names: ["Visited 2023", "Visited both"], total: 2 });
-    expect(await names("year=2024")).toEqual({ names: ["Rome new year", "Visited both"], total: 2 });
+    expect(await names("year=2024")).toEqual({
+      names: ["Rome new year", "Visited both"],
+      total: 2,
+    });
   });
 
   it("a future visit and a place without visits belong to no year", async () => {

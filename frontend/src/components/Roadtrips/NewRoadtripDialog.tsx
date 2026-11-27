@@ -7,6 +7,7 @@ import { Field, Input, Select, Switch } from "../ui/Field";
 import TagInput from "../TagInput";
 import RoadtripStartSource from "./RoadtripStartSource";
 import {
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredLegend,
   RequiredMark,
@@ -210,7 +211,10 @@ export default function NewRoadtripDialog({
     if (outcome.status === "failed") {
       logger.warn("Creating a roadtrip failed", outcome.error);
       // Always a create: a lost answer may have stored the roadtrip.
-      failure.fail(saveErrorKey(outcome.error, "roadtrips:createError", {}, { create: true }));
+      failure.fail(
+        saveErrorKey(outcome.error, "roadtrips:createError", {}, { create: true }),
+        outcome.error
+      );
     }
   };
 
@@ -406,8 +410,10 @@ export default function NewRoadtripDialog({
 
           <RequiredLegend />
 
+          <FieldErrorsHost failure={failure} />
+
           <FormErrorBanner
-            message={failureKey ? t(failureKey) : null}
+            message={failure.bannerKey ? t(failure.bannerKey) : null}
             onRetry={
               failureKey && isTransientSaveError(failureKey) ? () => void submit() : undefined
             }

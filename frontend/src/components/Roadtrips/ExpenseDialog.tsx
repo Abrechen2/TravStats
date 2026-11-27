@@ -9,6 +9,7 @@ import CurrencySelect from "../common/CurrencySelect";
 import ConfirmModal from "../ui/ConfirmModal";
 import DocumentsSection from "../documents/DocumentsSection";
 import {
+  FieldErrorsHost,
   FormErrorBanner,
   RequiredLegend,
   RequiredMark,
@@ -202,7 +203,7 @@ export default function ExpenseDialog({
     );
     if (outcome.status === "failed") {
       logger.warn("Saving a roadtrip expense failed", outcome.error);
-      failure.fail(expenseFailureKey(outcome.error, { create: !expense }));
+      failure.fail(expenseFailureKey(outcome.error, { create: !expense }), outcome.error);
     }
   };
 
@@ -226,7 +227,7 @@ export default function ExpenseDialog({
     } catch (err) {
       logger.warn("Deleting a roadtrip expense failed", err);
       setConfirmDelete(false);
-      failure.fail(expenseFailureKey(err));
+      failure.fail(expenseFailureKey(err), err);
     } finally {
       setRemoving(false);
     }
@@ -436,8 +437,9 @@ export default function ExpenseDialog({
           </div>
         )}
         <RequiredLegend />
+        <FieldErrorsHost failure={failure} />
         <FormErrorBanner
-          message={failureKey ? t(failureKey) : null}
+          message={failure.bannerKey ? t(failure.bannerKey) : null}
           onRetry={
             failureKey && isTransientExpenseFailure(failureKey) ? () => void save() : undefined
           }
