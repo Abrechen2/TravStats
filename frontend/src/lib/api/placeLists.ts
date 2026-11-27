@@ -73,8 +73,16 @@ export async function deletePlaceList(id: string): Promise<void> {
 }
 
 /** Every mutation below answers with the FRESH list, so callers never re-fetch. */
-export async function addPlaceToList(listId: string, placeId: string): Promise<PlaceList> {
-  const res = await api.post<Envelope<PlaceList>>(`/place-lists/${listId}/entries`, { placeId });
+/** `provenance` restores an automatic entry's origin when an undo puts it back. */
+export async function addPlaceToList(
+  listId: string,
+  placeId: string,
+  provenance?: { createdBy?: "brandRule" | "plugin"; externalFields?: Record<string, unknown> }
+): Promise<PlaceList> {
+  const res = await api.post<Envelope<PlaceList>>(`/place-lists/${listId}/entries`, {
+    placeId,
+    ...provenance,
+  });
   return res.data.data;
 }
 

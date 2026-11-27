@@ -331,7 +331,17 @@ router.post("/:id/entries", async (req: AuthRequest, res: Response, next: NextFu
     // One `INSERT … ON CONFLICT DO NOTHING`: a double tap on "add to list"
     // must not race into a unique violation (a read-then-insert upsert does).
     await prisma.placeListEntry.createMany({
-      data: [{ listId: list.id, placeId: place.id, sortIdx }],
+      data: [
+        {
+          listId: list.id,
+          placeId: place.id,
+          sortIdx,
+          ...(parsed.data.createdBy ? { createdBy: parsed.data.createdBy } : {}),
+          ...(parsed.data.externalFields
+            ? { externalFields: parsed.data.externalFields as unknown as Prisma.InputJsonValue }
+            : {}),
+        },
+      ],
       skipDuplicates: true,
     });
 

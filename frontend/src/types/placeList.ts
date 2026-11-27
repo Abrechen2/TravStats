@@ -32,6 +32,8 @@ export interface PlaceListEntry {
   createdAt: string;
   /** `brandRule` / `import` when automation added the entry; absent on older servers. */
   createdBy?: string | null;
+  /** A plugin-fed list's row fields; the server sends them back as stored. */
+  externalFields?: Record<string, unknown> | null;
   place: PlaceListPlace;
 }
 

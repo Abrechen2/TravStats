@@ -65,6 +65,12 @@ export const updatePlaceListSchema = z
 export const addListEntrySchema = z.object({
   placeId: z.string().uuid(),
   sortIdx: z.number().int().min(0).optional(),
+  /**
+   * Provenance to restore when an undo re-adds an entry that automation had added: the entry
+   * keeps counting as automatic (smart-list undo removes only these) instead of becoming manual.
+   */
+  createdBy: z.enum(["brandRule", "plugin"]).optional(),
+  externalFields: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**

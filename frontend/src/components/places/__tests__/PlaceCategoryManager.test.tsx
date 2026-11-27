@@ -23,9 +23,9 @@ describe("own place categories — display", () => {
     const t = (key: string) => `T(${key})`;
     expect(placeCategoryLabel(t, "St. Pauli Kiez")).toBe("St. Pauli Kiez");
     expect(placeCategoryLabel(t, "museum")).toBe("T(places:categories.museum)");
-    expect(placeCategoryIcon("Schwimmbad", [pool])).toBe("🏊");
+    expect(placeCategoryIcon("Schwimmbad", [pool])).toBe("waves");
     // A deleted or imported label has no definition: the default pin, not undefined.
-    expect(placeCategoryIcon("food", [pool])).toBe("📍");
+    expect(placeCategoryIcon("food", [pool])).toBe("map-pin");
   });
 });
 

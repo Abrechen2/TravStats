@@ -21,7 +21,6 @@ export interface DomainDescriptor {
   key: DomainKey;
   available: boolean;
   i18nKey: string;
-  icon: string;
   color: string;
   routePrefix: string;
 }
@@ -51,7 +50,6 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     key: "flight",
     available: true,
     i18nKey: "domain.flight",
-    icon: "✈",
     color: "#f0a947",
     routePrefix: "/flights",
   },
@@ -59,7 +57,6 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     key: "cruise",
     available: true,
     i18nKey: "domain.cruise",
-    icon: "🚢",
     color: "#4aa6b0",
     routePrefix: "/cruises",
   },
@@ -67,7 +64,6 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     key: "lodging",
     available: true,
     i18nKey: "domain.lodging",
-    icon: "🏨",
     color: "#5ec2b2",
     routePrefix: "/lodging",
   },
@@ -75,7 +71,6 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     key: "poi",
     available: true,
     i18nKey: "domain.poi",
-    icon: "📍",
     color: "#e7e3dc",
     routePrefix: "/places",
   },
@@ -87,7 +82,6 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     key: "roadtrip",
     available: true,
     i18nKey: "domain.roadtrip",
-    icon: "🚐",
     color: "#a9c46a",
     routePrefix: "/roadtrips",
   },
@@ -101,7 +95,6 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     key: "rail",
     available: true,
     i18nKey: "domain.rail",
-    icon: "🚆",
     color: "#a597e8",
     routePrefix: "/rail",
   },
@@ -114,7 +107,6 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     key: "rental",
     available: true,
     i18nKey: "domain.rental",
-    icon: "🚗",
     color: "#d98cb3",
     routePrefix: "/rentals",
   },
@@ -125,7 +117,6 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     key: "bus",
     available: true,
     i18nKey: "domain.bus",
-    icon: "🚌",
     color: "#c49a6c",
     routePrefix: "/bus",
   },
@@ -133,7 +124,6 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     key: "ferry",
     available: true,
     i18nKey: "domain.ferry",
-    icon: "⛴",
     color: "#5686b8",
     routePrefix: "/ferry",
   },
@@ -146,7 +136,6 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     key: "tour",
     available: true,
     i18nKey: "domain.tour",
-    icon: "🥾",
     color: TOUR_COLOR,
     routePrefix: "/tours",
   },

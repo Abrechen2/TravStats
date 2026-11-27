@@ -123,6 +123,28 @@ describe("Place lists API", () => {
       }
     });
 
+    it("keeps the provenance an undo hands back (an auto entry re-added came back as manual)", async () => {
+      const list = await request(app)
+        .post("/api/v1/place-lists")
+        .set("Cookie", authCookie)
+        .send({ name: "Rueckgaengig" });
+      const place = await makePlace("Alhambra");
+      const res = await request(app)
+        .post(`/api/v1/place-lists/${list.body.data.id}/entries`)
+        .set("Cookie", authCookie)
+        .send({ placeId: place.id, createdBy: "brandRule" });
+      expect(res.status).toBe(201);
+      const stored = await prisma.placeListEntry.findFirst({
+        where: { listId: list.body.data.id },
+      });
+      expect(stored?.createdBy).toBe("brandRule");
+      const bad = await request(app)
+        .post(`/api/v1/place-lists/${list.body.data.id}/entries`)
+        .set("Cookie", authCookie)
+        .send({ placeId: place.id, createdBy: "import" });
+      expect(bad.status).toBe(400);
+    });
+
     it("counts a wishlist entry as a member but not as visited", async () => {
       const list = await request(app)
         .post("/api/v1/place-lists")

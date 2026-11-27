@@ -1,4 +1,4 @@
-import { Fragment, type JSX } from "react";
+import { Fragment, type JSX, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { FlagImg } from "../../../lib/countryFlag";
@@ -27,7 +27,7 @@ export default function PlaceListTableRow({
   row: ListMemberRow;
   columns: ListMembersPage["columns"];
   showDistance: boolean;
-  icon: string;
+  icon: ReactNode;
   expanded: boolean;
   onToggle: () => void;
   onRemove: () => void;

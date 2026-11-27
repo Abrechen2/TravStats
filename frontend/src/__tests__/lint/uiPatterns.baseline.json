@@ -8,8 +8,6 @@
     "lib/flightSourceInfo.ts": 11,
     "lib/lodgingFormat.ts": 5,
     "lib/stats/domain-stats/cruiseStatsAdapter.ts": 8,
-    "lib/timeEstimation.ts": 5,
-    "shared/domains.ts": 10,
-    "shared/placeCategories.ts": 29
+    "lib/timeEstimation.ts": 5
   }
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { PlaceCategoryGlyph } from "../components/places/PlaceCategoryGlyph";
 import { useGapPrefill } from "../hooks/useGapPrefill";
 import GapEntityPicker from "../components/gap/GapEntityPicker";
 import { geoExportPaths } from "../lib/api/geoExport";
@@ -40,7 +41,7 @@ import { logger } from "../lib/logger";
 import { deletePlace, listPlaces, searchPlacesPage } from "../lib/api/places";
 import { useToastStore } from "../store/toastStore";
 import { PLACE_CATEGORIES, PLACE_CATEGORY_FILTER_ALL } from "../shared/placeCategories";
-import { placeCategoryIcon, placeCategoryLabel } from "../lib/placeCategoryDisplay";
+import { placeCategoryLabel } from "../lib/placeCategoryDisplay";
 import { usePlaceCategories } from "../hooks/usePlaceCategories";
 import { classifyPlace } from "../shared/placeCounting";
 import type { Place } from "../types/place";
@@ -638,7 +639,9 @@ export default function PlacesListPage(): JSX.Element {
                     cells={{
                       name: (
                         <span className="flex items-center gap-2 font-medium">
-                          <span aria-hidden>{placeCategoryIcon(p.category, customs)}</span>
+                          <span aria-hidden>
+                            <PlaceCategoryGlyph category={p.category} customs={customs} />
+                          </span>
                           <span className="min-w-0">
                             {p.name}
                             <LocalName value={p.localName} />

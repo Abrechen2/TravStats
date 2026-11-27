@@ -15,6 +15,8 @@
  * shared/domains.ts. Change both together.
  */
 
+import type { IconName } from "../components/ui/Icon";
+
 export const PLACE_CATEGORIES = [
   "restaurant",
   "landmark",
@@ -29,18 +31,19 @@ export const PLACE_CATEGORIES = [
 
 export type PlaceCategory = (typeof PLACE_CATEGORIES)[number];
 
-/** The glyph each category renders as. Kept here so the map layer, the list
- *  and the picker cannot drift into three different icon sets. */
-export const PLACE_CATEGORY_ICONS: Record<PlaceCategory, string> = {
-  restaurant: "🍟",
-  landmark: "🏛",
-  nature: "🌲",
-  museum: "🖼",
-  entertainment: "🎭",
-  shopping: "🛍",
-  viewpoint: "🔭",
-  service_area: "⛽",
-  other: "📍",
+/** The line icon each category renders as. Kept here so the map layer, the list
+ *  and the picker cannot drift into three different icon sets. (The backend mirror still
+ *  carries the emoji: they are what a calendar feed or an export prints as text.) */
+export const PLACE_CATEGORY_ICONS: Record<PlaceCategory, IconName> = {
+  restaurant: "utensils",
+  landmark: "landmark",
+  nature: "tree-pine",
+  museum: "image",
+  entertainment: "drama",
+  shopping: "shopping-bag",
+  viewpoint: "binoculars",
+  service_area: "fuel",
+  other: "map-pin",
 };
 
 /** Longest custom category name. */
@@ -77,6 +80,33 @@ export const PLACE_CATEGORY_ICON_CHOICES = [
   "🎵",
   "📚",
 ] as const;
+
+/**
+ * What a stored custom-category glyph is drawn as. The glyph itself is the persisted wire value
+ * (the server keeps the choice as sent), so it stays an emoji here; every screen renders the icon.
+ */
+export const PLACE_GLYPH_ICON: Record<(typeof PLACE_CATEGORY_ICON_CHOICES)[number], IconName> = {
+  "📍": "map-pin",
+  "🍟": "utensils",
+  "🏛": "landmark",
+  "🌲": "tree-pine",
+  "🖼": "image",
+  "🎭": "drama",
+  "🛍": "shopping-bag",
+  "🔭": "binoculars",
+  "⛽": "fuel",
+  "⚽": "trophy",
+  "🏊": "waves",
+  "🎢": "ferris-wheel",
+  "🏖": "umbrella",
+  "⛪": "church",
+  "🏥": "hospital",
+  "🎓": "graduation-cap",
+  "🏨": "hotel",
+  "🚉": "train-front",
+  "🎵": "music",
+  "📚": "book-open",
+};
 
 /** The words the built-in categories answer to in the UI (DE and EN). A custom
  *  name equal to one of them (or to a key) would be two categories that read

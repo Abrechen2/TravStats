@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PlaceCategoryGlyph } from "./PlaceCategoryGlyph";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { usePlaceCategories } from "../../hooks/usePlaceCategories";
@@ -9,10 +10,14 @@ import {
 } from "../../lib/api/placeCategories";
 import { logger } from "../../lib/logger";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
-import { placeCategoryIcon } from "../../lib/placeCategoryDisplay";
-import { PLACE_CATEGORY_ICON_CHOICES, PLACE_CATEGORY_NAME_MAX } from "../../shared/placeCategories";
+import {
+  PLACE_CATEGORY_ICON_CHOICES,
+  PLACE_CATEGORY_NAME_MAX,
+  PLACE_GLYPH_ICON,
+} from "../../shared/placeCategories";
 import { useToastStore } from "../../store/toastStore";
 import InlineError from "../ui/InlineError";
+import { IconGridPicker } from "../ui/IconGridPicker";
 
 interface Props {
   /** Called with the new category's name so a form can select it at once. */
@@ -96,7 +101,9 @@ export default function PlaceCategoryManager({ onCreated, onDeleted }: Props): J
               data-testid={`place-category-${c.id}`}
               className="flex items-center gap-2"
             >
-              <span aria-hidden>{placeCategoryIcon(c.name, customs)}</span>
+              <span aria-hidden>
+                <PlaceCategoryGlyph category={c.name} customs={customs} />
+              </span>
               <span className="flex-1">{c.name}</span>
               {asking === c.id ? (
                 <>
@@ -134,18 +141,17 @@ export default function PlaceCategoryManager({ onCreated, onDeleted }: Props): J
         </ul>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <select
-          aria-label={t("places:customCategories.iconLabel")}
+        <IconGridPicker
+          label={t("places:customCategories.iconLabel")}
           className={FIELD}
           value={icon}
-          onChange={(e) => setIcon(e.target.value)}
-        >
-          {PLACE_CATEGORY_ICON_CHOICES.map((glyph) => (
-            <option key={glyph} value={glyph}>
-              {glyph}
-            </option>
-          ))}
-        </select>
+          onChange={setIcon}
+          options={PLACE_CATEGORY_ICON_CHOICES.map((glyph) => ({
+            value: glyph,
+            icon: PLACE_GLYPH_ICON[glyph],
+            label: t(`places:customCategories.glyphName.${PLACE_GLYPH_ICON[glyph]}`),
+          }))}
+        />
         <input
           data-testid="place-category-name"
           className={`${FIELD} min-w-0 flex-1`}

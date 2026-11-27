@@ -1,4 +1,5 @@
 import Chip from "../components/ui/Chip";
+import { PlaceCategoryGlyph } from "../components/places/PlaceCategoryGlyph";
 import type { ReactNode } from "react";
 import { Icon } from "../components/ui/Icon";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -28,7 +29,7 @@ import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { PLACE_CATEGORIES } from "../shared/placeCategories";
-import { placeCategoryIcon, placeCategoryLabel } from "../lib/placeCategoryDisplay";
+import { placeCategoryLabel } from "../lib/placeCategoryDisplay";
 import { usePlaceCategories } from "../hooks/usePlaceCategories";
 import type { PlaceCountState } from "../shared/placeCounting";
 import type { Lodging } from "../types/lodging";
@@ -341,7 +342,9 @@ export default function PlacesNearbyPage(): JSX.Element {
                     border: "1px solid var(--color-border)",
                   }}
                 >
-                  <span aria-hidden>{placeCategoryIcon(place.category, customs)}</span>
+                  <span aria-hidden>
+                    <PlaceCategoryGlyph category={place.category} customs={customs} />
+                  </span>
                   <Link
                     to={`/places/${place.id}`}
                     className="min-w-0 flex-1 truncate text-sm"

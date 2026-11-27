@@ -149,7 +149,9 @@ const PATTERNS: Pattern[] = [
     home: /^components\/ui\//,
     files: "ts",
     hit: (l) => EMOJI.test(l),
-    skip: (rel) => /^content\/whatsNew/.test(rel),
+    // whatsNew is release-note copy. shared/placeCategories.ts holds the custom-category glyphs
+    // the server stores as sent (wire values); every screen maps them to <Icon> (PLACE_GLYPH_ICON).
+    skip: (rel) => /^content\/whatsNew|^shared\/placeCategories\.ts$/.test(rel),
   },
   {
     name: "domain emoji drawn as an icon (use DOMAIN_ICON + <Icon>)",

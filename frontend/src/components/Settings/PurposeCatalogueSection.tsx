@@ -5,9 +5,10 @@ import { purposeApi, type CustomPurposeEntry } from "../../lib/api/purpose";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { logger } from "../../lib/logger";
 import { PurposeGlyph } from "../purpose/PurposeGlyph";
+import { PurposeIconPicker } from "../purpose/PurposeIconPicker";
 import { usePurposeCatalogue, usePurposeCatalogueStore } from "../../store/purposeCatalogueStore";
 import { PURPOSES, type Purpose } from "../../shared/purpose";
-import { PURPOSE_ICONS, BUILTIN_PREFIX } from "../../shared/purposeCatalogue";
+import { BUILTIN_PREFIX } from "../../shared/purposeCatalogue";
 import { SectionCard } from "./SettingsShared";
 import { DEFAULT_CUSTOM_PURPOSE_COLOR } from "../../theme/purposeColors";
 
@@ -118,20 +119,14 @@ export default function PurposeCatalogueSection(): JSX.Element {
           ))}
         </select>
       </label>
-      <label className="t-caption flex flex-col">
+      <div className="t-caption flex flex-col">
         {t("purpose:custom.icon")}
-        <select
+        <PurposeIconPicker
           value={d.icon}
-          onChange={(e) => set({ ...d, icon: e.target.value })}
+          onChange={(icon) => set({ ...d, icon })}
           className={COARSE}
-        >
-          {PURPOSE_ICONS.map((icon) => (
-            <option key={icon} value={icon}>
-              {t(`purpose:custom.iconName.${icon}`)}
-            </option>
-          ))}
-        </select>
-      </label>
+        />
+      </div>
       <label className="t-caption flex flex-col">
         {t("purpose:custom.color")}
         <input

@@ -1,4 +1,5 @@
 import { Icon, type IconName } from "../ui/Icon";
+import { PlaceCategoryGlyph } from "../places/PlaceCategoryGlyph";
 import { deadlineSummary } from "../../lib/deadlines";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -14,7 +15,7 @@ import { RowActions } from "../../components/Trips/TimelineJournalCard";
 import { useTranslation } from "../../hooks/useTranslation";
 import { DetailRow, OpenFullLink } from "../../components/Trips/TimelineDetailParts";
 import { formatTimelineDate } from "../../lib/tripTimeline";
-import { placeCategoryIcon } from "../../lib/placeCategoryDisplay";
+import {} from "../../lib/placeCategoryDisplay";
 import { usePlaceCategories } from "../../hooks/usePlaceCategories";
 import { placeSubtitle } from "../../lib/placeNames";
 import { classifyVisit } from "../../shared/placeCounting";
@@ -376,7 +377,7 @@ export function PlaceVisitCard({
   return (
     <Link to={`/places/${place.id}`} className="block">
       <EventCard
-        icon={placeCategoryIcon(place.category, customs)}
+        icon=<PlaceCategoryGlyph category={place.category} customs={customs} />
         bg="var(--domain-poi-soft)"
         iconColor="var(--domain-poi)"
         title={place.name}

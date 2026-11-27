@@ -24,7 +24,7 @@ import {
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { isTransientSaveError, saveErrorKey } from "../lib/saveErrorMessage";
 import { FieldError, FormErrorBanner, fieldErrorProps } from "../components/form";
-import { placeCategoryIcon } from "../lib/placeCategoryDisplay";
+import { PlaceCategoryGlyph } from "../components/places/PlaceCategoryGlyph";
 import { usePlaceCategories } from "../hooks/usePlaceCategories";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import SmartListPanel from "../components/places/smartList/SmartListPanel";
@@ -244,7 +244,16 @@ export default function PlaceListDetailPage(): JSX.Element {
     async (placeId: string): Promise<void> => {
       if (!list) return;
       const position = entries.findIndex((e) => e.placeId === placeId);
-      const name = entries.find((e) => e.placeId === placeId)?.place.name ?? "";
+      const removed = entries[position];
+      const name = removed?.place.name ?? "";
+      const origin = removed?.createdBy;
+      const provenance: Parameters<typeof addPlaceToList>[2] =
+        origin === "brandRule" || origin === "plugin"
+          ? {
+              createdBy: origin,
+              ...(removed?.externalFields ? { externalFields: removed.externalFields } : {}),
+            }
+          : undefined;
       const done = await runChange(
         () => removePlaceFromList(list.id, placeId),
         "places:lists.removeFailed"
@@ -255,27 +264,34 @@ export default function PlaceListDetailPage(): JSX.Element {
         label: t("places:lists.removedToast", { name }),
         undoLabel: t("places:lists.undoRemove"),
         onUndo: () => {
-          void (async () => {
-            try {
-              // Rebuilt from what the server holds NOW, not from the order at removal time:
-              // other removals since then must not make the reorder fail.
-              const added = await addPlaceToList(list.id, placeId);
-              const ids = (added.entries ?? [])
-                .map((e) => e.placeId)
-                .filter((id) => id !== placeId);
-              ids.splice(Math.min(position, ids.length), 0, placeId);
-              const restored = await reorderPlaceList(list.id, ids);
+          const restore = async (): Promise<PlaceList> => {
+            // Rebuilt from what the server holds NOW, not from the order at removal time:
+            // other removals since then must not make the reorder fail.
+            const added = await addPlaceToList(list.id, placeId, provenance);
+            const ids = (added.entries ?? []).map((e) => e.placeId).filter((id) => id !== placeId);
+            ids.splice(Math.min(position, ids.length), 0, placeId);
+            return reorderPlaceList(list.id, ids);
+          };
+          void restore()
+            .then((restored) => {
               // The toast outlives the page's list: only the list on screen is replaced.
               if (listRef.current?.id === list.id) setList(restored);
-            } catch (err: unknown) {
+            })
+            .catch((err: unknown) => {
               logger.error({ err }, "PlaceListDetailPage: undoing a removal failed");
-              addToast("error", t("places:lists.undoFailed"));
-            }
-          })();
+              // A failure the user sees, with a retry, on the list they are looking at.
+              if (listRef.current?.id === list.id) {
+                setActionFailure({
+                  key: saveErrorKey(err, "places:lists.undoFailed"),
+                  change: restore,
+                  fallbackKey: "places:lists.undoFailed",
+                });
+              }
+            });
         },
       });
     },
-    [list, entries, runChange, t, addToast]
+    [list, entries, runChange, t]
   );
 
   const handleRename = useCallback(async (): Promise<void> => {
@@ -621,7 +637,7 @@ export default function PlaceListDetailPage(): JSX.Element {
           listId={list.id}
           refreshKey={list}
           autoOnly={autoOnly && autoEntries.length > 0}
-          iconOf={(category) => placeCategoryIcon(category, customs)}
+          iconOf={(category) => <PlaceCategoryGlyph category={category} customs={customs} />}
           onRemove={(placeId) => void handleRemove(placeId)}
           onMove={handleMove}
         />

@@ -82,7 +82,7 @@ describe("PlaceListDetailPage — removing a place", () => {
     const offered = useToastStore.getState().toasts[0];
     expect(offered.message).toBe("„Pantheon“ aus der Liste entfernt");
     offered.undo?.onUndo();
-    await waitFor(() => expect(addPlaceToList).toHaveBeenCalledWith("l1", "a"));
+    await waitFor(() => expect(addPlaceToList).toHaveBeenCalledWith("l1", "a", undefined));
     await waitFor(() => expect(reorderPlaceList).toHaveBeenCalledWith("l1", ["a", "b"]));
   });
 
@@ -102,5 +102,46 @@ describe("PlaceListDetailPage — removing a place", () => {
     addPlaceToList.mockResolvedValue({ ...LIST, entries: [entries[0]] });
     useToastStore.getState().toasts[0].undo?.onUndo();
     await waitFor(() => expect(reorderPlaceList).toHaveBeenCalledWith("l1", ["a"]));
+  });
+
+  it("restores an automatically added entry's provenance, not 'manual' (auto entries came back manual)", async () => {
+    getPlaceList.mockResolvedValue({
+      ...LIST,
+      entries: [{ ...entries[0], createdBy: "brandRule" }, entries[1]],
+    });
+    render(
+      <MemoryRouter initialEntries={["/places/lists/l1"]}>
+        <Routes>
+          <Route path="/places/lists/:id" element={<PlaceListDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "„Pantheon“ aus der Liste entfernen" })
+    );
+    await waitFor(() => expect(useToastStore.getState().toasts).toHaveLength(1));
+    useToastStore.getState().toasts[0].undo?.onUndo();
+    await waitFor(() =>
+      expect(addPlaceToList).toHaveBeenCalledWith("l1", "a", { createdBy: "brandRule" })
+    );
+  });
+
+  it("says a failed undo on the page instead of dropping it silently", async () => {
+    render(
+      <MemoryRouter initialEntries={["/places/lists/l1"]}>
+        <Routes>
+          <Route path="/places/lists/:id" element={<PlaceListDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "„Pantheon“ aus der Liste entfernen" })
+    );
+    await waitFor(() => expect(useToastStore.getState().toasts).toHaveLength(1));
+    addPlaceToList.mockRejectedValue(new Error("boom"));
+    useToastStore.getState().toasts[0].undo?.onUndo();
+    expect(
+      await screen.findByText("Der Ort konnte nicht zurückgelegt werden.")
+    ).toBeInTheDocument();
   });
 });

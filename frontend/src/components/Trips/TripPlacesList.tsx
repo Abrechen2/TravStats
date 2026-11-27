@@ -1,4 +1,5 @@
 import Chip from "../ui/Chip";
+import { PlaceCategoryGlyph } from "../places/PlaceCategoryGlyph";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { useScrollToHash } from "../../hooks/useScrollToHash";
@@ -9,7 +10,7 @@ import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import type { TripPlaceVisits, TripPlaceVisit } from "../../hooks/useTripPlaceVisits";
 import { formatDate } from "../../lib/format";
 import { visitTime } from "../../lib/entityTimes";
-import { placeCategoryIcon } from "../../lib/placeCategoryDisplay";
+import {} from "../../lib/placeCategoryDisplay";
 import { classifyVisit } from "../../shared/placeCounting";
 import { PanelHeader } from "./TripDetailPanels";
 import { TripPlacesError } from "./TripPlacesStatus";
@@ -114,7 +115,7 @@ export default function TripPlacesList({
                         className={`flex items-center gap-3 px-4 ${rowPad} hover:bg-[var(--ts-surface2)]`}
                       >
                         <span aria-hidden="true" className="shrink-0 text-lg">
-                          {placeCategoryIcon(place.category, customs)}
+                          <PlaceCategoryGlyph category={place.category} customs={customs} />
                         </span>
                         <span className="min-w-0 flex-1 truncate text-sm font-semibold">
                           {place.name}

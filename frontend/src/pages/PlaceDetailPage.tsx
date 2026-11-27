@@ -1,4 +1,5 @@
 import PlaceVisitSuggestions from "../components/places/smartList/PlaceVisitSuggestions";
+import { PlaceCategoryGlyph } from "../components/places/PlaceCategoryGlyph";
 import DetailMoreMenu from "../components/detail/DetailMoreMenu";
 import TagChips from "../components/common/TagChips";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -35,7 +36,7 @@ import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { tripsApi } from "../lib/api/trips";
 import type { Trip } from "../types";
 import { useToastStore } from "../store/toastStore";
-import { placeCategoryIcon, placeCategoryLabel } from "../lib/placeCategoryDisplay";
+import { placeCategoryLabel } from "../lib/placeCategoryDisplay";
 import { usePlaceCategories } from "../hooks/usePlaceCategories";
 import { useDisplayFormat } from "../lib/format";
 import { visitTime as visitTimeOf } from "../lib/entityTimes";
@@ -275,7 +276,7 @@ export default function PlaceDetailPage(): JSX.Element {
         backTo="/places"
         backLabel={t("places:detail.backToLogbook")}
         domain="poi"
-        icon={placeCategoryIcon(place.category, customs)}
+        icon=<PlaceCategoryGlyph category={place.category} customs={customs} />
         title={place.name}
         // The name on the sign, under the readable one (forgejo#199).
         subtitle={

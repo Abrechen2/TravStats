@@ -1,6 +1,7 @@
 import type { JSX } from "react";
+import { PlaceCategoryGlyph } from "./PlaceCategoryGlyph";
 import { useTranslation } from "../../hooks/useTranslation";
-import { placeCategoryIcon } from "../../lib/placeCategoryDisplay";
+import {} from "../../lib/placeCategoryDisplay";
 import { usePlaceCategories } from "../../hooks/usePlaceCategories";
 import type { Place } from "../../types/place";
 
@@ -86,7 +87,9 @@ export function PlaceListAddPanel({
         <ul className="mt-2" style={{ listStyle: "none", padding: 0 }}>
           {members.map((p) => (
             <li key={p.id} className="flex items-center gap-2 py-2 text-sm">
-              <span aria-hidden>{placeCategoryIcon(p.category, customs)}</span>
+              <span aria-hidden>
+                <PlaceCategoryGlyph category={p.category} customs={customs} />
+              </span>
               <span style={{ color: "var(--text-muted)" }}>
                 {t("places:lists.alreadyInList", { name: p.name })}
               </span>
@@ -113,7 +116,9 @@ export function PlaceListAddPanel({
                   className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm ${COARSE_BOX}`}
                   style={{ color: "var(--text-secondary)" }}
                 >
-                  <span aria-hidden>{placeCategoryIcon(p.category, customs)}</span>
+                  <span aria-hidden>
+                    <PlaceCategoryGlyph category={p.category} customs={customs} />
+                  </span>
                   <span className="truncate">{p.name}</span>
                   <span className="ml-auto text-xs" style={{ color: "var(--text-muted)" }}>
                     {p.city ?? ""}

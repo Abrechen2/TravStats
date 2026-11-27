@@ -20,13 +20,12 @@ import { useEntrySuggestions } from "../../hooks/useEntrySuggestions";
 import { entrySuggestionsApi, NO_PLACE_SUGGESTIONS } from "../../lib/api/entrySuggestions";
 import {
   PLACE_CATEGORIES,
-  PLACE_CATEGORY_ICONS,
   categoryFromOsmValue,
   isPlaceCategory,
   placeCountsAsTransit,
 } from "../../shared/placeCategories";
 import { usePlaceCategories } from "../../hooks/usePlaceCategories";
-import { placeCategoryIcon, placeCategoryLabel } from "../../lib/placeCategoryDisplay";
+import { placeCategoryLabel } from "../../lib/placeCategoryDisplay";
 import PlaceCategoryManager from "./PlaceCategoryManager";
 import type { Place } from "../../types/place";
 import TagInput from "../TagInput";
@@ -447,12 +446,12 @@ export function PlaceFormModal({
             >
               {PLACE_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
-                  {PLACE_CATEGORY_ICONS[c]} {placeCategoryLabel(t, c)}
+                  {placeCategoryLabel(t, c)}
                 </option>
               ))}
               {customs.map((c) => (
                 <option key={c.id} value={c.name}>
-                  {placeCategoryIcon(c.name, customs)} {c.name}
+                  {c.name}
                 </option>
               ))}
               {/* A place keeps a label it arrived with (an import's "food"):

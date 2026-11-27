@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type JSX } from "react";
+import { useCallback, useEffect, useRef, useState, type JSX, type ReactNode } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { logger } from "../../../lib/logger";
 import { getListMembers } from "../../../lib/api/placeLists";
@@ -41,7 +41,7 @@ export default function PlaceListTable({
   refreshKey: unknown;
   /** "Automatisch eingetragen" (the page's chip). */
   autoOnly?: boolean;
-  iconOf: (category: string) => string;
+  iconOf: (category: string) => ReactNode;
   onRemove: (placeId: string) => void;
   /** Moves an entry one step in the list's own order. */
   onMove: (placeId: string, delta: -1 | 1) => Promise<void>;
