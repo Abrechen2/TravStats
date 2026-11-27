@@ -228,7 +228,36 @@ export function betterSide(
 ): "here" | "there" | null {
   const a = qualityOf(group, here);
   const b = qualityOf(group, there);
-  return a > b ? "here" : b > a ? "there" : null;
+  if (a !== b) return a > b ? "here" : "there";
+  return group.kind === "plain" && group.fields.length === 1
+    ? fillsMore(here[group.fields[0] as string], there[group.fields[0] as string])
+    : null;
+}
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  !!v && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date);
+
+/**
+ * Two records (a lodging's house facts) that agree on every fact both fill: the one that fills
+ * more is better — "a filled fact beats an empty one", one level down. Sharing UAT 2: the same
+ * hotel, in the chain catalogue on one side only, read identically on both sides yet counted as
+ * a real conflict and sent three of four trips to review.
+ */
+function fillsMore(here: unknown, there: unknown): "here" | "there" | null {
+  if (!isRecord(here) || !isRecord(there)) return null;
+  let hereOnly = 0;
+  let thereOnly = 0;
+  for (const key of new Set([...Object.keys(here), ...Object.keys(there)])) {
+    const h = isEmpty(here[key]);
+    const t = isEmpty(there[key]);
+    if (!h && !t) {
+      if (JSON.stringify(here[key]) !== JSON.stringify(there[key])) return null;
+    } else if (!h) hereOnly += 1;
+    else if (!t) thereOnly += 1;
+  }
+  if (hereOnly > 0 && thereOnly === 0) return "here";
+  if (thereOnly > 0 && hereOnly === 0) return "there";
+  return null;
 }
 
 /** The choice a trip-level decision makes for one group. */

@@ -119,4 +119,34 @@ describe("the link's quality rule (UAT 2026-11-27, B1)", () => {
     expect(groups).toEqual([]);
     expect(uncarried).toEqual(["vesselName"]);
   });
+
+  /**
+   * Sharing UAT 2 (2026-11-27): the same hotel on both sides, one of them in the chain catalogue
+   * (Ramses Hilton, Courtyard by Marriott, Hampton Inn), was a "real" conflict whose two sides
+   * read identically, and it sent three of four trips to review instead of linking by rule.
+   */
+  it("a house that only adds facts the other side leaves empty is better, not a conflict", () => {
+    const house = {
+      countryVisitKind: "visit",
+      type: "hotel",
+      name: "Ramses Hilton",
+      city: "Bulaq",
+      lat: 30.0502774,
+      lon: 31.2320688,
+      amenities: [],
+      catalogueChainId: null,
+    };
+    const here = { lodging: { ...house, catalogueChainId: 2 } };
+    const there = { lodging: house };
+    expect(betterSide(groupOf("lodgingStay", "lodging"), here, there)).toBe("here");
+    expect(betterSide(groupOf("lodgingStay", "lodging"), there, here)).toBe("there");
+    expect(pairIsAutomatic("lodgingStay", ["lodging"], here, there)).toBe(true);
+  });
+
+  it("two houses that disagree on a filled fact still need the person", () => {
+    const here = { lodging: { name: "Ramses Hilton", city: "Bulaq", catalogueChainId: 2 } };
+    const there = { lodging: { name: "Ramses Hilton", city: "Kairo", catalogueChainId: null } };
+    expect(betterSide(groupOf("lodgingStay", "lodging"), here, there)).toBeNull();
+    expect(pairIsAutomatic("lodgingStay", ["lodging"], here, there)).toBe(false);
+  });
 });
