@@ -45,7 +45,9 @@
       "category": "Kategorie",
       "country": "Land",
       "list": "Liste",
-      "allLists": "Alle Listen"
+      "allLists": "Alle Listen",
+      "year": "Jahr",
+      "allYears": "Alle Jahre"
     },
     "status": {
       "visited": "Besucht",

@@ -45,7 +45,9 @@
       "category": "Category",
       "country": "Country",
       "list": "List",
-      "allLists": "All lists"
+      "allLists": "All lists",
+      "year": "Year",
+      "allYears": "All years"
     },
     "status": {
       "visited": "Visited",

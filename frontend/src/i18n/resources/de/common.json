@@ -584,6 +584,8 @@
       "events_other": "{{count}} Einträge",
       "rides_one": "{{count}} Fahrt",
       "rides_other": "{{count}} Fahrten",
+      "visits_one": "{{count}} Besuch",
+      "visits_other": "{{count}} Besuche",
       "rentals_one": "{{count}} Miete",
       "rentals_other": "{{count}} Mieten"
     }

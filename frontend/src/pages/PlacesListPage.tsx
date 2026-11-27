@@ -12,7 +12,6 @@ import {
   PlaceRow,
   PLACE_COLUMN_IDS as COLUMN_IDS,
   PLACE_COLUMN_LAYOUT,
-  type PlaceColumnId,
   type PlaceSortKey,
 } from "../components/places/PlaceRow";
 import { Table, type TableColumn } from "../components/ui/Table";
@@ -40,6 +39,13 @@ import type { PlaceList } from "../types/placeList";
 import { logger } from "../lib/logger";
 import { deletePlace, listPlaces, searchPlacesPage } from "../lib/api/places";
 import { useToastStore } from "../store/toastStore";
+import {
+  columnLabel,
+  compareRows,
+  SORT_DEFAULT_ASC,
+  SORT_KEY_BY_COLUMN,
+} from "../components/places/placeListSort";
+import { useYearCounts } from "../lib/stats/useYearCounts";
 import { PLACE_CATEGORIES, PLACE_CATEGORY_FILTER_ALL } from "../shared/placeCategories";
 import { placeCategoryLabel } from "../lib/placeCategoryDisplay";
 import { usePlaceCategories } from "../hooks/usePlaceCategories";
@@ -52,7 +58,13 @@ import { formatIsoDate } from "../lib/dateUtils";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
 import { LocalName } from "../components/places/LocalName";
-import { oneOfParam, stringParam, useQuerySearch, useQueryState } from "../hooks/useQueryState";
+import {
+  oneOfParam,
+  stringParam,
+  useQuerySearch,
+  useQueryState,
+  yearOrAllParam,
+} from "../hooks/useQueryState";
 import { useScrollRestoreReady } from "../lib/navigation/scrollMemory";
 
 type CategoryFilter = string;
@@ -86,67 +98,6 @@ const VISITED_PARAM = oneOfParam<VisitedFilter>(["all", "visited", "planned", "w
  * `actions` was always here. See `components/table/narrowColumns.ts`.
  */
 const ALWAYS_VISIBLE = ["name", "lastVisit", "status", "actions"] as const;
-
-const SORT_KEY_BY_COLUMN: Partial<Record<PlaceColumnId, PlaceSortKey>> = {
-  name: "name",
-  category: "category",
-  location: "location",
-  country: "country",
-  continent: "continent",
-  visits: "visits",
-  lastVisit: "lastVisit",
-};
-
-type Translate = (key: string, options?: Record<string, unknown>) => string;
-
-/** The country as a reader sees it — localised from the ISO code, falling back
- *  to whatever text the source wrote. */
-
-/** One label source for header, picker, aria and footer — they must agree. */
-function columnLabel(t: Translate, id: PlaceColumnId): string {
-  return t(`places:list.columns.${id}`);
-}
-
-/** Sort keys that read most naturally descending first — the same convention
- *  the lodging list uses for its count columns. */
-const SORT_DEFAULT_ASC: Record<PlaceSortKey, boolean> = {
-  name: true,
-  category: true,
-  location: true,
-  country: true,
-  continent: true,
-  visits: false,
-  lastVisit: false,
-};
-
-function compareRows(a: Place, b: Place, key: PlaceSortKey, locale: string, t: Translate): number {
-  switch (key) {
-    case "category":
-      return a.category.localeCompare(b.category);
-    case "location":
-      return (a.city ?? "").localeCompare(b.city ?? "", locale);
-    // Country and continent sort on the LOCALISED label, not the raw code: a
-    // German reader expects Ägypten by Ä, and "EG" would file it under E.
-    case "country":
-      return placeCountryLabel(a, locale).localeCompare(placeCountryLabel(b, locale), locale);
-    case "continent":
-      return continentLabel(a.continent, t, "").localeCompare(
-        continentLabel(b.continent, t, ""),
-        locale
-      );
-    case "visits":
-      return a.visitCount - b.visitCount;
-    case "lastVisit": {
-      // Undated-but-visited places sort to the END either way rather than
-      // pretending to be the oldest — a missing date is not a date.
-      const av = a.lastVisitAt ? Date.parse(a.lastVisitAt) : Number.NEGATIVE_INFINITY;
-      const bv = b.lastVisitAt ? Date.parse(b.lastVisitAt) : Number.NEGATIVE_INFINITY;
-      return av - bv;
-    }
-    default:
-      return a.name.localeCompare(b.name, locale);
-  }
-}
 
 export default function PlacesListPage(): JSX.Element {
   const { t, i18n } = useTranslation(["places", "common", "track"]);
@@ -194,6 +145,15 @@ export default function PlacesListPage(): JSX.Element {
   const [listId, setListId] = useQueryState("list", "all", stringParam);
   const [lists, setLists] = useState<PlaceList[]>([]);
   const [visited, setVisited] = useQueryState<VisitedFilter>("visited", "all", VISITED_PARAM);
+  // The year is cut on the SERVER (a visit's year is read on the place's own calendar), so a
+  // change reloads the list; the picker's captions are visits per year (`/stats/years/counts`).
+  const [year, setYear] = useQueryState<number | "all">("year", "all", yearOrAllParam);
+  const visitCounts = useYearCounts().of("poi");
+  const yearOptions = useMemo(() => {
+    const years = new Set(Object.keys(visitCounts).map(Number));
+    if (year !== "all") years.add(year);
+    return [...years].sort((a, b) => b - a);
+  }, [visitCounts, year]);
   // Newest first everywhere, and the choice survives a reload — the
   // column choice already did (useColumnPrefs), the sort never had.
   const { sortBy, sortOrder, setSort } = useSortPrefs("places-list", "lastVisit", "desc", [
@@ -215,7 +175,7 @@ export default function PlacesListPage(): JSX.Element {
       // `listPlaces` walks every page into memory, so client-side sorting and
       // filtering below always cover the COMPLETE set rather than one
       // paginated slice — the same reason the lodging list sorts client-side.
-      setRows(await listPlaces({}));
+      setRows(await listPlaces(year === "all" ? {} : { year }));
     } catch (err: unknown) {
       logger.error({ err }, "PlacesListPage: failed to load places");
       setLoadError(true);
@@ -223,7 +183,7 @@ export default function PlacesListPage(): JSX.Element {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [year]);
 
   useEffect(() => {
     void load();
@@ -344,6 +304,7 @@ export default function PlacesListPage(): JSX.Element {
     category !== PLACE_CATEGORY_FILTER_ALL ||
     country !== "all" ||
     listId !== "all" ||
+    year !== "all" ||
     visited !== "all";
 
   /** Read straight off the visible rows, like the other three lists. Visits
@@ -381,7 +342,8 @@ export default function PlacesListPage(): JSX.Element {
     setCountry("all");
     setListId("all");
     setVisited("all");
-  }, [setSearch, setCategory, setCountry, setListId, setVisited]);
+    setYear("all");
+  }, [setSearch, setCategory, setCountry, setListId, setVisited, setYear]);
 
   /**
    * Delete, once. A refusal closes the question and stays on the page, naming
@@ -519,6 +481,18 @@ export default function PlacesListPage(): JSX.Element {
               { value: "planned", label: t("places:list.status.planned") },
               { value: "wishlist", label: t("places:list.status.wishlist") },
             ],
+          }}
+          year={{
+            label: t("places:list.filters.year"),
+            value: year === "all" ? "all" : String(year),
+            onChange: (v) => setYear(v === "all" ? "all" : Number.parseInt(v, 10)),
+            allLabel: t("places:list.filters.allYears"),
+            options: yearOptions.map((y) => ({
+              value: String(y),
+              label: String(y),
+              count: visitCounts[y],
+            })),
+            formatCount: (n) => t("common:yearPicker.count.visits", { count: n }),
           }}
           extra={
             <>
@@ -764,7 +738,7 @@ export default function PlacesListPage(): JSX.Element {
             // Re-read the rows without the page's loading state, so the
             // dialog stays mounted; a failure is said there as "gespeichert,
             // Liste nicht aktualisiert", never as a failed save.
-            setRows(await listPlaces({}));
+            setRows(await listPlaces(year === "all" ? {} : { year }));
             addToast("success", t("places:visit.recorded", { name: recordingFor.name }));
             setRecordingFor(null);
           }}

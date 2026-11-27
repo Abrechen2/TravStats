@@ -63,6 +63,7 @@ import PlacesListPage from "../PlacesListPage";
 import { useSettingsStore } from "../../store/settingsStore";
 import { findNamed, getNamed, queryNamed } from "../../__tests__/helpers/namedElement";
 import { chooseFromBareMenu } from "../../__tests__/helpers/menu";
+import { yearTrigger } from "../../__tests__/helpers/yearPicker";
 
 // Measured 2026-09-19: this page's paged-rows case renders in about a second
 // on a developer machine and past Vitest's 5 s default on the CI runner under
@@ -117,6 +118,23 @@ describe("PlacesListPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Colosseo/ }));
 
     expect(await screen.findByTestId("visit-dialog-stub")).toHaveTextContent("p1|2024-03-04");
+  });
+
+  it("asks the server for one visit year, and a year in the URL is the picker's year", async () => {
+    listPlacesMock.mockResolvedValue([makePlace({ id: "p1", name: "Colosseo" })]);
+    renderListPage("/places?year=2023");
+
+    await screen.findByText("Colosseo");
+    expect(listPlacesMock).toHaveBeenCalledWith({ year: 2023 });
+    expect(yearTrigger("places:list.filters.year")).toHaveTextContent("2023");
+  });
+
+  it("asks for every year when the URL carries none", async () => {
+    listPlacesMock.mockResolvedValue([makePlace({ id: "p1", name: "Colosseo" })]);
+    renderListPage("/places");
+
+    await screen.findByText("Colosseo");
+    expect(listPlacesMock).toHaveBeenCalledWith({});
   });
 
   it("renders the empty state without crashing when there are no places", async () => {

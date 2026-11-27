@@ -141,6 +141,8 @@ export interface PlaceListQuery {
   country?: string;
   visited?: boolean;
   tripId?: string;
+  /** Only places with a visit that happened in this year (place calendar). */
+  year?: number;
   sortBy?: PlaceSortKey;
   sortOrder?: "asc" | "desc";
   limit?: number;

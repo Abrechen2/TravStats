@@ -584,6 +584,8 @@
       "events_other": "{{count}} entries",
       "rides_one": "{{count}} ride",
       "rides_other": "{{count}} rides",
+      "visits_one": "{{count}} visit",
+      "visits_other": "{{count}} visits",
       "rentals_one": "{{count}} rental",
       "rentals_other": "{{count}} rentals"
     }
