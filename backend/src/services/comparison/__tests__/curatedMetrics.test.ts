@@ -31,6 +31,12 @@ beforeAll(async () => {
       data: { username: `lb-cur-${randomUUID()}`, passwordHash: "test-only" },
     })
   ).id;
+  // A seed suite earlier in the run may have left the real catalogue behind (its afterAll
+  // re-seeds it). This suite owns world-heritage for its duration, as its afterAll already
+  // assumes, and needs nationalparks-us absent to see an unseeded list as null.
+  await prisma.curatedList.deleteMany({
+    where: { key: { in: ["world-heritage", "nationalparks-us"] } },
+  });
   await prisma.curatedList.create({
     data: {
       key: "world-heritage",

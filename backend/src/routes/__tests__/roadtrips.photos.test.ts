@@ -62,7 +62,9 @@ describe("GET /roadtrips/:id/photos", () => {
     otherCookie = `auth_token=${generateToken(otherId)}`;
     await seedRoadtripDemo(ownerId);
     const route = await prisma.tripRoute.findFirstOrThrow({
-      where: { userId: ownerId, kind: "roadtrip" },
+      // The demo seeds several roadtrips and only the Norway one is filed under a trip; without
+      // this filter the row Postgres happens to return first decides whether the suite passes.
+      where: { userId: ownerId, kind: "roadtrip", tripId: { not: null } },
       select: { id: true, tripId: true },
     });
     roadtripId = route.id;
