@@ -67,7 +67,7 @@
   },
   "custom": {
     "title": "Reisezwecke",
-    "intro": "Jeder Zweck gehört zu „privat“ oder „geschäftlich“. Danach richten sich das Ausblenden, die Zählungen und die Vorschläge. Eigene Zwecke siehst nur du; wer eine Reise mit dir teilt, sieht sie nicht.",
+    "intro": "Jeder Zweck ist „privat“ oder „geschäftlich“; danach richten sich Filter und Zählungen. Eigene Zwecke siehst nur du.",
     "own": "Eigene Zwecke",
     "none": "Noch keine eigenen Zwecke.",
     "name": "Name",

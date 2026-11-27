@@ -219,7 +219,9 @@ export default function SmartListPanel({
                 )}
               </div>
               {undoError && (
-                <InlineError className="mb-2">{t(undoError, { count: undoFailedCount })}</InlineError>
+                <InlineError className="mb-2">
+                  {t(undoError, { count: undoFailedCount })}
+                </InlineError>
               )}
               <ul className="grid gap-2" style={{ listStyle: "none", padding: 0 }}>
                 {auto.map((row) => (

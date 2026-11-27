@@ -9,6 +9,7 @@ import { sortEntries, type PluginEntry, type PluginSort, type Severity } from ".
 import { usePluginInbox } from "./usePluginInbox";
 import PluginRowEditor from "./PluginRowEditor";
 import { archiveUndoRequest, coord } from "./archiveConfirm";
+import Chip from "../../ui/Chip";
 
 const NS = "dataQuality:pluginInbox";
 const MS = "suggestionSources:plugins.maintenance";
@@ -120,19 +121,9 @@ export default function PluginsTab({
             const label =
               id === null ? t(`${NS}.all`) : inbox.plugins.find((p) => p.id === id)!.name;
             return (
-              <button
-                key={id ?? "all"}
-                type="button"
-                aria-pressed={active}
-                onClick={() => setPluginId(id)}
-                className="rounded-full px-3 py-1 text-sm"
-                style={{
-                  border: `1px solid ${active ? "var(--ts-accent)" : "var(--ts-border-button)"}`,
-                  color: active ? "var(--ts-accent)" : "var(--ts-muted)",
-                }}
-              >
+              <Chip key={id ?? "all"} active={active} onClick={() => setPluginId(id)}>
                 {label} {count(id)}
-              </button>
+              </Chip>
             );
           })}
         </div>

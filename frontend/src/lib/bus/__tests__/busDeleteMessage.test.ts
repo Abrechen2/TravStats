@@ -20,9 +20,7 @@ describe("busDeleteMessage", () => {
   });
 
   it("adds the originals that go with it once counted, and says nothing while uncounted", () => {
-    expect(busDeleteMessage(t, ride, 2)).toContain(
-      "Dazu 2 Dokumente: Diese werden nur von diesem Eintrag gelöst"
-    );
+    expect(busDeleteMessage(t, ride, 2)).toContain("Dazu 2 Dokumente: werden nur gelöst");
     expect(busDeleteMessage(t, ride, null)).not.toContain("Dokument");
   });
 

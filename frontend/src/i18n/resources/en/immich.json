@@ -264,7 +264,7 @@
   },
   "periodAuto": {
     "title": "Link the period automatically for trips without an album",
-    "hint": "Shows the photos of its period on every trip without an album (from PhotoPrism, else Immich). Only references are stored, no copies.",
+    "hint": "Shows the photos of its period on trips without an album (PhotoPrism, else Immich). Only references, no copies.",
     "loadFailed": "The setting could not be loaded.",
     "saveFailed": "The setting could not be saved."
   }

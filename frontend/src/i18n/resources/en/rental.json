@@ -133,7 +133,7 @@
     "distanceKm": "Kilometres driven (correction)",
     "odometerOutKm": "Odometer at pick-up",
     "odometerInKm": "Odometer at return",
-    "distanceHint": "From the invoice or odometer readings. “Correction” wins over both.",
+    "distanceHint": "From the invoice, rental agreement or odometer readings. “Correction” wins over all.",
     "driven": "Driven: {{km}} km ({{source}})",
     "drivenUnknown": "Kilometres driven: not known yet",
     "notes": "Notes",

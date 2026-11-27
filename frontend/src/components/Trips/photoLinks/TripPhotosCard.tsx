@@ -17,6 +17,8 @@ import { usePhotoViewer } from "../../common/photoViewer/usePhotoViewer";
 import { largeUrl, type ViewerPhoto } from "../../common/photoViewer/viewerPhoto";
 import { Button, Card } from "../../ui";
 import LinkedPhotoGallery from "./LinkedPhotoGallery";
+import InlineError from "../../ui/InlineError";
+import Banner from "../../ui/Banner";
 
 /** Thumbnails on the card; everything else is one click away in the gallery. */
 export const CARD_THUMBS = 4;
@@ -133,27 +135,26 @@ export default function TripPhotosCard({ tripId }: { tripId: string }): JSX.Elem
       <h2 className="t-card-title">{t("trips:photoLinks.title")}</h2>
 
       {loadFailed && (
-        <p role="alert" className="t-caption" style={{ color: "var(--color-danger)" }}>
-          {t("trips:photoLinks.loadFailed")}{" "}
-          <Button variant="secondary" onClick={() => void load()}>
-            {t("trips:photoLinks.retry")}
-          </Button>
-        </p>
+        <Banner
+          tone="error"
+          action={
+            <Button variant="secondary" onClick={() => void load()}>
+              {t("trips:photoLinks.retry")}
+            </Button>
+          }
+        >
+          {t("trips:photoLinks.loadFailed")}
+        </Banner>
       )}
       {page === null && !loadFailed && <p className="t-caption">{t("trips:photoLinks.loading")}</p>}
 
       {page?.failures.map((f: LinkedPhotoFailure) => (
-        <p
-          key={f.sourceId}
-          role="alert"
-          className="t-caption"
-          style={{ color: "var(--color-danger)" }}
-        >
+        <InlineError key={f.sourceId}>
           {t("trips:photoLinks.sourceFailed", {
             source: sourceLabel(f),
             reason: failureText(f.provider, f.kind),
           })}
-        </p>
+        </InlineError>
       ))}
       {page?.truncated && <p className="t-caption">{t("trips:photoLinks.truncated")}</p>}
 
@@ -190,11 +191,11 @@ export default function TripPhotosCard({ tripId }: { tripId: string }): JSX.Elem
       )}
 
       {proposals?.failure && (
-        <p role="alert" className="t-caption mt-2" style={{ color: "var(--color-danger)" }}>
+        <InlineError className="mt-2">
           {t("trips:photoLinks.proposalFailed", {
             reason: failureText(proposals.connectionId ?? "photoprism", proposals.failure),
           })}
-        </p>
+        </InlineError>
       )}
       {proposals?.proposals.map((p) => (
         <div
@@ -278,11 +279,7 @@ export default function TripPhotosCard({ tripId }: { tripId: string }): JSX.Elem
         </div>
       )}
 
-      {actionError && (
-        <p role="alert" className="t-caption mt-2" style={{ color: "var(--color-danger)" }}>
-          {actionError}
-        </p>
-      )}
+      {actionError && <InlineError className="mt-2">{actionError}</InlineError>}
       {galleryOpen && page && (
         <LinkedPhotoGallery
           tripId={tripId}

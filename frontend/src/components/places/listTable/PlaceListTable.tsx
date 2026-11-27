@@ -8,6 +8,7 @@ import { useServerPagination } from "../../table/useServerPagination";
 import type { ListMembersPage, ListSortKey } from "../../../types/placeList";
 import PlaceListTableRow from "./PlaceListTableRow";
 import { firstOrderOf, useListSort } from "./useListSort";
+import { SearchInput } from "../../ui/SearchInput";
 
 const SERVER_MAX_PAGE_SIZE = 100;
 const SEARCH_DEBOUNCE_MS = 250;
@@ -127,14 +128,12 @@ export default function PlaceListTable({
   return (
     <section aria-label={t("places:lists.table.label")} data-testid="place-list-table">
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <input
-          type="search"
+        <SearchInput
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={setQuery}
           placeholder={t("places:lists.table.search")}
-          aria-label={t("places:lists.table.search")}
-          className="min-w-0 flex-1 rounded-lg px-3 py-2 text-sm pointer-coarse:min-h-(--ts-size-touch-min)"
-          style={{ border: "1px solid var(--color-border)", background: "var(--bg-surface)" }}
+          label={t("places:lists.table.search")}
+          className="min-w-0 flex-1"
         />
         <label className="flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
           {t("places:lists.table.sortLabel")}

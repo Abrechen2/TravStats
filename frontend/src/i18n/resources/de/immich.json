@@ -264,7 +264,7 @@
   },
   "periodAuto": {
     "title": "Zeitraum automatisch verknüpfen für Reisen ohne Album",
-    "hint": "Zeigt auf jeder Reise ohne Album die Fotos ihres Zeitraums (aus PhotoPrism, sonst Immich). Es werden nur Verweise gespeichert, keine Kopien.",
+    "hint": "Zeigt auf Reisen ohne Album die Fotos ihres Zeitraums (PhotoPrism, sonst Immich). Nur Verweise, keine Kopien.",
     "loadFailed": "Die Einstellung konnte nicht geladen werden.",
     "saveFailed": "Die Einstellung konnte nicht gespeichert werden."
   }

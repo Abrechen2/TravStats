@@ -61,8 +61,6 @@
   "tailwindPalette": [
     "components/AchievementPopup.tsx",
     "components/Admin/AdminPasswordResetModal.tsx",
-    "components/AirportSeedingBanner.tsx",
-    "components/Admin/CreateEmailInviteModal.tsx",
     "components/BoardingPassScanner.tsx",
     "components/ChangeDiffView.tsx",
     "components/Cruise/CruiseImportPreviewModal.tsx",

@@ -15,6 +15,7 @@ import { listCuratedChecklists, listPlaceLists, subscribeChecklist } from "../li
 import { DOMAINS } from "../shared/domains";
 import { listPendingCounts } from "../lib/api/smartLists";
 import type { CuratedListSummary, PlaceList } from "../types/placeList";
+import Chip from "../components/ui/Chip";
 
 /**
  * Lists and checklists, one screen.
@@ -231,18 +232,16 @@ export default function PlaceListsPage(): JSX.Element {
                           {list.icon && <span aria-hidden>{list.icon}</span>}
                           <span className="font-medium">{list.name}</span>
                           {(pendingCounts[list.id] ?? 0) > 0 && (
-                            <span
-                              className="ml-auto rounded-full px-2 py-0.5 text-xs"
-                              style={{
-                                background: "var(--ts-accent)",
-                                color: "var(--ts-on-accent, #fff)",
-                              }}
-                              data-testid="list-pending-badge"
+                            <Chip
+                              size="sm"
+                              tone="accent"
+                              className="ml-auto"
+                              testId="list-pending-badge"
                             >
                               {t("places:smartList.pendingBadge", {
                                 count: pendingCounts[list.id],
                               })}
-                            </span>
+                            </Chip>
                           )}
                         </span>
                         <span className="mt-2 block text-xs" style={{ color: "var(--text-muted)" }}>

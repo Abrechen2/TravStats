@@ -82,6 +82,7 @@ vi.mock("../../components/NavigationBar", () => ({
 // (settings redesign, package 5): it reads the services overview on mount.
 // The instance mailbox card loads its own settings; it has its own tests.
 vi.mock("../../components/MailIntake/MailIntakeAdminCard", () => ({ default: () => null }));
+vi.mock("../../components/ServerPages/MaintenanceRuntime", () => ({ default: () => null }));
 vi.mock("@/lib/api/externalServices", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/externalServices")>()),
   externalServicesApi: {

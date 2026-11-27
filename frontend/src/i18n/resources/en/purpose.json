@@ -67,7 +67,7 @@
   },
   "custom": {
     "title": "Travel purposes",
-    "intro": "Every purpose belongs to “private” or “business”. Hiding, counts and suggestions follow that. Your own purposes are visible to you only; someone you share a trip with does not see them.",
+    "intro": "Every purpose is “private” or “business”; filters and counts follow that. Only you see your own purposes.",
     "own": "Your own purposes",
     "none": "No purposes of your own yet.",
     "name": "Name",

@@ -133,7 +133,7 @@
     "distanceKm": "Gefahrene Kilometer (Korrektur)",
     "odometerOutKm": "Kilometerstand bei Abholung",
     "odometerInKm": "Kilometerstand bei Rückgabe",
-    "distanceHint": "Aus Rechnung oder Kilometerständen. „Korrektur“ geht allem vor.",
+    "distanceHint": "Aus Rechnung, Mietvertrag oder Kilometerständen. „Korrektur“ geht allem vor.",
     "driven": "Gefahren: {{km}} km ({{source}})",
     "drivenUnknown": "Gefahrene Kilometer: noch nicht bekannt",
     "notes": "Notizen",

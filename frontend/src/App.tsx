@@ -1,4 +1,3 @@
-import { Icon } from "./components/ui/Icon";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence, MotionConfig } from "framer-motion";
 import NavigationMemory from "./components/navigation/NavigationMemory";
@@ -7,6 +6,7 @@ import { useAuthStore } from "./store/authStore";
 import { logger } from "./lib/logger";
 import { useSettingsStore } from "./store/settingsStore";
 import ErrorBoundary from "./components/ErrorBoundary";
+import AppCrashFallback from "./components/AppCrashFallback";
 import PageErrorHost from "./components/PageErrorHost";
 import Toast from "./components/Toast";
 import AirportSeedingBanner from "./components/AirportSeedingBanner";
@@ -203,35 +203,7 @@ function AppContent() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <ErrorBoundary
-        fallback={
-          <div
-            className="min-h-screen flex items-center justify-center"
-            style={{ background: "var(--bg-base)" }}
-          >
-            <div
-              className="max-w-md w-full p-8 rounded-xl"
-              style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-            >
-              <div className="text-center">
-                <div className="mb-4 flex justify-center">
-                  <Icon name="circle-alert" size={24} />
-                </div>
-                <h1 className="t-screen-title mb-2">{t("errorBoundary.title")}</h1>
-                <p className="mb-6" style={{ color: "var(--text-muted)" }}>
-                  {t("errorBoundary.message")}
-                </p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="btn-primary w-full px-6 py-3"
-                >
-                  {t("errorBoundary.refresh")}
-                </button>
-              </div>
-            </div>
-          </div>
-        }
-      >
+      <ErrorBoundary fallback={<AppCrashFallback />}>
         <Toast />
         <PageErrorHost />
         <AirportSeedingBanner />

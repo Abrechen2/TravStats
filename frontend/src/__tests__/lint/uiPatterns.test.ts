@@ -77,6 +77,8 @@ const RAW_TABLE_REASON: Record<string, string> = {
   // Lists, but each row expands into a full-width record (colSpan), which the grid Table cannot draw.
   "components/Passport/CountryTable.tsx": "rows expand into the evidence record (colSpan)",
   "components/Trips/TripBookingsPanel.tsx": "rows expand into an edit form (colSpan)",
+  "components/places/listTable/PlaceListTable.tsx":
+    "rows expand into the visit dates (colSpan); sorted and paged by the server, with plugin columns",
 };
 
 function walk(dir: string, out: string[] = []): string[] {

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { tripPhotoSourcesApi } from "../../lib/api/tripPhotoSources";
 import { logger } from "../../lib/logger";
+import InlineError from "../ui/InlineError";
 
 /**
  * "Zeitraum automatisch verknüpfen für Reisen ohne Album" (spec 2026-11-26-trip-photo-links.md,
@@ -52,9 +53,9 @@ export default function PhotoPeriodAutoSetting(): JSX.Element {
       </label>
       <p className="t-caption">{t("periodAuto.hint")}</p>
       {failed && (
-        <p role="alert" className="t-caption" style={{ color: "var(--color-danger)" }}>
+        <InlineError>
           {t(failed === "load" ? "periodAuto.loadFailed" : "periodAuto.saveFailed")}
-        </p>
+        </InlineError>
       )}
     </div>
   );
