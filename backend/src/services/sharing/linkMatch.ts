@@ -25,8 +25,9 @@ import { sameFlight, type FlightIdentity } from "./ownFlightMatch";
  * Nothing here reads the database.
  */
 
-export type LinkDecision = "mine" | "theirs" | "both";
-export const LINK_DECISIONS: readonly LinkDecision[] = ["mine", "theirs", "both"];
+/** `best`: the better value wins each difference, a tie keeps both (`linkResolve.ts`). */
+export type LinkDecision = "mine" | "theirs" | "both" | "best";
+export const LINK_DECISIONS: readonly LinkDecision[] = ["mine", "theirs", "both", "best"];
 
 export interface LinkRow {
   entity: ShareEntity;

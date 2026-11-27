@@ -63,7 +63,8 @@ const PRECISION_OF: Record<string, string> = {
 const asObject = (v: Prisma.JsonValue | null): Prisma.JsonObject =>
   v && typeof v === "object" && !Array.isArray(v) ? v : {};
 
-function display(
+/** One fact value in the API's display shapes (shared with the link dry run). */
+export function display(
   field: string,
   raw: unknown,
   zones: Record<string, string | null>,

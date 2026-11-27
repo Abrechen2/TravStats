@@ -11,6 +11,7 @@ import type { ShareEntity } from "../services/sharing/shareTypes";
 
 import { authenticate, requireWriteScope, type AuthRequest } from "../middleware/auth";
 import { rejectDemoWrites } from "../middleware/demoGuard";
+import { remoteShareLinkLimiter } from "../middleware/sharingRateLimit";
 import {
   hasAdmittedPeer,
   tripFederationAvailability,
@@ -318,7 +319,7 @@ router.get(
 
 router.post(
   "/offers/:id/link-preview",
-  remoteInviteLimiter,
+  remoteShareLinkLimiter,
   handle(async (req, res) => {
     const id = remoteOfferIdSchema.parse(req.params.id);
     const { tripId } = offerLinkPreviewBodySchema.parse(req.body ?? {});
@@ -328,11 +329,14 @@ router.post(
 
 router.post(
   "/offers/:id/link",
-  remoteInviteLimiter,
+  remoteShareLinkLimiter,
   handle(async (req, res) => {
     const id = remoteOfferIdSchema.parse(req.params.id);
-    const { tripId, decision } = offerLinkBodySchema.parse(req.body ?? {});
-    res.json({ success: true, data: await linkOffer(req.userId!, id, tripId, decision) });
+    const { tripId, decision, choices } = offerLinkBodySchema.parse(req.body ?? {});
+    res.json({
+      success: true,
+      data: await linkOffer(req.userId!, id, tripId, decision, choices),
+    });
   })
 );
 

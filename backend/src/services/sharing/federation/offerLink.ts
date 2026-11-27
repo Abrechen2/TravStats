@@ -10,7 +10,6 @@ import {
 import { exchange } from "../../federation/security";
 import { restatusTrips } from "../../trip/restatusTrips";
 import { ADAPTERS } from "../adapters";
-import { DERIVE } from "../deriveCopy";
 import { findByUserKey } from "../keyOps";
 import { planLink, type LinkDecision, type LinkPair, type LinkRow } from "../linkMatch";
 import {
@@ -26,8 +25,9 @@ import {
   type LinkPreviewAnswer,
   type LinkResult,
 } from "../linkExisting";
+import { settlePair, type LinkChoices } from "../linkSettle";
 import { acceptedParties } from "../members";
-import { propagateWrite, SHARE_TX_TIMEOUT_MS } from "../propagate";
+import { SHARE_TX_TIMEOUT_MS } from "../propagate";
 import { SHARE_TYPES, emptyCounts } from "../shareTypes";
 import { requireTripFederation } from "./access";
 import { ENTRIES_BYTES, wireEntriesOf } from "./entries";
@@ -350,30 +350,20 @@ async function settleAfterAnswer(
   row: OpenOffer,
   tripId: string,
   pairs: LinkPair[],
-  decision: LinkDecision
+  decision: LinkDecision,
+  choices: LinkChoices | undefined
 ): Promise<number> {
   return prisma.$transaction(
     async (tx) => {
       let settled = 0;
-      for (const pair of pairs) {
-        if (decision === "both" || pair.conflicts.length === 0) continue;
-        const { entity, here, there, conflicts } = pair;
-        if (decision === "theirs") {
-          await ADAPTERS[entity].apply(tx, here, there.facts, conflicts, here.facts);
-          await DERIVE[entity](tx, here.id, userId);
-        } else {
-          // As if the person had just changed these facts from the home's values to their own.
-          const homeValues = Object.fromEntries(conflicts.map((k) => [k, there.facts[k]]));
-          const before = {
-            ...here,
-            entity,
-            groupId: row.groupId,
-            facts: { ...here.facts, ...homeValues },
-          };
-          await propagateWrite(tx, userId, entity, here.id, before);
-        }
-        settled += 1;
-      }
+      // The home holds its own values and spreads them; only the caller's travel from here.
+      for (const pair of pairs)
+        if (
+          await settlePair(tx, userId, row.groupId, pair, decision, choices, {
+            spreadTheirs: false,
+          })
+        )
+          settled += 1;
       await restatusTrips([tripId], tx);
       return settled;
     },
@@ -386,7 +376,8 @@ export async function linkOffer(
   userId: string,
   id: string,
   tripId: string,
-  decision: LinkDecision
+  decision: LinkDecision,
+  choices?: LinkChoices
 ): Promise<LinkResult> {
   await requireTripFederation(userId);
   const row = await openOffer(userId, id);
@@ -418,7 +409,7 @@ export async function linkOffer(
   let settled = 0;
   let settleFailed = false;
   try {
-    settled = await settleAfterAnswer(userId, row, tripId, keyed.pairs, decision);
+    settled = await settleAfterAnswer(userId, row, tripId, keyed.pairs, decision, choices);
   } catch (error) {
     settleFailed = true;
     logger.error(

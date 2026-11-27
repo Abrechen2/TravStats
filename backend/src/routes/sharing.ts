@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { authenticate, requireWriteScope, type AuthRequest } from "../middleware/auth";
 import { rejectDemoWrites } from "../middleware/demoGuard";
-import { shareConsentRequestLimiter } from "../middleware/sharingRateLimit";
+import { shareConsentRequestLimiter, shareLinkLimiter } from "../middleware/sharingRateLimit";
 import {
   linkCompanion,
   listLinkableCompanions,
@@ -216,6 +216,7 @@ router.get(
 
 router.post(
   "/trips/:tripId/link-preview",
+  shareLinkLimiter,
   handle(async (req, res) => {
     const tripId = idSchema.parse(req.params.tripId);
     const body = linkPreviewBodySchema.parse(req.body ?? {});
@@ -228,12 +229,20 @@ router.post(
 
 router.post(
   "/trips/:tripId/link",
+  shareLinkLimiter,
   handle(async (req, res) => {
     const tripId = idSchema.parse(req.params.tripId);
     const body = linkBodySchema.parse(req.body ?? {});
     res.json({
       success: true,
-      data: await linkTrip(req.userId!, tripId, body.userId, body.targetTripId, body.decision),
+      data: await linkTrip(
+        req.userId!,
+        tripId,
+        body.userId,
+        body.targetTripId,
+        body.decision,
+        body.choices
+      ),
     });
   })
 );
