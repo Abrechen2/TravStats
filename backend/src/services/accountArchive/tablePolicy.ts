@@ -378,6 +378,8 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   // They name calendar sources, which do not travel (credentials): a rule without its source means nothing.
   suggestion_plugins: excluded(CREDENTIALS),
   suggestion_plugin_calls: excluded(BOOKKEEPING),
+  // A copy of the plugin's last answer; the plugin itself does not travel (credentials).
+  plugin_maintenance_caches: excluded(BOOKKEEPING),
   calendar_rules: excluded("bound to the calendar sources, which do not travel"),
   trip_share_invites: excluded(CREDENTIALS),
   comparison_invites: excluded(CREDENTIALS),
