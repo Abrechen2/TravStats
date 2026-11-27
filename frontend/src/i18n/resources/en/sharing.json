@@ -626,6 +626,7 @@
       "connectionExists": "There is a connection or an open request with this person already.",
       "connectionState": "That is not possible for this connection right now – it has changed meanwhile. Reload the page.",
       "connectionRequired": "That needs a confirmed connection – and the person must have allowed it.",
+      "bulkNotCandidate": "This trip is not on the list for this person.",
       "requestFailed": "The request could not be sent.",
       "confirmFailed": "The confirmation could not be sent. Nothing changed.",
       "switchesFailed": "The settings could not be saved.",
@@ -672,6 +673,7 @@
         "addRequestFailed": "The request could not be sent."
       },
       "delivery": {
+        "paused": "Paused: “Share trips” is off for {{name}}. Changes wait here and go out once you turn it back on.",
         "delivered": "All changes have reached {{name}}.",
         "pending": "Changes are on their way to {{name}}.",
         "retrying": "Changes are not reaching {{name}} right now – {{origin}} has not answered since {{date}}. Retrying.",

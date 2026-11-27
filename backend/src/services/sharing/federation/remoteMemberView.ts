@@ -4,6 +4,7 @@
  * went wrong, and — since F-S4d — where the changes made here stand on their way there, so the
  * page says it instead of showing a member who silently has nothing.
  */
+import { isSharePaused } from "./sharePause";
 import { prisma } from "../../../db";
 import { remoteMemberStateSchema, type RemoteMemberState } from "../../../schemas/sharingRemote";
 
@@ -19,7 +20,8 @@ import { remoteMemberStateSchema, type RemoteMemberState } from "../../../schema
  *   `consent`, `too-large`; `field` what did not parse; `label` the entry it was about); it is kept, not sent.
  */
 export interface DeliveryView {
-  state: "delivered" | "pending" | "retrying" | "unreachable" | "rejected";
+  /** `paused`: "Reisen teilen" is off for the person — changes wait here (`sharePause.ts`). */
+  state: "delivered" | "pending" | "retrying" | "unreachable" | "rejected" | "paused";
   /** Since when the delivery is in this state: failing since, or when it was refused. */
   stateSince: string | null;
   reason: string | null;
@@ -41,7 +43,19 @@ export interface RemoteMemberView {
 }
 
 export const MEMBER_INCLUDE = {
-  remote: { select: { id: true, userId: true, displayName: true, username: true, origin: true } },
+  remote: {
+    select: {
+      id: true,
+      userId: true,
+      displayName: true,
+      username: true,
+      origin: true,
+      state: true,
+      shareTripOffers: true,
+      remoteSwitches: true,
+    },
+  },
+  group: { select: { homeOrigin: true } },
 } as const;
 
 interface MemberRow {
@@ -50,7 +64,16 @@ interface MemberRow {
   state: string;
   stateReason: string | null;
   stateSince: Date;
-  remote: { id: string; displayName: string; username: string; origin: string };
+  remote: {
+    id: string;
+    displayName: string;
+    username: string;
+    origin: string;
+    state?: string;
+    shareTripOffers?: boolean;
+    remoteSwitches?: unknown;
+  };
+  group?: { homeOrigin: string | null };
 }
 
 const DELIVERED: DeliveryView = {
@@ -89,7 +112,22 @@ async function deliveryOf(rows: readonly MemberRow[]): Promise<Map<string, Deliv
     const mine = waiting.filter((q) => q.memberId === m.id);
     const parked = stream.filter((q) => q.parkedAt && q.memberId === m.id).at(-1);
     const failing = head?.failingSince ?? null;
-    if (m.state === "unreachable")
+    const pairing = m.remote;
+    if (
+      m.group &&
+      pairing.state !== undefined &&
+      pairing.shareTripOffers !== undefined &&
+      isSharePaused(
+        {
+          state: pairing.state,
+          shareTripOffers: pairing.shareTripOffers,
+          remoteSwitches: pairing.remoteSwitches,
+        },
+        m.group.homeOrigin === null
+      )
+    )
+      out.set(m.id, { ...DELIVERED, state: "paused" });
+    else if (m.state === "unreachable")
       out.set(m.id, {
         ...DELIVERED,
         state: "unreachable",

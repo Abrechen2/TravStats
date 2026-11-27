@@ -9,8 +9,11 @@ import {
   offerLinkBodySchema,
   offerLinkPreviewBodySchema,
 } from "../schemas/sharingLink";
-import { remoteBulkOfferCandidates, remoteBulkPairs } from "../services/sharing/bulkLink";
-import { offerTrip } from "../services/sharing/federation/offers";
+import {
+  bulkOffer,
+  remoteBulkOfferCandidates,
+  remoteBulkPairs,
+} from "../services/sharing/bulkLink";
 import { Router, type NextFunction, type Response } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import type { Request } from "express";
@@ -92,9 +95,18 @@ router.use(rejectDemoWrites);
  * one; an unbounded endpoint would let one account drive that traffic. The key masks addresses
  * through `ipKeyGenerator`, as express-rate-limit 8 demands.
  */
+/**
+ * Outbound offers and invitations, per user: 30 an hour. The bulk offer (UAT 2026-11-27) counts
+ * against the SAME budget — one limiter, one key — so a bulk run cannot be used to get past it;
+ * only its own route may go up to `BULK_OFFER_LIMIT`, enough for ~60 trips with a retry. Over the
+ * cap it answers 429 with `Retry-After`, which the bulk page shows as a pause, not a failure.
+ */
+const REMOTE_INVITE_LIMIT = 30;
+export const BULK_OFFER_LIMIT = 90;
+const BULK_OFFER_PATH = "/link-bulk/offers";
 const remoteInviteLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 30,
+  limit: (req: Request) => (req.path === BULK_OFFER_PATH ? BULK_OFFER_LIMIT : REMOTE_INVITE_LIMIT),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many invitation requests, please try again later", code: "RATE_LIMITED" },
@@ -335,11 +347,11 @@ router.get(
 );
 
 router.post(
-  "/link-bulk/offers",
-  remoteShareLinkLimiter,
+  BULK_OFFER_PATH,
+  remoteInviteLimiter,
   handle(async (req, res) => {
     const { tripId, remoteId } = bulkOfferBodySchema.parse(req.body ?? {});
-    res.status(201).json({ success: true, data: await offerTrip(req.userId!, tripId, remoteId) });
+    res.status(201).json({ success: true, data: await bulkOffer(req.userId!, tripId, remoteId) });
   })
 );
 

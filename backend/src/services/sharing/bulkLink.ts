@@ -2,6 +2,8 @@ import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { mayOfferTripTo } from "../friends/authz";
 import { requireTripFederation } from "./federation/access";
+import { offerTrip } from "./federation/offers";
+import type { RemoteMemberView } from "./federation/remoteMemberView";
 import { offeredTrip } from "./federation/offerLink";
 import { listOpenOffers } from "./federation/offerInbox";
 import { AWAITING_CONSENT, type AwaitingConsent } from "./linkExisting";
@@ -254,4 +256,25 @@ export async function remoteBulkOfferCandidates(
     if (states.some((s) => !REOFFERABLE.has(s))) return [];
     return [{ ...tripView(t), offered: states.includes("invited") }];
   });
+}
+
+/**
+ * One step of a bulk offer: only a trip the bulk list names for that person is offered (security
+ * review 2026-11-27) — the bulk route must not become a way to offer any trip outside the single
+ * offer's checks and budget.
+ */
+export async function bulkOffer(
+  userId: string,
+  tripId: string,
+  remoteId: string
+): Promise<RemoteMemberView> {
+  const candidates = await remoteBulkOfferCandidates(userId, remoteId);
+  if (!candidates.some((c) => c.id === tripId))
+    throw new AppError(
+      "That trip is not on the bulk list for this person",
+      409,
+      "SHARE_REMOTE_BULK_NOT_CANDIDATE",
+      "tripId"
+    );
+  return offerTrip(userId, tripId, remoteId);
 }

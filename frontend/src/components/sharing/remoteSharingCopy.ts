@@ -39,6 +39,7 @@ const CODES: Readonly<Record<string, string>> = {
   SHARE_REMOTE_CONNECTION_STATE: "sharing:remote.errors.connectionState",
   SHARE_REMOTE_CONNECTION_REQUIRED: "sharing:remote.errors.connectionRequired",
   SHARE_REMOTE_SERVER_NOT_CONNECTED: "sharing:remote.errors.serverNotConnected",
+  SHARE_REMOTE_BULK_NOT_CANDIDATE: "sharing:remote.errors.bulkNotCandidate",
   TRIP_NOT_FOUND: "sharing:remote.errors.tripNotFound",
   SHARE_REMOTE_TRIP_NOT_FOUND: "sharing:remote.errors.tripNotFound",
   SHARE_REMOTE_LINK_TRIP_SHARED: "sharing:remote.errors.linkTripShared",

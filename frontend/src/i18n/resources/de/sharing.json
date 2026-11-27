@@ -626,6 +626,7 @@
       "connectionExists": "Mit dieser Person gibt es schon eine Verbindung oder eine offene Anfrage.",
       "connectionState": "Das geht bei dieser Verbindung gerade nicht – sie hat sich inzwischen geändert. Lade die Seite neu.",
       "connectionRequired": "Dafür braucht ihr eine bestätigte Verbindung – und die Person muss es erlaubt haben.",
+      "bulkNotCandidate": "Diese Reise steht nicht in der Liste für diese Person.",
       "requestFailed": "Die Anfrage konnte nicht gesendet werden.",
       "confirmFailed": "Die Bestätigung konnte nicht gesendet werden. Es hat sich nichts geändert.",
       "switchesFailed": "Die Einstellungen konnten nicht gespeichert werden.",
@@ -672,6 +673,7 @@
         "addRequestFailed": "Die Anfrage konnte nicht gesendet werden."
       },
       "delivery": {
+        "paused": "Pausiert: „Reisen teilen“ ist für {{name}} aus. Änderungen warten hier und gehen weiter, sobald du es wieder einschaltest.",
         "delivered": "Alle Änderungen sind bei {{name}} angekommen.",
         "pending": "Änderungen sind auf dem Weg zu {{name}}.",
         "retrying": "Änderungen kommen bei {{name}} gerade nicht an – {{origin}} antwortet seit {{date}} nicht. Es wird weiter versucht.",

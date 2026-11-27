@@ -174,3 +174,14 @@ it("before the consent is accepted, the inbox lists no pair", async () => {
   const listed = await b.bulkLink.remoteBulkPairs(father);
   expect(listed).toEqual({ access: "full", pairs: [] });
 });
+
+it("a bulk offer refuses a trip the bulk list would not offer (security review 2026-11-27)", async () => {
+  const { owner, remote, mine } = await setup();
+  await expect(a.bulkLink.bulkOffer(owner, mine.alone.id, remote.id)).rejects.toMatchObject({
+    statusCode: 409,
+    code: "SHARE_REMOTE_BULK_NOT_CANDIDATE",
+  });
+  await expect(a.bulkLink.bulkOffer(owner, mine.portugal.id, remote.id)).resolves.toMatchObject({
+    state: "invited",
+  });
+});
