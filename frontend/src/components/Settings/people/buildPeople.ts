@@ -106,7 +106,8 @@ export function buildPeople(src: PeopleSources): {
     const user = companion.linkedUser;
     const consent = user ? (outgoing.get(user.id) ?? null) : null;
     if (user) covered.add(user.id);
-    const conn = !user && companion.linkedRemoteId ? remoteRows.get(companion.linkedRemoteId) : null;
+    const conn =
+      !user && companion.linkedRemoteId ? remoteRows.get(companion.linkedRemoteId) : null;
     const remote = conn && LISTED_STATES.has(conn.state) ? conn : null;
     if (remote) takenRemote.add(remote.id);
     people.push({

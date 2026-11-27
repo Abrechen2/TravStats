@@ -258,8 +258,20 @@ describe("PeopleSection", () => {
           username: "norbert",
           displayName: "Norbert W.",
           state: "active",
-          mine: { plans: false, stats: "off", achievements: false, leaderboard: false, tripOffers: true },
-          theirs: { plans: false, stats: "off", achievements: false, leaderboard: false, tripOffers: true },
+          mine: {
+            plans: false,
+            stats: "off",
+            achievements: false,
+            leaderboard: false,
+            tripOffers: true,
+          },
+          theirs: {
+            plans: false,
+            stats: "off",
+            achievements: false,
+            leaderboard: false,
+            tripOffers: true,
+          },
         },
       ],
     });

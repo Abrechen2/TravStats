@@ -343,7 +343,10 @@ describe("companions — manage", () => {
       },
     });
     const norbert = await companion(anna.id, "Norbert");
-    await prisma.companion.update({ where: { id: norbert.id }, data: { linkedRemoteId: remote.id } });
+    await prisma.companion.update({
+      where: { id: norbert.id },
+      data: { linkedRemoteId: remote.id },
+    });
     const res = await request(app)
       .get("/api/v1/companions/manage")
       .set("Cookie", anna.cookie)
