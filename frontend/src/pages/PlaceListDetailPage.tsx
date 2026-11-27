@@ -37,6 +37,7 @@ import { useToastStore } from "../store/toastStore";
 import type { Place } from "../types/place";
 import type { PlaceList } from "../types/placeList";
 import InlineError from "../components/ui/InlineError";
+import Chip from "../components/ui/Chip";
 
 // The shared ten from `listColor.palette`. The six that used to stand here
 // included the green and blue the system reserves for `good` and `info`, and a
@@ -575,19 +576,14 @@ export default function PlaceListDetailPage(): JSX.Element {
         />
 
         {autoEntries.length > 0 && (
-          <button
-            type="button"
-            aria-pressed={autoOnly}
+          <Chip
+            active={autoOnly}
             onClick={() => setAutoOnly((v) => !v)}
-            className="mb-2 rounded-full px-3 py-1 text-sm"
-            style={{
-              border: `1px solid ${autoOnly ? "var(--ts-accent)" : "var(--color-border)"}`,
-              color: autoOnly ? "var(--ts-accent)" : "var(--text-muted)",
-            }}
             title={t("places:autoFilter.info")}
+            className="mb-2"
           >
             {t("places:autoFilter.label")} ({autoEntries.length})
-          </button>
+          </Chip>
         )}
         <PlaceListTable
           listId={list.id}

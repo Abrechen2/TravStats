@@ -8,6 +8,7 @@ import EnlargeButton from "../../common/photoViewer/EnlargeButton";
 import { usePhotoViewer } from "../../common/photoViewer/usePhotoViewer";
 import { largeUrl, type ViewerPhoto } from "../../common/photoViewer/viewerPhoto";
 import { Button, Dialog } from "../../ui";
+import Banner from "../../ui/Banner";
 
 const PAGE = 60;
 const TILE = 120;
@@ -95,12 +96,16 @@ export default function LinkedPhotoGallery({ tripId, days, onClose }: Props): JS
         })}
       </div>
       {failed && (
-        <p role="alert" className="t-caption" style={{ color: "var(--color-danger)" }}>
-          {t("trips:photoLinks.loadFailed")}{" "}
-          <Button variant="secondary" onClick={() => void load(day, cursor)}>
-            {t("trips:photoLinks.retry")}
-          </Button>
-        </p>
+        <Banner
+          tone="error"
+          action={
+            <Button variant="secondary" onClick={() => void load(day, cursor)}>
+              {t("trips:photoLinks.retry")}
+            </Button>
+          }
+        >
+          {t("trips:photoLinks.loadFailed")}
+        </Banner>
       )}
       <ul
         className="grid gap-2"

@@ -94,7 +94,8 @@ describe("Inbox bulk answers", () => {
     mount("/pending-updates?from=2026-09-01&to=2026-09-30");
     await screen.findAllByRole("button", { name: "Reisezeitraum speichern und prüfen" });
     expect(screen.queryByRole("button", { name: PROPOSAL })).toBeNull();
-    expect(screen.getByLabelText("Von")).toHaveValue("2026-09-01");
+    // The period is a DateRangeField: the day reads in the profile format (DD.MM.YYYY).
+    expect(screen.getByLabelText("Von")).toHaveValue("01.09.2026");
   });
 
   it("'Alle annehmen' leaves what needs input and names a failed item", async () => {

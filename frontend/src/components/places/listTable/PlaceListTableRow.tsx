@@ -4,6 +4,8 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { FlagImg } from "../../../lib/countryFlag";
 import { formatLocalDate } from "../../../lib/format";
 import type { ListMemberRow, ListMembersPage } from "../../../types/placeList";
+import Chip from "../../ui/Chip";
+import { Icon } from "../../ui/Icon";
 
 const COARSE =
   "pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)";
@@ -134,7 +136,7 @@ export default function PlaceListTableRow({
             className={`px-1 text-sm ${COARSE}`}
             style={{ color: "var(--text-muted)" }}
           >
-            ✕
+            <Icon name="x" size={16} />
           </button>
         </td>
       </tr>
@@ -144,12 +146,8 @@ export default function PlaceListTableRow({
             <ul className="flex flex-wrap gap-2" style={{ listStyle: "none", padding: 0 }}>
               {row.visits.map((v) => (
                 <li key={v.id}>
-                  <Link
-                    to={`${to}#visit-${v.id}`}
-                    className="rounded-full px-2 py-0.5 text-xs"
-                    style={{ border: "1px solid var(--color-border)" }}
-                  >
-                    {day(v.date)}
+                  <Link to={`${to}#visit-${v.id}`}>
+                    <Chip size="sm">{day(v.date)}</Chip>
                   </Link>
                 </li>
               ))}

@@ -311,7 +311,7 @@ describe("PlaceMergeDialog", () => {
     await act(async () => {});
 
     const notice = screen.getByRole("alert");
-    expect(notice).toHaveTextContent("Einträge zweier Checklisten");
+    expect(notice).toHaveTextContent("stehen in zwei Checklisten");
     expect(notice).toHaveTextContent("UNESCO-Welterbe, Neue 7 Weltwunder");
     expect(screen.queryByRole("group", { name: "Name" })).not.toBeInTheDocument();
     expect(confirmButton()).toBeDisabled();

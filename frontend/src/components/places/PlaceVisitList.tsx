@@ -159,19 +159,9 @@ export function PlaceVisitList({
           )}
           {automatic.length > 0 && (
             <span className="flex items-center gap-1">
-              <button
-                type="button"
-                aria-pressed={autoOnly}
-                onClick={() => setAutoOnly((v) => !v)}
-                className="rounded-full px-3.5 text-sm"
-                style={{
-                  minHeight: "var(--ts-size-touch-min)",
-                  border: `1px solid ${autoOnly ? "var(--ts-accent)" : "var(--ts-border-button)"}`,
-                  color: autoOnly ? "var(--ts-accent)" : "var(--ts-muted)",
-                }}
-              >
+              <Chip active={autoOnly} onClick={() => setAutoOnly((v) => !v)}>
                 {t("places:autoFilter.label")} ({automatic.length})
-              </button>
+              </Chip>
               <Toggletip content={t("places:autoFilter.info")} />
             </span>
           )}

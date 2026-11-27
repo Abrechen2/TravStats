@@ -14,6 +14,8 @@ import EnlargeButton from "../common/photoViewer/EnlargeButton";
 import { usePhotoViewer } from "../common/photoViewer/usePhotoViewer";
 import { largeUrl, type ViewerPhoto } from "../common/photoViewer/viewerPhoto";
 import { Button } from "../ui";
+import InlineError from "../ui/InlineError";
+import Banner from "../ui/Banner";
 
 const TILE = 96;
 const LINKED_BORDER = "2px solid var(--accent)";
@@ -70,12 +72,16 @@ export default function RoadtripPhotosSection({ roadtripId }: { roadtripId: stri
     return (
       <section className="mt-8" data-testid="roadtrip-photos">
         <h2 className="t-card-title">{t("roadtrips:photos.title")}</h2>
-        <p role="alert" className="t-caption" style={{ color: "var(--color-danger)" }}>
-          {t("roadtrips:photos.loadFailed")}{" "}
-          <Button variant="secondary" onClick={() => void load()}>
-            {t("roadtrips:photos.retry")}
-          </Button>
-        </p>
+        <Banner
+          tone="error"
+          action={
+            <Button variant="secondary" onClick={() => void load()}>
+              {t("roadtrips:photos.retry")}
+            </Button>
+          }
+        >
+          {t("roadtrips:photos.loadFailed")}
+        </Banner>
       </section>
     );
   }
@@ -185,11 +191,7 @@ export default function RoadtripPhotosSection({ roadtripId }: { roadtripId: stri
           {t("roadtrips:photos.truncated")}
         </p>
       )}
-      {linkError && (
-        <p role="alert" className="t-caption" style={{ color: "var(--color-danger)" }}>
-          {t("roadtrips:photos.linkFailed")}
-        </p>
-      )}
+      {linkError && <InlineError>{t("roadtrips:photos.linkFailed")}</InlineError>}
       {days.length === 0 ? (
         <p className="t-caption">{t("roadtrips:photos.noDays")}</p>
       ) : (
@@ -219,11 +221,7 @@ export default function RoadtripPhotosSection({ roadtripId }: { roadtripId: stri
           <Button variant="secondary" onClick={() => void searchLibrary()}>
             {t("roadtrips:photos.searchLibrary")}
           </Button>
-          {library?.problem && (
-            <p role="alert" className="t-caption" style={{ color: "var(--color-danger)" }}>
-              {t("roadtrips:photos.libraryProblem")}
-            </p>
-          )}
+          {library?.problem && <InlineError>{t("roadtrips:photos.libraryProblem")}</InlineError>}
           {library && library.items.length === 0 && !library.problem && (
             <p className="t-caption">{t("roadtrips:photos.libraryNone")}</p>
           )}

@@ -83,8 +83,8 @@ describe("country question card", () => {
   it("shows the country, the ground days, the first and last day and the points", () => {
     mount();
     expect(screen.getByText(/Warst du in Portugal\?/)).toBeInTheDocument();
-    const evidence = screen.getByText(/an 2 Tagen am Boden/);
-    expect(evidence).toHaveTextContent("140 Positionen");
+    const evidence = screen.getByText(/an 2 Tagen hier/);
+    expect(evidence).toHaveTextContent("140 Punkte");
     expect(evidence).toHaveTextContent(/12\.10\.2026.*13\.10\.2026/);
     expect(screen.getByText(/aus TravTrack/)).toBeInTheDocument();
   });

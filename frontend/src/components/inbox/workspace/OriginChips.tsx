@@ -3,6 +3,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import Toggletip from "../../ui/Toggletip";
 import { W } from "./model";
 import type { Origin } from "./originFilter";
+import Chip from "../../ui/Chip";
 
 /** The source chips above the inbox's cards; the choice lives in `?origin=`. */
 export default function OriginChips({
@@ -21,19 +22,9 @@ export default function OriginChips({
   const chip = (key: string | null, label: string, count: number) => {
     const active = value === key;
     return (
-      <button
-        key={key ?? "all"}
-        type="button"
-        aria-pressed={active}
-        onClick={() => onChange(key)}
-        className="rounded-full px-3 py-1 text-sm"
-        style={{
-          border: `1px solid ${active ? "var(--ts-accent)" : "var(--ts-border-button)"}`,
-          color: active ? "var(--ts-accent)" : "var(--ts-muted)",
-        }}
-      >
+      <Chip key={key ?? "all"} active={active} onClick={() => onChange(key)}>
         {label} <span style={{ fontFamily: "var(--ts-font-mono)" }}>{count}</span>
-      </button>
+      </Chip>
     );
   };
   return (

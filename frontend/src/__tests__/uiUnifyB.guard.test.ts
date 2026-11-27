@@ -61,7 +61,7 @@ describe("one dialog frame", () => {
     "components/Cruise/CruiseRouteMap.tsx": 1, // full-screen route editor on a map
     "components/Dashboard/tabs/DomainFilterButton.tsx": 1, // bottom sheet of the filter, not a form
     "components/Trips/CoverCropEditor.tsx": 1, // full-screen crop canvas
-    "components/Trips/PhotoLightbox.tsx": 1, // full-bleed photo viewer
+    "components/common/PhotoViewer.tsx": 1, // full-bleed photo viewer (trip lightbox and every thumbnail)
   };
   it("a modal overlay is a ui/Dialog, except the named full-screen surfaces", () => {
     const found = new Map<string, number>();
@@ -99,7 +99,6 @@ describe("one error voice", () => {
     "pages/SetupPage.tsx": 3, // required-field asterisk
     "components/ChangeDiffView.tsx": 2, // removed value in a diff
     "lib/flightReviewFields.ts": 2, // field-source classes of the flight review table
-    "components/AirportSeedingBanner.tsx": 1, // status icon
     "components/Toast.tsx": 1, // the toast's own border
     "components/BoardingPassScanner.tsx": 3, // step-status tone table
     "components/ReceiptUpload.tsx": 2, // delete link

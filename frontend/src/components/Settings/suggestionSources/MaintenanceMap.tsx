@@ -3,6 +3,7 @@ import Map, { Marker, type MapRef } from "react-map-gl/maplibre";
 import { SharedMapOverlays } from "../../map/SharedMapOverlays";
 import { useBasemapStyle } from "../../map/useBasemapStyle";
 import type { MaintenanceProposal } from "../../../lib/api/suggestionPlugins";
+import { Icon } from "../../ui/Icon";
 
 /** Proposal pins: numbered like the list, stop and geocoder in their own colour. */
 const COLOUR = { stop: "var(--ts-accent)", geocoder: "var(--ts-good)" };
@@ -77,8 +78,8 @@ export default function MaintenanceMap({
       >
         {picked && (
           <Marker longitude={picked.lon} latitude={picked.lat} anchor="bottom">
-            <div aria-hidden style={{ fontSize: 24, lineHeight: 1 }}>
-              📍
+            <div aria-hidden style={{ lineHeight: 1, color: "var(--ts-accent)" }}>
+              <Icon name="map-pin" size={24} />
             </div>
           </Marker>
         )}

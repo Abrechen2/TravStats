@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { W } from "./model";
+import DateRangeField from "../../ui/DateRangeField";
 
 /** From–to days for the inbox (owner 2026-11-26), kept in `?from=` / `?to=`. */
 export default function PeriodFilter({
@@ -19,24 +20,13 @@ export default function PeriodFilter({
       role="group"
       aria-label={t(`${W}.period.label`)}
     >
-      <label className="flex items-center gap-1">
-        {t(`${W}.period.from`)}
-        <input
-          type="date"
-          className="ts-control"
-          value={from ?? ""}
-          onChange={(e) => onChange(e.target.value || null, to)}
-        />
-      </label>
-      <label className="flex items-center gap-1">
-        {t(`${W}.period.to`)}
-        <input
-          type="date"
-          className="ts-control"
-          value={to ?? ""}
-          onChange={(e) => onChange(from, e.target.value || null)}
-        />
-      </label>
+      <DateRangeField
+        fromLabel={t(`${W}.period.from`)}
+        toLabel={t(`${W}.period.to`)}
+        from={from ?? ""}
+        to={to ?? ""}
+        onChange={(range) => onChange(range.from || null, range.to || null)}
+      />
       {(from || to) && (
         <button type="button" className="underline" onClick={() => onChange(null, null)}>
           {t(`${W}.period.clear`)}

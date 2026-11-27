@@ -6,6 +6,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/format";
 import { useZoomPan } from "./photoViewer/useZoomPan";
 import type { ViewerPhoto } from "./photoViewer/viewerPhoto";
+import InlineError from "../ui/InlineError";
+import { Icon } from "../ui/Icon";
 
 /** The viewer is a photo on black in both themes, so its chrome is fixed light-on-dark. */
 const LIGHT = "rgba(255, 255, 255, 0.9)";
@@ -109,14 +111,11 @@ export default function PhotoViewer({
         {...handlers}
       >
         {failed === item.id ? (
-          <p
-            role="alert"
-            data-testid="photo-viewer-error"
-            className="rounded-md px-4 py-3 text-sm"
-            style={{ background: "var(--bg-elevated)", color: "var(--color-danger)" }}
-          >
-            {t("common:photoViewer.loadFailed")}
-          </p>
+          <div className="rounded-md px-4 py-3" style={{ background: "var(--bg-elevated)" }}>
+            <InlineError testId="photo-viewer-error">
+              {t("common:photoViewer.loadFailed")}
+            </InlineError>
+          </div>
         ) : (
           <img
             key={item.id}
@@ -188,7 +187,7 @@ export default function PhotoViewer({
           style={{ border: `1px solid ${LIGHT}`, color: LIGHT }}
           onClick={onClose}
         >
-          ✕
+          <Icon name="x" size={16} />
         </button>
       </div>
     </div>,

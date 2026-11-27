@@ -17,6 +17,7 @@ import MaintenanceMap from "./MaintenanceMap";
 import { archiveUndoRequest, archiveWriteRequest } from "../../inbox/plugins/archiveConfirm";
 import MaintenanceRowCard, { type Choice } from "./MaintenanceRowCard";
 import InlineError from "../../ui/InlineError";
+import { SearchInput } from "../../ui/SearchInput";
 
 const NS = "suggestionSources:plugins.maintenance";
 const PAGE_SIZE = 50;
@@ -213,14 +214,12 @@ export default function PluginMaintenanceDialog({
                 setSearch(draft.trim());
               }}
             >
-              <input
-                type="search"
-                className="ts-input"
+              <SearchInput
                 value={draft}
                 maxLength={100}
-                onChange={(e) => setDraft(e.target.value)}
+                onChange={setDraft}
                 placeholder={t(`${NS}.searchPlaceholder`)}
-                aria-label={t(`${NS}.searchLabel`)}
+                label={t(`${NS}.searchLabel`)}
               />
               <Button type="submit" disabled={busy}>
                 {t(`${NS}.searchButton`)}
