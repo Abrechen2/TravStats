@@ -31,6 +31,7 @@ import RemotePersonStats from "../RemotePersonStats";
 import { SectionCard, SectionTitle } from "../SettingsShared";
 import type { PendingRequest, PersonEntry } from "./buildPeople";
 import InvitationCodeDialog from "./InvitationCodeDialog";
+import { originHost } from "../../../lib/personHandle";
 import BulkLinkDialog from "../../sharing/BulkLinkDialog";
 import { PersonMenu, PersonSwitches, type PersonHandlers } from "./PersonControls";
 import { usePeople } from "./usePeople";
@@ -286,7 +287,7 @@ export default function PeopleSection(): JSX.Element {
         ? t(`${NS}.requests.${r.connection.state === "reconfirm" ? "reconfirm" : "connection"}`, {
             name: r.connection.displayName,
             username: r.connection.username,
-            origin: r.connection.origin,
+            host: originHost(r.connection.origin),
           })
         : t(`${NS}.requests.comparison`, { name: r.request.person.displayName });
 
@@ -300,7 +301,10 @@ export default function PeopleSection(): JSX.Element {
           ? t(`${NS}.account.none`)
           : p.account.kind === "local"
             ? t(`${NS}.account.local`, { username: p.account.username })
-            : t(`${NS}.account.remote`, { username: p.account.username, origin: p.account.origin })}
+            : t(`${NS}.account.remote`, {
+                username: p.account.username,
+                host: originHost(p.account.origin),
+              })}
         {p.status === "connected" && ` · ${t(`${NS}.status.connected`)}`}
       </span>
     ),

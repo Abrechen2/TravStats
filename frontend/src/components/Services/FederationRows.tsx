@@ -147,7 +147,11 @@ export default function FederationRows({
         <SettingItem
           controlId={CONTROL.origin}
           title={t("settingsRows:services.rows.fedorigin.t")}
-          sub={t("settingsRows:services.rows.fedorigin.s")}
+          sub={t(
+            state.privatePeers
+              ? "settingsRows:services.rows.fedorigin.sLan"
+              : "settingsRows:services.rows.fedorigin.s"
+          )}
           expert
           scope="allAccounts"
           locked={lock}

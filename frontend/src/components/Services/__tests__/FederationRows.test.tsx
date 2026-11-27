@@ -52,6 +52,19 @@ describe("FederationRows", () => {
   });
   afterEach(cleanup);
 
+  it("says a port is allowed when LAN peers are on, never 'https, ohne Port' then (UAT 2026-11-27)", async () => {
+    api.get.mockResolvedValue({ ...state, privatePeers: true });
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <FederationRows />
+        </MemoryRouter>
+      );
+    });
+    expect(await screen.findByText("settingsRows:services.rows.fedorigin.sLan")).toBeTruthy();
+    expect(screen.queryByText("settingsRows:services.rows.fedorigin.s")).toBeNull();
+  });
+
   it("runs two changes one after the other, the second with the first one's result — they do not race", async () => {
     let release: (s: unknown) => void = () => {};
     api.update

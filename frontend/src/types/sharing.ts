@@ -78,6 +78,8 @@ export interface TripPerson {
    * name may be theirs ("Ist das <Name>?"). Optional: an older server sends none.
    */
   nameMatches?: { id: string; name: string; onTrip: boolean }[];
+  /** A companion linked to a person on another server: listed in that section only. */
+  remoteLinked?: boolean;
 }
 
 export interface TripSharing {

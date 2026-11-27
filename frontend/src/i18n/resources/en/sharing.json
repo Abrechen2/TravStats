@@ -974,7 +974,7 @@
     },
     "account": {
       "local": "@{{username}}",
-      "remote": "{{username}}@{{origin}}",
+      "remote": "{{username}} · {{host}}",
       "none": "no account"
     },
     "demo": "Nothing here can be changed in the demo account.",
@@ -1005,8 +1005,8 @@
     "requests": {
       "title": "Requests to you",
       "share": "{{name}} (@{{username}}) would like to share trips with you.",
-      "connection": "{{name}} ({{username}}@{{origin}}) would like to connect with you.",
-      "reconfirm": "The connection to {{name}} ({{username}}@{{origin}}) needs to be confirmed again.",
+      "connection": "{{name}} ({{username}} · {{host}}) would like to connect with you.",
+      "reconfirm": "The connection to {{name}} ({{username}} · {{host}}) needs to be confirmed again.",
       "comparison": "{{name}} would like to see your totals on the leaderboard.",
       "accept": "Accept",
       "decline": "Decline",

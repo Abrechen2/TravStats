@@ -19,7 +19,19 @@ const SHOWN = 3;
  * arrived (and whether the consent took it without a question) and each offer waiting for an
  * answer. "Gesehen" marks the arrived ones read; an offer stays until it is answered.
  */
-export default function ReceivedTripsBanner(): JSX.Element | null {
+/**
+ * Over the dashboard map the banner floats in the map's chrome band (UAT 2026-11-27: in the page
+ * flow it sat BEHIND the globe, which fills its container absolutely). Same band as the
+ * "+ hinzufügen" button and "Als Nächstes" (z 30), below the open domain filter (35).
+ */
+export const OVER_MAP_Z = 30;
+
+export default function ReceivedTripsBanner({
+  overMap = false,
+}: {
+  /** On the dashboard: float above the map instead of sitting in the page flow. */
+  overMap?: boolean;
+} = {}): JSX.Element | null {
   const { t } = useTranslation(["sharing"]);
   const items = useReceivedTripsStore((s) => s.items);
   const load = useReceivedTripsStore((s) => s.load);
@@ -49,8 +61,17 @@ export default function ReceivedTripsBanner(): JSX.Element | null {
     <div
       role="status"
       data-testid="received-trips-banner"
-      className="mb-4 flex flex-col rounded-md text-sm"
+      className={`${overMap ? "" : "mb-4 "}flex flex-col rounded-md text-sm`}
       style={{
+        ...(overMap
+          ? {
+              position: "absolute",
+              top: 16,
+              left: 16,
+              zIndex: OVER_MAP_Z,
+              maxWidth: "min(480px, calc(100% - 32px))",
+            }
+          : {}),
         gap: 6,
         padding: "10px 14px",
         border: "1px solid var(--ts-accent)",

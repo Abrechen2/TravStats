@@ -9,6 +9,7 @@
  * every route here (see `admin/index.ts`): all are admin-only and
  * cheap; the connection-file upload is capped at 64 KB and inflates one bounded entry.
  */
+import { lanPeersEnabled } from "../../services/federation/peerAddressPolicy";
 import { Router, type Response, type NextFunction } from "express";
 import multer, { MulterError } from "multer";
 import { prisma } from "../../db";
@@ -91,6 +92,7 @@ async function state(): Promise<FederationState> {
     fingerprint: local?.fingerprint ?? null,
     hasKey: Boolean(row.federationPrivateKey),
     tripSharingEnabled: row.tripFederationEnabled,
+    privatePeers: lanPeersEnabled(),
     peers: peers.map((p) => ({
       origin: p.origin,
       fingerprint: hash(p.publicKey),

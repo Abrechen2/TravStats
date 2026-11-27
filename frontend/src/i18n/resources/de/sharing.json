@@ -974,7 +974,7 @@
     },
     "account": {
       "local": "@{{username}}",
-      "remote": "{{username}}@{{origin}}",
+      "remote": "{{username}} · {{host}}",
       "none": "kein Konto"
     },
     "demo": "Im Demo-Konto lässt sich hier nichts ändern.",
@@ -1005,8 +1005,8 @@
     "requests": {
       "title": "Anfragen an dich",
       "share": "{{name}} (@{{username}}) möchte Reisen mit dir teilen.",
-      "connection": "{{name}} ({{username}}@{{origin}}) möchte sich mit dir verbinden.",
-      "reconfirm": "Die Verbindung zu {{name}} ({{username}}@{{origin}}) muss neu bestätigt werden.",
+      "connection": "{{name}} ({{username}} · {{host}}) möchte sich mit dir verbinden.",
+      "reconfirm": "Die Verbindung zu {{name}} ({{username}} · {{host}}) muss neu bestätigt werden.",
       "comparison": "{{name}} möchte deine Summen in der Rangliste sehen.",
       "accept": "Annehmen",
       "decline": "Ablehnen",

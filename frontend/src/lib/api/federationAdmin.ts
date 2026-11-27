@@ -20,6 +20,8 @@ export interface FederationState {
   hasKey: boolean;
   /** The admin's switch for trip sharing across servers (default off). */
   tripSharingEnabled: boolean;
+  /** LAN peers allowed (`FEDERATION_PRIVATE_PEERS`): http and a port are valid. Optional: older servers. */
+  privatePeers?: boolean;
   peers: FederationPeer[];
 }
 
