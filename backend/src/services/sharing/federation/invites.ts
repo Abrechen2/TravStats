@@ -214,6 +214,9 @@ export async function serveInviteClaim(
         displayName: body.displayName,
         // The claimant said yes to receiving offers: this account may offer trips to them.
         remoteSwitches: { ...ALL_OFF, tripOffers: true },
+        // The issuer made the code to share trips with them: its own "Reisen teilen" is on, or
+        // the link would be paused from the start (`sharePause.ts`).
+        shareTripOffers: true,
       },
     });
     await tx.shareConsent.create({

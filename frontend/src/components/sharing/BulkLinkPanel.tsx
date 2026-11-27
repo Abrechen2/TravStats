@@ -18,12 +18,17 @@ import type { LinkFailure } from "./LinkExistingPanel";
 import LinkExistingPanel from "./LinkExistingPanel";
 
 const NS = "sharing:bulk";
+/** The copy key a refusal from an outdated server maps to (`remoteSharingCopy.ts`). */
+const OUTDATED_KEY = "sharing:remote.errors.outdated";
 
 /** Where a pair stands in the run. */
 type PairState =
   | { kind: "waiting" }
   | { kind: "auto" }
-  | { kind: "review"; why: "conflict" | "ambiguous" | "noTrip" | "nothingMatched" }
+  | {
+      kind: "review";
+      why: "conflict" | "ambiguous" | "noTrip" | "nothingMatched" | "outdated";
+    }
   | { kind: "done"; linked: number }
   | { kind: "skipped"; why: string }
   | { kind: "failed"; reason: string }
@@ -99,10 +104,15 @@ export default function BulkLinkPanel(props: Props): JSX.Element {
           );
         } catch (err) {
           logger.error("Bulk link: comparing a pair failed:", err);
-          setState(pair.id, {
-            kind: "failed",
-            reason: t(failure(err, `${NS}.errors.compareFailed`).key),
-          });
+          const f = failure(err, `${NS}.errors.compareFailed`);
+          // A server from before the dry run (no `offer-preview`): not a failure of this pair —
+          // the other side has to update; the offer can still be answered on its own below.
+          if (f.key === OUTDATED_KEY) setState(pair.id, { kind: "review", why: "outdated" });
+          else
+            setState(pair.id, {
+              kind: "failed",
+              reason: t(f.key, { origin: f.origin ?? "" }),
+            });
         }
         await wait(BULK_PACE_MS);
       }
@@ -169,10 +179,8 @@ export default function BulkLinkPanel(props: Props): JSX.Element {
         );
       } catch (err) {
         logger.error("Bulk link: linking a pair failed:", err);
-        setState(pair.id, {
-          kind: "failed",
-          reason: t(failure(err, `${NS}.errors.linkFailed`).key),
-        });
+        const f = failure(err, `${NS}.errors.linkFailed`);
+        setState(pair.id, { kind: "failed", reason: t(f.key, { origin: f.origin ?? "" }) });
       }
       n += 1;
       setProgress({ done: n, total: autoPairs.length });
@@ -278,11 +286,13 @@ export default function BulkLinkPanel(props: Props): JSX.Element {
             {reviewPairs.map((p) => (
               <li key={p.id}>
                 {names(p)} · {resultLine(p)}{" "}
-                {p.trip && (
-                  <Button onClick={() => setReviewing(reviewing === p.id ? null : p.id)}>
-                    {t(`${NS}.open`)}
-                  </Button>
-                )}
+                {p.trip &&
+                  states[p.id]?.kind === "review" &&
+                  (states[p.id] as { why: string }).why !== "outdated" && (
+                    <Button onClick={() => setReviewing(reviewing === p.id ? null : p.id)}>
+                      {t(`${NS}.open`)}
+                    </Button>
+                  )}
                 {reviewing === p.id && p.trip && (
                   <LinkExistingPanel
                     otherName={otherName}

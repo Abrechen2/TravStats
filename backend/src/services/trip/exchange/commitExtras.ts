@@ -41,6 +41,7 @@ export async function applyExtras(tx: DbTransaction, file: TripFile, created: Cr
   for (const f of file.flights) {
     const id = created("flight", f.key);
     if (!id || (f.gate == null && f.terminal == null && f.routeDistance == null)) continue;
+    // share-exempt: an entry this import created, propagated with it by writeAll
     await tx.flight.update({
       where: { id },
       data: {
@@ -53,6 +54,7 @@ export async function applyExtras(tx: DbTransaction, file: TripFile, created: Cr
   for (const r of file.ferry) {
     const id = created("ferry", r.key);
     if (!id || !r.geometry) continue;
+    // share-exempt: an entry this import created, propagated with it by writeAll
     await tx.ferryJourney.update({
       where: { id },
       data: {
@@ -88,6 +90,7 @@ export async function applyExtras(tx: DbTransaction, file: TripFile, created: Cr
     for (const l of c.legs ?? []) {
       const [fromPortId, toPortId] = [portOf(l.from), portOf(l.to)];
       if (fromPortId === null || toPortId === null) continue;
+      // share-exempt: a leg of a cruise this import created, propagated with it by writeAll
       await tx.cruiseLeg.create({
         data: {
           cruiseId,
@@ -106,6 +109,7 @@ export async function applyExtras(tx: DbTransaction, file: TripFile, created: Cr
     for (const r of c.legRoutes ?? []) {
       const [from, to] = [portOf(r.from), portOf(r.to)];
       if (from === null || to === null) continue;
+      // share-exempt: a line of a cruise this import created, propagated with it by writeAll
       await tx.cruiseLegRoute.create({
         data: {
           cruiseId,

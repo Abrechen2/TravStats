@@ -1186,7 +1186,8 @@
       "conflict": "beide Seiten haben verschiedene Angaben",
       "ambiguous": "passt zu mehr als einer Reise",
       "noTrip": "keine passende eigene Reise",
-      "nothingMatched": "kein Eintrag passt zusammen"
+      "nothingMatched": "kein Eintrag passt zusammen",
+      "outdated": "Gegenseite muss TravStats aktualisieren – du kannst die Reise unten einzeln annehmen"
     },
     "resultsTitle": "Ergebnis",
     "pairName": "{{mine}} ↔ {{theirs}} ({{from}})",

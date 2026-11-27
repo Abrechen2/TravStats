@@ -105,8 +105,7 @@ const streamMembers = (groupId: string, peerOrigin: string) => ({
 
 /** "Reisen teilen" off for the person: the row waits, in order, and is not dropped. */
 const pausedRow = (row: Row): boolean =>
-  !SENT_WHILE_PAUSED.has(row.kind) &&
-  isSharePaused(row.member.remote, row.group.homeOrigin === null);
+  !SENT_WHILE_PAUSED.has(row.kind) && isSharePaused(row.member.remote);
 
 async function stillReceives(row: Row): Promise<boolean> {
   // The end of a membership is told after it ended (F-S4e): no consent or state is left to ask.

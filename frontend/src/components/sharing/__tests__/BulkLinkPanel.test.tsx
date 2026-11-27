@@ -149,3 +149,29 @@ describe("BulkLinkPanel under React Strict Mode", () => {
     expect(previewFn).toHaveBeenCalled();
   });
 });
+
+describe("BulkLinkPanel with a peer on an old server (coordinator follow-up)", () => {
+  it("names that the other side must update, instead of failing the run", async () => {
+    const outdated = new Error("SHARE_REMOTE_PEER_OUTDATED");
+    render(
+      <BulkLinkPanel
+        otherName="Papa"
+        loadPairs={vi.fn().mockResolvedValue({ access: "full", pairs: [pair("a"), pair("b")] })}
+        preview={vi.fn((p: BulkPair) =>
+          p.id === "a" ? Promise.reject(outdated) : Promise.resolve(preview(true))
+        )}
+        link={vi.fn()}
+        undo={vi.fn()}
+        failure={(err, key) =>
+          err === outdated
+            ? { key: "sharing:remote.errors.outdated", origin: "old.example" }
+            : { key }
+        }
+      />
+    );
+    const summary = await screen.findByTestId("bulk-summary");
+    expect(summary.textContent).toContain('"auto":1');
+    expect(screen.getByTestId("bulk-review").textContent).toContain("sharing:bulk.review.outdated");
+    expect(screen.queryByText(/sharing:bulk.state.failed/)).toBeNull();
+  });
+});

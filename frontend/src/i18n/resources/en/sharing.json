@@ -1186,7 +1186,8 @@
       "conflict": "both sides have different details",
       "ambiguous": "fits more than one trip",
       "noTrip": "no matching trip of yours",
-      "nothingMatched": "no entry fits together"
+      "nothingMatched": "no entry fits together",
+      "outdated": "the other side has to update TravStats – you can answer this trip on its own below"
     },
     "resultsTitle": "Result",
     "pairName": "{{mine}} ↔ {{theirs}} ({{from}})",

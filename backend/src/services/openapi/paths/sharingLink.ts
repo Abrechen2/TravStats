@@ -32,7 +32,9 @@ const json = (schema: z.ZodTypeAny) => ({ content: { "application/json": { schem
 const tripParams = z.object({ tripId: z.string() });
 const offerParams = z.object({ id: z.string().uuid() });
 const localRefusals = {
-  403: err("`SHARE_CONSENT_REQUIRED` or `SHARE_GROUP_CONSENT_REQUIRED`"),
+  403: err(
+    "`SHARE_LINK_PROPOSAL_REQUIRED`: another account's trips are never read or linked from here without that account's own decision per trip (until local proposals exist, always)"
+  ),
   404: err("`TRIP_NOT_FOUND` (either trip) or `SHARE_USER_NOT_FOUND`"),
   409: err(
     "`SHARE_TRIP_IN_OTHER_GROUP` (the other trip is shared elsewhere), `SHARE_REMOTE_NOT_HOME` (the trip came from another server)"

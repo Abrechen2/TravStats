@@ -26,6 +26,7 @@ import { serveOffer } from "./offerInbox";
 import { hash } from "../../federation/refusal";
 import { requireTripFederation } from "./access";
 import { remoteShareError, type RemoteShareErrorCode } from "./errors";
+import { ALL_OFF } from "./connections/switches";
 import { parseTripInviteCode } from "./inviteCode";
 import { readRemotePerson, type RemotePersonView } from "./remotePeople";
 import { messageHeader, tripShareExchange } from "./transport";
@@ -66,6 +67,9 @@ async function recordPairing(
           claimedCodeHash,
           // The claimant's yes: the issuer may offer trips into this account.
           shareTripOffers: true,
+          // The issuer made the code to share trips: its "Reisen teilen" is on from the start, or
+          // the link would read as paused here (`sharePause.ts`) until it announced otherwise.
+          remoteSwitches: { ...ALL_OFF, tripOffers: true },
         },
       });
       // The claimant's yes: the issuer may share trips into this account.

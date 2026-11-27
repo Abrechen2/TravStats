@@ -56,8 +56,11 @@ export type LinkValue =
 export interface LinkConflictView {
   /** A fact, or the group decided together (`geometry`, `departureTime`, `checkIn`). */
   field: string;
-  here: LinkValue;
-  there: LinkValue;
+  /** The original short string form (kept for installed clients). */
+  here: string;
+  there: string;
+  /** The same values for display: times in the place's zone, a line by its quality. */
+  display: { here: LinkValue; there: LinkValue };
   /** The side whose value is better; null when equal in quality. */
   better: "here" | "there" | null;
   /** Equal quality, different values: only the person can decide. */

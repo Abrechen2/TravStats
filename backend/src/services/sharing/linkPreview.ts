@@ -47,8 +47,11 @@ export type LinkValue = DisplayValue | ({ kind: "line" } & LineView);
 export interface LinkConflictView {
   /** The group: a fact's name, or the name of the facts decided together (`geometry`, `checkIn`). */
   field: string;
-  here: LinkValue;
-  there: LinkValue;
+  /** The group's first fact as one short line — the shape installed clients read; unchanged. */
+  here: string;
+  there: string;
+  /** Additive (UAT 2026-11-27): the same values formatted for display, a line by its quality. */
+  display: { here: LinkValue; there: LinkValue };
   /** The side whose value is better (filled, drawn, more precise); null when equal. */
   better: "here" | "there" | null;
   /** Both hold a value of the same quality: the person decides, the rule cannot. */
@@ -92,6 +95,15 @@ export interface LinkPreview {
   matched: LinkMatchView[];
   onlyHere: LinkEntryView[];
   onlyThere: LinkEntryView[];
+}
+
+const VALUE_CHARS = 80;
+
+/** A fact value as one short line — the dry run's original string form, kept for old clients. */
+export function shortValue(v: unknown): string {
+  if (v === null || v === undefined) return "—";
+  const text = v instanceof Date ? v.toISOString() : typeof v === "string" ? v : JSON.stringify(v);
+  return text.length > VALUE_CHARS ? `${text.slice(0, VALUE_CHARS - 1)}…` : text;
 }
 
 /** A house as one line: its name and place. */
@@ -159,8 +171,12 @@ function matchView(p: LinkPair): LinkMatchView {
     linked: p.linked,
     conflicts: groups.map((g) => ({
       field: g.group.id,
-      here: groupValue(g.group, p.here.facts, zones),
-      there: groupValue(g.group, p.there.facts, zones),
+      here: shortValue(p.here.facts[g.group.fields[0] as string]),
+      there: shortValue(p.there.facts[g.group.fields[0] as string]),
+      display: {
+        here: groupValue(g.group, p.here.facts, zones),
+        there: groupValue(g.group, p.there.facts, zones),
+      },
       better: g.better,
       real: g.real,
     })),

@@ -185,3 +185,41 @@ it("a bulk offer refuses a trip the bulk list would not offer (security review 2
     state: "invited",
   });
 });
+
+it("the father's 'mine' never pushes his straight line over the owner's drawn one (UAT B1)", async () => {
+  const { owner, father, remote, his, hisFerry } = await setup();
+  for (const c of await a.bulkLink.remoteBulkOfferCandidates(owner, remote.id))
+    await a.offers.offerTrip(owner, c.id, remote.id);
+  const listed = await b.bulkLink.remoteBulkPairs(father);
+  if (listed.access !== "full") throw new Error("expected the pairs");
+  const norway = listed.pairs.find((p) => p.trip?.id === his.norway.id)!;
+  await b.offerLink.linkOffer(father, norway.id, his.norway.id, "mine");
+  await b.outbox.runDeliveries();
+  await a.outbox.runDeliveries();
+  const ownerFerry = await a.prisma.ferryJourney.findFirstOrThrow({ where: { userId: owner } });
+  expect(ownerFerry.geometrySource).toBe("manual");
+  const fatherFerry = await b.prisma.ferryJourney.findUniqueOrThrow({ where: { id: hisFerry.id } });
+  expect(fatherFerry.geometrySource).toBe("manual");
+});
+
+it("a home on an old server version (no dry run) degrades: listed, refused by name, still answerable", async () => {
+  const { owner, father, remote } = await setup();
+  for (const c of await a.bulkLink.remoteBulkOfferCandidates(owner, remote.id))
+    await a.offers.offerTrip(owner, c.id, remote.id);
+  const spy = jest.spyOn(b.peerFeatures, "peerSupports").mockResolvedValue(false);
+  try {
+    const listed = await b.bulkLink.remoteBulkPairs(father);
+    if (listed.access !== "full") throw new Error("expected the pairs");
+    expect(listed.pairs).toHaveLength(3);
+    const first = listed.pairs[0]!;
+    await expect(
+      b.offerLink.previewOfferLink(father, first.id, first.trip!.id)
+    ).rejects.toMatchObject({
+      code: "SHARE_REMOTE_PEER_OUTDATED",
+    });
+  } finally {
+    spy.mockRestore();
+  }
+  // The offer itself still waits for an answer (accept or decline one by one).
+  expect(await b.offerInbox.listReceivedOffers(father)).toHaveLength(3);
+});

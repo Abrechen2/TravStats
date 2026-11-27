@@ -44,3 +44,22 @@ it("the receiver switching 'Reisen teilen' off pauses the link on both servers, 
   await a.outbox.runDeliveries();
   expect(await gateOf(b, t.benFlight.id)).toBe("B7");
 });
+
+it("the sender switching 'Reisen teilen' off pauses it too: either side's switch (coordinator)", async () => {
+  const t = await sharedFlight(a, b);
+  await switchOffers(a, t.anna, false);
+  await a.outbox.runDeliveries();
+  await editFlight(a, t.anna, t.flight.id, { gate: "C9" });
+  await a.outbox.runDeliveries();
+  expect(await gateOf(b, t.benFlight.id)).toBe("A1");
+  expect(
+    (await a.tripRemoteSharing.tripRemoteSharing(t.anna, t.trip.id)).members[0]?.delivery.state
+  ).toBe("paused");
+  // The receiver's side shows it paused as well, once the switch was announced.
+  expect(
+    (await b.tripRemoteSharing.tripRemoteSharing(t.ben, t.benTrip)).members[0]?.delivery.state
+  ).toBe("paused");
+  await switchOffers(a, t.anna, true);
+  await a.outbox.runDeliveries();
+  expect(await gateOf(b, t.benFlight.id)).toBe("C9");
+});

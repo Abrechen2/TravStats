@@ -101,8 +101,9 @@ const linkPreviewFull = z.strictObject({
       conflicts: z.array(
         z.strictObject({
           field: z.string(),
-          here: linkValue,
-          there: linkValue,
+          here: z.string(),
+          there: z.string(),
+          display: z.strictObject({ here: linkValue, there: linkValue }),
           better: z.enum(["here", "there"]).nullable(),
           real: z.boolean(),
         })

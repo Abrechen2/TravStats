@@ -553,6 +553,8 @@ export type ApiErrorCode =
   | "SHARE_GROUP_CONSENT_REQUIRED"
   /** Linking an existing copy (forgejo#440): the other account's trip is in another share group (409). */
   | "SHARE_TRIP_IN_OTHER_GROUP"
+  /** Codex P1: another account's trips are linked only on that account's own decision. */
+  | "SHARE_LINK_PROPOSAL_REQUIRED"
   /** No companion of this caller under that id (404). */
   | "COMPANION_NOT_FOUND"
   /** Another of the caller's companions is already linked to that account (409). */

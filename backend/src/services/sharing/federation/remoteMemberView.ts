@@ -55,7 +55,6 @@ export const MEMBER_INCLUDE = {
       remoteSwitches: true,
     },
   },
-  group: { select: { homeOrigin: true } },
 } as const;
 
 interface MemberRow {
@@ -73,7 +72,6 @@ interface MemberRow {
     shareTripOffers?: boolean;
     remoteSwitches?: unknown;
   };
-  group?: { homeOrigin: string | null };
 }
 
 const DELIVERED: DeliveryView = {
@@ -114,17 +112,13 @@ async function deliveryOf(rows: readonly MemberRow[]): Promise<Map<string, Deliv
     const failing = head?.failingSince ?? null;
     const pairing = m.remote;
     if (
-      m.group &&
       pairing.state !== undefined &&
       pairing.shareTripOffers !== undefined &&
-      isSharePaused(
-        {
-          state: pairing.state,
-          shareTripOffers: pairing.shareTripOffers,
-          remoteSwitches: pairing.remoteSwitches,
-        },
-        m.group.homeOrigin === null
-      )
+      isSharePaused({
+        state: pairing.state,
+        shareTripOffers: pairing.shareTripOffers,
+        remoteSwitches: pairing.remoteSwitches,
+      })
     )
       out.set(m.id, { ...DELIVERED, state: "paused" });
     else if (m.state === "unreachable")

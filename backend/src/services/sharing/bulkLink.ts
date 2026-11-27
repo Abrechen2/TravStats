@@ -1,12 +1,11 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
-import { mayOfferTripTo } from "../friends/authz";
 import { requireTripFederation } from "./federation/access";
 import { offerTrip } from "./federation/offers";
 import type { RemoteMemberView } from "./federation/remoteMemberView";
 import { offeredTrip } from "./federation/offerLink";
 import { listOpenOffers } from "./federation/offerInbox";
-import { AWAITING_CONSENT, type AwaitingConsent } from "./linkExisting";
+import { localLinkNeedsProposal, type AwaitingConsent } from "./linkExisting";
 import {
   rankCandidates,
   tripView,
@@ -120,60 +119,17 @@ const TRIP_SELECT = {
   shareGroupId: true,
 } as const;
 
-/** Local: every trip of the caller that is the same as one of `otherId`'s. */
-export async function localBulkPairs(userId: string, otherId: string): Promise<BulkPairs> {
+/**
+ * Local: refused for every other account (Codex P1, `localLinkNeedsProposal`): listing pairs here
+ * would show the caller the other account's trips before that account decided anything.
+ */
+export async function localBulkPairs(_userId: string, otherId: string): Promise<BulkPairs> {
   const other = await prisma.user.findFirst({
     where: { id: otherId, isActive: true },
     select: { id: true },
   });
   if (!other) throw new AppError("No such user on this server", 404, "SHARE_USER_NOT_FOUND");
-  if (!(await mayOfferTripTo(prisma, userId, otherId))) return AWAITING_CONSENT;
-  // A trip that came from another server is linked from its home, never from here.
-  const notForeign = {
-    OR: [{ shareGroupId: null }, { shareGroup: { homeOrigin: null } }],
-  };
-  const [mine, theirs] = await Promise.all([
-    prisma.trip.findMany({ where: { userId, ...notForeign }, select: TRIP_SELECT }),
-    prisma.trip.findMany({ where: { userId: otherId, ...notForeign }, select: TRIP_SELECT }),
-  ]);
-  const groupOf = new Map([...mine, ...theirs].map((t) => [t.id, t.shareGroupId]));
-  const pairs: BulkPair[] = [];
-  // Already linked first: both trips in one group.
-  const linkedMine = new Set<string>();
-  const linkedTheirs = new Set<string>();
-  for (const m of mine) {
-    if (!m.shareGroupId) continue;
-    const t = theirs.find((x) => x.shareGroupId === m.shareGroupId);
-    if (!t) continue;
-    linkedMine.add(m.id);
-    linkedTheirs.add(t.id);
-    pairs.push({
-      id: m.id,
-      trip: tripView(m),
-      other: tripView(t),
-      reason: null,
-      linked: true,
-      ambiguous: false,
-    });
-  }
-  // The other account's trip must be in no group, or in the caller's (`counterpart`).
-  const open = (t: { id: string }) => !linkedTheirs.has(t.id);
-  for (const p of pairTrips(
-    mine.filter((m) => !linkedMine.has(m.id)).map(tripView),
-    theirs.filter(open).map(tripView)
-  )) {
-    const tg = groupOf.get(p.target.id);
-    if (tg && tg !== groupOf.get(p.source.id)) continue;
-    pairs.push({
-      id: p.source.id,
-      trip: p.source,
-      other: p.target,
-      reason: p.reason,
-      linked: false,
-      ambiguous: p.ambiguous,
-    });
-  }
-  return { access: "full", pairs: sortPairs(pairs) };
+  throw localLinkNeedsProposal();
 }
 
 const sortPairs = (pairs: BulkPair[]) =>

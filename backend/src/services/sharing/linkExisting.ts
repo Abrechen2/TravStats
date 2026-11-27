@@ -1,13 +1,12 @@
 import { randomUUID } from "crypto";
 
 import { prisma, type DbTransaction } from "../../db";
+import type { Trip } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
-import { mayOfferTripTo } from "../friends/authz";
 import { restatusTrips } from "../trip/restatusTrips";
 import { ADAPTERS } from "./adapters";
 import { consentRequired } from "./consent";
 import { recordEntryAuthor } from "./federation/entryAuthors";
-import { requireHome } from "./federation/offerBuild";
 import { queueRoster } from "./federation/roster";
 import { findByUserKey } from "./keyOps";
 import { planLink, type LinkDecision, type LinkPair, type LinkPlan } from "./linkMatch";
@@ -64,16 +63,35 @@ export interface LinkResult {
 }
 
 /**
- * Nothing of the other account is read before they agreed to sharing (`mayOfferTripTo`, the rule
- * a share asks): no candidate, no count, no comparison. Any number derived from their trips —
- * even "a copy may exist" — would let the caller probe their itinerary by editing their own trip.
- * Until then the dry-run endpoints answer `{ access: "awaitingConsent" }` and nothing else.
+ * Before the other account agreed: `{ access: "awaitingConsent" }` and nothing else (kept for the
+ * shape of the answer; across servers it still means exactly that).
  */
 export const AWAITING_CONSENT = { access: "awaitingConsent" } as const;
 export type AwaitingConsent = typeof AWAITING_CONSENT;
 
-/** The caller's trip and the other account; `null` while the other account has not agreed. */
-async function sides(c: DbTransaction, userId: string, tripId: string, otherId: string) {
+/**
+ * Codex P1 (2026-11-27): a consent that lets A OFFER trips to B let A list B's unshared trips,
+ * read their entries and overwrite them with `mine`. An offer consent authorises incoming offers
+ * only. The rule: nothing of B's existing trips is shown to A, and nothing is linked, without B's
+ * own decision per trip — the matching runs for B, on B's side, on a trip A proposed. Across
+ * servers that is what the offer inbox does (`federation/offerLink.ts`). On one server the
+ * proposal needs a record of its own (a schema change, not yet decided), so until it exists the
+ * local link answers this refusal for every other account, before anything of theirs is read.
+ */
+export const localLinkNeedsProposal = () =>
+  new AppError(
+    "Linking another account's trip needs that account's own decision per trip",
+    403,
+    "SHARE_LINK_PROPOSAL_REQUIRED"
+  );
+
+/** The caller's trip; refused for every other account until local proposals exist (above). */
+async function sides(
+  c: DbTransaction,
+  userId: string,
+  tripId: string,
+  otherId: string
+): Promise<Trip | null> {
   const trip = await c.trip.findFirst({ where: { id: tripId, userId } });
   if (!trip) throw tripNotFound();
   const other = await c.user.findFirst({
@@ -81,10 +99,7 @@ async function sides(c: DbTransaction, userId: string, tripId: string, otherId: 
     select: { id: true },
   });
   if (!other) throw new AppError("No such user on this server", 404, "SHARE_USER_NOT_FOUND");
-  if (!(await mayOfferTripTo(c, userId, otherId))) return null;
-  // A trip that came from another server is linked on from its home, as it is shared from there.
-  await requireHome(c, userId, trip.shareGroupId);
-  return trip;
+  throw localLinkNeedsProposal();
 }
 
 /** `sides`, for the link itself: refused while the other account has not agreed. */

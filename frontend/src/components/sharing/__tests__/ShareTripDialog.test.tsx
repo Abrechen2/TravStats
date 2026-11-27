@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import ShareTripDialog from "../ShareTripDialog";
@@ -56,15 +56,12 @@ const BLOCKS: ShareBlock[] = [
 describe("ShareTripDialog", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("linking a copy while the other side has not accepted says so, not another person's block", async () => {
-    vi.mocked(sharingLinkApi.candidates).mockResolvedValue({ access: "awaitingConsent" } as never);
+  it("offers no way to look into the other account's trips (Codex P1, 2026-11-27)", () => {
     render(
       <ShareTripDialog open onClose={vi.fn()} tripId="t1" people={[ben, ilse]} onShared={vi.fn()} />
     );
-    fireEvent.click(screen.getByRole("button", { name: "sharing:link.open" }));
-    expect(await screen.findByText("sharing:link.awaitingConsent")).toBeTruthy();
-    expect(screen.queryByText(/sharing:shareDialog\.blocked\.notLinked/)).toBeNull();
-    expect(screen.queryByText("sharing:shareDialog.blockedTitle")).toBeNull();
+    expect(screen.queryByRole("button", { name: "sharing:link.open" })).toBeNull();
+    expect(sharingLinkApi.candidates).not.toHaveBeenCalled();
   });
 
   it("says what is copied, what stays private and that it is final, then shares on confirm", async () => {

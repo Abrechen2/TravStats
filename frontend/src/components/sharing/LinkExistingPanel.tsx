@@ -237,11 +237,11 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
                               <tr key={c.field} data-testid={`link-field-${m.ref}-${c.field}`}>
                                 <td>{label}</td>
                                 <td>
-                                  {formatLinkValue(c.here, locale, t)}
+                                  {formatLinkValue(c.display.here, locale, t)}
                                   {c.better === "here" && ` · ${t(`${NS}.better`)}`}
                                 </td>
                                 <td>
-                                  {formatLinkValue(c.there, locale, t)}
+                                  {formatLinkValue(c.display.there, locale, t)}
                                   {c.better === "there" && ` · ${t(`${NS}.better`)}`}
                                 </td>
                                 <td>

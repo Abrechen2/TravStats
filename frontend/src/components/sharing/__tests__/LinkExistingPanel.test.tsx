@@ -28,24 +28,28 @@ const dryRun: LinkPreview = {
       conflicts: [
         {
           field: "departureTime",
-          here: {
-            kind: "time",
-            value: {
-              utc: "2030-06-01T08:00:00.000Z",
-              local: "2030-06-01T10:00:00",
-              zone: "Europe/Berlin",
-              offset: "+02:00",
-              precision: "minute",
+          here: "2030-06-01T08:00:00.000Z",
+          there: "2030-06-01T08:30:00.000Z",
+          display: {
+            here: {
+              kind: "time",
+              value: {
+                utc: "2030-06-01T08:00:00.000Z",
+                local: "2030-06-01T10:00:00",
+                zone: "Europe/Berlin",
+                offset: "+02:00",
+                precision: "minute",
+              },
             },
-          },
-          there: {
-            kind: "time",
-            value: {
-              utc: "2030-06-01T08:30:00.000Z",
-              local: "2030-06-01T10:30:00",
-              zone: "Europe/Berlin",
-              offset: "+02:00",
-              precision: "minute",
+            there: {
+              kind: "time",
+              value: {
+                utc: "2030-06-01T08:30:00.000Z",
+                local: "2030-06-01T10:30:00",
+                zone: "Europe/Berlin",
+                offset: "+02:00",
+                precision: "minute",
+              },
             },
           },
           better: null,
@@ -64,8 +68,12 @@ const dryRun: LinkPreview = {
       conflicts: [
         {
           field: "geometry",
-          here: { kind: "line", quality: "straight", points: 2 },
-          there: { kind: "line", quality: "drawn", points: 184 },
+          here: "[[0,0],[1,1]]",
+          there: "[[0,0],…]",
+          display: {
+            here: { kind: "line", quality: "straight", points: 2 },
+            there: { kind: "line", quality: "drawn", points: 184 },
+          },
           better: "there",
           real: false,
         },
