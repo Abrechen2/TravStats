@@ -28,6 +28,8 @@ jest.mock("../db", () => ({
     $transaction: (fn: (tx: unknown) => Promise<unknown>) =>
       fn({
         $executeRaw: jest.fn().mockResolvedValue(0),
+        // finishDeletion raises the statement timeout first (perf/rc47 sessionTimeouts).
+        $executeRawUnsafe: jest.fn().mockResolvedValue(0),
         user: {
           findUnique: (...args: unknown[]) => mockUserFindUnique(...args),
           count: (...args: unknown[]) => mockUserCount(...args),
