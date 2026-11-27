@@ -18,6 +18,10 @@ const deleteFactsMock = vi.fn();
 const listStayPageMock = vi.fn();
 const listForEntryMock = vi.fn();
 const getTripsMock = vi.fn();
+const stayYearCounts = vi.hoisted(() => ({ current: {} as Record<number, number> }));
+vi.mock("../../lib/stats/useYearCounts", () => ({
+  useYearCounts: () => ({ of: (d?: string) => (d === "lodging" ? stayYearCounts.current : {}) }),
+}));
 const navigateMock = vi.fn();
 
 // The row navigates, so proving that a row action does NOT navigate needs a
@@ -278,6 +282,7 @@ const mockFacets = (over: Partial<LodgingFacets> = {}): void => {
 
 describe("LodgingListPage", () => {
   beforeEach(() => {
+    stayYearCounts.current = {};
     listLodgingPageMock.mockReset();
     getLodgingFacetsMock.mockReset();
     mockRows([]);
@@ -407,6 +412,23 @@ describe("LodgingListPage", () => {
     const select = (await screen.findByLabelText("lodging:filter.type")) as HTMLSelectElement;
     const values = Array.from(select.options).map((o) => o.value);
     expect(values).toEqual(["all", "hotel", "campsite", "guesthouse", "apartment", "hostel"]);
+  });
+
+  it("captions a year with its stays that count, not the facet's house count", async () => {
+    // 2023 holds a house, but only a stay still ahead: no stay of 2023 counts yet.
+    mockFacets({
+      years: [
+        { year: 2024, count: 1 },
+        { year: 2023, count: 1 },
+      ],
+    });
+    stayYearCounts.current = { 2024: 3 };
+    renderListPage();
+    await waitFor(() =>
+      expect(openYearGrid("lodging:filter.year").map((b) => b.textContent)).toEqual(
+        expect.arrayContaining(["2024common:yearPicker.count.stays", "2023"])
+      )
+    );
   });
 
   it("sends every active filter to the server, and asks the facets for the options", async () => {

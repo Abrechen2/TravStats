@@ -159,6 +159,54 @@ describe("plugin location maintenance", () => {
     expect(screen.getByTestId("maintenance-map").textContent).toBe("2 pins");
   });
 
+  it("keeps rows without stop evidence reachable under 'Alle Einträge ohne Standort', filtered by the plugin", async () => {
+    api.maintenance.mockResolvedValue({
+      ...LIST,
+      rows: [
+        ...LIST.rows,
+        {
+          rowId: "9",
+          name: "Nur ungenau",
+          street: null,
+          postcode: null,
+          town: "Kempten",
+          lat: 47.7,
+          lon: 10.3,
+          issues: ["lowPrecision"],
+          proposals: [{ source: "geocoder", lat: 47.71, lon: 10.31, confidence: "low" }],
+        },
+        {
+          rowId: "10",
+          name: "Abweichend",
+          street: "Weg 1",
+          postcode: null,
+          town: "Kempten",
+          lat: 47.7,
+          lon: 10.3,
+          issues: ["coordsMismatch"],
+          proposals: [{ source: "geocoder", lat: 47.71, lon: 10.31, confidence: "low" }],
+        },
+      ],
+    });
+    render(<PluginMaintenanceDialog plugin={PLUGIN} open onClose={() => {}} />);
+    await screen.findByText("Nur ungenau");
+    await userEvent.click(screen.getByRole("button", { name: /filter\.noLocation/ }));
+    // Asked of the plugin, from the first page, so the filter covers the whole archive.
+    await waitFor(() =>
+      expect(api.maintenance).toHaveBeenLastCalledWith(
+        "p1",
+        expect.anything(),
+        expect.objectContaining({ filter: "noLocation", offset: 0 })
+      )
+    );
+    expect(screen.getByText("Nur ungenau")).toBeTruthy();
+    expect(screen.getByText("MSA Zentralküche Sonthofen")).toBeTruthy();
+    expect(screen.queryByText("Abweichend")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /filter\.withStops/ }));
+    expect(screen.queryByText("Nur ungenau")).toBeNull();
+    expect(screen.getAllByTestId("maintenance-row")).toHaveLength(1);
+  });
+
   it("'Übernehmen' names exactly what is written and sends only that", async () => {
     api.applyLocation.mockResolvedValue({ undoId: "u-2", rowId: "7", written: {} });
     render(<PluginMaintenanceDialog plugin={PLUGIN} open onClose={() => {}} />);

@@ -74,12 +74,19 @@ export default function CalendarSourcesSection(): JSX.Element {
         ...m,
         [source.id]: {
           ok: true,
-          text:
-            t(`${NS}.test.ok`, {
-              count: r.events,
-              from: fmt.date(r.from),
-              to: fmt.date(r.to),
-            }) + (r.skippedRules ? ` ${t(`${NS}.test.skipped`, { count: r.skippedRules })}` : ""),
+          text: [
+            t(`${NS}.test.ok`, { count: r.events, from: fmt.date(r.from), to: fmt.date(r.to) }),
+            r.skippedRules ? t(`${NS}.test.skipped`, { count: r.skippedRules }) : null,
+            r.skippedEvents ? t(`${NS}.test.skippedEvents`, { count: r.skippedEvents }) : null,
+            ...(r.failedCollections ?? []).map((c) =>
+              t(`${NS}.test.failedCollection`, {
+                name: c.name,
+                reason: t(`suggestionSources:${calendarFailureKey(c.code, c.code)}`),
+              })
+            ),
+          ]
+            .filter(Boolean)
+            .join(" "),
         },
       }));
     } catch (e) {
@@ -134,7 +141,7 @@ export default function CalendarSourcesSection(): JSX.Element {
             {list?.sources.map((source) => {
               const test = tests[source.id];
               const stored =
-                source.lastStatus && source.lastStatus !== "ok"
+                source.lastStatus && source.lastStatus !== "ok" && source.lastStatus !== "partial"
                   ? t(
                       `suggestionSources:${calendarFailureKey(source.lastStatus, source.lastErrorCode)}`
                     )
@@ -166,6 +173,22 @@ export default function CalendarSourcesSection(): JSX.Element {
                           })
                     }
                   />
+                  {source.lastStatus === "partial" && !test && (
+                    <p className="t-caption" style={{ color: "var(--ts-warn)" }} role="status">
+                      {t(`${NS}.partial`)}{" "}
+                      {source.collections
+                        .filter((c) => c.failedCode)
+                        .map((c) =>
+                          t(`${NS}.test.failedCollection`, {
+                            name: c.name,
+                            reason: t(
+                              `suggestionSources:${calendarFailureKey(c.failedCode, c.failedCode)}`
+                            ),
+                          })
+                        )
+                        .join(" ")}
+                    </p>
+                  )}
                   {stored && !test && (
                     <p className="t-caption" style={{ color: "var(--ts-bad)" }} role="status">
                       {t(`${NS}.lastFailed`)}: {stored}

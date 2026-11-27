@@ -18,9 +18,28 @@ import { archiveUndoRequest, archiveWriteRequest } from "../../inbox/plugins/arc
 import MaintenanceRowCard, { type Choice } from "./MaintenanceRowCard";
 import InlineError from "../../ui/InlineError";
 import { SearchInput } from "../../ui/SearchInput";
+import Chip from "../../ui/Chip";
 
 const NS = "suggestionSources:plugins.maintenance";
 const PAGE_SIZE = 50;
+/**
+ * The inbox lists only rows with evidence from the owner's own stops (rc.48); every other row of
+ * the archive stays reachable here. A filter is asked of the plugin, so it covers the whole
+ * archive and the paging counts filtered rows; a plugin that does not know filters answers
+ * unfiltered, and then the loaded page is narrowed here.
+ */
+type RowFilter = "all" | "withStops" | "noLocation";
+const ROW_FILTERS: readonly RowFilter[] = ["all", "withStops", "noLocation"];
+const NO_LOCATION_ISSUES: ReadonlySet<string> = new Set([
+  "noCoordinates",
+  "lowPrecision",
+  "noStreet",
+]);
+const matchesFilter = (row: MaintenanceRow, filter: RowFilter): boolean =>
+  filter === "all" ||
+  (filter === "withStops"
+    ? row.proposals.some((p) => p.source === "stop")
+    : row.issues.some((i) => NO_LOCATION_ISSUES.has(i)));
 
 type Load =
   | { status: "loading" }
@@ -49,6 +68,7 @@ export default function PluginMaintenanceDialog({
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [selected, setSelected] = useState<string | null>(null);
   const [showIgnored, setShowIgnored] = useState(false);
+  const [rowFilter, setRowFilter] = useState<RowFilter>("all");
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState("");
   const [search, setSearch] = useState("");
@@ -69,6 +89,7 @@ export default function PluginMaintenanceDialog({
         q: search,
         offset,
         limit: PAGE_SIZE,
+        ...(rowFilter === "all" ? {} : { filter: rowFilter }),
       });
       setLoad({ status: "done", list });
       setSelected((s) => s ?? list.rows.find((r) => !r.ignored)?.rowId ?? null);
@@ -77,7 +98,7 @@ export default function PluginMaintenanceDialog({
       console.warn("plugin maintenance list failed", key);
       setLoad({ status: "failed", key });
     }
-  }, [plugin.id, locale, search, offset]);
+  }, [plugin.id, locale, search, offset, rowFilter]);
 
   useEffect(() => {
     if (open) void reload();
@@ -151,7 +172,9 @@ export default function PluginMaintenanceDialog({
 
   if (!open) return null;
   const list = load.status === "done" ? load.list : null;
-  const rows = list ? list.rows.filter((r) => showIgnored || !r.ignored) : [];
+  const rows = list
+    ? list.rows.filter((r) => (showIgnored || !r.ignored) && matchesFilter(r, rowFilter))
+    : [];
   const total = list?.totalRows ?? list?.rows.length ?? 0;
   const pageStart = list?.offset ?? offset;
   const current = list?.rows.find((r) => r.rowId === selected) ?? null;
@@ -203,6 +226,24 @@ export default function PluginMaintenanceDialog({
               <Button disabled={busy} onClick={() => void reload()}>
                 {t(`${NS}.reload`)}
               </Button>
+            </div>
+            <div
+              role="group"
+              aria-label={t(`${NS}.filter.label`)}
+              className="flex flex-wrap gap-1.5"
+            >
+              {ROW_FILTERS.map((f) => (
+                <Chip
+                  key={f}
+                  active={rowFilter === f}
+                  onClick={() => {
+                    setOffset(0);
+                    setRowFilter(f);
+                  }}
+                >
+                  {t(`${NS}.filter.${f}`)}
+                </Chip>
+              ))}
             </div>
             <form
               className="flex flex-wrap items-center"

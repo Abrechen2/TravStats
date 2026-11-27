@@ -27,6 +27,16 @@ let base: string;
 let secret = "";
 let down = false;
 let proposalsCalls = 0;
+/** "filtering": a plugin that knows `withStops`; "legacy": one that ignores it; null: one row. */
+let mode: "filtering" | "legacy" | null = null;
+const requests: Array<Record<string, unknown>> = [];
+const stopRow = (i: number) => ({
+  rowId: String(i),
+  name: `Row ${i}`,
+  issues: ["noStreet"],
+  proposals: [{ source: "stop", lat: 47, lon: 10, confidence: "high" }],
+});
+const STOP_ROWS = Array.from({ length: 350 }, (_, i) => stopRow(i));
 
 beforeAll(async () => {
   server = http.createServer((req, res) => {
@@ -60,6 +70,25 @@ beforeAll(async () => {
       if (req.url!.endsWith("/maintenance/proposals")) {
         proposalsCalls += 1;
         if (down) return send(503, { error: "server" });
+        const asked = JSON.parse(body) as { filter?: string; offset?: number; limit?: number };
+        requests.push(asked);
+        if (mode === "filtering" && asked.filter === "withStops") {
+          const offset = asked.offset ?? 0;
+          return send(200, {
+            version: 1,
+            rows: STOP_ROWS.slice(offset, offset + (asked.limit ?? 300)),
+            totalRows: STOP_ROWS.length,
+            offset,
+            filter: "withStops",
+            notices: [{ severity: "error", code: "readOnly", message: "read only" }],
+          });
+        }
+        if (mode === "legacy")
+          return send(200, {
+            version: 1,
+            rows: Array.from({ length: 60 }, (_, i) => ({ ...stopRow(i), proposals: [] })),
+            totalRows: 1760,
+          });
         return send(200, {
           version: 1,
           rows: [{ rowId: "7", name: "Baustelle", issues: ["noStreet"], proposals: [] }],
@@ -82,6 +111,8 @@ afterAll(async () => {
 beforeEach(() => {
   down = false;
   proposalsCalls = 0;
+  mode = null;
+  requests.length = 0;
 });
 
 const root = "/api/v1/settings/suggestion-plugins";
@@ -105,6 +136,31 @@ async function setup() {
 }
 
 describe("cached plugin maintenance for the inbox", () => {
+  it("pages through every row with a stop proposal, not just the first 50", async () => {
+    mode = "filtering";
+    const { cookie, userId } = await setup();
+    await refreshDueMaintenanceCaches(new Date(), userId);
+    expect(requests.map((r) => [r.filter, r.offset])).toEqual([
+      ["withStops", 0],
+      ["withStops", 300],
+    ]);
+    const read = await request(app).get(`${root}/maintenance/inbox`).set("Cookie", cookie);
+    const data = read.body.plugins[0].data;
+    expect(data.rows).toHaveLength(350);
+    expect(new Set(data.rows.map((r: { rowId: string }) => r.rowId)).size).toBe(350);
+    expect(data.notices).toEqual([expect.objectContaining({ code: "readOnly" })]);
+  });
+
+  it("a plugin that ignores the filter keeps the old copy: its first 50 rows", async () => {
+    mode = "legacy";
+    const { cookie, userId } = await setup();
+    await refreshDueMaintenanceCaches(new Date(), userId);
+    expect(proposalsCalls).toBe(1);
+    const read = await request(app).get(`${root}/maintenance/inbox`).set("Cookie", cookie);
+    expect(read.body.plugins[0].data.rows).toHaveLength(50);
+    expect(read.body.plugins[0].data.totalRows).toBe(1760);
+  });
+
   it("the inbox read never asks the plugin; the poll fills the copy", async () => {
     const { cookie, id, userId } = await setup();
     const empty = await request(app).get(`${root}/maintenance/inbox`).set("Cookie", cookie);

@@ -73,6 +73,46 @@ describe("CalendarSourcesSection", () => {
     ).toBeTruthy();
   });
 
+  it("names a skipped calendar and skipped appointments in a partly read test", async () => {
+    api.test.mockResolvedValue({
+      ok: true,
+      events: 3,
+      from: "2026-11-01T00:00:00.000Z",
+      to: "2026-12-01T00:00:00.000Z",
+      skippedRules: 0,
+      skippedEvents: 2,
+      failedCollections: [{ name: "Work", code: "CALENDAR_PARSE" }],
+    });
+    render(<CalendarSourcesSection />);
+    await userEvent.click(await screen.findByText("suggestionSources:calendar.test.button"));
+    const line = await screen.findByText(/calendar\.test\.failedCollection/);
+    expect(line.textContent).toContain("calendar.test.skippedEvents");
+  });
+
+  it("shows a partly read source as partial, naming the skipped calendar, not as ok or failed", async () => {
+    api.list.mockResolvedValue({
+      sources: [
+        {
+          ...SOURCE,
+          kind: "caldav",
+          icsHost: null,
+          caldavUsername: "me",
+          lastStatus: "partial",
+          collections: [
+            { href: "https://dav.example.com/a/", name: "Privat" },
+            { href: "https://dav.example.com/b/", name: "Kaputt", failedCode: "CALENDAR_PARSE" },
+          ],
+        },
+      ],
+      blocked: null,
+      geocodeLocations: false,
+    });
+    render(<CalendarSourcesSection />);
+    const line = await screen.findByText(/calendar\.partial/);
+    expect(line.textContent).toContain("calendar.test.failedCollection");
+    expect(screen.queryByText(/calendar\.lastFailed/)).toBeNull();
+  });
+
   it("falls back to the fixed kind for a code it does not name", async () => {
     api.test.mockRejectedValue(rejectWith("auth", "SOMETHING_NEW"));
     render(<CalendarSourcesSection />);

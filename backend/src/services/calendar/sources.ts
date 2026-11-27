@@ -11,6 +11,7 @@
  * and an admin's own source may name a LAN server (Radicale, Nextcloud).
  */
 import { prisma } from "../../db";
+import logger from "../../utils/logger";
 import type { CalendarSource } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import { decryptApiKey, encryptApiKey } from "../../utils/encryption";
@@ -29,7 +30,7 @@ import {
   type CalendarSourceUpdate,
   type CalendarSourceView,
 } from "../../schemas/calendarSources";
-import { MAX_EVENTS_PER_FILE, type ParsedWindow } from "./icsParse";
+import { MAX_EVENTS_PER_FILE, type FailedCollection, type ParsedWindow } from "./icsParse";
 import { parseIcsInWorker } from "./icsWorker";
 import {
   CALDAV_TIMEOUT_MS,
@@ -113,6 +114,12 @@ const collectionsOf = (v: unknown): CaldavCollection[] =>
       )
     : [];
 
+/** The failure a partial read marked on the i-th stored collection, if any. */
+function failedCodeOf(v: unknown, i: number): string | null {
+  const entry = Array.isArray(v) ? (v[i] as { failedCode?: unknown } | undefined) : undefined;
+  return typeof entry?.failedCode === "string" ? entry.failedCode : null;
+}
+
 export function viewOf(row: CalendarSource): CalendarSourceView {
   return {
     id: row.id,
@@ -125,7 +132,10 @@ export function viewOf(row: CalendarSource): CalendarSourceView {
     credentialSet: Boolean(
       row.kind === "caldav" ? row.caldavPasswordEncrypted : row.icsUrlEncrypted
     ),
-    collections: collectionsOf(row.caldavCollections),
+    collections: collectionsOf(row.caldavCollections).map((c, i) => {
+      const failedCode = failedCodeOf(row.caldavCollections, i);
+      return failedCode ? { ...c, failedCode } : c;
+    }),
     lastStatus: row.lastStatus,
     lastErrorCode: row.lastErrorCode,
     lastCheckedAt: row.lastCheckedAt?.toISOString() ?? null,
@@ -294,13 +304,49 @@ export async function readCaldav(
   const deadlineAt = deps.deadlineAt ?? Date.now() + READ_DEADLINE_MS;
   const maxEvents = deps.maxEvents ?? MAX_EVENTS_PER_FILE;
   const texts: string[] = [];
+  const failedCollections: FailedCollection[] = [];
+  let firstFailure: CalendarError | null = null;
   for (const c of collections) {
     const timeoutMs = remaining(deadlineAt, CALDAV_TIMEOUT_MS);
-    texts.push(...(await queryCollection(creds, c.href, window, policy, deps.fetch, timeoutMs)));
+    try {
+      texts.push(...(await queryCollection(creds, c.href, window, policy, deps.fetch, timeoutMs)));
+    } catch (error) {
+      const failure = toCalendarError(error);
+      if (!collectionLocal(failure)) throw failure;
+      // One collection's answer that does not parse costs that collection, not the source.
+      firstFailure ??= failure;
+      failedCollections.push({ name: c.name, href: c.href, code: failure.code ?? failure.kind });
+      logger.warn(
+        { collection: c.name, kind: failure.kind, code: failure.code },
+        "calendar collection skipped"
+      );
+      continue;
+    }
     // Each text holds at least one event: more texts than the budget can never fit it.
     if (texts.length > maxEvents) throw new CalendarError("protocol", "CALENDAR_TOO_MANY_EVENTS");
   }
-  return parseIcsInWorker(texts, { ...window, profileZone, deadlineAt, maxEvents });
+  if (firstFailure && failedCollections.length === collections.length) throw firstFailure;
+  const parsed = await parseIcsInWorker(texts, { ...window, profileZone, deadlineAt, maxEvents });
+  if (parsed.skippedEvents)
+    logger.warn(
+      { skippedEvents: parsed.skippedEvents, reasons: parsed.skippedReasons },
+      "calendar events skipped"
+    );
+  return { ...parsed, failedCollections };
+}
+
+/**
+ * Failures that belong to one collection's answer (it did not parse, it is gone) rather than
+ * to the account (auth, network, egress) or to the read's budget.
+ */
+function collectionLocal(failure: CalendarError): boolean {
+  if (failure.kind === "notFound") return true;
+  if (failure.kind !== "protocol") return false;
+  return (
+    failure.code !== "CALENDAR_TOO_MANY_EVENTS" &&
+    failure.code !== "CALENDAR_PARSE_TIMEOUT" &&
+    failure.code !== "CALENDAR_REDIRECT"
+  );
 }
 
 /** A stored source, read for one window. Records the outcome on the row. */
@@ -335,10 +381,18 @@ export async function readSourceWindow(
       normaliseOrFail(url, policy);
       result = await readIcs(url, window, profileZone, policy, deps);
     }
-    await record(row.id, "ok", null);
+    const failed = result.failedCollections ?? [];
+    // A read that skipped a collection is not "ok": the card names what was left out.
+    await record(row.id, failed.length > 0 ? "partial" : "ok", null);
+    if (row.kind === "caldav") await markFailedCollections(row.id, failed);
     return result;
   } catch (error) {
     const failure = toCalendarError(error);
+    // The reason only, never a byte of the calendar's content.
+    logger.warn(
+      { sourceId: row.id, sourceKind: row.kind, kind: failure.kind, code: failure.code },
+      "calendar source read failed"
+    );
     await record(row.id, failure.kind, failure.code);
     throw failure;
   }
@@ -354,6 +408,25 @@ function normaliseOrFail(url: string, policy: TargetPolicy): void {
       throw new CalendarError("invalidUrl", "CALENDAR_HTTPS_REQUIRED");
     throw new CalendarError("invalidUrl");
   }
+}
+
+/**
+ * Marks each stored collection with the failure of the last read (`failedCode`), clearing the rest.
+ * One statement on the stored value, so a collection list the user saved meanwhile is kept.
+ */
+async function markFailedCollections(
+  id: string,
+  failed: readonly FailedCollection[]
+): Promise<void> {
+  const byHref = Object.fromEntries(failed.flatMap((f) => (f.href ? [[f.href, f.code]] : [])));
+  await prisma.$executeRaw`
+    UPDATE calendar_sources SET caldav_collections = COALESCE((
+      SELECT jsonb_agg(CASE WHEN ${JSON.stringify(byHref)}::jsonb ? (e->>'href')
+        THEN e || jsonb_build_object('failedCode', ${JSON.stringify(byHref)}::jsonb->>(e->>'href'))
+        ELSE e - 'failedCode' END ORDER BY ord)
+      FROM jsonb_array_elements(caldav_collections) WITH ORDINALITY AS t(e, ord)
+    ), '[]'::jsonb)
+    WHERE id = ${id}`;
 }
 
 async function record(id: string, status: string, code: string | null): Promise<void> {

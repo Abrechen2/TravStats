@@ -30,7 +30,15 @@ import {
 
 jest.setTimeout(120_000);
 
-const USERS = ["az-paced-1", "az-paced-2", "az-paced-3", "az-paced-4", "az-paced-5", "az-paced-6"];
+const USERS = [
+  "az-paced-1",
+  "az-paced-2",
+  "az-paced-3",
+  "az-paced-4",
+  "az-paced-5",
+  "az-paced-6",
+  "az-paced-7",
+];
 let work: string;
 let root: string;
 let zipPath: string;
@@ -213,5 +221,39 @@ describe("the paced account-archive restore", () => {
     ]);
     expect(rows).toEqual([{ immich_api_key: "OWN-KEY" }]);
     expect(await counts(USERS[4])).toEqual({ user_settings: 1 });
+  });
+
+  it("a failed row-record cleanup after the commit keeps the restored files, and the next import tidies it", async () => {
+    const target = path.join(work, "uploads-cleanup");
+    const filesIn = (dir: string): number =>
+      fs.existsSync(dir)
+        ? fs.readdirSync(dir, { recursive: true, withFileTypes: true }).filter((e) => e.isFile())
+            .length
+        : 0;
+    const result = await importAccountArchive(zipPath, USERS[6], undefined, {
+      uploadsRoot: target,
+      sleep: noSleep,
+      failRowRecordCleanup: true,
+    });
+    expect(result.alreadyImported).toBe(false);
+    expect(result.files).toBeGreaterThan(0);
+    // Before the fix the outer catch removed every restored file while its rows stayed.
+    expect(filesIn(target)).toBe(result.files);
+    const recordLeft = async () =>
+      (
+        await db.query(
+          `SELECT count(*)::int AS n FROM account_archive_import_rows WHERE archive_id = $1`,
+          [archiveId]
+        )
+      ).rows[0].n;
+    expect(await recordLeft()).toBeGreaterThan(0);
+
+    const again = await importAccountArchive(zipPath, USERS[6], undefined, {
+      uploadsRoot: target,
+      sleep: noSleep,
+    });
+    expect(again.alreadyImported).toBe(true);
+    expect(await recordLeft()).toBe(0);
+    expect(filesIn(target)).toBe(result.files);
   });
 });

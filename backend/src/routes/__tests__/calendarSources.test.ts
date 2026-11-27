@@ -61,6 +61,8 @@ function caldavAnswer(req: http.IncomingMessage, body: string, res: http.ServerR
       )
     );
   }
+  if (req.url === "/dav/cal/broken/" && req.method === "REPORT")
+    return res.end("<html>no dav</html>");
   if (req.url === "/dav-deep/") return res.end(ms("<d:a>".repeat(40) + "</d:a>".repeat(40)));
   if (req.url === "/dav-foreign/")
     return res.end(
@@ -290,6 +292,34 @@ describe("calendar sources: CalDAV", () => {
     const res = await api(cookie).test(added.body.id);
     expect(res.body).toMatchObject({ ok: true, events: 1 });
     expect(davRequests).toContain("REPORT /dav/cal/work/");
+  });
+
+  it("records a read that skipped a collection as partial and names it on the card", async () => {
+    const { cookie } = await account(true);
+    const added = await api(cookie).add({
+      kind: "caldav",
+      label: "Arbeit",
+      url: `${base}/dav/`,
+      username: "me",
+      password: "pw",
+      collections: [
+        { href: `${base}/dav/cal/work/`, name: "Arbeit" },
+        { href: `${base}/dav/cal/broken/`, name: "Kaputt" },
+      ],
+    });
+    const res = await api(cookie).test(added.body.id);
+    expect(res.body).toMatchObject({
+      ok: true,
+      events: 1,
+      failedCollections: [{ name: "Kaputt", code: "CALENDAR_PARSE" }],
+    });
+    const listed = await api(cookie).list();
+    const source = listed.body.sources.find((x: { id: string }) => x.id === added.body.id);
+    expect(source.lastStatus).toBe("partial");
+    expect(source.collections).toEqual([
+      { href: `${base}/dav/cal/work/`, name: "Arbeit" },
+      { href: `${base}/dav/cal/broken/`, name: "Kaputt", failedCode: "CALENDAR_PARSE" },
+    ]);
   });
 
   it("answers a wrong password as auth", async () => {

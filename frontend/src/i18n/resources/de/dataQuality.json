@@ -872,8 +872,8 @@
     }
   },
   "pluginInbox": {
-    "intro": "Vorschläge und Nachrichten deiner Plugins.",
-    "info": "Ins Projektarchiv wird erst geschrieben, wenn du einen Vorschlag einzeln bestätigst. Du kannst ihn vorher bearbeiten und danach zurücknehmen.",
+    "intro": "Vorschläge aus deinen eigenen Stopps und Fehler deiner Plugins.",
+    "info": "Ins Projektarchiv wird erst geschrieben, wenn du einen Vorschlag einzeln bestätigst. Du kannst ihn vorher bearbeiten und danach zurücknehmen. Ungenaue Einträge ohne Stopp findest du unter Einstellungen → Plugin → „Standorte pflegen“.",
     "reload": "Neu laden",
     "loading": "Plugins werden gefragt …",
     "noPlugins": "Kein Plugin mit Standortpflege eingerichtet.",

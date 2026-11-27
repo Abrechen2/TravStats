@@ -57,7 +57,15 @@ export const calendarSourceViewSchema = z.object({
   caldavUsername: z.string().nullable(),
   /** Whether the secret part (ICS address, CalDAV password) is stored. */
   credentialSet: z.boolean(),
-  collections: z.array(z.object({ href: z.string(), name: z.string() })),
+  collections: z.array(
+    z.object({
+      href: z.string(),
+      name: z.string(),
+      /** Set when the last read skipped this collection (`lastStatus: "partial"`). */
+      failedCode: z.string().optional(),
+    })
+  ),
+  /** `ok`, `partial` (some collections skipped, see `collections[].failedCode`), or a failure kind. */
   lastStatus: z.string().nullable(),
   lastErrorCode: z.string().nullable(),
   lastCheckedAt: z.string().nullable(),
@@ -72,4 +80,8 @@ export const calendarTestResultSchema = z.object({
   to: z.string(),
   /** Recurring events cut short by a cap (their later occurrences are missing). */
   skippedRules: z.number().int(),
+  /** Calendar objects that did not parse and were left out. */
+  skippedEvents: z.number().int(),
+  /** CalDAV collections whose answer could not be read, each with its failure code. */
+  failedCollections: z.array(z.object({ name: z.string(), code: z.string() })),
 });

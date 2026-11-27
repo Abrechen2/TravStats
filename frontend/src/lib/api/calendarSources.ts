@@ -7,6 +7,8 @@ export type CalendarFailureKind =
 export interface CalendarCollection {
   href: string;
   name: string;
+  /** Set when the last read skipped this calendar (`lastStatus: "partial"`). */
+  failedCode?: string;
 }
 
 export interface CalendarSource {
@@ -37,6 +39,10 @@ export interface CalendarTestResult {
   from: string;
   to: string;
   skippedRules: number;
+  /** Calendar objects that did not parse (older servers: absent). */
+  skippedEvents?: number;
+  /** CalDAV collections that could not be read, each with its failure code. */
+  failedCollections?: Array<{ name: string; code: string }>;
 }
 
 export type CalendarSourceInput =

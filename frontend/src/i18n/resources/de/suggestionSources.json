@@ -14,6 +14,7 @@
     "icsLine": "ICS-Abo · {{host}}",
     "caldavLine_one": "CalDAV · {{user}} · {{count}} Kalender",
     "caldavLine_other": "CalDAV · {{user}} · {{count}} Kalender",
+    "partial": "Zuletzt nur teilweise gelesen.",
     "lastFailed": "Letzter Versuch fehlgeschlagen",
     "blocked": {
       "internet_off": "Der Internetzugang des Servers ist ausgeschaltet. Kein Kalender wird gelesen.",
@@ -24,7 +25,10 @@
       "ok_one": "Gelesen: {{count}} Termin zwischen {{from}} und {{to}}.",
       "ok_other": "Gelesen: {{count}} Termine zwischen {{from}} und {{to}}.",
       "skipped_one": "{{count}} Serientermin wurde gekürzt oder übersprungen (zu viele oder ungültige Wiederholungen).",
-      "skipped_other": "{{count}} Serientermine wurden gekürzt oder übersprungen (zu viele oder ungültige Wiederholungen)."
+      "skipped_other": "{{count}} Serientermine wurden gekürzt oder übersprungen (zu viele oder ungültige Wiederholungen).",
+      "skippedEvents_one": "{{count}} Termin konnte nicht gelesen werden und wurde übersprungen.",
+      "skippedEvents_other": "{{count}} Termine konnten nicht gelesen werden und wurden übersprungen.",
+      "failedCollection": "Kalender „{{name}}“ übersprungen: {{reason}}"
     },
     "privacy": {
       "title": "Was gespeichert wird",
@@ -243,6 +247,12 @@
       "loading": "Einträge werden geladen …",
       "reload": "Neu laden",
       "empty": "Keine Einträge ohne Standort.",
+      "filter": {
+        "label": "Einträge filtern",
+        "all": "Alle",
+        "withStops": "Mit Vorschlag aus meinen Stopps",
+        "noLocation": "Alle Einträge ohne Standort"
+      },
       "showIgnored": "Ignorierte zeigen",
       "stopsSent": "{{count}} TravTrack-Stopps (benannte und längere unbenannte) wurden zum Abgleich mitgeschickt.",
       "stopsWithheld": {

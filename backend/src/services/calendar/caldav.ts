@@ -38,10 +38,14 @@ const DAV_HEADERS = (c: CaldavCredentials, depth: "0" | "1") => ({
 
 /** Refuse a DOCTYPE and a nesting deeper than the cap, before any tree is built. */
 export function assertXmlBounded(xml: string, maxDepth = XML_MAX_DEPTH): void {
-  if (/<!DOCTYPE|<!ENTITY/i.test(xml)) throw new CalendarError("protocol", "CALENDAR_PARSE");
+  // CDATA is character data: iCloud wraps every calendar-data in it, and an event's
+  // description may carry `<mailto:…>` or a whole HTML mail with its own DOCTYPE. Neither is
+  // markup, so neither may count as nesting or as a DOCTYPE of the answer itself.
+  const markup = xml.replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, "").replace(/<!--[\s\S]*?-->/g, "");
+  if (/<!DOCTYPE|<!ENTITY/i.test(markup)) throw new CalendarError("protocol", "CALENDAR_PARSE");
   let depth = 0;
   const tag = /<(\/?)([^\s>/!?]+)[^>]*?(\/?)>/g;
-  for (let m = tag.exec(xml); m; m = tag.exec(xml)) {
+  for (let m = tag.exec(markup); m; m = tag.exec(markup)) {
     if (m[1]) depth--;
     else if (!m[3]) {
       depth++;
@@ -80,8 +84,9 @@ function responses(xml: string): Array<{ href: string; prop: Node }> {
   } catch {
     throw new CalendarError("protocol", "CALENDAR_PARSE");
   }
+  // An empty collection answers `<multistatus/>`, which parses to "": present, and no responses.
+  if (!("multistatus" in doc)) throw new CalendarError("protocol", "CALENDAR_PARSE");
   const multi = asNode(doc.multistatus);
-  if (!doc.multistatus) throw new CalendarError("protocol", "CALENDAR_PARSE");
   return list(multi.response).flatMap((r) => {
     const node = asNode(r);
     const href = text(list(node.href)[0]);

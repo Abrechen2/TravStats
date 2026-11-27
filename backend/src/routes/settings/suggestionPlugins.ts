@@ -43,6 +43,7 @@ import {
 import {
   MAINTENANCE_MAX_QUERY,
   MAINTENANCE_MAX_ROWS,
+  MAINTENANCE_FILTERS,
   MAINTENANCE_SOURCES,
 } from "../../services/plugins/contract";
 import type { Precision } from "../../services/plugins/registry";
@@ -351,6 +352,8 @@ const maintenanceListQuery = z
     q: z.string().trim().max(MAINTENANCE_MAX_QUERY).optional(),
     offset: z.coerce.number().int().min(0).optional(),
     limit: z.coerce.number().int().min(1).max(MAINTENANCE_MAX_ROWS).optional(),
+    /** Passed through to the plugin; its answer's `filter` says whether it applied it. */
+    filter: z.enum(MAINTENANCE_FILTERS).optional(),
   })
   .transform(({ q, ...rest }) => ({ ...rest, ...(q ? { query: q } : {}) }));
 

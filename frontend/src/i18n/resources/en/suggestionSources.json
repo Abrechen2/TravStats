@@ -14,6 +14,7 @@
     "icsLine": "ICS subscription · {{host}}",
     "caldavLine_one": "CalDAV · {{user}} · {{count}} calendar",
     "caldavLine_other": "CalDAV · {{user}} · {{count}} calendars",
+    "partial": "Last read only in part.",
     "lastFailed": "Last attempt failed",
     "blocked": {
       "internet_off": "The server's internet access is switched off. No calendar is read.",
@@ -24,7 +25,10 @@
       "ok_one": "Read: {{count}} appointment between {{from}} and {{to}}.",
       "ok_other": "Read: {{count}} appointments between {{from}} and {{to}}.",
       "skipped_one": "{{count}} recurring appointment was cut short or skipped (too many or invalid repetitions).",
-      "skipped_other": "{{count}} recurring appointments were cut short or skipped (too many or invalid repetitions)."
+      "skipped_other": "{{count}} recurring appointments were cut short or skipped (too many or invalid repetitions).",
+      "skippedEvents_one": "{{count}} appointment could not be read and was skipped.",
+      "skippedEvents_other": "{{count}} appointments could not be read and were skipped.",
+      "failedCollection": "Calendar “{{name}}” skipped: {{reason}}"
     },
     "privacy": {
       "title": "What is stored",
@@ -243,6 +247,12 @@
       "loading": "Loading entries …",
       "reload": "Reload",
       "empty": "No entries without a location.",
+      "filter": {
+        "label": "Filter entries",
+        "all": "All",
+        "withStops": "With a proposal from my stops",
+        "noLocation": "All entries without a location"
+      },
       "showIgnored": "Show ignored",
       "stopsSent": "{{count}} TravTrack stops (named ones and longer unnamed ones) were sent along for matching.",
       "stopsWithheld": {
