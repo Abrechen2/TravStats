@@ -125,6 +125,8 @@ export default function PlaceListDetailPage(): JSX.Element {
     if (list?.curatedKey) navigate(`/places/checklists/${list.curatedKey}`, { replace: true });
   }, [list?.curatedKey, navigate]);
 
+  const listRef = useRef<PlaceList | null>(null);
+  listRef.current = list;
   const entries = useMemo(() => list?.entries ?? [], [list]);
   // "Automatisch eingetragen" (owner 2026-11-26): only what a chain or an import added.
   const [autoOnly, setAutoOnly] = useState(false);
@@ -241,7 +243,7 @@ export default function PlaceListDetailPage(): JSX.Element {
   const handleRemove = useCallback(
     async (placeId: string): Promise<void> => {
       if (!list) return;
-      const before = entries.map((e) => e.placeId);
+      const position = entries.findIndex((e) => e.placeId === placeId);
       const name = entries.find((e) => e.placeId === placeId)?.place.name ?? "";
       const done = await runChange(
         () => removePlaceFromList(list.id, placeId),
@@ -253,14 +255,27 @@ export default function PlaceListDetailPage(): JSX.Element {
         label: t("places:lists.removedToast", { name }),
         undoLabel: t("places:lists.undoRemove"),
         onUndo: () => {
-          void runChange(async () => {
-            await addPlaceToList(list.id, placeId);
-            return reorderPlaceList(list.id, before);
-          }, "places:lists.addFailed");
+          void (async () => {
+            try {
+              // Rebuilt from what the server holds NOW, not from the order at removal time:
+              // other removals since then must not make the reorder fail.
+              const added = await addPlaceToList(list.id, placeId);
+              const ids = (added.entries ?? [])
+                .map((e) => e.placeId)
+                .filter((id) => id !== placeId);
+              ids.splice(Math.min(position, ids.length), 0, placeId);
+              const restored = await reorderPlaceList(list.id, ids);
+              // The toast outlives the page's list: only the list on screen is replaced.
+              if (listRef.current?.id === list.id) setList(restored);
+            } catch (err: unknown) {
+              logger.error({ err }, "PlaceListDetailPage: undoing a removal failed");
+              addToast("error", t("places:lists.undoFailed"));
+            }
+          })();
         },
       });
     },
-    [list, entries, runChange, t]
+    [list, entries, runChange, t, addToast]
   );
 
   const handleRename = useCallback(async (): Promise<void> => {

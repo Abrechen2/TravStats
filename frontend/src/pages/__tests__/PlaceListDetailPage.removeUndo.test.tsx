@@ -63,7 +63,7 @@ describe("PlaceListDetailPage — removing a place", () => {
     useToastStore.setState({ toasts: [] });
     getPlaceList.mockResolvedValue(LIST);
     removePlaceFromList.mockResolvedValue({ ...LIST, entries: [entries[1]] });
-    addPlaceToList.mockResolvedValue(LIST);
+    addPlaceToList.mockResolvedValue({ ...LIST, entries: [entries[1], entries[0]] });
     reorderPlaceList.mockResolvedValue(LIST);
   });
 
@@ -84,5 +84,23 @@ describe("PlaceListDetailPage — removing a place", () => {
     offered.undo?.onUndo();
     await waitFor(() => expect(addPlaceToList).toHaveBeenCalledWith("l1", "a"));
     await waitFor(() => expect(reorderPlaceList).toHaveBeenCalledWith("l1", ["a", "b"]));
+  });
+
+  it("rebuilds the order from the server's current members when other removals came between", async () => {
+    render(
+      <MemoryRouter initialEntries={["/places/lists/l1"]}>
+        <Routes>
+          <Route path="/places/lists/:id" element={<PlaceListDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "„Pantheon“ aus der Liste entfernen" })
+    );
+    await waitFor(() => expect(useToastStore.getState().toasts).toHaveLength(1));
+    // "b" was removed afterwards: the server now holds only the re-added "a".
+    addPlaceToList.mockResolvedValue({ ...LIST, entries: [entries[0]] });
+    useToastStore.getState().toasts[0].undo?.onUndo();
+    await waitFor(() => expect(reorderPlaceList).toHaveBeenCalledWith("l1", ["a"]));
   });
 });

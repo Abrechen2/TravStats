@@ -188,6 +188,7 @@
     "deleteFailed": "Die Liste konnte nicht gelöscht werden.",
     "addFailed": "Der Ort konnte nicht hinzugefügt werden.",
     "removedToast": "„{{name}}“ aus der Liste entfernt",
+    "undoFailed": "Das Rückgängigmachen ist fehlgeschlagen.",
     "undoRemove": "Rückgängig",
     "removeFailed": "Der Ort konnte nicht entfernt werden.",
     "subscribeFailed": "Der Checkliste konnte nicht gefolgt werden.",

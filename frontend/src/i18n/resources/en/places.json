@@ -188,6 +188,7 @@
     "deleteFailed": "The list could not be deleted.",
     "addFailed": "The place could not be added.",
     "removedToast": "“{{name}}” removed from the list",
+    "undoFailed": "Undoing the removal failed.",
     "undoRemove": "Undo",
     "removeFailed": "The place could not be removed.",
     "subscribeFailed": "Could not follow that checklist.",
