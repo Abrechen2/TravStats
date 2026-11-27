@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RouteSection } from "../RouteSection";
 import type { PlanCtx } from "../../planContext";
@@ -90,10 +90,9 @@ describe("RouteSection", () => {
     render(<RouteSection ctx={ctx(plan)} />);
     const assumed = screen.getAllByTestId("assumed-day");
     expect(assumed).toHaveLength(1);
-    expect(within(assumed[0]).getByRole("img")).toHaveAttribute(
-      "title",
-      "route.station.dayAssumed"
-    );
+    // The explanation is a Toggletip, reachable by touch and keyboard (not a hover title).
+    fireEvent.click(within(assumed[0]).getByRole("button"));
+    expect(screen.getAllByText("route.station.dayAssumed").length).toBeGreaterThan(0);
   });
 
   it("offers the handover only for a station that has been reached, and sends the operation", async () => {

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Button, Card, Pill } from "../../../components/ui";
 import { useTranslation } from "../../../hooks/useTranslation";
+import Toggletip from "../../../components/ui/Toggletip";
 import type {
   PlanOperation,
   PlanStage,
@@ -109,14 +110,8 @@ export function StationCard({
                     style={{ color: "var(--ts-muted)", fontStyle: "italic" }}
                   >
                     {arrive}
-                    {depart && station.nights > 0 ? " – " + depart : ""}
-                    <span
-                      role="img"
-                      aria-label={t("route.station.dayAssumed")}
-                      title={t("route.station.dayAssumed")}
-                    >
-                      {" ⓘ"}
-                    </span>
+                    {depart && station.nights > 0 ? " – " + depart : ""}{" "}
+                    <Toggletip content={t("route.station.dayAssumed")} />
                   </span>
                 ) : (
                   `${arrive}${depart && station.nights > 0 ? " – " + depart : ""}`
