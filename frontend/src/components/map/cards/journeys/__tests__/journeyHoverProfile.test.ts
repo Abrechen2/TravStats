@@ -118,7 +118,7 @@ describe("route hover profile", () => {
     expect(html).toContain(
       l === "de" ? "684 km · Seeweg (Schätzung)" : "684 km · Sea route (estimate)"
     );
-    expect(html).toContain("Ø 20 h");
+    expect(html).toContain("Ø 20\u00A0h");
     // The overnight crossing names both days.
     expect(html).toMatch(/→/);
     expect(html).toContain('data-hover-operator data-domain="ferry" data-name="Color Line"');

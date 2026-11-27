@@ -304,6 +304,9 @@ export {
   formatShortDistance,
 } from "./units";
 
+/** U+00A0: a duration never breaks between its number and unit ("2 h 07 / min" wrapped a table cell). */
+const NBSP = "\u00A0";
+
 /**
  * A duration in minutes, as the design writes it: "2 h 05 min", "45 min",
  * "2 h". With `days`, anything of 48 hours or more reads "3 T 4 h" in German
@@ -320,11 +323,11 @@ export function formatDuration(
   const m = total % 60;
   if (options.days && h >= 48) {
     const dayLetter = appLocale(options.language).startsWith("de") ? "T" : "d";
-    return `${Math.floor(h / 24)} ${dayLetter} ${h % 24} h`;
+    return `${Math.floor(h / 24)}${NBSP}${dayLetter}${NBSP}${h % 24}${NBSP}h`;
   }
-  if (h === 0) return `${m} min`;
-  if (m === 0) return `${h} h`;
-  return `${h} h ${String(m).padStart(2, "0")} min`;
+  if (h === 0) return `${m}${NBSP}min`;
+  if (m === 0) return `${h}${NBSP}h`;
+  return `${h}${NBSP}h${NBSP}${String(m).padStart(2, "0")}${NBSP}min`;
 }
 
 /**

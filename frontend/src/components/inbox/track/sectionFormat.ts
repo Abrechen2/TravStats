@@ -70,9 +70,11 @@ export function formatSpeed(
 ): string {
   if (avgKmh === null) return t(`${K}.none`);
   const n = (v: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(v);
-  return maxKmh === null
-    ? t(`${K}.speedAvg`, { avg: n(avgKmh) })
-    : t(`${K}.speed`, { avg: n(avgKmh), max: n(maxKmh) });
+  // No plausible max (every step was a glitch): the max abstains instead of showing one.
+  return t(`${K}.speed`, {
+    avg: n(avgKmh),
+    max: maxKmh === null ? t(`${K}.none`) : n(maxKmh),
+  });
 }
 
 const minuteOfDay = (ms: number, zone: string) => {

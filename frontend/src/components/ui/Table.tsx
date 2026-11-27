@@ -407,6 +407,8 @@ export function TableRow({
               fontFamily: column?.mono ? "var(--ts-font-mono)" : undefined,
               fontVariantNumeric: column?.mono ? "tabular-nums" : undefined,
               textAlign: column?.align === "end" ? "right" : "left",
+              // A number with its unit stays on one line ("2 h 07 / min" wrapped).
+              whiteSpace: column?.mono || column?.align === "end" ? "nowrap" : undefined,
               minWidth: 0,
             }}
           >

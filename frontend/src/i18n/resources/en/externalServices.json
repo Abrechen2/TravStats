@@ -889,6 +889,7 @@
       "dwellMin": "Dwell",
       "nearbyPlaces": "Names of nearby places",
       "localDay": "Day",
+      "positions": "Positions",
       "points": "Positions with time",
       "costing": "Vehicle type"
     },

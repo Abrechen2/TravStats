@@ -14,6 +14,12 @@ import type { RouteProvider } from "./types";
  */
 export const PUBLIC_ROUTING_BASE = "https://routing.openstreetmap.de/routed-car";
 export const PUBLIC_ROUTING_HOST = "routing.openstreetmap.de";
+/**
+ * What a request to the public router carries, as the disclosure names it: coordinates in the
+ * URL (`lon,lat;lon,lat`) and nothing else — no timestamps, no account, no name. The
+ * confirmation dialog lists exactly this (it said "Positionen mit Zeit", which was never sent).
+ */
+export const PUBLIC_ROUTING_FIELDS = ["positions"] as const;
 /** Names the application, never an account or an address (a fair-use requirement). */
 export const PUBLIC_ROUTING_USER_AGENT = "TravStats-self-hosted";
 /** One request per 1.1 s for the whole instance, conservatively under FOSSGIS's fair use. */

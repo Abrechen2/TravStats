@@ -58,6 +58,8 @@ export interface TrackSectionPanelProps {
    * vertices of the whole window). Unset, the drawn section's count.
    */
   pointCount?: number | null;
+  /** The fastest step the section's mode can make; faster steps are glitches, not the "max". */
+  speedCapKmh?: number;
 }
 
 function useCountryShape(code: string | null | undefined, enabled: boolean) {
@@ -89,7 +91,10 @@ export default function TrackSectionPanel(props: TrackSectionPanelProps): JSX.El
   const locale = i18n.language;
 
   const loaded = state.kind === "loaded" ? state.stretches : null;
-  const facts = useMemo(() => (loaded ? sectionFacts(loaded) : null), [loaded]);
+  const facts = useMemo(
+    () => (loaded ? sectionFacts(loaded, props.speedCapKmh) : null),
+    [loaded, props.speedCapKmh]
+  );
   const points =
     props.pointCount != null && Number.isFinite(props.pointCount)
       ? props.pointCount

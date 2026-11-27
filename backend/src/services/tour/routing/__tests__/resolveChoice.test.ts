@@ -56,7 +56,7 @@ describe("resolveRouteChoice (public routing fallback)", () => {
         serviceId: "publicRouting",
         host: "routing.openstreetmap.de",
         location: "cloud",
-        fields: ["points"],
+        fields: ["positions"],
         pointCount: 2,
       },
     });

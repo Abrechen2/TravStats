@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TrackPoint } from "../../../../lib/api/travtrack";
-import { clipStretches, dayBarOf, sectionFacts } from "../sectionGeometry";
+import { MODE_SPEED_CAP_KMH, clipStretches, dayBarOf, sectionFacts } from "../sectionGeometry";
 
 /**
  * The section's arithmetic (owner, 2026-10-26): on the server's safe
@@ -72,5 +72,20 @@ describe("dayBarOf", () => {
   it("marks the share of 24 h, and refuses an empty window", () => {
     expect(dayBarOf(360, 720)).toEqual({ left: 25, width: 25 });
     expect(dayBarOf(720, 720)).toBeNull();
+  });
+});
+
+describe("sectionFacts — a mode's speed cap", () => {
+  it("does not show an 811 km/h glitch as the top speed of a drive", () => {
+    // ~67 km/h, then 111 km in 8 minutes (~830 km/h): plausible for no car.
+    const stretch = [p(0, 50, 8), p(10, 50.1, 8), p(18, 51.1, 8)];
+    expect(sectionFacts([stretch]).maxKmh).toBeGreaterThan(800);
+    const capped = sectionFacts([stretch], MODE_SPEED_CAP_KMH.road);
+    expect(capped.maxKmh).toBeGreaterThan(60);
+    expect(capped.maxKmh).toBeLessThan(80);
+  });
+
+  it("has no max when every step is implausible", () => {
+    expect(sectionFacts([[p(0, 50, 8), p(1, 51, 8)]], MODE_SPEED_CAP_KMH.road).maxKmh).toBeNull();
   });
 });

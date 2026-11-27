@@ -70,3 +70,27 @@ describe("public routing fallback", () => {
     expect(calls).toHaveLength(1);
   });
 });
+
+describe("public routing disclosure", () => {
+  it("lists only positions, matching what the request carries (it listed 'points' with time)", async () => {
+    const { publicRoutingDisclosure } = await import("../resolveProvider");
+    const disclosure = publicRoutingDisclosure(2);
+    expect(disclosure.fields).toEqual(["positions"]);
+
+    const urls: string[] = [];
+    const fake = (async (input: unknown) => {
+      urls.push(String(input));
+      return { ok: true, status: 200, json: async () => okBody } as unknown as Response;
+    }) as unknown as typeof fetch;
+    const limit = createRateLimiter(
+      0,
+      () => 0,
+      async () => undefined
+    );
+    await createPublicRouting(fake, limit).route(req);
+    // Coordinates only: no time, no identifier rides along in the request.
+    const query = urls[0].split("?")[1] ?? "";
+    expect(urls[0]).toContain("12,48;11,48");
+    expect(query).not.toMatch(/time|timestamp|user|name/i);
+  });
+});

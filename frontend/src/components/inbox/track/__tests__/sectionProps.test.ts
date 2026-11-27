@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DawarichStay } from "../../../../lib/api/dawarichStays";
-import type { LocationSuggestion } from "../../../../lib/api/locationSuggestions";
-import { countrySectionProps, staySectionProps } from "../sectionProps";
+import type { JourneyRun, LocationSuggestion } from "../../../../lib/api/locationSuggestions";
+import { countrySectionProps, journeyRunSectionProps, staySectionProps } from "../sectionProps";
 
 /** The count a card shows is the one its question names (beta.29 UAT). */
 describe("sectionProps — the question's own position count", () => {
@@ -34,5 +34,13 @@ describe("sectionProps — the question's own position count", () => {
       evidence: { source: "travtrack", zone: "UTC", maxGapMinutes: 0, uncertainties: [] },
     } as unknown as DawarichStay;
     expect(staySectionProps(row)?.pointCount).toBe(214);
+  });
+});
+
+describe("sectionProps — a journey's speed cap", () => {
+  it("caps a drive's top speed at what a car can do (max 811 km/h was shown)", () => {
+    const run = { fromMs: 0, untilMs: 1, startZone: "UTC", modeHint: "road" } as JourneyRun;
+    const props = journeyRunSectionProps({ coverage: "complete" } as LocationSuggestion, run);
+    expect(props.speedCapKmh).toBe(250);
   });
 });

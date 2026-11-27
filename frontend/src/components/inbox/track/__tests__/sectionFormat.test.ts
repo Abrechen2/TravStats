@@ -91,3 +91,11 @@ describe("sectionFormat", () => {
     });
   });
 });
+
+describe("formatSpeed without a plausible max", () => {
+  it("shows an em dash for the max instead of dropping it or inventing one", () => {
+    const t = (key: string, o?: Record<string, unknown>) =>
+      key.endsWith("none") ? "—" : `${key}:${o?.avg}:${o?.max}`;
+    expect(formatSpeed(70, null, "de", t)).toBe("track:inbox.value.speed:70:—");
+  });
+});

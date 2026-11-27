@@ -81,7 +81,6 @@ function CustomPicker({
         from={from}
         to={to}
         max={today}
-        quickPicks={[]}
         onChange={(range) => {
           setFrom(range.from);
           setTo(range.to);

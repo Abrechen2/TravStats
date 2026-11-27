@@ -687,8 +687,7 @@
       "days": "{{fromDay}} {{from}} – {{untilDay}} {{until}}",
       "wholeDay": "{{day}}, ganzer Tag",
       "wholeDays": "{{fromDay}} – {{untilDay}}",
-      "speed": "Ø {{avg}}, max {{max}} km/h",
-      "speedAvg": "Ø {{avg}} km/h"
+      "speed": "Ø {{avg}}, max {{max}} km/h"
     },
     "detail": {
       "truncated": "Nicht der ganze Abschnitt passte in eine Ansicht – die Karte zeigt den Anfang. Auf der Track-Karte siehst du alles.",

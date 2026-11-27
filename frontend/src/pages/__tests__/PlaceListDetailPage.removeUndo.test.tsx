@@ -75,7 +75,9 @@ describe("PlaceListDetailPage — removing a place", () => {
         </Routes>
       </MemoryRouter>
     );
-    fireEvent.click(await screen.findByRole("button", { name: "„Pantheon“ aus der Liste entfernen" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "„Pantheon“ aus der Liste entfernen" })
+    );
     await waitFor(() => expect(useToastStore.getState().toasts).toHaveLength(1));
     const offered = useToastStore.getState().toasts[0];
     expect(offered.message).toBe("„Pantheon“ aus der Liste entfernt");

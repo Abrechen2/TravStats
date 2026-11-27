@@ -687,8 +687,7 @@
       "days": "{{fromDay}} {{from}} – {{untilDay}} {{until}}",
       "wholeDay": "{{day}}, whole day",
       "wholeDays": "{{fromDay}} – {{untilDay}}",
-      "speed": "avg {{avg}}, max {{max}} km/h",
-      "speedAvg": "avg {{avg}} km/h"
+      "speed": "avg {{avg}}, max {{max}} km/h"
     },
     "detail": {
       "truncated": "Not the whole part fitted into one view – the map shows its beginning. The Track map shows all of it.",

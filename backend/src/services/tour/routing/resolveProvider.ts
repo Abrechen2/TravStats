@@ -5,7 +5,7 @@ import { isServiceDisabledByAdmin } from "../../externalServices/policy";
 import { createOpenRouteService } from "./openRouteService";
 import { createGraphHopper } from "./graphHopper";
 import { createCustomOsrm } from "./customOsrm";
-import { createPublicRouting, PUBLIC_ROUTING_BASE } from "./publicRouting";
+import { createPublicRouting, PUBLIC_ROUTING_BASE, PUBLIC_ROUTING_FIELDS } from "./publicRouting";
 import { internetAllowed } from "../../internetGate";
 import { offReasonFor } from "../../externalServices/policy";
 import {
@@ -158,7 +158,7 @@ export function publicRoutingDisclosure(pointCount = 2): Disclosure {
     host: hostOf(PUBLIC_ROUTING_BASE),
     provider: "osrm",
     location: "cloud",
-    fields: ["points"],
+    fields: [...PUBLIC_ROUTING_FIELDS],
     pointCount,
     privacyZonesApplied: null,
   };

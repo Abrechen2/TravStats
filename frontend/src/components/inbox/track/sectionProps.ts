@@ -1,5 +1,6 @@
 import type { DawarichStay } from "../../../lib/api/dawarichStays";
 import type { JourneyRun, LocationSuggestion } from "../../../lib/api/locationSuggestions";
+import { MODE_SPEED_CAP_KMH } from "./sectionGeometry";
 import type { TrackSectionPanelProps } from "./TrackSectionPanel";
 
 /**
@@ -67,6 +68,7 @@ export function journeyRunSectionProps(
     zone: run.startZone,
     why: { key: "track:inbox.why.journey" },
     coverage: suggestion.coverage,
+    speedCapKmh: MODE_SPEED_CAP_KMH[run.modeHint],
   };
 }
 

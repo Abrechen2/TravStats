@@ -889,6 +889,7 @@
       "dwellMin": "Aufenthaltsdauer",
       "nearbyPlaces": "Namen naher Orte",
       "localDay": "Tag",
+      "positions": "Positionen",
       "points": "Positionen mit Zeit",
       "costing": "Fahrzeugart"
     },

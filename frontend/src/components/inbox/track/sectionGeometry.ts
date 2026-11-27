@@ -48,7 +48,16 @@ export interface SectionFacts {
 /** A step faster than this is a position jump, not travel (an airliner tops out near 1000). */
 const IMPLAUSIBLE_KMH = 1_200;
 
-export function sectionFacts(stretches: readonly TrackPoint[][]): SectionFacts {
+/**
+ * The fastest step a mode can plausibly make (the backend's jitter profiles: road 250, rail 400).
+ * A faster step is a position glitch and never becomes "max" ("max 811 km/h" on a drive).
+ */
+export const MODE_SPEED_CAP_KMH = { road: 250, rail: 400, unknown: 400 } as const;
+
+export function sectionFacts(
+  stretches: readonly TrackPoint[][],
+  maxPlausibleKmh: number = IMPLAUSIBLE_KMH
+): SectionFacts {
   let metres = 0;
   let timeMs = 0;
   let steps = 0;
@@ -70,7 +79,7 @@ export function sectionFacts(stretches: readonly TrackPoint[][]): SectionFacts {
       if (dt > 0) {
         timeMs += dt;
         const kmh = (d / dt) * 3_600;
-        if (kmh < IMPLAUSIBLE_KMH && (maxKmh === null || kmh > maxKmh)) maxKmh = kmh;
+        if (kmh < maxPlausibleKmh && (maxKmh === null || kmh > maxKmh)) maxKmh = kmh;
       }
     }
   }

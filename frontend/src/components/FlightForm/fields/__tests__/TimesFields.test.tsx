@@ -217,4 +217,18 @@ describe("TimesFields", () => {
       expect(container.querySelectorAll("input").length).toBe(8);
     });
   });
+
+  it("keeps the help button out of the date label, so the label's name is just its text", () => {
+    render(
+      <TimesFields
+        value={VALUE}
+        onChange={() => {}}
+        help={{ depDate: { content: "Der Tag des Abflugs." } }}
+      />
+    );
+    const input = screen.getAllByLabelText(/datum|date/i, { selector: "input" })[0];
+    const label = document.querySelector(`label[for="${input.id}"]`) as HTMLLabelElement;
+    expect(label.querySelector("button")).toBeNull();
+    expect(label.contains(screen.getAllByRole("button", { name: /hilfe|help/i })[0])).toBe(false);
+  });
 });
