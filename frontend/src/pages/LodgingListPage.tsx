@@ -59,6 +59,7 @@ import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
 import { LoyaltyFilterNotice, useLoyaltyListFilter } from "../components/Loyalty/LoyaltyListFilter";
 import { reportPageError } from "../store/pageErrorStore";
+import { useYearCounts } from "../lib/stats/useYearCounts";
 
 type TypeFilter = LodgingType | "all";
 type YearFilter = number | "all";
@@ -365,6 +366,8 @@ export default function LodgingListPage(): JSX.Element {
     () => new Map((facets?.years ?? []).map((y) => [y.year, y.count])),
     [facets]
   );
+  // The caption says "Aufenthalte": stays that count (lodgingCounting), not the facet's houses.
+  const stayCounts = useYearCounts().of("lodging");
 
   /**
    * One option per COUNTRY, not per spelling.
@@ -590,7 +593,7 @@ export default function LodgingListPage(): JSX.Element {
                 options: availableYears.map((y) => ({
                   value: String(y),
                   label: String(y),
-                  count: yearCounts.get(y),
+                  count: Object.keys(stayCounts).length ? stayCounts[y] : yearCounts.get(y),
                 })),
                 formatCount: (n): string => t("common:yearPicker.count.stays", { count: n }),
               }}
