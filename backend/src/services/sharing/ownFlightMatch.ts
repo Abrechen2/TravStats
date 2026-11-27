@@ -41,6 +41,13 @@ export function normalisedFlightNumber(value: string | null): string | null {
 const code = (iata: string | null, icao: string | null) =>
   (iata ?? icao)?.trim().toUpperCase() || null;
 
+/** Epoch ms of a departure, read the same whether a fact arrives as a Date or an ISO string. */
+function instantMs(value: Date | string | null): number | null {
+  if (value === null || value === undefined) return null;
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? null : ms;
+}
+
 function departureDay(row: FlightIdentity, zone: string | null): string | null {
   if (!row.departureTime || !zone) return null;
   return localDay(row.departureTime, zone);
@@ -56,6 +63,12 @@ export function sameFlight(a: FlightIdentity, b: FlightIdentity): boolean {
   }
   // Same departure airport, so one zone serves both; a row without one borrows the other's.
   const zone = a.depTimezone ?? b.depTimezone;
+  // Neither side knows the zone (old imports: 2 of the owner's flights): without a local day the
+  // same departure instant is the identity, or identical copies never pair (sharing UAT 2).
+  if (!zone) {
+    const t = instantMs(a.departureTime);
+    return t !== null && t === instantMs(b.departureTime);
+  }
   const day = departureDay(a, zone);
   return day !== null && day === departureDay(b, zone);
 }
