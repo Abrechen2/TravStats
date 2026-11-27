@@ -115,7 +115,7 @@ export type RemoteMemberState =
  * `delivery` in `backend/src/schemas/sharingRemote.ts`.
  */
 export interface RemoteDelivery {
-  state: "delivered" | "pending" | "retrying" | "unreachable" | "rejected";
+  state: "delivered" | "pending" | "retrying" | "unreachable" | "rejected" | "paused";
   /** `retrying`/`unreachable`: failing since; `rejected`: when it was refused. */
   stateSince: string | null;
   /** `retrying`: the failure kind; `rejected`: `schema`, `not-member` or `consent`. */

@@ -175,8 +175,8 @@ function ShareTripForm({
                 otherName={person.name}
                 loadCandidates={() => sharingLinkApi.candidates(tripId, person.account!.id)}
                 preview={(target) => sharingLinkApi.preview(tripId, person.account!.id, target)}
-                link={(target, decision) =>
-                  sharingLinkApi.link(tripId, person.account!.id, target, decision)
+                link={(target, decision, choices) =>
+                  sharingLinkApi.link(tripId, person.account!.id, target, decision, choices)
                 }
                 failure={(err, fallback) => ({ key: sharingErrorKey(err, fallback) })}
                 onLinked={(result) => {

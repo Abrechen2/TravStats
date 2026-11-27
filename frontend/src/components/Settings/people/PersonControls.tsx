@@ -20,6 +20,8 @@ export interface PersonHandlers {
   withdrawIncoming: (p: PersonEntry) => void;
   toggleStats: (p: PersonEntry) => void;
   toggleAchievements: (p: PersonEntry) => void;
+  /** "Alle passenden Reisen verknüpfen" / "Gemeinsame Reisen anbieten" (UAT 2026-11-27). */
+  bulkLink: (p: PersonEntry) => void;
 }
 
 const NS = "sharing:friends";
@@ -156,6 +158,19 @@ export function PersonMenu({
               ? t(`${NS}.actions.closeAchievements`)
               : t(`${NS}.actions.viewAchievements`),
             onSelect: () => handlers.toggleAchievements(person),
+          },
+        ]
+      : []),
+    ...(account?.kind === "local" ||
+    (connection?.state === "active" && connection.theirs.tripOffers)
+      ? [
+          {
+            key: "bulkLink",
+            label:
+              account?.kind === "local"
+                ? t(`${NS}.actions.bulkLink`)
+                : t(`${NS}.actions.bulkOffer`),
+            onSelect: () => handlers.bulkLink(person),
           },
         ]
       : []),

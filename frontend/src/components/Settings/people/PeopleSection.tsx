@@ -31,6 +31,7 @@ import RemotePersonStats from "../RemotePersonStats";
 import { SectionCard, SectionTitle } from "../SettingsShared";
 import type { PendingRequest, PersonEntry } from "./buildPeople";
 import InvitationCodeDialog from "./InvitationCodeDialog";
+import BulkLinkDialog from "../../sharing/BulkLinkDialog";
 import { PersonMenu, PersonSwitches, type PersonHandlers } from "./PersonControls";
 import { usePeople } from "./usePeople";
 import { comparisonFailureCode } from "../../../lib/api/comparison";
@@ -47,6 +48,7 @@ type Open =
   | { kind: "totals"; person: PersonEntry; mode: "ask" | "change" }
   | { kind: "acceptTotals"; request: Extract<PendingRequest, { kind: "comparison" }> }
   | { kind: "code" }
+  | { kind: "bulk"; person: PersonEntry }
   | null;
 
 const PILL_COLOR = { requested: "var(--ts-warn)" } as const;
@@ -244,6 +246,7 @@ export default function PeopleSection(): JSX.Element {
     },
     toggleStats: (p) => setStats((id) => (id === p.key ? null : p.key)),
     toggleAchievements: (p) => setAchievements((id) => (id === p.key ? null : p.key)),
+    bulkLink: (p) => setOpen({ kind: "bulk", person: p }),
   };
 
   const answer = (request: PendingRequest, accept: boolean): void => {
@@ -462,6 +465,9 @@ export default function PeopleSection(): JSX.Element {
           linkableUsers={state.linkable?.linkableUsers ?? []}
           onLinked={done}
         />
+      )}
+      {open?.kind === "bulk" && (
+        <BulkLinkDialog person={open.person} onClose={() => setOpen(null)} />
       )}
       {open?.kind === "code" && (
         <InvitationCodeDialog

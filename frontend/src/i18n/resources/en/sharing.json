@@ -998,7 +998,9 @@
       "viewAchievements": "View achievements",
       "closeAchievements": "Close achievements",
       "remoteNoRename": "People on other servers are managed by their server.",
-      "withdrawIncoming": "Withdraw sharing from this person"
+      "withdrawIncoming": "Withdraw sharing from this person",
+      "bulkLink": "Link all matching trips",
+      "bulkOffer": "Offer shared trips"
     },
     "requests": {
       "title": "Requests to you",
@@ -1111,6 +1113,111 @@
       "previewFailed": "The comparison failed.",
       "linkFailed": "The trips could not be linked."
     },
-    "awaitingConsent": "The other side has to accept sharing first; after that you see the comparison."
+    "awaitingConsent": "The other side has to accept sharing first; after that you see the comparison.",
+    "line": {
+      "drawn": "drawn",
+      "routed": "routed",
+      "straight": "straight",
+      "none": "no line",
+      "single": "Line: {{quality}} ({{points}} points)",
+      "lines": "Lines: {{quality}} ({{count}} sections, {{points}} points)"
+    },
+    "fieldGroups": {
+      "geometry": "Line",
+      "actualRoute": "Flown route",
+      "legRoutes": "Sea routes",
+      "routeLegs": "Route",
+      "tracks": "Recording",
+      "checkIn": "Arrival",
+      "checkOut": "Departure",
+      "lodging": "Accommodation",
+      "startUtc": "Start",
+      "endUtc": "End",
+      "departureTime": "Departure",
+      "arrivalTime": "Arrival",
+      "pickupTime": "Pick-up",
+      "returnTime": "Return",
+      "actualPickupTime": "Actual pick-up",
+      "actualReturnTime": "Actual return",
+      "distanceKm": "Distance",
+      "distanceSource": "Distance source",
+      "routeDistance": "Distance",
+      "overflownCountries": "Countries flown over",
+      "co2Kg": "CO₂",
+      "nights": "Nights",
+      "delayMinutes": "Delay",
+      "stations": "Stations",
+      "stops": "Ports",
+      "legs": "Sections"
+    },
+    "table": {
+      "field": "Detail",
+      "mine": "Yours",
+      "theirs": "{{name}}'s",
+      "take": "Keep",
+      "takeFor": "What should apply for “{{field}}”?"
+    },
+    "fieldChoice": {
+      "mine": "Mine",
+      "theirs": "{{name}}'s",
+      "both": "Each keeps their own"
+    },
+    "better": "more precise",
+    "recomputed": "Recalculated: {{fields}}",
+    "decisionRule": "An empty, straight or less precise detail never overwrites a filled, drawn or more precise one – whichever side you pick."
+  },
+  "bulk": {
+    "open": "Look",
+    "title": "Link all matching trips with {{name}}",
+    "senders": "the other side",
+    "intro": "All trips you and {{name}} both have. What fits, I link; nothing is created twice.",
+    "loading": "Looking for trips …",
+    "awaitingConsent": "{{name}} has to accept sharing first. Then you will see the trips here.",
+    "none": "I found no trip that you and {{name}} both have.",
+    "comparing": "Comparing trip {{done}} of {{total}} …",
+    "linking": "Linking trip {{done}} of {{total}} …",
+    "paused": "Paused, continuing in {{minutes}} min",
+    "stop": "Stop",
+    "summary": "{{auto}} trips will be linked, {{review}} need your decision.",
+    "autoTitle": "These {{count}} trips fit together",
+    "run": "Link {{count}} trips",
+    "reviewTitle": "You decide these yourself",
+    "review": {
+      "conflict": "both sides have different details",
+      "ambiguous": "fits more than one trip",
+      "noTrip": "no matching trip of yours",
+      "nothingMatched": "no entry fits together"
+    },
+    "resultsTitle": "Result",
+    "pairName": "{{mine}} ↔ {{theirs}} ({{from}})",
+    "state": {
+      "linked": "already linked",
+      "done": "linked ({{count}} entries)",
+      "skipped": "skipped: {{why}}",
+      "failed": "did not work: {{why}}",
+      "undone": "link removed"
+    },
+    "skippedNothing": "nothing to link",
+    "undo": "Undo",
+    "errors": {
+      "loadFailed": "The trips could not be loaded.",
+      "compareFailed": "The comparison did not work.",
+      "linkFailed": "Linking did not work.",
+      "undoFailed": "Removing the link did not work."
+    },
+    "offer": {
+      "title": "Offer shared trips to {{name}}",
+      "intro": "These are your trips {{name}} was on. Offer them; {{name}} then links them with their own trips.",
+      "none": "No trip with {{name}} as a travel companion that is not shared yet.",
+      "waiting": "offered, waiting for an answer",
+      "done": "offered",
+      "failed": "did not work: {{why}}",
+      "progress": "Offering trip {{done}} of {{total}} …",
+      "run": "Offer {{count}} trips",
+      "errors": {
+        "loadFailed": "The trips could not be loaded.",
+        "offerFailed": "Offering did not work."
+      }
+    }
   }
 }
