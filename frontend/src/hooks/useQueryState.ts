@@ -59,7 +59,8 @@ export const yearOrAllParam: QueryCodec<number | "all"> = {
   parse: (raw) => {
     if (raw === "all") return "all";
     const value = Number(raw);
-    return Number.isInteger(value) ? value : undefined;
+    // The server refuses a year outside 1900-2200; a hand-edited URL falls back to "all".
+    return Number.isInteger(value) && value >= 1900 && value <= 2200 ? value : undefined;
   },
   format: (value) => String(value),
 };
